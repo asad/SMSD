@@ -1,6 +1,7 @@
 package smsdcmd;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -16,6 +17,7 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IChemFile;
 import org.openscience.cdk.interfaces.IMolecule;
+import org.openscience.cdk.io.CMLReader;
 import org.openscience.cdk.io.IChemObjectReader;
 import org.openscience.cdk.io.ISimpleChemObjectReader;
 import org.openscience.cdk.io.MDLReader;
@@ -57,6 +59,7 @@ public class InputHandler {
         sdg = new StructureDiagramGenerator();
         
         singularDataTypes = new HashMap<String, String>();
+        singularDataTypes.put("CML", "Chemical Markup Language");
         singularDataTypes.put("MOL", "MDL V2000 format");
         singularDataTypes.put("ML2", "MOL2 Tripos format");
         singularDataTypes.put("PDB", "Protein Databank Format");
@@ -163,6 +166,8 @@ public class InputHandler {
         if (type.equals("MOL")) {
             return new MDLReader(
                     new FileReader(input), IChemObjectReader.Mode.RELAXED);
+        } else if (type.equals("CML")) {
+            return new CMLReader(new FileInputStream(input));
         } else if (type.equals("ML2")) {
             return new Mol2Reader(new FileReader(input));
         } else if (type.equals("PDB")) {
