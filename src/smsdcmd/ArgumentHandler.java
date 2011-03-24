@@ -4,6 +4,8 @@
  */
 package smsdcmd;
 
+import java.io.Writer;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.OptionBuilder;
@@ -74,6 +76,7 @@ public class ArgumentHandler {
     private boolean isNMCS = false;
     private boolean outputSubgraph;
     private String outputFilepath;
+    private Writer outputWriter;
     private String outputFiletype;
     private String queryFilepath;
     private String targetFilepath;
@@ -312,6 +315,14 @@ public class ArgumentHandler {
     
     public boolean isHelp() {
         return helpRequested;
+    }
+    
+    public void setOutputWriter(Writer writer) {
+        outputWriter = writer;
+    }
+    
+    public Writer getOutputWriter() {
+        return outputWriter;
     }
     
     public boolean shouldOutputSubgraph() {

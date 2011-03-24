@@ -61,7 +61,12 @@ public class OutputHandler {
     public void writeMol(String outputType, IAtomContainer mol, String filepath) throws IOException, IllegalArgumentException, CDKException {
         Writer out;
         if (filepath.equals("--")) {
-            out = new PrintWriter(System.out);
+            Writer outWriter = argumentHandler.getOutputWriter();
+            if (outWriter == null) {
+                out = new PrintWriter(System.out);
+            } else {
+                out = outWriter;
+            }
         } else {
             out = new FileWriter(filepath);
         }
