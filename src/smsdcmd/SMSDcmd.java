@@ -54,6 +54,10 @@ public class SMSDcmd {
         }
     }
 
+    public static void run(ArgumentHandler argumentHandler) {
+        run(argumentHandler, new InputHandler(argumentHandler));
+    }
+    
     public static void run(ArgumentHandler argumentHandler, InputHandler inputHandler) {
         OutputHandler outputHandler = new OutputHandler(argumentHandler);
         try {
