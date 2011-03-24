@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.cli.MissingOptionException;
 import org.openscience.cdk.ChemFile;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.Molecule;
@@ -113,7 +114,7 @@ public class InputHandler {
         return argumentHandler.getTargetMolOutName() + suffix + ".mol";
     }
     
-    public MatchType validateInput() {
+    public MatchType validateInput() throws MissingOptionException {
         validateQueryType();
         validateTargetType();
         if ((isSingleFileQuery && isSingleFileTarget) 
@@ -124,7 +125,11 @@ public class InputHandler {
         } else if ((isSingleFileQuery || isStringQuery) && isMultipleTarget) {
             matchType = MatchType.SINGLE_QUERY_MULTIPLE_TARGET;
         } else if (!isSingleFileQuery && isMultipleTarget) {
-            matchType = MatchType.NMCS;
+            if (argumentHandler.isNMCS()) {
+                matchType = MatchType.NMCS;
+            } else {
+                throw new MissingOptionException("Set N-MCS to true");
+            }
         } else {
             matchType = MatchType.UNKNOWN;
         }

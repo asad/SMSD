@@ -145,7 +145,7 @@ public class ArgumentHandler {
              "Appends output to existing files, else creates new files");
         
         options.addOption(
-                OptionBuilder.hasArg().withDescription("Do N-way MCS on the input SD").withArgName("filepath").create("N")
+                OptionBuilder.withDescription("Do N-way MCS on the target SD file").create("N")
         );
         
         options.addOption(
@@ -242,7 +242,7 @@ public class ArgumentHandler {
         }
         
         if (line.hasOption("N")) {
-            targetFilepath = line.getOptionValue("N");
+            setNMCS(true);
         }
         
         if (line.hasOption("o")) {

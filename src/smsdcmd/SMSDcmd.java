@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.MissingOptionException;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.openscience.cdk.Molecule;
@@ -85,6 +86,8 @@ public class SMSDcmd {
 //            e.printStackTrace();
         } catch (CloneNotSupportedException e) {
             System.err.println(e.toString());
+        } catch (MissingOptionException e) {
+            System.err.println("Missing argument : " + e.getMessage());
         }
 
     }
