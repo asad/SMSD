@@ -1,0 +1,11 @@
+bin
+.classpath
+.project
+*.mol
+*.out
+build
+/nbproject/private/
+/dist/
+/store/
+*.jar
+build.properties

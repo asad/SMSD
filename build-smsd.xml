@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="SMSDcmd" default="package-for-store" basedir=".">
+    <property file="build.properties"/>
+    <property name="build.dir" value="build"/>
+    <property name="SMSD_GUI_bin_dir" value="${SMSD_GUI_dir}/bin"/>
+    <property name="CDK_bin_dir" value="${CDK_dir}/bin"/>
+
+    <target name="package-for-store">
+        <!-- Copy the SMSD-CMD classes -->
+        <copy todir="${build.dir}/bin">
+            <fileset dir="bin"/>
+        </copy>
+
+        <!-- Copy the SMSD-GUI classes -->
+        <copy todir="${build.dir}/bin">
+            <fileset dir="${SMSD_GUI_bin_dir}"/>
+        </copy>
+
+        <!-- Copy the CDK classes -->
+        <copy todir="${build.dir}/bin">
+            <fileset dir="${CDK_bin_dir}" excludes="data/**"/>
+        </copy>
+
+        <property name="store.jar.name" value="SMSDcmd"/>
+        <property name="store.dir" value="."/>
+            <tstamp>
+                <format property="TODAY" pattern="yyyyMMdd" />
+            </tstamp>
+        <property name="store.jar" value="${store.dir}/${store.jar.name}${TODAY}.jar"/>
+
+        <jar destfile="${store.jar}" filesetmanifest="skip">
+            <fileset dir="build/bin" includes="**"/>
+            <zipgroupfileset dir="lib" includes="*.jar"/>
+            <zipgroupfileset file="lib/commons-cli-1.2/commons-cli-1.2.jar"/> 
+            <zipgroupfileset dir="${CDK_dir}/jar" includes="*.jar"/>
+
+            <manifest>
+                <attribute name="Main-Class" value="smsdcmd.SMSDcmd"/>
+            </manifest>
+        </jar>
+
+
+    </target>
+
+    <target name="clean">
+       <delete dir="${build.dir}"/> 
+    </target>
+</project>
