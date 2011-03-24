@@ -27,6 +27,7 @@ import org.openscience.cdk.io.iterator.IIteratingChemObjectReader;
 import org.openscience.cdk.io.iterator.IteratingMDLReader;
 import org.openscience.cdk.layout.StructureDiagramGenerator;
 import org.openscience.cdk.nonotify.NoNotificationChemObjectBuilder;
+import org.openscience.cdk.signature.MoleculeSignature;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.cdk.tools.manipulator.ChemFileManipulator;
@@ -209,11 +210,29 @@ public class InputHandler {
         setID(mol);
     }
     
+    private IMolecule getMolFromString(String stringData, String type) throws CDKException {
+        if (type.equals("SMI")) {
+            return getMolFromSmiles(stringData);
+        } else if (type.equals("SIG")) {
+            return getMolFromSignature(stringData);
+        } else {
+            return null;
+        }
+    }
+    
     private IMolecule getMolFromSmiles(String smiles) throws CDKException {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer atomContainer = sp.parseSmiles(smiles);
         IMolecule mol = new Molecule(atomContainer);
         configure(mol, "SMI");
+        return mol;
+    }
+    
+    private IMolecule getMolFromSignature(String signatureString) throws CDKException {
+        IAtomContainer atomContainer = MoleculeSignature.fromSignatureString(
+                signatureString, DefaultChemObjectBuilder.getInstance());
+        IMolecule mol = new Molecule(atomContainer);
+        configure(mol, "SIG");
         return mol;
     }
     
@@ -240,7 +259,7 @@ public class InputHandler {
             configure(molecule, type);
             return molecule;
         } else {
-            return getMolFromSmiles(filenameOrData);
+            return getMolFromString(filenameOrData, type);
         }
     }
     
@@ -255,7 +274,7 @@ public class InputHandler {
             configure(molecule, type);
             return molecule;
         } else {
-            return getMolFromSmiles(filenameOrData);
+            return getMolFromString(filenameOrData, type);
         }
     }
     
