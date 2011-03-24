@@ -81,6 +81,8 @@ public class ArgumentHandler {
     private String targetType;
     private int imageWidth = -1;
     private int imageHeight = -1;
+    private boolean helpRequested = false;
+    private Options options;
     private String[] remainingArgs;
 
     protected void printError(String errmessg) {
@@ -98,7 +100,7 @@ public class ArgumentHandler {
     @SuppressWarnings("static-access")
     protected void parseCommandLineOptions(String[] args) throws ParseException {
 
-        Options options = new Options();
+        options = new Options();
 
         options.addOption("h", "help", false, "Help page for command usage");
 
@@ -202,14 +204,14 @@ public class ArgumentHandler {
 
         if (line.hasOption('h') || line.getOptions().length == 0) {
             System.out.println("Hello");
-            printHelp(options);
+            helpRequested = true;
         }
 
         if (line.hasOption('S')) {
             String[] suffix_reader = line.getOptionValues('S');
             if (suffix_reader.length < 1) {
                 System.out.println("Suffix required!");
-                printHelp(options);
+                helpRequested = true;
             }
             setSuffix(suffix_reader[0]);
             setApplySuffix(true);
@@ -219,7 +221,7 @@ public class ArgumentHandler {
             String[] filters = line.getOptionValues('f');
             if (filters.length < 1) {
                 System.out.println("Chemical filter required (Ranges: 0 to 3)!");
-                printHelp(options);
+                helpRequested = true;
             }
             setChemFilter((int) new Integer(filters[0]));
         }
@@ -269,8 +271,16 @@ public class ArgumentHandler {
         }
        
     }
-
-    private void printHelp(Options options) {
+    
+    public Options getOptions() {
+        return options;
+    }
+    
+    public void printHelp() {
+        printHelp(options);
+    }
+    
+    public void printHelp(Options options) {
         HelpFormatter formatter = new HelpFormatter();
 
         System.out.println("\n++++++++++++++++++++++++++++++++++++++++++++++"
@@ -298,8 +308,10 @@ public class ArgumentHandler {
 
         formatter.printHelp("\n", options);
         System.out.println("\n++++++++++++++++++++++++++++++++++++++++++++++\n");
-
-        System.exit(0);
+    }
+    
+    public boolean isHelp() {
+        return helpRequested;
     }
     
     public boolean shouldOutputSubgraph() {

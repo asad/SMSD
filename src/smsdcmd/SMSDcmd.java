@@ -10,6 +10,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.openscience.cdk.Molecule;
 import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
@@ -40,14 +42,19 @@ public class SMSDcmd {
         ArgumentHandler argumentHandler = new ArgumentHandler();
         try {
             argumentHandler.parseCommandLineOptions(args);
-            run(argumentHandler);
+            InputHandler inputHandler = new InputHandler(argumentHandler);
+            if (argumentHandler.isHelp()) {
+                argumentHandler.printHelp();
+                inputHandler.printDataTypeHelp();
+            } else {
+                run(argumentHandler, inputHandler);
+            }
         } catch (ParseException pe) {
             System.err.println("Problem with the arguments : " + pe.getMessage());
         }
     }
 
-    public static void run(ArgumentHandler argumentHandler) {
-        InputHandler inputHandler = new InputHandler(argumentHandler);
+    public static void run(ArgumentHandler argumentHandler, InputHandler inputHandler) {
         OutputHandler outputHandler = new OutputHandler(argumentHandler);
         try {
             InputHandler.MatchType matchType = inputHandler.validateInput();

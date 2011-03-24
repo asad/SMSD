@@ -71,6 +71,28 @@ public class InputHandler {
         stringDataTypes.put("SMI", "SMILES string format");
         stringDataTypes.put("SIG", "Signature string format");
     }
+
+    public void printDataTypeHelp() {
+        System.out.println("Allowed types for single-molecules (query or target):");
+        for (String singularType : singularDataTypes.keySet()) {
+            String description = singularDataTypes.get(singularType);
+            System.out.println(String.format("%s\t%s", singularType, description));
+        }
+        System.out.println();
+        System.out.println("Allowed types for multiple-molecules (targets only):");
+        for (String multipleType : multipleDataTypes.keySet()) {
+            String description = multipleDataTypes.get(multipleType);
+            System.out.println(String.format("%s\t%s", multipleType, description));
+        }
+    }
+    
+    public Map<String, String> getSingularDataTypes() {
+        return singularDataTypes;
+    }
+    
+    public Map<String, String> getMultipleDataTypes() {
+        return multipleDataTypes;
+    }
     
     public String getQRefName() {
         String suffix = argumentHandler.getSuffix(); 
