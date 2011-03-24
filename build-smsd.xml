@@ -2,18 +2,12 @@
 <project name="SMSDcmd" default="package-for-store" basedir=".">
     <property file="build.properties"/>
     <property name="build.dir" value="build"/>
-    <property name="SMSD_GUI_bin_dir" value="${SMSD_GUI_dir}/bin"/>
     <property name="CDK_bin_dir" value="${CDK_dir}/bin"/>
 
     <target name="package-for-store">
-        <!-- Copy the SMSD-CMD classes -->
+        <!-- Copy the SMSD classes -->
         <copy todir="${build.dir}/bin">
             <fileset dir="bin"/>
-        </copy>
-
-        <!-- Copy the SMSD-GUI classes -->
-        <copy todir="${build.dir}/bin">
-            <fileset dir="${SMSD_GUI_bin_dir}"/>
         </copy>
 
         <!-- Copy the CDK classes -->
