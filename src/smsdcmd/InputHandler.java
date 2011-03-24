@@ -79,12 +79,20 @@ public class InputHandler {
             String description = singularDataTypes.get(singularType);
             System.out.println(String.format("%s\t%s", singularType, description));
         }
+        for (String stringType : stringDataTypes.keySet()) {
+            String description = stringDataTypes.get(stringType);
+            System.out.println(String.format("%s\t%s", stringType, description));
+        }
         System.out.println();
         System.out.println("Allowed types for multiple-molecules (targets only):");
         for (String multipleType : multipleDataTypes.keySet()) {
             String description = multipleDataTypes.get(multipleType);
             System.out.println(String.format("%s\t%s", multipleType, description));
         }
+    }
+    
+    public Map<String, String> getStringDataTypes() {
+        return stringDataTypes;
     }
     
     public Map<String, String> getSingularDataTypes() {
