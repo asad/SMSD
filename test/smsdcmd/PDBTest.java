@@ -7,6 +7,9 @@ import junit.framework.Assert;
 
 import org.junit.Test;
 
+import cmd.ArgumentHandler;
+import cmd.SMSDcmd;
+
 public class PDBTest {
     
     public static String MOL_DATA_FOLDER = "test/data/mdl";
