@@ -75,7 +75,7 @@ public class SingleMappingHandler extends AbstractMCSAlgorithm implements IMCSBa
      * @param source
      * @param target
      */
-  @Override
+    @Override
     @TestMethod("testSet_MolHandler_MolHandler")
     public synchronized void set(IAtomContainer source, IAtomContainer target) {
         this.source = source;
@@ -180,7 +180,7 @@ public class SingleMappingHandler extends AbstractMCSAlgorithm implements IMCSBa
     @Override
     @TestMethod("testGetAllMapping")
     public List<Map<Integer, Integer>> getAllMapping() {
-        return Collections.unmodifiableList(allMCS);
+        return allMCS;
     }
 
     /** {@inheritDoc}
@@ -188,7 +188,7 @@ public class SingleMappingHandler extends AbstractMCSAlgorithm implements IMCSBa
     @Override
     @TestMethod("testGetFirstMapping")
     public Map<Integer, Integer> getFirstMapping() {
-        return Collections.unmodifiableMap(firstMCS);
+        return firstMCS;
     }
 
     /** {@inheritDoc}
@@ -196,7 +196,7 @@ public class SingleMappingHandler extends AbstractMCSAlgorithm implements IMCSBa
     @Override
     @TestMethod("testGetAllAtomMapping")
     public List<Map<IAtom, IAtom>> getAllAtomMapping() {
-        return Collections.unmodifiableList(allAtomMCS);
+        return allAtomMCS;
     }
 
     /** {@inheritDoc}
@@ -204,6 +204,6 @@ public class SingleMappingHandler extends AbstractMCSAlgorithm implements IMCSBa
     @Override
     @TestMethod("testGetFirstAtomMapping")
     public Map<IAtom, IAtom> getFirstAtomMapping() {
-        return Collections.unmodifiableMap(atomsMCS);
+        return atomsMCS;
     }
 }

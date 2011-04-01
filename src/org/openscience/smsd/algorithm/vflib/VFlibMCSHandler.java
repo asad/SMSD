@@ -177,7 +177,7 @@ public class VFlibMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
     @Override
     @TestMethod("testGetAllAtomMapping")
     public List<Map<IAtom, IAtom>> getAllAtomMapping() {
-        return Collections.unmodifiableList(allAtomMCS);
+        return allAtomMCS;
     }
 
     /** {@inheritDoc}
@@ -185,7 +185,7 @@ public class VFlibMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
     @Override
     @TestMethod("testGetAllMapping")
     public List<Map<Integer, Integer>> getAllMapping() {
-        return Collections.unmodifiableList(allMCS);
+        return allMCS;
     }
 
     /** {@inheritDoc}
@@ -193,7 +193,7 @@ public class VFlibMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
     @Override
     @TestMethod("testGetFirstAtomMapping")
     public Map<IAtom, IAtom> getFirstAtomMapping() {
-        return Collections.unmodifiableMap(atomsMCS);
+        return atomsMCS;
     }
 
     /** {@inheritDoc}
@@ -201,7 +201,7 @@ public class VFlibMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
     @Override
     @TestMethod("testGetFirstMapping")
     public Map<Integer, Integer> getFirstMapping() {
-        return Collections.unmodifiableMap(firstMCS);
+        return firstMCS;
     }
 
     private int checkCommonAtomCount(IAtomContainer reactantMolecule, IAtomContainer productMolecule) {

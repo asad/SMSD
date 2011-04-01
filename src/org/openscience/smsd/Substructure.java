@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.logging.Level;
-import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.annotations.TestMethod;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
@@ -66,10 +65,10 @@ public class Substructure implements IAtomAtomMapping {
     private List<Double> stereoScore = null;
     private List<Integer> fragmentSize = null;
     private List<Double> bEnergies = null;
-    private static List<Map<IAtom, IAtom>> allAtomMCS = null;
-    private static Map<IAtom, IAtom> firstAtomMCS = null;
-    private static Map<Integer, Integer> firstIndexMCS = null;
-    private static List<Map<Integer, Integer>> allMCS = null;
+    private List<Map<IAtom, IAtom>> allAtomMCS = null;
+    private Map<IAtom, IAtom> firstAtomMCS = null;
+    private Map<Integer, Integer> firstIndexMCS = null;
+    private List<Map<Integer, Integer>> allIndexMCS = null;
     private IAtomContainer mol1 = null;
     private IAtomContainer mol2 = null;
     private List<AtomMapping> vfLibSolutions = null;
@@ -85,7 +84,7 @@ public class Substructure implements IAtomAtomMapping {
         allAtomMCS = new ArrayList<Map<IAtom, IAtom>>();
         firstAtomMCS = new HashMap<IAtom, IAtom>();
         firstIndexMCS = new TreeMap<Integer, Integer>();
-        allMCS = new ArrayList<Map<Integer, Integer>>();
+        allIndexMCS = new ArrayList<Map<Integer, Integer>>();
 
         TimeOut tmo = TimeOut.getInstance();
         tmo.setCDKMCSTimeOut(0.15);
@@ -94,7 +93,7 @@ public class Substructure implements IAtomAtomMapping {
     private void setFirstMappings() {
         if (!allAtomMCS.isEmpty()) {
             firstAtomMCS.putAll(allAtomMCS.get(0));
-            firstIndexMCS.putAll(allMCS.get(0));
+            firstIndexMCS.putAll(allIndexMCS.get(0));
         }
     }
 
@@ -139,7 +138,7 @@ public class Substructure implements IAtomAtomMapping {
      */
     @Override
     public List<Map<IAtom, IAtom>> getAllAtomMapping() {
-        return Collections.unmodifiableList(allAtomMCS);
+        return allAtomMCS;
     }
 
     /** {@inheritDoc}
@@ -147,7 +146,7 @@ public class Substructure implements IAtomAtomMapping {
      */
     @Override
     public List<Map<Integer, Integer>> getAllMapping() {
-        return Collections.unmodifiableList(allMCS);
+        return allIndexMCS;
     }
 
     /** {@inheritDoc}
@@ -155,7 +154,7 @@ public class Substructure implements IAtomAtomMapping {
      */
     @Override
     public Map<IAtom, IAtom> getFirstAtomMapping() {
-        return Collections.unmodifiableMap(firstAtomMCS);
+        return firstAtomMCS;
     }
 
     /** {@inheritDoc}
@@ -163,7 +162,7 @@ public class Substructure implements IAtomAtomMapping {
      */
     @Override
     public Map<Integer, Integer> getFirstMapping() {
-        return Collections.unmodifiableMap(firstIndexMCS);
+        return firstIndexMCS;
     }
 
     private void setVFMappings() {
@@ -195,10 +194,10 @@ public class Substructure implements IAtomAtomMapping {
                     }
                 }
             }
-            if (!atomatomMapping.isEmpty() && !hasMap(indexindexMapping, allMCS)
+            if (!atomatomMapping.isEmpty() && !hasMap(indexindexMapping, allIndexMCS)
                     && indexindexMapping.size() == vfMappingSize) {
                 allAtomMCS.add(counter, atomatomMapping);
-                allMCS.add(counter, indexindexMapping);
+                allIndexMCS.add(counter, indexindexMapping);
                 counter++;
             }
         }
@@ -252,7 +251,7 @@ public class Substructure implements IAtomAtomMapping {
         if (!allAtomMCS.isEmpty()) {
             setFirstMappings();
         }
-        return (!allMCS.isEmpty() && allMCS.iterator().next().size() == getReactantMol().getAtomCount()) ? true : false;
+        return (!allIndexMCS.isEmpty() && allIndexMCS.iterator().next().size() == getReactantMol().getAtomCount()) ? true : false;
     }
 
     /**
@@ -261,20 +260,16 @@ public class Substructure implements IAtomAtomMapping {
      * @return
      */
     public boolean findSubgraph(boolean shouldMatchBonds) {
-//        System.out.println("Mol1 Size: -> " + getReactantMol().getAtomCount());
-//        System.out.println("Mol2 Size. -> " + getProductMol().getAtomCount());
 
         setBondMatchFlag(shouldMatchBonds);
         if (getReactantMol().getAtomCount() > getProductMol().getAtomCount()) {
             return false;
         } else {
-
             vfLibSolutions = new ArrayList<AtomMapping>();
             if (getProductMol() != null) {
                 VF2 mapper = new VF2();
                 AtomMapping atomMapping = mapper.isomorphism(getReactantMol(), getProductMol(), shouldMatchBonds);
                 if (!atomMapping.isEmpty()) {
-//                    System.out.println("Mappings " + atomMapping);
                     vfLibSolutions.add(atomMapping);
                 } else {
                     return false;
@@ -285,7 +280,7 @@ public class Substructure implements IAtomAtomMapping {
         if (!allAtomMCS.isEmpty()) {
             setFirstMappings();
         }
-        return (!allMCS.isEmpty() && allMCS.iterator().next().size() == getReactantMol().getAtomCount()) ? true : false;
+        return (!allIndexMCS.isEmpty() && allIndexMCS.iterator().next().size() == getReactantMol().getAtomCount()) ? true : false;
     }
 
     /**
@@ -314,7 +309,7 @@ public class Substructure implements IAtomAtomMapping {
     public void setChemFilters(boolean stereoFilter, boolean fragmentFilter, boolean energyFilter) {
 
         if (firstAtomMCS != null) {
-            ChemicalFilters chemFilter = new ChemicalFilters(allMCS, allAtomMCS,
+            ChemicalFilters chemFilter = new ChemicalFilters(allIndexMCS, allAtomMCS,
                     getFirstMapping(), getFirstAtomMapping(), getReactantMol(), getProductMol());
 
             if (energyFilter) {
@@ -446,97 +441,6 @@ public class Substructure implements IAtomAtomMapping {
             flag = true;
         }
         return flag;
-    }
-
-    /**
-     *  Checks some simple heuristics for whether the subgraph query can
-     *  realistically be atom subgraph of the supergraph. If, for example, the
-     *  number of nitrogen atoms in the query is larger than that of the supergraph
-     *  it cannot be part of it.
-     *
-     * @param  ac1  the supergraph to be checked. 
-     * @param  ac2  the subgraph to be tested for. Must not be an IQueryAtomContainer.
-     * @return    true if the subgraph ac1 has atom chance to be atom subgraph of ac2
-     * @throws org.openscience.cdk.exception.CDKException if the first molecule is an instance
-     * of IQueryAtomContainer
-     */
-    private static boolean testIsSubgraphHeuristics(IAtomContainer ac1, IAtomContainer ac2) {
-
-        int ac1SingleBondCount = 0;
-        int ac1DoubleBondCount = 0;
-        int ac1TripleBondCount = 0;
-        int ac1AromaticBondCount = 0;
-        int ac2SingleBondCount = 0;
-        int ac2DoubleBondCount = 0;
-        int ac2TripleBondCount = 0;
-        int ac2AromaticBondCount = 0;
-
-        IBond bond = null;
-
-        for (int i = 0; i < ac1.getBondCount(); i++) {
-            bond = ac1.getBond(i);
-            if (bond.getFlag(CDKConstants.ISAROMATIC)) {
-                ac1AromaticBondCount++;
-            } else if (bond.getOrder() == IBond.Order.SINGLE) {
-                ac1SingleBondCount++;
-            } else if (bond.getOrder() == IBond.Order.DOUBLE) {
-                ac1DoubleBondCount++;
-            } else if (bond.getOrder() == IBond.Order.TRIPLE) {
-                ac1TripleBondCount++;
-            }
-        }
-        for (int i = 0; i < ac2.getBondCount(); i++) {
-            bond = ac2.getBond(i);
-
-            if (bond.getFlag(CDKConstants.ISAROMATIC)) {
-                ac2AromaticBondCount++;
-            } else if (bond.getOrder() == IBond.Order.SINGLE) {
-                ac2SingleBondCount++;
-            } else if (bond.getOrder() == IBond.Order.DOUBLE) {
-                ac2DoubleBondCount++;
-            } else if (bond.getOrder() == IBond.Order.TRIPLE) {
-                ac2TripleBondCount++;
-            }
-        }
-
-        if (ac2SingleBondCount < ac1SingleBondCount) {
-            return false;
-        }
-        if (ac2AromaticBondCount < ac1AromaticBondCount) {
-            return false;
-        }
-        if (ac2DoubleBondCount < ac1DoubleBondCount) {
-            return false;
-        }
-        if (ac2TripleBondCount < ac1TripleBondCount) {
-            return false;
-        }
-
-        IAtom atom = null;
-        Map<String, Integer> map = new HashMap<String, Integer>();
-        for (int i = 0; i < ac1.getAtomCount(); i++) {
-            atom = ac1.getAtom(i);
-
-            if (map.containsKey(atom.getSymbol())) {
-                int val = map.get(atom.getSymbol()) + 1;
-                map.put(atom.getSymbol(), val);
-            } else {
-                map.put(atom.getSymbol(), 1);
-            }
-        }
-        for (int i = 0; i < ac2.getAtomCount(); i++) {
-            atom = ac2.getAtom(i);
-            if (map.containsKey(atom.getSymbol())) {
-                int val = map.get(atom.getSymbol()) - 1;
-                if (val > 0) {
-                    map.put(atom.getSymbol(), val);
-                } else {
-                    map.remove(atom.getSymbol());
-                }
-            }
-        }
-//        System.out.println("Map " + map);
-        return map.isEmpty();
     }
 
     @Override
