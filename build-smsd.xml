@@ -101,7 +101,7 @@
 		<chmod perm="a+x" file="SMSD.bat"/>
 
 		<zip destfile="${store.jar.name}${TODAY}.zip">
-			<filelist files="${store.jar.path},SMSD"/>
+			<filelist files="${store.jar.path},SMSD,SMSD.bat"/>
 		</zip>
 	</target>
 	<target name="clean" description="remove build dir">
