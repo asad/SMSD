@@ -119,10 +119,12 @@ public class ImageGenerator {
             try {
                 for (Object property : properties.keySet()) {
                     String key = (String) property; // force keys to be strings
+                    boolean found = false;
                     if (properties.containsKey(key)) {
                         Object value = properties.getProperty(key);
                         for (Field field : Params.class.getFields()) {
                             if (field.getName().equals(key)) {
+                                found = true;
                                 Class<?> type = field.getType();
                                 if (type.equals(Boolean.TYPE)) {
                                     field.set(params, Boolean.valueOf((String)value));
@@ -134,6 +136,10 @@ public class ImageGenerator {
                                     field.set(params, value);
                                 }
                             }
+                        }
+                        if (!found) {
+                            System.err.println(
+                                    "WARNING  : imageOption " + key + " not found!");
                         }
                     }
                 }

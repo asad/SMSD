@@ -7,6 +7,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.lang.reflect.Field;
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +21,7 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IMolecule;
 import org.openscience.cdk.io.MDLV2000Writer;
 import org.openscience.cdk.smiles.SmilesGenerator;
+import org.openscience.reactionblast.graphics.direct.Params;
 
 /**
  * Writes the results of SMSD to text files and images.
@@ -44,6 +46,20 @@ public class OutputHandler {
         nf = NumberFormat.getInstance();
         nf.setMaximumFractionDigits(2);
         nf.setMinimumFractionDigits(2);
+    }
+    
+    public void printImageOptionsHelp() {
+        Params params = imageGenerator.getParams();
+        System.out.println("Image options, and default values");
+        for (Field field : params.getClass().getFields()) {
+            try {
+                System.out.println(field.getName() + "=" + field.get(params));
+            } catch (IllegalArgumentException e) {
+                e.printStackTrace();
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     public void writeQueryMol(IAtomContainer mol) throws IllegalArgumentException, IOException, CDKException {

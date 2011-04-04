@@ -10,9 +10,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.MissingOptionException;
-import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.openscience.cdk.Molecule;
 import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
@@ -47,6 +45,9 @@ public class SMSDcmd {
             if (argumentHandler.isHelp()) {
                 argumentHandler.printHelp();
                 inputHandler.printDataTypeHelp();
+            } else if (argumentHandler.isImageOptionHelp()) {
+                OutputHandler outputHandler = new OutputHandler(argumentHandler);
+                outputHandler.printImageOptionsHelp();
             } else {
                 run(argumentHandler, inputHandler);
             }

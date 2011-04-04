@@ -89,6 +89,7 @@ public class ArgumentHandler {
     private Options options;
     private String[] remainingArgs;
     private Properties imageProperties;
+    private boolean isImageOptionHelp = false;
 
     protected void printError(String errmessg) {
         System.err.println(errmessg);
@@ -167,7 +168,7 @@ public class ArgumentHandler {
         );
         
         options.addOption(
-                OptionBuilder.hasArgs(2).withValueSeparator().withDescription("Image options").withArgName("option=value").create("I")
+                OptionBuilder.hasOptionalArgs(2).withValueSeparator().withDescription("Image options").withArgName("option=value").create("I")
         );
 
         PosixParser parser = new PosixParser();
@@ -281,6 +282,10 @@ public class ArgumentHandler {
         
         if (line.hasOption("I")) {
             imageProperties = line.getOptionProperties("I");
+            if (imageProperties.isEmpty()) {
+                // used just "-I" by itself
+                isImageOptionHelp = true;
+            }
         }
     }
     
@@ -598,6 +603,10 @@ public class ArgumentHandler {
 
     public void setImageHeight(int imageHeight) {
         this.imageHeight = imageHeight;
+    }
+
+    public boolean isImageOptionHelp() {
+        return isImageOptionHelp;
     }
     
 }
