@@ -23,10 +23,7 @@
 		</ant>
 	</target>
 
-	<!--
 	<target name="compile-smsd" depends="cdk-ant">
-	-->
-	<target name="compile-smsd">
 		<mkdir dir="build"/>
 
 		<!-- Copy the CDK classes -->
