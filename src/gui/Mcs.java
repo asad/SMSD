@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
-import org.junit.Test;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
@@ -53,7 +52,6 @@ public class Mcs {
         return (IAtomContainer) mcsmolecule.clone();
     }
 
-    @Test
     public static void main(String[] args) throws CDKException, CloneNotSupportedException, IOException {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         // Men_12
