@@ -8,4 +8,6 @@ build
 /dist/
 /store/
 SMSD*.jar
+SMSD*.zip
+SMSD
 build.properties

@@ -23,7 +23,10 @@
 		</ant>
 	</target>
 
+	<!--
 	<target name="compile-smsd" depends="cdk-ant">
+	-->
+	<target name="compile-smsd">
 		<mkdir dir="build"/>
 
 		<!-- Copy the CDK classes -->
@@ -69,14 +72,15 @@
 
 	<target name="package-for-store" depends="compile-smsd">
 
-		<property name="store.jar.name" value="SMSDcmd"/>
+		<property name="store.jar.name" value="SMSD"/>
 		<property name="store.dir" value="."/>
 		<tstamp>
 			<format property="TODAY" pattern="yyyyMMdd" />
 		</tstamp>
-		<property name="store.jar" value="${store.dir}/${store.jar.name}${TODAY}.jar"/>
+		<property name="store.jar" value="${store.jar.name}${TODAY}.jar"/>
+		<property name="store.jar.path" value="${store.dir}/${store.jar}"/>
 
-		<jar destfile="${store.jar}" filesetmanifest="skip">
+		<jar destfile="${store.jar.path}" filesetmanifest="skip">
 			<fileset dir="build" includes="**"/>
 			<zipgroupfileset dir="lib" includes="*.jar"/>
 			<zipgroupfileset file="lib/commons-cli-1.2/commons-cli-1.2.jar"/>
@@ -86,10 +90,15 @@
 			<zipgroupfileset file="${CDK_dir}/jar/vecmath-*.jar"/>
 
 			<manifest>
-				<attribute name="Main-Class" value="cmd.SMSDcmd"/>
+				<attribute name="Main-Class" value="gui.SMSDFrame"/>
 			</manifest>
 		</jar>
+		
+		<echo file="SMSD">java -cp ${store.jar} cmd.SMSDcmd</echo>
 
+		<zip destfile="${store.jar.name}${TODAY}.zip">
+			<filelist files="${store.jar.path},SMSD"/>
+		</zip>
 	</target>
 	<target name="clean" description="remove build dir">
 		<delete dir="build"/>
