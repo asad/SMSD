@@ -7,5 +7,5 @@ build
 /nbproject/private/
 /dist/
 /store/
-*.jar
+SMSD*.jar
 build.properties
