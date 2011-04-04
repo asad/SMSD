@@ -9,9 +9,11 @@ import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 import javax.imageio.ImageIO;
 
@@ -23,6 +25,7 @@ import org.openscience.cdk.interfaces.IMoleculeSet;
 import org.openscience.cdk.nonotify.NoNotificationChemObjectBuilder;
 import org.openscience.reactionblast.graphics.direct.DirectArrowDrawer;
 import org.openscience.reactionblast.graphics.direct.DirectMoleculeDrawer;
+import org.openscience.reactionblast.graphics.direct.Params;
 import org.openscience.reactionblast.graphics.direct.ZoomToFitDrawer;
 import org.openscience.reactionblast.graphics.direct.layout.ArrowWheel;
 import org.openscience.reactionblast.graphics.direct.layout.CircularCanvasGenerator;
@@ -52,9 +55,11 @@ public class ImageGenerator {
     public final static int SUB_IMAGE_WIDTH = 300;
     public final static int SUB_IMAGE_HEIGHT = 300;
     private List<QueryTargetPair> queryTargetPairs;
+    private ArgumentHandler argumentHandler;
 
-    public ImageGenerator() {
+    public ImageGenerator(ArgumentHandler argumentHandler) {
         queryTargetPairs = new ArrayList<QueryTargetPair>();
+        this.argumentHandler = argumentHandler;
     }
 
     public void addImages(
@@ -104,6 +109,40 @@ public class ImageGenerator {
                 new QueryTargetPair(
                 cloneOfQuery, cloneOfTarget, querySubgraph, targetSubgraph, label));
     }
+    
+    public Params getParams() {
+        Properties properties = argumentHandler.getImageProperties();
+        if (properties == null) {
+            return new Params();
+        } else {
+            Params params = new Params();
+            try {
+                for (Object property : properties.keySet()) {
+                    String key = (String) property; // force keys to be strings
+                    if (properties.containsKey(key)) {
+                        Object value = properties.getProperty(key);
+                        for (Field field : Params.class.getFields()) {
+                            if (field.getName().equals(key)) {
+                                Class<?> type = field.getType();
+                                if (type.equals(Boolean.TYPE)) {
+                                    field.set(params, Boolean.valueOf((String)value));
+                                } else if (type.equals(Integer.TYPE)) {
+                                    field.set(params, Integer.valueOf((String)value));
+                                } else if (type.equals(Double.TYPE)) {
+                                    field.set(params, Double.valueOf((String)value));
+                                } else {
+                                    field.set(params, value);
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return params;
+        }
+    }
 
     public void createImage(String outImageFileName, String qName, String tName) {
         createImage(outImageFileName, qName, tName, SUB_IMAGE_WIDTH, SUB_IMAGE_HEIGHT);
@@ -112,7 +151,8 @@ public class ImageGenerator {
     public void createImage(
             String outImageFileName, String qName, String tName, int w, int h) {
         // layout, and set the highlight subgraphs
-        DirectMoleculeDrawer moleculeDrawer = new DirectMoleculeDrawer();
+        Params params = getParams();
+        DirectMoleculeDrawer moleculeDrawer = new DirectMoleculeDrawer(params);
         moleculeDrawer.getParams().drawAtomID = true;
         IChemObjectBuilder builder = NoNotificationChemObjectBuilder.getInstance();
         IMoleculeSet leftHandMoleculeSet = builder.newInstance(IMoleculeSet.class);
@@ -165,7 +205,7 @@ public class ImageGenerator {
         CircularCanvasGenerator generator = new CircularCanvasGenerator(true);
         Dimension cellDim = new Dimension(SUB_IMAGE_WIDTH, SUB_IMAGE_HEIGHT);
         generator.layout(all, cellDim);
-        DirectMoleculeDrawer moleculeDrawer = new DirectMoleculeDrawer();
+        DirectMoleculeDrawer moleculeDrawer = new DirectMoleculeDrawer(getParams());
         
         // add the highlights
         int containerIndex = 0;
@@ -214,7 +254,7 @@ public class ImageGenerator {
 
     public RenderedImage createImage(int w, int h) {
         // layout, and set the highlight subgraphs
-        DirectMoleculeDrawer moleculeDrawer = new DirectMoleculeDrawer();
+        DirectMoleculeDrawer moleculeDrawer = new DirectMoleculeDrawer(getParams());
         IChemObjectBuilder builder = NoNotificationChemObjectBuilder.getInstance();
         IMoleculeSet leftHandMoleculeSet = builder.newInstance(IMoleculeSet.class);
         IMoleculeSet rightHandMoleculeSet = builder.newInstance(IMoleculeSet.class);

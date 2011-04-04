@@ -5,6 +5,7 @@
 package cmd;
 
 import java.io.Writer;
+import java.util.Properties;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
@@ -87,6 +88,7 @@ public class ArgumentHandler {
     private boolean helpRequested = false;
     private Options options;
     private String[] remainingArgs;
+    private Properties imageProperties;
 
     protected void printError(String errmessg) {
         System.err.println(errmessg);
@@ -101,7 +103,7 @@ public class ArgumentHandler {
      * @throws org.apache.commons.cli.ParseException 
      */
     @SuppressWarnings("static-access")
-    protected void parseCommandLineOptions(String[] args) throws ParseException {
+    public void parseCommandLineOptions(String[] args) throws ParseException {
 
         options = new Options();
 
@@ -162,6 +164,10 @@ public class ArgumentHandler {
         
         options.addOption(
                 OptionBuilder.hasArg().withDescription("Output type").withArgName("type").create("O")
+        );
+        
+        options.addOption(
+                OptionBuilder.hasArgs(2).withValueSeparator().withDescription("Image options").withArgName("option=value").create("I")
         );
 
         PosixParser parser = new PosixParser();
@@ -272,7 +278,18 @@ public class ArgumentHandler {
                 throw new ParseException("Malformed dimension string " + dimensionString);
             }
         }
-       
+        
+        if (line.hasOption("I")) {
+            imageProperties = line.getOptionProperties("I");
+        }
+    }
+    
+    public Properties getImageProperties() {
+        return imageProperties;
+    }
+    
+    public void setImageProperties(Properties imageProperties) {
+        this.imageProperties = imageProperties;
     }
     
     public Options getOptions() {

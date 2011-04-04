@@ -38,7 +38,7 @@ public class OutputHandler {
 
     public OutputHandler(ArgumentHandler argumentHandler) {
         this.argumentHandler = argumentHandler;
-        imageGenerator = new ImageGenerator();
+        imageGenerator = new ImageGenerator(argumentHandler);
 
         ////set the format right for the Tanimoto score (only two digits printed)
         nf = NumberFormat.getInstance();
