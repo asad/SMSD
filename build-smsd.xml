@@ -95,6 +95,10 @@
 		</jar>
 		
 		<echo file="SMSD">java -cp ${store.jar} cmd.SMSDcmd</echo>
+		<chmod perm="a+x" file="SMSD"/>
+		
+		<echo file="SMSD.bat">java -cp ${store.jar} cmd.SMSDcmd</echo>
+		<chmod perm="a+x" file="SMSD.bat"/>
 
 		<zip destfile="${store.jar.name}${TODAY}.zip">
 			<filelist files="${store.jar.path},SMSD"/>
