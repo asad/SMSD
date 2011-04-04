@@ -30,8 +30,6 @@ import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IMolecule;
 import org.openscience.cdk.smiles.SmilesParser;
-import org.openscience.smsd.Isomorphism;
-import org.openscience.smsd.Substructure;
 import org.openscience.smsd.interfaces.Algorithm;
 
 /**
@@ -362,7 +360,7 @@ public class SubstructureTest {
         Substructure smsd1 = new Substructure();
         smsd1.init(queryac, target);
         smsd1.findSubgraph(false);
-        smsd1.setChemFilters(false, false, false);
+        smsd1.setChemFilters(false, true, false);
         assertEquals(true, smsd1.isSubgraph(false));
     }
 
@@ -383,11 +381,5 @@ public class SubstructureTest {
 
         double score = 3.605;
         assertEquals(score, smsd1.getEuclideanDistance(), 0.005);
-
-        Isomorphism smsd2 = new Isomorphism(Algorithm.VFLibMCS, true);
-        smsd2.init(queryac, target);
-        smsd2.setChemFilters(true, true, true);
-
-        assertEquals(score, smsd2.getEuclideanDistance(), 0.005);
     }
 }

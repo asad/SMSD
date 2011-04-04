@@ -4,7 +4,7 @@
  *  $Revision$
  *
  *  Copyright (C) 1997-2007  Christoph Steinbeck
- *
+ *                      2011 Syed Asad Rahman<asad@ebi.ac.uk>
  *  Contact: cdk-devel@lists.sourceforge.net
  *
  *  This program is free software; you can redistribute it and/or

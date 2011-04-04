@@ -1,4 +1,4 @@
-/* Copyright (C) 2006-2010  Syed Asad Rahman <asad@ebi.ac.uk>
+/* Copyright (C) 2006-2011  Syed Asad Rahman <asad@ebi.ac.uk>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -246,7 +246,7 @@ public class CDKSubGraphHandler extends AbstractSubGraph implements IMCSBase {
     @Override
     @TestMethod("testGetAllMapping")
     public List<Map<Integer, Integer>> getAllMapping() {
-        return Collections.unmodifiableList(allMCS);
+        return allMCS;
     }
 
     /** {@inheritDoc}
@@ -254,7 +254,7 @@ public class CDKSubGraphHandler extends AbstractSubGraph implements IMCSBase {
     @Override
     @TestMethod("testGetFirstMapping")
     public Map<Integer, Integer> getFirstMapping() {
-        return Collections.unmodifiableMap(firstMCS);
+        return firstMCS;
     }
 
     /** {@inheritDoc}
@@ -262,7 +262,7 @@ public class CDKSubGraphHandler extends AbstractSubGraph implements IMCSBase {
     @Override
     @TestMethod("testGetAllAtomMapping")
     public List<Map<IAtom, IAtom>> getAllAtomMapping() {
-        return Collections.unmodifiableList(allAtomMCS);
+        return allAtomMCS;
     }
 
     /** {@inheritDoc}
@@ -270,6 +270,6 @@ public class CDKSubGraphHandler extends AbstractSubGraph implements IMCSBase {
     @Override
     @TestMethod("testGetFirstAtomMapping")
     public Map<IAtom, IAtom> getFirstAtomMapping() {
-        return Collections.unmodifiableMap(firstAtomMCS);
+        return firstAtomMCS;
     }
 }
