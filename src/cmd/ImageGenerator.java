@@ -112,10 +112,10 @@ public class ImageGenerator {
     
     public Params getParams() {
         Properties properties = argumentHandler.getImageProperties();
+        Params params = new Params();
         if (properties == null) {
-            return new Params();
+            params.drawAtomID = true;
         } else {
-            Params params = new Params();
             try {
                 for (Object property : properties.keySet()) {
                     String key = (String) property; // force keys to be strings
@@ -146,8 +146,8 @@ public class ImageGenerator {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            return params;
         }
+        return params;
     }
 
     public void createImage(String outImageFileName, String qName, String tName) {
@@ -159,7 +159,6 @@ public class ImageGenerator {
         // layout, and set the highlight subgraphs
         Params params = getParams();
         DirectMoleculeDrawer moleculeDrawer = new DirectMoleculeDrawer(params);
-        moleculeDrawer.getParams().drawAtomID = true;
         IChemObjectBuilder builder = NoNotificationChemObjectBuilder.getInstance();
         IMoleculeSet leftHandMoleculeSet = builder.newInstance(IMoleculeSet.class);
         IMoleculeSet rightHandMoleculeSet = builder.newInstance(IMoleculeSet.class);
@@ -177,7 +176,10 @@ public class ImageGenerator {
         // make the image, and draw the molecules on it
         Image image = moleculeDrawer.makeBlankImage(width, height);
         Graphics2D g = (Graphics2D) image.getGraphics();
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        if (params.useAntialias) {
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                               RenderingHints.VALUE_ANTIALIAS_ON);
+        }
         List<IAtomContainer> mols = new ArrayList<IAtomContainer>();
         for (QueryTargetPair pair : queryTargetPairs) {
             mols.add(pair.query);
@@ -211,7 +213,8 @@ public class ImageGenerator {
         CircularCanvasGenerator generator = new CircularCanvasGenerator(true);
         Dimension cellDim = new Dimension(SUB_IMAGE_WIDTH, SUB_IMAGE_HEIGHT);
         generator.layout(all, cellDim);
-        DirectMoleculeDrawer moleculeDrawer = new DirectMoleculeDrawer(getParams());
+        Params params = getParams();
+        DirectMoleculeDrawer moleculeDrawer = new DirectMoleculeDrawer(params);
         
         // add the highlights
         int containerIndex = 0;
@@ -227,8 +230,10 @@ public class ImageGenerator {
         int height = size.height;
         Image image = new BufferedImage(width, height, BufferedImage.TYPE_INT_BGR);
         Graphics2D g = (Graphics2D) image.getGraphics();
-        g.setRenderingHint(
-                RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        if (params.useAntialias) {
+            g.setRenderingHint(
+                    RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        }
         g.setColor(Color.WHITE);
         g.fillRect(0, 0, width, height);
         
