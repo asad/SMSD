@@ -102,6 +102,7 @@
 
 		<zip destfile="${store.jar.name}${TODAY}.zip">
 			<filelist files="${store.jar.path},SMSD,SMSD.bat"/>
+			<fileset dir="docs"/>
 		</zip>
 	</target>
 	<target name="clean" description="remove build dir">

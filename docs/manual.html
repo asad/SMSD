@@ -1,7 +1,22 @@
 <html>
 <head>
 <title>SMSD Command-line usage</title>
+<style>
+    span.cmd { background-color : #F0FFFF }
+</style>
 </head>
 <body>
+<h1>Filetypes</h1>
+<p>SMSD matches various filetypes, to see a list of supported types, run SMSD with "-h". At the end of the help, the list of types is shown, along with a description for each type. The type is a short identifier ('MOL', 'PDB', etc) that is used to tell SMSD what to expect. The query and the target files can have different types, for example:</p>
+<p><span class="cmd">./SMSD -Q MOL -q molfile.mol -T PDB -t pdbfile.pdb<span></p>
+<p>Where the uppercase flags (-Q and -T) give the types, and the lowercase flags (-q and -t) give the filenames. For 'string' types - such as SMILEs - the filename will be the data itself:</p>
+<p><span class="cmd">./SMSD -Q SMI -q "CCC" -T PDB -t pdbfile.pdb<span></p>
+<p>Note that, while the quotes may not always be necessary, they will prevent problems with more complex SMILEs.</p>
+<h1>Images</h1>
+<p>To generate an image of the isomorphism, use the -g flag, like this:</p>
+<p><span class="cmd">./SMSD -Q MOL -q ATP.mol -T MOL -t ATP.mol -g<span></p>
+<p>This will generate an image named "ADP_ATP.png" looking something like:</p>
+<img src="img/ADP_ATP.png"/>
+<p>Clearly the name of the image is generated using the names of the query and target input files. If string format molecules are used, the string will be used; for example, "CCC_CCCC.png". The size of the image can be changed with the -d flag, like : -d 400x200 to create an image with a width of 400 and a height of 200.</p>
 </body>
 </html>
