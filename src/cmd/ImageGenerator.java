@@ -171,7 +171,7 @@ public class ImageGenerator {
         int containerIndex = 0;
         for (Map<Integer, Integer> mapping : mappings) {
             IAtomContainer target = rim.get(containerIndex);
-            System.out.println(mapping + " " + target.getAtomCount());
+//            System.out.println(mapping + " " + target.getAtomCount());
             moleculeDrawer.addHighlights(getHighlightContainer(target, mapping));
             containerIndex++;
         }
