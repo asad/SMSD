@@ -12,11 +12,18 @@
 <p>Where the uppercase flags (-Q and -T) give the types, and the lowercase flags (-q and -t) give the filenames. For 'string' types - such as SMILEs - the filename will be the data itself:</p>
 <p><span class="cmd">./SMSD -Q SMI -q "CCC" -T PDB -t pdbfile.pdb<span></p>
 <p>Note that, while the quotes may not always be necessary, they will prevent problems with more complex SMILEs.</p>
+<p>Types can also be used with the output subgraph. There is a corresponding pair of -o/-O flags for the output filepath, and output filetype, respectively. So, to write the subgraph to a molfile, write:</p>
+<p><span class="cmd">./SMSD -Q SMI -q "CCC" -T PDB -t ATP.pdb -O MOL -o subgraph.mol<span></p>
+<p>For convenience, the output filepath can be given as the special name "--", which means "write to stdout". This is a quick way to see the subgraph, especially, if the output filetype is SMI.</p>
+<p><span class="cmd">./SMSD -Q SMI -q "CCC" -T SMI -t "CCN" -O SMI -o -- <span></p>
+<p>This will just print "CC", as that is the common subgraph of these two smiles.</p>
 <h1>Images</h1>
 <p>To generate an image of the isomorphism, use the -g flag, like this:</p>
 <p><span class="cmd">./SMSD -Q MOL -q ATP.mol -T MOL -t ATP.mol -g<span></p>
 <p>This will generate an image named "ADP_ATP.png" looking something like:</p>
 <img src="img/ADP_ATP.png"/>
 <p>Clearly the name of the image is generated using the names of the query and target input files. If string format molecules are used, the string will be used; for example, "CCC_CCCC.png". The size of the image can be changed with the -d flag, like : -d 400x200 to create an image with a width of 400 and a height of 200.</p>
+<h1>N-MCS</h1>
+<p>To get the maximum common subgraph (MCS) of a set of molecules, 
 </body>
 </html>
