@@ -84,7 +84,7 @@ public class BondTypeFactory {
         }
     }
     
-    public static final String DICTIONARY = "smsdcmd/pdb/bond_dictionary.txt";
+    public static final String DICTIONARY = "cmd/pdb/bond_dictionary.txt";
     
     private static BondTypeFactory instance;
     
