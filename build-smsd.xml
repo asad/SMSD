@@ -1,42 +1,100 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project name="SMSDcmd" default="package-for-store" basedir=".">
-    <property file="build.properties"/>
-    <property name="build.dir" value="build"/>
-    <property name="CDK_bin_dir" value="${CDK_dir}/bin"/>
+	<property file="build.properties"/>
+	<property name="cdk_src_dir" value="${CDK_dir}/src/main"/>
+	<property name="cdk_bin_dir" value="${CDK_dir}/build"/>
+	<property name="module_list" value="core,standard,nonotify,annotation,io,data,dict,fingerprint,interfaces,pdb,sdg,isomorphism,valencycheck,smarts,signature,smiles,extra,render"/>
 
-    <target name="package-for-store">
-        <!-- Copy the SMSD classes -->
-        <copy todir="${build.dir}/bin">
-            <fileset dir="bin"/>
-        </copy>
+	<target name="test">
+		<script language="groovy">
+		<classpath>
+		    <fileset dir="lib" includes="*.jar"/>
+		</classpath>
+			for (m in module_list.split(",")) { println(m) }
+		</script>
+	</target>
+	
+	<target name="cdk-ant" description="build cdk">
+		<echo>"Building CDK"</echo>
+		<property name="build" value="${CDK_dir}/build"/>
+		<property name="build.src" value="${CDK_dir}/build/src"/>
+		<property name="src" value="${CDK_dir}/src"/>
+		<ant target="dist-all" dir="${CDK_dir}">
+		</ant>
+	</target>
 
-        <!-- Copy the CDK classes -->
-        <copy todir="${build.dir}/bin">
-            <fileset dir="${CDK_bin_dir}" excludes="data/**"/>
-        </copy>
+	<!--
+	<target name="compile-smsd" depends="cdk-ant">
+	-->
+	<target name="compile-smsd">
+		<mkdir dir="build"/>
 
-        <property name="store.jar.name" value="SMSDcmd"/>
-        <property name="store.dir" value="."/>
-            <tstamp>
-                <format property="TODAY" pattern="yyyyMMdd" />
-            </tstamp>
-        <property name="store.jar" value="${store.dir}/${store.jar.name}${TODAY}.jar"/>
+		<!-- Copy the CDK classes -->
+		<script language="groovy">
+		   <classpath>
+		     <fileset dir="lib" includes="*.jar"/>
+		   </classpath>
+			dir = project.getProperty("cdk_bin_dir");
+            for (m in module_list.split(",")) { 
+		       copy = SMSDcmd.createTask("copy");
+		       copy.setTodir(new java.io.File("build"));
+			   fs = project.createDataType("fileset");
+			   fs.setDir(new java.io.File(dir, m));
+               copy.addFileset(fs);
+		       copy.perform();
+		    }
+		</script>
+		
+		<copy todir="build/org/openscience/cdk/config/data">
+			<fileset dir="${cdk_src_dir}/org/openscience/cdk/config/data" includes="**"/>
+		</copy>
+		
+		<copy todir="build/org/openscience/cdk/dict/data">
+		    <fileset dir="${cdk_src_dir}/org/openscience/cdk/dict/data" includes="**"/>
+		</copy>
+		
+		<copy todir="build/org/openscience/cdk/layout/templates">
+		    <fileset dir="${cdk_src_dir}/org/openscience/cdk/layout/templates" includes="**"/>
+		</copy>
+		
+		<copy todir="build/cmd/pdb" file="src/cmd/pdb/bond_dictionary.txt"/>
+		
+		<!-- Compile the SMSD classes -->
+		<javac srcdir="src" destdir="build" includeantruntime="false">
+			<classpath>
+				<pathelement path="build"/>
+				<pathelement path="lib/directgraphics.jar"/>
+				<pathelement path="lib/commons-cli-1.2/commons-cli-1.2.jar"/>
+				<pathelement path="${CDK_dir}/jar/signatures-1.0.jar"/>
+			</classpath>
+		</javac>
+	</target>
 
-        <jar destfile="${store.jar}" filesetmanifest="skip">
-            <fileset dir="build/bin" includes="**"/>
-            <zipgroupfileset dir="lib" includes="*.jar"/>
-            <zipgroupfileset file="lib/commons-cli-1.2/commons-cli-1.2.jar"/> 
-            <zipgroupfileset dir="${CDK_dir}/jar" includes="*.jar"/>
+	<target name="package-for-store" depends="compile-smsd">
 
-            <manifest>
-                <attribute name="Main-Class" value="smsdcmd.SMSDcmd"/>
-            </manifest>
-        </jar>
+		<property name="store.jar.name" value="SMSDcmd"/>
+		<property name="store.dir" value="."/>
+		<tstamp>
+			<format property="TODAY" pattern="yyyyMMdd" />
+		</tstamp>
+		<property name="store.jar" value="${store.dir}/${store.jar.name}${TODAY}.jar"/>
 
+		<jar destfile="${store.jar}" filesetmanifest="skip">
+			<fileset dir="build" includes="**"/>
+			<zipgroupfileset dir="lib" includes="*.jar"/>
+			<zipgroupfileset file="lib/commons-cli-1.2/commons-cli-1.2.jar"/>
+			<zipgroupfileset file="${CDK_dir}/jar/signatures-1.0.jar"/>
+			<zipgroupfileset file="${CDK_dir}/jar/cmlxom-*.jar"/>
+			<zipgroupfileset file="${CDK_dir}/jar/jgrapht-*.jar"/>
+			<zipgroupfileset file="${CDK_dir}/jar/vecmath-*.jar"/>
 
-    </target>
+			<manifest>
+				<attribute name="Main-Class" value="cmd.SMSDcmd"/>
+			</manifest>
+		</jar>
 
-    <target name="clean">
-       <delete dir="${build.dir}"/> 
-    </target>
+	</target>
+	<target name="clean" description="remove build dir">
+		<delete dir="build"/>
+	</target>
 </project>
