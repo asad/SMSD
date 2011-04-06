@@ -13,3 +13,5 @@ java -jar SMSD.jar -Q SIG -q "[C]([C][C])" -T SMI -t "C(C)CC" -O SMI -o --
 Multiway N-MCS, outputing the subgraph as a smiles to stdout:
 
 java -jar SMSD.jar -T SDF -t Data/arom.sdf -N -O SMI -o --
+
+Just use ./SMSD -I to list all the image options.
