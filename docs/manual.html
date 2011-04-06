@@ -31,5 +31,74 @@
 <img src="img/arom.png" width="300" height="300"/>
 <p>where the central (hub) molecule is the MCS of the molecules around the rim of the wheel.</p>
 <p>Just use ./SMSD -I to list all the image options.</p>
+
+<BR>
+<p>
+++++++++++++++++++++++++++++++++++++++++++++++
+<BR>NOTE: The graph matching is performed by removing
+the Hydrogens<BR>
+++++++++++++++++++++++++++++++++++++++++++++++
+</p><BR>
+<h2>usage:<h2>
+ <BR>
+ -A                  Appends output to existing files, else creates new
+                     files
+<BR>
+ -a                  Add Hydrogen
+<BR>
+ -b                  Match Bond types (Single, Double etc)
+<BR>
+ -d <WIDTHxHEIGHT>   Dimension of the image in pixels
+<BR>
+ -f <number>         Default: 0, Stereo: 1, Stereo+Fragment: 2,
+                     Stereo+Fragment+Energy: 3
+<BR>
+ -g                  create png of the mapping
+<BR>
+ -h,--help           Help page for command usage
+<BR>
+ -I <option=value>   Image options
+<BR>
+ -m                  Report all Mappings
+<BR>
+ -N                  Do N-way MCS on the target SD file
+<BR>
+ -o <filename>       Output the substructure to a file
+<BR>
+ -O <type>           Output type
+<BR>
+ -Q <type>           Query type (MOL, SMI, etc)
+<BR>
+ -q <filepath>       Query filename
+<BR>
+ -r                  Remove Hydrogen
+<BR>
+ -s                  SubStructure detection
+<BR>
+ -S <suffix>         Add suffix to the files
+<BR>
+ -T <type>           Target type (MOL, SMI, etc)
+<BR>
+ -t <filepath>       Target filename
+<BR>
+++++++++++++++++++++++++++++++++++++++++++++++
+<BR>
+Allowed types for single-molecules (query or target):
+<BR>
+MOL	MDL V2000 format
+<BR>
+ML2	MOL2 Tripos format
+<BR>
+PDB	Protein Databank Format
+<BR>
+CML	Chemical Markup Language
+<BR>
+SMI	SMILES string format
+<BR>
+SIG	Signature string format
+<BR>
+Allowed types for multiple-molecules (targets only):
+SDF	SD file format
+<BR>
 </body>
 </html>
