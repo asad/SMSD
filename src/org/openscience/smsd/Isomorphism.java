@@ -169,12 +169,12 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
     private Algorithm algorithmType;
     private final static ILoggingTool Logger =
             LoggingToolFactory.createLoggingTool(Isomorphism.class);
-    private double bondSensitiveCDKMCSTimeOut = 2.00;//mins
-    private double bondInSensitiveCDKMCSTimeOut = 5.00;//mins
-    private double bondSensitiveMCSPlusTimeOut = 2.00;//mins
-    private double bondInSensitiveMCSPlusTimeOut = 5.00;//mins
-    private double bondSensitiveVFTimeOut = 5.00;//mins
-    private double bondInSensitiveVFTimeOut = 10.00;//mins
+    private double bondSensitiveCDKMCSTimeOut = 1.00;//mins
+    private double bondInSensitiveCDKMCSTimeOut = 2.00;//mins
+    private double bondSensitiveMCSPlusTimeOut = 1.00;//mins
+    private double bondInSensitiveMCSPlusTimeOut = 2.00;//mins
+    private double bondSensitiveVFTimeOut = 2.00;//mins
+    private double bondInSensitiveVFTimeOut = 5.00;//mins
     private boolean matchBonds = false;
 
     /**
