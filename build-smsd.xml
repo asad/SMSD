@@ -87,7 +87,7 @@
 			<zipgroupfileset file="${CDK_dir}/jar/signatures-1.0.jar"/>
 			<zipgroupfileset file="${CDK_dir}/jar/cmlxom-*.jar"/>
 			<zipgroupfileset file="${CDK_dir}/jar/jgrapht-*.jar"/>
-			<zipgroupfileset file="${CDK_dir}/jar/vecmath-*.jar"/>
+			<zipgroupfileset file="${CDK_dir}/jar/vecmath*.jar"/>
 
 			<manifest>
 				<attribute name="Main-Class" value="gui.SMSDFrame"/>
