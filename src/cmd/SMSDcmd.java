@@ -134,7 +134,7 @@ public class SMSDcmd {
                 flag = ConnectivityChecker.isConnected(mcsMolecule);
                 if (!flag) {
                     System.out.println("WARNING : Skipping file "
-                            + mcsMolecule.getProperty(CDKConstants.TITLE) + " not connectted ");
+                            + mcsMolecule.getProperty(CDKConstants.TITLE) + " not connected ");
                     return;
 
                 } else if (mcsMolecule.getProperty(CDKConstants.TITLE) != null) {
@@ -198,7 +198,7 @@ public class SMSDcmd {
         /*check connectivity*/
         boolean flag = ConnectivityChecker.isConnected(query);
         if (!flag) {
-            System.out.println("WARNING : Skipping file " + inputHandler.getQueryName() + " not connectted ");
+            System.out.println("WARNING : Skipping file " + inputHandler.getQueryName() + " not connected ");
             return;
         }
         if (removeHydrogens) {
