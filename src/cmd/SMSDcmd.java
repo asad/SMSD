@@ -108,7 +108,6 @@ public class SMSDcmd {
         boolean matchBonds = argumentHandler.isMatchBondType();
         boolean removeHydrogens = argumentHandler.isApplyHRemoval();
         int filter = argumentHandler.getChemFilter();
-//        Isomorphism smsd = new Isomorphism(Algorithm.DEFAULT, matchBonds);
         List<IAtomContainer> targets = new ArrayList<IAtomContainer>();
         while (reader.hasNext()) {
             IMolecule target = (IMolecule) reader.next();
@@ -126,9 +125,6 @@ public class SMSDcmd {
             if (removeHydrogens) {
                 target = new Molecule(AtomContainerManipulator.removeHydrogens(target));
             }
-
-
-
 
             if (mcsMolecule != null) {
                 flag = ConnectivityChecker.isConnected(mcsMolecule);
