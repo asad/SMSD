@@ -71,6 +71,10 @@
     nbproject/build-impl.xml file. 
 
     -->
+	<!-- Added by Gilleain (to please eclipse). -->
+	<target name="default"></target>
+	<target name="jar"></target>
+	
     <!-- Added by Asad. -->
     <target name="package-for-store" depends="jar">
 
