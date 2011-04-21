@@ -61,13 +61,13 @@ public class SingleMapping {
      * Default
      */
     public SingleMapping() {
+//        System.out.println("Single Mapping called ");
     }
 
     /**
      * Returns single mapping solutions.
      * @param source
      * @param target
-     * @param removeHydrogen
      * @return Mappings
      * @throws CDKException 
      */
@@ -96,7 +96,6 @@ public class SingleMapping {
      * Returns single mapping solutions.
      * @param source
      * @param target
-     * @param removeHydrogen
      * @return Mappings
      * @throws CDKException
      */
@@ -120,33 +119,6 @@ public class SingleMapping {
         return mappings;
     }
 
-//    private void setSourceSingleAtomMap() throws CDKException {
-//        int counter = 0;
-//        BondEnergies be = BondEnergies.getInstance();
-//        for (IAtom sourceAtom : source.atoms()) {
-//            IQueryAtom smartAtom = (IQueryAtom) sourceAtom;
-//
-//            for (IAtom targetAtom : target.atoms()) {
-//                Map<IAtom, IAtom> mapAtoms = new HashMap<IAtom, IAtom>();
-//                if (smartAtom.matches(targetAtom)) {
-//                    mapAtoms.put(sourceAtom, targetAtom);
-//                    List<IBond> Bonds = target.getConnectedBondsList(targetAtom);
-//
-//                    double totalOrder = 0;
-//                    for (IBond bond : Bonds) {
-//                        Order bondOrder = bond.getOrder();
-//                        totalOrder += bondOrder.ordinal() + be.getEnergies(bond);
-//                    }
-//                    if (targetAtom.getFormalCharge() != sourceAtom.getFormalCharge()) {
-//                        totalOrder += 0.5;
-//                    }
-//                    connectedBondOrder.put(counter, totalOrder);
-//                    mappings.add(counter++, mapAtoms);
-//                }
-//            }
-//        }
-//
-//    }
     private void setSourceSingleAtomMap() throws CDKException {
         int counter = 0;
         BondEnergies be = BondEnergies.getInstance();
@@ -154,6 +126,7 @@ public class SingleMapping {
             for (IAtom targetAtom : target.atoms()) {
                 Map<IAtom, IAtom> mapAtoms = new HashMap<IAtom, IAtom>();
                 if (sourceAtom.getSymbol().equalsIgnoreCase(targetAtom.getSymbol())) {
+
                     mapAtoms.put(sourceAtom, targetAtom);
                     List<IBond> Bonds = target.getConnectedBondsList(targetAtom);
 
@@ -162,9 +135,11 @@ public class SingleMapping {
                         Order bondOrder = bond.getOrder();
                         totalOrder += bondOrder.ordinal() + be.getEnergies(bond);
                     }
+
                     if (targetAtom.getFormalCharge() != sourceAtom.getFormalCharge()) {
                         totalOrder += 0.5;
                     }
+
                     connectedBondOrder.put(counter, totalOrder);
                     mappings.add(counter++, mapAtoms);
                 }

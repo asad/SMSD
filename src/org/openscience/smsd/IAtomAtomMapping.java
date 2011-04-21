@@ -174,7 +174,7 @@ public interface IAtomAtomMapping {
      *
      * @return return modified product GraphMolecule
      */
-    public abstract IAtomContainer getProductMolecule();
+    public abstract IAtomContainer getTargetMolecule();
 
     /** 
      * Returns modified query molecule on which mapping was
@@ -182,5 +182,5 @@ public interface IAtomAtomMapping {
      *
      * @return return modified reactant GraphMolecule
      */
-    public abstract IAtomContainer getReactantMolecule();
+    public abstract IAtomContainer getQueryMolecule();
 }

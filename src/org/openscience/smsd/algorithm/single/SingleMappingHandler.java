@@ -59,7 +59,6 @@ public class SingleMappingHandler extends AbstractMCSAlgorithm implements IMCSBa
 
     /**
      * 
-     * @param removeH true
      */
     @TestMethod("setMCSAlgorithm")
     public SingleMappingHandler() {

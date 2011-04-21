@@ -38,6 +38,7 @@ import org.openscience.cdk.interfaces.IBond;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public class TargetProperties implements java.io.Serializable {
+    private static final long serialVersionUID = 1L;
 
     private Map<IAtom, Integer> connectedTargetAtomCountMap = null;
     private Map<IAtom, List<IAtom>> connectedTargetAtomListMap = null;
@@ -52,7 +53,7 @@ public class TargetProperties implements java.io.Serializable {
     public Integer countNeighbors(IAtom atom) {
         if (connectedTargetAtomCountMap == null
                 || !connectedTargetAtomCountMap.containsKey(atom)) {
-            System.out.println("Object not found in " + atoms.size() + " atoms");
+//            System.out.println("Object not found in " + atoms.size() + " atoms");
             return 0;
         }
         return connectedTargetAtomCountMap.get(atom);

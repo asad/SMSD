@@ -24,8 +24,8 @@ public class Mcs {
         System.out.println("MCS First Map: " + mcs.getFirstMapping());
         System.out.println("MCS First size: " + mcs.getFirstAtomMapping().size());
 
-        mol1 = mcs.getReactantMolecule();
-        mol2 = mcs.getProductMolecule();
+        mol1 = mcs.getQueryMolecule();
+        mol2 = mcs.getTargetMolecule();
 
         IMolecule mcsmolecule = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class, mol1);
 

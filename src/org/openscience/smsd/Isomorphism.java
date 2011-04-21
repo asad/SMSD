@@ -91,8 +91,8 @@ import org.openscience.smsd.interfaces.Algorithm;
  *   System.out.println("Tanimoto coefficient:  " + comparison.getTanimotoSimilarity());
  *   System.out.println("A1 is a subgraph of A2:  " + comparison.isSubgraph());
  *  //Get Modified GraphAtomContainer
- *   IAtomContainer Mol1 = comparison.getReactantMolecule();
- *   IAtomContainer Mol2 = comparison.getProductMolecule();
+ *   IAtomContainer Mol1 = comparison.getQueryMolecule();
+ *   IAtomContainer Mol2 = comparison.getTargetMolecule();
  *  // Print the mapping between molecules
  *   System.out.println(" Mappings: ");
  *   for (Map.Entry <Integer, Integer> mapping : comparison.getFirstMapping().entrySet()) {
@@ -128,8 +128,8 @@ import org.openscience.smsd.interfaces.Algorithm;
  *  System.out.println("Tanimoto coefficient:  " + comparison.getTanimotoSimilarity());
  *  System.out.println("A1 is a subgraph of A2:  " + comparison.isSubgraph());
  *  //Get Modified GraphAtomContainer
- *  IAtomContainer Mol1 = comparison.getReactantMolecule();
- *  IAtomContainer Mol2 = comparison.getProductMolecule();
+ *  IAtomContainer Mol1 = comparison.getQueryMolecule();
+ *  IAtomContainer Mol2 = comparison.getTargetMolecule();
  *  // Print the mapping between molecules
  *  System.out.println(" Mappings: ");
  *  for (Map.Entry <Integer, Integer> mapping : comparison.getFirstMapping().entrySet()) {
@@ -490,7 +490,7 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
     public void setChemFilters(boolean stereoFilter, boolean fragmentFilter, boolean energyFilter) {
 
         if (firstAtomMCS != null) {
-            ChemicalFilters chemFilter = new ChemicalFilters(allMCS, allAtomMCS, firstSolution, firstAtomMCS, getReactantMolecule(), getProductMolecule());
+            ChemicalFilters chemFilter = new ChemicalFilters(allMCS, allAtomMCS, firstSolution, firstAtomMCS, getQueryMolecule(), getTargetMolecule());
 
             if (energyFilter) {
                 try {
@@ -578,7 +578,7 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
      */
     @Override
     @TestMethod("testGetreactantMolecule")
-    public IAtomContainer getReactantMolecule() {
+    public IAtomContainer getQueryMolecule() {
         return query;
     }
 
@@ -586,7 +586,7 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
      */
     @Override
     @TestMethod("testGetproductMolecule")
-    public IAtomContainer getProductMolecule() {
+    public IAtomContainer getTargetMolecule() {
         return target;
     }
 
@@ -596,8 +596,8 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
     @TestMethod("testGetTanimotoSimilarity")
     public double getTanimotoSimilarity() throws IOException {
         double tanimoto = getTanimotoAtomSimilarity() + getTanimotoBondSimilarity();
-        if (tanimoto > 0 && getReactantMolecule().getBondCount() > 0
-                && getProductMolecule().getBondCount() > 0) {
+        if (tanimoto > 0 && getQueryMolecule().getBondCount() > 0
+                && getTargetMolecule().getBondCount() > 0) {
             tanimoto /= 2;
         }
         return tanimoto;
@@ -611,8 +611,8 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
 
         if (getFirstMapping() != null && !getFirstMapping().isEmpty()) {
 
-            rAtomCount = getReactantMolecule().getAtomCount();
-            pAtomCount = getProductMolecule().getAtomCount();
+            rAtomCount = getQueryMolecule().getAtomCount();
+            pAtomCount = getTargetMolecule().getAtomCount();
 
             double matchCount = getFirstMapping().size();
             tanimotoAtom = (matchCount) / (rAtomCount + pAtomCount - matchCount);
@@ -630,8 +630,8 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
         double tanimotoAtom = 0.0;
 
         if (getFirstBondMap() != null && !getFirstBondMap().isEmpty()) {
-            rBondCount = getReactantMolecule().getBondCount();
-            pBondCount = getProductMolecule().getBondCount();
+            rBondCount = getQueryMolecule().getBondCount();
+            pBondCount = getTargetMolecule().getBondCount();
 
             double matchCount = getFirstBondMap().size();
             tanimotoAtom = (matchCount) / (rBondCount + pBondCount - matchCount);
@@ -649,8 +649,8 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
     @TestMethod("testIsStereoMisMatch")
     public boolean isStereoMisMatch() {
         boolean flag = false;
-        IAtomContainer reactant = getReactantMolecule();
-        IAtomContainer product = getProductMolecule();
+        IAtomContainer reactant = getQueryMolecule();
+        IAtomContainer product = getTargetMolecule();
         int Score = 0;
 
         for (Map.Entry<IAtom, IAtom> mappingI : firstAtomMCS.entrySet()) {
@@ -690,8 +690,8 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
     @TestMethod("testIsSubgraph")
     public boolean isSubgraph() {
 
-        IAtomContainer reactant = getReactantMolecule();
-        IAtomContainer product = getProductMolecule();
+        IAtomContainer reactant = getQueryMolecule();
+        IAtomContainer product = getTargetMolecule();
 
         float mappingSize = 0;
         if (firstSolution != null && !firstSolution.isEmpty()) {
@@ -726,8 +726,8 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
 
         if (getFirstMapping() != null || !getFirstMapping().isEmpty()) {
 
-            sourceAtomCount = getReactantMolecule().getAtomCount();
-            targetAtomCount = getProductMolecule().getAtomCount();
+            sourceAtomCount = getQueryMolecule().getAtomCount();
+            targetAtomCount = getTargetMolecule().getAtomCount();
 
             double common = getFirstMapping().size();
             euclidean = Math.sqrt(sourceAtomCount + targetAtomCount - 2 * common);

@@ -157,7 +157,7 @@ public class MCSPlus {
             mgit = null;
 
             if (isTimeOut()) {
-                System.out.println("\nMCSPlus hit by timeout in McGregor\n");
+                System.err.println("\nMCSPlus hit by timeout in McGregor\n");
                 break;
             }
         }

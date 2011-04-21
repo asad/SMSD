@@ -34,9 +34,10 @@ import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.cdk.tools.manipulator.ChemFileManipulator;
 
 import cmd.pdb.LigandHelper;
+import org.openscience.cdk.CDKConstants;
 
 public class InputHandler {
-    
+
     private ArgumentHandler argumentHandler;
     private StructureDiagramGenerator sdg;
     private Map<String, String> singularDataTypes;
@@ -47,28 +48,29 @@ public class InputHandler {
     private boolean isMultipleTarget;
     private boolean isStringQuery;
     private boolean isStringTarget;
-    
-    public enum MatchType { 
-                             SINGLE_QUERY_SINGLE_TARGET, 
-                             SINGLE_QUERY_MULTIPLE_TARGET,
-                             NMCS,
-                             UNKNOWN
+
+    public enum MatchType {
+
+        SINGLE_QUERY_SINGLE_TARGET,
+        SINGLE_QUERY_MULTIPLE_TARGET,
+        NMCS,
+        UNKNOWN
     };
     private MatchType matchType;
-    
+
     public InputHandler(ArgumentHandler argumentHandler) {
         this.argumentHandler = argumentHandler;
         sdg = new StructureDiagramGenerator();
-        
+
         singularDataTypes = new HashMap<String, String>();
         singularDataTypes.put("CML", "Chemical Markup Language");
         singularDataTypes.put("MOL", "MDL V2000 format");
         singularDataTypes.put("ML2", "MOL2 Tripos format");
         singularDataTypes.put("PDB", "Protein Databank Format");
-        
+
         multipleDataTypes = new HashMap<String, String>();
         multipleDataTypes.put("SDF", "SD file format");
-        
+
         stringDataTypes = new HashMap<String, String>();
         stringDataTypes.put("SMI", "SMILES string format");
         stringDataTypes.put("SIG", "Signature string format");
@@ -91,33 +93,33 @@ public class InputHandler {
             System.out.println(String.format("%s\t%s", multipleType, description));
         }
     }
-    
+
     public Map<String, String> getStringDataTypes() {
         return stringDataTypes;
     }
-    
+
     public Map<String, String> getSingularDataTypes() {
         return singularDataTypes;
     }
-    
+
     public Map<String, String> getMultipleDataTypes() {
         return multipleDataTypes;
     }
-    
+
     public String getQRefName() {
-        String suffix = argumentHandler.getSuffix(); 
+        String suffix = argumentHandler.getSuffix();
         return argumentHandler.getQueryMolOutName() + suffix + ".mol";
     }
-    
+
     public String getTRefName() {
-        String suffix = argumentHandler.getSuffix(); 
+        String suffix = argumentHandler.getSuffix();
         return argumentHandler.getTargetMolOutName() + suffix + ".mol";
     }
-    
+
     public MatchType validateInput() throws MissingOptionException {
         validateQueryType();
         validateTargetType();
-        if ((isSingleFileQuery && isSingleFileTarget) 
+        if ((isSingleFileQuery && isSingleFileTarget)
                 || (isStringQuery && isSingleFileTarget)
                 || (isSingleFileQuery && isStringTarget)
                 || (isStringQuery && isStringTarget)) {
@@ -133,17 +135,9 @@ public class InputHandler {
         } else {
             matchType = MatchType.UNKNOWN;
         }
-//        System.err.println("MatchType " + matchType + 
-//                " isStringQuery " + isStringQuery +
-//                " isSingleFileQuery " + isSingleFileQuery +
-//                " isSingleFileTarget " + isSingleFileTarget +
-//                " isMultipleTarget " + isMultipleTarget +
-//                " queryType " + argumentHandler.getQueryType() +
-//                " targetType " + argumentHandler.getTargetType()
-//                );
         return matchType;
     }
-    
+
     private void validateQueryType() {
         String queryType = argumentHandler.getQueryType();
         if (queryType != null) {
@@ -161,7 +155,7 @@ public class InputHandler {
             isStringQuery = false;
         }
     }
-    
+
     private void validateTargetType() {
         String targetType = argumentHandler.getTargetType().toUpperCase();
         if (singularDataTypes.containsKey(targetType)) {
@@ -176,23 +170,23 @@ public class InputHandler {
             // TODO : throw error! - must have either a target
         }
     }
-    
+
     public boolean isNMCSInput() {
         return false;   // TODO
     }
-    
+
     public boolean isSingleFileQueryInput() {
         return isSingleFileQuery;
     }
-    
+
     public boolean isSingleFileTargetInput() {
         return isSingleFileTarget;
     }
-    
+
     public boolean isMultiTargetInput() {
         return isMultipleTarget;
     }
-    
+
     private ISimpleChemObjectReader getReader(String type, String filename) throws IOException {
         File input = new File(filename);
         if (input.isDirectory()) {
@@ -211,18 +205,29 @@ public class InputHandler {
         }
         return null;
     }
-    
+
+    /**
+     * 
+     * @param mol
+     * @param type
+     * @throws CDKException
+     */
     public void configure(IMolecule mol, String type) throws CDKException {
+        String id = "";
         if (type.equals("PDB")) {
             LigandHelper.addMissingBondOrders(mol);
+        } else if (type.equals("SDF")) {
+            id = (String) mol.getProperty(CDKConstants.TITLE);
         }
         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol);
         CDKHueckelAromaticityDetector.detectAromaticity(mol);
-        sdg.setMolecule(new Molecule(mol), false);
+        mol = new Molecule(mol);
+        mol.setID(id);
+        sdg.setMolecule(mol, false);
         sdg.generateCoordinates();
-        setID(mol);
+        setAtomID(mol);
     }
-    
+
     private IMolecule getMolFromString(String stringData, String type) throws CDKException {
         if (type.equals("SMI")) {
             return getMolFromSmiles(stringData);
@@ -232,7 +237,7 @@ public class InputHandler {
             return null;
         }
     }
-    
+
     private IMolecule getMolFromSmiles(String smiles) throws CDKException {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer atomContainer = sp.parseSmiles(smiles);
@@ -240,7 +245,7 @@ public class InputHandler {
         configure(mol, "SMI");
         return mol;
     }
-    
+
     private IMolecule getMolFromSignature(String signatureString) throws CDKException {
         IAtomContainer atomContainer = MoleculeSignature.fromSignatureString(
                 signatureString, DefaultChemObjectBuilder.getInstance());
@@ -248,65 +253,81 @@ public class InputHandler {
         configure(mol, "SIG");
         return mol;
     }
-    
+
     public String getQueryName() {
         String filename = argumentHandler.getQueryFilepath();
         File input = new File(filename);
         return input.getName().split("\\.")[0];
     }
-    
+
     public String getTargetName() {
         String filename = argumentHandler.getTargetFilepath();
         File input = new File(filename);
         return input.getName().split("\\.")[0];
     }
-    
+
+    /**
+     * Return Query molecule
+     * @return
+     * @throws IOException
+     * @throws CDKException
+     */
     public IMolecule getQuery() throws IOException, CDKException {
         String filenameOrData = argumentHandler.getQueryFilepath();
-        String type = argumentHandler.getQueryType(); 
+        String type = argumentHandler.getQueryType();
         if (isSingleFileQuery) {
             ISimpleChemObjectReader reader = getReader(type, filenameOrData);
             IChemFile chemFile = reader.read(new ChemFile());
-            IMolecule molecule = 
-                (IMolecule)ChemFileManipulator.getAllAtomContainers(chemFile).get(0);
+            IMolecule molecule =
+                    (IMolecule) ChemFileManipulator.getAllAtomContainers(chemFile).get(0);
             configure(molecule, type);
             return molecule;
         } else {
             return getMolFromString(filenameOrData, type);
         }
     }
-    
+
+    /**
+     * Returns Target molecule
+     * @return
+     * @throws IOException
+     * @throws CDKException
+     */
     public IMolecule getTarget() throws IOException, CDKException {
         String filenameOrData = argumentHandler.getTargetFilepath();
         String type = argumentHandler.getTargetType();
         if (isSingleFileTarget) {
             ISimpleChemObjectReader reader = getReader(type, filenameOrData);
             IChemFile chemFile = reader.read(new ChemFile());
-            IMolecule molecule = 
-                (IMolecule)ChemFileManipulator.getAllAtomContainers(chemFile).get(0);
+            IMolecule molecule =
+                    (IMolecule) ChemFileManipulator.getAllAtomContainers(chemFile).get(0);
             configure(molecule, type);
             return molecule;
         } else {
             return getMolFromString(filenameOrData, type);
         }
     }
-    
+
+    /**
+     * Returns an SDF files iterator
+     * @return
+     * @throws FileNotFoundException
+     */
     public IIteratingChemObjectReader getAllTargets() throws FileNotFoundException {
         String type = argumentHandler.getTargetType();
         if (type.equals("SDF")) {
             FileReader in = new FileReader(argumentHandler.getTargetFilepath());
             return new IteratingMDLReader(
-                        in, NoNotificationChemObjectBuilder.getInstance());
+                    in, NoNotificationChemObjectBuilder.getInstance());
         }
         return null;
     }
-    
-    private static void setID(IMolecule mol) {
+
+    private static void setAtomID(IMolecule mol) {
         int index = 1;
 
         for (IAtom atom : mol.atoms()) {
             atom.setID(String.valueOf(index++));
         }
     }
-
 }

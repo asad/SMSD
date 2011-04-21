@@ -12,9 +12,11 @@ import java.util.Map;
 
 import org.apache.commons.cli.MissingOptionException;
 import org.apache.commons.cli.ParseException;
+import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.Molecule;
 import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.exception.CDKException;
+import org.openscience.cdk.graph.ConnectivityChecker;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
@@ -59,7 +61,7 @@ public class SMSDcmd {
     public static void run(ArgumentHandler argumentHandler) {
         run(argumentHandler, new InputHandler(argumentHandler));
     }
-    
+
     public static void run(ArgumentHandler argumentHandler, InputHandler inputHandler) {
         OutputHandler outputHandler = new OutputHandler(argumentHandler);
         try {
@@ -110,19 +112,47 @@ public class SMSDcmd {
         List<IAtomContainer> targets = new ArrayList<IAtomContainer>();
         while (reader.hasNext()) {
             IMolecule target = (IMolecule) reader.next();
+            boolean flag = ConnectivityChecker.isConnected(target);
+            if (!flag) {
+                System.out.println("WARNING : Skipping target molecule "
+                        + target.getProperty(CDKConstants.TITLE) + " as it is not connected.");
+                continue;
+            } else {
+                target.setID((String) target.getProperty(CDKConstants.TITLE));
+            }
+            if (removeHydrogens) {
+                target = new Molecule(AtomContainerManipulator.removeHydrogens(target));
+            }
+
             inputHandler.configure(target, targetType);
+
             if (mcsMolecule == null) {
                 mcsMolecule = target;
                 targets.add(target);
             } else {
+
                 Isomorphism smsd = new Isomorphism(Algorithm.DEFAULT, matchBonds);
                 run(smsd, mcsMolecule, target, filter);
-                target = target.getBuilder().newInstance(IMolecule.class, smsd.getProductMolecule());
+                target = target.getBuilder().newInstance(IMolecule.class, smsd.getTargetMolecule());
                 targets.add(target);
                 Map<Integer, Integer> mapping = smsd.getFirstMapping();
                 IAtomContainer subgraph = getSubgraph(target, mapping);
                 mcsMolecule = new Molecule(subgraph);
             }
+        }
+
+
+        if (mcsMolecule != null) {
+            boolean flag = ConnectivityChecker.isConnected(mcsMolecule);
+            if (!flag) {
+                System.out.println("WARNING : Skipping file " + mcsMolecule.getProperty(CDKConstants.TITLE) + " not connectted ");
+            }
+            return;
+        }
+
+        if (removeHydrogens) {
+            mcsMolecule = new Molecule(AtomContainerManipulator.removeHydrogens(mcsMolecule));
+            mcsMolecule.setID((String) mcsMolecule.getProperty(CDKConstants.TITLE));
         }
         inputHandler.configure(mcsMolecule, targetType);
 
@@ -141,7 +171,7 @@ public class SMSDcmd {
                 run(smsd, mcsMolecule, (IMolecule) target, filter);
                 mappings.add(smsd.getFirstMapping());
                 secondRoundTargets.add(
-                        builder.newInstance(IAtomContainer.class, smsd.getProductMolecule()));
+                        builder.newInstance(IAtomContainer.class, smsd.getTargetMolecule()));
             }
 
             String name = inputHandler.getTargetName();
@@ -154,6 +184,18 @@ public class SMSDcmd {
             OutputHandler outputHandler,
             ArgumentHandler argumentHandler) throws IOException, CDKException, CloneNotSupportedException {
         IMolecule query = inputHandler.getQuery();
+        boolean removeHydrogens = argumentHandler.isApplyHRemoval();
+
+        /*check connectivity*/
+        boolean flag = ConnectivityChecker.isConnected(query);
+        if (!flag) {
+            System.out.println("WARNING : Skipping file " + inputHandler.getQueryName() + " not connectted ");
+            return;
+        }
+        if (removeHydrogens) {
+            query = new Molecule(AtomContainerManipulator.removeHydrogens(query));
+        }
+
         outputHandler.writeQueryMol(query);
 
         String out = ".out";
@@ -170,7 +212,6 @@ public class SMSDcmd {
             isomorphism = new Isomorphism(Algorithm.DEFAULT, matchBonds);
         }
 
-        boolean removeHydrogens = argumentHandler.isApplyHRemoval();
         int targetNumber = 0;
         IIteratingChemObjectReader reader = inputHandler.getAllTargets();
         String targetType = argumentHandler.getTargetType();
@@ -179,7 +220,22 @@ public class SMSDcmd {
         }
         while (reader.hasNext()) {
             IMolecule target = (IMolecule) reader.next();
+            flag = ConnectivityChecker.isConnected(target);
+            if (!flag) {
+                System.out.println("WARNING : Skipping target molecule "
+                        + target.getProperty(CDKConstants.TITLE) + " as it is not connected.");
+                System.out.println("CDK Warning: Use ConnectivityChecker.partitionIntoMolecules() "
+                        + "and do the layout for every single component");
+                continue;
+            }
+
+            /*remove target hydrogens*/
+            if (removeHydrogens) {
+                target = new Molecule(AtomContainerManipulator.removeHydrogens(target));
+            }
+
             inputHandler.configure(target, targetType);
+
             if (argumentHandler.isSubstructureMode()) {
                 runSubstructure(substructure, query, target, argumentHandler.getChemFilter(), matchBonds);
                 smsd = substructure;
@@ -187,15 +243,17 @@ public class SMSDcmd {
                 run(isomorphism, query, target, argumentHandler.getChemFilter());
                 smsd = isomorphism;
             }
+
+
             long endTime = System.currentTimeMillis();
             long executionTime = endTime - startTime;
-            outputHandler.writeTargetMol(smsd.getProductMolecule());
+            outputHandler.writeTargetMol(smsd.getTargetMolecule());
 
             String queryPath = argumentHandler.getQueryFilepath();
             String targetPath = argumentHandler.getTargetFilepath();
 
-            query = query.getBuilder().newInstance(IMolecule.class, smsd.getReactantMolecule());
-            target = target.getBuilder().newInstance(IMolecule.class, smsd.getProductMolecule());
+            query = query.getBuilder().newInstance(IMolecule.class, smsd.getQueryMolecule());
+            target = target.getBuilder().newInstance(IMolecule.class, smsd.getTargetMolecule());
 
 
             Map<IAtom, IAtom> mcs = smsd.getFirstAtomMapping();
@@ -255,6 +313,27 @@ public class SMSDcmd {
         IMolecule query = inputHandler.getQuery();
         IMolecule target = inputHandler.getTarget();
 
+        boolean removeHydrogens = argumentHandler.isApplyHRemoval();
+
+        /*check connectivity*/
+        boolean flag = ConnectivityChecker.isConnected(query);
+        if (!flag) {
+            System.out.println("WARNING : Skipping file " + inputHandler.getQueryName() + " not connectted ");
+            return;
+        }
+        flag = ConnectivityChecker.isConnected(target);
+        if (!flag) {
+            System.out.println("WARNING : Skipping target molecule "
+                    + inputHandler.getTargetName() + " as it is not connected.");
+            return;
+        }
+        /*remove hydrogens*/
+        if (removeHydrogens) {
+            query = new Molecule(AtomContainerManipulator.removeHydrogens(query));
+            target = new Molecule(AtomContainerManipulator.removeHydrogens(target));
+        }
+
+
         String out = ".out";
         if (!argumentHandler.isAppendMode()) {
             outputHandler.startAppending(out);
@@ -280,12 +359,13 @@ public class SMSDcmd {
         Substructure substructure = null;
         Isomorphism isomorphism = null;
         boolean matchBonds = argumentHandler.isMatchBondType();
+
         if (argumentHandler.isSubstructureMode()) {
             substructure = new Substructure();
         } else {
             isomorphism = new Isomorphism(Algorithm.DEFAULT, matchBonds);
         }
-        boolean removeHydrogens = argumentHandler.isApplyHRemoval();
+
         if (argumentHandler.isSubstructureMode()) {
             runSubstructure(substructure, query, target, argumentHandler.getChemFilter(), matchBonds);
             smsd = substructure;
@@ -294,15 +374,15 @@ public class SMSDcmd {
             smsd = isomorphism;
         }
 
-        query = query.getBuilder().newInstance(IMolecule.class, smsd.getReactantMolecule());
-        target = target.getBuilder().newInstance(IMolecule.class, smsd.getProductMolecule());
+        query = query.getBuilder().newInstance(IMolecule.class, smsd.getQueryMolecule());
+        target = target.getBuilder().newInstance(IMolecule.class, smsd.getTargetMolecule());
 
         long endTime = System.currentTimeMillis();
         long executionTime = endTime - startTime;
 
         // write out the input molecules to files
-        outputHandler.writeQueryMol(smsd.getReactantMolecule());
-        outputHandler.writeTargetMol(smsd.getProductMolecule());
+        outputHandler.writeQueryMol(smsd.getQueryMolecule());
+        outputHandler.writeTargetMol(smsd.getTargetMolecule());
 
         String queryPath = argumentHandler.getQueryFilepath();
         String targetPath = argumentHandler.getTargetFilepath();

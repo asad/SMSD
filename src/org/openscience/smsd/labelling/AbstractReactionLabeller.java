@@ -101,9 +101,9 @@ public class AbstractReactionLabeller {
             IAtomContainer valueAC = 
                 ReactionManipulator.getRelevantAtomContainer(clone, value);
             int valueIndex = valueAC.getAtomNumber(value);
-            System.out.println(
-                    "key " + keyIndex + key.getSymbol() 
-                    + " mapped to " + valueIndex + value.getSymbol());
+//            System.out.println(
+//                    "key " + keyIndex + key.getSymbol() 
+//                    + " mapped to " + valueIndex + value.getSymbol());
         }
         
         return atomAtom;

@@ -43,7 +43,7 @@ import org.openscience.cdk.annotations.TestClass;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.interfaces.AlgorithmTest")
-public enum Algorithm {
+public enum Algorithm implements Comparable<Algorithm> {
 
     /**
      * Default SMSD algorithm.
@@ -95,15 +95,5 @@ public enum Algorithm {
      */
     public String description() {
         return this.description;
-    }
-
-    /**
-     * Compares algorithm types.
-     * @param <status>
-     * @param obj
-     * @return status
-     */
-    public <status> int compareTo(Algorithm obj) {
-        return 0;
     }
 }

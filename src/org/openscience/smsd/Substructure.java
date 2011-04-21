@@ -25,7 +25,6 @@ package org.openscience.smsd;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +38,7 @@ import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
+import org.openscience.smsd.algorithm.single.SingleMappingHandler;
 import org.openscience.smsd.algorithm.vflib.substructure.AtomMapping;
 import org.openscience.smsd.algorithm.vflib.substructure.VF2;
 import org.openscience.smsd.filters.ChemicalFilters;
@@ -232,24 +232,30 @@ public class Substructure implements IAtomAtomMapping {
 //        System.out.println("Mol1 Size: -> " + getReactantMol().getAtomCount());
 //        System.out.println("Mol2 Size. -> " + getProductMol().getAtomCount());
         setBondMatchFlag(shouldMatchBonds);
-        if (getReactantMol().getAtomCount() > getProductMol().getAtomCount()) {
-            return false;
-        } else {
 
-            vfLibSolutions = new ArrayList<AtomMapping>();
-            if (getProductMol() != null) {
-                VF2 mapper = new VF2();
-                List<AtomMapping> atomMappings = mapper.isomorphisms(getReactantMol(), getProductMol(), shouldMatchBonds);
-                if (!atomMappings.isEmpty()) {
-                    vfLibSolutions.addAll(atomMappings);
-                } else {
-                    return false;
+
+        if (getReactantMol().getAtomCount() == 1 || getProductMol().getAtomCount() == 1) {
+            singleMapping(shouldMatchBonds);
+        } else {
+            if (getReactantMol().getAtomCount() > getProductMol().getAtomCount()) {
+                return false;
+            } else {
+
+                vfLibSolutions = new ArrayList<AtomMapping>();
+                if (getProductMol() != null) {
+                    VF2 mapper = new VF2();
+                    List<AtomMapping> atomMappings = mapper.isomorphisms(getReactantMol(), getProductMol(), shouldMatchBonds);
+                    if (!atomMappings.isEmpty()) {
+                        vfLibSolutions.addAll(atomMappings);
+                    } else {
+                        return false;
+                    }
                 }
+                setVFMappings();
             }
-            setVFMappings();
-        }
-        if (!allAtomMCS.isEmpty()) {
-            setFirstMappings();
+            if (!allAtomMCS.isEmpty()) {
+                setFirstMappings();
+            }
         }
         return (!allIndexMCS.isEmpty() && allIndexMCS.iterator().next().size() == getReactantMol().getAtomCount()) ? true : false;
     }
@@ -262,25 +268,44 @@ public class Substructure implements IAtomAtomMapping {
     public boolean findSubgraph(boolean shouldMatchBonds) {
 
         setBondMatchFlag(shouldMatchBonds);
-        if (getReactantMol().getAtomCount() > getProductMol().getAtomCount()) {
-            return false;
+        if (getReactantMol().getAtomCount() == 1 || getProductMol().getAtomCount() == 1) {
+            singleMapping(shouldMatchBonds);
         } else {
-            vfLibSolutions = new ArrayList<AtomMapping>();
-            if (getProductMol() != null) {
-                VF2 mapper = new VF2();
-                AtomMapping atomMapping = mapper.isomorphism(getReactantMol(), getProductMol(), shouldMatchBonds);
-                if (!atomMapping.isEmpty()) {
-                    vfLibSolutions.add(atomMapping);
-                } else {
-                    return false;
+            if (getReactantMol().getAtomCount() > getProductMol().getAtomCount()) {
+                return false;
+            } else {
+                vfLibSolutions = new ArrayList<AtomMapping>();
+                if (getProductMol() != null) {
+                    VF2 mapper = new VF2();
+                    AtomMapping atomMapping = mapper.isomorphism(getReactantMol(), getProductMol(), shouldMatchBonds);
+                    if (!atomMapping.isEmpty()) {
+                        vfLibSolutions.add(atomMapping);
+                    } else {
+                        return false;
+                    }
                 }
+                setVFMappings();
             }
-            setVFMappings();
-        }
-        if (!allAtomMCS.isEmpty()) {
-            setFirstMappings();
+            if (!allAtomMCS.isEmpty()) {
+                setFirstMappings();
+            }
         }
         return (!allIndexMCS.isEmpty() && allIndexMCS.iterator().next().size() == getReactantMol().getAtomCount()) ? true : false;
+    }
+
+    private void singleMapping(boolean shouldMatchBonds) {
+        SingleMappingHandler mcs = null;
+
+        mcs = new SingleMappingHandler();
+        mcs.set(getReactantMol(), getProductMol());
+        mcs.searchMCS(shouldMatchBonds);
+
+        firstIndexMCS.putAll(mcs.getFirstMapping());
+        allIndexMCS.addAll(mcs.getAllMapping());
+
+        firstAtomMCS.putAll(mcs.getFirstAtomMapping());
+        allAtomMCS.addAll(mcs.getAllAtomMapping());
+
     }
 
     /**
@@ -444,12 +469,12 @@ public class Substructure implements IAtomAtomMapping {
     }
 
     @Override
-    public IAtomContainer getProductMolecule() {
+    public IAtomContainer getTargetMolecule() {
         return this.mol1;
     }
 
     @Override
-    public IAtomContainer getReactantMolecule() {
+    public IAtomContainer getQueryMolecule() {
         return this.mol2;
     }
 }
