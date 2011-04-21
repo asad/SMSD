@@ -20,7 +20,6 @@ import org.apache.commons.cli.PosixParser;
  */
 public class ArgumentHandler {
 
-   
     /**
      * Get any arguments that were left over.
      * 
@@ -29,7 +28,7 @@ public class ArgumentHandler {
     public String[] getRemainingArgs() {
         return remainingArgs;
     }
-    
+
     /**
      * @return the matchFile
      */
@@ -111,7 +110,7 @@ public class ArgumentHandler {
         options.addOption("h", "help", false, "Help page for command usage");
 
         options.addOption("s", false, "SubStructure detection");
-        
+
         options.addOption("a", false, "Add Hydrogen");
 
         options.addOption("r", false, "Remove Hydrogen");
@@ -119,57 +118,46 @@ public class ArgumentHandler {
         options.addOption("b", false, "Match Bond types (Single, Double etc)");
 
         options.addOption(
-                OptionBuilder.hasArg().withDescription("Query filename").withArgName("filepath").create("q")
-        );
+                OptionBuilder.hasArg().withDescription("Query filename").withArgName("filepath").create("q"));
 
         options.addOption(
-                OptionBuilder.hasArg().withDescription("Target filename").withArgName("filepath").create("t")
-        );
+                OptionBuilder.hasArg().withDescription("Target filename").withArgName("filepath").create("t"));
 
         options.addOption(
-                OptionBuilder.hasArg().withDescription("Add suffix to the files").withArgName("suffix").create("S")
-        );
+                OptionBuilder.hasArg().withDescription("Add suffix to the files").withArgName("suffix").create("S"));
 
         options.addOption("g", false, "create png of the mapping");
-        
+
         options.addOption(
-                OptionBuilder.hasArg().withDescription("Dimension of the image in pixels").withArgName("WIDTHxHEIGHT").create("d")
-        );
+                OptionBuilder.hasArg().withDescription("Dimension of the image in pixels").withArgName("WIDTHxHEIGHT").create("d"));
 
         options.addOption("m", false, "Report all Mappings");
 
         String filterDescr = "Default: 0, Stereo: 1, "
-                                 + "Stereo+Fragment: 2, Stereo+Fragment+Energy: 3";
+                + "Stereo+Fragment: 2, Stereo+Fragment+Energy: 3";
         options.addOption(
-                OptionBuilder.hasArg().withDescription(filterDescr).withArgName("number").create("f")
-        );
+                OptionBuilder.hasArg().withDescription(filterDescr).withArgName("number").create("f"));
 
-        options.addOption("A", false, 
-             "Appends output to existing files, else creates new files");
-        
+        options.addOption("A", false,
+                "Appends output to existing files, else creates new files");
+
         options.addOption(
-                OptionBuilder.withDescription("Do N-way MCS on the target SD file").create("N")
-        );
-        
+                OptionBuilder.withDescription("Do N-way MCS on the target SD file").create("N"));
+
         options.addOption(
-                OptionBuilder.hasArg().withDescription("Query type (MOL, SMI, etc)").withArgName("type").create("Q")
-        );
-        
+                OptionBuilder.hasArg().withDescription("Query type (MOL, SMI, etc)").withArgName("type").create("Q"));
+
         options.addOption(
-                OptionBuilder.hasArg().withDescription("Target type (MOL, SMI, etc)").withArgName("type").create("T")
-        );
-        
+                OptionBuilder.hasArg().withDescription("Target type (MOL, SMI, etc)").withArgName("type").create("T"));
+
         options.addOption(
-                OptionBuilder.hasArg().withDescription("Output the substructure to a file").withArgName("filename").create("o")
-        );
-        
+                OptionBuilder.hasArg().withDescription("Output the substructure to a file").withArgName("filename").create("o"));
+
         options.addOption(
-                OptionBuilder.hasArg().withDescription("Output type").withArgName("type").create("O")
-        );
-        
+                OptionBuilder.hasArg().withDescription("Output type").withArgName("type").create("O"));
+
         options.addOption(
-                OptionBuilder.hasOptionalArgs(2).withValueSeparator().withDescription("Image options").withArgName("option=value").create("I")
-        );
+                OptionBuilder.hasOptionalArgs(2).withValueSeparator().withDescription("Image options").withArgName("option=value").create("I"));
 
         PosixParser parser = new PosixParser();
         CommandLine line = parser.parse(options, args, true);
@@ -179,17 +167,17 @@ public class ArgumentHandler {
         } //else {
 //            queryType = "MOL";
 //        } //XXX default type?
-        
+
         if (line.hasOption('T')) {
             targetType = line.getOptionValue("T");
         } else {
             targetType = "MOL";
         }
-        
+
         if (line.hasOption('a')) {
             this.setApplyHAdding(true);
         }
-        
+
         if (line.hasOption('r')) {
             this.setApplyHRemoval(true);
         }
@@ -209,7 +197,7 @@ public class ArgumentHandler {
         if (line.hasOption('b')) {
             this.setMatchBondType(true);
         }
-        
+
         remainingArgs = line.getArgs();
 
         if (line.hasOption('h') || line.getOptions().length == 0) {
@@ -237,7 +225,7 @@ public class ArgumentHandler {
         }
 
         if (line.hasOption('q')) {
-            queryFilepath = line.getOptionValue('q'); 
+            queryFilepath = line.getOptionValue('q');
         }
 
         if (line.hasOption('t')) {
@@ -247,22 +235,22 @@ public class ArgumentHandler {
         if (line.hasOption("A")) {
             this.setAppendMode(true);
         }
-        
+
         if (line.hasOption("N")) {
             setNMCS(true);
         }
-        
+
         if (line.hasOption("o")) {
             outputSubgraph = true;
             outputFilepath = line.getOptionValue("o");
         }
-        
+
         if (line.hasOption("O")) {
             outputFiletype = line.getOptionValue("O");
         } else {
             outputFiletype = "MOL";
         }
-        
+
         if (line.hasOption("d")) {
             String dimensionString = line.getOptionValue("d");
             if (dimensionString.contains("x")) {
@@ -270,7 +258,7 @@ public class ArgumentHandler {
                 try {
                     setImageWidth(Integer.parseInt(parts[0]));
                     setImageHeight(Integer.parseInt(parts[1]));
-                    System.out.println("set image dim to " 
+                    System.out.println("set image dim to "
                             + getImageWidth() + "x" + getImageHeight());
                 } catch (NumberFormatException nfe) {
                     throw new ParseException("Malformed dimension string " + dimensionString);
@@ -279,7 +267,7 @@ public class ArgumentHandler {
                 throw new ParseException("Malformed dimension string " + dimensionString);
             }
         }
-        
+
         if (line.hasOption("I")) {
             imageProperties = line.getOptionProperties("I");
             if (imageProperties.isEmpty()) {
@@ -288,23 +276,23 @@ public class ArgumentHandler {
             }
         }
     }
-    
+
     public Properties getImageProperties() {
         return imageProperties;
     }
-    
+
     public void setImageProperties(Properties imageProperties) {
         this.imageProperties = imageProperties;
     }
-    
+
     public Options getOptions() {
         return options;
     }
-    
+
     public void printHelp() {
         printHelp(options);
     }
-    
+
     public void printHelp(Options options) {
         HelpFormatter formatter = new HelpFormatter();
 
@@ -334,47 +322,47 @@ public class ArgumentHandler {
         formatter.printHelp("\n", options);
         System.out.println("\n++++++++++++++++++++++++++++++++++++++++++++++\n");
     }
-    
+
     public boolean isHelp() {
         return helpRequested;
     }
-    
+
     public void setOutputWriter(Writer writer) {
         outputWriter = writer;
     }
-    
+
     public Writer getOutputWriter() {
         return outputWriter;
     }
-    
+
     public boolean shouldOutputSubgraph() {
         return outputSubgraph;
     }
-    
+
     public String getOutputFilepath() {
         return outputFilepath;
     }
-    
+
     public String getOutputFiletype() {
         return outputFiletype;
     }
-    
+
     public String getQueryFilepath() {
         return queryFilepath;
     }
-    
+
     public void setQueryFilepath(String filepath) {
         queryFilepath = filepath;
     }
-    
+
     public String getTargetFilepath() {
         return targetFilepath;
     }
-    
+
     public void setTargetFilepath(String filepath) {
         targetFilepath = filepath;
     }
-    
+
     /**
      * Use N-way MCS.
      * 
@@ -383,7 +371,7 @@ public class ArgumentHandler {
     public boolean isNMCS() {
         return isNMCS;
     }
-    
+
     /**
      * Set the use of N-MCS for finding the MCS of N molecules from an SDF file.
      * 
@@ -513,6 +501,22 @@ public class ArgumentHandler {
     }
 
     /**
+     * @param name 
+     * @set the Target
+     */
+    public void setTargetMolOutName(String name) {
+        this.targetOutfileName = name;
+    }
+
+    /**
+     * @param name 
+     * @set the Query
+     */
+    public void setQueryMolOutName(String name) {
+        this.queryOutfileName = name;
+    }
+
+    /**
      * @param chemFilter the chemFilter to set
      */
     public void setChemFilter(int chemFilter) {
@@ -564,31 +568,31 @@ public class ArgumentHandler {
     public String getQueryType() {
         return queryType;
     }
-    
+
     public String getTargetType() {
         return targetType;
     }
-    
+
     public void setQueryType(String queryType) {
         this.queryType = queryType;
     }
-    
+
     public void setTargetType(String targetType) {
         this.targetType = targetType;
     }
-    
+
     public void setOutputSubgraph(boolean value) {
         outputSubgraph = value;
     }
-    
+
     public void setOutputFilepath(String filepath) {
         outputFilepath = filepath;
     }
-    
+
     public void setOutputFiletype(String filetype) {
         outputFiletype = filetype;
     }
-    
+
     public int getImageWidth() {
         return imageWidth;
     }
@@ -608,5 +612,4 @@ public class ArgumentHandler {
     public boolean isImageOptionHelp() {
         return isImageOptionHelp;
     }
-    
 }

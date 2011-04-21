@@ -118,7 +118,10 @@ public class SMSDcmd {
                         + target.getProperty(CDKConstants.TITLE) + " as it is not connected.");
                 continue;
             } else {
-                target.setID((String) target.getProperty(CDKConstants.TITLE));
+                if (target.getProperty(CDKConstants.TITLE) != null) {
+                    target.setID((String) target.getProperty(CDKConstants.TITLE));
+                    argumentHandler.setTargetMolOutName(target.getID());
+                }
             }
             if (removeHydrogens) {
                 target = new Molecule(AtomContainerManipulator.removeHydrogens(target));
@@ -145,14 +148,18 @@ public class SMSDcmd {
         if (mcsMolecule != null) {
             boolean flag = ConnectivityChecker.isConnected(mcsMolecule);
             if (!flag) {
-                System.out.println("WARNING : Skipping file " + mcsMolecule.getProperty(CDKConstants.TITLE) + " not connectted ");
+                System.out.println("WARNING : Skipping file "
+                        + mcsMolecule.getProperty(CDKConstants.TITLE) + " not connectted ");
             }
             return;
         }
 
         if (removeHydrogens) {
             mcsMolecule = new Molecule(AtomContainerManipulator.removeHydrogens(mcsMolecule));
-            mcsMolecule.setID((String) mcsMolecule.getProperty(CDKConstants.TITLE));
+            if (mcsMolecule.getProperty(CDKConstants.TITLE) != null) {
+                mcsMolecule.setID((String) mcsMolecule.getProperty(CDKConstants.TITLE));
+                argumentHandler.setQueryMolOutName(mcsMolecule.getID());
+            }
         }
         inputHandler.configure(mcsMolecule, targetType);
 
@@ -224,14 +231,16 @@ public class SMSDcmd {
             if (!flag) {
                 System.out.println("WARNING : Skipping target molecule "
                         + target.getProperty(CDKConstants.TITLE) + " as it is not connected.");
-                System.out.println("CDK Warning: Use ConnectivityChecker.partitionIntoMolecules() "
-                        + "and do the layout for every single component");
                 continue;
             }
 
             /*remove target hydrogens*/
             if (removeHydrogens) {
                 target = new Molecule(AtomContainerManipulator.removeHydrogens(target));
+                if (target.getProperty(CDKConstants.TITLE) != null) {
+                    target.setID((String) target.getProperty(CDKConstants.TITLE));
+                    argumentHandler.setTargetMolOutName(target.getID());
+                }
             }
 
             inputHandler.configure(target, targetType);
@@ -331,6 +340,14 @@ public class SMSDcmd {
         if (removeHydrogens) {
             query = new Molecule(AtomContainerManipulator.removeHydrogens(query));
             target = new Molecule(AtomContainerManipulator.removeHydrogens(target));
+            if (target.getProperty(CDKConstants.TITLE) != null) {
+                target.setID((String) target.getProperty(CDKConstants.TITLE));
+                argumentHandler.setTargetMolOutName(target.getID());
+            }
+            if (query.getProperty(CDKConstants.TITLE) != null) {
+                query.setID((String) target.getProperty(CDKConstants.TITLE));
+                argumentHandler.setQueryMolOutName(query.getID());
+            }
         }
 
 
