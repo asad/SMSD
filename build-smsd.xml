@@ -94,10 +94,10 @@
 			</manifest>
 		</jar>
 		
-		<echo file="SMSD">java -cp ${store.jar} cmd.SMSDcmd $@</echo>
+		<echo file="SMSD">java -Xms500M -Xmx512M -cp ${store.jar} cmd.SMSDcmd $@</echo>
 		<chmod perm="a+x" file="SMSD"/>
 		
-		<echo file="SMSD.bat">java -cp ${store.jar} cmd.SMSDcmd %*</echo>
+		<echo file="SMSD.bat">java -Xms500M -Xmx512M -cp ${store.jar} cmd.SMSDcmd %*</echo>
 		<chmod perm="a+x" file="SMSD.bat"/>
 
 		<zip destfile="${store.jar.name}${TODAY}.zip">
