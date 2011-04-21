@@ -127,6 +127,26 @@ public class SMSDcmd {
                 target = new Molecule(AtomContainerManipulator.removeHydrogens(target));
             }
 
+
+
+
+            if (mcsMolecule != null) {
+                flag = ConnectivityChecker.isConnected(mcsMolecule);
+                if (!flag) {
+                    System.out.println("WARNING : Skipping file "
+                            + mcsMolecule.getProperty(CDKConstants.TITLE) + " not connectted ");
+                    return;
+
+                } else if (mcsMolecule.getProperty(CDKConstants.TITLE) != null) {
+                    mcsMolecule.setID((String) mcsMolecule.getProperty(CDKConstants.TITLE));
+                    argumentHandler.setQueryMolOutName(mcsMolecule.getID());
+                }
+                if (removeHydrogens) {
+                    mcsMolecule = new Molecule(AtomContainerManipulator.removeHydrogens(mcsMolecule));
+
+                }
+            }
+
             inputHandler.configure(target, targetType);
 
             if (mcsMolecule == null) {
@@ -141,24 +161,6 @@ public class SMSDcmd {
                 Map<Integer, Integer> mapping = smsd.getFirstMapping();
                 IAtomContainer subgraph = getSubgraph(target, mapping);
                 mcsMolecule = new Molecule(subgraph);
-            }
-        }
-
-
-        if (mcsMolecule != null) {
-            boolean flag = ConnectivityChecker.isConnected(mcsMolecule);
-            if (!flag) {
-                System.out.println("WARNING : Skipping file "
-                        + mcsMolecule.getProperty(CDKConstants.TITLE) + " not connectted ");
-            }
-            return;
-        }
-
-        if (removeHydrogens) {
-            mcsMolecule = new Molecule(AtomContainerManipulator.removeHydrogens(mcsMolecule));
-            if (mcsMolecule.getProperty(CDKConstants.TITLE) != null) {
-                mcsMolecule.setID((String) mcsMolecule.getProperty(CDKConstants.TITLE));
-                argumentHandler.setQueryMolOutName(mcsMolecule.getID());
             }
         }
         inputHandler.configure(mcsMolecule, targetType);
@@ -237,10 +239,10 @@ public class SMSDcmd {
             /*remove target hydrogens*/
             if (removeHydrogens) {
                 target = new Molecule(AtomContainerManipulator.removeHydrogens(target));
-                if (target.getProperty(CDKConstants.TITLE) != null) {
-                    target.setID((String) target.getProperty(CDKConstants.TITLE));
-                    argumentHandler.setTargetMolOutName(target.getID());
-                }
+            }
+            if (target.getProperty(CDKConstants.TITLE) != null) {
+                target.setID((String) target.getProperty(CDKConstants.TITLE));
+                argumentHandler.setTargetMolOutName(target.getID());
             }
 
             inputHandler.configure(target, targetType);
@@ -340,16 +342,16 @@ public class SMSDcmd {
         if (removeHydrogens) {
             query = new Molecule(AtomContainerManipulator.removeHydrogens(query));
             target = new Molecule(AtomContainerManipulator.removeHydrogens(target));
-            if (target.getProperty(CDKConstants.TITLE) != null) {
-                target.setID((String) target.getProperty(CDKConstants.TITLE));
-                argumentHandler.setTargetMolOutName(target.getID());
-            }
-            if (query.getProperty(CDKConstants.TITLE) != null) {
-                query.setID((String) target.getProperty(CDKConstants.TITLE));
-                argumentHandler.setQueryMolOutName(query.getID());
-            }
         }
 
+        if (target.getProperty(CDKConstants.TITLE) != null) {
+            target.setID((String) target.getProperty(CDKConstants.TITLE));
+            argumentHandler.setTargetMolOutName(target.getID());
+        }
+        if (query.getProperty(CDKConstants.TITLE) != null) {
+            query.setID((String) target.getProperty(CDKConstants.TITLE));
+            argumentHandler.setQueryMolOutName(query.getID());
+        }
 
         String out = ".out";
         if (!argumentHandler.isAppendMode()) {
