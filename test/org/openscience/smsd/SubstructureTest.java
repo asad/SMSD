@@ -66,8 +66,8 @@ public class SubstructureTest {
         Substructure smsd1 = new Substructure();
         smsd1.init(queryac, target);
         smsd1.setChemFilters(true, false, false);
-        assertNotNull(smsd1.getReactantMolecule());
-        assertNotNull(smsd1.getProductMolecule());
+        assertNotNull(smsd1.getQueryMolecule());
+        assertNotNull(smsd1.getTargetMolecule());
     }
 
     /**
@@ -85,8 +85,8 @@ public class SubstructureTest {
         Substructure smsd1 = new Substructure();
         smsd1.init(queryac, target);
         smsd1.setChemFilters(true, false, false);
-        assertNotNull(smsd1.getReactantMolecule());
-        assertNotNull(smsd1.getProductMolecule());
+        assertNotNull(smsd1.getQueryMolecule());
+        assertNotNull(smsd1.getTargetMolecule());
     }
 
     /**
@@ -105,8 +105,8 @@ public class SubstructureTest {
         Substructure smsd1 = new Substructure();
         smsd1.init(queryac, target);
         smsd1.setChemFilters(true, false, false);
-        assertNotNull(smsd1.getReactantMolecule());
-        assertNotNull(smsd1.getProductMolecule());
+        assertNotNull(smsd1.getQueryMolecule());
+        assertNotNull(smsd1.getTargetMolecule());
 
     }
 
@@ -267,7 +267,7 @@ public class SubstructureTest {
     }
 
     /**
-     * Test of getReactantMolecule method, of class SubStructureSearchAlgorithms.
+     * Test of getQueryMolecule method, of class SubStructureSearchAlgorithms.
      * @throws InvalidSmilesException
      * @throws CDKException
      */
@@ -283,11 +283,11 @@ public class SubstructureTest {
         smsd1.findSubgraph(true);
         smsd1.setChemFilters(false, false, false);
 
-        assertEquals(20, smsd1.getReactantMolecule().getAtomCount());
+        assertEquals(20, smsd1.getQueryMolecule().getAtomCount());
     }
 
     /**
-     * Test of getProductMolecule method, of class SubStructureSearchAlgorithms.
+     * Test of getTargetMolecule method, of class SubStructureSearchAlgorithms.
      * @throws InvalidSmilesException
      * @throws CDKException
      */
@@ -303,7 +303,7 @@ public class SubstructureTest {
         smsd1.findSubgraph(true);
         smsd1.setChemFilters(false, false, false);
 
-        assertEquals(7, smsd1.getProductMolecule().getAtomCount());
+        assertEquals(7, smsd1.getTargetMolecule().getAtomCount());
     }
 
     /**

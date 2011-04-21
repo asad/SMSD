@@ -94,8 +94,8 @@ public class SMSDTest {
         Isomorphism smsd1 = new Isomorphism(Algorithm.DEFAULT, false);
         smsd1.init(queryac, target);
         smsd1.setChemFilters(true, false, false);
-        assertNotNull(smsd1.getReactantMolecule());
-        assertNotNull(smsd1.getProductMolecule());
+        assertNotNull(smsd1.getQueryMolecule());
+        assertNotNull(smsd1.getTargetMolecule());
     }
 
     /**
@@ -112,8 +112,8 @@ public class SMSDTest {
         Isomorphism smsd1 = new Isomorphism(Algorithm.DEFAULT, false);
         smsd1.init(queryac, target);
         smsd1.setChemFilters(true, false, false);
-        assertNotNull(smsd1.getReactantMolecule());
-        assertNotNull(smsd1.getProductMolecule());
+        assertNotNull(smsd1.getQueryMolecule());
+        assertNotNull(smsd1.getTargetMolecule());
     }
 
     /**
@@ -375,7 +375,7 @@ public class SMSDTest {
     }
 
     /**
-     * Test of getReactantMolecule method, of class Isomorphism.
+     * Test of getQueryMolecule method, of class Isomorphism.
      * @throws CDKException
      */
     @Test
@@ -389,11 +389,11 @@ public class SMSDTest {
         smsd1.init(queryac, target);
         smsd1.setChemFilters(true, true, true);
 
-        assertEquals(7, smsd1.getReactantMolecule().getAtomCount());
+        assertEquals(7, smsd1.getQueryMolecule().getAtomCount());
     }
 
     /**
-     * Test of getProductMolecule method, of class Isomorphism.
+     * Test of getTargetMolecule method, of class Isomorphism.
      * @throws CDKException
      */
     @Test
@@ -407,7 +407,7 @@ public class SMSDTest {
         smsd1.init(queryac, target);
         smsd1.setChemFilters(true, true, true);
 
-        assertEquals(20, smsd1.getProductMolecule().getAtomCount());
+        assertEquals(20, smsd1.getTargetMolecule().getAtomCount());
     }
 
     /**

@@ -141,8 +141,8 @@ public class TestSMSD {
         smsd.init(query, target);
         smsd.setChemFilters(false, false, false);
 
-        query = smsd.getReactantMolecule();
-        target = smsd.getProductMolecule();
+        query = smsd.getQueryMolecule();
+        target = smsd.getTargetMolecule();
 
         System.out.println("Mol1 Size. " + query.getAtomCount());
         System.out.println("Mol2 Size. " + target.getAtomCount());
@@ -157,8 +157,8 @@ public class TestSMSD {
         smsd.init(query, target);
         smsd.setChemFilters(false, false, false);
 
-        query = smsd.getReactantMolecule();
-        target = smsd.getProductMolecule();
+        query = smsd.getQueryMolecule();
+        target = smsd.getTargetMolecule();
 
         System.out.println("Mol1 Size. " + query.getAtomCount());
         System.out.println("Mol2 Size. " + target.getAtomCount());
@@ -298,8 +298,8 @@ public class TestSMSD {
 
         Assert.assertEquals(true, ss.isSubgraph(bondSensitive));
 
-//        mol1 = comparison.getReactantMolecule();
-//        mol2 = comparison.getProductMolecule();
+//        mol1 = comparison.getQueryMolecule();
+//        mol2 = comparison.getTargetMolecule();
 
         System.out.println("Mol1 Size. " + mol1.getAtomCount());
         System.out.println("Mol2 Size. " + mol2.getAtomCount());
@@ -564,8 +564,8 @@ public class TestSMSD {
         IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
         smsd = new Isomorphism(Algorithm.DEFAULT, true);
         smsd.init(queryContainer, target);
-        query = smsd.getReactantMolecule();
-        target = smsd.getProductMolecule();
+        query = smsd.getQueryMolecule();
+        target = smsd.getTargetMolecule();
         generateImage("testQuery ", query, target, smsd);
         boolean foundMatches = smsd.isSubgraph();
         Assert.assertTrue(foundMatches);
@@ -604,8 +604,8 @@ public class TestSMSD {
         smsd.init(query, target);
         smsd.setChemFilters(true, true, true);
 
-        query = smsd.getReactantMolecule();
-        target = smsd.getProductMolecule();
+        query = smsd.getQueryMolecule();
+        target = smsd.getTargetMolecule();
 
         System.out.println("Mol1 Size. " + query.getAtomCount());
         System.out.println("Mol2 Size. " + target.getAtomCount());
@@ -652,8 +652,8 @@ public class TestSMSD {
         smsd.init(query, target);
         smsd.setChemFilters(true, true, true);
 
-        query = smsd.getReactantMolecule();
-        target = smsd.getProductMolecule();
+        query = smsd.getQueryMolecule();
+        target = smsd.getTargetMolecule();
 
         System.out.println("Mol1 Size. " + query.getAtomCount());
         System.out.println("Mol2 Size. " + target.getAtomCount());
@@ -688,8 +688,8 @@ public class TestSMSD {
         smsd.init(query, target);
         smsd.setChemFilters(true, true, true);
 
-        query = smsd.getReactantMolecule();
-        target = smsd.getProductMolecule();
+        query = smsd.getQueryMolecule();
+        target = smsd.getTargetMolecule();
 
         System.out.println("Mol1 Size. " + query.getAtomCount());
         System.out.println("Mol2 Size. " + target.getAtomCount());
