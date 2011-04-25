@@ -206,12 +206,19 @@ public class ImageGenerator {
 
     }
     
-    public RenderedImage createHubWheelImage(IAtomContainer hub, List<IAtomContainer> rim, List<Map<Integer, Integer>> mappings) {
+    public RenderedImage createHubWheelImage(IAtomContainer hub, 
+            List<IAtomContainer> rim, List<Map<Integer, Integer>> mappings) {
+        return createHubWheelImage(hub, rim, mappings, SUB_IMAGE_WIDTH, SUB_IMAGE_HEIGHT);
+    }
+    
+    public RenderedImage createHubWheelImage(IAtomContainer hub, 
+            List<IAtomContainer> rim, List<Map<Integer, Integer>> mappings, 
+            int subImageWidth, int subImageHeight) {
         List<IAtomContainer> all = new ArrayList<IAtomContainer>();
         all.add(hub);
         all.addAll(rim);
         CircularCanvasGenerator generator = new CircularCanvasGenerator(true);
-        Dimension cellDim = new Dimension(SUB_IMAGE_WIDTH, SUB_IMAGE_HEIGHT);
+        Dimension cellDim = new Dimension(subImageWidth, subImageHeight);
         generator.layout(all, cellDim);
         Params params = getParams();
         DirectMoleculeDrawer moleculeDrawer = new DirectMoleculeDrawer(params);
@@ -239,6 +246,7 @@ public class ImageGenerator {
         
         ZoomToFitDrawer ztfDrawer = new ZoomToFitDrawer(moleculeDrawer, generator);
         ztfDrawer.draw(all, cellDim, g);
+        
         List<String> arrowLabels = new ArrayList<String>();
         for (int i = 0; i < rim.size(); i++) {
             arrowLabels.add(String.valueOf(i));

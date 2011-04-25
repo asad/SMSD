@@ -325,7 +325,15 @@ public class OutputHandler {
     }
 
     public void writeCircleImage(IAtomContainer hub, List<IAtomContainer> rim, String name, List<Map<Integer, Integer>> mappings) throws IOException {
-        RenderedImage image = imageGenerator.createHubWheelImage(hub, rim, mappings);
+        int w = argumentHandler.getImageWidth();
+        int h = argumentHandler.getImageHeight();
+        RenderedImage image;
+        if (w != -1 && h != -1) {
+            // these are the width and heights of the individual canvases
+            image = imageGenerator.createHubWheelImage(hub, rim, mappings, w, h);
+        } else {
+            image = imageGenerator.createHubWheelImage(hub, rim, mappings);
+        }
         ImageIO.write(image, "PNG", new File(name + ".png"));
     }
 }
