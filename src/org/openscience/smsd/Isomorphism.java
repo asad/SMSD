@@ -83,7 +83,7 @@ import org.openscience.smsd.interfaces.Algorithm;
  *  //Bond Sensitive is set true
  *  Isomorphism comparison = new Isomorphism(Algorithm.Substructure, true);
  *  // set molecules, remove hydrogens, clean and configure molecule
- *  comparison.init(A1, A2, true, true);
+ *  comparison.init(A1, A2);
  *  // set chemical filter true
  *  comparison.setChemFilters(false, false, false);
  *  if (comparison.isSubgraph()) {
@@ -120,7 +120,7 @@ import org.openscience.smsd.interfaces.Algorithm;
  *  //Bond Sensitive is set true
  *  Isomorphism comparison = new Isomorphism(Algorithm.DEFAULT, true);
  *  // set molecules, remove hydrogens, clean and configure molecule
- *  comparison.init(A1, A2, true, true);
+ *  comparison.init(A1, A2);
  *  // set chemical filter true
  *  comparison.setChemFilters(true, true, true);
  *
@@ -182,10 +182,10 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
      * supported algorithm {@link org.openscience.cdk.smsd.interfaces.Algorithm} types:
      * <OL>
      * <lI>0: Default,
-     * <lI>1: MCSPlus,
-     * <lI>2: VFLibMCS,
-     * <lI>3: CDKMCS,
-     * <lI>4: Substructure
+     * <lI>1: Default_1,
+     * <lI>2: MCSPlus,
+     * <lI>3: VFLibMCS,
+     * <lI>4: CDKMCS
      * </OL>
      * @param algorithmType {@link org.openscience.cdk.smsd.interfaces.Algorithm}
      * @param bondTypeFlag
@@ -292,11 +292,8 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
                 }
             }
         }
-
 //        System.out.println("bond Map size:" + maps.size());
-
         return maps;
-
     }
 
     private void chooseAlgorithm() {

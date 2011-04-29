@@ -40,7 +40,7 @@ import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IRingSet;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
 import org.openscience.cdk.isomorphism.matchers.IQueryBond;
-import org.openscience.smsd.ring.HanserRingFinder;
+import org.openscience.cdk.ringsearch.SSSRFinder;
 import org.openscience.cdk.tools.manipulator.RingSetManipulator;
 
 /**
@@ -213,7 +213,7 @@ public class StereoFilter extends BaseFilter implements IChemicalFilter<Double> 
             } else {
                 score += BOScore;
             }
-            
+
             if (rAtom.getFormalCharge() == pAtom.getFormalCharge()) {
                 score += 5.0;
             }
@@ -359,16 +359,17 @@ public class StereoFilter extends BaseFilter implements IChemicalFilter<Double> 
         double lScore = 0;
         List<IAtom> listMap = (List<IAtom>) list.get(0);
         IAtomContainer ac = (IAtomContainer) list.get(1);
-        HanserRingFinder ringFinder = new HanserRingFinder();
-        IRingSet rRings = null;
+//        HanserRingFinder ringFinder = new HanserRingFinder();
+        IRingSet sssr = null;
         try {
-            rRings = ringFinder.getRingSet(ac);
-        } catch (CDKException ex) {
+            SSSRFinder finder = new SSSRFinder(ac);
+            sssr = finder.findEssentialRings();
+            RingSetManipulator.sort(sssr);
+//            System.out.println("Ring length " + sssr.getAtomContainerCount());
+            lScore = getRingMatch(sssr, listMap);
+        } catch (Exception ex) {
             Logger.getLogger(StereoFilter.class.getName()).log(Level.SEVERE, null, ex);
         }
-        RingSetManipulator.sort(rRings);
-//        System.out.println("Ring length " + );
-        lScore = getRingMatch(rRings, listMap);
         return lScore;
     }
 
@@ -378,6 +379,8 @@ public class StereoFilter extends BaseFilter implements IChemicalFilter<Double> 
             for (IAtomContainer ring : rings.atomContainers()) {
                 if (ring.contains(a)) {
                     score += 10;
+                } else {
+                    score -= 10;
                 }
             }
         }

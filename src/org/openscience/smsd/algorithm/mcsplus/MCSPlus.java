@@ -124,8 +124,7 @@ public class MCSPlus {
         } catch (IOException ex) {
             Logger.getLogger(MCSPlus.class.getName()).log(Level.SEVERE, null, ex);
         }
-
-
+        
         return extendMappings;
     }
 

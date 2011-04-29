@@ -38,7 +38,6 @@ import org.openscience.smsd.filters.PostFilter;
 import org.openscience.smsd.helper.FinalMappings;
 import org.openscience.smsd.interfaces.AbstractMCSAlgorithm;
 import org.openscience.smsd.interfaces.IMCSBase;
-import org.openscience.smsd.tools.MolHandler;
 
 /**
  * This class acts as a handler class for MCSPlus algorithm.
