@@ -64,14 +64,14 @@ import org.openscience.smsd.tools.TimeManager;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFlibMCSHandlerTest")
-public class VFlibMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
+public final class VFlibMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
 
-    private static List<Map<IAtom, IAtom>> allAtomMCS = null;
-    private static Map<IAtom, IAtom> atomsMCS = null;
-    private static List<Map<IAtom, IAtom>> allAtomMCSCopy = null;
-    private static Map<Integer, Integer> firstMCS = null;
-    private static List<Map<Integer, Integer>> allMCS = null;
-    private static List<Map<Integer, Integer>> allMCSCopy = null;
+    private List<Map<IAtom, IAtom>> allAtomMCS = null;
+    private Map<IAtom, IAtom> atomsMCS = null;
+    private List<Map<IAtom, IAtom>> allAtomMCSCopy = null;
+    private Map<Integer, Integer> firstMCS = null;
+    private List<Map<Integer, Integer>> allMCS = null;
+    private List<Map<Integer, Integer>> allMCSCopy = null;
     private List<Map<INode, IAtom>> vfLibSolutions = null;
     private IQueryAtomContainer queryMol = null;
     private IAtomContainer mol1 = null;

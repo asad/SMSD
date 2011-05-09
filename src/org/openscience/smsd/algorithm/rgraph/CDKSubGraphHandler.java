@@ -23,7 +23,6 @@
 package org.openscience.smsd.algorithm.rgraph;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +38,6 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.smsd.helper.FinalMappings;
 import org.openscience.smsd.interfaces.AbstractSubGraph;
 import org.openscience.smsd.interfaces.IMCSBase;
-import org.openscience.smsd.tools.MolHandler;
 
 /**
  * This class acts as a handler class for CDKMCS algorithm

@@ -52,15 +52,14 @@ import org.openscience.cdk.tools.manipulator.BondManipulator;
 @TestClass("org.openscience.cdk.smsd.algorithm.cdk.CDKRMapHandlerTest")
 public class CDKRMapHandler {
 
-
-    public CDKRMapHandler(){
-        
+    public CDKRMapHandler() {
     }
+
     /**
      * Returns source molecule
      * @return the source
      */
-    public static IAtomContainer getSource() {
+    public synchronized IAtomContainer getSource() {
         return source;
     }
 
@@ -68,7 +67,7 @@ public class CDKRMapHandler {
      * Set source molecule
      * @param aSource the source to set
      */
-    public static void setSource(IAtomContainer aSource) {
+    public synchronized void setSource(IAtomContainer aSource) {
         source = aSource;
     }
 
@@ -76,7 +75,7 @@ public class CDKRMapHandler {
      * Returns target molecule
      * @return the target
      */
-    public static IAtomContainer getTarget() {
+    public synchronized IAtomContainer getTarget() {
         return target;
     }
 
@@ -84,12 +83,12 @@ public class CDKRMapHandler {
      * Set target molecule
      * @param aTarget the target to set
      */
-    public static void setTarget(IAtomContainer aTarget) {
+    public synchronized void setTarget(IAtomContainer aTarget) {
         target = aTarget;
     }
     private List<Map<Integer, Integer>> mappings;
-    private static IAtomContainer source;
-    private static IAtomContainer target;
+    private IAtomContainer source;
+    private IAtomContainer target;
     private boolean timeoutFlag = false;
 
     /**

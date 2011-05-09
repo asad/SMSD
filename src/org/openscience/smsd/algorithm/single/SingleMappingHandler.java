@@ -23,7 +23,6 @@
 package org.openscience.smsd.algorithm.single;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,10 +48,10 @@ import org.openscience.smsd.interfaces.IMCSBase;
 @TestClass("org.openscience.cdk.smsd.algorithm.single.SingleMappingHandlerTest")
 public class SingleMappingHandler extends AbstractMCSAlgorithm implements IMCSBase {
 
-    private static List<Map<IAtom, IAtom>> allAtomMCS = null;
-    private static Map<IAtom, IAtom> atomsMCS = null;
-    private static Map<Integer, Integer> firstMCS = null;
-    private static List<Map<Integer, Integer>> allMCS = null;
+    private List<Map<IAtom, IAtom>> allAtomMCS = null;
+    private Map<IAtom, IAtom> atomsMCS = null;
+    private Map<Integer, Integer> firstMCS = null;
+    private List<Map<Integer, Integer>> allMCS = null;
     private IAtomContainer source = null;
     private IQueryAtomContainer smartSource = null;
     private IAtomContainer target = null;

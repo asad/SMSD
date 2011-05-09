@@ -23,7 +23,6 @@
 package org.openscience.smsd.algorithm.rgraph;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +38,6 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.smsd.helper.FinalMappings;
 import org.openscience.smsd.interfaces.AbstractMCSAlgorithm;
 import org.openscience.smsd.interfaces.IMCSBase;
-import org.openscience.smsd.tools.MolHandler;
 
 /**
  * This class acts as a handler class for CDKMCS algorithm
@@ -80,7 +78,7 @@ public class CDKMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
      */
     @Override
     @TestMethod("testSet_MolHandler_MolHandler")
-    public void set(IAtomContainer source, IAtomContainer target) {
+    public synchronized void set(IAtomContainer source, IAtomContainer target) {
         this.source = source;
         this.target = target;
     }
@@ -92,7 +90,7 @@ public class CDKMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
      */
     @Override
     @TestMethod("testSet_IQueryAtomContainer_MolHandler")
-    public void set(IQueryAtomContainer source, IAtomContainer target) {
+    public synchronized void set(IQueryAtomContainer source, IAtomContainer target) {
         this.source = source;
         this.target = target;
     }
@@ -103,7 +101,7 @@ public class CDKMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
      */
     @Override
     @TestMethod("testSearchMCS")
-    public void searchMCS(boolean shouldMatchBonds) {
+    public synchronized void searchMCS(boolean shouldMatchBonds) {
 
         CDKRMapHandler rmap = new CDKRMapHandler();
 
@@ -136,7 +134,7 @@ public class CDKMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
      * @return IMolecule Set
      * @throws CDKException 
      */
-    protected IMoleculeSet getUncommon(IAtomContainer mol, IAtomContainer mcss, boolean shouldMatchBonds) throws CDKException {
+    protected synchronized IMoleculeSet getUncommon(IAtomContainer mol, IAtomContainer mcss, boolean shouldMatchBonds) throws CDKException {
         ArrayList<Integer> atomSerialsToDelete = new ArrayList<Integer>();
 
         List<List<CDKRMap>> matches = CDKMCS.getSubgraphAtomsMaps(mol, mcss, shouldMatchBonds);
@@ -238,7 +236,7 @@ public class CDKMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
      */
     @Override
     @TestMethod("testGetAllMapping")
-    public List<Map<Integer, Integer>> getAllMapping() {
+    public synchronized List<Map<Integer, Integer>> getAllMapping() {
         return allMCS;
     }
 
@@ -246,7 +244,7 @@ public class CDKMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
      */
     @Override
     @TestMethod("testGetFirstMapping")
-    public Map<Integer, Integer> getFirstMapping() {
+    public synchronized Map<Integer, Integer> getFirstMapping() {
         return firstMCS;
     }
 
@@ -254,7 +252,7 @@ public class CDKMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
      */
     @Override
     @TestMethod("testGetAllAtomMapping")
-    public List<Map<IAtom, IAtom>> getAllAtomMapping() {
+    public synchronized List<Map<IAtom, IAtom>> getAllAtomMapping() {
         return allAtomMCS;
     }
 
@@ -262,7 +260,7 @@ public class CDKMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
      */
     @Override
     @TestMethod("testGetFirstAtomMapping")
-    public Map<IAtom, IAtom> getFirstAtomMapping() {
+    public synchronized Map<IAtom, IAtom> getFirstAtomMapping() {
         return firstAtomMCS;
     }
 }
