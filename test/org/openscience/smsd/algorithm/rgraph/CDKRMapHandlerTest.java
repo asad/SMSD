@@ -22,7 +22,6 @@
  */
 package org.openscience.smsd.algorithm.rgraph;
 
-import org.openscience.smsd.algorithm.rgraph.CDKRMapHandler;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -74,8 +73,9 @@ public class CDKRMapHandlerTest {
     public void testGetSource() {
         System.out.println("getSource");
         IAtomContainer expResult = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class);
-        CDKRMapHandler.setSource(expResult);
-        IAtomContainer result = CDKRMapHandler.getSource();
+        CDKRMapHandler cdkHandler = new CDKRMapHandler();
+        cdkHandler.setSource(expResult);
+        IAtomContainer result = cdkHandler.getSource();
         assertEquals(expResult, result);
     }
 
@@ -86,8 +86,9 @@ public class CDKRMapHandlerTest {
     public void testSetSource() {
         System.out.println("setSource");
         IAtomContainer expResult = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class);
-        CDKRMapHandler.setSource(expResult);
-        IAtomContainer result = CDKRMapHandler.getSource();
+        CDKRMapHandler cdkHandler = new CDKRMapHandler();
+        cdkHandler.setSource(expResult);
+        IAtomContainer result = cdkHandler.getSource();
         assertEquals(expResult, result);
     }
 
@@ -98,8 +99,9 @@ public class CDKRMapHandlerTest {
     public void testGetTarget() {
         System.out.println("getTarget");
         IAtomContainer expResult = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class);
-        CDKRMapHandler.setTarget(expResult);
-        IAtomContainer result = CDKRMapHandler.getTarget();
+        CDKRMapHandler cdkHandler = new CDKRMapHandler();
+        cdkHandler.setTarget(expResult);
+        IAtomContainer result = cdkHandler.getTarget();
         assertEquals(expResult, result);
     }
 
@@ -110,8 +112,9 @@ public class CDKRMapHandlerTest {
     public void testSetTarget() {
         System.out.println("setTarget");
         IAtomContainer expResult = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class);
-        CDKRMapHandler.setTarget(expResult);
-        IAtomContainer result = CDKRMapHandler.getTarget();
+        CDKRMapHandler cdkHandler = new CDKRMapHandler();
+        cdkHandler.setTarget(expResult);
+        IAtomContainer result = cdkHandler.getTarget();
         assertEquals(expResult, result);
     }
 

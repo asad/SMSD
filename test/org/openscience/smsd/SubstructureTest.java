@@ -30,7 +30,6 @@ import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IMolecule;
 import org.openscience.cdk.smiles.SmilesParser;
-import org.openscience.smsd.interfaces.Algorithm;
 
 /**
  * Unit testing for the {@link SubStructureSearchAlgorithms} class.
