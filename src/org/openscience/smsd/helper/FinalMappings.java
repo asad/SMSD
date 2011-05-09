@@ -53,7 +53,7 @@ public class FinalMappings implements IFinalMapping {
      * @return instance of this object
      */
     @TestMethod("testGetInstance")
-    synchronized public static FinalMappings getInstance() {
+    public synchronized static FinalMappings getInstance() {
         if (instance == null) {
             instance = new FinalMappings();
         }
@@ -66,7 +66,7 @@ public class FinalMappings implements IFinalMapping {
      */
     @Override
     @TestMethod("testAdd")
-    synchronized public void add(Map<Integer, Integer> mapping) {
+    public synchronized void add(Map<Integer, Integer> mapping) {
         mappings.add(mapping);
     }
 
@@ -76,7 +76,7 @@ public class FinalMappings implements IFinalMapping {
      */
     @Override
     @TestMethod("testSet")
-    synchronized public final void set(List<Map<Integer, Integer>> list) {
+    public synchronized final void set(List<Map<Integer, Integer>> list) {
         this.clear();
         mappings.addAll(list);
     }
@@ -87,7 +87,7 @@ public class FinalMappings implements IFinalMapping {
      */
     @Override
     @TestMethod("testGetIterator")
-    synchronized public Iterator<Map<Integer, Integer>> getIterator() {
+    public synchronized Iterator<Map<Integer, Integer>> getIterator() {
         Iterator<Map<Integer, Integer>> iterator = mappings.iterator();
         return iterator;
     }
@@ -98,7 +98,7 @@ public class FinalMappings implements IFinalMapping {
      */
     @Override
     @TestMethod("testClear")
-    synchronized public void clear() {
+    public synchronized void clear() {
         FinalMappings.mappings.clear();
     }
 
@@ -108,7 +108,7 @@ public class FinalMappings implements IFinalMapping {
      */
     @Override
     @TestMethod("testGetFinalMapping")
-    synchronized public List<Map<Integer, Integer>> getFinalMapping() {
+    public synchronized List<Map<Integer, Integer>> getFinalMapping() {
         return mappings;
     }
 
@@ -118,7 +118,7 @@ public class FinalMappings implements IFinalMapping {
      */
     @Override
     @TestMethod("testGetSize")
-    synchronized public int getSize() {
+    public synchronized int getSize() {
         return mappings.size();
     }
 }

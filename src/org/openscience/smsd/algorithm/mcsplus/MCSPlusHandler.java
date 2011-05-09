@@ -86,7 +86,7 @@ public class MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase {
      */
     @Override
     @TestMethod("testSet_IQueryAtomContainer_MolHandler")
-    public void set(IQueryAtomContainer source, IAtomContainer target) {
+    public synchronized void set(IQueryAtomContainer source, IAtomContainer target) {
         this.source = source;
         this.target = target;
     }

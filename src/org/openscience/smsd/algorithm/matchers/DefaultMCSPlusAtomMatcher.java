@@ -102,6 +102,7 @@ public class DefaultMCSPlusAtomMatcher implements AtomMatcher {
         this.qAtom = atom;
         this.symbol = atom.getSymbol();
         setBondMatchFlag(shouldMatchBonds);
+        this.maximumNeighbors = queryContainer.getConnectedAtomsCount(atom);
 
 //        System.out.println("Atom " + atom.getSymbol());
 //        System.out.println("MAX allowed " + maximumNeighbors);
@@ -121,14 +122,14 @@ public class DefaultMCSPlusAtomMatcher implements AtomMatcher {
     /**
      * Constructor
      * @param queryContainer query atom container
-     * @param template query atom
+     * @param atom query atom
      * @param blockedPositions
      * @param shouldMatchBonds bond matching flag
      */
-    public DefaultMCSPlusAtomMatcher(IAtomContainer queryContainer, IAtom template, int blockedPositions, boolean shouldMatchBonds) {
-        this(queryContainer, template, shouldMatchBonds);
-        this.maximumNeighbors = countImplicitHydrogens(template)
-                + queryContainer.getConnectedAtomsCount(template)
+    public DefaultMCSPlusAtomMatcher(IAtomContainer queryContainer, IAtom atom, int blockedPositions, boolean shouldMatchBonds) {
+        this(queryContainer, atom, shouldMatchBonds);
+        this.maximumNeighbors = countImplicitHydrogens(atom)
+                + queryContainer.getConnectedAtomsCount(atom)
                 - blockedPositions;
     }
 
@@ -184,9 +185,9 @@ public class DefaultMCSPlusAtomMatcher implements AtomMatcher {
             return false;
         }
 
-//        if (!matchMaximumNeighbors(targetContainer, targetAtom)) {
-//            return false;
-//        }
+        if (!matchMaximumNeighbors(targetContainer, targetAtom)) {
+            return false;
+        }
         return true;
     }
 }

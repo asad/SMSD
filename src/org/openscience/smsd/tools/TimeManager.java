@@ -57,7 +57,7 @@ public class TimeManager {
      * @return Elapsed Time In Hours
      */
     @TestMethod("testGetElapsedTimeInHours")
-    public double getElapsedTimeInHours() {
+    public synchronized double getElapsedTimeInHours() {
         double currentTime = System.currentTimeMillis();
         return (currentTime - startTime) / (60 * 60 * 1000);
 
@@ -69,7 +69,7 @@ public class TimeManager {
      * @return Elapsed Time In Minutes
      */
     @TestMethod("testGetElapsedTimeInMinutes")
-    public double getElapsedTimeInMinutes() {
+    public synchronized double getElapsedTimeInMinutes() {
 
         //long diffSeconds = diff / 1000;
         //long diffMinutes = diff / (60 * 1000);
@@ -86,7 +86,7 @@ public class TimeManager {
      * @return Elapsed Time In Seconds
      */
     @TestMethod("testGetElapsedTimeInSeconds")
-    public double getElapsedTimeInSeconds() {
+    public synchronized double getElapsedTimeInSeconds() {
         double currentTime = System.currentTimeMillis();
         return ((currentTime - startTime) / 1000);
 
@@ -97,7 +97,7 @@ public class TimeManager {
      * @return Elapsed Time In Mill Seconds
      */
     @TestMethod("testGetElapsedTimeInMilliSeconds")
-    public double getElapsedTimeInMilliSeconds() {
+    public synchronized double getElapsedTimeInMilliSeconds() {
         double currentTime = System.currentTimeMillis();
         return (currentTime - startTime);
 

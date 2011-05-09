@@ -64,7 +64,7 @@ public class TimeOut {
      * @param timeout
      */
     @TestMethod("testSetTimeOut")
-    public void setCDKMCSTimeOut(double timeout) {
+    public synchronized void setCDKMCSTimeOut(double timeout) {
         this.cdkMCSTimeout = timeout;
     }
 
@@ -73,7 +73,7 @@ public class TimeOut {
      * @return cdkMCSTimeout out cutoff value
      */
     @TestMethod("testSetTimeOut")
-    public double getCDKMCSTimeOut() {
+    public synchronized double getCDKMCSTimeOut() {
         return cdkMCSTimeout;
     }
 
@@ -82,7 +82,7 @@ public class TimeOut {
      * @return the timeout flag
      */
     @TestMethod("testIsTimeOutFlag")
-    public boolean isTimeOutFlag() {
+    public synchronized boolean isTimeOutFlag() {
         return timeOutFlag;
     }
 
@@ -91,35 +91,35 @@ public class TimeOut {
      * @param timeOut the timeout flag to set
      */
     @TestMethod("testSetTimeOutFlag")
-    public void setTimeOutFlag(boolean timeOut) {
+    public synchronized void setTimeOutFlag(boolean timeOut) {
         this.timeOutFlag = timeOut;
     }
 
     /**
      * @return time out for the MCS Plus algorithm
      */
-    public double getMCSPlusTimeout() {
+    public synchronized double getMCSPlusTimeout() {
         return mcsPlusTimeout;
     }
 
     /**
      * @param mcsPlusTimeout time out for mcsPlus
      */
-    public void setMCSPlusTimeout(double mcsPlusTimeout) {
+    public synchronized void setMCSPlusTimeout(double mcsPlusTimeout) {
         this.mcsPlusTimeout = mcsPlusTimeout;
     }
 
     /**
      * @return time out for the VF algorithm
      */
-    public double getVFTimeout() {
+    public synchronized double getVFTimeout() {
         return vfTimeout;
     }
 
     /**
      * @param vfTimeout time out for the VF algorithm
      */
-    public void setVFTimeout(double VFTimeout) {
-        this.vfTimeout = VFTimeout;
+    public synchronized void setVFTimeout(double vfTimeout) {
+        this.vfTimeout = vfTimeout;
     }
 }

@@ -54,7 +54,7 @@ import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.helper.MolHandlerTest")
-public class MolHandler {
+public final class MolHandler {
 
     private IAtomContainer atomContainer = null;
     private boolean removeHydrogen = false;
@@ -160,7 +160,7 @@ public class MolHandler {
      * @return get processed / modified container
      */
     @TestMethod("testGetMolecule")
-    public IAtomContainer getMolecule() {
+    public synchronized IAtomContainer getMolecule() {
         return atomContainer;
     }
 
@@ -169,11 +169,11 @@ public class MolHandler {
      * @return true if remove H else false
      */
     @TestMethod("testGetRemoveHydrogenFlag")
-    public boolean getRemoveHydrogenFlag() {
+    public synchronized boolean getRemoveHydrogenFlag() {
         return removeHydrogen;
     }
 
-    private boolean isPseudoAtoms() {
+    private synchronized boolean isPseudoAtoms() {
         for (IAtom atoms : atomContainer.atoms()) {
             if (atoms instanceof IPseudoAtom || atoms instanceof PseudoAtom) {
                 return true;

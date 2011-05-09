@@ -127,7 +127,7 @@ public final class McGregor {
      * @param present_Mapping
      * @throws IOException
      */
-    public void startMcGregorIteration(int largestMappingSize, Map<Integer, Integer> present_Mapping) throws IOException {
+    public synchronized void startMcGregorIteration(int largestMappingSize, Map<Integer, Integer> present_Mapping) throws IOException {
 
         this.globalMCSSize = (largestMappingSize / 2);
         List<String> c_tab1_copy = McGregorChecks.generateCTabCopy(source);
@@ -264,7 +264,7 @@ public final class McGregor {
         iterator(mcGregorHelper);
     }
 
-    private int iterator(McgregorHelper mcGregorHelper) throws IOException {
+    private synchronized int iterator(McgregorHelper mcGregorHelper) throws IOException {
 
         boolean mappingCheckFlag = mcGregorHelper.isMappingCheckFlag();
         int mappedAtomCount = mcGregorHelper.getMappedAtomCount();
@@ -308,7 +308,7 @@ public final class McGregor {
         return 0;
     }
 
-    private void searchAndExtendMappings(
+    private synchronized void searchAndExtendMappings(
             Stack<List<Integer>> BESTARCS_copy,
             McgregorHelper mcGregorHelper) throws IOException {
         int mappedAtomCount = mcGregorHelper.getMappedAtomCount();
@@ -479,7 +479,7 @@ public final class McGregor {
         }
     }
 
-    private List<Integer> findMcGregorMapping(List<Integer> MARCS, McgregorHelper mcGregorHelper) {
+    private synchronized List<Integer> findMcGregorMapping(List<Integer> MARCS, McgregorHelper mcGregorHelper) {
 
         int neighborBondNumA = mcGregorHelper.getNeighborBondNumA();
         int neighborBondNumB = mcGregorHelper.getNeighborBondNumB();
@@ -508,7 +508,7 @@ public final class McGregor {
         return unique_MAPPING;
     }
 
-    private void setModifedArcs(McgregorHelper mcGregorHelper) {
+    private synchronized void setModifedArcs(McgregorHelper mcGregorHelper) {
         int neighborBondNumA = mcGregorHelper.getNeighborBondNumA();
         int neighborBondNumB = mcGregorHelper.getNeighborBondNumB();
         List<Integer> iBondNeighborAtomsA = mcGregorHelper.getiBondNeighborAtomsA();
@@ -546,7 +546,7 @@ public final class McGregor {
         }
     }
 
-    private void partsearch(int xstart, int ystart, List<Integer> TEMPMARCS_ORG, McgregorHelper mcGregorHelper) {
+    private synchronized void partsearch(int xstart, int ystart, List<Integer> TEMPMARCS_ORG, McgregorHelper mcGregorHelper) {
         int neighborBondNumA = mcGregorHelper.getNeighborBondNumA();
         int neighborBondNumB = mcGregorHelper.getNeighborBondNumB();
 
@@ -598,7 +598,7 @@ public final class McGregor {
 //"verifyNodes". If the matrix already exists the function returns false which means that
 //the matrix will not be stored. Otherwise the function returns true which means that the
 //matrix will be stored in function partsearch.
-    private boolean checkMARCS(List<Integer> MARCS_T, int neighborBondNumA, int neighborBondNumB) {
+    private synchronized boolean checkMARCS(List<Integer> MARCS_T, int neighborBondNumA, int neighborBondNumB) {
 
         int size = neighborBondNumA * neighborBondNumA;
         List<Integer> posnum_list = new ArrayList<Integer>(size);
@@ -626,7 +626,7 @@ public final class McGregor {
 
     }
 
-    private boolean verifyNodes(List<Integer> matrix, BinaryTree currentStructure, int index, int fieldLength) {
+    private synchronized boolean verifyNodes(List<Integer> matrix, BinaryTree currentStructure, int index, int fieldLength) {
         if (index < fieldLength) {
             if (matrix.get(index) == currentStructure.getValue() && currentStructure.getEqual() != null) {
                 setNewMatrix(false);
@@ -661,7 +661,7 @@ public final class McGregor {
         return true;
     }
 
-    private void startsearch(McgregorHelper mcGregorHelper) {
+    private synchronized void startsearch(McgregorHelper mcGregorHelper) {
         int neighborBondNumA = mcGregorHelper.getNeighborBondNumA();
         int neighborBondNumB = mcGregorHelper.getNeighborBondNumB();
 
@@ -703,7 +703,7 @@ public final class McGregor {
      * Returns computed mappings.
      * @return mappings
      */
-    public List<List<Integer>> getMappings() {
+    public synchronized List<List<Integer>> getMappings() {
 
         return mappings;
     }
@@ -712,7 +712,7 @@ public final class McGregor {
      * Returns MCS size.
      * @return MCS size
      */
-    public int getMCSSize() {
+    public synchronized int getMCSSize() {
 
         return this.globalMCSSize;
     }
@@ -735,7 +735,7 @@ public final class McGregor {
         }
     }
 
-    private void setArcs(int xIndex, int yIndex, int arcsleft, List<Integer> TEMPMARCS, McgregorHelper mcGregorHelper) {
+    private synchronized void setArcs(int xIndex, int yIndex, int arcsleft, List<Integer> TEMPMARCS, McgregorHelper mcGregorHelper) {
         int neighborBondNumA = mcGregorHelper.getNeighborBondNumA();
         int neighborBondNumB = mcGregorHelper.getNeighborBondNumB();
         do {
@@ -761,7 +761,7 @@ public final class McGregor {
         }
     }
 
-    private void popBestArcs(int arcsleft) {
+    private synchronized void popBestArcs(int arcsleft) {
         if (arcsleft > bestarcsleft) {
             McGregorChecks.removeTreeStructure(first);
             first = last = new BinaryTree(-1);
@@ -774,7 +774,7 @@ public final class McGregor {
         bestarcsleft = arcsleft;
     }
 
-    private void extendMapping(int xIndex, int yIndex, McgregorHelper mcGregorHelper, List<Integer> additional_mapping, List<Integer> currentMapping) {
+    private synchronized void extendMapping(int xIndex, int yIndex, McgregorHelper mcGregorHelper, List<Integer> additional_mapping, List<Integer> currentMapping) {
 
         int Atom1_moleculeA = mcGregorHelper.getiBondNeighborAtomsA().get(xIndex * 3 + 0);
         int Atom2_moleculeA = mcGregorHelper.getiBondNeighborAtomsA().get(xIndex * 3 + 1);
@@ -815,7 +815,7 @@ public final class McGregor {
         }
     }
 
-    private boolean matchGAtoms(String G1A, String G2A, String G1B, String G2B) {
+    private synchronized boolean matchGAtoms(String G1A, String G2A, String G1B, String G2B) {
         return (G1A.compareToIgnoreCase(G1B) == 0
                 && G2A.compareToIgnoreCase(G2B) == 0)
                 || (G1A.compareToIgnoreCase(G2B) == 0
@@ -826,7 +826,7 @@ public final class McGregor {
      * Checks if its a new Matrix.
      * @return the newMatrix
      */
-    public boolean isNewMatrix() {
+    public synchronized boolean isNewMatrix() {
         return newMatrix;
     }
 
@@ -834,7 +834,7 @@ public final class McGregor {
      * set a new Matrix.
      * @param newMatrix the newMatrix to set
      */
-    public void setNewMatrix(boolean newMatrix) {
+    public synchronized void setNewMatrix(boolean newMatrix) {
         this.newMatrix = newMatrix;
     }
 
@@ -842,7 +842,7 @@ public final class McGregor {
      * Should bonds match
      * @return the bondMatch
      */
-    private boolean isBondMatch() {
+    private synchronized boolean isBondMatch() {
         return bondMatch;
     }
 
@@ -850,7 +850,7 @@ public final class McGregor {
      * Should bonds match
      * @param bondMatch the bondMatch to set
      */
-    private void setBondMatch(boolean bondMatch) {
+    private synchronized void setBondMatch(boolean bondMatch) {
         this.bondMatch = bondMatch;
     }
 }

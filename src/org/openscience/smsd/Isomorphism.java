@@ -254,7 +254,7 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
      * @param mappings mappings between sourceAtomCount and targetAtomCount molecule atoms
      * @return bond maps between sourceAtomCount and targetAtomCount molecules based on the atoms
      */
-    public static List<Map<IBond, IBond>> makeBondMapsOfAtomMaps(IAtomContainer ac1, IAtomContainer ac2, List<Map<IAtom, IAtom>> mappings) {
+    public synchronized static List<Map<IBond, IBond>> makeBondMapsOfAtomMaps(IAtomContainer ac1, IAtomContainer ac2, List<Map<IAtom, IAtom>> mappings) {
         List<Map<IBond, IBond>> bondMaps = new ArrayList<Map<IBond, IBond>>();
         for (Map<IAtom, IAtom> mapping : mappings) {
             bondMaps.add(makeBondMapOfAtomMap(ac1, ac2, mapping));
@@ -270,7 +270,7 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
      * @param mapping mappings between sourceAtomCount and targetAtomCount molecule atoms
      * @return bond map between sourceAtomCount and targetAtomCount molecules based on the atoms
      */
-    public static Map<IBond, IBond> makeBondMapOfAtomMap(IAtomContainer ac1, IAtomContainer ac2, Map<IAtom, IAtom> mapping) {
+    public synchronized static Map<IBond, IBond> makeBondMapOfAtomMap(IAtomContainer ac1, IAtomContainer ac2, Map<IAtom, IAtom> mapping) {
         Map<IBond, IBond> maps = new HashMap<IBond, IBond>();
 
         for (Map.Entry<IAtom, IAtom> mapS : mapping.entrySet()) {
@@ -352,7 +352,7 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
 
     }
 
-    private void vfLibMCS() {
+    private synchronized void vfLibMCS() {
         VFlibMCSHandler mcs = null;
         mcs = new VFlibMCSHandler();
         mcs.set(query, target);
@@ -366,7 +366,7 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
         allAtomMCS.addAll(mcs.getAllAtomMapping());
     }
 
-    private void singleMapping() {
+    private synchronized void singleMapping() {
         SingleMappingHandler mcs = null;
 
         mcs = new SingleMappingHandler();
@@ -392,7 +392,7 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
         return count;
     }
 
-    private void defaultMCSAlgorithm() {
+    private synchronized void defaultMCSAlgorithm() {
         try {
             if (isMatchBonds()) {
                 cdkMCSAlgorithm();
@@ -414,7 +414,7 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
         }
     }
 
-    private void defaultMCSAlgorithm_1() {
+    private synchronized void defaultMCSAlgorithm_1() {
         try {
             cdkMCSAlgorithm();
             if (getFirstMapping() == null || isTimeOut()) {
@@ -428,7 +428,7 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
         }
     }
 
-    private void vfLibMCSAlgorithm() {
+    private synchronized void vfLibMCSAlgorithm() {
         vfLibMCS();
     }
 
@@ -446,15 +446,15 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
         }
     }
 
-    public boolean isTimeOut() {
+    public synchronized boolean isTimeOut() {
         return TimeOut.getInstance().isTimeOutFlag();
     }
 
-    public void resetTimeOut() {
+    public synchronized void resetTimeOut() {
         TimeOut.getInstance().setTimeOutFlag(false);
     }
 
-    private void clearMaps() {
+    private synchronized void clearMaps() {
         this.firstSolution.clear();
         this.allMCS.clear();
         this.allAtomMCS.clear();
@@ -467,14 +467,14 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
      *
      */
     @Override
-    public void init(IQueryAtomContainer query, IAtomContainer target) throws CDKException {
+    public synchronized void init(IQueryAtomContainer query, IAtomContainer target) throws CDKException {
         this.query = query;
         this.target = target;
         mcsBuilder(query, target);
     }
 
     @Override
-    public void init(IAtomContainer query, IAtomContainer target) throws CDKException {
+    public synchronized void init(IAtomContainer query, IAtomContainer target) throws CDKException {
         this.query = query;
         this.target = target;
         mcsBuilder(query, target);
@@ -484,7 +484,7 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
      */
     @Override
     @TestMethod("testSetChemFilters")
-    public void setChemFilters(boolean stereoFilter, boolean fragmentFilter, boolean energyFilter) {
+    public synchronized void setChemFilters(boolean stereoFilter, boolean fragmentFilter, boolean energyFilter) {
 
         if (firstAtomMCS != null) {
             ChemicalFilters chemFilter = new ChemicalFilters(allMCS, allAtomMCS, firstSolution, firstAtomMCS, getQueryMolecule(), getTargetMolecule());
@@ -575,7 +575,7 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
      */
     @Override
     @TestMethod("testGetreactantMolecule")
-    public IAtomContainer getQueryMolecule() {
+    public synchronized IAtomContainer getQueryMolecule() {
         return query;
     }
 
@@ -583,7 +583,7 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
      */
     @Override
     @TestMethod("testGetproductMolecule")
-    public IAtomContainer getTargetMolecule() {
+    public synchronized IAtomContainer getTargetMolecule() {
         return target;
     }
 
@@ -591,7 +591,7 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
      */
     @Override
     @TestMethod("testGetTanimotoSimilarity")
-    public double getTanimotoSimilarity() throws IOException {
+    public synchronized double getTanimotoSimilarity() throws IOException {
         double tanimoto = getTanimotoAtomSimilarity() + getTanimotoBondSimilarity();
         if (tanimoto > 0 && getQueryMolecule().getBondCount() > 0
                 && getTargetMolecule().getBondCount() > 0) {
@@ -600,7 +600,7 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
         return tanimoto;
     }
 
-    public double getTanimotoAtomSimilarity() throws IOException {
+    public synchronized double getTanimotoAtomSimilarity() throws IOException {
         int decimalPlaces = 4;
         int rAtomCount = 0;
         int pAtomCount = 0;
@@ -620,7 +620,7 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
         return tanimotoAtom;
     }
 
-    public double getTanimotoBondSimilarity() throws IOException {
+    public synchronized double getTanimotoBondSimilarity() throws IOException {
         int decimalPlaces = 4;
         int rBondCount = 0;
         int pBondCount = 0;
@@ -644,7 +644,7 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
      */
     @Override
     @TestMethod("testIsStereoMisMatch")
-    public boolean isStereoMisMatch() {
+    public synchronized boolean isStereoMisMatch() {
         boolean flag = false;
         IAtomContainer reactant = getQueryMolecule();
         IAtomContainer product = getTargetMolecule();
@@ -685,7 +685,7 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
      */
     @Override
     @TestMethod("testIsSubgraph")
-    public boolean isSubgraph() {
+    public synchronized boolean isSubgraph() {
 
         IAtomContainer reactant = getQueryMolecule();
         IAtomContainer product = getTargetMolecule();
@@ -714,7 +714,7 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
      */
     @Override
     @TestMethod("testGetEuclideanDistance")
-    public double getEuclideanDistance() throws IOException {
+    public synchronized double getEuclideanDistance() throws IOException {
         int decimalPlaces = 4;
         double sourceAtomCount = 0;
         double targetAtomCount = 0;
@@ -738,72 +738,72 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
     /**
      * @return the matchBonds
      */
-    public boolean isMatchBonds() {
+    public synchronized boolean isMatchBonds() {
         return matchBonds;
     }
 
     /**
      * @param matchBonds the matchBonds to set
      */
-    public void setMatchBonds(boolean matchBonds) {
+    public synchronized void setMatchBonds(boolean matchBonds) {
         this.matchBonds = matchBonds;
     }
 
     /**
      * @return the allBondMCS
      */
-    public List<Map<IBond, IBond>> getAllBondMaps() {
+    public synchronized List<Map<IBond, IBond>> getAllBondMaps() {
         return allBondMCS;
     }
 
     /**
      * @param allBondMCS the allBondMCS to set
      */
-    private void setAllBondMaps(List<Map<IBond, IBond>> allBondMCS) {
+    private synchronized void setAllBondMaps(List<Map<IBond, IBond>> allBondMCS) {
         this.allBondMCS = allBondMCS;
     }
 
     /**
      * @return the firstBondMCS
      */
-    public Map<IBond, IBond> getFirstBondMap() {
+    public synchronized Map<IBond, IBond> getFirstBondMap() {
         return firstBondMCS;
     }
 
     /**
      * @param firstBondMCS the firstBondMCS to set
      */
-    private void setFirstBondMap(Map<IBond, IBond> firstBondMCS) {
+    private synchronized void setFirstBondMap(Map<IBond, IBond> firstBondMCS) {
         this.firstBondMCS = firstBondMCS;
     }
 
     @Override
-    public double getBondSensitiveCDKMCSTimeOut() {
+    public synchronized double getBondSensitiveCDKMCSTimeOut() {
         return this.bondSensitiveCDKMCSTimeOut;
     }
 
     @Override
-    public void setBondSensitiveCDKMCSTimeOut(double bondSensitiveTimeOut) {
+    public synchronized void setBondSensitiveCDKMCSTimeOut(double bondSensitiveTimeOut) {
         this.bondSensitiveCDKMCSTimeOut = bondSensitiveTimeOut;
     }
 
     @Override
-    public double getBondInSensitiveCDKMCSTimeOut() {
+    public synchronized double getBondInSensitiveCDKMCSTimeOut() {
         return bondInSensitiveCDKMCSTimeOut;
     }
 
     @Override
-    public void setBondInSensitiveCDKMCSTimeOut(double bondInSensitiveTimeOut) {
+    public synchronized void setBondInSensitiveCDKMCSTimeOut(double bondInSensitiveTimeOut) {
         this.bondInSensitiveCDKMCSTimeOut = bondInSensitiveTimeOut;
     }
 
     @Override
-    public double getBondSensitiveMCSPlusTimeOut() {
+    public synchronized double getBondSensitiveMCSPlusTimeOut() {
         return this.bondSensitiveMCSPlusTimeOut;
     }
 
     @Override
-    public void setBondSensitiveMCSPlusTimeOut(double bondSensitiveTimeOut) {
+    public synchronized void setBondSensitiveMCSPlusTimeOut(double bondSensitiveTimeOut) {
         this.bondSensitiveMCSPlusTimeOut = bondSensitiveTimeOut;
     }
 
@@ -813,27 +813,27 @@ public final class Isomorphism extends AbstractMCS implements IAtomAtomMapping, 
     }
 
     @Override
-    public void setBondInSensitiveMCSPlusTimeOut(double bondInSensitiveTimeOut) {
+    public synchronized void setBondInSensitiveMCSPlusTimeOut(double bondInSensitiveTimeOut) {
         this.bondInSensitiveMCSPlusTimeOut = bondInSensitiveTimeOut;
     }
 
     @Override
-    public double getBondSensitiveVFTimeOut() {
+    public synchronized double getBondSensitiveVFTimeOut() {
         return this.bondSensitiveVFTimeOut;
     }
 
     @Override
-    public void setBondSensitiveVFTimeOut(double bondSensitiveTimeOut) {
+    public synchronized void setBondSensitiveVFTimeOut(double bondSensitiveTimeOut) {
         this.bondSensitiveVFTimeOut = bondSensitiveTimeOut;
     }
 
     @Override
-    public double getBondInSensitiveVFTimeOut() {
+    public synchronized double getBondInSensitiveVFTimeOut() {
         return this.bondInSensitiveVFTimeOut;
     }
 
     @Override
-    public void setBondInSensitiveVFTimeOut(double bondInSensitiveTimeOut) {
+    public synchronized void setBondInSensitiveVFTimeOut(double bondInSensitiveTimeOut) {
         this.bondInSensitiveVFTimeOut = bondInSensitiveTimeOut;
     }
 }

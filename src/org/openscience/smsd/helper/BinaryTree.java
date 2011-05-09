@@ -1,4 +1,3 @@
-
 /**
  *
  * Copyright (C) 2006-2011  Syed Asad Rahman <asad@ebi.ac.uk>
@@ -27,7 +26,6 @@ package org.openscience.smsd.helper;
 
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.annotations.TestMethod;
-
 
 /**
  * Class to construct a Binary tree for McGregor search.
@@ -58,7 +56,7 @@ public class BinaryTree {
      * @return get the value of the current node
      */
     @TestMethod("testGetValue")
-    public int getValue() {
+    public synchronized int getValue() {
         return this.value;
     }
 
@@ -67,7 +65,7 @@ public class BinaryTree {
      * @return the equal
      */
     @TestMethod("testGetEqual")
-    public BinaryTree getEqual() {
+    public synchronized BinaryTree getEqual() {
         return equal;
     }
 
@@ -76,7 +74,7 @@ public class BinaryTree {
      * @param equal the equal to set
      */
     @TestMethod("testSetEqual")
-    public void setEqual(BinaryTree equal) {
+    public synchronized void setEqual(BinaryTree equal) {
         this.equal = equal;
     }
 
@@ -85,7 +83,7 @@ public class BinaryTree {
      * @return the notEqual
      */
     @TestMethod("testGetNotEqual")
-    public BinaryTree getNotEqual() {
+    public synchronized BinaryTree getNotEqual() {
         return notEqual;
     }
 
@@ -94,7 +92,7 @@ public class BinaryTree {
      * @param notEqual the notEqual to set
      */
     @TestMethod("testSetNotEqual")
-    public void setNotEqual(BinaryTree notEqual) {
+    public synchronized void setNotEqual(BinaryTree notEqual) {
         this.notEqual = notEqual;
     }
 }

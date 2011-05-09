@@ -105,7 +105,7 @@ public class Substructure implements IAtomAtomMapping {
      * @param product
      */
     @Override
-    public void init(IAtomContainer reactant, IAtomContainer product) {
+    public synchronized void init(IAtomContainer reactant, IAtomContainer product) {
         this.mol1 = reactant;
         this.mol2 = product;
     }
@@ -118,12 +118,12 @@ public class Substructure implements IAtomAtomMapping {
      * @param product
      */
     @Override
-    public void init(IQueryAtomContainer reactant, IAtomContainer product) {
+    public synchronized void init(IQueryAtomContainer reactant, IAtomContainer product) {
         this.mol1 = reactant;
         this.mol2 = product;
     }
 
-    private boolean hasMap(Map<Integer, Integer> map, List<Map<Integer, Integer>> mapGlobal) {
+    private synchronized boolean hasMap(Map<Integer, Integer> map, List<Map<Integer, Integer>> mapGlobal) {
         for (Map<Integer, Integer> test : mapGlobal) {
             if (test.equals(map)) {
                 return true;
@@ -137,7 +137,7 @@ public class Substructure implements IAtomAtomMapping {
      * @return 
      */
     @Override
-    public List<Map<IAtom, IAtom>> getAllAtomMapping() {
+    public synchronized List<Map<IAtom, IAtom>> getAllAtomMapping() {
         return allAtomMCS;
     }
 
@@ -145,7 +145,7 @@ public class Substructure implements IAtomAtomMapping {
      * @return 
      */
     @Override
-    public List<Map<Integer, Integer>> getAllMapping() {
+    public synchronized List<Map<Integer, Integer>> getAllMapping() {
         return allIndexMCS;
     }
 
@@ -153,7 +153,7 @@ public class Substructure implements IAtomAtomMapping {
      * @return 
      */
     @Override
-    public Map<IAtom, IAtom> getFirstAtomMapping() {
+    public synchronized Map<IAtom, IAtom> getFirstAtomMapping() {
         return firstAtomMCS;
     }
 
@@ -161,11 +161,11 @@ public class Substructure implements IAtomAtomMapping {
      * @return 
      */
     @Override
-    public Map<Integer, Integer> getFirstMapping() {
+    public synchronized Map<Integer, Integer> getFirstMapping() {
         return firstIndexMCS;
     }
 
-    private void setVFMappings() {
+    private synchronized void setVFMappings() {
         int counter = 0;
         for (AtomMapping solution : vfLibSolutions) {
             Map<IAtom, IAtom> atomatomMapping = new HashMap<IAtom, IAtom>();
@@ -203,7 +203,7 @@ public class Substructure implements IAtomAtomMapping {
         }
     }
 
-    public boolean isSubgraph(boolean shouldMatchBonds) throws CDKException {
+    public synchronized boolean isSubgraph(boolean shouldMatchBonds) throws CDKException {
 
         setBondMatchFlag(shouldMatchBonds);
         if (getReactantMol().getAtomCount() > getProductMol().getAtomCount()) {
@@ -227,7 +227,7 @@ public class Substructure implements IAtomAtomMapping {
      * @param shouldMatchBonds
      * @return
      */
-    public boolean findSubgraphs(boolean shouldMatchBonds) {
+    public synchronized boolean findSubgraphs(boolean shouldMatchBonds) {
 
 //        System.out.println("Mol1 Size: -> " + getReactantMol().getAtomCount());
 //        System.out.println("Mol2 Size. -> " + getProductMol().getAtomCount());
@@ -265,7 +265,7 @@ public class Substructure implements IAtomAtomMapping {
      * @param shouldMatchBonds
      * @return
      */
-    public boolean findSubgraph(boolean shouldMatchBonds) {
+    public synchronized boolean findSubgraph(boolean shouldMatchBonds) {
 
         setBondMatchFlag(shouldMatchBonds);
         if (getReactantMol().getAtomCount() == 1 || getProductMol().getAtomCount() == 1) {
@@ -293,7 +293,7 @@ public class Substructure implements IAtomAtomMapping {
         return (!allIndexMCS.isEmpty() && allIndexMCS.iterator().next().size() == getReactantMol().getAtomCount()) ? true : false;
     }
 
-    private void singleMapping(boolean shouldMatchBonds) {
+    private synchronized void singleMapping(boolean shouldMatchBonds) {
         SingleMappingHandler mcs = null;
 
         mcs = new SingleMappingHandler();
@@ -311,27 +311,27 @@ public class Substructure implements IAtomAtomMapping {
     /**
      * @return the shouldMatchBonds
      */
-    public boolean isBondMatchFlag() {
+    public synchronized boolean isBondMatchFlag() {
         return bond_Match_Flag;
     }
 
     /**
      * @param shouldMatchBonds the shouldMatchBonds to set
      */
-    public void setBondMatchFlag(boolean shouldMatchBonds) {
+    public synchronized void setBondMatchFlag(boolean shouldMatchBonds) {
         this.bond_Match_Flag = shouldMatchBonds;
     }
 
-    private IAtomContainer getReactantMol() {
+    private synchronized IAtomContainer getReactantMol() {
         return mol1;
     }
 
-    private IAtomContainer getProductMol() {
+    private synchronized IAtomContainer getProductMol() {
         return mol2;
     }
 
     @Override
-    public void setChemFilters(boolean stereoFilter, boolean fragmentFilter, boolean energyFilter) {
+    public synchronized void setChemFilters(boolean stereoFilter, boolean fragmentFilter, boolean energyFilter) {
 
         if (firstAtomMCS != null) {
             ChemicalFilters chemFilter = new ChemicalFilters(allIndexMCS, allAtomMCS,
@@ -382,7 +382,7 @@ public class Substructure implements IAtomAtomMapping {
      */
     @Override
     @TestMethod("testGetEuclideanDistance")
-    public double getEuclideanDistance() throws IOException {
+    public synchronized double getEuclideanDistance() throws IOException {
         int decimalPlaces = 4;
         double sourceAtomCount = 0;
         double targetAtomCount = 0;
@@ -407,7 +407,7 @@ public class Substructure implements IAtomAtomMapping {
      */
     @Override
     @TestMethod("testGetTanimotoSimilarity")
-    public double getTanimotoSimilarity() throws IOException {
+    public synchronized double getTanimotoSimilarity() throws IOException {
         int decimalPlaces = 4;
         int rAtomCount = 0;
         int pAtomCount = 0;
@@ -432,7 +432,7 @@ public class Substructure implements IAtomAtomMapping {
      */
     @Override
     @TestMethod("testIsStereoMisMatch")
-    public boolean isStereoMisMatch() {
+    public synchronized boolean isStereoMisMatch() {
         boolean flag = false;
         IAtomContainer reactant = this.mol1;
         IAtomContainer product = this.mol2;
@@ -469,12 +469,12 @@ public class Substructure implements IAtomAtomMapping {
     }
 
     @Override
-    public IAtomContainer getTargetMolecule() {
+    public synchronized IAtomContainer getTargetMolecule() {
         return this.mol1;
     }
 
     @Override
-    public IAtomContainer getQueryMolecule() {
+    public synchronized IAtomContainer getQueryMolecule() {
         return this.mol2;
     }
 }

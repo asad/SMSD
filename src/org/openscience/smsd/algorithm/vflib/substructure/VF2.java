@@ -79,7 +79,7 @@ public class VF2 {
      * @param shouldMatchBonds 
      * @return
      */
-    public AtomMapping isomorphism(IAtomContainer a, IAtomContainer b, boolean shouldMatchBonds) {
+    public synchronized AtomMapping isomorphism(IAtomContainer a, IAtomContainer b, boolean shouldMatchBonds) {
 
         List<AtomMapping> mappings = new ArrayList<AtomMapping>();
         if (!isDead(a, b) && testIsSubgraphHeuristics(a, b, shouldMatchBonds)) {
@@ -101,7 +101,7 @@ public class VF2 {
      * @param shouldMatchBonds 
      * @return
      */
-    public List<AtomMapping> isomorphisms(IAtomContainer a, IAtomContainer b, boolean shouldMatchBonds) {
+    public synchronized List<AtomMapping> isomorphisms(IAtomContainer a, IAtomContainer b, boolean shouldMatchBonds) {
 
         List<AtomMapping> mappings = new ArrayList<AtomMapping>();
         if (!isDead(a, b) && testIsSubgraphHeuristics(a, b, shouldMatchBonds)) {
@@ -117,7 +117,7 @@ public class VF2 {
     }
 
     // Returns true substructure is bigger than teh target
-    private boolean isDead(IAtomContainer a, IAtomContainer b) {
+    private synchronized boolean isDead(IAtomContainer a, IAtomContainer b) {
         return a.getAtomCount() > b.getAtomCount();
     }
 
@@ -133,7 +133,7 @@ public class VF2 {
      * @throws org.openscience.cdk.exception.CDKException if the first molecule is an instance
      * of IQueryAtomContainer
      */
-    private static boolean testIsSubgraphHeuristics(IAtomContainer ac1, IAtomContainer ac2, boolean shouldMatchBonds) {
+    private synchronized static boolean testIsSubgraphHeuristics(IAtomContainer ac1, IAtomContainer ac2, boolean shouldMatchBonds) {
 
         int ac1SingleBondCount = 0;
         int ac1DoubleBondCount = 0;

@@ -244,7 +244,7 @@ public class BondEnergies {
      * @return bond energy
      */
     @TestMethod("testGetEnergies")
-    public int getEnergies(IAtom sourceAtom, IAtom targetAtom, Order bondOrder) {
+    public synchronized int getEnergies(IAtom sourceAtom, IAtom targetAtom, Order bondOrder) {
         String sourceAtomSymbol = sourceAtom.getSymbol();
         String targetAtomSymbol = targetAtom.getSymbol();
         return getEnergies(sourceAtomSymbol, targetAtomSymbol, bondOrder);
@@ -258,7 +258,7 @@ public class BondEnergies {
      * @return bond energy
      */
     @TestMethod("testGetEnergies")
-    public int getEnergies(String sourceAtom, String targetAtom, Order bondOrder) {
+    public synchronized int getEnergies(String sourceAtom, String targetAtom, Order bondOrder) {
         int D_kJ_per_mol = -1;
 
         if (sourceAtom.equalsIgnoreCase("R")) {
@@ -290,7 +290,7 @@ public class BondEnergies {
      * @return bond energy
      */
     @TestMethod("testGetEnergies")
-    public int getEnergies(IBond bond) {
+    public synchronized int getEnergies(IBond bond) {
         int D_kJ_per_mol = -1;
         for (Map.Entry<Integer, BondEnergy> entry : bondEngergies.entrySet()) {
             BondEnergy bondEnergy = entry.getValue();
@@ -301,7 +301,7 @@ public class BondEnergies {
         return D_kJ_per_mol;
     }
 
-    private int setHydrogenBlock(int key) {
+    private synchronized int setHydrogenBlock(int key) {
         bondEngergies.put(key++, new BondEnergy("H", "H", Order.SINGLE, 432));
         bondEngergies.put(key++, new BondEnergy("H", "B", Order.SINGLE, 389));
         bondEngergies.put(key++, new BondEnergy("H", "C", Order.SINGLE, 411));
@@ -322,7 +322,7 @@ public class BondEnergies {
         return key;
     }
 
-    private int setGroup13(int key) {
+    private synchronized int setGroup13(int key) {
 
         bondEngergies.put(key++, new BondEnergy("B", "B", Order.SINGLE, 293));
         bondEngergies.put(key++, new BondEnergy("B", "O", Order.SINGLE, 536));
@@ -332,7 +332,7 @@ public class BondEnergies {
         return key;
     }
 
-    private int setGroup14Part1(int key) {
+    private synchronized int setGroup14Part1(int key) {
         bondEngergies.put(key++, new BondEnergy("C", "C", Order.SINGLE, 346));
         bondEngergies.put(key++, new BondEnergy("C", "C", Order.DOUBLE, 602));
         bondEngergies.put(key++, new BondEnergy("C", "C", Order.TRIPLE, 835));
@@ -357,7 +357,7 @@ public class BondEnergies {
         return key;
     }
 
-    private int setGroup14Part2(int key) {
+    private synchronized int setGroup14Part2(int key) {
 
         bondEngergies.put(key++, new BondEnergy("Si", "Si", Order.SINGLE, 222));
         bondEngergies.put(key++, new BondEnergy("Si", "N", Order.SINGLE, 355));
@@ -387,7 +387,7 @@ public class BondEnergies {
         return key;
     }
 
-    private int setGroup15(int key) {
+    private synchronized int setGroup15(int key) {
         bondEngergies.put(key++, new BondEnergy("N", "N", Order.SINGLE, 167));
         bondEngergies.put(key++, new BondEnergy("N", "N", Order.DOUBLE, 418));
         bondEngergies.put(key++, new BondEnergy("N", "N", Order.TRIPLE, 942));
@@ -424,7 +424,7 @@ public class BondEnergies {
 
     }
 
-    private int setGroup16(int key) {
+    private synchronized int setGroup16(int key) {
 
         bondEngergies.put(key++, new BondEnergy("O", "O", Order.SINGLE, 142));
         bondEngergies.put(key++, new BondEnergy("O", "O", Order.DOUBLE, 494));
@@ -441,7 +441,7 @@ public class BondEnergies {
 
     }
 
-    private int setGroup17(int key) {
+    private synchronized int setGroup17(int key) {
         bondEngergies.put(key++, new BondEnergy("F", "F", Order.SINGLE, 155));
         bondEngergies.put(key++, new BondEnergy("Cl", "Cl", Order.SINGLE, 240));
         bondEngergies.put(key++, new BondEnergy("Br", "Br", Order.SINGLE, 190));
@@ -456,7 +456,7 @@ public class BondEnergies {
 
     }
 
-    private int setGroup18(int key) {
+    private synchronized int setGroup18(int key) {
 
         bondEngergies.put(key++, new BondEnergy("Kr", "F", Order.SINGLE, 50));
         bondEngergies.put(key++, new BondEnergy("Xe", "O", Order.SINGLE, 84));

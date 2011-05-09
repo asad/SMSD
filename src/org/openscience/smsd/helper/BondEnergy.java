@@ -69,7 +69,7 @@ public class BondEnergy {
      * @return the element symbol as {@link String}
      */
     @TestMethod("testGetSymbolFirstAtom")
-    public String getSymbolFirstAtom() {
+    public synchronized String getSymbolFirstAtom() {
         return symbol1;
     }
 
@@ -79,7 +79,7 @@ public class BondEnergy {
      * @return the element symbol as {@link String}
      */
     @TestMethod("testGetSymbolSecondAtom")
-    public String getSymbolSecondAtom() {
+    public synchronized String getSymbolSecondAtom() {
         return symbol2;
     }
 
@@ -89,7 +89,7 @@ public class BondEnergy {
      * @return the bond order of the bond type as {@link Order}
      */
     @TestMethod("testGetBondOrder")
-    public IBond.Order getBondOrder() {
+    public synchronized IBond.Order getBondOrder() {
         return bondOrder;
     }
 
@@ -99,11 +99,11 @@ public class BondEnergy {
      * @return the bond energy as integer.
      */
     @TestMethod("testGetEnergy")
-    public int getEnergy() {
+    public synchronized int getEnergy() {
         return energy;
     }
 
-    public boolean matches(IBond bond) {
+    public synchronized boolean matches(IBond bond) {
         IAtom atom1 = bond.getAtom(0);
         IAtom atom2 = bond.getAtom(1);
 

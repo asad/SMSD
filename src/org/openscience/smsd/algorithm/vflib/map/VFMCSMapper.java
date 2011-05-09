@@ -55,13 +55,13 @@ import java.util.Map;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.smsd.algorithm.vflib.VFlibMCSHandler;
 import org.openscience.smsd.algorithm.vflib.builder.TargetProperties;
 import org.openscience.smsd.algorithm.vflib.interfaces.IMapper;
 import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
 import org.openscience.smsd.algorithm.vflib.interfaces.IState;
 import org.openscience.smsd.algorithm.vflib.query.QueryCompiler;
-import org.openscience.smsd.global.TimeOut;
 import org.openscience.smsd.tools.TimeManager;
 
 /**
@@ -78,36 +78,13 @@ public class VFMCSMapper implements IMapper {
     private IQuery query = null;
     private List<Map<INode, IAtom>> maps = null;
     private int currentMCSSize = -1;
-    private static TimeManager timeManager = null;
-
-    /**
-     * @return the timeout
-     */
-    protected synchronized static double getTimeout() {
-        return TimeOut.getInstance().getVFTimeout();
-    }
-
-    /**
-     * @return the timeManager
-     */
-    protected synchronized static TimeManager getTimeManager() {
-        return timeManager;
-    }
-
-    /**
-     * @param aTimeManager the timeManager to set
-     */
-    protected synchronized static void setTimeManager(TimeManager aTimeManager) {
-        TimeOut.getInstance().setTimeOutFlag(false);
-        timeManager = aTimeManager;
-    }
 
     /**
      *
      * @param query
      */
     public VFMCSMapper(IQuery query) {
-        setTimeManager(new TimeManager());
+        VFlibMCSHandler.setTimeManager(new TimeManager());
         this.query = query;
         this.maps = new ArrayList<Map<INode, IAtom>>();
     }
@@ -118,7 +95,7 @@ public class VFMCSMapper implements IMapper {
      * @param bondMatcher 
      */
     public VFMCSMapper(IAtomContainer queryMolecule, boolean bondMatcher) {
-        setTimeManager(new TimeManager());
+        VFlibMCSHandler.setTimeManager(new TimeManager());
         this.query = new QueryCompiler(queryMolecule, bondMatcher).compile();
         this.maps = new ArrayList<Map<INode, IAtom>>();
     }
@@ -128,7 +105,7 @@ public class VFMCSMapper implements IMapper {
      */
     @Override
     public boolean hasMap(IAtomContainer targetMolecule) {
-        IState state = new VFState(query, new TargetProperties(targetMolecule));
+        IState state = new VFMCSState(query, new TargetProperties(targetMolecule));
         maps.clear();
         return mapFirst(state);
     }
@@ -137,7 +114,7 @@ public class VFMCSMapper implements IMapper {
      */
     @Override
     public List<Map<INode, IAtom>> getMaps(IAtomContainer target) {
-        IState state = new VFState(query, new TargetProperties(target));
+        IState state = new VFMCSState(query, new TargetProperties(target));
         maps.clear();
         mapAll(state);
         return new ArrayList<Map<INode, IAtom>>(maps);
@@ -150,7 +127,7 @@ public class VFMCSMapper implements IMapper {
      */
     @Override
     public Map<INode, IAtom> getFirstMap(IAtomContainer target) {
-        IState state = new VFState(query, new TargetProperties(target));
+        IState state = new VFMCSState(query, new TargetProperties(target));
         maps.clear();
         mapFirst(state);
         return maps.isEmpty() ? new HashMap<INode, IAtom>() : maps.get(0);
@@ -160,7 +137,7 @@ public class VFMCSMapper implements IMapper {
      */
     @Override
     public int countMaps(IAtomContainer target) {
-        IState state = new VFState(query, new TargetProperties(target));
+        IState state = new VFMCSState(query, new TargetProperties(target));
         maps.clear();
         mapAll(state);
         return maps.size();
@@ -171,7 +148,7 @@ public class VFMCSMapper implements IMapper {
      */
     @Override
     public boolean hasMap(TargetProperties targetMolecule) {
-        IState state = new VFState(query, targetMolecule);
+        IState state = new VFMCSState(query, targetMolecule);
         maps.clear();
         return mapFirst(state);
     }
@@ -181,7 +158,7 @@ public class VFMCSMapper implements IMapper {
      */
     @Override
     public List<Map<INode, IAtom>> getMaps(TargetProperties targetMolecule) {
-        IState state = new VFState(query, targetMolecule);
+        IState state = new VFMCSState(query, targetMolecule);
         maps.clear();
         mapAll(state);
         return new ArrayList<Map<INode, IAtom>>(maps);
@@ -194,7 +171,7 @@ public class VFMCSMapper implements IMapper {
      */
     @Override
     public Map<INode, IAtom> getFirstMap(TargetProperties targetMolecule) {
-        IState state = new VFState(query, targetMolecule);
+        IState state = new VFMCSState(query, targetMolecule);
         maps.clear();
         mapFirst(state);
         return maps.isEmpty() ? new HashMap<INode, IAtom>() : maps.get(0);
@@ -205,31 +182,41 @@ public class VFMCSMapper implements IMapper {
      */
     @Override
     public int countMaps(TargetProperties targetMolecule) {
-        IState state = new VFState(query, targetMolecule);
+        IState state = new VFMCSState(query, targetMolecule);
         maps.clear();
         mapAll(state);
         return maps.size();
     }
 
+    private boolean hasMap(Map<INode, IAtom> map) {
+        for (Map<INode, IAtom> storedMap : maps) {
+            if (storedMap.equals(map)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void addMapping(IState state) {
         Map<INode, IAtom> map = state.getMap();
-        if (!hasMap(map) && map.size() > currentMCSSize) {
+        if (map.size() > currentMCSSize) {
+            maps.clear();
             maps.add(map);
             currentMCSSize = map.size();
-        } else if (!hasMap(map) && map.size() == currentMCSSize) {
+        } else if (map.size() == currentMCSSize
+                && !hasMap(map)) {
             maps.add(map);
         }
     }
 
     private void mapAll(IState state) {
-
+        if (state.isDead()) {
+            return;
+        }
         if (state.isGoal()) {
-            Map<INode, IAtom> map = state.getMap();
-            if (!hasMap(map)) {
-                maps.add(state.getMap());
-            } else {
-                state.backTrack();
-            }
+            addMapping(state);
+            state.backTrack();
+            return;
         } else {
             addMapping(state);
         }
@@ -242,10 +229,13 @@ public class VFMCSMapper implements IMapper {
                 nextState.backTrack();
             }
         }
+        return;
     }
 
     private boolean mapFirst(IState state) {
-
+        if (state.isDead()) {
+            return false;
+        }
         if (state.isGoal()) {
             maps.add(state.getMap());
             return true;
@@ -261,22 +251,5 @@ public class VFMCSMapper implements IMapper {
             }
         }
         return found;
-    }
-
-    private boolean hasMap(Map<INode, IAtom> map) {
-        for (Map<INode, IAtom> storedMap : maps) {
-            if (storedMap.equals(map)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public synchronized static boolean isTimeOut() {
-        if (getTimeout() > -1 && getTimeManager().getElapsedTimeInMinutes() > getTimeout()) {
-            TimeOut.getInstance().setTimeOutFlag(true);
-            return true;
-        }
-        return false;
     }
 }

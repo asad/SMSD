@@ -48,7 +48,7 @@ public class BaseFilter {
     }
 
     @TestMethod("testSortMapByValueInAscendingOrder")
-    public static Map<Integer, Double> sortMapByValueInAscendingOrder(Map<Integer, Double> map) {
+    public synchronized static Map<Integer, Double> sortMapByValueInAscendingOrder(Map<Integer, Double> map) {
         List<Map.Entry<Integer, Double>> list = new LinkedList<Map.Entry<Integer, Double>>(map.entrySet());
         // Sort the list using an annonymous inner class implementing Comparator for the compare method
         Collections.sort(list, new Comparator<Map.Entry<Integer, Double>>() {
@@ -68,7 +68,7 @@ public class BaseFilter {
     }
 
     @TestMethod("testSortMapByValueInDescendingOrder")
-    public static Map<Integer, Double> sortMapByValueInDescendingOrder(Map<Integer, Double> map) {
+    public synchronized static Map<Integer, Double> sortMapByValueInDescendingOrder(Map<Integer, Double> map) {
         List<Map.Entry<Integer, Double>> list = new LinkedList<Map.Entry<Integer, Double>>(map.entrySet());
         // Sort the list using an annonymous inner class implementing Comparator for the compare method
         Collections.sort(list, new Comparator<Map.Entry<Integer, Double>>() {

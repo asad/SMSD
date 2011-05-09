@@ -61,7 +61,7 @@ public class MoleculeSanityCheck {
      * @return cleaned GraphAtomContainer
      */
     @TestMethod("testCheckAndCleanMolecule")
-    public static IAtomContainer checkAndCleanMolecule(IAtomContainer molecule) {
+    public synchronized static IAtomContainer checkAndCleanMolecule(IAtomContainer molecule) {
         boolean isMarkush = false;
         for (IAtom atom : molecule.atoms()) {
             if (atom.getSymbol().equals("R")) {
@@ -102,7 +102,7 @@ public class MoleculeSanityCheck {
      * @param mol input molecule
      */
     @TestMethod("testAromatizeMolecule")
-    public static void aromatizeMolecule(IAtomContainer mol) {
+    public synchronized static void aromatizeMolecule(IAtomContainer mol) {
         // need to find rings and aromaticity again since added H's
 
         IRingSet ringSet = null;
