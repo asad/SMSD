@@ -25,6 +25,7 @@
 package org.openscience.smsd.filters;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -57,7 +58,7 @@ public class PostFilter {
      * @return Filtered non-redundant mappings
      */
     @TestMethod("testFilter")
-    public static List<Map<Integer, Integer>> filter(List<List<Integer>> mappings) {
+    public synchronized static List<Map<Integer, Integer>> filter(List<List<Integer>> mappings) {
         FinalMappings final_MAPPINGS = FinalMappings.getInstance();
         if (mappings != null && !mappings.isEmpty()) {
             final_MAPPINGS.set(removeRedundantMapping(mappings));
@@ -68,7 +69,7 @@ public class PostFilter {
         return final_MAPPINGS.getFinalMapping();
     }
 
-    private static boolean hasMap(Map<Integer, Integer> newMap, List<Map<Integer, Integer>> nonRedundantMapping) {
+    private synchronized static boolean hasMap(Map<Integer, Integer> newMap, List<Map<Integer, Integer>> nonRedundantMapping) {
         for (Map<Integer, Integer> storedMap : nonRedundantMapping) {
             if (storedMap.equals(newMap)) {
                 return true;
@@ -82,8 +83,8 @@ public class PostFilter {
      * @param mapping_org
      * @return
      */
-    private static List<Map<Integer, Integer>> removeRedundantMapping(List<List<Integer>> mapping_org) {
-        List<Map<Integer, Integer>> nonRedundantMapping = new ArrayList<Map<Integer, Integer>>();
+    private synchronized static List<Map<Integer, Integer>> removeRedundantMapping(List<List<Integer>> mapping_org) {
+        List<Map<Integer, Integer>> nonRedundantMapping = Collections.synchronizedList(new ArrayList<Map<Integer, Integer>>());
         for (List<Integer> M : mapping_org) {
             Map<Integer, Integer> newMap = getMappingMapFromList(M);
             if (!hasMap(newMap, nonRedundantMapping)) {
@@ -93,8 +94,8 @@ public class PostFilter {
         return nonRedundantMapping;
     }
 
-    private static Map<Integer, Integer> getMappingMapFromList(List<Integer> list) {
-        Map<Integer, Integer> newMap = new TreeMap<Integer, Integer>();
+    private synchronized static Map<Integer, Integer> getMappingMapFromList(List<Integer> list) {
+        Map<Integer, Integer> newMap = Collections.synchronizedSortedMap(new TreeMap<Integer, Integer>());
         for (int index = 0; index < list.size(); index += 2) {
             newMap.put(list.get(index), list.get(index + 1));
         }

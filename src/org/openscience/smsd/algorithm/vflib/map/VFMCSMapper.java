@@ -49,20 +49,19 @@
 package org.openscience.smsd.algorithm.vflib.map;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.smsd.algorithm.vflib.VFlibMCSHandler;
 import org.openscience.smsd.algorithm.vflib.builder.TargetProperties;
 import org.openscience.smsd.algorithm.vflib.interfaces.IMapper;
 import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
 import org.openscience.smsd.algorithm.vflib.interfaces.IState;
 import org.openscience.smsd.algorithm.vflib.query.QueryCompiler;
-import org.openscience.smsd.tools.TimeManager;
 
 /**
  * This class finds MCS between query and target molecules
@@ -84,9 +83,8 @@ public class VFMCSMapper implements IMapper {
      * @param query
      */
     public VFMCSMapper(IQuery query) {
-        VFlibMCSHandler.setTimeManager(new TimeManager());
         this.query = query;
-        this.maps = new ArrayList<Map<INode, IAtom>>();
+        this.maps = Collections.synchronizedList(new ArrayList<Map<INode, IAtom>>());
     }
 
     /**
@@ -95,7 +93,6 @@ public class VFMCSMapper implements IMapper {
      * @param bondMatcher 
      */
     public VFMCSMapper(IAtomContainer queryMolecule, boolean bondMatcher) {
-        VFlibMCSHandler.setTimeManager(new TimeManager());
         this.query = new QueryCompiler(queryMolecule, bondMatcher).compile();
         this.maps = new ArrayList<Map<INode, IAtom>>();
     }

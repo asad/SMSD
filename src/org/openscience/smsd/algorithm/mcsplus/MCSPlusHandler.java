@@ -23,7 +23,7 @@
 package org.openscience.smsd.algorithm.mcsplus;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -34,6 +34,7 @@ import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
+import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.filters.PostFilter;
 import org.openscience.smsd.helper.FinalMappings;
 import org.openscience.smsd.interfaces.AbstractMCSAlgorithm;
@@ -47,11 +48,9 @@ import org.openscience.smsd.interfaces.IMCSBase;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.SMSDBondSensitiveTest")
-public class MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase {
+public final class MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase {
 
-    private List<Map<IAtom, IAtom>> allAtomMCS = null;
-    private Map<IAtom, IAtom> atomsMCS = null;
-    private Map<Integer, Integer> firstMCS = null;
+    private List<AtomAtomMapping> allAtomMCS = null;
     private List<Map<Integer, Integer>> allMCS = null;
     private IAtomContainer source = null;
     private IAtomContainer target = null;
@@ -61,10 +60,8 @@ public class MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase {
      * Constructor for the MCS Plus algorithm class
      */
     public MCSPlusHandler() {
-        allAtomMCS = new ArrayList<Map<IAtom, IAtom>>();
-        atomsMCS = new HashMap<IAtom, IAtom>();
-        firstMCS = new TreeMap<Integer, Integer>();
-        allMCS = new ArrayList<Map<Integer, Integer>>();
+        allAtomMCS = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
+        allMCS = Collections.synchronizedList(new ArrayList<Map<Integer, Integer>>());
     }
 
     /** {@inheritDoc}
@@ -102,16 +99,14 @@ public class MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase {
         List<List<Integer>> mappings = null;
         try {
             if (source.getAtomCount() > target.getAtomCount()) {
-                mappings = new MCSPlus().getOverlaps(source, target, shouldMatchBonds);
+                mappings = Collections.synchronizedList(new MCSPlus().getOverlaps(source, target, shouldMatchBonds));
             } else {
                 flagExchange = true;
-                mappings = new MCSPlus().getOverlaps(target, source, shouldMatchBonds);
+                mappings = Collections.synchronizedList(new MCSPlus().getOverlaps(target, source, shouldMatchBonds));
             }
             PostFilter.filter(mappings);
             setAllMapping();
             setAllAtomMapping();
-            setFirstMapping();
-            setFirstAtomMapping();
         } catch (CDKException e) {
             mappings = null;
         }
@@ -120,12 +115,13 @@ public class MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase {
     private synchronized void setAllMapping() {
         try {
 
-            List<Map<Integer, Integer>> final_solution = FinalMappings.getInstance().getFinalMapping();
+            List<Map<Integer, Integer>> final_solution =
+                    Collections.synchronizedList(FinalMappings.getInstance().getFinalMapping());
             int counter = 0;
             int bestSolSize = 0;
             for (Map<Integer, Integer> solution : final_solution) {
 //                System.out.println("Number of MCS solution: " + solution);
-                Map<Integer, Integer> validSolution = new TreeMap<Integer, Integer>();
+                Map<Integer, Integer> validSolution = Collections.synchronizedSortedMap(new TreeMap<Integer, Integer>());
                 if (!flagExchange) {
                     for (Map.Entry<Integer, Integer> map : solution.entrySet()) {
                         validSolution.put(map.getKey(), map.getValue());
@@ -156,7 +152,7 @@ public class MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase {
 
             int counter = 0;
             for (Map<Integer, Integer> solution : allMCS) {
-                Map<IAtom, IAtom> atomMappings = new HashMap<IAtom, IAtom>();
+                AtomAtomMapping atomMappings = new AtomAtomMapping(source, target);
                 for (Map.Entry<Integer, Integer> map : solution.entrySet()) {
 
                     int IIndex = map.getKey();
@@ -177,22 +173,10 @@ public class MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase {
 
     }
 
-    private synchronized void setFirstMapping() {
-        if (!allMCS.isEmpty()) {
-            firstMCS = new TreeMap<Integer, Integer>(allMCS.iterator().next());
-        }
-    }
-
-    private synchronized void setFirstAtomMapping() {
-        if (!allAtomMCS.isEmpty()) {
-            atomsMCS = new HashMap<IAtom, IAtom>(allAtomMCS.iterator().next());
-        }
-    }
-
     /** {@inheritDoc}
      */
     @Override
-    @TestMethod("testSearchMCS")
+    @TestMethod("testGetAllMapping")
     public synchronized List<Map<Integer, Integer>> getAllMapping() {
         return allMCS;
     }
@@ -200,24 +184,30 @@ public class MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase {
     /** {@inheritDoc}
      */
     @Override
-    @TestMethod("testSearchMCS")
+    @TestMethod("testGetFirstMapping")
     public synchronized Map<Integer, Integer> getFirstMapping() {
-        return firstMCS;
+        if (allMCS.iterator().hasNext()) {
+            return allMCS.iterator().next();
+        }
+        return new TreeMap<Integer, Integer>();
     }
 
     /** {@inheritDoc}
      */
     @Override
-    @TestMethod("testSearchMCS")
-    public synchronized List<Map<IAtom, IAtom>> getAllAtomMapping() {
+    @TestMethod("testGetAllAtomMapping")
+    public synchronized List<AtomAtomMapping> getAllAtomMapping() {
         return allAtomMCS;
     }
 
     /** {@inheritDoc}
      */
     @Override
-    @TestMethod("testSearchMCS")
-    public synchronized Map<IAtom, IAtom> getFirstAtomMapping() {
-        return atomsMCS;
+    @TestMethod("testGetFirstAtomMapping")
+    public synchronized AtomAtomMapping getFirstAtomMapping() {
+        if (allAtomMCS.iterator().hasNext()) {
+            return allAtomMCS.iterator().next();
+        }
+        return new AtomAtomMapping(source, target);
     }
 }

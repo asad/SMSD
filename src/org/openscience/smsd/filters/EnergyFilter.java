@@ -33,6 +33,7 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IMolecule;
+import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.tools.BondEnergies;
 
 /**
@@ -40,25 +41,24 @@ import org.openscience.smsd.tools.BondEnergies;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  * @cdk.module smsd
  */
-public class EnergyFilter extends BaseFilter implements IChemicalFilter<Double> {
+public final class EnergyFilter extends BaseFilter implements IChemicalFilter<Double> {
 
 //    public static final Double MAX_ENERGY = Double.MAX_VALUE;
-    public static final Double MAX_ENERGY = 99999999.99;
-    private List<Double> bEnergies = null;
+    public final static Double MAX_ENERGY = 99999999.99;
+    private final List<Double> bEnergies;
 
     public EnergyFilter(IAtomContainer rMol, IAtomContainer pMol) {
         super(rMol, pMol);
-        bEnergies = new ArrayList<Double>();
+        bEnergies = Collections.synchronizedList(new ArrayList<Double>());
     }
 
     @Override
-    public Double sortResults(
-            Map<Integer, Map<Integer, Integer>> allEnergyMCS,
-            Map<Integer, Map<IAtom, IAtom>> allAtomEnergyMCS,
+    public synchronized Double sortResults(
+            Map<Integer, AtomAtomMapping> allAtomEnergyMCS,
             Map<Integer, Double> energySelectionMap) throws CDKException {
 
-        for (Integer Key : allEnergyMCS.keySet()) {
-            Map<Integer, Integer> mcsAtom = allEnergyMCS.get(Key);
+        for (Integer Key : allAtomEnergyMCS.keySet()) {
+            AtomAtomMapping mcsAtom = allAtomEnergyMCS.get(Key);
             Double Energies = getMappedMoleculeEnergies(mcsAtom);
             energySelectionMap.put(Key, Energies);
         }
@@ -74,22 +74,22 @@ public class EnergyFilter extends BaseFilter implements IChemicalFilter<Double> 
     }
 
     @Override
-    public List<Double> getScores() {
+    public synchronized List<Double> getScores() {
         return Collections.unmodifiableList(bEnergies);
     }
 
     @Override
-    public void clearScores() {
+    public synchronized void clearScores() {
         bEnergies.clear();
     }
 
     @Override
-    public void addScore(int counter, Double value) {
+    public synchronized void addScore(int counter, Double value) {
         bEnergies.add(counter, value);
     }
 
     @Override
-    public void fillMap(Map<Integer, Double> energySelectionMap) {
+    public synchronized void fillMap(Map<Integer, Double> energySelectionMap) {
         int Index = 0;
         for (Double score : bEnergies) {
             energySelectionMap.put(Index, score);
@@ -97,7 +97,7 @@ public class EnergyFilter extends BaseFilter implements IChemicalFilter<Double> 
         }
     }
 
-    private synchronized Double getMappedMoleculeEnergies(Map<Integer, Integer> MCSAtomSolution) throws CDKException {
+    private synchronized Double getMappedMoleculeEnergies(AtomAtomMapping MCSAtomSolution) throws CDKException {
 
 //      System.out.println("\nSort By Energies");
         double totalBondEnergy = -9999.0;
@@ -105,39 +105,31 @@ public class EnergyFilter extends BaseFilter implements IChemicalFilter<Double> 
         IAtomContainer educt = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class, rMol);
         IAtomContainer product = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class, pMol);
 
-        for (IAtom eAtom : educt.atoms()) {
-            eAtom.setFlag(0, false);
+        for (int i = 0; i < educt.getAtomCount(); i++) {
+            educt.getAtom(i).setFlag(0, false);
         }
 
-        for (IAtom pAtom : product.atoms()) {
-            pAtom.setFlag(0, false);
+        for (int i = 0; i < product.getAtomCount(); i++) {
+            product.getAtom(i).setFlag(0, false);
         }
 
         if (MCSAtomSolution != null) {
-            for (Map.Entry<Integer, Integer> map : MCSAtomSolution.entrySet()) {
-                int eNum = map.getKey();
-                int pNum = map.getValue();
-
-                IAtom eAtom = educt.getAtom(eNum);
-                IAtom pAtom = product.getAtom(pNum);
-
+            for (IAtom eAtom : MCSAtomSolution.getMappings().keySet()) {
+                IAtom pAtom = MCSAtomSolution.getMappings().get(eAtom);
                 eAtom.setFlag(0, true);
                 pAtom.setFlag(0, true);
             }
-        }
-
-        if (MCSAtomSolution != null) {
             totalBondEnergy = getEnergy(educt, product);
         }
         return totalBondEnergy;
     }
 
-    private double getEnergy(IAtomContainer Educt, IAtomContainer product) throws CDKException {
+    private synchronized static double getEnergy(IAtomContainer educt, IAtomContainer product) throws CDKException {
         Double eEnergy = 0.0;
         BondEnergies bondEnergy = BondEnergies.getInstance();
         for (int i = 0; i
-                < Educt.getBondCount(); i++) {
-            IBond bond = Educt.getBond(i);
+                < educt.getBondCount(); i++) {
+            IBond bond = educt.getBond(i);
             eEnergy += getBondEnergy(bond, bondEnergy);
         }
         Double pEnergy = 0.0;
@@ -149,7 +141,7 @@ public class EnergyFilter extends BaseFilter implements IChemicalFilter<Double> 
         return (eEnergy + pEnergy);
     }
 
-    private double getBondEnergy(IBond bond, BondEnergies bondEnergy) {
+    private synchronized static double getBondEnergy(IBond bond, BondEnergies bondEnergy) {
         double energy = 0.0;
         if ((bond.getAtom(0).getFlag(0) == true && bond.getAtom(1).getFlag(0) == false)
                 || (bond.getAtom(0).getFlag(0) == false && bond.getAtom(1).getFlag(0) == true)) {

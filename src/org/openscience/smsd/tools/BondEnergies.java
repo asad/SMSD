@@ -32,6 +32,7 @@ import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IBond.Order;
+import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
 import org.openscience.smsd.helper.BondEnergy;
 
 /**
@@ -245,7 +246,12 @@ public class BondEnergies {
      */
     @TestMethod("testGetEnergies")
     public synchronized int getEnergies(IAtom sourceAtom, IAtom targetAtom, Order bondOrder) {
-        String sourceAtomSymbol = sourceAtom.getSymbol();
+        String sourceAtomSymbol = null;
+        if (!(sourceAtom instanceof IQueryAtom)) {
+            sourceAtomSymbol = sourceAtom.getSymbol();
+        } else {
+            return 0;
+        }
         String targetAtomSymbol = targetAtom.getSymbol();
         return getEnergies(sourceAtomSymbol, targetAtomSymbol, bondOrder);
     }

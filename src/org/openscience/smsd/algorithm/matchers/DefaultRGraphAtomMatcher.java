@@ -58,7 +58,7 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFLibTest")
-public class DefaultRGraphAtomMatcher implements AtomMatcher {
+public final class DefaultRGraphAtomMatcher implements AtomMatcher {
 
     static final long serialVersionUID = -7861469841127327812L;
     private int maximumNeighbors;
@@ -123,15 +123,15 @@ public class DefaultRGraphAtomMatcher implements AtomMatcher {
     @Override
     public boolean matches(IAtomContainer targetContainer, IAtom targetAtom) {
         if (qAtom instanceof IQueryAtom) {
-            if (!((IQueryAtom) qAtom).matches(targetAtom)) {
+            if (!((IQueryAtom) qAtom).matches(targetAtom) && qAtom.getSymbol() == null) {
                 return false;
             }
         } else if (!matchSymbol(targetAtom)) {
             return false;
         }
-        if (!matchMaximumNeighbors(targetContainer, targetAtom)) {
-            return false;
-        }
+//        if (!matchMaximumNeighbors(targetContainer, targetAtom)) {
+//            return false;
+//        }
         return true;
     }
 
@@ -179,4 +179,3 @@ public class DefaultRGraphAtomMatcher implements AtomMatcher {
         return container.getConnectedAtomsCount(atom);
     }
 }
-

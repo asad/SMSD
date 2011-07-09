@@ -1,4 +1,4 @@
-/* Copyright (C) 2009-2010 Syed Asad Rahman <asad@ebi.ac.uk>
+/* Copyright (C) 2009-2011 Syed Asad Rahman <asad@ebi.ac.uk>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -84,12 +84,35 @@ public class McGregorChecks {
                 String G1B = cBondNeighborsB.get(column * 4 + 0);
                 String G2B = cBondNeighborsB.get(column * 4 + 1);
 
-                if (isAtomMatch(G1A, G2A, G1B, G2B)) {
+                if (!(source instanceof IQueryAtomContainer) && isAtomMatch(G1A, G2A, G1B, G2B)) {
                     try {
 
                         int Index_I = i_bond_neighbor_atoms_A.get(row * 3 + 0);
                         int Index_IPlus1 = i_bond_neighbor_atoms_A.get(row * 3 + 1);
 
+
+                        int Index_J = i_bond_neighbor_atoms_B.get(column * 3 + 0);
+                        int Index_JPlus1 = i_bond_neighbor_atoms_B.get(column * 3 + 1);
+
+                        IAtom R1_A = source.getAtom(Index_I);
+                        IAtom R2_A = source.getAtom(Index_IPlus1);
+                        IBond reactantBond = source.getBond(R1_A, R2_A);
+
+                        IAtom P1_B = target.getAtom(Index_J);
+                        IAtom P2_B = target.getAtom(Index_JPlus1);
+                        IBond productBond = target.getBond(P1_B, P2_B);
+
+                        if (isMatchFeasible(source, reactantBond, target, productBond, shouldMatchBonds)) {
+                            return true;
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                } else if (source instanceof IQueryAtomContainer) {
+                    try {
+
+                        int Index_I = i_bond_neighbor_atoms_A.get(row * 3 + 0);
+                        int Index_IPlus1 = i_bond_neighbor_atoms_A.get(row * 3 + 1);
 
                         int Index_J = i_bond_neighbor_atoms_B.get(column * 3 + 0);
                         int Index_JPlus1 = i_bond_neighbor_atoms_B.get(column * 3 + 1);
@@ -577,7 +600,6 @@ public class McGregorChecks {
         List<String> cBondNeighborsA = mcGregorHelper.getcBondNeighborsA();
         List<String> cBondNeighborsB = mcGregorHelper.getcBondNeighborsB();
 
-        boolean moreMappingPossible = false;
         for (int row = 0; row < neighborBondNumA; row++) {
 //            System.out.println("i " + row);
             String G1A = cBondNeighborsA.get(row * 4 + 0);
@@ -589,7 +611,31 @@ public class McGregorChecks {
                 String G1B = cBondNeighborsB.get(column * 4 + 0);
                 String G2B = cBondNeighborsB.get(column * 4 + 1);
 
-                if (isAtomMatch(G1A, G2A, G1B, G2B)) {
+                if (!(source instanceof IQueryAtomContainer) && isAtomMatch(G1A, G2A, G1B, G2B)) {
+                    try {
+
+                        int Index_I = iBondNeighborAtomsA.get(row * 3 + 0);
+                        int Index_IPlus1 = iBondNeighborAtomsA.get(row * 3 + 1);
+
+
+                        int Index_J = iBondNeighborAtomsB.get(column * 3 + 0);
+                        int Index_JPlus1 = iBondNeighborAtomsB.get(column * 3 + 1);
+
+                        IAtom r1_A = source.getAtom(Index_I);
+                        IAtom r2_A = source.getAtom(Index_IPlus1);
+                        IBond reactantBond = source.getBond(r1_A, r2_A);
+
+                        IAtom p1_B = target.getAtom(Index_J);
+                        IAtom p2_B = target.getAtom(Index_JPlus1);
+                        IBond productBond = target.getBond(p1_B, p2_B);
+
+                        if (isMatchFeasible(source, reactantBond, target, productBond, shouldMatchBonds)) {
+                            return true;
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                } else if (source instanceof IQueryAtomContainer) {
                     try {
 
                         int Index_I = iBondNeighborAtomsA.get(row * 3 + 0);

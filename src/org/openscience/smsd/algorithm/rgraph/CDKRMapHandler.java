@@ -24,6 +24,7 @@ package org.openscience.smsd.algorithm.rgraph;
 
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +51,7 @@ import org.openscience.cdk.tools.manipulator.BondManipulator;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.cdk.CDKRMapHandlerTest")
-public class CDKRMapHandler {
+public final class CDKRMapHandler {
 
     public CDKRMapHandler() {
     }
@@ -98,7 +99,7 @@ public class CDKRMapHandler {
      * @param shouldMatchBonds
      * @throws CDKException
      */
-    public void calculateOverlapsAndReduce(IAtomContainer Molecule1, IAtomContainer Molecule2, boolean shouldMatchBonds) throws CDKException {
+    public synchronized void calculateOverlapsAndReduce(IAtomContainer Molecule1, IAtomContainer Molecule2, boolean shouldMatchBonds) throws CDKException {
 
         setSource(Molecule1);
         setTarget(Molecule2);
@@ -146,7 +147,7 @@ public class CDKRMapHandler {
      * @param shouldMatchBonds
      * @throws CDKException
      */
-    public void calculateOverlapsAndReduceExactMatch(IAtomContainer Molecule1, IAtomContainer Molecule2, boolean shouldMatchBonds) throws CDKException {
+    public synchronized void calculateOverlapsAndReduceExactMatch(IAtomContainer Molecule1, IAtomContainer Molecule2, boolean shouldMatchBonds) throws CDKException {
 
         setSource(Molecule1);
         setTarget(Molecule2);
@@ -191,7 +192,7 @@ public class CDKRMapHandler {
      * @param shouldMatchBonds
      * @throws CDKException
      */
-    public void calculateSubGraphs(IAtomContainer Molecule1, IAtomContainer Molecule2, boolean shouldMatchBonds) throws CDKException {
+    public synchronized void calculateSubGraphs(IAtomContainer Molecule1, IAtomContainer Molecule2, boolean shouldMatchBonds) throws CDKException {
 
         setSource(Molecule1);
         setTarget(Molecule2);
@@ -236,7 +237,7 @@ public class CDKRMapHandler {
      * @param shouldMatchBonds
      * @throws CDKException
      */
-    public void calculateIsomorphs(IAtomContainer Molecule1, IAtomContainer Molecule2, boolean shouldMatchBonds) throws CDKException {
+    public synchronized void calculateIsomorphs(IAtomContainer Molecule1, IAtomContainer Molecule2, boolean shouldMatchBonds) throws CDKException {
 
         setSource(Molecule1);
         setTarget(Molecule2);
@@ -277,7 +278,7 @@ public class CDKRMapHandler {
      * @param overlaps
      * @return
      */
-    protected List<List<CDKRMap>> removeSubGraph(List<List<CDKRMap>> overlaps) {
+    protected synchronized List<List<CDKRMap>> removeSubGraph(List<List<CDKRMap>> overlaps) {
 
         List<List<CDKRMap>> reducedList = new ArrayList<List<CDKRMap>>(overlaps);
 
@@ -307,8 +308,8 @@ public class CDKRMapHandler {
      * @param overlaps
      * @return
      */
-    protected List<CDKRMap> removeRedundantMappingsForSingleAtomCase(List<CDKRMap> overlaps) {
-        List<CDKRMap> reducedList = new ArrayList<CDKRMap>();
+    protected synchronized List<CDKRMap> removeRedundantMappingsForSingleAtomCase(List<CDKRMap> overlaps) {
+        List<CDKRMap> reducedList = Collections.synchronizedList(new ArrayList<CDKRMap>());
         reducedList.add(overlaps.get(0));
         //reducedList.add(overlaps.get(1));
         return reducedList;
@@ -322,7 +323,7 @@ public class CDKRMapHandler {
      * @param  graph2  second molecule. May be an IQueryAtomContainer.
      * @return     The mapping found projected on graph1. This is sourceAtom List of CDKRMap objects containing Ids of matching atoms.
      */
-    private static List<List<CDKRMap>> makeAtomsMapOfBondsMap(List<CDKRMap> rMapList, IAtomContainer graph1, IAtomContainer graph2) {
+    private synchronized List<List<CDKRMap>> makeAtomsMapOfBondsMap(List<CDKRMap> rMapList, IAtomContainer graph1, IAtomContainer graph2) {
         if (rMapList == null) {
             return (null);
         }
@@ -388,7 +389,7 @@ public class CDKRMapHandler {
      * @param  targetGraph  second molecule. May be an IQueryAtomContainer.
      * @return     The mapping found projected on sourceGraph. This is atom List of CDKRMap objects containing Ids of matching atoms.
      */
-    private static List<List<CDKRMap>> makeAtomsMapOfBondsMapSingleBond(List<CDKRMap> list, IAtomContainer sourceGraph, IAtomContainer targetGraph) {
+    private synchronized List<List<CDKRMap>> makeAtomsMapOfBondsMapSingleBond(List<CDKRMap> list, IAtomContainer sourceGraph, IAtomContainer targetGraph) {
         if (list == null) {
             return null;
         }
@@ -455,7 +456,7 @@ public class CDKRMapHandler {
      * @param overlaps
      * @return
      */
-    protected List getMaximum(List overlaps) {
+    protected synchronized List getMaximum(List overlaps) {
         ArrayList list = null;
         int count = 0;
         for (Object o : overlaps) {
@@ -474,7 +475,7 @@ public class CDKRMapHandler {
      * @param overlaps
      * @return
      */
-    protected Stack<List<CDKRMap>> getAllMaximum(List<List<CDKRMap>> overlaps) {
+    protected synchronized Stack<List<CDKRMap>> getAllMaximum(List<List<CDKRMap>> overlaps) {
 
         Stack<List<CDKRMap>> allMaximumMappings = null;
 
@@ -511,7 +512,7 @@ public class CDKRMapHandler {
      * @param source
      * @param target
      */
-    protected void identifyMatchedParts(List<List<CDKRMap>> list, IAtomContainer source, IAtomContainer target) {
+    protected synchronized void identifyMatchedParts(List<List<CDKRMap>> list, IAtomContainer source, IAtomContainer target) {
 
         List<IAtom> array1 = new ArrayList<IAtom>();
         List<IAtom> array2 = new ArrayList<IAtom>();
@@ -549,7 +550,7 @@ public class CDKRMapHandler {
      * @param source
      * @param target
      */
-    protected void identifySingleAtomsMatchedParts(List<CDKRMap> list,
+    protected synchronized void identifySingleAtomsMatchedParts(List<CDKRMap> list,
             IAtomContainer source,
             IAtomContainer target) {
 
@@ -595,7 +596,7 @@ public class CDKRMapHandler {
      * @param rmaps2
      * @return
      */
-    protected boolean isSubgraph(List<CDKRMap> rmaps1, List<CDKRMap> rmaps2) {
+    protected synchronized boolean isSubgraph(List<CDKRMap> rmaps1, List<CDKRMap> rmaps2) {
         //System.out.println("Entering isSubgraph.");
         List<CDKRMap> rmaps2clone = (List<CDKRMap>) ((ArrayList<CDKRMap>) rmaps2).clone();
         for (CDKRMap rmap1 : rmaps1) {
@@ -622,7 +623,7 @@ public class CDKRMapHandler {
      * @param targetRMap targetAtom
      * @return
      */
-    protected boolean isSameRMap(CDKRMap sourceRMap, CDKRMap targetRMap) {
+    protected synchronized boolean isSameRMap(CDKRMap sourceRMap, CDKRMap targetRMap) {
         return sourceRMap.getId1() == targetRMap.getId1()
                 && sourceRMap.getId2() == targetRMap.getId2() ? true : false;
     }
@@ -631,7 +632,7 @@ public class CDKRMapHandler {
      * Returns mapping solutions
      * @return the mappings
      */
-    public List<Map<Integer, Integer>> getMappings() {
+    public synchronized List<Map<Integer, Integer>> getMappings() {
         return mappings;
     }
 
@@ -639,7 +640,7 @@ public class CDKRMapHandler {
      * Set mapping solutions
      * @param mappings the mappings to set
      */
-    public void setMappings(List<Map<Integer, Integer>> mappings) {
+    public synchronized void setMappings(List<Map<Integer, Integer>> mappings) {
         this.mappings = mappings;
     }
 
@@ -647,7 +648,7 @@ public class CDKRMapHandler {
      * Returns true if a time out occured else false
      * @return the timeoutFlag
      */
-    public boolean isTimeoutFlag() {
+    public synchronized boolean isTimeoutFlag() {
         return timeoutFlag;
     }
 
@@ -655,7 +656,7 @@ public class CDKRMapHandler {
      * Set time out flag
      * @param timeoutFlag the timeoutFlag to set
      */
-    public void setTimeoutFlag(boolean timeoutFlag) {
+    public synchronized void setTimeoutFlag(boolean timeoutFlag) {
         this.timeoutFlag = timeoutFlag;
     }
 }

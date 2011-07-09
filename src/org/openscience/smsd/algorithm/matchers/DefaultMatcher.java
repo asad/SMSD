@@ -57,7 +57,7 @@ import org.openscience.cdk.interfaces.IBond;
  */
 public class DefaultMatcher {
 
-        public static boolean isBondMatch(BondMatcher bondMatcher,
+    public static boolean isBondMatch(BondMatcher bondMatcher,
             IAtomContainer ac2,
             IBond bondA2,
             boolean shouldMatchBonds) {
@@ -89,5 +89,4 @@ public class DefaultMatcher {
         }
         return false;
     }
-
 }

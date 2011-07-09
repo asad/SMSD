@@ -1,4 +1,4 @@
-/* Copyright (C) 2009-2011  Syed Asad Rahman <asad@ebi.ac.uk>
+/* Copyright (C) 2009-2011  Syed Asad Rahman <asad@ebi.subGraph.uk>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -30,9 +30,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.openscience.cdk.AtomContainer;
 
 import org.openscience.cdk.CDKConstants;
-import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -40,30 +40,29 @@ import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IRingSet;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
 import org.openscience.cdk.isomorphism.matchers.IQueryBond;
-import org.openscience.cdk.ringsearch.SSSRFinder;
-import org.openscience.cdk.tools.manipulator.RingSetManipulator;
+import org.openscience.smsd.AtomAtomMapping;
+import org.openscience.smsd.ring.HanserRingFinder;
 
 /**
  * Filter on stereo and bond matches.
- * @author Syed Asad Rahman <asad@ebi.ac.uk>
+ * @author Syed Asad Rahman <asad@ebi.subGraph.uk>
  * @cdk.module smsd
  */
-public class StereoFilter extends BaseFilter implements IChemicalFilter<Double> {
+public final class StereoFilter extends BaseFilter implements IChemicalFilter<Double> {
 
-    private List<Double> stereoScore = null;
+    private final List<Double> stereoScore;
 
     public StereoFilter(IAtomContainer rMol, IAtomContainer pMol) {
         super(rMol, pMol);
-        stereoScore = new ArrayList<Double>();
+        stereoScore = Collections.synchronizedList(new ArrayList<Double>());
     }
 
     @Override
-    public Double sortResults(
-            Map<Integer, Map<Integer, Integer>> allStereoMCS,
-            Map<Integer, Map<IAtom, IAtom>> allStereoAtomMCS,
+    public synchronized Double sortResults(
+            Map<Integer, AtomAtomMapping> allStereoAtomMCS,
             Map<Integer, Double> stereoScoreMap) throws CDKException {
 
-        getStereoBondChargeMatch(stereoScoreMap, allStereoMCS, allStereoAtomMCS);
+        getStereoBondChargeMatch(stereoScoreMap, allStereoAtomMCS);
 
         stereoScoreMap = sortMapByValueInDescendingOrder(stereoScoreMap);
         double highestStereoScore =
@@ -73,22 +72,22 @@ public class StereoFilter extends BaseFilter implements IChemicalFilter<Double> 
     }
 
     @Override
-    public List<Double> getScores() {
+    public synchronized List<Double> getScores() {
         return Collections.unmodifiableList(stereoScore);
     }
 
     @Override
-    public void clearScores() {
+    public synchronized void clearScores() {
         stereoScore.clear();
     }
 
     @Override
-    public void addScore(int counter, Double score) {
+    public synchronized void addScore(int counter, Double score) {
         stereoScore.add(counter, score);
     }
 
     @Override
-    public void fillMap(Map<Integer, Double> stereoScoreMap) {
+    public synchronized void fillMap(Map<Integer, Double> stereoScoreMap) {
         int Index = 0;
         for (Double score : stereoScore) {
             stereoScoreMap.put(Index, score);
@@ -96,31 +95,23 @@ public class StereoFilter extends BaseFilter implements IChemicalFilter<Double> 
         }
     }
 
-    private boolean getStereoBondChargeMatch(Map<Integer, Double> stereoScoreMap,
-            Map<Integer, Map<Integer, Integer>> allStereoMCS,
-            Map<Integer, Map<IAtom, IAtom>> allStereoAtomMCS) throws CDKException {
+    private synchronized boolean getStereoBondChargeMatch(Map<Integer, Double> stereoScoreMap,
+            Map<Integer, AtomAtomMapping> allStereoAtomMCS) throws CDKException {
 
         boolean stereoMatchFlag = false;
-        IAtomContainer reactant = rMol;
-        IAtomContainer product = pMol;
-        CDKHueckelAromaticityDetector.detectAromaticity(reactant);
-        CDKHueckelAromaticityDetector.detectAromaticity(product);
-
-        for (Integer Key : allStereoMCS.keySet()) {
+        for (Integer Key : allStereoAtomMCS.keySet()) {
             try {
                 double score = 0.0;
                 //            System.out.println("\nStart score " + score);
-                Map<Integer, Integer> atomsMCS = allStereoMCS.get(Key);
-                Map<IAtom, IAtom> atomMapMCS = allStereoAtomMCS.get(Key);
-                double atomScore = getAtomScore(score, atomMapMCS, reactant, product);
-                Map<IBond, IBond> bondMaps = makeBondMapsOfAtomMaps(rMol, pMol, atomsMCS);
+                AtomAtomMapping atomMapMCS = allStereoAtomMCS.get(Key);
+                double atomScore = getAtomScore(score, atomMapMCS, rMol, pMol);
+                Map<IBond, IBond> bondMaps = makeBondMapsOfAtomMaps(rMol, pMol, atomMapMCS);
                 double ringScore = 0.0;
                 if (rMol.getBondCount() > 1
                         && pMol.getBondCount() > 1) {
-                    List<Object> subgraphRList = getMappedFragment(rMol, atomMapMCS.keySet());
-
+                    List<IAtomContainer> subgraphRList = getMappedFragment(rMol, atomMapMCS.getMappings().keySet());
                     double rscore = getRingMatchScore(subgraphRList);
-                    List<Object> subgraphPList = getMappedFragment(pMol, atomMapMCS.values());
+                    List<IAtomContainer> subgraphPList = getMappedFragment(pMol, atomMapMCS.getMappings().values());
                     double pscore = getRingMatchScore(subgraphPList);
                     ringScore = rscore + pscore;
                 }
@@ -138,52 +129,29 @@ public class StereoFilter extends BaseFilter implements IChemicalFilter<Double> 
         return stereoMatchFlag;
     }
 
-    private Map<IBond, IBond> makeBondMapsOfAtomMaps(IAtomContainer ac1, IAtomContainer ac2,
-            Map<Integer, Integer> mappings) {
+    private synchronized Map<IBond, IBond> makeBondMapsOfAtomMaps(IAtomContainer ac1, IAtomContainer ac2,
+            AtomAtomMapping mappings) {
 
-        Map<IBond, IBond> maps = new HashMap<IBond, IBond>();
+        Map<IBond, IBond> bondbondMappingMap = new HashMap<IBond, IBond>();
 
-        for (IAtom atoms : ac1.atoms()) {
-
-            int ac1AtomNumber = ac1.getAtomNumber(atoms);
-
-            if (mappings.containsKey(ac1AtomNumber)) {
-
-                int ac2AtomNumber = mappings.get(ac1AtomNumber);
-
-                List<IAtom> connectedAtoms = ac1.getConnectedAtomsList(atoms);
-
-                for (IAtom cAtoms : connectedAtoms) {
-                    int ac1ConnectedAtomNumber = ac1.getAtomNumber(cAtoms);
-
-                    if (mappings.containsKey(ac1ConnectedAtomNumber)) {
-                        {
-                            int ac2ConnectedAtomNumber = mappings.get(ac1ConnectedAtomNumber);
-
-                            IBond ac1Bond = ac1.getBond(atoms, cAtoms);
-                            IBond ac2Bond = ac2.getBond(ac2.getAtom(ac2AtomNumber),
-                                    ac2.getAtom(ac2ConnectedAtomNumber));
-
-                            if (ac2Bond == null) {
-                                ac2Bond = ac2.getBond(ac2.getAtom(ac2ConnectedAtomNumber), ac2.getAtom(ac2AtomNumber));
-                            }
-
-                            if (ac1Bond != null && ac2Bond != null) {
-                                maps.put(ac1Bond, ac2Bond);
-                            }
-                        }
+        for (Map.Entry<IAtom, IAtom> map1 : mappings.getMappings().entrySet()) {
+            for (Map.Entry<IAtom, IAtom> map2 : mappings.getMappings().entrySet()) {
+                if (map1.getKey() != map2.getKey()) {
+                    IBond bond1 = ac1.getBond(map1.getKey(), map2.getKey());
+                    IBond bond2 = ac2.getBond(map1.getValue(), map2.getValue());
+                    if (bond1 != null && bond2 != null && !bondbondMappingMap.containsKey(bond1)) {
+                        bondbondMappingMap.put(bond1, bond2);
                     }
                 }
             }
         }
-//        System.out.println("Mol Map size:" + maps.size());
-        return maps;
-
+//        System.out.println("Mol Map size:" + bondbondMappingMap.size());
+        return bondbondMappingMap;
     }
 
-    private double getAtomScore(double score, Map<IAtom, IAtom> atomMapMCS, IAtomContainer reactant,
+    private synchronized double getAtomScore(double score, AtomAtomMapping atomMapMCS, IAtomContainer reactant,
             IAtomContainer product) {
-        for (Map.Entry<IAtom, IAtom> mappings : atomMapMCS.entrySet()) {
+        for (Map.Entry<IAtom, IAtom> mappings : atomMapMCS.getMappings().entrySet()) {
             IAtom rAtom = mappings.getKey();
             IAtom pAtom = mappings.getValue();
 
@@ -221,7 +189,7 @@ public class StereoFilter extends BaseFilter implements IChemicalFilter<Double> 
         return score;
     }
 
-    private double getBondScore(double score, Map<IBond, IBond> bondMaps) {
+    private synchronized double getBondScore(double score, Map<IBond, IBond> bondMaps) {
         for (Map.Entry<IBond, IBond> matchedBonds : bondMaps.entrySet()) {
 
             IBond RBond = matchedBonds.getKey();
@@ -232,7 +200,7 @@ public class StereoFilter extends BaseFilter implements IChemicalFilter<Double> 
         return score;
     }
 
-    private double getBondTypeMatches(IBond queryBond, IBond targetBond) {
+    private synchronized double getBondTypeMatches(IBond queryBond, IBond targetBond) {
         double score = 0;
 
         if (targetBond instanceof IQueryBond && queryBond instanceof IBond) {
@@ -243,7 +211,7 @@ public class StereoFilter extends BaseFilter implements IChemicalFilter<Double> 
                 // ok, bonds match
                 if (atom1.matches(queryBond.getAtom(0)) && atom2.matches(queryBond.getAtom(1))
                         || atom1.matches(queryBond.getAtom(1)) && atom2.matches(queryBond.getAtom(0))) {
-                    // ok, atoms match in either order
+                    // ok, queryAtom match in either order
                     score += 4;
                 }
             } else {
@@ -257,7 +225,7 @@ public class StereoFilter extends BaseFilter implements IChemicalFilter<Double> 
                 // ok, bonds match
                 if (atom1.matches(targetBond.getAtom(0)) && atom2.matches(targetBond.getAtom(1))
                         || atom1.matches(targetBond.getAtom(1)) && atom2.matches(targetBond.getAtom(0))) {
-                    // ok, atoms match in either order
+                    // ok, queryAtom match in either order
                     score += 4;
                 }
             } else {
@@ -299,7 +267,7 @@ public class StereoFilter extends BaseFilter implements IChemicalFilter<Double> 
      * @param bond
      * @return
      */
-    public static int convertBondStereo(IBond bond) {
+    public synchronized static int convertBondStereo(IBond bond) {
         int value = 0;
         switch (bond.getStereo()) {
             case UP:
@@ -334,7 +302,7 @@ public class StereoFilter extends BaseFilter implements IChemicalFilter<Double> 
      * @param bond
      * @return
      */
-    public static int convertBondOrder(IBond bond) {
+    public synchronized static int convertBondOrder(IBond bond) {
         int value = 0;
         switch (bond.getOrder()) {
             case QUADRUPLE:
@@ -355,27 +323,26 @@ public class StereoFilter extends BaseFilter implements IChemicalFilter<Double> 
         return value;
     }
 
-    private double getRingMatchScore(List<Object> list) {
+    private synchronized double getRingMatchScore(List<IAtomContainer> list) {
         double lScore = 0;
-        List<IAtom> listMap = (List<IAtom>) list.get(0);
-        IAtomContainer ac = (IAtomContainer) list.get(1);
-//        HanserRingFinder ringFinder = new HanserRingFinder();
-        IRingSet sssr = null;
+        IAtomContainer listMap = list.get(0);
+        IAtomContainer subGraph = list.get(1);
         try {
-            SSSRFinder finder = new SSSRFinder(ac);
-            sssr = finder.findEssentialRings();
-            RingSetManipulator.sort(sssr);
-//            System.out.println("Ring length " + sssr.getAtomContainerCount());
-            lScore = getRingMatch(sssr, listMap);
+//            CDKHueckelAromaticityDetector.detectAromaticity(subGraph);
+//            SSSRFinder finder = new SSSRFinder(subGraph);
+//            IRingSet ringSet = finder.findEssentialRings();
+//            RingSetManipulator.sort(ringSet);
+            IRingSet ringSet = HanserRingFinder.getRingSet(subGraph);
+            lScore = getRingMatch(ringSet, listMap);
         } catch (Exception ex) {
             Logger.getLogger(StereoFilter.class.getName()).log(Level.SEVERE, null, ex);
         }
         return lScore;
     }
 
-    private double getRingMatch(IRingSet rings, List<IAtom> atoms) {
+    private synchronized double getRingMatch(IRingSet rings, IAtomContainer atoms) {
         double score = 0.0;
-        for (IAtom a : atoms) {
+        for (IAtom a : atoms.atoms()) {
             for (IAtomContainer ring : rings.atomContainers()) {
                 if (ring.contains(a)) {
                     score += 10;
@@ -387,7 +354,7 @@ public class StereoFilter extends BaseFilter implements IChemicalFilter<Double> 
         return score;
     }
 
-    private List<Object> getMappedFragment(IAtomContainer molecule, Collection<IAtom> atomsMCS) throws CloneNotSupportedException {
+    private synchronized List<IAtomContainer> getMappedFragment(IAtomContainer molecule, Collection<IAtom> atomsMCS) throws CloneNotSupportedException {
         IAtomContainer subgraphContainer = molecule.getBuilder().newInstance(IAtomContainer.class, molecule);
         List<IAtom> list = new ArrayList<IAtom>(atomsMCS.size());
         for (IAtom atom : atomsMCS) {
@@ -396,18 +363,18 @@ public class StereoFilter extends BaseFilter implements IChemicalFilter<Double> 
             list.add(subgraphContainer.getAtom(post));
         }
 
-        List<IAtom> rlist = new ArrayList<IAtom>();
+        IAtomContainer rlist = new AtomContainer();
         for (IAtom atoms : subgraphContainer.atoms()) {
             if (!list.contains(atoms)) {
-                rlist.add(atoms);
+                rlist.addAtom(atoms);
             }
         }
 
-        for (IAtom atoms : rlist) {
+        for (IAtom atoms : rlist.atoms()) {
             subgraphContainer.removeAtomAndConnectedElectronContainers(atoms);
         }
-        List<Object> l = new ArrayList<Object>();
-        l.add(list);
+        List<IAtomContainer> l = new ArrayList<IAtomContainer>(2);
+        l.add(rlist);
         l.add(subgraphContainer);
         return l;
     }

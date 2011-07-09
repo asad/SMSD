@@ -39,9 +39,14 @@ import org.openscience.cdk.interfaces.IAtomContainer;
  */
 public class BaseFilter {
 
-    protected IAtomContainer rMol = null;
-    protected IAtomContainer pMol = null;
+    protected IAtomContainer rMol;
+    protected IAtomContainer pMol;
 
+    /**
+     * 
+     * @param rMol
+     * @param pMol
+     */
     public BaseFilter(IAtomContainer rMol, IAtomContainer pMol) {
         this.rMol = rMol;
         this.pMol = pMol;

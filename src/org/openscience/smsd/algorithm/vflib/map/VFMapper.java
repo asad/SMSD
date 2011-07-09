@@ -49,6 +49,7 @@
 package org.openscience.smsd.algorithm.vflib.map;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -90,7 +91,7 @@ public class VFMapper implements IMapper {
      */
     public VFMapper(IQuery query) {
         this.query = query;
-        this.maps = new ArrayList<Map<INode, IAtom>>();
+        this.maps = Collections.synchronizedList(new ArrayList<Map<INode, IAtom>>());
     }
 
     /**

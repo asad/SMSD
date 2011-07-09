@@ -23,13 +23,8 @@
  */
 package org.openscience.smsd;
 
-import java.io.IOException;
 import java.util.List;
-import java.util.Map;
-import org.openscience.cdk.exception.CDKException;
-import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 
 /**
  * Interface for all MCS/Substructure algorithms.
@@ -37,35 +32,19 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-public interface IAtomAtomMapping {
+public interface IAtomMapping {
 
     /**
-     * Initialize query and target molecules.
-     * 
-     *Note: Here its assumed that hydrogens are implicit
-     * and user has called these two methods
-     * percieveAtomTypesAndConfigureAtoms and CDKAromicityDetector 
-     * before initializing calling this method.
-     *
-     * @param source query mol
-     * @param target target mol
-     * @throws CDKException
+     * Mapped Query container
+     * @return
      */
-    public abstract void init(IAtomContainer source, IAtomContainer target) throws CDKException;
+    public abstract IAtomContainer getQueryContainer();
 
     /**
-     * initialize query and target molecules.
-     *
-     * Note: Here its assumed that hydrogens are implicit
-     * and user has called these two methods
-     * percieveAtomTypesAndConfigureAtoms and CDKAromicityDetector 
-     * before initializing calling this method.
-     * 
-     * @param source query mol
-     * @param target target mol
-     * @throws CDKException
+     * Mapped Target container
+     * @return
      */
-    public abstract void init(IQueryAtomContainer source, IAtomContainer target) throws CDKException;
+    public abstract IAtomContainer getTargetContainer();
 
     /**
      * initialize query and target molecules.
@@ -115,44 +94,28 @@ public interface IAtomAtomMapping {
      * and map.getValue() for the target molecule.
      * @return All possible MCS atom Mappings
      */
-    public abstract List<Map<IAtom, IAtom>> getAllAtomMapping();
-
-    /**
-     * Returns all plausible mappings between query and target molecules
-     * Each map in the list has atom-atom equivalence index of the mappings
-     * between query and target molecule i.e. map.getKey() for the query
-     * and map.getValue() for the target molecule.
-     * @return All possible MCS Mapping Index
-     */
-    public abstract List<Map<Integer, Integer>> getAllMapping();
+    public abstract List<AtomAtomMapping> getAllAtomMapping();
 
     /**
      * Returns one of the best matches with atoms mapped.
      * @return Best Atom Mapping
      */
-    public abstract Map<IAtom, IAtom> getFirstAtomMapping();
-
-    /**
-     * Returns one of the best matches with atom indexes mapped.
-     * @return Best Mapping Index
-     */
-    public abstract Map<Integer, Integer> getFirstMapping();
+    public abstract AtomAtomMapping getFirstAtomMapping();
 
     /** 
      * Returns Tanimoto similarity between query and target molecules
      * (Score is between 0-min and 1-max).
      *
      * @return Tanimoto Similarity between 0 and 1
-     * @throws IOException
      */
-    public abstract double getTanimotoSimilarity() throws IOException;
+    public abstract double getTanimotoSimilarity();
 
     /** 
      * Returns Euclidean Distance between query and target molecule.
      * @return Euclidean Distance (lower the score, better the match)
-     * @throws IOException
+     *
      */
-    public abstract double getEuclideanDistance() throws IOException;
+    public abstract double getEuclideanDistance();
 
     /**
      *
@@ -166,21 +129,12 @@ public interface IAtomAtomMapping {
      */
     public abstract boolean isStereoMisMatch();
 
-    /** 
-     * 
-     * Returns modified target molecule on which mapping was
-     * performed.
-     *
-     *
-     * @return return modified product GraphMolecule
+    /**
+     * Returns total mapping count between query and target molecules
+     * Each map in the list has atom-atom equivalence of the mappings
+     * between query and target molecule i.e. map.getKey() for the query
+     * and map.getValue() for the target molecule.
+     * @return All possible MCS atom Mappings
      */
-    public abstract IAtomContainer getTargetMolecule();
-
-    /** 
-     * Returns modified query molecule on which mapping was
-     * performed.
-     *
-     * @return return modified reactant GraphMolecule
-     */
-    public abstract IAtomContainer getQueryMolecule();
+    public abstract int getMappingCount();
 }

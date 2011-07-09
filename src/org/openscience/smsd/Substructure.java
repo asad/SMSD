@@ -22,26 +22,20 @@
  */
 package org.openscience.smsd;
 
-import java.io.IOException;
-import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.logging.Level;
-import org.openscience.cdk.annotations.TestMethod;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.algorithm.single.SingleMappingHandler;
-import org.openscience.smsd.algorithm.vflib.substructure.AtomMapping;
+import org.openscience.smsd.algorithm.vflib.VF2lib;
 import org.openscience.smsd.algorithm.vflib.substructure.VF2;
-import org.openscience.smsd.filters.ChemicalFilters;
 import org.openscience.smsd.global.TimeOut;
 
 /**
@@ -50,81 +44,91 @@ import org.openscience.smsd.global.TimeOut;
  * then it returns only all mapping.
  *
  * This is much faster than {@link
- * org.openscience.cdk.smsd.algorithm.vflib.VFlibHandler} class
+ * org.openscience.cdk.smsd.algorithm.vflib.substructure} class
  * as it only reports first match and backtracks.
  *
  * This class should only be used to report if a query
  * graph is a substructure of the target graph.
+ * 
+ *  *
+ * <p>An example for <b>Substructure search</b>:</p>
+ *  <font color="#003366">
+ *  <pre>
+ *  SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+ *  // Benzene
+ *  IAtomContainer query = sp.parseSmiles("C1=CC=CC=C1");
+ *  // Napthalene
+ *  IAtomContainer target = sp.parseSmiles("C1=CC2=C(C=C1)C=CC=C2");
+ *  //Turbo mode search
+ *  
+ *  // set molecules, remove hydrogens, clean and configure molecule
+ *  //Bond Sensitive is set true
+ *  IAtomMapping comparison = new Substructure(query, target, true);
+ *  // set chemical filter false
+ *  if (comparison.findSubgraph()) {
+ *      comparison.setChemFilters(true, true, true);
+ *  
+ *  //Get similarity score
+ *      System.out.println("Tanimoto coefficient:  " + comparison.getTanimotoSimilarity());
+ *  // Print the mapping between molecules
+ *      System.out.println(" Mappings: ");
+ *      for (Map.Entry<IAtom, IAtom> mapping : comparison.getMappings().entrySet()) {
+ *          IAtom eAtom = query.getKey();
+ *          IAtom pAtom = target.getValue();
+ *          System.out.println(eAtom.getSymbol() + " " + pAtom.getSymbol());
+ *      }
+ *      System.out.println("");
+ *  }
+ *
+ *  </pre>
+ *  </font>
+ *
  *
  * @cdk.module smsd
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-public class Substructure implements IAtomAtomMapping {
+public final class Substructure extends BaseMapping {
 
-    private List<Double> stereoScore = null;
-    private List<Integer> fragmentSize = null;
-    private List<Double> bEnergies = null;
-    private List<Map<IAtom, IAtom>> allAtomMCS = null;
-    private Map<IAtom, IAtom> firstAtomMCS = null;
-    private Map<Integer, Integer> firstIndexMCS = null;
-    private List<Map<Integer, Integer>> allIndexMCS = null;
-    private IAtomContainer mol1 = null;
-    private IAtomContainer mol2 = null;
-    private List<AtomMapping> vfLibSolutions = null;
     private int vfMappingSize = -1;
-    private boolean bond_Match_Flag = false;
-    private final static ILoggingTool Logger =
+    private final ILoggingTool Logger =
             LoggingToolFactory.createLoggingTool(Substructure.class);
+    private final boolean bond_Match_Flag;
 
     /**
      * Constructor for VF Substructure Algorithm 
+     * @param query
+     * @param target
+     * @param shouldMatchBonds  
      */
-    public Substructure() {
-        allAtomMCS = new ArrayList<Map<IAtom, IAtom>>();
-        firstAtomMCS = new HashMap<IAtom, IAtom>();
-        firstIndexMCS = new TreeMap<Integer, Integer>();
-        allIndexMCS = new ArrayList<Map<Integer, Integer>>();
-
+    public Substructure(IQueryAtomContainer query, IAtomContainer target, boolean shouldMatchBonds) {
+        this.queryMol = query;
+        this.mol1 = query;
+        this.mol2 = target;
+        this.mcsList = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
+        this.bond_Match_Flag = shouldMatchBonds;
         TimeOut tmo = TimeOut.getInstance();
         tmo.setCDKMCSTimeOut(0.15);
     }
 
-    private void setFirstMappings() {
-        if (!allAtomMCS.isEmpty()) {
-            firstAtomMCS.putAll(allAtomMCS.get(0));
-            firstIndexMCS.putAll(allIndexMCS.get(0));
-        }
-    }
-
-    /** {@inheritDoc}
-     *
-     * Set the VFLib MCS software
-     *
-     * @param reactant
-     * @param product
+    /**
+     * Constructor for VF Substructure Algorithm 
+     * @param query
+     * @param target
+     * @param shouldMatchBonds  
      */
-    @Override
-    public synchronized void init(IAtomContainer reactant, IAtomContainer product) {
-        this.mol1 = reactant;
-        this.mol2 = product;
+    public Substructure(IAtomContainer query, IAtomContainer target, boolean shouldMatchBonds) {
+        this.queryMol = null;
+        this.mol1 = query;
+        this.mol2 = target;
+        this.mcsList = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
+        TimeOut tmo = TimeOut.getInstance();
+        tmo.setCDKMCSTimeOut(0.15);
+        this.bond_Match_Flag = shouldMatchBonds;
     }
 
-    /** {@inheritDoc}
-     *
-     * Set the VFLib MCS software
-     *
-     * @param reactant
-     * @param product
-     */
-    @Override
-    public synchronized void init(IQueryAtomContainer reactant, IAtomContainer product) {
-        this.mol1 = reactant;
-        this.mol2 = product;
-    }
-
-    private synchronized boolean hasMap(Map<Integer, Integer> map, List<Map<Integer, Integer>> mapGlobal) {
-        for (Map<Integer, Integer> test : mapGlobal) {
+    private synchronized boolean hasMap(AtomAtomMapping map, List<AtomAtomMapping> mapGlobal) {
+        for (AtomAtomMapping test : mapGlobal) {
             if (test.equals(map)) {
                 return true;
             }
@@ -132,60 +136,118 @@ public class Substructure implements IAtomAtomMapping {
         return false;
     }
 
-    /** {@inheritDoc}
-     *
-     * @return 
+    /**
+     * Returns true if query is a subgraph of target molecule
+     * @return
+     * @throws CDKException  
      */
-    @Override
-    public synchronized List<Map<IAtom, IAtom>> getAllAtomMapping() {
-        return allAtomMCS;
+    public synchronized boolean findSubgraph() throws CDKException {
+
+        if ((mol2 == null) || (mol1 == null && queryMol == null)) {
+            throw new CDKException("Query or Target molecule is not initialized (NULL)");
+        }
+
+        if (mol1.getAtomCount() == 1 || mol2.getAtomCount() == 1) {
+            singleMapping(isBondMatchFlag());
+        } else {
+            if (mol1.getAtomCount() > mol2.getAtomCount()) {
+                return false;
+            } else if (queryMol != null) {
+                VF2 mapper = new VF2();
+                List<AtomAtomMapping> mappingsVF2 = new ArrayList<AtomAtomMapping>();
+                AtomAtomMapping atomMapping = mapper.isomorphism(queryMol, mol2, bond_Match_Flag);
+//                    System.out.println("Mapping Size " + atomMapping.getCount());
+                if (!atomMapping.isEmpty()) {
+                    mappingsVF2.add(atomMapping);
+                } else {
+                    return false;
+                }
+                setVFMappings(mappingsVF2);
+
+            } else {
+                VF2 mapper = new VF2();
+                List<AtomAtomMapping> mappingsVF2 = new ArrayList<AtomAtomMapping>();
+                AtomAtomMapping atomMapping = mapper.isomorphism(mol1, mol2, bond_Match_Flag);
+//                    System.out.println("Mapping Size " + atomMapping.getCount());
+                if (!atomMapping.isEmpty()) {
+                    mappingsVF2.add(atomMapping);
+                } else {
+                    return false;
+                }
+                setVFMappings(mappingsVF2);
+            }
+        }
+        return (getMappingCount() > 0 && getAllAtomMapping().iterator().next().getCount()
+                == mol1.getAtomCount()) ? true : false;
     }
 
-    /** {@inheritDoc}
-     * @return 
+    /**
+     * Returns true if query is a subgraph of target molecule
+     * @return
+     * @throws CDKException  
      */
-    @Override
-    public synchronized List<Map<Integer, Integer>> getAllMapping() {
-        return allIndexMCS;
+    public synchronized boolean findSubgraphs() throws CDKException {
+
+
+        if ((mol2 == null) || (mol1 == null && queryMol == null)) {
+            throw new CDKException("Query or Target molecule is not initialized (NULL)");
+        }
+
+        if (mol1.getAtomCount() == 1 || mol2.getAtomCount() == 1) {
+            singleMapping(isBondMatchFlag());
+        } else {
+            if (mol1.getAtomCount() > mol2.getAtomCount()) {
+                return false;
+            } else if (queryMol != null) {
+                VF2lib mapper = new VF2lib();
+                List<AtomAtomMapping> mappingsVF2 = new ArrayList<AtomAtomMapping>();
+                mapper.set(queryMol, mol2);
+                mapper.searchMCS(bond_Match_Flag);
+                List<AtomAtomMapping> atomMappings = mapper.getAllAtomMapping();
+//                    System.out.println("Mapping Size " + atomMapping.getCount());
+                if (!atomMappings.isEmpty()) {
+                    mappingsVF2.addAll(atomMappings);
+                } else {
+                    return false;
+                }
+                setVFMappings(mappingsVF2);
+
+            } else {
+                VF2lib mapper = new VF2lib();
+                List<AtomAtomMapping> mappingsVF2 = new ArrayList<AtomAtomMapping>();
+                mapper.set(mol1, mol2);
+                mapper.searchMCS(bond_Match_Flag);
+                List<AtomAtomMapping> atomMappings = mapper.getAllAtomMapping();
+//                    System.out.println("Mapping Size " + atomMapping.getCount());
+                if (!atomMappings.isEmpty()) {
+                    mappingsVF2.addAll(atomMappings);
+                } else {
+                    return false;
+                }
+                setVFMappings(mappingsVF2);
+            }
+        }
+        return (getMappingCount() > 0 && getAllAtomMapping().iterator().next().getCount()
+                == mol1.getAtomCount()) ? true : false;
     }
 
-    /** {@inheritDoc}
-     * @return 
-     */
-    @Override
-    public synchronized Map<IAtom, IAtom> getFirstAtomMapping() {
-        return firstAtomMCS;
-    }
-
-    /** {@inheritDoc}
-     * @return 
-     */
-    @Override
-    public synchronized Map<Integer, Integer> getFirstMapping() {
-        return firstIndexMCS;
-    }
-
-    private synchronized void setVFMappings() {
+    private synchronized void setVFMappings(List<AtomAtomMapping> mappingsVF2) {
         int counter = 0;
-        for (AtomMapping solution : vfLibSolutions) {
-            Map<IAtom, IAtom> atomatomMapping = new HashMap<IAtom, IAtom>();
-            Map<Integer, Integer> indexindexMapping = new TreeMap<Integer, Integer>();
-            if (solution.getSize() > vfMappingSize) {
-                this.vfMappingSize = solution.getSize();
+        for (AtomAtomMapping solution : mappingsVF2) {
+            AtomAtomMapping atomatomMapping = new AtomAtomMapping(mol1, mol2);
+            if (solution.getCount() > vfMappingSize) {
+                this.vfMappingSize = solution.getCount();
                 counter = 0;
             }
-            for (Map.Entry<IAtom, IAtom> mapping : solution.getAtomMapping().entrySet()) {
+            for (Map.Entry<IAtom, IAtom> mapping : solution.getMappings().entrySet()) {
                 IAtom qAtom = null;
                 IAtom tAtom = null;
 
                 qAtom = mapping.getKey();
                 tAtom = mapping.getValue();
 
-                Integer qIndex = Integer.valueOf(getReactantMol().getAtomNumber(qAtom));
-                Integer tIndex = Integer.valueOf(getProductMol().getAtomNumber(tAtom));
-                if (qIndex != -1 && tIndex != -1) {
+                if (qAtom != null && tAtom != null) {
                     atomatomMapping.put(qAtom, tAtom);
-                    indexindexMapping.put(qIndex, tIndex);
                 } else {
                     try {
                         throw new CDKException("Atom index pointing to NULL");
@@ -194,118 +256,20 @@ public class Substructure implements IAtomAtomMapping {
                     }
                 }
             }
-            if (!atomatomMapping.isEmpty() && !hasMap(indexindexMapping, allIndexMCS)
-                    && indexindexMapping.size() == vfMappingSize) {
-                allAtomMCS.add(counter, atomatomMapping);
-                allIndexMCS.add(counter, indexindexMapping);
+            if (!atomatomMapping.isEmpty() && !hasMap(atomatomMapping, mcsList)
+                    && atomatomMapping.getCount() == vfMappingSize) {
+                mcsList.add(counter, atomatomMapping);
                 counter++;
             }
         }
     }
 
-    public synchronized boolean isSubgraph(boolean shouldMatchBonds) throws CDKException {
-
-        setBondMatchFlag(shouldMatchBonds);
-        if (getReactantMol().getAtomCount() > getProductMol().getAtomCount()) {
-            return false;
-        } else {
-            if (getReactantMol() != null && getProductMol() != null) {
-
-                VF2 mapper = new VF2();
-                if (!mapper.isomorphism(getReactantMol(), getProductMol(), shouldMatchBonds).isEmpty()) {
-                    return true;
-                } else {
-                    return false;
-                }
-            }
-        }
-        return false;
-    }
-
-    /**
-     * 
-     * @param shouldMatchBonds
-     * @return
-     */
-    public synchronized boolean findSubgraphs(boolean shouldMatchBonds) {
-
-//        System.out.println("Mol1 Size: -> " + getReactantMol().getAtomCount());
-//        System.out.println("Mol2 Size. -> " + getProductMol().getAtomCount());
-        setBondMatchFlag(shouldMatchBonds);
-
-
-        if (getReactantMol().getAtomCount() == 1 || getProductMol().getAtomCount() == 1) {
-            singleMapping(shouldMatchBonds);
-        } else {
-            if (getReactantMol().getAtomCount() > getProductMol().getAtomCount()) {
-                return false;
-            } else {
-
-                vfLibSolutions = new ArrayList<AtomMapping>();
-                if (getProductMol() != null) {
-                    VF2 mapper = new VF2();
-                    List<AtomMapping> atomMappings = mapper.isomorphisms(getReactantMol(), getProductMol(), shouldMatchBonds);
-                    if (!atomMappings.isEmpty()) {
-                        vfLibSolutions.addAll(atomMappings);
-                    } else {
-                        return false;
-                    }
-                }
-                setVFMappings();
-            }
-            if (!allAtomMCS.isEmpty()) {
-                setFirstMappings();
-            }
-        }
-        return (!allIndexMCS.isEmpty() && allIndexMCS.iterator().next().size() == getReactantMol().getAtomCount()) ? true : false;
-    }
-
-    /**
-     * 
-     * @param shouldMatchBonds
-     * @return
-     */
-    public synchronized boolean findSubgraph(boolean shouldMatchBonds) {
-
-        setBondMatchFlag(shouldMatchBonds);
-        if (getReactantMol().getAtomCount() == 1 || getProductMol().getAtomCount() == 1) {
-            singleMapping(shouldMatchBonds);
-        } else {
-            if (getReactantMol().getAtomCount() > getProductMol().getAtomCount()) {
-                return false;
-            } else {
-                vfLibSolutions = new ArrayList<AtomMapping>();
-                if (getProductMol() != null) {
-                    VF2 mapper = new VF2();
-                    AtomMapping atomMapping = mapper.isomorphism(getReactantMol(), getProductMol(), shouldMatchBonds);
-                    if (!atomMapping.isEmpty()) {
-                        vfLibSolutions.add(atomMapping);
-                    } else {
-                        return false;
-                    }
-                }
-                setVFMappings();
-            }
-            if (!allAtomMCS.isEmpty()) {
-                setFirstMappings();
-            }
-        }
-        return (!allIndexMCS.isEmpty() && allIndexMCS.iterator().next().size() == getReactantMol().getAtomCount()) ? true : false;
-    }
-
     private synchronized void singleMapping(boolean shouldMatchBonds) {
         SingleMappingHandler mcs = null;
-
         mcs = new SingleMappingHandler();
-        mcs.set(getReactantMol(), getProductMol());
+        mcs.set(mol1, mol2);
         mcs.searchMCS(shouldMatchBonds);
-
-        firstIndexMCS.putAll(mcs.getFirstMapping());
-        allIndexMCS.addAll(mcs.getAllMapping());
-
-        firstAtomMCS.putAll(mcs.getFirstAtomMapping());
-        allAtomMCS.addAll(mcs.getAllAtomMapping());
-
+        mcsList.addAll(mcs.getAllAtomMapping());
     }
 
     /**
@@ -313,168 +277,5 @@ public class Substructure implements IAtomAtomMapping {
      */
     public synchronized boolean isBondMatchFlag() {
         return bond_Match_Flag;
-    }
-
-    /**
-     * @param shouldMatchBonds the shouldMatchBonds to set
-     */
-    public synchronized void setBondMatchFlag(boolean shouldMatchBonds) {
-        this.bond_Match_Flag = shouldMatchBonds;
-    }
-
-    private synchronized IAtomContainer getReactantMol() {
-        return mol1;
-    }
-
-    private synchronized IAtomContainer getProductMol() {
-        return mol2;
-    }
-
-    @Override
-    public synchronized void setChemFilters(boolean stereoFilter, boolean fragmentFilter, boolean energyFilter) {
-
-        if (firstAtomMCS != null) {
-            ChemicalFilters chemFilter = new ChemicalFilters(allIndexMCS, allAtomMCS,
-                    getFirstMapping(), getFirstAtomMapping(), getReactantMol(), getProductMol());
-
-            if (energyFilter) {
-                try {
-                    chemFilter.sortResultsByEnergies();
-                    this.bEnergies = chemFilter.getSortedEnergy();
-                } catch (CDKException ex) {
-                    Logger.error(Level.SEVERE, null, ex);
-                }
-            }
-
-            if (stereoFilter && firstAtomMCS.size() > 1) {
-                try {
-                    chemFilter.sortResultsByStereoAndBondMatch();
-                    this.stereoScore = chemFilter.getStereoMatches();
-                } catch (CDKException ex) {
-                    Logger.error(Level.SEVERE, null, ex);
-                }
-            }
-
-            if (fragmentFilter) {
-                chemFilter.sortResultsByFragments();
-                this.fragmentSize = chemFilter.getSortedFragment();
-            }
-        }
-    }
-
-    @Override
-    public synchronized Integer getFragmentSize(int Key) {
-        return (fragmentSize != null && !fragmentSize.isEmpty())
-                ? fragmentSize.get(Key) : null;
-    }
-
-    @Override
-    public synchronized Integer getStereoScore(int Key) {
-        return (stereoScore != null && !stereoScore.isEmpty()) ? stereoScore.get(Key).intValue() : null;
-    }
-
-    @Override
-    public synchronized Double getEnergyScore(int Key) {
-        return (bEnergies != null && !bEnergies.isEmpty()) ? bEnergies.get(Key) : null;
-    }
-
-    /** {@inheritDoc}
-     */
-    @Override
-    @TestMethod("testGetEuclideanDistance")
-    public synchronized double getEuclideanDistance() throws IOException {
-        int decimalPlaces = 4;
-        double sourceAtomCount = 0;
-        double targetAtomCount = 0;
-        double euclidean = -1;
-
-
-        if (getFirstMapping() != null || !getFirstMapping().isEmpty()) {
-
-            sourceAtomCount = this.mol1.getAtomCount();
-            targetAtomCount = this.mol2.getAtomCount();
-
-            double common = getFirstMapping().size();
-            euclidean = Math.sqrt(sourceAtomCount + targetAtomCount - 2 * common);
-            BigDecimal dist = new BigDecimal(euclidean);
-            dist = dist.setScale(decimalPlaces, BigDecimal.ROUND_HALF_UP);
-            euclidean = dist.doubleValue();
-        }
-        return euclidean;
-    }
-
-    /** {@inheritDoc}
-     */
-    @Override
-    @TestMethod("testGetTanimotoSimilarity")
-    public synchronized double getTanimotoSimilarity() throws IOException {
-        int decimalPlaces = 4;
-        int rAtomCount = 0;
-        int pAtomCount = 0;
-        double tanimotoAtom = 0.0;
-
-        if (getFirstMapping() != null && !getFirstMapping().isEmpty()) {
-
-            rAtomCount = this.mol1.getAtomCount();
-            pAtomCount = this.mol2.getAtomCount();
-
-            double matchCount = getFirstMapping().size();
-            tanimotoAtom = (matchCount) / (rAtomCount + pAtomCount - matchCount);
-            BigDecimal tan = new BigDecimal(tanimotoAtom);
-            tan = tan.setScale(decimalPlaces, BigDecimal.ROUND_HALF_UP);
-            tanimotoAtom = tan.doubleValue();
-        }
-        return tanimotoAtom;
-    }
-
-    /** {@inheritDoc}
-     *
-     */
-    @Override
-    @TestMethod("testIsStereoMisMatch")
-    public synchronized boolean isStereoMisMatch() {
-        boolean flag = false;
-        IAtomContainer reactant = this.mol1;
-        IAtomContainer product = this.mol2;
-        int Score = 0;
-
-        for (Map.Entry<IAtom, IAtom> mappingI : firstAtomMCS.entrySet()) {
-            IAtom indexI = mappingI.getKey();
-            IAtom indexJ = mappingI.getValue();
-            for (Map.Entry<IAtom, IAtom> mappingJ : firstAtomMCS.entrySet()) {
-
-                IAtom indexIPlus = mappingJ.getKey();
-                IAtom indexJPlus = mappingJ.getValue();
-                if (!indexI.equals(indexIPlus) && !indexJ.equals(indexJPlus)) {
-
-                    IAtom sourceAtom1 = indexI;
-                    IAtom sourceAtom2 = indexIPlus;
-
-                    IBond rBond = reactant.getBond(sourceAtom1, sourceAtom2);
-
-                    IAtom targetAtom1 = indexJ;
-                    IAtom targetAtom2 = indexJPlus;
-                    IBond pBond = product.getBond(targetAtom1, targetAtom2);
-
-                    if ((rBond != null && pBond != null) && (rBond.getStereo() != pBond.getStereo())) {
-                        Score++;
-                    }
-                }
-            }
-        }
-        if (Score > 0) {
-            flag = true;
-        }
-        return flag;
-    }
-
-    @Override
-    public synchronized IAtomContainer getTargetMolecule() {
-        return this.mol1;
-    }
-
-    @Override
-    public synchronized IAtomContainer getQueryMolecule() {
-        return this.mol2;
     }
 }

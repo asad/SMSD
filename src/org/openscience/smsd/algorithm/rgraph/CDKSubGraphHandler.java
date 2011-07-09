@@ -23,7 +23,6 @@
 package org.openscience.smsd.algorithm.rgraph;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -35,6 +34,7 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IMoleculeSet;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
+import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.helper.FinalMappings;
 import org.openscience.smsd.interfaces.AbstractSubGraph;
 import org.openscience.smsd.interfaces.IMCSBase;
@@ -51,12 +51,11 @@ import org.openscience.smsd.interfaces.IMCSBase;
 public class CDKSubGraphHandler extends AbstractSubGraph implements IMCSBase {
 
 //    //~--- fields -------------------------------------------------------------
+    private IQueryAtomContainer qSource = null;
     private IAtomContainer source;
     private IAtomContainer target;
     private boolean rOnPFlag = false;
-    private List<Map<IAtom, IAtom>> allAtomMCS = null;
-    private Map<IAtom, IAtom> firstAtomMCS = null;
-    private Map<Integer, Integer> firstMCS = null;
+    private List<AtomAtomMapping> allAtomMCS = null;
     private List<Map<Integer, Integer>> allMCS = null;
 
     //~--- constructors -------------------------------------------------------
@@ -65,9 +64,7 @@ public class CDKSubGraphHandler extends AbstractSubGraph implements IMCSBase {
      */
     public CDKSubGraphHandler() {
 
-        this.allAtomMCS = new ArrayList<Map<IAtom, IAtom>>();
-        this.firstAtomMCS = new HashMap<IAtom, IAtom>();
-        this.firstMCS = new TreeMap<Integer, Integer>();
+        this.allAtomMCS = new ArrayList<AtomAtomMapping>();
         this.allMCS = new ArrayList<Map<Integer, Integer>>();
     }
 
@@ -91,6 +88,7 @@ public class CDKSubGraphHandler extends AbstractSubGraph implements IMCSBase {
     @Override
     @TestMethod("testSet_IQueryAtomContainer_MolHandler")
     public void set(IQueryAtomContainer source, IAtomContainer target) {
+        this.qSource = source;
         this.source = source;
         this.target = target;
     }
@@ -122,8 +120,6 @@ public class CDKSubGraphHandler extends AbstractSubGraph implements IMCSBase {
 
             setAllMapping();
             setAllAtomMapping();
-            setFirstMapping();
-            setFirstAtomMapping();
 
         } catch (CDKException e) {
             rmap = null;
@@ -206,7 +202,7 @@ public class CDKSubGraphHandler extends AbstractSubGraph implements IMCSBase {
 
         int counter = 0;
         for (Map<Integer, Integer> final_solution : sol) {
-            Map<IAtom, IAtom> atomMappings = new HashMap<IAtom, IAtom>();
+            AtomAtomMapping atomMappings = new AtomAtomMapping(source, target);
             for (Map.Entry<Integer, Integer> Solutions : final_solution.entrySet()) {
 
                 int IIndex = Solutions.getKey().intValue();
@@ -224,21 +220,6 @@ public class CDKSubGraphHandler extends AbstractSubGraph implements IMCSBase {
         }
     }
 
-    private synchronized void setFirstMapping() {
-
-        if (!allMCS.isEmpty()) {
-            firstMCS = new TreeMap<Integer, Integer>(allMCS.get(0));
-        }
-
-    }
-
-    private synchronized void setFirstAtomMapping() {
-        if (!allAtomMCS.isEmpty()) {
-            firstAtomMCS = new HashMap<IAtom, IAtom>(allAtomMCS.get(0));
-        }
-
-    }
-
     /** {@inheritDoc}
      */
     @Override
@@ -252,14 +233,17 @@ public class CDKSubGraphHandler extends AbstractSubGraph implements IMCSBase {
     @Override
     @TestMethod("testGetFirstMapping")
     public Map<Integer, Integer> getFirstMapping() {
-        return firstMCS;
+        if (allMCS.iterator().hasNext()) {
+            return allMCS.iterator().next();
+        }
+        return new TreeMap<Integer, Integer>();
     }
 
     /** {@inheritDoc}
      */
     @Override
     @TestMethod("testGetAllAtomMapping")
-    public List<Map<IAtom, IAtom>> getAllAtomMapping() {
+    public List<AtomAtomMapping> getAllAtomMapping() {
         return allAtomMCS;
     }
 
@@ -267,7 +251,10 @@ public class CDKSubGraphHandler extends AbstractSubGraph implements IMCSBase {
      */
     @Override
     @TestMethod("testGetFirstAtomMapping")
-    public Map<IAtom, IAtom> getFirstAtomMapping() {
-        return firstAtomMCS;
+    public AtomAtomMapping getFirstAtomMapping() {
+        if (allAtomMCS.iterator().hasNext()) {
+            return allAtomMCS.iterator().next();
+        }
+        return new AtomAtomMapping(source, target);
     }
 }

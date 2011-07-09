@@ -60,7 +60,7 @@ import org.openscience.cdk.isomorphism.matchers.IQueryBond;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFLibTest")
-public class DefaultMCSPlusBondMatcher implements BondMatcher {
+public final class DefaultMCSPlusBondMatcher implements BondMatcher {
 
     static final long serialVersionUID = -7861469841127328812L;
     private IBond queryBond = null;

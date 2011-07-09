@@ -24,9 +24,9 @@ package org.openscience.smsd.algorithm.vflib;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Stack;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import org.openscience.cdk.annotations.TestClass;
@@ -44,8 +44,10 @@ import org.openscience.smsd.interfaces.AbstractMCSAlgorithm;
 import org.openscience.smsd.interfaces.IMCSBase;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
-import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
+import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.algorithm.mcgregor.McGregor;
+import org.openscience.smsd.algorithm.mcsplus.BKKCKCF;
+import org.openscience.smsd.algorithm.mcsplus.GenerateCompatibilityGraph;
 import org.openscience.smsd.global.TimeOut;
 import org.openscience.smsd.tools.TimeManager;
 
@@ -64,44 +66,42 @@ import org.openscience.smsd.tools.TimeManager;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFlibMCSHandlerTest")
-public final class VFlibMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
+public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase {
 
-    private List<Map<IAtom, IAtom>> allAtomMCS = null;
-    private Map<IAtom, IAtom> atomsMCS = null;
-    private List<Map<IAtom, IAtom>> allAtomMCSCopy = null;
-    private Map<Integer, Integer> firstMCS = null;
+    private List<AtomAtomMapping> allAtomMCS = null;
+    private List<AtomAtomMapping> allAtomMCSCopy = null;
     private List<Map<Integer, Integer>> allMCS = null;
     private List<Map<Integer, Integer>> allMCSCopy = null;
     private List<Map<INode, IAtom>> vfLibSolutions = null;
     private IQueryAtomContainer queryMol = null;
-    private IAtomContainer mol1 = null;
-    private IAtomContainer mol2 = null;
+    private IAtomContainer query = null;
+    private IAtomContainer target = null;
     private int vfMCSSize = -1;
     private boolean bond_Match_Flag = false;
     private int countR = 0;
     private int countP = 0;
     private final static ILoggingTool Logger =
-            LoggingToolFactory.createLoggingTool(VFlibMCSHandler.class);
-    private static TimeManager timeManager = null;
+            LoggingToolFactory.createLoggingTool(VF2MCSPlusHandler.class);
+    private TimeManager timeManager = null;
 
     /**
      * @return the timeout
      */
-    protected synchronized static double getTimeout() {
+    protected synchronized double getTimeout() {
         return TimeOut.getInstance().getVFTimeout();
     }
 
     /**
      * @return the timeManager
      */
-    protected synchronized static TimeManager getTimeManager() {
+    protected synchronized TimeManager getTimeManager() {
         return timeManager;
     }
 
     /**
      * @param aTimeManager the timeManager to set
      */
-    public synchronized static void setTimeManager(TimeManager aTimeManager) {
+    public synchronized void setTimeManager(TimeManager aTimeManager) {
         TimeOut.getInstance().setTimeOutFlag(false);
         timeManager = aTimeManager;
     }
@@ -109,12 +109,9 @@ public final class VFlibMCSHandler extends AbstractMCSAlgorithm implements IMCSB
     /**
      * Constructor for an extended VF Algorithm for the MCS search
      */
-    @TestMethod("setMCSAlgorithm")
-    public VFlibMCSHandler() {
-        allAtomMCS = new ArrayList<Map<IAtom, IAtom>>();
-        allAtomMCSCopy = new ArrayList<Map<IAtom, IAtom>>();
-        atomsMCS = new HashMap<IAtom, IAtom>();
-        firstMCS = new TreeMap<Integer, Integer>();
+    public VF2MCSPlusHandler() {
+        allAtomMCS = new ArrayList<AtomAtomMapping>();
+        allAtomMCSCopy = new ArrayList<AtomAtomMapping>();
         allMCS = new ArrayList<Map<Integer, Integer>>();
         allMCSCopy = new ArrayList<Map<Integer, Integer>>();
     }
@@ -127,11 +124,57 @@ public final class VFlibMCSHandler extends AbstractMCSAlgorithm implements IMCSB
     @Override
     @TestMethod("testSearchMCS")
     public synchronized void searchMCS(boolean bondTypeMatch) {
+        setTimeManager(new TimeManager());
         setBondMatchFlag(bondTypeMatch);
         searchVFMCSMappings();
-        boolean flag = mcgregorFlag();
+        boolean flag = isExtensionFeasible();
         if (flag && !vfLibSolutions.isEmpty()) {
             try {
+                GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(query, target, isBondMatchFlag());
+                List<Integer> comp_graph_nodes = gcg.getCompGraphNodes();
+
+                List<Integer> cEdges = gcg.getCEgdes();
+                List<Integer> dEdges = gcg.getDEgdes();
+
+                BKKCKCF init = new BKKCKCF(comp_graph_nodes, cEdges, dEdges);
+//            Koch init = new Koch(comp_graph_nodes, cEdges, dEdges);
+                Stack<List<Integer>> maxCliqueSet = init.getMaxCliqueSet();
+                //clear all the compatibility graph content
+                gcg.clear();
+                int counter = 0;
+
+                while (!maxCliqueSet.empty()) {
+                    List<Integer> peek = maxCliqueSet.peek();
+                    Map<Integer, Integer> mapping = new TreeMap<Integer, Integer>();
+                    AtomAtomMapping atomatomMapping = new AtomAtomMapping(query, target);
+
+                    for (Integer value : peek) {
+                        int[] index = getIndex(value.intValue(), comp_graph_nodes);
+                        Integer qIndex = index[0];
+                        Integer tIndex = index[1];
+                        if (qIndex != -1 && tIndex != -1) {
+                            IAtom qAtom = query.getAtom(qIndex);
+                            IAtom tAtom = target.getAtom(tIndex);
+                            atomatomMapping.put(qAtom, tAtom);
+                            mapping.put(qIndex, tIndex);
+                        } else {
+                            try {
+                                throw new CDKException("Atom index pointing to -1");
+                            } catch (CDKException ex) {
+                                Logger.error(Level.SEVERE, null, ex);
+                            }
+                        }
+                    }
+
+                    if (!atomatomMapping.isEmpty() && !hasMap(mapping, allMCSCopy)) {
+//                        System.out.println("\nvfMCSSize: " + vfMCSSize);
+                        allAtomMCSCopy.add(counter, atomatomMapping);
+                        allMCSCopy.add(counter, mapping);
+                        counter++;
+                    }
+                    maxCliqueSet.pop();
+                }
+
                 searchMcGregorMapping();
             } catch (CDKException ex) {
                 Logger.error(Level.SEVERE, null, ex);
@@ -142,19 +185,11 @@ public final class VFlibMCSHandler extends AbstractMCSAlgorithm implements IMCSB
             allAtomMCS.addAll(allAtomMCSCopy);
             allMCS.addAll(allMCSCopy);
         }
-        setFirstMappings();
     }
 
-    private synchronized void setFirstMappings() {
-        if (!allAtomMCS.isEmpty()) {
-            atomsMCS.putAll(allAtomMCS.get(0));
-            firstMCS.putAll(allMCS.get(0));
-        }
-    }
-
-    private synchronized boolean mcgregorFlag() {
+    private synchronized boolean isExtensionFeasible() {
         int commonAtomCount = checkCommonAtomCount(getReactantMol(), getProductMol());
-        if (commonAtomCount > vfMCSSize && commonAtomCount > vfMCSSize) {
+        if (commonAtomCount > vfMCSSize) {
             return true;
         }
         return false;
@@ -170,8 +205,8 @@ public final class VFlibMCSHandler extends AbstractMCSAlgorithm implements IMCSB
     @Override
     @TestMethod("testSet_MolHandler_MolHandler")
     public synchronized void set(IAtomContainer source, IAtomContainer target) {
-        this.mol1 = source;
-        this.mol2 = target;
+        this.query = source;
+        this.target = target;
     }
 
     /** {@inheritDoc}
@@ -181,27 +216,19 @@ public final class VFlibMCSHandler extends AbstractMCSAlgorithm implements IMCSB
      */
     @Override
     @TestMethod("testSet_IQueryAtomContainer_MolHandler")
-    public synchronized void set(IQueryAtomContainer source, IAtomContainer target) {
-        queryMol = source;
-        mol2 = target;
+    public void set(IQueryAtomContainer source, IAtomContainer target) {
+        this.queryMol = source;
+        this.query = source;
+        this.target = target;
     }
 
-    private synchronized boolean hasMap(Map<Integer, Integer> maps, List<Map<Integer, Integer>> mapGlobal) {
+    private boolean hasMap(Map<Integer, Integer> maps, List<Map<Integer, Integer>> mapGlobal) {
         for (Map<Integer, Integer> test : mapGlobal) {
             if (test.equals(maps)) {
                 return true;
             }
         }
         return false;
-    }
-
-    /** {@inheritDoc}
-     *
-     */
-    @Override
-    @TestMethod("testGetAllAtomMapping")
-    public synchronized List<Map<IAtom, IAtom>> getAllAtomMapping() {
-        return allAtomMCS;
     }
 
     /** {@inheritDoc}
@@ -215,24 +242,37 @@ public final class VFlibMCSHandler extends AbstractMCSAlgorithm implements IMCSB
     /** {@inheritDoc}
      */
     @Override
-    @TestMethod("testGetFirstAtomMapping")
-    public synchronized Map<IAtom, IAtom> getFirstAtomMapping() {
-        return atomsMCS;
+    @TestMethod("testGetFirstMapping")
+    public synchronized Map<Integer, Integer> getFirstMapping() {
+        if (allMCS.iterator().hasNext()) {
+            return allMCS.iterator().next();
+        }
+        return new TreeMap<Integer, Integer>();
     }
 
     /** {@inheritDoc}
      */
     @Override
-    @TestMethod("testGetFirstMapping")
-    public synchronized Map<Integer, Integer> getFirstMapping() {
-        return firstMCS;
+    @TestMethod("testGetAllAtomMapping")
+    public synchronized List<AtomAtomMapping> getAllAtomMapping() {
+        return allAtomMCS;
+    }
+
+    /** {@inheritDoc}
+     */
+    @Override
+    @TestMethod("testGetFirstAtomMapping")
+    public synchronized AtomAtomMapping getFirstAtomMapping() {
+        if (allAtomMCS.iterator().hasNext()) {
+            return allAtomMCS.iterator().next();
+        }
+        return new AtomAtomMapping(query, target);
     }
 
     private synchronized int checkCommonAtomCount(IAtomContainer reactantMolecule, IAtomContainer productMolecule) {
         ArrayList<String> atoms = new ArrayList<String>();
         for (int i = 0; i < reactantMolecule.getAtomCount(); i++) {
             atoms.add(reactantMolecule.getAtom(i).getSymbol());
-
         }
         int common = 0;
         for (int i = 0; i < productMolecule.getAtomCount(); i++) {
@@ -245,40 +285,48 @@ public final class VFlibMCSHandler extends AbstractMCSAlgorithm implements IMCSB
         return common;
     }
 
+    /*
+     * Note: VF MCS will search for cliques which will match the types.
+     * Mcgregor will extend the cliques depending of the bond type 
+     * (sensitive and insensitive).
+     */
     private synchronized void searchVFMCSMappings() {
 //        System.out.println("searchVFMCSMappings ");
-        IQuery query = null;
+        IQuery queryCompiler = null;
         IMapper mapper = null;
 
         if (queryMol == null) {
-            countR = getReactantMol().getAtomCount() + AtomContainerManipulator.getSingleBondEquivalentSum(getReactantMol());
-            countP = getProductMol().getAtomCount() + AtomContainerManipulator.getSingleBondEquivalentSum(getProductMol());
+            countR = getReactantMol().getAtomCount();
+            countP = getProductMol().getAtomCount();
         }
+
         vfLibSolutions = new ArrayList<Map<INode, IAtom>>();
         if (queryMol != null) {
-            query = new QueryCompiler(queryMol).compile();
-            mapper = new VFMCSMapper(query);
+            queryCompiler = new QueryCompiler(queryMol).compile();
+            mapper = new VFMCSMapper(queryCompiler);
             List<Map<INode, IAtom>> maps = mapper.getMaps(getProductMol());
             if (maps != null) {
                 vfLibSolutions.addAll(maps);
             }
-            setVFMappings(true, query);
+            setVFMappings(true, queryCompiler);
         } else if (countR <= countP) {
-            query = new QueryCompiler(mol1, isBondMatchFlag()).compile();
-            mapper = new VFMCSMapper(query);
+//            queryCompiler = new QueryCompiler(this.query, isBondMatchFlag()).compile();
+            queryCompiler = new QueryCompiler(this.query, true).compile();
+            mapper = new VFMCSMapper(queryCompiler);
             List<Map<INode, IAtom>> maps = mapper.getMaps(getProductMol());
             if (maps != null) {
                 vfLibSolutions.addAll(maps);
             }
-            setVFMappings(true, query);
+            setVFMappings(true, queryCompiler);
         } else {
-            query = new QueryCompiler(getProductMol(), isBondMatchFlag()).compile();
-            mapper = new VFMCSMapper(query);
+//            queryCompiler = new QueryCompiler(getProductMol(), isBondMatchFlag()).compile();
+            queryCompiler = new QueryCompiler(getProductMol(), true).compile();
+            mapper = new VFMCSMapper(queryCompiler);
             List<Map<INode, IAtom>> maps = mapper.getMaps(getReactantMol());
             if (maps != null) {
                 vfLibSolutions.addAll(maps);
             }
-            setVFMappings(false, query);
+            setVFMappings(false, queryCompiler);
         }
 //        System.out.println("Sol count " + vfLibSolutions.size());
 //        System.out.println("Sol size " + vfLibSolutions.iterator().next().size());
@@ -294,22 +342,24 @@ public final class VFlibMCSHandler extends AbstractMCSAlgorithm implements IMCSB
             Map<Integer, Integer> extendMapping = new TreeMap<Integer, Integer>(firstPassMappings);
             McGregor mgit = null;
             if (queryMol != null) {
-                mgit = new McGregor(queryMol, mol2, mappings, isBondMatchFlag());
+                mgit = new McGregor(queryMol, target, mappings, isBondMatchFlag());
             } else {
                 if (countR > countP) {
-                    mgit = new McGregor(mol1, mol2, mappings, isBondMatchFlag());
+                    mgit = new McGregor(query, target, mappings, isBondMatchFlag());
                 } else {
                     extendMapping.clear();
-                    mgit = new McGregor(mol2, mol1, mappings, isBondMatchFlag());
+                    mgit = new McGregor(target, query, mappings, isBondMatchFlag());
                     ROPFlag = false;
                     for (Map.Entry<Integer, Integer> map : firstPassMappings.entrySet()) {
                         extendMapping.put(map.getValue(), map.getKey());
                     }
                 }
             }
-            mgit.startMcGregorIteration(mgit.getMCSSize(), extendMapping); //Start McGregor search
+            //Start McGregor search
+            mgit.startMcGregorIteration(mgit.getMCSSize(), extendMapping);
             mappings = mgit.getMappings();
             mgit = null;
+
             if (isTimeOut()) {
                 System.err.println("\nVFLibMCS hit by timeout in McGregor");
                 break;
@@ -325,7 +375,7 @@ public final class VFlibMCSHandler extends AbstractMCSAlgorithm implements IMCSB
     private synchronized void setVFMappings(boolean RONP, IQuery query) {
         int counter = 0;
         for (Map<INode, IAtom> solution : vfLibSolutions) {
-            Map<IAtom, IAtom> atomatomMapping = new HashMap<IAtom, IAtom>();
+            AtomAtomMapping atomatomMapping = new AtomAtomMapping(queryMol, target);
             Map<Integer, Integer> indexindexMapping = new TreeMap<Integer, Integer>();
 
             for (Map.Entry<INode, IAtom> mapping : solution.entrySet()) {
@@ -357,14 +407,20 @@ public final class VFlibMCSHandler extends AbstractMCSAlgorithm implements IMCSB
                     }
                 }
             }
-            if (!atomatomMapping.isEmpty() && !hasMap(indexindexMapping, allMCSCopy)) {
+            if (indexindexMapping.size() > vfMCSSize) {
+                vfMCSSize = indexindexMapping.size();
+                allAtomMCSCopy.clear();
+                allMCSCopy.clear();
+                counter = 0;
+            }
+            if (!atomatomMapping.isEmpty() && !hasMap(indexindexMapping, allMCSCopy)
+                    && indexindexMapping.size() == vfMCSSize) {
 //                System.out.println("\nvfMCSSize: " + vfMCSSize);
                 allAtomMCSCopy.add(counter, atomatomMapping);
                 allMCSCopy.add(counter, indexindexMapping);
                 counter++;
             }
         }
-
 //        System.out.println("After set allMCSCopy " + allMCSCopy);
     }
 
@@ -372,7 +428,7 @@ public final class VFlibMCSHandler extends AbstractMCSAlgorithm implements IMCSB
         int counter = 0;
         for (List<Integer> mapping : mappings) {
 
-            Map<IAtom, IAtom> atomatomMapping = new HashMap<IAtom, IAtom>();
+            AtomAtomMapping atomatomMapping = new AtomAtomMapping(query, target);
             Map<Integer, Integer> indexindexMapping = new TreeMap<Integer, Integer>();
             for (int index = 0; index < mapping.size(); index += 2) {
                 IAtom qAtom = null;
@@ -431,25 +487,34 @@ public final class VFlibMCSHandler extends AbstractMCSAlgorithm implements IMCSB
 
     private synchronized IAtomContainer getReactantMol() {
         if (queryMol == null) {
-            return mol1;
+            return query;
         } else {
             return queryMol;
         }
     }
 
     private synchronized IAtomContainer getProductMol() {
-        return mol2;
+        return target;
     }
 
-    /**
-     * 
-     * @return
-     */
-    public synchronized static boolean isTimeOut() {
+    public synchronized boolean isTimeOut() {
         if (getTimeout() > -1 && getTimeManager().getElapsedTimeInMinutes() > getTimeout()) {
             TimeOut.getInstance().setTimeOutFlag(true);
             return true;
         }
         return false;
+    }
+
+    private int[] getIndex(int cliqueIndex, List<Integer> comp_graph_nodes) {
+        int[] v = new int[2];
+        v[0] = -1;
+        v[1] = -1;
+        for (int i = 0; i < comp_graph_nodes.size(); i += 3) {
+            if (cliqueIndex == comp_graph_nodes.get(i + 2)) {
+                v[0] = comp_graph_nodes.get(i);
+                v[1] = comp_graph_nodes.get(i + 1);
+            }
+        }
+        return v;
     }
 }

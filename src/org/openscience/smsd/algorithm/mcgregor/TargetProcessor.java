@@ -27,6 +27,7 @@ package org.openscience.smsd.algorithm.mcgregor;
 import java.util.List;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.interfaces.IBond;
 
 /**
  * Class to handle mappings of target molecule based on the query.
@@ -108,7 +109,8 @@ public class TargetProcessor {
 
             Integer indexI = target.getAtomNumber(target.getBond(atomIndex).getAtom(0));
             Integer indexJ = target.getAtomNumber(target.getBond(atomIndex).getAtom(1));
-            Integer order = target.getBond(atomIndex).getOrder().ordinal() + 1;
+            IBond bond = target.getBond(atomIndex);
+            Integer order = (bond.getOrder().ordinal() + 1);
 
             for (int b = 0; b < unmapped_numB; b++) {
                 if (unmapped_atoms_molB.get(b).equals(indexI)) {

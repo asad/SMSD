@@ -59,7 +59,7 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFLibTest")
-public class DefaultMCSPlusAtomMatcher implements AtomMatcher {
+public final class DefaultMCSPlusAtomMatcher implements AtomMatcher {
 
     static final long serialVersionUID = -7861469841127327812L;
     private int maximumNeighbors;
@@ -102,7 +102,6 @@ public class DefaultMCSPlusAtomMatcher implements AtomMatcher {
         this.qAtom = atom;
         this.symbol = atom.getSymbol();
         setBondMatchFlag(shouldMatchBonds);
-        this.maximumNeighbors = queryContainer.getConnectedAtomsCount(atom);
 
 //        System.out.println("Atom " + atom.getSymbol());
 //        System.out.println("MAX allowed " + maximumNeighbors);
@@ -122,14 +121,14 @@ public class DefaultMCSPlusAtomMatcher implements AtomMatcher {
     /**
      * Constructor
      * @param queryContainer query atom container
-     * @param atom query atom
+     * @param template query atom
      * @param blockedPositions
      * @param shouldMatchBonds bond matching flag
      */
-    public DefaultMCSPlusAtomMatcher(IAtomContainer queryContainer, IAtom atom, int blockedPositions, boolean shouldMatchBonds) {
-        this(queryContainer, atom, shouldMatchBonds);
-        this.maximumNeighbors = countImplicitHydrogens(atom)
-                + queryContainer.getConnectedAtomsCount(atom)
+    public DefaultMCSPlusAtomMatcher(IAtomContainer queryContainer, IAtom template, int blockedPositions, boolean shouldMatchBonds) {
+        this(queryContainer, template, shouldMatchBonds);
+        this.maximumNeighbors = countImplicitHydrogens(template)
+                + queryContainer.getConnectedAtomsCount(template)
                 - blockedPositions;
     }
 
@@ -177,7 +176,7 @@ public class DefaultMCSPlusAtomMatcher implements AtomMatcher {
      */
     @Override
     public boolean matches(IAtomContainer targetContainer, IAtom targetAtom) {
-        if (smartQueryAtom != null && qAtom == null) {
+        if (smartQueryAtom != null && qAtom == null && smartQueryAtom.getSymbol() == null) {
             if (!smartQueryAtom.matches(targetAtom)) {
                 return false;
             }
@@ -185,9 +184,9 @@ public class DefaultMCSPlusAtomMatcher implements AtomMatcher {
             return false;
         }
 
-        if (!matchMaximumNeighbors(targetContainer, targetAtom)) {
-            return false;
-        }
+//        if (!matchMaximumNeighbors(targetContainer, targetAtom)) {
+//            return false;
+//        }
         return true;
     }
 }

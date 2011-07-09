@@ -25,6 +25,7 @@
 package org.openscience.smsd.helper;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +46,7 @@ public class FinalMappings implements IFinalMapping {
     private static FinalMappings instance = null;
 
     protected FinalMappings() {
-        mappings = new ArrayList<Map<Integer, Integer>>();
+        mappings = Collections.synchronizedList(new ArrayList<Map<Integer, Integer>>());
     }
 
     /**
@@ -76,7 +77,7 @@ public class FinalMappings implements IFinalMapping {
      */
     @Override
     @TestMethod("testSet")
-    public synchronized final void set(List<Map<Integer, Integer>> list) {
+    public final synchronized void set(List<Map<Integer, Integer>> list) {
         this.clear();
         mappings.addAll(list);
     }
@@ -99,7 +100,7 @@ public class FinalMappings implements IFinalMapping {
     @Override
     @TestMethod("testClear")
     public synchronized void clear() {
-        FinalMappings.mappings.clear();
+        this.mappings.clear();
     }
 
     /**
@@ -109,7 +110,7 @@ public class FinalMappings implements IFinalMapping {
     @Override
     @TestMethod("testGetFinalMapping")
     public synchronized List<Map<Integer, Integer>> getFinalMapping() {
-        return mappings;
+        return Collections.synchronizedList(new ArrayList<Map<Integer, Integer>>(mappings));
     }
 
     /**

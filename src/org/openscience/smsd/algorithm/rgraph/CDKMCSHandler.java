@@ -23,7 +23,7 @@
 package org.openscience.smsd.algorithm.rgraph;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -35,6 +35,7 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IMoleculeSet;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
+import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.helper.FinalMappings;
 import org.openscience.smsd.interfaces.AbstractMCSAlgorithm;
 import org.openscience.smsd.interfaces.IMCSBase;
@@ -54,9 +55,7 @@ public class CDKMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
     private IAtomContainer source;
     private IAtomContainer target;
     private boolean rOnPFlag = false;
-    private List<Map<IAtom, IAtom>> allAtomMCS = null;
-    private Map<IAtom, IAtom> firstAtomMCS = null;
-    private Map<Integer, Integer> firstMCS = null;
+    private List<AtomAtomMapping> allAtomMCS = null;
     private List<Map<Integer, Integer>> allMCS = null;
 
     //~--- constructors -------------------------------------------------------
@@ -65,10 +64,8 @@ public class CDKMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
      */
     public CDKMCSHandler() {
 
-        this.allAtomMCS = new ArrayList<Map<IAtom, IAtom>>();
-        this.firstAtomMCS = new HashMap<IAtom, IAtom>();
-        this.firstMCS = new TreeMap<Integer, Integer>();
-        this.allMCS = new ArrayList<Map<Integer, Integer>>();
+        this.allAtomMCS = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
+        this.allMCS = Collections.synchronizedList(new ArrayList<Map<Integer, Integer>>());
     }
 
     /** {@inheritDoc}
@@ -117,8 +114,6 @@ public class CDKMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
 
             setAllMapping();
             setAllAtomMapping();
-            setFirstMapping();
-            setFirstAtomMapping();
 
         } catch (CDKException e) {
             rmap = null;
@@ -199,7 +194,7 @@ public class CDKMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
 
         int counter = 0;
         for (Map<Integer, Integer> final_solution : sol) {
-            Map<IAtom, IAtom> atomMappings = new HashMap<IAtom, IAtom>();
+            AtomAtomMapping atomMappings = new AtomAtomMapping(source, target);
             for (Map.Entry<Integer, Integer> Solutions : final_solution.entrySet()) {
 
                 int IIndex = Solutions.getKey().intValue();
@@ -217,21 +212,6 @@ public class CDKMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
         }
     }
 
-    private synchronized void setFirstMapping() {
-
-        if (!allMCS.isEmpty()) {
-            firstMCS = new TreeMap<Integer, Integer>(allMCS.get(0));
-        }
-
-    }
-
-    private synchronized void setFirstAtomMapping() {
-        if (!allAtomMCS.isEmpty()) {
-            firstAtomMCS = new HashMap<IAtom, IAtom>(allAtomMCS.get(0));
-        }
-
-    }
-
     /** {@inheritDoc}
      */
     @Override
@@ -245,14 +225,17 @@ public class CDKMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
     @Override
     @TestMethod("testGetFirstMapping")
     public synchronized Map<Integer, Integer> getFirstMapping() {
-        return firstMCS;
+        if (allMCS.iterator().hasNext()) {
+            return allMCS.iterator().next();
+        }
+        return new TreeMap<Integer, Integer>();
     }
 
     /** {@inheritDoc}
      */
     @Override
     @TestMethod("testGetAllAtomMapping")
-    public synchronized List<Map<IAtom, IAtom>> getAllAtomMapping() {
+    public synchronized List<AtomAtomMapping> getAllAtomMapping() {
         return allAtomMCS;
     }
 
@@ -260,7 +243,10 @@ public class CDKMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
      */
     @Override
     @TestMethod("testGetFirstAtomMapping")
-    public synchronized Map<IAtom, IAtom> getFirstAtomMapping() {
-        return firstAtomMCS;
+    public synchronized AtomAtomMapping getFirstAtomMapping() {
+        if (allAtomMCS.iterator().hasNext()) {
+            return allAtomMCS.iterator().next();
+        }
+        return new AtomAtomMapping(source, target);
     }
 }

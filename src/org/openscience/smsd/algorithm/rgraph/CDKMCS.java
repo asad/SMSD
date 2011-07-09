@@ -73,7 +73,7 @@ public class CDKMCS {
 
     final static int ID1 = 0;
     final static int ID2 = 1;
-    private static TimeManager timeManager = null;
+    static TimeManager timeManager;
 
     ///////////////////////////////////////////////////////////////////////////
     //                            Query Methods
@@ -1152,7 +1152,7 @@ public class CDKMCS {
      */
     protected synchronized static void setTimeManager(TimeManager aTimeManager) {
         TimeOut.getInstance().setTimeOutFlag(false);
-        timeManager = aTimeManager;
+        CDKMCS.timeManager = aTimeManager;
     }
 
     public synchronized static boolean isTimeOut() {

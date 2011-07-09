@@ -39,6 +39,7 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IBond.Order;
+import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.smsd.tools.BondEnergies;
 
@@ -72,7 +73,7 @@ public class SingleMapping {
      * @throws CDKException 
      */
     @TestMethod("testGetOverLaps")
-    protected List<Map<IAtom, IAtom>> getOverLaps(IAtomContainer source, IAtomContainer target) throws CDKException {
+    protected synchronized List<Map<IAtom, IAtom>> getOverLaps(IAtomContainer source, IAtomContainer target) throws CDKException {
 
         mappings = new ArrayList<Map<IAtom, IAtom>>();
         connectedBondOrder = new TreeMap<Integer, Double>();
@@ -100,7 +101,7 @@ public class SingleMapping {
      * @throws CDKException
      */
     @TestMethod("testGetOverLaps")
-    protected List<Map<IAtom, IAtom>> getOverLaps(IQueryAtomContainer source, IAtomContainer target) throws CDKException {
+    protected synchronized List<Map<IAtom, IAtom>> getOverLaps(IQueryAtomContainer source, IAtomContainer target) throws CDKException {
         mappings = new ArrayList<Map<IAtom, IAtom>>();
         connectedBondOrder = new TreeMap<Integer, Double>();
         this.source = source;
@@ -119,13 +120,31 @@ public class SingleMapping {
         return mappings;
     }
 
-    private void setSourceSingleAtomMap() throws CDKException {
+    private synchronized void setSourceSingleAtomMap() throws CDKException {
         int counter = 0;
         BondEnergies be = BondEnergies.getInstance();
         for (IAtom sourceAtom : source.atoms()) {
             for (IAtom targetAtom : target.atoms()) {
                 Map<IAtom, IAtom> mapAtoms = new HashMap<IAtom, IAtom>();
-                if (sourceAtom.getSymbol().equalsIgnoreCase(targetAtom.getSymbol())) {
+                if (sourceAtom instanceof IQueryAtom) {
+                    if (((IQueryAtom) sourceAtom).matches(targetAtom)) {
+                        mapAtoms.put(sourceAtom, targetAtom);
+                        List<IBond> Bonds = target.getConnectedBondsList(targetAtom);
+
+                        double totalOrder = 0;
+                        for (IBond bond : Bonds) {
+                            Order bondOrder = bond.getOrder();
+                            totalOrder += bondOrder.ordinal() + be.getEnergies(bond);
+                        }
+
+                        if (targetAtom.getFormalCharge() != sourceAtom.getFormalCharge()) {
+                            totalOrder += 0.5;
+                        }
+
+                        connectedBondOrder.put(counter, totalOrder);
+                        mappings.add(counter++, mapAtoms);
+                    }
+                } else if (sourceAtom.getSymbol().equalsIgnoreCase(targetAtom.getSymbol())) {
 
                     mapAtoms.put(sourceAtom, targetAtom);
                     List<IBond> Bonds = target.getConnectedBondsList(targetAtom);
@@ -147,7 +166,7 @@ public class SingleMapping {
         }
     }
 
-    private void setTargetSingleAtomMap() throws CDKException {
+    private synchronized void setTargetSingleAtomMap() throws CDKException {
         int counter = 0;
         BondEnergies be = BondEnergies.getInstance();
         for (IAtom targetAtom : target.atoms()) {
@@ -173,7 +192,7 @@ public class SingleMapping {
         }
     }
 
-    private void postFilter() {
+    private synchronized void postFilter() {
         List<Map<IAtom, IAtom>> sortedMap = new ArrayList<Map<IAtom, IAtom>>();
         connectedBondOrder = sortByValue(connectedBondOrder);
         for (Integer key : connectedBondOrder.keySet()) {

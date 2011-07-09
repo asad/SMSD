@@ -56,7 +56,7 @@ public class LabelContainer {
      * @return instance of this object
      */
     @TestMethod("testGetInstance")
-    public synchronized static LabelContainer getInstance() {
+    synchronized public static LabelContainer getInstance() {
         if (instance == null) {
             instance = new LabelContainer();
         }
@@ -68,7 +68,7 @@ public class LabelContainer {
      * @param label
      */
     @TestMethod("testAddLabel")
-    public synchronized void addLabel(String label) {
+    synchronized public void addLabel(String label) {
         if (!labelMap.contains(label)) {
             labelMap.add(labelCounter++, label);
         }
@@ -80,7 +80,7 @@ public class LabelContainer {
      * @return labelID
      */
     @TestMethod("testGetLabelID")
-    public synchronized Integer getLabelID(String label) {
+    synchronized public Integer getLabelID(String label) {
         addLabel(label);
         return labelMap.indexOf(label);
     }
@@ -91,7 +91,7 @@ public class LabelContainer {
      * @return label
      */
     @TestMethod("testGetLabel")
-    public synchronized String getLabel(Integer labelID) {
+    synchronized public String getLabel(Integer labelID) {
         return labelMap.get(labelID);
     }
 
@@ -100,7 +100,7 @@ public class LabelContainer {
      * @return size of the labels
      */
     @TestMethod("testGetSize")
-    public synchronized int getSize() {
+    synchronized public int getSize() {
         return labelMap.size();
     }
 }

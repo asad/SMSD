@@ -52,7 +52,9 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
+import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryBond;
+import org.openscience.smsd.AtomAtomMapping;
 
 /**
  * This class finds mapping states between query and target
@@ -64,9 +66,12 @@ import org.openscience.cdk.isomorphism.matchers.IQueryBond;
  */
 // The State class represents a single state in the isomorphism detection
 // algorithm. Every state uses and modifies the same SharedState object.
-class State {
+final class State {
 
-    private boolean shouldMatchBonds = true;
+    private final boolean shouldMatchBonds;
+    private final IAtomContainer source;
+    private final IQueryAtomContainer querySource;
+    private final IAtomContainer target;
 
     // Returns true if the state contains an isomorphism.
     public boolean isGoal() {
@@ -103,8 +108,6 @@ class State {
     private int size;
     private int sourceTerminalSize;
     private int targetTerminalSize;
-    private final IAtomContainer source;
-    private final IAtomContainer target;
     private Pair<Integer, Integer> lastAddition;
     private SharedState sharedState;
     private boolean ownSharedState;
@@ -116,7 +119,25 @@ class State {
         this.sourceTerminalSize = 0;
         this.targetTerminalSize = 0;
         this.source = source;
+        this.querySource = null;
         this.target = target;
+        this.ownSharedState = true;
+        this.matches = new boolean[this.source.getAtomCount()][this.target.getAtomCount()];
+        this.isMatchPossible = isFeasible();
+
+        this.lastAddition = new Pair<Integer, Integer>(-1, -1);
+        this.sharedState = new SharedState(source.getAtomCount(),
+                target.getAtomCount());
+        this.shouldMatchBonds = shouldMatchBonds;
+    }
+
+    State(IQueryAtomContainer source, IAtomContainer target, boolean shouldMatchBonds) {
+        this.size = 0;
+        this.sourceTerminalSize = 0;
+        this.targetTerminalSize = 0;
+        this.source = source;
+        this.target = target;
+        this.querySource = source;
         this.ownSharedState = true;
         this.matches = new boolean[this.source.getAtomCount()][this.target.getAtomCount()];
         this.isMatchPossible = isFeasible();
@@ -132,6 +153,7 @@ class State {
         this.sourceTerminalSize = state.sourceTerminalSize;
         this.targetTerminalSize = state.targetTerminalSize;
         this.source = state.source;
+        this.querySource = state.querySource;
         this.target = state.target;
         this.ownSharedState = false;
         this.matches = state.matches;
@@ -170,11 +192,11 @@ class State {
 
     // Returns the current isomorphism for the state in an AtomMapping
     // object.
-    AtomMapping getMapping() {
-        AtomMapping mapping = new AtomMapping(source, target);
+    AtomAtomMapping getMapping() {
+        AtomAtomMapping mapping = new AtomAtomMapping(source, target);
 
         for (int i = 0; i < size; i++) {
-            mapping.add(source.getAtom(i),
+            mapping.put(source.getAtom(i),
                     target.getAtom(sharedState.sourceMapping[i]));
         }
         return mapping;
@@ -282,6 +304,7 @@ class State {
     // candidate pair. Assumes addPair() has been called on the state only once.
     void backTrack() {
         if (isGoal()) {
+            lastAddition = new Pair<Integer, Integer>(-1, -1);
             return;
         }
         int addedSourceAtom = lastAddition.getSourceAtom();
@@ -397,7 +420,7 @@ class State {
                 && (sourceNewNeighborCount <= targetNewNeighborCount);
     }
 
-    boolean matchFirst(State state, List<AtomMapping> mappings) {
+    boolean matchFirst(State state, List<AtomAtomMapping> mappings) {
 //            System.out.println("Matched " + state.size + " out of " + state.source.getAtomCount());
         if (state.isGoal()) {
             mappings.add(state.getMapping());
@@ -431,40 +454,30 @@ class State {
     }
 
     /* TO DO: Fix the match all results*/
-    boolean matchAll(State state, List<AtomMapping> mappings) {
+    void matchAll(State state, List<AtomAtomMapping> mappings) {
 //        System.out.println("Matched " + state.size + " out of " + state.source.getAtomCount());
 
         if (state.isGoal()) {
-            AtomMapping map = state.getMapping();
+            AtomAtomMapping map = state.getMapping();
             if (!hasMap(map, mappings)) {
                 mappings.add(state.getMapping());
             }
+            return;
         }
 
         Pair<Integer, Integer> lastCandidate = new Pair<Integer, Integer>(-1, -1);
+        Pair<Integer, Integer> candidate = state.nextCandidate(lastCandidate);
 
-        boolean found = false;
-        while (!found) {
-            Pair<Integer, Integer> candidate = state.nextCandidate(lastCandidate);
-
-            if (!state.hasNextCandidate(candidate)) {
-                return false;
-            }
-
+        while (state.hasNextCandidate(candidate)) {
             lastCandidate = candidate;
-
             if (state.isMatchFeasible(candidate)) {
                 State nextState = new State(state);
                 nextState.nextState(candidate);
-                found = matchFirst(nextState, mappings);
-                if (found) {
-                    return true;
-                }
+                matchAll(nextState, mappings);
                 nextState.backTrack();
             }
         }
-
-        return found;
+        return;
     }
 
     private boolean matcher(int queryAtom, int targetAtom) {
@@ -486,6 +499,7 @@ class State {
             return true;
         }
         if (queryBond instanceof IQueryBond) {
+//            System.out.println("IQueryBond");
             return ((IQueryBond) queryBond).matches(targetBond);
         } else if ((queryBond.getFlag(CDKConstants.ISAROMATIC) == targetBond.getFlag(CDKConstants.ISAROMATIC))
                 && (queryBond.getOrder() == targetBond.getOrder())) {
@@ -497,15 +511,16 @@ class State {
     }
 
     boolean matchAtoms(IAtom sourceAtom, IAtom targetAtom) {
-        if (sourceAtom instanceof IQueryAtom) {
+        if (sourceAtom instanceof IQueryAtom && sourceAtom.getSymbol() == null) {
+//            System.out.println("IQueryAtom");
             return ((IQueryAtom) sourceAtom).matches(targetAtom) ? true : false;
         } else {
             return sourceAtom.getSymbol().equals(targetAtom.getSymbol()) ? true : false;
         }
     }
 
-    private boolean hasMap(AtomMapping map, List<AtomMapping> mappings) {
-        for (AtomMapping test : mappings) {
+    private boolean hasMap(AtomAtomMapping map, List<AtomAtomMapping> mappings) {
+        for (AtomAtomMapping test : mappings) {
             if (test.equals(map)) {
                 return true;
             }

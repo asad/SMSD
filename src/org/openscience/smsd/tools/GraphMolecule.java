@@ -73,7 +73,7 @@ public class GraphMolecule extends GraphAtomContainer implements Serializable, I
      * @return  The string representation of this Atom
      */
     @Override
-    public String toString() {
+    public synchronized String toString() {
         StringBuilder description = new StringBuilder();
         description.append("GraphMolecule(");
         description.append(hashCode());
@@ -86,7 +86,7 @@ public class GraphMolecule extends GraphAtomContainer implements Serializable, I
     }
 
     @Override
-    public Object clone() throws CloneNotSupportedException {
+    public synchronized Object clone() throws CloneNotSupportedException {
         return super.clone();
     }
 }

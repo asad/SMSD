@@ -25,6 +25,7 @@
 package org.openscience.smsd.algorithm.mcsplus;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -49,7 +50,7 @@ public class ExactMapping {
      */
     private static List<Integer> extractCliqueMapping(List<Integer> comp_graph_nodes, List<Integer> clique_List_org) {
 
-        List<Integer> clique_mapping = new ArrayList<Integer>();
+        List<Integer> clique_mapping = Collections.synchronizedList(new ArrayList<Integer>());
         List<Integer> clique_List = new ArrayList<Integer>(clique_List_org);
         int clique_siz = clique_List.size();
         int vec_size = comp_graph_nodes.size();
@@ -95,7 +96,7 @@ public class ExactMapping {
      * @return
      */
     public static Map<Integer, Integer> extractMapping(List<Integer> comp_graph_nodes, List<Integer> clique_List_org) {
-        Map<Integer, Integer> clique_mapping = new TreeMap<Integer, Integer>();
+        Map<Integer, Integer> clique_mapping = Collections.synchronizedSortedMap(new TreeMap<Integer, Integer>());
 
         try {
             List<Integer> clique_List = new ArrayList<Integer>(clique_List_org);

@@ -1,3 +1,4 @@
+
 /**
  *
  * Copyright (C) 2006-2011  Syed Asad Rahman <asad@ebi.ac.uk>
@@ -27,6 +28,7 @@ package org.openscience.smsd.helper;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.annotations.TestMethod;
 
+
 /**
  * Class to construct a Binary tree for McGregor search.
  * @cdk.module smsd
@@ -40,7 +42,7 @@ public class BinaryTree {
      * Creates a new instance of BinaryTree.
      * @param value node value
      */
-    @TestMethod("testGetEnergies")
+    @TestMethod("testBinaryTree")
     public BinaryTree(int value) {
         this.value = value;
     }

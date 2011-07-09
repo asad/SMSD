@@ -35,6 +35,7 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.interfaces.IMolecule;
 import org.openscience.cdk.interfaces.IMoleculeSet;
+import org.openscience.smsd.AtomAtomMapping;
 
 /**
  * Filter the results based on fragment size.
@@ -42,9 +43,9 @@ import org.openscience.cdk.interfaces.IMoleculeSet;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  * @cdk.module smsd
  */
-public class FragmentFilter extends BaseFilter implements IChemicalFilter<Integer> {
+public final class FragmentFilter extends BaseFilter implements IChemicalFilter<Integer> {
 
-    private List<Integer> fragmentSize = null;
+    private final List<Integer> fragmentSize;
 
     public FragmentFilter(IAtomContainer rMol, IAtomContainer pMol) {
         super(rMol, pMol);
@@ -52,14 +53,13 @@ public class FragmentFilter extends BaseFilter implements IChemicalFilter<Intege
     }
 
     @Override
-    public Integer sortResults(
-            Map<Integer, Map<Integer, Integer>> allFragmentMCS,
-            Map<Integer, Map<IAtom, IAtom>> allFragmentAtomMCS,
+    public synchronized Integer sortResults(
+            Map<Integer, AtomAtomMapping> allFragmentAtomMCS,
             Map<Integer, Integer> fragmentScoreMap) throws CDKException {
 
         int _minFragmentScore = 9999;
         for (Integer Key : allFragmentAtomMCS.keySet()) {
-            Map<IAtom, IAtom> mcsAtom = allFragmentAtomMCS.get(Key);
+            AtomAtomMapping mcsAtom = allFragmentAtomMCS.get(Key);
             int FragmentCount = getMappedMoleculeFragmentSize(mcsAtom);
             fragmentScoreMap.put(Key, FragmentCount);
             if (_minFragmentScore > FragmentCount) {
@@ -71,22 +71,22 @@ public class FragmentFilter extends BaseFilter implements IChemicalFilter<Intege
     }
 
     @Override
-    public List<Integer> getScores() {
+    public synchronized List<Integer> getScores() {
         return Collections.unmodifiableList(fragmentSize);
     }
 
     @Override
-    public void clearScores() {
+    public synchronized void clearScores() {
         fragmentSize.clear();
     }
 
     @Override
-    public void addScore(int counter, Integer value) {
+    public synchronized void addScore(int counter, Integer value) {
         fragmentSize.add(counter, value);
     }
 
     @Override
-    public void fillMap(Map<Integer, Integer> fragmentScoreMap) {
+    public synchronized void fillMap(Map<Integer, Integer> fragmentScoreMap) {
         int Index = 0;
         for (Integer score : fragmentSize) {
             fragmentScoreMap.put(Index, score);
@@ -94,14 +94,14 @@ public class FragmentFilter extends BaseFilter implements IChemicalFilter<Intege
         }
     }
 
-    private synchronized int getMappedMoleculeFragmentSize(Map<IAtom, IAtom> MCSAtomSolution) {
+    private synchronized int getMappedMoleculeFragmentSize(AtomAtomMapping mcsAtomSolution) {
 
         IAtomContainer Educt = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class, rMol);
         IAtomContainer product = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class, pMol);
 
 
-        if (MCSAtomSolution != null) {
-            for (Map.Entry<IAtom, IAtom> map : MCSAtomSolution.entrySet()) {
+        if (mcsAtomSolution != null) {
+            for (Map.Entry<IAtom, IAtom> map : mcsAtomSolution.getMappings().entrySet()) {
                 IAtom atomE = map.getKey();
                 IAtom atomP = map.getValue();
                 Educt.removeAtomAndConnectedElectronContainers(atomE);
@@ -111,7 +111,7 @@ public class FragmentFilter extends BaseFilter implements IChemicalFilter<Intege
         return getFragmentCount(Educt) + getFragmentCount(product);
     }
 
-    private int getFragmentCount(IAtomContainer molecule) {
+    private synchronized int getFragmentCount(IAtomContainer molecule) {
         boolean fragmentFlag = true;
         IAtomContainerSet fragmentMolSet = DefaultChemObjectBuilder.getInstance().newInstance(IMoleculeSet.class);
         int countFrag = 0;

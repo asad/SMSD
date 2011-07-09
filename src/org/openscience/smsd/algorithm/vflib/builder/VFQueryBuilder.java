@@ -61,8 +61,6 @@ import org.openscience.smsd.algorithm.vflib.interfaces.IEdge;
 import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
 
-
-
 /**
  * Class for parsing and generating query graph.
  * @cdk.module smsd
@@ -88,21 +86,21 @@ public class VFQueryBuilder implements IQuery {
     /** {@inheritDoc}
      */
     @Override
-    public Iterable<IEdge> edges() {
+    public synchronized Iterable<IEdge> edges() {
         return Collections.unmodifiableList(edgesList);
     }
 
     /** {@inheritDoc}
      */
     @Override
-    public Iterable<INode> nodes() {
+    public synchronized Iterable<INode> nodes() {
         return Collections.unmodifiableList(nodesList);
     }
 
     /** {@inheritDoc}
      */
     @Override
-    public INode getNode(int index) {
+    public synchronized INode getNode(int index) {
         return nodesList.get(index);
     }
 
@@ -189,7 +187,7 @@ public class VFQueryBuilder implements IQuery {
      * @param matcher
      * @return connected edges
      */
-    public IEdge connect(INode source, INode target, VFBondMatcher matcher) {
+    public synchronized IEdge connect(INode source, INode target, VFBondMatcher matcher) {
         NodeBuilder sourceImpl = (NodeBuilder) source;
         NodeBuilder targetImpl = (NodeBuilder) target;
         EdgeBuilder edge = new EdgeBuilder(sourceImpl, targetImpl, matcher);

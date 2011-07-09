@@ -50,29 +50,17 @@ public enum Algorithm implements Comparable<Algorithm> {
      */
     DEFAULT(0, "Default SMSD algorithm"),
     /**
-     * Default SMSD algorithm.
-     */
-    DEFAULT_1(1, "Default SMSD algorithm"),
-    /**
      * MCS Plus algorithm.
      */
     MCSPlus(2, "MCS Plus algorithm"),
     /**
-     * VF Lib based MCS algorithm.
+     * VF-Koch-McGregor Lib based MCS algorithm.
      */
-    VFLibMCS(3, "VF-McGregor Lib based MCS algorithm"),
+    VFLibMCS(3, "VF-Koch-McGregor Lib based MCS algorithm"),
     /**
      * CDK UIT MCS.
      */
     CDKMCS(4, "CDK UIT MCS");
-////    /**
-////     * Substructure search will return all maps.
-////     */
-////    SubStructure(5, "Substructure search"),
-////    /**
-////     * Substructure search will return first map.
-////     */
-////    TurboSubStructure(6, "Turbo Mode- Substructure search");
     private final int type;
     private final String description;
 

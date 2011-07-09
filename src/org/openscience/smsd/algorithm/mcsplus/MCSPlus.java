@@ -52,26 +52,26 @@ public class MCSPlus {
      */
     public MCSPlus() {
     }
-    private static TimeManager timeManager = null;
+    private TimeManager timeManager = null;
 
     /**
      * @return the timeout
      */
-    protected synchronized static double getTimeout() {
+    protected synchronized double getTimeout() {
         return TimeOut.getInstance().getMCSPlusTimeout();
     }
 
     /**
      * @return the timeManager
      */
-    protected synchronized static TimeManager getTimeManager() {
+    protected synchronized TimeManager getTimeManager() {
         return timeManager;
     }
 
     /**
      * @param aTimeManager the timeManager to set
      */
-    public synchronized static void setTimeManager(TimeManager aTimeManager) {
+    public synchronized void setTimeManager(TimeManager aTimeManager) {
         TimeOut.getInstance().setTimeOutFlag(false);
         timeManager = aTimeManager;
     }
@@ -88,6 +88,9 @@ public class MCSPlus {
             throws CDKException {
         List<List<Integer>> extendMappings = null;
 
+//        System.err.println("ac1 : " + ac1.getAtomCount());
+//        System.err.println("ac2 : " + ac2.getAtomCount());
+        setTimeManager(new TimeManager());
         try {
             GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(ac1, ac2, shouldMatchBonds);
             List<Integer> comp_graph_nodes = gcg.getCompGraphNodes();
@@ -95,18 +98,18 @@ public class MCSPlus {
             List<Integer> cEdges = gcg.getCEgdes();
             List<Integer> dEdges = gcg.getDEgdes();
 
-            //            System.err.println("**************************************************");
-            //            System.err.println("C_edges: " + cEdges.size());
-            //            System.err.println("D_edges: " + dEdges.size());
+//            System.err.println("**************************************************");
+//            System.err.println("C_edges: " + cEdges.size());
+//            System.err.println("D_edges: " + dEdges.size());
 
             BKKCKCF init = new BKKCKCF(comp_graph_nodes, cEdges, dEdges);
-            //            BronKerboschKochCliqueFinder init = new BronKerboschKochCliqueFinder(comp_graph_nodes, cEdges, dEdges);
+//            Koch init = new Koch(comp_graph_nodes, cEdges, dEdges);
             Stack<List<Integer>> maxCliqueSet = null;
             maxCliqueSet = init.getMaxCliqueSet();
 
-            //            System.err.println("Max_Cliques_Set: " + maxCliqueSet);
-            //            System.err.println("Best Clique Size: " + init.getBestCliqueSize());
-            //            System.err.println("**************************************************");
+//            System.err.println("Max_Cliques_Set: " + maxCliqueSet);
+//            System.err.println("Best Clique Size: " + init.getBestCliqueSize());
+//            System.err.println("**************************************************");
 
 
             //clear all the compatibility graph content
@@ -120,11 +123,11 @@ public class MCSPlus {
                 maxCliqueSet.pop();
             }
             extendMappings = searchMcGregorMapping(ac1, ac2, mappings, shouldMatchBonds);
-
         } catch (IOException ex) {
             Logger.getLogger(MCSPlus.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
+//        System.err.println("extendMappings: " + extendMappings.iterator().next().size() / 2);
+
         return extendMappings;
     }
 
@@ -150,8 +153,9 @@ public class MCSPlus {
                     extendMapping.put(map.getValue(), map.getKey());
                 }
             }
-
-            mgit.startMcGregorIteration(mgit.getMCSSize(), extendMapping); //Start McGregor search
+//            System.out.println("\nStart McGregor search");
+            //Start McGregor search
+            mgit.startMcGregorIteration(mgit.getMCSSize(), extendMapping);
             extendMappings = mgit.getMappings();
             mgit = null;
 
@@ -159,22 +163,21 @@ public class MCSPlus {
                 System.err.println("\nMCSPlus hit by timeout in McGregor\n");
                 break;
             }
+
+//            System.out.println("\nSol count after MG" + extendMappings.size());
         }
-//        System.out.println("\nSol count after MG" + extendMappings.size());
-        List<List<Integer>> finalMappings = setMcGregorMappings(ac1, ac2, ROPFlag, extendMappings);
+        List<List<Integer>> finalMappings = setMcGregorMappings(ROPFlag, extendMappings);
 //        System.out.println("After set Sol count MG" + allMCS.size());
-//        System.out.println("MCSSize " + vfMCSSize + "\n");
+//        System.out.println("MCSSize " + mcsSize + "\n");
 
         return finalMappings;
     }
 
     private List<List<Integer>> setMcGregorMappings(
-            IAtomContainer ac1,
-            IAtomContainer ac2,
             boolean RONP,
             List<List<Integer>> mappings) {
         int counter = 0;
-        int vfMCSSize = 0;
+        int mcsSize = 0;
         List<List<Integer>> finalMappings = new ArrayList<List<Integer>>();
         for (List<Integer> mapping : mappings) {
             List<Integer> indexindexMapping = new ArrayList<Integer>();
@@ -195,13 +198,13 @@ public class MCSPlus {
                     indexindexMapping.add(tIndex);
                 }
             }
-            if (!indexindexMapping.isEmpty() && indexindexMapping.size() > vfMCSSize) {
-                vfMCSSize = indexindexMapping.size();
+            if (!indexindexMapping.isEmpty() && indexindexMapping.size() > mcsSize) {
+                mcsSize = indexindexMapping.size();
                 finalMappings.clear();
                 counter = 0;
             }
             if (!indexindexMapping.isEmpty() && !finalMappings.contains(indexindexMapping)
-                    && (indexindexMapping.size()) == vfMCSSize) {
+                    && (indexindexMapping.size()) == mcsSize) {
                 finalMappings.add(counter, indexindexMapping);
                 counter++;
             }
@@ -209,7 +212,7 @@ public class MCSPlus {
         return finalMappings;
     }
 
-    public synchronized static boolean isTimeOut() {
+    public synchronized boolean isTimeOut() {
         if (getTimeout() > -1 && getTimeManager().getElapsedTimeInMinutes() > getTimeout()) {
             TimeOut.getInstance().setTimeOutFlag(true);
             return true;

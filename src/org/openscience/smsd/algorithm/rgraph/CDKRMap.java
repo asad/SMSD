@@ -41,9 +41,9 @@ import org.openscience.cdk.annotations.TestClass;
  * @cdk.module  smsd
  * @cdk.githash
  */
-
 @TestClass("org.openscience.cdk.smsd.algorithm.cdk.CDKRMapTest")
 public class CDKRMap {
+
     private int id1 = 0;
     private int id2 = 0;
 
@@ -63,7 +63,7 @@ public class CDKRMap {
      *
      * @param  id1  The new id1 value
      */
-    public void setId1(int id1) {
+    public synchronized void setId1(int id1) {
         this.id1 = id1;
     }
 
@@ -72,7 +72,7 @@ public class CDKRMap {
      *
      * @param  id2  The new id2 value
      */
-    public void setId2(int id2) {
+    public synchronized void setId2(int id2) {
         this.id2 = id2;
     }
 
@@ -81,7 +81,7 @@ public class CDKRMap {
      *
      * @return    The id1 value
      */
-    public int getId1() {
+    public synchronized int getId1() {
         return id1;
     }
 
@@ -90,7 +90,7 @@ public class CDKRMap {
      *
      * @return    The id2 value
      */
-    public int getId2() {
+    public synchronized int getId2() {
         return id2;
     }
 
@@ -101,7 +101,7 @@ public class CDKRMap {
      * @return    true=if both ids equal, else false.
      */
     @Override
-    public boolean equals(Object obj) {
+    public synchronized boolean equals(Object obj) {
         if (((CDKRMap) obj).getId1() == getId1() && ((CDKRMap) obj).getId2() == getId2()) {
             return (true);
         } else {
@@ -109,17 +109,15 @@ public class CDKRMap {
         }
     }
 
-     /**
+    /**
      * Returns a hash code for object comparison.
      * @return    Returns a hash code for object comparison.
      */
-
     @Override
-    public int hashCode() {
+    public synchronized int hashCode() {
         int hash = 5;
         hash = 79 * hash + this.getId1();
         hash = 79 * hash + this.getId2();
         return hash;
     }
 }
-

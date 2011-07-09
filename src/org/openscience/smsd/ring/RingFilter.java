@@ -61,17 +61,15 @@ import org.openscience.smsd.algorithm.matchers.AtomMatcher;
  *
  * @cdk.module smsd
  * @cdk.githash
- * @author Syed Asad Rahman <asad@ebi.ac.uk> 2009-2010
+ * @author Syed Asad Rahman <asad@ebi.ac.uk> 2009-2011
  */
 public class RingFilter {
 
-    private RingFinder ringFinder;
     private Comparator comparator;
     private AtomMatcher filter;
     private IAtomContainer mol;
 
-    public RingFilter(AtomMatcher filter, RingFinder finder) {
-        ringFinder = finder;
+    public RingFilter(AtomMatcher filter) {
         comparator = new RingSizeComparator();
         this.filter = filter;
     }
@@ -90,7 +88,7 @@ public class RingFilter {
 
     public void filterAtoms(IAtomContainer molecule, Collection<IAtom> atoms) {
         this.mol = molecule;
-        List<List<IAtom>> rings = new ArrayList<List<IAtom>>(ringFinder.findRings(molecule));
+        List<List<IAtom>> rings = new ArrayList<List<IAtom>>(HanserRingFinder.findRings(molecule));
         Collections.sort(rings, comparator);
 
         for (List<IAtom> ring : rings) {

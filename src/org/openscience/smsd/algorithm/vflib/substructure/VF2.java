@@ -53,6 +53,10 @@ import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
+import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
+import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
+import org.openscience.cdk.isomorphism.matchers.IQueryBond;
+import org.openscience.smsd.AtomAtomMapping;
 
 /**
  * This class finds mapping states between query and target
@@ -62,7 +66,7 @@ import org.openscience.cdk.interfaces.IBond;
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-public class VF2 {
+public final class VF2 {
 
     public VF2() {
     }
@@ -79,9 +83,9 @@ public class VF2 {
      * @param shouldMatchBonds 
      * @return
      */
-    public synchronized AtomMapping isomorphism(IAtomContainer a, IAtomContainer b, boolean shouldMatchBonds) {
+    public synchronized AtomAtomMapping isomorphism(IAtomContainer a, IAtomContainer b, boolean shouldMatchBonds) {
 
-        List<AtomMapping> mappings = new ArrayList<AtomMapping>();
+        List<AtomAtomMapping> mappings = new ArrayList<AtomAtomMapping>();
         if (!isDead(a, b) && testIsSubgraphHeuristics(a, b, shouldMatchBonds)) {
 //            AtomContainerPrinter printer = new AtomContainerPrinter();
 //            System.out.println(printer.toString(a));
@@ -91,7 +95,31 @@ public class VF2 {
                 state.matchFirst(state, mappings);
             }
         }
-        return mappings.isEmpty() ? new AtomMapping(a, b) : mappings.get(0);
+        return mappings.isEmpty() ? new AtomAtomMapping(a, b) : mappings.get(0);
+    }
+
+    /** The isomorphism method returns an isomorphism between two molecular
+     *  graphs using the VF2Automorphism algorithm. This can be used for finding both
+     *  graph-graph isomorphisms and graph-subgraph isomorphisms. In the latter
+     *  case graph 'a' is the subgraph, implying a.size() < b.size(). In the case that
+     *  no isomorphism is found an empty mapping is returned.
+    
+     * 
+     * @param a query molecule
+     * @param b target molecule
+     * @param shouldMatchBonds 
+     * @return
+     */
+    public synchronized AtomAtomMapping isomorphism(IQueryAtomContainer a, IAtomContainer b, boolean shouldMatchBonds) {
+
+        List<AtomAtomMapping> mappings = new ArrayList<AtomAtomMapping>();
+        if (!isDead(a, b) && testIsSubgraphHeuristics(a, b, shouldMatchBonds)) {
+            State state = new State(a, b, shouldMatchBonds);
+            if (!state.isDead()) {
+                state.matchFirst(state, mappings);
+            }
+        }
+        return mappings.isEmpty() ? new AtomAtomMapping(a, b) : mappings.get(0);
     }
 
     /**
@@ -101,13 +129,10 @@ public class VF2 {
      * @param shouldMatchBonds 
      * @return
      */
-    public synchronized List<AtomMapping> isomorphisms(IAtomContainer a, IAtomContainer b, boolean shouldMatchBonds) {
+    public synchronized List<AtomAtomMapping> isomorphisms(IAtomContainer a, IAtomContainer b, boolean shouldMatchBonds) {
 
-        List<AtomMapping> mappings = new ArrayList<AtomMapping>();
+        List<AtomAtomMapping> mappings = new ArrayList<AtomAtomMapping>();
         if (!isDead(a, b) && testIsSubgraphHeuristics(a, b, shouldMatchBonds)) {
-////            AtomContainerPrinter printer = new AtomContainerPrinter();
-////            System.out.println(printer.toString(a));
-//            System.out.println(printer.toString(b));
             State state = new State(a, b, shouldMatchBonds);
             if (!state.isDead()) {
                 state.matchAll(state, mappings);
@@ -133,7 +158,7 @@ public class VF2 {
      * @throws org.openscience.cdk.exception.CDKException if the first molecule is an instance
      * of IQueryAtomContainer
      */
-    private synchronized static boolean testIsSubgraphHeuristics(IAtomContainer ac1, IAtomContainer ac2, boolean shouldMatchBonds) {
+    private synchronized boolean testIsSubgraphHeuristics(IAtomContainer ac1, IAtomContainer ac2, boolean shouldMatchBonds) {
 
         int ac1SingleBondCount = 0;
         int ac1DoubleBondCount = 0;
@@ -149,6 +174,9 @@ public class VF2 {
         if (shouldMatchBonds) {
             for (int i = 0; i < ac1.getBondCount(); i++) {
                 bond = ac1.getBond(i);
+                if (bond instanceof IQueryBond) {
+                    continue;
+                }
                 if (bond.getFlag(CDKConstants.ISAROMATIC)) {
                     ac1AromaticBondCount++;
                 } else if (bond.getOrder() == IBond.Order.SINGLE) {
@@ -159,9 +187,8 @@ public class VF2 {
                     ac1TripleBondCount++;
                 }
             }
-            for (int i = 0; i < ac2.getBondCount(); i++) {
-                bond = ac2.getBond(i);
-
+            for (int indexI = 0; indexI < ac2.getBondCount(); indexI++) {
+                bond = ac2.getBond(indexI);
                 if (bond.getFlag(CDKConstants.ISAROMATIC)) {
                     ac2AromaticBondCount++;
                 } else if (bond.getOrder() == IBond.Order.SINGLE) {
@@ -191,7 +218,9 @@ public class VF2 {
         Map<String, Integer> map = new HashMap<String, Integer>();
         for (int i = 0; i < ac1.getAtomCount(); i++) {
             atom = ac1.getAtom(i);
-
+            if (atom instanceof IQueryAtom) {
+                continue;
+            }
             if (map.containsKey(atom.getSymbol())) {
                 int val = map.get(atom.getSymbol()) + 1;
                 map.put(atom.getSymbol(), val);
@@ -210,7 +239,6 @@ public class VF2 {
                 }
             }
         }
-//        System.out.println("Map " + map);
         return map.isEmpty();
     }
 }

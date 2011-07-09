@@ -31,7 +31,6 @@ import org.openscience.cdk.interfaces.IBond;
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-
 public interface BondMatcher {
 
     boolean matches(IAtomContainer container, IBond atom);

@@ -38,8 +38,8 @@ import org.openscience.cdk.interfaces.IBond;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public class TargetProperties implements java.io.Serializable {
-    private static final long serialVersionUID = 1L;
 
+    private static final long serialVersionUID = 1L;
     private Map<IAtom, Integer> connectedTargetAtomCountMap = null;
     private Map<IAtom, List<IAtom>> connectedTargetAtomListMap = null;
     private IBond[][] map = null;
@@ -50,7 +50,7 @@ public class TargetProperties implements java.io.Serializable {
      * @param atom
      * @return the connectedTargetAtomCountMap
      */
-    public Integer countNeighbors(IAtom atom) {
+    public synchronized Integer countNeighbors(IAtom atom) {
         if (connectedTargetAtomCountMap == null
                 || !connectedTargetAtomCountMap.containsKey(atom)) {
 //            System.out.println("Object not found in " + atoms.size() + " atoms");
@@ -63,7 +63,7 @@ public class TargetProperties implements java.io.Serializable {
      * @param atom
      * @return the connected Target Atom List
      */
-    public List<IAtom> getNeighbors(IAtom atom) {
+    public synchronized List<IAtom> getNeighbors(IAtom atom) {
         return connectedTargetAtomListMap.get(atom);
     }
 
@@ -72,14 +72,14 @@ public class TargetProperties implements java.io.Serializable {
      * @param atom2 
      * @return the map
      */
-    public IBond getBond(IAtom atom1, IAtom atom2) {
+    public synchronized IBond getBond(IAtom atom1, IAtom atom2) {
         return map[atoms.get(atom2)][atoms.get(atom1)];
     }
 
     /**
      * @return atom count
      */
-    public int getAtomCount() {
+    public synchronized int getAtomCount() {
         return atoms.size();
     }
 

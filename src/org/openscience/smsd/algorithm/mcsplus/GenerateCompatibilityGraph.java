@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2006-2010  Syed Asad Rahman <asad@ebi.ebi.ac.uk>
+ * Copyright (C) 2006-2011  Syed Asad Rahman <asad@ebi.ebi.ac.uk>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -32,6 +32,7 @@ import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
+import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
 import org.openscience.smsd.algorithm.matchers.AtomMatcher;
 import org.openscience.smsd.algorithm.matchers.BondMatcher;
 import org.openscience.smsd.algorithm.matchers.DefaultMCSPlusBondMatcher;
@@ -80,8 +81,8 @@ public final class GenerateCompatibilityGraph {
         this.target = target;
         compGraphNodes = new ArrayList<Integer>();
         compGraphNodesCZero = new ArrayList<Integer>();
-        cEdges = new ArrayList<Integer>();
-        dEdges = new ArrayList<Integer>();
+        cEdges = Collections.synchronizedList(new ArrayList<Integer>());
+        dEdges = Collections.synchronizedList(new ArrayList<Integer>());
         compatibilityGraphNodes();
         compatibilityGraph();
 
@@ -231,9 +232,6 @@ public final class GenerateCompatibilityGraph {
                         && (compGraphNodes.get(a) != compGraphNodes.get(b))
                         && (compGraphNodes.get(a + 1) != compGraphNodes.get(b + 1))) {
 
-//                    System.out.println("compGraphNodes.get(a): " + compGraphNodes.get(a));
-//                    System.out.println("compGraphNodes.get(b): " + compGraphNodes.get(b));
-
                     boolean molecule1_pair_connected = false;
                     boolean molecule2_pair_connected = false;
 
@@ -295,11 +293,10 @@ public final class GenerateCompatibilityGraph {
                 cEdges.add((iIndex / 3) + 1);
                 cEdges.add((jIndex / 3) + 1);
             }
-        } 
-//        else if ((!molecule1_pair_connected && !molecule2_pair_connected)) {
-//            dEdges.add((iIndex / 3) + 1);
-//            dEdges.add((jIndex / 3) + 1);
-//        }
+        } else if ((!molecule1_pair_connected && !molecule2_pair_connected)) {
+            dEdges.add((iIndex / 3) + 1);
+            dEdges.add((jIndex / 3) + 1);
+        }
     }
 
     /**
@@ -322,7 +319,19 @@ public final class GenerateCompatibilityGraph {
 
                 //You can also check object equal or charge, hydrogen count etc
 
-                if (atom1.getSymbol().equalsIgnoreCase(atom2.getSymbol()) && (!map.contains(i + "_" + j))) {
+                if ((atom1 instanceof IQueryAtom)
+                        && ((IQueryAtom) atom1).matches(atom2)
+                        && !map.contains(i + "_" + j)) {
+                    compGraphNodesCZero.add(i);
+                    compGraphNodesCZero.add(j);
+                    compGraphNodesCZero.add(labelContainer.getLabelID(atom2.getSymbol())); //i.e C is label 1
+                    compGraphNodesCZero.add(count_nodes);
+                    compGraphNodes.add(i);
+                    compGraphNodes.add(j);
+                    compGraphNodes.add(count_nodes++);
+                    map.add(i + "_" + j);
+                } else if (atom1.getSymbol().equalsIgnoreCase(atom2.getSymbol())
+                        && !map.contains(i + "_" + j)) {
                     compGraphNodesCZero.add(i);
                     compGraphNodesCZero.add(j);
                     compGraphNodesCZero.add(labelContainer.getLabelID(atom1.getSymbol())); //i.e C is label 1
@@ -394,7 +403,7 @@ public final class GenerateCompatibilityGraph {
         }
     }
 
-    private static boolean isMatchFeasible(IAtomContainer ac1,
+    private boolean isMatchFeasible(IAtomContainer ac1,
             IBond bondA1,
             IAtomContainer ac2,
             IBond bondA2,
@@ -421,19 +430,19 @@ public final class GenerateCompatibilityGraph {
         return Collections.unmodifiableList(cEdges);
     }
 
-    protected List<Integer> getDEgdes() {
+    public List<Integer> getDEgdes() {
         return Collections.unmodifiableList(dEdges);
     }
 
-    protected List<Integer> getCompGraphNodes() {
+    public List<Integer> getCompGraphNodes() {
         return Collections.unmodifiableList(compGraphNodes);
     }
 
-    protected int getCEdgesSize() {
+    public int getCEdgesSize() {
         return cEdgesSize;
     }
 
-    protected int getDEdgesSize() {
+    public int getDEdgesSize() {
         return dEdgesSize;
     }
 
@@ -465,7 +474,7 @@ public final class GenerateCompatibilityGraph {
         dEdgesSize = 0;
     }
 
-    public void clear() {
+    public synchronized void clear() {
         cEdges = null;
         dEdges = null;
         compGraphNodes = null;

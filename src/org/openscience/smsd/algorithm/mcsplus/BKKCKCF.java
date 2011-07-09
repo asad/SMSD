@@ -29,7 +29,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Stack;
 import org.openscience.cdk.annotations.TestClass;
-import org.openscience.smsd.tools.TimeManager;
 
 /**
  * This class implements Bron-Kerbosch clique detection algorithm as it is
@@ -60,7 +59,7 @@ public class BKKCKCF {
      * V[G]
      *nodes of vector comp_graph_nodes are stored in V
      */
-    private static Stack<Integer> V;
+    private Stack<Integer> V;
 
     /**
      * Creates index new instance of Bron Kerbosch Cazals Karande Koch Clique Finder
@@ -72,8 +71,7 @@ public class BKKCKCF {
      * @param edgesC C-Edges set of allowed edges
      * @param edgesD D-Edges set of prohibited edges
      */
-    protected BKKCKCF(List<Integer> compGraphNodes, List<Integer> edgesC, List<Integer> edgesD) {
-        MCSPlus.setTimeManager(new TimeManager());
+    public BKKCKCF(List<Integer> compGraphNodes, List<Integer> edgesC, List<Integer> edgesD) {
         this.compGraphNodes = compGraphNodes;
         this.cEdges = edgesC;
         this.dEdges = edgesD;
@@ -86,7 +84,7 @@ public class BKKCKCF {
 
         //Initialization maxCliquesSet
 
-        maxCliquesSet = new ArrayList<List<Integer>>();
+        maxCliquesSet = Collections.synchronizedList(new ArrayList<List<Integer>>());
 
 //        System.out.println("C-edges " + edgesC.size());
 //        System.out.println("d-edges " + edgesD.size());
@@ -99,7 +97,7 @@ public class BKKCKCF {
      * Call the wrapper for ENUMERATE_CLIQUES
      *
      */
-    private void init() {
+    private synchronized void init() {
 
 
         /********************************************************************/
@@ -136,7 +134,7 @@ public class BKKCKCF {
 
     }
 
-    private int enumerateCliques(List<Integer> C, Stack<Integer> P,
+    private synchronized int enumerateCliques(List<Integer> C, Stack<Integer> P,
             List<Integer> D, List<Integer> S, List<Integer> excludedCVertex) {
         List<Integer> potentialVertex = new ArrayList<Integer>();//Defined as P' in the paper
 
@@ -148,6 +146,18 @@ public class BKKCKCF {
 //        System.out.print("S " + S);
 
         if ((P.size() == 1) && (S.isEmpty())) {
+
+//            System.out.print("Clique found!!!!!!!!!!!!!!!!");
+//            System.out.print("\n");
+//            int c_num = C.size();
+//            System.out.print("C Vector Size: ");
+//            System.out.print(c_num);
+//            System.out.print("\n");
+//            for (int cl = 0; cl < c_num; cl++) {
+//                System.out.print(C.get(cl));
+//                System.out.print(" ");
+//            }
+//            System.out.print("\n");
 
             //store best solutions in stack maxCliquesSet
             int clique_size = C.size();
@@ -179,7 +189,7 @@ public class BKKCKCF {
         return 0;
     }
 
-    private void findCliques(List<Integer> potentialVertex, List<Integer> C,
+    private synchronized void findCliques(List<Integer> potentialVertex, List<Integer> C,
             Stack<Integer> P, List<Integer> D, List<Integer> S,
             List<Integer> excludedCVertex) {
         int index = 0;
@@ -241,7 +251,7 @@ public class BKKCKCF {
         }
     }
 
-    private void groupNeighbors(int index,
+    private synchronized void groupNeighbors(int index,
             Stack<Integer> P_copy,
             List<Integer> Q_copy,
             List<Integer> X_copy,
@@ -290,7 +300,7 @@ public class BKKCKCF {
         }
     }
 
-    private List<Integer> findNeighbors(int central_node) {
+    private synchronized List<Integer> findNeighbors(int central_node) {
 
         List<Integer> neighborVertex = new ArrayList<Integer>();
 
@@ -320,11 +330,15 @@ public class BKKCKCF {
         return neighborVertex;
     }
 
-    protected int getBestCliqueSize() {
+    protected synchronized int getBestCliqueSize() {
         return bestCliqueSize;
     }
 
-    protected Stack<List<Integer>> getMaxCliqueSet() {
+    /**
+     * Maximum clique set
+     * @return
+     */
+    public synchronized Stack<List<Integer>> getMaxCliqueSet() {
         Stack<List<Integer>> solution = new Stack<List<Integer>>();
         for (List<Integer> list : maxCliquesSet) {
             Collections.sort(list);
@@ -335,7 +349,7 @@ public class BKKCKCF {
         return solution;
     }
 
-    private void copyVertex(List<Integer> neighbourVertex, Stack<Integer> P_copy_N_intersec, Stack<Integer> P_copy,
+    private synchronized void copyVertex(List<Integer> neighbourVertex, Stack<Integer> P_copy_N_intersec, Stack<Integer> P_copy,
             List<Integer> Q_copy_N_intersec, List<Integer> Q_copy, List<Integer> X_copy_N_intersec,
             List<Integer> X_copy, List<Integer> Y_copy_N_intersec, List<Integer> Y_copy) {
         int nElement = -1;
@@ -360,7 +374,7 @@ public class BKKCKCF {
         }
     }
 
-    private void initIterator(List<Integer> T) {
+    private synchronized void initIterator(List<Integer> T) {
         /*
          * C: set of vertices belonging to the current clique
          */

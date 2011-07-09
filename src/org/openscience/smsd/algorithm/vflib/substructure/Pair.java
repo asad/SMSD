@@ -68,35 +68,35 @@ public class Pair<T, S> {
     }
 
     @Override
-    public String toString() {
+    public synchronized String toString() {
         return "(" + getSourceAtom() + ", " + getTargetAtom() + ")";
     }
 
     /**
      * @return the source
      */
-    public T getSourceAtom() {
+    public synchronized T getSourceAtom() {
         return source;
     }
 
     /**
      * @param source the source to set
      */
-    public void setSourceAtom(T first) {
+    public synchronized void setSourceAtom(T first) {
         this.source = first;
     }
 
     /**
      * @return the target
      */
-    public S getTargetAtom() {
+    public synchronized S getTargetAtom() {
         return target;
     }
 
     /**
      * @param target the target to set
      */
-    public void setTargetAtom(S second) {
+    public synchronized void setTargetAtom(S second) {
         this.target = second;
     }
 }

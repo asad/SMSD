@@ -31,7 +31,6 @@ import org.openscience.cdk.interfaces.IAtomContainer;
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-
 public interface AtomMatcher {
 
     boolean matches(IAtomContainer container, IAtom atom);

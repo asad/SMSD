@@ -26,9 +26,9 @@ import java.util.List;
 import java.util.Map;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.exception.CDKException;
-import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
+import org.openscience.smsd.AtomAtomMapping;
 
 /**
  * Interface that holds basic core interface for all MCS algorithm.
@@ -66,7 +66,7 @@ public interface IMCSBase {
      * and map.getValue() for the target molecule
      * @return All possible MCS atom Mappings
      */
-    public abstract List<Map<IAtom, IAtom>> getAllAtomMapping();
+    public abstract List<AtomAtomMapping> getAllAtomMapping();
 
     /**
      * Returns all plausible mappings between query and target molecules.
@@ -81,7 +81,7 @@ public interface IMCSBase {
      * Returns one of the best matches with atoms mapped.
      * @return Best Atom Mapping
      */
-    public abstract Map<IAtom, IAtom> getFirstAtomMapping();
+    public abstract AtomAtomMapping getFirstAtomMapping();
 
     /**
      * Returns one of the best matches with atom indexes mapped.

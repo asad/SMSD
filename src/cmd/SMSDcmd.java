@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.apache.commons.cli.MissingOptionException;
 import org.apache.commons.cli.ParseException;
@@ -24,7 +25,8 @@ import org.openscience.cdk.interfaces.IMolecule;
 import org.openscience.cdk.io.iterator.IIteratingChemObjectReader;
 import org.openscience.cdk.nonotify.NoNotificationChemObjectBuilder;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
-import org.openscience.smsd.IAtomAtomMapping;
+import org.openscience.smsd.AtomAtomMapping;
+import org.openscience.smsd.IAtomMapping;
 import org.openscience.smsd.Isomorphism;
 import org.openscience.smsd.Substructure;
 import org.openscience.smsd.interfaces.Algorithm;
@@ -149,12 +151,10 @@ public class SMSDcmd {
                 mcsMolecule = target;
                 targets.add(target);
             } else {
-
-                Isomorphism smsd = new Isomorphism(Algorithm.DEFAULT, matchBonds);
-                run(smsd, mcsMolecule, target, filter);
-                target = target.getBuilder().newInstance(IMolecule.class, smsd.getTargetMolecule());
+                Isomorphism smsd = run(mcsMolecule, target, filter, matchBonds);
+                target = target.getBuilder().newInstance(IMolecule.class, smsd.getFirstAtomMapping().getTarget());
                 targets.add(target);
-                Map<Integer, Integer> mapping = smsd.getFirstMapping();
+                Map<Integer, Integer> mapping = getIndexMapping(smsd.getFirstAtomMapping());
                 IAtomContainer subgraph = getSubgraph(target, mapping);
                 mcsMolecule = new Molecule(subgraph);
             }
@@ -172,11 +172,10 @@ public class SMSDcmd {
             List<IAtomContainer> secondRoundTargets = new ArrayList<IAtomContainer>();
             IChemObjectBuilder builder = NoNotificationChemObjectBuilder.getInstance();
             for (IAtomContainer target : targets) {
-                Isomorphism smsd = new Isomorphism(Algorithm.DEFAULT, matchBonds);
-                run(smsd, mcsMolecule, (IMolecule) target, filter);
-                mappings.add(smsd.getFirstMapping());
+                Isomorphism smsd = run(mcsMolecule, (IMolecule) target, filter, matchBonds);
+                mappings.add(getIndexMapping(smsd.getFirstAtomMapping()));
                 secondRoundTargets.add(
-                        builder.newInstance(IAtomContainer.class, smsd.getTargetMolecule()));
+                        builder.newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getTarget()));
             }
 
             String name = inputHandler.getTargetName();
@@ -207,15 +206,8 @@ public class SMSDcmd {
         outputHandler.startAppending(out);
 
         long startTime = System.currentTimeMillis();
-        IAtomAtomMapping smsd = null;
-        Substructure substructure = null;
-        Isomorphism isomorphism = null;
+        IAtomMapping smsd = null;
         boolean matchBonds = argumentHandler.isMatchBondType();
-        if (argumentHandler.isSubstructureMode()) {
-            substructure = new Substructure();
-        } else {
-            isomorphism = new Isomorphism(Algorithm.DEFAULT, matchBonds);
-        }
 
         int targetNumber = 0;
         IIteratingChemObjectReader reader = inputHandler.getAllTargets();
@@ -244,45 +236,43 @@ public class SMSDcmd {
             inputHandler.configure(target, targetType);
 
             if (argumentHandler.isSubstructureMode()) {
-                runSubstructure(substructure, query, target, argumentHandler.getChemFilter(), matchBonds);
-                smsd = substructure;
+                smsd = runSubstructure(query, target, argumentHandler.getChemFilter(), matchBonds);
             } else {
-                run(isomorphism, query, target, argumentHandler.getChemFilter());
-                smsd = isomorphism;
+                smsd = run(query, target, argumentHandler.getChemFilter(), matchBonds);
             }
 
 
             long endTime = System.currentTimeMillis();
             long executionTime = endTime - startTime;
-            outputHandler.writeTargetMol(smsd.getTargetMolecule());
+            outputHandler.writeTargetMol(smsd.getTargetContainer());
 
             String queryPath = argumentHandler.getQueryFilepath();
             String targetPath = argumentHandler.getTargetFilepath();
 
-            query = query.getBuilder().newInstance(IMolecule.class, smsd.getQueryMolecule());
-            target = target.getBuilder().newInstance(IMolecule.class, smsd.getTargetMolecule());
+            query = query.getBuilder().newInstance(IMolecule.class, smsd.getFirstAtomMapping().getQuery());
+            target = target.getBuilder().newInstance(IMolecule.class, smsd.getFirstAtomMapping().getTarget());
 
 
-            Map<IAtom, IAtom> mcs = smsd.getFirstAtomMapping();
+            Map<IAtom, IAtom> mcs = smsd.getFirstAtomMapping().getMappings();
             int nAtomsMatched = (mcs == null) ? 0 : mcs.size();
             double tanimotoSimilarity = smsd.getTanimotoSimilarity();
 
             //print out all mappings
             if (mcs != null && argumentHandler.isAllMapping()) {
                 outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
-                List<Map<Integer, Integer>> allMappings = smsd.getAllMapping();
-                int counter = 1;
-                for (Map<Integer, Integer> mapping : allMappings) {
+                for (AtomAtomMapping aam : smsd.getAllAtomMapping()) {
+                    Map<Integer, Integer> mapping = getIndexMapping(aam);
+                    int counter = 1;
                     if (argumentHandler.isImage()) {
                         double stereoScore = smsd.getStereoScore(counter);
                         String label = outputHandler.makeLabel(tanimotoSimilarity, stereoScore);
                         outputHandler.addImage(query, target, label, mapping);
                     }
-                    outputHandler.printMapping(counter, mcs);
+                    outputHandler.printMapping(counter++, mcs);
                 }
             } //print out top one
             else if (mcs != null && !argumentHandler.isAllMapping()) {
-                Map<Integer, Integer> mcsNumber = smsd.getFirstMapping();
+                Map<Integer, Integer> mcsNumber = getIndexMapping(smsd.getFirstAtomMapping());
                 double stereoScore = smsd.getStereoScore(0);
                 outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
                 String qrefName = inputHandler.getQRefName();
@@ -370,58 +360,49 @@ public class SMSDcmd {
         }
 
         long startTime = System.currentTimeMillis();
-        IAtomAtomMapping smsd = null;
-        Substructure substructure = null;
-        Isomorphism isomorphism = null;
+        IAtomMapping smsd = null;
         boolean matchBonds = argumentHandler.isMatchBondType();
 
-        if (argumentHandler.isSubstructureMode()) {
-            substructure = new Substructure();
-        } else {
-            isomorphism = new Isomorphism(Algorithm.DEFAULT, matchBonds);
-        }
 
         if (argumentHandler.isSubstructureMode()) {
-            runSubstructure(substructure, query, target, argumentHandler.getChemFilter(), matchBonds);
-            smsd = substructure;
+            smsd = runSubstructure(query, target, argumentHandler.getChemFilter(), matchBonds);
         } else {
-            run(isomorphism, query, target, argumentHandler.getChemFilter());
-            smsd = isomorphism;
+            smsd = run(query, target, argumentHandler.getChemFilter(), matchBonds);
         }
 
-        query = query.getBuilder().newInstance(IMolecule.class, smsd.getQueryMolecule());
-        target = target.getBuilder().newInstance(IMolecule.class, smsd.getTargetMolecule());
+        query = query.getBuilder().newInstance(IMolecule.class, smsd.getFirstAtomMapping().getQuery());
+        target = target.getBuilder().newInstance(IMolecule.class, smsd.getFirstAtomMapping().getTarget());
 
         long endTime = System.currentTimeMillis();
         long executionTime = endTime - startTime;
 
         // write out the input molecules to files
-        outputHandler.writeQueryMol(smsd.getQueryMolecule());
-        outputHandler.writeTargetMol(smsd.getTargetMolecule());
+        outputHandler.writeQueryMol(smsd.getFirstAtomMapping().getQuery());
+        outputHandler.writeTargetMol(smsd.getFirstAtomMapping().getTarget());
 
         String queryPath = argumentHandler.getQueryFilepath();
         String targetPath = argumentHandler.getTargetFilepath();
 
-        Map<IAtom, IAtom> mcs = smsd.getFirstAtomMapping();
+        Map<IAtom, IAtom> mcs = smsd.getFirstAtomMapping().getMappings();
         int nAtomsMatched = (mcs == null) ? 0 : mcs.size();
         double tanimotoSimilarity = smsd.getTanimotoSimilarity();
 
         //print out all mappings
         if (mcs != null && argumentHandler.isAllMapping()) {
             outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
-            List<Map<Integer, Integer>> allMappings = smsd.getAllMapping();
-            int counter = 1;
-            for (Map<Integer, Integer> mapping : allMappings) {
+            for (AtomAtomMapping aam : smsd.getAllAtomMapping()) {
+                Map<Integer, Integer> mapping = getIndexMapping(aam);
+                int counter = 1;
                 if (argumentHandler.isImage()) {
                     double stereoScore = smsd.getStereoScore(counter);
                     String label = outputHandler.makeLabel(tanimotoSimilarity, stereoScore);
                     outputHandler.addImage(query, target, label, mapping);
                 }
-                outputHandler.printMapping(counter, mcs);
+                outputHandler.printMapping(counter++, mcs);
             }
         } //print out top one
         else if (mcs != null && !argumentHandler.isAllMapping()) {
-            Map<Integer, Integer> mcsNumber = smsd.getFirstMapping();
+            Map<Integer, Integer> mcsNumber = getIndexMapping(smsd.getFirstAtomMapping());
             double stereoScore = smsd.getStereoScore(0);
             outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
             String qrefName = inputHandler.getQRefName();
@@ -448,7 +429,7 @@ public class SMSDcmd {
         }
 
         if (argumentHandler.shouldOutputSubgraph()) {
-            Map<Integer, Integer> mapping = smsd.getFirstMapping();
+            Map<Integer, Integer> mapping = getIndexMapping(smsd.getFirstAtomMapping());
             IAtomContainer subgraph = getSubgraph(target, mapping);
             String outpath = argumentHandler.getOutputFilepath();
             String outtype = argumentHandler.getOutputFiletype();
@@ -477,12 +458,13 @@ public class SMSDcmd {
         return subgraph;
     }
 
-    private static void run(Isomorphism smsd,
+    private static Isomorphism run(
             IMolecule query,
             IMolecule target,
-            int filter) throws CDKException {
+            int filter,
+            boolean matchBonds) throws CDKException {
         // XXX - if clean and configure is 'true', is that not duplicate configuring?
-        smsd.init(query, target);
+        Isomorphism smsd = new Isomorphism(query, target, Algorithm.DEFAULT, matchBonds);
         if (filter == 0) {
             smsd.setChemFilters(false, false, false);
         }
@@ -495,16 +477,17 @@ public class SMSDcmd {
         if (filter == 3) {
             smsd.setChemFilters(true, true, true);
         }
+        return smsd;
     }
 
-    private static void runSubstructure(Substructure smsd,
+    private static Substructure runSubstructure(
             IMolecule query,
             IMolecule target,
             int filter,
             boolean matchBonds) throws CDKException {
         // XXX - if clean and configure is 'true', is that not duplicate configuring?
-        smsd.init(query, target);
-        boolean findSubgraph = smsd.findSubgraph(matchBonds);
+        Substructure smsd = new Substructure(query, target, matchBonds);
+        boolean findSubgraph = smsd.findSubgraph();
         if (findSubgraph) {
             if (filter == 0) {
                 smsd.setChemFilters(false, false, false);
@@ -519,5 +502,15 @@ public class SMSDcmd {
                 smsd.setChemFilters(true, true, true);
             }
         }
+        return smsd;
+    }
+
+    private static Map<Integer, Integer> getIndexMapping(AtomAtomMapping aam) {
+        Map<IAtom, IAtom> mappings = aam.getMappings();
+        Map<Integer, Integer> mapping = new TreeMap<Integer, Integer>();
+        for (IAtom keys : mappings.keySet()) {
+            mapping.put(aam.getQueryIndex(keys), aam.getTargetIndex(mappings.get(keys)));
+        }
+        return mapping;
     }
 }

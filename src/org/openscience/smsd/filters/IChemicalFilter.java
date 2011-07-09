@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.openscience.cdk.exception.CDKException;
-import org.openscience.cdk.interfaces.IAtom;
+import org.openscience.smsd.AtomAtomMapping;
 
 /**
  * A filter on SMSD results.
@@ -43,15 +43,13 @@ public interface IChemicalFilter<T> {
      * Calculates a score for each MCS, and sorts the results on that score,
      * returning the best.
      *
-     * @param allMCS
      * @param allAtomMCS
      * @param selectionMap
      * @return
      * @throws CDKException
      */
     public T sortResults(
-            Map<Integer, Map<Integer, Integer>> allMCS,
-            Map<Integer, Map<IAtom, IAtom>> allAtomMCS,
+            Map<Integer, AtomAtomMapping> allAtomMCS,
             Map<Integer, T> selectionMap) throws CDKException;
 
     public List<T> getScores();

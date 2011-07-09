@@ -61,7 +61,7 @@ import org.openscience.smsd.algorithm.vflib.builder.TargetProperties;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFLibTest")
-public class DefaultVFBondMatcher implements VFBondMatcher {
+public final class DefaultVFBondMatcher implements VFBondMatcher {
 
     static final long serialVersionUID = -7861469841127328812L;
     private IBond queryBond = null;
@@ -111,14 +111,14 @@ public class DefaultVFBondMatcher implements VFBondMatcher {
      */
     @Override
     public boolean matches(TargetProperties targetConatiner, IBond targetBond) {
-           if (this.smartQueryBond != null) {
+        if (this.smartQueryBond != null) {
             return smartQueryBond.matches(targetBond);
         } else if (!isBondMatchFlag() || (isBondMatchFlag() && isBondTypeMatch(targetBond))) {
             return true;
-        }
-//            if (isBondMatchFlag() && this.unsaturation == getUnsaturation(targetConatiner, targetBond)) {
-//                return true;
-//            }
+        } 
+//        else if (isBondMatchFlag() && this.unsaturation == getUnsaturation(targetConatiner, targetBond)) {
+//            return true;
+//        }
         return false;
     }
 

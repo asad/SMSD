@@ -32,6 +32,7 @@ import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
@@ -47,6 +48,7 @@ import javax.swing.filechooser.FileFilter;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.exception.InvalidSmilesException;
+import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IMolecule;
 import org.openscience.cdk.io.IChemObjectReader;
@@ -54,6 +56,7 @@ import org.openscience.cdk.io.MDLReader;
 import org.openscience.cdk.layout.StructureDiagramGenerator;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
+import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.Isomorphism;
 import org.openscience.smsd.interfaces.Algorithm;
 import org.openscience.smsd.tools.GraphMolecule;
@@ -276,7 +279,6 @@ public class SMSDFrame extends JFrame {
 
             if (molFiles.size() >= 4) {
 
-                Isomorphism comparison = new Isomorphism(Algorithm.DEFAULT, jRadioButton1.isSelected());
                 IAtomContainer QMol = (IAtomContainer) molFiles.get(1);
                 IAtomContainer TMol = (IAtomContainer) molFiles.get(3);
                 jTextArea1.append("Calculating MCS...." + "." + newline);
@@ -296,12 +298,11 @@ public class SMSDFrame extends JFrame {
 //                CanonicalLabeler c=new CanonicalLabeler();
 //                c.canonLabel(QMol);
 //                c.canonLabel(TMol);
-
-                comparison.init(QMol, TMol);
+                Isomorphism comparison = new Isomorphism(QMol, TMol, Algorithm.DEFAULT, jRadioButton1.isSelected());
                 comparison.setChemFilters(jCheckBox2.isSelected(), jCheckBox3.isSelected(), jCheckBox4.isSelected());
 
 
-                jTextArea1.append("Number of overlaps = " + comparison.getFirstAtomMapping().size() + newline);
+                jTextArea1.append("Number of overlaps = " + comparison.getFirstAtomMapping().getCount() + newline);
                 jTextArea1.setCaretPosition(jTextArea1.getDocument().getLength());
 
                 String[] QName = ((String) molFiles.get(0)).split(".mol");
@@ -489,7 +490,13 @@ public class SMSDFrame extends JFrame {
         nf.setMinimumFractionDigits(2);
         System.out.println("Output of the final Mappings: ");
         int counter = 1;
-        for (Map<Integer, Integer> mapping : smsd.getAllMapping()) {
+        for (AtomAtomMapping aam : smsd.getAllAtomMapping()) {
+            Map<IAtom, IAtom> mappings = aam.getMappings();
+            Map<Integer, Integer> mapping = new TreeMap<Integer, Integer>();
+            for (IAtom keys : mappings.keySet()) {
+                mapping.put(aam.getQueryIndex(keys), aam.getTargetIndex(mappings.get(keys)));
+            }
+
             String tanimoto = nf.format(smsd.getTanimotoSimilarity());
             String stereo = "NA";
             if (smsd.getStereoScore(counter - 1) != null) {
@@ -498,6 +505,7 @@ public class SMSDFrame extends JFrame {
             String label = "Scores [" + "Tanimoto: " + tanimoto + ", Stereo: " + stereo + "]";
             imageGenerator.addImages(query, target, label, mapping);
             counter++;
+
         }
         return (Image) imageGenerator.createImage();
 
