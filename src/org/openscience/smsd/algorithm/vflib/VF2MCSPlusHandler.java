@@ -130,7 +130,7 @@ public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase 
         boolean flag = isExtensionFeasible();
         if (flag && !vfLibSolutions.isEmpty()) {
             try {
-                GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(query, target, isBondMatchFlag());
+                GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(query, target, true);
                 List<Integer> comp_graph_nodes = gcg.getCompGraphNodes();
 
                 List<Integer> cEdges = gcg.getCEgdes();
