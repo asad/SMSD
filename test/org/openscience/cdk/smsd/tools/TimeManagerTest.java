@@ -24,13 +24,12 @@ package org.openscience.cdk.smsd.tools;
 
 import org.junit.Assert;
 import org.junit.Test;
-import org.openscience.cdk.CDKTestCase;
 
 /**
  * @author Asad
  * @cdk.module test-smsd
  */
-public class TimeManagerTest extends CDKTestCase {
+public class TimeManagerTest {
 
     @Test
     public void testTimeManager() throws Exception {

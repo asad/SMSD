@@ -30,7 +30,6 @@ import junit.framework.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.openscience.cdk.Bond;
-import org.openscience.cdk.CDKTestCase;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.exception.CDKException;
@@ -55,7 +54,7 @@ import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  * @cdk.module test-smsd
  */
-public class VFLibTest extends CDKTestCase {
+public class VFLibTest {
 
     private static IAtomContainer hexane;
     private static IQuery hexaneQuery;

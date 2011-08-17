@@ -22,11 +22,9 @@
  */
 package org.openscience.cdk.smsd.tools;
 
-
 import org.junit.Assert;
 import org.junit.Test;
 import org.openscience.cdk.Atom;
-import org.openscience.cdk.CDKTestCase;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IBond.Order;
 
@@ -34,12 +32,12 @@ import org.openscience.cdk.interfaces.IBond.Order;
  * @author Asad
  * @cdk.module test-smsd
  */
-public class BondEnergiesTest extends CDKTestCase {
+public class BondEnergiesTest {
 
     @Test
     public void testGetInstance() throws Exception {
-    	BondEnergies energies = BondEnergies.getInstance();
-    	Assert.assertNotNull(energies);
+        BondEnergies energies = BondEnergies.getInstance();
+        Assert.assertNotNull(energies);
     }
 
     /**
@@ -56,5 +54,4 @@ public class BondEnergiesTest extends CDKTestCase {
         Integer result = instance.getEnergies(sourceAtom, targetAtom, bondOrder);
         Assert.assertEquals(expResult, result);
     }
-
 }

@@ -34,7 +34,6 @@ import org.junit.Test;
 import org.openscience.cdk.Atom;
 import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.CDKConstants;
-import org.openscience.cdk.CDKTestCase;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.Molecule;
 import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
@@ -63,7 +62,7 @@ import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
  * @author     Syed Asad Rahman
  * @cdk.require java1.5+
  */
-public class CDKMCSTest extends CDKTestCase {
+public class CDKMCSTest {
 
     boolean standAlone = false;
 

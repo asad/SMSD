@@ -20,17 +20,15 @@
  */
 package org.openscience.cdk.smsd.algorithm.rgraph;
 
-import org.openscience.cdk.smsd.algorithm.rgraph.CDKRNode;
 import org.junit.Assert;
 import org.junit.Test;
-import org.openscience.cdk.CDKTestCase;
 
 /**
  * @cdk.module test-smsd
  * @author     Syed Asad Rahman
  * @cdk.require java1.5+
  */
-public class CDKRNodeTest extends CDKTestCase {
+public class CDKRNodeTest {
 
     @Test
     public void testRNode_int_int() {
@@ -40,5 +38,3 @@ public class CDKRNodeTest extends CDKTestCase {
         Assert.assertNotNull(node.getForbidden());
     }
 }
-
-

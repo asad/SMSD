@@ -21,6 +21,7 @@ import org.openscience.cdk.interfaces.IRingSet;
 import org.openscience.cdk.ringsearch.AllRingsFinder;
 import org.openscience.cdk.smiles.SmilesGenerator;
 import org.openscience.cdk.smiles.SmilesParser;
+import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.Isomorphism;
 import org.openscience.smsd.interfaces.Algorithm;
 import org.openscience.smsd.tools.MoleculeSanityCheck;
@@ -48,8 +49,7 @@ public class UnionTest {
         MoleculeSanityCheck.aromatizeMolecule(mol1);
         MoleculeSanityCheck.aromatizeMolecule(mol2);
 
-        Isomorphism isomorphism = new Isomorphism(Algorithm.DEFAULT, true);
-        isomorphism.init(mol1, mol2);
+        Isomorphism isomorphism = new Isomorphism(mol1, mol2, Algorithm.DEFAULT, true);
         isomorphism.setChemFilters(false, false, false);
 
 
@@ -59,7 +59,7 @@ public class UnionTest {
 
         if (isomorphism.getFirstAtomMapping() != null) {
 
-            for (Map<IAtom, IAtom> map : isomorphism.getAllAtomMapping()) {
+            for (AtomAtomMapping mapping : isomorphism.getAllAtomMapping()) {
 
                 IAtomContainer union = new AtomContainer();
 
@@ -75,8 +75,8 @@ public class UnionTest {
                     IAtom a1 = bond.getAtom(0);
                     IAtom a2 = bond.getAtom(1);
 
-                    if (!map.containsValue(a1)
-                            && !map.containsValue(a2)) {
+                    if (!mapping.getMappings().containsValue(a1)
+                            && !mapping.getMappings().containsValue(a2)) {
                         if (!union.contains(a1)) {
                             union.addAtom(a1);
                         }
@@ -84,18 +84,18 @@ public class UnionTest {
                             union.addAtom(a2);
                         }
                         union.addBond(bond);
-                    } else if (map.containsValue(a1)
-                            && !map.containsValue(a2)) {
+                    } else if (mapping.getMappings().containsValue(a1)
+                            && !mapping.getMappings().containsValue(a2)) {
                         if (!union.contains(a2)) {
                             union.addAtom(a2);
                         }
-                        union.addBond(new Bond(a2, getKey(a1, map), bond.getOrder(), bond.getStereo()));
-                    } else if (!map.containsValue(a1)
-                            && map.containsValue(a2)) {
+                        union.addBond(new Bond(a2, getKey(a1, mapping.getMappings()), bond.getOrder(), bond.getStereo()));
+                    } else if (!mapping.getMappings().containsValue(a1)
+                            && mapping.getMappings().containsValue(a2)) {
                         if (!union.contains(a1)) {
                             union.addAtom(a1);
                         }
-                        union.addBond(new Bond(a1, getKey(a2, map), bond.getOrder(), bond.getStereo()));
+                        union.addBond(new Bond(a1, getKey(a2, mapping.getMappings()), bond.getOrder(), bond.getStereo()));
                     }
                 }
                 /*check if this combination is chemically valid*/
@@ -105,6 +105,7 @@ public class UnionTest {
                         acSet.add(molSMILES);
                     }
                 }
+
             }
         }
 
