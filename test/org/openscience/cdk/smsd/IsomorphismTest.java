@@ -488,4 +488,40 @@ public class IsomorphismTest {
         Isomorphism smsd = new Isomorphism(query, target, Algorithm.CDKMCS, true);
         Assert.assertEquals(18, smsd.getAllAtomMapping().size());
     }
+
+    /**
+     * Test Tanimoto NAD+ & NADH for Bond Sensitive.
+     * @throws Exception
+     */
+    @Test
+    public void testNADPlusNADHBondSensitive() throws Exception {
+        System.out.println("getTanimoto for NAD+ and NADH");
+        SmilesParser smilesParser = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        IAtomContainer molecule1 = smilesParser.parseSmiles("NC(=O)c1ccc[n+](c1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
+
+        IAtomContainer molecule2 = smilesParser.parseSmiles("NC(=O)C1=CN(C=CC1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
+
+        double score = 0.733;
+        Isomorphism smsd1 = new Isomorphism(molecule1, molecule2, Algorithm.DEFAULT, true);
+        smsd1.setChemFilters(true, true, true);
+        Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
+    }
+
+    /**
+     * Test Tanimoto NAD+ & NADH for Bond InSensitive.
+     * @throws Exception
+     */
+    @Test
+    public void testNADPlusNADHBondInSensitive() throws Exception {
+        System.out.println("getTanimoto for NAD+ and NADH");
+        SmilesParser smilesParser = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        IAtomContainer molecule1 = smilesParser.parseSmiles("NC(=O)c1ccc[n+](c1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
+
+        IAtomContainer molecule2 = smilesParser.parseSmiles("NC(=O)C1=CN(C=CC1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
+
+        double score = 1.0;
+        Isomorphism smsd1 = new Isomorphism(molecule1, molecule2, Algorithm.DEFAULT, false);
+        smsd1.setChemFilters(true, true, true);
+        Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
+    }
 }

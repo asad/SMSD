@@ -515,4 +515,42 @@ public class SubstructureTest {
         boolean foundMatches = smsd.findSubgraph();
         Assert.assertFalse(foundMatches);
     }
+
+    /**
+     * Test Tanimoto NAD+ & NADH for Bond Sensitive.
+     * @throws Exception
+     */
+    @Test
+    public void testNADPlusNADHBondSensitive() throws Exception {
+        System.out.println("getTanimoto for NAD+ and NADH");
+        SmilesParser smilesParser = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        IAtomContainer molecule1 = smilesParser.parseSmiles("NC(=O)c1ccc[n+](c1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
+
+        IAtomContainer molecule2 = smilesParser.parseSmiles("NC(=O)C1=CN(C=CC1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
+
+        double score = 0.0;
+        Substructure smsd1 = new Substructure(molecule1, molecule2, true);
+        smsd1.setChemFilters(true, true, true);
+        Assert.assertFalse(smsd1.findSubgraph());
+        Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
+    }
+
+    /**
+     * Test Tanimoto NAD+ & NADH for Bond InSensitive.
+     * @throws Exception
+     */
+    @Test
+    public void testNADPlusNADHBondInSensitive() throws Exception {
+        System.out.println("getTanimoto for NAD+ and NADH");
+        SmilesParser smilesParser = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        IAtomContainer molecule1 = smilesParser.parseSmiles("NC(=O)c1ccc[n+](c1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
+
+        IAtomContainer molecule2 = smilesParser.parseSmiles("NC(=O)C1=CN(C=CC1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
+
+        double score = 1.0;
+        Substructure smsd1 = new Substructure(molecule1, molecule2, false);
+        smsd1.setChemFilters(true, true, true);
+        Assert.assertTrue(smsd1.findSubgraph());
+        Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
+    }
 }
