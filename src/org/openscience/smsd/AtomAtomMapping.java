@@ -28,14 +28,17 @@
  */
 package org.openscience.smsd;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 
 /**
- * Holds atom-atom mappings between source and target atoms
+ * Holds atom-atom mappings information between 
+ * source and target molecules
  * 
  * @cdk.module smsd
  * @cdk.githash
@@ -67,6 +70,10 @@ public final class AtomAtomMapping {
         mapping.put(atom1, atom2);
     }
 
+    /**
+     * Returns String.
+     * @return string
+     */
     @Override
     public synchronized String toString() {
         String s = "[";
@@ -79,8 +86,8 @@ public final class AtomAtomMapping {
     }
 
     /**
-     * 
-     * @return true if 'query' is not query subgraph of 'target'
+     * Returns true if 'query' is not isomorphic of 'target'.
+     * @return true if 'query' is not isomorphic of 'target'
      */
     public synchronized boolean isEmpty() {
         return mapping.isEmpty();
@@ -96,16 +103,16 @@ public final class AtomAtomMapping {
 
     /**
      * 
-     * get mapping size 
-     * @return
+     * Returns mapping size. 
+     * @return mapping size
      */
     public synchronized int getCount() {
         return mapping.isEmpty() ? 0 : mapping.size();
     }
 
     /**
-     * get atom-atom mappings
-     * @return
+     * Returns atom-atom mappings
+     * @return atom-atom mappings
      */
     public synchronized Map<IAtom, IAtom> getMappings() {
         return Collections.unmodifiableMap(new HashMap<IAtom, IAtom>(mapping));
@@ -132,6 +139,7 @@ public final class AtomAtomMapping {
     }
 
     /**
+     * Returns Query molecule
      * @return the query
      */
     public synchronized IAtomContainer getQuery() {
@@ -139,9 +147,78 @@ public final class AtomAtomMapping {
     }
 
     /**
+     * Returns Target molecule
      * @return the target
      */
     public synchronized IAtomContainer getTarget() {
         return target;
+    }
+
+    /**
+     * Returns Common mapped fragment in the query molecule.
+     * @return Common mapped fragment in the query molecule
+     */
+    public synchronized IAtomContainer getCommonFragmentInQuery() {
+        IAtomContainer ac = query.getBuilder().newInstance(IAtomContainer.class, query);
+        List<IAtom> uniqueAtoms = Collections.synchronizedList(new ArrayList<IAtom>());
+        for (IAtom atom : query.atoms()) {
+            if (!mapping.containsKey(atom)) {
+                uniqueAtoms.add(ac.getAtom(getQueryIndex(atom)));
+            }
+        }
+        for (IAtom atom : uniqueAtoms) {
+            ac.removeAtomAndConnectedElectronContainers(atom);
+        }
+        return ac;
+    }
+
+    /**
+     * Returns Common mapped fragment in the target molecule.
+     * @return Common mapped fragment in the target molecule
+     */
+    public synchronized IAtomContainer getCommonFragmentInTarget() {
+        IAtomContainer ac = target.getBuilder().newInstance(IAtomContainer.class, target);
+        List<IAtom> uniqueAtoms = Collections.synchronizedList(new ArrayList<IAtom>());
+        for (IAtom atom : target.atoms()) {
+            if (!mapping.containsValue(atom)) {
+                uniqueAtoms.add(ac.getAtom(getTargetIndex(atom)));
+            }
+        }
+        for (IAtom atom : uniqueAtoms) {
+            ac.removeAtomAndConnectedElectronContainers(atom);
+        }
+        return ac;
+    }
+
+    /**
+     * Returns Unique unmapped fragment in the query molecule.
+     * @return Common mapped fragment in the query molecule
+     */
+    public synchronized IAtomContainer getUniqueFragmentInQuery() {
+        IAtomContainer ac = query.getBuilder().newInstance(IAtomContainer.class, query);
+        List<IAtom> commonAtoms = Collections.synchronizedList(new ArrayList<IAtom>());
+        for (IAtom atom : mapping.keySet()) {
+            commonAtoms.add(ac.getAtom(getQueryIndex(atom)));
+        }
+        for (IAtom atom : commonAtoms) {
+            ac.removeAtomAndConnectedElectronContainers(atom);
+        }
+        return ac;
+    }
+
+    /**
+     * Returns Unique unmapped fragment in the target molecule.
+     * @return Common mapped fragment in the target molecule
+     */
+    public synchronized IAtomContainer getUniqueFragmentInTarget() {
+        IAtomContainer ac = target.getBuilder().newInstance(IAtomContainer.class, target);
+        List<IAtom> commonAtoms = Collections.synchronizedList(new ArrayList<IAtom>());
+        for (IAtom atom : mapping.values()) {
+            commonAtoms.add(ac.getAtom(getTargetIndex(atom)));
+        }
+        for (IAtom atom : commonAtoms) {
+            ac.removeAtomAndConnectedElectronContainers(atom);
+        }
+        return ac;
     }
 }
