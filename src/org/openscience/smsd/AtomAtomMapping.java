@@ -212,7 +212,7 @@ public final class AtomAtomMapping {
      * @return unique fragments in the query molecule
      * @throws CloneNotSupportedException  
      */
-    public synchronized IAtomContainerSet getUniqueFragmentInQuery() throws CloneNotSupportedException {
+    public synchronized IAtomContainerSet getUniqueFragmentsInQuery() throws CloneNotSupportedException {
         IAtomContainer ac = (IAtomContainer) query.clone();
         List<IAtom> commonAtoms = Collections.synchronizedList(new ArrayList<IAtom>());
         for (IAtom atom : mapping.keySet()) {
@@ -232,7 +232,7 @@ public final class AtomAtomMapping {
      * @return unique fragments in the target molecule
      * @throws CloneNotSupportedException  
      */
-    public synchronized IAtomContainerSet getUniqueFragmentInTarget() throws CloneNotSupportedException {
+    public synchronized IAtomContainerSet getUniqueFragmentsInTarget() throws CloneNotSupportedException {
         IAtomContainer ac = (IAtomContainer) target.clone();
         List<IAtom> commonAtoms = Collections.synchronizedList(new ArrayList<IAtom>());
         for (IAtom atom : mapping.values()) {
