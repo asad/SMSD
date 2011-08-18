@@ -33,8 +33,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
+import org.openscience.cdk.graph.ConnectivityChecker;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.interfaces.IAtomContainerSet;
 
 /**
  * Holds atom-atom mappings information between 
@@ -49,6 +52,7 @@ public final class AtomAtomMapping {
     private final IAtomContainer query;
     private final IAtomContainer target;
     private final Map<IAtom, IAtom> mapping;
+    private final Map<Integer, Integer> mappingIndex;
 
     /**
      * 
@@ -59,6 +63,7 @@ public final class AtomAtomMapping {
         this.query = query;
         this.target = target;
         this.mapping = Collections.synchronizedMap(new HashMap<IAtom, IAtom>());
+        this.mappingIndex = Collections.synchronizedMap(new TreeMap<Integer, Integer>());
     }
 
     /**
@@ -68,6 +73,7 @@ public final class AtomAtomMapping {
      */
     public synchronized void put(IAtom atom1, IAtom atom2) {
         mapping.put(atom1, atom2);
+        mappingIndex.put(query.getAtomNumber(atom1), target.getAtomNumber(atom2));
     }
 
     /**
@@ -95,10 +101,11 @@ public final class AtomAtomMapping {
 
     /**
      * 
-     * clear mapping
+     * Clear mappings
      */
     public synchronized void clear() {
         mapping.clear();
+        mappingIndex.clear();
     }
 
     /**
@@ -116,6 +123,14 @@ public final class AtomAtomMapping {
      */
     public synchronized Map<IAtom, IAtom> getMappings() {
         return Collections.unmodifiableMap(new HashMap<IAtom, IAtom>(mapping));
+    }
+
+    /**
+     * Returns atom-atom index mappings
+     * @return atom-atom index mappings
+     */
+    public synchronized Map<Integer, Integer> getMappingsIndex() {
+        return Collections.unmodifiableMap(new HashMap<Integer, Integer>(mappingIndex));
     }
 
     /**
@@ -139,7 +154,7 @@ public final class AtomAtomMapping {
     }
 
     /**
-     * Returns Query molecule
+     * Returns query molecule
      * @return the query
      */
     public synchronized IAtomContainer getQuery() {
@@ -147,7 +162,7 @@ public final class AtomAtomMapping {
     }
 
     /**
-     * Returns Target molecule
+     * Returns target molecule
      * @return the target
      */
     public synchronized IAtomContainer getTarget() {
@@ -155,11 +170,12 @@ public final class AtomAtomMapping {
     }
 
     /**
-     * Returns Common mapped fragment in the query molecule.
-     * @return Common mapped fragment in the query molecule
+     * Returns common mapped fragment in the query molecule.
+     * @return common mapped fragment in the query molecule
+     * @throws CloneNotSupportedException  
      */
-    public synchronized IAtomContainer getCommonFragmentInQuery() {
-        IAtomContainer ac = query.getBuilder().newInstance(IAtomContainer.class, query);
+    public synchronized IAtomContainer getCommonFragmentInQuery() throws CloneNotSupportedException {
+        IAtomContainer ac = (IAtomContainer) query.clone();
         List<IAtom> uniqueAtoms = Collections.synchronizedList(new ArrayList<IAtom>());
         for (IAtom atom : query.atoms()) {
             if (!mapping.containsKey(atom)) {
@@ -173,11 +189,12 @@ public final class AtomAtomMapping {
     }
 
     /**
-     * Returns Common mapped fragment in the target molecule.
-     * @return Common mapped fragment in the target molecule
+     * Returns common mapped fragment in the target molecule.
+     * @return common mapped fragment in the target molecule
+     * @throws CloneNotSupportedException  
      */
-    public synchronized IAtomContainer getCommonFragmentInTarget() {
-        IAtomContainer ac = target.getBuilder().newInstance(IAtomContainer.class, target);
+    public synchronized IAtomContainer getCommonFragmentInTarget() throws CloneNotSupportedException {
+        IAtomContainer ac = (IAtomContainer) target.clone();
         List<IAtom> uniqueAtoms = Collections.synchronizedList(new ArrayList<IAtom>());
         for (IAtom atom : target.atoms()) {
             if (!mapping.containsValue(atom)) {
@@ -191,11 +208,12 @@ public final class AtomAtomMapping {
     }
 
     /**
-     * Returns Unique unmapped fragment in the query molecule.
-     * @return Common mapped fragment in the query molecule
+     * Returns unique unmapped fragments in the query molecule.
+     * @return unique fragments in the query molecule
+     * @throws CloneNotSupportedException  
      */
-    public synchronized IAtomContainer getUniqueFragmentInQuery() {
-        IAtomContainer ac = query.getBuilder().newInstance(IAtomContainer.class, query);
+    public synchronized IAtomContainerSet getUniqueFragmentInQuery() throws CloneNotSupportedException {
+        IAtomContainer ac = (IAtomContainer) query.clone();
         List<IAtom> commonAtoms = Collections.synchronizedList(new ArrayList<IAtom>());
         for (IAtom atom : mapping.keySet()) {
             commonAtoms.add(ac.getAtom(getQueryIndex(atom)));
@@ -203,15 +221,19 @@ public final class AtomAtomMapping {
         for (IAtom atom : commonAtoms) {
             ac.removeAtomAndConnectedElectronContainers(atom);
         }
-        return ac;
+        // now we probably have a set of disconnected components
+        // so lets get a set of individual atom containers for
+        // corresponding to each component
+        return ConnectivityChecker.partitionIntoMolecules(ac);
     }
 
     /**
-     * Returns Unique unmapped fragment in the target molecule.
-     * @return Common mapped fragment in the target molecule
+     * Returns unique unmapped fragments in the target molecule.
+     * @return unique fragments in the target molecule
+     * @throws CloneNotSupportedException  
      */
-    public synchronized IAtomContainer getUniqueFragmentInTarget() {
-        IAtomContainer ac = target.getBuilder().newInstance(IAtomContainer.class, target);
+    public synchronized IAtomContainerSet getUniqueFragmentInTarget() throws CloneNotSupportedException {
+        IAtomContainer ac = (IAtomContainer) target.clone();
         List<IAtom> commonAtoms = Collections.synchronizedList(new ArrayList<IAtom>());
         for (IAtom atom : mapping.values()) {
             commonAtoms.add(ac.getAtom(getTargetIndex(atom)));
@@ -219,6 +241,9 @@ public final class AtomAtomMapping {
         for (IAtom atom : commonAtoms) {
             ac.removeAtomAndConnectedElectronContainers(atom);
         }
-        return ac;
+        // now we probably have a set of disconnected components
+        // so lets get a set of individual atom containers for
+        // corresponding to each component
+        return ConnectivityChecker.partitionIntoMolecules(ac);
     }
 }
