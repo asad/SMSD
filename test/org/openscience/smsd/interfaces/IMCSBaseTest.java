@@ -39,8 +39,7 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IMolecule;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
-import org.openscience.cdk.smsd.AtomAtomMapping;
-import org.openscience.cdk.smsd.interfaces.IMCSBase;
+import org.openscience.smsd.AtomAtomMapping;
 
 
 /**
