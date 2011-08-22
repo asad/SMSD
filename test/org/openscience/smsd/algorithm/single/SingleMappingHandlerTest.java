@@ -23,6 +23,7 @@ package org.openscience.smsd.algorithm.single;
 
 import java.io.IOException;
 import java.io.InputStream;
+import junit.framework.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.openscience.cdk.Atom;
@@ -30,15 +31,13 @@ import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.Molecule;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
-import static org.junit.Assert.*;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IMolecule;
 import org.openscience.cdk.io.IChemObjectReader.Mode;
 import org.openscience.cdk.io.MDLV2000Reader;
-import org.openscience.cdk.smsd.Isomorphism;
-import org.openscience.cdk.smsd.algorithm.single.SingleMappingHandler;
+import org.openscience.smsd.Isomorphism;
 import org.openscience.smsd.interfaces.AbstractMCSAlgorithmTest;
-import org.openscience.cdk.smsd.interfaces.Algorithm;
+import org.openscience.smsd.interfaces.Algorithm;
 
 
 /**
@@ -70,7 +69,7 @@ public class SingleMappingHandlerTest extends AbstractMCSAlgorithmTest {
         target.addAtom(atomTarget);
         SingleMappingHandler instance = new SingleMappingHandler();
         instance.set(source, target);
-        assertNotNull(instance.getFirstAtomMapping());
+        Assert.assertNotNull(instance.getFirstAtomMapping());
     }
 
     /**
@@ -88,7 +87,7 @@ public class SingleMappingHandlerTest extends AbstractMCSAlgorithmTest {
         target.addAtom(atomTarget);
         SingleMappingHandler instance = new SingleMappingHandler();
         instance.set(source, target);
-        assertNotNull(instance.getFirstAtomMapping());
+        Assert.assertNotNull(instance.getFirstAtomMapping());
     }
 
     /**
@@ -114,7 +113,7 @@ public class SingleMappingHandlerTest extends AbstractMCSAlgorithmTest {
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true);
         smsd1.setChemFilters(true, true, true);
         double score = 1.0;
-        assertEquals(score, smsd1.getTanimotoSimilarity(), 0.0001);
+        Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.0001);
     }
 
     /**
@@ -133,7 +132,7 @@ public class SingleMappingHandlerTest extends AbstractMCSAlgorithmTest {
         SingleMappingHandler instance = new SingleMappingHandler();
         instance.set(source, target);
         instance.searchMCS(true);
-        assertNotNull(instance.getFirstAtomMapping());
+        Assert.assertNotNull(instance.getFirstAtomMapping());
     }
 
     /**
@@ -152,8 +151,8 @@ public class SingleMappingHandlerTest extends AbstractMCSAlgorithmTest {
         SingleMappingHandler instance = new SingleMappingHandler();
         instance.set(source, target);
         instance.searchMCS(true);
-        assertNotNull(instance.getAllMapping());
-        assertEquals(1, instance.getAllMapping().size());
+        Assert.assertNotNull(instance.getAllMapping());
+        Assert.assertEquals(1, instance.getAllMapping().size());
     }
 
     /**
@@ -171,7 +170,7 @@ public class SingleMappingHandlerTest extends AbstractMCSAlgorithmTest {
         SingleMappingHandler instance = new SingleMappingHandler();
         instance.set(source, target);
         instance.searchMCS(true);
-        assertNotNull(instance.getAllMapping());
+        Assert.assertNotNull(instance.getAllMapping());
     }
 
     /**
@@ -189,7 +188,7 @@ public class SingleMappingHandlerTest extends AbstractMCSAlgorithmTest {
         SingleMappingHandler instance = new SingleMappingHandler();
         instance.set(source, target);
         instance.searchMCS(true);
-        assertNotNull(instance.getFirstMapping());
+        Assert.assertNotNull(instance.getFirstMapping());
     }
 
     /**
@@ -207,7 +206,7 @@ public class SingleMappingHandlerTest extends AbstractMCSAlgorithmTest {
         SingleMappingHandler instance = new SingleMappingHandler();
         instance.set(source, target);
         instance.searchMCS(true);
-        assertNotNull(instance.getAllAtomMapping());
+        Assert.assertNotNull(instance.getAllAtomMapping());
     }
 
     /**
@@ -225,6 +224,6 @@ public class SingleMappingHandlerTest extends AbstractMCSAlgorithmTest {
         SingleMappingHandler instance = new SingleMappingHandler();
         instance.set(source, target);
         instance.searchMCS(true);
-        assertNotNull(instance.getFirstAtomMapping());
+        Assert.assertNotNull(instance.getFirstAtomMapping());
     }
 }

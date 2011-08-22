@@ -21,6 +21,11 @@
  */
 package org.openscience.smsd.algorithm.rgraph;
 
+import org.openscience.cdk.io.MDLV2000Reader;
+import org.openscience.cdk.smiles.SmilesParser;
+import org.openscience.smsd.Isomorphism;
+import org.openscience.smsd.interfaces.AbstractMCSAlgorithmTest;
+import org.openscience.smsd.interfaces.Algorithm;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.logging.Level;
@@ -34,12 +39,6 @@ import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IMolecule;
 import org.openscience.cdk.io.IChemObjectReader.Mode;
-import org.openscience.cdk.io.MDLV2000Reader;
-import org.openscience.cdk.smiles.SmilesParser;
-import org.openscience.cdk.smsd.Isomorphism;
-import org.openscience.cdk.smsd.algorithm.rgraph.CDKMCSHandler;
-import org.openscience.smsd.interfaces.AbstractMCSAlgorithmTest;
-import org.openscience.cdk.smsd.interfaces.Algorithm;
 
 import static org.junit.Assert.*;
 
@@ -214,7 +213,7 @@ public class CDKMCSHandlerTest extends AbstractMCSAlgorithmTest {
         smsd1.searchMCS(true);
         assertNotNull(smsd1.getFirstMapping());
 
-        assertEquals(7, smsd1.getFirstAtomMapping().size());
+        assertEquals(7, smsd1.getFirstAtomMapping().getCount());
     }
 
     /**

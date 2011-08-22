@@ -24,13 +24,12 @@
 package org.openscience.smsd.algorithm.mcsplus;
 
 import java.util.ArrayList;
+import junit.framework.Assert;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.openscience.cdk.smsd.algorithm.mcsplus.BKKCKCF;
-import static org.junit.Assert.*;
 
 /**
  * @cdk.module test-smsd
@@ -61,7 +60,7 @@ public class BKKCKCFTest {
     public void testSomeMethod() {
         System.out.println("BKKCKCF");
         // TODO review the generated test code and remove the default call to fail.
-        assertNotNull(new BKKCKCF(new ArrayList<Integer>(), new ArrayList<Integer>(), new ArrayList<Integer>()));
+        Assert.assertNotNull(new BKKCKCF(new ArrayList<Integer>(), new ArrayList<Integer>(), new ArrayList<Integer>()));
     }
 
 }

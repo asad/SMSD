@@ -23,7 +23,6 @@ package org.openscience.smsd.interfaces;
 
 import org.junit.Assert;
 import org.junit.Test;
-import org.openscience.cdk.smsd.interfaces.AbstractMCSAlgorithm;
 
 /**
  * Unit test class to be extended by test classes for classes that

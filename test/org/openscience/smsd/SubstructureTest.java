@@ -37,7 +37,6 @@ import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.interfaces.IMolecule;
 import org.openscience.cdk.smiles.SmilesParser;
-import org.openscience.cdk.smsd.Substructure;
 
 /**
  * Unit testing for the {@link Substructure} class.
@@ -212,7 +211,7 @@ public class SubstructureTest {
         Substructure smsd1 = new Substructure(query, target, false);
         smsd1.findSubgraphs();
         smsd1.setChemFilters(true, true, true);
-        assertEquals(7, smsd1.getFirstAtomMapping().size());
+        assertEquals(7, smsd1.getFirstAtomMapping().getCount());
     }
 
     /**
@@ -249,7 +248,7 @@ public class SubstructureTest {
         Substructure smsd1 = new Substructure(query, target, false);
         smsd1.setChemFilters(true, true, true);
         smsd1.findSubgraphs();
-        assertEquals(7, smsd1.getFirstAtomMapping().size());
+        assertEquals(7, smsd1.getFirstAtomMapping().getCount());
     }
 
     /**

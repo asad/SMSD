@@ -38,8 +38,6 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({org.openscience.smsd.IsomorphismTest.class,
-    org.openscience.smsd.SMSDBondSensitiveTest.class,
-    org.openscience.smsd.SMSDBondInsensitiveTest.class,
     org.openscience.smsd.global.GlobalSuite.class,
     org.openscience.smsd.helper.HelperSuite.class,
     //        org.openscience.cdk.smsd.interfaces.InterfacesSuite.class,

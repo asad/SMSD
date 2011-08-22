@@ -27,7 +27,7 @@ import static org.junit.Assert.assertNotNull;
 import java.io.InputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
+import junit.framework.Assert;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -42,8 +42,8 @@ import org.openscience.cdk.interfaces.IMolecule;
 import org.openscience.cdk.io.IChemObjectReader.Mode;
 import org.openscience.cdk.io.MDLV2000Reader;
 import org.openscience.cdk.smiles.SmilesParser;
-import org.openscience.cdk.smsd.algorithm.vflib.VF2lib;
 import org.openscience.smsd.interfaces.AbstractMCSAlgorithmTest;
+
 
 /**
  * Unit testing for the {@link VF2lib} class.
@@ -76,7 +76,7 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
     @BeforeClass
     public static void setMCSAlgorithm() {
         AbstractMCSAlgorithmTest.setMCSAlgorithm(
-                new VF2lib());
+                new VF2MCSPlusHandler());
     }
 
     /**
@@ -238,7 +238,7 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
         smsd1.searchMCS(true);
         assertNotNull(smsd1.getFirstMapping());
 
-        assertEquals(7, smsd1.getFirstAtomMapping().size());
+        Assert.assertEquals(7, smsd1.getFirstAtomMapping().getCount());
     }
 
     /**
