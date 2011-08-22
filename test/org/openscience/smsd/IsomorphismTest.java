@@ -48,10 +48,8 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainerCreator;
 import org.openscience.cdk.normalize.SMSDNormalizer;
 import org.openscience.cdk.smiles.SmilesParser;
-import org.openscience.cdk.smsd.Isomorphism;
-import org.openscience.cdk.smsd.Substructure;
 import org.openscience.smsd.algorithm.mcsplus.MCSPlusHandlerTest;
-import org.openscience.cdk.smsd.interfaces.Algorithm;
+import org.openscience.smsd.interfaces.Algorithm;
 
 /**
  * Unit testing for the {@link Isomorphism} class.
@@ -141,7 +139,7 @@ public class IsomorphismTest {
             IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
             Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true);
             smsd1.setChemFilters(true, true, true);
-            Assert.assertEquals(7, smsd1.getFirstAtomMapping().size());
+            Assert.assertEquals(7, smsd1.getFirstAtomMapping().getCount());
             Assert.assertEquals(2, smsd1.getAllAtomMapping().size());
             Assert.assertNotNull(smsd1.getFirstAtomMapping());
         } catch (InvalidSmilesException ex) {
@@ -280,7 +278,7 @@ public class IsomorphismTest {
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true);
         smsd1.setChemFilters(true, true, true);
         Assert.assertNotNull(smsd1.getFirstAtomMapping());
-        Assert.assertEquals(7, smsd1.getFirstAtomMapping().size());
+        Assert.assertEquals(7, smsd1.getFirstAtomMapping().getCount());
     }
 
     /**
@@ -297,7 +295,7 @@ public class IsomorphismTest {
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true);
         smsd1.setChemFilters(true, true, true);
         Assert.assertNotNull(smsd1.getFirstAtomMapping());
-        Assert.assertEquals(7, smsd1.getFirstAtomMapping().size());
+        Assert.assertEquals(7, smsd1.getFirstAtomMapping().getCount());
     }
 
     /**
