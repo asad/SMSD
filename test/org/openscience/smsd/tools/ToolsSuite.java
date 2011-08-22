@@ -21,7 +21,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-
 package org.openscience.smsd.tools;
 
 import org.junit.After;
@@ -38,8 +37,7 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({org.openscience.smsd.tools.BondEnergiesTest.class,
     org.openscience.smsd.tools.MoleculeSanityCheckTest.class,
-        org.openscience.smsd.tools.SMSDNormalizerTest.class,
-        org.openscience.smsd.tools.TimeManagerTest.class})
+    org.openscience.smsd.tools.TimeManagerTest.class})
 public class ToolsSuite {
 
     @BeforeClass
@@ -57,5 +55,4 @@ public class ToolsSuite {
     @After
     public void tearDown() throws Exception {
     }
-
 }
