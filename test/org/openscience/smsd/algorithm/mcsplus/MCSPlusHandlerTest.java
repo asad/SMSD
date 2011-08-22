@@ -220,6 +220,7 @@ public class MCSPlusHandlerTest extends AbstractMCSAlgorithmTest {
     /**
      * Test of getFirstMapping method, of class MCSPlusHandler.
      * @throws InvalidSmilesException
+     * @throws CDKException  
      */
     @Test
     public void testGetFirstMapping() throws InvalidSmilesException, CDKException {
