@@ -381,8 +381,8 @@ public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase 
             for (Map.Entry<INode, IAtom> mapping : solution.entrySet()) {
                 IAtom qAtom = null;
                 IAtom tAtom = null;
-                Integer qIndex = 0;
-                Integer tIndex = 0;
+                Integer qIndex = -1;
+                Integer tIndex = -1;
 
                 if (RONP) {
                     qAtom = query.getAtom(mapping.getKey());
@@ -433,8 +433,8 @@ public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase 
             for (int index = 0; index < mapping.size(); index += 2) {
                 IAtom qAtom = null;
                 IAtom tAtom = null;
-                Integer qIndex = 0;
-                Integer tIndex = 0;
+                Integer qIndex = -1;
+                Integer tIndex = -1;
 
                 if (RONP) {
                     qAtom = getReactantMol().getAtom(mapping.get(index));
@@ -449,7 +449,7 @@ public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase 
                     tIndex = mapping.get(index);
                 }
 
-                if (qIndex != null && tIndex != null) {
+                if (qIndex != -1 && tIndex != -1) {
                     atomatomMapping.put(qAtom, tAtom);
                     indexindexMapping.put(qIndex, tIndex);
                 } else {
