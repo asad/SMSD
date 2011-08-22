@@ -52,12 +52,12 @@ import org.openscience.smsd.global.TimeOut;
 import org.openscience.smsd.tools.TimeManager;
 
 /**
- * This class should be used to find MCS between query
+ * This class should be used to find MCS between source
  * graph and target graph.
  *
  * First the algorithm runs VF lib {@link org.openscience.cdk.smsd.algorithm.vflib.map.VFMCSMapper}
  * and reports MCS between
- * run query and target graphs. Then these solutions are extended
+ * run source and target graphs. Then these solutions are extended
  * using McGregor {@link org.openscience.cdk.smsd.algorithm.mcgregor.McGregor}
  * algorithm where ever required.
  *
@@ -74,7 +74,7 @@ public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase 
     private List<Map<Integer, Integer>> allMCSCopy = null;
     private List<Map<INode, IAtom>> vfLibSolutions = null;
     private IQueryAtomContainer queryMol = null;
-    private IAtomContainer query = null;
+    private IAtomContainer source = null;
     private IAtomContainer target = null;
     private int vfMCSSize = -1;
     private boolean bond_Match_Flag = false;
@@ -130,7 +130,7 @@ public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase 
         boolean flag = isExtensionFeasible();
         if (flag && !vfLibSolutions.isEmpty()) {
             try {
-                GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(query, target, true);
+                GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(source, target, true);
                 List<Integer> comp_graph_nodes = gcg.getCompGraphNodes();
 
                 List<Integer> cEdges = gcg.getCEgdes();
@@ -146,14 +146,14 @@ public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase 
                 while (!maxCliqueSet.empty()) {
                     List<Integer> peek = maxCliqueSet.peek();
                     Map<Integer, Integer> mapping = new TreeMap<Integer, Integer>();
-                    AtomAtomMapping atomatomMapping = new AtomAtomMapping(query, target);
+                    AtomAtomMapping atomatomMapping = new AtomAtomMapping(source, target);
 
                     for (Integer value : peek) {
                         int[] index = getIndex(value.intValue(), comp_graph_nodes);
                         Integer qIndex = index[0];
                         Integer tIndex = index[1];
                         if (qIndex != -1 && tIndex != -1) {
-                            IAtom qAtom = query.getAtom(qIndex);
+                            IAtom qAtom = source.getAtom(qIndex);
                             IAtom tAtom = target.getAtom(tIndex);
                             atomatomMapping.put(qAtom, tAtom);
                             mapping.put(qIndex, tIndex);
@@ -205,7 +205,7 @@ public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase 
     @Override
     @TestMethod("testSet_MolHandler_MolHandler")
     public synchronized void set(IAtomContainer source, IAtomContainer target) {
-        this.query = source;
+        this.source = source;
         this.target = target;
     }
 
@@ -218,7 +218,7 @@ public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase 
     @TestMethod("testSet_IQueryAtomContainer_MolHandler")
     public void set(IQueryAtomContainer source, IAtomContainer target) {
         this.queryMol = source;
-        this.query = source;
+        this.source = source;
         this.target = target;
     }
 
@@ -266,7 +266,7 @@ public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase 
         if (allAtomMCS.iterator().hasNext()) {
             return allAtomMCS.iterator().next();
         }
-        return new AtomAtomMapping(query, target);
+        return new AtomAtomMapping(source, target);
     }
 
     private synchronized int checkCommonAtomCount(IAtomContainer reactantMolecule, IAtomContainer productMolecule) {
@@ -310,8 +310,8 @@ public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase 
             }
             setVFMappings(true, queryCompiler);
         } else if (countR <= countP) {
-//            queryCompiler = new QueryCompiler(this.query, isBondMatchFlag()).compile();
-            queryCompiler = new QueryCompiler(this.query, true).compile();
+//            queryCompiler = new QueryCompiler(this.source, isBondMatchFlag()).compile();
+            queryCompiler = new QueryCompiler(this.source, true).compile();
             mapper = new VFMCSMapper(queryCompiler);
             List<Map<INode, IAtom>> maps = mapper.getMaps(getProductMol());
             if (maps != null) {
@@ -345,10 +345,10 @@ public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase 
                 mgit = new McGregor(queryMol, target, mappings, isBondMatchFlag());
             } else {
                 if (countR > countP) {
-                    mgit = new McGregor(query, target, mappings, isBondMatchFlag());
+                    mgit = new McGregor(source, target, mappings, isBondMatchFlag());
                 } else {
                     extendMapping.clear();
-                    mgit = new McGregor(target, query, mappings, isBondMatchFlag());
+                    mgit = new McGregor(target, source, mappings, isBondMatchFlag());
                     ROPFlag = false;
                     for (Map.Entry<Integer, Integer> map : firstPassMappings.entrySet()) {
                         extendMapping.put(map.getValue(), map.getKey());
@@ -375,7 +375,7 @@ public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase 
     private synchronized void setVFMappings(boolean RONP, IQuery query) {
         int counter = 0;
         for (Map<INode, IAtom> solution : vfLibSolutions) {
-            AtomAtomMapping atomatomMapping = new AtomAtomMapping(queryMol, target);
+            AtomAtomMapping atomatomMapping = new AtomAtomMapping(source, target);
             Map<Integer, Integer> indexindexMapping = new TreeMap<Integer, Integer>();
 
             for (Map.Entry<INode, IAtom> mapping : solution.entrySet()) {
@@ -428,7 +428,7 @@ public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase 
         int counter = 0;
         for (List<Integer> mapping : mappings) {
 
-            AtomAtomMapping atomatomMapping = new AtomAtomMapping(query, target);
+            AtomAtomMapping atomatomMapping = new AtomAtomMapping(source, target);
             Map<Integer, Integer> indexindexMapping = new TreeMap<Integer, Integer>();
             for (int index = 0; index < mapping.size(); index += 2) {
                 IAtom qAtom = null;
@@ -487,7 +487,7 @@ public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase 
 
     private synchronized IAtomContainer getReactantMol() {
         if (queryMol == null) {
-            return query;
+            return source;
         } else {
             return queryMol;
         }
