@@ -46,6 +46,7 @@
  */
 package org.openscience.smsd.algorithm.matchers;
 
+import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -168,8 +169,23 @@ public final class DefaultVFAtomMatcher implements VFAtomMatcher {
 //        if (!matchMaximumNeighbors(targetContainer, targetAtom)) {
 //            return false;
 //        }
+        if (!matchRingAtoms(targetAtom) && !matchNonRingAtoms(targetAtom)) {
+            return false;
+        }
 
         return true;
+    }
+
+    private boolean matchRingAtoms(IAtom tAtom) {
+        return isRingAtom(qAtom) && isRingAtom(tAtom) ? true : false;
+    }
+
+    private boolean matchNonRingAtoms(IAtom tAtom) {
+        return !isRingAtom(qAtom) && !isRingAtom(tAtom) ? true : false;
+    }
+
+    private boolean isRingAtom(IAtom atom) {
+        return atom.getFlag(CDKConstants.ISINRING) ? true : false;
     }
 
     private boolean matchSymbol(IAtom atom) {
