@@ -74,12 +74,13 @@ public class VF2lib extends AbstractMCSAlgorithm implements IMCSBase {
     private IAtomContainer query = null;
     private IAtomContainer target = null;
     private int bestHitSize = -1;
-    private boolean bond_Match_Flag = false;
+    private boolean matchBonds;
     private int countR = 0;
     private int countP = 0;
     private final static ILoggingTool Logger =
             LoggingToolFactory.createLoggingTool(VF2MCSPlusHandler.class);
     private TimeManager timeManager = null;
+    private boolean shouldMatchRings;
 
     /**
      * @return the timeout
@@ -117,13 +118,14 @@ public class VF2lib extends AbstractMCSAlgorithm implements IMCSBase {
     /**
      *{@inheritDoc}
      *
-     * @param bondTypeMatch 
+     * @param matchBonds 
      */
     @Override
     @TestMethod("testSearchMCS")
-    public synchronized void searchMCS(boolean bondTypeMatch) {
+    public synchronized void searchMCS(boolean matchBonds, boolean shouldMatchRings) {
         setTimeManager(new TimeManager());
-        setBondMatchFlag(bondTypeMatch);
+        setBondMatchFlag(matchBonds);
+        this.setMatchRings(shouldMatchRings);
         searchVFMappings();
         boolean flag = isExtensionFeasible();
         if (flag && !vfLibSolutions.isEmpty()) {
@@ -265,7 +267,7 @@ public class VF2lib extends AbstractMCSAlgorithm implements IMCSBase {
             setVFMappings(true, queryCompiler);
         } else if (countR <= countP) {
 //            queryCompiler = new QueryCompiler(this.query, isBondMatchFlag()).compile();
-            queryCompiler = new QueryCompiler(this.query, true).compile();
+            queryCompiler = new QueryCompiler(this.query, true, false).compile();
             mapper = new VFMapper(queryCompiler);
             List<Map<INode, IAtom>> maps = mapper.getMaps(getProductMol());
             if (maps != null) {
@@ -287,10 +289,10 @@ public class VF2lib extends AbstractMCSAlgorithm implements IMCSBase {
             Map<Integer, Integer> extendMapping = new TreeMap<Integer, Integer>(firstPassMappings);
             McGregor mgit = null;
             if (queryMol != null) {
-                mgit = new McGregor(queryMol, target, mappings, isBondMatchFlag());
+                mgit = new McGregor(queryMol, target, mappings, isBondMatchFlag(), isMatchRings());
             } else {
                 extendMapping.clear();
-                mgit = new McGregor(target, query, mappings, isBondMatchFlag());
+                mgit = new McGregor(target, query, mappings, isBondMatchFlag(), isMatchRings());
                 ROPFlag = false;
                 for (Map.Entry<Integer, Integer> map : firstPassMappings.entrySet()) {
                     extendMapping.put(map.getValue(), map.getKey());
@@ -412,14 +414,14 @@ public class VF2lib extends AbstractMCSAlgorithm implements IMCSBase {
      * @return the shouldMatchBonds
      */
     public synchronized boolean isBondMatchFlag() {
-        return bond_Match_Flag;
+        return matchBonds;
     }
 
     /**
      * @param shouldMatchBonds the shouldMatchBonds to set
      */
     public synchronized void setBondMatchFlag(boolean shouldMatchBonds) {
-        this.bond_Match_Flag = shouldMatchBonds;
+        this.matchBonds = shouldMatchBonds;
     }
 
     private synchronized IAtomContainer getReactantMol() {
@@ -440,5 +442,19 @@ public class VF2lib extends AbstractMCSAlgorithm implements IMCSBase {
             return true;
         }
         return false;
+    }
+
+    /**
+     * @return the shouldMatchRings
+     */
+    public boolean isMatchRings() {
+        return shouldMatchRings;
+    }
+
+    /**
+     * @param shouldMatchRings the shouldMatchRings to set
+     */
+    public void setMatchRings(boolean shouldMatchRings) {
+        this.shouldMatchRings = shouldMatchRings;
     }
 }

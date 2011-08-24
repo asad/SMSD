@@ -99,7 +99,7 @@ public class CDKSubGraphHandler extends AbstractSubGraph implements IMCSBase {
      */
     @Override
     @TestMethod("testSearchMCS")
-    public boolean isSubgraph(boolean shouldMatchBonds) {
+    public boolean isSubgraph(boolean shouldMatchBonds, boolean shouldMatchRings) {
 
         CDKRMapHandler rmap = new CDKRMapHandler();
 
@@ -107,15 +107,15 @@ public class CDKSubGraphHandler extends AbstractSubGraph implements IMCSBase {
 
             if ((source.getAtomCount() == target.getAtomCount()) && source.getBondCount() == target.getBondCount()) {
                 rOnPFlag = true;
-                rmap.calculateIsomorphs(source, target, shouldMatchBonds);
+                rmap.calculateIsomorphs(source, target, shouldMatchBonds, shouldMatchRings);
 
             } else if (source.getAtomCount() > target.getAtomCount() && source.getBondCount() != target.getBondCount()) {
                 rOnPFlag = true;
-                rmap.calculateSubGraphs(source, target, shouldMatchBonds);
+                rmap.calculateSubGraphs(source, target, shouldMatchBonds, shouldMatchRings);
 
             } else {
                 rOnPFlag = false;
-                rmap.calculateSubGraphs(target, source, shouldMatchBonds);
+                rmap.calculateSubGraphs(target, source, shouldMatchBonds, shouldMatchRings);
             }
 
             setAllMapping();
@@ -134,13 +134,14 @@ public class CDKSubGraphHandler extends AbstractSubGraph implements IMCSBase {
      * @param mol
      * @param mcss
      * @param shouldMatchBonds 
+     * @param shouldMatchRings 
      * @return IMolecule Set
      * @throws CDKException 
      */
-    protected IMoleculeSet getUncommon(IAtomContainer mol, IAtomContainer mcss, boolean shouldMatchBonds) throws CDKException {
+    protected IMoleculeSet getUncommon(IAtomContainer mol, IAtomContainer mcss, boolean shouldMatchBonds, boolean shouldMatchRings) throws CDKException {
         ArrayList<Integer> atomSerialsToDelete = new ArrayList<Integer>();
 
-        List<List<CDKRMap>> matches = CDKMCS.getSubgraphAtomsMaps(mol, mcss, shouldMatchBonds);
+        List<List<CDKRMap>> matches = CDKMCS.getSubgraphAtomsMaps(mol, mcss, shouldMatchBonds, shouldMatchRings);
         List<CDKRMap> mapList = matches.get(0);
         for (Object o : mapList) {
             CDKRMap rmap = (CDKRMap) o;

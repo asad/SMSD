@@ -18,6 +18,7 @@ import org.openscience.cdk.isomorphism.matchers.QueryAtomContainer;
 import org.openscience.smsd.global.TimeOut;
 import org.openscience.smsd.tools.TimeManager;
 import org.openscience.cdk.tools.manipulator.BondManipulator;
+import org.openscience.smsd.algorithm.matchers.DefaultRGraphAtomMatcher;
 
 /**
  *  This class implements atom multipurpose structure comparison tool.
@@ -25,7 +26,7 @@ import org.openscience.cdk.tools.manipulator.BondManipulator;
  *  mapping of atom substructure in another structure, and the mapping of
  *  two isomorphic structures.
  *
- *  <p>Structure comparison may be associated to bondA1 constraints
+ *  <p>Structure comparison may be associated to bondA constraints
  *  (mandatory bonds, e.graphContainer. scaffolds, reaction cores,...) on each source graph.
  *  The constraint flexibility allows atom number of interesting queries.
  *  The substructure analysis relies on the CDKRGraph generic class (see: CDKRGraph)
@@ -50,7 +51,7 @@ import org.openscience.cdk.tools.manipulator.BondManipulator;
  *    As atom result of the adjacency perception used in this algorithm
  *    there is atom single limitation : cyclopropane and isobutane are seen as isomorph
  *    This is due to the fact that these two compounds are the only ones where
- *    each bondA1 is connected two each other bondA1 (bonds are fully conected)
+ *    each bondA is connected two each other bondA (bonds are fully conected)
  *    with the same number of bonds and still they have different structures
  *    The algotihm could be easily enhanced with atom simple atom mapping manager
  *    to provide an atom level overlap definition that would reveal this case.
@@ -91,10 +92,11 @@ public class CDKMCS {
      * @param  g1  first molecule. Must not be an {@link IQueryAtomContainer}.
      * @param  g2  second molecule. May be an {@link IQueryAtomContainer}.
      * @param shouldMatchBonds 
+     * @param shouldMatchRings 
      * @return     true if the 2 molecule are isomorph
      * @throws     CDKException if the first molecule is an instance of IQueryAtomContainer
      */
-    public static boolean isIsomorph(IAtomContainer g1, IAtomContainer g2, boolean shouldMatchBonds) throws CDKException {
+    public static boolean isIsomorph(IAtomContainer g1, IAtomContainer g2, boolean shouldMatchBonds, boolean shouldMatchRings) throws CDKException {
         if (g1 instanceof IQueryAtomContainer) {
             throw new CDKException(
                     "The first IAtomContainer must not be an IQueryAtomContainer");
@@ -118,7 +120,7 @@ public class CDKMCS {
                 return g1.getAtom(0).getSymbol().equals(atomSymbol);
             }
         }
-        return (getIsomorphMap(g1, g2, shouldMatchBonds) != null);
+        return (getIsomorphMap(g1, g2, shouldMatchBonds, shouldMatchRings) != null);
     }
 
     /**
@@ -126,9 +128,12 @@ public class CDKMCS {
      *
      * @param  g1  first molecule. Must not be an {@link IQueryAtomContainer}.
      * @param  g2  second molecule. May be an {@link IQueryAtomContainer}.
+     * @param shouldMatchBonds 
+     * @param shouldMatchRings 
      * @return     the first isomorph mapping found projected of g1. This is a List of CDKRMap objects containing Ids of matching bonds.
+     * @throws CDKException  
      */
-    public static List<CDKRMap> getIsomorphMap(IAtomContainer g1, IAtomContainer g2, boolean shouldMatchBonds) throws CDKException {
+    public static List<CDKRMap> getIsomorphMap(IAtomContainer g1, IAtomContainer g2, boolean shouldMatchBonds, boolean shouldMatchRings) throws CDKException {
         if (g1 instanceof IQueryAtomContainer) {
             throw new CDKException(
                     "The first IAtomContainer must not be an IQueryAtomContainer");
@@ -136,7 +141,7 @@ public class CDKMCS {
 
         List<CDKRMap> result = null;
 
-        List<List<CDKRMap>> rMapsList = search(g1, g2, getBitSet(g1), getBitSet(g2), false, false, shouldMatchBonds);
+        List<List<CDKRMap>> rMapsList = search(g1, g2, getBitSet(g1), getBitSet(g2), false, false, shouldMatchBonds, shouldMatchRings);
 
         if (!rMapsList.isEmpty()) {
             result = rMapsList.get(0);
@@ -151,11 +156,13 @@ public class CDKMCS {
      * @param  g1  first molecule. Must not be an {@link IQueryAtomContainer}.
      * @param  g2  second molecule. May be an {@link IQueryAtomContainer}.
      * @param shouldMatchBonds 
+     * @param shouldMatchRings 
      * @return     the first isomorph atom mapping found projected on g1.
      * This is a List of CDKRMap objects containing Ids of matching atoms.
      * @throws CDKException if the first molecules is not an instance of {@link IQueryAtomContainer}
      */
-    public static List<CDKRMap> getIsomorphAtomsMap(IAtomContainer g1, IAtomContainer g2, boolean shouldMatchBonds) throws CDKException {
+    public static List<CDKRMap> getIsomorphAtomsMap(IAtomContainer g1, IAtomContainer g2,
+            boolean shouldMatchBonds, boolean shouldMatchRings) throws CDKException {
         if (g1 instanceof IQueryAtomContainer) {
             throw new CDKException(
                     "The first IAtomContainer must not be an IQueryAtomContainer");
@@ -163,7 +170,7 @@ public class CDKMCS {
 
         List<CDKRMap> list = checkSingleAtomCases(g1, g2);
         if (list == null) {
-            return makeAtomsMapOfBondsMap(CDKMCS.getIsomorphMap(g1, g2, shouldMatchBonds), g1, g2);
+            return makeAtomsMapOfBondsMap(CDKMCS.getIsomorphMap(g1, g2, shouldMatchBonds, shouldMatchRings), g1, g2);
         } else if (list.isEmpty()) {
             return null;
         } else {
@@ -178,20 +185,22 @@ public class CDKMCS {
      * @param  g1  first molecule. Must not be an {@link IQueryAtomContainer}.
      * @param  g2  second molecule. May be an {@link IQueryAtomContainer}.
      * @param shouldMatchBonds 
+     * @param shouldMatchRings 
      * @return     the list of all the 'mappings'
      * @throws CDKException  
      */
-    public static List<List<CDKRMap>> getIsomorphMaps(IAtomContainer g1, IAtomContainer g2, boolean shouldMatchBonds) throws CDKException {
-        return search(g1, g2, getBitSet(g1), getBitSet(g2), true, true, shouldMatchBonds);
+    public static List<List<CDKRMap>> getIsomorphMaps(IAtomContainer g1, IAtomContainer g2,
+            boolean shouldMatchBonds, boolean shouldMatchRings) throws CDKException {
+        return search(g1, g2, getBitSet(g1), getBitSet(g2), true, true, shouldMatchBonds, shouldMatchRings);
     }
 
     /////
     // Subgraph search
     /**
-     * Returns all the subgraph 'bond mappings' found for g2 in g1.
+     * Returns all the subgraph 'bondA mappings' found for g2 in g1.
      * This is an {@link List} of {@link List}s of {@link CDKRMap} objects.
      *
-     * Note that if the query molecule is a single atom, then bond mappings
+     * Note that if the query molecule is a single atom, then bondA mappings
      * cannot be defined. In such a case, the {@link CDKRMap} object refers directly to
      * atom - atom mappings. Thus CDKRMap.id1 is the index of the target atom
      * and CDKRMap.id2 is the index of the matching query atom (in this case,
@@ -203,28 +212,31 @@ public class CDKMCS {
      * @param  g1  first molecule. Must not be an {@link IQueryAtomContainer}.
      * @param  g2  second molecule. May be an {@link IQueryAtomContainer}.
      * @param shouldMatchBonds 
+     * @param shouldMatchRings 
      * @return     the list of all the 'mappings' found projected of g1
      *
      * @throws CDKException 
      * @see #makeAtomsMapsOfBondsMaps(List, IAtomContainer, IAtomContainer)
      */
-    public static List<List<CDKRMap>> getSubgraphMaps(IAtomContainer g1, IAtomContainer g2, boolean shouldMatchBonds) throws CDKException {
-        return search(g1, g2, new BitSet(), getBitSet(g2), true, true, shouldMatchBonds);
+    public static List<List<CDKRMap>> getSubgraphMaps(IAtomContainer g1, IAtomContainer g2,
+            boolean shouldMatchBonds, boolean shouldMatchRings) throws CDKException {
+        return search(g1, g2, new BitSet(), getBitSet(g2), true, true, shouldMatchBonds, shouldMatchRings);
     }
 
     /**
-     * Returns the first subgraph 'bond mapping' found for g2 in g1.
+     * Returns the first subgraph 'bondA mapping' found for g2 in g1.
      *
      * @param  g1  first molecule. Must not be an {@link IQueryAtomContainer}.
      * @param  g2  second molecule. May be an {@link IQueryAtomContainer}.
      * @param shouldMatchBonds 
-     * @return     the first subgraph bond mapping found projected on g1. This is a {@link List} of
+     * @param shouldMatchRings 
+     * @return     the first subgraph bondA mapping found projected on g1. This is a {@link List} of
      *             {@link CDKRMap} objects containing Ids of matching bonds.
      * @throws CDKException  
      */
-    public static List<CDKRMap> getSubgraphMap(IAtomContainer g1, IAtomContainer g2, boolean shouldMatchBonds) throws CDKException {
+    public static List<CDKRMap> getSubgraphMap(IAtomContainer g1, IAtomContainer g2, boolean shouldMatchBonds, boolean shouldMatchRings) throws CDKException {
         List<CDKRMap> result = null;
-        List<List<CDKRMap>> rMapsList = search(g1, g2, new BitSet(), getBitSet(g2), false, false, shouldMatchBonds);
+        List<List<CDKRMap>> rMapsList = search(g1, g2, new BitSet(), getBitSet(g2), false, false, shouldMatchBonds, shouldMatchRings);
 
         if (!rMapsList.isEmpty()) {
             result = rMapsList.get(0);
@@ -241,17 +253,18 @@ public class CDKMCS {
      * @param  g1  first molecule. Must not be an {@link IQueryAtomContainer}.
      * @param  g2  substructure to be mapped. May be an {@link IQueryAtomContainer}.
      * @param shouldMatchBonds 
+     * @param shouldMatchRings 
      * @return     all subgraph atom mappings found projected on g1. This is a
      *             {@link List} of {@link CDKRMap} objects containing Ids of matching atoms.
      * @throws CDKException  
      */
     public static List<List<CDKRMap>> getSubgraphAtomsMaps(IAtomContainer g1,
-            IAtomContainer g2, boolean shouldMatchBonds)
+            IAtomContainer g2, boolean shouldMatchBonds, boolean shouldMatchRings)
             throws CDKException {
         List<CDKRMap> list = checkSingleAtomCases(g1, g2);
         if (list == null) {
             return makeAtomsMapsOfBondsMaps(
-                    CDKMCS.getSubgraphMaps(g1, g2, shouldMatchBonds), g1, g2);
+                    CDKMCS.getSubgraphMaps(g1, g2, shouldMatchBonds, shouldMatchRings), g1, g2);
         } else {
             List<List<CDKRMap>> atomsMap = new ArrayList<List<CDKRMap>>();
             atomsMap.add(list);
@@ -266,16 +279,17 @@ public class CDKMCS {
      * @param  g1 first molecule. Must not be an {@link IQueryAtomContainer}.
      * @param  g2 substructure to be mapped. May be an {@link IQueryAtomContainer}.
      * @param shouldMatchBonds 
+     * @param shouldMatchRings 
      * @return    the first subgraph atom mapping found projected on g1.
      *            This is a {@link List} of {@link CDKRMap} objects containing Ids of matching atoms.
      * @throws CDKException  
      */
     public static List<CDKRMap> getSubgraphAtomsMap(IAtomContainer g1,
-            IAtomContainer g2, boolean shouldMatchBonds)
+            IAtomContainer g2, boolean shouldMatchBonds, boolean shouldMatchRings)
             throws CDKException {
         List<CDKRMap> list = checkSingleAtomCases(g1, g2);
         if (list == null) {
-            return makeAtomsMapOfBondsMap(CDKMCS.getSubgraphMap(g1, g2, shouldMatchBonds), g1, g2);
+            return makeAtomsMapOfBondsMap(CDKMCS.getSubgraphMap(g1, g2, shouldMatchBonds, shouldMatchRings), g1, g2);
         } else if (list.isEmpty()) {
             return null;
         } else {
@@ -288,9 +302,13 @@ public class CDKMCS {
      *
      * @param  g1  first molecule. Must not be an {@link IQueryAtomContainer}.
      * @param  g2  second molecule. May be an {@link IQueryAtomContainer}.
+     * @param shouldMatchBonds 
+     * @param shouldMatchRings 
      * @return     true if g2 a subgraph on g1
+     * @throws CDKException  
      */
-    public static boolean isSubgraph(IAtomContainer g1, IAtomContainer g2, boolean shouldMatchBonds) throws CDKException {
+    public static boolean isSubgraph(IAtomContainer g1, IAtomContainer g2,
+            boolean shouldMatchBonds, boolean shouldMatchRings) throws CDKException {
         if (g1 instanceof IQueryAtomContainer) {
             throw new CDKException(
                     "The first IAtomContainer must not be an IQueryAtomContainer");
@@ -325,7 +343,7 @@ public class CDKMCS {
         if (!testSubgraphHeuristics(g1, g2)) {
             return false;
         }
-        return (getSubgraphMap(g1, g2, shouldMatchBonds) != null);
+        return (getSubgraphMap(g1, g2, shouldMatchBonds, shouldMatchRings) != null);
     }
 
     ////
@@ -336,12 +354,13 @@ public class CDKMCS {
      * @param  g1  first molecule. Must not be an {@link IQueryAtomContainer}.
      * @param  g2  second molecule. May be an {@link IQueryAtomContainer}.
      * @param shouldMatchBonds 
+     * @param shouldMatchRings 
      * @return     the list of all the maximal common substructure
      *             found projected of g1 (list of GraphAtomContainer )
      * @throws CDKException  
      */
-    public static List<IAtomContainer> getOverlaps(IAtomContainer g1, IAtomContainer g2, boolean shouldMatchBonds) throws CDKException {
-        List<List<CDKRMap>> rMapsList = search(g1, g2, new BitSet(), new BitSet(), true, false, shouldMatchBonds);
+    public static List<IAtomContainer> getOverlaps(IAtomContainer g1, IAtomContainer g2, boolean shouldMatchBonds, boolean shouldMatchRings) throws CDKException {
+        List<List<CDKRMap>> rMapsList = search(g1, g2, new BitSet(), new BitSet(), true, false, shouldMatchBonds, shouldMatchRings);
 
         // projection on G1
         List<IAtomContainer> graphList = projectList(rMapsList, g1, ID1);
@@ -349,11 +368,11 @@ public class CDKMCS {
         // reduction of set of solution (isomorphism and substructure
         // with different 'mappings'
 
-        return getMaximum(graphList, shouldMatchBonds);
+        return getMaximum(graphList, shouldMatchBonds, shouldMatchRings);
     }
 
     /**
-     * Transforms an GraphAtomContainer into a {@link BitSet} (which's size = number of bond
+     * Transforms an GraphAtomContainer into a {@link BitSet} (which's size = number of bondA
      * in the atomContainer, all the bit are set to true).
      *
      * @param  ac  {@link IAtomContainer} to transform
@@ -386,12 +405,14 @@ public class CDKMCS {
      * @param  g1  Description of the first molecule
      * @param  g2  Description of the second molecule
      * @param shouldMatchBonds 
+     * @param shouldMatchRings 
      * @return     the rGraph
      * @throws CDKException  
      */
-    public static CDKRGraph buildRGraph(IAtomContainer g1, IAtomContainer g2, boolean shouldMatchBonds) throws CDKException {
+    public static CDKRGraph buildRGraph(IAtomContainer g1, IAtomContainer g2,
+            boolean shouldMatchBonds, boolean shouldMatchRings) throws CDKException {
         CDKRGraph rGraph = new CDKRGraph();
-        nodeConstructor(rGraph, g1, g2, shouldMatchBonds);
+        nodeConstructor(rGraph, g1, g2, shouldMatchBonds, shouldMatchRings);
         arcConstructor(rGraph, g1, g2);
         return rGraph;
     }
@@ -411,34 +432,46 @@ public class CDKMCS {
      * @param  findAllMap        if true search all the 'mappings' for one same
      *                           structure
      * @param shouldMatchBonds 
+     * @param shouldMatchRings 
      * @return                   a List of Lists of {@link CDKRMap} objects that represent the search solutions
      * @throws CDKException  
      */
     public static List<List<CDKRMap>> search(IAtomContainer g1, IAtomContainer g2, BitSet c1,
-            BitSet c2, boolean findAllStructure, boolean findAllMap, boolean shouldMatchBonds) throws CDKException {
+            BitSet c2, boolean findAllStructure, boolean findAllMap,
+            boolean shouldMatchBonds, boolean shouldMatchRings) throws CDKException {
 
         // handle single query atom case separately
         if (g2.getAtomCount() == 1) {
             List<List<CDKRMap>> matches = new ArrayList<List<CDKRMap>>();
             IAtom queryAtom = g2.getAtom(0);
 
-            // we can have a IQueryAtomContainer *or* an IAtomContainer
-            if (queryAtom instanceof IQueryAtom) {
-                IQueryAtom qAtom = (IQueryAtom) queryAtom;
-                for (IAtom atom : g1.atoms()) {
-                    if (qAtom.matches(atom)) {
-                        List<CDKRMap> lmap = new ArrayList<CDKRMap>();
-                        lmap.add(new CDKRMap(g1.getAtomNumber(atom), 0));
-                        matches.add(lmap);
-                    }
-                }
-            } else {
-                for (IAtom atom : g1.atoms()) {
-                    if (queryAtom.getSymbol().equals(atom.getSymbol())) {
-                        List<CDKRMap> lmap = new ArrayList<CDKRMap>();
-                        lmap.add(new CDKRMap(g1.getAtomNumber(atom), 0));
-                        matches.add(lmap);
-                    }
+//            // we can have a IQueryAtomContainer *or* an IAtomContainer
+//            if (queryAtom instanceof IQueryAtom) {
+//                IQueryAtom qAtom = (IQueryAtom) queryAtom;
+//                for (IAtom atom : g1.atoms()) {
+//                    if (qAtom.matches(atom)) {
+//                        List<CDKRMap> lmap = new ArrayList<CDKRMap>();
+//                        lmap.add(new CDKRMap(g1.getAtomNumber(atom), 0));
+//                        matches.add(lmap);
+//                    }
+//                }
+//            } else {
+//                for (IAtom atom : g1.atoms()) {
+//                    if (queryAtom.getSymbol().equals(atom.getSymbol())) {
+//                        List<CDKRMap> lmap = new ArrayList<CDKRMap>();
+//                        lmap.add(new CDKRMap(g1.getAtomNumber(atom), 0));
+//                        matches.add(lmap);
+//                    }
+//                }
+//            }
+            //use atom matcher from SMSD
+            DefaultRGraphAtomMatcher defaultRGraphAtomMatcher =
+                    new DefaultRGraphAtomMatcher(g2, queryAtom, shouldMatchBonds, shouldMatchRings);
+            for (IAtom atom : g1.atoms()) {
+                if (defaultRGraphAtomMatcher.matches(g1, atom)) {
+                    List<CDKRMap> lmap = new ArrayList<CDKRMap>();
+                    lmap.add(new CDKRMap(g1.getAtomNumber(atom), 0));
+                    matches.add(lmap);
                 }
             }
             return matches;
@@ -448,7 +481,7 @@ public class CDKMCS {
         List<List<CDKRMap>> rMapsList = new ArrayList<List<CDKRMap>>();
 
         // build the CDKRGraph corresponding to this problem
-        CDKRGraph rGraph = buildRGraph(g1, g2, shouldMatchBonds);
+        CDKRGraph rGraph = buildRGraph(g1, g2, shouldMatchBonds, shouldMatchRings);
         // Set time data
         setTimeManager(new TimeManager());
         // parse the CDKRGraph with the given constrains and options
@@ -549,7 +582,8 @@ public class CDKMCS {
      * @return            the list cleaned
      * @throws CDKException if there is a problem in obtaining subgraphs
      */
-    private static List<IAtomContainer> getMaximum(List<IAtomContainer> graphList, boolean shouldMatchBonds) throws CDKException {
+    private static List<IAtomContainer> getMaximum(List<IAtomContainer> graphList,
+            boolean shouldMatchBonds, boolean shouldMatchRings) throws CDKException {
         List<IAtomContainer> reducedGraphList = new ArrayList<IAtomContainer>();
         reducedGraphList.addAll(graphList);
 
@@ -561,9 +595,9 @@ public class CDKMCS {
 
                 // Gi included in Gj or Gj included in Gi then
                 // reduce the irrelevant solution
-                if (isSubgraph(gj, gi, shouldMatchBonds)) {
+                if (isSubgraph(gj, gi, shouldMatchBonds, shouldMatchRings)) {
                     reducedGraphList.remove(gi);
-                } else if (isSubgraph(gi, gj, shouldMatchBonds)) {
+                } else if (isSubgraph(gi, gj, shouldMatchBonds, shouldMatchRings)) {
                     reducedGraphList.remove(gj);
                 }
             }
@@ -710,6 +744,100 @@ public class CDKMCS {
         return result;
     }
 
+//    /**
+//     *  Builds  the nodes of the {@link CDKRGraph} ( resolution graph ), from
+//     *  two atom containers (description of the two molecules to compare)
+//     *
+//     * @param  gr   the target CDKRGraph
+//     * @param  ac1   first molecule. Must not be an {@link IQueryAtomContainer}.
+//     * @param  ac2   second molecule. May be an {@link IQueryAtomContainer}.
+//     * @throws CDKException if it takes too long to identify overlaps
+//     */
+//    private static void nodeConstructor(CDKRGraph gr,
+//            IAtomContainer ac1, IAtomContainer ac2,
+//            boolean shouldMatchBonds, boolean shouldMatchRings) throws CDKException {
+//        if (ac1 instanceof IQueryAtomContainer) {
+//            throw new CDKException(
+//                    "The first IAtomContainer must not be an IQueryAtomContainer");
+//        }
+//
+//        // resets the target graph.
+//        gr.clear();
+//        
+//        if (shouldMatchBonds) {
+//            // compares each bondA of G1 to each bondA of G2
+//            for (int i = 0; i < ac1.getBondCount(); i++) {
+//                for (int j = 0; j < ac2.getBondCount(); j++) {
+//                    IBond bondB = ac2.getBond(j);
+//                    if (bondB instanceof IQueryBond) {
+//                        IQueryBond queryBond = (IQueryBond) bondB;
+//                        IQueryAtom atom1 = (IQueryAtom) (bondB.getAtom(0));
+//                        IQueryAtom atom2 = (IQueryAtom) (bondB.getAtom(1));
+//                        IBond bondA = ac1.getBond(i);
+//                        if (queryBond.matches(bondA)) {
+//                            // ok, bonds match
+//                            if (atom1.matches(bondA.getAtom(0)) && atom2.matches(bondA.getAtom(1))
+//                                    || atom1.matches(bondA.getAtom(1)) && atom2.matches(bondA.getAtom(0))) {
+//                                // ok, atoms match in either order
+//                                gr.addNode(new CDKRNode(i, j));
+//                            }
+//                        }
+//                    } else {
+//                        // if both bonds are compatible then create an association node
+//                        // in the resolution graph
+//                        if (( // bondA type conditions
+//                                ( // same bondA order and same aromaticity flag (either both on or off)
+//                                ac1.getBond(i).getOrder() == ac2.getBond(j).getOrder()
+//                                && ac1.getBond(i).getFlag(CDKConstants.ISAROMATIC)
+//                                == ac2.getBond(j).getFlag(CDKConstants.ISAROMATIC))
+//                                || ( // both bondA are aromatic
+//                                ac1.getBond(i).getFlag(CDKConstants.ISAROMATIC)
+//                                && ac2.getBond(j).getFlag(CDKConstants.ISAROMATIC)))
+//                                && ( // atome type conditions
+//                                ( // a1 = a2 && b1 = b2
+//                                ac1.getBond(i).getAtom(0).getSymbol().equals(ac2.getBond(j).getAtom(0).getSymbol())
+//                                && ac1.getBond(i).getAtom(1).getSymbol().equals(ac2.getBond(j).getAtom(1).getSymbol()))
+//                                || ( // a1 = b2 && b1 = a2
+//                                ac1.getBond(i).getAtom(0).getSymbol().equals(ac2.getBond(j).getAtom(1).getSymbol())
+//                                && ac1.getBond(i).getAtom(1).getSymbol().equals(ac2.getBond(j).getAtom(0).getSymbol())))) {
+//                            gr.addNode(new CDKRNode(i, j));
+//                        }
+//                    }
+//                }
+//            }
+//        } else {
+//            // compares each bondA of G1 to each bondA of G2
+//            for (int i = 0; i < ac1.getBondCount(); i++) {
+//                for (int j = 0; j < ac2.getBondCount(); j++) {
+//                    IBond bondB = ac2.getBond(j);
+//                    if (bondB instanceof IQueryBond) {
+//                        IQueryAtom atom1 = (IQueryAtom) (bondB.getAtom(0));
+//                        IQueryAtom atom2 = (IQueryAtom) (bondB.getAtom(1));
+//                        IBond bondA = ac1.getBond(i);
+//                        // ok, bonds match
+//                        if (atom1.matches(bondA.getAtom(0)) && atom2.matches(bondA.getAtom(1))
+//                                || atom1.matches(bondA.getAtom(1)) && atom2.matches(bondA.getAtom(0))) {
+//                            // ok, atoms match in either order
+//                            gr.addNode(new CDKRNode(i, j));
+//                        }
+//                        
+//                    } else {
+//                        // if both bonds are compatible then create an association node
+//                        // in the resolution graph
+//                        if (// atome type conditions
+//                                ( // a1 = a2 && b1 = b2
+//                                ac1.getBond(i).getAtom(0).getSymbol().equals(ac2.getBond(j).getAtom(0).getSymbol())
+//                                && ac1.getBond(i).getAtom(1).getSymbol().equals(ac2.getBond(j).getAtom(1).getSymbol()))
+//                                || ( // a1 = b2 && b1 = a2
+//                                ac1.getBond(i).getAtom(0).getSymbol().equals(ac2.getBond(j).getAtom(1).getSymbol())
+//                                && ac1.getBond(i).getAtom(1).getSymbol().equals(ac2.getBond(j).getAtom(0).getSymbol()))) {
+//                            gr.addNode(new CDKRNode(i, j));
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
     /**
      *  Builds  the nodes of the {@link CDKRGraph} ( resolution graph ), from
      *  two atom containers (description of the two molecules to compare)
@@ -719,7 +847,9 @@ public class CDKMCS {
      * @param  ac2   second molecule. May be an {@link IQueryAtomContainer}.
      * @throws CDKException if it takes too long to identify overlaps
      */
-    private static void nodeConstructor(CDKRGraph gr, IAtomContainer ac1, IAtomContainer ac2, boolean shouldMatchBonds) throws CDKException {
+    private static void nodeConstructor(CDKRGraph gr,
+            IAtomContainer ac1, IAtomContainer ac2,
+            boolean shouldMatchBonds, boolean shouldMatchRings) throws CDKException {
         if (ac1 instanceof IQueryAtomContainer) {
             throw new CDKException(
                     "The first IAtomContainer must not be an IQueryAtomContainer");
@@ -728,79 +858,84 @@ public class CDKMCS {
         // resets the target graph.
         gr.clear();
 
-        if (shouldMatchBonds) {
-            // compares each bond of G1 to each bond of G2
-            for (int i = 0; i < ac1.getBondCount(); i++) {
-                for (int j = 0; j < ac2.getBondCount(); j++) {
-                    IBond bondA2 = ac2.getBond(j);
-                    if (bondA2 instanceof IQueryBond) {
-                        IQueryBond queryBond = (IQueryBond) bondA2;
-                        IQueryAtom atom1 = (IQueryAtom) (bondA2.getAtom(0));
-                        IQueryAtom atom2 = (IQueryAtom) (bondA2.getAtom(1));
-                        IBond bond = ac1.getBond(i);
-                        if (queryBond.matches(bond)) {
-                            // ok, bonds match
-                            if (atom1.matches(bond.getAtom(0)) && atom2.matches(bond.getAtom(1))
-                                    || atom1.matches(bond.getAtom(1)) && atom2.matches(bond.getAtom(0))) {
-                                // ok, atoms match in either order
-                                gr.addNode(new CDKRNode(i, j));
-                            }
-                        }
-                    } else {
-                        // if both bonds are compatible then create an association node
-                        // in the resolution graph
-                        if (( // bond type conditions
-                                ( // same bond order and same aromaticity flag (either both on or off)
-                                ac1.getBond(i).getOrder() == ac2.getBond(j).getOrder()
-                                && ac1.getBond(i).getFlag(CDKConstants.ISAROMATIC)
-                                == ac2.getBond(j).getFlag(CDKConstants.ISAROMATIC))
-                                || ( // both bond are aromatic
-                                ac1.getBond(i).getFlag(CDKConstants.ISAROMATIC)
-                                && ac2.getBond(j).getFlag(CDKConstants.ISAROMATIC)))
-                                && ( // atome type conditions
-                                ( // a1 = a2 && b1 = b2
-                                ac1.getBond(i).getAtom(0).getSymbol().equals(ac2.getBond(j).getAtom(0).getSymbol())
-                                && ac1.getBond(i).getAtom(1).getSymbol().equals(ac2.getBond(j).getAtom(1).getSymbol()))
-                                || ( // a1 = b2 && b1 = a2
-                                ac1.getBond(i).getAtom(0).getSymbol().equals(ac2.getBond(j).getAtom(1).getSymbol())
-                                && ac1.getBond(i).getAtom(1).getSymbol().equals(ac2.getBond(j).getAtom(0).getSymbol())))) {
-                            gr.addNode(new CDKRNode(i, j));
-                        }
-                    }
-                }
-            }
-        } else {
-            // compares each bond of G1 to each bond of G2
-            for (int i = 0; i < ac1.getBondCount(); i++) {
-                for (int j = 0; j < ac2.getBondCount(); j++) {
-                    IBond bondA2 = ac2.getBond(j);
-                    if (bondA2 instanceof IQueryBond) {
-                        IQueryAtom atom1 = (IQueryAtom) (bondA2.getAtom(0));
-                        IQueryAtom atom2 = (IQueryAtom) (bondA2.getAtom(1));
-                        IBond bond = ac1.getBond(i);
-                        // ok, bonds match
-                        if (atom1.matches(bond.getAtom(0)) && atom2.matches(bond.getAtom(1))
-                                || atom1.matches(bond.getAtom(1)) && atom2.matches(bond.getAtom(0))) {
-                            // ok, atoms match in either order
-                            gr.addNode(new CDKRNode(i, j));
-                        }
 
-                    } else {
-                        // if both bonds are compatible then create an association node
-                        // in the resolution graph
-                        if (// atome type conditions
-                                ( // a1 = a2 && b1 = b2
-                                ac1.getBond(i).getAtom(0).getSymbol().equals(ac2.getBond(j).getAtom(0).getSymbol())
-                                && ac1.getBond(i).getAtom(1).getSymbol().equals(ac2.getBond(j).getAtom(1).getSymbol()))
-                                || ( // a1 = b2 && b1 = a2
-                                ac1.getBond(i).getAtom(0).getSymbol().equals(ac2.getBond(j).getAtom(1).getSymbol())
-                                && ac1.getBond(i).getAtom(1).getSymbol().equals(ac2.getBond(j).getAtom(0).getSymbol()))) {
-                            gr.addNode(new CDKRNode(i, j));
-                        }
+        // compares each bondA of G1 to each bondA of G2
+        for (int i = 0; i < ac1.getBondCount(); i++) {
+            IBond bondA = ac1.getBond(i);
+            IAtom atomA1 = bondA.getAtom(0);
+            IAtom atomA2 = bondA.getAtom(1);
+            for (int j = 0; j < ac2.getBondCount(); j++) {
+                IBond bondB = ac2.getBond(j);
+                IAtom atomB1 = bondB.getAtom(0);
+                IAtom atomB2 = bondB.getAtom(1);
+
+                // if both bonds are compatible then create an association node
+                // in the resolution graph
+
+                if (bondB instanceof IQueryBond) {
+                    IQueryBond queryBond = (IQueryBond) bondB;
+                    if (!queryBond.matches(bondA)) {
+                        continue;
                     }
+                } else if (shouldMatchBonds && !CDKMCS.BondMatcher(ac1.getBond(i), ac2.getBond(j))) {
+                    continue;
+                }
+
+                if (// atome type conditions
+                        (// a1 = a2 && b1 = b2
+                        AtomMatcher(ac1, atomA1, ac2, atomB1, shouldMatchBonds, shouldMatchRings)
+                        && AtomMatcher(ac1, atomA2, ac2, atomB2, shouldMatchBonds, shouldMatchRings))
+                        || (// a1 = b2 && b1 = a2
+                        AtomMatcher(ac1, atomA1, ac2, atomB2, shouldMatchBonds, shouldMatchRings)
+                        && AtomMatcher(ac1, atomA2, ac2, atomB1, shouldMatchBonds, shouldMatchRings))) {
+
+                    gr.addNode(new CDKRNode(i, j));
                 }
             }
         }
+    }
+
+    /**
+     * SMSD based Atom matcher
+     * @param queryAtomContainer
+     * @param queryAtom
+     * @param targetAtomContainer
+     * @param targetAtom
+     * @param shouldMatchBonds
+     * @param shouldMatchRings
+     * @return
+     */
+    public static boolean AtomMatcher(
+            IAtomContainer queryAtomContainer,
+            IAtom queryAtom,
+            IAtomContainer targetAtomContainer,
+            IAtom targetAtom,
+            boolean shouldMatchBonds,
+            boolean shouldMatchRings) {
+        DefaultRGraphAtomMatcher defaultRGraphAtomMatcher = new DefaultRGraphAtomMatcher(queryAtomContainer, queryAtom, shouldMatchBonds, shouldMatchRings);
+        return defaultRGraphAtomMatcher.matches(targetAtomContainer, targetAtom);
+    }
+
+    /**
+     * SMSD based matcher
+     * @param queryBond
+     * @param targetBond
+     * @return
+     */
+    public static boolean BondMatcher(
+            IBond queryBond,
+            IBond targetBond) {
+        if ( // bondA type conditions
+                ( // same bondA order and same aromaticity flag (either both on or off)
+                queryBond.getOrder() == targetBond.getOrder()
+                && queryBond.getFlag(CDKConstants.ISAROMATIC)
+                == targetBond.getFlag(CDKConstants.ISAROMATIC))
+                || ( // both bondA are aromatic
+                queryBond.getFlag(CDKConstants.ISAROMATIC)
+                && targetBond.getFlag(CDKConstants.ISAROMATIC))) {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -869,8 +1004,8 @@ public class CDKMCS {
     /**
      * Determines if two bonds have at least one atom in common.
      *
-     * @param  a  first bond
-     * @param  b  second bond
+     * @param  a  first bondA
+     * @param  b  second bondA
      * @return    the symbol of the common atom or "" if
      *            the 2 bonds have no common atom
      */
@@ -879,10 +1014,10 @@ public class CDKMCS {
     }
 
     /**
-     *  Determines if 2 bond have 1 atom in common and returns the common symbol.
+     *  Determines if 2 bondA have 1 atom in common and returns the common symbol.
      *
-     * @param  a  first bond
-     * @param  b  second bond
+     * @param  a  first bondA
+     * @param  b  second bondA
      * @return    the symbol of the common atom or "" if
      *            the 2 bonds have no common atom
      */
@@ -899,10 +1034,10 @@ public class CDKMCS {
     }
 
     /**
-     *  Determines if 2 bond have 1 atom in common if second is a query GraphAtomContainer.
+     *  Determines if 2 bondA have 1 atom in common if second is a query GraphAtomContainer.
      *
-     * @param  a1  first bond
-     * @param  b1  second bond
+     * @param  a1  first bondA
+     * @param  b1  second bondA
      * @return    the symbol of the common atom or "" if
      *            the 2 bonds have no common atom
      */
@@ -933,13 +1068,13 @@ public class CDKMCS {
     }
 
     /**
-     *  Determines if 2 bond have 1 atom in common if second is a query GraphAtomContainer
+     *  Determines if 2 bondA have 1 atom in common if second is a query GraphAtomContainer
      *  and whether the order of the atoms is correct (atoms match).
      *
-     * @param  bond1  first bond
-     * @param  bond2  second bond
-     * @param queryBond1 first query bond
-     * @param queryBond2 second query bond
+     * @param  bond1  first bondA
+     * @param  bond2  second bondA
+     * @param queryBond1 first query bondA
+     * @param queryBond2 second query bondA
      * @return    the symbol of the common atom or "" if the 2 bonds have no common atom
      */
     private static boolean queryAdjacencyAndOrder(IBond bond1, IBond bond2, IBond queryBond1, IBond queryBond2) {

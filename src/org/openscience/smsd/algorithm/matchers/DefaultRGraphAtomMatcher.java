@@ -51,6 +51,9 @@ import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
+import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
+import org.openscience.smsd.algorithm.matchers.ring.IRingMatcher;
+import org.openscience.smsd.algorithm.matchers.ring.RingMatcher;
 
 /**
  * Checks if atom is matching between query and target molecules.
@@ -65,7 +68,10 @@ public final class DefaultRGraphAtomMatcher implements AtomMatcher {
     private int maximumNeighbors;
     private String symbol = null;
     private IAtom qAtom = null;
-    private boolean shouldMatchBonds = false;
+    private boolean shouldMatchBonds;
+    private boolean shouldMatchRings;
+    private IRingMatcher ringMatcher;
+    private IQueryAtom smartQueryAtom;
 
     /**
      * @return the shouldMatchBonds
@@ -88,6 +94,10 @@ public final class DefaultRGraphAtomMatcher implements AtomMatcher {
         this.qAtom = null;
         symbol = null;
         maximumNeighbors = -1;
+        ringMatcher = null;
+        smartQueryAtom = null;
+        shouldMatchBonds = false;
+        shouldMatchRings = false;
     }
 
     /**
@@ -95,12 +105,26 @@ public final class DefaultRGraphAtomMatcher implements AtomMatcher {
      * @param queryContainer query atom container
      * @param atom query atom
      * @param shouldMatchBonds bond matching flag
+     * @param shouldMatchRings ring matching flag 
      */
-    public DefaultRGraphAtomMatcher(IAtomContainer queryContainer, IAtom atom, boolean shouldMatchBonds) {
+    public DefaultRGraphAtomMatcher(IAtomContainer queryContainer, IAtom atom, boolean shouldMatchBonds, boolean shouldMatchRings) {
         this();
         this.qAtom = atom;
         this.symbol = atom.getSymbol();
+        this.ringMatcher = new RingMatcher(atom);
+        this.shouldMatchRings = shouldMatchRings;
         setBondMatchFlag(shouldMatchBonds);
+    }
+
+    /**
+     * Constructor
+     * @param smartQueryAtom query atom
+     * @param container 
+     */
+    public DefaultRGraphAtomMatcher(IQueryAtom smartQueryAtom, IQueryAtomContainer container) {
+        this();
+        this.smartQueryAtom = smartQueryAtom;
+        this.symbol = smartQueryAtom.getSymbol();
     }
 
     /**
@@ -109,9 +133,11 @@ public final class DefaultRGraphAtomMatcher implements AtomMatcher {
      * @param template query atom
      * @param blockedPositions
      * @param shouldMatchBonds bond matching flag
+     * @param shouldMatchRings ring matching flag 
      */
-    public DefaultRGraphAtomMatcher(IAtomContainer queryContainer, IAtom template, int blockedPositions, boolean shouldMatchBonds) {
-        this(queryContainer, template, shouldMatchBonds);
+    public DefaultRGraphAtomMatcher(IAtomContainer queryContainer, IAtom template, int blockedPositions, boolean shouldMatchBonds, boolean shouldMatchRings) {
+        this(queryContainer, template, shouldMatchBonds, shouldMatchRings);
+        this.shouldMatchRings = shouldMatchRings;
         this.maximumNeighbors = countSaturation(queryContainer, template) - blockedPositions;
     }
 
@@ -123,19 +149,24 @@ public final class DefaultRGraphAtomMatcher implements AtomMatcher {
      */
     @Override
     public boolean matches(IAtomContainer targetContainer, IAtom targetAtom) {
-        if (qAtom instanceof IQueryAtom) {
-            if (!((IQueryAtom) qAtom).matches(targetAtom) && qAtom.getSymbol() == null) {
-                return false;
-            }
+        if (smartQueryAtom != null && qAtom == null && smartQueryAtom.getSymbol() == null) {
+            return smartQueryAtom.matches(targetAtom) ? true : false;
         } else if (!matchSymbol(targetAtom)) {
             return false;
         }
+
 //        if (!matchMaximumNeighbors(targetContainer, targetAtom)) {
 //            return false;
 //        }
-        if (!matchRingAtoms(targetAtom) && !matchNonRingAtoms(targetAtom)) {
-            return false;
+
+        if (shouldMatchRings) {
+            if (matchRingAtoms(targetAtom)) {
+                return ringMatcher.matches(targetAtom);
+            } else {
+                return matchNonRingAtoms(targetAtom);
+            }
         }
+
         return true;
     }
 

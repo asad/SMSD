@@ -72,16 +72,19 @@ public class QueryCompiler implements IQueryCompiler {
 
     private IAtomContainer molecule = null;
     private IQueryAtomContainer queryMolecule = null;
-    private boolean shouldMatchBonds = true;
+    private boolean shouldMatchBonds;
+    private boolean shouldMatchRings;
 
     /**
      * Construct query object from the molecule
      * @param molecule
-     * @param shouldMatchBonds 
+     * @param shouldMatchBonds
+     * @param shouldMatchRings  
      */
-    public QueryCompiler(IAtomContainer molecule, boolean shouldMatchBonds) {
+    public QueryCompiler(IAtomContainer molecule, boolean shouldMatchBonds, boolean shouldMatchRings) {
         this.setMolecule(molecule);
         this.setBondMatchFlag(shouldMatchBonds);
+        this.shouldMatchRings = shouldMatchRings;
     }
 
     /**
@@ -159,7 +162,7 @@ public class QueryCompiler implements IQueryCompiler {
     }
 
     private synchronized VFAtomMatcher createAtomMatcher(IAtomContainer mol, IAtom atom) {
-        return new DefaultVFAtomMatcher(mol, atom, isBondMatchFlag());
+        return new DefaultVFAtomMatcher(mol, atom, isBondMatchFlag(), isShouldMatchRings());
     }
 
     private synchronized VFBondMatcher createBondMatcher(IAtomContainer mol, IBond bond) {
@@ -186,5 +189,19 @@ public class QueryCompiler implements IQueryCompiler {
      */
     private synchronized void setBondMatchFlag(boolean shouldMatchBonds) {
         this.shouldMatchBonds = shouldMatchBonds;
+    }
+
+    /**
+     * @return the shouldMatchRings
+     */
+    public boolean isShouldMatchRings() {
+        return shouldMatchRings;
+    }
+
+    /**
+     * @param shouldMatchRings the shouldMatchRings to set
+     */
+    public void setShouldMatchRings(boolean shouldMatchRings) {
+        this.shouldMatchRings = shouldMatchRings;
     }
 }

@@ -95,14 +95,14 @@ public final class MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBa
      */
     @Override
     @TestMethod("testSearchMCS")
-    public synchronized void searchMCS(boolean shouldMatchBonds) {
+    public synchronized void searchMCS(boolean shouldMatchBonds, boolean shouldMatchRings) {
         List<List<Integer>> mappings = null;
         try {
             if (source.getAtomCount() > target.getAtomCount()) {
-                mappings = Collections.synchronizedList(new MCSPlus().getOverlaps(source, target, shouldMatchBonds));
+                mappings = Collections.synchronizedList(new MCSPlus().getOverlaps(source, target, shouldMatchBonds, false));
             } else {
                 flagExchange = true;
-                mappings = Collections.synchronizedList(new MCSPlus().getOverlaps(target, source, shouldMatchBonds));
+                mappings = Collections.synchronizedList(new MCSPlus().getOverlaps(target, source, shouldMatchBonds, false));
             }
             PostFilter.filter(mappings);
             setAllMapping();

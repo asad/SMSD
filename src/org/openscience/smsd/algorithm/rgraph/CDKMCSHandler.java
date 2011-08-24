@@ -98,7 +98,7 @@ public class CDKMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
      */
     @Override
     @TestMethod("testSearchMCS")
-    public synchronized void searchMCS(boolean shouldMatchBonds) {
+    public synchronized void searchMCS(boolean shouldMatchBonds, boolean shouldMatchRings) {
 
         CDKRMapHandler rmap = new CDKRMapHandler();
 
@@ -106,10 +106,10 @@ public class CDKMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
 
             if (source.getAtomCount() > target.getAtomCount()) {
                 rOnPFlag = true;
-                rmap.calculateOverlapsAndReduce(source, target, shouldMatchBonds);
+                rmap.calculateOverlapsAndReduce(source, target, shouldMatchBonds, shouldMatchRings);
             } else {
                 rOnPFlag = false;
-                rmap.calculateOverlapsAndReduce(target, source, shouldMatchBonds);
+                rmap.calculateOverlapsAndReduce(target, source, shouldMatchBonds, shouldMatchRings);
             }
 
             setAllMapping();
@@ -126,13 +126,15 @@ public class CDKMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
      * @param mol
      * @param mcss
      * @param shouldMatchBonds 
+     * @param shouldMatchRings 
      * @return IMolecule Set
      * @throws CDKException 
      */
-    protected synchronized IMoleculeSet getUncommon(IAtomContainer mol, IAtomContainer mcss, boolean shouldMatchBonds) throws CDKException {
+    protected synchronized IMoleculeSet getUncommon(IAtomContainer mol, IAtomContainer mcss,
+            boolean shouldMatchBonds, boolean shouldMatchRings) throws CDKException {
         ArrayList<Integer> atomSerialsToDelete = new ArrayList<Integer>();
 
-        List<List<CDKRMap>> matches = CDKMCS.getSubgraphAtomsMaps(mol, mcss, shouldMatchBonds);
+        List<List<CDKRMap>> matches = CDKMCS.getSubgraphAtomsMaps(mol, mcss, shouldMatchBonds, shouldMatchRings);
         List<CDKRMap> mapList = matches.get(0);
         for (Object o : mapList) {
             CDKRMap rmap = (CDKRMap) o;

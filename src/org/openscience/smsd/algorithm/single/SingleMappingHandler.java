@@ -95,7 +95,7 @@ public class SingleMappingHandler extends AbstractMCSAlgorithm implements IMCSBa
      */
     @Override
     @TestMethod("testSearchMCS")
-    public synchronized void searchMCS(boolean bondTypeMatch) {
+    public synchronized void searchMCS(boolean bondTypeMatch, boolean shouldMatchRings) {
         SingleMapping singleMapping = new SingleMapping();
         List<Map<IAtom, IAtom>> mappings = null;
         try {

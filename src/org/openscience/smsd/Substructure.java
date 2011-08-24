@@ -115,9 +115,10 @@ public final class Substructure extends BaseMapping {
      * Constructor for VF Substructure Algorithm 
      * @param query
      * @param target
-     * @param shouldMatchBonds  
+     * @param shouldMatchBonds Match bond types (i.e. double to double etc)
+     * @param matchRings Match ring atoms and ring size  
      */
-    public Substructure(IAtomContainer query, IAtomContainer target, boolean shouldMatchBonds) {
+    public Substructure(IAtomContainer query, IAtomContainer target, boolean shouldMatchBonds, boolean matchRings) {
         this.queryMol = null;
         this.mol1 = query;
         this.mol2 = target;
@@ -125,6 +126,14 @@ public final class Substructure extends BaseMapping {
         TimeOut tmo = TimeOut.getInstance();
         tmo.setCDKMCSTimeOut(0.15);
         this.bond_Match_Flag = shouldMatchBonds;
+        if (matchRings) {
+            try {
+                initializeMolecule(mol1);
+                initializeMolecule(mol2);
+            } catch (CDKException ex) {
+                Logger.error(Level.SEVERE, null, ex);
+            }
+        }
     }
 
     private synchronized boolean hasMap(AtomAtomMapping map, List<AtomAtomMapping> mapGlobal) {
@@ -202,7 +211,7 @@ public final class Substructure extends BaseMapping {
                 VF2lib mapper = new VF2lib();
                 List<AtomAtomMapping> mappingsVF2 = new ArrayList<AtomAtomMapping>();
                 mapper.set(queryMol, mol2);
-                mapper.searchMCS(bond_Match_Flag);
+                mapper.searchMCS(bond_Match_Flag, false);
                 List<AtomAtomMapping> atomMappings = mapper.getAllAtomMapping();
 //                    System.out.println("Mapping Size " + atomMapping.getCount());
                 if (!atomMappings.isEmpty()) {
@@ -216,7 +225,7 @@ public final class Substructure extends BaseMapping {
                 VF2lib mapper = new VF2lib();
                 List<AtomAtomMapping> mappingsVF2 = new ArrayList<AtomAtomMapping>();
                 mapper.set(mol1, mol2);
-                mapper.searchMCS(bond_Match_Flag);
+                mapper.searchMCS(bond_Match_Flag, false);
                 List<AtomAtomMapping> atomMappings = mapper.getAllAtomMapping();
 //                    System.out.println("Mapping Size " + atomMapping.getCount());
                 if (!atomMappings.isEmpty()) {
@@ -268,7 +277,7 @@ public final class Substructure extends BaseMapping {
         SingleMappingHandler mcs = null;
         mcs = new SingleMappingHandler();
         mcs.set(mol1, mol2);
-        mcs.searchMCS(shouldMatchBonds);
+        mcs.searchMCS(shouldMatchBonds, false);
         mcsList.addAll(mcs.getAllAtomMapping());
     }
 

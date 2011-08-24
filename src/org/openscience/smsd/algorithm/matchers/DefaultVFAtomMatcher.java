@@ -46,6 +46,8 @@
  */
 package org.openscience.smsd.algorithm.matchers;
 
+import org.openscience.smsd.algorithm.matchers.ring.RingMatcher;
+import org.openscience.smsd.algorithm.matchers.ring.IRingMatcher;
 import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtom;
@@ -67,8 +69,10 @@ public final class DefaultVFAtomMatcher implements VFAtomMatcher {
     private int maximumNeighbors;
     private String symbol = null;
     private IAtom qAtom = null;
-    private IQueryAtom smartQueryAtom = null;
-    private boolean shouldMatchBonds = false;
+    private IQueryAtom smartQueryAtom;
+    private boolean shouldMatchBonds;
+    private boolean shouldMatchRings;
+    private IRingMatcher ringMatcher;
 
     /**
      * @return the shouldMatchBonds
@@ -90,7 +94,11 @@ public final class DefaultVFAtomMatcher implements VFAtomMatcher {
     public DefaultVFAtomMatcher() {
         this.qAtom = null;
         symbol = null;
+        ringMatcher = null;
+        smartQueryAtom = null;
         maximumNeighbors = -1;
+        shouldMatchBonds = false;
+        shouldMatchRings = false;
     }
 
     /**
@@ -98,12 +106,15 @@ public final class DefaultVFAtomMatcher implements VFAtomMatcher {
      * @param queryContainer query atom container
      * @param atom query atom
      * @param shouldMatchBonds bond matching flag
+     * @param shouldMatchRings  ring matching flag
      */
-    public DefaultVFAtomMatcher(IAtomContainer queryContainer, IAtom atom, boolean shouldMatchBonds) {
+    public DefaultVFAtomMatcher(IAtomContainer queryContainer, IAtom atom, boolean shouldMatchBonds, boolean shouldMatchRings) {
         this();
         this.qAtom = atom;
         this.symbol = atom.getSymbol();
+        this.ringMatcher = new RingMatcher(atom);
         setBondMatchFlag(shouldMatchBonds);
+        this.shouldMatchRings = shouldMatchRings;
         this.maximumNeighbors = queryContainer.getConnectedAtomsCount(atom);
 
 //        System.out.println("Atom " + atom.getSymbol());
@@ -127,12 +138,15 @@ public final class DefaultVFAtomMatcher implements VFAtomMatcher {
      * @param atom query atom
      * @param blockedPositions
      * @param shouldMatchBonds bond matching flag
+     * @param shouldMatchRings ring matching flag 
      */
-    public DefaultVFAtomMatcher(IAtomContainer queryContainer, IAtom atom, int blockedPositions, boolean shouldMatchBonds) {
-        this(queryContainer, atom, shouldMatchBonds);
+    public DefaultVFAtomMatcher(IAtomContainer queryContainer, IAtom atom, int blockedPositions, boolean shouldMatchBonds, boolean shouldMatchRings) {
+        this(queryContainer, atom, shouldMatchBonds, shouldMatchRings);
         this.maximumNeighbors = countImplicitHydrogens(atom)
                 + queryContainer.getConnectedAtomsCount(atom)
                 - blockedPositions;
+        this.ringMatcher = new RingMatcher(atom);
+        this.shouldMatchRings = shouldMatchRings;
     }
 
     /**
@@ -159,9 +173,7 @@ public final class DefaultVFAtomMatcher implements VFAtomMatcher {
     @Override
     public boolean matches(TargetProperties targetContainer, IAtom targetAtom) {
         if (smartQueryAtom != null && qAtom == null && smartQueryAtom.getSymbol() == null) {
-            if (!smartQueryAtom.matches(targetAtom)) {
-                return false;
-            }
+            return smartQueryAtom.matches(targetAtom) ? true : false;
         } else if (!matchSymbol(targetAtom)) {
             return false;
         }
@@ -169,8 +181,13 @@ public final class DefaultVFAtomMatcher implements VFAtomMatcher {
 //        if (!matchMaximumNeighbors(targetContainer, targetAtom)) {
 //            return false;
 //        }
-        if (!matchRingAtoms(targetAtom) && !matchNonRingAtoms(targetAtom)) {
-            return false;
+
+        if (shouldMatchRings) {
+            if (matchRingAtoms(targetAtom)) {
+                return ringMatcher.matches(targetAtom);
+            } else {
+                return matchNonRingAtoms(targetAtom);
+            }
         }
 
         return true;

@@ -59,6 +59,7 @@ public final class McGregor {
     //private float timeout = -1;
     //5 min time out for infinite loop
     private float timeout = 5;
+    private boolean shouldMatchRings;
 
     /**
      * @return the timeout
@@ -117,11 +118,17 @@ public final class McGregor {
      * @param source
      * @param target
      * @param _mappings
-     * @param shouldMatchBonds 
+     * @param shouldMatchBonds
+     * @param shouldMatchRings  
      */
-    public McGregor(IAtomContainer source, IAtomContainer target, List<List<Integer>> _mappings, boolean shouldMatchBonds) {
+    public McGregor(IAtomContainer source,
+            IAtomContainer target,
+            List<List<Integer>> _mappings,
+            boolean shouldMatchBonds,
+            boolean shouldMatchRings) {
         setTimeManager(new TimeManager());
         setBondMatch(shouldMatchBonds);
+        this.shouldMatchRings = shouldMatchRings;
         this.source = source;
         this.target = target;
         this.mappings = Collections.synchronizedList(_mappings);
@@ -146,6 +153,7 @@ public final class McGregor {
     public McGregor(IQueryAtomContainer source, IAtomContainer target, List<List<Integer>> _mappings) {
         setTimeManager(new TimeManager());
         setBondMatch(true);
+        setMatchRings(false);
         this.source = source;
         this.target = target;
         this.mappings = Collections.synchronizedList(_mappings);
@@ -316,7 +324,7 @@ public final class McGregor {
 
 
 //        //check possible mappings:
-        boolean furtherMappingFlag = McGregorChecks.isFurtherMappingPossible(source, target, mcGregorHelper, isBondMatch());
+        boolean furtherMappingFlag = McGregorChecks.isFurtherMappingPossible(source, target, mcGregorHelper, isBondMatch(), isMatchRings());
 
         if (neighborBondNumA == 0 || neighborBondNumB == 0 || mappingCheckFlag || !furtherMappingFlag) {
             setFinalMappings(mappedAtoms, mappedAtomCount);
@@ -580,7 +588,7 @@ public final class McGregor {
                     IAtom P1_B = target.getAtom(Index_J);
                     IAtom P2_B = target.getAtom(Index_JPlus1);
                     IBond productBond = target.getBond(P1_B, P2_B);
-                    if (McGregorChecks.isMatchFeasible(source, reactantBond, target, productBond, isBondMatch())) {
+                    if (McGregorChecks.isMatchFeasible(source, reactantBond, target, productBond, isBondMatch(), isMatchRings())) {
                         modifiedARCS.set(row * neighborBondNumB + column, 1);
                     }
                 } else if (source instanceof IQueryAtomContainer) {
@@ -597,7 +605,7 @@ public final class McGregor {
                     IAtom P1_B = target.getAtom(Index_J);
                     IAtom P2_B = target.getAtom(Index_JPlus1);
                     IBond productBond = target.getBond(P1_B, P2_B);
-                    if (McGregorChecks.isMatchFeasible(source, reactantBond, target, productBond, isBondMatch())) {
+                    if (McGregorChecks.isMatchFeasible(source, reactantBond, target, productBond, isBondMatch(), isMatchRings())) {
                         modifiedARCS.set(row * neighborBondNumB + column, 1);
                     }
                 }
@@ -860,7 +868,7 @@ public final class McGregor {
 
 //      Bond Order Check Introduced by Asad
 
-        if (McGregorChecks.isMatchFeasible(source, reactantBond, target, productBond, isBondMatch())) {
+        if (McGregorChecks.isMatchFeasible(source, reactantBond, target, productBond, isBondMatch(), isMatchRings())) {
 
             for (int indexZ = 0; indexZ < mcGregorHelper.getMappedAtomCount(); indexZ++) {
 
@@ -921,5 +929,19 @@ public final class McGregor {
      */
     private synchronized void setBondMatch(boolean bondMatch) {
         this.bondMatch = bondMatch;
+    }
+
+    /**
+     * @return the shouldMatchRings
+     */
+    public boolean isMatchRings() {
+        return shouldMatchRings;
+    }
+
+    /**
+     * @param shouldMatchRings the shouldMatchRings to set
+     */
+    public void setMatchRings(boolean shouldMatchRings) {
+        this.shouldMatchRings = shouldMatchRings;
     }
 }

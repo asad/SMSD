@@ -47,6 +47,9 @@ import org.openscience.smsd.tools.TimeManager;
 @TestClass("org.openscience.cdk.smsd.SMSDBondSensitiveTest")
 public class MCSPlus {
 
+    private boolean shouldMatchRings;
+    private boolean shouldMatchBonds;
+
     /**
      * Default constructor added 
      */
@@ -81,18 +84,22 @@ public class MCSPlus {
      * @param ac1
      * @param ac2
      * @param shouldMatchBonds 
+     * @param shouldMatchRings 
      * @return
      * @throws CDKException
      */
-    protected List<List<Integer>> getOverlaps(IAtomContainer ac1, IAtomContainer ac2, boolean shouldMatchBonds)
+    protected List<List<Integer>> getOverlaps(IAtomContainer ac1, IAtomContainer ac2,
+            boolean shouldMatchBonds, boolean shouldMatchRings)
             throws CDKException {
         List<List<Integer>> extendMappings = null;
+        this.setMatchRings(shouldMatchRings);
+        this.setMatchBonds(shouldMatchBonds);
 
 //        System.err.println("ac1 : " + ac1.getAtomCount());
 //        System.err.println("ac2 : " + ac2.getAtomCount());
         setTimeManager(new TimeManager());
         try {
-            GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(ac1, ac2, shouldMatchBonds);
+            GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(ac1, ac2, shouldMatchBonds, shouldMatchRings);
             List<Integer> comp_graph_nodes = gcg.getCompGraphNodes();
 
             List<Integer> cEdges = gcg.getCEgdes();
@@ -122,7 +129,7 @@ public class MCSPlus {
                 mappings.add(indexindexMapping);
                 maxCliqueSet.pop();
             }
-            extendMappings = searchMcGregorMapping(ac1, ac2, mappings, shouldMatchBonds);
+            extendMappings = searchMcGregorMapping(ac1, ac2, mappings);
         } catch (IOException ex) {
             Logger.getLogger(MCSPlus.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -134,8 +141,7 @@ public class MCSPlus {
     private List<List<Integer>> searchMcGregorMapping(
             IAtomContainer ac1,
             IAtomContainer ac2,
-            List<Map<Integer, Integer>> allMCSCopy,
-            boolean shouldMatchBonds) throws IOException {
+            List<Map<Integer, Integer>> allMCSCopy) throws IOException {
 
         List<List<Integer>> extendMappings = new ArrayList<List<Integer>>();
         boolean ROPFlag = true;
@@ -144,10 +150,10 @@ public class MCSPlus {
             McGregor mgit = null;
 
             if (ac1.getAtomCount() > ac2.getAtomCount()) {
-                mgit = new McGregor(ac1, ac2, extendMappings, shouldMatchBonds);
+                mgit = new McGregor(ac1, ac2, extendMappings, isMatchBonds(), isMatchRings());
             } else {
                 extendMapping.clear();
-                mgit = new McGregor(ac2, ac1, extendMappings, shouldMatchBonds);
+                mgit = new McGregor(ac2, ac1, extendMappings, isMatchBonds(), isMatchRings());
                 ROPFlag = false;
                 for (Map.Entry<Integer, Integer> map : firstPassMappings.entrySet()) {
                     extendMapping.put(map.getValue(), map.getKey());
@@ -218,5 +224,33 @@ public class MCSPlus {
             return true;
         }
         return false;
+    }
+
+    /**
+     * @return the shouldMatchRings
+     */
+    public boolean isMatchRings() {
+        return shouldMatchRings;
+    }
+
+    /**
+     * @param shouldMatchRings the shouldMatchRings to set
+     */
+    public void setMatchRings(boolean shouldMatchRings) {
+        this.shouldMatchRings = shouldMatchRings;
+    }
+
+    /**
+     * @return the shouldMatchBonds
+     */
+    public boolean isMatchBonds() {
+        return shouldMatchBonds;
+    }
+
+    /**
+     * @param shouldMatchBonds the shouldMatchBonds to set
+     */
+    public void setMatchBonds(boolean shouldMatchBonds) {
+        this.shouldMatchBonds = shouldMatchBonds;
     }
 }

@@ -39,6 +39,7 @@ public abstract class AbstractMCSAlgorithm {
      * Initialise the MCS search algorithm. Each MCS algorithm should contain
      * this method.
      * @param shouldMatchBonds bond match
+     * @param shouldMatchRings ring match 
      */
-    public abstract void searchMCS(boolean shouldMatchBonds);
+    public abstract void searchMCS(boolean shouldMatchBonds, boolean shouldMatchRings);
 }

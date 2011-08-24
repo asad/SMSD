@@ -1,4 +1,5 @@
-/* Copyright (C) 2006-2011  Syed Asad Rahman <asad@ebi.ac.uk>
+/* 
+ * Copyright (C) 2009-2011  Syed Asad Rahman <asad@ebi.ac.uk>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -19,27 +20,26 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ * 
  */
-package org.openscience.smsd.interfaces;
+package org.openscience.smsd.algorithm.matchers.ring;
 
-import org.openscience.cdk.annotations.TestClass;
+import org.openscience.cdk.interfaces.IAtom;
 
 /**
- * Interface class for reporting only substructure searches.
+ * Checks if atom is in the ring, they are of equal size
+ * then return true else returns false.
  * @cdk.module smsd
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-@TestClass("org.openscience.cdk.smsd.interfaces.AbstractSubGraphTest")
-public abstract class AbstractSubGraph {
+public interface IRingMatcher {
 
-    /** 
-     * Initialise the Subgraph search algorithm. Each Subgraph algorithm
-     * should contain this method.
-     * @param shouldMatchBonds 
-     * @param shouldMatchRings 
-     * @return true if Query/reactant is a subgraph of Target/product
-     * else false
+    /**
+     * Returns true if query and target are atoms of same size.
+     * @param targetAtom target atom of be checked
+     * @return true if query and target are atoms of same size
      */
-    public abstract boolean isSubgraph(boolean shouldMatchBonds, boolean shouldMatchRings);
+    boolean matches(IAtom targetAtom);
+    
 }

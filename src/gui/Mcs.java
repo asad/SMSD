@@ -19,7 +19,7 @@ import org.openscience.smsd.Isomorphism;
 public class Mcs {
 
     public static IAtomContainer getMcsAsNewContainer(IAtomContainer mol1, IAtomContainer mol2) throws CDKException, CloneNotSupportedException, IOException {
-        Isomorphism mcs = new Isomorphism(mol1, mol2, org.openscience.smsd.interfaces.Algorithm.DEFAULT, true);
+        Isomorphism mcs = new Isomorphism(mol1, mol2, org.openscience.smsd.interfaces.Algorithm.DEFAULT, true, false);
         mcs.setChemFilters(true, true, true);
 
         System.out.println("MCS Size: " + mcs.getTanimotoSimilarity());

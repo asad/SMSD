@@ -108,6 +108,7 @@ public class SMSDcmd {
         }
         IMolecule mcsMolecule = null;
         boolean matchBonds = argumentHandler.isMatchBondType();
+        boolean matchRings = argumentHandler.isMatchRingType();
         boolean removeHydrogens = argumentHandler.isApplyHRemoval();
         int filter = argumentHandler.getChemFilter();
         List<IAtomContainer> targets = new ArrayList<IAtomContainer>();
@@ -151,7 +152,7 @@ public class SMSDcmd {
                 mcsMolecule = target;
                 targets.add(target);
             } else {
-                Isomorphism smsd = run(mcsMolecule, target, filter, matchBonds);
+                Isomorphism smsd = run(mcsMolecule, target, filter, matchBonds, matchRings);
                 target = target.getBuilder().newInstance(IMolecule.class, smsd.getFirstAtomMapping().getTarget());
                 targets.add(target);
                 Map<Integer, Integer> mapping = getIndexMapping(smsd.getFirstAtomMapping());
@@ -172,7 +173,7 @@ public class SMSDcmd {
             List<IAtomContainer> secondRoundTargets = new ArrayList<IAtomContainer>();
             IChemObjectBuilder builder = NoNotificationChemObjectBuilder.getInstance();
             for (IAtomContainer target : targets) {
-                Isomorphism smsd = run(mcsMolecule, (IMolecule) target, filter, matchBonds);
+                Isomorphism smsd = run(mcsMolecule, (IMolecule) target, filter, matchBonds, matchRings);
                 mappings.add(getIndexMapping(smsd.getFirstAtomMapping()));
                 secondRoundTargets.add(
                         builder.newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getTarget()));
@@ -208,6 +209,7 @@ public class SMSDcmd {
         long startTime = System.currentTimeMillis();
         IAtomMapping smsd = null;
         boolean matchBonds = argumentHandler.isMatchBondType();
+        boolean matchRings = argumentHandler.isMatchRingType();
 
         int targetNumber = 0;
         IIteratingChemObjectReader reader = inputHandler.getAllTargets();
@@ -236,9 +238,9 @@ public class SMSDcmd {
             inputHandler.configure(target, targetType);
 
             if (argumentHandler.isSubstructureMode()) {
-                smsd = runSubstructure(query, target, argumentHandler.getChemFilter(), matchBonds);
+                smsd = runSubstructure(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings);
             } else {
-                smsd = run(query, target, argumentHandler.getChemFilter(), matchBonds);
+                smsd = run(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings);
             }
 
 
@@ -362,12 +364,13 @@ public class SMSDcmd {
         long startTime = System.currentTimeMillis();
         IAtomMapping smsd = null;
         boolean matchBonds = argumentHandler.isMatchBondType();
+        boolean matchRings = argumentHandler.isMatchRingType();
 
 
         if (argumentHandler.isSubstructureMode()) {
-            smsd = runSubstructure(query, target, argumentHandler.getChemFilter(), matchBonds);
+            smsd = runSubstructure(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings);
         } else {
-            smsd = run(query, target, argumentHandler.getChemFilter(), matchBonds);
+            smsd = run(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings);
         }
 
         query = query.getBuilder().newInstance(IMolecule.class, smsd.getFirstAtomMapping().getQuery());
@@ -462,9 +465,11 @@ public class SMSDcmd {
             IMolecule query,
             IMolecule target,
             int filter,
-            boolean matchBonds) throws CDKException {
+            boolean matchBonds,
+            boolean matchRings) throws CDKException {
         // XXX - if clean and configure is 'true', is that not duplicate configuring?
-        Isomorphism smsd = new Isomorphism(query, target, Algorithm.VFLibMCS, matchBonds);
+//        Isomorphism smsd = new Isomorphism(query, target, Algorithm.VFLibMCS, matchBonds, matchRings);
+        Isomorphism smsd = new Isomorphism(query, target, Algorithm.CDKMCS, matchBonds, matchRings);
         if (filter == 0) {
             smsd.setChemFilters(false, false, false);
         }
@@ -484,9 +489,10 @@ public class SMSDcmd {
             IMolecule query,
             IMolecule target,
             int filter,
-            boolean matchBonds) throws CDKException {
+            boolean matchBonds,
+            boolean matchRings) throws CDKException {
         // XXX - if clean and configure is 'true', is that not duplicate configuring?
-        Substructure smsd = new Substructure(query, target, matchBonds);
+        Substructure smsd = new Substructure(query, target, matchBonds, matchRings);
         boolean findSubgraph = smsd.findSubgraph();
         if (findSubgraph) {
             if (filter == 0) {

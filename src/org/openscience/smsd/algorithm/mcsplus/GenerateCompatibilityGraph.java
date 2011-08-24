@@ -58,7 +58,8 @@ public final class GenerateCompatibilityGraph {
     private int dEdgesSize = 0;
     private IAtomContainer source = null;
     private IAtomContainer target = null;
-    private boolean shouldMatchBonds = false;
+    private boolean shouldMatchBonds;
+    private boolean shouldMatchRings;
 
     /**
      * Default constructor added 
@@ -71,12 +72,15 @@ public final class GenerateCompatibilityGraph {
      * @param source
      * @param target
      * @param shouldMatchBonds
+     * @param shouldMatchRings 
      * @throws java.io.IOException
      */
     public GenerateCompatibilityGraph(IAtomContainer source,
             IAtomContainer target,
-            boolean shouldMatchBonds) throws IOException {
+            boolean shouldMatchBonds,
+            boolean shouldMatchRings) throws IOException {
         setMatchBond(shouldMatchBonds);
+        this.shouldMatchRings = shouldMatchRings;
         this.source = source;
         this.target = target;
         compGraphNodes = new ArrayList<Integer>();
@@ -289,7 +293,7 @@ public final class GenerateCompatibilityGraph {
             boolean molecule1_pair_connected, boolean molecule2_pair_connected) {
 
         if (molecule1_pair_connected && molecule2_pair_connected) {
-            if (isMatchFeasible(source, reactantBond, target, productBond, shouldMatchBonds)) {
+            if (isMatchFeasible(source, reactantBond, target, productBond)) {
                 cEdges.add((iIndex / 3) + 1);
                 cEdges.add((jIndex / 3) + 1);
             }
@@ -392,7 +396,7 @@ public final class GenerateCompatibilityGraph {
     }
 
     private void addCZeroEdges(IBond reactantBond, IBond productBond, int indexI, int indexJ) {
-        if (isMatchFeasible(source, productBond, target, productBond, shouldMatchBonds)) {
+        if (isMatchFeasible(source, productBond, target, productBond)) {
             //bondMatch(reactantBond, productBond)
             cEdges.add((indexI / 4) + 1);
             cEdges.add((indexJ / 4) + 1);
@@ -406,21 +410,20 @@ public final class GenerateCompatibilityGraph {
     private boolean isMatchFeasible(IAtomContainer ac1,
             IBond bondA1,
             IAtomContainer ac2,
-            IBond bondA2,
-            boolean shouldMatchBonds) {
+            IBond bondA2) {
 
         //Bond Matcher
         BondMatcher bondMatcher =
-                new DefaultMCSPlusBondMatcher(ac1, bondA1, shouldMatchBonds);
+                new DefaultMCSPlusBondMatcher(ac1, bondA1, isMatchBond());
         //Atom Matcher
         AtomMatcher atomMatcher1 =
-                new DefaultMCSPlusAtomMatcher(ac1, bondA1.getAtom(0), shouldMatchBonds);
+                new DefaultMCSPlusAtomMatcher(ac1, bondA1.getAtom(0), isMatchBond(), isMatchRings());
         //Atom Matcher
         AtomMatcher atomMatcher2 =
-                new DefaultMCSPlusAtomMatcher(ac1, bondA1.getAtom(1), shouldMatchBonds);
+                new DefaultMCSPlusAtomMatcher(ac1, bondA1.getAtom(1), isMatchBond(), isMatchRings());
 
-        if (DefaultMatcher.isBondMatch(bondMatcher, ac2, bondA2, shouldMatchBonds)
-                && DefaultMatcher.isAtomMatch(atomMatcher1, atomMatcher2, ac2, bondA2, shouldMatchBonds)) {
+        if (DefaultMatcher.isBondMatch(bondMatcher, ac2, bondA2, isMatchBond())
+                && DefaultMatcher.isAtomMatch(atomMatcher1, atomMatcher2, ac2, bondA2, isMatchBond())) {
             return true;
         }
         return false;
@@ -493,5 +496,19 @@ public final class GenerateCompatibilityGraph {
      */
     public void setMatchBond(boolean shouldMatchBonds) {
         this.shouldMatchBonds = shouldMatchBonds;
+    }
+
+    /**
+     * @return the shouldMatchRings
+     */
+    public boolean isMatchRings() {
+        return shouldMatchRings;
+    }
+
+    /**
+     * @param shouldMatchRings the shouldMatchRings to set
+     */
+    public void setMatchRings(boolean shouldMatchRings) {
+        this.shouldMatchRings = shouldMatchRings;
     }
 }

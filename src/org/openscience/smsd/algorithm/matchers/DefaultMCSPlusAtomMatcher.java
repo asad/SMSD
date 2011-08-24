@@ -52,6 +52,8 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
+import org.openscience.smsd.algorithm.matchers.ring.IRingMatcher;
+import org.openscience.smsd.algorithm.matchers.ring.RingMatcher;
 
 /**
  * Checks if atom is matching between query and target molecules.
@@ -66,8 +68,10 @@ public final class DefaultMCSPlusAtomMatcher implements AtomMatcher {
     private int maximumNeighbors;
     private String symbol = null;
     private IAtom qAtom = null;
-    private IQueryAtom smartQueryAtom = null;
-    private boolean shouldMatchBonds = false;
+    private IQueryAtom smartQueryAtom;
+    private IRingMatcher ringMatcher;
+    private boolean shouldMatchBonds;
+    private boolean shouldMatchRings;
 
     /**
      * @return the shouldMatchBonds
@@ -89,7 +93,11 @@ public final class DefaultMCSPlusAtomMatcher implements AtomMatcher {
     public DefaultMCSPlusAtomMatcher() {
         this.qAtom = null;
         symbol = null;
+        smartQueryAtom = null;
+        ringMatcher = null;
         maximumNeighbors = -1;
+        shouldMatchBonds = false;
+        shouldMatchRings = false;
     }
 
     /**
@@ -97,12 +105,15 @@ public final class DefaultMCSPlusAtomMatcher implements AtomMatcher {
      * @param queryContainer query atom container
      * @param atom query atom
      * @param shouldMatchBonds bond matching flag
+     * @param shouldMatchRings ring matching flag
      */
-    public DefaultMCSPlusAtomMatcher(IAtomContainer queryContainer, IAtom atom, boolean shouldMatchBonds) {
+    public DefaultMCSPlusAtomMatcher(IAtomContainer queryContainer, IAtom atom, boolean shouldMatchBonds, boolean shouldMatchRings) {
         this();
         this.qAtom = atom;
         this.symbol = atom.getSymbol();
         setBondMatchFlag(shouldMatchBonds);
+        this.shouldMatchRings = shouldMatchRings;
+        this.ringMatcher = new RingMatcher(atom);
 
 //        System.out.println("Atom " + atom.getSymbol());
 //        System.out.println("MAX allowed " + maximumNeighbors);
@@ -125,12 +136,20 @@ public final class DefaultMCSPlusAtomMatcher implements AtomMatcher {
      * @param template query atom
      * @param blockedPositions
      * @param shouldMatchBonds bond matching flag
+     * @param shouldMatchRings ring matching flag 
      */
-    public DefaultMCSPlusAtomMatcher(IAtomContainer queryContainer, IAtom template, int blockedPositions, boolean shouldMatchBonds) {
-        this(queryContainer, template, shouldMatchBonds);
+    public DefaultMCSPlusAtomMatcher(
+            IAtomContainer queryContainer,
+            IAtom template,
+            int blockedPositions,
+            boolean shouldMatchBonds,
+            boolean shouldMatchRings) {
+        this(queryContainer, template, shouldMatchBonds, shouldMatchRings);
         this.maximumNeighbors = countImplicitHydrogens(template)
                 + queryContainer.getConnectedAtomsCount(template)
                 - blockedPositions;
+        this.ringMatcher = new RingMatcher(template);
+        this.shouldMatchRings = shouldMatchRings;
     }
 
     /**
@@ -178,9 +197,7 @@ public final class DefaultMCSPlusAtomMatcher implements AtomMatcher {
     @Override
     public boolean matches(IAtomContainer targetContainer, IAtom targetAtom) {
         if (smartQueryAtom != null && qAtom == null && smartQueryAtom.getSymbol() == null) {
-            if (!smartQueryAtom.matches(targetAtom)) {
-                return false;
-            }
+            return smartQueryAtom.matches(targetAtom) ? true : false;
         } else if (!matchSymbol(targetAtom)) {
             return false;
         }
@@ -189,8 +206,12 @@ public final class DefaultMCSPlusAtomMatcher implements AtomMatcher {
 //            return false;
 //        }
 
-        if (!matchRingAtoms(targetAtom) && !matchNonRingAtoms(targetAtom)) {
-            return false;
+        if (shouldMatchRings) {
+            if (matchRingAtoms(targetAtom)) {
+                return ringMatcher.matches(targetAtom);
+            } else {
+                return matchNonRingAtoms(targetAtom);
+            }
         }
         return true;
     }

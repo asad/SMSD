@@ -29,8 +29,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.annotations.TestMethod;
+import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
@@ -121,7 +123,8 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
     private double bondInSensitiveMCSPlusTimeOut = 2.00;//mins
     private double bondSensitiveVFTimeOut = 2.00;//mins
     private double bondInSensitiveVFTimeOut = 2.00;//mins
-    private final boolean matchBonds;
+    private boolean matchBonds;
+    private boolean matchRings;
 
     /**
      * Initialize query and target molecules.
@@ -145,7 +148,7 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
      * @param algorithmType {@link org.openscience.cdk.smsd.interfaces.Algorithm}
      * @param bondTypeFlag
      */
-    @TestMethod("testSubStructureSearchAlgorithms")
+    @TestMethod("testIsomorphismTest")
     public Isomorphism(
             IQueryAtomContainer query,
             IAtomContainer target,
@@ -155,7 +158,6 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
         this.mol1 = query;
         this.mol2 = target;
         this.mcsList = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
-        this.matchBonds = bondTypeFlag;
         setTime(bondTypeFlag);
         mcsBuilder(mol1, mol2);
     }
@@ -180,19 +182,30 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
      * <lI>4: CDKMCS
      * </OL>
      * @param algorithmType {@link org.openscience.cdk.smsd.interfaces.Algorithm}
-     * @param bondTypeFlag
+     * @param bondTypeFlag Match bond types (i.e. double to double etc)
+     * @param matchRings Match ring atoms and ring size 
      */
-    @TestMethod("testSubStructureSearchAlgorithms")
+    @TestMethod("testIsomorphismTest")
     public Isomorphism(
             IAtomContainer query,
             IAtomContainer target,
             Algorithm algorithmType,
-            boolean bondTypeFlag) {
+            boolean bondTypeFlag,
+            boolean matchRings) {
         this.algorithmType = algorithmType;
         this.mol1 = query;
         this.mol2 = target;
+        if (matchRings) {
+            try {
+                initializeMolecule(mol1);
+                initializeMolecule(mol2);
+            } catch (CDKException ex) {
+                Logger.error(Level.SEVERE, null, ex);
+            }
+        }
         this.mcsList = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
         this.matchBonds = bondTypeFlag;
+        this.matchRings = matchRings;
         setTime(bondTypeFlag);
         mcsBuilder(mol1, mol2);
     }
@@ -294,7 +307,7 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
         CDKMCSHandler mcs = null;
         mcs = new CDKMCSHandler();
         mcs.set(mol1, mol2);
-        mcs.searchMCS(isMatchBonds());
+        mcs.searchMCS(isMatchBonds(), isMatchRings());
         clearMaps();
         mcsList.addAll(mcs.getAllAtomMapping());
 //        System.out.println("\nCDKMCS used\n" + ((System.currentTimeMillis() - time) / (60 * 1000)));
@@ -305,7 +318,7 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
         MCSPlusHandler mcs = null;
         mcs = new MCSPlusHandler();
         mcs.set(mol1, mol2);
-        mcs.searchMCS(isMatchBonds());
+        mcs.searchMCS(isMatchBonds(), isMatchRings());
         clearMaps();
         mcsList.addAll(mcs.getAllAtomMapping());
 //        System.out.println("\nMCSPlus used\n" + ((System.currentTimeMillis() - time) / (60 * 1000)));
@@ -316,7 +329,7 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
         VF2MCSPlusHandler mcs = null;
         mcs = new VF2MCSPlusHandler();
         mcs.set(mol1, mol2);
-        mcs.searchMCS(isMatchBonds());
+        mcs.searchMCS(isMatchBonds(), isMatchRings());
         clearMaps();
         mcsList.addAll(mcs.getAllAtomMapping());
 //        System.out.println("\nVFLib used\n" + ((System.currentTimeMillis() - time) / (60 * 1000)));
@@ -326,7 +339,7 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
         SingleMappingHandler mcs = null;
         mcs = new SingleMappingHandler();
         mcs.set(mol1, mol2);
-        mcs.searchMCS(isMatchBonds());
+        mcs.searchMCS(isMatchBonds(), isMatchRings());
         clearMaps();
         mcsList.addAll(mcs.getAllAtomMapping());
     }
@@ -473,5 +486,19 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
     @Override
     public synchronized void setBondInSensitiveVFTimeOut(double bondInSensitiveTimeOut) {
         this.bondInSensitiveVFTimeOut = bondInSensitiveTimeOut;
+    }
+
+    /**
+     * @return the matchRings
+     */
+    public boolean isMatchRings() {
+        return matchRings;
+    }
+
+    /**
+     * @param matchRings the matchRings to set
+     */
+    public void setMatchRings(boolean matchRings) {
+        this.matchRings = matchRings;
     }
 }

@@ -62,6 +62,7 @@ public class ArgumentHandler {
     private boolean applySuffix = false;
     private boolean appendMode = false;
     private boolean matchBondType = false;
+    private boolean matchRingType = false;
     private String matchFile = "mcs";
     private String fingerFile = "finger";
     private String graphFile = "graph";
@@ -114,6 +115,8 @@ public class ArgumentHandler {
         options.addOption("a", false, "Add Hydrogen");
 
         options.addOption("r", false, "Remove Hydrogen");
+
+        options.addOption("z", false, "Ring atom and rinz size matching");
 
         options.addOption("b", false, "Match Bond types (Single, Double etc)");
 
@@ -196,6 +199,10 @@ public class ArgumentHandler {
 
         if (line.hasOption('b')) {
             this.setMatchBondType(true);
+        }
+
+        if (line.hasOption('z')) {
+            this.setMatchRingType(true);
         }
 
         remainingArgs = line.getArgs();
@@ -459,10 +466,24 @@ public class ArgumentHandler {
     }
 
     /**
+     * @return the matchRingType
+     */
+    public boolean isMatchRingType() {
+        return matchRingType;
+    }
+
+    /**
      * @param matchBondType the matchBondType to set
      */
     public void setMatchBondType(boolean matchBondType) {
         this.matchBondType = matchBondType;
+    }
+
+    /**
+     * @param matchRingType the match ring size and ring atom
+     */
+    public void setMatchRingType(boolean matchRingType) {
+        this.matchRingType = matchRingType;
     }
 
     /**
