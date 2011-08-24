@@ -751,6 +751,11 @@ public class CDKMCS {
             IBond bondA = ac1.getBond(i);
             IAtom atomA1 = bondA.getAtom(0);
             IAtom atomA2 = bondA.getAtom(1);
+            DefaultRGraphAtomMatcher defaultRGraphAtomMatcherA1 =
+                    new DefaultRGraphAtomMatcher(ac1, atomA1, shouldMatchBonds, shouldMatchRings);
+            DefaultRGraphAtomMatcher defaultRGraphAtomMatcherA2 =
+                    new DefaultRGraphAtomMatcher(ac1, atomA2, shouldMatchBonds, shouldMatchRings);
+
             for (int j = 0; j < ac2.getBondCount(); j++) {
                 IBond bondB = ac2.getBond(j);
                 IAtom atomB1 = bondB.getAtom(0);
@@ -770,11 +775,11 @@ public class CDKMCS {
 
                 if (// atom type conditions
                         (// a1 = a2 && b1 = b2
-                        AtomMatcher(ac1, atomA1, ac2, atomB1, shouldMatchBonds, shouldMatchRings)
-                        && AtomMatcher(ac1, atomA2, ac2, atomB2, shouldMatchBonds, shouldMatchRings))
+                        defaultRGraphAtomMatcherA1.matches(ac2, atomB1)
+                        && defaultRGraphAtomMatcherA2.matches(ac2, atomB2)
                         || (// a1 = b2 && b1 = a2
-                        AtomMatcher(ac1, atomA1, ac2, atomB2, shouldMatchBonds, shouldMatchRings)
-                        && AtomMatcher(ac1, atomA2, ac2, atomB1, shouldMatchBonds, shouldMatchRings))) {
+                        defaultRGraphAtomMatcherA1.matches(ac2, atomB2)
+                        && defaultRGraphAtomMatcherA2.matches(ac2, atomB1)))) {
 
                     gr.addNode(new CDKRNode(i, j));
                 }
@@ -783,28 +788,6 @@ public class CDKMCS {
     }
 
     /**
-     * SMSD based Atom matcher
-     * @param queryAtomContainer
-     * @param queryAtom
-     * @param targetAtomContainer
-     * @param targetAtom
-     * @param shouldMatchBonds
-     * @param shouldMatchRings
-     * @return
-     */
-    public static boolean AtomMatcher(
-            IAtomContainer queryAtomContainer,
-            IAtom queryAtom,
-            IAtomContainer targetAtomContainer,
-            IAtom targetAtom,
-            boolean shouldMatchBonds,
-            boolean shouldMatchRings) {
-        DefaultRGraphAtomMatcher defaultRGraphAtomMatcher = new DefaultRGraphAtomMatcher(queryAtomContainer, queryAtom, shouldMatchBonds, shouldMatchRings);
-        return defaultRGraphAtomMatcher.matches(targetAtomContainer, targetAtom);
-    }
-
-    /**
-     * SMSD based matcher
      * @param queryBond
      * @param targetBond
      * @return
