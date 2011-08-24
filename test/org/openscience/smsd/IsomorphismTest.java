@@ -442,7 +442,7 @@ public class IsomorphismTest {
         Assert.assertTrue(foundMatches);
 
         IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
-        smsd = new Substructure(queryContainer, target, true);
+        smsd = new Substructure(queryContainer, target);
         foundMatches = smsd.findSubgraph();
         Assert.assertTrue(foundMatches);
     }
@@ -458,7 +458,7 @@ public class IsomorphismTest {
         Assert.assertTrue(foundMatches);
 
         IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
-        smsd = new Substructure(queryContainer, target, true);
+        smsd = new Substructure(queryContainer, target);
         foundMatches = smsd.findSubgraph();
         Assert.assertTrue(foundMatches);
     }
@@ -475,7 +475,7 @@ public class IsomorphismTest {
         Assert.assertTrue(foundMatches);
 
         IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
-        smsd = new Substructure(queryContainer, target, true);
+        smsd = new Substructure(queryContainer, target);
         foundMatches = smsd.findSubgraph();
         Assert.assertTrue(foundMatches);
     }
