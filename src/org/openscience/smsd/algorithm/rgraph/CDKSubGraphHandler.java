@@ -105,6 +105,11 @@ public class CDKSubGraphHandler extends AbstractSubGraph implements IMCSBase {
 
         try {
 
+            if (shouldMatchRings) {
+                initializeMolecule(source);
+                initializeMolecule(target);
+            }
+
             if ((source.getAtomCount() == target.getAtomCount()) && source.getBondCount() == target.getBondCount()) {
                 rOnPFlag = true;
                 rmap.calculateIsomorphs(source, target, shouldMatchBonds, shouldMatchRings);

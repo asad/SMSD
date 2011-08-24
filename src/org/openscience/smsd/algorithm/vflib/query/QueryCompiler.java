@@ -142,11 +142,11 @@ public class QueryCompiler implements IQueryCompiler {
     }
 
     private synchronized VFAtomMatcher createAtomMatcher(IAtomContainer mol, IAtom atom) {
-        return new DefaultVFAtomMatcher(mol, atom, isBondMatchFlag(), isShouldMatchRings());
+        return new DefaultVFAtomMatcher(atom, isBondMatchFlag(), isShouldMatchRings());
     }
 
     private synchronized VFBondMatcher createBondMatcher(IAtomContainer mol, IBond bond) {
-        return new DefaultVFBondMatcher(mol, bond, isBondMatchFlag());
+        return new DefaultVFBondMatcher(bond, isBondMatchFlag());
     }
 
     /**

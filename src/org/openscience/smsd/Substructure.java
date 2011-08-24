@@ -33,7 +33,7 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.algorithm.single.SingleMappingHandler;
-import org.openscience.smsd.algorithm.vflib.VF2lib;
+import org.openscience.smsd.algorithm.vflib.VF2Substructure;
 import org.openscience.smsd.algorithm.vflib.substructure.VF2;
 import org.openscience.smsd.global.TimeOut;
 
@@ -92,7 +92,8 @@ public final class Substructure extends BaseMapping {
     private int vfMappingSize = -1;
     private final ILoggingTool Logger =
             LoggingToolFactory.createLoggingTool(Substructure.class);
-    private boolean bond_Match_Flag;
+    private boolean matchBond;
+    private boolean matchRing;
 
     /**
      * Constructor for VF Substructure Algorithm 
@@ -107,15 +108,8 @@ public final class Substructure extends BaseMapping {
         this.mcsList = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
         TimeOut tmo = TimeOut.getInstance();
         tmo.setCDKMCSTimeOut(0.15);
-        this.bond_Match_Flag = shouldMatchBonds;
-        if (matchRings) {
-            try {
-                initializeMolecule(mol1);
-                initializeMolecule(mol2);
-            } catch (CDKException ex) {
-                Logger.error(Level.SEVERE, null, ex);
-            }
-        }
+        this.matchBond = shouldMatchBonds;
+        this.matchRing = matchRings;
     }
 
     /**
@@ -159,7 +153,7 @@ public final class Substructure extends BaseMapping {
             }
             VF2 mapper = new VF2();
             List<AtomAtomMapping> mappingsVF2 = new ArrayList<AtomAtomMapping>();
-            AtomAtomMapping atomMapping = mapper.isomorphism(mol1, mol2, bond_Match_Flag);
+            AtomAtomMapping atomMapping = mapper.isomorphism(mol1, mol2, isBondMatchFlag(), isMatchRing());
 //                    System.out.println("Mapping Size " + atomMapping.getCount());
             if (!atomMapping.isEmpty()) {
                 mappingsVF2.add(atomMapping);
@@ -190,10 +184,10 @@ public final class Substructure extends BaseMapping {
             if (mol1.getAtomCount() > mol2.getAtomCount()) {
                 return false;
             } else {
-                VF2lib mapper = new VF2lib();
+                VF2Substructure mapper = new VF2Substructure();
                 List<AtomAtomMapping> mappingsVF2 = new ArrayList<AtomAtomMapping>();
                 mapper.set(mol1, mol2);
-                mapper.searchMCS(bond_Match_Flag, false);
+                mapper.isSubgraph(isBondMatchFlag(), isMatchRing());
                 List<AtomAtomMapping> atomMappings = mapper.getAllAtomMapping();
 //                    System.out.println("Mapping Size " + atomMapping.getCount());
                 if (!atomMappings.isEmpty()) {
@@ -245,7 +239,7 @@ public final class Substructure extends BaseMapping {
         SingleMappingHandler mcs = null;
         mcs = new SingleMappingHandler();
         mcs.set(mol1, mol2);
-        mcs.searchMCS(shouldMatchBonds, false);
+        mcs.searchMCS(shouldMatchBonds, isMatchRing());
         mcsList.addAll(mcs.getAllAtomMapping());
     }
 
@@ -253,6 +247,20 @@ public final class Substructure extends BaseMapping {
      * @return the shouldMatchBonds
      */
     public synchronized boolean isBondMatchFlag() {
-        return bond_Match_Flag;
+        return matchBond;
+    }
+
+    /**
+     * @return the matchRing
+     */
+    public boolean isMatchRing() {
+        return matchRing;
+    }
+
+    /**
+     * @param matchRing the matchRing to set
+     */
+    public void setMatchRing(boolean matchRing) {
+        this.matchRing = matchRing;
     }
 }

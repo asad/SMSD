@@ -94,17 +94,16 @@ public final class CDKRMapHandler {
 
     /**
      * This function calculates all the possible combinations of MCS
-     * @param Molecule1
-     * @param Molecule2
+     * @param molecule1
+     * @param molecule2
      * @param shouldMatchBonds
      * @param shouldMatchRings 
      * @throws CDKException
      */
-    public synchronized void calculateOverlapsAndReduce(IAtomContainer Molecule1,
-            IAtomContainer Molecule2, boolean shouldMatchBonds, boolean shouldMatchRings) throws CDKException {
-
-        setSource(Molecule1);
-        setTarget(Molecule2);
+    public synchronized void calculateOverlapsAndReduce(IAtomContainer molecule1,
+            IAtomContainer molecule2, boolean shouldMatchBonds, boolean shouldMatchRings) throws CDKException {
+        setSource(molecule1);
+        setTarget(molecule2);
 
         setMappings(new ArrayList<Map<Integer, Integer>>());
 

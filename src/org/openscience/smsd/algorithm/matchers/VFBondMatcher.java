@@ -24,7 +24,6 @@
 package org.openscience.smsd.algorithm.matchers;
 
 import org.openscience.cdk.interfaces.IBond;
-import org.openscience.smsd.algorithm.vflib.builder.TargetProperties;
 
 /**
  * Interface for the BondMatcher (bonds) in graph.
@@ -34,6 +33,10 @@ import org.openscience.smsd.algorithm.vflib.builder.TargetProperties;
  */
 
 public interface VFBondMatcher {
-
-    boolean matches(TargetProperties container, IBond atom);
+    /**
+     * 
+     * @param atom
+     * @return
+     */
+    boolean matches(IBond atom);
 }

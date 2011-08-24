@@ -414,16 +414,16 @@ public final class GenerateCompatibilityGraph {
 
         //Bond Matcher
         BondMatcher bondMatcher =
-                new DefaultMCSPlusBondMatcher(ac1, bondA1, isMatchBond());
+                new DefaultMCSPlusBondMatcher(bondA1, isMatchBond());
         //Atom Matcher
         AtomMatcher atomMatcher1 =
-                new DefaultMCSPlusAtomMatcher(ac1, bondA1.getAtom(0), isMatchBond(), isMatchRings());
+                new DefaultMCSPlusAtomMatcher(bondA1.getAtom(0), isMatchBond(), isMatchRings());
         //Atom Matcher
         AtomMatcher atomMatcher2 =
-                new DefaultMCSPlusAtomMatcher(ac1, bondA1.getAtom(1), isMatchBond(), isMatchRings());
+                new DefaultMCSPlusAtomMatcher(bondA1.getAtom(1), isMatchBond(), isMatchRings());
 
-        if (DefaultMatcher.isBondMatch(bondMatcher, ac2, bondA2, isMatchBond())
-                && DefaultMatcher.isAtomMatch(atomMatcher1, atomMatcher2, ac2, bondA2, isMatchBond())) {
+        if (DefaultMatcher.isBondMatch(bondMatcher, bondA2, isMatchBond())
+                && DefaultMatcher.isAtomMatch(atomMatcher1, atomMatcher2, bondA2)) {
             return true;
         }
         return false;

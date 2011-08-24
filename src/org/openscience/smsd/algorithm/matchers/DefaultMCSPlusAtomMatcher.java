@@ -49,9 +49,7 @@ package org.openscience.smsd.algorithm.matchers;
 import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtom;
-import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
-import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.smsd.algorithm.matchers.ring.IRingMatcher;
 import org.openscience.smsd.algorithm.matchers.ring.RingMatcher;
 
@@ -65,7 +63,6 @@ import org.openscience.smsd.algorithm.matchers.ring.RingMatcher;
 public final class DefaultMCSPlusAtomMatcher implements AtomMatcher {
 
     static final long serialVersionUID = -7861469841127327812L;
-    private int maximumNeighbors;
     private String symbol = null;
     private IAtom qAtom = null;
     private IRingMatcher ringMatcher;
@@ -93,19 +90,17 @@ public final class DefaultMCSPlusAtomMatcher implements AtomMatcher {
         this.qAtom = null;
         symbol = null;
         ringMatcher = null;
-        maximumNeighbors = -1;
         shouldMatchBonds = false;
         shouldMatchRings = false;
     }
 
     /**
      * Constructor
-     * @param queryContainer query atom container
      * @param atom query atom
      * @param shouldMatchBonds bond matching flag
      * @param shouldMatchRings ring matching flag
      */
-    public DefaultMCSPlusAtomMatcher(IAtomContainer queryContainer, IAtom atom, boolean shouldMatchBonds, boolean shouldMatchRings) {
+    public DefaultMCSPlusAtomMatcher(IAtom atom, boolean shouldMatchBonds, boolean shouldMatchRings) {
         this();
         this.qAtom = atom;
         this.symbol = atom.getSymbol();
@@ -115,14 +110,6 @@ public final class DefaultMCSPlusAtomMatcher implements AtomMatcher {
 
 //        System.out.println("Atom " + atom.getSymbol());
 //        System.out.println("MAX allowed " + maximumNeighbors);
-    }
-
-    /**
-     *
-     * @param maximum numbers of connected atoms allowed
-     */
-    public void setMaximumNeighbors(int maximum) {
-        this.maximumNeighbors = maximum;
     }
 
     /** {@inheritDoc}
@@ -139,29 +126,14 @@ public final class DefaultMCSPlusAtomMatcher implements AtomMatcher {
         return symbol.equals(atom.getSymbol());
     }
 
-    private boolean matchMaximumNeighbors(IAtomContainer targetContainer, IAtom targetAtom) {
-        if (maximumNeighbors == -1 || !isBondMatchFlag()) {
-            return true;
-        }
-
-        int maximumTargetNeighbors = targetContainer.getConnectedAtomsCount(targetAtom);
-        return maximumTargetNeighbors >= maximumNeighbors;
-    }
-
-    private int countImplicitHydrogens(IAtom atom) {
-        return (atom.getImplicitHydrogenCount() == null)
-                ? 0 : atom.getImplicitHydrogenCount();
-    }
-
     /** {@inheritDoc}
      *
-     * @param targetContainer
      * @param targetAtom
      * @return
      */
     @Override
-    public boolean matches(IAtomContainer targetContainer, IAtom targetAtom) {
-        if (targetContainer instanceof IQueryAtomContainer) {
+    public boolean matches(IAtom targetAtom) {
+        if (targetAtom instanceof IQueryAtom) {
             return ((IQueryAtom) targetAtom).matches(qAtom);
         } else if (qAtom != null && qAtom instanceof IQueryAtom) {
             return ((IQueryAtom) qAtom).matches(targetAtom);
@@ -176,13 +148,7 @@ public final class DefaultMCSPlusAtomMatcher implements AtomMatcher {
                     return matchNonRingAtoms(targetAtom);
                 }
             }
-
-//        if (!matchMaximumNeighbors(targetContainer, targetAtom)) {
-//            return false;
-//        }
-
         }
-
         return true;
     }
 

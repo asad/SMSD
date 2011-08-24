@@ -27,13 +27,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.annotations.TestMethod;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
+import org.openscience.cdk.tools.ILoggingTool;
+import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.interfaces.AbstractMCSAlgorithm;
 import org.openscience.smsd.interfaces.IMCSBase;
@@ -48,10 +49,11 @@ import org.openscience.smsd.interfaces.IMCSBase;
 @TestClass("org.openscience.cdk.smsd.algorithm.single.SingleMappingHandlerTest")
 public class SingleMappingHandler extends AbstractMCSAlgorithm implements IMCSBase {
 
+    private final ILoggingTool Logger =
+            LoggingToolFactory.createLoggingTool(SingleMappingHandler.class);
     private List<AtomAtomMapping> allAtomMCS = null;
     private List<Map<Integer, Integer>> allMCS = null;
     private IAtomContainer source = null;
-    private IQueryAtomContainer smartSource = null;
     private IAtomContainer target = null;
 
     /**
@@ -83,7 +85,6 @@ public class SingleMappingHandler extends AbstractMCSAlgorithm implements IMCSBa
     @Override
     @TestMethod("testSet_IQueryAtomContainer_MolHandler")
     public synchronized void set(IQueryAtomContainer source, IAtomContainer target) {
-        this.smartSource = source;
         this.source = source;
         this.target = target;
     }
@@ -99,15 +100,22 @@ public class SingleMappingHandler extends AbstractMCSAlgorithm implements IMCSBa
         SingleMapping singleMapping = new SingleMapping();
         List<Map<IAtom, IAtom>> mappings = null;
         try {
-            if (this.smartSource == null) {
+            if (!(source instanceof IQueryAtomContainer)) {
+                if (shouldMatchRings) {
+                    try {
+                        initializeMolecule(source);
+                        initializeMolecule(target);
+                    } catch (CDKException ex) {
+                        Logger.error(Level.SEVERE, null, ex);
+                    }
+                }
                 mappings = singleMapping.getOverLaps(source, target);
             } else {
-                mappings = singleMapping.getOverLaps(smartSource, target);
+                mappings = singleMapping.getOverLaps((IQueryAtomContainer) source, target);
             }
         } catch (CDKException ex) {
-            Logger.getLogger(SingleMappingHandler.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.error(Level.SEVERE, null, ex);
         }
-
         setAllAtomMapping(mappings);
         setAllMapping(mappings);
         //setStereoScore();

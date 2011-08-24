@@ -33,7 +33,7 @@ import org.openscience.cdk.annotations.TestClass;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.interfaces.AbstractMCSAlgorithmTest")
-public abstract class AbstractMCSAlgorithm {
+public abstract class AbstractMCSAlgorithm extends MoleculeInitializer{
 
     /** 
      * Initialise the MCS search algorithm. Each MCS algorithm should contain

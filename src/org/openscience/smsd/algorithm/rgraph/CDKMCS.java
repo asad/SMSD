@@ -446,9 +446,9 @@ public class CDKMCS {
 
             //use atom matcher from SMSD
             DefaultRGraphAtomMatcher defaultRGraphAtomMatcher =
-                    new DefaultRGraphAtomMatcher(g2, queryAtom, shouldMatchBonds, shouldMatchRings);
+                    new DefaultRGraphAtomMatcher(queryAtom, shouldMatchBonds, shouldMatchRings);
             for (IAtom atom : g1.atoms()) {
-                if (defaultRGraphAtomMatcher.matches(g1, atom)) {
+                if (defaultRGraphAtomMatcher.matches(atom)) {
                     List<CDKRMap> lmap = new ArrayList<CDKRMap>();
                     lmap.add(new CDKRMap(g1.getAtomNumber(atom), 0));
                     matches.add(lmap);
@@ -751,9 +751,9 @@ public class CDKMCS {
             IAtom atomA1 = bondA.getAtom(0);
             IAtom atomA2 = bondA.getAtom(1);
             DefaultRGraphAtomMatcher defaultRGraphAtomMatcherA1 =
-                    new DefaultRGraphAtomMatcher(ac1, atomA1, shouldMatchBonds, shouldMatchRings);
+                    new DefaultRGraphAtomMatcher(atomA1, shouldMatchBonds, shouldMatchRings);
             DefaultRGraphAtomMatcher defaultRGraphAtomMatcherA2 =
-                    new DefaultRGraphAtomMatcher(ac1, atomA2, shouldMatchBonds, shouldMatchRings);
+                    new DefaultRGraphAtomMatcher(atomA2, shouldMatchBonds, shouldMatchRings);
 
             for (int j = 0; j < ac2.getBondCount(); j++) {
                 IBond bondB = ac2.getBond(j);
@@ -774,11 +774,11 @@ public class CDKMCS {
 
                 if (// atom type conditions
                         (// a1 = a2 && b1 = b2
-                        defaultRGraphAtomMatcherA1.matches(ac2, atomB1)
-                        && defaultRGraphAtomMatcherA2.matches(ac2, atomB2)
+                        defaultRGraphAtomMatcherA1.matches(atomB1)
+                        && defaultRGraphAtomMatcherA2.matches(atomB2)
                         || (// a1 = b2 && b1 = a2
-                        defaultRGraphAtomMatcherA1.matches(ac2, atomB2)
-                        && defaultRGraphAtomMatcherA2.matches(ac2, atomB1)))) {
+                        defaultRGraphAtomMatcherA1.matches(atomB2)
+                        && defaultRGraphAtomMatcherA2.matches(atomB1)))) {
                     gr.addNode(new CDKRNode(i, j));
                 }
             }

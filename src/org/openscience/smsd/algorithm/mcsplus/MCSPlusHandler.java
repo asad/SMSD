@@ -98,11 +98,15 @@ public final class MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBa
     public synchronized void searchMCS(boolean shouldMatchBonds, boolean shouldMatchRings) {
         List<List<Integer>> mappings = null;
         try {
+            if (shouldMatchRings) {
+                initializeMolecule(source);
+                initializeMolecule(target);
+            }
             if (source.getAtomCount() > target.getAtomCount()) {
-                mappings = Collections.synchronizedList(new MCSPlus().getOverlaps(source, target, shouldMatchBonds, false));
+                mappings = Collections.synchronizedList(new MCSPlus().getOverlaps(source, target, shouldMatchBonds, shouldMatchRings));
             } else {
                 flagExchange = true;
-                mappings = Collections.synchronizedList(new MCSPlus().getOverlaps(target, source, shouldMatchBonds, false));
+                mappings = Collections.synchronizedList(new MCSPlus().getOverlaps(target, source, shouldMatchBonds, shouldMatchRings));
             }
             PostFilter.filter(mappings);
             setAllMapping();

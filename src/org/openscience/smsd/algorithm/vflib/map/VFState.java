@@ -192,7 +192,7 @@ public class VFState implements IState {
     private void loadRootCandidates() {
         for (int i = 0; i < query.countNodes(); i++) {
             for (int j = 0; j < target.getAtomCount(); j++) {
-                if (query.getNode(i).getAtomMatcher().matches(target, target.getAtom(j))) {
+                if (query.getNode(i).getAtomMatcher().matches(target.getAtom(j))) {
                     Match match = new Match(query.getNode(i), target.getAtom(j));
                     candidates.add(match);
                 }
@@ -206,7 +206,7 @@ public class VFState implements IState {
         List<IAtom> targetNeighbors = target.getNeighbors(atom);
         for (INode q : lastMatch.getQueryNode().neighbors()) {
             for (IAtom t : targetNeighbors) {
-                if (q.getAtomMatcher().matches(target, t)) {
+                if (q.getAtomMatcher().matches(t)) {
                     Match match = new Match(q, t);
                     if (candidateFeasible(match)) {
                         candidates.add(match);
@@ -232,7 +232,7 @@ public class VFState implements IState {
         if (match.getQueryNode().countNeighbors() > target.countNeighbors(atom)) {
             return false;
         }
-        return match.getQueryNode().getAtomMatcher().matches(target, atom);
+        return match.getQueryNode().getAtomMatcher().matches(atom);
     }
 
     private boolean matchBonds(Match match) {
@@ -262,7 +262,7 @@ public class VFState implements IState {
     }
 
     private boolean matchBond(IEdge edge, IBond targetBond) {
-        return edge.getBondMatcher().matches(target, targetBond);
+        return edge.getBondMatcher().matches(targetBond);
     }
 
     private boolean isHeadMapped() {

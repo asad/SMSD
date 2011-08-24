@@ -22,7 +22,6 @@
  */
 package org.openscience.smsd.algorithm.matchers;
 
-import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 
 /**
@@ -33,5 +32,5 @@ import org.openscience.cdk.interfaces.IBond;
  */
 public interface BondMatcher {
 
-    boolean matches(IAtomContainer container, IBond atom);
+    boolean matches(IBond bond);
 }

@@ -31,7 +31,7 @@ import org.openscience.cdk.annotations.TestClass;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.interfaces.AbstractSubGraphTest")
-public abstract class AbstractSubGraph {
+public abstract class AbstractSubGraph extends MoleculeInitializer {
 
     /** 
      * Initialise the Subgraph search algorithm. Each Subgraph algorithm

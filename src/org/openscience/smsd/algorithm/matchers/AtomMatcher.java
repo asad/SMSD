@@ -23,7 +23,6 @@
 package org.openscience.smsd.algorithm.matchers;
 
 import org.openscience.cdk.interfaces.IAtom;
-import org.openscience.cdk.interfaces.IAtomContainer;
 
 /**
  * Interface for the AtomMatcher (atoms) in graph.
@@ -33,5 +32,5 @@ import org.openscience.cdk.interfaces.IAtomContainer;
  */
 public interface AtomMatcher {
 
-    boolean matches(IAtomContainer container, IAtom atom);
+    boolean matches(IAtom atom);
 }

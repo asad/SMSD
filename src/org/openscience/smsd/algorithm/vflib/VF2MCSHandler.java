@@ -35,20 +35,20 @@ import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
-import org.openscience.smsd.algorithm.vflib.interfaces.IMapper;
-import org.openscience.smsd.algorithm.vflib.interfaces.INode;
-import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
-import org.openscience.smsd.algorithm.vflib.map.VFMCSMapper;
-import org.openscience.smsd.algorithm.vflib.query.QueryCompiler;
-import org.openscience.smsd.interfaces.AbstractMCSAlgorithm;
-import org.openscience.smsd.interfaces.IMCSBase;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.algorithm.mcgregor.McGregor;
 import org.openscience.smsd.algorithm.mcsplus.BKKCKCF;
 import org.openscience.smsd.algorithm.mcsplus.GenerateCompatibilityGraph;
+import org.openscience.smsd.algorithm.vflib.interfaces.IMapper;
+import org.openscience.smsd.algorithm.vflib.interfaces.INode;
+import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
+import org.openscience.smsd.algorithm.vflib.map.VFMCSMapper;
+import org.openscience.smsd.algorithm.vflib.query.QueryCompiler;
 import org.openscience.smsd.global.TimeOut;
+import org.openscience.smsd.interfaces.AbstractMCSAlgorithm;
+import org.openscience.smsd.interfaces.IMCSBase;
 import org.openscience.smsd.tools.TimeManager;
 
 /**
@@ -66,7 +66,7 @@ import org.openscience.smsd.tools.TimeManager;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFlibMCSHandlerTest")
-public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase {
+public class VF2MCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
 
     private List<AtomAtomMapping> allAtomMCS = null;
     private List<AtomAtomMapping> allAtomMCSCopy = null;
@@ -80,7 +80,7 @@ public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase 
     private int countR = 0;
     private int countP = 0;
     private final static ILoggingTool Logger =
-            LoggingToolFactory.createLoggingTool(VF2MCSPlusHandler.class);
+            LoggingToolFactory.createLoggingTool(VF2MCSHandler.class);
     private TimeManager timeManager = null;
     private boolean shouldMatchRings;
 
@@ -109,7 +109,7 @@ public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase 
     /**
      * Constructor for an extended VF Algorithm for the MCS search
      */
-    public VF2MCSPlusHandler() {
+    public VF2MCSHandler() {
         allAtomMCS = new ArrayList<AtomAtomMapping>();
         allAtomMCSCopy = new ArrayList<AtomAtomMapping>();
         allMCS = new ArrayList<Map<Integer, Integer>>();
@@ -127,6 +127,15 @@ public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase 
         setTimeManager(new TimeManager());
         setBondMatchFlag(matchBonds);
         this.setMatchRings(shouldMatchRings);
+
+        if (isMatchRings()) {
+            try {
+                initializeMolecule(source);
+                initializeMolecule(target);
+            } catch (CDKException ex) {
+                Logger.error(Level.SEVERE, null, ex);
+            }
+        }
 
         searchVFMCSMappings();
         boolean flag = isExtensionFeasible();

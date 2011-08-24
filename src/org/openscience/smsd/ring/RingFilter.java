@@ -104,7 +104,7 @@ public class RingFilter {
 
     private boolean ringMatches(List<IAtom> ring) {
         for (IAtom atom : ring) {
-            if (!filter.matches(mol, atom)) {
+            if (!filter.matches(atom)) {
                 return false;
             }
         }

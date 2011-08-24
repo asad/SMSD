@@ -46,7 +46,6 @@
  */
 package org.openscience.smsd.algorithm.matchers;
 
-import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 
 /**
@@ -57,13 +56,20 @@ import org.openscience.cdk.interfaces.IBond;
  */
 public class DefaultMatcher {
 
-    public static boolean isBondMatch(BondMatcher bondMatcher,
-            IAtomContainer ac2,
+    /**
+     * 
+     * @param bondMatcher
+     * @param bondA2
+     * @param shouldMatchBonds
+     * @return
+     */
+    public static boolean isBondMatch(
+            BondMatcher bondMatcher,
             IBond bondA2,
             boolean shouldMatchBonds) {
 
         // ok, bonds match
-        if (bondMatcher.matches(ac2, bondA2)) {
+        if (bondMatcher.matches(bondA2)) {
 //            System.out.println("Bond Matched");
             return true;
         }
@@ -71,19 +77,18 @@ public class DefaultMatcher {
 
     }
 
-    public static boolean isAtomMatch(AtomMatcher atomMatcher1,
+    public static boolean isAtomMatch(
+            AtomMatcher atomMatcher1,
             AtomMatcher atomMatcher2,
-            IAtomContainer ac2,
-            IBond bondA2,
-            boolean shouldMatchBonds) {
+            IBond bondA2) {
 
         // ok, atoms match
-        if (atomMatcher1.matches(ac2, bondA2.getAtom(0)) && atomMatcher2.matches(ac2, bondA2.getAtom(1))) {
+        if (atomMatcher1.matches(bondA2.getAtom(0)) && atomMatcher2.matches(bondA2.getAtom(1))) {
 //            System.out.println("Atom Matched");
             return true;
         }
         // ok, atoms match
-        if (atomMatcher1.matches(ac2, bondA2.getAtom(1)) && atomMatcher2.matches(ac2, bondA2.getAtom(0))) {
+        if (atomMatcher1.matches(bondA2.getAtom(1)) && atomMatcher2.matches(bondA2.getAtom(0))) {
 //            System.out.println("Atom Matched");
             return true;
         }

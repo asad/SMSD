@@ -49,14 +49,19 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import org.openscience.cdk.CDKConstants;
+import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryBond;
+import org.openscience.cdk.tools.ILoggingTool;
+import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.AtomAtomMapping;
+import org.openscience.smsd.interfaces.MoleculeInitializer;
 
 /**
  * This class finds mapping states between query and target
@@ -66,7 +71,10 @@ import org.openscience.smsd.AtomAtomMapping;
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-public final class VF2 {
+public final class VF2 extends MoleculeInitializer {
+
+    private final ILoggingTool Logger =
+            LoggingToolFactory.createLoggingTool(VF2.class);
 
     public VF2() {
     }
@@ -81,16 +89,30 @@ public final class VF2 {
      * @param a query molecule
      * @param b target molecule
      * @param shouldMatchBonds 
+     * @param shouldMatchRings 
      * @return
      */
-    public synchronized AtomAtomMapping isomorphism(IAtomContainer a, IAtomContainer b, boolean shouldMatchBonds) {
+    public synchronized AtomAtomMapping isomorphism(IAtomContainer a,
+            IAtomContainer b,
+            boolean shouldMatchBonds,
+            boolean shouldMatchRings) {
+
+
+        if (shouldMatchRings) {
+            try {
+                initializeMolecule(a);
+                initializeMolecule(b);
+            } catch (CDKException ex) {
+                Logger.error(Level.SEVERE, null, ex);
+            }
+        }
 
         List<AtomAtomMapping> mappings = new ArrayList<AtomAtomMapping>();
         if (!isDead(a, b) && testIsSubgraphHeuristics(a, b, shouldMatchBonds)) {
 //            AtomContainerPrinter printer = new AtomContainerPrinter();
 //            System.out.println(printer.toString(a));
 //            System.out.println(printer.toString(b));
-            State state = new State(a, b, shouldMatchBonds);
+            State state = new State(a, b, shouldMatchBonds, shouldMatchRings);
             if (!state.isDead()) {
                 state.matchFirst(state, mappings);
             }
@@ -107,14 +129,13 @@ public final class VF2 {
      * 
      * @param a query molecule
      * @param b target molecule
-     * @param shouldMatchBonds 
      * @return
      */
-    public synchronized AtomAtomMapping isomorphism(IQueryAtomContainer a, IAtomContainer b, boolean shouldMatchBonds) {
+    public synchronized AtomAtomMapping isomorphism(IQueryAtomContainer a, IAtomContainer b) {
 
         List<AtomAtomMapping> mappings = new ArrayList<AtomAtomMapping>();
-        if (!isDead(a, b) && testIsSubgraphHeuristics(a, b, shouldMatchBonds)) {
-            State state = new State(a, b, shouldMatchBonds);
+        if (!isDead(a, b) && testIsSubgraphHeuristics(a, b, true)) {
+            State state = new State(a, b);
             if (!state.isDead()) {
                 state.matchFirst(state, mappings);
             }
@@ -127,13 +148,18 @@ public final class VF2 {
      * @param a query molecule
      * @param b target molecule
      * @param shouldMatchBonds 
+     * @param shouldMatchRings 
      * @return
      */
-    public synchronized List<AtomAtomMapping> isomorphisms(IAtomContainer a, IAtomContainer b, boolean shouldMatchBonds) {
+    public synchronized List<AtomAtomMapping> isomorphisms(
+            IAtomContainer a,
+            IAtomContainer b,
+            boolean shouldMatchBonds,
+            boolean shouldMatchRings) {
 
         List<AtomAtomMapping> mappings = new ArrayList<AtomAtomMapping>();
         if (!isDead(a, b) && testIsSubgraphHeuristics(a, b, shouldMatchBonds)) {
-            State state = new State(a, b, shouldMatchBonds);
+            State state = new State(a, b, shouldMatchBonds, shouldMatchRings);
             if (!state.isDead()) {
                 state.matchAll(state, mappings);
             }

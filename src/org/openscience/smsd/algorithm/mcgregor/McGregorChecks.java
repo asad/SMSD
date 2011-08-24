@@ -174,16 +174,16 @@ public class McGregorChecks {
 
             //Bond Matcher
             BondMatcher bondMatcher =
-                    new DefaultMCSPlusBondMatcher(ac1, bondA1, shouldMatchBonds);
+                    new DefaultMCSPlusBondMatcher(bondA1, shouldMatchBonds);
             //Atom Matcher
             AtomMatcher atomMatcher1 =
-                    new DefaultMCSPlusAtomMatcher(ac1, bondA1.getAtom(0), shouldMatchBonds, shouldMatchRings);
+                    new DefaultMCSPlusAtomMatcher(bondA1.getAtom(0), shouldMatchBonds, shouldMatchRings);
             //Atom Matcher
             AtomMatcher atomMatcher2 =
-                    new DefaultMCSPlusAtomMatcher(ac1, bondA1.getAtom(1), shouldMatchBonds, shouldMatchRings);
+                    new DefaultMCSPlusAtomMatcher(bondA1.getAtom(1), shouldMatchBonds, shouldMatchRings);
 
-            if (DefaultMatcher.isBondMatch(bondMatcher, ac2, bondA2, shouldMatchBonds)
-                    && DefaultMatcher.isAtomMatch(atomMatcher1, atomMatcher2, ac2, bondA2, shouldMatchBonds)) {
+            if (DefaultMatcher.isBondMatch(bondMatcher, bondA2, shouldMatchBonds)
+                    && DefaultMatcher.isAtomMatch(atomMatcher1, atomMatcher2, bondA2)) {
                 return true;
             }
             return false;

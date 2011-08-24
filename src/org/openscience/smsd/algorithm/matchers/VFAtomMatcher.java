@@ -24,7 +24,6 @@
 package org.openscience.smsd.algorithm.matchers;
 
 import org.openscience.cdk.interfaces.IAtom;
-import org.openscience.smsd.algorithm.vflib.builder.TargetProperties;
 
 /**
  * Interface for the AtomMatcher (atoms) in graph.
@@ -34,6 +33,10 @@ import org.openscience.smsd.algorithm.vflib.builder.TargetProperties;
  */
 
 public interface VFAtomMatcher {
-
-    boolean matches(TargetProperties container, IAtom atom);
+    /**
+     * 
+     * @param atom
+     * @return
+     */
+    boolean matches(IAtom atom);
 }

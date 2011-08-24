@@ -51,10 +51,7 @@ import org.openscience.smsd.algorithm.matchers.ring.IRingMatcher;
 import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtom;
-import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
-import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
-import org.openscience.smsd.algorithm.vflib.builder.TargetProperties;
 
 /**
  * Checks if atom is matching between query and target molecules.
@@ -66,7 +63,6 @@ import org.openscience.smsd.algorithm.vflib.builder.TargetProperties;
 public final class DefaultVFAtomMatcher implements VFAtomMatcher {
 
     static final long serialVersionUID = -7861469841127327812L;
-    private int maximumNeighbors;
     private String symbol = null;
     private IAtom qAtom = null;
     private boolean shouldMatchBonds;
@@ -90,41 +86,30 @@ public final class DefaultVFAtomMatcher implements VFAtomMatcher {
     /**
      * Constructor
      */
-    public DefaultVFAtomMatcher() {
+    protected DefaultVFAtomMatcher() {
         this.qAtom = null;
         symbol = null;
         ringMatcher = null;
-        maximumNeighbors = -1;
         shouldMatchBonds = false;
         shouldMatchRings = false;
     }
 
     /**
      * Constructor
-     * @param queryContainer query atom container
      * @param atom query atom
      * @param shouldMatchBonds bond matching flag
      * @param shouldMatchRings  ring matching flag
      */
-    public DefaultVFAtomMatcher(IAtomContainer queryContainer, IAtom atom, boolean shouldMatchBonds, boolean shouldMatchRings) {
+    public DefaultVFAtomMatcher(IAtom atom, boolean shouldMatchBonds, boolean shouldMatchRings) {
         this();
         this.qAtom = atom;
         this.symbol = atom.getSymbol();
         this.ringMatcher = new RingMatcher(atom);
         setBondMatchFlag(shouldMatchBonds);
         this.shouldMatchRings = shouldMatchRings;
-        this.maximumNeighbors = queryContainer.getConnectedAtomsCount(atom);
 
 //        System.out.println("Atom " + atom.getSymbol());
 //        System.out.println("MAX allowed " + maximumNeighbors);
-    }
-
-    /**
-     *
-     * @param maximum numbers of connected atoms allowed
-     */
-    public void setMaximumNeighbors(int maximum) {
-        this.maximumNeighbors = maximum;
     }
 
     /** {@inheritDoc}
@@ -136,13 +121,12 @@ public final class DefaultVFAtomMatcher implements VFAtomMatcher {
 
     /** {@inheritDoc}
      *
-     * @param targetContainer
      * @param targetAtom
      * @return
      */
     @Override
-    public boolean matches(TargetProperties targetContainer, IAtom targetAtom) {
-        if (targetContainer instanceof IQueryAtomContainer) {
+    public boolean matches(IAtom targetAtom) {
+        if (targetAtom instanceof IQueryAtom) {
             return ((IQueryAtom) targetAtom).matches(qAtom);
         } else if (qAtom != null && qAtom instanceof IQueryAtom) {
             return ((IQueryAtom) qAtom).matches(targetAtom);
@@ -157,11 +141,6 @@ public final class DefaultVFAtomMatcher implements VFAtomMatcher {
                     return matchNonRingAtoms(targetAtom);
                 }
             }
-
-//        if (!matchMaximumNeighbors(targetContainer, targetAtom)) {
-//            return false;
-//        }
-
         }
 
         return true;
@@ -184,18 +163,5 @@ public final class DefaultVFAtomMatcher implements VFAtomMatcher {
             return false;
         }
         return symbol.equals(atom.getSymbol());
-    }
-
-    private boolean matchMaximumNeighbors(TargetProperties targetContainer, IAtom targetAtom) {
-        if (maximumNeighbors == -1 || !isBondMatchFlag()) {
-            return true;
-        }
-        int maximumTargetNeighbors = targetContainer.countNeighbors(targetAtom);
-        return maximumTargetNeighbors >= maximumNeighbors;
-    }
-
-    private int countImplicitHydrogens(IAtom atom) {
-        return (atom.getImplicitHydrogenCount() == null)
-                ? 0 : atom.getImplicitHydrogenCount();
     }
 }

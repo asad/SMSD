@@ -42,7 +42,7 @@ import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.algorithm.mcsplus.MCSPlusHandler;
 import org.openscience.smsd.algorithm.rgraph.CDKMCSHandler;
 import org.openscience.smsd.algorithm.single.SingleMappingHandler;
-import org.openscience.smsd.algorithm.vflib.VF2MCSPlusHandler;
+import org.openscience.smsd.algorithm.vflib.VF2MCSHandler;
 import org.openscience.smsd.global.TimeOut;
 import org.openscience.smsd.interfaces.Algorithm;
 import org.openscience.smsd.interfaces.ITimeOut;
@@ -192,14 +192,6 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
         this.algorithmType = algorithmType;
         this.mol1 = query;
         this.mol2 = target;
-        if (matchRings) {
-            try {
-                initializeMolecule(mol1);
-                initializeMolecule(mol2);
-            } catch (CDKException ex) {
-                Logger.error(Level.SEVERE, null, ex);
-            }
-        }
         this.mcsList = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
         this.matchBonds = bondTypeFlag;
         this.matchRings = matchRings;
@@ -308,8 +300,8 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
 
     private synchronized void vfLibMCSAlgorithm() {
 //        double time = System.currentTimeMillis();
-        VF2MCSPlusHandler mcs = null;
-        mcs = new VF2MCSPlusHandler();
+        VF2MCSHandler mcs = null;
+        mcs = new VF2MCSHandler();
         mcs.set(mol1, mol2);
         mcs.searchMCS(isMatchBonds(), isMatchRings());
         clearMaps();

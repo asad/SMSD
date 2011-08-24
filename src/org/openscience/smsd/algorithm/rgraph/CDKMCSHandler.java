@@ -101,8 +101,11 @@ public class CDKMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
     public synchronized void searchMCS(boolean shouldMatchBonds, boolean shouldMatchRings) {
 
         CDKRMapHandler rmap = new CDKRMapHandler();
-
         try {
+            if (shouldMatchRings) {
+                initializeMolecule(source);
+                initializeMolecule(target);
+            }
 
             if (source.getAtomCount() > target.getAtomCount()) {
                 rOnPFlag = true;

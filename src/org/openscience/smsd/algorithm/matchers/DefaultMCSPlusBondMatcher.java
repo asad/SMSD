@@ -64,8 +64,6 @@ public final class DefaultMCSPlusBondMatcher implements BondMatcher {
 
     static final long serialVersionUID = -7861469841127328812L;
     private IBond queryBond = null;
-    private IQueryBond smartQueryBond = null;
-    private int unsaturation = 0;
     private boolean shouldMatchBonds = false;
 
     /**
@@ -73,49 +71,33 @@ public final class DefaultMCSPlusBondMatcher implements BondMatcher {
      */
     public DefaultMCSPlusBondMatcher() {
         this.queryBond = null;
-        this.smartQueryBond = null;
-        this.unsaturation = -1;
         shouldMatchBonds = false;
     }
 
     /**
      * Constructor
-     * @param queryMol query GraphMolecule
      * @param queryBond query GraphMolecule
      * @param shouldMatchBonds bond match flag
      */
-    public DefaultMCSPlusBondMatcher(IAtomContainer queryMol, IBond queryBond, boolean shouldMatchBonds) {
+    public DefaultMCSPlusBondMatcher(IBond queryBond, boolean shouldMatchBonds) {
         super();
         this.queryBond = queryBond;
 //        this.unsaturation = getUnsaturation(queryMol, this.queryBond);
         setBondMatchFlag(shouldMatchBonds);
     }
 
-    /**
-     * Constructor
-     * @param queryBond query GraphMolecule
-     */
-    public DefaultMCSPlusBondMatcher(IQueryBond queryBond) {
-        super();
-        this.smartQueryBond = queryBond;
-    }
-
     /** {@inheritDoc}
      *
-     * @param targetContainer target container
      * @param targetBond target bond
      * @return true if bonds match
      */
     @Override
-    public boolean matches(IAtomContainer targetContainer, IBond targetBond) {
-        if (this.smartQueryBond != null) {
-            return smartQueryBond.matches(targetBond);
+    public boolean matches(IBond targetBond) {
+        if (this.queryBond != null && queryBond instanceof IQueryBond) {
+            return ((IQueryBond) queryBond).matches(targetBond);
         } else if (!isBondMatchFlag() || (isBondMatchFlag() && isBondTypeMatch(targetBond))) {
             return true;
         }
-//            if (isBondMatchFlag() && this.unsaturation == getUnsaturation(targetConatiner, targetBond)) {
-//                return true;
-//            }
         return false;
     }
 

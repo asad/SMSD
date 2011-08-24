@@ -47,14 +47,13 @@
 package org.openscience.smsd.algorithm.vflib.substructure;
 
 import java.util.List;
-import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
-import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
-import org.openscience.cdk.isomorphism.matchers.IQueryBond;
 import org.openscience.smsd.AtomAtomMapping;
+import org.openscience.smsd.algorithm.matchers.DefaultVFAtomMatcher;
+import org.openscience.smsd.algorithm.matchers.DefaultVFBondMatcher;
 
 /**
  * This class finds mapping states between query and target
@@ -69,8 +68,8 @@ import org.openscience.smsd.AtomAtomMapping;
 final class State {
 
     private final boolean shouldMatchBonds;
+    private final boolean shouldMatchRings;
     private final IAtomContainer source;
-    private final IQueryAtomContainer querySource;
     private final IAtomContainer target;
 
     // Returns true if the state contains an isomorphism.
@@ -114,12 +113,11 @@ final class State {
     private boolean[][] matches;
     private boolean isMatchPossible = false;
 
-    State(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds) {
+    State(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings) {
         this.size = 0;
         this.sourceTerminalSize = 0;
         this.targetTerminalSize = 0;
         this.source = source;
-        this.querySource = null;
         this.target = target;
         this.ownSharedState = true;
         this.matches = new boolean[this.source.getAtomCount()][this.target.getAtomCount()];
@@ -129,15 +127,15 @@ final class State {
         this.sharedState = new SharedState(source.getAtomCount(),
                 target.getAtomCount());
         this.shouldMatchBonds = shouldMatchBonds;
+        this.shouldMatchRings = shouldMatchRings;
     }
 
-    State(IQueryAtomContainer source, IAtomContainer target, boolean shouldMatchBonds) {
+    State(IQueryAtomContainer source, IAtomContainer target) {
         this.size = 0;
         this.sourceTerminalSize = 0;
         this.targetTerminalSize = 0;
         this.source = source;
         this.target = target;
-        this.querySource = source;
         this.ownSharedState = true;
         this.matches = new boolean[this.source.getAtomCount()][this.target.getAtomCount()];
         this.isMatchPossible = isFeasible();
@@ -145,7 +143,8 @@ final class State {
         this.lastAddition = new Pair<Integer, Integer>(-1, -1);
         this.sharedState = new SharedState(source.getAtomCount(),
                 target.getAtomCount());
-        this.shouldMatchBonds = shouldMatchBonds;
+        this.shouldMatchBonds = true;
+        this.shouldMatchRings = true;
     }
 
     State(State state) {
@@ -153,13 +152,13 @@ final class State {
         this.sourceTerminalSize = state.sourceTerminalSize;
         this.targetTerminalSize = state.targetTerminalSize;
         this.source = state.source;
-        this.querySource = state.querySource;
         this.target = state.target;
         this.ownSharedState = false;
         this.matches = state.matches;
         this.lastAddition = new Pair<Integer, Integer>(-1, -1);
         this.sharedState = state.sharedState;
         this.shouldMatchBonds = state.shouldMatchBonds;
+        this.shouldMatchRings = state.shouldMatchRings;
     }
 
     private boolean isFeasible() {
@@ -494,29 +493,14 @@ final class State {
         return true;
     }
 
-    private boolean matchBonds(IBond queryBond, IBond targetBond) {
-        if (!shouldMatchBonds) {
-            return true;
-        }
-        if (queryBond instanceof IQueryBond) {
-//            System.out.println("IQueryBond");
-            return ((IQueryBond) queryBond).matches(targetBond);
-        } else if ((queryBond.getFlag(CDKConstants.ISAROMATIC) == targetBond.getFlag(CDKConstants.ISAROMATIC))
-                && (queryBond.getOrder() == targetBond.getOrder())) {
-            return true;
-        } else if (queryBond.getFlag(CDKConstants.ISAROMATIC) && targetBond.getFlag(CDKConstants.ISAROMATIC)) {
-            return true;
-        }
-        return false;
+    boolean matchBonds(IBond queryBond, IBond targetBond) {
+        DefaultVFBondMatcher defaultVFBondMatcher = new DefaultVFBondMatcher(queryBond, shouldMatchBonds);
+        return defaultVFBondMatcher.matches(targetBond);
     }
 
     boolean matchAtoms(IAtom sourceAtom, IAtom targetAtom) {
-        if (sourceAtom instanceof IQueryAtom && sourceAtom.getSymbol() == null) {
-//            System.out.println("IQueryAtom");
-            return ((IQueryAtom) sourceAtom).matches(targetAtom) ? true : false;
-        } else {
-            return sourceAtom.getSymbol().equals(targetAtom.getSymbol()) ? true : false;
-        }
+        DefaultVFAtomMatcher defaultVFAtomMatcher = new DefaultVFAtomMatcher(sourceAtom, shouldMatchBonds, shouldMatchRings);
+        return defaultVFAtomMatcher.matches(targetAtom);
     }
 
     private boolean hasMap(AtomAtomMapping map, List<AtomAtomMapping> mappings) {
