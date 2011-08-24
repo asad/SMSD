@@ -1,5 +1,4 @@
-
-/* Copyright (C) 2009-2011 Syed Asad Rahman <asad@ebi.ac.uk>
+/* Copyright (C) 2006-2011  Syed Asad Rahman <asad@ebi.ac.uk>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -21,29 +20,25 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-package org.openscience.smsd.algorithm;
+package org.openscience.smsd.interfaces;
 
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 /**
+ * Interface class for reporting only substructure searches.
+ * @cdk.module smsd
+ * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
- *
- * @cdk.module test-smsd
- * @cdk.require java1.6+
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({org.openscience.smsd.algorithm.single.SingleSuite.class,
-    org.openscience.smsd.algorithm.vflib.VFSuite.class,
-    org.openscience.smsd.algorithm.mcsplus.McsplusSuite.class,
-    //        org.openscience.cdk.smsd.algorithm.mcgregor.McgregorSuite.class,
-    org.openscience.smsd.algorithm.rgraph.CdkSuite.class
-})
-public class AlgorithmSuite {
+public class AbstractSubGraphTest {
+
+    public AbstractSubGraphTest() {
+    }
 
     @BeforeClass
     public static void setUpClass() throws Exception {
@@ -54,10 +49,34 @@ public class AlgorithmSuite {
     }
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
     }
 
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
+    }
+
+    /**
+     * Test of isSubgraph method, of class AbstractSubGraph.
+     */
+    @Test
+    public void testIsSubgraph() {
+        System.out.println("isSubgraph");
+        boolean shouldMatchBonds = false;
+        boolean shouldMatchRings = false;
+        AbstractSubGraph instance = new AbstractSubGraphImpl();
+        boolean expResult = false;
+        boolean result = instance.isSubgraph(shouldMatchBonds, shouldMatchRings);
+        assertEquals(expResult, result);
+        // TODO review the generated test code and remove the default call to fail.
+        fail("The test case is a prototype.");
+    }
+
+    public class AbstractSubGraphImpl extends AbstractSubGraph {
+
+        @Override
+        public boolean isSubgraph(boolean shouldMatchBonds, boolean shouldMatchRings) {
+            return false;
+        }
     }
 }
