@@ -342,6 +342,6 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
         smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
 
-        assertEquals(7, smsd1.getFirstMapping().size());
+        assertEquals(6, smsd1.getFirstMapping().size());
     }
 }
