@@ -445,25 +445,6 @@ public class CDKMCS {
             List<List<CDKRMap>> matches = new ArrayList<List<CDKRMap>>();
             IAtom queryAtom = g2.getAtom(0);
 
-//            // we can have a IQueryAtomContainer *or* an IAtomContainer
-//            if (queryAtom instanceof IQueryAtom) {
-//                IQueryAtom qAtom = (IQueryAtom) queryAtom;
-//                for (IAtom atom : g1.atoms()) {
-//                    if (qAtom.matches(atom)) {
-//                        List<CDKRMap> lmap = new ArrayList<CDKRMap>();
-//                        lmap.add(new CDKRMap(g1.getAtomNumber(atom), 0));
-//                        matches.add(lmap);
-//                    }
-//                }
-//            } else {
-//                for (IAtom atom : g1.atoms()) {
-//                    if (queryAtom.getSymbol().equals(atom.getSymbol())) {
-//                        List<CDKRMap> lmap = new ArrayList<CDKRMap>();
-//                        lmap.add(new CDKRMap(g1.getAtomNumber(atom), 0));
-//                        matches.add(lmap);
-//                    }
-//                }
-//            }
             //use atom matcher from SMSD
             DefaultRGraphAtomMatcher defaultRGraphAtomMatcher =
                     new DefaultRGraphAtomMatcher(g2, queryAtom, shouldMatchBonds, shouldMatchRings);
