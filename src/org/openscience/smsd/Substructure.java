@@ -33,7 +33,7 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.algorithm.single.SingleMappingHandler;
-import org.openscience.smsd.algorithm.vflib.VF2Substructure;
+import org.openscience.smsd.algorithm.vflib.VF2Sub;
 import org.openscience.smsd.algorithm.vflib.substructure.VF2;
 import org.openscience.smsd.global.TimeOut;
 
@@ -184,7 +184,7 @@ public final class Substructure extends BaseMapping {
             if (mol1.getAtomCount() > mol2.getAtomCount()) {
                 return false;
             } else {
-                VF2Substructure mapper = new VF2Substructure();
+                VF2Sub mapper = new VF2Sub();
                 List<AtomAtomMapping> mappingsVF2 = new ArrayList<AtomAtomMapping>();
                 mapper.set(mol1, mol2);
                 mapper.isSubgraph(isBondMatchFlag(), isMatchRing());
