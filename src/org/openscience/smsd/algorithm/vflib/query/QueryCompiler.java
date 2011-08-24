@@ -51,7 +51,6 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
-import org.openscience.cdk.isomorphism.matchers.IQueryBond;
 import org.openscience.smsd.algorithm.matchers.DefaultVFAtomMatcher;
 import org.openscience.smsd.algorithm.matchers.DefaultVFBondMatcher;
 import org.openscience.smsd.algorithm.matchers.VFAtomMatcher;
@@ -148,10 +147,6 @@ public class QueryCompiler implements IQueryCompiler {
 
     private synchronized VFBondMatcher createBondMatcher(IAtomContainer mol, IBond bond) {
         return new DefaultVFBondMatcher(mol, bond, isBondMatchFlag());
-    }
-
-    private synchronized VFBondMatcher createBondMatcher(IQueryBond bond) {
-        return new DefaultVFBondMatcher(bond);
     }
 
     /**
