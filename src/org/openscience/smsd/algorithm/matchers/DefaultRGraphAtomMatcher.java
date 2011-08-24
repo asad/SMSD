@@ -66,12 +66,11 @@ public final class DefaultRGraphAtomMatcher implements AtomMatcher {
 
     static final long serialVersionUID = -7861469841127327812L;
     private int maximumNeighbors;
-    private String symbol = null;
-    private IAtom qAtom = null;
+    private String symbol;
+    private IAtom qAtom;
     private boolean shouldMatchBonds;
     private boolean shouldMatchRings;
     private IRingMatcher ringMatcher;
-    private IQueryAtom smartQueryAtom;
 
     /**
      * @return the shouldMatchBonds
@@ -92,12 +91,11 @@ public final class DefaultRGraphAtomMatcher implements AtomMatcher {
      */
     public DefaultRGraphAtomMatcher() {
         this.qAtom = null;
-        symbol = null;
-        maximumNeighbors = -1;
-        ringMatcher = null;
-        smartQueryAtom = null;
-        shouldMatchBonds = false;
-        shouldMatchRings = false;
+        this.symbol = null;
+        this.maximumNeighbors = -1;
+        this.ringMatcher = null;
+        this.shouldMatchBonds = false;
+        this.shouldMatchRings = false;
     }
 
     /**
@@ -116,31 +114,6 @@ public final class DefaultRGraphAtomMatcher implements AtomMatcher {
         setBondMatchFlag(shouldMatchBonds);
     }
 
-    /**
-     * Constructor
-     * @param smartQueryAtom query atom
-     * @param container 
-     */
-    public DefaultRGraphAtomMatcher(IQueryAtom smartQueryAtom, IQueryAtomContainer container) {
-        this();
-        this.smartQueryAtom = smartQueryAtom;
-        this.symbol = smartQueryAtom.getSymbol();
-    }
-
-    /**
-     * Constructor
-     * @param queryContainer query atom container
-     * @param template query atom
-     * @param blockedPositions
-     * @param shouldMatchBonds bond matching flag
-     * @param shouldMatchRings ring matching flag 
-     */
-    public DefaultRGraphAtomMatcher(IAtomContainer queryContainer, IAtom template, int blockedPositions, boolean shouldMatchBonds, boolean shouldMatchRings) {
-        this(queryContainer, template, shouldMatchBonds, shouldMatchRings);
-        this.shouldMatchRings = shouldMatchRings;
-        this.maximumNeighbors = countSaturation(queryContainer, template) - blockedPositions;
-    }
-
     /** {@inheritDoc}
      *
      * @param targetContainer
@@ -149,22 +122,26 @@ public final class DefaultRGraphAtomMatcher implements AtomMatcher {
      */
     @Override
     public boolean matches(IAtomContainer targetContainer, IAtom targetAtom) {
-        if (smartQueryAtom != null && qAtom == null && smartQueryAtom.getSymbol() == null) {
-            return smartQueryAtom.matches(targetAtom) ? true : false;
-        } else if (!matchSymbol(targetAtom)) {
-            return false;
-        }
+        if (targetContainer instanceof IQueryAtomContainer) {
+            return ((IQueryAtom) targetAtom).matches(qAtom);
+        } else if (qAtom != null && qAtom instanceof IQueryAtom) {
+            return ((IQueryAtom) qAtom).matches(targetAtom);
+        } else {
+            if (!matchSymbol(targetAtom)) {
+                return false;
+            }
+            if (shouldMatchRings) {
+                if (matchRingAtoms(targetAtom)) {
+                    return ringMatcher.matches(targetAtom);
+                } else {
+                    return matchNonRingAtoms(targetAtom);
+                }
+            }
 
 //        if (!matchMaximumNeighbors(targetContainer, targetAtom)) {
 //            return false;
 //        }
 
-        if (shouldMatchRings) {
-            if (matchRingAtoms(targetAtom)) {
-                return ringMatcher.matches(targetAtom);
-            } else {
-                return matchNonRingAtoms(targetAtom);
-            }
         }
 
         return true;

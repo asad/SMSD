@@ -68,7 +68,6 @@ public final class DefaultMCSPlusAtomMatcher implements AtomMatcher {
     private int maximumNeighbors;
     private String symbol = null;
     private IAtom qAtom = null;
-    private IQueryAtom smartQueryAtom;
     private IRingMatcher ringMatcher;
     private boolean shouldMatchBonds;
     private boolean shouldMatchRings;
@@ -93,7 +92,6 @@ public final class DefaultMCSPlusAtomMatcher implements AtomMatcher {
     public DefaultMCSPlusAtomMatcher() {
         this.qAtom = null;
         symbol = null;
-        smartQueryAtom = null;
         ringMatcher = null;
         maximumNeighbors = -1;
         shouldMatchBonds = false;
@@ -117,39 +115,6 @@ public final class DefaultMCSPlusAtomMatcher implements AtomMatcher {
 
 //        System.out.println("Atom " + atom.getSymbol());
 //        System.out.println("MAX allowed " + maximumNeighbors);
-    }
-
-    /**
-     * Constructor
-     * @param smartQueryAtom query atom
-     * @param container
-     */
-    public DefaultMCSPlusAtomMatcher(IQueryAtom smartQueryAtom, IQueryAtomContainer container) {
-        this();
-        this.smartQueryAtom = smartQueryAtom;
-        this.symbol = smartQueryAtom.getSymbol();
-    }
-
-    /**
-     * Constructor
-     * @param queryContainer query atom container
-     * @param template query atom
-     * @param blockedPositions
-     * @param shouldMatchBonds bond matching flag
-     * @param shouldMatchRings ring matching flag 
-     */
-    public DefaultMCSPlusAtomMatcher(
-            IAtomContainer queryContainer,
-            IAtom template,
-            int blockedPositions,
-            boolean shouldMatchBonds,
-            boolean shouldMatchRings) {
-        this(queryContainer, template, shouldMatchBonds, shouldMatchRings);
-        this.maximumNeighbors = countImplicitHydrogens(template)
-                + queryContainer.getConnectedAtomsCount(template)
-                - blockedPositions;
-        this.ringMatcher = new RingMatcher(template);
-        this.shouldMatchRings = shouldMatchRings;
     }
 
     /**
@@ -196,23 +161,28 @@ public final class DefaultMCSPlusAtomMatcher implements AtomMatcher {
      */
     @Override
     public boolean matches(IAtomContainer targetContainer, IAtom targetAtom) {
-        if (smartQueryAtom != null && qAtom == null && smartQueryAtom.getSymbol() == null) {
-            return smartQueryAtom.matches(targetAtom) ? true : false;
-        } else if (!matchSymbol(targetAtom)) {
-            return false;
-        }
+        if (targetContainer instanceof IQueryAtomContainer) {
+            return ((IQueryAtom) targetAtom).matches(qAtom);
+        } else if (qAtom != null && qAtom instanceof IQueryAtom) {
+            return ((IQueryAtom) qAtom).matches(targetAtom);
+        } else {
+            if (!matchSymbol(targetAtom)) {
+                return false;
+            }
+            if (shouldMatchRings) {
+                if (matchRingAtoms(targetAtom)) {
+                    return ringMatcher.matches(targetAtom);
+                } else {
+                    return matchNonRingAtoms(targetAtom);
+                }
+            }
 
 //        if (!matchMaximumNeighbors(targetContainer, targetAtom)) {
 //            return false;
 //        }
 
-        if (shouldMatchRings) {
-            if (matchRingAtoms(targetAtom)) {
-                return ringMatcher.matches(targetAtom);
-            } else {
-                return matchNonRingAtoms(targetAtom);
-            }
         }
+
         return true;
     }
 

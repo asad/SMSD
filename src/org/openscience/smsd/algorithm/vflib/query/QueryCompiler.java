@@ -50,7 +50,6 @@ import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
-import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryBond;
 import org.openscience.smsd.algorithm.matchers.DefaultVFAtomMatcher;
@@ -143,34 +142,12 @@ public class QueryCompiler implements IQueryCompiler {
         return result;
     }
 
-    private synchronized IQuery build(IQueryAtomContainer queryMolecule) {
-        VFQueryBuilder result = new VFQueryBuilder();
-        for (IAtom atoms : queryMolecule.atoms()) {
-            IQueryAtom atom = (IQueryAtom) atoms;
-            VFAtomMatcher matcher = createAtomMatcher(atom, queryMolecule);
-            if (matcher != null) {
-                result.addNode(matcher, atom);
-            }
-        }
-        for (int i = 0; i < queryMolecule.getBondCount(); i++) {
-            IBond bond = queryMolecule.getBond(i);
-            IQueryAtom atomI = (IQueryAtom) bond.getAtom(0);
-            IQueryAtom atomJ = (IQueryAtom) bond.getAtom(1);
-            result.connect(result.getNode(atomI), result.getNode(atomJ), createBondMatcher((IQueryBond) bond));
-        }
-        return result;
-    }
-
     private synchronized VFAtomMatcher createAtomMatcher(IAtomContainer mol, IAtom atom) {
         return new DefaultVFAtomMatcher(mol, atom, isBondMatchFlag(), isShouldMatchRings());
     }
 
     private synchronized VFBondMatcher createBondMatcher(IAtomContainer mol, IBond bond) {
         return new DefaultVFBondMatcher(mol, bond, isBondMatchFlag());
-    }
-
-    private synchronized VFAtomMatcher createAtomMatcher(IQueryAtom atom, IQueryAtomContainer container) {
-        return new DefaultVFAtomMatcher(atom, container);
     }
 
     private synchronized VFBondMatcher createBondMatcher(IQueryBond bond) {

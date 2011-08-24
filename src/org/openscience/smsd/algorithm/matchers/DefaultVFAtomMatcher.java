@@ -69,7 +69,6 @@ public final class DefaultVFAtomMatcher implements VFAtomMatcher {
     private int maximumNeighbors;
     private String symbol = null;
     private IAtom qAtom = null;
-    private IQueryAtom smartQueryAtom;
     private boolean shouldMatchBonds;
     private boolean shouldMatchRings;
     private IRingMatcher ringMatcher;
@@ -95,7 +94,6 @@ public final class DefaultVFAtomMatcher implements VFAtomMatcher {
         this.qAtom = null;
         symbol = null;
         ringMatcher = null;
-        smartQueryAtom = null;
         maximumNeighbors = -1;
         shouldMatchBonds = false;
         shouldMatchRings = false;
@@ -122,34 +120,6 @@ public final class DefaultVFAtomMatcher implements VFAtomMatcher {
     }
 
     /**
-     * Constructor
-     * @param smartQueryAtom query atom
-     * @param container 
-     */
-    public DefaultVFAtomMatcher(IQueryAtom smartQueryAtom, IQueryAtomContainer container) {
-        this();
-        this.smartQueryAtom = smartQueryAtom;
-        this.symbol = smartQueryAtom.getSymbol();
-    }
-
-    /**
-     * Constructor
-     * @param queryContainer query atom container
-     * @param atom query atom
-     * @param blockedPositions
-     * @param shouldMatchBonds bond matching flag
-     * @param shouldMatchRings ring matching flag 
-     */
-    public DefaultVFAtomMatcher(IAtomContainer queryContainer, IAtom atom, int blockedPositions, boolean shouldMatchBonds, boolean shouldMatchRings) {
-        this(queryContainer, atom, shouldMatchBonds, shouldMatchRings);
-        this.maximumNeighbors = countImplicitHydrogens(atom)
-                + queryContainer.getConnectedAtomsCount(atom)
-                - blockedPositions;
-        this.ringMatcher = new RingMatcher(atom);
-        this.shouldMatchRings = shouldMatchRings;
-    }
-
-    /**
      *
      * @param maximum numbers of connected atoms allowed
      */
@@ -172,22 +142,26 @@ public final class DefaultVFAtomMatcher implements VFAtomMatcher {
      */
     @Override
     public boolean matches(TargetProperties targetContainer, IAtom targetAtom) {
-        if (smartQueryAtom != null && qAtom == null && smartQueryAtom.getSymbol() == null) {
-            return smartQueryAtom.matches(targetAtom) ? true : false;
-        } else if (!matchSymbol(targetAtom)) {
-            return false;
-        }
+        if (targetContainer instanceof IQueryAtomContainer) {
+            return ((IQueryAtom) targetAtom).matches(qAtom);
+        } else if (qAtom != null && qAtom instanceof IQueryAtom) {
+            return ((IQueryAtom) qAtom).matches(targetAtom);
+        } else {
+            if (!matchSymbol(targetAtom)) {
+                return false;
+            }
+            if (shouldMatchRings) {
+                if (matchRingAtoms(targetAtom)) {
+                    return ringMatcher.matches(targetAtom);
+                } else {
+                    return matchNonRingAtoms(targetAtom);
+                }
+            }
 
 //        if (!matchMaximumNeighbors(targetContainer, targetAtom)) {
 //            return false;
 //        }
 
-        if (shouldMatchRings) {
-            if (matchRingAtoms(targetAtom)) {
-                return ringMatcher.matches(targetAtom);
-            } else {
-                return matchNonRingAtoms(targetAtom);
-            }
         }
 
         return true;

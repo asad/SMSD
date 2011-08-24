@@ -439,7 +439,6 @@ public class CDKMCS {
     public static List<List<CDKRMap>> search(IAtomContainer g1, IAtomContainer g2, BitSet c1,
             BitSet c2, boolean findAllStructure, boolean findAllMap,
             boolean shouldMatchBonds, boolean shouldMatchRings) throws CDKException {
-
         // handle single query atom case separately
         if (g2.getAtomCount() == 1) {
             List<List<CDKRMap>> matches = new ArrayList<List<CDKRMap>>();
@@ -780,7 +779,6 @@ public class CDKMCS {
                         || (// a1 = b2 && b1 = a2
                         defaultRGraphAtomMatcherA1.matches(ac2, atomB2)
                         && defaultRGraphAtomMatcherA2.matches(ac2, atomB1)))) {
-
                     gr.addNode(new CDKRNode(i, j));
                 }
             }
