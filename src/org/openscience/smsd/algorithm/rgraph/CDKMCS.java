@@ -881,7 +881,7 @@ public class CDKMCS {
                     continue;
                 }
 
-                if (// atome type conditions
+                if (// atom type conditions
                         (// a1 = a2 && b1 = b2
                         AtomMatcher(ac1, atomA1, ac2, atomB1, shouldMatchBonds, shouldMatchRings)
                         && AtomMatcher(ac1, atomA2, ac2, atomB2, shouldMatchBonds, shouldMatchRings))
