@@ -62,7 +62,7 @@ import org.openscience.smsd.tools.TimeManager;
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-@TestClass("org.openscience.cdk.smsd.algorithm.vflib.VF2SubstructureTest")
+@TestClass("org.openscience.cdk.smsd.algorithm.vflib.VF2SubTest")
 public class VF2Sub extends AbstractSubGraph implements IMCSBase {
 
     private List<AtomAtomMapping> allAtomMCS = null;
