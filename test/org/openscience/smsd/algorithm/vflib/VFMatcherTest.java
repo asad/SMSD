@@ -54,7 +54,7 @@ import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  * @cdk.module test-smsd
  */
-public class VFLibTest {
+public class VFMatcherTest {
 
     private static IAtomContainer hexane;
     private static IQuery hexaneQuery;

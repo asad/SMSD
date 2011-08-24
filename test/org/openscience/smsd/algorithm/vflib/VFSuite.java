@@ -39,9 +39,9 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     org.openscience.smsd.algorithm.vflib.VFlibMCSHandlerTest.class,
-    org.openscience.smsd.algorithm.vflib.VFLibTest.class,
+    org.openscience.smsd.algorithm.vflib.VFMatcherTest.class,
     org.openscience.smsd.algorithm.vflib.VFMapperTest.class})
-public class VflibSuite {
+public class VFSuite {
 
     @BeforeClass
     public static void setUpClass() throws Exception {

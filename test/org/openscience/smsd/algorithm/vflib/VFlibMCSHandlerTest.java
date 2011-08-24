@@ -44,9 +44,8 @@ import org.openscience.cdk.io.MDLV2000Reader;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.smsd.interfaces.AbstractMCSAlgorithmTest;
 
-
 /**
- * Unit testing for the {@link VF2lib} class.
+ * Unit testing for the {@link VF2MCSHandler} class.
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
  * @cdk.module test-smsd
@@ -76,11 +75,11 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
     @BeforeClass
     public static void setMCSAlgorithm() {
         AbstractMCSAlgorithmTest.setMCSAlgorithm(
-                new VF2MCSPlusHandler());
+                new VF2MCSHandler());
     }
 
     /**
-     * Test of searchMCS method, of class VF2lib.
+     * Test of searchMCS method, of class VF2SubStructure.
      */
     @Test
     @Override
@@ -100,14 +99,14 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
             Logger.getLogger(VFlibMCSHandlerTest.class.getName()).log(Level.SEVERE, null, ex);
         }
 
-        VF2lib smsd1 = new VF2lib();
+        VF2MCSHandler smsd1 = new VF2MCSHandler();
         smsd1.set(query, target);
         smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
     }
 
     /**
-     * Test of set method, of class VF2lib.
+     * Test of set method, of class VF2SubStructure.
      * @throws InvalidSmilesException
      */
     @Test
@@ -117,7 +116,7 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        VF2lib smsd1 = new VF2lib();
+        VF2MCSHandler smsd1 = new VF2MCSHandler();
         smsd1.set(query, target);
         smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
@@ -125,7 +124,7 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
     }
 
     /**
-     * Test of set method, of class VF2lib.
+     * Test of set method, of class VF2SubStructure.
      * @throws Exception
      */
     @Test
@@ -135,14 +134,14 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
         IMolecule target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IMolecule query = sp.parseSmiles("Nc1ccccc1");
 
-        VF2lib smsd1 = new VF2lib();
+        VF2MCSHandler smsd1 = new VF2MCSHandler();
         smsd1.set(query, target);
         smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
     }
 
     /**
-     * Test of set method, of class VF2lib.
+     * Test of set method, of class VF2SubStructure.
      * @throws CDKException
      */
     @Test
@@ -160,7 +159,7 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
         reader = new MDLV2000Reader(ins, Mode.STRICT);
         reader.read(target);
 
-        VF2lib smsd1 = new VF2lib();
+        VF2MCSHandler smsd1 = new VF2MCSHandler();
         smsd1.set(query, target);
         smsd1.searchMCS(true, false);
 
@@ -168,7 +167,7 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
     }
 
     /**
-     * Test of set method, of class VF2lib.
+     * Test of set method, of class VF2SubStructure.
      * @throws InvalidSmilesException
      */
     @Test
@@ -178,14 +177,14 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
 
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
-        VF2lib instance = new VF2lib();
+        VF2MCSHandler instance = new VF2MCSHandler();
         instance.set(query, target);
         instance.searchMCS(true, false);
         assertNotNull(instance.getFirstMapping());
     }
 
     /**
-     * Test of getAllAtomMapping method, of class VF2lib.
+     * Test of getAllAtomMapping method, of class VF2SubStructure.
      * @throws InvalidSmilesException
      */
     @Test
@@ -195,7 +194,7 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        VF2lib smsd1 = new VF2lib();
+        VF2MCSHandler smsd1 = new VF2MCSHandler();
         smsd1.set(query, target);
         smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
@@ -204,7 +203,7 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
     }
 
     /**
-     * Test of getAllMapping method, of class VF2lib.
+     * Test of getAllMapping method, of class VF2SubStructure.
      * @throws InvalidSmilesException
      */
     @Test
@@ -214,7 +213,7 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        VF2lib smsd1 = new VF2lib();
+        VF2MCSHandler smsd1 = new VF2MCSHandler();
         smsd1.set(query, target);
         smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
@@ -223,7 +222,7 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
     }
 
     /**
-     * Test of getFirstAtomMapping method, of class VF2lib.
+     * Test of getFirstAtomMapping method, of class VF2SubStructure.
      * @throws InvalidSmilesException
      */
     @Test
@@ -233,7 +232,7 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        VF2lib smsd1 = new VF2lib();
+        VF2MCSHandler smsd1 = new VF2MCSHandler();
         smsd1.set(query, target);
         smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
@@ -242,7 +241,7 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
     }
 
     /**
-     * Test of getFirstMapping method, of class VF2lib.
+     * Test of getFirstMapping method, of class VF2SubStructure.
      * @throws InvalidSmilesException
      */
     @Test
@@ -252,7 +251,93 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        VF2lib smsd1 = new VF2lib();
+        VF2MCSHandler smsd1 = new VF2MCSHandler();
+        smsd1.set(query, target);
+        smsd1.searchMCS(true, false);
+        assertNotNull(smsd1.getFirstMapping());
+
+        assertEquals(7, smsd1.getFirstMapping().size());
+    }
+
+    /**
+     * Test of ring to ring match
+     * @throws InvalidSmilesException
+     */
+    @Test
+    public void testRingSystemMatch() throws InvalidSmilesException {
+        System.out.println("testRingSystemMatch");
+        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        IAtomContainer query = sp.parseSmiles("c1(ccc2c(c1)c(c([nH]2)C(=O)N)S(=O)(=O)N1CCOC(C1)C(=O)N1CCc2c(C1)cccc2)Br");
+        IAtomContainer target = sp.parseSmiles("c1(ccc2c(c1)c(c([nH]2)C(=O)N)S(=O)(=O)N1CCOC(C1)C(=O)NCCOc1ccccc1)Br");
+
+        VF2MCSHandler smsd1 = new VF2MCSHandler();
+        smsd1.set(query, target);
+        smsd1.searchMCS(true, true);
+        assertNotNull(smsd1.getFirstMapping());
+
+        assertEquals(24, smsd1.getFirstMapping().size());
+        
+        
+        VF2MCSHandler smsd2 = new VF2MCSHandler();
+        smsd2.set(query, target);
+        smsd2.searchMCS(true, false);
+        assertNotNull(smsd2.getFirstMapping());
+
+        assertEquals(27, smsd2.getFirstMapping().size());
+    }
+
+    /**
+     * Test linker to linker match
+     * @throws InvalidSmilesException
+     */
+    @Test
+    public void testLinkersSystemMatch() throws InvalidSmilesException {
+        System.out.println("testLinkersSystemMatch");
+        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        IAtomContainer query = sp.parseSmiles("OP(O)(=O)S1=CC=CC=C1");
+        IAtomContainer target = sp.parseSmiles("OP(O)(S)=O");
+
+        VF2MCSHandler smsd1 = new VF2MCSHandler();
+        smsd1.set(query, target);
+        smsd1.searchMCS(true, false);
+        assertNotNull(smsd1.getFirstMapping());
+
+        assertEquals(5, smsd1.getFirstMapping().size());
+    }
+
+    /**
+     * Test linker to ring match
+     * @throws InvalidSmilesException
+     */
+    @Test
+    public void testLinkersVsRingsMatch() throws InvalidSmilesException {
+        System.out.println("testLinkersVsRingsMatch");
+        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+
+        IAtomContainer query = sp.parseSmiles("OP(O)(=O)S1=CC=CC=C1");
+        IAtomContainer target = sp.parseSmiles("OP(O)(S)=O");
+
+
+        VF2MCSHandler smsd1 = new VF2MCSHandler();
+        smsd1.set(query, target);
+        smsd1.searchMCS(true, true);
+        assertNotNull(smsd1.getFirstMapping());
+
+        assertEquals(4, smsd1.getFirstMapping().size());
+    }
+
+    /**
+     * Test ring size match
+     * @throws InvalidSmilesException
+     */
+    @Test
+    public void testRingSizeMatch() throws InvalidSmilesException {
+        System.out.println("testRingSizeMatch");
+        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        IAtomContainer target = sp.parseSmiles("C1=CC2=C3C(C=CC4=CC=CC(C=C2)=C34)=C1");
+        IAtomContainer query = sp.parseSmiles("C1\\C=C/C=C/C=C\\C2=CC=CC(=C2)\\C=C/1");
+
+        VF2MCSHandler smsd1 = new VF2MCSHandler();
         smsd1.set(query, target);
         smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
