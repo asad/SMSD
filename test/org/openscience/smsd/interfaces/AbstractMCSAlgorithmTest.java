@@ -62,7 +62,7 @@ public abstract class AbstractMCSAlgorithmTest {
     public class AbstractMCSAlgorithmImpl extends AbstractMCSAlgorithm {
 
         @Override
-        public void searchMCS(boolean shouldMatchBonds) {
+        public void searchMCS(boolean shouldMatchBonds, boolean shouldMatchRings) {
             return;
         }
 

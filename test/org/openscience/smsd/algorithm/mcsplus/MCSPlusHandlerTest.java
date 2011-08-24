@@ -73,7 +73,7 @@ public class MCSPlusHandlerTest extends AbstractMCSAlgorithmTest {
             queryac = sp.parseSmiles("Nc1ccccc1");
             MCSPlusHandler smsd1 = new MCSPlusHandler();
             smsd1.set(queryac, target);
-            smsd1.searchMCS(true);
+            smsd1.searchMCS(true, false);
             assertNotNull(smsd1.getFirstMapping());
         } catch (InvalidSmilesException ex) {
             Logger.getLogger(MCSPlusHandlerTest.class.getName()).log(Level.SEVERE, null, ex);
@@ -93,7 +93,7 @@ public class MCSPlusHandlerTest extends AbstractMCSAlgorithmTest {
 
         MCSPlusHandler smsd1 = new MCSPlusHandler();
         smsd1.set(queryac, target);
-        smsd1.searchMCS(true);
+        smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
 
     }
@@ -111,7 +111,7 @@ public class MCSPlusHandlerTest extends AbstractMCSAlgorithmTest {
 
         MCSPlusHandler smsd1 = new MCSPlusHandler();
         smsd1.set(queryac, target);
-        smsd1.searchMCS(true);
+        smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
     }
 
@@ -135,7 +135,7 @@ public class MCSPlusHandlerTest extends AbstractMCSAlgorithmTest {
         reader = new MDLV2000Reader(ins, Mode.STRICT);
         reader.read(target);
 
-        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true);
+        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false);
         smsd1.setChemFilters(true, true, true);
         double score = 1.0;
         assertEquals(score, smsd1.getTanimotoSimilarity(), 0.0001);
@@ -154,7 +154,7 @@ public class MCSPlusHandlerTest extends AbstractMCSAlgorithmTest {
         IAtomContainer queryac = sp.parseSmiles("Nc1ccccc1");
         MCSPlusHandler instance = new MCSPlusHandler();
         instance.set(queryac, target);
-        instance.searchMCS(true);
+        instance.searchMCS(true, false);
         assertNotNull(instance.getFirstMapping());
     }
 
@@ -172,7 +172,7 @@ public class MCSPlusHandlerTest extends AbstractMCSAlgorithmTest {
 
         MCSPlusHandler smsd1 = new MCSPlusHandler();
         smsd1.set(query, target);
-        smsd1.searchMCS(true);
+        smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
         assertEquals(2, smsd1.getAllAtomMapping().size());
     }
@@ -191,7 +191,7 @@ public class MCSPlusHandlerTest extends AbstractMCSAlgorithmTest {
 
         MCSPlusHandler smsd1 = new MCSPlusHandler();
         smsd1.set(query, target);
-        smsd1.searchMCS(true);
+        smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
 
         assertEquals(2, smsd1.getAllMapping().size());
@@ -211,7 +211,7 @@ public class MCSPlusHandlerTest extends AbstractMCSAlgorithmTest {
 
         MCSPlusHandler smsd1 = new MCSPlusHandler();
         smsd1.set(query, target);
-        smsd1.searchMCS(true);
+        smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
 
         assertEquals(7, smsd1.getFirstAtomMapping().getCount());
@@ -237,7 +237,7 @@ public class MCSPlusHandlerTest extends AbstractMCSAlgorithmTest {
 
         MCSPlusHandler smsd1 = new MCSPlusHandler();
         smsd1.set(query, target);
-        smsd1.searchMCS(true);
+        smsd1.searchMCS(true, false);
 
         assertNotNull(smsd1.getFirstMapping());
         assertEquals(7, smsd1.getFirstMapping().size());

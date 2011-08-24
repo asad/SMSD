@@ -71,7 +71,7 @@ public class CDKMCSHandlerTest extends AbstractMCSAlgorithmTest {
             query = sp.parseSmiles("Nc1ccccc1");
             CDKMCSHandler smsd1 = new CDKMCSHandler();
             smsd1.set(query, target);
-            smsd1.searchMCS(true);
+            smsd1.searchMCS(true, false);
             assertNotNull(smsd1.getFirstMapping());
         } catch (InvalidSmilesException ex) {
             Logger.getLogger(CDKMCSHandlerTest.class.getName()).log(Level.SEVERE, null, ex);
@@ -91,8 +91,8 @@ public class CDKMCSHandlerTest extends AbstractMCSAlgorithmTest {
 
         CDKMCSHandler smsd1 = new CDKMCSHandler();
         smsd1.set(query, target);
-        smsd1.searchMCS(true);
-        smsd1.searchMCS(true);
+        smsd1.searchMCS(true, false);
+        smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
 
     }
@@ -110,8 +110,8 @@ public class CDKMCSHandlerTest extends AbstractMCSAlgorithmTest {
 
         CDKMCSHandler smsd1 = new CDKMCSHandler();
         smsd1.set(query, target);
-        smsd1.searchMCS(true);
-        smsd1.searchMCS(true);
+        smsd1.searchMCS(true, false);
+        smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
     }
 
@@ -135,7 +135,7 @@ public class CDKMCSHandlerTest extends AbstractMCSAlgorithmTest {
         reader = new MDLV2000Reader(ins, Mode.STRICT);
         reader.read(target);
 
-        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true);
+        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false);
         smsd1.setChemFilters(true, true, true);
         double score = 1.0;
         assertEquals(score, smsd1.getTanimotoSimilarity(), 0.0001);
@@ -154,7 +154,7 @@ public class CDKMCSHandlerTest extends AbstractMCSAlgorithmTest {
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
         CDKMCSHandler instance = new CDKMCSHandler();
         instance.set(query, target);
-        instance.searchMCS(true);
+        instance.searchMCS(true, false);
         assertNotNull(instance.getFirstMapping());
     }
 
@@ -171,7 +171,7 @@ public class CDKMCSHandlerTest extends AbstractMCSAlgorithmTest {
 
         CDKMCSHandler smsd1 = new CDKMCSHandler();
         smsd1.set(query, target);
-        smsd1.searchMCS(true);
+        smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
         assertEquals(4, smsd1.getAllAtomMapping().size());
     }
@@ -189,8 +189,8 @@ public class CDKMCSHandlerTest extends AbstractMCSAlgorithmTest {
 
         CDKMCSHandler smsd1 = new CDKMCSHandler();
         smsd1.set(query, target);
-        smsd1.searchMCS(true);
-        smsd1.searchMCS(true);
+        smsd1.searchMCS(true, false);
+        smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
 
         assertEquals(4, smsd1.getAllMapping().size());
@@ -209,8 +209,8 @@ public class CDKMCSHandlerTest extends AbstractMCSAlgorithmTest {
 
         CDKMCSHandler smsd1 = new CDKMCSHandler();
         smsd1.set(query, target);
-        smsd1.searchMCS(true);
-        smsd1.searchMCS(true);
+        smsd1.searchMCS(true, false);
+        smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
 
         assertEquals(7, smsd1.getFirstAtomMapping().getCount());
@@ -229,8 +229,8 @@ public class CDKMCSHandlerTest extends AbstractMCSAlgorithmTest {
 
         CDKMCSHandler smsd1 = new CDKMCSHandler();
         smsd1.set(query, target);
-        smsd1.searchMCS(true);
-        smsd1.searchMCS(true);
+        smsd1.searchMCS(true, false);
+        smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
 
         assertEquals(7, smsd1.getFirstMapping().size());

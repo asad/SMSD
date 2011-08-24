@@ -49,7 +49,7 @@ public class UnionTest {
         MoleculeSanityCheck.aromatizeMolecule(mol1);
         MoleculeSanityCheck.aromatizeMolecule(mol2);
 
-        Isomorphism isomorphism = new Isomorphism(mol1, mol2, Algorithm.DEFAULT, true);
+        Isomorphism isomorphism = new Isomorphism(mol1, mol2, Algorithm.DEFAULT, true, false);
         isomorphism.setChemFilters(false, false, false);
 
 

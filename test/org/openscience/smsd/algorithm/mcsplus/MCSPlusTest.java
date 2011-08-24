@@ -63,7 +63,7 @@ public class MCSPlusTest {
         System.out.println("MCSPlus().getOverlaps");
 
         // TODO review the generated test code and remove the default call to fail.
-        Assert.assertNotNull(new MCSPlus().getOverlaps(new AtomContainer(), new AtomContainer(), true));
+        Assert.assertNotNull(new MCSPlus().getOverlaps(new AtomContainer(), new AtomContainer(), true, false));
 
     }
 }

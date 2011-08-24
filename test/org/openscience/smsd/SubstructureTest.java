@@ -53,10 +53,10 @@ public class SubstructureTest {
     public void testSubStructureSearchAlgorithms() {
         Assert.assertNotNull(
                 new Substructure(new AtomContainer(), new AtomContainer(),
-                true));
+                true, false));
         Assert.assertNotNull(
                 new Substructure(new AtomContainer(), new AtomContainer(),
-                false));
+                false, false));
     }
 
     /**
@@ -71,7 +71,7 @@ public class SubstructureTest {
         IMolecule target = sp.parseSmiles("C\\C=C/OCC=C");
         IMolecule query = sp.parseSmiles("CCCOCC(C)=C");
 
-        Substructure smsd1 = new Substructure(query, target, false);
+        Substructure smsd1 = new Substructure(query, target, false, false);
         smsd1.setChemFilters(true, false, false);
         assertNotNull(smsd1.getQueryContainer());
         assertNotNull(smsd1.getTargetContainer());
@@ -89,7 +89,7 @@ public class SubstructureTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/OCC=C");
         IAtomContainer query = sp.parseSmiles("CCCOCC(C)=C");
 
-        Substructure smsd1 = new Substructure(query, target, false);
+        Substructure smsd1 = new Substructure(query, target, false, false);
         smsd1.setChemFilters(true, false, false);
         assertNotNull(smsd1.getQueryContainer());
         assertNotNull(smsd1.getTargetContainer());
@@ -108,7 +108,7 @@ public class SubstructureTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/OCC=C");
         IAtomContainer query = sp.parseSmiles("CCCOCC(C)=C");
 
-        Substructure smsd1 = new Substructure(query, target, false);
+        Substructure smsd1 = new Substructure(query, target, false, false);
         smsd1.setChemFilters(true, false, false);
         assertNotNull(smsd1.getQueryContainer());
         assertNotNull(smsd1.getTargetContainer());
@@ -169,7 +169,7 @@ public class SubstructureTest {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("CCCOCC(C)=C");
 
-        Substructure smsd1 = new Substructure(query, target, true);
+        Substructure smsd1 = new Substructure(query, target, true, false);
         smsd1.findSubgraphs();
         smsd1.setChemFilters(true, true, true);
 
@@ -188,7 +188,7 @@ public class SubstructureTest {
         IAtomContainer query = sp.parseSmiles("CCCOCC(C)=C");
         IAtomContainer target = sp.parseSmiles("CCCOCC(C)=C");
 
-        Substructure smsd1 = new Substructure(query, target, false);
+        Substructure smsd1 = new Substructure(query, target, false, false);
         smsd1.findSubgraphs();
         smsd1.setChemFilters(true, true, true);
 
@@ -208,7 +208,7 @@ public class SubstructureTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        Substructure smsd1 = new Substructure(query, target, false);
+        Substructure smsd1 = new Substructure(query, target, false, false);
         smsd1.findSubgraphs();
         smsd1.setChemFilters(true, true, true);
         assertEquals(7, smsd1.getFirstAtomMapping().getCount());
@@ -227,7 +227,7 @@ public class SubstructureTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
 
 
-        Substructure smsd1 = new Substructure(query, target, true);
+        Substructure smsd1 = new Substructure(query, target, true, false);
         smsd1.setChemFilters(true, true, true);
         smsd1.findSubgraphs();
         assertEquals(4, smsd1.getAllAtomMapping().size());
@@ -245,7 +245,7 @@ public class SubstructureTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        Substructure smsd1 = new Substructure(query, target, false);
+        Substructure smsd1 = new Substructure(query, target, false, false);
         smsd1.setChemFilters(true, true, true);
         smsd1.findSubgraphs();
         assertEquals(7, smsd1.getFirstAtomMapping().getCount());
@@ -409,7 +409,7 @@ public class SubstructureTest {
 
         IAtomContainer target = mol;
 
-        Substructure smsd1 = new Substructure(query, target, true);
+        Substructure smsd1 = new Substructure(query, target, true, false);
         smsd1.findSubgraphs();
         smsd1.setChemFilters(true, true, true);
 
@@ -428,7 +428,7 @@ public class SubstructureTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        Substructure smsd1 = new Substructure(query, target, true);
+        Substructure smsd1 = new Substructure(query, target, true, false);
         smsd1.setChemFilters(true, true, true);
         assertEquals(7, smsd1.getQueryContainer().getAtomCount());
     }
@@ -445,7 +445,7 @@ public class SubstructureTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        Substructure smsd1 = new Substructure(query, target, true);
+        Substructure smsd1 = new Substructure(query, target, true, false);
         smsd1.setChemFilters(true, true, true);
 
         assertEquals(20, smsd1.getTargetContainer().getAtomCount());
@@ -462,7 +462,7 @@ public class SubstructureTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        Substructure smsd1 = new Substructure(query, target, true);
+        Substructure smsd1 = new Substructure(query, target, true, false);
         smsd1.findSubgraph();
         smsd1.setChemFilters(true, true, true);
 
@@ -482,7 +482,7 @@ public class SubstructureTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        Substructure smsd1 = new Substructure(query, target, false);
+        Substructure smsd1 = new Substructure(query, target, false, false);
         smsd1.setChemFilters(true, true, true);
         smsd1.findSubgraphs();
         assertEquals(false, smsd1.isStereoMisMatch());
@@ -500,7 +500,7 @@ public class SubstructureTest {
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
         double score = 3.605;
-        Substructure smsd1 = new Substructure(query, target, true);
+        Substructure smsd1 = new Substructure(query, target, true, false);
         smsd1.setChemFilters(true, true, true);
         smsd1.findSubgraph();
         assertEquals(score, smsd1.getEuclideanDistance(), 0.005);
@@ -511,7 +511,7 @@ public class SubstructureTest {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("CC");
         IAtomContainer target = sp.parseSmiles("C");
-        Substructure smsd = new Substructure(query, target, true);
+        Substructure smsd = new Substructure(query, target, true, false);
         boolean foundMatches = smsd.findSubgraph();
         Assert.assertFalse(foundMatches);
     }
@@ -529,7 +529,7 @@ public class SubstructureTest {
         IAtomContainer molecule2 = smilesParser.parseSmiles("NC(=O)C1=CN(C=CC1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
 
         double score = 0.0;
-        Substructure smsd1 = new Substructure(molecule1, molecule2, true);
+        Substructure smsd1 = new Substructure(molecule1, molecule2, true, false);
         smsd1.setChemFilters(true, true, true);
         Assert.assertFalse(smsd1.findSubgraph());
         Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
@@ -548,7 +548,7 @@ public class SubstructureTest {
         IAtomContainer molecule2 = smilesParser.parseSmiles("NC(=O)C1=CN(C=CC1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
 
         double score = 1.0;
-        Substructure smsd1 = new Substructure(molecule1, molecule2, false);
+        Substructure smsd1 = new Substructure(molecule1, molecule2, false, false);
         smsd1.setChemFilters(true, true, true);
         Assert.assertTrue(smsd1.findSubgraph());
         Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);

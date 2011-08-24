@@ -68,11 +68,11 @@ public class IsomorphismTest {
         Assert.assertNotNull(
                 new Isomorphism(new AtomContainer(), new AtomContainer(),
                 Algorithm.DEFAULT,
-                true));
+                true, false));
         Assert.assertNotNull(
                 new Isomorphism(new AtomContainer(), new AtomContainer(),
                 Algorithm.DEFAULT,
-                false));
+                false, false));
     }
 
     @BeforeClass
@@ -102,7 +102,7 @@ public class IsomorphismTest {
         IMolecule target = sp.parseSmiles("C\\C=C/OCC=C");
         IMolecule query = sp.parseSmiles("CCCOCC(C)=C");
 
-        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, false);
+        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, false, false);
         smsd1.setChemFilters(true, false, false);
         Assert.assertNotNull(smsd1.getQueryContainer());
         Assert.assertNotNull(smsd1.getTargetContainer());
@@ -119,7 +119,7 @@ public class IsomorphismTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/OCC=C");
         IAtomContainer query = sp.parseSmiles("CCCOCC(C)=C");
 
-        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, false);
+        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, false, false);
         smsd1.setChemFilters(true, false, false);
         Assert.assertNotNull(smsd1.getQueryContainer());
         Assert.assertNotNull(smsd1.getTargetContainer());
@@ -137,7 +137,7 @@ public class IsomorphismTest {
             IAtomContainer target = null;
             target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
             IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
-            Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true);
+            Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false);
             smsd1.setChemFilters(true, true, true);
             Assert.assertEquals(7, smsd1.getFirstAtomMapping().getCount());
             Assert.assertEquals(2, smsd1.getAllAtomMapping().size());
@@ -158,7 +158,7 @@ public class IsomorphismTest {
         IMolecule target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IMolecule query = sp.parseSmiles("Nc1ccccc1");
 
-        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true);
+        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false);
         smsd1.setChemFilters(true, true, true);
         Assert.assertNotNull(smsd1.getFirstAtomMapping());
 
@@ -175,7 +175,7 @@ public class IsomorphismTest {
         IMolecule target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IMolecule query = sp.parseSmiles("Nc1ccccc1");
 
-        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true);
+        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false);
         smsd1.setChemFilters(true, true, true);
         Assert.assertNotNull(smsd1.getFirstAtomMapping());
     }
@@ -200,7 +200,7 @@ public class IsomorphismTest {
         reader = new MDLV2000Reader(ins, Mode.STRICT);
         reader.read(target);
 
-        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true);
+        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false);
         smsd1.setChemFilters(true, true, true);
         double score = 1.0;
         Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.0001);
@@ -217,7 +217,7 @@ public class IsomorphismTest {
 
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
-        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true);
+        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false);
         smsd1.setChemFilters(true, true, true);
         Assert.assertNotNull(smsd1.getFirstAtomMapping());
     }
@@ -241,7 +241,7 @@ public class IsomorphismTest {
         CDKHueckelAromaticityDetector.detectAromaticity(query);
         CDKHueckelAromaticityDetector.detectAromaticity(target);
 
-        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true);
+        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false);
         smsd1.setChemFilters(true, true, true);
         Assert.assertNotNull(smsd1.getFirstAtomMapping());
         Assert.assertEquals(2, smsd1.getAllAtomMapping().size());
@@ -258,7 +258,7 @@ public class IsomorphismTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true);
+        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false);
         smsd1.setChemFilters(true, true, true);
         Assert.assertNotNull(smsd1.getFirstAtomMapping());
         Assert.assertEquals(2, smsd1.getAllAtomMapping().size());
@@ -275,7 +275,7 @@ public class IsomorphismTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true);
+        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false);
         smsd1.setChemFilters(true, true, true);
         Assert.assertNotNull(smsd1.getFirstAtomMapping());
         Assert.assertEquals(7, smsd1.getFirstAtomMapping().getCount());
@@ -292,7 +292,7 @@ public class IsomorphismTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true);
+        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false);
         smsd1.setChemFilters(true, true, true);
         Assert.assertNotNull(smsd1.getFirstAtomMapping());
         Assert.assertEquals(7, smsd1.getFirstAtomMapping().getCount());
@@ -309,7 +309,7 @@ public class IsomorphismTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/OCC=C");
         IAtomContainer query = sp.parseSmiles("CCCOCC(C)=C");
 
-        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, false);
+        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, false, false);
         smsd1.setChemFilters(true, true, true);
         Assert.assertEquals(1, smsd1.getAllAtomMapping().size());
     }
@@ -325,7 +325,7 @@ public class IsomorphismTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true);
+        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false);
         smsd1.setChemFilters(false, true, false);
         Integer score = 2;
         Assert.assertEquals(score, smsd1.getFragmentSize(0));
@@ -342,7 +342,7 @@ public class IsomorphismTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/OCC=C");
         IAtomContainer query = sp.parseSmiles("CCCOCC(C)=C");
 
-        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, false);
+        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, false, false);
         smsd1.setChemFilters(true, false, false);
         Integer score = 77; //1024 to 77 due to new scoring fuction
         Assert.assertEquals(score, smsd1.getStereoScore(0));
@@ -359,7 +359,7 @@ public class IsomorphismTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true);
+        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false);
         smsd1.setChemFilters(false, false, true);
         Double score = 610.0;
         Assert.assertEquals(score, smsd1.getEnergyScore(0));
@@ -376,7 +376,7 @@ public class IsomorphismTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true);
+        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false);
         smsd1.setChemFilters(true, true, true);
         Assert.assertEquals(7, smsd1.getQueryContainer().getAtomCount());
     }
@@ -392,7 +392,7 @@ public class IsomorphismTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true);
+        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false);
         smsd1.setChemFilters(true, true, true);
         Assert.assertEquals(20, smsd1.getTargetContainer().getAtomCount());
     }
@@ -408,7 +408,7 @@ public class IsomorphismTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true);
+        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false);
         smsd1.setChemFilters(true, true, true);
 
         double score = 0.35;
@@ -426,7 +426,7 @@ public class IsomorphismTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, false);
+        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, false, false);
         smsd1.setChemFilters(true, true, true);
         Assert.assertEquals(false, smsd1.isStereoMisMatch());
     }
@@ -436,7 +436,7 @@ public class IsomorphismTest {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("CC");
         IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
-        Substructure smsd = new Substructure(query, target, true);
+        Substructure smsd = new Substructure(query, target, true, false);
 
         boolean foundMatches = smsd.findSubgraph();
         Assert.assertTrue(foundMatches);
@@ -452,7 +452,7 @@ public class IsomorphismTest {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("CC");
         IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
-        Substructure smsd = new Substructure(query, target, true);
+        Substructure smsd = new Substructure(query, target, true, false);
 
         boolean foundMatches = smsd.findSubgraph();
         Assert.assertTrue(foundMatches);
@@ -468,7 +468,7 @@ public class IsomorphismTest {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("CC");
         IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
-        Substructure smsd = new Substructure(query, target, true);
+        Substructure smsd = new Substructure(query, target, true, false);
 
         boolean foundMatches = smsd.findSubgraphs();
         Assert.assertEquals(18, smsd.getAllAtomMapping().size());
@@ -485,7 +485,7 @@ public class IsomorphismTest {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("CC");
         IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
-        Isomorphism smsd = new Isomorphism(query, target, Algorithm.CDKMCS, true);
+        Isomorphism smsd = new Isomorphism(query, target, Algorithm.CDKMCS, true, false);
         Assert.assertEquals(18, smsd.getAllAtomMapping().size());
     }
 
@@ -502,7 +502,7 @@ public class IsomorphismTest {
         IAtomContainer molecule2 = smilesParser.parseSmiles("NC(=O)C1=CN(C=CC1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
 
         double score = 0.733;
-        Isomorphism smsd1 = new Isomorphism(molecule1, molecule2, Algorithm.DEFAULT, true);
+        Isomorphism smsd1 = new Isomorphism(molecule1, molecule2, Algorithm.DEFAULT, true, false);
         smsd1.setChemFilters(true, true, true);
         Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
     }
@@ -520,7 +520,7 @@ public class IsomorphismTest {
         IAtomContainer molecule2 = smilesParser.parseSmiles("NC(=O)C1=CN(C=CC1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
 
         double score = 1.0;
-        Isomorphism smsd1 = new Isomorphism(molecule1, molecule2, Algorithm.DEFAULT, false);
+        Isomorphism smsd1 = new Isomorphism(molecule1, molecule2, Algorithm.DEFAULT, false, false);
         smsd1.setChemFilters(true, true, true);
         Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
     }

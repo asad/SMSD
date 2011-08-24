@@ -102,7 +102,7 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
 
         VF2lib smsd1 = new VF2lib();
         smsd1.set(query, target);
-        smsd1.searchMCS(true);
+        smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
     }
 
@@ -119,7 +119,7 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
 
         VF2lib smsd1 = new VF2lib();
         smsd1.set(query, target);
-        smsd1.searchMCS(true);
+        smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
 
     }
@@ -137,7 +137,7 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
 
         VF2lib smsd1 = new VF2lib();
         smsd1.set(query, target);
-        smsd1.searchMCS(true);
+        smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
     }
 
@@ -162,7 +162,7 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
 
         VF2lib smsd1 = new VF2lib();
         smsd1.set(query, target);
-        smsd1.searchMCS(true);
+        smsd1.searchMCS(true, false);
 
         assertNotNull(smsd1.getFirstMapping());
     }
@@ -180,7 +180,7 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
         VF2lib instance = new VF2lib();
         instance.set(query, target);
-        instance.searchMCS(true);
+        instance.searchMCS(true, false);
         assertNotNull(instance.getFirstMapping());
     }
 
@@ -197,7 +197,7 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
 
         VF2lib smsd1 = new VF2lib();
         smsd1.set(query, target);
-        smsd1.searchMCS(true);
+        smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
 
         assertEquals(4, smsd1.getAllAtomMapping().size());
@@ -216,7 +216,7 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
 
         VF2lib smsd1 = new VF2lib();
         smsd1.set(query, target);
-        smsd1.searchMCS(true);
+        smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
 
         assertEquals(4, smsd1.getAllMapping().size());
@@ -235,7 +235,7 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
 
         VF2lib smsd1 = new VF2lib();
         smsd1.set(query, target);
-        smsd1.searchMCS(true);
+        smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
 
         Assert.assertEquals(7, smsd1.getFirstAtomMapping().getCount());
@@ -254,7 +254,7 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
 
         VF2lib smsd1 = new VF2lib();
         smsd1.set(query, target);
-        smsd1.searchMCS(true);
+        smsd1.searchMCS(true, false);
         assertNotNull(smsd1.getFirstMapping());
 
         assertEquals(7, smsd1.getFirstMapping().size());
