@@ -146,19 +146,16 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
      * <lI>4: CDKMCS
      * </OL>
      * @param algorithmType {@link org.openscience.cdk.smsd.interfaces.Algorithm}
-     * @param bondTypeFlag
      */
     @TestMethod("testIsomorphismTest")
     public Isomorphism(
             IQueryAtomContainer query,
             IAtomContainer target,
-            Algorithm algorithmType,
-            boolean bondTypeFlag) {
+            Algorithm algorithmType) {
         this.algorithmType = algorithmType;
         this.mol1 = query;
         this.mol2 = target;
         this.mcsList = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
-        setTime(bondTypeFlag);
         mcsBuilder(mol1, mol2);
     }
 
@@ -211,21 +208,6 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
     }
 
     private synchronized void mcsBuilder(IAtomContainer mol1, IAtomContainer mol2) {
-
-        int rBondCount = mol1.getBondCount();
-        int pBondCount = mol2.getBondCount();
-
-        int rAtomCount = mol1.getAtomCount();
-        int pAtomCount = mol2.getAtomCount();
-
-        if ((rBondCount == 0 && rAtomCount > 0) || (pBondCount == 0 && pAtomCount > 0)) {
-            singleMapping();
-        } else {
-            chooseAlgorithm();
-        }
-    }
-
-    private synchronized void mcsBuilder(IQueryAtomContainer mol1, IAtomContainer mol2) {
 
         int rBondCount = mol1.getBondCount();
         int pBondCount = mol2.getBondCount();

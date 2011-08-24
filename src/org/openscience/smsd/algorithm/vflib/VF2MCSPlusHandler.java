@@ -73,7 +73,6 @@ public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase 
     private List<Map<Integer, Integer>> allMCS = null;
     private List<Map<Integer, Integer>> allMCSCopy = null;
     private List<Map<INode, IAtom>> vfLibSolutions = null;
-    private IQueryAtomContainer queryMol = null;
     private IAtomContainer source = null;
     private IAtomContainer target = null;
     private int vfMCSSize = -1;
@@ -220,7 +219,6 @@ public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase 
     @Override
     @TestMethod("testSet_IQueryAtomContainer_MolHandler")
     public void set(IQueryAtomContainer source, IAtomContainer target) {
-        this.queryMol = source;
         this.source = source;
         this.target = target;
     }
@@ -298,14 +296,14 @@ public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase 
         IQuery queryCompiler = null;
         IMapper mapper = null;
 
-        if (queryMol == null) {
+        if (!(source instanceof IQueryAtomContainer) && !(target instanceof IQueryAtomContainer)) {
             countR = getReactantMol().getAtomCount();
             countP = getProductMol().getAtomCount();
         }
 
         vfLibSolutions = new ArrayList<Map<INode, IAtom>>();
-        if (queryMol != null) {
-            queryCompiler = new QueryCompiler(queryMol).compile();
+        if (source instanceof IQueryAtomContainer) {
+            queryCompiler = new QueryCompiler((IQueryAtomContainer) source).compile();
             mapper = new VFMCSMapper(queryCompiler);
             List<Map<INode, IAtom>> maps = mapper.getMaps(getProductMol());
             if (maps != null) {
@@ -344,8 +342,8 @@ public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase 
         for (Map<Integer, Integer> firstPassMappings : allMCSCopy) {
             Map<Integer, Integer> extendMapping = new TreeMap<Integer, Integer>(firstPassMappings);
             McGregor mgit = null;
-            if (queryMol != null) {
-                mgit = new McGregor(queryMol, target, mappings, isBondMatchFlag(), isMatchRings());
+            if (source instanceof IQueryAtomContainer) {
+                mgit = new McGregor((IQueryAtomContainer) source, target, mappings, isBondMatchFlag(), isMatchRings());
             } else {
                 if (countR > countP) {
                     mgit = new McGregor(source, target, mappings, isBondMatchFlag(), isMatchRings());
@@ -489,11 +487,7 @@ public class VF2MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBase 
     }
 
     private synchronized IAtomContainer getReactantMol() {
-        if (queryMol == null) {
-            return source;
-        } else {
-            return queryMol;
-        }
+        return source;
     }
 
     private synchronized IAtomContainer getProductMol() {

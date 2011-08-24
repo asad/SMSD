@@ -30,7 +30,6 @@ import java.util.logging.Level;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.algorithm.single.SingleMappingHandler;
@@ -93,23 +92,7 @@ public final class Substructure extends BaseMapping {
     private int vfMappingSize = -1;
     private final ILoggingTool Logger =
             LoggingToolFactory.createLoggingTool(Substructure.class);
-    private final boolean bond_Match_Flag;
-
-    /**
-     * Constructor for VF Substructure Algorithm 
-     * @param query
-     * @param target
-     * @param shouldMatchBonds  
-     */
-    public Substructure(IQueryAtomContainer query, IAtomContainer target, boolean shouldMatchBonds) {
-        this.queryMol = query;
-        this.mol1 = query;
-        this.mol2 = target;
-        this.mcsList = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
-        this.bond_Match_Flag = shouldMatchBonds;
-        TimeOut tmo = TimeOut.getInstance();
-        tmo.setCDKMCSTimeOut(0.15);
-    }
+    private boolean bond_Match_Flag;
 
     /**
      * Constructor for VF Substructure Algorithm 
@@ -119,7 +102,6 @@ public final class Substructure extends BaseMapping {
      * @param matchRings Match ring atoms and ring size  
      */
     public Substructure(IAtomContainer query, IAtomContainer target, boolean shouldMatchBonds, boolean matchRings) {
-        this.queryMol = null;
         this.mol1 = query;
         this.mol2 = target;
         this.mcsList = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
@@ -134,6 +116,19 @@ public final class Substructure extends BaseMapping {
                 Logger.error(Level.SEVERE, null, ex);
             }
         }
+    }
+
+    /**
+     * Constructor for VF Substructure Algorithm 
+     * @param query
+     * @param target  
+     */
+    public Substructure(IAtomContainer query, IAtomContainer target) {
+        this.mol1 = query;
+        this.mol2 = target;
+        this.mcsList = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
+        TimeOut tmo = TimeOut.getInstance();
+        tmo.setCDKMCSTimeOut(0.15);
     }
 
     private synchronized boolean hasMap(AtomAtomMapping map, List<AtomAtomMapping> mapGlobal) {
@@ -152,7 +147,7 @@ public final class Substructure extends BaseMapping {
      */
     public synchronized boolean findSubgraph() throws CDKException {
 
-        if ((mol2 == null) || (mol1 == null && queryMol == null)) {
+        if ((mol2 == null) || (mol1 == null)) {
             throw new CDKException("Query or Target molecule is not initialized (NULL)");
         }
 
@@ -161,30 +156,17 @@ public final class Substructure extends BaseMapping {
         } else {
             if (mol1.getAtomCount() > mol2.getAtomCount()) {
                 return false;
-            } else if (queryMol != null) {
-                VF2 mapper = new VF2();
-                List<AtomAtomMapping> mappingsVF2 = new ArrayList<AtomAtomMapping>();
-                AtomAtomMapping atomMapping = mapper.isomorphism(queryMol, mol2, bond_Match_Flag);
-//                    System.out.println("Mapping Size " + atomMapping.getCount());
-                if (!atomMapping.isEmpty()) {
-                    mappingsVF2.add(atomMapping);
-                } else {
-                    return false;
-                }
-                setVFMappings(mappingsVF2);
-
-            } else {
-                VF2 mapper = new VF2();
-                List<AtomAtomMapping> mappingsVF2 = new ArrayList<AtomAtomMapping>();
-                AtomAtomMapping atomMapping = mapper.isomorphism(mol1, mol2, bond_Match_Flag);
-//                    System.out.println("Mapping Size " + atomMapping.getCount());
-                if (!atomMapping.isEmpty()) {
-                    mappingsVF2.add(atomMapping);
-                } else {
-                    return false;
-                }
-                setVFMappings(mappingsVF2);
             }
+            VF2 mapper = new VF2();
+            List<AtomAtomMapping> mappingsVF2 = new ArrayList<AtomAtomMapping>();
+            AtomAtomMapping atomMapping = mapper.isomorphism(mol1, mol2, bond_Match_Flag);
+//                    System.out.println("Mapping Size " + atomMapping.getCount());
+            if (!atomMapping.isEmpty()) {
+                mappingsVF2.add(atomMapping);
+            } else {
+                return false;
+            }
+            setVFMappings(mappingsVF2);
         }
         return (getMappingCount() > 0 && getAllAtomMapping().iterator().next().getCount()
                 == mol1.getAtomCount()) ? true : false;
@@ -198,7 +180,7 @@ public final class Substructure extends BaseMapping {
     public synchronized boolean findSubgraphs() throws CDKException {
 
 
-        if ((mol2 == null) || (mol1 == null && queryMol == null)) {
+        if ((mol2 == null) || (mol1 == null)) {
             throw new CDKException("Query or Target molecule is not initialized (NULL)");
         }
 
@@ -207,20 +189,6 @@ public final class Substructure extends BaseMapping {
         } else {
             if (mol1.getAtomCount() > mol2.getAtomCount()) {
                 return false;
-            } else if (queryMol != null) {
-                VF2lib mapper = new VF2lib();
-                List<AtomAtomMapping> mappingsVF2 = new ArrayList<AtomAtomMapping>();
-                mapper.set(queryMol, mol2);
-                mapper.searchMCS(bond_Match_Flag, false);
-                List<AtomAtomMapping> atomMappings = mapper.getAllAtomMapping();
-//                    System.out.println("Mapping Size " + atomMapping.getCount());
-                if (!atomMappings.isEmpty()) {
-                    mappingsVF2.addAll(atomMappings);
-                } else {
-                    return false;
-                }
-                setVFMappings(mappingsVF2);
-
             } else {
                 VF2lib mapper = new VF2lib();
                 List<AtomAtomMapping> mappingsVF2 = new ArrayList<AtomAtomMapping>();

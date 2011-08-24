@@ -37,8 +37,6 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IRingSet;
-import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
-import org.openscience.cdk.ringsearch.AllRingsFinder;
 import org.openscience.cdk.ringsearch.SSSRFinder;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
@@ -60,7 +58,6 @@ public class BaseMapping implements IAtomMapping {
     protected List<AtomAtomMapping> mcsList;
     protected IAtomContainer mol1;
     protected IAtomContainer mol2;
-    protected IQueryAtomContainer queryMol;
     private List<Double> stereoScoreList;
     private List<Integer> fragmentSizeList;
     private List<Double> bondEnergiesList;
