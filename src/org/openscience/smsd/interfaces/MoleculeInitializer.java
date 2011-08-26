@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
 import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.exception.CDKException;
@@ -108,17 +107,17 @@ public class MoleculeInitializer {
         valencesTable.put("Mn", 2);
         valencesTable.put("Co", 2);
 
-        // do all ring perception
+//        // do all ring perception
 //        AllRingsFinder arf = new AllRingsFinder();
 //        IRingSet allRings;
 //        try {
 //            allRings = arf.findAllRings(atomContainer);
 //        } catch (CDKException e) {
-//            Logger.error(Level.SEVERE, null, e);
+//            Logger.debug(e.toString());
 //            throw new CDKException(e.toString(), e);
 //        }
 
-        // sets Hanser Ring information
+        // do all ring perception
         IRingSet allRings = HanserRingFinder.getRingSet(atomContainer);
 
         // sets SSSR information
@@ -198,7 +197,7 @@ public class MoleculeInitializer {
             AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(atomContainer);
             CDKHueckelAromaticityDetector.detectAromaticity(atomContainer);
         } catch (CDKException e) {
-            Logger.error(Level.SEVERE, null, e);
+            Logger.debug(e.toString());
             throw new CDKException(e.toString(), e);
         }
     }
