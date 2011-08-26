@@ -116,7 +116,7 @@ public class ArgumentHandler {
 
         options.addOption("r", false, "Remove Hydrogen");
 
-        options.addOption("z", false, "Ring atom and rinz size matching");
+        options.addOption("z", false, "Ring size matcher");
 
         options.addOption("b", false, "Match Bond types (Single, Double etc)");
 
