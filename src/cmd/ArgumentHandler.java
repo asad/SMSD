@@ -100,7 +100,6 @@ public class ArgumentHandler {
      * Parses the options in the command line arguments and returns
      * an array of strings corresponding to the filenames given as arguments only
      * @param args
-     * @return
      * @throws org.apache.commons.cli.ParseException 
      */
     @SuppressWarnings("static-access")
@@ -116,7 +115,7 @@ public class ArgumentHandler {
 
         options.addOption("r", false, "Remove Hydrogen");
 
-        options.addOption("z", false, "Ring size matcher");
+        options.addOption("z", false, "Ring matching");
 
         options.addOption("b", false, "Match Bond types (Single, Double etc)");
 
