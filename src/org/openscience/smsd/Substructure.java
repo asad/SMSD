@@ -153,10 +153,10 @@ public final class Substructure extends BaseMapping {
             }
             VF2 mapper = new VF2();
             List<AtomAtomMapping> mappingsVF2 = new ArrayList<AtomAtomMapping>();
-            AtomAtomMapping atomMapping = mapper.isomorphism(mol1, mol2, isBondMatchFlag(), isMatchRing());
+            mapper.set(mol1, mol2);
 //                    System.out.println("Mapping Size " + atomMapping.getCount());
-            if (!atomMapping.isEmpty()) {
-                mappingsVF2.add(atomMapping);
+            if (mapper.isSubgraph(isBondMatchFlag(), isMatchRing())) {
+                mappingsVF2.add(mapper.getFirstAtomMapping());
             } else {
                 return false;
             }
