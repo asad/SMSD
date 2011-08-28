@@ -1,27 +1,11 @@
-/* Copyright (C) 2010  Egon Willighagen <egonw@users.sf.net>
- *
- * Contact: cdk-devel@lists.sourceforge.net
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU Lesser General Public License as published by the Free
- * Software Foundation; either version 2.1 of the License, or (at your option)
- * any later version. All we ask is that proper credit is given for our work,
- * which includes - but is not limited to - adding the above copyright notice to
- * the beginning of your source code files, and to any copyright notice that you
- * may distribute with programs based on this work.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
- * details.
- *
- * You should have received rAtomCount copy of the GNU Lesser General Public
- * License along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
  */
 package org.openscience.smsd.algorithm.vflib.substructure;
 
 import java.util.List;
+import java.util.Map;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -33,13 +17,11 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.smsd.AtomAtomMapping;
 
 /**
- * Interface class for reporting only substructure searches.
- * @cdk.module smsd
- * @cdk.githash
- * @author Syed Asad Rahman <asad@ebi.ac.uk>
+ *
+ * @author Asad
  */
 public class VF2Test {
-
+    
     public VF2Test() {
     }
 
@@ -50,11 +32,11 @@ public class VF2Test {
     @AfterClass
     public static void tearDownClass() throws Exception {
     }
-
+    
     @Before
     public void setUp() {
     }
-
+    
     @After
     public void tearDown() {
     }
@@ -63,31 +45,11 @@ public class VF2Test {
      * Test of isomorphism method, of class VF2.
      */
     @Test
-    public void testIsomorphism_4args() {
+    public void testIsomorphism() {
         System.out.println("isomorphism");
-        IAtomContainer a = null;
-        IAtomContainer b = null;
-        boolean shouldMatchBonds = false;
-        boolean shouldMatchRings = false;
         VF2 instance = new VF2();
         AtomAtomMapping expResult = null;
-        AtomAtomMapping result = instance.isomorphism(a, b, shouldMatchBonds, shouldMatchRings);
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
-    }
-
-    /**
-     * Test of isomorphism method, of class VF2.
-     */
-    @Test
-    public void testIsomorphism_IQueryAtomContainer_IAtomContainer() {
-        System.out.println("isomorphism");
-        IQueryAtomContainer a = null;
-        IAtomContainer b = null;
-        VF2 instance = new VF2();
-        AtomAtomMapping expResult = null;
-        AtomAtomMapping result = instance.isomorphism(a, b);
+        AtomAtomMapping result = instance.isomorphism();
         assertEquals(expResult, result);
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");
@@ -97,15 +59,138 @@ public class VF2Test {
      * Test of isomorphisms method, of class VF2.
      */
     @Test
-    public void testIsomorphisms() {
+    public void testIsomorphisms_boolean() {
         System.out.println("isomorphisms");
-        IAtomContainer a = null;
-        IAtomContainer b = null;
+        boolean shouldMatchBonds = false;
+        VF2 instance = new VF2();
+        instance.isomorphisms(shouldMatchBonds);
+        // TODO review the generated test code and remove the default call to fail.
+        fail("The test case is a prototype.");
+    }
+
+    /**
+     * Test of isomorphisms method, of class VF2.
+     */
+    @Test
+    public void testIsomorphisms_0args() {
+        System.out.println("isomorphisms");
+        VF2 instance = new VF2();
+        instance.isomorphisms();
+        // TODO review the generated test code and remove the default call to fail.
+        fail("The test case is a prototype.");
+    }
+
+    /**
+     * Test of isSubgraph method, of class VF2.
+     */
+    @Test
+    public void testIsSubgraph() {
+        System.out.println("isSubgraph");
         boolean shouldMatchBonds = false;
         boolean shouldMatchRings = false;
         VF2 instance = new VF2();
+        boolean expResult = false;
+        boolean result = instance.isSubgraph(shouldMatchBonds, shouldMatchRings);
+        assertEquals(expResult, result);
+        // TODO review the generated test code and remove the default call to fail.
+        fail("The test case is a prototype.");
+    }
+
+    /**
+     * Test of isSubgraphs method, of class VF2.
+     */
+    @Test
+    public void testIsSubgraphs() {
+        System.out.println("isSubgraphs");
+        boolean shouldMatchBonds = false;
+        boolean shouldMatchRings = false;
+        VF2 instance = new VF2();
+        boolean expResult = false;
+        boolean result = instance.isSubgraphs(shouldMatchBonds, shouldMatchRings);
+        assertEquals(expResult, result);
+        // TODO review the generated test code and remove the default call to fail.
+        fail("The test case is a prototype.");
+    }
+
+    /**
+     * Test of set method, of class VF2.
+     */
+    @Test
+    public void testSet_IAtomContainer_IAtomContainer() throws Exception {
+        System.out.println("set");
+        IAtomContainer source = null;
+        IAtomContainer target = null;
+        VF2 instance = new VF2();
+        instance.set(source, target);
+        // TODO review the generated test code and remove the default call to fail.
+        fail("The test case is a prototype.");
+    }
+
+    /**
+     * Test of set method, of class VF2.
+     */
+    @Test
+    public void testSet_IQueryAtomContainer_IAtomContainer() throws Exception {
+        System.out.println("set");
+        IQueryAtomContainer source = null;
+        IAtomContainer target = null;
+        VF2 instance = new VF2();
+        instance.set(source, target);
+        // TODO review the generated test code and remove the default call to fail.
+        fail("The test case is a prototype.");
+    }
+
+    /**
+     * Test of getAllAtomMapping method, of class VF2.
+     */
+    @Test
+    public void testGetAllAtomMapping() {
+        System.out.println("getAllAtomMapping");
+        VF2 instance = new VF2();
         List expResult = null;
-        List result = instance.isomorphisms(a, b, shouldMatchBonds, shouldMatchRings);
+        List result = instance.getAllAtomMapping();
+        assertEquals(expResult, result);
+        // TODO review the generated test code and remove the default call to fail.
+        fail("The test case is a prototype.");
+    }
+
+    /**
+     * Test of getAllMapping method, of class VF2.
+     */
+    @Test
+    public void testGetAllMapping() {
+        System.out.println("getAllMapping");
+        VF2 instance = new VF2();
+        List expResult = null;
+        List result = instance.getAllMapping();
+        assertEquals(expResult, result);
+        // TODO review the generated test code and remove the default call to fail.
+        fail("The test case is a prototype.");
+    }
+
+    /**
+     * Test of getFirstAtomMapping method, of class VF2.
+     */
+    @Test
+    public void testGetFirstAtomMapping() {
+        System.out.println("getFirstAtomMapping");
+        VF2 instance = new VF2();
+        AtomAtomMapping expResult = null;
+        AtomAtomMapping result = instance.getFirstAtomMapping();
+        assertEquals(expResult, result);
+        // TODO review the generated test code and remove the default call to fail.
+        fail("The test case is a prototype.");
+    }
+
+    /**
+     * Test of getFirstMapping method, of class VF2.
+     */
+    @Test
+    public void testGetFirstMapping() {
+        System.out.println("getFirstMapping");
+        VF2 instance = new VF2();
+        Map expResult = null;
+        Map result = instance.getFirstMapping();
         assertEquals(expResult, result);
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");
