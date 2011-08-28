@@ -49,6 +49,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.logging.Level;
 import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.exception.CDKException;
@@ -61,7 +62,8 @@ import org.openscience.cdk.isomorphism.matchers.IQueryBond;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.AtomAtomMapping;
-import org.openscience.smsd.interfaces.MoleculeInitializer;
+import org.openscience.smsd.interfaces.AbstractSubGraph;
+import org.openscience.smsd.interfaces.IMCSBase;
 
 /**
  * This class finds mapping states between query and target
@@ -71,100 +73,119 @@ import org.openscience.smsd.interfaces.MoleculeInitializer;
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-public final class VF2 extends MoleculeInitializer {
+public final class VF2 extends AbstractSubGraph implements IMCSBase {
 
+    private List<AtomAtomMapping> allAtomMCS = null;
+    private List<Map<Integer, Integer>> allMCS = null;
+    private IAtomContainer source = null;
+    private IAtomContainer target = null;
+    private boolean shouldMatchRings;
     private final ILoggingTool Logger =
             LoggingToolFactory.createLoggingTool(VF2.class);
 
+    /**
+     * Constructor for an extended VF Algorithm for the MCS search
+     */
     public VF2() {
+        allAtomMCS = new ArrayList<AtomAtomMapping>();
+        allMCS = new ArrayList<Map<Integer, Integer>>();
     }
 
-    /** The isomorphism method returns an isomorphism between two molecular
+    /** 
+     * The isomorphism method returns an isomorphism between two molecular
      *  graphs using the VF2Automorphism algorithm. This can be used for finding both
      *  graph-graph isomorphisms and graph-subgraph isomorphisms. In the latter
      *  case graph 'a' is the subgraph, implying a.size() < b.size(). In the case that
      *  no isomorphism is found an empty mapping is returned.
-    
      * 
-     * @param a query molecule
-     * @param b target molecule
+     * 
      * @param shouldMatchBonds 
      * @param shouldMatchRings 
      * @return
      */
-    public synchronized AtomAtomMapping isomorphism(IAtomContainer a,
-            IAtomContainer b,
-            boolean shouldMatchBonds,
-            boolean shouldMatchRings) {
-
+    private synchronized void isomorphism(boolean shouldMatchBonds) {
 
         if (shouldMatchRings) {
             try {
-                initializeMolecule(a);
-                initializeMolecule(b);
+                initializeMolecule(source);
+                initializeMolecule(target);
             } catch (CDKException ex) {
                 Logger.error(Level.SEVERE, null, ex);
             }
         }
 
-        List<AtomAtomMapping> mappings = new ArrayList<AtomAtomMapping>();
-        if (!isDead(a, b) && testIsSubgraphHeuristics(a, b, shouldMatchBonds)) {
+        if (!isDead(source, target) && testIsSubgraphHeuristics(source, target, shouldMatchBonds)) {
 //            AtomContainerPrinter printer = new AtomContainerPrinter();
 //            System.out.println(printer.toString(a));
 //            System.out.println(printer.toString(b));
-            State state = new State(a, b, shouldMatchBonds, shouldMatchRings);
+            State state = new State(source, target, shouldMatchBonds, shouldMatchRings);
             if (!state.isDead()) {
-                state.matchFirst(state, mappings);
+                state.matchFirst(state, allAtomMCS);
             }
         }
-        return mappings.isEmpty() ? new AtomAtomMapping(a, b) : mappings.get(0);
     }
 
-    /** The isomorphism method returns an isomorphism between two molecular
+    /** 
+     * The isomorphism method returns an isomorphism between two molecular
      *  graphs using the VF2Automorphism algorithm. This can be used for finding both
      *  graph-graph isomorphisms and graph-subgraph isomorphisms. In the latter
      *  case graph 'a' is the subgraph, implying a.size() < b.size(). In the case that
      *  no isomorphism is found an empty mapping is returned.
-    
      * 
-     * @param a query molecule
-     * @param b target molecule
+     * 
      * @return
      */
-    public synchronized AtomAtomMapping isomorphism(IQueryAtomContainer a, IAtomContainer b) {
+    public synchronized AtomAtomMapping isomorphism() {
 
         List<AtomAtomMapping> mappings = new ArrayList<AtomAtomMapping>();
-        if (!isDead(a, b) && testIsSubgraphHeuristics(a, b, true)) {
-            State state = new State(a, b);
+        if (!isDead(source, target) && testIsSubgraphHeuristics(source, target, true)) {
+            State state = new State((IQueryAtomContainer) source, target);
             if (!state.isDead()) {
                 state.matchFirst(state, mappings);
             }
         }
-        return mappings.isEmpty() ? new AtomAtomMapping(a, b) : mappings.get(0);
+        return mappings.isEmpty() ? new AtomAtomMapping(source, target) : mappings.get(0);
     }
 
     /**
-     * 
-     * @param a query molecule
-     * @param b target molecule
      * @param shouldMatchBonds 
-     * @param shouldMatchRings 
-     * @return
      */
-    public synchronized List<AtomAtomMapping> isomorphisms(
-            IAtomContainer a,
-            IAtomContainer b,
-            boolean shouldMatchBonds,
-            boolean shouldMatchRings) {
+    public synchronized void isomorphisms(boolean shouldMatchBonds) {
 
-        List<AtomAtomMapping> mappings = new ArrayList<AtomAtomMapping>();
-        if (!isDead(a, b) && testIsSubgraphHeuristics(a, b, shouldMatchBonds)) {
-            State state = new State(a, b, shouldMatchBonds, shouldMatchRings);
-            if (!state.isDead()) {
-                state.matchAll(state, mappings);
+        if (shouldMatchRings) {
+            try {
+                initializeMolecule(source);
+                initializeMolecule(target);
+            } catch (CDKException ex) {
+                Logger.error(Level.SEVERE, null, ex);
             }
         }
-        return mappings;
+
+        if (!isDead(source, target) && testIsSubgraphHeuristics(source, target, shouldMatchBonds)) {
+            State state = new State(source, target, shouldMatchBonds, shouldMatchRings);
+            if (!state.isDead()) {
+                state.matchAll(state, allAtomMCS);
+            }
+        }
+    }
+
+    public synchronized void isomorphisms() {
+
+        if (shouldMatchRings) {
+            try {
+                initializeMolecule(source);
+                initializeMolecule(target);
+            } catch (CDKException ex) {
+                Logger.error(Level.SEVERE, null, ex);
+            }
+        }
+
+        if (!isDead(source, target) && testIsSubgraphHeuristics(source, target, true)) {
+            State state = new State((IQueryAtomContainer) source, target);
+            if (!state.isDead()) {
+                state.matchAll(state, allAtomMCS);
+            }
+        }
     }
 
     // Returns true substructure is bigger than teh target
@@ -266,5 +287,64 @@ public final class VF2 extends MoleculeInitializer {
             }
         }
         return map.isEmpty();
+    }
+
+    @Override
+    public boolean isSubgraph(boolean shouldMatchBonds, boolean shouldMatchRings) {
+        this.shouldMatchRings = shouldMatchRings;
+        if (source instanceof IQueryAtomContainer) {
+            isomorphism();
+        } else {
+            isomorphism(shouldMatchBonds);
+        }
+        return allAtomMCS.isEmpty() ? false : true;
+    }
+
+    public boolean isSubgraphs(boolean shouldMatchBonds, boolean shouldMatchRings) {
+        this.shouldMatchRings = shouldMatchRings;
+        if (source instanceof IQueryAtomContainer) {
+            isomorphisms();
+        } else {
+            isomorphisms(shouldMatchBonds);
+        }
+        return allAtomMCS.isEmpty() ? false : true;
+    }
+
+    @Override
+    public void set(IAtomContainer source, IAtomContainer target) throws CDKException {
+        this.source = source;
+        this.target = target;
+    }
+
+    @Override
+    public void set(IQueryAtomContainer source, IAtomContainer target) throws CDKException {
+        this.source = source;
+        this.target = target;
+    }
+
+    @Override
+    public List<AtomAtomMapping> getAllAtomMapping() {
+        return allAtomMCS;
+    }
+
+    @Override
+    public List<Map<Integer, Integer>> getAllMapping() {
+        return allMCS;
+    }
+
+    @Override
+    public AtomAtomMapping getFirstAtomMapping() {
+        if (allAtomMCS.iterator().hasNext()) {
+            return allAtomMCS.iterator().next();
+        }
+        return new AtomAtomMapping(source, target);
+    }
+
+    @Override
+    public Map<Integer, Integer> getFirstMapping() {
+        if (allMCS.iterator().hasNext()) {
+            return allMCS.iterator().next();
+        }
+        return new TreeMap<Integer, Integer>();
     }
 }

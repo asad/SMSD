@@ -20,7 +20,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-package org.openscience.smsd.interfaces;
+package org.openscience.smsd.helper;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,6 +37,7 @@ import org.openscience.cdk.ringsearch.SSSRFinder;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
+import org.openscience.smsd.interfaces.IMoleculeInitializer;
 import org.openscience.smsd.ring.HanserRingFinder;
 
 /**
@@ -45,22 +46,18 @@ import org.openscience.smsd.ring.HanserRingFinder;
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-public class MoleculeInitializer {
+public class MoleculeInitializer extends IMoleculeInitializer {
 
     private final ILoggingTool Logger =
             LoggingToolFactory.createLoggingTool(MoleculeInitializer.class);
 
     /**
-     * Prepare the target molecule for analysis. 
-     * <p/> We perform ring perception and aromaticity detection and set up
-     * the appropriate properties. Right now, this function is called each time 
-     * we need to do a query and this is
-     * inefficient.
      *
      * @param atomContainer Atom container where rings are to be marked
      * @throws CDKException if there is a problem in ring perception or aromaticity detection, 
      * which is usually related to a timeout in the ring finding code.
      */
+    @Override
     protected void initializeMolecule(IAtomContainer atomContainer) throws CDKException {
         // Code copied from
         // org.openscience.cdk.qsar.descriptors.atomic.AtomValenceDescriptor;

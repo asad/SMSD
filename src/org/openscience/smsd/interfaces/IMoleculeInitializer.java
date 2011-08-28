@@ -1,6 +1,4 @@
-/**
- *
- * Copyright (C) 2006-2011  Syed Asad Rahman <asad@ebi.ac.uk>
+/* Copyright (C) 2006-2011  Syed Asad Rahman <asad@ebi.ac.uk>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -24,23 +22,26 @@
  */
 package org.openscience.smsd.interfaces;
 
-import org.openscience.cdk.annotations.TestClass;
-import org.openscience.smsd.helper.MoleculeInitializer;
+import org.openscience.cdk.exception.CDKException;
+import org.openscience.cdk.interfaces.IAtomContainer;
 
 /**
- * Interface for MCS search algorithm.
+ * 
  * @cdk.module smsd
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-@TestClass("org.openscience.cdk.smsd.interfaces.AbstractMCSAlgorithmTest")
-public abstract class AbstractMCSAlgorithm extends MoleculeInitializer{
+public abstract class IMoleculeInitializer {
 
-    /** 
-     * Initialise the MCS search algorithm. Each MCS algorithm should contain
-     * this method.
-     * @param shouldMatchBonds bond match
-     * @param shouldMatchRings ring match 
+    /**
+     * Prepare the molecule for analysis.
+     * <p/> We perform ring perception and aromaticity detection and set up
+     * the appropriate properties. Right now, this function is called each time
+     * we need to do a query and this is inefficient.
+     *
+     * @param atomContainer Atom container where rings are to be marked
+     * @throws CDKException if there is a problem in ring perception or aromaticity detection,
+     * which is usually related to a timeout in the ring finding code.
      */
-    public abstract void searchMCS(boolean shouldMatchBonds, boolean shouldMatchRings);
+    protected abstract void initializeMolecule(IAtomContainer atomContainer) throws CDKException;
 }

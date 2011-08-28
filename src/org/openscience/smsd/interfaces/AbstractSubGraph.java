@@ -23,6 +23,7 @@
 package org.openscience.smsd.interfaces;
 
 import org.openscience.cdk.annotations.TestClass;
+import org.openscience.smsd.helper.MoleculeInitializer;
 
 /**
  * Interface class for reporting only substructure searches.
