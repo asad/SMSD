@@ -30,6 +30,7 @@ import java.util.logging.Level;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.algorithm.single.SingleMappingHandler;
@@ -117,7 +118,7 @@ public final class Substructure extends BaseMapping {
      * @param query
      * @param target  
      */
-    public Substructure(IAtomContainer query, IAtomContainer target) {
+    public Substructure(IQueryAtomContainer query, IAtomContainer target) {
         this.mol1 = query;
         this.mol2 = target;
         this.mcsList = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
@@ -153,7 +154,11 @@ public final class Substructure extends BaseMapping {
             }
             VF2 mapper = new VF2();
             List<AtomAtomMapping> mappingsVF2 = new ArrayList<AtomAtomMapping>();
-            mapper.set(mol1, mol2);
+            if (mol1 instanceof IQueryAtomContainer) {
+                mapper.set((IQueryAtomContainer) mol1, mol2);
+            } else {
+                mapper.set(mol1, mol2);
+            }
 //                    System.out.println("Mapping Size " + atomMapping.getCount());
             if (mapper.isSubgraph(isBondMatchFlag(), isMatchRing())) {
                 mappingsVF2.add(mapper.getFirstAtomMapping());
@@ -255,12 +260,5 @@ public final class Substructure extends BaseMapping {
      */
     public boolean isMatchRing() {
         return matchRing;
-    }
-
-    /**
-     * @param matchRing the matchRing to set
-     */
-    public void setMatchRing(boolean matchRing) {
-        this.matchRing = matchRing;
     }
 }
