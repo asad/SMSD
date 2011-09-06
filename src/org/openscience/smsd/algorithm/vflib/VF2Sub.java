@@ -111,6 +111,8 @@ public class VF2Sub extends AbstractSubGraph implements IMCSBase {
         allAtomMCSCopy = new ArrayList<AtomAtomMapping>();
         allMCS = new ArrayList<Map<Integer, Integer>>();
         allMCSCopy = new ArrayList<Map<Integer, Integer>>();
+        TimeOut tmo = TimeOut.getInstance();
+        tmo.setCDKMCSTimeOut(0.15);
     }
 
     /**
@@ -120,7 +122,7 @@ public class VF2Sub extends AbstractSubGraph implements IMCSBase {
     @Override
     public boolean isSubgraph(boolean shouldMatchBonds, boolean shouldMatchRings) {
         setTimeManager(new TimeManager());
-        setBondMatchFlag(matchBonds);
+        setBondMatchFlag(shouldMatchBonds);
         this.setMatchRings(shouldMatchRings);
 
         if (isMatchRings()) {
@@ -163,7 +165,7 @@ public class VF2Sub extends AbstractSubGraph implements IMCSBase {
 
     /** {@inheritDoc}
      *
-     * Set the VFLib MCS software
+     * Set the query and target
      *
      * @param source
      * @param target
@@ -275,8 +277,7 @@ public class VF2Sub extends AbstractSubGraph implements IMCSBase {
             }
             setVFMappings(true, queryCompiler);
         } else if (countR <= countP) {
-//            queryCompiler = new QueryCompiler(this.source, isBondMatchFlag()).compile();
-            queryCompiler = new QueryCompiler(this.source, true, false).compile();
+            queryCompiler = new QueryCompiler(this.source, isBondMatchFlag(), isMatchRings()).compile();
             mapper = new VFMapper(queryCompiler);
             List<Map<INode, IAtom>> maps = mapper.getMaps(getProductMol());
             if (maps != null) {
