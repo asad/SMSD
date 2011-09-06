@@ -98,6 +98,7 @@ public class VFMapper implements IMapper {
      *
      * @param queryMolecule
      * @param bondMatcher
+     * @param ringMatcher  
      */
     public VFMapper(IAtomContainer queryMolecule, boolean bondMatcher, boolean ringMatcher) {
         this.query = new QueryCompiler(queryMolecule, bondMatcher, ringMatcher).compile();
