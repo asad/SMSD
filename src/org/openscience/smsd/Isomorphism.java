@@ -56,10 +56,9 @@ import org.openscience.smsd.interfaces.ITimeOut;
  *  For example:</p>
  * <OL>
  * <lI>0: Default,
- * <lI>1: Default_1,
- * <lI>2: MCSPlus,
- * <lI>3: VFLibMCS,
- * <lI>4: CDKMCS
+ * <lI>1: MCSPlus,
+ * <lI>2: VFLibMCS,
+ * <lI>3: CDKMCS
  * </OL>
  *  <p>It also has a set of robust chemical filters (i.e. bond energy, fragment
  *  count, stereo & bond match) to sort the reported MCS solutions in a chemically
@@ -73,31 +72,41 @@ import org.openscience.smsd.interfaces.ITimeOut;
  * <p>An example for <b>MCS search</b>:</p>
  *  <font color="#003366">
  *  <pre>
- *  SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
- *  // Benzene
- *  IAtomContainer query = sp.parseSmiles("C1=CC=CC=C1");
- *  // Napthalene
- *  IAtomContainer target = sp.parseSmiles("C1=CC2=C(C=C1)C=CC=C2");
- *  //{ 0: Default Isomorphism Algorithm, 1: MCSPlus Algorithm, 2: VFLibMCS Algorithm, 3: CDKMCS Algorithm}
- *  //Bond Sensitive is set true
  * 
- *  // set molecules and/or remove hydrogens
- *  Isomorphism comparison = new Isomorphism(query, target, Algorithm.VFLibMCS, true);
- *  // set chemical filter true
- *  comparison.setChemFilters(true, true, true);
+ * Test ring match using MCS VF2Plus
+ * @throws Exception
  *
- *  //Get similarity score
- *   System.out.println("Tanimoto coefficient:  " + comparison.getTanimotoSimilarity());
- *  // Print the mapping between molecules
- *   System.out.println(" Mappings: ");
- *   for (Map.Entry<IAtom, IAtom> mapping : comparison.getMappings().entrySet()) {
- *      IAtom eAtom = query.getKey();
- *      IAtom pAtom = target.getValue();
- *      System.out.println(eAtom.getSymbol() + " " + pAtom.getSymbol());
- *   }
- *   System.out.println("");
- *  
- *
+ * @Test
+ * public void testVF2MCS() throws Exception {
+ * SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+ * // Benzene
+ * IAtomContainer query = sp.parseSmiles("C1=CC=CC=C1");
+ * // Napthalene
+ * IAtomContainer target = sp.parseSmiles("C1=CC2=C(C=C1)C=CC=C2");
+ * //{ 0: Default Isomorphism Algorithm, 1: MCSPlus Algorithm, 2: VFLibMCS Algorithm, 3: CDKMCS Algorithm}
+ * //Algorithm is VF2MCS
+ * //Bond Sensitive is set True
+ * //Ring Match is set True
+ * Isomorphism comparison = new Isomorphism(query, target, Algorithm.VFLibMCS, true, true);
+ * // set chemical filter true
+ * comparison.setChemFilters(true, true, true);
+ * //Get similarity score
+ * System.out.println("Tanimoto coefficient:  " + comparison.getTanimotoSimilarity());
+ * Assert.assertEquals(0.6, comparison.getTanimotoSimilarity());
+ * Assert.assertEquals(12, comparison.getAllAtomMapping().size());
+ * // Print the mapping between molecules
+ * System.out.println(" Mappings: ");
+ * for (AtomAtomMapping atomatomMapping : comparison.getAllAtomMapping()) {
+ *      for (Map.Entry<IAtom, IAtom> mapping : atomatomMapping.getMappings().entrySet()) {
+ *          IAtom sourceAtom = mapping.getKey();
+ *          IAtom targetAtom = mapping.getValue();
+ *          System.out.println(sourceAtom.getSymbol() + " " + targetAtom.getSymbol());
+ *          System.out.println(atomatomMapping.getQueryIndex(sourceAtom) + " " + atomatomMapping.getTargetIndex(targetAtom));
+ *      }
+ *      System.out.println("");
+ *  }
+ * }
+ * 
  *  </pre>
  *  </font>
  *
@@ -138,10 +147,9 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
      * supported algorithm {@link org.openscience.cdk.smsd.interfaces.Algorithm} types:
      * <OL>
      * <lI>0: Default,
-     * <lI>1: Default_1,
-     * <lI>2: MCSPlus,
-     * <lI>3: VFLibMCS,
-     * <lI>4: CDKMCS
+     * <lI>1: MCSPlus,
+     * <lI>2: VFLibMCS,
+     * <lI>3: CDKMCS
      * </OL>
      * @param algorithmType {@link org.openscience.cdk.smsd.interfaces.Algorithm}
      */
@@ -171,10 +179,9 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
      * supported algorithm {@link org.openscience.cdk.smsd.interfaces.Algorithm} types:
      * <OL>
      * <lI>0: Default,
-     * <lI>1: Default_1,
-     * <lI>2: MCSPlus,
-     * <lI>3: VFLibMCS,
-     * <lI>4: CDKMCS
+     * <lI>1: MCSPlus,
+     * <lI>2: VFLibMCS,
+     * <lI>3: CDKMCS
      * </OL>
      * @param algorithmType {@link org.openscience.cdk.smsd.interfaces.Algorithm}
      * @param bondTypeFlag Match bond types (i.e. double to double etc)

@@ -36,7 +36,6 @@ import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.algorithm.single.SingleMappingHandler;
 import org.openscience.smsd.algorithm.vflib.VF2Sub;
 import org.openscience.smsd.algorithm.vflib.substructure.VF2;
-import org.openscience.smsd.global.TimeOut;
 
 /**
  * This is an ultra fast method to report if query
@@ -54,31 +53,16 @@ import org.openscience.smsd.global.TimeOut;
  * <p>An example for <b>Substructure search</b>:</p>
  *  <font color="#003366">
  *  <pre>
- *  SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
- *  // Benzene
- *  IAtomContainer query = sp.parseSmiles("C1=CC=CC=C1");
- *  // Napthalene
- *  IAtomContainer target = sp.parseSmiles("C1=CC2=C(C=C1)C=CC=C2");
- *  //Turbo mode search
- *  
- *  // set molecules, remove hydrogens, clean and configure molecule
- *  //Bond Sensitive is set true
- *  IAtomMapping comparison = new Substructure(query, target, true);
- *  // set chemical filter false
- *  if (comparison.findSubgraph()) {
- *      comparison.setChemFilters(true, true, true);
- *  
- *  //Get similarity score
- *      System.out.println("Tanimoto coefficient:  " + comparison.getTanimotoSimilarity());
- *  // Print the mapping between molecules
- *      System.out.println(" Mappings: ");
- *      for (Map.Entry<IAtom, IAtom> mapping : comparison.getMappings().entrySet()) {
- *          IAtom eAtom = query.getKey();
- *          IAtom pAtom = target.getValue();
- *          System.out.println(eAtom.getSymbol() + " " + pAtom.getSymbol());
- *      }
- *      System.out.println("");
- *  }
+ * SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+ * IAtomContainer query = sp.parseSmiles("CC");
+ * IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
+ * Substructure smsd = new Substructure(query, target, true, false, true);
+ * Assert.assertTrue(smsd.isSubgraph());
+ * Assert.assertEquals(18, smsd.getAllAtomMapping().size());
+
+ * IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
+ * smsd = new Substructure(queryContainer, target, true);
+ * Assert.assertTrue(smsd.isSubgraph());
  *
  *  </pre>
  *  </font>
@@ -95,35 +79,54 @@ public final class Substructure extends BaseMapping {
             LoggingToolFactory.createLoggingTool(Substructure.class);
     private boolean matchBond;
     private boolean matchRing;
+    private boolean subgraph;
 
     /**
      * Constructor for VF Substructure Algorithm 
      * @param query
      * @param target
      * @param shouldMatchBonds Match bond types (i.e. double to double etc)
-     * @param matchRings Match ring atoms and ring size  
+     * @param matchRings Match ring atoms and ring size
+     * @param findAllSubgraph report all subgraphs
+     * @throws CDKException  
      */
-    public Substructure(IAtomContainer query, IAtomContainer target, boolean shouldMatchBonds, boolean matchRings) {
+    public Substructure(
+            IAtomContainer query,
+            IAtomContainer target,
+            boolean shouldMatchBonds,
+            boolean matchRings,
+            boolean findAllSubgraph) throws CDKException {
         this.mol1 = query;
         this.mol2 = target;
         this.mcsList = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
-        TimeOut tmo = TimeOut.getInstance();
-        tmo.setCDKMCSTimeOut(0.15);
         this.matchBond = shouldMatchBonds;
         this.matchRing = matchRings;
+        if (findAllSubgraph) {
+            this.subgraph = findSubgraphs();
+        } else {
+            this.subgraph = findSubgraph();
+        }
     }
 
     /**
      * Constructor for VF Substructure Algorithm 
      * @param query
-     * @param target  
+     * @param target
+     * @param findAllSubgraph report all subgraphs
+     * @throws CDKException  
      */
-    public Substructure(IQueryAtomContainer query, IAtomContainer target) {
+    public Substructure(
+            IQueryAtomContainer query,
+            IAtomContainer target,
+            boolean findAllSubgraph) throws CDKException {
         this.mol1 = query;
         this.mol2 = target;
         this.mcsList = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
-        TimeOut tmo = TimeOut.getInstance();
-        tmo.setCDKMCSTimeOut(0.15);
+        if (findAllSubgraph) {
+            this.subgraph = findSubgraphs();
+        } else {
+            this.subgraph = findSubgraph();
+        }
     }
 
     private synchronized boolean hasMap(AtomAtomMapping map, List<AtomAtomMapping> mapGlobal) {
@@ -140,7 +143,7 @@ public final class Substructure extends BaseMapping {
      * @return
      * @throws CDKException  
      */
-    public synchronized boolean findSubgraph() throws CDKException {
+    private synchronized boolean findSubgraph() throws CDKException {
 
         if ((mol2 == null) || (mol1 == null)) {
             throw new CDKException("Query or Target molecule is not initialized (NULL)");
@@ -159,15 +162,18 @@ public final class Substructure extends BaseMapping {
             } else {
                 mapper.set(mol1, mol2);
             }
-//                    System.out.println("Mapping Size " + atomMapping.getCount());
             if (mapper.isSubgraph(isBondMatchFlag(), isMatchRing())) {
-                mappingsVF2.add(mapper.getFirstAtomMapping());
+                System.out.println("Mapping Size " + mapper.getFirstAtomMapping().getCount()
+                        + " mol1.getAtomCount() " + mol1.getAtomCount());
+                System.out.println("ALL Mapping Size " + mapper.getAllAtomMapping().size());
+                mappingsVF2.addAll(mapper.getAllAtomMapping());
             } else {
                 return false;
             }
             setVFMappings(mappingsVF2);
         }
-        return (getMappingCount() > 0 && getAllAtomMapping().iterator().next().getCount()
+        return (getMappingCount() > 0
+                && getAllAtomMapping().iterator().next().getCount()
                 == mol1.getAtomCount()) ? true : false;
     }
 
@@ -176,7 +182,7 @@ public final class Substructure extends BaseMapping {
      * @return
      * @throws CDKException  
      */
-    public synchronized boolean findSubgraphs() throws CDKException {
+    private synchronized boolean findSubgraphs() throws CDKException {
 
 
         if ((mol2 == null) || (mol1 == null)) {
@@ -191,11 +197,15 @@ public final class Substructure extends BaseMapping {
             } else {
                 VF2Sub mapper = new VF2Sub();
                 List<AtomAtomMapping> mappingsVF2 = new ArrayList<AtomAtomMapping>();
-                mapper.set(mol1, mol2);
-                mapper.isSubgraph(isBondMatchFlag(), isMatchRing());
+                if (mol1 instanceof IQueryAtomContainer) {
+                    mapper.set((IQueryAtomContainer) mol1, mol2);
+                } else {
+                    mapper.set(mol1, mol2);
+                }
+                boolean isSubgraph = mapper.isSubgraph(isBondMatchFlag(), isMatchRing());
                 List<AtomAtomMapping> atomMappings = mapper.getAllAtomMapping();
 //                    System.out.println("Mapping Size " + atomMapping.getCount());
-                if (!atomMappings.isEmpty()) {
+                if (isSubgraph) {
                     mappingsVF2.addAll(atomMappings);
                 } else {
                     return false;
@@ -203,7 +213,8 @@ public final class Substructure extends BaseMapping {
                 setVFMappings(mappingsVF2);
             }
         }
-        return (getMappingCount() > 0 && getAllAtomMapping().iterator().next().getCount()
+        return (getMappingCount() > 0
+                && getAllAtomMapping().iterator().next().getCount()
                 == mol1.getAtomCount()) ? true : false;
     }
 
@@ -260,5 +271,13 @@ public final class Substructure extends BaseMapping {
      */
     public boolean isMatchRing() {
         return matchRing;
+    }
+
+    /**
+     * Return true if Query is a subgraph of the Target
+     * @return the subgraph
+     */
+    public boolean isSubgraph() {
+        return subgraph;
     }
 }
