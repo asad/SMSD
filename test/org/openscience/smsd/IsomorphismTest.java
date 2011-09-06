@@ -26,6 +26,7 @@ package org.openscience.smsd;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import junit.framework.Assert;
@@ -40,6 +41,7 @@ import org.openscience.cdk.Molecule;
 import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.exception.InvalidSmilesException;
+import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IMolecule;
 import org.openscience.cdk.io.IChemObjectReader.Mode;
@@ -428,7 +430,7 @@ public class IsomorphismTest {
 
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, false, false);
         smsd1.setChemFilters(true, true, true);
-        Assert.assertEquals(false, smsd1.isStereoMisMatch());
+        Assert.assertFalse(smsd1.isStereoMisMatch());
     }
 
     @Test
@@ -436,14 +438,15 @@ public class IsomorphismTest {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("CC");
         IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
-        Substructure smsd = new Substructure(query, target, true, false);
+        Isomorphism smsd = new Isomorphism(query, target, Algorithm.VFLibMCS, true, true);
 
-        boolean foundMatches = smsd.findSubgraph();
+        boolean foundMatches = smsd.isSubgraph();
+        Assert.assertEquals(18, smsd.getAllAtomMapping().size());
         Assert.assertTrue(foundMatches);
 
         IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
-        smsd = new Substructure(queryContainer, target);
-        foundMatches = smsd.findSubgraph();
+        smsd = new Isomorphism(queryContainer, target, Algorithm.VFLibMCS);
+        foundMatches = smsd.isSubgraph();
         Assert.assertTrue(foundMatches);
     }
 
@@ -452,14 +455,15 @@ public class IsomorphismTest {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("CC");
         IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
-        Substructure smsd = new Substructure(query, target, true, false);
+        Isomorphism smsd = new Isomorphism(query, target, Algorithm.MCSPlus, true, true);
 
-        boolean foundMatches = smsd.findSubgraph();
+        boolean foundMatches = smsd.isSubgraph();
+        Assert.assertEquals(18, smsd.getAllAtomMapping().size());
         Assert.assertTrue(foundMatches);
 
         IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
-        smsd = new Substructure(queryContainer, target);
-        foundMatches = smsd.findSubgraph();
+        smsd = new Isomorphism(queryContainer, target, Algorithm.MCSPlus);
+        foundMatches = smsd.isSubgraph();
         Assert.assertTrue(foundMatches);
     }
 
@@ -468,15 +472,15 @@ public class IsomorphismTest {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("CC");
         IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
-        Substructure smsd = new Substructure(query, target, true, false);
+        Isomorphism smsd = new Isomorphism(query, target, Algorithm.DEFAULT, true, true);
 
-        boolean foundMatches = smsd.findSubgraphs();
+        boolean foundMatches = smsd.isSubgraph();
         Assert.assertEquals(18, smsd.getAllAtomMapping().size());
         Assert.assertTrue(foundMatches);
 
         IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
-        smsd = new Substructure(queryContainer, target);
-        foundMatches = smsd.findSubgraph();
+        smsd = new Isomorphism(queryContainer, target, Algorithm.DEFAULT);
+        foundMatches = smsd.isSubgraph();
         Assert.assertTrue(foundMatches);
     }
 
@@ -523,5 +527,42 @@ public class IsomorphismTest {
         Isomorphism smsd1 = new Isomorphism(molecule1, molecule2, Algorithm.DEFAULT, false, false);
         smsd1.setChemFilters(true, true, true);
         Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
+    }
+
+    /**
+     * Test ring match using MCS VF2Plus
+     * @throws Exception
+     */
+    @Test
+    public void testVF2MCS() throws Exception {
+        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        // Benzene
+        IAtomContainer query = sp.parseSmiles("C1=CC=CC=C1");
+        // Napthalene
+        IAtomContainer target = sp.parseSmiles("C1=CC2=C(C=C1)C=CC=C2");
+        //{ 0: Default Isomorphism Algorithm, 1: MCSPlus Algorithm, 2: VFLibMCS Algorithm, 3: CDKMCS Algorithm}
+        //Algorithm is VF2MCS
+        //Bond Sensitive is set True
+        //Ring Match is set True
+
+        Isomorphism comparison = new Isomorphism(query, target, Algorithm.VFLibMCS, true, true);
+        // set chemical filter true
+        comparison.setChemFilters(true, true, true);
+
+        //Get similarity score
+        System.out.println("Tanimoto coefficient:  " + comparison.getTanimotoSimilarity());
+        Assert.assertEquals(0.6, comparison.getTanimotoSimilarity());
+        Assert.assertEquals(12, comparison.getAllAtomMapping().size());
+        // Print the mapping between molecules
+        System.out.println(" Mappings: ");
+        for (AtomAtomMapping atomatomMapping : comparison.getAllAtomMapping()) {
+            for (Map.Entry<IAtom, IAtom> mapping : atomatomMapping.getMappings().entrySet()) {
+                IAtom sourceAtom = mapping.getKey();
+                IAtom targetAtom = mapping.getValue();
+                System.out.println(sourceAtom.getSymbol() + " " + targetAtom.getSymbol());
+                System.out.println(atomatomMapping.getQueryIndex(sourceAtom) + " " + atomatomMapping.getTargetIndex(targetAtom));
+            }
+            System.out.println("");
+        }
     }
 }
