@@ -73,9 +73,9 @@ public class SubstructureBenchMark {
 
     private static int getSMSDSolutionCount(IMolecule queryMol, IMolecule target) throws CDKException {
 
-        Substructure substructure = new Substructure(queryMol, target, true, false);
+        Substructure substructure = new Substructure(queryMol, target, true, false, false);
 
-        if (substructure.findSubgraph()) {
+        if (substructure.isSubgraph()) {
             return 1;
         } else {
             return 0;

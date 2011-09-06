@@ -493,9 +493,9 @@ public class SMSDcmd {
             boolean matchBonds,
             boolean matchRings) throws CDKException {
         // XXX - if clean and configure is 'true', is that not duplicate configuring?
-        Substructure smsd = new Substructure(query, target, matchBonds, matchRings);
-        boolean findSubgraph = smsd.findSubgraph();
-        if (findSubgraph) {
+        Substructure smsd = new Substructure(query, target, matchBonds, matchRings, false);
+
+        if (smsd.isSubgraph()) {
             if (filter == 0) {
                 smsd.setChemFilters(false, false, false);
             }
@@ -509,6 +509,7 @@ public class SMSDcmd {
                 smsd.setChemFilters(true, true, true);
             }
         }
+
         return smsd;
     }
 
