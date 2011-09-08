@@ -18,7 +18,8 @@ import org.openscience.cdk.isomorphism.matchers.QueryAtomContainer;
 import org.openscience.smsd.global.TimeOut;
 import org.openscience.smsd.tools.TimeManager;
 import org.openscience.cdk.tools.manipulator.BondManipulator;
-import org.openscience.smsd.algorithm.matchers.DefaultRGraphAtomMatcher;
+import org.openscience.smsd.algorithm.matchers.AtomMatcher;
+import org.openscience.smsd.algorithm.matchers.DefaultAtomMatcher;
 
 /**
  *  This class implements atom multipurpose structure comparison tool.
@@ -445,8 +446,8 @@ public class CDKMCS {
             IAtom queryAtom = g2.getAtom(0);
 
             //use atom matcher from SMSD
-            DefaultRGraphAtomMatcher defaultRGraphAtomMatcher =
-                    new DefaultRGraphAtomMatcher(queryAtom, shouldMatchRings);
+            AtomMatcher defaultRGraphAtomMatcher =
+                    new DefaultAtomMatcher(queryAtom, shouldMatchRings);
             for (IAtom atom : g1.atoms()) {
                 if (defaultRGraphAtomMatcher.matches(atom)) {
                     List<CDKRMap> lmap = new ArrayList<CDKRMap>();
@@ -750,10 +751,10 @@ public class CDKMCS {
             IBond bondA = ac1.getBond(i);
             IAtom atomA1 = bondA.getAtom(0);
             IAtom atomA2 = bondA.getAtom(1);
-            DefaultRGraphAtomMatcher defaultRGraphAtomMatcherA1 =
-                    new DefaultRGraphAtomMatcher(atomA1, shouldMatchRings);
-            DefaultRGraphAtomMatcher defaultRGraphAtomMatcherA2 =
-                    new DefaultRGraphAtomMatcher(atomA2, shouldMatchRings);
+            AtomMatcher defaultRGraphAtomMatcherA1 =
+                    new DefaultAtomMatcher(atomA1, shouldMatchRings);
+            AtomMatcher defaultRGraphAtomMatcherA2 =
+                    new DefaultAtomMatcher(atomA2, shouldMatchRings);
 
             for (int j = 0; j < ac2.getBondCount(); j++) {
                 IBond bondB = ac2.getBond(j);

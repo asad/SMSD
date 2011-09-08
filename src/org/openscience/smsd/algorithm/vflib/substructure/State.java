@@ -52,8 +52,10 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.smsd.AtomAtomMapping;
-import org.openscience.smsd.algorithm.matchers.DefaultVFAtomMatcher;
-import org.openscience.smsd.algorithm.matchers.DefaultVFBondMatcher;
+import org.openscience.smsd.algorithm.matchers.AtomMatcher;
+import org.openscience.smsd.algorithm.matchers.BondMatcher;
+import org.openscience.smsd.algorithm.matchers.DefaultAtomMatcher;
+import org.openscience.smsd.algorithm.matchers.DefaultBondMatcher;
 
 /**
  * This class finds mapping states between query and target
@@ -494,12 +496,12 @@ final class State {
     }
 
     boolean matchBonds(IBond queryBond, IBond targetBond) {
-        DefaultVFBondMatcher defaultVFBondMatcher = new DefaultVFBondMatcher(queryBond, shouldMatchBonds);
+        BondMatcher defaultVFBondMatcher = new DefaultBondMatcher(queryBond, shouldMatchBonds);
         return defaultVFBondMatcher.matches(targetBond);
     }
 
     boolean matchAtoms(IAtom sourceAtom, IAtom targetAtom) {
-        DefaultVFAtomMatcher defaultVFAtomMatcher = new DefaultVFAtomMatcher(sourceAtom, shouldMatchRings);
+        AtomMatcher defaultVFAtomMatcher = new DefaultAtomMatcher(sourceAtom, shouldMatchRings);
         return defaultVFAtomMatcher.matches(targetAtom);
     }
 

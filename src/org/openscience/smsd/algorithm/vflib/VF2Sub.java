@@ -73,13 +73,13 @@ public class VF2Sub extends AbstractSubGraph implements IMCSBase {
     private IAtomContainer source = null;
     private IAtomContainer target = null;
     private int bestHitSize = -1;
-    private boolean matchBonds;
+    private final boolean matchBonds;
     private int countR = 0;
     private int countP = 0;
     private final static ILoggingTool Logger =
             LoggingToolFactory.createLoggingTool(VF2Sub.class);
     private TimeManager timeManager = null;
-    private boolean shouldMatchRings;
+    private final boolean shouldMatchRings;
 
     /**
      * @return the timeout
@@ -105,14 +105,18 @@ public class VF2Sub extends AbstractSubGraph implements IMCSBase {
 
     /**
      * Constructor for an extended VF Algorithm for the MCS search
+     * @param shouldMatchBonds
+     * @param shouldMatchRings  
      */
-    public VF2Sub() {
+    public VF2Sub(boolean shouldMatchBonds, boolean shouldMatchRings) {
         allAtomMCS = new ArrayList<AtomAtomMapping>();
         allAtomMCSCopy = new ArrayList<AtomAtomMapping>();
         allMCS = new ArrayList<Map<Integer, Integer>>();
         allMCSCopy = new ArrayList<Map<Integer, Integer>>();
         TimeOut tmo = TimeOut.getInstance();
         tmo.setCDKMCSTimeOut(0.15);
+        this.shouldMatchRings = shouldMatchRings;
+        this.matchBonds = shouldMatchBonds;
     }
 
     /**
@@ -120,10 +124,8 @@ public class VF2Sub extends AbstractSubGraph implements IMCSBase {
      *
      */
     @Override
-    public boolean isSubgraph(boolean shouldMatchBonds, boolean shouldMatchRings) {
+    public boolean isSubgraph() {
         setTimeManager(new TimeManager());
-        setBondMatchFlag(shouldMatchBonds);
-        this.setMatchRings(shouldMatchRings);
 
         if (isMatchRings()) {
             try {
@@ -427,13 +429,6 @@ public class VF2Sub extends AbstractSubGraph implements IMCSBase {
         return matchBonds;
     }
 
-    /**
-     * @param shouldMatchBonds the shouldMatchBonds to set
-     */
-    public synchronized void setBondMatchFlag(boolean shouldMatchBonds) {
-        this.matchBonds = shouldMatchBonds;
-    }
-
     private synchronized IAtomContainer getReactantMol() {
         return source;
     }
@@ -455,12 +450,5 @@ public class VF2Sub extends AbstractSubGraph implements IMCSBase {
      */
     public boolean isMatchRings() {
         return shouldMatchRings;
-    }
-
-    /**
-     * @param shouldMatchRings the shouldMatchRings to set
-     */
-    public void setMatchRings(boolean shouldMatchRings) {
-        this.shouldMatchRings = shouldMatchRings;
     }
 }

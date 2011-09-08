@@ -588,7 +588,7 @@ public final class McGregor {
                     IAtom P1_B = target.getAtom(Index_J);
                     IAtom P2_B = target.getAtom(Index_JPlus1);
                     IBond productBond = target.getBond(P1_B, P2_B);
-                    if (McGregorChecks.isMatchFeasible(source, reactantBond, target, productBond, isBondMatch(), isMatchRings())) {
+                    if (McGregorChecks.isMatchFeasible(reactantBond, productBond, isBondMatch(), isMatchRings())) {
                         modifiedARCS.set(row * neighborBondNumB + column, 1);
                     }
                 } else if (source instanceof IQueryAtomContainer) {
@@ -605,7 +605,7 @@ public final class McGregor {
                     IAtom P1_B = target.getAtom(Index_J);
                     IAtom P2_B = target.getAtom(Index_JPlus1);
                     IBond productBond = target.getBond(P1_B, P2_B);
-                    if (McGregorChecks.isMatchFeasible(source, reactantBond, target, productBond, isBondMatch(), isMatchRings())) {
+                    if (McGregorChecks.isMatchFeasible(reactantBond, productBond, isBondMatch(), isMatchRings())) {
                         modifiedARCS.set(row * neighborBondNumB + column, 1);
                     }
                 }
@@ -868,7 +868,7 @@ public final class McGregor {
 
 //      Bond Order Check Introduced by Asad
 
-        if (McGregorChecks.isMatchFeasible(source, reactantBond, target, productBond, isBondMatch(), isMatchRings())) {
+        if (McGregorChecks.isMatchFeasible(reactantBond, productBond, isBondMatch(), isMatchRings())) {
 
             for (int indexZ = 0; indexZ < mcGregorHelper.getMappedAtomCount(); indexZ++) {
 

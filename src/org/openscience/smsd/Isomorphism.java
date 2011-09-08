@@ -35,8 +35,6 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
-import org.openscience.cdk.tools.ILoggingTool;
-import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.algorithm.mcsplus.MCSPlusHandler;
 import org.openscience.smsd.algorithm.rgraph.CDKMCSHandler;
 import org.openscience.smsd.algorithm.single.SingleMappingHandler;
@@ -122,16 +120,12 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
 
     static final long serialVersionUID = 10278639972837495L;
     private Algorithm algorithmType;
-    private final ILoggingTool Logger =
-            LoggingToolFactory.createLoggingTool(Isomorphism.class);
     private double bondSensitiveCDKMCSTimeOut = 1.00;//mins
     private double bondInSensitiveCDKMCSTimeOut = 1.00;//mins
     private double bondSensitiveMCSPlusTimeOut = 1.00;//mins
     private double bondInSensitiveMCSPlusTimeOut = 2.00;//mins
     private double bondSensitiveVFTimeOut = 2.00;//mins
     private double bondInSensitiveVFTimeOut = 2.00;//mins
-    private boolean matchBonds;
-    private boolean matchRings;
 
     /**
      * Initialize query and target molecules.
@@ -368,6 +362,7 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
      * @return true if query is a subgraph of the target
      */
     @TestMethod("testIsSubgraph")
+    @Override
     public synchronized boolean isSubgraph() {
 
         float mappingSize = 0;
@@ -388,13 +383,6 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
             }
         }
         return false;
-    }
-
-    /**
-     * @return the matchBonds
-     */
-    public synchronized boolean isMatchBonds() {
-        return matchBonds;
     }
 
     /**
@@ -465,19 +453,5 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
     @Override
     public synchronized void setBondInSensitiveVFTimeOut(double bondInSensitiveTimeOut) {
         this.bondInSensitiveVFTimeOut = bondInSensitiveTimeOut;
-    }
-
-    /**
-     * @return the matchRings
-     */
-    public boolean isMatchRings() {
-        return matchRings;
-    }
-
-    /**
-     * @param matchRings the matchRings to set
-     */
-    public void setMatchRings(boolean matchRings) {
-        this.matchRings = matchRings;
     }
 }

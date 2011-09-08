@@ -37,10 +37,8 @@ public abstract class AbstractSubGraph extends MoleculeInitializer {
     /** 
      * Initialise the Subgraph search algorithm. Each Subgraph algorithm
      * should contain this method.
-     * @param shouldMatchBonds 
-     * @param shouldMatchRings 
      * @return true if Query/reactant is a subgraph of Target/product
      * else false
      */
-    public abstract boolean isSubgraph(boolean shouldMatchBonds, boolean shouldMatchRings);
+    public abstract boolean isSubgraph();
 }

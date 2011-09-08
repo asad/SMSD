@@ -79,14 +79,19 @@ public final class VF2 extends AbstractSubGraph implements IMCSBase {
     private List<Map<Integer, Integer>> allMCS = null;
     private IAtomContainer source = null;
     private IAtomContainer target = null;
-    private boolean shouldMatchRings;
+    private final boolean shouldMatchRings;
     private final ILoggingTool Logger =
             LoggingToolFactory.createLoggingTool(VF2.class);
+    private final boolean shouldMatchBonds;
 
     /**
      * Constructor for an extended VF Algorithm for the MCS search
+     * @param shouldMatchBonds
+     * @param shouldMatchRings  
      */
-    public VF2() {
+    public VF2(boolean shouldMatchBonds, boolean shouldMatchRings) {
+        this.shouldMatchRings = shouldMatchRings;
+        this.shouldMatchBonds = shouldMatchBonds;
         allAtomMCS = new ArrayList<AtomAtomMapping>();
         allMCS = new ArrayList<Map<Integer, Integer>>();
     }
@@ -103,7 +108,7 @@ public final class VF2 extends AbstractSubGraph implements IMCSBase {
      * @param shouldMatchRings 
      * @return
      */
-    private synchronized void isomorphism(boolean shouldMatchBonds) {
+    private synchronized void isomorphism() {
 
         if (shouldMatchRings) {
             try {
@@ -133,24 +138,8 @@ public final class VF2 extends AbstractSubGraph implements IMCSBase {
      *  no isomorphism is found an empty mapping is returned.
      * 
      * 
-     * @return
      */
-    public synchronized AtomAtomMapping isomorphism() {
-
-        List<AtomAtomMapping> mappings = new ArrayList<AtomAtomMapping>();
-        if (!isDead(source, target) && testIsSubgraphHeuristics(source, target, true)) {
-            State state = new State((IQueryAtomContainer) source, target);
-            if (!state.isDead()) {
-                state.matchFirst(state, mappings);
-            }
-        }
-        return mappings.isEmpty() ? new AtomAtomMapping(source, target) : mappings.get(0);
-    }
-
-    /**
-     * @param shouldMatchBonds 
-     */
-    public synchronized void isomorphisms(boolean shouldMatchBonds) {
+    public synchronized void isomorphisms() {
 
         if (shouldMatchRings) {
             try {
@@ -169,26 +158,7 @@ public final class VF2 extends AbstractSubGraph implements IMCSBase {
         }
     }
 
-    public synchronized void isomorphisms() {
-
-        if (shouldMatchRings) {
-            try {
-                initializeMolecule(source);
-                initializeMolecule(target);
-            } catch (CDKException ex) {
-                Logger.error(Level.SEVERE, null, ex);
-            }
-        }
-
-        if (!isDead(source, target) && testIsSubgraphHeuristics(source, target, true)) {
-            State state = new State((IQueryAtomContainer) source, target);
-            if (!state.isDead()) {
-                state.matchAll(state, allAtomMCS);
-            }
-        }
-    }
-
-    // Returns true substructure is bigger than teh target
+    // Returns true substructure is bigger than the target
     private synchronized boolean isDead(IAtomContainer a, IAtomContainer b) {
         return a.getAtomCount() > b.getAtomCount();
     }
@@ -290,23 +260,13 @@ public final class VF2 extends AbstractSubGraph implements IMCSBase {
     }
 
     @Override
-    public boolean isSubgraph(boolean shouldMatchBonds, boolean shouldMatchRings) {
-        this.shouldMatchRings = shouldMatchRings;
-        if (source instanceof IQueryAtomContainer) {
-            isomorphism();
-        } else {
-            isomorphism(shouldMatchBonds);
-        }
+    public boolean isSubgraph() {
+        isomorphism();
         return allAtomMCS.isEmpty() ? false : true;
     }
 
-    public boolean isSubgraphs(boolean shouldMatchBonds, boolean shouldMatchRings) {
-        this.shouldMatchRings = shouldMatchRings;
-        if (source instanceof IQueryAtomContainer) {
-            isomorphisms();
-        } else {
-            isomorphisms(shouldMatchBonds);
-        }
+    public boolean isSubgraphs() {
+        isomorphisms();
         return allAtomMCS.isEmpty() ? false : true;
     }
 

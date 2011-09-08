@@ -51,19 +51,21 @@ import org.openscience.smsd.interfaces.IMCSBase;
 public class CDKSubGraphHandler extends AbstractSubGraph implements IMCSBase {
 
 //    //~--- fields -------------------------------------------------------------
-    private IQueryAtomContainer qSource = null;
     private IAtomContainer source;
     private IAtomContainer target;
     private boolean rOnPFlag = false;
     private List<AtomAtomMapping> allAtomMCS = null;
     private List<Map<Integer, Integer>> allMCS = null;
+    private final boolean shouldMatchRings;
+    private final boolean shouldMatchBonds;
 
     //~--- constructors -------------------------------------------------------
     /*
      * Creates a new instance of MappingHandler
      */
-    public CDKSubGraphHandler() {
-
+    public CDKSubGraphHandler(boolean shouldMatchBonds, boolean shouldMatchRings) {
+        this.shouldMatchRings = shouldMatchRings;
+        this.shouldMatchBonds = shouldMatchBonds;
         this.allAtomMCS = new ArrayList<AtomAtomMapping>();
         this.allMCS = new ArrayList<Map<Integer, Integer>>();
     }
@@ -88,18 +90,16 @@ public class CDKSubGraphHandler extends AbstractSubGraph implements IMCSBase {
     @Override
     @TestMethod("testSet_IQueryAtomContainer_MolHandler")
     public void set(IQueryAtomContainer source, IAtomContainer target) {
-        this.qSource = source;
         this.source = source;
         this.target = target;
     }
 
     /** {@inheritDoc}
      *
-     * @param shouldMatchBonds
      */
     @Override
     @TestMethod("testSearchMCS")
-    public boolean isSubgraph(boolean shouldMatchBonds, boolean shouldMatchRings) {
+    public boolean isSubgraph() {
 
         CDKRMapHandler rmap = new CDKRMapHandler();
 

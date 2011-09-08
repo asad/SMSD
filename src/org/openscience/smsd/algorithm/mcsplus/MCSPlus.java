@@ -88,23 +88,28 @@ public class MCSPlus {
      * @return
      * @throws CDKException
      */
-    protected List<List<Integer>> getOverlaps(IAtomContainer ac1, IAtomContainer ac2,
-            boolean shouldMatchBonds, boolean shouldMatchRings)
+    protected List<List<Integer>> getOverlaps(
+            IAtomContainer ac1,
+            IAtomContainer ac2,
+            boolean shouldMatchBonds,
+            boolean shouldMatchRings)
             throws CDKException {
+
+        this.shouldMatchBonds = shouldMatchBonds;
+        this.shouldMatchRings = shouldMatchRings;
+
         List<List<Integer>> extendMappings = null;
-        this.setMatchRings(shouldMatchRings);
-        this.setMatchBonds(shouldMatchBonds);
 
 //        System.err.println("ac1 : " + ac1.getAtomCount());
 //        System.err.println("ac2 : " + ac2.getAtomCount());
         setTimeManager(new TimeManager());
         try {
-            GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(ac1, ac2, shouldMatchBonds, shouldMatchRings);
+            GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(ac1, ac2, isMatchBonds(), isMatchRings());
             List<Integer> comp_graph_nodes = gcg.getCompGraphNodes();
 
             List<Integer> cEdges = gcg.getCEgdes();
             List<Integer> dEdges = gcg.getDEgdes();
-
+//
 //            System.err.println("**************************************************");
 //            System.err.println("C_edges: " + cEdges.size());
 //            System.err.println("D_edges: " + dEdges.size());
@@ -144,6 +149,7 @@ public class MCSPlus {
             List<Map<Integer, Integer>> allMCSCopy) throws IOException {
 
         List<List<Integer>> extendMappings = new ArrayList<List<Integer>>();
+
         boolean ROPFlag = true;
         for (Map<Integer, Integer> firstPassMappings : allMCSCopy) {
             Map<Integer, Integer> extendMapping = new TreeMap<Integer, Integer>(firstPassMappings);
@@ -173,8 +179,8 @@ public class MCSPlus {
 //            System.out.println("\nSol count after MG" + extendMappings.size());
         }
         List<List<Integer>> finalMappings = setMcGregorMappings(ROPFlag, extendMappings);
-//        System.out.println("After set Sol count MG" + allMCS.size());
-//        System.out.println("MCSSize " + mcsSize + "\n");
+//        System.out.println("After set Sol count MG" + finalMappings.size());
+//        System.out.println("MCSSize " + finalMappings.iterator().next().size() + "\n");
 
         return finalMappings;
     }
@@ -234,23 +240,9 @@ public class MCSPlus {
     }
 
     /**
-     * @param shouldMatchRings the shouldMatchRings to set
-     */
-    public void setMatchRings(boolean shouldMatchRings) {
-        this.shouldMatchRings = shouldMatchRings;
-    }
-
-    /**
      * @return the shouldMatchBonds
      */
     public boolean isMatchBonds() {
         return shouldMatchBonds;
-    }
-
-    /**
-     * @param shouldMatchBonds the shouldMatchBonds to set
-     */
-    public void setMatchBonds(boolean shouldMatchBonds) {
-        this.shouldMatchBonds = shouldMatchBonds;
     }
 }

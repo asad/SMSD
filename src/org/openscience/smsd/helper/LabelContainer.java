@@ -31,7 +31,7 @@ import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.annotations.TestMethod;
 
 /**
- * Class that handles atoms and assignes an integer lable to them.
+ * Class that handles atoms and assigns an integer label to them.
  * @cdk.module smsd
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
@@ -39,7 +39,7 @@ import org.openscience.cdk.annotations.TestMethod;
 @TestClass("org.openscience.cdk.smsd.helper.LabelContainerTest")
 public class LabelContainer {
 
-    private List<String> labelMap = null;
+    private final List<String> labelMap;
     private int labelCounter = 0;
     private static LabelContainer instance = null;
 
