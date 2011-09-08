@@ -446,7 +446,7 @@ public class CDKMCS {
 
             //use atom matcher from SMSD
             DefaultRGraphAtomMatcher defaultRGraphAtomMatcher =
-                    new DefaultRGraphAtomMatcher(queryAtom, shouldMatchBonds, shouldMatchRings);
+                    new DefaultRGraphAtomMatcher(queryAtom, shouldMatchRings);
             for (IAtom atom : g1.atoms()) {
                 if (defaultRGraphAtomMatcher.matches(atom)) {
                     List<CDKRMap> lmap = new ArrayList<CDKRMap>();
@@ -751,9 +751,9 @@ public class CDKMCS {
             IAtom atomA1 = bondA.getAtom(0);
             IAtom atomA2 = bondA.getAtom(1);
             DefaultRGraphAtomMatcher defaultRGraphAtomMatcherA1 =
-                    new DefaultRGraphAtomMatcher(atomA1, shouldMatchBonds, shouldMatchRings);
+                    new DefaultRGraphAtomMatcher(atomA1, shouldMatchRings);
             DefaultRGraphAtomMatcher defaultRGraphAtomMatcherA2 =
-                    new DefaultRGraphAtomMatcher(atomA2, shouldMatchBonds, shouldMatchRings);
+                    new DefaultRGraphAtomMatcher(atomA2, shouldMatchRings);
 
             for (int j = 0; j < ac2.getBondCount(); j++) {
                 IBond bondB = ac2.getBond(j);
