@@ -102,7 +102,7 @@ public final class MCSPlusHandler extends AbstractMCSAlgorithm implements IMCSBa
                 initializeMolecule(source);
                 initializeMolecule(target);
             }
-            if (source.getAtomCount() > target.getAtomCount()) {
+            if (source.getAtomCount() < target.getAtomCount()) {
                 mappings = Collections.synchronizedList(new MCSPlus().getOverlaps(source, target, shouldMatchBonds, shouldMatchRings));
             } else {
                 flagExchange = true;
