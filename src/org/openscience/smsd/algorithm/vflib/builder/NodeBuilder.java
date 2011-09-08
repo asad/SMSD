@@ -26,7 +26,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.openscience.cdk.annotations.TestClass;
-import org.openscience.smsd.algorithm.matchers.VFAtomMatcher;
+import org.openscience.smsd.algorithm.matchers.AtomMatcher;
 import org.openscience.smsd.algorithm.vflib.interfaces.IEdge;
 import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 
@@ -42,13 +42,13 @@ public class NodeBuilder implements INode {
 
     private List<INode> neighborsList;
     private List<IEdge> edgesList;
-    private VFAtomMatcher matcher;
+    private AtomMatcher matcher;
 
     /**
      * Construct a node for a query atom
      * @param matcher
      */
-    protected NodeBuilder(VFAtomMatcher matcher) {
+    protected NodeBuilder(AtomMatcher matcher) {
         edgesList = new ArrayList<IEdge>();
         neighborsList = new ArrayList<INode>();
         this.matcher = matcher;
@@ -71,7 +71,7 @@ public class NodeBuilder implements INode {
     /** {@inheritDoc}
      */
     @Override
-    public VFAtomMatcher getAtomMatcher() {
+    public AtomMatcher getAtomMatcher() {
         return matcher;
     }
 

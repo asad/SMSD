@@ -55,8 +55,8 @@ import java.util.List;
 import java.util.Map;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtom;
-import org.openscience.smsd.algorithm.matchers.VFAtomMatcher;
-import org.openscience.smsd.algorithm.matchers.VFBondMatcher;
+import org.openscience.smsd.algorithm.matchers.AtomMatcher;
+import org.openscience.smsd.algorithm.matchers.BondMatcher;
 import org.openscience.smsd.algorithm.vflib.interfaces.IEdge;
 import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
@@ -152,7 +152,7 @@ public class VFQueryBuilder implements IQuery {
      * @param atom
      * @return added Node
      */
-    public INode addNode(VFAtomMatcher matcher, IAtom atom) {
+    public INode addNode(AtomMatcher matcher, IAtom atom) {
         NodeBuilder node = new NodeBuilder(matcher);
         nodesList.add(node);
         nodeBondMap.put(node, atom);
@@ -187,7 +187,7 @@ public class VFQueryBuilder implements IQuery {
      * @param matcher
      * @return connected edges
      */
-    public synchronized IEdge connect(INode source, INode target, VFBondMatcher matcher) {
+    public synchronized IEdge connect(INode source, INode target, BondMatcher matcher) {
         NodeBuilder sourceImpl = (NodeBuilder) source;
         NodeBuilder targetImpl = (NodeBuilder) target;
         EdgeBuilder edge = new EdgeBuilder(sourceImpl, targetImpl, matcher);

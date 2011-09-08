@@ -23,7 +23,7 @@
 package org.openscience.smsd.algorithm.vflib.builder;
 
 import org.openscience.cdk.annotations.TestClass;
-import org.openscience.smsd.algorithm.matchers.VFBondMatcher;
+import org.openscience.smsd.algorithm.matchers.BondMatcher;
 import org.openscience.smsd.algorithm.vflib.interfaces.IEdge;
 import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 
@@ -39,7 +39,7 @@ public class EdgeBuilder implements IEdge {
 
     private NodeBuilder source;
     private NodeBuilder target;
-    private VFBondMatcher matcher;
+    private BondMatcher matcher;
 
     /**
      * 
@@ -47,7 +47,7 @@ public class EdgeBuilder implements IEdge {
      * @param target
      * @param matcher
      */
-    protected EdgeBuilder(NodeBuilder source, NodeBuilder target, VFBondMatcher matcher) {
+    protected EdgeBuilder(NodeBuilder source, NodeBuilder target, BondMatcher matcher) {
         this.source = source;
         this.target = target;
         this.matcher = matcher;
@@ -70,7 +70,7 @@ public class EdgeBuilder implements IEdge {
     /** {@inheritDoc}
      */
     @Override
-    public VFBondMatcher getBondMatcher() {
+    public BondMatcher getBondMatcher() {
         return matcher;
     }
 }
