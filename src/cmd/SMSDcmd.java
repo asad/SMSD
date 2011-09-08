@@ -7,6 +7,8 @@ package cmd;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -106,14 +108,23 @@ public class SMSDcmd {
         if (reader == null) {
             throw new IOException("Unknown input type " + targetType);
         }
+        List<IMolecule> atomContainerSet = new ArrayList<IMolecule>();
+        while (reader.hasNext()) {
+            IMolecule target = (IMolecule) reader.next();
+            atomContainerSet.add(target);
+        }
+
+        Comparator<IAtomContainer> comparator = new AtomContainerComparator();
+        Collections.sort(atomContainerSet, comparator);
+
         IMolecule mcsMolecule = null;
         boolean matchBonds = argumentHandler.isMatchBondType();
         boolean matchRings = argumentHandler.isMatchRingType();
         boolean removeHydrogens = argumentHandler.isApplyHRemoval();
         int filter = argumentHandler.getChemFilter();
         List<IAtomContainer> targets = new ArrayList<IAtomContainer>();
-        while (reader.hasNext()) {
-            IMolecule target = (IMolecule) reader.next();
+
+        for (IMolecule target : atomContainerSet) {
             boolean flag = ConnectivityChecker.isConnected(target);
             if (!flag) {
                 System.out.println("WARNING : Skipping target molecule "
@@ -135,14 +146,12 @@ public class SMSDcmd {
                     System.out.println("WARNING : Skipping file "
                             + mcsMolecule.getProperty(CDKConstants.TITLE) + " not connected ");
                     return;
-
                 } else if (mcsMolecule.getProperty(CDKConstants.TITLE) != null) {
                     mcsMolecule.setID((String) mcsMolecule.getProperty(CDKConstants.TITLE));
                     argumentHandler.setQueryMolOutName(mcsMolecule.getID());
                 }
                 if (removeHydrogens) {
                     mcsMolecule = new Molecule(AtomContainerManipulator.removeHydrogens(mcsMolecule));
-
                 }
             }
 
