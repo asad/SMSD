@@ -30,6 +30,7 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
 import org.openscience.smsd.algorithm.matchers.ring.IRingMatcher;
 import org.openscience.smsd.algorithm.matchers.ring.RingMatcher;
 
+
 /**
  * Checks if atom is matching between query and target molecules.
  * @cdk.module smsd
@@ -37,65 +38,41 @@ import org.openscience.smsd.algorithm.matchers.ring.RingMatcher;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFLibTest")
-public final class DefaultMCSPlusAtomMatcher implements AtomMatcher {
+public final class DefaultAtomMatcher implements AtomMatcher {
 
     static final long serialVersionUID = -7861469841127327812L;
-    private String symbol = null;
-    private IAtom qAtom = null;
-    private IRingMatcher ringMatcher;
-    private boolean shouldMatchBonds;
-    private boolean shouldMatchRings;
+    private final String symbol;
+    private final IAtom qAtom;
+    private final IRingMatcher ringMatcher;
+    private final boolean shouldMatchRings;
 
-    /**
-     * @return the shouldMatchBonds
-     */
-    public boolean isBondMatchFlag() {
-        return shouldMatchBonds;
-    }
-
-    /**
-     * @param shouldMatchBonds the shouldMatchBonds to set
-     */
-    public final void setBondMatchFlag(boolean shouldMatchBonds) {
-        this.shouldMatchBonds = shouldMatchBonds;
-    }
 
     /**
      * Constructor
      */
-    public DefaultMCSPlusAtomMatcher() {
+    public DefaultAtomMatcher() {
         this.qAtom = null;
-        symbol = null;
-        ringMatcher = null;
-        shouldMatchBonds = false;
-        shouldMatchRings = false;
+        this.symbol = null;
+        this.ringMatcher = null;
+        this.shouldMatchRings = false;
     }
 
     /**
      * Constructor
      * @param atom query atom
-     * @param shouldMatchBonds bond matching flag
      * @param shouldMatchRings ring matching flag
      */
-    public DefaultMCSPlusAtomMatcher(IAtom atom, boolean shouldMatchBonds, boolean shouldMatchRings) {
-        this();
+    public DefaultAtomMatcher(IAtom atom, boolean shouldMatchRings) {
+        super();
         this.qAtom = atom;
         this.symbol = atom.getSymbol();
-        setBondMatchFlag(shouldMatchBonds);
         this.shouldMatchRings = shouldMatchRings;
         this.ringMatcher = new RingMatcher(atom);
 
 //        System.out.println("Atom " + atom.getSymbol());
 //        System.out.println("MAX allowed " + maximumNeighbors);
     }
-
-    /** {@inheritDoc}
-     * @param symbol
-     */
-    public void setSymbol(String symbol) {
-        this.symbol = symbol;
-    }
-
+    
     private boolean matchSymbol(IAtom atom) {
         if (symbol == null) {
             return false;
