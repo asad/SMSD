@@ -49,6 +49,9 @@ import org.openscience.smsd.filters.ChemicalFilters;
 public class BaseMapping implements IAtomMapping {
 
     protected List<AtomAtomMapping> mcsList;
+    protected boolean matchBonds;
+    protected boolean matchRings;
+    protected boolean subgraph;
     protected IAtomContainer mol1;
     protected IAtomContainer mol2;
     private List<Double> stereoScoreList;
@@ -235,5 +238,29 @@ public class BaseMapping implements IAtomMapping {
     @Override
     public synchronized IAtomContainer getTargetContainer() {
         return this.mol2;
+    }
+
+    /**
+     * Returns true if bond are to be matched.
+     * @return true if bond are to be matched
+     */
+    protected boolean isMatchBonds() {
+        return matchBonds;
+    }
+
+    /**
+     * Returns true if rings are to be matched.
+     * @return true if rings are to be matched
+     */
+    protected boolean isMatchRings() {
+        return matchRings;
+    }
+
+    /**
+     * Returns true if Query is a subgraph of the Target.
+     * @return true if Query is a subgraph of the Target
+     */
+    public synchronized boolean isSubgraph() {
+        return this.subgraph;
     }
 }
