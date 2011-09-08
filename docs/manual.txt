@@ -46,6 +46,7 @@ usage:
  -S <suffix>         Add suffix to the files
  -T <type>           Target type (MOL, SMI, etc)
  -t <filepath>       Target filename
+ -z                  Ring Match
 
 ++++++++++++++++++++++++++++++++++++++++++++++
 
