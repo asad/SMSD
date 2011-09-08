@@ -499,7 +499,7 @@ final class State {
     }
 
     boolean matchAtoms(IAtom sourceAtom, IAtom targetAtom) {
-        DefaultVFAtomMatcher defaultVFAtomMatcher = new DefaultVFAtomMatcher(sourceAtom, shouldMatchBonds, shouldMatchRings);
+        DefaultVFAtomMatcher defaultVFAtomMatcher = new DefaultVFAtomMatcher(sourceAtom, shouldMatchRings);
         return defaultVFAtomMatcher.matches(targetAtom);
     }
 

@@ -51,10 +51,10 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
+import org.openscience.smsd.algorithm.matchers.AtomMatcher;
+import org.openscience.smsd.algorithm.matchers.BondMatcher;
 import org.openscience.smsd.algorithm.matchers.DefaultVFAtomMatcher;
 import org.openscience.smsd.algorithm.matchers.DefaultVFBondMatcher;
-import org.openscience.smsd.algorithm.matchers.VFAtomMatcher;
-import org.openscience.smsd.algorithm.matchers.VFBondMatcher;
 import org.openscience.smsd.algorithm.vflib.builder.VFQueryBuilder;
 import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
 import org.openscience.smsd.algorithm.vflib.interfaces.IQueryCompiler;
@@ -127,7 +127,7 @@ public class QueryCompiler implements IQueryCompiler {
     private synchronized IQuery build(IAtomContainer queryMolecule) {
         VFQueryBuilder result = new VFQueryBuilder();
         for (IAtom atom : queryMolecule.atoms()) {
-            VFAtomMatcher matcher = createAtomMatcher(queryMolecule, atom);
+            AtomMatcher matcher = createAtomMatcher(queryMolecule, atom);
             if (matcher != null) {
                 result.addNode(matcher, atom);
             }
@@ -141,11 +141,11 @@ public class QueryCompiler implements IQueryCompiler {
         return result;
     }
 
-    private synchronized VFAtomMatcher createAtomMatcher(IAtomContainer mol, IAtom atom) {
-        return new DefaultVFAtomMatcher(atom, isBondMatchFlag(), isShouldMatchRings());
+    private synchronized AtomMatcher createAtomMatcher(IAtomContainer mol, IAtom atom) {
+        return new DefaultVFAtomMatcher(atom, isShouldMatchRings());
     }
 
-    private synchronized VFBondMatcher createBondMatcher(IAtomContainer mol, IBond bond) {
+    private synchronized BondMatcher createBondMatcher(IAtomContainer mol, IBond bond) {
         return new DefaultVFBondMatcher(bond, isBondMatchFlag());
     }
 

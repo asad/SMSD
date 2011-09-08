@@ -48,7 +48,7 @@
 package org.openscience.smsd.algorithm.vflib.interfaces;
 
 import org.openscience.cdk.annotations.TestClass;
-import org.openscience.smsd.algorithm.matchers.VFBondMatcher;
+import org.openscience.smsd.algorithm.matchers.BondMatcher;
 
 /**
  * Interface for the Edges (bonds) in graph.
@@ -75,5 +75,5 @@ public interface IEdge {
      * Returns bond matcher.
      * @return Query Bond.
      */
-    public VFBondMatcher getBondMatcher();
+    public BondMatcher getBondMatcher();
 }

@@ -47,10 +47,9 @@
  */
 package org.openscience.smsd.algorithm.vflib.interfaces;
 
-
 import java.util.List;
 import org.openscience.cdk.annotations.TestClass;
-import org.openscience.smsd.algorithm.matchers.VFAtomMatcher;
+import org.openscience.smsd.algorithm.matchers.AtomMatcher;
 import org.openscience.smsd.algorithm.vflib.builder.EdgeBuilder;
 import org.openscience.smsd.algorithm.vflib.builder.NodeBuilder;
 
@@ -79,7 +78,7 @@ public interface INode {
      * Returns Query Atom.
      * @return Query Atom.
      */
-    public VFAtomMatcher getAtomMatcher();
+    public AtomMatcher getAtomMatcher();
 
     /**
      * Returns List of Edges.
