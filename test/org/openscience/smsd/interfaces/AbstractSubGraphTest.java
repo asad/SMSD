@@ -66,7 +66,7 @@ public class AbstractSubGraphTest {
         boolean shouldMatchRings = false;
         AbstractSubGraph instance = new AbstractSubGraphImpl();
         boolean expResult = false;
-        boolean result = instance.isSubgraph(shouldMatchBonds, shouldMatchRings);
+        boolean result = instance.isSubgraph();
         assertEquals(expResult, result);
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");
@@ -75,7 +75,7 @@ public class AbstractSubGraphTest {
     public class AbstractSubGraphImpl extends AbstractSubGraph {
 
         @Override
-        public boolean isSubgraph(boolean shouldMatchBonds, boolean shouldMatchRings) {
+        public boolean isSubgraph() {
             return false;
         }
     }

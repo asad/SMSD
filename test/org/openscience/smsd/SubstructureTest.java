@@ -582,9 +582,8 @@ public class SubstructureTest {
         Assert.assertTrue(foundMatches);
 
         IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
-        smsd = new Substructure(queryContainer, target, false);
-        foundMatches = smsd.isSubgraph();
-        Assert.assertTrue(foundMatches);
+        Substructure smsd1 = new Substructure(queryContainer, target, false);
+        Assert.assertTrue(smsd1.isSubgraph());
     }
 
     @Test

@@ -434,11 +434,11 @@ public class IsomorphismTest {
     }
 
     @Test
-    public void testQueryAtomContainerDefault() throws CDKException {
+    public void testQueryAtomContainerDefaultVF2() throws CDKException {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("CC");
         IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
-        Isomorphism smsd = new Isomorphism(query, target, Algorithm.VFLibMCS, true, true);
+        Isomorphism smsd = new Isomorphism(query, target, Algorithm.VFLibMCS, true, false);
 
         boolean foundMatches = smsd.isSubgraph();
         Assert.assertEquals(18, smsd.getAllAtomMapping().size());
@@ -455,16 +455,14 @@ public class IsomorphismTest {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("CC");
         IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
-        Isomorphism smsd = new Isomorphism(query, target, Algorithm.MCSPlus, true, true);
+        Isomorphism smsd = new Isomorphism(query, target, Algorithm.MCSPlus, true, false);
 
-        boolean foundMatches = smsd.isSubgraph();
         Assert.assertEquals(18, smsd.getAllAtomMapping().size());
-        Assert.assertTrue(foundMatches);
+        Assert.assertTrue(smsd.isSubgraph());
 
         IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
         smsd = new Isomorphism(queryContainer, target, Algorithm.MCSPlus);
-        foundMatches = smsd.isSubgraph();
-        Assert.assertTrue(foundMatches);
+        Assert.assertTrue(smsd.isSubgraph());
     }
 
     @Test
@@ -472,16 +470,14 @@ public class IsomorphismTest {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("CC");
         IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
-        Isomorphism smsd = new Isomorphism(query, target, Algorithm.DEFAULT, true, true);
+        Isomorphism smsd = new Isomorphism(query, target, Algorithm.DEFAULT, true, false);
 
-        boolean foundMatches = smsd.isSubgraph();
         Assert.assertEquals(18, smsd.getAllAtomMapping().size());
-        Assert.assertTrue(foundMatches);
+        Assert.assertTrue(smsd.isSubgraph());
 
         IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
         smsd = new Isomorphism(queryContainer, target, Algorithm.DEFAULT);
-        foundMatches = smsd.isSubgraph();
-        Assert.assertTrue(foundMatches);
+        Assert.assertTrue(smsd.isSubgraph());
     }
 
     @Test
@@ -491,6 +487,7 @@ public class IsomorphismTest {
         IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
         Isomorphism smsd = new Isomorphism(query, target, Algorithm.CDKMCS, true, false);
         Assert.assertEquals(18, smsd.getAllAtomMapping().size());
+        Assert.assertTrue(smsd.isSubgraph());
     }
 
     /**
@@ -506,7 +503,7 @@ public class IsomorphismTest {
         IAtomContainer molecule2 = smilesParser.parseSmiles("NC(=O)C1=CN(C=CC1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
 
         double score = 0.733;
-        Isomorphism smsd1 = new Isomorphism(molecule1, molecule2, Algorithm.DEFAULT, true, false);
+        Isomorphism smsd1 = new Isomorphism(molecule1, molecule2, Algorithm.MCSPlus, true, false);
         smsd1.setChemFilters(true, true, true);
         Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
     }
@@ -550,19 +547,56 @@ public class IsomorphismTest {
         comparison.setChemFilters(true, true, true);
 
         //Get similarity score
-        System.out.println("Tanimoto coefficient:  " + comparison.getTanimotoSimilarity());
+//        System.out.println("Tanimoto coefficient:  " + comparison.getTanimotoSimilarity());
         Assert.assertEquals(0.6, comparison.getTanimotoSimilarity());
         Assert.assertEquals(12, comparison.getAllAtomMapping().size());
         // Print the mapping between molecules
-        System.out.println(" Mappings: ");
-        for (AtomAtomMapping atomatomMapping : comparison.getAllAtomMapping()) {
-            for (Map.Entry<IAtom, IAtom> mapping : atomatomMapping.getMappings().entrySet()) {
-                IAtom sourceAtom = mapping.getKey();
-                IAtom targetAtom = mapping.getValue();
-                System.out.println(sourceAtom.getSymbol() + " " + targetAtom.getSymbol());
-                System.out.println(atomatomMapping.getQueryIndex(sourceAtom) + " " + atomatomMapping.getTargetIndex(targetAtom));
-            }
-            System.out.println("");
-        }
+//        System.out.println(" Mappings: ");
+//        for (AtomAtomMapping atomatomMapping : comparison.getAllAtomMapping()) {
+//            for (Map.Entry<IAtom, IAtom> mapping : atomatomMapping.getMappings().entrySet()) {
+//                IAtom sourceAtom = mapping.getKey();
+//                IAtom targetAtom = mapping.getValue();
+//                System.out.println(sourceAtom.getSymbol() + " " + targetAtom.getSymbol());
+//                System.out.println(atomatomMapping.getQueryIndex(sourceAtom) + " " + atomatomMapping.getTargetIndex(targetAtom));
+//            }
+//            System.out.println("");
+//        }
+    }
+
+    /**
+     * Test ring match using MCS VF2Plus
+     * @throws Exception
+     */
+    @Test
+    public void testMCSPlus() throws Exception {
+        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        // Benzene
+        IAtomContainer query = sp.parseSmiles("C1=CC=CC=C1");
+        // Napthalene
+        IAtomContainer target = sp.parseSmiles("C1=CC2=C(C=C1)C=CC=C2");
+        //{ 0: Default Isomorphism Algorithm, 1: MCSPlus Algorithm, 2: VFLibMCS Algorithm, 3: CDKMCS Algorithm}
+        //Algorithm is MCSPlus
+        //Bond Sensitive is set True
+        //Ring Match is set True
+
+        Isomorphism comparison = new Isomorphism(query, target, Algorithm.MCSPlus, false, false);
+        // set chemical filter true
+        comparison.setChemFilters(true, true, true);
+
+        //Get similarity score
+//        System.out.println("Tanimoto coefficient:  " + comparison.getTanimotoSimilarity());
+        Assert.assertEquals(0.6, comparison.getTanimotoSimilarity());
+        Assert.assertEquals(12, comparison.getAllAtomMapping().size());
+        // Print the mapping between molecules
+//        System.out.println(" Mappings: ");
+//        for (AtomAtomMapping atomatomMapping : comparison.getAllAtomMapping()) {
+//            for (Map.Entry<IAtom, IAtom> mapping : atomatomMapping.getMappings().entrySet()) {
+//                IAtom sourceAtom = mapping.getKey();
+//                IAtom targetAtom = mapping.getValue();
+////                System.out.println(sourceAtom.getSymbol() + " " + targetAtom.getSymbol());
+////                System.out.println(atomatomMapping.getQueryIndex(sourceAtom) + " " + atomatomMapping.getTargetIndex(targetAtom));
+//            }
+////            System.out.println("");
+//        }
     }
 }

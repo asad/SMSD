@@ -42,55 +42,14 @@ public class VF2Test {
     }
 
     /**
-     * Test of isomorphism method, of class VF2.
-     */
-    @Test
-    public void testIsomorphism() {
-        System.out.println("isomorphism");
-        VF2 instance = new VF2();
-        AtomAtomMapping expResult = null;
-        AtomAtomMapping result = instance.isomorphism();
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
-    }
-
-    /**
-     * Test of isomorphisms method, of class VF2.
-     */
-    @Test
-    public void testIsomorphisms_boolean() {
-        System.out.println("isomorphisms");
-        boolean shouldMatchBonds = false;
-        VF2 instance = new VF2();
-        instance.isomorphisms(shouldMatchBonds);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
-    }
-
-    /**
-     * Test of isomorphisms method, of class VF2.
-     */
-    @Test
-    public void testIsomorphisms_0args() {
-        System.out.println("isomorphisms");
-        VF2 instance = new VF2();
-        instance.isomorphisms();
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
-    }
-
-    /**
      * Test of isSubgraph method, of class VF2.
      */
     @Test
     public void testIsSubgraph() {
         System.out.println("isSubgraph");
-        boolean shouldMatchBonds = false;
-        boolean shouldMatchRings = false;
-        VF2 instance = new VF2();
+        VF2 instance = null;
         boolean expResult = false;
-        boolean result = instance.isSubgraph(shouldMatchBonds, shouldMatchRings);
+        boolean result = instance.isSubgraph();
         assertEquals(expResult, result);
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");
@@ -102,11 +61,9 @@ public class VF2Test {
     @Test
     public void testIsSubgraphs() {
         System.out.println("isSubgraphs");
-        boolean shouldMatchBonds = false;
-        boolean shouldMatchRings = false;
-        VF2 instance = new VF2();
+        VF2 instance = null;
         boolean expResult = false;
-        boolean result = instance.isSubgraphs(shouldMatchBonds, shouldMatchRings);
+        boolean result = instance.isSubgraphs();
         assertEquals(expResult, result);
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");
@@ -120,7 +77,7 @@ public class VF2Test {
         System.out.println("set");
         IAtomContainer source = null;
         IAtomContainer target = null;
-        VF2 instance = new VF2();
+        VF2 instance = null;
         instance.set(source, target);
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");
@@ -134,7 +91,7 @@ public class VF2Test {
         System.out.println("set");
         IQueryAtomContainer source = null;
         IAtomContainer target = null;
-        VF2 instance = new VF2();
+        VF2 instance = null;
         instance.set(source, target);
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");
@@ -146,7 +103,7 @@ public class VF2Test {
     @Test
     public void testGetAllAtomMapping() {
         System.out.println("getAllAtomMapping");
-        VF2 instance = new VF2();
+        VF2 instance = null;
         List expResult = null;
         List result = instance.getAllAtomMapping();
         assertEquals(expResult, result);
@@ -160,7 +117,7 @@ public class VF2Test {
     @Test
     public void testGetAllMapping() {
         System.out.println("getAllMapping");
-        VF2 instance = new VF2();
+        VF2 instance = null;
         List expResult = null;
         List result = instance.getAllMapping();
         assertEquals(expResult, result);
@@ -174,7 +131,7 @@ public class VF2Test {
     @Test
     public void testGetFirstAtomMapping() {
         System.out.println("getFirstAtomMapping");
-        VF2 instance = new VF2();
+        VF2 instance = null;
         AtomAtomMapping expResult = null;
         AtomAtomMapping result = instance.getFirstAtomMapping();
         assertEquals(expResult, result);
@@ -188,7 +145,7 @@ public class VF2Test {
     @Test
     public void testGetFirstMapping() {
         System.out.println("getFirstMapping");
-        VF2 instance = new VF2();
+        VF2 instance = null;
         Map expResult = null;
         Map result = instance.getFirstMapping();
         assertEquals(expResult, result);
