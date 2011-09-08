@@ -53,6 +53,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import org.openscience.cdk.CDKConstants;
+import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IBond;
@@ -108,7 +109,7 @@ final public class HanserRingFinder {
      */
     public static synchronized IRingSet getRingSet(IAtomContainer molecule) throws CDKException {
         Collection<List<IAtom>> cycles = findRings(molecule);
-        IRingSet ringSet = molecule.getBuilder().newInstance(IRingSet.class);
+        IRingSet ringSet = DefaultChemObjectBuilder.getInstance().newInstance(IRingSet.class);
         for (List<IAtom> ringAtoms : cycles) {
             IRing ring = molecule.getBuilder().newInstance(IRing.class);
             for (IAtom atom : ringAtoms) {
