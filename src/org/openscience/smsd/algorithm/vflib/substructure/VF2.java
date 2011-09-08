@@ -139,7 +139,7 @@ public final class VF2 extends AbstractSubGraph implements IMCSBase {
      * 
      * 
      */
-    public synchronized void isomorphisms() {
+    private synchronized void isomorphisms() {
 
         if (shouldMatchRings) {
             try {
