@@ -24,8 +24,6 @@ package org.openscience.smsd.algorithm.matchers;
 
 import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.annotations.TestClass;
-import org.openscience.cdk.interfaces.IAtom;
-import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.isomorphism.matchers.IQueryBond;
 
@@ -71,7 +69,6 @@ public final class DefaultBondMatcher implements BondMatcher {
         if (this.queryBond != null && queryBond instanceof IQueryBond) {
             return ((IQueryBond) queryBond).matches(targetBond);
         } else if (!isBondMatchFlag() || (isBondMatchFlag() && isBondTypeMatch(targetBond))) {
-            System.out.println("DefaultMCSPlusBondMatcher " + isBondMatchFlag());
             return true;
         }
         return false;
@@ -90,27 +87,6 @@ public final class DefaultBondMatcher implements BondMatcher {
             return true;
         }
         return false;
-    }
-
-    private int getValency(IAtom atom) {
-        return (atom.getValency() == null) ? 0 : atom.getValency().intValue();
-    }
-
-    private int getUnsaturation(IAtomContainer container, IBond bond) {
-        return getUnsaturation(container, bond.getAtom(0)) + getUnsaturation(container, bond.getAtom(1));
-    }
-
-    private int getUnsaturation(IAtomContainer container, IAtom atom) {
-        return getValency(atom) - (countNeighbors(container, atom) + countImplicitHydrogens(atom));
-    }
-
-    private int countNeighbors(IAtomContainer container, IAtom atom) {
-        return container.getConnectedAtomsCount(atom);
-    }
-
-    private int countImplicitHydrogens(IAtom atom) {
-        return (atom.getImplicitHydrogenCount() == null)
-                ? 0 : atom.getImplicitHydrogenCount();
     }
 
     /**
