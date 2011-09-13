@@ -113,9 +113,9 @@ public class AtomContainerComparator implements Comparator<IAtomContainer> {
 
         // 1. Compare atom count
         if (atomContainer1.getAtomCount() > atomContainer2.getAtomCount()) {
-            return -1;
-        } else if (atomContainer1.getAtomCount() < atomContainer2.getAtomCount()) {
             return 1;
+        } else if (atomContainer1.getAtomCount() < atomContainer2.getAtomCount()) {
+            return -1;
         } else {
             // 2. Atom count equal, compare molecular weight (heavy atoms only)
             double mw1 = 0;
@@ -128,23 +128,23 @@ public class AtomContainerComparator implements Comparator<IAtomContainer> {
                 return 0;
             }
             if (mw1 > mw2) {
-                return -1;
-            } else if (mw1 < mw2) {
                 return 1;
+            } else if (mw1 < mw2) {
+                return -1;
             } else {
                 // 3. Molecular weight equal, compare bond count
                 if (atomContainer1.getBondCount() > atomContainer2.getBondCount()) {
-                    return -1;
-                } else if (atomContainer1.getBondCount() < atomContainer2.getBondCount()) {
                     return 1;
+                } else if (atomContainer1.getBondCount() < atomContainer2.getBondCount()) {
+                    return -1;
                 } else {
                     // 4. Bond count equal, compare sum of bond orders (heavy atoms only)
                     double bondOrderSum1 = AtomContainerManipulator.getSingleBondEquivalentSum(atomContainer1);
                     double bondOrderSum2 = AtomContainerManipulator.getSingleBondEquivalentSum(atomContainer2);
                     if (bondOrderSum1 > bondOrderSum2) {
-                        return -1;
-                    } else if (bondOrderSum1 < bondOrderSum2) {
                         return 1;
+                    } else if (bondOrderSum1 < bondOrderSum2) {
+                        return -1;
                     }
                 }
 
