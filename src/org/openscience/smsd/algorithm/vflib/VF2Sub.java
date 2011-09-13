@@ -125,6 +125,9 @@ public class VF2Sub extends AbstractSubGraph implements IMCSBase {
      */
     @Override
     public boolean isSubgraph() {
+        if (!testIsSubgraphHeuristics(source, target, isBondMatchFlag())) {
+            return false;
+        }
         setTimeManager(new TimeManager());
 
         if (isMatchRings()) {
