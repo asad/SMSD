@@ -29,7 +29,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.openscience.cdk.AtomContainer;
-import org.openscience.cdk.smsd.algorithm.mcsplus.GenerateCompatibilityGraph;
+import org.openscience.smsd.algorithm.mcsplus.GenerateCompatibilityGraph;
 import static org.junit.Assert.*;
 
 /**
@@ -61,6 +61,6 @@ public class GenerateCompatibilityGraphTest {
     public void testSomeMethod() throws IOException {
         System.out.println("GenerateCompatibilityGraph");
         // TODO review the generated test code and remove the default call to fail.
-        assertNotNull(new GenerateCompatibilityGraph(new AtomContainer(), new AtomContainer(), true));
+        assertNotNull(new GenerateCompatibilityGraph(new AtomContainer(), new AtomContainer(), true, false));
     }
 }
