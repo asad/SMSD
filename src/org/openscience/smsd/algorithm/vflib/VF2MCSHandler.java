@@ -148,7 +148,7 @@ public class VF2MCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
                 List<Integer> dEdges = gcg.getDEgdes();
 
                 BKKCKCF init = new BKKCKCF(comp_graph_nodes, cEdges, dEdges);
-//            Koch init = new Koch(comp_graph_nodes, cEdges, dEdges);
+//                Koch init = new Koch(comp_graph_nodes, cEdges, dEdges);
                 Stack<List<Integer>> maxCliqueSet = init.getMaxCliqueSet();
                 //clear all the compatibility graph content
                 gcg.clear();
@@ -234,6 +234,9 @@ public class VF2MCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
 
     private boolean hasMap(Map<Integer, Integer> maps, List<Map<Integer, Integer>> mapGlobal) {
         for (Map<Integer, Integer> test : mapGlobal) {
+            if (test.size() > maps.size()) {
+                return true;
+            }
             if (test.equals(maps)) {
                 return true;
             }
