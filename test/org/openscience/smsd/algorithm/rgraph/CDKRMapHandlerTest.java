@@ -38,8 +38,8 @@ import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.smiles.SmilesParser;
-import org.openscience.cdk.smsd.algorithm.rgraph.CDKRMapHandler;
-import org.openscience.cdk.smsd.helper.FinalMappings;
+import org.openscience.smsd.algorithm.rgraph.CDKRMapHandler;
+import org.openscience.smsd.helper.FinalMappings;
 
 /**
  * @cdk.module test-smsd
@@ -130,7 +130,7 @@ public class CDKRMapHandlerTest {
         IAtomContainer Molecule1 = sp.parseSmiles("O1C=CC=C1");
         IAtomContainer Molecule2 = sp.parseSmiles("C1CCCC1");
         CDKRMapHandler instance = new CDKRMapHandler();
-        instance.calculateOverlapsAndReduce(Molecule1, Molecule2, true);
+        instance.calculateOverlapsAndReduce(Molecule1, Molecule2, true, false);
         Assert.assertNotNull(FinalMappings.getInstance().getSize());
     }
 
@@ -145,7 +145,7 @@ public class CDKRMapHandlerTest {
         IAtomContainer Molecule1 = sp.parseSmiles("O1C=CC=C1");
         IAtomContainer Molecule2 = sp.parseSmiles("O1C=CC=C1");
         CDKRMapHandler instance = new CDKRMapHandler();
-        instance.calculateOverlapsAndReduceExactMatch(Molecule1, Molecule2, true);
+        instance.calculateOverlapsAndReduceExactMatch(Molecule1, Molecule2, true, false);
         // TODO review the generated test code and remove the default call to fail.
         Assert.assertNotNull(FinalMappings.getInstance().getSize());
     }
@@ -161,7 +161,7 @@ public class CDKRMapHandlerTest {
         IAtomContainer Molecule1 = sp.parseSmiles("O1C=CC=C1");
         IAtomContainer Molecule2 = sp.parseSmiles("O1C=CC=C1");
         CDKRMapHandler instance = new CDKRMapHandler();
-        instance.calculateOverlapsAndReduceExactMatch(Molecule1, Molecule2, true);
+        instance.calculateOverlapsAndReduceExactMatch(Molecule1, Molecule2, true, false);
         List<Map<Integer, Integer>> result = instance.getMappings();
         Assert.assertEquals(2, result.size());
     }

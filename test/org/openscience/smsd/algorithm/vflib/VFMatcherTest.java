@@ -37,15 +37,15 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IMolecule;
-import org.openscience.cdk.smsd.algorithm.vflib.builder.TargetProperties;
-import org.openscience.cdk.smsd.algorithm.vflib.interfaces.IMapper;
-import org.openscience.cdk.smsd.algorithm.vflib.interfaces.INode;
-import org.openscience.cdk.smsd.algorithm.vflib.interfaces.IQuery;
-import org.openscience.cdk.smsd.algorithm.vflib.interfaces.IState;
-import org.openscience.cdk.smsd.algorithm.vflib.map.Match;
-import org.openscience.cdk.smsd.algorithm.vflib.map.VFMapper;
-import org.openscience.cdk.smsd.algorithm.vflib.map.VFState;
-import org.openscience.cdk.smsd.algorithm.vflib.query.QueryCompiler;
+import org.openscience.smsd.algorithm.vflib.builder.TargetProperties;
+import org.openscience.smsd.algorithm.vflib.interfaces.IMapper;
+import org.openscience.smsd.algorithm.vflib.interfaces.INode;
+import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
+import org.openscience.smsd.algorithm.vflib.interfaces.IState;
+import org.openscience.smsd.algorithm.vflib.map.Match;
+import org.openscience.smsd.algorithm.vflib.map.VFMapper;
+import org.openscience.smsd.algorithm.vflib.map.VFState;
+import org.openscience.smsd.algorithm.vflib.query.QueryCompiler;
 import org.openscience.cdk.normalize.SMSDNormalizer;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 
@@ -68,13 +68,13 @@ public class VFMatcherTest {
         SMSDNormalizer.percieveAtomTypesAndConfigureAtoms(hexane);
         hexane = SMSDNormalizer.removeHydrogensAndPreserveAtomID(hexane);
         CDKHueckelAromaticityDetector.detectAromaticity(hexane);
-        hexaneQuery = new QueryCompiler(hexane, true).compile();
+        hexaneQuery = new QueryCompiler(hexane, true, false).compile();
         Assert.assertEquals(6, hexaneQuery.countNodes());
         benzene = createBenzene();
         SMSDNormalizer.percieveAtomTypesAndConfigureAtoms(benzene);
         hexane = SMSDNormalizer.removeHydrogensAndPreserveAtomID(benzene);
         CDKHueckelAromaticityDetector.detectAromaticity(benzene);
-        benzeneQuery = new QueryCompiler(benzene, true).compile();
+        benzeneQuery = new QueryCompiler(benzene, true, false).compile();
     }
 
     @Test
@@ -205,7 +205,7 @@ public class VFMatcherTest {
      */
     @Test
     public void testItShouldMatchHexaneToHexaneWhenUsingMolecule() {
-        IMapper mapper = new VFMapper(hexane, true);
+        IMapper mapper = new VFMapper(hexane, true, false);
         Assert.assertTrue(mapper.hasMap(hexane));
     }
 

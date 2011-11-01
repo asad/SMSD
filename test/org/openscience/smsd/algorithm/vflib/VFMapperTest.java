@@ -54,9 +54,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IMolecule;
-import org.openscience.cdk.smsd.algorithm.vflib.interfaces.IMapper;
-import org.openscience.cdk.smsd.algorithm.vflib.interfaces.INode;
-import org.openscience.cdk.smsd.algorithm.vflib.map.VFMapper;
+import org.openscience.smsd.algorithm.vflib.interfaces.IMapper;
+import org.openscience.smsd.algorithm.vflib.interfaces.INode;
+import org.openscience.smsd.algorithm.vflib.map.VFMapper;
 
 /**
  *
@@ -105,81 +105,81 @@ public class VFMapperTest {
 
     @Test
     public void testItShouldMatchHexaneToHexane() {
-        IMapper mapper = new VFMapper(hexane, true);
+        IMapper mapper = new VFMapper(hexane, true, true);
 
         Assert.assertTrue(mapper.hasMap(hexane));
     }
 
     @Test
     public void testItShouldMatchHexaneToHexaneWhenUsingMolecule() {
-        IMapper mapper = new VFMapper(hexane, true);
+        IMapper mapper = new VFMapper(hexane, true, true);
 
         Assert.assertTrue(mapper.hasMap(hexane));
     }
 
     @Test
     public void testItShouldMatchBenzeneToBenzene() {
-        IMapper mapper = new VFMapper(benzene, true);
+        IMapper mapper = new VFMapper(benzene, true, false);
 
         Assert.assertTrue(mapper.hasMap(benzene));
     }
 
     @Test
     public void testItShouldNotMatchHexaneToBenzene() {
-        IMapper mapper = new VFMapper(hexane, true);
+        IMapper mapper = new VFMapper(hexane, true, true);
 
         Assert.assertFalse(mapper.hasMap(benzene));
     }
 
     @Test
     public void testItShouldNotMatchPyridazineToNaphthalene() {
-        IMapper mapper = new VFMapper(pyridazine, true);
+        IMapper mapper = new VFMapper(pyridazine, true, true);
 
         Assert.assertFalse(mapper.hasMap(naphthalene));
     }
 
     @Test
     public void testItShouldNotMatchChlorobenzeneTo4ChloroIsoquinoline() {
-        IMapper mapper = new VFMapper(chlorobenzene, true);
+        IMapper mapper = new VFMapper(chlorobenzene, true, true);
 
         Assert.assertFalse(mapper.hasMap(chloroisoquinoline4));
     }
 
     @Test
     public void testItShouldNotMatchBenzeneToPyridine() {
-        IMapper mapper = new VFMapper(benzene, true);
+        IMapper mapper = new VFMapper(benzene, true, true);
 
         Assert.assertFalse(mapper.hasMap(pyridine));
 
-        mapper = new VFMapper(pyridine, true);
+        mapper = new VFMapper(pyridine, true, true);
 
         Assert.assertFalse(mapper.hasMap(benzene));
     }
 
     @Test
     public void testItShouldNotMatchTolueneToBenzene() {
-        IMapper mapper = new VFMapper(toluene, true);
+        IMapper mapper = new VFMapper(toluene, true, true);
 
         Assert.assertFalse(mapper.hasMap(benzene));
     }
 
     @Test
     public void testItShouldMatchAcetoneToAcetone() {
-        IMapper mapper = new VFMapper(acetone, true);
+        IMapper mapper = new VFMapper(acetone, true, true);
 
         Assert.assertTrue(mapper.hasMap(acetone));
     }
 
     @Test
     public void testItShouldMatchPropaneToCyclopropane() {
-        IMapper mapper = new VFMapper(propane, true);
+        IMapper mapper = new VFMapper(propane, true, false);
 
         Assert.assertTrue(mapper.hasMap(cyclopropane));
     }
 
     @Test
     public void testItShouldFindTwoMapsFromHexaneToHexane() {
-        IMapper mapper = new VFMapper(hexane, true);
+        IMapper mapper = new VFMapper(hexane, true, true);
 
         List<Map<INode, IAtom>> maps = mapper.getMaps(hexane);
 
@@ -188,14 +188,14 @@ public class VFMapperTest {
 
     @Test
     public void testItShouldNotMatchTolueneToPhenol() {
-        IMapper mapper = new VFMapper(toluene, true);
+        IMapper mapper = new VFMapper(toluene, true, true);
 
         Assert.assertFalse(mapper.hasMap(phenol));
     }
 
     @Test
     public void testItShouldMapSixAtomsOfBenzeneOntoBenzene() {
-        IMapper mapper = new VFMapper(benzene, true);
+        IMapper mapper = new VFMapper(benzene, true, false);
         Map<INode, IAtom> map = mapper.getFirstMap(benzene);
 
         Assert.assertEquals(6, map.size());
@@ -203,21 +203,21 @@ public class VFMapperTest {
 
     @Test
     public void testItShouldCountTwelveMapsForBenzeneOntoBenzene() {
-        IMapper mapper = new VFMapper(benzene, true);
+        IMapper mapper = new VFMapper(benzene, true, false);
 
         Assert.assertEquals(12, mapper.countMaps(benzene));
     }
 
     @Test
     public void testItShouldCountTwoMapsForTolueneOntoToluene() {
-        IMapper mapper = new VFMapper(toluene, true);
+        IMapper mapper = new VFMapper(toluene, true, false);
 
         Assert.assertEquals(2, mapper.countMaps(toluene));
     }
 
     @Test
     public void testItShouldFindTwelveMapsForBenzeneOntoBenzene() {
-        IMapper mapper = new VFMapper(benzene, true);
+        IMapper mapper = new VFMapper(benzene, true, false);
         List<Map<INode, IAtom>> maps = mapper.getMaps(benzene);
 
         Assert.assertEquals(12, maps.size());
@@ -225,7 +225,7 @@ public class VFMapperTest {
 
     @Test
     public void testItShouldFindTwentyFourMapsForBenzeneOntoNaphthalene() {
-        IMapper mapper = new VFMapper(benzene, true);
+        IMapper mapper = new VFMapper(benzene, true, false);
         List<Map<INode, IAtom>> maps = mapper.getMaps(naphthalene);
 
         Assert.assertEquals(24, maps.size());
@@ -233,7 +233,7 @@ public class VFMapperTest {
 
     @Test
     public void testItShouldFindAMapForEquivalentFormsOfToluene() {
-        IMapper mapper = new VFMapper(toluene, true);
+        IMapper mapper = new VFMapper(toluene, true, false);
         Map<INode, IAtom> map = mapper.getFirstMap(toluene4);
 
         Assert.assertEquals(7, map.size());
@@ -241,7 +241,7 @@ public class VFMapperTest {
 
     @Test
     public void testItShouldFindTwoMapsForEquivalentFormsOfToluene() {
-        IMapper mapper = new VFMapper(toluene, true);
+        IMapper mapper = new VFMapper(toluene, true, false);
         List<Map<INode, IAtom>> maps = mapper.getMaps(toluene4);
 
         Assert.assertEquals(2, maps.size());
@@ -255,26 +255,26 @@ public class VFMapperTest {
 //
 //        blockedPropane.addBond(bond);
 //
-//        IMapper mapper = new VFMapper(blockedPropane, true);
+//        IMapper mapper = new VFMapper(blockedPropane, true, true);
 //
 //        assertTrue(mapper.hasMap(propane));
 //    }
 //    public void testItMapsBlockedBenzaldehydeOntoBenzaldehyde() {
 //        Molecule blockedBenzaldehyde = this.createBlockedBenzaldehyde();
-//        IMapper mapper = new VFMapper(blockedBenzaldehyde, true);
+//        IMapper mapper = new VFMapper(blockedBenzaldehyde, true, true);
 //
 //        assertTrue(mapper.hasMap(createBenzaldehyde()));
 //    }
 //
 //    public void testItDoesntMapBlockedBenzaldehydeOntoBenzoicAcid() {
 //        Molecule blockedBenzaldehyde = this.createBlockedBenzaldehyde();
-//        IMapper mapper = new VFMapper(blockedBenzaldehyde, true);
+//        IMapper mapper = new VFMapper(blockedBenzaldehyde, true, true);
 //
 //        assertFalse(mapper.hasMap(createBenzoicAcid()));
 //    }
 //
 //    public void testItMapsDimethylsulfideToChargelessDMSO() {
-//        IMapper mapper = new VFMapper(Molecules.createDimethylsulfide(), true);
+//        IMapper mapper = new VFMapper(Molecules.createDimethylsulfide(), true, true);
 //
 //        assertTrue(mapper.hasMap(Molecules.createChargelessDMSO()));
 //    }
@@ -293,7 +293,7 @@ public class VFMapperTest {
 //    @Test
 //    public void testItMapsPropaneToAcetone() throws CDKException {
 //        IMolecule mol = Molecules.createPropane();
-//        IQuery querComp = QueryCompiler.compile(mol, true);
+//        IQuery querComp = QueryCompiler.compile(mol, true, true);
 //        IMapper mapper = new VFMapper(querComp);
 //        assertTrue(mapper.hasMap(Molecules.createAcetone()));
 //    }
@@ -301,20 +301,20 @@ public class VFMapperTest {
 //    @Test
 //    public void testDoesntMapImineToAmine() throws CDKException {
 //        IMolecule mol = Molecules.createSimpleImine();
-//        IQuery querComp = QueryCompiler.compile(mol, true);
+//        IQuery querComp = QueryCompiler.compile(mol, true, true);
 //        IMapper mapper = new VFMapper(querComp);
 //        Map<INode, IAtom> map = mapper.getFirstMap(Molecules.createSimpleAmine());
 //        assertEquals(0, map.size());
 //    }
 //
 //    public void testItMapsBigmolToItself() {
-//        IMapper mapper = new VFMapper(bigmol, true);
+//        IMapper mapper = new VFMapper(bigmol, true, true);
 //
 //        assertEquals(bigmol.getAtomCount(), mapper.getFirstMap(bigmol).size());
 //    }
 //
 //    public void testBigmolHasOneMap() {
-//        IMapper mapper = new VFMapper(bigmol, true);
+//        IMapper mapper = new VFMapper(bigmol, true, true);
 //
 //        assertEquals(1, mapper.countMaps(bigmol));
 //    }
