@@ -344,4 +344,26 @@ public class VFlibMCSHandlerTest extends AbstractMCSAlgorithmTest {
 
         assertEquals(6, smsd1.getFirstMapping().size());
     }
+    
+    /**
+     * Bug report by John Gerlits <jgerlits@utah.gov>
+     * Cl should not match
+     * Test ring size match
+     * @throws InvalidSmilesException
+     */
+    @Test
+    public void testVFMCSClMappingBugReportByJohn() throws InvalidSmilesException {
+        System.out.println("testVFMCSClMappingBug");
+        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        IAtomContainer target = sp.parseSmiles("CCCCCn1c2c(cccc2)c(c1)C(=O)c3ccc(c4c3cccc4)Cl");
+        IAtomContainer query = sp.parseSmiles("CCCCCn1c2c(cccc2)c(c1)C(=O)c3cccc4c3cccc4Cl");
+
+        VF2MCSHandler smsd1 = new VF2MCSHandler();
+        smsd1.set(query, target);
+        smsd1.searchMCS(true, true);
+        assertNotNull(smsd1.getFirstMapping());
+        Assert.assertEquals(27, query.getAtomCount());
+        Assert.assertEquals(27, target.getAtomCount());
+        assertEquals(26, smsd1.getFirstMapping().size());
+    }
 }
