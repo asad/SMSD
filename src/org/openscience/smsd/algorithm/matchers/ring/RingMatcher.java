@@ -50,7 +50,6 @@ public class RingMatcher extends DefaultRingMatcher implements IRingMatcher {
     public RingMatcher(IAtom atom) {
         if (isRingAtom(atom) && hasRingSize(atom)) {
             this.queryRingSizes = (List<Integer>) atom.getProperty(CDKConstants.RING_SIZES);
-            Collections.sort(queryRingSizes);
         } else {
             this.queryRingSizes = new ArrayList<Integer>(0);
         }
