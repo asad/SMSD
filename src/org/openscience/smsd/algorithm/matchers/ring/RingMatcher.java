@@ -72,14 +72,7 @@ public class RingMatcher extends DefaultRingMatcher implements IRingMatcher {
             if (targetRingSizes.isEmpty()) {
                 return false;
             }
-            for (Integer queryRingSize : queryRingSizes) {
-                for (Integer targetRingSize : targetRingSizes) {
-                    if (queryRingSize.intValue() == targetRingSize.intValue()) {
-                        //System.out.println(" both are ring atoms ");
-                        return true;
-                    }
-                }
-            }
+            return true;
         }
         return false;
     }
