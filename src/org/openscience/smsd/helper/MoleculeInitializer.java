@@ -62,8 +62,6 @@ public class MoleculeInitializer extends IMoleculeInitializer {
     protected void initializeMolecule(IAtomContainer atomContainer) throws CDKException {
 
         if (!(atomContainer instanceof IQueryAtomContainer)) {
-            // Code copied from
-            // org.openscience.cdk.qsar.descriptors.atomic.AtomValenceDescriptor;
             Map<String, Integer> valencesTable = new HashMap<String, Integer>();
             valencesTable.put("H", 1);
             valencesTable.put("Li", 1);

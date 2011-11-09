@@ -114,9 +114,6 @@ public final class VF2 extends AbstractSubGraph implements IMCSBase {
         }
 
         if (!isDead(source, target) && testIsSubgraphHeuristics(source, target, shouldMatchBonds)) {
-//            AtomContainerPrinter printer = new AtomContainerPrinter();
-//            System.out.println(printer.toString(a));
-//            System.out.println(printer.toString(b));
             State state = new State(source, target, shouldMatchBonds, shouldMatchRings);
             if (!state.isDead()) {
                 state.matchFirst(state, allAtomMCS);
