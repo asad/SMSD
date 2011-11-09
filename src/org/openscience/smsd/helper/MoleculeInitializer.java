@@ -34,12 +34,12 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IRingSet;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
+import org.openscience.cdk.ringsearch.AllRingsFinder;
 import org.openscience.cdk.ringsearch.SSSRFinder;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.interfaces.IMoleculeInitializer;
-import org.openscience.smsd.ring.HanserRingFinder;
 
 /**
  *
@@ -107,18 +107,15 @@ public class MoleculeInitializer extends IMoleculeInitializer {
             valencesTable.put("Mn", 2);
             valencesTable.put("Co", 2);
 
-//        // do all ring perception
-//        AllRingsFinder arf = new AllRingsFinder();
-//        IRingSet allRings;
-//        try {
-//            allRings = arf.findAllRings(atomContainer);
-//        } catch (CDKException e) {
-//            Logger.debug(e.toString());
-//            throw new CDKException(e.toString(), e);
-//        }
-
             // do all ring perception
-            IRingSet allRings = HanserRingFinder.getRingSet(atomContainer);
+            AllRingsFinder arf = new AllRingsFinder();
+            IRingSet allRings;
+            try {
+                allRings = arf.findAllRings(atomContainer);
+            } catch (CDKException e) {
+                Logger.debug(e.toString());
+                throw new CDKException(e.toString(), e);
+            }
 
             // sets SSSR information
             SSSRFinder finder = new SSSRFinder(atomContainer);
