@@ -23,9 +23,6 @@
  */
 package org.openscience.smsd.algorithm.matchers.ring;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.interfaces.IAtom;
 
@@ -39,7 +36,7 @@ import org.openscience.cdk.interfaces.IAtom;
 public class RingMatcher extends DefaultRingMatcher implements IRingMatcher {
 
     private static final long serialVersionUID = -7867686677884205622L;
-    private final List<Integer> queryRingSizes;
+    private final boolean isRingAtom;
 
     /**
      * Creates a new instance
@@ -48,10 +45,10 @@ public class RingMatcher extends DefaultRingMatcher implements IRingMatcher {
      */
     @SuppressWarnings("unchecked")
     public RingMatcher(IAtom atom) {
-        if (isRingAtom(atom) && hasRingSize(atom)) {
-            this.queryRingSizes = (List<Integer>) atom.getProperty(CDKConstants.RING_SIZES);
+        if (isRingAtom(atom)) {
+            isRingAtom = true;
         } else {
-            this.queryRingSizes = new ArrayList<Integer>(0);
+            isRingAtom = false;
         }
     }
 
@@ -62,25 +59,10 @@ public class RingMatcher extends DefaultRingMatcher implements IRingMatcher {
      */
     @Override
     public boolean matches(IAtom targetAtom) {
-        if (queryRingSizes.isEmpty()) {
-            return false;
-        }
-        if (isRingAtom(targetAtom) && hasRingSize(targetAtom)) {
-            @SuppressWarnings("unchecked")
-            List<Integer> targetRingSizes = (List<Integer>) targetAtom.getProperty(CDKConstants.RING_SIZES);
-            if (targetRingSizes.isEmpty()) {
-                return false;
-            }
-            return true;
-        }
-        return false;
+        return isRingAtom(targetAtom) && isRingAtom ? true : false;
     }
 
     private boolean isRingAtom(IAtom atom) {
         return atom.getFlag(CDKConstants.ISINRING) ? true : false;
-    }
-
-    private boolean hasRingSize(IAtom atom) {
-        return atom.getProperty(CDKConstants.RING_SIZES) == null ? false : true;
     }
 }
