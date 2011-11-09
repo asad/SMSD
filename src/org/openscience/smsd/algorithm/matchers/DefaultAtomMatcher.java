@@ -27,9 +27,6 @@ import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
-import org.openscience.smsd.algorithm.matchers.ring.IRingMatcher;
-import org.openscience.smsd.algorithm.matchers.ring.RingMatcher;
-
 
 /**
  * Checks if atom is matching between query and target molecules.
@@ -43,9 +40,7 @@ public final class DefaultAtomMatcher implements AtomMatcher {
     static final long serialVersionUID = -7861469841127327812L;
     private final String symbol;
     private final IAtom qAtom;
-    private final IRingMatcher ringMatcher;
     private final boolean shouldMatchRings;
-
 
     /**
      * Constructor
@@ -53,7 +48,6 @@ public final class DefaultAtomMatcher implements AtomMatcher {
     public DefaultAtomMatcher() {
         this.qAtom = null;
         this.symbol = null;
-        this.ringMatcher = null;
         this.shouldMatchRings = false;
     }
 
@@ -67,12 +61,10 @@ public final class DefaultAtomMatcher implements AtomMatcher {
         this.qAtom = atom;
         this.symbol = atom.getSymbol();
         this.shouldMatchRings = shouldMatchRings;
-        this.ringMatcher = new RingMatcher(atom);
-
-//        System.out.println("Atom " + atom.getSymbol());
-//        System.out.println("MAX allowed " + maximumNeighbors);
+        //        System.out.println("Atom " + atom.getSymbol());
+        //        System.out.println("MAX allowed " + maximumNeighbors);
     }
-    
+
     private boolean matchSymbol(IAtom atom) {
         if (symbol == null) {
             return false;
@@ -95,23 +87,18 @@ public final class DefaultAtomMatcher implements AtomMatcher {
             if (!matchSymbol(targetAtom)) {
                 return false;
             }
-            if (shouldMatchRings) {
-                if (matchRingAtoms(targetAtom)) {
-                    return ringMatcher.matches(targetAtom);
-                } else {
-                    return matchNonRingAtoms(targetAtom);
-                }
+            if (shouldMatchRings && (isRingAtom(qAtom) && isAliphaticAtom(targetAtom))) {
+                return false;
+            }
+            if (shouldMatchRings && (isAliphaticAtom(qAtom) && isRingAtom(targetAtom))) {
+                return false;
             }
         }
         return true;
     }
 
-    private boolean matchRingAtoms(IAtom tAtom) {
-        return isRingAtom(qAtom) && isRingAtom(tAtom) ? true : false;
-    }
-
-    private boolean matchNonRingAtoms(IAtom tAtom) {
-        return !isRingAtom(qAtom) && !isRingAtom(tAtom) ? true : false;
+    private boolean isAliphaticAtom(IAtom atom) {
+        return atom.getFlag(CDKConstants.ISALIPHATIC) ? true : false;
     }
 
     private boolean isRingAtom(IAtom atom) {

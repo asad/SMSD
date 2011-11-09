@@ -128,6 +128,7 @@ public class MoleculeInitializer extends IMoleculeInitializer {
                 // Add SSSR ring counts
                 if (allRings.contains(atom)) { // it's in a ring
                     atom.setFlag(CDKConstants.ISINRING, true);
+                    atom.setFlag(CDKConstants.ISALIPHATIC, false);
                     // lets find which ring sets it is a part of
                     List<Integer> ringsizes = new ArrayList<Integer>();
                     IRingSet currentRings = allRings.getRings(atom);
@@ -143,6 +144,7 @@ public class MoleculeInitializer extends IMoleculeInitializer {
                     atom.setProperty(CDKConstants.SMALLEST_RINGS, sssr.getRings(atom));
                 } else {
                     atom.setFlag(CDKConstants.ISINRING, false);
+                    atom.setFlag(CDKConstants.ISALIPHATIC, true);
                 }
 
                 // determine how many rings bonds each atom is a part of
@@ -172,6 +174,7 @@ public class MoleculeInitializer extends IMoleculeInitializer {
             for (IBond bond : atomContainer.bonds()) {
                 if (allRings.getRings(bond).getAtomContainerCount() > 0) {
                     bond.setFlag(CDKConstants.ISINRING, true);
+                    bond.setFlag(CDKConstants.ISALIPHATIC, false);
                 }
             }
 
