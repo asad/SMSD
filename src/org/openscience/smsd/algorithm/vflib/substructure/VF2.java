@@ -49,15 +49,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.logging.Level;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.AtomAtomMapping;
-import org.openscience.smsd.interfaces.AbstractSubGraph;
-import org.openscience.smsd.interfaces.IMCSBase;
+import org.openscience.smsd.helper.MoleculeInitializer;
+import org.openscience.smsd.interfaces.IResults;
 
 /**
  * This class finds mapping states between query and target
@@ -67,27 +66,62 @@ import org.openscience.smsd.interfaces.IMCSBase;
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-public final class VF2 extends AbstractSubGraph implements IMCSBase {
+public final class VF2 extends MoleculeInitializer implements IResults {
 
     private List<AtomAtomMapping> allAtomMCS = null;
     private List<Map<Integer, Integer>> allMCS = null;
-    private IAtomContainer source = null;
-    private IAtomContainer target = null;
+    private final IAtomContainer source;
+    private final IAtomContainer target;
     private final boolean shouldMatchRings;
+    private final boolean shouldMatchBonds;
+    private boolean isSubgraph = false;
     private final ILoggingTool Logger =
             LoggingToolFactory.createLoggingTool(VF2.class);
-    private final boolean shouldMatchBonds;
 
     /**
      * Constructor for an extended VF Algorithm for the MCS search
+     * @param source 
+     * @param target 
      * @param shouldMatchBonds
      * @param shouldMatchRings  
      */
-    public VF2(boolean shouldMatchBonds, boolean shouldMatchRings) {
+    public VF2(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings) {
+        this.source = source;
+        this.target = target;
         this.shouldMatchRings = shouldMatchRings;
         this.shouldMatchBonds = shouldMatchBonds;
         allAtomMCS = new ArrayList<AtomAtomMapping>();
         allMCS = new ArrayList<Map<Integer, Integer>>();
+        if (this.shouldMatchRings) {
+            try {
+                initializeMolecule(source);
+                initializeMolecule(target);
+            } catch (CDKException ex) {
+            }
+        }
+        this.isSubgraph = findSubgraph();
+    }
+
+    /**
+     * Constructor for an extended VF Algorithm for the MCS search
+     * @param source 
+     * @param target  
+     */
+    public VF2(IQueryAtomContainer source, IAtomContainer target) {
+        this.source = source;
+        this.target = target;
+        this.shouldMatchRings = true;
+        this.shouldMatchBonds = true;
+        allAtomMCS = new ArrayList<AtomAtomMapping>();
+        allMCS = new ArrayList<Map<Integer, Integer>>();
+        if (this.shouldMatchRings) {
+            try {
+                initializeMolecule(source);
+                initializeMolecule(target);
+            } catch (CDKException ex) {
+            }
+        }
+        this.isSubgraph = findSubgraph();
     }
 
     /** 
@@ -103,15 +137,6 @@ public final class VF2 extends AbstractSubGraph implements IMCSBase {
      * @return
      */
     private synchronized void isomorphism() {
-
-        if (shouldMatchRings) {
-            try {
-                initializeMolecule(source);
-                initializeMolecule(target);
-            } catch (CDKException ex) {
-                Logger.error(Level.SEVERE, null, ex);
-            }
-        }
 
         if (!isDead(source, target) && testIsSubgraphHeuristics(source, target, shouldMatchBonds)) {
             State state = new State(source, target, shouldMatchBonds, shouldMatchRings);
@@ -132,15 +157,6 @@ public final class VF2 extends AbstractSubGraph implements IMCSBase {
      */
     private synchronized void isomorphisms() {
 
-        if (shouldMatchRings) {
-            try {
-                initializeMolecule(source);
-                initializeMolecule(target);
-            } catch (CDKException ex) {
-                Logger.error(Level.SEVERE, null, ex);
-            }
-        }
-
         if (!isDead(source, target) && testIsSubgraphHeuristics(source, target, shouldMatchBonds)) {
             State state = new State(source, target, shouldMatchBonds, shouldMatchRings);
             if (!state.isDead()) {
@@ -154,27 +170,14 @@ public final class VF2 extends AbstractSubGraph implements IMCSBase {
         return a.getAtomCount() > b.getAtomCount();
     }
 
-    @Override
-    public boolean isSubgraph() {
+    private boolean findSubgraph() {
         isomorphism();
         return allAtomMCS.isEmpty() ? false : true;
     }
 
-    public boolean isSubgraphs() {
+    private boolean findSubgraphs() {
         isomorphisms();
         return allAtomMCS.isEmpty() ? false : true;
-    }
-
-    @Override
-    public void set(IAtomContainer source, IAtomContainer target) throws CDKException {
-        this.source = source;
-        this.target = target;
-    }
-
-    @Override
-    public void set(IQueryAtomContainer source, IAtomContainer target) throws CDKException {
-        this.source = source;
-        this.target = target;
     }
 
     @Override
@@ -201,5 +204,12 @@ public final class VF2 extends AbstractSubGraph implements IMCSBase {
             return allMCS.iterator().next();
         }
         return new TreeMap<Integer, Integer>();
+    }
+
+    /**
+     * @return the findSubgraph
+     */
+    public boolean isSubgraph() {
+        return isSubgraph;
     }
 }

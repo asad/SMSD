@@ -36,8 +36,8 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.AtomAtomMapping;
-import org.openscience.smsd.interfaces.AbstractMCSAlgorithm;
-import org.openscience.smsd.interfaces.IMCSBase;
+import org.openscience.smsd.helper.MoleculeInitializer;
+import org.openscience.smsd.interfaces.IResults;
 
 /**
  * This is a handler class for single atom mapping
@@ -47,68 +47,71 @@ import org.openscience.smsd.interfaces.IMCSBase;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.single.SingleMappingHandlerTest")
-public class SingleMappingHandler extends AbstractMCSAlgorithm implements IMCSBase {
+public class SingleMappingHandler extends MoleculeInitializer implements IResults {
 
     private final ILoggingTool Logger =
             LoggingToolFactory.createLoggingTool(SingleMappingHandler.class);
     private List<AtomAtomMapping> allAtomMCS = null;
     private List<Map<Integer, Integer>> allMCS = null;
-    private IAtomContainer source = null;
-    private IAtomContainer target = null;
+    private final IAtomContainer source;
+    private final IAtomContainer target;
+    private final boolean shouldMatchRings;
 
     /**
      * 
+     * @param source
+     * @param target
+     * @param bondTypeMatch 
+     * @param shouldMatchRings  
      */
     @TestMethod("setMCSAlgorithm")
-    public SingleMappingHandler() {
+    public SingleMappingHandler(IAtomContainer source, IAtomContainer target, boolean bondTypeMatch, boolean shouldMatchRings) {
         allAtomMCS = new ArrayList<AtomAtomMapping>();
         allMCS = new ArrayList<Map<Integer, Integer>>();
-    }
-
-    /** {@inheritDoc}
-     *
-     * @param source
-     * @param target
-     */
-    @Override
-    @TestMethod("testSet_MolHandler_MolHandler")
-    public synchronized void set(IAtomContainer source, IAtomContainer target) {
         this.source = source;
         this.target = target;
+        this.shouldMatchRings = shouldMatchRings;
+        if (this.shouldMatchRings) {
+            try {
+                initializeMolecule(source);
+                initializeMolecule(target);
+            } catch (CDKException ex) {
+            }
+        }
+        searchMCS();
     }
 
-    /** {@inheritDoc}
-     *
+    /**
+     * 
      * @param source
-     * @param target
+     * @param target  
      */
-    @Override
-    @TestMethod("testSet_IQueryAtomContainer_MolHandler")
-    public synchronized void set(IQueryAtomContainer source, IAtomContainer target) {
+    @TestMethod("setMCSAlgorithm")
+    public SingleMappingHandler(IQueryAtomContainer source, IAtomContainer target) {
+        allAtomMCS = new ArrayList<AtomAtomMapping>();
+        allMCS = new ArrayList<Map<Integer, Integer>>();
         this.source = source;
         this.target = target;
+        this.shouldMatchRings = true;
+        if (this.shouldMatchRings) {
+            try {
+                initializeMolecule(source);
+                initializeMolecule(target);
+            } catch (CDKException ex) {
+            }
+        }
+        searchMCS();
     }
+
     //Function is called by the main program and serves as a starting point for the comparision procedure.
-
     /** {@inheritDoc}
      *
-     * @param bondTypeMatch 
      */
-    @Override
-    @TestMethod("testSearchMCS")
-    public synchronized void searchMCS(boolean bondTypeMatch, boolean shouldMatchRings) {
+    private synchronized void searchMCS() {
         SingleMapping singleMapping = new SingleMapping();
         List<Map<IAtom, IAtom>> mappings = null;
         try {
             if (!(source instanceof IQueryAtomContainer)) {
-                if (shouldMatchRings) {
-                    try {
-                        initializeMolecule(source);
-                        initializeMolecule(target);
-                    } catch (CDKException ex) {
-                        Logger.error(Level.SEVERE, null, ex);
-                    }
-                }
                 mappings = singleMapping.getOverLaps(source, target);
             } else {
                 mappings = singleMapping.getOverLaps((IQueryAtomContainer) source, target);

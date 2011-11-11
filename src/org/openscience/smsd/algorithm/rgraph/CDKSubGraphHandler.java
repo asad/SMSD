@@ -36,8 +36,8 @@ import org.openscience.cdk.interfaces.IMoleculeSet;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.helper.FinalMappings;
-import org.openscience.smsd.interfaces.AbstractSubGraph;
-import org.openscience.smsd.interfaces.IMCSBase;
+import org.openscience.smsd.helper.MoleculeInitializer;
+import org.openscience.smsd.interfaces.IResults;
 
 /**
  * This class acts as a handler class for CDKMCS algorithm
@@ -48,11 +48,11 @@ import org.openscience.smsd.interfaces.IMCSBase;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.cdk.CDKMCSHandlerTest")
-public class CDKSubGraphHandler extends AbstractSubGraph implements IMCSBase {
+public class CDKSubGraphHandler extends MoleculeInitializer implements IResults {
 
 //    //~--- fields -------------------------------------------------------------
-    private IAtomContainer source;
-    private IAtomContainer target;
+    private final IAtomContainer source;
+    private final IAtomContainer target;
     private boolean rOnPFlag = false;
     private List<AtomAtomMapping> allAtomMCS = null;
     private List<Map<Integer, Integer>> allMCS = null;
@@ -63,52 +63,60 @@ public class CDKSubGraphHandler extends AbstractSubGraph implements IMCSBase {
     /*
      * Creates a new instance of MappingHandler
      */
-    public CDKSubGraphHandler(boolean shouldMatchBonds, boolean shouldMatchRings) {
+    /**
+     * 
+     * @param source
+     * @param target
+     * @param shouldMatchBonds
+     * @param shouldMatchRings
+     */
+    public CDKSubGraphHandler(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings) {
+        this.source = source;
+        this.target = target;
         this.shouldMatchRings = shouldMatchRings;
         this.shouldMatchBonds = shouldMatchBonds;
         this.allAtomMCS = new ArrayList<AtomAtomMapping>();
         this.allMCS = new ArrayList<Map<Integer, Integer>>();
+        if (this.shouldMatchRings) {
+            try {
+                initializeMolecule(source);
+                initializeMolecule(target);
+            } catch (CDKException ex) {
+            }
+        }
+        isSubgraph();
     }
 
-    /** {@inheritDoc}
-     *
+    /**
+     * 
      * @param source
      * @param target
      */
-    @Override
-    @TestMethod("testSet_MolHandler_MolHandler")
-    public void set(IAtomContainer source, IAtomContainer target) {
+    public CDKSubGraphHandler(IQueryAtomContainer source, IQueryAtomContainer target) {
         this.source = source;
         this.target = target;
-    }
-
-    /** {@inheritDoc}
-     *
-     * @param source
-     * @param target
-     */
-    @Override
-    @TestMethod("testSet_IQueryAtomContainer_MolHandler")
-    public void set(IQueryAtomContainer source, IAtomContainer target) {
-        this.source = source;
-        this.target = target;
+        this.shouldMatchRings = true;
+        this.shouldMatchBonds = true;
+        this.allAtomMCS = new ArrayList<AtomAtomMapping>();
+        this.allMCS = new ArrayList<Map<Integer, Integer>>();
+        if (shouldMatchRings) {
+            try {
+                initializeMolecule(source);
+                initializeMolecule(target);
+            } catch (CDKException ex) {
+            }
+        }
+        isSubgraph();
     }
 
     /** {@inheritDoc}
      *
      */
-    @Override
-    @TestMethod("testSearchMCS")
-    public boolean isSubgraph() {
+    private boolean isSubgraph() {
 
         CDKRMapHandler rmap = new CDKRMapHandler();
 
         try {
-
-            if (shouldMatchRings) {
-                initializeMolecule(source);
-                initializeMolecule(target);
-            }
 
             if ((source.getAtomCount() == target.getAtomCount()) && source.getBondCount() == target.getBondCount()) {
                 rOnPFlag = true;
@@ -227,6 +235,7 @@ public class CDKSubGraphHandler extends AbstractSubGraph implements IMCSBase {
     }
 
     /** {@inheritDoc}
+     * @return 
      */
     @Override
     @TestMethod("testGetAllMapping")
@@ -235,6 +244,7 @@ public class CDKSubGraphHandler extends AbstractSubGraph implements IMCSBase {
     }
 
     /** {@inheritDoc}
+     * @return 
      */
     @Override
     @TestMethod("testGetFirstMapping")
@@ -246,6 +256,7 @@ public class CDKSubGraphHandler extends AbstractSubGraph implements IMCSBase {
     }
 
     /** {@inheritDoc}
+     * @return 
      */
     @Override
     @TestMethod("testGetAllAtomMapping")
@@ -254,6 +265,7 @@ public class CDKSubGraphHandler extends AbstractSubGraph implements IMCSBase {
     }
 
     /** {@inheritDoc}
+     * @return 
      */
     @Override
     @TestMethod("testGetFirstAtomMapping")

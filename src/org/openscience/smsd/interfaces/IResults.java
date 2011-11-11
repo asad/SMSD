@@ -37,28 +37,7 @@ import org.openscience.smsd.AtomAtomMapping;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.interfaces.IMCSBaseTest")
-public interface IMCSBase {
-
-    /** 
-     * Initialise the query and target molecule.
-     *
-     * @param source source molecule
-     * @param target target molecule
-     * @throws CDKException
-     *
-     */
-    public abstract void set(IAtomContainer source, IAtomContainer target) throws CDKException;
-
-    /**
-     * Initialise the query and target molecule.
-     *
-     * @param source source molecule
-     * @param target target molecule
-     * @throws CDKException
-     *
-     */
-    public abstract void set(IQueryAtomContainer source, IAtomContainer target) throws CDKException;
-
+public interface IResults {
     /**
      * Returns all plausible mappings between query and target molecules.
      * Each map in the list has atom-atom equivalence of the mappings

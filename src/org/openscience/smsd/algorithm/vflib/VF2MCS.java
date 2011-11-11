@@ -47,8 +47,8 @@ import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
 import org.openscience.smsd.algorithm.vflib.map.VFMCSMapper;
 import org.openscience.smsd.algorithm.vflib.query.QueryCompiler;
 import org.openscience.smsd.global.TimeOut;
-import org.openscience.smsd.interfaces.AbstractMCSAlgorithm;
-import org.openscience.smsd.interfaces.IMCSBase;
+import org.openscience.smsd.helper.MoleculeInitializer;
+import org.openscience.smsd.interfaces.IResults;
 import org.openscience.smsd.tools.TimeManager;
 
 /**
@@ -66,23 +66,23 @@ import org.openscience.smsd.tools.TimeManager;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFlibMCSHandlerTest")
-public class VF2MCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
+public class VF2MCS extends MoleculeInitializer implements IResults {
 
     private List<AtomAtomMapping> allAtomMCS = null;
     private List<AtomAtomMapping> allAtomMCSCopy = null;
     private List<Map<Integer, Integer>> allMCS = null;
     private List<Map<Integer, Integer>> allMCSCopy = null;
     private List<Map<INode, IAtom>> vfLibSolutions = null;
-    private IAtomContainer source = null;
-    private IAtomContainer target = null;
+    private final IAtomContainer source;
+    private final IAtomContainer target;
     private int vfMCSSize = -1;
-    private boolean matchBonds;
     private int countR = 0;
     private int countP = 0;
+    private final TimeManager timeManager;
+    private final boolean shouldMatchRings;
+    private final boolean matchBonds;
     private final static ILoggingTool Logger =
-            LoggingToolFactory.createLoggingTool(VF2MCSHandler.class);
-    private TimeManager timeManager = null;
-    private boolean shouldMatchRings;
+            LoggingToolFactory.createLoggingTool(VF2MCS.class);
 
     /**
      * @return the timeout
@@ -99,43 +99,64 @@ public class VF2MCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
     }
 
     /**
-     * @param aTimeManager the timeManager to set
-     */
-    public synchronized void setTimeManager(TimeManager aTimeManager) {
-        TimeOut.getInstance().setTimeOutFlag(false);
-        timeManager = aTimeManager;
-    }
-
-    /**
      * Constructor for an extended VF Algorithm for the MCS search
+     * @param source
+     * @param target
+     * @param shouldMatchBonds bond match
+     * @param shouldMatchRings ring match 
      */
-    public VF2MCSHandler() {
+    public VF2MCS(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings) {
+
+        this.source = source;
+        this.target = target;
+        this.shouldMatchRings = shouldMatchRings;
+        this.matchBonds = shouldMatchBonds;
         allAtomMCS = new ArrayList<AtomAtomMapping>();
         allAtomMCSCopy = new ArrayList<AtomAtomMapping>();
         allMCS = new ArrayList<Map<Integer, Integer>>();
         allMCSCopy = new ArrayList<Map<Integer, Integer>>();
+        timeManager = new TimeManager();
+        if (this.shouldMatchRings) {
+            try {
+                initializeMolecule(source);
+                initializeMolecule(target);
+            } catch (CDKException ex) {
+            }
+        }
+        searchMCS();
+    }
+
+    /**
+     * Constructor for an extended VF Algorithm for the MCS search
+     * @param source
+     * @param target  
+     */
+    public VF2MCS(IQueryAtomContainer source, IQueryAtomContainer target) {
+
+        this.source = source;
+        this.target = target;
+        this.shouldMatchRings = true;
+        this.matchBonds = true;
+        allAtomMCS = new ArrayList<AtomAtomMapping>();
+        allAtomMCSCopy = new ArrayList<AtomAtomMapping>();
+        allMCS = new ArrayList<Map<Integer, Integer>>();
+        allMCSCopy = new ArrayList<Map<Integer, Integer>>();
+        timeManager = new TimeManager();
+        if (this.shouldMatchRings) {
+            try {
+                initializeMolecule(source);
+                initializeMolecule(target);
+            } catch (CDKException ex) {
+            }
+        }
+        searchMCS();
     }
 
     /**
      *{@inheritDoc}
      *
-     * @param matchBonds 
      */
-    @Override
-    @TestMethod("testSearchMCS")
-    public synchronized void searchMCS(boolean matchBonds, boolean shouldMatchRings) {
-        setTimeManager(new TimeManager());
-        setBondMatchFlag(matchBonds);
-        this.setMatchRings(shouldMatchRings);
-
-        if (isMatchRings()) {
-            try {
-                initializeMolecule(source);
-                initializeMolecule(target);
-            } catch (CDKException ex) {
-                Logger.error(Level.SEVERE, null, ex);
-            }
-        }
+    private synchronized void searchMCS() {
 
         searchVFMCSMappings();
         boolean flag = isExtensionFeasible();
@@ -206,32 +227,6 @@ public class VF2MCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
         return false;
     }
 
-    /** {@inheritDoc}
-     *
-     * Set the VFLib MCS software
-     *
-     * @param source
-     * @param target
-     */
-    @Override
-    @TestMethod("testSet_MolHandler_MolHandler")
-    public synchronized void set(IAtomContainer source, IAtomContainer target) {
-        this.source = source;
-        this.target = target;
-    }
-
-    /** {@inheritDoc}
-     *
-     * @param source
-     * @param target
-     */
-    @Override
-    @TestMethod("testSet_IQueryAtomContainer_MolHandler")
-    public void set(IQueryAtomContainer source, IAtomContainer target) {
-        this.source = source;
-        this.target = target;
-    }
-
     private boolean hasMap(Map<Integer, Integer> maps, List<Map<Integer, Integer>> mapGlobal) {
         for (Map<Integer, Integer> test : mapGlobal) {
             if (test.size() > maps.size()) {
@@ -245,6 +240,7 @@ public class VF2MCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
     }
 
     /** {@inheritDoc}
+     * @return 
      */
     @Override
     @TestMethod("testGetAllMapping")
@@ -253,6 +249,7 @@ public class VF2MCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
     }
 
     /** {@inheritDoc}
+     * @return 
      */
     @Override
     @TestMethod("testGetFirstMapping")
@@ -264,6 +261,7 @@ public class VF2MCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
     }
 
     /** {@inheritDoc}
+     * @return 
      */
     @Override
     @TestMethod("testGetAllAtomMapping")
@@ -272,6 +270,7 @@ public class VF2MCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
     }
 
     /** {@inheritDoc}
+     * @return 
      */
     @Override
     @TestMethod("testGetFirstAtomMapping")
@@ -491,13 +490,6 @@ public class VF2MCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
         return matchBonds;
     }
 
-    /**
-     * @param shouldMatchBonds the shouldMatchBonds to set
-     */
-    public synchronized void setBondMatchFlag(boolean shouldMatchBonds) {
-        this.matchBonds = shouldMatchBonds;
-    }
-
     private synchronized IAtomContainer getReactantMol() {
         return source;
     }
@@ -532,12 +524,5 @@ public class VF2MCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
      */
     public boolean isMatchRings() {
         return shouldMatchRings;
-    }
-
-    /**
-     * @param shouldMatchRings the shouldMatchRings to set
-     */
-    public void setMatchRings(boolean shouldMatchRings) {
-        this.shouldMatchRings = shouldMatchRings;
     }
 }

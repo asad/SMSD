@@ -38,7 +38,7 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.smsd.algorithm.mcsplus.MCSPlusHandler;
 import org.openscience.smsd.algorithm.rgraph.CDKMCSHandler;
 import org.openscience.smsd.algorithm.single.SingleMappingHandler;
-import org.openscience.smsd.algorithm.vflib.VF2MCSHandler;
+import org.openscience.smsd.algorithm.vflib.VF2MCS;
 import org.openscience.smsd.global.TimeOut;
 import org.openscience.smsd.interfaces.Algorithm;
 import org.openscience.smsd.interfaces.ITimeOut;
@@ -278,9 +278,7 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
     private synchronized void cdkMCSAlgorithm() {
 //        double time = System.currentTimeMillis();
         CDKMCSHandler mcs = null;
-        mcs = new CDKMCSHandler();
-        mcs.set(mol1, mol2);
-        mcs.searchMCS(isMatchBonds(), isMatchRings());
+        mcs = new CDKMCSHandler(mol1, mol2, isMatchBonds(), isMatchRings());
         clearMaps();
         mcsList.addAll(mcs.getAllAtomMapping());
 //        System.out.println("\nCDKMCS used\n" + ((System.currentTimeMillis() - time) / (60 * 1000)));
@@ -289,9 +287,7 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
     private synchronized void mcsPlusAlgorithm() {
 //        double time = System.currentTimeMillis();
         MCSPlusHandler mcs = null;
-        mcs = new MCSPlusHandler();
-        mcs.set(mol1, mol2);
-        mcs.searchMCS(isMatchBonds(), isMatchRings());
+        mcs = new MCSPlusHandler(mol1, mol2, isMatchBonds(), isMatchRings());
         clearMaps();
         mcsList.addAll(mcs.getAllAtomMapping());
 //        System.out.println("\nMCSPlus used\n" + ((System.currentTimeMillis() - time) / (60 * 1000)));
@@ -299,10 +295,8 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
 
     private synchronized void vfLibMCSAlgorithm() {
 //        double time = System.currentTimeMillis();
-        VF2MCSHandler mcs = null;
-        mcs = new VF2MCSHandler();
-        mcs.set(mol1, mol2);
-        mcs.searchMCS(isMatchBonds(), isMatchRings());
+        VF2MCS mcs = null;
+        mcs = new VF2MCS(mol1, mol2, isMatchBonds(), isMatchRings());
         clearMaps();
         mcsList.addAll(mcs.getAllAtomMapping());
 //        System.out.println("\nVFLib used\n" + ((System.currentTimeMillis() - time) / (60 * 1000)));
@@ -310,9 +304,7 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
 
     private synchronized void singleMapping() {
         SingleMappingHandler mcs = null;
-        mcs = new SingleMappingHandler();
-        mcs.set(mol1, mol2);
-        mcs.searchMCS(isMatchBonds(), isMatchRings());
+        mcs = new SingleMappingHandler(mol1, mol2, isMatchBonds(), isMatchRings());
         clearMaps();
         mcsList.addAll(mcs.getAllAtomMapping());
     }

@@ -155,12 +155,12 @@ public final class Substructure extends BaseMapping {
             if (mol1.getAtomCount() > mol2.getAtomCount()) {
                 return false;
             }
-            VF2 mapper = new VF2(isMatchBonds(), isMatchRings());
+            VF2 mapper = null;
             List<AtomAtomMapping> mappingsVF2 = new ArrayList<AtomAtomMapping>();
             if (mol1 instanceof IQueryAtomContainer) {
-                mapper.set((IQueryAtomContainer) mol1, mol2);
+                mapper = new VF2((IQueryAtomContainer) mol1, mol2);
             } else {
-                mapper.set(mol1, mol2);
+                mapper = new VF2(mol1, mol2, isMatchBonds(), isMatchRings());
             }
             isSubgraph = mapper.isSubgraph();
             List<AtomAtomMapping> atomMappings = mapper.getAllAtomMapping();
@@ -193,12 +193,12 @@ public final class Substructure extends BaseMapping {
             if (mol1.getAtomCount() > mol2.getAtomCount()) {
                 return false;
             } else {
-                VF2Sub mapper = new VF2Sub(isMatchBonds(), isMatchRings());
                 List<AtomAtomMapping> mappingsVF2 = new ArrayList<AtomAtomMapping>();
+                VF2Sub mapper = null;
                 if (mol1 instanceof IQueryAtomContainer) {
-                    mapper.set((IQueryAtomContainer) mol1, mol2);
+                    mapper = new VF2Sub((IQueryAtomContainer) mol1, mol2);
                 } else {
-                    mapper.set(mol1, mol2);
+                    mapper = new VF2Sub(mol1, mol2, isMatchBonds(), isMatchRings());
                 }
                 isSubgraph = mapper.isSubgraph();
                 List<AtomAtomMapping> atomMappings = mapper.getAllAtomMapping();
@@ -249,9 +249,11 @@ public final class Substructure extends BaseMapping {
 
     private synchronized void singleMapping(boolean shouldMatchBonds) {
         SingleMappingHandler mcs = null;
-        mcs = new SingleMappingHandler();
-        mcs.set(mol1, mol2);
-        mcs.searchMCS(shouldMatchBonds, isMatchRings());
+        if (mol1 instanceof IQueryAtomContainer) {
+            mcs = new SingleMappingHandler(mol1, mol2, shouldMatchBonds, isMatchRings());
+        } else {
+            mcs = new SingleMappingHandler((IQueryAtomContainer) mol1, mol2);
+        }
         mcsList.addAll(mcs.getAllAtomMapping());
     }
 }

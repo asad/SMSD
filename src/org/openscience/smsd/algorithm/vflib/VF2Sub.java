@@ -44,8 +44,8 @@ import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
 import org.openscience.smsd.algorithm.vflib.map.VFMapper;
 import org.openscience.smsd.algorithm.vflib.query.QueryCompiler;
 import org.openscience.smsd.global.TimeOut;
-import org.openscience.smsd.interfaces.AbstractSubGraph;
-import org.openscience.smsd.interfaces.IMCSBase;
+import org.openscience.smsd.helper.MoleculeInitializer;
+import org.openscience.smsd.interfaces.IResults;
 import org.openscience.smsd.tools.TimeManager;
 
 /**
@@ -63,23 +63,24 @@ import org.openscience.smsd.tools.TimeManager;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VF2SubTest")
-public class VF2Sub extends AbstractSubGraph implements IMCSBase {
+public class VF2Sub extends MoleculeInitializer implements IResults {
 
     private List<AtomAtomMapping> allAtomMCS = null;
     private List<AtomAtomMapping> allAtomMCSCopy = null;
     private List<Map<Integer, Integer>> allMCS = null;
     private List<Map<Integer, Integer>> allMCSCopy = null;
     private List<Map<INode, IAtom>> vfLibSolutions = null;
-    private IAtomContainer source = null;
-    private IAtomContainer target = null;
-    private int bestHitSize = -1;
+    private final IAtomContainer source;
+    private final IAtomContainer target;
+    private final TimeManager timeManager;
+    private final boolean shouldMatchRings;
     private final boolean matchBonds;
+    private int bestHitSize = -1;
     private int countR = 0;
     private int countP = 0;
+    private boolean isSubgraph = false;
     private final static ILoggingTool Logger =
             LoggingToolFactory.createLoggingTool(VF2Sub.class);
-    private TimeManager timeManager = null;
-    private final boolean shouldMatchRings;
 
     /**
      * @return the timeout
@@ -96,19 +97,15 @@ public class VF2Sub extends AbstractSubGraph implements IMCSBase {
     }
 
     /**
-     * @param aTimeManager the timeManager to set
-     */
-    public synchronized void setTimeManager(TimeManager aTimeManager) {
-        TimeOut.getInstance().setTimeOutFlag(false);
-        timeManager = aTimeManager;
-    }
-
-    /**
      * Constructor for an extended VF Algorithm for the MCS search
+     * @param source 
+     * @param target 
      * @param shouldMatchBonds
      * @param shouldMatchRings  
      */
-    public VF2Sub(boolean shouldMatchBonds, boolean shouldMatchRings) {
+    public VF2Sub(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings) {
+        this.source = source;
+        this.target = target;
         allAtomMCS = new ArrayList<AtomAtomMapping>();
         allAtomMCSCopy = new ArrayList<AtomAtomMapping>();
         allMCS = new ArrayList<Map<Integer, Integer>>();
@@ -117,28 +114,52 @@ public class VF2Sub extends AbstractSubGraph implements IMCSBase {
         tmo.setCDKMCSTimeOut(0.15);
         this.shouldMatchRings = shouldMatchRings;
         this.matchBonds = shouldMatchBonds;
+        this.timeManager = new TimeManager();
+        if (this.shouldMatchRings) {
+            try {
+                initializeMolecule(source);
+                initializeMolecule(target);
+            } catch (CDKException ex) {
+            }
+        }
+        this.isSubgraph = findSubgraph();
+    }
+
+    /**
+     * Constructor for an extended VF Algorithm for the MCS search
+     * @param source 
+     * @param target  
+     */
+    public VF2Sub(IQueryAtomContainer source, IAtomContainer target) {
+        this.source = source;
+        this.target = target;
+        allAtomMCS = new ArrayList<AtomAtomMapping>();
+        allAtomMCSCopy = new ArrayList<AtomAtomMapping>();
+        allMCS = new ArrayList<Map<Integer, Integer>>();
+        allMCSCopy = new ArrayList<Map<Integer, Integer>>();
+        TimeOut tmo = TimeOut.getInstance();
+        tmo.setCDKMCSTimeOut(0.15);
+        this.shouldMatchRings = true;
+        this.matchBonds = true;
+        this.timeManager = new TimeManager();
+        if (this.shouldMatchRings) {
+            try {
+                initializeMolecule(source);
+                initializeMolecule(target);
+            } catch (CDKException ex) {
+            }
+        }
+        this.isSubgraph = findSubgraph();
     }
 
     /**
      *{@inheritDoc}
      *
      */
-    @Override
-    public boolean isSubgraph() {
-        if (!testIsSubgraphHeuristics(source, target, isBondMatchFlag())) {
+    private boolean findSubgraph() {
+        if (!testIsSubgraphHeuristics(source, target, this.matchBonds)) {
             return false;
         }
-        setTimeManager(new TimeManager());
-
-        if (isMatchRings()) {
-            try {
-                initializeMolecule(source);
-                initializeMolecule(target);
-            } catch (CDKException ex) {
-                Logger.error(Level.SEVERE, null, ex);
-            }
-        }
-
         searchVFMappings();
         boolean flag = isExtensionFeasible();
         if (flag && !vfLibSolutions.isEmpty()) {
@@ -168,32 +189,6 @@ public class VF2Sub extends AbstractSubGraph implements IMCSBase {
         return false;
     }
 
-    /** {@inheritDoc}
-     *
-     * Set the query and target
-     *
-     * @param source
-     * @param target
-     */
-    @Override
-    @TestMethod("testSet_MolHandler_MolHandler")
-    public synchronized void set(IAtomContainer source, IAtomContainer target) {
-        this.source = source;
-        this.target = target;
-    }
-
-    /** {@inheritDoc}
-     *
-     * @param source
-     * @param target
-     */
-    @Override
-    @TestMethod("testSet_IQueryAtomContainer_MolHandler")
-    public void set(IQueryAtomContainer source, IAtomContainer target) {
-        this.source = source;
-        this.target = target;
-    }
-
     private boolean hasMap(Map<Integer, Integer> maps, List<Map<Integer, Integer>> mapGlobal) {
         for (Map<Integer, Integer> test : mapGlobal) {
             if (test.equals(maps)) {
@@ -204,6 +199,7 @@ public class VF2Sub extends AbstractSubGraph implements IMCSBase {
     }
 
     /** {@inheritDoc}
+     * @return 
      */
     @Override
     @TestMethod("testGetAllMapping")
@@ -212,6 +208,7 @@ public class VF2Sub extends AbstractSubGraph implements IMCSBase {
     }
 
     /** {@inheritDoc}
+     * @return 
      */
     @Override
     @TestMethod("testGetFirstMapping")
@@ -223,6 +220,7 @@ public class VF2Sub extends AbstractSubGraph implements IMCSBase {
     }
 
     /** {@inheritDoc}
+     * @return 
      */
     @Override
     @TestMethod("testGetAllAtomMapping")
@@ -231,6 +229,7 @@ public class VF2Sub extends AbstractSubGraph implements IMCSBase {
     }
 
     /** {@inheritDoc}
+     * @return 
      */
     @Override
     @TestMethod("testGetFirstAtomMapping")
@@ -282,7 +281,7 @@ public class VF2Sub extends AbstractSubGraph implements IMCSBase {
             }
             setVFMappings(true, queryCompiler);
         } else if (countR <= countP) {
-            queryCompiler = new QueryCompiler(this.source, isBondMatchFlag(), isMatchRings()).compile();
+            queryCompiler = new QueryCompiler(this.source, this.matchBonds, this.shouldMatchRings).compile();
             mapper = new VFMapper(queryCompiler);
             List<Map<INode, IAtom>> maps = mapper.getMaps(getProductMol());
             if (maps != null) {
@@ -304,10 +303,10 @@ public class VF2Sub extends AbstractSubGraph implements IMCSBase {
             Map<Integer, Integer> extendMapping = new TreeMap<Integer, Integer>(firstPassMappings);
             McGregor mgit = null;
             if (source instanceof IQueryAtomContainer) {
-                mgit = new McGregor((IQueryAtomContainer) source, target, mappings, isBondMatchFlag(), isMatchRings());
+                mgit = new McGregor((IQueryAtomContainer) source, target, mappings, this.matchBonds, this.shouldMatchRings);
             } else {
                 extendMapping.clear();
-                mgit = new McGregor(target, source, mappings, isBondMatchFlag(), isMatchRings());
+                mgit = new McGregor(target, source, mappings, this.matchBonds, this.shouldMatchRings);
                 ROPFlag = false;
                 for (Map.Entry<Integer, Integer> map : firstPassMappings.entrySet()) {
                     extendMapping.put(map.getValue(), map.getKey());
@@ -425,13 +424,6 @@ public class VF2Sub extends AbstractSubGraph implements IMCSBase {
         }
     }
 
-    /**
-     * @return the shouldMatchBonds
-     */
-    public synchronized boolean isBondMatchFlag() {
-        return matchBonds;
-    }
-
     private synchronized IAtomContainer getReactantMol() {
         return source;
     }
@@ -449,9 +441,9 @@ public class VF2Sub extends AbstractSubGraph implements IMCSBase {
     }
 
     /**
-     * @return the shouldMatchRings
+     * @return the isSubgraph
      */
-    public boolean isMatchRings() {
-        return shouldMatchRings;
+    public boolean isSubgraph() {
+        return isSubgraph;
     }
 }

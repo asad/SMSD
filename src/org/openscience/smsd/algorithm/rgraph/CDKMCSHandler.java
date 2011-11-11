@@ -37,8 +37,8 @@ import org.openscience.cdk.interfaces.IMoleculeSet;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.helper.FinalMappings;
-import org.openscience.smsd.interfaces.AbstractMCSAlgorithm;
-import org.openscience.smsd.interfaces.IMCSBase;
+import org.openscience.smsd.helper.MoleculeInitializer;
+import org.openscience.smsd.interfaces.IResults;
 
 /**
  * This class acts as a handler class for CDKMCS algorithm
@@ -49,63 +49,75 @@ import org.openscience.smsd.interfaces.IMCSBase;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.cdk.CDKMCSHandlerTest")
-public class CDKMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
+public class CDKMCSHandler extends MoleculeInitializer implements IResults {
 
 //    //~--- fields -------------------------------------------------------------
-    private IAtomContainer source;
-    private IAtomContainer target;
+    private final IAtomContainer source;
+    private final IAtomContainer target;
     private boolean rOnPFlag = false;
     private List<AtomAtomMapping> allAtomMCS = null;
     private List<Map<Integer, Integer>> allMCS = null;
+    private final boolean shouldMatchRings;
+    private final boolean shouldMatchBonds;
 
     //~--- constructors -------------------------------------------------------
     /*
      * Creates a new instance of MappingHandler
      */
-    public CDKMCSHandler() {
-
+    /**
+     * 
+     * @param source
+     * @param target
+     * @param shouldMatchBonds
+     * @param shouldMatchRings
+     */
+    public CDKMCSHandler(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings) {
+        this.source = source;
+        this.target = target;
+        this.shouldMatchRings = shouldMatchRings;
+        this.shouldMatchBonds = shouldMatchBonds;
         this.allAtomMCS = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
         this.allMCS = Collections.synchronizedList(new ArrayList<Map<Integer, Integer>>());
+        if (shouldMatchRings) {
+            try {
+                initializeMolecule(source);
+                initializeMolecule(target);
+            } catch (CDKException ex) {
+            }
+        }
+        searchMCS();
     }
 
-    /** {@inheritDoc}
-     *
+    /**
+     * 
      * @param source
      * @param target
      */
-    @Override
-    @TestMethod("testSet_MolHandler_MolHandler")
-    public synchronized void set(IAtomContainer source, IAtomContainer target) {
+    public CDKMCSHandler(IQueryAtomContainer source, IQueryAtomContainer target) {
         this.source = source;
         this.target = target;
+        this.shouldMatchRings = true;
+        this.shouldMatchBonds = true;
+        this.allAtomMCS = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
+        this.allMCS = Collections.synchronizedList(new ArrayList<Map<Integer, Integer>>());
+        if (shouldMatchRings) {
+            try {
+                initializeMolecule(source);
+                initializeMolecule(target);
+            } catch (CDKException ex) {
+            }
+        }
+        searchMCS();
     }
 
     /** {@inheritDoc}
      *
-     * @param source
-     * @param target
      */
-    @Override
-    @TestMethod("testSet_IQueryAtomContainer_MolHandler")
-    public synchronized void set(IQueryAtomContainer source, IAtomContainer target) {
-        this.source = source;
-        this.target = target;
-    }
-
-    /** {@inheritDoc}
-     *
-     * @param shouldMatchBonds
-     */
-    @Override
     @TestMethod("testSearchMCS")
-    public synchronized void searchMCS(boolean shouldMatchBonds, boolean shouldMatchRings) {
+    private synchronized void searchMCS() {
 
         CDKRMapHandler rmap = new CDKRMapHandler();
         try {
-            if (shouldMatchRings) {
-                initializeMolecule(source);
-                initializeMolecule(target);
-            }
 
             if (source.getAtomCount() > target.getAtomCount()) {
                 rOnPFlag = true;
@@ -218,6 +230,7 @@ public class CDKMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
     }
 
     /** {@inheritDoc}
+     * @return 
      */
     @Override
     @TestMethod("testGetAllMapping")
@@ -226,6 +239,7 @@ public class CDKMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
     }
 
     /** {@inheritDoc}
+     * @return 
      */
     @Override
     @TestMethod("testGetFirstMapping")
@@ -237,6 +251,7 @@ public class CDKMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
     }
 
     /** {@inheritDoc}
+     * @return 
      */
     @Override
     @TestMethod("testGetAllAtomMapping")
@@ -245,6 +260,7 @@ public class CDKMCSHandler extends AbstractMCSAlgorithm implements IMCSBase {
     }
 
     /** {@inheritDoc}
+     * @return 
      */
     @Override
     @TestMethod("testGetFirstAtomMapping")
