@@ -26,7 +26,6 @@ package org.openscience.smsd;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import junit.framework.Assert;
@@ -41,7 +40,6 @@ import org.openscience.cdk.Molecule;
 import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.exception.InvalidSmilesException;
-import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IMolecule;
 import org.openscience.cdk.io.IChemObjectReader.Mode;

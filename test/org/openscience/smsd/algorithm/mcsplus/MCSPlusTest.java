@@ -32,8 +32,10 @@ import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.exception.CDKException;
 
 /**
+ * @author Syed Asad Rahman <asad@ebi.ac.uk>
+ *
  * @cdk.module test-smsd
- * @author Asad
+ * @cdk.require java1.6+
  */
 
 
