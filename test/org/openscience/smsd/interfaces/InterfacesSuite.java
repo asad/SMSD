@@ -39,8 +39,7 @@ import org.junit.runners.Suite;
 @Suite.SuiteClasses({
     org.openscience.smsd.interfaces.IFinalMappingTest.class,
     org.openscience.smsd.interfaces.AlgorithmTest.class,
-    org.openscience.smsd.interfaces.IMCSBaseTest.class,
-    org.openscience.smsd.interfaces.AbstractMCSAlgorithmTest.class})
+    org.openscience.smsd.interfaces.IResultsTest.class,})
 public class InterfacesSuite {
 
     @BeforeClass

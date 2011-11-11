@@ -12,10 +12,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.smsd.AtomAtomMapping;
-import org.openscience.smsd.tools.TimeManager;
 
 /**
  *
@@ -40,61 +37,6 @@ public class VF2SubTest {
     
     @After
     public void tearDown() {
-    }
-
-    /**
-     * Test of setTimeManager method, of class VF2Sub.
-     */
-    @Test
-    public void testSetTimeManager() {
-        System.out.println("setTimeManager");
-        TimeManager aTimeManager = null;
-        VF2Sub instance = null;
-        instance.setTimeManager(aTimeManager);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
-    }
-
-    /**
-     * Test of isSubgraph method, of class VF2Sub.
-     */
-    @Test
-    public void testIsSubgraph() {
-        System.out.println("isSubgraph");
-        VF2Sub instance = null;
-        boolean expResult = false;
-        boolean result = instance.isSubgraph();
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
-    }
-
-    /**
-     * Test of set method, of class VF2Sub.
-     */
-    @Test
-    public void testSet_IAtomContainer_IAtomContainer() {
-        System.out.println("set");
-        IAtomContainer source = null;
-        IAtomContainer target = null;
-        VF2Sub instance = null;
-        instance.set(source, target);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
-    }
-
-    /**
-     * Test of set method, of class VF2Sub.
-     */
-    @Test
-    public void testSet_IQueryAtomContainer_IAtomContainer() {
-        System.out.println("set");
-        IQueryAtomContainer source = null;
-        IAtomContainer target = null;
-        VF2Sub instance = null;
-        instance.set(source, target);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
     }
 
     /**
@@ -154,20 +96,6 @@ public class VF2SubTest {
     }
 
     /**
-     * Test of isBondMatchFlag method, of class VF2Sub.
-     */
-    @Test
-    public void testIsBondMatchFlag() {
-        System.out.println("isBondMatchFlag");
-        VF2Sub instance = null;
-        boolean expResult = false;
-        boolean result = instance.isBondMatchFlag();
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
-    }
-
-    /**
      * Test of isTimeOut method, of class VF2Sub.
      */
     @Test
@@ -182,14 +110,14 @@ public class VF2SubTest {
     }
 
     /**
-     * Test of isMatchRings method, of class VF2Sub.
+     * Test of isSubgraph method, of class VF2Sub.
      */
     @Test
-    public void testIsMatchRings() {
-        System.out.println("isMatchRings");
+    public void testIsSubgraph() {
+        System.out.println("isSubgraph");
         VF2Sub instance = null;
         boolean expResult = false;
-        boolean result = instance.isMatchRings();
+        boolean result = instance.isSubgraph();
         assertEquals(expResult, result);
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");

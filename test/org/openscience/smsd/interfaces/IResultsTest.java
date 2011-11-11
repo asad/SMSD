@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.openscience.smsd.algorithm.vflib.substructure;
+package org.openscience.smsd.interfaces;
 
 import java.util.List;
 import java.util.Map;
@@ -18,9 +18,9 @@ import org.openscience.smsd.AtomAtomMapping;
  *
  * @author Asad
  */
-public class VF2Test {
+public class IResultsTest {
     
-    public VF2Test() {
+    public IResultsTest() {
     }
 
     @BeforeClass
@@ -40,12 +40,12 @@ public class VF2Test {
     }
 
     /**
-     * Test of getAllAtomMapping method, of class VF2.
+     * Test of getAllAtomMapping method, of class IResults.
      */
     @Test
     public void testGetAllAtomMapping() {
         System.out.println("getAllAtomMapping");
-        VF2 instance = null;
+        IResults instance = new IResultsImpl();
         List expResult = null;
         List result = instance.getAllAtomMapping();
         assertEquals(expResult, result);
@@ -54,12 +54,12 @@ public class VF2Test {
     }
 
     /**
-     * Test of getAllMapping method, of class VF2.
+     * Test of getAllMapping method, of class IResults.
      */
     @Test
     public void testGetAllMapping() {
         System.out.println("getAllMapping");
-        VF2 instance = null;
+        IResults instance = new IResultsImpl();
         List expResult = null;
         List result = instance.getAllMapping();
         assertEquals(expResult, result);
@@ -68,12 +68,12 @@ public class VF2Test {
     }
 
     /**
-     * Test of getFirstAtomMapping method, of class VF2.
+     * Test of getFirstAtomMapping method, of class IResults.
      */
     @Test
     public void testGetFirstAtomMapping() {
         System.out.println("getFirstAtomMapping");
-        VF2 instance = null;
+        IResults instance = new IResultsImpl();
         AtomAtomMapping expResult = null;
         AtomAtomMapping result = instance.getFirstAtomMapping();
         assertEquals(expResult, result);
@@ -82,12 +82,12 @@ public class VF2Test {
     }
 
     /**
-     * Test of getFirstMapping method, of class VF2.
+     * Test of getFirstMapping method, of class IResults.
      */
     @Test
     public void testGetFirstMapping() {
         System.out.println("getFirstMapping");
-        VF2 instance = null;
+        IResults instance = new IResultsImpl();
         Map expResult = null;
         Map result = instance.getFirstMapping();
         assertEquals(expResult, result);
@@ -95,17 +95,22 @@ public class VF2Test {
         fail("The test case is a prototype.");
     }
 
-    /**
-     * Test of isSubgraph method, of class VF2.
-     */
-    @Test
-    public void testIsSubgraph() {
-        System.out.println("isSubgraph");
-        VF2 instance = null;
-        boolean expResult = false;
-        boolean result = instance.isSubgraph();
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+    public class IResultsImpl implements IResults {
+
+        public List<AtomAtomMapping> getAllAtomMapping() {
+            return null;
+        }
+
+        public List<Map<Integer, Integer>> getAllMapping() {
+            return null;
+        }
+
+        public AtomAtomMapping getFirstAtomMapping() {
+            return null;
+        }
+
+        public Map<Integer, Integer> getFirstMapping() {
+            return null;
+        }
     }
 }

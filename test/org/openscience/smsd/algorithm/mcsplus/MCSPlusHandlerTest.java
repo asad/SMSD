@@ -1,68 +1,62 @@
-/* Copyright (C) 2010  Egon Willighagen <egonw@users.sf.net>
- *
- * Contact: cdk-devel@lists.sourceforge.net
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU Lesser General Public License as published by the Free
- * Software Foundation; either version 2.1 of the License, or (at your option)
- * any later version. All we ask is that proper credit is given for our work,
- * which includes - but is not limited to - adding the above copyright notice to
- * the beginning of your source code files, and to any copyright notice that you
- * may distribute with programs based on this work.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
- * details.
- *
- * You should have received rAtomCount copy of the GNU Lesser General Public
- * License along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
  */
 package org.openscience.smsd.algorithm.mcsplus;
 
-import org.openscience.cdk.io.MDLV2000Reader;
-import org.openscience.cdk.smiles.SmilesParser;
-import org.openscience.smsd.Isomorphism;
-import org.openscience.smsd.interfaces.AbstractMCSAlgorithmTest;
-import org.openscience.smsd.interfaces.Algorithm;
-import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
-import org.openscience.cdk.normalize.SMSDNormalizer;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.junit.BeforeClass;
-import org.junit.Test;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.Molecule;
+import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IMolecule;
 import org.openscience.cdk.io.IChemObjectReader.Mode;
-
+import org.openscience.cdk.io.MDLV2000Reader;
+import org.openscience.cdk.normalize.SMSDNormalizer;
+import org.openscience.cdk.smiles.SmilesParser;
+import org.openscience.smsd.Isomorphism;
+import org.openscience.smsd.interfaces.Algorithm;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import static org.junit.Assert.*;
 
 /**
- * Unit testing for the {@link MCSPlusHandler} class.
- * @author     Syed Asad Rahman
- * @author     egonw
- * @cdk.module test-smsd
+ *
+ * @author Asad
  */
-public class MCSPlusHandlerTest extends AbstractMCSAlgorithmTest {
+public class MCSPlusHandlerTest {
+
+    public MCSPlusHandlerTest() {
+    }
 
     @BeforeClass
-    public static void setMCSAlgorithm() {
-        AbstractMCSAlgorithmTest.setMCSAlgorithm(
-                new MCSPlusHandler());
+    public static void setUpClass() throws Exception {
+    }
+
+    @AfterClass
+    public static void tearDownClass() throws Exception {
+    }
+
+    @Before
+    public void setUp() {
+    }
+
+    @After
+    public void tearDown() {
     }
 
     /**
      * Test of searchMCS method, of class MCSPlusHandler.
      */
     @Test
-    @Override
     public void testSearchMCS() {
         try {
             System.out.println("searchMCS");
@@ -71,9 +65,7 @@ public class MCSPlusHandlerTest extends AbstractMCSAlgorithmTest {
             target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
             IAtomContainer queryac = null;
             queryac = sp.parseSmiles("Nc1ccccc1");
-            MCSPlusHandler smsd1 = new MCSPlusHandler();
-            smsd1.set(queryac, target);
-            smsd1.searchMCS(true, false);
+            MCSPlusHandler smsd1 = new MCSPlusHandler(queryac, target, true, false);
             assertNotNull(smsd1.getFirstMapping());
         } catch (InvalidSmilesException ex) {
             Logger.getLogger(MCSPlusHandlerTest.class.getName()).log(Level.SEVERE, null, ex);
@@ -91,9 +83,7 @@ public class MCSPlusHandlerTest extends AbstractMCSAlgorithmTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer queryac = sp.parseSmiles("Nc1ccccc1");
 
-        MCSPlusHandler smsd1 = new MCSPlusHandler();
-        smsd1.set(queryac, target);
-        smsd1.searchMCS(true, false);
+        MCSPlusHandler smsd1 = new MCSPlusHandler(queryac, target, true, false);
         assertNotNull(smsd1.getFirstMapping());
 
     }
@@ -109,36 +99,8 @@ public class MCSPlusHandlerTest extends AbstractMCSAlgorithmTest {
         IMolecule target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IMolecule queryac = sp.parseSmiles("Nc1ccccc1");
 
-        MCSPlusHandler smsd1 = new MCSPlusHandler();
-        smsd1.set(queryac, target);
-        smsd1.searchMCS(true, false);
+        MCSPlusHandler smsd1 = new MCSPlusHandler(queryac, target, true, false);
         assertNotNull(smsd1.getFirstMapping());
-    }
-
-    /**
-     * Test of set method, of class MCSPlusHandler.
-     * @throws CDKException
-     * @throws IOException 
-     */
-    @Test
-    public void testSet_String_String() throws CDKException, IOException {
-        System.out.println("set");
-        String molfile = "data/mdl/decalin.mol";
-        String queryfile = "data/mdl/decalin.mol";
-        Molecule query = new Molecule();
-        Molecule target = new Molecule();
-
-        InputStream ins = this.getClass().getClassLoader().getResourceAsStream(molfile);
-        MDLV2000Reader reader = new MDLV2000Reader(ins, Mode.STRICT);
-        reader.read(query);
-        ins = this.getClass().getClassLoader().getResourceAsStream(queryfile);
-        reader = new MDLV2000Reader(ins, Mode.STRICT);
-        reader.read(target);
-
-        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false);
-        smsd1.setChemFilters(true, true, true);
-        double score = 1.0;
-        assertEquals(score, smsd1.getTanimotoSimilarity(), 0.0001);
     }
 
     /**
@@ -152,9 +114,7 @@ public class MCSPlusHandlerTest extends AbstractMCSAlgorithmTest {
 
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer queryac = sp.parseSmiles("Nc1ccccc1");
-        MCSPlusHandler instance = new MCSPlusHandler();
-        instance.set(queryac, target);
-        instance.searchMCS(true, false);
+        MCSPlusHandler instance = new MCSPlusHandler(queryac, target, true, false);
         assertNotNull(instance.getFirstMapping());
     }
 
@@ -170,9 +130,7 @@ public class MCSPlusHandlerTest extends AbstractMCSAlgorithmTest {
         IAtomContainer target = sp.parseSmiles("Nc1ccccc1");
 
 
-        MCSPlusHandler smsd1 = new MCSPlusHandler();
-        smsd1.set(query, target);
-        smsd1.searchMCS(true, false);
+        MCSPlusHandler smsd1 = new MCSPlusHandler(query, target, true, false);
         assertNotNull(smsd1.getFirstMapping());
         assertEquals(2, smsd1.getAllAtomMapping().size());
     }
@@ -189,11 +147,8 @@ public class MCSPlusHandlerTest extends AbstractMCSAlgorithmTest {
         IAtomContainer target = sp.parseSmiles("Nc1ccccc1");
 
 
-        MCSPlusHandler smsd1 = new MCSPlusHandler();
-        smsd1.set(query, target);
-        smsd1.searchMCS(true, false);
+        MCSPlusHandler smsd1 = new MCSPlusHandler(query, target, true, true);
         assertNotNull(smsd1.getFirstMapping());
-
         assertEquals(2, smsd1.getAllMapping().size());
     }
 
@@ -209,9 +164,7 @@ public class MCSPlusHandlerTest extends AbstractMCSAlgorithmTest {
         IAtomContainer target = sp.parseSmiles("Nc1ccccc1");
 
 
-        MCSPlusHandler smsd1 = new MCSPlusHandler();
-        smsd1.set(query, target);
-        smsd1.searchMCS(true, false);
+        MCSPlusHandler smsd1 = new MCSPlusHandler(query, target, true, false);
         assertNotNull(smsd1.getFirstMapping());
 
         assertEquals(7, smsd1.getFirstAtomMapping().getCount());
@@ -235,10 +188,7 @@ public class MCSPlusHandlerTest extends AbstractMCSAlgorithmTest {
         SMSDNormalizer.percieveAtomTypesAndConfigureAtoms(query);
         CDKHueckelAromaticityDetector.detectAromaticity(query);
 
-        MCSPlusHandler smsd1 = new MCSPlusHandler();
-        smsd1.set(query, target);
-        smsd1.searchMCS(true, false);
-
+        MCSPlusHandler smsd1 = new MCSPlusHandler(query, target, true, false);
         assertNotNull(smsd1.getFirstMapping());
         assertEquals(7, smsd1.getFirstMapping().size());
     }
