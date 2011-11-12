@@ -71,11 +71,7 @@ import org.openscience.smsd.interfaces.ITimeOut;
  *  <font color="#003366">
  *  <pre>
  * 
- * Test ring match using MCS VF2Plus
- * @throws Exception
- *
- * @Test
- * public void testVF2MCS() throws Exception {
+ * 
  * SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
  * // Benzene
  * IAtomContainer query = sp.parseSmiles("C1=CC=CC=C1");
@@ -103,7 +99,7 @@ import org.openscience.smsd.interfaces.ITimeOut;
  *      }
  *      System.out.println("");
  *  }
- * }
+ * 
  * 
  *  </pre>
  *  </font>
