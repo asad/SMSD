@@ -249,7 +249,7 @@ public final class Substructure extends BaseMapping {
 
     private synchronized void singleMapping(boolean shouldMatchBonds) {
         SingleMappingHandler mcs = null;
-        if (mol1 instanceof IQueryAtomContainer) {
+        if (!(mol1 instanceof IQueryAtomContainer) && !(mol2 instanceof IQueryAtomContainer)) {
             mcs = new SingleMappingHandler(mol1, mol2, shouldMatchBonds, isMatchRings());
         } else {
             mcs = new SingleMappingHandler((IQueryAtomContainer) mol1, mol2);
