@@ -33,6 +33,7 @@ import java.util.logging.Logger;
 import org.openscience.cdk.AtomContainer;
 
 import org.openscience.cdk.CDKConstants;
+import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -40,8 +41,9 @@ import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IRingSet;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
 import org.openscience.cdk.isomorphism.matchers.IQueryBond;
+import org.openscience.cdk.ringsearch.SSSRFinder;
+import org.openscience.cdk.tools.manipulator.RingSetManipulator;
 import org.openscience.smsd.AtomAtomMapping;
-import org.openscience.smsd.ring.HanserRingFinder;
 
 /**
  * Filter on stereo and bond matches.
@@ -328,29 +330,28 @@ public final class StereoFilter extends BaseFilter implements IChemicalFilter<Do
         IAtomContainer listMap = list.get(0);
         IAtomContainer subGraph = list.get(1);
         try {
-//            CDKHueckelAromaticityDetector.detectAromaticity(subGraph);
-//            SSSRFinder finder = new SSSRFinder(subGraph);
-//            IRingSet ringSet = finder.findEssentialRings();
-//            RingSetManipulator.sort(ringSet);
-            IRingSet ringSet = HanserRingFinder.getRingSet(subGraph);
-            lScore = getRingMatch(ringSet, listMap);
+            CDKHueckelAromaticityDetector.detectAromaticity(subGraph);
+            SSSRFinder finder = new SSSRFinder(subGraph);
+            IRingSet ringSet = finder.findEssentialRings();
+            RingSetManipulator.sort(ringSet);
+            IAtomContainer allInOneContainer = RingSetManipulator.getAllInOneContainer(ringSet);
+            lScore = getRingMatch(allInOneContainer, listMap);
         } catch (Exception ex) {
             Logger.getLogger(StereoFilter.class.getName()).log(Level.SEVERE, null, ex);
         }
         return lScore;
     }
 
-    private synchronized double getRingMatch(IRingSet rings, IAtomContainer atoms) {
+    private synchronized double getRingMatch(IAtomContainer rings, IAtomContainer atoms) {
         double score = 0.0;
-        for (IAtom a : atoms.atoms()) {
-            for (IAtomContainer ring : rings.atomContainers()) {
-                if (ring.contains(a)) {
-                    score += 10;
-                } else {
-                    score -= 10;
-                }
+        for (IAtom atom : atoms.atoms()) {
+            if (rings.contains(atom)) {
+                score += 10;
+            } else {
+                score -= 10;
             }
         }
+
         return score;
     }
 
