@@ -26,7 +26,7 @@ import org.openscience.smsd.tools.GraphMolecule;
  *
  *
  * MCSSearch.java
- * @modified 4 April, 2011, 11.06 AM
+ * @modified 5 November, 2011, 11.06 AM
  *
  * @author Syed Asad Rahman, EMBL-EBI, Cambridge, UK
  * contact asad@ebi.ac.uk
@@ -176,34 +176,8 @@ public class MCSSearch {
             }
             System.out.println("");
 
-            System.out.println("");
-
         } catch (Exception ex) {
             Logger.getLogger(MCSSearch.class.getName()).log(Level.SEVERE, null, ex);
         }
-    }
-
-    /**
-     *
-     * @param Molecule1
-     * @param Molecule2
-     */
-    private static void printMolecules(IAtomContainer Molecule1, IAtomContainer Molecule2) {
-
-        System.out.println("Molecule 1");
-
-        for (int i = 0; i < Molecule1.getAtomCount(); i++) {
-
-            System.out.print(Molecule1.getAtom(i).getSymbol() + " ");
-        }
-
-        System.out.println();
-        System.out.println("Molecule 2");
-        for (int i = 0; i < Molecule2.getAtomCount(); i++) {
-
-            System.out.print(Molecule2.getAtom(i).getSymbol() + " ");
-        }
-        System.out.println();
-
     }
 }
