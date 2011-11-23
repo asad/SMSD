@@ -1,7 +1,6 @@
 bin
 .classpath
 .project
-*.mol
 *.out
 build
 /nbproject/private/
