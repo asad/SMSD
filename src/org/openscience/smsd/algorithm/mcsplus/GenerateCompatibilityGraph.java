@@ -317,12 +317,10 @@ public final class GenerateCompatibilityGraph {
                 dEdges.add((iIndex / 3) + 1);
                 dEdges.add((jIndex / 3) + 1);
             }
+        } else if ((!molecule1_pair_connected && !molecule2_pair_connected)) {
+            dEdges.add((iIndex / 3) + 1);
+            dEdges.add((jIndex / 3) + 1);
         }
-
-//        else if ((!molecule1_pair_connected && !molecule2_pair_connected)) {
-//            dEdges.add((iIndex / 3) + 1);
-//            dEdges.add((jIndex / 3) + 1);
-//        }
     }
 
     /**

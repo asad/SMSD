@@ -119,9 +119,9 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
     private double bondSensitiveCDKMCSTimeOut = 1.00;//mins
     private double bondInSensitiveCDKMCSTimeOut = 1.00;//mins
     private double bondSensitiveMCSPlusTimeOut = 1.00;//mins
-    private double bondInSensitiveMCSPlusTimeOut = 2.00;//mins
-    private double bondSensitiveVFTimeOut = 2.00;//mins
-    private double bondInSensitiveVFTimeOut = 2.00;//mins
+    private double bondInSensitiveMCSPlusTimeOut = 1.00;//mins
+    private double bondSensitiveVFTimeOut = 1.00;//mins
+    private double bondInSensitiveVFTimeOut = 1.00;//mins
 
     /**
      * Initialize query and target molecules.

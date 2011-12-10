@@ -75,7 +75,6 @@ public class VF2MCS extends MoleculeInitializer implements IResults {
     private List<Map<INode, IAtom>> vfLibSolutions = null;
     private final IAtomContainer source;
     private final IAtomContainer target;
-    private int vfMCSSize = -1;
     private int countR = 0;
     private int countP = 0;
     private final TimeManager timeManager;
@@ -121,6 +120,7 @@ public class VF2MCS extends MoleculeInitializer implements IResults {
                 initializeMolecule(source);
                 initializeMolecule(target);
             } catch (CDKException ex) {
+                Logger.error(ex);
             }
         }
         searchMCS();
@@ -159,9 +159,11 @@ public class VF2MCS extends MoleculeInitializer implements IResults {
     private synchronized void searchMCS() {
 
         searchVFMCSMappings();
-        boolean flag = isExtensionFeasible();
-        if (flag && !vfLibSolutions.isEmpty()) {
+        if (!vfLibSolutions.isEmpty()) {
             try {
+
+                List<Map<Integer, Integer>> allCliqueMCS = new ArrayList<Map<Integer, Integer>>();
+                List<AtomAtomMapping> allCliqueAtomMCS = new ArrayList<AtomAtomMapping>();
                 GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(source, target, true, isMatchRings());
                 List<Integer> comp_graph_nodes = gcg.getCompGraphNodes();
 
@@ -198,13 +200,22 @@ public class VF2MCS extends MoleculeInitializer implements IResults {
                         }
                     }
 
-                    if (!atomatomMapping.isEmpty() && !hasMap(mapping, allMCSCopy)) {
-//                        System.out.println("\nvfMCSSize: " + vfMCSSize);
-                        allAtomMCSCopy.add(counter, atomatomMapping);
-                        allMCSCopy.add(counter, mapping);
+                    if (!atomatomMapping.isEmpty() && !hasMap(mapping, allCliqueMCS)) {
+                        allCliqueAtomMCS.add(counter, atomatomMapping);
+                        allCliqueMCS.add(counter, mapping);
                         counter++;
                     }
                     maxCliqueSet.pop();
+                }
+
+                /*add more cliques*/
+                for (int i = 0; i < allCliqueMCS.size(); i++) {
+                    Map<Integer, Integer> map = allCliqueMCS.get(i);
+                    AtomAtomMapping atomMCSMap = allCliqueAtomMCS.get(i);
+                    if (!hasClique(map, allMCSCopy)) {
+                        allMCSCopy.add(map);
+                        allAtomMCSCopy.add(atomMCSMap);
+                    }
                 }
 
                 searchMcGregorMapping();
@@ -213,18 +224,20 @@ public class VF2MCS extends MoleculeInitializer implements IResults {
             } catch (IOException ex) {
                 Logger.error(Level.SEVERE, null, ex);
             }
-        } else if (!allAtomMCSCopy.isEmpty()) {
-            allAtomMCS.addAll(allAtomMCSCopy);
-            allMCS.addAll(allMCSCopy);
         }
-    }
+        allMCS.clear();
+        allAtomMCS.clear();
 
-    private synchronized boolean isExtensionFeasible() {
-        int commonAtomCount = checkCommonAtomCount(getReactantMol(), getProductMol());
-        if (commonAtomCount > vfMCSSize) {
-            return true;
+        if (!allAtomMCSCopy.isEmpty()) {
+            for (int i = 0; i < allMCSCopy.size(); i++) {
+                Map<Integer, Integer> map = allMCSCopy.get(i);
+                AtomAtomMapping atomMCSMap = allAtomMCSCopy.get(i);
+                if (!hasMap(map, allMCS)) {
+                    allMCS.add(map);
+                    allAtomMCS.add(atomMCSMap);
+                }
+            }
         }
-        return false;
     }
 
     private boolean hasMap(Map<Integer, Integer> maps, List<Map<Integer, Integer>> mapGlobal) {
@@ -237,6 +250,40 @@ public class VF2MCS extends MoleculeInitializer implements IResults {
             }
         }
         return false;
+    }
+
+    private boolean hasClique(Map<Integer, Integer> maps, List<Map<Integer, Integer>> mapGlobal) {
+        for (Map<Integer, Integer> test : mapGlobal) {
+            if (matchMaps(test, maps)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /*
+     * check if this map is the subset of the existing map or same 
+     * 
+     */
+    private boolean matchMaps(Map<Integer, Integer> maps1, Map<Integer, Integer> maps2) {
+        if (maps1.size() <= maps2.size()) {
+            for (Integer atom1 : maps1.keySet()) {
+                if (maps2.containsKey(atom1) && maps1.get(atom1).equals(maps2.get(atom1))) {
+                    continue;
+                } else {
+                    return false;
+                }
+            }
+        } else {
+            for (Integer atom1 : maps2.keySet()) {
+                if (maps1.containsKey(atom1) && maps2.get(atom1).equals(maps1.get(atom1))) {
+                    continue;
+                } else {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     /** {@inheritDoc}
@@ -281,22 +328,6 @@ public class VF2MCS extends MoleculeInitializer implements IResults {
         return new AtomAtomMapping(source, target);
     }
 
-    private synchronized int checkCommonAtomCount(IAtomContainer reactantMolecule, IAtomContainer productMolecule) {
-        ArrayList<String> atoms = new ArrayList<String>();
-        for (int i = 0; i < reactantMolecule.getAtomCount(); i++) {
-            atoms.add(reactantMolecule.getAtom(i).getSymbol());
-        }
-        int common = 0;
-        for (int i = 0; i < productMolecule.getAtomCount(); i++) {
-            String symbol = productMolecule.getAtom(i).getSymbol();
-            if (atoms.contains(symbol)) {
-                atoms.remove(symbol);
-                common++;
-            }
-        }
-        return common;
-    }
-
     /*
      * Note: VF MCS will search for cliques which will match the types.
      * Mcgregor will extend the cliques depending of the bond type 
@@ -322,8 +353,7 @@ public class VF2MCS extends MoleculeInitializer implements IResults {
             }
             setVFMappings(true, queryCompiler);
         } else if (countR <= countP) {
-//            queryCompiler = new QueryCompiler(this.source, isBondMatchFlag()).compile();
-            queryCompiler = new QueryCompiler(this.source, true, isMatchRings()).compile();
+            queryCompiler = new QueryCompiler(this.source, this.shouldMatchRings, isMatchRings()).compile();
             mapper = new VFMCSMapper(queryCompiler);
             List<Map<INode, IAtom>> maps = mapper.getMaps(getProductMol());
             if (maps != null) {
@@ -331,8 +361,7 @@ public class VF2MCS extends MoleculeInitializer implements IResults {
             }
             setVFMappings(true, queryCompiler);
         } else {
-//            queryCompiler = new QueryCompiler(getProductMol(), isBondMatchFlag()).compile();
-            queryCompiler = new QueryCompiler(getProductMol(), true, isMatchRings()).compile();
+            queryCompiler = new QueryCompiler(getProductMol(), this.shouldMatchRings, isMatchRings()).compile();
             mapper = new VFMCSMapper(queryCompiler);
             List<Map<INode, IAtom>> maps = mapper.getMaps(getReactantMol());
             if (maps != null) {
@@ -379,7 +408,6 @@ public class VF2MCS extends MoleculeInitializer implements IResults {
         }
 //        System.out.println("\nSol count after MG" + mappings.size());
         setMcGregorMappings(ROPFlag, mappings);
-        vfMCSSize = vfMCSSize / 2;
 //        System.out.println("After set Sol count MG" + allMCS.size());
 //        System.out.println("MCSSize " + vfMCSSize + "\n");
     }
@@ -419,25 +447,21 @@ public class VF2MCS extends MoleculeInitializer implements IResults {
                     }
                 }
             }
-            if (indexindexMapping.size() > vfMCSSize) {
-                vfMCSSize = indexindexMapping.size();
-                allAtomMCSCopy.clear();
-                allMCSCopy.clear();
-                counter = 0;
-            }
-            if (!atomatomMapping.isEmpty() && !hasMap(indexindexMapping, allMCSCopy)
-                    && indexindexMapping.size() == vfMCSSize) {
-//                System.out.println("\nvfMCSSize: " + vfMCSSize);
+
+            if (!atomatomMapping.isEmpty()
+                    && !hasMap(indexindexMapping, allMCSCopy)) {
                 allAtomMCSCopy.add(counter, atomatomMapping);
                 allMCSCopy.add(counter, indexindexMapping);
                 counter++;
             }
         }
-//        System.out.println("After set allMCSCopy " + allMCSCopy);
     }
 
     private synchronized void setMcGregorMappings(boolean RONP, List<List<Integer>> mappings) throws CDKException {
         int counter = 0;
+        int solSize = 0;
+        allAtomMCS.clear();
+        allAtomMCSCopy.clear();
         for (List<Integer> mapping : mappings) {
 
             AtomAtomMapping atomatomMapping = new AtomAtomMapping(source, target);
@@ -468,16 +492,16 @@ public class VF2MCS extends MoleculeInitializer implements IResults {
                     throw new CDKException("Atom index pointing to NULL");
                 }
             }
-            if (indexindexMapping.size() > vfMCSSize) {
-                vfMCSSize = indexindexMapping.size();
-                allAtomMCS.clear();
-                allMCS.clear();
+            if (indexindexMapping.size() > solSize) {
+                solSize = indexindexMapping.size();
+                allAtomMCSCopy.clear();
+                allMCSCopy.clear();
                 counter = 0;
             }
-            if (!atomatomMapping.isEmpty() && !hasMap(indexindexMapping, allMCS)
-                    && (indexindexMapping.size()) == vfMCSSize) {
-                allAtomMCS.add(counter, atomatomMapping);
-                allMCS.add(counter, indexindexMapping);
+            if (!atomatomMapping.isEmpty() && !hasMap(indexindexMapping, allMCSCopy)
+                    && (indexindexMapping.size()) == solSize) {
+                allAtomMCSCopy.add(counter, atomatomMapping);
+                allMCSCopy.add(counter, indexindexMapping);
                 counter++;
             }
         }

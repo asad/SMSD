@@ -36,6 +36,8 @@ import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.filters.ChemicalFilters;
+import org.openscience.smsd.interfaces.IAtomMapping;
+
 
 /**
  *

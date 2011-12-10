@@ -32,7 +32,7 @@ import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
-import org.openscience.cdk.interfaces.IMolecule;
+import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.tools.BondEnergies;
 
@@ -102,8 +102,8 @@ public final class EnergyFilter extends BaseFilter implements IChemicalFilter<Do
 //      System.out.println("\nSort By Energies");
         double totalBondEnergy = -9999.0;
 
-        IAtomContainer educt = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class, rMol);
-        IAtomContainer product = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class, pMol);
+        IAtomContainer educt = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class, rMol);
+        IAtomContainer product = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class, pMol);
 
         for (int i = 0; i < educt.getAtomCount(); i++) {
             educt.getAtom(i).setFlag(0, false);

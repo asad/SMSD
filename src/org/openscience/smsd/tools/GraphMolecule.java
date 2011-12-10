@@ -21,7 +21,7 @@
 package org.openscience.smsd.tools;
 
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.interfaces.IMolecule;
+import org.openscience.cdk.interfaces.IAtomContainer;
 
 import java.io.Serializable;
 
@@ -37,7 +37,7 @@ import java.io.Serializable;
  *
  * @cdk.keyword molecule
  */
-public class GraphMolecule extends GraphAtomContainer implements Serializable, IMolecule, Cloneable {
+public class GraphMolecule extends GraphAtomContainer implements Serializable, IAtomContainer, Cloneable {
 
     /**
      * Determines if a de-serialized object is compatible with this class.

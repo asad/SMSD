@@ -61,7 +61,7 @@ public class MoleculeInitializer extends IMoleculeInitializer {
      * which is usually related to a timeout in the ring finding code.
      */
     @Override
-    protected void initializeMolecule(IAtomContainer atomContainer) throws CDKException {
+    protected synchronized void initializeMolecule(IAtomContainer atomContainer) throws CDKException {
 
         if (!(atomContainer instanceof IQueryAtomContainer)) {
             Map<String, Integer> valencesTable = new HashMap<String, Integer>();
@@ -194,13 +194,16 @@ public class MoleculeInitializer extends IMoleculeInitializer {
 
             // check for atomaticity
             try {
+
                 AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(atomContainer);
                 CDKHueckelAromaticityDetector.detectAromaticity(atomContainer);
-            } catch (CDKException e) {
+
+            } catch (Exception e) {
                 Logger.debug(e.toString());
                 throw new CDKException(e.toString(), e);
             }
         }
+
     }
 
     /**

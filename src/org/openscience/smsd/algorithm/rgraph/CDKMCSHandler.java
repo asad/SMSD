@@ -33,7 +33,7 @@ import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.graph.ConnectivityChecker;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.interfaces.IMoleculeSet;
+import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.helper.FinalMappings;
@@ -142,10 +142,10 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
      * @param mcss
      * @param shouldMatchBonds 
      * @param shouldMatchRings 
-     * @return IMolecule Set
+     * @return IAtomContainer Set
      * @throws CDKException 
      */
-    protected synchronized IMoleculeSet getUncommon(IAtomContainer mol, IAtomContainer mcss,
+    protected synchronized IAtomContainerSet getUncommon(IAtomContainer mol, IAtomContainer mcss,
             boolean shouldMatchBonds, boolean shouldMatchRings) throws CDKException {
         ArrayList<Integer> atomSerialsToDelete = new ArrayList<Integer>();
 

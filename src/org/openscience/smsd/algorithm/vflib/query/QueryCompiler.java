@@ -113,7 +113,7 @@ public class QueryCompiler implements IQueryCompiler {
      * Return molecule
      * @return Atom Container
      */
-    private synchronized IAtomContainer getMolecule() {
+    private synchronized IAtomContainer getAtomContainer() {
         return queryMolecule == null ? molecule : queryMolecule;
     }
 

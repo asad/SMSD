@@ -107,9 +107,9 @@ final public class HanserRingFinder {
      * @return report collected the rings
      * @throws CDKException 
      */
-    public static synchronized IRingSet getRingSet(IAtomContainer molecule) throws CDKException {
-        Collection<List<IAtom>> cycles = findRings(molecule);
+    public static IRingSet getRingSet(IAtomContainer molecule) throws CDKException {
         IRingSet ringSet = DefaultChemObjectBuilder.getInstance().newInstance(IRingSet.class);
+        Collection<List<IAtom>> cycles = findRings(molecule);
         for (List<IAtom> ringAtoms : cycles) {
             IRing ring = molecule.getBuilder().newInstance(IRing.class);
             for (IAtom atom : ringAtoms) {

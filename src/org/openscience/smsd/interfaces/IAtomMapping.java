@@ -21,10 +21,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-package org.openscience.smsd;
+package org.openscience.smsd.interfaces;
 
 import java.util.List;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.smsd.AtomAtomMapping;
 
 /**
  * Interface for all MCS/Substructure algorithms.
@@ -137,4 +138,11 @@ public interface IAtomMapping {
      * @return All possible MCS atom Mappings
      */
     public abstract int getMappingCount();
+    
+    /**
+     * Convert to String
+     * @return
+     */
+    @Override
+    public abstract String toString();
 }
