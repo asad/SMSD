@@ -10,7 +10,7 @@ import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.interfaces.IMolecule;
+import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.io.SMILESWriter;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.smsd.AtomAtomMapping;
@@ -29,7 +29,7 @@ public class MCS {
         mol1 = mcs.getQueryContainer();
         mol2 = mcs.getTargetContainer();
 
-        IMolecule mcsmolecule = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class, mol1);
+        IAtomContainer mcsmolecule = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class, mol1);
         Map<Integer, Integer> indexMapping = getIndexMapping(mcs.getFirstAtomMapping());
 
         List<IAtom> atomsToBeRemoved = new ArrayList<IAtom>();

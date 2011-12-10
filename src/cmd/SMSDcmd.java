@@ -21,14 +21,13 @@ import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.graph.ConnectivityChecker;
 import org.openscience.cdk.interfaces.IAtom;
-import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
-import org.openscience.cdk.interfaces.IMolecule;
+import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.io.iterator.IIteratingChemObjectReader;
 import org.openscience.cdk.nonotify.NoNotificationChemObjectBuilder;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.AtomAtomMapping;
-import org.openscience.smsd.IAtomMapping;
+import org.openscience.smsd.BaseMapping;
 import org.openscience.smsd.Isomorphism;
 import org.openscience.smsd.Substructure;
 import org.openscience.smsd.interfaces.Algorithm;
@@ -108,23 +107,23 @@ public class SMSDcmd {
         if (reader == null) {
             throw new IOException("Unknown input type " + targetType);
         }
-        List<IMolecule> atomContainerSet = new ArrayList<IMolecule>();
+        List<IAtomContainer> atomContainerSet = new ArrayList<IAtomContainer>();
         while (reader.hasNext()) {
-            IMolecule target = (IMolecule) reader.next();
+            IAtomContainer target = (IAtomContainer) reader.next();
             atomContainerSet.add(target);
         }
 
         Comparator<IAtomContainer> comparator = new AtomContainerComparator();
         Collections.sort(atomContainerSet, comparator);
 
-        IMolecule mcsMolecule = null;
+        IAtomContainer mcsMolecule = null;
         boolean matchBonds = argumentHandler.isMatchBondType();
         boolean matchRings = argumentHandler.isMatchRingType();
         boolean removeHydrogens = argumentHandler.isApplyHRemoval();
         int filter = argumentHandler.getChemFilter();
         List<IAtomContainer> targets = new ArrayList<IAtomContainer>();
 
-        for (IMolecule target : atomContainerSet) {
+        for (IAtomContainer target : atomContainerSet) {
             boolean flag = ConnectivityChecker.isConnected(target);
             if (!flag) {
                 System.out.println("WARNING : Skipping target molecule "
@@ -161,8 +160,8 @@ public class SMSDcmd {
                 mcsMolecule = target;
                 targets.add(target);
             } else {
-                Isomorphism smsd = run(mcsMolecule, target, filter, matchBonds, matchRings);
-                target = target.getBuilder().newInstance(IMolecule.class, smsd.getFirstAtomMapping().getTarget());
+                BaseMapping smsd = run(mcsMolecule, target, filter, matchBonds, matchRings);
+                target = target.getBuilder().newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getTarget());
                 targets.add(target);
                 Map<Integer, Integer> mapping = getIndexMapping(smsd.getFirstAtomMapping());
                 IAtomContainer subgraph = getSubgraph(target, mapping);
@@ -182,7 +181,7 @@ public class SMSDcmd {
             List<IAtomContainer> secondRoundTargets = new ArrayList<IAtomContainer>();
             IChemObjectBuilder builder = NoNotificationChemObjectBuilder.getInstance();
             for (IAtomContainer target : targets) {
-                Isomorphism smsd = run(mcsMolecule, (IMolecule) target, filter, matchBonds, matchRings);
+                BaseMapping smsd = run(mcsMolecule, target, filter, matchBonds, matchRings);
                 mappings.add(getIndexMapping(smsd.getFirstAtomMapping()));
                 secondRoundTargets.add(
                         builder.newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getTarget()));
@@ -197,7 +196,7 @@ public class SMSDcmd {
             InputHandler inputHandler,
             OutputHandler outputHandler,
             ArgumentHandler argumentHandler) throws IOException, CDKException, CloneNotSupportedException {
-        IMolecule query = inputHandler.getQuery();
+        IAtomContainer query = inputHandler.getQuery();
         boolean removeHydrogens = argumentHandler.isApplyHRemoval();
 
         /*check connectivity*/
@@ -216,7 +215,7 @@ public class SMSDcmd {
         outputHandler.startAppending(out);
 
         long startTime = System.currentTimeMillis();
-        IAtomMapping smsd = null;
+        BaseMapping smsd = null;
         boolean matchBonds = argumentHandler.isMatchBondType();
         boolean matchRings = argumentHandler.isMatchRingType();
 
@@ -227,7 +226,7 @@ public class SMSDcmd {
             throw new IOException("Unknown input type " + targetType);
         }
         while (reader.hasNext()) {
-            IMolecule target = (IMolecule) reader.next();
+            IAtomContainer target = (IAtomContainer) reader.next();
             flag = ConnectivityChecker.isConnected(target);
             if (!flag) {
                 System.out.println("WARNING : Skipping target molecule "
@@ -260,8 +259,8 @@ public class SMSDcmd {
             String queryPath = argumentHandler.getQueryFilepath();
             String targetPath = argumentHandler.getTargetFilepath();
 
-            query = query.getBuilder().newInstance(IMolecule.class, smsd.getFirstAtomMapping().getQuery());
-            target = target.getBuilder().newInstance(IMolecule.class, smsd.getFirstAtomMapping().getTarget());
+            query = query.getBuilder().newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getQuery());
+            target = target.getBuilder().newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getTarget());
 
 
             Map<IAtom, IAtom> mcs = smsd.getFirstAtomMapping().getMappings();
@@ -318,8 +317,8 @@ public class SMSDcmd {
             OutputHandler outputHandler,
             ArgumentHandler argumentHandler)
             throws IOException, CDKException, CloneNotSupportedException {
-        IMolecule query = inputHandler.getQuery();
-        IMolecule target = inputHandler.getTarget();
+        IAtomContainer query = inputHandler.getQuery();
+        IAtomContainer target = inputHandler.getTarget();
 
         boolean removeHydrogens = argumentHandler.isApplyHRemoval();
 
@@ -371,7 +370,7 @@ public class SMSDcmd {
         }
 
         long startTime = System.currentTimeMillis();
-        IAtomMapping smsd = null;
+        BaseMapping smsd = null;
         boolean matchBonds = argumentHandler.isMatchBondType();
         boolean matchRings = argumentHandler.isMatchRingType();
 
@@ -382,8 +381,8 @@ public class SMSDcmd {
             smsd = run(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings);
         }
 
-        query = query.getBuilder().newInstance(IMolecule.class, smsd.getFirstAtomMapping().getQuery());
-        target = target.getBuilder().newInstance(IMolecule.class, smsd.getFirstAtomMapping().getTarget());
+        query = query.getBuilder().newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getQuery());
+        target = target.getBuilder().newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getTarget());
 
         long endTime = System.currentTimeMillis();
         long executionTime = endTime - startTime;
@@ -451,7 +450,7 @@ public class SMSDcmd {
     }
 
     private static IAtomContainer getSubgraph(
-            IMolecule container, Map<Integer, Integer> mapping) throws CloneNotSupportedException {
+            IAtomContainer container, Map<Integer, Integer> mapping) throws CloneNotSupportedException {
         Collection<Integer> values = mapping.values();
         List<IAtom> subgraphAtoms = new ArrayList<IAtom>();
         IAtomContainer subgraph = (IAtomContainer) container.clone();
@@ -470,14 +469,14 @@ public class SMSDcmd {
         return subgraph;
     }
 
-    private static Isomorphism run(
-            IMolecule query,
-            IMolecule target,
+    private static BaseMapping run(
+            IAtomContainer query,
+            IAtomContainer target,
             int filter,
             boolean matchBonds,
             boolean matchRings) throws CDKException {
         // XXX - if clean and configure is 'true', is that not duplicate configuring?
-        Isomorphism smsd = new Isomorphism(query, target, Algorithm.VFLibMCS, matchBonds, matchRings);
+        BaseMapping smsd = new Isomorphism(query, target, Algorithm.VFLibMCS, matchBonds, matchRings);
 //        Isomorphism smsd = new Isomorphism(query, target, Algorithm.CDKMCS, matchBonds, matchRings);
 //        Isomorphism smsd = new Isomorphism(query, target, Algorithm.MCSPlus, matchBonds, matchRings);
         if (filter == 0) {
@@ -495,14 +494,14 @@ public class SMSDcmd {
         return smsd;
     }
 
-    private static Substructure runSubstructure(
-            IMolecule query,
-            IMolecule target,
+    private static BaseMapping runSubstructure(
+            IAtomContainer query,
+            IAtomContainer target,
             int filter,
             boolean matchBonds,
             boolean matchRings) throws CDKException {
         // XXX - if clean and configure is 'true', is that not duplicate configuring?
-        Substructure smsd = new Substructure(query, target, matchBonds, matchRings, false);
+        BaseMapping smsd = new Substructure(query, target, matchBonds, matchRings, false);
 
         if (smsd.isSubgraph()) {
             if (filter == 0) {

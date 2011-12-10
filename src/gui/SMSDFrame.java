@@ -50,7 +50,6 @@ import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.interfaces.IMolecule;
 import org.openscience.cdk.io.IChemObjectReader;
 import org.openscience.cdk.io.MDLReader;
 import org.openscience.cdk.layout.StructureDiagramGenerator;
@@ -255,12 +254,12 @@ public class SMSDFrame extends JFrame {
                 try {
                     StructureDiagramGenerator sdg = new StructureDiagramGenerator();
                     SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
-                    IMolecule query = new GraphMolecule(sp.parseSmiles(jFormattedTextField1.getText()));
+                    IAtomContainer query = new GraphMolecule(sp.parseSmiles(jFormattedTextField1.getText()));
                     molFiles.add(count++, jFormattedTextField1.getText());
                     molFiles.add(count++, query);
                     jTextArea1.append("Attaching smile: " + jFormattedTextField1.getText() + "." + newline);
 
-                    IMolecule target = new GraphMolecule(sp.parseSmiles(jFormattedTextField2.getText()));
+                    IAtomContainer target = new GraphMolecule(sp.parseSmiles(jFormattedTextField2.getText()));
                     molFiles.add(count++, jFormattedTextField2.getText());
                     molFiles.add(count++, target);
                     jTextArea1.append("Attaching smile: " + jFormattedTextField2.getText() + "." + newline);
@@ -407,7 +406,7 @@ public class SMSDFrame extends JFrame {
         IAtomContainer container = null;
         try {
             MDLReader reader2 = new MDLReader(new FileReader(fileName), IChemObjectReader.Mode.RELAXED);
-            IMolecule molecule = (IMolecule) reader2.read(new GraphMolecule());
+            IAtomContainer molecule = (IAtomContainer) reader2.read(new GraphMolecule());
             reader2.close();
 
             count = 0;

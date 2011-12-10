@@ -19,8 +19,6 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
-import org.openscience.cdk.interfaces.IMolecule;
-import org.openscience.cdk.interfaces.IMoleculeSet;
 import org.openscience.cdk.nonotify.NoNotificationChemObjectBuilder;
 import org.openscience.reactionblast.graphics.direct.DirectMoleculeDrawer;
 import org.openscience.reactionblast.graphics.direct.Params;
@@ -33,13 +31,13 @@ public class ImageGenerator {
 
         public final IAtomContainer query;
         public final IAtomContainer target;
-        public final IMolecule querySubgraph;
-        public final IMolecule targetSubgraph;
+        public final IAtomContainer querySubgraph;
+        public final IAtomContainer targetSubgraph;
         public final String label;
 
         public QueryTargetPair(
                 IAtomContainer query, IAtomContainer target,
-                IMolecule querySubgraph, IMolecule targetSubgraph,
+                IAtomContainer querySubgraph, IAtomContainer targetSubgraph,
                 String label) {
             this.query = query;
             this.target = target;
@@ -52,7 +50,6 @@ public class ImageGenerator {
     public final static int SUB_IMAGE_HEIGHT = 300;
     private List<QueryTargetPair> queryTargetPairs;
     private Params params;
-    
 
     public ImageGenerator() {
         queryTargetPairs = new ArrayList<QueryTargetPair>();
@@ -64,16 +61,16 @@ public class ImageGenerator {
             IAtomContainer target,
             String label,
             Map<Integer, Integer> maxac) throws IOException, Exception {
-        
-        SingleMoleculeLayout msl=new SingleMoleculeLayout(params);
+
+        SingleMoleculeLayout msl = new SingleMoleculeLayout(params);
         msl.layout(query, new Vector2d(0.0, 0.0));
         msl.layout(target, new Vector2d(0.0, 0.0));
 
-        IMolecule cloneOfQuery = (IMolecule) (new org.openscience.cdk.Molecule(query).clone());
-        IMolecule cloneOfTarget = (IMolecule) (new org.openscience.cdk.Molecule(target).clone());
+        IAtomContainer cloneOfQuery = (IAtomContainer) (new org.openscience.cdk.Molecule(query).clone());
+        IAtomContainer cloneOfTarget = (IAtomContainer) (new org.openscience.cdk.Molecule(target).clone());
 
-        IMolecule querySubgraph = query.getBuilder().newInstance(IMolecule.class, cloneOfQuery);
-        IMolecule targetSubgraph = target.getBuilder().newInstance(IMolecule.class, cloneOfTarget);
+        IAtomContainer querySubgraph = query.getBuilder().newInstance(IAtomContainer.class, cloneOfQuery);
+        IAtomContainer targetSubgraph = target.getBuilder().newInstance(IAtomContainer.class, cloneOfTarget);
         List<IAtom> n1 = new ArrayList<IAtom>(query.getAtomCount());
         List<IAtom> n2 = new ArrayList<IAtom>(target.getAtomCount());
 
@@ -108,8 +105,8 @@ public class ImageGenerator {
         // layout, and set the highlight subgraphs
         DirectMoleculeDrawer moleculeDrawer = new DirectMoleculeDrawer();
         IChemObjectBuilder builder = NoNotificationChemObjectBuilder.getInstance();
-        IAtomContainerSet leftHandMoleculeSet = builder.newInstance(IMoleculeSet.class);
-        IAtomContainerSet rightHandMoleculeSet = builder.newInstance(IMoleculeSet.class);
+        IAtomContainerSet leftHandMoleculeSet = builder.newInstance(IAtomContainerSet.class);
+        IAtomContainerSet rightHandMoleculeSet = builder.newInstance(IAtomContainerSet.class);
         for (QueryTargetPair pair : queryTargetPairs) {
             moleculeDrawer.addHighlights(pair.querySubgraph);
             moleculeDrawer.addHighlights(pair.targetSubgraph);
@@ -156,8 +153,8 @@ public class ImageGenerator {
         // layout, and set the highlight subgraphs
         DirectMoleculeDrawer moleculeDrawer = new DirectMoleculeDrawer();
         IChemObjectBuilder builder = NoNotificationChemObjectBuilder.getInstance();
-        IMoleculeSet leftHandMoleculeSet = builder.newInstance(IMoleculeSet.class);
-        IMoleculeSet rightHandMoleculeSet = builder.newInstance(IMoleculeSet.class);
+        IAtomContainerSet leftHandMoleculeSet = builder.newInstance(IAtomContainerSet.class);
+        IAtomContainerSet rightHandMoleculeSet = builder.newInstance(IAtomContainerSet.class);
         for (QueryTargetPair pair : queryTargetPairs) {
             moleculeDrawer.addHighlights(pair.querySubgraph);
             moleculeDrawer.addHighlights(pair.targetSubgraph);

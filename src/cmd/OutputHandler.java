@@ -18,7 +18,6 @@ import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.interfaces.IMolecule;
 import org.openscience.cdk.io.MDLV2000Writer;
 import org.openscience.cdk.smiles.SmilesGenerator;
 import org.openscience.reactionblast.graphics.direct.Params;
@@ -113,7 +112,7 @@ public class OutputHandler {
 
     public void writeMolToMolfile(IAtomContainer mol, Writer out) throws IOException, IllegalArgumentException, CDKException {
         MDLV2000Writer writer = new MDLV2000Writer(out);
-        writer.write(DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class, mol));
+        writer.write(DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class, mol));
         writer.close();
     }
 
@@ -160,7 +159,7 @@ public class OutputHandler {
         outGFile.newLine();
     }
 
-//    public void writeResults(IMolecule mol1, IMolecule mol2,
+//    public void writeResults(IAtomContainer mol1, IAtomContainer mol2,
 //            double tanimotoGraph, double tanimotoAtom, double tanimotoBond, double euclidianGraph, int nAtomsMatched,
 //            long executionTime) throws IOException, CloneNotSupportedException {
     /**
@@ -174,7 +173,7 @@ public class OutputHandler {
      * @throws IOException
      * @throws CloneNotSupportedException
      */
-    public void writeResults(IMolecule mol1, IMolecule mol2,
+    public void writeResults(IAtomContainer mol1, IAtomContainer mol2,
             double tanimotoGraph, double euclidianGraph, int nAtomsMatched,
             long executionTime) throws IOException, CloneNotSupportedException {
         String queryMolInput = argumentHandler.getQueryFilepath();
@@ -303,11 +302,11 @@ public class OutputHandler {
         outDescriptorFile.close();
     }
 
-    public void makeImage(IMolecule mol1, IMolecule mol2, String label, Map<Integer, Integer> mcsNumber) throws IOException, CloneNotSupportedException {
+    public void makeImage(IAtomContainer mol1, IAtomContainer mol2, String label, Map<Integer, Integer> mcsNumber) throws IOException, CloneNotSupportedException {
         imageGenerator.addImages(mol1, mol2, label, mcsNumber);
     }
 
-    public void addImage(IMolecule mol1, IMolecule mol2, String label, Map<Integer, Integer> mcsNumber) throws CloneNotSupportedException, IOException {
+    public void addImage(IAtomContainer mol1, IAtomContainer mol2, String label, Map<Integer, Integer> mcsNumber) throws CloneNotSupportedException, IOException {
         imageGenerator.addImages(mol1, mol2, label, mcsNumber);
     }
 

@@ -17,7 +17,6 @@ import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IChemFile;
-import org.openscience.cdk.interfaces.IMolecule;
 import org.openscience.cdk.io.CMLReader;
 import org.openscience.cdk.io.IChemObjectReader;
 import org.openscience.cdk.io.ISimpleChemObjectReader;
@@ -212,7 +211,7 @@ public class InputHandler {
      * @param type
      * @throws CDKException
      */
-    public void configure(IMolecule mol, String type) throws CDKException {
+    public void configure(IAtomContainer mol, String type) throws CDKException {
         String id = "";
         if (type.equals("PDB")) {
             LigandHelper.addMissingBondOrders(mol);
@@ -228,7 +227,7 @@ public class InputHandler {
         setAtomID(mol);
     }
 
-    private IMolecule getMolFromString(String stringData, String type) throws CDKException {
+    private IAtomContainer getMolFromString(String stringData, String type) throws CDKException {
         if (type.equals("SMI")) {
             return getMolFromSmiles(stringData);
         } else if (type.equals("SIG")) {
@@ -238,18 +237,18 @@ public class InputHandler {
         }
     }
 
-    private IMolecule getMolFromSmiles(String smiles) throws CDKException {
+    private IAtomContainer getMolFromSmiles(String smiles) throws CDKException {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer atomContainer = sp.parseSmiles(smiles);
-        IMolecule mol = new Molecule(atomContainer);
+        IAtomContainer mol = new Molecule(atomContainer);
         configure(mol, "SMI");
         return mol;
     }
 
-    private IMolecule getMolFromSignature(String signatureString) throws CDKException {
+    private IAtomContainer getMolFromSignature(String signatureString) throws CDKException {
         IAtomContainer atomContainer = MoleculeSignature.fromSignatureString(
                 signatureString, DefaultChemObjectBuilder.getInstance());
-        IMolecule mol = new Molecule(atomContainer);
+        IAtomContainer mol = new Molecule(atomContainer);
         configure(mol, "SIG");
         return mol;
     }
@@ -272,14 +271,14 @@ public class InputHandler {
      * @throws IOException
      * @throws CDKException
      */
-    public IMolecule getQuery() throws IOException, CDKException {
+    public IAtomContainer getQuery() throws IOException, CDKException {
         String filenameOrData = argumentHandler.getQueryFilepath();
         String type = argumentHandler.getQueryType();
         if (isSingleFileQuery) {
             ISimpleChemObjectReader reader = getReader(type, filenameOrData);
             IChemFile chemFile = reader.read(new ChemFile());
-            IMolecule molecule =
-                    (IMolecule) ChemFileManipulator.getAllAtomContainers(chemFile).get(0);
+            IAtomContainer molecule =
+                    (IAtomContainer) ChemFileManipulator.getAllAtomContainers(chemFile).get(0);
             configure(molecule, type);
             return molecule;
         } else {
@@ -293,14 +292,14 @@ public class InputHandler {
      * @throws IOException
      * @throws CDKException
      */
-    public IMolecule getTarget() throws IOException, CDKException {
+    public IAtomContainer getTarget() throws IOException, CDKException {
         String filenameOrData = argumentHandler.getTargetFilepath();
         String type = argumentHandler.getTargetType();
         if (isSingleFileTarget) {
             ISimpleChemObjectReader reader = getReader(type, filenameOrData);
             IChemFile chemFile = reader.read(new ChemFile());
-            IMolecule molecule =
-                    (IMolecule) ChemFileManipulator.getAllAtomContainers(chemFile).get(0);
+            IAtomContainer molecule =
+                    (IAtomContainer) ChemFileManipulator.getAllAtomContainers(chemFile).get(0);
             configure(molecule, type);
             return molecule;
         } else {
@@ -323,7 +322,7 @@ public class InputHandler {
         return null;
     }
 
-    private static void setAtomID(IMolecule mol) {
+    private static void setAtomID(IAtomContainer mol) {
         int index = 1;
 
         for (IAtom atom : mol.atoms()) {
