@@ -69,6 +69,13 @@ public final class McGregor {
     }
 
     /**
+     * @param timeout 
+     */
+    public synchronized void setTimeout(float timeout) {
+        this.timeout = timeout;
+    }
+
+    /**
      * @return the timeManager
      */
     protected synchronized TimeManager getTimeManager() {
@@ -93,17 +100,17 @@ public final class McGregor {
      * McGregor starts
      ***************************************************************
      */
-    private IAtomContainer source = null;
-    private IAtomContainer target = null;
+    private final IAtomContainer source;
+    private final IAtomContainer target;
     private BinaryTree last = null;
     private BinaryTree first = null;
-    private Stack<List<Integer>> bestARCS = null;
-    private List<Integer> modifiedARCS = null;
-    private int bestarcsleft = 0;
-    private int globalMCSSize = 0;
-    private List<List<Integer>> mappings = null;
+    private Stack<List<Integer>> bestARCS;
+    private List<Integer> modifiedARCS;
+    private int bestarcsleft;
+    private int globalMCSSize;
+    private List<List<Integer>> mappings;
     /*This should be more or equal to all the atom types*/
-    private static final String[] SIGNS = {
+    private final String[] SIGNS = {
         "$1", "$2", "$3", "$4", "$5", "$6", "$7", "$8", "$9", "$10", "$11", "$12",
         "$13", "$15", "$16", "$17", "$18", "$19", "$20", "$21", "$22", "$23", "$24",
         "$25", "$26", "$27", "$28", "$29", "$30", "$31", "$32", "$33", "$34", "$35",
@@ -117,13 +124,13 @@ public final class McGregor {
      * Constructor for the McGregor algorithm.
      * @param source
      * @param target
-     * @param _mappings
+     * @param mappings
      * @param shouldMatchBonds
      * @param shouldMatchRings  
      */
     public McGregor(IAtomContainer source,
             IAtomContainer target,
-            List<List<Integer>> _mappings,
+            List<List<Integer>> mappings,
             boolean shouldMatchBonds,
             boolean shouldMatchRings) {
         setTimeManager(new TimeManager());
@@ -131,11 +138,11 @@ public final class McGregor {
         this.shouldMatchRings = shouldMatchRings;
         this.source = source;
         this.target = target;
-        this.mappings = Collections.synchronizedList(_mappings);
+        this.mappings = Collections.synchronizedList(mappings);
         this.bestarcsleft = 0;
 
-        if (!_mappings.isEmpty()) {
-            this.globalMCSSize = _mappings.get(0).size();
+        if (!mappings.isEmpty()) {
+            this.globalMCSSize = mappings.get(0).size();
         } else {
             this.globalMCSSize = 0;
         }
@@ -148,19 +155,19 @@ public final class McGregor {
      * Constructor for the McGregor algorithm.
      * @param source
      * @param target
-     * @param _mappings
+     * @param mappings
      */
-    public McGregor(IQueryAtomContainer source, IAtomContainer target, List<List<Integer>> _mappings) {
+    public McGregor(IQueryAtomContainer source, IAtomContainer target, List<List<Integer>> mappings) {
         setTimeManager(new TimeManager());
         setBondMatch(true);
         setMatchRings(false);
         this.source = source;
         this.target = target;
-        this.mappings = Collections.synchronizedList(_mappings);
+        this.mappings = Collections.synchronizedList(mappings);
         this.bestarcsleft = 0;
 
-        if (!_mappings.isEmpty()) {
-            this.globalMCSSize = _mappings.get(0).size();
+        if (!mappings.isEmpty()) {
+            this.globalMCSSize = mappings.get(0).size();
         } else {
             this.globalMCSSize = 0;
         }
@@ -344,13 +351,13 @@ public final class McGregor {
         bestarcsleft = 0;
 
         startsearch(mcGregorHelper);
-        Stack<List<Integer>> BESTARCS_copy = new Stack<List<Integer>>();
+        Stack<List<Integer>> bestARCSClone = new Stack<List<Integer>>();
 
-        BESTARCS_copy.addAll(bestARCS);
+        bestARCSClone.addAll(bestARCS);
         while (!bestARCS.empty()) {
             bestARCS.pop();
         }
-        searchAndExtendMappings(BESTARCS_copy, mcGregorHelper);
+        searchAndExtendMappings(bestARCSClone, mcGregorHelper);
 
         //System.out.println("In the iterator Termination");
         //System.out.println("============+++++++++==============");
@@ -359,7 +366,7 @@ public final class McGregor {
     }
 
     private synchronized void searchAndExtendMappings(
-            Stack<List<Integer>> BESTARCS_copy,
+            Stack<List<Integer>> bestARCSClone,
             McgregorHelper mcGregorHelper) throws IOException {
         int mappedAtomCount = mcGregorHelper.getMappedAtomCount();
 
@@ -370,9 +377,9 @@ public final class McGregor {
         List<String> c_bond_setA = mcGregorHelper.getCBondSetA();
         List<String> c_bond_setB = mcGregorHelper.getCBondSetB();
 
-        while (!BESTARCS_copy.empty()) {
+        while (!bestARCSClone.empty()) {
 
-            List<Integer> MARCS_vector = new ArrayList<Integer>(BESTARCS_copy.peek());
+            List<Integer> MARCS_vector = new ArrayList<Integer>(bestARCSClone.peek());
             List<Integer> new_Mapping = findMcGregorMapping(MARCS_vector, mcGregorHelper);
 
             int newMapingSize = new_Mapping.size() / 2;
@@ -405,7 +412,6 @@ public final class McGregor {
                     if (a == new_Mapping.get(b * 2 + 0)) {
                         atomA_is_unmapped = false;
                     }
-
                 }
                 if (atomA_is_unmapped) {
                     unmapped_atoms_molA.add(unmapped_numA++, a);
@@ -524,7 +530,7 @@ public final class McGregor {
                     new_c_bond_setB);
 
             iterator(newMH);
-            BESTARCS_copy.pop();
+            bestARCSClone.pop();
 //            System.out.println("End of the iterator!!!!");
         }
     }
@@ -659,7 +665,6 @@ public final class McGregor {
                     if (checkMARCS(TEMPMARCS, neighborBondNumA, neighborBondNumB)) {
                         bestARCS.push(TEMPMARCS);
                     }
-
                 }
             }
         }
@@ -790,25 +795,20 @@ public final class McGregor {
      * @return MCS size
      */
     public synchronized int getMCSSize() {
-
         return this.globalMCSSize;
     }
 
     private synchronized void setFinalMappings(List<Integer> mapped_atoms, int mappedAtomCount) {
-        try {
-            if (mappedAtomCount >= globalMCSSize) {
-//                    System.out.println("Hello-1");
-                if (mappedAtomCount > globalMCSSize) {
-//                        System.out.println("Hello-2");
-                    this.globalMCSSize = mappedAtomCount;
-//                        System.out.println("best_MAPPING_size: " + globalMCSSize);
-                    mappings.clear();
-                }
-                mappings.add(mapped_atoms);
-//                    System.out.println("mappings " + mappings);
+        if (mappedAtomCount >= globalMCSSize) {
+//            System.out.println("Hello-1");
+            if (mappedAtomCount > globalMCSSize) {
+//                System.out.println("Hello-2");
+                this.globalMCSSize = mappedAtomCount;
+//                System.out.println("best_MAPPING_size: " + globalMCSSize);
+                mappings.clear();
             }
-        } catch (Exception ex) {
-            ex.printStackTrace();
+            mappings.add(mapped_atoms);
+//            System.out.println("mappings " + mappings);
         }
     }
 

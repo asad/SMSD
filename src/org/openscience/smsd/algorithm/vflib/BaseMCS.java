@@ -24,6 +24,8 @@ package org.openscience.smsd.algorithm.vflib;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
@@ -97,15 +99,6 @@ public class BaseMCS extends MoleculeInitializer {
 
     }
 
-    protected boolean hasMap(Map<Integer, Integer> cliqueMap, List<Map<Integer, Integer>> mapGlobal) {
-        for (Map<Integer, Integer> storedMap : mapGlobal) {
-            if (matchMaps(storedMap, cliqueMap)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     protected boolean hasClique(Map<Integer, Integer> cliqueMap, List<Map<Integer, Integer>> mapGlobal) {
         for (Map<Integer, Integer> storedMap : mapGlobal) {
             if (matchMaps(storedMap, cliqueMap)) {
@@ -157,7 +150,17 @@ public class BaseMCS extends MoleculeInitializer {
             Stack<List<Integer>> maxCliqueSet = init.getMaxCliqueSet();
             //clear all the compatibility graph content
             gcg.clear();
-            int counter = 0;
+
+            /*
+             * Sort biggest clique to smallest
+             */
+            Collections.sort(maxCliqueSet, new Comparator<List<Integer>>() {
+
+                @Override
+                public int compare(List<Integer> a1, List<Integer> a2) {
+                    return a2.size() - a1.size(); // assumes you want biggest to smallest
+                }
+            });
 
             while (!maxCliqueSet.empty()) {
                 List<Integer> peek = maxCliqueSet.peek();
@@ -182,10 +185,9 @@ public class BaseMCS extends MoleculeInitializer {
                     }
                 }
 
-                if (!atomatomMapping.isEmpty() && !hasMap(mapping, allCliqueMCS)) {
-                    allCliqueAtomMCS.add(counter, atomatomMapping);
-                    allCliqueMCS.add(counter, mapping);
-                    counter++;
+                if (!atomatomMapping.isEmpty() && !hasClique(mapping, allCliqueMCS)) {
+                    allCliqueAtomMCS.add(atomatomMapping);
+                    allCliqueMCS.add(mapping);
                 }
                 maxCliqueSet.pop();
             }
@@ -218,6 +220,7 @@ public class BaseMCS extends MoleculeInitializer {
             countR = getReactantMol().getAtomCount();
             countP = getProductMol().getAtomCount();
         }
+
         if (source instanceof IQueryAtomContainer) {
             queryCompiler = new QueryCompiler((IQueryAtomContainer) source).compile();
             mapper = new VFMCSMapper(queryCompiler);
@@ -226,20 +229,21 @@ public class BaseMCS extends MoleculeInitializer {
                 vfLibSolutions.addAll(maps);
             }
             setVFMappings(true, queryCompiler);
+
         } else if (countR <= countP) {
             queryCompiler = new QueryCompiler(this.source, this.shouldMatchRings, isMatchRings()).compile();
             mapper = new VFMCSMapper(queryCompiler);
-            List<Map<INode, IAtom>> maps = mapper.getMaps(getProductMol());
-            if (maps != null) {
-                vfLibSolutions.addAll(maps);
+            List<Map<INode, IAtom>> map = mapper.getMaps(this.target);
+            if (map != null) {
+                vfLibSolutions.addAll(map);
             }
             setVFMappings(true, queryCompiler);
         } else {
-            queryCompiler = new QueryCompiler(getProductMol(), this.shouldMatchRings, isMatchRings()).compile();
+            queryCompiler = new QueryCompiler(this.target, this.shouldMatchRings, isMatchRings()).compile();
             mapper = new VFMCSMapper(queryCompiler);
-            List<Map<INode, IAtom>> maps = mapper.getMaps(getReactantMol());
-            if (maps != null) {
-                vfLibSolutions.addAll(maps);
+            List<Map<INode, IAtom>> map = mapper.getMaps(this.source);
+            if (map != null) {
+                vfLibSolutions.addAll(map);
             }
             setVFMappings(false, queryCompiler);
         }
@@ -271,16 +275,16 @@ public class BaseMCS extends MoleculeInitializer {
                 }
             }
             //Start McGregor search
+            mgit.setTimeout(-1);
             mgit.startMcGregorIteration(mgit.getMCSSize(), extendMapping);
             mappings = mgit.getMappings();
-            mgit = null;
 
             if (isTimeOut()) {
-                System.err.println("\nVFLibMCS hit by timeout in McGregor");
+                System.err.println("\nVFPlusMCS timeout");
                 break;
             }
         }
-//        System.out.println("\nSol count after MG" + mappings.size());
+//        System.out.println("\nSol count after MG " + mappings.size());
         setMcGregorMappings(ROPFlag, mappings);
 //        System.out.println("After set Sol count MG" + allMCS.size());
 //        System.out.println("MCSSize " + vfMCSSize + "\n");
@@ -322,7 +326,7 @@ public class BaseMCS extends MoleculeInitializer {
             }
 
             if (!atomatomMapping.isEmpty()
-                    && !hasMap(indexindexMapping, allMCSCopy)) {
+                    && !hasClique(indexindexMapping, allMCSCopy)) {
                 getLocalAtomMCSSolution().add(atomatomMapping);
                 getLocalMCSSolution().add(indexindexMapping);
             }
@@ -370,7 +374,7 @@ public class BaseMCS extends MoleculeInitializer {
                 getLocalMCSSolution().clear();
                 counter = 0;
             }
-            if (!atomatomMapping.isEmpty() && !hasMap(indexindexMapping, allMCSCopy)
+            if (!atomatomMapping.isEmpty() && !hasClique(indexindexMapping, allMCSCopy)
                     && (indexindexMapping.size()) == solSize) {
                 getLocalAtomMCSSolution().add(counter, atomatomMapping);
                 getLocalMCSSolution().add(counter, indexindexMapping);

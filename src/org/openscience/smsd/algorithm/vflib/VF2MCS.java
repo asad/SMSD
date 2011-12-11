@@ -24,6 +24,8 @@ package org.openscience.smsd.algorithm.vflib;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -95,24 +97,24 @@ public class VF2MCS extends BaseMCS implements IResults {
         allAtomMCS.clear();
 
         try {
-
             addVFMatchesMappings();
+//            System.out.println("addVFMatchesMappings() " + getLocalMCSSolution().size());
             addKochCliques();
-
+//            System.out.println(" After addKochCliques(); " + getLocalMCSSolution());
             if (isExtensionRequired()) {
                 extendCliquesWithMcGregor();
             }
-            
         } catch (CDKException ex) {
             java.util.logging.Logger.getLogger(VF2MCS.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
             java.util.logging.Logger.getLogger(VF2MCS.class.getName()).log(Level.SEVERE, null, ex);
         }
+
         if (!getLocalAtomMCSSolution().isEmpty()) {
             for (int i = 0; i < getLocalMCSSolution().size(); i++) {
                 Map<Integer, Integer> map = getLocalMCSSolution().get(i);
                 AtomAtomMapping atomMCSMap = getLocalAtomMCSSolution().get(i);
-                if (!hasMap(map, allMCS)) {
+                if (!hasClique(map, allMCS)) {
                     allMCS.add(map);
                     allAtomMCS.add(atomMCSMap);
                 }
