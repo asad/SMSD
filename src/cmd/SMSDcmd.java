@@ -272,7 +272,7 @@ public class SMSDcmd {
                 outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
                 for (AtomAtomMapping aam : smsd.getAllAtomMapping()) {
                     Map<Integer, Integer> mapping = getIndexMapping(aam);
-                    int counter = 1;
+                    int counter = 0;
                     if (argumentHandler.isImage()) {
                         double stereoScore = smsd.getStereoScore(counter);
                         String label = outputHandler.makeLabel(tanimotoSimilarity, stereoScore);
@@ -403,7 +403,7 @@ public class SMSDcmd {
             outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
             for (AtomAtomMapping aam : smsd.getAllAtomMapping()) {
                 Map<Integer, Integer> mapping = getIndexMapping(aam);
-                int counter = 1;
+                int counter = 0;
                 if (argumentHandler.isImage()) {
                     double stereoScore = smsd.getStereoScore(counter);
                     String label = outputHandler.makeLabel(tanimotoSimilarity, stereoScore);
@@ -479,6 +479,7 @@ public class SMSDcmd {
         BaseMapping smsd = new Isomorphism(query, target, Algorithm.VFLibMCS, matchBonds, matchRings);
 //        Isomorphism smsd = new Isomorphism(query, target, Algorithm.CDKMCS, matchBonds, matchRings);
 //        Isomorphism smsd = new Isomorphism(query, target, Algorithm.MCSPlus, matchBonds, matchRings);
+        
         if (filter == 0) {
             smsd.setChemFilters(false, false, false);
         }
