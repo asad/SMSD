@@ -68,21 +68,9 @@ public class VF2MCS extends BaseMCS implements IResults {
      * @param shouldMatchRings ring match 
      */
     public VF2MCS(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings) {
-        super();
-        this.source = source;
-        this.target = target;
-        this.shouldMatchRings = shouldMatchRings;
-        this.matchBonds = shouldMatchBonds;
+        super(source, target, shouldMatchBonds, shouldMatchRings);
         this.allAtomMCS = new ArrayList<AtomAtomMapping>();
         this.allMCS = new ArrayList<Map<Integer, Integer>>();
-        if (this.shouldMatchRings) {
-            try {
-                initializeMolecule(source);
-                initializeMolecule(target);
-            } catch (CDKException ex) {
-                Logger.error(ex);
-            }
-        }
         searchMCS();
     }
 
@@ -92,20 +80,9 @@ public class VF2MCS extends BaseMCS implements IResults {
      * @param target  
      */
     public VF2MCS(IQueryAtomContainer source, IQueryAtomContainer target) {
-        super();
-        this.source = source;
-        this.target = target;
-        this.shouldMatchRings = true;
-        this.matchBonds = true;
+        super(source, target, true, true);
         this.allAtomMCS = new ArrayList<AtomAtomMapping>();
         this.allMCS = new ArrayList<Map<Integer, Integer>>();
-        if (this.shouldMatchRings) {
-            try {
-                initializeMolecule(source);
-                initializeMolecule(target);
-            } catch (CDKException ex) {
-            }
-        }
         searchMCS();
     }
 
@@ -117,12 +94,15 @@ public class VF2MCS extends BaseMCS implements IResults {
         allMCS.clear();
         allAtomMCS.clear();
 
-        addKochCliques();
-        System.out.println("addKochCliques solution " + getLocalMCSSolution());
-        addVFMatchesMappings();
-        System.out.println("After addVFMatchesMappings solution " + getLocalMCSSolution());
         try {
-            extendCliquesWithMcGregor();
+
+            addVFMatchesMappings();
+            addKochCliques();
+
+            if (isExtensionRequired()) {
+                extendCliquesWithMcGregor();
+            }
+            
         } catch (CDKException ex) {
             java.util.logging.Logger.getLogger(VF2MCS.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
@@ -179,6 +159,6 @@ public class VF2MCS extends BaseMCS implements IResults {
         if (allAtomMCS.iterator().hasNext()) {
             return allAtomMCS.iterator().next();
         }
-        return new AtomAtomMapping(source, target);
+        return new AtomAtomMapping(getReactantMol(), getProductMol());
     }
 }

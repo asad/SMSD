@@ -66,23 +66,35 @@ public class BaseMCS extends MoleculeInitializer {
 
     private int countR = 0;
     private int countP = 0;
-    protected IAtomContainer source;
-    protected IAtomContainer target;
+    private final IAtomContainer source;
+    private final IAtomContainer target;
     private final TimeManager timeManager;
-    protected boolean shouldMatchRings;
-    protected boolean matchBonds;
-    private List<Map<INode, IAtom>> vfLibSolutions = null;
-    private List<Map<Integer, Integer>> allMCSCopy = null;
-    private List<AtomAtomMapping> allAtomMCSCopy = null;
+    private final boolean shouldMatchRings;
+    private final boolean matchBonds;
+    private final List<Map<INode, IAtom>> vfLibSolutions;
+    private final List<Map<Integer, Integer>> allMCSCopy;
+    private final List<AtomAtomMapping> allAtomMCSCopy;
     private final static ILoggingTool Logger =
             LoggingToolFactory.createLoggingTool(BaseMCS.class);
 
-    BaseMCS() {
+    BaseMCS(IAtomContainer source, IAtomContainer target, boolean matchBonds, boolean shouldMatchRings) {
         this.allAtomMCSCopy = new ArrayList<AtomAtomMapping>();
         this.timeManager = new TimeManager();
         this.allMCSCopy = new ArrayList<Map<Integer, Integer>>();
-        this.shouldMatchRings = false;
-        this.matchBonds = false;
+        this.shouldMatchRings = shouldMatchRings;
+        this.matchBonds = matchBonds;
+        this.vfLibSolutions = new ArrayList<Map<INode, IAtom>>();
+        this.source = source;
+        this.target = target;
+        if (shouldMatchRings) {
+            try {
+                initializeMolecule(source);
+                initializeMolecule(target);
+            } catch (CDKException ex) {
+                Logger.error(ex);
+            }
+        }
+
     }
 
     protected boolean hasMap(Map<Integer, Integer> cliqueMap, List<Map<Integer, Integer>> mapGlobal) {
@@ -129,7 +141,7 @@ public class BaseMCS extends MoleculeInitializer {
     }
 
     protected synchronized void addKochCliques() {
-        System.out.println("addKochCliques ");
+//        System.out.println("addKochCliques ");
         try {
 
             List<Map<Integer, Integer>> allCliqueMCS = new ArrayList<Map<Integer, Integer>>();
@@ -206,8 +218,6 @@ public class BaseMCS extends MoleculeInitializer {
             countR = getReactantMol().getAtomCount();
             countP = getProductMol().getAtomCount();
         }
-
-        vfLibSolutions = new ArrayList<Map<INode, IAtom>>();
         if (source instanceof IQueryAtomContainer) {
             queryCompiler = new QueryCompiler((IQueryAtomContainer) source).compile();
             mapper = new VFMCSMapper(queryCompiler);
@@ -383,11 +393,11 @@ public class BaseMCS extends MoleculeInitializer {
         return v;
     }
 
-    private synchronized IAtomContainer getReactantMol() {
+    protected synchronized IAtomContainer getReactantMol() {
         return source;
     }
 
-    private synchronized IAtomContainer getProductMol() {
+    protected synchronized IAtomContainer getProductMol() {
         return target;
     }
 
@@ -439,5 +449,15 @@ public class BaseMCS extends MoleculeInitializer {
      */
     protected List<AtomAtomMapping> getLocalAtomMCSSolution() {
         return allAtomMCSCopy;
+    }
+
+    protected boolean isExtensionRequired() {
+        int maxSize = 0;
+        for (Map<Integer, Integer> map : allMCSCopy) {
+            if (map.size() > maxSize) {
+                maxSize = map.size();
+            }
+        }
+        return this.source.getAtomCount() > maxSize && this.target.getAtomCount() > maxSize ? true : false;
     }
 }
