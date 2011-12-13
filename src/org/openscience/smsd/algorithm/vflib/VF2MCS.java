@@ -96,9 +96,9 @@ public class VF2MCS extends BaseMCS implements IResults {
 
         try {
             addVFMatchesMappings();
-//            System.out.println("addVFMatchesMappings() " + getLocalMCSSolution().size());
+//            System.out.println("addVFMatchesMappings() " + getLocalMCSSolution());
             addKochCliques();
-//            System.out.println(" After addKochCliques(); " + getLocalMCSSolution());
+//            System.out.println(" \nAfter addKochCliques(); " + getLocalMCSSolution());
             if (isExtensionRequired()) {
                 extendCliquesWithMcGregor();
             }
@@ -107,7 +107,6 @@ public class VF2MCS extends BaseMCS implements IResults {
         } catch (IOException ex) {
             java.util.logging.Logger.getLogger(VF2MCS.class.getName()).log(Level.SEVERE, null, ex);
         }
-
         if (!getLocalAtomMCSSolution().isEmpty()) {
             for (int i = 0; i < getLocalMCSSolution().size(); i++) {
                 Map<Integer, Integer> map = getLocalMCSSolution().get(i);

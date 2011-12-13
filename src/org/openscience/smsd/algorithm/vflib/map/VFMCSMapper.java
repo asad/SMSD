@@ -74,8 +74,8 @@ import org.openscience.smsd.algorithm.vflib.query.QueryCompiler;
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFLibTest")
 public class VFMCSMapper implements IMapper {
 
-    private IQuery query = null;
-    private List<Map<INode, IAtom>> maps = null;
+    private final IQuery query;
+    private final List<Map<INode, IAtom>> maps;
     private int currentMCSSize = -1;
 
     /**
@@ -188,11 +188,40 @@ public class VFMCSMapper implements IMapper {
 
     private boolean hasMap(Map<INode, IAtom> map) {
         for (Map<INode, IAtom> storedMap : maps) {
-            if (storedMap.equals(map)) {
+            if (matchMaps(storedMap, map)) {
                 return true;
             }
         }
         return false;
+    }
+
+    /*
+     * Check if this map is the subset of the existing map or same 
+     * 
+     * 
+     * @param storedMap
+     * @param cliqueMap
+     * @return
+     */
+    private boolean matchMaps(Map<INode, IAtom> storedMap, Map<INode, IAtom> cliqueMap) {
+        if (storedMap.size() >= cliqueMap.size()) {
+            for (INode atom1 : cliqueMap.keySet()) {
+                if (storedMap.containsKey(atom1) && cliqueMap.get(atom1).equals(storedMap.get(atom1))) {
+                    continue;
+                } else {
+                    return false;
+                }
+            }
+        } else {
+            for (INode atom1 : storedMap.keySet()) {
+                if (cliqueMap.containsKey(atom1) && storedMap.get(atom1).equals(cliqueMap.get(atom1))) {
+                    continue;
+                } else {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     private void addMapping(IState state) {

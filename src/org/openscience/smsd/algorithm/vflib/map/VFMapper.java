@@ -75,8 +75,8 @@ import org.openscience.smsd.global.TimeOut;
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFLibTest")
 public class VFMapper implements IMapper {
 
-    private IQuery query;
-    private List<Map<INode, IAtom>> maps;
+    private final IQuery query;
+    private final List<Map<INode, IAtom>> maps;
 
     /**
      * @return the timeout

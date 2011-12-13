@@ -58,7 +58,7 @@ public final class McGregor {
     //-1 is infinite loop
     //private float timeout = -1;
     //5 min time out for infinite loop
-    private float timeout = 5;
+    private float timeout = 10;
     private boolean shouldMatchRings;
 
     /**

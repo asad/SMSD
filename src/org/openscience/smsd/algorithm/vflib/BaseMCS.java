@@ -275,7 +275,6 @@ public class BaseMCS extends MoleculeInitializer {
                 }
             }
             //Start McGregor search
-            mgit.setTimeout(-1);
             mgit.startMcGregorIteration(mgit.getMCSSize(), extendMapping);
             mappings = mgit.getMappings();
 
@@ -291,6 +290,10 @@ public class BaseMCS extends MoleculeInitializer {
     }
 
     private synchronized void setVFMappings(boolean RONP, IQuery query) {
+        /*
+         * Sort biggest clique to smallest
+         */
+        Collections.sort(vfLibSolutions, new MapComparator());
         for (Map<INode, IAtom> solution : vfLibSolutions) {
             AtomAtomMapping atomatomMapping = new AtomAtomMapping(source, target);
             Map<Integer, Integer> indexindexMapping = new TreeMap<Integer, Integer>();
@@ -463,5 +466,23 @@ public class BaseMCS extends MoleculeInitializer {
             }
         }
         return this.source.getAtomCount() > maxSize && this.target.getAtomCount() > maxSize ? true : false;
+    }
+
+    public class MapComparator implements Comparator<Map<INode, IAtom>> {
+
+        /**
+         * 
+         * @param object1
+         * @param object2
+         * @return
+         */
+        @Override
+        public int compare(Map<INode, IAtom> object1, Map<INode, IAtom> object2) {
+
+            Integer a1 = (Integer) ((Map) object1).size();
+            Integer a2 = (Integer) ((Map) object2).size();
+            return a2 - a1; // assumes you want biggest to smallest;
+
+        }
     }
 }
