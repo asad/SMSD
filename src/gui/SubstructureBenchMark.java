@@ -6,12 +6,12 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.io.iterator.IIteratingChemObjectReader;
 import org.openscience.cdk.io.iterator.IteratingMDLReader;
 import org.openscience.cdk.isomorphism.UniversalIsomorphismTester;
-import org.openscience.cdk.nonotify.NoNotificationChemObjectBuilder;
 import org.openscience.smsd.Substructure;
 
 /**
@@ -114,7 +114,7 @@ public class SubstructureBenchMark {
 
         FileReader in = new FileReader(file);
         return new IteratingMDLReader(
-                in, NoNotificationChemObjectBuilder.getInstance());
+                in, DefaultChemObjectBuilder.getInstance());
 
     }
 }

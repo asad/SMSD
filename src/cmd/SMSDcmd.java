@@ -16,7 +16,8 @@ import java.util.TreeMap;
 import org.apache.commons.cli.MissingOptionException;
 import org.apache.commons.cli.ParseException;
 import org.openscience.cdk.CDKConstants;
-import org.openscience.cdk.Molecule;
+import org.openscience.cdk.AtomContainer;
+import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.graph.ConnectivityChecker;
@@ -24,7 +25,6 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.io.iterator.IIteratingChemObjectReader;
-import org.openscience.cdk.nonotify.NoNotificationChemObjectBuilder;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.BaseMapping;
@@ -116,7 +116,7 @@ public class SMSDcmd {
         Comparator<IAtomContainer> comparator = new AtomContainerComparator();
         Collections.sort(atomContainerSet, comparator);
 
-        IAtomContainer mcsMolecule = null;
+        IAtomContainer mcsAtomContainer = null;
         boolean matchBonds = argumentHandler.isMatchBondType();
         boolean matchRings = argumentHandler.isMatchRingType();
         boolean removeHydrogens = argumentHandler.isApplyHRemoval();
@@ -126,7 +126,7 @@ public class SMSDcmd {
         for (IAtomContainer target : atomContainerSet) {
             boolean flag = ConnectivityChecker.isConnected(target);
             if (!flag) {
-                System.out.println("WARNING : Skipping target molecule "
+                System.out.println("WARNING : Skipping target AtomContainer "
                         + target.getProperty(CDKConstants.TITLE) + " as it is not connected.");
                 continue;
             } else {
@@ -136,59 +136,59 @@ public class SMSDcmd {
                 }
             }
             if (removeHydrogens) {
-                target = new Molecule(AtomContainerManipulator.removeHydrogens(target));
+                target = new AtomContainer(AtomContainerManipulator.removeHydrogens(target));
             }
 
-            if (mcsMolecule != null) {
-                flag = ConnectivityChecker.isConnected(mcsMolecule);
+            if (mcsAtomContainer != null) {
+                flag = ConnectivityChecker.isConnected(mcsAtomContainer);
                 if (!flag) {
                     System.out.println("WARNING : Skipping file "
-                            + mcsMolecule.getProperty(CDKConstants.TITLE) + " not connected ");
+                            + mcsAtomContainer.getProperty(CDKConstants.TITLE) + " not connected ");
                     return;
-                } else if (mcsMolecule.getProperty(CDKConstants.TITLE) != null) {
-                    mcsMolecule.setID((String) mcsMolecule.getProperty(CDKConstants.TITLE));
-                    argumentHandler.setQueryMolOutName(mcsMolecule.getID());
+                } else if (mcsAtomContainer.getProperty(CDKConstants.TITLE) != null) {
+                    mcsAtomContainer.setID((String) mcsAtomContainer.getProperty(CDKConstants.TITLE));
+                    argumentHandler.setQueryMolOutName(mcsAtomContainer.getID());
                 }
                 if (removeHydrogens) {
-                    mcsMolecule = new Molecule(AtomContainerManipulator.removeHydrogens(mcsMolecule));
+                    mcsAtomContainer = new AtomContainer(AtomContainerManipulator.removeHydrogens(mcsAtomContainer));
                 }
             }
 
             inputHandler.configure(target, targetType);
 
-            if (mcsMolecule == null) {
-                mcsMolecule = target;
+            if (mcsAtomContainer == null) {
+                mcsAtomContainer = target;
                 targets.add(target);
             } else {
-                BaseMapping smsd = run(mcsMolecule, target, filter, matchBonds, matchRings);
+                BaseMapping smsd = run(mcsAtomContainer, target, filter, matchBonds, matchRings);
                 target = target.getBuilder().newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getTarget());
                 targets.add(target);
                 Map<Integer, Integer> mapping = getIndexMapping(smsd.getFirstAtomMapping());
                 IAtomContainer subgraph = getSubgraph(target, mapping);
-                mcsMolecule = new Molecule(subgraph);
+                mcsAtomContainer = new AtomContainer(subgraph);
             }
         }
-        inputHandler.configure(mcsMolecule, targetType);
+        inputHandler.configure(mcsAtomContainer, targetType);
 
         if (argumentHandler.shouldOutputSubgraph()) {
             String outpath = argumentHandler.getOutputFilepath();
             String outtype = argumentHandler.getOutputFiletype();
-            outputHandler.writeMol(outtype, mcsMolecule, outpath);
+            outputHandler.writeMol(outtype, mcsAtomContainer, outpath);
         }
-        if (mcsMolecule != null && argumentHandler.isImage()) {
+        if (mcsAtomContainer != null && argumentHandler.isImage()) {
             // now that we have the N-MCS, remap
             List<Map<Integer, Integer>> mappings = new ArrayList<Map<Integer, Integer>>();
             List<IAtomContainer> secondRoundTargets = new ArrayList<IAtomContainer>();
-            IChemObjectBuilder builder = NoNotificationChemObjectBuilder.getInstance();
+            IChemObjectBuilder builder = DefaultChemObjectBuilder.getInstance();
             for (IAtomContainer target : targets) {
-                BaseMapping smsd = run(mcsMolecule, target, filter, matchBonds, matchRings);
+                BaseMapping smsd = run(mcsAtomContainer, target, filter, matchBonds, matchRings);
                 mappings.add(getIndexMapping(smsd.getFirstAtomMapping()));
                 secondRoundTargets.add(
                         builder.newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getTarget()));
             }
 
             String name = inputHandler.getTargetName();
-            outputHandler.writeCircleImage(mcsMolecule, secondRoundTargets, name, mappings);
+            outputHandler.writeCircleImage(mcsAtomContainer, secondRoundTargets, name, mappings);
         }
     }
 
@@ -206,7 +206,7 @@ public class SMSDcmd {
             return;
         }
         if (removeHydrogens) {
-            query = new Molecule(AtomContainerManipulator.removeHydrogens(query));
+            query = new AtomContainer(AtomContainerManipulator.removeHydrogens(query));
         }
 
         outputHandler.writeQueryMol(query);
@@ -229,14 +229,14 @@ public class SMSDcmd {
             IAtomContainer target = (IAtomContainer) reader.next();
             flag = ConnectivityChecker.isConnected(target);
             if (!flag) {
-                System.out.println("WARNING : Skipping target molecule "
+                System.out.println("WARNING : Skipping target AtomContainer "
                         + target.getProperty(CDKConstants.TITLE) + " as it is not connected.");
                 continue;
             }
 
             /*remove target hydrogens*/
             if (removeHydrogens) {
-                target = new Molecule(AtomContainerManipulator.removeHydrogens(target));
+                target = new AtomContainer(AtomContainerManipulator.removeHydrogens(target));
             }
             if (target.getProperty(CDKConstants.TITLE) != null) {
                 target.setID((String) target.getProperty(CDKConstants.TITLE));
@@ -330,14 +330,14 @@ public class SMSDcmd {
         }
         flag = ConnectivityChecker.isConnected(target);
         if (!flag) {
-            System.out.println("WARNING : Skipping target molecule "
+            System.out.println("WARNING : Skipping target AtomContainer "
                     + inputHandler.getTargetName() + " as it is not connected.");
             return;
         }
         /*remove hydrogens*/
         if (removeHydrogens) {
-            query = new Molecule(AtomContainerManipulator.removeHydrogens(query));
-            target = new Molecule(AtomContainerManipulator.removeHydrogens(target));
+            query = new AtomContainer(AtomContainerManipulator.removeHydrogens(query));
+            target = new AtomContainer(AtomContainerManipulator.removeHydrogens(target));
         }
 
         if (target.getProperty(CDKConstants.TITLE) != null) {
@@ -387,7 +387,7 @@ public class SMSDcmd {
         long endTime = System.currentTimeMillis();
         long executionTime = endTime - startTime;
 
-        // write out the input molecules to files
+        // write out the input AtomContainers to files
         outputHandler.writeQueryMol(smsd.getFirstAtomMapping().getQuery());
         outputHandler.writeTargetMol(smsd.getFirstAtomMapping().getTarget());
 
