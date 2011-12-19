@@ -221,15 +221,6 @@ public final class GenerateCompatibilityGraph {
             }
             sourceNodes++;
         }
-
-//        System.out.println("\n\n******************************* ");
-//
-//        System.out.println("compatibility graph nodes: " + compGraphNodes.size());
-//        Iterator<Integer> it = compGraphNodes.iterator();
-//        while (it.hasNext()) {
-//            System.out.println(it.next() + " " + it.next() + " " + it.next());
-//        }
-//        System.out.println("");
         return 0;
     }
 

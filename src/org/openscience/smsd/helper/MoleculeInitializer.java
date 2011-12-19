@@ -23,6 +23,7 @@
 package org.openscience.smsd.helper;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -140,11 +141,14 @@ public class MoleculeInitializer extends IMoleculeInitializer {
                         }
                         ringsizes.add(size);
                     }
+                    Collections.sort(ringsizes);
                     atom.setProperty(CDKConstants.RING_SIZES, ringsizes);
                     atom.setProperty(CDKConstants.SMALLEST_RINGS, sssr.getRings(atom));
+                    atom.setProperty(IMoleculeInitializer.SMALLEST_RING_SIZE, ringsizes.get(0));
                 } else {
                     atom.setFlag(CDKConstants.ISINRING, false);
                     atom.setFlag(CDKConstants.ISALIPHATIC, true);
+                    atom.setProperty(IMoleculeInitializer.SMALLEST_RING_SIZE, 0);
                 }
 
                 // determine how many rings bonds each atom is a part of

@@ -24,6 +24,7 @@ package org.openscience.smsd.algorithm.vflib;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -57,7 +58,7 @@ public class VF2MCS extends BaseMCS implements IResults {
 
     private List<AtomAtomMapping> allAtomMCS = null;
     private List<Map<Integer, Integer>> allMCS = null;
-    private final static ILoggingTool Logger =
+    private final static ILoggingTool logger =
             LoggingToolFactory.createLoggingTool(VF2MCS.class);
 
     /**
@@ -96,24 +97,62 @@ public class VF2MCS extends BaseMCS implements IResults {
 
         try {
             addVFMatchesMappings();
-//            System.out.println("addVFMatchesMappings() " + getLocalMCSSolution());
-            addKochCliques();
-//            System.out.println(" \nAfter addKochCliques(); " + getLocalMCSSolution());
+//            System.out.println("\n\naddVFMatchesMappings() " + getLocalMCSSolution().size() + ", Solutions: " + getLocalMCSSolution());
             if (isExtensionRequired()) {
-                extendCliquesWithMcGregor();
+                addKochCliques();
+//                System.out.println(" \nAfter addKochCliques() " + getLocalMCSSolution().size() + ", Solutions: " + getLocalMCSSolution());
+                addUIT();
+//                System.out.println(" \nAfter addUIT(); " + getLocalMCSSolution().size() + ", Solutions: " + getLocalMCSSolution());
+
+                List<Map<Integer, Integer>> mcsSeeds = new ArrayList<Map<Integer, Integer>>();
+                int solSize = 0;
+                int counter = 0;
+                if (!getLocalMCSSolution().isEmpty()) {
+                    for (int i = 0; i < getLocalMCSSolution().size(); i++) {
+                        Map<Integer, Integer> map = getLocalMCSSolution().get(i);
+                        if (map.size() > solSize) {
+                            solSize = map.size();
+                            mcsSeeds.clear();
+                            counter = 0;
+                        }
+                        if (!map.isEmpty()
+                                && map.size() == solSize
+                                && !hasClique(map, mcsSeeds)) {
+                            mcsSeeds.add(counter, map);
+                            counter++;
+                        }
+                    }
+                }
+                getLocalMCSSolution().clear();
+                getLocalAtomMCSSolution().clear();
+                /*
+                 * Sort biggest clique to smallest
+                 */
+                Collections.sort(mcsSeeds, new Map2Comparator());
+                extendCliquesWithMcGregor(mcsSeeds);
             }
         } catch (CDKException ex) {
-            java.util.logging.Logger.getLogger(VF2MCS.class.getName()).log(Level.SEVERE, null, ex);
+            logger.error(Level.SEVERE, null, ex);
         } catch (IOException ex) {
-            java.util.logging.Logger.getLogger(VF2MCS.class.getName()).log(Level.SEVERE, null, ex);
+            logger.error(Level.SEVERE, null, ex);
         }
-        if (!getLocalAtomMCSSolution().isEmpty()) {
+        int solSize = 0;
+        int counter = 0;
+        if (!getLocalMCSSolution().isEmpty()) {
             for (int i = 0; i < getLocalMCSSolution().size(); i++) {
                 Map<Integer, Integer> map = getLocalMCSSolution().get(i);
                 AtomAtomMapping atomMCSMap = getLocalAtomMCSSolution().get(i);
-                if (!hasClique(map, allMCS)) {
-                    allMCS.add(map);
-                    allAtomMCS.add(atomMCSMap);
+                if (map.size() > solSize) {
+                    solSize = map.size();
+                    allMCS.clear();
+                    allAtomMCS.clear();
+                    counter = 0;
+                }
+                if (!map.isEmpty()
+                        && map.size() == solSize) {
+                    allMCS.add(counter, map);
+                    allAtomMCS.add(counter, atomMCSMap);
+                    counter++;
                 }
             }
         }

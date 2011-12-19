@@ -33,6 +33,8 @@ import org.openscience.cdk.interfaces.IAtomContainer;
  */
 public abstract class IMoleculeInitializer {
 
+    public static final String SMALLEST_RING_SIZE = "SMALLEST_RING_SIZE";
+
     /**
      * Prepare the molecule for analysis.
      * <p/> We perform ring perception and aromaticity detection and set up

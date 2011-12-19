@@ -29,12 +29,15 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.annotations.TestMethod;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
+import org.openscience.cdk.tools.ILoggingTool;
+import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.algorithm.mcsplus.MCSPlusHandler;
 import org.openscience.smsd.algorithm.rgraph.CDKMCSHandler;
 import org.openscience.smsd.algorithm.single.SingleMappingHandler;
@@ -114,14 +117,16 @@ import org.openscience.smsd.interfaces.ITimeOut;
 @TestClass("org.openscience.cdk.smsd.factory.SubStructureSearchAlgorithmsTest")
 public final class Isomorphism extends BaseMapping implements ITimeOut, Serializable {
 
+    private final static ILoggingTool logger =
+            LoggingToolFactory.createLoggingTool(Isomorphism.class);
     static final long serialVersionUID = 10278639972837495L;
     private Algorithm algorithmType;
     private double bondSensitiveCDKMCSTimeOut = 1.00;//mins
     private double bondInSensitiveCDKMCSTimeOut = 1.00;//mins
     private double bondSensitiveMCSPlusTimeOut = 1.00;//mins
     private double bondInSensitiveMCSPlusTimeOut = 1.00;//mins
-    private double bondSensitiveVFTimeOut = 1.00;//mins
-    private double bondInSensitiveVFTimeOut = 1.00;//mins
+    private double bondSensitiveVFTimeOut = 2.00;//mins
+    private double bondInSensitiveVFTimeOut = 2.00;//mins
 
     /**
      * Initialize query and target molecules.
@@ -315,7 +320,7 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
 //                System.out.println("\nVF Lib used\n" + ((System.currentTimeMillis() - time) / (60 * 1000)));
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(Level.SEVERE, null, e);
         }
     }
 

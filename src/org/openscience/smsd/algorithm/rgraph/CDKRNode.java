@@ -45,7 +45,6 @@ import org.openscience.cdk.annotations.TestClass;
  * @cdk.module  smsd
  * @cdk.githash
  */
-
 @TestClass("org.openscience.cdk.smsd.algorithm.cdk.CDKRNodeTest")
 public class CDKRNode {
     // G1/G2 mapping
@@ -73,7 +72,7 @@ public class CDKRNode {
      *
      *@param  rMap  The new rMap value
      */
-    public void setRMap(CDKRMap rMap) {
+    public synchronized void setRMap(CDKRMap rMap) {
         this.setrMap(rMap);
     }
 
@@ -82,7 +81,7 @@ public class CDKRNode {
      *
      *@param  extension  The new extension value
      */
-    public void setExtension(BitSet extension) {
+    public synchronized void setExtension(BitSet extension) {
         this.extension = extension;
     }
 
@@ -91,7 +90,7 @@ public class CDKRNode {
      *
      *@param  forbidden  The new forbidden value
      */
-    public void setForbidden(BitSet forbidden) {
+    public synchronized void setForbidden(BitSet forbidden) {
         this.forbidden = forbidden;
     }
 
@@ -100,7 +99,7 @@ public class CDKRNode {
      *
      *@return    The rMap value
      */
-    public CDKRMap getRMap() {
+    public synchronized CDKRMap getRMap() {
         return getrMap();
     }
 
@@ -109,7 +108,7 @@ public class CDKRNode {
      *
      *@return    The extension value
      */
-    public BitSet getExtension() {
+    public synchronized BitSet getExtension() {
         return extension;
     }
 
@@ -118,7 +117,7 @@ public class CDKRNode {
      *
      *@return    The forbidden value
      */
-    public BitSet getForbidden() {
+    public synchronized BitSet getForbidden() {
         return forbidden;
     }
 
@@ -128,7 +127,7 @@ public class CDKRNode {
      *@return    the string representation of the RNode
      */
     @Override
-    public String toString() {
+    public synchronized String toString() {
         return ("id1 : " + getrMap().getId1() + ", id2 : " + getrMap().getId2() + "\n" + "extension : " + getExtension() + "\n" + "forbiden : " + getForbidden());
     }
 
@@ -136,7 +135,7 @@ public class CDKRNode {
      * Returns resolution Map
      * @return the rMap
      */
-    public CDKRMap getrMap() {
+    public synchronized CDKRMap getrMap() {
         return rMap;
     }
 
@@ -144,8 +143,7 @@ public class CDKRNode {
      * Sets resolution map/graph
      * @param rMap the rMap to set
      */
-    public void setrMap(CDKRMap rMap) {
+    public synchronized void setrMap(CDKRMap rMap) {
         this.rMap = rMap;
     }
 }
-

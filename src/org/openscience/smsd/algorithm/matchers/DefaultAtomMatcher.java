@@ -27,6 +27,7 @@ import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
+import org.openscience.smsd.interfaces.IMoleculeInitializer;
 
 /**
  * Checks if atom is matching between query and target molecules.
@@ -41,14 +42,23 @@ public final class DefaultAtomMatcher implements AtomMatcher {
     private final String symbol;
     private final IAtom qAtom;
     private final boolean shouldMatchRings;
+    private int smallestRingSize;
 
     /**
      * Constructor
+     * @param qAtom 
+     * @param symbol 
+     * @param shouldMatchRings
      */
-    public DefaultAtomMatcher() {
-        this.qAtom = null;
-        this.symbol = null;
-        this.shouldMatchRings = false;
+    public DefaultAtomMatcher(IAtom qAtom,
+            String symbol,
+            boolean shouldMatchRings) {
+        this.qAtom = qAtom;
+        this.symbol = symbol;
+        this.shouldMatchRings = shouldMatchRings;
+        if (shouldMatchRings) {
+            this.smallestRingSize = isRingAtom(qAtom) ? getRingSize(qAtom).intValue() : 0;
+        }
     }
 
     /**
@@ -57,12 +67,7 @@ public final class DefaultAtomMatcher implements AtomMatcher {
      * @param shouldMatchRings ring matching flag
      */
     public DefaultAtomMatcher(IAtom atom, boolean shouldMatchRings) {
-        super();
-        this.qAtom = atom;
-        this.symbol = atom.getSymbol();
-        this.shouldMatchRings = shouldMatchRings;
-        //        System.out.println("Atom " + atom.getSymbol());
-        //        System.out.println("MAX allowed " + maximumNeighbors);
+        this(atom, atom.getSymbol(), shouldMatchRings);
     }
 
     private boolean matchSymbol(IAtom atom) {
@@ -93,6 +98,12 @@ public final class DefaultAtomMatcher implements AtomMatcher {
             if (shouldMatchRings && (isAliphaticAtom(qAtom) && isRingAtom(targetAtom))) {
                 return false;
             }
+            if (shouldMatchRings
+                    && (isRingAtom(qAtom)
+                    && isRingAtom(targetAtom)
+                    && !isRingSizeEqual(targetAtom))) {
+                return false;
+            }
         }
         return true;
     }
@@ -103,5 +114,26 @@ public final class DefaultAtomMatcher implements AtomMatcher {
 
     private boolean isRingAtom(IAtom atom) {
         return atom.getFlag(CDKConstants.ISINRING) ? true : false;
+    }
+
+    private boolean isRingSizeEqual(IAtom atom) {
+
+        if (isRingAtom(atom) && isRingAtom(qAtom)) {
+
+            Integer ringSize = getRingSize(atom);
+            if (ringSize == null) {
+                return false;
+            }
+
+            if (ringSize.intValue() == this.smallestRingSize) {
+                return true;
+            }
+        }
+        return false;
+
+    }
+
+    private Integer getRingSize(IAtom atom) {
+        return (Integer) atom.getProperty(IMoleculeInitializer.SMALLEST_RING_SIZE);
     }
 }

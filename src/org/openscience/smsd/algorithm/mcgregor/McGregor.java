@@ -59,7 +59,8 @@ public final class McGregor {
     //private float timeout = -1;
     //5 min time out for infinite loop
     private float timeout = 10;
-    private boolean shouldMatchRings;
+    private final boolean shouldMatchRings;
+    private final boolean bondMatch;
 
     /**
      * @return the timeout
@@ -118,7 +119,6 @@ public final class McGregor {
         "$47", "$48", "$49", "$50", "$51", "$52", "$53", "$54", "$55"
     };
     private boolean newMatrix = false;
-    private boolean bondMatch = false;
 
     /**
      * Constructor for the McGregor algorithm.
@@ -134,8 +134,8 @@ public final class McGregor {
             boolean shouldMatchBonds,
             boolean shouldMatchRings) {
         setTimeManager(new TimeManager());
-        setBondMatch(shouldMatchBonds);
         this.shouldMatchRings = shouldMatchRings;
+        this.bondMatch = shouldMatchBonds;
         this.source = source;
         this.target = target;
         this.mappings = Collections.synchronizedList(mappings);
@@ -159,8 +159,8 @@ public final class McGregor {
      */
     public McGregor(IQueryAtomContainer source, IAtomContainer target, List<List<Integer>> mappings) {
         setTimeManager(new TimeManager());
-        setBondMatch(true);
-        setMatchRings(false);
+        this.shouldMatchRings = true;
+        this.bondMatch = true;
         this.source = source;
         this.target = target;
         this.mappings = Collections.synchronizedList(mappings);
@@ -924,24 +924,9 @@ public final class McGregor {
     }
 
     /**
-     * Should bonds match
-     * @param bondMatch the bondMatch to set
-     */
-    private synchronized void setBondMatch(boolean bondMatch) {
-        this.bondMatch = bondMatch;
-    }
-
-    /**
      * @return the shouldMatchRings
      */
     public boolean isMatchRings() {
         return shouldMatchRings;
-    }
-
-    /**
-     * @param shouldMatchRings the shouldMatchRings to set
-     */
-    public void setMatchRings(boolean shouldMatchRings) {
-        this.shouldMatchRings = shouldMatchRings;
     }
 }

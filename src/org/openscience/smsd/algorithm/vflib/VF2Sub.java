@@ -344,13 +344,13 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
                 if (RONP) {
                     qAtom = query.getAtom(mapping.getKey());
                     tAtom = mapping.getValue();
-                    qIndex = getReactantMol().getAtomNumber(qAtom);
-                    tIndex = getProductMol().getAtomNumber(tAtom);
+                    qIndex = source.getAtomNumber(qAtom);
+                    tIndex = target.getAtomNumber(tAtom);
                 } else {
                     tAtom = query.getAtom(mapping.getKey());
                     qAtom = mapping.getValue();
-                    qIndex = getReactantMol().getAtomNumber(qAtom);
-                    tIndex = getProductMol().getAtomNumber(tAtom);
+                    qIndex = source.getAtomNumber(qAtom);
+                    tIndex = target.getAtomNumber(tAtom);
                 }
 
                 if (qIndex != -1 && tIndex != -1) {

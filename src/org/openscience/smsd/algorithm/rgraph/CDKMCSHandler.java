@@ -55,8 +55,8 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
     private final IAtomContainer source;
     private final IAtomContainer target;
     private boolean rOnPFlag = false;
-    private List<AtomAtomMapping> allAtomMCS = null;
-    private List<Map<Integer, Integer>> allMCS = null;
+    private final List<AtomAtomMapping> allAtomMCS;
+    private final List<Map<Integer, Integer>> allMCS;
     private final boolean shouldMatchRings;
     private final boolean shouldMatchBonds;
 

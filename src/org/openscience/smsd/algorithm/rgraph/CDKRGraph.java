@@ -137,7 +137,7 @@ public class CDKRGraph {
         graphBitSet = new BitSet();
     }
 
-    private boolean checkTimeOut() throws CDKException {
+    private synchronized boolean checkTimeOut() throws CDKException {
         if (CDKMCS.isTimeOut()) {
             setStop(true);
             return true;
@@ -150,7 +150,7 @@ public class CDKRGraph {
      *  compared graphs.
      * @return The size of the first of the two compared graphs
      */
-    public int getFirstGraphSize() {
+    public synchronized int getFirstGraphSize() {
         return firstGraphSize;
     }
 
@@ -159,7 +159,7 @@ public class CDKRGraph {
      *  compared graphs.
      * @return The size of the second of the two compared graphs
      */
-    public int getSecondGraphSize() {
+    public synchronized int getSecondGraphSize() {
         return secondGraphSize;
     }
 
@@ -168,7 +168,7 @@ public class CDKRGraph {
      *  compared graphs.
      * @param graphSize The size of the second of the two compared graphs
      */
-    public void setFirstGraphSize(int graphSize) {
+    public synchronized void setFirstGraphSize(int graphSize) {
         firstGraphSize = graphSize;
     }
 
@@ -177,14 +177,14 @@ public class CDKRGraph {
      *  compared graphs.
      * @param graphSize The size of the second of the two compared graphs
      */
-    public void setSecondGraphSize(int graphSize) {
+    public synchronized void setSecondGraphSize(int graphSize) {
         secondGraphSize = graphSize;
     }
 
     /**
      *  Reinitialisation of the TGraph.
      */
-    public void clear() {
+    public synchronized void clear() {
         getGraph().clear();
         getGraphBitSet().clear();
     }
@@ -193,7 +193,7 @@ public class CDKRGraph {
      *  Returns the graph object of this CDKRGraph.
      * @return      The graph object, a list
      */
-    public List<CDKRNode> getGraph() {
+    public synchronized List<CDKRNode> getGraph() {
         return this.graph;
     }
 
@@ -201,7 +201,7 @@ public class CDKRGraph {
      *  Adds a new node to the CDKRGraph.
      * @param  newNode  The node to add to the graph
      */
-    public void addNode(CDKRNode newNode) {
+    public synchronized void addNode(CDKRNode newNode) {
         getGraph().add(newNode);
         getGraphBitSet().set(getGraph().size() - 1);
     }
@@ -222,7 +222,7 @@ public class CDKRGraph {
      * @param timeManager
      * @throws CDKException
      */
-    public void parse(BitSet sourceBitSet, BitSet targetBitSet, boolean findAllStructure, boolean findAllMap, TimeManager timeManager) throws CDKException {
+    public synchronized void parse(BitSet sourceBitSet, BitSet targetBitSet, boolean findAllStructure, boolean findAllMap, TimeManager timeManager) throws CDKException {
         // initialize the list of solution
         checkTimeOut();
         // initialize the list of solution
@@ -250,7 +250,7 @@ public class CDKRGraph {
      * @param  extension  possible extension node (allowed neighbors)
      * @param  forbiden   node forbidden (set of node incompatible with the current solution)
      */
-    private void parseRec(BitSet traversed, BitSet extension, BitSet forbidden) throws CDKException {
+    private synchronized void parseRec(BitSet traversed, BitSet extension, BitSet forbidden) throws CDKException {
         BitSet newTraversed = null;
         BitSet newExtension = null;
         BitSet newForbidden = null;
@@ -325,7 +325,7 @@ public class CDKRGraph {
      *
      * @param  traversed  new potential solution
      */
-    private void solution(BitSet traversed) throws CDKException {
+    private synchronized void solution(BitSet traversed) throws CDKException {
         boolean included = false;
         BitSet projG1 = projectG1(traversed);
         BitSet projG2 = projectG2(traversed);
@@ -377,7 +377,7 @@ public class CDKRGraph {
      * @param       potentialNode  set of remaining potential nodes
      * @return      true if maxIterator is worse to continue the search
      */
-    private boolean mustContinue(BitSet potentialNode) {
+    private synchronized boolean mustContinue(BitSet potentialNode) {
         boolean result = true;
         boolean cancel = false;
         BitSet projG1 = projectG1(potentialNode);
@@ -421,7 +421,7 @@ public class CDKRGraph {
      * @param  targetBitSet  constraint in the graph G2
      * @return
      */
-    private BitSet buildB(BitSet sourceBitSet, BitSet targetBitSet) throws CDKException {
+    private synchronized BitSet buildB(BitSet sourceBitSet, BitSet targetBitSet) throws CDKException {
         this.setSourceBitSet(sourceBitSet);
         this.setTargetBitSet(targetBitSet);
 
@@ -446,7 +446,7 @@ public class CDKRGraph {
      *
      * @return    The solution list
      */
-    public List<BitSet> getSolutions() {
+    public synchronized List<BitSet> getSolutions() {
         return getSolutionList();
     }
 
@@ -460,7 +460,7 @@ public class CDKRGraph {
      * @param  set  the BitSet
      * @return      the CDKRMap list
      */
-    public List<CDKRMap> bitSetToRMap(BitSet set) {
+    public synchronized List<CDKRMap> bitSetToRMap(BitSet set) {
         List<CDKRMap> rMapList = new ArrayList<CDKRMap>();
 
         for (int x = set.nextSetBit(0); x >= 0; x = set.nextSetBit(x + 1)) {
@@ -479,7 +479,7 @@ public class CDKRGraph {
      *
      * @param  findAllStructure
      */
-    public void setAllStructure(boolean findAllStructure) {
+    public synchronized void setAllStructure(boolean findAllStructure) {
         this.setFindAllStructure(findAllStructure);
     }
 
@@ -491,7 +491,7 @@ public class CDKRGraph {
      *
      * @param  findAllMap
      */
-    public void setAllMap(boolean findAllMap) {
+    public synchronized void setAllMap(boolean findAllMap) {
         this.setFindAllMap(findAllMap);
     }
 
@@ -501,7 +501,7 @@ public class CDKRGraph {
      *
      * @param  maxIterator  The new maxIteration value
      */
-    public void setMaxIteration(int maxIterator) {
+    public synchronized void setMaxIteration(int maxIterator) {
         this.maxIteration = maxIterator;
     }
 
@@ -510,7 +510,7 @@ public class CDKRGraph {
      * @return the string representation of the CDKRGraph
      */
     @Override
-    public String toString() {
+    public synchronized String toString() {
         String message = "";
         int jIndex = 0;
 
@@ -529,7 +529,7 @@ public class CDKRGraph {
      * @param  set  CDKRGraph BitSet to project
      * @return      The associate BitSet in G1
      */
-    public BitSet projectG1(BitSet set) {
+    public synchronized BitSet projectG1(BitSet set) {
         BitSet projection = new BitSet(getFirstGraphSize());
         CDKRNode xNode = null;
 
@@ -545,7 +545,7 @@ public class CDKRGraph {
      * @param  set  CDKRGraph BitSet to project
      * @return      The associate BitSet in G2
      */
-    public BitSet projectG2(BitSet set) {
+    public synchronized BitSet projectG2(BitSet set) {
         BitSet projection = new BitSet(getSecondGraphSize());
         CDKRNode xNode = null;
 
@@ -562,7 +562,7 @@ public class CDKRGraph {
      * @param  targetBitSet  a bitSet
      * @return    true if  sourceBitSet is contained in  targetBitSet
      */
-    private boolean isContainedIn(BitSet sourceBitSet, BitSet targetBitSet) {
+    private synchronized boolean isContainedIn(BitSet sourceBitSet, BitSet targetBitSet) {
         boolean result = false;
 
         if (sourceBitSet.isEmpty()) {
@@ -582,70 +582,70 @@ public class CDKRGraph {
     /**
      * @return the findAllStructure
      */
-    private boolean isFindAllStructure() {
+    private synchronized boolean isFindAllStructure() {
         return findAllStructure;
     }
 
     /**
      * @param findAllStructure the findAllStructure to set
      */
-    private void setFindAllStructure(boolean findAllStructure) {
+    private synchronized void setFindAllStructure(boolean findAllStructure) {
         this.findAllStructure = findAllStructure;
     }
 
     /**
      * @return the solutionList
      */
-    private List<BitSet> getSolutionList() {
+    private synchronized List<BitSet> getSolutionList() {
         return solutionList;
     }
 
     /**
      * @return the targetBitSet
      */
-    private BitSet getTargetBitSet() {
+    private synchronized BitSet getTargetBitSet() {
         return targetBitSet;
     }
 
     /**
      * @param targetBitSet the targetBitSet to set
      */
-    private void setTargetBitSet(BitSet targetBitSet) {
+    private synchronized void setTargetBitSet(BitSet targetBitSet) {
         this.targetBitSet = targetBitSet;
     }
 
     /**
      * @return the sourceBitSet
      */
-    private BitSet getSourceBitSet() {
+    private synchronized BitSet getSourceBitSet() {
         return sourceBitSet;
     }
 
     /**
      * @param sourceBitSet the sourceBitSet to set
      */
-    private void setSourceBitSet(BitSet sourceBitSet) {
+    private synchronized void setSourceBitSet(BitSet sourceBitSet) {
         this.sourceBitSet = sourceBitSet;
     }
 
     /**
      * @return the maxIteration
      */
-    private int getMaxIteration() {
+    private synchronized int getMaxIteration() {
         return maxIteration;
     }
 
     /**
      * @return the findAllMap
      */
-    private boolean isFindAllMap() {
+    private synchronized boolean isFindAllMap() {
         return findAllMap;
     }
 
     /**
      * @param findAllMap the findAllMap to set
      */
-    private void setFindAllMap(boolean findAllMap) {
+    private synchronized void setFindAllMap(boolean findAllMap) {
         this.findAllMap = findAllMap;
     }
 
@@ -653,7 +653,7 @@ public class CDKRGraph {
      * True if stop search is set.
      * @return the stop
      */
-    private boolean isStop() {
+    private synchronized boolean isStop() {
         return stop;
     }
 
@@ -661,28 +661,28 @@ public class CDKRGraph {
      * Set if true is a search has to be stopped
      * @param stop the stop to set
      */
-    private void setStop(boolean stop) {
+    private synchronized void setStop(boolean stop) {
         this.stop = stop;
     }
 
     /**
      * @return the nbIteration
      */
-    private int getNbIteration() {
+    private synchronized int getNbIteration() {
         return nbIteration;
     }
 
     /**
      * @param nbIteration the nbIteration to set
      */
-    private void setNbIteration(int nbIteration) {
+    private synchronized void setNbIteration(int nbIteration) {
         this.nbIteration = nbIteration;
     }
 
     /**
      * @return the graphBitSet
      */
-    private BitSet getGraphBitSet() {
+    private synchronized BitSet getGraphBitSet() {
         return graphBitSet;
     }
 }

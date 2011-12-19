@@ -15,11 +15,12 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryBond;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainer;
+import org.openscience.cdk.tools.manipulator.BondManipulator;
 import org.openscience.smsd.global.TimeOut;
 import org.openscience.smsd.tools.TimeManager;
-import org.openscience.cdk.tools.manipulator.BondManipulator;
 import org.openscience.smsd.algorithm.matchers.AtomMatcher;
 import org.openscience.smsd.algorithm.matchers.DefaultAtomMatcher;
+import org.openscience.smsd.algorithm.matchers.DefaultMatcher;
 
 /**
  *  This class implements atom multipurpose structure comparison tool.
@@ -748,38 +749,13 @@ public class CDKMCS {
 
         // compares each bondA of G1 to each bondA of G2
         for (int i = 0; i < ac1.getBondCount(); i++) {
-            IBond bondA = ac1.getBond(i);
-            IAtom atomA1 = bondA.getAtom(0);
-            IAtom atomA2 = bondA.getAtom(1);
-            AtomMatcher defaultRGraphAtomMatcherA1 =
-                    new DefaultAtomMatcher(atomA1, shouldMatchRings);
-            AtomMatcher defaultRGraphAtomMatcherA2 =
-                    new DefaultAtomMatcher(atomA2, shouldMatchRings);
-
             for (int j = 0; j < ac2.getBondCount(); j++) {
-                IBond bondB = ac2.getBond(j);
-                IAtom atomB1 = bondB.getAtom(0);
-                IAtom atomB2 = bondB.getAtom(1);
+//                // if both bonds are compatible then create an association node
+//                // in the resolution graph
 
-                // if both bonds are compatible then create an association node
-                // in the resolution graph
-
-                if (bondB instanceof IQueryBond) {
-                    IQueryBond queryBond = (IQueryBond) bondB;
-                    if (!queryBond.matches(bondA)) {
-                        continue;
-                    }
-                } else if (shouldMatchBonds && !CDKMCS.BondMatcher(ac1.getBond(i), ac2.getBond(j))) {
+                if (!isMatchFeasible(ac1.getBond(i), ac2.getBond(j), shouldMatchBonds, shouldMatchRings)) {
                     continue;
-                }
-
-                if (// atom type conditions
-                        (// a1 = a2 && b1 = b2
-                        defaultRGraphAtomMatcherA1.matches(atomB1)
-                        && defaultRGraphAtomMatcherA2.matches(atomB2)
-                        || (// a1 = b2 && b1 = a2
-                        defaultRGraphAtomMatcherA1.matches(atomB2)
-                        && defaultRGraphAtomMatcherA2.matches(atomB1)))) {
+                } else {
                     gr.addNode(new CDKRNode(i, j));
                 }
             }
@@ -787,24 +763,35 @@ public class CDKMCS {
     }
 
     /**
-     * @param queryBond
-     * @param targetBond
+     * 
+     * @param bondA1
+     * @param bondA2
+     * @param shouldMatchBonds
+     * @param shouldMatchRings
      * @return
      */
-    public static boolean BondMatcher(
-            IBond queryBond,
-            IBond targetBond) {
-        if ( // bondA type conditions
-                ( // same bondA order and same aromaticity flag (either both on or off)
-                queryBond.getOrder() == targetBond.getOrder()
-                && queryBond.getFlag(CDKConstants.ISAROMATIC)
-                == targetBond.getFlag(CDKConstants.ISAROMATIC))
-                || ( // both bondA are aromatic
-                queryBond.getFlag(CDKConstants.ISAROMATIC)
-                && targetBond.getFlag(CDKConstants.ISAROMATIC))) {
-            return true;
+    protected static boolean isMatchFeasible(
+            IBond bondA1,
+            IBond bondA2,
+            boolean shouldMatchBonds,
+            boolean shouldMatchRings) {
+
+        if (bondA1 instanceof IQueryBond) {
+            if (((IQueryBond) bondA1).matches(bondA2)) {
+                IQueryAtom atom1 = (IQueryAtom) (bondA1.getAtom(0));
+                IQueryAtom atom2 = (IQueryAtom) (bondA1.getAtom(1));
+                // ok, bonds match
+                if (atom1.matches(bondA2.getAtom(0)) && atom2.matches(bondA2.getAtom(1))
+                        || atom1.matches(bondA2.getAtom(1)) && atom2.matches(bondA2.getAtom(0))) {
+                    // ok, atoms match in either order
+                    return true;
+                }
+                return false;
+            }
+            return false;
+        } else {
+            return DefaultMatcher.matches(bondA1, bondA2, shouldMatchBonds, shouldMatchRings) ? true : false;
         }
-        return false;
     }
 
     /**
