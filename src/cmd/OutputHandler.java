@@ -239,9 +239,9 @@ public class OutputHandler {
 
     public void printHeader(
             String queryMolInput, String targetMolInput, int nAtomsMatched) throws IOException {
-        outMFile.write("Molecule 1=\t" + queryMolInput);
+        outMFile.write("AtomContainer 1=\t" + queryMolInput);
         outMFile.newLine();
-        outMFile.write("Molecule 2=\t" + targetMolInput);
+        outMFile.write("AtomContainer 2=\t" + targetMolInput);
         outMFile.newLine();
         outMFile.write("Max atoms matched=\t" + nAtomsMatched);
         outMFile.newLine();

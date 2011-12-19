@@ -11,7 +11,7 @@ import java.util.Map;
 import org.apache.commons.cli.MissingOptionException;
 import org.openscience.cdk.ChemFile;
 import org.openscience.cdk.DefaultChemObjectBuilder;
-import org.openscience.cdk.Molecule;
+import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
@@ -26,7 +26,6 @@ import org.openscience.cdk.io.PDBReader;
 import org.openscience.cdk.io.iterator.IIteratingChemObjectReader;
 import org.openscience.cdk.io.iterator.IteratingMDLReader;
 import org.openscience.cdk.layout.StructureDiagramGenerator;
-import org.openscience.cdk.nonotify.NoNotificationChemObjectBuilder;
 import org.openscience.cdk.signature.MoleculeSignature;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
@@ -220,7 +219,7 @@ public class InputHandler {
         }
         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol);
         CDKHueckelAromaticityDetector.detectAromaticity(mol);
-        mol = new Molecule(mol);
+        mol = new AtomContainer(mol);
         mol.setID(id);
         sdg.setMolecule(mol, false);
         sdg.generateCoordinates();
@@ -240,7 +239,7 @@ public class InputHandler {
     private IAtomContainer getMolFromSmiles(String smiles) throws CDKException {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer atomContainer = sp.parseSmiles(smiles);
-        IAtomContainer mol = new Molecule(atomContainer);
+        IAtomContainer mol = new AtomContainer(atomContainer);
         configure(mol, "SMI");
         return mol;
     }
@@ -248,7 +247,7 @@ public class InputHandler {
     private IAtomContainer getMolFromSignature(String signatureString) throws CDKException {
         IAtomContainer atomContainer = MoleculeSignature.fromSignatureString(
                 signatureString, DefaultChemObjectBuilder.getInstance());
-        IAtomContainer mol = new Molecule(atomContainer);
+        IAtomContainer mol = new AtomContainer(atomContainer);
         configure(mol, "SIG");
         return mol;
     }
@@ -317,7 +316,7 @@ public class InputHandler {
         if (type.equals("SDF")) {
             FileReader in = new FileReader(argumentHandler.getTargetFilepath());
             return new IteratingMDLReader(
-                    in, NoNotificationChemObjectBuilder.getInstance());
+                    in, DefaultChemObjectBuilder.getInstance());
         }
         return null;
     }

@@ -4,13 +4,13 @@ package cmd.pdb;
 import java.io.IOException;
 
 import org.openscience.cdk.CDKConstants;
+import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.config.AtomTypeFactory;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IAtomType;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
-import org.openscience.cdk.nonotify.NoNotificationChemObjectBuilder;
 import org.openscience.cdk.protein.data.PDBAtom;
 import org.openscience.cdk.tools.manipulator.BondManipulator;
 
@@ -91,7 +91,7 @@ public class LigandHelper {
 
     private static void saturate(IAtomContainer atomContainer) {
         AtomTypeFactory typeFactory = 
-            getAtomTypeFactory(NoNotificationChemObjectBuilder.getInstance());
+            getAtomTypeFactory(DefaultChemObjectBuilder.getInstance());
         
         // set some lookup information
         int numberOfAtoms = atomContainer.getAtomCount();

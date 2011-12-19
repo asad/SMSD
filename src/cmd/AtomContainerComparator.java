@@ -28,7 +28,7 @@ import org.openscience.cdk.config.IsotopeFactory;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.interfaces.IMolecule;
+import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
@@ -98,13 +98,13 @@ public class AtomContainerComparator implements Comparator<IAtomContainer> {
         }
 
         // Check for correct instances
-        if (!(o1 instanceof IMolecule) && !(o2 instanceof IMolecule)) {
+        if (!(o1 instanceof IAtomContainer) && !(o2 instanceof IAtomContainer)) {
             return 0;
         }
-        if (!(o1 instanceof IMolecule)) {
+        if (!(o1 instanceof IAtomContainer)) {
             return -1;
         }
-        if (!(o2 instanceof IMolecule)) {
+        if (!(o2 instanceof IAtomContainer)) {
             return 1;
         }
 

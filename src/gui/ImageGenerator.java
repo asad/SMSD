@@ -15,11 +15,11 @@ import java.util.Map;
 import javax.imageio.ImageIO;
 import javax.vecmath.Vector2d;
 
+import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
-import org.openscience.cdk.nonotify.NoNotificationChemObjectBuilder;
 import org.openscience.reactionblast.graphics.direct.DirectMoleculeDrawer;
 import org.openscience.reactionblast.graphics.direct.Params;
 import org.openscience.reactionblast.graphics.direct.layout.SingleMoleculeLayout;
@@ -66,8 +66,8 @@ public class ImageGenerator {
         msl.layout(query, new Vector2d(0.0, 0.0));
         msl.layout(target, new Vector2d(0.0, 0.0));
 
-        IAtomContainer cloneOfQuery = (IAtomContainer) (new org.openscience.cdk.Molecule(query).clone());
-        IAtomContainer cloneOfTarget = (IAtomContainer) (new org.openscience.cdk.Molecule(target).clone());
+        IAtomContainer cloneOfQuery = (IAtomContainer) (new org.openscience.cdk.AtomContainer(query).clone());
+        IAtomContainer cloneOfTarget = (IAtomContainer) (new org.openscience.cdk.AtomContainer(target).clone());
 
         IAtomContainer querySubgraph = query.getBuilder().newInstance(IAtomContainer.class, cloneOfQuery);
         IAtomContainer targetSubgraph = target.getBuilder().newInstance(IAtomContainer.class, cloneOfTarget);
@@ -104,7 +104,7 @@ public class ImageGenerator {
 
         // layout, and set the highlight subgraphs
         DirectMoleculeDrawer moleculeDrawer = new DirectMoleculeDrawer();
-        IChemObjectBuilder builder = NoNotificationChemObjectBuilder.getInstance();
+        IChemObjectBuilder builder = DefaultChemObjectBuilder.getInstance();
         IAtomContainerSet leftHandMoleculeSet = builder.newInstance(IAtomContainerSet.class);
         IAtomContainerSet rightHandMoleculeSet = builder.newInstance(IAtomContainerSet.class);
         for (QueryTargetPair pair : queryTargetPairs) {
@@ -152,7 +152,7 @@ public class ImageGenerator {
 
         // layout, and set the highlight subgraphs
         DirectMoleculeDrawer moleculeDrawer = new DirectMoleculeDrawer();
-        IChemObjectBuilder builder = NoNotificationChemObjectBuilder.getInstance();
+        IChemObjectBuilder builder = DefaultChemObjectBuilder.getInstance();
         IAtomContainerSet leftHandMoleculeSet = builder.newInstance(IAtomContainerSet.class);
         IAtomContainerSet rightHandMoleculeSet = builder.newInstance(IAtomContainerSet.class);
         for (QueryTargetPair pair : queryTargetPairs) {
