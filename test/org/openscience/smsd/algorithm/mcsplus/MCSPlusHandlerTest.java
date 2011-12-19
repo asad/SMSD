@@ -30,7 +30,7 @@ import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.interfaces.IMolecule;
+import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.normalize.SMSDNormalizer;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.junit.After;
@@ -110,8 +110,8 @@ public class MCSPlusHandlerTest {
     public void testSet_IMolecule_IMolecule() throws Exception {
         System.out.println("set");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
-        IMolecule target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
-        IMolecule queryac = sp.parseSmiles("Nc1ccccc1");
+        IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
+        IAtomContainer queryac = sp.parseSmiles("Nc1ccccc1");
 
         MCSPlusHandler smsd1 = new MCSPlusHandler(queryac, target, true, false);
         assertNotNull(smsd1.getFirstMapping());

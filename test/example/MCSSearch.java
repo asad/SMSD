@@ -5,7 +5,7 @@ import java.io.FileInputStream;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.openscience.cdk.Molecule;
+import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -65,10 +65,10 @@ public class MCSSearch {
             }
 
             MDLV2000Reader molQuery = new MDLV2000Reader(new FileInputStream(mol1));
-            IAtomContainer query = molQuery.read(new Molecule());
+            IAtomContainer query = molQuery.read(new AtomContainer());
 
             MDLV2000Reader molTarget = new MDLV2000Reader(new FileInputStream(mol2));
-            IAtomContainer target = molTarget.read(new Molecule());
+            IAtomContainer target = molTarget.read(new AtomContainer());
 
             AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(query);
             AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(target);
@@ -107,15 +107,15 @@ public class MCSSearch {
                             for (Map.Entry<IAtom, IAtom> mapping : aams.getMappings().entrySet()) {
 
 
-                                //Get the mapped atom in Query Molecule
+                                //Get the mapped atom in Query AtomContainer
                                 IAtom queryAtom = mapping.getKey();
-                                //Get the mapped atom in Target Molecule
+                                //Get the mapped atom in Target AtomContainer
                                 IAtom targetAtom = mapping.getValue();
 
 
-                                //Get the mapped atom number in Query Molecule
+                                //Get the mapped atom number in Query AtomContainer
                                 int queryMappingNumber = aams.getQueryIndex(queryAtom);
-                                //Get the mapped atom number in Target Molecule
+                                //Get the mapped atom number in Target AtomContainer
                                 int targetMappingNumber = aams.getTargetIndex(targetAtom);
                                 //Print mapped atom numbers
                                 System.out.println(queryMappingNumber + " "
@@ -148,9 +148,9 @@ public class MCSSearch {
                     AtomAtomMapping firstAtomMapping = comparison.getFirstAtomMapping();
                     for (Map.Entry<IAtom, IAtom> mapping : firstAtomMapping.getMappings().entrySet()) {
 
-                        //Get the mapped atom in Query Molecule
+                        //Get the mapped atom in Query AtomContainer
                         IAtom queryAtom = mapping.getKey();
-                        //Get the mapped atom in Target Molecule
+                        //Get the mapped atom in Target AtomContainer
                         IAtom targetAtom = mapping.getValue();
                         //Print mapped atom numbers
                         System.out.println(firstAtomMapping.getQueryIndex(queryAtom) + " "

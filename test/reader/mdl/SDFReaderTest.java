@@ -8,15 +8,14 @@ import java.io.IOException;
 import org.junit.Before;
 import org.junit.Test;
 import org.openscience.cdk.CDKConstants;
+import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.graph.ConnectivityChecker;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.interfaces.IMolecule;
-import org.openscience.cdk.interfaces.IMoleculeSet;
+import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.io.SDFWriter;
 import org.openscience.cdk.io.iterator.IteratingMDLReader;
 import org.openscience.cdk.libio.md.MDMolecule;
-import org.openscience.cdk.nonotify.NoNotificationChemObjectBuilder;
 
 /*
  * To change this template, choose Tools | Templates
@@ -38,22 +37,22 @@ public class SDFReaderTest {
     public void testSDFReader() throws FileNotFoundException, CDKException, IOException {
         FileReader in = new FileReader(SDF_DATA_FOLDER + File.separator + "trupti.sdf");
         IteratingMDLReader iteratingMDLReader = new IteratingMDLReader(
-                in, NoNotificationChemObjectBuilder.getInstance());
+                in, DefaultChemObjectBuilder.getInstance());
         int i = 0;
-        IMoleculeSet connectedSet = NoNotificationChemObjectBuilder.getInstance().newInstance(IMoleculeSet.class);
-        IMoleculeSet disconnectedSet = NoNotificationChemObjectBuilder.getInstance().newInstance(IMoleculeSet.class);
+        IAtomContainerSet connectedSet = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainerSet.class);
+        IAtomContainerSet disconnectedSet = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainerSet.class);
 
         while (iteratingMDLReader.hasNext()) {
-            IAtomContainer ac = (IAtomContainer) iteratingMDLReader.next();
+            IAtomContainer ac = iteratingMDLReader.next();
             boolean flag = ConnectivityChecker.isConnected(ac);
-            IMolecule mol = new MDMolecule(ac);
+            IAtomContainer mol = new MDMolecule(ac);
             mol.setID((String) ac.getProperty(CDKConstants.TITLE));
             mol.setProperty(CDKConstants.TITLE, mol.getID());
             if (!flag) {
-                disconnectedSet.addMolecule(mol);
+                disconnectedSet.addAtomContainer(mol);
                 System.out.println("error:file not connectted " + ac.getProperty(CDKConstants.TITLE));
             } else {
-                connectedSet.addMolecule(mol);
+                connectedSet.addAtomContainer(mol);
             }
             i++;
         }

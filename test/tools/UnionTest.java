@@ -16,7 +16,7 @@ import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
-import org.openscience.cdk.interfaces.IMolecule;
+import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IRingSet;
 import org.openscience.cdk.ringsearch.AllRingsFinder;
 import org.openscience.cdk.smiles.SmilesGenerator;
@@ -35,8 +35,8 @@ public class UnionTest {
     @Test
     public void unionMolecules() throws IOException, CDKException {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
-        IMolecule mol1 = sp.parseSmiles("OOC1=CC=CC=C1");
-        IMolecule mol2 = sp.parseSmiles("c1ccc(cc1)c2ccccc2");
+        IAtomContainer mol1 = sp.parseSmiles("OOC1=CC=CC=C1");
+        IAtomContainer mol2 = sp.parseSmiles("c1ccc(cc1)c2ccccc2");
         int i = 0;
         for (IAtom atom1 : mol1.atoms()) {
             atom1.setID(String.valueOf((i++)));

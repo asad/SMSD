@@ -28,7 +28,7 @@ import java.util.logging.Logger;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.interfaces.IMolecule;
+import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -91,8 +91,8 @@ public class CDKMCSHandlerTest {
     public void testSet_IMolecule_IMolecule() throws Exception {
         System.out.println("set");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
-        IMolecule target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
-        IMolecule query = sp.parseSmiles("Nc1ccccc1");
+        IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
+        IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
         CDKMCSHandler smsd1 = new CDKMCSHandler(query, target, true, false);
         assertNotNull(smsd1.getFirstMapping());

@@ -36,7 +36,7 @@ import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
-import org.openscience.cdk.interfaces.IMolecule;
+import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.smsd.algorithm.vflib.builder.TargetProperties;
 import org.openscience.smsd.algorithm.vflib.interfaces.IMapper;
 import org.openscience.smsd.algorithm.vflib.interfaces.INode;
@@ -209,8 +209,8 @@ public class VFMatcherTest {
         Assert.assertTrue(mapper.hasMap(hexane));
     }
 
-    public static IMolecule createHexane() throws CDKException {
-        IMolecule result = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class);
+    public static IAtomContainer createHexane() throws CDKException {
+        IAtomContainer result = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class);
         IAtom c1 = DefaultChemObjectBuilder.getInstance().newInstance(IAtom.class, "C");
         c1.setID("1");
         IAtom c2 = DefaultChemObjectBuilder.getInstance().newInstance(IAtom.class, "C");
@@ -249,8 +249,8 @@ public class VFMatcherTest {
         return result;
     }
 
-    public static IMolecule createBenzene() throws CDKException {
-        IMolecule result = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class);
+    public static IAtomContainer createBenzene() throws CDKException {
+        IAtomContainer result = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class);
 
         IAtom c1 = DefaultChemObjectBuilder.getInstance().newInstance(IAtom.class, "C");
         c1.setID("1");

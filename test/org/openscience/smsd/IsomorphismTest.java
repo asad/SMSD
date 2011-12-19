@@ -34,14 +34,13 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.DefaultChemObjectBuilder;
-import org.openscience.cdk.Molecule;
+import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.interfaces.IMolecule;
+import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.io.IChemObjectReader.Mode;
 import org.openscience.cdk.io.MDLV2000Reader;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
@@ -99,8 +98,8 @@ public class IsomorphismTest {
     public void testInit_3args_1() throws CDKException {
         System.out.println("init");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
-        IMolecule target = sp.parseSmiles("C\\C=C/OCC=C");
-        IMolecule query = sp.parseSmiles("CCCOCC(C)=C");
+        IAtomContainer target = sp.parseSmiles("C\\C=C/OCC=C");
+        IAtomContainer query = sp.parseSmiles("CCCOCC(C)=C");
 
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, false, false);
         smsd1.setChemFilters(true, false, false);
@@ -155,8 +154,8 @@ public class IsomorphismTest {
     public void testSet_IAtomContainer_IAtomContainer() throws CDKException {
         System.out.println("set");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
-        IMolecule target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
-        IMolecule query = sp.parseSmiles("Nc1ccccc1");
+        IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
+        IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false);
         smsd1.setChemFilters(true, true, true);
@@ -172,8 +171,8 @@ public class IsomorphismTest {
     public void testSet_IMolecule_IMolecule() throws Exception {
         System.out.println("set");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
-        IMolecule target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
-        IMolecule query = sp.parseSmiles("Nc1ccccc1");
+        IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
+        IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false);
         smsd1.setChemFilters(true, true, true);
@@ -190,8 +189,8 @@ public class IsomorphismTest {
         System.out.println("set");
         String molfile = "data/mdl/decalin.mol";
         String queryfile = "data/mdl/decalin.mol";
-        Molecule query = new Molecule();
-        Molecule target = new Molecule();
+        AtomContainer query = new AtomContainer();
+        AtomContainer target = new AtomContainer();
 
         InputStream ins = this.getClass().getClassLoader().getResourceAsStream(molfile);
         MDLV2000Reader reader = new MDLV2000Reader(ins, Mode.STRICT);

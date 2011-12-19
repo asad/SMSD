@@ -31,10 +31,10 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.openscience.cdk.Atom;
 import org.openscience.cdk.AtomContainer;
-import org.openscience.cdk.Molecule;
+import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.interfaces.IMolecule;
+import org.openscience.cdk.interfaces.IAtomContainer;
 
 /**
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
@@ -88,9 +88,9 @@ public class SingleMappingHandlerTest {
         System.out.println("set");
         IAtom atomSource = new Atom("R");
         IAtom atomTarget = new Atom("R");
-        IMolecule source = new Molecule();
+        IAtomContainer source = new AtomContainer();
         source.addAtom(atomSource);
-        IMolecule target = new Molecule();
+        IAtomContainer target = new AtomContainer();
         target.addAtom(atomTarget);
         SingleMappingHandler instance = new SingleMappingHandler(source, target, true, false);
         Assert.assertNotNull(instance.getFirstAtomMapping());
@@ -104,9 +104,9 @@ public class SingleMappingHandlerTest {
         System.out.println("set");
         IAtom atomSource = new Atom("R");
         IAtom atomTarget = new Atom("R");
-        IMolecule source = new Molecule();
+        IAtomContainer source = new AtomContainer();
         source.addAtom(atomSource);
-        IMolecule target = new Molecule();
+        IAtomContainer target = new AtomContainer();
         target.addAtom(atomTarget);
 
         SingleMappingHandler instance = new SingleMappingHandler(source, target, true, false);

@@ -52,7 +52,7 @@ import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IBond;
-import org.openscience.cdk.interfaces.IMolecule;
+import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.smiles.SmilesGenerator;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.tools.CDKHydrogenAdder;
@@ -66,8 +66,8 @@ import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
  */
 public class Molecules {
 
-    public static IMolecule create4Toluene() throws CDKException {
-        IMolecule result = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class);
+    public static IAtomContainer create4Toluene() throws CDKException {
+        IAtomContainer result = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class);
         IAtom c1 = DefaultChemObjectBuilder.getInstance().newInstance(IAtom.class, "C");
         c1.setID("1");
         IAtom c2 = DefaultChemObjectBuilder.getInstance().newInstance(IAtom.class, "C");
@@ -117,8 +117,8 @@ public class Molecules {
         return result;
     }
 
-    public static IMolecule createMethane() throws CDKException {
-        IMolecule result = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class);
+    public static IAtomContainer createMethane() throws CDKException {
+        IAtomContainer result = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class);
         IAtom c1 = DefaultChemObjectBuilder.getInstance().newInstance(IAtom.class, "C");
         result.addAtom(c1);
         CDKHydrogenAdder adder = CDKHydrogenAdder.getInstance(result.getBuilder());
@@ -127,8 +127,8 @@ public class Molecules {
         return result;
     }
 
-    public static IMolecule createPropane() throws CDKException {
-        IMolecule result = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class);
+    public static IAtomContainer createPropane() throws CDKException {
+        IAtomContainer result = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class);
         IAtom c1 = result.getBuilder().newInstance(IAtom.class, "C");
         IAtom c2 = result.getBuilder().newInstance(IAtom.class, "C");
         IAtom c3 = result.getBuilder().newInstance(IAtom.class, "C");
@@ -157,8 +157,8 @@ public class Molecules {
         return result;
     }
 
-    public static IMolecule createHexane() throws CDKException {
-        IMolecule result = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class);
+    public static IAtomContainer createHexane() throws CDKException {
+        IAtomContainer result = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class);
 
         IAtom c1 = DefaultChemObjectBuilder.getInstance().newInstance(IAtom.class, "C");
         c1.setID("1");
@@ -205,8 +205,8 @@ public class Molecules {
         return result;
     }
 
-    public static IMolecule createBenzene() throws CDKException {
-        IMolecule result = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class);
+    public static IAtomContainer createBenzene() throws CDKException {
+        IAtomContainer result = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class);
 
         IAtom c1 = DefaultChemObjectBuilder.getInstance().newInstance(IAtom.class, "C");
         c1.setID("1");
@@ -256,8 +256,8 @@ public class Molecules {
         return result;
     }
 
-    public static IMolecule createNaphthalene() throws CDKException {
-        IMolecule result = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class);
+    public static IAtomContainer createNaphthalene() throws CDKException {
+        IAtomContainer result = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class);
 
         IAtom c1 = DefaultChemObjectBuilder.getInstance().newInstance(IAtom.class, "C");
         c1.setID("1");
@@ -330,10 +330,10 @@ public class Molecules {
         return result;
     }
 
-    public static IMolecule createPyridazine() throws CDKException {
+    public static IAtomContainer createPyridazine() throws CDKException {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         String smiles = "C1=CN=NC=C1";
-        IMolecule result = sp.parseSmiles(smiles);
+        IAtomContainer result = sp.parseSmiles(smiles);
         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(result);
         CDKHydrogenAdder adder = CDKHydrogenAdder.getInstance(result.getBuilder());
         adder.addImplicitHydrogens(result);
@@ -341,10 +341,10 @@ public class Molecules {
         return result;
     }
 
-    public static IMolecule createChloroisoquinoline4() throws CDKException {
+    public static IAtomContainer createChloroisoquinoline4() throws CDKException {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         String smiles = "ClC1=CC=NC2=C1C=CC=C2";
-        IMolecule result = sp.parseSmiles(smiles);
+        IAtomContainer result = sp.parseSmiles(smiles);
         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(result);
         CDKHydrogenAdder adder = CDKHydrogenAdder.getInstance(result.getBuilder());
         adder.addImplicitHydrogens(result);
@@ -352,10 +352,10 @@ public class Molecules {
         return result;
     }
 
-    public static IMolecule createChlorobenzene() throws CDKException {
+    public static IAtomContainer createChlorobenzene() throws CDKException {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         String smiles = "Clc1ccccc1";
-        IMolecule result = sp.parseSmiles(smiles);
+        IAtomContainer result = sp.parseSmiles(smiles);
         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(result);
         CDKHydrogenAdder adder = CDKHydrogenAdder.getInstance(result.getBuilder());
         adder.addImplicitHydrogens(result);
@@ -363,8 +363,8 @@ public class Molecules {
         return result;
     }
 
-    public static IMolecule createAcetone() throws CDKException {
-        IMolecule result = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class);
+    public static IAtomContainer createAcetone() throws CDKException {
+        IAtomContainer result = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class);
 
         IAtom c1 = DefaultChemObjectBuilder.getInstance().newInstance(IAtom.class, "C");
         c1.setID("1");
@@ -395,8 +395,8 @@ public class Molecules {
         return result;
     }
 //
-//    public static Molecule createNeopentane() {
-//        Molecule result = new DefaultMolecule();
+//    public static AtomContainer createNeopentane() {
+//        AtomContainer result = new DefaultMolecule();
 //        Atom c0 = result.addAtom("C");
 //        Atom c1 = result.addAtom("C");
 //        Atom c2 = result.addAtom("C");
@@ -412,8 +412,8 @@ public class Molecules {
 //    }
 //
 
-    public static IMolecule createCubane() throws CDKException {
-        IMolecule result = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class);
+    public static IAtomContainer createCubane() throws CDKException {
+        IAtomContainer result = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class);
         IAtom c1 = DefaultChemObjectBuilder.getInstance().newInstance(IAtom.class, "C");
         c1.setID("1");
         IAtom c2 = DefaultChemObjectBuilder.getInstance().newInstance(IAtom.class, "C");
@@ -476,8 +476,8 @@ public class Molecules {
         return result;
     }
 //
-//    public static Molecule createBicyclo220hexane() {
-//        Molecule result = new DefaultMolecule();
+//    public static AtomContainer createBicyclo220hexane() {
+//        AtomContainer result = new DefaultMolecule();
 //        Atom c0 = result.addAtom("C");
 //        Atom c1 = result.addAtom("C");
 //        Atom c2 = result.addAtom("C");
@@ -496,8 +496,8 @@ public class Molecules {
 //        return result;
 //    }
 //
-//    public static Molecule createEthylbenzeneWithSuperatom() {
-//        Molecule result = Molecules.createBenzene();
+//    public static AtomContainer createEthylbenzeneWithSuperatom() {
+//        AtomContainer result = Molecules.createBenzene();
 //        Atom carbon1 = result.addAtom("C");
 //        Atom carbon2 = result.addAtom("C");
 //        Bond crossingBond = result.connect(result.getAtom(0), carbon1, 1);
@@ -514,8 +514,8 @@ public class Molecules {
 //    }
 //
 
-    public static IMolecule createPyridine() throws CDKException {
-        IMolecule result = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class);
+    public static IAtomContainer createPyridine() throws CDKException {
+        IAtomContainer result = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class);
 
         IAtom c1 = DefaultChemObjectBuilder.getInstance().newInstance(IAtom.class, "C");
         c1.setID("1");
@@ -558,8 +558,8 @@ public class Molecules {
         return result;
     }
 
-    public static IMolecule createToluene() throws CDKException {
-        IMolecule result = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class);
+    public static IAtomContainer createToluene() throws CDKException {
+        IAtomContainer result = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class);
 
         IAtom c1 = DefaultChemObjectBuilder.getInstance().newInstance(IAtom.class, "C");
         c1.setID("1");
@@ -609,9 +609,9 @@ public class Molecules {
         return result;
     }
 
-    public static IMolecule createPhenol() throws CDKException {
+    public static IAtomContainer createPhenol() throws CDKException {
 
-        IMolecule result = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class);
+        IAtomContainer result = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class);
 
         IAtom c1 = DefaultChemObjectBuilder.getInstance().newInstance(IAtom.class, "C");
         c1.setID("1");
@@ -661,9 +661,9 @@ public class Molecules {
         return result;
     }
 
-    public static IMolecule createCyclohexane() throws CDKException {
+    public static IAtomContainer createCyclohexane() throws CDKException {
 
-        IMolecule result = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class);
+        IAtomContainer result = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class);
 
         IAtom c1 = DefaultChemObjectBuilder.getInstance().newInstance(IAtom.class, "C");
         c1.setID("1");
@@ -710,8 +710,8 @@ public class Molecules {
 
     }
 
-    public static IMolecule createCyclopropane() throws CDKException {
-        IMolecule result = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class);
+    public static IAtomContainer createCyclopropane() throws CDKException {
+        IAtomContainer result = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class);
 
         IAtom c1 = DefaultChemObjectBuilder.getInstance().newInstance(IAtom.class, "C");
         IAtom c2 = DefaultChemObjectBuilder.getInstance().newInstance(IAtom.class, "C");
@@ -738,8 +738,8 @@ public class Molecules {
         return result;
     }
 
-    public static IMolecule createIsobutane() throws CDKException {
-        IMolecule result = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class);
+    public static IAtomContainer createIsobutane() throws CDKException {
+        IAtomContainer result = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class);
 
         IAtom c1 = DefaultChemObjectBuilder.getInstance().newInstance(IAtom.class, "C");
         IAtom c2 = DefaultChemObjectBuilder.getInstance().newInstance(IAtom.class, "C");
@@ -768,8 +768,8 @@ public class Molecules {
         return result;
     }
 
-//    private IMolecule createBenzaldehyde() {
-//        Molecule result = new DefaultMolecule();
+//    private IAtomContainer createBenzaldehyde() {
+//        AtomContainer result = new DefaultMolecule();
 //        Atom c1 = result.addAtom("C");
 //        Atom c2 = result.addAtom("C");
 //        Atom c3 = result.addAtom("C");
@@ -791,23 +791,23 @@ public class Molecules {
 //        return result;
 //    }
 //
-//    private IMolecule createBenzoicAcid() {
-//        Molecule result = createBenzaldehyde();
+//    private IAtomContainer createBenzoicAcid() {
+//        AtomContainer result = createBenzaldehyde();
 //
 //        result.connect(result.getAtom(6), result.addAtom("O"), 1);
 //
 //        return result;
 //    }
 //
-//    private IMolecule createBlockedBenzaldehyde() {
-//        Molecule result = createBenzaldehyde();
+//    private IAtomContainer createBlockedBenzaldehyde() {
+//        AtomContainer result = createBenzaldehyde();
 //
 //        result.connect(result.getAtom(6), result.addAtom("H"), 1);
 //
 //        return result;
 //    }
-//    private Molecule create4Toluene() {
-//        Molecule result = new DefaultMolecule();
+//    private AtomContainer create4Toluene() {
+//        AtomContainer result = new DefaultMolecule();
 //        Atom c1 = result.addAtom("C");
 //        Atom c2 = result.addAtom("C");
 //        Atom c3 = result.addAtom("C");
@@ -826,8 +826,8 @@ public class Molecules {
 //
 //        return result;
 //    }
-    public static IMolecule createSimpleImine() throws CDKException {
-        IMolecule result = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class);
+    public static IAtomContainer createSimpleImine() throws CDKException {
+        IAtomContainer result = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class);
 
         IAtom c1 = DefaultChemObjectBuilder.getInstance().newInstance(IAtom.class, "C");
         IAtom c2 = DefaultChemObjectBuilder.getInstance().newInstance(IAtom.class, "N");
@@ -850,8 +850,8 @@ public class Molecules {
         return result;
     }
 
-    public static IMolecule createSimpleAmine() throws CDKException {
-        IMolecule result = DefaultChemObjectBuilder.getInstance().newInstance(IMolecule.class);
+    public static IAtomContainer createSimpleAmine() throws CDKException {
+        IAtomContainer result = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class);
 
         IAtom c1 = DefaultChemObjectBuilder.getInstance().newInstance(IAtom.class, "C");
         IAtom c2 = DefaultChemObjectBuilder.getInstance().newInstance(IAtom.class, "N");

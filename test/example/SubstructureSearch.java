@@ -77,15 +77,15 @@ public class SubstructureSearch {
                     for (Map.Entry<IAtom, IAtom> mapping : aams.getMappings().entrySet()) {
 
 
-                        //Get the mapped atom in Query Molecule
+                        //Get the mapped atom in Query AtomContainer
                         IAtom queryAtom = mapping.getKey();
-                        //Get the mapped atom in Target Molecule
+                        //Get the mapped atom in Target AtomContainer
                         IAtom targetAtom = mapping.getValue();
 
 
-                        //Get the mapped atom number in Query Molecule
+                        //Get the mapped atom number in Query AtomContainer
                         int queryMappingNumber = aams.getQueryIndex(queryAtom);
-                        //Get the mapped atom number in Target Molecule
+                        //Get the mapped atom number in Target AtomContainer
                         int targetMappingNumber = aams.getTargetIndex(targetAtom);
                         //Print mapped atom numbers
                         System.out.println(queryMappingNumber + " "

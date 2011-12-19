@@ -35,7 +35,7 @@ import org.openscience.cdk.Atom;
 import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.DefaultChemObjectBuilder;
-import org.openscience.cdk.Molecule;
+import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.graph.AtomContainerAtomPermutor;
 import org.openscience.cdk.interfaces.IAtom;
@@ -68,8 +68,8 @@ public class CDKMCSTest {
 
     @Test
     public void testIsSubgraph_IAtomContainer_IAtomContainer() throws java.lang.Exception {
-        AtomContainer mol = MoleculeFactory.makeAlphaPinene();
-        AtomContainer frag1 = MoleculeFactory.makeCyclohexene(); //one double bond in ring
+        IAtomContainer mol = MoleculeFactory.makeAlphaPinene();
+        IAtomContainer frag1 = MoleculeFactory.makeCyclohexene(); //one double bond in ring
         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol);
         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(frag1);
         CDKHydrogenAdder adder = CDKHydrogenAdder.getInstance(mol.getBuilder());
@@ -126,8 +126,8 @@ public class CDKMCSTest {
 
     @Test
     public void test2() throws java.lang.Exception {
-        AtomContainer mol = MoleculeFactory.makeAlphaPinene();
-        AtomContainer frag1 = MoleculeFactory.makeCyclohexane(); // no double bond in ring
+        IAtomContainer mol = MoleculeFactory.makeAlphaPinene();
+        IAtomContainer frag1 = MoleculeFactory.makeCyclohexane(); // no double bond in ring
         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol);
         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(frag1);
         CDKHueckelAromaticityDetector.detectAromaticity(mol);
@@ -142,8 +142,8 @@ public class CDKMCSTest {
 
     @Test
     public void test3() throws java.lang.Exception {
-        AtomContainer mol = MoleculeFactory.makeIndole();
-        AtomContainer frag1 = MoleculeFactory.makePyrrole();
+        IAtomContainer mol = MoleculeFactory.makeIndole();
+        IAtomContainer frag1 = MoleculeFactory.makePyrrole();
         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol);
         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(frag1);
         CDKHydrogenAdder adder = CDKHydrogenAdder.getInstance(mol.getBuilder());
@@ -175,8 +175,8 @@ public class CDKMCSTest {
         int[] result1 = {6, 5, 7, 8, 0};
         int[] result2 = {3, 4, 2, 1, 0};
 
-        AtomContainer mol = MoleculeFactory.makeIndole();
-        AtomContainer frag1 = MoleculeFactory.makePyrrole();
+        IAtomContainer mol = MoleculeFactory.makeIndole();
+        IAtomContainer frag1 = MoleculeFactory.makePyrrole();
         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol);
         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(frag1);
         CDKHydrogenAdder adder = CDKHydrogenAdder.getInstance(mol.getBuilder());
@@ -199,8 +199,8 @@ public class CDKMCSTest {
     public void testGetSubgraphMap_IAtomContainer_IAtomContainer() throws Exception {
         String molfile = "data/mdl/decalin.mol";
         String queryfile = "data/mdl/decalin.mol";
-        Molecule mol = new Molecule();
-        Molecule temp = new Molecule();
+        AtomContainer mol = new AtomContainer();
+        AtomContainer temp = new AtomContainer();
         QueryAtomContainer query1 = null;
         QueryAtomContainer query2 = null;
 
@@ -232,8 +232,8 @@ public class CDKMCSTest {
     public void testGetOverlaps_IAtomContainer_IAtomContainer() throws Exception {
         String file1 = "data/mdl/5SD.mol";
         String file2 = "data/mdl/ADN.mol";
-        Molecule mol1 = new Molecule();
-        Molecule mol2 = new Molecule();
+        AtomContainer mol1 = new AtomContainer();
+        AtomContainer mol2 = new AtomContainer();
 
         InputStream ins1 = this.getClass().getClassLoader().getResourceAsStream(file1);
         new MDLV2000Reader(ins1, Mode.STRICT).read(mol1);
@@ -268,8 +268,8 @@ public class CDKMCSTest {
     public void testSFBug1208740() throws Exception {
         String file1 = "data/mdl/bug1208740_1.mol";
         String file2 = "data/mdl/bug1208740_2.mol";
-        Molecule mol1 = new Molecule();
-        Molecule mol2 = new Molecule();
+        AtomContainer mol1 = new AtomContainer();
+        AtomContainer mol2 = new AtomContainer();
 
         InputStream ins1 = this.getClass().getClassLoader().getResourceAsStream(file1);
         new MDLV2000Reader(ins1, Mode.STRICT).read(mol1);
@@ -328,15 +328,15 @@ public class CDKMCSTest {
     public void testSFBug999330() throws Exception {
         String file1 = "data/mdl/5SD.mol";
         String file2 = "data/mdl/ADN.mol";
-        Molecule mol1 = new Molecule();
-        Molecule mol2 = new Molecule();
+        AtomContainer mol1 = new AtomContainer();
+        AtomContainer mol2 = new AtomContainer();
 
         InputStream ins1 = this.getClass().getClassLoader().getResourceAsStream(file1);
         new MDLV2000Reader(ins1, Mode.STRICT).read(mol1);
         InputStream ins2 = this.getClass().getClassLoader().getResourceAsStream(file2);
         new MDLV2000Reader(ins2, Mode.STRICT).read(mol2);
         AtomContainerAtomPermutor permutor = new AtomContainerAtomPermutor(mol2);
-        mol2 = new Molecule((AtomContainer) permutor.next());
+        mol2 = new AtomContainer((AtomContainer) permutor.next());
 
         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol1);
         CDKHydrogenAdder adder = CDKHydrogenAdder.getInstance(mol1.getBuilder());

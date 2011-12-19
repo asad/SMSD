@@ -35,7 +35,7 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
-import org.openscience.cdk.interfaces.IMolecule;
+import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainerCreator;
@@ -71,8 +71,8 @@ public class SubstructureTest {
     public void testInit_3args_1() throws InvalidSmilesException, CDKException {
         System.out.println("init");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
-        IMolecule target = sp.parseSmiles("C\\C=C/OCC=C");
-        IMolecule query = sp.parseSmiles("CCCOCC(C)=C");
+        IAtomContainer target = sp.parseSmiles("C\\C=C/OCC=C");
+        IAtomContainer query = sp.parseSmiles("CCCOCC(C)=C");
 
         Substructure smsd1 = new Substructure(query, target, false, false, false);
         smsd1.setChemFilters(true, false, false);
@@ -128,7 +128,7 @@ public class SubstructureTest {
 
         System.out.println("setChemFilters");
         IChemObjectBuilder builder = DefaultChemObjectBuilder.getInstance();
-        IMolecule mol = builder.newInstance(IMolecule.class);
+        IAtomContainer mol = builder.newInstance(IAtomContainer.class);
         IAtom a1 = builder.newInstance(IAtom.class, "C");
         a1.setFormalCharge(0);
         mol.addAtom(a1);
@@ -262,7 +262,7 @@ public class SubstructureTest {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
 //       query="Nc1ccccc1"
         IChemObjectBuilder builder = DefaultChemObjectBuilder.getInstance();
-        IMolecule mol = builder.newInstance(IMolecule.class);
+        IAtomContainer mol = builder.newInstance(IAtomContainer.class);
         IAtom a1 = builder.newInstance(IAtom.class, "N");
         a1.setFormalCharge(0);
         mol.addAtom(a1);
@@ -305,7 +305,7 @@ public class SubstructureTest {
 //      target = "C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C";
 
         builder = DefaultChemObjectBuilder.getInstance();
-        mol = builder.newInstance(IMolecule.class);
+        mol = builder.newInstance(IAtomContainer.class);
         a1 = builder.newInstance(IAtom.class, "C");
         a1.setFormalCharge(0);
         mol.addAtom(a1);
