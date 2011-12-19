@@ -129,6 +129,7 @@ public class VF2MCS extends BaseMCS implements IResults {
                  * Sort biggest clique to smallest
                  */
                 Collections.sort(mcsSeeds, new Map2Comparator());
+//                System.out.println(" \nmcsSeeds " + mcsSeeds.size() + ", Solutions: " + mcsSeeds);
                 extendCliquesWithMcGregor(mcsSeeds);
             }
         } catch (CDKException ex) {
