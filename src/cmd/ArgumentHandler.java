@@ -22,7 +22,7 @@ public class ArgumentHandler {
 
     /**
      * Get any arguments that were left over.
-     * 
+     *
      * @return the remaining arguments
      */
     public String[] getRemainingArgs() {
@@ -75,7 +75,7 @@ public class ArgumentHandler {
     private boolean image = false;
     private boolean substructureMode = false;
     private boolean isNMCS = false;
-    private boolean outputSubgraph;
+    private boolean outputSubgraph = false;
     private String outputFilepath;
     private Writer outputWriter;
     private String outputFiletype;
@@ -97,10 +97,11 @@ public class ArgumentHandler {
     }
 
     /**
-     * Parses the options in the command line arguments and returns
-     * an array of strings corresponding to the filenames given as arguments only
+     * Parses the options in the command line arguments and returns an array of
+     * strings corresponding to the filenames given as arguments only
+     *
      * @param args
-     * @throws org.apache.commons.cli.ParseException 
+     * @throws org.apache.commons.cli.ParseException
      */
     @SuppressWarnings("static-access")
     public void parseCommandLineOptions(String[] args) throws ParseException {
@@ -371,7 +372,7 @@ public class ArgumentHandler {
 
     /**
      * Use N-way MCS.
-     * 
+     *
      * @return
      */
     public boolean isNMCS() {
@@ -380,7 +381,7 @@ public class ArgumentHandler {
 
     /**
      * Set the use of N-MCS for finding the MCS of N molecules from an SDF file.
-     * 
+     *
      * @param value true if N-MCS should be used
      */
     public void setNMCS(boolean value) {
@@ -521,16 +522,14 @@ public class ArgumentHandler {
     }
 
     /**
-     * @param name 
-     * @set the Target
+     * @param name @set the Target
      */
     public void setTargetMolOutName(String name) {
         this.targetOutfileName = name;
     }
 
     /**
-     * @param name 
-     * @set the Query
+     * @param name @set the Query
      */
     public void setQueryMolOutName(String name) {
         this.queryOutfileName = name;

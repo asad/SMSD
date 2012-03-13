@@ -92,8 +92,15 @@ public class OutputHandler {
         }
     }
 
+    /**
+     * 
+     * @param mol
+     * @param out
+     * @throws IOException
+     */
     public void writeMolToSmiles(IAtomContainer mol, Writer out) throws IOException {
         SmilesGenerator smilesGenerator = new SmilesGenerator();
+        smilesGenerator.setUseAromaticityFlag(true);
         String smiles = smilesGenerator.createSMILES(mol);
         out.write(smiles);
         out.write('\n');
