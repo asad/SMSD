@@ -24,7 +24,6 @@ import org.openscience.cdk.io.MDLReader;
 import org.openscience.cdk.io.Mol2Reader;
 import org.openscience.cdk.io.PDBReader;
 import org.openscience.cdk.io.iterator.IIteratingChemObjectReader;
-import org.openscience.cdk.io.iterator.IteratingMDLReader;
 import org.openscience.cdk.layout.StructureDiagramGenerator;
 import org.openscience.cdk.signature.MoleculeSignature;
 import org.openscience.cdk.smiles.SmilesParser;
@@ -33,6 +32,7 @@ import org.openscience.cdk.tools.manipulator.ChemFileManipulator;
 
 import cmd.pdb.LigandHelper;
 import org.openscience.cdk.CDKConstants;
+import org.openscience.cdk.io.iterator.IteratingSDFReader;
 
 public class InputHandler {
 
@@ -315,7 +315,7 @@ public class InputHandler {
         String type = argumentHandler.getTargetType();
         if (type.equals("SDF")) {
             FileReader in = new FileReader(argumentHandler.getTargetFilepath());
-            return new IteratingMDLReader(
+            return new IteratingSDFReader(
                     in, DefaultChemObjectBuilder.getInstance());
         }
         return null;

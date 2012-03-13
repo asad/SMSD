@@ -10,7 +10,7 @@ import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.io.iterator.IIteratingChemObjectReader;
-import org.openscience.cdk.io.iterator.IteratingMDLReader;
+import org.openscience.cdk.io.iterator.IteratingSDFReader;
 import org.openscience.cdk.isomorphism.UniversalIsomorphismTester;
 import org.openscience.smsd.Substructure;
 
@@ -113,7 +113,7 @@ public class SubstructureBenchMark {
     public static IIteratingChemObjectReader read(File file) throws FileNotFoundException {
 
         FileReader in = new FileReader(file);
-        return new IteratingMDLReader(
+        return new IteratingSDFReader(
                 in, DefaultChemObjectBuilder.getInstance());
 
     }
