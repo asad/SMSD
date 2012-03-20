@@ -3,7 +3,7 @@
 	<property file="build.properties"/>
 	<property name="cdk_src_dir" value="${CDK_dir}/src/main"/>
 	<property name="cdk_bin_dir" value="${CDK_dir}/build"/>
-	<property name="module_list" value="core,standard,nonotify,annotation,io,data,dict,fingerprint,interfaces,pdb,sdg,isomorphism,valencycheck,smarts,signature,smiles,extra,render,ioformats"/>
+	<property name="module_list" value="core,standard,annotation,io,data,dict,fingerprint,interfaces,pdb,sdg,isomorphism,valencycheck,smarts,signature,smiles,extra,render,ioformats"/>
 
 	<target name="test">
 		<script language="groovy">
