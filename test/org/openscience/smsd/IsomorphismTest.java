@@ -251,7 +251,7 @@ public class IsomorphismTest {
      * @throws CDKException
      */
     @Test
-    public void testGetAllMapping() throws CDKException {
+    public void testgetAllAtomMapping() throws CDKException {
         System.out.println("getAllAtomMapping");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");

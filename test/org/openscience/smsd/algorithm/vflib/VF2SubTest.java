@@ -36,11 +36,10 @@ import org.openscience.smsd.AtomAtomMapping;
 /**
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
- * @cdk.module test-smsd
- * @cdk.require java1.6+
+ * @cdk.module test-smsd @cdk.require java1.6+
  */
 public class VF2SubTest {
-    
+
     public VF2SubTest() {
     }
 
@@ -51,38 +50,38 @@ public class VF2SubTest {
     @AfterClass
     public static void tearDownClass() throws Exception {
     }
-    
+
     @Before
     public void setUp() {
     }
-    
+
     @After
     public void tearDown() {
     }
 
     /**
-     * Test of getAllMapping method, of class VF2Sub.
+     * Test of getAllAtomMapping method, of class VF2Sub.
      */
     @Test
-    public void testGetAllMapping() {
-        System.out.println("getAllMapping");
+    public void testgetAllAtomMapping() {
+        System.out.println("getAllAtomMapping");
         VF2Sub instance = null;
         List expResult = null;
-        List result = instance.getAllMapping();
+        List result = instance.getAllAtomMapping();
         assertEquals(expResult, result);
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");
     }
 
     /**
-     * Test of getFirstMapping method, of class VF2Sub.
+     * Test of getFirstAtomMapping method, of class VF2Sub.
      */
     @Test
-    public void testGetFirstMapping() {
-        System.out.println("getFirstMapping");
+    public void testgetFirstAtomMapping() {
+        System.out.println("getFirstAtomMapping");
         VF2Sub instance = null;
         Map expResult = null;
-        Map result = instance.getFirstMapping();
+        AtomAtomMapping result = instance.getFirstAtomMapping();
         assertEquals(expResult, result);
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");

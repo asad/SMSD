@@ -216,13 +216,13 @@ public class SubstructureTest {
     }
 
     /**
-     * Test of getAllMapping method, of class SubStructureSearchAlgorithms.
+     * Test of getAllAtomMapping method, of class SubStructureSearchAlgorithms.
      * @throws InvalidSmilesException
      * @throws CDKException
      */
     @Test
-    public void testGetAllMapping() throws InvalidSmilesException, CDKException {
-        System.out.println("getAllMapping");
+    public void testgetAllAtomMapping() throws InvalidSmilesException, CDKException {
+        System.out.println("getAllAtomMapping");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("ONc1ccccc1");
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
