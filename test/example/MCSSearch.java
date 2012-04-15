@@ -14,7 +14,6 @@ import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.Isomorphism;
 import org.openscience.smsd.interfaces.Algorithm;
-import org.openscience.smsd.tools.GraphMolecule;
 
 
 /*
@@ -81,8 +80,8 @@ public class MCSSearch {
             CDKHueckelAromaticityDetector.detectAromaticity(query);
             CDKHueckelAromaticityDetector.detectAromaticity(target);
 
-            query = new GraphMolecule(query);
-            target = new GraphMolecule(target);
+            query = new AtomContainer(query);
+            target = new AtomContainer(target);
 
             boolean bondSensitive = true;
             boolean ringMatch = false;

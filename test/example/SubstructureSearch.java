@@ -1,6 +1,7 @@
 package example;
 
 import java.util.Map;
+import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.exception.CDKException;
@@ -10,7 +11,6 @@ import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.Substructure;
-import org.openscience.smsd.tools.GraphMolecule;
 
 
 /* This example file covers the substructure search part of the SMSD.
@@ -54,8 +54,8 @@ public class SubstructureSearch {
         CDKHueckelAromaticityDetector.detectAromaticity(mol1);
         CDKHueckelAromaticityDetector.detectAromaticity(mol2);
 
-        mol1 = new GraphMolecule(mol1);
-        mol2 = new GraphMolecule(mol2);
+        mol1 = new AtomContainer(mol1);
+        mol2 = new AtomContainer(mol2);
 
         boolean bondSensitive = true;
         boolean stereoMatch = true;
