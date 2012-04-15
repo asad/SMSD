@@ -477,8 +477,6 @@ public class SMSDcmd {
             boolean matchRings) throws CDKException {
         // XXX - if clean and configure is 'true', is that not duplicate configuring?
         BaseMapping smsd = new Isomorphism(query, target, Algorithm.VFLibMCS, matchBonds, matchRings);
-//        Isomorphism smsd = new Isomorphism(query, target, Algorithm.CDKMCS, matchBonds, matchRings);
-//        Isomorphism smsd = new Isomorphism(query, target, Algorithm.MCSPlus, matchBonds, matchRings);
         
         if (filter == 0) {
             smsd.setChemFilters(false, false, false);
