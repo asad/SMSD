@@ -22,10 +22,7 @@
  */
 package org.openscience.smsd.algorithm.rgraph;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.annotations.TestMethod;
 import org.openscience.cdk.exception.CDKException;
@@ -42,9 +39,9 @@ import org.openscience.smsd.interfaces.IResults;
 /**
  * This class acts as a handler class for CDKMCS algorithm
  * {@link org.openscience.cdk.smsd.algorithm.cdk.CDKMCS}.
- * 
- * @cdk.module smsd
- * @cdk.githash
+ *
+ * @cdk.module smsd @cdk.githash
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.cdk.CDKMCSHandlerTest")
@@ -64,7 +61,7 @@ public class CDKSubGraphHandler extends MoleculeInitializer implements IResults 
      * Creates a new instance of MappingHandler
      */
     /**
-     * 
+     *
      * @param source
      * @param target
      * @param shouldMatchBonds
@@ -88,7 +85,7 @@ public class CDKSubGraphHandler extends MoleculeInitializer implements IResults 
     }
 
     /**
-     * 
+     *
      * @param source
      * @param target
      */
@@ -109,7 +106,8 @@ public class CDKSubGraphHandler extends MoleculeInitializer implements IResults 
         isSubgraph();
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      *
      */
     private boolean isSubgraph() {
@@ -139,17 +137,17 @@ public class CDKSubGraphHandler extends MoleculeInitializer implements IResults 
 //            System.err.println("WARNING: graphContainer: most probably time out error ");
         }
 
-        return !getFirstMapping().isEmpty();
+        return !getFirstAtomMapping().isEmpty();
     }
 
     /**
-     * 
+     *
      * @param mol
      * @param mcss
-     * @param shouldMatchBonds 
-     * @param shouldMatchRings 
+     * @param shouldMatchBonds
+     * @param shouldMatchRings
      * @return IAtomContainer Set
-     * @throws CDKException 
+     * @throws CDKException
      */
     protected IAtomContainerSet getUncommon(IAtomContainer mol, IAtomContainer mcss, boolean shouldMatchBonds, boolean shouldMatchRings) throws CDKException {
         ArrayList<Integer> atomSerialsToDelete = new ArrayList<Integer>();
@@ -234,38 +232,21 @@ public class CDKSubGraphHandler extends MoleculeInitializer implements IResults 
         }
     }
 
-    /** {@inheritDoc}
-     * @return 
-     */
-    @Override
-    @TestMethod("testGetAllMapping")
-    public List<Map<Integer, Integer>> getAllMapping() {
-        return allMCS;
-    }
-
-    /** {@inheritDoc}
-     * @return 
-     */
-    @Override
-    @TestMethod("testGetFirstMapping")
-    public Map<Integer, Integer> getFirstMapping() {
-        if (allMCS.iterator().hasNext()) {
-            return allMCS.iterator().next();
-        }
-        return new TreeMap<Integer, Integer>();
-    }
-
-    /** {@inheritDoc}
-     * @return 
+    /**
+     * {@inheritDoc}
+     *
+     * @return
      */
     @Override
     @TestMethod("testGetAllAtomMapping")
     public List<AtomAtomMapping> getAllAtomMapping() {
-        return allAtomMCS;
+        return Collections.unmodifiableList(allAtomMCS);
     }
 
-    /** {@inheritDoc}
-     * @return 
+    /**
+     * {@inheritDoc}
+     *
+     * @return
      */
     @Override
     @TestMethod("testGetFirstAtomMapping")

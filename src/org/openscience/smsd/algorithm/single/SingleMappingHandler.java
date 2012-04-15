@@ -22,10 +22,7 @@
  */
 package org.openscience.smsd.algorithm.single;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.logging.Level;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.annotations.TestMethod;
@@ -41,9 +38,8 @@ import org.openscience.smsd.interfaces.IResults;
 
 /**
  * This is a handler class for single atom mapping
- * ({@link org.openscience.cdk.smsd.algorithm.single.SingleMapping}).
- * @cdk.module smsd
- * @cdk.githash
+ * ({@link org.openscience.cdk.smsd.algorithm.single.SingleMapping}). @cdk.module smsd @cdk.githash
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.single.SingleMappingHandlerTest")
@@ -52,22 +48,20 @@ public class SingleMappingHandler extends MoleculeInitializer implements IResult
     private final ILoggingTool Logger =
             LoggingToolFactory.createLoggingTool(SingleMappingHandler.class);
     private List<AtomAtomMapping> allAtomMCS = null;
-    private List<Map<Integer, Integer>> allMCS = null;
     private final IAtomContainer source;
     private final IAtomContainer target;
     private final boolean shouldMatchRings;
 
     /**
-     * 
+     *
      * @param source
      * @param target
-     * @param bondTypeMatch 
-     * @param shouldMatchRings  
+     * @param bondTypeMatch
+     * @param shouldMatchRings
      */
     @TestMethod("setMCSAlgorithm")
     public SingleMappingHandler(IAtomContainer source, IAtomContainer target, boolean bondTypeMatch, boolean shouldMatchRings) {
         allAtomMCS = new ArrayList<AtomAtomMapping>();
-        allMCS = new ArrayList<Map<Integer, Integer>>();
         this.source = source;
         this.target = target;
         this.shouldMatchRings = shouldMatchRings;
@@ -82,14 +76,13 @@ public class SingleMappingHandler extends MoleculeInitializer implements IResult
     }
 
     /**
-     * 
+     *
      * @param source
-     * @param target  
+     * @param target
      */
     @TestMethod("setMCSAlgorithm")
     public SingleMappingHandler(IQueryAtomContainer source, IAtomContainer target) {
         allAtomMCS = new ArrayList<AtomAtomMapping>();
-        allMCS = new ArrayList<Map<Integer, Integer>>();
         this.source = source;
         this.target = target;
         this.shouldMatchRings = true;
@@ -104,7 +97,8 @@ public class SingleMappingHandler extends MoleculeInitializer implements IResult
     }
 
     //Function is called by the main program and serves as a starting point for the comparision procedure.
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      *
      */
     private synchronized void searchMCS() {
@@ -120,29 +114,7 @@ public class SingleMappingHandler extends MoleculeInitializer implements IResult
             Logger.error(Level.SEVERE, null, ex);
         }
         setAllAtomMapping(mappings);
-        setAllMapping(mappings);
         //setStereoScore();
-    }
-
-    /** {@inheritDoc}
-     *
-     * Set the mappings
-     */
-    private synchronized void setAllMapping(List<Map<IAtom, IAtom>> mappings) {
-        try {
-            int counter = 0;
-            for (Map<IAtom, IAtom> solution : mappings) {
-                Map<Integer, Integer> atomMappings = new TreeMap<Integer, Integer>();
-                for (Map.Entry<IAtom, IAtom> map : solution.entrySet()) {
-                    IAtom sourceAtom = map.getKey();
-                    IAtom targetAtom = map.getValue();
-                    atomMappings.put(source.getAtomNumber(sourceAtom), target.getAtomNumber(targetAtom));
-                }
-                allMCS.add(counter++, atomMappings);
-            }
-        } catch (Exception I) {
-            I.getCause();
-        }
     }
 
     private synchronized void setAllAtomMapping(List<Map<IAtom, IAtom>> mappings) {
@@ -164,34 +136,17 @@ public class SingleMappingHandler extends MoleculeInitializer implements IResult
         }
     }
 
-    /** {@inheritDoc}
-     */
-    @Override
-    @TestMethod("testGetAllMapping")
-    public synchronized List<Map<Integer, Integer>> getAllMapping() {
-        return allMCS;
-    }
-
-    /** {@inheritDoc}
-     */
-    @Override
-    @TestMethod("testGetFirstMapping")
-    public synchronized Map<Integer, Integer> getFirstMapping() {
-        if (allMCS.iterator().hasNext()) {
-            return allMCS.iterator().next();
-        }
-        return new TreeMap<Integer, Integer>();
-    }
-
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     @TestMethod("testGetAllAtomMapping")
     public synchronized List<AtomAtomMapping> getAllAtomMapping() {
-        return allAtomMCS;
+        return Collections.unmodifiableList(allAtomMCS);
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     @TestMethod("testGetFirstAtomMapping")

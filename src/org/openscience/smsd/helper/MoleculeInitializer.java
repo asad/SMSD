@@ -46,8 +46,8 @@ import org.openscience.smsd.interfaces.IMoleculeInitializer;
 
 /**
  *
- * @cdk.module smsd
- * @cdk.githash
+ * @cdk.module smsd @cdk.githash
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public class MoleculeInitializer extends IMoleculeInitializer {
@@ -58,8 +58,8 @@ public class MoleculeInitializer extends IMoleculeInitializer {
     /**
      *
      * @param atomContainer Atom container where rings are to be marked
-     * @throws CDKException if there is a problem in ring perception or aromaticity detection, 
-     * which is usually related to a timeout in the ring finding code.
+     * @throws CDKException if there is a problem in ring perception or aromaticity detection, which is usually related
+     * to a timeout in the ring finding code.
      */
     @Override
     protected synchronized void initializeMolecule(IAtomContainer atomContainer) throws CDKException {
@@ -110,12 +110,12 @@ public class MoleculeInitializer extends IMoleculeInitializer {
 
             // do all ring perception
             AllRingsFinder arf = new AllRingsFinder();
-            IRingSet allRings;
+            arf.setTimeout(90000);
+            IRingSet allRings = null;
             try {
                 allRings = arf.findAllRings(atomContainer);
             } catch (CDKException e) {
-                Logger.debug(e.toString());
-                throw new CDKException(e.toString(), e);
+                Logger.warn(e.toString());
             }
 
             // sets SSSR information
@@ -127,7 +127,7 @@ public class MoleculeInitializer extends IMoleculeInitializer {
                 // add a property to each ring atom that will be an array of
                 // Integers, indicating what size ring the given atom belongs to
                 // Add SSSR ring counts
-                if (allRings.contains(atom)) { // it's in a ring
+                if (allRings != null && allRings.contains(atom)) { // it's in a ring
                     atom.setFlag(CDKConstants.ISINRING, true);
                     atom.setFlag(CDKConstants.ISALIPHATIC, false);
                     // lets find which ring sets it is a part of
@@ -176,7 +176,7 @@ public class MoleculeInitializer extends IMoleculeInitializer {
             }
 
             for (IBond bond : atomContainer.bonds()) {
-                if (allRings.getRings(bond).getAtomContainerCount() > 0) {
+                if (allRings != null && allRings.getRings(bond).getAtomContainerCount() > 0) {
                     bond.setFlag(CDKConstants.ISINRING, true);
                     bond.setFlag(CDKConstants.ISALIPHATIC, false);
                 }
@@ -211,15 +211,14 @@ public class MoleculeInitializer extends IMoleculeInitializer {
     }
 
     /**
-     *  Checks some simple heuristics for whether the subgraph query can
-     *  realistically be atom subgraph of the supergraph. If, for example, the
-     *  number of nitrogen atoms in the query is larger than that of the supergraph
-     *  it cannot be part of it.
+     * Checks some simple heuristics for whether the subgraph query can realistically be atom subgraph of the
+     * supergraph. If, for example, the number of nitrogen atoms in the query is larger than that of the supergraph it
+     * cannot be part of it.
      *
-     * @param  ac1  the supergraph to be checked. 
-     * @param  ac2  the subgraph to be tested for. Must not be an IQueryAtomContainer.
-     * @param shouldMatchBonds 
-     * @return    true if the subgraph ac1 has atom chance to be atom subgraph of ac2
+     * @param ac1 the supergraph to be checked.
+     * @param ac2 the subgraph to be tested for. Must not be an IQueryAtomContainer.
+     * @param shouldMatchBonds
+     * @return true if the subgraph ac1 has atom chance to be atom subgraph of ac2
      */
     protected synchronized boolean testIsSubgraphHeuristics(IAtomContainer ac1, IAtomContainer ac2, boolean shouldMatchBonds) {
 

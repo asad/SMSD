@@ -23,10 +23,7 @@
 package org.openscience.smsd.algorithm.vflib;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.logging.Level;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.annotations.TestMethod;
@@ -49,17 +46,14 @@ import org.openscience.smsd.interfaces.IResults;
 import org.openscience.smsd.tools.TimeManager;
 
 /**
- * This class should be used to find MCS between source
- * graph and target graph.
+ * This class should be used to find MCS between source graph and target graph.
  *
- * First the algorithm runs VF lib {@link org.openscience.cdk.smsd.algorithm.vflib.map.VFMCSMapper}
- * and reports MCS between
- * run source and target graphs. Then these solutions are extended
- * using McGregor {@link org.openscience.cdk.smsd.algorithm.mcgregor.McGregor}
+ * First the algorithm runs VF lib {@link org.openscience.cdk.smsd.algorithm.vflib.map.VFMCSMapper} and reports MCS
+ * between run source and target graphs. Then these solutions are extended using McGregor {@link org.openscience.cdk.smsd.algorithm.mcgregor.McGregor}
  * algorithm where ever required.
  *
- * @cdk.module smsd
- * @cdk.githash
+ * @cdk.module smsd @cdk.githash
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VF2SubTest")
@@ -98,10 +92,11 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
 
     /**
      * Constructor for an extended VF Algorithm for the MCS search
-     * @param source 
-     * @param target 
+     *
+     * @param source
+     * @param target
      * @param shouldMatchBonds
-     * @param shouldMatchRings  
+     * @param shouldMatchRings
      */
     public VF2Sub(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings) {
         this.source = source;
@@ -127,8 +122,9 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
 
     /**
      * Constructor for an extended VF Algorithm for the MCS search
-     * @param source 
-     * @param target  
+     *
+     * @param source
+     * @param target
      */
     public VF2Sub(IQueryAtomContainer source, IAtomContainer target) {
         this.source = source;
@@ -153,7 +149,7 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
     }
 
     /**
-     *{@inheritDoc}
+     * {@inheritDoc}
      *
      */
     private boolean findSubgraph() {
@@ -198,38 +194,21 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
         return false;
     }
 
-    /** {@inheritDoc}
-     * @return 
-     */
-    @Override
-    @TestMethod("testGetAllMapping")
-    public synchronized List<Map<Integer, Integer>> getAllMapping() {
-        return allMCS;
-    }
-
-    /** {@inheritDoc}
-     * @return 
-     */
-    @Override
-    @TestMethod("testGetFirstMapping")
-    public synchronized Map<Integer, Integer> getFirstMapping() {
-        if (allMCS.iterator().hasNext()) {
-            return allMCS.iterator().next();
-        }
-        return new TreeMap<Integer, Integer>();
-    }
-
-    /** {@inheritDoc}
-     * @return 
+    /**
+     * {@inheritDoc}
+     *
+     * @return
      */
     @Override
     @TestMethod("testGetAllAtomMapping")
     public synchronized List<AtomAtomMapping> getAllAtomMapping() {
-        return allAtomMCS;
+        return Collections.unmodifiableList(allAtomMCS);
     }
 
-    /** {@inheritDoc}
-     * @return 
+    /**
+     * {@inheritDoc}
+     *
+     * @return
      */
     @Override
     @TestMethod("testGetFirstAtomMapping")
@@ -257,9 +236,8 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
     }
 
     /*
-     * Note: VF will search for core hits.
-     * Mcgregor will extend the cliques depending of the bond type 
-     * (sensitive and insensitive).
+     * Note: VF will search for core hits. Mcgregor will extend the cliques depending of the bond type (sensitive and
+     * insensitive).
      */
     private synchronized void searchVFMappings() {
 //        System.out.println("searchVFMappings ");
@@ -324,7 +302,6 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
         }
 //        System.out.println("\nSol count after MG" + mappings.size());
         setMcGregorMappings(ROPFlag, mappings);
-        bestHitSize = bestHitSize / 2;
 //        System.out.println("After set Sol count MG" + allMCS.size());
 //        System.out.println("MCSSize " + bestHitSize + "\n");
     }
@@ -383,8 +360,6 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
 
     private synchronized void setMcGregorMappings(boolean RONP, List<List<Integer>> mappings) throws CDKException {
         int counter = 0;
-        //Only store subgraphs which are substructures
-        this.bestHitSize = getReactantMol().getAtomCount();
         for (List<Integer> mapping : mappings) {
             AtomAtomMapping atomatomMapping = new AtomAtomMapping(source, target);
             Map<Integer, Integer> indexindexMapping = new TreeMap<Integer, Integer>();
@@ -413,6 +388,13 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
                 } else {
                     throw new CDKException("Atom index pointing to NULL");
                 }
+            }
+
+            if (indexindexMapping.size() > bestHitSize) {
+                bestHitSize = indexindexMapping.size();
+                allAtomMCS.clear();
+                allMCS.clear();
+                counter = 0;
             }
 
             if (!atomatomMapping.isEmpty() && !hasMap(indexindexMapping, allMCS)

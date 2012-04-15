@@ -65,11 +65,10 @@ import org.openscience.smsd.algorithm.vflib.query.QueryCompiler;
 import org.openscience.smsd.global.TimeOut;
 
 /**
- * This class finds MCS between query and target molecules
- * using VF2 algorithm.
+ * This class finds MCS between query and target molecules using VF2 algorithm.
  *
- * @cdk.module smsd
- * @cdk.githash
+ * @cdk.module smsd @cdk.githash
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFLibTest")
@@ -98,14 +97,16 @@ public class VFMapper implements IMapper {
      *
      * @param queryMolecule
      * @param bondMatcher
-     * @param ringMatcher  
+     * @param ringMatcher
      */
     public VFMapper(IAtomContainer queryMolecule, boolean bondMatcher, boolean ringMatcher) {
         this.query = new QueryCompiler(queryMolecule, bondMatcher, ringMatcher).compile();
         this.maps = new ArrayList<Map<INode, IAtom>>();
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
+     *
      * @param targetMolecule targetMolecule graph
      */
     @Override
@@ -115,7 +116,8 @@ public class VFMapper implements IMapper {
         return mapFirst(state);
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     public List<Map<INode, IAtom>> getMaps(IAtomContainer target) {
@@ -125,7 +127,8 @@ public class VFMapper implements IMapper {
         return new ArrayList<Map<INode, IAtom>>(maps);
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      *
      * @param target
      *
@@ -138,7 +141,8 @@ public class VFMapper implements IMapper {
         return maps.isEmpty() ? new HashMap<INode, IAtom>() : maps.get(0);
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     public int countMaps(IAtomContainer target) {
@@ -148,7 +152,9 @@ public class VFMapper implements IMapper {
         return maps.size();
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
+     *
      * @param targetMolecule targetMolecule graph
      */
     @Override
@@ -158,7 +164,9 @@ public class VFMapper implements IMapper {
         return mapFirst(state);
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
+     *
      * @param targetMolecule
      */
     @Override
@@ -169,7 +177,8 @@ public class VFMapper implements IMapper {
         return new ArrayList<Map<INode, IAtom>>(maps);
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      *
      * @param targetMolecule
      *
@@ -182,7 +191,9 @@ public class VFMapper implements IMapper {
         return maps.isEmpty() ? new HashMap<INode, IAtom>() : maps.get(0);
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
+     *
      * @param targetMolecule
      */
     @Override
@@ -198,17 +209,12 @@ public class VFMapper implements IMapper {
             return;
         }
 
-        if (hasMap(state.getMap())) {
-            state.backTrack();
-        }
-
         if (state.isGoal()) {
             Map<INode, IAtom> map = state.getMap();
             if (!hasMap(map)) {
                 maps.add(state.getMap());
-            } else {
-                state.backTrack();
             }
+            return;
         }
 
         while (state.hasNextCandidate()) {

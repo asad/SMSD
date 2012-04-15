@@ -112,11 +112,11 @@ public class RingFilter {
         return true;
     }
 
-    private class RingSizeComparator implements Comparator {
+    private class RingSizeComparator implements Comparator<List<List<IAtom>>> {
 
         @Override
-        public int compare(Object o1, Object o2) {
-            return ((List) o1).size() - ((List) o2).size();
+        public int compare(List<List<IAtom>> o1, List<List<IAtom>> o2) {
+            return o1.size() - o2.size();
         }
     }
 }

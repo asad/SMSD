@@ -23,48 +23,30 @@
 package org.openscience.smsd.interfaces;
 
 import java.util.List;
-import java.util.Map;
 import org.openscience.cdk.annotations.TestClass;
-import org.openscience.cdk.exception.CDKException;
-import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.smsd.AtomAtomMapping;
 
 /**
- * Interface that holds basic core interface for all MCS algorithm.
- * @cdk.module smsd
- * @cdk.githash
+ * Interface that holds basic core interface for all MCS algorithm. @cdk.module smsd @cdk.githash
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.interfaces.IMCSBaseTest")
 public interface IResults {
+
     /**
-     * Returns all plausible mappings between query and target molecules.
-     * Each map in the list has atom-atom equivalence of the mappings
-     * between query and target molecule i.e. map.getKey() for the query
-     * and map.getValue() for the target molecule
+     * Returns all plausible mappings between query and target molecules. Each map in the list has atom-atom equivalence
+     * of the mappings between query and target molecule i.e. map.getKey() for the query and map.getValue() for the
+     * target molecule
+     *
      * @return All possible MCS atom Mappings
      */
     public abstract List<AtomAtomMapping> getAllAtomMapping();
 
     /**
-     * Returns all plausible mappings between query and target molecules.
-     * Each map in the list has atom-atom equivalence index of the mappings
-     * between query and target molecule i.e. map.getKey() for the query
-     * and map.getValue() for the target molecule
-     * @return All possible MCS Mapping Index
-     */
-    public abstract List<Map<Integer, Integer>> getAllMapping();
-
-    /**
      * Returns one of the best matches with atoms mapped.
+     *
      * @return Best Atom Mapping
      */
     public abstract AtomAtomMapping getFirstAtomMapping();
-
-    /**
-     * Returns one of the best matches with atom indexes mapped.
-     * @return Best Mapping Index
-     */
-    public abstract Map<Integer, Integer> getFirstMapping();
 }

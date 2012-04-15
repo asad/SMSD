@@ -43,9 +43,9 @@ import org.openscience.smsd.interfaces.IResults;
 /**
  * This class acts as a handler class for CDKMCS algorithm
  * {@link org.openscience.cdk.smsd.algorithm.cdk.CDKMCS}.
- * 
- * @cdk.module smsd
- * @cdk.githash
+ *
+ * @cdk.module smsd @cdk.githash
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.cdk.CDKMCSHandlerTest")
@@ -65,7 +65,7 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
      * Creates a new instance of MappingHandler
      */
     /**
-     * 
+     *
      * @param source
      * @param target
      * @param shouldMatchBonds
@@ -89,7 +89,7 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
     }
 
     /**
-     * 
+     *
      * @param source
      * @param target
      */
@@ -110,7 +110,8 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
         searchMCS();
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      *
      */
     @TestMethod("testSearchMCS")
@@ -137,13 +138,13 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
     }
 
     /**
-     * 
+     *
      * @param mol
      * @param mcss
-     * @param shouldMatchBonds 
-     * @param shouldMatchRings 
+     * @param shouldMatchBonds
+     * @param shouldMatchRings
      * @return IAtomContainer Set
-     * @throws CDKException 
+     * @throws CDKException
      */
     protected synchronized IAtomContainerSet getUncommon(IAtomContainer mol, IAtomContainer mcss,
             boolean shouldMatchBonds, boolean shouldMatchRings) throws CDKException {
@@ -229,38 +230,21 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
         }
     }
 
-    /** {@inheritDoc}
-     * @return 
-     */
-    @Override
-    @TestMethod("testGetAllMapping")
-    public synchronized List<Map<Integer, Integer>> getAllMapping() {
-        return allMCS;
-    }
-
-    /** {@inheritDoc}
-     * @return 
-     */
-    @Override
-    @TestMethod("testGetFirstMapping")
-    public synchronized Map<Integer, Integer> getFirstMapping() {
-        if (allMCS.iterator().hasNext()) {
-            return allMCS.iterator().next();
-        }
-        return new TreeMap<Integer, Integer>();
-    }
-
-    /** {@inheritDoc}
-     * @return 
+    /**
+     * {@inheritDoc}
+     *
+     * @return
      */
     @Override
     @TestMethod("testGetAllAtomMapping")
     public synchronized List<AtomAtomMapping> getAllAtomMapping() {
-        return allAtomMCS;
+        return Collections.unmodifiableList(allAtomMCS);
     }
 
-    /** {@inheritDoc}
-     * @return 
+    /**
+     * {@inheritDoc}
+     *
+     * @return
      */
     @Override
     @TestMethod("testGetFirstAtomMapping")

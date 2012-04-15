@@ -38,13 +38,12 @@ import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.filters.ChemicalFilters;
 import org.openscience.smsd.interfaces.IAtomMapping;
 
-
 /**
  *
  * @cdk.require java1.5+
  *
- * @cdk.module smsd
- * @cdk.githash
+ * @cdk.module smsd @cdk.githash
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
  */
@@ -109,14 +108,15 @@ public class BaseMapping implements IAtomMapping {
         return (bondEnergiesList != null && !bondEnergiesList.isEmpty()) ? bondEnergiesList.get(Key) : null;
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     @TestMethod("testGetTanimotoSimilarity")
     public synchronized double getTanimotoSimilarity() {
         int decimalPlaces = 4;
-        int rAtomCount = 0;
-        int pAtomCount = 0;
+        double rAtomCount;
+        double pAtomCount;
         double tanimotoAtom = 0.0;
 
         if (getMappingCount() > 0) {
@@ -124,10 +124,10 @@ public class BaseMapping implements IAtomMapping {
 
             if (!firstAtomMCS.isEmpty()) {
 
-                rAtomCount = this.mol1.getAtomCount();
-                pAtomCount = this.mol2.getAtomCount();
+                rAtomCount = (double) this.mcsList.iterator().next().getQuery().getAtomCount();
+                pAtomCount = (double) this.mcsList.iterator().next().getTarget().getAtomCount();
 
-                double matchCount = firstAtomMCS.getCount();
+                double matchCount = (double) firstAtomMCS.getCount();
                 tanimotoAtom = (matchCount) / (rAtomCount + pAtomCount - matchCount);
                 BigDecimal tan = new BigDecimal(tanimotoAtom);
                 tan = tan.setScale(decimalPlaces, BigDecimal.ROUND_HALF_UP);
@@ -137,7 +137,8 @@ public class BaseMapping implements IAtomMapping {
         return tanimotoAtom;
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      *
      */
     @Override
@@ -185,14 +186,15 @@ public class BaseMapping implements IAtomMapping {
         return this.mcsList.isEmpty() ? 0 : this.mcsList.size();
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @TestMethod("testGetEuclideanDistance")
     @Override
     public synchronized double getEuclideanDistance() {
         int decimalPlaces = 4;
-        double sourceAtomCount = 0;
-        double targetAtomCount = 0;
+        double sourceAtomCount;
+        double targetAtomCount;
         double euclidean = -1.;
 
         if (getMappingCount() > 0) {
@@ -200,10 +202,10 @@ public class BaseMapping implements IAtomMapping {
 
             if (!firstAtomMCS.isEmpty()) {
 
-                sourceAtomCount = this.mol1.getAtomCount();
-                targetAtomCount = this.mol2.getAtomCount();
+                sourceAtomCount = (double) this.mcsList.iterator().next().getQuery().getAtomCount();
+                targetAtomCount = (double) this.mcsList.iterator().next().getTarget().getAtomCount();
 
-                double common = firstAtomMCS.getCount();
+                double common = (double) firstAtomMCS.getCount();
                 euclidean = Math.sqrt(sourceAtomCount + targetAtomCount - 2 * common);
                 BigDecimal dist = new BigDecimal(euclidean);
                 dist = dist.setScale(decimalPlaces, BigDecimal.ROUND_HALF_UP);
@@ -213,18 +215,20 @@ public class BaseMapping implements IAtomMapping {
         return euclidean;
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      *
-     * @return 
+     * @return
      */
     @Override
     public synchronized List<AtomAtomMapping> getAllAtomMapping() {
         return Collections.unmodifiableList(new ArrayList<AtomAtomMapping>(mcsList));
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      *
-     * @return 
+     * @return
      */
     @Override
     public synchronized AtomAtomMapping getFirstAtomMapping() {
@@ -244,6 +248,7 @@ public class BaseMapping implements IAtomMapping {
 
     /**
      * Returns true if bond are to be matched.
+     *
      * @return true if bond are to be matched
      */
     protected boolean isMatchBonds() {
@@ -252,6 +257,7 @@ public class BaseMapping implements IAtomMapping {
 
     /**
      * Returns true if rings are to be matched.
+     *
      * @return true if rings are to be matched
      */
     protected boolean isMatchRings() {
@@ -260,6 +266,7 @@ public class BaseMapping implements IAtomMapping {
 
     /**
      * Returns true if Query is a subgraph of the Target.
+     *
      * @return true if Query is a subgraph of the Target
      */
     public synchronized boolean isSubgraph() {

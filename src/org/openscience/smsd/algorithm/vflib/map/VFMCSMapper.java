@@ -64,11 +64,10 @@ import org.openscience.smsd.algorithm.vflib.interfaces.IState;
 import org.openscience.smsd.algorithm.vflib.query.QueryCompiler;
 
 /**
- * This class finds MCS between query and target molecules
- * using VF2 algorithm.
+ * This class finds MCS between query and target molecules using VF2 algorithm.
  *
- * @cdk.module smsd
- * @cdk.githash
+ * @cdk.module smsd @cdk.githash
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFLibTest")
@@ -76,7 +75,6 @@ public class VFMCSMapper implements IMapper {
 
     private final IQuery query;
     private final List<Map<INode, IAtom>> maps;
-    private int currentMCSSize = -1;
 
     /**
      *
@@ -91,14 +89,16 @@ public class VFMCSMapper implements IMapper {
      *
      * @param queryMolecule
      * @param bondMatcher
-     * @param ringMatcher  
+     * @param ringMatcher
      */
     public VFMCSMapper(IAtomContainer queryMolecule, boolean bondMatcher, boolean ringMatcher) {
         this.query = new QueryCompiler(queryMolecule, bondMatcher, ringMatcher).compile();
         this.maps = new ArrayList<Map<INode, IAtom>>();
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
+     *
      * @param targetMolecule targetMolecule graph
      */
     @Override
@@ -108,7 +108,8 @@ public class VFMCSMapper implements IMapper {
         return mapFirst(state);
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     public List<Map<INode, IAtom>> getMaps(IAtomContainer target) {
@@ -118,7 +119,8 @@ public class VFMCSMapper implements IMapper {
         return new ArrayList<Map<INode, IAtom>>(maps);
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      *
      * @param target
      *
@@ -131,7 +133,8 @@ public class VFMCSMapper implements IMapper {
         return maps.isEmpty() ? new HashMap<INode, IAtom>() : maps.get(0);
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     public int countMaps(IAtomContainer target) {
@@ -141,7 +144,9 @@ public class VFMCSMapper implements IMapper {
         return maps.size();
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
+     *
      * @param targetMolecule targetMolecule graph
      */
     @Override
@@ -151,7 +156,9 @@ public class VFMCSMapper implements IMapper {
         return mapFirst(state);
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
+     *
      * @param targetMolecule
      */
     @Override
@@ -162,7 +169,8 @@ public class VFMCSMapper implements IMapper {
         return new ArrayList<Map<INode, IAtom>>(maps);
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      *
      * @param targetMolecule
      *
@@ -175,7 +183,9 @@ public class VFMCSMapper implements IMapper {
         return maps.isEmpty() ? new HashMap<INode, IAtom>() : maps.get(0);
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
+     *
      * @param targetMolecule
      */
     @Override
@@ -188,50 +198,19 @@ public class VFMCSMapper implements IMapper {
 
     private boolean hasMap(Map<INode, IAtom> map) {
         for (Map<INode, IAtom> storedMap : maps) {
-            if (matchMaps(storedMap, map)) {
+            if (storedMap.size() > map.size()) {
                 return true;
             }
+        }
+        if (maps.contains(map)) {
+            return true;
         }
         return false;
     }
 
-    /*
-     * Check if this map is the subset of the existing map or same 
-     * 
-     * 
-     * @param storedMap
-     * @param cliqueMap
-     * @return
-     */
-    private boolean matchMaps(Map<INode, IAtom> storedMap, Map<INode, IAtom> cliqueMap) {
-        if (storedMap.size() >= cliqueMap.size()) {
-            for (INode atom1 : cliqueMap.keySet()) {
-                if (storedMap.containsKey(atom1) && cliqueMap.get(atom1).equals(storedMap.get(atom1))) {
-                    continue;
-                } else {
-                    return false;
-                }
-            }
-        } else {
-            for (INode atom1 : storedMap.keySet()) {
-                if (cliqueMap.containsKey(atom1) && storedMap.get(atom1).equals(cliqueMap.get(atom1))) {
-                    continue;
-                } else {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
     private void addMapping(IState state) {
         Map<INode, IAtom> map = state.getMap();
-        if (map.size() > currentMCSSize) {
-            maps.clear();
-            maps.add(map);
-            currentMCSSize = map.size();
-        } else if (map.size() == currentMCSSize
-                && !hasMap(map)) {
+        if (!hasMap(map) || maps.isEmpty()) {
             maps.add(map);
         }
     }
@@ -240,9 +219,9 @@ public class VFMCSMapper implements IMapper {
         if (state.isDead()) {
             return;
         }
+
         if (state.isGoal()) {
             addMapping(state);
-            state.backTrack();
             return;
         } else {
             addMapping(state);
@@ -256,7 +235,6 @@ public class VFMCSMapper implements IMapper {
                 nextState.backTrack();
             }
         }
-        return;
     }
 
     private boolean mapFirst(IState state) {

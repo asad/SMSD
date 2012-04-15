@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import java.util.logging.Level;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.annotations.TestMethod;
 import org.openscience.cdk.exception.CDKException;
@@ -43,9 +42,8 @@ import org.openscience.smsd.interfaces.IResults;
 
 /**
  * This class acts as a handler class for MCSPlus algorithm.
- * {@link org.openscience.cdk.smsd.algorithm.mcsplus.MCSPlus}
- * @cdk.module smsd
- * @cdk.githash
+ * {@link org.openscience.cdk.smsd.algorithm.mcsplus.MCSPlus} @cdk.module smsd @cdk.githash
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.SMSDBondSensitiveTest")
@@ -61,10 +59,11 @@ public final class MCSPlusHandler extends MoleculeInitializer implements IResult
 
     /**
      * Constructor for the MCS Plus algorithm class
+     *
      * @param source
      * @param target
      * @param shouldMatchBonds
-     * @param shouldMatchRings  
+     * @param shouldMatchRings
      */
     public MCSPlusHandler(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings) {
         this.source = source;
@@ -86,8 +85,9 @@ public final class MCSPlusHandler extends MoleculeInitializer implements IResult
 
     /**
      * Constructor for the MCS Plus algorithm class
+     *
      * @param source
-     * @param target  
+     * @param target
      */
     public MCSPlusHandler(IQueryAtomContainer source, IQueryAtomContainer target) {
         this.source = source;
@@ -106,8 +106,8 @@ public final class MCSPlusHandler extends MoleculeInitializer implements IResult
         searchMCS();
     }
 
-    /** {@inheritDoc}
-     * Function is called by the main program and serves as a starting point for the comparison procedure.
+    /**
+     * {@inheritDoc} Function is called by the main program and serves as a starting point for the comparison procedure.
      *
      */
     private synchronized void searchMCS() {
@@ -187,38 +187,21 @@ public final class MCSPlusHandler extends MoleculeInitializer implements IResult
 
     }
 
-    /** {@inheritDoc}
-     * @return 
-     */
-    @Override
-    @TestMethod("testGetAllMapping")
-    public synchronized List<Map<Integer, Integer>> getAllMapping() {
-        return allMCS;
-    }
-
-    /** {@inheritDoc}
-     * @return 
-     */
-    @Override
-    @TestMethod("testGetFirstMapping")
-    public synchronized Map<Integer, Integer> getFirstMapping() {
-        if (allMCS.iterator().hasNext()) {
-            return allMCS.iterator().next();
-        }
-        return new TreeMap<Integer, Integer>();
-    }
-
-    /** {@inheritDoc}
-     * @return 
+    /**
+     * {@inheritDoc}
+     *
+     * @return
      */
     @Override
     @TestMethod("testGetAllAtomMapping")
     public synchronized List<AtomAtomMapping> getAllAtomMapping() {
-        return allAtomMCS;
+        return Collections.unmodifiableList(allAtomMCS);
     }
 
-    /** {@inheritDoc}
-     * @return 
+    /**
+     * {@inheritDoc}
+     *
+     * @return
      */
     @Override
     @TestMethod("testGetFirstAtomMapping")
