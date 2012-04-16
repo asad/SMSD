@@ -199,7 +199,9 @@ public class SMSDcmd {
         IAtomContainer query = inputHandler.getQuery();
         boolean removeHydrogens = argumentHandler.isApplyHRemoval();
 
-        /*check connectivity*/
+        /*
+         * check connectivity
+         */
         boolean flag = ConnectivityChecker.isConnected(query);
         if (!flag) {
             System.out.println("WARNING : Skipping file " + inputHandler.getQueryName() + " not connected ");
@@ -234,7 +236,9 @@ public class SMSDcmd {
                 continue;
             }
 
-            /*remove target hydrogens*/
+            /*
+             * remove target hydrogens
+             */
             if (removeHydrogens) {
                 target = new AtomContainer(AtomContainerManipulator.removeHydrogens(target));
             }
@@ -322,7 +326,9 @@ public class SMSDcmd {
 
         boolean removeHydrogens = argumentHandler.isApplyHRemoval();
 
-        /*check connectivity*/
+        /*
+         * check connectivity
+         */
         boolean flag = ConnectivityChecker.isConnected(query);
         if (!flag) {
             System.out.println("WARNING : Skipping file " + inputHandler.getQueryName() + " not connectted ");
@@ -334,7 +340,9 @@ public class SMSDcmd {
                     + inputHandler.getTargetName() + " as it is not connected.");
             return;
         }
-        /*remove hydrogens*/
+        /*
+         * remove hydrogens
+         */
         if (removeHydrogens) {
             query = new AtomContainer(AtomContainerManipulator.removeHydrogens(query));
             target = new AtomContainer(AtomContainerManipulator.removeHydrogens(target));
@@ -477,7 +485,7 @@ public class SMSDcmd {
             boolean matchRings) throws CDKException {
         // XXX - if clean and configure is 'true', is that not duplicate configuring?
         BaseMapping smsd = new Isomorphism(query, target, Algorithm.VFLibMCS, matchBonds, matchRings);
-        
+
         if (filter == 0) {
             smsd.setChemFilters(false, false, false);
         }
