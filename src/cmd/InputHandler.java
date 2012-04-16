@@ -31,6 +31,7 @@ import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.cdk.tools.manipulator.ChemFileManipulator;
 
 import cmd.pdb.LigandHelper;
+import java.util.Collections;
 import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.io.iterator.IteratingSDFReader;
 
@@ -93,15 +94,15 @@ public class InputHandler {
     }
 
     public Map<String, String> getStringDataTypes() {
-        return stringDataTypes;
+        return Collections.unmodifiableMap(stringDataTypes);
     }
 
     public Map<String, String> getSingularDataTypes() {
-        return singularDataTypes;
+        return Collections.unmodifiableMap(singularDataTypes);
     }
 
     public Map<String, String> getMultipleDataTypes() {
-        return multipleDataTypes;
+        return Collections.unmodifiableMap(multipleDataTypes);
     }
 
     public String getQRefName() {
@@ -205,7 +206,7 @@ public class InputHandler {
     }
 
     /**
-     * 
+     *
      * @param mol
      * @param type
      * @throws CDKException
@@ -266,6 +267,7 @@ public class InputHandler {
 
     /**
      * Return Query molecule
+     *
      * @return
      * @throws IOException
      * @throws CDKException
@@ -277,7 +279,7 @@ public class InputHandler {
             ISimpleChemObjectReader reader = getReader(type, filenameOrData);
             IChemFile chemFile = reader.read(new ChemFile());
             IAtomContainer molecule =
-                    (IAtomContainer) ChemFileManipulator.getAllAtomContainers(chemFile).get(0);
+                    ChemFileManipulator.getAllAtomContainers(chemFile).get(0);
             configure(molecule, type);
             return molecule;
         } else {
@@ -287,6 +289,7 @@ public class InputHandler {
 
     /**
      * Returns Target molecule
+     *
      * @return
      * @throws IOException
      * @throws CDKException
@@ -298,7 +301,7 @@ public class InputHandler {
             ISimpleChemObjectReader reader = getReader(type, filenameOrData);
             IChemFile chemFile = reader.read(new ChemFile());
             IAtomContainer molecule =
-                    (IAtomContainer) ChemFileManipulator.getAllAtomContainers(chemFile).get(0);
+                    ChemFileManipulator.getAllAtomContainers(chemFile).get(0);
             configure(molecule, type);
             return molecule;
         } else {
@@ -308,6 +311,7 @@ public class InputHandler {
 
     /**
      * Returns an SDF files iterator
+     *
      * @return
      * @throws FileNotFoundException
      */

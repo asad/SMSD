@@ -345,7 +345,7 @@ public class SMSDcmd {
             argumentHandler.setTargetMolOutName(target.getID());
         }
         if (query.getProperty(CDKConstants.TITLE) != null) {
-            query.setID((String) target.getProperty(CDKConstants.TITLE));
+            query.setID((String) query.getProperty(CDKConstants.TITLE));
             argumentHandler.setQueryMolOutName(query.getID());
         }
 
