@@ -23,10 +23,7 @@
 package org.openscience.smsd;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Level;
 import org.openscience.cdk.annotations.TestMethod;
 import org.openscience.cdk.exception.CDKException;
@@ -150,13 +147,12 @@ public class BaseMapping implements IAtomMapping {
         int stereoMisMatchScore = 0;
         if (getMappingCount() > 0) {
             AtomAtomMapping firstAtomMCS = mcsList.iterator().next();
-            for (Map.Entry<IAtom, IAtom> mappingI : firstAtomMCS.getMappings().entrySet()) {
-                IAtom indexI = mappingI.getKey();
-                IAtom indexJ = mappingI.getValue();
-                for (Map.Entry<IAtom, IAtom> mappingJ : firstAtomMCS.getMappings().entrySet()) {
-
-                    IAtom indexIPlus = mappingJ.getKey();
-                    IAtom indexJPlus = mappingJ.getValue();
+            for (Iterator<IAtom> it1 = firstAtomMCS.getMappings().keySet().iterator(); it1.hasNext();) {
+                IAtom indexI = it1.next();
+                IAtom indexJ = firstAtomMCS.getMappings().get(indexI);
+                for (Iterator<IAtom> it2 = firstAtomMCS.getMappings().keySet().iterator(); it2.hasNext();) {
+                    IAtom indexIPlus = it2.next();
+                    IAtom indexJPlus = firstAtomMCS.getMappings().get(indexIPlus);
                     if (!indexI.equals(indexIPlus) && !indexJ.equals(indexJPlus)) {
 
                         IAtom sourceAtom1 = indexI;

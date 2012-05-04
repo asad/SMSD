@@ -1,8 +1,7 @@
 /*
  *
  *
- * Copyright (C) 2011  Syed Asad Rahman <asad@ebi.ac.uk>
- *                     Gilleain Torrance <gilleain.torrance@gmail.com>
+ * Copyright (C) 2011-2012  Syed Asad Rahman <asad@ebi.ac.uk>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -28,23 +27,17 @@
  */
 package org.openscience.smsd;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import org.openscience.cdk.graph.ConnectivityChecker;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IAtomContainerSet;
 
 /**
- * Holds atom-atom mappings information between 
- * source and target molecules
- * 
- * @cdk.module smsd
- * @cdk.githash
+ * Holds atom-atom mappings information between source and target molecules
+ *
+ * @cdk.module smsd @cdk.githash
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public final class AtomAtomMapping {
@@ -55,7 +48,7 @@ public final class AtomAtomMapping {
     private final Map<Integer, Integer> mappingIndex;
 
     /**
-     * 
+     *
      * @param query source molecule
      * @param target target molecule
      */
@@ -63,11 +56,11 @@ public final class AtomAtomMapping {
         this.query = query;
         this.target = target;
         this.mapping = Collections.synchronizedMap(new HashMap<IAtom, IAtom>());
-        this.mappingIndex = Collections.synchronizedMap(new TreeMap<Integer, Integer>());
+        this.mappingIndex = Collections.synchronizedSortedMap(new TreeMap<Integer, Integer>());
     }
 
     /**
-     * 
+     *
      * @param atom1
      * @param atom2
      */
@@ -78,6 +71,7 @@ public final class AtomAtomMapping {
 
     /**
      * Returns String.
+     *
      * @return string
      */
     @Override
@@ -93,6 +87,7 @@ public final class AtomAtomMapping {
 
     /**
      * Returns true if 'query' is not isomorphic of 'target'.
+     *
      * @return true if 'query' is not isomorphic of 'target'
      */
     public synchronized boolean isEmpty() {
@@ -100,7 +95,7 @@ public final class AtomAtomMapping {
     }
 
     /**
-     * 
+     *
      * Clear mappings
      */
     public synchronized void clear() {
@@ -109,8 +104,9 @@ public final class AtomAtomMapping {
     }
 
     /**
-     * 
-     * Returns mapping size. 
+     *
+     * Returns mapping size.
+     *
      * @return mapping size
      */
     public synchronized int getCount() {
@@ -119,6 +115,7 @@ public final class AtomAtomMapping {
 
     /**
      * Returns atom-atom mappings
+     *
      * @return atom-atom mappings
      */
     public synchronized Map<IAtom, IAtom> getMappings() {
@@ -127,15 +124,16 @@ public final class AtomAtomMapping {
 
     /**
      * Returns atom-atom index mappings
+     *
      * @return atom-atom index mappings
      */
     public synchronized Map<Integer, Integer> getMappingsIndex() {
-        return Collections.unmodifiableMap(new HashMap<Integer, Integer>(mappingIndex));
+        return Collections.unmodifiableSortedMap(new TreeMap<Integer, Integer>(mappingIndex));
     }
 
     /**
-     * Returns atom index of the given atom
-     * in the query molecule
+     * Returns atom index of the given atom in the query molecule
+     *
      * @param atom
      * @return
      */
@@ -144,8 +142,8 @@ public final class AtomAtomMapping {
     }
 
     /**
-     * Returns atom index of the given atom
-     * in the target molecule
+     * Returns atom index of the given atom in the target molecule
+     *
      * @param atom
      * @return
      */
@@ -155,6 +153,7 @@ public final class AtomAtomMapping {
 
     /**
      * Returns query molecule
+     *
      * @return the query
      */
     public synchronized IAtomContainer getQuery() {
@@ -163,6 +162,7 @@ public final class AtomAtomMapping {
 
     /**
      * Returns target molecule
+     *
      * @return the target
      */
     public synchronized IAtomContainer getTarget() {
@@ -171,8 +171,9 @@ public final class AtomAtomMapping {
 
     /**
      * Returns common mapped fragment in the query molecule.
+     *
      * @return common mapped fragment in the query molecule
-     * @throws CloneNotSupportedException  
+     * @throws CloneNotSupportedException
      */
     public synchronized IAtomContainer getCommonFragmentInQuery() throws CloneNotSupportedException {
         IAtomContainer ac = (IAtomContainer) query.clone();
@@ -190,8 +191,9 @@ public final class AtomAtomMapping {
 
     /**
      * Returns common mapped fragment in the target molecule.
+     *
      * @return common mapped fragment in the target molecule
-     * @throws CloneNotSupportedException  
+     * @throws CloneNotSupportedException
      */
     public synchronized IAtomContainer getCommonFragmentInTarget() throws CloneNotSupportedException {
         IAtomContainer ac = (IAtomContainer) target.clone();
@@ -209,8 +211,9 @@ public final class AtomAtomMapping {
 
     /**
      * Returns unique unmapped fragments in the query molecule.
+     *
      * @return unique fragments in the query molecule
-     * @throws CloneNotSupportedException  
+     * @throws CloneNotSupportedException
      */
     public synchronized IAtomContainerSet getUniqueFragmentsInQuery() throws CloneNotSupportedException {
         IAtomContainer ac = (IAtomContainer) query.clone();
@@ -229,8 +232,9 @@ public final class AtomAtomMapping {
 
     /**
      * Returns unique unmapped fragments in the target molecule.
+     *
      * @return unique fragments in the target molecule
-     * @throws CloneNotSupportedException  
+     * @throws CloneNotSupportedException
      */
     public synchronized IAtomContainerSet getUniqueFragmentsInTarget() throws CloneNotSupportedException {
         IAtomContainer ac = (IAtomContainer) target.clone();
