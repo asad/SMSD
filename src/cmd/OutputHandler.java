@@ -24,7 +24,7 @@ import org.openscience.reactionblast.graphics.direct.Params;
 
 /**
  * Writes the results of SMSD to text files and images.
- *  
+ *
  * @author maclean
  *
  */
@@ -46,7 +46,7 @@ public class OutputHandler {
         nf.setMaximumFractionDigits(2);
         nf.setMinimumFractionDigits(2);
     }
-    
+
     public void printImageOptionsHelp() {
         Params params = imageGenerator.getParams();
         System.out.println("Image options, and default values");
@@ -61,15 +61,31 @@ public class OutputHandler {
         }
     }
 
+    /**
+     *
+     * @param mol
+     * @throws IllegalArgumentException
+     * @throws IOException
+     * @throws CDKException
+     */
     public void writeQueryMol(IAtomContainer mol) throws IllegalArgumentException, IOException, CDKException {
         String suffix = argumentHandler.getSuffix();
-        String qRefName = argumentHandler.getQueryMolOutName() + suffix + ".mol";
+        String fileName = argumentHandler.getQueryMolOutName().equals("untitled") ? "Query" : argumentHandler.getQueryMolOutName();
+        String qRefName = fileName + suffix + ".mol";
         writeMolToMolfile(mol, qRefName);
     }
 
+    /**
+     *
+     * @param mol
+     * @throws IllegalArgumentException
+     * @throws IOException
+     * @throws CDKException
+     */
     public void writeTargetMol(IAtomContainer mol) throws IllegalArgumentException, IOException, CDKException {
         String suffix = argumentHandler.getSuffix();
-        String tRefName = argumentHandler.getTargetMolOutName() + suffix + ".mol";
+        String fileName = argumentHandler.getQueryMolOutName().equals("untitled") ? "Target" : argumentHandler.getQueryMolOutName();
+        String tRefName = fileName + suffix + ".mol";
         writeMolToMolfile(mol, tRefName);
     }
 
@@ -93,7 +109,7 @@ public class OutputHandler {
     }
 
     /**
-     * 
+     *
      * @param mol
      * @param out
      * @throws IOException
@@ -170,7 +186,7 @@ public class OutputHandler {
 //            double tanimotoGraph, double tanimotoAtom, double tanimotoBond, double euclidianGraph, int nAtomsMatched,
 //            long executionTime) throws IOException, CloneNotSupportedException {
     /**
-     * 
+     *
      * @param mol1
      * @param mol2
      * @param tanimotoGraph

@@ -67,7 +67,7 @@ public class ArgumentHandler {
     private String fingerFile = "finger";
     private String graphFile = "graph";
     private String descriptorFile = "molDescriptors";
-    private String queryOutfileName = "Query";
+    private String queryOutfileName;
     private String targetOutfileName = "Target";
     private String suffix = "";
     private int chemFilter = 3;
@@ -97,8 +97,8 @@ public class ArgumentHandler {
     }
 
     /**
-     * Parses the options in the command line arguments and returns an array of
-     * strings corresponding to the filenames given as arguments only
+     * Parses the options in the command line arguments and returns an array of strings corresponding to the filenames
+     * given as arguments only
      *
      * @param args
      * @throws org.apache.commons.cli.ParseException
@@ -511,14 +511,14 @@ public class ArgumentHandler {
      * @return the Target
      */
     public String getTargetMolOutName() {
-        return this.targetOutfileName;
+        return targetOutfileName;
     }
 
     /**
      * @return the Query
      */
     public String getQueryMolOutName() {
-        return this.queryOutfileName;
+        return queryOutfileName;
     }
 
     /**

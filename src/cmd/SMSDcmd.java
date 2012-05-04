@@ -5,13 +5,7 @@
 package cmd;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 import org.apache.commons.cli.MissingOptionException;
 import org.apache.commons.cli.ParseException;
@@ -126,13 +120,13 @@ public class SMSDcmd {
         for (IAtomContainer target : atomContainerSet) {
             boolean flag = ConnectivityChecker.isConnected(target);
             if (!flag) {
-                System.out.println("WARNING : Skipping target AtomContainer "
+                System.err.println("WARNING : Skipping target AtomContainer "
                         + target.getProperty(CDKConstants.TITLE) + " as it is not connected.");
                 continue;
             } else {
                 if (target.getProperty(CDKConstants.TITLE) != null) {
                     target.setID((String) target.getProperty(CDKConstants.TITLE));
-                    argumentHandler.setTargetMolOutName(target.getID());
+                    argumentHandler.setTargetMolOutName(target.getID() == null ? "Target" : target.getID());
                 }
             }
             if (removeHydrogens) {
@@ -142,11 +136,13 @@ public class SMSDcmd {
             if (mcsAtomContainer != null) {
                 flag = ConnectivityChecker.isConnected(mcsAtomContainer);
                 if (!flag) {
-                    System.out.println("WARNING : Skipping file "
+                    System.err.println("WARNING : Skipping file "
                             + mcsAtomContainer.getProperty(CDKConstants.TITLE) + " not connected ");
                     return;
                 } else if (mcsAtomContainer.getProperty(CDKConstants.TITLE) != null) {
-                    mcsAtomContainer.setID((String) mcsAtomContainer.getProperty(CDKConstants.TITLE));
+                    String mcsFilenName = mcsAtomContainer.getProperty(CDKConstants.TITLE).equals("untitled")
+                            ? "mcs" : (String) mcsAtomContainer.getProperty(CDKConstants.TITLE);
+                    mcsAtomContainer.setID(mcsFilenName);
                     argumentHandler.setQueryMolOutName(mcsAtomContainer.getID());
                 }
                 if (removeHydrogens) {
@@ -204,7 +200,7 @@ public class SMSDcmd {
          */
         boolean flag = ConnectivityChecker.isConnected(query);
         if (!flag) {
-            System.out.println("WARNING : Skipping file " + inputHandler.getQueryName() + " not connected ");
+            System.err.println("WARNING : Skipping file " + inputHandler.getQueryName() + " not connected ");
             return;
         }
         if (removeHydrogens) {
@@ -231,7 +227,7 @@ public class SMSDcmd {
             IAtomContainer target = (IAtomContainer) reader.next();
             flag = ConnectivityChecker.isConnected(target);
             if (!flag) {
-                System.out.println("WARNING : Skipping target AtomContainer "
+                System.err.println("WARNING : Skipping target AtomContainer "
                         + target.getProperty(CDKConstants.TITLE) + " as it is not connected.");
                 continue;
             }
@@ -244,7 +240,7 @@ public class SMSDcmd {
             }
             if (target.getProperty(CDKConstants.TITLE) != null) {
                 target.setID((String) target.getProperty(CDKConstants.TITLE));
-                argumentHandler.setTargetMolOutName(target.getID());
+                argumentHandler.setTargetMolOutName(target.getID() == null ? "Target" : target.getID());
             }
 
             inputHandler.configure(target, targetType);
@@ -332,12 +328,12 @@ public class SMSDcmd {
          */
         boolean flag = ConnectivityChecker.isConnected(query);
         if (!flag) {
-            System.out.println("WARNING : Skipping file " + inputHandler.getQueryName() + " not connectted ");
+            System.err.println("WARNING : Skipping file " + inputHandler.getQueryName() + " not connectted ");
             return;
         }
         flag = ConnectivityChecker.isConnected(target);
         if (!flag) {
-            System.out.println("WARNING : Skipping target AtomContainer "
+            System.err.println("WARNING : Skipping target AtomContainer "
                     + inputHandler.getTargetName() + " as it is not connected.");
             return;
         }
@@ -350,11 +346,15 @@ public class SMSDcmd {
         }
 
         if (target.getProperty(CDKConstants.TITLE) != null) {
-            target.setID((String) target.getProperty(CDKConstants.TITLE));
+            String fileName = target.getProperty(CDKConstants.TITLE) == null ? "Target"
+                    : (String) target.getProperty(CDKConstants.TITLE);
+            target.setID(fileName);
             argumentHandler.setTargetMolOutName(target.getID());
         }
         if (query.getProperty(CDKConstants.TITLE) != null) {
-            query.setID((String) query.getProperty(CDKConstants.TITLE));
+            String fileName = query.getProperty(CDKConstants.TITLE) == null ? "Query"
+                    : (String) query.getProperty(CDKConstants.TITLE);
+            query.setID(fileName);
             argumentHandler.setQueryMolOutName(query.getID());
         }
 
@@ -379,7 +379,7 @@ public class SMSDcmd {
         }
 
         long startTime = System.currentTimeMillis();
-        BaseMapping smsd = null;
+        BaseMapping smsd;
         boolean matchBonds = argumentHandler.isMatchBondType();
         boolean matchRings = argumentHandler.isMatchRingType();
 
@@ -410,7 +410,8 @@ public class SMSDcmd {
         //print out all mappings
         if (mcs != null && argumentHandler.isAllMapping()) {
             outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
-            for (AtomAtomMapping aam : smsd.getAllAtomMapping()) {
+            for (Iterator<AtomAtomMapping> it = smsd.getAllAtomMapping().iterator(); it.hasNext();) {
+                AtomAtomMapping aam = it.next();
                 Map<Integer, Integer> mapping = getIndexMapping(aam);
                 int counter = 0;
                 if (argumentHandler.isImage()) {
@@ -418,7 +419,8 @@ public class SMSDcmd {
                     String label = outputHandler.makeLabel(tanimotoSimilarity, stereoScore);
                     outputHandler.addImage(query, target, label, mapping);
                 }
-                outputHandler.printMapping(counter++, mcs);
+                outputHandler.printMapping((counter + 1), aam.getMappings());
+                counter += 1;
             }
         } //print out top one
         else if (mcs != null && !argumentHandler.isAllMapping()) {
