@@ -28,46 +28,39 @@ import org.openscience.cdk.config.IsotopeFactory;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 
 /**
- * @author     Syed Asad Rahman<asad@ebi.ac.uk>
- * @cdk.module smsd
+ * @author Syed Asad Rahman<asad@ebi.ac.uk> @cdk.module smsd
  */
 public class AtomContainerComparator implements Comparator<IAtomContainer> {
 
-    /** Configure LoggingTool */
+    /**
+     * Configure LoggingTool
+     */
     private ILoggingTool logger =
             LoggingToolFactory.createLoggingTool(AtomContainerComparator.class);
 
-    /** Creates a new instance of AtomContainerComparator */
+    /**
+     * Creates a new instance of AtomContainerComparator
+     */
     public AtomContainerComparator() {
     }
 
     /*
-     * <p>Compares two IAtomContainers for order with the following criteria with decreasing priority:</p>
-     * <ul>
-     *   <li>Compare atom count
-     *   <li>Compare molecular weight (heavy atoms only)
-     *   <li>Compare bond count
-     *   <li>Compare sum of bond orders (heavy atoms only)
-     * </ul>
-     * <p>If no difference can be found with the above criteria, the IAtomContainers are
-     * considered equal.</p>
-     * <p>Returns a negative integer, zero, or a positive integer as the first argument is less than,
-     * equal to, or greater than the second.</p>
-     * <p>This method is null safe.</p>
+     * <p>Compares two IAtomContainers for order with the following criteria with decreasing priority:</p> <ul>
+     * <li>Compare atom count <li>Compare molecular weight (heavy atoms only) <li>Compare bond count <li>Compare sum of
+     * bond orders (heavy atoms only) </ul> <p>If no difference can be found with the above criteria, the
+     * IAtomContainers are considered equal.</p> <p>Returns a negative integer, zero, or a positive integer as the first
+     * argument is less than, equal to, or greater than the second.</p> <p>This method is null safe.</p>
      *
-     * @param o1 the first IAtomContainer
-     * @param o2 the second IAtomContainer
-     * @return a negative integer, zero, or a positive integer as the first argument is less than, equal
-     *         to, or greater than the second.
+     * @param o1 the first IAtomContainer @param o2 the second IAtomContainer @return a negative integer, zero, or a
+     * positive integer as the first argument is less than, equal to, or greater than the second.
      */
     /**
-     * 
+     *
      * @param o1
      * @param o2
      * @return
@@ -155,12 +148,11 @@ public class AtomContainerComparator implements Comparator<IAtomContainer> {
     }
 
     /**
-     * Returns the molecular weight (exact mass) of the major isotopes
-     * of all heavy atoms of the given IAtomContainer.
+     * Returns the molecular weight (exact mass) of the major isotopes of all heavy atoms of the given IAtomContainer.
+     *
      * @param atomContainer an IAtomContainer to calculate the molecular weight for
      * @throws org.openscience.cdk.exception.CDKException if an error occurs with the IsotopeFactory
-     * @return the molecular weight (exact mass) of the major isotopes
-     *         of all heavy atoms of the given IAtomContainer
+     * @return the molecular weight (exact mass) of the major isotopes of all heavy atoms of the given IAtomContainer
      */
     private double getMolecularWeight(IAtomContainer atomContainer) throws CDKException {
         double mw = 0.0;
