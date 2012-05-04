@@ -63,7 +63,6 @@ public final class VF2MCS extends BaseMCS implements IResults {
      */
     public VF2MCS(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings) {
         super(source, target, shouldMatchBonds, shouldMatchRings);
-        this.allAtomMCS = new ArrayList<AtomAtomMapping>();
 
         try {
             addVFMatchesMappings();
@@ -135,6 +134,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
         }
         int solSize = 0;
         int counter = 0;
+        this.allAtomMCS = new ArrayList<AtomAtomMapping>();
         if (!allLocalAtomAtomMapping.isEmpty()) {
             for (int i = 0; i < allLocalAtomAtomMapping.size(); i++) {
                 AtomAtomMapping atomMCSMap = allLocalAtomAtomMapping.get(i);

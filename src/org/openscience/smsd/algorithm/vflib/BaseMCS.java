@@ -99,13 +99,17 @@ public class BaseMCS extends MoleculeInitializer {
 
     }
 
+    /**
+     * 
+     * @param cliqueMap
+     * @param mapGlobal
+     * @return
+     */
     protected synchronized boolean hasClique(Map<Integer, Integer> cliqueMap, List<Map<Integer, Integer>> mapGlobal) {
         for (Map<Integer, Integer> storedMap : mapGlobal) {
             if (cliqueMap.size() < storedMap.size()) {
                 return true;
-            }
-            if (cliqueMap.keySet().equals(storedMap.keySet())
-                    && cliqueMap.values().equals(storedMap.values())) {
+            } else if (cliqueMap.equals(storedMap)) {
                 return true;
             }
         }
