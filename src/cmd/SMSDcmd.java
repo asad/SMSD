@@ -270,9 +270,9 @@ public class SMSDcmd {
             //print out all mappings
             if (mcs != null && argumentHandler.isAllMapping()) {
                 outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
+                int counter = 0;
                 for (AtomAtomMapping aam : smsd.getAllAtomMapping()) {
-                    Map<Integer, Integer> mapping = getIndexMapping(aam);
-                    int counter = 0;
+                    Map<Integer, Integer> mapping = aam.getMappingsIndex();
                     if (argumentHandler.isImage()) {
                         double stereoScore = smsd.getStereoScore(counter);
                         String label = outputHandler.makeLabel(tanimotoSimilarity, stereoScore);
@@ -283,7 +283,7 @@ public class SMSDcmd {
                 }
             } //print out top one
             else if (mcs != null && !argumentHandler.isAllMapping()) {
-                Map<Integer, Integer> mcsNumber = getIndexMapping(smsd.getFirstAtomMapping());
+                Map<Integer, Integer> mcsNumber = smsd.getFirstAtomMapping().getMappingsIndex();
                 double stereoScore = smsd.getStereoScore(0);
                 outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
                 String qrefName = inputHandler.getQRefName();
@@ -410,10 +410,10 @@ public class SMSDcmd {
         //print out all mappings
         if (mcs != null && argumentHandler.isAllMapping()) {
             outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
+            int counter = 0;
             for (Iterator<AtomAtomMapping> it = smsd.getAllAtomMapping().iterator(); it.hasNext();) {
                 AtomAtomMapping aam = it.next();
-                Map<Integer, Integer> mapping = getIndexMapping(aam);
-                int counter = 0;
+                Map<Integer, Integer> mapping = aam.getMappingsIndex();
                 if (argumentHandler.isImage()) {
                     double stereoScore = smsd.getStereoScore(counter);
                     String label = outputHandler.makeLabel(tanimotoSimilarity, stereoScore);
@@ -424,7 +424,7 @@ public class SMSDcmd {
             }
         } //print out top one
         else if (mcs != null && !argumentHandler.isAllMapping()) {
-            Map<Integer, Integer> mcsNumber = getIndexMapping(smsd.getFirstAtomMapping());
+            Map<Integer, Integer> mcsNumber = smsd.getFirstAtomMapping().getMappingsIndex();
             double stereoScore = smsd.getStereoScore(0);
             outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
             String qrefName = inputHandler.getQRefName();
