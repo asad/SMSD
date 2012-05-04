@@ -14,12 +14,11 @@ import org.openscience.cdk.graph.ConnectivityChecker;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.io.SDFWriter;
-import org.openscience.cdk.io.iterator.IteratingMDLReader;
+import org.openscience.cdk.io.iterator.IteratingSDFReader;
 import org.openscience.cdk.libio.md.MDMolecule;
 
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ * To change this template, choose Tools | Templates and open the template in the editor.
  */
 /**
  *
@@ -36,7 +35,7 @@ public class SDFReaderTest {
     @Test
     public void testSDFReader() throws FileNotFoundException, CDKException, IOException {
         FileReader in = new FileReader(SDF_DATA_FOLDER + File.separator + "trupti.sdf");
-        IteratingMDLReader iteratingMDLReader = new IteratingMDLReader(
+        IteratingSDFReader iteratingMDLReader = new IteratingSDFReader(
                 in, DefaultChemObjectBuilder.getInstance());
         int i = 0;
         IAtomContainerSet connectedSet = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainerSet.class);
