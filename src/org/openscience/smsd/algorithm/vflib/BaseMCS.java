@@ -1,4 +1,5 @@
-/* Copyright (C) 2009-2011  Syed Asad Rahman <asad@ebi.ac.uk>
+/* 
+ * Copyright (C) 2009-2011  Syed Asad Rahman <asad@ebi.ac.uk>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -74,12 +75,12 @@ public class BaseMCS extends MoleculeInitializer {
     private final boolean matchBonds;
     private final List<Map<INode, IAtom>> vfLibSolutions;
     final List<Map<Integer, Integer>> allMCSCopy;
-    final List<AtomAtomMapping> allAtomMCSCopy;
+    final List<AtomAtomMapping> allLocalAtomAtomMapping;
     private final static ILoggingTool Logger =
             LoggingToolFactory.createLoggingTool(BaseMCS.class);
 
     BaseMCS(IAtomContainer source, IAtomContainer target, boolean matchBonds, boolean shouldMatchRings) {
-        this.allAtomMCSCopy = new ArrayList<AtomAtomMapping>();
+        this.allLocalAtomAtomMapping = new ArrayList<AtomAtomMapping>();
         this.timeManager = new TimeManager();
         this.allMCSCopy = new ArrayList<Map<Integer, Integer>>();
         this.shouldMatchRings = shouldMatchRings;
@@ -490,10 +491,10 @@ public class BaseMCS extends MoleculeInitializer {
     }
 
     /**
-     * @return the allAtomMCSCopy
+     * @return the allLocalAtomAtomMapping
      */
     private synchronized List<AtomAtomMapping> getLocalAtomMCSSolution() {
-        return Collections.synchronizedList(allAtomMCSCopy);
+        return Collections.synchronizedList(allLocalAtomAtomMapping);
     }
 
     protected synchronized boolean isExtensionRequired(List<Map<Integer, Integer>> mcsSeeds) {

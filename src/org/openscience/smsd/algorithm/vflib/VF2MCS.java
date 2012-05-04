@@ -119,7 +119,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
                 }
 
                 allMCSCopy.clear();
-                allAtomMCSCopy.clear();
+                allLocalAtomAtomMapping.clear();
                 /*
                  * Sort biggest clique to smallest
                  */
@@ -135,17 +135,16 @@ public final class VF2MCS extends BaseMCS implements IResults {
         }
         int solSize = 0;
         int counter = 0;
-        if (!allMCSCopy.isEmpty()) {
-            for (int i = 0; i < allMCSCopy.size(); i++) {
-                Map<Integer, Integer> map = allMCSCopy.get(i);
-                AtomAtomMapping atomMCSMap = allAtomMCSCopy.get(i);
-                if (map.size() > solSize) {
-                    solSize = map.size();
+        if (!allLocalAtomAtomMapping.isEmpty()) {
+            for (int i = 0; i < allLocalAtomAtomMapping.size(); i++) {
+                AtomAtomMapping atomMCSMap = allLocalAtomAtomMapping.get(i);
+                if (atomMCSMap.getCount() > solSize) {
+                    solSize = atomMCSMap.getCount();
                     allAtomMCS.clear();
                     counter = 0;
                 }
-                if (!map.isEmpty()
-                        && map.size() == solSize) {
+                if (!atomMCSMap.isEmpty()
+                        && atomMCSMap.getCount() == solSize) {
                     allAtomMCS.add(counter, atomMCSMap);
                     counter++;
                 }
