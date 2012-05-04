@@ -282,7 +282,8 @@ public class SMSDcmd {
                         String label = outputHandler.makeLabel(tanimotoSimilarity, stereoScore);
                         outputHandler.addImage(query, target, label, mapping);
                     }
-                    outputHandler.printMapping(counter++, mcs);
+                    outputHandler.printMapping((counter + 1), aam.getMappings());
+                    counter += 1;
                 }
             } //print out top one
             else if (mcs != null && !argumentHandler.isAllMapping()) {
