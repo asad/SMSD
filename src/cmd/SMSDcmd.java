@@ -293,14 +293,15 @@ public class SMSDcmd {
             if (mcs != null && argumentHandler.isAllMapping()) {
                 outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
                 int counter = 0;
-                for (AtomAtomMapping aam : smsd.getAllAtomMapping()) {
+                for (Iterator<AtomAtomMapping> it = smsd.getAllAtomMapping().iterator(); it.hasNext();) {
+                    AtomAtomMapping aam = it.next();
                     Map<Integer, Integer> mapping = aam.getMappingsIndex();
                     if (argumentHandler.isImage()) {
                         double stereoScore = smsd.getStereoScore(counter);
                         String label = outputHandler.makeLabel(tanimotoSimilarity, stereoScore);
                         outputHandler.addImage(query, target, label, mapping);
                     }
-                    outputHandler.printMapping((counter + 1), aam.getMappings());
+                    outputHandler.printMapping((counter + 1), mapping);
                     counter += 1;
                 }
             } //print out top one
@@ -441,7 +442,7 @@ public class SMSDcmd {
                     String label = outputHandler.makeLabel(tanimotoSimilarity, stereoScore);
                     outputHandler.addImage(query, target, label, mapping);
                 }
-                outputHandler.printMapping((counter + 1), aam.getMappings());
+                outputHandler.printMapping((counter + 1), mapping);
                 counter += 1;
             }
         } //print out top one

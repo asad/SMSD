@@ -296,14 +296,19 @@ public class OutputHandler {
         outMFile.newLine();
     }
 
-    public void printMapping(int solutionIndex, Map<IAtom, IAtom> mcs) throws IOException {
+    /**
+     *
+     * @param solutionIndex
+     * @param mcs
+     * @throws IOException
+     */
+    public void printMapping(int solutionIndex, Map<Integer, Integer> mcs) throws IOException {
         outMFile.newLine();
         outMFile.write("Solution=\t" + solutionIndex);
         outMFile.newLine();
-        for (Map.Entry<IAtom, IAtom> map : mcs.entrySet()) {
-            String QueryIndex = map.getKey().getID();
-            String TargetIndex = map.getValue().getID();
-            outMFile.write(QueryIndex + "\t" + TargetIndex);
+        for (Integer queryIndex : mcs.keySet()) {
+            Integer targetIndex = mcs.get(queryIndex);
+            outMFile.write((queryIndex + 1) + "\t" + (targetIndex + 1));
             outMFile.newLine();
         }
 
