@@ -141,6 +141,7 @@ public class SMSDcmd {
 
         for (IAtomContainer target : atomContainerSet) {
             boolean flag = ConnectivityChecker.isConnected(target);
+            String name = (String) target.getProperty(CDKConstants.TITLE);
             if (!flag) {
                 System.err.println("WARNING : Skipping target AtomContainer "
                         + target.getProperty(CDKConstants.TITLE) + " as it is not connected.");
@@ -153,6 +154,8 @@ public class SMSDcmd {
             }
             if (removeHydrogens) {
                 target = new AtomContainer(AtomContainerManipulator.removeHydrogens(target));
+                target.setProperty(CDKConstants.TITLE, name);
+                target.setID(name);
             }
 
             if (mcsAtomContainer != null) {
@@ -215,6 +218,7 @@ public class SMSDcmd {
             OutputHandler outputHandler,
             ArgumentHandler argumentHandler) throws IOException, CDKException, CloneNotSupportedException {
         IAtomContainer query = inputHandler.getQuery();
+        String name = (String) query.getProperty(CDKConstants.TITLE);
         boolean removeHydrogens = argumentHandler.isApplyHRemoval();
 
         /*
@@ -227,6 +231,8 @@ public class SMSDcmd {
         }
         if (removeHydrogens) {
             query = new AtomContainer(AtomContainerManipulator.removeHydrogens(query));
+            query.setProperty(CDKConstants.TITLE, name);
+            query.setID(name);
         }
 
         outputHandler.writeQueryMol(query);
@@ -360,25 +366,31 @@ public class SMSDcmd {
                     + inputHandler.getTargetName() + " as it is not connected.");
             return;
         }
+
+        String fileNameQ = "Query";
+        String fileNameT = "Target";
+
+        if (target.getProperty(CDKConstants.TITLE) != null) {
+            fileNameQ = target.getProperty(CDKConstants.TITLE) == null ? fileNameT
+                    : (String) target.getProperty(CDKConstants.TITLE);
+            target.setID(fileNameQ);
+            argumentHandler.setTargetMolOutName(target.getID());
+        }
+        if (query.getProperty(CDKConstants.TITLE) != null) {
+            fileNameT = query.getProperty(CDKConstants.TITLE) == null ? fileNameQ
+                    : (String) query.getProperty(CDKConstants.TITLE);
+            query.setID(fileNameT);
+            argumentHandler.setQueryMolOutName(query.getID());
+        }
+
         /*
          * remove hydrogens
          */
         if (removeHydrogens) {
             query = new AtomContainer(AtomContainerManipulator.removeHydrogens(query));
+            query.setID(fileNameQ);
             target = new AtomContainer(AtomContainerManipulator.removeHydrogens(target));
-        }
-
-        if (target.getProperty(CDKConstants.TITLE) != null) {
-            String fileName = target.getProperty(CDKConstants.TITLE) == null ? "Target"
-                    : (String) target.getProperty(CDKConstants.TITLE);
-            target.setID(fileName);
-            argumentHandler.setTargetMolOutName(target.getID());
-        }
-        if (query.getProperty(CDKConstants.TITLE) != null) {
-            String fileName = query.getProperty(CDKConstants.TITLE) == null ? "Query"
-                    : (String) query.getProperty(CDKConstants.TITLE);
-            query.setID(fileName);
-            argumentHandler.setQueryMolOutName(query.getID());
+            target.setID(fileNameT);
         }
 
         String out = ".out";
