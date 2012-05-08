@@ -90,7 +90,7 @@ public class ArgumentHandler {
     private String graphFile = "graph";
     private String descriptorFile = "molDescriptors";
     private String queryOutfileName;
-    private String targetOutfileName = "Target";
+    private String targetOutfileName;
     private String suffix = "";
     private int chemFilter = 3;
     private boolean allMapping = false;

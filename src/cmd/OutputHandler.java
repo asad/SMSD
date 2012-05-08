@@ -96,7 +96,10 @@ public class OutputHandler {
      */
     public void writeQueryMol(IAtomContainer mol) throws IllegalArgumentException, IOException, CDKException {
         String suffix = argumentHandler.getSuffix();
-        String fileName = argumentHandler.getQueryMolOutName().equals("untitled") ? "Query" : argumentHandler.getQueryMolOutName();
+        String fileName = argumentHandler.getQueryMolOutName() == null ? "Query" : argumentHandler.getQueryMolOutName();
+        if (!fileName.equals("Query")) {
+            fileName = argumentHandler.getQueryMolOutName().equals("untitled") ? "Query" : argumentHandler.getQueryMolOutName();
+        }
         String qRefName = fileName + suffix + ".mol";
         writeMolToMolfile(mol, qRefName);
     }
@@ -110,7 +113,10 @@ public class OutputHandler {
      */
     public void writeTargetMol(IAtomContainer mol) throws IllegalArgumentException, IOException, CDKException {
         String suffix = argumentHandler.getSuffix();
-        String fileName = argumentHandler.getQueryMolOutName().equals("untitled") ? "Target" : argumentHandler.getQueryMolOutName();
+        String fileName = argumentHandler.getQueryMolOutName() == null ? "Target" : argumentHandler.getQueryMolOutName();
+        if (!fileName.equals("Target")) {
+            fileName = argumentHandler.getQueryMolOutName().equals("untitled") ? "Target" : argumentHandler.getQueryMolOutName();
+        }
         String tRefName = fileName + suffix + ".mol";
         writeMolToMolfile(mol, tRefName);
     }
