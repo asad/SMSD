@@ -28,9 +28,8 @@ import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.isomorphism.matchers.IQueryBond;
 
 /**
- * Checks if a bond is matching between query and target molecules.
- * @cdk.module smsd
- * @cdk.githash
+ * Checks if a bond is matching between query and target molecules. @cdk.module smsd @cdk.githash
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFLibTest")
@@ -50,6 +49,7 @@ public final class DefaultBondMatcher implements BondMatcher {
 
     /**
      * Constructor
+     *
      * @param queryBond query GraphMolecule
      * @param shouldMatchBonds bond match flag
      */
@@ -59,7 +59,8 @@ public final class DefaultBondMatcher implements BondMatcher {
         this.shouldMatchBonds = shouldMatchBonds;
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      *
      * @param targetBond target bond
      * @return true if bonds match
@@ -76,14 +77,19 @@ public final class DefaultBondMatcher implements BondMatcher {
 
     /**
      * Return true if a bond is matched between query and target
+     *
      * @param targetBond
      * @return
      */
     private boolean isBondTypeMatch(IBond targetBond) {
+
         if ((queryBond.getFlag(CDKConstants.ISAROMATIC) == targetBond.getFlag(CDKConstants.ISAROMATIC))
                 && (queryBond.getOrder() == targetBond.getOrder())) {
             return true;
         } else if (queryBond.getFlag(CDKConstants.ISAROMATIC) && targetBond.getFlag(CDKConstants.ISAROMATIC)) {
+            return true;
+        } else if ((queryBond.getFlag(CDKConstants.ISINRING) == targetBond.getFlag(CDKConstants.ISINRING))
+                && (queryBond.getOrder() == targetBond.getOrder())) {
             return true;
         }
         return false;

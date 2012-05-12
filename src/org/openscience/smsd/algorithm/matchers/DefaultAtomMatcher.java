@@ -30,9 +30,8 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
 import org.openscience.smsd.interfaces.IMoleculeInitializer;
 
 /**
- * Checks if atom is matching between query and target molecules.
- * @cdk.module smsd
- * @cdk.githash
+ * Checks if atom is matching between query and target molecules. @cdk.module smsd @cdk.githash
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFLibTest")
@@ -46,8 +45,9 @@ public final class DefaultAtomMatcher implements AtomMatcher {
 
     /**
      * Constructor
-     * @param qAtom 
-     * @param symbol 
+     *
+     * @param qAtom
+     * @param symbol
      * @param shouldMatchRings
      */
     public DefaultAtomMatcher(IAtom qAtom,
@@ -63,6 +63,7 @@ public final class DefaultAtomMatcher implements AtomMatcher {
 
     /**
      * Constructor
+     *
      * @param atom query atom
      * @param shouldMatchRings ring matching flag
      */
@@ -77,7 +78,8 @@ public final class DefaultAtomMatcher implements AtomMatcher {
         return symbol.equals(atom.getSymbol());
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      *
      * @param targetAtom
      * @return
@@ -102,6 +104,13 @@ public final class DefaultAtomMatcher implements AtomMatcher {
                     && (isRingAtom(qAtom)
                     && isRingAtom(targetAtom)
                     && !isRingSizeEqual(targetAtom))) {
+                return false;
+            }
+            if (shouldMatchRings
+                    && !(isRingAtom(qAtom) && isRingAtom(targetAtom))
+                    && qAtom.getHybridization() != null
+                    && targetAtom.getHybridization() != null
+                    && !qAtom.getHybridization().equals(targetAtom.getHybridization())) {
                 return false;
             }
         }
