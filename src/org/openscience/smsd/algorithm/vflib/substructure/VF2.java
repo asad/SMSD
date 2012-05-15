@@ -1,8 +1,9 @@
 /*
  *
  *
- * Copyright (C) 2009-2011  Syed Asad Rahman <asad@ebi.ac.uk>
- *
+ * Copyright (C) 2009-2012  Syed Asad Rahman <asad@ebi.ac.uk>
+ * 
+ * 
  * Contact: cdk-devel@lists.sourceforge.net
  *
  * This program is free software; you can redistribute it and/or
@@ -124,6 +125,10 @@ public final class VF2 extends MoleculeInitializer implements IResults {
      * This can be used for finding both graph-graph isomorphisms and graph-subgraph isomorphisms. In the latter case
      * graph 'a' is the subgraph, implying a.size() < b.size(). In the case that no isomorphism is found an empty
      * mapping is returned.
+     *
+     *
+     *
+     *
      *
      *
      *

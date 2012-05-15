@@ -1,8 +1,8 @@
 /*
  *
  *
- * Copyright (C) 2009-2011  Syed Asad Rahman <asad@ebi.ac.uk>
- *                          Gilleain Torrance <gilleain.torrance@gmail.com>
+ * Copyright (C) 2009-2012  Syed Asad Rahman <asad@ebi.ac.uk>
+ *               2011       Gilleain Torrance <gilleain.torrance@gmail.com>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -49,9 +49,9 @@ import java.util.Arrays;
 
 /**
  * This class keeps track of shared states
- * 
- * @cdk.module smsd
- * @cdk.githash
+ *
+ * @cdk.module smsd @cdk.githash
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 // The SharedState class holds four arrays containing the mapping between

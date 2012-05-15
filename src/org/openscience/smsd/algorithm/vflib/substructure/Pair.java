@@ -1,8 +1,8 @@
 /*
  *
  *
- * Copyright (C) 2009-2011  Syed Asad Rahman <asad@ebi.ac.uk>
- *                          Gilleain Torrance <gilleain.torrance@gmail.com>
+ * Copyright (C) 2009-2012  Syed Asad Rahman <asad@ebi.ac.uk>
+ *               2011       Gilleain Torrance <gilleain.torrance@gmail.com>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -48,9 +48,9 @@ package org.openscience.smsd.algorithm.vflib.substructure;
 
 /**
  * Holds source and target atoms
- * 
- * @cdk.module smsd
- * @cdk.githash
+ *
+ * @cdk.module smsd @cdk.githash
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 /**
@@ -80,7 +80,7 @@ public class Pair<T, S> {
     }
 
     /**
-     * @param source the source to set
+     * @param first the source to set
      */
     public synchronized void setSourceAtom(T first) {
         this.source = first;
@@ -94,7 +94,7 @@ public class Pair<T, S> {
     }
 
     /**
-     * @param target the target to set
+     * @param second the target to set
      */
     public synchronized void setTargetAtom(S second) {
         this.target = second;
