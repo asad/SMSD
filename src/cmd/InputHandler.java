@@ -59,7 +59,10 @@ import org.openscience.cdk.tools.manipulator.ChemFileManipulator;
 import cmd.pdb.LigandHelper;
 import java.util.Collections;
 import org.openscience.cdk.CDKConstants;
+import org.openscience.cdk.graph.ConnectivityChecker;
+import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.io.iterator.IteratingSDFReader;
+import org.openscience.cdk.smsd.tools.ExtAtomContainerManipulator;
 
 public class InputHandler {
 
@@ -241,6 +244,18 @@ public class InputHandler {
         String id = "";
         if (type.equals("PDB")) {
             LigandHelper.addMissingBondOrders(mol);
+            boolean connected = ConnectivityChecker.isConnected(mol);
+            if (!connected) {
+                IAtomContainer tempMol = null;
+                IAtomContainerSet partitionIntoMolecules = ConnectivityChecker.partitionIntoMolecules(mol);
+                for (IAtomContainer frag : partitionIntoMolecules.atomContainers()) {
+                    IAtomContainer removeHydrogensExceptSingleAndPreserveAtomID = ExtAtomContainerManipulator.removeHydrogensExceptSingleAndPreserveAtomID(frag);
+                    if (tempMol == null || removeHydrogensExceptSingleAndPreserveAtomID.getAtomCount() > tempMol.getAtomCount()) {
+                        tempMol = removeHydrogensExceptSingleAndPreserveAtomID;
+                    }
+                }
+                mol = tempMol;
+            }
         } else if (type.equals("SDF")) {
             id = (String) mol.getProperty(CDKConstants.TITLE);
         }
