@@ -2,7 +2,7 @@
  *
  *
  * Copyright (C) 2009-2012  Syed Asad Rahman <asad@ebi.ac.uk>
- * 
+ *               2011       Gilleain Torrance <gilleain.torrance@gmail.com>
  * Contact: cdk-devel@lists.sourceforge.net
  *
  * This program is free software; you can redistribute it and/or

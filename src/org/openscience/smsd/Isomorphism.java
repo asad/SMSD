@@ -137,7 +137,7 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
         this.mol1 = query;
         this.mol2 = target;
         this.mcsList = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
-        mcsBuilder(mol1, mol2);
+        mcsBuilder(query, target);
     }
 
     /**
@@ -172,6 +172,21 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
     }
 
     private synchronized void mcsBuilder(IAtomContainer mol1, IAtomContainer mol2) {
+
+        int rBondCount = mol1.getBondCount();
+        int pBondCount = mol2.getBondCount();
+
+        int rAtomCount = mol1.getAtomCount();
+        int pAtomCount = mol2.getAtomCount();
+
+        if ((rBondCount == 0 && rAtomCount > 0) || (pBondCount == 0 && pAtomCount > 0)) {
+            singleMapping();
+        } else {
+            chooseAlgorithm();
+        }
+    }
+
+    private synchronized void mcsBuilder(IQueryAtomContainer mol1, IAtomContainer mol2) {
 
         int rBondCount = mol1.getBondCount();
         int pBondCount = mol2.getBondCount();
@@ -280,7 +295,7 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
 
     private synchronized void defaultMCSAlgorithm() {
         try {
-            cdkMCSAlgorithm();
+            mcsPlusAlgorithm();
             if (getMappingCount() == 0 || isTimeOut()) {
 //                System.out.println("\nCDKMCS hit by timeout\n");
 //                double time = System.currentTimeMillis();

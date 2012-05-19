@@ -48,9 +48,9 @@ package org.openscience.smsd.algorithm.vflib.substructure;
 
 /**
  * Holds source and target atoms
- *
- * @cdk.module smsd @cdk.githash
- *
+ * 
+ * @cdk.module smsd
+ * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 /**
@@ -80,7 +80,7 @@ public class Pair<T, S> {
     }
 
     /**
-     * @param first the source to set
+     * @param source the source to set
      */
     public synchronized void setSourceAtom(T first) {
         this.source = first;
@@ -94,7 +94,7 @@ public class Pair<T, S> {
     }
 
     /**
-     * @param second the target to set
+     * @param target the target to set
      */
     public synchronized void setTargetAtom(S second) {
         this.target = second;

@@ -178,7 +178,6 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
     //~--- get methods --------------------------------------------------------
     private synchronized void setAllMapping() {
 
-        //int count_final_sol = 1;
         //System.out.println("Output of the final FinalMappings: ");
         try {
             List<Map<Integer, Integer>> sol = FinalMappings.getInstance().getFinalMapping();
@@ -187,17 +186,18 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
                 TreeMap<Integer, Integer> atomMappings = new TreeMap<Integer, Integer>();
                 for (Map.Entry<Integer, Integer> Solutions : final_solution.entrySet()) {
 
-                    int IIndex = Solutions.getKey().intValue();
-                    int JIndex = Solutions.getValue().intValue();
+                    int iIndex = Solutions.getKey().intValue();
+                    int jIndex = Solutions.getValue().intValue();
 
                     if (rOnPFlag) {
-                        atomMappings.put(IIndex, JIndex);
+                        atomMappings.put(iIndex, jIndex);
                     } else {
-                        atomMappings.put(JIndex, IIndex);
+                        atomMappings.put(jIndex, iIndex);
                     }
                 }
                 if (!allMCS.contains(atomMappings)) {
-                    allMCS.add(counter++, atomMappings);
+                    allMCS.add(counter, atomMappings);
+                    counter += 1;
                 }
             }
 
@@ -208,25 +208,20 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
     }
 
     private synchronized void setAllAtomMapping() {
-        List<Map<Integer, Integer>> sol = allMCS;
-
         int counter = 0;
-        for (Map<Integer, Integer> final_solution : sol) {
+        for (Map<Integer, Integer> final_solution : allMCS) {
             AtomAtomMapping atomMappings = new AtomAtomMapping(source, target);
-            for (Map.Entry<Integer, Integer> Solutions : final_solution.entrySet()) {
-
-                int IIndex = Solutions.getKey().intValue();
-                int JIndex = Solutions.getValue().intValue();
-
-                IAtom sourceAtom = null;
-                IAtom targetAtom = null;
-
-                sourceAtom = source.getAtom(IIndex);
-                targetAtom = target.getAtom(JIndex);
-                atomMappings.put(sourceAtom, targetAtom);
-
+            for (Integer indexI : final_solution.keySet()) {
+                IAtom sourceAtom = source.getAtom(indexI);
+                IAtom targetAtom = target.getAtom(final_solution.get(indexI));
+                if (sourceAtom != null && targetAtom != null) {
+                    atomMappings.put(sourceAtom, targetAtom);
+                }
             }
-            allAtomMCS.add(counter++, atomMappings);
+            if (!allAtomMCS.contains(atomMappings)) {
+                allAtomMCS.add(counter, atomMappings);
+                counter += 1;
+            }
         }
     }
 

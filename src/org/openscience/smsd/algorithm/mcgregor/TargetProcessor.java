@@ -28,11 +28,11 @@ import java.util.List;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
+import org.openscience.cdk.isomorphism.matchers.IQueryBond;
 
 /**
- * Class to handle mappings of target molecule based on the query.
- * @cdk.module smsd
- * @cdk.githash
+ * Class to handle mappings of target molecule based on the query. @cdk.module smsd @cdk.githash
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.mcgregor.TargetProcessorTest")
@@ -110,7 +110,13 @@ public class TargetProcessor {
             Integer indexI = target.getAtomNumber(target.getBond(atomIndex).getAtom(0));
             Integer indexJ = target.getAtomNumber(target.getBond(atomIndex).getAtom(1));
             IBond bond = target.getBond(atomIndex);
-            Integer order = (bond.getOrder().ordinal() + 1);
+            Integer order = null;
+            if (!(bond instanceof IQueryBond)) {
+                order = (bond.getOrder().ordinal() + 1);
+            } else {
+                IQueryBond queryBond = (IQueryBond) bond;
+                order = queryBond.getOrder() != null ? (queryBond.getOrder().ordinal() + 1) : null;
+            }
 
             for (int b = 0; b < unmapped_numB; b++) {
                 if (unmapped_atoms_molB.get(b).equals(indexI)) {
@@ -392,8 +398,7 @@ public class TargetProcessor {
 
     /**
      *
-     * @return number of remaining molecule A bonds after the clique search,
-     * which are neighbors of the MCS
+     * @return number of remaining molecule A bonds after the clique search, which are neighbors of the MCS
      *
      */
     protected int getNeighborBondNumB() {
@@ -402,8 +407,7 @@ public class TargetProcessor {
 
     /**
      *
-     * @return number of remaining molecule A bonds after the clique search,
-     * which aren't neighbors
+     * @return number of remaining molecule A bonds after the clique search, which aren't neighbors
      */
     protected int getBondNumB() {
         return this.setBondNumB;
