@@ -249,7 +249,7 @@ public class InputHandler {
                 IAtomContainer tempMol = null;
                 IAtomContainerSet partitionIntoMolecules = ConnectivityChecker.partitionIntoMolecules(mol);
                 for (IAtomContainer frag : partitionIntoMolecules.atomContainers()) {
-                    IAtomContainer removeHydrogensExceptSingleAndPreserveAtomID = ExtAtomContainerManipulator.removeHydrogensExceptSingleAndPreserveAtomID(frag);
+                    IAtomContainer removeHydrogensExceptSingleAndPreserveAtomID = AtomContainerManipulator.removeHydrogens(frag);
                     if (tempMol == null || removeHydrogensExceptSingleAndPreserveAtomID.getAtomCount() > tempMol.getAtomCount()) {
                         tempMol = removeHydrogensExceptSingleAndPreserveAtomID;
                     }
