@@ -58,11 +58,11 @@ import org.openscience.cdk.tools.manipulator.ChemFileManipulator;
 
 import cmd.pdb.LigandHelper;
 import java.util.Collections;
+import java.util.List;
 import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.graph.ConnectivityChecker;
 import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.io.iterator.IteratingSDFReader;
-import org.openscience.cdk.smsd.tools.ExtAtomContainerManipulator;
 
 public class InputHandler {
 
@@ -244,18 +244,6 @@ public class InputHandler {
         String id = "";
         if (type.equals("PDB")) {
             LigandHelper.addMissingBondOrders(mol);
-            boolean connected = ConnectivityChecker.isConnected(mol);
-            if (!connected) {
-                IAtomContainer tempMol = null;
-                IAtomContainerSet partitionIntoMolecules = ConnectivityChecker.partitionIntoMolecules(mol);
-                for (IAtomContainer frag : partitionIntoMolecules.atomContainers()) {
-                    IAtomContainer removeHydrogensExceptSingleAndPreserveAtomID = AtomContainerManipulator.removeHydrogens(frag);
-                    if (tempMol == null || removeHydrogensExceptSingleAndPreserveAtomID.getAtomCount() > tempMol.getAtomCount()) {
-                        tempMol = removeHydrogensExceptSingleAndPreserveAtomID;
-                    }
-                }
-                mol = tempMol;
-            }
         } else if (type.equals("SDF")) {
             id = (String) mol.getProperty(CDKConstants.TITLE);
         }
@@ -263,8 +251,10 @@ public class InputHandler {
         CDKHueckelAromaticityDetector.detectAromaticity(mol);
         mol = new AtomContainer(mol);
         mol.setID(id);
-        sdg.setMolecule(mol, false);
-        sdg.generateCoordinates();
+        if (argumentHandler.isImage()) {
+            sdg.setMolecule(mol, false);
+            sdg.generateCoordinates();
+        }
         setAtomID(mol);
     }
 
@@ -319,8 +309,13 @@ public class InputHandler {
         if (isSingleFileQuery) {
             ISimpleChemObjectReader reader = getReader(type, filenameOrData);
             IChemFile chemFile = reader.read(new ChemFile());
-            IAtomContainer molecule =
-                    ChemFileManipulator.getAllAtomContainers(chemFile).get(0);
+            List<IAtomContainer> allAtomContainers = ChemFileManipulator.getAllAtomContainers(chemFile);
+            IAtomContainer molecule = null;
+            for (IAtomContainer frag : allAtomContainers) {
+                if (molecule == null || frag.getAtomCount() > molecule.getAtomCount()) {
+                    molecule = frag;
+                }
+            }
             configure(molecule, type);
             return molecule;
         } else {
@@ -341,8 +336,13 @@ public class InputHandler {
         if (isSingleFileTarget) {
             ISimpleChemObjectReader reader = getReader(type, filenameOrData);
             IChemFile chemFile = reader.read(new ChemFile());
-            IAtomContainer molecule =
-                    ChemFileManipulator.getAllAtomContainers(chemFile).get(0);
+            List<IAtomContainer> allAtomContainers = ChemFileManipulator.getAllAtomContainers(chemFile);
+            IAtomContainer molecule = null;
+            for (IAtomContainer frag : allAtomContainers) {
+                if (molecule == null || frag.getAtomCount() > molecule.getAtomCount()) {
+                    molecule = frag;
+                }
+            }
             configure(molecule, type);
             return molecule;
         } else {

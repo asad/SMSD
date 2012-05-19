@@ -355,16 +355,18 @@ public class SMSDcmd {
         /*
          * check connectivity
          */
-        boolean flag = ConnectivityChecker.isConnected(query);
-        if (!flag) {
-            System.err.println("WARNING : Skipping file " + inputHandler.getQueryName() + " not connectted ");
-            return;
-        }
-        flag = ConnectivityChecker.isConnected(target);
-        if (!flag) {
-            System.err.println("WARNING : Skipping target AtomContainer "
-                    + inputHandler.getTargetName() + " as it is not connected.");
-            return;
+        if (argumentHandler.isImage()) {
+            boolean flag = ConnectivityChecker.isConnected(query);
+            if (!flag) {
+                System.err.println("WARNING : Skipping file " + inputHandler.getQueryName() + " not connectted ");
+                return;
+            }
+            flag = ConnectivityChecker.isConnected(target);
+            if (!flag) {
+                System.err.println("WARNING : Skipping target AtomContainer "
+                        + inputHandler.getTargetName() + " as it is not connected.");
+                return;
+            }
         }
 
         String fileNameQ = "Query";
