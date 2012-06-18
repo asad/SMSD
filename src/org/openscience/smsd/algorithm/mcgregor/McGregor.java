@@ -39,16 +39,13 @@ import org.openscience.smsd.helper.BinaryTree;
 import org.openscience.smsd.tools.TimeManager;
 
 /**
- * Class which reports MCS solutions based on the McGregor algorithm
- * published in 1982.
+ * Class which reports MCS solutions based on the McGregor algorithm published in 1982.
  *
- *  <p>The SMSD algorithm is described in this paper.
- * <font color="#FF0000">please refer Rahman <i>et.al. 2009</i></font>
- *  {@cdk.cite SMSD2009}.
- *  </p>
+ * <p>The SMSD algorithm is described in this paper. <font color="#FF0000">please refer Rahman <i>et.al. 2009</i></font>
+ * {@cdk.cite SMSD2009}. </p>
  *
- * @cdk.module smsd
- * @cdk.githash
+ * @cdk.module smsd @cdk.githash
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.mcgregor.McGregorTest")
@@ -58,7 +55,7 @@ public final class McGregor {
     //-1 is infinite loop
     //private float timeout = -1;
     //5 min time out for infinite loop
-    private float timeout = 10;
+    private float timeout = 1.00f;
     private final boolean shouldMatchRings;
     private final boolean bondMatch;
 
@@ -70,7 +67,7 @@ public final class McGregor {
     }
 
     /**
-     * @param timeout 
+     * @param timeout
      */
     public synchronized void setTimeout(float timeout) {
         this.timeout = timeout;
@@ -97,9 +94,8 @@ public final class McGregor {
         return false;
     }
     /*
-     ***************************************************************
+     *
      * McGregor starts
-     ***************************************************************
      */
     private final IAtomContainer source;
     private final IAtomContainer target;
@@ -110,7 +106,9 @@ public final class McGregor {
     private int bestarcsleft;
     private int globalMCSSize;
     private List<List<Integer>> mappings;
-    /*This should be more or equal to all the atom types*/
+    /*
+     * This should be more or equal to all the atom types
+     */
     private final String[] SIGNS = {
         "$1", "$2", "$3", "$4", "$5", "$6", "$7", "$8", "$9", "$10", "$11", "$12",
         "$13", "$15", "$16", "$17", "$18", "$19", "$20", "$21", "$22", "$23", "$24",
@@ -122,11 +120,12 @@ public final class McGregor {
 
     /**
      * Constructor for the McGregor algorithm.
+     *
      * @param source
      * @param target
      * @param mappings
      * @param shouldMatchBonds
-     * @param shouldMatchRings  
+     * @param shouldMatchRings
      */
     public McGregor(IAtomContainer source,
             IAtomContainer target,
@@ -153,6 +152,7 @@ public final class McGregor {
 
     /**
      * Constructor for the McGregor algorithm.
+     *
      * @param source
      * @param target
      * @param mappings
@@ -178,6 +178,7 @@ public final class McGregor {
 
     /**
      * Start McGregor search and extend the mappings if possible.
+     *
      * @param largestMappingSize
      * @param present_Mapping
      * @throws IOException
@@ -414,7 +415,8 @@ public final class McGregor {
                     }
                 }
                 if (atomA_is_unmapped) {
-                    unmapped_atoms_molA.add(unmapped_numA++, a);
+                    unmapped_atoms_molA.add(unmapped_numA, a);
+                    unmapped_numA += 1;
                 }
                 atomA_is_unmapped = true;
             }
@@ -471,7 +473,8 @@ public final class McGregor {
                     }
                 }
                 if (atomB_is_unmapped) {
-                    unmapped_atoms_molB.add(unmapped_numB++, a);
+                    unmapped_atoms_molB.add(unmapped_numB, a);
+                    unmapped_numB += 1;
                 }
                 atomB_is_unmapped = true;
             }
@@ -688,7 +691,8 @@ public final class McGregor {
         int count_entries = 0;
         for (int x = 0; x < (neighborBondNumA * neighborBondNumB); x++) {
             if (MARCS_T.get(x) == 1) {
-                posnum_list.add(yCounter++, x);
+                posnum_list.add(yCounter, x);
+                yCounter += 1;
                 count_entries++;
             }
         }
@@ -783,15 +787,16 @@ public final class McGregor {
 
     /**
      * Returns computed mappings.
+     *
      * @return mappings
      */
     public synchronized List<List<Integer>> getMappings() {
-
-        return mappings;
+        return Collections.synchronizedList(mappings);
     }
 
     /**
      * Returns MCS size.
+     *
      * @return MCS size
      */
     public synchronized int getMCSSize() {
@@ -816,10 +821,10 @@ public final class McGregor {
         int neighborBondNumA = mcGregorHelper.getNeighborBondNumA();
         int neighborBondNumB = mcGregorHelper.getNeighborBondNumB();
         do {
-            yIndex++;
+            yIndex += 1;
             if (yIndex == neighborBondNumB) {
                 yIndex = 0;
-                xIndex++;
+                xIndex += 1;
 
             }
         } //Correction by ASAD set value minus 1
@@ -841,7 +846,8 @@ public final class McGregor {
     private synchronized void popBestArcs(int arcsleft) {
         if (arcsleft > bestarcsleft) {
             McGregorChecks.removeTreeStructure(first);
-            first = last = new BinaryTree(-1);
+            first = new BinaryTree(-1);
+            last = new BinaryTree(-1);
             last.setEqual(null);
             last.setNotEqual(null);
             while (!bestARCS.empty()) {
@@ -901,6 +907,7 @@ public final class McGregor {
 
     /**
      * Checks if its a new Matrix.
+     *
      * @return the newMatrix
      */
     public synchronized boolean isNewMatrix() {
@@ -909,6 +916,7 @@ public final class McGregor {
 
     /**
      * set a new Matrix.
+     *
      * @param newMatrix the newMatrix to set
      */
     public synchronized void setNewMatrix(boolean newMatrix) {
@@ -917,6 +925,7 @@ public final class McGregor {
 
     /**
      * Should bonds match
+     *
      * @return the bondMatch
      */
     private synchronized boolean isBondMatch() {

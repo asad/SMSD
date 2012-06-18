@@ -91,11 +91,9 @@ public final class DefaultAtomMatcher implements AtomMatcher {
             }
             if (shouldMatchRings && (isRingAtom(qAtom) && isAliphaticAtom(targetAtom))) {
                 return false;
-            }
-            if (shouldMatchRings && (isAliphaticAtom(qAtom) && isRingAtom(targetAtom))) {
+            } else if (shouldMatchRings && (isAliphaticAtom(qAtom) && isRingAtom(targetAtom))) {
                 return false;
-            }
-            if (shouldMatchRings
+            } else if (shouldMatchRings
                     && !(isRingAtom(qAtom) && isRingAtom(targetAtom))
                     && qAtom.getHybridization() != null
                     && targetAtom.getHybridization() != null

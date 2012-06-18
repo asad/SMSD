@@ -60,9 +60,8 @@ import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
 import org.openscience.smsd.algorithm.vflib.interfaces.IQueryCompiler;
 
 /**
- * This class creates an template for MCS/substructure query.
- * @cdk.module smsd
- * @cdk.githash
+ * This class creates an template for MCS/substructure query. @cdk.module smsd @cdk.githash
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFLibTest")
@@ -75,9 +74,10 @@ public class QueryCompiler implements IQueryCompiler {
 
     /**
      * Construct query object from the molecule
+     *
      * @param molecule
      * @param shouldMatchBonds
-     * @param shouldMatchRings  
+     * @param shouldMatchRings
      */
     public QueryCompiler(IAtomContainer molecule, boolean shouldMatchBonds, boolean shouldMatchRings) {
         this.setMolecule(molecule);
@@ -87,6 +87,7 @@ public class QueryCompiler implements IQueryCompiler {
 
     /**
      * Construct query object from the molecule
+     *
      * @param molecule
      */
     public QueryCompiler(IQueryAtomContainer molecule) {
@@ -95,6 +96,7 @@ public class QueryCompiler implements IQueryCompiler {
 
     /**
      * Set GraphMolecule
+     *
      * @param molecule
      */
     private synchronized void setMolecule(IAtomContainer molecule) {
@@ -103,6 +105,7 @@ public class QueryCompiler implements IQueryCompiler {
 
     /**
      * Set GraphMolecule
+     *
      * @param molecule
      */
     private synchronized void setQueryMolecule(IQueryAtomContainer molecule) {
@@ -111,13 +114,15 @@ public class QueryCompiler implements IQueryCompiler {
 
     /**
      * Return molecule
+     *
      * @return Atom Container
      */
     private synchronized IAtomContainer getAtomContainer() {
         return queryMolecule == null ? molecule : queryMolecule;
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     public synchronized IQuery compile() {

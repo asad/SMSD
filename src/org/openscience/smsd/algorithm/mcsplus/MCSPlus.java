@@ -38,10 +38,9 @@ import org.openscience.smsd.global.TimeOut;
 import org.openscience.smsd.tools.TimeManager;
 
 /**
- * This class handles MCS plus algorithm which is a combination of
- * c-clique algorithm and McGregor algorithm.
- * @cdk.module smsd
- * @cdk.githash
+ * This class handles MCS plus algorithm which is a combination of c-clique algorithm and McGregor algorithm.
+ * @cdk.module smsd @cdk.githash
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.SMSDBondSensitiveTest")
@@ -51,7 +50,7 @@ public class MCSPlus {
     private boolean shouldMatchBonds;
 
     /**
-     * Default constructor added 
+     * Default constructor added
      */
     public MCSPlus() {
     }
@@ -80,11 +79,11 @@ public class MCSPlus {
     }
 
     /**
-     * 
+     *
      * @param ac1
      * @param ac2
-     * @param shouldMatchBonds 
-     * @param shouldMatchRings 
+     * @param shouldMatchBonds
+     * @param shouldMatchRings
      * @return
      * @throws CDKException
      */
@@ -172,7 +171,7 @@ public class MCSPlus {
             mgit = null;
 
             if (isTimeOut()) {
-                System.err.println("\nMCSPlus hit by timeout in McGregor\n");
+                Logger.getLogger("\nMCSPlus hit by timeout in McGregor\n");
                 break;
             }
 

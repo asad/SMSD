@@ -39,14 +39,15 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IRingSet;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
+import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryBond;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.ring.HanserRingFinder;
 
 /**
  * Filter on stereo and bond matches.
- * @author Syed Asad Rahman <asad@ebi.subGraph.uk>
- * @cdk.module smsd
+ *
+ * @author Syed Asad Rahman <asad@ebi.subGraph.uk> @cdk.module smsd
  */
 public final class StereoFilter extends BaseFilter implements IChemicalFilter<Double> {
 
@@ -108,7 +109,9 @@ public final class StereoFilter extends BaseFilter implements IChemicalFilter<Do
                 Map<IBond, IBond> bondMaps = makeBondMapsOfAtomMaps(rMol, pMol, atomMapMCS);
                 double ringScore = 0.0;
                 if (rMol.getBondCount() > 1
-                        && pMol.getBondCount() > 1) {
+                        && pMol.getBondCount() > 1
+                        && !(rMol instanceof IQueryAtomContainer
+                        || pMol instanceof IQueryAtomContainer)) {
                     List<IAtomContainer> subgraphRList = getMappedFragment(rMol, atomMapMCS.getMappings().keySet());
                     double rscore = getRingMatchScore(subgraphRList);
                     List<IAtomContainer> subgraphPList = getMappedFragment(pMol, atomMapMCS.getMappings().values());
@@ -264,6 +267,7 @@ public final class StereoFilter extends BaseFilter implements IChemicalFilter<Do
 
     /**
      * Get stereo value as integer
+     *
      * @param bond
      * @return
      */
@@ -298,7 +302,8 @@ public final class StereoFilter extends BaseFilter implements IChemicalFilter<Do
     }
 
     /**
-     *Get bond order value as integer
+     * Get bond order value as integer
+     *
      * @param bond
      * @return
      */
@@ -355,11 +360,16 @@ public final class StereoFilter extends BaseFilter implements IChemicalFilter<Do
     }
 
     private synchronized List<IAtomContainer> getMappedFragment(IAtomContainer molecule, Collection<IAtom> atomsMCS) throws CloneNotSupportedException {
-        IAtomContainer subgraphContainer = molecule.getBuilder().newInstance(IAtomContainer.class, molecule);
+        IAtomContainer subgraphContainer;
+
+        if (molecule instanceof IAtomContainer) {
+            subgraphContainer = molecule.getBuilder().newInstance(IAtomContainer.class, molecule);
+        } else {
+            return new ArrayList<IAtomContainer>(2);
+        }
         List<IAtom> list = new ArrayList<IAtom>(atomsMCS.size());
         for (IAtom atom : atomsMCS) {
             int post = molecule.getAtomNumber(atom);
-//            System.out.println("Atom to be removed " + post);
             list.add(subgraphContainer.getAtom(post));
         }
 

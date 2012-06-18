@@ -75,8 +75,15 @@ public final class VF2MCS extends BaseMCS implements IResults {
             if (isEnrichmentRequired() || isExtensionRequired()) {
                 List<Map<Integer, Integer>> mcsSeeds = new ArrayList<Map<Integer, Integer>>();
                 List<AtomAtomMapping> mcsKochCliques;
-                mcsKochCliques = addKochCliques(isBondMatchFlag());
+                mcsKochCliques = addKochCliques();
                 for (AtomAtomMapping mapping : mcsKochCliques) {
+                    Map<Integer, Integer> map = new TreeMap<Integer, Integer>();
+                    map.putAll(mapping.getMappingsIndex());
+                    mcsSeeds.add(map);
+                }
+                List<AtomAtomMapping> mcsUITCliques;
+                mcsUITCliques = addUIT();
+                for (AtomAtomMapping mapping : mcsUITCliques) {
                     Map<Integer, Integer> map = new TreeMap<Integer, Integer>();
                     map.putAll(mapping.getMappingsIndex());
                     mcsSeeds.add(map);
@@ -106,9 +113,9 @@ public final class VF2MCS extends BaseMCS implements IResults {
                 /*
                  * Copy VF MCS solutions
                  */
-                for (Map<Integer, Integer> vfSolutions : allMCSCopy) {
+                for (Map<Integer, Integer> vfMapping : allMCSCopy) {
                     Map<Integer, Integer> map = new TreeMap<Integer, Integer>();
-                    map.putAll(vfSolutions);
+                    map.putAll(vfMapping);
                     if (!map.isEmpty()
                             && map.size() >= solSize
                             && !hasClique(map, cleanedMCSSeeds)) {
@@ -123,7 +130,6 @@ public final class VF2MCS extends BaseMCS implements IResults {
                  * Sort biggest clique to smallest
                  */
                 Collections.sort(cleanedMCSSeeds, new Map2Comparator());
-//                System.out.println("cleanedMCSSeeds " + cleanedMCSSeeds);
                 extendCliquesWithMcGregor(cleanedMCSSeeds);
 
             }

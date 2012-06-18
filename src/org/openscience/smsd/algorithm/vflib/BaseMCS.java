@@ -100,7 +100,7 @@ public class BaseMCS extends MoleculeInitializer {
     }
 
     /**
-     * 
+     *
      * @param cliqueMap
      * @param mapGlobal
      * @return
@@ -116,18 +116,28 @@ public class BaseMCS extends MoleculeInitializer {
         return false;
     }
 
-    protected synchronized List<AtomAtomMapping> addKochCliques(boolean bondSensitiveFlag) {
+    protected synchronized List<AtomAtomMapping> addKochCliques() {
 //        System.out.println("addKochCliques ");
         List<AtomAtomMapping> allCliqueAtomMCS = new ArrayList<AtomAtomMapping>();
         try {
-            GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(source, target, bondSensitiveFlag, isMatchRings());
+            IAtomContainer ac1;
+            IAtomContainer ac2;
+            boolean flagExchange = false;
+            if (source.getAtomCount() < target.getAtomCount()) {
+                ac1 = source;
+                ac2 = target;
+            } else {
+                flagExchange = true;
+                ac1 = target;
+                ac2 = source;
+            }
+            GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(ac1, ac2, isBondMatchFlag(), isMatchRings());
             List<Integer> comp_graph_nodes = gcg.getCompGraphNodes();
 
             List<Integer> cEdges = gcg.getCEgdes();
             List<Integer> dEdges = gcg.getDEgdes();
 
             BKKCKCF init = new BKKCKCF(comp_graph_nodes, cEdges, dEdges);
-//                Koch init = new Koch(comp_graph_nodes, cEdges, dEdges);
             Stack<List<Integer>> maxCliqueSet = init.getMaxCliqueSet();
             //clear all the compatibility graph content
             gcg.clear();
@@ -152,8 +162,15 @@ public class BaseMCS extends MoleculeInitializer {
                     Integer qIndex = index[0];
                     Integer tIndex = index[1];
                     if (qIndex != -1 && tIndex != -1) {
-                        IAtom qAtom = source.getAtom(qIndex);
-                        IAtom tAtom = target.getAtom(tIndex);
+                        IAtom qAtom;
+                        IAtom tAtom;
+                        if (flagExchange) {
+                            qAtom = source.getAtom(tIndex);
+                            tAtom = target.getAtom(qIndex);
+                        } else {
+                            qAtom = source.getAtom(qIndex);
+                            tAtom = target.getAtom(tIndex);
+                        }
                         atomatomMapping.put(qAtom, tAtom);
                     } else {
                         try {
@@ -178,21 +195,20 @@ public class BaseMCS extends MoleculeInitializer {
 
     /**
      *
-     * @param bondSensitiveFlag
      * @return
      */
-    protected synchronized List<AtomAtomMapping> addUIT(boolean bondSensitiveFlag) {
+    protected synchronized List<AtomAtomMapping> addUIT() {
         CDKRMapHandler rmap = new CDKRMapHandler();
         boolean rOnPFlag = false;
         List<Map<Integer, Integer>> sol = null;
         try {
 
             if (source.getAtomCount() > target.getAtomCount()) {
-                rOnPFlag = true;
-                rmap.calculateOverlapsAndReduce(source, target, bondSensitiveFlag, isMatchRings());
+                rOnPFlag = true;//isBondMatchFlag()
+                rmap.calculateOverlapsAndReduce(source, target, true, isMatchRings());
             } else {
                 rOnPFlag = false;
-                rmap.calculateOverlapsAndReduce(target, source, bondSensitiveFlag, isMatchRings());
+                rmap.calculateOverlapsAndReduce(target, source, true, isMatchRings());
             }
             sol = FinalMappings.getInstance().getFinalMapping();
 
@@ -211,7 +227,8 @@ public class BaseMCS extends MoleculeInitializer {
         IQuery queryCompiler;
         IMapper mapper;
 
-        if (!(source instanceof IQueryAtomContainer) && !(target instanceof IQueryAtomContainer)) {
+        if (!(source instanceof IQueryAtomContainer)
+                && !(target instanceof IQueryAtomContainer)) {
             countR = getReactantMol().getAtomCount();
             countP = getProductMol().getAtomCount();
         }
@@ -225,8 +242,8 @@ public class BaseMCS extends MoleculeInitializer {
             }
             setVFMappings(true, queryCompiler);
 
-        } else if (countR <= countP) {
-            queryCompiler = new QueryCompiler(this.source, isBondMatchFlag(), isMatchRings()).compile();
+        } else if (countR <= countP) {//isBondMatchFlag()
+            queryCompiler = new QueryCompiler(this.source, true, isMatchRings()).compile();
             mapper = new VFMCSMapper(queryCompiler);
             List<Map<INode, IAtom>> map = mapper.getMaps(this.target);
             if (map != null) {
@@ -234,7 +251,7 @@ public class BaseMCS extends MoleculeInitializer {
             }
             setVFMappings(true, queryCompiler);
         } else {
-            queryCompiler = new QueryCompiler(this.target, isBondMatchFlag(), isMatchRings()).compile();
+            queryCompiler = new QueryCompiler(this.target, true, isMatchRings()).compile();
             mapper = new VFMCSMapper(queryCompiler);
             List<Map<INode, IAtom>> map = mapper.getMaps(this.source);
             if (map != null) {
@@ -242,11 +259,6 @@ public class BaseMCS extends MoleculeInitializer {
             }
             setVFMappings(false, queryCompiler);
         }
-//        System.out.println("Sol count " + vfLibSolutions.size());
-//        System.out.println("Sol size " + vfLibSolutions.iterator().next().size());
-//        System.out.println("MCSSize " + vfMCSSize);
-//        System.out.println("After Sol count " + allMCSCopy.size());
-
     }
 
     protected synchronized void extendCliquesWithMcGregor(List<Map<Integer, Integer>> refinedMCSSeeds) throws CDKException, IOException {
@@ -274,7 +286,7 @@ public class BaseMCS extends MoleculeInitializer {
             mappings = mgit.getMappings();
 
             if (isTimeOut()) {
-                System.err.println("\nMcGregorIteration timeout");
+                Logger.debug("\nMcGregorIteration timeout");
                 break;
             }
         }
@@ -302,14 +314,12 @@ public class BaseMCS extends MoleculeInitializer {
                 if (RONP) {
                     qAtom = query.getAtom(node);
                     tAtom = solution.get(node);
-                    qIndex = source.getAtomNumber(qAtom);
-                    tIndex = target.getAtomNumber(tAtom);
                 } else {
                     tAtom = query.getAtom(node);
                     qAtom = solution.get(node);
-                    qIndex = source.getAtomNumber(qAtom);
-                    tIndex = target.getAtomNumber(tAtom);
                 }
+                qIndex = source.getAtomNumber(qAtom);
+                tIndex = target.getAtomNumber(tAtom);
 
                 if (qIndex != -1 && tIndex != -1) {
                     atomatomMapping.put(qAtom, tAtom);
@@ -346,21 +356,19 @@ public class BaseMCS extends MoleculeInitializer {
             for (Integer qAtomIndex : solution.keySet()) {
                 IAtom qAtom = null;
                 IAtom tAtom = null;
-                Integer qIndex = -1;
-                Integer tIndex = -1;
+                int qIndex = -1;
+                int tIndex = -1;
 
                 if (RONP) {
                     qAtom = source.getAtom(qAtomIndex);
                     tAtom = target.getAtom(solution.get(qAtomIndex));
-                    qIndex = source.getAtomNumber(qAtom);
-                    tIndex = target.getAtomNumber(tAtom);
                 } else {
                     tAtom = target.getAtom(qAtomIndex);
                     qAtom = source.getAtom(solution.get(qAtomIndex));
-                    tIndex = target.getAtomNumber(tAtom);
-                    qIndex = source.getAtomNumber(qAtom);
                 }
 
+                qIndex = source.getAtomNumber(qAtom);
+                tIndex = target.getAtomNumber(tAtom);
                 if (qIndex != -1 && tIndex != -1) {
                     atomatomMapping.put(qAtom, tAtom);
                 } else {
@@ -391,8 +399,8 @@ public class BaseMCS extends MoleculeInitializer {
             for (int index = 0; index < mapping.size(); index += 2) {
                 IAtom qAtom = null;
                 IAtom tAtom = null;
-                Integer qIndex = -1;
-                Integer tIndex = -1;
+                int qIndex = -1;
+                int tIndex = -1;
 
                 if (RONP) {
                     qAtom = source.getAtom(mapping.get(index));

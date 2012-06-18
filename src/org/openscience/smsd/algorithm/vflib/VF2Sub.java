@@ -296,7 +296,7 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
             mgit = null;
 
             if (isTimeOut()) {
-                System.err.println("\nVFLibMCS hit by timeout in McGregor");
+                Logger.debug("\nVFLibMCS hit by timeout in McGregor");
                 break;
             }
         }

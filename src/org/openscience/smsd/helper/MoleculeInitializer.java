@@ -42,7 +42,6 @@ import org.openscience.cdk.ringsearch.SSSRFinder;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
-import org.openscience.smsd.interfaces.IMoleculeInitializer;
 
 /**
  *
@@ -50,9 +49,19 @@ import org.openscience.smsd.interfaces.IMoleculeInitializer;
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-public class MoleculeInitializer extends IMoleculeInitializer {
+public class MoleculeInitializer {
 
-    private final ILoggingTool Logger =
+    /**
+     * Prepare the molecule for analysis.
+     * <p/>
+     * We perform ring perception and aromaticity detection and set up the appropriate properties. Right now, this
+     * function is called each time we need to do a query and this is inefficient.
+     *
+     * @param atomContainer Atom container where rings are to be marked
+     * @throws CDKException if there is a problem in ring perception or aromaticity detection, which is usually related
+     * to a timeout in the ring finding code.
+     */
+    private static final ILoggingTool Logger =
             LoggingToolFactory.createLoggingTool(MoleculeInitializer.class);
 
     /**
@@ -61,9 +70,8 @@ public class MoleculeInitializer extends IMoleculeInitializer {
      * @throws CDKException if there is a problem in ring perception or aromaticity detection, which is usually related
      * to a timeout in the ring finding code.
      */
-    @Override
-    protected synchronized void initializeMolecule(IAtomContainer atomContainer) throws CDKException {
-
+    public synchronized static void initializeMolecule(IAtomContainer atomContainer) throws CDKException {
+        String SMALLEST_RING_SIZE = "SMALLEST_RING_SIZE";
         if (!(atomContainer instanceof IQueryAtomContainer)) {
             Map<String, Integer> valencesTable = new HashMap<String, Integer>();
             valencesTable.put("H", 1);
@@ -144,11 +152,11 @@ public class MoleculeInitializer extends IMoleculeInitializer {
                     Collections.sort(ringsizes);
                     atom.setProperty(CDKConstants.RING_SIZES, ringsizes);
                     atom.setProperty(CDKConstants.SMALLEST_RINGS, sssr.getRings(atom));
-                    atom.setProperty(IMoleculeInitializer.SMALLEST_RING_SIZE, ringsizes.get(0));
+                    atom.setProperty(SMALLEST_RING_SIZE, ringsizes.get(0));
                 } else {
                     atom.setFlag(CDKConstants.ISINRING, false);
                     atom.setFlag(CDKConstants.ISALIPHATIC, true);
-                    atom.setProperty(IMoleculeInitializer.SMALLEST_RING_SIZE, 0);
+                    atom.setProperty(SMALLEST_RING_SIZE, 0);
                 }
 
                 // determine how many rings bonds each atom is a part of
@@ -220,7 +228,7 @@ public class MoleculeInitializer extends IMoleculeInitializer {
      * @param shouldMatchBonds
      * @return true if the subgraph ac1 has atom chance to be atom subgraph of ac2
      */
-    protected synchronized boolean testIsSubgraphHeuristics(IAtomContainer ac1, IAtomContainer ac2, boolean shouldMatchBonds) {
+    protected synchronized static boolean testIsSubgraphHeuristics(IAtomContainer ac1, IAtomContainer ac2, boolean shouldMatchBonds) {
 
         int ac1SingleBondCount = 0;
         int ac1DoubleBondCount = 0;

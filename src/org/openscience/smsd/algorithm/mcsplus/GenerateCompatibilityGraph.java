@@ -38,10 +38,9 @@ import org.openscience.smsd.algorithm.matchers.DefaultMatcher;
 import org.openscience.smsd.helper.LabelContainer;
 
 /**
- * This class generates compatibility graph between query and target molecule.
- * It also marks edges in the compatibility graph as c-edges or d-edges.
- * @cdk.module smsd
- * @cdk.githash
+ * This class generates compatibility graph between query and target molecule. It also marks edges in the compatibility
+ * graph as c-edges or d-edges. @cdk.module smsd @cdk.githash
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.SMSDBondSensitiveTest")
@@ -60,10 +59,11 @@ public final class GenerateCompatibilityGraph {
 
     /**
      * Generates a compatibility graph between two molecules
+     *
      * @param source
      * @param target
      * @param shouldMatchBonds
-     * @param shouldMatchRings 
+     * @param shouldMatchRings
      * @throws java.io.IOException
      */
     public GenerateCompatibilityGraph(
@@ -117,7 +117,8 @@ public final class GenerateCompatibilityGraph {
 
             for (IAtom negAtom : connAtoms) {
                 String neighbouringAtom = negAtom.getSymbol();
-                label.set(counter++, labelContainer.getLabelID(neighbouringAtom));
+                label.set(counter, labelContainer.getLabelID(neighbouringAtom));
+                counter += 1;
             }
             bubbleSort(label);
             label_list.add(label);
@@ -153,26 +154,22 @@ public final class GenerateCompatibilityGraph {
     }
 
     /*
-     * labelA [0, 2, 2, 2, 0, 0, 0] 
-     * labelB [0, 2, 2, 2, 0, 0, 0] 
-     * 
+     * labelA [0, 2, 2, 2, 0, 0, 0] labelB [0, 2, 2, 2, 0, 0, 0]
+     *
      * return true
-     * 
-     * labelA [0, 2, 2, 0, 0, 0, 0] 
-     * labelB [0, 2, 2, 2, 0, 0, 0] 
-     * 
+     *
+     * labelA [0, 2, 2, 0, 0, 0, 0] labelB [0, 2, 2, 2, 0, 0, 0]
+     *
      * return true
-     * 
-     * labelA [0, 2, 2, 3, 0, 0, 0] 
-     * labelB [0, 2, 2, 2, 0, 0, 0]
-     * 
+     *
+     * labelA [0, 2, 2, 3, 0, 0, 0] labelB [0, 2, 2, 2, 0, 0, 0]
+     *
      * return false
-     * 
-     * labelA [0, 2, 2, 2, 0, 0, 0] 
-     * labelB [0, 2, 2, 0, 0, 0, 0] 
-     * 
+     *
+     * labelA [0, 2, 2, 2, 0, 0, 0] labelB [0, 2, 2, 0, 0, 0, 0]
+     *
      * return false
-     * 
+     *
      */
     private boolean isSubset(List<Integer> labelA, List<Integer> labelB) {
         boolean flag = true;
@@ -215,7 +212,8 @@ public final class GenerateCompatibilityGraph {
 
                     compGraphNodes.add(source.getAtomNumber(sourceAtoms.get(sourceNodes)));
                     compGraphNodes.add(target.getAtomNumber(targetAtoms.get(targetNodes)));
-                    compGraphNodes.add(nodeCount++);
+                    compGraphNodes.add(nodeCount);
+                    nodeCount += 1;
                 }
                 targetNodes++;
             }
@@ -241,8 +239,8 @@ public final class GenerateCompatibilityGraph {
         cEdges = new ArrayList<Integer>(); //Initialize the cEdges List
         dEdges = new ArrayList<Integer>(); //Initialize the dEdges List
 
-        for (int a = 0; a < comp_graph_nodes_List_size; a = a + 3) {
-            for (int b = a + 3; b < comp_graph_nodes_List_size; b = b + 3) {
+        for (int a = 0; a < comp_graph_nodes_List_size; a += 3) {
+            for (int b = a + 3; b < comp_graph_nodes_List_size; b += 3) {
                 if ((a != b)
                         && (compGraphNodes.get(a) != compGraphNodes.get(b))
                         && (compGraphNodes.get(a + 1) != compGraphNodes.get(b + 1))) {
@@ -316,6 +314,7 @@ public final class GenerateCompatibilityGraph {
 
     /**
      * compGraphNodesCZero is used to build up of the edges of the compatibility graph
+     *
      * @return
      * @throws IOException
      */
@@ -343,7 +342,8 @@ public final class GenerateCompatibilityGraph {
                     compGraphNodesCZero.add(count_nodes);
                     compGraphNodes.add(i);
                     compGraphNodes.add(j);
-                    compGraphNodes.add(count_nodes++);
+                    compGraphNodes.add(count_nodes);
+                    count_nodes += 1;
                     map.add(i + "_" + j);
                 } else if (atom1.getSymbol().equalsIgnoreCase(atom2.getSymbol())
                         && !map.contains(i + "_" + j)) {
@@ -353,7 +353,8 @@ public final class GenerateCompatibilityGraph {
                     compGraphNodesCZero.add(count_nodes);
                     compGraphNodes.add(i);
                     compGraphNodes.add(j);
-                    compGraphNodes.add(count_nodes++);
+                    compGraphNodes.add(count_nodes);
+                    count_nodes += 1;
                     map.add(i + "_" + j);
                 }
             }
@@ -363,9 +364,8 @@ public final class GenerateCompatibilityGraph {
     }
 
     /**
-     * compatibilityGraphCEdgeZero is used to
-     * build up of the edges of the
-     * compatibility graph BIS
+     * compatibilityGraphCEdgeZero is used to build up of the edges of the compatibility graph BIS
+     *
      * @return
      * @throws IOException
      */
@@ -418,7 +418,7 @@ public final class GenerateCompatibilityGraph {
     }
 
     /**
-     * 
+     *
      * @param bondA1
      * @param bondA2
      * @param shouldMatchBonds
@@ -470,7 +470,7 @@ public final class GenerateCompatibilityGraph {
     }
 
     protected List<Integer> getCompGraphNodesCZero() {
-        return compGraphNodesCZero;
+        return Collections.unmodifiableList(compGraphNodesCZero);
     }
 
     protected void clearCEgdes() {
