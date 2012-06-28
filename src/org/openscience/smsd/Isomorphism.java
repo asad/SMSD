@@ -295,9 +295,9 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
 
     private synchronized void defaultMCSAlgorithm() {
         try {
-            mcsPlusAlgorithm();
+            cdkMCSAlgorithm();
             if (getMappingCount() == 0 || isTimeOut()) {
-//                System.out.println("\nCDKMCS hit by timeout\n");
+                System.out.println("\nCDKMCS hit by timeout\n");
 //                double time = System.currentTimeMillis();
                 vfLibMCSAlgorithm();
 //                System.out.println("\nVF Lib used\n" + ((System.currentTimeMillis() - time) / (60 * 1000)));
