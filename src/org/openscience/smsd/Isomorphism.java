@@ -73,7 +73,7 @@ import org.openscience.smsd.interfaces.ITimeOut;
  * //Algorithm is VF2MCS
  * //Bond Sensitive is set True
  * //Ring Match is set True
- * Isomorphism comparison = new Isomorphism(query, target, Algorithm.VFLibMCS, true, true);
+ * Isomorphism comparison = new Isomorphism(query, target, Algorithm.DEFAULT, true, true);
  * // set chemical filter true
  * comparison.setChemFilters(true, true, true);
  * //Get similarity score
@@ -297,7 +297,7 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
         try {
             cdkMCSAlgorithm();
             if (getMappingCount() == 0 || isTimeOut()) {
-                System.out.println("\nCDKMCS hit by timeout\n");
+//                System.out.println("\nCDKMCS hit by timeout\n");
 //                double time = System.currentTimeMillis();
                 vfLibMCSAlgorithm();
 //                System.out.println("\nVF Lib used\n" + ((System.currentTimeMillis() - time) / (60 * 1000)));
