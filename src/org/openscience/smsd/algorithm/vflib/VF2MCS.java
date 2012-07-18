@@ -64,95 +64,169 @@ public final class VF2MCS extends BaseMCS implements IResults {
     public VF2MCS(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings) {
         super(source, target, shouldMatchBonds, shouldMatchRings);
 
-        try {
-            addVFMatchesMappings();
-            /*
-             * An extension is triggered if its mcs solution is smaller than reactant and product. An enrichment is
-             * triggered if its mcs solution is equal to reactant or product size.
-             *
-             *
-             */
-            if (isEnrichmentRequired() || isExtensionRequired()) {
-                List<Map<Integer, Integer>> mcsSeeds = new ArrayList<Map<Integer, Integer>>();
-                List<AtomAtomMapping> mcsKochCliques;
-                mcsKochCliques = addKochCliques();
-                for (AtomAtomMapping mapping : mcsKochCliques) {
-                    Map<Integer, Integer> map = new TreeMap<Integer, Integer>();
-                    map.putAll(mapping.getMappingsIndex());
-                    mcsSeeds.add(map);
-                }
-                List<AtomAtomMapping> mcsUITCliques;
-                mcsUITCliques = addUIT();
-                for (AtomAtomMapping mapping : mcsUITCliques) {
-                    Map<Integer, Integer> map = new TreeMap<Integer, Integer>();
-                    map.putAll(mapping.getMappingsIndex());
-                    mcsSeeds.add(map);
-                }
 
-                /*
-                 * Copy UIT & Koch MCS solutions
-                 */
-                int solSize = 0;
-                int counter = 0;
-                List<Map<Integer, Integer>> cleanedMCSSeeds = new ArrayList<Map<Integer, Integer>>();
-                if (!mcsSeeds.isEmpty()) {
-                    for (Map<Integer, Integer> map : mcsSeeds) {
-                        if (map.size() > solSize) {
-                            solSize = map.size();
-                            cleanedMCSSeeds.clear();
-                            counter = 0;
-                        }
-                        if (!map.isEmpty()
-                                && map.size() == solSize
-                                && !hasClique(map, cleanedMCSSeeds)) {
-                            cleanedMCSSeeds.add(counter, map);
-                            counter++;
-                        }
+        addVFMatchesMappings();
+        /*
+         * An extension is triggered if its mcs solution is smaller than reactant and product. An enrichment is
+         * triggered if its mcs solution is equal to reactant or product size.
+         *
+         *
+         */
+        if (isEnrichmentRequired() || isExtensionRequired()) {
+
+            List<Map<Integer, Integer>> mcsVFSeeds = new ArrayList<Map<Integer, Integer>>();
+
+            /*
+             * Copy VF based MCS solution in the seed
+             */
+
+            int counter = 0;
+            for (Map<Integer, Integer> vfMapping : allLocalMCS) {
+                mcsVFSeeds.add(counter, vfMapping);
+                counter++;
+            }
+
+
+            /*
+             * Clean VF mapping data
+             */
+
+            allLocalMCS.clear();
+            allLocalAtomAtomMapping.clear();
+
+            /*
+             * Generate the UIT based MCS seeds
+             */
+
+            List<Map<Integer, Integer>> mcsSeeds = new ArrayList<Map<Integer, Integer>>();
+
+            List<AtomAtomMapping> mcsUITCliques;
+            mcsUITCliques = addUIT();
+            for (AtomAtomMapping mapping : mcsUITCliques) {
+                Map<Integer, Integer> map = new TreeMap<Integer, Integer>();
+                map.putAll(mapping.getMappingsIndex());
+                mcsSeeds.add(map);
+            }
+
+            List<AtomAtomMapping> mcsKochCliques;
+            mcsKochCliques = addKochCliques();
+            for (AtomAtomMapping mapping : mcsKochCliques) {
+                Map<Integer, Integer> map = new TreeMap<Integer, Integer>();
+                map.putAll(mapping.getMappingsIndex());
+                mcsSeeds.add(map);
+            }
+
+            /*
+             * Store largest MCS seeds generated from MCSPlus and UIT
+             */
+            int solSize = 0;
+            counter = 0;
+            List<Map<Integer, Integer>> cleanedMCSSeeds = new ArrayList<Map<Integer, Integer>>();
+            if (!mcsSeeds.isEmpty()) {
+                for (Iterator<Map<Integer, Integer>> it = mcsSeeds.iterator(); it.hasNext();) {
+                    Map<Integer, Integer> map = it.next();
+                    if (map.size() > solSize) {
+                        solSize = map.size();
+                        cleanedMCSSeeds.clear();
+                        counter = 0;
                     }
-                }
-                /*
-                 * Copy VF MCS solutions
-                 */
-                for (Map<Integer, Integer> vfMapping : allMCSCopy) {
-                    Map<Integer, Integer> map = new TreeMap<Integer, Integer>();
-                    map.putAll(vfMapping);
                     if (!map.isEmpty()
-                            && map.size() >= solSize
+                            && map.size() == solSize
                             && !hasClique(map, cleanedMCSSeeds)) {
                         cleanedMCSSeeds.add(counter, map);
                         counter++;
                     }
                 }
-
-                allMCSCopy.clear();
-                allLocalAtomAtomMapping.clear();
-                /*
-                 * Sort biggest clique to smallest
-                 */
-                Collections.sort(cleanedMCSSeeds, new Map2Comparator());
-                extendCliquesWithMcGregor(cleanedMCSSeeds);
-
             }
-        } catch (CDKException ex) {
-            logger.error(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            logger.error(Level.SEVERE, null, ex);
-        }
-        int solSize = 0;
-        int counter = 0;
-        this.allAtomMCS = new ArrayList<AtomAtomMapping>();
-        if (!allLocalAtomAtomMapping.isEmpty()) {
-            for (int i = 0; i < allLocalAtomAtomMapping.size(); i++) {
-                AtomAtomMapping atomMCSMap = allLocalAtomAtomMapping.get(i);
-                if (atomMCSMap.getCount() > solSize) {
-                    solSize = atomMCSMap.getCount();
-                    allAtomMCS.clear();
-                    counter = 0;
-                }
-                if (!atomMCSMap.isEmpty()
-                        && atomMCSMap.getCount() == solSize) {
-                    allAtomMCS.add(counter, atomMCSMap);
+
+            /*
+             * Store MCS seeds generated from VF
+             */
+            for (Iterator<Map<Integer, Integer>> it = mcsVFSeeds.iterator(); it.hasNext();) {
+                Map<Integer, Integer> map = it.next();
+                if (!map.isEmpty()
+                        && !hasClique(map, cleanedMCSSeeds)) {
+                    cleanedMCSSeeds.add(counter, map);
                     counter++;
+                }
+            }
+            /*
+             * Sort biggest clique to smallest
+             */
+            Collections.sort(cleanedMCSSeeds, new Map2Comparator());
+
+            /*
+             * Extend the seeds using McGregor
+             */
+            try {
+                extendCliquesWithMcGregor(cleanedMCSSeeds);
+            } catch (CDKException ex) {
+                java.util.logging.Logger.getLogger(VF2MCS.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (IOException ex) {
+                java.util.logging.Logger.getLogger(VF2MCS.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            /*
+             * Clear previous seeds
+             */
+            mcsSeeds.clear();
+            cleanedMCSSeeds.clear();
+
+            /*
+             * Integerate the solutions
+             */
+
+            solSize = 0;
+            counter = 0;
+            this.allAtomMCS = new ArrayList<AtomAtomMapping>();
+
+            /*
+             * Store solutions from VF MCS only
+             */
+            if (!allLocalAtomAtomMapping.isEmpty()) {
+                for (int i = 0; i < allLocalAtomAtomMapping.size(); i++) {
+                    AtomAtomMapping atomMCSMap = allLocalAtomAtomMapping.get(i);
+                    if (atomMCSMap.getCount() > solSize) {
+                        solSize = atomMCSMap.getCount();
+                        allAtomMCS.clear();
+                        counter = 0;
+                    }
+                    if (!atomMCSMap.isEmpty()
+                            && atomMCSMap.getCount() == solSize) {
+                        allAtomMCS.add(counter, atomMCSMap);
+                        counter++;
+                    }
+                }
+            }
+
+            /*
+             * Clear the local solution after storing it into mcs solutions
+             */
+
+            allLocalMCS.clear();
+            allLocalAtomAtomMapping.clear();
+
+        } else {
+
+            /*
+             * Store solutions from VF MCS only
+             */
+            int solSize = 0;
+            int counter = 0;
+            this.allAtomMCS = new ArrayList<AtomAtomMapping>();
+            if (!allLocalAtomAtomMapping.isEmpty()) {
+                for (int i = 0; i < allLocalAtomAtomMapping.size(); i++) {
+                    AtomAtomMapping atomMCSMap = allLocalAtomAtomMapping.get(i);
+                    if (atomMCSMap.getCount() > solSize) {
+                        solSize = atomMCSMap.getCount();
+                        allAtomMCS.clear();
+                        counter = 0;
+                    }
+                    if (!atomMCSMap.isEmpty()
+                            && atomMCSMap.getCount() == solSize) {
+                        allAtomMCS.add(counter, atomMCSMap);
+                        counter++;
+                    }
                 }
             }
         }

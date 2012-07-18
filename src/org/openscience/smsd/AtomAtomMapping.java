@@ -27,6 +27,7 @@
  */
 package org.openscience.smsd;
 
+import java.io.Serializable;
 import java.util.*;
 import org.openscience.cdk.graph.ConnectivityChecker;
 import org.openscience.cdk.interfaces.IAtom;
@@ -40,12 +41,47 @@ import org.openscience.cdk.interfaces.IAtomContainerSet;
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-public final class AtomAtomMapping {
+public final class AtomAtomMapping implements Serializable {
 
+    private static final long serialVersionUID = 1223637237262778L;
     private final IAtomContainer query;
     private final IAtomContainer target;
     private final Map<IAtom, IAtom> mapping;
     private final Map<Integer, Integer> mappingIndex;
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final AtomAtomMapping other = (AtomAtomMapping) obj;
+        if (this.query != other.query && (this.query == null || !this.query.equals(other.query))) {
+            return false;
+        }
+        if (this.target != other.target && (this.target == null || !this.target.equals(other.target))) {
+            return false;
+        }
+        if (this.mapping != other.mapping && (this.mapping == null || !this.mapping.equals(other.mapping))) {
+            return false;
+        }
+        if (this.mappingIndex != other.mappingIndex && (this.mappingIndex == null || !this.mappingIndex.equals(other.mappingIndex))) {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 67 * hash + (this.query != null ? this.query.hashCode() : 0);
+        hash = 67 * hash + (this.target != null ? this.target.hashCode() : 0);
+        hash = 67 * hash + (this.mapping != null ? this.mapping.hashCode() : 0);
+        hash = 67 * hash + (this.mappingIndex != null ? this.mappingIndex.hashCode() : 0);
+        return hash;
+    }
 
     /**
      *

@@ -36,6 +36,7 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFLibTest")
 public final class DefaultAtomMatcher implements AtomMatcher {
 
+    private final String SMALLEST_RING_SIZE = "SMALLEST_RING_SIZE";
     static final long serialVersionUID = -7861469841127327812L;
     private final String symbol;
     private final IAtom qAtom;
@@ -99,6 +100,10 @@ public final class DefaultAtomMatcher implements AtomMatcher {
                     && targetAtom.getHybridization() != null
                     && !qAtom.getHybridization().equals(targetAtom.getHybridization())) {
                 return false;
+            } else if (shouldMatchRings && (isRingAtom(qAtom) && isRingAtom(targetAtom))) {
+                if (qAtom.getProperty(SMALLEST_RING_SIZE) != targetAtom.getProperty(SMALLEST_RING_SIZE)) {
+                    return false;
+                }
             }
         }
         return true;

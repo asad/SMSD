@@ -73,7 +73,7 @@ import org.openscience.smsd.interfaces.ITimeOut;
  * //Algorithm is VF2MCS
  * //Bond Sensitive is set True
  * //Ring Match is set True
- * Isomorphism comparison = new Isomorphism(query, target, Algorithm.DEFAULT, true, true);
+ * Isomorphism comparison = new Isomorphism(query, target, Algorithm.VFLibMCS, true, true);
  * // set chemical filter true
  * comparison.setChemFilters(true, true, true);
  * //Get similarity score
@@ -110,11 +110,11 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
     static final long serialVersionUID = 0x24845e5c5ae877L;
     private Algorithm algorithmType;
     private double bondSensitiveCDKMCSTimeOut = 0.15;//mins
-    private double bondInSensitiveCDKMCSTimeOut = 0.30;//mins
+    private double bondInSensitiveCDKMCSTimeOut = 2.00;//mins
     private double bondSensitiveMCSPlusTimeOut = 0.15;//mins
-    private double bondInSensitiveMCSPlusTimeOut = 0.30;//mins
-    private double bondSensitiveVFTimeOut = 0.15;//mins
-    private double bondInSensitiveVFTimeOut = 0.30;//mins
+    private double bondInSensitiveMCSPlusTimeOut = 2.00;//mins
+    private double bondSensitiveVFTimeOut = 5.00;//mins
+    private double bondInSensitiveVFTimeOut = 5.00;//mins
 
     /**
      * Initialize query and target molecules.

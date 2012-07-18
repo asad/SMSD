@@ -74,7 +74,7 @@ public class BaseMCS extends MoleculeInitializer {
     private final boolean shouldMatchRings;
     private final boolean matchBonds;
     private final List<Map<INode, IAtom>> vfLibSolutions;
-    final List<Map<Integer, Integer>> allMCSCopy;
+    final List<Map<Integer, Integer>> allLocalMCS;
     final List<AtomAtomMapping> allLocalAtomAtomMapping;
     private final static ILoggingTool Logger =
             LoggingToolFactory.createLoggingTool(BaseMCS.class);
@@ -82,7 +82,7 @@ public class BaseMCS extends MoleculeInitializer {
     BaseMCS(IAtomContainer source, IAtomContainer target, boolean matchBonds, boolean shouldMatchRings) {
         this.allLocalAtomAtomMapping = new ArrayList<AtomAtomMapping>();
         this.timeManager = new TimeManager();
-        this.allMCSCopy = new ArrayList<Map<Integer, Integer>>();
+        this.allLocalMCS = new ArrayList<Map<Integer, Integer>>();
         this.shouldMatchRings = shouldMatchRings;
         this.matchBonds = matchBonds;
         this.vfLibSolutions = new ArrayList<Map<INode, IAtom>>();
@@ -243,7 +243,7 @@ public class BaseMCS extends MoleculeInitializer {
             setVFMappings(true, queryCompiler);
 
         } else if (countR <= countP) {//isBondMatchFlag()
-            queryCompiler = new QueryCompiler(this.source, true, isMatchRings()).compile();
+            queryCompiler = new QueryCompiler(this.source, isBondMatchFlag(), isMatchRings()).compile();
             mapper = new VFMCSMapper(queryCompiler);
             List<Map<INode, IAtom>> map = mapper.getMaps(this.target);
             if (map != null) {
@@ -251,7 +251,7 @@ public class BaseMCS extends MoleculeInitializer {
             }
             setVFMappings(true, queryCompiler);
         } else {
-            queryCompiler = new QueryCompiler(this.target, true, isMatchRings()).compile();
+            queryCompiler = new QueryCompiler(this.target, isBondMatchFlag(), isMatchRings()).compile();
             mapper = new VFMCSMapper(queryCompiler);
             List<Map<INode, IAtom>> map = mapper.getMaps(this.source);
             if (map != null) {
@@ -306,20 +306,22 @@ public class BaseMCS extends MoleculeInitializer {
             Map<Integer, Integer> indexindexMapping = new TreeMap<Integer, Integer>();
 
             for (INode node : solution.keySet()) {
-                IAtom qAtom = null;
-                IAtom tAtom = null;
-                int qIndex = -1;
-                int tIndex = -1;
+                IAtom qAtom;
+                IAtom tAtom;
+                int qIndex;
+                int tIndex;
 
                 if (RONP) {
                     qAtom = query.getAtom(node);
                     tAtom = solution.get(node);
+                    qIndex = source.getAtomNumber(qAtom);
+                    tIndex = target.getAtomNumber(tAtom);
                 } else {
                     tAtom = query.getAtom(node);
                     qAtom = solution.get(node);
+                    qIndex = source.getAtomNumber(qAtom);
+                    tIndex = target.getAtomNumber(tAtom);
                 }
-                qIndex = source.getAtomNumber(qAtom);
-                tIndex = target.getAtomNumber(tAtom);
 
                 if (qIndex != -1 && tIndex != -1) {
                     atomatomMapping.put(qAtom, tAtom);
@@ -393,14 +395,13 @@ public class BaseMCS extends MoleculeInitializer {
         getLocalAtomMCSSolution().clear();
         getLocalMCSSolution().clear();
         for (List<Integer> mapping : mappings) {
-
             AtomAtomMapping atomatomMapping = new AtomAtomMapping(source, target);
             Map<Integer, Integer> indexindexMapping = new TreeMap<Integer, Integer>();
             for (int index = 0; index < mapping.size(); index += 2) {
-                IAtom qAtom = null;
-                IAtom tAtom = null;
-                int qIndex = -1;
-                int tIndex = -1;
+                IAtom qAtom;
+                IAtom tAtom;
+                int qIndex;
+                int tIndex;
 
                 if (RONP) {
                     qAtom = source.getAtom(mapping.get(index));
@@ -496,10 +497,10 @@ public class BaseMCS extends MoleculeInitializer {
     }
 
     /**
-     * @return the allMCSCopy
+     * @return the allLocalMCS
      */
     private synchronized List<Map<Integer, Integer>> getLocalMCSSolution() {
-        return Collections.synchronizedList(allMCSCopy);
+        return Collections.synchronizedList(allLocalMCS);
     }
 
     /**
@@ -522,7 +523,7 @@ public class BaseMCS extends MoleculeInitializer {
     protected synchronized boolean isExtensionRequired() {
         int commonAtomCount = checkCommonAtomCount(getReactantMol(), getProductMol());
         int maxSize = 0;
-        for (Map<Integer, Integer> map : allMCSCopy) {
+        for (Map<Integer, Integer> map : allLocalMCS) {
             if (map.size() > maxSize) {
                 maxSize = map.size();
             }
@@ -551,7 +552,7 @@ public class BaseMCS extends MoleculeInitializer {
 
     protected synchronized boolean isEnrichmentRequired() {
         int maxSize = 0;
-        for (Map<Integer, Integer> map : allMCSCopy) {
+        for (Map<Integer, Integer> map : allLocalMCS) {
             if (map.size() > maxSize) {
                 maxSize = map.size();
             }

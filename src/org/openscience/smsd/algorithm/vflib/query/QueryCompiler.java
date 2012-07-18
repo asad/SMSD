@@ -82,7 +82,7 @@ public class QueryCompiler implements IQueryCompiler {
     public QueryCompiler(IAtomContainer molecule, boolean shouldMatchBonds, boolean shouldMatchRings) {
         this.setMolecule(molecule);
         this.setBondMatchFlag(shouldMatchBonds);
-        this.shouldMatchRings = shouldMatchRings;
+        this.setShouldMatchRings(shouldMatchRings);
     }
 
     /**
@@ -113,15 +113,6 @@ public class QueryCompiler implements IQueryCompiler {
     }
 
     /**
-     * Return molecule
-     *
-     * @return Atom Container
-     */
-    private synchronized IAtomContainer getAtomContainer() {
-        return queryMolecule == null ? molecule : queryMolecule;
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
@@ -132,7 +123,7 @@ public class QueryCompiler implements IQueryCompiler {
     private synchronized IQuery build(IAtomContainer queryMolecule) {
         VFQueryBuilder result = new VFQueryBuilder();
         for (IAtom atom : queryMolecule.atoms()) {
-            AtomMatcher matcher = createAtomMatcher(queryMolecule, atom);
+            AtomMatcher matcher = createAtomMatcher(atom);
             if (matcher != null) {
                 result.addNode(matcher, atom);
             }
@@ -141,16 +132,16 @@ public class QueryCompiler implements IQueryCompiler {
             IBond bond = queryMolecule.getBond(i);
             IAtom atomI = bond.getAtom(0);
             IAtom atomJ = bond.getAtom(1);
-            result.connect(result.getNode(atomI), result.getNode(atomJ), createBondMatcher(queryMolecule, bond));
+            result.connect(result.getNode(atomI), result.getNode(atomJ), createBondMatcher(bond));
         }
         return result;
     }
 
-    private synchronized AtomMatcher createAtomMatcher(IAtomContainer mol, IAtom atom) {
+    private synchronized AtomMatcher createAtomMatcher(IAtom atom) {
         return new DefaultAtomMatcher(atom, isShouldMatchRings());
     }
 
-    private synchronized BondMatcher createBondMatcher(IAtomContainer mol, IBond bond) {
+    private synchronized BondMatcher createBondMatcher(IBond bond) {
         return new DefaultBondMatcher(bond, isBondMatchFlag());
     }
 
@@ -171,14 +162,14 @@ public class QueryCompiler implements IQueryCompiler {
     /**
      * @return the shouldMatchRings
      */
-    public boolean isShouldMatchRings() {
+    private synchronized boolean isShouldMatchRings() {
         return shouldMatchRings;
     }
 
     /**
      * @param shouldMatchRings the shouldMatchRings to set
      */
-    public void setShouldMatchRings(boolean shouldMatchRings) {
+    private synchronized void setShouldMatchRings(boolean shouldMatchRings) {
         this.shouldMatchRings = shouldMatchRings;
     }
 }
