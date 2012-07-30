@@ -60,8 +60,6 @@ import cmd.pdb.LigandHelper;
 import java.util.Collections;
 import java.util.List;
 import org.openscience.cdk.CDKConstants;
-import org.openscience.cdk.graph.ConnectivityChecker;
-import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.io.iterator.IteratingSDFReader;
 
 public class InputHandler {
