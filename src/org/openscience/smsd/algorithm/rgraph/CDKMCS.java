@@ -118,7 +118,7 @@ public class CDKMCS {
                 IQueryAtom qAtom = (IQueryAtom) atom2;
                 return qAtom.matches(g1.getAtom(0));
             } else {
-                String atomSymbol = atom.getSymbol();
+                String atomSymbol = atom2.getSymbol();
                 return g1.getAtom(0).getSymbol().equals(atomSymbol);
             }
         }
@@ -335,9 +335,7 @@ public class CDKMCS {
                         return true;
                     }
                 } else {
-                    if (atom2.getSymbol().equals(atom.getSymbol())) {
-                        return true;
-                    }
+                    return atom2.getSymbol().equals(atom.getSymbol());
                 }
             }
             return false;
