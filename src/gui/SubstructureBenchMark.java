@@ -24,7 +24,7 @@ public class SubstructureBenchMark {
      * @param args the command line arguments
      * @throws FileNotFoundException
      * @throws IOException
-     * @throws CDKException  
+     * @throws CDKException
      */
     public static void main(String[] args) throws FileNotFoundException, IOException, CDKException {
         String queryFilePath = (args.length > 0) ? args[0] : "data/actives.sdf";
@@ -96,7 +96,9 @@ public class SubstructureBenchMark {
     private static int getUITSolutionCount(IAtomContainer query, IAtomContainer target) throws CDKException {
 //       List bondMapping = UniversalIsomorphismTester.getSubgraphMaps(target, query);
 //       List<List<RMap>> sol = UniversalIsomorphismTester.makeAtomsMapsOfBondsMaps(bondMapping, target, query);
-        if (UniversalIsomorphismTester.isSubgraph(target, query)) {
+
+        UniversalIsomorphismTester uti = new UniversalIsomorphismTester();
+        if (uti.isSubgraph(target, query)) {
             return 1;
         } else {
             return 0;
