@@ -66,8 +66,8 @@ public class ImageGenerator {
         msl.layout(query, new Vector2d(0.0, 0.0));
         msl.layout(target, new Vector2d(0.0, 0.0));
 
-        IAtomContainer cloneOfQuery = (IAtomContainer) (new org.openscience.cdk.AtomContainer(query).clone());
-        IAtomContainer cloneOfTarget = (IAtomContainer) (new org.openscience.cdk.AtomContainer(target).clone());
+        IAtomContainer cloneOfQuery = new org.openscience.cdk.AtomContainer(query).clone();
+        IAtomContainer cloneOfTarget = new org.openscience.cdk.AtomContainer(target).clone();
 
         IAtomContainer querySubgraph = query.getBuilder().newInstance(IAtomContainer.class, cloneOfQuery);
         IAtomContainer targetSubgraph = target.getBuilder().newInstance(IAtomContainer.class, cloneOfTarget);
