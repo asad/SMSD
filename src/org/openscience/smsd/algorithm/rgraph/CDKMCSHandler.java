@@ -133,7 +133,7 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
 
         } catch (CDKException e) {
             rmap = null;
-//            System.err.println("WARNING: graphContainer: most probably time out error ");
+            System.err.println("WARNING: " + e.getMessage());
         }
     }
 
@@ -196,8 +196,10 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
                     }
                 }
                 if (!allMCS.contains(atomMappings)) {
-                    allMCS.add(counter, atomMappings);
-                    counter += 1;
+                    if (!atomMappings.isEmpty()) {
+                        allMCS.add(counter, atomMappings);
+                        counter += 1;
+                    }
                 }
             }
 
@@ -219,8 +221,10 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
                 }
             }
             if (!allAtomMCS.contains(atomMappings)) {
-                allAtomMCS.add(counter, atomMappings);
-                counter += 1;
+                if (!atomMappings.isEmpty()) {
+                    allAtomMCS.add(counter, atomMappings);
+                    counter += 1;
+                }
             }
         }
     }

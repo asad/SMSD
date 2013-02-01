@@ -65,10 +65,10 @@ public final class StereoFilter extends BaseFilter implements IChemicalFilter<Do
 
         getStereoBondChargeMatch(stereoScoreMap, allStereoAtomMCS);
 
-        stereoScoreMap = sortMapByValueInDescendingOrder(stereoScoreMap);
+        Map<Integer, Double> sortedStereoScoreMap = sortMapByValueInDescendingOrder(stereoScoreMap);
         double highestStereoScore =
-                stereoScoreMap.isEmpty() ? 0
-                : stereoScoreMap.values().iterator().next();
+                sortedStereoScoreMap.isEmpty() ? 0
+                : sortedStereoScoreMap.values().iterator().next();
         return highestStereoScore;
     }
 
@@ -152,8 +152,9 @@ public final class StereoFilter extends BaseFilter implements IChemicalFilter<Do
         return bondbondMappingMap;
     }
 
-    private synchronized double getAtomScore(double score, AtomAtomMapping atomMapMCS, IAtomContainer reactant,
+    private synchronized double getAtomScore(double scoreGlobal, AtomAtomMapping atomMapMCS, IAtomContainer reactant,
             IAtomContainer product) {
+        double score = scoreGlobal;
         for (Map.Entry<IAtom, IAtom> mappings : atomMapMCS.getMappings().entrySet()) {
             IAtom rAtom = mappings.getKey();
             IAtom pAtom = mappings.getValue();
@@ -192,7 +193,8 @@ public final class StereoFilter extends BaseFilter implements IChemicalFilter<Do
         return score;
     }
 
-    private synchronized double getBondScore(double score, Map<IBond, IBond> bondMaps) {
+    private synchronized double getBondScore(double scoreGlobal, Map<IBond, IBond> bondMaps) {
+        double score = scoreGlobal;
         for (Map.Entry<IBond, IBond> matchedBonds : bondMaps.entrySet()) {
 
             IBond RBond = matchedBonds.getKey();
@@ -272,7 +274,7 @@ public final class StereoFilter extends BaseFilter implements IChemicalFilter<Do
      * @return
      */
     public synchronized static int convertBondStereo(IBond bond) {
-        int value = 0;
+        int value;
         switch (bond.getStereo()) {
             case UP:
                 value = 1;
@@ -308,7 +310,7 @@ public final class StereoFilter extends BaseFilter implements IChemicalFilter<Do
      * @return
      */
     public synchronized static int convertBondOrder(IBond bond) {
-        int value = 0;
+        int value;
         switch (bond.getOrder()) {
             case QUADRUPLE:
                 value = 4;
@@ -323,7 +325,7 @@ public final class StereoFilter extends BaseFilter implements IChemicalFilter<Do
                 value = 1;
                 break;
             default:
-                value = 0;
+                value = 1;
         }
         return value;
     }

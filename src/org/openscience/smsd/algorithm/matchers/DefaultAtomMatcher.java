@@ -90,21 +90,32 @@ public final class DefaultAtomMatcher implements AtomMatcher {
             if (!matchSymbol(targetAtom)) {
                 return false;
             }
-            if (shouldMatchRings && (isRingAtom(qAtom) && isAliphaticAtom(targetAtom))) {
-                return false;
+
+            if (shouldMatchRings
+                    && isAtomAttachedToRing(qAtom)
+                    && isAtomAttachedToRing(targetAtom)) {
+                return true;
             } else if (shouldMatchRings && (isAliphaticAtom(qAtom) && isRingAtom(targetAtom))) {
                 return false;
-            } else if (shouldMatchRings
-                    && !(isRingAtom(qAtom) && isRingAtom(targetAtom))
-                    && qAtom.getHybridization() != null
-                    && targetAtom.getHybridization() != null
-                    && !qAtom.getHybridization().equals(targetAtom.getHybridization())) {
+            } else if (shouldMatchRings && (isRingAtom(qAtom) && isAliphaticAtom(targetAtom))) {
                 return false;
-            } else if (shouldMatchRings && (isRingAtom(qAtom) && isRingAtom(targetAtom))) {
+            } 
+            /*
+             * This tiggers error in matching example C00026_C00217
+             */
+//            else if (shouldMatchRings
+//                    && !(isRingAtom(qAtom) && isRingAtom(targetAtom))
+//                    && qAtom.getHybridization() != null
+//                    && targetAtom.getHybridization() != null
+//                    && !qAtom.getHybridization().equals(targetAtom.getHybridization())) {
+//                return false;
+//            } 
+            else if (shouldMatchRings && (isRingAtom(qAtom) && isRingAtom(targetAtom))) {
                 if (qAtom.getProperty(SMALLEST_RING_SIZE) != targetAtom.getProperty(SMALLEST_RING_SIZE)) {
                     return false;
                 }
             }
+
         }
         return true;
     }
@@ -115,5 +126,9 @@ public final class DefaultAtomMatcher implements AtomMatcher {
 
     private boolean isRingAtom(IAtom atom) {
         return atom.getFlag(CDKConstants.ISINRING) ? true : false;
+    }
+
+    private boolean isAtomAttachedToRing(IAtom atom) {
+        return ((Integer) atom.getProperty(CDKConstants.RING_CONNECTIONS)).intValue() > 0 ? true : false;
     }
 }

@@ -212,7 +212,7 @@ public final class AtomAtomMapping implements Serializable {
      * @throws CloneNotSupportedException
      */
     public synchronized IAtomContainer getCommonFragmentInQuery() throws CloneNotSupportedException {
-        IAtomContainer ac = (IAtomContainer) query.clone();
+        IAtomContainer ac = query.clone();
         List<IAtom> uniqueAtoms = Collections.synchronizedList(new ArrayList<IAtom>());
         for (IAtom atom : query.atoms()) {
             if (!mapping.containsKey(atom)) {
@@ -232,7 +232,7 @@ public final class AtomAtomMapping implements Serializable {
      * @throws CloneNotSupportedException
      */
     public synchronized IAtomContainer getCommonFragmentInTarget() throws CloneNotSupportedException {
-        IAtomContainer ac = (IAtomContainer) target.clone();
+        IAtomContainer ac = target.clone();
         List<IAtom> uniqueAtoms = Collections.synchronizedList(new ArrayList<IAtom>());
         for (IAtom atom : target.atoms()) {
             if (!mapping.containsValue(atom)) {
@@ -252,7 +252,7 @@ public final class AtomAtomMapping implements Serializable {
      * @throws CloneNotSupportedException
      */
     public synchronized IAtomContainerSet getUniqueFragmentsInQuery() throws CloneNotSupportedException {
-        IAtomContainer ac = (IAtomContainer) query.clone();
+        IAtomContainer ac = query.clone();
         List<IAtom> commonAtoms = Collections.synchronizedList(new ArrayList<IAtom>());
         for (IAtom atom : mapping.keySet()) {
             commonAtoms.add(ac.getAtom(getQueryIndex(atom)));
@@ -273,7 +273,7 @@ public final class AtomAtomMapping implements Serializable {
      * @throws CloneNotSupportedException
      */
     public synchronized IAtomContainerSet getUniqueFragmentsInTarget() throws CloneNotSupportedException {
-        IAtomContainer ac = (IAtomContainer) target.clone();
+        IAtomContainer ac = target.clone();
         List<IAtom> commonAtoms = Collections.synchronizedList(new ArrayList<IAtom>());
         for (IAtom atom : mapping.values()) {
             commonAtoms.add(ac.getAtom(getTargetIndex(atom)));

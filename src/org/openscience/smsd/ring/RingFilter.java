@@ -59,8 +59,8 @@ import org.openscience.smsd.algorithm.matchers.AtomMatcher;
 
 /**
  *
- * @cdk.module smsd
- * @cdk.githash
+ * @cdk.module smsd @cdk.githash
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk> 2009-2011
  */
 public class RingFilter {
@@ -116,7 +116,13 @@ public class RingFilter {
 
         @Override
         public int compare(List<List<IAtom>> o1, List<List<IAtom>> o2) {
-            return o1.size() - o2.size();
+            if (o1.size() > o2.size()) {
+                return +1;
+            }
+            if (o1.size() < o2.size()) {
+                return -1;
+            }
+            return 0;
         }
     }
 }
