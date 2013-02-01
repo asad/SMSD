@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project name="SMSDcmd" default="package-for-store" basedir=".">
 	<property file="build.properties"/>
-	<property name="cdk_src_dir" value="${CDK_dir}/src/main"/>
-	<property name="cdk_bin_dir" value="${CDK_dir}/build"/>
+	<property name="cdk_src_dir" value="${CDK_DIR}/src/main"/>
+	<property name="cdk_bin_dir" value="${CDK_DIR}/build"/>
 	<property name="module_list" value="core,standard,annotation,io,data,dict,fingerprint,interfaces,pdb,sdg,isomorphism,valencycheck,smarts,signature,smiles,extra,render,ioformats"/>
 
 	<target name="test">
@@ -16,10 +16,10 @@
 	
 	<target name="cdk-ant" description="build cdk">
 		<echo>"Building CDK"</echo>
-		<property name="build" value="${CDK_dir}/build"/>
-		<property name="build.src" value="${CDK_dir}/build/src"/>
-		<property name="src" value="${CDK_dir}/src"/>
-		<ant target="dist-all" dir="${CDK_dir}">
+		<property name="build" value="${CDK_DIR}/build"/>
+		<property name="build.src" value="${CDK_DIR}/build/src"/>
+		<property name="src" value="${CDK_DIR}/src"/>
+		<ant target="dist-all" dir="${CDK_DIR}">
 		</ant>
 	</target>
 
@@ -65,7 +65,7 @@
 				<pathelement path="build"/>
 				<pathelement path="lib/directgraphics.jar"/>
 				<pathelement path="lib/commons-cli-1.2/commons-cli-1.2.jar"/>
-				<pathelement path="${CDK_dir}/jar/signatures-1.0.jar"/>
+				<pathelement path="${CDK_DIR}/jar/signatures-1.0.jar"/>
 			</classpath>
 		</javac>
 	</target>
@@ -84,10 +84,10 @@
 			<fileset dir="build" includes="**"/>
 			<zipgroupfileset dir="lib" includes="*.jar"/>
 			<zipgroupfileset file="lib/commons-cli-1.2/commons-cli-1.2.jar"/>
-			<zipgroupfileset file="${CDK_dir}/jar/signatures-1.0.jar"/>
-			<zipgroupfileset file="${CDK_dir}/jar/cmlxom-*.jar"/>
-			<zipgroupfileset file="${CDK_dir}/jar/jgrapht-*.jar"/>
-			<zipgroupfileset file="${CDK_dir}/jar/vecmath*.jar"/>
+			<zipgroupfileset file="${CDK_DIR}/jar/signatures-1.0.jar"/>
+			<zipgroupfileset file="${CDK_DIR}/jar/cmlxom-*.jar"/>
+			<zipgroupfileset file="${CDK_DIR}/jar/jgrapht-*.jar"/>
+			<zipgroupfileset file="${CDK_DIR}/jar/vecmath*.jar"/>
 
 			<manifest>
 				<attribute name="Main-Class" value="gui.SMSDFrame"/>
