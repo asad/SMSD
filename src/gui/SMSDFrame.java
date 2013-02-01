@@ -1,14 +1,27 @@
+/* Copyright (C) 2009-2013  Syed Asad Rahman <asad@ebi.ac.uk>
+ *
+ * Contact: Syed Asad Rahman <asad@ebi.ac.uk>
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation; either version 2.1
+ * of the License, or (at your option) any later version.
+ * All we ask is that proper credit is given for our work, which includes
+ * - but is not limited to - adding the above copyright notice to the beginning
+ * of your source code files, and to any copyright notice that you may distribute
+ * with programs based on this work.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 package gui;
 
-/*
- * To change this template, choose Tools | Templates and open the template in the editor.
- */
-
-/*
- * SMSDFrame.java @author Syed Asad Rahman, EBI-EMBL asad@ebi.ac.uk @modifed Franz
- *
- * Created on Mar 29, 2009, 3:07:42 AM
- */
 import gui.helper.FileExportFilter;
 import gui.helper.ImagePreView;
 import gui.helper.molFileFilter;
@@ -44,21 +57,20 @@ import javax.swing.filechooser.FileFilter;
 import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
-import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.io.IChemObjectReader;
 import org.openscience.cdk.io.MDLReader;
-import org.openscience.cdk.layout.StructureDiagramGenerator;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.Isomorphism;
 import org.openscience.smsd.interfaces.Algorithm;
 
-/**
+/*
+ * SMSDFrame.java @author Syed Asad Rahman, EBI-EMBL, @contact: asad@ebi.ac.uk, @modifed Franz
  *
- * @author sar
+ * Created on Mar 29, 2009, 3:07:42 AM
  */
 public class SMSDFrame extends JFrame {
 
@@ -66,13 +78,13 @@ public class SMSDFrame extends JFrame {
     /**
      * Creates new form SMSDFrame
      */
-    static private String newline = "\n";
+    private final static String NEW_LINE = System.getProperty("line.separator");
     private File QueryFileName = null;
     private File TargetFileName = null;
     private List<Object> molFiles = new ArrayList<Object>(2);
     private Integer count;
     static private JPanel panels;
-    File file = null;
+    private File file = null;
 
     public SMSDFrame() {
         count = 0;
@@ -248,23 +260,24 @@ public class SMSDFrame extends JFrame {
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
         try {
             if (jRadioButton4.isSelected()) {
+
                 try {
-                    StructureDiagramGenerator sdg = new StructureDiagramGenerator();
                     SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
                     IAtomContainer query = new AtomContainer(sp.parseSmiles(jFormattedTextField1.getText()));
                     molFiles.add(count++, jFormattedTextField1.getText());
                     molFiles.add(count++, query);
-                    jTextArea1.append("Attaching smile: " + jFormattedTextField1.getText() + "." + newline);
+                    jTextArea1.append("Attaching smile: " + jFormattedTextField1.getText() + "." + NEW_LINE);
 
                     IAtomContainer target = new AtomContainer(sp.parseSmiles(jFormattedTextField2.getText()));
                     molFiles.add(count++, jFormattedTextField2.getText());
                     molFiles.add(count++, target);
-                    jTextArea1.append("Attaching smile: " + jFormattedTextField2.getText() + "." + newline);
+                    jTextArea1.append("Attaching smile: " + jFormattedTextField2.getText() + "." + NEW_LINE);
 
                     jTextArea1.setCaretPosition(jTextArea1.getDocument().getLength());
-                } catch (InvalidSmilesException ise) {
-                    ise.printStackTrace();
+                } catch (Exception ex) {
+                    Logger.getLogger(SMSDFrame.class.getName()).log(Level.SEVERE, null, ex);
                 }
+
             }
 
             //Mappping
@@ -277,7 +290,7 @@ public class SMSDFrame extends JFrame {
 
                 IAtomContainer QMol = (IAtomContainer) molFiles.get(1);
                 IAtomContainer TMol = (IAtomContainer) molFiles.get(3);
-                jTextArea1.append("Calculating MCS...." + "." + newline);
+                jTextArea1.append("Calculating MCS...." + "." + NEW_LINE);
 //                System.out.println("Calculating MCS....");
 
                 if (jCheckBox1.isSelected()) {
@@ -298,7 +311,7 @@ public class SMSDFrame extends JFrame {
                 comparison.setChemFilters(jCheckBox2.isSelected(), jCheckBox3.isSelected(), jCheckBox4.isSelected());
 
 
-                jTextArea1.append("Number of overlaps = " + comparison.getFirstAtomMapping().getCount() + newline);
+                jTextArea1.append("Number of overlaps = " + comparison.getFirstAtomMapping().getCount() + NEW_LINE);
                 jTextArea1.setCaretPosition(jTextArea1.getDocument().getLength());
 
                 String[] QName = ((String) molFiles.get(0)).split(".mol");
@@ -362,16 +375,13 @@ public class SMSDFrame extends JFrame {
                                 String fileName = file.getAbsolutePath();//Path + File.separator + fc.getName();
                                 ImageIO.write(image, type, new File(fileName + "." + type));
                             } catch (IOException ioe) {
-                                jTextArea1.append("Note: " + ioe.getMessage() + newline);
+                                jTextArea1.append("Note: " + ioe.getMessage() + NEW_LINE);
                                 jTextArea1.setCaretPosition(jTextArea1.getDocument().getLength());
 //                                System.out.println(ioe.getMessage());
                             }
                         } else {
-                            jTextArea1.append("File chooser cancel button clicked" + newline);
+                            jTextArea1.append("File chooser cancel button clicked" + NEW_LINE);
                             jTextArea1.setCaretPosition(jTextArea1.getDocument().getLength());
-//
-//                            System.out.println("File chooser cancel button clicked");
-                            return;
                         }
                     }
                 });
@@ -385,7 +395,7 @@ public class SMSDFrame extends JFrame {
                 frame.pack();
                 frame.setVisible(true);
             } else {
-                jTextArea1.append("Error: " + "Please provide query and target molecule information" + newline);
+                jTextArea1.append("Error: " + "Please provide query and target molecule information" + NEW_LINE);
                 jTextArea1.setCaretPosition(jTextArea1.getDocument().getLength());
 //
 //                System.out.println("Error: " + "Please provide query and target molecule information");
@@ -409,7 +419,7 @@ public class SMSDFrame extends JFrame {
             count = 0;
             container = molecule;
 //            container = AtomContainerManipulator.removeHydrogens(mol);
-            jTextArea1.append("Created Mol = " + fileName.getName() + newline);
+            jTextArea1.append("Created Mol = " + fileName.getName() + NEW_LINE);
             jTextArea1.setCaretPosition(jTextArea1.getDocument().getLength());
 //            System.out.println("Created Mol = " + fileName.getName());
         } catch (Exception ex) {
@@ -450,7 +460,7 @@ public class SMSDFrame extends JFrame {
                     IAtomContainer mol = readMol(QueryFileName);
                     molFiles.add(count++, QueryFileName.getName());
                     molFiles.add(count++, mol);
-                    jTextArea1.append("Attaching file: " + QueryFileName.getName() + "." + newline);
+                    jTextArea1.append("Attaching file: " + QueryFileName.getName() + "." + NEW_LINE);
                 } catch (Exception ex) {
                     Logger.getLogger(SMSDFrame.class.getName()).log(Level.SEVERE, null, ex);
                 }
@@ -460,14 +470,14 @@ public class SMSDFrame extends JFrame {
                     IAtomContainer mol = readMol(TargetFileName);
                     molFiles.add(count++, TargetFileName.getName());
                     molFiles.add(count++, mol);
-                    jTextArea1.append("Attaching file: " + TargetFileName.getName() + "." + newline);
+                    jTextArea1.append("Attaching file: " + TargetFileName.getName() + "." + NEW_LINE);
                 } catch (Exception ex) {
                     Logger.getLogger(SMSDFrame.class.getName()).log(Level.SEVERE, null, ex);
                 }
 
             }
         } else {
-            jTextArea1.append("Attachment cancelled by user." + newline);
+            jTextArea1.append("Attachment cancelled by user." + NEW_LINE);
         }
         jTextArea1.setCaretPosition(jTextArea1.getDocument().getLength());
 

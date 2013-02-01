@@ -1,4 +1,4 @@
-/* Copyright (C) 2011  Syed Asad Rahman <asad@ebi.ac.uk>
+/* Copyright (C) 2009-2013  Syed Asad Rahman <asad@ebi.ac.uk>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -28,7 +28,9 @@ import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.isomorphism.matchers.IQueryBond;
 
 /**
- * Checks if a bond is matching between query and target molecules. @cdk.module smsd @cdk.githash
+ * Checks if a bond is matching between query and target molecules. 
+ * @cdk.module smsd 
+ * @cdk.githash
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */

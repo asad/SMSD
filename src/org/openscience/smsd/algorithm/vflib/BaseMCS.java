@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2009-2011  Syed Asad Rahman <asad@ebi.ac.uk>
+ * Copyright (C) 2009-2013  Syed Asad Rahman <asad@ebi.ac.uk>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -300,7 +300,7 @@ public class BaseMCS extends MoleculeInitializer {
         /*
          * Sort biggest clique to smallest
          */
-        Collections.sort(vfLibSolutions, new Map1Comparator());
+        Collections.sort(vfLibSolutions, new Map2ValueComparator(SortOrder.DESCENDING));
         for (Map<INode, IAtom> solution : vfLibSolutions) {
             AtomAtomMapping atomatomMapping = new AtomAtomMapping(source, target);
             Map<Integer, Integer> indexindexMapping = new TreeMap<Integer, Integer>();
@@ -351,7 +351,7 @@ public class BaseMCS extends MoleculeInitializer {
         /*
          * Sort biggest clique to smallest
          */
-        Collections.sort(sol, new Map2Comparator());
+        Collections.sort(sol, new Map1ValueComparator(SortOrder.DESCENDING));
         for (Map<Integer, Integer> solution : sol) {
             AtomAtomMapping atomatomMapping = new AtomAtomMapping(source, target);
 
@@ -558,41 +558,5 @@ public class BaseMCS extends MoleculeInitializer {
             }
         }
         return this.source.getAtomCount() == maxSize || this.target.getAtomCount() == maxSize ? true : false;
-    }
-
-    public class Map1Comparator implements Comparator<Map<INode, IAtom>> {
-
-        /**
-         *
-         * @param object1
-         * @param object2
-         * @return
-         */
-        @Override
-        public int compare(Map<INode, IAtom> object1, Map<INode, IAtom> object2) {
-
-            Integer a1 = (Integer) ((Map) object1).size();
-            Integer a2 = (Integer) ((Map) object2).size();
-            return a2 - a1; // assumes you want biggest to smallest;
-
-        }
-    }
-
-    public class Map2Comparator implements Comparator<Map<Integer, Integer>> {
-
-        /**
-         *
-         * @param object1
-         * @param object2
-         * @return
-         */
-        @Override
-        public int compare(Map<Integer, Integer> object1, Map<Integer, Integer> object2) {
-
-            Integer a1 = (Integer) ((Map) object1).size();
-            Integer a2 = (Integer) ((Map) object2).size();
-            return a2 - a1; // assumes you want biggest to smallest;
-
-        }
     }
 }

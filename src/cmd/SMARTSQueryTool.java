@@ -41,7 +41,6 @@ import org.openscience.cdk.isomorphism.matchers.QueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.smarts.HydrogenAtom;
 import org.openscience.cdk.isomorphism.matchers.smarts.LogicalOperatorAtom;
 import org.openscience.cdk.isomorphism.matchers.smarts.RecursiveSmartsAtom;
-import org.openscience.cdk.isomorphism.mcss.RMap;
 import org.openscience.cdk.ringsearch.AllRingsFinder;
 import org.openscience.cdk.ringsearch.SSSRFinder;
 import org.openscience.cdk.smiles.smarts.parser.SMARTSParser;
@@ -51,7 +50,6 @@ import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.Isomorphism;
-import org.openscience.smsd.Substructure;
 import org.openscience.smsd.interfaces.Algorithm;
 
 /**
@@ -540,52 +538,5 @@ public class SMARTSQueryTool {
             query = SMARTSParser.parse(smarts);
             cache.put(smarts, query);
         }
-    }
-
-    private List<List<Integer>> getAtomMappings(List bondMapping, IAtomContainer atomContainer) {
-        List<List<Integer>> atomMapping = new ArrayList<List<Integer>>();
-
-        // loop over each mapping
-        for (Object aBondMapping : bondMapping) {
-            List list = (List) aBondMapping;
-
-            List<Integer> tmp = new ArrayList<Integer>();
-            IAtom atom1 = null;
-            IAtom atom2 = null;
-            // loop over this mapping
-            for (Object aList : list) {
-                RMap map = (RMap) aList;
-                int bondID = map.getId1();
-
-                // get the atoms in this bond
-                IBond bond = atomContainer.getBond(bondID);
-                atom1 = bond.getAtom(0);
-                atom2 = bond.getAtom(1);
-
-                Integer idx1 = atomContainer.getAtomNumber(atom1);
-                Integer idx2 = atomContainer.getAtomNumber(atom2);
-
-                if (!tmp.contains(idx1)) {
-                    tmp.add(idx1);
-                }
-                if (!tmp.contains(idx2)) {
-                    tmp.add(idx2);
-                }
-            }
-            if (tmp.size() > 0) {
-                atomMapping.add(tmp);
-            }
-
-            // If there is only one bond, check if it matches both ways.
-            if (list.size() == 1 && atom1.getAtomicNumber() == atom2.getAtomicNumber()) {
-                List<Integer> tmp2 = new ArrayList<Integer>();
-                tmp2.add(tmp.get(0));
-                tmp2.add(tmp.get(1));
-                atomMapping.add(tmp2);
-            }
-        }
-
-
-        return atomMapping;
     }
 }

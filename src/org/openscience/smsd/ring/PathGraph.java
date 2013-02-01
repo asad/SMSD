@@ -1,7 +1,7 @@
 /*
  * MX Cheminformatics Tools for Java
  *
- * Copyright (c) 2007-2009 Metamolecular, LLC
+ * Copyright (c) 2009-2013 Metamolecular, LLC
  *
  * http://metamolecular.com
  *
@@ -23,7 +23,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *
- * Copyright (C) 2009-2011  Syed Asad Rahman <asad@ebi.ac.uk>
+ * Copyright (C) 2009-2013  Syed Asad Rahman <asad@ebi.ac.uk>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -59,8 +59,8 @@ import org.openscience.cdk.interfaces.IAtomContainer;
  *
  * @cdk.module smsd
  * @cdk.githash
- * @author Richard L. Apodaca <rapodaca at metamolecular.com> 2007-2009,
- *         Syed Asad Rahman <asad@ebi.ac.uk> 2009-2011
+ * @author Richard L. Apodaca <rapodaca at metamolecular.com> 2009-2013,
+ *         Syed Asad Rahman <asad@ebi.ac.uk> 2009-2013
  */
 public class PathGraph {
 

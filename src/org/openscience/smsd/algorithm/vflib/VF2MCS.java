@@ -1,4 +1,4 @@
-/* Copyright (C) 2009-2011  Syed Asad Rahman <asad@ebi.ac.uk>
+/* Copyright (C) 2009-2013  Syed Asad Rahman <asad@ebi.ac.uk>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -153,7 +153,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
             /*
              * Sort biggest clique to smallest
              */
-            Collections.sort(cleanedMCSSeeds, new Map2Comparator());
+            Collections.sort(cleanedMCSSeeds, new Map1Comparator());
 
             /*
              * Extend the seeds using McGregor

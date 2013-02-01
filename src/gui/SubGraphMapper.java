@@ -1,6 +1,24 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+/* Copyright (C) 2009-2013  Syed Asad Rahman <asad@ebi.ac.uk>
+ *
+ * Contact: Syed Asad Rahman <asad@ebi.ac.uk>
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation; either version 2.1
+ * of the License, or (at your option) any later version.
+ * All we ask is that proper credit is given for our work, which includes
+ * - but is not limited to - adding the above copyright notice to the beginning
+ * of your source code files, and to any copyright notice that you may distribute
+ * with programs based on this work.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 package gui;
 
@@ -8,10 +26,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.Vector;
+import java.util.List;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -52,8 +69,8 @@ public class SubGraphMapper {
         return needle;
     }
 
-    public static Vector<List<Integer>> getNeedleList(List<Integer> matchedCore) {
-        Vector<List<Integer>> matchedList = new Vector<List<Integer>>();
+    public static List<List<Integer>> getNeedleList(List<Integer> matchedCore) {
+        List<List<Integer>> matchedList = new ArrayList<List<Integer>>();
         List<Integer> rList = new LinkedList<Integer>();
         List<Integer> pList = new LinkedList<Integer>();
 
@@ -69,8 +86,8 @@ public class SubGraphMapper {
         return matchedList;
     }
 
-    public static Vector<List<Integer>> getNeedleList(Map<Integer, Integer> matchedCore) {
-        Vector<List<Integer>> matchedList = new Vector<List<Integer>>();
+    public static List<List<Integer>> getNeedleList(Map<Integer, Integer> matchedCore) {
+        List<List<Integer>> matchedList = new ArrayList<List<Integer>>();
         List<Integer> rList = new LinkedList<Integer>();
         List<Integer> pList = new LinkedList<Integer>();
 
@@ -84,59 +101,6 @@ public class SubGraphMapper {
         return matchedList;
     }
 
-    /**
-     *
-     * @param ac1 Query Container
-     * @param ac2 Target Container
-     * @param mappings Atom mapping
-     * @return Bond mapping
-     */
-//    public static Map<IBond, IBond> makeBondMapsOfAtomMaps(IAtomContainer ac1, IAtomContainer ac2, TreeMap<Integer, Integer> mappings) {
-//
-//        HashMap<IBond, IBond> maps = new HashMap<IBond, IBond>();
-//
-//        for (IAtom atoms : ac1.atoms()) {
-//
-//            int ac1AtomNumber = ac1.getAtomNumber(atoms);
-//
-//            if (mappings.containsKey(ac1AtomNumber)) {
-//
-//                int ac2AtomNumber = mappings.get(ac1AtomNumber);
-//
-//                List<IAtom> connectedAtoms = ac1.getConnectedAtomsList(atoms);
-//
-//                for (IAtom cAtoms : connectedAtoms) {
-//                    int ac1ConnectedAtomNumber = ac1.getAtomNumber(cAtoms);
-//
-//                    if (mappings.containsKey(ac1ConnectedAtomNumber)) {
-//                        {
-//
-//                            int ac2ConnectedAtomNumber = mappings.get(ac1ConnectedAtomNumber);
-//
-//                            IBond ac1Bond = ac1.getBond(atoms, cAtoms);
-//
-//                            IBond ac2Bond = ac2.getBond(ac2.getAtom(ac2AtomNumber), ac2.getAtom(ac2ConnectedAtomNumber));
-//
-//                            if (ac2Bond == null) {
-//                                ac2Bond = ac2.getBond(ac2.getAtom(ac2ConnectedAtomNumber), ac2.getAtom(ac2AtomNumber));
-//
-//                            }
-//
-//                            if (ac1Bond != null && ac2Bond != null) {
-//                                maps.put(ac1Bond, ac2Bond);
-//                            }
-//
-//                        }
-//
-//
-//                    }
-//                }
-//            }
-//        }
-//
-//        return maps;
-//
-//    }
     public static Map<IBond, IBond> makeBondMapsOfAtomMaps(IAtomContainer ac1, IAtomContainer ac2, TreeMap<Integer, Integer> mappings) {
 
         HashMap<IBond, IBond> maps = new HashMap<IBond, IBond>();
@@ -177,21 +141,21 @@ public class SubGraphMapper {
     }
 
     /**
-     * This function will returns a subgraph extracted from the
-     * source or target molecules
+     * This function will returns a subgraph extracted from the source or target molecules
+     *
      * @param container source/target container
-     * @param matches   source/target mapping
+     * @param matches source/target mapping
      * @return mapped subgraph/substructure
      */
-    public IAtomContainer getMatchedSubgraph(IAtomContainer container, Collection<Integer> matches){
+    public IAtomContainer getMatchedSubgraph(IAtomContainer container, Collection<Integer> matches) {
         IAtomContainer needle = container.getBuilder().newInstance(IAtomContainer.class, container);
-        List<IAtom> atomListToBeRemoved=new ArrayList<IAtom>(matches.size());
-        for(Integer index:matches){
-            IAtom atomToBeRemoved= needle.getAtom(index.intValue());
+        List<IAtom> atomListToBeRemoved = new ArrayList<IAtom>(matches.size());
+        for (Integer index : matches) {
+            IAtom atomToBeRemoved = needle.getAtom(index.intValue());
             atomListToBeRemoved.add(atomToBeRemoved);
         }
 
-        for(IAtom removeAtom:atomListToBeRemoved){
+        for (IAtom removeAtom : atomListToBeRemoved) {
             needle.removeAtomAndConnectedElectronContainers(removeAtom);
         }
         atomListToBeRemoved.clear();

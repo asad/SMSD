@@ -1,4 +1,4 @@
-/* Copyright (C) 2006-2011  Syed Asad Rahman <asad@ebi.ac.uk>
+/* Copyright (C) 2009-2013  Syed Asad Rahman <asad@ebi.ac.uk>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -44,10 +44,9 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.smsd.tools.BondEnergies;
 
 /**
- * This class handles single atom mapping.
- * Either query and/or target molecule with single atom is mapped by this class.
- * @cdk.module smsd
- * @cdk.githash
+ * This class handles single atom mapping. Either query and/or target molecule with single atom is mapped by this class.
+ * @cdk.module smsd @cdk.githash
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.single.SingleMappingTest")
@@ -55,46 +54,46 @@ public class SingleMapping {
 
     private IAtomContainer source = null;
     private IAtomContainer target = null;
-    private List<Map<IAtom, IAtom>> mappings = null;
-    private Map<Integer, Double> connectedBondOrder = null;
+    private final Map<Integer, Double> connectedBondOrder;
 
     /**
      * Default
      */
     public SingleMapping() {
 //        System.out.println("Single Mapping called ");
+        connectedBondOrder = new TreeMap<Integer, Double>();
+
     }
 
     /**
      * Returns single mapping solutions.
+     *
      * @param source
      * @param target
      * @return Mappings
-     * @throws CDKException 
+     * @throws CDKException
      */
     @TestMethod("testGetOverLaps")
     protected synchronized List<Map<IAtom, IAtom>> getOverLaps(IAtomContainer source, IAtomContainer target) throws CDKException {
-
-        mappings = new ArrayList<Map<IAtom, IAtom>>();
-        connectedBondOrder = new TreeMap<Integer, Double>();
+        List<Map<IAtom, IAtom>> mappings = new ArrayList<Map<IAtom, IAtom>>();
         this.source = source;
         this.target = target;
 
         if (source.getAtomCount() == 1
                 || (source.getAtomCount() > 0 && source.getBondCount() == 0)) {
-            setSourceSingleAtomMap();
+            setSourceSingleAtomMap(mappings);
         }
         if (target.getAtomCount() == 1
                 || (target.getAtomCount() > 0 && target.getBondCount() == 0)) {
-            setTargetSingleAtomMap();
+            setTargetSingleAtomMap(mappings);
         }
 
-        postFilter();
-        return mappings;
+        return postFilter(mappings);
     }
 
     /**
      * Returns single mapping solutions.
+     *
      * @param source
      * @param target
      * @return Mappings
@@ -102,25 +101,23 @@ public class SingleMapping {
      */
     @TestMethod("testGetOverLaps")
     protected synchronized List<Map<IAtom, IAtom>> getOverLaps(IQueryAtomContainer source, IAtomContainer target) throws CDKException {
-        mappings = new ArrayList<Map<IAtom, IAtom>>();
-        connectedBondOrder = new TreeMap<Integer, Double>();
+        List<Map<IAtom, IAtom>> mappings = new ArrayList<Map<IAtom, IAtom>>();
         this.source = source;
         this.target = target;
 
         if (source.getAtomCount() == 1
                 || (source.getAtomCount() > 0 && source.getBondCount() == 0)) {
-            setSourceSingleAtomMap();
+            setSourceSingleAtomMap(mappings);
         }
         if (target.getAtomCount() == 1
                 || (target.getAtomCount() > 0 && target.getBondCount() == 0)) {
-            setTargetSingleAtomMap();
+            setTargetSingleAtomMap(mappings);
         }
 
-        postFilter();
-        return mappings;
+        return postFilter(mappings);
     }
 
-    private synchronized void setSourceSingleAtomMap() throws CDKException {
+    private synchronized void setSourceSingleAtomMap(List<Map<IAtom, IAtom>> mappings) throws CDKException {
         int counter = 0;
         BondEnergies be = BondEnergies.getInstance();
         for (IAtom sourceAtom : source.atoms()) {
@@ -166,7 +163,7 @@ public class SingleMapping {
         }
     }
 
-    private synchronized void setTargetSingleAtomMap() throws CDKException {
+    private synchronized void setTargetSingleAtomMap(List<Map<IAtom, IAtom>> mappings) throws CDKException {
         int counter = 0;
         BondEnergies be = BondEnergies.getInstance();
         for (IAtom targetAtom : target.atoms()) {
@@ -192,14 +189,14 @@ public class SingleMapping {
         }
     }
 
-    private synchronized void postFilter() {
+    private synchronized List<Map<IAtom, IAtom>> postFilter(List<Map<IAtom, IAtom>> mappings) {
         List<Map<IAtom, IAtom>> sortedMap = new ArrayList<Map<IAtom, IAtom>>();
-        connectedBondOrder = sortByValue(connectedBondOrder);
-        for (Integer key : connectedBondOrder.keySet()) {
+        Map<Integer, Double> sortedMapByValue = sortByValue(connectedBondOrder);
+        for (Integer key : sortedMapByValue.keySet()) {
             Map<IAtom, IAtom> mapToBeMoved = mappings.get(key);
             sortedMap.add(mapToBeMoved);
         }
-        mappings = sortedMap;
+        return sortedMap;
     }
 
     private <K, V> Map<K, V> sortByValue(Map<K, V> map) {

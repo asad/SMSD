@@ -1,3 +1,25 @@
+/* Copyright (C) 2009-2013  Syed Asad Rahman <asad@ebi.ac.uk>
+ *
+ * Contact: Syed Asad Rahman <asad@ebi.ac.uk>
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation; either version 2.1
+ * of the License, or (at your option) any later version.
+ * All we ask is that proper credit is given for our work, which includes
+ * - but is not limited to - adding the above copyright notice to the beginning
+ * of your source code files, and to any copyright notice that you may distribute
+ * with programs based on this work.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 package gui;
 
 import java.io.File;
@@ -80,30 +102,15 @@ public class SubstructureBenchMark {
         } else {
             return 0;
         }
-//
-//        IQuery query = null;
-//        IMapper mapper = null;
-//
-//        query = new QueryCompiler(queryMol, true).compile();
-//        mapper = new VFMapper(query);
-//        if (mapper.hasMap(target)) {
-//            return 1;
-//        }
-//
-//        return 0;
     }
 
     private static int getUITSolutionCount(IAtomContainer query, IAtomContainer target) throws CDKException {
-//       List bondMapping = UniversalIsomorphismTester.getSubgraphMaps(target, query);
-//       List<List<RMap>> sol = UniversalIsomorphismTester.makeAtomsMapsOfBondsMaps(bondMapping, target, query);
-
         UniversalIsomorphismTester uti = new UniversalIsomorphismTester();
         if (uti.isSubgraph(target, query)) {
             return 1;
         } else {
             return 0;
         }
-//       return sol.size();
     }
 
     /**
