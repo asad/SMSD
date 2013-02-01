@@ -233,7 +233,7 @@ public class SMSDFrame extends JFrame {
 
         jLabel5.setBackground(new java.awt.Color(255, 255, 255));
         jLabel5.setFont(new java.awt.Font("Lucida Grande", 1, 14)); // NOI18N
-        jLabel5.setText("Small GraphMolecule SubGraph Detector (Isomorphism)");
+        jLabel5.setText("Small Molecule Subgraph Detector (SMSD)");
 
         jTextArea1.setColumns(20);
         jTextArea1.setRows(20);
