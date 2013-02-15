@@ -305,9 +305,10 @@ public class IsomorphismTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/OCC=C");
         IAtomContainer query = sp.parseSmiles("CCCOCC(C)=C");
 
-        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, false, false);
+        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, true);
         smsd1.setChemFilters(true, true, true);
         Assert.assertEquals(1, smsd1.getAllAtomMapping().size());
+        Assert.assertEquals(5, smsd1.getAllAtomMapping().listIterator().next().getCount());
     }
 
     /**
