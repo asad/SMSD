@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License along with this program; if not, write to
  * the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-package tools.mcss;
+package tools;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -24,11 +24,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.junit.Assert;
+import org.junit.Test;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.smiles.SmilesGenerator;
 import org.openscience.cdk.smiles.SmilesParser;
+import tools.mcss.MCSS;
 
 /**
  *
@@ -42,6 +45,7 @@ public class TestMCSS {
     /**
      * @param args the command line arguments
      */
+    @Test
     public static void main(String[] args) {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         // TODO code application logic here
@@ -64,6 +68,7 @@ public class TestMCSS {
         MCSS mcss = new MCSS(jobs, 2);
         for (IAtomContainer ac : mcss.getCalculateMCSS()) {
             System.out.println("Result MCS " + getMCSSSmiles(ac));
+            Assert.assertEquals(31, ac.getAtomCount());
         }
         long endCalcTime = Calendar.getInstance().getTimeInMillis();
         System.out.println("Total time: " + (endCalcTime - startTime) + "ms");
@@ -74,6 +79,4 @@ public class TestMCSS {
         g.setUseAromaticityFlag(true);
         return g.createSMILES(ac);
     }
-
-    
 }
