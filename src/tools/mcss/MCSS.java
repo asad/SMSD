@@ -68,6 +68,9 @@ final public class MCSS {
                 }
             }
         }
+        if (mcssList.get(mcssList.size() - 1) == newMCSSList.get(0)) {
+            return new ArrayList<IAtomContainer>();
+        }
         return newMCSSList;
     }
 
@@ -124,6 +127,6 @@ final public class MCSS {
     }
 
     public synchronized String getTitle() {
-        return "Calculating Maximum Commmon Substrutures (MCSS)";
+        return "Calculating Maximum Commmon Substrutures (MCSS) using SMSD";
     }
 }
