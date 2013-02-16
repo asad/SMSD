@@ -72,7 +72,7 @@ public class TestMCSS {
             }
         }
         long startTime = Calendar.getInstance().getTimeInMillis();
-        MCSS mcss = new MCSS(jobs, JobType.MCS, 5);
+        MCSS mcss = new MCSS(jobs, JobType.MCS, 3);
         for (IAtomContainer ac : mcss.getCalculateMCSS()) {
             System.out.println("Result MCS " + getMCSSSmiles(ac));
             Assert.assertEquals(31, ac.getAtomCount());
