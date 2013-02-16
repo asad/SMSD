@@ -19,10 +19,7 @@
 package tools.mcss;
 
 import cmd.AtomContainerComparator;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -104,21 +101,22 @@ final public class MCSS {
                 newMCSSList.add(subList.get(0));
             }
         }
-
-        for (Future<List<IAtomContainer>> results : futureList) {
-
+        for (Iterator<Future<List<IAtomContainer>>> it = futureList.iterator(); it.hasNext();) {
+            Future<List<IAtomContainer>> results = it.next();
             if (results == null) {
                 continue;
             }
             try {
                 List<IAtomContainer> f = results.get();
-                if (f != null) {
-                    newMCSSList.addAll(results.get());
+                if (f != null && results != null) {
+                    List<IAtomContainer> matchResults = results.get();
+                    if (matchResults != null) {
+                        newMCSSList.addAll(matchResults);
+                    }
                 }
             } catch (Exception e) {
                 Logger.getLogger(MCSSThread.class.getName()).log(Level.WARNING, "Execution exception: {0}", e);
             }
-
         }
 
         threadPool.shutdown();

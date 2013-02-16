@@ -58,7 +58,7 @@ final public class MCSSThread implements Callable<List<IAtomContainer>> {
     @Override
     public synchronized List<IAtomContainer> call() {
 
-//        System.out.println("Calling MCSSTask " + taskNumber + " with " + mcssList.size() + " items");
+        System.out.println("Calling MCSSTask " + taskNumber + " with " + mcssList.size() + " items");
         List<IAtomContainer> resultsList = new ArrayList<IAtomContainer>();
         long startTime = Calendar.getInstance().getTimeInMillis();
         IAtomContainer querySeed = AtomContainerManipulator.removeHydrogens(mcssList.get(0));
@@ -69,14 +69,20 @@ final public class MCSSThread implements Callable<List<IAtomContainer>> {
             for (int index = 1; index < mcssList.size(); index++) {
                 IAtomContainer target = AtomContainerManipulator.removeHydrogens(mcssList.get(index));
                 Collection<Fragment> fragmentsFomMCS;
-                if (this.jobType == JobType.MCS) {
+                if (this.jobType.equals(JobType.MCS)) {
                     Isomorphism comparison = new Isomorphism(querySeed, target, Algorithm.DEFAULT, true, true);
                     comparison.setChemFilters(true, true, true);
                     fragmentsFomMCS = getMCSS(comparison);
+
+//                    System.out.println("comparison for task " + taskNumber + " has " + fragmentsFomMCS.size()
+//                            + " unique matches of size " + comparison.getFirstAtomMapping().getCount());
                 } else {
                     Substructure comparison = new Substructure(querySeed, target, true, true, false);
                     comparison.setChemFilters(true, true, true);
                     fragmentsFomMCS = getMCSS(comparison);
+
+//                    System.out.println("comparison for task " + taskNumber + " has " + fragmentsFomMCS.size()
+//                            + " unique matches of size " + comparison.getFirstAtomMapping().getCount());
                 }
 //                System.out.println("MCSS for task " + taskNumber + " has " + querySeed.getAtomCount() + " atoms, and " + querySeed.getBondCount() + " bonds");
 //                System.out.println("Target for task " + taskNumber + " has " + target.getAtomCount() + " atoms, and " + target.getBondCount() + " bonds");
@@ -87,17 +93,16 @@ final public class MCSSThread implements Callable<List<IAtomContainer>> {
                 calcTime = endCalcTime;
 
                 if (fragmentsFomMCS == null || fragmentsFomMCS.isEmpty()) {
+                    querySeed = null;
                     break;
                 }
-//                System.out.println("comparison for task " + taskNumber + " has " + fragmentsFomMCS.size()
-//                        + " unique matches of size " + comparison.getFirstAtomMapping().getCount());
                 querySeed = fragmentsFomMCS.iterator().next().getContainer();
             }
 
         } catch (Exception e) {
             Logger.getLogger(MCSSThread.class.getName()).log(Level.SEVERE, null, e);
         }
-        if (resultsList != null) {
+        if (resultsList != null && querySeed != null) {
             resultsList.add(querySeed);
         }
 
