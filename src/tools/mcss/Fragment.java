@@ -34,18 +34,14 @@ import org.openscience.cdk.interfaces.IAtomContainer;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
  */
-public class Fragment implements Comparable<Fragment> {
+final public class Fragment implements Comparable<Fragment> {
 
-    public IAtomContainer getContainer() {
+    public synchronized IAtomContainer getContainer() {
         return container;
-    }
-
-    public void setContainer(IAtomContainer container) {
-        this.container = container;
     }
     private BitSet fingerprint;
     private long fingerprintAsLong;
-    private IAtomContainer container;
+    private final IAtomContainer container;
 
     public Fragment(IAtomContainer container) throws CDKException {
         if (container == null) {
@@ -58,7 +54,7 @@ public class Fragment implements Comparable<Fragment> {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public synchronized boolean equals(Object obj) {
         if (obj == null) {
             return false;
         }
@@ -66,17 +62,23 @@ public class Fragment implements Comparable<Fragment> {
             return false;
         }
         final Fragment other = (Fragment) obj;
+
+        if (this.container != other.container && (this.container == null || (this.container.getAtomCount() != other.container.getAtomCount()))) {
+            return false;
+        }
+
         if (this.fingerprint != other.fingerprint && (this.fingerprint == null || !this.fingerprint.equals(other.fingerprint))) {
             return false;
         }
         if (this.fingerprintAsLong != other.fingerprintAsLong) {
             return false;
         }
+
         return true;
     }
 
     @Override
-    public int hashCode() {
+    public synchronized int hashCode() {
         int hash = 3;
         hash = 47 * hash + (this.fingerprint != null ? this.fingerprint.hashCode() : 0);
         hash = 47 * hash + (int) (this.fingerprintAsLong ^ (this.fingerprintAsLong >>> 32));
@@ -84,7 +86,7 @@ public class Fragment implements Comparable<Fragment> {
     }
 
     @Override
-    public int compareTo(Fragment t) {
+    public synchronized int compareTo(Fragment t) {
 
         if (this.fingerprintAsLong == t.fingerprintAsLong) {
             return 0;
@@ -95,7 +97,7 @@ public class Fragment implements Comparable<Fragment> {
         }
     }
 
-    private long convert(BitSet bits) {
+    private synchronized long convert(BitSet bits) {
         long value = 0L;
         if (bits == null || bits.isEmpty()) {
             return value;

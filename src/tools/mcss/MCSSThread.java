@@ -27,7 +27,9 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.smiles.SmilesGenerator;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.AtomAtomMapping;
+import org.openscience.smsd.BaseMapping;
 import org.openscience.smsd.Isomorphism;
+import org.openscience.smsd.Substructure;
 import org.openscience.smsd.interfaces.Algorithm;
 
 /**
@@ -35,18 +37,21 @@ import org.openscience.smsd.interfaces.Algorithm;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
  */
-public class MCSSThread implements Callable<List<IAtomContainer>> {
+final public class MCSSThread implements Callable<List<IAtomContainer>> {
 
-    private List<IAtomContainer> mcssList;
+    private final List<IAtomContainer> mcssList;
+    private final JobType jobType;
     private int taskNumber = 0;
 
     /**
      *
      * @param mcssList
+     * @param jobType MCS/Substructure
      * @param taskNumber
      */
-    public MCSSThread(List<IAtomContainer> mcssList, int taskNumber) {
+    public MCSSThread(List<IAtomContainer> mcssList, JobType jobType, int taskNumber) {
         this.mcssList = mcssList;
+        this.jobType = jobType;
         this.taskNumber = taskNumber;
     }
 
@@ -63,12 +68,20 @@ public class MCSSThread implements Callable<List<IAtomContainer>> {
         try {
             for (int index = 1; index < mcssList.size(); index++) {
                 IAtomContainer target = AtomContainerManipulator.removeHydrogens(mcssList.get(index));
-                Isomorphism comparison = new Isomorphism(querySeed, target, Algorithm.DEFAULT, true, true);
-                comparison.setChemFilters(true, true, true);
+                Collection<Fragment> fragmentsFomMCS;
+                if (this.jobType == JobType.MCS) {
+                    Isomorphism comparison = new Isomorphism(querySeed, target, Algorithm.DEFAULT, true, true);
+                    comparison.setChemFilters(true, true, true);
+                    fragmentsFomMCS = getMCSS(comparison);
+                } else {
+                    Substructure comparison = new Substructure(querySeed, target, true, true, false);
+                    comparison.setChemFilters(true, true, true);
+                    fragmentsFomMCS = getMCSS(comparison);
+                }
 //                System.out.println("MCSS for task " + taskNumber + " has " + querySeed.getAtomCount() + " atoms, and " + querySeed.getBondCount() + " bonds");
 //                System.out.println("Target for task " + taskNumber + " has " + target.getAtomCount() + " atoms, and " + target.getBondCount() + " bonds");
 
-                Collection<Fragment> fragmentsFomMCS = getMCSS(comparison);
+
                 long endCalcTime = Calendar.getInstance().getTimeInMillis();
 //                System.out.println("Task " + taskNumber + " index " + index + " took " + (endCalcTime - calcTime) + "ms");
                 calcTime = endCalcTime;
@@ -76,7 +89,6 @@ public class MCSSThread implements Callable<List<IAtomContainer>> {
                 if (querySeed == null || querySeed.isEmpty()) {
                     break;
                 }
-
 //                System.out.println("comparison for task " + taskNumber + " has " + fragmentsFomMCS.size()
 //                        + " unique matches of size " + comparison.getFirstAtomMapping().getCount());
                 querySeed = fragmentsFomMCS.iterator().next().getContainer();
@@ -95,7 +107,7 @@ public class MCSSThread implements Callable<List<IAtomContainer>> {
         return resultsList;
     }
 
-    private synchronized Collection<Fragment> getMCSS(Isomorphism comparison) {
+    private synchronized Collection<Fragment> getMCSS(BaseMapping comparison) {
         Set<Fragment> matchList = new HashSet<Fragment>();
         // System.out.println("Found "+comparison.getAllAtomMapping().size()+" mappings");
         for (AtomAtomMapping mapping : comparison.getAllAtomMapping()) {
@@ -117,7 +129,13 @@ public class MCSSThread implements Callable<List<IAtomContainer>> {
         return matchList;
     }
 
-    public static String getMCSSSmiles(IAtomContainer ac) {
+    /**
+     * Return SMILES
+     *
+     * @param ac
+     * @return
+     */
+    public synchronized String getMCSSSmiles(IAtomContainer ac) {
         SmilesGenerator g = new SmilesGenerator();
         g.setUseAromaticityFlag(true);
         return g.createSMILES(ac);

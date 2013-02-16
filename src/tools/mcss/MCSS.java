@@ -35,24 +35,24 @@ import org.openscience.cdk.interfaces.IAtomContainer;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
  */
-public class MCSS {
+final public class MCSS {
 
     private final List<IAtomContainer> calculateMCSS;
 
-    public MCSS(List<IAtomContainer> jobList, int numberOfThreads) {
+    public MCSS(List<IAtomContainer> jobList, JobType jobType, int numberOfThreads) {
         int threadsAvailable = Runtime.getRuntime().availableProcessors() - 1;
         if (numberOfThreads > 0) {
             threadsAvailable = numberOfThreads;
         }
         Comparator<IAtomContainer> comparator = new AtomContainerComparator();
         Collections.sort(jobList, comparator);
-        calculateMCSS = calculateMCSS(jobList, threadsAvailable);
+        calculateMCSS = calculateMCSS(jobList, jobType, threadsAvailable);
     }
 
-    private List<IAtomContainer> calculateMCSS(List<IAtomContainer> mcssList, int nThreads) {
+    private synchronized List<IAtomContainer> calculateMCSS(List<IAtomContainer> mcssList, JobType jobType, int nThreads) {
         List<IAtomContainer> newMCSSList = Collections.synchronizedList(new ArrayList<IAtomContainer>(nThreads));
         if (nThreads == 1) {
-            MCSSThread task = new MCSSThread(mcssList, 1);
+            MCSSThread task = new MCSSThread(mcssList, jobType, 1);
             List<IAtomContainer> results = task.call();
             if (results != null) {
                 newMCSSList.addAll(results);
@@ -62,12 +62,12 @@ public class MCSS {
             /*
              * Calling recursive MCS
              */
-            newMCSSList = submitMultiThreadedJob(mcssList, nThreads);
+            newMCSSList = submitMultiThreadedJob(mcssList, jobType, nThreads);
             while (newMCSSList.size() > 1) {
                 if (newMCSSList.size() > 2) {
-                    newMCSSList = submitMultiThreadedJob(newMCSSList, nThreads);
+                    newMCSSList = submitMultiThreadedJob(newMCSSList, jobType, nThreads);
                 } else {
-                    newMCSSList = submitMultiThreadedJob(newMCSSList, 1);
+                    newMCSSList = submitMultiThreadedJob(newMCSSList, jobType, 1);
                 }
             }
         }
@@ -77,11 +77,11 @@ public class MCSS {
     /**
      * @return the calculateMCSS
      */
-    public List<IAtomContainer> getCalculateMCSS() {
+    public synchronized List<IAtomContainer> getCalculateMCSS() {
         return Collections.unmodifiableList(calculateMCSS);
     }
 
-    private List<IAtomContainer> submitMultiThreadedJob(List<IAtomContainer> mcssList, int nThreads) {
+    private synchronized List<IAtomContainer> submitMultiThreadedJob(List<IAtomContainer> mcssList, JobType jobType, int nThreads) {
         int taskNumber = 1;
         List<IAtomContainer> newMCSSList = Collections.synchronizedList(new ArrayList<IAtomContainer>(nThreads));
         List<Future<List<IAtomContainer>>> futureList = new ArrayList<Future<List<IAtomContainer>>>();
@@ -97,7 +97,7 @@ public class MCSS {
             }
             List<IAtomContainer> subList = new ArrayList<IAtomContainer>(mcssList.subList(i, endPoint));
             if (subList.size() > 1) {
-                MCSSThread mcssJobThread = new MCSSThread(subList, taskNumber++);
+                MCSSThread mcssJobThread = new MCSSThread(subList, jobType, taskNumber++);
                 Future<List<IAtomContainer>> callMCSSThread = threadPool.submit(mcssJobThread);
                 futureList.add(callMCSSThread);
             } else {
@@ -125,7 +125,7 @@ public class MCSS {
         return newMCSSList;
     }
 
-    public String getTitle() {
+    public synchronized String getTitle() {
         return "Calculating Maximum Commmon Substrutures (MCSS)";
     }
 }
