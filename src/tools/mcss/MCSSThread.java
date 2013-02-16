@@ -86,7 +86,7 @@ final public class MCSSThread implements Callable<List<IAtomContainer>> {
 //                System.out.println("Task " + taskNumber + " index " + index + " took " + (endCalcTime - calcTime) + "ms");
                 calcTime = endCalcTime;
 
-                if (querySeed == null || querySeed.isEmpty()) {
+                if (fragmentsFomMCS == null || fragmentsFomMCS.isEmpty()) {
                     break;
                 }
 //                System.out.println("comparison for task " + taskNumber + " has " + fragmentsFomMCS.size()
