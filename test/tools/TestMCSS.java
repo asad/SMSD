@@ -31,8 +31,8 @@ import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.smiles.SmilesGenerator;
 import org.openscience.cdk.smiles.SmilesParser;
-import tools.mcss.JobType;
-import tools.mcss.MCSS;
+import org.openscience.smsd.mcss.JobType;
+import org.openscience.smsd.mcss.MCSS;
 
 /**
  *
@@ -41,21 +41,27 @@ import tools.mcss.MCSS;
  */
 public class TestMCSS {
 
-    static HashMap<String, String> map = new HashMap<String, String>();
-
     /**
      * @param args the command line arguments
      */
     @Test
     public static void main(String[] args) {
+        HashMap<String, String> map = new HashMap<String, String>();
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         // TODO code application logic here
-        map.put("30331701", "Cc1ccc(C2N(C(c3c(Cl)cccc3)=O)c(c4N=C(C2=C5O)CC(c6c(Cl)cccc6)C5)cccc4)cc1");
-        map.put("4170207", "CCC(N1C(c2ccc(F)cc2)C(C3=Nc(c14)cccc4)=C(O)CC(c5ccc(C(C)(C)C)cc5)C3)=O");
-        map.put("6368123", "CC(N1C(c2ccc(F)cc2)C(C3=Nc(c14)cccc4)=C(O)CC(c5ccc(Cl)cc5)C3)=O");
-        map.put("MCS", "O=C(N4c5ccccc5(N=C2C(=C(O)CC(c1ccccc1)C2)C4(c3ccccc3)))C");
-        map.put("MMV011436", "CC(c1ccc(C2CC(C3=C(O)C2)=Nc(c4N(C(c5c(Cl)cccc5)=O)C3c6ccc(F)cc6)cccc4)cc1)(C)C");
-        map.put("4196500", "CC(c1ccc(C2CC(C3=C(O)C2)=Nc(c4N(C(c5c(Cl)cccc5)=O)C3c6ccc(F)cc6)cccc4)cc1)(C)C");
+
+        map.put(
+                "30331701", "Cc1ccc(C2N(C(c3c(Cl)cccc3)=O)c(c4N=C(C2=C5O)CC(c6c(Cl)cccc6)C5)cccc4)cc1");
+        map.put(
+                "4170207", "CCC(N1C(c2ccc(F)cc2)C(C3=Nc(c14)cccc4)=C(O)CC(c5ccc(C(C)(C)C)cc5)C3)=O");
+        map.put(
+                "6368123", "CC(N1C(c2ccc(F)cc2)C(C3=Nc(c14)cccc4)=C(O)CC(c5ccc(Cl)cc5)C3)=O");
+        map.put(
+                "MCS", "O=C(N4c5ccccc5(N=C2C(=C(O)CC(c1ccccc1)C2)C4(c3ccccc3)))C");
+        map.put(
+                "MMV011436", "CC(c1ccc(C2CC(C3=C(O)C2)=Nc(c4N(C(c5c(Cl)cccc5)=O)C3c6ccc(F)cc6)cccc4)cc1)(C)C");
+        map.put(
+                "4196500", "CC(c1ccc(C2CC(C3=C(O)C2)=Nc(c4N(C(c5c(Cl)cccc5)=O)C3c6ccc(F)cc6)cccc4)cc1)(C)C");
 
         List<IAtomContainer> jobs = new ArrayList<IAtomContainer>();
         for (String s : map.values()) {
@@ -65,15 +71,16 @@ public class TestMCSS {
                 Logger.getLogger(TestMCSS.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-
         long startTime = Calendar.getInstance().getTimeInMillis();
-        MCSS mcss = new MCSS(jobs, JobType.Substructure, 2);
+        MCSS mcss = new MCSS(jobs, JobType.MCS, 5);
         for (IAtomContainer ac : mcss.getCalculateMCSS()) {
             System.out.println("Result MCS " + getMCSSSmiles(ac));
             Assert.assertEquals(31, ac.getAtomCount());
         }
         long endCalcTime = Calendar.getInstance().getTimeInMillis();
-        System.out.println("Total time: " + (endCalcTime - startTime) + "ms");
+
+        System.out.println(
+                "Total time: " + (endCalcTime - startTime) + "ms");
     }
 
     public static String getMCSSSmiles(IAtomContainer ac) {
