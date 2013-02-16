@@ -41,7 +41,7 @@ final public class MCSSThread implements Callable<List<IAtomContainer>> {
 
     private final List<IAtomContainer> mcssList;
     private final JobType jobType;
-    private int taskNumber = 0;
+    private int taskNumber;
 
     /**
      *
@@ -69,21 +69,20 @@ final public class MCSSThread implements Callable<List<IAtomContainer>> {
             for (int index = 1; index < mcssList.size(); index++) {
                 IAtomContainer target = AtomContainerManipulator.removeHydrogens(mcssList.get(index));
                 Collection<Fragment> fragmentsFomMCS;
+                BaseMapping comparison;
                 if (this.jobType.equals(JobType.MCS)) {
-                    Isomorphism comparison = new Isomorphism(querySeed, target, Algorithm.DEFAULT, true, true);
+                    comparison = new Isomorphism(querySeed, target, Algorithm.DEFAULT, true, true);
                     comparison.setChemFilters(true, true, true);
                     fragmentsFomMCS = getMCSS(comparison);
                     querySeed = null;
-//                    System.out.println("comparison for task " + taskNumber + " has " + fragmentsFomMCS.size()
-//                            + " unique matches of size " + comparison.getFirstAtomMapping().getCount());
                 } else {
-                    Substructure comparison = new Substructure(querySeed, target, true, true, false);
+                    comparison = new Substructure(querySeed, target, true, true, false);
                     comparison.setChemFilters(true, true, true);
                     fragmentsFomMCS = getMCSS(comparison);
                     querySeed = null;
-//                    System.out.println("comparison for task " + taskNumber + " has " + fragmentsFomMCS.size()
-//                            + " unique matches of size " + comparison.getFirstAtomMapping().getCount());
                 }
+//                System.out.println("comparison for task " + taskNumber + " has " + fragmentsFomMCS.size()
+//                        + " unique matches of size " + comparison.getFirstAtomMapping().getCount());
 //                System.out.println("MCSS for task " + taskNumber + " has " + querySeed.getAtomCount() + " atoms, and " + querySeed.getBondCount() + " bonds");
 //                System.out.println("Target for task " + taskNumber + " has " + target.getAtomCount() + " atoms, and " + target.getBondCount() + " bonds");
 
@@ -113,9 +112,7 @@ final public class MCSSThread implements Callable<List<IAtomContainer>> {
 
     private synchronized Collection<Fragment> getMCSS(BaseMapping comparison) {
         Set<Fragment> matchList = new HashSet<Fragment>();
-        // System.out.println("Found "+comparison.getAllAtomMapping().size()+" mappings");
         for (AtomAtomMapping mapping : comparison.getAllAtomMapping()) {
-            //IAtomContainer match = getMatchedSubgraph(mol1, mapping.getMappings());
             IAtomContainer match;
             try {
                 match = mapping.getCommonFragmentInQuery();
