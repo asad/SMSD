@@ -41,8 +41,14 @@ final public class MCSS {
         if (numberOfThreads > 0) {
             threadsAvailable = numberOfThreads;
         }
+        /*
+         * Sort the molecules in the ascending order of atom size and atom type
+         */
         Comparator<IAtomContainer> comparator = new AtomContainerComparator();
         Collections.sort(jobList, comparator);
+        /*
+         * Call the MCS
+         */
         calculateMCSS = calculateMCSS(jobList, jobType, threadsAvailable);
     }
 
