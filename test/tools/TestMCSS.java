@@ -31,6 +31,7 @@ import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.smiles.SmilesGenerator;
 import org.openscience.cdk.smiles.SmilesParser;
+import tools.mcss.JobType;
 import tools.mcss.MCSS;
 
 /**
@@ -65,7 +66,7 @@ public class TestMCSS {
         }
 
         long startTime = Calendar.getInstance().getTimeInMillis();
-        MCSS mcss = new MCSS(jobs, 2);
+        MCSS mcss = new MCSS(jobs, JobType.MCS, 2);
         for (IAtomContainer ac : mcss.getCalculateMCSS()) {
             System.out.println("Result MCS " + getMCSSSmiles(ac));
             Assert.assertEquals(31, ac.getAtomCount());
