@@ -47,6 +47,7 @@ import org.openscience.smsd.BaseMapping;
 import org.openscience.smsd.Isomorphism;
 import org.openscience.smsd.Substructure;
 import org.openscience.smsd.interfaces.Algorithm;
+import org.openscience.smsd.tools.AtomContainerComparator;
 
 /**
  *

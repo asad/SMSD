@@ -47,14 +47,16 @@ import org.openscience.smsd.ring.HanserRingFinder;
 /**
  * Filter on stereo and bond matches.
  *
- * @author Syed Asad Rahman <asad@ebi.subGraph.uk> @cdk.module smsd
+ * @author Syed Asad Rahman <asad@ebi.subGraph.uk>
+ * @cdk.module smsd
  */
-public final class StereoFilter extends BaseFilter implements IChemicalFilter<Double> {
+public final class StereoFilter extends Sotter implements IChemicalFilter<Double> {
 
     private final List<Double> stereoScore;
+    private final ChemicalFilters chemfilter;
 
-    public StereoFilter(IAtomContainer rMol, IAtomContainer pMol) {
-        super(rMol, pMol);
+    StereoFilter(ChemicalFilters chemfilter) {
+        this.chemfilter = chemfilter;
         stereoScore = Collections.synchronizedList(new ArrayList<Double>());
     }
 
@@ -105,16 +107,16 @@ public final class StereoFilter extends BaseFilter implements IChemicalFilter<Do
                 double score = 0.0;
                 //            System.out.println("\nStart score " + score);
                 AtomAtomMapping atomMapMCS = allStereoAtomMCS.get(Key);
-                double atomScore = getAtomScore(score, atomMapMCS, rMol, pMol);
-                Map<IBond, IBond> bondMaps = makeBondMapsOfAtomMaps(rMol, pMol, atomMapMCS);
+                double atomScore = getAtomScore(score, atomMapMCS, chemfilter.getQuery(), chemfilter.getTarget());
+                Map<IBond, IBond> bondMaps = makeBondMapsOfAtomMaps(chemfilter.getQuery(), chemfilter.getTarget(), atomMapMCS);
                 double ringScore = 0.0;
-                if (rMol.getBondCount() > 1
-                        && pMol.getBondCount() > 1
-                        && !(rMol instanceof IQueryAtomContainer
-                        || pMol instanceof IQueryAtomContainer)) {
-                    List<IAtomContainer> subgraphRList = getMappedFragment(rMol, atomMapMCS.getMappings().keySet());
+                if (chemfilter.getQuery().getBondCount() > 1
+                        && chemfilter.getTarget().getBondCount() > 1
+                        && !(chemfilter.getQuery() instanceof IQueryAtomContainer
+                        || chemfilter.getTarget() instanceof IQueryAtomContainer)) {
+                    List<IAtomContainer> subgraphRList = getMappedFragment(chemfilter.getQuery(), atomMapMCS.getMappings().keySet());
                     double rscore = getRingMatchScore(subgraphRList);
-                    List<IAtomContainer> subgraphPList = getMappedFragment(pMol, atomMapMCS.getMappings().values());
+                    List<IAtomContainer> subgraphPList = getMappedFragment(chemfilter.getTarget(), atomMapMCS.getMappings().values());
                     double pscore = getRingMatchScore(subgraphPList);
                     ringScore = rscore + pscore;
                 }

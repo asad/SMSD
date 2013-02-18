@@ -30,7 +30,6 @@ import java.util.Map;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
-import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.smsd.AtomAtomMapping;
@@ -38,18 +37,20 @@ import org.openscience.smsd.tools.BondEnergies;
 
 /**
  * Filter based on energies.
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  * @cdk.module smsd
  */
-public final class EnergyFilter extends BaseFilter implements IChemicalFilter<Double> {
+public final class EnergyFilter extends Sotter implements IChemicalFilter<Double> {
 
-//    public static final Double MAX_ENERGY = Double.MAX_VALUE;
-    public final static Double MAX_ENERGY = 99999999.99;
+    public static final Double MAX_ENERGY = Double.MAX_VALUE;
     private final List<Double> bEnergies;
+    private final ChemicalFilters chemfilter;
 
-    public EnergyFilter(IAtomContainer rMol, IAtomContainer pMol) {
-        super(rMol, pMol);
+    EnergyFilter(ChemicalFilters chemfilter) {
+        this.chemfilter = chemfilter;
         bEnergies = Collections.synchronizedList(new ArrayList<Double>());
+
     }
 
     @Override
@@ -97,13 +98,13 @@ public final class EnergyFilter extends BaseFilter implements IChemicalFilter<Do
         }
     }
 
-    private synchronized Double getMappedMoleculeEnergies(AtomAtomMapping MCSAtomSolution) throws CDKException {
+    private synchronized Double getMappedMoleculeEnergies(AtomAtomMapping mcsAtomSolution) throws CDKException {
 
 //      System.out.println("\nSort By Energies");
         double totalBondEnergy = -9999.0;
 
-        IAtomContainer educt = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class, rMol);
-        IAtomContainer product = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class, pMol);
+        IAtomContainer educt = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class, chemfilter.getQuery());
+        IAtomContainer product = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class, chemfilter.getTarget());
 
         for (int i = 0; i < educt.getAtomCount(); i++) {
             educt.getAtom(i).setFlag(0, false);
@@ -113,9 +114,9 @@ public final class EnergyFilter extends BaseFilter implements IChemicalFilter<Do
             product.getAtom(i).setFlag(0, false);
         }
 
-        if (MCSAtomSolution != null) {
-            for (IAtom eAtom : MCSAtomSolution.getMappings().keySet()) {
-                IAtom pAtom = MCSAtomSolution.getMappings().get(eAtom);
+        if (mcsAtomSolution != null) {
+            for (IAtom eAtom : mcsAtomSolution.getMappings().keySet()) {
+                IAtom pAtom = mcsAtomSolution.getMappings().get(eAtom);
                 eAtom.setFlag(0, true);
                 pAtom.setFlag(0, true);
             }

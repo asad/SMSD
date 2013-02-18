@@ -20,7 +20,7 @@
  * License along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-package cmd;
+package org.openscience.smsd.tools;
 
 import java.util.Comparator;
 import org.openscience.cdk.annotations.TestMethod;

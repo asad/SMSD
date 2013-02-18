@@ -33,8 +33,6 @@ import org.openscience.cdk.graph.ConnectivityChecker;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IAtomContainerSet;
-import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.smsd.AtomAtomMapping;
 
 /**
@@ -43,12 +41,13 @@ import org.openscience.smsd.AtomAtomMapping;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  * @cdk.module smsd
  */
-public final class FragmentFilter extends BaseFilter implements IChemicalFilter<Integer> {
+public final class FragmentFilter extends Sotter implements IChemicalFilter<Integer> {
 
     private final List<Integer> fragmentSize;
+    private final ChemicalFilters chemfilter;
 
-    public FragmentFilter(IAtomContainer rMol, IAtomContainer pMol) {
-        super(rMol, pMol);
+    FragmentFilter(ChemicalFilters chemfilter) {
+        this.chemfilter = chemfilter;
         fragmentSize = new ArrayList<Integer>();
     }
 
@@ -96,8 +95,8 @@ public final class FragmentFilter extends BaseFilter implements IChemicalFilter<
 
     private synchronized int getMappedMoleculeFragmentSize(AtomAtomMapping mcsAtomSolution) {
 
-        IAtomContainer Educt = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class, rMol);
-        IAtomContainer product = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class, pMol);
+        IAtomContainer Educt = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class, chemfilter.getQuery());
+        IAtomContainer product = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class, chemfilter.getTarget());
 
 
         if (mcsAtomSolution != null) {

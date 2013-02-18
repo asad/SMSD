@@ -44,14 +44,12 @@ import org.openscience.smsd.AtomAtomMapping;
  *
  */
 @TestClass("org.openscience.cdk.smsd.filters.ChemicalFiltersTest")
-public class ChemicalFilters {
+public class ChemicalFilters extends BaseFilter {
 
     private final List<AtomAtomMapping> allAtomMCS;
-    private final IChemicalFilter<Double> energyFilter;
-    private final IChemicalFilter<Integer> fragmentFilter;
-    private final IChemicalFilter<Double> stereoFilter;
-    private final IAtomContainer mol1;
-    private final IAtomContainer mol2;
+    private IChemicalFilter<Double> energyFilter;
+    private IChemicalFilter<Integer> fragmentFilter;
+    private IChemicalFilter<Double> stereoFilter;
 
     /**
      *
@@ -61,12 +59,11 @@ public class ChemicalFilters {
     public ChemicalFilters(
             IAtomContainer sourceMol,
             IAtomContainer targetMol) {
-        this.mol1 = sourceMol;
-        this.mol2 = targetMol;
-        this.energyFilter = new EnergyFilter(sourceMol, targetMol);
-        this.fragmentFilter = new FragmentFilter(sourceMol, targetMol);
-        this.stereoFilter = new StereoFilter(sourceMol, targetMol);
+        super(sourceMol, targetMol);
         this.allAtomMCS = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
+        this.stereoFilter = new StereoFilter(this);
+        this.fragmentFilter = new FragmentFilter(this);
+        this.energyFilter = new EnergyFilter(this);
     }
 
     private synchronized void clear(
@@ -93,7 +90,6 @@ public class ChemicalFilters {
         Map<Integer, Double> energySelectionMap = Collections.synchronizedSortedMap(new TreeMap<Integer, Double>());
 
         initializeMaps(allEnergyAtomMCS, stereoScoreMap, fragmentScoreMap, energySelectionMap);
-
         double lowestEnergyScore = energyFilter.sortResults(allEnergyAtomMCS, energySelectionMap);
         clear();
 
@@ -176,7 +172,6 @@ public class ChemicalFilters {
                 stereoScoreMap,
                 fragmentScoreMap,
                 energyScoreMap);
-
         double highestStereoScore = stereoFilter.sortResults(allStereoAtomMCS, stereoScoreMap);
 
         if (highestStereoScore != 0) {
@@ -297,19 +292,5 @@ public class ChemicalFilters {
      */
     public synchronized List<AtomAtomMapping> getMCSList() {
         return Collections.synchronizedList(allAtomMCS);
-    }
-
-    /**
-     * @return the mol1
-     */
-    public synchronized IAtomContainer getQuery() {
-        return mol1;
-    }
-
-    /**
-     * @return the mol2
-     */
-    public synchronized IAtomContainer getTarget() {
-        return mol2;
     }
 }

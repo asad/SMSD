@@ -22,14 +22,6 @@
  */
 package org.openscience.smsd.filters;
 
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-
-import org.openscience.cdk.annotations.TestMethod;
 import org.openscience.cdk.interfaces.IAtomContainer;
 
 /**
@@ -39,57 +31,30 @@ import org.openscience.cdk.interfaces.IAtomContainer;
  */
 public class BaseFilter {
 
-    protected IAtomContainer rMol;
-    protected IAtomContainer pMol;
+    private final IAtomContainer mol1;
+    private final IAtomContainer mol2;
 
     /**
-     * 
-     * @param rMol
-     * @param pMol
+     *
+     * @param sourceMol
+     * @param targetMol
      */
-    public BaseFilter(IAtomContainer rMol, IAtomContainer pMol) {
-        this.rMol = rMol;
-        this.pMol = pMol;
+    public BaseFilter(IAtomContainer sourceMol, IAtomContainer targetMol) {
+        this.mol1 = sourceMol;
+        this.mol2 = targetMol;
     }
 
-    @TestMethod("testSortMapByValueInAscendingOrder")
-    public synchronized static Map<Integer, Double> sortMapByValueInAscendingOrder(Map<Integer, Double> map) {
-        List<Map.Entry<Integer, Double>> list = new LinkedList<Map.Entry<Integer, Double>>(map.entrySet());
-        // Sort the list using an annonymous inner class implementing Comparator for the compare method
-        Collections.sort(list, new Comparator<Map.Entry<Integer, Double>>() {
-
-            @Override
-            public int compare(Map.Entry<Integer, Double> entry, Map.Entry<Integer, Double> entry1) {
-                // Return 0 for eAtom match, -1 for less than and +1 for more then (Aceending Order Sort)
-                return (entry.getValue().equals(entry1.getValue()) ? 0 : (entry.getValue() > entry1.getValue() ? 1 : -1));
-            }
-        });
-        // logger.info(list);
-        Map<Integer, Double> result = new LinkedHashMap<Integer, Double>();
-        for (Map.Entry<Integer, Double> entry : list) {
-            result.put(entry.getKey(), entry.getValue());
-        }
-        return result;
+    /**
+     * @return the mol1
+     */
+    public synchronized IAtomContainer getQuery() {
+        return mol1;
     }
 
-    @TestMethod("testSortMapByValueInDescendingOrder")
-    public synchronized static Map<Integer, Double> sortMapByValueInDescendingOrder(Map<Integer, Double> map) {
-        List<Map.Entry<Integer, Double>> list = new LinkedList<Map.Entry<Integer, Double>>(map.entrySet());
-        // Sort the list using an annonymous inner class implementing Comparator for the compare method
-        Collections.sort(list, new Comparator<Map.Entry<Integer, Double>>() {
-
-            @Override
-            public int compare(Map.Entry<Integer, Double> entry, Map.Entry<Integer, Double> entry1) {
-                // Return 0 for eAtom match, -1 for less than and +1 for more then (Decending Order Sort)
-                return (entry.getValue().equals(entry1.getValue()) ? 0
-                        : (entry.getValue() < entry1.getValue() ? 1 : -1));
-            }
-        });
-        // logger.info(list);
-        Map<Integer, Double> result = new LinkedHashMap<Integer, Double>();
-        for (Map.Entry<Integer, Double> entry : list) {
-            result.put(entry.getKey(), entry.getValue());
-        }
-        return result;
+    /**
+     * @return the mol2
+     */
+    public synchronized IAtomContainer getTarget() {
+        return mol2;
     }
 }

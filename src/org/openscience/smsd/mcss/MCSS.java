@@ -18,7 +18,6 @@
  */
 package org.openscience.smsd.mcss;
 
-import cmd.AtomContainerComparator;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -26,6 +25,7 @@ import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.smsd.tools.AtomContainerComparator;
 
 /**
  *
