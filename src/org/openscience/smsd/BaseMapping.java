@@ -39,35 +39,46 @@ import org.openscience.smsd.interfaces.IAtomMapping;
  *
  * @cdk.require java1.5+
  *
- * @cdk.module smsd @cdk.githash
+ * @cdk.module smsd
+ * @cdk.githash
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
  */
-public class BaseMapping implements IAtomMapping {
+public class BaseMapping extends ChemicalFilters implements IAtomMapping {
 
-    protected List<AtomAtomMapping> mcsList;
-    protected boolean matchBonds;
-    protected boolean matchRings;
-    protected boolean subgraph;
-    protected IAtomContainer mol1;
-    protected IAtomContainer mol2;
+    private final boolean matchBonds;
+    private final boolean matchRings;
+    private boolean subgraph;
     private List<Double> stereoScoreList;
     private List<Integer> fragmentSizeList;
     private List<Double> bondEnergiesList;
     private final static ILoggingTool Logger =
             LoggingToolFactory.createLoggingTool(BaseMapping.class);
 
+    /**
+     *
+     * @param matchBonds
+     * @param matchRings
+     * @param mol1
+     * @param mol2
+     */
+    public BaseMapping(boolean matchBonds, boolean matchRings, IAtomContainer mol1, IAtomContainer mol2) {
+        super(mol1, mol2);
+        this.matchBonds = matchBonds;
+        this.matchRings = matchRings;
+
+    }
+
     @Override
     public synchronized void setChemFilters(boolean stereoFilter, boolean fragmentFilter, boolean energyFilter) {
 
         if (getMappingCount() > 0) {
-            ChemicalFilters chemFilter = new ChemicalFilters(mcsList, mol1, mol2);
 
             if (energyFilter) {
                 try {
-                    chemFilter.sortResultsByEnergies();
-                    this.bondEnergiesList = chemFilter.getSortedEnergy();
+                    sortResultsByEnergies();
+                    this.bondEnergiesList = getSortedEnergy();
                 } catch (CDKException ex) {
                     Logger.error(Level.SEVERE, null, ex);
                 }
@@ -75,16 +86,16 @@ public class BaseMapping implements IAtomMapping {
 
             if (stereoFilter) {
                 try {
-                    chemFilter.sortResultsByStereoAndBondMatch();
-                    this.stereoScoreList = chemFilter.getStereoMatches();
+                    sortResultsByStereoAndBondMatch();
+                    this.stereoScoreList = getStereoMatches();
                 } catch (CDKException ex) {
                     Logger.error(Level.SEVERE, null, ex);
                 }
             }
 
             if (fragmentFilter) {
-                chemFilter.sortResultsByFragments();
-                this.fragmentSizeList = chemFilter.getSortedFragment();
+                sortResultsByFragments();
+                this.fragmentSizeList = getSortedFragment();
             }
         }
     }
@@ -117,12 +128,12 @@ public class BaseMapping implements IAtomMapping {
         double tanimotoAtom = 0.0;
 
         if (getMappingCount() > 0) {
-            AtomAtomMapping firstAtomMCS = mcsList.iterator().next();
+            AtomAtomMapping firstAtomMCS = getMCSList().iterator().next();
 
             if (!firstAtomMCS.isEmpty()) {
 
-                rAtomCount = (double) this.mcsList.iterator().next().getQuery().getAtomCount();
-                pAtomCount = (double) this.mcsList.iterator().next().getTarget().getAtomCount();
+                rAtomCount = (double) this.getMCSList().iterator().next().getQuery().getAtomCount();
+                pAtomCount = (double) this.getMCSList().iterator().next().getTarget().getAtomCount();
 
                 double matchCount = (double) firstAtomMCS.getCount();
                 tanimotoAtom = (matchCount) / (rAtomCount + pAtomCount - matchCount);
@@ -142,11 +153,11 @@ public class BaseMapping implements IAtomMapping {
     @TestMethod("testIsStereoMisMatch")
     public synchronized boolean isStereoMisMatch() {
         boolean flag = false;
-        IAtomContainer reactant = this.mol1;
-        IAtomContainer product = this.mol2;
+        IAtomContainer reactant = getQuery();
+        IAtomContainer product = getTarget();
         int stereoMisMatchScore = 0;
         if (getMappingCount() > 0) {
-            AtomAtomMapping firstAtomMCS = mcsList.iterator().next();
+            AtomAtomMapping firstAtomMCS = getMCSList().iterator().next();
             for (Iterator<IAtom> it1 = firstAtomMCS.getMappings().keySet().iterator(); it1.hasNext();) {
                 IAtom indexI = it1.next();
                 IAtom indexJ = firstAtomMCS.getMappings().get(indexI);
@@ -179,7 +190,7 @@ public class BaseMapping implements IAtomMapping {
 
     @Override
     public synchronized int getMappingCount() {
-        return this.mcsList.isEmpty() ? 0 : this.mcsList.size();
+        return this.getMCSList().isEmpty() ? 0 : this.getMCSList().size();
     }
 
     /**
@@ -194,12 +205,12 @@ public class BaseMapping implements IAtomMapping {
         double euclidean = -1.;
 
         if (getMappingCount() > 0) {
-            AtomAtomMapping firstAtomMCS = mcsList.iterator().next();
+            AtomAtomMapping firstAtomMCS = getMCSList().iterator().next();
 
             if (!firstAtomMCS.isEmpty()) {
 
-                sourceAtomCount = (double) this.mcsList.iterator().next().getQuery().getAtomCount();
-                targetAtomCount = (double) this.mcsList.iterator().next().getTarget().getAtomCount();
+                sourceAtomCount = (double) this.getMCSList().iterator().next().getQuery().getAtomCount();
+                targetAtomCount = (double) this.getMCSList().iterator().next().getTarget().getAtomCount();
 
                 double common = (double) firstAtomMCS.getCount();
                 euclidean = Math.sqrt(sourceAtomCount + targetAtomCount - 2 * common);
@@ -218,7 +229,7 @@ public class BaseMapping implements IAtomMapping {
      */
     @Override
     public synchronized List<AtomAtomMapping> getAllAtomMapping() {
-        return Collections.unmodifiableList(new ArrayList<AtomAtomMapping>(mcsList));
+        return Collections.unmodifiableList(new ArrayList<AtomAtomMapping>(getMCSList()));
     }
 
     /**
@@ -228,18 +239,18 @@ public class BaseMapping implements IAtomMapping {
      */
     @Override
     public synchronized AtomAtomMapping getFirstAtomMapping() {
-        return mcsList.isEmpty() ? new AtomAtomMapping(mol1, mol2)
-                : mcsList.iterator().next();
+        return getMCSList().isEmpty() ? new AtomAtomMapping(getQuery(), getTarget())
+                : getMCSList().iterator().next();
     }
 
     @Override
     public synchronized IAtomContainer getQueryContainer() {
-        return this.mol1;
+        return this.getQuery();
     }
 
     @Override
     public synchronized IAtomContainer getTargetContainer() {
-        return this.mol2;
+        return this.getTarget();
     }
 
     /**
@@ -247,7 +258,7 @@ public class BaseMapping implements IAtomMapping {
      *
      * @return true if bond are to be matched
      */
-    protected boolean isMatchBonds() {
+    protected synchronized boolean isMatchBonds() {
         return matchBonds;
     }
 
@@ -256,7 +267,7 @@ public class BaseMapping implements IAtomMapping {
      *
      * @return true if rings are to be matched
      */
-    protected boolean isMatchRings() {
+    protected synchronized boolean isMatchRings() {
         return matchRings;
     }
 
@@ -267,5 +278,78 @@ public class BaseMapping implements IAtomMapping {
      */
     public synchronized boolean isSubgraph() {
         return this.subgraph;
+    }
+
+    public synchronized void clearMaps() {
+        this.getMCSList().clear();
+    }
+
+    /**
+     * @return the allBondMCS
+     */
+    public synchronized List<Map<IBond, IBond>> getAllBondMaps() {
+        if (!getMCSList().isEmpty()) {
+            return makeBondMapsOfAtomMaps(getQuery(), getTarget(), getMCSList());
+        }
+        return new ArrayList<Map<IBond, IBond>>();
+    }
+
+    /**
+     * @param subgraph the subgraph to set
+     */
+    public synchronized void setSubgraph(boolean subgraph) {
+        this.subgraph = subgraph;
+    }
+
+    /**
+     * Returns bond maps between sourceAtomCount and targetAtomCount molecules
+     * based on the atoms
+     *
+     * @param ac1 sourceAtomCount molecule
+     * @param ac2 targetAtomCount molecule
+     * @param mappings mappings between sourceAtomCount and targetAtomCount
+     * molecule atoms
+     * @return bond maps between sourceAtomCount and targetAtomCount molecules
+     * based on the atoms
+     */
+    public synchronized List<Map<IBond, IBond>> makeBondMapsOfAtomMaps(IAtomContainer ac1,
+            IAtomContainer ac2, List<AtomAtomMapping> mappings) {
+        List<Map<IBond, IBond>> bondMaps = Collections.synchronizedList(new ArrayList<Map<IBond, IBond>>());
+        for (AtomAtomMapping mapping : mappings) {
+            bondMaps.add(makeBondMapOfAtomMap(ac1, ac2, mapping));
+        }
+        return bondMaps;
+    }
+
+    /**
+     *
+     * Returns bond map between sourceAtomCount and targetAtomCount molecules
+     * based on the atoms
+     *
+     * @param ac1 sourceAtomCount molecule
+     * @param ac2 targetAtomCount molecule
+     * @param mapping mappings between sourceAtomCount and targetAtomCount
+     * molecule atoms
+     * @return bond map between sourceAtomCount and targetAtomCount molecules
+     * based on the atoms
+     */
+    private synchronized Map<IBond, IBond> makeBondMapOfAtomMap(IAtomContainer ac1, IAtomContainer ac2,
+            AtomAtomMapping mapping) {
+
+        Map<IBond, IBond> bondbondMappingMap = Collections.synchronizedMap(new HashMap<IBond, IBond>());
+
+        for (Map.Entry<IAtom, IAtom> map1 : mapping.getMappings().entrySet()) {
+            for (Map.Entry<IAtom, IAtom> map2 : mapping.getMappings().entrySet()) {
+                if (map1.getKey() != map2.getKey()) {
+                    IBond bond1 = ac1.getBond(map1.getKey(), map2.getKey());
+                    IBond bond2 = ac2.getBond(map1.getValue(), map2.getValue());
+                    if (bond1 != null && bond2 != null && !bondbondMappingMap.containsKey(bond1)) {
+                        bondbondMappingMap.put(bond1, bond2);
+                    }
+                }
+            }
+        }
+//        System.out.println("Mol Map size:" + bondbondMappingMap.size());
+        return bondbondMappingMap;
     }
 }

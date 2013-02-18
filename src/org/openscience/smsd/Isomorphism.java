@@ -24,17 +24,10 @@
 package org.openscience.smsd;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.logging.Level;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.annotations.TestMethod;
-import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
@@ -47,21 +40,27 @@ import org.openscience.smsd.interfaces.Algorithm;
 import org.openscience.smsd.interfaces.ITimeOut;
 
 /**
- * <p>This class implements the Isomorphism- a multipurpose structure comparison tool. It allows users to, i) find the
- * maximal common substructure(s) (MCS); ii) perform the mapping of a substructure in another structure, and; iii) map
+ * <p>This class implements the Isomorphism- a multipurpose structure comparison
+ * tool. It allows users to, i) find the maximal common substructure(s) (MCS);
+ * ii) perform the mapping of a substructure in another structure, and; iii) map
  * two isomorphic structures.</p>
  *
- * <p>It also comes with various published algorithms. The user is free to choose his favorite algorithm to perform MCS
- * or substructure search. For example:</p> <OL> <lI>0: Default, <lI>1: MCSPlus, <lI>2: VFLibMCS, <lI>3: CDKMCS </OL>
- * <p>It also has a set of robust chemical filters (i.e. bond energy, fragment count, stereo & bond match) to sort the
- * reported MCS solutions in a chemically relevant manner. Each comparison can be made with or without using the bond
- * sensitive mode and with implicit or explicit hydrogens.</p>
+ * <p>It also comes with various published algorithms. The user is free to
+ * choose his favorite algorithm to perform MCS or substructure search. For
+ * example:</p> <OL> <lI>0: Default, <lI>1: MCSPlus, <lI>2: VFLibMCS, <lI>3:
+ * CDKMCS </OL> <p>It also has a set of robust chemical filters (i.e. bond
+ * energy, fragment count, stereo & bond match) to sort the reported MCS
+ * solutions in a chemically relevant manner. Each comparison can be made with
+ * or without using the bond sensitive mode and with implicit or explicit
+ * hydrogens.</p>
  *
- * <p>If you are using <font color="#FF0000">Isomorphism, please cite Rahman <i>et.al. 2009</i></font> {@cdk.cite
- * SMSD2009}. The Isomorphism algorithm is described in this paper. </p>
+ * <p>If you are using <font color="#FF0000">Isomorphism, please cite Rahman
+ * <i>et.al. 2009</i></font> {
  *
- * <p>An example for <b>MCS search</b>:</p> <font color="#003366">
- * <pre>
+ * @cdk.cite SMSD2009}. The Isomorphism algorithm is described in this paper.
+ * </p>
+ *
+ * <p>An example for <b>MCS search</b>:</p> <font color="#003366">  <pre>
  *
  *
  * SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
@@ -97,7 +96,8 @@ import org.openscience.smsd.interfaces.ITimeOut;
  *
  * @cdk.require java1.5+
  *
- * @cdk.module smsd @cdk.githash
+ * @cdk.module smsd
+ * @cdk.githash
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
@@ -119,38 +119,43 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
     /**
      * Initialize query and target molecules.
      *
-     * Note: Here its assumed that hydrogens are implicit and user has called these two methods
-     * percieveAtomTypesAndConfigureAtoms and CDKAromicityDetector before initializing calling this method.
+     * Note: Here its assumed that hydrogens are implicit and user has called
+     * these two methods percieveAtomTypesAndConfigureAtoms and
+     * CDKAromicityDetector before initializing calling this method.
      *
      * @param query query molecule
-     * @param target target molecule This is the algorithm factory and entry port for all the MCS algorithm in the
-     * Isomorphism supported algorithm {@link org.openscience.cdk.smsd.interfaces.Algorithm} types: <OL> <lI>0: Default,
-     * <lI>1: MCSPlus, <lI>2: VFLibMCS, <lI>3: CDKMCS </OL>
-     * @param algorithmType {@link org.openscience.cdk.smsd.interfaces.Algorithm}
+     * @param target target molecule This is the algorithm factory and entry
+     * port for all the MCS algorithm in the Isomorphism supported algorithm
+     * {@link org.openscience.cdk.smsd.interfaces.Algorithm} types: <OL> <lI>0:
+     * Default, <lI>1: MCSPlus, <lI>2: VFLibMCS, <lI>3: CDKMCS </OL>
+     * @param algorithmType
+     * {@link org.openscience.cdk.smsd.interfaces.Algorithm}
      */
     @TestMethod("testIsomorphismTest")
     public Isomorphism(
             IQueryAtomContainer query,
             IAtomContainer target,
             Algorithm algorithmType) {
+        super(true, true, query, target);
         this.algorithmType = algorithmType;
-        this.mol1 = query;
-        this.mol2 = target;
-        this.mcsList = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
         mcsBuilder(query, target);
+        setSubgraph(isSubgraph());
     }
 
     /**
      * Initialize query and target molecules.
      *
-     * Note: Here its assumed that hydrogens are implicit and user has called these two methods
-     * percieveAtomTypesAndConfigureAtoms and CDKAromicityDetector before initializing calling this method.
+     * Note: Here its assumed that hydrogens are implicit and user has called
+     * these two methods percieveAtomTypesAndConfigureAtoms and
+     * CDKAromicityDetector before initializing calling this method.
      *
      * @param query query mol
-     * @param target target mol This is the algorithm factory and entry port for all the MCS algorithm in the
-     * Isomorphism supported algorithm {@link org.openscience.cdk.smsd.interfaces.Algorithm} types: <OL> <lI>0: Default,
-     * <lI>1: MCSPlus, <lI>2: VFLibMCS, <lI>3: CDKMCS </OL>
-     * @param algorithmType {@link org.openscience.cdk.smsd.interfaces.Algorithm}
+     * @param target target mol This is the algorithm factory and entry port for
+     * all the MCS algorithm in the Isomorphism supported algorithm
+     * {@link org.openscience.cdk.smsd.interfaces.Algorithm} types: <OL> <lI>0:
+     * Default, <lI>1: MCSPlus, <lI>2: VFLibMCS, <lI>3: CDKMCS </OL>
+     * @param algorithmType
+     * {@link org.openscience.cdk.smsd.interfaces.Algorithm}
      * @param bondTypeFlag Match bond types (i.e. double to double etc)
      * @param matchRings Match ring atoms and ring size
      */
@@ -161,14 +166,11 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
             Algorithm algorithmType,
             boolean bondTypeFlag,
             boolean matchRings) {
+        super(bondTypeFlag, matchRings, query, target);
         this.algorithmType = algorithmType;
-        this.mol1 = query;
-        this.mol2 = target;
-        this.mcsList = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
-        this.matchBonds = bondTypeFlag;
-        this.matchRings = matchRings;
         setTime(bondTypeFlag);
-        mcsBuilder(mol1, mol2);
+        mcsBuilder(getQueryContainer(), getTargetContainer());
+        setSubgraph(isSubgraph());
     }
 
     private synchronized void mcsBuilder(IAtomContainer mol1, IAtomContainer mol2) {
@@ -201,52 +203,6 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
         }
     }
 
-    /**
-     * Returns bond maps between sourceAtomCount and targetAtomCount molecules based on the atoms
-     *
-     * @param ac1 sourceAtomCount molecule
-     * @param ac2 targetAtomCount molecule
-     * @param mappings mappings between sourceAtomCount and targetAtomCount molecule atoms
-     * @return bond maps between sourceAtomCount and targetAtomCount molecules based on the atoms
-     */
-    public synchronized List<Map<IBond, IBond>> makeBondMapsOfAtomMaps(IAtomContainer ac1,
-            IAtomContainer ac2, List<AtomAtomMapping> mappings) {
-        List<Map<IBond, IBond>> bondMaps = Collections.synchronizedList(new ArrayList<Map<IBond, IBond>>());
-        for (AtomAtomMapping mapping : mappings) {
-            bondMaps.add(makeBondMapOfAtomMap(ac1, ac2, mapping));
-        }
-        return bondMaps;
-    }
-
-    /**
-     *
-     * Returns bond map between sourceAtomCount and targetAtomCount molecules based on the atoms
-     *
-     * @param ac1 sourceAtomCount molecule
-     * @param ac2 targetAtomCount molecule
-     * @param mapping mappings between sourceAtomCount and targetAtomCount molecule atoms
-     * @return bond map between sourceAtomCount and targetAtomCount molecules based on the atoms
-     */
-    private synchronized Map<IBond, IBond> makeBondMapOfAtomMap(IAtomContainer ac1, IAtomContainer ac2,
-            AtomAtomMapping mapping) {
-
-        Map<IBond, IBond> bondbondMappingMap = Collections.synchronizedMap(new HashMap<IBond, IBond>());
-
-        for (Map.Entry<IAtom, IAtom> map1 : mapping.getMappings().entrySet()) {
-            for (Map.Entry<IAtom, IAtom> map2 : mapping.getMappings().entrySet()) {
-                if (map1.getKey() != map2.getKey()) {
-                    IBond bond1 = ac1.getBond(map1.getKey(), map2.getKey());
-                    IBond bond2 = ac2.getBond(map1.getValue(), map2.getValue());
-                    if (bond1 != null && bond2 != null && !bondbondMappingMap.containsKey(bond1)) {
-                        bondbondMappingMap.put(bond1, bond2);
-                    }
-                }
-            }
-        }
-//        System.out.println("Mol Map size:" + bondbondMappingMap.size());
-        return bondbondMappingMap;
-    }
-
     private synchronized void chooseAlgorithm() {
 
         switch (algorithmType) {
@@ -267,30 +223,30 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
 
     private synchronized void cdkMCSAlgorithm() {
         CDKMCSHandler mcs;
-        mcs = new CDKMCSHandler(mol1, mol2, isMatchBonds(), isMatchRings());
+        mcs = new CDKMCSHandler(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings());
         clearMaps();
-        mcsList.addAll(mcs.getAllAtomMapping());
+        getMCSList().addAll(mcs.getAllAtomMapping());
     }
 
     private synchronized void mcsPlusAlgorithm() {
         MCSPlusHandler mcs;
-        mcs = new MCSPlusHandler(mol1, mol2, isMatchBonds(), isMatchRings());
+        mcs = new MCSPlusHandler(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings());
         clearMaps();
-        mcsList.addAll(mcs.getAllAtomMapping());
+        getMCSList().addAll(mcs.getAllAtomMapping());
     }
 
     private synchronized void vfLibMCSAlgorithm() {
         VF2MCS mcs;
-        mcs = new VF2MCS(mol1, mol2, isMatchBonds(), isMatchRings());
+        mcs = new VF2MCS(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings());
         clearMaps();
-        mcsList.addAll(mcs.getAllAtomMapping());
+        getMCSList().addAll(mcs.getAllAtomMapping());
     }
 
     private synchronized void singleMapping() {
         SingleMappingHandler mcs;
-        mcs = new SingleMappingHandler(mol1, mol2, isMatchBonds(), isMatchRings());
+        mcs = new SingleMappingHandler(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings());
         clearMaps();
-        mcsList.addAll(mcs.getAllAtomMapping());
+        getMCSList().addAll(mcs.getAllAtomMapping());
     }
 
     private synchronized void defaultMCSAlgorithm() {
@@ -329,10 +285,6 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
         TimeOut.getInstance().setTimeOutFlag(false);
     }
 
-    private synchronized void clearMaps() {
-        this.mcsList.clear();
-    }
-
     /**
      *
      * @return true if query is a subgraph of the target
@@ -347,28 +299,18 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
         } else {
             return false;
         }
-        int sourceAtomCount = mol1.getAtomCount();
-        int targetAtomCount = mol2.getAtomCount();
+        int sourceAtomCount = getQueryContainer().getAtomCount();
+        int targetAtomCount = getTargetContainer().getAtomCount();
 
         if (mappingSize == sourceAtomCount && mappingSize <= targetAtomCount) {
             if (mappingSize == 1) {
                 return true;
             } else if (!getAllBondMaps().isEmpty()
-                    && getAllBondMaps().iterator().next().size() == mol1.getBondCount()) {
+                    && getAllBondMaps().iterator().next().size() == getQueryContainer().getBondCount()) {
                 return true;
             }
         }
         return false;
-    }
-
-    /**
-     * @return the allBondMCS
-     */
-    public synchronized List<Map<IBond, IBond>> getAllBondMaps() {
-        if (!mcsList.isEmpty()) {
-            return makeBondMapsOfAtomMaps(mol1, mol2, mcsList);
-        }
-        return new ArrayList<Map<IBond, IBond>>();
     }
 
     @Override

@@ -4,18 +4,22 @@
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
- * This program is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General
- * Public License as published by the Free Software Foundation; either version 2.1 of the License, or (at your option)
- * any later version. All we ask is that proper credit is given for our work, which includes - but is not limited to -
- * adding the above copyright notice to the beginning of your source code files, and to any copyright notice that you
+ * This program is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version. All we ask is that proper credit is given for our work,
+ * which includes - but is not limited to - adding the above copyright notice to
+ * the beginning of your source code files, and to any copyright notice that you
  * may distribute with programs based on this work.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
  * details.
  *
- * You should have received a copy of the GNU Lesser General Public License along with this program; if not, write to
- * the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 package org.openscience.smsd.tools;
 
@@ -37,32 +41,36 @@ import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.cdk.tools.manipulator.RingSetManipulator;
 
 /**
- * Class that cleans a molecule before MCS search. @cdk.module smsd @cdk.githash
+ * Class that cleans a molecule before MCS search.
+ *
+ * @cdk.module smsd
+ * @cdk.githash
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.tools.MoleculeSanityCheckTest")
 public class MoleculeSanityCheck {
-    
+
     private static final ILoggingTool logger =
             LoggingToolFactory.createLoggingTool(MoleculeSanityCheck.class);
 
     /**
      * Modules for cleaning a molecule
      *
-     * @param molecule
+     * @param molecule_orignal 
      * @return cleaned GraphAtomContainer
      */
     @TestMethod("testCheckAndCleanMolecule")
-    public synchronized static IAtomContainer checkAndCleanMolecule(IAtomContainer molecule) {
+    public synchronized static IAtomContainer checkAndCleanMolecule(IAtomContainer molecule_orignal) {
         boolean isMarkush = false;
+        IAtomContainer molecule = molecule_orignal;
         for (IAtom atom : molecule.atoms()) {
             if (atom.getSymbol().equals("R")) {
                 isMarkush = true;
                 break;
             }
         }
-        
+
         if (isMarkush) {
             logger.warn("Skipping Markush structure for sanity check");
         }
@@ -90,7 +98,8 @@ public class MoleculeSanityCheck {
     }
 
     /**
-     * This function finds rings and uses aromaticity detection code to aromatize the molecule.
+     * This function finds rings and uses aromaticity detection code to
+     * aromatize the molecule.
      *
      * @param mol input molecule
      */
@@ -113,7 +122,7 @@ public class MoleculeSanityCheck {
             cdk.addImplicitHydrogens(mol);
         } catch (Exception exception) {
         }
-        
+
         try {
             // figure out which atoms are in aromatic rings:
 //            printAtoms(atomContainer);
@@ -144,7 +153,7 @@ public class MoleculeSanityCheck {
                     if (!ring.getFlag(CDKConstants.ISAROMATIC)) {
                         continue jloop;
                     }
-                    
+
                     boolean haveatom = ring.contains(mol.getAtom(i));
 
                     //logger.debug("haveatom="+haveatom);

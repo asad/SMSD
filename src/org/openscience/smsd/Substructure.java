@@ -23,7 +23,6 @@
 package org.openscience.smsd;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -38,34 +37,31 @@ import org.openscience.smsd.algorithm.vflib.VF2Sub;
 import org.openscience.smsd.algorithm.vflib.substructure.VF2;
 
 /**
- * This is an ultra fast method to report if query
- * is a substructure for target molecule. If this case is true
- * then it returns only all mapping.
+ * This is an ultra fast method to report if query is a substructure for target
+ * molecule. If this case is true then it returns only all mapping.
  *
  * This is much faster than {@link
- * org.openscience.cdk.smsd.algorithm.vflib.substructure} class
- * as it only reports first match and backtracks.
+ * org.openscience.cdk.smsd.algorithm.vflib.substructure} class as it only
+ * reports first match and backtracks.
  *
- * This class should only be used to report if a query
- * graph is a substructure of the target graph.
- * 
+ * This class should only be used to report if a query graph is a substructure
+ * of the target graph.
+ *
  *  *
- * <p>An example for <b>Substructure search</b>:</p>
- *  <font color="#003366">
- *  <pre>
+ * <p>An example for <b>Substructure search</b>:</p> <font color="#003366">
+ * <pre>
  * SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
  * IAtomContainer query = sp.parseSmiles("CC");
  * IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
  * Substructure smsd = new Substructure(query, target, true, false, true);
  * Assert.assertTrue(smsd.isSubgraph());
  * Assert.assertEquals(18, smsd.getAllAtomMapping().size());
-
+ *
  * IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
  * smsd = new Substructure(queryContainer, target, true);
  * Assert.assertTrue(smsd.isSubgraph());
  *
- *  </pre>
- *  </font>
+ *  </pre> </font>
  *
  *
  * @cdk.module smsd
@@ -79,13 +75,14 @@ public final class Substructure extends BaseMapping {
             LoggingToolFactory.createLoggingTool(Substructure.class);
 
     /**
-     * Constructor for VF Substructure Algorithm 
+     * Constructor for VF Substructure Algorithm
+     *
      * @param query
      * @param target
      * @param shouldMatchBonds Match bond types (i.e. double to double etc)
      * @param matchRings Match ring atoms and ring size
      * @param findAllSubgraph report all subgraphs
-     * @throws CDKException  
+     * @throws CDKException
      */
     public Substructure(
             IAtomContainer query,
@@ -93,38 +90,31 @@ public final class Substructure extends BaseMapping {
             boolean shouldMatchBonds,
             boolean matchRings,
             boolean findAllSubgraph) throws CDKException {
-        this.mol1 = query;
-        this.mol2 = target;
-        this.mcsList = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
-        this.matchBonds = shouldMatchBonds;
-        this.matchRings = matchRings;
+        super(shouldMatchBonds, matchRings, query, target);
         if (findAllSubgraph) {
-            this.subgraph = findSubgraphs();
+            setSubgraph(findSubgraphs());
         } else {
-            this.subgraph = findSubgraph();
+            setSubgraph(findSubgraph());
         }
     }
 
     /**
-     * Constructor for VF Substructure Algorithm 
+     * Constructor for VF Substructure Algorithm
+     *
      * @param query
      * @param target
      * @param findAllSubgraph report all subgraphs
-     * @throws CDKException  
+     * @throws CDKException
      */
     public Substructure(
             IQueryAtomContainer query,
             IAtomContainer target,
             boolean findAllSubgraph) throws CDKException {
-        this.mol1 = query;
-        this.mol2 = target;
-        this.matchBonds = true;
-        this.matchRings = true;
-        this.mcsList = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
+        super(true, true, query, target);
         if (findAllSubgraph) {
-            this.subgraph = findSubgraphs();
+            setSubgraph(findSubgraphs());
         } else {
-            this.subgraph = findSubgraph();
+            setSubgraph(findSubgraph());
         }
     }
 
@@ -139,28 +129,29 @@ public final class Substructure extends BaseMapping {
 
     /**
      * Returns true if query is a subgraph of target molecule
+     *
      * @return
-     * @throws CDKException  
+     * @throws CDKException
      */
     private synchronized boolean findSubgraph() throws CDKException {
         boolean isSubgraph = false;
 
-        if ((mol2 == null) || (mol1 == null)) {
+        if ((getTargetContainer() == null) || (getQueryContainer() == null)) {
             throw new CDKException("Query or Target molecule is not initialized (NULL)");
         }
 
-        if (mol1.getAtomCount() == 1 || mol2.getAtomCount() == 1) {
+        if (getQueryContainer().getAtomCount() == 1 || getTargetContainer().getAtomCount() == 1) {
             singleMapping(isMatchBonds());
         } else {
-            if (mol1.getAtomCount() > mol2.getAtomCount()) {
+            if (getQueryContainer().getAtomCount() > getTargetContainer().getAtomCount()) {
                 return false;
             }
             VF2 mapper = null;
             List<AtomAtomMapping> mappingsVF2 = new ArrayList<AtomAtomMapping>();
-            if (mol1 instanceof IQueryAtomContainer) {
-                mapper = new VF2((IQueryAtomContainer) mol1, mol2);
+            if (getQueryContainer() instanceof IQueryAtomContainer) {
+                mapper = new VF2((IQueryAtomContainer) getQueryContainer(), getTargetContainer());
             } else {
-                mapper = new VF2(mol1, mol2, isMatchBonds(), isMatchRings());
+                mapper = new VF2(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings());
             }
             isSubgraph = mapper.isSubgraph();
             List<AtomAtomMapping> atomMappings = mapper.getAllAtomMapping();
@@ -177,28 +168,29 @@ public final class Substructure extends BaseMapping {
 
     /**
      * Returns true if query is a subgraph of target molecule
+     *
      * @return
-     * @throws CDKException  
+     * @throws CDKException
      */
     private synchronized boolean findSubgraphs() throws CDKException {
         boolean isSubgraph = false;
 
-        if ((mol2 == null) || (mol1 == null)) {
+        if ((getTargetContainer() == null) || (getQueryContainer() == null)) {
             throw new CDKException("Query or Target molecule is not initialized (NULL)");
         }
 
-        if (mol1.getAtomCount() == 1 || mol2.getAtomCount() == 1) {
+        if (getQueryContainer().getAtomCount() == 1 || getTargetContainer().getAtomCount() == 1) {
             singleMapping(isMatchBonds());
         } else {
-            if (mol1.getAtomCount() > mol2.getAtomCount()) {
+            if (getQueryContainer().getAtomCount() > getTargetContainer().getAtomCount()) {
                 return false;
             } else {
                 List<AtomAtomMapping> mappingsVF2 = new ArrayList<AtomAtomMapping>();
                 VF2Sub mapper = null;
-                if (mol1 instanceof IQueryAtomContainer) {
-                    mapper = new VF2Sub((IQueryAtomContainer) mol1, mol2);
+                if (getQueryContainer() instanceof IQueryAtomContainer) {
+                    mapper = new VF2Sub((IQueryAtomContainer) getQueryContainer(), getTargetContainer());
                 } else {
-                    mapper = new VF2Sub(mol1, mol2, isMatchBonds(), isMatchRings());
+                    mapper = new VF2Sub(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings());
                 }
                 isSubgraph = mapper.isSubgraph();
                 List<AtomAtomMapping> atomMappings = mapper.getAllAtomMapping();
@@ -217,7 +209,7 @@ public final class Substructure extends BaseMapping {
     private synchronized void setVFMappings(List<AtomAtomMapping> mappingsVF2) {
         int counter = 0;
         for (AtomAtomMapping solution : mappingsVF2) {
-            AtomAtomMapping atomatomMapping = new AtomAtomMapping(mol1, mol2);
+            AtomAtomMapping atomatomMapping = new AtomAtomMapping(getQueryContainer(), getTargetContainer());
             if (solution.getCount() > vfMappingSize) {
                 this.vfMappingSize = solution.getCount();
                 counter = 0;
@@ -239,9 +231,9 @@ public final class Substructure extends BaseMapping {
                     }
                 }
             }
-            if (!atomatomMapping.isEmpty() && !hasMap(atomatomMapping, mcsList)
+            if (!atomatomMapping.isEmpty() && !hasMap(atomatomMapping, getMCSList())
                     && atomatomMapping.getCount() == vfMappingSize) {
-                mcsList.add(counter, atomatomMapping);
+                getMCSList().add(counter, atomatomMapping);
                 counter++;
             }
         }
@@ -249,11 +241,11 @@ public final class Substructure extends BaseMapping {
 
     private synchronized void singleMapping(boolean shouldMatchBonds) {
         SingleMappingHandler mcs = null;
-        if (!(mol1 instanceof IQueryAtomContainer) && !(mol2 instanceof IQueryAtomContainer)) {
-            mcs = new SingleMappingHandler(mol1, mol2, shouldMatchBonds, isMatchRings());
+        if (!(getQueryContainer() instanceof IQueryAtomContainer) && !(getTargetContainer() instanceof IQueryAtomContainer)) {
+            mcs = new SingleMappingHandler(getQueryContainer(), getTargetContainer(), shouldMatchBonds, isMatchRings());
         } else {
-            mcs = new SingleMappingHandler((IQueryAtomContainer) mol1, mol2);
+            mcs = new SingleMappingHandler((IQueryAtomContainer) getQueryContainer(), getTargetContainer());
         }
-        mcsList.addAll(mcs.getAllAtomMapping());
+        getMCSList().addAll(mcs.getAllAtomMapping());
     }
 }

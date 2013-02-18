@@ -22,6 +22,7 @@
  */
 package org.openscience.smsd.filters;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -43,26 +44,29 @@ import org.openscience.smsd.AtomAtomMapping;
  *
  */
 @TestClass("org.openscience.cdk.smsd.filters.ChemicalFiltersTest")
-public final class ChemicalFilters {
+public class ChemicalFilters {
 
     private final List<AtomAtomMapping> allAtomMCS;
     private final IChemicalFilter<Double> energyFilter;
     private final IChemicalFilter<Integer> fragmentFilter;
     private final IChemicalFilter<Double> stereoFilter;
+    private final IAtomContainer mol1;
+    private final IAtomContainer mol2;
 
     /**
-     * 
-     * @param allAtomMCS
+     *
      * @param sourceMol
      * @param targetMol
      */
-    public ChemicalFilters(List<AtomAtomMapping> allAtomMCS,
+    public ChemicalFilters(
             IAtomContainer sourceMol,
             IAtomContainer targetMol) {
-        this.allAtomMCS = allAtomMCS;
-        energyFilter = new EnergyFilter(sourceMol, targetMol);
-        fragmentFilter = new FragmentFilter(sourceMol, targetMol);
-        stereoFilter = new StereoFilter(sourceMol, targetMol);
+        this.mol1 = sourceMol;
+        this.mol2 = targetMol;
+        this.energyFilter = new EnergyFilter(sourceMol, targetMol);
+        this.fragmentFilter = new FragmentFilter(sourceMol, targetMol);
+        this.stereoFilter = new StereoFilter(sourceMol, targetMol);
+        this.allAtomMCS = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
     }
 
     private synchronized void clear(
@@ -157,6 +161,7 @@ public final class ChemicalFilters {
 
     /**
      * Sort MCS solution by stereo and bond type matches.
+     *
      * @throws CDKException
      */
     @TestMethod("testSortResultsByStereoAndBondMatch")
@@ -218,6 +223,7 @@ public final class ChemicalFilters {
 
     /**
      * Return sorted energy in ascending order.
+     *
      * @return sorted bond breaking energy
      */
     @TestMethod("testGetSortedEnergy")
@@ -227,6 +233,7 @@ public final class ChemicalFilters {
 
     /**
      * Return sorted fragment in ascending order of the size.
+     *
      * @return sorted fragment count
      */
     @TestMethod("testGetSortedFragment")
@@ -236,6 +243,7 @@ public final class ChemicalFilters {
 
     /**
      * Return Stereo matches in descending order.
+     *
      * @return sorted stereo matches
      */
     @TestMethod("testGetStereoMatches")
@@ -282,5 +290,26 @@ public final class ChemicalFilters {
         energyFilter.clearScores();
         fragmentFilter.clearScores();
         stereoFilter.clearScores();
+    }
+
+    /**
+     * @return the mcsList
+     */
+    public synchronized List<AtomAtomMapping> getMCSList() {
+        return Collections.synchronizedList(allAtomMCS);
+    }
+
+    /**
+     * @return the mol1
+     */
+    public synchronized IAtomContainer getQuery() {
+        return mol1;
+    }
+
+    /**
+     * @return the mol2
+     */
+    public synchronized IAtomContainer getTarget() {
+        return mol2;
     }
 }
