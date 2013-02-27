@@ -332,10 +332,10 @@ public final class StereoFilter extends Sotter implements IChemicalFilter<Double
         return value;
     }
 
-    private synchronized double getRingMatchScore(List<IAtomContainer> list) {
+    private synchronized double getRingMatchScore(List<IAtomContainer> list) throws CloneNotSupportedException {
         double lScore = 0;
-        IAtomContainer listMap = list.get(0);
-        IAtomContainer subGraph = list.get(1);
+        IAtomContainer listMap = list.get(0).clone();
+        IAtomContainer subGraph = list.get(1).clone();
         try {
 //            CDKHueckelAromaticityDetector.detectAromaticity(subGraph);
 //            SSSRFinder finder = new SSSRFinder(subGraph);
