@@ -8,3 +8,4 @@ build
 /store/
 SMSD*
 build.properties
+.DS_Store
