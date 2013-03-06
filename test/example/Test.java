@@ -6,10 +6,12 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.openscience.cdk.AtomContainer;
+import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.io.MDLV2000Reader;
+import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.Isomorphism;
@@ -31,10 +33,12 @@ import org.openscience.smsd.interfaces.Algorithm;
  * contact asad@ebi.ac.uk
  *
  */
-public class MCSSearch {
+public class Test {
 
-    /** Creates a new instance of SMSD */
-    public MCSSearch() {
+    /**
+     * Creates a new instance of SMSD
+     */
+    public Test() {
     }
 
     /**
@@ -42,54 +46,34 @@ public class MCSSearch {
      * @throws Exception
      */
     public static void main(String[] args) throws Exception {
+        boolean first_MCS = false;
         try {
+            String query = "CCCC(C)C";
+            String target = "c1ccc(cc1)CC";
+            SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
 
-            String mol1 = "Data/ATP.mol";
-            String mol2 = "Data/ADP.mol";
+            IAtomContainer mol1 = sp.parseSmiles(query);
+            IAtomContainer mol2 = sp.parseSmiles(target);
 
-            boolean first_MCS = false;
+            AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol1);
+            AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol2);
 
-            boolean exists = (new File(mol1)).exists();
-            if (!exists) {
-
-                System.err.println("Error: The Assigned File Path is not Correct " + mol1);
-                System.exit(1);
-            }
-
-            exists = (new File(mol2)).exists();
-            if (!exists) {
-
-                System.err.println("Error: The Assigned File Path is not Correct " + mol2);
-                System.exit(1);
-            }
-
-            MDLV2000Reader molQuery = new MDLV2000Reader(new FileInputStream(mol1));
-            IAtomContainer query = molQuery.read(new AtomContainer());
-
-            MDLV2000Reader molTarget = new MDLV2000Reader(new FileInputStream(mol2));
-            IAtomContainer target = molTarget.read(new AtomContainer());
-
-            AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(query);
-            AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(target);
-
-            query = AtomContainerManipulator.removeHydrogens(query);
-            target = AtomContainerManipulator.removeHydrogens(target);
+            mol1 = AtomContainerManipulator.removeHydrogens(mol1);
+            mol2 = AtomContainerManipulator.removeHydrogens(mol2);
 
 //	Calling the main algorithm to perform MCS cearch
 
-            CDKHueckelAromaticityDetector.detectAromaticity(query);
-            CDKHueckelAromaticityDetector.detectAromaticity(target);
+            CDKHueckelAromaticityDetector.detectAromaticity(mol1);
+            CDKHueckelAromaticityDetector.detectAromaticity(mol2);
 
-            query = new AtomContainer(query);
-            target = new AtomContainer(target);
 
-            boolean bondSensitive = true;
+            boolean bondSensitive = false;
             boolean ringMatch = false;
-            boolean stereoMatch = true;
-            boolean fragmentMinimization = true;
-            boolean energyMinimization = true;
+            boolean stereoMatch = false;
+            boolean fragmentMinimization = false;
+            boolean energyMinimization = false;
 
-            Isomorphism comparison = new Isomorphism(query, target, Algorithm.DEFAULT, bondSensitive, ringMatch);
+            Isomorphism comparison = new Isomorphism(mol1, mol2, Algorithm.DEFAULT, bondSensitive, ringMatch);
             comparison.setChemFilters(stereoMatch, fragmentMinimization, energyMinimization);
 
 
@@ -176,7 +160,7 @@ public class MCSSearch {
             System.out.println("");
 
         } catch (Exception ex) {
-            Logger.getLogger(MCSSearch.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Test.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 }
