@@ -19,12 +19,14 @@
 package org.openscience.smsd.mcss;
 
 import java.util.*;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.concurrent.LinkedBlockingQueue;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.tools.ILoggingTool;
+import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.tools.AtomContainerComparator;
 
 /**
@@ -34,6 +36,8 @@ import org.openscience.smsd.tools.AtomContainerComparator;
  */
 final public class MCSS {
 
+    private final static ILoggingTool logger =
+            LoggingToolFactory.createLoggingTool(MCSS.class);
     private final List<IAtomContainer> calculateMCSS;
 
     public MCSS(List<IAtomContainer> jobList, JobType jobType, int numberOfThreads) {
@@ -89,8 +93,8 @@ final public class MCSS {
 
     private synchronized List<IAtomContainer> submitMultiThreadedJob(List<IAtomContainer> mcssList, JobType jobType, int nThreads) {
         int taskNumber = 1;
-        List<IAtomContainer> newMCSSList = Collections.synchronizedList(new ArrayList<IAtomContainer>(nThreads));
-        List<Future<List<IAtomContainer>>> futureList = new ArrayList<Future<List<IAtomContainer>>>();
+        List<IAtomContainer> solutions = Collections.synchronizedList(new ArrayList<IAtomContainer>(nThreads));
+        LinkedBlockingQueue<Callable<List<IAtomContainer>>> callablesQueue = new LinkedBlockingQueue<Callable<List<IAtomContainer>>>();
         ExecutorService threadPool = Executors.newFixedThreadPool(nThreads);
         int step = (int) Math.ceil((double) mcssList.size() / (double) nThreads);
         if (step < 2) {
@@ -104,32 +108,41 @@ final public class MCSS {
             List<IAtomContainer> subList = new ArrayList<IAtomContainer>(mcssList.subList(i, endPoint));
             if (subList.size() > 1) {
                 MCSSThread mcssJobThread = new MCSSThread(subList, jobType, taskNumber++);
-                Future<List<IAtomContainer>> callMCSSThread = threadPool.submit(mcssJobThread);
-                futureList.add(callMCSSThread);
+                callablesQueue.add(mcssJobThread);
             } else {
-                newMCSSList.add(subList.get(0));
+                solutions.add(subList.get(0));
             }
         }
-        for (Iterator<Future<List<IAtomContainer>>> it = futureList.iterator(); it.hasNext();) {
-            Future<List<IAtomContainer>> results = it.next();
-            if (results == null) {
-                continue;
-            }
-            try {
-                List<IAtomContainer> f = results.get();
-                if (f != null && results != null) {
-                    List<IAtomContainer> matchResults = results.get();
-                    if (matchResults != null) {
-                        newMCSSList.addAll(matchResults);
-                    }
+        try {
+            /*
+             * Wait all the threads to finish
+             */
+            List<Future<List<IAtomContainer>>> futureList = threadPool.invokeAll(callablesQueue);
+            /*
+             * Collect the results
+             */
+            for (Iterator<Future<List<IAtomContainer>>> it = futureList.iterator(); it.hasNext();) {
+                Future<List<IAtomContainer>> callable = it.next();
+                List<IAtomContainer> mapping = callable.get();
+                if (callable.isDone() && mapping != null) {
+                    solutions.addAll(mapping);
+                } else {
+                    logger.warn("WARNING: InComplete job in AtomMappingTool: ");
                 }
-            } catch (Exception e) {
-                Logger.getLogger(MCSSThread.class.getName()).log(Level.WARNING, "Execution exception: {0}", e);
             }
+            threadPool.shutdown();
+            // Wait until all threads are finish
+            while (!threadPool.isTerminated()) {
+            }
+            System.gc();
+        } catch (Exception e) {
+            logger.debug("ERROR: in AtomMappingTool: " + e.getMessage());
+            logger.error(e);
+        } finally {
+            threadPool.shutdown();
         }
 
-        threadPool.shutdown();
-        return newMCSSList;
+        return solutions;
     }
 
     public synchronized String getTitle() {
