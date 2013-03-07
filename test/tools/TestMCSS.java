@@ -3,18 +3,22 @@
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
- * This program is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General
- * Public License as published by the Free Software Foundation; either version 2.1 of the License, or (at your option)
- * any later version. All we ask is that proper credit is given for our work, which includes - but is not limited to -
- * adding the above copyright notice to the beginning of your source code files, and to any copyright notice that you
+ * This program is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version. All we ask is that proper credit is given for our work,
+ * which includes - but is not limited to - adding the above copyright notice to
+ * the beginning of your source code files, and to any copyright notice that you
  * may distribute with programs based on this work.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
  * details.
  *
- * You should have received a copy of the GNU Lesser General Public License along with this program; if not, write to
- * the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 package tools;
 
@@ -56,8 +60,8 @@ public class TestMCSS {
                 "4170207", "CCC(N1C(c2ccc(F)cc2)C(C3=Nc(c14)cccc4)=C(O)CC(c5ccc(C(C)(C)C)cc5)C3)=O");
         map.put(
                 "6368123", "CC(N1C(c2ccc(F)cc2)C(C3=Nc(c14)cccc4)=C(O)CC(c5ccc(Cl)cc5)C3)=O");
-        map.put(
-                "MCS", "O=C(N4c5ccccc5(N=C2C(=C(O)CC(c1ccccc1)C2)C4(c3ccccc3)))C");
+//        map.put(
+//                "MCS", "O=C(N4c5ccccc5(N=C2C(=C(O)CC(c1ccccc1)C2)C4(c3ccccc3)))C");
         map.put(
                 "MMV011436", "CC(c1ccc(C2CC(C3=C(O)C2)=Nc(c4N(C(c5c(Cl)cccc5)=O)C3c6ccc(F)cc6)cccc4)cc1)(C)C");
         map.put(
@@ -72,7 +76,7 @@ public class TestMCSS {
             }
         }
         long startTime = Calendar.getInstance().getTimeInMillis();
-        MCSS mcss = new MCSS(jobs, JobType.MCS, 3);
+        MCSS mcss = new MCSS(jobs, JobType.MCS, 5);
         for (IAtomContainer ac : mcss.getCalculateMCSS()) {
             System.out.println("Result MCS " + getMCSSSmiles(ac));
             Assert.assertEquals(31, ac.getAtomCount());
