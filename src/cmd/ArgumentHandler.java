@@ -328,7 +328,7 @@ public class ArgumentHandler {
         HelpFormatter formatter = new HelpFormatter();
 
         System.out.println("\n++++++++++++++++++++++++++++++++++++++++++++++"
-                + "\nSMSD (Small AtomContainer Similarity Detector)"
+                + "\nSmall Molecule Similarity Detector (SMSD)"
                 + "\n++++++++++++++++++++++++++++++++++++++++++++++"
                 + "\nContact: Syed Asad Rahman,"
                 + "\n\t EMBL-EBI, Hinxton "
