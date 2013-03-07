@@ -42,6 +42,8 @@ import org.apache.commons.cli.PosixParser;
  */
 public class ArgumentHandler {
 
+    final static String NEW_LINE = System.getProperty("line.separator");
+
     /**
      * Get any arguments that were left over.
      *
@@ -119,8 +121,8 @@ public class ArgumentHandler {
     }
 
     /**
-     * Parses the options in the command line arguments and returns an array of strings corresponding to the filenames
-     * given as arguments only
+     * Parses the options in the command line arguments and returns an array of
+     * strings corresponding to the filenames given as arguments only
      *
      * @param args
      * @throws org.apache.commons.cli.ParseException
@@ -179,7 +181,7 @@ public class ArgumentHandler {
                 OptionBuilder.hasArg().withDescription("Output the substructure to a file").withArgName("filename").create("o"));
 
         options.addOption(
-                OptionBuilder.hasArg().withDescription("Output type").withArgName("type").create("O"));
+                OptionBuilder.hasArg().withDescription("Output type (SMI, MOL)").withArgName("type").create("O"));
 
         options.addOption(
                 OptionBuilder.hasOptionalArgs(2).withValueSeparator().withDescription("Image options").withArgName("option=value").create("I"));
@@ -349,7 +351,32 @@ public class ArgumentHandler {
                 + "\n++++++++++++++++++++++++++++++++++++++++++++++\n");
 
         formatter.printHelp("\n", options);
+        System.out.println(getExamples());
         System.out.println("\n++++++++++++++++++++++++++++++++++++++++++++++\n");
+    }
+
+    private StringBuilder getExamples() {
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(NEW_LINE);
+        sb.append("Usage examples: ");
+        sb.append(NEW_LINE);
+        sb.append("a) To start the GUI: java -jar SMSD.jar ").append(NEW_LINE);
+        sb.append("You could further use various file formats (SMI, MOL etc).").append(NEW_LINE);
+        sb.append("Options (recommended): -r -z -b will remove hydrogens, match rings, match bond types respectively.").append(NEW_LINE);
+        sb.append("b) Find MCS between two molecules and write the output as a MOL file:").append(NEW_LINE)
+                .append("sh SMSD -Q SMI -q \"CCC\" -T PDB -t ATP.pdb -O MOL -o subgraph.mol -r -z -b").append(NEW_LINE);
+        sb.append("c) Find MCS between two molecules and print the output:").append(NEW_LINE)
+                .append("sh SMSD -Q SMI -q \"CCC\" -T SMI -t \"CCN\" -O SMI -o -- -r -z -b").append(NEW_LINE);
+        sb.append("d) Find MCS between two molecules and generate an image highlighting the matched parts:").append(NEW_LINE)
+                .append("sh SMSD -Q MOL -q ADP.mol -T MOL -t ATP.mol -g -r -z -b").append(NEW_LINE);
+        sb.append("e) Find MCS between N-molecules and print the common substructure between them:").append(NEW_LINE)
+                .append("sh SMSD -T SDF -t arom.sdf -N -O SMI -o -- -r -z -b").append(NEW_LINE);
+        sb.append("f) Find MCS between N-molecules and highlighting the common substructure between them:").append(NEW_LINE);
+        sb.append("WARNING: This option might require large virtual machine memory allocation").append(NEW_LINE)
+                .append("sh SMSD -T SDF -t arom.sdf -N -O SMI -o -- -g -r -z -b").append(NEW_LINE);
+        sb.append("You could further use various file formats").append(NEW_LINE);
+        return sb;
     }
 
     public boolean isHelp() {
