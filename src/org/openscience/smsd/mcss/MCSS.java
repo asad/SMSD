@@ -42,8 +42,10 @@ final public class MCSS {
 
     public MCSS(List<IAtomContainer> jobList, JobType jobType, int numberOfThreads) {
         int threadsAvailable = Runtime.getRuntime().availableProcessors() - 1;
-        if (numberOfThreads > 0) {
+        if (numberOfThreads > 0 && threadsAvailable >= numberOfThreads) {
             threadsAvailable = numberOfThreads;
+        } else if (threadsAvailable <= 0) {
+            threadsAvailable = 1;
         }
         /*
          * Sort the molecules in the ascending order of atom size and atom type
