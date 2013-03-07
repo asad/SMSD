@@ -327,32 +327,29 @@ public class ArgumentHandler {
     public void printHelp(Options options) {
         HelpFormatter formatter = new HelpFormatter();
 
-        System.out.println("\n++++++++++++++++++++++++++++++++++++++++++++++"
-                + "\nSmall Molecule Similarity Detector (SMSD)"
-                + "\n++++++++++++++++++++++++++++++++++++++++++++++"
-                + "\nContact: Syed Asad Rahman,"
-                + "\n\t EMBL-EBI, Hinxton "
-                + "\n\t Cambridge CB10 1SD"
-                + "\n\t United Kingdom "
-                + "\ne-mail: asad@ebi.ac.uk"
-                + "\n++++++++++++++++++++++++++++++++++++++++++++++\n"
-                + "\nSMSD software can calculate the similarity between"
-                + "\ntwo small molecules by using an inhouse algorithm"
-                + "\ndeveloped at EMBL-EBI. "
-                + "It also uses CDK based"
-                + "\nFingerprints and Maximum Common Subgraph (MCS) "
-                + "\nmatching for finding similarity. "
-                + "It create four"
-                + "\nfiles which contains similarity scores between"
-                + "\nmatched atoms.\n"
-                + "\n++++++++++++++++++++++++++++++++++++++++++++++"
-                + "\nNOTE: The graph matching is performed by removing"
-                + "\nthe Hydrogens"
-                + "\n++++++++++++++++++++++++++++++++++++++++++++++\n");
+        System.out.println(NEW_LINE + "++++++++++++++++++++++++++++++++++++++++++++++"
+                + NEW_LINE + "Small Molecule Similarity Detector (SMSD)"
+                + NEW_LINE + "+++++++++++++++++++++++++++++++++++++++++++++"
+                + NEW_LINE + "Contact: Syed Asad Rahman,"
+                + NEW_LINE + "\t EMBL-EBI, Hinxton "
+                + NEW_LINE + "\t Cambridge CB10 1SD"
+                + NEW_LINE + "\t United Kingdom "
+                + NEW_LINE + "e-mail:  asad@ebi.ac.uk"
+                + NEW_LINE + "++++++++++++++++++++++++++++++++++++++++++++++" + NEW_LINE
+                + NEW_LINE + "SMSD can calculate similarity between two small molecules"
+                + NEW_LINE + "by using an inhouse algorithm developed at EMBL-EBI. It"
+                + NEW_LINE + "reports similarity scores and highlights the matched "
+                + NEW_LINE + "substructure." + NEW_LINE
+                + NEW_LINE + "It uses CDK library for handling chemistry. "
+                + NEW_LINE + "++++++++++++++++++++++++++++++++++++++++++++++"
+                + NEW_LINE + "Publication:"
+                + NEW_LINE + "   S.A. Rahman et.al, (2009), Journal of Cheminformatics"
+                + NEW_LINE + "   (http://www.jcheminf.com/content/1/1/12)"
+                + NEW_LINE + "++++++++++++++++++++++++++++++++++++++++++++++" + NEW_LINE);
 
-        formatter.printHelp("\n", options);
+        formatter.printHelp(NEW_LINE, options);
         System.out.println(getExamples());
-        System.out.println("\n++++++++++++++++++++++++++++++++++++++++++++++\n");
+        System.out.println(NEW_LINE + "++++++++++++++++++++++++++++++++++++++++++++++" + NEW_LINE);
     }
 
     private StringBuilder getExamples() {
@@ -362,7 +359,8 @@ public class ArgumentHandler {
         sb.append("Usage examples: ");
         sb.append(NEW_LINE);
         sb.append("To start the GUI: java -jar SMSD.jar ").append(NEW_LINE).append(NEW_LINE);
-        sb.append("Command Line Options (recommended): -r -z -b will remove hydrogens, match rings, match bond types respectively.").append(NEW_LINE).append(NEW_LINE);
+        sb.append("Command Line Options (recommended flags):")
+                .append("\n -r -z -b will remove hydrogens, match rings, match bond types respectively.").append(NEW_LINE).append(NEW_LINE);
         sb.append("a) Find MCS between two molecules and write the output as a MOL file:").append(NEW_LINE)
                 .append("\tsh SMSD -Q SMI -q \"CCC\" -T PDB -t ATP.pdb -O MOL -o subgraph.mol -r -z -b").append(NEW_LINE);
         sb.append("b) Find MCS between two molecules and print the output:").append(NEW_LINE)
@@ -374,7 +372,7 @@ public class ArgumentHandler {
         sb.append("e) Find MCS between N-molecules and highlighting the common substructure between them:").append(NEW_LINE);
         sb.append("\tWARNING: This option might require large virtual machine memory allocation").append(NEW_LINE)
                 .append("\tsh SMSD -T SDF -t arom.sdf -N -O SMI -o -- -g -r -z -b").append(NEW_LINE).append(NEW_LINE);
-        sb.append("You could further use various file formats").append(NEW_LINE).append(NEW_LINE);
+        sb.append("Note: You could use various file formats").append(NEW_LINE);
         return sb;
     }
 
