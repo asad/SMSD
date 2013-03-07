@@ -206,6 +206,7 @@ public class SMSDcmd {
          * For image generation RE-RUN the MCS with the common fragment
          */
         if (argumentHandler.isImage()) {
+            int index = 1;
             for (IAtomContainer ac : mcss.getCalculateMCSS()) {
                 if (ac != null && ac.getAtomCount() > 0) {
                     IAtomContainer mcsAtomContainer = ac.clone();
@@ -220,9 +221,10 @@ public class SMSDcmd {
                                 builder.newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getTarget()));
                     }
 
-                    String name = inputHandler.getTargetName();
+                    String name = inputHandler.getTargetName() + "_" + String.valueOf(index);
                     outputHandler.writeCircleImage(mcsAtomContainer, secondRoundTargets, name, mappings);
                 }
+                index++;
             }
         }
     }
@@ -438,14 +440,6 @@ public class SMSDcmd {
             smsd = runSubstructure(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings);
         } else {
             smsd = run(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings);
-
-
-
-
-
-
-
-
         }
 
         query = query.getBuilder().newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getQuery());
@@ -590,11 +584,6 @@ public class SMSDcmd {
     }
 
     private static Map<Integer, Integer> getIndexMapping(AtomAtomMapping aam) {
-        Map<IAtom, IAtom> mappings = aam.getMappings();
-        Map<Integer, Integer> mapping = new TreeMap<Integer, Integer>();
-        for (IAtom keys : mappings.keySet()) {
-            mapping.put(aam.getQueryIndex(keys), aam.getTargetIndex(mappings.get(keys)));
-        }
-        return mapping;
+        return aam.isEmpty() ? new TreeMap<Integer, Integer>() : aam.getMappingsIndex();
     }
 }
