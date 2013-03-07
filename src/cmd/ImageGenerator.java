@@ -56,6 +56,10 @@ import org.openscience.reactionblast.graphics.direct.layout.ArrowWheel;
 import org.openscience.reactionblast.graphics.direct.layout.CircularCanvasGenerator;
 import org.openscience.reactionblast.graphics.direct.layout.ZoomToFitGridLayout;
 
+/**
+ *
+ * @author Syed Asad Rahman <asad@ebi.ac.uk>
+ */
 public class ImageGenerator {
 
     private class QueryTargetPair {
@@ -92,8 +96,8 @@ public class ImageGenerator {
             IAtomContainer target,
             String label,
             Map<Integer, Integer> maxac) throws IOException, CloneNotSupportedException {
-        IAtomContainer cloneOfQuery = (IAtomContainer) query.clone();
-        IAtomContainer cloneOfTarget = (IAtomContainer) target.clone();
+        IAtomContainer cloneOfQuery = query.clone();
+        IAtomContainer cloneOfTarget = target.clone();
 
         IAtomContainer querySubgraph = query.getBuilder().newInstance(IAtomContainer.class, cloneOfQuery);
         IAtomContainer targetSubgraph = target.getBuilder().newInstance(IAtomContainer.class, cloneOfTarget);
@@ -104,10 +108,10 @@ public class ImageGenerator {
             IAtom qAtom = cloneOfQuery.getAtom(aMaps.getKey());
             IAtom tAtom = cloneOfTarget.getAtom(aMaps.getValue());
 
-            String keyID = aMaps.getKey().toString(); 
+            String keyID = aMaps.getKey().toString();
 //            qAtom.setID(qAtom.getID() + "(" + keyID + ")");
             qAtom.setID(keyID);
-            String valID = aMaps.getValue().toString(); 
+            String valID = aMaps.getValue().toString();
 //            tAtom.setID(tAtom.getID() + "(" + valID + ")");
 //            tAtom.setID(valID);
             tAtom.setID(keyID);
@@ -134,7 +138,7 @@ public class ImageGenerator {
                 new QueryTargetPair(
                 cloneOfQuery, cloneOfTarget, querySubgraph, targetSubgraph, label));
     }
-    
+
     public Params getParams() {
         Properties properties = argumentHandler.getImageProperties();
         Params params = new Params();
@@ -152,11 +156,11 @@ public class ImageGenerator {
                                 found = true;
                                 Class<?> type = field.getType();
                                 if (type.equals(Boolean.TYPE)) {
-                                    field.set(params, Boolean.valueOf((String)value));
+                                    field.set(params, Boolean.valueOf((String) value));
                                 } else if (type.equals(Integer.TYPE)) {
-                                    field.set(params, Integer.valueOf((String)value));
+                                    field.set(params, Integer.valueOf((String) value));
                                 } else if (type.equals(Double.TYPE)) {
-                                    field.set(params, Double.valueOf((String)value));
+                                    field.set(params, Double.valueOf((String) value));
                                 } else {
                                     field.set(params, value);
                                 }
@@ -203,7 +207,7 @@ public class ImageGenerator {
         Graphics2D g = (Graphics2D) image.getGraphics();
         if (params.useAntialias) {
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-                               RenderingHints.VALUE_ANTIALIAS_ON);
+                    RenderingHints.VALUE_ANTIALIAS_ON);
         }
         List<IAtomContainer> mols = new ArrayList<IAtomContainer>();
         for (QueryTargetPair pair : queryTargetPairs) {
@@ -230,14 +234,14 @@ public class ImageGenerator {
         }
 
     }
-    
-    public RenderedImage createHubWheelImage(IAtomContainer hub, 
+
+    public RenderedImage createHubWheelImage(IAtomContainer hub,
             List<IAtomContainer> rim, List<Map<Integer, Integer>> mappings) {
         return createHubWheelImage(hub, rim, mappings, SUB_IMAGE_WIDTH, SUB_IMAGE_HEIGHT);
     }
-    
-    public RenderedImage createHubWheelImage(IAtomContainer hub, 
-            List<IAtomContainer> rim, List<Map<Integer, Integer>> mappings, 
+
+    public RenderedImage createHubWheelImage(IAtomContainer hub,
+            List<IAtomContainer> rim, List<Map<Integer, Integer>> mappings,
             int subImageWidth, int subImageHeight) {
         List<IAtomContainer> all = new ArrayList<IAtomContainer>();
         all.add(hub);
@@ -247,7 +251,7 @@ public class ImageGenerator {
         generator.layout(all, cellDim);
         Params params = getParams();
         DirectMoleculeDrawer moleculeDrawer = new DirectMoleculeDrawer(params);
-        
+
         // add the highlights
         int containerIndex = 0;
         for (Map<Integer, Integer> mapping : mappings) {
@@ -256,7 +260,7 @@ public class ImageGenerator {
             moleculeDrawer.addHighlights(getHighlightContainer(target, mapping));
             containerIndex++;
         }
-        
+
         Dimension size = generator.getSize();
         int width = size.width;
         int height = size.height;
@@ -268,10 +272,10 @@ public class ImageGenerator {
         }
         g.setColor(Color.WHITE);
         g.fillRect(0, 0, width, height);
-        
+
         ZoomToFitDrawer ztfDrawer = new ZoomToFitDrawer(moleculeDrawer, generator);
         ztfDrawer.draw(all, cellDim, g);
-        
+
         List<String> arrowLabels = new ArrayList<String>();
         for (int i = 0; i < rim.size(); i++) {
             arrowLabels.add(String.valueOf(i));
@@ -282,7 +286,7 @@ public class ImageGenerator {
         arrowWheel.draw(generator, g);
         return (RenderedImage) image;
     }
-    
+
     private IAtomContainer getHighlightContainer(IAtomContainer source, Map<Integer, Integer> mapping) {
         IAtomContainer highlightContainer = source.getBuilder().newInstance(IAtomContainer.class);
         for (int index : mapping.values()) {

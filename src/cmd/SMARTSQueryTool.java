@@ -104,8 +104,14 @@ import org.openscience.smsd.interfaces.Algorithm;
  * <code>[O-]C(=O)c1ccccc1c2c3ccc([O-])cc3oc4cc(=O)ccc24</code>. Thus SMARTS patterns that depend on proper aromaticity
  * detection may not work correctly in such polycyclic systems</li> </ul>
  *
- * @author Rajarshi Guha @cdk.created 2007-04-08 @cdk.module smarts @cdk.githash @cdk.keyword SMARTS @cdk.keyword
- * substructure search @cdk.bug 1760973 @cdk.bug 1761027
+ * @author Rajarshi Guha
+ * @cdk.created 2007-04-08
+ * @cdk.module smarts
+ * @cdk.githash
+ * @cdk.keyword SMARTS
+ * @cdk.keyword substructure search
+ * @cdk.bug 1760973
+ * @cdk.bug 1761027
  */
 @TestClass("org.openscience.cdk.smiles.smarts.SMARTSQueryToolTest")
 public class SMARTSQueryTool {
@@ -119,7 +125,6 @@ public class SMARTSQueryTool {
     // a simplistic cache to store parsed SMARTS queries
     private int MAX_ENTRIES = 20;
     Map<String, QueryAtomContainer> cache = new LinkedHashMap<String, QueryAtomContainer>(MAX_ENTRIES + 1, .75F, true) {
-
         private static final long serialVersionUID = 16754433456654L;
 
         @Override

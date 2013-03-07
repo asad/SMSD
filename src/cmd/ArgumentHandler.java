@@ -38,7 +38,7 @@ import org.apache.commons.cli.PosixParser;
 
 /**
  *
- * @author sar
+ * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public class ArgumentHandler {
 
@@ -230,7 +230,7 @@ public class ArgumentHandler {
         remainingArgs = line.getArgs();
 
         if (line.hasOption('h') || line.getOptions().length == 0) {
-            System.out.println("Hello");
+//            System.out.println("Hello");
             helpRequested = true;
         }
 
@@ -544,14 +544,16 @@ public class ArgumentHandler {
     }
 
     /**
-     * @param name @set the Target
+     * @param name
+     * @set the Target
      */
     public void setTargetMolOutName(String name) {
         this.targetOutfileName = name;
     }
 
     /**
-     * @param name @set the Query
+     * @param name
+     * @set the Query
      */
     public void setQueryMolOutName(String name) {
         this.queryOutfileName = name;

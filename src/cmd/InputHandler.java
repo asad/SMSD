@@ -62,6 +62,10 @@ import java.util.List;
 import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.io.iterator.IteratingSDFReader;
 
+/**
+ *
+ * @author Syed Asad Rahman <asad@ebi.ac.uk>
+ */
 public class InputHandler {
 
     private ArgumentHandler argumentHandler;
@@ -234,11 +238,12 @@ public class InputHandler {
 
     /**
      *
-     * @param mol
+     * @param molecule
      * @param type
      * @throws CDKException
      */
-    public void configure(IAtomContainer mol, String type) throws CDKException {
+    public void configure(IAtomContainer molecule, String type) throws CDKException {
+        IAtomContainer mol = molecule;
         String id = "";
         if (type.equals("PDB")) {
             LigandHelper.addMissingBondOrders(mol);

@@ -47,11 +47,13 @@ import org.openscience.smsd.BaseMapping;
 import org.openscience.smsd.Isomorphism;
 import org.openscience.smsd.Substructure;
 import org.openscience.smsd.interfaces.Algorithm;
+import org.openscience.smsd.mcss.JobType;
+import org.openscience.smsd.mcss.MCSS;
 import org.openscience.smsd.tools.AtomContainerComparator;
 
 /**
  *
- * @author sar
+ * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public class SMSDcmd {
 
@@ -133,13 +135,15 @@ public class SMSDcmd {
         Comparator<IAtomContainer> comparator = new AtomContainerComparator();
         Collections.sort(atomContainerSet, comparator);
 
-        IAtomContainer mcsAtomContainer = null;
         boolean matchBonds = argumentHandler.isMatchBondType();
         boolean matchRings = argumentHandler.isMatchRingType();
         boolean removeHydrogens = argumentHandler.isApplyHRemoval();
         int filter = argumentHandler.getChemFilter();
         List<IAtomContainer> targets = new ArrayList<IAtomContainer>();
 
+        /*
+         * Configure the targets
+         */
         for (IAtomContainer target : atomContainerSet) {
             boolean flag = ConnectivityChecker.isConnected(target);
             String name = (String) target.getProperty(CDKConstants.TITLE);
@@ -154,13 +158,25 @@ public class SMSDcmd {
                 }
             }
             if (removeHydrogens) {
-                target = new AtomContainer(AtomContainerManipulator.removeHydrogens(target));
+                target = AtomContainerManipulator.removeHydrogens(target);
                 target.setProperty(CDKConstants.TITLE, name);
                 target.setID(name);
             }
 
-            if (mcsAtomContainer != null) {
-                flag = ConnectivityChecker.isConnected(mcsAtomContainer);
+            targets.add(target);
+            inputHandler.configure(target, targetType);
+        }
+
+
+        /*
+         * Run N MCS on targets
+         */
+
+        MCSS mcss = new MCSS(targets, JobType.MCS, 0);
+        for (IAtomContainer ac : mcss.getCalculateMCSS()) {
+            if (ac != null && ac.getAtomCount() > 0) {
+                IAtomContainer mcsAtomContainer = ac.clone();
+                boolean flag = ConnectivityChecker.isConnected(mcsAtomContainer);
                 if (!flag) {
                     System.err.println("WARNING : Skipping file "
                             + mcsAtomContainer.getProperty(CDKConstants.TITLE) + " not connected ");
@@ -170,47 +186,44 @@ public class SMSDcmd {
                             ? "mcs" : (String) mcsAtomContainer.getProperty(CDKConstants.TITLE);
                     mcsAtomContainer.setID(mcsFilenName);
                     argumentHandler.setQueryMolOutName(mcsAtomContainer.getID());
+                } else if (mcsAtomContainer.getProperty(CDKConstants.TITLE) == null) {
+                    String mcsFilenName = "Fragment";
+                    mcsAtomContainer.setID(mcsFilenName);
+                    argumentHandler.setQueryMolOutName(mcsAtomContainer.getID());
                 }
-                if (removeHydrogens) {
-                    mcsAtomContainer = new AtomContainer(AtomContainerManipulator.removeHydrogens(mcsAtomContainer));
+
+                inputHandler.configure(mcsAtomContainer, targetType);
+                if (argumentHandler.shouldOutputSubgraph()) {
+                    String outpath = argumentHandler.getOutputFilepath();
+                    String outtype = argumentHandler.getOutputFiletype();
+                    outputHandler.writeMol(outtype, mcsAtomContainer, outpath);
                 }
-            }
 
-            inputHandler.configure(target, targetType);
-
-            if (mcsAtomContainer == null) {
-                mcsAtomContainer = target;
-                targets.add(target);
-            } else {
-                BaseMapping smsd = run(mcsAtomContainer, target, filter, matchBonds, matchRings);
-                target = target.getBuilder().newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getTarget());
-                targets.add(target);
-                Map<Integer, Integer> mapping = getIndexMapping(smsd.getFirstAtomMapping());
-                IAtomContainer subgraph = getSubgraph(target, mapping);
-                mcsAtomContainer = new AtomContainer(subgraph);
             }
         }
-        inputHandler.configure(mcsAtomContainer, targetType);
 
-        if (argumentHandler.shouldOutputSubgraph()) {
-            String outpath = argumentHandler.getOutputFilepath();
-            String outtype = argumentHandler.getOutputFiletype();
-            outputHandler.writeMol(outtype, mcsAtomContainer, outpath);
-        }
-        if (mcsAtomContainer != null && argumentHandler.isImage()) {
-            // now that we have the N-MCS, remap
-            List<Map<Integer, Integer>> mappings = new ArrayList<Map<Integer, Integer>>();
-            List<IAtomContainer> secondRoundTargets = new ArrayList<IAtomContainer>();
-            IChemObjectBuilder builder = DefaultChemObjectBuilder.getInstance();
-            for (IAtomContainer target : targets) {
-                BaseMapping smsd = run(mcsAtomContainer, target, filter, matchBonds, matchRings);
-                mappings.add(getIndexMapping(smsd.getFirstAtomMapping()));
-                secondRoundTargets.add(
-                        builder.newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getTarget()));
+        /*
+         * For image generation RE-RUN the MCS with the common fragment
+         */
+        if (argumentHandler.isImage()) {
+            for (IAtomContainer ac : mcss.getCalculateMCSS()) {
+                if (ac != null && ac.getAtomCount() > 0) {
+                    IAtomContainer mcsAtomContainer = ac.clone();
+                    // now that we have the N-MCS, remap
+                    List<Map<Integer, Integer>> mappings = new ArrayList<Map<Integer, Integer>>();
+                    List<IAtomContainer> secondRoundTargets = new ArrayList<IAtomContainer>();
+                    IChemObjectBuilder builder = DefaultChemObjectBuilder.getInstance();
+                    for (IAtomContainer target : targets) {
+                        BaseMapping smsd = run(mcsAtomContainer, target, filter, matchBonds, matchRings);
+                        mappings.add(getIndexMapping(smsd.getFirstAtomMapping()));
+                        secondRoundTargets.add(
+                                builder.newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getTarget()));
+                    }
+
+                    String name = inputHandler.getTargetName();
+                    outputHandler.writeCircleImage(mcsAtomContainer, secondRoundTargets, name, mappings);
+                }
             }
-
-            String name = inputHandler.getTargetName();
-            outputHandler.writeCircleImage(mcsAtomContainer, secondRoundTargets, name, mappings);
         }
     }
 
@@ -290,14 +303,12 @@ public class SMSDcmd {
 
             query = query.getBuilder().newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getQuery());
             target = target.getBuilder().newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getTarget());
-
-
             Map<IAtom, IAtom> mcs = smsd.getFirstAtomMapping().getMappings();
             int nAtomsMatched = (mcs == null) ? 0 : mcs.size();
             double tanimotoSimilarity = smsd.getTanimotoSimilarity();
-
             //print out all mappings
-            if (mcs != null && argumentHandler.isAllMapping()) {
+            if (mcs
+                    != null && argumentHandler.isAllMapping()) {
                 outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
                 int counter = 0;
                 for (Iterator<AtomAtomMapping> it = smsd.getAllAtomMapping().iterator(); it.hasNext();) {
@@ -312,7 +323,8 @@ public class SMSDcmd {
                     counter += 1;
                 }
             } //print out top one
-            else if (mcs != null && !argumentHandler.isAllMapping()) {
+            else if (mcs
+                    != null && !argumentHandler.isAllMapping()) {
                 Map<Integer, Integer> mcsNumber = smsd.getFirstAtomMapping().getMappingsIndex();
                 double stereoScore = smsd.getStereoScore(0);
                 outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
@@ -325,15 +337,15 @@ public class SMSDcmd {
                     outputHandler.makeImage(query, target, label, mcsNumber);
                 }
             }
-
             double tanimotoGraph = smsd.getTanimotoSimilarity();
 //            double tanimotoAtom = smsd.getTanimotoAtomSimilarity();
 //            double tanimotoBond = smsd.getTanimotoBondSimilarity();
             double euclidianGraph = smsd.getEuclideanDistance();
 //            outputHandler.writeResults(query, target, tanimotoGraph, tanimotoAtom, tanimotoBond, euclidianGraph, nAtomsMatched, executionTime);
-            outputHandler.writeResults(query, target, tanimotoGraph, euclidianGraph, nAtomsMatched, executionTime);
 
-            if (mcs != null && argumentHandler.isImage()) {
+            outputHandler.writeResults(query, target, tanimotoGraph, euclidianGraph, nAtomsMatched, executionTime);
+            if (mcs
+                    != null && argumentHandler.isImage()) {
                 String qName = inputHandler.getQueryName();
                 String tName = inputHandler.getTargetName() + "_" + targetNumber;
                 outputHandler.writeImage(qName, tName);
@@ -426,11 +438,18 @@ public class SMSDcmd {
             smsd = runSubstructure(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings);
         } else {
             smsd = run(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings);
+
+
+
+
+
+
+
+
         }
 
         query = query.getBuilder().newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getQuery());
         target = target.getBuilder().newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getTarget());
-
         long endTime = System.currentTimeMillis();
         long executionTime = endTime - startTime;
 
@@ -440,13 +459,12 @@ public class SMSDcmd {
 
         String queryPath = argumentHandler.getQueryFilepath();
         String targetPath = argumentHandler.getTargetFilepath();
-
         Map<IAtom, IAtom> mcs = smsd.getFirstAtomMapping().getMappings();
         int nAtomsMatched = (mcs == null) ? 0 : mcs.size();
         double tanimotoSimilarity = smsd.getTanimotoSimilarity();
-
         //print out all mappings
-        if (mcs != null && argumentHandler.isAllMapping()) {
+        if (mcs
+                != null && argumentHandler.isAllMapping()) {
             outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
             int counter = 0;
             for (Iterator<AtomAtomMapping> it = smsd.getAllAtomMapping().iterator(); it.hasNext();) {
@@ -461,7 +479,8 @@ public class SMSDcmd {
                 counter += 1;
             }
         } //print out top one
-        else if (mcs != null && !argumentHandler.isAllMapping()) {
+        else if (mcs
+                != null && !argumentHandler.isAllMapping()) {
             Map<Integer, Integer> mcsNumber = smsd.getFirstAtomMapping().getMappingsIndex();
             double stereoScore = smsd.getStereoScore(0);
             outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
@@ -474,15 +493,15 @@ public class SMSDcmd {
                 outputHandler.makeImage(query, target, label, mcsNumber);
             }
         }
-
         double tanimotoGraph = smsd.getTanimotoSimilarity();
 //        double tanimotoAtom = smsd.getTanimotoAtomSimilarity();
 //        double tanimotoBond = smsd.getTanimotoBondSimilarity();
         double euclidianGraph = smsd.getEuclideanDistance();
 //        outputHandler.writeResults(query, target, tanimotoGraph, tanimotoAtom, tanimotoBond, euclidianGraph, nAtomsMatched, executionTime);
-        outputHandler.writeResults(query, target, tanimotoGraph, euclidianGraph, nAtomsMatched, executionTime);
 
-        if (mcs != null && argumentHandler.isImage()) {
+        outputHandler.writeResults(query, target, tanimotoGraph, euclidianGraph, nAtomsMatched, executionTime);
+        if (mcs
+                != null && argumentHandler.isImage()) {
             String qName = inputHandler.getQueryName();
             String tName = inputHandler.getTargetName();
             outputHandler.writeImage(qName, tName);
@@ -495,6 +514,7 @@ public class SMSDcmd {
             String outtype = argumentHandler.getOutputFiletype();
             outputHandler.writeMol(outtype, subgraph, outpath);
         }
+
         outputHandler.closeFiles();
     }
 
@@ -502,7 +522,7 @@ public class SMSDcmd {
             IAtomContainer container, Map<Integer, Integer> mapping) throws CloneNotSupportedException {
         Collection<Integer> values = mapping.values();
         List<IAtom> subgraphAtoms = new ArrayList<IAtom>();
-        IAtomContainer subgraph = (IAtomContainer) container.clone();
+        IAtomContainer subgraph = container.clone();
         for (Integer index : values) {
             subgraphAtoms.add(subgraph.getAtom(index));
         }

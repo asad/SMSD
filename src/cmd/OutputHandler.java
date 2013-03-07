@@ -234,8 +234,8 @@ public class OutputHandler {
         String queryMolInput = argumentHandler.getQueryFilepath();
         String targetMolInput = argumentHandler.getTargetFilepath();
 
-        double cosineGraph = 0.0;
-        double SoergelGraph = 0.0;
+        double cosineGraph;
+        double SoergelGraph;
 
         int mol1Size = mol1.getAtomCount();
         int mol2Size = mol2.getAtomCount();
@@ -259,8 +259,6 @@ public class OutputHandler {
         if (!argumentHandler.isAppendMode()) {
             outDescriptorFile.write(graphDescrptorL + " ");
             outDescriptorFile.write("Tanimoto (Sim.)= " + nf.format(tanimotoGraph) + " ");
-//            outDescriptorFile.write("Tanimoto (Bond Sim.)= " + nf.format(tanimotoBond) + " ");
-//            outDescriptorFile.write("Tanimoto (Atom Sim.)= " + nf.format(tanimotoAtom) + " ");
             outDescriptorFile.write("Euclidian (Dist.)= " + nf.format(euclidianGraph) + " ");
             outDescriptorFile.write("Cosine (Sim.)= " + nf.format(cosineGraph) + " ");
             outDescriptorFile.write("Soergel (Dist.)= " + nf.format(SoergelGraph) + " ");
@@ -274,8 +272,6 @@ public class OutputHandler {
         } else {
             outDescriptorFile.write(graphDescrptorL + "\t");
             outDescriptorFile.write(nf.format(tanimotoGraph) + "\t");
-//            outDescriptorFile.write(nf.format(tanimotoBond) + "\t");
-//            outDescriptorFile.write(nf.format(tanimotoAtom) + "\t");
             outDescriptorFile.write(nf.format(euclidianGraph) + "\t");
             outDescriptorFile.write(nf.format(cosineGraph) + "\t");
             outDescriptorFile.write(nf.format(SoergelGraph) + "\t");
