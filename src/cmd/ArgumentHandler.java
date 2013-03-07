@@ -361,21 +361,20 @@ public class ArgumentHandler {
         sb.append(NEW_LINE);
         sb.append("Usage examples: ");
         sb.append(NEW_LINE);
-        sb.append("a) To start the GUI: java -jar SMSD.jar ").append(NEW_LINE);
-        sb.append("You could further use various file formats (SMI, MOL etc).").append(NEW_LINE);
-        sb.append("Options (recommended): -r -z -b will remove hydrogens, match rings, match bond types respectively.").append(NEW_LINE);
-        sb.append("b) Find MCS between two molecules and write the output as a MOL file:").append(NEW_LINE)
-                .append("sh SMSD -Q SMI -q \"CCC\" -T PDB -t ATP.pdb -O MOL -o subgraph.mol -r -z -b").append(NEW_LINE);
-        sb.append("c) Find MCS between two molecules and print the output:").append(NEW_LINE)
-                .append("sh SMSD -Q SMI -q \"CCC\" -T SMI -t \"CCN\" -O SMI -o -- -r -z -b").append(NEW_LINE);
-        sb.append("d) Find MCS between two molecules and generate an image highlighting the matched parts:").append(NEW_LINE)
-                .append("sh SMSD -Q MOL -q ADP.mol -T MOL -t ATP.mol -g -r -z -b").append(NEW_LINE);
-        sb.append("e) Find MCS between N-molecules and print the common substructure between them:").append(NEW_LINE)
-                .append("sh SMSD -T SDF -t arom.sdf -N -O SMI -o -- -r -z -b").append(NEW_LINE);
-        sb.append("f) Find MCS between N-molecules and highlighting the common substructure between them:").append(NEW_LINE);
-        sb.append("WARNING: This option might require large virtual machine memory allocation").append(NEW_LINE)
-                .append("sh SMSD -T SDF -t arom.sdf -N -O SMI -o -- -g -r -z -b").append(NEW_LINE);
-        sb.append("You could further use various file formats").append(NEW_LINE);
+        sb.append("To start the GUI: java -jar SMSD.jar ").append(NEW_LINE).append(NEW_LINE);
+        sb.append("Command Line Options (recommended): -r -z -b will remove hydrogens, match rings, match bond types respectively.").append(NEW_LINE).append(NEW_LINE);
+        sb.append("a) Find MCS between two molecules and write the output as a MOL file:").append(NEW_LINE)
+                .append("\tsh SMSD -Q SMI -q \"CCC\" -T PDB -t ATP.pdb -O MOL -o subgraph.mol -r -z -b").append(NEW_LINE);
+        sb.append("b) Find MCS between two molecules and print the output:").append(NEW_LINE)
+                .append("\tsh SMSD -Q SMI -q \"CCC\" -T SMI -t \"CCN\" -O SMI -o -- -r -z -b").append(NEW_LINE);
+        sb.append("c) Find MCS between two molecules and generate an image highlighting the matched parts:").append(NEW_LINE)
+                .append("\tsh SMSD -Q MOL -q ADP.mol -T MOL -t ATP.mol -g -r -z -b").append(NEW_LINE);
+        sb.append("d) Find MCS between N-molecules and print the common substructure between them:").append(NEW_LINE)
+                .append("\tsh SMSD -T SDF -t arom.sdf -N -O SMI -o -- -r -z -b").append(NEW_LINE);
+        sb.append("e) Find MCS between N-molecules and highlighting the common substructure between them:").append(NEW_LINE);
+        sb.append("\tWARNING: This option might require large virtual machine memory allocation").append(NEW_LINE)
+                .append("\tsh SMSD -T SDF -t arom.sdf -N -O SMI -o -- -g -r -z -b").append(NEW_LINE).append(NEW_LINE);
+        sb.append("You could further use various file formats").append(NEW_LINE).append(NEW_LINE);
         return sb;
     }
 
