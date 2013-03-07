@@ -336,7 +336,7 @@ public class ArgumentHandler {
                 + NEW_LINE + "\t United Kingdom "
                 + NEW_LINE + "e-mail:  asad@ebi.ac.uk"
                 + NEW_LINE + "++++++++++++++++++++++++++++++++++++++++++++++" + NEW_LINE
-                + NEW_LINE + "SMSD can calculate similarity between two small molecules"
+                + NEW_LINE + "SMSD can calculate similarity between small molecules"
                 + NEW_LINE + "by using an inhouse algorithm developed at EMBL-EBI. It"
                 + NEW_LINE + "reports similarity scores and highlights the matched "
                 + NEW_LINE + "substructure." + NEW_LINE
