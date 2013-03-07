@@ -41,6 +41,8 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.io.iterator.IIteratingChemObjectReader;
+import org.openscience.cdk.tools.ILoggingTool;
+import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.BaseMapping;
@@ -56,6 +58,9 @@ import org.openscience.smsd.tools.AtomContainerComparator;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public class SMSDcmd {
+
+    private final static ILoggingTool logger =
+            LoggingToolFactory.createLoggingTool(InputHandler.class);
 
     /**
      * @param args the command line arguments
@@ -104,15 +109,15 @@ public class SMSDcmd {
             }
 
         } catch (IOException ioe) {
-            System.err.println("IO Problem : " + ioe.getMessage());
+            logger.error("IO Problem : " + ioe.getMessage());
 //            ioe.printStackTrace();
         } catch (CDKException e) {
-            System.err.println("CDK Problem : " + e.getMessage());
+            logger.error("CDK Problem : " + e.getMessage());
 //            e.printStackTrace();
         } catch (CloneNotSupportedException e) {
-            System.err.println(e.toString());
+            logger.error(e.toString());
         } catch (MissingOptionException e) {
-            System.err.println("Missing argument : " + e.getMessage());
+            logger.error("Missing argument : " + e.getMessage());
         }
 
     }
@@ -271,7 +276,7 @@ public class SMSDcmd {
             IAtomContainer target = (IAtomContainer) reader.next();
             flag = ConnectivityChecker.isConnected(target);
             if (!flag) {
-                System.err.println("WARNING : Skipping target AtomContainer "
+                logger.error("WARNING : Skipping target AtomContainer "
                         + target.getProperty(CDKConstants.TITLE) + " as it is not connected.");
                 continue;
             }
@@ -373,12 +378,12 @@ public class SMSDcmd {
         if (argumentHandler.isImage()) {
             boolean flag = ConnectivityChecker.isConnected(query);
             if (!flag) {
-                System.err.println("WARNING : Skipping file " + inputHandler.getQueryName() + " not connectted ");
+                logger.error("WARNING : Skipping file " + inputHandler.getQueryName() + " not connectted ");
                 return;
             }
             flag = ConnectivityChecker.isConnected(target);
             if (!flag) {
-                System.err.println("WARNING : Skipping target AtomContainer "
+                logger.error("WARNING : Skipping target AtomContainer "
                         + inputHandler.getTargetName() + " as it is not connected.");
                 return;
             }

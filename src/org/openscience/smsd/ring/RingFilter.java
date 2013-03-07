@@ -59,7 +59,8 @@ import org.openscience.smsd.algorithm.matchers.AtomMatcher;
 
 /**
  *
- * @cdk.module smsd @cdk.githash
+ * @cdk.module smsd
+ * @cdk.githash
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk> 2009-2013
  */

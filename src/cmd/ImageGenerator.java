@@ -48,6 +48,8 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.interfaces.IAtomContainerSet;
+import org.openscience.cdk.tools.ILoggingTool;
+import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.reactionblast.graphics.direct.DirectArrowDrawer;
 import org.openscience.reactionblast.graphics.direct.DirectMoleculeDrawer;
 import org.openscience.reactionblast.graphics.direct.Params;
@@ -61,6 +63,9 @@ import org.openscience.reactionblast.graphics.direct.layout.ZoomToFitGridLayout;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public class ImageGenerator {
+
+    private final static ILoggingTool logger =
+            LoggingToolFactory.createLoggingTool(ImageGenerator.class);
 
     private class QueryTargetPair {
 
@@ -230,7 +235,7 @@ public class ImageGenerator {
             ImageIO.write((RenderedImage) image, "PNG",
                     new File(outImageFileName + ".png"));
         } catch (IOException ioe) {
-            ioe.printStackTrace();
+            logger.error("Error: Image generation: ", ioe);
         }
 
     }

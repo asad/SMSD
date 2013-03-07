@@ -100,7 +100,7 @@ public class FinalMappings implements IFinalMapping {
     @Override
     @TestMethod("testClear")
     public synchronized void clear() {
-        this.mappings.clear();
+        FinalMappings.mappings.clear();
     }
 
     /**

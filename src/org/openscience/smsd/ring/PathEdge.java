@@ -57,7 +57,7 @@ import org.openscience.cdk.interfaces.IAtom;
  *
  * @cdk.module smsd
  * @cdk.githash
- * @author Richard L. Apodaca <rapodaca at metamolecular.com> 2009-2013,
+ * @author Richard L. Apodaca <rapodaca at metamolecular.com> 2009-2013, 
  *         Syed Asad Rahman <asad@ebi.ac.uk> 2009-2013
  */
 public class PathEdge {
@@ -69,7 +69,7 @@ public class PathEdge {
     }
 
     public List<IAtom> getAtoms() {
-        return atoms;
+        return Collections.unmodifiableList(atoms);
     }
 
     public IAtom getSource() {

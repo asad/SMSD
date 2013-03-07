@@ -46,6 +46,8 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.io.MDLV2000Writer;
 import org.openscience.cdk.smiles.SmilesGenerator;
+import org.openscience.cdk.tools.ILoggingTool;
+import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.reactionblast.graphics.direct.Params;
 
 /**
@@ -56,6 +58,8 @@ import org.openscience.reactionblast.graphics.direct.Params;
  */
 public class OutputHandler {
 
+    private final static ILoggingTool logger =
+            LoggingToolFactory.createLoggingTool(OutputHandler.class);
     private ArgumentHandler argumentHandler;
     private BufferedWriter outGFile = null;
     private BufferedWriter outMFile = null;
@@ -80,9 +84,9 @@ public class OutputHandler {
             try {
                 System.out.println(field.getName() + "=" + field.get(params));
             } catch (IllegalArgumentException e) {
-                e.printStackTrace();
+                logger.error("ERROR: ", e);
             } catch (IllegalAccessException e) {
-                e.printStackTrace();
+                logger.error("ERROR: ", e);
             }
         }
     }

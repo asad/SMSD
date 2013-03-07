@@ -20,11 +20,11 @@ package org.openscience.smsd.mcss;
 
 import java.util.*;
 import java.util.concurrent.Callable;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.smiles.SmilesGenerator;
+import org.openscience.cdk.tools.ILoggingTool;
+import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.BaseMapping;
@@ -39,6 +39,8 @@ import org.openscience.smsd.interfaces.Algorithm;
  */
 final public class MCSSThread implements Callable<List<IAtomContainer>> {
 
+    private final static ILoggingTool logger =
+            LoggingToolFactory.createLoggingTool(MCSSThread.class);
     private final List<IAtomContainer> mcssList;
     private final JobType jobType;
     private int taskNumber;
@@ -98,7 +100,7 @@ final public class MCSSThread implements Callable<List<IAtomContainer>> {
             }
 
         } catch (Exception e) {
-            Logger.getLogger(MCSSThread.class.getName()).log(Level.SEVERE, null, e);
+            logger.error("ERROR IN MCS Thread: ", e);
         }
         if (resultsList != null && querySeed != null) {
             resultsList.add(querySeed);
@@ -119,10 +121,10 @@ final public class MCSSThread implements Callable<List<IAtomContainer>> {
                 try {
                     matchList.add(new Fragment(match));
                 } catch (CDKException ex) {
-                    Logger.getLogger(MCSSThread.class.getName()).log(Level.SEVERE, null, ex);
+                    logger.error("ERROR IN MCS Thread: ", ex);
                 }
             } catch (CloneNotSupportedException ex) {
-                Logger.getLogger(MCSSThread.class.getName()).log(Level.SEVERE, null, ex);
+                logger.error("ERROR IN MCS Thread: ", ex);
             }
             // System.out.println("match has "+match.getAtomCount()+" atoms, and "+match.getBondCount()+" bonds");
         }

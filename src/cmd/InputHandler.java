@@ -26,18 +26,21 @@
  */
 package cmd;
 
+import cmd.pdb.LigandHelper;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-
 import org.apache.commons.cli.MissingOptionException;
+import org.openscience.cdk.AtomContainer;
+import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.ChemFile;
 import org.openscience.cdk.DefaultChemObjectBuilder;
-import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
@@ -50,17 +53,15 @@ import org.openscience.cdk.io.MDLReader;
 import org.openscience.cdk.io.Mol2Reader;
 import org.openscience.cdk.io.PDBReader;
 import org.openscience.cdk.io.iterator.IIteratingChemObjectReader;
+import org.openscience.cdk.io.iterator.IteratingSDFReader;
 import org.openscience.cdk.layout.StructureDiagramGenerator;
 import org.openscience.cdk.signature.MoleculeSignature;
 import org.openscience.cdk.smiles.SmilesParser;
+import org.openscience.cdk.tools.ILoggingTool;
+import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.cdk.tools.manipulator.ChemFileManipulator;
 
-import cmd.pdb.LigandHelper;
-import java.util.Collections;
-import java.util.List;
-import org.openscience.cdk.CDKConstants;
-import org.openscience.cdk.io.iterator.IteratingSDFReader;
 
 /**
  *
@@ -68,6 +69,8 @@ import org.openscience.cdk.io.iterator.IteratingSDFReader;
  */
 public class InputHandler {
 
+    private final static ILoggingTool logger =
+            LoggingToolFactory.createLoggingTool(InputHandler.class);
     private ArgumentHandler argumentHandler;
     private StructureDiagramGenerator sdg;
     private Map<String, String> singularDataTypes;

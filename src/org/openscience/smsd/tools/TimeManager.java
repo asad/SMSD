@@ -30,6 +30,12 @@ import org.openscience.cdk.annotations.TestMethod;
 
 /**
  * Class that handles execution time of the MCS search.
+ *
+ * long diffSeconds = time / 1000; 
+ * long diffMinutes = time / (60 * 1000); 
+ * long diffHours = time / (60 * 60 * 1000); 
+ * long diffDays = time / (24 * 60 * 60 * 1000);
+ *
  * @cdk.module smsd
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
@@ -54,6 +60,7 @@ public class TimeManager {
 
     /**
      * Returns Elapsed Time In Hours
+     *
      * @return Elapsed Time In Hours
      */
     @TestMethod("testGetElapsedTimeInHours")
@@ -66,16 +73,11 @@ public class TimeManager {
 
     /**
      * Returns Elapsed Time In Minutes
+     *
      * @return Elapsed Time In Minutes
      */
     @TestMethod("testGetElapsedTimeInMinutes")
     public synchronized double getElapsedTimeInMinutes() {
-
-        //long diffSeconds = diff / 1000;
-        //long diffMinutes = diff / (60 * 1000);
-        //long diffHours = diff / (60 * 60 * 1000);
-        //long diffDays = diff / (24 * 60 * 60 * 1000);
-
         double currentTime = System.currentTimeMillis();
         return (currentTime - startTime) / (60 * 1000);
 
@@ -83,6 +85,7 @@ public class TimeManager {
 
     /**
      * Return Elapsed Time In Seconds
+     *
      * @return Elapsed Time In Seconds
      */
     @TestMethod("testGetElapsedTimeInSeconds")
@@ -94,6 +97,7 @@ public class TimeManager {
 
     /**
      * Returns Elapsed Time In Mill Seconds
+     *
      * @return Elapsed Time In Mill Seconds
      */
     @TestMethod("testGetElapsedTimeInMilliSeconds")
