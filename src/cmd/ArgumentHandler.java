@@ -175,7 +175,7 @@ public class ArgumentHandler {
                 OptionBuilder.hasArg().withDescription("Query type (MOL, SMI, etc)").withArgName("type").create("Q"));
 
         options.addOption(
-                OptionBuilder.hasArg().withDescription("Target type (MOL, SMI, etc)").withArgName("type").create("T"));
+                OptionBuilder.hasArg().withDescription("Target type (MOL, SMI, SMIF, etc)").withArgName("type").create("T"));
 
         options.addOption(
                 OptionBuilder.hasArg().withDescription("Output the substructure to a file").withArgName("filename").create("o"));

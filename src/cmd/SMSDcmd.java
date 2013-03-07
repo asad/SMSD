@@ -88,6 +88,11 @@ public class SMSDcmd {
         run(argumentHandler, new InputHandler(argumentHandler));
     }
 
+    /**
+     *
+     * @param argumentHandler
+     * @param inputHandler
+     */
     public static void run(ArgumentHandler argumentHandler, InputHandler inputHandler) {
         OutputHandler outputHandler = new OutputHandler(argumentHandler);
         try {

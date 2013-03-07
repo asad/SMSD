@@ -108,6 +108,7 @@ public class InputHandler {
 
         multipleDataTypes = new HashMap<String, String>();
         multipleDataTypes.put("SDF", "SD file format");
+        multipleDataTypes.put("SMIF", "SMILES file format");
 
         stringDataTypes = new HashMap<String, String>();
         stringDataTypes.put("SMI", "SMILES string format");
@@ -371,7 +372,6 @@ public class InputHandler {
      */
     public List<IAtomContainer> getAllTargets() throws FileNotFoundException, IOException, CDKException {
         String type = argumentHandler.getTargetType();
-
         IChemObjectBuilder builder = DefaultChemObjectBuilder.getInstance();
         ISimpleChemObjectReader reader;
         boolean deducebonds = false;
@@ -397,7 +397,7 @@ public class InputHandler {
                 allAtomContainers.add(iteratingSDFReader.next());
             }
             iteratingSDFReader.close();
-        } else if (type.equals("SMI")) {
+        } else if (type.equals("SMIF")) {
             reader = new SMILESReader(new FileReader(inputFile));
             deducebonds = true;
             emptyChemFile = builder.newInstance(IChemFile.class);
@@ -409,7 +409,6 @@ public class InputHandler {
             chemFile = reader.read(emptyChemFile);
             allAtomContainers = ChemFileManipulator.getAllAtomContainers(chemFile);
         }
-//        System.out.println(chemFile.toString());
         if (!allAtomContainers.isEmpty()) {
             // Get Molecules
             List<IAtomContainer> atomContainerList = new ArrayList<IAtomContainer>(allAtomContainers.size());
