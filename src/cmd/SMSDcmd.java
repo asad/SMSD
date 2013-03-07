@@ -40,7 +40,6 @@ import org.openscience.cdk.graph.ConnectivityChecker;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.io.iterator.IIteratingChemObjectReader;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
@@ -126,15 +125,10 @@ public class SMSDcmd {
             InputHandler inputHandler,
             OutputHandler outputHandler,
             ArgumentHandler argumentHandler) throws IOException, CDKException, CloneNotSupportedException {
-        IIteratingChemObjectReader reader = inputHandler.getAllTargets();
+        List<IAtomContainer> atomContainerSet = inputHandler.getAllTargets();
         String targetType = argumentHandler.getTargetType();
-        if (reader == null) {
+        if (atomContainerSet == null) {
             throw new IOException("Unknown input type " + targetType);
-        }
-        List<IAtomContainer> atomContainerSet = new ArrayList<IAtomContainer>();
-        while (reader.hasNext()) {
-            IAtomContainer target = (IAtomContainer) reader.next();
-            atomContainerSet.add(target);
         }
 
         Comparator<IAtomContainer> comparator = new AtomContainerComparator();
@@ -142,33 +136,12 @@ public class SMSDcmd {
 
         boolean matchBonds = argumentHandler.isMatchBondType();
         boolean matchRings = argumentHandler.isMatchRingType();
-        boolean removeHydrogens = argumentHandler.isApplyHRemoval();
         int filter = argumentHandler.getChemFilter();
-        List<IAtomContainer> targets = new ArrayList<IAtomContainer>();
 
         /*
          * Configure the targets
          */
         for (IAtomContainer target : atomContainerSet) {
-            boolean flag = ConnectivityChecker.isConnected(target);
-            String name = (String) target.getProperty(CDKConstants.TITLE);
-            if (!flag) {
-                System.err.println("WARNING : Skipping target AtomContainer "
-                        + target.getProperty(CDKConstants.TITLE) + " as it is not connected.");
-                continue;
-            } else {
-                if (target.getProperty(CDKConstants.TITLE) != null) {
-                    target.setID((String) target.getProperty(CDKConstants.TITLE));
-                    argumentHandler.setTargetMolOutName(target.getID() == null ? "Target" : target.getID());
-                }
-            }
-            if (removeHydrogens) {
-                target = AtomContainerManipulator.removeHydrogens(target);
-                target.setProperty(CDKConstants.TITLE, name);
-                target.setID(name);
-            }
-
-            targets.add(target);
             inputHandler.configure(target, targetType);
         }
 
@@ -177,7 +150,7 @@ public class SMSDcmd {
          * Run N MCS on targets
          */
 
-        MCSS mcss = new MCSS(targets, JobType.MCS, 0);
+        MCSS mcss = new MCSS(atomContainerSet, JobType.MCS, 0, matchBonds, matchRings);
         for (IAtomContainer ac : mcss.getCalculateMCSS()) {
             if (ac != null && ac.getAtomCount() > 0) {
                 IAtomContainer mcsAtomContainer = ac.clone();
@@ -219,7 +192,7 @@ public class SMSDcmd {
                     List<Map<Integer, Integer>> mappings = new ArrayList<Map<Integer, Integer>>();
                     List<IAtomContainer> secondRoundTargets = new ArrayList<IAtomContainer>();
                     IChemObjectBuilder builder = DefaultChemObjectBuilder.getInstance();
-                    for (IAtomContainer target : targets) {
+                    for (IAtomContainer target : atomContainerSet) {
                         BaseMapping smsd = run(mcsAtomContainer, target, filter, matchBonds, matchRings);
                         mappings.add(getIndexMapping(smsd.getFirstAtomMapping()));
                         secondRoundTargets.add(
@@ -267,29 +240,17 @@ public class SMSDcmd {
         boolean matchRings = argumentHandler.isMatchRingType();
 
         int targetNumber = 0;
-        IIteratingChemObjectReader reader = inputHandler.getAllTargets();
+        List<IAtomContainer> allTargets = inputHandler.getAllTargets();
         String targetType = argumentHandler.getTargetType();
-        if (reader == null) {
+        if (allTargets == null) {
             throw new IOException("Unknown input type " + targetType);
         }
-        while (reader.hasNext()) {
-            IAtomContainer target = (IAtomContainer) reader.next();
+        for (IAtomContainer target : allTargets) {
             flag = ConnectivityChecker.isConnected(target);
             if (!flag) {
                 logger.error("WARNING : Skipping target AtomContainer "
                         + target.getProperty(CDKConstants.TITLE) + " as it is not connected.");
                 continue;
-            }
-
-            /*
-             * remove target hydrogens
-             */
-            if (removeHydrogens) {
-                target = new AtomContainer(AtomContainerManipulator.removeHydrogens(target));
-            }
-            if (target.getProperty(CDKConstants.TITLE) != null) {
-                target.setID((String) target.getProperty(CDKConstants.TITLE));
-                argumentHandler.setTargetMolOutName(target.getID() == null ? "Target" : target.getID());
             }
 
             inputHandler.configure(target, targetType);
@@ -314,8 +275,7 @@ public class SMSDcmd {
             int nAtomsMatched = (mcs == null) ? 0 : mcs.size();
             double tanimotoSimilarity = smsd.getTanimotoSimilarity();
             //print out all mappings
-            if (mcs
-                    != null && argumentHandler.isAllMapping()) {
+            if (mcs != null && argumentHandler.isAllMapping()) {
                 outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
                 int counter = 0;
                 for (Iterator<AtomAtomMapping> it = smsd.getAllAtomMapping().iterator(); it.hasNext();) {

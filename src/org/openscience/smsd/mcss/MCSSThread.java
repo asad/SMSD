@@ -43,7 +43,9 @@ final public class MCSSThread implements Callable<List<IAtomContainer>> {
             LoggingToolFactory.createLoggingTool(MCSSThread.class);
     private final List<IAtomContainer> mcssList;
     private final JobType jobType;
-    private int taskNumber;
+    private final int taskNumber;
+    private final boolean matchBonds;
+    private final boolean matchRings;
 
     /**
      *
@@ -52,9 +54,15 @@ final public class MCSSThread implements Callable<List<IAtomContainer>> {
      * @param taskNumber
      */
     public MCSSThread(List<IAtomContainer> mcssList, JobType jobType, int taskNumber) {
+        this(mcssList, jobType, taskNumber, true, true);
+    }
+
+    MCSSThread(List<IAtomContainer> mcssList, JobType jobType, int taskNumber, boolean matchBonds, boolean matchRings) {
         this.mcssList = mcssList;
         this.jobType = jobType;
         this.taskNumber = taskNumber;
+        this.matchBonds = matchBonds;
+        this.matchRings = matchRings;
     }
 
     @Override
@@ -62,9 +70,9 @@ final public class MCSSThread implements Callable<List<IAtomContainer>> {
 
 //        System.out.println("Calling MCSSTask " + taskNumber + " with " + mcssList.size() + " items");
         List<IAtomContainer> resultsList = new ArrayList<IAtomContainer>();
-        long startTime = Calendar.getInstance().getTimeInMillis();
+//        long startTime = Calendar.getInstance().getTimeInMillis();
         IAtomContainer querySeed = AtomContainerManipulator.removeHydrogens(mcssList.get(0));
-        long calcTime = startTime;
+//        long calcTime = startTime;
 
 
         try {
@@ -73,12 +81,12 @@ final public class MCSSThread implements Callable<List<IAtomContainer>> {
                 Collection<Fragment> fragmentsFomMCS;
                 BaseMapping comparison;
                 if (this.jobType.equals(JobType.MCS)) {
-                    comparison = new Isomorphism(querySeed, target, Algorithm.DEFAULT, true, true);
+                    comparison = new Isomorphism(querySeed, target, Algorithm.DEFAULT, matchBonds, matchRings);
                     comparison.setChemFilters(true, true, true);
                     fragmentsFomMCS = getMCSS(comparison);
                     querySeed = null;
                 } else {
-                    comparison = new Substructure(querySeed, target, true, true, false);
+                    comparison = new Substructure(querySeed, target, matchBonds, matchRings, false);
                     comparison.setChemFilters(true, true, true);
                     fragmentsFomMCS = getMCSS(comparison);
                     querySeed = null;
@@ -87,11 +95,9 @@ final public class MCSSThread implements Callable<List<IAtomContainer>> {
 //                        + " unique matches of size " + comparison.getFirstAtomMapping().getCount());
 //                System.out.println("MCSS for task " + taskNumber + " has " + querySeed.getAtomCount() + " atoms, and " + querySeed.getBondCount() + " bonds");
 //                System.out.println("Target for task " + taskNumber + " has " + target.getAtomCount() + " atoms, and " + target.getBondCount() + " bonds");
-
-
-                long endCalcTime = Calendar.getInstance().getTimeInMillis();
+//                long endCalcTime = Calendar.getInstance().getTimeInMillis();
 //                System.out.println("Task " + taskNumber + " index " + index + " took " + (endCalcTime - calcTime) + "ms");
-                calcTime = endCalcTime;
+//                calcTime = endCalcTime;
 
                 if (fragmentsFomMCS == null || fragmentsFomMCS.isEmpty()) {
                     break;
@@ -102,11 +108,11 @@ final public class MCSSThread implements Callable<List<IAtomContainer>> {
         } catch (Exception e) {
             logger.error("ERROR IN MCS Thread: ", e);
         }
-        if (resultsList != null && querySeed != null) {
+        if (querySeed != null) {
             resultsList.add(querySeed);
         }
 
-        long endTime = Calendar.getInstance().getTimeInMillis();
+//        long endTime = Calendar.getInstance().getTimeInMillis();
 //        System.out.println("Done: task " + taskNumber + " took " + (endTime - startTime) + "ms");
 //        System.out.println(" and mcss has " + querySeed.getAtomCount() + " atoms, and " + querySeed.getBondCount() + " bonds");
         return resultsList;
@@ -142,5 +148,12 @@ final public class MCSSThread implements Callable<List<IAtomContainer>> {
         SmilesGenerator g = new SmilesGenerator();
         g.setUseAromaticityFlag(true);
         return g.createSMILES(ac);
+    }
+
+    /**
+     * @return the taskNumber
+     */
+    public int getTaskNumber() {
+        return taskNumber;
     }
 }
