@@ -33,6 +33,7 @@ import org.apache.commons.cli.MissingOptionException;
 import org.apache.commons.cli.ParseException;
 import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.AtomContainer;
+import org.openscience.cdk.AtomContainerSet;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.exception.CDKException;
@@ -40,6 +41,8 @@ import org.openscience.cdk.graph.ConnectivityChecker;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.interfaces.IAtomContainerSet;
+import org.openscience.cdk.smiles.SmilesGenerator;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
@@ -152,13 +155,14 @@ public class SMSDcmd {
 
 
         /*
-         * Run N MCS on targets
+         * Run N MULTIPLE on targets
          */
 
-        MCSS mcss = new MCSS(atomContainerSet, JobType.MCS, 0, matchBonds, matchRings);
-        for (IAtomContainer ac : mcss.getCalculateMCSS()) {
-            if (ac != null && ac.getAtomCount() > 0) {
-                IAtomContainer mcsAtomContainer = ac.clone();
+        MCSS mcss = new MCSS(atomContainerSet, JobType.MULTIPLE, 0, matchBonds, matchRings);
+        List<IAtomContainer> calculatedMCSS = mcss.getCalculateMCSS();
+        IAtomContainerSet solutions = new AtomContainerSet();
+        for (IAtomContainer mcsAtomContainer : calculatedMCSS) {
+            if (mcsAtomContainer != null && mcsAtomContainer.getAtomCount() > 0) {
                 boolean flag = ConnectivityChecker.isConnected(mcsAtomContainer);
                 if (!flag) {
                     System.err.println("WARNING : Skipping file "
@@ -176,24 +180,25 @@ public class SMSDcmd {
                 }
 
                 inputHandler.configure(mcsAtomContainer, targetType);
-                if (argumentHandler.shouldOutputSubgraph()) {
-                    String outpath = argumentHandler.getOutputFilepath();
-                    String outtype = argumentHandler.getOutputFiletype();
-                    outputHandler.writeMol(outtype, mcsAtomContainer, outpath);
-                }
-
+                solutions.addAtomContainer(mcsAtomContainer);
             }
         }
 
+        if (argumentHandler.shouldOutputSubgraph()) {
+            String outpath = argumentHandler.getOutputFilepath();
+            String outtype = argumentHandler.getOutputFiletype();
+            outputHandler.writeMol(outtype, solutions, outpath);
+        }
+
         /*
-         * For image generation RE-RUN the MCS with the common fragment
+         * For image generation RE-RUN the MULTIPLE with the common fragment
          */
         if (argumentHandler.isImage()) {
             int index = 1;
-            for (IAtomContainer ac : mcss.getCalculateMCSS()) {
+            for (IAtomContainer ac : solutions.atomContainers()) {
                 if (ac != null && ac.getAtomCount() > 0) {
                     IAtomContainer mcsAtomContainer = ac.clone();
-                    // now that we have the N-MCS, remap
+                    // now that we have the N-MULTIPLE, remap
                     List<Map<Integer, Integer>> mappings = new ArrayList<Map<Integer, Integer>>();
                     List<IAtomContainer> secondRoundTargets = new ArrayList<IAtomContainer>();
                     IChemObjectBuilder builder = DefaultChemObjectBuilder.getInstance();
@@ -555,5 +560,17 @@ public class SMSDcmd {
 
     private static Map<Integer, Integer> getIndexMapping(AtomAtomMapping aam) {
         return aam.isEmpty() ? new TreeMap<Integer, Integer>() : aam.getMappingsIndex();
+    }
+
+    /**
+     * Return SMILES
+     *
+     * @param ac
+     * @return
+     */
+    private static String toSmiles(IAtomContainer ac) {
+        SmilesGenerator g = new SmilesGenerator();
+        g.setUseAromaticityFlag(true);
+        return g.createSMILES(ac);
     }
 }
