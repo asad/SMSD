@@ -26,13 +26,13 @@ package org.openscience.smsd.mcss;
 public enum JobType implements Comparable<JobType> {
 
     /**
-     * Default MCS algorithm.
+     * Default MULTIPLE algorithm.
      */
-    MCS(0, "MCS search"),
+    MULTIPLE(0, "Multiple Fragments"),
     /**
-     * Substructure search algorithm.
+     * SINGLE search algorithm.
      */
-    Substructure(1, "Substructure search");
+    SINGLE(1, "Single Fragment");
     private final int type;
     private final String description;
 
