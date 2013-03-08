@@ -129,6 +129,15 @@ public class SMSDcmd {
 
     }
 
+    /**
+     *
+     * @param inputHandler
+     * @param outputHandler
+     * @param argumentHandler
+     * @throws IOException
+     * @throws CDKException
+     * @throws CloneNotSupportedException
+     */
     public static void runNMCS(
             InputHandler inputHandler,
             OutputHandler outputHandler,
@@ -217,6 +226,15 @@ public class SMSDcmd {
         }
     }
 
+    /**
+     *
+     * @param inputHandler
+     * @param outputHandler
+     * @param argumentHandler
+     * @throws IOException
+     * @throws CDKException
+     * @throws CloneNotSupportedException
+     */
     public static void runSingleQueryMultipleTarget(
             InputHandler inputHandler,
             OutputHandler outputHandler,
@@ -332,6 +350,15 @@ public class SMSDcmd {
         outputHandler.closeFiles();
     }
 
+    /**
+     *
+     * @param inputHandler
+     * @param outputHandler
+     * @param argumentHandler
+     * @throws IOException
+     * @throws CDKException
+     * @throws CloneNotSupportedException
+     */
     public static void runSingleQuerySingleTarget(
             InputHandler inputHandler,
             OutputHandler outputHandler,
