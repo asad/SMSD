@@ -73,7 +73,7 @@ public class TestMCSS {
             }
         }
         long startTime = Calendar.getInstance().getTimeInMillis();
-        MCSS mcss = new MCSS(jobs, JobType.MCS, 5);
+        MCSS mcss = new MCSS(jobs, JobType.MULTIPLE, 5);
         for (IAtomContainer ac : mcss.getCalculateMCSS()) {
             System.out.println("Result MCS " + getMCSSSmiles(ac));
             Assert.assertEquals(31, ac.getAtomCount());
@@ -103,7 +103,7 @@ public class TestMCSS {
             }
         }
         long startTime = Calendar.getInstance().getTimeInMillis();
-        MCSS mcss = new MCSS(jobs, JobType.MCS, 5);
+        MCSS mcss = new MCSS(jobs, JobType.MULTIPLE, 5);
         for (IAtomContainer ac : mcss.getCalculateMCSS()) {
             System.out.println("Result MCS " + getMCSSSmiles(ac));
             Assert.assertEquals(3, ac.getAtomCount());
@@ -132,7 +132,7 @@ public class TestMCSS {
             }
         }
         long startTime = Calendar.getInstance().getTimeInMillis();
-        MCSS mcss = new MCSS(jobs, JobType.MCS, 5);
+        MCSS mcss = new MCSS(jobs, JobType.MULTIPLE, 5);
         for (IAtomContainer ac : mcss.getCalculateMCSS()) {
             System.out.println("Result MCS " + getMCSSSmiles(ac));
             Assert.assertEquals(3, ac.getAtomCount());
@@ -163,7 +163,7 @@ public class TestMCSS {
             }
         }
         long startTime = Calendar.getInstance().getTimeInMillis();
-        MCSS mcss = new MCSS(jobs, JobType.MCS, 5);
+        MCSS mcss = new MCSS(jobs, JobType.MULTIPLE, 5);
         for (IAtomContainer ac : mcss.getCalculateMCSS()) {
             System.out.println("Result MCS " + getMCSSSmiles(ac));
             Assert.assertEquals(1, ac.getAtomCount());
