@@ -27,6 +27,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
+import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.tools.AtomContainerComparator;
 
 /**
@@ -72,17 +73,24 @@ final public class MCSS {
         }
         logger.debug(", Assigned threads: " + threadsAvailable + "\n");
         /*
+         * Remove hydrogen from the molecules
+         **/
+        List<IAtomContainer> selectedJobs = new ArrayList<IAtomContainer>(jobList.size());
+        for (IAtomContainer ac : jobList) {
+            selectedJobs.add(AtomContainerManipulator.removeHydrogens(ac));
+        }
+        /*
          * Sort the molecules in the ascending order of atom size and atom type
          */
         Comparator<IAtomContainer> comparator = new AtomContainerComparator();
-        Collections.sort(jobList, comparator);
+        Collections.sort(selectedJobs, comparator);
         this.matchBonds = matchBonds;
         this.matchRings = matchRings;
         /*
          * Call the MCS
          */
-        calculateMCSS = calculateMCSS(jobList, jobType, threadsAvailable);
-
+        calculateMCSS = calculateMCSS(selectedJobs, jobType, threadsAvailable);
+        selectedJobs.clear();
     }
 
     private synchronized List<IAtomContainer> calculateMCSS(List<IAtomContainer> mcssList, JobType jobType, int nThreads) {
