@@ -168,7 +168,7 @@ public class SMSDcmd {
          */
 
         MCSS mcss = new MCSS(atomContainerSet, JobType.MULTIPLE, 0, matchBonds, matchRings);
-        List<IAtomContainer> calculatedMCSS = mcss.getCalculateMCSS();
+        Collection<IAtomContainer> calculatedMCSS = mcss.getCalculateMCSS();
         IAtomContainerSet solutions = new AtomContainerSet();
         for (IAtomContainer mcsAtomContainer : calculatedMCSS) {
             if (mcsAtomContainer != null && mcsAtomContainer.getAtomCount() > 0) {

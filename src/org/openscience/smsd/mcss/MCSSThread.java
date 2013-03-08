@@ -21,6 +21,7 @@ package org.openscience.smsd.mcss;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.smiles.SmilesGenerator;
@@ -37,7 +38,7 @@ import org.openscience.smsd.interfaces.Algorithm;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
  */
-final public class MCSSThread implements Callable<List<IAtomContainer>> {
+final public class MCSSThread implements Callable<LinkedBlockingQueue<IAtomContainer>> {
 
     private final static ILoggingTool logger =
             LoggingToolFactory.createLoggingTool(MCSSThread.class);
@@ -57,7 +58,15 @@ final public class MCSSThread implements Callable<List<IAtomContainer>> {
         this(mcssList, jobType, taskNumber, true, true);
     }
 
-    MCSSThread(List<IAtomContainer> mcssList, JobType jobType, int taskNumber, boolean matchBonds, boolean matchRings) {
+    /**
+     *
+     * @param mcssList
+     * @param jobType
+     * @param taskNumber
+     * @param matchBonds
+     * @param matchRings
+     */
+    public MCSSThread(List<IAtomContainer> mcssList, JobType jobType, int taskNumber, boolean matchBonds, boolean matchRings) {
         this.mcssList = mcssList;
         this.jobType = jobType;
         this.taskNumber = taskNumber;
@@ -66,7 +75,7 @@ final public class MCSSThread implements Callable<List<IAtomContainer>> {
     }
 
     @Override
-    public synchronized List<IAtomContainer> call() {
+    public synchronized LinkedBlockingQueue<IAtomContainer> call() {
         if (this.jobType.equals(JobType.MULTIPLE)) {
             return multiSolution();
         } else {
@@ -77,11 +86,11 @@ final public class MCSSThread implements Callable<List<IAtomContainer>> {
      * MULTIPLE Fragments of MCS are returned if present
      */
 
-    private synchronized List<IAtomContainer> multiSolution() {
+    private synchronized LinkedBlockingQueue<IAtomContainer> multiSolution() {
         /*
          * Store final solution here
          */
-        List<IAtomContainer> mcss = new ArrayList<IAtomContainer>();
+        LinkedBlockingQueue<IAtomContainer> mcss = new LinkedBlockingQueue<IAtomContainer>();
 
         logger.debug("Calling MCSSTask " + taskNumber + " with " + mcssList.size() + " items");
         long startTime = Calendar.getInstance().getTimeInMillis();
@@ -210,10 +219,10 @@ final public class MCSSThread implements Callable<List<IAtomContainer>> {
      * SINGLE Fragment of MCS is returned if present.
      */
 
-    private synchronized List<IAtomContainer> singleSolution() {
+    private synchronized LinkedBlockingQueue<IAtomContainer> singleSolution() {
 
         logger.debug("Calling MCSSTask " + taskNumber + " with " + mcssList.size() + " items");
-        List<IAtomContainer> resultsList = new ArrayList<IAtomContainer>();
+        LinkedBlockingQueue<IAtomContainer> mcss = new LinkedBlockingQueue<IAtomContainer>();
         long startTime = Calendar.getInstance().getTimeInMillis();
         IAtomContainer querySeed = mcssList.get(0);
         long calcTime = startTime;
@@ -242,17 +251,17 @@ final public class MCSSThread implements Callable<List<IAtomContainer>> {
                 querySeed = fragmentsFomMCS.iterator().next().getContainer();
             }
 
+
+            if (querySeed != null) {
+                mcss.add(querySeed);
+                long endTime = Calendar.getInstance().getTimeInMillis();
+                logger.debug("Done: task " + taskNumber + " took " + (endTime - startTime) + "ms");
+                logger.debug(" and mcss has " + querySeed.getAtomCount() + " atoms, and " + querySeed.getBondCount() + " bonds");
+            }
         } catch (Exception e) {
             logger.error("ERROR IN MCS Thread: ", e);
         }
-        if (querySeed != null) {
-            resultsList.add(querySeed);
-        }
-
-        long endTime = Calendar.getInstance().getTimeInMillis();
-        logger.debug("Done: task " + taskNumber + " took " + (endTime - startTime) + "ms");
-        logger.debug(" and mcss has " + querySeed.getAtomCount() + " atoms, and " + querySeed.getBondCount() + " bonds");
-        return resultsList;
+        return mcss;
     }
 
     private synchronized Collection<Fragment> getMCSS(BaseMapping comparison) {
@@ -288,7 +297,7 @@ final public class MCSSThread implements Callable<List<IAtomContainer>> {
     /**
      * @return the taskNumber
      */
-    public int getTaskNumber() {
+    public synchronized int getTaskNumber() {
         return taskNumber;
     }
 }

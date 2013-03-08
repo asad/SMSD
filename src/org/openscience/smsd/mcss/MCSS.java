@@ -39,7 +39,7 @@ final public class MCSS {
 
     private final static ILoggingTool logger =
             LoggingToolFactory.createLoggingTool(MCSS.class);
-    private final List<IAtomContainer> calculateMCSS;
+    private final Collection<IAtomContainer> calculateMCSS;
     private final boolean matchBonds;
     private final boolean matchRings;
 
@@ -93,30 +93,25 @@ final public class MCSS {
         selectedJobs.clear();
     }
 
-    private synchronized List<IAtomContainer> calculateMCSS(List<IAtomContainer> mcssList, JobType jobType, int nThreads) {
-        List<IAtomContainer> newMCSSList = Collections.synchronizedList(new ArrayList<IAtomContainer>(nThreads));
+    private synchronized Collection<IAtomContainer> calculateMCSS(List<IAtomContainer> mcssList, JobType jobType, int nThreads) {
+        List<IAtomContainer> newMCSSList;
         if (nThreads == 1) {
-            MCSSThread task = new MCSSThread(mcssList, jobType, 1);
-            List<IAtomContainer> results = task.call();
-            if (results != null) {
-                newMCSSList.addAll(results);
-            }
-            return newMCSSList;
+            newMCSSList = new LinkedList<IAtomContainer>(submitSingleThreadedJob(mcssList, jobType, nThreads));
         } else {
             /*
              * Calling recursive MCS
              */
-            newMCSSList = submitMultiThreadedJob(mcssList, jobType, nThreads);
+            newMCSSList = new LinkedList<IAtomContainer>(submitMultiThreadedJob(mcssList, jobType, nThreads));
             while (newMCSSList.size() > 1) {
                 if (newMCSSList.size() > 2) {
-                    newMCSSList = submitMultiThreadedJob(newMCSSList, jobType, nThreads);
+                    newMCSSList = new LinkedList<IAtomContainer>(submitMultiThreadedJob(newMCSSList, jobType, nThreads));
                 } else {
-                    newMCSSList = submitMultiThreadedJob(newMCSSList, jobType, 1);
+                    newMCSSList = new LinkedList<IAtomContainer>(submitMultiThreadedJob(newMCSSList, jobType, 1));
                 }
             }
         }
         if (mcssList.get(mcssList.size() - 1) == newMCSSList.get(0)) {
-            return new ArrayList<IAtomContainer>();
+            return new LinkedBlockingQueue<IAtomContainer>();
         }
         return newMCSSList;
     }
@@ -124,14 +119,24 @@ final public class MCSS {
     /**
      * @return the calculateMCSS
      */
-    public synchronized List<IAtomContainer> getCalculateMCSS() {
-        return Collections.unmodifiableList(calculateMCSS);
+    public synchronized Collection<IAtomContainer> getCalculateMCSS() {
+        return Collections.unmodifiableCollection(calculateMCSS);
     }
 
-    private synchronized List<IAtomContainer> submitMultiThreadedJob(List<IAtomContainer> mcssList, JobType jobType, int nThreads) {
+    private synchronized LinkedBlockingQueue<IAtomContainer> submitSingleThreadedJob(List<IAtomContainer> mcssList, JobType jobType, int nThreads) {
+        LinkedBlockingQueue<IAtomContainer> solutions = new LinkedBlockingQueue<IAtomContainer>();
+        MCSSThread task = new MCSSThread(mcssList, jobType, 1);
+        LinkedBlockingQueue<IAtomContainer> results = task.call();
+        if (results != null) {
+            solutions.addAll(results);
+        }
+        return solutions;
+    }
+
+    private synchronized LinkedBlockingQueue<IAtomContainer> submitMultiThreadedJob(List<IAtomContainer> mcssList, JobType jobType, int nThreads) {
         int taskNumber = 1;
-        List<IAtomContainer> solutions = Collections.synchronizedList(new ArrayList<IAtomContainer>(nThreads));
-        LinkedBlockingQueue<Callable<List<IAtomContainer>>> callablesQueue = new LinkedBlockingQueue<Callable<List<IAtomContainer>>>();
+        LinkedBlockingQueue<IAtomContainer> solutions = new LinkedBlockingQueue<IAtomContainer>();
+        LinkedBlockingQueue<Callable<LinkedBlockingQueue<IAtomContainer>>> callablesQueue = new LinkedBlockingQueue<Callable<LinkedBlockingQueue<IAtomContainer>>>();
         ExecutorService threadPool = Executors.newFixedThreadPool(nThreads);
         int step = (int) Math.ceil((double) mcssList.size() / (double) nThreads);
         if (step < 2) {
@@ -155,13 +160,13 @@ final public class MCSS {
             /*
              * Wait all the threads to finish
              */
-            List<Future<List<IAtomContainer>>> futureList = threadPool.invokeAll(callablesQueue);
+            List<Future<LinkedBlockingQueue<IAtomContainer>>> futureList = threadPool.invokeAll(callablesQueue);
             /*
              * Collect the results
              */
-            for (Iterator<Future<List<IAtomContainer>>> it = futureList.iterator(); it.hasNext();) {
-                Future<List<IAtomContainer>> callable = it.next();
-                List<IAtomContainer> mapping = callable.get();
+            for (Iterator<Future<LinkedBlockingQueue<IAtomContainer>>> it = futureList.iterator(); it.hasNext();) {
+                Future<LinkedBlockingQueue<IAtomContainer>> callable = it.next();
+                LinkedBlockingQueue<IAtomContainer> mapping = callable.get();
                 if (callable.isDone() && mapping != null) {
                     solutions.addAll(mapping);
                 } else {
