@@ -1,20 +1,20 @@
-/**
- * Copyright (C) 2009-2013 Syed Asad Rahman <asad@ebi.ac.uk>
+/*
+ * Copyright (C) 2013 Syed Asad Rahman <asad at ebi.ac.uk>.
  *
- * Contact: cdk-devel@lists.sourceforge.net
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * This program is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General
- * Public License as published by the Free Software Foundation; either version 2.1 of the License, or (at your option)
- * any later version. All we ask is that proper credit is given for our work, which includes - but is not limited to -
- * adding the above copyright notice to the beginning of your source code files, and to any copyright notice that you
- * may distribute with programs based on this work.
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
- * details.
- *
- * You should have received a copy of the GNU Lesser General Public License along with this program; if not, write to
- * the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1301  USA
  */
 package org.openscience.smsd.mcss;
 
@@ -34,7 +34,8 @@ import org.openscience.smsd.Isomorphism;
 import org.openscience.smsd.interfaces.Algorithm;
 
 /**
- *
+ * @cdk.module smsd
+ * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
  */
@@ -90,19 +91,19 @@ final public class MCSSThread implements Callable<LinkedBlockingQueue<IAtomConta
         /*
          * Store final solution here
          */
-        LinkedBlockingQueue<IAtomContainer> mcss = new LinkedBlockingQueue<IAtomContainer>();
+        LinkedBlockingQueue<IAtomContainer> mcss = new LinkedBlockingQueue<>();
 
         logger.debug("Calling MCSSTask " + taskNumber + " with " + mcssList.size() + " items");
         long startTime = Calendar.getInstance().getTimeInMillis();
         IAtomContainer querySeed = mcssList.get(0);
         long calcTime = startTime;
 
-        ConcurrentLinkedQueue<IAtomContainer> seeds = new ConcurrentLinkedQueue<IAtomContainer>();
+        ConcurrentLinkedQueue<IAtomContainer> seeds = new ConcurrentLinkedQueue<>();
         try {
             /*
              * Local Seeds
              */
-            Set<Fragment> localSeeds = new TreeSet<Fragment>();
+            Set<Fragment> localSeeds = new TreeSet<>();
             int minSeedSize = querySeed.getAtomCount();
 
             for (int index = 1; index < mcssList.size(); index++) {
@@ -160,7 +161,7 @@ final public class MCSSThread implements Callable<LinkedBlockingQueue<IAtomConta
 
             while (!seeds.isEmpty()) {
                 IAtomContainer fragmentMCS = seeds.poll();
-                localSeeds = new TreeSet<Fragment>();
+                localSeeds = new TreeSet<>();
                 logger.debug("Potential MULTIPLE " + getMCSSSmiles(fragmentMCS));
                 Collection<Fragment> fragmentsFromMCS;
                 for (int index = 0; index < mcssList.size(); index++) {
@@ -222,7 +223,7 @@ final public class MCSSThread implements Callable<LinkedBlockingQueue<IAtomConta
     private synchronized LinkedBlockingQueue<IAtomContainer> singleSolution() {
 
         logger.debug("Calling MCSSTask " + taskNumber + " with " + mcssList.size() + " items");
-        LinkedBlockingQueue<IAtomContainer> mcss = new LinkedBlockingQueue<IAtomContainer>();
+        LinkedBlockingQueue<IAtomContainer> mcss = new LinkedBlockingQueue<>();
         long startTime = Calendar.getInstance().getTimeInMillis();
         IAtomContainer querySeed = mcssList.get(0);
         long calcTime = startTime;
@@ -265,7 +266,7 @@ final public class MCSSThread implements Callable<LinkedBlockingQueue<IAtomConta
     }
 
     private synchronized Collection<Fragment> getMCSS(BaseMapping comparison) {
-        Set<Fragment> matchList = new HashSet<Fragment>();
+        Set<Fragment> matchList = new HashSet<>();
         for (AtomAtomMapping mapping : comparison.getAllAtomMapping()) {
             IAtomContainer match;
             try {

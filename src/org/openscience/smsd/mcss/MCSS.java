@@ -20,6 +20,7 @@ package org.openscience.smsd.mcss;
 
 import java.util.*;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -31,12 +32,13 @@ import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.tools.AtomContainerComparator;
 
 /**
- *
+ * @cdk.module smsd
+ * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
  */
 final public class MCSS {
-    
+
     private final static ILoggingTool logger =
             LoggingToolFactory.createLoggingTool(MCSS.class);
     private final Collection<IAtomContainer> calculateMCSS;
@@ -63,7 +65,7 @@ final public class MCSS {
      */
     public MCSS(List<IAtomContainer> jobList, JobType jobType, int numberOfThreads, boolean matchBonds, boolean matchRings) {
         int threadsAvailable = Runtime.getRuntime().availableProcessors() - 1;
-        
+
         logger.debug("Demand threads: " + numberOfThreads);
         logger.debug(", Available threads: " + threadsAvailable);
         if (numberOfThreads > 0 && threadsAvailable >= numberOfThreads) {
@@ -92,7 +94,7 @@ final public class MCSS {
         calculateMCSS = calculateMCSS(selectedJobs, jobType, threadsAvailable);
         selectedJobs.clear();
     }
-    
+
     private synchronized Collection<IAtomContainer> calculateMCSS(List<IAtomContainer> mcssList, JobType jobType, int nThreads) {
         List<IAtomContainer> newMCSSList;
         if (nThreads == 1) {
@@ -125,7 +127,7 @@ final public class MCSS {
     public synchronized Collection<IAtomContainer> getCalculateMCSS() {
         return Collections.unmodifiableCollection(calculateMCSS);
     }
-    
+
     private synchronized LinkedBlockingQueue<IAtomContainer> submitSingleThreadedJob(List<IAtomContainer> mcssList, JobType jobType, int nThreads) {
         LinkedBlockingQueue<IAtomContainer> solutions = new LinkedBlockingQueue<>();
         MCSSThread task = new MCSSThread(mcssList, jobType, 1);
@@ -135,7 +137,7 @@ final public class MCSS {
         }
         return solutions;
     }
-    
+
     private synchronized LinkedBlockingQueue<IAtomContainer> submitMultiThreadedJob(List<IAtomContainer> mcssList, JobType jobType, int nThreads) {
         int taskNumber = 1;
         LinkedBlockingQueue<IAtomContainer> solutions = new LinkedBlockingQueue<>();
@@ -181,16 +183,16 @@ final public class MCSS {
             while (!threadPool.isTerminated()) {
             }
             System.gc();
-        } catch (Exception e) {
+        } catch (InterruptedException | ExecutionException e) {
             logger.debug("ERROR: in AtomMappingTool: " + e.getMessage());
             logger.error(e);
         } finally {
             threadPool.shutdown();
         }
-        
+
         return solutions;
     }
-    
+
     public synchronized String getTitle() {
         return "Calculating Maximum Commmon Substrutures (MCSS) using SMSD";
     }
