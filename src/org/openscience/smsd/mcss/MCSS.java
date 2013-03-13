@@ -1,20 +1,20 @@
-/**
- * Copyright (C) 2009-2013 Syed Asad Rahman <asad@ebi.ac.uk>
+/*
+ * Copyright (C) 2013 Syed Asad Rahman <asad at ebi.ac.uk>.
  *
- * Contact: cdk-devel@lists.sourceforge.net
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * This program is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General
- * Public License as published by the Free Software Foundation; either version 2.1 of the License, or (at your option)
- * any later version. All we ask is that proper credit is given for our work, which includes - but is not limited to -
- * adding the above copyright notice to the beginning of your source code files, and to any copyright notice that you
- * may distribute with programs based on this work.
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
- * details.
- *
- * You should have received a copy of the GNU Lesser General Public License along with this program; if not, write to
- * the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1301  USA
  */
 package org.openscience.smsd.mcss;
 
@@ -36,7 +36,7 @@ import org.openscience.smsd.tools.AtomContainerComparator;
  *
  */
 final public class MCSS {
-
+    
     private final static ILoggingTool logger =
             LoggingToolFactory.createLoggingTool(MCSS.class);
     private final Collection<IAtomContainer> calculateMCSS;
@@ -63,7 +63,7 @@ final public class MCSS {
      */
     public MCSS(List<IAtomContainer> jobList, JobType jobType, int numberOfThreads, boolean matchBonds, boolean matchRings) {
         int threadsAvailable = Runtime.getRuntime().availableProcessors() - 1;
-
+        
         logger.debug("Demand threads: " + numberOfThreads);
         logger.debug(", Available threads: " + threadsAvailable);
         if (numberOfThreads > 0 && threadsAvailable >= numberOfThreads) {
@@ -75,7 +75,7 @@ final public class MCSS {
         /*
          * Remove hydrogen from the molecules
          **/
-        List<IAtomContainer> selectedJobs = new ArrayList<IAtomContainer>(jobList.size());
+        List<IAtomContainer> selectedJobs = new ArrayList<>(jobList.size());
         for (IAtomContainer ac : jobList) {
             selectedJobs.add(AtomContainerManipulator.removeHydrogens(ac));
         }
@@ -92,26 +92,29 @@ final public class MCSS {
         calculateMCSS = calculateMCSS(selectedJobs, jobType, threadsAvailable);
         selectedJobs.clear();
     }
-
+    
     private synchronized Collection<IAtomContainer> calculateMCSS(List<IAtomContainer> mcssList, JobType jobType, int nThreads) {
         List<IAtomContainer> newMCSSList;
         if (nThreads == 1) {
-            newMCSSList = new LinkedList<IAtomContainer>(submitSingleThreadedJob(mcssList, jobType, nThreads));
+            newMCSSList = new LinkedList<>(submitSingleThreadedJob(mcssList, jobType, nThreads));
         } else {
             /*
              * Calling recursive MCS
              */
-            newMCSSList = new LinkedList<IAtomContainer>(submitMultiThreadedJob(mcssList, jobType, nThreads));
+            newMCSSList = new LinkedList<>(submitMultiThreadedJob(mcssList, jobType, nThreads));
             while (newMCSSList.size() > 1) {
                 if (newMCSSList.size() > 2) {
-                    newMCSSList = new LinkedList<IAtomContainer>(submitMultiThreadedJob(newMCSSList, jobType, nThreads));
+                    newMCSSList = new LinkedList<>(submitMultiThreadedJob(newMCSSList, jobType, nThreads));
                 } else {
-                    newMCSSList = new LinkedList<IAtomContainer>(submitMultiThreadedJob(newMCSSList, jobType, 1));
+                    newMCSSList = new LinkedList<>(submitMultiThreadedJob(newMCSSList, jobType, 1));
                 }
             }
         }
-        if (mcssList.get(mcssList.size() - 1) == newMCSSList.get(0)) {
-            return new LinkedBlockingQueue<IAtomContainer>();
+        if (!mcssList.isEmpty() && !newMCSSList.isEmpty()) {
+            IAtomContainer inTheList = mcssList.get(mcssList.size() - 1);
+            if (inTheList == newMCSSList.iterator().next()) {
+                return new LinkedBlockingQueue<>();
+            }
         }
         return newMCSSList;
     }
@@ -122,9 +125,9 @@ final public class MCSS {
     public synchronized Collection<IAtomContainer> getCalculateMCSS() {
         return Collections.unmodifiableCollection(calculateMCSS);
     }
-
+    
     private synchronized LinkedBlockingQueue<IAtomContainer> submitSingleThreadedJob(List<IAtomContainer> mcssList, JobType jobType, int nThreads) {
-        LinkedBlockingQueue<IAtomContainer> solutions = new LinkedBlockingQueue<IAtomContainer>();
+        LinkedBlockingQueue<IAtomContainer> solutions = new LinkedBlockingQueue<>();
         MCSSThread task = new MCSSThread(mcssList, jobType, 1);
         LinkedBlockingQueue<IAtomContainer> results = task.call();
         if (results != null) {
@@ -132,11 +135,11 @@ final public class MCSS {
         }
         return solutions;
     }
-
+    
     private synchronized LinkedBlockingQueue<IAtomContainer> submitMultiThreadedJob(List<IAtomContainer> mcssList, JobType jobType, int nThreads) {
         int taskNumber = 1;
-        LinkedBlockingQueue<IAtomContainer> solutions = new LinkedBlockingQueue<IAtomContainer>();
-        LinkedBlockingQueue<Callable<LinkedBlockingQueue<IAtomContainer>>> callablesQueue = new LinkedBlockingQueue<Callable<LinkedBlockingQueue<IAtomContainer>>>();
+        LinkedBlockingQueue<IAtomContainer> solutions = new LinkedBlockingQueue<>();
+        LinkedBlockingQueue<Callable<LinkedBlockingQueue<IAtomContainer>>> callablesQueue = new LinkedBlockingQueue<>();
         ExecutorService threadPool = Executors.newFixedThreadPool(nThreads);
         int step = (int) Math.ceil((double) mcssList.size() / (double) nThreads);
         if (step < 2) {
@@ -147,7 +150,7 @@ final public class MCSS {
             if (endPoint > mcssList.size()) {
                 endPoint = mcssList.size();
             }
-            List<IAtomContainer> subList = new ArrayList<IAtomContainer>(mcssList.subList(i, endPoint));
+            List<IAtomContainer> subList = new ArrayList<>(mcssList.subList(i, endPoint));
             if (subList.size() > 1) {
                 MCSSThread mcssJobThread = new MCSSThread(subList, jobType, taskNumber, matchBonds, matchRings);
                 callablesQueue.add(mcssJobThread);
@@ -184,10 +187,10 @@ final public class MCSS {
         } finally {
             threadPool.shutdown();
         }
-
+        
         return solutions;
     }
-
+    
     public synchronized String getTitle() {
         return "Calculating Maximum Commmon Substrutures (MCSS) using SMSD";
     }

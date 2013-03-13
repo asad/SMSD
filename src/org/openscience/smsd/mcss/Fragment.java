@@ -1,55 +1,52 @@
-
-/* 
- * Copyright (C) 2009-2013 Syed Asad Rahman <asad@ebi.ac.uk>
+/*
+ * Copyright (C) 2013 Syed Asad Rahman <asad at ebi.ac.uk>.
  *
- * Contact: cdk-devel@lists.sourceforge.net
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation; either version 2.1
- * of the License, or (at your option) any later version.
- * All we ask is that proper credit is given for our work, which includes
- * - but is not limited to - adding the above copyright notice to the beginning
- * of your source code files, and to any copyright notice that you may distribute
- * with programs based on this work.
- *
- * This program is distributed in the hope that it will be useful,
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1301  USA
  */
 package org.openscience.smsd.mcss;
 
+import java.io.Serializable;
 import java.util.BitSet;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.fingerprint.ShortestPathFingerprinter;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.smiles.SmilesGenerator;
 
 /**
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
  */
-final public class Fragment implements Comparable<Fragment> {
+final public class Fragment implements Comparable<Fragment>, Serializable {
+
+    private static final long serialVersionUID = 134634654886765L;
 
     public synchronized IAtomContainer getContainer() {
         return container;
     }
-    private BitSet fingerprint;
-    private long fingerprintAsLong;
+    private final BitSet fingerprint;
+    private final long fingerprintAsLong;
     private final IAtomContainer container;
 
     public Fragment(IAtomContainer container) throws CDKException {
         if (container == null) {
             throw new CDKException("NULL container not supported");
         }
-        ShortestPathFingerprinter spf = new ShortestPathFingerprinter(1024);
         this.container = container;
-        this.fingerprint = spf.getBitFingerprint(container).asBitSet();
+        this.fingerprint = new ShortestPathFingerprinter().getBitFingerprint(container).asBitSet();
         this.fingerprintAsLong = convert(this.fingerprint);
     }
 
@@ -63,11 +60,13 @@ final public class Fragment implements Comparable<Fragment> {
         }
         final Fragment other = (Fragment) obj;
 
-        if (this.container != other.container && (this.container == null || (this.container.getAtomCount() != other.container.getAtomCount()))) {
+        if (this.getContainer() != other.getContainer() && (this.getContainer() == null
+                || (this.getContainer().getAtomCount() != other.getContainer().getAtomCount()))) {
             return false;
         }
 
-        if (this.fingerprint != other.fingerprint && (this.fingerprint == null || !this.fingerprint.equals(other.fingerprint))) {
+        if (this.getFingerprint() != other.getFingerprint() && (this.getFingerprint() == null
+                || !this.getFingerprint().equals(other.getFingerprint()))) {
             return false;
         }
         if (this.fingerprintAsLong != other.fingerprintAsLong) {
@@ -80,7 +79,7 @@ final public class Fragment implements Comparable<Fragment> {
     @Override
     public synchronized int hashCode() {
         int hash = 3;
-        hash = 47 * hash + (this.fingerprint != null ? this.fingerprint.hashCode() : 0);
+        hash = 47 * hash + (this.getFingerprint() != null ? this.getFingerprint().hashCode() : 0);
         hash = 47 * hash + (int) (this.fingerprintAsLong ^ (this.fingerprintAsLong >>> 32));
         return hash;
     }
@@ -106,5 +105,24 @@ final public class Fragment implements Comparable<Fragment> {
             value += bits.get(i) ? (1L << i) : 0L;
         }
         return value;
+    }
+
+    /**
+     * @return the fingerprint
+     */
+    public BitSet getFingerprint() {
+        return fingerprint;
+    }
+
+    /**
+     * Return SMILES
+     *
+     * @param ac
+     * @return
+     */
+    public static String toSmiles(IAtomContainer ac) {
+        SmilesGenerator g = new SmilesGenerator();
+        g.setUseAromaticityFlag(true);
+        return g.createSMILES(ac);
     }
 }
