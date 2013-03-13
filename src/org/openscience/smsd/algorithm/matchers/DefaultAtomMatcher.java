@@ -29,8 +29,9 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
 
 /**
- * Checks if atom is matching between query and target molecules. 
- * @cdk.module smsd 
+ * Checks if atom is matching between query and target molecules.
+ *
+ * @cdk.module smsd
  * @cdk.githash
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
@@ -70,10 +71,10 @@ public final class DefaultAtomMatcher implements AtomMatcher {
     }
 
     private boolean matchSymbol(IAtom atom) {
-        if (symbol == null) {
+        if (getAtomSymbol() == null) {
             return false;
         }
-        return symbol.equals(atom.getSymbol());
+        return getAtomSymbol().equals(atom.getSymbol());
     }
 
     /**
@@ -85,35 +86,35 @@ public final class DefaultAtomMatcher implements AtomMatcher {
     @Override
     public boolean matches(IAtom targetAtom) {
         if (targetAtom instanceof IQueryAtom) {
-            return ((IQueryAtom) targetAtom).matches(qAtom);
-        } else if (qAtom != null && qAtom instanceof IQueryAtom) {
-            return ((IQueryAtom) qAtom).matches(targetAtom);
+            return ((IQueryAtom) targetAtom).matches(getQueryAtom());
+        } else if (getQueryAtom() != null && getQueryAtom() instanceof IQueryAtom) {
+            return ((IQueryAtom) getQueryAtom()).matches(targetAtom);
         } else {
             if (!matchSymbol(targetAtom)) {
                 return false;
             }
 
-            if (shouldMatchRings
-                    && isAtomAttachedToRing(qAtom)
+            if (isShouldMatchRings()
+                    && isAtomAttachedToRing(getQueryAtom())
                     && isAtomAttachedToRing(targetAtom)) {
                 return true;
-            } else if (shouldMatchRings && (isAliphaticAtom(qAtom) && isRingAtom(targetAtom))) {
+            } else if (isShouldMatchRings()
+                    && (isAliphaticAtom(getQueryAtom()) && isRingAtom(targetAtom))) {
                 return false;
-            } else if (shouldMatchRings && (isRingAtom(qAtom) && isAliphaticAtom(targetAtom))) {
+            } else if (isShouldMatchRings()
+                    && (isRingAtom(getQueryAtom()) && isAliphaticAtom(targetAtom))) {
                 return false;
-            } 
-            /*
+            } /*
              * This tiggers error in matching example C00026_C00217
-             */
-//            else if (shouldMatchRings
-//                    && !(isRingAtom(qAtom) && isRingAtom(targetAtom))
-//                    && qAtom.getHybridization() != null
-//                    && targetAtom.getHybridization() != null
-//                    && !qAtom.getHybridization().equals(targetAtom.getHybridization())) {
-//                return false;
-//            } 
-            else if (shouldMatchRings && (isRingAtom(qAtom) && isRingAtom(targetAtom))) {
-                if (qAtom.getProperty(SMALLEST_RING_SIZE) != targetAtom.getProperty(SMALLEST_RING_SIZE)) {
+             */ //            else if (shouldMatchRings
+            //                    && !(isRingAtom(qAtom) && isRingAtom(targetAtom))
+            //                    && qAtom.getHybridization() != null
+            //                    && targetAtom.getHybridization() != null
+            //                    && !qAtom.getHybridization().equals(targetAtom.getHybridization())) {
+            //                return false;
+            //            } 
+            else if (isShouldMatchRings() && (isRingAtom(getQueryAtom()) && isRingAtom(targetAtom))) {
+                if (getQueryAtom().getProperty(SMALLEST_RING_SIZE) != targetAtom.getProperty(SMALLEST_RING_SIZE)) {
                     return false;
                 }
             }
@@ -132,5 +133,27 @@ public final class DefaultAtomMatcher implements AtomMatcher {
 
     private boolean isAtomAttachedToRing(IAtom atom) {
         return ((Integer) atom.getProperty(CDKConstants.RING_CONNECTIONS)).intValue() > 0 ? true : false;
+    }
+
+    /**
+     * @return the qAtom
+     */
+    @Override
+    public IAtom getQueryAtom() {
+        return qAtom;
+    }
+
+    /**
+     * @return the symbol
+     */
+    public String getAtomSymbol() {
+        return symbol;
+    }
+
+    /**
+     * @return the shouldMatchRings
+     */
+    public boolean isShouldMatchRings() {
+        return shouldMatchRings;
     }
 }

@@ -26,6 +26,7 @@ import org.openscience.cdk.interfaces.IAtom;
 
 /**
  * Interface for the AtomMatcher (atoms) in graph.
+ *
  * @cdk.module smsd
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
@@ -33,4 +34,6 @@ import org.openscience.cdk.interfaces.IAtom;
 public interface AtomMatcher {
 
     boolean matches(IAtom atom);
+
+    IAtom getQueryAtom();
 }
