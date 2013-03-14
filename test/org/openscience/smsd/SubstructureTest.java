@@ -43,15 +43,17 @@ import org.openscience.cdk.smiles.SmilesParser;
 
 /**
  * Unit testing for the {@link Substructure} class.
- * @author     Syed Asad Rahman
- * @author     egonw
+ *
+ * @author Syed Asad Rahman
+ * @author egonw
  * @cdk.module test-smsd
  */
 public class SubstructureTest {
 
     /**
      * Tests if the Substructure can be instantiated without throwing exceptions.
-     * @throws CDKException 
+     *
+     * @throws CDKException
      */
     @Test
     public void testSubStructureSearchAlgorithms() throws CDKException {
@@ -64,6 +66,7 @@ public class SubstructureTest {
 
     /**
      * Test of init method, of class SubStructureSearchAlgorithms.
+     *
      * @throws InvalidSmilesException
      * @throws CDKException
      */
@@ -82,6 +85,7 @@ public class SubstructureTest {
 
     /**
      * Test of init method, of class SubStructureSearchAlgorithms.
+     *
      * @throws InvalidSmilesException
      * @throws CDKException
      */
@@ -100,7 +104,8 @@ public class SubstructureTest {
 
     /**
      * Test of init method, of class SubStructureSearchAlgorithms.
-     * @throws Exception 
+     *
+     * @throws Exception
      */
     @Test
     public void testInit_3args_3() throws Exception {
@@ -120,6 +125,7 @@ public class SubstructureTest {
 
     /**
      * Test of setChemFilters method, of class SubStructureSearchAlgorithms.
+     *
      * @throws InvalidSmilesException
      * @throws CDKException
      */
@@ -180,6 +186,7 @@ public class SubstructureTest {
 
     /**
      * Test of getStereoScore method, of class SubStructureSearchAlgorithms.
+     *
      * @throws InvalidSmilesException
      * @throws CDKException
      */
@@ -200,6 +207,7 @@ public class SubstructureTest {
 
     /**
      * Test of getFirstMapping method, of class SubStructureSearchAlgorithms.
+     *
      * @throws InvalidSmilesException
      * @throws CDKException
      */
@@ -217,6 +225,7 @@ public class SubstructureTest {
 
     /**
      * Test of getAllAtomMapping method, of class SubStructureSearchAlgorithms.
+     *
      * @throws InvalidSmilesException
      * @throws CDKException
      */
@@ -235,6 +244,7 @@ public class SubstructureTest {
 
     /**
      * Test of getFirstAtomMapping method, of class SubStructureSearchAlgorithms.
+     *
      * @throws InvalidSmilesException
      * @throws CDKException
      */
@@ -253,6 +263,7 @@ public class SubstructureTest {
 
     /**
      * Test of getAllAtomMapping method, of class SubStructureSearchAlgorithms.
+     *
      * @throws InvalidSmilesException
      * @throws CDKException
      */
@@ -418,6 +429,7 @@ public class SubstructureTest {
 
     /**
      * Test of getQueryContainer method, of class SubStructureSearchAlgorithms.
+     *
      * @throws InvalidSmilesException
      * @throws CDKException
      */
@@ -435,6 +447,7 @@ public class SubstructureTest {
 
     /**
      * Test of getTargetContainer method, of class SubStructureSearchAlgorithms.
+     *
      * @throws InvalidSmilesException
      * @throws CDKException
      */
@@ -453,6 +466,7 @@ public class SubstructureTest {
 
     /**
      * Test of getTanimotoSimilarity method, of class SubStructureSearchAlgorithms.
+     *
      * @throws Exception
      */
     @Test
@@ -472,6 +486,7 @@ public class SubstructureTest {
 
     /**
      * Test of isStereoMisMatch method, of class SubStructureSearchAlgorithms.
+     *
      * @throws InvalidSmilesException
      * @throws CDKException
      */
@@ -490,6 +505,7 @@ public class SubstructureTest {
 
     /**
      * Test of getEuclideanDistance method, of class SubStructureSearchAlgorithms.
+     *
      * @throws Exception
      */
     @Test
@@ -518,6 +534,7 @@ public class SubstructureTest {
 
     /**
      * Test Tanimoto NAD+ & NADH for Bond Sensitive.
+     *
      * @throws Exception
      */
     @Test
@@ -537,6 +554,7 @@ public class SubstructureTest {
 
     /**
      * Test Tanimoto NAD+ & NADH for Bond InSensitive.
+     *
      * @throws Exception
      */
     @Test
@@ -591,12 +609,30 @@ public class SubstructureTest {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("CC");
         IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
+        int i = 1;
+        for (IAtom a : query.atoms()) {
+            a.setID(String.valueOf(i));
+            System.out.print(i + ",");
+            i++;
+        }
+        System.out.println();
+        i = 1;
+        for (IAtom a : target.atoms()) {
+            a.setID(String.valueOf(i));
+            System.out.print(i + ",");
+            i++;
+        }
+        System.out.println();
+
         Substructure smsd = new Substructure(query, target, true, false, true);
         Assert.assertTrue(smsd.isSubgraph());
+        for (AtomAtomMapping m : smsd.getAllAtomMapping()) {
+            System.out.println(m.getMappingsIndex());
+        }
         Assert.assertEquals(18, smsd.getAllAtomMapping().size());
 
         IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
-        smsd = new Substructure(queryContainer, target, true);
-        Assert.assertTrue(smsd.isSubgraph());
+        Substructure smsd2 = new Substructure(queryContainer, target, true);
+        Assert.assertTrue(smsd2.isSubgraph());
     }
 }
