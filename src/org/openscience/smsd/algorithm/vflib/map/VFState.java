@@ -51,6 +51,7 @@
 package org.openscience.smsd.algorithm.vflib.map;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -106,7 +107,6 @@ public class VFState implements IState {
         this.map = state.map;
         this.query = state.query;
         this.target = state.target;
-
         map.put(match.getQueryNode(), match.getTargetAtom());
         queryPath.add(match.getQueryNode());
         targetPath.add(match.getTargetAtom());
@@ -136,7 +136,7 @@ public class VFState implements IState {
      */
     @Override
     public Map<INode, IAtom> getMap() {
-        return new HashMap<INode, IAtom>(map);
+        return Collections.synchronizedMap(new HashMap<INode, IAtom>(map));
     }
 
     /**
@@ -214,15 +214,17 @@ public class VFState implements IState {
         List<IAtom> targetNeighbors = target.getConnectedAtomsList(atom);
         for (INode q : lastMatch.getQueryNode().neighbors()) {
             for (IAtom t : targetNeighbors) {
-                Match match = new Match(q, t);
-                if (candidateFeasible(match)) {
-                    candidates.add(match);
+                if (q.getAtomMatcher().matches(t)) {
+                    Match match = new Match(q, t);
+                    if (isCandidateFeasible(match)) {
+                        candidates.add(match);
+                    }
                 }
             }
         }
     }
 
-    private boolean candidateFeasible(Match candidate) {
+    private boolean isCandidateFeasible(Match candidate) {
         for (INode queryAtom : map.keySet()) {
             if (queryAtom.equals(candidate.getQueryNode())
                     || map.get(queryAtom).equals(candidate.getTargetAtom())) {
@@ -253,10 +255,10 @@ public class VFState implements IState {
         for (int i = 0; i < queryPath.size() - 1; i++) {
             IEdge queryBond = query.getEdge(queryPath.get(i), match.getQueryNode());
             IBond targetBond = target.getBond(targetPath.get(i), match.getTargetAtom());
+
             if (queryBond == null) {
                 continue;
             }
-
             if (targetBond == null) {
                 return false;
             }
