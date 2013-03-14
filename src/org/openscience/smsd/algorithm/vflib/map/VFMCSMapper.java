@@ -192,8 +192,9 @@ public class VFMCSMapper implements IMapper {
         if (state.isDead()) {
             return false;
         }
+
         if (state.isGoal()) {
-            maps.add(state.getMap());
+            addMapping(state);
             return true;
         }
 
@@ -203,7 +204,9 @@ public class VFMCSMapper implements IMapper {
             if (state.isMatchFeasible(candidate)) {
                 IState nextState = state.nextState(candidate);
                 found = mapFirst(nextState);
-                nextState.backTrack();
+                if (!found) {
+                    nextState.backTrack();
+                }
             }
         }
         return found;
