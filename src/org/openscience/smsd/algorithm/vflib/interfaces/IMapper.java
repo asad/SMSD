@@ -51,7 +51,6 @@ import java.util.Map;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.smsd.algorithm.vflib.builder.TargetProperties;
 
 /**
  * Interface for the mappings (mapped objects).
@@ -89,32 +88,4 @@ public interface IMapper {
      * @return get first map.
      */
     public Map<INode, IAtom> getFirstMap(IAtomContainer target);
-
-    /**
-     * checks if a map exits for a molecule.
-     * @param molecule molecule
-     * @return true/false.
-     */
-    public boolean hasMap(TargetProperties molecule);
-
-    /**
-     * Returns solution map count.
-     * @param target target molecule.
-     * @return map count.
-     */
-    public int countMaps(TargetProperties target);
-
-    /**
-     * Returns all solution map.
-     * @param target molecule.
-     * @return get maps.
-     */
-    public List<Map<INode, IAtom>> getMaps(TargetProperties target);
-
-    /**
-     * Returns first solution map.
-     * @param target molecule.
-     * @return get first map.
-     */
-    public Map<INode, IAtom> getFirstMap(TargetProperties target);
 }

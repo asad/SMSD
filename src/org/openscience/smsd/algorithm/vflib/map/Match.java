@@ -46,12 +46,14 @@
  */
 package org.openscience.smsd.algorithm.vflib.map;
 
+import java.util.Objects;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 
 /**
  * Holds matching query and target nodes.
+ *
  * @cdk.module smsd
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
@@ -59,11 +61,42 @@ import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFLibTest")
 public class Match {
 
-    private INode query;
-    private IAtom target;
+    @Override
+    public String toString() {
+        return "Match{" + "query=" + query.getAtomMatcher().getQueryAtom().getID() + ", target=" + target.getID() + '}';
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 3;
+        hash = 31 * hash + Objects.hashCode(this.query);
+        hash = 31 * hash + Objects.hashCode(this.target);
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final Match other = (Match) obj;
+        if (!Objects.equals(this.query, other.query)) {
+            return false;
+        }
+        if (!Objects.equals(this.target, other.target)) {
+            return false;
+        }
+        return true;
+    }
+    private final INode query;
+    private final IAtom target;
 
     /**
      * Constructor
+     *
      * @param query
      * @param target
      */
@@ -74,6 +107,7 @@ public class Match {
 
     /**
      * Return query node
+     *
      * @return query node
      */
     public INode getQueryNode() {
@@ -82,6 +116,7 @@ public class Match {
 
     /**
      * Return Target Atom
+     *
      * @return target Atom
      */
     public IAtom getTargetAtom() {

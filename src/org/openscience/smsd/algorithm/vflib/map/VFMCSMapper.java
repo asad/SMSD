@@ -56,7 +56,6 @@ import java.util.Map;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.smsd.algorithm.vflib.builder.TargetProperties;
 import org.openscience.smsd.algorithm.vflib.interfaces.IMapper;
 import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
@@ -66,7 +65,8 @@ import org.openscience.smsd.algorithm.vflib.query.QueryCompiler;
 /**
  * This class finds MCS between query and target molecules using VF2 algorithm.
  *
- * @cdk.module smsd @cdk.githash
+ * @cdk.module smsd
+ * @cdk.githash
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
@@ -103,7 +103,7 @@ public class VFMCSMapper implements IMapper {
      */
     @Override
     public boolean hasMap(IAtomContainer targetMolecule) {
-        IState state = new VFMCSState(query, new TargetProperties(targetMolecule));
+        IState state = new VFMCSState(query, targetMolecule);
         maps.clear();
         return mapFirst(state);
     }
@@ -113,7 +113,7 @@ public class VFMCSMapper implements IMapper {
      */
     @Override
     public List<Map<INode, IAtom>> getMaps(IAtomContainer target) {
-        IState state = new VFMCSState(query, new TargetProperties(target));
+        IState state = new VFMCSState(query, target);
         maps.clear();
         mapAll(state);
         return new ArrayList<Map<INode, IAtom>>(maps);
@@ -127,7 +127,7 @@ public class VFMCSMapper implements IMapper {
      */
     @Override
     public Map<INode, IAtom> getFirstMap(IAtomContainer target) {
-        IState state = new VFMCSState(query, new TargetProperties(target));
+        IState state = new VFMCSState(query, target);
         maps.clear();
         mapFirst(state);
         return maps.isEmpty() ? new HashMap<INode, IAtom>() : maps.get(0);
@@ -138,59 +138,7 @@ public class VFMCSMapper implements IMapper {
      */
     @Override
     public int countMaps(IAtomContainer target) {
-        IState state = new VFMCSState(query, new TargetProperties(target));
-        maps.clear();
-        mapAll(state);
-        return maps.size();
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @param targetMolecule targetMolecule graph
-     */
-    @Override
-    public boolean hasMap(TargetProperties targetMolecule) {
-        IState state = new VFMCSState(query, targetMolecule);
-        maps.clear();
-        return mapFirst(state);
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @param targetMolecule
-     */
-    @Override
-    public List<Map<INode, IAtom>> getMaps(TargetProperties targetMolecule) {
-        IState state = new VFMCSState(query, targetMolecule);
-        maps.clear();
-        mapAll(state);
-        return new ArrayList<Map<INode, IAtom>>(maps);
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @param targetMolecule
-     *
-     */
-    @Override
-    public Map<INode, IAtom> getFirstMap(TargetProperties targetMolecule) {
-        IState state = new VFMCSState(query, targetMolecule);
-        maps.clear();
-        mapFirst(state);
-        return maps.isEmpty() ? new HashMap<INode, IAtom>() : maps.get(0);
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @param targetMolecule
-     */
-    @Override
-    public int countMaps(TargetProperties targetMolecule) {
-        IState state = new VFMCSState(query, targetMolecule);
+        IState state = new VFMCSState(query, target);
         maps.clear();
         mapAll(state);
         return maps.size();
@@ -215,26 +163,29 @@ public class VFMCSMapper implements IMapper {
         }
     }
 
-    private void mapAll(IState state) {
+    private boolean mapAll(IState state) {
         if (state.isDead()) {
-            return;
+            return false;
         }
-
         if (state.isGoal()) {
-            addMapping(state);
-            return;
-        } else {
-            addMapping(state);
+            return true;
         }
 
+        boolean found = false;
         while (state.hasNextCandidate()) {
             Match candidate = state.nextCandidate();
             if (state.isMatchFeasible(candidate)) {
                 IState nextState = state.nextState(candidate);
-                mapAll(nextState);
+                found = mapAll(nextState);
+                if (found) {
+                    addMapping(state);
+                    found = false;
+                    continue;
+                }
                 nextState.backTrack();
             }
         }
+        return found;
     }
 
     private boolean mapFirst(IState state) {

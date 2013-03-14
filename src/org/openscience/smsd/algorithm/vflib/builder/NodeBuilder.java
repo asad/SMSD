@@ -25,14 +25,15 @@ package org.openscience.smsd.algorithm.vflib.builder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.smsd.algorithm.matchers.AtomMatcher;
 import org.openscience.smsd.algorithm.vflib.interfaces.IEdge;
 import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 
 /**
- * Class for building/storing nodes (atoms) in the graph with atom
- * query capabilities.
+ * Class for building/storing nodes (atoms) in the graph with atom query capabilities.
+ *
  * @cdk.module smsd
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
@@ -40,12 +41,39 @@ import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFLibTest")
 public class NodeBuilder implements INode {
 
+    @Override
+    public int hashCode() {
+        int hash = 5;
+        hash = 17 * hash + Objects.hashCode(this.matcher);
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final NodeBuilder other = (NodeBuilder) obj;
+        if (!Objects.equals(this.matcher, other.matcher)) {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public String toString() {
+        return "NodeBuilder{" + "matcher=" + matcher.getQueryAtom().getID()+ '}';
+    }
     private List<INode> neighborsList;
     private List<IEdge> edgesList;
     private AtomMatcher matcher;
 
     /**
      * Construct a node for a query atom
+     *
      * @param matcher
      */
     protected NodeBuilder(AtomMatcher matcher) {
@@ -54,42 +82,48 @@ public class NodeBuilder implements INode {
         this.matcher = matcher;
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     public int countNeighbors() {
         return neighborsList.size();
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     public Iterable<INode> neighbors() {
         return Collections.unmodifiableList(neighborsList);
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     public AtomMatcher getAtomMatcher() {
         return matcher;
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     public List<IEdge> getEdges() {
         return Collections.unmodifiableList(edgesList);
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     public void addEdge(EdgeBuilder edge) {
         edgesList.add(edge);
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     public void addNeighbor(NodeBuilder node) {
