@@ -61,7 +61,7 @@ public class SubstructureTest {
                 new Substructure(new AtomContainer(), new AtomContainer(),
                 true, false, false));
         Assert.assertNotNull(
-                new Substructure(new QueryAtomContainer(), new AtomContainer(), true));
+                new Substructure(new QueryAtomContainer(DefaultChemObjectBuilder.getInstance()), new AtomContainer(), true));
     }
 
     /**
