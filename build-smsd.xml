@@ -65,7 +65,7 @@
 				<pathelement path="build"/>
 				<pathelement path="lib/directgraphics.jar"/>
 				<pathelement path="lib/commons-cli-1.2/commons-cli-1.2.jar"/>
-				<pathelement path="${CDK_DIR}/jar/signatures-1.0.jar"/>
+				<pathelement path="${CDK_DIR}/jar/signatures-1.1.jar"/>
 			</classpath>
 		</javac>
 	</target>
