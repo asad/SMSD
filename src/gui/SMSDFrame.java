@@ -60,7 +60,7 @@ import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.io.IChemObjectReader;
-import org.openscience.cdk.io.MDLReader;
+import org.openscience.cdk.io.MDLV2000Reader;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.AtomAtomMapping;
@@ -412,9 +412,11 @@ public class SMSDFrame extends JFrame {
 
         IAtomContainer container = null;
         try {
-            MDLReader reader2 = new MDLReader(new FileReader(fileName), IChemObjectReader.Mode.RELAXED);
-            IAtomContainer molecule = (IAtomContainer) reader2.read(new AtomContainer());
-            reader2.close();
+            MDLV2000Reader molReader;
+            molReader = new MDLV2000Reader(new FileReader(fileName), IChemObjectReader.Mode.RELAXED);
+            IAtomContainer molecule;
+            molecule = (IAtomContainer) molReader.read(new AtomContainer());
+            molReader.close();
 
             count = 0;
             container = molecule;

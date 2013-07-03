@@ -52,7 +52,7 @@ import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.io.CMLReader;
 import org.openscience.cdk.io.IChemObjectReader;
 import org.openscience.cdk.io.ISimpleChemObjectReader;
-import org.openscience.cdk.io.MDLReader;
+import org.openscience.cdk.io.MDLV2000Reader;
 import org.openscience.cdk.io.Mol2Reader;
 import org.openscience.cdk.io.PDBReader;
 import org.openscience.cdk.io.ReaderFactory;
@@ -233,7 +233,7 @@ public class InputHandler {
                     "Input path " + filename + " is a directory, not a file");
         }
         if (type.equals("MOL")) {
-            return new MDLReader(
+            return new MDLV2000Reader(
                     new FileReader(input), IChemObjectReader.Mode.RELAXED);
         } else if (type.equals("CML")) {
             return new CMLReader(new FileInputStream(input));
