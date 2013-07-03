@@ -52,11 +52,14 @@ import java.util.Map;
 import junit.framework.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.interfaces.IBond;
 import org.openscience.smsd.algorithm.vflib.interfaces.IMapper;
 import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 import org.openscience.smsd.algorithm.vflib.map.VFMapper;
+import org.openscience.smsd.helper.MoleculeInitializer;
 
 /**
  *
@@ -82,10 +85,9 @@ public class VFMapperTest {
     private IAtomContainer propane;
     private IAtomContainer cyclopropane;
 
-    public VFMapperTest(){
-
+    public VFMapperTest() {
     }
-    
+
     @Before
     public void setUp() throws Exception {
         hexane = Molecules.createHexane();
@@ -101,6 +103,20 @@ public class VFMapperTest {
         acetone = Molecules.createAcetone();
         propane = Molecules.createPropane();
         cyclopropane = Molecules.createCyclopropane();
+        MoleculeInitializer.initializeMolecule(hexane);
+        MoleculeInitializer.initializeMolecule(benzene);
+        MoleculeInitializer.initializeMolecule(pyridine);
+        MoleculeInitializer.initializeMolecule(toluene4);
+        MoleculeInitializer.initializeMolecule(pyridazine);
+        MoleculeInitializer.initializeMolecule(chloroisoquinoline4);
+        MoleculeInitializer.initializeMolecule(naphthalene);
+        MoleculeInitializer.initializeMolecule(chlorobenzene);
+        MoleculeInitializer.initializeMolecule(toluene);
+        MoleculeInitializer.initializeMolecule(phenol);
+        MoleculeInitializer.initializeMolecule(acetone);
+        MoleculeInitializer.initializeMolecule(propane);
+        MoleculeInitializer.initializeMolecule(cyclopropane);
+
     }
 
     @Test
@@ -257,7 +273,7 @@ public class VFMapperTest {
 //
 //        IMapper mapper = new VFMapper(blockedPropane, true, true);
 //
-//        assertTrue(mapper.hasMap(propane));
+//        Assert.assertTrue(mapper.hasMap(propane));
 //    }
 //    public void testItMapsBlockedBenzaldehydeOntoBenzaldehyde() {
 //        AtomContainer blockedBenzaldehyde = this.createBlockedBenzaldehyde();
