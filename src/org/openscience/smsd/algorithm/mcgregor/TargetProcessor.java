@@ -112,10 +112,10 @@ public class TargetProcessor {
             IBond bond = target.getBond(atomIndex);
             Integer order = null;
             if (!(bond instanceof IQueryBond)) {
-                order = (bond.getOrder().ordinal() + 1);
+                order = (bond.getOrder().numeric() + 1);
             } else {
                 IQueryBond queryBond = (IQueryBond) bond;
-                order = queryBond.getOrder() != null ? (queryBond.getOrder().ordinal() + 1) : null;
+                order = queryBond.getOrder() != null ? (queryBond.getOrder().numeric() + 1) : null;
             }
 
             for (int b = 0; b < unmapped_numB; b++) {

@@ -45,7 +45,9 @@ import org.openscience.smsd.tools.BondEnergies;
 
 /**
  * This class handles single atom mapping. Either query and/or target molecule with single atom is mapped by this class.
- * @cdk.module smsd @cdk.githash
+ *
+ * @cdk.module smsd
+ * @cdk.githash
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
@@ -131,7 +133,7 @@ public class SingleMapping {
                         double totalOrder = 0;
                         for (IBond bond : Bonds) {
                             Order bondOrder = bond.getOrder();
-                            totalOrder += bondOrder.ordinal() + be.getEnergies(bond);
+                            totalOrder += bondOrder.numeric() + be.getEnergies(bond);
                         }
 
                         if (targetAtom.getFormalCharge() != sourceAtom.getFormalCharge()) {
@@ -149,7 +151,7 @@ public class SingleMapping {
                     double totalOrder = 0;
                     for (IBond bond : Bonds) {
                         Order bondOrder = bond.getOrder();
-                        totalOrder += bondOrder.ordinal() + be.getEnergies(bond);
+                        totalOrder += bondOrder.numeric() + be.getEnergies(bond);
                     }
 
                     if (targetAtom.getFormalCharge() != sourceAtom.getFormalCharge()) {
@@ -177,7 +179,7 @@ public class SingleMapping {
                     double totalOrder = 0;
                     for (IBond bond : Bonds) {
                         Order bondOrder = bond.getOrder();
-                        totalOrder += bondOrder.ordinal() + be.getEnergies(bond);
+                        totalOrder += bondOrder.numeric() + be.getEnergies(bond);
                     }
                     if (sourceAtoms.getFormalCharge() != targetAtom.getFormalCharge()) {
                         totalOrder += 0.5;
@@ -202,7 +204,6 @@ public class SingleMapping {
     private <K, V> Map<K, V> sortByValue(Map<K, V> map) {
         List list = new LinkedList(map.entrySet());
         Collections.sort(list, new Comparator() {
-
             public int compare(Object object1, Object object2) {
                 return ((Comparable) ((Map.Entry<K, V>) (object1)).getValue()).compareTo(((Map.Entry<K, V>) (object2)).getValue());
             }
