@@ -31,7 +31,10 @@ import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.isomorphism.matchers.IQueryBond;
 
 /**
- * Class to handle mappings of target molecule based on the query. @cdk.module smsd @cdk.githash
+ * Class to handle mappings of target molecule based on the query.
+ *
+ * @cdk.module smsd
+ * @cdk.githash
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
@@ -112,10 +115,10 @@ public class TargetProcessor {
             IBond bond = target.getBond(atomIndex);
             Integer order = null;
             if (!(bond instanceof IQueryBond)) {
-                order = (bond.getOrder().numeric() + 1);
+                order = (bond.getOrder().numeric());
             } else {
                 IQueryBond queryBond = (IQueryBond) bond;
-                order = queryBond.getOrder() != null ? (queryBond.getOrder().numeric() + 1) : null;
+                order = queryBond.getOrder() != null ? (queryBond.getOrder().numeric()) : null;
             }
 
             for (int b = 0; b < unmapped_numB; b++) {
