@@ -26,6 +26,7 @@ import org.openscience.cdk.interfaces.IBond;
 
 /**
  * Interface for the BondMatcher (bonds) in graph.
+ *
  * @cdk.module smsd
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>

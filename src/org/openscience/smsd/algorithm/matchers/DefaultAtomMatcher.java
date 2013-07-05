@@ -95,8 +95,8 @@ public final class DefaultAtomMatcher implements AtomMatcher {
             }
 
             if (isShouldMatchRings()
-                    && isAtomAttachedToRing(getQueryAtom())
-                    && isAtomAttachedToRing(targetAtom)) {
+                    && isAtomAttachedToRing(getQueryAtom()) && !isRingAtom(getQueryAtom())
+                    && isAtomAttachedToRing(targetAtom) && !isRingAtom(targetAtom)) {
                 return true;
             } else if (isShouldMatchRings()
                     && (isAliphaticAtom(getQueryAtom()) && isRingAtom(targetAtom))) {
@@ -104,16 +104,7 @@ public final class DefaultAtomMatcher implements AtomMatcher {
             } else if (isShouldMatchRings()
                     && (isRingAtom(getQueryAtom()) && isAliphaticAtom(targetAtom))) {
                 return false;
-            } /*
-             * This tiggers error in matching example C00026_C00217
-             */ //            else if (shouldMatchRings
-            //                    && !(isRingAtom(qAtom) && isRingAtom(targetAtom))
-            //                    && qAtom.getHybridization() != null
-            //                    && targetAtom.getHybridization() != null
-            //                    && !qAtom.getHybridization().equals(targetAtom.getHybridization())) {
-            //                return false;
-            //            } 
-            else if (isShouldMatchRings() && (isRingAtom(getQueryAtom()) && isRingAtom(targetAtom))) {
+            } else if (isShouldMatchRings() && (isRingAtom(getQueryAtom()) && isRingAtom(targetAtom))) {
                 if (getQueryAtom().getProperty(SMALLEST_RING_SIZE) != targetAtom.getProperty(SMALLEST_RING_SIZE)) {
                     return false;
                 }
