@@ -307,7 +307,7 @@ public class SMSDFrame extends JFrame {
 //                CanonicalLabeler c=new CanonicalLabeler();
 //                c.canonLabel(QMol);
 //                c.canonLabel(TMol);
-                Isomorphism comparison = new Isomorphism(QMol, TMol, Algorithm.DEFAULT, jRadioButton1.isSelected(), false);
+                Isomorphism comparison = new Isomorphism(QMol, TMol, Algorithm.VFLibMCS, jRadioButton1.isSelected(), false);
                 comparison.setChemFilters(jCheckBox2.isSelected(), jCheckBox3.isSelected(), jCheckBox4.isSelected());
 
 
