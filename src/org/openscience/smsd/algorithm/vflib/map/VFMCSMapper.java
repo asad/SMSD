@@ -158,7 +158,9 @@ public class VFMCSMapper implements IMapper {
 
     private void addMapping(IState state) {
         Map<INode, IAtom> map = state.getMap();
-        if (!hasMap(map) || maps.isEmpty()) {
+        if (maps.isEmpty()) {
+            maps.add(map);
+        } else if (!hasMap(map)) {
             maps.add(map);
         }
     }
@@ -170,15 +172,16 @@ public class VFMCSMapper implements IMapper {
         if (state.isGoal()) {
             return true;
         }
-
+        
         boolean found = false;
+        addMapping(state);
+        
         while (state.hasNextCandidate()) {
             Match candidate = state.nextCandidate();
             if (state.isMatchFeasible(candidate)) {
                 IState nextState = state.nextState(candidate);
                 found = mapAll(nextState);
                 if (found) {
-                    addMapping(state);
                     found = false;
                     continue;
                 }
