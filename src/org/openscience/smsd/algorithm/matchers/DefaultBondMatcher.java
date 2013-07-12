@@ -37,7 +37,7 @@ import org.openscience.cdk.isomorphism.matchers.IQueryBond;
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFLibTest")
 public final class DefaultBondMatcher implements BondMatcher {
-    
+
     static final long serialVersionUID = -7861469841127328812L;
     private final IBond queryBond;
     private final boolean shouldMatchBonds;
@@ -72,7 +72,7 @@ public final class DefaultBondMatcher implements BondMatcher {
     public boolean matches(IBond targetBond) {
         if (this.queryBond != null && queryBond instanceof IQueryBond) {
             return ((IQueryBond) queryBond).matches(targetBond);
-        } else if ((!isBondMatchFlag() && isBondAtomTypeMatch(targetBond)) 
+        } else if ((!isBondMatchFlag() && isBondAtomTypeMatch(targetBond))
                 || (isBondMatchFlag() && isBondTypeMatch(targetBond))) {
             return true;
         }
@@ -86,7 +86,7 @@ public final class DefaultBondMatcher implements BondMatcher {
      * @return
      */
     private boolean isBondTypeMatch(IBond targetBond) {
-        
+
         if ((queryBond.getFlag(CDKConstants.ISAROMATIC) == targetBond.getFlag(CDKConstants.ISAROMATIC))
                 && (queryBond.getOrder() == targetBond.getOrder())) {
             return true;
@@ -106,7 +106,7 @@ public final class DefaultBondMatcher implements BondMatcher {
      * @return
      */
     private boolean isBondAtomTypeMatch(IBond targetBond) {
-        
+
         if (queryBond.getAtom(0).getHybridization().equals(targetBond.getAtom(0).getHybridization())) {
             if (queryBond.getAtom(1).getHybridization().equals(targetBond.getAtom(1).getHybridization())) {
                 return true;
@@ -117,13 +117,13 @@ public final class DefaultBondMatcher implements BondMatcher {
                 return true;
             }
         }
-        
+
         if (queryBond.getAtom(0).getHybridization().equals(targetBond.getAtom(1).getHybridization())) {
             if (queryBond.getAtom(1).getHybridization().equals(targetBond.getAtom(0).getHybridization())) {
                 return true;
             }
         }
-        
+
         if (queryBond.getAtom(1).getHybridization().equals(targetBond.getAtom(1).getHybridization())) {
             if (queryBond.getAtom(0).getHybridization().equals(targetBond.getAtom(0).getHybridization())) {
                 return true;
