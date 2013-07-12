@@ -26,6 +26,7 @@ package org.openscience.smsd;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import junit.framework.Assert;
@@ -35,6 +36,7 @@ import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.exception.InvalidSmilesException;
+import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.io.IChemObjectReader.Mode;
 import org.openscience.cdk.io.MDLV2000Reader;
@@ -45,10 +47,9 @@ import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.smsd.algorithm.mcsplus.MCSPlusHandlerTest;
 import org.openscience.smsd.interfaces.Algorithm;
 
-
-
 /**
  * Unit testing for the {@link Isomorphism} class.
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
  * @cdk.module test-smsd
@@ -89,6 +90,7 @@ public class IsomorphismTest {
 
     /**
      * Test of init method, of class Isomorphism.
+     *
      * @throws CDKException
      */
     @Test
@@ -106,6 +108,7 @@ public class IsomorphismTest {
 
     /**
      * Test of init method, of class Isomorphism.
+     *
      * @throws CDKException
      */
     @Test
@@ -123,6 +126,7 @@ public class IsomorphismTest {
 
     /**
      * Test of searchMCS method, of class Isomorphism.
+     *
      * @throws CDKException
      */
     @Test
@@ -145,6 +149,7 @@ public class IsomorphismTest {
 
     /**
      * Test of set method, of class Isomorphism.
+     *
      * @throws CDKException
      */
     @Test
@@ -162,6 +167,7 @@ public class IsomorphismTest {
 
     /**
      * Test of set method, of class Isomorphism.
+     *
      * @throws Exception
      */
     @Test
@@ -178,6 +184,7 @@ public class IsomorphismTest {
 
     /**
      * Test of set method, of class Isomorphism.
+     *
      * @throws CDKException
      * @throws IOException
      */
@@ -204,6 +211,7 @@ public class IsomorphismTest {
 
     /**
      * Test of set method, of class Isomorphism.
+     *
      * @throws CDKException
      */
     @Test
@@ -220,6 +228,7 @@ public class IsomorphismTest {
 
     /**
      * Test of getAllAtomMapping method, of class Isomorphism.
+     *
      * @throws CDKException
      */
     @Test
@@ -245,6 +254,7 @@ public class IsomorphismTest {
 
     /**
      * Test of getAllAtomMapping method, of class Isomorphism.
+     *
      * @throws CDKException
      */
     @Test
@@ -262,6 +272,7 @@ public class IsomorphismTest {
 
     /**
      * Test of getFirstAtomMapping method, of class Isomorphism.
+     *
      * @throws CDKException
      */
     @Test
@@ -279,6 +290,7 @@ public class IsomorphismTest {
 
     /**
      * Test of getFirstAtomMapping method, of class Isomorphism.
+     *
      * @throws CDKException
      */
     @Test
@@ -296,6 +308,7 @@ public class IsomorphismTest {
 
     /**
      * Test of setChemFilters method, of class Isomorphism.
+     *
      * @throws CDKException
      */
     @Test
@@ -313,6 +326,7 @@ public class IsomorphismTest {
 
     /**
      * Test of getFragmentSize method, of class Isomorphism.
+     *
      * @throws CDKException
      */
     @Test
@@ -330,6 +344,7 @@ public class IsomorphismTest {
 
     /**
      * Test of getStereoScore method, of class Isomorphism.
+     *
      * @throws CDKException
      */
     @Test
@@ -347,6 +362,7 @@ public class IsomorphismTest {
 
     /**
      * Test of getEnergyScore method, of class Isomorphism.
+     *
      * @throws CDKException
      */
     @Test
@@ -364,6 +380,7 @@ public class IsomorphismTest {
 
     /**
      * Test of getQueryContainer method, of class Isomorphism.
+     *
      * @throws CDKException
      */
     @Test
@@ -380,6 +397,7 @@ public class IsomorphismTest {
 
     /**
      * Test of getTargetContainer method, of class Isomorphism.
+     *
      * @throws CDKException
      */
     @Test
@@ -396,6 +414,7 @@ public class IsomorphismTest {
 
     /**
      * Test of getTanimotoSimilarity method, of class Isomorphism.
+     *
      * @throws Exception
      */
     @Test
@@ -414,6 +433,7 @@ public class IsomorphismTest {
 
     /**
      * Test of isStereoMisMatch method, of class Isomorphism.
+     *
      * @throws CDKException
      */
     @Test
@@ -487,6 +507,7 @@ public class IsomorphismTest {
 
     /**
      * Test Tanimoto NAD+ & NADH for Bond Sensitive.
+     *
      * @throws Exception
      */
     @Test
@@ -505,6 +526,7 @@ public class IsomorphismTest {
 
     /**
      * Test Tanimoto NAD+ & NADH for Bond InSensitive.
+     *
      * @throws Exception
      */
     @Test
@@ -523,6 +545,7 @@ public class IsomorphismTest {
 
     /**
      * Test ring match using MCS VF2Plus
+     *
      * @throws Exception
      */
     @Test
@@ -560,6 +583,7 @@ public class IsomorphismTest {
 
     /**
      * Test ring match using MCS VF2Plus
+     *
      * @throws Exception
      */
     @Test
@@ -593,5 +617,36 @@ public class IsomorphismTest {
 //            }
 ////            System.out.println("");
 //        }
+    }
+
+    /**
+     * Test ring match using MCS VF2Plus
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testOpenCloseRing() throws Exception {
+        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        // Benzene
+        IAtomContainer query = sp.parseSmiles("CC(C)=CCC\\C(C)=C\\CC\\C(C)=C\\CC\\C=C(/C)CC\\C=C(/C)CC[C@@H]1OC1(C)C");
+        // Napthalene
+        IAtomContainer target = sp.parseSmiles("[H][C@]12[C@@H](CC[C@]1(C)CC[C@]1(C)[C@]2([H])CC[C@]2([H])[C@@]3(C)CC[C@H](O)C(C)(C)[C@]3([H])CC[C@@]12C)C(C)=C");
+
+        Isomorphism comparison = new Isomorphism(query, target, Algorithm.VFLibMCS, false, false);
+        // set chemical filter true
+        comparison.setChemFilters(true, true, true);
+
+        //Get similarity score
+        System.out.println("Tanimoto coefficient:  " + comparison.getTanimotoSimilarity());
+        System.out.println(" Mappings: ");
+        for (AtomAtomMapping atomatomMapping : comparison.getAllAtomMapping()) {
+            for (Map.Entry<IAtom, IAtom> mapping : atomatomMapping.getMappings().entrySet()) {
+                IAtom sourceAtom = mapping.getKey();
+                IAtom targetAtom = mapping.getValue();
+                System.out.println(sourceAtom.getSymbol() + " " + targetAtom.getSymbol());
+                System.out.println(atomatomMapping.getQueryIndex(sourceAtom) + " " + atomatomMapping.getTargetIndex(targetAtom));
+            }
+            System.out.println("");
+        }
     }
 }
