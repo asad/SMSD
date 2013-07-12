@@ -112,6 +112,7 @@ public final class DefaultBondMatcher implements BondMatcher {
                 return true;
             }
         }
+
         if (queryBond.getAtom(1).getHybridization().equals(targetBond.getAtom(0).getHybridization())) {
             if (queryBond.getAtom(0).getHybridization().equals(targetBond.getAtom(1).getHybridization())) {
                 return true;
