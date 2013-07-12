@@ -28,15 +28,16 @@ import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.isomorphism.matchers.IQueryBond;
 
 /**
- * Checks if a bond is matching between query and target molecules. 
- * @cdk.module smsd 
+ * Checks if a bond is matching between query and target molecules.
+ *
+ * @cdk.module smsd
  * @cdk.githash
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFLibTest")
 public final class DefaultBondMatcher implements BondMatcher {
-
+    
     static final long serialVersionUID = -7861469841127328812L;
     private final IBond queryBond;
     private final boolean shouldMatchBonds;
@@ -71,7 +72,8 @@ public final class DefaultBondMatcher implements BondMatcher {
     public boolean matches(IBond targetBond) {
         if (this.queryBond != null && queryBond instanceof IQueryBond) {
             return ((IQueryBond) queryBond).matches(targetBond);
-        } else if (!isBondMatchFlag() || (isBondMatchFlag() && isBondTypeMatch(targetBond))) {
+        } else if ((!isBondMatchFlag() && isBondAtomTypeMatch(targetBond)) 
+                || (isBondMatchFlag() && isBondTypeMatch(targetBond))) {
             return true;
         }
         return false;
@@ -84,7 +86,7 @@ public final class DefaultBondMatcher implements BondMatcher {
      * @return
      */
     private boolean isBondTypeMatch(IBond targetBond) {
-
+        
         if ((queryBond.getFlag(CDKConstants.ISAROMATIC) == targetBond.getFlag(CDKConstants.ISAROMATIC))
                 && (queryBond.getOrder() == targetBond.getOrder())) {
             return true;
@@ -93,6 +95,39 @@ public final class DefaultBondMatcher implements BondMatcher {
         } else if ((queryBond.getFlag(CDKConstants.ISINRING) == targetBond.getFlag(CDKConstants.ISINRING))
                 && (queryBond.getOrder() == targetBond.getOrder())) {
             return true;
+        }
+        return false;
+    }
+
+    /**
+     * Return true if a bond is matched between query and target
+     *
+     * @param targetBond
+     * @return
+     */
+    private boolean isBondAtomTypeMatch(IBond targetBond) {
+        
+        if (queryBond.getAtom(0).getHybridization().equals(targetBond.getAtom(0).getHybridization())) {
+            if (queryBond.getAtom(1).getHybridization().equals(targetBond.getAtom(1).getHybridization())) {
+                return true;
+            }
+        }
+        if (queryBond.getAtom(1).getHybridization().equals(targetBond.getAtom(0).getHybridization())) {
+            if (queryBond.getAtom(0).getHybridization().equals(targetBond.getAtom(1).getHybridization())) {
+                return true;
+            }
+        }
+        
+        if (queryBond.getAtom(0).getHybridization().equals(targetBond.getAtom(1).getHybridization())) {
+            if (queryBond.getAtom(1).getHybridization().equals(targetBond.getAtom(0).getHybridization())) {
+                return true;
+            }
+        }
+        
+        if (queryBond.getAtom(1).getHybridization().equals(targetBond.getAtom(1).getHybridization())) {
+            if (queryBond.getAtom(0).getHybridization().equals(targetBond.getAtom(0).getHybridization())) {
+                return true;
+            }
         }
         return false;
     }
