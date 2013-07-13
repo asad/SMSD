@@ -57,10 +57,11 @@ import org.openscience.smsd.tools.TimeManager;
  * This class should be used to find MCS between source graph and target graph.
  *
  * First the algorithm runs VF lib {@link org.openscience.cdk.smsd.algorithm.vflib.map.VFMCSMapper} and reports MCS
- * between run source and target graphs. Then these solutions are extended using McGregor {@link org.openscience.cdk.smsd.algorithm.mcgregor.McGregor}
- * algorithm where ever required.
+ * between run source and target graphs. Then these solutions are extended using McGregor
+ * {@link org.openscience.cdk.smsd.algorithm.mcgregor.McGregor} algorithm where ever required.
  *
- * @cdk.module smsd @cdk.githash
+ * @cdk.module smsd
+ * @cdk.githash
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
@@ -146,7 +147,6 @@ public class BaseMCS extends MoleculeInitializer {
              * Sort biggest clique to smallest
              */
             Collections.sort(maxCliqueSet, new Comparator<List<Integer>>() {
-
                 @Override
                 public int compare(List<Integer> a1, List<Integer> a2) {
                     return a2.size() - a1.size(); // assumes you want biggest to smallest

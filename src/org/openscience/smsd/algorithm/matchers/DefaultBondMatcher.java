@@ -72,8 +72,8 @@ public final class DefaultBondMatcher implements BondMatcher {
     public boolean matches(IBond targetBond) {
         if (this.queryBond != null && queryBond instanceof IQueryBond) {
             return ((IQueryBond) queryBond).matches(targetBond);
-        } else if ((!isBondMatchFlag() && isBondAtomTypeMatch(targetBond))
-                || (isBondMatchFlag() && isBondTypeMatch(targetBond))) {
+        } else if ((queryBond != null && targetBond != null) && (!isBondMatchFlag()
+                || (isBondMatchFlag() && isBondTypeMatch(targetBond)))) {
             return true;
         }
         return false;
@@ -95,40 +95,6 @@ public final class DefaultBondMatcher implements BondMatcher {
         } else if ((queryBond.getFlag(CDKConstants.ISINRING) == targetBond.getFlag(CDKConstants.ISINRING))
                 && (queryBond.getOrder() == targetBond.getOrder())) {
             return true;
-        }
-        return false;
-    }
-
-    /**
-     * Return true if a bond is matched between query and target
-     *
-     * @param targetBond
-     * @return
-     */
-    private boolean isBondAtomTypeMatch(IBond targetBond) {
-
-        if (queryBond.getAtom(0).getHybridization().equals(targetBond.getAtom(0).getHybridization())) {
-            if (queryBond.getAtom(1).getHybridization().equals(targetBond.getAtom(1).getHybridization())) {
-                return true;
-            }
-        }
-
-        if (queryBond.getAtom(1).getHybridization().equals(targetBond.getAtom(0).getHybridization())) {
-            if (queryBond.getAtom(0).getHybridization().equals(targetBond.getAtom(1).getHybridization())) {
-                return true;
-            }
-        }
-
-        if (queryBond.getAtom(0).getHybridization().equals(targetBond.getAtom(1).getHybridization())) {
-            if (queryBond.getAtom(1).getHybridization().equals(targetBond.getAtom(0).getHybridization())) {
-                return true;
-            }
-        }
-
-        if (queryBond.getAtom(1).getHybridization().equals(targetBond.getAtom(1).getHybridization())) {
-            if (queryBond.getAtom(0).getHybridization().equals(targetBond.getAtom(0).getHybridization())) {
-                return true;
-            }
         }
         return false;
     }

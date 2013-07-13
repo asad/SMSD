@@ -118,10 +118,6 @@ public final class DefaultAtomMatcher implements AtomMatcher {
         return atom.getFlag(CDKConstants.ISINRING) ? true : false;
     }
 
-    private boolean isAtomAttachedToRing(IAtom atom) {
-        return ((Integer) atom.getProperty(CDKConstants.RING_CONNECTIONS)).intValue() > 0 ? true : false;
-    }
-
     /**
      * @return the qAtom
      */
