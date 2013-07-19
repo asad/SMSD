@@ -202,7 +202,7 @@ public class SMSDcmd {
         /*
          * For image generation RE-RUN the MULTIPLE with the common fragment
          */
-        if (argumentHandler.isImage()) {
+        if (argumentHandler.isImage() && !solutions.isEmpty()) {
             int index = 1;
             for (IAtomContainer ac : solutions.atomContainers()) {
                 if (ac != null && ac.getAtomCount() > 0) {
@@ -289,13 +289,6 @@ public class SMSDcmd {
                 smsd = run(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings);
             }
 
-            /*
-             * Check for no overlap cases
-             */
-            if (smsd == null || smsd.getMappingCount() == 0) {
-                continue;
-            }
-
             long endTime = System.currentTimeMillis();
             long executionTime = endTime - startTime;
             outputHandler.writeTargetMol(smsd.getTargetContainer());
@@ -309,13 +302,13 @@ public class SMSDcmd {
             int nAtomsMatched = (mcs == null) ? 0 : mcs.size();
             double tanimotoSimilarity = smsd.getTanimotoSimilarity();
             //print out all mappings
-            if (mcs != null && argumentHandler.isAllMapping()) {
+            if (mcs != null && !mcs.isEmpty() && argumentHandler.isAllMapping()) {
                 outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
                 int counter = 0;
                 for (Iterator<AtomAtomMapping> it = smsd.getAllAtomMapping().iterator(); it.hasNext();) {
                     AtomAtomMapping aam = it.next();
                     Map<Integer, Integer> mapping = aam.getMappingsIndex();
-                    if (argumentHandler.isImage()) {
+                    if (argumentHandler.isImage() && !mapping.isEmpty()) {
                         double stereoScore = smsd.getStereoScore(counter);
                         String label = outputHandler.makeLabel(tanimotoSimilarity, stereoScore);
                         outputHandler.addImage(queryLocal, targetLocal, label, mapping);
@@ -324,7 +317,7 @@ public class SMSDcmd {
                     counter += 1;
                 }
             } //print out top one
-            else if (mcs != null && !argumentHandler.isAllMapping()) {
+            else if (mcs != null && !mcs.isEmpty() && !argumentHandler.isAllMapping()) {
                 Map<Integer, Integer> mcsNumber = smsd.getFirstAtomMapping().getMappingsIndex();
                 double stereoScore = smsd.getStereoScore(0);
                 outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
@@ -332,7 +325,7 @@ public class SMSDcmd {
                 String trefName = inputHandler.getTRefName();
                 outputHandler.printTopMapping(
                         nAtomsMatched, mcs, mcsNumber, qrefName, trefName);
-                if (argumentHandler.isImage()) {
+                if (argumentHandler.isImage() && !mcs.isEmpty()) {
                     String label = outputHandler.makeLabel(tanimotoSimilarity, stereoScore);
                     outputHandler.makeImage(queryLocal, targetLocal, label, mcsNumber);
                 }
@@ -344,7 +337,7 @@ public class SMSDcmd {
 //            outputHandler.writeResults(queryLocal, targetLocal, tanimotoGraph, tanimotoAtom, tanimotoBond, euclidianGraph, nAtomsMatched, executionTime);
 
             outputHandler.writeResults(queryLocal, targetLocal, tanimotoGraph, euclidianGraph, nAtomsMatched, executionTime);
-            if (mcs != null && argumentHandler.isImage()) {
+            if (mcs != null && !mcs.isEmpty() && argumentHandler.isImage()) {
                 String qName = inputHandler.getQueryName();
                 String tName = inputHandler.getTargetName() + "_" + targetNumber;
                 outputHandler.writeImage(qName, tName);
@@ -448,13 +441,6 @@ public class SMSDcmd {
             smsd = run(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings);
         }
 
-        /*
-         * Check for no overlap cases
-         */
-        if (smsd == null || smsd.getMappingCount() == 0) {
-            return;
-        }
-
         query = query.getBuilder().newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getQuery());
         target = target.getBuilder().newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getTarget());
         long endTime = System.currentTimeMillis();
@@ -471,13 +457,13 @@ public class SMSDcmd {
         double tanimotoSimilarity = smsd.getTanimotoSimilarity();
 
         //print out all mappings
-        if (mcs != null && argumentHandler.isAllMapping()) {
+        if (mcs != null && !mcs.isEmpty() && argumentHandler.isAllMapping()) {
             outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
             int counter = 0;
             for (Iterator<AtomAtomMapping> it = smsd.getAllAtomMapping().iterator(); it.hasNext();) {
                 AtomAtomMapping aam = it.next();
                 Map<Integer, Integer> mapping = aam.getMappingsIndex();
-                if (argumentHandler.isImage()) {
+                if (argumentHandler.isImage() && !mapping.isEmpty()) {
                     double stereoScore = smsd.getStereoScore(counter);
                     String label = outputHandler.makeLabel(tanimotoSimilarity, stereoScore);
                     outputHandler.addImage(query, target, label, mapping);
@@ -486,15 +472,14 @@ public class SMSDcmd {
                 counter += 1;
             }
         } //print out top one
-        else if (mcs != null && !argumentHandler.isAllMapping()) {
+        else if (mcs != null && !mcs.isEmpty() && !argumentHandler.isAllMapping()) {
             Map<Integer, Integer> mcsNumber = smsd.getFirstAtomMapping().getMappingsIndex();
             double stereoScore = smsd.getStereoScore(0);
             outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
             String qrefName = inputHandler.getQRefName();
             String trefName = inputHandler.getTRefName();
-            outputHandler.printTopMapping(
-                    nAtomsMatched, mcs, mcsNumber, qrefName, trefName);
-            if (argumentHandler.isImage()) {
+            outputHandler.printTopMapping(nAtomsMatched, mcs, mcsNumber, qrefName, trefName);
+            if (argumentHandler.isImage() && !mcsNumber.isEmpty()) {
                 String label = outputHandler.makeLabel(tanimotoSimilarity, stereoScore);
                 outputHandler.makeImage(query, target, label, mcsNumber);
             }
@@ -507,7 +492,7 @@ public class SMSDcmd {
 //        outputHandler.writeResults(queryLocal, targetLocal, tanimotoGraph, tanimotoAtom, tanimotoBond, euclidianGraph, nAtomsMatched, executionTime);
 
         outputHandler.writeResults(query, target, tanimotoGraph, euclidianGraph, nAtomsMatched, executionTime);
-        if (mcs != null && argumentHandler.isImage()) {
+        if (mcs != null && !mcs.isEmpty() && argumentHandler.isImage()) {
             String qName = inputHandler.getQueryName();
             String tName = inputHandler.getTargetName();
             outputHandler.writeImage(qName, tName);
