@@ -96,8 +96,9 @@ public class SingleMappingHandler extends MoleculeInitializer implements IResult
         searchMCS();
     }
 
-    //Function is called by the main program and serves as a starting point for the comparision procedure.
+    
     /**
+     * Function is called by the main program and serves as a starting point for the comparison procedure.
      * {@inheritDoc}
      *
      */
@@ -129,7 +130,8 @@ public class SingleMappingHandler extends MoleculeInitializer implements IResult
                     IAtom targetAtom = map.getValue();
                     atomMappings.put(sourceAtom, targetAtom);
                 }
-                allAtomMCS.add(counter++, atomMappings);
+                allAtomMCS.add(counter, atomMappings);
+                counter++;
             }
         } catch (Exception I) {
             I.getCause();
