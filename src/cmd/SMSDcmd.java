@@ -19,7 +19,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
  *
- * You should have received query copy of the GNU Lesser General Public License
+ * You should have received queryLocal copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  * 
@@ -297,8 +297,8 @@ public class SMSDcmd {
             String queryPath = argumentHandler.getQueryFilepath();
             String targetPath = argumentHandler.getTargetFilepath();
 
-            query = query.getBuilder().newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getQuery());
-            target = target.getBuilder().newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getTarget());
+            IAtomContainer queryLocal = query.getBuilder().newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getQuery());
+            IAtomContainer targetLocal = target.getBuilder().newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getTarget());
             Map<IAtom, IAtom> mcs = smsd.getFirstAtomMapping().getMappings();
             int nAtomsMatched = (mcs == null) ? 0 : mcs.size();
             double tanimotoSimilarity = smsd.getTanimotoSimilarity();
@@ -312,14 +312,13 @@ public class SMSDcmd {
                     if (argumentHandler.isImage()) {
                         double stereoScore = smsd.getStereoScore(counter);
                         String label = outputHandler.makeLabel(tanimotoSimilarity, stereoScore);
-                        outputHandler.addImage(query, target, label, mapping);
+                        outputHandler.addImage(queryLocal, targetLocal, label, mapping);
                     }
                     outputHandler.printMapping((counter + 1), mapping);
                     counter += 1;
                 }
             } //print out top one
-            else if (mcs
-                    != null && !argumentHandler.isAllMapping()) {
+            else if (mcs != null && !argumentHandler.isAllMapping()) {
                 Map<Integer, Integer> mcsNumber = smsd.getFirstAtomMapping().getMappingsIndex();
                 double stereoScore = smsd.getStereoScore(0);
                 outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
@@ -329,16 +328,16 @@ public class SMSDcmd {
                         nAtomsMatched, mcs, mcsNumber, qrefName, trefName);
                 if (argumentHandler.isImage()) {
                     String label = outputHandler.makeLabel(tanimotoSimilarity, stereoScore);
-                    outputHandler.makeImage(query, target, label, mcsNumber);
+                    outputHandler.makeImage(queryLocal, targetLocal, label, mcsNumber);
                 }
             }
             double tanimotoGraph = smsd.getTanimotoSimilarity();
 //            double tanimotoAtom = smsd.getTanimotoAtomSimilarity();
 //            double tanimotoBond = smsd.getTanimotoBondSimilarity();
             double euclidianGraph = smsd.getEuclideanDistance();
-//            outputHandler.writeResults(query, target, tanimotoGraph, tanimotoAtom, tanimotoBond, euclidianGraph, nAtomsMatched, executionTime);
+//            outputHandler.writeResults(queryLocal, targetLocal, tanimotoGraph, tanimotoAtom, tanimotoBond, euclidianGraph, nAtomsMatched, executionTime);
 
-            outputHandler.writeResults(query, target, tanimotoGraph, euclidianGraph, nAtomsMatched, executionTime);
+            outputHandler.writeResults(queryLocal, targetLocal, tanimotoGraph, euclidianGraph, nAtomsMatched, executionTime);
             if (mcs
                     != null && argumentHandler.isImage()) {
                 String qName = inputHandler.getQueryName();
@@ -444,6 +443,13 @@ public class SMSDcmd {
             smsd = run(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings);
         }
 
+        /*
+         * Check for no overlap cases
+         */
+        if (smsd == null || smsd.getMappingCount() == 0) {
+            return;
+        }
+
         query = query.getBuilder().newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getQuery());
         target = target.getBuilder().newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getTarget());
         long endTime = System.currentTimeMillis();
@@ -458,9 +464,9 @@ public class SMSDcmd {
         Map<IAtom, IAtom> mcs = smsd.getFirstAtomMapping().getMappings();
         int nAtomsMatched = (mcs == null) ? 0 : mcs.size();
         double tanimotoSimilarity = smsd.getTanimotoSimilarity();
+
         //print out all mappings
-        if (mcs
-                != null && argumentHandler.isAllMapping()) {
+        if (mcs != null && argumentHandler.isAllMapping()) {
             outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
             int counter = 0;
             for (Iterator<AtomAtomMapping> it = smsd.getAllAtomMapping().iterator(); it.hasNext();) {
@@ -475,8 +481,7 @@ public class SMSDcmd {
                 counter += 1;
             }
         } //print out top one
-        else if (mcs
-                != null && !argumentHandler.isAllMapping()) {
+        else if (mcs != null && !argumentHandler.isAllMapping()) {
             Map<Integer, Integer> mcsNumber = smsd.getFirstAtomMapping().getMappingsIndex();
             double stereoScore = smsd.getStereoScore(0);
             outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
@@ -489,15 +494,15 @@ public class SMSDcmd {
                 outputHandler.makeImage(query, target, label, mcsNumber);
             }
         }
+
         double tanimotoGraph = smsd.getTanimotoSimilarity();
 //        double tanimotoAtom = smsd.getTanimotoAtomSimilarity();
 //        double tanimotoBond = smsd.getTanimotoBondSimilarity();
         double euclidianGraph = smsd.getEuclideanDistance();
-//        outputHandler.writeResults(query, target, tanimotoGraph, tanimotoAtom, tanimotoBond, euclidianGraph, nAtomsMatched, executionTime);
+//        outputHandler.writeResults(queryLocal, targetLocal, tanimotoGraph, tanimotoAtom, tanimotoBond, euclidianGraph, nAtomsMatched, executionTime);
 
         outputHandler.writeResults(query, target, tanimotoGraph, euclidianGraph, nAtomsMatched, executionTime);
-        if (mcs
-                != null && argumentHandler.isImage()) {
+        if (mcs != null && argumentHandler.isImage()) {
             String qName = inputHandler.getQueryName();
             String tName = inputHandler.getTargetName();
             outputHandler.writeImage(qName, tName);
