@@ -62,7 +62,6 @@ public class SingleMapping {
      * Default
      */
     public SingleMapping() {
-        System.out.println("Single Mapping called ");
         connectedBondOrder = new TreeMap<Integer, Double>();
     }
 
