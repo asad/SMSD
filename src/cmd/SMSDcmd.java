@@ -289,6 +289,12 @@ public class SMSDcmd {
                 smsd = run(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings);
             }
 
+            /*
+             * Check for no overlap cases
+             */
+            if (smsd == null || smsd.getMappingCount() == 0) {
+                continue;
+            }
 
             long endTime = System.currentTimeMillis();
             long executionTime = endTime - startTime;
@@ -338,8 +344,7 @@ public class SMSDcmd {
 //            outputHandler.writeResults(queryLocal, targetLocal, tanimotoGraph, tanimotoAtom, tanimotoBond, euclidianGraph, nAtomsMatched, executionTime);
 
             outputHandler.writeResults(queryLocal, targetLocal, tanimotoGraph, euclidianGraph, nAtomsMatched, executionTime);
-            if (mcs
-                    != null && argumentHandler.isImage()) {
+            if (mcs != null && argumentHandler.isImage()) {
                 String qName = inputHandler.getQueryName();
                 String tName = inputHandler.getTargetName() + "_" + targetNumber;
                 outputHandler.writeImage(qName, tName);
