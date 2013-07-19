@@ -136,7 +136,6 @@ public class SMSDFrame extends JFrame {
         jRadioButton1.setText("Bond Sensitive");
         jRadioButton1.setToolTipText("Bond order match is turned on");
         jRadioButton1.addActionListener(new java.awt.event.ActionListener() {
-
             @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jRadioButton1ActionPerformed(evt);
@@ -151,7 +150,6 @@ public class SMSDFrame extends JFrame {
         jCheckBox1.setText("Remove Hydrogen");
         jCheckBox1.setToolTipText("Make Hydrogen implicite");
         jCheckBox1.addActionListener(new java.awt.event.ActionListener() {
-
             @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jCheckBox1ActionPerformed(evt);
@@ -178,7 +176,6 @@ public class SMSDFrame extends JFrame {
         jButton1.setActionCommand("QueryFile");
         buttonGroup2.add(jButton1);
         jButton1.addActionListener(new java.awt.event.ActionListener() {
-
             @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton1ActionPerformed(evt);
@@ -189,7 +186,6 @@ public class SMSDFrame extends JFrame {
         jButton3.setActionCommand("TargetFile");
         buttonGroup2.add(jButton3);
         jButton3.addActionListener(new java.awt.event.ActionListener() {
-
             @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton1ActionPerformed(evt);
@@ -224,7 +220,6 @@ public class SMSDFrame extends JFrame {
 
         jButton2.setText("Run");
         jButton2.addActionListener(new java.awt.event.ActionListener() {
-
             @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton2ActionPerformed(evt);
@@ -288,28 +283,27 @@ public class SMSDFrame extends JFrame {
 
             if (molFiles.size() >= 4) {
 
-                IAtomContainer QMol = (IAtomContainer) molFiles.get(1);
-                IAtomContainer TMol = (IAtomContainer) molFiles.get(3);
+                IAtomContainer queryMolecule = (IAtomContainer) molFiles.get(1);
+                IAtomContainer targetMolecule = (IAtomContainer) molFiles.get(3);
                 jTextArea1.append("Calculating MCS...." + "." + NEW_LINE);
 //                System.out.println("Calculating MCS....");
 
                 if (jCheckBox1.isSelected()) {
 
-                    QMol = AtomContainerManipulator.removeHydrogens(QMol);
-                    TMol = AtomContainerManipulator.removeHydrogens(TMol);
+                    queryMolecule = AtomContainerManipulator.removeHydrogens(queryMolecule);
+                    targetMolecule = AtomContainerManipulator.removeHydrogens(targetMolecule);
 
                 }
-                AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(TMol);
-                AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(QMol);
-                CDKHueckelAromaticityDetector.detectAromaticity(TMol);
-                CDKHueckelAromaticityDetector.detectAromaticity(QMol);
+                AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(targetMolecule);
+                AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(queryMolecule);
+                CDKHueckelAromaticityDetector.detectAromaticity(targetMolecule);
+                CDKHueckelAromaticityDetector.detectAromaticity(queryMolecule);
 
 //                CanonicalLabeler c=new CanonicalLabeler();
-//                c.canonLabel(QMol);
-//                c.canonLabel(TMol);
-                Isomorphism comparison = new Isomorphism(QMol, TMol, Algorithm.VFLibMCS, jRadioButton1.isSelected(), false);
+//                c.canonLabel(queryMolecule);
+//                c.canonLabel(targetMolecule);
+                Isomorphism comparison = new Isomorphism(queryMolecule, targetMolecule, Algorithm.VFLibMCS, jRadioButton1.isSelected(), false);
                 comparison.setChemFilters(jCheckBox2.isSelected(), jCheckBox3.isSelected(), jCheckBox4.isSelected());
-
 
                 jTextArea1.append("Number of overlaps = " + comparison.getFirstAtomMapping().getCount() + NEW_LINE);
                 jTextArea1.setCaretPosition(jTextArea1.getDocument().getLength());
@@ -332,8 +326,12 @@ public class SMSDFrame extends JFrame {
                 jPanel.add(l2, gbc);
                 jPanel.setBackground(Color.cyan);
                 panels.add(jPanel, gbc);
-                panels.add(new JLabel(new ImageIcon(generateImage(QMol, TMol, comparison))));
 
+                if (comparison.getFirstAtomMapping().getCount() > 0) {
+                    panels.add(new JLabel(new ImageIcon(generateImage(queryMolecule, targetMolecule, comparison))));
+                } else {
+                    panels.add(new JLabel("There is no overlap between them!"));
+                }
 
                 JButton button = new JButton("Save as");
                 JPanel southPanel = new JPanel();
@@ -346,7 +344,6 @@ public class SMSDFrame extends JFrame {
                 frame.getContentPane().add(southPanel, "South");
 
                 button.addActionListener(new ActionListener() {
-
                     @Override
                     public void actionPerformed(ActionEvent e) {
 
@@ -524,7 +521,6 @@ public class SMSDFrame extends JFrame {
      */
     public static void main(String args[]) {
         java.awt.EventQueue.invokeLater(new Runnable() {
-
             @Override
             public void run() {
                 new SMSDFrame().setVisible(true);
