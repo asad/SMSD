@@ -62,9 +62,8 @@ public class SingleMapping {
      * Default
      */
     public SingleMapping() {
-//        System.out.println("Single Mapping called ");
+        System.out.println("Single Mapping called ");
         connectedBondOrder = new TreeMap<Integer, Double>();
-
     }
 
     /**
@@ -89,7 +88,6 @@ public class SingleMapping {
                 || (target.getAtomCount() > 0 && target.getBondCount() == 0)) {
             setTargetSingleAtomMap(mappings);
         }
-
         return postFilter(mappings);
     }
 
@@ -115,7 +113,6 @@ public class SingleMapping {
                 || (target.getAtomCount() > 0 && target.getBondCount() == 0)) {
             setTargetSingleAtomMap(mappings);
         }
-
         return postFilter(mappings);
     }
 
@@ -159,7 +156,8 @@ public class SingleMapping {
                     }
 
                     connectedBondOrder.put(counter, totalOrder);
-                    mappings.add(counter++, mapAtoms);
+                    mappings.add(counter, mapAtoms);
+                    counter++;
                 }
             }
         }
@@ -185,7 +183,8 @@ public class SingleMapping {
                         totalOrder += 0.5;
                     }
                     connectedBondOrder.put(counter, totalOrder);
-                    mappings.add(counter++, mapAtoms);
+                    mappings.add(counter, mapAtoms);
+                    counter++;
                 }
             }
         }
@@ -193,6 +192,11 @@ public class SingleMapping {
 
     private synchronized List<Map<IAtom, IAtom>> postFilter(List<Map<IAtom, IAtom>> mappings) {
         List<Map<IAtom, IAtom>> sortedMap = new ArrayList<Map<IAtom, IAtom>>();
+
+        if (mappings.isEmpty()) {
+            return sortedMap;
+        }
+
         Map<Integer, Double> sortedMapByValue = sortByValue(connectedBondOrder);
         for (Integer key : sortedMapByValue.keySet()) {
             Map<IAtom, IAtom> mapToBeMoved = mappings.get(key);
