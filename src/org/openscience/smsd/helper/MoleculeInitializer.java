@@ -118,7 +118,6 @@ public class MoleculeInitializer {
 
             // do all ring perception
             AllRingsFinder arf = new AllRingsFinder();
-            arf.setTimeout(90000);
             IRingSet allRings = null;
             try {
                 allRings = arf.findAllRings(atomContainer);
