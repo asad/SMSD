@@ -388,26 +388,29 @@ public class InputHandler {
         }
 
         List<IAtomContainer> allAtomContainers = new ArrayList<IAtomContainer>();
-
-        if (type.equals("SDF")) {
-            IteratingSDFReader iteratingSDFReader =
-                    new IteratingSDFReader(
-                    new FileReader(inputFile), DefaultChemObjectBuilder.getInstance());
-            while (iteratingSDFReader.hasNext()) {
-                allAtomContainers.add(iteratingSDFReader.next());
-            }
-            iteratingSDFReader.close();
-        } else if (type.equals("SMIF")) {
-            reader = new SMILESReader(new FileReader(inputFile));
-            deducebonds = true;
-            emptyChemFile = builder.newInstance(IChemFile.class);
-            chemFile = reader.read(emptyChemFile);
-            allAtomContainers = ChemFileManipulator.getAllAtomContainers(chemFile);
-        } else {
-            reader = readerFactory.createReader(new FileReader(inputFile));
-            emptyChemFile = builder.newInstance(IChemFile.class);
-            chemFile = reader.read(emptyChemFile);
-            allAtomContainers = ChemFileManipulator.getAllAtomContainers(chemFile);
+        switch (type) {
+            case "SDF":
+                IteratingSDFReader iteratingSDFReader =
+                        new IteratingSDFReader(
+                        new FileReader(inputFile), DefaultChemObjectBuilder.getInstance());
+                while (iteratingSDFReader.hasNext()) {
+                    allAtomContainers.add(iteratingSDFReader.next());
+                }
+                iteratingSDFReader.close();
+                break;
+            case "SMIF":
+                reader = new SMILESReader(new FileReader(inputFile));
+                deducebonds = true;
+                emptyChemFile = builder.newInstance(IChemFile.class);
+                chemFile = reader.read(emptyChemFile);
+                allAtomContainers = ChemFileManipulator.getAllAtomContainers(chemFile);
+                break;
+            default:
+                reader = readerFactory.createReader(new FileReader(inputFile));
+                emptyChemFile = builder.newInstance(IChemFile.class);
+                chemFile = reader.read(emptyChemFile);
+                allAtomContainers = ChemFileManipulator.getAllAtomContainers(chemFile);
+                break;
         }
         if (!allAtomContainers.isEmpty()) {
             // Get Molecules
