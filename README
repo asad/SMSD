@@ -46,3 +46,14 @@ ant -f /Users/Asad/Software/GITROOT/asad/SMSD/nbbuild.xml clean jar
 Step 2, for releasing the code:
 
 ant -f /Users/Asad/Software/GITROOT/asad/SMSD release-smsd-zip
+
+
+To Run SMSD code:
+
+On Unix/Linux:
+
+sh SMSD.sh
+
+On Windows/DOS:
+
+cmd SMSD.bat or SMSD.bat
