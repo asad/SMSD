@@ -84,7 +84,7 @@
 			<fileset dir="build" includes="**"/>
 			<zipgroupfileset dir="lib" includes="*.jar"/>
 			<zipgroupfileset file="lib/commons-cli-1.2/commons-cli-1.2.jar"/>
-			<zipgroupfileset file="${CDK_DIR}/jar/signatures-1.0.jar"/>
+			<zipgroupfileset file="${CDK_DIR}/jar/signatures-1.*.jar"/>
 			<zipgroupfileset file="${CDK_DIR}/jar/cmlxom-*.jar"/>
 			<zipgroupfileset file="${CDK_DIR}/jar/jgrapht-*.jar"/>
 			<zipgroupfileset file="${CDK_DIR}/jar/vecmath*.jar"/>
