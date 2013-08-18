@@ -44,18 +44,28 @@ public class RingTest {
             IAtomContainer mol1 = sp.parseSmiles(query);
             IAtomContainer mol2 = sp.parseSmiles(target);
 
+            /*
+             * perceive Atom Types
+             */
             AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol1);
             AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol2);
 
+            /*
+             * Remove Hydrogens
+             */
             mol1 = AtomContainerManipulator.removeHydrogens(mol1);
             mol2 = AtomContainerManipulator.removeHydrogens(mol2);
 
-//	Calling the main algorithm to perform MCS cearch
+            /*
+             * Detect aromatic compounds and rings
+             */
 
             CDKHueckelAromaticityDetector.detectAromaticity(mol1);
             CDKHueckelAromaticityDetector.detectAromaticity(mol2);
 
-
+            /*
+             * Calling the main algorithm to perform MCS search
+             */
             boolean bondSensitive = true;
             boolean ringMatch = true;
             boolean stereoMatch = true;
