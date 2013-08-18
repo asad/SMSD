@@ -1,16 +1,12 @@
 package example;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.io.MDLV2000Reader;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.AtomAtomMapping;
@@ -33,23 +29,16 @@ import org.openscience.smsd.interfaces.Algorithm;
  * contact asad@ebi.ac.uk
  *
  */
-public class Test {
+public class RingTest {
 
     /**
      * Creates a new instance of SMSD
      */
-    public Test() {
-    }
-
-    /**
-     * @param args the command line arguments
-     * @throws Exception
-     */
-    public static void main(String[] args) throws Exception {
+    public RingTest() {
         boolean first_MCS = false;
         try {
             String query = "CCc1ccccc1";
-            String target = "C\C=C\C=C/C(=C)C1=CC=CC=C1";
+            String target = "C\\C=C\\C=C/C(=C)C1=CC=CC=C1";
             SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
 
             IAtomContainer mol1 = sp.parseSmiles(query);
@@ -160,7 +149,16 @@ public class Test {
             System.out.println("");
 
         } catch (Exception ex) {
-            Logger.getLogger(Test.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(RingTest.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+
+    /**
+     * @param args the command line arguments
+     * @throws Exception
+     */
+    public static void main(String[] args) throws Exception {
+
+        new RingTest();
     }
 }
