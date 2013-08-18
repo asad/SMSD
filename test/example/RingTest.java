@@ -37,7 +37,7 @@ public class RingTest {
     public RingTest() {
         boolean first_MCS = false;
         try {
-            String query = "COc1ccccc1";
+            String query = "Oc1ccccc1";
             String target = "C\\C=C\\C=C\\COC1=CC=CC=C1";
             SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
 
