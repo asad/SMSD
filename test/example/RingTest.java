@@ -48,8 +48,8 @@ public class Test {
     public static void main(String[] args) throws Exception {
         boolean first_MCS = false;
         try {
-            String query = "CCCC(C)C";
-            String target = "c1ccc(cc1)CC";
+            String query = "CCc1ccccc1";
+            String target = "C\C=C\C=C/C(=C)C1=CC=CC=C1";
             SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
 
             IAtomContainer mol1 = sp.parseSmiles(query);
@@ -67,11 +67,11 @@ public class Test {
             CDKHueckelAromaticityDetector.detectAromaticity(mol2);
 
 
-            boolean bondSensitive = false;
-            boolean ringMatch = false;
-            boolean stereoMatch = false;
-            boolean fragmentMinimization = false;
-            boolean energyMinimization = false;
+            boolean bondSensitive = true;
+            boolean ringMatch = true;
+            boolean stereoMatch = true;
+            boolean fragmentMinimization = true;
+            boolean energyMinimization = true;
 
             Isomorphism comparison = new Isomorphism(mol1, mol2, Algorithm.DEFAULT, bondSensitive, ringMatch);
             comparison.setChemFilters(stereoMatch, fragmentMinimization, energyMinimization);
