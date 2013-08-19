@@ -302,7 +302,7 @@ public class SMSDFrame extends JFrame {
 //                CanonicalLabeler c=new CanonicalLabeler();
 //                c.canonLabel(queryMolecule);
 //                c.canonLabel(targetMolecule);
-                Isomorphism comparison = new Isomorphism(queryMolecule, targetMolecule, Algorithm.VFLibMCS, jRadioButton1.isSelected(), false);
+                Isomorphism comparison = new Isomorphism(queryMolecule, targetMolecule, Algorithm.VFLibMCS, jRadioButton1.isSelected(), true);
                 comparison.setChemFilters(jCheckBox2.isSelected(), jCheckBox3.isSelected(), jCheckBox4.isSelected());
 
                 jTextArea1.append("Number of overlaps = " + comparison.getFirstAtomMapping().getCount() + NEW_LINE);
