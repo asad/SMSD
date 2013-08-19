@@ -41,7 +41,6 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
 public final class DefaultAtomMatcher implements AtomMatcher {
 
     private final String SMALLEST_RING_SIZE = "SMALLEST_RING_SIZE";
-    private final String RING_SIZES = "CDKConstants.RING_SIZES";
     static final long serialVersionUID = -7861469841127327812L;
     private final String symbol;
     private final IAtom qAtom;
@@ -115,8 +114,8 @@ public final class DefaultAtomMatcher implements AtomMatcher {
     }
 
     private boolean isRingSizeMatch(IAtom atom) {
-        List<Integer> ringsizesQ = qAtom.getProperty(RING_SIZES);
-        List<Integer> ringsizesT = atom.getProperty(RING_SIZES);
+        List<Integer> ringsizesQ = qAtom.getProperty(CDKConstants.RING_SIZES);
+        List<Integer> ringsizesT = atom.getProperty(CDKConstants.RING_SIZES);
         if (ringsizesQ != null && ringsizesT != null) {
             for (int i : ringsizesQ) {
                 if (ringsizesT.contains(i)) {
