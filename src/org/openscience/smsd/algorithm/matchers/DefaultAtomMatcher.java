@@ -103,12 +103,12 @@ public final class DefaultAtomMatcher implements AtomMatcher {
                     && (isRingAtom(getQueryAtom()) && isAliphaticAtom(targetAtom))) {
                 return false;
             } else if (isShouldMatchRings() && isRingAtom(getQueryAtom()) && isRingAtom(targetAtom)) {
-                if (getQueryAtom().getProperty(SMALLEST_RING_SIZE) != targetAtom.getProperty(SMALLEST_RING_SIZE)) {
-                    return false;
-                }
-//                if (!isRingSizeMatch(targetAtom)) {
+//                if (getQueryAtom().getProperty(SMALLEST_RING_SIZE) != targetAtom.getProperty(SMALLEST_RING_SIZE)) {
 //                    return false;
 //                }
+                if (!isRingSizeMatch(targetAtom)) {
+                    return false;
+                }
             }
         }
         return true;
