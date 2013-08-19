@@ -37,8 +37,9 @@ public class RingTest {
     public RingTest() {
         boolean first_MCS = false;
         try {
-            String query = "Oc1ccccc1";
-            String target = "C\\C=C\\C=C\\COC1=CC=CC=C1";
+            String query = "C1=CC=C2C(=C1)C=CC=N2";//Quinoline 
+            String target = "C1=CC=C2C(=C1)C=CN2";//Indole
+
             SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
 
             IAtomContainer mol1 = sp.parseSmiles(query);
