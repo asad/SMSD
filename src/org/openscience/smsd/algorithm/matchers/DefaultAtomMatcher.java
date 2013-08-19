@@ -96,13 +96,13 @@ public final class DefaultAtomMatcher implements AtomMatcher {
                 return false;
             }
 
-            if (isShouldMatchRings()
+            if (isMatchRings()
                     && (isAliphaticAtom(getQueryAtom()) && isRingAtom(targetAtom))) {
                 return false;
-            } else if (isShouldMatchRings()
+            } else if (isMatchRings()
                     && (isRingAtom(getQueryAtom()) && isAliphaticAtom(targetAtom))) {
                 return false;
-            } else if (isShouldMatchRings() && isRingAtom(getQueryAtom()) && isRingAtom(targetAtom)) {
+            } else if (isMatchRings() && isRingAtom(getQueryAtom()) && isRingAtom(targetAtom)) {
 //                if (getQueryAtom().getProperty(SMALLEST_RING_SIZE) != targetAtom.getProperty(SMALLEST_RING_SIZE)) {
 //                    return false;
 //                }
@@ -153,7 +153,7 @@ public final class DefaultAtomMatcher implements AtomMatcher {
     /**
      * @return the shouldMatchRings
      */
-    public boolean isShouldMatchRings() {
+    public boolean isMatchRings() {
         return shouldMatchRings;
     }
 }
