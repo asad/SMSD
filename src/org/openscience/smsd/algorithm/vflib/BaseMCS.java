@@ -549,14 +549,4 @@ public class BaseMCS extends MoleculeInitializer {
         }
         return common;
     }
-
-    protected synchronized boolean isEnrichmentRequired() {
-        int maxSize = 0;
-        for (Map<Integer, Integer> map : allLocalMCS) {
-            if (map.size() > maxSize) {
-                maxSize = map.size();
-            }
-        }
-        return this.source.getAtomCount() == maxSize || this.target.getAtomCount() == maxSize ? true : false;
-    }
 }

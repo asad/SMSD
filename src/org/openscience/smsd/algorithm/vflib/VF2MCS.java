@@ -72,7 +72,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
          *
          *
          */
-        if (isEnrichmentRequired() || isExtensionRequired()) {
+        if (isExtensionRequired()) {
 
             List<Map<Integer, Integer>> mcsVFSeeds = new ArrayList<Map<Integer, Integer>>();
 
@@ -119,19 +119,19 @@ public final class VF2MCS extends BaseMCS implements IResults {
             /*
              * Store largest MCS seeds generated from MCSPlus and UIT
              */
-            int solSize = 0;
+            int solutionSize = 0;
             counter = 0;
             List<Map<Integer, Integer>> cleanedMCSSeeds = new ArrayList<Map<Integer, Integer>>();
             if (!mcsSeeds.isEmpty()) {
                 for (Iterator<Map<Integer, Integer>> it = mcsSeeds.iterator(); it.hasNext();) {
                     Map<Integer, Integer> map = it.next();
-                    if (map.size() > solSize) {
-                        solSize = map.size();
+                    if (map.size() > solutionSize) {
+                        solutionSize = map.size();
                         cleanedMCSSeeds.clear();
                         counter = 0;
                     }
                     if (!map.isEmpty()
-                            && map.size() == solSize
+                            && map.size() == solutionSize
                             && !hasClique(map, cleanedMCSSeeds)) {
                         cleanedMCSSeeds.add(counter, map);
                         counter++;
@@ -140,11 +140,12 @@ public final class VF2MCS extends BaseMCS implements IResults {
             }
 
             /*
-             * Store MCS seeds generated from VF
+             * Store MCS seeds generated from VF on top of other seeds
              */
             for (Iterator<Map<Integer, Integer>> it = mcsVFSeeds.iterator(); it.hasNext();) {
                 Map<Integer, Integer> map = it.next();
                 if (!map.isEmpty()
+                        && map.size() >= solutionSize
                         && !hasClique(map, cleanedMCSSeeds)) {
                     cleanedMCSSeeds.add(counter, map);
                     counter++;
@@ -176,7 +177,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
              * Integerate the solutions
              */
 
-            solSize = 0;
+            solutionSize = 0;
             counter = 0;
             this.allAtomMCS = new ArrayList<AtomAtomMapping>();
 
@@ -186,13 +187,13 @@ public final class VF2MCS extends BaseMCS implements IResults {
             if (!allLocalAtomAtomMapping.isEmpty()) {
                 for (int i = 0; i < allLocalAtomAtomMapping.size(); i++) {
                     AtomAtomMapping atomMCSMap = allLocalAtomAtomMapping.get(i);
-                    if (atomMCSMap.getCount() > solSize) {
-                        solSize = atomMCSMap.getCount();
+                    if (atomMCSMap.getCount() > solutionSize) {
+                        solutionSize = atomMCSMap.getCount();
                         allAtomMCS.clear();
                         counter = 0;
                     }
                     if (!atomMCSMap.isEmpty()
-                            && atomMCSMap.getCount() == solSize) {
+                            && atomMCSMap.getCount() == solutionSize) {
                         allAtomMCS.add(counter, atomMCSMap);
                         counter++;
                     }
