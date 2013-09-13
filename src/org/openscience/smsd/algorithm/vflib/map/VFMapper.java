@@ -152,32 +152,34 @@ public class VFMapper implements IMapper {
         return maps.size();
     }
 
-    private boolean mapAll(IState state) {
+    private void mapAll(IState state) {
         if (state.isDead()) {
-            return false;
-        }
-        if (state.isGoal()) {
-            return true;
+            return;
         }
 
-        boolean found = false;
+        if (hasMap(state.getMap())) {
+            state.backTrack();
+        }
+
+        if (state.isGoal()) {
+            Map<INode, IAtom> map = state.getMap();
+            if (!hasMap(map)) {
+                maps.add(state.getMap());
+            }
+//            else {
+//                state.backTrack();
+//            }
+            return;
+        }
+
         while (state.hasNextCandidate()) {
             Match candidate = state.nextCandidate();
             if (state.isMatchFeasible(candidate)) {
                 IState nextState = state.nextState(candidate);
-                found = mapAll(nextState);
-                if (found) {
-                    Map<INode, IAtom> map = state.getMap();
-                    if (!hasMap(map)) {
-                        maps.add(map);
-                    }
-                    found = false;
-                    continue;
-                }
+                mapAll(nextState);
                 nextState.backTrack();
             }
         }
-        return found;
     }
 
     private boolean mapFirst(IState state) {
