@@ -161,9 +161,9 @@ public final class VF2MCS extends BaseMCS implements IResults {
             try {
                 extendCliquesWithMcGregor(cleanedMCSSeeds);
             } catch (CDKException ex) {
-                java.util.logging.Logger.getLogger(VF2MCS.class.getName()).log(Level.SEVERE, null, ex);
+                logger.error(Level.SEVERE, null, ex);
             } catch (IOException ex) {
-                java.util.logging.Logger.getLogger(VF2MCS.class.getName()).log(Level.SEVERE, null, ex);
+                logger.error(Level.SEVERE, null, ex);
             }
 
             /*
