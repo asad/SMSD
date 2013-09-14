@@ -38,7 +38,6 @@ import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.smiles.SmilesParser;
-import org.openscience.smsd.algorithm.rgraph.CDKRMapHandler;
 import org.openscience.smsd.helper.FinalMappings;
 
 /**

@@ -468,15 +468,4 @@ public class CDKMCSTest {
         TimeManager expResult = new TimeManager();
         Assert.assertNotNull(expResult);
     }
-
-    /**
-     * Test of setTimeManager method, of class CDKMCS.
-     */
-    @Test
-    public void testSetTimeManager() {
-        System.out.println("setTimeManager");
-        TimeManager aTimeManager = new TimeManager();
-        CDKMCS.setTimeManager(aTimeManager);
-        Assert.assertNotNull(CDKMCS.getTimeManager().getElapsedTimeInSeconds());
-    }
 }
