@@ -37,15 +37,13 @@ import org.openscience.smsd.algorithm.vflib.VF2Sub;
 import org.openscience.smsd.algorithm.vflib.substructure.VF2;
 
 /**
- * This is an ultra fast method to report if query is a substructure for target
- * molecule. If this case is true then it returns only all mapping.
+ * This is an ultra fast method to report if query is a substructure for target molecule. If this case is true then it
+ * returns only all mapping.
  *
  * This is much faster than {@link
- * org.openscience.cdk.smsd.algorithm.vflib.substructure} class as it only
- * reports first match and backtracks.
+ * org.openscience.cdk.smsd.algorithm.vflib.substructure} class as it only reports first match and backtracks.
  *
- * This class should only be used to report if a query graph is a substructure
- * of the target graph.
+ * This class should only be used to report if a query graph is a substructure of the target graph.
  *
  *  *
  * <p>An example for <b>Substructure search</b>:</p> <font color="#003366">

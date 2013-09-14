@@ -62,6 +62,7 @@ import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
 import org.openscience.smsd.algorithm.vflib.interfaces.IState;
 import org.openscience.smsd.algorithm.vflib.query.QueryCompiler;
 import org.openscience.smsd.global.TimeOut;
+import org.openscience.smsd.tools.TimeManager;
 
 /**
  * This class finds MCS between query and target molecules using VF2 algorithm.
@@ -78,17 +79,11 @@ public class VFMapper implements IMapper {
     private final List<Map<INode, IAtom>> maps;
 
     /**
-     * @return the timeout
-     */
-    protected synchronized static double getTimeout() {
-        return TimeOut.getInstance().getVFTimeout();
-    }
-
-    /**
      *
      * @param query
      */
     public VFMapper(IQuery query) {
+        setTimeManager(new TimeManager());
         this.query = query;
         this.maps = Collections.synchronizedList(new ArrayList<Map<INode, IAtom>>());
     }
@@ -100,8 +95,40 @@ public class VFMapper implements IMapper {
      * @param ringMatcher
      */
     public VFMapper(IAtomContainer queryMolecule, boolean bondMatcher, boolean ringMatcher) {
+        setTimeManager(new TimeManager());
         this.query = new QueryCompiler(queryMolecule, bondMatcher, ringMatcher).compile();
         this.maps = new ArrayList<Map<INode, IAtom>>();
+    }
+
+    /**
+     * @return the timeout
+     */
+    private double getTimeout() {
+        return TimeOut.getInstance().getVFTimeout();
+    }
+
+    private boolean isTimeOut() {
+        if (getTimeout() > -1 && getTimeManager().getElapsedTimeInMinutes() > getTimeout()) {
+            TimeOut.getInstance().setTimeOutFlag(true);
+            return true;
+        }
+        return false;
+    }
+    private TimeManager timeManager = null;
+
+    /**
+     * @return the timeManager
+     */
+    private TimeManager getTimeManager() {
+        return timeManager;
+    }
+
+    /**
+     * @param aTimeManager the timeManager to set
+     */
+    private void setTimeManager(TimeManager aTimeManager) {
+        TimeOut.getInstance().setTimeOutFlag(false);
+        timeManager = aTimeManager;
     }
 
     /**
@@ -172,7 +199,7 @@ public class VFMapper implements IMapper {
             return;
         }
 
-        while (state.hasNextCandidate()) {
+        while (state.hasNextCandidate() && !isTimeOut()) {
             Match candidate = state.nextCandidate();
             if (state.isMatchFeasible(candidate)) {
                 IState nextState = state.nextState(candidate);

@@ -35,6 +35,7 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
+import org.openscience.smsd.global.TimeOut;
 import org.openscience.smsd.helper.BinaryTree;
 import org.openscience.smsd.tools.TimeManager;
 
@@ -42,9 +43,12 @@ import org.openscience.smsd.tools.TimeManager;
  * Class which reports MCS solutions based on the McGregor algorithm published in 1982.
  *
  * <p>The SMSD algorithm is described in this paper. <font color="#FF0000">please refer Rahman <i>et.al. 2009</i></font>
- * {@cdk.cite SMSD2009}. </p>
+ * {
  *
- * @cdk.module smsd @cdk.githash
+ * @cdk.cite SMSD2009}. </p>
+ *
+ * @cdk.module smsd
+ * @cdk.githash
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
@@ -52,10 +56,6 @@ import org.openscience.smsd.tools.TimeManager;
 public final class McGregor {
 
     private TimeManager timeManager = null;
-    //-1 is infinite loop
-    //private float timeout = -1;
-    //5 min time out for infinite loop
-    private float timeout = 1.00f;
     private final boolean shouldMatchRings;
     private final boolean bondMatch;
 
@@ -63,14 +63,7 @@ public final class McGregor {
      * @return the timeout
      */
     protected synchronized double getTimeout() {
-        return timeout;
-    }
-
-    /**
-     * @param timeout
-     */
-    public synchronized void setTimeout(float timeout) {
-        this.timeout = timeout;
+        return TimeOut.getInstance().getMcGregorTimeout();
     }
 
     /**

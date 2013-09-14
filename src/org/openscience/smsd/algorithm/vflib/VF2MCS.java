@@ -33,6 +33,7 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.AtomAtomMapping;
+import org.openscience.smsd.global.TimeOut;
 import org.openscience.smsd.interfaces.IResults;
 
 /**
@@ -63,9 +64,8 @@ public final class VF2MCS extends BaseMCS implements IResults {
      */
     public VF2MCS(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings) {
         super(source, target, shouldMatchBonds, shouldMatchRings);
-
-
         addVFMatchesMappings();
+
         /*
          * An extension is triggered if its mcs solution is smaller than reactant and product. An enrichment is
          * triggered if its mcs solution is equal to reactant or product size.
@@ -73,6 +73,13 @@ public final class VF2MCS extends BaseMCS implements IResults {
          *
          */
         if (isExtensionRequired()) {
+
+            /*
+             * Overide the MCS searching for seeds
+             */
+            TimeOut tmo = TimeOut.getInstance();
+            tmo.setCDKMCSTimeOut(0.30);
+            tmo.setMCSPlusTimeout(1.00);
 
             List<Map<Integer, Integer>> mcsVFSeeds = new ArrayList<Map<Integer, Integer>>();
 
@@ -86,7 +93,6 @@ public final class VF2MCS extends BaseMCS implements IResults {
                 counter++;
             }
 
-
             /*
              * Clean VF mapping data
              */
@@ -97,7 +103,6 @@ public final class VF2MCS extends BaseMCS implements IResults {
             /*
              * Generate the UIT based MCS seeds
              */
-
             List<Map<Integer, Integer>> mcsSeeds = new ArrayList<Map<Integer, Integer>>();
 
             List<AtomAtomMapping> mcsUITCliques;
@@ -107,7 +112,6 @@ public final class VF2MCS extends BaseMCS implements IResults {
                 map.putAll(mapping.getMappingsIndex());
                 mcsSeeds.add(map);
             }
-
             List<AtomAtomMapping> mcsKochCliques;
             mcsKochCliques = addKochCliques();
             for (AtomAtomMapping mapping : mcsKochCliques) {
@@ -115,7 +119,6 @@ public final class VF2MCS extends BaseMCS implements IResults {
                 map.putAll(mapping.getMappingsIndex());
                 mcsSeeds.add(map);
             }
-
             /*
              * Store largest MCS seeds generated from MCSPlus and UIT
              */

@@ -41,10 +41,10 @@ import org.openscience.smsd.helper.MoleculeInitializer;
 import org.openscience.smsd.interfaces.IResults;
 
 /**
- * This class acts as a handler class for CDKMCS algorithm
- * {@link org.openscience.cdk.smsd.algorithm.cdk.CDKMCS}.
+ * This class acts as a handler class for CDKMCS algorithm {@link org.openscience.cdk.smsd.algorithm.cdk.CDKMCS}.
  *
- * @cdk.module smsd @cdk.githash
+ * @cdk.module smsd
+ * @cdk.githash
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
@@ -116,11 +116,10 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
      */
     @TestMethod("testSearchMCS")
     private synchronized void searchMCS() {
-
         CDKRMapHandler rmap = new CDKRMapHandler();
         try {
 
-            if (source.getAtomCount() > target.getAtomCount()) {
+            if (source.getAtomCount() >= target.getAtomCount()) {
                 rOnPFlag = true;
                 rmap.calculateOverlapsAndReduce(source, target, shouldMatchBonds, shouldMatchRings);
             } else {

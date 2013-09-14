@@ -24,6 +24,8 @@
 package org.openscience.smsd;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.annotations.TestMethod;
@@ -40,19 +42,15 @@ import org.openscience.smsd.interfaces.Algorithm;
 import org.openscience.smsd.interfaces.ITimeOut;
 
 /**
- * <p>This class implements the Isomorphism- a multipurpose structure comparison
- * tool. It allows users to, i) find the maximal common substructure(s) (MCS);
- * ii) perform the mapping of a substructure in another structure, and; iii) map
+ * <p>This class implements the Isomorphism- a multipurpose structure comparison tool. It allows users to, i) find the
+ * maximal common substructure(s) (MCS); ii) perform the mapping of a substructure in another structure, and; iii) map
  * two isomorphic structures.</p>
  *
- * <p>It also comes with various published algorithms. The user is free to
- * choose his favorite algorithm to perform MCS or substructure search. For
- * example:</p> <OL> <lI>0: Default, <lI>1: MCSPlus, <lI>2: VFLibMCS, <lI>3:
- * CDKMCS </OL> <p>It also has a set of robust chemical filters (i.e. bond
- * energy, fragment count, stereo & bond match) to sort the reported MCS
- * solutions in a chemically relevant manner. Each comparison can be made with
- * or without using the bond sensitive mode and with implicit or explicit
- * hydrogens.</p>
+ * <p>It also comes with various published algorithms. The user is free to choose his favorite algorithm to perform MCS
+ * or substructure search. For example:</p> <OL> <lI>0: Default, <lI>1: MCSPlus, <lI>2: VFLibMCS, <lI>3: CDKMCS </OL>
+ * <p>It also has a set of robust chemical filters (i.e. bond energy, fragment count, stereo & bond match) to sort the
+ * reported MCS solutions in a chemically relevant manner. Each comparison can be made with or without using the bond
+ * sensitive mode and with implicit or explicit hydrogens.</p>
  *
  * <p>If you are using <font color="#FF0000">Isomorphism, please cite Rahman
  * <i>et.al. 2009</i></font> {
@@ -109,27 +107,26 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
             LoggingToolFactory.createLoggingTool(Isomorphism.class);
     static final long serialVersionUID = 0x24845e5c5ae877L;
     private Algorithm algorithmType;
-    private double bondSensitiveCDKMCSTimeOut = 0.15;//mins
+    private double bondSensitiveCDKMCSTimeOut = 1.00;//mins
     private double bondInSensitiveCDKMCSTimeOut = 2.00;//mins
-    private double bondSensitiveMCSPlusTimeOut = 0.15;//mins
+    private double bondSensitiveMCSPlusTimeOut = 1.00;//mins
     private double bondInSensitiveMCSPlusTimeOut = 2.00;//mins
-    private double bondSensitiveVFTimeOut = 5.00;//mins
-    private double bondInSensitiveVFTimeOut = 5.00;//mins
+    private double bondSensitiveVFTimeOut = 1.00;//mins
+    private double bondInSensitiveVFTimeOut = 2.00;//mins
+    private double bondSensitiveMcGregorOut = 1.00;//mins
+    private double bondInSensitiveMcGregor = 2.00;//mins
 
     /**
      * Initialize query and target molecules.
      *
-     * Note: Here its assumed that hydrogens are implicit and user has called
-     * these two methods percieveAtomTypesAndConfigureAtoms and
-     * CDKAromicityDetector before initializing calling this method.
+     * Note: Here its assumed that hydrogens are implicit and user has called these two methods
+     * percieveAtomTypesAndConfigureAtoms and CDKAromicityDetector before initializing calling this method.
      *
      * @param query query molecule
-     * @param target target molecule This is the algorithm factory and entry
-     * port for all the MCS algorithm in the Isomorphism supported algorithm
-     * {@link org.openscience.cdk.smsd.interfaces.Algorithm} types: <OL> <lI>0:
-     * Default, <lI>1: MCSPlus, <lI>2: VFLibMCS, <lI>3: CDKMCS </OL>
-     * @param algorithmType
-     * {@link org.openscience.cdk.smsd.interfaces.Algorithm}
+     * @param target target molecule This is the algorithm factory and entry port for all the MCS algorithm in the
+     * Isomorphism supported algorithm {@link org.openscience.cdk.smsd.interfaces.Algorithm} types: <OL> <lI>0: Default,
+     * <lI>1: MCSPlus, <lI>2: VFLibMCS, <lI>3: CDKMCS </OL>
+     * @param algorithmType {@link org.openscience.cdk.smsd.interfaces.Algorithm}
      */
     @TestMethod("testIsomorphismTest")
     public Isomorphism(
@@ -145,17 +142,14 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
     /**
      * Initialize query and target molecules.
      *
-     * Note: Here its assumed that hydrogens are implicit and user has called
-     * these two methods percieveAtomTypesAndConfigureAtoms and
-     * CDKAromicityDetector before initializing calling this method.
+     * Note: Here its assumed that hydrogens are implicit and user has called these two methods
+     * percieveAtomTypesAndConfigureAtoms and CDKAromicityDetector before initializing calling this method.
      *
      * @param query query mol
-     * @param target target mol This is the algorithm factory and entry port for
-     * all the MCS algorithm in the Isomorphism supported algorithm
-     * {@link org.openscience.cdk.smsd.interfaces.Algorithm} types: <OL> <lI>0:
-     * Default, <lI>1: MCSPlus, <lI>2: VFLibMCS, <lI>3: CDKMCS </OL>
-     * @param algorithmType
-     * {@link org.openscience.cdk.smsd.interfaces.Algorithm}
+     * @param target target mol This is the algorithm factory and entry port for all the MCS algorithm in the
+     * Isomorphism supported algorithm {@link org.openscience.cdk.smsd.interfaces.Algorithm} types: <OL> <lI>0: Default,
+     * <lI>1: MCSPlus, <lI>2: VFLibMCS, <lI>3: CDKMCS </OL>
+     * @param algorithmType {@link org.openscience.cdk.smsd.interfaces.Algorithm}
      * @param bondTypeFlag Match bond types (i.e. double to double etc)
      * @param matchRings Match ring atoms and ring size
      */
@@ -269,11 +263,13 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
             tmo.setCDKMCSTimeOut(getBondSensitiveCDKMCSTimeOut());
             tmo.setMCSPlusTimeout(getBondSensitiveMCSPlusTimeOut());
             tmo.setVFTimeout(getBondSensitiveVFTimeOut());
+            tmo.setMcGregorTimeout(getBondInSensitiveMcGregor());
         } else {
             TimeOut tmo = TimeOut.getInstance();
             tmo.setCDKMCSTimeOut(getBondInSensitiveCDKMCSTimeOut());
             tmo.setMCSPlusTimeout(getBondInSensitiveMCSPlusTimeOut());
             tmo.setVFTimeout(getBondInSensitiveVFTimeOut());
+            tmo.setMcGregorTimeout(getBondInSensitiveMcGregor());
         }
     }
 
@@ -371,5 +367,33 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
     @Override
     public synchronized void setBondInSensitiveVFTimeOut(double bondInSensitiveTimeOut) {
         this.bondInSensitiveVFTimeOut = bondInSensitiveTimeOut;
+    }
+
+    /**
+     * @return the bondSensitiveMcGregorOut
+     */
+    public double getBondSensitiveMcGregorOut() {
+        return bondSensitiveMcGregorOut;
+    }
+
+    /**
+     * @param bondSensitiveMcGregorOut the bondSensitiveMcGregorOut to set
+     */
+    public void setBondSenSitiveMcGregorOut(double bondSensitiveMcGregorOut) {
+        this.bondSensitiveMcGregorOut = bondSensitiveMcGregorOut;
+    }
+
+    /**
+     * @return the bondInSensitiveMcGregor
+     */
+    public double getBondInSensitiveMcGregor() {
+        return bondInSensitiveMcGregor;
+    }
+
+    /**
+     * @param bondInSensitiveMcGregor the bondInSensitiveMcGregor to set
+     */
+    public void setBondInSenSitiveMcGregor(double bondInSensitiveMcGregor) {
+        this.bondInSensitiveMcGregor = bondInSensitiveMcGregor;
     }
 }

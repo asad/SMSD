@@ -39,12 +39,10 @@ import org.openscience.smsd.helper.FinalMappings;
 import org.openscience.cdk.tools.manipulator.BondManipulator;
 
 /**
- * This algorithm derives from the algorithm described in
- * [Tonnelier, C. and Jauffret, Ph. and Hanser, Th. and Jauffret, Ph. and Kaufmann, G.,
- * Machine Learning of generic reactions:
- * 3. An efficient algorithm for maximal common substructure determination,
- * Tetrahedron Comput. Methodol., 1990, 3:351-358] and modified in the thesis of
- * T. Hanser [Unknown BibTeXML type: HAN93].
+ * This algorithm derives from the algorithm described in [Tonnelier, C. and Jauffret, Ph. and Hanser, Th. and Jauffret,
+ * Ph. and Kaufmann, G., Machine Learning of generic reactions: 3. An efficient algorithm for maximal common
+ * substructure determination, Tetrahedron Comput. Methodol., 1990, 3:351-358] and modified in the thesis of T. Hanser
+ * [Unknown BibTeXML type: HAN93].
  *
  * @cdk.module smsd
  * @cdk.githash
@@ -58,6 +56,7 @@ public final class CDKRMapHandler {
 
     /**
      * Returns source molecule
+     *
      * @return the source
      */
     public synchronized IAtomContainer getSource() {
@@ -66,6 +65,7 @@ public final class CDKRMapHandler {
 
     /**
      * Set source molecule
+     *
      * @param aSource the source to set
      */
     public synchronized void setSource(IAtomContainer aSource) {
@@ -74,6 +74,7 @@ public final class CDKRMapHandler {
 
     /**
      * Returns target molecule
+     *
      * @return the target
      */
     public synchronized IAtomContainer getTarget() {
@@ -82,6 +83,7 @@ public final class CDKRMapHandler {
 
     /**
      * Set target molecule
+     *
      * @param aTarget the target to set
      */
     public synchronized void setTarget(IAtomContainer aTarget) {
@@ -94,10 +96,11 @@ public final class CDKRMapHandler {
 
     /**
      * This function calculates all the possible combinations of MCS
+     *
      * @param molecule1
      * @param molecule2
      * @param shouldMatchBonds
-     * @param shouldMatchRings 
+     * @param shouldMatchRings
      * @throws CDKException
      */
     public synchronized void calculateOverlapsAndReduce(IAtomContainer molecule1,
@@ -140,13 +143,13 @@ public final class CDKRMapHandler {
     }
 
     /**
-     * This function calculates only one solution (exact) because we are looking at the
-     * molecules which are exactly same in terms of the bonds and atoms determined by the
-     * Fingerprint
+     * This function calculates only one solution (exact) because we are looking at the molecules which are exactly same
+     * in terms of the bonds and atoms determined by the Fingerprint
+     *
      * @param Molecule1
      * @param Molecule2
      * @param shouldMatchBonds
-     * @param shouldMatchRings 
+     * @param shouldMatchRings
      * @throws CDKException
      */
     public synchronized void calculateOverlapsAndReduceExactMatch(
@@ -191,13 +194,13 @@ public final class CDKRMapHandler {
     }
 
     /**
-     * This function calculates only one solution (exact) because we are looking at the
-     * molecules which are exactly same in terms of the bonds and atoms determined by the
-     * Fingerprint
+     * This function calculates only one solution (exact) because we are looking at the molecules which are exactly same
+     * in terms of the bonds and atoms determined by the Fingerprint
+     *
      * @param Molecule1
      * @param Molecule2
      * @param shouldMatchBonds
-     * @param shouldMatchRings 
+     * @param shouldMatchRings
      * @throws CDKException
      */
     public synchronized void calculateSubGraphs(IAtomContainer Molecule1,
@@ -240,13 +243,13 @@ public final class CDKRMapHandler {
     }
 
     /**
-     * This function calculates only one solution (exact) because we are looking at the
-     * molecules which are exactly same in terms of the bonds and atoms determined by the
-     * Fingerprint
+     * This function calculates only one solution (exact) because we are looking at the molecules which are exactly same
+     * in terms of the bonds and atoms determined by the Fingerprint
+     *
      * @param Molecule1
      * @param Molecule2
      * @param shouldMatchBonds
-     * @param shouldMatchRings 
+     * @param shouldMatchRings
      * @throws CDKException
      */
     public synchronized void calculateIsomorphs(IAtomContainer Molecule1,
@@ -331,12 +334,14 @@ public final class CDKRMapHandler {
     }
 
     /**
-     *  This makes sourceAtom map of matching atoms out of sourceAtom map of matching bonds as produced by the get(Subgraph|Ismorphism)Map methods.
+     * This makes sourceAtom map of matching atoms out of sourceAtom map of matching bonds as produced by the
+     * get(Subgraph|Ismorphism)Map methods.
      *
-     * @param  rMapList   The list produced by the getMap method.
-     * @param  graph1  first molecule. Must not be an IQueryAtomContainer.
-     * @param  graph2  second molecule. May be an IQueryAtomContainer.
-     * @return     The mapping found projected on graph1. This is sourceAtom List of CDKRMap objects containing Ids of matching atoms.
+     * @param rMapList The list produced by the getMap method.
+     * @param graph1 first molecule. Must not be an IQueryAtomContainer.
+     * @param graph2 second molecule. May be an IQueryAtomContainer.
+     * @return The mapping found projected on graph1. This is sourceAtom List of CDKRMap objects containing Ids of
+     * matching atoms.
      */
     private synchronized List<List<CDKRMap>> makeAtomsMapOfBondsMap(List<CDKRMap> rMapList, IAtomContainer graph1, IAtomContainer graph2) {
         if (rMapList == null) {
@@ -397,12 +402,14 @@ public final class CDKRMapHandler {
     }
 
     /**
-     *  This makes atom map of matching atoms out of atom map of matching bonds as produced by the get(Subgraph|Ismorphism)Map methods.
-     *  Added by Asad since CDK one doesn't pick up the correct changes
-     * @param  list   The list produced by the getMap method.
-     * @param  sourceGraph  first molecule. Must not be an IQueryAtomContainer.
-     * @param  targetGraph  second molecule. May be an IQueryAtomContainer.
-     * @return     The mapping found projected on sourceGraph. This is atom List of CDKRMap objects containing Ids of matching atoms.
+     * This makes atom map of matching atoms out of atom map of matching bonds as produced by the
+     * get(Subgraph|Ismorphism)Map methods. Added by Asad since CDK one doesn't pick up the correct changes
+     *
+     * @param list The list produced by the getMap method.
+     * @param sourceGraph first molecule. Must not be an IQueryAtomContainer.
+     * @param targetGraph second molecule. May be an IQueryAtomContainer.
+     * @return The mapping found projected on sourceGraph. This is atom List of CDKRMap objects containing Ids of
+     * matching atoms.
      */
     private synchronized List<List<CDKRMap>> makeAtomsMapOfBondsMapSingleBond(List<CDKRMap> list, IAtomContainer sourceGraph, IAtomContainer targetGraph) {
         if (list == null) {
@@ -472,10 +479,10 @@ public final class CDKRMapHandler {
      * @return
      */
     protected synchronized List getMaximum(List overlaps) {
-        ArrayList list = null;
+        List list = null;
         int count = 0;
         for (Object o : overlaps) {
-            ArrayList arrayList = (ArrayList) o;
+            List arrayList = (ArrayList) o;
             if (arrayList.size() > count) {
                 list = arrayList;
                 count = arrayList.size();
@@ -645,6 +652,7 @@ public final class CDKRMapHandler {
 
     /**
      * Returns mapping solutions
+     *
      * @return the mappings
      */
     public synchronized List<Map<Integer, Integer>> getMappings() {
@@ -653,6 +661,7 @@ public final class CDKRMapHandler {
 
     /**
      * Set mapping solutions
+     *
      * @param mappings the mappings to set
      */
     public synchronized void setMappings(List<Map<Integer, Integer>> mappings) {
@@ -661,6 +670,7 @@ public final class CDKRMapHandler {
 
     /**
      * Returns true if a time out occured else false
+     *
      * @return the timeoutFlag
      */
     public synchronized boolean isTimeoutFlag() {
@@ -669,6 +679,7 @@ public final class CDKRMapHandler {
 
     /**
      * Set time out flag
+     *
      * @param timeoutFlag the timeoutFlag to set
      */
     public synchronized void setTimeoutFlag(boolean timeoutFlag) {
