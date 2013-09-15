@@ -134,7 +134,7 @@ public final class McGregor {
         this.target = target;
         this.mappings = Collections.synchronizedList(mappings);
         this.bestarcsleft = 0;
-        setIterationManager(new IterationManager((this.source.getAtomCount() + this.target.getAtomCount() * 10)));
+        setIterationManager(new IterationManager((this.source.getAtomCount() + this.target.getAtomCount() * 5)));
 
 
 
@@ -162,7 +162,7 @@ public final class McGregor {
         this.target = target;
         this.mappings = Collections.synchronizedList(mappings);
         this.bestarcsleft = 0;
-        setIterationManager(new IterationManager((this.source.getAtomCount() + this.target.getAtomCount() * 10)));
+        setIterationManager(new IterationManager((this.source.getAtomCount() + this.target.getAtomCount() * 5)));
 
         if (!mappings.isEmpty()) {
             this.globalMCSSize = mappings.get(0).size();
