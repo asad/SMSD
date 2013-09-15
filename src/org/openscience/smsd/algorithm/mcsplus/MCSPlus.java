@@ -34,12 +34,14 @@ import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.smsd.algorithm.mcgregor.McGregor;
-import org.openscience.smsd.global.TimeOut;
-import org.openscience.smsd.tools.TimeManager;
+import org.openscience.smsd.tools.TimeOut;
+import org.openscience.smsd.tools.IterationManager;
 
 /**
  * This class handles MCS plus algorithm which is a combination of c-clique algorithm and McGregor algorithm.
- * @cdk.module smsd @cdk.githash
+ *
+ * @cdk.module smsd
+ * @cdk.githash
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
@@ -54,7 +56,7 @@ public class MCSPlus {
      */
     public MCSPlus() {
     }
-    private TimeManager timeManager = null;
+    private IterationManager iterationManager = null;
 
     /**
      * @return the timeout
@@ -64,18 +66,17 @@ public class MCSPlus {
     }
 
     /**
-     * @return the timeManager
+     * @return the iterationManager
      */
-    protected synchronized TimeManager getTimeManager() {
-        return timeManager;
+    private IterationManager getIterationManager() {
+        return iterationManager;
     }
 
     /**
-     * @param aTimeManager the timeManager to set
+     * @param iterationManager the iterationManager to set
      */
-    public synchronized void setTimeManager(TimeManager aTimeManager) {
-        TimeOut.getInstance().setTimeOutFlag(false);
-        timeManager = aTimeManager;
+    private void setIterationManager(IterationManager iterationManager) {
+        this.iterationManager = iterationManager;
     }
 
     /**
@@ -101,7 +102,7 @@ public class MCSPlus {
 
 //        System.err.println("ac1 : " + ac1.getAtomCount());
 //        System.err.println("ac2 : " + ac2.getAtomCount());
-        setTimeManager(new TimeManager());
+        setIterationManager(new IterationManager((ac1.getAtomCount() + ac2.getAtomCount() * 10)));
         try {
             GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(ac1, ac2, isMatchBonds(), isMatchRings());
             List<Integer> comp_graph_nodes = gcg.getCompGraphNodes();
@@ -152,7 +153,7 @@ public class MCSPlus {
         boolean ROPFlag = true;
         for (Map<Integer, Integer> firstPassMappings : allMCSCopy) {
             Map<Integer, Integer> extendMapping = new TreeMap<Integer, Integer>(firstPassMappings);
-            McGregor mgit = null;
+            McGregor mgit;
 
             if (ac1.getAtomCount() > ac2.getAtomCount()) {
                 mgit = new McGregor(ac1, ac2, extendMappings, isMatchBonds(), isMatchRings());
@@ -168,14 +169,10 @@ public class MCSPlus {
             //Start McGregor search
             mgit.startMcGregorIteration(mgit.getMCSSize(), extendMapping);
             extendMappings = mgit.getMappings();
-            mgit = null;
-
+//            System.out.println("\nSol count after MG" + extendMappings.size());
             if (isTimeOut()) {
-                Logger.getLogger("\nMCSPlus hit by timeout in McGregor\n");
                 break;
             }
-
-//            System.out.println("\nSol count after MG" + extendMappings.size());
         }
         List<List<Integer>> finalMappings = setMcGregorMappings(ROPFlag, extendMappings);
 //        System.out.println("After set Sol count MG" + finalMappings.size());
@@ -223,11 +220,14 @@ public class MCSPlus {
         return finalMappings;
     }
 
-    public synchronized boolean isTimeOut() {
-        if (getTimeout() > -1 && getTimeManager().getElapsedTimeInMinutes() > getTimeout()) {
+    private synchronized boolean isTimeOut() {
+        if (getTimeout() > -1
+                && getIterationManager().isMaxIteration()) {
             TimeOut.getInstance().setTimeOutFlag(true);
+//            System.out.println("MCS+ iterations " + getIterationManager().getCounter());
             return true;
         }
+        getIterationManager().increment();
         return false;
     }
 

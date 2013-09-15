@@ -33,7 +33,7 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.AtomAtomMapping;
-import org.openscience.smsd.global.TimeOut;
+import org.openscience.smsd.tools.TimeOut;
 import org.openscience.smsd.interfaces.IResults;
 
 /**
@@ -74,13 +74,6 @@ public final class VF2MCS extends BaseMCS implements IResults {
          */
         if (isExtensionRequired()) {
 
-            /*
-             * Overide the MCS searching for seeds
-             */
-            TimeOut tmo = TimeOut.getInstance();
-            tmo.setCDKMCSTimeOut(0.30);
-            tmo.setMCSPlusTimeout(1.00);
-
             List<Map<Integer, Integer>> mcsVFSeeds = new ArrayList<Map<Integer, Integer>>();
 
             /*
@@ -106,25 +99,31 @@ public final class VF2MCS extends BaseMCS implements IResults {
             List<Map<Integer, Integer>> mcsSeeds = new ArrayList<Map<Integer, Integer>>();
 
             List<AtomAtomMapping> mcsUITCliques;
+//            System.out.println("calling UIT");
             mcsUITCliques = addUIT();
             for (AtomAtomMapping mapping : mcsUITCliques) {
                 Map<Integer, Integer> map = new TreeMap<Integer, Integer>();
                 map.putAll(mapping.getMappingsIndex());
                 mcsSeeds.add(map);
             }
-            List<AtomAtomMapping> mcsKochCliques;
-            mcsKochCliques = addKochCliques();
-            for (AtomAtomMapping mapping : mcsKochCliques) {
-                Map<Integer, Integer> map = new TreeMap<Integer, Integer>();
-                map.putAll(mapping.getMappingsIndex());
-                mcsSeeds.add(map);
-            }
+            /*
+             * FIXME koch cliques
+             */
+//            List<AtomAtomMapping> mcsKochCliques;
+//            System.out.println("calling KochCliques");
+//            mcsKochCliques = addKochCliques();
+//            for (AtomAtomMapping mapping : mcsKochCliques) {
+//                Map<Integer, Integer> map = new TreeMap<Integer, Integer>();
+//                map.putAll(mapping.getMappingsIndex());
+//                mcsSeeds.add(map);
+//            }
             /*
              * Store largest MCS seeds generated from MCSPlus and UIT
              */
             int solutionSize = 0;
             counter = 0;
             List<Map<Integer, Integer>> cleanedMCSSeeds = new ArrayList<Map<Integer, Integer>>();
+//            System.out.println("mergin  UIT & KochCliques");
             if (!mcsSeeds.isEmpty()) {
                 for (Iterator<Map<Integer, Integer>> it = mcsSeeds.iterator(); it.hasNext();) {
                     Map<Integer, Integer> map = it.next();

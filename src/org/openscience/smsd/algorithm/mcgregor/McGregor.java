@@ -35,9 +35,9 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
-import org.openscience.smsd.global.TimeOut;
+import org.openscience.smsd.tools.TimeOut;
 import org.openscience.smsd.helper.BinaryTree;
-import org.openscience.smsd.tools.TimeManager;
+import org.openscience.smsd.tools.IterationManager;
 
 /**
  * Class which reports MCS solutions based on the McGregor algorithm published in 1982.
@@ -55,9 +55,9 @@ import org.openscience.smsd.tools.TimeManager;
 @TestClass("org.openscience.cdk.smsd.algorithm.mcgregor.McGregorTest")
 public final class McGregor {
 
-    private TimeManager timeManager = null;
     private final boolean shouldMatchRings;
     private final boolean bondMatch;
+    private IterationManager iterationManager = null;
 
     /**
      * @return the timeout
@@ -66,25 +66,28 @@ public final class McGregor {
         return TimeOut.getInstance().getMcGregorTimeout();
     }
 
-    /**
-     * @return the timeManager
-     */
-    protected synchronized TimeManager getTimeManager() {
-        return timeManager;
-    }
-
-    /**
-     * @param aTimeManager the timeManager to set
-     */
-    public synchronized void setTimeManager(TimeManager aTimeManager) {
-        timeManager = aTimeManager;
-    }
-
     public synchronized boolean isTimeOut() {
-        if (getTimeout() > -1 && getTimeManager().getElapsedTimeInMinutes() > getTimeout()) {
+        if (getTimeout() > -1 && getIterationManager().isMaxIteration()) {
+            TimeOut.getInstance().setTimeOutFlag(true);
+//            System.out.println("McGregor MCS iterations " + getIterationManager().getCounter());
             return true;
         }
+        getIterationManager().increment();
         return false;
+    }
+
+    /**
+     * @return the iterationManager
+     */
+    public IterationManager getIterationManager() {
+        return iterationManager;
+    }
+
+    /**
+     * @param iterationManager the iterationManager to set
+     */
+    public void setIterationManager(IterationManager iterationManager) {
+        this.iterationManager = iterationManager;
     }
     /*
      *
@@ -125,13 +128,15 @@ public final class McGregor {
             List<List<Integer>> mappings,
             boolean shouldMatchBonds,
             boolean shouldMatchRings) {
-        setTimeManager(new TimeManager());
         this.shouldMatchRings = shouldMatchRings;
         this.bondMatch = shouldMatchBonds;
         this.source = source;
         this.target = target;
         this.mappings = Collections.synchronizedList(mappings);
         this.bestarcsleft = 0;
+        setIterationManager(new IterationManager((this.source.getAtomCount() + this.target.getAtomCount() * 10)));
+
+
 
         if (!mappings.isEmpty()) {
             this.globalMCSSize = mappings.get(0).size();
@@ -151,13 +156,13 @@ public final class McGregor {
      * @param mappings
      */
     public McGregor(IQueryAtomContainer source, IAtomContainer target, List<List<Integer>> mappings) {
-        setTimeManager(new TimeManager());
         this.shouldMatchRings = true;
         this.bondMatch = true;
         this.source = source;
         this.target = target;
         this.mappings = Collections.synchronizedList(mappings);
         this.bestarcsleft = 0;
+        setIterationManager(new IterationManager((this.source.getAtomCount() + this.target.getAtomCount() * 10)));
 
         if (!mappings.isEmpty()) {
             this.globalMCSSize = mappings.get(0).size();

@@ -40,19 +40,19 @@ import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
 import org.openscience.smsd.algorithm.vflib.map.VFMapper;
 import org.openscience.smsd.algorithm.vflib.query.QueryCompiler;
-import org.openscience.smsd.global.TimeOut;
+import org.openscience.smsd.tools.TimeOut;
 import org.openscience.smsd.helper.MoleculeInitializer;
 import org.openscience.smsd.interfaces.IResults;
-import org.openscience.smsd.tools.TimeManager;
 
 /**
  * This class should be used to find MCS between source graph and target graph.
  *
  * First the algorithm runs VF lib {@link org.openscience.cdk.smsd.algorithm.vflib.map.VFMCSMapper} and reports MCS
- * between run source and target graphs. Then these solutions are extended using McGregor {@link org.openscience.cdk.smsd.algorithm.mcgregor.McGregor}
- * algorithm where ever required.
+ * between run source and target graphs. Then these solutions are extended using McGregor
+ * {@link org.openscience.cdk.smsd.algorithm.mcgregor.McGregor} algorithm where ever required.
  *
- * @cdk.module smsd @cdk.githash
+ * @cdk.module smsd
+ * @cdk.githash
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
@@ -66,7 +66,6 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
     private List<Map<INode, IAtom>> vfLibSolutions = null;
     private final IAtomContainer source;
     private final IAtomContainer target;
-    private final TimeManager timeManager;
     private final boolean shouldMatchRings;
     private final boolean matchBonds;
     private int bestHitSize = -1;
@@ -75,20 +74,6 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
     private boolean isSubgraph = false;
     private final static ILoggingTool Logger =
             LoggingToolFactory.createLoggingTool(VF2Sub.class);
-
-    /**
-     * @return the timeout
-     */
-    protected synchronized double getTimeout() {
-        return TimeOut.getInstance().getVFTimeout();
-    }
-
-    /**
-     * @return the timeManager
-     */
-    protected synchronized TimeManager getTimeManager() {
-        return timeManager;
-    }
 
     /**
      * Constructor for an extended VF Algorithm for the MCS search
@@ -109,7 +94,6 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
         tmo.setCDKMCSTimeOut(0.15);
         this.shouldMatchRings = shouldMatchRings;
         this.matchBonds = shouldMatchBonds;
-        this.timeManager = new TimeManager();
         if (this.shouldMatchRings) {
             try {
                 initializeMolecule(source);
@@ -137,7 +121,6 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
         tmo.setCDKMCSTimeOut(0.15);
         this.shouldMatchRings = true;
         this.matchBonds = true;
-        this.timeManager = new TimeManager();
         if (this.shouldMatchRings) {
             try {
                 initializeMolecule(source);
@@ -279,7 +262,7 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
         boolean ROPFlag = true;
         for (Map<Integer, Integer> firstPassMappings : allMCSCopy) {
             Map<Integer, Integer> extendMapping = new TreeMap<Integer, Integer>(firstPassMappings);
-            McGregor mgit = null;
+            McGregor mgit;
             if (source instanceof IQueryAtomContainer) {
                 mgit = new McGregor((IQueryAtomContainer) source, target, mappings, this.matchBonds, this.shouldMatchRings);
             } else {
@@ -293,12 +276,6 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
             //Start McGregor search
             mgit.startMcGregorIteration(mgit.getMCSSize(), extendMapping);
             mappings = mgit.getMappings();
-            mgit = null;
-
-            if (isTimeOut()) {
-                Logger.debug("\nVFLibMCS hit by timeout in McGregor");
-                break;
-            }
         }
 //        System.out.println("\nSol count after MG" + mappings.size());
         setMcGregorMappings(ROPFlag, mappings);
@@ -412,14 +389,6 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
 
     private synchronized IAtomContainer getProductMol() {
         return target;
-    }
-
-    public synchronized boolean isTimeOut() {
-        if (getTimeout() > -1 && getTimeManager().getElapsedTimeInMinutes() > getTimeout()) {
-            TimeOut.getInstance().setTimeOutFlag(true);
-            return true;
-        }
-        return false;
     }
 
     /**

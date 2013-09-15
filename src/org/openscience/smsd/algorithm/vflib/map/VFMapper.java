@@ -61,8 +61,8 @@ import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
 import org.openscience.smsd.algorithm.vflib.interfaces.IState;
 import org.openscience.smsd.algorithm.vflib.query.QueryCompiler;
-import org.openscience.smsd.global.TimeOut;
-import org.openscience.smsd.tools.TimeManager;
+import org.openscience.smsd.tools.TimeOut;
+import org.openscience.smsd.tools.IterationManager;
 
 /**
  * This class finds MCS between query and target molecules using VF2 algorithm.
@@ -77,15 +77,16 @@ public class VFMapper implements IMapper {
 
     private final IQuery query;
     private final List<Map<INode, IAtom>> maps;
+    private IterationManager iterationManager = null;
 
     /**
      *
      * @param query
      */
     public VFMapper(IQuery query) {
-        setTimeManager(new TimeManager());
         this.query = query;
         this.maps = Collections.synchronizedList(new ArrayList<Map<INode, IAtom>>());
+        setIterationManager(new IterationManager((this.query.countNodes() + this.query.countEdges() * 10)));
     }
 
     /**
@@ -95,9 +96,9 @@ public class VFMapper implements IMapper {
      * @param ringMatcher
      */
     public VFMapper(IAtomContainer queryMolecule, boolean bondMatcher, boolean ringMatcher) {
-        setTimeManager(new TimeManager());
         this.query = new QueryCompiler(queryMolecule, bondMatcher, ringMatcher).compile();
         this.maps = new ArrayList<Map<INode, IAtom>>();
+        setIterationManager(new IterationManager((this.query.countNodes() + this.query.countEdges() * 10)));
     }
 
     /**
@@ -108,27 +109,28 @@ public class VFMapper implements IMapper {
     }
 
     private boolean isTimeOut() {
-        if (getTimeout() > -1 && getTimeManager().getElapsedTimeInMinutes() > getTimeout()) {
+        if (getTimeout() > -1
+                && getIterationManager().isMaxIteration()) {
             TimeOut.getInstance().setTimeOutFlag(true);
+//            System.out.println("VF SUB iterations " + getIterationManager().getCounter());
             return true;
         }
+        getIterationManager().increment();
         return false;
     }
-    private TimeManager timeManager = null;
 
     /**
-     * @return the timeManager
+     * @return the iterationManager
      */
-    private TimeManager getTimeManager() {
-        return timeManager;
+    private IterationManager getIterationManager() {
+        return iterationManager;
     }
 
     /**
-     * @param aTimeManager the timeManager to set
+     * @param iterationManager the iterationManager to set
      */
-    private void setTimeManager(TimeManager aTimeManager) {
-        TimeOut.getInstance().setTimeOutFlag(false);
-        timeManager = aTimeManager;
+    private void setIterationManager(IterationManager iterationManager) {
+        this.iterationManager = iterationManager;
     }
 
     /**
@@ -193,9 +195,6 @@ public class VFMapper implements IMapper {
             if (!hasMap(map)) {
                 maps.add(state.getMap());
             }
-//            else {
-//                state.backTrack();
-//            }
             return;
         }
 

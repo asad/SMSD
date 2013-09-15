@@ -35,10 +35,8 @@ import java.util.Iterator;
 import java.util.List;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.exception.CDKException;
-import org.openscience.smsd.SMSDFlag;
 import static org.openscience.smsd.algorithm.rgraph.CDKMCS.getTimeout;
-import org.openscience.smsd.global.TimeOut;
-import org.openscience.smsd.tools.TimeManager;
+import org.openscience.smsd.tools.TimeOut;
 
 /**
  * This class implements the Resolution Graph (CDKRGraph). The CDKRGraph is a graph based representation of the search
@@ -166,7 +164,7 @@ public class CDKRGraph {
     }
 
     /**
-     * Reinitialisation of the TGraph.
+     * Re initialisation of the TGraph.
      */
     public synchronized void clear() {
         getGraph().clear();
@@ -202,10 +200,9 @@ public class CDKRGraph {
      * @param targetBitSet constrain on the graph G2
      * @param findAllStructure true if we want all results to be generated
      * @param findAllMap true is we want all possible 'mappings'
-     * @param timeManager
      * @throws CDKException
      */
-    public synchronized void parse(BitSet sourceBitSet, BitSet targetBitSet, boolean findAllStructure, boolean findAllMap, TimeManager timeManager) throws CDKException {
+    public synchronized void parse(BitSet sourceBitSet, BitSet targetBitSet, boolean findAllStructure, boolean findAllMap) throws CDKException {
         // initialize the list of solution
         getSolutionList().clear();
 
@@ -647,10 +644,12 @@ public class CDKRGraph {
     }
 
     private boolean isTimeOut() {
-        if (getTimeout() > -1 && CDKMCS.getTimeManager().getElapsedTimeInMinutes() > getTimeout()) {
+        if (getTimeout() > -1
+                && CDKMCS.getIterationManager().isMaxIteration()) {
             TimeOut.getInstance().setTimeOutFlag(true);
             return true;
         }
+        CDKMCS.getIterationManager().increment();
         return false;
     }
 }

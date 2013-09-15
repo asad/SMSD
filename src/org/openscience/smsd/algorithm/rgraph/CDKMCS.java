@@ -16,11 +16,11 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryBond;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainer;
 import org.openscience.cdk.tools.manipulator.BondManipulator;
-import org.openscience.smsd.global.TimeOut;
-import org.openscience.smsd.tools.TimeManager;
+import org.openscience.smsd.tools.TimeOut;
 import org.openscience.smsd.algorithm.matchers.AtomMatcher;
 import org.openscience.smsd.algorithm.matchers.DefaultAtomMatcher;
 import org.openscience.smsd.algorithm.matchers.DefaultMatcher;
+import org.openscience.smsd.tools.IterationManager;
 
 /**
  * This class implements atom multipurpose structure comparison tool. It allows to find maximal common substructure,
@@ -68,7 +68,7 @@ public class CDKMCS {
 
     final static int ID1 = 0;
     final static int ID2 = 1;
-    static TimeManager timeManager;
+    private static IterationManager iterationManager = null;
 
     ///////////////////////////////////////////////////////////////////////////
     //                            Query Methods
@@ -444,9 +444,9 @@ public class CDKMCS {
         // build the CDKRGraph corresponding to this problem
         CDKRGraph rGraph = buildRGraph(g1, g2, shouldMatchBonds, shouldMatchRings);
         // Set time data
-        setTimeManager(new TimeManager());
+        setIterationManager(new IterationManager((g1.getAtomCount() + g2.getAtomCount()) * 10));
         // parse the CDKRGraph with the given constrains and options
-        rGraph.parse(c1, c2, findAllStructure, findAllMap, getTimeManager());
+        rGraph.parse(c1, c2, findAllStructure, findAllMap);
         List<BitSet> solutionList = rGraph.getSolutions();
 
         // conversions of CDKRGraph's internal solutions to G1/G2 mappings
@@ -1101,22 +1101,21 @@ public class CDKMCS {
     /**
      * @return the timeout
      */
-    protected synchronized static double getTimeout() {
+    protected static double getTimeout() {
         return TimeOut.getInstance().getCDKMCSTimeOut();
     }
 
     /**
-     * @return the timeManager
+     * @return the iterationManager
      */
-    protected synchronized static TimeManager getTimeManager() {
-        return timeManager;
+    protected static IterationManager getIterationManager() {
+        return iterationManager;
     }
 
     /**
-     * @param aTimeManager the timeManager to set
+     * @param aIterationManager the iterationManager to set
      */
-    private static void setTimeManager(TimeManager aTimeManager) {
-        TimeOut.getInstance().setTimeOutFlag(false);
-        CDKMCS.timeManager = aTimeManager;
+    private static void setIterationManager(IterationManager aIterationManager) {
+        iterationManager = aIterationManager;
     }
 }

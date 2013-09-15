@@ -53,7 +53,6 @@ public class TimeManager {
     public TimeManager() {
 
         dateFormat = new SimpleDateFormat("HH:mm:ss");
-
         dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
         startTime = System.currentTimeMillis();
     }

@@ -48,10 +48,9 @@ import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
 import org.openscience.smsd.algorithm.vflib.map.VFMCSMapper;
 import org.openscience.smsd.algorithm.vflib.query.QueryCompiler;
-import org.openscience.smsd.global.TimeOut;
+import org.openscience.smsd.tools.TimeOut;
 import org.openscience.smsd.helper.FinalMappings;
 import org.openscience.smsd.helper.MoleculeInitializer;
-import org.openscience.smsd.tools.TimeManager;
 
 /**
  * This class should be used to find MCS between source graph and target graph.
@@ -71,7 +70,6 @@ public class BaseMCS extends MoleculeInitializer {
     private int countP = 0;
     private final IAtomContainer source;
     private final IAtomContainer target;
-    private final TimeManager timeManager;
     private final boolean shouldMatchRings;
     private final boolean matchBonds;
     private final List<Map<INode, IAtom>> vfLibSolutions;
@@ -82,7 +80,6 @@ public class BaseMCS extends MoleculeInitializer {
 
     BaseMCS(IAtomContainer source, IAtomContainer target, boolean matchBonds, boolean shouldMatchRings) {
         this.allLocalAtomAtomMapping = new ArrayList<AtomAtomMapping>();
-        this.timeManager = new TimeManager();
         this.allLocalMCS = new ArrayList<Map<Integer, Integer>>();
         this.shouldMatchRings = shouldMatchRings;
         this.matchBonds = matchBonds;
@@ -140,6 +137,7 @@ public class BaseMCS extends MoleculeInitializer {
 
             BKKCKCF init = new BKKCKCF(comp_graph_nodes, cEdges, dEdges);
             Stack<List<Integer>> maxCliqueSet = init.getMaxCliqueSet();
+            
             //clear all the compatibility graph content
             gcg.clear();
 
@@ -152,6 +150,9 @@ public class BaseMCS extends MoleculeInitializer {
                     return a2.size() - a1.size(); // assumes you want biggest to smallest
                 }
             });
+
+            System.out.println(" KochCliques " + maxCliqueSet);
+
 
             while (!maxCliqueSet.empty()) {
                 List<Integer> peek = maxCliqueSet.peek();
@@ -284,11 +285,6 @@ public class BaseMCS extends MoleculeInitializer {
             //Start McGregor search
             mgit.startMcGregorIteration(mgit.getMCSSize(), extendMapping);
             mappings = mgit.getMappings();
-
-            if (isTimeOut()) {
-                Logger.debug("\nMcGregorIteration timeout");
-                break;
-            }
         }
 //        System.out.println("\nSol count after MG " + mappings.size());
         setMcGregorMappings(ROPFlag, mappings);
@@ -460,26 +456,11 @@ public class BaseMCS extends MoleculeInitializer {
         return target;
     }
 
-    protected synchronized boolean isTimeOut() {
-        if (getTimeout() > -1 && getTimeManager().getElapsedTimeInMinutes() > getTimeout()) {
-            TimeOut.getInstance().setTimeOutFlag(true);
-            return true;
-        }
-        return false;
-    }
-
     /**
      * @return the shouldMatchRings
      */
     protected boolean isMatchRings() {
         return shouldMatchRings;
-    }
-
-    /**
-     * @return the timeManager
-     */
-    protected synchronized TimeManager getTimeManager() {
-        return timeManager;
     }
 
     /**

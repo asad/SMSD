@@ -24,8 +24,6 @@
 package org.openscience.smsd;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.logging.Level;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.annotations.TestMethod;
@@ -37,7 +35,7 @@ import org.openscience.smsd.algorithm.mcsplus.MCSPlusHandler;
 import org.openscience.smsd.algorithm.rgraph.CDKMCSHandler;
 import org.openscience.smsd.algorithm.single.SingleMappingHandler;
 import org.openscience.smsd.algorithm.vflib.VF2MCS;
-import org.openscience.smsd.global.TimeOut;
+import org.openscience.smsd.tools.TimeOut;
 import org.openscience.smsd.interfaces.Algorithm;
 import org.openscience.smsd.interfaces.ITimeOut;
 
