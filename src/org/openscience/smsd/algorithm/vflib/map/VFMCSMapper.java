@@ -86,7 +86,7 @@ public class VFMCSMapper implements IMapper {
     public VFMCSMapper(IQuery query) {
         this.query = query;
         this.maps = Collections.synchronizedList(new ArrayList<Map<INode, IAtom>>());
-        setIterationManager(new IterationManager((this.query.countNodes() + this.query.countEdges() * 5)));
+        setIterationManager(new IterationManager((this.query.countNodes() + this.query.countEdges() * 2)));
     }
 
     /**
@@ -98,7 +98,7 @@ public class VFMCSMapper implements IMapper {
     public VFMCSMapper(IAtomContainer queryMolecule, boolean bondMatcher, boolean ringMatcher) {
         this.query = new QueryCompiler(queryMolecule, bondMatcher, ringMatcher).compile();
         this.maps = new ArrayList<Map<INode, IAtom>>();
-        setIterationManager(new IterationManager((this.query.countNodes() + this.query.countEdges() * 5)));
+        setIterationManager(new IterationManager((this.query.countNodes() + this.query.countEdges() * 2)));
     }
 
     /**
