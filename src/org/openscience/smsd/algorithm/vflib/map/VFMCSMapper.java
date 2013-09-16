@@ -86,7 +86,6 @@ public class VFMCSMapper implements IMapper {
     public VFMCSMapper(IQuery query) {
         this.query = query;
         this.maps = Collections.synchronizedList(new ArrayList<Map<INode, IAtom>>());
-        setIterationManager(new IterationManager((this.query.countNodes() + this.query.countEdges())));
     }
 
     /**
@@ -98,7 +97,6 @@ public class VFMCSMapper implements IMapper {
     public VFMCSMapper(IAtomContainer queryMolecule, boolean bondMatcher, boolean ringMatcher) {
         this.query = new QueryCompiler(queryMolecule, bondMatcher, ringMatcher).compile();
         this.maps = new ArrayList<Map<INode, IAtom>>();
-        setIterationManager(new IterationManager((this.query.countNodes() + this.query.countEdges())));
     }
 
     /**
@@ -140,6 +138,7 @@ public class VFMCSMapper implements IMapper {
      */
     @Override
     public boolean hasMap(IAtomContainer targetMolecule) {
+        setIterationManager(new IterationManager((this.query.countNodes() + targetMolecule.getAtomCount())));
         IState state = new VFMCSState(query, targetMolecule);
         maps.clear();
         return mapFirst(state);
@@ -150,6 +149,7 @@ public class VFMCSMapper implements IMapper {
      */
     @Override
     public List<Map<INode, IAtom>> getMaps(IAtomContainer target) {
+        setIterationManager(new IterationManager((this.query.countNodes() + target.getAtomCount())));
         IState state = new VFMCSState(query, target);
         maps.clear();
         mapAll(state);
@@ -164,6 +164,7 @@ public class VFMCSMapper implements IMapper {
      */
     @Override
     public Map<INode, IAtom> getFirstMap(IAtomContainer target) {
+        setIterationManager(new IterationManager((this.query.countNodes() + target.getAtomCount())));
         IState state = new VFMCSState(query, target);
         maps.clear();
         mapFirst(state);
@@ -175,6 +176,7 @@ public class VFMCSMapper implements IMapper {
      */
     @Override
     public int countMaps(IAtomContainer target) {
+        setIterationManager(new IterationManager((this.query.countNodes() + target.getAtomCount())));
         IState state = new VFMCSState(query, target);
         maps.clear();
         mapAll(state);

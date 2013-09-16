@@ -144,7 +144,7 @@ public final class Substructure extends BaseMapping {
             if (getQueryContainer().getAtomCount() > getTargetContainer().getAtomCount()) {
                 return false;
             }
-            VF2 mapper = null;
+            VF2 mapper;
             List<AtomAtomMapping> mappingsVF2 = new ArrayList<AtomAtomMapping>();
             if (getQueryContainer() instanceof IQueryAtomContainer) {
                 mapper = new VF2((IQueryAtomContainer) getQueryContainer(), getTargetContainer());
@@ -213,8 +213,8 @@ public final class Substructure extends BaseMapping {
                 counter = 0;
             }
             for (Map.Entry<IAtom, IAtom> mapping : solution.getMappings().entrySet()) {
-                IAtom qAtom = null;
-                IAtom tAtom = null;
+                IAtom qAtom;
+                IAtom tAtom;
 
                 qAtom = mapping.getKey();
                 tAtom = mapping.getValue();
@@ -238,7 +238,7 @@ public final class Substructure extends BaseMapping {
     }
 
     private synchronized void singleMapping(boolean shouldMatchBonds) {
-        SingleMappingHandler mcs = null;
+        SingleMappingHandler mcs;
         if (!(getQueryContainer() instanceof IQueryAtomContainer) && !(getTargetContainer() instanceof IQueryAtomContainer)) {
             mcs = new SingleMappingHandler(getQueryContainer(), getTargetContainer(), shouldMatchBonds, isMatchRings());
         } else {

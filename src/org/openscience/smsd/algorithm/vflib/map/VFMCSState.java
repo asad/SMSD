@@ -63,6 +63,7 @@ import org.openscience.smsd.algorithm.vflib.interfaces.IEdge;
 import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
 import org.openscience.smsd.algorithm.vflib.interfaces.IState;
+import org.openscience.smsd.tools.IterationManager;
 
 /**
  * This class finds mapping states between query and target molecules.
@@ -91,10 +92,9 @@ public class VFMCSState implements IState {
         this.map = new HashMap<INode, IAtom>();
         this.queryPath = new ArrayList<INode>();
         this.targetPath = new ArrayList<IAtom>();
-
+        this.candidates = new ArrayList<Match>();
         this.query = query;
         this.target = target;
-        this.candidates = new ArrayList<Match>();
         loadRootCandidates();
 
     }
@@ -103,7 +103,6 @@ public class VFMCSState implements IState {
         this.candidates = new ArrayList<Match>();
         this.queryPath = new ArrayList<INode>(state.queryPath);
         this.targetPath = new ArrayList<IAtom>(state.targetPath);
-
         this.map = state.map;
         this.query = state.query;
         this.target = state.target;

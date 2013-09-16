@@ -37,6 +37,7 @@ public class IterationManager implements Serializable {
     private static final long serialVersionUID = 396239639826981L;
     private int max;
     private int counter;
+    private int coverage;
 
     /**
      * Constructor for storing execution time
@@ -52,6 +53,7 @@ public class IterationManager implements Serializable {
      */
     public IterationManager(int maxIteration) {
         this.counter = 0;
+        this.coverage = 1000;
         this.max = maxIteration;
     }
 
@@ -83,9 +85,23 @@ public class IterationManager implements Serializable {
     }
 
     public boolean isMaxIteration() {
-        if (getCounter() > this.max) {
+        if (getCounter() > (this.max * this.coverage)) {
             return true;
         }
         return false;
+    }
+
+    /**
+     * @return the coverage
+     */
+    public int getCoverage() {
+        return coverage;
+    }
+
+    /**
+     * @param coverage the coverage to set
+     */
+    public void setCoverage(int coverage) {
+        this.coverage = coverage;
     }
 }

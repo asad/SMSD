@@ -40,7 +40,6 @@ import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
 import org.openscience.smsd.algorithm.vflib.map.VFMapper;
 import org.openscience.smsd.algorithm.vflib.query.QueryCompiler;
-import org.openscience.smsd.tools.TimeOut;
 import org.openscience.smsd.helper.MoleculeInitializer;
 import org.openscience.smsd.interfaces.IResults;
 
@@ -90,8 +89,6 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
         allAtomMCSCopy = new ArrayList<AtomAtomMapping>();
         allMCS = new ArrayList<Map<Integer, Integer>>();
         allMCSCopy = new ArrayList<Map<Integer, Integer>>();
-        TimeOut tmo = TimeOut.getInstance();
-        tmo.setCDKMCSTimeOut(0.15);
         this.shouldMatchRings = shouldMatchRings;
         this.matchBonds = shouldMatchBonds;
         if (this.shouldMatchRings) {
@@ -117,8 +114,6 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
         allAtomMCSCopy = new ArrayList<AtomAtomMapping>();
         allMCS = new ArrayList<Map<Integer, Integer>>();
         allMCSCopy = new ArrayList<Map<Integer, Integer>>();
-        TimeOut tmo = TimeOut.getInstance();
-        tmo.setCDKMCSTimeOut(0.15);
         this.shouldMatchRings = true;
         this.matchBonds = true;
         if (this.shouldMatchRings) {
@@ -290,10 +285,10 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
             Map<Integer, Integer> indexindexMapping = new TreeMap<Integer, Integer>();
 
             for (Map.Entry<INode, IAtom> mapping : solution.entrySet()) {
-                IAtom qAtom = null;
-                IAtom tAtom = null;
-                Integer qIndex = 0;
-                Integer tIndex = 0;
+                IAtom qAtom;
+                IAtom tAtom;
+                Integer qIndex;
+                Integer tIndex;
 
                 if (RONP) {
                     qAtom = query.getAtom(mapping.getKey());
@@ -341,10 +336,10 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
             AtomAtomMapping atomatomMapping = new AtomAtomMapping(source, target);
             Map<Integer, Integer> indexindexMapping = new TreeMap<Integer, Integer>();
             for (int index = 0; index < mapping.size(); index += 2) {
-                IAtom qAtom = null;
-                IAtom tAtom = null;
-                Integer qIndex = 0;
-                Integer tIndex = 0;
+                IAtom qAtom;
+                IAtom tAtom;
+                Integer qIndex;
+                Integer tIndex;
 
                 if (RONP) {
                     qAtom = getReactantMol().getAtom(mapping.get(index));
