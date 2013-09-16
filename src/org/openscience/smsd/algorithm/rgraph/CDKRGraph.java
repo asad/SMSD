@@ -644,7 +644,7 @@ public class CDKRGraph {
     }
 
     private boolean isTimeOut() {
-        if (getTimeout() > -1
+        if (getTimeout() == -1
                 && CDKMCS.getIterationManager().isMaxIteration()) {
             TimeOut.getInstance().setTimeOutFlag(true);
             return true;

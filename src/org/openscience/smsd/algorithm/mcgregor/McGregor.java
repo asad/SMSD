@@ -67,7 +67,7 @@ public final class McGregor {
     }
 
     public synchronized boolean isTimeOut() {
-        if (getTimeout() > -1 && getIterationManager().isMaxIteration()) {
+        if (getTimeout() == -1 && getIterationManager().isMaxIteration()) {
             TimeOut.getInstance().setTimeOutFlag(true);
 //            System.out.println("McGregor MCS iterations " + getIterationManager().getCounter());
             return true;

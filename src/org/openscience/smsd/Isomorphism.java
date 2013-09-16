@@ -105,14 +105,14 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
             LoggingToolFactory.createLoggingTool(Isomorphism.class);
     static final long serialVersionUID = 0x24845e5c5ae877L;
     private Algorithm algorithmType;
-    private double bondSensitiveCDKMCSTimeOut = 1.00;//mins
-    private double bondInSensitiveCDKMCSTimeOut = 2.00;//mins
-    private double bondSensitiveMCSPlusTimeOut = 1.00;//mins
-    private double bondInSensitiveMCSPlusTimeOut = 2.00;//mins
-    private double bondSensitiveVFTimeOut = 1.00;//mins
-    private double bondInSensitiveVFTimeOut = 2.00;//mins
-    private double bondSensitiveMcGregorOut = 1.00;//mins
-    private double bondInSensitiveMcGregor = 2.00;//mins
+    private double bondSensitiveCDKMCSTimeOut = -1;//mins
+    private double bondInSensitiveCDKMCSTimeOut = -1;//mins
+    private double bondSensitiveMCSPlusTimeOut = -1;//mins
+    private double bondInSensitiveMCSPlusTimeOut = -1;//mins
+    private double bondSensitiveVFTimeOut = -1;//mins
+    private double bondInSensitiveVFTimeOut = -1;//mins
+    private double bondSensitiveMcGregorOut = -1;//mins
+    private double bondInSensitiveMcGregor = -1;//mins
 
     /**
      * Initialize query and target molecules.

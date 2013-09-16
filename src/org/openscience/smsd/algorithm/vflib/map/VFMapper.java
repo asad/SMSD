@@ -109,7 +109,7 @@ public class VFMapper implements IMapper {
     }
 
     private boolean isTimeOut() {
-        if (getTimeout() > -1
+        if (getTimeout() == -1
                 && getIterationManager().isMaxIteration()) {
             TimeOut.getInstance().setTimeOutFlag(true);
 //            System.out.println("VF SUB iterations " + getIterationManager().getCounter());

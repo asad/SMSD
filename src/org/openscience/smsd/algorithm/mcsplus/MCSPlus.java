@@ -221,7 +221,7 @@ public class MCSPlus {
     }
 
     private synchronized boolean isTimeOut() {
-        if (getTimeout() > -1
+        if (getTimeout() == -1
                 && getIterationManager().isMaxIteration()) {
             TimeOut.getInstance().setTimeOutFlag(true);
 //            System.out.println("MCS+ iterations " + getIterationManager().getCounter());
