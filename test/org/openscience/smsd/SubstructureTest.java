@@ -518,7 +518,8 @@ public class SubstructureTest {
         double score = 3.605;
         Substructure smsd1 = new Substructure(query, target, true, false, true);
         smsd1.setChemFilters(true, true, true);
-        smsd1.isSubgraph();
+        System.out.println("smsd1.isSubgraph() " + smsd1.isSubgraph());
+        Assert.assertTrue(smsd1.isSubgraph());
         assertEquals(score, smsd1.getEuclideanDistance(), 0.005);
     }
 
