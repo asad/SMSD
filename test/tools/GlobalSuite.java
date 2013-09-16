@@ -22,7 +22,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-package org.openscience.smsd.global;
+package tools;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -38,7 +38,7 @@ import org.junit.runners.Suite;
  * @cdk.require java1.6+
  */
 @RunWith(Suite.class)
-@Suite.SuiteClasses({org.openscience.smsd.global.TimeOutTest.class})
+@Suite.SuiteClasses({tools.TimeOutTest.class})
 public class GlobalSuite {
 
     @BeforeClass

@@ -19,15 +19,16 @@
  * License along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-package org.openscience.smsd.global;
+package tools;
 
+import org.openscience.smsd.tools.TimeOut;
 import org.junit.Assert;
 import org.junit.Test;
 
 /**
  * Unit testing for the {@link TimeOut} class.
- * 
- * @author     egonw
+ *
+ * @author egonw
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
  * @cdk.module test-smsd
@@ -70,7 +71,7 @@ public class TimeOutTest {
     @Test
     public void testGetVFTimeout() {
         System.out.println("getTimeOut");
-        TimeOut instance = new TimeOut();
+        TimeOut instance = TimeOut.getInstance();
         instance.setVFTimeout(10);
         double expResult = 10.0;
         double result = instance.getVFTimeout();
@@ -80,7 +81,7 @@ public class TimeOutTest {
     @Test
     public void testGetMCSPlusTimeout() {
         System.out.println("getTimeOut");
-        TimeOut instance = new TimeOut();
+        TimeOut instance = TimeOut.getInstance();
         instance.setMCSPlusTimeout(10);
         double expResult = 10.0;
         double result = instance.getMCSPlusTimeout();
@@ -90,7 +91,7 @@ public class TimeOutTest {
     @Test
     public void testGetCDKMCSTimeOut() {
         System.out.println("getTimeOut");
-        TimeOut instance = new TimeOut();
+        TimeOut instance = TimeOut.getInstance();
         instance.setCDKMCSTimeOut(10);
         double expResult = 10.0;
         double result = instance.getCDKMCSTimeOut();
@@ -103,7 +104,7 @@ public class TimeOutTest {
     @Test
     public void testIsTimeOutFlag() {
         System.out.println("isTimeOutFlag");
-        TimeOut instance = new TimeOut();
+        TimeOut instance = TimeOut.getInstance();
         instance.setTimeOutFlag(true);
         boolean expResult = true;
         boolean result = instance.isTimeOutFlag();
@@ -117,7 +118,7 @@ public class TimeOutTest {
     public void testSetTimeOutFlag() {
         System.out.println("setTimeOutFlag");
         boolean timeOut = true;
-        TimeOut instance = new TimeOut();
+        TimeOut instance = TimeOut.getInstance();
         instance.setTimeOutFlag(timeOut);
         boolean expResult = false;
         boolean result = instance.isTimeOutFlag();
