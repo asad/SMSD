@@ -444,7 +444,7 @@ public class CDKMCS {
         // build the CDKRGraph corresponding to this problem
         CDKRGraph rGraph = buildRGraph(g1, g2, shouldMatchBonds, shouldMatchRings);
         // Set time data
-        setIterationManager(new IterationManager((g1.getAtomCount() + g2.getAtomCount()) * 2));
+        setIterationManager(new IterationManager((g1.getAtomCount() + g2.getAtomCount())));
         // parse the CDKRGraph with the given constrains and options
         rGraph.parse(c1, c2, findAllStructure, findAllMap);
         List<BitSet> solutionList = rGraph.getSolutions();
