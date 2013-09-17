@@ -38,7 +38,6 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({org.openscience.smsd.IsomorphismTest.class,
-    tools.GlobalSuite.class,
     org.openscience.smsd.helper.HelperSuite.class,
     //        org.openscience.cdk.smsd.interfaces.InterfacesSuite.class,
     org.openscience.smsd.filters.FiltersSuite.class,

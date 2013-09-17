@@ -32,7 +32,6 @@ import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.interfaces.IAtom;
-import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -72,7 +71,7 @@ public class SubstructureTest {
      */
     @Test
     public void testInit_3args_1() throws InvalidSmilesException, CDKException {
-        System.out.println("init");
+//        System.out.println("init");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/OCC=C");
         IAtomContainer query = sp.parseSmiles("CCCOCC(C)=C");
@@ -91,7 +90,7 @@ public class SubstructureTest {
      */
     @Test
     public void testInit_3args_2() throws InvalidSmilesException, CDKException {
-        System.out.println("init");
+//        System.out.println("init");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/OCC=C");
         IAtomContainer query = sp.parseSmiles("CCCOCC(C)=C");
@@ -109,7 +108,7 @@ public class SubstructureTest {
      */
     @Test
     public void testInit_3args_3() throws Exception {
-        System.out.println("init");
+//        System.out.println("init");
 //        String sourceMolFileName = "";
 //        String targetMolFileName = "";
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
@@ -132,7 +131,7 @@ public class SubstructureTest {
     @Test
     public void testSetChemFilters() throws InvalidSmilesException, CDKException {
 
-        System.out.println("setChemFilters");
+//        System.out.println("setChemFilters");
         IChemObjectBuilder builder = DefaultChemObjectBuilder.getInstance();
         IAtomContainer mol = builder.newInstance(IAtomContainer.class);
         IAtom a1 = builder.newInstance(IAtom.class, "C");
@@ -192,7 +191,7 @@ public class SubstructureTest {
      */
     @Test
     public void testGetStereoScore() throws InvalidSmilesException, CDKException {
-        System.out.println("getStereoScore");
+//        System.out.println("getStereoScore");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("CCCOCC(C)=C");
         IAtomContainer target = sp.parseSmiles("CCCOCC(C)=C");
@@ -213,7 +212,7 @@ public class SubstructureTest {
      */
     @Test
     public void testGetFirstMapping() throws InvalidSmilesException, CDKException {
-        System.out.println("getFirstMapping");
+//        System.out.println("getFirstMapping");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
@@ -231,7 +230,7 @@ public class SubstructureTest {
      */
     @Test
     public void testgetAllAtomMapping() throws InvalidSmilesException, CDKException {
-        System.out.println("getAllAtomMapping");
+//        System.out.println("getAllAtomMapping");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("ONc1ccccc1");
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
@@ -250,7 +249,7 @@ public class SubstructureTest {
      */
     @Test
     public void testGetFirstAtomMapping() throws InvalidSmilesException, CDKException {
-        System.out.println("getFirstAtomMapping");
+//        System.out.println("getFirstAtomMapping");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
@@ -269,7 +268,7 @@ public class SubstructureTest {
      */
     @Test
     public void testGetAllAtomMapping() throws InvalidSmilesException, CDKException {
-        System.out.println("getAllAtomMapping");
+//        System.out.println("getAllAtomMapping");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
 //       query="Nc1ccccc1"
         IChemObjectBuilder builder = DefaultChemObjectBuilder.getInstance();

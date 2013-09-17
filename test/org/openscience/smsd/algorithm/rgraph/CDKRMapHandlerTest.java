@@ -42,7 +42,7 @@ import org.openscience.smsd.helper.FinalMappings;
 
 /**
  * @cdk.module test-smsd
- * @author     Syed Asad Rahman
+ * @author Syed Asad Rahman
  * @cdk.require java1.5+
  */
 public class CDKRMapHandlerTest {
@@ -190,8 +190,8 @@ public class CDKRMapHandlerTest {
         System.out.println("isTimeoutFlag");
         CDKRMapHandler instance = new CDKRMapHandler();
         boolean expResult = true;
-        instance.setTimeoutFlag(true);
-        boolean result = instance.isTimeoutFlag();
+        instance.setTimeout(true);
+        boolean result = instance.isTimeout();
         Assert.assertEquals(expResult, result);
     }
 
@@ -203,7 +203,7 @@ public class CDKRMapHandlerTest {
         System.out.println("setTimeoutFlag");
         boolean timeoutFlag = false;
         CDKRMapHandler instance = new CDKRMapHandler();
-        instance.setTimeoutFlag(timeoutFlag);
-        Assert.assertNotSame(true, instance.isTimeoutFlag());
+        instance.setTimeout(timeoutFlag);
+        Assert.assertNotSame(true, instance.isTimeout());
     }
 }
