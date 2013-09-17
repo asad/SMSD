@@ -113,17 +113,14 @@ public class MCSPlus {
 //            System.err.println("**************************************************");
 //            System.err.println("C_edges: " + cEdges.size());
 //            System.err.println("D_edges: " + dEdges.size());
-
             BKKCKCF init = new BKKCKCF(comp_graph_nodes, cEdges, dEdges);
 //            Koch init = new Koch(comp_graph_nodes, cEdges, dEdges);
-            Stack<List<Integer>> maxCliqueSet = null;
+            Stack<List<Integer>> maxCliqueSet;
             maxCliqueSet = init.getMaxCliqueSet();
 
 //            System.err.println("Max_Cliques_Set: " + maxCliqueSet);
 //            System.err.println("Best Clique Size: " + init.getBestCliqueSize());
 //            System.err.println("**************************************************");
-
-
             //clear all the compatibility graph content
             gcg.clear();
             List<Map<Integer, Integer>> mappings = new ArrayList<Map<Integer, Integer>>();
@@ -170,9 +167,9 @@ public class MCSPlus {
             mgit.startMcGregorIteration(mgit.getMCSSize(), extendMapping);
             extendMappings = mgit.getMappings();
 //            System.out.println("\nSol count after MG" + extendMappings.size());
-            if (isTimeOut()) {
-                break;
-            }
+//            if (isTimeOut()) {
+//                break;
+//            }
         }
         List<List<Integer>> finalMappings = setMcGregorMappings(ROPFlag, extendMappings);
 //        System.out.println("After set Sol count MG" + finalMappings.size());

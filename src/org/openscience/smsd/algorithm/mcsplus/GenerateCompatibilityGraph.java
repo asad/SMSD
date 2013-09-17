@@ -27,7 +27,9 @@ package org.openscience.smsd.algorithm.mcsplus;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -82,7 +84,6 @@ public final class GenerateCompatibilityGraph {
         compatibilityGraphNodes();
         compatibilityGraph();
 
-
         if (getCEdgesSize() == 0) {
             clearCompGraphNodes();
 
@@ -98,84 +99,57 @@ public final class GenerateCompatibilityGraph {
         }
     }
 
-    private List<List<Integer>> labelAtoms(IAtomContainer atomCont) {
-        List<List<Integer>> label_list = new ArrayList<List<Integer>>();
-        LabelContainer labelContainer = LabelContainer.getInstance();
+    private Map<IAtom, List<String>> labelAtoms(IAtomContainer atomCont) {
+        Map<IAtom, List<String>> label_list = new HashMap<IAtom, List<String>>();
 
         for (int i = 0; i < atomCont.getAtomCount(); i++) {
-            List<Integer> label = new ArrayList<Integer>(7);
+            List<String> label = new ArrayList<String>(7);
             for (int a = 0; a < 7; a++) {
-                label.add(a, 0);
+                label.add(a, "NA");
             }
             IAtom refAtom = atomCont.getAtom(i);
             String referenceAtom = refAtom.getSymbol();
 
-            label.set(0, labelContainer.getLabelID(referenceAtom));
+            label.set(0, referenceAtom);
             List<IAtom> connAtoms = atomCont.getConnectedAtomsList(refAtom);
 
             int counter = 1;
 
             for (IAtom negAtom : connAtoms) {
                 String neighbouringAtom = negAtom.getSymbol();
-                label.set(counter, labelContainer.getLabelID(neighbouringAtom));
+                label.set(counter, neighbouringAtom);
                 counter += 1;
             }
             bubbleSort(label);
-            label_list.add(label);
+            label_list.put(refAtom, label);
         }
         return label_list;
     }
 
-    private void bubbleSort(List<Integer> label) {
+    private void bubbleSort(List<String> num) {
+        int j;
+        boolean flag = true;   // set flag to true to begin first pass
+        String temp;   //holding variable
 
-        boolean flag = true; // set flag to 1 to begin initial pass
-        int temp; // holding variable
-        for (int i = 0; i < 7 && flag; i++) {
-            flag = false;
-            for (int j = 0; j < 6; j++) {
-                if (label.get(i) > label.get(j + 1)) {
-                    // descending order simply changes to >
-                    temp = label.get(i); // swap elements
-
-                    label.set(i, label.get(j + 1));
-                    label.set(j + 1, temp);
-                    flag = true; // indicates that iIndex swap occurred.
+        while (flag) {
+            flag = false;    //set flag to false awaiting a possible swap
+            for (j = 0; j < (num.size() - 1); j++) {
+                if (num.get(j).compareTo(num.get(j + 1)) > 0) // change to < for descending sort
+                {
+                    temp = num.get(j);                //swap elements
+                    num.set(j, num.get(j + 1));
+                    num.set(j + 1, temp);
+                    flag = true;              //shows a swap occurred  
                 }
             }
         }
     }
 
-    private List<IAtom> reduceAtomSet(IAtomContainer atomCont) {
-        List<IAtom> atoms = new ArrayList<IAtom>();
-        for (IAtom atom : atomCont.atoms()) {
-            atoms.add(atom);
-        }
-        return atoms;
-    }
-
-    /*
-     * labelA [0, 2, 2, 2, 0, 0, 0] labelB [0, 2, 2, 2, 0, 0, 0]
-     *
-     * return true
-     *
-     * labelA [0, 2, 2, 0, 0, 0, 0] labelB [0, 2, 2, 2, 0, 0, 0]
-     *
-     * return true
-     *
-     * labelA [0, 2, 2, 3, 0, 0, 0] labelB [0, 2, 2, 2, 0, 0, 0]
-     *
-     * return false
-     *
-     * labelA [0, 2, 2, 2, 0, 0, 0] labelB [0, 2, 2, 0, 0, 0, 0]
-     *
-     * return false
-     *
-     */
-    private boolean isSubset(List<Integer> labelA, List<Integer> labelB) {
+    private boolean isSubset(List<String> labelA, List<String> labelB) {
         boolean flag = true;
         for (int i = 0; i < labelA.size(); i++) {
-            if (labelA.get(i) != labelB.get(i)) {
-                if (labelA.get(i) > 0) {
+            if (!labelA.get(i).equals(labelB.get(i))) {
+                if (labelA.get(i).compareTo(labelB.get(i)) > 0) {
                     flag = false;
                 }
             }
@@ -192,32 +166,21 @@ public final class GenerateCompatibilityGraph {
     protected int compatibilityGraphNodes() throws IOException {
 
         compGraphNodes.clear();
-        List<IAtom> sourceAtoms = null;
-        List<IAtom> targetAtoms = null;
 
-        sourceAtoms = reduceAtomSet(source);
-        targetAtoms = reduceAtomSet(target);
+        Map<IAtom, List<String>> label_list_molA = labelAtoms(source);
+        Map<IAtom, List<String>> label_list_molB = labelAtoms(target);
 
-        List<List<Integer>> label_list_molA = labelAtoms(source);
-        List<List<Integer>> label_list_molB = labelAtoms(target);
-
-        int sourceNodes = 0;
         int nodeCount = 1;
 
-        for (List<Integer> labelA : label_list_molA) {
-            int targetNodes = 0;
-            for (List<Integer> labelB : label_list_molB) {
-//                if (labelA.equals(labelB)) {
-                if (isSubset(labelA, labelB)) {
-
-                    compGraphNodes.add(source.getAtomNumber(sourceAtoms.get(sourceNodes)));
-                    compGraphNodes.add(target.getAtomNumber(targetAtoms.get(targetNodes)));
+        for (Map.Entry<IAtom, List<String>> labelA : label_list_molA.entrySet()) {
+            for (Map.Entry<IAtom, List<String>> labelB : label_list_molB.entrySet()) {
+                if (labelA.equals(labelB)) {
+                    compGraphNodes.add(source.getAtomNumber(labelA.getKey()));
+                    compGraphNodes.add(target.getAtomNumber(labelB.getKey()));
                     compGraphNodes.add(nodeCount);
                     nodeCount += 1;
                 }
-                targetNodes++;
             }
-            sourceNodes++;
         }
         return 0;
     }
@@ -233,9 +196,7 @@ public final class GenerateCompatibilityGraph {
         int comp_graph_nodes_List_size = compGraphNodes.size();
 
 //        System.out.println("Vector_Size: " + compGraphNodes);
-
 //        System.out.println("compGraphNodes size " + comp_graph_nodes_List_size);
-
         cEdges = new ArrayList<Integer>(); //Initialize the cEdges List
         dEdges = new ArrayList<Integer>(); //Initialize the dEdges List
 
@@ -259,10 +220,10 @@ public final class GenerateCompatibilityGraph {
                         int q1 = source.getAtomNumber(reactantBond.getAtom(0));
                         int q2 = source.getAtomNumber(reactantBond.getAtom(1));
 
-                        if (((compGraphNodes.get(a) == q1)
-                                && (compGraphNodes.get(b) == q2))
-                                || ((compGraphNodes.get(a) == q2)
-                                && (compGraphNodes.get(b) == q1))) {
+                        if ((compGraphNodes.get(a) == q1
+                                && compGraphNodes.get(b) == q2)
+                                || (compGraphNodes.get(a) == q2
+                                && compGraphNodes.get(b) == q1)) {
                             molecule1_pair_connected = true;
                             break;
                         }
@@ -275,10 +236,10 @@ public final class GenerateCompatibilityGraph {
                         int t1 = target.getAtomNumber(productBond.getAtom(0));
                         int t2 = target.getAtomNumber(productBond.getAtom(1));
 
-                        if (((compGraphNodes.get(a + 1) == t1)
-                                && (compGraphNodes.get(b + 1) == t2))
-                                || ((compGraphNodes.get(a + 1) == t2)
-                                && (compGraphNodes.get(b + 1) == t1))) {
+                        if ((compGraphNodes.get(a + 1) == t1
+                                && compGraphNodes.get(b + 1) == t2)
+                                || (compGraphNodes.get(a + 1) == t2
+                                && compGraphNodes.get(b + 1) == t1)) {
                             molecule2_pair_connected = true;
                             break;
                         }
@@ -318,7 +279,7 @@ public final class GenerateCompatibilityGraph {
      * @return
      * @throws IOException
      */
-    protected Integer compatibilityGraphNodesIfCEdgeIsZero() throws IOException {
+    private Integer compatibilityGraphNodesIfCEdgeIsZero() throws IOException {
 
         int count_nodes = 1;
         List<String> map = new ArrayList<String>();
@@ -332,7 +293,6 @@ public final class GenerateCompatibilityGraph {
                 IAtom atom2 = target.getAtom(j);
 
                 //You can also check object equal or charge, hydrogen count etc
-
                 if ((atom1 instanceof IQueryAtom)
                         && ((IQueryAtom) atom1).matches(atom2)
                         && !map.contains(i + "_" + j)) {
@@ -369,7 +329,7 @@ public final class GenerateCompatibilityGraph {
      * @return
      * @throws IOException
      */
-    protected int compatibilityGraphCEdgeZero() throws IOException {
+    private int compatibilityGraphCEdgeZero() throws IOException {
 
         int compGraphNodesCZeroListSize = compGraphNodesCZero.size();
         cEdges = new ArrayList<Integer>(); //Initialize the cEdges List
@@ -425,7 +385,7 @@ public final class GenerateCompatibilityGraph {
      * @param shouldMatchRings
      * @return
      */
-    protected static boolean isMatchFeasible(
+    private boolean isMatchFeasible(
             IBond bondA1,
             IBond bondA2,
             boolean shouldMatchBonds,
@@ -435,17 +395,12 @@ public final class GenerateCompatibilityGraph {
             if (((IQueryBond) bondA1).matches(bondA2)) {
                 IQueryAtom atom1 = (IQueryAtom) (bondA1.getAtom(0));
                 IQueryAtom atom2 = (IQueryAtom) (bondA1.getAtom(1));
-                // ok, bonds match
-                if (atom1.matches(bondA2.getAtom(0)) && atom2.matches(bondA2.getAtom(1))
-                        || atom1.matches(bondA2.getAtom(1)) && atom2.matches(bondA2.getAtom(0))) {
-                    // ok, atoms match in either order
-                    return true;
-                }
-                return false;
+                return atom1.matches(bondA2.getAtom(0)) && atom2.matches(bondA2.getAtom(1))
+                        || atom1.matches(bondA2.getAtom(1)) && atom2.matches(bondA2.getAtom(0));
             }
             return false;
         } else {
-            return DefaultMatcher.matches(bondA1, bondA2, shouldMatchBonds, shouldMatchRings) ? true : false;
+            return DefaultMatcher.matches(bondA1, bondA2, shouldMatchBonds, shouldMatchRings);
         }
     }
 
@@ -461,39 +416,39 @@ public final class GenerateCompatibilityGraph {
         return Collections.unmodifiableList(compGraphNodes);
     }
 
-    public int getCEdgesSize() {
+    protected int getCEdgesSize() {
         return cEdgesSize;
     }
 
-    public int getDEdgesSize() {
+    protected int getDEdgesSize() {
         return dEdgesSize;
     }
 
-    protected List<Integer> getCompGraphNodesCZero() {
+    private List<Integer> getCompGraphNodesCZero() {
         return Collections.unmodifiableList(compGraphNodesCZero);
     }
 
-    protected void clearCEgdes() {
+    private void clearCEgdes() {
         cEdges.clear();
     }
 
-    protected void clearDEgdes() {
+    private void clearDEgdes() {
         dEdges.clear();
     }
 
-    protected void clearCompGraphNodes() {
+    private void clearCompGraphNodes() {
         compGraphNodes.clear();
     }
 
-    protected void clearCompGraphNodesCZero() {
+    private void clearCompGraphNodesCZero() {
         compGraphNodesCZero.clear();
     }
 
-    protected void resetCEdgesSize() {
+    private void resetCEdgesSize() {
         cEdgesSize = 0;
     }
 
-    protected void resetDEdgesSize() {
+    private void resetDEdgesSize() {
         dEdgesSize = 0;
     }
 
@@ -507,14 +462,14 @@ public final class GenerateCompatibilityGraph {
     /**
      * @return the shouldMatchBonds
      */
-    public boolean isMatchBond() {
+    private boolean isMatchBond() {
         return shouldMatchBonds;
     }
 
     /**
      * @return the shouldMatchRings
      */
-    public boolean isMatchRings() {
+    private boolean isMatchRings() {
         return shouldMatchRings;
     }
 }
