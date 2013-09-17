@@ -244,7 +244,7 @@ public final class Isomorphism extends BaseMapping implements Serializable {
             boolean timeoutMCS1 = cdkMCSAlgorithm();
             if (getMappingCount() == 0 || timeoutMCS1) {
                 boolean timeoutMCS2 = mcsPlusAlgorithm();
-                if (getMappingCount() == 0 || timeoutMCS2) {
+                if (getMappingCount() == 0 && timeoutMCS2) {
 //                System.out.println("\nSwitching to VF MCS\n");
 //                double time = System.currentTimeMillis();
                     vfLibMCSAlgorithm();

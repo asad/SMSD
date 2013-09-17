@@ -101,23 +101,27 @@ public final class VF2MCS extends BaseMCS implements IResults {
              */
             List<Map<Integer, Integer>> mcsSeeds = new ArrayList<Map<Integer, Integer>>();
 
+            long startTime = System.nanoTime();
             List<AtomAtomMapping> mcsUITCliques;
-//            System.out.println("calling UIT");
+            System.out.println("calling UIT");
             mcsUITCliques = addUIT();
             for (AtomAtomMapping mapping : mcsUITCliques) {
                 Map<Integer, Integer> map = new TreeMap<Integer, Integer>();
                 map.putAll(mapping.getMappingsIndex());
                 mcsSeeds.add(map);
             }
+            long stopTime = System.nanoTime();
+            System.out.println("done UIT " + (stopTime - startTime));
 
             List<AtomAtomMapping> mcsKochCliques;
-//            System.out.println("calling KochCliques");
+            System.out.println("calling KochCliques");
             mcsKochCliques = addKochCliques();
             for (AtomAtomMapping mapping : mcsKochCliques) {
                 Map<Integer, Integer> map = new TreeMap<Integer, Integer>();
                 map.putAll(mapping.getMappingsIndex());
                 mcsSeeds.add(map);
             }
+            System.out.println("done Koch " + (stopTime - startTime));
             /*
              * Store largest MCS seeds generated from MCSPlus and UIT
              */
