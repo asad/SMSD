@@ -242,13 +242,14 @@ public final class Isomorphism extends BaseMapping implements Serializable {
     private synchronized void defaultMCSAlgorithm() {
         try {
             boolean timeoutMCS1 = cdkMCSAlgorithm();
-            boolean timeoutMCS2 = mcsPlusAlgorithm();
-//            mcsPlusAlgorithm();
-            if (getMappingCount() == 0 || (timeoutMCS1 && timeoutMCS2)) {
+            if (getMappingCount() == 0 || timeoutMCS1) {
+                boolean timeoutMCS2 = mcsPlusAlgorithm();
+                if (getMappingCount() == 0 || timeoutMCS2) {
 //                System.out.println("\nSwitching to VF MCS\n");
 //                double time = System.currentTimeMillis();
-                vfLibMCSAlgorithm();
+                    vfLibMCSAlgorithm();
 //                System.out.println("\nVF Lib used\n" + ((System.currentTimeMillis() - time) / (60 * 1000)));
+                }
             }
         } catch (Exception e) {
             logger.error(Level.SEVERE, null, e);
