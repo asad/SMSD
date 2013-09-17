@@ -88,7 +88,7 @@ public class TimeOut {
     }
 
     /**
-     * Set true if timeout occures else false
+     * Set true if timeout occurs else false
      *
      * @param timeOut the timeout flag to set
      */
