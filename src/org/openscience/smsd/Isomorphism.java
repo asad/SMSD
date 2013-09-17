@@ -35,28 +35,31 @@ import org.openscience.smsd.algorithm.mcsplus.MCSPlusHandler;
 import org.openscience.smsd.algorithm.rgraph.CDKMCSHandler;
 import org.openscience.smsd.algorithm.single.SingleMappingHandler;
 import org.openscience.smsd.algorithm.vflib.VF2MCS;
-import org.openscience.smsd.tools.TimeOut;
 import org.openscience.smsd.interfaces.Algorithm;
-import org.openscience.smsd.interfaces.ITimeOut;
 
 /**
- * <p>This class implements the Isomorphism- a multipurpose structure comparison tool. It allows users to, i) find the
+ * <p>
+ * This class implements the Isomorphism- a multipurpose structure comparison tool. It allows users to, i) find the
  * maximal common substructure(s) (MCS); ii) perform the mapping of a substructure in another structure, and; iii) map
  * two isomorphic structures.</p>
  *
- * <p>It also comes with various published algorithms. The user is free to choose his favorite algorithm to perform MCS
- * or substructure search. For example:</p> <OL> <lI>0: Default, <lI>1: MCSPlus, <lI>2: VFLibMCS, <lI>3: CDKMCS </OL>
- * <p>It also has a set of robust chemical filters (i.e. bond energy, fragment count, stereo & bond match) to sort the
+ * <p>
+ * It also comes with various published algorithms. The user is free to choose his favorite algorithm to perform MCS or
+ * substructure search. For example:</p> <OL> <lI>0: Default, <lI>1: MCSPlus, <lI>2: VFLibMCS, <lI>3: CDKMCS </OL>
+ * <p>
+ * It also has a set of robust chemical filters (i.e. bond energy, fragment count, stereo & bond match) to sort the
  * reported MCS solutions in a chemically relevant manner. Each comparison can be made with or without using the bond
  * sensitive mode and with implicit or explicit hydrogens.</p>
  *
- * <p>If you are using <font color="#FF0000">Isomorphism, please cite Rahman
+ * <p>
+ * If you are using <font color="#FF0000">Isomorphism, please cite Rahman
  * <i>et.al. 2009</i></font> {
  *
  * @cdk.cite SMSD2009}. The Isomorphism algorithm is described in this paper.
  * </p>
  *
- * <p>An example for <b>MCS search</b>:</p> <font color="#003366">  <pre>
+ * <p>
+ * An example for <b>MCS search</b>:</p> <font color="#003366">  <pre>
  *
  *
  * SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
@@ -99,18 +102,12 @@ import org.openscience.smsd.interfaces.ITimeOut;
  *
  */
 @TestClass("org.openscience.cdk.smsd.factory.SubStructureSearchAlgorithmsTest")
-public final class Isomorphism extends BaseMapping implements ITimeOut, Serializable {
+public final class Isomorphism extends BaseMapping implements Serializable {
 
-    private final static ILoggingTool logger =
-            LoggingToolFactory.createLoggingTool(Isomorphism.class);
+    private final static ILoggingTool logger
+            = LoggingToolFactory.createLoggingTool(Isomorphism.class);
     static final long serialVersionUID = 0x24845e5c5ae877L;
-    private Algorithm algorithmType;
-    private double bondSensitiveCDKMCSTimeOut = -1;//mins
-    private double bondInSensitiveCDKMCSTimeOut = -1;//mins
-    private double bondSensitiveMCSPlusTimeOut = -1;//mins
-    private double bondInSensitiveMCSPlusTimeOut = -1;//mins
-    private double bondSensitiveVFTimeOut = -1;//mins
-    private double bondInSensitiveVFTimeOut = -1;//mins
+    private final Algorithm algorithmType;
     private double bondSensitiveMcGregorOut = -1;//mins
     private double bondInSensitiveMcGregor = -1;//mins
 
@@ -160,7 +157,6 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
             boolean matchRings) {
         super(bondTypeFlag, matchRings, query, target);
         this.algorithmType = algorithmType;
-        setTime(bondTypeFlag);
         mcsBuilder(getQueryContainer(), getTargetContainer());
         setSubgraph(isSubgraph());
     }
@@ -213,18 +209,20 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
         }
     }
 
-    private synchronized void cdkMCSAlgorithm() {
+    private synchronized boolean cdkMCSAlgorithm() {
         CDKMCSHandler mcs;
         mcs = new CDKMCSHandler(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings());
         clearMaps();
         getMCSList().addAll(mcs.getAllAtomMapping());
+        return mcs.isTimeout();
     }
 
-    private synchronized void mcsPlusAlgorithm() {
+    private synchronized boolean mcsPlusAlgorithm() {
         MCSPlusHandler mcs;
         mcs = new MCSPlusHandler(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings());
         clearMaps();
         getMCSList().addAll(mcs.getAllAtomMapping());
+        return mcs.isTimeout();
     }
 
     private synchronized void vfLibMCSAlgorithm() {
@@ -243,8 +241,10 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
 
     private synchronized void defaultMCSAlgorithm() {
         try {
-            cdkMCSAlgorithm();
-            if (getMappingCount() == 0 || isTimeOut()) {
+            boolean timeoutMCS1 = cdkMCSAlgorithm();
+            boolean timeoutMCS2 = mcsPlusAlgorithm();
+//            mcsPlusAlgorithm();
+            if (getMappingCount() == 0 || (timeoutMCS1 && timeoutMCS2)) {
 //                System.out.println("\nSwitching to VF MCS\n");
 //                double time = System.currentTimeMillis();
                 vfLibMCSAlgorithm();
@@ -253,30 +253,6 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
         } catch (Exception e) {
             logger.error(Level.SEVERE, null, e);
         }
-    }
-
-    private synchronized void setTime(boolean bondTypeFlag) {
-        if (bondTypeFlag) {
-            TimeOut tmo = TimeOut.getInstance();
-            tmo.setCDKMCSTimeOut(getBondSensitiveCDKMCSTimeOut());
-            tmo.setMCSPlusTimeout(getBondSensitiveMCSPlusTimeOut());
-            tmo.setVFTimeout(getBondSensitiveVFTimeOut());
-            tmo.setMcGregorTimeout(getBondInSensitiveMcGregor());
-        } else {
-            TimeOut tmo = TimeOut.getInstance();
-            tmo.setCDKMCSTimeOut(getBondInSensitiveCDKMCSTimeOut());
-            tmo.setMCSPlusTimeout(getBondInSensitiveMCSPlusTimeOut());
-            tmo.setVFTimeout(getBondInSensitiveVFTimeOut());
-            tmo.setMcGregorTimeout(getBondInSensitiveMcGregor());
-        }
-    }
-
-    public synchronized boolean isTimeOut() {
-        return TimeOut.getInstance().isTimeOutFlag();
-    }
-
-    public synchronized void resetTimeOut() {
-        TimeOut.getInstance().setTimeOutFlag(false);
     }
 
     /**
@@ -305,66 +281,6 @@ public final class Isomorphism extends BaseMapping implements ITimeOut, Serializ
             }
         }
         return false;
-    }
-
-    @Override
-    public synchronized double getBondSensitiveCDKMCSTimeOut() {
-        return this.bondSensitiveCDKMCSTimeOut;
-    }
-
-    @Override
-    public synchronized void setBondSensitiveCDKMCSTimeOut(double bondSensitiveTimeOut) {
-        this.bondSensitiveCDKMCSTimeOut = bondSensitiveTimeOut;
-    }
-
-    @Override
-    public synchronized double getBondInSensitiveCDKMCSTimeOut() {
-        return bondInSensitiveCDKMCSTimeOut;
-    }
-
-    @Override
-    public synchronized void setBondInSensitiveCDKMCSTimeOut(double bondInSensitiveTimeOut) {
-        this.bondInSensitiveCDKMCSTimeOut = bondInSensitiveTimeOut;
-    }
-
-    @Override
-    public synchronized double getBondSensitiveMCSPlusTimeOut() {
-        return this.bondSensitiveMCSPlusTimeOut;
-    }
-
-    @Override
-    public synchronized void setBondSensitiveMCSPlusTimeOut(double bondSensitiveTimeOut) {
-        this.bondSensitiveMCSPlusTimeOut = bondSensitiveTimeOut;
-    }
-
-    @Override
-    public synchronized double getBondInSensitiveMCSPlusTimeOut() {
-        return this.bondInSensitiveMCSPlusTimeOut;
-    }
-
-    @Override
-    public synchronized void setBondInSensitiveMCSPlusTimeOut(double bondInSensitiveTimeOut) {
-        this.bondInSensitiveMCSPlusTimeOut = bondInSensitiveTimeOut;
-    }
-
-    @Override
-    public synchronized double getBondSensitiveVFTimeOut() {
-        return this.bondSensitiveVFTimeOut;
-    }
-
-    @Override
-    public synchronized void setBondSensitiveVFTimeOut(double bondSensitiveTimeOut) {
-        this.bondSensitiveVFTimeOut = bondSensitiveTimeOut;
-    }
-
-    @Override
-    public synchronized double getBondInSensitiveVFTimeOut() {
-        return this.bondInSensitiveVFTimeOut;
-    }
-
-    @Override
-    public synchronized void setBondInSensitiveVFTimeOut(double bondInSensitiveTimeOut) {
-        this.bondInSensitiveVFTimeOut = bondInSensitiveTimeOut;
     }
 
     /**

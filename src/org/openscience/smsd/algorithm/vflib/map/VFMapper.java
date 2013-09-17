@@ -61,7 +61,6 @@ import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
 import org.openscience.smsd.algorithm.vflib.interfaces.IState;
 import org.openscience.smsd.algorithm.vflib.query.QueryCompiler;
-import org.openscience.smsd.tools.TimeOut;
 import org.openscience.smsd.tools.IterationManager;
 
 /**
@@ -78,6 +77,7 @@ public class VFMapper implements IMapper {
     private final IQuery query;
     private final List<Map<INode, IAtom>> maps;
     private IterationManager iterationManager = null;
+    private boolean timeout = false;
 
     /**
      *
@@ -102,14 +102,14 @@ public class VFMapper implements IMapper {
     /**
      * @return the timeout
      */
-    private double getTimeout() {
-        return TimeOut.getInstance().getVFTimeout();
+    @Override
+    public boolean isTimeout() {
+        return this.timeout;
     }
 
-    private boolean isTimeOut() {
-        if (getTimeout() == -1
-                && getIterationManager().isMaxIteration()) {
-            TimeOut.getInstance().setTimeOutFlag(true);
+    private boolean checkTimeout() {
+        if (getIterationManager().isMaxIteration()) {
+            this.timeout = true;
 //            System.out.println("VF SUB iterations " + getIterationManager().getCounter());
             return true;
         }
@@ -200,7 +200,7 @@ public class VFMapper implements IMapper {
             return;
         }
 
-        while (state.hasNextCandidate() && !isTimeOut()) {
+        while (state.hasNextCandidate() && !checkTimeout()) {
             Match candidate = state.nextCandidate();
             if (state.isMatchFeasible(candidate)) {
                 IState nextState = state.nextState(candidate);

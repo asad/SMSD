@@ -35,15 +35,14 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
-import org.openscience.smsd.tools.TimeOut;
 import org.openscience.smsd.helper.BinaryTree;
 import org.openscience.smsd.tools.IterationManager;
 
 /**
  * Class which reports MCS solutions based on the McGregor algorithm published in 1982.
  *
- * <p>The SMSD algorithm is described in this paper. <font color="#FF0000">please refer Rahman <i>et.al. 2009</i></font>
- * {
+ * <p>
+ * The SMSD algorithm is described in this paper. <font color="#FF0000">please refer Rahman <i>et.al. 2009</i></font> {
  *
  * @cdk.cite SMSD2009}. </p>
  *
@@ -58,17 +57,18 @@ public final class McGregor {
     private final boolean shouldMatchRings;
     private final boolean bondMatch;
     private IterationManager iterationManager = null;
+    private boolean timeout = false;
 
     /**
      * @return the timeout
      */
-    protected synchronized double getTimeout() {
-        return TimeOut.getInstance().getMcGregorTimeout();
+    public synchronized boolean isTimeout() {
+        return timeout;
     }
 
-    public synchronized boolean isTimeOut() {
-        if (getTimeout() == -1 && getIterationManager().isMaxIteration()) {
-            TimeOut.getInstance().setTimeOutFlag(true);
+    private synchronized boolean checkTimeout() {
+        if (getIterationManager().isMaxIteration()) {
+            this.timeout = true;
 //            System.out.println("McGregor MCS iterations " + getIterationManager().getCounter());
             return true;
         }
@@ -136,8 +136,6 @@ public final class McGregor {
         this.bestarcsleft = 0;
         setIterationManager(new IterationManager((this.source.getAtomCount() + this.target.getAtomCount())));
 
-
-
         if (!mappings.isEmpty()) {
             this.globalMCSSize = mappings.get(0).size();
         } else {
@@ -187,7 +185,6 @@ public final class McGregor {
         List<String> c_tab1_copy = McGregorChecks.generateCTabCopy(source);
         List<String> c_tab2_copy = McGregorChecks.generateCTabCopy(target);
 
-
         //find mapped atoms of both molecules and store these in mappedAtoms
         List<Integer> mapped_atoms = new ArrayList<Integer>();
 //        System.out.println("\nMapped Atoms");
@@ -197,7 +194,6 @@ public final class McGregor {
             mapped_atoms.add(map.getValue());
         }
         int mapping_size = present_Mapping.size();
-
 
         List<Integer> i_bond_neighborsA = new ArrayList<Integer>();
         List<String> c_bond_neighborsA = new ArrayList<String>();
@@ -211,15 +207,12 @@ public final class McGregor {
         List<String> c_bond_setB = new ArrayList<String>();
 
         //find unmapped atoms of molecule A
-
         List<Integer> unmapped_atoms_molA = McGregorChecks.markUnMappedAtoms(true, source, present_Mapping);
         int counter = 0;
         int gSetBondNumA = 0;
         int gSetBondNumB = 0;
         int gNeighborBondnumA = 0; //number of remaining molecule A bonds after the clique search, which are neighbors of the MCS_1
         int gNeighborBondNumB = 0; //number of remaining molecule B bonds after the clique search, which are neighbors of the MCS_1
-
-
 
         QueryProcessor queryProcess = new QueryProcessor(
                 c_tab1_copy,
@@ -232,7 +225,6 @@ public final class McGregor {
                 mapping_size,
                 i_bond_setA,
                 c_bond_setA);
-
 
         if (!(source instanceof IQueryAtomContainer)) {
             queryProcess.process(
@@ -261,14 +253,11 @@ public final class McGregor {
         List<Integer> unmapped_atoms_molB = McGregorChecks.markUnMappedAtoms(false, target, present_Mapping);
 
 //        System.out.println("unmapped_atoms_molB: " + unmapped_atoms_molB.size());
-
         //Extract bonds which are related with unmapped atoms of molecule B.
         //In case that unmapped atoms are connected with already mapped atoms, the mapped atoms are labelled with
         //new special signs -> the result are two vectors: cBondNeighborsA and int_bonds_molB, which contain those
         //bonds of molecule B, which are relevant for the McGregorBondTypeInSensitive algorithm.
         //The special signs must be transfered to the corresponding atoms of molecule A
-
-
         TargetProcessor targetProcess = new TargetProcessor(
                 c_tab1_copy,
                 c_tab2_copy,
@@ -280,7 +269,6 @@ public final class McGregor {
                 gNeighborBondnumA,
                 i_bond_neighborsA,
                 c_bond_neighborsA);
-
 
         targetProcess.process(
                 target,
@@ -319,7 +307,7 @@ public final class McGregor {
     }
 
     private synchronized int iterator(McgregorHelper mcGregorHelper) throws IOException {
-        if (isTimeOut()) {
+        if (checkTimeout()) {
             return 1;
         }
         boolean mappingCheckFlag = mcGregorHelper.isMappingCheckFlag();
@@ -327,7 +315,6 @@ public final class McGregor {
         List<Integer> mappedAtoms = new ArrayList<Integer>(mcGregorHelper.getMappedAtomsOrg());
         int neighborBondNumA = mcGregorHelper.getNeighborBondNumA();
         int neighborBondNumB = mcGregorHelper.getNeighborBondNumB();
-
 
 //        //check possible mappings:
         boolean furtherMappingFlag = McGregorChecks.isFurtherMappingPossible(source, target, mcGregorHelper, isBondMatch(), isMatchRings());
@@ -419,17 +406,14 @@ public final class McGregor {
                 atomA_is_unmapped = true;
             }
 
-
             //The special signs must be transfered to the corresponding atoms of molecule B
-
             int counter = 0;
             //number of remaining molecule A bonds after the clique search, which aren't neighbors
             int newSetBondNumA = 0; //instead of setNumA
             int newNeighborNumA = 0; //instead of localNeighborBondnumA
 
-
-            QueryProcessor queryProcess =
-                    new QueryProcessor(
+            QueryProcessor queryProcess
+                    = new QueryProcessor(
                     c_setA_copy,
                     c_setB_copy,
                     SIGNS,
@@ -440,7 +424,6 @@ public final class McGregor {
                     newMapingSize,
                     new_i_bond_setA,
                     new_c_bond_setA);
-
 
             queryProcess.process(
                     setNumA,
@@ -459,7 +442,6 @@ public final class McGregor {
             new_c_neighborsA = queryProcess.getCBondNeighborsA();
 
             //find unmapped atoms of molecule B
-
             List<Integer> unmapped_atoms_molB = new ArrayList<Integer>();
             int unmapped_numB = 0;
             boolean atomB_is_unmapped = true;
@@ -477,7 +459,6 @@ public final class McGregor {
                 atomB_is_unmapped = true;
             }
 
-
             //number of remaining molecule B bonds after the clique search, which aren't neighbors
             int newSetBondNumB = 0; //instead of setNumB
             int newNeighborNumB = 0; //instead of localNeighborBondNumB
@@ -493,7 +474,6 @@ public final class McGregor {
                     newNeighborNumA,
                     new_i_neighborsA,
                     new_c_neighborsA);
-
 
             targetProcess.process(
                     setNumB,
@@ -551,7 +531,6 @@ public final class McGregor {
             }
         }
 
-
         int additionalMappingSize = additional_mapping.size();
         //add McGregorBondTypeInSensitive mapping to the Clique mapping
         for (int a = 0; a < additionalMappingSize; a += 2) {
@@ -560,7 +539,6 @@ public final class McGregor {
         }
 
 //        remove recurring mappings from currentMapping
-
         List<Integer> unique_MAPPING = McGregorChecks.removeRecurringMappings(currentMapping);
         return unique_MAPPING;
     }
@@ -579,7 +557,6 @@ public final class McGregor {
                 String G2A = cBondNeighborsA.get(row * 4 + 1);
                 String G1B = cBondNeighborsB.get(column * 4 + 0);
                 String G2B = cBondNeighborsB.get(column * 4 + 1);
-
 
                 if (!(source instanceof IQueryAtomContainer) && matchGAtoms(G1A, G2A, G1B, G2B)) {
                     int Index_I = iBondNeighborAtomsA.get(row * 3 + 0);
@@ -622,7 +599,7 @@ public final class McGregor {
 
     private synchronized void partsearch(int xstart, int ystart, List<Integer> TEMPMARCS_ORG, McgregorHelper mcGregorHelper) {
 
-        if (isTimeOut()) {
+        if (checkTimeout()) {
             return;
         }
 
@@ -721,7 +698,6 @@ public final class McGregor {
                     currentStructure.getNotEqual().setNotEqual(null);
                     int yIndex = 0;
 
-
                     BinaryTree last_one = currentStructure.getNotEqual();
 
                     while ((yIndex + index + 1) < fieldLength) {
@@ -742,7 +718,7 @@ public final class McGregor {
 
     private synchronized void startsearch(McgregorHelper mcGregorHelper) {
 
-        if (isTimeOut()) {
+        if (checkTimeout()) {
             return;
         }
 
@@ -871,7 +847,6 @@ public final class McGregor {
         IBond productBond = target.getBond(P1_B, P2_B);
 
 //      Bond Order Check Introduced by Asad
-
         if (McGregorChecks.isMatchFeasible(reactantBond, productBond, isBondMatch(), isMatchRings())) {
 
             for (int indexZ = 0; indexZ < mcGregorHelper.getMappedAtomCount(); indexZ++) {

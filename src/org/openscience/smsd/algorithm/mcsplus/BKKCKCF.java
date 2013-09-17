@@ -222,7 +222,7 @@ public class BKKCKCF {
                             max_Cliques_Set.pop();
                         }
                         best_clique_size = clique_size;
-                        System.out.println("Best Cliques Size: " + best_clique_size + " " + clique_size);
+//                        System.out.println("Best Cliques Size: " + best_clique_size + " " + clique_size);
                     }
                     if (clique_size == best_clique_size) {
                         max_Cliques_Set.push(C);

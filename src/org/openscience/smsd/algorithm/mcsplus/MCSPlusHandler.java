@@ -41,8 +41,9 @@ import org.openscience.smsd.helper.MoleculeInitializer;
 import org.openscience.smsd.interfaces.IResults;
 
 /**
- * This class acts as a handler class for MCSPlus algorithm.
- * {@link org.openscience.cdk.smsd.algorithm.mcsplus.MCSPlus} @cdk.module smsd @cdk.githash
+ * This class acts as a handler class for MCSPlus algorithm. {@link org.openscience.cdk.smsd.algorithm.mcsplus.MCSPlus}
+ *
+ * @cdk.module smsd @cdk.githash
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
@@ -56,6 +57,7 @@ public final class MCSPlusHandler extends MoleculeInitializer implements IResult
     private boolean flagExchange = false;
     private final boolean shouldMatchRings;
     private final boolean shouldMatchBonds;
+    private boolean timeout;
 
     /**
      * Constructor for the MCS Plus algorithm class
@@ -80,7 +82,7 @@ public final class MCSPlusHandler extends MoleculeInitializer implements IResult
             } catch (CDKException ex) {
             }
         }
-        searchMCS();
+        this.timeout = searchMCS();
     }
 
     /**
@@ -103,21 +105,24 @@ public final class MCSPlusHandler extends MoleculeInitializer implements IResult
             } catch (CDKException ex) {
             }
         }
-        searchMCS();
+        this.timeout = searchMCS();
     }
 
     /**
      * {@inheritDoc} Function is called by the main program and serves as a starting point for the comparison procedure.
      *
      */
-    private synchronized void searchMCS() {
-        List<List<Integer>> mappings = null;
+    private synchronized boolean searchMCS() {
+        List<List<Integer>> mappings;
+        MCSPlus mcsPlus = new MCSPlus();
         try {
             if (source.getAtomCount() < target.getAtomCount()) {
-                mappings = Collections.synchronizedList(new MCSPlus().getOverlaps(source, target, shouldMatchBonds, shouldMatchRings));
+                List<List<Integer>> overlaps = mcsPlus.getOverlaps(source, target, shouldMatchBonds, shouldMatchRings);
+                mappings = Collections.synchronizedList(overlaps);
             } else {
                 flagExchange = true;
-                mappings = Collections.synchronizedList(new MCSPlus().getOverlaps(target, source, shouldMatchBonds, shouldMatchRings));
+                List<List<Integer>> overlaps = mcsPlus.getOverlaps(target, source, shouldMatchBonds, shouldMatchRings);
+                mappings = Collections.synchronizedList(overlaps);
             }
             PostFilter.filter(mappings);
             setAllMapping();
@@ -125,13 +130,14 @@ public final class MCSPlusHandler extends MoleculeInitializer implements IResult
         } catch (CDKException e) {
             mappings = null;
         }
+        return mcsPlus.isTimeout();
     }
 
     private synchronized void setAllMapping() {
         try {
 
-            List<Map<Integer, Integer>> final_solution =
-                    Collections.synchronizedList(FinalMappings.getInstance().getFinalMapping());
+            List<Map<Integer, Integer>> final_solution
+                    = Collections.synchronizedList(FinalMappings.getInstance().getFinalMapping());
             int counter = 0;
             int bestSolSize = 0;
             for (Map<Integer, Integer> solution : final_solution) {
@@ -210,5 +216,19 @@ public final class MCSPlusHandler extends MoleculeInitializer implements IResult
             return allAtomMCS.iterator().next();
         }
         return new AtomAtomMapping(source, target);
+    }
+
+    /**
+     * @return the timeout
+     */
+    public boolean isTimeout() {
+        return timeout;
+    }
+
+    /**
+     * @param timeout the timeout to set
+     */
+    public void setTimeout(boolean timeout) {
+        this.timeout = timeout;
     }
 }

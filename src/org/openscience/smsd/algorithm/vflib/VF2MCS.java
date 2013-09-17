@@ -28,11 +28,17 @@ import java.util.logging.Level;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.annotations.TestMethod;
 import org.openscience.cdk.exception.CDKException;
+import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.AtomAtomMapping;
+import org.openscience.smsd.algorithm.vflib.interfaces.IMapper;
+import org.openscience.smsd.algorithm.vflib.interfaces.INode;
+import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
+import org.openscience.smsd.algorithm.vflib.map.VFMCSMapper;
+import org.openscience.smsd.algorithm.vflib.query.QueryCompiler;
 import org.openscience.smsd.interfaces.IResults;
 
 /**
@@ -50,8 +56,8 @@ import org.openscience.smsd.interfaces.IResults;
 public final class VF2MCS extends BaseMCS implements IResults {
 
     private final List<AtomAtomMapping> allAtomMCS;
-    private final static ILoggingTool logger =
-            LoggingToolFactory.createLoggingTool(VF2MCS.class);
+    private final static ILoggingTool logger
+            = LoggingToolFactory.createLoggingTool(VF2MCS.class);
 
     /**
      * Constructor for an extended VF Algorithm for the MCS search
@@ -63,7 +69,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
      */
     public VF2MCS(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings) {
         super(source, target, shouldMatchBonds, shouldMatchRings);
-        addVFMatchesMappings();
+        boolean timoutVF = searchVFMappings();
 
         /*
          * An extension is triggered if its mcs solution is smaller than reactant and product. An enrichment is
@@ -71,14 +77,13 @@ public final class VF2MCS extends BaseMCS implements IResults {
          *
          *
          */
-        if (isExtensionRequired()) {
+        if (isExtensionRequired() || !timoutVF) {
 
             List<Map<Integer, Integer>> mcsVFSeeds = new ArrayList<Map<Integer, Integer>>();
 
             /*
              * Copy VF based MCS solution in the seed
              */
-
             int counter = 0;
             for (Map<Integer, Integer> vfMapping : allLocalMCS) {
                 mcsVFSeeds.add(counter, vfMapping);
@@ -88,7 +93,6 @@ public final class VF2MCS extends BaseMCS implements IResults {
             /*
              * Clean VF mapping data
              */
-
             allLocalMCS.clear();
             allLocalAtomAtomMapping.clear();
 
@@ -105,17 +109,15 @@ public final class VF2MCS extends BaseMCS implements IResults {
                 map.putAll(mapping.getMappingsIndex());
                 mcsSeeds.add(map);
             }
-            /*
-             * FIXME koch cliques
-             */
-//            List<AtomAtomMapping> mcsKochCliques;
+
+            List<AtomAtomMapping> mcsKochCliques;
 //            System.out.println("calling KochCliques");
-//            mcsKochCliques = addKochCliques();
-//            for (AtomAtomMapping mapping : mcsKochCliques) {
-//                Map<Integer, Integer> map = new TreeMap<Integer, Integer>();
-//                map.putAll(mapping.getMappingsIndex());
-//                mcsSeeds.add(map);
-//            }
+            mcsKochCliques = addKochCliques();
+            for (AtomAtomMapping mapping : mcsKochCliques) {
+                Map<Integer, Integer> map = new TreeMap<Integer, Integer>();
+                map.putAll(mapping.getMappingsIndex());
+                mcsSeeds.add(map);
+            }
             /*
              * Store largest MCS seeds generated from MCSPlus and UIT
              */
@@ -124,8 +126,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
             List<Map<Integer, Integer>> cleanedMCSSeeds = new ArrayList<Map<Integer, Integer>>();
 //            System.out.println("mergin  UIT & KochCliques");
             if (!mcsSeeds.isEmpty()) {
-                for (Iterator<Map<Integer, Integer>> it = mcsSeeds.iterator(); it.hasNext();) {
-                    Map<Integer, Integer> map = it.next();
+                for (Map<Integer, Integer> map : mcsSeeds) {
                     if (map.size() > solutionSize) {
                         solutionSize = map.size();
                         cleanedMCSSeeds.clear();
@@ -139,12 +140,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
                     }
                 }
             }
-
-            /*
-             * Store MCS seeds generated from VF on top of other seeds
-             */
-            for (Iterator<Map<Integer, Integer>> it = mcsVFSeeds.iterator(); it.hasNext();) {
-                Map<Integer, Integer> map = it.next();
+            for (Map<Integer, Integer> map : mcsVFSeeds) {
                 if (!map.isEmpty()
                         && map.size() >= solutionSize
                         && !hasClique(map, cleanedMCSSeeds)) {
@@ -177,7 +173,6 @@ public final class VF2MCS extends BaseMCS implements IResults {
             /*
              * Integerate the solutions
              */
-
             solutionSize = 0;
             counter = 0;
             this.allAtomMCS = new ArrayList<AtomAtomMapping>();
@@ -204,7 +199,6 @@ public final class VF2MCS extends BaseMCS implements IResults {
             /*
              * Clear the local solution after storing it into mcs solutions
              */
-
             allLocalMCS.clear();
             allLocalAtomAtomMapping.clear();
 
@@ -232,6 +226,50 @@ public final class VF2MCS extends BaseMCS implements IResults {
                 }
             }
         }
+    }
+
+    /*
+     * Note: VF MCS will search for cliques which will match the types. Mcgregor will extend the cliques depending of
+     * the bond type (sensitive and insensitive).
+     */
+    protected synchronized boolean searchVFMappings() {
+//        System.out.println("searchVFMappings ");
+        IQuery queryCompiler;
+        IMapper mapper;
+
+        if (!(source instanceof IQueryAtomContainer)
+                && !(target instanceof IQueryAtomContainer)) {
+            countR = getReactantMol().getAtomCount();
+            countP = getProductMol().getAtomCount();
+        }
+
+        if (source instanceof IQueryAtomContainer) {
+            queryCompiler = new QueryCompiler((IQueryAtomContainer) source).compile();
+            mapper = new VFMCSMapper(queryCompiler);
+            List<Map<INode, IAtom>> maps = mapper.getMaps(getProductMol());
+            if (maps != null) {
+                vfLibSolutions.addAll(maps);
+            }
+            setVFMappings(true, queryCompiler);
+
+        } else if (countR <= countP) {//isBondMatchFlag()
+            queryCompiler = new QueryCompiler(this.source, isBondMatchFlag(), isMatchRings()).compile();
+            mapper = new VFMCSMapper(queryCompiler);
+            List<Map<INode, IAtom>> map = mapper.getMaps(this.target);
+            if (map != null) {
+                vfLibSolutions.addAll(map);
+            }
+            setVFMappings(true, queryCompiler);
+        } else {
+            queryCompiler = new QueryCompiler(this.target, isBondMatchFlag(), isMatchRings()).compile();
+            mapper = new VFMCSMapper(queryCompiler);
+            List<Map<INode, IAtom>> map = mapper.getMaps(this.source);
+            if (map != null) {
+                vfLibSolutions.addAll(map);
+            }
+            setVFMappings(false, queryCompiler);
+        }
+        return mapper.isTimeout();
     }
 
     /**

@@ -16,7 +16,6 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryBond;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainer;
 import org.openscience.cdk.tools.manipulator.BondManipulator;
-import org.openscience.smsd.tools.TimeOut;
 import org.openscience.smsd.algorithm.matchers.AtomMatcher;
 import org.openscience.smsd.algorithm.matchers.DefaultAtomMatcher;
 import org.openscience.smsd.algorithm.matchers.DefaultMatcher;
@@ -26,18 +25,21 @@ import org.openscience.smsd.tools.IterationManager;
  * This class implements atom multipurpose structure comparison tool. It allows to find maximal common substructure,
  * find the mapping of atom substructure in another structure, and the mapping of two isomorphic structures.
  *
- * <p>Structure comparison may be associated to bondA constraints (mandatory bonds, e.graphContainer. scaffolds,
- * reaction cores,...) on each source graph. The constraint flexibility allows atom number of interesting queries. The
+ * <p>
+ * Structure comparison may be associated to bondA constraints (mandatory bonds, e.graphContainer. scaffolds, reaction
+ * cores,...) on each source graph. The constraint flexibility allows atom number of interesting queries. The
  * substructure analysis relies on the CDKRGraph generic class (see: CDKRGraph) This class implements the link between
  * the CDKRGraph model and the the CDK model in this way the CDKRGraph remains independant and may be used in other
  * contexts.
  *
- * <p>This algorithm derives from the algorithm described in {
+ * <p>
+ * This algorithm derives from the algorithm described in {
  *
  * @cdk.cite HAN90} and modified in the thesis of T. Hanser {
  * @cdk.cite HAN93}.
  *
- * <p>With the <code>isSubgraph()</code> method, the second, and only the second argument <tBond>may</tBond> be atom
+ * <p>
+ * With the <code>isSubgraph()</code> method, the second, and only the second argument <tBond>may</tBond> be atom
  * IQueryAtomContainer, which allows one to do MQL like queries. The first IAtomContainer must never be an
  * IQueryAtomContainer. An example:<pre>
  *  SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
@@ -47,15 +49,15 @@ import org.openscience.smsd.tools.IterationManager;
  *  boolean isSubstructure = graphContainer.isSubgraph(atomContainer, query);
  * </pre>
  *
- * <p><font color="#FF0000">WARNING</font>: As atom result of the adjacency perception used in this algorithm there is
- * atom single limitation : cyclopropane and isobutane are seen as isomorph This is due to the fact that these two
- * compounds are the only ones where each bondA is connected two each other bondA (bonds are fully conected) with the
- * same number of bonds and still they have different structures The algotihm could be easily enhanced with atom simple
- * atom mapping manager to provide an atom level overlap definition that would reveal this case. We decided not to
- * penalize the whole procedure because of one single exception query. Furthermore isomorphism may be discarded since
- * the number of atoms are not the same (3 != 4) and in most case this will be already screened out by atom fingerprint
- * based filtering. It is possible to add atom special treatment for this special query. Be reminded that this algorithm
- * matches bonds only.
+ * <p>
+ * <font color="#FF0000">WARNING</font>: As atom result of the adjacency perception used in this algorithm there is atom
+ * single limitation : cyclopropane and isobutane are seen as isomorph This is due to the fact that these two compounds
+ * are the only ones where each bondA is connected two each other bondA (bonds are fully conected) with the same number
+ * of bonds and still they have different structures The algotihm could be easily enhanced with atom simple atom mapping
+ * manager to provide an atom level overlap definition that would reveal this case. We decided not to penalize the whole
+ * procedure because of one single exception query. Furthermore isomorphism may be discarded since the number of atoms
+ * are not the same (3 != 4) and in most case this will be already screened out by atom fingerprint based filtering. It
+ * is possible to add atom special treatment for this special query. Be reminded that this algorithm matches bonds only.
  * </p>
  *
  * @author Stephane Werner from IXELIS mail@ixelis.net, Syed Asad Rahman <asad@ebi.ebi.uk> (modified the orignal code)
@@ -66,8 +68,9 @@ import org.openscience.smsd.tools.IterationManager;
  */
 public class CDKMCS {
 
-    final static int ID1 = 0;
-    final static int ID2 = 1;
+    protected static boolean timeout = false;
+    protected final static int ID1 = 0;
+    protected final static int ID2 = 1;
     private static IterationManager iterationManager = null;
 
     ///////////////////////////////////////////////////////////////////////////
@@ -165,7 +168,7 @@ public class CDKMCS {
 
         List<CDKRMap> list = checkSingleAtomCases(g1, g2);
         if (list == null) {
-            return makeAtomsMapOfBondsMap(CDKMCS.getIsomorphMap(g1, g2, shouldMatchBonds, shouldMatchRings), g1, g2);
+            return makeAtomsMapOfBondsMap(getIsomorphMap(g1, g2, shouldMatchBonds, shouldMatchRings), g1, g2);
         } else if (list.isEmpty()) {
             return null;
         } else {
@@ -254,7 +257,7 @@ public class CDKMCS {
         List<CDKRMap> list = checkSingleAtomCases(g1, g2);
         if (list == null) {
             return makeAtomsMapsOfBondsMaps(
-                    CDKMCS.getSubgraphMaps(g1, g2, shouldMatchBonds, shouldMatchRings), g1, g2);
+                    getSubgraphMaps(g1, g2, shouldMatchBonds, shouldMatchRings), g1, g2);
         } else {
             List<List<CDKRMap>> atomsMap = new ArrayList<List<CDKRMap>>();
             atomsMap.add(list);
@@ -279,7 +282,7 @@ public class CDKMCS {
             throws CDKException {
         List<CDKRMap> list = checkSingleAtomCases(g1, g2);
         if (list == null) {
-            return makeAtomsMapOfBondsMap(CDKMCS.getSubgraphMap(g1, g2, shouldMatchBonds, shouldMatchRings), g1, g2);
+            return makeAtomsMapOfBondsMap(getSubgraphMap(g1, g2, shouldMatchBonds, shouldMatchRings), g1, g2);
         } else if (list.isEmpty()) {
             return null;
         } else {
@@ -354,7 +357,6 @@ public class CDKMCS {
 
         // reduction of set of solution (isomorphism and substructure
         // with different 'mappings'
-
         return getMaximum(graphList, shouldMatchBonds, shouldMatchRings);
     }
 
@@ -426,8 +428,8 @@ public class CDKMCS {
             IAtom queryAtom = g2.getAtom(0);
 
             //use atom matcher from SMSD
-            AtomMatcher defaultRGraphAtomMatcher =
-                    new DefaultAtomMatcher(queryAtom, shouldMatchRings);
+            AtomMatcher defaultRGraphAtomMatcher
+                    = new DefaultAtomMatcher(queryAtom, shouldMatchRings);
             for (IAtom atom : g1.atoms()) {
                 if (defaultRGraphAtomMatcher.matches(atom)) {
                     List<CDKRMap> lmap = new ArrayList<CDKRMap>();
@@ -475,10 +477,8 @@ public class CDKMCS {
         IAtom a2;
         IAtom a;
         IBond bond;
-
-        for (Iterator<CDKRMap> i = rMapList.iterator(); i.hasNext();) {
-            CDKRMap rMap = i.next();
-            if (id == CDKMCS.ID1) {
+        for (CDKRMap rMap : rMapList) {
+            if (id == ID1) {
                 bond = g.getBond(rMap.getId1());
             } else {
                 bond = g.getBond(rMap.getId2());
@@ -725,7 +725,6 @@ public class CDKMCS {
 
         // resets the target graph.
         gr.clear();
-
 
         // compares each bondA of G1 to each bondA of G2
         for (int i = 0; i < ac1.getBondCount(); i++) {
@@ -1101,8 +1100,8 @@ public class CDKMCS {
     /**
      * @return the timeout
      */
-    protected static double getTimeout() {
-        return TimeOut.getInstance().getCDKMCSTimeOut();
+    public static boolean isTimeout() {
+        return timeout;
     }
 
     /**

@@ -59,6 +59,7 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
     private final List<Map<Integer, Integer>> allMCS;
     private final boolean shouldMatchRings;
     private final boolean shouldMatchBonds;
+    private boolean timeout;
 
     //~--- constructors -------------------------------------------------------
     /*
@@ -85,7 +86,7 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
             } catch (CDKException ex) {
             }
         }
-        searchMCS();
+        this.timeout=searchMCS();
     }
 
     /**
@@ -107,7 +108,7 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
             } catch (CDKException ex) {
             }
         }
-        searchMCS();
+        this.timeout=searchMCS();
     }
 
     /**
@@ -115,7 +116,7 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
      *
      */
     @TestMethod("testSearchMCS")
-    private synchronized void searchMCS() {
+    private synchronized boolean searchMCS() {
         CDKRMapHandler rmap = new CDKRMapHandler();
         try {
 
@@ -134,6 +135,7 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
             rmap = null;
             System.err.println("WARNING: " + e.getMessage());
         }
+        return rmap.isTimeout();
     }
 
     /**
@@ -251,5 +253,19 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
             return allAtomMCS.iterator().next();
         }
         return new AtomAtomMapping(source, target);
+    }
+
+    /**
+     * @return the timeout
+     */
+    public boolean isTimeout() {
+        return timeout;
+    }
+
+    /**
+     * @param timeout the timeout to set
+     */
+    public void setTimeout(boolean timeout) {
+        this.timeout = timeout;
     }
 }

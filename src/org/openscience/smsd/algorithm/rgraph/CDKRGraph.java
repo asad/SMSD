@@ -35,8 +35,6 @@ import java.util.Iterator;
 import java.util.List;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.exception.CDKException;
-import static org.openscience.smsd.algorithm.rgraph.CDKMCS.getTimeout;
-import org.openscience.smsd.tools.TimeOut;
 
 /**
  * This class implements the Resolution Graph (CDKRGraph). The CDKRGraph is a graph based representation of the search
@@ -45,13 +43,15 @@ import org.openscience.smsd.tools.TimeOut;
  * graphs are represented by a vertex in the CDKRGraph. Each edge in the CDKRGraph corresponds to a common adjacency
  * relationship between the 2 couple of compatible edges associated to the 2 CDKRGraph nodes forming this edge.
  *
- * <p>Example:
+ * <p>
+ * Example:
  * <pre>
  *    G1 : C-C=O  and G2 : C-C-C=0
  *         1 2 3           1 2 3 4
  * </pre>
  *
- * <p>The resulting CDKRGraph(G1,G2) will contain 3 nodes:
+ * <p>
+ * The resulting CDKRGraph(G1,G2) will contain 3 nodes:
  * <ul>
  * <li>Node sourceBitSet : association between bond C-C : 1-2 in G1 and 1-2 in G2
  * <li>Node targetBitSet : association between bond C-C : 1-2 in G1 and 2-3 in G2
@@ -60,26 +60,33 @@ import org.openscience.smsd.tools.TimeOut;
  * The CDKRGraph will also contain one edge representing the adjacency between node targetBitSet and C that is : bonds
  * 1-2 and 2-3 in G1 and bonds 2-3 and 3-4 in G2.
  *
- * <p>Once the CDKRGraph has been built from the two compared graphs maxIterator becomes a very interesting tool to
- * perform all kinds of structural search (isomorphism, substructure search, maximal common substructure,....).
+ * <p>
+ * Once the CDKRGraph has been built from the two compared graphs maxIterator becomes a very interesting tool to perform
+ * all kinds of structural search (isomorphism, substructure search, maximal common substructure,....).
  *
- * <p>The search may be constrained by mandatory elements (e.g. bonds that have to be present in the mapped common
+ * <p>
+ * The search may be constrained by mandatory elements (e.g. bonds that have to be present in the mapped common
  * substructures).
  *
- * <p>Performing a query on an CDKRGraph requires simply to set the constrains (if any) and to invoke the parsing method
+ * <p>
+ * Performing a query on an CDKRGraph requires simply to set the constrains (if any) and to invoke the parsing method
  * (parse())
  *
- * <p>The CDKRGraph has been designed to be a generic tool. It may be constructed from any kind of source graphs, thus
+ * <p>
+ * The CDKRGraph has been designed to be a generic tool. It may be constructed from any kind of source graphs, thus
  * maxIterator is not restricted to a chemical context.
  *
- * <p>The CDKRGraph model is independent from the CDK model and the link between both model is performed by the RTools
+ * <p>
+ * The CDKRGraph model is independent from the CDK model and the link between both model is performed by the RTools
  * class. In this way the CDKRGraph class may be reused in other graph context (conceptual graphs,....)
  *
- * <p><bitSet>Important note</bitSet>: This implementation of the algorithm has not been optimized for speed at this
- * stage. It has been written with the goal to clearly retrace the principle of the underlined search method. There is
- * room for optimization in many ways including the the algorithm itself.
+ * <p>
+ * <bitSet>Important note</bitSet>: This implementation of the algorithm has not been optimized for speed at this stage.
+ * It has been written with the goal to clearly retrace the principle of the underlined search method. There is room for
+ * optimization in many ways including the the algorithm itself.
  *
- * <p>This algorithm derives from the algorithm described in {
+ * <p>
+ * This algorithm derives from the algorithm described in {
  *
  * @cdk.cite HAN90} and modified in the thesis of T. Hanser {
  * @cdk.cite HAN93}.
@@ -232,12 +239,9 @@ public class CDKRGraph {
         BitSet newForbidden;
         BitSet potentialNode;
 
-        boolean timeOut = isTimeOut();
-
-//        System.out.println(timeOut + ", is Timeout " 
-//                + CDKMCS.getTimeManager().getElapsedTimeInMinutes());
-
+        boolean timeOut = checkTimeout();
         if (timeOut) {
+//            System.out.println(timeOut + ", is Timeout ");
             this.stop = true;
             return;
         }
@@ -643,10 +647,9 @@ public class CDKRGraph {
         return graphBitSet;
     }
 
-    private boolean isTimeOut() {
-        if (getTimeout() == -1
-                && CDKMCS.getIterationManager().isMaxIteration()) {
-            TimeOut.getInstance().setTimeOutFlag(true);
+    private boolean checkTimeout() {
+        if (CDKMCS.getIterationManager().isMaxIteration()) {
+            CDKMCS.timeout = true;
             return true;
         }
         CDKMCS.getIterationManager().increment();

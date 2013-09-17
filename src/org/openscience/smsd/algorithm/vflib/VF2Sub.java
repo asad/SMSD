@@ -71,8 +71,8 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
     private int countR = 0;
     private int countP = 0;
     private boolean isSubgraph = false;
-    private final static ILoggingTool Logger =
-            LoggingToolFactory.createLoggingTool(VF2Sub.class);
+    private final static ILoggingTool Logger
+            = LoggingToolFactory.createLoggingTool(VF2Sub.class);
 
     /**
      * Constructor for an extended VF Algorithm for the MCS search
@@ -134,9 +134,9 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
         if (!testIsSubgraphHeuristics(source, target, this.matchBonds)) {
             return false;
         }
-        searchVFMappings();
+        boolean timoutVF = searchVFMappings();
         boolean flag = isExtensionFeasible();
-        if (flag && !vfLibSolutions.isEmpty()) {
+        if (flag && !vfLibSolutions.isEmpty() && !timoutVF) {
             try {
                 searchMcGregorMapping();
             } catch (CDKException ex) {
@@ -151,7 +151,7 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
         }
         return !allAtomMCS.isEmpty()
                 && allAtomMCS.iterator().next().getCount()
-                == getReactantMol().getAtomCount() ? true : false;
+                == getReactantMol().getAtomCount();
 
     }
 
@@ -217,9 +217,9 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
      * Note: VF will search for core hits. Mcgregor will extend the cliques depending of the bond type (sensitive and
      * insensitive).
      */
-    private synchronized void searchVFMappings() {
+    private synchronized boolean searchVFMappings() {
 //        System.out.println("searchVFMappings ");
-        IQuery queryCompiler = null;
+        IQuery queryCompiler;
         IMapper mapper = null;
 
         if (!(source instanceof IQueryAtomContainer) && !(target instanceof IQueryAtomContainer)) {
@@ -249,7 +249,7 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
 //        System.out.println("Sol size " + vfLibSolutions.iterator().next().size());
 //        System.out.println("MCSSize " + bestHitSize);
 //        System.out.println("After Sol count " + allMCSCopy.size());
-
+        return mapper != null ? mapper.isTimeout() : true;
     }
 
     private synchronized void searchMcGregorMapping() throws CDKException, IOException {

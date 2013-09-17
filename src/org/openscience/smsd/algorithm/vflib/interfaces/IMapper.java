@@ -54,6 +54,7 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 
 /**
  * Interface for the mappings (mapped objects).
+ *
  * @cdk.module smsd
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
@@ -63,6 +64,7 @@ public interface IMapper {
 
     /**
      * checks if a map exits for a molecule.
+     *
      * @param molecule molecule
      * @return true/false.
      */
@@ -70,6 +72,7 @@ public interface IMapper {
 
     /**
      * Returns solution map count.
+     *
      * @param target target molecule.
      * @return map count.
      */
@@ -77,6 +80,7 @@ public interface IMapper {
 
     /**
      * Returns all solution map.
+     *
      * @param target molecule.
      * @return get maps.
      */
@@ -84,8 +88,14 @@ public interface IMapper {
 
     /**
      * Returns first solution map.
+     *
      * @param target molecule.
      * @return get first map.
      */
     public Map<INode, IAtom> getFirstMap(IAtomContainer target);
+
+    /*
+     * Return true if there was a timeout else false
+     */
+    public boolean isTimeout();
 }

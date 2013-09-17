@@ -34,7 +34,6 @@ import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.smsd.algorithm.mcgregor.McGregor;
-import org.openscience.smsd.tools.TimeOut;
 import org.openscience.smsd.tools.IterationManager;
 
 /**
@@ -50,6 +49,7 @@ public class MCSPlus {
 
     private boolean shouldMatchRings;
     private boolean shouldMatchBonds;
+    private boolean timeout = false;
 
     /**
      * Default constructor added
@@ -61,8 +61,8 @@ public class MCSPlus {
     /**
      * @return the timeout
      */
-    protected synchronized double getTimeout() {
-        return TimeOut.getInstance().getMCSPlusTimeout();
+    public synchronized boolean isTimeout() {
+        return timeout;
     }
 
     /**
@@ -167,9 +167,9 @@ public class MCSPlus {
             mgit.startMcGregorIteration(mgit.getMCSSize(), extendMapping);
             extendMappings = mgit.getMappings();
 //            System.out.println("\nSol count after MG" + extendMappings.size());
-//            if (isTimeOut()) {
-//                break;
-//            }
+            if (checkTimeout()) {
+                break;
+            }
         }
         List<List<Integer>> finalMappings = setMcGregorMappings(ROPFlag, extendMappings);
 //        System.out.println("After set Sol count MG" + finalMappings.size());
@@ -217,10 +217,9 @@ public class MCSPlus {
         return finalMappings;
     }
 
-    private synchronized boolean isTimeOut() {
-        if (getTimeout() == -1
-                && getIterationManager().isMaxIteration()) {
-            TimeOut.getInstance().setTimeOutFlag(true);
+    private synchronized boolean checkTimeout() {
+        if (getIterationManager().isMaxIteration()) {
+            this.timeout = true;
 //            System.out.println("MCS+ iterations " + getIterationManager().getCounter());
             return true;
         }
