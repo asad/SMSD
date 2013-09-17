@@ -67,7 +67,7 @@ public class FinalMappingsTest {
      */
     @Test
     public void testGetInstance() {
-        System.out.println("getInstance");
+        //System.out.println("getInstance");
         FinalMappings result = FinalMappings.getInstance();
         Assert.assertNotNull(result);
     }
@@ -77,7 +77,7 @@ public class FinalMappingsTest {
      */
     @Test
     public void testAdd() {
-        System.out.println("add");
+        //System.out.println("add");
         Map<Integer, Integer> mapping = new TreeMap<Integer, Integer>();
         mapping.put(1, 1);
         mapping.put(2, 2);
@@ -93,7 +93,7 @@ public class FinalMappingsTest {
      */
     @Test
     public void testSet() {
-        System.out.println("set");
+        //System.out.println("set");
         Map<Integer, Integer> mapping1 = new TreeMap<Integer, Integer>();
         mapping1.put(1, 1);
         mapping1.put(2, 2);
@@ -117,7 +117,7 @@ public class FinalMappingsTest {
      */
     @Test
     public void testGetIterator() {
-        System.out.println("getIterator");
+        //System.out.println("getIterator");
         Map<Integer, Integer> mapping1 = new TreeMap<Integer, Integer>();
         mapping1.put(1, 1);
         mapping1.put(2, 2);
@@ -142,7 +142,7 @@ public class FinalMappingsTest {
      */
     @Test
     public void testClear() {
-        System.out.println("clear");
+        //System.out.println("clear");
         Map<Integer, Integer> mapping1 = new TreeMap<Integer, Integer>();
         mapping1.put(1, 1);
         mapping1.put(2, 2);
@@ -167,7 +167,7 @@ public class FinalMappingsTest {
      */
     @Test
     public void testGetFinalMapping() {
-        System.out.println("getFinalMapping");
+        //System.out.println("getFinalMapping");
         Map<Integer, Integer> mapping1 = new TreeMap<Integer, Integer>();
         mapping1.put(1, 1);
         mapping1.put(2, 2);
@@ -193,7 +193,7 @@ public class FinalMappingsTest {
      */
     @Test
     public void testGetSize() {
-        System.out.println("getSize");
+        //System.out.println("getSize");
         Map<Integer, Integer> mapping1 = new TreeMap<Integer, Integer>();
         mapping1.put(1, 1);
         mapping1.put(2, 2);

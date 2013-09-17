@@ -59,7 +59,7 @@ public class GenerateCompatibilityGraphTest {
 
     @Test
     public void testSomeMethod() throws IOException {
-        System.out.println("GenerateCompatibilityGraph");
+        //System.out.println("GenerateCompatibilityGraph");
         // TODO review the generated test code and remove the default call to fail.
         assertNotNull(new GenerateCompatibilityGraph(new AtomContainer(), new AtomContainer(), true, false));
     }

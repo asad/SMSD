@@ -14,7 +14,6 @@ import org.openscience.cdk.Bond;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
-import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IRingSet;
@@ -51,7 +50,6 @@ public class UnionTest {
 
         Isomorphism isomorphism = new Isomorphism(mol1, mol2, Algorithm.DEFAULT, true, false);
         isomorphism.setChemFilters(false, false, false);
-
 
         int combinations = 1;
 
@@ -109,13 +107,12 @@ public class UnionTest {
             }
         }
 
-        for (String container : acSet) {
-            System.out.println("\n-------------" + " Combination " + combinations++ + "--------------------");
-            System.out.println("Query SMILES " + getSMILES(mol1).toString() + ", count " + mol1.getAtomCount());
-            System.out.println("Target SMILES " + getSMILES(mol2).toString() + ", count " + mol2.getAtomCount());
-            System.out.println("Union SMILES " + container + ", count " + sp.parseSmiles(container).getAtomCount());
-        }
-
+//        for (String container : acSet) {
+        //System.out.println("\n-------------" + " Combination " + combinations++ + "--------------------");
+        //System.out.println("Query SMILES " + getSMILES(mol1).toString() + ", count " + mol1.getAtomCount());
+        //System.out.println("Target SMILES " + getSMILES(mol2).toString() + ", count " + mol2.getAtomCount());
+        //System.out.println("Union SMILES " + container + ", count " + sp.parseSmiles(container).getAtomCount());
+//        }
     }
 
     public IAtom getKey(IAtom a1, Map<IAtom, IAtom> map) {

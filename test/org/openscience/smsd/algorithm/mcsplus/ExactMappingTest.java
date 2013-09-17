@@ -60,7 +60,7 @@ public class ExactMappingTest {
 
     @Test
     public void testSomeMethod() {
-         System.out.println("ExactMapping.extractMapping");
+         //System.out.println("ExactMapping.extractMapping");
         // TODO review the generated test code and remove the default call to fail.
         assertNotNull(ExactMapping.extractMapping(new ArrayList<List<Integer>>(),
                 new ArrayList<Integer>(), new ArrayList<Integer>()));

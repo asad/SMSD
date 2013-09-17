@@ -65,7 +65,7 @@ public class McGregorTest {
      */
     @Test
     public void testStartMcGregorIteration_int_Map() throws Exception {
-        System.out.println("startMcGregorIteration");
+        //System.out.println("startMcGregorIteration");
         int largestMappingSize = 0;
         Map<Integer, Integer> present_Mapping = null;
         McGregor instance = null;
@@ -79,7 +79,7 @@ public class McGregorTest {
      */
     @Test
     public void testStartMcGregorIteration_3args() throws Exception {
-        System.out.println("startMcGregorIteration");
+        //System.out.println("startMcGregorIteration");
         int largestMappingSize = 0;
         Map<Integer, Integer> presentMapping = null;
         McGregor instance = null;
@@ -93,7 +93,7 @@ public class McGregorTest {
      */
     @Test
     public void testGetMappings() {
-        System.out.println("getMappings");
+        //System.out.println("getMappings");
         McGregor instance = null;
         List expResult = null;
         List result = instance.getMappings();
@@ -107,7 +107,7 @@ public class McGregorTest {
      */
     @Test
     public void testGetMCSSize() {
-        System.out.println("getMCSSize");
+        //System.out.println("getMCSSize");
         McGregor instance = null;
         int expResult = 0;
         int result = instance.getMCSSize();
@@ -121,7 +121,7 @@ public class McGregorTest {
      */
     @Test
     public void testIsNewMatrix() {
-        System.out.println("isNewMatrix");
+        //System.out.println("isNewMatrix");
         McGregor instance = null;
         boolean expResult = false;
         boolean result = instance.isNewMatrix();
@@ -135,7 +135,7 @@ public class McGregorTest {
      */
     @Test
     public void testSetNewMatrix() {
-        System.out.println("setNewMatrix");
+        //System.out.println("setNewMatrix");
         boolean newMatrix = false;
         McGregor instance = null;
         instance.setNewMatrix(newMatrix);

@@ -53,15 +53,15 @@ public class MCSSearch {
             boolean exists = (new File(mol1)).exists();
             if (!exists) {
 
-                System.err.println("Error: The Assigned File Path is not Correct " + mol1);
-                System.exit(1);
+                //System.err.println("Error: The Assigned File Path is not Correct " + mol1);
+                //System.exit(1);
             }
 
             exists = (new File(mol2)).exists();
             if (!exists) {
 
-                System.err.println("Error: The Assigned File Path is not Correct " + mol2);
-                System.exit(1);
+                //System.err.println("Error: The Assigned File Path is not Correct " + mol2);
+                //System.exit(1);
             }
 
             MDLV2000Reader molQuery = new MDLV2000Reader(new FileInputStream(mol1));
@@ -94,12 +94,12 @@ public class MCSSearch {
             //Print all MCS solutions if first_MCS is false
             if (!first_MCS) {
                 int count_final_sol = 0;
-                System.out.println("Output of the final Mappings: ");
+                //System.out.println("Output of the final Mappings: ");
                 try {
                     if (comparison.getAllAtomMapping() != null) {
                         for (AtomAtomMapping mapping : comparison.getAllAtomMapping()) {
                             int final_solution_size = mapping.getCount();
-                            System.out.println("Final mapping Nr. " + (count_final_sol + 1) + " Size:" + final_solution_size);
+                            //System.out.println("Final mapping Nr. " + (count_final_sol + 1) + " Size:" + final_solution_size);
 
                             for (Map.Entry<IAtom, IAtom> aam : mapping.getMappings().entrySet()) {
 
@@ -113,24 +113,24 @@ public class MCSSearch {
                                 //Get the mapped atom in Target Molecule
                                 IAtom targetAtom = aam.getValue();
                                 //Print mapped atoms
-                                System.out.println(
-                                        queryAtom.getSymbol()
-                                        + "(" + queryMappingNumber + "), "
-                                        + targetAtom.getSymbol()
-                                        + "(" + targetMappingNumber + ")");
+                                //System.out.println(
+//                                        queryAtom.getSymbol()
+//                                        + "(" + queryMappingNumber + "), "
+//                                        + targetAtom.getSymbol()
+//                                        + "(" + targetMappingNumber + ")");
                             }
-                            System.out.println("");
+                            //System.out.println("");
 
-                            System.out.println("Stereo Match: " + comparison.getStereoScore(count_final_sol));
-                            System.out.println("Stereo different: " + comparison.isStereoMisMatch());
-                            System.out.println("Fragment Size: " + comparison.getFragmentSize(count_final_sol));
-                            System.out.println("Tanimoto Similarity Score: " + comparison.getTanimotoSimilarity());
-                            System.out.println("Tanimoto Euclidean Distance: " + comparison.getEuclideanDistance());
+                            //System.out.println("Stereo Match: " + comparison.getStereoScore(count_final_sol));
+                            //System.out.println("Stereo different: " + comparison.isStereoMisMatch());
+                            //System.out.println("Fragment Size: " + comparison.getFragmentSize(count_final_sol));
+                            //System.out.println("Tanimoto Similarity Score: " + comparison.getTanimotoSimilarity());
+                            //System.out.println("Tanimoto Euclidean Distance: " + comparison.getEuclideanDistance());
                             count_final_sol++;
 
                         }
 
-                        System.out.println("");
+                        //System.out.println("");
                     }
                 } catch (Exception ex) {
                     ex.printStackTrace();
@@ -159,24 +159,24 @@ public class MCSSearch {
                                 + "(" + targetMappingNumber + ")");
 
                     }
-                    System.out.println("");
+                    //System.out.println("");
 
-                    System.out.println("");
+                    //System.out.println("");
 
-                    System.out.println("Stereo Match: " + comparison.getStereoScore(0));
-                    System.out.println("Stereo different: " + comparison.isStereoMisMatch());
-                    System.out.println("Fragment Size: " + comparison.getFragmentSize(0));
-                    System.out.println("Tanimoto Similarity Score: " + comparison.getTanimotoSimilarity());
-                    System.out.println("Tanimoto Euclidean Distance: " + comparison.getEuclideanDistance());
-                    System.out.println("");
+                    //System.out.println("Stereo Match: " + comparison.getStereoScore(0));
+                    //System.out.println("Stereo different: " + comparison.isStereoMisMatch());
+                    //System.out.println("Fragment Size: " + comparison.getFragmentSize(0));
+                    //System.out.println("Tanimoto Similarity Score: " + comparison.getTanimotoSimilarity());
+                    //System.out.println("Tanimoto Euclidean Distance: " + comparison.getEuclideanDistance());
+                    //System.out.println("");
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
-                System.out.println("");
+                //System.out.println("");
             }
-            System.out.println("");
+            //System.out.println("");
 
-            System.out.println("");
+            //System.out.println("");
 
         } catch (Exception ex) {
             Logger.getLogger(MCSSearch.class.getName()).log(Level.SEVERE, null, ex);
@@ -190,20 +190,20 @@ public class MCSSearch {
      */
     private static void printMolecules(IAtomContainer Molecule1, IAtomContainer Molecule2) {
 
-        System.out.println("Molecule 1");
+        //System.out.println("Molecule 1");
 
         for (int i = 0; i < Molecule1.getAtomCount(); i++) {
 
-            System.out.print(Molecule1.getAtom(i).getSymbol() + " ");
+            //System.out.print(Molecule1.getAtom(i).getSymbol() + " ");
         }
 
-        System.out.println();
-        System.out.println("Molecule 2");
+        //System.out.println();
+        //System.out.println("Molecule 2");
         for (int i = 0; i < Molecule2.getAtomCount(); i++) {
 
-            System.out.print(Molecule2.getAtom(i).getSymbol() + " ");
+            //System.out.print(Molecule2.getAtom(i).getSymbol() + " ");
         }
-        System.out.println();
+        //System.out.println();
 
     }
 }

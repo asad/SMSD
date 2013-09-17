@@ -68,7 +68,7 @@ public class SingleMappingHandlerTest {
      */
     @Test
     public void testSet_IAtomContainer_IAtomContainer() {
-        System.out.println("set");
+        //System.out.println("set");
         IAtom atomSource = new Atom("R");
         IAtom atomTarget = new Atom("R");
         IAtomContainer source = new AtomContainer();
@@ -85,7 +85,7 @@ public class SingleMappingHandlerTest {
      */
     @Test
     public void testSet_IMolecule_IMolecule() throws Exception {
-        System.out.println("set");
+        //System.out.println("set");
         IAtom atomSource = new Atom("R");
         IAtom atomTarget = new Atom("R");
         IAtomContainer source = new AtomContainer();
@@ -101,7 +101,7 @@ public class SingleMappingHandlerTest {
      */
     @Test
     public void testSet_AtomContainer_AtomContainer() {
-        System.out.println("set");
+        //System.out.println("set");
         IAtom atomSource = new Atom("R");
         IAtom atomTarget = new Atom("R");
         IAtomContainer source = new AtomContainer();
@@ -118,7 +118,7 @@ public class SingleMappingHandlerTest {
      */
     @Test
     public void testSearchMCS() {
-        System.out.println("searchMCS");
+        //System.out.println("searchMCS");
         IAtom atomSource = new Atom("R");
         IAtom atomTarget = new Atom("R");
         IAtomContainer source = new AtomContainer();
@@ -135,7 +135,7 @@ public class SingleMappingHandlerTest {
      */
     @Test
     public void testgetAllAtomMapping() {
-        System.out.println("getAllAtomMapping");
+        //System.out.println("getAllAtomMapping");
         IAtom atomSource = new Atom("R");
         IAtom atomTarget = new Atom("R");
         IAtomContainer source = new AtomContainer();
@@ -151,7 +151,7 @@ public class SingleMappingHandlerTest {
      */
     @Test
     public void testGetFirstMapping() {
-        System.out.println("getFirstMapping");
+        //System.out.println("getFirstMapping");
         IAtom atomSource = new Atom("R");
         IAtom atomTarget = new Atom("R");
         IAtomContainer source = new AtomContainer();
@@ -167,7 +167,7 @@ public class SingleMappingHandlerTest {
      */
     @Test
     public void testGetAllAtomMapping() {
-        System.out.println("getAllAtomMapping");
+        //System.out.println("getAllAtomMapping");
         IAtom atomSource = new Atom("R");
         IAtom atomTarget = new Atom("R");
         IAtomContainer source = new AtomContainer();
@@ -183,7 +183,7 @@ public class SingleMappingHandlerTest {
      */
     @Test
     public void testGetFirstAtomMapping() {
-        System.out.println("getFirstAtomMapping");
+        //System.out.println("getFirstAtomMapping");
         IAtom atomSource = new Atom("R");
         IAtom atomTarget = new Atom("R");
         IAtomContainer source = new AtomContainer();

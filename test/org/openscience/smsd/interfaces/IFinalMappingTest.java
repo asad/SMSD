@@ -65,7 +65,7 @@ public class IFinalMappingTest {
      */
     @Test
     public void testAdd() {
-        System.out.println("add");
+        //System.out.println("add");
         Map<Integer, Integer> mapping = null;
         IFinalMapping instance = new IFinalMappingImpl();
         instance.add(mapping);
@@ -78,7 +78,7 @@ public class IFinalMappingTest {
      */
     @Test
     public void testSet() {
-        System.out.println("set");
+        //System.out.println("set");
         List<Map<Integer, Integer>> mappings = null;
         IFinalMapping instance = new IFinalMappingImpl();
         instance.set(mappings);
@@ -91,7 +91,7 @@ public class IFinalMappingTest {
      */
     @Test
     public void testGetIterator() {
-        System.out.println("getIterator");
+        //System.out.println("getIterator");
         IFinalMapping instance = new IFinalMappingImpl();
         Iterator expResult = null;
         Iterator result = instance.getIterator();
@@ -105,7 +105,7 @@ public class IFinalMappingTest {
      */
     @Test
     public void testClear() {
-        System.out.println("clear");
+        //System.out.println("clear");
         IFinalMapping instance = new IFinalMappingImpl();
         instance.clear();
         // TODO review the generated test code and remove the default call to fail.
@@ -117,7 +117,7 @@ public class IFinalMappingTest {
      */
     @Test
     public void testGetFinalMapping() {
-        System.out.println("getFinalMapping");
+        //System.out.println("getFinalMapping");
         IFinalMapping instance = new IFinalMappingImpl();
         List expResult = null;
         List result = instance.getFinalMapping();
@@ -131,7 +131,7 @@ public class IFinalMappingTest {
      */
     @Test
     public void testGetSize() {
-        System.out.println("getSize");
+        //System.out.println("getSize");
         IFinalMapping instance = new IFinalMappingImpl();
         int expResult = 0;
         int result = instance.getSize();

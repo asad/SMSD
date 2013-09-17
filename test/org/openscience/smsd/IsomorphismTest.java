@@ -93,7 +93,7 @@ public class IsomorphismTest {
      */
     @Test
     public void testInit_3args_1() throws CDKException {
-//        System.out.println("init");
+//        //System.out.println("init");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/OCC=C");
         IAtomContainer query = sp.parseSmiles("CCCOCC(C)=C");
@@ -111,7 +111,7 @@ public class IsomorphismTest {
      */
     @Test
     public void testInit_3args_2() throws CDKException {
-//        System.out.println("init");
+//        //System.out.println("init");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/OCC=C");
         IAtomContainer query = sp.parseSmiles("CCCOCC(C)=C");
@@ -130,7 +130,7 @@ public class IsomorphismTest {
     @Test
     public void testSearchMCS() throws CDKException {
         try {
-//            System.out.println("searchMCS");
+//            //System.out.println("searchMCS");
             SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
             IAtomContainer target;
             target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
@@ -152,7 +152,7 @@ public class IsomorphismTest {
      */
     @Test
     public void testSet_IAtomContainer_IAtomContainer() throws CDKException {
-//        System.out.println("set");
+//        //System.out.println("set");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
@@ -170,7 +170,7 @@ public class IsomorphismTest {
      */
     @Test
     public void testSet_IMolecule_IMolecule() throws Exception {
-//        System.out.println("set");
+//        //System.out.println("set");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
@@ -188,7 +188,7 @@ public class IsomorphismTest {
      */
     @Test
     public void testSet_String_String() throws CDKException, IOException {
-//        System.out.println("set");
+//        //System.out.println("set");
         String molfile = "data/mdl/decalin.mol";
         String queryfile = "data/mdl/decalin.mol";
         AtomContainer query = new AtomContainer();
@@ -214,7 +214,7 @@ public class IsomorphismTest {
      */
     @Test
     public void testSet_AtomContainer_AtomContainer() throws CDKException {
-//        System.out.println("set");
+//        //System.out.println("set");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
 
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
@@ -231,7 +231,7 @@ public class IsomorphismTest {
      */
     @Test
     public void testGetAllAtomMapping() throws CDKException {
-//        System.out.println("getAllAtomMapping");
+//        //System.out.println("getAllAtomMapping");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
@@ -256,7 +256,7 @@ public class IsomorphismTest {
      */
     @Test
     public void testgetAllAtomMapping() throws CDKException {
-//        System.out.println("getAllAtomMapping");
+//        //System.out.println("getAllAtomMapping");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
@@ -274,7 +274,7 @@ public class IsomorphismTest {
      */
     @Test
     public void testGetFirstAtomMapping() throws CDKException {
-//        System.out.println("getFirstAtomMapping");
+//        //System.out.println("getFirstAtomMapping");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
@@ -292,7 +292,7 @@ public class IsomorphismTest {
      */
     @Test
     public void testGetFirstMapping() throws CDKException {
-//        System.out.println("getFirstAtomMapping");
+//        //System.out.println("getFirstAtomMapping");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
@@ -310,7 +310,7 @@ public class IsomorphismTest {
      */
     @Test
     public void testSetChemFilters() throws CDKException {
-//        System.out.println("setChemFilters");
+//        //System.out.println("setChemFilters");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/OCC=C");
         IAtomContainer query = sp.parseSmiles("CCCOCC(C)=C");
@@ -328,7 +328,7 @@ public class IsomorphismTest {
      */
     @Test
     public void testGetFragmentSize() throws CDKException {
-//        System.out.println("getFragmentSize");
+//        //System.out.println("getFragmentSize");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
@@ -346,7 +346,7 @@ public class IsomorphismTest {
      */
     @Test
     public void testGetStereoScore() throws CDKException {
-//        System.out.println("getStereoScore");
+//        //System.out.println("getStereoScore");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/OCC=C");
         IAtomContainer query = sp.parseSmiles("CCCOCC(C)=C");
@@ -364,7 +364,7 @@ public class IsomorphismTest {
      */
     @Test
     public void testGetEnergyScore() throws CDKException {
-//        System.out.println("getEnergyScore");
+//        //System.out.println("getEnergyScore");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
@@ -382,7 +382,7 @@ public class IsomorphismTest {
      */
     @Test
     public void testGetReactantMolecule() throws CDKException {
-//        System.out.println("getQueryContainer");
+//        //System.out.println("getQueryContainer");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
@@ -399,7 +399,7 @@ public class IsomorphismTest {
      */
     @Test
     public void testGetProductMolecule() throws CDKException {
-//        System.out.println("getTargetContainer");
+//        //System.out.println("getTargetContainer");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
@@ -416,7 +416,7 @@ public class IsomorphismTest {
      */
     @Test
     public void testGetTanimotoSimilarity() throws Exception {
-//        System.out.println("getTanimotoSimilarity");
+//        //System.out.println("getTanimotoSimilarity");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
@@ -435,7 +435,7 @@ public class IsomorphismTest {
      */
     @Test
     public void testIsStereoMisMatch() throws CDKException {
-//        System.out.println("isStereoMisMatch");
+//        //System.out.println("isStereoMisMatch");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
@@ -509,7 +509,7 @@ public class IsomorphismTest {
      */
     @Test
     public void testNADPlusNADHBondSensitive() throws Exception {
-//        System.out.println("getTanimoto for NAD+ and NADH");
+//        //System.out.println("getTanimoto for NAD+ and NADH");
         SmilesParser smilesParser = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer molecule1 = smilesParser.parseSmiles("NC(=O)c1ccc[n+](c1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
         IAtomContainer molecule2 = smilesParser.parseSmiles("NC(=O)C1=CN(C=CC1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
@@ -527,7 +527,7 @@ public class IsomorphismTest {
      */
     @Test
     public void testNADPlusNADHBondInSensitive() throws Exception {
-//        System.out.println("getTanimoto for NAD+ and NADH");
+//        //System.out.println("getTanimoto for NAD+ and NADH");
         SmilesParser smilesParser = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer molecule1 = smilesParser.parseSmiles("NC(=O)c1ccc[n+](c1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
 
@@ -561,19 +561,19 @@ public class IsomorphismTest {
         comparison.setChemFilters(true, true, true);
 
         //Get similarity score
-//        System.out.println("Tanimoto coefficient:  " + comparison.getTanimotoSimilarity());
+//        //System.out.println("Tanimoto coefficient:  " + comparison.getTanimotoSimilarity());
         Assert.assertEquals(0.6, comparison.getTanimotoSimilarity());
         Assert.assertEquals(12, comparison.getAllAtomMapping().size());
         // Print the mapping between molecules
-//        System.out.println(" Mappings: ");
+//        //System.out.println(" Mappings: ");
 //        for (AtomAtomMapping atomatomMapping : comparison.getAllAtomMapping()) {
 //            for (Map.Entry<IAtom, IAtom> mapping : atomatomMapping.getMappings().entrySet()) {
 //                IAtom sourceAtom = mapping.getKey();
 //                IAtom targetAtom = mapping.getValue();
-//                System.out.println(sourceAtom.getSymbol() + " " + targetAtom.getSymbol());
-//                System.out.println(atomatomMapping.getQueryIndex(sourceAtom) + " " + atomatomMapping.getTargetIndex(targetAtom));
+//                //System.out.println(sourceAtom.getSymbol() + " " + targetAtom.getSymbol());
+//                //System.out.println(atomatomMapping.getQueryIndex(sourceAtom) + " " + atomatomMapping.getTargetIndex(targetAtom));
 //            }
-//            System.out.println("");
+//            //System.out.println("");
 //        }
     }
 
@@ -599,19 +599,19 @@ public class IsomorphismTest {
         comparison.setChemFilters(true, true, true);
 
         //Get similarity score
-//        System.out.println("Tanimoto coefficient:  " + comparison.getTanimotoSimilarity());
+//        //System.out.println("Tanimoto coefficient:  " + comparison.getTanimotoSimilarity());
         Assert.assertEquals(0.6, comparison.getTanimotoSimilarity());
         Assert.assertEquals(12, comparison.getAllAtomMapping().size());
         // Print the mapping between molecules
-//        System.out.println(" Mappings: ");
+//        //System.out.println(" Mappings: ");
 //        for (AtomAtomMapping atomatomMapping : comparison.getAllAtomMapping()) {
 //            for (Map.Entry<IAtom, IAtom> mapping : atomatomMapping.getMappings().entrySet()) {
 //                IAtom sourceAtom = mapping.getKey();
 //                IAtom targetAtom = mapping.getValue();
-////                System.out.println(sourceAtom.getSymbol() + " " + targetAtom.getSymbol());
-////                System.out.println(atomatomMapping.getQueryIndex(sourceAtom) + " " + atomatomMapping.getTargetIndex(targetAtom));
+////                //System.out.println(sourceAtom.getSymbol() + " " + targetAtom.getSymbol());
+////                //System.out.println(atomatomMapping.getQueryIndex(sourceAtom) + " " + atomatomMapping.getTargetIndex(targetAtom));
 //            }
-////            System.out.println("");
+////            //System.out.println("");
 //        }
     }
 
@@ -633,16 +633,16 @@ public class IsomorphismTest {
         comparison.setChemFilters(true, true, true);
 
         //Get similarity score
-//        System.out.println("Tanimoto coefficient:  " + comparison.getTanimotoSimilarity());
-//        System.out.println(" Mappings: ");
+//        //System.out.println("Tanimoto coefficient:  " + comparison.getTanimotoSimilarity());
+//        //System.out.println(" Mappings: ");
 //        for (AtomAtomMapping atomatomMapping : comparison.getAllAtomMapping()) {
 //            for (Map.Entry<IAtom, IAtom> mapping : atomatomMapping.getMappings().entrySet()) {
 //                IAtom sourceAtom = mapping.getKey();
 //                IAtom targetAtom = mapping.getValue();
-//                System.out.println(sourceAtom.getSymbol() + " " + targetAtom.getSymbol());
-//                System.out.println(atomatomMapping.getQueryIndex(sourceAtom) + " " + atomatomMapping.getTargetIndex(targetAtom));
+//                //System.out.println(sourceAtom.getSymbol() + " " + targetAtom.getSymbol());
+//                //System.out.println(atomatomMapping.getQueryIndex(sourceAtom) + " " + atomatomMapping.getTargetIndex(targetAtom));
 //            }
-//            System.out.println("");
+//            //System.out.println("");
 //        }
     }
 }

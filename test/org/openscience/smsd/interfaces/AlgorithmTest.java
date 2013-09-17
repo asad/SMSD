@@ -62,7 +62,7 @@ public class AlgorithmTest {
      */
     @Test
     public void testValues() {
-        System.out.println("values");
+        //System.out.println("values");
         Algorithm[] expResult = null;
         Algorithm[] result = Algorithm.values();
         Assert.assertArrayEquals(expResult, result);
@@ -75,7 +75,7 @@ public class AlgorithmTest {
      */
     @Test
     public void testValueOf() {
-        System.out.println("valueOf");
+        //System.out.println("valueOf");
         String name = "";
         Algorithm expResult = null;
         Algorithm result = Algorithm.valueOf(name);
@@ -89,7 +89,7 @@ public class AlgorithmTest {
      */
     @Test
     public void testType() {
-        System.out.println("type");
+        //System.out.println("type");
         Algorithm instance = null;
         int expResult = 0;
         int result = instance.type();
@@ -103,7 +103,7 @@ public class AlgorithmTest {
      */
     @Test
     public void testDescription() {
-        System.out.println("description");
+        //System.out.println("description");
         Algorithm instance = null;
         String expResult = "";
         String result = instance.description();
@@ -117,7 +117,7 @@ public class AlgorithmTest {
      */
     @Test
     public void testCompareTo() {
-        System.out.println("compareTo");
+        //System.out.println("compareTo");
         Algorithm obj = null;
         Algorithm instance = null;
         int expResult = 0;
