@@ -55,12 +55,7 @@ public class DefaultMatcher {
 //            System.out.println("Atom Matched");
             return true;
         }
-        // ok, atoms match
-        if (atomMatcher1.matches(bondA2.getAtom(1)) && atomMatcher2.matches(bondA2.getAtom(0))) {
-//            System.out.println("Atom Matched");
-            return true;
-        }
-        return false;
+        return atomMatcher1.matches(bondA2.getAtom(1)) && atomMatcher2.matches(bondA2.getAtom(0));
     }
 
     /**
@@ -76,9 +71,6 @@ public class DefaultMatcher {
         if (!isAtomMatch(bondA1, bondA2, shouldMatchRings)) {
             return false;
         }
-        if (matchBond && !isBondMatch(new DefaultBondMatcher(bondA1, matchBond), bondA2)) {
-            return false;
-        }
-        return true;
+        return !matchBond || isBondMatch(new DefaultBondMatcher(bondA1, matchBond), bondA2);
     }
 }
