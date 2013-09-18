@@ -79,7 +79,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
          */
         if (isExtensionRequired() || !timoutVF) {
 
-            List<Map<Integer, Integer>> mcsVFSeeds = new ArrayList<Map<Integer, Integer>>();
+            List<Map<Integer, Integer>> mcsVFSeeds = new ArrayList<>();
 
             /*
              * Copy VF based MCS solution in the seed
@@ -99,36 +99,36 @@ public final class VF2MCS extends BaseMCS implements IResults {
             /*
              * Generate the UIT based MCS seeds
              */
-            List<Map<Integer, Integer>> mcsSeeds = new ArrayList<Map<Integer, Integer>>();
+            List<Map<Integer, Integer>> mcsSeeds = new ArrayList<>();
 
 //            long startTime = System.nanoTime();
-//            List<AtomAtomMapping> mcsUITCliques;
+            List<AtomAtomMapping> mcsUITCliques;
 //            System.out.println("calling UIT");
-//            mcsUITCliques = addUIT();
-//            for (AtomAtomMapping mapping : mcsUITCliques) {
-//                Map<Integer, Integer> map = new TreeMap<Integer, Integer>();
-//                map.putAll(mapping.getMappingsIndex());
-//                mcsSeeds.add(map);
-//            }
-//            long stopTime = System.nanoTime();
-//            System.out.println("done UIT " + (stopTime - startTime));
-            List<AtomAtomMapping> mcsKochCliques;
-            long startTimeKoch = System.nanoTime();
-            System.out.println("calling KochCliques");
-            mcsKochCliques = addKochCliques();
-            for (AtomAtomMapping mapping : mcsKochCliques) {
-                Map<Integer, Integer> map = new TreeMap<Integer, Integer>();
+            mcsUITCliques = addUIT();
+            for (AtomAtomMapping mapping : mcsUITCliques) {
+                Map<Integer, Integer> map = new TreeMap<>();
                 map.putAll(mapping.getMappingsIndex());
                 mcsSeeds.add(map);
             }
-            long stopTimeKoch = System.nanoTime();
-            System.out.println("done Koch " + (stopTimeKoch - startTimeKoch));
+            long stopTime = System.nanoTime();
+//            System.out.println("done UIT " + (stopTime - startTime));
+            List<AtomAtomMapping> mcsKochCliques;
+//            long startTimeKoch = System.nanoTime();
+//            System.out.println("calling KochCliques");
+            mcsKochCliques = addKochCliques();
+            for (AtomAtomMapping mapping : mcsKochCliques) {
+                Map<Integer, Integer> map = new TreeMap<>();
+                map.putAll(mapping.getMappingsIndex());
+                mcsSeeds.add(map);
+            }
+//            long stopTimeKoch = System.nanoTime();
+//            System.out.println("done Koch " + (stopTimeKoch - startTimeKoch));
             /*
              * Store largest MCS seeds generated from MCSPlus and UIT
              */
             int solutionSize = 0;
             counter = 0;
-            List<Map<Integer, Integer>> cleanedMCSSeeds = new ArrayList<Map<Integer, Integer>>();
+            List<Map<Integer, Integer>> cleanedMCSSeeds = new ArrayList<>();
 //            System.out.println("mergin  UIT & KochCliques");
             if (!mcsSeeds.isEmpty()) {
                 for (Map<Integer, Integer> map : mcsSeeds) {

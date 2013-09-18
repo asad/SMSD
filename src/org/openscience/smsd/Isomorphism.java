@@ -242,7 +242,10 @@ public final class Isomorphism extends BaseMapping implements Serializable {
     private synchronized void defaultMCSAlgorithm() {
         try {
             boolean timeoutMCS1 = cdkMCSAlgorithm();
-            if (getMappingCount() == 0 || timeoutMCS1) {
+            if ((getMappingCount() == 0 && timeoutMCS1)
+                    || (timeoutMCS1 && getMappingCount() > 0
+                    && (getFirstAtomMapping().getCount() != getQueryContainer().getAtomCount()
+                    || getFirstAtomMapping().getCount() != getTargetContainer().getAtomCount()))) {
                 vfLibMCSAlgorithm();
             }
         } catch (Exception e) {

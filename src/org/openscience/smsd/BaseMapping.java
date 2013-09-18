@@ -53,8 +53,8 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
     private List<Double> stereoScoreList;
     private List<Integer> fragmentSizeList;
     private List<Double> bondEnergiesList;
-    private final static ILoggingTool Logger =
-            LoggingToolFactory.createLoggingTool(BaseMapping.class);
+    private final static ILoggingTool Logger
+            = LoggingToolFactory.createLoggingTool(BaseMapping.class);
 
     /**
      *
@@ -158,11 +158,9 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
         int stereoMisMatchScore = 0;
         if (getMappingCount() > 0) {
             AtomAtomMapping firstAtomMCS = getMCSList().iterator().next();
-            for (Iterator<IAtom> it1 = firstAtomMCS.getMappings().keySet().iterator(); it1.hasNext();) {
-                IAtom indexI = it1.next();
+            for (IAtom indexI : firstAtomMCS.getMappings().keySet()) {
                 IAtom indexJ = firstAtomMCS.getMappings().get(indexI);
-                for (Iterator<IAtom> it2 = firstAtomMCS.getMappings().keySet().iterator(); it2.hasNext();) {
-                    IAtom indexIPlus = it2.next();
+                for (IAtom indexIPlus : firstAtomMCS.getMappings().keySet()) {
                     IAtom indexJPlus = firstAtomMCS.getMappings().get(indexIPlus);
                     if (!indexI.equals(indexIPlus) && !indexJ.equals(indexJPlus)) {
 
@@ -229,7 +227,7 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
      */
     @Override
     public synchronized List<AtomAtomMapping> getAllAtomMapping() {
-        return Collections.unmodifiableList(new ArrayList<AtomAtomMapping>(getMCSList()));
+        return Collections.unmodifiableList(new ArrayList<>(getMCSList()));
     }
 
     /**
@@ -302,15 +300,12 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
     }
 
     /**
-     * Returns bond maps between sourceAtomCount and targetAtomCount molecules
-     * based on the atoms
+     * Returns bond maps between sourceAtomCount and targetAtomCount molecules based on the atoms
      *
      * @param ac1 sourceAtomCount molecule
      * @param ac2 targetAtomCount molecule
-     * @param mappings mappings between sourceAtomCount and targetAtomCount
-     * molecule atoms
-     * @return bond maps between sourceAtomCount and targetAtomCount molecules
-     * based on the atoms
+     * @param mappings mappings between sourceAtomCount and targetAtomCount molecule atoms
+     * @return bond maps between sourceAtomCount and targetAtomCount molecules based on the atoms
      */
     public synchronized List<Map<IBond, IBond>> makeBondMapsOfAtomMaps(IAtomContainer ac1,
             IAtomContainer ac2, List<AtomAtomMapping> mappings) {
@@ -323,15 +318,12 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
 
     /**
      *
-     * Returns bond map between sourceAtomCount and targetAtomCount molecules
-     * based on the atoms
+     * Returns bond map between sourceAtomCount and targetAtomCount molecules based on the atoms
      *
      * @param ac1 sourceAtomCount molecule
      * @param ac2 targetAtomCount molecule
-     * @param mapping mappings between sourceAtomCount and targetAtomCount
-     * molecule atoms
-     * @return bond map between sourceAtomCount and targetAtomCount molecules
-     * based on the atoms
+     * @param mapping mappings between sourceAtomCount and targetAtomCount molecule atoms
+     * @return bond map between sourceAtomCount and targetAtomCount molecules based on the atoms
      */
     private synchronized Map<IBond, IBond> makeBondMapOfAtomMap(IAtomContainer ac1, IAtomContainer ac2,
             AtomAtomMapping mapping) {
