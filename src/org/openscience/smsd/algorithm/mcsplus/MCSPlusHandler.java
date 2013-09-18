@@ -136,11 +136,12 @@ public final class MCSPlusHandler extends MoleculeInitializer implements IResult
     private synchronized void setAllMapping() {
         try {
 
-            List<Map<Integer, Integer>> final_solution
+            List<Map<Integer, Integer>> solutions
                     = Collections.synchronizedList(FinalMappings.getInstance().getFinalMapping());
+            FinalMappings.getInstance().getFinalMapping().clear();
             int counter = 0;
             int bestSolSize = 0;
-            for (Map<Integer, Integer> solution : final_solution) {
+            for (Map<Integer, Integer> solution : solutions) {
 //                System.out.println("Number of MCS solution: " + solution);
                 Map<Integer, Integer> validSolution = Collections.synchronizedSortedMap(new TreeMap<Integer, Integer>());
                 if (!flagExchange) {

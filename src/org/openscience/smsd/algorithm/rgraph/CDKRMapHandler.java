@@ -511,14 +511,9 @@ public final class CDKRMapHandler {
 
                 List<CDKRMap> list = new ArrayList<CDKRMap>(arrayList);
                 count = arrayList.size();
-
-                //System.out.println("List size" + list.size());
-                //Collection threadSafeList = Collections.synchronizedCollection( list );
                 allMaximumMappings = new Stack<List<CDKRMap>>();
-                //allMaximumMappings.clear();
                 allMaximumMappings.push(list);
             } else if (arrayList.size() == count) {
-
                 List<CDKRMap> list = new ArrayList<CDKRMap>(arrayList);
                 count = arrayList.size();
                 allMaximumMappings.push(list);

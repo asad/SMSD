@@ -170,8 +170,10 @@ public class MCSSeedGenerator implements Callable<List<AtomAtomMapping>> {
             rOnPFlag = false;
             rmap.calculateOverlapsAndReduce(target, source, bondMatch, ringMatch);
         }
-        sol = FinalMappings.getInstance().getFinalMapping();
-        return setUITMappings(rOnPFlag, sol);
+        List<Map<Integer, Integer>> solutions
+                = Collections.synchronizedList(FinalMappings.getInstance().getFinalMapping());
+        FinalMappings.getInstance().getFinalMapping().clear();
+        return setUITMappings(rOnPFlag, solutions);
     }
 
     private List<AtomAtomMapping> setUITMappings(boolean RONP, List<Map<Integer, Integer>> sol) {

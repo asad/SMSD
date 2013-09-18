@@ -181,9 +181,11 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
 
         //System.out.println("Output of the final FinalMappings: ");
         try {
-            List<Map<Integer, Integer>> sol = FinalMappings.getInstance().getFinalMapping();
+            List<Map<Integer, Integer>> solutions
+                    = Collections.synchronizedList(FinalMappings.getInstance().getFinalMapping());
+            FinalMappings.getInstance().getFinalMapping().clear();
             int counter = 0;
-            for (Map<Integer, Integer> final_solution : sol) {
+            for (Map<Integer, Integer> final_solution : solutions) {
                 TreeMap<Integer, Integer> atomMappings = new TreeMap<Integer, Integer>();
                 for (Map.Entry<Integer, Integer> Solutions : final_solution.entrySet()) {
 

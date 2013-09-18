@@ -110,7 +110,7 @@ public class FinalMappings implements IFinalMapping {
     @Override
     @TestMethod("testGetFinalMapping")
     public synchronized List<Map<Integer, Integer>> getFinalMapping() {
-        return Collections.synchronizedList(new ArrayList<Map<Integer, Integer>>(mappings));
+        return Collections.synchronizedList(new ArrayList<>(mappings));
     }
 
     /**
