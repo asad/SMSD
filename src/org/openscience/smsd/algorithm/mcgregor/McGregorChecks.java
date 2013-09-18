@@ -38,6 +38,7 @@ import org.openscience.smsd.helper.BinaryTree;
 
 /**
  * Class to perform check/methods for McGregor class.
+ *
  * @cdk.module smsd
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
@@ -55,8 +56,8 @@ public class McGregorChecks {
      * @param i_bond_neighbor_atoms_B
      * @param cBondNeighborsA
      * @param cBondNeighborsB
-     * @param shouldMatchBonds 
-     * @param shouldMatchRings 
+     * @param shouldMatchBonds
+     * @param shouldMatchRings
      * @return
      */
     protected static boolean isFurtherMappingPossible(
@@ -76,7 +77,6 @@ public class McGregorChecks {
             String G1A = cBondNeighborsA.get(row * 4 + 0);
             String G2A = cBondNeighborsA.get(row * 4 + 1);
 
-
             for (int column = 0; column < neighborBondNumB; column++) {
 
                 String G1B = cBondNeighborsB.get(column * 4 + 0);
@@ -87,7 +87,6 @@ public class McGregorChecks {
 
                         int Index_I = i_bond_neighbor_atoms_A.get(row * 3 + 0);
                         int Index_IPlus1 = i_bond_neighbor_atoms_A.get(row * 3 + 1);
-
 
                         int Index_J = i_bond_neighbor_atoms_B.get(column * 3 + 0);
                         int Index_JPlus1 = i_bond_neighbor_atoms_B.get(column * 3 + 1);
@@ -137,7 +136,7 @@ public class McGregorChecks {
     }
 
     /**
-     * 
+     *
      * @param bondA1
      * @param bondA2
      * @param shouldMatchBonds
@@ -164,7 +163,7 @@ public class McGregorChecks {
             }
             return false;
         } else {
-            return DefaultMatcher.matches(bondA1, bondA2, shouldMatchBonds, shouldMatchRings) ? true : false;
+            return DefaultMatcher.matches(bondA1, bondA2, shouldMatchBonds, shouldMatchRings);
         }
     }
 
@@ -178,7 +177,7 @@ public class McGregorChecks {
      */
     protected static int searchCorrespondingAtom(int mappedAtomsSize, int atomFromOtherMolecule, int molecule, List<Integer> mapped_atoms_org) {
 
-        List<Integer> mapped_atoms = new ArrayList<Integer>(mapped_atoms_org);
+        List<Integer> mapped_atoms = new ArrayList<>(mapped_atoms_org);
 
         int corresponding_atom = 0;
         for (int a = 0; a < mappedAtomsSize; a++) {
@@ -240,7 +239,7 @@ public class McGregorChecks {
     protected static List<Integer> removeRecurringMappings(List<Integer> atom_mapping) {
 
         boolean exist = true;
-        List<Integer> temp_map = new ArrayList<Integer>();
+        List<Integer> temp_map = new ArrayList<>();
         int temp_counter = 0;
         int atom_mapping_size = atom_mapping.size();
         for (int x = 0; x < atom_mapping_size; x += 2) {
@@ -263,11 +262,12 @@ public class McGregorChecks {
     }
 
     /**
-     * The function is called in function partsearch. The function is given a temporary matrix and a position (row/column)
-     * within this matrix. First the function sets all entries to zero, which can be exlcuded in respect to the current
-     * atom by atom matching. After this the function replaces all entries in the same row and column of the current
-     * position by zeros. Only the entry of the current position is set to one.
-     * Return value "count_arcsleft" counts the number of arcs, which are still in the matrix.
+     * The function is called in function partsearch. The function is given a temporary matrix and a position
+     * (row/column) within this matrix. First the function sets all entries to zero, which can be excluded in respect to
+     * the current atom by atom matching. After this the function replaces all entries in the same row and column of the
+     * current position by zeros. Only the entry of the current position is set to one. Return value "count_arcsleft"
+     * counts the number of arcs, which are still in the matrix.
+     *
      * @param row
      * @param column
      * @param MARCS
@@ -316,7 +316,7 @@ public class McGregorChecks {
      * @return
      */
     protected static List<String> generateCSetCopy(int bond_number, List<String> c_set) {
-        List<String> cTabCopy = new ArrayList<String>();
+        List<String> cTabCopy = new ArrayList<>();
         for (int a = 0; a < bond_number; a++) {
             cTabCopy.add(c_set.get(a * 4 + 0));
             cTabCopy.add(c_set.get(a * 4 + 1));
@@ -333,7 +333,7 @@ public class McGregorChecks {
      * @throws IOException
      */
     protected static List<String> generateCTabCopy(IAtomContainer atomContainer) throws IOException {
-        List<String> c_tab_copy = new ArrayList<String>();
+        List<String> c_tab_copy = new ArrayList<>();
         for (int a = 0; a < atomContainer.getBondCount(); a++) {
             String AtomI = atomContainer.getBond(a).getAtom(0).getSymbol();
             String AtomJ = atomContainer.getBond(a).getAtom(1).getSymbol();
@@ -357,11 +357,8 @@ public class McGregorChecks {
      * @return
      */
     protected static boolean case1(int G1_atom, int G3_atom, int G4_atom, int row_atom1, int row_atom2, int column_atom3, int column_atom4) {
-        if (((G1_atom == row_atom1) || (G1_atom == row_atom2))
-                && (!(((column_atom3 == G3_atom) || (column_atom4 == G3_atom)) || ((column_atom3 == G4_atom) || (column_atom4 == G4_atom))))) {
-            return true;
-        }
-        return false;
+        return ((G1_atom == row_atom1) || (G1_atom == row_atom2))
+                && (!(((column_atom3 == G3_atom) || (column_atom4 == G3_atom)) || ((column_atom3 == G4_atom) || (column_atom4 == G4_atom))));
     }
 
     /**
@@ -376,12 +373,9 @@ public class McGregorChecks {
      * @return
      */
     protected static boolean case2(int G2_atom, int G3_atom, int G4_atom, int row_atom1, int row_atom2, int column_atom3, int column_atom4) {
-        if (((G2_atom == row_atom1)
+        return ((G2_atom == row_atom1)
                 || (G2_atom == row_atom2))
-                && (!(((column_atom3 == G3_atom) || (column_atom4 == G3_atom)) || ((column_atom3 == G4_atom) || (column_atom4 == G4_atom))))) {
-            return true;
-        }
-        return false;
+                && (!(((column_atom3 == G3_atom) || (column_atom4 == G3_atom)) || ((column_atom3 == G4_atom) || (column_atom4 == G4_atom))));
     }
 
     /**
@@ -396,11 +390,8 @@ public class McGregorChecks {
      * @return
      */
     protected static boolean case3(int G1_atom, int G3_atom, int G2_atom, int row_atom1, int row_atom2, int column_atom3, int column_atom4) {
-        if (((G3_atom == column_atom3) || (G3_atom == column_atom4))
-                && (!(((row_atom1 == G1_atom) || (row_atom2 == G1_atom)) || ((row_atom1 == G2_atom) || (row_atom2 == G2_atom))))) {
-            return true;
-        }
-        return false;
+        return ((G3_atom == column_atom3) || (G3_atom == column_atom4))
+                && (!(((row_atom1 == G1_atom) || (row_atom2 == G1_atom)) || ((row_atom1 == G2_atom) || (row_atom2 == G2_atom))));
     }
 
     /**
@@ -415,11 +406,8 @@ public class McGregorChecks {
      * @return
      */
     protected static boolean case4(int G1_atom, int G2_atom, int G4_atom, int row_atom1, int row_atom2, int column_atom3, int column_atom4) {
-        if (((G4_atom == column_atom3) || (G4_atom == column_atom4))
-                && (!(((row_atom1 == G1_atom) || (row_atom2 == G1_atom)) || ((row_atom1 == G2_atom) || (row_atom2 == G2_atom))))) {
-            return true;
-        }
-        return false;
+        return ((G4_atom == column_atom3) || (G4_atom == column_atom4))
+                && (!(((row_atom1 == G1_atom) || (row_atom2 == G1_atom)) || ((row_atom1 == G2_atom) || (row_atom2 == G2_atom))));
     }
 
     /**
@@ -435,10 +423,7 @@ public class McGregorChecks {
      * @return
      */
     protected static boolean cases(int G1_atom, int G2_atom, int G3_atom, int G4_atom, int row_atom1, int row_atom2, int column_atom3, int column_atom4) {
-        if (case1(G1_atom, G3_atom, G4_atom, row_atom1, row_atom2, column_atom3, column_atom4) || case2(G2_atom, G3_atom, G4_atom, row_atom1, row_atom2, column_atom3, column_atom4) || case3(G1_atom, G3_atom, G2_atom, row_atom1, row_atom2, column_atom3, column_atom4) || case4(G1_atom, G2_atom, G4_atom, row_atom1, row_atom2, column_atom3, column_atom4)) {
-            return true;
-        }
-        return false;
+        return case1(G1_atom, G3_atom, G4_atom, row_atom1, row_atom2, column_atom3, column_atom4) || case2(G2_atom, G3_atom, G4_atom, row_atom1, row_atom2, column_atom3, column_atom4) || case3(G1_atom, G3_atom, G2_atom, row_atom1, row_atom2, column_atom3, column_atom4) || case4(G1_atom, G2_atom, G4_atom, row_atom1, row_atom2, column_atom3, column_atom4);
     }
 
     /**
@@ -452,8 +437,8 @@ public class McGregorChecks {
      * @param cBondNeighborsA
      * @param cBondNeighborsB
      * @param modifiedARCS
-     * @param shouldMatchBonds 
-     * @param shouldMatchRings 
+     * @param shouldMatchBonds
+     * @param shouldMatchRings
      * @return
      */
     protected static List<Integer> setArcs(IAtomContainer source,
@@ -476,9 +461,7 @@ public class McGregorChecks {
                 String G1B = cBondNeighborsB.get(column * 4 + 0);
                 String G2B = cBondNeighborsB.get(column * 4 + 1);
 
-
                 if (McGregorChecks.isAtomMatch(G1A, G2A, G1B, G2B)) {
-
 
                     int Index_I = i_bond_neighbor_atoms_A.get(row * 3 + 0);
                     int Index_IPlus1 = i_bond_neighbor_atoms_A.get(row * 3 + 1);
@@ -598,7 +581,6 @@ public class McGregorChecks {
             String G1A = cBondNeighborsA.get(row * 4 + 0);
             String G2A = cBondNeighborsA.get(row * 4 + 1);
 
-
             for (int column = 0; column < neighborBondNumB; column++) {
 
                 String G1B = cBondNeighborsB.get(column * 4 + 0);
@@ -609,7 +591,6 @@ public class McGregorChecks {
 
                         int Index_I = iBondNeighborAtomsA.get(row * 3 + 0);
                         int Index_IPlus1 = iBondNeighborAtomsA.get(row * 3 + 1);
-
 
                         int Index_J = iBondNeighborAtomsB.get(column * 3 + 0);
                         int Index_JPlus1 = iBondNeighborAtomsB.get(column * 3 + 1);
@@ -633,7 +614,6 @@ public class McGregorChecks {
 
                         int Index_I = iBondNeighborAtomsA.get(row * 3 + 0);
                         int Index_IPlus1 = iBondNeighborAtomsA.get(row * 3 + 1);
-
 
                         int Index_J = iBondNeighborAtomsB.get(column * 3 + 0);
                         int Index_JPlus1 = iBondNeighborAtomsB.get(column * 3 + 1);

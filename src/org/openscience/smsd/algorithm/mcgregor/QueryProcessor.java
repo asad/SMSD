@@ -128,7 +128,6 @@ public class QueryProcessor {
                     normal_bond = unMappedAtomsEqualsIndexI(query, target, atomIndex, counter, mapped_atoms, indexI, indexJ, order);
                     bond_considered = true;
                 }
-
                 if (normal_bond && bond_considered) {
                     markNormalBonds(atomIndex, indexI, indexJ, order);
                     break;

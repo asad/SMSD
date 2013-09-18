@@ -85,6 +85,8 @@ public final class GenerateCompatibilityGraph {
         compatibilityGraphNodes();
 //        System.out.println("compatibilityGraph ");
         compatibilityGraph();
+//        System.out.println("c-edges " + getCEgdes().size());
+//        System.out.println("d-edges " + getDEgdes().size());
 
         if (getCEdgesSize() == 0) {
             clearCompGraphNodes();
@@ -110,7 +112,10 @@ public final class GenerateCompatibilityGraph {
                 label.add(a, "Z9");
             }
             IAtom refAtom = atomCont.getAtom(i);
-            String referenceAtom = refAtom.getSymbol();
+            /*
+             * Important Step: Discriminate between source atom types
+             */
+            String referenceAtom = refAtom.getAtomTypeName() != null ? refAtom.getAtomTypeName() : refAtom.getSymbol();
 
             label.set(0, referenceAtom);
             List<IAtom> connAtoms = atomCont.getConnectedAtomsList(refAtom);
@@ -151,7 +156,7 @@ public final class GenerateCompatibilityGraph {
         boolean flag = true;
         for (int i = 0; i < labelA.size(); i++) {
             if (!labelA.get(i).equals(labelB.get(i))) {
-                if (labelA.get(i).compareTo(labelB.get(i)) > 0) {
+                if (labelA.get(i).compareTo(labelB.get(i)) < 0) {
                     flag = false;
                 }
             }
@@ -190,13 +195,13 @@ public final class GenerateCompatibilityGraph {
             for (Map.Entry<IAtom, List<String>> labelB : label_list_molB.entrySet()) {
                 if (isSubset(labelA.getValue(), labelB.getValue())) {
 //                    System.err.println("IS SUBSET");
-                    if (isEqual(labelA.getValue(), labelB.getValue())) {
+//                    if (isEqual(labelA.getValue(), labelB.getValue())) {
 //                    System.err.println("IS EQUAL");
-                        compGraphNodes.add(source.getAtomNumber(labelA.getKey()));
-                        compGraphNodes.add(target.getAtomNumber(labelB.getKey()));
-                        compGraphNodes.add(nodeCount);
-                        nodeCount += 1;
-                    }
+                    compGraphNodes.add(source.getAtomNumber(labelA.getKey()));
+                    compGraphNodes.add(target.getAtomNumber(labelB.getKey()));
+                    compGraphNodes.add(nodeCount);
+                    nodeCount += 1;
+//                    }
                 }
             }
         }
@@ -216,7 +221,6 @@ public final class GenerateCompatibilityGraph {
 //        System.out.println("Source atom count " + source.getAtomCount());
 //        System.out.println("target atom count " + target.getAtomCount());
 //        System.out.println("compGraphNodes combs: " + compGraphNodes.size());
-//        System.out.println("compGraphNodes size " + comp_graph_nodes_List_size);
 //        System.out.println("compGraphNodes " + compGraphNodes);
         cEdges = new ArrayList<>(); //Initialize the cEdges List
         dEdges = new ArrayList<>(); //Initialize the dEdges List

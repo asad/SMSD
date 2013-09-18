@@ -115,7 +115,6 @@ public class MCSPlus {
 //            System.out.println("D_edges: " + dEdges.size());
 //            System.out.println("comp_graph_nodes: " + comp_graph_nodes);
             BKKCKCF init = new BKKCKCF(comp_graph_nodes, cEdges, dEdges);
-//            Koch init = new Koch(comp_graph_nodes, cEdges, dEdges);
             Stack<List<Integer>> maxCliqueSet = new Stack<>();
             maxCliqueSet.addAll(init.getMaxCliqueSet());
 

@@ -101,7 +101,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
              */
             List<Map<Integer, Integer>> mcsSeeds = new ArrayList<>();
 
-//            long startTime = System.nanoTime();
+            long startTime = System.nanoTime();
             List<AtomAtomMapping> mcsUITCliques;
 //            System.out.println("calling UIT");
             mcsUITCliques = addUIT();
@@ -110,7 +110,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
                 map.putAll(mapping.getMappingsIndex());
                 mcsSeeds.add(map);
             }
-            long stopTime = System.nanoTime();
+//            long stopTime = System.nanoTime();
 //            System.out.println("done UIT " + (stopTime - startTime));
             List<AtomAtomMapping> mcsKochCliques;
 //            long startTimeKoch = System.nanoTime();
