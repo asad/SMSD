@@ -28,8 +28,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -41,7 +43,10 @@ import org.openscience.smsd.helper.LabelContainer;
 
 /**
  * This class generates compatibility graph between query and target molecule. It also marks edges in the compatibility
- * graph as c-edges or d-edges. @cdk.module smsd @cdk.githash
+ * graph as c-edges or d-edges.
+ *
+ * @cdk.module smsd
+ * @cdk.githash
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
@@ -85,8 +90,8 @@ public final class GenerateCompatibilityGraph {
         compatibilityGraphNodes();
 //        System.out.println("compatibilityGraph ");
         compatibilityGraph();
-//        System.out.println("c-edges " + getCEgdes().size());
-//        System.out.println("d-edges " + getDEgdes().size());
+        System.out.println("c-edges " + getCEgdes().size());
+        System.out.println("d-edges " + getDEgdes().size());
 
         if (getCEdgesSize() == 0) {
             clearCompGraphNodes();
@@ -103,7 +108,7 @@ public final class GenerateCompatibilityGraph {
         }
     }
 
-    private Map<IAtom, List<String>> labelAtoms(IAtomContainer atomCont) {
+    private Map<IAtom, List<String>> labelAtomsByAtomType(IAtomContainer atomCont) {
         Map<IAtom, List<String>> label_list = new HashMap<>();
 
         for (int i = 0; i < atomCont.getAtomCount(); i++) {
@@ -115,7 +120,7 @@ public final class GenerateCompatibilityGraph {
             /*
              * Important Step: Discriminate between source atom types
              */
-            String referenceAtom = refAtom.getAtomTypeName() != null ? refAtom.getAtomTypeName() : refAtom.getSymbol();
+            String referenceAtom = refAtom.getAtomTypeName() == null ? refAtom.getSymbol() : refAtom.getAtomTypeName();
 
             label.set(0, referenceAtom);
             List<IAtom> connAtoms = atomCont.getConnectedAtomsList(refAtom);
@@ -123,10 +128,42 @@ public final class GenerateCompatibilityGraph {
             int counter = 1;
 
             for (IAtom negAtom : connAtoms) {
-                String neighbouringAtom = negAtom.getAtomTypeName() != null ? negAtom.getAtomTypeName() : negAtom.getSymbol();
+                String neighbouringAtom = negAtom.getAtomTypeName() == null ? negAtom.getSymbol() : negAtom.getAtomTypeName();
                 label.set(counter, neighbouringAtom);
                 counter += 1;
             }
+//            System.out.println("label " + label);
+            bubbleSort(label);
+            label_list.put(refAtom, label);
+        }
+        return label_list;
+    }
+
+    private Map<IAtom, List<String>> labelAtomsBySymbol(IAtomContainer atomCont) {
+        Map<IAtom, List<String>> label_list = new HashMap<>();
+
+        for (int i = 0; i < atomCont.getAtomCount(); i++) {
+            List<String> label = new ArrayList<>(7);
+            for (int a = 0; a < 7; a++) {
+                label.add(a, "Z9");
+            }
+            IAtom refAtom = atomCont.getAtom(i);
+            /*
+             * Important Step: Discriminate between source atom types
+             */
+            String referenceAtom = refAtom.getSymbol();
+
+            label.set(0, referenceAtom);
+            List<IAtom> connAtoms = atomCont.getConnectedAtomsList(refAtom);
+
+            int counter = 1;
+
+            for (IAtom negAtom : connAtoms) {
+                String neighbouringAtom = negAtom.getSymbol();
+                label.set(counter, neighbouringAtom);
+                counter += 1;
+            }
+//            System.out.println("label " + label);
             bubbleSort(label);
             label_list.put(refAtom, label);
         }
@@ -186,22 +223,59 @@ public final class GenerateCompatibilityGraph {
 
         compGraphNodes.clear();
 
-        Map<IAtom, List<String>> label_list_molA = labelAtoms(source);
-        Map<IAtom, List<String>> label_list_molB = labelAtoms(target);
+        Set<Edge> edges = new HashSet<>();
 
         int nodeCount = 1;
 
+        Map<IAtom, List<String>> label_list_molA;
+        Map<IAtom, List<String>> label_list_molB;
+
+        label_list_molA = labelAtomsBySymbol(source);
+        label_list_molB = labelAtomsBySymbol(target);
+
         for (Map.Entry<IAtom, List<String>> labelA : label_list_molA.entrySet()) {
+//            System.err.println("labelA.getValue() " + labelA.getValue());
             for (Map.Entry<IAtom, List<String>> labelB : label_list_molB.entrySet()) {
                 if (isSubset(labelA.getValue(), labelB.getValue())) {
 //                    System.err.println("IS SUBSET");
-//                    if (isEqual(labelA.getValue(), labelB.getValue())) {
+                    if (isEqual(labelA.getValue(), labelB.getValue())) {
+//                        System.err.println("IS EQUAL");
+                        int atomNumberI = source.getAtomNumber(labelA.getKey());
+                        int atomNumberJ = target.getAtomNumber(labelB.getKey());
+                        Edge e = new Edge(atomNumberI, atomNumberJ);
+                        if (!edges.contains(e)) {
+                            edges.add(e);
+                            compGraphNodes.add(atomNumberI);
+                            compGraphNodes.add(atomNumberJ);
+                            compGraphNodes.add(nodeCount);
+                            nodeCount += 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        label_list_molA = labelAtomsByAtomType(source);
+        label_list_molB = labelAtomsByAtomType(target);
+
+        for (Map.Entry<IAtom, List<String>> labelA : label_list_molA.entrySet()) {
+//            System.err.println("labelA.getValue() " + labelA.getValue());
+            for (Map.Entry<IAtom, List<String>> labelB : label_list_molB.entrySet()) {
+                if (isSubset(labelA.getValue(), labelB.getValue())) {
+//                    System.err.println("IS SUBSET");
+                    if (isEqual(labelA.getValue(), labelB.getValue())) {
 //                    System.err.println("IS EQUAL");
-                    compGraphNodes.add(source.getAtomNumber(labelA.getKey()));
-                    compGraphNodes.add(target.getAtomNumber(labelB.getKey()));
-                    compGraphNodes.add(nodeCount);
-                    nodeCount += 1;
-//                    }
+                        int atomNumberI = source.getAtomNumber(labelA.getKey());
+                        int atomNumberJ = target.getAtomNumber(labelB.getKey());
+                        Edge e = new Edge(atomNumberI, atomNumberJ);
+                        if (!edges.contains(e)) {
+                            edges.add(e);
+                            compGraphNodes.add(atomNumberI);
+                            compGraphNodes.add(atomNumberJ);
+                            compGraphNodes.add(nodeCount);
+                            nodeCount += 1;
+                        }
+                    }
                 }
             }
         }
