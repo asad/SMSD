@@ -123,7 +123,7 @@ public final class GenerateCompatibilityGraph {
             int counter = 1;
 
             for (IAtom negAtom : connAtoms) {
-                String neighbouringAtom = negAtom.getSymbol();
+                String neighbouringAtom = negAtom.getAtomTypeName() != null ? negAtom.getAtomTypeName() : negAtom.getSymbol();
                 label.set(counter, neighbouringAtom);
                 counter += 1;
             }
