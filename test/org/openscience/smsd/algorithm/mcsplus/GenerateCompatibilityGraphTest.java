@@ -29,7 +29,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.openscience.cdk.AtomContainer;
-import org.openscience.smsd.algorithm.mcsplus.GenerateCompatibilityGraph;
 import static org.junit.Assert.*;
 
 /**

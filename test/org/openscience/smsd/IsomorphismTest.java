@@ -664,23 +664,11 @@ public class IsomorphismTest {
         IAtomContainer query = sp.parseSmiles("CC(C)=CCC\\C(C)=C\\CC\\C(C)=C\\CC\\C=C(/C)CC\\C=C(/C)CC[C@@H]1OC1(C)C");
         // Napthalene
         IAtomContainer target = sp.parseSmiles("[H][C@]12[C@@H](CC[C@]1(C)CC[C@]1(C)[C@]2([H])CC[C@]2([H])[C@@]3(C)CC[C@H](O)C(C)(C)[C@]3([H])CC[C@@]12C)C(C)=C");
-
-        Isomorphism comparison = new Isomorphism(query, target, Algorithm.VFLibMCS, false, false);
+        Isomorphism comparison = new Isomorphism(query, target, Algorithm.MCSPlus, false, false);
         // set chemical filter true
         comparison.setChemFilters(true, true, true);
-
-        //Get similarity score
-//        //System.out.println("Tanimoto coefficient:  " + comparison.getTanimotoSimilarity());
-//        //System.out.println(" Mappings: ");
-//        for (AtomAtomMapping atomatomMapping : comparison.getAllAtomMapping()) {
-//            for (Map.Entry<IAtom, IAtom> mapping : atomatomMapping.getMappings().entrySet()) {
-//                IAtom sourceAtom = mapping.getKey();
-//                IAtom targetAtom = mapping.getValue();
-//                //System.out.println(sourceAtom.getSymbol() + " " + targetAtom.getSymbol());
-//                //System.out.println(atomatomMapping.getQueryIndex(sourceAtom) + " " + atomatomMapping.getTargetIndex(targetAtom));
-//            }
-//            //System.out.println("");
-//        }
+        Assert.assertEquals(0.68, comparison.getTanimotoSimilarity(), .09);
+        Assert.assertEquals(2, comparison.getAllAtomMapping().size());
     }
 
 //    /**
