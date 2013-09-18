@@ -90,8 +90,8 @@ public final class GenerateCompatibilityGraph {
         compatibilityGraphNodes();
 //        System.out.println("compatibilityGraph ");
         compatibilityGraph();
-        System.out.println("c-edges " + getCEgdes().size());
-        System.out.println("d-edges " + getDEgdes().size());
+//        System.out.println("c-edges " + getCEgdes().size());
+//        System.out.println("d-edges " + getDEgdes().size());
 
         if (getCEdgesSize() == 0) {
             clearCompGraphNodes();
@@ -236,20 +236,17 @@ public final class GenerateCompatibilityGraph {
         for (Map.Entry<IAtom, List<String>> labelA : label_list_molA.entrySet()) {
 //            System.err.println("labelA.getValue() " + labelA.getValue());
             for (Map.Entry<IAtom, List<String>> labelB : label_list_molB.entrySet()) {
-                if (isSubset(labelA.getValue(), labelB.getValue())) {
-//                    System.err.println("IS SUBSET");
-                    if (isEqual(labelA.getValue(), labelB.getValue())) {
+                if (isEqual(labelA.getValue(), labelB.getValue())) {
 //                        System.err.println("IS EQUAL");
-                        int atomNumberI = source.getAtomNumber(labelA.getKey());
-                        int atomNumberJ = target.getAtomNumber(labelB.getKey());
-                        Edge e = new Edge(atomNumberI, atomNumberJ);
-                        if (!edges.contains(e)) {
-                            edges.add(e);
-                            compGraphNodes.add(atomNumberI);
-                            compGraphNodes.add(atomNumberJ);
-                            compGraphNodes.add(nodeCount);
-                            nodeCount += 1;
-                        }
+                    int atomNumberI = source.getAtomNumber(labelA.getKey());
+                    int atomNumberJ = target.getAtomNumber(labelB.getKey());
+                    Edge e = new Edge(atomNumberI, atomNumberJ);
+                    if (!edges.contains(e)) {
+                        edges.add(e);
+                        compGraphNodes.add(atomNumberI);
+                        compGraphNodes.add(atomNumberJ);
+                        compGraphNodes.add(nodeCount);
+                        nodeCount += 1;
                     }
                 }
             }
@@ -262,19 +259,15 @@ public final class GenerateCompatibilityGraph {
 //            System.err.println("labelA.getValue() " + labelA.getValue());
             for (Map.Entry<IAtom, List<String>> labelB : label_list_molB.entrySet()) {
                 if (isSubset(labelA.getValue(), labelB.getValue())) {
-//                    System.err.println("IS SUBSET");
-                    if (isEqual(labelA.getValue(), labelB.getValue())) {
-//                    System.err.println("IS EQUAL");
-                        int atomNumberI = source.getAtomNumber(labelA.getKey());
-                        int atomNumberJ = target.getAtomNumber(labelB.getKey());
-                        Edge e = new Edge(atomNumberI, atomNumberJ);
-                        if (!edges.contains(e)) {
-                            edges.add(e);
-                            compGraphNodes.add(atomNumberI);
-                            compGraphNodes.add(atomNumberJ);
-                            compGraphNodes.add(nodeCount);
-                            nodeCount += 1;
-                        }
+                    int atomNumberI = source.getAtomNumber(labelA.getKey());
+                    int atomNumberJ = target.getAtomNumber(labelB.getKey());
+                    Edge e = new Edge(atomNumberI, atomNumberJ);
+                    if (!edges.contains(e)) {
+                        edges.add(e);
+                        compGraphNodes.add(atomNumberI);
+                        compGraphNodes.add(atomNumberJ);
+                        compGraphNodes.add(nodeCount);
+                        nodeCount += 1;
                     }
                 }
             }

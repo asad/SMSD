@@ -103,7 +103,7 @@ public class BaseMCS extends MoleculeInitializer {
         }
         return false;
     }
-    
+
     /**
      *
      * @param refinedMCSSeeds
@@ -111,10 +111,10 @@ public class BaseMCS extends MoleculeInitializer {
      * @throws IOException
      */
     protected synchronized void extendCliquesWithMcGregor(List<Map<Integer, Integer>> refinedMCSSeeds) throws CDKException, IOException {
-        List<List<Integer>> mappings = new ArrayList<List<Integer>>();
+        List<List<Integer>> mappings = new ArrayList<>();
         boolean ROPFlag = true;
         for (Map<Integer, Integer> firstPassMappings : refinedMCSSeeds) {
-            Map<Integer, Integer> extendMapping = new TreeMap<Integer, Integer>(firstPassMappings);
+            Map<Integer, Integer> extendMapping = new TreeMap<>(firstPassMappings);
             McGregor mgit;
             if (source instanceof IQueryAtomContainer) {
                 mgit = new McGregor((IQueryAtomContainer) source, target, mappings, isBondMatchFlag(), isMatchRings());
@@ -192,8 +192,6 @@ public class BaseMCS extends MoleculeInitializer {
         }
     }
 
-    
-
     private synchronized void setMcGregorMappings(boolean RONP, List<List<Integer>> mappings) throws CDKException {
         int counter = 0;
         int solSize = 0;
@@ -243,7 +241,7 @@ public class BaseMCS extends MoleculeInitializer {
         }
 
     }
-    
+
     protected synchronized IAtomContainer getReactantMol() {
         return source;
     }

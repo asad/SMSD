@@ -134,7 +134,7 @@ public final class McGregor {
         this.target = target;
         this.mappings = Collections.synchronizedList(mappings);
         this.bestarcsleft = 0;
-        setIterationManager(new IterationManager((this.source.getAtomCount() + this.target.getAtomCount())*100));
+        setIterationManager(new IterationManager((this.source.getAtomCount() + this.target.getAtomCount()) * 1000));
 
         if (!mappings.isEmpty()) {
             this.globalMCSSize = mappings.get(0).size();
@@ -161,7 +161,7 @@ public final class McGregor {
         this.target = target;
         this.mappings = Collections.synchronizedList(mappings);
         this.bestarcsleft = 0;
-        setIterationManager(new IterationManager((this.source.getAtomCount() + this.target.getAtomCount())*100));
+        setIterationManager(new IterationManager((this.source.getAtomCount() + this.target.getAtomCount()) * 1000));
 
         if (!mappings.isEmpty()) {
             this.globalMCSSize = mappings.get(0).size();
@@ -183,6 +183,7 @@ public final class McGregor {
     public synchronized void startMcGregorIteration(int largestMappingSize, Map<Integer, Integer> present_Mapping) throws IOException {
 
         this.globalMCSSize = (largestMappingSize / 2);
+//        System.out.println("globalMCSSize " + globalMCSSize);
         List<String> c_tab1_copy = McGregorChecks.generateCTabCopy(source);
         List<String> c_tab2_copy = McGregorChecks.generateCTabCopy(target);
 

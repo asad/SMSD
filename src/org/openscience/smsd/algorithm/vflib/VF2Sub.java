@@ -253,10 +253,10 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
     }
 
     private synchronized void searchMcGregorMapping() throws CDKException, IOException {
-        List<List<Integer>> mappings = new ArrayList<List<Integer>>();
+        List<List<Integer>> mappings = new ArrayList<>();
         boolean ROPFlag = true;
         for (Map<Integer, Integer> firstPassMappings : allMCSCopy) {
-            Map<Integer, Integer> extendMapping = new TreeMap<Integer, Integer>(firstPassMappings);
+            Map<Integer, Integer> extendMapping = new TreeMap<>(firstPassMappings);
             McGregor mgit;
             if (source instanceof IQueryAtomContainer) {
                 mgit = new McGregor((IQueryAtomContainer) source, target, mappings, this.matchBonds, this.shouldMatchRings);
@@ -282,7 +282,7 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
         int counter = 0;
         for (Map<INode, IAtom> solution : vfLibSolutions) {
             AtomAtomMapping atomatomMapping = new AtomAtomMapping(source, target);
-            Map<Integer, Integer> indexindexMapping = new TreeMap<Integer, Integer>();
+            Map<Integer, Integer> indexindexMapping = new TreeMap<>();
 
             for (Map.Entry<INode, IAtom> mapping : solution.entrySet()) {
                 IAtom qAtom;

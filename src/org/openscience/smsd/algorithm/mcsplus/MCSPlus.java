@@ -100,8 +100,8 @@ public class MCSPlus {
 
         List<List<Integer>> extendMappings = null;
 
-//        System.err.println("ac1 : " + ac1.getAtomCount());
-//        System.err.println("ac2 : " + ac2.getAtomCount());
+//        System.out.println("ac1 : " + ac1.getAtomCount());
+//        System.out.println("ac2 : " + ac2.getAtomCount());
         setIterationManager(new IterationManager((ac1.getAtomCount() + ac2.getAtomCount())));
         try {
             GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(ac1, ac2, isMatchBonds(), isMatchRings());
