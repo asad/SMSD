@@ -530,13 +530,50 @@ public class IsomorphismTest {
 //        //System.out.println("getTanimoto for NAD+ and NADH");
         SmilesParser smilesParser = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer molecule1 = smilesParser.parseSmiles("NC(=O)c1ccc[n+](c1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
-
         IAtomContainer molecule2 = smilesParser.parseSmiles("NC(=O)C1=CN(C=CC1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
 
         double score = 1.0;
-        Isomorphism smsd1 = new Isomorphism(molecule1, molecule2, Algorithm.DEFAULT, false, false);
+        Isomorphism smsd1 = new Isomorphism(molecule1, molecule2, Algorithm.MCSPlus, false, false);
         smsd1.setChemFilters(true, true, true);
         Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
+    }
+
+    /**
+     * Test ring match using MCS VF2Plus
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testCDKMCS() throws Exception {
+        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        // Benzene
+        IAtomContainer query = sp.parseSmiles("C1=CC=CC=C1");
+        // Napthalene
+        IAtomContainer target = sp.parseSmiles("C1=CC2=C(C=C1)C=CC=C2");
+        //{ 0: Default Isomorphism Algorithm, 1: MCSPlus Algorithm, 2: VFLibMCS Algorithm, 3: CDKMCS Algorithm}
+        //Algorithm is VF2MCS
+        //Bond Sensitive is set True
+        //Ring Match is set True
+
+        Isomorphism comparison = new Isomorphism(query, target, Algorithm.CDKMCS, true, true);
+        // set chemical filter true
+        comparison.setChemFilters(true, true, true);
+
+        //Get similarity score
+//        //System.out.println("Tanimoto coefficient:  " + comparison.getTanimotoSimilarity());
+        Assert.assertEquals(0.6, comparison.getTanimotoSimilarity());
+        Assert.assertEquals(12, comparison.getAllAtomMapping().size());
+        // Print the mapping between molecules
+//        //System.out.println(" Mappings: ");
+//        for (AtomAtomMapping atomatomMapping : comparison.getAllAtomMapping()) {
+//            for (Map.Entry<IAtom, IAtom> mapping : atomatomMapping.getMappings().entrySet()) {
+//                IAtom sourceAtom = mapping.getKey();
+//                IAtom targetAtom = mapping.getValue();
+//                //System.out.println(sourceAtom.getSymbol() + " " + targetAtom.getSymbol());
+//                //System.out.println(atomatomMapping.getQueryIndex(sourceAtom) + " " + atomatomMapping.getTargetIndex(targetAtom));
+//            }
+//            //System.out.println("");
+//        }
     }
 
     /**
@@ -598,21 +635,21 @@ public class IsomorphismTest {
         // set chemical filter true
         comparison.setChemFilters(true, true, true);
 
-        //Get similarity score
-//        //System.out.println("Tanimoto coefficient:  " + comparison.getTanimotoSimilarity());
-        Assert.assertEquals(0.6, comparison.getTanimotoSimilarity());
-        Assert.assertEquals(12, comparison.getAllAtomMapping().size());
-        // Print the mapping between molecules
-//        //System.out.println(" Mappings: ");
+//         Print the mapping between molecules
+//        System.out.println(" Mappings: ");
 //        for (AtomAtomMapping atomatomMapping : comparison.getAllAtomMapping()) {
 //            for (Map.Entry<IAtom, IAtom> mapping : atomatomMapping.getMappings().entrySet()) {
 //                IAtom sourceAtom = mapping.getKey();
 //                IAtom targetAtom = mapping.getValue();
-////                //System.out.println(sourceAtom.getSymbol() + " " + targetAtom.getSymbol());
-////                //System.out.println(atomatomMapping.getQueryIndex(sourceAtom) + " " + atomatomMapping.getTargetIndex(targetAtom));
+//                System.out.println(sourceAtom.getSymbol() + " " + targetAtom.getSymbol());
+//                System.out.println(atomatomMapping.getQueryIndex(sourceAtom) + " " + atomatomMapping.getTargetIndex(targetAtom));
 //            }
-////            //System.out.println("");
+//            System.out.println("");
 //        }
+        //Get similarity score
+//        //System.out.println("Tanimoto coefficient:  " + comparison.getTanimotoSimilarity());
+        Assert.assertEquals(0.6, comparison.getTanimotoSimilarity());
+        Assert.assertEquals(12, comparison.getAllAtomMapping().size());
     }
 
     /**
@@ -645,4 +682,45 @@ public class IsomorphismTest {
 //            //System.out.println("");
 //        }
     }
+
+//    /**
+//     * Test ring match using MCS VF2Plus
+//     *
+//     * @throws Exception
+//     */
+//    @Test
+//    public void testComplexRings() throws Exception {
+//        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+//        // CHEBI:67212
+//        IAtomContainer query = sp.parseSmiles("[H][C@]1(O[C@@H](O[C@H](CO)[C@]2([H])O[C@@H](OC[C@@H](O)[C@]3([H])O[C@@H]"
+//                + "(O[C@H](CO)[C@]4([H])O[C@@H](OC[C@@H](O)[C@]5([H])O[C@@H](O[C@H](CO)[C@]6([H])O[C@@H](OC[C@@H](O)[C@]"
+//                + "7([H])O[C@@H](O[C@H](CO)[C@]8([H])O[C@@H](OC[C@@H](O)[C@]9([H])O[C@@H](O[C@H](CO)[C@]%10([H])O[C@@H]"
+//                + "(OC[C@@H](O)[C@]%11([H])O[C@@H](O[C@H](CO)[C@]%12([H])O[C@@H](OC[C@@H](O)[C@]%13([H])O[C@@H](O[C@H]"
+//                + "(CO)[C@]%14([H])O[C@@H](OC[C@@H](O)[C@]%15([H])O[C@@H](O[C@H](CO)[C@]%16([H])O[C@@H](OC[C@@H](O)[C@]"
+//                + "%17([H])O[C@@H](O[C@H](CO)[C@]%18([H])O[C@@H](OC[C@@H](O)[C@]%19([H])O[C@@H](O[C@H](CO)[C@]%20([H])"
+//                + "O[C@@H](OC[C@@H](O)[C@]%21([H])O[C@@H](O[C@H](CO)[C@]%22([H])O[C@@H](OC[C@@H](O)[C@]%23([H])O[C@@H]"
+//                + "(O[C@H](CO)[C@]%24([H])O[C@@H](OC[C@@H](O)[C@]%25([H])O[C@@H](O[C@H](CO)[C@]%26([H])O[C@@H](OC[C@@H]"
+//                + "(O)[C@]%27([H])O[C@@H](O[C@H](CO)[C@]%28([H])O[C@@H](OC[C@@H](O)[C@]%29([H])O[C@@H](O[C@H](CO)[C@]"
+//                + "%30([H])O[C@@H](O[C@H]%31[C@H](C)O[C@@H](O[C@H]%32[C@H](O)[C@@H](CO)O[C@H](OP([O-])(=O)OP([O-])"
+//                + "(=O)OC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)"
+//                + "CC\\C=C(/C)CCC=C(C)C)[C@@H]%32NC(C)=O)[C@H](O)[C@@H]%31O)[C@H](O)[C@H]%30O)[C@H](O)[C@H]%29O)[C@H]"
+//                + "(O)[C@H]%28O)[C@H](O)[C@H]%27O)[C@H](O)[C@H]%26O)[C@H](O)[C@H]%25O)[C@H](O)[C@H]%24O)[C@H](O)[C@H]%23O)"
+//                + "[C@H](O)[C@H]%22O)[C@H](O)[C@H]%21O)[C@H](O)[C@H]%20O)[C@H](O)[C@H]%19O)[C@H](O)[C@H]%18O)[C@H](O)"
+//                + "[C@H]%17O)[C@H](O)[C@H]%16O)[C@H](O)[C@H]%15O)[C@H](O)[C@H]%14O)[C@H](O)[C@H]%13O)[C@H](O)[C@H]%12O)"
+//                + "[C@H](O)[C@H]%11O)[C@H](O)[C@H]%10O)[C@H](O)[C@H]9O)[C@H](O)[C@H]8O)[C@H](O)[C@H]7O)[C@H](O)[C@H]6O)"
+//                + "[C@H](O)[C@H]5O)[C@H](O)[C@H]4O)[C@H](O)[C@H]3O)[C@H](O)[C@H]2O)[C@H](O)[C@H]1O)[C@H](O)CO");
+//        // CHEBI:67210
+//        IAtomContainer target = sp.parseSmiles("[H][C@]1(O[C@@H](O[C@H](CO)[C@]2([H])O[C@@H](O[C@H]3[C@H](C)O[C@@H]"
+//                + "(O[C@H]4[C@H](O)[C@@H](CO)O[C@H](OP([O-])(=O)OP([O-])(=O)OC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C"
+//                + "(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(/C)CCC=C(C)C)[C@@H]4NC(C)=O)[C@H](O)"
+//                + "[C@@H]3O)[C@H](O)[C@H]2O)[C@H](O)[C@H]1O)[C@H](O)CO");
+//        IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(query);
+//        IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(target);
+//        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.DEFAULT, false, false);
+//
+//// set chemical filter true
+//        comparison.setChemFilters(true, true, true);
+//        //0.162
+//        Assert.assertEquals(0.2542, comparison.getTanimotoSimilarity(), 0.001);
+//    }
 }
