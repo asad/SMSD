@@ -71,7 +71,7 @@ public class IterationManager implements Serializable {
      *
      *
      */
-    public void increment() {
+    public synchronized void increment() {
         counter++;
     }
 
@@ -80,28 +80,25 @@ public class IterationManager implements Serializable {
      *
      *
      */
-    public void decrement() {
+    public synchronized void decrement() {
         counter--;
     }
 
-    public boolean isMaxIteration() {
-        if (getCounter() > (this.max * this.coverage)) {
-            return true;
-        }
-        return false;
+    public synchronized boolean isMaxIteration() {
+        return getCounter() > (this.max * this.coverage);
     }
 
     /**
      * @return the coverage
      */
-    public int getCoverage() {
+    public synchronized int getCoverage() {
         return coverage;
     }
 
     /**
      * @param coverage the coverage to set
      */
-    public void setCoverage(int coverage) {
+    public synchronized void setCoverage(int coverage) {
         this.coverage = coverage;
     }
 }

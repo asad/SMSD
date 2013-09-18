@@ -26,10 +26,8 @@ package org.openscience.smsd.algorithm.vflib;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Stack;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import org.openscience.cdk.exception.CDKException;
@@ -40,12 +38,8 @@ import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.algorithm.mcgregor.McGregor;
-import org.openscience.smsd.algorithm.mcsplus.BKKCKCF;
-import org.openscience.smsd.algorithm.mcsplus.GenerateCompatibilityGraph;
-import org.openscience.smsd.algorithm.rgraph.CDKRMapHandler;
 import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
-import org.openscience.smsd.helper.FinalMappings;
 import org.openscience.smsd.helper.MoleculeInitializer;
 
 /**
@@ -75,11 +69,11 @@ public class BaseMCS extends MoleculeInitializer {
             = LoggingToolFactory.createLoggingTool(BaseMCS.class);
 
     BaseMCS(IAtomContainer source, IAtomContainer target, boolean matchBonds, boolean shouldMatchRings) {
-        this.allLocalAtomAtomMapping = new ArrayList<AtomAtomMapping>();
-        this.allLocalMCS = new ArrayList<Map<Integer, Integer>>();
+        this.allLocalAtomAtomMapping = new ArrayList<>();
+        this.allLocalMCS = new ArrayList<>();
         this.shouldMatchRings = shouldMatchRings;
         this.matchBonds = matchBonds;
-        this.vfLibSolutions = new ArrayList<Map<INode, IAtom>>();
+        this.vfLibSolutions = new ArrayList<>();
         this.source = source;
         this.target = target;
         if (shouldMatchRings) {
@@ -109,112 +103,7 @@ public class BaseMCS extends MoleculeInitializer {
         }
         return false;
     }
-
-    protected synchronized List<AtomAtomMapping> addKochCliques() {
-//        System.out.println("addKochCliques ");
-        List<AtomAtomMapping> allCliqueAtomMCS = new ArrayList<AtomAtomMapping>();
-        try {
-            IAtomContainer ac1;
-            IAtomContainer ac2;
-            boolean flagExchange = false;
-            if (source.getAtomCount() < target.getAtomCount()) {
-                ac1 = source;
-                ac2 = target;
-            } else {
-                flagExchange = true;
-                ac1 = target;
-                ac2 = source;
-            }
-            GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(ac1, ac2, isBondMatchFlag(), isMatchRings());
-            List<Integer> comp_graph_nodes = gcg.getCompGraphNodes();
-
-            List<Integer> cEdges = gcg.getCEgdes();
-            List<Integer> dEdges = gcg.getDEgdes();
-
-//            System.out.println("BKKCKCF C-edges " + cEdges.size());
-//            System.out.println("BKKCKCF D-edges " + dEdges.size());
-            BKKCKCF init = new BKKCKCF(comp_graph_nodes, cEdges, dEdges);
-//            System.out.println("BKKCKCF size " + init.getBestCliqueSize());
-            Stack<List<Integer>> maxCliqueSet = new Stack<>();
-            maxCliqueSet.addAll(init.getMaxCliqueSet());
-
-            //clear all the compatibility graph content
-            gcg.clear();
-
-            /*
-             * Sort biggest clique to smallest
-             */
-            Collections.sort(maxCliqueSet, new Comparator<List<Integer>>() {
-                @Override
-                public int compare(List<Integer> a1, List<Integer> a2) {
-                    return a2.size() - a1.size(); // assumes you want biggest to smallest
-                }
-            });
-            while (!maxCliqueSet.empty()) {
-                List<Integer> peek = maxCliqueSet.peek();
-                AtomAtomMapping atomatomMapping = new AtomAtomMapping(source, target);
-
-                for (Integer value : peek) {
-                    int[] index = getIndex(value.intValue(), comp_graph_nodes);
-                    Integer qIndex = index[0];
-                    Integer tIndex = index[1];
-                    if (qIndex != -1 && tIndex != -1) {
-                        IAtom qAtom;
-                        IAtom tAtom;
-                        if (flagExchange) {
-                            qAtom = source.getAtom(tIndex);
-                            tAtom = target.getAtom(qIndex);
-                        } else {
-                            qAtom = source.getAtom(qIndex);
-                            tAtom = target.getAtom(tIndex);
-                        }
-                        atomatomMapping.put(qAtom, tAtom);
-                    } else {
-                        try {
-                            throw new CDKException("Atom index pointing to -1");
-                        } catch (CDKException ex) {
-                            Logger.error(Level.SEVERE, null, ex);
-                        }
-                    }
-                }
-
-                if (!atomatomMapping.isEmpty()) {
-                    allCliqueAtomMCS.add(atomatomMapping);
-                }
-                maxCliqueSet.pop();
-            }
-        } catch (IOException ex) {
-            Logger.error(Level.SEVERE, null, ex);
-        }
-
-        return allCliqueAtomMCS;
-    }
-
-    /**
-     *
-     * @return
-     */
-    protected synchronized List<AtomAtomMapping> addUIT() {
-        CDKRMapHandler rmap = new CDKRMapHandler();
-        boolean rOnPFlag = false;
-        List<Map<Integer, Integer>> sol = null;
-        try {
-
-            if (source.getAtomCount() > target.getAtomCount()) {
-                rOnPFlag = true;//isBondMatchFlag()
-                rmap.calculateOverlapsAndReduce(source, target, true, isMatchRings());
-            } else {
-                rOnPFlag = false;
-                rmap.calculateOverlapsAndReduce(target, source, true, isMatchRings());
-            }
-            sol = FinalMappings.getInstance().getFinalMapping();
-
-        } catch (CDKException e) {
-//            System.err.println("WARNING: graphContainer: most probably time out error ");
-        }
-        return setUITMappings(rOnPFlag, sol);
-    }
-
+    
     /**
      *
      * @param refinedMCSSeeds
@@ -303,51 +192,7 @@ public class BaseMCS extends MoleculeInitializer {
         }
     }
 
-    private synchronized List<AtomAtomMapping> setUITMappings(boolean RONP, List<Map<Integer, Integer>> sol) {
-        /*
-         * Sort biggest clique to smallest
-         */
-        List<AtomAtomMapping> allCliqueAtomMCS = new ArrayList<AtomAtomMapping>();
-        /*
-         * Sort biggest clique to smallest
-         */
-        Collections.sort(sol, new Map1ValueComparator(SortOrder.DESCENDING));
-        for (Map<Integer, Integer> solution : sol) {
-            AtomAtomMapping atomatomMapping = new AtomAtomMapping(source, target);
-
-            for (Integer qAtomIndex : solution.keySet()) {
-                IAtom qAtom;
-                IAtom tAtom;
-                int qIndex;
-                int tIndex;
-
-                if (RONP) {
-                    qAtom = source.getAtom(qAtomIndex);
-                    tAtom = target.getAtom(solution.get(qAtomIndex));
-                } else {
-                    tAtom = target.getAtom(qAtomIndex);
-                    qAtom = source.getAtom(solution.get(qAtomIndex));
-                }
-
-                qIndex = source.getAtomNumber(qAtom);
-                tIndex = target.getAtomNumber(tAtom);
-                if (qIndex != -1 && tIndex != -1) {
-                    atomatomMapping.put(qAtom, tAtom);
-                } else {
-                    try {
-                        throw new CDKException("Atom index pointing to -1");
-                    } catch (CDKException ex) {
-                        Logger.error(Level.SEVERE, null, ex);
-                    }
-                }
-            }
-
-            if (!atomatomMapping.isEmpty()) {
-                allCliqueAtomMCS.add(atomatomMapping);
-            }
-        }
-        return allCliqueAtomMCS;
-    }
+    
 
     private synchronized void setMcGregorMappings(boolean RONP, List<List<Integer>> mappings) throws CDKException {
         int counter = 0;
@@ -398,20 +243,7 @@ public class BaseMCS extends MoleculeInitializer {
         }
 
     }
-
-    private int[] getIndex(int cliqueIndex, List<Integer> comp_graph_nodes) {
-        int[] v = new int[2];
-        v[0] = -1;
-        v[1] = -1;
-        for (int i = 0; i < comp_graph_nodes.size(); i += 3) {
-            if (cliqueIndex == comp_graph_nodes.get(i + 2)) {
-                v[0] = comp_graph_nodes.get(i);
-                v[1] = comp_graph_nodes.get(i + 1);
-            }
-        }
-        return v;
-    }
-
+    
     protected synchronized IAtomContainer getReactantMol() {
         return source;
     }

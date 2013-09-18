@@ -24,6 +24,11 @@ package org.openscience.smsd.algorithm.vflib;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.annotations.TestMethod;
@@ -39,6 +44,8 @@ import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
 import org.openscience.smsd.algorithm.vflib.map.VFMCSMapper;
 import org.openscience.smsd.algorithm.vflib.query.QueryCompiler;
+import org.openscience.smsd.algorithm.vflib.seeds.MCSSeedGenerator;
+import org.openscience.smsd.interfaces.Algorithm;
 import org.openscience.smsd.interfaces.IResults;
 
 /**
@@ -96,33 +103,51 @@ public final class VF2MCS extends BaseMCS implements IResults {
             allLocalMCS.clear();
             allLocalAtomAtomMapping.clear();
 
+//            long startTimeSeeds = System.nanoTime();
+            int threadsAvailable = Runtime.getRuntime().availableProcessors();
+            if (threadsAvailable > 2) {
+                threadsAvailable = 2;
+            }
+            ExecutorService executor = Executors.newFixedThreadPool(threadsAvailable);
+            CompletionService<List<AtomAtomMapping>> cs = new ExecutorCompletionService<>(executor);
+            MCSSeedGenerator mcsSeedGeneratorUIT = new MCSSeedGenerator(source, target, isBondMatchFlag(), isMatchRings(), Algorithm.CDKMCS);
+            MCSSeedGenerator mcsSeedGeneratorKoch = new MCSSeedGenerator(source, target, true, isMatchRings(), Algorithm.MCSPlus);
+            int jobCounter = 0;
+            cs.submit(mcsSeedGeneratorUIT);
+            jobCounter++;
+            cs.submit(mcsSeedGeneratorKoch);
+            jobCounter++;
+
             /*
              * Generate the UIT based MCS seeds
              */
             List<Map<Integer, Integer>> mcsSeeds = new ArrayList<>();
+            /*
+             * Collect the results
+             */
+            for (int i = 0; i < jobCounter; i++) {
+                List<AtomAtomMapping> chosen;
+                try {
+                    chosen = cs.take().get();
+                    for (AtomAtomMapping mapping : chosen) {
+                        Map<Integer, Integer> map = new TreeMap<>();
+                        map.putAll(mapping.getMappingsIndex());
+                        mcsSeeds.add(map);
+                    }
+                } catch (InterruptedException ex) {
+                    logger.error(Level.SEVERE, null, ex);
+                } catch (ExecutionException ex) {
+                    logger.error(Level.SEVERE, null, ex);
+                }
+            }
+            executor.shutdown();
+            // Wait until all threads are finish
+            while (!executor.isTerminated()) {
+            }
+            System.gc();
 
-            long startTime = System.nanoTime();
-            List<AtomAtomMapping> mcsUITCliques;
-//            System.out.println("calling UIT");
-            mcsUITCliques = addUIT();
-            for (AtomAtomMapping mapping : mcsUITCliques) {
-                Map<Integer, Integer> map = new TreeMap<>();
-                map.putAll(mapping.getMappingsIndex());
-                mcsSeeds.add(map);
-            }
-//            long stopTime = System.nanoTime();
-//            System.out.println("done UIT " + (stopTime - startTime));
-            List<AtomAtomMapping> mcsKochCliques;
-//            long startTimeKoch = System.nanoTime();
-//            System.out.println("calling KochCliques");
-            mcsKochCliques = addKochCliques();
-            for (AtomAtomMapping mapping : mcsKochCliques) {
-                Map<Integer, Integer> map = new TreeMap<>();
-                map.putAll(mapping.getMappingsIndex());
-                mcsSeeds.add(map);
-            }
-//            long stopTimeKoch = System.nanoTime();
-//            System.out.println("done Koch " + (stopTimeKoch - startTimeKoch));
+//            long stopTimeSeeds = System.nanoTime();
+//            System.out.println("done seeds " + (stopTimeSeeds - startTimeSeeds));
             /*
              * Store largest MCS seeds generated from MCSPlus and UIT
              */
