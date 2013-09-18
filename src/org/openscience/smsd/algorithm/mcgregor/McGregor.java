@@ -1,6 +1,6 @@
 
 /* Copyright (C) 2005-2006 Markus Leber
- *               2006-2009 Syed Asad Rahman <asad@ebi.ac.uk>
+ *               2006-2013 Syed Asad Rahman <asad@ebi.ac.uk>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -69,7 +69,7 @@ public final class McGregor {
     private synchronized boolean checkTimeout() {
         if (getIterationManager().isMaxIteration()) {
             this.timeout = true;
-//            System.out.println("McGregor MCS iterations " + getIterationManager().getCounter());
+            System.out.println("McGregor MCS iterations " + getIterationManager().getCounter());
             return true;
         }
         getIterationManager().increment();
@@ -97,11 +97,11 @@ public final class McGregor {
     private final IAtomContainer target;
     private BinaryTree last = null;
     private BinaryTree first = null;
-    private Stack<List<Integer>> bestARCS;
-    private List<Integer> modifiedARCS;
+    private final Stack<List<Integer>> bestARCS;
+    private final List<Integer> modifiedARCS;
     private int bestarcsleft;
     private int globalMCSSize;
-    private List<List<Integer>> mappings;
+    private final List<List<Integer>> mappings;
     /*
      * This should be more or equal to all the atom types
      */
@@ -134,15 +134,16 @@ public final class McGregor {
         this.target = target;
         this.mappings = Collections.synchronizedList(mappings);
         this.bestarcsleft = 0;
-        setIterationManager(new IterationManager((this.source.getAtomCount() + this.target.getAtomCount())));
+        setIterationManager(new IterationManager((this.source.getAtomCount() + this.target.getAtomCount()) * 1000));
 
         if (!mappings.isEmpty()) {
             this.globalMCSSize = mappings.get(0).size();
         } else {
             this.globalMCSSize = 0;
         }
+//        System.out.println("globalMCSSize " + globalMCSSize);
         this.modifiedARCS = Collections.synchronizedList(new ArrayList<Integer>());
-        this.bestARCS = new Stack<List<Integer>>();
+        this.bestARCS = new Stack<>();
         this.newMatrix = false;
     }
 
@@ -160,7 +161,7 @@ public final class McGregor {
         this.target = target;
         this.mappings = Collections.synchronizedList(mappings);
         this.bestarcsleft = 0;
-        setIterationManager(new IterationManager((this.source.getAtomCount() + this.target.getAtomCount())));
+        setIterationManager(new IterationManager((this.source.getAtomCount() + this.target.getAtomCount()) * 1000));
 
         if (!mappings.isEmpty()) {
             this.globalMCSSize = mappings.get(0).size();
@@ -168,7 +169,7 @@ public final class McGregor {
             this.globalMCSSize = 0;
         }
         this.modifiedARCS = Collections.synchronizedList(new ArrayList<Integer>());
-        this.bestARCS = new Stack<List<Integer>>();
+        this.bestARCS = new Stack<>();
         this.newMatrix = false;
     }
 
@@ -186,7 +187,7 @@ public final class McGregor {
         List<String> c_tab2_copy = McGregorChecks.generateCTabCopy(target);
 
         //find mapped atoms of both molecules and store these in mappedAtoms
-        List<Integer> mapped_atoms = new ArrayList<Integer>();
+        List<Integer> mapped_atoms = new ArrayList<>();
 //        System.out.println("\nMapped Atoms");
         for (Map.Entry<Integer, Integer> map : present_Mapping.entrySet()) {
 //            System.out.println("i:" + map.getKey() + " j:" + map.getValue());
@@ -195,16 +196,16 @@ public final class McGregor {
         }
         int mapping_size = present_Mapping.size();
 
-        List<Integer> i_bond_neighborsA = new ArrayList<Integer>();
-        List<String> c_bond_neighborsA = new ArrayList<String>();
+        List<Integer> i_bond_neighborsA = new ArrayList<>();
+        List<String> c_bond_neighborsA = new ArrayList<>();
 
-        List<Integer> i_bond_setA = new ArrayList<Integer>();
-        List<String> c_bond_setA = new ArrayList<String>();
+        List<Integer> i_bond_setA = new ArrayList<>();
+        List<String> c_bond_setA = new ArrayList<>();
 
-        List<Integer> i_bond_neighborsB = new ArrayList<Integer>();
-        List<Integer> i_bond_setB = new ArrayList<Integer>();
-        List<String> c_bond_neighborsB = new ArrayList<String>();
-        List<String> c_bond_setB = new ArrayList<String>();
+        List<Integer> i_bond_neighborsB = new ArrayList<>();
+        List<Integer> i_bond_setB = new ArrayList<>();
+        List<String> c_bond_neighborsB = new ArrayList<>();
+        List<String> c_bond_setB = new ArrayList<>();
 
         //find unmapped atoms of molecule A
         List<Integer> unmapped_atoms_molA = McGregorChecks.markUnMappedAtoms(true, source, present_Mapping);
@@ -242,8 +243,6 @@ public final class McGregor {
                     counter);
         }
 
-        c_tab1_copy = queryProcess.getCTab1();
-        c_tab2_copy = queryProcess.getCTab2();
         gSetBondNumA = queryProcess.getBondNumA();
         gNeighborBondnumA = queryProcess.getNeighborBondNumA();
         i_bond_neighborsA = queryProcess.getIBondNeighboursA();
@@ -259,7 +258,6 @@ public final class McGregor {
         //bonds of molecule B, which are relevant for the McGregorBondTypeInSensitive algorithm.
         //The special signs must be transfered to the corresponding atoms of molecule A
         TargetProcessor targetProcess = new TargetProcessor(
-                c_tab1_copy,
                 c_tab2_copy,
                 SIGNS,
                 gNeighborBondNumB,
@@ -279,8 +277,6 @@ public final class McGregor {
                 mapped_atoms,
                 counter);
 
-        c_tab1_copy = targetProcess.getCTab1();
-        c_tab2_copy = targetProcess.getCTab2();
         gSetBondNumB = targetProcess.getBondNumB();
         gNeighborBondNumB = targetProcess.getNeighborBondNumB();
         i_bond_neighborsB = targetProcess.getIBondNeighboursB();
@@ -307,12 +303,10 @@ public final class McGregor {
     }
 
     private synchronized int iterator(McgregorHelper mcGregorHelper) throws IOException {
-        if (checkTimeout()) {
-            return 1;
-        }
+
         boolean mappingCheckFlag = mcGregorHelper.isMappingCheckFlag();
         int mappedAtomCount = mcGregorHelper.getMappedAtomCount();
-        List<Integer> mappedAtoms = new ArrayList<Integer>(mcGregorHelper.getMappedAtomsOrg());
+        List<Integer> mappedAtoms = new ArrayList<>(mcGregorHelper.getMappedAtomsOrg());
         int neighborBondNumA = mcGregorHelper.getNeighborBondNumA();
         int neighborBondNumB = mcGregorHelper.getNeighborBondNumB();
 
@@ -337,7 +331,7 @@ public final class McGregor {
         bestarcsleft = 0;
 
         startsearch(mcGregorHelper);
-        Stack<List<Integer>> bestARCSClone = new Stack<List<Integer>>();
+        Stack<List<Integer>> bestARCSClone = new Stack<>();
 
         bestARCSClone.addAll(bestARCS);
         while (!bestARCS.empty()) {
@@ -355,7 +349,6 @@ public final class McGregor {
             Stack<List<Integer>> bestARCSClone,
             McgregorHelper mcGregorHelper) throws IOException {
         int mappedAtomCount = mcGregorHelper.getMappedAtomCount();
-
         int setNumA = mcGregorHelper.getSetNumA();
         int setNumB = mcGregorHelper.getsetNumB();
         List<Integer> i_bond_setA = mcGregorHelper.getIBondSetA();
@@ -365,7 +358,7 @@ public final class McGregor {
 
         while (!bestARCSClone.empty()) {
 
-            List<Integer> MARCS_vector = new ArrayList<Integer>(bestARCSClone.peek());
+            List<Integer> MARCS_vector = new ArrayList<>(bestARCSClone.peek());
             List<Integer> new_Mapping = findMcGregorMapping(MARCS_vector, mcGregorHelper);
 
             int newMapingSize = new_Mapping.size() / 2;
@@ -374,14 +367,14 @@ public final class McGregor {
                 no_further_MAPPINGS = true;
             }
 
-            List<Integer> new_i_neighborsA = new ArrayList<Integer>(); //instead of iBondNeighborAtomsA
-            List<Integer> new_i_neighborsB = new ArrayList<Integer>(); //instead of iBondNeighborAtomsB
-            List<String> new_c_neighborsA = new ArrayList<String>(); //instead of cBondNeighborsA
-            List<String> new_c_neighborsB = new ArrayList<String>(); //instead of cBondNeighborsB
-            List<Integer> new_i_bond_setA = new ArrayList<Integer>(); //instead of i_bond_setA
-            List<Integer> new_i_bond_setB = new ArrayList<Integer>(); //instead of i_bond_setB
-            List<String> new_c_bond_setA = new ArrayList<String>(); //instead of c_bond_setA
-            List<String> new_c_bond_setB = new ArrayList<String>(); //instead of c_bond_setB
+            List<Integer> new_i_neighborsA = new ArrayList<>(); //instead of iBondNeighborAtomsA
+            List<Integer> new_i_neighborsB = new ArrayList<>(); //instead of iBondNeighborAtomsB
+            List<String> new_c_neighborsA = new ArrayList<>(); //instead of cBondNeighborsA
+            List<String> new_c_neighborsB = new ArrayList<>(); //instead of cBondNeighborsB
+            List<Integer> new_i_bond_setA = new ArrayList<>(); //instead of i_bond_setA
+            List<Integer> new_i_bond_setB = new ArrayList<>(); //instead of i_bond_setB
+            List<String> new_c_bond_setA = new ArrayList<>(); //instead of c_bond_setA
+            List<String> new_c_bond_setB = new ArrayList<>(); //instead of c_bond_setB
             //new values for setNumA + setNumB
             //new arrays for i_bond_setA + i_bond_setB + c_bond_setB + c_bond_setB
 
@@ -434,8 +427,6 @@ public final class McGregor {
                     new_Mapping,
                     counter);
 
-            c_setA_copy = queryProcess.getCTab1();
-            c_setB_copy = queryProcess.getCTab2();
             newSetBondNumA = queryProcess.getBondNumA();
             newNeighborNumA = queryProcess.getNeighborBondNumA();
             new_i_neighborsA = queryProcess.getIBondNeighboursA();
@@ -464,7 +455,6 @@ public final class McGregor {
             int newNeighborNumB = 0; //instead of localNeighborBondNumB
 
             TargetProcessor targetProcess = new TargetProcessor(
-                    c_setA_copy,
                     c_setB_copy,
                     SIGNS,
                     newNeighborNumB,
@@ -486,8 +476,6 @@ public final class McGregor {
                     new_i_bond_setB,
                     new_c_bond_setB);
 
-            c_setA_copy = targetProcess.getCTab1();
-            c_setB_copy = targetProcess.getCTab2();
             newSetBondNumB = targetProcess.getBondNumB();
             newNeighborNumB = targetProcess.getNeighborBondNumB();
             new_i_neighborsB = targetProcess.getIBondNeighboursB();
@@ -520,8 +508,8 @@ public final class McGregor {
 
         int neighborBondNumA = mcGregorHelper.getNeighborBondNumA();
         int neighborBondNumB = mcGregorHelper.getNeighborBondNumB();
-        List<Integer> currentMapping = new ArrayList<Integer>(mcGregorHelper.getMappedAtomsOrg());
-        List<Integer> additional_mapping = new ArrayList<Integer>();
+        List<Integer> currentMapping = new ArrayList<>(mcGregorHelper.getMappedAtomsOrg());
+        List<Integer> additional_mapping = new ArrayList<>();
 
         for (int x = 0; x < neighborBondNumA; x++) {
             for (int y = 0; y < neighborBondNumB; y++) {
@@ -616,7 +604,7 @@ public final class McGregor {
             McGregorChecks.removeRedundantArcs(xstart, ystart, TEMPMARCS, mcGregorHelper);
             int arcsleft = McGregorChecks.countArcsLeft(TEMPMARCS, neighborBondNumA, neighborBondNumB);
 
-            //test Best arcs left and skip rest if needed
+            //test best arcs left and skip rest if needed
             if (arcsleft >= bestarcsleft) {
                 setArcs(xIndex, yIndex, arcsleft, TEMPMARCS, mcGregorHelper);
             }
@@ -639,7 +627,6 @@ public final class McGregor {
                 int arcsleft = McGregorChecks.countArcsLeft(TEMPMARCS, neighborBondNumA, neighborBondNumB);
                 if (arcsleft >= bestarcsleft) {
                     popBestArcs(arcsleft);
-
                     if (checkMARCS(TEMPMARCS, neighborBondNumA, neighborBondNumB)) {
                         bestARCS.push(TEMPMARCS);
                     }
@@ -717,10 +704,6 @@ public final class McGregor {
     }
 
     private synchronized void startsearch(McgregorHelper mcGregorHelper) {
-
-        if (checkTimeout()) {
-            return;
-        }
 
         int neighborBondNumA = mcGregorHelper.getNeighborBondNumA();
         int neighborBondNumB = mcGregorHelper.getNeighborBondNumB();

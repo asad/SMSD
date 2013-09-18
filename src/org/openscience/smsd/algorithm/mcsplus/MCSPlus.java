@@ -110,32 +110,37 @@ public class MCSPlus {
             List<Integer> cEdges = gcg.getCEgdes();
             List<Integer> dEdges = gcg.getDEgdes();
 //
-//            System.err.println("**************************************************");
-//            System.err.println("C_edges: " + cEdges.size());
-//            System.err.println("D_edges: " + dEdges.size());
+//            System.out.println("**************************************************");
+//            System.out.println("C_edges: " + cEdges.size());
+//            System.out.println("D_edges: " + dEdges.size());
+//            System.out.println("comp_graph_nodes: " + comp_graph_nodes);
             BKKCKCF init = new BKKCKCF(comp_graph_nodes, cEdges, dEdges);
 //            Koch init = new Koch(comp_graph_nodes, cEdges, dEdges);
-            Stack<List<Integer>> maxCliqueSet;
-            maxCliqueSet = init.getMaxCliqueSet();
+            Stack<List<Integer>> maxCliqueSet = new Stack<>();
+            maxCliqueSet.addAll(init.getMaxCliqueSet());
 
-//            System.err.println("Max_Cliques_Set: " + maxCliqueSet);
-//            System.err.println("Best Clique Size: " + init.getBestCliqueSize());
-//            System.err.println("**************************************************");
+//            System.out.println("Max_Cliques_Set: " + maxCliqueSet);
+//            System.out.println("Best Clique Size: " + init.getBestCliqueSize());
+//            System.out.println("**************************************************");
             //clear all the compatibility graph content
             gcg.clear();
-            List<Map<Integer, Integer>> mappings = new ArrayList<Map<Integer, Integer>>();
+            List<Map<Integer, Integer>> mappings = new ArrayList<>();
 
             while (!maxCliqueSet.empty()) {
-                Map<Integer, Integer> indexindexMapping = new TreeMap<Integer, Integer>();
+                Map<Integer, Integer> indexindexMapping;
                 indexindexMapping = ExactMapping.extractMapping(comp_graph_nodes, maxCliqueSet.peek());
-                mappings.add(indexindexMapping);
+                if (indexindexMapping != null) {
+                    mappings.add(indexindexMapping);
+                }
                 maxCliqueSet.pop();
             }
+//            System.out.println("mappings: " + mappings.size());
             extendMappings = searchMcGregorMapping(ac1, ac2, mappings);
+//            int size = !extendMappings.isEmpty() ? (extendMappings.size() / 2) : 0;
+//            System.out.println("extendMappings: " + size);
         } catch (IOException ex) {
             Logger.getLogger(MCSPlus.class.getName()).log(Level.SEVERE, null, ex);
         }
-//        System.err.println("extendMappings: " + extendMappings.iterator().next().size() / 2);
 
         return extendMappings;
     }
@@ -145,36 +150,33 @@ public class MCSPlus {
             IAtomContainer ac2,
             List<Map<Integer, Integer>> allMCSCopy) throws IOException {
 
-        List<List<Integer>> extendMappings = new ArrayList<List<Integer>>();
+        List<List<Integer>> cliques = new ArrayList<>();
 
         boolean ROPFlag = true;
         for (Map<Integer, Integer> firstPassMappings : allMCSCopy) {
-            Map<Integer, Integer> extendMapping = new TreeMap<Integer, Integer>(firstPassMappings);
+            Map<Integer, Integer> extendMapping = new TreeMap<>(firstPassMappings);
             McGregor mgit;
-
             if (ac1.getAtomCount() > ac2.getAtomCount()) {
-                mgit = new McGregor(ac1, ac2, extendMappings, isMatchBonds(), isMatchRings());
+                mgit = new McGregor(ac1, ac2, cliques, isMatchBonds(), isMatchRings());
             } else {
                 extendMapping.clear();
-                mgit = new McGregor(ac2, ac1, extendMappings, isMatchBonds(), isMatchRings());
                 ROPFlag = false;
                 for (Map.Entry<Integer, Integer> map : firstPassMappings.entrySet()) {
                     extendMapping.put(map.getValue(), map.getKey());
                 }
+                mgit = new McGregor(ac2, ac1, cliques, isMatchBonds(), isMatchRings());
             }
 //            System.out.println("\nStart McGregor search");
             //Start McGregor search
             mgit.startMcGregorIteration(mgit.getMCSSize(), extendMapping);
-            extendMappings = mgit.getMappings();
-//            System.out.println("\nSol count after MG" + extendMappings.size());
+            cliques = mgit.getMappings();
+//            System.out.println("\nSol count after MG " + cliques.size());
             if (checkTimeout()) {
                 break;
             }
         }
-        List<List<Integer>> finalMappings = setMcGregorMappings(ROPFlag, extendMappings);
-//        System.out.println("After set Sol count MG" + finalMappings.size());
-//        System.out.println("MCSSize " + finalMappings.iterator().next().size() + "\n");
-
+        List<List<Integer>> finalMappings = setMcGregorMappings(ROPFlag, cliques);
+//        System.out.println("After set Sol count MG " + finalMappings.size());
         return finalMappings;
     }
 
@@ -183,12 +185,12 @@ public class MCSPlus {
             List<List<Integer>> mappings) {
         int counter = 0;
         int mcsSize = 0;
-        List<List<Integer>> finalMappings = new ArrayList<List<Integer>>();
+        List<List<Integer>> finalMappings = new ArrayList<>();
         for (List<Integer> mapping : mappings) {
-            List<Integer> indexindexMapping = new ArrayList<Integer>();
+            List<Integer> indexindexMapping = new ArrayList<>();
             for (int index = 0; index < mapping.size(); index += 2) {
-                Integer qIndex = 0;
-                Integer tIndex = 0;
+                Integer qIndex;
+                Integer tIndex;
 
                 if (RONP) {
                     qIndex = mapping.get(index);

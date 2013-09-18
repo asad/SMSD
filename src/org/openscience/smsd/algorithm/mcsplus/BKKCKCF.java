@@ -20,7 +20,11 @@
 package org.openscience.smsd.algorithm.mcsplus;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Stack;
 import org.openscience.cdk.annotations.TestClass;
 
@@ -38,7 +42,7 @@ import org.openscience.cdk.annotations.TestClass;
 @TestClass("org.openscience.cdk.smsd.BKKCKCFTest")
 public class BKKCKCF {
 
-    private final Stack<List<Integer>> max_Cliques_Set;
+    private final Set<List<Integer>> max_Cliques_Set;
     /**
      * *****************************************************************
      */
@@ -100,7 +104,7 @@ public class BKKCKCF {
         this.C_edges = cEdges;
         this.D_edges = dEdges;
         best_clique_size = 0;
-        max_Cliques_Set = new Stack<>();
+        max_Cliques_Set = new HashSet<>();
 
         T = new ArrayList<>(); //Initialize the T Vector
         C = new ArrayList<>();
@@ -218,14 +222,12 @@ public class BKKCKCF {
 
                 if (clique_size >= best_clique_size) {
                     if (clique_size > best_clique_size) {
-                        while (!max_Cliques_Set.empty()) {
-                            max_Cliques_Set.pop();
-                        }
+                        max_Cliques_Set.clear();
                         best_clique_size = clique_size;
 //                        System.out.println("Best Cliques Size: " + best_clique_size + " " + clique_size);
                     }
                     if (clique_size == best_clique_size) {
-                        max_Cliques_Set.push(C);
+                        max_Cliques_Set.add(C);
                     }
                 }
 
@@ -405,8 +407,8 @@ public class BKKCKCF {
      *
      * @return
      */
-    public Stack<List<Integer>> getMaxCliqueSet() {
+    public Collection<List<Integer>> getMaxCliqueSet() {
         //System.out.println("max_Cliques_Set: " + max_Cliques_Set.size());
-        return max_Cliques_Set;
+        return Collections.unmodifiableCollection(max_Cliques_Set);
     }
 }

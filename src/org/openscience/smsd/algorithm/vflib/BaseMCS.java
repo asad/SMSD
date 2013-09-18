@@ -131,8 +131,12 @@ public class BaseMCS extends MoleculeInitializer {
             List<Integer> cEdges = gcg.getCEgdes();
             List<Integer> dEdges = gcg.getDEgdes();
 
+//            System.out.println("BKKCKCF C-edges " + cEdges.size());
+//            System.out.println("BKKCKCF D-edges " + dEdges.size());
             BKKCKCF init = new BKKCKCF(comp_graph_nodes, cEdges, dEdges);
-            Stack<List<Integer>> maxCliqueSet = init.getMaxCliqueSet();
+//            System.out.println("BKKCKCF size " + init.getBestCliqueSize());
+            Stack<List<Integer>> maxCliqueSet = new Stack<>();
+            maxCliqueSet.addAll(init.getMaxCliqueSet());
 
             //clear all the compatibility graph content
             gcg.clear();
