@@ -81,10 +81,10 @@ public class SMSDFrame extends JFrame {
     private final static String NEW_LINE = System.getProperty("line.separator");
     private File QueryFileName = null;
     private File TargetFileName = null;
-    private List<Object> molFiles = new ArrayList<Object>(2);
+    private final List<Object> molFiles = new ArrayList<Object>(2);
     private Integer count;
     static private JPanel panels;
-    private File file = null;
+    private File file;
 
     public SMSDFrame() {
         count = 0;
@@ -276,7 +276,6 @@ public class SMSDFrame extends JFrame {
             }
 
             //Mappping
-
             JFrame frame = new JFrame("Isomorphism Maxmimum Common Substructure (Highlighted)");
             frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
             GridBagConstraints gbc = new GridBagConstraints();
@@ -302,16 +301,22 @@ public class SMSDFrame extends JFrame {
 //                CanonicalLabeler c=new CanonicalLabeler();
 //                c.canonLabel(queryMolecule);
 //                c.canonLabel(targetMolecule);
-                Isomorphism comparison = new Isomorphism(queryMolecule, targetMolecule, Algorithm.DEFAULT, jRadioButton1.isSelected(), true);
+                Isomorphism comparison = null;
+                if (jRadioButton1.isSelected()) {
+                    comparison = new Isomorphism(queryMolecule, targetMolecule, Algorithm.DEFAULT, jRadioButton1.isSelected(), true);
+                } else if (jRadioButton2.isSelected()) {
+                    comparison = new Isomorphism(queryMolecule, targetMolecule, Algorithm.DEFAULT, jRadioButton2.isSelected(), false);
+                }
+                if (comparison == null) {
+                    System.exit(1);
+                }
                 comparison.setChemFilters(jCheckBox2.isSelected(), jCheckBox3.isSelected(), jCheckBox4.isSelected());
-
                 jTextArea1.append("Number of overlaps = " + comparison.getFirstAtomMapping().getCount() + NEW_LINE);
                 jTextArea1.setCaretPosition(jTextArea1.getDocument().getLength());
 
                 String[] QName = ((String) molFiles.get(0)).split(".mol");
                 String[] TName = ((String) molFiles.get(2)).split(".mol");
                 final String FileName = QName[0] + "_" + TName[0];
-
 
                 JLabel l1 = new JLabel("Query: " + (String) molFiles.get(0), SwingConstants.CENTER);
                 JLabel l2 = new JLabel("Target: " + (String) molFiles.get(2), SwingConstants.CENTER);
@@ -397,7 +402,6 @@ public class SMSDFrame extends JFrame {
 //
 //                System.out.println("Error: " + "Please provide query and target molecule information");
             }
-
 
         } catch (Exception ex) {
             Logger.getLogger(SMSDFrame.class.getName()).log(Level.SEVERE, null, ex);
