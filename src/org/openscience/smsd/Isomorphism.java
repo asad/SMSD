@@ -230,7 +230,7 @@ public final class Isomorphism extends BaseMapping implements Serializable {
         Substructure mcs;
         mcs = new Substructure(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings(), true);
         clearMaps();
-        if (isSubgraph()) {
+        if (mcs.isSubgraph()) {
             getMCSList().addAll(mcs.getAllAtomMapping());
         }
         return mcs.isSubgraph();
