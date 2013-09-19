@@ -82,7 +82,7 @@ import org.openscience.smsd.interfaces.Algorithm;
  * // Print the mapping between molecules
  * System.out.println(" Mappings: ");
  * for (AtomAtomMapping atomatomMapping : comparison.getAllAtomMapping()) {
- *      for (Map.Entry<IAtom, IAtom> mapping : atomatomMapping.getMappings().entrySet()) {
+ *      for (Map.Entry<IAtom, IAtom> mapping : atomatomMapping.getMappingsByAtoms().entrySet()) {
  *          IAtom sourceAtom = mapping.getKey();
  *          IAtom targetAtom = mapping.getValue();
  *          System.out.println(sourceAtom.getSymbol() + " " + targetAtom.getSymbol());

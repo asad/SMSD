@@ -115,8 +115,8 @@ public final class EnergyFilter extends Sotter implements IChemicalFilter<Double
         }
 
         if (mcsAtomSolution != null) {
-            for (IAtom eAtom : mcsAtomSolution.getMappings().keySet()) {
-                IAtom pAtom = mcsAtomSolution.getMappings().get(eAtom);
+            for (IAtom eAtom : mcsAtomSolution.getMappingsByAtoms().keySet()) {
+                IAtom pAtom = mcsAtomSolution.getMappingsByAtoms().get(eAtom);
                 eAtom.setFlag(0, true);
                 pAtom.setFlag(0, true);
             }

@@ -158,10 +158,10 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
         int stereoMisMatchScore = 0;
         if (getMappingCount() > 0) {
             AtomAtomMapping firstAtomMCS = getMCSList().iterator().next();
-            for (IAtom indexI : firstAtomMCS.getMappings().keySet()) {
-                IAtom indexJ = firstAtomMCS.getMappings().get(indexI);
-                for (IAtom indexIPlus : firstAtomMCS.getMappings().keySet()) {
-                    IAtom indexJPlus = firstAtomMCS.getMappings().get(indexIPlus);
+            for (IAtom indexI : firstAtomMCS.getMappingsByAtoms().keySet()) {
+                IAtom indexJ = firstAtomMCS.getMappingsByAtoms().get(indexI);
+                for (IAtom indexIPlus : firstAtomMCS.getMappingsByAtoms().keySet()) {
+                    IAtom indexJPlus = firstAtomMCS.getMappingsByAtoms().get(indexIPlus);
                     if (!indexI.equals(indexIPlus) && !indexJ.equals(indexJPlus)) {
 
                         IAtom sourceAtom1 = indexI;
@@ -330,8 +330,8 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
 
         Map<IBond, IBond> bondbondMappingMap = Collections.synchronizedMap(new HashMap<IBond, IBond>());
 
-        for (Map.Entry<IAtom, IAtom> map1 : mapping.getMappings().entrySet()) {
-            for (Map.Entry<IAtom, IAtom> map2 : mapping.getMappings().entrySet()) {
+        for (Map.Entry<IAtom, IAtom> map1 : mapping.getMappingsByAtoms().entrySet()) {
+            for (Map.Entry<IAtom, IAtom> map2 : mapping.getMappingsByAtoms().entrySet()) {
                 if (map1.getKey() != map2.getKey()) {
                     IBond bond1 = ac1.getBond(map1.getKey(), map2.getKey());
                     IBond bond2 = ac2.getBond(map1.getValue(), map2.getValue());

@@ -500,7 +500,7 @@ public class SMSDFrame extends JFrame {
         System.out.println("Output of the final Mappings: ");
         int counter = 1;
         for (AtomAtomMapping aam : smsd.getAllAtomMapping()) {
-            Map<IAtom, IAtom> mappings = aam.getMappings();
+            Map<IAtom, IAtom> mappings = aam.getMappingsByAtoms();
             Map<Integer, Integer> mapping = new TreeMap<Integer, Integer>();
             for (IAtom keys : mappings.keySet()) {
                 mapping.put(aam.getQueryIndex(keys), aam.getTargetIndex(mappings.get(keys)));

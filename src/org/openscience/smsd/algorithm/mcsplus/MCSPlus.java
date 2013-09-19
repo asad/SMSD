@@ -121,8 +121,6 @@ public class MCSPlus {
 //            System.out.println("Max_Cliques_Set: " + maxCliqueSet);
 //            System.out.println("Best Clique Size: " + init.getBestCliqueSize());
 //            System.out.println("**************************************************");
-            //clear all the compatibility graph content
-            gcg.clear();
             List<Map<Integer, Integer>> mappings = new ArrayList<>();
 
             while (!maxCliqueSet.empty()) {
@@ -133,6 +131,9 @@ public class MCSPlus {
                 }
                 maxCliqueSet.pop();
             }
+
+            //clear all the compatibility graph content
+            gcg.clear();
 //            System.out.println("mappings: " + mappings.size());
             extendMappings = searchMcGregorMapping(ac1, ac2, mappings);
 //            int size = !extendMappings.isEmpty() ? (extendMappings.size() / 2) : 0;
@@ -140,7 +141,6 @@ public class MCSPlus {
         } catch (IOException ex) {
             Logger.getLogger(MCSPlus.class.getName()).log(Level.SEVERE, null, ex);
         }
-
         return extendMappings;
     }
 

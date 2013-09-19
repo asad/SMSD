@@ -67,7 +67,7 @@ public final class AtomAtomMapping implements Serializable {
         if (this.getMapping() != other.getMapping() && (this.getMapping() == null || !this.mapping.equals(other.mapping))) {
             return false;
         }
-        if (this.getMappingIndex() != other.getMappingIndex() && (this.getMappingIndex() == null || !this.mappingIndex.equals(other.mappingIndex))) {
+        if (this.getMappingByIndex() != other.getMappingByIndex() && (this.getMappingByIndex() == null || !this.mappingIndex.equals(other.mappingIndex))) {
             return false;
         }
         return true;
@@ -79,7 +79,7 @@ public final class AtomAtomMapping implements Serializable {
         hash = 67 * hash + (this.getQuery() != null ? this.getQuery().hashCode() : 0);
         hash = 67 * hash + (this.getTarget() != null ? this.getTarget().hashCode() : 0);
         hash = 67 * hash + (this.getMapping() != null ? this.getMapping().hashCode() : 0);
-        hash = 67 * hash + (this.getMappingIndex() != null ? this.getMappingIndex().hashCode() : 0);
+        hash = 67 * hash + (this.getMappingByIndex() != null ? this.getMappingByIndex().hashCode() : 0);
         return hash;
     }
 
@@ -102,7 +102,7 @@ public final class AtomAtomMapping implements Serializable {
      */
     public synchronized void put(IAtom atom1, IAtom atom2) {
         getMapping().put(atom1, atom2);
-        getMappingIndex().put(getQuery().getAtomNumber(atom1), getTarget().getAtomNumber(atom2));
+        getMappingByIndex().put(getQuery().getAtomNumber(atom1), getTarget().getAtomNumber(atom2));
     }
 
     /**
@@ -136,7 +136,7 @@ public final class AtomAtomMapping implements Serializable {
      */
     public synchronized void clear() {
         getMapping().clear();
-        getMappingIndex().clear();
+        getMappingByIndex().clear();
     }
 
     /**
@@ -154,7 +154,7 @@ public final class AtomAtomMapping implements Serializable {
      *
      * @return atom-atom mappings
      */
-    public synchronized Map<IAtom, IAtom> getMappings() {
+    public synchronized Map<IAtom, IAtom> getMappingsByAtoms() {
         return Collections.unmodifiableMap(new HashMap<>(getMapping()));
     }
 
@@ -163,8 +163,8 @@ public final class AtomAtomMapping implements Serializable {
      *
      * @return atom-atom index mappings
      */
-    public synchronized Map<Integer, Integer> getMappingsIndex() {
-        return Collections.unmodifiableSortedMap(new TreeMap<>(getMappingIndex()));
+    public synchronized Map<Integer, Integer> getMappingsByIndex() {
+        return Collections.unmodifiableSortedMap(new TreeMap<>(getMappingByIndex()));
     }
 
     /**
@@ -290,14 +290,14 @@ public final class AtomAtomMapping implements Serializable {
     /**
      * @return the mapping
      */
-    public Map<IAtom, IAtom> getMapping() {
+    private Map<IAtom, IAtom> getMapping() {
         return mapping;
     }
 
     /**
      * @return the mappingIndex
      */
-    public Map<Integer, Integer> getMappingIndex() {
+    private Map<Integer, Integer> getMappingByIndex() {
         return mappingIndex;
     }
 }

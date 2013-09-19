@@ -164,10 +164,10 @@ public class MCSSeedGenerator implements Callable<List<AtomAtomMapping>> {
         boolean rOnPFlag;
         if (source.getAtomCount() > target.getAtomCount()) {
             rOnPFlag = true;
-            rmap.calculateOverlapsAndReduce(source, target, bondMatch, ringMatch);
+            rmap.calculateOverlapsAndReduce(source, target, true, ringMatch);
         } else {
             rOnPFlag = false;
-            rmap.calculateOverlapsAndReduce(target, source, bondMatch, ringMatch);
+            rmap.calculateOverlapsAndReduce(target, source, true, ringMatch);
         }
         List<Map<Integer, Integer>> solutions
                 = Collections.synchronizedList(FinalMappings.getInstance().getFinalMapping());

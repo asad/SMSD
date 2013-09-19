@@ -114,9 +114,9 @@ public final class StereoFilter extends Sotter implements IChemicalFilter<Double
                         && chemfilter.getTarget().getBondCount() > 1
                         && !(chemfilter.getQuery() instanceof IQueryAtomContainer
                         || chemfilter.getTarget() instanceof IQueryAtomContainer)) {
-                    List<IAtomContainer> subgraphRList = getMappedFragment(chemfilter.getQuery(), atomMapMCS.getMappings().keySet());
+                    List<IAtomContainer> subgraphRList = getMappedFragment(chemfilter.getQuery(), atomMapMCS.getMappingsByAtoms().keySet());
                     double rscore = getRingMatchScore(subgraphRList);
-                    List<IAtomContainer> subgraphPList = getMappedFragment(chemfilter.getTarget(), atomMapMCS.getMappings().values());
+                    List<IAtomContainer> subgraphPList = getMappedFragment(chemfilter.getTarget(), atomMapMCS.getMappingsByAtoms().values());
                     double pscore = getRingMatchScore(subgraphPList);
                     ringScore = rscore + pscore;
                 }
@@ -139,8 +139,8 @@ public final class StereoFilter extends Sotter implements IChemicalFilter<Double
 
         Map<IBond, IBond> bondbondMappingMap = new HashMap<IBond, IBond>();
 
-        for (Map.Entry<IAtom, IAtom> map1 : mappings.getMappings().entrySet()) {
-            for (Map.Entry<IAtom, IAtom> map2 : mappings.getMappings().entrySet()) {
+        for (Map.Entry<IAtom, IAtom> map1 : mappings.getMappingsByAtoms().entrySet()) {
+            for (Map.Entry<IAtom, IAtom> map2 : mappings.getMappingsByAtoms().entrySet()) {
                 if (map1.getKey() != map2.getKey()) {
                     IBond bond1 = ac1.getBond(map1.getKey(), map2.getKey());
                     IBond bond2 = ac2.getBond(map1.getValue(), map2.getValue());
@@ -157,7 +157,7 @@ public final class StereoFilter extends Sotter implements IChemicalFilter<Double
     private synchronized double getAtomScore(double scoreGlobal, AtomAtomMapping atomMapMCS, IAtomContainer reactant,
             IAtomContainer product) {
         double score = scoreGlobal;
-        for (Map.Entry<IAtom, IAtom> mappings : atomMapMCS.getMappings().entrySet()) {
+        for (Map.Entry<IAtom, IAtom> mappings : atomMapMCS.getMappingsByAtoms().entrySet()) {
             IAtom rAtom = mappings.getKey();
             IAtom pAtom = mappings.getValue();
 

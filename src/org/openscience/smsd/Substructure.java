@@ -212,7 +212,7 @@ public final class Substructure extends BaseMapping {
                 this.vfMappingSize = solution.getCount();
                 counter = 0;
             }
-            for (Map.Entry<IAtom, IAtom> mapping : solution.getMappings().entrySet()) {
+            for (Map.Entry<IAtom, IAtom> mapping : solution.getMappingsByAtoms().entrySet()) {
                 IAtom qAtom;
                 IAtom tAtom;
 

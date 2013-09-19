@@ -33,6 +33,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -58,8 +59,8 @@ public final class GenerateCompatibilityGraph implements Serializable {
 
     private List<Integer> compGraphNodes = null;
     private List<Integer> compGraphNodesCZero = null;
-    private List<Integer> cEdges = null;
-    private List<Integer> dEdges = null;
+    private final List<Integer> cEdges;
+    private final List<Integer> dEdges;
     private int cEdgesSize = 0;
     private int dEdgesSize = 0;
     private final IAtomContainer source;
@@ -92,16 +93,14 @@ public final class GenerateCompatibilityGraph implements Serializable {
         cEdges = Collections.synchronizedList(new ArrayList<Integer>());
         dEdges = Collections.synchronizedList(new ArrayList<Integer>());
 
-        if (largeCliques) {
-//            System.out.println("compatibilityGraphNodes ");
-            compatibilityGraphNodes();
-//            System.out.println("compatibilityGraph ");
-            compatibilityGraph();
-//            System.out.println("c-edges " + getCEgdes().size());
-//            System.out.println("d-edges " + getDEgdes().size());
-        }
+//        System.out.println("compatibilityGraphNodes ");
+        compatibilityGraphNodes();
+//        System.out.println("compatibilityGraph ");
+        compatibilityGraph(largeCliques);
+//        System.out.println("c-edges " + getCEgdes().size());
+//        System.out.println("d-edges " + getDEgdes().size());
 
-        if (getCEdgesSize() == 0 || !largeCliques) {
+        if (getCEdgesSize() == 0) {
             clearCompGraphNodes();
 
             clearCEgdes();
@@ -113,41 +112,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
             compatibilityGraphNodesIfCEdgeIsZero();
             compatibilityGraphCEdgeZero();
             clearCompGraphNodesCZero();
-
-//            System.out.println("small c-edges " + getCEgdes().size());
-//            System.out.println("small d-edges " + getDEgdes().size());
         }
-    }
-
-    private Map<IAtom, List<String>> labelAtomsByAtomType(IAtomContainer atomCont) {
-        Map<IAtom, List<String>> label_list = new HashMap<>();
-
-        for (int i = 0; i < atomCont.getAtomCount(); i++) {
-            List<String> label = new ArrayList<>(7);
-            for (int a = 0; a < 7; a++) {
-                label.add(a, "Z9");
-            }
-            IAtom refAtom = atomCont.getAtom(i);
-            /*
-             * Important Step: Discriminate between source atom types
-             */
-            String referenceAtom = refAtom.getAtomTypeName() == null ? refAtom.getSymbol() : refAtom.getAtomTypeName();
-
-            label.set(0, referenceAtom);
-            List<IAtom> connAtoms = atomCont.getConnectedAtomsList(refAtom);
-
-            int counter = 1;
-
-            for (IAtom negAtom : connAtoms) {
-                String neighbouringAtom = negAtom.getAtomTypeName() == null ? negAtom.getSymbol() : negAtom.getAtomTypeName();
-                label.set(counter, neighbouringAtom);
-                counter += 1;
-            }
-//            System.out.println("label " + label);
-            bubbleSort(label);
-            label_list.put(refAtom, label);
-        }
-        return label_list;
     }
 
     private Map<IAtom, List<String>> labelAtomsBySymbol(IAtomContainer atomCont) {
@@ -163,6 +128,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
              * Important Step: Discriminate between source atom types
              */
             String referenceAtom = refAtom.getSymbol();
+//            String referenceAtom = refAtom.getAtomTypeName() == null ? refAtom.getSymbol() : refAtom.getAtomTypeName();
 
             label.set(0, referenceAtom);
             List<IAtom> connAtoms = atomCont.getConnectedAtomsList(refAtom);
@@ -171,6 +137,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
 
             for (IAtom negAtom : connAtoms) {
                 String neighbouringAtom = negAtom.getSymbol();
+//                String neighbouringAtom = negAtom.getAtomTypeName() == null ? negAtom.getSymbol() : negAtom.getAtomTypeName();
                 label.set(counter, neighbouringAtom);
                 counter += 1;
             }
@@ -201,15 +168,9 @@ public final class GenerateCompatibilityGraph implements Serializable {
     }
 
     private boolean isSubset(List<String> labelA, List<String> labelB) {
-        boolean flag = true;
-        for (int i = 0; i < labelA.size(); i++) {
-            if (!labelA.get(i).equals(labelB.get(i))) {
-                if (labelA.get(i).compareTo(labelB.get(i)) < 0) {
-                    flag = false;
-                }
-            }
-        }
-        return flag;
+        List<String> common = new ArrayList<>(labelA);
+        common.retainAll(labelB);
+        return common.size() == labelB.size();
     }
 
     private boolean isEqual(List<String> labelA, List<String> labelB) {
@@ -237,48 +198,24 @@ public final class GenerateCompatibilityGraph implements Serializable {
         Set<Edge> edges = new HashSet<>();
 
         int nodeCount = 1;
+        Map<IAtom, List<String>> labelAtomsBySymbolA = labelAtomsBySymbol(source);
+        Map<IAtom, List<String>> labelAtomsBySymbolB = labelAtomsBySymbol(target);
 
-        Map<IAtom, List<String>> label_list_molA;
-        Map<IAtom, List<String>> label_list_molB;
-
-        label_list_molA = labelAtomsBySymbol(source);
-        label_list_molB = labelAtomsBySymbol(target);
-
-        for (Map.Entry<IAtom, List<String>> labelA : label_list_molA.entrySet()) {
+        for (Map.Entry<IAtom, List<String>> labelA : labelAtomsBySymbolA.entrySet()) {
 //            System.err.println("labelA.getValue() " + labelA.getValue());
-            for (Map.Entry<IAtom, List<String>> labelB : label_list_molB.entrySet()) {
-                if (isEqual(labelA.getValue(), labelB.getValue())) {
-//                        System.err.println("IS EQUAL");
-                    int atomNumberI = source.getAtomNumber(labelA.getKey());
-                    int atomNumberJ = target.getAtomNumber(labelB.getKey());
-                    Edge e = new Edge(atomNumberI, atomNumberJ);
-                    if (!edges.contains(e)) {
-                        edges.add(e);
-                        compGraphNodes.add(atomNumberI);
-                        compGraphNodes.add(atomNumberJ);
-                        compGraphNodes.add(nodeCount);
-                        nodeCount += 1;
-                    }
-                }
-            }
-        }
-
-        label_list_molA = labelAtomsByAtomType(source);
-        label_list_molB = labelAtomsByAtomType(target);
-
-        for (Map.Entry<IAtom, List<String>> labelA : label_list_molA.entrySet()) {
-//            System.err.println("labelA.getValue() " + labelA.getValue());
-            for (Map.Entry<IAtom, List<String>> labelB : label_list_molB.entrySet()) {
-                if (isSubset(labelA.getValue(), labelB.getValue())) {
-                    int atomNumberI = source.getAtomNumber(labelA.getKey());
-                    int atomNumberJ = target.getAtomNumber(labelB.getKey());
-                    Edge e = new Edge(atomNumberI, atomNumberJ);
-                    if (!edges.contains(e)) {
-                        edges.add(e);
-                        compGraphNodes.add(atomNumberI);
-                        compGraphNodes.add(atomNumberJ);
-                        compGraphNodes.add(nodeCount);
-                        nodeCount += 1;
+            for (Map.Entry<IAtom, List<String>> labelB : labelAtomsBySymbolB.entrySet()) {
+                if (labelA.getKey().getSymbol().equals(labelB.getKey().getSymbol())) {
+                    if (isSubset(labelA.getValue(), labelB.getValue())) {
+                        int atomNumberI = source.getAtomNumber(labelA.getKey());
+                        int atomNumberJ = target.getAtomNumber(labelB.getKey());
+                        Edge e = new Edge(atomNumberI, atomNumberJ);
+                        if (!edges.contains(e)) {
+                            edges.add(e);
+                            compGraphNodes.add(atomNumberI);
+                            compGraphNodes.add(atomNumberJ);
+                            compGraphNodes.add(nodeCount);
+                            nodeCount += 1;
+                        }
                     }
                 }
             }
@@ -289,10 +226,11 @@ public final class GenerateCompatibilityGraph implements Serializable {
     /**
      * Generate Compatibility Graph Nodes Bond Insensitive
      *
+     * @param largeCliques
      * @return
      * @throws IOException
      */
-    protected int compatibilityGraph() throws IOException {
+    protected int compatibilityGraph(boolean largeCliques) throws IOException {
 
         int comp_graph_nodes_List_size = compGraphNodes.size();
 
@@ -300,9 +238,6 @@ public final class GenerateCompatibilityGraph implements Serializable {
 //        System.out.println("target atom count " + target.getAtomCount());
 //        System.out.println("compGraphNodes combs: " + compGraphNodes.size());
 //        System.out.println("compGraphNodes " + compGraphNodes);
-        cEdges = new ArrayList<>(); //Initialize the cEdges List
-        dEdges = new ArrayList<>(); //Initialize the dEdges List
-
         for (int a = 0; a < comp_graph_nodes_List_size; a += 3) {
             for (int b = a; b < comp_graph_nodes_List_size; b += 3) {
                 if ((a != b)
@@ -319,7 +254,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
 
                     if (reactantBond != null && productBond != null) {
                         addEdges(reactantBond, productBond, a, b);
-                    } else if (reactantBond == null && productBond == null) {
+                    } else if (largeCliques && reactantBond == null && productBond == null) {
                         dEdges.add((a / 3) + 1);
                         dEdges.add((b / 3) + 1);
                     }
@@ -332,11 +267,10 @@ public final class GenerateCompatibilityGraph implements Serializable {
     }
 
     private void addEdges(IBond reactantBond, IBond productBond, int iIndex, int jIndex) {
-
         if (isMatchFeasible(reactantBond, productBond, isMatchBond(), isMatchRings())) {
             cEdges.add((iIndex / 3) + 1);
             cEdges.add((jIndex / 3) + 1);
-        } else {
+        } else {//if (reactantBond == null && productBond == null) {
             dEdges.add((iIndex / 3) + 1);
             dEdges.add((jIndex / 3) + 1);
         }
@@ -401,8 +335,6 @@ public final class GenerateCompatibilityGraph implements Serializable {
     private int compatibilityGraphCEdgeZero() throws IOException {
 
         int compGraphNodesCZeroListSize = compGraphNodesCZero.size();
-        cEdges = new ArrayList<>(); //Initialize the cEdges List
-        dEdges = new ArrayList<>(); //Initialize the dEdges List
 
         for (int a = 0; a < compGraphNodesCZeroListSize; a += 4) {
             int index_a = compGraphNodesCZero.get(a);
@@ -521,10 +453,10 @@ public final class GenerateCompatibilityGraph implements Serializable {
     }
 
     public synchronized void clear() {
-        cEdges = null;
-        dEdges = null;
-        compGraphNodes = null;
-        compGraphNodesCZero = null;
+        cEdges.clear();
+        dEdges.clear();
+        compGraphNodes.clear();
+        compGraphNodesCZero.clear();
     }
 
     /**

@@ -57,13 +57,13 @@ public class Edge implements Comparable<Edge>, Comparator<Edge>, Serializable {
             return false;
         }
         final Edge other = (Edge) obj;
-        if (this.i != other.i) {
+        if (this.i != other.i && this.j == other.j) {
             return false;
         }
-        if (this.j != other.j) {
+        if (this.i == other.i && this.j != other.j) {
             return false;
         }
-        return true;
+        return this.i == other.i || this.j == other.j;
     }
 
     private final int i;
