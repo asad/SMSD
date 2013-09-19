@@ -111,7 +111,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
             ExecutorService executor = Executors.newFixedThreadPool(threadsAvailable);
             CompletionService<List<AtomAtomMapping>> cs = new ExecutorCompletionService<>(executor);
             MCSSeedGenerator mcsSeedGeneratorUIT = new MCSSeedGenerator(source, target, isBondMatchFlag(), isMatchRings(), Algorithm.CDKMCS);
-            MCSSeedGenerator mcsSeedGeneratorKoch = new MCSSeedGenerator(source, target, true, isMatchRings(), Algorithm.MCSPlus);
+            MCSSeedGenerator mcsSeedGeneratorKoch = new MCSSeedGenerator(source, target, isBondMatchFlag(), isMatchRings(), Algorithm.MCSPlus);
             int jobCounter = 0;
             cs.submit(mcsSeedGeneratorUIT);
             jobCounter++;
@@ -121,7 +121,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
             /*
              * Generate the UIT based MCS seeds
              */
-            List<Map<Integer, Integer>> mcsSeeds = new ArrayList<>();
+            Set<Map<Integer, Integer>> mcsSeeds = new HashSet<>();
             /*
              * Collect the results
              */
@@ -205,7 +205,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
              */
             solutionSize = 0;
             counter = 0;
-            this.allAtomMCS = new ArrayList<AtomAtomMapping>();
+            this.allAtomMCS = new ArrayList<>();
 
             /*
              * Store solutions from VF MCS only
@@ -239,7 +239,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
              */
             int solSize = 0;
             int counter = 0;
-            this.allAtomMCS = new ArrayList<AtomAtomMapping>();
+            this.allAtomMCS = new ArrayList<>();
             if (!allLocalAtomAtomMapping.isEmpty()) {
                 for (int i = 0; i < allLocalAtomAtomMapping.size(); i++) {
                     AtomAtomMapping atomMCSMap = allLocalAtomAtomMapping.get(i);

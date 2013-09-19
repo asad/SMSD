@@ -27,6 +27,7 @@ import java.io.Serializable;
 import java.util.logging.Level;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.annotations.TestMethod;
+import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.tools.ILoggingTool;
@@ -225,6 +226,16 @@ public final class Isomorphism extends BaseMapping implements Serializable {
         return mcs.isTimeout();
     }
 
+    private synchronized boolean substructureAlgorithm() throws CDKException {
+        Substructure mcs;
+        mcs = new Substructure(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings(), true);
+        clearMaps();
+        if (isSubgraph()) {
+            getMCSList().addAll(mcs.getAllAtomMapping());
+        }
+        return mcs.isSubgraph();
+    }
+
     private synchronized void vfLibMCSAlgorithm() {
         VF2MCS mcs;
         mcs = new VF2MCS(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings());
@@ -240,20 +251,19 @@ public final class Isomorphism extends BaseMapping implements Serializable {
     }
 
     private synchronized void defaultMCSAlgorithm() {
-//        try {
-//            boolean timeoutMCS1 = cdkMCSAlgorithm();
-//            if ((getMappingCount() == 0 && timeoutMCS1)
-//                    || (timeoutMCS1 && getMappingCount() > 0
-//                    && (getFirstAtomMapping().getCount() != getQueryContainer().getAtomCount()
-//                    || getFirstAtomMapping().getCount() != getTargetContainer().getAtomCount()))) {
-//                vfLibMCSAlgorithm();
-//            }
-//        } catch (Exception e) {
-//            logger.error(Level.SEVERE, null, e);
-//        }
         try {
-            vfLibMCSAlgorithm();
-        } catch (Exception e) {
+            boolean substructureAlgorithm = substructureAlgorithm();
+            if (!substructureAlgorithm) {
+                boolean timeoutMCS1 = mcsPlusAlgorithm();
+                if ((getMappingCount() == 0 && timeoutMCS1)
+                        || (timeoutMCS1 && getMappingCount() > 0
+                        && (getFirstAtomMapping().getCount() != getQueryContainer().getAtomCount()
+                        || getFirstAtomMapping().getCount() != getTargetContainer().getAtomCount()))) {
+                    vfLibMCSAlgorithm();
+                }
+            } else {
+            }
+        } catch (CDKException e) {
             logger.error(Level.SEVERE, null, e);
         }
     }

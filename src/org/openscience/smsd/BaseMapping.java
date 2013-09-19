@@ -289,7 +289,7 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
         if (!getMCSList().isEmpty()) {
             return makeBondMapsOfAtomMaps(getQuery(), getTarget(), getMCSList());
         }
-        return new ArrayList<Map<IBond, IBond>>();
+        return new ArrayList<>();
     }
 
     /**

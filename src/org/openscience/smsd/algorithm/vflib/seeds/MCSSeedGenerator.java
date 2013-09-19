@@ -104,7 +104,7 @@ public class MCSSeedGenerator implements Callable<List<AtomAtomMapping>> {
             ac1 = target;
             ac2 = source;
         }
-        GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(ac1, ac2, bondMatch, ringMatch);
+        GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(ac1, ac2, bondMatch, ringMatch, true);
         List<Integer> comp_graph_nodes = gcg.getCompGraphNodes();
         List<Integer> cEdges = gcg.getCEgdes();
         List<Integer> dEdges = gcg.getDEgdes();
@@ -162,7 +162,6 @@ public class MCSSeedGenerator implements Callable<List<AtomAtomMapping>> {
     private List<AtomAtomMapping> addUIT() throws CDKException {
         CDKRMapHandler rmap = new CDKRMapHandler();
         boolean rOnPFlag;
-        List<Map<Integer, Integer>> sol;
         if (source.getAtomCount() > target.getAtomCount()) {
             rOnPFlag = true;
             rmap.calculateOverlapsAndReduce(source, target, bondMatch, ringMatch);
