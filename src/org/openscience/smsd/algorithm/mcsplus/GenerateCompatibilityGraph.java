@@ -93,12 +93,12 @@ public final class GenerateCompatibilityGraph implements Serializable {
         dEdges = Collections.synchronizedList(new ArrayList<Integer>());
 
         if (largeCliques) {
-            System.out.println("compatibilityGraphNodes ");
+//            System.out.println("compatibilityGraphNodes ");
             compatibilityGraphNodes();
-            System.out.println("compatibilityGraph ");
+//            System.out.println("compatibilityGraph ");
             compatibilityGraph();
-            System.out.println("c-edges " + getCEgdes().size());
-            System.out.println("d-edges " + getDEgdes().size());
+//            System.out.println("c-edges " + getCEgdes().size());
+//            System.out.println("d-edges " + getDEgdes().size());
         }
 
         if (getCEdgesSize() == 0 || !largeCliques) {
