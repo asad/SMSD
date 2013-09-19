@@ -114,8 +114,8 @@ public final class GenerateCompatibilityGraph implements Serializable {
             compatibilityGraphCEdgeZero();
             clearCompGraphNodesCZero();
 
-            System.out.println("small c-edges " + getCEgdes().size());
-            System.out.println("small d-edges " + getDEgdes().size());
+//            System.out.println("small c-edges " + getCEgdes().size());
+//            System.out.println("small d-edges " + getDEgdes().size());
         }
     }
 
