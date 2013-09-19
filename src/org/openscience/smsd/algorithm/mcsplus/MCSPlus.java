@@ -110,17 +110,17 @@ public class MCSPlus {
             List<Integer> cEdges = gcg.getCEgdes();
             List<Integer> dEdges = gcg.getDEgdes();
 //
-            System.out.println("**************************************************");
-            System.out.println("C_edges: " + cEdges.size());
-            System.out.println("D_edges: " + dEdges.size());
-            System.out.println("comp_graph_nodes: " + comp_graph_nodes);
+//            System.out.println("**************************************************");
+//            System.out.println("C_edges: " + cEdges.size());
+//            System.out.println("D_edges: " + dEdges.size());
+//            System.out.println("comp_graph_nodes: " + comp_graph_nodes);
             BKKCKCF init = new BKKCKCF(comp_graph_nodes, cEdges, dEdges);
             Stack<List<Integer>> maxCliqueSet = new Stack<>();
             maxCliqueSet.addAll(init.getMaxCliqueSet());
 
-            System.out.println("Max_Cliques_Set: " + maxCliqueSet);
-            System.out.println("Best Clique Size: " + init.getBestCliqueSize());
-            System.out.println("**************************************************");
+//            System.out.println("Max_Cliques_Set: " + maxCliqueSet);
+//            System.out.println("Best Clique Size: " + init.getBestCliqueSize());
+//            System.out.println("**************************************************");
             //clear all the compatibility graph content
             gcg.clear();
             List<Map<Integer, Integer>> mappings = new ArrayList<>();
