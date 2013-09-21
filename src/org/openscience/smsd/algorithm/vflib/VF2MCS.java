@@ -284,7 +284,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
             setVFMappings(true, queryCompiler);
 
         } else if (countR <= countP) {//isBondMatchFlag()
-            queryCompiler = new QueryCompiler(this.source, isBondMatchFlag(), isMatchRings()).compile();
+            queryCompiler = new QueryCompiler(this.source, true, isMatchRings()).compile();
             mapper = new VFMCSMapper(queryCompiler);
             List<Map<INode, IAtom>> map = mapper.getMaps(this.target);
             if (map != null) {
@@ -292,7 +292,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
             }
             setVFMappings(true, queryCompiler);
         } else {
-            queryCompiler = new QueryCompiler(this.target, isBondMatchFlag(), isMatchRings()).compile();
+            queryCompiler = new QueryCompiler(this.target, true, isMatchRings()).compile();
             mapper = new VFMCSMapper(queryCompiler);
             List<Map<INode, IAtom>> map = mapper.getMaps(this.source);
             if (map != null) {
