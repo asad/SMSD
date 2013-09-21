@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.Stack;
@@ -50,26 +51,26 @@ public final class BKKCKCF {
      *T: is a set of vertices which have already been used for the
      * initialization of ENUMERATE_CLIQUES
      */
-    private List<Integer> T;
+    private final List<Integer> T;
     /*
      * C: set of vertices belonging to the current clique
      */
-    private List<Integer> C;
+    private final List<Integer> C;
     /*
      * S: set of vertices which are not allowed to be added
      * to C
      */
-    private List<Integer> S;
+    private final List<Integer> S;
     /*
      *P: is a set of vertices which <b>can</b> be added to C, because they are
      * neighbours of vertex u via <i>c-edges</i>
      */
-    private Stack<Integer> P;
+    private final Stack<Integer> P;
     /*
      * D: is a set of vertices which <b>cannot</b> be added to C, because they are
      * neighbours of vertex u via <i>d-edges</i>
      */
-    private Stack<Integer> D;
+    private final Stack<Integer> D;
     /*
      *V: stored all the vertices for the Graph G
      * V[G]: nodes of vector comp_graph_nodes are stored in V
@@ -100,9 +101,9 @@ public final class BKKCKCF {
             List<Integer> cEdges,
             List<Integer> dEdges) {
 
-        this.comp_graph_nodes = new ArrayList<>(compGraphNodes);
-        this.C_edges = new ArrayList<>(cEdges);
-        this.D_edges = new ArrayList<>(dEdges);
+        this.comp_graph_nodes = Collections.unmodifiableList(new ArrayList<>(compGraphNodes));
+        this.C_edges = Collections.unmodifiableList(new ArrayList<>(cEdges));
+        this.D_edges = Collections.unmodifiableList(new ArrayList<>(dEdges));
         best_clique_size = 0;
         max_Cliques_Set = new HashSet<>();
 
@@ -204,12 +205,12 @@ public final class BKKCKCF {
     private int Enumerate_Cliques(List<Integer> C, Stack<Integer> P, Stack<Integer> D, List<Integer> S) {
 
         List<Integer> N = new ArrayList<>(); ////Initialization Vector N
-        Stack<Integer> P_Prime = new Stack<Integer>();//Defined as P' in the paper
+        Stack<Integer> P_Prime = new Stack<>();//Defined as P' in the paper
 
-        C_copy = new ArrayList<Integer>();
-        P_copy = new Stack<Integer>();
-        D_copy = new Stack<Integer>();
-        S_copy = new ArrayList<Integer>();
+        C_copy = new ArrayList<>();
+        P_copy = new Stack<>();
+        D_copy = new Stack<>();
+        S_copy = new ArrayList<>();
 
         for (Integer I : P) {
             P_Prime.add(I);

@@ -85,7 +85,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
          *
          *
          */
-        if (isExtensionRequired() || !timoutVF) {
+        if (!timoutVF) {
 
             List<Map<Integer, Integer>> mcsVFSeeds = new ArrayList<>();
 
@@ -104,12 +104,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
             allLocalMCS.clear();
             allLocalAtomAtomMapping.clear();
 
-//            long startTimeSeeds = System.nanoTime();
-            int threadsAvailable = Runtime.getRuntime().availableProcessors();
-            if (threadsAvailable > 2) {
-                threadsAvailable = 2;
-            }
-            ExecutorService executor = Executors.newFixedThreadPool(threadsAvailable);
+            ExecutorService executor = Executors.newSingleThreadExecutor();
             CompletionService<List<AtomAtomMapping>> cs = new ExecutorCompletionService<>(executor);
             MCSSeedGenerator mcsSeedGeneratorUIT = new MCSSeedGenerator(source, target, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.CDKMCS);
             MCSSeedGenerator mcsSeedGeneratorKoch = new MCSSeedGenerator(source, target, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.MCSPlus);
