@@ -38,7 +38,6 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({org.openscience.smsd.helper.LabelContainerTest.class,
-    org.openscience.smsd.helper.FinalMappingsTest.class,
     org.openscience.smsd.helper.BondEnergyTest.class,
     org.openscience.smsd.helper.BinaryTreeTest.class})
 public class HelperSuite {

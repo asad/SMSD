@@ -233,6 +233,56 @@ public class IsomorphismMCSPlusTest {
         Assert.assertEquals(2, comparison.getAllAtomMapping().size());
     }
 
+    /**
+     * Test ring match using MCS VF2Plus
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testOpenRing() throws Exception {
+        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        // Benzene
+        IAtomContainer query = sp.parseSmiles("O=P(O)(O)OCC1OC(O)(COP(=O)(O)O)C(O)C1(O)");
+        // Napthalene
+        IAtomContainer target = sp.parseSmiles("O=C(CO)COP(=O)(O)O");
+        IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(query);
+        IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(target);
+        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, true);
+        // set chemical filter true
+        comparison.setChemFilters(true, true, true);
+        RenderedImage generateImage = generateImage(ac1, ac2, comparison);
+        boolean write = ImageIO.write(generateImage, "png", new File("MCSPLUS_Ring_Open.png"));
+        Assert.assertEquals(0.5, comparison.getTanimotoSimilarity(), .09);
+        Assert.assertEquals(2, comparison.getAllAtomMapping().size());
+    }
+
+    /**
+     * Test ring match using MCS VF2Plus
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testNADPNNADPH() throws Exception {
+        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        // NAD
+//        IAtomContainer query = sp.parseSmiles("NC(=O)c1ccc[n+](c1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
+        IAtomContainer query = sp.parseSmiles("O=C(N)C1=CC=C[N+](=C1)C4OC(COP(=O)(O)OP(=O)(O)OCC(O)C(O)C(O)CN3C=NC2=C(N=CN=C23)N)C(O)C4(O)");
+
+// NADH
+//        IAtomContainer target = sp.parseSmiles("NC(=O)C1=CN(C=CC1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
+        IAtomContainer target = sp.parseSmiles("O=C(N)C1=CN(C=CC1)C(O)C(O)C(O)CCOP(=O)(O)OP(=O)(O)OCC4OC(N3C=NC=2C(=NC=NC=23)N)C(O)C4(O)");
+
+        IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(query);
+        IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(target);
+        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.VFLibMCS, false, true);
+        // set chemical filter true
+        comparison.setChemFilters(true, true, true);
+        RenderedImage generateImage = generateImage(ac1, ac2, comparison);
+        boolean write = ImageIO.write(generateImage, "png", new File("MCSPLUS_NADH_NADP.png"));
+        Assert.assertEquals(1.0, comparison.getTanimotoSimilarity(), .09);
+        Assert.assertEquals(1, comparison.getAllAtomMapping().size());
+    }
+
 //    /**
 //     * Test ring match using MCS VF2Plus
 //     *

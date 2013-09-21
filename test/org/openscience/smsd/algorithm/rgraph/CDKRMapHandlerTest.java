@@ -38,7 +38,6 @@ import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.smiles.SmilesParser;
-import org.openscience.smsd.helper.FinalMappings;
 
 /**
  * @cdk.module test-smsd
@@ -130,7 +129,7 @@ public class CDKRMapHandlerTest {
         IAtomContainer Molecule2 = sp.parseSmiles("C1CCCC1");
         CDKRMapHandler instance = new CDKRMapHandler();
         instance.calculateOverlapsAndReduce(Molecule1, Molecule2, true, false);
-        Assert.assertNotNull(FinalMappings.getInstance().getSize());
+        Assert.assertNotNull(instance.getMappings().size());
     }
 
     /**
@@ -146,11 +145,12 @@ public class CDKRMapHandlerTest {
         CDKRMapHandler instance = new CDKRMapHandler();
         instance.calculateOverlapsAndReduceExactMatch(Molecule1, Molecule2, true, false);
         // TODO review the generated test code and remove the default call to fail.
-        Assert.assertNotNull(FinalMappings.getInstance().getSize());
+        Assert.assertNotNull(instance.getMappings());
     }
 
     /**
      * Test of getMappings method, of class CDKRMapHandler.
+     * @throws org.openscience.cdk.exception.InvalidSmilesException
      */
     @Test
     public void testGetMappings() throws InvalidSmilesException, CDKException {
