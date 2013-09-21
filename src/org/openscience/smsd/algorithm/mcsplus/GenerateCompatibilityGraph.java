@@ -33,7 +33,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -56,7 +55,6 @@ import org.openscience.smsd.helper.LabelContainer;
 public final class GenerateCompatibilityGraph implements Serializable {
 
     private static final long serialVersionUID = 96986606860861L;
-
     private List<Integer> compGraphNodes = null;
     private List<Integer> compGraphNodesCZero = null;
     private final List<Integer> cEdges;
@@ -127,8 +125,8 @@ public final class GenerateCompatibilityGraph implements Serializable {
             /*
              * Important Step: Discriminate between source atom types
              */
-            String referenceAtom = refAtom.getSymbol();
-//            String referenceAtom = refAtom.getAtomTypeName() == null ? refAtom.getSymbol() : refAtom.getAtomTypeName();
+//            String referenceAtom = refAtom.getSymbol();
+            String referenceAtom = refAtom.getAtomTypeName() == null ? refAtom.getSymbol() : refAtom.getAtomTypeName();
 
             label.set(0, referenceAtom);
             List<IAtom> connAtoms = atomCont.getConnectedAtomsList(refAtom);
@@ -136,8 +134,8 @@ public final class GenerateCompatibilityGraph implements Serializable {
             int counter = 1;
 
             for (IAtom negAtom : connAtoms) {
-                String neighbouringAtom = negAtom.getSymbol();
-//                String neighbouringAtom = negAtom.getAtomTypeName() == null ? negAtom.getSymbol() : negAtom.getAtomTypeName();
+//                String neighbouringAtom = negAtom.getSymbol();
+                String neighbouringAtom = negAtom.getAtomTypeName() == null ? negAtom.getSymbol() : negAtom.getAtomTypeName();
                 label.set(counter, neighbouringAtom);
                 counter += 1;
             }
@@ -206,6 +204,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
             for (Map.Entry<IAtom, List<String>> labelB : labelAtomsBySymbolB.entrySet()) {
                 if (labelA.getKey().getSymbol().equals(labelB.getKey().getSymbol())) {
                     if (isSubset(labelA.getValue(), labelB.getValue())) {
+//                        System.err.println("labelB.getValue() " + labelB.getValue());
                         int atomNumberI = source.getAtomNumber(labelA.getKey());
                         int atomNumberJ = target.getAtomNumber(labelB.getKey());
                         Edge e = new Edge(atomNumberI, atomNumberJ);
@@ -231,12 +230,11 @@ public final class GenerateCompatibilityGraph implements Serializable {
      * @throws IOException
      */
     protected int compatibilityGraph(boolean largeCliques) throws IOException {
-
         int comp_graph_nodes_List_size = compGraphNodes.size();
-
 //        System.out.println("Source atom count " + source.getAtomCount());
 //        System.out.println("target atom count " + target.getAtomCount());
-//        System.out.println("compGraphNodes combs: " + compGraphNodes.size());
+//        System.out.println("Expected " + (source.getAtomCount() * target.getAtomCount())
+//                + " Found Compatibilty: " + ((compGraphNodes.size() / 3) * 2));
 //        System.out.println("compGraphNodes " + compGraphNodes);
         for (int a = 0; a < comp_graph_nodes_List_size; a += 3) {
             for (int b = a; b < comp_graph_nodes_List_size; b += 3) {
@@ -254,7 +252,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
 
                     if (reactantBond != null && productBond != null) {
                         addEdges(reactantBond, productBond, a, b);
-                    } else if (largeCliques && reactantBond == null && productBond == null) {
+                    } else if (reactantBond == null && productBond == null) {
                         dEdges.add((a / 3) + 1);
                         dEdges.add((b / 3) + 1);
                     }
@@ -270,7 +268,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
         if (isMatchFeasible(reactantBond, productBond, isMatchBond(), isMatchRings())) {
             cEdges.add((iIndex / 3) + 1);
             cEdges.add((jIndex / 3) + 1);
-        } else {//if (reactantBond == null && productBond == null) {
+        } else {
             dEdges.add((iIndex / 3) + 1);
             dEdges.add((jIndex / 3) + 1);
         }
