@@ -82,12 +82,18 @@ public class MCSSeedGenerator implements Callable<List<AtomAtomMapping>> {
 
     @Override
     public List<AtomAtomMapping> call() throws Exception {
+//        System.out.println("ac1: " + this.source.getAtomCount());
+//        System.out.println("ac2: " + this.target.getAtomCount());
         if (algorithm.equals(Algorithm.CDKMCS)) {
-            System.out.println("Calling CDKMCS");
-            return addUIT();
+//            System.out.println("Calling CDKMCS " + bondMatch + " " + ringMatch);
+            List<AtomAtomMapping> addUIT = addUIT();
+//            System.out.println("addUIT " + addUIT.iterator().next().getCount());
+            return addUIT;
         } else if (algorithm.equals(Algorithm.MCSPlus)) {
-            System.out.println("Calling CDKMCS");
-            return addKochCliques();
+//            System.out.println("Calling MCSPLUS " + bondMatch + " " + ringMatch);
+            List<AtomAtomMapping> addKochCliques = addKochCliques();
+//            System.out.println("MCSPLUS " + addKochCliques.iterator().next().getCount());
+            return addKochCliques;
         } else {
             return Collections.unmodifiableList(allCliqueAtomMCS);
         }
@@ -112,7 +118,6 @@ public class MCSSeedGenerator implements Callable<List<AtomAtomMapping>> {
         BKKCKCF init = new BKKCKCF(comp_graph_nodes, cEdges, dEdges);
         Stack<List<Integer>> maxCliqueSet = new Stack<>();
         maxCliqueSet.addAll(init.getMaxCliqueSet());
-        gcg.clear();
         Collections.sort(maxCliqueSet, new Comparator<List<Integer>>() {
             @Override
             public int compare(List<Integer> a1, List<Integer> a2) {
@@ -152,7 +157,7 @@ public class MCSSeedGenerator implements Callable<List<AtomAtomMapping>> {
             }
             maxCliqueSet.pop();
         }
-
+        gcg.clear();
         return Collections.unmodifiableList(allCliqueAtomMCS);
     }
 
