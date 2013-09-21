@@ -73,7 +73,6 @@ public final class GenerateCompatibilityGraph implements Serializable {
      * @param target
      * @param shouldMatchBonds
      * @param shouldMatchRings
-     * @param largeCliques
      * @throws java.io.IOException
      */
     public GenerateCompatibilityGraph(
