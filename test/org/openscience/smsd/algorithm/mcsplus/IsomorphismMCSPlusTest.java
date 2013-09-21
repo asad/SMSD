@@ -25,7 +25,6 @@
 package org.openscience.smsd.algorithm.mcsplus;
 
 import gui.ImageGenerator;
-import java.awt.Image;
 import java.awt.image.RenderedImage;
 import java.io.File;
 import java.text.NumberFormat;
@@ -45,7 +44,6 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainerCreator;
-import org.openscience.cdk.smiles.SmilesGenerator;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.interfaces.Algorithm;
