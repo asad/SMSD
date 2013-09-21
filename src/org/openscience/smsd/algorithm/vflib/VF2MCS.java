@@ -103,7 +103,6 @@ public final class VF2MCS extends BaseMCS implements IResults {
              */
             allLocalMCS.clear();
             allLocalAtomAtomMapping.clear();
-
             ExecutorService executor = Executors.newSingleThreadExecutor();
             CompletionService<List<AtomAtomMapping>> cs = new ExecutorCompletionService<>(executor);
             MCSSeedGenerator mcsSeedGeneratorUIT = new MCSSeedGenerator(source, target, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.CDKMCS);
