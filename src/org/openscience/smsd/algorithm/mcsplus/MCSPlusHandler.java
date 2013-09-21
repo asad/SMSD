@@ -36,7 +36,6 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.filters.PostFilter;
-import org.openscience.smsd.helper.FinalMappings;
 import org.openscience.smsd.helper.MoleculeInitializer;
 import org.openscience.smsd.interfaces.IResults;
 
@@ -114,31 +113,26 @@ public final class MCSPlusHandler extends MoleculeInitializer implements IResult
      */
     private synchronized boolean searchMCS() {
         List<List<Integer>> mappings;
-        MCSPlus mcsPlus = new MCSPlus();
-        try {
-            if (source.getAtomCount() < target.getAtomCount()) {
-                List<List<Integer>> overlaps = mcsPlus.getOverlaps(source, target, shouldMatchBonds, shouldMatchRings);
-                mappings = Collections.synchronizedList(overlaps);
-            } else {
-                flagExchange = true;
-                List<List<Integer>> overlaps = mcsPlus.getOverlaps(target, source, shouldMatchBonds, shouldMatchRings);
-                mappings = Collections.synchronizedList(overlaps);
-            }
-            PostFilter.filter(mappings);
-            setAllMapping();
-            setAllAtomMapping();
-        } catch (CDKException e) {
-            mappings = null;
+        MCSPlus mcsplus;
+        if (source.getAtomCount() < target.getAtomCount()) {
+            mcsplus = new MCSPlus(source, target, shouldMatchBonds, shouldMatchRings);
+            List<List<Integer>> overlaps = mcsplus.getOverlaps();
+            mappings = Collections.synchronizedList(overlaps);
+
+        } else {
+            flagExchange = true;
+            mcsplus = new MCSPlus(target, source, shouldMatchBonds, shouldMatchRings);
+            List<List<Integer>> overlaps = mcsplus.getOverlaps();
+            mappings = Collections.synchronizedList(overlaps);
         }
-        return mcsPlus.isTimeout();
+        List<Map<Integer, Integer>> solutions=PostFilter.filter(mappings);
+        setAllMapping(solutions);
+        setAllAtomMapping();
+        return mcsplus.isTimeout();
     }
 
-    private synchronized void setAllMapping() {
+    private synchronized void setAllMapping(List<Map<Integer, Integer>> solutions) {
         try {
-
-            List<Map<Integer, Integer>> solutions
-                    = Collections.synchronizedList(FinalMappings.getInstance().getFinalMapping());
-            FinalMappings.getInstance().getFinalMapping().clear();
             int counter = 0;
             int bestSolSize = 0;
             for (Map<Integer, Integer> solution : solutions) {

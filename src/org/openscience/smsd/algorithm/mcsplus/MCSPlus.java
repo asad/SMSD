@@ -24,6 +24,7 @@ package org.openscience.smsd.algorithm.mcsplus;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
@@ -45,17 +46,16 @@ import org.openscience.smsd.tools.IterationManager;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.SMSDBondSensitiveTest")
-public class MCSPlus {
+public final class MCSPlus {
 
-    private boolean shouldMatchRings;
-    private boolean shouldMatchBonds;
+    private final boolean shouldMatchRings;
+    private final boolean shouldMatchBonds;
+    private final IAtomContainer ac1;
+    private final IAtomContainer ac2;
+    private final List<List<Integer>> overlaps;
+
     private boolean timeout = false;
 
-    /**
-     * Default constructor added
-     */
-    public MCSPlus() {
-    }
     private IterationManager iterationManager = null;
 
     /**
@@ -81,6 +81,21 @@ public class MCSPlus {
 
     /**
      *
+     * @param shouldMatchRings
+     * @param shouldMatchBonds
+     * @param ac1
+     * @param ac2
+     */
+    public MCSPlus(IAtomContainer ac1, IAtomContainer ac2, boolean shouldMatchBonds, boolean shouldMatchRings) {
+        this.shouldMatchRings = shouldMatchRings;
+        this.shouldMatchBonds = shouldMatchBonds;
+        this.ac1 = ac1;
+        this.ac2 = ac2;
+        this.overlaps = calculateMCS();
+    }
+
+    /**
+     *
      * @param ac1
      * @param ac2
      * @param shouldMatchBonds
@@ -88,15 +103,7 @@ public class MCSPlus {
      * @return
      * @throws CDKException
      */
-    protected List<List<Integer>> getOverlaps(
-            IAtomContainer ac1,
-            IAtomContainer ac2,
-            boolean shouldMatchBonds,
-            boolean shouldMatchRings)
-            throws CDKException {
-
-        this.shouldMatchBonds = shouldMatchBonds;
-        this.shouldMatchRings = shouldMatchRings;
+    private List<List<Integer>> calculateMCS() {
 
         List<List<Integer>> extendMappings = null;
 
@@ -240,5 +247,12 @@ public class MCSPlus {
      */
     public boolean isMatchBonds() {
         return shouldMatchBonds;
+    }
+
+    /**
+     * @return the overlaps
+     */
+    public List<List<Integer>> getOverlaps() {
+        return Collections.unmodifiableList(overlaps);
     }
 }

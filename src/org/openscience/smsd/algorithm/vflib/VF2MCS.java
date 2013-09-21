@@ -132,7 +132,9 @@ public final class VF2MCS extends BaseMCS implements IResults {
                     for (AtomAtomMapping mapping : chosen) {
                         Map<Integer, Integer> map = new TreeMap<>();
                         map.putAll(mapping.getMappingsByIndex());
-//                        System.out.println("mapping " + mapping.getMappingsByAtoms().size());
+                        System.out.println("ac1: " + mapping.getQuery().getAtomCount());
+                        System.out.println("ac2: " + mapping.getTarget().getAtomCount());
+                        System.out.println(" mapping " + mapping.getMappingsByAtoms().size());
                         mcsSeeds.add(map);
                     }
                 } catch (InterruptedException ex) {

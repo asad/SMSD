@@ -1,26 +1,21 @@
 /**
  *
- * Copyright (C) 2009-2013  Syed Asad Rahman <asad@ebi.ac.uk>
+ * Copyright (C) 2009-2013 Syed Asad Rahman <asad@ebi.ac.uk>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation; either version 2.1
- * of the License, or (at your option) any later version.
- * All we ask is that proper credit is given for our work, which includes
- * - but is not limited to - adding the above copyright notice to the beginning
- * of your source code files, and to any copyright notice that you may distribute
- * with programs based on this work.
+ * This program is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General
+ * Public License as published by the Free Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version. All we ask is that proper credit is given for our work, which includes - but is not limited to -
+ * adding the above copyright notice to the beginning of your source code files, and to any copyright notice that you
+ * may distribute with programs based on this work.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
  *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ * You should have received a copy of the GNU Lesser General Public License along with this program; if not, write to
+ * the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 package org.openscience.smsd.filters;
 
@@ -31,7 +26,6 @@ import java.util.Map;
 import java.util.TreeMap;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.annotations.TestMethod;
-import org.openscience.smsd.helper.FinalMappings;
 
 /**
  * Class that cleans redundant mappings from the solution set.
@@ -40,8 +34,9 @@ import org.openscience.smsd.helper.FinalMappings;
  * <lI>1: Stereo match, bond type, ring etc,
  * <lI>2: Fragment size,
  * <lI>3: Bond breaking energy
- * 
+ *
  * </OL>
+ *
  * @cdk.module smsd
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
@@ -49,24 +44,21 @@ import org.openscience.smsd.helper.FinalMappings;
 @TestClass("org.openscience.cdk.smsd.filters.PostFilterTest")
 public class PostFilter {
 
-    /** 
-     * 
-     * Creates a new instance of Post Filter and removes
-     * redundant mapping(s).
-     * 
+    /**
+     *
+     * Creates a new instance of Post Filter and removes redundant mapping(s).
+     *
      * @param mappings
      * @return Filtered non-redundant mappings
      */
     @TestMethod("testFilter")
     public synchronized static List<Map<Integer, Integer>> filter(List<List<Integer>> mappings) {
-        FinalMappings final_MAPPINGS = FinalMappings.getInstance();
+        List<Map<Integer, Integer>> final_MAPPINGS = new ArrayList<>();
         if (mappings != null && !mappings.isEmpty()) {
-            final_MAPPINGS.set(removeRedundantMapping(mappings));
-            mappings.clear();
-        } else {
-            final_MAPPINGS.set(new ArrayList<Map<Integer, Integer>>());
+            List<Map<Integer, Integer>> removeRedundantMapping = removeRedundantMapping(mappings);
+            final_MAPPINGS.addAll(removeRedundantMapping);
         }
-        return final_MAPPINGS.getFinalMapping();
+        return final_MAPPINGS;
     }
 
     private synchronized static boolean hasMap(Map<Integer, Integer> newMap, List<Map<Integer, Integer>> nonRedundantMapping) {

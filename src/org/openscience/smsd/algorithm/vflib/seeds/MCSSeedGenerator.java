@@ -38,7 +38,6 @@ import org.openscience.smsd.algorithm.mcsplus.GenerateCompatibilityGraph;
 import org.openscience.smsd.algorithm.rgraph.CDKRMapHandler;
 import org.openscience.smsd.algorithm.vflib.Map1ValueComparator;
 import org.openscience.smsd.algorithm.vflib.SortOrder;
-import org.openscience.smsd.helper.FinalMappings;
 import org.openscience.smsd.interfaces.Algorithm;
 
 /**
@@ -84,8 +83,10 @@ public class MCSSeedGenerator implements Callable<List<AtomAtomMapping>> {
     @Override
     public List<AtomAtomMapping> call() throws Exception {
         if (algorithm.equals(Algorithm.CDKMCS)) {
+            System.out.println("Calling CDKMCS");
             return addUIT();
         } else if (algorithm.equals(Algorithm.MCSPlus)) {
+            System.out.println("Calling CDKMCS");
             return addKochCliques();
         } else {
             return Collections.unmodifiableList(allCliqueAtomMCS);
@@ -161,17 +162,16 @@ public class MCSSeedGenerator implements Callable<List<AtomAtomMapping>> {
      */
     private List<AtomAtomMapping> addUIT() throws CDKException {
         CDKRMapHandler rmap = new CDKRMapHandler();
+        List<Map<Integer, Integer>> solutions;
+
         boolean rOnPFlag;
         if (source.getAtomCount() > target.getAtomCount()) {
             rOnPFlag = true;
-            rmap.calculateOverlapsAndReduce(source, target, bondMatch, ringMatch);
+            solutions = rmap.calculateOverlapsAndReduce(source, target, bondMatch, ringMatch);
         } else {
             rOnPFlag = false;
-            rmap.calculateOverlapsAndReduce(target, source, bondMatch, ringMatch);
+            solutions = rmap.calculateOverlapsAndReduce(target, source, bondMatch, ringMatch);
         }
-        List<Map<Integer, Integer>> solutions
-                = Collections.synchronizedList(FinalMappings.getInstance().getFinalMapping());
-        FinalMappings.getInstance().getFinalMapping().clear();
         return setUITMappings(rOnPFlag, solutions);
     }
 

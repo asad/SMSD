@@ -32,7 +32,6 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.smsd.AtomAtomMapping;
-import org.openscience.smsd.helper.FinalMappings;
 import org.openscience.smsd.helper.MoleculeInitializer;
 import org.openscience.smsd.interfaces.IResults;
 
@@ -113,23 +112,23 @@ public class CDKSubGraphHandler extends MoleculeInitializer implements IResults 
     private boolean isSubgraph() {
 
         CDKRMapHandler rmap = new CDKRMapHandler();
-
+        List<Map<Integer, Integer>> solutions;
         try {
 
             if ((source.getAtomCount() == target.getAtomCount()) && source.getBondCount() == target.getBondCount()) {
                 rOnPFlag = true;
-                rmap.calculateIsomorphs(source, target, shouldMatchBonds, shouldMatchRings);
+                solutions=rmap.calculateIsomorphs(source, target, shouldMatchBonds, shouldMatchRings);
 
             } else if (source.getAtomCount() > target.getAtomCount() && source.getBondCount() != target.getBondCount()) {
                 rOnPFlag = true;
-                rmap.calculateSubGraphs(source, target, shouldMatchBonds, shouldMatchRings);
+                solutions=rmap.calculateSubGraphs(source, target, shouldMatchBonds, shouldMatchRings);
 
             } else {
                 rOnPFlag = false;
-                rmap.calculateSubGraphs(target, source, shouldMatchBonds, shouldMatchRings);
+                solutions=rmap.calculateSubGraphs(target, source, shouldMatchBonds, shouldMatchRings);
             }
 
-            setAllMapping();
+            setAllMapping(solutions);
             setAllAtomMapping();
 
         } catch (CDKException e) {
@@ -178,14 +177,11 @@ public class CDKSubGraphHandler extends MoleculeInitializer implements IResults 
     }
 
     //~--- get methods --------------------------------------------------------
-    private synchronized void setAllMapping() {
+    private synchronized void setAllMapping(List<Map<Integer, Integer>> solutions) {
 
         //int count_final_sol = 1;
         //System.out.println("Output of the final FinalMappings: ");
         try {
-            List<Map<Integer, Integer>> solutions
-                    = Collections.synchronizedList(FinalMappings.getInstance().getFinalMapping());
-            FinalMappings.getInstance().getFinalMapping().clear();
             int counter = 0;
             for (Map<Integer, Integer> final_solution : solutions) {
                 TreeMap<Integer, Integer> atomMappings = new TreeMap<>();

@@ -40,7 +40,7 @@ import org.openscience.cdk.annotations.TestClass;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.BKKCKCFTest")
-public class BKKCKCF {
+public final class BKKCKCF {
 
     private final Set<List<Integer>> max_Cliques_Set;
     /**
@@ -100,9 +100,9 @@ public class BKKCKCF {
             List<Integer> cEdges,
             List<Integer> dEdges) {
 
-        this.comp_graph_nodes = compGraphNodes;
-        this.C_edges = cEdges;
-        this.D_edges = dEdges;
+        this.comp_graph_nodes = new ArrayList<>(compGraphNodes);
+        this.C_edges = new ArrayList<>(cEdges);
+        this.D_edges = new ArrayList<>(dEdges);
         best_clique_size = 0;
         max_Cliques_Set = new HashSet<>();
 
@@ -183,7 +183,7 @@ public class BKKCKCF {
                 //delete neighbor from set V
                 if (neighbor_position != -1) {
                     //System.out.println("neighbor_position : " + neighbor_position);
-                    for (int e = neighbor_position; e < V.size() - 1; e++) {
+                    for (int e = neighbor_position; e < (V.size() - 1); e++) {
                         V.set(e, V.get(e + 1));
                     }
                     V.pop();
