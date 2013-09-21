@@ -49,6 +49,7 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
 
     private final boolean matchBonds;
     private final boolean matchRings;
+    private final boolean matchAtomType;
     private boolean subgraph;
     private List<Double> stereoScoreList;
     private List<Integer> fragmentSizeList;
@@ -60,13 +61,15 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
      *
      * @param matchBonds
      * @param matchRings
+     * @param matchAtomType
      * @param mol1
      * @param mol2
      */
-    public BaseMapping(boolean matchBonds, boolean matchRings, IAtomContainer mol1, IAtomContainer mol2) {
+    public BaseMapping(boolean matchBonds, boolean matchRings, boolean matchAtomType, IAtomContainer mol1, IAtomContainer mol2) {
         super(mol1, mol2);
         this.matchBonds = matchBonds;
         this.matchRings = matchRings;
+        this.matchAtomType = matchAtomType;
 
     }
 
@@ -343,5 +346,12 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
         }
 //        System.out.println("Mol Map size:" + bondbondMappingMap.size());
         return bondbondMappingMap;
+    }
+
+    /**
+     * @return the matchAtomType
+     */
+    public boolean isMatchAtomType() {
+        return matchAtomType;
     }
 }

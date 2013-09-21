@@ -69,9 +69,11 @@ public final class VF2 extends MoleculeInitializer implements IResults {
     private final IAtomContainer target;
     private final boolean shouldMatchRings;
     private final boolean shouldMatchBonds;
+    private final boolean matchAtomType;
+
     private boolean isSubgraph = false;
-    private final ILoggingTool Logger =
-            LoggingToolFactory.createLoggingTool(VF2.class);
+    private final ILoggingTool Logger
+            = LoggingToolFactory.createLoggingTool(VF2.class);
 
     /**
      * Constructor for an extended VF Algorithm for the MCS search
@@ -80,13 +82,14 @@ public final class VF2 extends MoleculeInitializer implements IResults {
      * @param target
      * @param shouldMatchBonds
      * @param shouldMatchRings
+     * @param matchAtomType
      */
-    public VF2(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings) {
+    public VF2(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) {
         this.source = source;
         this.target = target;
         this.shouldMatchRings = shouldMatchRings;
         this.shouldMatchBonds = shouldMatchBonds;
-        allAtomMCS = new ArrayList<AtomAtomMapping>();
+        this.allAtomMCS = new ArrayList<>();
         if (this.shouldMatchRings) {
             try {
                 initializeMolecule(source);
@@ -95,6 +98,7 @@ public final class VF2 extends MoleculeInitializer implements IResults {
             }
         }
         this.isSubgraph = findSubgraph();
+        this.matchAtomType = matchAtomType;
     }
 
     /**
@@ -108,7 +112,8 @@ public final class VF2 extends MoleculeInitializer implements IResults {
         this.target = target;
         this.shouldMatchRings = true;
         this.shouldMatchBonds = true;
-        allAtomMCS = new ArrayList<AtomAtomMapping>();
+        this.matchAtomType = true;
+        allAtomMCS = new ArrayList<>();
         if (this.shouldMatchRings) {
             try {
                 initializeMolecule(source);
@@ -130,7 +135,7 @@ public final class VF2 extends MoleculeInitializer implements IResults {
      *
      *
      *
-
+     *
      *
      * @param shouldMatchBonds
      * @param shouldMatchRings
@@ -139,7 +144,7 @@ public final class VF2 extends MoleculeInitializer implements IResults {
     private synchronized void isomorphism() {
 
         if (!isDead(source, target) && testIsSubgraphHeuristics(source, target, shouldMatchBonds)) {
-            State state = new State(source, target, shouldMatchBonds, shouldMatchRings);
+            State state = new State(source, target, shouldMatchBonds, shouldMatchRings, matchAtomType);
             if (!state.isDead()) {
                 state.matchFirst(state, allAtomMCS);
             }
@@ -157,7 +162,7 @@ public final class VF2 extends MoleculeInitializer implements IResults {
     private synchronized void isomorphisms() {
 
         if (!isDead(source, target) && testIsSubgraphHeuristics(source, target, shouldMatchBonds)) {
-            State state = new State(source, target, shouldMatchBonds, shouldMatchRings);
+            State state = new State(source, target, shouldMatchBonds, shouldMatchRings, matchAtomType);
             if (!state.isDead()) {
                 state.matchAll(state, allAtomMCS);
             }

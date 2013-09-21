@@ -61,8 +61,8 @@ import org.openscience.smsd.tools.AtomContainerComparator;
  */
 public class SMSDcmd {
 
-    private final static ILoggingTool logger =
-            LoggingToolFactory.createLoggingTool(InputHandler.class);
+    private final static ILoggingTool logger
+            = LoggingToolFactory.createLoggingTool(InputHandler.class);
 
     /**
      * @param args the command line arguments
@@ -166,8 +166,7 @@ public class SMSDcmd {
         /*
          * Run N MULTIPLE on targets
          */
-
-        MCSS mcss = new MCSS(atomContainerSet, JobType.MULTIPLE, 0, matchBonds, matchRings);
+        MCSS mcss = new MCSS(atomContainerSet, JobType.MULTIPLE, 0, matchBonds, matchRings, true);
         Collection<IAtomContainer> calculatedMCSS = mcss.getCalculateMCSS();
         IAtomContainerSet solutions = new AtomContainerSet();
         for (IAtomContainer mcsAtomContainer : calculatedMCSS) {
@@ -208,11 +207,11 @@ public class SMSDcmd {
                 if (ac != null && ac.getAtomCount() > 0) {
                     IAtomContainer mcsAtomContainer = ac.clone();
                     // now that we have the N-MULTIPLE, remap
-                    List<Map<Integer, Integer>> mappings = new ArrayList<Map<Integer, Integer>>();
-                    List<IAtomContainer> secondRoundTargets = new ArrayList<IAtomContainer>();
+                    List<Map<Integer, Integer>> mappings = new ArrayList<>();
+                    List<IAtomContainer> secondRoundTargets = new ArrayList<>();
                     IChemObjectBuilder builder = DefaultChemObjectBuilder.getInstance();
                     for (IAtomContainer target : atomContainerSet) {
-                        BaseMapping smsd = run(mcsAtomContainer, target, filter, matchBonds, matchRings);
+                        BaseMapping smsd = run(mcsAtomContainer, target, filter, matchBonds, matchRings, false);
                         mappings.add(getIndexMapping(smsd.getFirstAtomMapping()));
                         secondRoundTargets.add(
                                 builder.newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getTarget()));
@@ -286,7 +285,7 @@ public class SMSDcmd {
             if (argumentHandler.isSubstructureMode()) {
                 smsd = runSubstructure(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings);
             } else {
-                smsd = run(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings);
+                smsd = run(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings, false);
             }
 
             long endTime = System.currentTimeMillis();
@@ -434,11 +433,10 @@ public class SMSDcmd {
         boolean matchBonds = argumentHandler.isMatchBondType();
         boolean matchRings = argumentHandler.isMatchRingType();
 
-
         if (argumentHandler.isSubstructureMode()) {
             smsd = runSubstructure(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings);
         } else {
-            smsd = run(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings);
+            smsd = run(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings, false);
         }
 
         query = query.getBuilder().newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getQuery());
@@ -534,9 +532,10 @@ public class SMSDcmd {
             IAtomContainer target,
             int filter,
             boolean matchBonds,
-            boolean matchRings) throws CDKException {
+            boolean matchRings,
+            boolean matchAtomType) throws CDKException {
         // XXX - if clean and configure is 'true', is that not duplicate configuring?
-        BaseMapping smsd = new Isomorphism(query, target, Algorithm.DEFAULT, matchBonds, matchRings);
+        BaseMapping smsd = new Isomorphism(query, target, Algorithm.DEFAULT, matchBonds, matchRings, matchAtomType);
 
         if (filter == 0) {
             smsd.setChemFilters(false, false, false);
@@ -560,7 +559,7 @@ public class SMSDcmd {
             boolean matchBonds,
             boolean matchRings) throws CDKException {
         // XXX - if clean and configure is 'true', is that not duplicate configuring?
-        BaseMapping smsd = new Substructure(query, target, matchBonds, matchRings, false);
+        BaseMapping smsd = new Substructure(query, target, matchBonds, matchRings, false, true);
 
         if (smsd.isSubgraph()) {
             if (filter == 0) {

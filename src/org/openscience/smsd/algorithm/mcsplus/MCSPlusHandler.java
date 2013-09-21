@@ -56,6 +56,7 @@ public final class MCSPlusHandler extends MoleculeInitializer implements IResult
     private boolean flagExchange = false;
     private final boolean shouldMatchRings;
     private final boolean shouldMatchBonds;
+    private final boolean matchAtomType;
     private boolean timeout;
 
     /**
@@ -65,12 +66,15 @@ public final class MCSPlusHandler extends MoleculeInitializer implements IResult
      * @param target
      * @param shouldMatchBonds
      * @param shouldMatchRings
+     * @param matchAtomType
      */
-    public MCSPlusHandler(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings) {
+    public MCSPlusHandler(IAtomContainer source, IAtomContainer target,
+            boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) {
         this.source = source;
         this.target = target;
         this.shouldMatchRings = shouldMatchRings;
         this.shouldMatchBonds = shouldMatchBonds;
+        this.matchAtomType = matchAtomType;
         allAtomMCS = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
         allMCS = Collections.synchronizedList(new ArrayList<Map<Integer, Integer>>());
 
@@ -95,6 +99,7 @@ public final class MCSPlusHandler extends MoleculeInitializer implements IResult
         this.target = target;
         this.shouldMatchRings = true;
         this.shouldMatchBonds = true;
+        this.matchAtomType = true;
         allAtomMCS = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
         allMCS = Collections.synchronizedList(new ArrayList<Map<Integer, Integer>>());
         if (shouldMatchRings) {
@@ -115,17 +120,17 @@ public final class MCSPlusHandler extends MoleculeInitializer implements IResult
         List<List<Integer>> mappings;
         MCSPlus mcsplus;
         if (source.getAtomCount() < target.getAtomCount()) {
-            mcsplus = new MCSPlus(source, target, shouldMatchBonds, shouldMatchRings);
+            mcsplus = new MCSPlus(source, target, shouldMatchBonds, shouldMatchRings, matchAtomType);
             List<List<Integer>> overlaps = mcsplus.getOverlaps();
             mappings = Collections.synchronizedList(overlaps);
 
         } else {
             flagExchange = true;
-            mcsplus = new MCSPlus(target, source, shouldMatchBonds, shouldMatchRings);
+            mcsplus = new MCSPlus(target, source, shouldMatchBonds, shouldMatchRings, matchAtomType);
             List<List<Integer>> overlaps = mcsplus.getOverlaps();
             mappings = Collections.synchronizedList(overlaps);
         }
-        List<Map<Integer, Integer>> solutions=PostFilter.filter(mappings);
+        List<Map<Integer, Integer>> solutions = PostFilter.filter(mappings);
         setAllMapping(solutions);
         setAllAtomMapping();
         return mcsplus.isTimeout();

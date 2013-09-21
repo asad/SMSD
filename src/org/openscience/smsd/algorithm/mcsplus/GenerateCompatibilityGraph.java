@@ -65,6 +65,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
     private final IAtomContainer target;
     private final boolean shouldMatchBonds;
     private final boolean shouldMatchRings;
+    private final boolean matchAtomType;
 
     /**
      * Generates a compatibility graph between two molecules
@@ -73,15 +74,18 @@ public final class GenerateCompatibilityGraph implements Serializable {
      * @param target
      * @param shouldMatchBonds
      * @param shouldMatchRings
+     * @param matchAtomType
      * @throws java.io.IOException
      */
     public GenerateCompatibilityGraph(
             IAtomContainer source,
             IAtomContainer target,
             boolean shouldMatchBonds,
-            boolean shouldMatchRings) throws IOException {
+            boolean shouldMatchRings,
+            boolean matchAtomType) throws IOException {
         this.shouldMatchRings = shouldMatchRings;
         this.shouldMatchBonds = shouldMatchBonds;
+        this.matchAtomType = matchAtomType;
         this.source = source;
         this.target = target;
         compGraphNodes = new ArrayList<>();
@@ -262,7 +266,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
     }
 
     private void addEdges(IBond reactantBond, IBond productBond, int iIndex, int jIndex) {
-        if (isMatchFeasible(reactantBond, productBond, isMatchBond(), isMatchRings())) {
+        if (isMatchFeasible(reactantBond, productBond, isMatchBond(), isMatchRings(), matchAtomType)) {
             cEdges.add((iIndex / 3) + 1);
             cEdges.add((jIndex / 3) + 1);
         } else {
@@ -362,7 +366,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
     }
 
     private void addZeroEdges(IBond reactantBond, IBond productBond, int indexI, int indexJ) {
-        if (isMatchFeasible(reactantBond, productBond, isMatchBond(), isMatchRings())) {
+        if (isMatchFeasible(reactantBond, productBond, isMatchBond(), isMatchRings(), matchAtomType)) {
             cEdges.add((indexI / 4) + 1);
             cEdges.add((indexJ / 4) + 1);
         }
@@ -384,7 +388,8 @@ public final class GenerateCompatibilityGraph implements Serializable {
             IBond bondA1,
             IBond bondA2,
             boolean shouldMatchBonds,
-            boolean shouldMatchRings) {
+            boolean shouldMatchRings,
+            boolean matchAtomType) {
 
         if (bondA1 instanceof IQueryBond) {
             if (((IQueryBond) bondA1).matches(bondA2)) {
@@ -398,7 +403,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
             /*
              This one also matches atom type, not just symbols
              */
-            return DefaultMatcher.matches(bondA1, bondA2, shouldMatchBonds, shouldMatchRings);
+            return DefaultMatcher.matches(bondA1, bondA2, shouldMatchBonds, shouldMatchRings, matchAtomType);
         }
     }
 

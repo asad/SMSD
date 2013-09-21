@@ -303,9 +303,9 @@ public class SMSDFrame extends JFrame {
 //                c.canonLabel(targetMolecule);
                 Isomorphism comparison = null;
                 if (jRadioButton1.isSelected()) {
-                    comparison = new Isomorphism(queryMolecule, targetMolecule, Algorithm.DEFAULT, jRadioButton1.isSelected(), true);
+                    comparison = new Isomorphism(queryMolecule, targetMolecule, Algorithm.DEFAULT, jRadioButton1.isSelected(), true, true);
                 } else if (jRadioButton2.isSelected()) {
-                    comparison = new Isomorphism(queryMolecule, targetMolecule, Algorithm.DEFAULT, jRadioButton2.isSelected(), false);
+                    comparison = new Isomorphism(queryMolecule, targetMolecule, Algorithm.DEFAULT, jRadioButton2.isSelected(), false, false);
                 }
                 if (comparison == null) {
                     System.exit(1);

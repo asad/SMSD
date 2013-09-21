@@ -39,11 +39,12 @@ import org.openscience.smsd.tools.AtomContainerComparator;
  */
 final public class MCSS {
 
-    private final static ILoggingTool logger =
-            LoggingToolFactory.createLoggingTool(MCSS.class);
+    private final static ILoggingTool logger
+            = LoggingToolFactory.createLoggingTool(MCSS.class);
     private final Collection<IAtomContainer> calculateMCSS;
     private final boolean matchBonds;
     private final boolean matchRings;
+    private final boolean matchAtomType;
 
     /**
      *
@@ -52,7 +53,7 @@ final public class MCSS {
      * @param numberOfThreads
      */
     public MCSS(List<IAtomContainer> jobList, JobType jobType, int numberOfThreads) {
-        this(jobList, jobType, numberOfThreads, true, true);
+        this(jobList, jobType, numberOfThreads, true, true, true);
     }
 
     /**
@@ -63,7 +64,13 @@ final public class MCSS {
      * @param matchBonds
      * @param matchRings
      */
-    public MCSS(List<IAtomContainer> jobList, JobType jobType, int numberOfThreads, boolean matchBonds, boolean matchRings) {
+    public MCSS(
+            List<IAtomContainer> jobList,
+            JobType jobType,
+            int numberOfThreads,
+            boolean matchBonds,
+            boolean matchRings,
+            boolean matchAtomType) {
         int threadsAvailable = Runtime.getRuntime().availableProcessors() - 1;
 
         logger.debug("Demand threads: " + numberOfThreads);
@@ -88,6 +95,7 @@ final public class MCSS {
         Collections.sort(selectedJobs, comparator);
         this.matchBonds = matchBonds;
         this.matchRings = matchRings;
+        this.matchAtomType = matchAtomType;
         /*
          * Call the MCS
          */
@@ -154,7 +162,8 @@ final public class MCSS {
             }
             List<IAtomContainer> subList = new ArrayList<>(mcssList.subList(i, endPoint));
             if (subList.size() > 1) {
-                MCSSThread mcssJobThread = new MCSSThread(subList, jobType, taskNumber, matchBonds, matchRings);
+                MCSSThread mcssJobThread = new MCSSThread(subList, jobType, taskNumber, matchBonds, matchRings,
+                        matchAtomType);
                 callablesQueue.add(mcssJobThread);
                 taskNumber++;
             } else {

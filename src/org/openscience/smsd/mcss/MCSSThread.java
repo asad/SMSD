@@ -41,13 +41,14 @@ import org.openscience.smsd.interfaces.Algorithm;
  */
 final public class MCSSThread implements Callable<LinkedBlockingQueue<IAtomContainer>> {
 
-    private final static ILoggingTool logger =
-            LoggingToolFactory.createLoggingTool(MCSSThread.class);
+    private final static ILoggingTool logger
+            = LoggingToolFactory.createLoggingTool(MCSSThread.class);
     private final List<IAtomContainer> mcssList;
     private final JobType jobType;
     private final int taskNumber;
     private final boolean matchBonds;
     private final boolean matchRings;
+    private final boolean matchAtomType;
 
     /**
      *
@@ -56,7 +57,7 @@ final public class MCSSThread implements Callable<LinkedBlockingQueue<IAtomConta
      * @param taskNumber
      */
     public MCSSThread(List<IAtomContainer> mcssList, JobType jobType, int taskNumber) {
-        this(mcssList, jobType, taskNumber, true, true);
+        this(mcssList, jobType, taskNumber, true, true, true);
     }
 
     /**
@@ -66,13 +67,17 @@ final public class MCSSThread implements Callable<LinkedBlockingQueue<IAtomConta
      * @param taskNumber
      * @param matchBonds
      * @param matchRings
+     * @param matchAtomType
      */
-    public MCSSThread(List<IAtomContainer> mcssList, JobType jobType, int taskNumber, boolean matchBonds, boolean matchRings) {
+    public MCSSThread(List<IAtomContainer> mcssList, JobType jobType, int taskNumber, boolean matchBonds, boolean matchRings,
+            boolean matchAtomType) {
         this.mcssList = mcssList;
         this.jobType = jobType;
         this.taskNumber = taskNumber;
         this.matchBonds = matchBonds;
         this.matchRings = matchRings;
+        this.matchAtomType = matchAtomType;
+
     }
 
     @Override
@@ -111,7 +116,7 @@ final public class MCSSThread implements Callable<LinkedBlockingQueue<IAtomConta
                 Collection<Fragment> fragmentsFromMCS;
                 BaseMapping comparison;
 
-                comparison = new Isomorphism(querySeed, target, Algorithm.DEFAULT, matchBonds, matchRings);
+                comparison = new Isomorphism(querySeed, target, Algorithm.DEFAULT, matchBonds, matchRings, matchAtomType);
                 comparison.setChemFilters(true, true, true);
                 fragmentsFromMCS = getMCSS(comparison);
 
@@ -166,7 +171,7 @@ final public class MCSSThread implements Callable<LinkedBlockingQueue<IAtomConta
                 Collection<Fragment> fragmentsFromMCS;
                 for (int index = 0; index < mcssList.size(); index++) {
                     IAtomContainer target = mcssList.get(index);
-                    Isomorphism comparison = new Isomorphism(fragmentMCS, target, Algorithm.DEFAULT, matchBonds, matchRings);
+                    Isomorphism comparison = new Isomorphism(fragmentMCS, target, Algorithm.DEFAULT, matchBonds, matchRings, matchAtomType);
                     comparison.setChemFilters(true, true, true);
                     fragmentsFromMCS = getMCSS(comparison);
 
@@ -234,7 +239,7 @@ final public class MCSSThread implements Callable<LinkedBlockingQueue<IAtomConta
                 Collection<Fragment> fragmentsFomMCS;
                 BaseMapping comparison;
 
-                comparison = new Isomorphism(querySeed, target, Algorithm.DEFAULT, matchBonds, matchRings);
+                comparison = new Isomorphism(querySeed, target, Algorithm.DEFAULT, matchBonds, matchRings, matchAtomType);
                 comparison.setChemFilters(true, true, true);
                 fragmentsFomMCS = getMCSS(comparison);
 
@@ -251,7 +256,6 @@ final public class MCSSThread implements Callable<LinkedBlockingQueue<IAtomConta
                 }
                 querySeed = fragmentsFomMCS.iterator().next().getContainer();
             }
-
 
             if (querySeed != null) {
                 mcss.add(querySeed);

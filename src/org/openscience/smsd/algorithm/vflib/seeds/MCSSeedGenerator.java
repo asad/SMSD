@@ -62,6 +62,7 @@ public class MCSSeedGenerator implements Callable<List<AtomAtomMapping>> {
     private final static ILoggingTool Logger
             = LoggingToolFactory.createLoggingTool(MCSSeedGenerator.class);
     private final boolean bondMatch;
+    private final boolean matchAtomType;
 
     /**
      *
@@ -69,14 +70,16 @@ public class MCSSeedGenerator implements Callable<List<AtomAtomMapping>> {
      * @param target
      * @param bondMatch
      * @param ringMatch
+     * @param matchAtomType
      * @param algorithm
      */
-    public MCSSeedGenerator(IAtomContainer source, IAtomContainer target, boolean bondMatch, boolean ringMatch, Algorithm algorithm) {
+    public MCSSeedGenerator(IAtomContainer source, IAtomContainer target, boolean bondMatch, boolean ringMatch, boolean matchAtomType, Algorithm algorithm) {
         this.source = source;
         this.target = target;
         this.allCliqueAtomMCS = new ArrayList<>();
         this.ringMatch = ringMatch;
         this.algorithm = algorithm;
+        this.matchAtomType = matchAtomType;
         this.bondMatch = bondMatch;
     }
 
@@ -111,7 +114,7 @@ public class MCSSeedGenerator implements Callable<List<AtomAtomMapping>> {
             ac1 = target;
             ac2 = source;
         }
-        GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(ac1, ac2, bondMatch, ringMatch);
+        GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(ac1, ac2, bondMatch, ringMatch, matchAtomType);
         List<Integer> comp_graph_nodes = gcg.getCompGraphNodes();
         List<Integer> cEdges = gcg.getCEgdes();
         List<Integer> dEdges = gcg.getDEgdes();
@@ -172,10 +175,10 @@ public class MCSSeedGenerator implements Callable<List<AtomAtomMapping>> {
         boolean rOnPFlag;
         if (source.getAtomCount() > target.getAtomCount()) {
             rOnPFlag = true;
-            solutions = rmap.calculateOverlapsAndReduce(source, target, bondMatch, ringMatch);
+            solutions = rmap.calculateOverlapsAndReduce(source, target, bondMatch, ringMatch, matchAtomType);
         } else {
             rOnPFlag = false;
-            solutions = rmap.calculateOverlapsAndReduce(target, source, bondMatch, ringMatch);
+            solutions = rmap.calculateOverlapsAndReduce(target, source, bondMatch, ringMatch, matchAtomType);
         }
         return setUITMappings(rOnPFlag, solutions);
     }

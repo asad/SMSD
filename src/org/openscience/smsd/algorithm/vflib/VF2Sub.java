@@ -67,6 +67,7 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
     private final IAtomContainer target;
     private final boolean shouldMatchRings;
     private final boolean matchBonds;
+    private boolean matchAtomType;
     private int bestHitSize = -1;
     private int countR = 0;
     private int countP = 0;
@@ -81,16 +82,19 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
      * @param target
      * @param shouldMatchBonds
      * @param shouldMatchRings
+     * @param matchAtomType
      */
-    public VF2Sub(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings) {
+    public VF2Sub(IAtomContainer source, IAtomContainer target,
+            boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) {
         this.source = source;
         this.target = target;
-        allAtomMCS = new ArrayList<AtomAtomMapping>();
-        allAtomMCSCopy = new ArrayList<AtomAtomMapping>();
-        allMCS = new ArrayList<Map<Integer, Integer>>();
-        allMCSCopy = new ArrayList<Map<Integer, Integer>>();
+        allAtomMCS = new ArrayList<>();
+        allAtomMCSCopy = new ArrayList<>();
+        allMCS = new ArrayList<>();
+        allMCSCopy = new ArrayList<>();
         this.shouldMatchRings = shouldMatchRings;
         this.matchBonds = shouldMatchBonds;
+        this.matchAtomType = matchAtomType;
         if (this.shouldMatchRings) {
             try {
                 initializeMolecule(source);
@@ -198,7 +202,7 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
     }
 
     private synchronized int checkCommonAtomCount(IAtomContainer reactantMolecule, IAtomContainer productMolecule) {
-        ArrayList<String> atoms = new ArrayList<String>();
+        ArrayList<String> atoms = new ArrayList<>();
         for (int i = 0; i < reactantMolecule.getAtomCount(); i++) {
             atoms.add(reactantMolecule.getAtom(i).getSymbol());
         }
@@ -227,7 +231,7 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
             countP = getProductMol().getAtomCount();
         }
 
-        vfLibSolutions = new ArrayList<Map<INode, IAtom>>();
+        vfLibSolutions = new ArrayList<>();
         if (source instanceof IQueryAtomContainer) {
             queryCompiler = new QueryCompiler((IQueryAtomContainer) source).compile();
             mapper = new VFMapper(queryCompiler);
@@ -237,7 +241,7 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
             }
             setVFMappings(true, queryCompiler);
         } else if (countR <= countP) {
-            queryCompiler = new QueryCompiler(this.source, this.matchBonds, this.shouldMatchRings).compile();
+            queryCompiler = new QueryCompiler(this.source, this.matchBonds, this.shouldMatchRings, this.matchAtomType).compile();
             mapper = new VFMapper(queryCompiler);
             List<Map<INode, IAtom>> maps = mapper.getMaps(getProductMol());
             if (maps != null) {
@@ -259,10 +263,10 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
             Map<Integer, Integer> extendMapping = new TreeMap<>(firstPassMappings);
             McGregor mgit;
             if (source instanceof IQueryAtomContainer) {
-                mgit = new McGregor((IQueryAtomContainer) source, target, mappings, this.matchBonds, this.shouldMatchRings);
+                mgit = new McGregor((IQueryAtomContainer) source, target, mappings, this.matchBonds, this.shouldMatchRings, this.matchAtomType);
             } else {
                 extendMapping.clear();
-                mgit = new McGregor(target, source, mappings, this.matchBonds, this.shouldMatchRings);
+                mgit = new McGregor(target, source, mappings, this.matchBonds, this.shouldMatchRings, this.matchAtomType);
                 ROPFlag = false;
                 for (Map.Entry<Integer, Integer> map : firstPassMappings.entrySet()) {
                     extendMapping.put(map.getValue(), map.getKey());

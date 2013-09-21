@@ -73,9 +73,10 @@ public final class VF2MCS extends BaseMCS implements IResults {
      * @param target
      * @param shouldMatchBonds bond match
      * @param shouldMatchRings ring match
+     * @param matchAtomType
      */
-    public VF2MCS(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings) {
-        super(source, target, shouldMatchBonds, shouldMatchRings);
+    public VF2MCS(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) {
+        super(source, target, shouldMatchBonds, shouldMatchRings, matchAtomType);
         boolean timoutVF = searchVFMappings();
 
         /*
@@ -110,8 +111,8 @@ public final class VF2MCS extends BaseMCS implements IResults {
             }
             ExecutorService executor = Executors.newFixedThreadPool(threadsAvailable);
             CompletionService<List<AtomAtomMapping>> cs = new ExecutorCompletionService<>(executor);
-            MCSSeedGenerator mcsSeedGeneratorUIT = new MCSSeedGenerator(source, target, isBondMatchFlag(), isMatchRings(), Algorithm.CDKMCS);
-            MCSSeedGenerator mcsSeedGeneratorKoch = new MCSSeedGenerator(source, target, isBondMatchFlag(), isMatchRings(), Algorithm.MCSPlus);
+            MCSSeedGenerator mcsSeedGeneratorUIT = new MCSSeedGenerator(source, target, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.CDKMCS);
+            MCSSeedGenerator mcsSeedGeneratorKoch = new MCSSeedGenerator(source, target, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.MCSPlus);
             int jobCounter = 0;
             cs.submit(mcsSeedGeneratorUIT);
             jobCounter++;
@@ -281,7 +282,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
             setVFMappings(true, queryCompiler);
 
         } else if (countR <= countP) {//isBondMatchFlag()
-            queryCompiler = new QueryCompiler(this.source, true, isMatchRings()).compile();
+            queryCompiler = new QueryCompiler(this.source, true, isMatchRings(), isMatchAtomType()).compile();
             mapper = new VFMCSMapper(queryCompiler);
             List<Map<INode, IAtom>> map = mapper.getMaps(this.target);
             if (map != null) {
@@ -289,7 +290,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
             }
             setVFMappings(true, queryCompiler);
         } else {
-            queryCompiler = new QueryCompiler(this.target, true, isMatchRings()).compile();
+            queryCompiler = new QueryCompiler(this.target, true, isMatchRings(), isMatchAtomType()).compile();
             mapper = new VFMCSMapper(queryCompiler);
             List<Map<INode, IAtom>> map = mapper.getMaps(this.source);
             if (map != null) {
@@ -307,7 +308,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
      * @param target
      */
     public VF2MCS(IQueryAtomContainer source, IQueryAtomContainer target) {
-        this(source, target, false, false);
+        this(source, target, true, true, true);
     }
 
     /**

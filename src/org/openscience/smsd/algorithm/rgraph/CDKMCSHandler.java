@@ -58,6 +58,7 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
     private final List<Map<Integer, Integer>> allMCS;
     private final boolean shouldMatchRings;
     private final boolean shouldMatchBonds;
+    private final boolean matchAtomType;
     private boolean timeout;
 
     //~--- constructors -------------------------------------------------------
@@ -70,12 +71,15 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
      * @param target
      * @param shouldMatchBonds
      * @param shouldMatchRings
+     * @param matchAtomType
      */
-    public CDKMCSHandler(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings) {
+    public CDKMCSHandler(IAtomContainer source, IAtomContainer target,
+            boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) {
         this.source = source;
         this.target = target;
         this.shouldMatchRings = shouldMatchRings;
         this.shouldMatchBonds = shouldMatchBonds;
+        this.matchAtomType = matchAtomType;
         this.allAtomMCS = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
         this.allMCS = Collections.synchronizedList(new ArrayList<Map<Integer, Integer>>());
         if (shouldMatchRings) {
@@ -98,6 +102,7 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
         this.target = target;
         this.shouldMatchRings = true;
         this.shouldMatchBonds = true;
+        this.matchAtomType = true;
         this.allAtomMCS = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
         this.allMCS = Collections.synchronizedList(new ArrayList<Map<Integer, Integer>>());
         if (shouldMatchRings) {
@@ -122,10 +127,10 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
 
             if (source.getAtomCount() >= target.getAtomCount()) {
                 rOnPFlag = true;
-                solutions = rmap.calculateOverlapsAndReduce(source, target, shouldMatchBonds, shouldMatchRings);
+                solutions = rmap.calculateOverlapsAndReduce(source, target, shouldMatchBonds, shouldMatchRings, matchAtomType);
             } else {
                 rOnPFlag = false;
-                solutions = rmap.calculateOverlapsAndReduce(target, source, shouldMatchBonds, shouldMatchRings);
+                solutions = rmap.calculateOverlapsAndReduce(target, source, shouldMatchBonds, shouldMatchRings, matchAtomType);
             }
 
             setAllMapping(solutions);
@@ -144,14 +149,15 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
      * @param mcss
      * @param shouldMatchBonds
      * @param shouldMatchRings
+     * @param matchAtomType
      * @return IAtomContainer Set
      * @throws CDKException
      */
     protected synchronized IAtomContainerSet getUncommon(IAtomContainer mol, IAtomContainer mcss,
-            boolean shouldMatchBonds, boolean shouldMatchRings) throws CDKException {
-        ArrayList<Integer> atomSerialsToDelete = new ArrayList<Integer>();
+            boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) throws CDKException {
+        ArrayList<Integer> atomSerialsToDelete = new ArrayList<>();
 
-        List<List<CDKRMap>> matches = CDKMCS.getSubgraphAtomsMaps(mol, mcss, shouldMatchBonds, shouldMatchRings);
+        List<List<CDKRMap>> matches = CDKMCS.getSubgraphAtomsMaps(mol, mcss, shouldMatchBonds, shouldMatchRings, matchAtomType);
         List<CDKRMap> mapList = matches.get(0);
         for (Object o : mapList) {
             CDKRMap rmap = (CDKRMap) o;
@@ -160,7 +166,7 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
 
         // at this point we have the serial numbers of the bonds to delete
         // we should get the actual bonds rather than delete by serial numbers
-        ArrayList<IAtom> atomsToDelete = new ArrayList<IAtom>();
+        ArrayList<IAtom> atomsToDelete = new ArrayList<>();
         for (Integer serial : atomSerialsToDelete) {
             atomsToDelete.add(mol.getAtom(serial));
         }
@@ -183,7 +189,7 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
         try {
             int counter = 0;
             for (Map<Integer, Integer> final_solution : solutions) {
-                TreeMap<Integer, Integer> atomMappings = new TreeMap<Integer, Integer>();
+                TreeMap<Integer, Integer> atomMappings = new TreeMap<>();
                 for (Map.Entry<Integer, Integer> Solutions : final_solution.entrySet()) {
 
                     int iIndex = Solutions.getKey().intValue();

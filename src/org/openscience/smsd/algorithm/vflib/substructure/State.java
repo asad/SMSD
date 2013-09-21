@@ -58,9 +58,8 @@ import org.openscience.smsd.algorithm.matchers.DefaultAtomMatcher;
 import org.openscience.smsd.algorithm.matchers.DefaultBondMatcher;
 
 /**
- * This class finds mapping states between query and target
- * molecules.
- * 
+ * This class finds mapping states between query and target molecules.
+ *
  * @cdk.module smsd
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
@@ -73,6 +72,7 @@ final class State {
     private final boolean shouldMatchRings;
     private final IAtomContainer source;
     private final IAtomContainer target;
+    private final boolean matchAtomType;
 
     // Returns true if the state contains an isomorphism.
     public boolean isGoal() {
@@ -115,7 +115,8 @@ final class State {
     private boolean[][] matches;
     private boolean isMatchPossible = false;
 
-    State(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings) {
+    State(IAtomContainer source, IAtomContainer target,
+            boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) {
         this.size = 0;
         this.sourceTerminalSize = 0;
         this.targetTerminalSize = 0;
@@ -130,6 +131,7 @@ final class State {
                 target.getAtomCount());
         this.shouldMatchBonds = shouldMatchBonds;
         this.shouldMatchRings = shouldMatchRings;
+        this.matchAtomType = matchAtomType;
     }
 
     State(IQueryAtomContainer source, IAtomContainer target) {
@@ -147,6 +149,7 @@ final class State {
                 target.getAtomCount());
         this.shouldMatchBonds = true;
         this.shouldMatchRings = true;
+        this.matchAtomType = true;
     }
 
     State(State state) {
@@ -161,6 +164,7 @@ final class State {
         this.sharedState = state.sharedState;
         this.shouldMatchBonds = state.shouldMatchBonds;
         this.shouldMatchRings = state.shouldMatchRings;
+        this.matchAtomType = state.matchAtomType;
     }
 
     private boolean isFeasible() {
@@ -281,8 +285,8 @@ final class State {
         sharedState.sourceMapping[sourceAtom] = targetAtom;
         sharedState.targetMapping[targetAtom] = sourceAtom;
 
-        List<IAtom> sourceNeighbours =
-                source.getConnectedAtomsList(source.getAtom(sourceAtom));
+        List<IAtom> sourceNeighbours
+                = source.getConnectedAtomsList(source.getAtom(sourceAtom));
         for (IAtom neighbor : sourceNeighbours) {
             int neighbourIndex = source.getAtomNumber(neighbor);
             if (sharedState.sourceTerminalSet[neighbourIndex] < 1) {
@@ -314,8 +318,8 @@ final class State {
             sharedState.sourceTerminalSet[addedSourceAtom] = 0;
         }
 
-        List<IAtom> sourceNeighbours =
-                source.getConnectedAtomsList(source.getAtom(addedSourceAtom));
+        List<IAtom> sourceNeighbours
+                = source.getConnectedAtomsList(source.getAtom(addedSourceAtom));
         for (IAtom neighbor : sourceNeighbours) {
             int neighbourIndex = source.getAtomNumber(neighbor);
             if (sharedState.sourceTerminalSet[neighbourIndex] == size) {
@@ -329,8 +333,8 @@ final class State {
             sharedState.targetTerminalSet[addedTargetAtom] = 0;
         }
 
-        List<IAtom> targetNeighbours =
-                target.getConnectedAtomsList(target.getAtom(addedTargetAtom));
+        List<IAtom> targetNeighbours
+                = target.getConnectedAtomsList(target.getAtom(addedTargetAtom));
         for (IAtom neighbor : targetNeighbours) {
             int neighbourIndex = target.getAtomNumber(neighbor);
             if (sharedState.targetTerminalSet[neighbourIndex] == size) {
@@ -354,7 +358,6 @@ final class State {
 //        if (!matchAtoms(source.getAtom(sourceAtom), target.getAtom(targetAtom))) {
 //            return false;
 //        }
-
         if (!this.matches[sourceAtom][targetAtom]) {
             return false;
         }
@@ -364,8 +367,8 @@ final class State {
         int sourceNewNeighborCount = 0;
         int targetNewNeighborCount = 0;
 
-        List<IAtom> sourceNeighbours =
-                source.getConnectedAtomsList(source.getAtom(sourceAtom));
+        List<IAtom> sourceNeighbours
+                = source.getConnectedAtomsList(source.getAtom(sourceAtom));
 
         for (IAtom neighbour : sourceNeighbours) {
             int neighbourIndex = source.getAtomNumber(neighbour);
@@ -396,9 +399,8 @@ final class State {
             }
         }
 
-
-        List<IAtom> targetNeighbours =
-                target.getConnectedAtomsList(target.getAtom(targetAtom));
+        List<IAtom> targetNeighbours
+                = target.getConnectedAtomsList(target.getAtom(targetAtom));
         for (IAtom neighbour : targetNeighbours) {
             int neighbourIndex = target.getAtomNumber(neighbour);
             if (sharedState.targetMapping[neighbourIndex] != -1) {
@@ -478,14 +480,13 @@ final class State {
                 nextState.backTrack();
             }
         }
-        return;
     }
 
     private boolean matcher(int queryAtom, int targetAtom) {
-        List<IAtom> sourceNeighbours =
-                source.getConnectedAtomsList(source.getAtom(queryAtom));
-        List<IAtom> targetNeighbours =
-                target.getConnectedAtomsList(target.getAtom(targetAtom));
+        List<IAtom> sourceNeighbours
+                = source.getConnectedAtomsList(source.getAtom(queryAtom));
+        List<IAtom> targetNeighbours
+                = target.getConnectedAtomsList(target.getAtom(targetAtom));
         if (!matchAtoms(source.getAtom(queryAtom), target.getAtom(targetAtom))) {
             return false;
         }
@@ -501,7 +502,13 @@ final class State {
     }
 
     boolean matchAtoms(IAtom sourceAtom, IAtom targetAtom) {
-        AtomMatcher defaultVFAtomMatcher = new DefaultAtomMatcher(sourceAtom, shouldMatchRings);
+        AtomMatcher defaultVFAtomMatcher;
+        if (matchAtomType) {
+            defaultVFAtomMatcher
+                    = new DefaultAtomMatcher(sourceAtom, shouldMatchRings);
+        } else {
+            defaultVFAtomMatcher = new DefaultAtomMatcher(sourceAtom, shouldMatchRings);
+        }
         return defaultVFAtomMatcher.matches(targetAtom);
     }
 

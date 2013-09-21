@@ -46,7 +46,8 @@ import org.openscience.smsd.algorithm.vflib.substructure.VF2;
  * This class should only be used to report if a query graph is a substructure of the target graph.
  *
  *  *
- * <p>An example for <b>Substructure search</b>:</p> <font color="#003366">
+ * <p>
+ * An example for <b>Substructure search</b>:</p> <font color="#003366">
  * <pre>
  * SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
  * IAtomContainer query = sp.parseSmiles("CC");
@@ -69,8 +70,8 @@ import org.openscience.smsd.algorithm.vflib.substructure.VF2;
 public final class Substructure extends BaseMapping {
 
     private int vfMappingSize = -1;
-    private final ILoggingTool Logger =
-            LoggingToolFactory.createLoggingTool(Substructure.class);
+    private final ILoggingTool Logger
+            = LoggingToolFactory.createLoggingTool(Substructure.class);
 
     /**
      * Constructor for VF Substructure Algorithm
@@ -80,6 +81,7 @@ public final class Substructure extends BaseMapping {
      * @param shouldMatchBonds Match bond types (i.e. double to double etc)
      * @param matchRings Match ring atoms and ring size
      * @param findAllSubgraph report all subgraphs
+     * @param matchAtomType
      * @throws CDKException
      */
     public Substructure(
@@ -87,8 +89,9 @@ public final class Substructure extends BaseMapping {
             IAtomContainer target,
             boolean shouldMatchBonds,
             boolean matchRings,
+            boolean matchAtomType,
             boolean findAllSubgraph) throws CDKException {
-        super(shouldMatchBonds, matchRings, query, target);
+        super(shouldMatchBonds, matchRings, matchAtomType, query, target);
         if (findAllSubgraph) {
             setSubgraph(findSubgraphs());
         } else {
@@ -108,7 +111,7 @@ public final class Substructure extends BaseMapping {
             IQueryAtomContainer query,
             IAtomContainer target,
             boolean findAllSubgraph) throws CDKException {
-        super(true, true, query, target);
+        super(true, true, true, query, target);
         if (findAllSubgraph) {
             setSubgraph(findSubgraphs());
         } else {
@@ -145,11 +148,11 @@ public final class Substructure extends BaseMapping {
                 return false;
             }
             VF2 mapper;
-            List<AtomAtomMapping> mappingsVF2 = new ArrayList<AtomAtomMapping>();
+            List<AtomAtomMapping> mappingsVF2 = new ArrayList<>();
             if (getQueryContainer() instanceof IQueryAtomContainer) {
                 mapper = new VF2((IQueryAtomContainer) getQueryContainer(), getTargetContainer());
             } else {
-                mapper = new VF2(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings());
+                mapper = new VF2(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings(), isMatchAtomType());
             }
             isSubgraph = mapper.isSubgraph();
             List<AtomAtomMapping> atomMappings = mapper.getAllAtomMapping();
@@ -183,12 +186,12 @@ public final class Substructure extends BaseMapping {
             if (getQueryContainer().getAtomCount() > getTargetContainer().getAtomCount()) {
                 return false;
             } else {
-                List<AtomAtomMapping> mappingsVF2 = new ArrayList<AtomAtomMapping>();
-                VF2Sub mapper = null;
+                List<AtomAtomMapping> mappingsVF2 = new ArrayList<>();
+                VF2Sub mapper;
                 if (getQueryContainer() instanceof IQueryAtomContainer) {
                     mapper = new VF2Sub((IQueryAtomContainer) getQueryContainer(), getTargetContainer());
                 } else {
-                    mapper = new VF2Sub(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings());
+                    mapper = new VF2Sub(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings(), isMatchAtomType());
                 }
                 isSubgraph = mapper.isSubgraph();
                 List<AtomAtomMapping> atomMappings = mapper.getAllAtomMapping();

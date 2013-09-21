@@ -62,17 +62,19 @@ public class BaseMCS extends MoleculeInitializer {
     protected final IAtomContainer target;
     private final boolean shouldMatchRings;
     private final boolean matchBonds;
+    private final boolean matchAtomType;
     protected final List<Map<INode, IAtom>> vfLibSolutions;
     final List<Map<Integer, Integer>> allLocalMCS;
     final List<AtomAtomMapping> allLocalAtomAtomMapping;
     private final static ILoggingTool Logger
             = LoggingToolFactory.createLoggingTool(BaseMCS.class);
 
-    BaseMCS(IAtomContainer source, IAtomContainer target, boolean matchBonds, boolean shouldMatchRings) {
+    BaseMCS(IAtomContainer source, IAtomContainer target, boolean matchBonds, boolean shouldMatchRings, boolean matchAtomType) {
         this.allLocalAtomAtomMapping = new ArrayList<>();
         this.allLocalMCS = new ArrayList<>();
         this.shouldMatchRings = shouldMatchRings;
         this.matchBonds = matchBonds;
+        this.matchAtomType = matchAtomType;
         this.vfLibSolutions = new ArrayList<>();
         this.source = source;
         this.target = target;
@@ -117,13 +119,13 @@ public class BaseMCS extends MoleculeInitializer {
             Map<Integer, Integer> extendMapping = new TreeMap<>(firstPassMappings);
             McGregor mgit;
             if (source instanceof IQueryAtomContainer) {
-                mgit = new McGregor((IQueryAtomContainer) source, target, mappings, isBondMatchFlag(), isMatchRings());
+                mgit = new McGregor((IQueryAtomContainer) source, target, mappings, isBondMatchFlag(), isMatchRings(), isMatchAtomType());
             } else {
                 if (countR > countP) {
-                    mgit = new McGregor(source, target, mappings, isBondMatchFlag(), isMatchRings());
+                    mgit = new McGregor(source, target, mappings, isBondMatchFlag(), isMatchRings(), isMatchAtomType());
                 } else {
                     extendMapping.clear();
-                    mgit = new McGregor(target, source, mappings, isBondMatchFlag(), isMatchRings());
+                    mgit = new McGregor(target, source, mappings, isBondMatchFlag(), isMatchRings(), isMatchAtomType());
                     ROPFlag = false;
                     for (Map.Entry<Integer, Integer> map : firstPassMappings.entrySet()) {
                         extendMapping.put(map.getValue(), map.getKey());
@@ -313,5 +315,12 @@ public class BaseMCS extends MoleculeInitializer {
             }
         }
         return common;
+    }
+
+    /**
+     * @return the matchAtomType
+     */
+    public boolean isMatchAtomType() {
+        return matchAtomType;
     }
 }

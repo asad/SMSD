@@ -20,8 +20,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-
-
 package gui;
 
 import java.io.IOException;
@@ -42,7 +40,7 @@ import org.openscience.smsd.Isomorphism;
 public class MCS {
 
     public static IAtomContainer getMcsAsNewContainer(IAtomContainer mol1, IAtomContainer mol2) throws CDKException, CloneNotSupportedException, IOException {
-        Isomorphism mcs = new Isomorphism(mol1, mol2, org.openscience.smsd.interfaces.Algorithm.DEFAULT, true, false);
+        Isomorphism mcs = new Isomorphism(mol1, mol2, org.openscience.smsd.interfaces.Algorithm.DEFAULT, true, false, true);
         mcs.setChemFilters(true, true, true);
 
         System.out.println("MCS Size: " + mcs.getTanimotoSimilarity());

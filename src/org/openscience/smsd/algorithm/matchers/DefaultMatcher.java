@@ -46,10 +46,18 @@ public class DefaultMatcher {
         return queryBondMatcher.matches(targetBond);
     }
 
-    private static boolean isAtomMatch(IBond bondA1, IBond bondA2, boolean shouldMatchRings) {
+    private static boolean isAtomMatch(IBond bondA1, IBond bondA2, boolean shouldMatchRings, boolean matchAtomTypes) {
 
-        AtomMatcher atomMatcher1 = new DefaultAtomTypeMatcher(bondA1.getAtom(0), shouldMatchRings);
-        AtomMatcher atomMatcher2 = new DefaultAtomTypeMatcher(bondA1.getAtom(1), shouldMatchRings);
+        AtomMatcher atomMatcher1;
+        AtomMatcher atomMatcher2;
+
+        if (matchAtomTypes) {
+            atomMatcher1 = new DefaultAtomTypeMatcher(bondA1.getAtom(0), shouldMatchRings);
+            atomMatcher2 = new DefaultAtomTypeMatcher(bondA1.getAtom(1), shouldMatchRings);
+        } else {
+            atomMatcher1 = new DefaultAtomMatcher(bondA1.getAtom(0), shouldMatchRings);
+            atomMatcher2 = new DefaultAtomMatcher(bondA1.getAtom(1), shouldMatchRings);
+        }
 
         // ok, atoms match
         if (atomMatcher1.matches(bondA2.getAtom(0)) && atomMatcher2.matches(bondA2.getAtom(1))) {
@@ -65,11 +73,12 @@ public class DefaultMatcher {
      * @param bondA2
      * @param matchBond
      * @param shouldMatchRings
+     * @param matchAtomTypes (atom type also matched and symbol matched)
      * @return
      */
-    public static boolean matches(IBond bondA1, IBond bondA2, boolean matchBond, boolean shouldMatchRings) {
+    public static boolean matches(IBond bondA1, IBond bondA2, boolean matchBond, boolean shouldMatchRings, boolean matchAtomTypes) {
 
-        if (!isAtomMatch(bondA1, bondA2, shouldMatchRings)) {
+        if (!isAtomMatch(bondA1, bondA2, shouldMatchRings, matchAtomTypes)) {
             return false;
         }
         return !matchBond || isBondMatch(new DefaultBondMatcher(bondA1, matchBond), bondA2);

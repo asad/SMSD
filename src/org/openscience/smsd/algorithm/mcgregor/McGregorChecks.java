@@ -58,6 +58,7 @@ public class McGregorChecks {
      * @param cBondNeighborsB
      * @param shouldMatchBonds
      * @param shouldMatchRings
+     * @param matchAtomType
      * @return
      */
     protected static boolean isFurtherMappingPossible(
@@ -70,7 +71,8 @@ public class McGregorChecks {
             List<String> cBondNeighborsA,
             List<String> cBondNeighborsB,
             boolean shouldMatchBonds,
-            boolean shouldMatchRings) {
+            boolean shouldMatchRings,
+            boolean matchAtomType) {
 
         for (int row = 0; row < neighborBondNumA; row++) {
 //            System.out.println("i " + row);
@@ -99,7 +101,7 @@ public class McGregorChecks {
                         IAtom P2_B = target.getAtom(Index_JPlus1);
                         IBond productBond = target.getBond(P1_B, P2_B);
 
-                        if (isMatchFeasible(reactantBond, productBond, shouldMatchBonds, shouldMatchRings)) {
+                        if (isMatchFeasible(reactantBond, productBond, shouldMatchBonds, shouldMatchRings, matchAtomType)) {
                             return true;
                         }
                     } catch (Exception e) {
@@ -122,7 +124,7 @@ public class McGregorChecks {
                         IAtom P2_B = target.getAtom(Index_JPlus1);
                         IBond productBond = target.getBond(P1_B, P2_B);
 
-                        if (isMatchFeasible(reactantBond, productBond, shouldMatchBonds, shouldMatchRings)) {
+                        if (isMatchFeasible(reactantBond, productBond, shouldMatchBonds, shouldMatchRings, matchAtomType)) {
                             return true;
                         }
                     } catch (Exception e) {
@@ -141,13 +143,15 @@ public class McGregorChecks {
      * @param bondA2
      * @param shouldMatchBonds
      * @param shouldMatchRings
+     * @param matchAtomType
      * @return
      */
     protected static boolean isMatchFeasible(
             IBond bondA1,
             IBond bondA2,
             boolean shouldMatchBonds,
-            boolean shouldMatchRings) {
+            boolean shouldMatchRings,
+            boolean matchAtomType) {
 
         if (bondA1 instanceof IQueryBond) {
             if (((IQueryBond) bondA1).matches(bondA2)) {
@@ -158,7 +162,7 @@ public class McGregorChecks {
             }
             return false;
         } else {
-            return DefaultMatcher.matches(bondA1, bondA2, shouldMatchBonds, shouldMatchRings);
+            return DefaultMatcher.matches(bondA1, bondA2, shouldMatchBonds, shouldMatchRings, matchAtomType);
         }
     }
 
@@ -434,6 +438,7 @@ public class McGregorChecks {
      * @param modifiedARCS
      * @param shouldMatchBonds
      * @param shouldMatchRings
+     * @param matchAtomType
      * @return
      */
     protected static List<Integer> setArcs(IAtomContainer source,
@@ -446,7 +451,8 @@ public class McGregorChecks {
             List<String> cBondNeighborsB,
             List<Integer> modifiedARCS,
             boolean shouldMatchBonds,
-            boolean shouldMatchRings) {
+            boolean shouldMatchRings,
+            boolean matchAtomType) {
 
         for (int row = 0; row < neighborBondNumA; row++) {
             for (int column = 0; column < neighborBondNumB; column++) {
@@ -471,7 +477,7 @@ public class McGregorChecks {
                     IAtom P1_B = target.getAtom(Index_J);
                     IAtom P2_B = target.getAtom(Index_JPlus1);
                     IBond productBond = target.getBond(P1_B, P2_B);
-                    if (isMatchFeasible(reactantBond, productBond, shouldMatchBonds, shouldMatchRings)) {
+                    if (isMatchFeasible(reactantBond, productBond, shouldMatchBonds, shouldMatchRings, matchAtomType)) {
                         modifiedARCS.set(row * neighborBondNumB + column, 1);
                     }
                 }
@@ -562,7 +568,7 @@ public class McGregorChecks {
     }
 
     static boolean isFurtherMappingPossible(IAtomContainer source, IAtomContainer target,
-            McgregorHelper mcGregorHelper, boolean shouldMatchBonds, boolean shouldMatchRings) {
+            McgregorHelper mcGregorHelper, boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) {
 
         int neighborBondNumA = mcGregorHelper.getNeighborBondNumA();
         int neighborBondNumB = mcGregorHelper.getNeighborBondNumB();
@@ -598,7 +604,7 @@ public class McGregorChecks {
                         IAtom p2_B = target.getAtom(Index_JPlus1);
                         IBond productBond = target.getBond(p1_B, p2_B);
 
-                        if (isMatchFeasible(reactantBond, productBond, shouldMatchBonds, shouldMatchRings)) {
+                        if (isMatchFeasible(reactantBond, productBond, shouldMatchBonds, shouldMatchRings, matchAtomType)) {
                             return true;
                         }
                     } catch (Exception e) {
@@ -621,7 +627,7 @@ public class McGregorChecks {
                         IAtom p2_B = target.getAtom(Index_JPlus1);
                         IBond productBond = target.getBond(p1_B, p2_B);
 
-                        if (isMatchFeasible(reactantBond, productBond, shouldMatchBonds, shouldMatchRings)) {
+                        if (isMatchFeasible(reactantBond, productBond, shouldMatchBonds, shouldMatchRings, matchAtomType)) {
                             return true;
                         }
                     } catch (Exception e) {

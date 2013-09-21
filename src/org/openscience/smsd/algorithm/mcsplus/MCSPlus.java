@@ -57,6 +57,7 @@ public final class MCSPlus {
     private boolean timeout = false;
 
     private IterationManager iterationManager = null;
+    private final boolean matchAtomType;
 
     /**
      * @return the timeout
@@ -85,10 +86,12 @@ public final class MCSPlus {
      * @param shouldMatchBonds
      * @param ac1
      * @param ac2
+     * @param matchAtomType
      */
-    public MCSPlus(IAtomContainer ac1, IAtomContainer ac2, boolean shouldMatchBonds, boolean shouldMatchRings) {
+    public MCSPlus(IAtomContainer ac1, IAtomContainer ac2, boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) {
         this.shouldMatchRings = shouldMatchRings;
         this.shouldMatchBonds = shouldMatchBonds;
+        this.matchAtomType = matchAtomType;
         this.ac1 = ac1;
         this.ac2 = ac2;
         this.overlaps = calculateMCS();
@@ -111,7 +114,7 @@ public final class MCSPlus {
 //        System.out.println("ac2 : " + ac2.getAtomCount());
         setIterationManager(new IterationManager((ac1.getAtomCount() + ac2.getAtomCount())));
         try {
-            GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(ac1, ac2, isMatchBonds(), isMatchRings());
+            GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(ac1, ac2, isMatchBonds(), isMatchRings(), matchAtomType);
             List<Integer> comp_graph_nodes = gcg.getCompGraphNodes();
 
             List<Integer> cEdges = gcg.getCEgdes();
@@ -163,14 +166,14 @@ public final class MCSPlus {
             Map<Integer, Integer> extendMapping = new TreeMap<>(firstPassMappings);
             McGregor mgit;
             if (ac1.getAtomCount() > ac2.getAtomCount()) {
-                mgit = new McGregor(ac1, ac2, cliques, isMatchBonds(), isMatchRings());
+                mgit = new McGregor(ac1, ac2, cliques, isMatchBonds(), isMatchRings(), isMatchAtomType());
             } else {
                 extendMapping.clear();
                 ROPFlag = false;
                 for (Map.Entry<Integer, Integer> map : firstPassMappings.entrySet()) {
                     extendMapping.put(map.getValue(), map.getKey());
                 }
-                mgit = new McGregor(ac2, ac1, cliques, isMatchBonds(), isMatchRings());
+                mgit = new McGregor(ac2, ac1, cliques, isMatchBonds(), isMatchRings(), isMatchAtomType());
             }
 //            System.out.println("\nStart McGregor search");
             //Start McGregor search
@@ -254,5 +257,12 @@ public final class MCSPlus {
      */
     public List<List<Integer>> getOverlaps() {
         return Collections.unmodifiableList(overlaps);
+    }
+
+    /**
+     * @return the matchAtomType
+     */
+    public boolean isMatchAtomType() {
+        return matchAtomType;
     }
 }

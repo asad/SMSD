@@ -129,7 +129,7 @@ public final class Isomorphism extends BaseMapping implements Serializable {
             IQueryAtomContainer query,
             IAtomContainer target,
             Algorithm algorithmType) {
-        super(true, true, query, target);
+        super(true, true, true, query, target);
         this.algorithmType = algorithmType;
         mcsBuilder(query, target);
         setSubgraph(isSubgraph());
@@ -148,6 +148,7 @@ public final class Isomorphism extends BaseMapping implements Serializable {
      * @param algorithmType {@link org.openscience.cdk.smsd.interfaces.Algorithm}
      * @param bondTypeFlag Match bond types (i.e. double to double etc)
      * @param matchRings Match ring atoms and ring size
+     * @param matchAtomType
      */
     @TestMethod("testIsomorphismTest")
     public Isomorphism(
@@ -155,8 +156,9 @@ public final class Isomorphism extends BaseMapping implements Serializable {
             IAtomContainer target,
             Algorithm algorithmType,
             boolean bondTypeFlag,
-            boolean matchRings) {
-        super(bondTypeFlag, matchRings, query, target);
+            boolean matchRings,
+            boolean matchAtomType) {
+        super(bondTypeFlag, matchRings, matchAtomType, query, target);
         this.algorithmType = algorithmType;
         mcsBuilder(getQueryContainer(), getTargetContainer());
         setSubgraph(isSubgraph());
@@ -212,7 +214,7 @@ public final class Isomorphism extends BaseMapping implements Serializable {
 
     private synchronized boolean cdkMCSAlgorithm() {
         CDKMCSHandler mcs;
-        mcs = new CDKMCSHandler(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings());
+        mcs = new CDKMCSHandler(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings(), isMatchAtomType());
         clearMaps();
         getMCSList().addAll(mcs.getAllAtomMapping());
         return mcs.isTimeout();
@@ -220,7 +222,7 @@ public final class Isomorphism extends BaseMapping implements Serializable {
 
     private synchronized boolean mcsPlusAlgorithm() {
         MCSPlusHandler mcs;
-        mcs = new MCSPlusHandler(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings());
+        mcs = new MCSPlusHandler(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings(), isMatchAtomType());
         clearMaps();
         getMCSList().addAll(mcs.getAllAtomMapping());
         return mcs.isTimeout();
@@ -228,7 +230,7 @@ public final class Isomorphism extends BaseMapping implements Serializable {
 
     private synchronized boolean substructureAlgorithm() throws CDKException {
         Substructure mcs;
-        mcs = new Substructure(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings(), true);
+        mcs = new Substructure(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings(), isMatchAtomType(), true);
         clearMaps();
         if (mcs.isSubgraph()) {
             getMCSList().addAll(mcs.getAllAtomMapping());
@@ -238,7 +240,7 @@ public final class Isomorphism extends BaseMapping implements Serializable {
 
     private synchronized void vfLibMCSAlgorithm() {
         VF2MCS mcs;
-        mcs = new VF2MCS(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings());
+        mcs = new VF2MCS(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings(), isMatchAtomType());
         clearMaps();
         getMCSList().addAll(mcs.getAllAtomMapping());
     }

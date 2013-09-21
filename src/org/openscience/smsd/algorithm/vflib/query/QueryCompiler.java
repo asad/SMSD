@@ -69,8 +69,9 @@ public class QueryCompiler implements IQueryCompiler {
 
     private IAtomContainer molecule = null;
     private IQueryAtomContainer queryMolecule = null;
-    private boolean shouldMatchBonds;
-    private boolean shouldMatchRings;
+    private final boolean shouldMatchBonds;
+    private final boolean shouldMatchRings;
+    private final boolean matchAtomType;
 
     /**
      * Construct query object from the molecule
@@ -78,11 +79,13 @@ public class QueryCompiler implements IQueryCompiler {
      * @param molecule
      * @param shouldMatchBonds
      * @param shouldMatchRings
+     * @param matchAtomType
      */
-    public QueryCompiler(IAtomContainer molecule, boolean shouldMatchBonds, boolean shouldMatchRings) {
+    public QueryCompiler(IAtomContainer molecule, boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) {
         this.setMolecule(molecule);
-        this.setBondMatchFlag(shouldMatchBonds);
-        this.setShouldMatchRings(shouldMatchRings);
+        this.shouldMatchRings = shouldMatchRings;
+        this.matchAtomType = matchAtomType;
+        this.shouldMatchBonds = shouldMatchBonds;
     }
 
     /**
@@ -92,6 +95,9 @@ public class QueryCompiler implements IQueryCompiler {
      */
     public QueryCompiler(IQueryAtomContainer molecule) {
         this.setQueryMolecule(molecule);
+        this.shouldMatchRings = true;
+        this.matchAtomType = true;
+        this.shouldMatchBonds = true;
     }
 
     /**
@@ -153,13 +159,6 @@ public class QueryCompiler implements IQueryCompiler {
     }
 
     /**
-     * @param shouldMatchBonds the shouldMatchBonds to set
-     */
-    private synchronized void setBondMatchFlag(boolean shouldMatchBonds) {
-        this.shouldMatchBonds = shouldMatchBonds;
-    }
-
-    /**
      * @return the shouldMatchRings
      */
     private synchronized boolean isShouldMatchRings() {
@@ -167,9 +166,9 @@ public class QueryCompiler implements IQueryCompiler {
     }
 
     /**
-     * @param shouldMatchRings the shouldMatchRings to set
+     * @return the matchAtomType
      */
-    private synchronized void setShouldMatchRings(boolean shouldMatchRings) {
-        this.shouldMatchRings = shouldMatchRings;
+    public boolean isMatchAtomType() {
+        return matchAtomType;
     }
 }

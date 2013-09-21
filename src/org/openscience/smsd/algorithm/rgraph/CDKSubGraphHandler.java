@@ -36,8 +36,7 @@ import org.openscience.smsd.helper.MoleculeInitializer;
 import org.openscience.smsd.interfaces.IResults;
 
 /**
- * This class acts as a handler class for CDKMCS algorithm
- * {@link org.openscience.cdk.smsd.algorithm.cdk.CDKMCS}.
+ * This class acts as a handler class for CDKMCS algorithm {@link org.openscience.cdk.smsd.algorithm.cdk.CDKMCS}.
  *
  * @cdk.module smsd @cdk.githash
  *
@@ -54,6 +53,7 @@ public class CDKSubGraphHandler extends MoleculeInitializer implements IResults 
     private List<Map<Integer, Integer>> allMCS = null;
     private final boolean shouldMatchRings;
     private final boolean shouldMatchBonds;
+    private final boolean matchAtomType;
 
     //~--- constructors -------------------------------------------------------
     /*
@@ -66,13 +66,15 @@ public class CDKSubGraphHandler extends MoleculeInitializer implements IResults 
      * @param shouldMatchBonds
      * @param shouldMatchRings
      */
-    public CDKSubGraphHandler(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings) {
+    public CDKSubGraphHandler(IAtomContainer source, IAtomContainer target,
+            boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) {
         this.source = source;
         this.target = target;
         this.shouldMatchRings = shouldMatchRings;
         this.shouldMatchBonds = shouldMatchBonds;
-        this.allAtomMCS = new ArrayList<AtomAtomMapping>();
-        this.allMCS = new ArrayList<Map<Integer, Integer>>();
+        this.matchAtomType = matchAtomType;
+        this.allAtomMCS = new ArrayList<>();
+        this.allMCS = new ArrayList<>();
         if (this.shouldMatchRings) {
             try {
                 initializeMolecule(source);
@@ -93,8 +95,9 @@ public class CDKSubGraphHandler extends MoleculeInitializer implements IResults 
         this.target = target;
         this.shouldMatchRings = true;
         this.shouldMatchBonds = true;
-        this.allAtomMCS = new ArrayList<AtomAtomMapping>();
-        this.allMCS = new ArrayList<Map<Integer, Integer>>();
+        this.matchAtomType = true;
+        this.allAtomMCS = new ArrayList<>();
+        this.allMCS = new ArrayList<>();
         if (shouldMatchRings) {
             try {
                 initializeMolecule(source);
@@ -117,15 +120,15 @@ public class CDKSubGraphHandler extends MoleculeInitializer implements IResults 
 
             if ((source.getAtomCount() == target.getAtomCount()) && source.getBondCount() == target.getBondCount()) {
                 rOnPFlag = true;
-                solutions=rmap.calculateIsomorphs(source, target, shouldMatchBonds, shouldMatchRings);
+                solutions = rmap.calculateIsomorphs(source, target, shouldMatchBonds, shouldMatchRings, matchAtomType);
 
             } else if (source.getAtomCount() > target.getAtomCount() && source.getBondCount() != target.getBondCount()) {
                 rOnPFlag = true;
-                solutions=rmap.calculateSubGraphs(source, target, shouldMatchBonds, shouldMatchRings);
+                solutions = rmap.calculateSubGraphs(source, target, shouldMatchBonds, shouldMatchRings, matchAtomType);
 
             } else {
                 rOnPFlag = false;
-                solutions=rmap.calculateSubGraphs(target, source, shouldMatchBonds, shouldMatchRings);
+                solutions = rmap.calculateSubGraphs(target, source, shouldMatchBonds, shouldMatchRings, matchAtomType);
             }
 
             setAllMapping(solutions);
@@ -143,15 +146,13 @@ public class CDKSubGraphHandler extends MoleculeInitializer implements IResults 
      *
      * @param mol
      * @param mcss
-     * @param shouldMatchBonds
-     * @param shouldMatchRings
      * @return IAtomContainer Set
      * @throws CDKException
      */
-    protected IAtomContainerSet getUncommon(IAtomContainer mol, IAtomContainer mcss, boolean shouldMatchBonds, boolean shouldMatchRings) throws CDKException {
-        ArrayList<Integer> atomSerialsToDelete = new ArrayList<Integer>();
+    protected IAtomContainerSet getUncommon(IAtomContainer mol, IAtomContainer mcss) throws CDKException {
+        ArrayList<Integer> atomSerialsToDelete = new ArrayList<>();
 
-        List<List<CDKRMap>> matches = CDKMCS.getSubgraphAtomsMaps(mol, mcss, shouldMatchBonds, shouldMatchRings);
+        List<List<CDKRMap>> matches = CDKMCS.getSubgraphAtomsMaps(mol, mcss, shouldMatchBonds, shouldMatchRings, matchAtomType);
         List<CDKRMap> mapList = matches.get(0);
         for (Object o : mapList) {
             CDKRMap rmap = (CDKRMap) o;
@@ -160,7 +161,7 @@ public class CDKSubGraphHandler extends MoleculeInitializer implements IResults 
 
         // at this point we have the serial numbers of the bonds to delete
         // we should get the actual bonds rather than delete by serial numbers
-        ArrayList<IAtom> atomsToDelete = new ArrayList<IAtom>();
+        ArrayList<IAtom> atomsToDelete = new ArrayList<>();
         for (Integer serial : atomSerialsToDelete) {
             atomsToDelete.add(mol.getAtom(serial));
         }

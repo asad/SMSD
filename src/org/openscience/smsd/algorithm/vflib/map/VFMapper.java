@@ -93,10 +93,11 @@ public class VFMapper implements IMapper {
      * @param queryMolecule
      * @param bondMatcher
      * @param ringMatcher
+     * @param matchAtomType
      */
-    public VFMapper(IAtomContainer queryMolecule, boolean bondMatcher, boolean ringMatcher) {
-        this.query = new QueryCompiler(queryMolecule, bondMatcher, ringMatcher).compile();
-        this.maps = new ArrayList<Map<INode, IAtom>>();
+    public VFMapper(IAtomContainer queryMolecule, boolean bondMatcher, boolean ringMatcher, boolean matchAtomType) {
+        this.query = new QueryCompiler(queryMolecule, bondMatcher, ringMatcher, matchAtomType).compile();
+        this.maps = new ArrayList<>();
     }
 
     /**
