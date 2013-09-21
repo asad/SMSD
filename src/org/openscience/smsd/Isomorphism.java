@@ -254,14 +254,13 @@ public final class Isomorphism extends BaseMapping implements Serializable {
         try {
             boolean substructureAlgorithm = substructureAlgorithm();
             if (!substructureAlgorithm) {
-                boolean timeoutMCS1 = mcsPlusAlgorithm();
+                boolean timeoutMCS1 = cdkMCSAlgorithm();
                 if ((getMappingCount() == 0 && timeoutMCS1)
                         || (timeoutMCS1 && getMappingCount() > 0
                         && (getFirstAtomMapping().getCount() != getQueryContainer().getAtomCount()
                         || getFirstAtomMapping().getCount() != getTargetContainer().getAtomCount()))) {
                     vfLibMCSAlgorithm();
                 }
-            } else {
             }
         } catch (CDKException e) {
             logger.error(Level.SEVERE, null, e);
