@@ -101,7 +101,7 @@ public class MCSSearch {
                             int final_solution_size = aams.getCount();
                             //System.out.println("Final mapping Nr. " + (count_final_sol + 1) + " Size:" + final_solution_size);
 
-                            for (Map.Entry<IAtom, IAtom> mapping : aams.getMappings().entrySet()) {
+                            for (Map.Entry<IAtom, IAtom> mapping : aams.getMappingsByAtoms().entrySet()) {
 
                                 //Get the mapped atom in Query AtomContainer
                                 IAtom queryAtom = mapping.getKey();
@@ -141,7 +141,7 @@ public class MCSSearch {
             if (first_MCS) {
                 try {
                     AtomAtomMapping firstAtomMapping = comparison.getFirstAtomMapping();
-                    for (Map.Entry<IAtom, IAtom> mapping : firstAtomMapping.getMappings().entrySet()) {
+                    for (Map.Entry<IAtom, IAtom> mapping : firstAtomMapping.getMappingsByAtoms().entrySet()) {
 
                         //Get the mapped atom in Query AtomContainer
                         IAtom queryAtom = mapping.getKey();

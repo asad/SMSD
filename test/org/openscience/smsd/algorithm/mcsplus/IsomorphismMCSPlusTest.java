@@ -24,18 +24,28 @@
  */
 package org.openscience.smsd.algorithm.mcsplus;
 
+import gui.ImageGenerator;
+import java.awt.Image;
+import java.awt.image.RenderedImage;
+import java.io.File;
+import java.text.NumberFormat;
+import java.util.Map;
+import java.util.TreeMap;
 import org.openscience.smsd.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.imageio.ImageIO;
 import junit.framework.Assert;
 import org.junit.*;
 import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.exception.InvalidSmilesException;
+import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainerCreator;
+import org.openscience.cdk.smiles.SmilesGenerator;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.interfaces.Algorithm;
@@ -182,6 +192,16 @@ public class IsomorphismMCSPlusTest {
         Isomorphism comparison = new Isomorphism(query, target, Algorithm.MCSPlus, false, false);
         // set chemical filter true
         comparison.setChemFilters(true, true, true);
+
+//        for (AtomAtomMapping m : comparison.getAllAtomMapping()) {
+//            SmilesGenerator sg = new SmilesGenerator();
+//            String createSMILESQ = sg.createSMILES(m.getCommonFragmentInQuery());
+//            String createSMILEST = sg.createSMILES(m.getCommonFragmentInTarget());
+//            System.out.println("createSMILES " + createSMILESQ + "." + createSMILEST);
+//            System.out.println("Map " + m.getMappingsByIndex());
+//        }
+        RenderedImage generateImage = generateImage(query, target, comparison);
+        boolean write = ImageIO.write(generateImage, "png", new File("MCSPLUS_C1=CC=CC=C1.C1=CC2=C(C=C1)C=CC=C2.png"));
         Assert.assertEquals(0.6, comparison.getTanimotoSimilarity());
         Assert.assertEquals(12, comparison.getAllAtomMapping().size());
     }
@@ -204,9 +224,87 @@ public class IsomorphismMCSPlusTest {
         Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, false);
         // set chemical filter true
         comparison.setChemFilters(true, true, true);
+        RenderedImage generateImage = generateImage(ac1, ac2, comparison);
+        boolean write = ImageIO.write(generateImage, "png", new File("MCSPLUS_Ring_Open_Close.png"));
+
+//        SmilesGenerator sg = new SmilesGenerator();
+//        String createSMILES = sg.createSMILES(comparison.getFirstAtomMapping().getCommonFragmentInTarget());
+//        System.out.println("createSMILES " + createSMILES);
         Assert.assertEquals(28, comparison.getFirstAtomMapping().getCount());
         Assert.assertEquals(0.82, comparison.getTanimotoSimilarity(), .09);
         Assert.assertEquals(2, comparison.getAllAtomMapping().size());
+    }
+
+//    /**
+//     * Test ring match using MCS VF2Plus
+//     *
+//     * @throws Exception
+//     */
+//    @Test
+//    public void testComplexRings() throws Exception {
+//        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+//        // CHEBI:67212
+//        IAtomContainer query = sp.parseSmiles("[H][C@]1(O[C@@H](O[C@H](CO)[C@]2([H])O[C@@H](OC[C@@H](O)[C@]3([H])O[C@@H]"
+//                + "(O[C@H](CO)[C@]4([H])O[C@@H](OC[C@@H](O)[C@]5([H])O[C@@H](O[C@H](CO)[C@]6([H])O[C@@H](OC[C@@H](O)[C@]"
+//                + "7([H])O[C@@H](O[C@H](CO)[C@]8([H])O[C@@H](OC[C@@H](O)[C@]9([H])O[C@@H](O[C@H](CO)[C@]%10([H])O[C@@H]"
+//                + "(OC[C@@H](O)[C@]%11([H])O[C@@H](O[C@H](CO)[C@]%12([H])O[C@@H](OC[C@@H](O)[C@]%13([H])O[C@@H](O[C@H]"
+//                + "(CO)[C@]%14([H])O[C@@H](OC[C@@H](O)[C@]%15([H])O[C@@H](O[C@H](CO)[C@]%16([H])O[C@@H](OC[C@@H](O)[C@]"
+//                + "%17([H])O[C@@H](O[C@H](CO)[C@]%18([H])O[C@@H](OC[C@@H](O)[C@]%19([H])O[C@@H](O[C@H](CO)[C@]%20([H])"
+//                + "O[C@@H](OC[C@@H](O)[C@]%21([H])O[C@@H](O[C@H](CO)[C@]%22([H])O[C@@H](OC[C@@H](O)[C@]%23([H])O[C@@H]"
+//                + "(O[C@H](CO)[C@]%24([H])O[C@@H](OC[C@@H](O)[C@]%25([H])O[C@@H](O[C@H](CO)[C@]%26([H])O[C@@H](OC[C@@H]"
+//                + "(O)[C@]%27([H])O[C@@H](O[C@H](CO)[C@]%28([H])O[C@@H](OC[C@@H](O)[C@]%29([H])O[C@@H](O[C@H](CO)[C@]"
+//                + "%30([H])O[C@@H](O[C@H]%31[C@H](C)O[C@@H](O[C@H]%32[C@H](O)[C@@H](CO)O[C@H](OP([O-])(=O)OP([O-])"
+//                + "(=O)OC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)"
+//                + "CC\\C=C(/C)CCC=C(C)C)[C@@H]%32NC(C)=O)[C@H](O)[C@@H]%31O)[C@H](O)[C@H]%30O)[C@H](O)[C@H]%29O)[C@H]"
+//                + "(O)[C@H]%28O)[C@H](O)[C@H]%27O)[C@H](O)[C@H]%26O)[C@H](O)[C@H]%25O)[C@H](O)[C@H]%24O)[C@H](O)[C@H]%23O)"
+//                + "[C@H](O)[C@H]%22O)[C@H](O)[C@H]%21O)[C@H](O)[C@H]%20O)[C@H](O)[C@H]%19O)[C@H](O)[C@H]%18O)[C@H](O)"
+//                + "[C@H]%17O)[C@H](O)[C@H]%16O)[C@H](O)[C@H]%15O)[C@H](O)[C@H]%14O)[C@H](O)[C@H]%13O)[C@H](O)[C@H]%12O)"
+//                + "[C@H](O)[C@H]%11O)[C@H](O)[C@H]%10O)[C@H](O)[C@H]9O)[C@H](O)[C@H]8O)[C@H](O)[C@H]7O)[C@H](O)[C@H]6O)"
+//                + "[C@H](O)[C@H]5O)[C@H](O)[C@H]4O)[C@H](O)[C@H]3O)[C@H](O)[C@H]2O)[C@H](O)[C@H]1O)[C@H](O)CO");
+//        // CHEBI:67210
+//        IAtomContainer target = sp.parseSmiles("[H][C@]1(O[C@@H](O[C@H](CO)[C@]2([H])O[C@@H](O[C@H]3[C@H](C)O[C@@H]"
+//                + "(O[C@H]4[C@H](O)[C@@H](CO)O[C@H](OP([O-])(=O)OP([O-])(=O)OC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C"
+//                + "(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(/C)CCC=C(C)C)[C@@H]4NC(C)=O)[C@H](O)"
+//                + "[C@@H]3O)[C@H](O)[C@H]2O)[C@H](O)[C@H]1O)[C@H](O)CO");
+//        IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(query);
+//        IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(target);
+//        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, false);
+//        RenderedImage generateImage = generateImage(query, target, comparison);
+//        boolean write = ImageIO.write(generateImage, "png", new File("MCSPLUS_complexRing.png"));
+//
+//// set chemical filter true
+//        comparison.setChemFilters(true, true, true);
+//        //0.162
+//        Assert.assertEquals(0.2542, comparison.getTanimotoSimilarity(), 0.001);
+//    }
+    private static RenderedImage generateImage(IAtomContainer query, IAtomContainer target, Isomorphism smsd) throws Exception {
+
+        ImageGenerator imageGenerator = new ImageGenerator();
+
+        ////set the format right for the Tanimoto score (only two digits printed)
+        NumberFormat nf = NumberFormat.getInstance();
+        nf.setMaximumFractionDigits(2);
+        nf.setMinimumFractionDigits(2);
+        int counter = 1;
+        for (AtomAtomMapping aam : smsd.getAllAtomMapping()) {
+            Map<IAtom, IAtom> mappings = aam.getMappingsByAtoms();
+            Map<Integer, Integer> mapping = new TreeMap<Integer, Integer>();
+            for (IAtom keys : mappings.keySet()) {
+                mapping.put(aam.getQueryIndex(keys), aam.getTargetIndex(mappings.get(keys)));
+            }
+
+            String tanimoto = nf.format(smsd.getTanimotoSimilarity());
+            String stereo = "NA";
+            if (smsd.getStereoScore(counter - 1) != null) {
+                stereo = nf.format(smsd.getStereoScore(counter - 1));
+            }
+            String label = "Scores [" + "Tanimoto: " + tanimoto + ", Stereo: " + stereo + "]";
+            imageGenerator.addImages(query, target, label, mapping);
+            counter++;
+
+        }
+        return imageGenerator.createImage();
+
     }
 }
 //c-edges 2288

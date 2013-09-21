@@ -64,7 +64,7 @@ public class SubstructureSearch {
                 comparison.setChemFilters(stereoMatch, fragmentMinimization, energyMinimization);
 
                 AtomAtomMapping mapping = comparison.getFirstAtomMapping();
-                for (Map.Entry<IAtom, IAtom> aam : mapping.getMappings().entrySet()) {
+                for (Map.Entry<IAtom, IAtom> aam : mapping.getMappingsByAtoms().entrySet()) {
                     //Get the mapped atom number in Query Molecule
                     int queryMappingNumber = mapping.getQueryIndex(aam.getKey());
                     //Get the mapped atom number in Target Molecule

@@ -73,8 +73,8 @@ public class UnionTest {
                     IAtom a1 = bond.getAtom(0);
                     IAtom a2 = bond.getAtom(1);
 
-                    if (!mapping.getMappings().containsValue(a1)
-                            && !mapping.getMappings().containsValue(a2)) {
+                    if (!mapping.getMappingsByAtoms().containsValue(a1)
+                            && !mapping.getMappingsByAtoms().containsValue(a2)) {
                         if (!union.contains(a1)) {
                             union.addAtom(a1);
                         }
@@ -82,18 +82,18 @@ public class UnionTest {
                             union.addAtom(a2);
                         }
                         union.addBond(bond);
-                    } else if (mapping.getMappings().containsValue(a1)
-                            && !mapping.getMappings().containsValue(a2)) {
+                    } else if (mapping.getMappingsByAtoms().containsValue(a1)
+                            && !mapping.getMappingsByAtoms().containsValue(a2)) {
                         if (!union.contains(a2)) {
                             union.addAtom(a2);
                         }
-                        union.addBond(new Bond(a2, getKey(a1, mapping.getMappings()), bond.getOrder(), bond.getStereo()));
-                    } else if (!mapping.getMappings().containsValue(a1)
-                            && mapping.getMappings().containsValue(a2)) {
+                        union.addBond(new Bond(a2, getKey(a1, mapping.getMappingsByAtoms()), bond.getOrder(), bond.getStereo()));
+                    } else if (!mapping.getMappingsByAtoms().containsValue(a1)
+                            && mapping.getMappingsByAtoms().containsValue(a2)) {
                         if (!union.contains(a1)) {
                             union.addAtom(a1);
                         }
-                        union.addBond(new Bond(a1, getKey(a2, mapping.getMappings()), bond.getOrder(), bond.getStereo()));
+                        union.addBond(new Bond(a1, getKey(a2, mapping.getMappingsByAtoms()), bond.getOrder(), bond.getStereo()));
                     }
                 }
                 /*check if this combination is chemically valid*/

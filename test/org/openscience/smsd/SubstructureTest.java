@@ -627,7 +627,7 @@ public class SubstructureTest {
         Substructure smsd = new Substructure(query, target, true, false, true);
         Assert.assertTrue(smsd.isSubgraph());
         for (AtomAtomMapping m : smsd.getAllAtomMapping()) {
-            //System.out.println(m.getMappingsIndex());
+            //System.out.println(m.getMappingsByIndex());
         }
         Assert.assertEquals(18, smsd.getAllAtomMapping().size());
 
