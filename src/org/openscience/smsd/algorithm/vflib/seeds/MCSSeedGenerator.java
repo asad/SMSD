@@ -104,7 +104,7 @@ public class MCSSeedGenerator implements Callable<List<AtomAtomMapping>> {
             ac1 = target;
             ac2 = source;
         }
-        GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(ac1, ac2, bondMatch, ringMatch, true);
+        GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(ac1, ac2, bondMatch, ringMatch);
         List<Integer> comp_graph_nodes = gcg.getCompGraphNodes();
         List<Integer> cEdges = gcg.getCEgdes();
         List<Integer> dEdges = gcg.getDEgdes();

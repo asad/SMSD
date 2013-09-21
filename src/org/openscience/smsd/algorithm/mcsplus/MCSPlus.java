@@ -104,7 +104,7 @@ public class MCSPlus {
 //        System.out.println("ac2 : " + ac2.getAtomCount());
         setIterationManager(new IterationManager((ac1.getAtomCount() + ac2.getAtomCount())));
         try {
-            GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(ac1, ac2, isMatchBonds(), isMatchRings(), false);
+            GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(ac1, ac2, isMatchBonds(), isMatchRings());
             List<Integer> comp_graph_nodes = gcg.getCompGraphNodes();
 
             List<Integer> cEdges = gcg.getCEgdes();

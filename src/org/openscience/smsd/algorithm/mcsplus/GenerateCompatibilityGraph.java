@@ -80,8 +80,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
             IAtomContainer source,
             IAtomContainer target,
             boolean shouldMatchBonds,
-            boolean shouldMatchRings,
-            boolean largeCliques) throws IOException {
+            boolean shouldMatchRings) throws IOException {
         this.shouldMatchRings = shouldMatchRings;
         this.shouldMatchBonds = shouldMatchBonds;
         this.source = source;
@@ -94,7 +93,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
 //        System.out.println("compatibilityGraphNodes ");
         compatibilityGraphNodes();
 //        System.out.println("compatibilityGraph ");
-        compatibilityGraph(largeCliques);
+        compatibilityGraph();
 //        System.out.println("c-edges " + getCEgdes().size());
 //        System.out.println("d-edges " + getDEgdes().size());
 
@@ -225,11 +224,10 @@ public final class GenerateCompatibilityGraph implements Serializable {
     /**
      * Generate Compatibility Graph Nodes Bond Insensitive
      *
-     * @param largeCliques
      * @return
      * @throws IOException
      */
-    protected int compatibilityGraph(boolean largeCliques) throws IOException {
+    protected int compatibilityGraph() throws IOException {
         int comp_graph_nodes_List_size = compGraphNodes.size();
 //        System.out.println("Source atom count " + source.getAtomCount());
 //        System.out.println("target atom count " + target.getAtomCount());
