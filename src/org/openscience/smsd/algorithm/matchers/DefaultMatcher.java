@@ -26,8 +26,9 @@ package org.openscience.smsd.algorithm.matchers;
 import org.openscience.cdk.interfaces.IBond;
 
 /**
- * Checks if atom is matching between query and target molecules. 
- * @cdk.module smsd 
+ * Checks if atom is matching between query and target molecules.
+ *
+ * @cdk.module smsd
  * @cdk.githash
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
@@ -47,8 +48,8 @@ public class DefaultMatcher {
 
     private static boolean isAtomMatch(IBond bondA1, IBond bondA2, boolean shouldMatchRings) {
 
-        AtomMatcher atomMatcher1 = new DefaultAtomMatcher(bondA1.getAtom(0), shouldMatchRings);
-        AtomMatcher atomMatcher2 = new DefaultAtomMatcher(bondA1.getAtom(1), shouldMatchRings);
+        AtomMatcher atomMatcher1 = new DefaultAtomTypeMatcher(bondA1.getAtom(0), shouldMatchRings);
+        AtomMatcher atomMatcher2 = new DefaultAtomTypeMatcher(bondA1.getAtom(1), shouldMatchRings);
 
         // ok, atoms match
         if (atomMatcher1.matches(bondA2.getAtom(0)) && atomMatcher2.matches(bondA2.getAtom(1))) {

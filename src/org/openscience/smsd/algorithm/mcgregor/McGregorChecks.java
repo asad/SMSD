@@ -153,13 +153,8 @@ public class McGregorChecks {
             if (((IQueryBond) bondA1).matches(bondA2)) {
                 IQueryAtom atom1 = (IQueryAtom) (bondA1.getAtom(0));
                 IQueryAtom atom2 = (IQueryAtom) (bondA1.getAtom(1));
-                // ok, bonds match
-                if (atom1.matches(bondA2.getAtom(0)) && atom2.matches(bondA2.getAtom(1))
-                        || atom1.matches(bondA2.getAtom(1)) && atom2.matches(bondA2.getAtom(0))) {
-                    // ok, atoms match in either order
-                    return true;
-                }
-                return false;
+                return atom1.matches(bondA2.getAtom(0)) && atom2.matches(bondA2.getAtom(1))
+                        || atom1.matches(bondA2.getAtom(1)) && atom2.matches(bondA2.getAtom(0));
             }
             return false;
         } else {

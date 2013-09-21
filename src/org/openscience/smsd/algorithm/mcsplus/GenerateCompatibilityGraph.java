@@ -395,6 +395,9 @@ public final class GenerateCompatibilityGraph implements Serializable {
             }
             return false;
         } else {
+            /*
+             This one also matches atom type, not just symbols
+             */
             return DefaultMatcher.matches(bondA1, bondA2, shouldMatchBonds, shouldMatchRings);
         }
     }

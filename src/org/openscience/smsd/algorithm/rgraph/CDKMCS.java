@@ -3,7 +3,6 @@ package org.openscience.smsd.algorithm.rgraph;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import org.openscience.cdk.CDKConstants;
@@ -733,7 +732,6 @@ public class CDKMCS {
 //                // in the resolution graph
 
                 if (!isMatchFeasible(ac1.getBond(i), ac2.getBond(j), shouldMatchBonds, shouldMatchRings)) {
-                    continue;
                 } else {
                     gr.addNode(new CDKRNode(i, j));
                 }
@@ -759,17 +757,12 @@ public class CDKMCS {
             if (((IQueryBond) bondA1).matches(bondA2)) {
                 IQueryAtom atom1 = (IQueryAtom) (bondA1.getAtom(0));
                 IQueryAtom atom2 = (IQueryAtom) (bondA1.getAtom(1));
-                // ok, bonds match
-                if (atom1.matches(bondA2.getAtom(0)) && atom2.matches(bondA2.getAtom(1))
-                        || atom1.matches(bondA2.getAtom(1)) && atom2.matches(bondA2.getAtom(0))) {
-                    // ok, atoms match in either order
-                    return true;
-                }
-                return false;
+                return atom1.matches(bondA2.getAtom(0)) && atom2.matches(bondA2.getAtom(1))
+                        || atom1.matches(bondA2.getAtom(1)) && atom2.matches(bondA2.getAtom(0));
             }
             return false;
         } else {
-            return DefaultMatcher.matches(bondA1, bondA2, shouldMatchBonds, shouldMatchRings) ? true : false;
+            return DefaultMatcher.matches(bondA1, bondA2, shouldMatchBonds, shouldMatchRings);
         }
     }
 
