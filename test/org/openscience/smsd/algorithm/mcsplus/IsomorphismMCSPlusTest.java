@@ -297,13 +297,13 @@ public class IsomorphismMCSPlusTest {
 
         IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(query);
         IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(target);
-        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, false, false);
+        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.VFLibMCS, false, false, false);
         // set chemical filter true
-        comparison.setChemFilters(true, true, true);
+        comparison.setChemFilters(false, true, true);
         RenderedImage generateImage = generateImage(ac1, ac2, comparison);
         boolean write = ImageIO.write(generateImage, "png", new File("MCSPLUS_C06006_C14463.png"));
 //        Assert.assertEquals(1.0, comparison.getTanimotoSimilarity(), .09);
-        Assert.assertEquals(1, comparison.getAllAtomMapping().size());
+        Assert.assertEquals(2, comparison.getAllAtomMapping().size());
     }
 
 //    /**
