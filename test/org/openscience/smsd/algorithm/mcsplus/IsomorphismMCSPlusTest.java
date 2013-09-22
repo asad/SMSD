@@ -297,7 +297,7 @@ public class IsomorphismMCSPlusTest {
 
         IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(query);
         IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(target);
-        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.VFLibMCS, false, false, false);
+        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, false, false);
         // set chemical filter true
         comparison.setChemFilters(false, true, true);
         RenderedImage generateImage = generateImage(ac1, ac2, comparison);
