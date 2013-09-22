@@ -87,6 +87,11 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
                 }
             }
 
+            if (fragmentFilter) {
+                sortResultsByFragments();
+                this.fragmentSizeList = getSortedFragment();
+            }
+
             if (stereoFilter) {
                 try {
                     sortResultsByStereoAndBondMatch();
@@ -94,11 +99,6 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
                 } catch (CDKException ex) {
                     Logger.error(Level.SEVERE, null, ex);
                 }
-            }
-
-            if (fragmentFilter) {
-                sortResultsByFragments();
-                this.fragmentSizeList = getSortedFragment();
             }
         }
     }

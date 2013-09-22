@@ -47,9 +47,9 @@ import org.openscience.smsd.AtomAtomMapping;
 public class ChemicalFilters extends BaseFilter {
 
     private final List<AtomAtomMapping> allAtomMCS;
-    private IChemicalFilter<Double> energyFilter;
-    private IChemicalFilter<Integer> fragmentFilter;
-    private IChemicalFilter<Double> stereoFilter;
+    private final IChemicalFilter<Double> energyFilter;
+    private final IChemicalFilter<Integer> fragmentFilter;
+    private final IChemicalFilter<Double> stereoFilter;
 
     /**
      *
