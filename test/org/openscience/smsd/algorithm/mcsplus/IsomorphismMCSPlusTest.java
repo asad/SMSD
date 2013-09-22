@@ -281,6 +281,31 @@ public class IsomorphismMCSPlusTest {
         Assert.assertEquals(1, comparison.getAllAtomMapping().size());
     }
 
+    /**
+     * Test ring match using MCS VF2Plus
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testC06006_C14463() throws Exception {
+        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        // C06006
+        IAtomContainer query = sp.parseSmiles("O=C(O)C(O)(C(=O)C)CC");
+
+        // C14463
+        IAtomContainer target = sp.parseSmiles("O=C(O)C(=O)C(O)(C)CC");
+
+        IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(query);
+        IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(target);
+        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, false, false);
+        // set chemical filter true
+        comparison.setChemFilters(true, true, true);
+        RenderedImage generateImage = generateImage(ac1, ac2, comparison);
+        boolean write = ImageIO.write(generateImage, "png", new File("MCSPLUS_C06006_C14463.png"));
+//        Assert.assertEquals(1.0, comparison.getTanimotoSimilarity(), .09);
+        Assert.assertEquals(1, comparison.getAllAtomMapping().size());
+    }
+
 //    /**
 //     * Test ring match using MCS VF2Plus
 //     *
