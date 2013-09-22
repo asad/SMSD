@@ -213,7 +213,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
             for (Map.Entry<IAtom, List<String>> labelB : labelAtomsBySymbolB.entrySet()) {
                 if (labelA.getKey().getSymbol().equals(labelB.getKey().getSymbol())) {
                     if ((isMatchBond() && isEqual(labelA.getValue(), labelB.getValue()))
-                            || (!isMatchBond() && isEqual(labelA.getValue(), labelB.getValue()))) {
+                            || (!isMatchBond() && isSubset(labelA.getValue(), labelB.getValue()))) {
 //                        System.err.println("labelB.getValue() " + labelB.getValue());
                         int atomNumberI = source.getAtomNumber(labelA.getKey());
                         int atomNumberJ = target.getAtomNumber(labelB.getKey());
