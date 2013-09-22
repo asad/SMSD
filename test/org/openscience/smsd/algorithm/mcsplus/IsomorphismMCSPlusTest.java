@@ -187,7 +187,7 @@ public class IsomorphismMCSPlusTest {
         //Bond Sensitive is set True
         //Ring Match is set True
 
-        Isomorphism comparison = new Isomorphism(query, target, Algorithm.MCSPlus, false, false, false);
+        Isomorphism comparison = new Isomorphism(query, target, Algorithm.MCSPlus, false, false, true);
         // set chemical filter true
         comparison.setChemFilters(true, true, true);
 
@@ -266,15 +266,13 @@ public class IsomorphismMCSPlusTest {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         // NAD
         IAtomContainer query = sp.parseSmiles("NC(=O)c1ccc[n+](c1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
-//        IAtomContainer query = sp.parseSmiles("O=C(N)C1=CC=C[N+](=C1)C4OC(COP(=O)(O)OP(=O)(O)OCC(O)C(O)C(O)CN3C=NC2=C(N=CN=C23)N)C(O)C4(O)");
 
 // NADH
         IAtomContainer target = sp.parseSmiles("NC(=O)C1=CN(C=CC1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
-//        IAtomContainer target = sp.parseSmiles("O=C(N)C1=CN(C=CC1)C(O)C(O)C(O)CCOP(=O)(O)OP(=O)(O)OCC4OC(N3C=NC=2C(=NC=NC=23)N)C(O)C4(O)");
 
         IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(query);
         IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(target);
-        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.VFLibMCS, false, true, false);
+        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, false, false);
         // set chemical filter true
         comparison.setChemFilters(true, true, true);
         RenderedImage generateImage = generateImage(ac1, ac2, comparison);
