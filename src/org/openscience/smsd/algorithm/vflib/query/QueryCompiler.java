@@ -54,6 +54,7 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.smsd.algorithm.matchers.AtomMatcher;
 import org.openscience.smsd.algorithm.matchers.BondMatcher;
 import org.openscience.smsd.algorithm.matchers.DefaultAtomMatcher;
+import org.openscience.smsd.algorithm.matchers.DefaultAtomTypeMatcher;
 import org.openscience.smsd.algorithm.matchers.DefaultBondMatcher;
 import org.openscience.smsd.algorithm.vflib.builder.VFQueryBuilder;
 import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
@@ -144,7 +145,11 @@ public class QueryCompiler implements IQueryCompiler {
     }
 
     private synchronized AtomMatcher createAtomMatcher(IAtom atom) {
-        return new DefaultAtomMatcher(atom, isShouldMatchRings());
+        if (isMatchAtomType()) {
+            return new DefaultAtomTypeMatcher(atom, isShouldMatchRings());
+        } else {
+            return new DefaultAtomMatcher(atom, isShouldMatchRings());
+        }
     }
 
     private synchronized BondMatcher createBondMatcher(IBond bond) {
@@ -168,7 +173,7 @@ public class QueryCompiler implements IQueryCompiler {
     /**
      * @return the matchAtomType
      */
-    public boolean isMatchAtomType() {
+    private boolean isMatchAtomType() {
         return matchAtomType;
     }
 }
