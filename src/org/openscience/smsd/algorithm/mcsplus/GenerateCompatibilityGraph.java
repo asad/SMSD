@@ -128,10 +128,10 @@ public final class GenerateCompatibilityGraph implements Serializable {
              * Important Step: Discriminate between source atom types
              */
             String referenceAtom;
-            if (!this.matchAtomType) {
-                referenceAtom = refAtom.getSymbol();
-            } else {
+            if (this.matchAtomType) {
                 referenceAtom = refAtom.getAtomTypeName() == null ? refAtom.getSymbol() : refAtom.getAtomTypeName();
+            } else {
+                referenceAtom = refAtom.getSymbol();
             }
             label.set(0, referenceAtom);
             List<IAtom> connAtoms = atomCont.getConnectedAtomsList(refAtom);
@@ -140,10 +140,10 @@ public final class GenerateCompatibilityGraph implements Serializable {
 
             for (IAtom negAtom : connAtoms) {
                 String neighbouringAtom;
-                if (!this.matchAtomType) {
-                    neighbouringAtom = negAtom.getSymbol();
-                } else {
+                if (this.matchAtomType) {
                     neighbouringAtom = negAtom.getAtomTypeName() == null ? negAtom.getSymbol() : negAtom.getAtomTypeName();
+                } else {
+                    neighbouringAtom = negAtom.getSymbol();
                 }
                 label.set(counter, neighbouringAtom);
                 counter += 1;
@@ -212,8 +212,8 @@ public final class GenerateCompatibilityGraph implements Serializable {
 //            System.err.println("labelA.getValue() " + labelA.getValue());
             for (Map.Entry<IAtom, List<String>> labelB : labelAtomsBySymbolB.entrySet()) {
                 if (labelA.getKey().getSymbol().equals(labelB.getKey().getSymbol())) {
-                    if ((!isMatchBond() && isSubset(labelA.getValue(), labelB.getValue()))
-                            || (isMatchBond() && isEqual(labelA.getValue(), labelB.getValue()))) {
+                    if ((isMatchBond() && isEqual(labelA.getValue(), labelB.getValue()))
+                            || (!isMatchBond() && isEqual(labelA.getValue(), labelB.getValue()))) {
 //                        System.err.println("labelB.getValue() " + labelB.getValue());
                         int atomNumberI = source.getAtomNumber(labelA.getKey());
                         int atomNumberJ = target.getAtomNumber(labelB.getKey());
