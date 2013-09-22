@@ -127,8 +127,8 @@ public final class GenerateCompatibilityGraph implements Serializable {
             /*
              * Important Step: Discriminate between source atom types
              */
-//            String referenceAtom = refAtom.getSymbol();
-            String referenceAtom = refAtom.getAtomTypeName() == null ? refAtom.getSymbol() : refAtom.getAtomTypeName();
+            String referenceAtom = refAtom.getSymbol();
+//            String referenceAtom = refAtom.getAtomTypeName() == null ? refAtom.getSymbol() : refAtom.getAtomTypeName();
 
             label.set(0, referenceAtom);
             List<IAtom> connAtoms = atomCont.getConnectedAtomsList(refAtom);
@@ -136,8 +136,8 @@ public final class GenerateCompatibilityGraph implements Serializable {
             int counter = 1;
 
             for (IAtom negAtom : connAtoms) {
-//                String neighbouringAtom = negAtom.getSymbol();
-                String neighbouringAtom = negAtom.getAtomTypeName() == null ? negAtom.getSymbol() : negAtom.getAtomTypeName();
+                String neighbouringAtom = negAtom.getSymbol();
+//                String neighbouringAtom = negAtom.getAtomTypeName() == null ? negAtom.getSymbol() : negAtom.getAtomTypeName();
                 label.set(counter, neighbouringAtom);
                 counter += 1;
             }
