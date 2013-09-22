@@ -93,12 +93,12 @@ public final class GenerateCompatibilityGraph implements Serializable {
         cEdges = Collections.synchronizedList(new ArrayList<Integer>());
         dEdges = Collections.synchronizedList(new ArrayList<Integer>());
 
-//        System.out.println("compatibilityGraphNodes ");
+        System.out.println("compatibilityGraphNodes ");
         compatibilityGraphNodes();
-//        System.out.println("compatibilityGraph ");
+        System.out.println("compatibilityGraph ");
         compatibilityGraph();
-//        System.out.println("c-edges " + getCEgdes().size());
-//        System.out.println("d-edges " + getDEgdes().size());
+        System.out.println("c-edges " + getCEgdes().size());
+        System.out.println("d-edges " + getDEgdes().size());
 
         if (getCEdgesSize() == 0) {
             clearCompGraphNodes();
@@ -127,17 +127,24 @@ public final class GenerateCompatibilityGraph implements Serializable {
             /*
              * Important Step: Discriminate between source atom types
              */
-            String referenceAtom = refAtom.getSymbol();
-//            String referenceAtom = refAtom.getAtomTypeName() == null ? refAtom.getSymbol() : refAtom.getAtomTypeName();
-
+            String referenceAtom;
+            if (!this.matchAtomType) {
+                referenceAtom = refAtom.getSymbol();
+            } else {
+                referenceAtom = refAtom.getAtomTypeName() == null ? refAtom.getSymbol() : refAtom.getAtomTypeName();
+            }
             label.set(0, referenceAtom);
             List<IAtom> connAtoms = atomCont.getConnectedAtomsList(refAtom);
 
             int counter = 1;
 
             for (IAtom negAtom : connAtoms) {
-                String neighbouringAtom = negAtom.getSymbol();
-//                String neighbouringAtom = negAtom.getAtomTypeName() == null ? negAtom.getSymbol() : negAtom.getAtomTypeName();
+                String neighbouringAtom;
+                if (!this.matchAtomType) {
+                    neighbouringAtom = negAtom.getSymbol();
+                } else {
+                    neighbouringAtom = negAtom.getAtomTypeName() == null ? negAtom.getSymbol() : negAtom.getAtomTypeName();
+                }
                 label.set(counter, neighbouringAtom);
                 counter += 1;
             }
@@ -205,7 +212,8 @@ public final class GenerateCompatibilityGraph implements Serializable {
 //            System.err.println("labelA.getValue() " + labelA.getValue());
             for (Map.Entry<IAtom, List<String>> labelB : labelAtomsBySymbolB.entrySet()) {
                 if (labelA.getKey().getSymbol().equals(labelB.getKey().getSymbol())) {
-                    if (isSubset(labelA.getValue(), labelB.getValue())) {
+                    if ((!isMatchBond() && isSubset(labelA.getValue(), labelB.getValue()))
+                            || (isMatchBond() && isEqual(labelA.getValue(), labelB.getValue()))) {
 //                        System.err.println("labelB.getValue() " + labelB.getValue());
                         int atomNumberI = source.getAtomNumber(labelA.getKey());
                         int atomNumberJ = target.getAtomNumber(labelB.getKey());
@@ -253,7 +261,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
 
                     if (reactantBond != null && productBond != null) {
                         addEdges(reactantBond, productBond, a, b);
-                    } else if (reactantBond == null && productBond == null) {
+                    } else if (isMatchBond() && reactantBond == null && productBond == null) {
                         dEdges.add((a / 3) + 1);
                         dEdges.add((b / 3) + 1);
                     }
