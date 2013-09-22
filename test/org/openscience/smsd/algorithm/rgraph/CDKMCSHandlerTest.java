@@ -74,7 +74,7 @@ public class CDKMCSHandlerTest {
             target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
             IAtomContainer query = null;
             query = sp.parseSmiles("Nc1ccccc1");
-            CDKMCSHandler smsd1 = new CDKMCSHandler(query, target, true, false);
+            CDKMCSHandler smsd1 = new CDKMCSHandler(query, target, true, false,false);
             assertNotNull(smsd1.getFirstAtomMapping());
         } catch (InvalidSmilesException ex) {
             Logger.getLogger(CDKMCSHandlerTest.class.getName()).log(Level.SEVERE, null, ex);
@@ -93,7 +93,7 @@ public class CDKMCSHandlerTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        CDKMCSHandler smsd1 = new CDKMCSHandler(query, target, true, false);
+        CDKMCSHandler smsd1 = new CDKMCSHandler(query, target, true, false,false);
         assertNotNull(smsd1.getFirstAtomMapping());
     }
 
@@ -109,7 +109,7 @@ public class CDKMCSHandlerTest {
 
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
-        CDKMCSHandler instance = new CDKMCSHandler(query, target, true, false);
+        CDKMCSHandler instance = new CDKMCSHandler(query, target, true, false,false);
         assertNotNull(instance.getFirstAtomMapping());
     }
 
@@ -125,7 +125,7 @@ public class CDKMCSHandlerTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        CDKMCSHandler smsd1 = new CDKMCSHandler(query, target, true, false);
+        CDKMCSHandler smsd1 = new CDKMCSHandler(query, target, true, false,false);
         assertNotNull(smsd1.getFirstAtomMapping());
         assertEquals(4, smsd1.getAllAtomMapping().size());
     }
@@ -142,7 +142,7 @@ public class CDKMCSHandlerTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        CDKMCSHandler smsd1 = new CDKMCSHandler(query, target, true, false);
+        CDKMCSHandler smsd1 = new CDKMCSHandler(query, target, true, false,false);
         assertNotNull(smsd1.getFirstAtomMapping());
         assertEquals(4, smsd1.getAllAtomMapping().size());
     }
@@ -159,7 +159,7 @@ public class CDKMCSHandlerTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        CDKMCSHandler smsd1 = new CDKMCSHandler(query, target, true, false);
+        CDKMCSHandler smsd1 = new CDKMCSHandler(query, target, true, false,false);
         assertNotNull(smsd1.getFirstAtomMapping());
         assertEquals(7, smsd1.getFirstAtomMapping().getCount());
     }
@@ -176,7 +176,7 @@ public class CDKMCSHandlerTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        CDKMCSHandler smsd1 = new CDKMCSHandler(query, target, true, false);
+        CDKMCSHandler smsd1 = new CDKMCSHandler(query, target, true, false,false);
         assertNotNull(smsd1.getFirstAtomMapping());
         assertEquals(7, smsd1.getFirstAtomMapping().getCount());
     }

@@ -128,7 +128,7 @@ public class CDKRMapHandlerTest {
         IAtomContainer Molecule1 = sp.parseSmiles("O1C=CC=C1");
         IAtomContainer Molecule2 = sp.parseSmiles("C1CCCC1");
         CDKRMapHandler instance = new CDKRMapHandler();
-        instance.calculateOverlapsAndReduce(Molecule1, Molecule2, true, false);
+        instance.calculateOverlapsAndReduce(Molecule1, Molecule2, true, false,false);
         Assert.assertNotNull(instance.getMappings().size());
     }
 
@@ -143,7 +143,7 @@ public class CDKRMapHandlerTest {
         IAtomContainer Molecule1 = sp.parseSmiles("O1C=CC=C1");
         IAtomContainer Molecule2 = sp.parseSmiles("O1C=CC=C1");
         CDKRMapHandler instance = new CDKRMapHandler();
-        instance.calculateOverlapsAndReduceExactMatch(Molecule1, Molecule2, true, false);
+        instance.calculateOverlapsAndReduceExactMatch(Molecule1, Molecule2, true, false,false);
         // TODO review the generated test code and remove the default call to fail.
         Assert.assertNotNull(instance.getMappings());
     }
@@ -160,7 +160,7 @@ public class CDKRMapHandlerTest {
         IAtomContainer Molecule1 = sp.parseSmiles("O1C=CC=C1");
         IAtomContainer Molecule2 = sp.parseSmiles("O1C=CC=C1");
         CDKRMapHandler instance = new CDKRMapHandler();
-        instance.calculateOverlapsAndReduceExactMatch(Molecule1, Molecule2, true, false);
+        instance.calculateOverlapsAndReduceExactMatch(Molecule1, Molecule2, true, false,false);
         List<Map<Integer, Integer>> result = instance.getMappings();
         Assert.assertEquals(2, result.size());
     }

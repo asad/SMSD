@@ -77,7 +77,6 @@ public class MCSSearch {
             target = AtomContainerManipulator.removeHydrogens(target);
 
 //	Calling the main algorithm to perform MCS cearch
-
             CDKHueckelAromaticityDetector.detectAromaticity(query);
             CDKHueckelAromaticityDetector.detectAromaticity(target);
 
@@ -87,9 +86,8 @@ public class MCSSearch {
             boolean fragmentMinimization = true;
             boolean energyMinimization = true;
 
-            Isomorphism comparison = new Isomorphism(query, target, Algorithm.DEFAULT, bondSensitive, ringmatch);
+            Isomorphism comparison = new Isomorphism(query, target, Algorithm.DEFAULT, bondSensitive, ringmatch, true);
             comparison.setChemFilters(stereoMatch, fragmentMinimization, energyMinimization);
-
 
             //Print all MCS solutions if first_MCS is false
             if (!first_MCS) {
@@ -103,7 +101,7 @@ public class MCSSearch {
 
                             for (Map.Entry<IAtom, IAtom> aam : mapping.getMappingsByAtoms().entrySet()) {
 
-                                 //Get the mapped atom number in Query Molecule
+                                //Get the mapped atom number in Query Molecule
                                 int queryMappingNumber = mapping.getQueryIndex(aam.getKey());
                                 //Get the mapped atom number in Target Molecule
                                 int targetMappingNumber = mapping.getTargetIndex(aam.getValue());
@@ -162,7 +160,6 @@ public class MCSSearch {
                     //System.out.println("");
 
                     //System.out.println("");
-
                     //System.out.println("Stereo Match: " + comparison.getStereoScore(0));
                     //System.out.println("Stereo different: " + comparison.isStereoMisMatch());
                     //System.out.println("Fragment Size: " + comparison.getFragmentSize(0));
@@ -177,7 +174,6 @@ public class MCSSearch {
             //System.out.println("");
 
             //System.out.println("");
-
         } catch (Exception ex) {
             Logger.getLogger(MCSSearch.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -191,7 +187,6 @@ public class MCSSearch {
     private static void printMolecules(IAtomContainer Molecule1, IAtomContainer Molecule2) {
 
         //System.out.println("Molecule 1");
-
         for (int i = 0; i < Molecule1.getAtomCount(); i++) {
 
             //System.out.print(Molecule1.getAtom(i).getSymbol() + " ");

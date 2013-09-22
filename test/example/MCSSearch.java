@@ -88,7 +88,7 @@ public class MCSSearch {
             boolean fragmentMinimization = true;
             boolean energyMinimization = true;
 
-            Isomorphism comparison = new Isomorphism(query, target, Algorithm.DEFAULT, bondSensitive, ringMatch);
+            Isomorphism comparison = new Isomorphism(query, target, Algorithm.DEFAULT, bondSensitive, ringMatch, false);
             comparison.setChemFilters(stereoMatch, fragmentMinimization, energyMinimization);
 
             //Print all MCS solutions if first_MCS is false

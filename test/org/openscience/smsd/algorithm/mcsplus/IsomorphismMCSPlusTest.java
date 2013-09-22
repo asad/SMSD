@@ -65,12 +65,12 @@ public class IsomorphismMCSPlusTest {
     public void IsomorphismTest() {
         Assert.assertNotNull(
                 new Isomorphism(new AtomContainer(), new AtomContainer(),
-                Algorithm.DEFAULT,
-                true, false));
+                        Algorithm.DEFAULT,
+                        true, false, false));
         Assert.assertNotNull(
                 new Isomorphism(new AtomContainer(), new AtomContainer(),
-                Algorithm.DEFAULT,
-                false, false));
+                        Algorithm.DEFAULT,
+                        false, false, false));
     }
 
     @BeforeClass
@@ -102,7 +102,7 @@ public class IsomorphismMCSPlusTest {
             IAtomContainer target;
             target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
             IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
-            Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.MCSPlus, true, false);
+            Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.MCSPlus, true, false, false);
             smsd1.setChemFilters(true, true, true);
             Assert.assertEquals(7, smsd1.getFirstAtomMapping().getCount());
             Assert.assertEquals(2, smsd1.getAllAtomMapping().size());
@@ -119,7 +119,7 @@ public class IsomorphismMCSPlusTest {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("CC");
         IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
-        Isomorphism smsd = new Isomorphism(query, target, Algorithm.MCSPlus, true, false);
+        Isomorphism smsd = new Isomorphism(query, target, Algorithm.MCSPlus, true, false, false);
 
         Assert.assertEquals(18, smsd.getAllAtomMapping().size());
         Assert.assertTrue(smsd.isSubgraph());
@@ -144,7 +144,7 @@ public class IsomorphismMCSPlusTest {
         double score = 0.76;
         IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(molecule1);
         IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(molecule2);
-        Isomorphism smsd1 = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, true, false);
+        Isomorphism smsd1 = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, true, false, false);
         smsd1.setChemFilters(true, true, true);
         Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
     }
@@ -165,7 +165,7 @@ public class IsomorphismMCSPlusTest {
 
         IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(molecule1);
         IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(molecule2);
-        Isomorphism smsd1 = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, false);
+        Isomorphism smsd1 = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, false, false);
         smsd1.setChemFilters(true, true, true);
         Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
     }
@@ -187,7 +187,7 @@ public class IsomorphismMCSPlusTest {
         //Bond Sensitive is set True
         //Ring Match is set True
 
-        Isomorphism comparison = new Isomorphism(query, target, Algorithm.MCSPlus, false, false);
+        Isomorphism comparison = new Isomorphism(query, target, Algorithm.MCSPlus, false, false, false);
         // set chemical filter true
         comparison.setChemFilters(true, true, true);
 
@@ -219,7 +219,7 @@ public class IsomorphismMCSPlusTest {
 
         IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(query);
         IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(target);
-        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, false);
+        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, false, false);
         // set chemical filter true
         comparison.setChemFilters(true, true, true);
         RenderedImage generateImage = generateImage(ac1, ac2, comparison);
@@ -247,7 +247,7 @@ public class IsomorphismMCSPlusTest {
         IAtomContainer target = sp.parseSmiles("O=C(CO)COP(=O)(O)O");
         IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(query);
         IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(target);
-        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, false);
+        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, false, false);
         // set chemical filter true
         comparison.setChemFilters(true, true, true);
         RenderedImage generateImage = generateImage(ac1, ac2, comparison);
@@ -274,7 +274,7 @@ public class IsomorphismMCSPlusTest {
 
         IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(query);
         IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(target);
-        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.VFLibMCS, false, true);
+        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.VFLibMCS, false, true, false);
         // set chemical filter true
         comparison.setChemFilters(true, true, true);
         RenderedImage generateImage = generateImage(ac1, ac2, comparison);
@@ -316,7 +316,7 @@ public class IsomorphismMCSPlusTest {
 //                + "[C@@H]3O)[C@H](O)[C@H]2O)[C@H](O)[C@H]1O)[C@H](O)CO");
 //        IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(query);
 //        IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(target);
-//        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, false);
+//        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, false,false);
 //        RenderedImage generateImage = generateImage(query, target, comparison);
 //        boolean write = ImageIO.write(generateImage, "png", new File("MCSPLUS_complexRing.png"));
 //

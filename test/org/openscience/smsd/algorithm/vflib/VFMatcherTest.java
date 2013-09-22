@@ -67,13 +67,13 @@ public class VFMatcherTest {
         SMSDNormalizer.percieveAtomTypesAndConfigureAtoms(hexane);
         hexane = SMSDNormalizer.removeHydrogensAndPreserveAtomID(hexane);
         CDKHueckelAromaticityDetector.detectAromaticity(hexane);
-        hexaneQuery = new QueryCompiler(hexane, true, false).compile();
+        hexaneQuery = new QueryCompiler(hexane, true, false,true).compile();
         Assert.assertEquals(6, hexaneQuery.countNodes());
         benzene = createBenzene();
         SMSDNormalizer.percieveAtomTypesAndConfigureAtoms(benzene);
         hexane = SMSDNormalizer.removeHydrogensAndPreserveAtomID(benzene);
         CDKHueckelAromaticityDetector.detectAromaticity(benzene);
-        benzeneQuery = new QueryCompiler(benzene, true, false).compile();
+        benzeneQuery = new QueryCompiler(benzene, true, false,true).compile();
     }
 
     @Test
@@ -204,7 +204,7 @@ public class VFMatcherTest {
      */
     @Test
     public void testItShouldMatchHexaneToHexaneWhenUsingMolecule() {
-        IMapper mapper = new VFMapper(hexane, true, false);
+        IMapper mapper = new VFMapper(hexane, true, false,false);
         Assert.assertTrue(mapper.hasMap(hexane));
     }
 

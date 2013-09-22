@@ -48,7 +48,7 @@ public class UnionTest {
         MoleculeSanityCheck.aromatizeMolecule(mol1);
         MoleculeSanityCheck.aromatizeMolecule(mol2);
 
-        Isomorphism isomorphism = new Isomorphism(mol1, mol2, Algorithm.DEFAULT, true, false);
+        Isomorphism isomorphism = new Isomorphism(mol1, mol2, Algorithm.DEFAULT, true, false, false);
         isomorphism.setChemFilters(false, false, false);
 
         int combinations = 1;
@@ -133,7 +133,6 @@ public class UnionTest {
 
         SmilesGenerator sg = new SmilesGenerator(true);
         AllRingsFinder arf = new AllRingsFinder();
-        arf.setTimeout(900000);
 
         IRingSet findAllRings = arf.findAllRings(molecule);
         sg.setRings(findAllRings);

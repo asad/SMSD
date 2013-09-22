@@ -58,7 +58,7 @@ public class SubstructureSearch {
             /*
              * Test if mol1 is a substructure of mol2
              */
-            Substructure comparison = new Substructure(mol1, mol2, bondSensitive, ringMatcher, allMatch);
+            Substructure comparison = new Substructure(mol1, mol2, bondSensitive, ringMatcher, true, allMatch);
             //System.out.println("Is a Subgraph " + comparison.isSubgraph());
             if (comparison.isSubgraph()) {
                 comparison.setChemFilters(stereoMatch, fragmentMinimization, energyMinimization);

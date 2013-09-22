@@ -85,7 +85,6 @@ public class TestMCSS {
         map.put("3", "CCCSNNN");
         map.put("4", "CCCC=NNN");
 
-
         List<IAtomContainer> jobs = new ArrayList<IAtomContainer>();
         for (String s : map.values()) {
             try {
@@ -114,7 +113,6 @@ public class TestMCSS {
         map.put("1", "CCC=NNN");
         map.put("2", "CCC-NNN");
         map.put("3", "CCCSNNN");
-
 
         List<IAtomContainer> jobs = new ArrayList<IAtomContainer>();
         for (String s : map.values()) {
@@ -147,7 +145,6 @@ public class TestMCSS {
         map.put("4", "SSSCCC");
         map.put("5", "CSSSCSNNN");
 
-
         List<IAtomContainer> jobs = new ArrayList<IAtomContainer>();
         for (String s : map.values()) {
             try {
@@ -176,7 +173,6 @@ public class TestMCSS {
         map.put("1", "O=C(OC1OC(CO)C(O)C(O)C1(O))Cc3c[nH]c2ccccc23");
         map.put("2", "O=C(OC1C(O)C(O)C(O)C(O)C1(O))Cc3c[nH]c2ccccc23");
 
-
         List<IAtomContainer> jobs = new ArrayList<IAtomContainer>();
         for (String s : map.values()) {
             try {
@@ -192,7 +188,7 @@ public class TestMCSS {
             }
         }
         long startTime = Calendar.getInstance().getTimeInMillis();
-        MCSS mcss = new MCSS(jobs, JobType.SINGLE, 5, true, true);
+        MCSS mcss = new MCSS(jobs, JobType.SINGLE, 5, true, true, false);
         for (IAtomContainer ac : mcss.getCalculateMCSS()) {
             //System.out.println("Result MCS " + getMCSSSmiles(ac));
             Assert.assertEquals(21, ac.getAtomCount());

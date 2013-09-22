@@ -58,7 +58,7 @@ public class SubstructureSearch {
         boolean fragmentMinimization = true;
         boolean energyMinimization = true;
 
-        Substructure comparison = new Substructure(mol1, mol2, bondSensitive, false, true);
+        Substructure comparison = new Substructure(mol1, mol2, bondSensitive, false, true,false);
 
         if (comparison.isSubgraph()) {
             comparison.setChemFilters(stereoMatch, fragmentMinimization, energyMinimization);

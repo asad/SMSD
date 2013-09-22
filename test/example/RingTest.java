@@ -73,7 +73,7 @@ public class RingTest {
             boolean fragmentMinimization = true;
             boolean energyMinimization = true;
 
-            Isomorphism comparison = new Isomorphism(mol1, mol2, Algorithm.DEFAULT, bondSensitive, ringMatch);
+            Isomorphism comparison = new Isomorphism(mol1, mol2, Algorithm.DEFAULT, bondSensitive, ringMatch,true);
             comparison.setChemFilters(stereoMatch, fragmentMinimization, energyMinimization);
 
 
