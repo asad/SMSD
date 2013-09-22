@@ -261,7 +261,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
 
                     if (reactantBond != null && productBond != null) {
                         addEdges(reactantBond, productBond, a, b);
-                    } else if (isMatchBond() && reactantBond == null && productBond == null) {
+                    } else if (reactantBond == null && productBond == null) {
                         dEdges.add((a / 3) + 1);
                         dEdges.add((b / 3) + 1);
                     }
