@@ -416,7 +416,7 @@ public class SubstructureTest {
 
         IAtomContainer target = mol;
 
-        Substructure smsd1 = new Substructure(query, target, true, false, true, false);
+        Substructure smsd1 = new Substructure(query, target, true, false, true, true);
         Assert.assertTrue(smsd1.isSubgraph());
         smsd1.setChemFilters(true, true, true);
 
@@ -621,7 +621,7 @@ public class SubstructureTest {
         }
         //System.out.println();
 
-        Substructure smsd = new Substructure(query, target, true, false, true, false);
+        Substructure smsd = new Substructure(query, target, true, false, true, true);
         Assert.assertTrue(smsd.isSubgraph());
         for (AtomAtomMapping m : smsd.getAllAtomMapping()) {
             //System.out.println(m.getMappingsByIndex());
