@@ -191,7 +191,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
      * @return
      * @throws IOException
      */
-    protected int compatibilityGraphNodes() throws IOException {
+    private int compatibilityGraphNodes() throws IOException {
 
         compGraphNodes.clear();
 
@@ -230,7 +230,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
      * @return
      * @throws IOException
      */
-    protected int compatibilityGraph() throws IOException {
+    private int compatibilityGraph() throws IOException {
         int comp_graph_nodes_List_size = compGraphNodes.size();
 //        System.out.println("Source atom count " + source.getAtomCount());
 //        System.out.println("target atom count " + target.getAtomCount());
@@ -407,23 +407,23 @@ public final class GenerateCompatibilityGraph implements Serializable {
         }
     }
 
-    public List<Integer> getCEgdes() {
-        return Collections.unmodifiableList(cEdges);
+    public synchronized List<Integer> getCEgdes() {
+        return Collections.synchronizedList(cEdges);
     }
 
-    public List<Integer> getDEgdes() {
-        return Collections.unmodifiableList(dEdges);
+    public synchronized List<Integer> getDEgdes() {
+        return Collections.synchronizedList(dEdges);
     }
 
-    public List<Integer> getCompGraphNodes() {
-        return Collections.unmodifiableList(compGraphNodes);
+    public synchronized List<Integer> getCompGraphNodes() {
+        return Collections.synchronizedList(compGraphNodes);
     }
 
-    protected int getCEdgesSize() {
+    protected synchronized int getCEdgesSize() {
         return cEdgesSize;
     }
 
-    protected int getDEdgesSize() {
+    protected synchronized int getDEdgesSize() {
         return dEdgesSize;
     }
 

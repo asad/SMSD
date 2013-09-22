@@ -400,7 +400,7 @@ public final class BKKCKCF {
         return neighbor_vec;
     }
 
-    public int getBestCliqueSize() {
+    public synchronized int getBestCliqueSize() {
         return best_clique_size;
     }
 
@@ -408,7 +408,7 @@ public final class BKKCKCF {
      *
      * @return
      */
-    public Collection<List<Integer>> getMaxCliqueSet() {
+    public synchronized Collection<List<Integer>> getMaxCliqueSet() {
         //System.out.println("max_Cliques_Set: " + max_Cliques_Set.size());
         return Collections.unmodifiableCollection(max_Cliques_Set);
     }

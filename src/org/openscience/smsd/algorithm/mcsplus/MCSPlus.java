@@ -228,7 +228,7 @@ public final class MCSPlus {
         return finalMappings;
     }
 
-    private synchronized boolean checkTimeout() {
+    private boolean checkTimeout() {
         if (getIterationManager().isMaxIteration()) {
             this.timeout = true;
 //            System.out.println("MCS+ iterations " + getIterationManager().getCounter());

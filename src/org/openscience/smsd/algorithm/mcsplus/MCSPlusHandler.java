@@ -49,15 +49,15 @@ import org.openscience.smsd.interfaces.IResults;
 @TestClass("org.openscience.cdk.smsd.SMSDBondSensitiveTest")
 public final class MCSPlusHandler extends MoleculeInitializer implements IResults {
 
-    private List<AtomAtomMapping> allAtomMCS = null;
-    private List<Map<Integer, Integer>> allMCS = null;
+    private final List<AtomAtomMapping> allAtomMCS;
+    private final List<Map<Integer, Integer>> allMCS;
     private final IAtomContainer source;
     private final IAtomContainer target;
     private boolean flagExchange = false;
     private final boolean shouldMatchRings;
     private final boolean shouldMatchBonds;
     private final boolean matchAtomType;
-    private boolean timeout;
+    private final boolean timeout;
 
     /**
      * Constructor for the MCS Plus algorithm class
@@ -178,8 +178,8 @@ public final class MCSPlusHandler extends MoleculeInitializer implements IResult
                     int IIndex = map.getKey();
                     int JIndex = map.getValue();
 
-                    IAtom sourceAtom = null;
-                    IAtom targetAtom = null;
+                    IAtom sourceAtom;
+                    IAtom targetAtom;
 
                     sourceAtom = source.getAtom(IIndex);
                     targetAtom = target.getAtom(JIndex);
@@ -221,14 +221,7 @@ public final class MCSPlusHandler extends MoleculeInitializer implements IResult
     /**
      * @return the timeout
      */
-    public boolean isTimeout() {
+    public synchronized boolean isTimeout() {
         return timeout;
-    }
-
-    /**
-     * @param timeout the timeout to set
-     */
-    public void setTimeout(boolean timeout) {
-        this.timeout = timeout;
     }
 }
