@@ -114,10 +114,10 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
     public VF2Sub(IQueryAtomContainer source, IAtomContainer target) {
         this.source = source;
         this.target = target;
-        allAtomMCS = new ArrayList<AtomAtomMapping>();
-        allAtomMCSCopy = new ArrayList<AtomAtomMapping>();
-        allMCS = new ArrayList<Map<Integer, Integer>>();
-        allMCSCopy = new ArrayList<Map<Integer, Integer>>();
+        allAtomMCS = new ArrayList<>();
+        allAtomMCSCopy = new ArrayList<>();
+        allMCS = new ArrayList<>();
+        allMCSCopy = new ArrayList<>();
         this.shouldMatchRings = true;
         this.matchBonds = true;
         if (this.shouldMatchRings) {
@@ -161,10 +161,7 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
 
     private synchronized boolean isExtensionFeasible() {
         int commonAtomCount = checkCommonAtomCount(getReactantMol(), getProductMol());
-        if (commonAtomCount > bestHitSize) {
-            return true;
-        }
-        return false;
+        return commonAtomCount > bestHitSize;
     }
 
     private boolean hasMap(Map<Integer, Integer> maps, List<Map<Integer, Integer>> mapGlobal) {
@@ -338,7 +335,7 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
         int counter = 0;
         for (List<Integer> mapping : mappings) {
             AtomAtomMapping atomatomMapping = new AtomAtomMapping(source, target);
-            Map<Integer, Integer> indexindexMapping = new TreeMap<Integer, Integer>();
+            Map<Integer, Integer> indexindexMapping = new TreeMap<>();
             for (int index = 0; index < mapping.size(); index += 2) {
                 IAtom qAtom;
                 IAtom tAtom;
