@@ -53,7 +53,7 @@ public class MCS {
         IAtomContainer mcsmolecule = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class, mol1);
         Map<Integer, Integer> indexMapping = getIndexMapping(mcs.getFirstAtomMapping());
 
-        List<IAtom> atomsToBeRemoved = new ArrayList<IAtom>();
+        List<IAtom> atomsToBeRemoved = new ArrayList<>();
         for (IAtom atom : mcsmolecule.atoms()) {
             int index = mcsmolecule.getAtomNumber(atom);
 //            System.out.println("index: " +index);
@@ -67,13 +67,13 @@ public class MCS {
         }
 
         StringWriter stringWriter = new StringWriter();
-        SMILESWriter smilesWriter = new SMILESWriter(stringWriter);
-        smilesWriter.write(mcsmolecule);
-        smilesWriter.close();
-
+        try (SMILESWriter smilesWriter = new SMILESWriter(stringWriter)) {
+            smilesWriter.write(mcsmolecule);
+            smilesWriter.close();
+        }
         System.out.println("MCS SMILES: " + stringWriter.toString());
 
-        return (IAtomContainer) mcsmolecule.clone();
+        return mcsmolecule.clone();
     }
 
     public static void main(String[] args) throws CDKException, CloneNotSupportedException, IOException {
@@ -90,7 +90,7 @@ public class MCS {
 
     private static Map<Integer, Integer> getIndexMapping(AtomAtomMapping aam) {
         Map<IAtom, IAtom> mappings = aam.getMappingsByAtoms();
-        Map<Integer, Integer> mapping = new TreeMap<Integer, Integer>();
+        Map<Integer, Integer> mapping = new TreeMap<>();
         for (IAtom keys : mappings.keySet()) {
             mapping.put(aam.getQueryIndex(keys), aam.getTargetIndex(mappings.get(keys)));
         }

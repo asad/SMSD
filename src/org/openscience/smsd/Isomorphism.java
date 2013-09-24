@@ -72,7 +72,7 @@ import org.openscience.smsd.interfaces.Algorithm;
  * //Algorithm is VF2MCS
  * //Bond Sensitive is set True
  * //Ring Match is set True
- * Isomorphism comparison = new Isomorphism(query, target, Algorithm.VFLibMCS, true, true);
+ * Isomorphism comparison = new Isomorphism(query, target, Algorithm.VFLibMCS, true, true, true);
  * // set chemical filter true
  * comparison.setChemFilters(true, true, true);
  * //Get similarity score

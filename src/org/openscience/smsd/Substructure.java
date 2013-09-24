@@ -52,7 +52,7 @@ import org.openscience.smsd.algorithm.vflib.substructure.VF2;
  * SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
  * IAtomContainer query = sp.parseSmiles("CC");
  * IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
- * Substructure smsd = new Substructure(query, target, true, false, true);
+ * Substructure smsd = new Substructure(query, target, true, false, true, true);
  * Assert.assertTrue(smsd.isSubgraph());
  * Assert.assertEquals(18, smsd.getAllAtomMapping().size());
  *

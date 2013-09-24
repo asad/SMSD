@@ -211,7 +211,7 @@ public class SMSDcmd {
                     List<IAtomContainer> secondRoundTargets = new ArrayList<>();
                     IChemObjectBuilder builder = DefaultChemObjectBuilder.getInstance();
                     for (IAtomContainer target : atomContainerSet) {
-                        BaseMapping smsd = run(mcsAtomContainer, target, filter, matchBonds, matchRings, false);
+                        BaseMapping smsd = run(mcsAtomContainer, target, filter, matchBonds, matchRings, matchBonds);
                         mappings.add(getIndexMapping(smsd.getFirstAtomMapping()));
                         secondRoundTargets.add(
                                 builder.newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getTarget()));
@@ -262,7 +262,7 @@ public class SMSDcmd {
         outputHandler.startAppending(out);
 
         long startTime = System.currentTimeMillis();
-        BaseMapping smsd = null;
+        BaseMapping smsd;
         boolean matchBonds = argumentHandler.isMatchBondType();
         boolean matchRings = argumentHandler.isMatchRingType();
 
@@ -285,7 +285,7 @@ public class SMSDcmd {
             if (argumentHandler.isSubstructureMode()) {
                 smsd = runSubstructure(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings);
             } else {
-                smsd = run(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings, false);
+                smsd = run(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings, matchBonds);
             }
 
             long endTime = System.currentTimeMillis();
@@ -304,8 +304,7 @@ public class SMSDcmd {
             if (mcs != null && !mcs.isEmpty() && argumentHandler.isAllMapping()) {
                 outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
                 int counter = 0;
-                for (Iterator<AtomAtomMapping> it = smsd.getAllAtomMapping().iterator(); it.hasNext();) {
-                    AtomAtomMapping aam = it.next();
+                for (AtomAtomMapping aam : smsd.getAllAtomMapping()) {
                     Map<Integer, Integer> mapping = aam.getMappingsByIndex();
                     if (argumentHandler.isImage() && !mapping.isEmpty()) {
                         double stereoScore = smsd.getStereoScore(counter);
@@ -436,7 +435,7 @@ public class SMSDcmd {
         if (argumentHandler.isSubstructureMode()) {
             smsd = runSubstructure(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings);
         } else {
-            smsd = run(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings, false);
+            smsd = run(query, target, argumentHandler.getChemFilter(), matchBonds, matchRings, matchBonds);
         }
 
         query = query.getBuilder().newInstance(IAtomContainer.class, smsd.getFirstAtomMapping().getQuery());
@@ -458,8 +457,7 @@ public class SMSDcmd {
         if (mcs != null && !mcs.isEmpty() && argumentHandler.isAllMapping()) {
             outputHandler.printHeader(queryPath, targetPath, nAtomsMatched);
             int counter = 0;
-            for (Iterator<AtomAtomMapping> it = smsd.getAllAtomMapping().iterator(); it.hasNext();) {
-                AtomAtomMapping aam = it.next();
+            for (AtomAtomMapping aam : smsd.getAllAtomMapping()) {
                 Map<Integer, Integer> mapping = aam.getMappingsByIndex();
                 if (argumentHandler.isImage() && !mapping.isEmpty()) {
                     double stereoScore = smsd.getStereoScore(counter);
@@ -510,7 +508,7 @@ public class SMSDcmd {
     private static IAtomContainer getSubgraph(
             IAtomContainer container, Map<Integer, Integer> mapping) throws CloneNotSupportedException {
         Collection<Integer> values = mapping.values();
-        List<IAtom> subgraphAtoms = new ArrayList<IAtom>();
+        List<IAtom> subgraphAtoms = new ArrayList<>();
         IAtomContainer subgraph = container.clone();
         for (Integer index : values) {
             subgraphAtoms.add(subgraph.getAtom(index));
@@ -559,7 +557,7 @@ public class SMSDcmd {
             boolean matchBonds,
             boolean matchRings) throws CDKException {
         // XXX - if clean and configure is 'true', is that not duplicate configuring?
-        BaseMapping smsd = new Substructure(query, target, matchBonds, matchRings, false, true);
+        BaseMapping smsd = new Substructure(query, target, matchBonds, matchRings, matchBonds, true);
 
         if (smsd.isSubgraph()) {
             if (filter == 0) {

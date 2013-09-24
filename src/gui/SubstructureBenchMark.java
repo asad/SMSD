@@ -59,7 +59,7 @@ public class SubstructureBenchMark {
         if (qFileReader == null) {
             throw new IOException("Unknown input type ");
         }
-        List<IAtomContainer> targets = new ArrayList<IAtomContainer>();
+        List<IAtomContainer> targets = new ArrayList<>();
         IIteratingChemObjectReader tFileReader = read(tFile);
         while (tFileReader.hasNext()) {
             targets.add((IAtomContainer) tFileReader.next());
@@ -95,7 +95,7 @@ public class SubstructureBenchMark {
 
     private static int getSMSDSolutionCount(IAtomContainer queryMol, IAtomContainer target) throws CDKException {
 
-        Substructure substructure = new Substructure(queryMol, target, true, false, true, false);
+        Substructure substructure = new Substructure(queryMol, target, true, true, true, false);
 
         if (substructure.isSubgraph()) {
             return 1;
