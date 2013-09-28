@@ -45,7 +45,8 @@ import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 
 /**
  *
- * @cdk.module smsd @cdk.githash
+ * @cdk.module smsd
+ * @cdk.githash
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
@@ -116,7 +117,6 @@ public class MoleculeInitializer {
             valencesTable.put("Mn", 2);
             valencesTable.put("Co", 2);
 
-            long time = System.nanoTime();
             // do all ring perception
             AllRingsFinder arf = new AllRingsFinder();
             IRingSet allRings = null;
@@ -126,17 +126,9 @@ public class MoleculeInitializer {
                 Logger.warn(e.toString());
             }
 
-            long timeUp = System.nanoTime();
-
-            System.out.println("Time all ring " + (timeUp - time));
-            time = System.nanoTime();
             // sets SSSR information
             SSSRFinder finder = new SSSRFinder(atomContainer);
             IRingSet sssr = finder.findEssentialRings();
-
-            timeUp = System.nanoTime();
-
-            System.out.println("Time ssr ring " + (timeUp - time));
 
             for (IAtom atom : atomContainer.atoms()) {
 
