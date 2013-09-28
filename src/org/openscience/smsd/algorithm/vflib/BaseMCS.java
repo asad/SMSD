@@ -40,7 +40,6 @@ import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.algorithm.mcgregor.McGregor;
 import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
-import org.openscience.smsd.helper.MoleculeInitializer;
 
 /**
  * This class should be used to find MCS between source graph and target graph.
@@ -54,7 +53,7 @@ import org.openscience.smsd.helper.MoleculeInitializer;
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-public class BaseMCS extends MoleculeInitializer {
+public class BaseMCS {
 
     protected int countR;
     protected int countP;
@@ -78,15 +77,6 @@ public class BaseMCS extends MoleculeInitializer {
         this.vfLibSolutions = new ArrayList<>();
         this.source = source;
         this.target = target;
-        if (shouldMatchRings) {
-            try {
-                initializeMolecule(source);
-                initializeMolecule(target);
-            } catch (CDKException ex) {
-                Logger.error(ex);
-            }
-        }
-
     }
 
     /**
@@ -154,7 +144,7 @@ public class BaseMCS extends MoleculeInitializer {
         Collections.sort(vfLibSolutions, new Map2ValueComparator(SortOrder.DESCENDING));
         for (Map<INode, IAtom> solution : vfLibSolutions) {
             AtomAtomMapping atomatomMapping = new AtomAtomMapping(source, target);
-            Map<Integer, Integer> indexindexMapping = new TreeMap<Integer, Integer>();
+            Map<Integer, Integer> indexindexMapping = new TreeMap<>();
 
             for (INode node : solution.keySet()) {
                 IAtom qAtom;
@@ -201,7 +191,7 @@ public class BaseMCS extends MoleculeInitializer {
         getLocalMCSSolution().clear();
         for (List<Integer> mapping : mappings) {
             AtomAtomMapping atomatomMapping = new AtomAtomMapping(source, target);
-            Map<Integer, Integer> indexindexMapping = new TreeMap<Integer, Integer>();
+            Map<Integer, Integer> indexindexMapping = new TreeMap<>();
             for (int index = 0; index < mapping.size(); index += 2) {
                 IAtom qAtom;
                 IAtom tAtom;

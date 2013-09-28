@@ -33,20 +33,19 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.AtomAtomMapping;
-import org.openscience.smsd.helper.MoleculeInitializer;
 import org.openscience.smsd.interfaces.IResults;
 
 /**
- * This is a handler class for single atom mapping
- * ({@link org.openscience.cdk.smsd.algorithm.single.SingleMapping}). @cdk.module smsd @cdk.githash
+ * This is a handler class for single atom mapping ({@link org.openscience.cdk.smsd.algorithm.single.SingleMapping}).
+ * @cdk.module smsd @cdk.githash
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.single.SingleMappingHandlerTest")
-public class SingleMappingHandler extends MoleculeInitializer implements IResults {
+public class SingleMappingHandler implements IResults {
 
-    private final ILoggingTool Logger =
-            LoggingToolFactory.createLoggingTool(SingleMappingHandler.class);
+    private final ILoggingTool Logger
+            = LoggingToolFactory.createLoggingTool(SingleMappingHandler.class);
     private List<AtomAtomMapping> allAtomMCS = null;
     private final IAtomContainer source;
     private final IAtomContainer target;
@@ -61,17 +60,10 @@ public class SingleMappingHandler extends MoleculeInitializer implements IResult
      */
     @TestMethod("setMCSAlgorithm")
     public SingleMappingHandler(IAtomContainer source, IAtomContainer target, boolean bondTypeMatch, boolean shouldMatchRings) {
-        allAtomMCS = new ArrayList<AtomAtomMapping>();
+        allAtomMCS = new ArrayList<>();
         this.source = source;
         this.target = target;
         this.shouldMatchRings = shouldMatchRings;
-        if (this.shouldMatchRings) {
-            try {
-                initializeMolecule(source);
-                initializeMolecule(target);
-            } catch (CDKException ex) {
-            }
-        }
         searchMCS();
     }
 
@@ -82,24 +74,15 @@ public class SingleMappingHandler extends MoleculeInitializer implements IResult
      */
     @TestMethod("setMCSAlgorithm")
     public SingleMappingHandler(IQueryAtomContainer source, IAtomContainer target) {
-        allAtomMCS = new ArrayList<AtomAtomMapping>();
+        allAtomMCS = new ArrayList<>();
         this.source = source;
         this.target = target;
         this.shouldMatchRings = true;
-        if (this.shouldMatchRings) {
-            try {
-                initializeMolecule(source);
-                initializeMolecule(target);
-            } catch (CDKException ex) {
-            }
-        }
         searchMCS();
     }
 
-    
     /**
-     * Function is called by the main program and serves as a starting point for the comparison procedure.
-     * {@inheritDoc}
+     * Function is called by the main program and serves as a starting point for the comparison procedure. {@inheritDoc}
      *
      */
     private synchronized void searchMCS() {

@@ -30,13 +30,11 @@ import java.util.TreeMap;
 
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.annotations.TestMethod;
-import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.filters.PostFilter;
-import org.openscience.smsd.helper.MoleculeInitializer;
 import org.openscience.smsd.interfaces.IResults;
 
 /**
@@ -47,7 +45,7 @@ import org.openscience.smsd.interfaces.IResults;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.SMSDBondSensitiveTest")
-public final class MCSPlusHandler extends MoleculeInitializer implements IResults {
+public final class MCSPlusHandler implements IResults {
 
     private final List<AtomAtomMapping> allAtomMCS;
     private final List<Map<Integer, Integer>> allMCS;
@@ -77,14 +75,6 @@ public final class MCSPlusHandler extends MoleculeInitializer implements IResult
         this.matchAtomType = matchAtomType;
         allAtomMCS = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
         allMCS = Collections.synchronizedList(new ArrayList<Map<Integer, Integer>>());
-
-        if (shouldMatchRings) {
-            try {
-                initializeMolecule(source);
-                initializeMolecule(target);
-            } catch (CDKException ex) {
-            }
-        }
         this.timeout = searchMCS();
     }
 
@@ -102,13 +92,6 @@ public final class MCSPlusHandler extends MoleculeInitializer implements IResult
         this.matchAtomType = true;
         allAtomMCS = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
         allMCS = Collections.synchronizedList(new ArrayList<Map<Integer, Integer>>());
-        if (shouldMatchRings) {
-            try {
-                initializeMolecule(source);
-                initializeMolecule(target);
-            } catch (CDKException ex) {
-            }
-        }
         this.timeout = searchMCS();
     }
 

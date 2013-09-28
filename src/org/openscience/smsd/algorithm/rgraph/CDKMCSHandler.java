@@ -36,7 +36,6 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.smsd.AtomAtomMapping;
-import org.openscience.smsd.helper.MoleculeInitializer;
 import org.openscience.smsd.interfaces.IResults;
 
 /**
@@ -48,7 +47,7 @@ import org.openscience.smsd.interfaces.IResults;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.cdk.CDKMCSHandlerTest")
-public class CDKMCSHandler extends MoleculeInitializer implements IResults {
+public class CDKMCSHandler implements IResults {
 
 //    //~--- fields -------------------------------------------------------------
     private final IAtomContainer source;
@@ -82,13 +81,6 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
         this.matchAtomType = matchAtomType;
         this.allAtomMCS = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
         this.allMCS = Collections.synchronizedList(new ArrayList<Map<Integer, Integer>>());
-        if (shouldMatchRings) {
-            try {
-                initializeMolecule(source);
-                initializeMolecule(target);
-            } catch (CDKException ex) {
-            }
-        }
         this.timeout = searchMCS();
     }
 
@@ -105,13 +97,6 @@ public class CDKMCSHandler extends MoleculeInitializer implements IResults {
         this.matchAtomType = true;
         this.allAtomMCS = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
         this.allMCS = Collections.synchronizedList(new ArrayList<Map<Integer, Integer>>());
-        if (shouldMatchRings) {
-            try {
-                initializeMolecule(source);
-                initializeMolecule(target);
-            } catch (CDKException ex) {
-            }
-        }
         this.timeout = searchMCS();
     }
 

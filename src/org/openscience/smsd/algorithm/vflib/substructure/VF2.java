@@ -46,7 +46,6 @@
 package org.openscience.smsd.algorithm.vflib.substructure;
 
 import java.util.*;
-import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.tools.ILoggingTool;
@@ -62,7 +61,7 @@ import org.openscience.smsd.interfaces.IResults;
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-public final class VF2 extends MoleculeInitializer implements IResults {
+public final class VF2 implements IResults {
 
     private List<AtomAtomMapping> allAtomMCS = null;
     private final IAtomContainer source;
@@ -90,13 +89,6 @@ public final class VF2 extends MoleculeInitializer implements IResults {
         this.shouldMatchRings = shouldMatchRings;
         this.shouldMatchBonds = shouldMatchBonds;
         this.allAtomMCS = new ArrayList<>();
-        if (this.shouldMatchRings) {
-            try {
-                initializeMolecule(source);
-                initializeMolecule(target);
-            } catch (CDKException ex) {
-            }
-        }
         this.isSubgraph = findSubgraph();
         this.matchAtomType = matchAtomType;
     }
@@ -114,13 +106,6 @@ public final class VF2 extends MoleculeInitializer implements IResults {
         this.shouldMatchBonds = true;
         this.matchAtomType = true;
         allAtomMCS = new ArrayList<>();
-        if (this.shouldMatchRings) {
-            try {
-                initializeMolecule(source);
-                initializeMolecule(target);
-            } catch (CDKException ex) {
-            }
-        }
         this.isSubgraph = findSubgraph();
     }
 
@@ -143,7 +128,7 @@ public final class VF2 extends MoleculeInitializer implements IResults {
      */
     private synchronized void isomorphism() {
 
-        if (!isDead(source, target) && testIsSubgraphHeuristics(source, target, shouldMatchBonds)) {
+        if (!isDead(source, target) && MoleculeInitializer.testIsSubgraphHeuristics(source, target, shouldMatchBonds)) {
             State state = new State(source, target, shouldMatchBonds, shouldMatchRings, matchAtomType);
             if (!state.isDead()) {
                 state.matchFirst(state, allAtomMCS);
@@ -161,7 +146,7 @@ public final class VF2 extends MoleculeInitializer implements IResults {
      */
     private synchronized void isomorphisms() {
 
-        if (!isDead(source, target) && testIsSubgraphHeuristics(source, target, shouldMatchBonds)) {
+        if (!isDead(source, target) && MoleculeInitializer.testIsSubgraphHeuristics(source, target, shouldMatchBonds)) {
             State state = new State(source, target, shouldMatchBonds, shouldMatchRings, matchAtomType);
             if (!state.isDead()) {
                 state.matchAll(state, allAtomMCS);
@@ -176,12 +161,12 @@ public final class VF2 extends MoleculeInitializer implements IResults {
 
     private boolean findSubgraph() {
         isomorphism();
-        return allAtomMCS.isEmpty() ? false : true;
+        return !allAtomMCS.isEmpty();
     }
 
     private boolean findSubgraphs() {
         isomorphisms();
-        return allAtomMCS.isEmpty() ? false : true;
+        return !allAtomMCS.isEmpty();
     }
 
     @Override

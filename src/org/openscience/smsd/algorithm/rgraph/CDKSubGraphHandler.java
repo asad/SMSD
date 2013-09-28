@@ -32,7 +32,6 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.smsd.AtomAtomMapping;
-import org.openscience.smsd.helper.MoleculeInitializer;
 import org.openscience.smsd.interfaces.IResults;
 
 /**
@@ -43,7 +42,7 @@ import org.openscience.smsd.interfaces.IResults;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.cdk.CDKMCSHandlerTest")
-public class CDKSubGraphHandler extends MoleculeInitializer implements IResults {
+public class CDKSubGraphHandler implements IResults {
 
 //    //~--- fields -------------------------------------------------------------
     private final IAtomContainer source;
@@ -75,13 +74,6 @@ public class CDKSubGraphHandler extends MoleculeInitializer implements IResults 
         this.matchAtomType = matchAtomType;
         this.allAtomMCS = new ArrayList<>();
         this.allMCS = new ArrayList<>();
-        if (this.shouldMatchRings) {
-            try {
-                initializeMolecule(source);
-                initializeMolecule(target);
-            } catch (CDKException ex) {
-            }
-        }
         isSubgraph();
     }
 
@@ -98,13 +90,6 @@ public class CDKSubGraphHandler extends MoleculeInitializer implements IResults 
         this.matchAtomType = true;
         this.allAtomMCS = new ArrayList<>();
         this.allMCS = new ArrayList<>();
-        if (shouldMatchRings) {
-            try {
-                initializeMolecule(source);
-                initializeMolecule(target);
-            } catch (CDKException ex) {
-            }
-        }
         isSubgraph();
     }
 

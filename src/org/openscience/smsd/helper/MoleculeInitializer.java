@@ -61,8 +61,8 @@ public class MoleculeInitializer {
      * @throws CDKException if there is a problem in ring perception or aromaticity detection, which is usually related
      * to a timeout in the ring finding code.
      */
-    private static final ILoggingTool Logger =
-            LoggingToolFactory.createLoggingTool(MoleculeInitializer.class);
+    private static final ILoggingTool Logger
+            = LoggingToolFactory.createLoggingTool(MoleculeInitializer.class);
 
     /**
      *
@@ -73,7 +73,7 @@ public class MoleculeInitializer {
     public synchronized static void initializeMolecule(IAtomContainer atomContainer) throws CDKException {
         String SMALLEST_RING_SIZE = "SMALLEST_RING_SIZE";
         if (!(atomContainer instanceof IQueryAtomContainer)) {
-            Map<String, Integer> valencesTable = new HashMap<String, Integer>();
+            Map<String, Integer> valencesTable = new HashMap<>();
             valencesTable.put("H", 1);
             valencesTable.put("Li", 1);
             valencesTable.put("Be", 2);
@@ -116,6 +116,7 @@ public class MoleculeInitializer {
             valencesTable.put("Mn", 2);
             valencesTable.put("Co", 2);
 
+            long time = System.nanoTime();
             // do all ring perception
             AllRingsFinder arf = new AllRingsFinder();
             IRingSet allRings = null;
@@ -125,9 +126,17 @@ public class MoleculeInitializer {
                 Logger.warn(e.toString());
             }
 
+            long timeUp = System.nanoTime();
+
+            System.out.println("Time all ring " + (timeUp - time));
+            time = System.nanoTime();
             // sets SSSR information
             SSSRFinder finder = new SSSRFinder(atomContainer);
             IRingSet sssr = finder.findEssentialRings();
+
+            timeUp = System.nanoTime();
+
+            System.out.println("Time ssr ring " + (timeUp - time));
 
             for (IAtom atom : atomContainer.atoms()) {
 
@@ -138,7 +147,7 @@ public class MoleculeInitializer {
                     atom.setFlag(CDKConstants.ISINRING, true);
                     atom.setFlag(CDKConstants.ISALIPHATIC, false);
                     // lets find which ring sets it is a part of
-                    List<Integer> ringsizes = new ArrayList<Integer>();
+                    List<Integer> ringsizes = new ArrayList<>();
                     IRingSet currentRings = allRings.getRings(atom);
                     int min = 0;
                     for (int i = 0; i < currentRings.getAtomContainerCount(); i++) {
@@ -209,7 +218,7 @@ public class MoleculeInitializer {
                 AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(atomContainer);
                 CDKHueckelAromaticityDetector.detectAromaticity(atomContainer);
 
-            } catch (Exception e) {
+            } catch (CDKException e) {
                 Logger.debug(e.toString());
                 throw new CDKException(e.toString(), e);
             }
@@ -227,7 +236,7 @@ public class MoleculeInitializer {
      * @param shouldMatchBonds
      * @return true if the subgraph ac1 has atom chance to be atom subgraph of ac2
      */
-    protected synchronized static boolean testIsSubgraphHeuristics(IAtomContainer ac1, IAtomContainer ac2, boolean shouldMatchBonds) {
+    public synchronized static boolean testIsSubgraphHeuristics(IAtomContainer ac1, IAtomContainer ac2, boolean shouldMatchBonds) {
 
         int ac1SingleBondCount = 0;
         int ac1DoubleBondCount = 0;
@@ -238,7 +247,7 @@ public class MoleculeInitializer {
         int ac2TripleBondCount = 0;
         int ac2AromaticBondCount = 0;
 
-        IBond bond = null;
+        IBond bond;
 
         if (shouldMatchBonds) {
             for (int i = 0; i < ac1.getBondCount(); i++) {
@@ -283,8 +292,8 @@ public class MoleculeInitializer {
             }
         }
 
-        IAtom atom = null;
-        Map<String, Integer> map = new HashMap<String, Integer>();
+        IAtom atom;
+        Map<String, Integer> map = new HashMap<>();
         for (int i = 0; i < ac1.getAtomCount(); i++) {
             atom = ac1.getAtom(i);
             if (atom instanceof IQueryAtom) {

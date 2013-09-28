@@ -56,7 +56,7 @@ import org.openscience.smsd.interfaces.IResults;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VF2SubTest")
-public class VF2Sub extends MoleculeInitializer implements IResults {
+public class VF2Sub implements IResults {
 
     private List<AtomAtomMapping> allAtomMCS = null;
     private List<AtomAtomMapping> allAtomMCSCopy = null;
@@ -95,13 +95,6 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
         this.shouldMatchRings = shouldMatchRings;
         this.matchBonds = shouldMatchBonds;
         this.matchAtomType = matchAtomType;
-        if (this.shouldMatchRings) {
-            try {
-                initializeMolecule(source);
-                initializeMolecule(target);
-            } catch (CDKException ex) {
-            }
-        }
         this.isSubgraph = findSubgraph();
     }
 
@@ -120,13 +113,6 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
         allMCSCopy = new ArrayList<>();
         this.shouldMatchRings = true;
         this.matchBonds = true;
-        if (this.shouldMatchRings) {
-            try {
-                initializeMolecule(source);
-                initializeMolecule(target);
-            } catch (CDKException ex) {
-            }
-        }
         this.isSubgraph = findSubgraph();
     }
 
@@ -135,7 +121,7 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
      *
      */
     private boolean findSubgraph() {
-        if (!testIsSubgraphHeuristics(source, target, this.matchBonds)) {
+        if (!MoleculeInitializer.testIsSubgraphHeuristics(source, target, this.matchBonds)) {
             return false;
         }
         boolean timoutVF = searchVFMappings();
@@ -143,9 +129,7 @@ public class VF2Sub extends MoleculeInitializer implements IResults {
         if (flag && !vfLibSolutions.isEmpty() && !timoutVF) {
             try {
                 searchMcGregorMapping();
-            } catch (CDKException ex) {
-                Logger.error(Level.SEVERE, null, ex);
-            } catch (IOException ex) {
+            } catch (CDKException | IOException ex) {
                 Logger.error(Level.SEVERE, null, ex);
             }
         } else if (!allAtomMCSCopy.isEmpty()
