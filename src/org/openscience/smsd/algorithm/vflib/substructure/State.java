@@ -84,7 +84,7 @@ final class State {
     }
 
     public boolean hasNextCandidate(Pair<Integer, Integer> candidate) {
-        return candidate.getSourceAtom() == -1 ? false : true;
+        return candidate.getSourceAtom() != -1;
     }
 
     int getSize() {
@@ -111,7 +111,7 @@ final class State {
     private int targetTerminalSize;
     private Pair<Integer, Integer> lastAddition;
     private SharedState sharedState;
-    private boolean ownSharedState;
+    private final boolean ownSharedState;
     private boolean[][] matches;
     private boolean isMatchPossible = false;
 
@@ -126,7 +126,7 @@ final class State {
         this.matches = new boolean[this.source.getAtomCount()][this.target.getAtomCount()];
         this.isMatchPossible = isFeasible();
 
-        this.lastAddition = new Pair<Integer, Integer>(-1, -1);
+        this.lastAddition = new Pair<>(-1, -1);
         this.sharedState = new SharedState(source.getAtomCount(),
                 target.getAtomCount());
         this.shouldMatchBonds = shouldMatchBonds;
@@ -144,7 +144,7 @@ final class State {
         this.matches = new boolean[this.source.getAtomCount()][this.target.getAtomCount()];
         this.isMatchPossible = isFeasible();
 
-        this.lastAddition = new Pair<Integer, Integer>(-1, -1);
+        this.lastAddition = new Pair<>(-1, -1);
         this.sharedState = new SharedState(source.getAtomCount(),
                 target.getAtomCount());
         this.shouldMatchBonds = true;
@@ -345,7 +345,7 @@ final class State {
         sharedState.sourceMapping[addedSourceAtom] = -1;
         sharedState.targetMapping[addedTargetAtom] = -1;
         size--;
-        lastAddition = new Pair<Integer, Integer>(-1, -1);
+        lastAddition = new Pair<>(-1, -1);
     }
 
     boolean isMatchFeasible(Pair<Integer, Integer> candidate) {
@@ -430,7 +430,7 @@ final class State {
             return true;
         }
 
-        Pair<Integer, Integer> lastCandidate = new Pair<Integer, Integer>(-1, -1);
+        Pair<Integer, Integer> lastCandidate = new Pair<>(-1, -1);
 
         boolean found = false;
         while (!found) {
@@ -468,12 +468,12 @@ final class State {
             return;
         }
 
-        Pair<Integer, Integer> lastCandidate = new Pair<Integer, Integer>(-1, -1);
+        Pair<Integer, Integer> lastCandidate = new Pair<>(-1, -1);
         Pair<Integer, Integer> candidate = state.nextCandidate(lastCandidate);
 
         while (state.hasNextCandidate(candidate)) {
             lastCandidate = candidate;
-            if (state.isMatchFeasible(candidate)) {
+            if (state.isMatchFeasible(lastCandidate)) {
                 State nextState = new State(state);
                 nextState.nextState(candidate);
                 matchAll(nextState, mappings);
@@ -490,10 +490,7 @@ final class State {
         if (!matchAtoms(source.getAtom(queryAtom), target.getAtom(targetAtom))) {
             return false;
         }
-        if (sourceNeighbours.size() > targetNeighbours.size()) {
-            return false;
-        }
-        return true;
+        return sourceNeighbours.size() <= targetNeighbours.size();
     }
 
     boolean matchBonds(IBond queryBond, IBond targetBond) {
