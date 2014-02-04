@@ -53,7 +53,7 @@ public class IterationManager implements Serializable {
      */
     public IterationManager(int maxIteration) {
         this.counter = 0;
-        this.coverage = 1000;
+        this.coverage = 2000;
         this.max = maxIteration;
     }
 
