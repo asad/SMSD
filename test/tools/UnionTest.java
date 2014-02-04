@@ -8,18 +8,23 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.junit.Test;
 import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.Bond;
 import org.openscience.cdk.DefaultChemObjectBuilder;
+import org.openscience.cdk.atomtype.CDKAtomTypeMatcher;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.interfaces.IAtomType;
 import org.openscience.cdk.interfaces.IRingSet;
 import org.openscience.cdk.ringsearch.AllRingsFinder;
 import org.openscience.cdk.smiles.SmilesGenerator;
 import org.openscience.cdk.smiles.SmilesParser;
+import org.openscience.cdk.tools.CDKHydrogenAdder;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.Isomorphism;
 import org.openscience.smsd.interfaces.Algorithm;
@@ -124,6 +129,12 @@ public class UnionTest {
         return null;
     }
 
+    /**
+     *
+     * @param molecule
+     * @return
+     * @throws CDKException
+     */
     public String getSMILES(IAtomContainer molecule) throws CDKException {
 
         String smiles = "";
@@ -131,14 +142,13 @@ public class UnionTest {
             return smiles;
         }
 
-        SmilesGenerator sg = new SmilesGenerator(true);
-        AllRingsFinder arf = new AllRingsFinder();
-
-        IRingSet findAllRings = arf.findAllRings(molecule);
-        sg.setRings(findAllRings);
-
-        sg.setRingFinder(arf);
-        smiles = sg.createSMILES(molecule, false, new boolean[molecule.getBondCount()]);
+        SmilesGenerator sg = new SmilesGenerator().aromatic();
+        try {
+            addImplicitHydrogens(molecule);
+        } catch (Exception ex) {
+            Logger.getLogger(UnionTest.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        smiles = sg.create(molecule);
         return smiles;
     }
 
@@ -150,5 +160,31 @@ public class UnionTest {
             }
         }
         return true;
+    }
+
+    /**
+     * Convenience method that perceives atom types (CDK scheme) and adds
+     * implicit hydrogens accordingly. It does not create 2D or 3D coordinates
+     * for the new hydrogens.
+     *
+     * @param container to which implicit hydrogens are added.
+     */
+    protected void addImplicitHydrogens(IAtomContainer container) throws Exception {
+        CDKAtomTypeMatcher matcher = CDKAtomTypeMatcher.getInstance(container.getBuilder());
+        int atomCount = container.getAtomCount();
+        String[] originalAtomTypeNames = new String[atomCount];
+        for (int i = 0; i < atomCount; i++) {
+            IAtom atom = container.getAtom(i);
+            IAtomType type = matcher.findMatchingAtomType(container, atom);
+            originalAtomTypeNames[i] = atom.getAtomTypeName();
+            atom.setAtomTypeName(type.getAtomTypeName());
+        }
+        CDKHydrogenAdder hAdder = CDKHydrogenAdder.getInstance(container.getBuilder());
+        hAdder.addImplicitHydrogens(container);
+        // reset to the original atom types
+        for (int i = 0; i < atomCount; i++) {
+            IAtom atom = container.getAtom(i);
+            atom.setAtomTypeName(originalAtomTypeNames[i]);
+        }
     }
 }
