@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2013  Syed Asad Rahman <asad@ebi.ac.uk>
+ * Copyright (C) 2009-2014  Syed Asad Rahman <asad@ebi.ac.uk>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -23,7 +23,7 @@
  *
  * MX Cheminformatics Tools for Java
  *
- * Copyright (c) 2009-2013 Metamolecular, LLC
+ * Copyright (c) 2009-2014 Metamolecular, LLC
  *
  * http://metamolecular.com
  *
