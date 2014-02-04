@@ -1,26 +1,25 @@
 /**
  *
- * Copyright (C) 2009-2014  Syed Asad Rahman <asad@ebi.ac.uk>
+ * Copyright (C) 2009-2014 Syed Asad Rahman <asad@ebi.ac.uk>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation; either version 2.1
- * of the License, or (at your option) any later version.
- * All we ask is that proper credit is given for our work, which includes
- * - but is not limited to - adding the above copyright notice to the beginning
- * of your source code files, and to any copyright notice that you may distribute
- * with programs based on this work.
+ * This program is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version. All we ask is that proper credit is given for our work,
+ * which includes - but is not limited to - adding the above copyright notice to
+ * the beginning of your source code files, and to any copyright notice that you
+ * may distribute with programs based on this work.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ * along with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 package org.openscience.smsd.helper;
 
@@ -32,6 +31,7 @@ import org.openscience.cdk.annotations.TestMethod;
 
 /**
  * Class that handles atoms and assigns an integer label to them.
+ *
  * @cdk.module smsd
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
@@ -53,6 +53,7 @@ public class LabelContainer {
 
     /**
      * Create ids from atom labels
+     *
      * @return instance of this object
      */
     @TestMethod("testGetInstance")
@@ -65,6 +66,7 @@ public class LabelContainer {
 
     /**
      * Add label if its not present
+     *
      * @param label
      */
     @TestMethod("testAddLabel")
@@ -76,6 +78,7 @@ public class LabelContainer {
 
     /**
      * Returns label ID
+     *
      * @param label
      * @return labelID
      */
@@ -87,6 +90,7 @@ public class LabelContainer {
 
     /**
      * Returns Label of a given ID
+     *
      * @param labelID
      * @return label
      */
@@ -97,6 +101,7 @@ public class LabelContainer {
 
     /**
      * Returns label count
+     *
      * @return size of the labels
      */
     @TestMethod("testGetSize")

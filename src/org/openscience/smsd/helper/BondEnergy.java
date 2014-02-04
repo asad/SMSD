@@ -30,8 +30,8 @@ import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IBond.Order;
 
 /**
- * Helper class defining the energy for a bond type. The bond
- * type is defined as to element symbols and a bond order.
+ * Helper class defining the energy for a bond type. The bond type is defined as
+ * to element symbols and a bond order.
  *
  * @cdk.module smsd
  * @cdk.githash
@@ -46,13 +46,12 @@ public class BondEnergy {
     private int energy = -1;
 
     /**
-     * Creates a new bond energy for the given elements and
-     * bond order.
+     * Creates a new bond energy for the given elements and bond order.
      *
      * @param symbol1 element symbol for the first atom
      * @param symbol2 element symbol for the second atom
-     * @param order   bond order
-     * @param energy  energy for this bond type
+     * @param order bond order
+     * @param energy energy for this bond type
      */
     @TestMethod("BondEnergyTest")
     public BondEnergy(String symbol1, String symbol2,

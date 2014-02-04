@@ -55,12 +55,14 @@ public class MoleculeInitializer {
     /**
      * Prepare the molecule for analysis.
      * <p/>
-     * We perform ring perception and aromaticity detection and set up the appropriate properties. Right now, this
-     * function is called each time we need to do a query and this is inefficient.
+     * We perform ring perception and aromaticity detection and set up the
+     * appropriate properties. Right now, this function is called each time we
+     * need to do a query and this is inefficient.
      *
      * @param atomContainer Atom container where rings are to be marked
-     * @throws CDKException if there is a problem in ring perception or aromaticity detection, which is usually related
-     * to a timeout in the ring finding code.
+     * @throws CDKException if there is a problem in ring perception or
+     * aromaticity detection, which is usually related to a timeout in the ring
+     * finding code.
      */
     private static final ILoggingTool Logger
             = LoggingToolFactory.createLoggingTool(MoleculeInitializer.class);
@@ -68,8 +70,9 @@ public class MoleculeInitializer {
     /**
      *
      * @param atomContainer Atom container where rings are to be marked
-     * @throws CDKException if there is a problem in ring perception or aromaticity detection, which is usually related
-     * to a timeout in the ring finding code.
+     * @throws CDKException if there is a problem in ring perception or
+     * aromaticity detection, which is usually related to a timeout in the ring
+     * finding code.
      */
     public synchronized static void initializeMolecule(IAtomContainer atomContainer) throws CDKException {
         String SMALLEST_RING_SIZE = "SMALLEST_RING_SIZE";
@@ -219,14 +222,17 @@ public class MoleculeInitializer {
     }
 
     /**
-     * Checks some simple heuristics for whether the subgraph query can realistically be atom subgraph of the
-     * supergraph. If, for example, the number of nitrogen atoms in the query is larger than that of the supergraph it
-     * cannot be part of it.
+     * Checks some simple heuristics for whether the subgraph query can
+     * realistically be atom subgraph of the supergraph. If, for example, the
+     * number of nitrogen atoms in the query is larger than that of the
+     * supergraph it cannot be part of it.
      *
      * @param ac1 the supergraph to be checked.
-     * @param ac2 the subgraph to be tested for. Must not be an IQueryAtomContainer.
+     * @param ac2 the subgraph to be tested for. Must not be an
+     * IQueryAtomContainer.
      * @param shouldMatchBonds
-     * @return true if the subgraph ac1 has atom chance to be atom subgraph of ac2
+     * @return true if the subgraph ac1 has atom chance to be atom subgraph of
+     * ac2
      */
     public synchronized static boolean testIsSubgraphHeuristics(IAtomContainer ac1, IAtomContainer ac2, boolean shouldMatchBonds) {
 
