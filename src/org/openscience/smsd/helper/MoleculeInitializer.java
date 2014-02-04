@@ -28,8 +28,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.openscience.cdk.CDKConstants;
-import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
+import org.openscience.cdk.aromaticity.Aromaticity;
+import org.openscience.cdk.aromaticity.ElectronDonation;
 import org.openscience.cdk.exception.CDKException;
+import org.openscience.cdk.graph.CycleFinder;
+import org.openscience.cdk.graph.Cycles;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
@@ -52,6 +55,13 @@ import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
  */
 public class MoleculeInitializer {
 
+    static void aromatize(IAtomContainer molecule) throws CDKException {
+        ElectronDonation model = ElectronDonation.cdk();
+        CycleFinder cycles = Cycles.cdkAromaticSet();
+        Aromaticity aromaticity = new Aromaticity(model, cycles);
+        AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(molecule);
+        aromaticity.apply(molecule);
+    }
     /**
      * Prepare the molecule for analysis.
      * <p/>
@@ -209,10 +219,7 @@ public class MoleculeInitializer {
 
             // check for atomaticity
             try {
-
-                AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(atomContainer);
-                CDKHueckelAromaticityDetector.detectAromaticity(atomContainer);
-
+                aromatize(atomContainer);
             } catch (CDKException e) {
                 Logger.debug(e.toString());
                 throw new CDKException(e.toString(), e);
