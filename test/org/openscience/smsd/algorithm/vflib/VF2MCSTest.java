@@ -36,6 +36,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
+import org.openscience.cdk.exception.CDKException;
+import org.openscience.smsd.helper.MoleculeInitializer;
 
 /**
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
@@ -150,6 +152,7 @@ public class VF2MCSTest {
 
         VF2MCS smsd1 = new VF2MCS(query, target, true, false, false);
         assertNotNull(smsd1.getFirstAtomMapping());
+        assertEquals(7, smsd1.getFirstAtomMapping().getCount());
         assertEquals(4, smsd1.getAllAtomMapping().size());
     }
 
@@ -210,11 +213,17 @@ public class VF2MCSTest {
      * @throws InvalidSmilesException
      */
     @Test
-    public void testRingSystemMatch() throws InvalidSmilesException {
+    public void testRingSystemMatch() throws InvalidSmilesException, CDKException {
 //        //System.out.println("testRingSystemMatch");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("c1(ccc2c(c1)c(c([nH]2)C(=O)N)S(=O)(=O)N1CCOC(C1)C(=O)N1CCc2c(C1)cccc2)Br");
         IAtomContainer target = sp.parseSmiles("c1(ccc2c(c1)c(c([nH]2)C(=O)N)S(=O)(=O)N1CCOC(C1)C(=O)NCCOc1ccccc1)Br");
+
+        /*
+         Set Ring perception ON
+         */
+        MoleculeInitializer.initializeMolecule(query);
+        MoleculeInitializer.initializeMolecule(target);
 
         VF2MCS smsd1 = new VF2MCS(query, target, true, true, false);
         assertNotNull(smsd1.getFirstAtomMapping());
@@ -248,12 +257,18 @@ public class VF2MCSTest {
      * @throws InvalidSmilesException
      */
     @Test
-    public void testLinkersVsRingsMatch() throws InvalidSmilesException {
+    public void testLinkersVsRingsMatch() throws InvalidSmilesException, CDKException {
 //        //System.out.println("testLinkersVsRingsMatch");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
 
         IAtomContainer query = sp.parseSmiles("OP(O)(=O)S1=CC=CC=C1");
         IAtomContainer target = sp.parseSmiles("OP(O)(S)=O");
+
+        /*
+         Set Ring perception ON
+         */
+        MoleculeInitializer.initializeMolecule(query);
+        MoleculeInitializer.initializeMolecule(target);
 
         VF2MCS smsd1 = new VF2MCS(query, target, true, true, false);
         assertNotNull(smsd1.getFirstAtomMapping());

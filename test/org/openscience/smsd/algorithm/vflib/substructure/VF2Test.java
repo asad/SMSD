@@ -24,7 +24,6 @@
 package org.openscience.smsd.algorithm.vflib.substructure;
 
 import java.util.List;
-import java.util.Map;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -39,22 +38,22 @@ import org.openscience.smsd.AtomAtomMapping;
  * @cdk.module test-smsd @cdk.require java1.6+
  */
 public class VF2Test {
-
+    
     public VF2Test() {
     }
-
+    
     @BeforeClass
-    public static void setUpClass() throws Exception {
+    public static void setUpClass() {
     }
-
+    
     @AfterClass
-    public static void tearDownClass() throws Exception {
+    public static void tearDownClass() {
     }
-
+    
     @Before
     public void setUp() {
     }
-
+    
     @After
     public void tearDown() {
     }
@@ -64,24 +63,10 @@ public class VF2Test {
      */
     @Test
     public void testGetAllAtomMapping() {
-        //System.out.println("getAllAtomMapping");
+        System.out.println("getAllAtomMapping");
         VF2 instance = null;
-        List expResult = null;
-        List result = instance.getAllAtomMapping();
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
-    }
-
-    /**
-     * Test of getAllAtomMapping method, of class VF2.
-     */
-    @Test
-    public void testgetAllAtomMapping() {
-        //System.out.println("getAllAtomMapping");
-        VF2 instance = null;
-        List expResult = null;
-        List result = instance.getAllAtomMapping();
+        List<AtomAtomMapping> expResult = null;
+        List<AtomAtomMapping> result = instance.getAllAtomMapping();
         assertEquals(expResult, result);
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");
@@ -92,23 +77,9 @@ public class VF2Test {
      */
     @Test
     public void testGetFirstAtomMapping() {
-        //System.out.println("getFirstAtomMapping");
+        System.out.println("getFirstAtomMapping");
         VF2 instance = null;
         AtomAtomMapping expResult = null;
-        AtomAtomMapping result = instance.getFirstAtomMapping();
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
-    }
-
-    /**
-     * Test of getFirstAtomMapping method, of class VF2.
-     */
-    @Test
-    public void testgetFirstAtomMapping() {
-        //System.out.println("getFirstAtomMapping");
-        VF2 instance = null;
-        Map expResult = null;
         AtomAtomMapping result = instance.getFirstAtomMapping();
         assertEquals(expResult, result);
         // TODO review the generated test code and remove the default call to fail.
@@ -120,7 +91,7 @@ public class VF2Test {
      */
     @Test
     public void testIsSubgraph() {
-        //System.out.println("isSubgraph");
+        System.out.println("isSubgraph");
         VF2 instance = null;
         boolean expResult = false;
         boolean result = instance.isSubgraph();
@@ -128,4 +99,5 @@ public class VF2Test {
         // TODO review the generated test code and remove the default call to fail.
         fail("The test case is a prototype.");
     }
+    
 }
