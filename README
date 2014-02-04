@@ -36,7 +36,7 @@ Author: Syed Asad Rahman <asad@ebi.ac.uk>
 
 To build SMSD code:
 
-You need path to the CDK (https://github.com/cdk) directory as SMSD depends on the CDK for processing the Chemical information.
+You need path to the CDK (https://github.com/asad/cdk) directory as SMSD depends on the CDK for processing the Chemical information.
 
 
 Step 1, for cleaning and building the SMSD project:
