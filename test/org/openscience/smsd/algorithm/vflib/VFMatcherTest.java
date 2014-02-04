@@ -31,8 +31,11 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.openscience.cdk.Bond;
 import org.openscience.cdk.DefaultChemObjectBuilder;
-import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
+import org.openscience.cdk.aromaticity.Aromaticity;
+import org.openscience.cdk.aromaticity.ElectronDonation;
 import org.openscience.cdk.exception.CDKException;
+import org.openscience.cdk.graph.CycleFinder;
+import org.openscience.cdk.graph.Cycles;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -53,7 +56,9 @@ import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  * @cdk.module test-smsd
  */
-public class VFMatcherTest {
+public class VFMatcherTest extends Molecules{
+
+   
 
     private static IAtomContainer hexane;
     private static IQuery hexaneQuery;
@@ -66,14 +71,14 @@ public class VFMatcherTest {
         Assert.assertEquals(6, hexane.getAtomCount());
         SMSDNormalizer.percieveAtomTypesAndConfigureAtoms(hexane);
         hexane = SMSDNormalizer.removeHydrogensAndPreserveAtomID(hexane);
-        CDKHueckelAromaticityDetector.detectAromaticity(hexane);
-        hexaneQuery = new QueryCompiler(hexane, true, false,true).compile();
+        aromatize(hexane);
+        hexaneQuery = new QueryCompiler(hexane, true, false, true).compile();
         Assert.assertEquals(6, hexaneQuery.countNodes());
         benzene = createBenzene();
         SMSDNormalizer.percieveAtomTypesAndConfigureAtoms(benzene);
         hexane = SMSDNormalizer.removeHydrogensAndPreserveAtomID(benzene);
-        CDKHueckelAromaticityDetector.detectAromaticity(benzene);
-        benzeneQuery = new QueryCompiler(benzene, true, false,true).compile();
+        aromatize(benzene);
+        benzeneQuery = new QueryCompiler(benzene, true, false, true).compile();
     }
 
     @Test
@@ -204,7 +209,7 @@ public class VFMatcherTest {
      */
     @Test
     public void testItShouldMatchHexaneToHexaneWhenUsingMolecule() {
-        IMapper mapper = new VFMapper(hexane, true, false,false);
+        IMapper mapper = new VFMapper(hexane, true, false, false);
         Assert.assertTrue(mapper.hasMap(hexane));
     }
 
@@ -235,7 +240,6 @@ public class VFMatcherTest {
         IBond bond3 = new Bond(c3, c4, IBond.Order.SINGLE);
         IBond bond4 = new Bond(c4, c5, IBond.Order.SINGLE);
         IBond bond5 = new Bond(c5, c6, IBond.Order.SINGLE);
-
 
         result.addBond(bond1);
         result.addBond(bond2);
@@ -278,14 +282,12 @@ public class VFMatcherTest {
         IBond bond5 = new Bond(c5, c6, IBond.Order.SINGLE);
         IBond bond6 = new Bond(c6, c1, IBond.Order.DOUBLE);
 
-
         result.addBond(bond1);
         result.addBond(bond2);
         result.addBond(bond3);
         result.addBond(bond4);
         result.addBond(bond5);
         result.addBond(bond6);
-
 
         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(result);
         return result;
