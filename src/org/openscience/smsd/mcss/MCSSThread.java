@@ -292,11 +292,11 @@ final public class MCSSThread implements Callable<LinkedBlockingQueue<IAtomConta
      *
      * @param ac
      * @return
+     * @throws org.openscience.cdk.exception.CDKException
      */
-    public synchronized String getMCSSSmiles(IAtomContainer ac) {
-        SmilesGenerator g = new SmilesGenerator();
-        g.setUseAromaticityFlag(true);
-        return g.createSMILES(ac);
+    public synchronized String getMCSSSmiles(IAtomContainer ac) throws CDKException {
+        SmilesGenerator g = new SmilesGenerator().aromatic();
+        return g.create(ac);
     }
 
     /**

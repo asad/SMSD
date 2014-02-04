@@ -42,9 +42,12 @@ import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.ChemFile;
 import org.openscience.cdk.DefaultChemObjectBuilder;
-import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
+import org.openscience.cdk.aromaticity.Aromaticity;
+import org.openscience.cdk.aromaticity.ElectronDonation;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.graph.ConnectivityChecker;
+import org.openscience.cdk.graph.CycleFinder;
+import org.openscience.cdk.graph.Cycles;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IChemFile;
@@ -74,8 +77,16 @@ import org.openscience.cdk.tools.manipulator.ChemFileManipulator;
  */
 public class InputHandler {
 
-    private final static ILoggingTool logger =
-            LoggingToolFactory.createLoggingTool(InputHandler.class);
+    static void aromatize(IAtomContainer molecule) throws CDKException {
+        ElectronDonation model = ElectronDonation.cdk();
+        CycleFinder cycles = Cycles.cdkAromaticSet();
+        Aromaticity aromaticity = new Aromaticity(model, cycles);
+        AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(molecule);
+        aromaticity.apply(molecule);
+    }
+
+    private final static ILoggingTool logger
+            = LoggingToolFactory.createLoggingTool(InputHandler.class);
     private ArgumentHandler argumentHandler;
     private StructureDiagramGenerator sdg;
     private Map<String, String> singularDataTypes;
@@ -259,8 +270,7 @@ public class InputHandler {
         } else if (type.equals("SDF")) {
             id = (String) mol.getProperty(CDKConstants.TITLE);
         }
-        AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol);
-        CDKHueckelAromaticityDetector.detectAromaticity(mol);
+        aromatize(mol);
         mol = new AtomContainer(mol);
         mol.setID(id);
         if (argumentHandler.isImage()) {
@@ -390,9 +400,9 @@ public class InputHandler {
         List<IAtomContainer> allAtomContainers = new ArrayList<IAtomContainer>();
         switch (type) {
             case "SDF":
-                IteratingSDFReader iteratingSDFReader =
-                        new IteratingSDFReader(
-                        new FileReader(inputFile), DefaultChemObjectBuilder.getInstance());
+                IteratingSDFReader iteratingSDFReader
+                        = new IteratingSDFReader(
+                                new FileReader(inputFile), DefaultChemObjectBuilder.getInstance());
                 while (iteratingSDFReader.hasNext()) {
                     allAtomContainers.add(iteratingSDFReader.next());
                 }
@@ -427,7 +437,7 @@ public class InputHandler {
                 }
 
                 adder.addImplicitHydrogens(atomcontainerHFree);
-                CDKHueckelAromaticityDetector.detectAromaticity(atomcontainerHFree);
+                aromatize(atomcontainerHFree);
                 String index = String.valueOf((atomContainerNr + 1));
                 boolean flag = ConnectivityChecker.isConnected(atomcontainerHFree);
                 String title = atomcontainerHFree.getProperty(CDKConstants.TITLE) != null

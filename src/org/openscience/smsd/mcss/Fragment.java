@@ -120,10 +120,10 @@ final public class Fragment implements Comparable<Fragment>, Serializable {
      *
      * @param ac
      * @return
+     * @throws org.openscience.cdk.exception.CDKException
      */
-    public static String toSmiles(IAtomContainer ac) {
-        SmilesGenerator g = new SmilesGenerator();
-        g.setUseAromaticityFlag(true);
-        return g.createSMILES(ac);
+    public static String toSmiles(IAtomContainer ac) throws CDKException {
+        SmilesGenerator g = new SmilesGenerator().aromatic();
+        return g.create(ac);
     }
 }

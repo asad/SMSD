@@ -60,8 +60,8 @@ import org.openscience.reactionblast.graphics.direct.Params;
  */
 public class OutputHandler {
 
-    private final static ILoggingTool logger =
-            LoggingToolFactory.createLoggingTool(OutputHandler.class);
+    private final static ILoggingTool logger
+            = LoggingToolFactory.createLoggingTool(OutputHandler.class);
     private ArgumentHandler argumentHandler;
     private BufferedWriter outGFile = null;
     private BufferedWriter outMFile = null;
@@ -483,10 +483,9 @@ public class OutputHandler {
      * @param out
      * @throws IOException
      */
-    void writeMolToSmiles(IAtomContainer mol, Writer out) throws IOException {
-        SmilesGenerator smilesGenerator = new SmilesGenerator();
-        smilesGenerator.setUseAromaticityFlag(true);
-        String smiles = smilesGenerator.createSMILES(mol);
+    void writeMolToSmiles(IAtomContainer mol, Writer out) throws IOException, CDKException {
+        SmilesGenerator smilesGenerator = new SmilesGenerator().aromatic();
+        String smiles = smilesGenerator.create(mol);
         out.write(smiles);
         out.write(NEW_LINE);
         out.close();
@@ -498,11 +497,10 @@ public class OutputHandler {
      * @param out
      * @throws IOException
      */
-    void writeMolsToSmiles(IAtomContainerSet mols, Writer out) throws IOException {
-        SmilesGenerator smilesGenerator = new SmilesGenerator();
-        smilesGenerator.setUseAromaticityFlag(true);
+    void writeMolsToSmiles(IAtomContainerSet mols, Writer out) throws IOException, CDKException {
+        SmilesGenerator smilesGenerator = new SmilesGenerator().aromatic();
         for (IAtomContainer mol : mols.atomContainers()) {
-            String smiles = smilesGenerator.createSMILES(mol);
+            String smiles = smilesGenerator.create(mol);
             out.write(smiles);
             out.write(NEW_LINE);
         }

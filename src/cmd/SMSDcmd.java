@@ -35,9 +35,12 @@ import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.AtomContainerSet;
 import org.openscience.cdk.DefaultChemObjectBuilder;
-import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
+import org.openscience.cdk.aromaticity.Aromaticity;
+import org.openscience.cdk.aromaticity.ElectronDonation;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.graph.ConnectivityChecker;
+import org.openscience.cdk.graph.CycleFinder;
+import org.openscience.cdk.graph.Cycles;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -61,6 +64,13 @@ import org.openscience.smsd.tools.AtomContainerComparator;
  */
 public class SMSDcmd {
 
+    static void aromatize(IAtomContainer molecule) throws CDKException {
+        ElectronDonation model = ElectronDonation.cdk();
+        CycleFinder cycles = Cycles.cdkAromaticSet();
+        Aromaticity aromaticity = new Aromaticity(model, cycles);
+        AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(molecule);
+        aromaticity.apply(molecule);
+    }
     private final static ILoggingTool logger
             = LoggingToolFactory.createLoggingTool(InputHandler.class);
 
@@ -414,13 +424,8 @@ public class SMSDcmd {
             outputHandler.startNew(out);
         }
 
-        // XXX - this is also done in the InputHandler!
-        CDKHueckelAromaticityDetector.detectAromaticity(query);
-        CDKHueckelAromaticityDetector.detectAromaticity(target);
-
-        // XXX - this is also done in the InputHandler!
-        AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(query);
-        AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(target);
+        aromatize(query);
+        aromatize(target);
 
         if (argumentHandler.isApplyHAdding()) {
             AtomContainerManipulator.convertImplicitToExplicitHydrogens(query);
@@ -587,9 +592,8 @@ public class SMSDcmd {
      * @param ac
      * @return
      */
-    private static String toSmiles(IAtomContainer ac) {
-        SmilesGenerator g = new SmilesGenerator();
-        g.setUseAromaticityFlag(true);
-        return g.createSMILES(ac);
+    private static String toSmiles(IAtomContainer ac) throws CDKException {
+        SmilesGenerator g = new SmilesGenerator().aromatic();
+        return g.create(ac);
     }
 }

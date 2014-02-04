@@ -149,7 +149,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
             System.gc();
 
             long stopTimeSeeds = System.nanoTime();
-            System.out.println("done seeds " + (stopTimeSeeds - startTimeSeeds));
+//            System.out.println("done seeds " + (stopTimeSeeds - startTimeSeeds));
             /*
              * Store largest MCS seeds generated from MCSPlus and UIT
              */
