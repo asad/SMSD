@@ -66,8 +66,8 @@ import org.openscience.smsd.algorithm.matchers.AtomMatcher;
  */
 public class RingFilter {
 
-    private Comparator comparator;
-    private AtomMatcher filter;
+    private final Comparator comparator;
+    private final AtomMatcher filter;
     private IAtomContainer mol;
 
     public RingFilter(AtomMatcher filter) {

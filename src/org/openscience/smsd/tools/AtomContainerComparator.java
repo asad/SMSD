@@ -22,12 +22,15 @@
  */
 package org.openscience.smsd.tools;
 
+import java.io.IOException;
 import java.util.Comparator;
 import org.openscience.cdk.annotations.TestMethod;
 import org.openscience.cdk.config.IsotopeFactory;
+import org.openscience.cdk.config.Isotopes;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.interfaces.IIsotope;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
@@ -40,8 +43,8 @@ public class AtomContainerComparator implements Comparator<IAtomContainer> {
     /**
      * Configure LoggingTool
      */
-    private ILoggingTool logger =
-            LoggingToolFactory.createLoggingTool(AtomContainerComparator.class);
+    private ILoggingTool logger
+            = LoggingToolFactory.createLoggingTool(AtomContainerComparator.class);
 
     /**
      * Creates a new instance of AtomContainerComparator
@@ -148,11 +151,15 @@ public class AtomContainerComparator implements Comparator<IAtomContainer> {
     }
 
     /**
-     * Returns the molecular weight (exact mass) of the major isotopes of all heavy atoms of the given IAtomContainer.
+     * Returns the molecular weight (exact mass) of the major isotopes of all
+     * heavy atoms of the given IAtomContainer.
      *
-     * @param atomContainer an IAtomContainer to calculate the molecular weight for
-     * @throws org.openscience.cdk.exception.CDKException if an error occurs with the IsotopeFactory
-     * @return the molecular weight (exact mass) of the major isotopes of all heavy atoms of the given IAtomContainer
+     * @param atomContainer an IAtomContainer to calculate the molecular weight
+     * for
+     * @throws org.openscience.cdk.exception.CDKException if an error occurs
+     * with the IsotopeFactory
+     * @return the molecular weight (exact mass) of the major isotopes of all
+     * heavy atoms of the given IAtomContainer
      */
     private double getMolecularWeight(IAtomContainer atomContainer) throws CDKException {
         double mw = 0.0;
@@ -160,15 +167,19 @@ public class AtomContainerComparator implements Comparator<IAtomContainer> {
             for (IAtom atom : atomContainer.atoms()) {
                 if (!atom.getSymbol().equals("H") && !atom.getSymbol().equals("R")) {
                     try {
-                        mw += IsotopeFactory.getInstance(atomContainer.getBuilder()).getMajorIsotope(atom.getSymbol()).getExactMass();
-                    } catch (Exception e) {
+                        IsotopeFactory elfac = Isotopes.getInstance();
+                        IIsotope majorIsotope = elfac.getMajorIsotope(atom.getSymbol());
+                        mw += majorIsotope.getExactMass();
+                    } catch (IOException e) {
                         System.err.println("Molecular weight calculation failes for atom " + atom.getSymbol());
                     }
                 } else if (atom.getSymbol().equals("R")) {
-                    mw += IsotopeFactory.getInstance(atomContainer.getBuilder()).getMajorIsotope("C").getExactMass();
+                    IsotopeFactory elfac = Isotopes.getInstance();
+                    IIsotope majorIsotope = elfac.getMajorIsotope("C");
+                    mw += majorIsotope.getExactMass();
                 }
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
         }
         return mw;
     }
