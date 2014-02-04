@@ -111,8 +111,8 @@ public class VFMCSMapper implements IMapper {
     private boolean checkTimeout() {
         if (getIterationManager().isMaxIteration()) {
             this.timeout = true;
-//            System.out.println("VF MCS iterations " + getIterationManager().getCounter());
-            return true;
+            System.out.println("Max VF MCS iterations " + getIterationManager().getCounter());
+            return isTimeout();
         }
         getIterationManager().increment();
         return false;
@@ -135,12 +135,12 @@ public class VFMCSMapper implements IMapper {
     /**
      * {@inheritDoc}
      *
-     * @param targetMolecule targetMolecule graph
+     * @param target targetMolecule graph
      */
     @Override
-    public boolean hasMap(IAtomContainer targetMolecule) {
-        setIterationManager(new IterationManager((this.query.countNodes() + targetMolecule.getAtomCount())));
-        IState state = new VFMCSState(query, targetMolecule);
+    public boolean hasMap(IAtomContainer target) {
+        setIterationManager(new IterationManager((this.query.countNodes() + target.getAtomCount())));
+        IState state = new VFMCSState(query, target);
         maps.clear();
         return mapFirst(state);
     }
@@ -190,10 +190,7 @@ public class VFMCSMapper implements IMapper {
                 return true;
             }
         }
-        if (maps.contains(map)) {
-            return true;
-        }
-        return false;
+        return maps.contains(map);
     }
 
     private void addMapping(IState state) {

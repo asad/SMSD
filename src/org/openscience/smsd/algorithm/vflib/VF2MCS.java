@@ -51,9 +51,11 @@ import org.openscience.smsd.interfaces.IResults;
 /**
  * This class should be used to find MCS between source graph and target graph.
  *
- * First the algorithm runs VF lib {@link org.openscience.cdk.smsd.algorithm.vflib.map.VFMCSMapper} and reports MCS
- * between run source and target graphs. Then these solutions are extended using McGregor
- * {@link org.openscience.cdk.smsd.algorithm.mcgregor.McGregor} algorithm where ever required.
+ * First the algorithm runs VF lib
+ * {@link org.openscience.cdk.smsd.algorithm.vflib.map.VFMCSMapper} and reports
+ * MCS between run source and target graphs. Then these solutions are extended
+ * using McGregor {@link org.openscience.cdk.smsd.algorithm.mcgregor.McGregor}
+ * algorithm where ever required.
  *
  * @cdk.module smsd@cdk.githash
  *
@@ -77,7 +79,9 @@ public final class VF2MCS extends BaseMCS implements IResults {
      */
     public VF2MCS(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) {
         super(source, target, shouldMatchBonds, shouldMatchRings, matchAtomType);
-        boolean timoutVF = searchVFMappings();
+        boolean timeoutVF = searchVFMappings();
+
+//        System.out.println("time for VF search " + timeoutVF);
 
         /*
          * An extension is triggered if its mcs solution is smaller than reactant and product. An enrichment is
@@ -85,7 +89,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
          *
          *
          */
-        if (!timoutVF) {
+        if (!timeoutVF) {
 
             List<Map<Integer, Integer>> mcsVFSeeds = new ArrayList<>();
 
@@ -103,6 +107,9 @@ public final class VF2MCS extends BaseMCS implements IResults {
              */
             allLocalMCS.clear();
             allLocalAtomAtomMapping.clear();
+
+            long startTimeSeeds = System.nanoTime();
+
             ExecutorService executor = Executors.newSingleThreadExecutor();
             CompletionService<List<AtomAtomMapping>> cs = new ExecutorCompletionService<>(executor);
             MCSSeedGenerator mcsSeedGeneratorUIT = new MCSSeedGenerator(source, target, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.CDKMCS);
@@ -141,8 +148,8 @@ public final class VF2MCS extends BaseMCS implements IResults {
             }
             System.gc();
 
-//            long stopTimeSeeds = System.nanoTime();
-//            System.out.println("done seeds " + (stopTimeSeeds - startTimeSeeds));
+            long stopTimeSeeds = System.nanoTime();
+            System.out.println("done seeds " + (stopTimeSeeds - startTimeSeeds));
             /*
              * Store largest MCS seeds generated from MCSPlus and UIT
              */

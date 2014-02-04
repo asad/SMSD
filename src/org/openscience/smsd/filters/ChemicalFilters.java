@@ -178,8 +178,6 @@ public class ChemicalFilters extends BaseFilter {
             boolean flag = false;
 
             //Higher Score is mapped preferred over lower
-
-
             double secondhigestStereoScore = highestStereoScore;
             for (Integer key : stereoScoreMap.keySet()) {
                 if (secondhigestStereoScore < highestStereoScore
@@ -197,7 +195,6 @@ public class ChemicalFilters extends BaseFilter {
             }
 
             /*Put back the sorted solutions*/
-
             int counter = 0;
             for (Integer I : stereoScoreMap.keySet()) {
                 if (highestStereoScore == stereoScoreMap.get(I)) {

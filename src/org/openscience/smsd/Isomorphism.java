@@ -45,17 +45,21 @@ import static org.openscience.smsd.interfaces.Algorithm.VFLibMCS;
 
 /**
  * <p>
- * This class implements the Isomorphism- a multipurpose structure comparison tool. It allows users to, i) find the
- * maximal common substructure(s) (MCS); ii) perform the mapping of a substructure in another structure, and; iii) map
+ * This class implements the Isomorphism- a multipurpose structure comparison
+ * tool. It allows users to, i) find the maximal common substructure(s) (MCS);
+ * ii) perform the mapping of a substructure in another structure, and; iii) map
  * two isomorphic structures.</p>
  *
  * <p>
- * It also comes with various published algorithms. The user is free to choose his favorite algorithm to perform MCS or
- * substructure search. For example:</p> <OL> <lI>0: Default, <lI>1: MCSPlus, <lI>2: VFLibMCS, <lI>3: CDKMCS </OL>
+ * It also comes with various published algorithms. The user is free to choose
+ * his favorite algorithm to perform MCS or substructure search. For
+ * example:</p> <OL> <lI>0: Default, <lI>1: MCSPlus, <lI>2: VFLibMCS, <lI>3:
+ * CDKMCS </OL>
  * <p>
- * It also has a set of robust chemical filters (i.e. bond energy, fragment count, stereo & bond match) to sort the
- * reported MCS solutions in a chemically relevant manner. Each comparison can be made with or without using the bond
- * sensitive mode and with implicit or explicit hydrogens.</p>
+ * It also has a set of robust chemical filters (i.e. bond energy, fragment
+ * count, stereo & bond match) to sort the reported MCS solutions in a
+ * chemically relevant manner. Each comparison can be made with or without using
+ * the bond sensitive mode and with implicit or explicit hydrogens.</p>
  *
  * <p>
  * If you are using <font color="#FF0000">Isomorphism, please cite Rahman
@@ -120,14 +124,18 @@ public final class Isomorphism extends BaseMapping implements Serializable {
     /**
      * Initialize query and target molecules.
      *
-     * Note: Here its assumed that hydrogens are implicit and user has called these two methods
-     * percieveAtomTypesAndConfigureAtoms and CDKAromicityDetector before initializing calling this method.
+     * Note: Here its assumed that hydrogens are implicit and user has called
+     * these two methods percieveAtomTypesAndConfigureAtoms and
+     * CDKAromicityDetector before initializing calling this method.
      *
      * @param query query molecule
-     * @param target target molecule This is the algorithm factory and entry port for all the MCS algorithm in the
-     * Isomorphism supported algorithm {@link org.openscience.cdk.smsd.interfaces.Algorithm} types: <OL> <lI>0: Default,
+     * @param target target molecule This is the algorithm factory and entry
+     * port for all the MCS algorithm in the Isomorphism supported algorithm
+     * {@link org.openscience.cdk.smsd.interfaces.Algorithm} types: <OL> <lI>0:
+     * Default,
      * <lI>1: MCSPlus, <lI>2: VFLibMCS, <lI>3: CDKMCS </OL>
-     * @param algorithmType {@link org.openscience.cdk.smsd.interfaces.Algorithm}
+     * @param algorithmType
+     * {@link org.openscience.cdk.smsd.interfaces.Algorithm}
      */
     @TestMethod("testIsomorphismTest")
     public Isomorphism(
@@ -143,14 +151,18 @@ public final class Isomorphism extends BaseMapping implements Serializable {
     /**
      * Initialize query and target molecules.
      *
-     * Note: Here its assumed that hydrogens are implicit and user has called these two methods
-     * percieveAtomTypesAndConfigureAtoms and CDKAromicityDetector before initializing calling this method.
+     * Note: Here its assumed that hydrogens are implicit and user has called
+     * these two methods percieveAtomTypesAndConfigureAtoms and
+     * CDKAromicityDetector before initializing calling this method.
      *
      * @param query query mol
-     * @param target target mol This is the algorithm factory and entry port for all the MCS algorithm in the
-     * Isomorphism supported algorithm {@link org.openscience.cdk.smsd.interfaces.Algorithm} types: <OL> <lI>0: Default,
+     * @param target target mol This is the algorithm factory and entry port for
+     * all the MCS algorithm in the Isomorphism supported algorithm
+     * {@link org.openscience.cdk.smsd.interfaces.Algorithm} types: <OL> <lI>0:
+     * Default,
      * <lI>1: MCSPlus, <lI>2: VFLibMCS, <lI>3: CDKMCS </OL>
-     * @param algorithmType {@link org.openscience.cdk.smsd.interfaces.Algorithm}
+     * @param algorithmType
+     * {@link org.openscience.cdk.smsd.interfaces.Algorithm}
      * @param bondTypeFlag Match bond types (i.e. double to double etc)
      * @param matchRings Match ring atoms and ring size
      * @param matchAtomType

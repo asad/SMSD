@@ -303,12 +303,15 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
     }
 
     /**
-     * Returns bond maps between sourceAtomCount and targetAtomCount molecules based on the atoms
+     * Returns bond maps between sourceAtomCount and targetAtomCount molecules
+     * based on the atoms
      *
      * @param ac1 sourceAtomCount molecule
      * @param ac2 targetAtomCount molecule
-     * @param mappings mappings between sourceAtomCount and targetAtomCount molecule atoms
-     * @return bond maps between sourceAtomCount and targetAtomCount molecules based on the atoms
+     * @param mappings mappings between sourceAtomCount and targetAtomCount
+     * molecule atoms
+     * @return bond maps between sourceAtomCount and targetAtomCount molecules
+     * based on the atoms
      */
     public synchronized List<Map<IBond, IBond>> makeBondMapsOfAtomMaps(IAtomContainer ac1,
             IAtomContainer ac2, List<AtomAtomMapping> mappings) {
@@ -321,12 +324,15 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
 
     /**
      *
-     * Returns bond map between sourceAtomCount and targetAtomCount molecules based on the atoms
+     * Returns bond map between sourceAtomCount and targetAtomCount molecules
+     * based on the atoms
      *
      * @param ac1 sourceAtomCount molecule
      * @param ac2 targetAtomCount molecule
-     * @param mapping mappings between sourceAtomCount and targetAtomCount molecule atoms
-     * @return bond map between sourceAtomCount and targetAtomCount molecules based on the atoms
+     * @param mapping mappings between sourceAtomCount and targetAtomCount
+     * molecule atoms
+     * @return bond map between sourceAtomCount and targetAtomCount molecules
+     * based on the atoms
      */
     private synchronized Map<IBond, IBond> makeBondMapOfAtomMap(IAtomContainer ac1, IAtomContainer ac2,
             AtomAtomMapping mapping) {
