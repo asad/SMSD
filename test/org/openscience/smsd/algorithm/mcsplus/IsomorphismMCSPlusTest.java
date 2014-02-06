@@ -24,12 +24,8 @@
  */
 package org.openscience.smsd.algorithm.mcsplus;
 
-import gui.ImageGenerator;
 import java.awt.image.RenderedImage;
 import java.io.File;
-import java.text.NumberFormat;
-import java.util.Map;
-import java.util.TreeMap;
 import org.openscience.smsd.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -40,7 +36,6 @@ import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.exception.InvalidSmilesException;
-import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainerCreator;
@@ -56,7 +51,7 @@ import org.openscience.smsd.interfaces.Algorithm;
  * @cdk.module test-smsd
  * @cdk.require java1.6+
  */
-public class IsomorphismMCSPlusTest {
+public class IsomorphismMCSPlusTest extends ImageUtility {
 
     /**
      * Tests if the CDKMCS can be instantiated without throwing exceptions.
@@ -198,39 +193,10 @@ public class IsomorphismMCSPlusTest {
 //            System.out.println("createSMILES " + createSMILESQ + "." + createSMILEST);
 //            System.out.println("Map " + m.getMappingsByIndex());
 //        }
-        RenderedImage generateImage = generateImage(query, target, comparison);
-        boolean write = ImageIO.write(generateImage, "png", new File("MCSPLUS_C1=CC=CC=C1.C1=CC2=C(C=C1)C=CC=C2.png"));
+//        RenderedImage generateImage = generateImage(query, target, comparison);
+//        boolean write = ImageIO.write(generateImage, "png", new File("MCSPLUS_C1=CC=CC=C1.C1=CC2=C(C=C1)C=CC=C2.png"));
         Assert.assertEquals(0.6, comparison.getTanimotoSimilarity());
         Assert.assertEquals(12, comparison.getAllAtomMapping().size());
-    }
-
-    /**
-     * Test ring match using MCS VF2Plus
-     *
-     * @throws Exception
-     */
-    @Test
-    public void testOpenCloseRing() throws Exception {
-        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
-        // Benzene
-        IAtomContainer query = sp.parseSmiles("CC(C)=CCC\\C(C)=C\\CC\\C(C)=C\\CC\\C=C(/C)CC\\C=C(/C)CC[C@@H]1OC1(C)C");
-        // Napthalene
-        IAtomContainer target = sp.parseSmiles("[H][C@]12[C@@H](CC[C@]1(C)CC[C@]1(C)[C@]2([H])CC[C@]2([H])[C@@]3(C)CC[C@H](O)C(C)(C)[C@]3([H])CC[C@@]12C)C(C)=C");
-
-        IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(query);
-        IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(target);
-        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, false, false);
-        // set chemical filter true
-        comparison.setChemFilters(true, true, true);
-        RenderedImage generateImage = generateImage(ac1, ac2, comparison);
-        boolean write = ImageIO.write(generateImage, "png", new File("MCSPLUS_Ring_Open_Close.png"));
-
-//        SmilesGenerator sg = new SmilesGenerator();
-//        String createSMILES = sg.createSMILES(comparison.getFirstAtomMapping().getCommonFragmentInTarget());
-//        System.out.println("createSMILES " + createSMILES);
-        Assert.assertEquals(28, comparison.getFirstAtomMapping().getCount());
-        Assert.assertEquals(0.82, comparison.getTanimotoSimilarity(), .09);
-        Assert.assertEquals(2, comparison.getAllAtomMapping().size());
     }
 
     /**
@@ -250,35 +216,10 @@ public class IsomorphismMCSPlusTest {
         Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, false, false);
         // set chemical filter true
         comparison.setChemFilters(true, true, true);
-        RenderedImage generateImage = generateImage(ac1, ac2, comparison);
-        boolean write = ImageIO.write(generateImage, "png", new File("MCSPLUS_Ring_Open.png"));
+//        RenderedImage generateImage = generateImage(ac1, ac2, comparison);
+//        boolean write = ImageIO.write(generateImage, "png", new File("MCSPLUS_Ring_Open.png"));
         Assert.assertEquals(0.5, comparison.getTanimotoSimilarity(), .09);
         Assert.assertEquals(2, comparison.getAllAtomMapping().size());
-    }
-
-    /**
-     * Test ring match using MCS VF2Plus
-     *
-     * @throws Exception
-     */
-    @Test
-    public void testNADPNNADPH() throws Exception {
-        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
-        // NAD
-        IAtomContainer query = sp.parseSmiles("NC(=O)c1ccc[n+](c1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
-
-// NADH
-        IAtomContainer target = sp.parseSmiles("NC(=O)C1=CN(C=CC1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
-
-        IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(query);
-        IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(target);
-        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, false, false);
-        // set chemical filter true
-        comparison.setChemFilters(true, true, true);
-        RenderedImage generateImage = generateImage(ac1, ac2, comparison);
-        boolean write = ImageIO.write(generateImage, "png", new File("MCSPLUS_NADH_NADP.png"));
-        Assert.assertEquals(1.0, comparison.getTanimotoSimilarity(), .09);
-        Assert.assertEquals(1, comparison.getAllAtomMapping().size());
     }
 
     /**
@@ -348,35 +289,60 @@ public class IsomorphismMCSPlusTest {
 //        //0.162
 //        Assert.assertEquals(0.2542, comparison.getTanimotoSimilarity(), 0.001);
 //    }
-    private static RenderedImage generateImage(IAtomContainer query, IAtomContainer target, Isomorphism smsd) throws Exception {
+    /**
+     * Test ring match using MCS VF2Plus Exhaustive
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testNADPNNADPH() throws Exception {
+        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        // NAD
+        IAtomContainer query = sp.parseSmiles("NC(=O)c1ccc[n+](c1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
 
-        ImageGenerator imageGenerator = new ImageGenerator();
+        // NADH
+        IAtomContainer target = sp.parseSmiles("NC(=O)C1=CN(C=CC1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
 
-        ////set the format right for the Tanimoto score (only two digits printed)
-        NumberFormat nf = NumberFormat.getInstance();
-        nf.setMaximumFractionDigits(2);
-        nf.setMinimumFractionDigits(2);
-        int counter = 1;
-        for (AtomAtomMapping aam : smsd.getAllAtomMapping()) {
-            Map<IAtom, IAtom> mappings = aam.getMappingsByAtoms();
-            Map<Integer, Integer> mapping = new TreeMap<Integer, Integer>();
-            for (IAtom keys : mappings.keySet()) {
-                mapping.put(aam.getQueryIndex(keys), aam.getTargetIndex(mappings.get(keys)));
-            }
-
-            String tanimoto = nf.format(smsd.getTanimotoSimilarity());
-            String stereo = "NA";
-            if (smsd.getStereoScore(counter - 1) != null) {
-                stereo = nf.format(smsd.getStereoScore(counter - 1));
-            }
-            String label = "Scores [" + "Tanimoto: " + tanimoto + ", Stereo: " + stereo + "]";
-            imageGenerator.addImages(query, target, label, mapping);
-            counter++;
-
-        }
-        return imageGenerator.createImage();
-
+        IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(query);
+        IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(target);
+        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, false, false);
+        // set chemical filter true
+        comparison.setChemFilters(true, true, true);
+//        RenderedImage generateImage = generateImage(ac1, ac2, comparison);
+//        boolean write = ImageIO.write(generateImage, "png", new File("MCSPLUS_NADH_NADP.png"));
+        Assert.assertEquals(1.0, comparison.getTanimotoSimilarity(), .09);
+        Assert.assertEquals(1, comparison.getAllAtomMapping().size());
     }
+
+    /**
+     * Test ring match using MCS PLUS Complex
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testOpenCloseRing() throws Exception {
+        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        //(S)-2,3-epoxysqualene (CHEBI:15441)
+        IAtomContainer query = sp.parseSmiles("CC(C)=CCC\\C(C)=C\\CC\\C(C)=C\\CC\\C=C(/C)CC\\C=C(/C)CC[C@@H]1OC1(C)C");
+        // lupeol (CHEBI:6570)
+        IAtomContainer target = sp.parseSmiles("[H][C@]12[C@@H](CC[C@]1(C)CC[C@]1(C)[C@]2([H])CC[C@]2([H])[C@@]3(C)CC[C@H](O)C(C)(C)[C@]3([H])CC[C@@]12C)C(C)=C");
+
+        IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(query);
+        IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(target);
+        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, false, false);
+        // set chemical filter true
+        comparison.setChemFilters(true, true, true);
+//        RenderedImage generateImage = generateImage(ac1, ac2, comparison);
+//        boolean write = ImageIO.write(generateImage, "png", new File("MCSPLUS_Ring_Open_Close.png"));
+
+//        SmilesGenerator sg = new SmilesGenerator();
+//        String createSMILES = sg.createSMILES(comparison.getFirstAtomMapping().getCommonFragmentInTarget());
+//        System.out.println("createSMILES " + createSMILES);
+        Assert.assertEquals(28, comparison.getFirstAtomMapping().getCount());
+        Assert.assertEquals(0.82, comparison.getTanimotoSimilarity(), .09);
+        Assert.assertEquals(2, comparison.getAllAtomMapping().size());
+    }
+
 }
 //c-edges 2288
 //d-edges 395230
