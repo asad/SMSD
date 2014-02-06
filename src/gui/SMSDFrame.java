@@ -300,9 +300,6 @@ public class SMSDFrame extends JFrame {
                 Utility.aromatizeDayLight(targetMolecule);
                 Utility.aromatizeDayLight(queryMolecule);
 
-//                CanonicalLabeler c=new CanonicalLabeler();
-//                c.canonLabel(queryMolecule);
-//                c.canonLabel(targetMolecule);
                 Isomorphism comparison = null;
                 if (jRadioButton1.isSelected()) {
                     comparison = new Isomorphism(queryMolecule, targetMolecule, Algorithm.DEFAULT, jRadioButton1.isSelected(), true, true);
@@ -314,23 +311,27 @@ public class SMSDFrame extends JFrame {
                 }
                 comparison.setChemFilters(jCheckBox2.isSelected(), jCheckBox3.isSelected(), jCheckBox4.isSelected());
                 jTextArea1.append("Number of overlaps = " + comparison.getFirstAtomMapping().getCount() + NEW_LINE);
+                jTextArea1.append("Overlap = " + comparison.getFirstAtomMapping().getCommonFragmentAsSMILES() + NEW_LINE);
                 jTextArea1.setCaretPosition(jTextArea1.getDocument().getLength());
 
                 String[] QName = ((String) molFiles.get(0)).split(".mol");
                 String[] TName = ((String) molFiles.get(2)).split(".mol");
                 final String FileName = QName[0] + "_" + TName[0];
 
-                JLabel l1 = new JLabel("Query: " + (String) molFiles.get(0), SwingConstants.CENTER);
-                JLabel l2 = new JLabel("Target: " + (String) molFiles.get(2), SwingConstants.CENTER);
+                JLabel l1 = new JLabel("Query: " + (String) molFiles.get(0), SwingConstants.LEFT);
+                JLabel l2 = new JLabel("Target: " + (String) molFiles.get(2), SwingConstants.LEFT);
+                JLabel l3 = new JLabel("Overlap: " + comparison.getFirstAtomMapping().getCommonFragmentAsSMILES(), SwingConstants.CENTER);
 
                 GridBagLayout gridbag = new GridBagLayout();
 
                 panels = new JPanel(gridbag);
                 gbc.gridwidth = GridBagConstraints.REMAINDER;//GridBagConstraints.HORIZONTAL;
                 final JPanel jPanel = new JPanel(gridbag);
-                jPanel.setPreferredSize(new Dimension(300, 30));
+                jPanel.setPreferredSize(new Dimension(300, 60));
                 jPanel.add(l1, gbc);
                 jPanel.add(l2, gbc);
+                jPanel.add(l3, gbc);
+
                 jPanel.setBackground(Color.cyan);
                 panels.add(jPanel, gbc);
 
@@ -507,7 +508,7 @@ public class SMSDFrame extends JFrame {
         int counter = 1;
         for (AtomAtomMapping aam : smsd.getAllAtomMapping()) {
             Map<IAtom, IAtom> mappings = aam.getMappingsByAtoms();
-            Map<Integer, Integer> mapping = new TreeMap<Integer, Integer>();
+            Map<Integer, Integer> mapping = new TreeMap<>();
             for (IAtom keys : mappings.keySet()) {
                 mapping.put(aam.getQueryIndex(keys), aam.getTargetIndex(mappings.get(keys)));
             }
