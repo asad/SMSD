@@ -34,6 +34,7 @@ import org.openscience.cdk.AtomContainer;
 
 import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.exception.CDKException;
+import org.openscience.cdk.exception.Intractable;
 import org.openscience.cdk.graph.Cycles;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -337,14 +338,9 @@ public final class StereoFilter extends Sotter implements IChemicalFilter<Double
         IAtomContainer listMap = list.get(0).clone();
         IAtomContainer subGraph = list.get(1).clone();
         try {
-//            CDKHueckelAromaticityDetector.detectAromaticity(subGraph);
-//            SSSRFinder finder = new SSSRFinder(subGraph);
-//            IRingSet ringSet = finder.findEssentialRings();
-//            RingSetManipulator.sort(ringSet);
-//            IRingSet ringSet = HanserRingFinder.getRingSet(subGraph);
             Cycles cycles = Cycles.all(subGraph);
             lScore = getRingMatch(cycles.toRingSet(), listMap);
-        } catch (CDKException ex) {
+        } catch (Intractable ex) {
             Logger.getLogger(StereoFilter.class.getName()).log(Level.SEVERE, null, ex);
         }
         return lScore;

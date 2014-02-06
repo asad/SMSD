@@ -22,7 +22,7 @@
  */
 package gui;
 
-import cmd.Utility;
+import org.openscience.smsd.tools.Utility;
 import gui.helper.FileExportFilter;
 import gui.helper.ImagePreView;
 import gui.helper.molFileFilter;
@@ -471,7 +471,8 @@ public class SMSDFrame extends JFrame {
                         jTextArea1.append("Attaching file: " + QueryFileName.getName() + "." + NEW_LINE);
                     } catch (Exception ex) {
                         Logger.getLogger(SMSDFrame.class.getName()).log(Level.SEVERE, null, ex);
-                    }   break;
+                    }
+                    break;
                 case "TargetFile":
                     try {
                         TargetFileName = fileChooser.getSelectedFile();
@@ -481,7 +482,8 @@ public class SMSDFrame extends JFrame {
                         jTextArea1.append("Attaching file: " + TargetFileName.getName() + "." + NEW_LINE);
                     } catch (Exception ex) {
                         Logger.getLogger(SMSDFrame.class.getName()).log(Level.SEVERE, null, ex);
-                    }   break;
+                    }
+                    break;
             }
         } else {
             jTextArea1.append("Attachment cancelled by user." + NEW_LINE);

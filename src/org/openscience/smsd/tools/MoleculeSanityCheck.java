@@ -27,12 +27,8 @@ import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.annotations.TestMethod;
-import org.openscience.cdk.aromaticity.Aromaticity;
-import org.openscience.cdk.aromaticity.ElectronDonation;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.graph.ConnectivityChecker;
-import org.openscience.cdk.graph.CycleFinder;
-import org.openscience.cdk.graph.Cycles;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -41,7 +37,6 @@ import org.openscience.cdk.ringsearch.AllRingsFinder;
 import org.openscience.cdk.tools.CDKHydrogenAdder;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
-import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.cdk.tools.manipulator.RingSetManipulator;
 
 /**
@@ -54,7 +49,7 @@ import org.openscience.cdk.tools.manipulator.RingSetManipulator;
  */
 @TestClass("org.openscience.cdk.smsd.tools.MoleculeSanityCheckTest")
 public class MoleculeSanityCheck {
-    
+
     private static final ILoggingTool logger
             = LoggingToolFactory.createLoggingTool(MoleculeSanityCheck.class);
 
@@ -74,7 +69,7 @@ public class MoleculeSanityCheck {
                 break;
             }
         }
-        
+
         if (isMarkush) {
             logger.warn("Skipping Markush structure for sanity check");
         }
@@ -126,9 +121,9 @@ public class MoleculeSanityCheck {
             cdk.addImplicitHydrogens(mol);
         } catch (CDKException exception) {
         }
-        
+
         try {
-            aromatize(mol);
+            Utility.aromatizeDayLight(mol);
 //            printAtoms(atomContainer);
             // figure out which rings are aromatic:
             RingSetManipulator.markAromaticRings(ringSet);
@@ -151,7 +146,7 @@ public class MoleculeSanityCheck {
                     if (!ring.getFlag(CDKConstants.ISAROMATIC)) {
                         continue jloop;
                     }
-                    
+
                     boolean haveatom = ring.contains(mol.getAtom(i));
 
                     //logger.debug("haveatom="+haveatom);
@@ -163,13 +158,5 @@ public class MoleculeSanityCheck {
         } catch (Exception e) {
             logger.warn("Skipping ring fix check");
         }
-    }
-    
-    static void aromatize(IAtomContainer molecule) throws CDKException {
-        ElectronDonation model = ElectronDonation.cdk();
-        CycleFinder cycles = Cycles.cdkAromaticSet();
-        Aromaticity aromaticity = new Aromaticity(model, cycles);
-        AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(molecule);
-        aromaticity.apply(molecule);
     }
 }

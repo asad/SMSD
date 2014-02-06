@@ -26,6 +26,7 @@
  */
 package cmd;
 
+import org.openscience.smsd.tools.Utility;
 import cmd.pdb.LigandHelper;
 import java.io.File;
 import java.io.FileInputStream;
@@ -42,12 +43,8 @@ import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.ChemFile;
 import org.openscience.cdk.DefaultChemObjectBuilder;
-import org.openscience.cdk.aromaticity.Aromaticity;
-import org.openscience.cdk.aromaticity.ElectronDonation;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.graph.ConnectivityChecker;
-import org.openscience.cdk.graph.CycleFinder;
-import org.openscience.cdk.graph.Cycles;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IChemFile;
@@ -75,23 +72,15 @@ import org.openscience.cdk.tools.manipulator.ChemFileManipulator;
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-public class InputHandler {
-
-    static void aromatize(IAtomContainer molecule) throws CDKException {
-        ElectronDonation model = ElectronDonation.cdk();
-        CycleFinder cycles = Cycles.cdkAromaticSet();
-        Aromaticity aromaticity = new Aromaticity(model, cycles);
-        AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(molecule);
-        aromaticity.apply(molecule);
-    }
+public class InputHandler extends Utility {
 
     private final static ILoggingTool logger
             = LoggingToolFactory.createLoggingTool(InputHandler.class);
-    private ArgumentHandler argumentHandler;
-    private StructureDiagramGenerator sdg;
-    private Map<String, String> singularDataTypes;
-    private Map<String, String> multipleDataTypes;
-    private Map<String, String> stringDataTypes;
+    private final ArgumentHandler argumentHandler;
+    private final StructureDiagramGenerator sdg;
+    private final Map<String, String> singularDataTypes;
+    private final Map<String, String> multipleDataTypes;
+    private final Map<String, String> stringDataTypes;
     private boolean isSingleFileQuery;
     private boolean isSingleFileTarget;
     private boolean isMultipleTarget;
@@ -270,7 +259,7 @@ public class InputHandler {
         } else if (type.equals("SDF")) {
             id = (String) mol.getProperty(CDKConstants.TITLE);
         }
-        aromatize(mol);
+        aromatizeDayLight(mol);
         mol = new AtomContainer(mol);
         mol.setID(id);
         if (argumentHandler.isImage()) {
@@ -437,7 +426,7 @@ public class InputHandler {
                 }
 
                 adder.addImplicitHydrogens(atomcontainerHFree);
-                aromatize(atomcontainerHFree);
+                aromatizeDayLight(atomcontainerHFree);
                 String index = String.valueOf((atomContainerNr + 1));
                 boolean flag = ConnectivityChecker.isConnected(atomcontainerHFree);
                 String title = atomcontainerHFree.getProperty(CDKConstants.TITLE) != null

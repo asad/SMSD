@@ -26,6 +26,7 @@
  */
 package cmd;
 
+import org.openscience.smsd.tools.Utility;
 import java.io.IOException;
 import java.util.*;
 
@@ -62,15 +63,8 @@ import org.openscience.smsd.tools.AtomContainerComparator;
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-public class SMSDcmd {
+public class SMSDcmd extends Utility {
 
-    static void aromatize(IAtomContainer molecule) throws CDKException {
-        ElectronDonation model = ElectronDonation.cdk();
-        CycleFinder cycles = Cycles.cdkAromaticSet();
-        Aromaticity aromaticity = new Aromaticity(model, cycles);
-        AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(molecule);
-        aromaticity.apply(molecule);
-    }
     private final static ILoggingTool logger
             = LoggingToolFactory.createLoggingTool(InputHandler.class);
 
@@ -424,8 +418,8 @@ public class SMSDcmd {
             outputHandler.startNew(out);
         }
 
-        aromatize(query);
-        aromatize(target);
+        aromatizeDayLight(query);
+        aromatizeDayLight(target);
 
         if (argumentHandler.isApplyHAdding()) {
             AtomContainerManipulator.convertImplicitToExplicitHydrogens(query);
