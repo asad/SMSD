@@ -294,7 +294,7 @@ public final class AtomAtomMapping implements Serializable {
      * @throws CDKException
      */
     public synchronized String getCommonFragmentAsSMILES() throws CloneNotSupportedException, CDKException {
-        SmilesGenerator aromatic = SmilesGenerator.unique().aromatic();
+        SmilesGenerator aromatic = SmilesGenerator.unique();
         return aromatic.create(getCommonFragment());
     }
 }
