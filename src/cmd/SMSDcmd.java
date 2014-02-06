@@ -36,12 +36,8 @@ import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.AtomContainerSet;
 import org.openscience.cdk.DefaultChemObjectBuilder;
-import org.openscience.cdk.aromaticity.Aromaticity;
-import org.openscience.cdk.aromaticity.ElectronDonation;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.graph.ConnectivityChecker;
-import org.openscience.cdk.graph.CycleFinder;
-import org.openscience.cdk.graph.Cycles;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -578,16 +574,5 @@ public class SMSDcmd extends Utility {
 
     private static Map<Integer, Integer> getIndexMapping(AtomAtomMapping aam) {
         return aam.isEmpty() ? new TreeMap<Integer, Integer>() : aam.getMappingsByIndex();
-    }
-
-    /**
-     * Return SMILES
-     *
-     * @param ac
-     * @return
-     */
-    private static String toSmiles(IAtomContainer ac) throws CDKException {
-        SmilesGenerator g = new SmilesGenerator().aromatic();
-        return g.create(ac);
     }
 }

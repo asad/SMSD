@@ -62,12 +62,12 @@ public class OutputHandler {
 
     private final static ILoggingTool logger
             = LoggingToolFactory.createLoggingTool(OutputHandler.class);
-    private ArgumentHandler argumentHandler;
+    private final ArgumentHandler argumentHandler;
     private BufferedWriter outGFile = null;
     private BufferedWriter outMFile = null;
     private BufferedWriter outDescriptorFile = null;
-    private ImageGenerator imageGenerator;
-    private NumberFormat nf;
+    private final ImageGenerator imageGenerator;
+    private final NumberFormat nf;
     final static String NEW_LINE = System.getProperty("line.separator");
 
     OutputHandler(ArgumentHandler argumentHandler) {
@@ -446,14 +446,9 @@ public class OutputHandler {
      * @throws CDKException
      */
     void writeMolToMolfile(IAtomContainer mol, Writer out) throws IOException, IllegalArgumentException, CDKException {
-        MDLV2000Writer writer = null;
-        try {
-            writer = new MDLV2000Writer(out);
+        try (MDLV2000Writer writer = new MDLV2000Writer(out)) {
             writer.write(DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class, mol));
-        } finally {
-            if (writer != null) {
-                writer.close();
-            }
+            writer.close();
         }
     }
 
@@ -466,14 +461,9 @@ public class OutputHandler {
      * @throws CDKException
      */
     void writeMolsToMolfile(IAtomContainerSet mols, Writer out) throws IOException, IllegalArgumentException, CDKException {
-        SDFWriter writer = null;
-        try {
-            writer = new SDFWriter(out);
+        try (SDFWriter writer = new SDFWriter(out)) {
             writer.write(mols);
-        } finally {
-            if (writer != null) {
-                writer.close();
-            }
+            writer.close();
         }
     }
 

@@ -63,6 +63,7 @@ final public class MCSS {
      * @param numberOfThreads
      * @param matchBonds
      * @param matchRings
+     * @param matchAtomType
      */
     public MCSS(
             List<IAtomContainer> jobList,

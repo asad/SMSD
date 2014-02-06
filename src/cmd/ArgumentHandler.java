@@ -87,10 +87,10 @@ public class ArgumentHandler {
     private boolean appendMode = false;
     private boolean matchBondType = false;
     private boolean matchRingType = false;
-    private String matchFile = "mcs";
-    private String fingerFile = "finger";
-    private String graphFile = "graph";
-    private String descriptorFile = "molDescriptors";
+    private final String matchFile = "mcs";
+    private final String fingerFile = "finger";
+    private final String graphFile = "graph";
+    private final String descriptorFile = "molDescriptors";
     private String queryOutfileName;
     private String targetOutfileName;
     private String suffix = "";

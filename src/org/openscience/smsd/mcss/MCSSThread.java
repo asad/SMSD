@@ -274,7 +274,7 @@ final public class MCSSThread implements Callable<LinkedBlockingQueue<IAtomConta
         for (AtomAtomMapping mapping : comparison.getAllAtomMapping()) {
             IAtomContainer match;
             try {
-                match = mapping.getMapCommonFragmentOnQuery();
+                match = mapping.getCommonFragment();
                 try {
                     matchList.add(new Fragment(match));
                 } catch (CDKException ex) {
