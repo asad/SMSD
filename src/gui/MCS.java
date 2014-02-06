@@ -47,8 +47,8 @@ public class MCS {
         System.out.println("MCS First Map: " + mcs.getFirstAtomMapping().toString());
         System.out.println("MCS First size: " + mcs.getFirstAtomMapping().getCount());
 
-        mol1 = mcs.getQueryContainer();
-        mol2 = mcs.getTargetContainer();
+        mol1 = mcs.getQuery();
+        mol2 = mcs.getTarget();
 
         IAtomContainer mcsmolecule = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class, mol1);
         Map<Integer, Integer> indexMapping = getIndexMapping(mcs.getFirstAtomMapping());

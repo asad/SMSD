@@ -36,18 +36,6 @@ import org.openscience.smsd.AtomAtomMapping;
 public interface IAtomMapping {
 
     /**
-     * Mapped Query container
-     * @return
-     */
-    public abstract IAtomContainer getQueryContainer();
-
-    /**
-     * Mapped Target container
-     * @return
-     */
-    public abstract IAtomContainer getTargetContainer();
-
-    /**
      * initialize query and target molecules.
      *
      * @param stereoFilter set true to rank the solutions as per stereo matches

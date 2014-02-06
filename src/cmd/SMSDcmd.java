@@ -294,7 +294,7 @@ public class SMSDcmd extends Utility {
 
             long endTime = System.currentTimeMillis();
             long executionTime = endTime - startTime;
-            outputHandler.writeTargetMol(smsd.getTargetContainer());
+            outputHandler.writeTargetMol(smsd.getTarget());
 
             String queryPath = argumentHandler.getQueryFilepath();
             String targetPath = argumentHandler.getTargetFilepath();

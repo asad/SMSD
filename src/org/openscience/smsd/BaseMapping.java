@@ -244,16 +244,6 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
                 : getMCSList().iterator().next();
     }
 
-    @Override
-    public synchronized IAtomContainer getQueryContainer() {
-        return this.getQuery();
-    }
-
-    @Override
-    public synchronized IAtomContainer getTargetContainer() {
-        return this.getTarget();
-    }
-
     /**
      * Returns true if bond are to be matched.
      *

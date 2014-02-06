@@ -139,22 +139,22 @@ public final class Substructure extends BaseMapping {
     private synchronized boolean findSubgraph() throws CDKException {
         boolean isSubgraph = false;
 
-        if ((getTargetContainer() == null) || (getQueryContainer() == null)) {
+        if ((getTarget() == null) || (getQuery() == null)) {
             throw new CDKException("Query or Target molecule is not initialized (NULL)");
         }
 
-        if (getQueryContainer().getAtomCount() == 1 || getTargetContainer().getAtomCount() == 1) {
+        if (getQuery().getAtomCount() == 1 || getTarget().getAtomCount() == 1) {
             singleMapping(isMatchBonds());
         } else {
-            if (getQueryContainer().getAtomCount() > getTargetContainer().getAtomCount()) {
+            if (getQuery().getAtomCount() > getTarget().getAtomCount()) {
                 return false;
             }
             VF2 mapper;
             List<AtomAtomMapping> mappingsVF2 = new ArrayList<>();
-            if (getQueryContainer() instanceof IQueryAtomContainer) {
-                mapper = new VF2((IQueryAtomContainer) getQueryContainer(), getTargetContainer());
+            if (getQuery() instanceof IQueryAtomContainer) {
+                mapper = new VF2((IQueryAtomContainer) getQuery(), getTarget());
             } else {
-                mapper = new VF2(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings(), isMatchAtomType());
+                mapper = new VF2(getQuery(), getTarget(), isMatchBonds(), isMatchRings(), isMatchAtomType());
             }
             isSubgraph = mapper.isSubgraph();
             List<AtomAtomMapping> atomMappings = mapper.getAllAtomMapping();
@@ -178,22 +178,22 @@ public final class Substructure extends BaseMapping {
     private synchronized boolean findSubgraphs() throws CDKException {
         boolean isSubgraph = false;
 
-        if ((getTargetContainer() == null) || (getQueryContainer() == null)) {
+        if ((getTarget() == null) || (getQuery() == null)) {
             throw new CDKException("Query or Target molecule is not initialized (NULL)");
         }
 
-        if (getQueryContainer().getAtomCount() == 1 || getTargetContainer().getAtomCount() == 1) {
+        if (getQuery().getAtomCount() == 1 || getTarget().getAtomCount() == 1) {
             singleMapping(isMatchBonds());
         } else {
-            if (getQueryContainer().getAtomCount() > getTargetContainer().getAtomCount()) {
+            if (getQuery().getAtomCount() > getTarget().getAtomCount()) {
                 return false;
             } else {
                 List<AtomAtomMapping> mappingsVF2 = new ArrayList<>();
                 VF2Sub mapper;
-                if (getQueryContainer() instanceof IQueryAtomContainer) {
-                    mapper = new VF2Sub((IQueryAtomContainer) getQueryContainer(), getTargetContainer());
+                if (getQuery() instanceof IQueryAtomContainer) {
+                    mapper = new VF2Sub((IQueryAtomContainer) getQuery(), getTarget());
                 } else {
-                    mapper = new VF2Sub(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings(), isMatchAtomType());
+                    mapper = new VF2Sub(getQuery(), getTarget(), isMatchBonds(), isMatchRings(), isMatchAtomType());
                 }
                 isSubgraph = mapper.isSubgraph();
                 List<AtomAtomMapping> atomMappings = mapper.getAllAtomMapping();
@@ -212,7 +212,7 @@ public final class Substructure extends BaseMapping {
     private synchronized void setVFMappings(List<AtomAtomMapping> mappingsVF2) {
         int counter = 0;
         for (AtomAtomMapping solution : mappingsVF2) {
-            AtomAtomMapping atomatomMapping = new AtomAtomMapping(getQueryContainer(), getTargetContainer());
+            AtomAtomMapping atomatomMapping = new AtomAtomMapping(getQuery(), getTarget());
             if (solution.getCount() > vfMappingSize) {
                 this.vfMappingSize = solution.getCount();
                 counter = 0;
@@ -244,10 +244,10 @@ public final class Substructure extends BaseMapping {
 
     private synchronized void singleMapping(boolean shouldMatchBonds) {
         SingleMappingHandler mcs;
-        if (!(getQueryContainer() instanceof IQueryAtomContainer) && !(getTargetContainer() instanceof IQueryAtomContainer)) {
-            mcs = new SingleMappingHandler(getQueryContainer(), getTargetContainer(), shouldMatchBonds, isMatchRings());
+        if (!(getQuery() instanceof IQueryAtomContainer) && !(getTarget() instanceof IQueryAtomContainer)) {
+            mcs = new SingleMappingHandler(getQuery(), getTarget(), shouldMatchBonds, isMatchRings());
         } else {
-            mcs = new SingleMappingHandler((IQueryAtomContainer) getQueryContainer(), getTargetContainer());
+            mcs = new SingleMappingHandler((IQueryAtomContainer) getQuery(), getTarget());
         }
         getMCSList().addAll(mcs.getAllAtomMapping());
     }

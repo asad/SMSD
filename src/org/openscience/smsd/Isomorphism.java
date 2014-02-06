@@ -177,7 +177,7 @@ public final class Isomorphism extends BaseMapping implements Serializable {
             boolean matchAtomType) {
         super(bondTypeFlag, matchRings, matchAtomType, query, target);
         this.algorithmType = algorithmType;
-        mcsBuilder(getQueryContainer(), getTargetContainer());
+        mcsBuilder(getQuery(), getTarget());
         setSubgraph(isSubgraph());
     }
 
@@ -237,7 +237,7 @@ public final class Isomorphism extends BaseMapping implements Serializable {
 
     private synchronized boolean cdkMCSAlgorithm() {
         CDKMCSHandler mcs;
-        mcs = new CDKMCSHandler(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings(), isMatchAtomType());
+        mcs = new CDKMCSHandler(getQuery(), getTarget(), isMatchBonds(), isMatchRings(), isMatchAtomType());
         clearMaps();
         getMCSList().addAll(mcs.getAllAtomMapping());
         return mcs.isTimeout();
@@ -245,7 +245,7 @@ public final class Isomorphism extends BaseMapping implements Serializable {
 
     private synchronized boolean mcsPlusAlgorithm() {
         MCSPlusHandler mcs;
-        mcs = new MCSPlusHandler(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings(), isMatchAtomType());
+        mcs = new MCSPlusHandler(getQuery(), getTarget(), isMatchBonds(), isMatchRings(), isMatchAtomType());
         clearMaps();
         getMCSList().addAll(mcs.getAllAtomMapping());
         return mcs.isTimeout();
@@ -253,7 +253,7 @@ public final class Isomorphism extends BaseMapping implements Serializable {
 
     private synchronized boolean substructureAlgorithm() throws CDKException {
         Substructure mcs;
-        mcs = new Substructure(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings(), isMatchAtomType(), true);
+        mcs = new Substructure(getQuery(), getTarget(), isMatchBonds(), isMatchRings(), isMatchAtomType(), true);
         clearMaps();
         if (mcs.isSubgraph()) {
             getMCSList().addAll(mcs.getAllAtomMapping());
@@ -263,14 +263,14 @@ public final class Isomorphism extends BaseMapping implements Serializable {
 
     private synchronized void vfLibMCSAlgorithm() {
         VF2MCS mcs;
-        mcs = new VF2MCS(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings(), isMatchAtomType());
+        mcs = new VF2MCS(getQuery(), getTarget(), isMatchBonds(), isMatchRings(), isMatchAtomType());
         clearMaps();
         getMCSList().addAll(mcs.getAllAtomMapping());
     }
 
     private synchronized void singleMapping() {
         SingleMappingHandler mcs;
-        mcs = new SingleMappingHandler(getQueryContainer(), getTargetContainer(), isMatchBonds(), isMatchRings());
+        mcs = new SingleMappingHandler(getQuery(), getTarget(), isMatchBonds(), isMatchRings());
         clearMaps();
         getMCSList().addAll(mcs.getAllAtomMapping());
     }
@@ -282,8 +282,8 @@ public final class Isomorphism extends BaseMapping implements Serializable {
                 boolean timeoutMCS1 = cdkMCSAlgorithm();
                 if ((getMappingCount() == 0 && timeoutMCS1)
                         || (timeoutMCS1 && getMappingCount() > 0
-                        && (getFirstAtomMapping().getCount() != getQueryContainer().getAtomCount()
-                        || getFirstAtomMapping().getCount() != getTargetContainer().getAtomCount()))) {
+                        && (getFirstAtomMapping().getCount() != getQuery().getAtomCount()
+                        || getFirstAtomMapping().getCount() != getTarget().getAtomCount()))) {
                     vfLibMCSAlgorithm();
                 }
             }
@@ -306,14 +306,14 @@ public final class Isomorphism extends BaseMapping implements Serializable {
         } else {
             return false;
         }
-        int sourceAtomCount = getQueryContainer().getAtomCount();
-        int targetAtomCount = getTargetContainer().getAtomCount();
+        int sourceAtomCount = getQuery().getAtomCount();
+        int targetAtomCount = getTarget().getAtomCount();
 
         if (mappingSize == sourceAtomCount && mappingSize <= targetAtomCount) {
             if (mappingSize == 1) {
                 return true;
             } else if (!getAllBondMaps().isEmpty()
-                    && getAllBondMaps().iterator().next().size() == getQueryContainer().getBondCount()) {
+                    && getAllBondMaps().iterator().next().size() == getQuery().getBondCount()) {
                 return true;
             }
         }
