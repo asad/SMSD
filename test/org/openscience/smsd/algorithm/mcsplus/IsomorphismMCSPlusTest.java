@@ -188,8 +188,8 @@ public class IsomorphismMCSPlusTest extends ImageUtility {
 
 //        for (AtomAtomMapping m : comparison.getAllAtomMapping()) {
 //            SmilesGenerator sg = new SmilesGenerator();
-//            String createSMILESQ = sg.createSMILES(m.getCommonFragmentInQuery());
-//            String createSMILEST = sg.createSMILES(m.getCommonFragmentInTarget());
+//            String createSMILESQ = sg.createSMILES(m.getMapCommonFragmentOnQuery());
+//            String createSMILEST = sg.createSMILES(m.getMapCommonFragmentOnTarget());
 //            System.out.println("createSMILES " + createSMILESQ + "." + createSMILEST);
 //            System.out.println("Map " + m.getMappingsByIndex());
 //        }
@@ -336,7 +336,7 @@ public class IsomorphismMCSPlusTest extends ImageUtility {
 //        boolean write = ImageIO.write(generateImage, "png", new File("MCSPLUS_Ring_Open_Close.png"));
 
 //        SmilesGenerator sg = new SmilesGenerator();
-//        String createSMILES = sg.createSMILES(comparison.getFirstAtomMapping().getCommonFragmentInTarget());
+//        String createSMILES = sg.createSMILES(comparison.getFirstAtomMapping().getMapCommonFragmentOnTarget());
 //        System.out.println("createSMILES " + createSMILES);
         Assert.assertEquals(28, comparison.getFirstAtomMapping().getCount());
         Assert.assertEquals(0.82, comparison.getTanimotoSimilarity(), .09);

@@ -516,10 +516,10 @@ public class IsomorphismTest {
         IAtomContainer molecule1 = smilesParser.parseSmiles("NC(=O)c1ccc[n+](c1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
         IAtomContainer molecule2 = smilesParser.parseSmiles("NC(=O)C1=CN(C=CC1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
 
-        double score = 0.7;
+        double score = 0.7959;
         Isomorphism smsd1 = new Isomorphism(molecule1, molecule2, Algorithm.MCSPlus, true, false, true);
         //smsd1.setChemFilters(true, true, true);
-        Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.0999);
+        Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
     }
 
     /**
@@ -620,7 +620,7 @@ public class IsomorphismTest {
         comparison.setChemFilters(true, true, true);
 
 //        SmilesGenerator sg = new SmilesGenerator();
-//        String createSMILES = sg.create(comparison.getFirstAtomMapping().getCommonFragmentInTarget());
+//        String createSMILES = sg.create(comparison.getFirstAtomMapping().getMapCommonFragmentOnTarget());
 //        System.out.println("createSMILES " + createSMILES);
         //Get similarity score
         //System.out.println("Tanimoto coefficient:  " + comparison.getTanimotoSimilarity());
@@ -647,9 +647,9 @@ public class IsomorphismTest {
         Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.DEFAULT, false, false, false);
         // set chemical filter true
         comparison.setChemFilters(true, true, true);
-//        SmilesGenerator aromatic = SmilesGenerator.unique().aromatic();
-//        System.out.println("SMILES :" + aromatic.create(comparison.getFirstAtomMapping().getCommonFragmentInQuery()));
-//        System.out.println("SMILES :" + aromatic.create(comparison.getFirstAtomMapping().getCommonFragmentInTarget()));
+        SmilesGenerator aromatic = SmilesGenerator.unique().aromatic();
+        System.out.println("SMILES :" + aromatic.create(comparison.getFirstAtomMapping().getMapCommonFragmentOnQuery()));
+        System.out.println("SMILES :" + aromatic.create(comparison.getFirstAtomMapping().getMapCommonFragmentOnTarget()));
 
         Assert.assertEquals(0.8235, comparison.getTanimotoSimilarity(), .001);
         Assert.assertEquals(2, comparison.getAllAtomMapping().size());
