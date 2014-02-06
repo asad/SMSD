@@ -101,8 +101,8 @@ public class IsomorphismTest {
 
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, false, false, false);
         smsd1.setChemFilters(true, false, false);
-        Assert.assertNotNull(smsd1.getQueryContainer());
-        Assert.assertNotNull(smsd1.getTargetContainer());
+        Assert.assertNotNull(smsd1.getQuery());
+        Assert.assertNotNull(smsd1.getTarget());
     }
 
     /**
@@ -119,8 +119,8 @@ public class IsomorphismTest {
 
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, false, false, false);
         smsd1.setChemFilters(true, false, false);
-        Assert.assertNotNull(smsd1.getQueryContainer());
-        Assert.assertNotNull(smsd1.getTargetContainer());
+        Assert.assertNotNull(smsd1.getQuery());
+        Assert.assertNotNull(smsd1.getTarget());
     }
 
     /**
@@ -377,37 +377,37 @@ public class IsomorphismTest {
     }
 
     /**
-     * Test of getQueryContainer method, of class Isomorphism.
+     * Test of getQuery method, of class Isomorphism.
      *
      * @throws CDKException
      */
     @Test
     public void testGetReactantMolecule() throws CDKException {
-//        //System.out.println("getQueryContainer");
+//        //System.out.println("getQuery");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false, true);
         smsd1.setChemFilters(true, true, true);
-        Assert.assertEquals(7, smsd1.getQueryContainer().getAtomCount());
+        Assert.assertEquals(7, smsd1.getQuery().getAtomCount());
     }
 
     /**
-     * Test of getTargetContainer method, of class Isomorphism.
+     * Test of getTarget method, of class Isomorphism.
      *
      * @throws CDKException
      */
     @Test
     public void testGetProductMolecule() throws CDKException {
-//        //System.out.println("getTargetContainer");
+//        //System.out.println("getTarget");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false, true);
         smsd1.setChemFilters(true, true, true);
-        Assert.assertEquals(20, smsd1.getTargetContainer().getAtomCount());
+        Assert.assertEquals(20, smsd1.getTarget().getAtomCount());
     }
 
     /**

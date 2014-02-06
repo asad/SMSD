@@ -80,8 +80,8 @@ public class SubstructureTest {
 
         Substructure smsd1 = new Substructure(query, target, false, false, false, false);
         smsd1.setChemFilters(true, false, false);
-        assertNotNull(smsd1.getQueryContainer());
-        assertNotNull(smsd1.getTargetContainer());
+        assertNotNull(smsd1.getQuery());
+        assertNotNull(smsd1.getTarget());
     }
 
     /**
@@ -99,8 +99,8 @@ public class SubstructureTest {
 
         Substructure smsd1 = new Substructure(query, target, false, false, false, false);
         smsd1.setChemFilters(true, false, false);
-        assertNotNull(smsd1.getQueryContainer());
-        assertNotNull(smsd1.getTargetContainer());
+        assertNotNull(smsd1.getQuery());
+        assertNotNull(smsd1.getTarget());
     }
 
     /**
@@ -119,8 +119,8 @@ public class SubstructureTest {
 
         Substructure smsd1 = new Substructure(query, target, false, false, false, false);
         smsd1.setChemFilters(true, false, false);
-        assertNotNull(smsd1.getQueryContainer());
-        assertNotNull(smsd1.getTargetContainer());
+        assertNotNull(smsd1.getQuery());
+        assertNotNull(smsd1.getTarget());
 
     }
 
@@ -426,32 +426,32 @@ public class SubstructureTest {
     }
 
     /**
-     * Test of getQueryContainer method, of class SubStructureSearchAlgorithms.
+     * Test of getQuery method, of class SubStructureSearchAlgorithms.
      *
      * @throws InvalidSmilesException
      * @throws CDKException
      */
     @Test
     public void testGetReactantMolecule() throws InvalidSmilesException, CDKException {
-        //System.out.println("getQueryContainer");
+        //System.out.println("getQuery");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
         Substructure smsd1 = new Substructure(query, target, true, false, true, false);
         smsd1.setChemFilters(true, true, true);
-        assertEquals(7, smsd1.getQueryContainer().getAtomCount());
+        assertEquals(7, smsd1.getQuery().getAtomCount());
     }
 
     /**
-     * Test of getTargetContainer method, of class SubStructureSearchAlgorithms.
+     * Test of getTarget method, of class SubStructureSearchAlgorithms.
      *
      * @throws InvalidSmilesException
      * @throws CDKException
      */
     @Test
     public void testGetProductMolecule() throws InvalidSmilesException, CDKException {
-        //System.out.println("getTargetContainer");
+        //System.out.println("getTarget");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
@@ -459,7 +459,7 @@ public class SubstructureTest {
         Substructure smsd1 = new Substructure(query, target, true, false, true, false);
         smsd1.setChemFilters(true, true, true);
 
-        assertEquals(20, smsd1.getTargetContainer().getAtomCount());
+        assertEquals(20, smsd1.getTarget().getAtomCount());
     }
 
     /**
