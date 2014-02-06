@@ -22,6 +22,7 @@
  */
 package gui;
 
+import cmd.Utility;
 import gui.helper.FileExportFilter;
 import gui.helper.ImagePreView;
 import gui.helper.molFileFilter;
@@ -56,11 +57,7 @@ import javax.swing.SwingConstants;
 import javax.swing.filechooser.FileFilter;
 import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.DefaultChemObjectBuilder;
-import org.openscience.cdk.aromaticity.Aromaticity;
-import org.openscience.cdk.aromaticity.ElectronDonation;
 import org.openscience.cdk.exception.CDKException;
-import org.openscience.cdk.graph.CycleFinder;
-import org.openscience.cdk.graph.Cycles;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.io.IChemObjectReader;
@@ -72,19 +69,13 @@ import org.openscience.smsd.Isomorphism;
 import org.openscience.smsd.interfaces.Algorithm;
 
 /*
- * SMSDFrame.java @author Syed Asad Rahman, EBI-EMBL, @contact: asad@ebi.ac.uk, @modifed Franz
+ * SMSDFrame.java 
+ * @author Syed Asad Rahman, EBI-EMBL, 
+ * @contact: asad@ebi.ac.uk
  *
  * Created on Mar 29, 2009, 3:07:42 AM
  */
 public class SMSDFrame extends JFrame {
-
-    static void aromatize(IAtomContainer molecule) throws CDKException {
-        ElectronDonation model = ElectronDonation.cdk();
-        CycleFinder cycles = Cycles.cdkAromaticSet();
-        Aromaticity aromaticity = new Aromaticity(model, cycles);
-        AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(molecule);
-        aromaticity.apply(molecule);
-    }
 
     private static final long serialVersionUID = 7878619981017L;
     /**
@@ -306,8 +297,8 @@ public class SMSDFrame extends JFrame {
                     targetMolecule = AtomContainerManipulator.removeHydrogens(targetMolecule);
 
                 }
-                aromatize(targetMolecule);
-                aromatize(queryMolecule);
+                Utility.aromatizeDayLight(targetMolecule);
+                Utility.aromatizeDayLight(queryMolecule);
 
 //                CanonicalLabeler c=new CanonicalLabeler();
 //                c.canonLabel(queryMolecule);
@@ -370,7 +361,7 @@ public class SMSDFrame extends JFrame {
                         if (rc == JFileChooser.APPROVE_OPTION) {
                             File file = fc.getSelectedFile();
 
-                            String type = null;
+                            String type;
                             FileFilter currentFilter = fc.getFileFilter();
                             type = ((FileExportFilter) currentFilter).getType();
 
@@ -436,7 +427,9 @@ public class SMSDFrame extends JFrame {
             jTextArea1.append("Created Mol = " + fileName.getName() + NEW_LINE);
             jTextArea1.setCaretPosition(jTextArea1.getDocument().getLength());
 //            System.out.println("Created Mol = " + fileName.getName());
-        } catch (Exception ex) {
+        } catch (IOException ex) {
+            Logger.getLogger(SMSDFrame.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (CDKException ex) {
             Logger.getLogger(SMSDFrame.class.getName()).log(Level.SEVERE, null, ex);
         }
         return container;
@@ -468,27 +461,27 @@ public class SMSDFrame extends JFrame {
 
         //Process the results.
         if (returnVal == JFileChooser.APPROVE_OPTION) {
-            if (ac.equals("QueryFile")) {
-                try {
-                    QueryFileName = fileChooser.getSelectedFile();
-                    IAtomContainer mol = readMol(QueryFileName);
-                    molFiles.add(count++, QueryFileName.getName());
-                    molFiles.add(count++, mol);
-                    jTextArea1.append("Attaching file: " + QueryFileName.getName() + "." + NEW_LINE);
-                } catch (Exception ex) {
-                    Logger.getLogger(SMSDFrame.class.getName()).log(Level.SEVERE, null, ex);
-                }
-            } else if (ac.equals("TargetFile")) {
-                try {
-                    TargetFileName = fileChooser.getSelectedFile();
-                    IAtomContainer mol = readMol(TargetFileName);
-                    molFiles.add(count++, TargetFileName.getName());
-                    molFiles.add(count++, mol);
-                    jTextArea1.append("Attaching file: " + TargetFileName.getName() + "." + NEW_LINE);
-                } catch (Exception ex) {
-                    Logger.getLogger(SMSDFrame.class.getName()).log(Level.SEVERE, null, ex);
-                }
-
+            switch (ac) {
+                case "QueryFile":
+                    try {
+                        QueryFileName = fileChooser.getSelectedFile();
+                        IAtomContainer mol = readMol(QueryFileName);
+                        molFiles.add(count++, QueryFileName.getName());
+                        molFiles.add(count++, mol);
+                        jTextArea1.append("Attaching file: " + QueryFileName.getName() + "." + NEW_LINE);
+                    } catch (Exception ex) {
+                        Logger.getLogger(SMSDFrame.class.getName()).log(Level.SEVERE, null, ex);
+                    }   break;
+                case "TargetFile":
+                    try {
+                        TargetFileName = fileChooser.getSelectedFile();
+                        IAtomContainer mol = readMol(TargetFileName);
+                        molFiles.add(count++, TargetFileName.getName());
+                        molFiles.add(count++, mol);
+                        jTextArea1.append("Attaching file: " + TargetFileName.getName() + "." + NEW_LINE);
+                    } catch (Exception ex) {
+                        Logger.getLogger(SMSDFrame.class.getName()).log(Level.SEVERE, null, ex);
+                    }   break;
             }
         } else {
             jTextArea1.append("Attachment cancelled by user." + NEW_LINE);
