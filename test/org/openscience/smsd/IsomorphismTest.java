@@ -41,6 +41,7 @@ import org.openscience.cdk.io.MDLV2000Reader;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainerCreator;
 import org.openscience.cdk.normalize.SMSDNormalizer;
+import org.openscience.cdk.smiles.SmilesGenerator;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.algorithm.mcsplus.MCSPlusHandlerTest;
@@ -617,11 +618,10 @@ public class IsomorphismTest {
         Isomorphism comparison = new Isomorphism(query, target, Algorithm.MCSPlus, false, false, true);
         // set chemical filter true
         comparison.setChemFilters(true, true, true);
-        
+
 //        SmilesGenerator sg = new SmilesGenerator();
 //        String createSMILES = sg.create(comparison.getFirstAtomMapping().getCommonFragmentInTarget());
 //        System.out.println("createSMILES " + createSMILES);
-
         //Get similarity score
         //System.out.println("Tanimoto coefficient:  " + comparison.getTanimotoSimilarity());
         Assert.assertEquals(0.6, comparison.getTanimotoSimilarity());
@@ -650,7 +650,7 @@ public class IsomorphismTest {
 //        SmilesGenerator aromatic = SmilesGenerator.unique().aromatic();
 //        System.out.println("SMILES :" + aromatic.create(comparison.getFirstAtomMapping().getCommonFragmentInQuery()));
 //        System.out.println("SMILES :" + aromatic.create(comparison.getFirstAtomMapping().getCommonFragmentInTarget()));
-        
+
         Assert.assertEquals(0.8235, comparison.getTanimotoSimilarity(), .001);
         Assert.assertEquals(2, comparison.getAllAtomMapping().size());
     }
