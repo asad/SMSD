@@ -4,7 +4,7 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.openscience.cdk.DefaultChemObjectBuilder;
-import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
+import org.openscience.smsd.tools.Utility;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.smiles.SmilesParser;
@@ -61,8 +61,8 @@ public class RingTest {
              * Detect aromatic compounds and rings
              */
 
-            CDKHueckelAromaticityDetector.detectAromaticity(mol1);
-            CDKHueckelAromaticityDetector.detectAromaticity(mol2);
+            Utility.aromatizeDayLight(mol1);
+            Utility.aromatizeDayLight(mol2);
 
             /*
              * Calling the main algorithm to perform MCS search

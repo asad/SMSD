@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.openscience.cdk.AtomContainer;
-import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
+import org.openscience.smsd.tools.Utility;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.io.MDLV2000Reader;
@@ -77,8 +77,8 @@ public class MCSSearch {
             target = AtomContainerManipulator.removeHydrogens(target);
 
 //	Calling the main algorithm to perform MCS cearch
-            CDKHueckelAromaticityDetector.detectAromaticity(query);
-            CDKHueckelAromaticityDetector.detectAromaticity(target);
+            Utility.aromatizeDayLight(query);
+            Utility.aromatizeDayLight(target);
 
             boolean bondSensitive = true;
             boolean ringmatch = false;

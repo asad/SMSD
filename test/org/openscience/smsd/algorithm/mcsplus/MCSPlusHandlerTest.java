@@ -26,7 +26,6 @@ package org.openscience.smsd.algorithm.mcsplus;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.openscience.cdk.DefaultChemObjectBuilder;
-import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -38,6 +37,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
+import org.openscience.smsd.tools.Utility;
 
 /**
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
@@ -200,10 +200,10 @@ public class MCSPlusHandlerTest {
         IAtomContainer target = sp.parseSmiles("Nc1ccccc1");
 
         SMSDNormalizer.percieveAtomTypesAndConfigureAtoms(target);
-        CDKHueckelAromaticityDetector.detectAromaticity(target);
+        Utility.aromatizeDayLight(target);
 
         SMSDNormalizer.percieveAtomTypesAndConfigureAtoms(query);
-        CDKHueckelAromaticityDetector.detectAromaticity(query);
+        Utility.aromatizeDayLight(query);
 
         MCSPlusHandler smsd1 = new MCSPlusHandler(query, target, true, false,false);
         assertNotNull(smsd1.getFirstAtomMapping());

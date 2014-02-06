@@ -39,6 +39,7 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainerCreator;
 import org.openscience.cdk.smiles.SmilesParser;
+import org.openscience.smsd.tools.Utility;
 
 /**
  * Unit testing for the {@link Substructure} class.
@@ -50,7 +51,8 @@ import org.openscience.cdk.smiles.SmilesParser;
 public class SubstructureTest {
 
     /**
-     * Tests if the Substructure can be instantiated without throwing exceptions.
+     * Tests if the Substructure can be instantiated without throwing
+     * exceptions.
      *
      * @throws CDKException
      */
@@ -234,14 +236,14 @@ public class SubstructureTest {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("ONc1ccccc1");
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
-
         Substructure smsd1 = new Substructure(query, target, true, true, true, true);
         smsd1.setChemFilters(true, true, true);
         assertEquals(2, smsd1.getAllAtomMapping().size());
     }
 
     /**
-     * Test of getFirstAtomMapping method, of class SubStructureSearchAlgorithms.
+     * Test of getFirstAtomMapping method, of class
+     * SubStructureSearchAlgorithms.
      *
      * @throws InvalidSmilesException
      * @throws CDKException
@@ -461,7 +463,8 @@ public class SubstructureTest {
     }
 
     /**
-     * Test of getTanimotoSimilarity method, of class SubStructureSearchAlgorithms.
+     * Test of getTanimotoSimilarity method, of class
+     * SubStructureSearchAlgorithms.
      *
      * @throws Exception
      */
@@ -500,7 +503,8 @@ public class SubstructureTest {
     }
 
     /**
-     * Test of getEuclideanDistance method, of class SubStructureSearchAlgorithms.
+     * Test of getEuclideanDistance method, of class
+     * SubStructureSearchAlgorithms.
      *
      * @throws Exception
      */

@@ -2,7 +2,7 @@ package gui;
 
 import java.util.Map;
 import org.openscience.cdk.DefaultChemObjectBuilder;
-import org.openscience.cdk.aromaticity.CDKHueckelAromaticityDetector;
+import org.openscience.smsd.tools.Utility;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.smiles.SmilesParser;
@@ -45,8 +45,8 @@ public class SubstructureSearch {
             mol2 = AtomContainerManipulator.removeHydrogens(mol2);
 
 //	Calling the main algorithm to perform MCS cearch
-            CDKHueckelAromaticityDetector.detectAromaticity(mol1);
-            CDKHueckelAromaticityDetector.detectAromaticity(mol2);
+            Utility.aromatizeDayLight(mol1);
+            Utility.aromatizeDayLight(mol2);
 
             boolean bondSensitive = true;
             boolean ringMatcher = true;
