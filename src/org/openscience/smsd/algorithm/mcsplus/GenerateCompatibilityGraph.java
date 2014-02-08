@@ -93,25 +93,34 @@ public final class GenerateCompatibilityGraph implements Serializable {
         cEdges = Collections.synchronizedList(new ArrayList<Integer>());
         dEdges = Collections.synchronizedList(new ArrayList<Integer>());
 
-//        System.out.println("compatibilityGraphNodes ");
-        compatibilityGraphNodes();
-//        System.out.println("compatibilityGraph ");
-        compatibilityGraph();
-//        System.out.println("c-edges " + getCEgdes().size());
-//        System.out.println("d-edges " + getDEgdes().size());
-
-        if (getCEdgesSize() == 0) {
-            clearCompGraphNodes();
-
-            clearCEgdes();
-            clearDEgdes();
-
-            resetCEdgesSize();
-            resetDEdgesSize();
-
+        /*
+         if all atoms are to be mapped to all bonds please use the method below
+         */
+        if (!isMatchBond() && !isMatchRings() && !matchAtomType) {
             compatibilityGraphNodesIfCEdgeIsZero();
             compatibilityGraphCEdgeZero();
             clearCompGraphNodesCZero();
+        } else {
+//        System.out.println("compatibilityGraphNodes ");
+            compatibilityGraphNodes();
+//        System.out.println("compatibilityGraph ");
+            compatibilityGraph();
+//        System.out.println("c-edges " + getCEgdes().size());
+//        System.out.println("d-edges " + getDEgdes().size());
+
+            if (getCEdgesSize() == 0) {
+                clearCompGraphNodes();
+
+                clearCEgdes();
+                clearDEgdes();
+
+                resetCEdgesSize();
+                resetDEdgesSize();
+
+                compatibilityGraphNodesIfCEdgeIsZero();
+                compatibilityGraphCEdgeZero();
+                clearCompGraphNodesCZero();
+            }
         }
     }
 
@@ -174,24 +183,6 @@ public final class GenerateCompatibilityGraph implements Serializable {
         }
     }
 
-    private boolean isSubset(List<String> labelA, List<String> labelB) {
-        List<String> common = new ArrayList<>(labelA);
-        common.retainAll(labelB);
-        return common.size() == labelB.size();
-    }
-
-    private boolean isEqual(List<String> labelA, List<String> labelB) {
-        boolean flag = true;
-        for (int i = 0; i < labelA.size(); i++) {
-            if (!labelA.get(i).equals(labelB.get(i))) {
-                if (labelA.get(i).compareTo(labelB.get(i)) != 0) {
-                    flag = false;
-                }
-            }
-        }
-        return flag;
-    }
-
     /**
      * Generate Compatibility Graph Nodes
      *
@@ -212,19 +203,16 @@ public final class GenerateCompatibilityGraph implements Serializable {
 //            System.err.println("labelA.getValue() " + labelA.getValue());
             for (Map.Entry<IAtom, List<String>> labelB : labelAtomsBySymbolB.entrySet()) {
                 if (labelA.getKey().getSymbol().equals(labelB.getKey().getSymbol())) {
-                    if ((isMatchBond() && isEqual(labelA.getValue(), labelB.getValue()))
-                            || (!isMatchBond() && isSubset(labelA.getValue(), labelB.getValue()))) {
 //                        System.err.println("labelB.getValue() " + labelB.getValue());
-                        int atomNumberI = source.getAtomNumber(labelA.getKey());
-                        int atomNumberJ = target.getAtomNumber(labelB.getKey());
-                        Edge e = new Edge(atomNumberI, atomNumberJ);
-                        if (!edges.contains(e)) {
-                            edges.add(e);
-                            compGraphNodes.add(atomNumberI);
-                            compGraphNodes.add(atomNumberJ);
-                            compGraphNodes.add(nodeCount);
-                            nodeCount += 1;
-                        }
+                    int atomNumberI = source.getAtomNumber(labelA.getKey());
+                    int atomNumberJ = target.getAtomNumber(labelB.getKey());
+                    Edge e = new Edge(atomNumberI, atomNumberJ);
+                    if (!edges.contains(e)) {
+                        edges.add(e);
+                        compGraphNodes.add(atomNumberI);
+                        compGraphNodes.add(atomNumberJ);
+                        compGraphNodes.add(nodeCount);
+                        nodeCount += 1;
                     }
                 }
             }
@@ -316,7 +304,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
     private Integer compatibilityGraphNodesIfCEdgeIsZero() throws IOException {
 
         int count_nodes = 1;
-        List<String> map = new ArrayList<>();
+        List<String> list = new ArrayList<>();
         compGraphNodesCZero = new ArrayList<>(); //Initialize the compGraphNodesCZero List
         LabelContainer labelContainer = LabelContainer.getInstance();
         compGraphNodes.clear();
@@ -329,7 +317,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
                 //You can also check object equal or charge, hydrogen count etc
                 if ((atom1 instanceof IQueryAtom)
                         && ((IQueryAtom) atom1).matches(atom2)
-                        && !map.contains(i + "_" + j)) {
+                        && !list.contains(i + "_" + j)) {
                     compGraphNodesCZero.add(i);
                     compGraphNodesCZero.add(j);
                     compGraphNodesCZero.add(labelContainer.getLabelID(atom2.getSymbol())); //i.e C is label 1
@@ -338,9 +326,9 @@ public final class GenerateCompatibilityGraph implements Serializable {
                     compGraphNodes.add(j);
                     compGraphNodes.add(count_nodes);
                     count_nodes += 1;
-                    map.add(i + "_" + j);
+                    list.add(i + "_" + j);
                 } else if (atom1.getSymbol().equalsIgnoreCase(atom2.getSymbol())
-                        && !map.contains(i + "_" + j)) {
+                        && !list.contains(i + "_" + j)) {
                     compGraphNodesCZero.add(i);
                     compGraphNodesCZero.add(j);
                     compGraphNodesCZero.add(labelContainer.getLabelID(atom1.getSymbol())); //i.e C is label 1
@@ -349,11 +337,11 @@ public final class GenerateCompatibilityGraph implements Serializable {
                     compGraphNodes.add(j);
                     compGraphNodes.add(count_nodes);
                     count_nodes += 1;
-                    map.add(i + "_" + j);
+                    list.add(i + "_" + j);
                 }
             }
         }
-        map.clear();
+        list.clear();
         return count_nodes;
     }
 
@@ -387,6 +375,9 @@ public final class GenerateCompatibilityGraph implements Serializable {
 
                     if (reactantBond != null && productBond != null) {
                         addZeroEdges(reactantBond, productBond, a, b);
+                    } else if (reactantBond == null && productBond == null) {
+                        dEdges.add((a / 4) + 1);
+                        dEdges.add((b / 4) + 1);
                     }
                 }
             }
@@ -402,8 +393,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
         if (isMatchFeasible(reactantBond, productBond, isMatchBond(), isMatchRings(), matchAtomType)) {
             cEdges.add((indexI / 4) + 1);
             cEdges.add((indexJ / 4) + 1);
-        }
-        if (reactantBond == null && productBond == null) {
+        } else {
             dEdges.add((indexI / 4) + 1);
             dEdges.add((indexJ / 4) + 1);
         }
