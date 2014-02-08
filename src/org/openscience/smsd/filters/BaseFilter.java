@@ -22,7 +22,12 @@
  */
 package org.openscience.smsd.filters;
 
+import java.util.logging.Level;
+import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.tools.ILoggingTool;
+import org.openscience.cdk.tools.LoggingToolFactory;
+import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 
 /**
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
@@ -33,6 +38,8 @@ public class BaseFilter {
 
     private final IAtomContainer mol1;
     private final IAtomContainer mol2;
+    private final static ILoggingTool logger
+            = LoggingToolFactory.createLoggingTool(BaseFilter.class);
 
     /**
      *
@@ -42,6 +49,17 @@ public class BaseFilter {
     public BaseFilter(IAtomContainer sourceMol, IAtomContainer targetMol) {
         this.mol1 = sourceMol;
         this.mol2 = targetMol;
+
+        try {
+            AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol1);
+        } catch (CDKException ex) {
+            logger.error(Level.SEVERE, null, ex);
+        }
+        try {
+            AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol2);
+        } catch (CDKException ex) {
+            logger.error(Level.SEVERE, null, ex);
+        }
     }
 
     /**
