@@ -134,9 +134,9 @@ public class IsomorphismMCSPlusTest extends ImageUtility {
         IAtomContainer molecule2 = smilesParser.parseSmiles("NC(=O)C1=CN(C=CC1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
 
         double score = 0.7959;
-        IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(molecule1);
-        IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(molecule2);
-        Isomorphism smsd1 = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, true, false, false);
+//        IAtomContainer molecule1 = AtomContainerManipulator.removeHydrogens(molecule1);
+//        IAtomContainer molecule2 = AtomContainerManipulator.removeHydrogens(molecule2);
+        Isomorphism smsd1 = new Isomorphism(molecule1, molecule2, Algorithm.MCSPlus, true, false, false);
         smsd1.setChemFilters(true, true, true);
         Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
     }
