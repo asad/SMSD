@@ -38,7 +38,8 @@ import org.openscience.smsd.algorithm.mcgregor.McGregor;
 import org.openscience.smsd.tools.IterationManager;
 
 /**
- * This class handles MCS plus algorithm which is a combination of c-clique algorithm and McGregor algorithm.
+ * This class handles MCS plus algorithm which is a combination of c-clique
+ * algorithm and McGregor algorithm.
  *
  * @cdk.module smsd
  * @cdk.githash
@@ -120,17 +121,17 @@ public final class MCSPlus {
             List<Integer> cEdges = gcg.getCEgdes();
             List<Integer> dEdges = gcg.getDEgdes();
 //
-//            System.out.println("**************************************************");
-//            System.out.println("C_edges: " + cEdges.size());
-//            System.out.println("D_edges: " + dEdges.size());
-//            System.out.println("comp_graph_nodes: " + comp_graph_nodes);
+            System.out.println("**************************************************");
+            System.out.println("C_edges: " + cEdges.size());
+            System.out.println("D_edges: " + dEdges.size());
+            System.out.println("comp_graph_nodes: " + comp_graph_nodes);
             BKKCKCF init = new BKKCKCF(comp_graph_nodes, cEdges, dEdges);
             Stack<List<Integer>> maxCliqueSet = new Stack<>();
             maxCliqueSet.addAll(init.getMaxCliqueSet());
 
-//            System.out.println("Max_Cliques_Set: " + maxCliqueSet);
-//            System.out.println("Best Clique Size: " + init.getBestCliqueSize());
-//            System.out.println("**************************************************");
+            System.out.println("Max_Cliques_Set: " + maxCliqueSet);
+            System.out.println("Best Clique Size: " + init.getBestCliqueSize());
+            System.out.println("**************************************************");
             List<Map<Integer, Integer>> mappings = new ArrayList<>();
 
             while (!maxCliqueSet.empty()) {

@@ -43,8 +43,8 @@ import org.openscience.smsd.algorithm.matchers.DefaultMatcher;
 import org.openscience.smsd.helper.LabelContainer;
 
 /**
- * This class generates compatibility graph between query and target molecule. It also marks edges in the compatibility
- * graph as c-edges or d-edges.
+ * This class generates compatibility graph between query and target molecule.
+ * It also marks edges in the compatibility graph as c-edges or d-edges.
  *
  * @cdk.module smsd
  * @cdk.githash
@@ -274,7 +274,13 @@ public final class GenerateCompatibilityGraph implements Serializable {
     }
 
     private void addEdges(IBond reactantBond, IBond productBond, int iIndex, int jIndex) {
-        if (isMatchFeasible(reactantBond, productBond, isMatchBond(), isMatchRings(), matchAtomType)) {
+
+        if (!isMatchBond() && !isMatchRings() && !matchAtomType) {
+            if (isRawMatch(reactantBond, productBond)) {
+                cEdges.add((iIndex / 3) + 1);
+                cEdges.add((jIndex / 3) + 1);
+            }
+        } else if (isMatchFeasible(reactantBond, productBond, isMatchBond(), isMatchRings(), matchAtomType)) {
             cEdges.add((iIndex / 3) + 1);
             cEdges.add((jIndex / 3) + 1);
         } else {
@@ -283,8 +289,26 @@ public final class GenerateCompatibilityGraph implements Serializable {
         }
     }
 
+    private boolean isRawMatch(IBond reactantBond, IBond productBond) {
+        if (reactantBond.getAtom(0).getSymbol().equals(productBond.getAtom(0).getSymbol())
+                && reactantBond.getAtom(1).getSymbol().equals(productBond.getAtom(1).getSymbol())) {
+            if (reactantBond.getAtom(0).getHybridization().equals(productBond.getAtom(0).getHybridization())
+                    && reactantBond.getAtom(1).getHybridization().equals(productBond.getAtom(1).getHybridization())) {
+                return true;
+            }
+        } else if (reactantBond.getAtom(1).getSymbol().equals(productBond.getAtom(0).getSymbol())
+                && reactantBond.getAtom(0).getSymbol().equals(productBond.getAtom(1).getSymbol())) {
+            if (reactantBond.getAtom(1).getHybridization().equals(productBond.getAtom(0).getHybridization())
+                    && reactantBond.getAtom(0).getHybridization().equals(productBond.getAtom(1).getHybridization())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
-     * compGraphNodesCZero is used to build up of the edges of the compatibility graph
+     * compGraphNodesCZero is used to build up of the edges of the compatibility
+     * graph
      *
      * @return
      * @throws IOException
@@ -334,7 +358,8 @@ public final class GenerateCompatibilityGraph implements Serializable {
     }
 
     /**
-     * compatibilityGraphCEdgeZero is used to build up of the edges of the compatibility graph BIS
+     * compatibilityGraphCEdgeZero is used to build up of the edges of the
+     * compatibility graph BIS
      *
      * @return
      * @throws IOException

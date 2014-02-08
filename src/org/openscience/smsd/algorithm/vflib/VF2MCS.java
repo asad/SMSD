@@ -125,22 +125,19 @@ public final class VF2MCS extends BaseMCS implements IResults {
                 Set<IBond> bondRemovedT = new HashSet<IBond>();
                 for (IBond b1 : targetClone.bonds()) {
                     for (IBond b2 : source.bonds()) {
-                        if (b1.getAtom(0).getSymbol().equals(b2.getAtom(0).getSymbol())) {
-                            if (b1.getAtom(1).getSymbol().equals(b2.getAtom(1).getSymbol())) {
-                                if (!b1.getAtom(0).getHybridization().equals(b2.getAtom(0).getHybridization())
-                                        || !b1.getAtom(1).getHybridization().equals(b2.getAtom(1).getHybridization())) {
-                                    bondRemovedT.add(b1);
-                                }
+                        if (b1.getAtom(0).getSymbol().equals(b2.getAtom(0).getSymbol())
+                                && (b1.getAtom(1).getSymbol().equals(b2.getAtom(1).getSymbol()))) {
+                            if (!b1.getAtom(0).getHybridization().equals(b2.getAtom(0).getHybridization())
+                                    || !b1.getAtom(1).getHybridization().equals(b2.getAtom(1).getHybridization())) {
+                                bondRemovedT.add(b1);
                             }
 
-                        } else if (b1.getAtom(0).getSymbol().equals(b2.getAtom(1).getSymbol())) {
-                            if (b1.getAtom(1).getSymbol().equals(b2.getAtom(0).getSymbol())) {
-                                if (!b1.getAtom(0).getHybridization().equals(b2.getAtom(1).getHybridization())
-                                        || !b1.getAtom(1).getHybridization().equals(b2.getAtom(0).getHybridization())) {
-                                    bondRemovedT.add(b1);
-                                }
+                        } else if (b1.getAtom(0).getSymbol().equals(b2.getAtom(1).getSymbol())
+                                && (b1.getAtom(1).getSymbol().equals(b2.getAtom(0).getSymbol()))) {
+                            if (!b1.getAtom(0).getHybridization().equals(b2.getAtom(1).getHybridization())
+                                    || !b1.getAtom(1).getHybridization().equals(b2.getAtom(0).getHybridization())) {
+                                bondRemovedT.add(b1);
                             }
-
                         }
                     }
                 }
