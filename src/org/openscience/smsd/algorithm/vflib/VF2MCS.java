@@ -35,9 +35,11 @@ import org.openscience.cdk.annotations.TestMethod;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
+import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.algorithm.vflib.interfaces.IMapper;
 import org.openscience.smsd.algorithm.vflib.interfaces.INode;
@@ -112,8 +114,48 @@ public final class VF2MCS extends BaseMCS implements IResults {
 
             ExecutorService executor = Executors.newSingleThreadExecutor();
             CompletionService<List<AtomAtomMapping>> cs = new ExecutorCompletionService<>(executor);
-            MCSSeedGenerator mcsSeedGeneratorUIT = new MCSSeedGenerator(source, target, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.CDKMCS);
-            MCSSeedGenerator mcsSeedGeneratorKoch = new MCSSeedGenerator(source, target, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.MCSPlus);
+
+            /*
+             * Reduce the target size by removing bonds which do not share 
+             * similar Hybridization 
+             */
+            IAtomContainer targetClone = null;
+            try {
+                targetClone = target.clone();
+                Set<IBond> bondRemovedT = new HashSet<IBond>();
+                for (IBond b1 : targetClone.bonds()) {
+                    for (IBond b2 : source.bonds()) {
+                        if (b1.getAtom(0).getSymbol().equals(b2.getAtom(0).getSymbol())) {
+                            if (b1.getAtom(1).getSymbol().equals(b2.getAtom(1).getSymbol())) {
+                                if (!b1.getAtom(0).getHybridization().equals(b2.getAtom(0).getHybridization())
+                                        || !b1.getAtom(1).getHybridization().equals(b2.getAtom(1).getHybridization())) {
+                                    bondRemovedT.add(b1);
+                                }
+                            }
+
+                        } else if (b1.getAtom(0).getSymbol().equals(b2.getAtom(1).getSymbol())) {
+                            if (b1.getAtom(1).getSymbol().equals(b2.getAtom(0).getSymbol())) {
+                                if (!b1.getAtom(0).getHybridization().equals(b2.getAtom(1).getHybridization())
+                                        || !b1.getAtom(1).getHybridization().equals(b2.getAtom(0).getHybridization())) {
+                                    bondRemovedT.add(b1);
+                                }
+                            }
+
+                        }
+                    }
+                }
+
+//                System.out.println("Bond to be removed " + bondRemovedT.size());
+                for (IBond b : bondRemovedT) {
+                    targetClone.removeBond(b);
+                }
+
+            } catch (CloneNotSupportedException ex) {
+                java.util.logging.Logger.getLogger(VF2MCS.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            MCSSeedGenerator mcsSeedGeneratorUIT = new MCSSeedGenerator(source, targetClone, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.CDKMCS);
+            MCSSeedGenerator mcsSeedGeneratorKoch = new MCSSeedGenerator(source, targetClone, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.MCSPlus);
             int jobCounter = 0;
             cs.submit(mcsSeedGeneratorUIT);
             jobCounter++;
