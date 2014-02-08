@@ -121,8 +121,8 @@ public class CDKMCSTest {
         IAtomContainer frag1 = MoleculeFactory.makeCyclohexane(); // no double bond in ring
         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol);
         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(frag1);
-        Utility.aromatizeDayLight(mol);
-        Utility.aromatizeDayLight(frag1);
+        Utility.aromatizeCDK(mol);
+        Utility.aromatizeCDK(frag1);
 
         if (standAlone) {
             //System.out.println("Cyclohexane is a subgraph of alpha-Pinen: " + CDKMCS.isSubgraph(mol, frag1, true, true,true));

@@ -37,6 +37,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
+import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
+import org.openscience.smsd.Isomorphism;
+import org.openscience.smsd.interfaces.Algorithm;
 import org.openscience.smsd.tools.Utility;
 
 /**
@@ -78,7 +81,7 @@ public class MCSPlusHandlerTest {
             target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
             IAtomContainer queryac = null;
             queryac = sp.parseSmiles("Nc1ccccc1");
-            MCSPlusHandler smsd1 = new MCSPlusHandler(queryac, target, true, false,false);
+            MCSPlusHandler smsd1 = new MCSPlusHandler(queryac, target, true, false, false);
             assertNotNull(smsd1.getFirstAtomMapping());
         } catch (InvalidSmilesException ex) {
             Logger.getLogger(MCSPlusHandlerTest.class.getName()).log(Level.SEVERE, null, ex);
@@ -97,7 +100,7 @@ public class MCSPlusHandlerTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer queryac = sp.parseSmiles("Nc1ccccc1");
 
-        MCSPlusHandler smsd1 = new MCSPlusHandler(queryac, target, true, false,false);
+        MCSPlusHandler smsd1 = new MCSPlusHandler(queryac, target, true, false, false);
         assertNotNull(smsd1.getFirstAtomMapping());
 
     }
@@ -114,7 +117,7 @@ public class MCSPlusHandlerTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer queryac = sp.parseSmiles("Nc1ccccc1");
 
-        MCSPlusHandler smsd1 = new MCSPlusHandler(queryac, target, true, false,false);
+        MCSPlusHandler smsd1 = new MCSPlusHandler(queryac, target, true, false, false);
         assertNotNull(smsd1.getFirstAtomMapping());
     }
 
@@ -130,7 +133,7 @@ public class MCSPlusHandlerTest {
 
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer queryac = sp.parseSmiles("Nc1ccccc1");
-        MCSPlusHandler instance = new MCSPlusHandler(queryac, target, true, false,false);
+        MCSPlusHandler instance = new MCSPlusHandler(queryac, target, true, false, false);
         assertNotNull(instance.getFirstAtomMapping());
     }
 
@@ -146,7 +149,7 @@ public class MCSPlusHandlerTest {
         IAtomContainer query = sp.parseSmiles("Nc1cccc(NO)c1");
         IAtomContainer target = sp.parseSmiles("Nc1ccccc1");
 
-        MCSPlusHandler smsd1 = new MCSPlusHandler(query, target, true, false,false);
+        MCSPlusHandler smsd1 = new MCSPlusHandler(query, target, true, false, false);
         assertNotNull(smsd1.getFirstAtomMapping());
         assertEquals(4, smsd1.getAllAtomMapping().size());
     }
@@ -157,15 +160,15 @@ public class MCSPlusHandlerTest {
      * @throws InvalidSmilesException
      */
     @Test
-    public void testgetAllAtomMapping() throws InvalidSmilesException {
+    public void testgetAllAtomMapping() throws InvalidSmilesException, CDKException {
 //        //System.out.println("getAllAtomMapping");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("Nc1cccc(NO)c1");
         IAtomContainer target = sp.parseSmiles("Nc1ccccc1");
-
-        MCSPlusHandler smsd1 = new MCSPlusHandler(query, target, true, true,false);
-        assertNotNull(smsd1.getFirstAtomMapping());
-        assertEquals(4, smsd1.getAllAtomMapping().size());
+        MCSPlusHandler comparison = new MCSPlusHandler(query, target, true, true, false);
+//        Isomorphism comparison = new Isomorphism(query, target, Algorithm.MCSPlus, true, true, false);
+        assertNotNull(comparison.getFirstAtomMapping());
+        assertEquals(4, comparison.getAllAtomMapping().size());
     }
 
     /**
@@ -180,7 +183,7 @@ public class MCSPlusHandlerTest {
         IAtomContainer query = sp.parseSmiles("Nc1cccc(NO)c1");
         IAtomContainer target = sp.parseSmiles("Nc1ccccc1");
 
-        MCSPlusHandler smsd1 = new MCSPlusHandler(query, target, true, false,false);
+        MCSPlusHandler smsd1 = new MCSPlusHandler(query, target, true, false, false);
         assertNotNull(smsd1.getFirstAtomMapping());
 
         assertEquals(7, smsd1.getFirstAtomMapping().getCount());
@@ -205,7 +208,7 @@ public class MCSPlusHandlerTest {
         SMSDNormalizer.percieveAtomTypesAndConfigureAtoms(query);
         Utility.aromatizeDayLight(query);
 
-        MCSPlusHandler smsd1 = new MCSPlusHandler(query, target, true, false,false);
+        MCSPlusHandler smsd1 = new MCSPlusHandler(query, target, true, false, false);
         assertNotNull(smsd1.getFirstAtomMapping());
         assertEquals(7, smsd1.getFirstAtomMapping().getCount());
     }
