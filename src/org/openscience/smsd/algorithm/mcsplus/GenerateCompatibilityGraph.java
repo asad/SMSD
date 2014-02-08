@@ -94,9 +94,9 @@ public final class GenerateCompatibilityGraph implements Serializable {
         dEdges = Collections.synchronizedList(new ArrayList<Integer>());
 
         /*
-         if all atoms are to be mapped to all bonds please use the method below
+         Generate all possible graphs when no ring match or atom type is required
          */
-        if (!isMatchBond() && !isMatchRings() && !matchAtomType) {
+        if (!isMatchRings() && !matchAtomType) {
             compatibilityGraphNodesIfCEdgeIsZero();
             compatibilityGraphCEdgeZero();
             clearCompGraphNodesCZero();
