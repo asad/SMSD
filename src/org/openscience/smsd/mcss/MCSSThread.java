@@ -213,7 +213,7 @@ final public class MCSSThread implements Callable<LinkedBlockingQueue<IAtomConta
                 }
 
             }
-        } catch (Exception e) {
+        } catch (CDKException e) {
             logger.error("ERROR IN MCS Thread: ", e);
         }
         long endTime = Calendar.getInstance().getTimeInMillis();
