@@ -121,20 +121,20 @@ public final class VF2MCS extends BaseMCS implements IResults {
             IAtomContainer targetClone = null;
             try {
                 targetClone = target.clone();
-                Set<IBond> bondRemovedT = new HashSet<IBond>();
+                Set<IBond> bondRemovedT = new HashSet<>();
                 for (IBond b1 : targetClone.bonds()) {
                     for (IBond b2 : source.bonds()) {
                         if (b1.getAtom(0).getSymbol().equals(b2.getAtom(0).getSymbol())
                                 && (b1.getAtom(1).getSymbol().equals(b2.getAtom(1).getSymbol()))) {
-                            if (!b1.getAtom(0).getHybridization().equals(b2.getAtom(0).getHybridization())
-                                    || !b1.getAtom(1).getHybridization().equals(b2.getAtom(1).getHybridization())) {
+                            if ((shouldMatchBonds || shouldMatchRings || matchAtomType) && (!b1.getAtom(0).getHybridization().equals(b2.getAtom(0).getHybridization())
+                                    || !b1.getAtom(1).getHybridization().equals(b2.getAtom(1).getHybridization()))) {
                                 bondRemovedT.add(b1);
                             }
 
                         } else if (b1.getAtom(0).getSymbol().equals(b2.getAtom(1).getSymbol())
                                 && (b1.getAtom(1).getSymbol().equals(b2.getAtom(0).getSymbol()))) {
-                            if (!b1.getAtom(0).getHybridization().equals(b2.getAtom(1).getHybridization())
-                                    || !b1.getAtom(1).getHybridization().equals(b2.getAtom(0).getHybridization())) {
+                            if ((shouldMatchBonds || shouldMatchRings || matchAtomType) && (!b1.getAtom(0).getHybridization().equals(b2.getAtom(1).getHybridization())
+                                    || !b1.getAtom(1).getHybridization().equals(b2.getAtom(0).getHybridization()))) {
                                 bondRemovedT.add(b1);
                             }
                         }
@@ -152,6 +152,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
 
             MCSSeedGenerator mcsSeedGeneratorUIT = new MCSSeedGenerator(source, targetClone, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.CDKMCS);
             MCSSeedGenerator mcsSeedGeneratorKoch = new MCSSeedGenerator(source, targetClone, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.MCSPlus);
+
             int jobCounter = 0;
             cs.submit(mcsSeedGeneratorUIT);
             jobCounter++;
