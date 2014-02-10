@@ -677,4 +677,54 @@ public class IsomorphismTest {
         smsd1.setChemFilters(true, true, true);
         Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
     }
+//NC1=NC=NC2=C1N=CN2[C@@H]1O[C@H](COP(O)(=O)OP(O)(O)=O)[C@@H](O)[C@H]1O.OP(O)(O)=O
+//C[C@@H](NC(=O)[C@@H](C)NC(=O)[C@H](CCCCN)NC(=O)CC[C@@H](NC(=O)[C@H](C)NC(=O)[C@@H](C)O[C@@H]1[C@@H](NC(C)=O)[C@@H](OP(O)(=O)OP(O)(=O)OC\C=C(\C)CC\C=C(\C)CC\C=C(\C)CC\C=C(\C)CC\C=C(\C)CC\C=C(\C)CC\C=C(\C)CC\C=C(\C)CC\C=C(/C)CC\C=C(/C)CCC=C(C)C)O[C@H](CO)[C@H]1O[C@@H]1O[C@H](CO)[C@@H](O)[C@H](O)[C@H]1NC(C)=O)C(O)=O)C(O)=O
+    //C[C@@H](NC(=O)[C@@H](C)NC(=O)[C@H](CCCCN)NC(=O)CC[C@@H](NC(=O)[C@H](C)NC(=O)[C@@H](C)O[C@@H]1[C@@H](NC(C)=O)[C@@H](OP(O)(=O)OP(O)(=O)OC\C=C(\C)CC\C=C(\C)CC\C=C(\C)CC\C=C(\C)CC\C=C(\C)CC\C=C(\C)CC\C=C(\C)CC\C=C(\C)CC\C=C(/C)CC\C=C(/C)CCC=C(C)C)O[C@H](CO)[C@H]1O[C@@H]1O[C@H](CO)[C@@H](O)[C@H](O)[C@H]1NC(C)=O)C(N)=O)C(O)=O
+
+    @Test
+    public void testComplex1() throws Exception {
+//        //System.out.println("getTanimoto for NAD+ and NADH");
+        SmilesParser smilesParser = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        IAtomContainer query = smilesParser.parseSmiles("C[C@@H](NC(=O)[C@@H](C)NC(=O)[C@H](CCCCN)NC(=O)CC[C@@H](NC(=O)[C@H](C)NC(=O)[C@@H](C)O[C@@H]1[C@@H](NC(C)=O)[C@@H](OP(O)(=O)OP(O)(=O)OC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(/C)CC\\C=C(/C)CCC=C(C)C)O[C@H](CO)[C@H]1O[C@@H]1O[C@H](CO)[C@@H](O)[C@H](O)[C@H]1NC(C)=O)C(O)=O)C(O)=O");
+        IAtomContainer target = smilesParser.parseSmiles("C[C@@H](NC(=O)[C@@H](C)NC(=O)[C@H](CCCCN)NC(=O)CC[C@@H](NC(=O)[C@H](C)NC(=O)[C@@H](C)O[C@@H]1[C@@H](NC(C)=O)[C@@H](OP(O)(=O)OP(O)(=O)OC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(/C)CC\\C=C(/C)CCC=C(C)C)O[C@H](CO)[C@H]1O[C@@H]1O[C@H](CO)[C@@H](O)[C@H](O)[C@H]1NC(C)=O)C(N)=O)C(O)=O");
+        IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(query);
+        IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(target);
+        double score = 0.9847;
+        Isomorphism smsd1 = new Isomorphism(ac1, ac2, Algorithm.VFLibMCS, false, false, false);
+        smsd1.setChemFilters(true, true, true);
+        System.out.println(" overlap " +smsd1.getFirstAtomMapping().getCommonFragmentAsSMILES());
+        Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
+    }
+    
+    @Test
+    public void testComplex2() throws Exception {
+//        //System.out.println("getTanimoto for NAD+ and NADH");
+        SmilesParser smilesParser = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        IAtomContainer query = smilesParser.parseSmiles("NC1=NC=NC2=C1N=CN2[C@@H]1O[C@H](COP(O)(=O)OP(O)(O)=O)[C@@H](O)[C@H]1O");
+        IAtomContainer target = smilesParser.parseSmiles("C[C@@H](NC(=O)[C@@H](C)NC(=O)[C@H](CCCCN)NC(=O)CC[C@@H](NC(=O)[C@H](C)NC(=O)[C@@H](C)O[C@@H]1[C@@H](NC(C)=O)[C@@H](OP(O)(=O)OP(O)(=O)OC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(\\C)CC\\C=C(/C)CC\\C=C(/C)CCC=C(C)C)O[C@H](CO)[C@H]1O[C@@H]1O[C@H](CO)[C@@H](O)[C@H](O)[C@H]1NC(C)=O)C(N)=O)C(O)=O");
+        IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(query);
+        IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(target);
+        double score = 0.1214;
+        Isomorphism smsd1 = new Isomorphism(ac1, ac2, Algorithm.VFLibMCS, false, false, false);
+        smsd1.setChemFilters(true, true, true);
+        System.out.println(" overlap " +smsd1.getFirstAtomMapping().getCommonFragmentAsSMILES());
+        Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
+    }
+    
+     @Test
+    public void testComplex3() throws Exception {
+//        //System.out.println("getTanimoto for NAD+ and NADH");
+        SmilesParser smilesParser = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        IAtomContainer query = smilesParser.parseSmiles("COc1cccc(C\\C=C(/C)CC\\C=C(/C)CC\\C=C(/C)CC\\C=C(/C)CC\\C=C(/C)CC\\C=C(/C)CC\\C=C(/C)CCC=C(C)C)c1O");
+        IAtomContainer target = smilesParser.parseSmiles("COC1=CC(=O)C=C(C\\C=C(/C)CC\\C=C(/C)CC\\C=C(/C)CC\\C=C(/C)CC\\C=C(/C)CC\\C=C(/C)CC\\C=C(/C)CCC=C(C)C)C1=O");
+        IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(query);
+        IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(target);
+        double score = 0.98;
+        Isomorphism smsd1 = new Isomorphism(ac1, ac2, Algorithm.VFLibMCS, false, false, false);
+        smsd1.setChemFilters(true, true, true);
+        System.out.println(" overlap " +smsd1.getFirstAtomMapping().getCommonFragmentAsSMILES());
+        Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
+        Assert.assertEquals(2, smsd1.getAllAtomMapping().size());
+    }
+
 }
