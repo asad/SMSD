@@ -232,15 +232,16 @@ public class InputHandler extends Utility {
             throw new IOException(
                     "Input path " + filename + " is a directory, not a file");
         }
-        if (type.equals("MOL")) {
-            return new MDLV2000Reader(
-                    new FileReader(input), IChemObjectReader.Mode.RELAXED);
-        } else if (type.equals("CML")) {
-            return new CMLReader(new FileInputStream(input));
-        } else if (type.equals("ML2")) {
-            return new Mol2Reader(new FileReader(input));
-        } else if (type.equals("PDB")) {
-            return new PDBReader(new FileReader(input));
+        switch (type) {
+            case "MOL":
+                return new MDLV2000Reader(
+                        new FileReader(input), IChemObjectReader.Mode.RELAXED);
+            case "CML":
+                return new CMLReader(new FileInputStream(input));
+            case "ML2":
+                return new Mol2Reader(new FileReader(input));
+            case "PDB":
+                return new PDBReader(new FileReader(input));
         }
         return null;
     }
@@ -254,10 +255,13 @@ public class InputHandler extends Utility {
     public void configure(IAtomContainer molecule, String type) throws CDKException {
         IAtomContainer mol = molecule;
         String id = "";
-        if (type.equals("PDB")) {
-            LigandHelper.addMissingBondOrders(mol);
-        } else if (type.equals("SDF")) {
-            id = (String) mol.getProperty(CDKConstants.TITLE);
+        switch (type) {
+            case "PDB":
+                LigandHelper.addMissingBondOrders(mol);
+                break;
+            case "SDF":
+                id = (String) mol.getProperty(CDKConstants.TITLE);
+                break;
         }
         aromatizeDayLight(mol);
         mol = new AtomContainer(mol);
@@ -270,12 +274,13 @@ public class InputHandler extends Utility {
     }
 
     private IAtomContainer getMolFromString(String stringData, String type) throws CDKException {
-        if (type.equals("SMI")) {
-            return getMolFromSmiles(stringData);
-        } else if (type.equals("SIG")) {
-            return getMolFromSignature(stringData);
-        } else {
-            return null;
+        switch (type) {
+            case "SMI":
+                return getMolFromSmiles(stringData);
+            case "SIG":
+                return getMolFromSignature(stringData);
+            default:
+                return null;
         }
     }
 
