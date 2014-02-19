@@ -263,7 +263,7 @@ public class InputHandler extends Utility {
                 id = (String) mol.getProperty(CDKConstants.TITLE);
                 break;
         }
-        aromatizeCDK(mol);
+        aromatizeDayLight(mol);
         mol = new AtomContainer(mol);
         mol.setID(id);
         if (argumentHandler.isImage()) {
@@ -431,7 +431,7 @@ public class InputHandler extends Utility {
                 }
 
                 adder.addImplicitHydrogens(atomcontainerHFree);
-                aromatizeCDK(atomcontainerHFree);
+                aromatizeDayLight(atomcontainerHFree);
                 String index = String.valueOf((atomContainerNr + 1));
                 boolean flag = ConnectivityChecker.isConnected(atomcontainerHFree);
                 String title = atomcontainerHFree.getProperty(CDKConstants.TITLE) != null
