@@ -1,4 +1,3 @@
-
 package cmd.pdb;
 
 import java.io.BufferedReader;
@@ -12,18 +11,18 @@ import java.util.Map;
 import org.openscience.cdk.interfaces.IBond;
 
 public class BondTypeFactory {
-    
+
     private class Dictionary {
-        
+
         private HashMap<String, Map<String, Map<String, Integer>>> map;
-        
+
         public Dictionary() {
             map = new HashMap<String, Map<String, Map<String, Integer>>>();
         }
-        
+
         public int getValue(String keyA, String keyB, String keyC) {
             if (map.containsKey(keyA)) {
-                Map<String, Map<String, Integer>> innerMap = map.get(keyA); 
+                Map<String, Map<String, Integer>> innerMap = map.get(keyA);
                 if (innerMap.containsKey(keyB)) {
                     if (innerMap.get(keyB).containsKey(keyC)) {
                         return innerMap.get(keyB).get(keyC);
@@ -36,14 +35,14 @@ public class BondTypeFactory {
             }
             return -1;
         }
-        
+
         public void add(String line) {
             String[] parts = line.split(":");
             String keyA = parts[0];
             String keyB = parts[1];
             String keyC = parts[2];
             int value = Integer.parseInt(parts[3]);
-            
+
             if (map.containsKey(keyA)) {
                 Map<String, Map<String, Integer>> innerMap = map.get(keyA);
                 if (innerMap.containsKey(keyB)) {
@@ -57,21 +56,21 @@ public class BondTypeFactory {
                     innerMap.put(keyB, makeInnerInner(keyB, keyC, value));
                 }
             } else {
-                Map<String, Map<String, Integer>> innerMap = 
-                    new HashMap<String, Map<String, Integer>>();
+                Map<String, Map<String, Integer>> innerMap
+                        = new HashMap<String, Map<String, Integer>>();
                 innerMap.put(keyB, makeInnerInner(keyB, keyC, value));
                 map.put(keyA, innerMap);
             }
         }
-        
-        private Map<String, Integer> makeInnerInner( 
-                                    String keyB, String keyC, int value) {
-            Map<String, Integer> innerInnerMap = 
-                new HashMap<String, Integer>();
+
+        private Map<String, Integer> makeInnerInner(
+                String keyB, String keyC, int value) {
+            Map<String, Integer> innerInnerMap
+                    = new HashMap<String, Integer>();
             innerInnerMap.put(keyC, value);
             return innerInnerMap;
         }
-        
+
         public void toStream(PrintStream stream) {
             for (String keyA : map.keySet()) {
                 Map<String, Map<String, Integer>> innerMap = map.get(keyA);
@@ -84,41 +83,44 @@ public class BondTypeFactory {
             }
         }
     }
-    
+
     public static final String DICTIONARY = "cmd/pdb/bond_dictionary.txt";
-    
+
     private static BondTypeFactory instance;
-    
-    private Dictionary bondMap;
-    
+
+    private final Dictionary bondMap;
+
     private BondTypeFactory() throws IOException {
-        InputStream input = 
-            this.getClass().getClassLoader().getResourceAsStream(DICTIONARY);
-        BufferedReader reader = new BufferedReader(new InputStreamReader(input));
-        bondMap = new Dictionary();
-        String line;
-        while ((line = reader.readLine()) != null) {
-            bondMap.add(line);
+        InputStream input
+                = this.getClass().getClassLoader().getResourceAsStream(DICTIONARY);
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(input))) {
+            bondMap = new Dictionary();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                bondMap.add(line);
+            }
         }
-        reader.close();
     }
-    
+
     public static BondTypeFactory getInstance() throws IOException {
         if (instance == null) {
             instance = new BondTypeFactory();
         }
         return instance;
     }
-    
+
     public IBond.Order getBondOrder(String resName, String atomNameA, String atomNameB) {
         int value = bondMap.getValue(resName, atomNameA, atomNameB);
         switch (value) {
-            case 2 : return IBond.Order.DOUBLE;
-            case 3 : return IBond.Order.TRIPLE;
-            default: return IBond.Order.SINGLE; 
+            case 2:
+                return IBond.Order.DOUBLE;
+            case 3:
+                return IBond.Order.TRIPLE;
+            default:
+                return IBond.Order.SINGLE;
         }
     }
-    
+
     public void printDictionaryToStream(PrintStream stream) {
         bondMap.toStream(stream);
     }

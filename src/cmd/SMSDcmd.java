@@ -42,7 +42,6 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IAtomContainerSet;
-import org.openscience.cdk.smiles.SmilesGenerator;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
@@ -414,8 +413,8 @@ public class SMSDcmd extends Utility {
             outputHandler.startNew(out);
         }
 
-        aromatizeDayLight(query);
-        aromatizeDayLight(target);
+        Utility.aromatizeCDK(query);
+        Utility.aromatizeCDK(target);
 
         if (argumentHandler.isApplyHAdding()) {
             AtomContainerManipulator.convertImplicitToExplicitHydrogens(query);

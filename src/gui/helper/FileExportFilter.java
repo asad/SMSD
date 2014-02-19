@@ -20,7 +20,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-
 package gui.helper;
 
 import java.io.File;
@@ -33,7 +32,7 @@ import javax.swing.JFileChooser;
  * An export filter for JCP file formats
  *
  * @cdk.module jchempaint
- * @author  Egon Willighagen
+ * @author Egon Willighagen
  * @cdk.created 2003-04-01
  */
 public class FileExportFilter extends javax.swing.filechooser.FileFilter {
@@ -52,6 +51,8 @@ public class FileExportFilter extends javax.swing.filechooser.FileFilter {
 
     /**
      * Adds the JCPFileFilter to the JFileChooser object.
+     *
+     * @param chooser
      */
     public static void addChoosableFileFilters(JFileChooser chooser) {
         chooser.addChoosableFileFilter(new FileExportFilter(FileExportFilter.bmp));
@@ -65,17 +66,22 @@ public class FileExportFilter extends javax.swing.filechooser.FileFilter {
     public String getDescription() {
         String type = (String) types.get(0);
         String result = "Unknown";
-        if (type.equals(png)) {
-            result = "PNG";
-        } else if (type.equals(bmp)) {
-            result = "BMP";
-        } else if (type.equals(jpg)) {
-            result = "JPEG";
+        switch (type) {
+            case png:
+                result = "PNG";
+                break;
+            case bmp:
+                result = "BMP";
+                break;
+            case jpg:
+                result = "JPEG";
+                break;
         }
         return result;
     }
 
     // Accept all directories and all gif, jpg, or tiff files.
+    @Override
     public boolean accept(File f) {
         boolean accepted = false;
         if (f.isDirectory()) {

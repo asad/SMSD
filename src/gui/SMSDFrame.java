@@ -22,8 +22,10 @@
  */
 package gui;
 
+import cmd.pdb.LigandHelper;
 import org.openscience.smsd.tools.Utility;
 import gui.helper.FileExportFilter;
+import gui.helper.FileFilterUtility;
 import gui.helper.ImagePreView;
 import gui.helper.molFileFilter;
 import java.awt.Color;
@@ -36,6 +38,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.text.NumberFormat;
@@ -56,14 +59,23 @@ import javax.swing.JScrollPane;
 import javax.swing.SwingConstants;
 import javax.swing.filechooser.FileFilter;
 import org.openscience.cdk.AtomContainer;
+import org.openscience.cdk.CDKConstants;
+import org.openscience.cdk.ChemFile;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.interfaces.IChemFile;
+import org.openscience.cdk.io.CMLReader;
 import org.openscience.cdk.io.IChemObjectReader;
+import org.openscience.cdk.io.ISimpleChemObjectReader;
+import org.openscience.cdk.io.MDLReader;
 import org.openscience.cdk.io.MDLV2000Reader;
+import org.openscience.cdk.io.Mol2Reader;
+import org.openscience.cdk.io.PDBReader;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
+import org.openscience.cdk.tools.manipulator.ChemFileManipulator;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.Isomorphism;
 import org.openscience.smsd.interfaces.Algorithm;
@@ -291,14 +303,15 @@ public class SMSDFrame extends JFrame {
                 jTextArea1.append("Calculating MCS...." + "." + NEW_LINE);
 //                System.out.println("Calculating MCS....");
 
+                AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(queryMolecule);
+                AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(targetMolecule);
+
                 if (jCheckBox1.isSelected()) {
 
                     queryMolecule = AtomContainerManipulator.removeHydrogens(queryMolecule);
                     targetMolecule = AtomContainerManipulator.removeHydrogens(targetMolecule);
 
                 }
-                Utility.aromatizeDayLight(targetMolecule);
-                Utility.aromatizeDayLight(queryMolecule);
 
                 Isomorphism comparison = null;
                 if (jRadioButton1.isSelected()) {
@@ -412,28 +425,92 @@ public class SMSDFrame extends JFrame {
 
     }//GEN-LAST:event_jButton3ActionPerformed
 
-    private IAtomContainer readMol(File fileName) {
+    private IAtomContainer readMol(File file) {
+        IAtomContainer molecule = null;
 
-        IAtomContainer container = null;
         try {
-            MDLV2000Reader molReader;
-            molReader = new MDLV2000Reader(new FileReader(fileName), IChemObjectReader.Mode.RELAXED);
-            IAtomContainer molecule;
-            molecule = (IAtomContainer) molReader.read(new AtomContainer());
-            molReader.close();
+            List<IAtomContainer> allAtomContainers;
+            String extension = FileFilterUtility.getExtension(file);
+
+            try (ISimpleChemObjectReader reader = getReader(file, extension)) {
+                IChemFile chemFile = reader.read(new ChemFile());
+                allAtomContainers = ChemFileManipulator.getAllAtomContainers(chemFile);
+            }
+            for (IAtomContainer frag : allAtomContainers) {
+                if (molecule == null || frag.getAtomCount() > molecule.getAtomCount()) {
+                    molecule = frag;
+                }
+            }
+            configure(molecule, extension);
 
             count = 0;
-            container = molecule;
-//            container = AtomContainerManipulator.removeHydrogens(mol);
-            jTextArea1.append("Created Mol = " + fileName.getName() + NEW_LINE);
+            jTextArea1.append("Created Mol = " + file.getName() + NEW_LINE);
             jTextArea1.setCaretPosition(jTextArea1.getDocument().getLength());
-//            System.out.println("Created Mol = " + fileName.getName());
+
         } catch (IOException ex) {
             Logger.getLogger(SMSDFrame.class.getName()).log(Level.SEVERE, null, ex);
         } catch (CDKException ex) {
             Logger.getLogger(SMSDFrame.class.getName()).log(Level.SEVERE, null, ex);
         }
-        return container;
+
+        return molecule;
+    }
+
+    /**
+     *
+     * @param molecule
+     * @param type
+     * @throws CDKException
+     */
+    public void configure(IAtomContainer molecule, String type) throws CDKException {
+        IAtomContainer mol = molecule;
+        String id = "";
+        switch (type) {
+            case "pdb":
+                LigandHelper.addMissingBondOrders(mol);
+                break;
+            case "sdf":
+                id = (String) mol.getProperty(CDKConstants.TITLE);
+                break;
+        }
+        mol = new AtomContainer(mol);
+        mol.setID(id);
+        setAtomID(mol);
+    }
+
+    private static void setAtomID(IAtomContainer mol) {
+        int index = 1;
+        for (IAtom atom : mol.atoms()) {
+            atom.setID(String.valueOf(index));
+            index++;
+        }
+    }
+
+    private ISimpleChemObjectReader getReader(File file, String extension) throws IOException, CDKException {
+
+        if (file.isDirectory()) {
+            throw new IOException(
+                    "Input path " + file + " is a directory, not a file");
+        }
+
+        switch (extension) {
+            case "mol":
+                return new MDLV2000Reader(
+                        new FileReader(file), IChemObjectReader.Mode.RELAXED);
+            case "sdf":
+                return new MDLReader(
+                        new FileReader(file));
+            case "cml":
+                return new CMLReader(new FileInputStream(file));
+            case "ml2":
+                return new Mol2Reader(new FileReader(file));
+            case "pdb":
+                PDBReader reader = new PDBReader(new FileReader(file));
+                reader.getSetting("UseRebondTool").setSetting("false");      // UseRebondTool
+                reader.getSetting("ReadConnectSection").setSetting("true");  // ReadConnectSection
+                return reader;
+        }
+        return null;
     }
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed

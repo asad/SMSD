@@ -20,7 +20,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-
 package gui.helper;
 
 import java.io.File;
@@ -38,10 +37,11 @@ public class FileFilterUtility {
 //    public final static String tiff = "tiff";
 //    public final static String tif = "tif";
 //    public final static String png = "png";
-
     public final static String mol = "mol";
     public final static String cml = "cml";
     public final static String sdf = "sdf";
+    public final static String mol2 = "ml2";
+    public final static String pdb = "pdb";
 
     /*
      * Get the extension of a file.
@@ -57,7 +57,9 @@ public class FileFilterUtility {
         return ext;
     }
 
-    /** Returns an ImageIcon, or null if the path was invalid.
+    /**
+     * Returns an ImageIcon, or null if the path was invalid.
+     *
      * @param path
      * @return
      */

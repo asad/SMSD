@@ -40,14 +40,17 @@ public class molFileFilter extends FileFilter {
 
         String extension = FileFilterUtility.getExtension(f);
         if (extension != null) {
-            if (extension.equals(FileFilterUtility.mol)) {
-                return true;
-            } else if (extension.equals(FileFilterUtility.sdf)) {
-                return true;
-            } else if (extension.equals(FileFilterUtility.cml)) {
-                return true;
-            } else {
-                return false;
+            switch (extension) {
+                case FileFilterUtility.mol:
+                    return true;
+                case FileFilterUtility.sdf:
+                    return true;
+                case FileFilterUtility.cml:
+                    return true;
+                case FileFilterUtility.pdb:
+                    return true;
+                default:
+                    return false;
             }
         }
 
@@ -57,6 +60,6 @@ public class molFileFilter extends FileFilter {
     //The description of this filter
     @Override
     public String getDescription() {
-        return ".mol,.sdf,.cml";
+        return ".mol,.sdf,.cml,.pdb";
     }
 }
