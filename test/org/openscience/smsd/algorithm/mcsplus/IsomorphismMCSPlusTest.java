@@ -253,7 +253,7 @@ public class IsomorphismMCSPlusTest extends ImageUtility {
 
     @Test
     public void testSolutionCount() throws Exception {
-        System.out.println("33");
+        System.out.println("9");
         String g1 = "NC1CCCCC1";
         String g2 = "NC1CCC(N)CC1";
         String g3 = "CNC1CCC(N)CC1";
