@@ -489,34 +489,13 @@ public class SMSDcmd extends Utility {
         }
 
         if (argumentHandler.shouldOutputSubgraph()) {
-            Map<Integer, Integer> mapping = getIndexMapping(smsd.getFirstAtomMapping());
-            IAtomContainer subgraph = getSubgraph(target, mapping);
+            IAtomContainer subgraph = smsd.getFirstAtomMapping().getCommonFragment();
             String outpath = argumentHandler.getOutputFilepath();
             String outtype = argumentHandler.getOutputFiletype();
             outputHandler.writeMol(outtype, subgraph, outpath);
         }
 
         outputHandler.closeFiles();
-    }
-
-    private static IAtomContainer getSubgraph(
-            IAtomContainer container, Map<Integer, Integer> mapping) throws CloneNotSupportedException {
-        Collection<Integer> values = mapping.values();
-        List<IAtom> subgraphAtoms = new ArrayList<>();
-        IAtomContainer subgraph = container.clone();
-        for (Integer index : values) {
-            subgraphAtoms.add(subgraph.getAtom(index));
-        }
-        List<IAtom> atoms = new ArrayList<IAtom>();
-        for (IAtom atom : subgraph.atoms()) {
-            atoms.add(atom);
-        }
-        for (IAtom atom : atoms) {
-            if (!subgraphAtoms.contains(atom)) {
-                subgraph.removeAtomAndConnectedElectronContainers(atom);
-            }
-        }
-        return subgraph;
     }
 
     private static BaseMapping run(
