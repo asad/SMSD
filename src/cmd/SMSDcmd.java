@@ -413,8 +413,8 @@ public class SMSDcmd extends Utility {
             outputHandler.startNew(out);
         }
 
-        Utility.aromatizeCDK(query);
-        Utility.aromatizeCDK(target);
+        Utility.aromatizeDayLight(query);
+        Utility.aromatizeDayLight(target);
 
         if (argumentHandler.isApplyHAdding()) {
             AtomContainerManipulator.convertImplicitToExplicitHydrogens(query);

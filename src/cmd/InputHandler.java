@@ -26,7 +26,6 @@
  */
 package cmd;
 
-import org.openscience.smsd.tools.Utility;
 import cmd.pdb.LigandHelper;
 import java.io.File;
 import java.io.FileInputStream;
@@ -67,12 +66,13 @@ import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.cdk.tools.manipulator.ChemFileManipulator;
+import static org.openscience.smsd.tools.Utility.aromatizeDayLight;
 
 /**
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-public class InputHandler extends Utility {
+public class InputHandler {
 
     private final static ILoggingTool logger
             = LoggingToolFactory.createLoggingTool(InputHandler.class);
