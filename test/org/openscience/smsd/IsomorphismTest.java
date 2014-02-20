@@ -40,6 +40,7 @@ import org.openscience.cdk.io.MDLV2000Reader;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainerCreator;
 import org.openscience.cdk.normalize.SMSDNormalizer;
+import org.openscience.cdk.smiles.SmilesGenerator;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.algorithm.mcsplus.MCSPlusHandlerTest;
@@ -704,4 +705,31 @@ public class IsomorphismTest {
 //        Assert.assertEquals(0.8235, comparison.getTanimotoSimilarity(), .001);
 //        Assert.assertEquals(2, comparison.getAllAtomMapping().size());
 //    }
+    /**
+     * Test Common Fragment Expected SMLIES is Given the two molecules CCCNCC &
+     * CNCCS the MCS returned is N([CH2])CC which is correct. But it could also
+     * have been [CH2]CN[CH2]
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testCommonFragment() throws Exception {
+        System.out.println("32");
+        SmilesParser smilesParser = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        IAtomContainer query = smilesParser.parseSmiles("CCCNCC");//("CNCCS");
+        IAtomContainer target = smilesParser.parseSmiles("CNCCS");//("CCCNCC");
+
+        IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(query);
+        IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(target);
+        double score = 0.5714;
+        Isomorphism overlap = new Isomorphism(ac1, ac2, Algorithm.VFLibMCS, true, true, true);
+        overlap.setChemFilters(true, true, true);
+        Assert.assertEquals(score, overlap.getTanimotoSimilarity(), 0.001);
+        SmilesGenerator aromatic = SmilesGenerator.unique().aromatic();
+        System.out.println("SMILES Q :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnQuery()));
+        System.out.println("SMILES T :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnTarget()));
+        System.out.println("SMILES Common:" + overlap.getFirstAtomMapping().getCommonFragmentAsSMILES());
+//
+    }
+
 }
