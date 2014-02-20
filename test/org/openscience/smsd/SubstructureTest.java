@@ -38,8 +38,9 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainerCreator;
+import org.openscience.cdk.smiles.SmilesGenerator;
 import org.openscience.cdk.smiles.SmilesParser;
-import org.openscience.smsd.tools.Utility;
+import org.openscience.smsd.interfaces.Algorithm;
 
 /**
  * Unit testing for the {@link Substructure} class.
@@ -635,5 +636,43 @@ public class SubstructureTest {
         IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
         Substructure smsd2 = new Substructure(queryContainer, target, false);
         Assert.assertTrue(smsd2.isSubgraph());
+    }
+
+    @Test
+    public void testSolutionCount() throws Exception {
+        System.out.println("33");
+        String g1 = "NC1CCCCC1";
+        String g2 = "NC1CCC(N)CC1";
+        String g3 = "CNC1CCC(N)CC1";
+        String g4 = "CNC1CCC(CC1)NC";
+
+//        String g1 = "OC1CCCCC1";
+//        String g2 = "OC1CCC(O)CC1";
+//        String g3 = "COC1CCC(O)CC1";
+//        String g4 = "COC1CCC(CC1)OC";
+        SmilesParser smilesParser = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        IAtomContainer ac1 = smilesParser.parseSmiles(g1);
+        IAtomContainer ac2 = smilesParser.parseSmiles(g2);
+        IAtomContainer ac3 = smilesParser.parseSmiles(g3);
+        IAtomContainer ac4 = smilesParser.parseSmiles(g4);
+
+        Substructure overlap = new Substructure(ac1, ac2, true, false, false, true);
+        overlap.setChemFilters(false, false, true);
+        junit.framework.Assert.assertEquals(4, overlap.getAllAtomMapping().size());
+        overlap = new Substructure(ac1, ac3, true, false, false, true);
+        overlap.setChemFilters(false, false, true);
+        junit.framework.Assert.assertEquals(4, overlap.getAllAtomMapping().size());
+        overlap = new Substructure(ac1, ac4, true, false, false, true);
+        overlap.setChemFilters(false, false, true);
+        junit.framework.Assert.assertEquals(4, overlap.getAllAtomMapping().size());
+        overlap = new Substructure(ac1, ac1, true, false, false, true);
+        overlap.setChemFilters(false, false, true);
+        junit.framework.Assert.assertEquals(2, overlap.getAllAtomMapping().size());
+
+//        SmilesGenerator aromatic = SmilesGenerator.unique().aromatic();
+//        System.out.println("SMILES Q :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnQuery()));
+//        System.out.println("SMILES T :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnTarget()));
+//        System.out.println("SMILES Common:" + overlap.getFirstAtomMapping().getCommonFragmentAsSMILES());
+//
     }
 }
