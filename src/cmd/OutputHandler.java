@@ -509,10 +509,13 @@ public class OutputHandler {
         } else {
             out = new FileWriter(filepath);
         }
-        if (outputType.equals("MOL")) {
-            writeMolToMolfile(mol, out);
-        } else if (outputType.equals("SMI")) {
-            writeMolToSmiles(mol, out);
+        switch (outputType) {
+            case "MOL":
+                writeMolToMolfile(mol, out);
+                break;
+            case "SMI":
+                writeMolToSmiles(mol, out);
+                break;
         }
     }
 
