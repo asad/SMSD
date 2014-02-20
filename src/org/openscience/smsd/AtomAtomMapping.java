@@ -30,11 +30,15 @@ package org.openscience.smsd;
 import com.google.common.collect.HashBiMap;
 import java.io.Serializable;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.smiles.SmilesGenerator;
+import org.openscience.cdk.tools.CDKHydrogenAdder;
+import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 
 /**
  * Holds atom-atom mappings information between source and target molecules
@@ -281,6 +285,17 @@ public final class AtomAtomMapping implements Serializable {
 
         for (IAtom atom : uniqueAtoms) {
             ac.removeAtomAndConnectedElectronContainers(atom);
+        }
+
+        try {
+            CDKHydrogenAdder.getInstance(ac.getBuilder()).addImplicitHydrogens(ac);
+        } catch (CDKException ex) {
+            Logger.getLogger(AtomAtomMapping.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        try {
+            AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(ac);
+        } catch (CDKException ex) {
+            Logger.getLogger(AtomAtomMapping.class.getName()).log(Level.SEVERE, null, ex);
         }
 
         return ac;
