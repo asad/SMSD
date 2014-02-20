@@ -136,11 +136,11 @@ public class IsomorphismTest {
             System.out.println("3");
             SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
             IAtomContainer target;
-            target = sp.parseSmiles //("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
-                    ("NC1=CC=C(N)C=C1");
+            target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
+            //("NC1=CC=C(N)C=C1");
             IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
             Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.CDKMCS, true, false, false);
-            smsd1.setChemFilters(true, true, true);
+            smsd1.setChemFilters(false, false, false);
             Assert.assertEquals(7, smsd1.getFirstAtomMapping().getCount());
             Assert.assertEquals(2, smsd1.getAllAtomMapping().size());
             Assert.assertNotNull(smsd1.getFirstAtomMapping());

@@ -33,6 +33,7 @@ import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.exception.InvalidSmilesException;
+import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainerCreator;
@@ -248,6 +249,54 @@ public class IsomorphismMCSPlusTest extends ImageUtility {
         comparison.setChemFilters(true, true, true);
         Assert.assertEquals(1.0, comparison.getTanimotoSimilarity(), .09);
         Assert.assertEquals(1, comparison.getAllAtomMapping().size());
+    }
+
+    @Test
+    public void testSolutionCount() throws Exception {
+        System.out.println("33");
+        String g1 = "NC1CCCCC1";
+        String g2 = "NC1CCC(N)CC1";
+        String g3 = "CNC1CCC(N)CC1";
+        String g4 = "CNC1CCC(CC1)NC";
+
+//        String g1 = "OC1CCCCC1";
+//        String g2 = "OC1CCC(O)CC1";
+//        String g3 = "COC1CCC(O)CC1";
+//        String g4 = "COC1CCC(CC1)OC";
+        SmilesParser smilesParser = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        IAtomContainer ac1 = smilesParser.parseSmiles(g1);
+        setID(ac1);
+        IAtomContainer ac2 = smilesParser.parseSmiles(g2);
+        setID(ac2);
+        IAtomContainer ac3 = smilesParser.parseSmiles(g3);
+        setID(ac3);
+        IAtomContainer ac4 = smilesParser.parseSmiles(g4);
+        setID(ac4);
+
+        Isomorphism overlap = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, true, false, false);
+        overlap.setChemFilters(false, false, true);
+        Assert.assertEquals(4, overlap.getAllAtomMapping().size());
+        overlap = new Isomorphism(ac1, ac3, Algorithm.MCSPlus, true, false, false);
+        overlap.setChemFilters(false, false, true);
+        Assert.assertEquals(4, overlap.getAllAtomMapping().size());
+        overlap = new Isomorphism(ac1, ac4, Algorithm.MCSPlus, true, false, false);
+        overlap.setChemFilters(false, false, true);
+        Assert.assertEquals(4, overlap.getAllAtomMapping().size());
+        overlap = new Isomorphism(ac1, ac1, Algorithm.MCSPlus, true, false, false);
+        overlap.setChemFilters(false, false, true);
+        Assert.assertEquals(2, overlap.getAllAtomMapping().size());
+
+//        SmilesGenerator aromatic = SmilesGenerator.unique().aromatic();
+//        System.out.println("SMILES Q :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnQuery()));
+//        System.out.println("SMILES T :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnTarget()));
+//        System.out.println("SMILES Common:" + overlap.getFirstAtomMapping().getCommonFragmentAsSMILES());
+//
+    }
+
+    private void setID(IAtomContainer ac) {
+        for (IAtom a : ac.atoms()) {
+            a.setID(ac.getAtomNumber(a) + "");
+        }
     }
 
 }
