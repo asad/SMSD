@@ -287,6 +287,10 @@ public final class AtomAtomMapping implements Serializable {
             ac.removeAtomAndConnectedElectronContainers(atom);
         }
 
+        /*
+         Get canonicalised by fixing hydrogens 
+         o/p i.e. atom type + CDKHydrogenManipulator
+         */
         try {
             CDKHydrogenAdder.getInstance(ac.getBuilder()).addImplicitHydrogens(ac);
         } catch (CDKException ex) {
