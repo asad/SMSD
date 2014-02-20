@@ -94,8 +94,6 @@ public final class DefaultAtomMatcher implements AtomMatcher {
                 return false;
             }
 
-//            System.out.print("\n" + getQueryAtom().getSymbol() + " Query isRingAtom " + getQueryAtom().getFlag(CDKConstants.ISINRING));
-//            System.out.println(", " + targetAtom.getSymbol() + " Target isRingAtom " + targetAtom.getFlag(CDKConstants.ISINRING));
             if (isMatchRings()
                     && (isAliphaticAtom(getQueryAtom()) && isRingAtom(targetAtom))) {
                 return false;
@@ -108,6 +106,9 @@ public final class DefaultAtomMatcher implements AtomMatcher {
                 }
             }
         }
+//        System.out.print("\n Q: " + getQueryAtom().getSymbol() + " " + getQueryAtom().getID());
+//        System.out.print(", T: " + targetAtom.getSymbol() + " " + targetAtom.getID());
+//        System.out.println(", matches");
         return true;
     }
 
