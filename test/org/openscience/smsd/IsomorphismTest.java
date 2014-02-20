@@ -135,9 +135,10 @@ public class IsomorphismTest {
             System.out.println("3");
             SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
             IAtomContainer target;
-            target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
+            target = sp.parseSmiles //("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
+                    ("NC1=CC=C(N)C=C1");
             IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
-            Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false, false);
+            Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.CDKMCS, true, false, false);
             smsd1.setChemFilters(true, true, true);
             Assert.assertEquals(7, smsd1.getFirstAtomMapping().getCount());
             Assert.assertEquals(2, smsd1.getAllAtomMapping().size());
@@ -726,10 +727,56 @@ public class IsomorphismTest {
         overlap.setChemFilters(true, true, true);
         Assert.assertEquals(score, overlap.getTanimotoSimilarity(), 0.001);
         SmilesGenerator aromatic = SmilesGenerator.unique().aromatic();
-        System.out.println("SMILES Q :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnQuery()));
-        System.out.println("SMILES T :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnTarget()));
-        System.out.println("SMILES Common:" + overlap.getFirstAtomMapping().getCommonFragmentAsSMILES());
+//        System.out.println("SMILES Q :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnQuery()));
+//        System.out.println("SMILES T :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnTarget()));
+//        System.out.println("SMILES Common:" + overlap.getFirstAtomMapping().getCommonFragmentAsSMILES());
 //
     }
 
+    /*
+     g1: NC1CCCCC1
+     g2: NC1CCC(N)CC1
+     g3: CNC1CCC(N)CC1
+     g4: CNC1CCC(CC1)NC
+
+     The correct number of all MCS mappings should be
+
+     |MCS(g1, g1)| = 2
+     |MCS(g1, g2)| = 4
+     |MCS(g1, g3)| = 4
+     |MCS(g1, g4)| = 4
+     */
+    @Test
+    public void testSolutionCount() throws Exception {
+        System.out.println("33");
+        String g1 = "NC1CCCCC1";
+        String g2 = "NC1CCC(N)CC1";
+        String g3 = "CNC1CCC(N)CC1";
+        String g4 = "CNC1CCC(CC1)NC";
+
+        SmilesParser smilesParser = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        IAtomContainer ac1 = smilesParser.parseSmiles(g1);
+        IAtomContainer ac2 = smilesParser.parseSmiles(g2);
+        IAtomContainer ac3 = smilesParser.parseSmiles(g3);
+        IAtomContainer ac4 = smilesParser.parseSmiles(g4);
+
+        Isomorphism overlap = new Isomorphism(ac1, ac2, Algorithm.DEFAULT, true, true, true);
+        overlap.setChemFilters(true, true, true);
+        Assert.assertEquals(4, overlap.getAllAtomMapping().size());
+        overlap = new Isomorphism(ac1, ac3, Algorithm.DEFAULT, true, true, true);
+        overlap.setChemFilters(true, true, true);
+        Assert.assertEquals(4, overlap.getAllAtomMapping().size());
+        overlap = new Isomorphism(ac1, ac4, Algorithm.DEFAULT, true, true, true);
+        overlap.setChemFilters(true, true, true);
+        Assert.assertEquals(4, overlap.getAllAtomMapping().size());
+        overlap = new Isomorphism(ac1, ac1, Algorithm.DEFAULT, true, true, true);
+        overlap.setChemFilters(true, true, true);
+        Assert.assertEquals(2, overlap.getAllAtomMapping().size());
+
+        SmilesGenerator aromatic = SmilesGenerator.unique().aromatic();
+//        System.out.println("SMILES Q :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnQuery()));
+//        System.out.println("SMILES T :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnTarget()));
+//        System.out.println("SMILES Common:" + overlap.getFirstAtomMapping().getCommonFragmentAsSMILES());
+//
+    }
 }
