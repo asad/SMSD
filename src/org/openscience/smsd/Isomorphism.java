@@ -275,7 +275,11 @@ public final class Isomorphism extends BaseMapping implements Serializable {
 
     private synchronized void vfLibMCSAlgorithm() {
         VF2MCS mcs;
-        mcs = new VF2MCS(getQuery(), getTarget(), isMatchBonds(), isMatchRings(), isMatchAtomType());
+        if (getQuery() instanceof IQueryAtomContainer) {
+            mcs = new VF2MCS((IQueryAtomContainer) getQuery(), getTarget());
+        } else {
+            mcs = new VF2MCS(getQuery(), getTarget(), isMatchBonds(), isMatchRings(), isMatchAtomType());
+        }
         clearMaps();
         getMCSList().addAll(mcs.getAllAtomMapping());
     }

@@ -324,6 +324,36 @@ public class QueryProcessor {
         return normal_bond;
     }
 
+    private boolean unMappedAtomsEqualsIndexJ(
+            IQueryAtomContainer query,
+            IAtomContainer target,
+            int atomIndex,
+            int counter,
+            List<Integer> mapped_atoms,
+            Integer indexI,
+            Integer indexJ,
+            Integer order) {
+        boolean normal_bond = true;
+        for (int c = 0; c < newNeighborNumA; c++) {
+
+            if (mapped_atoms.get(c * 2).equals(indexJ)) {
+                setBondNeighbors(indexI, indexJ, order);
+                if (cTab1Copy.get(atomIndex * 4 + 3).compareToIgnoreCase("X") == 0) {
+                    step1(atomIndex, counter);
+                    McGregorChecks.changeCharBonds(indexJ, signs[counter], query.getBondCount(), (IQueryAtomContainer) query, cTab1Copy);
+                    int cor_atom = searchCorrespondingAtom(newNeighborNumA, indexJ, 1, mapped_atoms);
+                    McGregorChecks.changeCharBonds(cor_atom, signs[counter], target.getBondCount(), target, cTab2Copy);
+                    counter++;
+                } else {
+                    step2(atomIndex);
+                }
+                normal_bond = false;
+                neighborBondNumA++;
+            }
+        }
+        return normal_bond;
+    }
+
     private boolean unMappedAtomsEqualsIndexI(
             IAtomContainer query,
             IAtomContainer target,
@@ -342,6 +372,39 @@ public class QueryProcessor {
                 if (cTab1Copy.get(atomIndex * 4 + 2).compareToIgnoreCase("X") == 0) {
                     step3(atomIndex, counter);
                     McGregorChecks.changeCharBonds(indexI, signs[counter], query.getBondCount(), query, cTab1Copy);
+                    int cor_atom = searchCorrespondingAtom(newNeighborNumA, indexI, 1, mapped_atoms);
+                    McGregorChecks.changeCharBonds(cor_atom, signs[counter], target.getBondCount(), target, cTab2Copy);
+                    counter++;
+                } else {
+                    step4(atomIndex);
+                }
+                normal_bond = false;
+                neighborBondNumA++;
+                //System.out.println("Neighbor");
+                //System.out.println(neighborBondNumA);
+            }
+        }
+        return normal_bond;
+    }
+
+    private boolean unMappedAtomsEqualsIndexI(
+            IQueryAtomContainer query,
+            IAtomContainer target,
+            int atomIndex,
+            int counter,
+            List<Integer> mapped_atoms,
+            Integer indexI,
+            Integer indexJ,
+            Integer order) {
+
+        boolean normal_bond = true;
+        for (int c = 0; c < newNeighborNumA; c++) {
+
+            if (mapped_atoms.get(c * 2 + 0).equals(indexI)) {
+                setBondNeighbors(indexI, indexJ, order);
+                if (cTab1Copy.get(atomIndex * 4 + 2).compareToIgnoreCase("X") == 0) {
+                    step3(atomIndex, counter);
+                    McGregorChecks.changeCharBonds(indexI, signs[counter], query.getBondCount(), (IQueryAtomContainer) query, cTab1Copy);
                     int cor_atom = searchCorrespondingAtom(newNeighborNumA, indexI, 1, mapped_atoms);
                     McGregorChecks.changeCharBonds(cor_atom, signs[counter], target.getBondCount(), target, cTab2Copy);
                     counter++;
@@ -434,7 +497,8 @@ public class QueryProcessor {
 
     /**
      *
-     * @return number of remaining molecule A bonds after the clique search, which are neighbors of the MCS
+     * @return number of remaining molecule A bonds after the clique search,
+     * which are neighbors of the MCS
      *
      */
     protected int getNeighborBondNumA() {
@@ -443,7 +507,8 @@ public class QueryProcessor {
 
     /**
      *
-     * @return number of remaining molecule A bonds after the clique search, which aren't neighbors
+     * @return number of remaining molecule A bonds after the clique search,
+     * which aren't neighbors
      */
     protected int getBondNumA() {
         return this.setBondNumA;
