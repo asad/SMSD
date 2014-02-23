@@ -66,8 +66,8 @@ public class ChemicalFilters extends BaseFilter {
         this.fragmentFilter = new FragmentFilter(this);
         this.energyFilter = new EnergyFilter(this);
     }
-    
-        /**
+
+    /**
      *
      * @param sourceMol
      * @param targetMol
