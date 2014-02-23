@@ -113,7 +113,7 @@ public final class Substructure extends BaseMapping {
             IQueryAtomContainer query,
             IAtomContainer target,
             boolean findAllSubgraph) throws CDKException {
-        super(true, true, true, query, target);
+        super(query, target);
         if (findAllSubgraph) {
             setSubgraph(findSubgraphs());
         } else {

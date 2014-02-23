@@ -30,6 +30,7 @@ import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
+import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.filters.ChemicalFilters;
@@ -70,6 +71,18 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
         this.matchBonds = matchBonds;
         this.matchRings = matchRings;
         this.matchAtomType = matchAtomType;
+
+    }
+
+    /**
+     * @param mol1
+     * @param mol2
+     */
+    public BaseMapping(IQueryAtomContainer mol1, IAtomContainer mol2) {
+        super(mol1, mol2);
+        this.matchBonds = true;
+        this.matchRings = true;
+        this.matchAtomType = true;
 
     }
 

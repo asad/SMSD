@@ -33,6 +33,7 @@ import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.annotations.TestMethod;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.smsd.AtomAtomMapping;
 
 /**
@@ -58,6 +59,21 @@ public class ChemicalFilters extends BaseFilter {
      */
     public ChemicalFilters(
             IAtomContainer sourceMol,
+            IAtomContainer targetMol) {
+        super(sourceMol, targetMol);
+        this.allAtomMCS = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
+        this.stereoFilter = new StereoFilter(this);
+        this.fragmentFilter = new FragmentFilter(this);
+        this.energyFilter = new EnergyFilter(this);
+    }
+    
+        /**
+     *
+     * @param sourceMol
+     * @param targetMol
+     */
+    public ChemicalFilters(
+            IQueryAtomContainer sourceMol,
             IAtomContainer targetMol) {
         super(sourceMol, targetMol);
         this.allAtomMCS = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());

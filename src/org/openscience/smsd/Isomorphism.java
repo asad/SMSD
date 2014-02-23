@@ -142,7 +142,7 @@ public final class Isomorphism extends BaseMapping implements Serializable {
             IQueryAtomContainer query,
             IAtomContainer target,
             Algorithm algorithmType) {
-        super(true, true, true, query, target);
+        super(query, target);
         this.algorithmType = algorithmType;
         mcsBuilder(query, target);
         setSubgraph(isSubgraph());
