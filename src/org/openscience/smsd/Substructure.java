@@ -30,7 +30,6 @@ import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
-import org.openscience.cdk.isomorphism.matchers.QueryAtomContainer;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.algorithm.single.SingleMappingHandler;
@@ -111,7 +110,7 @@ public final class Substructure extends BaseMapping {
      * @throws CDKException
      */
     public Substructure(
-            QueryAtomContainer query,
+            IQueryAtomContainer query,
             IAtomContainer target,
             boolean findAllSubgraph) throws CDKException {
         super(query, target);
