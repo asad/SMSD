@@ -287,7 +287,7 @@ public class ChemicalFilters extends BaseFilter {
     /**
      * @return the mcsList
      */
-    public synchronized List<AtomAtomMapping> getMCSList() {
+    protected synchronized List<AtomAtomMapping> getMCSList() {
         return Collections.synchronizedList(allAtomMCS);
     }
 }
