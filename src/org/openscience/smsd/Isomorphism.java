@@ -237,7 +237,11 @@ public final class Isomorphism extends BaseMapping implements Serializable {
 
     private synchronized boolean cdkMCSAlgorithm() {
         CDKMCSHandler mcs;
-        mcs = new CDKMCSHandler(getQuery(), getTarget(), isMatchBonds(), isMatchRings(), isMatchAtomType());
+        if (getQuery() instanceof IQueryAtomContainer) {
+            mcs = new CDKMCSHandler((IQueryAtomContainer) getQuery(), getTarget());
+        } else {
+            mcs = new CDKMCSHandler(getQuery(), getTarget(), isMatchBonds(), isMatchRings(), isMatchAtomType());
+        }
         clearMaps();
         getMCSList().addAll(mcs.getAllAtomMapping());
         return mcs.isTimeout();
@@ -245,7 +249,11 @@ public final class Isomorphism extends BaseMapping implements Serializable {
 
     private synchronized boolean mcsPlusAlgorithm() {
         MCSPlusHandler mcs;
-        mcs = new MCSPlusHandler(getQuery(), getTarget(), isMatchBonds(), isMatchRings(), isMatchAtomType());
+        if (getQuery() instanceof IQueryAtomContainer) {
+            mcs = new MCSPlusHandler((IQueryAtomContainer) getQuery(), getTarget());
+        } else {
+            mcs = new MCSPlusHandler(getQuery(), getTarget(), isMatchBonds(), isMatchRings(), isMatchAtomType());
+        }
         clearMaps();
         getMCSList().addAll(mcs.getAllAtomMapping());
         return mcs.isTimeout();
@@ -253,7 +261,11 @@ public final class Isomorphism extends BaseMapping implements Serializable {
 
     private synchronized boolean substructureAlgorithm() throws CDKException {
         Substructure mcs;
-        mcs = new Substructure(getQuery(), getTarget(), isMatchBonds(), isMatchRings(), isMatchAtomType(), true);
+        if (getQuery() instanceof IQueryAtomContainer) {
+            mcs = new Substructure((IQueryAtomContainer) getQuery(), getTarget(), true);
+        } else {
+            mcs = new Substructure(getQuery(), getTarget(), isMatchBonds(), isMatchRings(), isMatchAtomType(), true);
+        }
         clearMaps();
         if (mcs.isSubgraph()) {
             getMCSList().addAll(mcs.getAllAtomMapping());

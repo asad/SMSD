@@ -39,7 +39,8 @@ import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.interfaces.IResults;
 
 /**
- * This class acts as a handler class for CDKMCS algorithm {@link org.openscience.cdk.smsd.algorithm.cdk.CDKMCS}.
+ * This class acts as a handler class for CDKMCS algorithm
+ * {@link org.openscience.cdk.smsd.algorithm.cdk.CDKMCS}.
  *
  * @cdk.module smsd
  * @cdk.githash
@@ -89,7 +90,7 @@ public class CDKMCSHandler implements IResults {
      * @param source
      * @param target
      */
-    public CDKMCSHandler(IQueryAtomContainer source, IQueryAtomContainer target) {
+    public CDKMCSHandler(IQueryAtomContainer source, IAtomContainer target) {
         this.source = source;
         this.target = target;
         this.shouldMatchRings = true;
@@ -110,12 +111,12 @@ public class CDKMCSHandler implements IResults {
         List<Map<Integer, Integer>> solutions;
         try {
 
-            if (source.getAtomCount() >= target.getAtomCount()) {
-                rOnPFlag = true;
-                solutions = rmap.calculateOverlapsAndReduce(source, target, shouldMatchBonds, shouldMatchRings, matchAtomType);
-            } else {
+            if (source instanceof IQueryAtomContainer || source.getAtomCount() < target.getAtomCount()) {
                 rOnPFlag = false;
                 solutions = rmap.calculateOverlapsAndReduce(target, source, shouldMatchBonds, shouldMatchRings, matchAtomType);
+            } else {
+                rOnPFlag = true;
+                solutions = rmap.calculateOverlapsAndReduce(source, target, shouldMatchBonds, shouldMatchRings, matchAtomType);
             }
 
             setAllMapping(solutions);

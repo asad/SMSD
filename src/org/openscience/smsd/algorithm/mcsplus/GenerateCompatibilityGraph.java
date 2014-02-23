@@ -157,7 +157,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
                 label.set(counter, neighbouringAtom);
                 counter += 1;
             }
-//            System.out.println("label " + label);
+            System.out.println("label " + label);
             bubbleSort(label);
             label_list.put(refAtom, label);
         }

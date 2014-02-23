@@ -38,7 +38,8 @@ import org.openscience.smsd.filters.PostFilter;
 import org.openscience.smsd.interfaces.IResults;
 
 /**
- * This class acts as a handler class for MCSPlus algorithm. {@link org.openscience.cdk.smsd.algorithm.mcsplus.MCSPlus}
+ * This class acts as a handler class for MCSPlus algorithm.
+ * {@link org.openscience.cdk.smsd.algorithm.mcsplus.MCSPlus}
  *
  * @cdk.module smsd @cdk.githash
  *
@@ -84,7 +85,7 @@ public final class MCSPlusHandler implements IResults {
      * @param source
      * @param target
      */
-    public MCSPlusHandler(IQueryAtomContainer source, IQueryAtomContainer target) {
+    public MCSPlusHandler(IQueryAtomContainer source, IAtomContainer target) {
         this.source = source;
         this.target = target;
         this.shouldMatchRings = true;
@@ -96,13 +97,15 @@ public final class MCSPlusHandler implements IResults {
     }
 
     /**
-     * {@inheritDoc} Function is called by the main program and serves as a starting point for the comparison procedure.
+     * {@inheritDoc} Function is called by the main program and serves as a
+     * starting point for the comparison procedure.
      *
      */
     private synchronized boolean searchMCS() {
         List<List<Integer>> mappings;
         MCSPlus mcsplus;
-        if (source.getAtomCount() < target.getAtomCount()) {
+
+        if (source instanceof IQueryAtomContainer || source.getAtomCount() < target.getAtomCount()) {
             mcsplus = new MCSPlus(source, target, shouldMatchBonds, shouldMatchRings, matchAtomType);
             List<List<Integer>> overlaps = mcsplus.getOverlaps();
             mappings = Collections.synchronizedList(overlaps);
