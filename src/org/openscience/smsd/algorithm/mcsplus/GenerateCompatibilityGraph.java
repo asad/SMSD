@@ -140,7 +140,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
             String referenceAtom;
             if (refAtom instanceof IQueryAtom) {
                 referenceAtom = ((IQueryAtom) refAtom).getSymbol() == null ? "*" : ((IQueryAtom) refAtom).getSymbol();
-                System.out.println("referenceAtom " + referenceAtom);
+//                System.out.println("referenceAtom " + referenceAtom);
             } else if (!(refAtom instanceof IQueryAtom) && this.matchAtomType) {
                 referenceAtom = refAtom.getAtomTypeName() == null ? refAtom.getSymbol() : refAtom.getAtomTypeName();
             } else {
@@ -155,7 +155,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
                 String neighbouringAtom;
                 if (refAtom instanceof IQueryAtom) {
                     neighbouringAtom = ((IQueryAtom) negAtom).getSymbol() == null ? "*" : ((IQueryAtom) negAtom).getSymbol();
-                    System.out.println("neighbouringAtom " + neighbouringAtom);
+//                    System.out.println("neighbouringAtom " + neighbouringAtom);
                 } else if (!(negAtom instanceof IQueryAtom) && this.matchAtomType) {
                     neighbouringAtom = negAtom.getAtomTypeName() == null ? negAtom.getSymbol() : negAtom.getAtomTypeName();
                 } else {
@@ -164,7 +164,7 @@ public final class GenerateCompatibilityGraph implements Serializable {
                 label.set(counter, neighbouringAtom);
                 counter += 1;
             }
-            System.out.println("label " + label);
+//            System.out.println("label " + label);
             bubbleSort(label);
             label_list.put(refAtom, label);
         }
