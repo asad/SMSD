@@ -30,6 +30,7 @@ import java.util.logging.Level;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.AtomAtomMapping;
@@ -43,9 +44,11 @@ import org.openscience.smsd.interfaces.Algorithm;
 /**
  * This class should be used to find MCS between source graph and target graph.
  *
- * First the algorithm runs VF lib {@link org.openscience.cdk.smsd.algorithm.vflib.map.VFMCSMapper} and reports MCS
- * between run source and target graphs. Then these solutions are extended using McGregor
- * {@link org.openscience.cdk.smsd.algorithm.mcgregor.McGregor} algorithm where ever required.
+ * First the algorithm runs VF lib
+ * {@link org.openscience.cdk.smsd.algorithm.vflib.map.VFMCSMapper} and reports
+ * MCS between run source and target graphs. Then these solutions are extended
+ * using McGregor {@link org.openscience.cdk.smsd.algorithm.mcgregor.McGregor}
+ * algorithm where ever required.
  *
  * @cdk.module smsd
  * @cdk.githash
@@ -83,6 +86,16 @@ public class MCSSeedGenerator implements Callable<List<AtomAtomMapping>> {
         this.bondMatch = bondMatch;
     }
 
+    public MCSSeedGenerator(IQueryAtomContainer source, IAtomContainer target, Algorithm algorithm) {
+        this.source = source;
+        this.target = target;
+        this.allCliqueAtomMCS = new ArrayList<>();
+        this.ringMatch = true;
+        this.algorithm = algorithm;
+        this.matchAtomType = true;
+        this.bondMatch = true;
+    }
+
     @Override
     public List<AtomAtomMapping> call() throws Exception {
 //        System.out.println("ac1: " + this.source.getAtomCount());
@@ -106,7 +119,11 @@ public class MCSSeedGenerator implements Callable<List<AtomAtomMapping>> {
         IAtomContainer ac1;
         IAtomContainer ac2;
         boolean flagExchange = false;
-        if (source.getAtomCount() < target.getAtomCount()) {
+
+        if (source instanceof IQueryAtomContainer) {
+            ac1 = (IQueryAtomContainer) source;
+            ac2 = target;
+        } else if (source.getAtomCount() < target.getAtomCount()) {
             ac1 = source;
             ac2 = target;
         } else {
@@ -173,7 +190,10 @@ public class MCSSeedGenerator implements Callable<List<AtomAtomMapping>> {
         List<Map<Integer, Integer>> solutions;
 
         boolean rOnPFlag;
-        if (source.getAtomCount() > target.getAtomCount()) {
+        if (source instanceof IQueryAtomContainer) {
+            rOnPFlag = false;
+            solutions = rmap.calculateOverlapsAndReduce(target, (IQueryAtomContainer) source);
+        } else if (source.getAtomCount() > target.getAtomCount()) {
             rOnPFlag = true;
             solutions = rmap.calculateOverlapsAndReduce(source, target, bondMatch, ringMatch, matchAtomType);
         } else {

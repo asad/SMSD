@@ -36,7 +36,9 @@ import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
+import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
+import org.openscience.cdk.isomorphism.matchers.IQueryBond;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.AtomAtomMapping;
@@ -152,6 +154,226 @@ public final class VF2MCS extends BaseMCS implements IResults {
 
             MCSSeedGenerator mcsSeedGeneratorUIT = new MCSSeedGenerator(source, targetClone, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.CDKMCS);
             MCSSeedGenerator mcsSeedGeneratorKoch = new MCSSeedGenerator(source, targetClone, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.MCSPlus);
+
+            int jobCounter = 0;
+            cs.submit(mcsSeedGeneratorUIT);
+            jobCounter++;
+            cs.submit(mcsSeedGeneratorKoch);
+            jobCounter++;
+
+            /*
+             * Generate the UIT based MCS seeds
+             */
+            Set<Map<Integer, Integer>> mcsSeeds = new HashSet<>();
+            /*
+             * Collect the results
+             */
+            for (int i = 0; i < jobCounter; i++) {
+                List<AtomAtomMapping> chosen;
+                try {
+                    chosen = cs.take().get();
+                    for (AtomAtomMapping mapping : chosen) {
+                        Map<Integer, Integer> map = new TreeMap<>();
+                        map.putAll(mapping.getMappingsByIndex());
+                        mcsSeeds.add(map);
+                    }
+                } catch (InterruptedException ex) {
+                    logger.error(Level.SEVERE, null, ex);
+                } catch (ExecutionException ex) {
+                    logger.error(Level.SEVERE, null, ex);
+                }
+            }
+            executor.shutdown();
+            // Wait until all threads are finish
+            while (!executor.isTerminated()) {
+            }
+            System.gc();
+
+            long stopTimeSeeds = System.nanoTime();
+//            System.out.println("done seeds " + (stopTimeSeeds - startTimeSeeds));
+            /*
+             * Store largest MCS seeds generated from MCSPlus and UIT
+             */
+            int solutionSize = 0;
+            counter = 0;
+            List<Map<Integer, Integer>> cleanedMCSSeeds = new ArrayList<>();
+//            System.out.println("mergin  UIT & KochCliques");
+            if (!mcsSeeds.isEmpty()) {
+                for (Map<Integer, Integer> map : mcsSeeds) {
+                    if (map.size() > solutionSize) {
+                        solutionSize = map.size();
+                        cleanedMCSSeeds.clear();
+                        counter = 0;
+                    }
+                    if (!map.isEmpty()
+                            && map.size() == solutionSize
+                            && !hasClique(map, cleanedMCSSeeds)) {
+                        cleanedMCSSeeds.add(counter, map);
+                        counter++;
+                    }
+                }
+            }
+            for (Map<Integer, Integer> map : mcsVFSeeds) {
+                if (!map.isEmpty()
+                        && map.size() >= solutionSize
+                        && !hasClique(map, cleanedMCSSeeds)) {
+                    cleanedMCSSeeds.add(counter, map);
+                    counter++;
+                }
+            }
+            /*
+             * Sort biggest clique to smallest
+             */
+            Collections.sort(cleanedMCSSeeds, new Map1ValueComparator(SortOrder.DESCENDING));
+
+            /*
+             * Extend the seeds using McGregor
+             */
+            try {
+                extendCliquesWithMcGregor(cleanedMCSSeeds);
+            } catch (CDKException | IOException ex) {
+                logger.error(Level.SEVERE, null, ex);
+            }
+
+            /*
+             * Clear previous seeds
+             */
+            mcsSeeds.clear();
+            cleanedMCSSeeds.clear();
+
+            /*
+             * Integerate the solutions
+             */
+            solutionSize = 0;
+            counter = 0;
+            this.allAtomMCS = new ArrayList<>();
+
+            /*
+             * Store solutions from VF MCS only
+             */
+            if (!allLocalAtomAtomMapping.isEmpty()) {
+                for (int i = 0; i < allLocalAtomAtomMapping.size(); i++) {
+                    AtomAtomMapping atomMCSMap = allLocalAtomAtomMapping.get(i);
+                    if (atomMCSMap.getCount() > solutionSize) {
+                        solutionSize = atomMCSMap.getCount();
+                        allAtomMCS.clear();
+                        counter = 0;
+                    }
+                    if (!atomMCSMap.isEmpty()
+                            && atomMCSMap.getCount() == solutionSize) {
+                        allAtomMCS.add(counter, atomMCSMap);
+                        counter++;
+                    }
+                }
+            }
+
+            /*
+             * Clear the local solution after storing it into mcs solutions
+             */
+            allLocalMCS.clear();
+            allLocalAtomAtomMapping.clear();
+
+        } else {
+
+            /*
+             * Store solutions from VF MCS only
+             */
+            int solSize = 0;
+            int counter = 0;
+            this.allAtomMCS = new ArrayList<>();
+            if (!allLocalAtomAtomMapping.isEmpty()) {
+                for (int i = 0; i < allLocalAtomAtomMapping.size(); i++) {
+                    AtomAtomMapping atomMCSMap = allLocalAtomAtomMapping.get(i);
+                    if (atomMCSMap.getCount() > solSize) {
+                        solSize = atomMCSMap.getCount();
+                        allAtomMCS.clear();
+                        counter = 0;
+                    }
+                    if (!atomMCSMap.isEmpty()
+                            && atomMCSMap.getCount() == solSize) {
+                        allAtomMCS.add(counter, atomMCSMap);
+                        counter++;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Constructor for an extended VF Algorithm for the MCS search
+     *
+     * @param source
+     * @param target
+     */
+    public VF2MCS(IQueryAtomContainer source, IAtomContainer target) {
+        super((IQueryAtomContainer) source, target, true, true, true);
+        boolean timeoutVF = searchVFMappings();
+
+//        System.out.println("time for VF search " + timeoutVF);
+
+        /*
+         * An extension is triggered if its mcs solution is smaller than reactant and product. An enrichment is
+         * triggered if its mcs solution is equal to reactant or product size.
+         *
+         *
+         */
+        if (!timeoutVF) {
+
+            List<Map<Integer, Integer>> mcsVFSeeds = new ArrayList<>();
+
+            /*
+             * Copy VF based MCS solution in the seed
+             */
+            int counter = 0;
+            for (Map<Integer, Integer> vfMapping : allLocalMCS) {
+                mcsVFSeeds.add(counter, vfMapping);
+                counter++;
+            }
+
+            /*
+             * Clean VF mapping data
+             */
+            allLocalMCS.clear();
+            allLocalAtomAtomMapping.clear();
+
+            long startTimeSeeds = System.nanoTime();
+
+            ExecutorService executor = Executors.newSingleThreadExecutor();
+            CompletionService<List<AtomAtomMapping>> cs = new ExecutorCompletionService<>(executor);
+
+            /*
+             * Reduce the target size by removing bonds which do not share 
+             * similar Hybridization 
+             */
+            IAtomContainer targetClone = null;
+            try {
+                targetClone = target.clone();
+                Set<IBond> bondRemovedT = new HashSet<>();
+                for (IBond b1 : source.bonds()) {
+                    IQueryBond bond = (IQueryBond) b1;
+                    IQueryAtom a1 = (IQueryAtom) b1.getAtom(0);
+                    IQueryAtom a2 = (IQueryAtom) b1.getAtom(1);
+                    for (IBond b2 : targetClone.bonds()) {
+                        boolean matches = bond.matches(b2);
+                        if (a1.matches(b2.getAtom(0)) && a2.matches(b2.getAtom(1)) && !matches) {
+                            bondRemovedT.add(b2);
+                        } else if (a2.matches(b2.getAtom(0)) && a1.matches(b2.getAtom(1)) && !matches) {
+                            bondRemovedT.add(b2);
+                        }
+                    }
+                }
+
+//                System.out.println("Bond to be removed " + bondRemovedT.size());
+                for (IBond b : bondRemovedT) {
+                    targetClone.removeBond(b);
+                }
+
+            } catch (CloneNotSupportedException ex) {
+                java.util.logging.Logger.getLogger(VF2MCS.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            MCSSeedGenerator mcsSeedGeneratorUIT = new MCSSeedGenerator((IQueryAtomContainer)source, targetClone, Algorithm.CDKMCS);
+            MCSSeedGenerator mcsSeedGeneratorKoch = new MCSSeedGenerator((IQueryAtomContainer)source, targetClone, Algorithm.MCSPlus);
 
             int jobCounter = 0;
             cs.submit(mcsSeedGeneratorUIT);

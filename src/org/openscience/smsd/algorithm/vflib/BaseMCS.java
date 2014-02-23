@@ -81,6 +81,17 @@ public class BaseMCS {
         this.target = target;
     }
 
+    BaseMCS(IQueryAtomContainer source, IAtomContainer target) {
+        this.allLocalAtomAtomMapping = new ArrayList<>();
+        this.allLocalMCS = new ArrayList<>();
+        this.shouldMatchRings = true;
+        this.matchBonds = true;
+        this.matchAtomType = true;
+        this.vfLibSolutions = new ArrayList<>();
+        this.source = source;
+        this.target = target;
+    }
+
     /**
      *
      * @param cliqueMap
