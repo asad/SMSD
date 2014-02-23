@@ -46,9 +46,11 @@ import org.openscience.smsd.interfaces.IResults;
 /**
  * This class should be used to find MCS between source graph and target graph.
  *
- * First the algorithm runs VF lib {@link org.openscience.cdk.smsd.algorithm.vflib.map.VFMCSMapper} and reports MCS
- * between run source and target graphs. Then these solutions are extended using McGregor
- * {@link org.openscience.cdk.smsd.algorithm.mcgregor.McGregor} algorithm where ever required.
+ * First the algorithm runs VF lib
+ * {@link org.openscience.cdk.smsd.algorithm.vflib.map.VFMCSMapper} and reports
+ * MCS between run source and target graphs. Then these solutions are extended
+ * using McGregor {@link org.openscience.cdk.smsd.algorithm.mcgregor.McGregor}
+ * algorithm where ever required.
  *
  * @cdk.module smsd
  * @cdk.githash
@@ -245,6 +247,8 @@ public class VF2Sub implements IResults {
             McGregor mgit;
             if (source instanceof IQueryAtomContainer) {
                 mgit = new McGregor((IQueryAtomContainer) source, target, mappings, this.matchBonds, this.shouldMatchRings, this.matchAtomType);
+                //Start McGregor search
+                mgit.startMcGregorIteration((IQueryAtomContainer) source, mgit.getMCSSize(), extendMapping);
             } else {
                 extendMapping.clear();
                 mgit = new McGregor(target, source, mappings, this.matchBonds, this.shouldMatchRings, this.matchAtomType);
@@ -252,9 +256,9 @@ public class VF2Sub implements IResults {
                 for (Map.Entry<Integer, Integer> map : firstPassMappings.entrySet()) {
                     extendMapping.put(map.getValue(), map.getKey());
                 }
+                //Start McGregor search
+                mgit.startMcGregorIteration(target, mgit.getMCSSize(), extendMapping);
             }
-            //Start McGregor search
-            mgit.startMcGregorIteration(mgit.getMCSSize(), extendMapping);
             mappings = mgit.getMappings();
         }
 //        System.out.println("\nSol count after MG" + mappings.size());

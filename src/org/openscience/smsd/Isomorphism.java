@@ -238,7 +238,7 @@ public final class Isomorphism extends BaseMapping implements Serializable {
     private synchronized boolean cdkMCSAlgorithm() {
         CDKMCSHandler mcs;
         if (getQuery() instanceof IQueryAtomContainer) {
-            mcs = new CDKMCSHandler((IQueryAtomContainer) getQuery(), getTarget());
+            mcs = new CDKMCSHandler(getQuery(), getTarget());
         } else {
             mcs = new CDKMCSHandler(getQuery(), getTarget(), isMatchBonds(), isMatchRings(), isMatchAtomType());
         }

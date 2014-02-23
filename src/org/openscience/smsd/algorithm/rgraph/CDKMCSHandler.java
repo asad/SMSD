@@ -90,7 +90,7 @@ public class CDKMCSHandler implements IResults {
      * @param source
      * @param target
      */
-    public CDKMCSHandler(IQueryAtomContainer source, IAtomContainer target) {
+    public CDKMCSHandler(IAtomContainer source, IAtomContainer target) {
         this.source = source;
         this.target = target;
         this.shouldMatchRings = true;
@@ -111,7 +111,11 @@ public class CDKMCSHandler implements IResults {
         List<Map<Integer, Integer>> solutions;
         try {
 
-            if (source instanceof IQueryAtomContainer || source.getAtomCount() < target.getAtomCount()) {
+            if (source instanceof IQueryAtomContainer) {
+                rOnPFlag = false;
+                solutions = rmap.calculateOverlapsAndReduce(target, (IQueryAtomContainer) source);
+                rOnPFlag = false;
+            } else if (source.getAtomCount() < target.getAtomCount()) {
                 rOnPFlag = false;
                 solutions = rmap.calculateOverlapsAndReduce(target, source, shouldMatchBonds, shouldMatchRings, matchAtomType);
             } else {

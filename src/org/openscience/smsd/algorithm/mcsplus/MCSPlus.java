@@ -34,6 +34,7 @@ import java.util.logging.Logger;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.smsd.algorithm.mcgregor.McGregor;
 import org.openscience.smsd.tools.IterationManager;
 
@@ -102,6 +103,20 @@ public final class MCSPlus {
      *
      * @param ac1
      * @param ac2
+     */
+    public MCSPlus(IQueryAtomContainer ac1, IAtomContainer ac2) {
+        this.shouldMatchRings = true;
+        this.shouldMatchBonds = true;
+        this.matchAtomType = true;
+        this.ac1 = ac1;
+        this.ac2 = ac2;
+        this.overlaps = calculateMCS();
+    }
+
+    /**
+     *
+     * @param ac1
+     * @param ac2
      * @param shouldMatchBonds
      * @param shouldMatchRings
      * @return
@@ -146,7 +161,11 @@ public final class MCSPlus {
             //clear all the compatibility graph content
             gcg.clear();
 //            System.out.println("mappings: " + mappings.size());
-            extendMappings = searchMcGregorMapping(ac1, ac2, mappings);
+            if (ac1 instanceof IQueryAtomContainer) {
+                extendMappings = searchMcGregorMapping((IQueryAtomContainer) ac1, ac2, mappings);
+            } else {
+                extendMappings = searchMcGregorMapping(ac1, ac2, mappings);
+            }
 //            int size = !extendMappings.isEmpty() ? (extendMappings.size() / 2) : 0;
 //            System.out.println("extendMappings: " + size);
         } catch (IOException ex) {
@@ -168,17 +187,45 @@ public final class MCSPlus {
             McGregor mgit;
             if (ac1.getAtomCount() > ac2.getAtomCount()) {
                 mgit = new McGregor(ac1, ac2, cliques, isMatchBonds(), isMatchRings(), isMatchAtomType());
+                mgit.startMcGregorIteration(ac1, mgit.getMCSSize(), extendMapping);
             } else {
                 extendMapping.clear();
                 ROPFlag = false;
                 for (Map.Entry<Integer, Integer> map : firstPassMappings.entrySet()) {
                     extendMapping.put(map.getValue(), map.getKey());
+
                 }
                 mgit = new McGregor(ac2, ac1, cliques, isMatchBonds(), isMatchRings(), isMatchAtomType());
+                mgit.startMcGregorIteration(ac2, mgit.getMCSSize(), extendMapping);
             }
 //            System.out.println("\nStart McGregor search");
             //Start McGregor search
-            mgit.startMcGregorIteration(mgit.getMCSSize(), extendMapping);
+            cliques = mgit.getMappings();
+//            System.out.println("\nSol count after MG " + cliques.size());
+            if (checkTimeout()) {
+                break;
+            }
+        }
+        List<List<Integer>> finalMappings = setMcGregorMappings(ROPFlag, cliques);
+//        System.out.println("After set Sol count MG " + finalMappings.size());
+        return finalMappings;
+    }
+
+    private List<List<Integer>> searchMcGregorMapping(
+            IQueryAtomContainer ac1,
+            IAtomContainer ac2,
+            List<Map<Integer, Integer>> allMCSCopy) throws IOException {
+
+        List<List<Integer>> cliques = new ArrayList<>();
+
+        boolean ROPFlag = true;
+        for (Map<Integer, Integer> firstPassMappings : allMCSCopy) {
+            Map<Integer, Integer> extendMapping = new TreeMap<>(firstPassMappings);
+            McGregor mgit;
+            mgit = new McGregor((IQueryAtomContainer) ac1, ac2, cliques, isMatchBonds(), isMatchRings(), isMatchAtomType());
+            mgit.startMcGregorIteration((IQueryAtomContainer) ac1, mgit.getMCSSize(), extendMapping);
+//            System.out.println("\nStart McGregor search");
+            //Start McGregor search
             cliques = mgit.getMappings();
 //            System.out.println("\nSol count after MG " + cliques.size());
             if (checkTimeout()) {

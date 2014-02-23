@@ -199,11 +199,8 @@ public class McGregorChecks {
      * @return
      */
     protected static boolean isAtomMatch(String G1A, String G2A, String G1B, String G2B) {
-        if ((G1A.compareToIgnoreCase(G1B) == 0 && G2A.compareToIgnoreCase(G2B) == 0)
-                || (G1A.compareToIgnoreCase(G2B) == 0 && G2A.compareToIgnoreCase(G1B) == 0)) {
-            return true;
-        }
-        return false;
+        return (G1A.compareToIgnoreCase(G1B) == 0 && G2A.compareToIgnoreCase(G2B) == 0)
+                || (G1A.compareToIgnoreCase(G2B) == 0 && G2A.compareToIgnoreCase(G1B) == 0);
     }
 
     /*
@@ -261,11 +258,14 @@ public class McGregorChecks {
     }
 
     /**
-     * The function is called in function partsearch. The function is given a temporary matrix and a position
-     * (row/column) within this matrix. First the function sets all entries to zero, which can be excluded in respect to
-     * the current atom by atom matching. After this the function replaces all entries in the same row and column of the
-     * current position by zeros. Only the entry of the current position is set to one. Return value "count_arcsleft"
-     * counts the number of arcs, which are still in the matrix.
+     * The function is called in function partsearch. The function is given a
+     * temporary matrix and a position (row/column) within this matrix. First
+     * the function sets all entries to zero, which can be excluded in respect
+     * to the current atom by atom matching. After this the function replaces
+     * all entries in the same row and column of the current position by zeros.
+     * Only the entry of the current position is set to one. Return value
+     * "count_arcsleft" counts the number of arcs, which are still in the
+     * matrix.
      *
      * @param row
      * @param column
@@ -587,7 +587,7 @@ public class McGregorChecks {
                 String G1B = cBondNeighborsB.get(column * 4 + 0);
                 String G2B = cBondNeighborsB.get(column * 4 + 1);
 
-                if (!(source instanceof IQueryAtomContainer) && isAtomMatch(G1A, G2A, G1B, G2B)) {
+                if (source instanceof IQueryAtomContainer) {
                     try {
 
                         int Index_I = iBondNeighborAtomsA.get(row * 3 + 0);
@@ -610,7 +610,7 @@ public class McGregorChecks {
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
-                } else if (source instanceof IQueryAtomContainer) {
+                } else if (!(source instanceof IQueryAtomContainer) && isAtomMatch(G1A, G2A, G1B, G2B)) {
                     try {
 
                         int Index_I = iBondNeighborAtomsA.get(row * 3 + 0);

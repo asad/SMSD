@@ -35,13 +35,15 @@ import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
+import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.tools.manipulator.BondManipulator;
 
 /**
- * This algorithm derives from the algorithm described in [Tonnelier, C. and Jauffret, Ph. and Hanser, Th. and Jauffret,
- * Ph. and Kaufmann, G., Machine Learning of generic reactions: 3. An efficient algorithm for maximal common
- * substructure determination, Tetrahedron Comput. Methodol., 1990, 3:351-358] and modified in the thesis of T. Hanser
- * [Unknown BibTeXML type: HAN93].
+ * This algorithm derives from the algorithm described in [Tonnelier, C. and
+ * Jauffret, Ph. and Hanser, Th. and Jauffret, Ph. and Kaufmann, G., Machine
+ * Learning of generic reactions: 3. An efficient algorithm for maximal common
+ * substructure determination, Tetrahedron Comput. Methodol., 1990, 3:351-358]
+ * and modified in the thesis of T. Hanser [Unknown BibTeXML type: HAN93].
  *
  * @cdk.module smsd
  * @cdk.githash
@@ -143,8 +145,54 @@ public final class CDKRMapHandler {
     }
 
     /**
-     * This function calculates only one solution (exact) because we are looking at the molecules which are exactly same
-     * in terms of the bonds and atoms determined by the Fingerprint
+     * This function calculates all the possible combinations of MCS
+     *
+     * @param molecule1
+     * @param molecule2
+     * @return
+     * @throws CDKException
+     */
+    public synchronized List<Map<Integer, Integer>> calculateOverlapsAndReduce(IAtomContainer molecule1,
+            IQueryAtomContainer molecule2) throws CDKException {
+        setSource(molecule1);
+        setTarget(molecule2);
+        List<Map<Integer, Integer>> solution = new ArrayList<>();
+        setMappings(solution);
+
+        if ((getSource().getAtomCount() == 1) || (getTarget().getAtomCount() == 1)) {
+            List<CDKRMap> overlaps = CDKMCS.checkSingleAtomCases(getSource(), getTarget());
+            this.setTimeout(CDKMCS.isTimeout());
+            int nAtomsMatched = overlaps.size();
+            nAtomsMatched = (nAtomsMatched > 0) ? 1 : 0;
+            if (nAtomsMatched > 0) {
+                /*UnComment this to get one Unique Mapping*/
+                //List reducedList = removeRedundantMappingsForSingleAtomCase(overlaps);
+                //int counter = 0;
+                identifySingleAtomsMatchedParts(overlaps, getSource(), (IQueryAtomContainer) getTarget());
+
+            }
+
+        } else {
+            List<List<CDKRMap>> overlaps = CDKMCS.search(getSource(), (IQueryAtomContainer) getTarget(), new BitSet(), new BitSet(), true, true, true, true, true);
+            this.setTimeout(CDKMCS.isTimeout());
+            List<List<CDKRMap>> reducedList = removeSubGraph(overlaps);
+            Stack<List<CDKRMap>> allMaxOverlaps = getAllMaximum(reducedList);
+            while (!allMaxOverlaps.empty()) {
+//                System.out.println("source: " + source.getAtomCount() + ", target: " + target.getAtomCount() + ", overl: " + allMaxOverlaps.peek().size());
+                List<List<CDKRMap>> maxOverlapsAtoms = makeAtomsMapOfBondsMap(allMaxOverlaps.peek(), getSource(), (IQueryAtomContainer) getTarget());
+//                System.out.println("size of maxOverlaps: " + maxOverlapsAtoms.size());
+                identifyMatchedParts(maxOverlapsAtoms, getSource(), (IQueryAtomContainer) getTarget());
+//                identifyMatchedParts(allMaxOverlaps.peek(), source, target);
+                allMaxOverlaps.pop();
+            }
+        }
+        return solution;
+    }
+
+    /**
+     * This function calculates only one solution (exact) because we are looking
+     * at the molecules which are exactly same in terms of the bonds and atoms
+     * determined by the Fingerprint
      *
      * @param Molecule1
      * @param Molecule2
@@ -195,8 +243,9 @@ public final class CDKRMapHandler {
     }
 
     /**
-     * This function calculates only one solution (exact) because we are looking at the molecules which are exactly same
-     * in terms of the bonds and atoms determined by the Fingerprint
+     * This function calculates only one solution (exact) because we are looking
+     * at the molecules which are exactly same in terms of the bonds and atoms
+     * determined by the Fingerprint
      *
      * @param Molecule1
      * @param Molecule2
@@ -251,8 +300,9 @@ public final class CDKRMapHandler {
     }
 
     /**
-     * This function calculates only one solution (exact) because we are looking at the molecules which are exactly same
-     * in terms of the bonds and atoms determined by the Fingerprint
+     * This function calculates only one solution (exact) because we are looking
+     * at the molecules which are exactly same in terms of the bonds and atoms
+     * determined by the Fingerprint
      *
      * @param Molecule1
      * @param Molecule2
@@ -345,14 +395,14 @@ public final class CDKRMapHandler {
     }
 
     /**
-     * This makes sourceAtom map of matching atoms out of sourceAtom map of matching bonds as produced by the
-     * get(Subgraph|Ismorphism)Map methods.
+     * This makes sourceAtom map of matching atoms out of sourceAtom map of
+     * matching bonds as produced by the get(Subgraph|Ismorphism)Map methods.
      *
      * @param rMapList The list produced by the getMap method.
      * @param graph1 first molecule. Must not be an IQueryAtomContainer.
      * @param graph2 second molecule. May be an IQueryAtomContainer.
-     * @return The mapping found projected on graph1. This is sourceAtom List of CDKRMap objects containing Ids of
-     * matching atoms.
+     * @return The mapping found projected on graph1. This is sourceAtom List of
+     * CDKRMap objects containing Ids of matching atoms.
      */
     private synchronized List<List<CDKRMap>> makeAtomsMapOfBondsMap(List<CDKRMap> rMapList, IAtomContainer graph1, IAtomContainer graph2) {
         if (rMapList == null) {
@@ -413,14 +463,15 @@ public final class CDKRMapHandler {
     }
 
     /**
-     * This makes atom map of matching atoms out of atom map of matching bonds as produced by the
-     * get(Subgraph|Ismorphism)Map methods. Added by Asad since CDK one doesn't pick up the correct changes
+     * This makes atom map of matching atoms out of atom map of matching bonds
+     * as produced by the get(Subgraph|Ismorphism)Map methods. Added by Asad
+     * since CDK one doesn't pick up the correct changes
      *
      * @param list The list produced by the getMap method.
      * @param sourceGraph first molecule. Must not be an IQueryAtomContainer.
      * @param targetGraph second molecule. May be an IQueryAtomContainer.
-     * @return The mapping found projected on sourceGraph. This is atom List of CDKRMap objects containing Ids of
-     * matching atoms.
+     * @return The mapping found projected on sourceGraph. This is atom List of
+     * CDKRMap objects containing Ids of matching atoms.
      */
     private synchronized List<List<CDKRMap>> makeAtomsMapOfBondsMapSingleBond(List<CDKRMap> list, IAtomContainer sourceGraph, IAtomContainer targetGraph) {
         if (list == null) {

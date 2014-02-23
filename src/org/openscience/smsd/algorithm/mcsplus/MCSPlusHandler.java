@@ -105,7 +105,12 @@ public final class MCSPlusHandler implements IResults {
         List<List<Integer>> mappings;
         MCSPlus mcsplus;
 
-        if (source instanceof IQueryAtomContainer || source.getAtomCount() < target.getAtomCount()) {
+        if (source instanceof IQueryAtomContainer) {
+            mcsplus = new MCSPlus((IQueryAtomContainer) source, target);
+            List<List<Integer>> overlaps = mcsplus.getOverlaps();
+            mappings = Collections.synchronizedList(overlaps);
+
+        } else if (!(source instanceof IQueryAtomContainer) && source.getAtomCount() < target.getAtomCount()) {
             mcsplus = new MCSPlus(source, target, shouldMatchBonds, shouldMatchRings, matchAtomType);
             List<List<Integer>> overlaps = mcsplus.getOverlaps();
             mappings = Collections.synchronizedList(overlaps);
