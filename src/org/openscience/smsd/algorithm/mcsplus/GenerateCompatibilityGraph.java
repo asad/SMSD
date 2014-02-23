@@ -132,12 +132,16 @@ public final class GenerateCompatibilityGraph implements Serializable {
             for (int a = 0; a < 7; a++) {
                 label.add(a, "Z9");
             }
+
             IAtom refAtom = atomCont.getAtom(i);
             /*
              * Important Step: Discriminate between source atom types
              */
             String referenceAtom;
-            if (this.matchAtomType) {
+            if (refAtom instanceof IQueryAtom) {
+                referenceAtom = ((IQueryAtom) refAtom).getSymbol() == null ? "*" : ((IQueryAtom) refAtom).getSymbol();
+                System.out.println("referenceAtom " + referenceAtom);
+            } else if (!(refAtom instanceof IQueryAtom) && this.matchAtomType) {
                 referenceAtom = refAtom.getAtomTypeName() == null ? refAtom.getSymbol() : refAtom.getAtomTypeName();
             } else {
                 referenceAtom = refAtom.getSymbol();
@@ -149,7 +153,10 @@ public final class GenerateCompatibilityGraph implements Serializable {
 
             for (IAtom negAtom : connAtoms) {
                 String neighbouringAtom;
-                if (this.matchAtomType) {
+                if (refAtom instanceof IQueryAtom) {
+                    neighbouringAtom = ((IQueryAtom) negAtom).getSymbol() == null ? "*" : ((IQueryAtom) negAtom).getSymbol();
+                    System.out.println("neighbouringAtom " + neighbouringAtom);
+                } else if (!(negAtom instanceof IQueryAtom) && this.matchAtomType) {
                     neighbouringAtom = negAtom.getAtomTypeName() == null ? negAtom.getSymbol() : negAtom.getAtomTypeName();
                 } else {
                     neighbouringAtom = negAtom.getSymbol();
@@ -202,7 +209,9 @@ public final class GenerateCompatibilityGraph implements Serializable {
         for (Map.Entry<IAtom, List<String>> labelA : labelAtomsBySymbolA.entrySet()) {
 //            System.err.println("labelA.getValue() " + labelA.getValue());
             for (Map.Entry<IAtom, List<String>> labelB : labelAtomsBySymbolB.entrySet()) {
-                if (labelA.getKey().getSymbol().equals(labelB.getKey().getSymbol())) {
+                IAtom atom = labelA.getKey();
+                if (((atom instanceof IQueryAtom) && ((IQueryAtom) atom).matches(labelB.getKey()))
+                        || (!(atom instanceof IQueryAtom) && atom.getSymbol().equals(labelB.getKey().getSymbol()))) {
 //                        System.err.println("labelB.getValue() " + labelB.getValue());
                     int atomNumberI = source.getAtomNumber(labelA.getKey());
                     int atomNumberJ = target.getAtomNumber(labelB.getKey());
