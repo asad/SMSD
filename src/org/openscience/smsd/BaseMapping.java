@@ -66,7 +66,7 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
      * @param mol1
      * @param mol2
      */
-    public BaseMapping(boolean matchBonds, boolean matchRings, boolean matchAtomType, IAtomContainer mol1, IAtomContainer mol2) {
+    public BaseMapping(IAtomContainer mol1, IAtomContainer mol2, boolean matchBonds, boolean matchRings, boolean matchAtomType) {
         super(mol1, mol2);
         this.matchBonds = matchBonds;
         this.matchRings = matchRings;

@@ -175,7 +175,7 @@ public final class Isomorphism extends BaseMapping implements Serializable {
             boolean bondTypeFlag,
             boolean matchRings,
             boolean matchAtomType) {
-        super(bondTypeFlag, matchRings, matchAtomType, query, target);
+        super(query, target, bondTypeFlag, matchRings, matchAtomType);
         this.algorithmType = algorithmType;
         mcsBuilder(getQuery(), getTarget());
         setSubgraph(isSubgraph());
