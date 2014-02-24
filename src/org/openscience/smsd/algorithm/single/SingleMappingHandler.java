@@ -36,7 +36,9 @@ import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.interfaces.IResults;
 
 /**
- * This is a handler class for single atom mapping ({@link org.openscience.cdk.smsd.algorithm.single.SingleMapping}).
+ * This is a handler class for single atom mapping
+ * ({@link org.openscience.cdk.smsd.algorithm.single.SingleMapping}).
+ *
  * @cdk.module smsd @cdk.githash
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
@@ -82,14 +84,17 @@ public class SingleMappingHandler implements IResults {
     }
 
     /**
-     * Function is called by the main program and serves as a starting point for the comparison procedure. {@inheritDoc}
+     * Function is called by the main program and serves as a starting point for
+     * the comparison procedure. {@inheritDoc}
      *
      */
     private synchronized void searchMCS() {
         SingleMapping singleMapping = new SingleMapping();
         List<Map<IAtom, IAtom>> mappings = null;
         try {
-            if (!(source instanceof IQueryAtomContainer)) {
+            if (target instanceof IQueryAtomContainer) {
+                throw new CDKException("Target can't be IQueryAtomContainer");
+            } else if (!(source instanceof IQueryAtomContainer)) {
                 mappings = singleMapping.getOverLaps(source, target);
             } else {
                 mappings = singleMapping.getOverLaps((IQueryAtomContainer) source, target);

@@ -130,6 +130,9 @@ public class SingleMapping {
                         double totalOrder = 0;
                         for (IBond bond : Bonds) {
                             Order bondOrder = bond.getOrder();
+                            if (bondOrder == null) {
+                                continue;
+                            }
                             totalOrder += bondOrder.numeric() + be.getEnergies(bond);
                         }
 
@@ -148,6 +151,9 @@ public class SingleMapping {
                     double totalOrder = 0;
                     for (IBond bond : Bonds) {
                         Order bondOrder = bond.getOrder();
+                        if (bondOrder == null) {
+                            continue;
+                        }
                         totalOrder += bondOrder.numeric() + be.getEnergies(bond);
                     }
 
@@ -178,6 +184,9 @@ public class SingleMapping {
                             double totalOrder = 0;
                             for (IBond bond : Bonds) {
                                 Order bondOrder = bond.getOrder();
+                                if (bondOrder == null) {
+                                    continue;
+                                }
                                 totalOrder += bondOrder.numeric() + be.getEnergies(bond);
                             }
                             if (sourceAtoms.getFormalCharge() != targetAtom.getFormalCharge()) {
@@ -195,6 +204,9 @@ public class SingleMapping {
                     double totalOrder = 0;
                     for (IBond bond : Bonds) {
                         Order bondOrder = bond.getOrder();
+                        if (bondOrder == null) {
+                            continue;
+                        }
                         totalOrder += bondOrder.numeric() + be.getEnergies(bond);
                     }
                     if (sourceAtoms.getFormalCharge() != targetAtom.getFormalCharge()) {
@@ -226,6 +238,7 @@ public class SingleMapping {
     private <K, V> Map<K, V> sortByValue(Map<K, V> map) {
         List list = new LinkedList(map.entrySet());
         Collections.sort(list, new Comparator() {
+            @Override
             public int compare(Object object1, Object object2) {
                 return ((Comparable) ((Map.Entry<K, V>) (object1)).getValue()).compareTo(((Map.Entry<K, V>) (object2)).getValue());
             }
