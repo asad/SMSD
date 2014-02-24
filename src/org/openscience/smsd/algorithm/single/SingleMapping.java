@@ -44,7 +44,8 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.smsd.tools.BondEnergies;
 
 /**
- * This class handles single atom mapping. Either query and/or target molecule with single atom is mapped by this class.
+ * This class handles single atom mapping. Either query and/or target molecule
+ * with single atom is mapped by this class.
  *
  * @cdk.module smsd
  * @cdk.githash
@@ -168,8 +169,26 @@ public class SingleMapping {
         for (IAtom targetAtom : target.atoms()) {
             for (IAtom sourceAtoms : source.atoms()) {
                 Map<IAtom, IAtom> mapAtoms = new HashMap<IAtom, IAtom>();
+                if (targetAtom instanceof IQueryAtom) {
+                    if (((IQueryAtom) targetAtom).matches(sourceAtoms)) {
+                        if (targetAtom.getSymbol().equalsIgnoreCase(sourceAtoms.getSymbol())) {
+                            mapAtoms.put(sourceAtoms, targetAtom);
+                            List<IBond> Bonds = source.getConnectedBondsList(sourceAtoms);
 
-                if (targetAtom.getSymbol().equalsIgnoreCase(sourceAtoms.getSymbol())) {
+                            double totalOrder = 0;
+                            for (IBond bond : Bonds) {
+                                Order bondOrder = bond.getOrder();
+                                totalOrder += bondOrder.numeric() + be.getEnergies(bond);
+                            }
+                            if (sourceAtoms.getFormalCharge() != targetAtom.getFormalCharge()) {
+                                totalOrder += 0.5;
+                            }
+                            connectedBondOrder.put(counter, totalOrder);
+                            mappings.add(counter, mapAtoms);
+                            counter++;
+                        }
+                    }
+                } else if (targetAtom.getSymbol().equalsIgnoreCase(sourceAtoms.getSymbol())) {
                     mapAtoms.put(sourceAtoms, targetAtom);
                     List<IBond> Bonds = source.getConnectedBondsList(sourceAtoms);
 
