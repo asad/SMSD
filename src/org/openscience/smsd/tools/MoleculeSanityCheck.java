@@ -37,6 +37,7 @@ import org.openscience.cdk.ringsearch.AllRingsFinder;
 import org.openscience.cdk.tools.CDKHydrogenAdder;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
+import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.cdk.tools.manipulator.RingSetManipulator;
 
 /**
@@ -49,7 +50,7 @@ import org.openscience.cdk.tools.manipulator.RingSetManipulator;
  */
 @TestClass("org.openscience.cdk.smsd.tools.MoleculeSanityCheckTest")
 public class MoleculeSanityCheck {
-
+    
     private static final ILoggingTool logger
             = LoggingToolFactory.createLoggingTool(MoleculeSanityCheck.class);
 
@@ -69,7 +70,7 @@ public class MoleculeSanityCheck {
                 break;
             }
         }
-
+        
         if (isMarkush) {
             logger.warn("Skipping Markush structure for sanity check");
         }
@@ -117,19 +118,16 @@ public class MoleculeSanityCheck {
 
         // figure out which atoms are in aromatic rings:
         try {
-            CDKHydrogenAdder cdk = CDKHydrogenAdder.getInstance(DefaultChemObjectBuilder.getInstance());
-            cdk.addImplicitHydrogens(mol);
+            AtomContainerManipulator.percieveAtomTypesAndConfigureUnsetProperties(mol);
+            CDKHydrogenAdder.getInstance(mol.getBuilder()).addImplicitHydrogens(mol);
         } catch (CDKException exception) {
+            logger.warn("CDKHydrogenAdder ERROR: " + exception);
         }
-
+        
         try {
             Utility.aromatizeDayLight(mol);
-//            printAtoms(atomContainer);
             // figure out which rings are aromatic:
             RingSetManipulator.markAromaticRings(ringSet);
-//            printAtoms(atomContainer);
-            // figure out which simple (non cycles) rings are aromatic:
-            // HueckelAromaticityDetector.detectAromaticity(atomContainer, srs);
         } catch (CDKException e) {
             logger.warn("Skipping aromatize molecule");
         }
@@ -146,7 +144,7 @@ public class MoleculeSanityCheck {
                     if (!ring.getFlag(CDKConstants.ISAROMATIC)) {
                         continue jloop;
                     }
-
+                    
                     boolean haveatom = ring.contains(mol.getAtom(i));
 
                     //logger.debug("haveatom="+haveatom);
