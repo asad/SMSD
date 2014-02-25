@@ -39,6 +39,7 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.io.IChemObjectReader.Mode;
 import org.openscience.cdk.io.MDLV2000Reader;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
+import org.openscience.cdk.isomorphism.matchers.QueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainerCreator;
 import org.openscience.cdk.normalize.SMSDNormalizer;
 import org.openscience.cdk.smiles.SmilesGenerator;
@@ -461,8 +462,8 @@ public class IsomorphismTest {
         Assert.assertEquals(18, smsd.getAllAtomMapping().size());
         Assert.assertTrue(foundMatches);
 
-        IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
-        smsd = new Isomorphism(queryContainer, target, Algorithm.VFLibMCS);
+        QueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
+        smsd = new Isomorphism(queryContainer, target, Algorithm.DEFAULT);
         foundMatches = smsd.isSubgraph();
         Assert.assertTrue(foundMatches);
     }
