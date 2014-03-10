@@ -193,7 +193,7 @@ import org.openscience.smsd.helper.BondEnergy;
  * @cdk.module smsd
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-@TestClass("org.openscience.cdk.smsd.tools.BondEnergiesTest")
+ @TestClass("org.openscience.cdk.smsd.tools.BondEnergiesTest")
 public class BondEnergies {
 
     private static Map<Integer, BondEnergy> bondEngergies = null;
