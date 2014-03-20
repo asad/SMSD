@@ -119,8 +119,6 @@ public final class VF2MCS extends BaseMCS implements IResults {
             IAtomContainer reducedQuery = reduceQuery(shouldMatchBonds, shouldMatchRings, matchAtomType);
             IAtomContainer reducedTarget = reduceTarget(shouldMatchBonds, shouldMatchRings, matchAtomType);
 
-            System.out.println("Q " + reducedQuery.getAtomCount() + " T " + reducedTarget.getAtomCount());
-
             MCSSeedGenerator mcsSeedGeneratorUIT = new MCSSeedGenerator(reducedQuery, reducedTarget, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.CDKMCS);
             MCSSeedGenerator mcsSeedGeneratorKoch = new MCSSeedGenerator(reducedQuery, reducedTarget, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.MCSPlus);
 
