@@ -116,11 +116,54 @@ public final class VF2MCS extends BaseMCS implements IResults {
             ExecutorService executor = Executors.newSingleThreadExecutor();
             CompletionService<List<AtomAtomMapping>> cs = new ExecutorCompletionService<>(executor);
 
-            IAtomContainer reducedQuery = reduceQuery(shouldMatchBonds, shouldMatchRings, matchAtomType);
-            IAtomContainer reducedTarget = reduceTarget(shouldMatchBonds, shouldMatchRings, matchAtomType);
+            /*
+             * Reduce the target size by removing bonds which do not share 
+             * similar Hybridization 
+             */
+            IAtomContainer targetClone = null;
+            try {
+                targetClone = target.clone();
+                Set<IBond> bondRemovedT = new HashSet<>();
+                for (IBond b1 : targetClone.bonds()) {
+                    for (IBond b2 : source.bonds()) {
+                        if (b1.getAtom(0).getSymbol().equals(b2.getAtom(0).getSymbol())
+                                && (b1.getAtom(1).getSymbol().equals(b2.getAtom(1).getSymbol()))) {
+                            if ((shouldMatchBonds || shouldMatchRings || matchAtomType)
+                                    && (b1.getAtom(0).getHybridization() != null
+                                    && b2.getAtom(0).getHybridization() != null
+                                    && b1.getAtom(1).getHybridization() != null
+                                    && b2.getAtom(1).getHybridization() != null)
+                                    && (!b1.getAtom(0).getHybridization().equals(b2.getAtom(0).getHybridization())
+                                    || !b1.getAtom(1).getHybridization().equals(b2.getAtom(1).getHybridization()))) {
+                                bondRemovedT.add(b1);
+                            }
 
-            MCSSeedGenerator mcsSeedGeneratorUIT = new MCSSeedGenerator(reducedQuery, reducedTarget, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.CDKMCS);
-            MCSSeedGenerator mcsSeedGeneratorKoch = new MCSSeedGenerator(reducedQuery, reducedTarget, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.MCSPlus);
+                        } else if (b1.getAtom(0).getSymbol().equals(b2.getAtom(1).getSymbol())
+                                && (b1.getAtom(1).getSymbol().equals(b2.getAtom(0).getSymbol()))) {
+                            if ((shouldMatchBonds || shouldMatchRings || matchAtomType)
+                                    && (b1.getAtom(0).getHybridization() != null
+                                    && b2.getAtom(0).getHybridization() != null
+                                    && b1.getAtom(1).getHybridization() != null
+                                    && b2.getAtom(1).getHybridization() != null)
+                                    && (!b1.getAtom(0).getHybridization().equals(b2.getAtom(1).getHybridization())
+                                    || !b1.getAtom(1).getHybridization().equals(b2.getAtom(0).getHybridization()))) {
+                                bondRemovedT.add(b1);
+                            }
+                        }
+                    }
+                }
+
+//                System.out.println("Bond to be removed " + bondRemovedT.size());
+                for (IBond b : bondRemovedT) {
+                    targetClone.removeBond(b);
+                }
+
+            } catch (CloneNotSupportedException ex) {
+                java.util.logging.Logger.getLogger(VF2MCS.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            MCSSeedGenerator mcsSeedGeneratorUIT = new MCSSeedGenerator(source, targetClone, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.CDKMCS);
+            MCSSeedGenerator mcsSeedGeneratorKoch = new MCSSeedGenerator(source, targetClone, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.MCSPlus);
 
             int jobCounter = 0;
             cs.submit(mcsSeedGeneratorUIT);
@@ -330,7 +373,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
                     }
                 }
 
-//                System.out.println("Bond to be removed " + bondRemovedQ.size());
+//                System.out.println("Bond to be removed " + bondRemovedT.size());
                 for (IBond b : bondRemovedT) {
                     targetClone.removeBond(b);
                 }
@@ -563,102 +606,5 @@ public final class VF2MCS extends BaseMCS implements IResults {
             return allAtomMCS.iterator().next();
         }
         return new AtomAtomMapping(getReactantMol(), getProductMol());
-    }
-
-    private IAtomContainer reduceTarget(boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) {
-        /*
-         * Reduce the target size by removing bonds which do not share 
-         * similar Hybridization 
-         */
-        IAtomContainer targetClone = null;
-        try {
-            targetClone = target.clone();
-            Set<IBond> bondRemovedT = new HashSet<>();
-            for (IBond b1 : targetClone.bonds()) {
-                for (IBond b2 : source.bonds()) {
-                    if (b1.getAtom(0).getSymbol().equals(b2.getAtom(0).getSymbol())
-                            && (b1.getAtom(1).getSymbol().equals(b2.getAtom(1).getSymbol()))) {
-                        if ((shouldMatchBonds || shouldMatchRings || matchAtomType)
-                                && (b1.getAtom(0).getHybridization() != null
-                                && b2.getAtom(0).getHybridization() != null
-                                && b1.getAtom(1).getHybridization() != null
-                                && b2.getAtom(1).getHybridization() != null)
-                                && (!b1.getAtom(0).getHybridization().equals(b2.getAtom(0).getHybridization())
-                                || !b1.getAtom(1).getHybridization().equals(b2.getAtom(1).getHybridization()))) {
-                            bondRemovedT.add(b1);
-                        }
-
-                    } else if (b1.getAtom(0).getSymbol().equals(b2.getAtom(1).getSymbol())
-                            && (b1.getAtom(1).getSymbol().equals(b2.getAtom(0).getSymbol()))) {
-                        if ((shouldMatchBonds || shouldMatchRings || matchAtomType)
-                                && (b1.getAtom(0).getHybridization() != null
-                                && b2.getAtom(0).getHybridization() != null
-                                && b1.getAtom(1).getHybridization() != null
-                                && b2.getAtom(1).getHybridization() != null)
-                                && (!b1.getAtom(0).getHybridization().equals(b2.getAtom(1).getHybridization())
-                                || !b1.getAtom(1).getHybridization().equals(b2.getAtom(0).getHybridization()))) {
-                            bondRemovedT.add(b1);
-                        }
-                    }
-                }
-            }
-
-//                System.out.println("Bond to be removed " + bondRemovedQ.size());
-            for (IBond b : bondRemovedT) {
-                targetClone.removeBond(b);
-            }
-        } catch (CloneNotSupportedException ex) {
-            java.util.logging.Logger.getLogger(VF2MCS.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        return targetClone;
-    }
-
-    private IAtomContainer reduceQuery(boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) {
-        /*
-         * Reduce the target size by removing bonds which do not share 
-         * similar Hybridization 
-         */
-        IAtomContainer queryClone = null;
-        try {
-            queryClone = source.clone();
-            Set<IBond> bondRemovedQ = new HashSet<>();
-            for (IBond b1 : queryClone.bonds()) {
-                for (IBond b2 : target.bonds()) {
-                    if (b1.getAtom(0).getSymbol().equals(b2.getAtom(0).getSymbol())
-                            && (b1.getAtom(1).getSymbol().equals(b2.getAtom(1).getSymbol()))) {
-                        if ((shouldMatchBonds || shouldMatchRings || matchAtomType)
-                                && (b1.getAtom(0).getHybridization() != null
-                                && b2.getAtom(0).getHybridization() != null
-                                && b1.getAtom(1).getHybridization() != null
-                                && b2.getAtom(1).getHybridization() != null)
-                                && (!b1.getAtom(0).getHybridization().equals(b2.getAtom(0).getHybridization())
-                                || !b1.getAtom(1).getHybridization().equals(b2.getAtom(1).getHybridization()))) {
-                            bondRemovedQ.add(b1);
-                        }
-
-                    } else if (b1.getAtom(0).getSymbol().equals(b2.getAtom(1).getSymbol())
-                            && (b1.getAtom(1).getSymbol().equals(b2.getAtom(0).getSymbol()))) {
-                        if ((shouldMatchBonds || shouldMatchRings || matchAtomType)
-                                && (b1.getAtom(0).getHybridization() != null
-                                && b2.getAtom(0).getHybridization() != null
-                                && b1.getAtom(1).getHybridization() != null
-                                && b2.getAtom(1).getHybridization() != null)
-                                && (!b1.getAtom(0).getHybridization().equals(b2.getAtom(1).getHybridization())
-                                || !b1.getAtom(1).getHybridization().equals(b2.getAtom(0).getHybridization()))) {
-                            bondRemovedQ.add(b1);
-                        }
-                    }
-                }
-            }
-
-//                System.out.println("Bond to be removed " + bondRemovedQ.size());
-            for (IBond b : bondRemovedQ) {
-                queryClone.removeBond(b);
-            }
-
-        } catch (CloneNotSupportedException ex) {
-            java.util.logging.Logger.getLogger(VF2MCS.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        return queryClone;
     }
 }
