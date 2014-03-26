@@ -78,6 +78,7 @@ public class VFMCSMapper implements IMapper {
     private final IQuery query;
     private final List<Map<INode, IAtom>> maps;
     private IterationManager iterationManager = null;
+    private final int weight = 10;
 
     /**
      *
@@ -150,7 +151,7 @@ public class VFMCSMapper implements IMapper {
      */
     @Override
     public List<Map<INode, IAtom>> getMaps(IAtomContainer target) {
-        setIterationManager(new IterationManager((this.query.countNodes() + target.getAtomCount())));
+        setIterationManager(new IterationManager(weight * (this.query.countNodes() + target.getAtomCount())));
         IState state = new VFMCSState(query, target);
         maps.clear();
         mapAll(state);
@@ -177,7 +178,7 @@ public class VFMCSMapper implements IMapper {
      */
     @Override
     public int countMaps(IAtomContainer target) {
-        setIterationManager(new IterationManager((this.query.countNodes() + target.getAtomCount())));
+        setIterationManager(new IterationManager(weight * (this.query.countNodes() + target.getAtomCount())));
         IState state = new VFMCSState(query, target);
         maps.clear();
         mapAll(state);
