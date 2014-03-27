@@ -63,7 +63,6 @@ import org.openscience.smsd.algorithm.vflib.interfaces.IEdge;
 import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
 import org.openscience.smsd.algorithm.vflib.interfaces.IState;
-import org.openscience.smsd.tools.IterationManager;
 
 /**
  * This class finds mapping states between query and target molecules.
