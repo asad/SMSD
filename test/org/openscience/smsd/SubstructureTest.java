@@ -702,11 +702,6 @@ public class SubstructureTest {
 
         Substructure smsd = new Substructure(query, target, false, false, false, true);
         Assert.assertTrue(smsd.isSubgraph());
-//        for (AtomAtomMapping m : smsd.getAllAtomMapping()) {
-//            //System.out.println(m.getMappingsByIndex());
-//        }
-        Assert.assertEquals(5, smsd.getAllAtomMapping().size());
-
         IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
         Substructure smsd2 = new Substructure(queryContainer, target, false);
         Assert.assertFalse(smsd2.isSubgraph());
