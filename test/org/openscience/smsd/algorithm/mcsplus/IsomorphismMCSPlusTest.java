@@ -242,8 +242,8 @@ public class IsomorphismMCSPlusTest extends ImageUtility {
         // NADH
         IAtomContainer target = sp.parseSmiles("NC(=O)C1=CN(C=CC1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
 
-        IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(query);
-        IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(target);
+        IAtomContainer ac1 = AtomContainerManipulator.removeNonChiralHydrogens(query);
+        IAtomContainer ac2 = AtomContainerManipulator.removeNonChiralHydrogens(target);
         Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, false, false);
         // set chemical filter true
         comparison.setChemFilters(true, true, true);
