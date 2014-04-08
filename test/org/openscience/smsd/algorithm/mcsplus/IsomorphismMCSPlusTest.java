@@ -223,7 +223,7 @@ public class IsomorphismMCSPlusTest extends ImageUtility {
         IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(target);
         Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, false, false);
         // set chemical filter true
-        comparison.setChemFilters(false, true, true);
+        comparison.setChemFilters(false, false, false);
         Assert.assertEquals(2, comparison.getAllAtomMapping().size());
     }
 
