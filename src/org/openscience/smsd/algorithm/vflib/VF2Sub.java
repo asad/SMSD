@@ -128,21 +128,20 @@ public class VF2Sub implements IResults {
         }
         boolean timoutVF = searchVFMappings();
         boolean flag = isExtensionFeasible();
-        if (flag && !vfLibSolutions.isEmpty() && !timoutVF) {
+        if (flag && !vfLibSolutions.isEmpty() && !timoutVF && (!(source instanceof IQueryAtomContainer))) {
             try {
                 searchMcGregorMapping();
             } catch (CDKException | IOException ex) {
                 Logger.error(Level.SEVERE, null, ex);
             }
         } else if (!allAtomMCSCopy.isEmpty()
-                && allAtomMCSCopy.iterator().next().getCount() == getReactantMol().getAtomCount()) {
+                && allAtomMCSCopy.iterator().next().getCount() == source.getAtomCount()) {
             allAtomMCS.addAll(allAtomMCSCopy);
             allMCS.addAll(allMCSCopy);
         }
         return !allAtomMCS.isEmpty()
                 && allAtomMCS.iterator().next().getCount()
-                == getReactantMol().getAtomCount();
-
+                == source.getAtomCount();
     }
 
     private synchronized boolean isExtensionFeasible() {
@@ -233,7 +232,7 @@ public class VF2Sub implements IResults {
             setVFMappings(true, queryCompiler);
         }
 //        System.out.println("Sol count " + vfLibSolutions.size());
-//        System.out.println("Sol size " + vfLibSolutions.iterator().next().size());
+//        System.out.println("Sol size " + (vfLibSolutions.iterator().hasNext() ? vfLibSolutions.iterator().next().size() : 0));
 //        System.out.println("MCSSize " + bestHitSize);
 //        System.out.println("After Sol count " + allMCSCopy.size());
         return mapper != null ? mapper.isTimeout() : true;

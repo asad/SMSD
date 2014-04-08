@@ -33,7 +33,7 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IIsotope;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
-import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
+import uk.ac.ebi.reactionblast.tools.ExtAtomContainerManipulator;
 
 /**
  * @author Syed Asad Rahman<asad@ebi.ac.uk> @cdk.module smsd
@@ -135,8 +135,8 @@ public class AtomContainerComparator implements Comparator<IAtomContainer> {
                     return -1;
                 } else {
                     // 4. Bond count equal, compare sum of bond orders (heavy atoms only)
-                    double bondOrderSum1 = AtomContainerManipulator.getSingleBondEquivalentSum(atomContainer1);
-                    double bondOrderSum2 = AtomContainerManipulator.getSingleBondEquivalentSum(atomContainer2);
+                    double bondOrderSum1 = ExtAtomContainerManipulator.getSingleBondEquivalentSum(atomContainer1);
+                    double bondOrderSum2 = ExtAtomContainerManipulator.getSingleBondEquivalentSum(atomContainer2);
                     if (bondOrderSum1 > bondOrderSum2) {
                         return 1;
                     } else if (bondOrderSum1 < bondOrderSum2) {

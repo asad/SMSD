@@ -38,7 +38,7 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.smiles.SmilesGenerator;
 import org.openscience.cdk.tools.CDKHydrogenAdder;
-import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
+import uk.ac.ebi.reactionblast.tools.ExtAtomContainerManipulator;
 
 /**
  * Holds atom-atom mappings information between source and target molecules
@@ -297,7 +297,7 @@ public final class AtomAtomMapping implements Serializable {
             Logger.getLogger(AtomAtomMapping.class.getName()).log(Level.SEVERE, null, ex);
         }
         try {
-            AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(ac);
+            ExtAtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(ac);
         } catch (CDKException ex) {
             Logger.getLogger(AtomAtomMapping.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -313,7 +313,7 @@ public final class AtomAtomMapping implements Serializable {
      * @throws CDKException
      */
     public synchronized String getCommonFragmentAsSMILES() throws CloneNotSupportedException, CDKException {
-        SmilesGenerator aromatic = SmilesGenerator.unique();
+        SmilesGenerator aromatic = SmilesGenerator.unique().withAtomClasses();
         return aromatic.create(getCommonFragment());
     }
 }

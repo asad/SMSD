@@ -27,7 +27,7 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.smiles.SmilesGenerator;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
-import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
+import uk.ac.ebi.reactionblast.tools.ExtAtomContainerManipulator;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.BaseMapping;
 import org.openscience.smsd.Isomorphism;
@@ -235,7 +235,7 @@ final public class MCSSThread implements Callable<LinkedBlockingQueue<IAtomConta
 
         try {
             for (int index = 1; index < mcssList.size(); index++) {
-                IAtomContainer target = AtomContainerManipulator.removeHydrogens(mcssList.get(index));
+                IAtomContainer target = ExtAtomContainerManipulator.removeHydrogens(mcssList.get(index));
                 Collection<Fragment> fragmentsFomMCS;
                 BaseMapping comparison;
 

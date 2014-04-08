@@ -24,7 +24,6 @@
 package org.openscience.smsd.tools;
 
 import org.openscience.cdk.CDKConstants;
-import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.annotations.TestMethod;
 import org.openscience.cdk.exception.CDKException;
@@ -37,7 +36,7 @@ import org.openscience.cdk.ringsearch.AllRingsFinder;
 import org.openscience.cdk.tools.CDKHydrogenAdder;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
-import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
+import uk.ac.ebi.reactionblast.tools.ExtAtomContainerManipulator;
 import org.openscience.cdk.tools.manipulator.RingSetManipulator;
 
 /**
@@ -118,14 +117,14 @@ public class MoleculeSanityCheck {
 
         // figure out which atoms are in aromatic rings:
         try {
-            AtomContainerManipulator.percieveAtomTypesAndConfigureUnsetProperties(mol);
+            ExtAtomContainerManipulator.percieveAtomTypesAndConfigureUnsetProperties(mol);
             CDKHydrogenAdder.getInstance(mol.getBuilder()).addImplicitHydrogens(mol);
         } catch (CDKException exception) {
             logger.warn("CDKHydrogenAdder ERROR: " + exception);
         }
         
         try {
-            Utility.aromatizeDayLight(mol);
+            ExtAtomContainerManipulator.aromatizeDayLight(mol);
             // figure out which rings are aromatic:
             RingSetManipulator.markAromaticRings(ringSet);
         } catch (CDKException e) {

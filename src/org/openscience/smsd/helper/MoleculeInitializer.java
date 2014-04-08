@@ -40,7 +40,7 @@ import org.openscience.cdk.ringsearch.AllRingsFinder;
 import org.openscience.cdk.ringsearch.SSSRFinder;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
-import org.openscience.smsd.tools.Utility;
+import uk.ac.ebi.reactionblast.tools.ExtAtomContainerManipulator;
 
 /**
  *
@@ -208,7 +208,7 @@ public class MoleculeInitializer {
 
             // check for atomaticity
             try {
-                Utility.aromatizeDayLight(atomContainer);
+                ExtAtomContainerManipulator.aromatizeDayLight(atomContainer);
             } catch (CDKException e) {
                 Logger.debug(e.toString());
                 throw new CDKException(e.toString(), e);

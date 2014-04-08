@@ -289,28 +289,28 @@ public final class MCSPlus {
     /**
      * @return the shouldMatchRings
      */
-    public boolean isMatchRings() {
+    public synchronized boolean isMatchRings() {
         return shouldMatchRings;
     }
 
     /**
      * @return the shouldMatchBonds
      */
-    public boolean isMatchBonds() {
+    public synchronized boolean isMatchBonds() {
         return shouldMatchBonds;
     }
 
     /**
      * @return the overlaps
      */
-    public List<List<Integer>> getOverlaps() {
+    public synchronized List<List<Integer>> getOverlaps() {
         return Collections.unmodifiableList(overlaps);
     }
 
     /**
      * @return the matchAtomType
      */
-    public boolean isMatchAtomType() {
+    public synchronized boolean isMatchAtomType() {
         return matchAtomType;
     }
 }

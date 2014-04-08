@@ -32,7 +32,7 @@ import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.graph.CycleFinder;
 import org.openscience.cdk.graph.Cycles;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
+import uk.ac.ebi.reactionblast.tools.ExtAtomContainerManipulator;
 
 /**
  *
@@ -61,7 +61,7 @@ public class Utility {
         ElectronDonation model = ElectronDonation.cdk();
         CycleFinder cycles = Cycles.cdkAromaticSet();
         Aromaticity aromaticity = new Aromaticity(model, cycles);
-        AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(molecule);
+        ExtAtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(molecule);
         aromaticity.apply(molecule);
     }
 }

@@ -74,12 +74,12 @@ import org.openscience.smsd.algorithm.vflib.interfaces.IState;
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFLibTest")
 public class VFState implements IState {
 
-    private List<Match> candidates;
-    private IQuery query;
-    private IAtomContainer target;
-    private List<INode> queryPath;
-    private List<IAtom> targetPath;
-    private Map<INode, IAtom> map;
+    private final List<Match> candidates;
+    private final IQuery query;
+    private final IAtomContainer target;
+    private final List<INode> queryPath;
+    private final List<IAtom> targetPath;
+    private final Map<INode, IAtom> map;
 
     /**
      * initialize the VFState with query and target
@@ -88,21 +88,21 @@ public class VFState implements IState {
      * @param target
      */
     public VFState(IQuery query, IAtomContainer target) {
-        this.map = new HashMap<INode, IAtom>();
-        this.queryPath = new ArrayList<INode>();
-        this.targetPath = new ArrayList<IAtom>();
+        this.map = new HashMap<>();
+        this.queryPath = new ArrayList<>();
+        this.targetPath = new ArrayList<>();
 
         this.query = query;
         this.target = target;
-        this.candidates = new ArrayList<Match>();
+        this.candidates = new ArrayList<>();
         loadRootCandidates();
 
     }
 
     private VFState(VFState state, Match match) {
-        this.candidates = new ArrayList<Match>();
-        this.queryPath = new ArrayList<INode>(state.queryPath);
-        this.targetPath = new ArrayList<IAtom>(state.targetPath);
+        this.candidates = new ArrayList<>();
+        this.queryPath = new ArrayList<>(state.queryPath);
+        this.targetPath = new ArrayList<>(state.targetPath);
 
         this.map = state.map;
         this.query = state.query;
@@ -136,7 +136,7 @@ public class VFState implements IState {
      */
     @Override
     public Map<INode, IAtom> getMap() {
-        return Collections.synchronizedMap(new HashMap<INode, IAtom>(map));
+        return Collections.synchronizedMap(new HashMap<>(map));
     }
 
     /**
@@ -175,10 +175,7 @@ public class VFState implements IState {
         if (!matchAtoms(match)) {
             return false;
         }
-        if (!matchBonds(match)) {
-            return false;
-        }
-        return true;
+        return matchBonds(match);
     }
 
     /**

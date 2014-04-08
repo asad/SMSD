@@ -28,7 +28,7 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
-import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
+import uk.ac.ebi.reactionblast.tools.ExtAtomContainerManipulator;
 
 /**
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
@@ -52,12 +52,12 @@ public class BaseFilter {
         this.mol2 = targetMol;
 
         try {
-            AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol1);
+            ExtAtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol1);
         } catch (CDKException ex) {
             logger.error(Level.SEVERE, null, ex);
         }
         try {
-            AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol2);
+            ExtAtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol2);
         } catch (CDKException ex) {
             logger.error(Level.SEVERE, null, ex);
         }
@@ -73,7 +73,7 @@ public class BaseFilter {
         this.mol2 = targetMol;
 
         try {
-            AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol2);
+            ExtAtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol2);
         } catch (CDKException ex) {
             logger.error(Level.SEVERE, null, ex);
         }

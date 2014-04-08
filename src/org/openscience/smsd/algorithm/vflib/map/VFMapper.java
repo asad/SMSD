@@ -154,7 +154,7 @@ public class VFMapper implements IMapper {
         IState state = new VFState(query, target);
         maps.clear();
         mapAll(state);
-        return new ArrayList<Map<INode, IAtom>>(maps);
+        return new ArrayList<>(maps);
     }
 
     /**

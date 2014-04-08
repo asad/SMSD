@@ -96,7 +96,11 @@ public final class GenerateCompatibilityGraph implements Serializable {
         /*
          Generate all possible graphs when no ring match or atom type is required
          */
-        if (!isMatchRings() && !matchAtomType) {
+        /*
+         Modification for AAM only
+         */
+        if ((!shouldMatchBonds || !matchAtomType)
+                && source.getAtomCount() > 30 && target.getAtomCount() > 30) {
             compatibilityGraphNodesIfCEdgeIsZero();
             compatibilityGraphCEdgeZero();
             clearCompGraphNodesCZero();
@@ -384,7 +388,9 @@ public final class GenerateCompatibilityGraph implements Serializable {
 
                     if (reactantBond != null && productBond != null) {
                         addZeroEdges(reactantBond, productBond, a, b);
-                    } else if (reactantBond == null && productBond == null) {
+                    } else if (reactantBond == null && productBond == null
+                            && source.getAtomCount() < 50 && target.getAtomCount() < 50) {
+                        //50 unique condition to speed up the AAM
                         dEdges.add((a / 4) + 1);
                         dEdges.add((b / 4) + 1);
                     }

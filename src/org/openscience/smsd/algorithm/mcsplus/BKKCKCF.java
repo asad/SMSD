@@ -4,18 +4,22 @@
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
- * This program is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General
- * Public License as published by the Free Software Foundation; either version 2.1 of the License, or (at your option)
- * any later version. All we ask is that proper credit is given for our work, which includes - but is not limited to -
- * adding the above copyright notice to the beginning of your source code files, and to any copyright notice that you
+ * This program is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version. All we ask is that proper credit is given for our work,
+ * which includes - but is not limited to - adding the above copyright notice to
+ * the beginning of your source code files, and to any copyright notice that you
  * may distribute with programs based on this work.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
  * details.
  *
- * You should have received index copy of the GNU Lesser General Public License along with this program; if not, write
- * to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ * You should have received index copy of the GNU Lesser General Public License
+ * along with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 package org.openscience.smsd.algorithm.mcsplus;
 
@@ -23,15 +27,15 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.Stack;
 import org.openscience.cdk.annotations.TestClass;
 
 /**
- * This class implements Bron-Kerbosch clique detection algorithm as it is described in [F. Cazals, C. Karande: An
- * Algorithm for reporting maximal c-cliques; processedVertex.Comp. Sc. (2005); vol 349; pp. 484-490]
+ * This class implements Bron-Kerbosch clique detection algorithm as it is
+ * described in [F. Cazals, C. Karande: An Algorithm for reporting maximal
+ * c-cliques; processedVertex.Comp. Sc. (2005); vol 349; pp. 484-490]
  *
  *
  * BronKerboschCazalsKarandeKochCliqueFinder.java
@@ -75,7 +79,7 @@ public final class BKKCKCF {
      *V: stored all the vertices for the Graph G
      * V[G]: nodes of vector comp_graph_nodes are stored in V
      */
-    private static Stack<Integer> V;
+    private final Stack<Integer> V;
     /**
      * ********************************************************************
      */
@@ -118,14 +122,6 @@ public final class BKKCKCF {
             V.add(comp_graph_nodes.get(a * 3 + 2));
         }
         V.add(0);
-        Init_Algorithm();
-    }
-
-    /*
-     * Call the wrapper for ENUMERATE_CLIQUES
-     *
-     */
-    private void Init_Algorithm() {
 
         /*
          * N[u]: set of neighbours of vertex u in Graph G
