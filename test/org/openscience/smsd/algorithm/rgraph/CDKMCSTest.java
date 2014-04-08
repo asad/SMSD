@@ -187,19 +187,15 @@ public class CDKMCSTest {
 
     @Test
     public void testGetSubgraphMap_IAtomContainer_IAtomContainer() throws Exception {
-        String molfile = "data/mdl/decalin.mol";
-        String queryfile = "data/mdl/decalin.mol";
-        AtomContainer mol = new AtomContainer();
-        AtomContainer temp = new AtomContainer();
+        String molfile = "C1CCC2CCCCC2C1";//decalin
+        String queryfile = "C1CCC2CCCCC2C1";//decalin
+        IAtomContainer mol;
+        IAtomContainer temp;
         QueryAtomContainer query1 = null;
         QueryAtomContainer query2 = null;
 
-        InputStream ins = this.getClass().getClassLoader().getResourceAsStream(molfile);
-        MDLV2000Reader reader = new MDLV2000Reader(ins, Mode.STRICT);
-        reader.read(mol);
-        ins = this.getClass().getClassLoader().getResourceAsStream(queryfile);
-        reader = new MDLV2000Reader(ins, Mode.STRICT);
-        reader.read(temp);
+        mol = new SmilesParser(DefaultChemObjectBuilder.getInstance()).parseSmiles(molfile);
+        temp = new SmilesParser(DefaultChemObjectBuilder.getInstance()).parseSmiles(queryfile);
         query1 = QueryAtomContainerCreator.createBasicQueryContainer(temp);
 
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
@@ -220,25 +216,14 @@ public class CDKMCSTest {
      */
     @Test
     public void testGetOverlaps_IAtomContainer_IAtomContainer() throws Exception {
-        String file1 = "data/mdl/5SD.mol";
-        String file2 = "data/mdl/ADN.mol";
-        AtomContainer mol1 = new AtomContainer();
-        AtomContainer mol2 = new AtomContainer();
+        String file1 = "O=C3CC4CCC2C1C(C(=O)CC1)(CCC2C4(C)CC3)C";//5SD//"data/mdl/5SD.mol";
+        String file2 = "n2c1c(ncnc1n(c2)C3OC(C(O)C3O)CO)N";//ADN//"data/mdl/ADN.mol";
 
-        InputStream ins1 = this.getClass().getClassLoader().getResourceAsStream(file1);
-        new MDLV2000Reader(ins1, Mode.STRICT).read(mol1);
-        InputStream ins2 = this.getClass().getClassLoader().getResourceAsStream(file2);
-        new MDLV2000Reader(ins2, Mode.STRICT).read(mol2);
+        IAtomContainer mol1;
+        IAtomContainer mol2;
 
-        AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol1);
-        CDKHydrogenAdder adder = CDKHydrogenAdder.getInstance(mol1.getBuilder());
-        adder.addImplicitHydrogens(mol1);
-        Utility.aromatizeDayLight(mol1);
-
-        AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol2);
-        adder = CDKHydrogenAdder.getInstance(mol2.getBuilder());
-        adder.addImplicitHydrogens(mol2);
-        Utility.aromatizeDayLight(mol2);
+        mol1 = new SmilesParser(DefaultChemObjectBuilder.getInstance()).parseSmiles(file1);
+        mol2 = new SmilesParser(DefaultChemObjectBuilder.getInstance()).parseSmiles(file2);
 
         List<IAtomContainer> list = CDKMCS.getOverlaps(mol1, mol2, true, true, false);
         Assert.assertEquals(1, list.size());

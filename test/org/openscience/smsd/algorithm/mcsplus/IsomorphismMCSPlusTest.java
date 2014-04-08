@@ -155,8 +155,8 @@ public class IsomorphismMCSPlusTest extends ImageUtility {
 
         double score = 1.0;
 
-        IAtomContainer ac1 = AtomContainerManipulator.removeHydrogens(molecule1);
-        IAtomContainer ac2 = AtomContainerManipulator.removeHydrogens(molecule2);
+        IAtomContainer ac1 = AtomContainerManipulator.removeNonChiralHydrogens(molecule1);
+        IAtomContainer ac2 = AtomContainerManipulator.removeNonChiralHydrogens(molecule2);
         Isomorphism smsd1 = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, false, false);
         smsd1.setChemFilters(true, true, true);
         Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
