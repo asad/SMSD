@@ -33,9 +33,9 @@ import org.openscience.cdk.Atom;
 import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
+import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
-import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.io.IChemObjectReader.Mode;
 import org.openscience.cdk.io.MDLV2000Reader;
 import org.openscience.cdk.isomorphism.matchers.*;
@@ -84,25 +84,24 @@ public class CDKMCSTest {
      */
     @Test
     public void testSFBug1708336() throws Exception {
-        IChemObjectBuilder builder = DefaultChemObjectBuilder.getInstance();
-        IAtomContainer atomContainer = builder.newInstance(AtomContainer.class);
-        atomContainer.addAtom(builder.newInstance(Atom.class, "C"));
-        atomContainer.addAtom(builder.newInstance(Atom.class, "C"));
-        atomContainer.addAtom(builder.newInstance(Atom.class, "N"));
+        IAtomContainer atomContainer = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class);
+        atomContainer.addAtom(atomContainer.getBuilder().newInstance(IAtom.class, "C"));
+        atomContainer.addAtom(atomContainer.getBuilder().newInstance(IAtom.class, "C"));
+        atomContainer.addAtom(atomContainer.getBuilder().newInstance(IAtom.class, "N"));
         atomContainer.addBond(0, 1, IBond.Order.SINGLE);
         atomContainer.addBond(1, 2, IBond.Order.SINGLE);
-        IQueryAtomContainer query = new QueryAtomContainer(builder);
-        IQueryAtom a1 = new SymbolQueryAtom(builder);
+        IQueryAtomContainer query = new QueryAtomContainer(atomContainer.getBuilder());
+        IQueryAtom a1 = new SymbolQueryAtom(atomContainer.getBuilder());
         a1.setSymbol("C");
 
-        AnyAtom a2 = new AnyAtom(builder);
+        AnyAtom a2 = new AnyAtom(atomContainer.getBuilder());
 
-        IBond b1 = new OrderQueryBond(a1, a2, IBond.Order.SINGLE, builder);
+        IBond b1 = new OrderQueryBond(a1, a2, IBond.Order.SINGLE, atomContainer.getBuilder());
 
-        IQueryAtom a3 = new SymbolQueryAtom(builder);
+        IQueryAtom a3 = new SymbolQueryAtom(atomContainer.getBuilder());
         a3.setSymbol("C");
 
-        IBond b2 = new OrderQueryBond(a2, a3, IBond.Order.SINGLE, builder);
+        IBond b2 = new OrderQueryBond(a2, a3, IBond.Order.SINGLE, atomContainer.getBuilder());
         query.addAtom(a1);
         query.addAtom(a2);
         query.addAtom(a3);

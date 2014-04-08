@@ -72,7 +72,7 @@ public class MCSPlusHandlerTest {
     @Test
     public void testSearchMCS() {
         try {
-            System.out.println("1");
+            //System.out.println("1");
             SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
             IAtomContainer target;
             target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
@@ -92,7 +92,7 @@ public class MCSPlusHandlerTest {
      */
     @Test
     public void testSet_IAtomContainer_IAtomContainer() throws InvalidSmilesException {
-        System.out.println("2");
+        //System.out.println("2");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer queryac = sp.parseSmiles("Nc1ccccc1");
@@ -109,7 +109,7 @@ public class MCSPlusHandlerTest {
      */
     @Test
     public void testSet_IMolecule_IMolecule() throws Exception {
-        System.out.println("3");
+        //System.out.println("3");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer queryac = sp.parseSmiles("Nc1ccccc1");
@@ -125,7 +125,7 @@ public class MCSPlusHandlerTest {
      */
     @Test
     public void testSet_AtomContainer_AtomContainer() throws InvalidSmilesException {
-        System.out.println("4");
+        //System.out.println("4");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
 
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
@@ -141,7 +141,7 @@ public class MCSPlusHandlerTest {
      */
     @Test
     public void testGetAllAtomMapping() throws InvalidSmilesException {
-        System.out.println("5");
+        //System.out.println("5");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("Nc1cccc(NO)c1");
         IAtomContainer target = sp.parseSmiles("Nc1ccccc1");
@@ -158,7 +158,7 @@ public class MCSPlusHandlerTest {
      */
     @Test
     public void testgetAllAtomMapping() throws InvalidSmilesException, CDKException {
-        System.out.println("6");
+        //System.out.println("6");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("Nc1cccc(NO)c1");
         IAtomContainer target = sp.parseSmiles("Nc1ccccc1");
@@ -174,7 +174,7 @@ public class MCSPlusHandlerTest {
      */
     @Test
     public void testGetFirstAtomMapping() throws InvalidSmilesException {
-        System.out.println("7");
+        //System.out.println("7");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("Nc1cccc(NO)c1");
         IAtomContainer target = sp.parseSmiles("Nc1ccccc1");
@@ -193,7 +193,7 @@ public class MCSPlusHandlerTest {
      */
     @Test
     public void testgetFirstAtomMapping() throws InvalidSmilesException, CDKException {
-        System.out.println("8");
+        //System.out.println("8");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("Nc1cccc(NO)c1");
         IAtomContainer target = sp.parseSmiles("Nc1ccccc1");
