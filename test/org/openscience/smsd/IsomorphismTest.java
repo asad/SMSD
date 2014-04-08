@@ -735,6 +735,36 @@ public class IsomorphismTest {
 //
     }
 
+    @Test
+    public void testComplexRing() throws Exception {
+        System.out.println("32");
+        String s = "";
+        String t = "";
+
+        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+//      s="C[C@@]12CC3=C(CCC([O-])=O)[C@](C)(CC([O-])=O)C(\\C=C4/[NH2+][C@@](C)([C@@H]5N=C(\\C=C(/[NH2+]1)C(CCC([O-])=O)=C2CC([O-])=O)[C@](C)(CCC([O-])=O)[C@H]5CC([O-])=O)[C@@](C)(CC([O-])=O)[C@@H]4CCC([O-])=O)=N3");
+//      t="C[C@@]12CC3=C(CCC([O-])=O)[C@](C)(CC([O-])=O)C(\\C=C4/N[C@@](C)(C5=C(CC([O-])=O)[C@@](C)(CCC([O-])=O)C(CC(=N1)C(CCC([O-])=O)=C2CC([O-])=O)=N5)[C@@](C)(CC([O-])=O)[C@@H]4CCC([O-])=O)=N3");
+
+////        s="O=C([O-])CCC1C=2N=C(C(=C3[NH2+]C(C)(C4N=C(C(=C5N=C(C2)C(C)(C)C5CCC(=O)[O-])C)C(C)(CCC(=O)[O-])C4CC(=O)[O-])C(C)(CC(=O)[O-])C3CCC(=O)[O-])C)C1(C)CC(=O)[O-]");
+////        t="O=C([O-])CCC1C=2N=C(C(=C3[NH2+]C(C)(C4N=C(C(=C5N=C(C2)C(C)(C)C5CCC(=O)[O-])C)C(C)(CCC(=O)[O-])C4CC(=O)[O-])C(C)(CC(=O)N)C3CCC(=O)[O-])C)C1(C)CC(=O)N");
+        
+        s="O=C([O-])CC1=C(C2=[N+]3C1(C)CC4=C(CCC(=O)[O-])C(C=5C=C6N7C(C)(C8[N+](=C(C2)C(C)(CCC(=O)[O-])C8CC(=O)[O-])[Co-2]73[N+]45)C(C)(CC(=O)[O-])C6CCC(=O)[O-])(C)CC(=O)[O-])CCC(=O)[O-]";
+        t="O=C([O-])CC1=C(C2=[N+]3C1(C)CC4=C(CCC(=O)[O-])C(C=5C=C6N7C(C8=C(CC(=O)[O-])C(C(=[N+]8[Co-2]73[N+]45)C2)(C)CCC(=O)[O-])(C)C(C)(CC(=O)[O-])C6CCC(=O)[O-])(C)CC(=O)[O-])CCC(=O)[O-]";
+        IAtomContainer query = sp.parseSmiles(s);
+        IAtomContainer target = sp.parseSmiles(t);
+
+        double score = 1.0;
+        Isomorphism overlap = new Isomorphism(query, target, Algorithm.VFLibMCS, false, false, false);
+        overlap.setChemFilters(true, true, true);
+//        Assert.assertEquals(score, overlap.getTanimotoSimilarity(), 0.001);
+        SmilesGenerator aromatic = SmilesGenerator.unique().aromatic();
+        System.out.println("SMILES Q :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnQuery()));
+        System.out.println("SMILES T :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnTarget()));
+        System.out.println("SMILES Common:" + overlap.getFirstAtomMapping().getCommonFragmentAsSMILES());
+        System.out.println("q:" + query.getAtomCount() +" t:" + target.getAtomCount()+ ", Common atoms: " + overlap.getFirstAtomMapping().getCount());
+//
+    }
+
     /*
      g1: NC1CCCCC1
      g2: NC1CCC(N)CC1
