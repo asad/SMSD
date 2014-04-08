@@ -63,7 +63,7 @@ public class VF2Test {
      */
     @Test
     public void testGetAllAtomMapping() {
-        ////System.out.println("getAllAtomMapping");
+        //////System.out.println("getAllAtomMapping");
         VF2 instance = null;
         List<AtomAtomMapping> expResult = null;
         List<AtomAtomMapping> result = instance.getAllAtomMapping();
@@ -77,7 +77,7 @@ public class VF2Test {
      */
     @Test
     public void testGetFirstAtomMapping() {
-        ////System.out.println("getFirstAtomMapping");
+        //////System.out.println("getFirstAtomMapping");
         VF2 instance = null;
         AtomAtomMapping expResult = null;
         AtomAtomMapping result = instance.getFirstAtomMapping();
@@ -91,7 +91,7 @@ public class VF2Test {
      */
     @Test
     public void testIsSubgraph() {
-        ////System.out.println("isSubgraph");
+        //////System.out.println("isSubgraph");
         VF2 instance = null;
         boolean expResult = false;
         boolean result = instance.isSubgraph();

@@ -90,7 +90,7 @@ public class IsomorphismMCSPlusTest extends ImageUtility {
     @Test
     public void testSearchMCS() throws CDKException {
         try {
-            //////System.out.println("1");
+            ////////System.out.println("1");
             SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
             IAtomContainer target;
             target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
@@ -109,7 +109,7 @@ public class IsomorphismMCSPlusTest extends ImageUtility {
 
     @Test
     public void testQueryAtomContainerMCSPLUS() throws CDKException {
-        //////System.out.println("2");
+        ////////System.out.println("2");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("CC");
         IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
@@ -130,7 +130,7 @@ public class IsomorphismMCSPlusTest extends ImageUtility {
      */
     @Test
     public void testNADPlusNADHBondSensitive() throws Exception {
-        //////System.out.println("3");
+        ////////System.out.println("3");
         SmilesParser smilesParser = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer molecule1 = smilesParser.parseSmiles("NC(=O)c1ccc[n+](c1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
         IAtomContainer molecule2 = smilesParser.parseSmiles("NC(=O)C1=CN(C=CC1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
@@ -148,7 +148,7 @@ public class IsomorphismMCSPlusTest extends ImageUtility {
      */
     @Test
     public void testNADPlusNADHBondInSensitive() throws Exception {
-        //////System.out.println("4");
+        ////////System.out.println("4");
         SmilesParser smilesParser = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer molecule1 = smilesParser.parseSmiles("NC(=O)c1ccc[n+](c1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
         IAtomContainer molecule2 = smilesParser.parseSmiles("NC(=O)C1=CN(C=CC1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
@@ -169,7 +169,7 @@ public class IsomorphismMCSPlusTest extends ImageUtility {
      */
     @Test
     public void testMCSPlus() throws Exception {
-        //////System.out.println("5");
+        ////////System.out.println("5");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         // Benzene
         IAtomContainer query = sp.parseSmiles("C1=CC=CC=C1");
@@ -189,7 +189,7 @@ public class IsomorphismMCSPlusTest extends ImageUtility {
      */
     @Test
     public void testOpenRing() throws Exception {
-        //////System.out.println("6");
+        ////////System.out.println("6");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         // Benzene
         IAtomContainer query = sp.parseSmiles("O=P(O)(O)OCC1OC(O)(COP(=O)(O)O)C(O)C1(O)");
@@ -211,7 +211,7 @@ public class IsomorphismMCSPlusTest extends ImageUtility {
      */
     @Test
     public void testC06006_C14463() throws Exception {
-        //////System.out.println("7");
+        ////////System.out.println("7");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         // C06006
         IAtomContainer query = sp.parseSmiles("O=C(O)C(O)(C(=O)C)CC");
@@ -234,7 +234,7 @@ public class IsomorphismMCSPlusTest extends ImageUtility {
      */
     @Test
     public void testNADPNNADPH() throws Exception {
-        //////System.out.println("8");
+        ////////System.out.println("8");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         // NAD
         IAtomContainer query = sp.parseSmiles("NC(=O)c1ccc[n+](c1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
@@ -253,7 +253,7 @@ public class IsomorphismMCSPlusTest extends ImageUtility {
 
     @Test
     public void testSolutionCount() throws Exception {
-        //////System.out.println("9");
+        ////////System.out.println("9");
         String g1 = "NC1CCCCC1";
         String g2 = "NC1CCC(N)CC1";
         String g3 = "CNC1CCC(N)CC1";
@@ -287,9 +287,9 @@ public class IsomorphismMCSPlusTest extends ImageUtility {
         Assert.assertEquals(2, overlap.getAllAtomMapping().size());
 
 //        SmilesGenerator aromatic = SmilesGenerator.unique().aromatic();
-//        //////System.out.println("SMILES Q :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnQuery()));
-//        //////System.out.println("SMILES T :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnTarget()));
-//        //////System.out.println("SMILES Common:" + overlap.getFirstAtomMapping().getCommonFragmentAsSMILES());
+//        ////////System.out.println("SMILES Q :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnQuery()));
+//        ////////System.out.println("SMILES T :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnTarget()));
+//        ////////System.out.println("SMILES Common:" + overlap.getFirstAtomMapping().getCommonFragmentAsSMILES());
 //
     }
 

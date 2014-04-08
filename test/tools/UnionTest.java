@@ -113,10 +113,10 @@ public class UnionTest {
         }
 
 //        for (String container : acSet) {
-        //System.out.println("\n-------------" + " Combination " + combinations++ + "--------------------");
-        //System.out.println("Query SMILES " + getSMILES(mol1).toString() + ", count " + mol1.getAtomCount());
-        //System.out.println("Target SMILES " + getSMILES(mol2).toString() + ", count " + mol2.getAtomCount());
-        //System.out.println("Union SMILES " + container + ", count " + sp.parseSmiles(container).getAtomCount());
+        ////System.out.println("\n-------------" + " Combination " + combinations++ + "--------------------");
+        ////System.out.println("Query SMILES " + getSMILES(mol1).toString() + ", count " + mol1.getAtomCount());
+        ////System.out.println("Target SMILES " + getSMILES(mol2).toString() + ", count " + mol2.getAtomCount());
+        ////System.out.println("Union SMILES " + container + ", count " + sp.parseSmiles(container).getAtomCount());
 //        }
     }
 

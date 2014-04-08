@@ -33,10 +33,10 @@ public class Set {
         test2.add(5);
         TreeSet<Integer> common = (TreeSet) test1.clone();
         TreeSet<Integer> diff = (TreeSet) test1.clone();
-        //System.out.println("common " + common.retainAll(test2));
-        //System.out.println("diff " + diff.removeAll(test2));
-        //System.out.println("diff elements" + diff);
-        //System.out.println("common elements" + common);
+        ////System.out.println("common " + common.retainAll(test2));
+        ////System.out.println("diff " + diff.removeAll(test2));
+        ////System.out.println("diff elements" + diff);
+        ////System.out.println("common elements" + common);
 
     }
 

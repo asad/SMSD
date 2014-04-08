@@ -49,7 +49,7 @@ public class SDFReaderTest {
             mol.setProperty(CDKConstants.TITLE, mol.getID());
             if (!flag) {
                 disconnectedSet.addAtomContainer(mol);
-                //System.out.println("error:file not connectted " + ac.getProperty(CDKConstants.TITLE));
+                ////System.out.println("error:file not connectted " + ac.getProperty(CDKConstants.TITLE));
             } else {
                 connectedSet.addAtomContainer(mol);
             }
@@ -62,6 +62,6 @@ public class SDFReaderTest {
         sdfWriter = new SDFWriter(new FileOutputStream(SDF_DATA_FOLDER + File.separator + "disconnected.sdf"));
         sdfWriter.write(disconnectedSet);
         sdfWriter.close();
-        //System.out.println("total files read: " + i);
+        ////System.out.println("total files read: " + i);
     }
 }

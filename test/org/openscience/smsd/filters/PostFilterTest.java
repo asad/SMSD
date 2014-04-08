@@ -66,7 +66,7 @@ public class PostFilterTest {
      */
     @Test
     public void testFilter() {
-        ////System.out.println("filter");
+        //////System.out.println("filter");
 
         List<Integer> l1 = new ArrayList<Integer>(6);
         l1.add(1);

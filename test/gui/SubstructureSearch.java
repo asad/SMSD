@@ -59,7 +59,7 @@ public class SubstructureSearch {
              * Test if mol1 is a substructure of mol2
              */
             Substructure comparison = new Substructure(mol1, mol2, bondSensitive, ringMatcher, true, allMatch);
-            //System.out.println("Is a Subgraph " + comparison.isSubgraph());
+            ////System.out.println("Is a Subgraph " + comparison.isSubgraph());
             if (comparison.isSubgraph()) {
                 comparison.setChemFilters(stereoMatch, fragmentMinimization, energyMinimization);
 
@@ -82,21 +82,21 @@ public class SubstructureSearch {
                             + "(" + targetMappingNumber + ")");
 
                 }
-                //System.out.println("");
-                //System.out.println("");
+                ////System.out.println("");
+                ////System.out.println("");
 
-                //System.out.println("Stereo Match: " + comparison.getStereoScore(0));
-                //System.out.println("Stereo different: " + comparison.isStereoMisMatch());
-                //System.out.println("Fragment Size: " + comparison.getFragmentSize(0));
-                //System.out.println("Tanimoto Similarity Score: " + comparison.getTanimotoSimilarity());
-                //System.out.println("Tanimoto Euclidean Distance: " + comparison.getEuclideanDistance());
-                //System.out.println("");
+                ////System.out.println("Stereo Match: " + comparison.getStereoScore(0));
+                ////System.out.println("Stereo different: " + comparison.isStereoMisMatch());
+                ////System.out.println("Fragment Size: " + comparison.getFragmentSize(0));
+                ////System.out.println("Tanimoto Similarity Score: " + comparison.getTanimotoSimilarity());
+                ////System.out.println("Tanimoto Euclidean Distance: " + comparison.getEuclideanDistance());
+                ////System.out.println("");
             }
         } catch (Exception ex) {
             ex.printStackTrace();
         }
-        //System.out.println("");
-        //System.out.println("");
+        ////System.out.println("");
+        ////System.out.println("");
     }
 
     /**
@@ -106,19 +106,19 @@ public class SubstructureSearch {
      */
     private static void printMolecules(IAtomContainer Molecule1, IAtomContainer Molecule2) {
 
-        //System.out.println("Molecule 1");
+        ////System.out.println("Molecule 1");
         for (int i = 0; i
                 < Molecule1.getAtomCount(); i++) {
             //System.out.print(Molecule1.getAtom(i).getSymbol() + " ");
         }
 
-        //System.out.println();
-        //System.out.println("Molecule 2");
+        ////System.out.println();
+        ////System.out.println("Molecule 2");
         for (int i = 0; i
                 < Molecule2.getAtomCount(); i++) {
             //System.out.print(Molecule2.getAtom(i).getSymbol() + " ");
         }
 
-        //System.out.println();
+        ////System.out.println();
     }
 }

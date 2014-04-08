@@ -80,12 +80,12 @@ public class RingTest {
             //Print all MCS solutions if first_MCS is false
             if (first_MCS == false) {
                 int count_final_sol = 0;
-                //System.out.println("Output of the final Mappings: ");
+                ////System.out.println("Output of the final Mappings: ");
                 try {
                     if (!comparison.getAllAtomMapping().isEmpty()) {
                         for (AtomAtomMapping aams : comparison.getAllAtomMapping()) {
                             int final_solution_size = aams.getCount();
-                            //System.out.println("Final mapping Nr. " + (count_final_sol + 1) + " Size:" + final_solution_size);
+                            ////System.out.println("Final mapping Nr. " + (count_final_sol + 1) + " Size:" + final_solution_size);
 
                             for (Map.Entry<IAtom, IAtom> mapping : aams.getMappingsByAtoms().entrySet()) {
 
@@ -107,18 +107,18 @@ public class RingTest {
                                 System.out.println(queryAtom.getSymbol() + " "
                                         + targetAtom.getSymbol());
                             }
-                            //System.out.println("");
+                            ////System.out.println("");
 
-                            //System.out.println("Stereo Match: " + comparison.getStereoScore(count_final_sol));
-                            //System.out.println("Stereo different: " + comparison.isStereoMisMatch());
-                            //System.out.println("Fragment Size: " + comparison.getFragmentSize(count_final_sol));
-                            //System.out.println("Tanimoto Similarity Score: " + comparison.getTanimotoSimilarity());
-                            //System.out.println("Tanimoto Euclidean Distance: " + comparison.getEuclideanDistance());
+                            ////System.out.println("Stereo Match: " + comparison.getStereoScore(count_final_sol));
+                            ////System.out.println("Stereo different: " + comparison.isStereoMisMatch());
+                            ////System.out.println("Fragment Size: " + comparison.getFragmentSize(count_final_sol));
+                            ////System.out.println("Tanimoto Similarity Score: " + comparison.getTanimotoSimilarity());
+                            ////System.out.println("Tanimoto Euclidean Distance: " + comparison.getEuclideanDistance());
                             count_final_sol++;
 
                         }
 
-                        //System.out.println("");
+                        ////System.out.println("");
                     }
                 } catch (Exception ex) {
                     ex.printStackTrace();
@@ -142,22 +142,22 @@ public class RingTest {
                         System.out.println(queryAtom.getSymbol() + " "
                                 + targetAtom.getSymbol());
                     }
-                    //System.out.println("");
+                    ////System.out.println("");
 
-                    //System.out.println("");
+                    ////System.out.println("");
 
-                    //System.out.println("Stereo Match: " + comparison.getStereoScore(0));
-                    //System.out.println("Stereo different: " + comparison.isStereoMisMatch());
-                    //System.out.println("Fragment Size: " + comparison.getFragmentSize(0));
-                    //System.out.println("Tanimoto Similarity Score: " + comparison.getTanimotoSimilarity());
-                    //System.out.println("Tanimoto Euclidean Distance: " + comparison.getEuclideanDistance());
-                    //System.out.println("");
+                    ////System.out.println("Stereo Match: " + comparison.getStereoScore(0));
+                    ////System.out.println("Stereo different: " + comparison.isStereoMisMatch());
+                    ////System.out.println("Fragment Size: " + comparison.getFragmentSize(0));
+                    ////System.out.println("Tanimoto Similarity Score: " + comparison.getTanimotoSimilarity());
+                    ////System.out.println("Tanimoto Euclidean Distance: " + comparison.getEuclideanDistance());
+                    ////System.out.println("");
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
-                //System.out.println("");
+                ////System.out.println("");
             }
-            //System.out.println("");
+            ////System.out.println("");
 
         } catch (Exception ex) {
             Logger.getLogger(RingTest.class.getName()).log(Level.SEVERE, null, ex);
