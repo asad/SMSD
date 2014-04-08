@@ -237,7 +237,7 @@ public class SubstructureTest {
         IAtomContainer query = sp.parseSmiles("ONc1ccccc1");
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         Substructure smsd1 = new Substructure(query, target, true, true, true, true);
-        smsd1.setChemFilters(true, true, true);
+        smsd1.setChemFilters(false, true, true);
         assertEquals(2, smsd1.getAllAtomMapping().size());
     }
 
