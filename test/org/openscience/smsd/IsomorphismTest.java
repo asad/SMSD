@@ -194,17 +194,15 @@ public class IsomorphismTest {
     @Test
     public void testSet_String_String() throws CDKException, IOException {
         ////System.out.println("6");
-        String molfile = "data/mdl/decalin.mol";
-        String queryfile = "data/mdl/decalin.mol";
-        AtomContainer query = new AtomContainer();
-        AtomContainer target = new AtomContainer();
+         String molfile = "C1CCC2CCCCC2C1";//decalin
+        String queryfile = "C1CCC2CCCCC2C1";//decalin
+        IAtomContainer query;
+        IAtomContainer target;
+        QueryAtomContainer query1 = null;
+        QueryAtomContainer query2 = null;
 
-        InputStream ins = this.getClass().getClassLoader().getResourceAsStream(molfile);
-        MDLV2000Reader reader = new MDLV2000Reader(ins, Mode.STRICT);
-        reader.read(query);
-        ins = this.getClass().getClassLoader().getResourceAsStream(queryfile);
-        reader = new MDLV2000Reader(ins, Mode.STRICT);
-        reader.read(target);
+        query = new SmilesParser(DefaultChemObjectBuilder.getInstance()).parseSmiles(molfile);
+        target = new SmilesParser(DefaultChemObjectBuilder.getInstance()).parseSmiles(queryfile);
 
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false, false);
         smsd1.setChemFilters(true, true, true);
