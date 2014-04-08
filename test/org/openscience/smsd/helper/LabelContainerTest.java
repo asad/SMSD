@@ -42,7 +42,7 @@ public class LabelContainerTest {
      */
     @Test
     public void testAddLabel() {
-        //System.out.println("addLabel");
+        ////System.out.println("addLabel");
         String label = "R3";
         LabelContainer instance = new LabelContainer();
         instance.addLabel(label);
@@ -56,7 +56,7 @@ public class LabelContainerTest {
      */
     @Test
     public void testGetLabelID() {
-        //System.out.println("getLabelID");
+        ////System.out.println("getLabelID");
         String label = "R3";
         LabelContainer instance = new LabelContainer();
         instance.addLabel(label);
@@ -69,7 +69,7 @@ public class LabelContainerTest {
      */
     @Test
     public void testGetLabel() {
-        //System.out.println("getLabel");
+        ////System.out.println("getLabel");
         String label = "R3";
         LabelContainer instance = new LabelContainer();
         instance.addLabel(label);
@@ -83,7 +83,7 @@ public class LabelContainerTest {
      */
     @Test
     public void testGetSize() {
-        //System.out.println("getSize");
+        ////System.out.println("getSize");
         String label = "R3";
         LabelContainer instance = new LabelContainer();
         instance.addLabel(label);

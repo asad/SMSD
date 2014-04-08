@@ -65,7 +65,7 @@ public class HanserRingFinderTest {
      */
     @Test
     public void testFindRings() {
-        //System.out.println("findRings");
+        ////System.out.println("findRings");
         IAtomContainer molecule = null;
         HanserRingFinder instance = new HanserRingFinder();
         Collection expResult = null;

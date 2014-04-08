@@ -71,7 +71,7 @@ public class CDKMCSTest {
         Utility.aromatizeDayLight(frag1);
 
         if (standAlone) {
-            //System.out.println("Cyclohexene is a subgraph of alpha-Pinen: " + CDKMCS.isSubgraph(mol, frag1, true, false,false));
+            //////System.out.println("Cyclohexene is a subgraph of alpha-Pinen: " + CDKMCS.isSubgraph(mol, frag1, true, false,false));
         } else {
             Assert.assertTrue(CDKMCS.isSubgraph(mol, frag1, true, false, false));
         }
@@ -124,7 +124,7 @@ public class CDKMCSTest {
         Utility.aromatizeCDK(frag1);
 
         if (standAlone) {
-            //System.out.println("Cyclohexane is a subgraph of alpha-Pinen: " + CDKMCS.isSubgraph(mol, frag1, true, true,true));
+            //////System.out.println("Cyclohexane is a subgraph of alpha-Pinen: " + CDKMCS.isSubgraph(mol, frag1, true, true,true));
         } else {
             Assert.assertTrue(!CDKMCS.isSubgraph(mol, frag1, true, true, true));
         }
@@ -144,7 +144,7 @@ public class CDKMCSTest {
         Utility.aromatizeDayLight(frag1);
 
         if (standAlone) {
-            //System.out.println("Pyrrole is a subgraph of Indole: " + CDKMCS.isSubgraph(mol, frag1, true, false,false));
+            //////System.out.println("Pyrrole is a subgraph of Indole: " + CDKMCS.isSubgraph(mol, frag1, true, false,false));
         } else {
             Assert.assertTrue(CDKMCS.isSubgraph(mol, frag1, true, false, false));
         }
@@ -285,7 +285,7 @@ public class CDKMCSTest {
 //        int i = 1;
 //        while (atoms.hasNext()) {
 //            IAtom nextAtom = atoms.next();
-//            //System.out.println(i + ": " + nextAtom.getSymbol()
+//            //////System.out.println(i + ": " + nextAtom.getSymbol()
 //                    + " T:" + nextAtom.getAtomTypeName()
 //                    + " A:" + nextAtom.getFlag(CDKConstants.ISAROMATIC));
 //            i++;
@@ -350,13 +350,13 @@ public class CDKMCSTest {
         QueryAtomContainer query = QueryAtomContainerCreator.createAnyAtomContainer(new SmilesParser(DefaultChemObjectBuilder.getInstance()).parseSmiles(smiles), false);
         IAtomContainer ac = new SmilesParser(DefaultChemObjectBuilder.getInstance()).parseSmiles(smiles);
         if (standAlone) {
-            //System.out.println("AtomCount of query: " + query.getAtomCount());
-            //System.out.println("AtomCount of target: " + ac.getAtomCount());
+            //////System.out.println("AtomCount of query: " + query.getAtomCount());
+            //////System.out.println("AtomCount of target: " + ac.getAtomCount());
         }
 
         boolean matched = CDKMCS.isSubgraph(ac, query, true, false, false);
         if (standAlone) {
-            //System.out.println("QueryAtomContainer matched: " + matched);
+            //////System.out.println("QueryAtomContainer matched: " + matched);
         }
         if (!standAlone) {
             Assert.assertTrue(matched);
@@ -457,7 +457,7 @@ public class CDKMCSTest {
      */
     @Test
     public void testGetTimeManager() {
-        //System.out.println("getTimeManager");
+        //////System.out.println("getTimeManager");
         TimeManager expResult = new TimeManager();
         Assert.assertNotNull(expResult);
     }

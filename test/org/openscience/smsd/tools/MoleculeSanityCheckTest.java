@@ -68,7 +68,7 @@ public class MoleculeSanityCheckTest {
      */
     @Test
     public void testCheckAndCleanMolecule() throws InvalidSmilesException {
-        //System.out.println("checkAndCleanMolecule");
+        ////System.out.println("checkAndCleanMolecule");
         String fragmentMolSmiles = "C1=CC=CC=C1.C1=CC2=C(C=C1)C=CC=C2";
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer molecule = sp.parseSmiles(fragmentMolSmiles);
@@ -83,7 +83,7 @@ public class MoleculeSanityCheckTest {
      */
     @Test
     public void testFixAromaticity() throws InvalidSmilesException {
-        //System.out.println("fixAromaticity");
+        ////System.out.println("fixAromaticity");
         String rawMolSmiles = "C1=CC2=C(C=C1)C=CC=C2";
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer mol = sp.parseSmiles(rawMolSmiles);

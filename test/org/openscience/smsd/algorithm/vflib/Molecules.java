@@ -160,7 +160,7 @@ public class Molecules {
 
         SmilesGenerator sg = new SmilesGenerator();
         String oldSmiles = sg.create(result);
-        //System.out.println("Propane " + oldSmiles);
+        //////System.out.println("Propane " + oldSmiles);
 
         return result;
     }
@@ -207,7 +207,7 @@ public class Molecules {
 
         SmilesGenerator sg = new SmilesGenerator();
         String oldSmiles = sg.create(result);
-        //System.out.println("Hexane " + oldSmiles);
+        //////System.out.println("Hexane " + oldSmiles);
 
         return result;
     }
@@ -256,7 +256,7 @@ public class Molecules {
 
         SmilesGenerator sg = new SmilesGenerator();
         String oldSmiles = sg.create(result);
-//        //System.out.println("Benzene " + oldSmiles);
+//        //////System.out.println("Benzene " + oldSmiles);
 
         return result;
     }
@@ -327,7 +327,7 @@ public class Molecules {
 
         SmilesGenerator sg = new SmilesGenerator();
         String oldSmiles = sg.create(result);
-//        //System.out.println("Naphthalene " + oldSmiles);
+//        //////System.out.println("Naphthalene " + oldSmiles);
 
         return result;
     }
@@ -841,7 +841,7 @@ public class Molecules {
 
         SmilesGenerator sg = new SmilesGenerator();
         String oldSmiles = sg.create(result);
-//        //System.out.println("SimpleImine " + oldSmiles);
+//        //////System.out.println("SimpleImine " + oldSmiles);
 
         return result;
     }
@@ -865,7 +865,7 @@ public class Molecules {
 
         SmilesGenerator sg = new SmilesGenerator();
         String oldSmiles = sg.create(result);
-//        //System.out.println("SimpleAmine " + oldSmiles);
+//        //////System.out.println("SimpleAmine " + oldSmiles);
 
         return result;
     }

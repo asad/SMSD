@@ -43,7 +43,7 @@ public class TimeManagerTest {
      */
     @Test
     public void testGetElapsedTimeInHours() {
-        //System.out.println("getElapsedTimeInHours");
+        ////System.out.println("getElapsedTimeInHours");
         TimeManager instance = new TimeManager();
         double expResult = 0.0001;
         myMethod(360);
@@ -56,7 +56,7 @@ public class TimeManagerTest {
      */
     @Test
     public void testGetElapsedTimeInMinutes() {
-        //System.out.println("getElapsedTimeInMinutes");
+        ////System.out.println("getElapsedTimeInMinutes");
         TimeManager instance = new TimeManager();
         double expResult = 0.006;
         myMethod(360);
@@ -69,7 +69,7 @@ public class TimeManagerTest {
      */
     @Test
     public void testGetElapsedTimeInSeconds() {
-        //System.out.println("getElapsedTimeInSeconds");
+        ////System.out.println("getElapsedTimeInSeconds");
         TimeManager instance = new TimeManager();
         double expResult = 0.36;
         myMethod(360);
@@ -82,7 +82,7 @@ public class TimeManagerTest {
      */
     @Test
     public void testGetElapsedTimeInMilliSeconds() {
-        //System.out.println("getElapsedTimeInMilliSeconds");
+        ////System.out.println("getElapsedTimeInMilliSeconds");
         TimeManager instance = new TimeManager();
         double expResult = 360;
         myMethod(360);
@@ -91,7 +91,7 @@ public class TimeManagerTest {
     }
 
     public void myMethod(long timeMillis) {
-        //System.out.println("Starting......");
+        ////System.out.println("Starting......");
 
         // pause for a while
         Thread thisThread = Thread.currentThread();
@@ -100,7 +100,7 @@ public class TimeManagerTest {
         } catch (Throwable t) {
             throw new OutOfMemoryError("An Error has occured");
         }
-        //System.out.println("Ending......");
+        ////System.out.println("Ending......");
 
     }
 }
