@@ -177,18 +177,18 @@ public final class Isomorphism extends BaseMapping implements Serializable {
             boolean matchAtomType) {
         super(query, target, bondTypeFlag, matchRings, matchAtomType);
         this.algorithmType = algorithmType;
+        if (isMatchRings()) {
+            try {
+                MoleculeInitializer.initializeMolecule(getQuery());
+                MoleculeInitializer.initializeMolecule(getTarget());
+            } catch (CDKException ex) {
+            }
+        }
         mcsBuilder(getQuery(), getTarget());
         setSubgraph(isSubgraph());
     }
 
     private synchronized void mcsBuilder(IAtomContainer mol1, IAtomContainer mol2) {
-        if (isMatchRings()) {
-            try {
-                MoleculeInitializer.initializeMolecule(mol1);
-                MoleculeInitializer.initializeMolecule(mol2);
-            } catch (CDKException ex) {
-            }
-        }
         int rBondCount = mol1.getBondCount();
         int pBondCount = mol2.getBondCount();
 

@@ -35,6 +35,7 @@ import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.algorithm.single.SingleMappingHandler;
 import org.openscience.smsd.algorithm.vflib.VF2Sub;
 import org.openscience.smsd.algorithm.vflib.substructure.VF2;
+import org.openscience.smsd.helper.MoleculeInitializer;
 
 /**
  * This is an ultra fast method to report if query is a substructure for target
@@ -94,6 +95,14 @@ public final class Substructure extends BaseMapping {
             boolean matchAtomType,
             boolean findAllSubgraph) throws CDKException {
         super(query, target, shouldMatchBonds, matchRings, matchAtomType);
+        if (isMatchRings()) {
+            try {
+                MoleculeInitializer.initializeMolecule(getQuery());
+                MoleculeInitializer.initializeMolecule(getTarget());
+            } catch (CDKException ex) {
+            }
+        }
+
         if (findAllSubgraph) {
             setSubgraph(findSubgraphs());
         } else {
@@ -197,7 +206,9 @@ public final class Substructure extends BaseMapping {
                 }
                 isSubgraph = mapper.isSubgraph();
                 List<AtomAtomMapping> atomMappings = mapper.getAllAtomMapping();
-//                    System.out.println("Mapping Size " + atomMapping.getCount());
+//                if (atomMappings.iterator().hasNext()) {
+//                    System.out.println("Mapping Size " + atomMappings.iterator().next().getCount());
+//                }
                 if (isSubgraph) {
                     mappingsVF2.addAll(atomMappings);
                 } else {

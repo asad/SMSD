@@ -66,12 +66,12 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
      * @param mol1
      * @param mol2
      */
-    public BaseMapping(IAtomContainer mol1, IAtomContainer mol2, boolean matchBonds, boolean matchRings, boolean matchAtomType) {
+    public BaseMapping(IAtomContainer mol1, IAtomContainer mol2, boolean matchBonds,
+            boolean matchRings, boolean matchAtomType) {
         super(mol1, mol2);
         this.matchBonds = matchBonds;
         this.matchRings = matchRings;
         this.matchAtomType = matchAtomType;
-
     }
 
     /**
@@ -189,7 +189,8 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
                         IAtom targetAtom2 = indexJPlus;
                         IBond pBond = product.getBond(targetAtom1, targetAtom2);
 
-                        if ((rBond != null && pBond != null) && (rBond.getStereo() != pBond.getStereo())) {
+                        if ((rBond != null && pBond != null)
+                                && (rBond.getStereo() != pBond.getStereo())) {
                             stereoMisMatchScore++;
                         }
                     }
@@ -223,8 +224,10 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
 
             if (!firstAtomMCS.isEmpty()) {
 
-                sourceAtomCount = (double) this.getMCSList().iterator().next().getQuery().getAtomCount();
-                targetAtomCount = (double) this.getMCSList().iterator().next().getTarget().getAtomCount();
+                sourceAtomCount = (double) this.getMCSList().iterator()
+                        .next().getQuery().getAtomCount();
+                targetAtomCount = (double) this.getMCSList().iterator()
+                        .next().getTarget().getAtomCount();
 
                 double common = (double) firstAtomMCS.getCount();
                 euclidean = Math.sqrt(sourceAtomCount + targetAtomCount - 2 * common);

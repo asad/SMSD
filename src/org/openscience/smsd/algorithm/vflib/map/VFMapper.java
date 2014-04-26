@@ -1,7 +1,7 @@
 /*
  * MX Cheminformatics Tools for Java
  *
- * Copyright (c) 2009-2014 Metamolecular, LLC
+ * Copyright (c) 2007-2009 Metamolecular, LLC
  *
  * http://metamolecular.com
  *
@@ -189,10 +189,6 @@ public class VFMapper implements IMapper {
             return;
         }
 
-        if (hasMap(state.getMap())) {
-            state.backTrack();
-        }
-
         if (state.isGoal()) {
             Map<INode, IAtom> map = state.getMap();
             if (!hasMap(map)) {
@@ -227,15 +223,18 @@ public class VFMapper implements IMapper {
             if (state.isMatchFeasible(candidate)) {
                 IState nextState = state.nextState(candidate);
                 found = mapFirst(nextState);
-                if (!found) {
-                    nextState.backTrack();
-                }
+                nextState.backTrack();
             }
         }
         return found;
     }
 
     private boolean hasMap(Map<INode, IAtom> map) {
-        return maps.contains(map);
+        for (Map<INode, IAtom> storedMap : maps) {
+            if (storedMap.equals(map)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

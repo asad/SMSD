@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
@@ -50,6 +51,52 @@ import uk.ac.ebi.reactionblast.tools.ExtAtomContainerManipulator;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public class MoleculeInitializer {
+
+    /**
+     * Defines which set of rings to define rings in the target.
+     */
+    private enum RingSet {
+
+        /**
+         * Smallest Set of Smallest Rings (or Minimum Cycle Basis - but not
+         * strictly the same). Defines what is typically thought of as a 'ring'
+         * however the non-uniqueness leads to ambiguous matching.
+         */
+        SmallestSetOfSmallestRings {
+                    @Override
+                    IRingSet ringSet(IAtomContainer m) {
+                        return new SSSRFinder(m).findSSSR();
+                    }
+                },
+        /**
+         * Intersect of all Minimum Cycle Bases (or SSSR) and thus is a subset.
+         * The set is unique but may excludes rings (e.g. from bridged systems).
+         */
+        EssentialRings {
+                    @Override
+                    IRingSet ringSet(IAtomContainer m) {
+                        return new SSSRFinder(m).findEssentialRings();
+                    }
+                },
+        /**
+         * Union of all Minimum Cycle Bases (or SSSR) and thus is a superset.
+         * The set is unique but may include more rings then is necessary.
+         */
+        RelevantRings {
+                    @Override
+                    IRingSet ringSet(IAtomContainer m) {
+                        return new SSSRFinder(m).findRelevantRings();
+                    }
+                };
+
+        /**
+         * Compute a ring set for a molecule.
+         *
+         * @param m molecule
+         * @return the ring set for the molecule
+         */
+        abstract IRingSet ringSet(IAtomContainer m);
+    }
 
     /**
      * Prepare the molecule for analysis.
@@ -129,8 +176,7 @@ public class MoleculeInitializer {
             }
 
             // sets SSSR information
-            SSSRFinder finder = new SSSRFinder(atomContainer);
-            IRingSet sssr = finder.findEssentialRings();
+            IRingSet sssr = new SSSRFinder(atomContainer).findEssentialRings();
 
             for (IAtom atom : atomContainer.atoms()) {
 
@@ -154,7 +200,7 @@ public class MoleculeInitializer {
                     Collections.sort(ringsizes);
                     atom.setProperty(CDKConstants.RING_SIZES, ringsizes);
                     atom.setProperty(CDKConstants.SMALLEST_RINGS, sssr.getRings(atom));
-                    atom.setProperty(SMALLEST_RING_SIZE, ringsizes.get(0));
+                    atom.setProperty(SMALLEST_RING_SIZE, min);
                 } else {
                     atom.setFlag(CDKConstants.ISINRING, false);
                     atom.setFlag(CDKConstants.ISALIPHATIC, true);
@@ -163,7 +209,7 @@ public class MoleculeInitializer {
 
                 // determine how many rings bonds each atom is a part of
                 int hCount;
-                if (atom.getImplicitHydrogenCount() == CDKConstants.UNSET) {
+                if (Objects.equals(atom.getImplicitHydrogenCount(), CDKConstants.UNSET)) {
                     hCount = 0;
                 } else {
                     hCount = atom.getImplicitHydrogenCount();
@@ -180,7 +226,7 @@ public class MoleculeInitializer {
                 atom.setProperty(CDKConstants.TOTAL_H_COUNT, hCount);
 
                 if (valencesTable.get(atom.getSymbol()) != null) {
-                    int formalCharge = atom.getFormalCharge() == CDKConstants.UNSET ? 0 : atom.getFormalCharge();
+                    int formalCharge = Objects.equals(atom.getFormalCharge(), CDKConstants.UNSET) ? 0 : atom.getFormalCharge();
                     atom.setValency(valencesTable.get(atom.getSymbol()) - formalCharge);
                 }
             }

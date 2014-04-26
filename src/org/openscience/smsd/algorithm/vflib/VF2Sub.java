@@ -60,11 +60,11 @@ import org.openscience.smsd.interfaces.IResults;
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VF2SubTest")
 public class VF2Sub implements IResults {
 
-    private List<AtomAtomMapping> allAtomMCS = null;
-    private List<AtomAtomMapping> allAtomMCSCopy = null;
-    private List<Map<Integer, Integer>> allMCS = null;
-    private List<Map<Integer, Integer>> allMCSCopy = null;
-    private List<Map<INode, IAtom>> vfLibSolutions = null;
+    private final List<AtomAtomMapping> allAtomMCS;
+    private final List<AtomAtomMapping> allAtomMCSCopy;
+    private final List<Map<Integer, Integer>> allMCS;
+    private final List<Map<Integer, Integer>> allMCSCopy;
+    private List<Map<INode, IAtom>> vfLibSolutions;
     private final IAtomContainer source;
     private final IAtomContainer target;
     private final boolean shouldMatchRings;
@@ -128,6 +128,7 @@ public class VF2Sub implements IResults {
         }
         boolean timoutVF = searchVFMappings();
         boolean flag = isExtensionFeasible();
+//        System.out.println("find subgraph " + flag);
         if (flag && !vfLibSolutions.isEmpty() && !timoutVF && (!(source instanceof IQueryAtomContainer))) {
             try {
                 searchMcGregorMapping();

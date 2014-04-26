@@ -23,7 +23,7 @@
  *
  * MX Cheminformatics Tools for Java
  *
- * Copyright (c) 2009-2014 Metamolecular, LLC
+ * Copyright (c) 2007-2009 Metamolecular, LLC
  *
  * http://metamolecular.com
  *
@@ -63,6 +63,7 @@ import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
 
 /**
  * Class for parsing and generating query graph.
+ *
  * @cdk.module smsd
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
@@ -70,9 +71,9 @@ import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFLibTest")
 public class VFQueryBuilder implements IQuery {
 
-    private List<INode> nodesList;
-    private List<IEdge> edgesList;
-    private Map<INode, IAtom> nodeBondMap;
+    private final List<INode> nodesList;
+    private final List<IEdge> edgesList;
+    private final Map<INode, IAtom> nodeBondMap;
 
     /**
      * Constructor for VF Query Builder
@@ -83,21 +84,24 @@ public class VFQueryBuilder implements IQuery {
         nodeBondMap = new HashMap<INode, IAtom>();
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     public synchronized Iterable<IEdge> edges() {
         return Collections.unmodifiableList(edgesList);
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     public synchronized Iterable<INode> nodes() {
         return Collections.unmodifiableList(nodesList);
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     public synchronized INode getNode(int index) {
@@ -106,6 +110,7 @@ public class VFQueryBuilder implements IQuery {
 
     /**
      * Return a node for a given atom else return null
+     *
      * @param atom
      * @return Node in the graph for a given atom
      */
@@ -120,14 +125,16 @@ public class VFQueryBuilder implements IQuery {
         return null;
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     public IEdge getEdge(int index) {
         return edgesList.get(index);
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     public IEdge getEdge(INode source, INode target) {
@@ -148,6 +155,7 @@ public class VFQueryBuilder implements IQuery {
 
     /**
      * Add and return a node for a query atom
+     *
      * @param matcher
      * @param atom
      * @return added Node
@@ -159,21 +167,24 @@ public class VFQueryBuilder implements IQuery {
         return node;
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     public IAtom getAtom(INode node) {
         return nodeBondMap.get(node);
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     public int countNodes() {
         return nodesList.size();
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     public int countEdges() {
@@ -182,6 +193,7 @@ public class VFQueryBuilder implements IQuery {
 
     /**
      * Construct and return an edge for a given query and target node
+     *
      * @param source
      * @param target
      * @param matcher

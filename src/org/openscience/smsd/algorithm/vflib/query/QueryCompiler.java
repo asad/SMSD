@@ -22,7 +22,7 @@
  *
  * MX Cheminformatics Tools for Java
  *
- * Copyright (c) 2009-2014 Metamolecular, LLC
+ * Copyright (c) 2007-2009 Metamolecular, LLC
  *
  * http://metamolecular.com
  *

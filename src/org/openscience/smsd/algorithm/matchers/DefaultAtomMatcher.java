@@ -93,22 +93,19 @@ public final class DefaultAtomMatcher implements AtomMatcher {
             if (!matchSymbol(targetAtom)) {
                 return false;
             }
-
+            if (isMatchRings() && isRingAtom(getQueryAtom()) && !isRingAtom(targetAtom)) {
+                return false;
+            }
+            if (isMatchRings() && !isRingAtom(getQueryAtom()) && isRingAtom(targetAtom)) {
+                return false;
+            }
             if (isMatchRings()
-                    && (isAliphaticAtom(getQueryAtom()) && isRingAtom(targetAtom))) {
+                    && isRingAtom(getQueryAtom())
+                    && isRingAtom(targetAtom)
+                    && !isRingSizeMatch(targetAtom)) {
                 return false;
-            } else if (isMatchRings()
-                    && (isRingAtom(getQueryAtom()) && isAliphaticAtom(targetAtom))) {
-                return false;
-            } else if (isMatchRings() && isRingAtom(getQueryAtom()) && isRingAtom(targetAtom)) {
-                if (!isRingSizeMatch(targetAtom)) {
-                    return false;
-                }
             }
         }
-//        System.out.print("\n Q: " + getQueryAtom().getSymbol() + " " + getQueryAtom().getID());
-//        System.out.print(", T: " + targetAtom.getSymbol() + " " + targetAtom.getID());
-//        System.out.println(", matches");
         return true;
     }
 

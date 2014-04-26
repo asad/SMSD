@@ -160,7 +160,7 @@ final class State {
         this.target = state.target;
         this.ownSharedState = false;
         this.matches = state.matches;
-        this.lastAddition = new Pair<Integer, Integer>(-1, -1);
+        this.lastAddition = new Pair<>(-1, -1);
         this.sharedState = state.sharedState;
         this.shouldMatchBonds = state.shouldMatchBonds;
         this.shouldMatchRings = state.shouldMatchRings;
@@ -257,10 +257,10 @@ final class State {
         }
 
         if (lastSourceAtom < sourceSize && lastTargetAtom < targetSize) {
-            return new Pair<Integer, Integer>(lastSourceAtom, lastTargetAtom);
+            return new Pair<>(lastSourceAtom, lastTargetAtom);
         }
 
-        return new Pair<Integer, Integer>(-1, -1);
+        return new Pair<>(-1, -1);
     }
 
     // Adds the candidate pair (sourceAtom, targetAtom) to the state. The
@@ -309,7 +309,7 @@ final class State {
     // candidate pair. Assumes addPair() has been called on the state only once.
     void backTrack() {
         if (isGoal()) {
-            lastAddition = new Pair<Integer, Integer>(-1, -1);
+            lastAddition = new Pair<>(-1, -1);
             return;
         }
         int addedSourceAtom = lastAddition.getSourceAtom();

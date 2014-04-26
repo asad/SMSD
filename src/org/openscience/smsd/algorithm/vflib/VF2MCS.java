@@ -60,7 +60,9 @@ import org.openscience.smsd.interfaces.IResults;
  * using McGregor {@link org.openscience.cdk.smsd.algorithm.mcgregor.McGregor}
  * algorithm where ever required.
  *
- * @cdk.module smsd@cdk.githash
+ *
+ * @cdk.module smsd
+ * @cdk.githash
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
@@ -262,8 +264,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
              * Store solutions from VF MCS only
              */
             if (!allLocalAtomAtomMapping.isEmpty()) {
-                for (int i = 0; i < allLocalAtomAtomMapping.size(); i++) {
-                    AtomAtomMapping atomMCSMap = allLocalAtomAtomMapping.get(i);
+                for (AtomAtomMapping atomMCSMap : allLocalAtomAtomMapping) {
                     if (atomMCSMap.getCount() > solutionSize) {
                         solutionSize = atomMCSMap.getCount();
                         allAtomMCS.clear();
@@ -292,8 +293,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
             int counter = 0;
             this.allAtomMCS = new ArrayList<>();
             if (!allLocalAtomAtomMapping.isEmpty()) {
-                for (int i = 0; i < allLocalAtomAtomMapping.size(); i++) {
-                    AtomAtomMapping atomMCSMap = allLocalAtomAtomMapping.get(i);
+                for (AtomAtomMapping atomMCSMap : allLocalAtomAtomMapping) {
                     if (atomMCSMap.getCount() > solSize) {
                         solSize = atomMCSMap.getCount();
                         allAtomMCS.clear();
@@ -407,9 +407,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
                         map.putAll(mapping.getMappingsByIndex());
                         mcsSeeds.add(map);
                     }
-                } catch (InterruptedException ex) {
-                    logger.error(Level.SEVERE, null, ex);
-                } catch (ExecutionException ex) {
+                } catch (InterruptedException | ExecutionException ex) {
                     logger.error(Level.SEVERE, null, ex);
                 }
             }
@@ -482,8 +480,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
              * Store solutions from VF MCS only
              */
             if (!allLocalAtomAtomMapping.isEmpty()) {
-                for (int i = 0; i < allLocalAtomAtomMapping.size(); i++) {
-                    AtomAtomMapping atomMCSMap = allLocalAtomAtomMapping.get(i);
+                for (AtomAtomMapping atomMCSMap : allLocalAtomAtomMapping) {
                     if (atomMCSMap.getCount() > solutionSize) {
                         solutionSize = atomMCSMap.getCount();
                         allAtomMCS.clear();
@@ -512,8 +509,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
             int counter = 0;
             this.allAtomMCS = new ArrayList<>();
             if (!allLocalAtomAtomMapping.isEmpty()) {
-                for (int i = 0; i < allLocalAtomAtomMapping.size(); i++) {
-                    AtomAtomMapping atomMCSMap = allLocalAtomAtomMapping.get(i);
+                for (AtomAtomMapping atomMCSMap : allLocalAtomAtomMapping) {
                     if (atomMCSMap.getCount() > solSize) {
                         solSize = atomMCSMap.getCount();
                         allAtomMCS.clear();

@@ -28,8 +28,9 @@ import org.openscience.smsd.algorithm.vflib.interfaces.IEdge;
 import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 
 /**
- * Class for building/storing edges (bonds) in the graph with bond
- * query capabilities.
+ * Class for building/storing edges (bonds) in the graph with bond query
+ * capabilities.
+ *
  * @cdk.module smsd
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
@@ -37,12 +38,12 @@ import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFLibTest")
 public class EdgeBuilder implements IEdge {
 
-    private NodeBuilder source;
-    private NodeBuilder target;
-    private BondMatcher matcher;
+    private final NodeBuilder source;
+    private final NodeBuilder target;
+    private final BondMatcher matcher;
 
     /**
-     * 
+     *
      * @param source
      * @param target
      * @param matcher
@@ -53,21 +54,24 @@ public class EdgeBuilder implements IEdge {
         this.matcher = matcher;
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     public INode getSource() {
         return source;
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     public INode getTarget() {
         return target;
     }
 
-    /** {@inheritDoc}
+    /**
+     * {@inheritDoc}
      */
     @Override
     public BondMatcher getBondMatcher() {

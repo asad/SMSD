@@ -22,7 +22,7 @@
  * 
  * MX Cheminformatics Tools for Java
  *
- * Copyright (c) 2009-2014 Metamolecular, LLC
+ * Copyright (c) 2007-2009 Metamolecular, LLC
  *
  * http://metamolecular.com
  *
@@ -63,7 +63,8 @@ public class Match {
 
     @Override
     public String toString() {
-        return "Match{" + "query=" + query.getAtomMatcher().getQueryAtom().getID() + ", target=" + target.getID() + '}';
+        return "Match{" + "query=" + query.getAtomMatcher().getQueryAtom().getID() 
+                + ", target=" + target.getID() + '}';
     }
 
     @Override
@@ -86,10 +87,7 @@ public class Match {
         if (!Objects.equals(this.query, other.query)) {
             return false;
         }
-        if (!Objects.equals(this.target, other.target)) {
-            return false;
-        }
-        return true;
+        return Objects.equals(this.target, other.target);
     }
     private final INode query;
     private final IAtom target;

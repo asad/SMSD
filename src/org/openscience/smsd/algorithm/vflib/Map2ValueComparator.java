@@ -28,13 +28,15 @@ import java.util.Map;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 
-/**
+ /*
+ * @cdk.module smsd
+ * @cdk.githash
  *
- * @author Asad
+ * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public class Map2ValueComparator implements Comparator<Map<INode, IAtom>> {
 
-    private SortOrder sortOrder;
+    private final SortOrder sortOrder;
 
     public Map2ValueComparator(SortOrder sortOrder) {
         this.sortOrder = sortOrder;

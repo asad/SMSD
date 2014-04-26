@@ -32,7 +32,8 @@ import org.openscience.smsd.algorithm.vflib.interfaces.IEdge;
 import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 
 /**
- * Class for building/storing nodes (atoms) in the graph with atom query capabilities.
+ * Class for building/storing nodes (atoms) in the graph with atom query
+ * capabilities.
  *
  * @cdk.module smsd
  * @cdk.githash
@@ -65,11 +66,11 @@ public class NodeBuilder implements INode {
 
     @Override
     public String toString() {
-        return "NodeBuilder{" + "matcher=" + matcher.getQueryAtom().getID()+ '}';
+        return "NodeBuilder{" + "matcher=" + matcher.getQueryAtom().getID() + '}';
     }
-    private List<INode> neighborsList;
-    private List<IEdge> edgesList;
-    private AtomMatcher matcher;
+    private final List<INode> neighborsList;
+    private final List<IEdge> edgesList;
+    private final AtomMatcher matcher;
 
     /**
      * Construct a node for a query atom

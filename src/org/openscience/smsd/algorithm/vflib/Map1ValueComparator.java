@@ -26,13 +26,15 @@ package org.openscience.smsd.algorithm.vflib;
 import java.util.Comparator;
 import java.util.Map;
 
-/**
+ /*
+ * @cdk.module smsd
+ * @cdk.githash
  *
- * @author Asad
+ * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public class Map1ValueComparator implements Comparator<Map<Integer, Integer>> {
 
-    private SortOrder sortOrder;
+    private final SortOrder sortOrder;
 
     public Map1ValueComparator(SortOrder sortOrder) {
         this.sortOrder = sortOrder;

@@ -93,19 +93,21 @@ public final class DefaultAtomTypeMatcher implements AtomMatcher {
             if (!matchSymbol(targetAtom)) {
                 return false;
             }
+            if (!matchAtomType(targetAtom)) {
+                return false;
+            }
+            if (isMatchRings() && isRingAtom(getQueryAtom()) && !isRingAtom(targetAtom)) {
+                return false;
+            }
+            if (isMatchRings() && !isRingAtom(getQueryAtom()) && isRingAtom(targetAtom)) {
+                return false;
+            }
 
             if (isMatchRings()
-                    && (isAliphaticAtom(getQueryAtom()) && isRingAtom(targetAtom))) {
+                    && isRingAtom(getQueryAtom())
+                    && isRingAtom(targetAtom)
+                    && !isRingSizeMatch(targetAtom)) {
                 return false;
-            } else if (isMatchRings()
-                    && (isRingAtom(getQueryAtom()) && isAliphaticAtom(targetAtom))) {
-                return false;
-            } else if (isMatchRings() && isRingAtom(getQueryAtom()) && isRingAtom(targetAtom)) {
-                if (!isRingSizeMatch(targetAtom)) {
-                    return false;
-                }
-            } else if (!isMatchRings()) {
-                return matchAtomType(targetAtom);
             }
         }
         return true;
@@ -155,8 +157,10 @@ public final class DefaultAtomTypeMatcher implements AtomMatcher {
     }
 
     private boolean matchAtomType(IAtom targetAtom) {
-        String rAtom = qAtom.getAtomTypeName() == null ? qAtom.getSymbol() : qAtom.getAtomTypeName();
-        String tAtom = targetAtom.getAtomTypeName() == null ? targetAtom.getSymbol() : targetAtom.getAtomTypeName();
+        String rAtom = qAtom.getAtomTypeName() == null
+                ? qAtom.getSymbol() : qAtom.getAtomTypeName();
+        String tAtom = targetAtom.getAtomTypeName() == null
+                ? targetAtom.getSymbol() : targetAtom.getAtomTypeName();
         return rAtom.equals(tAtom);
     }
 }
