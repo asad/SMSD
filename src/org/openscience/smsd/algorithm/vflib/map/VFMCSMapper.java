@@ -207,11 +207,7 @@ public class VFMCSMapper implements IMapper {
         if (state.isDead()) {
             return;
         }
-
-        if (hasMap(state.getMap())) {
-            state.backTrack();
-        }
-
+        
         if (state.isGoal()) {
             Map<INode, IAtom> map = state.getMap();
             if (!hasMap(map)) {
