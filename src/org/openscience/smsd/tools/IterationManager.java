@@ -38,6 +38,7 @@ public class IterationManager implements Serializable {
     private int max;
     private int counter;
     private int coverage;
+    private final int limit;
 
     /**
      * Constructor for storing execution time
@@ -53,8 +54,9 @@ public class IterationManager implements Serializable {
      */
     public IterationManager(int maxIteration) {
         this.counter = 0;
-        this.coverage = 2000;
+        this.coverage = 500;
         this.max = maxIteration;
+        this.limit = this.max * this.coverage;
     }
 
     /**
@@ -85,7 +87,7 @@ public class IterationManager implements Serializable {
     }
 
     public synchronized boolean isMaxIteration() {
-        return getCounter() > (this.max * this.coverage);
+        return getCounter() > limit;
     }
 
     /**
@@ -100,5 +102,14 @@ public class IterationManager implements Serializable {
      */
     public synchronized void setCoverage(int coverage) {
         this.coverage = coverage;
+    }
+
+    /**
+     * Returns max allowed iterations (upper limit)
+     *
+     * @return
+     */
+    public int getIterationLimit() {
+        return limit;
     }
 }

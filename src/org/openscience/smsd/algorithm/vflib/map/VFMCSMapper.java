@@ -78,7 +78,7 @@ public class VFMCSMapper implements IMapper {
     private final IQuery query;
     private final List<Map<INode, IAtom>> maps;
     private IterationManager iterationManager = null;
-    private final int weight = 10;
+    private final int weight = 1;
 
     /**
      *
@@ -112,7 +112,7 @@ public class VFMCSMapper implements IMapper {
     private boolean checkTimeout() {
         if (getIterationManager().isMaxIteration()) {
             this.timeout = true;
-            System.out.println("Max VF MCS iterations " + getIterationManager().getCounter());
+//            System.out.println("Max VF MCS iterations " + getIterationManager().getCounter());
             return isTimeout();
         }
         getIterationManager().increment();
@@ -155,7 +155,7 @@ public class VFMCSMapper implements IMapper {
         IState state = new VFMCSState(query, target);
         maps.clear();
         mapAll(state);
-        return new ArrayList<Map<INode, IAtom>>(maps);
+        return new ArrayList<>(maps);
     }
 
     /**

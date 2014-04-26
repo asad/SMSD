@@ -315,7 +315,7 @@ public class SMSDFrame extends JFrame {
 
                 Isomorphism comparison = null;
                 if (jRadioButton1.isSelected()) {
-                    comparison = new Isomorphism(queryMolecule, targetMolecule, Algorithm.DEFAULT, jRadioButton1.isSelected(), true, true);
+                    comparison = new Isomorphism(queryMolecule, targetMolecule, Algorithm.DEFAULT, jRadioButton1.isSelected(), false, true);
                 } else if (jRadioButton2.isSelected()) {
                     comparison = new Isomorphism(queryMolecule, targetMolecule, Algorithm.DEFAULT, jRadioButton2.isSelected(), false, false);
                 }
