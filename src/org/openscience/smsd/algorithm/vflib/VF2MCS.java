@@ -72,6 +72,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
     private final List<AtomAtomMapping> allAtomMCS;
     private final static ILoggingTool logger
             = LoggingToolFactory.createLoggingTool(VF2MCS.class);
+    private final boolean DEBUG = false;
 
     /**
      * Constructor for an extended VF Algorithm for the MCS search
@@ -86,7 +87,9 @@ public final class VF2MCS extends BaseMCS implements IResults {
         super(source, target, shouldMatchBonds, shouldMatchRings, matchAtomType);
         boolean timeoutVF = searchVFMappings();
 
-//        System.out.println("time for VF search " + timeoutVF);
+        if (DEBUG) {
+            System.out.println("time for VF search " + timeoutVF);
+        }
 
         /*
          * An extension is triggered if its mcs solution is smaller than reactant and product. An enrichment is
@@ -94,7 +97,9 @@ public final class VF2MCS extends BaseMCS implements IResults {
          *
          *
          */
-        if (!timeoutVF) {
+        int size = allLocalMCS.iterator().hasNext() ? allLocalMCS.iterator().next().size() : 0;
+
+        if (timeoutVF || (size != source.getAtomCount() && size != target.getAtomCount())) {
 
             List<Map<Integer, Integer>> mcsVFSeeds = new ArrayList<>();
 
@@ -153,23 +158,31 @@ public final class VF2MCS extends BaseMCS implements IResults {
                             }
                         }
                     }
-                }
-
-//                System.out.println("Bond to be removed " + bondRemovedT.size());
-                for (IBond b : bondRemovedT) {
-                    targetClone.removeBond(b);
+                    if (DEBUG) {
+                        System.out.println("Bond to be removed " + bondRemovedT.size());
+                    }
+                    for (IBond b : bondRemovedT) {
+                        targetClone.removeBond(b);
+                    }
                 }
 
             } catch (CloneNotSupportedException ex) {
                 java.util.logging.Logger.getLogger(VF2MCS.class.getName()).log(Level.SEVERE, null, ex);
             }
 
-            MCSSeedGenerator mcsSeedGeneratorUIT = new MCSSeedGenerator(source, targetClone, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.CDKMCS);
-            MCSSeedGenerator mcsSeedGeneratorKoch = new MCSSeedGenerator(source, targetClone, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.MCSPlus);
-
             int jobCounter = 0;
+
+            if (DEBUG) {
+                System.out.println(" CALLING UIT ");
+            }
+            MCSSeedGenerator mcsSeedGeneratorUIT = new MCSSeedGenerator(source, targetClone, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.CDKMCS);
             cs.submit(mcsSeedGeneratorUIT);
             jobCounter++;
+
+            if (DEBUG) {
+                System.out.println(" CALLING MCSPLUS ");
+            }
+            MCSSeedGenerator mcsSeedGeneratorKoch = new MCSSeedGenerator(source, targetClone, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.MCSPlus);
             cs.submit(mcsSeedGeneratorKoch);
             jobCounter++;
 
@@ -196,22 +209,34 @@ public final class VF2MCS extends BaseMCS implements IResults {
                 }
             }
             executor.shutdown();
-            // Wait until all threads are finish
+            /*
+             Wait until all threads are finish
+             */
+
             while (!executor.isTerminated()) {
             }
             System.gc();
 
             long stopTimeSeeds = System.nanoTime();
-//            System.out.println("done seeds " + (stopTimeSeeds - startTimeSeeds));
+            if (DEBUG) {
+                System.out.println("done seeds " + (stopTimeSeeds - startTimeSeeds));
+            }
             /*
              * Store largest MCS seeds generated from MCSPlus and UIT
              */
             int solutionSize = 0;
             counter = 0;
             List<Map<Integer, Integer>> cleanedMCSSeeds = new ArrayList<>();
-//            System.out.println("mergin  UIT & KochCliques");
+
+            if (DEBUG) {
+                System.out.println("merging  UIT & KochCliques");
+            }
+
             if (!mcsSeeds.isEmpty()) {
                 for (Map<Integer, Integer> map : mcsSeeds) {
+                    if (DEBUG) {
+                        System.out.println("potential seed MCS, UIT " + map.size());
+                    }
                     if (map.size() > solutionSize) {
                         solutionSize = map.size();
                         cleanedMCSSeeds.clear();
@@ -219,7 +244,10 @@ public final class VF2MCS extends BaseMCS implements IResults {
                     }
                     if (!map.isEmpty()
                             && map.size() == solutionSize
-                            && !hasClique(map, cleanedMCSSeeds)) {
+                            && !isCliquePresent(map, cleanedMCSSeeds)) {
+                        if (DEBUG) {
+                            System.out.println("seed MCS, UIT " + map.size());
+                        }
                         cleanedMCSSeeds.add(counter, map);
                         counter++;
                     }
@@ -228,7 +256,10 @@ public final class VF2MCS extends BaseMCS implements IResults {
             for (Map<Integer, Integer> map : mcsVFSeeds) {
                 if (!map.isEmpty()
                         && map.size() >= solutionSize
-                        && !hasClique(map, cleanedMCSSeeds)) {
+                        && !isCliquePresent(map, cleanedMCSSeeds)) {
+                    if (DEBUG) {
+                        System.out.println("seed VF " + map.size());
+                    }
                     cleanedMCSSeeds.add(counter, map);
                     counter++;
                 }

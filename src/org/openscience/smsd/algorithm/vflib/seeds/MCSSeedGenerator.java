@@ -106,7 +106,7 @@ public class MCSSeedGenerator implements Callable<List<AtomAtomMapping>> {
 //            System.out.println("addUIT " + addUIT.iterator().next().getCount());
             return addUIT;
         } else if (algorithm.equals(Algorithm.MCSPlus)) {
-//            System.out.println("Calling MCSPLUS " + bondMatch + " " + ringMatch);
+//            System.out.println("Calling MCSPLUS " + bondMatch + " " + ringMatch + " " + matchAtomType);
             List<AtomAtomMapping> addKochCliques = addKochCliques();
 //            System.out.println("MCSPLUS " + addKochCliques.iterator().next().getCount());
             return addKochCliques;
@@ -131,7 +131,9 @@ public class MCSSeedGenerator implements Callable<List<AtomAtomMapping>> {
             ac1 = target;
             ac2 = source;
         }
-        GenerateCompatibilityGraph gcg = new GenerateCompatibilityGraph(ac1, ac2, bondMatch, ringMatch, matchAtomType);
+
+        GenerateCompatibilityGraph gcg
+                = new GenerateCompatibilityGraph(ac1, ac2, bondMatch, ringMatch, matchAtomType);
         List<Integer> comp_graph_nodes = gcg.getCompGraphNodes();
         List<Integer> cEdges = gcg.getCEgdes();
         List<Integer> dEdges = gcg.getDEgdes();

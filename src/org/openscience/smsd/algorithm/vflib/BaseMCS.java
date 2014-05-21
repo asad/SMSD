@@ -98,7 +98,8 @@ public class BaseMCS {
      * @param mapGlobal
      * @return
      */
-    protected synchronized boolean hasClique(Map<Integer, Integer> cliqueMap, List<Map<Integer, Integer>> mapGlobal) {
+    protected synchronized boolean hasClique(
+            Map<Integer, Integer> cliqueMap, List<Map<Integer, Integer>> mapGlobal) {
         for (Map<Integer, Integer> storedMap : mapGlobal) {
             if (cliqueMap.size() < storedMap.size()) {
                 return true;
@@ -111,11 +112,28 @@ public class BaseMCS {
 
     /**
      *
+     * @param cliqueMap
+     * @param mapGlobal
+     * @return
+     */
+    protected synchronized boolean isCliquePresent(
+            Map<Integer, Integer> cliqueMap, List<Map<Integer, Integer>> mapGlobal) {
+        for (Map<Integer, Integer> storedMap : mapGlobal) {
+            if (cliqueMap.equals(storedMap)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     *
      * @param refinedMCSSeeds
      * @throws CDKException
      * @throws IOException
      */
-    protected synchronized void extendCliquesWithMcGregor(List<Map<Integer, Integer>> refinedMCSSeeds) throws CDKException, IOException {
+    protected synchronized void extendCliquesWithMcGregor(
+            List<Map<Integer, Integer>> refinedMCSSeeds) throws CDKException, IOException {
         List<List<Integer>> mappings = new ArrayList<>();
         boolean ROPFlag = true;
         for (Map<Integer, Integer> firstPassMappings : refinedMCSSeeds) {
@@ -202,7 +220,8 @@ public class BaseMCS {
         }
     }
 
-    private synchronized void setMcGregorMappings(boolean RONP, List<List<Integer>> mappings) throws CDKException {
+    private synchronized void setMcGregorMappings(boolean RONP,
+            List<List<Integer>> mappings) throws CDKException {
         int counter = 0;
         int solSize = 0;
         getLocalAtomMCSSolution().clear();
@@ -309,7 +328,8 @@ public class BaseMCS {
         return commonAtomCount > maxSize;
     }
 
-    private synchronized int checkCommonAtomCount(IAtomContainer reactantMolecule, IAtomContainer productMolecule) {
+    private synchronized int checkCommonAtomCount(
+            IAtomContainer reactantMolecule, IAtomContainer productMolecule) {
         ArrayList<String> atoms = new ArrayList<>();
         for (int i = 0; i < reactantMolecule.getAtomCount(); i++) {
             atoms.add(reactantMolecule.getAtom(i).getSymbol());

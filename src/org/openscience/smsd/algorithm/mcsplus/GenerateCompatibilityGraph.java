@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtom;
@@ -249,8 +250,8 @@ public final class GenerateCompatibilityGraph implements Serializable {
         for (int a = 0; a < comp_graph_nodes_List_size; a += 3) {
             for (int b = a; b < comp_graph_nodes_List_size; b += 3) {
                 if ((a != b)
-                        && (compGraphNodes.get(a) != compGraphNodes.get(b))
-                        && (compGraphNodes.get(a + 1) != compGraphNodes.get(b + 1))) {
+                        && (!Objects.equals(compGraphNodes.get(a), compGraphNodes.get(b)))
+                        && (!Objects.equals(compGraphNodes.get(a + 1), compGraphNodes.get(b + 1)))) {
 
                     IBond reactantBond;
                     IBond productBond;
