@@ -74,6 +74,7 @@ public final class DefaultBondMatcher implements BondMatcher {
      */
     @Override
     public boolean matches(IBond targetBond) {
+
         if (this.queryBond != null && queryBond instanceof IQueryBond) {
             return ((IQueryBond) queryBond).matches(targetBond);
         } else if ((queryBond != null && targetBond != null) && (!isBondMatchFlag()
@@ -92,7 +93,7 @@ public final class DefaultBondMatcher implements BondMatcher {
     private boolean isBondTypeMatch(IBond targetBond) {
 
         if ((queryBond.getFlag(CDKConstants.ISAROMATIC) == targetBond.getFlag(CDKConstants.ISAROMATIC))
-                && (queryBond.getOrder() == targetBond.getOrder())) {
+                && queryBond.getOrder().equals(targetBond.getOrder())) {
             return true;
         }
 
@@ -100,20 +101,11 @@ public final class DefaultBondMatcher implements BondMatcher {
             return true;
         }
 
-        if (queryBond.getOrder().equals(targetBond.getOrder())) {
-            return true;
-        }
-
-        if (queryBond.getFlag(CDKConstants.ISINRING) && targetBond.getFlag(CDKConstants.ISINRING)
-                && (queryBond.getOrder() == targetBond.getOrder()
-                || queryBond.getOrder() == IBond.Order.UNSET
-                || targetBond.getOrder() == IBond.Order.UNSET)) {
-            return true;
-        }
-
         return !matchAtomTypes
                 && queryBond.getFlag(CDKConstants.ISINRING)
-                && targetBond.getFlag(CDKConstants.ISINRING);
+                && targetBond.getFlag(CDKConstants.ISINRING)
+                && (queryBond.getOrder() == IBond.Order.UNSET
+                || targetBond.getOrder() == IBond.Order.UNSET);
     }
 
     /**

@@ -85,6 +85,7 @@ public final class DefaultAtomTypeMatcher implements AtomMatcher {
      */
     @Override
     public boolean matches(IAtom targetAtom) {
+
         if (targetAtom instanceof IQueryAtom) {
             return ((IQueryAtom) targetAtom).matches(getQueryAtom());
         } else if (getQueryAtom() != null && getQueryAtom() instanceof IQueryAtom) {
@@ -113,7 +114,9 @@ public final class DefaultAtomTypeMatcher implements AtomMatcher {
                 return false;
             }
 
-            if (!matchAtomType(targetAtom)) {
+            if (!matchAtomType(targetAtom)
+                    && isAliphaticAtom(getQueryAtom())
+                    && isAliphaticAtom(targetAtom)) {
                 return false;
             }
 
