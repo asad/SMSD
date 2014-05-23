@@ -113,9 +113,7 @@ public final class DefaultAtomTypeMatcher implements AtomMatcher {
                 return false;
             }
 
-            if (!matchAtomType(targetAtom)
-                    && isAliphaticAtom(getQueryAtom())
-                    && isAliphaticAtom(targetAtom)) {
+            if (!matchAtomType(targetAtom)) {
                 return false;
             }
 
