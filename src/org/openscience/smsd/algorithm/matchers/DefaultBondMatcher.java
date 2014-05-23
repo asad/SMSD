@@ -90,13 +90,16 @@ public final class DefaultBondMatcher implements BondMatcher {
         if ((queryBond.getFlag(CDKConstants.ISAROMATIC) == targetBond.getFlag(CDKConstants.ISAROMATIC))
                 && (queryBond.getOrder() == targetBond.getOrder())) {
             return true;
-        } else if (queryBond.getFlag(CDKConstants.ISAROMATIC) && targetBond.getFlag(CDKConstants.ISAROMATIC)) {
-            return true;
-        } else if ((queryBond.getFlag(CDKConstants.ISINRING) == targetBond.getFlag(CDKConstants.ISINRING))
-                && (queryBond.getOrder() == targetBond.getOrder())) {
+        }
+
+        if (queryBond.getFlag(CDKConstants.ISAROMATIC) && targetBond.getFlag(CDKConstants.ISAROMATIC)) {
             return true;
         }
-        return false;
+
+        return (queryBond.getFlag(CDKConstants.ISINRING) == targetBond.getFlag(CDKConstants.ISINRING)
+                && (queryBond.getOrder() == targetBond.getOrder()
+                || queryBond.getOrder() == IBond.Order.UNSET
+                || targetBond.getOrder() == IBond.Order.UNSET));
     }
 
     /**

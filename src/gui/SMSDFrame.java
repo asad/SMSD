@@ -23,7 +23,6 @@
 package gui;
 
 import cmd.pdb.LigandHelper;
-import org.openscience.smsd.tools.Utility;
 import gui.helper.FileExportFilter;
 import gui.helper.FileFilterUtility;
 import gui.helper.ImagePreView;

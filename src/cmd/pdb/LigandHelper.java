@@ -1,6 +1,7 @@
 package cmd.pdb;
 
 import java.io.IOException;
+import java.util.Objects;
 
 import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.DefaultChemObjectBuilder;
@@ -106,7 +107,7 @@ public class LigandHelper {
             int degree = atomContainer.getConnectedAtomsCount(atom);
             degreeLookup[atomIndex] = degree;
             hCountLookup[atomIndex]
-                    = atom.getImplicitHydrogenCount() == CDKConstants.UNSET ? 0
+                    = Objects.equals(atom.getImplicitHydrogenCount(), CDKConstants.UNSET) ? 0
                     : atom.getImplicitHydrogenCount();
             bosLookup[atomIndex] = atomContainer.getBondOrderSum(atom);
             if (degree > maxDegree) {
@@ -129,7 +130,7 @@ public class LigandHelper {
                 int hCount = hCountLookup[atomIndex];
                 double bosAtom = bosLookup[atomIndex];
                 double bosType1
-                        = atomTypes1[0].getBondOrderSum() == CDKConstants.UNSET ? 0.0
+                        = Objects.equals(atomTypes1[0].getBondOrderSum(), CDKConstants.UNSET) ? 0.0
                         : atomTypes1[0].getBondOrderSum();
                 // check aromatic atoms
                 boolean isAromatic = atom.getFlag(CDKConstants.ISAROMATIC);
@@ -147,7 +148,7 @@ public class LigandHelper {
                         double bosPartner = bosLookup[partnerIndex];
                         boolean bondIsAromatic = bond.getFlag(CDKConstants.ISAROMATIC);
                         double bosType2
-                                = (atomTypes2[0].getBondOrderSum() == CDKConstants.UNSET)
+                                = (Objects.equals(atomTypes2[0].getBondOrderSum(), CDKConstants.UNSET))
                                 ? 0.0 : atomTypes2[0].getBondOrderSum();
                         if (bondIsAromatic && bosPartner < bosType2 - partnerHCount) {
                             bond = atomContainer.getBond(atom, partner);
@@ -171,7 +172,7 @@ public class LigandHelper {
                         }
 
                         double bos2
-                                = (atomTypes2[0].getBondOrderSum() == CDKConstants.UNSET)
+                                = (Objects.equals(atomTypes2[0].getBondOrderSum(), CDKConstants.UNSET))
                                 ? 0.0 : atomTypes2[0].getBondOrderSum();
                         int hc2 = hCountLookup[partnerIndex];
                         double acbos2 = bosLookup[partnerIndex];

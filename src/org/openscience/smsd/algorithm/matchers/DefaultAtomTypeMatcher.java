@@ -93,13 +93,16 @@ public final class DefaultAtomTypeMatcher implements AtomMatcher {
             if (!matchSymbol(targetAtom)) {
                 return false;
             }
-            if (!matchAtomType(targetAtom)) {
+
+            if (isMatchRings()
+                    && isRingAtom(getQueryAtom())
+                    && !isRingAtom(targetAtom)) {
                 return false;
             }
-            if (isMatchRings() && isRingAtom(getQueryAtom()) && !isRingAtom(targetAtom)) {
-                return false;
-            }
-            if (isMatchRings() && !isRingAtom(getQueryAtom()) && isRingAtom(targetAtom)) {
+
+            if (isMatchRings()
+                    && !isRingAtom(getQueryAtom())
+                    && isRingAtom(targetAtom)) {
                 return false;
             }
 
@@ -109,6 +112,13 @@ public final class DefaultAtomTypeMatcher implements AtomMatcher {
                     && !isRingSizeMatch(targetAtom)) {
                 return false;
             }
+
+            if (!matchAtomType(targetAtom)
+                    && isAliphaticAtom(getQueryAtom())
+                    && isAliphaticAtom(targetAtom)) {
+                return false;
+            }
+
         }
         return true;
     }

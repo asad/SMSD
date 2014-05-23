@@ -252,13 +252,7 @@ public class MoleculeInitializer {
                 atom.setProperty(CDKConstants.RING_CONNECTIONS, counter);
             }
 
-            // check for atomaticity
-            try {
-                ExtAtomContainerManipulator.aromatizeDayLight(atomContainer);
-            } catch (CDKException e) {
-                Logger.debug(e.toString());
-                throw new CDKException(e.toString(), e);
-            }
+            ExtAtomContainerManipulator.aromatizeMolecule(atomContainer);
         }
 
     }

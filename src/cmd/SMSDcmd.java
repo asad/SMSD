@@ -26,7 +26,6 @@
  */
 package cmd;
 
-import org.openscience.smsd.tools.Utility;
 import java.io.IOException;
 import java.util.*;
 
@@ -42,6 +41,7 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IAtomContainerSet;
+import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
@@ -53,12 +53,13 @@ import org.openscience.smsd.interfaces.Algorithm;
 import org.openscience.smsd.mcss.JobType;
 import org.openscience.smsd.mcss.MCSS;
 import org.openscience.smsd.tools.AtomContainerComparator;
+import uk.ac.ebi.reactionblast.tools.ExtAtomContainerManipulator;
 
 /**
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-public class SMSDcmd extends Utility {
+public class SMSDcmd {
 
     private final static ILoggingTool logger
             = LoggingToolFactory.createLoggingTool(InputHandler.class);
@@ -413,8 +414,8 @@ public class SMSDcmd extends Utility {
             outputHandler.startNew(out);
         }
 
-        Utility.aromatizeDayLight(query);
-        Utility.aromatizeDayLight(target);
+        ExtAtomContainerManipulator.aromatizeDayLight(query);
+        ExtAtomContainerManipulator.aromatizeDayLight(target);
 
         if (argumentHandler.isApplyHAdding()) {
             AtomContainerManipulator.convertImplicitToExplicitHydrogens(query);

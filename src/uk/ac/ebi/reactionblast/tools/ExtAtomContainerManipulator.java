@@ -1,6 +1,5 @@
 package uk.ac.ebi.reactionblast.tools;
 
-
 /**
  *
  * Copyright (C) 2006-2013 Syed Asad Rahman {asad@ebi.ac.uk}
@@ -24,7 +23,6 @@ package uk.ac.ebi.reactionblast.tools;
  * along with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,6 +40,7 @@ import org.openscience.cdk.aromaticity.Aromaticity;
 import org.openscience.cdk.aromaticity.ElectronDonation;
 import org.openscience.cdk.atomtype.CDKAtomTypeMatcher;
 import org.openscience.cdk.exception.CDKException;
+import org.openscience.cdk.graph.ConnectivityChecker;
 import org.openscience.cdk.graph.CycleFinder;
 import org.openscience.cdk.graph.Cycles;
 import org.openscience.cdk.graph.GraphUtil;
@@ -49,6 +48,7 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomType;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.interfaces.IDoubleBondStereochemistry;
 import org.openscience.cdk.interfaces.ILonePair;
 import org.openscience.cdk.interfaces.IPseudoAtom;
@@ -99,6 +99,49 @@ public class ExtAtomContainerManipulator extends AtomContainerManipulator implem
     }
 
     /**
+     * Modules for cleaning a molecule
+     *
+     * @param molecule_orignal
+     * @return cleaned GraphAtomContainer
+     */
+    @TestMethod("testCheckAndCleanMolecule")
+    public synchronized static IAtomContainer checkAndCleanMolecule(IAtomContainer molecule_orignal) {
+        boolean isMarkush = false;
+        IAtomContainer molecule = molecule_orignal;
+        for (IAtom atom : molecule.atoms()) {
+            if (atom.getSymbol().equals("R")) {
+                isMarkush = true;
+                break;
+            }
+        }
+
+        if (isMarkush) {
+            logger.log(Level.WARNING, "Skipping Markush structure for sanity check");
+        }
+
+        // Check for salts and such
+        if (!ConnectivityChecker.isConnected(molecule)) {
+            // lets see if we have just two parts if so, we assume its a salt and just work
+            // on the larger part. Ideally we should have a check to ensure that the smaller
+            //  part is a metal/halogen etc.
+            IAtomContainerSet fragments = ConnectivityChecker.partitionIntoMolecules(molecule);
+            if (fragments.getAtomContainerCount() > 2) {
+                logger.log(Level.WARNING, "More than 2 components. Skipped");
+            } else {
+                IAtomContainer frag1 = fragments.getAtomContainer(0);
+                IAtomContainer frag2 = fragments.getAtomContainer(1);
+                if (frag1.getAtomCount() > frag2.getAtomCount()) {
+                    molecule = frag1;
+                } else {
+                    molecule = frag2;
+                }
+            }
+        }
+        aromatizeMolecule(molecule);
+        return molecule;
+    }
+
+    /**
      * This function finds rings and uses aromaticity detection code to
      * aromatize the molecule.
      *
@@ -112,19 +155,19 @@ public class ExtAtomContainerManipulator extends AtomContainerManipulator implem
             try {
                 AllRingsFinder arf = new AllRingsFinder();
                 ringSet = arf.findAllRings(mol);
+                RingSetManipulator.markAromaticRings(ringSet);
             } catch (CDKException e) {
                 logger.log(Level.WARNING, "Error in find and assigning rings in the molecule. ", mol.getID());
             }
 
             try {
-                // figure out which atoms are in aromatic rings:
-                percieveAtomTypesAndConfigureAtoms(mol);
                 try {
+                    // figure out which atoms are in aromatic rings:
+                    percieveAtomTypesAndConfigureAtoms(mol);
                     aromatizeCDK(mol);
                 } catch (CDKException e) {
                     aromatizeDayLight(mol);
                 }
-                RingSetManipulator.markAromaticRings(ringSet);
             } catch (CDKException e) {
                 logger.log(Level.WARNING, "Error in aromaticity dectection. ", mol.getID());
             }
@@ -602,7 +645,7 @@ public class ExtAtomContainerManipulator extends AtomContainerManipulator implem
                     if (matched != null) {
                         AtomTypeManipulator.configure(atom, matched);
                     }
-                } catch (Exception e) {
+                } catch (CDKException e) {
                     logger.log(Level.WARNING,
                             "Failed to find Matching AtomType! {0}{1}", new Object[]{atom.getSymbol(), e});
                 }
@@ -654,10 +697,10 @@ public class ExtAtomContainerManipulator extends AtomContainerManipulator implem
         Aromaticity aromaticity = new Aromaticity(model, cycles);
         try {
             aromaticity.apply(molecule);
-        } catch (Exception e) {
-            logger
-                    .log(Level.WARNING,
-                            "Aromaticity detection failed due to presence of unset atom hybridisation", molecule.getID());
+        } catch (CDKException e) {
+            logger.log(Level.WARNING,
+                    "Aromaticity detection failed due to presence of unset "
+                    + "atom hybridisation", molecule.getID());
         }
     }
 
@@ -673,9 +716,10 @@ public class ExtAtomContainerManipulator extends AtomContainerManipulator implem
         ExtAtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(molecule);
         try {
             aromaticity.apply(molecule);
-        } catch (Exception e) {
+        } catch (CDKException e) {
             logger.log(Level.WARNING,
-                    "Aromaticity detection failed due to presence of unset atom hybridisation", molecule.getID());
+                    "Aromaticity detection failed due to presence of unset "
+                    + "atom hybridisation", molecule.getID());
         }
     }
 

@@ -64,9 +64,8 @@ import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.tools.CDKHydrogenAdder;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
-import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.cdk.tools.manipulator.ChemFileManipulator;
-import static org.openscience.smsd.tools.Utility.aromatizeDayLight;
+import uk.ac.ebi.reactionblast.tools.ExtAtomContainerManipulator;
 
 /**
  *
@@ -263,9 +262,10 @@ public class InputHandler {
                 id = (String) mol.getProperty(CDKConstants.TITLE);
                 break;
         }
-        aromatizeDayLight(mol);
+        ExtAtomContainerManipulator.aromatizeMolecule(mol);
         mol = new AtomContainer(mol);
         mol.setID(id);
+
         if (argumentHandler.isImage()) {
             sdg.setMolecule(mol, false);
             sdg.generateCoordinates();
@@ -423,19 +423,20 @@ public class InputHandler {
             CDKHydrogenAdder adder = CDKHydrogenAdder.getInstance(DefaultChemObjectBuilder.getInstance());
             for (int atomContainerNr = 0; atomContainerNr < allAtomContainers.size();) {
                 IAtomContainer temp = allAtomContainers.get(atomContainerNr);
-                IAtomContainer atomcontainerHFree = AtomContainerManipulator.removeHydrogens(temp);
-                AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(atomcontainerHFree);
+                IAtomContainer atomcontainerHFree = ExtAtomContainerManipulator.removeHydrogens(temp);
+                ExtAtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(atomcontainerHFree);
+
                 if (deducebonds) {
                     DeduceBondSystemTool dbst = new DeduceBondSystemTool();
                     atomcontainerHFree = dbst.fixAromaticBondOrders(atomcontainerHFree);
                 }
 
                 adder.addImplicitHydrogens(atomcontainerHFree);
-                aromatizeDayLight(atomcontainerHFree);
                 String index = String.valueOf((atomContainerNr + 1));
                 boolean flag = ConnectivityChecker.isConnected(atomcontainerHFree);
                 String title = atomcontainerHFree.getProperty(CDKConstants.TITLE) != null
                         ? (String) atomcontainerHFree.getProperty(CDKConstants.TITLE) : index;
+                atomcontainerHFree.setProperty(CDKConstants.TITLE, index);
                 if (!flag) {
                     System.err.println("WARNING : Skipping target AtomContainer "
                             + title + " as it is not connected.");
@@ -446,6 +447,7 @@ public class InputHandler {
                     }
                     argumentHandler.setTargetMolOutName(atomcontainerHFree.getID());
                 }
+
                 atomContainerList.add(atomContainerNr, atomcontainerHFree);
                 atomContainerNr++;
             }
