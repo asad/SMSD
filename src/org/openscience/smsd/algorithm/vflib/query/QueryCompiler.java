@@ -153,7 +153,7 @@ public class QueryCompiler implements IQueryCompiler {
     }
 
     private synchronized BondMatcher createBondMatcher(IBond bond) {
-        return new DefaultBondMatcher(bond, isBondMatchFlag());
+        return new DefaultBondMatcher(bond, isBondMatchFlag(), isMatchAtomType());
     }
 
     /**

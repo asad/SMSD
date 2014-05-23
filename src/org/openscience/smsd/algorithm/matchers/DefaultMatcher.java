@@ -81,6 +81,6 @@ public class DefaultMatcher {
         if (!isAtomMatch(bondA1, bondA2, shouldMatchRings, matchAtomTypes)) {
             return false;
         }
-        return !matchBond || isBondMatch(new DefaultBondMatcher(bondA1, matchBond), bondA2);
+        return !matchBond || isBondMatch(new DefaultBondMatcher(bondA1, matchBond, matchAtomTypes), bondA2);
     }
 }

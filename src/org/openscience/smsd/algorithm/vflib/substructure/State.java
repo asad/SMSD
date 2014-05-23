@@ -55,6 +55,7 @@ import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.algorithm.matchers.AtomMatcher;
 import org.openscience.smsd.algorithm.matchers.BondMatcher;
 import org.openscience.smsd.algorithm.matchers.DefaultAtomMatcher;
+import org.openscience.smsd.algorithm.matchers.DefaultAtomTypeMatcher;
 import org.openscience.smsd.algorithm.matchers.DefaultBondMatcher;
 
 /**
@@ -72,7 +73,7 @@ final class State {
     private final boolean shouldMatchRings;
     private final IAtomContainer source;
     private final IAtomContainer target;
-    private final boolean matchAtomType;
+    private final boolean shouldMatchAtomType;
 
     // Returns true if the state contains an isomorphism.
     public boolean isGoal() {
@@ -131,7 +132,7 @@ final class State {
                 target.getAtomCount());
         this.shouldMatchBonds = shouldMatchBonds;
         this.shouldMatchRings = shouldMatchRings;
-        this.matchAtomType = matchAtomType;
+        this.shouldMatchAtomType = matchAtomType;
     }
 
     State(IQueryAtomContainer source, IAtomContainer target) {
@@ -149,7 +150,7 @@ final class State {
                 target.getAtomCount());
         this.shouldMatchBonds = true;
         this.shouldMatchRings = true;
-        this.matchAtomType = true;
+        this.shouldMatchAtomType = true;
     }
 
     State(State state) {
@@ -164,7 +165,7 @@ final class State {
         this.sharedState = state.sharedState;
         this.shouldMatchBonds = state.shouldMatchBonds;
         this.shouldMatchRings = state.shouldMatchRings;
-        this.matchAtomType = state.matchAtomType;
+        this.shouldMatchAtomType = state.shouldMatchAtomType;
     }
 
     private boolean isFeasible() {
@@ -494,15 +495,16 @@ final class State {
     }
 
     boolean matchBonds(IBond queryBond, IBond targetBond) {
-        BondMatcher defaultVFBondMatcher = new DefaultBondMatcher(queryBond, shouldMatchBonds);
+        BondMatcher defaultVFBondMatcher
+                = new DefaultBondMatcher(queryBond, shouldMatchBonds, shouldMatchAtomType);
         return defaultVFBondMatcher.matches(targetBond);
     }
 
     boolean matchAtoms(IAtom sourceAtom, IAtom targetAtom) {
         AtomMatcher defaultVFAtomMatcher;
-        if (matchAtomType) {
+        if (shouldMatchAtomType) {
             defaultVFAtomMatcher
-                    = new DefaultAtomMatcher(sourceAtom, shouldMatchRings);
+                    = new DefaultAtomTypeMatcher(sourceAtom, shouldMatchRings);
         } else {
             defaultVFAtomMatcher = new DefaultAtomMatcher(sourceAtom, shouldMatchRings);
         }

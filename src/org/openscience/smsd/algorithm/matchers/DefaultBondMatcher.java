@@ -41,6 +41,7 @@ public final class DefaultBondMatcher implements BondMatcher {
     static final long serialVersionUID = -7861469841127328812L;
     private final IBond queryBond;
     private final boolean shouldMatchBonds;
+    private final boolean matchAtomTypes;
 
     /**
      * Constructor
@@ -48,6 +49,7 @@ public final class DefaultBondMatcher implements BondMatcher {
     public DefaultBondMatcher() {
         this.queryBond = null;
         shouldMatchBonds = false;
+        matchAtomTypes = false;
     }
 
     /**
@@ -55,11 +57,13 @@ public final class DefaultBondMatcher implements BondMatcher {
      *
      * @param queryBond query GraphMolecule
      * @param shouldMatchBonds bond match flag
+     * @param matchAtomTypes
      */
-    public DefaultBondMatcher(IBond queryBond, boolean shouldMatchBonds) {
+    public DefaultBondMatcher(IBond queryBond, boolean shouldMatchBonds, boolean matchAtomTypes) {
         super();
         this.queryBond = queryBond;
         this.shouldMatchBonds = shouldMatchBonds;
+        this.matchAtomTypes = matchAtomTypes;
     }
 
     /**
@@ -96,10 +100,20 @@ public final class DefaultBondMatcher implements BondMatcher {
             return true;
         }
 
-        return (queryBond.getFlag(CDKConstants.ISINRING) == targetBond.getFlag(CDKConstants.ISINRING)
+        if (queryBond.getOrder().equals(targetBond.getOrder())) {
+            return true;
+        }
+
+        if (queryBond.getFlag(CDKConstants.ISINRING) && targetBond.getFlag(CDKConstants.ISINRING)
                 && (queryBond.getOrder() == targetBond.getOrder()
                 || queryBond.getOrder() == IBond.Order.UNSET
-                || targetBond.getOrder() == IBond.Order.UNSET));
+                || targetBond.getOrder() == IBond.Order.UNSET)) {
+            return true;
+        }
+
+        return !matchAtomTypes
+                && queryBond.getFlag(CDKConstants.ISINRING)
+                && targetBond.getFlag(CDKConstants.ISINRING);
     }
 
     /**

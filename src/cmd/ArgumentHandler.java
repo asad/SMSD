@@ -80,6 +80,9 @@ public class ArgumentHandler {
     public String getDescriptorFile() {
         return descriptorFile;
     }
+    /*
+     Boolean Options
+     */
     private boolean applyHAdding = false;
     private boolean applyHRemoval = false;
     private boolean applyTest = false;
@@ -87,6 +90,17 @@ public class ArgumentHandler {
     private boolean appendMode = false;
     private boolean matchBondType = false;
     private boolean matchRingType = false;
+
+    private boolean allMapping = false;
+    private boolean image = false;
+    private boolean substructureMode = false;
+    private boolean isNMCS = false;
+    private boolean outputSubgraph = false;
+    private boolean matchAtomType = false;
+
+    /*
+    
+     */
     private final String matchFile = "mcs";
     private final String fingerFile = "finger";
     private final String graphFile = "graph";
@@ -95,11 +109,6 @@ public class ArgumentHandler {
     private String targetOutfileName;
     private String suffix = "";
     private int chemFilter = 3;
-    private boolean allMapping = false;
-    private boolean image = false;
-    private boolean substructureMode = false;
-    private boolean isNMCS = false;
-    private boolean outputSubgraph = false;
     private String outputFilepath;
     private Writer outputWriter;
     private String outputFiletype;
@@ -137,6 +146,8 @@ public class ArgumentHandler {
         options.addOption("s", false, "SubStructure detection");
 
         options.addOption("a", false, "Add Hydrogen");
+
+        options.addOption("x", false, "Match Atom Type");
 
         options.addOption("r", false, "Remove Hydrogen");
 
@@ -227,6 +238,10 @@ public class ArgumentHandler {
 
         if (line.hasOption('z')) {
             this.setMatchRingType(true);
+        }
+
+        if (line.hasOption('x')) {
+            this.setMatchAtomType(true);
         }
 
         remainingArgs = line.getArgs();
@@ -678,5 +693,16 @@ public class ArgumentHandler {
 
     public boolean isImageOptionHelp() {
         return isImageOptionHelp;
+    }
+
+    private void setMatchAtomType(boolean x) {
+        this.matchAtomType = x;
+    }
+
+    /**
+     * @return the matchAtomType
+     */
+    public boolean isMatchAtomType() {
+        return matchAtomType;
     }
 }
