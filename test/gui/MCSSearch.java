@@ -6,14 +6,13 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.openscience.cdk.AtomContainer;
-import org.openscience.smsd.tools.Utility;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.io.MDLV2000Reader;
-import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.Isomorphism;
 import org.openscience.smsd.interfaces.Algorithm;
+import uk.ac.ebi.reactionblast.tools.ExtAtomContainerManipulator;
 
 
 /*
@@ -70,15 +69,15 @@ public class MCSSearch {
             MDLV2000Reader molTarget = new MDLV2000Reader(new FileInputStream(mol2));
             IAtomContainer target = molTarget.read(new AtomContainer());
 
-            AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(query);
-            AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(target);
+            ExtAtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(query);
+            ExtAtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(target);
 
-            query = AtomContainerManipulator.removeHydrogens(query);
-            target = AtomContainerManipulator.removeHydrogens(target);
+            query = ExtAtomContainerManipulator.removeHydrogens(query);
+            target = ExtAtomContainerManipulator.removeHydrogens(target);
 
 //	Calling the main algorithm to perform MCS cearch
-            Utility.aromatizeDayLight(query);
-            Utility.aromatizeDayLight(target);
+            ExtAtomContainerManipulator.aromatizeDayLight(query);
+            ExtAtomContainerManipulator.aromatizeDayLight(target);
 
             boolean bondSensitive = true;
             boolean ringmatch = false;

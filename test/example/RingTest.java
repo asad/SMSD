@@ -4,14 +4,13 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.openscience.cdk.DefaultChemObjectBuilder;
-import org.openscience.smsd.tools.Utility;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.smiles.SmilesParser;
-import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.Isomorphism;
 import org.openscience.smsd.interfaces.Algorithm;
+import uk.ac.ebi.reactionblast.tools.ExtAtomContainerManipulator;
 
 
 /*
@@ -48,21 +47,21 @@ public class RingTest {
             /*
              * perceive Atom Types
              */
-            AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol1);
-            AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol2);
+            ExtAtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol1);
+            ExtAtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol2);
 
             /*
              * Remove Hydrogens
              */
-            mol1 = AtomContainerManipulator.removeHydrogens(mol1);
-            mol2 = AtomContainerManipulator.removeHydrogens(mol2);
+            mol1 = ExtAtomContainerManipulator.removeHydrogens(mol1);
+            mol2 = ExtAtomContainerManipulator.removeHydrogens(mol2);
 
             /*
              * Detect aromatic compounds and rings
              */
 
-            Utility.aromatizeDayLight(mol1);
-            Utility.aromatizeDayLight(mol2);
+            ExtAtomContainerManipulator.aromatizeDayLight(mol1);
+            ExtAtomContainerManipulator.aromatizeDayLight(mol2);
 
             /*
              * Calling the main algorithm to perform MCS search

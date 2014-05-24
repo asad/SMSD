@@ -681,8 +681,12 @@ public class SubstructureTest {
 //      t="C[C@@]12CC3=C(CCC([O-])=O)[C@](C)(CC([O-])=O)C(\\C=C4/N[C@@](C)(C5=C(CC([O-])=O)[C@@](C)(CCC([O-])=O)C(CC(=N1)C(CCC([O-])=O)=C2CC([O-])=O)=N5)[C@@](C)(CC([O-])=O)[C@@H]4CCC([O-])=O)=N3");
 ////        s="O=C([O-])CCC1C=2N=C(C(=C3[NH2+]C(C)(C4N=C(C(=C5N=C(C2)C(C)(C)C5CCC(=O)[O-])C)C(C)(CCC(=O)[O-])C4CC(=O)[O-])C(C)(CC(=O)[O-])C3CCC(=O)[O-])C)C1(C)CC(=O)[O-]");
 ////        t="O=C([O-])CCC1C=2N=C(C(=C3[NH2+]C(C)(C4N=C(C(=C5N=C(C2)C(C)(C)C5CCC(=O)[O-])C)C(C)(CCC(=O)[O-])C4CC(=O)[O-])C(C)(CC(=O)N)C3CCC(=O)[O-])C)C1(C)CC(=O)N");
-        s = "O=C([O-])CC1=C(C2=[N+]3C1(C)CC4=C(CCC(=O)[O-])C(C=5C=C6N7C(C)(C8[N+](=C(C2)C(C)(CCC(=O)[O-])C8CC(=O)[O-])[Co-2]73[N+]45)C(C)(CC(=O)[O-])C6CCC(=O)[O-])(C)CC(=O)[O-])CCC(=O)[O-]";
-        t = "O=C([O-])CC1=C(C2=[N+]3C1(C)CC4=C(CCC(=O)[O-])C(C=5C=C6N7C(C8=C(CC(=O)[O-])C(C(=[N+]8[Co-2]73[N+]45)C2)(C)CCC(=O)[O-])(C)C(C)(CC(=O)[O-])C6CCC(=O)[O-])(C)CC(=O)[O-])CCC(=O)[O-]";
+//        s = "O=C([O-])CC1=C(C2=[N+]3C1(C)CC4=C(CCC(=O)[O-])C(C=5C=C6N7C(C)(C8[N+](=C(C2)C(C)(CCC(=O)[O-])C8CC(=O)[O-])[Co-2]73[N+]45)C(C)(CC(=O)[O-])C6CCC(=O)[O-])(C)CC(=O)[O-])CCC(=O)[O-]";
+//        t = "O=C([O-])CC1=C(C2=[N+]3C1(C)CC4=C(CCC(=O)[O-])C(C=5C=C6N7C(C8=C(CC(=O)[O-])C(C(=[N+]8[Co-2]73[N+]45)C2)(C)CCC(=O)[O-])(C)C(C)(CC(=O)[O-])C6CCC(=O)[O-])(C)CC(=O)[O-])CCC(=O)[O-]";
+//        
+        s = "CC1=C2CC3=C(C)C(C=C)=C(CC4=C(C)C(C=C)=C(CC5=C(C)C(CCC([O-])=O)=C(CC(N2)=C1CCC([O-])=O)N5)N4)N3";
+        t = "CC1=C2CC3=C(C)C(CCC([O-])=O)=C(CC4=C(CCC([O-])=O)C(C)=C(CC5=C(CCC([O-])=O)C(C)=C(CC(N2)=C1CCC([O-])=O)N5)N4)N3";
+
         IAtomContainer query = sp.parseSmiles(s);
         IAtomContainer target = sp.parseSmiles(t);
 
@@ -701,7 +705,7 @@ public class SubstructureTest {
         }
         //////System.out.println();
 
-        Substructure smsd = new Substructure(query, target, false, false, false, true);
+        Substructure smsd = new Substructure(query, target, false, true, false, true);
         Assert.assertTrue(smsd.isSubgraph());
         IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
         Substructure smsd2 = new Substructure(queryContainer, target, false);
@@ -717,6 +721,50 @@ public class SubstructureTest {
 
         s = "CC1=C2CC3=C(C)C(C=C)=C(CC4=C(C)C(C=C)=C(CC5=C(C)C(CCC([O-])=O)=C(CC(N2)=C1CCC([O-])=O)N5)N4)N3";
         t = "CC1=C2CC3=C(C)C(CCC([O-])=O)=C(CC4=C(CCC([O-])=O)C(C)=C(CC5=C(CCC([O-])=O)C(C)=C(CC(N2)=C1CCC([O-])=O)N5)N4)N3";
+
+        IAtomContainer query = sp.parseSmiles(s);
+        IAtomContainer target = sp.parseSmiles(t);
+
+        int i = 1;
+        for (IAtom a : query.atoms()) {
+            a.setID(String.valueOf(i));
+            //System.out.print(i + ",");
+            i++;
+        }
+        //////System.out.println();
+        i = 1;
+        for (IAtom a : target.atoms()) {
+            a.setID(String.valueOf(i));
+            //System.out.print(i + ",");
+            i++;
+        }
+
+        QueryAtomContainer createAnyAtomAnyBondContainer1 = QueryAtomContainerCreator.createAnyAtomAnyBondContainer(query, false);
+
+        for (i = 0; i < query.getAtomCount(); i++) {
+            createAnyAtomAnyBondContainer1.getAtom(i).setID(query.getAtom(i).getID());
+        }
+
+        QueryAtomContainer createAnyAtomAnyBondContainer2 = QueryAtomContainerCreator.createAnyAtomAnyBondContainer(target, false);
+        for (i = 0; i < target.getAtomCount(); i++) {
+            createAnyAtomAnyBondContainer2.getAtom(i).setID(target.getAtom(i).getID());
+        }
+
+//        IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
+        Substructure smsd = new Substructure(createAnyAtomAnyBondContainer1, target, true);
+        ////System.out.println("Subgraph " + smsd.isSubgraph());
+        Assert.assertTrue(smsd.isSubgraph());
+    }
+
+    @Test
+    public void testisSubgraph() throws CDKException {
+        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+
+        String s = "";
+        String t = "";
+
+        s = "OC1CCC2(C3=C(CCC2C1C)C4(C)CCC(C(C)CCC(=C)C(C)C)C4(C)CC3)C";
+        t = "OC1CCC23CC43CCC5(C)C(CCC5(C)C4CCC2C1C)C(C)CCC(=C)C(C)C";
 
         IAtomContainer query = sp.parseSmiles(s);
         IAtomContainer target = sp.parseSmiles(t);

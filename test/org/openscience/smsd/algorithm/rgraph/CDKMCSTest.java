@@ -46,7 +46,7 @@ import org.openscience.cdk.templates.MoleculeFactory;
 import org.openscience.cdk.tools.CDKHydrogenAdder;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.tools.TimeManager;
-import org.openscience.smsd.tools.Utility;
+import uk.ac.ebi.reactionblast.tools.ExtAtomContainerManipulator;
 
 /**
  * @cdk.module test-smsd
@@ -67,8 +67,8 @@ public class CDKMCSTest {
         adder.addImplicitHydrogens(mol);
         adder = CDKHydrogenAdder.getInstance(frag1.getBuilder());
         adder.addImplicitHydrogens(frag1);
-        Utility.aromatizeDayLight(mol);
-        Utility.aromatizeDayLight(frag1);
+        ExtAtomContainerManipulator.aromatizeDayLight(mol);
+        ExtAtomContainerManipulator.aromatizeDayLight(frag1);
 
         if (standAlone) {
             ////////System.out.println("Cyclohexene is a subgraph of alpha-Pinen: " + CDKMCS.isSubgraph(mol, frag1, true, false,false));
@@ -120,8 +120,8 @@ public class CDKMCSTest {
         IAtomContainer frag1 = MoleculeFactory.makeCyclohexane(); // no double bond in ring
         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol);
         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(frag1);
-        Utility.aromatizeCDK(mol);
-        Utility.aromatizeCDK(frag1);
+        ExtAtomContainerManipulator.aromatizeCDK(mol);
+        ExtAtomContainerManipulator.aromatizeCDK(frag1);
 
         if (standAlone) {
             ////////System.out.println("Cyclohexane is a subgraph of alpha-Pinen: " + CDKMCS.isSubgraph(mol, frag1, true, true,true));
@@ -140,8 +140,8 @@ public class CDKMCSTest {
         adder.addImplicitHydrogens(mol);
         adder = CDKHydrogenAdder.getInstance(frag1.getBuilder());
         adder.addImplicitHydrogens(frag1);
-        Utility.aromatizeDayLight(mol);
-        Utility.aromatizeDayLight(frag1);
+        ExtAtomContainerManipulator.aromatizeDayLight(mol);
+        ExtAtomContainerManipulator.aromatizeDayLight(frag1);
 
         if (standAlone) {
             ////////System.out.println("Pyrrole is a subgraph of Indole: " + CDKMCS.isSubgraph(mol, frag1, true, false,false));
@@ -173,8 +173,8 @@ public class CDKMCSTest {
         adder.addImplicitHydrogens(mol);
         adder = CDKHydrogenAdder.getInstance(frag1.getBuilder());
         adder.addImplicitHydrogens(frag1);
-        Utility.aromatizeDayLight(mol);
-        Utility.aromatizeDayLight(frag1);
+        ExtAtomContainerManipulator.aromatizeDayLight(mol);
+        ExtAtomContainerManipulator.aromatizeDayLight(frag1);
 
         List<List<CDKRMap>> list = CDKMCS.getSubgraphAtomsMaps(mol, frag1, true, false, false);
         List<CDKRMap> first = list.get(0);
@@ -260,12 +260,12 @@ public class CDKMCSTest {
 //         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol1);
 //        CDKHydrogenAdder adder = CDKHydrogenAdder.getInstance(mol1.getBuilder());
 //        adder.addImplicitHydrogens(mol1);
-//        Utility.aromatizeDayLight(mol1);
+//        ExtAtomContainerManipulator.aromatizeDayLight(mol1);
 //
 //        AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol2);
 //        adder = CDKHydrogenAdder.getInstance(mol2.getBuilder());
 //        adder.addImplicitHydrogens(mol2);
-//        Utility.aromatizeDayLight(mol2);
+//        ExtAtomContainerManipulator.aromatizeDayLight(mol2);
 //        Iterator<IAtom> atoms = mol1.atoms().iterator();
 //        int i = 1;
 //        while (atoms.hasNext()) {
@@ -278,12 +278,12 @@ public class CDKMCSTest {
         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol1);
         CDKHydrogenAdder adder = CDKHydrogenAdder.getInstance(mol1.getBuilder());
         adder.addImplicitHydrogens(mol1);
-        Utility.aromatizeDayLight(mol1);
+        ExtAtomContainerManipulator.aromatizeDayLight(mol1);
 
         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol2);
         adder = CDKHydrogenAdder.getInstance(mol2.getBuilder());
         adder.addImplicitHydrogens(mol2);
-        Utility.aromatizeDayLight(mol2);
+        ExtAtomContainerManipulator.aromatizeDayLight(mol2);
 
         list = CDKMCS.getOverlaps(mol1, mol2, true, true, false);
         //Fix me should return 8 hits
@@ -314,12 +314,12 @@ public class CDKMCSTest {
         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol1);
         CDKHydrogenAdder adder = CDKHydrogenAdder.getInstance(mol1.getBuilder());
         adder.addImplicitHydrogens(mol1);
-        Utility.aromatizeDayLight(mol1);
+        ExtAtomContainerManipulator.aromatizeDayLight(mol1);
 
         AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol2);
         adder = CDKHydrogenAdder.getInstance(mol2.getBuilder());
         adder.addImplicitHydrogens(mol2);
-        Utility.aromatizeDayLight(mol2);
+        ExtAtomContainerManipulator.aromatizeDayLight(mol2);
 
         List<IAtomContainer> list1 = CDKMCS.getOverlaps(mol1, mol2, true, true, false);
         List<IAtomContainer> list2 = CDKMCS.getOverlaps(mol2, mol1, true, true, false);

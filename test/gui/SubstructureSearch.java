@@ -2,13 +2,12 @@ package gui;
 
 import java.util.Map;
 import org.openscience.cdk.DefaultChemObjectBuilder;
-import org.openscience.smsd.tools.Utility;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.smiles.SmilesParser;
-import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.Substructure;
+import uk.ac.ebi.reactionblast.tools.ExtAtomContainerManipulator;
 
 
 /*
@@ -38,15 +37,15 @@ public class SubstructureSearch {
             IAtomContainer mol1 = sp.parseSmiles(query);
             IAtomContainer mol2 = sp.parseSmiles(target);
 
-            AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol1);
-            AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol2);
+            ExtAtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol1);
+            ExtAtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(mol2);
 
-            mol1 = AtomContainerManipulator.removeHydrogens(mol1);
-            mol2 = AtomContainerManipulator.removeHydrogens(mol2);
+            mol1 = ExtAtomContainerManipulator.removeHydrogens(mol1);
+            mol2 = ExtAtomContainerManipulator.removeHydrogens(mol2);
 
 //	Calling the main algorithm to perform MCS cearch
-            Utility.aromatizeDayLight(mol1);
-            Utility.aromatizeDayLight(mol2);
+            ExtAtomContainerManipulator.aromatizeDayLight(mol1);
+            ExtAtomContainerManipulator.aromatizeDayLight(mol2);
 
             boolean bondSensitive = true;
             boolean ringMatcher = true;

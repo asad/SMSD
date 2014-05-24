@@ -37,7 +37,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import org.openscience.smsd.tools.Utility;
+import uk.ac.ebi.reactionblast.tools.ExtAtomContainerManipulator;
 
 /**
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
@@ -199,10 +199,10 @@ public class MCSPlusHandlerTest {
         IAtomContainer target = sp.parseSmiles("Nc1ccccc1");
 
         SMSDNormalizer.percieveAtomTypesAndConfigureAtoms(target);
-        Utility.aromatizeDayLight(target);
+        ExtAtomContainerManipulator.aromatizeDayLight(target);
 
         SMSDNormalizer.percieveAtomTypesAndConfigureAtoms(query);
-        Utility.aromatizeDayLight(query);
+        ExtAtomContainerManipulator.aromatizeDayLight(query);
 
         MCSPlusHandler smsd1 = new MCSPlusHandler(query, target, true, false, false);
         assertNotNull(smsd1.getFirstAtomMapping());

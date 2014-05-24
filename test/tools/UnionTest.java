@@ -20,15 +20,13 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IAtomType;
-import org.openscience.cdk.interfaces.IRingSet;
-import org.openscience.cdk.ringsearch.AllRingsFinder;
 import org.openscience.cdk.smiles.SmilesGenerator;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.tools.CDKHydrogenAdder;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.Isomorphism;
 import org.openscience.smsd.interfaces.Algorithm;
-import org.openscience.smsd.tools.MoleculeSanityCheck;
+import uk.ac.ebi.reactionblast.tools.ExtAtomContainerManipulator;
 
 /**
  *
@@ -50,8 +48,8 @@ public class UnionTest {
             atom2.setID(String.valueOf((j++)));
         }
 
-        MoleculeSanityCheck.aromatizeMolecule(mol1);
-        MoleculeSanityCheck.aromatizeMolecule(mol2);
+        ExtAtomContainerManipulator.aromatizeMolecule(mol1);
+        ExtAtomContainerManipulator.aromatizeMolecule(mol2);
 
         Isomorphism isomorphism = new Isomorphism(mol1, mol2, Algorithm.DEFAULT, true, false, false);
         isomorphism.setChemFilters(false, false, false);
