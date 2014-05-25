@@ -50,6 +50,7 @@
  */
 package org.openscience.smsd.algorithm.vflib.map;
 
+import com.google.common.collect.HashBiMap;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -88,7 +89,7 @@ public class VFState implements IState {
      * @param target
      */
     public VFState(IQuery query, IAtomContainer target) {
-        this.map = new HashMap<>();
+        this.map = HashBiMap.create();
         this.queryPath = new ArrayList<>();
         this.targetPath = new ArrayList<>();
 
@@ -127,6 +128,12 @@ public class VFState implements IState {
         }
         map.clear();
         for (int i = 0; i < queryPath.size() - 1; i++) {
+            if (map.containsKey(queryPath.get(i))) {
+                continue;
+            }
+            if (map.containsValue(targetPath.get(i))) {
+                continue;
+            }
             map.put(queryPath.get(i), targetPath.get(i));
         }
     }
@@ -168,10 +175,14 @@ public class VFState implements IState {
      */
     @Override
     public boolean isMatchFeasible(Match match) {
-        if (map.containsKey(match.getQueryNode())
-                || map.containsValue(match.getTargetAtom())) {
+        if (map.containsKey(match.getQueryNode())) {
             return false;
         }
+
+        if (map.containsValue(match.getTargetAtom())) {
+            return false;
+        }
+
         if (!matchAtoms(match)) {
             return false;
         }
@@ -223,8 +234,12 @@ public class VFState implements IState {
 
     private boolean isCandidateFeasible(Match candidate) {
         for (INode queryAtom : map.keySet()) {
-            if (queryAtom.equals(candidate.getQueryNode())
-                    || map.get(queryAtom).equals(candidate.getTargetAtom())) {
+
+            if (queryAtom.equals(candidate.getQueryNode())) {
+                return false;
+            }
+
+            if (map.get(queryAtom).equals(candidate.getTargetAtom())) {
                 return false;
             }
         }
