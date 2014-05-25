@@ -446,15 +446,10 @@ public class IsomorphismTest {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("CC");
         IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
-        Isomorphism smsd = new Isomorphism(query, target, Algorithm.VFLibMCS, true, false, true);
-
-        boolean foundMatches = smsd.isSubgraph();
-        Assert.assertEquals(18, smsd.getAllAtomMapping().size());
-        Assert.assertTrue(foundMatches);
 
         QueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
-        smsd = new Isomorphism(queryContainer, target, Algorithm.DEFAULT);
-        foundMatches = smsd.isSubgraph();
+        Isomorphism smsd = new Isomorphism(queryContainer, target, Algorithm.VFLibMCS);
+        boolean foundMatches = smsd.isSubgraph();
         Assert.assertTrue(foundMatches);
     }
 
@@ -480,7 +475,7 @@ public class IsomorphismTest {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("CC");
         IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
-        Isomorphism smsd = new Isomorphism(query, target, Algorithm.DEFAULT, true, false, true);
+        Isomorphism smsd = new Isomorphism(query, target, Algorithm.CDKMCS, true, false, true);
 
         Assert.assertEquals(18, smsd.getAllAtomMapping().size());
         Assert.assertTrue(smsd.isSubgraph());
@@ -675,29 +670,29 @@ public class IsomorphismTest {
      *
      * @throws Exception
      */
-//    @Test
-//    public void testOpenCloseRing() throws Exception {
-//    ////System.out.println("31");
-//        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
-//        //(S)-2,3-epoxysqualene (CHEBI:15441)
-//        IAtomContainer query = sp.parseSmiles("CC(C)=CCC\\C(C)=C\\CC\\C(C)=C\\CC\\C=C(/C)CC\\C=C(/C)CC[C@@H]1OC1(C)C");
-//        // lupeol (CHEBI:6570)
-//        IAtomContainer target = sp.parseSmiles("[H][C@]12[C@@H](CC[C@]1(C)CC[C@]1(C)[C@]2([H])CC[C@]2([H])[C@@]3(C)CC[C@H](O)C(C)(C)[C@]3([H])CC[C@@]12C)C(C)=C");
-//
-//        IAtomContainer ac1 = ExtAtomContainerManipulator.removeHydrogens(query);
-//        IAtomContainer ac2 = ExtAtomContainerManipulator.removeHydrogens(target);
-//
-//        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.DEFAULT, false, false, false);
-//        // set chemical filter true
-//        comparison.setChemFilters(true, true, true);
-//        SmilesGenerator aromatic = SmilesGenerator.unique().aromatic();
-//        ////System.out.println("SMILES :" + aromatic.create(comparison.getFirstAtomMapping().getMapCommonFragmentOnQuery()));
-//        ////System.out.println("SMILES :" + aromatic.create(comparison.getFirstAtomMapping().getMapCommonFragmentOnTarget()));
-//        ////System.out.println("SMILES :" + comparison.getFirstAtomMapping().getCommonFragmentAsSMILES());
-//
-//        Assert.assertEquals(0.8235, comparison.getTanimotoSimilarity(), .001);
-//        Assert.assertEquals(2, comparison.getAllAtomMapping().size());
-//    }
+    @Test
+    public void testOpenCloseRing() throws Exception {
+    ////System.out.println("31");
+        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        //(S)-2,3-epoxysqualene (CHEBI:15441)
+        IAtomContainer query = sp.parseSmiles("CC(C)=CCC\\C(C)=C\\CC\\C(C)=C\\CC\\C=C(/C)CC\\C=C(/C)CC[C@@H]1OC1(C)C");
+        // lupeol (CHEBI:6570)
+        IAtomContainer target = sp.parseSmiles("[H][C@]12[C@@H](CC[C@]1(C)CC[C@]1(C)[C@]2([H])CC[C@]2([H])[C@@]3(C)CC[C@H](O)C(C)(C)[C@]3([H])CC[C@@]12C)C(C)=C");
+
+        IAtomContainer ac1 = ExtAtomContainerManipulator.removeHydrogens(query);
+        IAtomContainer ac2 = ExtAtomContainerManipulator.removeHydrogens(target);
+
+        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.DEFAULT, false, false, false);
+        // set chemical filter true
+        comparison.setChemFilters(true, true, true);
+        SmilesGenerator aromatic = SmilesGenerator.unique().aromatic();
+        ////System.out.println("SMILES :" + aromatic.create(comparison.getFirstAtomMapping().getMapCommonFragmentOnQuery()));
+        ////System.out.println("SMILES :" + aromatic.create(comparison.getFirstAtomMapping().getMapCommonFragmentOnTarget()));
+        ////System.out.println("SMILES :" + comparison.getFirstAtomMapping().getCommonFragmentAsSMILES());
+
+        Assert.assertEquals(0.8235, comparison.getTanimotoSimilarity(), .001);
+        Assert.assertEquals(2, comparison.getAllAtomMapping().size());
+    }
     /**
      * Test Common Fragment Expected SMLIES is Given the two molecules CCCNCC &
      * CNCCS the MCS returned is N([CH2])CC which is correct. But it could also
@@ -799,12 +794,12 @@ public class IsomorphismTest {
         Assert.assertEquals(score, overlap.getTanimotoSimilarity(), 0.001);
 
     }
-    
-        @Test
+
+    @Test
     public void testjg3() throws Exception {
         ////System.out.println("32");
         /*
-        Now check ring comparision, CDK RMAP bug, equals is || not &&
+         Now check ring comparision, CDK RMAP bug, equals is || not &&
          */
         SmilesParser smilesParser = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = smilesParser.parseSmiles("C(NC)(C)CC1=CCC=CC1");//("CNCCS");
