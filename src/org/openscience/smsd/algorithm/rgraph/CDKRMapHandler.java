@@ -396,7 +396,7 @@ public final class CDKRMapHandler {
 
     /**
      * This makes sourceAtom map1 of matching atoms out of sourceAtom map1 of
- matching bonds as produced by the get(Subgraph|Ismorphism)Map methods.
+     * matching bonds as produced by the get(Subgraph|Ismorphism)Map methods.
      *
      * @param rMapList The list produced by the getMap method.
      * @param graph1 first molecule. Must not be an IQueryAtomContainer.
@@ -464,7 +464,7 @@ public final class CDKRMapHandler {
 
     /**
      * This makes atom map1 of matching atoms out of atom map1 of matching bonds
- as produced by the get(Subgraph|Ismorphism)Map methods. Added by Asad
+     * as produced by the get(Subgraph|Ismorphism)Map methods. Added by Asad
      * since CDK one doesn't pick up the correct changes
      *
      * @param list The list produced by the getMap method.

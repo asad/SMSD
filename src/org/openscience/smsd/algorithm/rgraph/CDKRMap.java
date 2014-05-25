@@ -42,7 +42,7 @@ import org.openscience.cdk.annotations.TestClass;
  * @cdk.githash
  */
 @TestClass("org.openscience.cdk.smsd.algorithm.cdk.CDKRMapTest")
-public class CDKRMap {
+class CDKRMap extends Object {
 
     private int id1 = 0;
     private int id2 = 0;
