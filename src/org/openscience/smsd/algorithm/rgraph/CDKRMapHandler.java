@@ -395,8 +395,8 @@ public final class CDKRMapHandler {
     }
 
     /**
-     * This makes sourceAtom map of matching atoms out of sourceAtom map of
-     * matching bonds as produced by the get(Subgraph|Ismorphism)Map methods.
+     * This makes sourceAtom map1 of matching atoms out of sourceAtom map1 of
+ matching bonds as produced by the get(Subgraph|Ismorphism)Map methods.
      *
      * @param rMapList The list produced by the getMap method.
      * @param graph1 first molecule. Must not be an IQueryAtomContainer.
@@ -413,31 +413,31 @@ public final class CDKRMapHandler {
             result = makeAtomsMapOfBondsMapSingleBond(rMapList, graph1, graph2);
         } else {
             List<CDKRMap> resultLocal = new ArrayList<CDKRMap>();
-            for (int i = 0; i < rMapList.size(); i++) {
-                IBond qBond = graph1.getBond(rMapList.get(i).getId1());
-                IBond tBond = graph2.getBond(rMapList.get(i).getId2());
+            for (CDKRMap rMapList2 : rMapList) {
+                IBond qBond = graph1.getBond(rMapList2.getId1());
+                IBond tBond = graph2.getBond(rMapList2.getId2());
                 IAtom[] qAtoms = BondManipulator.getAtomArray(qBond);
                 IAtom[] tAtoms = BondManipulator.getAtomArray(tBond);
                 for (int j = 0; j < 2; j++) {
                     List<IBond> bondsConnectedToAtom1j = graph1.getConnectedBondsList(qAtoms[j]);
-                    for (int k = 0; k < bondsConnectedToAtom1j.size(); k++) {
-                        if (bondsConnectedToAtom1j.get(k) != qBond) {
-                            IBond testBond = bondsConnectedToAtom1j.get(k);
-                            for (int m = 0; m < rMapList.size(); m++) {
+                    for (IBond bondsConnectedToAtom1j1 : bondsConnectedToAtom1j) {
+                        if (bondsConnectedToAtom1j1 != qBond) {
+                            IBond testBond = bondsConnectedToAtom1j1;
+                            for (CDKRMap rMapList1 : rMapList) {
                                 IBond testBond2;
-                                if ((rMapList.get(m)).getId1() == graph1.getBondNumber(testBond)) {
-                                    testBond2 = graph2.getBond((rMapList.get(m)).getId2());
+                                if ((rMapList1).getId1() == graph1.getBondNumber(testBond)) {
+                                    testBond2 = graph2.getBond((rMapList1).getId2());
                                     for (int n = 0; n < 2; n++) {
                                         List<IBond> bondsToTest = graph2.getConnectedBondsList(tAtoms[n]);
                                         if (bondsToTest.contains(testBond2)) {
-                                            CDKRMap map;
+                                            CDKRMap map1;
                                             if (j == n) {
-                                                map = new CDKRMap(graph1.getAtomNumber(qAtoms[0]), graph2.getAtomNumber(tAtoms[0]));
+                                                map1 = new CDKRMap(graph1.getAtomNumber(qAtoms[0]), graph2.getAtomNumber(tAtoms[0]));
                                             } else {
-                                                map = new CDKRMap(graph1.getAtomNumber(qAtoms[1]), graph2.getAtomNumber(tAtoms[0]));
+                                                map1 = new CDKRMap(graph1.getAtomNumber(qAtoms[1]), graph2.getAtomNumber(tAtoms[0]));
                                             }
-                                            if (!resultLocal.contains(map)) {
-                                                resultLocal.add(map);
+                                            if (!resultLocal.contains(map1)) {
+                                                resultLocal.add(map1);
                                             }
                                             CDKRMap map2;
                                             if (j == n) {
@@ -463,8 +463,8 @@ public final class CDKRMapHandler {
     }
 
     /**
-     * This makes atom map of matching atoms out of atom map of matching bonds
-     * as produced by the get(Subgraph|Ismorphism)Map methods. Added by Asad
+     * This makes atom map1 of matching atoms out of atom map1 of matching bonds
+ as produced by the get(Subgraph|Ismorphism)Map methods. Added by Asad
      * since CDK one doesn't pick up the correct changes
      *
      * @param list The list produced by the getMap method.
