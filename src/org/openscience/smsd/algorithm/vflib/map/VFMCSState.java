@@ -50,6 +50,7 @@
  */
 package org.openscience.smsd.algorithm.vflib.map;
 
+import com.google.common.collect.HashBiMap;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -74,12 +75,12 @@ import org.openscience.smsd.algorithm.vflib.interfaces.IState;
 @TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFLibTest")
 public class VFMCSState implements IState {
 
-    private List<Match> candidates;
-    private IQuery query;
-    private IAtomContainer target;
-    private List<INode> queryPath;
-    private List<IAtom> targetPath;
-    private Map<INode, IAtom> map;
+    private final List<Match> candidates;
+    private final IQuery query;
+    private final IAtomContainer target;
+    private final List<INode> queryPath;
+    private final List<IAtom> targetPath;
+    private final Map<INode, IAtom> map;
 
     /**
      * initialize the VFState with query and target
@@ -88,10 +89,10 @@ public class VFMCSState implements IState {
      * @param target
      */
     public VFMCSState(IQuery query, IAtomContainer target) {
-        this.map = new HashMap<INode, IAtom>();
-        this.queryPath = new ArrayList<INode>();
-        this.targetPath = new ArrayList<IAtom>();
-        this.candidates = new ArrayList<Match>();
+        this.map = HashBiMap.create();
+        this.queryPath = new ArrayList<>();
+        this.targetPath = new ArrayList<>();
+        this.candidates = new ArrayList<>();
         this.query = query;
         this.target = target;
         loadRootCandidates();
@@ -99,9 +100,9 @@ public class VFMCSState implements IState {
     }
 
     private VFMCSState(VFMCSState state, Match match) {
-        this.candidates = new ArrayList<Match>();
-        this.queryPath = new ArrayList<INode>(state.queryPath);
-        this.targetPath = new ArrayList<IAtom>(state.targetPath);
+        this.candidates = new ArrayList<>();
+        this.queryPath = new ArrayList<>(state.queryPath);
+        this.targetPath = new ArrayList<>(state.targetPath);
         this.map = state.map;
         this.query = state.query;
         this.target = state.target;
@@ -125,6 +126,12 @@ public class VFMCSState implements IState {
         }
         map.clear();
         for (int i = 0; i < queryPath.size() - 1; i++) {
+            if (map.containsKey(queryPath.get(i))) {
+                continue;
+            }
+            if (map.containsValue(targetPath.get(i))) {
+                continue;
+            }
             map.put(queryPath.get(i), targetPath.get(i));
         }
     }
@@ -134,7 +141,7 @@ public class VFMCSState implements IState {
      */
     @Override
     public Map<INode, IAtom> getMap() {
-        return Collections.synchronizedMap(new HashMap<INode, IAtom>(map));
+        return Collections.synchronizedMap(new HashMap<>(map));
     }
 
     /**
@@ -173,10 +180,7 @@ public class VFMCSState implements IState {
         if (!matchAtoms(match)) {
             return false;
         }
-        if (!matchBonds(match)) {
-            return false;
-        }
-        return true;
+        return matchBonds(match);
     }
 
     /**

@@ -63,7 +63,7 @@ public class Match {
 
     @Override
     public String toString() {
-        return "Match{" + "query=" + query.getAtomMatcher().getQueryAtom().getID() 
+        return "Match{" + "query=" + query.getAtomMatcher().getQueryAtom().getID()
                 + ", target=" + target.getID() + '}';
     }
 
