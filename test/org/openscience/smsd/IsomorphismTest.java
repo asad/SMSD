@@ -513,7 +513,7 @@ public class IsomorphismTest {
         IAtomContainer molecule1 = smilesParser.parseSmiles("NC(=O)c1ccc[n+](c1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
         IAtomContainer molecule2 = smilesParser.parseSmiles("NC(=O)C1=CN(C=CC1)[C@@H]1O[C@H](COP(O)(=O)OP(O)(=O)OC[C@H]2O[C@H]([C@H](O)[C@@H]2O)n2cnc3c(N)ncnc23)[C@@H](O)[C@H]1O");
 
-        double score = 0.6604;
+        double score = 0.6923;
         Isomorphism comparison = new Isomorphism(molecule1, molecule2, Algorithm.DEFAULT, true, false, true);
         comparison.setChemFilters(true, true, true);
 //        ////System.out.println("SMILES :" + comparison.getFirstAtomMapping().getCommonFragmentAsSMILES());
@@ -766,6 +766,56 @@ public class IsomorphismTest {
         IAtomContainer ac2 = ExtAtomContainerManipulator.removeHydrogens(target);
         double score = 1.0;
         Isomorphism overlap = new Isomorphism(ac1, ac2, Algorithm.VFLibMCS, false, false, false);
+        overlap.setChemFilters(true, true, true);
+        SmilesGenerator aromatic = SmilesGenerator.unique().aromatic();
+        System.out.println("SMILES Q :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnQuery()));
+        System.out.println("SMILES T :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnTarget()));
+        System.out.println(" SMILES Common: " + overlap.getFirstAtomMapping().getCount() + ", " + overlap.getFirstAtomMapping().getCommonFragmentAsSMILES());
+        Assert.assertEquals(score, overlap.getTanimotoSimilarity(), 0.001);
+
+    }
+
+    @Test
+    public void testjg2() throws Exception {
+        ////System.out.println("32");
+        /*
+         CDK RMAP bug, equals is || not &&
+         */
+        SmilesParser smilesParser = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        IAtomContainer query = smilesParser.parseSmiles("O=C(c1cn(c2c1cccc2)CCN3CCOCC3)C4C(C4(C)C)(C)C");//("CNCCS");
+        setID(query);
+        IAtomContainer target = smilesParser.parseSmiles("C(ON=O)C(C)C");
+        setID(target);
+
+        IAtomContainer ac1 = ExtAtomContainerManipulator.removeHydrogens(query);
+        IAtomContainer ac2 = ExtAtomContainerManipulator.removeHydrogens(target);
+        double score = 0.1379;
+        Isomorphism overlap = new Isomorphism(ac1, ac2, Algorithm.CDKMCS, true, false, false);
+        overlap.setChemFilters(true, true, true);
+        SmilesGenerator aromatic = SmilesGenerator.unique().aromatic();
+        System.out.println("SMILES Q :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnQuery()));
+        System.out.println("SMILES T :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnTarget()));
+        System.out.println(" SMILES Common: " + overlap.getFirstAtomMapping().getCount() + ", " + overlap.getFirstAtomMapping().getCommonFragmentAsSMILES());
+        Assert.assertEquals(score, overlap.getTanimotoSimilarity(), 0.001);
+
+    }
+    
+        @Test
+    public void testjg3() throws Exception {
+        ////System.out.println("32");
+        /*
+        Now check ring comparision, CDK RMAP bug, equals is || not &&
+         */
+        SmilesParser smilesParser = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        IAtomContainer query = smilesParser.parseSmiles("C(NC)(C)CC1=CCC=CC1");//("CNCCS");
+        setID(query);
+        IAtomContainer target = smilesParser.parseSmiles("c12OCOc1cc(cc2)C(=O)C(N(C)C)CC");
+        setID(target);
+
+        IAtomContainer ac1 = ExtAtomContainerManipulator.removeHydrogens(query);
+        IAtomContainer ac2 = ExtAtomContainerManipulator.removeHydrogens(target);
+        double score = 0.6471;
+        Isomorphism overlap = new Isomorphism(ac1, ac2, Algorithm.DEFAULT, false, false, false);
         overlap.setChemFilters(true, true, true);
         SmilesGenerator aromatic = SmilesGenerator.unique().aromatic();
         System.out.println("SMILES Q :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnQuery()));
