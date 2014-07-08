@@ -99,17 +99,17 @@ public class InputHandler {
         this.argumentHandler = argumentHandler;
         sdg = new StructureDiagramGenerator();
 
-        singularDataTypes = new HashMap<String, String>();
+        singularDataTypes = new HashMap<>();
         singularDataTypes.put("CML", "Chemical Markup Language");
         singularDataTypes.put("MOL", "MDL V2000 format");
         singularDataTypes.put("ML2", "MOL2 Tripos format");
         singularDataTypes.put("PDB", "Protein Databank Format");
 
-        multipleDataTypes = new HashMap<String, String>();
+        multipleDataTypes = new HashMap<>();
         multipleDataTypes.put("SDF", "SD file format");
         multipleDataTypes.put("SMIF", "SMILES file format");
 
-        stringDataTypes = new HashMap<String, String>();
+        stringDataTypes = new HashMap<>();
         stringDataTypes.put("SMI", "SMILES string format");
         stringDataTypes.put("SIG", "Signature string format");
     }
@@ -391,14 +391,17 @@ public class InputHandler {
             throw new FileNotFoundException("ERROR: Input File Not Found " + infileName);
         }
 
-        List<IAtomContainer> allAtomContainers = new ArrayList<IAtomContainer>();
+        List<IAtomContainer> allAtomContainers = new ArrayList<>();
         switch (type) {
             case "SDF":
                 IteratingSDFReader iteratingSDFReader
                         = new IteratingSDFReader(
                                 new FileReader(inputFile), DefaultChemObjectBuilder.getInstance());
                 while (iteratingSDFReader.hasNext()) {
-                    allAtomContainers.add(iteratingSDFReader.next());
+                    IAtomContainer mol = iteratingSDFReader.next();
+                    String id = (String) mol.getProperty(CDKConstants.TITLE);
+                    mol.setID(id);
+                    allAtomContainers.add(mol);
                 }
                 iteratingSDFReader.close();
                 break;
@@ -418,7 +421,7 @@ public class InputHandler {
         }
         if (!allAtomContainers.isEmpty()) {
             // Get Molecules
-            List<IAtomContainer> atomContainerList = new ArrayList<IAtomContainer>(allAtomContainers.size());
+            List<IAtomContainer> atomContainerList = new ArrayList<>(allAtomContainers.size());
 
             CDKHydrogenAdder adder = CDKHydrogenAdder.getInstance(DefaultChemObjectBuilder.getInstance());
             for (int atomContainerNr = 0; atomContainerNr < allAtomContainers.size();) {
