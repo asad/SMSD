@@ -57,11 +57,13 @@ public class SingleMappingHandler implements IResults {
      *
      * @param source
      * @param target
-     * @param bondTypeMatch
      * @param shouldMatchRings
      */
     @TestMethod("setMCSAlgorithm")
-    public SingleMappingHandler(IAtomContainer source, IAtomContainer target, boolean bondTypeMatch, boolean shouldMatchRings) {
+    public SingleMappingHandler(
+            IAtomContainer source, 
+            IAtomContainer target, 
+            boolean shouldMatchRings) {
         allAtomMCS = new ArrayList<>();
         this.source = source;
         this.target = target;
@@ -75,7 +77,9 @@ public class SingleMappingHandler implements IResults {
      * @param target
      */
     @TestMethod("setMCSAlgorithm")
-    public SingleMappingHandler(IQueryAtomContainer source, IAtomContainer target) {
+    public SingleMappingHandler(
+            IQueryAtomContainer source, 
+            IAtomContainer target) {
         allAtomMCS = new ArrayList<>();
         this.source = source;
         this.target = target;

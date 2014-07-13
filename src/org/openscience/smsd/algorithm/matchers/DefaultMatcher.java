@@ -76,11 +76,12 @@ public class DefaultMatcher {
      * @param matchAtomTypes (atom type also matched and symbol matched)
      * @return
      */
-    public static boolean matches(IBond bondA1, IBond bondA2, boolean matchBond, boolean shouldMatchRings, boolean matchAtomTypes) {
+    public static boolean matches(IBond bondA1, IBond bondA2,
+            boolean matchBond, boolean shouldMatchRings, boolean matchAtomTypes) {
 
         if (!isAtomMatch(bondA1, bondA2, shouldMatchRings, matchAtomTypes)) {
             return false;
         }
-        return !matchBond || isBondMatch(new DefaultBondMatcher(bondA1, matchBond, matchAtomTypes), bondA2);
+        return isBondMatch(new DefaultBondMatcher(bondA1, matchBond, shouldMatchRings, matchAtomTypes), bondA2);
     }
 }

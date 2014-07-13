@@ -31,6 +31,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.annotations.TestMethod;
@@ -63,7 +64,7 @@ public class SingleMapping {
      * Default
      */
     public SingleMapping() {
-        connectedBondOrder = new TreeMap<Integer, Double>();
+        connectedBondOrder = new TreeMap<>();
     }
 
     /**
@@ -75,8 +76,10 @@ public class SingleMapping {
      * @throws CDKException
      */
     @TestMethod("testGetOverLaps")
-    protected synchronized List<Map<IAtom, IAtom>> getOverLaps(IAtomContainer source, IAtomContainer target) throws CDKException {
-        List<Map<IAtom, IAtom>> mappings = new ArrayList<Map<IAtom, IAtom>>();
+    protected synchronized List<Map<IAtom, IAtom>> getOverLaps(
+            IAtomContainer source,
+            IAtomContainer target) throws CDKException {
+        List<Map<IAtom, IAtom>> mappings = new ArrayList<>();
         this.source = source;
         this.target = target;
 
@@ -100,8 +103,9 @@ public class SingleMapping {
      * @throws CDKException
      */
     @TestMethod("testGetOverLaps")
-    protected synchronized List<Map<IAtom, IAtom>> getOverLaps(IQueryAtomContainer source, IAtomContainer target) throws CDKException {
-        List<Map<IAtom, IAtom>> mappings = new ArrayList<Map<IAtom, IAtom>>();
+    protected synchronized List<Map<IAtom, IAtom>> getOverLaps(
+            IQueryAtomContainer source, IAtomContainer target) throws CDKException {
+        List<Map<IAtom, IAtom>> mappings = new ArrayList<>();
         this.source = source;
         this.target = target;
 
@@ -121,7 +125,7 @@ public class SingleMapping {
         BondEnergies be = BondEnergies.getInstance();
         for (IAtom sourceAtom : source.atoms()) {
             for (IAtom targetAtom : target.atoms()) {
-                Map<IAtom, IAtom> mapAtoms = new HashMap<IAtom, IAtom>();
+                Map<IAtom, IAtom> mapAtoms = new HashMap<>();
                 if (sourceAtom instanceof IQueryAtom) {
                     if (((IQueryAtom) sourceAtom).matches(targetAtom)) {
                         mapAtoms.put(sourceAtom, targetAtom);
@@ -136,7 +140,7 @@ public class SingleMapping {
                             totalOrder += bondOrder.numeric() + be.getEnergies(bond);
                         }
 
-                        if (targetAtom.getFormalCharge() != sourceAtom.getFormalCharge()) {
+                        if (!Objects.equals(targetAtom.getFormalCharge(), sourceAtom.getFormalCharge())) {
                             totalOrder += 0.5;
                         }
 
@@ -157,7 +161,7 @@ public class SingleMapping {
                         totalOrder += bondOrder.numeric() + be.getEnergies(bond);
                     }
 
-                    if (targetAtom.getFormalCharge() != sourceAtom.getFormalCharge()) {
+                    if (!Objects.equals(targetAtom.getFormalCharge(), sourceAtom.getFormalCharge())) {
                         totalOrder += 0.5;
                     }
 
@@ -174,7 +178,7 @@ public class SingleMapping {
         BondEnergies be = BondEnergies.getInstance();
         for (IAtom targetAtom : target.atoms()) {
             for (IAtom sourceAtoms : source.atoms()) {
-                Map<IAtom, IAtom> mapAtoms = new HashMap<IAtom, IAtom>();
+                Map<IAtom, IAtom> mapAtoms = new HashMap<>();
                 if (targetAtom instanceof IQueryAtom) {
                     if (((IQueryAtom) targetAtom).matches(sourceAtoms)) {
                         if (targetAtom.getSymbol().equalsIgnoreCase(sourceAtoms.getSymbol())) {
@@ -189,7 +193,7 @@ public class SingleMapping {
                                 }
                                 totalOrder += bondOrder.numeric() + be.getEnergies(bond);
                             }
-                            if (sourceAtoms.getFormalCharge() != targetAtom.getFormalCharge()) {
+                            if (!Objects.equals(sourceAtoms.getFormalCharge(), targetAtom.getFormalCharge())) {
                                 totalOrder += 0.5;
                             }
                             connectedBondOrder.put(counter, totalOrder);
@@ -209,7 +213,7 @@ public class SingleMapping {
                         }
                         totalOrder += bondOrder.numeric() + be.getEnergies(bond);
                     }
-                    if (sourceAtoms.getFormalCharge() != targetAtom.getFormalCharge()) {
+                    if (!Objects.equals(sourceAtoms.getFormalCharge(), targetAtom.getFormalCharge())) {
                         totalOrder += 0.5;
                     }
                     connectedBondOrder.put(counter, totalOrder);
@@ -221,7 +225,7 @@ public class SingleMapping {
     }
 
     private synchronized List<Map<IAtom, IAtom>> postFilter(List<Map<IAtom, IAtom>> mappings) {
-        List<Map<IAtom, IAtom>> sortedMap = new ArrayList<Map<IAtom, IAtom>>();
+        List<Map<IAtom, IAtom>> sortedMap = new ArrayList<>();
 
         if (mappings.isEmpty()) {
             return sortedMap;
@@ -240,10 +244,11 @@ public class SingleMapping {
         Collections.sort(list, new Comparator() {
             @Override
             public int compare(Object object1, Object object2) {
-                return ((Comparable) ((Map.Entry<K, V>) (object1)).getValue()).compareTo(((Map.Entry<K, V>) (object2)).getValue());
+                return ((Comparable) ((Map.Entry<K, V>) (object1)).getValue()).compareTo(
+                        ((Map.Entry<K, V>) (object2)).getValue());
             }
         });
-        Map<K, V> result = new LinkedHashMap<K, V>();
+        Map<K, V> result = new LinkedHashMap<>();
         for (Iterator it = list.iterator(); it.hasNext();) {
             Map.Entry<K, V> entry = (Map.Entry<K, V>) it.next();
             result.put(entry.getKey(), entry.getValue());

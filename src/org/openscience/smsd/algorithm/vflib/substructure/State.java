@@ -496,7 +496,8 @@ final class State {
 
     boolean matchBonds(IBond queryBond, IBond targetBond) {
         BondMatcher defaultVFBondMatcher
-                = new DefaultBondMatcher(queryBond, shouldMatchBonds, shouldMatchAtomType);
+                = new DefaultBondMatcher(
+                        queryBond, shouldMatchBonds, shouldMatchRings, shouldMatchAtomType);
         return defaultVFBondMatcher.matches(targetBond);
     }
 

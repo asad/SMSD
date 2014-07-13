@@ -146,14 +146,14 @@ public final class Substructure extends BaseMapping {
      * @throws CDKException
      */
     private synchronized boolean findSubgraph() throws CDKException {
-        boolean isSubgraph = false;
+        boolean isSubgraph;
 
         if ((getTarget() == null) || (getQuery() == null)) {
             throw new CDKException("Query or Target molecule is not initialized (NULL)");
         }
 
         if (getQuery().getAtomCount() == 1 || getTarget().getAtomCount() == 1) {
-            singleMapping(isMatchBonds());
+            isSubgraph = singleMapping();
         } else {
             if (getQuery().getAtomCount() > getTarget().getAtomCount()) {
                 return false;
@@ -185,14 +185,14 @@ public final class Substructure extends BaseMapping {
      * @throws CDKException
      */
     private synchronized boolean findSubgraphs() throws CDKException {
-        boolean isSubgraph = false;
+        boolean isSubgraph;
 
         if ((getTarget() == null) || (getQuery() == null)) {
             throw new CDKException("Query or Target molecule is not initialized (NULL)");
         }
 
         if (getQuery().getAtomCount() == 1 || getTarget().getAtomCount() == 1) {
-            singleMapping(isMatchBonds());
+            isSubgraph = singleMapping();
         } else {
             if (getQuery().getAtomCount() > getTarget().getAtomCount()) {
                 return false;
@@ -253,13 +253,13 @@ public final class Substructure extends BaseMapping {
         }
     }
 
-    private synchronized void singleMapping(boolean shouldMatchBonds) {
+    private synchronized boolean singleMapping() {
         SingleMappingHandler mcs;
         if (!(getQuery() instanceof IQueryAtomContainer) && !(getTarget() instanceof IQueryAtomContainer)) {
-            mcs = new SingleMappingHandler(getQuery(), getTarget(), shouldMatchBonds, isMatchRings());
+            mcs = new SingleMappingHandler(getQuery(), getTarget(), isMatchRings());
         } else {
             mcs = new SingleMappingHandler((IQueryAtomContainer) getQuery(), getTarget());
         }
-        getMCSList().addAll(mcs.getAllAtomMapping());
+        return mcs.getAllAtomMapping() != null && !mcs.getAllAtomMapping().isEmpty();
     }
 }

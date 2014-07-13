@@ -286,7 +286,7 @@ public final class Isomorphism extends BaseMapping implements Serializable {
 
     private synchronized void singleMapping() {
         SingleMappingHandler mcs;
-        mcs = new SingleMappingHandler(getQuery(), getTarget(), isMatchBonds(), isMatchRings());
+        mcs = new SingleMappingHandler(getQuery(), getTarget(), isMatchRings());
         clearMaps();
         getMCSList().addAll(mcs.getAllAtomMapping());
     }

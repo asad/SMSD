@@ -592,8 +592,8 @@ public final class CDKRMapHandler {
      */
     protected synchronized void identifyMatchedParts(List<List<CDKRMap>> list, IAtomContainer source, IAtomContainer target) {
 
-        List<IAtom> array1 = new ArrayList<IAtom>();
-        List<IAtom> array2 = new ArrayList<IAtom>();
+//        List<IAtom> array1 = new ArrayList<IAtom>();
+//        List<IAtom> array2 = new ArrayList<IAtom>();
 
         /*
          * We have serial numbers of the bonds/Atoms to delete
@@ -608,8 +608,8 @@ public final class CDKRMapHandler {
                 IAtom sourceAtom = source.getAtom(rmap.getId1());
                 IAtom targetAtom = target.getAtom(rmap.getId2());
 
-                array1.add(sourceAtom);
-                array2.add(targetAtom);
+//                array1.add(sourceAtom);
+//                array2.add(targetAtom);
 
                 int indexI = source.getAtomNumber(sourceAtom);
                 int indexJ = target.getAtomNumber(targetAtom);
@@ -632,8 +632,8 @@ public final class CDKRMapHandler {
             IAtomContainer source,
             IAtomContainer target) {
 
-        List<IAtom> array1 = new ArrayList<>();
-        List<IAtom> array2 = new ArrayList<>();
+//        List<IAtom> array1 = new ArrayList<>();
+//        List<IAtom> array2 = new ArrayList<>();
 
         /* We have serial numbers of the bonds/Atoms to delete
          * Now we will collect the actual bond/Atoms rather than
@@ -648,9 +648,8 @@ public final class CDKRMapHandler {
             IAtom sAtom = source.getAtom(rmap.getId1());
             IAtom tAtom = target.getAtom(rmap.getId2());
 
-            array1.add(sAtom);
-            array2.add(tAtom);
-
+//            array1.add(sAtom);
+//            array2.add(tAtom);
             int indexI = source.getAtomNumber(sAtom);
             int indexJ = target.getAtomNumber(tAtom);
 

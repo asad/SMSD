@@ -42,6 +42,7 @@ public final class DefaultBondMatcher implements BondMatcher {
     private final IBond queryBond;
     private final boolean shouldMatchBonds;
     private final boolean matchAtomTypes;
+    private final boolean shouldMatchRings;
 
     /**
      * Constructor
@@ -50,6 +51,7 @@ public final class DefaultBondMatcher implements BondMatcher {
         this.queryBond = null;
         shouldMatchBonds = false;
         matchAtomTypes = false;
+        shouldMatchRings = false;
     }
 
     /**
@@ -57,12 +59,17 @@ public final class DefaultBondMatcher implements BondMatcher {
      *
      * @param queryBond query GraphMolecule
      * @param shouldMatchBonds bond match flag
+     * @param shouldMatchRings
      * @param matchAtomTypes
      */
-    public DefaultBondMatcher(IBond queryBond, boolean shouldMatchBonds, boolean matchAtomTypes) {
+    public DefaultBondMatcher(IBond queryBond,
+            boolean shouldMatchBonds,
+            boolean shouldMatchRings,
+            boolean matchAtomTypes) {
         super();
         this.queryBond = queryBond;
         this.shouldMatchBonds = shouldMatchBonds;
+        this.shouldMatchRings = shouldMatchRings;
         this.matchAtomTypes = matchAtomTypes;
     }
 
@@ -77,9 +84,17 @@ public final class DefaultBondMatcher implements BondMatcher {
 
         if (this.queryBond != null && queryBond instanceof IQueryBond) {
             return ((IQueryBond) queryBond).matches(targetBond);
-        } else if ((queryBond != null && targetBond != null) && (!isBondMatchFlag()
-                || (isBondMatchFlag() && isBondTypeMatch(targetBond)))) {
+        } else if ((queryBond != null && targetBond != null)
+                && isBondMatchFlag() && isBondTypeMatch(targetBond)) {
             return true;
+        } else if ((queryBond != null && targetBond != null)
+                && !isBondMatchFlag() && isShouldMatchRings()) {
+            if (queryBond.getFlag(CDKConstants.ISAROMATIC)
+                    && targetBond.getFlag(CDKConstants.ISAROMATIC)) {
+                return true;
+            }
+            return !queryBond.getFlag(CDKConstants.ISAROMATIC)
+                    && !targetBond.getFlag(CDKConstants.ISAROMATIC);
         }
         return false;
     }
@@ -113,5 +128,12 @@ public final class DefaultBondMatcher implements BondMatcher {
      */
     public boolean isBondMatchFlag() {
         return shouldMatchBonds;
+    }
+
+    /**
+     * @return the shouldMatchRings
+     */
+    public boolean isShouldMatchRings() {
+        return shouldMatchRings;
     }
 }

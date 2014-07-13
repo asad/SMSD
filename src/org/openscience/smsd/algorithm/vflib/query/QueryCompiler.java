@@ -61,7 +61,8 @@ import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
 import org.openscience.smsd.algorithm.vflib.interfaces.IQueryCompiler;
 
 /**
- * This class creates an template for MCS/substructure query. @cdk.module smsd @cdk.githash
+ * This class creates an template for MCS/substructure query. @cdk.module smsd
+ * @cdk.githash
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
@@ -153,7 +154,7 @@ public class QueryCompiler implements IQueryCompiler {
     }
 
     private synchronized BondMatcher createBondMatcher(IBond bond) {
-        return new DefaultBondMatcher(bond, isBondMatchFlag(), isMatchAtomType());
+        return new DefaultBondMatcher(bond, isBondMatchFlag(), isShouldMatchRings(), isMatchAtomType());
     }
 
     /**
