@@ -169,8 +169,7 @@ final public class MCSSThread implements Callable<LinkedBlockingQueue<IAtomConta
                 localSeeds = new TreeSet<>();
                 logger.debug("Potential MULTIPLE " + getMCSSSmiles(fragmentMCS));
                 Collection<Fragment> fragmentsFromMCS;
-                for (int index = 0; index < mcssList.size(); index++) {
-                    IAtomContainer target = mcssList.get(index);
+                for (IAtomContainer target : mcssList) {
                     Isomorphism comparison = new Isomorphism(fragmentMCS, target, Algorithm.DEFAULT, matchBonds, matchRings, matchAtomType);
                     comparison.setChemFilters(true, true, true);
                     fragmentsFromMCS = getMCSS(comparison);

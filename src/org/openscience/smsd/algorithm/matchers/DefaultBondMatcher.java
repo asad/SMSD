@@ -92,9 +92,13 @@ public final class DefaultBondMatcher implements BondMatcher {
             if (queryBond.getFlag(CDKConstants.ISAROMATIC)
                     && targetBond.getFlag(CDKConstants.ISAROMATIC)) {
                 return true;
+            } else if (!queryBond.getFlag(CDKConstants.ISAROMATIC)
+                    && !targetBond.getFlag(CDKConstants.ISAROMATIC)) {
+                return true;
             }
-            return !queryBond.getFlag(CDKConstants.ISAROMATIC)
-                    && !targetBond.getFlag(CDKConstants.ISAROMATIC);
+        } else if ((queryBond != null && targetBond != null)
+                && !isBondMatchFlag() && !isShouldMatchRings()) {
+            return true;
         }
         return false;
     }
