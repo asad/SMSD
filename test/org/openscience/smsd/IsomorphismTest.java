@@ -682,7 +682,7 @@ public class IsomorphismTest {
         IAtomContainer ac1 = ExtAtomContainerManipulator.removeHydrogens(query);
         IAtomContainer ac2 = ExtAtomContainerManipulator.removeHydrogens(target);
 
-        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.DEFAULT, false, false, false);
+        Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.VFLibMCS, false, false, false);
         // set chemical filter true
         comparison.setChemFilters(true, true, true);
         SmilesGenerator aromatic = SmilesGenerator.unique().aromatic();
