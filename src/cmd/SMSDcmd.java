@@ -52,7 +52,7 @@ import org.openscience.smsd.interfaces.Algorithm;
 import org.openscience.smsd.mcss.JobType;
 import org.openscience.smsd.mcss.MCSS;
 import org.openscience.smsd.tools.AtomContainerComparator;
-import uk.ac.ebi.reactionblast.tools.ExtAtomContainerManipulator;
+import org.openscience.smsd.tools.ExtAtomContainerManipulator;
 
 /**
  *

@@ -1,4 +1,4 @@
-package uk.ac.ebi.reactionblast.tools;
+package org.openscience.smsd.tools;
 
 /**
  *

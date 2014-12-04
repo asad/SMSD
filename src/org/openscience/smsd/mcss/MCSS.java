@@ -28,7 +28,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
-import uk.ac.ebi.reactionblast.tools.ExtAtomContainerManipulator;
+import org.openscience.smsd.tools.ExtAtomContainerManipulator;
 import org.openscience.smsd.tools.AtomContainerComparator;
 
 /**
