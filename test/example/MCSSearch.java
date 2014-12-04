@@ -12,7 +12,7 @@ import org.openscience.cdk.io.MDLV2000Reader;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.Isomorphism;
 import org.openscience.smsd.interfaces.Algorithm;
-import uk.ac.ebi.reactionblast.tools.ExtAtomContainerManipulator;
+import org.openscience.smsd.tools.ExtAtomContainerManipulator;
 
 
 /*

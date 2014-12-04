@@ -73,13 +73,14 @@ public class SingleMappingHandlerTest {
         source.addAtom(atomSource);
         IAtomContainer target = new AtomContainer();
         target.addAtom(atomTarget);
-        SingleMappingHandler instance = new SingleMappingHandler(source, target, true, false);
+        SingleMappingHandler instance = new SingleMappingHandler(source, target, false);
         Assert.assertNotNull(instance.getFirstAtomMapping());
     }
 
     /**
      * Test of set method, of class SingleMappingHandler.
-     * @throws Exception 
+     *
+     * @throws Exception
      */
     @Test
     public void testSet_IMolecule_IMolecule() throws Exception {
@@ -90,7 +91,7 @@ public class SingleMappingHandlerTest {
         source.addAtom(atomSource);
         IAtomContainer target = new AtomContainer();
         target.addAtom(atomTarget);
-        SingleMappingHandler instance = new SingleMappingHandler(source, target, true, false);
+        SingleMappingHandler instance = new SingleMappingHandler(source, target, false);
         Assert.assertNotNull(instance.getFirstAtomMapping());
     }
 
@@ -107,7 +108,7 @@ public class SingleMappingHandlerTest {
         IAtomContainer target = new AtomContainer();
         target.addAtom(atomTarget);
 
-        SingleMappingHandler instance = new SingleMappingHandler(source, target, true, false);
+        SingleMappingHandler instance = new SingleMappingHandler(source, target, false);
         Assert.assertNotNull(instance.getFirstAtomMapping());
     }
 
@@ -123,7 +124,7 @@ public class SingleMappingHandlerTest {
         source.addAtom(atomSource);
         IAtomContainer target = new AtomContainer();
         target.addAtom(atomTarget);
-        SingleMappingHandler instance = new SingleMappingHandler(source, target, true, false);
+        SingleMappingHandler instance = new SingleMappingHandler(source, target, false);
         Assert.assertNotNull(instance.getAllAtomMapping());
         Assert.assertEquals(1, instance.getAllAtomMapping().size());
     }
@@ -140,7 +141,7 @@ public class SingleMappingHandlerTest {
         source.addAtom(atomSource);
         IAtomContainer target = new AtomContainer();
         target.addAtom(atomTarget);
-        SingleMappingHandler instance = new SingleMappingHandler(source, target, true, false);
+        SingleMappingHandler instance = new SingleMappingHandler(source, target, false);
         Assert.assertNotNull(instance.getAllAtomMapping());
     }
 
@@ -156,7 +157,7 @@ public class SingleMappingHandlerTest {
         source.addAtom(atomSource);
         IAtomContainer target = new AtomContainer();
         target.addAtom(atomTarget);
-        SingleMappingHandler instance = new SingleMappingHandler(source, target, true, false);
+        SingleMappingHandler instance = new SingleMappingHandler(source, target, false);
         Assert.assertNotNull(instance.getFirstAtomMapping());
     }
 
@@ -172,7 +173,7 @@ public class SingleMappingHandlerTest {
         source.addAtom(atomSource);
         IAtomContainer target = new AtomContainer();
         target.addAtom(atomTarget);
-        SingleMappingHandler instance = new SingleMappingHandler(source, target, true, false);
+        SingleMappingHandler instance = new SingleMappingHandler(source, target, false);
         Assert.assertNotNull(instance.getAllAtomMapping());
     }
 
@@ -188,7 +189,7 @@ public class SingleMappingHandlerTest {
         source.addAtom(atomSource);
         IAtomContainer target = new AtomContainer();
         target.addAtom(atomTarget);
-        SingleMappingHandler instance = new SingleMappingHandler(source, target, true, false);
+        SingleMappingHandler instance = new SingleMappingHandler(source, target, false);
         Assert.assertNotNull(instance.getFirstAtomMapping());
     }
 }

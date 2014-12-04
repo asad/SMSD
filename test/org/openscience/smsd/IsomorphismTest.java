@@ -43,7 +43,7 @@ import org.openscience.cdk.smiles.SmilesGenerator;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.smsd.algorithm.mcsplus.MCSPlusHandlerTest;
 import org.openscience.smsd.interfaces.Algorithm;
-import uk.ac.ebi.reactionblast.tools.ExtAtomContainerManipulator;
+import org.openscience.smsd.tools.ExtAtomContainerManipulator;
 
 /**
  * Unit testing for the {@link Isomorphism} class.

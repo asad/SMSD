@@ -9,7 +9,7 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.Substructure;
-import uk.ac.ebi.reactionblast.tools.ExtAtomContainerManipulator;
+import org.openscience.smsd.tools.ExtAtomContainerManipulator;
 
 
 /* This example file covers the substructure search part of the SMSD.

@@ -37,7 +37,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import uk.ac.ebi.reactionblast.tools.ExtAtomContainerManipulator;
+import org.openscience.smsd.tools.ExtAtomContainerManipulator;
 
 /**
  * @author Syed Asad Rahman <asad@ebi.ac.uk>

@@ -46,7 +46,7 @@ import org.openscience.cdk.templates.MoleculeFactory;
 import org.openscience.cdk.tools.CDKHydrogenAdder;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.tools.TimeManager;
-import uk.ac.ebi.reactionblast.tools.ExtAtomContainerManipulator;
+import org.openscience.smsd.tools.ExtAtomContainerManipulator;
 
 /**
  * @cdk.module test-smsd
