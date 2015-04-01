@@ -21,6 +21,8 @@ package org.openscience.smsd.mcss;
 import java.io.Serializable;
 import java.util.BitSet;
 import org.openscience.cdk.exception.CDKException;
+import org.openscience.cdk.fingerprint.CircularFingerprinter;
+import org.openscience.cdk.fingerprint.IFingerprinter;
 import org.openscience.cdk.fingerprint.ShortestPathFingerprinter;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.smiles.SmilesGenerator;
@@ -33,6 +35,7 @@ import org.openscience.cdk.smiles.SmilesGenerator;
  */
 final public class Fragment implements Comparable<Fragment>, Serializable {
 
+    static public final IFingerprinter fingerprinter = new CircularFingerprinter(CircularFingerprinter.CLASS_ECFP4);
     private static final long serialVersionUID = 134634654886765L;
 
     public synchronized IAtomContainer getContainer() {
@@ -70,11 +73,7 @@ final public class Fragment implements Comparable<Fragment>, Serializable {
                 || !this.getFingerprint().equals(other.getFingerprint()))) {
             return false;
         }
-        if (this.fingerprintAsLong != other.fingerprintAsLong) {
-            return false;
-        }
-
-        return true;
+        return this.fingerprintAsLong == other.fingerprintAsLong;
     }
 
     @Override
@@ -118,12 +117,11 @@ final public class Fragment implements Comparable<Fragment>, Serializable {
     /**
      * Return SMILES
      *
-     * @param ac
      * @return
      * @throws org.openscience.cdk.exception.CDKException
      */
-    public static String toSmiles(IAtomContainer ac) throws CDKException {
+    public String getFragmentSMILES() throws CDKException {
         SmilesGenerator g = new SmilesGenerator().aromatic();
-        return g.create(ac);
+        return g.create(container);
     }
 }

@@ -179,8 +179,7 @@ final public class MCSS {
             /*
              * Collect the results
              */
-            for (Iterator<Future<LinkedBlockingQueue<IAtomContainer>>> it = futureList.iterator(); it.hasNext();) {
-                Future<LinkedBlockingQueue<IAtomContainer>> callable = it.next();
+            for (Future<LinkedBlockingQueue<IAtomContainer>> callable : futureList) {
                 LinkedBlockingQueue<IAtomContainer> mapping = callable.get();
                 if (callable.isDone() && mapping != null) {
                     solutions.addAll(mapping);

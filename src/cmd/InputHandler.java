@@ -146,12 +146,20 @@ public class InputHandler {
 
     public String getQRefName() {
         String suffix = argumentHandler.getSuffix();
-        return argumentHandler.getQueryMolOutName() + suffix + ".mol";
+        String fileName = argumentHandler.getQueryMolOutName() == null ? "Query" : argumentHandler.getQueryMolOutName();
+        if (!fileName.equals("Query")) {
+            fileName = argumentHandler.getQueryMolOutName().equals("untitled") ? "Query" : argumentHandler.getQueryMolOutName();
+        }
+        return fileName + suffix + ".mol";
     }
 
     public String getTRefName() {
         String suffix = argumentHandler.getSuffix();
-        return argumentHandler.getTargetMolOutName() + suffix + ".mol";
+        String fileName = argumentHandler.getTargetMolOutName() == null ? "Target" : argumentHandler.getTargetMolOutName();
+        if (!fileName.equals("Target")) {
+            fileName = argumentHandler.getTargetMolOutName().equals("untitled") ? "Target" : argumentHandler.getTargetMolOutName();
+        }
+        return fileName + suffix + ".mol";
     }
 
     public MatchType validateInput() throws MissingOptionException {

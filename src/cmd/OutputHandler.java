@@ -86,9 +86,7 @@ public class OutputHandler {
         for (Field field : params.getClass().getFields()) {
             try {
                 System.out.println(field.getName() + "=" + field.get(params));
-            } catch (IllegalArgumentException e) {
-                logger.error("ERROR: ", e);
-            } catch (IllegalAccessException e) {
+            } catch (IllegalArgumentException | IllegalAccessException e) {
                 logger.error("ERROR: ", e);
             }
         }
@@ -120,9 +118,9 @@ public class OutputHandler {
      */
     public void writeTargetMol(IAtomContainer mol) throws IllegalArgumentException, IOException, CDKException {
         String suffix = argumentHandler.getSuffix();
-        String fileName = argumentHandler.getQueryMolOutName() == null ? "Target" : argumentHandler.getQueryMolOutName();
+        String fileName = argumentHandler.getTargetMolOutName() == null ? "Target" : argumentHandler.getTargetMolOutName();
         if (!fileName.equals("Target")) {
-            fileName = argumentHandler.getQueryMolOutName().equals("untitled") ? "Target" : argumentHandler.getQueryMolOutName();
+            fileName = argumentHandler.getTargetMolOutName().equals("untitled") ? "Target" : argumentHandler.getTargetMolOutName();
         }
         String tRefName = fileName + suffix + ".mol";
         writeMolToMolfile(mol, tRefName);
@@ -322,7 +320,9 @@ public class OutputHandler {
      * @throws IOException
      */
     void printTopMapping(
-            int nAtomsMatched, Map<IAtom, IAtom> mcs, Map<Integer, Integer> mcsNumber,
+            int nAtomsMatched, 
+            Map<IAtom, IAtom> mcs, 
+            Map<Integer, Integer> mcsNumber,
             String qrefName, String trefName) throws IOException {
 
         for (Map.Entry<IAtom, IAtom> map : mcs.entrySet()) {
@@ -336,7 +336,7 @@ public class OutputHandler {
         outMFile.newLine();
         outMFile.write("Query =" + qrefName);
         outMFile.newLine();
-        outMFile.write("Target = " + trefName);
+        outMFile.write("Target =" + trefName);
         outMFile.newLine();
         outMFile.write("Max atoms matched=\t" + nAtomsMatched);
         outMFile.newLine();
