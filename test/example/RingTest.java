@@ -59,7 +59,6 @@ public class RingTest {
             /*
              * Detect aromatic compounds and rings
              */
-
             ExtAtomContainerManipulator.aromatizeDayLight(mol1);
             ExtAtomContainerManipulator.aromatizeDayLight(mol2);
 
@@ -72,9 +71,8 @@ public class RingTest {
             boolean fragmentMinimization = true;
             boolean energyMinimization = true;
 
-            Isomorphism comparison = new Isomorphism(mol1, mol2, Algorithm.DEFAULT, bondSensitive, ringMatch,true);
+            Isomorphism comparison = new Isomorphism(mol1, mol2, Algorithm.DEFAULT, bondSensitive, ringMatch, true);
             comparison.setChemFilters(stereoMatch, fragmentMinimization, energyMinimization);
-
 
             //Print all MCS solutions if first_MCS is false
             if (first_MCS == false) {
@@ -88,12 +86,10 @@ public class RingTest {
 
                             for (Map.Entry<IAtom, IAtom> mapping : aams.getMappingsByAtoms().entrySet()) {
 
-
                                 //Get the mapped atom in Query AtomContainer
                                 IAtom queryAtom = mapping.getKey();
                                 //Get the mapped atom in Target AtomContainer
                                 IAtom targetAtom = mapping.getValue();
-
 
                                 //Get the mapped atom number in Query AtomContainer
                                 int queryMappingNumber = aams.getQueryIndex(queryAtom);
@@ -130,17 +126,16 @@ public class RingTest {
                         IAtom queryAtom = mapping.getKey();
                         //Get the mapped atom in Target AtomContainer
                         IAtom targetAtom = mapping.getValue();
-                        //Print mapped atom numbers
-                        System.out.println(firstAtomMapping.getQueryIndex(queryAtom) + " "
-                                + firstAtomMapping.getQueryIndex(targetAtom));
-                        //Print mapped atoms
-                        System.out.println(queryAtom.getSymbol() + " "
-                                + targetAtom.getSymbol());
+                        int queryMappingNumber = firstAtomMapping.getQueryIndex(queryAtom);
+                        //Get the mapped atom number in Target AtomContainer
+                        int targetMappingNumber = firstAtomMapping.getTargetIndex(targetAtom);
+//                                Print mapped atom numbers
+                        System.out.println(queryAtom.getSymbol() + "(" + queryMappingNumber + "), "
+                                + targetAtom.getSymbol() + "(" + targetMappingNumber + ") ");
                     }
                     ////System.out.println("");
 
                     ////System.out.println("");
-
                     ////System.out.println("Stereo Match: " + comparison.getStereoScore(0));
                     ////System.out.println("Stereo different: " + comparison.isStereoMisMatch());
                     ////System.out.println("Fragment Size: " + comparison.getFragmentSize(0));

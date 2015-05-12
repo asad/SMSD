@@ -48,7 +48,7 @@ public class MCSSearch {
             String mol1 = "Data/ATP.mol";
             String mol2 = "Data/ADP.mol";
 
-            boolean first_MCS = false;
+            boolean first_MCS = true;
 
             boolean exists = (new File(mol1)).exists();
             if (!exists) {
@@ -144,11 +144,13 @@ public class MCSSearch {
                         //Get the mapped atom in Target AtomContainer
                         IAtom targetAtom = mapping.getValue();
                         //Print mapped atom numbers
-                        System.out.println(firstAtomMapping.getQueryIndex(queryAtom) + " "
-                                + firstAtomMapping.getQueryIndex(targetAtom));
-                        //Print mapped atoms
-                        System.out.println(queryAtom.getSymbol() + " "
-                                + targetAtom.getSymbol());
+                        //Get the mapped atom number in Query AtomContainer
+                        int queryMappingNumber = firstAtomMapping.getQueryIndex(queryAtom);
+                        //Get the mapped atom number in Target AtomContainer
+                        int targetMappingNumber = firstAtomMapping.getTargetIndex(targetAtom);
+//                                Print mapped atom numbers
+                        System.out.println(queryAtom.getSymbol() + "(" + queryMappingNumber + "), "
+                                + targetAtom.getSymbol() + "(" + targetMappingNumber + ") ");
                     }
                     ////System.out.println("");
 
