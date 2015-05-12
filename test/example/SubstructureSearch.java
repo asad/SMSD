@@ -80,12 +80,8 @@ public class SubstructureSearch {
                         int queryMappingNumber = aams.getQueryIndex(queryAtom);
                         //Get the mapped atom number in Target AtomContainer
                         int targetMappingNumber = aams.getTargetIndex(targetAtom);
-                        //Print mapped atom numbers
-                        System.out.println(queryMappingNumber + " "
-                                + (targetMappingNumber));
-                        //Print mapped atoms
-                        System.out.println(queryAtom.getSymbol() + " "
-                                + targetAtom.getSymbol());
+                        System.out.println(queryAtom.getSymbol() + "(" + queryMappingNumber + "), "
+                                        + targetAtom.getSymbol() + "(" + targetMappingNumber + ") ");
                     }
                     ////System.out.println("");
 
