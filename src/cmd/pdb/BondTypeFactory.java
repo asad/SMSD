@@ -17,7 +17,7 @@ public class BondTypeFactory {
         private HashMap<String, Map<String, Map<String, Integer>>> map;
 
         public Dictionary() {
-            map = new HashMap<String, Map<String, Map<String, Integer>>>();
+            map = new HashMap<>();
         }
 
         public int getValue(String keyA, String keyB, String keyC) {
