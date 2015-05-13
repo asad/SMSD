@@ -27,9 +27,9 @@
  */
 package org.openscience.smsd;
 
-import com.google.common.collect.HashBiMap;
 import java.io.Serializable;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.openscience.cdk.exception.CDKException;
@@ -49,10 +49,19 @@ import org.openscience.smsd.tools.ExtAtomContainerManipulator;
  */
 public final class AtomAtomMapping implements Serializable {
 
+    class MyQueryIAtomComp implements Comparator<IAtom> {
+
+        @Override
+        public int compare(IAtom o1, IAtom o2) {
+            int atomNumber1 = getQuery().getAtomNumber(o1);
+            int atomNumber2 = getQuery().getAtomNumber(o2);
+            return atomNumber1 - atomNumber2;
+        }
+    }
     private static final long serialVersionUID = 1223637237262778L;
     private final IAtomContainer query;
     private final IAtomContainer target;
-    private final HashBiMap<IAtom, IAtom> mapping;
+    private final Map<IAtom, IAtom> mapping;
     private final Map<Integer, Integer> mappingIndex;
 
     @Override
@@ -94,7 +103,7 @@ public final class AtomAtomMapping implements Serializable {
     public AtomAtomMapping(IAtomContainer query, IAtomContainer target) {
         this.query = query;
         this.target = target;
-        this.mapping = HashBiMap.create(new HashMap<IAtom, IAtom>());
+        mapping = new TreeMap<>(new MyQueryIAtomComp());
         this.mappingIndex = Collections.synchronizedSortedMap(new TreeMap<Integer, Integer>());
     }
 
@@ -139,7 +148,7 @@ public final class AtomAtomMapping implements Serializable {
      */
     public synchronized void clear() {
         mapping.clear();
-        mapping.clear();
+        mappingIndex.clear();
     }
 
     /**
@@ -158,7 +167,7 @@ public final class AtomAtomMapping implements Serializable {
      * @return atom-atom mappings
      */
     public synchronized Map<IAtom, IAtom> getMappingsByAtoms() {
-        return Collections.unmodifiableMap(new HashMap<>(mapping));
+        return Collections.unmodifiableMap(new LinkedHashMap<>(mapping));
     }
 
     /**
@@ -316,4 +325,32 @@ public final class AtomAtomMapping implements Serializable {
         SmilesGenerator aromatic = SmilesGenerator.unique().withAtomClasses();
         return aromatic.create(getCommonFragment());
     }
+
+    /*
+     * Java method to sort Map in Java by value e.g. HashMap or Hashtable
+     * throw NullPointerException if Map contains null values
+     * It also sort values even if they are duplicates
+     */
+    public Map<IAtom, IAtom> sortByValues(Map<IAtom, IAtom> map) {
+        List<Map.Entry<IAtom, IAtom>> entries = new LinkedList<>(map.entrySet());
+        Collections.sort(entries, new Comparator<Map.Entry<IAtom, IAtom>>() {
+            @Override
+            public int compare(Entry<IAtom, IAtom> o1, Entry<IAtom, IAtom> o2) {
+                int atomNumber1 = getQuery().getAtomNumber(o1.getKey());
+                int atomNumber2 = getQuery().getAtomNumber(o2.getKey());
+                return atomNumber1 - atomNumber2;
+            }
+        });
+
+        //LinkedHashMap will keep the keys in the order they are inserted
+        //which is currently sorted on natural ordering
+        Map<IAtom, IAtom> sortedMap = new LinkedHashMap<>();
+
+        for (Map.Entry<IAtom, IAtom> entry : entries) {
+            sortedMap.put(entry.getKey(), entry.getValue());
+        }
+
+        return sortedMap;
+    }
+
 }
