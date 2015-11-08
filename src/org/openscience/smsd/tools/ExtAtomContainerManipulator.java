@@ -610,6 +610,7 @@ public class ExtAtomContainerManipulator extends AtomContainerManipulator implem
     @TestMethod("testConvertExplicitToImplicitHydrogens")
     public static IAtomContainer convertExplicitToImplicitHydrogens(IAtomContainer atomContainer) {
         IAtomContainer mol = atomContainer.getBuilder().newInstance(IAtomContainer.class, atomContainer);
+        setNullHCountToZero(mol);
         convertImplicitToExplicitHydrogens(mol);
         if (mol.getAtomCount() > 1) {
             mol = removeHydrogens(mol);
@@ -734,6 +735,23 @@ public class ExtAtomContainerManipulator extends AtomContainerManipulator implem
                 if (bond.getOrder() == IBond.Order.UNSET) {
                     bond.setOrder(IBond.Order.SINGLE);
                 }
+            }
+        }
+    }
+    
+     /**
+     * Set all null hydrogen counts to 0. Generally hydrogen counts are present
+     * and if not we add them. However the molecule being tested can't include
+     * hydrogen counts as then fingerprints don't line up (substructure
+     * filtering). The previous behaviour of the SMARTS matching was to treat
+     * null hydrogens as 0 - the new behaviour is to complain about it.
+     *
+     * @param mol molecule to zero out hydrogen counts
+     */
+    static void setNullHCountToZero(IAtomContainer mol) {
+        for (IAtom a : mol.atoms()) {
+            if (a.getImplicitHydrogenCount() == null) {
+                a.setImplicitHydrogenCount(0);
             }
         }
     }
