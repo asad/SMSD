@@ -29,7 +29,6 @@
  */
 package org.openscience.smsd.algorithm.rgraph;
 
-import org.openscience.cdk.annotations.TestClass;
 
 /**
  * An CDKRMap implements the association between an edge (bond) in G1 and an
@@ -41,7 +40,6 @@ import org.openscience.cdk.annotations.TestClass;
  * @cdk.module smsd
  * @cdk.githash
  */
-@TestClass("org.openscience.cdk.smsd.algorithm.cdk.CDKRMapTest")
 class CDKRMap extends Object {
 
     private int id1 = 0;

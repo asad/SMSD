@@ -24,7 +24,6 @@ package org.openscience.smsd.tools;
 
 import java.io.IOException;
 import java.util.Comparator;
-import org.openscience.cdk.annotations.TestMethod;
 import org.openscience.cdk.config.IsotopeFactory;
 import org.openscience.cdk.config.Isotopes;
 import org.openscience.cdk.exception.CDKException;
@@ -67,7 +66,6 @@ public class AtomContainerComparator implements Comparator<IAtomContainer> {
      * @param o2
      * @return
      */
-    @TestMethod("testCompare_Object_Object")
     @Override
     public int compare(IAtomContainer o1, IAtomContainer o2) {
         // Check for nulls

@@ -29,7 +29,6 @@
 package org.openscience.smsd.algorithm.rgraph;
 
 import java.util.BitSet;
-import org.openscience.cdk.annotations.TestClass;
 
 /**
  *  Node of the resolution graphe (RGraph) An CDKRNode represents an association
@@ -45,7 +44,6 @@ import org.openscience.cdk.annotations.TestClass;
  * @cdk.module  smsd
  * @cdk.githash
  */
-@TestClass("org.openscience.cdk.smsd.algorithm.cdk.CDKRNodeTest")
 public class CDKRNode {
     // G1/G2 mapping
 

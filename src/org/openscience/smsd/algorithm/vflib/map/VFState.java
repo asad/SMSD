@@ -56,7 +56,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
@@ -72,7 +71,6 @@ import org.openscience.smsd.algorithm.vflib.interfaces.IState;
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-@TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFLibTest")
 public class VFState implements IState {
 
     private final List<Match> candidates;

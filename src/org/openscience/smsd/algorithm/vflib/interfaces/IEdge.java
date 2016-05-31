@@ -47,7 +47,6 @@
  */
 package org.openscience.smsd.algorithm.vflib.interfaces;
 
-import org.openscience.cdk.annotations.TestClass;
 import org.openscience.smsd.algorithm.matchers.BondMatcher;
 
 /**
@@ -56,7 +55,6 @@ import org.openscience.smsd.algorithm.matchers.BondMatcher;
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-@TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFLibTest")
 public interface IEdge {
 
     /**

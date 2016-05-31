@@ -33,8 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
-import org.openscience.cdk.annotations.TestClass;
-import org.openscience.cdk.annotations.TestMethod;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -53,7 +51,6 @@ import org.openscience.smsd.tools.BondEnergies;
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-@TestClass("org.openscience.cdk.smsd.algorithm.single.SingleMappingTest")
 public class SingleMapping {
 
     private IAtomContainer source = null;
@@ -75,7 +72,6 @@ public class SingleMapping {
      * @return Mappings
      * @throws CDKException
      */
-    @TestMethod("testGetOverLaps")
     protected synchronized List<Map<IAtom, IAtom>> getOverLaps(
             IAtomContainer source,
             IAtomContainer target) throws CDKException {
@@ -102,7 +98,6 @@ public class SingleMapping {
      * @return Mappings
      * @throws CDKException
      */
-    @TestMethod("testGetOverLaps")
     protected synchronized List<Map<IAtom, IAtom>> getOverLaps(
             IQueryAtomContainer source, IAtomContainer target) throws CDKException {
         List<Map<IAtom, IAtom>> mappings = new ArrayList<>();

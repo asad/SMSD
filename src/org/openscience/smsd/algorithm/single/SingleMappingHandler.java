@@ -24,8 +24,6 @@ package org.openscience.smsd.algorithm.single;
 
 import java.util.*;
 import java.util.logging.Level;
-import org.openscience.cdk.annotations.TestClass;
-import org.openscience.cdk.annotations.TestMethod;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -43,7 +41,6 @@ import org.openscience.smsd.interfaces.IResults;
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-@TestClass("org.openscience.cdk.smsd.algorithm.single.SingleMappingHandlerTest")
 public class SingleMappingHandler implements IResults {
 
     private final ILoggingTool Logger
@@ -59,7 +56,6 @@ public class SingleMappingHandler implements IResults {
      * @param target
      * @param shouldMatchRings
      */
-    @TestMethod("setMCSAlgorithm")
     public SingleMappingHandler(
             IAtomContainer source, 
             IAtomContainer target, 
@@ -76,7 +72,6 @@ public class SingleMappingHandler implements IResults {
      * @param source
      * @param target
      */
-    @TestMethod("setMCSAlgorithm")
     public SingleMappingHandler(
             IQueryAtomContainer source, 
             IAtomContainer target) {
@@ -134,7 +129,6 @@ public class SingleMappingHandler implements IResults {
      * {@inheritDoc}
      */
     @Override
-    @TestMethod("testGetAllAtomMapping")
     public synchronized List<AtomAtomMapping> getAllAtomMapping() {
         return Collections.unmodifiableList(allAtomMCS);
     }
@@ -143,7 +137,6 @@ public class SingleMappingHandler implements IResults {
      * {@inheritDoc}
      */
     @Override
-    @TestMethod("testGetFirstAtomMapping")
     public synchronized AtomAtomMapping getFirstAtomMapping() {
         if (allAtomMCS.iterator().hasNext()) {
             return allAtomMCS.iterator().next();

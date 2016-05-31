@@ -25,8 +25,6 @@ package org.openscience.smsd.algorithm.vflib;
 import java.io.IOException;
 import java.util.*;
 import java.util.logging.Level;
-import org.openscience.cdk.annotations.TestClass;
-import org.openscience.cdk.annotations.TestMethod;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -57,7 +55,6 @@ import org.openscience.smsd.interfaces.IResults;
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-@TestClass("org.openscience.cdk.smsd.algorithm.vflib.VF2SubTest")
 public class VF2Sub implements IResults {
 
     private final List<AtomAtomMapping> allAtomMCS;
@@ -165,7 +162,6 @@ public class VF2Sub implements IResults {
      * @return
      */
     @Override
-    @TestMethod("testGetAllAtomMapping")
     public synchronized List<AtomAtomMapping> getAllAtomMapping() {
         return Collections.unmodifiableList(allAtomMCS);
     }
@@ -176,7 +172,6 @@ public class VF2Sub implements IResults {
      * @return
      */
     @Override
-    @TestMethod("testGetFirstAtomMapping")
     public synchronized AtomAtomMapping getFirstAtomMapping() {
         if (allAtomMCS.iterator().hasNext()) {
             return allAtomMCS.iterator().next();

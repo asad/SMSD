@@ -24,7 +24,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import org.openscience.cdk.annotations.TestClass;
 
 /**
  * This class handles MCS between two identical molecules. Hence they generate am MCS where all atoms are mapped.
@@ -33,7 +32,6 @@ import org.openscience.cdk.annotations.TestClass;
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-@TestClass("org.openscience.cdk.smsd.SMSDBondSensitiveTest")
 public class ExactMapping {
 
     /**

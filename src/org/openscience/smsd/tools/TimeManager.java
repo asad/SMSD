@@ -25,8 +25,6 @@ package org.openscience.smsd.tools;
 import java.text.SimpleDateFormat;
 import java.util.TimeZone;
 
-import org.openscience.cdk.annotations.TestClass;
-import org.openscience.cdk.annotations.TestMethod;
 
 /**
  * Class that handles execution time of the MCS search.
@@ -40,7 +38,6 @@ import org.openscience.cdk.annotations.TestMethod;
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-@TestClass("org.openscience.cdk.smsd.tools.TimeManagerTest")
 public class TimeManager {
 
     private double startTime;
@@ -49,7 +46,6 @@ public class TimeManager {
     /**
      * Constructor for storing execution time
      */
-    @TestMethod("testTimeManager")
     public TimeManager() {
 
         dateFormat = new SimpleDateFormat("HH:mm:ss");
@@ -62,7 +58,6 @@ public class TimeManager {
      *
      * @return Elapsed Time In Hours
      */
-    @TestMethod("testGetElapsedTimeInHours")
     public synchronized double getElapsedTimeInHours() {
         double currentTime = System.currentTimeMillis();
         return (currentTime - startTime) / (60 * 60 * 1000);
@@ -75,7 +70,6 @@ public class TimeManager {
      *
      * @return Elapsed Time In Minutes
      */
-    @TestMethod("testGetElapsedTimeInMinutes")
     public synchronized double getElapsedTimeInMinutes() {
         double currentTime = System.currentTimeMillis();
         return (currentTime - startTime) / (60 * 1000);
@@ -87,7 +81,6 @@ public class TimeManager {
      *
      * @return Elapsed Time In Seconds
      */
-    @TestMethod("testGetElapsedTimeInSeconds")
     public synchronized double getElapsedTimeInSeconds() {
         double currentTime = System.currentTimeMillis();
         return ((currentTime - startTime) / 1000);
@@ -99,7 +92,6 @@ public class TimeManager {
      *
      * @return Elapsed Time In Mill Seconds
      */
-    @TestMethod("testGetElapsedTimeInMilliSeconds")
     public synchronized double getElapsedTimeInMilliSeconds() {
         double currentTime = System.currentTimeMillis();
         return (currentTime - startTime);

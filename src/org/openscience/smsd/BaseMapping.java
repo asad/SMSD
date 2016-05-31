@@ -25,7 +25,6 @@ package org.openscience.smsd;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.logging.Level;
-import org.openscience.cdk.annotations.TestMethod;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -136,7 +135,6 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
      * {@inheritDoc}
      */
     @Override
-    @TestMethod("testGetTanimotoSimilarity")
     public synchronized double getTanimotoSimilarity() {
         int decimalPlaces = 4;
         double rAtomCount;
@@ -166,7 +164,6 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
      *
      */
     @Override
-    @TestMethod("testIsStereoMisMatch")
     public synchronized boolean isStereoMisMatch() {
         boolean flag = false;
         IAtomContainer reactant = getQuery();
@@ -211,7 +208,6 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
     /**
      * {@inheritDoc}
      */
-    @TestMethod("testGetEuclideanDistance")
     @Override
     public synchronized double getEuclideanDistance() {
         int decimalPlaces = 4;

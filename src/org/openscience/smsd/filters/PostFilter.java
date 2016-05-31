@@ -24,8 +24,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import org.openscience.cdk.annotations.TestClass;
-import org.openscience.cdk.annotations.TestMethod;
 
 /**
  * Class that cleans redundant mappings from the solution set.
@@ -41,7 +39,6 @@ import org.openscience.cdk.annotations.TestMethod;
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-@TestClass("org.openscience.cdk.smsd.filters.PostFilterTest")
 public class PostFilter {
 
     /**
@@ -51,7 +48,6 @@ public class PostFilter {
      * @param mappings
      * @return Filtered non-redundant mappings
      */
-    @TestMethod("testFilter")
     public synchronized static List<Map<Integer, Integer>> filter(List<List<Integer>> mappings) {
         List<Map<Integer, Integer>> final_MAPPINGS = new ArrayList<>();
         if (mappings != null && !mappings.isEmpty()) {

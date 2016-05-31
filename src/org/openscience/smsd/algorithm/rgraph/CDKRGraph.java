@@ -33,7 +33,6 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Iterator;
 import java.util.List;
-import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.exception.CDKException;
 
 /**
@@ -97,7 +96,6 @@ import org.openscience.cdk.exception.CDKException;
  * @cdk.module smsd
  * @cdk.githash
  */
-@TestClass("org.openscience.cdk.smsd.algorithm.cdk.CDKRGraphTest")
 public class CDKRGraph {
     // an CDKRGraph is a list of CDKRGraph nodes
     // each node keeping track of its

@@ -26,7 +26,6 @@ package org.openscience.smsd.algorithm.mcgregor;
 
 import java.util.Collections;
 import java.util.List;
-import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.isomorphism.matchers.IQueryBond;
@@ -39,7 +38,6 @@ import org.openscience.cdk.isomorphism.matchers.IQueryBond;
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-@TestClass("org.openscience.cdk.smsd.algorithm.mcgregor.TargetProcessorTest")
 public class TargetProcessor {
 
     private final List<String> cTab2Copy;

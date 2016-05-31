@@ -29,7 +29,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.openscience.cdk.annotations.TestMethod;
 
 /**
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
@@ -38,7 +37,6 @@ import org.openscience.cdk.annotations.TestMethod;
  */
 public class Sotter {
     
-    @TestMethod("testSortMapByValueInAscendingOrder")
     public synchronized static Map<Integer, Double> sortMapByValueInAscendingOrder(Map<Integer, Double> map) {
         List<Map.Entry<Integer, Double>> list = new LinkedList<Map.Entry<Integer, Double>>(map.entrySet());
         // Sort the list using an annonymous inner class implementing Comparator for the compare method
@@ -57,7 +55,6 @@ public class Sotter {
         return result;
     }
 
-    @TestMethod("testSortMapByValueInDescendingOrder")
     public synchronized static Map<Integer, Double> sortMapByValueInDescendingOrder(Map<Integer, Double> map) {
         List<Map.Entry<Integer, Double>> list = new LinkedList<Map.Entry<Integer, Double>>(map.entrySet());
         // Sort the list using an annonymous inner class implementing Comparator for the compare method

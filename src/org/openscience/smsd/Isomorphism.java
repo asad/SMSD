@@ -25,8 +25,6 @@ package org.openscience.smsd;
 
 import java.io.Serializable;
 import java.util.logging.Level;
-import org.openscience.cdk.annotations.TestClass;
-import org.openscience.cdk.annotations.TestMethod;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
@@ -111,7 +109,6 @@ import static org.openscience.smsd.interfaces.Algorithm.VFLibMCS;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
  */
-@TestClass("org.openscience.cdk.smsd.factory.SubStructureSearchAlgorithmsTest")
 public final class Isomorphism extends BaseMapping implements Serializable {
 
     private final static ILoggingTool logger
@@ -137,7 +134,6 @@ public final class Isomorphism extends BaseMapping implements Serializable {
      * @param algorithmType
      * {@link org.openscience.cdk.smsd.interfaces.Algorithm}
      */
-    @TestMethod("testIsomorphismTest")
     public Isomorphism(
             IQueryAtomContainer query,
             IAtomContainer target,
@@ -167,7 +163,6 @@ public final class Isomorphism extends BaseMapping implements Serializable {
      * @param matchRings Match ring atoms and ring size
      * @param matchAtomType
      */
-    @TestMethod("testIsomorphismTest")
     public Isomorphism(
             IAtomContainer query,
             IAtomContainer target,
@@ -312,7 +307,6 @@ public final class Isomorphism extends BaseMapping implements Serializable {
      *
      * @return true if query is a subgraph of the target
      */
-    @TestMethod("testIsSubgraph")
     @Override
     public synchronized boolean isSubgraph() {
 

@@ -27,7 +27,6 @@ package org.openscience.smsd.algorithm.mcgregor;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 
@@ -38,7 +37,6 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-@TestClass("org.openscience.cdk.smsd.algorithm.mcgregor.QueryProcessorTest")
 public class QueryProcessor {
 
     private final List<String> cTab1Copy;

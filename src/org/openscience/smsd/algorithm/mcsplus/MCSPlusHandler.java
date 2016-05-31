@@ -28,8 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.openscience.cdk.annotations.TestClass;
-import org.openscience.cdk.annotations.TestMethod;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
@@ -45,7 +43,6 @@ import org.openscience.smsd.interfaces.IResults;
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-@TestClass("org.openscience.cdk.smsd.SMSDBondSensitiveTest")
 public final class MCSPlusHandler implements IResults {
 
     private final List<AtomAtomMapping> allAtomMCS;
@@ -190,7 +187,6 @@ public final class MCSPlusHandler implements IResults {
      * @return
      */
     @Override
-    @TestMethod("testGetAllAtomMapping")
     public synchronized List<AtomAtomMapping> getAllAtomMapping() {
         return Collections.unmodifiableList(allAtomMCS);
     }
@@ -201,7 +197,6 @@ public final class MCSPlusHandler implements IResults {
      * @return
      */
     @Override
-    @TestMethod("testGetFirstAtomMapping")
     public synchronized AtomAtomMapping getFirstAtomMapping() {
         if (allAtomMCS.iterator().hasNext()) {
             return allAtomMCS.iterator().next();

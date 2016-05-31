@@ -25,7 +25,6 @@ package org.openscience.smsd.algorithm.matchers;
 
 import java.util.List;
 import org.openscience.cdk.CDKConstants;
-import org.openscience.cdk.annotations.TestClass;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
 
@@ -37,7 +36,6 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-@TestClass("org.openscience.cdk.smsd.algorithm.vflib.VFLibTest")
 public final class DefaultAtomMatcher implements AtomMatcher {
 
     static final long serialVersionUID = -7861469841127327812L;
