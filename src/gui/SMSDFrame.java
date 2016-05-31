@@ -68,7 +68,6 @@ import org.openscience.cdk.interfaces.IChemFile;
 import org.openscience.cdk.io.CMLReader;
 import org.openscience.cdk.io.IChemObjectReader;
 import org.openscience.cdk.io.ISimpleChemObjectReader;
-import org.openscience.cdk.io.MDLReader;
 import org.openscience.cdk.io.MDLV2000Reader;
 import org.openscience.cdk.io.Mol2Reader;
 import org.openscience.cdk.io.PDBReader;
@@ -497,7 +496,7 @@ public class SMSDFrame extends JFrame {
                 return new MDLV2000Reader(
                         new FileReader(file), IChemObjectReader.Mode.RELAXED);
             case "sdf":
-                return new MDLReader(
+                return new MDLV2000Reader(
                         new FileReader(file));
             case "cml":
                 return new CMLReader(new FileInputStream(file));

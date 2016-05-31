@@ -42,6 +42,7 @@ import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.ChemFile;
 import org.openscience.cdk.DefaultChemObjectBuilder;
+import org.openscience.cdk.aromaticity.Kekulization;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.graph.ConnectivityChecker;
 import org.openscience.cdk.interfaces.IAtom;
@@ -59,7 +60,6 @@ import org.openscience.cdk.io.SMILESReader;
 import org.openscience.cdk.io.iterator.IteratingSDFReader;
 import org.openscience.cdk.layout.StructureDiagramGenerator;
 import org.openscience.cdk.signature.MoleculeSignature;
-import org.openscience.cdk.smiles.DeduceBondSystemTool;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.tools.CDKHydrogenAdder;
 import org.openscience.cdk.tools.ILoggingTool;
@@ -438,8 +438,9 @@ public class InputHandler {
                 ExtAtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(atomcontainerHFree);
 
                 if (deducebonds) {
-                    DeduceBondSystemTool dbst = new DeduceBondSystemTool();
-                    atomcontainerHFree = dbst.fixAromaticBondOrders(atomcontainerHFree);
+//                    DeduceBondSystemTool dbst = new DeduceBondSystemTool();
+//                    atomcontainerHFree = dbst.fixAromaticBondOrders(atomcontainerHFree);
+                    Kekulization.kekulize(atomcontainerHFree);
                 }
 
                 adder.addImplicitHydrogens(atomcontainerHFree);
