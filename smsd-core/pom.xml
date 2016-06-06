@@ -5,6 +5,12 @@
     <artifactId>smsd-core</artifactId>
     <version>2.0-SNAPSHOT</version>
     <packaging>jar</packaging>
+    
+    <name>${project.groupId}:${project.artifactId}</name>
+    <description>Small Molecule Subgraph Detector (SMSD) is a library for calculating Maximum Common Subgraph (MCS) between small molecules. This enables us to find similarity/distance between two molecules. MCS is also used for screening drug like compounds by hitting molecules, which share common subgraph (substructure).
+    </description>
+    <url>http://www.ebi.ac.uk/thornton-srv/software/SMSD/</url>
+    
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
@@ -19,6 +25,33 @@
         </license>
     </licenses>
     
+    <scm>
+        <connection>scm:git:git://github.com/asad/SMSD.git</connection>
+        <developerConnection>scm:git:git@github.com:asad/SMSD.git
+        </developerConnection>
+        <url>git@github.com:asad/SMSD.git</url>
+    </scm>
+    
+    <developers>
+        <developer>
+            <name>Syed Asad Rahman</name>
+            <email>s9asad@gmail.com</email>
+            <url>https://chembioinfo.com</url>
+        </developer>
+        <developer>
+            <name>Gilliean Torrance</name>
+        </developer>
+    </developers>
+    
+    <contributors>
+        <contributor>
+            <name>Gemma L. Holliday</name>
+        </contributor>
+        <contributor>
+            <name>Janet M. Thornton</name>
+        </contributor>
+    </contributors>
+    
     <dependencies>
         <dependency>
             <groupId>org.openscience.cdk</groupId>
@@ -32,24 +65,4 @@
             <type>jar</type>
         </dependency>
     </dependencies>
-    
-    <developers>
-        <developer>
-            <name>Syed Asad Rahman</name>
-            <email>s9asad@gmail.com</email>
-            <url>https://chembioinfo.com</url>
-        </developer>
-        <developer>
-            <name>Gilliean Torrance</name>
-        </developer>
-    </developers>
-    <contributors>
-        <contributor>
-            <name>Gemma L. Holliday</name>
-        </contributor>
-        <contributor>
-            <name>Janet M. Thornton</name>
-        </contributor>
-    </contributors>
-    <name>smsd-core</name>
 </project>
