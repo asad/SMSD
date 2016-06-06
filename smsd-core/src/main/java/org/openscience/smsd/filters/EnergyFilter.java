@@ -123,6 +123,18 @@ public final class EnergyFilter extends Sotter implements IChemicalFilter<Double
             });
             totalBondEnergy = getEnergy(educt, product);
         }
+
+        /*
+         * Reset the flag
+         */
+        for (int i = 0; i < educt.getAtomCount(); i++) {
+            educt.getAtom(i).setFlag(999, false);
+        }
+
+        for (int i = 0; i < product.getAtomCount(); i++) {
+            product.getAtom(i).setFlag(999, false);
+        }
+
         return totalBondEnergy;
     }
 
