@@ -63,7 +63,7 @@ import org.openscience.smsd.helper.MoleculeInitializer;
  * smsd = new Substructure(queryContainer, target, true);
  * Assert.assertTrue(smsd.isSubgraph());
  *
- *  </pre> </font>
+ * </pre> </font>
  *
  *
  * @cdk.module smsd
@@ -151,13 +151,15 @@ public final class Substructure extends BaseMapping {
         if ((getTarget() == null) || (getQuery() == null)) {
             throw new CDKException("Query or Target molecule is not initialized (NULL)");
         }
+        
+        if (getQuery().getAtomCount() > getTarget().getAtomCount()) {
+            return false;
+        }
 
         if (getQuery().getAtomCount() == 1 || getTarget().getAtomCount() == 1) {
             isSubgraph = singleMapping();
         } else {
-            if (getQuery().getAtomCount() > getTarget().getAtomCount()) {
-                return false;
-            }
+
             VF2 mapper;
             List<AtomAtomMapping> mappingsVF2 = new ArrayList<>();
             if (getQuery() instanceof IQueryAtomContainer) {
@@ -193,29 +195,27 @@ public final class Substructure extends BaseMapping {
 
         if (getQuery().getAtomCount() == 1 || getTarget().getAtomCount() == 1) {
             isSubgraph = singleMapping();
+        } else if (getQuery().getAtomCount() > getTarget().getAtomCount()) {
+            return false;
         } else {
-            if (getQuery().getAtomCount() > getTarget().getAtomCount()) {
-                return false;
+            List<AtomAtomMapping> mappingsVF2 = new ArrayList<>();
+            VF2Sub mapper;
+            if (getQuery() instanceof IQueryAtomContainer) {
+                mapper = new VF2Sub((IQueryAtomContainer) getQuery(), getTarget());
             } else {
-                List<AtomAtomMapping> mappingsVF2 = new ArrayList<>();
-                VF2Sub mapper;
-                if (getQuery() instanceof IQueryAtomContainer) {
-                    mapper = new VF2Sub((IQueryAtomContainer) getQuery(), getTarget());
-                } else {
-                    mapper = new VF2Sub(getQuery(), getTarget(), isMatchBonds(), isMatchRings(), isMatchAtomType());
-                }
-                isSubgraph = mapper.isSubgraph();
-                List<AtomAtomMapping> atomMappings = mapper.getAllAtomMapping();
+                mapper = new VF2Sub(getQuery(), getTarget(), isMatchBonds(), isMatchRings(), isMatchAtomType());
+            }
+            isSubgraph = mapper.isSubgraph();
+            List<AtomAtomMapping> atomMappings = mapper.getAllAtomMapping();
 //                if (atomMappings.iterator().hasNext()) {
 //                    System.out.println("Mapping Size " + atomMappings.iterator().next().getCount());
 //                }
-                if (isSubgraph) {
-                    mappingsVF2.addAll(atomMappings);
-                } else {
-                    return false;
-                }
-                setVFMappings(mappingsVF2);
+            if (isSubgraph) {
+                mappingsVF2.addAll(atomMappings);
+            } else {
+                return false;
             }
+            setVFMappings(mappingsVF2);
         }
         return isSubgraph;
     }
