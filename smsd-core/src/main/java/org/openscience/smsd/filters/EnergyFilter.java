@@ -57,11 +57,10 @@ public final class EnergyFilter extends Sotter implements IChemicalFilter<Double
     public synchronized Double sortResults(
             Map<Integer, AtomAtomMapping> allAtomEnergyMCS,
             Map<Integer, Double> energySelectionMap) throws CDKException {
-
         for (Integer Key : allAtomEnergyMCS.keySet()) {
             AtomAtomMapping mcsAtom = allAtomEnergyMCS.get(Key);
-            Double Energies = getMappedMoleculeEnergies(mcsAtom);
-            energySelectionMap.put(Key, Energies);
+            Double energies = getMappedMoleculeEnergies(mcsAtom);
+            energySelectionMap.put(Key, energies);
         }
 
         energySelectionMap = sortMapByValueInAscendingOrder(energySelectionMap);
@@ -100,25 +99,25 @@ public final class EnergyFilter extends Sotter implements IChemicalFilter<Double
 
     private synchronized Double getMappedMoleculeEnergies(AtomAtomMapping mcsAtomSolution) throws CDKException {
 
-//      System.out.println("\nSort By Energies");
+//        System.out.println("\nSort By Energies");
         double totalBondEnergy = -9999.0;
 
         IAtomContainer educt = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class, chemfilter.getQuery());
         IAtomContainer product = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class, chemfilter.getTarget());
 
         for (int i = 0; i < educt.getAtomCount(); i++) {
-            educt.getAtom(i).setFlag(0, false);
+            educt.getAtom(i).setFlag(999, false);
         }
 
         for (int i = 0; i < product.getAtomCount(); i++) {
-            product.getAtom(i).setFlag(0, false);
+            product.getAtom(i).setFlag(999, false);
         }
 
         if (mcsAtomSolution != null) {
             for (IAtom eAtom : mcsAtomSolution.getMappingsByAtoms().keySet()) {
                 IAtom pAtom = mcsAtomSolution.getMappingsByAtoms().get(eAtom);
-                eAtom.setFlag(0, true);
-                pAtom.setFlag(0, true);
+                eAtom.setFlag(999, true);
+                pAtom.setFlag(999, true);
             }
             totalBondEnergy = getEnergy(educt, product);
         }
@@ -128,14 +127,12 @@ public final class EnergyFilter extends Sotter implements IChemicalFilter<Double
     private synchronized static double getEnergy(IAtomContainer educt, IAtomContainer product) throws CDKException {
         Double eEnergy = 0.0;
         BondEnergies bondEnergy = BondEnergies.getInstance();
-        for (int i = 0; i
-                < educt.getBondCount(); i++) {
+        for (int i = 0; i < educt.getBondCount(); i++) {
             IBond bond = educt.getBond(i);
             eEnergy += getBondEnergy(bond, bondEnergy);
         }
         Double pEnergy = 0.0;
-        for (int j = 0; j
-                < product.getBondCount(); j++) {
+        for (int j = 0; j < product.getBondCount(); j++) {
             IBond bond = product.getBond(j);
             pEnergy += getBondEnergy(bond, bondEnergy);
         }
@@ -144,12 +141,10 @@ public final class EnergyFilter extends Sotter implements IChemicalFilter<Double
 
     private synchronized static double getBondEnergy(IBond bond, BondEnergies bondEnergy) {
         double energy = 0.0;
-        if ((bond.getAtom(0).getFlag(0) == true && bond.getAtom(1).getFlag(0) == false)
-                || (bond.getAtom(0).getFlag(0) == false && bond.getAtom(1).getFlag(0) == true)) {
-            Integer val = bondEnergy.getEnergies(bond.getAtom(0), bond.getAtom(1), bond.getOrder());
-            if (val != null) {
-                energy = val;
-            }
+        if ((bond.getAtom(0).getFlag(0) == true && bond.getAtom(1).getFlag(999) == false)
+                || (bond.getAtom(0).getFlag(0) == false && bond.getAtom(1).getFlag(999) == true)) {
+            int val = bondEnergy.getEnergies(bond.getAtom(0), bond.getAtom(1), bond.getOrder());
+            energy = val;
         }
         return energy;
     }
