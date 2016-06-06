@@ -167,7 +167,7 @@ public class VFMapper implements IMapper {
         IState state = new VFState(query, target);
         maps.clear();
         mapFirst(state);
-        return maps.isEmpty() ? new HashMap<INode, IAtom>() : maps.get(0);
+        return maps.isEmpty() ? new HashMap<>() : maps.get(0);
     }
 
     /**

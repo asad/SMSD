@@ -232,11 +232,9 @@ public class VFState implements IState {
 
     private boolean isCandidateFeasible(Match candidate) {
         for (INode queryAtom : map.keySet()) {
-
             if (queryAtom.equals(candidate.getQueryNode())) {
                 return false;
             }
-
             if (map.get(queryAtom).equals(candidate.getTargetAtom())) {
                 return false;
             }
