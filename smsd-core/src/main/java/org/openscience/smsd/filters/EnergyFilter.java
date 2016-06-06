@@ -114,11 +114,13 @@ public final class EnergyFilter extends Sotter implements IChemicalFilter<Double
         }
 
         if (mcsAtomSolution != null) {
-            for (IAtom eAtom : mcsAtomSolution.getMappingsByAtoms().keySet()) {
-                IAtom pAtom = mcsAtomSolution.getMappingsByAtoms().get(eAtom);
-                eAtom.setFlag(999, true);
-                pAtom.setFlag(999, true);
-            }
+            Map<IAtom, IAtom> mappingsByAtoms = mcsAtomSolution.getMappingsByAtoms();
+            mappingsByAtoms.entrySet().stream().map((mapping) -> {
+                mapping.getKey().setFlag(999, true);
+                return mapping;
+            }).forEach((mapping) -> {
+                mapping.getValue().setFlag(999, true);
+            });
             totalBondEnergy = getEnergy(educt, product);
         }
         return totalBondEnergy;
@@ -141,8 +143,8 @@ public final class EnergyFilter extends Sotter implements IChemicalFilter<Double
 
     private synchronized static double getBondEnergy(IBond bond, BondEnergies bondEnergy) {
         double energy = 0.0;
-        if ((bond.getAtom(0).getFlag(0) == true && bond.getAtom(1).getFlag(999) == false)
-                || (bond.getAtom(0).getFlag(0) == false && bond.getAtom(1).getFlag(999) == true)) {
+        if ((bond.getAtom(0).getFlag(999) == true && bond.getAtom(1).getFlag(999) == false)
+                || (bond.getAtom(0).getFlag(999) == false && bond.getAtom(1).getFlag(999) == true)) {
             int val = bondEnergy.getEnergies(bond.getAtom(0), bond.getAtom(1), bond.getOrder());
             energy = val;
         }
