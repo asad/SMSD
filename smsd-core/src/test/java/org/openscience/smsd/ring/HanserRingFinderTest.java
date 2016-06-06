@@ -75,7 +75,7 @@ public class HanserRingFinderTest {
     private HanserRingFinder finder;
 
     @Before
-    protected void setUp() throws Exception {
+    public void setUp() throws Exception {
         finder = new HanserRingFinder();
     }
 

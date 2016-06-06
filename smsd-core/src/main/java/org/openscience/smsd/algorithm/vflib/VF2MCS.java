@@ -40,12 +40,9 @@ import org.openscience.cdk.isomorphism.matchers.IQueryBond;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.AtomAtomMapping;
-import org.openscience.smsd.algorithm.vflib.interfaces.IMapper;
-import org.openscience.smsd.algorithm.vflib.interfaces.INode;
-import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
-import org.openscience.smsd.algorithm.vflib.map.VFMCSMapper;
-import org.openscience.smsd.algorithm.vflib.query.QueryCompiler;
 import org.openscience.smsd.algorithm.vflib.seeds.MCSSeedGenerator;
+import org.openscience.smsd.algorithm.vflib.vf2.Pattern;
+import org.openscience.smsd.algorithm.vflib.vf2.VF;
 import org.openscience.smsd.interfaces.Algorithm;
 import org.openscience.smsd.interfaces.IResults;
 
@@ -553,48 +550,86 @@ public final class VF2MCS extends BaseMCS implements IResults {
         }
     }
 
+//    /*
+//     * Note: VF MCS will search for cliques which will match the types. Mcgregor will extend the cliques depending of
+//     * the bond type (sensitive and insensitive).
+//     */
+//    protected synchronized boolean searchVFMappings() {
+////        System.out.println("searchVFMappings ");
+//        IQuery queryCompiler;
+//        IMapper mapper;
+//
+//        if (!(source instanceof IQueryAtomContainer)
+//                && !(target instanceof IQueryAtomContainer)) {
+//            countR = getReactantMol().getAtomCount();
+//            countP = getProductMol().getAtomCount();
+//        }
+//
+//        if (source instanceof IQueryAtomContainer) {
+//            queryCompiler = new QueryCompiler((IQueryAtomContainer) source).compile();
+//            mapper = new VFMCSMapper(queryCompiler);
+//            List<Map<INode, IAtom>> maps = mapper.getMaps(getProductMol());
+//            if (maps != null) {
+//                vfLibSolutions.addAll(maps);
+//            }
+//            setVFMappings(true, queryCompiler);
+//
+//        } else if (countR <= countP) {//isBondMatchFlag()
+//            queryCompiler = new QueryCompiler(this.source, true, isMatchRings(), isMatchAtomType()).compile();
+//            mapper = new VFMCSMapper(queryCompiler);
+//            List<Map<INode, IAtom>> map = mapper.getMaps(this.target);
+//            if (map != null) {
+//                vfLibSolutions.addAll(map);
+//            }
+//            setVFMappings(true, queryCompiler);
+//        } else {
+//            queryCompiler = new QueryCompiler(this.target, true, isMatchRings(), isMatchAtomType()).compile();
+//            mapper = new VFMCSMapper(queryCompiler);
+//            List<Map<INode, IAtom>> map = mapper.getMaps(this.source);
+//            if (map != null) {
+//                vfLibSolutions.addAll(map);
+//            }
+//            setVFMappings(false, queryCompiler);
+//        }
+//        return mapper.isTimeout();
+//    }
     /*
-     * Note: VF MCS will search for cliques which will match the types. Mcgregor will extend the cliques depending of
-     * the bond type (sensitive and insensitive).
+     * Note: VF will search for core hits. Mcgregor will extend the cliques depending of the bond type (sensitive and
+     * insensitive).
      */
-    protected synchronized boolean searchVFMappings() {
+    private synchronized boolean searchVFMappings() {
 //        System.out.println("searchVFMappings ");
-        IQuery queryCompiler;
-        IMapper mapper;
-
-        if (!(source instanceof IQueryAtomContainer)
-                && !(target instanceof IQueryAtomContainer)) {
+        VF mapper = null;
+        if (!(source instanceof IQueryAtomContainer) && !(target instanceof IQueryAtomContainer)) {
             countR = getReactantMol().getAtomCount();
             countP = getProductMol().getAtomCount();
         }
 
         if (source instanceof IQueryAtomContainer) {
-            queryCompiler = new QueryCompiler((IQueryAtomContainer) source).compile();
-            mapper = new VFMCSMapper(queryCompiler);
-            List<Map<INode, IAtom>> maps = mapper.getMaps(getProductMol());
+            Pattern findSeeds = VF.findSubstructure((IQueryAtomContainer) source);
+            List<Map<IAtom, IAtom>> maps = findSeeds.matchAll(getProductMol());
             if (maps != null) {
                 vfLibSolutions.addAll(maps);
             }
-            setVFMappings(true, queryCompiler);
-
-        } else if (countR <= countP) {//isBondMatchFlag()
-            queryCompiler = new QueryCompiler(this.source, true, isMatchRings(), isMatchAtomType()).compile();
-            mapper = new VFMCSMapper(queryCompiler);
-            List<Map<INode, IAtom>> map = mapper.getMaps(this.target);
-            if (map != null) {
-                vfLibSolutions.addAll(map);
+            setVFMappings(true);
+        } else if (countR <= countP) {
+            Pattern findSeeds = VF.findSubstructure(this.source, true, isMatchRings(), isMatchAtomType());
+            List<Map<IAtom, IAtom>> maps = findSeeds.matchAll(getProductMol());
+            if (maps != null) {
+                vfLibSolutions.addAll(maps);
             }
-            setVFMappings(true, queryCompiler);
+            setVFMappings(true);
         } else {
-            queryCompiler = new QueryCompiler(this.target, true, isMatchRings(), isMatchAtomType()).compile();
-            mapper = new VFMCSMapper(queryCompiler);
-            List<Map<INode, IAtom>> map = mapper.getMaps(this.source);
-            if (map != null) {
-                vfLibSolutions.addAll(map);
+            Pattern findSeeds = VF.findSubstructure(this.target, true, isMatchRings(), isMatchAtomType());
+            List<Map<IAtom, IAtom>> maps = findSeeds.matchAll(getReactantMol());
+            if (maps != null) {
+                vfLibSolutions.addAll(maps);
             }
-            setVFMappings(false, queryCompiler);
+            setVFMappings(false);
         }
-        return mapper.isTimeout();
+//        System.out.println("Sol count " + vfLibSolutions.size());
+//        System.out.println("Sol size " + (vfLibSolutions.iterator().hasNext() ? vfLibSolutions.iterator().next().size() : 0));
+        return mapper != null;
     }
 
     /**

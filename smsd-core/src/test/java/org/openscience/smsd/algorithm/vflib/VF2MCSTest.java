@@ -308,7 +308,7 @@ public class VF2MCSTest {
         IAtomContainer target = sp.parseSmiles("CCCCCn1c2c(cccc2)c(c1)C(=O)c3ccc(c4c3cccc4)Cl");
         IAtomContainer query = sp.parseSmiles("CCCCCn1c2c(cccc2)c(c1)C(=O)c3cccc4c3cccc4Cl");
 
-        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.VFLibMCS, true, true, false);
+        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.VFLibMCS, true, true, true);
         assertNotNull(smsd1.getFirstAtomMapping());
         assertEquals(27, query.getAtomCount());
         assertEquals(27, target.getAtomCount());

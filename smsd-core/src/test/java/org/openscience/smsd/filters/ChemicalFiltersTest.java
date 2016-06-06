@@ -66,6 +66,7 @@ public class ChemicalFiltersTest {
 
     /**
      * Test of sortResultsByStereoAndBondMatch method, of class ChemicalFilters.
+     *
      * @throws Exception
      */
     @Test
@@ -75,17 +76,18 @@ public class ChemicalFiltersTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/OCC=C");
         IAtomContainer queryac = sp.parseSmiles("CCCOCC(C)=C");
 
-        Isomorphism smsd = new Isomorphism(queryac, target, Algorithm.DEFAULT, false, false,false);
+        Isomorphism smsd = new Isomorphism(queryac, target, Algorithm.DEFAULT, false, false, false);
         smsd.setChemFilters(false, false, false);
         assertEquals(4, smsd.getAllAtomMapping().size());
 
-        Isomorphism smsd1 = new Isomorphism(queryac, target, Algorithm.DEFAULT, false, false,false);
+        Isomorphism smsd1 = new Isomorphism(queryac, target, Algorithm.DEFAULT, false, false, false);
         smsd1.setChemFilters(true, false, false);
         assertEquals(1, smsd1.getAllAtomMapping().size());
     }
 
     /**
      * Test of sortResultsByFragments method, of class ChemicalFilters.
+     *
      * @throws InvalidSmilesException
      * @throws CDKException
      */
@@ -96,18 +98,19 @@ public class ChemicalFiltersTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer queryac = sp.parseSmiles("Nc1ccccc1");
 
-        Isomorphism smsd = new Isomorphism(queryac, target,Algorithm.CDKMCS, false, false,false);
+        Isomorphism smsd = new Isomorphism(queryac, target, Algorithm.CDKMCS, false, false, false);
         smsd.setChemFilters(false, false, false);
         assertEquals(4, smsd.getAllAtomMapping().size());
 
-        Isomorphism smsd1 = new Isomorphism(queryac, target, Algorithm.CDKMCS, false, false,false);
+        Isomorphism smsd1 = new Isomorphism(queryac, target, Algorithm.CDKMCS, false, false, false);
         smsd1.setChemFilters(false, true, false);
         assertEquals(2, smsd1.getAllAtomMapping().size());
     }
 
     /**
      * Test of sortResultsByEnergies method, of class ChemicalFilters.
-     * @throws Exception 
+     *
+     * @throws Exception
      */
     @Test
     public void testSortResultsByEnergies() throws Exception {
@@ -116,19 +119,20 @@ public class ChemicalFiltersTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer queryac = sp.parseSmiles("Nc1ccccc1");
 
-        Isomorphism smsd = new Isomorphism(queryac, target, Algorithm.DEFAULT, true, false,false);
+        Isomorphism smsd = new Isomorphism(queryac, target, Algorithm.DEFAULT, true, false, false);
         smsd.setChemFilters(false, false, false);
         assertEquals(4, smsd.getAllAtomMapping().size());
 
-        Isomorphism smsd1 = new Isomorphism(queryac, target, Algorithm.DEFAULT, true, false,false);
+        Isomorphism smsd1 = new Isomorphism(queryac, target, Algorithm.DEFAULT, true, false, false);
         smsd1.setChemFilters(false, false, true);
-        assertEquals(4, smsd1.getAllAtomMapping().size());
+        assertEquals(2, smsd1.getAllAtomMapping().size());
     }
 
     /**
      * Test of getSortedEnergy method, of class ChemicalFilters.
+     *
      * @throws InvalidSmilesException
-     * @throws CDKException 
+     * @throws CDKException
      */
     @Test
     public void testGetSortedEnergy() throws InvalidSmilesException, CDKException {
@@ -137,7 +141,7 @@ public class ChemicalFiltersTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer queryac = sp.parseSmiles("Nc1ccccc1");
 
-        Isomorphism smsd1 = new Isomorphism(queryac, target, Algorithm.DEFAULT, true, false,false);
+        Isomorphism smsd1 = new Isomorphism(queryac, target, Algorithm.DEFAULT, true, false, false);
         smsd1.setChemFilters(false, false, true);
         Double score = 610.0;
         assertEquals(score, smsd1.getEnergyScore(0));
@@ -145,8 +149,9 @@ public class ChemicalFiltersTest {
 
     /**
      * Test of getSortedFragment method, of class ChemicalFilters.
+     *
      * @throws InvalidSmilesException
-     * @throws CDKException 
+     * @throws CDKException
      */
     @Test
     public void testGetSortedFragment() throws InvalidSmilesException, CDKException {
@@ -155,7 +160,7 @@ public class ChemicalFiltersTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer queryac = sp.parseSmiles("Nc1ccccc1");
 
-        Isomorphism smsd1 = new Isomorphism(queryac, target, Algorithm.DEFAULT, true, false,false);
+        Isomorphism smsd1 = new Isomorphism(queryac, target, Algorithm.DEFAULT, true, false, false);
         smsd1.setChemFilters(false, true, false);
         Integer score = 2;
         assertEquals(score, smsd1.getFragmentSize(0));
@@ -163,6 +168,7 @@ public class ChemicalFiltersTest {
 
     /**
      * Test of getStereoMatches method, of class ChemicalFilters.
+     *
      * @throws InvalidSmilesException
      * @throws CDKException
      */
@@ -173,7 +179,7 @@ public class ChemicalFiltersTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/OCC=C");
         IAtomContainer queryac = sp.parseSmiles("CCCOCC(C)=C");
 
-        Isomorphism smsd1 = new Isomorphism(queryac, target, Algorithm.DEFAULT, false, false,false);
+        Isomorphism smsd1 = new Isomorphism(queryac, target, Algorithm.DEFAULT, false, false, false);
         smsd1.setChemFilters(true, false, false);
         Integer score = 77;//1048 to 77 as per new score
         assertEquals(score, smsd1.getStereoScore(0));

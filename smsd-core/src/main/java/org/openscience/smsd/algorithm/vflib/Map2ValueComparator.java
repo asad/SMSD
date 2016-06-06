@@ -26,7 +26,6 @@ package org.openscience.smsd.algorithm.vflib;
 import java.util.Comparator;
 import java.util.Map;
 import org.openscience.cdk.interfaces.IAtom;
-import org.openscience.smsd.algorithm.vflib.interfaces.INode;
 
  /*
  * @cdk.module smsd
@@ -34,7 +33,7 @@ import org.openscience.smsd.algorithm.vflib.interfaces.INode;
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-public class Map2ValueComparator implements Comparator<Map<INode, IAtom>> {
+public class Map2ValueComparator implements Comparator<Map<IAtom, IAtom>> {
 
     private final SortOrder sortOrder;
 
@@ -49,10 +48,10 @@ public class Map2ValueComparator implements Comparator<Map<INode, IAtom>> {
      * @return
      */
     @Override
-    public int compare(Map<INode, IAtom> object1, Map<INode, IAtom> object2) {
+    public int compare(Map<IAtom, IAtom> object1, Map<IAtom, IAtom> object2) {
         int size1 = object1.size();
         int size2 = object2.size();
-        int compare = Integer.signum(new Integer(size1).compareTo(new Integer(size2)));
+        int compare = Integer.signum(new Integer(size1).compareTo(size2));
 
         if (sortOrder == SortOrder.ASCENDING) {
             return compare;

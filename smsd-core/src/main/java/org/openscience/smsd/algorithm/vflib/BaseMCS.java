@@ -38,8 +38,6 @@ import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.algorithm.mcgregor.McGregor;
-import org.openscience.smsd.algorithm.vflib.interfaces.INode;
-import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
 
 /**
  * This class should be used to find MCS between source graph and target graph.
@@ -64,7 +62,7 @@ public class BaseMCS {
     private final boolean shouldMatchRings;
     private final boolean matchBonds;
     private final boolean matchAtomType;
-    protected final List<Map<INode, IAtom>> vfLibSolutions;
+    protected final List<Map<IAtom, IAtom>> vfLibSolutions;
     final List<Map<Integer, Integer>> allLocalMCS;
     final List<AtomAtomMapping> allLocalAtomAtomMapping;
     private final static ILoggingTool Logger
@@ -173,29 +171,29 @@ public class BaseMCS {
      * @param RONP
      * @param query
      */
-    protected synchronized void setVFMappings(boolean RONP, IQuery query) {
+    protected synchronized void setVFMappings(boolean RONP) {
         /*
          * Sort biggest clique to smallest
          */
         Collections.sort(vfLibSolutions, new Map2ValueComparator(SortOrder.DESCENDING));
-        for (Map<INode, IAtom> solution : vfLibSolutions) {
+        for (Map<IAtom, IAtom> solution : vfLibSolutions) {
             AtomAtomMapping atomatomMapping = new AtomAtomMapping(source, target);
             Map<Integer, Integer> indexindexMapping = new TreeMap<>();
 
-            for (INode node : solution.keySet()) {
+            for (Map.Entry<IAtom, IAtom> mapping : solution.entrySet()) {
                 IAtom qAtom;
                 IAtom tAtom;
-                int qIndex;
-                int tIndex;
+                Integer qIndex;
+                Integer tIndex;
 
-                if (RONP) {
-                    qAtom = query.getAtom(node);
-                    tAtom = solution.get(node);
+                  if (RONP) {
+                    qAtom = mapping.getKey();
+                    tAtom = mapping.getValue();
                     qIndex = source.getAtomNumber(qAtom);
                     tIndex = target.getAtomNumber(tAtom);
                 } else {
-                    tAtom = query.getAtom(node);
-                    qAtom = solution.get(node);
+                    tAtom = mapping.getKey();
+                    qAtom = mapping.getValue();
                     qIndex = source.getAtomNumber(qAtom);
                     tIndex = target.getAtomNumber(tAtom);
                 }

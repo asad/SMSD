@@ -1,5 +1,4 @@
-
-/* Copyright (C) 2009-2014 Syed Asad Rahman <asad@ebi.ac.uk>
+/* Copyright (C) 2009-2015  Syed Asad Rahman <asad@ebi.ac.uk>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -21,39 +20,18 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-package org.openscience.smsd.algorithm.vflib;
+package org.openscience.smsd.algorithm.vflib.vf2;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import org.openscience.cdk.interfaces.IAtom;
 
 /**
- * @author Syed Asad Rahman <asad@ebi.ac.uk>
+ * Interface for the AtomMatcher (atoms) in graph.
  *
- * @cdk.module test-smsd
- * @cdk.require java1.6+
+ * @cdk.module smsd
+ * @cdk.githash
+ * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    org.openscience.smsd.algorithm.vflib.VF2MCSTest.class})
-public class VFSuite {
+public interface AtomMatcher {
 
-    @BeforeClass
-    public static void setUpClass() throws Exception {
-    }
-
-    @AfterClass
-    public static void tearDownClass() throws Exception {
-    }
-
-    @Before
-    public void setUp() throws Exception {
-    }
-
-    @After
-    public void tearDown() throws Exception {
-    }
+    boolean matches(IAtom queryAtom, IAtom targetAtom);
 }

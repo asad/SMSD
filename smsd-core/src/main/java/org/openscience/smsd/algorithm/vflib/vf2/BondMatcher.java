@@ -20,59 +20,18 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-package org.openscience.smsd.algorithm.vflib.builder;
+package org.openscience.smsd.algorithm.vflib.vf2;
 
-import org.openscience.smsd.algorithm.matchers.BondMatcher;
-import org.openscience.smsd.algorithm.vflib.interfaces.IEdge;
-import org.openscience.smsd.algorithm.vflib.interfaces.INode;
+import org.openscience.cdk.interfaces.IBond;
 
 /**
- * Class for building/storing edges (bonds) in the graph with bond query
- * capabilities.
+ * Interface for the BondMatcher (bonds) in graph.
  *
  * @cdk.module smsd
  * @cdk.githash
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
-public class EdgeBuilder implements IEdge {
+public interface BondMatcher {
 
-    private final NodeBuilder source;
-    private final NodeBuilder target;
-    private final BondMatcher matcher;
-
-    /**
-     *
-     * @param source
-     * @param target
-     * @param matcher
-     */
-    protected EdgeBuilder(NodeBuilder source, NodeBuilder target, BondMatcher matcher) {
-        this.source = source;
-        this.target = target;
-        this.matcher = matcher;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public INode getSource() {
-        return source;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public INode getTarget() {
-        return target;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public BondMatcher getBondMatcher() {
-        return matcher;
-    }
+    boolean matches(IBond queryBond, IBond targetBond);
 }

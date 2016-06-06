@@ -33,11 +33,8 @@ import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.algorithm.mcgregor.McGregor;
-import org.openscience.smsd.algorithm.vflib.interfaces.IMapper;
-import org.openscience.smsd.algorithm.vflib.interfaces.INode;
-import org.openscience.smsd.algorithm.vflib.interfaces.IQuery;
-import org.openscience.smsd.algorithm.vflib.map.VFMapper;
-import org.openscience.smsd.algorithm.vflib.query.QueryCompiler;
+import org.openscience.smsd.algorithm.vflib.vf2.Pattern;
+import org.openscience.smsd.algorithm.vflib.vf2.VF;
 import org.openscience.smsd.helper.MoleculeInitializer;
 import org.openscience.smsd.interfaces.IResults;
 
@@ -61,7 +58,7 @@ public class VF2Sub implements IResults {
     private final List<AtomAtomMapping> allAtomMCSCopy;
     private final List<Map<Integer, Integer>> allMCS;
     private final List<Map<Integer, Integer>> allMCSCopy;
-    private List<Map<INode, IAtom>> vfLibSolutions;
+    private List<Map<IAtom, IAtom>> vfLibSolutions;
     private final IAtomContainer source;
     private final IAtomContainer target;
     private final boolean shouldMatchRings;
@@ -195,15 +192,51 @@ public class VF2Sub implements IResults {
         return common;
     }
 
+//    /*
+//     * Note: VF will search for core hits. Mcgregor will extend the cliques depending of the bond type (sensitive and
+//     * insensitive).
+//     */
+//    private synchronized boolean searchVFMappings() {
+////        System.out.println("searchVFMappings ");
+//        IQuery queryCompiler;
+//        IMapper mapper = null;
+//
+//        if (!(source instanceof IQueryAtomContainer) && !(target instanceof IQueryAtomContainer)) {
+//            countR = getReactantMol().getAtomCount();
+//            countP = getProductMol().getAtomCount();
+//        }
+//
+//        vfLibSolutions = new ArrayList<>();
+//        if (source instanceof IQueryAtomContainer) {
+//            queryCompiler = new QueryCompiler((IQueryAtomContainer) source).compile();
+//            mapper = new VFMapper(queryCompiler);
+//            List<Map<INode, IAtom>> maps = mapper.getMaps(getProductMol());
+//            if (maps != null) {
+//                vfLibSolutions.addAll(maps);
+//            }
+//            setVFMappings(true, queryCompiler);
+//        } else if (countR <= countP) {
+//            queryCompiler = new QueryCompiler(this.source, this.matchBonds, this.shouldMatchRings, this.matchAtomType).compile();
+//            mapper = new VFMapper(queryCompiler);
+//            List<Map<INode, IAtom>> maps = mapper.getMaps(getProductMol());
+//            if (maps != null) {
+//                vfLibSolutions.addAll(maps);
+//            }
+//            setVFMappings(true, queryCompiler);
+//        }
+////        System.out.println("Sol count " + vfLibSolutions.size());
+////        System.out.println("Sol size " + (vfLibSolutions.iterator().hasNext() ? vfLibSolutions.iterator().next().size() : 0));
+////        System.out.println("MCSSize " + bestHitSize);
+////        System.out.println("After Sol count " + allMCSCopy.size());
+//        return mapper != null ? mapper.isTimeout() : true;
+//    }
     /*
      * Note: VF will search for core hits. Mcgregor will extend the cliques depending of the bond type (sensitive and
      * insensitive).
      */
     private synchronized boolean searchVFMappings() {
 //        System.out.println("searchVFMappings ");
-        IQuery queryCompiler;
-        IMapper mapper = null;
-
+        VF mapper = null;
         if (!(source instanceof IQueryAtomContainer) && !(target instanceof IQueryAtomContainer)) {
             countR = getReactantMol().getAtomCount();
             countP = getProductMol().getAtomCount();
@@ -211,27 +244,25 @@ public class VF2Sub implements IResults {
 
         vfLibSolutions = new ArrayList<>();
         if (source instanceof IQueryAtomContainer) {
-            queryCompiler = new QueryCompiler((IQueryAtomContainer) source).compile();
-            mapper = new VFMapper(queryCompiler);
-            List<Map<INode, IAtom>> maps = mapper.getMaps(getProductMol());
+            Pattern findSubstructure = VF.findSubstructure((IQueryAtomContainer) source);
+            List<Map<IAtom, IAtom>> maps = findSubstructure.matchAll(getProductMol());
             if (maps != null) {
                 vfLibSolutions.addAll(maps);
             }
-            setVFMappings(true, queryCompiler);
+            setVFMappings(true);
         } else if (countR <= countP) {
-            queryCompiler = new QueryCompiler(this.source, this.matchBonds, this.shouldMatchRings, this.matchAtomType).compile();
-            mapper = new VFMapper(queryCompiler);
-            List<Map<INode, IAtom>> maps = mapper.getMaps(getProductMol());
+            Pattern findSubstructure = VF.findSubstructure(this.source, this.matchBonds, this.shouldMatchRings, this.matchAtomType);
+            List<Map<IAtom, IAtom>> maps = findSubstructure.matchAll(getProductMol());
             if (maps != null) {
                 vfLibSolutions.addAll(maps);
             }
-            setVFMappings(true, queryCompiler);
+            setVFMappings(true);
         }
 //        System.out.println("Sol count " + vfLibSolutions.size());
 //        System.out.println("Sol size " + (vfLibSolutions.iterator().hasNext() ? vfLibSolutions.iterator().next().size() : 0));
 //        System.out.println("MCSSize " + bestHitSize);
 //        System.out.println("After Sol count " + allMCSCopy.size());
-        return mapper != null ? mapper.isTimeout() : true;
+        return mapper != null;
     }
 
     private synchronized void searchMcGregorMapping() throws CDKException, IOException {
@@ -262,25 +293,25 @@ public class VF2Sub implements IResults {
 //        System.out.println("MCSSize " + bestHitSize + "\n");
     }
 
-    private synchronized void setVFMappings(boolean RONP, IQuery query) {
+    private synchronized void setVFMappings(boolean RONP) {
         int counter = 0;
-        for (Map<INode, IAtom> solution : vfLibSolutions) {
+        for (Map<IAtom, IAtom> solution : vfLibSolutions) {
             AtomAtomMapping atomatomMapping = new AtomAtomMapping(source, target);
             Map<Integer, Integer> indexindexMapping = new TreeMap<>();
 
-            for (Map.Entry<INode, IAtom> mapping : solution.entrySet()) {
+            for (Map.Entry<IAtom, IAtom> mapping : solution.entrySet()) {
                 IAtom qAtom;
                 IAtom tAtom;
                 Integer qIndex;
                 Integer tIndex;
 
                 if (RONP) {
-                    qAtom = query.getAtom(mapping.getKey());
+                    qAtom = mapping.getKey();
                     tAtom = mapping.getValue();
                     qIndex = source.getAtomNumber(qAtom);
                     tIndex = target.getAtomNumber(tAtom);
                 } else {
-                    tAtom = query.getAtom(mapping.getKey());
+                    tAtom = mapping.getKey();
                     qAtom = mapping.getValue();
                     qIndex = source.getAtomNumber(qAtom);
                     tIndex = target.getAtomNumber(tAtom);
