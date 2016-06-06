@@ -151,7 +151,7 @@ public final class Substructure extends BaseMapping {
         if ((getTarget() == null) || (getQuery() == null)) {
             throw new CDKException("Query or Target molecule is not initialized (NULL)");
         }
-        
+
         if (getQuery().getAtomCount() > getTarget().getAtomCount()) {
             return false;
         }
@@ -193,10 +193,12 @@ public final class Substructure extends BaseMapping {
             throw new CDKException("Query or Target molecule is not initialized (NULL)");
         }
 
+        if (getQuery().getAtomCount() > getTarget().getAtomCount()) {
+            return false;
+        }
+
         if (getQuery().getAtomCount() == 1 || getTarget().getAtomCount() == 1) {
             isSubgraph = singleMapping();
-        } else if (getQuery().getAtomCount() > getTarget().getAtomCount()) {
-            return false;
         } else {
             List<AtomAtomMapping> mappingsVF2 = new ArrayList<>();
             VF2Sub mapper;
