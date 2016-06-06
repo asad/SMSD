@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.openscience.cdk.AtomContainer;
@@ -138,7 +139,7 @@ public final class StereoFilter extends Sotter implements IChemicalFilter<Double
     private synchronized Map<IBond, IBond> makeBondMapsOfAtomMaps(IAtomContainer ac1, IAtomContainer ac2,
             AtomAtomMapping mappings) {
 
-        Map<IBond, IBond> bondbondMappingMap = new HashMap<IBond, IBond>();
+        Map<IBond, IBond> bondbondMappingMap = new HashMap<>();
 
         for (Map.Entry<IAtom, IAtom> map1 : mappings.getMappingsByAtoms().entrySet()) {
             for (Map.Entry<IAtom, IAtom> map2 : mappings.getMappingsByAtoms().entrySet()) {
@@ -189,7 +190,7 @@ public final class StereoFilter extends Sotter implements IChemicalFilter<Double
                 score += BOScore;
             }
 
-            if (rAtom.getFormalCharge() == pAtom.getFormalCharge()) {
+            if (Objects.equals(rAtom.getFormalCharge(), pAtom.getFormalCharge())) {
                 score += 5.0;
             }
         }

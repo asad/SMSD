@@ -107,7 +107,7 @@ public class ChemicalFilters extends BaseFilter {
 
         int counter = 0;
         for (Map.Entry<Integer, Double> map : energySelectionMap.entrySet()) {
-            if (lowestEnergyScore == map.getValue().doubleValue()) {
+            if (lowestEnergyScore == map.getValue()) {
                 addSolution(counter, map.getKey(),
                         allEnergyAtomMCS,
                         stereoScoreMap,

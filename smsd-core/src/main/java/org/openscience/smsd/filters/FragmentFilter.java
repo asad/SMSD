@@ -48,7 +48,7 @@ public final class FragmentFilter extends Sotter implements IChemicalFilter<Inte
 
     FragmentFilter(ChemicalFilters chemfilter) {
         this.chemfilter = chemfilter;
-        fragmentSize = new ArrayList<Integer>();
+        fragmentSize = new ArrayList<>();
     }
 
     @Override
