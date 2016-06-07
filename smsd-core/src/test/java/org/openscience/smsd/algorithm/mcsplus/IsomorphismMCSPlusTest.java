@@ -277,7 +277,7 @@ public class IsomorphismMCSPlusTest {
         Assert.assertEquals(4, overlap.getAllAtomMapping().size());
         overlap = new Isomorphism(ac1, ac3, Algorithm.MCSPlus, true, false, false);
         overlap.setChemFilters(false, false, true);
-        Assert.assertEquals(4, overlap.getAllAtomMapping().size());
+        Assert.assertEquals(2, overlap.getAllAtomMapping().size());
         overlap = new Isomorphism(ac1, ac4, Algorithm.MCSPlus, true, false, false);
         overlap.setChemFilters(false, false, true);
         Assert.assertEquals(4, overlap.getAllAtomMapping().size());
