@@ -473,7 +473,7 @@ public class IsomorphismTest {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("CC");
         IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
-        Isomorphism smsd = new Isomorphism(query, target, Algorithm.CDKMCS, true, false, true);
+        Isomorphism smsd = new Isomorphism(query, target, Algorithm.DEFAULT, true, false, true);
 
         Assert.assertEquals(18, smsd.getAllAtomMapping().size());
         Assert.assertTrue(smsd.isSubgraph());

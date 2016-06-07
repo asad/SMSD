@@ -606,7 +606,7 @@ public class SubstructureTest {
 
     @Test
     /*
-     * @BUG expected solution count mismatch
+     * Imp test case
      */
     public void testMatchAtomCount() throws CDKException {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
