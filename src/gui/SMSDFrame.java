@@ -94,7 +94,7 @@ public class SMSDFrame extends JFrame {
     private final static String NEW_LINE = System.getProperty("line.separator");
     private File QueryFileName = null;
     private File TargetFileName = null;
-    private final List<Object> molFiles = new ArrayList<Object>(2);
+    private final List<Object> molFiles = new ArrayList<>(2);
     private Integer count;
     static private JPanel panels;
     private File file;
@@ -445,9 +445,7 @@ public class SMSDFrame extends JFrame {
             jTextArea1.append("Created Mol = " + file.getName() + NEW_LINE);
             jTextArea1.setCaretPosition(jTextArea1.getDocument().getLength());
 
-        } catch (IOException ex) {
-            Logger.getLogger(SMSDFrame.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (CDKException ex) {
+        } catch (IOException | CDKException ex) {
             Logger.getLogger(SMSDFrame.class.getName()).log(Level.SEVERE, null, ex);
         }
 
