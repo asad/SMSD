@@ -820,7 +820,7 @@ public class SubstructureTest {
         Assert.assertEquals(4, overlap.getAllAtomMapping().size());
         overlap = new Substructure(ac1, ac3, true, false, false, true);
         overlap.setChemFilters(false, false, true);
-        Assert.assertEquals(4, overlap.getAllAtomMapping().size());
+        Assert.assertEquals(2, overlap.getAllAtomMapping().size());
         overlap = new Substructure(ac1, ac4, true, false, false, true);
         overlap.setChemFilters(false, false, true);
         Assert.assertEquals(4, overlap.getAllAtomMapping().size());

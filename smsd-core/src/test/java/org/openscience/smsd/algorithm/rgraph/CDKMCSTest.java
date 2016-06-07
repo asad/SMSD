@@ -26,7 +26,10 @@
 package org.openscience.smsd.algorithm.rgraph;
 
 import java.io.InputStream;
+import java.net.URISyntaxException;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.junit.Assert;
 import org.junit.Test;
 import org.openscience.cdk.Atom;
@@ -47,6 +50,7 @@ import org.openscience.cdk.tools.CDKHydrogenAdder;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.tools.TimeManager;
 import org.openscience.smsd.tools.ExtAtomContainerManipulator;
+import reader.mdl.SDFReaderTest;
 
 /**
  * @cdk.module test-smsd
@@ -299,6 +303,12 @@ public class CDKMCSTest {
      */
     @Test
     public void testSFBug999330() throws Exception {
+        String path = null;
+        try {
+            path = this.getClass().getClassLoader().getResource("").toURI().getPath();
+        } catch (URISyntaxException ex) {
+            Logger.getLogger(SDFReaderTest.class.getName()).log(Level.SEVERE, null, ex);
+        }
         String file1 = "data/mdl/5SD.mol";
         String file2 = "data/mdl/ADN.mol";
         AtomContainer mol1 = new AtomContainer();

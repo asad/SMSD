@@ -5,6 +5,10 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.junit.Before;
 import org.junit.Test;
 import org.openscience.cdk.CDKConstants;
@@ -26,7 +30,7 @@ import org.openscience.cdk.libio.md.MDMolecule;
  */
 public class SDFReaderTest {
 
-    public static String SDF_DATA_FOLDER = "test/data/mdl";
+    public static String SDF_DATA_FOLDER = "data/mdl";
 
     @Before
     public void setUp() {
@@ -34,7 +38,13 @@ public class SDFReaderTest {
 
     @Test
     public void testSDFReader() throws FileNotFoundException, CDKException, IOException {
-        FileReader in = new FileReader(SDF_DATA_FOLDER + File.separator + "trupti.sdf");
+        String path = null;
+        try {
+            path = this.getClass().getClassLoader().getResource("").toURI().getPath();
+        } catch (URISyntaxException ex) {
+            Logger.getLogger(SDFReaderTest.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        FileReader in = new FileReader(path + File.separator + SDF_DATA_FOLDER + File.separator + "mols.sdf");
         IteratingSDFReader iteratingMDLReader = new IteratingSDFReader(
                 in, DefaultChemObjectBuilder.getInstance());
         int i = 0;
@@ -56,10 +66,10 @@ public class SDFReaderTest {
             i++;
         }
 
-        SDFWriter sdfWriter = new SDFWriter(new FileOutputStream(SDF_DATA_FOLDER + File.separator + "connected.sdf"));
+        SDFWriter sdfWriter = new SDFWriter(new FileOutputStream(path + File.separator + SDF_DATA_FOLDER + File.separator + "connected.sdf"));
         sdfWriter.write(connectedSet);
         sdfWriter.close();
-        sdfWriter = new SDFWriter(new FileOutputStream(SDF_DATA_FOLDER + File.separator + "disconnected.sdf"));
+        sdfWriter = new SDFWriter(new FileOutputStream(path + File.separator + SDF_DATA_FOLDER + File.separator + "disconnected.sdf"));
         sdfWriter.write(disconnectedSet);
         sdfWriter.close();
         ////System.out.println("total files read: " + i);
