@@ -50,13 +50,13 @@ import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
-import org.openscience.reactionblast.graphics.direct.DirectArrowDrawer;
-import org.openscience.reactionblast.graphics.direct.DirectMoleculeDrawer;
-import org.openscience.reactionblast.graphics.direct.Params;
-import org.openscience.reactionblast.graphics.direct.ZoomToFitDrawer;
-import org.openscience.reactionblast.graphics.direct.layout.ArrowWheel;
-import org.openscience.reactionblast.graphics.direct.layout.CircularCanvasGenerator;
-import org.openscience.reactionblast.graphics.direct.layout.ZoomToFitGridLayout;
+import org.openscience.directgraphics.direct.DirectArrowDrawer;
+import org.openscience.directgraphics.direct.DirectMoleculeDrawer;
+import org.openscience.directgraphics.direct.Params;
+import org.openscience.directgraphics.direct.ZoomToFitDrawer;
+import org.openscience.directgraphics.direct.layout.ArrowWheel;
+import org.openscience.directgraphics.direct.layout.CircularCanvasGenerator;
+import org.openscience.directgraphics.direct.layout.ZoomToFitGridLayout;
 
 /**
  *

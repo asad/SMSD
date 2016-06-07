@@ -45,10 +45,10 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
-import org.openscience.reactionblast.graphics.direct.DirectMoleculeDrawer;
-import org.openscience.reactionblast.graphics.direct.Params;
-import org.openscience.reactionblast.graphics.direct.layout.SingleMoleculeLayout;
-import org.openscience.reactionblast.graphics.direct.layout.ZoomToFitGridLayout;
+import org.openscience.directgraphics.direct.DirectMoleculeDrawer;
+import org.openscience.directgraphics.direct.Params;
+import org.openscience.directgraphics.direct.layout.SingleMoleculeLayout;
+import org.openscience.directgraphics.direct.layout.ZoomToFitGridLayout;
 
 public class ImageGenerator {
 

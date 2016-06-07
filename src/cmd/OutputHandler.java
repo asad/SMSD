@@ -50,7 +50,7 @@ import org.openscience.cdk.io.SDFWriter;
 import org.openscience.cdk.smiles.SmilesGenerator;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
-import org.openscience.reactionblast.graphics.direct.Params;
+import org.openscience.directgraphics.direct.Params;
 
 /**
  * Writes the results of SMSD to text files and images.
