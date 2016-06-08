@@ -116,12 +116,7 @@ public class BaseMCS {
      */
     protected synchronized boolean isCliquePresent(
             Map<Integer, Integer> cliqueMap, List<Map<Integer, Integer>> mapGlobal) {
-        for (Map<Integer, Integer> storedMap : mapGlobal) {
-            if (cliqueMap.equals(storedMap)) {
-                return true;
-            }
-        }
-        return false;
+        return mapGlobal.stream().anyMatch((storedMap) -> (cliqueMap.equals(storedMap)));
     }
 
     /**
@@ -141,22 +136,20 @@ public class BaseMCS {
                 mgit = new McGregor((IQueryAtomContainer) source, target, mappings, isBondMatchFlag(), isMatchRings(), isMatchAtomType());
                 //Start McGregor search
                 mgit.startMcGregorIteration((IQueryAtomContainer) source, mgit.getMCSSize(), extendMapping);
-            } else {
-                if (countR > countP) {
-                    mgit = new McGregor(source, target, mappings, isBondMatchFlag(), isMatchRings(), isMatchAtomType());
+            } else if (countR > countP) {
+                mgit = new McGregor(source, target, mappings, isBondMatchFlag(), isMatchRings(), isMatchAtomType());
 
-                    //Start McGregor search
-                    mgit.startMcGregorIteration(source, mgit.getMCSSize(), extendMapping);
-                } else {
-                    extendMapping.clear();
-                    mgit = new McGregor(target, source, mappings, isBondMatchFlag(), isMatchRings(), isMatchAtomType());
-                    ROPFlag = false;
-                    for (Map.Entry<Integer, Integer> map : firstPassMappings.entrySet()) {
-                        extendMapping.put(map.getValue(), map.getKey());
-                    }
-                    //Start McGregor search
-                    mgit.startMcGregorIteration(target, mgit.getMCSSize(), extendMapping);
-                }
+                //Start McGregor search
+                mgit.startMcGregorIteration(source, mgit.getMCSSize(), extendMapping);
+            } else {
+                extendMapping.clear();
+                mgit = new McGregor(target, source, mappings, isBondMatchFlag(), isMatchRings(), isMatchAtomType());
+                ROPFlag = false;
+                firstPassMappings.entrySet().stream().forEach((map) -> {
+                    extendMapping.put(map.getValue(), map.getKey());
+                });
+                //Start McGregor search
+                mgit.startMcGregorIteration(target, mgit.getMCSSize(), extendMapping);
             }
             mappings = mgit.getMappings();
         }
@@ -169,24 +162,29 @@ public class BaseMCS {
     /**
      *
      * @param RONP
-     * @param query
      */
     protected synchronized void setVFMappings(boolean RONP) {
+
         /*
          * Sort biggest clique to smallest
          */
         Collections.sort(vfLibSolutions, new Map2ValueComparator(SortOrder.DESCENDING));
+        int maxSolutionSize = vfLibSolutions.iterator().hasNext() ? vfLibSolutions.iterator().next().size() : 0;
         for (Map<IAtom, IAtom> solution : vfLibSolutions) {
             AtomAtomMapping atomatomMapping = new AtomAtomMapping(source, target);
             Map<Integer, Integer> indexindexMapping = new TreeMap<>();
 
-            for (Map.Entry<IAtom, IAtom> mapping : solution.entrySet()) {
+            if (maxSolutionSize != solution.size()) {
+                break;
+            }
+
+            solution.entrySet().stream().forEach((mapping) -> {
                 IAtom qAtom;
                 IAtom tAtom;
                 Integer qIndex;
                 Integer tIndex;
 
-                  if (RONP) {
+                if (RONP) {
                     qAtom = mapping.getKey();
                     tAtom = mapping.getValue();
                     qIndex = source.getAtomNumber(qAtom);
@@ -208,7 +206,7 @@ public class BaseMCS {
                         Logger.error(Level.SEVERE, null, ex);
                     }
                 }
-            }
+            });
 
             if (!indexindexMapping.isEmpty()
                     && !hasClique(indexindexMapping, getLocalMCSSolution())) {
