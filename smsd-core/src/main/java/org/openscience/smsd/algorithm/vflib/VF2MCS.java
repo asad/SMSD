@@ -130,42 +130,6 @@ public final class VF2MCS extends BaseMCS implements IResults {
             IAtomContainer targetClone = null;
             try {
                 targetClone = target.clone();
-                Set<IBond> bondRemovedT = new HashSet<>();
-                for (IBond b1 : targetClone.bonds()) {
-                    for (IBond b2 : source.bonds()) {
-                        if (b1.getAtom(0).getSymbol().equals(b2.getAtom(0).getSymbol())
-                                && (b1.getAtom(1).getSymbol().equals(b2.getAtom(1).getSymbol()))) {
-                            if ((shouldMatchBonds || shouldMatchRings || matchAtomType)
-                                    && (b1.getAtom(0).getHybridization() != null
-                                    && b2.getAtom(0).getHybridization() != null
-                                    && b1.getAtom(1).getHybridization() != null
-                                    && b2.getAtom(1).getHybridization() != null)
-                                    && (!b1.getAtom(0).getHybridization().equals(b2.getAtom(0).getHybridization())
-                                    || !b1.getAtom(1).getHybridization().equals(b2.getAtom(1).getHybridization()))) {
-                                bondRemovedT.add(b1);
-                            }
-
-                        } else if (b1.getAtom(0).getSymbol().equals(b2.getAtom(1).getSymbol())
-                                && (b1.getAtom(1).getSymbol().equals(b2.getAtom(0).getSymbol()))) {
-                            if ((shouldMatchBonds || shouldMatchRings || matchAtomType)
-                                    && (b1.getAtom(0).getHybridization() != null
-                                    && b2.getAtom(0).getHybridization() != null
-                                    && b1.getAtom(1).getHybridization() != null
-                                    && b2.getAtom(1).getHybridization() != null)
-                                    && (!b1.getAtom(0).getHybridization().equals(b2.getAtom(1).getHybridization())
-                                    || !b1.getAtom(1).getHybridization().equals(b2.getAtom(0).getHybridization()))) {
-                                bondRemovedT.add(b1);
-                            }
-                        }
-                    }
-                    if (DEBUG) {
-                        System.out.println("Bond to be removed " + bondRemovedT.size());
-                    }
-//                    for (IBond b : bondRemovedT) {
-//                        targetClone.removeBond(b);
-//                    }
-                }
-
             } catch (CloneNotSupportedException ex) {
                 java.util.logging.Logger.getLogger(VF2MCS.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -177,7 +141,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
             }
             if (targetClone != null) {
                 if (targetClone.getBondCount() > 0) {
-                    MCSSeedGenerator mcsSeedGeneratorUIT = new MCSSeedGenerator(source, targetClone, super.isBondMatchFlag(), super.isMatchRings(), matchAtomType, Algorithm.CDKMCS);
+                    MCSSeedGenerator mcsSeedGeneratorUIT = new MCSSeedGenerator(source, targetClone, true, super.isMatchRings(), matchAtomType, Algorithm.CDKMCS);
                     cs.submit(mcsSeedGeneratorUIT);
                     jobCounter++;
                 }
@@ -186,7 +150,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
             if (DEBUG) {
                 System.out.println(" CALLING MCSPLUS ");
             }
-            MCSSeedGenerator mcsSeedGeneratorKoch = new MCSSeedGenerator(source, targetClone, super.isBondMatchFlag(), super.isMatchRings(), matchAtomType, Algorithm.MCSPlus);
+            MCSSeedGenerator mcsSeedGeneratorKoch = new MCSSeedGenerator(source, targetClone, true, super.isMatchRings(), matchAtomType, Algorithm.MCSPlus);
             cs.submit(mcsSeedGeneratorKoch);
             jobCounter++;
 
@@ -257,17 +221,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
                     }
                 }
             }
-            for (Map<Integer, Integer> map : mcsVFSeeds) {
-                if (!map.isEmpty()
-                        && map.size() >= solutionSize
-                        && !super.isCliquePresent(map, cleanedMCSSeeds)) {
-                    if (DEBUG) {
-                        System.out.println("seed VF " + map.size());
-                    }
-                    cleanedMCSSeeds.add(counter, map);
-                    counter++;
-                }
-            }
+
             /*
              * Add seeds from VF MCS
              */
@@ -632,14 +586,14 @@ public final class VF2MCS extends BaseMCS implements IResults {
             }
             setVFMappings(true);
         } else if (countR <= countP) {
-            Pattern findSeeds = VF.findSeeds(this.source, true, isMatchRings(), isMatchAtomType());
+            Pattern findSeeds = VF.findSeeds(this.source, isBondMatchFlag(), isMatchRings(), isMatchAtomType());
             List<Map<IAtom, IAtom>> maps = findSeeds.matchAll(getProductMol());
             if (maps != null) {
                 vfLibSolutions.addAll(maps);
             }
             setVFMappings(true);
         } else {
-            Pattern findSeeds = VF.findSeeds(this.target, true, isMatchRings(), isMatchAtomType());
+            Pattern findSeeds = VF.findSeeds(this.target, isBondMatchFlag(), isMatchRings(), isMatchAtomType());
             List<Map<IAtom, IAtom>> maps = findSeeds.matchAll(getReactantMol());
             if (maps != null) {
                 vfLibSolutions.addAll(maps);

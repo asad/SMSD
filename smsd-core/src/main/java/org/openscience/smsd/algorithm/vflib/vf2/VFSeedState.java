@@ -154,8 +154,13 @@ final class VFSeedState extends AbstractVFSeedState {
         // equal to the number of the number of vertices adjacent to m that
         // are neither in m2 or t2. To allow mapping of monomorphisms we addMapping the
         // number of adjacent terminal vertices.
-//        return nTerminal1 <= nTerminal2 && (nRemain1 + nTerminal1) <= (nRemain2 + nTerminal2);
-        return nTerminal1 <= nTerminal2 || (nRemain1 + nTerminal1) <= (nRemain2 + nTerminal2);
+        
+        /*
+         * @Asad
+         * Return all matche combinations
+         */
+        return (nTerminal1 <= nTerminal2 || (nRemain1 + nTerminal1) <= (nRemain2 + nTerminal2))
+                || (nTerminal1 <= nTerminal2 && (nRemain1 + nTerminal1) <= (nRemain2 + nTerminal2));
     }
 
 }

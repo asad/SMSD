@@ -322,7 +322,7 @@ public class VF2MCSTest {
      */
     @Test
     public void testComplexCaseR03165() throws InvalidSmilesException {
-        //////System.out.println("13");
+        //////System.out.println("14");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer target = sp.parseSmiles("OCC1=C(CC(O)=O)C(CCC(O)=O)=C(CC2=C(CC(O)=O)C(CCC(O)=O)=C(CC3=C(CC(O)=O)C(CCC(O)=O)=C(CC4=C(CC(O)=O)C(CCC(O)=O)=CN4)N3)N2)N1");
         IAtomContainer query = sp.parseSmiles("OC(=O)CCC1=C2CC3=C(CCC(O)=O)C(CC(O)=O)=C(CC4=C(CC(O)=O)C(CCC(O)=O)=C(CC5=C(CC(O)=O)C(CCC(O)=O)=C(CC(N2)=C1CC(O)=O)N5)N4)N3");
@@ -332,5 +332,25 @@ public class VF2MCSTest {
         assertEquals(60, query.getAtomCount());
         assertEquals(61, target.getAtomCount());
         assertEquals(55, smsd1.getFirstAtomMapping().getCount());
+    }
+    
+    /**
+     * ComplexCase
+     *
+     *
+     * @throws InvalidSmilesException
+     */
+    @Test
+    public void testComplexCaseR09087() throws InvalidSmilesException {
+        //////System.out.println("15");
+        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        IAtomContainer target = sp.parseSmiles("OP(O)(=O)O[C@H]1[C@H](OP(O)(O)=O)[C@@H](OP(O)(O)=O)[C@H](OP(O)(O)=O)[C@H](OP(O)(O)=O)[C@@H]1OP(O)(O)=O");
+        IAtomContainer query = sp.parseSmiles("OP(O)(=O)O[C@@H]1[C@H](OP(O)(O)=O)[C@@H](OP(O)(O)=O)[C@H](OP(O)(=O)OP(O)(O)=O)[C@@H](OP(O)(O)=O)[C@@H]1OP(O)(O)=O");
+
+        Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.VFLibMCS, false, false, false);
+        assertNotNull(smsd1.getFirstAtomMapping());
+        assertEquals(40, query.getAtomCount());
+        assertEquals(36, target.getAtomCount());
+        assertEquals(36, smsd1.getFirstAtomMapping().getCount());
     }
 }

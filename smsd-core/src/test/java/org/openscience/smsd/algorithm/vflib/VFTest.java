@@ -85,6 +85,22 @@ public class VFTest {
     }
 
     @Test
+    public void testMatchDefault() throws CDKException {
+        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        IAtomContainer query = sp.parseSmiles("OP(O)(=O)O[C@H]1[C@H](OP(O)(O)=O)[C@@H](OP(O)(O)=O)[C@H](OP(O)(O)=O)[C@H](OP(O)(O)=O)[C@@H]1OP(O)(O)=O");
+        IAtomContainer target = sp.parseSmiles("OP(O)(=O)O[C@@H]1[C@H](OP(O)(O)=O)[C@@H](OP(O)(O)=O)[C@H](OP(O)(=O)OP(O)(O)=O)[C@@H](OP(O)(O)=O)[C@@H]1OP(O)(O)=O");
+        Pattern findIdentical = VF.findSubstructure(query, false, false, false);
+
+        boolean foundMatches = findIdentical.matches(target);
+        Assert.assertTrue(foundMatches);
+
+        IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
+        findIdentical = VF.findSubstructure(queryContainer);
+        foundMatches = findIdentical.matches(target);
+        Assert.assertTrue(foundMatches);
+    }
+
+    @Test
     /*
      * Imp test case
      */
