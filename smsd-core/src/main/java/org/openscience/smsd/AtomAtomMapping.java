@@ -32,10 +32,15 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import static org.openscience.cdk.CDKConstants.ATOM_ATOM_MAPPING;
+import static org.openscience.cdk.CDKConstants.MAPPED;
+import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
+import org.openscience.cdk.interfaces.IMapping;
+import org.openscience.cdk.interfaces.IReaction;
 import org.openscience.cdk.smiles.SmilesGenerator;
 import org.openscience.cdk.tools.CDKHydrogenAdder;
 import org.openscience.smsd.tools.ExtAtomContainerManipulator;
@@ -118,19 +123,59 @@ public final class AtomAtomMapping implements Serializable {
     }
 
     /**
-     * Returns String.
+     * Returns String with MMP and AAM.
      *
      * @return string
      */
     @Override
     public synchronized String toString() {
-        String s = "[";
-        for (IAtom key : mapping.keySet()) {
-            int keyIndex = getQuery().getAtomNumber(key);
-            int valueIndex = getTarget().getAtomNumber(mapping.get(key));
-            s += keyIndex + ":" + valueIndex + "|";
+        String s = "";
+        try {
+            IReaction reaction = DefaultChemObjectBuilder.getInstance().newInstance(IReaction.class);
+            reaction.addReactant(getQuery().clone(), 1.0);
+            reaction.addProduct(getTarget().clone(), 1.0);
+
+            int counter = 1;
+            for (IAtomContainer ac : reaction.getReactants().atomContainers()) {
+                for (IAtom a : ac.atoms()) {
+                    IAtom refAtom = getQuery().getAtom(ac.getAtomNumber(a));
+                    if (mapping.containsKey(refAtom)) {
+                        a.setProperty(ATOM_ATOM_MAPPING, counter);
+                        a.setFlag(MAPPED, true);
+                        IAtom mappedAtom = mapping.get(refAtom);
+                        int mappedAtomIndex = getTarget().getAtomNumber(mappedAtom);
+                        IAtom b = reaction.getProducts().getAtomContainer(0).getAtom(mappedAtomIndex);
+                        b.setProperty(ATOM_ATOM_MAPPING, counter);
+                        b.setFlag(MAPPED, true);
+                        IMapping aammapping
+                                = reaction.getBuilder().newInstance(IMapping.class, a, b);
+                        reaction.addMapping(aammapping);
+                    }
+                    counter++;
+                }
+            }
+
+            String createReactionSMILES = "NA";
+            try {
+                SmilesGenerator withAtomClasses = SmilesGenerator.generic().aromatic().withAtomClasses();
+                createReactionSMILES = withAtomClasses.createReactionSMILES(reaction);
+            } catch (CDKException ex) {
+                Logger.getLogger(AtomAtomMapping.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            s = "MMP: " + createReactionSMILES + ", AAM:[";
+            for (IAtom firstAtom : mapping.keySet()) {
+                int keyIndex = getQuery().getAtomNumber(firstAtom) + 1;
+                int valueIndex = getTarget().getAtomNumber(mapping.get(firstAtom)) + 1;
+                s += keyIndex + ":" + valueIndex + "|";
+            }
+
+            s += "]";
+
+        } catch (CloneNotSupportedException ex) {
+            Logger.getLogger(AtomAtomMapping.class.getName()).log(Level.SEVERE, null, ex);
         }
-        return s + "]";
+        return s;
     }
 
     /**
@@ -232,9 +277,9 @@ public final class AtomAtomMapping implements Serializable {
             }
         }
 
-        for (IAtom atom : uniqueAtoms) {
+        uniqueAtoms.stream().forEach((atom) -> {
             ac.removeAtomAndConnectedElectronContainers(atom);
-        }
+        });
 
         return ac;
     }
@@ -255,9 +300,9 @@ public final class AtomAtomMapping implements Serializable {
             }
         }
 
-        for (IAtom atom : uniqueAtoms) {
+        uniqueAtoms.stream().forEach((atom) -> {
             ac.removeAtomAndConnectedElectronContainers(atom);
-        }
+        });
         return ac;
     }
 
@@ -292,9 +337,9 @@ public final class AtomAtomMapping implements Serializable {
             }
         }
 
-        for (IAtom atom : uniqueAtoms) {
+        uniqueAtoms.stream().forEach((atom) -> {
             ac.removeAtomAndConnectedElectronContainers(atom);
-        }
+        });
 
         /*
          Get canonicalised by fixing hydrogens 
@@ -333,22 +378,19 @@ public final class AtomAtomMapping implements Serializable {
      */
     public Map<IAtom, IAtom> sortByValues(Map<IAtom, IAtom> map) {
         List<Map.Entry<IAtom, IAtom>> entries = new LinkedList<>(map.entrySet());
-        Collections.sort(entries, new Comparator<Map.Entry<IAtom, IAtom>>() {
-            @Override
-            public int compare(Entry<IAtom, IAtom> o1, Entry<IAtom, IAtom> o2) {
-                int atomNumber1 = getQuery().getAtomNumber(o1.getKey());
-                int atomNumber2 = getQuery().getAtomNumber(o2.getKey());
-                return atomNumber1 - atomNumber2;
-            }
+        Collections.sort(entries, (Entry<IAtom, IAtom> o1, Entry<IAtom, IAtom> o2) -> {
+            int atomNumber1 = getQuery().getAtomNumber(o1.getKey());
+            int atomNumber2 = getQuery().getAtomNumber(o2.getKey());
+            return atomNumber1 - atomNumber2;
         });
 
         //LinkedHashMap will keep the keys in the order they are inserted
         //which is currently sorted on natural ordering
         Map<IAtom, IAtom> sortedMap = new LinkedHashMap<>();
 
-        for (Map.Entry<IAtom, IAtom> entry : entries) {
+        entries.stream().forEach((entry) -> {
             sortedMap.put(entry.getKey(), entry.getValue());
-        }
+        });
 
         return sortedMap;
     }
