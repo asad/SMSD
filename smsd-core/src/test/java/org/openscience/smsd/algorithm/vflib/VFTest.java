@@ -27,18 +27,23 @@ import java.util.Map;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
+import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainerCreator;
 import org.openscience.cdk.smiles.SmilesParser;
+import org.openscience.smsd.Isomorphism;
 import org.openscience.smsd.algorithm.vflib.vf2.Pattern;
 import org.openscience.smsd.algorithm.vflib.vf2.VF;
+import org.openscience.smsd.interfaces.Algorithm;
 
 /**
  * Unit testing for the {@link VF} class.
@@ -200,6 +205,28 @@ public class VFTest {
         find = VF.findSeeds(queryContainer);
         matchAll = find.matchAll(target);
         Assert.assertEquals(246, matchAll.size());
+    }
+
+    /**
+     * ComplexCase
+     *
+     *
+     * @throws InvalidSmilesException
+     */
+    @Test
+    public void testComplexCaseR09087() throws InvalidSmilesException {
+        //System.out.println("12");
+        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        IAtomContainer query = sp.parseSmiles("OP(O)(=O)O[C@H]1[C@H](OP(O)(O)=O)[C@@H](OP(O)(O)=O)[C@H](OP(O)(O)=O)[C@H](OP(O)(O)=O)[C@@H]1OP(O)(O)=O");
+        IAtomContainer target = sp.parseSmiles("OP(O)(=O)O[C@@H]1[C@H](OP(O)(O)=O)[C@@H](OP(O)(O)=O)[C@H](OP(O)(=O)OP(O)(O)=O)[C@@H](OP(O)(O)=O)[C@@H]1OP(O)(O)=O");
+
+        Pattern find = VF.findSubstructure(query, false, false, false);
+        List<Map<IAtom, IAtom>> matchAll = find.matchAll(target);
+        Assert.assertTrue(!matchAll.isEmpty());
+        assertEquals(36, query.getAtomCount());
+        assertEquals(40, target.getAtomCount());
+        assertEquals(559872, matchAll.size());
+        assertEquals(36, matchAll.iterator().next().size());
     }
 
 }

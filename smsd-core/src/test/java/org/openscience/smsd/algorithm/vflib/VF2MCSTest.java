@@ -288,13 +288,13 @@ public class VF2MCSTest {
     public void testComplexCaseR09087() throws InvalidSmilesException {
         //System.out.println("12");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
-        IAtomContainer target = sp.parseSmiles("OP(O)(=O)O[C@H]1[C@H](OP(O)(O)=O)[C@@H](OP(O)(O)=O)[C@H](OP(O)(O)=O)[C@H](OP(O)(O)=O)[C@@H]1OP(O)(O)=O");
-        IAtomContainer query = sp.parseSmiles("OP(O)(=O)O[C@@H]1[C@H](OP(O)(O)=O)[C@@H](OP(O)(O)=O)[C@H](OP(O)(=O)OP(O)(O)=O)[C@@H](OP(O)(O)=O)[C@@H]1OP(O)(O)=O");
+        IAtomContainer query = sp.parseSmiles("OP(O)(=O)O[C@H]1[C@H](OP(O)(O)=O)[C@@H](OP(O)(O)=O)[C@H](OP(O)(O)=O)[C@H](OP(O)(O)=O)[C@@H]1OP(O)(O)=O");
+        IAtomContainer target = sp.parseSmiles("OP(O)(=O)O[C@@H]1[C@H](OP(O)(O)=O)[C@@H](OP(O)(O)=O)[C@H](OP(O)(=O)OP(O)(O)=O)[C@@H](OP(O)(O)=O)[C@@H]1OP(O)(O)=O");
 
         Isomorphism smsd = new Isomorphism(query, target, Algorithm.VFLibMCS, false, false, false);
         assertNotNull(smsd.getFirstAtomMapping());
-        assertEquals(40, query.getAtomCount());
-        assertEquals(36, target.getAtomCount());
+        assertEquals(36, query.getAtomCount());
+        assertEquals(40, target.getAtomCount());
         assertEquals(36, smsd.getFirstAtomMapping().getCount());
     }
 

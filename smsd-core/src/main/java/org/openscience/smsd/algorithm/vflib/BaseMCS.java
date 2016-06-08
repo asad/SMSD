@@ -165,19 +165,14 @@ public class BaseMCS {
      * @param RONP
      */
     protected synchronized void setVFMappings(boolean RONP) {
-
+//        System.out.println(" setVFMappings ");
         /*
          * Sort biggest clique to smallest
          */
         Collections.sort(vfLibSolutions, new Map2ValueComparator(SortOrder.DESCENDING));
-//        int maxSolutionSize = vfLibSolutions.iterator().hasNext() ? vfLibSolutions.iterator().next().size() : 0;
         for (Map<IAtom, IAtom> solution : vfLibSolutions) {
             AtomAtomMapping atomatomMapping = new AtomAtomMapping(source, target);
             Map<Integer, Integer> indexindexMapping = new TreeMap<>();
-
-//            if (maxSolutionSize != solution.size()) {
-//                break;
-//            }
             solution.entrySet().stream().forEach((mapping) -> {
                 IAtom qAtom;
                 IAtom tAtom;
