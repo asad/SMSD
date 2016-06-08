@@ -91,12 +91,17 @@ public final class VF2MCS extends BaseMCS implements IResults {
          *
          *
          */
-        int size = allLocalMCS.iterator().hasNext() ? allLocalMCS.iterator().next().size() : 0;
+        int maxVFMappingSize = 0;
+        for (Map<Integer, Integer> map : allLocalMCS) {
+            if (maxVFMappingSize < map.size()) {
+                maxVFMappingSize = map.size();
+            }
+        }
 
         /*
          * Atleast two atoms are unmapped else you will get bug due to unmapped single atoms
          */
-        if (timeoutVF || (size != (source.getAtomCount() - 1) && size != (target.getAtomCount() - 1))) {
+        if (timeoutVF || (maxVFMappingSize != (source.getAtomCount()) && maxVFMappingSize != (target.getAtomCount()))) {
 
             List<Map<Integer, Integer>> mcsVFSeeds = new ArrayList<>();
 
@@ -172,9 +177,13 @@ public final class VF2MCS extends BaseMCS implements IResults {
             if (DEBUG) {
                 System.out.println(" CALLING UIT ");
             }
-            MCSSeedGenerator mcsSeedGeneratorUIT = new MCSSeedGenerator(source, targetClone, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.CDKMCS);
-            cs.submit(mcsSeedGeneratorUIT);
-            jobCounter++;
+            if (targetClone != null) {
+                if (targetClone.getBondCount() > 0) {
+                    MCSSeedGenerator mcsSeedGeneratorUIT = new MCSSeedGenerator(source, targetClone, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.CDKMCS);
+                    cs.submit(mcsSeedGeneratorUIT);
+                    jobCounter++;
+                }
+            }
 
             if (DEBUG) {
                 System.out.println(" CALLING MCSPLUS ");

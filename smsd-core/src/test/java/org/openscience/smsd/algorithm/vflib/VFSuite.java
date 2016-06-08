@@ -38,7 +38,8 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    org.openscience.smsd.algorithm.vflib.VF2MCSTest.class})
+    org.openscience.smsd.algorithm.vflib.VF2MCSTest.class,
+    org.openscience.smsd.algorithm.vflib.VFTest.class})
 public class VFSuite {
 
     @BeforeClass

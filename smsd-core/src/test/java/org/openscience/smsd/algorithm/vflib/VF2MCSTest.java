@@ -25,7 +25,6 @@ package org.openscience.smsd.algorithm.vflib;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import junit.framework.Assert;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -189,7 +188,7 @@ public class VF2MCSTest {
 
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.VFLibMCS, true, false, false);
         assertNotNull(smsd1.getFirstAtomMapping());
-        Assert.assertEquals(7, smsd1.getFirstAtomMapping().getCount());
+        assertEquals(7, smsd1.getFirstAtomMapping().getCount());
     }
 
     /**
@@ -296,7 +295,7 @@ public class VF2MCSTest {
     /**
      * Bug report by John Gerlits <jgerlits@utah.gov> Cl should not match Test
      * ring size match
-     * 
+     *
      * @BUG in the MCSPlus
      *
      * @throws InvalidSmilesException
