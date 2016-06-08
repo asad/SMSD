@@ -1,7 +1,5 @@
 package org.openscience.smsd.algorithm.vflib.vf2;
 
-
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -84,7 +82,7 @@ public final class VF extends Pattern {
     /**
      * Search for a subgraph.
      */
-    private final boolean subgraph;
+    private final Patterns searchType;
 
     /**
      * Non-public constructor for-now the atom/bond semantics are fixed.
@@ -94,27 +92,30 @@ public final class VF extends Pattern {
      * @param bondMatcher how bonds should be matched
      * @param substructure substructure search
      */
-    private VF(IAtomContainer query, boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType, boolean substructure) {
+    private VF(IAtomContainer query, boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType, Patterns searchType) {
         this.query = query;
         this.atomMatcher = new DefaultAtomMatcher(shouldMatchRings, matchAtomType);
         this.bondMatcher = new DefaultBondMatcher(shouldMatchBonds, shouldMatchRings, matchAtomType);
         this.bonds1 = EdgeToBondMap.withSpaceFor(query);
         this.g1 = GraphUtil.toAdjList(query, bonds1);
-        this.subgraph = substructure;
+        this.searchType = searchType;
     }
 
     /**
      * @inheritDoc
      */
     @Override
-    public List<Map<IAtom,IAtom>> matchAll(final IAtomContainer target) {
+    public List<Map<IAtom, IAtom>> matchAll(final IAtomContainer target) {
         EdgeToBondMap bonds2 = EdgeToBondMap.withSpaceFor(target);
         int[][] g2 = GraphUtil.toAdjList(target, bonds2);
-        Iterable<int[]> iterable = new VFIterable(query, target, g1, g2, bonds1, bonds2, atomMatcher, bondMatcher, subgraph);
-        List<Map<IAtom,IAtom>> mappings = new ArrayList<>();
+        Iterable<int[]> iterable = new VFIterable(query, target, g1, g2, bonds1, bonds2, atomMatcher, bondMatcher, searchType);
+        List<Map<IAtom, IAtom>> mappings = new ArrayList<>();
         for (int[] map : iterable) {
-            Map<IAtom,IAtom> atomAtomMapping = new HashMap<>();
+            Map<IAtom, IAtom> atomAtomMapping = new HashMap<>();
             for (int i = 0; i < map.length; i++) {
+                if (map[i] < 0) {
+                    continue;
+                }
                 atomAtomMapping.put(query.getAtom(i), target.getAtom(map[i]));
             }
             mappings.add(atomAtomMapping);
@@ -147,6 +148,18 @@ public final class VF extends Pattern {
     }
 
     /**
+     * Create a pattern which can be used to find molecules which are the same
+     * as the {@code query} structure.
+     *
+     * @param query the substructure to find
+     * @return a pattern for finding the {@code query}
+     */
+    public static Pattern findSeeds(IQueryAtomContainer query) {
+        boolean isQuery = query instanceof IQueryAtomContainer;
+        return findSeeds(query, false, false, false);
+    }
+
+    /**
      * Create a pattern which can be used to find molecules which contain the
      * {@code query} structure.
      *
@@ -157,7 +170,7 @@ public final class VF extends Pattern {
      * @return a pattern for finding the {@code query}
      */
     public static Pattern findSubstructure(IAtomContainer query, boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) {
-        return new VF(query, shouldMatchBonds, shouldMatchRings, matchAtomType, true);
+        return new VF(query, shouldMatchBonds, shouldMatchRings, matchAtomType, Patterns.SUBGRAPH);
     }
 
     /**
@@ -171,7 +184,21 @@ public final class VF extends Pattern {
      * @return a pattern for finding the {@code query}
      */
     public static Pattern findIdentical(IAtomContainer query, boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) {
-        return new VF(query, shouldMatchBonds, shouldMatchRings, matchAtomType, false);
+        return new VF(query, shouldMatchBonds, shouldMatchRings, matchAtomType, Patterns.IDENTICAL);
+    }
+
+    /**
+     * Create a pattern which can be used to find molecules which are the same
+     * as the {@code query} structure.
+     *
+     * @param query the substructure to find
+     * @param shouldMatchBonds
+     * @param shouldMatchRings
+     * @param matchAtomType
+     * @return a pattern for finding the {@code query}
+     */
+    public static Pattern findSeeds(IAtomContainer query, boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) {
+        return new VF(query, shouldMatchBonds, shouldMatchRings, matchAtomType, Patterns.SEEDS);
     }
 
     private static final class VFIterable implements Iterable<int[]> {
@@ -204,7 +231,7 @@ public final class VF extends Pattern {
         /**
          * The query is a subgraph.
          */
-        private final boolean subgraph;
+        private final Patterns searchType;
 
         /**
          * Create a match for the following parameters.
@@ -221,7 +248,7 @@ public final class VF extends Pattern {
          */
         private VFIterable(IAtomContainer container1, IAtomContainer container2, int[][] g1, int[][] g2,
                 EdgeToBondMap bonds1, EdgeToBondMap bonds2, AtomMatcher atomMatcher, BondMatcher bondMatcher,
-                boolean subgraph) {
+                Patterns searchType) {
             this.container1 = container1;
             this.container2 = container2;
             this.g1 = g1;
@@ -230,7 +257,7 @@ public final class VF extends Pattern {
             this.bonds2 = bonds2;
             this.atomMatcher = atomMatcher;
             this.bondMatcher = bondMatcher;
-            this.subgraph = subgraph;
+            this.searchType = searchType;
         }
 
         /**
@@ -238,12 +265,20 @@ public final class VF extends Pattern {
          */
         @Override
         public Iterator<int[]> iterator() {
-            if (subgraph) {
-                return new StateStream(new VFSubState(container1, container2, g1, g2, bonds1, bonds2, atomMatcher,
-                        bondMatcher));
+            if (null != searchType) {
+                switch (searchType) {
+                    case SUBGRAPH:
+                        return new StateStream(new VFSubState(container1, container2, g1, g2, bonds1, bonds2, atomMatcher,
+                                bondMatcher), searchType);
+                    case IDENTICAL:
+                        return new StateStream(
+                                new VFState(container1, container2, g1, g2, bonds1, bonds2, atomMatcher, bondMatcher), searchType);
+                    default:
+                        return new StateStream(
+                                new VFSeedState(container1, container2, g1, g2, bonds1, bonds2, atomMatcher, bondMatcher), searchType);
+                }
             }
-            return new StateStream(
-                    new VFState(container1, container2, g1, g2, bonds1, bonds2, atomMatcher, bondMatcher));
+            return null;
         }
     }
 }

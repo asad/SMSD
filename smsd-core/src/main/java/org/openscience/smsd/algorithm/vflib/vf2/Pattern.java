@@ -17,6 +17,13 @@ import org.openscience.smsd.AtomAtomMapping;
 public abstract class Pattern {
 
     /**
+     * Patterns Algorithm Patterns.
+     */
+    public static enum Patterns {
+        IDENTICAL, SUBGRAPH, SEEDS
+    };
+
+    /**
      * Determine if there is a mapping of this pattern in the {@code target}.
      * Depending on the implementation stereochemistry may be checked
      * (recommended).
@@ -95,6 +102,19 @@ public abstract class Pattern {
     }
 
     /**
+     * Create a pattern which can be used to find molecules which are the same
+     * as the {@code query} structure. The default structure search
+     * implementation is {@link VF}.
+     *
+     * @param query the substructure to find
+     * @return a pattern for finding the {@code query}
+     * @see VF
+     */
+    public static Pattern findSeeds(IQueryAtomContainer query) {
+        return VF.findSeeds(query);
+    }
+
+    /**
      * Create a pattern which can be used to find molecules which contain the
      * {@code query} structure. The default structure search implementation is
      * {@link VF}.
@@ -124,5 +144,21 @@ public abstract class Pattern {
      */
     public static Pattern findIdentical(IAtomContainer query, boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) {
         return VF.findSubstructure(query, shouldMatchBonds, shouldMatchRings, matchAtomType);
+    }
+
+    /**
+     * Create a pattern which can be used to find molecules which are the same
+     * as the {@code query} structure. The default structure search
+     * implementation is {@link VF}.
+     *
+     * @param query the substructure to find
+     * @param shouldMatchBonds match bonds
+     * @param shouldMatchRings match rings
+     * @param matchAtomType match Atom types
+     * @return a pattern for finding the {@code query}
+     * @see VF
+     */
+    public static Pattern findSeeds(IAtomContainer query, boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) {
+        return VF.findSeeds(query, shouldMatchBonds, shouldMatchRings, matchAtomType);
     }
 }

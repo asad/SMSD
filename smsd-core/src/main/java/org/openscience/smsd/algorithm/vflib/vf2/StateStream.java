@@ -1,6 +1,7 @@
 package org.openscience.smsd.algorithm.vflib.vf2;
 
 import java.util.Iterator;
+import org.openscience.smsd.algorithm.vflib.vf2.Pattern.Patterns;
 
 /**
  * Given a (subgraph-)isomorphism state this class can lazily iterate over the
@@ -33,14 +34,16 @@ final class StateStream implements Iterator<int[]> {
      * The next mapping.
      */
     private int[] next;
+    private final Patterns searchType;
 
     /**
      * Create a stream for the provided state.
      *
      * @param state the state to stream over
      */
-    StateStream(final State state) {
+    StateStream(final State state, final Patterns searchType) {
         this.state = state;
+        this.searchType = searchType;
         this.stack = new CandidateStack(state.maxQueryCandidate());
         this.next = state.maxQueryCandidate() == 0 || state.maxTargetCandidate() == 0 ? null : findNext(); // first-mapping
     }
@@ -77,9 +80,18 @@ final class StateStream implements Iterator<int[]> {
      * @return the next state (or null if none)
      */
     private int[] findNext() {
-        while (map());
-        if (state.size() == state.maxQueryCandidate()) {
-            return state.mapping();
+
+        if (Patterns.SEEDS == searchType) {
+            while (map()) {
+                if (state.size() <= state.maxQueryCandidate() && state.size() > 0) {
+                    return state.mapping();
+                }
+            }
+        } else if (Patterns.SUBGRAPH == searchType || Patterns.IDENTICAL == searchType) {
+            while (map());
+            if (state.size() == state.maxQueryCandidate()) {
+                return state.mapping();
+            }
         }
         return null;
     }
