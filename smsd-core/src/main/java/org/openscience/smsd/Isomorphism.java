@@ -99,7 +99,7 @@ import static org.openscience.smsd.interfaces.Algorithm.VFLibMCS;
  *  }
  *
  *
- *  </pre> </font>
+ * </pre> </font>
  *
  * @cdk.require java1.5+
  *
@@ -141,7 +141,7 @@ public final class Isomorphism extends BaseMapping implements Serializable {
         super(query, target);
         this.algorithmType = algorithmType;
         mcsBuilder(query, target);
-        setSubgraph(isSubgraph());
+        super.setSubgraph(isSubgraph());
     }
 
     /**
@@ -172,15 +172,15 @@ public final class Isomorphism extends BaseMapping implements Serializable {
             boolean matchAtomType) {
         super(query, target, bondTypeFlag, matchRings, matchAtomType);
         this.algorithmType = algorithmType;
-        if (isMatchRings()) {
+        if (super.isMatchRings()) {
             try {
-                MoleculeInitializer.initializeMolecule(getQuery());
-                MoleculeInitializer.initializeMolecule(getTarget());
+                MoleculeInitializer.initializeMolecule(super.getQuery());
+                MoleculeInitializer.initializeMolecule(super.getTarget());
             } catch (CDKException ex) {
             }
         }
-        mcsBuilder(getQuery(), getTarget());
-        setSubgraph(isSubgraph());
+        mcsBuilder(super.getQuery(), super.getTarget());
+        super.setSubgraph(isSubgraph());
     }
 
     private synchronized void mcsBuilder(IAtomContainer mol1, IAtomContainer mol2) {

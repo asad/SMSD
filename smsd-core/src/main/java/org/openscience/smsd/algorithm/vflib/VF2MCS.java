@@ -325,27 +325,38 @@ public final class VF2MCS extends BaseMCS implements IResults {
             allLocalAtomAtomMapping.clear();
 
         } else {
-
+            if (DEBUG) {
+                System.out.println("IS A Subgraph ");
+            }
             /*
              * Store solutions from VF MCS only
              */
-            int solSize = 0;
+            int solutionSize = 0;
             int counter = 0;
             this.allAtomMCS = new ArrayList<>();
+            /*
+             * Store solutions from VF MCS only
+             */
             if (!allLocalAtomAtomMapping.isEmpty()) {
                 for (AtomAtomMapping atomMCSMap : allLocalAtomAtomMapping) {
-                    if (atomMCSMap.getCount() > solSize) {
-                        solSize = atomMCSMap.getCount();
+                    if (atomMCSMap.getCount() > solutionSize) {
+                        solutionSize = atomMCSMap.getCount();
                         allAtomMCS.clear();
                         counter = 0;
                     }
                     if (!atomMCSMap.isEmpty()
-                            && atomMCSMap.getCount() == solSize) {
+                            && atomMCSMap.getCount() == solutionSize) {
                         allAtomMCS.add(counter, atomMCSMap);
                         counter++;
                     }
                 }
             }
+
+            /*
+             * Clear the local solution after storing it into mcs solutions
+             */
+            allLocalMCS.clear();
+            allLocalAtomAtomMapping.clear();
         }
     }
 
@@ -641,16 +652,16 @@ public final class VF2MCS extends BaseMCS implements IResults {
             }
 
             //long start = System.currentTimeMillis();
-            Pattern findSeeds = VF.findSubstructure(this.source, true, isMatchRings(), isMatchAtomType());
+            Pattern findSeeds = VF.findSubstructure(this.source, isBondMatchFlag(), isMatchRings(), isMatchAtomType());
             List<Map<IAtom, IAtom>> maps = findSeeds.matchAll(getProductMol());
             //long end = System.currentTimeMillis();
-           //System.out.println("Time elapsed: " + TimeUnit.NANOSECONDS.convert((end - start), TimeUnit.NANOSECONDS) + " ns.");
+            //System.out.println("Time elapsed: " + TimeUnit.NANOSECONDS.convert((end - start), TimeUnit.NANOSECONDS) + " ns.");
 
             if (maps.isEmpty()) {
                 if (DEBUG) {
                     System.out.println("searchVFMappings ");
                 }
-                findSeeds = VF.findSeeds(this.source, true, isMatchRings(), isMatchAtomType());
+                findSeeds = VF.findSeeds(this.source, isBondMatchFlag(), isMatchRings(), isMatchAtomType());
                 maps = findSeeds.matchAll(getProductMol());
             }
             if (maps != null && !maps.isEmpty()) {
@@ -661,13 +672,13 @@ public final class VF2MCS extends BaseMCS implements IResults {
             if (DEBUG) {
                 System.out.println("searchVFMappings findSubstructure");
             }
-            Pattern findSeeds = VF.findSubstructure(this.target, true, isMatchRings(), isMatchAtomType());
+            Pattern findSeeds = VF.findSubstructure(this.target, isBondMatchFlag(), isMatchRings(), isMatchAtomType());
             List<Map<IAtom, IAtom>> maps = findSeeds.matchAll(getReactantMol());
             if (maps.isEmpty()) {
                 if (DEBUG) {
                     System.out.println("searchVFMappings ");
                 }
-                findSeeds = VF.findSeeds(this.target, true, isMatchRings(), isMatchAtomType());
+                findSeeds = VF.findSeeds(this.target, isBondMatchFlag(), isMatchRings(), isMatchAtomType());
                 maps = findSeeds.matchAll(getReactantMol());
             }
             if (maps != null && !maps.isEmpty()) {

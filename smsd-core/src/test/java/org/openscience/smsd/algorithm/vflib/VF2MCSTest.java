@@ -305,17 +305,40 @@ public class VF2MCSTest {
      * @throws InvalidSmilesException
      */
     @Test
-    public void testMappingCoverage() throws InvalidSmilesException {
+    public void testMappingCoverage1() throws InvalidSmilesException {
         //System.out.println("12");
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("CC(=O)C=C");
         IAtomContainer target = sp.parseSmiles("CC1CC(CC=C1)C(C)=O");
 
         Isomorphism smsd = new Isomorphism(query, target, Algorithm.VFLibMCS, false, false, false);
-        smsd.setChemFilters(true, true, false);
+        smsd.setChemFilters(false, true, true);
         assertNotNull(smsd.getFirstAtomMapping());
         assertEquals(5, query.getAtomCount());
         assertEquals(10, target.getAtomCount());
+        assertEquals(2, smsd.getAllAtomMapping().size());
+        assertEquals(5, smsd.getFirstAtomMapping().getCount());
+    }
+    
+    /**
+     * ComplexCase
+     *
+     *
+     * @throws InvalidSmilesException
+     */
+    @Test
+    public void testMappingCoverage2() throws InvalidSmilesException {
+        //System.out.println("12");
+        SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+        IAtomContainer query = sp.parseSmiles("C\\C=C\\C=C");
+        IAtomContainer target = sp.parseSmiles("CC1CC(CC=C1)C(C)=O");
+
+        Isomorphism smsd = new Isomorphism(query, target, Algorithm.VFLibMCS, false, false, false);
+        smsd.setChemFilters(false, true, true);
+        assertNotNull(smsd.getFirstAtomMapping());
+        assertEquals(5, query.getAtomCount());
+        assertEquals(10, target.getAtomCount());
+        assertEquals(2, smsd.getAllAtomMapping().size());
         assertEquals(5, smsd.getFirstAtomMapping().getCount());
     }
 }
