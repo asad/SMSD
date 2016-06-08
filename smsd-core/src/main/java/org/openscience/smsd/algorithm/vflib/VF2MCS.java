@@ -91,11 +91,9 @@ public final class VF2MCS extends BaseMCS implements IResults {
          *
          *
          */
-        int maxVFMappingSize = 0;
-        for (Map<Integer, Integer> map : allLocalMCS) {
-            if (maxVFMappingSize < map.size()) {
-                maxVFMappingSize = map.size();
-            }
+        int maxVFMappingSize = allLocalMCS.iterator().hasNext() ? allLocalMCS.iterator().next().size() : 0;
+        if (DEBUG) {
+            System.out.println("maxVFMappingSize " + maxVFMappingSize);
         }
 
         /*
@@ -163,9 +161,9 @@ public final class VF2MCS extends BaseMCS implements IResults {
                     if (DEBUG) {
                         System.out.println("Bond to be removed " + bondRemovedT.size());
                     }
-                    for (IBond b : bondRemovedT) {
-                        targetClone.removeBond(b);
-                    }
+//                    for (IBond b : bondRemovedT) {
+//                        targetClone.removeBond(b);
+//                    }
                 }
 
             } catch (CloneNotSupportedException ex) {
@@ -179,7 +177,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
             }
             if (targetClone != null) {
                 if (targetClone.getBondCount() > 0) {
-                    MCSSeedGenerator mcsSeedGeneratorUIT = new MCSSeedGenerator(source, targetClone, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.CDKMCS);
+                    MCSSeedGenerator mcsSeedGeneratorUIT = new MCSSeedGenerator(source, targetClone, super.isBondMatchFlag(), super.isMatchRings(), matchAtomType, Algorithm.CDKMCS);
                     cs.submit(mcsSeedGeneratorUIT);
                     jobCounter++;
                 }
@@ -188,7 +186,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
             if (DEBUG) {
                 System.out.println(" CALLING MCSPLUS ");
             }
-            MCSSeedGenerator mcsSeedGeneratorKoch = new MCSSeedGenerator(source, targetClone, isBondMatchFlag(), isMatchRings(), matchAtomType, Algorithm.MCSPlus);
+            MCSSeedGenerator mcsSeedGeneratorKoch = new MCSSeedGenerator(source, targetClone, super.isBondMatchFlag(), super.isMatchRings(), matchAtomType, Algorithm.MCSPlus);
             cs.submit(mcsSeedGeneratorKoch);
             jobCounter++;
 
@@ -203,11 +201,13 @@ public final class VF2MCS extends BaseMCS implements IResults {
                 List<AtomAtomMapping> chosen;
                 try {
                     chosen = cs.take().get();
-                    for (AtomAtomMapping mapping : chosen) {
+                    chosen.stream().map((mapping) -> {
                         Map<Integer, Integer> map = new TreeMap<>();
                         map.putAll(mapping.getMappingsByIndex());
+                        return map;
+                    }).forEach((map) -> {
                         mcsSeeds.add(map);
-                    }
+                    });
                 } catch (InterruptedException | ExecutionException ex) {
                     logger.error(Level.SEVERE, null, ex);
                 }
@@ -248,9 +248,9 @@ public final class VF2MCS extends BaseMCS implements IResults {
                     }
                     if (!map.isEmpty()
                             && map.size() == solutionSize
-                            && !isCliquePresent(map, cleanedMCSSeeds)) {
+                            && !super.isCliquePresent(map, cleanedMCSSeeds)) {
                         if (DEBUG) {
-                            System.out.println("seed MCS, UIT " + map.size());
+                            System.out.println("seed MCS, UIT " + cleanedMCSSeeds.size());
                         }
                         cleanedMCSSeeds.add(counter, map);
                         counter++;
@@ -260,7 +260,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
             for (Map<Integer, Integer> map : mcsVFSeeds) {
                 if (!map.isEmpty()
                         && map.size() >= solutionSize
-                        && !isCliquePresent(map, cleanedMCSSeeds)) {
+                        && !super.isCliquePresent(map, cleanedMCSSeeds)) {
                     if (DEBUG) {
                         System.out.println("seed VF " + map.size());
                     }
@@ -268,6 +268,13 @@ public final class VF2MCS extends BaseMCS implements IResults {
                     counter++;
                 }
             }
+            /*
+             * Add seeds from VF MCS
+             */
+            mcsVFSeeds.stream().filter((map) -> (!map.isEmpty()
+                    && !super.isCliquePresent(map, cleanedMCSSeeds))).forEach((_item) -> {
+                cleanedMCSSeeds.addAll(mcsVFSeeds);
+            });
             /*
              * Sort biggest clique to smallest
              */
@@ -277,7 +284,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
              * Extend the seeds using McGregor
              */
             try {
-                extendCliquesWithMcGregor(cleanedMCSSeeds);
+                super.extendCliquesWithMcGregor(cleanedMCSSeeds);
             } catch (CDKException | IOException ex) {
                 logger.error(Level.SEVERE, null, ex);
             }
@@ -437,11 +444,13 @@ public final class VF2MCS extends BaseMCS implements IResults {
                 List<AtomAtomMapping> chosen;
                 try {
                     chosen = cs.take().get();
-                    for (AtomAtomMapping mapping : chosen) {
+                    chosen.stream().map((mapping) -> {
                         Map<Integer, Integer> map = new TreeMap<>();
                         map.putAll(mapping.getMappingsByIndex());
+                        return map;
+                    }).forEach((map) -> {
                         mcsSeeds.add(map);
-                    }
+                    });
                 } catch (InterruptedException | ExecutionException ex) {
                     logger.error(Level.SEVERE, null, ex);
                 }
@@ -470,7 +479,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
                     }
                     if (!map.isEmpty()
                             && map.size() == solutionSize
-                            && !hasClique(map, cleanedMCSSeeds)) {
+                            && !super.hasClique(map, cleanedMCSSeeds)) {
                         cleanedMCSSeeds.add(counter, map);
                         counter++;
                     }
@@ -479,7 +488,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
             for (Map<Integer, Integer> map : mcsVFSeeds) {
                 if (!map.isEmpty()
                         && map.size() >= solutionSize
-                        && !hasClique(map, cleanedMCSSeeds)) {
+                        && !super.hasClique(map, cleanedMCSSeeds)) {
                     cleanedMCSSeeds.add(counter, map);
                     counter++;
                 }
@@ -493,7 +502,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
              * Extend the seeds using McGregor
              */
             try {
-                extendCliquesWithMcGregor(cleanedMCSSeeds);
+                super.extendCliquesWithMcGregor(cleanedMCSSeeds);
             } catch (CDKException | IOException ex) {
                 logger.error(Level.SEVERE, null, ex);
             }

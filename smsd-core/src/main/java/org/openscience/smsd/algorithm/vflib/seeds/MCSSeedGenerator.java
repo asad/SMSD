@@ -21,7 +21,6 @@ package org.openscience.smsd.algorithm.vflib.seeds;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
@@ -100,18 +99,19 @@ public class MCSSeedGenerator implements Callable<List<AtomAtomMapping>> {
     public List<AtomAtomMapping> call() throws Exception {
 //        System.out.println("ac1: " + this.source.getAtomCount());
 //        System.out.println("ac2: " + this.target.getAtomCount());
-        if (algorithm.equals(Algorithm.CDKMCS)) {
-//            System.out.println("Calling CDKMCS " + bondMatch + " " + ringMatch);
-            List<AtomAtomMapping> addUIT = addUIT();
+        switch (algorithm) {
+            case CDKMCS:
+                //            System.out.println("Calling CDKMCS " + bondMatch + " " + ringMatch);
+                List<AtomAtomMapping> addUIT = addUIT();
 //            System.out.println("addUIT " + addUIT.iterator().next().getCount());
-            return addUIT;
-        } else if (algorithm.equals(Algorithm.MCSPlus)) {
-//            System.out.println("Calling MCSPLUS " + bondMatch + " " + ringMatch + " " + matchAtomType);
-            List<AtomAtomMapping> addKochCliques = addKochCliques();
+                return addUIT;
+            case MCSPlus:
+                //            System.out.println("Calling MCSPLUS " + bondMatch + " " + ringMatch + " " + matchAtomType);
+                List<AtomAtomMapping> addKochCliques = addKochCliques();
 //            System.out.println("MCSPLUS " + addKochCliques.iterator().next().getCount());
-            return addKochCliques;
-        } else {
-            return Collections.unmodifiableList(allCliqueAtomMCS);
+                return addKochCliques;
+            default:
+                return Collections.unmodifiableList(allCliqueAtomMCS);
         }
     }
 
@@ -140,18 +140,14 @@ public class MCSSeedGenerator implements Callable<List<AtomAtomMapping>> {
         BKKCKCF init = new BKKCKCF(comp_graph_nodes, cEdges, dEdges);
         Stack<List<Integer>> maxCliqueSet = new Stack<>();
         maxCliqueSet.addAll(init.getMaxCliqueSet());
-        Collections.sort(maxCliqueSet, new Comparator<List<Integer>>() {
-            @Override
-            public int compare(List<Integer> a1, List<Integer> a2) {
-                return a2.size() - a1.size(); // assumes you want biggest to smallest
-            }
-        });
+        Collections.sort(maxCliqueSet, (List<Integer> a1, List<Integer> a2) -> a2.size() - a1.size() // assumes you want biggest to smallest
+        );
         while (!maxCliqueSet.empty()) {
             List<Integer> peek = maxCliqueSet.peek();
             AtomAtomMapping atomatomMapping = new AtomAtomMapping(source, target);
 
             for (Integer value : peek) {
-                int[] index = getIndex(value.intValue(), comp_graph_nodes);
+                int[] index = getIndex(value, comp_graph_nodes);
                 Integer qIndex = index[0];
                 Integer tIndex = index[1];
                 if (qIndex != -1 && tIndex != -1) {
@@ -210,15 +206,14 @@ public class MCSSeedGenerator implements Callable<List<AtomAtomMapping>> {
          * Sort biggest clique to smallest
          */
         Collections.sort(sol, new Map1ValueComparator(SortOrder.DESCENDING));
-        for (Map<Integer, Integer> solution : sol) {
+        sol.stream().map((Map<Integer, Integer> solution) -> {
             AtomAtomMapping atomatomMapping = new AtomAtomMapping(source, target);
-
-            for (Integer qAtomIndex : solution.keySet()) {
+            solution.keySet().stream().forEach((qAtomIndex) -> {
                 IAtom qAtom;
                 IAtom tAtom;
                 int qIndex;
                 int tIndex;
-
+                
                 if (RONP) {
                     qAtom = source.getAtom(qAtomIndex);
                     tAtom = target.getAtom(solution.get(qAtomIndex));
@@ -226,7 +221,7 @@ public class MCSSeedGenerator implements Callable<List<AtomAtomMapping>> {
                     tAtom = target.getAtom(qAtomIndex);
                     qAtom = source.getAtom(solution.get(qAtomIndex));
                 }
-
+                
                 qIndex = source.getAtomNumber(qAtom);
                 tIndex = target.getAtomNumber(tAtom);
                 if (qIndex != -1 && tIndex != -1) {
@@ -238,12 +233,11 @@ public class MCSSeedGenerator implements Callable<List<AtomAtomMapping>> {
                         Logger.error(Level.SEVERE, null, ex);
                     }
                 }
-            }
-
-            if (!atomatomMapping.isEmpty()) {
-                allCliqueAtomMCS.add(atomatomMapping);
-            }
-        }
+            });
+            return atomatomMapping;
+        }).filter((atomatomMapping) -> (!atomatomMapping.isEmpty())).forEach((atomatomMapping) -> {
+            allCliqueAtomMCS.add(atomatomMapping);
+        });
         return Collections.unmodifiableList(allCliqueAtomMCS);
     }
 
