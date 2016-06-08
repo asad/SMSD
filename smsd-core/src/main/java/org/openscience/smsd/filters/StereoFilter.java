@@ -367,9 +367,9 @@ public final class StereoFilter extends Sotter implements IChemicalFilter<Double
         if (molecule instanceof IAtomContainer) {
             subgraphContainer = molecule.getBuilder().newInstance(IAtomContainer.class, molecule);
         } else {
-            return new ArrayList<IAtomContainer>(2);
+            return new ArrayList<>(2);
         }
-        List<IAtom> list = new ArrayList<IAtom>(atomsMCS.size());
+        List<IAtom> list = new ArrayList<>(atomsMCS.size());
         for (IAtom atom : atomsMCS) {
             int post = molecule.getAtomNumber(atom);
             list.add(subgraphContainer.getAtom(post));
@@ -385,7 +385,7 @@ public final class StereoFilter extends Sotter implements IChemicalFilter<Double
         for (IAtom atoms : rlist.atoms()) {
             subgraphContainer.removeAtomAndConnectedElectronContainers(atoms);
         }
-        List<IAtomContainer> l = new ArrayList<IAtomContainer>(2);
+        List<IAtomContainer> l = new ArrayList<>(2);
         l.add(rlist);
         l.add(subgraphContainer);
         return l;
