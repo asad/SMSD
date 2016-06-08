@@ -92,6 +92,9 @@ public final class VF2MCS extends BaseMCS implements IResults {
          *
          */
         int maxVFMappingSize = allLocalMCS.iterator().hasNext() ? allLocalMCS.iterator().next().size() : 0;
+        if (DEBUG) {
+            System.out.println("maxVFMappingSize " + maxVFMappingSize);
+        }
 
         /*
          * Atleast two atoms are unmapped else you will get bug due to unmapped single atoms
@@ -158,9 +161,9 @@ public final class VF2MCS extends BaseMCS implements IResults {
                     if (DEBUG) {
                         System.out.println("Bond to be removed " + bondRemovedT.size());
                     }
-                    for (IBond b : bondRemovedT) {
-                        targetClone.removeBond(b);
-                    }
+//                    for (IBond b : bondRemovedT) {
+//                        targetClone.removeBond(b);
+//                    }
                 }
 
             } catch (CloneNotSupportedException ex) {
@@ -247,7 +250,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
                             && map.size() == solutionSize
                             && !super.isCliquePresent(map, cleanedMCSSeeds)) {
                         if (DEBUG) {
-                            System.out.println("seed MCS, UIT " + map.size());
+                            System.out.println("seed MCS, UIT " + cleanedMCSSeeds.size());
                         }
                         cleanedMCSSeeds.add(counter, map);
                         counter++;
@@ -265,6 +268,13 @@ public final class VF2MCS extends BaseMCS implements IResults {
                     counter++;
                 }
             }
+            /*
+             * Add seeds from VF MCS
+             */
+            mcsVFSeeds.stream().filter((map) -> (!map.isEmpty()
+                    && !super.isCliquePresent(map, cleanedMCSSeeds))).forEach((_item) -> {
+                cleanedMCSSeeds.addAll(mcsVFSeeds);
+            });
             /*
              * Sort biggest clique to smallest
              */
