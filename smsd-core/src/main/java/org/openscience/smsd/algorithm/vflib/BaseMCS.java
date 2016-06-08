@@ -67,6 +67,7 @@ public class BaseMCS {
     final List<AtomAtomMapping> allLocalAtomAtomMapping;
     private final static ILoggingTool Logger
             = LoggingToolFactory.createLoggingTool(BaseMCS.class);
+    private final boolean DEBUG = false;
 
     BaseMCS(IAtomContainer source, IAtomContainer target, boolean matchBonds, boolean shouldMatchRings, boolean matchAtomType) {
         this.allLocalAtomAtomMapping = new ArrayList<>();
@@ -169,15 +170,14 @@ public class BaseMCS {
          * Sort biggest clique to smallest
          */
         Collections.sort(vfLibSolutions, new Map2ValueComparator(SortOrder.DESCENDING));
-        int maxSolutionSize = vfLibSolutions.iterator().hasNext() ? vfLibSolutions.iterator().next().size() : 0;
+//        int maxSolutionSize = vfLibSolutions.iterator().hasNext() ? vfLibSolutions.iterator().next().size() : 0;
         for (Map<IAtom, IAtom> solution : vfLibSolutions) {
             AtomAtomMapping atomatomMapping = new AtomAtomMapping(source, target);
             Map<Integer, Integer> indexindexMapping = new TreeMap<>();
 
-            if (maxSolutionSize != solution.size()) {
-                break;
-            }
-
+//            if (maxSolutionSize != solution.size()) {
+//                break;
+//            }
             solution.entrySet().stream().forEach((mapping) -> {
                 IAtom qAtom;
                 IAtom tAtom;
@@ -213,6 +213,10 @@ public class BaseMCS {
                 getLocalAtomMCSSolution().add(atomatomMapping);
                 getLocalMCSSolution().add(indexindexMapping);
             }
+        }
+
+        if (DEBUG) {
+            System.out.println("VF seed mappings stored count: " + getLocalMCSSolution().size());
         }
     }
 
