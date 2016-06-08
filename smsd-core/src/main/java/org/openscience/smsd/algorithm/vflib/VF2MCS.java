@@ -652,7 +652,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
             }
 
             //long start = System.currentTimeMillis();
-            Pattern findSeeds = VF.findSubstructure(this.source, isBondMatchFlag(), isMatchRings(), isMatchAtomType());
+            Pattern findSeeds = VF.findSubstructure(this.source, true, isMatchRings(), isMatchAtomType());
             List<Map<IAtom, IAtom>> maps = findSeeds.matchAll(getProductMol());
             //long end = System.currentTimeMillis();
             //System.out.println("Time elapsed: " + TimeUnit.NANOSECONDS.convert((end - start), TimeUnit.NANOSECONDS) + " ns.");
@@ -661,7 +661,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
                 if (DEBUG) {
                     System.out.println("searchVFMappings ");
                 }
-                findSeeds = VF.findSeeds(this.source, isBondMatchFlag(), isMatchRings(), isMatchAtomType());
+                findSeeds = VF.findSeeds(this.source, true, isMatchRings(), isMatchAtomType());
                 maps = findSeeds.matchAll(getProductMol());
             }
             if (maps != null && !maps.isEmpty()) {
@@ -672,13 +672,13 @@ public final class VF2MCS extends BaseMCS implements IResults {
             if (DEBUG) {
                 System.out.println("searchVFMappings findSubstructure");
             }
-            Pattern findSeeds = VF.findSubstructure(this.target, isBondMatchFlag(), isMatchRings(), isMatchAtomType());
+            Pattern findSeeds = VF.findSubstructure(this.target, true, isMatchRings(), isMatchAtomType());
             List<Map<IAtom, IAtom>> maps = findSeeds.matchAll(getReactantMol());
             if (maps.isEmpty()) {
                 if (DEBUG) {
                     System.out.println("searchVFMappings ");
                 }
-                findSeeds = VF.findSeeds(this.target, isBondMatchFlag(), isMatchRings(), isMatchAtomType());
+                findSeeds = VF.findSeeds(this.target, true, isMatchRings(), isMatchAtomType());
                 maps = findSeeds.matchAll(getReactantMol());
             }
             if (maps != null && !maps.isEmpty()) {

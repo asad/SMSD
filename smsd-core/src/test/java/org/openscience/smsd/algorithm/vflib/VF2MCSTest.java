@@ -23,6 +23,8 @@
  */
 package org.openscience.smsd.algorithm.vflib;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -34,6 +36,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import org.openscience.cdk.exception.CDKException;
+import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.Isomorphism;
 import org.openscience.smsd.helper.MoleculeInitializer;
 import org.openscience.smsd.interfaces.Algorithm;
@@ -312,14 +315,18 @@ public class VF2MCSTest {
         IAtomContainer target = sp.parseSmiles("CC1CC(CC=C1)C(C)=O");
 
         Isomorphism smsd = new Isomorphism(query, target, Algorithm.VFLibMCS, false, false, false);
-        smsd.setChemFilters(false, true, true);
+        smsd.setChemFilters(true, true, true);
+        for (AtomAtomMapping map : smsd.getAllAtomMapping()) {
+            System.out.println("map " + map.toString());
+        }
+
         assertNotNull(smsd.getFirstAtomMapping());
         assertEquals(5, query.getAtomCount());
         assertEquals(10, target.getAtomCount());
         assertEquals(2, smsd.getAllAtomMapping().size());
         assertEquals(5, smsd.getFirstAtomMapping().getCount());
     }
-    
+
     /**
      * ComplexCase
      *
@@ -334,11 +341,14 @@ public class VF2MCSTest {
         IAtomContainer target = sp.parseSmiles("CC1CC(CC=C1)C(C)=O");
 
         Isomorphism smsd = new Isomorphism(query, target, Algorithm.VFLibMCS, false, false, false);
-        smsd.setChemFilters(false, true, true);
+        smsd.setChemFilters(true, true, true);
+        for (AtomAtomMapping map : smsd.getAllAtomMapping()) {
+            System.out.println("map " + map.toString());
+        }
         assertNotNull(smsd.getFirstAtomMapping());
         assertEquals(5, query.getAtomCount());
         assertEquals(10, target.getAtomCount());
-        assertEquals(2, smsd.getAllAtomMapping().size());
+        assertEquals(1, smsd.getAllAtomMapping().size());
         assertEquals(5, smsd.getFirstAtomMapping().getCount());
     }
 }
