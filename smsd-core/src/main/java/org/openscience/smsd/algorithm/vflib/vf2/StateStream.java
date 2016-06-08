@@ -1,6 +1,8 @@
 package org.openscience.smsd.algorithm.vflib.vf2;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import org.openscience.smsd.algorithm.vflib.vf2.Pattern.Patterns;
 
 /**
@@ -82,11 +84,31 @@ final class StateStream implements Iterator<int[]> {
     private int[] findNext() {
 
         if (Patterns.SEEDS == searchType) {
+            List<int[]> types = new ArrayList<>();
             while (map()) {
                 if (state.size() <= state.maxQueryCandidate() && state.size() > 0) {
-                    return state.mapping();
+                    if (types.isEmpty()) {
+                        types.add(state.mapping());
+                    } else if (types.iterator().next().length < state.mapping().length) {
+                        types.clear();
+                        types.add(state.mapping());
+                    } else if (types.iterator().next().length == state.mapping().length) {
+                        if (!types.contains(state.mapping())) {
+                            types.add(state.mapping());
+                        }
+                    }
+
+                    if (state.mapping() != null) {
+                        System.out.println("state.mapping() " + state.mapping().length);
+                        System.out.println("types " + types.size());
+                    }
                 }
             }
+            int[] solution = types.iterator().hasNext() ? types.iterator().next() : null;
+            if (solution != null) {
+                System.out.println("Size " + solution.length);
+            }
+            return solution;
         } else if (Patterns.SUBGRAPH == searchType || Patterns.IDENTICAL == searchType) {
             while (map());
             if (state.size() == state.maxQueryCandidate()) {
