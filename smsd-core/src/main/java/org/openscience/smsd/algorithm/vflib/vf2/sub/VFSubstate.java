@@ -1,4 +1,4 @@
-package org.openscience.smsd.algorithm.vflib.vf2;
+package org.openscience.smsd.algorithm.vflib.vf2.sub;
 
 /**
  * Vento-Foggia (VF) state for matching subgraph-monomorphisms. The original
@@ -21,6 +21,8 @@ package org.openscience.smsd.algorithm.vflib.vf2;
  */
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
+import org.openscience.smsd.algorithm.vflib.vf2.AtomMatcher;
+import org.openscience.smsd.algorithm.vflib.vf2.BondMatcher;
 
 import static org.openscience.cdk.graph.GraphUtil.EdgeToBondMap;
 

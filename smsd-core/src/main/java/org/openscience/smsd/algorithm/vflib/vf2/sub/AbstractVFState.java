@@ -1,5 +1,6 @@
-package org.openscience.smsd.algorithm.vflib.vf2;
+package org.openscience.smsd.algorithm.vflib.vf2.sub;
 
+import org.openscience.smsd.algorithm.vflib.vf2.sub.State;
 import java.util.Arrays;
 
 /**

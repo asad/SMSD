@@ -1,4 +1,4 @@
-package org.openscience.smsd.algorithm.vflib.vf2;
+package org.openscience.smsd.algorithm.vflib.vf2.sub;
 
 /**
  * Defines a state for matching (subgraph-)isomorphism from a query graph

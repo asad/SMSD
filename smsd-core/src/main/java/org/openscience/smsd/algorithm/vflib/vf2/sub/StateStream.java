@@ -1,9 +1,7 @@
-package org.openscience.smsd.algorithm.vflib.vf2;
+package org.openscience.smsd.algorithm.vflib.vf2.sub;
 
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
-import org.openscience.smsd.algorithm.vflib.vf2.Pattern.Patterns;
+import org.openscience.smsd.algorithm.vflib.vf2.sub.Pattern.Patterns;
 
 /**
  * Given a (subgraph-)isomorphism state this class can lazily iterate over the
@@ -83,44 +81,13 @@ final class StateStream implements Iterator<int[]> {
      */
     private int[] findNext() {
 
-        if (Patterns.SEEDS == searchType) {
-            List<int[]> types = new ArrayList<>();
-            /*
-             * Return maximum match
-             */
-            while (map()) {
-                if (state.size() <= state.maxQueryCandidate() && state.size() > 0) {
-                    if (types.isEmpty()) {
-                        types.add(state.mapping());
-                    } else if (matchLength(types.iterator().next()) < matchLength(state.mapping())) {
-                        types.clear();
-                        types.add(state.mapping());
-                    } else if (matchLength(types.iterator().next()) == matchLength(state.mapping())) {
-                        if (!types.contains(state.mapping())) {
-                            types.add(state.mapping());
-                        }
-                    }
-                }
-            }
-            int[] solution = types.iterator().hasNext() ? types.iterator().next() : null;
-            return solution;
-        } else if (Patterns.SUBGRAPH == searchType || Patterns.IDENTICAL == searchType) {
+        if (Patterns.SUBGRAPH == searchType || Patterns.IDENTICAL == searchType) {
             while (map());
             if (state.size() == state.maxQueryCandidate()) {
                 return state.mapping();
             }
         }
         return null;
-    }
-
-    private int matchLength(int[] match) {
-        int counter = 0;
-        for (int i : match) {
-            if (i >= 0) {
-                counter++;
-            }
-        }
-        return counter;
     }
 
     /**

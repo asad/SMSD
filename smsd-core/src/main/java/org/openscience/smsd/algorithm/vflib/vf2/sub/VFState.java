@@ -1,8 +1,10 @@
-package org.openscience.smsd.algorithm.vflib.vf2;
+package org.openscience.smsd.algorithm.vflib.vf2.sub;
 
 import org.openscience.cdk.graph.GraphUtil.EdgeToBondMap;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
+import org.openscience.smsd.algorithm.vflib.vf2.AtomMatcher;
+import org.openscience.smsd.algorithm.vflib.vf2.BondMatcher;
 
 /**
  * Vento-Foggia (VF) state for matching isomorphisms (identity) {
@@ -83,7 +85,7 @@ final class VFState extends AbstractVFState {
      * @return the mapping is isMatchFeasible
      */
     @Override
-    boolean isMatchFeasible(int n, int m) {
+    public boolean isMatchFeasible(int n, int m) {
 
         // verify atom semantic feasibility
         if (!atomMatcher.matches(container1.getAtom(n), container2.getAtom(m))) {

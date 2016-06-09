@@ -1,4 +1,4 @@
-package org.openscience.smsd.algorithm.vflib.vf2;
+package org.openscience.smsd.algorithm.vflib.vf2.sub;
 
 import java.util.List;
 import java.util.Map;
@@ -20,7 +20,7 @@ public abstract class Pattern {
      * Patterns Algorithm Patterns.
      */
     public static enum Patterns {
-        IDENTICAL, SUBGRAPH, SEEDS
+        IDENTICAL, SUBGRAPH
     };
 
     /**

@@ -33,8 +33,8 @@ import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.algorithm.mcgregor.McGregor;
-import org.openscience.smsd.algorithm.vflib.vf2.Pattern;
-import org.openscience.smsd.algorithm.vflib.vf2.VF;
+import org.openscience.smsd.algorithm.vflib.vf2.sub.Pattern;
+import org.openscience.smsd.algorithm.vflib.vf2.sub.VF;
 import org.openscience.smsd.helper.MoleculeInitializer;
 import org.openscience.smsd.interfaces.IResults;
 

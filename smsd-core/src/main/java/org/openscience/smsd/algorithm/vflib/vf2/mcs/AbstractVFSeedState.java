@@ -1,15 +1,15 @@
-package org.openscience.smsd.algorithm.vflib.vf2;
+package org.openscience.smsd.algorithm.vflib.vf2.mcs;
 
 import java.util.Arrays;
 
 /**
  * A state for the Vento-Foggia (VF) algorithm. The state allows adding and
  * removing of mappings as well as generating the new candidate mappings {@link
- * #hasNextCandidate(int)} and {@link #nextCandidate(int, int)}. The feasibility
- * check is left for subclasses to implement.
+ * #hasNextCandidate(int)} and {@link #nextCandidate(int, int)}. The feasibility check is left for
+ * subclasses to implement.
  *
- * @author Syed Asad Rahman
  * @author John May
+ * @author Syed Asad Rahman
  * @cdk.module isomorphism
  */
 abstract class AbstractVFSeedState extends State {
@@ -170,8 +170,8 @@ abstract class AbstractVFSeedState extends State {
     }
 
     /**
-     * Is the candidate pair {n, m} isMatchFeasible. Verifies if the adding
-     * candidate pair {n, m} to the state would lead to an invalid mapping.
+     * Is the candidate pair {n, m} isMatchFeasible. Verifies if the adding candidate
+     * pair {n, m} to the state would lead to an invalid mapping.
      *
      * @param n query vertex
      * @param m target vertex

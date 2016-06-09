@@ -1,4 +1,4 @@
-package org.openscience.smsd.algorithm.vflib.vf2;
+package org.openscience.smsd.algorithm.vflib.vf2.sub;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,6 +10,10 @@ import org.openscience.cdk.graph.GraphUtil.EdgeToBondMap;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
+import org.openscience.smsd.algorithm.vflib.vf2.AtomMatcher;
+import org.openscience.smsd.algorithm.vflib.vf2.BondMatcher;
+import org.openscience.smsd.algorithm.vflib.vf2.DefaultAtomMatcher;
+import org.openscience.smsd.algorithm.vflib.vf2.DefaultBondMatcher;
 
 /**
  * A structure pattern which utilises the Vento-Foggia (VF) algorithm {
@@ -148,18 +152,6 @@ public final class VF extends Pattern {
     }
 
     /**
-     * Create a pattern which can be used to find molecules which are the same
-     * as the {@code query} structure.
-     *
-     * @param query the substructure to find
-     * @return a pattern for finding the {@code query}
-     */
-    public static Pattern findSeeds(IQueryAtomContainer query) {
-        boolean isQuery = query instanceof IQueryAtomContainer;
-        return findSeeds(query, false, false, false);
-    }
-
-    /**
      * Create a pattern which can be used to find molecules which contain the
      * {@code query} structure.
      *
@@ -185,20 +177,6 @@ public final class VF extends Pattern {
      */
     public static Pattern findIdentical(IAtomContainer query, boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) {
         return new VF(query, shouldMatchBonds, shouldMatchRings, matchAtomType, Patterns.IDENTICAL);
-    }
-
-    /**
-     * Create a pattern which can be used to find molecules which are the same
-     * as the {@code query} structure.
-     *
-     * @param query the substructure to find
-     * @param shouldMatchBonds
-     * @param shouldMatchRings
-     * @param matchAtomType
-     * @return a pattern for finding the {@code query}
-     */
-    public static Pattern findSeeds(IAtomContainer query, boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) {
-        return new VF(query, shouldMatchBonds, shouldMatchRings, matchAtomType, Patterns.SEEDS);
     }
 
     private static final class VFIterable implements Iterable<int[]> {
@@ -267,15 +245,11 @@ public final class VF extends Pattern {
         public Iterator<int[]> iterator() {
             if (null != searchType) {
                 switch (searchType) {
-                    case SUBGRAPH:
-                        return new StateStream(new VFSubState(container1, container2, g1, g2, bonds1, bonds2, atomMatcher,
-                                bondMatcher), searchType);
                     case IDENTICAL:
                         return new StateStream(
                                 new VFState(container1, container2, g1, g2, bonds1, bonds2, atomMatcher, bondMatcher), searchType);
                     default:
-                        return new StateStream(
-                                new VFSeedState(container1, container2, g1, g2, bonds1, bonds2, atomMatcher, bondMatcher), searchType);
+                        return new StateStream(new VFSubState(container1, container2, g1, g2, bonds1, bonds2, atomMatcher, bondMatcher), searchType);
                 }
             }
             return null;

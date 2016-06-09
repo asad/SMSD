@@ -44,8 +44,9 @@ import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.algorithm.vflib.seeds.MCSSeedGenerator;
 import org.openscience.smsd.algorithm.vflib.vf2.DefaultAtomMatcher;
 import org.openscience.smsd.algorithm.vflib.vf2.DefaultBondMatcher;
-import org.openscience.smsd.algorithm.vflib.vf2.Pattern;
-import org.openscience.smsd.algorithm.vflib.vf2.VF;
+import org.openscience.smsd.algorithm.vflib.vf2.sub.Pattern;
+import org.openscience.smsd.algorithm.vflib.vf2.sub.VF;
+import org.openscience.smsd.algorithm.vflib.vf2.mcs.VFSeed;
 import org.openscience.smsd.interfaces.Algorithm;
 import org.openscience.smsd.interfaces.IResults;
 
@@ -661,7 +662,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
                 if (DEBUG) {
                     System.out.println("searchVFMappings ");
                 }
-                findSeeds = VF.findSeeds(this.source, true, isMatchRings(), isMatchAtomType());
+                findSeeds = VFSeed.findSeeds(this.source, true, isMatchRings(), isMatchAtomType());
                 maps = findSeeds.matchAll(getProductMol());
             }
             if (maps != null && !maps.isEmpty()) {
@@ -683,7 +684,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
                 if (DEBUG) {
                     System.out.println("searchVFMappings ");
                 }
-                findSeeds = VF.findSeeds(this.source, true, isMatchRings(), isMatchAtomType());
+                findSeeds = VFSeed.findSeeds(this.source, true, isMatchRings(), isMatchAtomType());
                 maps = findSeeds.matchAll(getProductMol());
             }
             if (maps != null && !maps.isEmpty()) {
@@ -700,7 +701,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
                 if (DEBUG) {
                     System.out.println("searchVFMappings ");
                 }
-                findSeeds = VF.findSeeds(this.target, true, isMatchRings(), isMatchAtomType());
+                findSeeds = VFSeed.findSeeds(this.target, true, isMatchRings(), isMatchAtomType());
                 maps = findSeeds.matchAll(getReactantMol());
             }
             if (maps != null && !maps.isEmpty()) {
@@ -709,7 +710,7 @@ public final class VF2MCS extends BaseMCS implements IResults {
             setVFMappings(false);
         }
         if (DEBUG) {
-            System.out.println("Sol count " + ((float) vfLibSolutions.size()) / 2.0);
+            System.out.println("\nSol count " + ((float) vfLibSolutions.size()));
             System.out.println("Sol size " + ((vfLibSolutions.iterator().hasNext() ? vfLibSolutions.iterator().next().size() : 0)));
             System.out.println("searchVFMappings done ");
         }
