@@ -1,9 +1,10 @@
 package org.openscience.smsd.algorithm.vflib.vf2.mcs;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * Given a (subgraph-)isomorphism state this class can lazily iterate over the
@@ -15,7 +16,7 @@ import java.util.Set;
  * @author Syed Asad Rahman
  * @cdk.module smsd
  */
-final class StateStream implements Iterator<Set<int[]>> {
+final class StateStream implements Iterator<Collection<int[]>> {
 
     /**
      * A mapping state.
@@ -35,7 +36,7 @@ final class StateStream implements Iterator<Set<int[]>> {
     /**
      * The next mapping.
      */
-    private Set<int[]> next;
+    private Collection<int[]> next;
 
     /**
      * Create a stream for the provided state.
@@ -60,8 +61,8 @@ final class StateStream implements Iterator<Set<int[]>> {
      * @inheritDoc
      */
     @Override
-    public Set<int[]> next() {
-        Set<int[]> ret = next;
+    public Collection<int[]> next() {
+        Collection<int[]> ret = next;
         next = findNext();
         return ret;
     }
@@ -79,9 +80,9 @@ final class StateStream implements Iterator<Set<int[]>> {
      *
      * @return the next state (or null if none)
      */
-    private Set<int[]> findNext() {
+    private Collection<int[]> findNext() {
 
-        Set<int[]> types = new LinkedHashSet<>();
+        List<int[]> types = new LinkedList<>();
         /*
              * Return maximum match
          */
@@ -107,7 +108,7 @@ final class StateStream implements Iterator<Set<int[]>> {
 
     }
 
-    private boolean solutionPresent(Set<int[]> storedSolutions, int[] potentialSolution) {
+    private boolean solutionPresent(Collection<int[]> storedSolutions, int[] potentialSolution) {
         for (int[] solution : storedSolutions) {
             boolean equalsFlag = Arrays.equals(solution, potentialSolution);
             if (equalsFlag) {

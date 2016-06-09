@@ -1,6 +1,7 @@
 package org.openscience.smsd.algorithm.vflib.vf2.mcs;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -108,9 +109,9 @@ public final class VFSeed extends Pattern {
     public List<Map<IAtom, IAtom>> matchAll(final IAtomContainer target) {
         EdgeToBondMap bonds2 = EdgeToBondMap.withSpaceFor(target);
         int[][] g2 = GraphUtil.toAdjList(target, bonds2);
-        Iterable<Set<int[]>> iterable = new VFIterable(query, target, g1, g2, bonds1, bonds2, atomMatcher, bondMatcher);
+        Iterable<Collection<int[]>> iterable = new VFIterable(query, target, g1, g2, bonds1, bonds2, atomMatcher, bondMatcher);
         List<Map<IAtom, IAtom>> mappings = new ArrayList<>();
-        for (Set<int[]> maps : iterable) {
+        for (Collection<int[]> maps : iterable) {
             for (int[] map : maps) {
                 Map<IAtom, IAtom> atomAtomMapping = new HashMap<>();
                 for (int i = 0; i < map.length; i++) {
@@ -151,7 +152,7 @@ public final class VFSeed extends Pattern {
         return new VFSeed(query, shouldMatchBonds, shouldMatchRings, matchAtomType);
     }
 
-    private static final class VFIterable implements Iterable<Set<int[]>> {
+    private static final class VFIterable implements Iterable<Collection<int[]>> {
 
         /**
          * Query and target containers.
@@ -207,7 +208,7 @@ public final class VFSeed extends Pattern {
          * @inheritDoc
          */
         @Override
-        public Iterator<Set<int[]>> iterator() {
+        public Iterator<Collection<int[]>> iterator() {
 
             return new StateStream(
                     new VFSeedState(container1, container2, g1, g2, bonds1, bonds2, atomMatcher, bondMatcher));
