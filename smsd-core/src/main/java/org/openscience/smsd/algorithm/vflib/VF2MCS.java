@@ -41,7 +41,6 @@ import org.openscience.cdk.isomorphism.matchers.IQueryBond;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.smsd.AtomAtomMapping;
-import org.openscience.smsd.algorithm.vflib.seeds.MCSSeedGenerator;
 import org.openscience.smsd.algorithm.vflib.vf2.DefaultAtomMatcher;
 import org.openscience.smsd.algorithm.vflib.vf2.DefaultBondMatcher;
 import org.openscience.smsd.algorithm.vflib.vf2.sub.Pattern;

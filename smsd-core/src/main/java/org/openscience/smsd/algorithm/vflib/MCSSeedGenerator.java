@@ -16,7 +16,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301  USA
  */
-package org.openscience.smsd.algorithm.vflib.seeds;
+package org.openscience.smsd.algorithm.vflib;
 
 import java.io.IOException;
 import java.util.ArrayList;
