@@ -23,8 +23,6 @@
  */
 package org.openscience.smsd.algorithm.vflib;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.interfaces.IAtomContainer;
