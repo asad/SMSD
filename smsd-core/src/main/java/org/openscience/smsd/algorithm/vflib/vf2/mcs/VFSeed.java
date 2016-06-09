@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.openscience.cdk.graph.GraphUtil;
 import org.openscience.cdk.graph.GraphUtil.EdgeToBondMap;
 import org.openscience.cdk.interfaces.IAtom;
