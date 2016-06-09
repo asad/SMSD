@@ -85,29 +85,24 @@ final class StateStream implements Iterator<int[]> {
 
         if (Patterns.SEEDS == searchType) {
             List<int[]> types = new ArrayList<>();
+            /*
+             * Return maximum match
+             */
             while (map()) {
                 if (state.size() <= state.maxQueryCandidate() && state.size() > 0) {
                     if (types.isEmpty()) {
                         types.add(state.mapping());
-                    } else if (types.iterator().next().length < state.mapping().length) {
+                    } else if (matchLength(types.iterator().next()) < matchLength(state.mapping())) {
                         types.clear();
                         types.add(state.mapping());
-                    } else if (types.iterator().next().length == state.mapping().length) {
+                    } else if (matchLength(types.iterator().next()) == matchLength(state.mapping())) {
                         if (!types.contains(state.mapping())) {
                             types.add(state.mapping());
                         }
                     }
-
-                    if (state.mapping() != null) {
-                        System.out.println("state.mapping() " + state.mapping().length);
-                        System.out.println("types " + types.size());
-                    }
                 }
             }
             int[] solution = types.iterator().hasNext() ? types.iterator().next() : null;
-            if (solution != null) {
-                System.out.println("Size " + solution.length);
-            }
             return solution;
         } else if (Patterns.SUBGRAPH == searchType || Patterns.IDENTICAL == searchType) {
             while (map());
@@ -116,6 +111,16 @@ final class StateStream implements Iterator<int[]> {
             }
         }
         return null;
+    }
+
+    private int matchLength(int[] match) {
+        int counter = 0;
+        for (int i : match) {
+            if (i >= 0) {
+                counter++;
+            }
+        }
+        return counter;
     }
 
     /**

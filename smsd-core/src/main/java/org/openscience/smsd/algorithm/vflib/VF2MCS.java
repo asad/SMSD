@@ -646,13 +646,35 @@ public final class VF2MCS extends BaseMCS implements IResults {
                 vfLibSolutions.addAll(maps);
             }
             setVFMappings(true);
-        } else if (countR <= countP) {
+        } else if (countR < countP) {
             if (DEBUG) {
                 System.out.println("searchVFMappings findSubstructure");
             }
 
             //long start = System.currentTimeMillis();
             Pattern findSeeds = VF.findSubstructure(this.source, true, isMatchRings(), isMatchAtomType());
+            List<Map<IAtom, IAtom>> maps = findSeeds.matchAll(getProductMol());
+            //long end = System.currentTimeMillis();
+            //System.out.println("Time elapsed: " + TimeUnit.NANOSECONDS.convert((end - start), TimeUnit.NANOSECONDS) + " ns.");
+
+            if (maps.isEmpty()) {
+                if (DEBUG) {
+                    System.out.println("searchVFMappings ");
+                }
+                findSeeds = VF.findSeeds(this.source, true, isMatchRings(), isMatchAtomType());
+                maps = findSeeds.matchAll(getProductMol());
+            }
+            if (maps != null && !maps.isEmpty()) {
+                vfLibSolutions.addAll(maps);
+            }
+            setVFMappings(true);
+        } else if (countR == countP) {
+            if (DEBUG) {
+                System.out.println("searchVFMappings findSubstructure");
+            }
+
+            //long start = System.currentTimeMillis();
+            Pattern findSeeds = VF.findIdentical(this.source, true, isMatchRings(), isMatchAtomType());
             List<Map<IAtom, IAtom>> maps = findSeeds.matchAll(getProductMol());
             //long end = System.currentTimeMillis();
             //System.out.println("Time elapsed: " + TimeUnit.NANOSECONDS.convert((end - start), TimeUnit.NANOSECONDS) + " ns.");
