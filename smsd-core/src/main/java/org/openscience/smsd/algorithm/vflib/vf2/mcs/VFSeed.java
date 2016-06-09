@@ -112,7 +112,7 @@ public final class VFSeed extends Pattern {
         Iterable<Collection<int[]>> iterable = new VFIterable(query, target, g1, g2, bonds1, bonds2, atomMatcher, bondMatcher);
         List<Map<IAtom, IAtom>> mappings = new ArrayList<>();
         for (Collection<int[]> maps : iterable) {
-            for (int[] map : maps) {
+            maps.stream().map((map) -> {
                 Map<IAtom, IAtom> atomAtomMapping = new HashMap<>();
                 for (int i = 0; i < map.length; i++) {
                     if (map[i] < 0) {
@@ -120,8 +120,10 @@ public final class VFSeed extends Pattern {
                     }
                     atomAtomMapping.put(query.getAtom(i), target.getAtom(map[i]));
                 }
+                return atomAtomMapping;
+            }).forEach((atomAtomMapping) -> {
                 mappings.add(atomAtomMapping);
-            }
+            });
         }
         return mappings;
     }
