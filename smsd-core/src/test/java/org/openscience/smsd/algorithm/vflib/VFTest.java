@@ -41,8 +41,8 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainerCreator;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.smsd.Isomorphism;
-import org.openscience.smsd.algorithm.vflib.vf2.Pattern;
-import org.openscience.smsd.algorithm.vflib.vf2.VF;
+import org.openscience.smsd.algorithm.vflib.vf2.sub.Pattern;
+import org.openscience.smsd.algorithm.vflib.vf2.sub.VF;
 import org.openscience.smsd.interfaces.Algorithm;
 
 /**
