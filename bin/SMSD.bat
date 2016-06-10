@@ -1,1 +1,0 @@
-java -Xms500M -Xmx512M -cp SMSD-2.0.jar cmd.SMSDcmd %*
