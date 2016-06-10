@@ -18,7 +18,7 @@ Wish you a happy coding!
 Maven POM configuration
 -----------------------
 
-
+```xml
 <project>
 ...
 <repositories>
@@ -46,7 +46,7 @@ Maven POM configuration
 </dependencies>
 ...
 </project>
-
+```
 ---------------
 THIRD PARTY TOOL
 ---------------
