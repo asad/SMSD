@@ -39,8 +39,8 @@ Maven POM configuration
         <version>2.0.0-SNAPSHOT</version>
     </dependency>
     <dependency>
-        <groupId>uk.ac.ebi.beam</groupId>
-        <artifactId>beam-func</artifactId>
+        <groupId>uk.ac.ebi.smsd</groupId>
+        <artifactId>smsd-exec</artifactId>
         <version>2.0.0-SNAPSHOT</version>
     </dependency>
 </dependencies>
