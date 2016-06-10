@@ -1,5 +1,5 @@
 # SMSD
-SMSD is a Java based software library for finding Maximum Common Subgraph (MCS)/ Substructure between small molecules.
+Small Molecule Subgraph Detector (SMSD) is a Java based software library for finding Maximum Common Subgraph (MCS)/ Substructure between small molecules.
 This enables help us to find similarity/distance between two molecules. MCS is also used for screening drug like compounds by hitting molecules, which share common subgraph (substructure).
 
 
