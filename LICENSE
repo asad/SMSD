@@ -2,8 +2,7 @@ Author: Syed Asad Rahman, EMBL-EBI <asad@ebi.ac.uk>
 Copyright (c) 2013, European Bioinformatics Institute (EMBL-EBI)
 All rights reserved.
 
-SMSD is a Java based software library for calculating Maximum Common Subgraph (MCS) between small molecules. This enables help us to find similarity/distance between two molecules. 
-MCS is also used for screening drug like compounds by hitting molecules, which share common subgraph (substructure).
+Small Molecule Subgraph Detector (SMSD) is a Java based software library for calculating Maximum Common Subgraph (MCS) between small molecules.
 
 Usage Terms and Condition
 Brief summary of the agreement
@@ -39,21 +38,3 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies, 
 either expressed or implied, of the FreeBSD Project.
-
-
-
-The SMSD code:
-
-The present code is part of the Small Molecule Subgraph Detector 
-(SMSD http://www.ebi.ac.uk/thornton-srv/software/SMSD ) library.
-
-Encourage this project by <b>citing the paper and the (SMSD) URL</b> 
-
-S. A. Rahman, M. Bashton, G. L. Holliday, R. Schrader and J. M. Thornton, Small Molecule Subgraph Detector (SMSD) toolkit, Journal of Cheminformatics 2009, 1:12. DOI:10.1186/1758-2946-1-12
-
-Wish you a happy coding!
-
----------------
-THIRD PARTY TOOL
----------------
-You need the CDK (https://github.com/cdk/cdk) as SMSD depends on the CDK for processing the Chemical information.
