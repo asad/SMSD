@@ -14,6 +14,39 @@ S. A. Rahman, M. Bashton, G. L. Holliday, R. Schrader and J. M. Thornton, Small 
 
 Wish you a happy coding!
 
+-----------------------
+Maven POM configuration
+-----------------------
+
+
+<project>
+...
+<repositories>
+   <repository>
+      <id>ossrh</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+   </repository>
+   <repository>
+      <id>ossrh</id>
+      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+   </repository>
+</repositories>
+...
+<dependencies>
+    <dependency>
+        <groupId>uk.ac.ebi.smsd</groupId>
+        <artifactId>smsd-core</artifactId>
+        <version>2.0.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+        <groupId>uk.ac.ebi.beam</groupId>
+        <artifactId>beam-func</artifactId>
+        <version>2.0.0-SNAPSHOT</version>
+    </dependency>
+</dependencies>
+...
+</project>
+
 ---------------
 THIRD PARTY TOOL
 ---------------
