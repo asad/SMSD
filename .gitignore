@@ -1,3 +1,4 @@
+settings.xml
 bin
 .classpath
 .project
@@ -11,3 +12,5 @@ build.properties
 .DS_Store
 /smsd/target/
 /smsd-pom/target/
+/core/target/
+/exec/target/
