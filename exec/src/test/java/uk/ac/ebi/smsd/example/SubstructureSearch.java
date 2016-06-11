@@ -1,4 +1,4 @@
-package example;
+package uk.ac.ebi.smsd.example;
 
 import java.util.Map;
 import org.openscience.cdk.AtomContainer;

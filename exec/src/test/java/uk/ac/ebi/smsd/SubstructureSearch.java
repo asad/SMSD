@@ -1,4 +1,4 @@
-package gui;
+package uk.ac.ebi.smsd;
 
 import java.util.Map;
 import org.openscience.cdk.DefaultChemObjectBuilder;

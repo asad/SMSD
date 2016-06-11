@@ -24,9 +24,9 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  * 
  */
-package cmd;
+package uk.ac.ebi.smsd.cmd;
 
-import cmd.pdb.LigandHelper;
+import uk.ac.ebi.smsd.cmd.pdb.LigandHelper;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;

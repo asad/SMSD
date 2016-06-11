@@ -1,4 +1,4 @@
-package gui;
+package uk.ac.ebi.smsd;
 
 import java.io.File;
 import java.io.FileInputStream;

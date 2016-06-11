@@ -1,4 +1,4 @@
-package cmd.pdb;
+package uk.ac.ebi.smsd.cmd.pdb;
 
 import java.io.BufferedReader;
 import java.io.IOException;

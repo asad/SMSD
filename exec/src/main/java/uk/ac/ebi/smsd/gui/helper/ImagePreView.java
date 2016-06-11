@@ -21,7 +21,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-package gui.helper;
+package uk.ac.ebi.smsd.gui.helper;
 
 import java.awt.Dimension;
 import java.awt.Graphics;
