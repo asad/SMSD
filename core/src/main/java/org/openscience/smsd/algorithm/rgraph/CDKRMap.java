@@ -36,9 +36,9 @@ package org.openscience.smsd.algorithm.rgraph;
  *
  * @author Stephane Werner, IXELIS <mail@ixelis.net>, Syed Asad Rahman
  * <asad@ebi.ac.uk> (modified the orignal code)
- * @cdk.created 2002-07-24
- * @cdk.module smsd
- * @cdk.githash
+ * 2002-07-24
+ * 
+ * 
  */
 class CDKRMap extends Object {
 

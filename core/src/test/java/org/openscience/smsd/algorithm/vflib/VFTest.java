@@ -47,7 +47,7 @@ import org.openscience.smsd.algorithm.vflib.vf2.sub.VF;
  *
  * @author Syed Asad Rahman
  * @author egonw
- * @cdk.module test-smsd
+ *  test-smsd
  */
 public class VFTest {
 

@@ -70,8 +70,8 @@ import org.openscience.cdk.tools.manipulator.RingSetManipulator;
  * This is an extension of CDK GraphAtomContainer. Some part of this code was
  * taken from CDK source code and modified.</p>
  *
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
@@ -289,7 +289,6 @@ public class ExtAtomContainerManipulator extends AtomContainerManipulator implem
      *
      * @param org The AtomContainer from which to remove the hydrogens
      * @return The molecule without hydrogens.
-     * @cdk.keyword hydrogens, removal, suppress
      * @see #copyAndSuppressedHydrogens
      */
     public static IAtomContainer removeHydrogens(IAtomContainer org) {

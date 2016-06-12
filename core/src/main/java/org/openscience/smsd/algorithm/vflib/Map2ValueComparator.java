@@ -28,8 +28,8 @@ import java.util.Map;
 import org.openscience.cdk.interfaces.IAtom;
 
  /*
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */

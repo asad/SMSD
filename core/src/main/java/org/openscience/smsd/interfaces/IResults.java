@@ -26,7 +26,7 @@ import java.util.List;
 import org.openscience.smsd.AtomAtomMapping;
 
 /**
- * Interface that holds basic core interface for all MCS algorithm. @cdk.module smsd @cdk.githash
+ * Interface that holds basic core interface for all MCS algorithm.  
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */

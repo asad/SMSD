@@ -70,13 +70,11 @@ import org.openscience.smsd.tools.IterationManager;
  * </p>
  *
  * @author Stephane Werner from IXELIS mail@ixelis.net, Syed Asad Rahman
- * <asad@ebi.ebi.uk> (modified the orignal code)
- * @cdk.created 2002-07-17
- * @cdk.require java1.5+
- * @cdk.module smsd
- * @cdk.githash
+ * <asad@ebi.ebi.uk> (modified the orignal code) 2002-07-17 java1.5+
+ *
+ *
  */
-public class CDKMCS {
+final public class CDKMCS {
 
     protected static boolean timeout = false;
     protected final static int ID1 = 0;
@@ -139,11 +137,12 @@ public class CDKMCS {
      * @param g2 second molecule. May be an {@link IQueryAtomContainer}.
      * @param shouldMatchBonds
      * @param shouldMatchRings
+     * @param matchAtomType
      * @return the first isomorph mapping found projected of g1. This is a List
      * of CDKRMap objects containing Ids of matching bonds.
      * @throws CDKException
      */
-    public static List<CDKRMap> getIsomorphMap(IAtomContainer g1, IAtomContainer g2,
+    private static List<CDKRMap> getIsomorphMap(IAtomContainer g1, IAtomContainer g2,
             boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) throws CDKException {
         if (g1 instanceof IQueryAtomContainer) {
             throw new CDKException(
@@ -168,12 +167,13 @@ public class CDKMCS {
      * @param g2 second molecule. May be an {@link IQueryAtomContainer}.
      * @param shouldMatchBonds
      * @param shouldMatchRings
+     * @param matchAtomType
      * @return the first isomorph atom mapping found projected on g1. This is a
      * List of CDKRMap objects containing Ids of matching atoms.
      * @throws CDKException if the first molecules is not an instance of
      * {@link IQueryAtomContainer}
      */
-    public static List<CDKRMap> getIsomorphAtomsMap(IAtomContainer g1, IAtomContainer g2,
+    private static List<CDKRMap> getIsomorphAtomsMap(IAtomContainer g1, IAtomContainer g2,
             boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) throws CDKException {
         if (g1 instanceof IQueryAtomContainer) {
             throw new CDKException(
@@ -306,7 +306,7 @@ public class CDKMCS {
      * {@link List} of {@link CDKRMap} objects containing Ids of matching atoms.
      * @throws CDKException
      */
-    public static List<CDKRMap> getSubgraphAtomsMap(IAtomContainer g1,
+    private static List<CDKRMap> getSubgraphAtomsMap(IAtomContainer g1,
             IAtomContainer g2, boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType)
             throws CDKException {
         List<CDKRMap> list = checkSingleAtomCases(g1, g2);
@@ -515,10 +515,10 @@ public class CDKMCS {
      * @param id the id in the {@link CDKRMap} of the molecule g
      * @return an GraphAtomContainer
      */
-    public static IAtomContainer project(List<CDKRMap> rMapList, IAtomContainer g, int id) {
+    private static IAtomContainer project(List<CDKRMap> rMapList, IAtomContainer g, int id) {
         IAtomContainer ac = g.getBuilder().newInstance(IAtomContainer.class);
 
-        Map<IAtom, IAtom> table = new HashMap<IAtom, IAtom>();
+        Map<IAtom, IAtom> table = new HashMap<>();
         IAtom a1;
         IAtom a2;
         IAtom a;
@@ -572,8 +572,8 @@ public class CDKMCS {
      * @param id the id in the CDKRMap of the molecule g
      * @return a list of GraphAtomContainer
      */
-    public static List<IAtomContainer> projectList(List<List<CDKRMap>> rMapsList, IAtomContainer g, int id) {
-        List<IAtomContainer> graphList = new ArrayList<IAtomContainer>();
+    private static List<IAtomContainer> projectList(List<List<CDKRMap>> rMapsList, IAtomContainer g, int id) {
+        List<IAtomContainer> graphList = new ArrayList<>();
 
         for (List<CDKRMap> rMapList : rMapsList) {
             IAtomContainer ac = project(rMapList, g, id);
@@ -624,14 +624,14 @@ public class CDKMCS {
      * @throws CDKException if the first molecule is an instance of
      * IQueryAtomContainer
      */
-    public static List<CDKRMap> checkSingleAtomCases(IAtomContainer g1, IAtomContainer g2) throws CDKException {
+    static List<CDKRMap> checkSingleAtomCases(IAtomContainer g1, IAtomContainer g2) throws CDKException {
         if (g1 instanceof IQueryAtomContainer) {
             throw new CDKException(
                     "The first IAtomContainer must not be an IQueryAtomContainer");
         }
 
         if (g2.getAtomCount() == 1) {
-            List<CDKRMap> arrayList = new ArrayList<CDKRMap>();
+            List<CDKRMap> arrayList = new ArrayList<>();
             IAtom atom = g2.getAtom(0);
             if (atom instanceof IQueryAtom) {
                 IQueryAtom qAtom = (IQueryAtom) atom;
@@ -659,10 +659,8 @@ public class CDKMCS {
                     if (qAtom.matches(atom)) {
                         arrayList.add(new CDKRMap(0, i));
                     }
-                } else {
-                    if (atom2.getSymbol().equals(atom.getSymbol())) {
-                        arrayList.add(new CDKRMap(0, i));
-                    }
+                } else if (atom2.getSymbol().equals(atom.getSymbol())) {
+                    arrayList.add(new CDKRMap(0, i));
                 }
             }
             return arrayList;
@@ -683,14 +681,14 @@ public class CDKMCS {
      * @return A List of {@link List}s of {@link CDKRMap} objects of matching
      * Atoms.
      */
-    public static List<List<CDKRMap>> makeAtomsMapsOfBondsMaps(List<List<CDKRMap>> l, IAtomContainer g1, IAtomContainer g2) {
+    static List<List<CDKRMap>> makeAtomsMapsOfBondsMaps(List<List<CDKRMap>> l, IAtomContainer g1, IAtomContainer g2) {
         if (l == null) {
             return l;
         }
         if (g2.getAtomCount() == 1) {
             return l; // since the CDKRMap is already an atom-atom mapping
         }
-        List<List<CDKRMap>> result = new ArrayList<List<CDKRMap>>();
+        List<List<CDKRMap>> result = new ArrayList<>();
         for (List<CDKRMap> l2 : l) {
             result.add(makeAtomsMapOfBondsMap(l2, g1, g2));
         }
@@ -707,11 +705,11 @@ public class CDKMCS {
      * @return The mapping found projected on g1. This is a {@link List} of
      * {@link CDKRMap} objects containing Ids of matching atoms.
      */
-    public static List<CDKRMap> makeAtomsMapOfBondsMap(List<CDKRMap> l, IAtomContainer g1, IAtomContainer g2) {
+    private static List<CDKRMap> makeAtomsMapOfBondsMap(List<CDKRMap> l, IAtomContainer g1, IAtomContainer g2) {
         if (l == null) {
             return (l);
         }
-        List<CDKRMap> result = new ArrayList<CDKRMap>();
+        List<CDKRMap> result = new ArrayList<>();
         for (int i = 0; i < l.size(); i++) {
             IBond bond1 = g1.getBond(l.get(i).getId1());
             IBond bond2 = g2.getBond(l.get(i).getId2());
@@ -873,15 +871,13 @@ public class CDKMCS {
                         x.getExtension().set(j);
                         y.getExtension().set(i);
                     }
-                } else {
-                    if (a1.equals(b1) || a2.equals(b2)
-                            || (!getCommonSymbol(a1, b1).equals(getCommonSymbol(a2, b2)))) {
-                        x.getForbidden().set(j);
-                        y.getForbidden().set(i);
-                    } else if (hasCommonAtom(a1, b1)) {
-                        x.getExtension().set(j);
-                        y.getExtension().set(i);
-                    }
+                } else if (a1.equals(b1) || a2.equals(b2)
+                        || (!getCommonSymbol(a1, b1).equals(getCommonSymbol(a2, b2)))) {
+                    x.getForbidden().set(j);
+                    y.getForbidden().set(i);
+                } else if (hasCommonAtom(a1, b1)) {
+                    x.getExtension().set(j);
+                    y.getExtension().set(i);
                 }
             }
         }

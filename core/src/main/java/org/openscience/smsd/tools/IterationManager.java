@@ -28,8 +28,8 @@ import java.io.Serializable;
  * Class that handles execution time of the MCS search.
  *
  *
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public class IterationManager implements Serializable {

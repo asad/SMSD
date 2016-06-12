@@ -61,7 +61,7 @@ public class FileFilterUtility {
      * Returns an ImageIcon, or null if the path was invalid.
      *
      * @param path
-     * @return
+     * @return ImageIcon
      */
     protected static ImageIcon createImageIcon(String path) {
         java.net.URL imgURL = FileFilterUtility.class.getResource(path);

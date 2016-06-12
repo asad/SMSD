@@ -33,14 +33,14 @@ import org.junit.runners.Suite;
 /**
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
- * @cdk.module test-smsd
- * @cdk.require java1.6+
+ *  test-smsd
+ *  java1.6+
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({org.openscience.smsd.algorithm.single.SingleSuite.class,
     org.openscience.smsd.algorithm.vflib.VFSuite.class,
     org.openscience.smsd.algorithm.mcsplus.McsplusSuite.class,
-    //        org.openscience.cdk.smsd.algorithm.mcgregor.McgregorSuite.class,
+    //        org.openscience.smsd.algorithm.mcgregor.McgregorSuite.class,
     org.openscience.smsd.algorithm.rgraph.CdkSuite.class
 })
 public class AlgorithmSuite {

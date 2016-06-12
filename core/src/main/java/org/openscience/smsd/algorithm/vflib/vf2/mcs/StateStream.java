@@ -14,7 +14,7 @@ import java.util.List;
  *
  * @author John May
  * @author Syed Asad Rahman
- * @cdk.module smsd
+ * 
  */
 final class StateStream implements Iterator<Collection<int[]>> {
 

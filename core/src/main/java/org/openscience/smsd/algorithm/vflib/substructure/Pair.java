@@ -49,8 +49,8 @@ package org.openscience.smsd.algorithm.vflib.substructure;
 /**
  * Holds source and target atoms
  * 
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 /**

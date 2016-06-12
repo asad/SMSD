@@ -44,8 +44,8 @@ import org.openscience.cdk.tools.manipulator.BondManipulator;
  * substructure determination, Tetrahedron Comput. Methodol., 1990, 3:351-358]
  * and modified in the thesis of T. Hanser [Unknown BibTeXML type: HAN93].
  *
- * @cdk.module smsd
- * @cdk.githash
+ *
+ *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public final class CDKRMapHandler {
@@ -102,7 +102,7 @@ public final class CDKRMapHandler {
      * @param shouldMatchBonds
      * @param shouldMatchRings
      * @param matchAtomType
-     * @return
+     * @return List
      * @throws CDKException
      */
     public synchronized List<Map<Integer, Integer>> calculateOverlapsAndReduce(IAtomContainer molecule1,
@@ -147,7 +147,7 @@ public final class CDKRMapHandler {
      *
      * @param molecule1
      * @param molecule2
-     * @return
+     * @return List
      * @throws CDKException
      */
     public synchronized List<Map<Integer, Integer>> calculateOverlapsAndReduce(IAtomContainer molecule1,
@@ -209,7 +209,7 @@ public final class CDKRMapHandler {
         setSource(Molecule1);
         setTarget(Molecule2);
 
-        setMappings(new ArrayList<Map<Integer, Integer>>());
+        setMappings(new ArrayList<>());
 
         //System.out.println("Searching: ");
         //List overlaps = UniversalIsomorphismTesterBondTypeInSensitive.getSubgraphAtomsMap(source, target);
@@ -250,7 +250,7 @@ public final class CDKRMapHandler {
      * @param shouldMatchBonds
      * @param shouldMatchRings
      * @param matchAtomType
-     * @return
+     * @return List
      * @throws CDKException
      */
     public synchronized List<Map<Integer, Integer>> calculateSubGraphs(IAtomContainer Molecule1,
@@ -307,7 +307,7 @@ public final class CDKRMapHandler {
      * @param shouldMatchBonds
      * @param shouldMatchRings
      * @param matchAtomType
-     * @return
+     * @return List
      * @throws CDKException
      */
     public synchronized List<Map<Integer, Integer>> calculateIsomorphs(IAtomContainer Molecule1,
@@ -353,11 +353,11 @@ public final class CDKRMapHandler {
     /**
      *
      * @param overlaps
-     * @return
+     * @return removed List
      */
     protected synchronized List<List<CDKRMap>> removeSubGraph(List<List<CDKRMap>> overlaps) {
 
-        List<List<CDKRMap>> reducedList = new ArrayList<List<CDKRMap>>(overlaps);
+        List<List<CDKRMap>> reducedList = new ArrayList<>(overlaps);
 
         for (int i = 0; i < overlaps.size(); i++) {
             List<CDKRMap> graphI = overlaps.get(i);
@@ -383,7 +383,7 @@ public final class CDKRMapHandler {
     /**
      *
      * @param overlaps
-     * @return
+     * @return List removed
      */
     protected synchronized List<CDKRMap> removeRedundantMappingsForSingleAtomCase(List<CDKRMap> overlaps) {
         List<CDKRMap> reducedList = Collections.synchronizedList(new ArrayList<CDKRMap>());
@@ -410,7 +410,7 @@ public final class CDKRMapHandler {
         if (rMapList.size() == 1) {
             result = makeAtomsMapOfBondsMapSingleBond(rMapList, graph1, graph2);
         } else {
-            List<CDKRMap> resultLocal = new ArrayList<CDKRMap>();
+            List<CDKRMap> resultLocal = new ArrayList<>();
             for (CDKRMap rMapList2 : rMapList) {
                 IBond qBond = graph1.getBond(rMapList2.getId1());
                 IBond tBond = graph2.getBond(rMapList2.getId2());
@@ -475,7 +475,7 @@ public final class CDKRMapHandler {
         if (list == null) {
             return null;
         }
-        Map<IBond, IBond> bondMap = new HashMap<IBond, IBond>(list.size());
+        Map<IBond, IBond> bondMap = new HashMap<>(list.size());
         for (CDKRMap solBondMap : list) {
             int id1 = solBondMap.getId1();
             int id2 = solBondMap.getId2();
@@ -483,8 +483,8 @@ public final class CDKRMapHandler {
             IBond tBond = targetGraph.getBond(id2);
             bondMap.put(qBond, tBond);
         }
-        List<CDKRMap> result1 = new ArrayList<CDKRMap>();
-        List<CDKRMap> result2 = new ArrayList<CDKRMap>();
+        List<CDKRMap> result1 = new ArrayList<>();
+        List<CDKRMap> result2 = new ArrayList<>();
         for (IBond qbond : sourceGraph.bonds()) {
             if (bondMap.containsKey(qbond)) {
                 IBond tbond = bondMap.get(qbond);
@@ -521,7 +521,7 @@ public final class CDKRMapHandler {
                 }
             }
         }
-        List<List<CDKRMap>> result = new ArrayList<List<CDKRMap>>();
+        List<List<CDKRMap>> result = new ArrayList<>();
         if (result1.size() == result2.size()) {
             result.add(result1);
             result.add(result2);
@@ -568,12 +568,12 @@ public final class CDKRMapHandler {
 
             if (arrayList.size() > count) {
 
-                List<CDKRMap> list = new ArrayList<CDKRMap>(arrayList);
+                List<CDKRMap> list = new ArrayList<>(arrayList);
                 count = arrayList.size();
-                allMaximumMappings = new Stack<List<CDKRMap>>();
+                allMaximumMappings = new Stack<>();
                 allMaximumMappings.push(list);
             } else if (arrayList.size() == count) {
-                List<CDKRMap> list = new ArrayList<CDKRMap>(arrayList);
+                List<CDKRMap> list = new ArrayList<>(arrayList);
                 count = arrayList.size();
                 allMaximumMappings.push(list);
             }
@@ -608,7 +608,6 @@ public final class CDKRMapHandler {
 
 //                array1.add(sourceAtom);
 //                array2.add(targetAtom);
-
                 int indexI = source.getAtomNumber(sourceAtom);
                 int indexJ = target.getAtomNumber(targetAtom);
 
@@ -664,7 +663,7 @@ public final class CDKRMapHandler {
      *
      * @param rmaps1
      * @param rmaps2
-     * @return
+     * @return true if condition meet else false
      */
     protected synchronized boolean isSubgraph(List<CDKRMap> rmaps1, List<CDKRMap> rmaps2) {
         //System.out.println("Entering isSubgraph.");
@@ -691,7 +690,7 @@ public final class CDKRMapHandler {
      *
      * @param sourceRMap sourceAtom
      * @param targetRMap targetAtom
-     * @return
+     * @return true if condition meet else false
      */
     protected synchronized boolean isSameRMap(CDKRMap sourceRMap, CDKRMap targetRMap) {
         return sourceRMap.getId1() == targetRMap.getId1()

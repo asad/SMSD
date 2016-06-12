@@ -53,14 +53,14 @@ import org.openscience.smsd.interfaces.IResults;
  * This class should be used to find MCS between source graph and target graph.
  *
  * First the algorithm runs VF lib
- * {@link org.openscience.cdk.smsd.algorithm.vflib.map.VFMCSMapper} and reports
+ * {@link org.openscience.smsd.algorithm.vflib.VF2MCS} and reports
  * MCS between run source and target graphs. Then these solutions are extended
- * using McGregor {@link org.openscience.cdk.smsd.algorithm.mcgregor.McGregor}
+ * using McGregor {@link org.openscience.smsd.algorithm.mcgregor.McGregor}
  * algorithm where ever required.
  *
  *
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */

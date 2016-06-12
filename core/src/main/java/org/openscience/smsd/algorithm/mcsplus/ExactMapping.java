@@ -28,8 +28,8 @@ import java.util.TreeMap;
 /**
  * This class handles MCS between two identical molecules. Hence they generate am MCS where all atoms are mapped.
  *
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public class ExactMapping {

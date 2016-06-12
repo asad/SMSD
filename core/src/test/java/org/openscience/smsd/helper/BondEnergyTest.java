@@ -30,13 +30,13 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import org.openscience.cdk.interfaces.IBond.Order;
-import org.openscience.cdk.smsd.helper.BondEnergy;
+import org.openscience.smsd.helper.BondEnergy;
 
 /**
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
- * @cdk.module test-smsd
- * @cdk.require java1.6+
+ *  test-smsd
+ *  java1.6+
  */
 public class BondEnergyTest {
 

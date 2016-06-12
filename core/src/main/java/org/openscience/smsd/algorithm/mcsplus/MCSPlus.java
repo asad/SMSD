@@ -41,8 +41,8 @@ import org.openscience.smsd.tools.IterationManager;
  * This class handles MCS plus algorithm which is a combination of c-clique
  * algorithm and McGregor algorithm.
  *
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */

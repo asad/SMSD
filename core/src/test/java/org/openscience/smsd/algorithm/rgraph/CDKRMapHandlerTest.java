@@ -40,9 +40,9 @@ import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.smiles.SmilesParser;
 
 /**
- * @cdk.module test-smsd
+ *  test-smsd
  * @author Syed Asad Rahman
- * @cdk.require java1.5+
+ *  java1.5+
  */
 public class CDKRMapHandlerTest {
 

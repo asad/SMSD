@@ -57,7 +57,7 @@ import org.openscience.smsd.interfaces.IResults;
 /**
  * This class finds mapping states between query and target molecules.
  *
- * @cdk.module smsd @cdk.githash
+ *  
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */

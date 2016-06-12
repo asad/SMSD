@@ -12,7 +12,7 @@ import org.openscience.smsd.AtomAtomMapping;
  *
  * @author John May
  * @author Syed Asad Rahman
- * @cdk.module smsd
+ * 
  */
 public abstract class Pattern {
 

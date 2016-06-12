@@ -35,9 +35,9 @@ import org.openscience.smsd.interfaces.IResults;
 
 /**
  * This is a handler class for single atom mapping
- * ({@link org.openscience.cdk.smsd.algorithm.single.SingleMapping}).
+ * ({@link org.openscience.smsd.algorithm.single.SingleMapping}).
  *
- * @cdk.module smsd @cdk.githash
+ *  
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */

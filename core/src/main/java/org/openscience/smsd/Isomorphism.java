@@ -101,10 +101,10 @@ import static org.openscience.smsd.interfaces.Algorithm.VFLibMCS;
  *
  * </pre> </font>
  *
- * @cdk.require java1.5+
+ *  java1.5+
  *
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
@@ -128,11 +128,11 @@ public final class Isomorphism extends BaseMapping implements Serializable {
      * @param query query molecule
      * @param target target molecule This is the algorithm factory and entry
      * port for all the MCS algorithm in the Isomorphism supported algorithm
-     * {@link org.openscience.cdk.smsd.interfaces.Algorithm} types: <OL> <lI>0:
+     * {@link org.openscience.smsd.interfaces.Algorithm} types: <OL> <lI>0:
      * Default,
      * <lI>1: MCSPlus, <lI>2: VFLibMCS, <lI>3: CDKMCS </OL>
      * @param algorithmType
-     * {@link org.openscience.cdk.smsd.interfaces.Algorithm}
+     * {@link org.openscience.smsd.interfaces.Algorithm}
      */
     public Isomorphism(
             IQueryAtomContainer query,
@@ -154,11 +154,11 @@ public final class Isomorphism extends BaseMapping implements Serializable {
      * @param query query mol
      * @param target target mol This is the algorithm factory and entry port for
      * all the MCS algorithm in the Isomorphism supported algorithm
-     * {@link org.openscience.cdk.smsd.interfaces.Algorithm} types: <OL> <lI>0:
+     * {@link org.openscience.smsd.interfaces.Algorithm} types: <OL> <lI>0:
      * Default,
      * <lI>1: MCSPlus, <lI>2: VFLibMCS, <lI>3: CDKMCS </OL>
      * @param algorithmType
-     * {@link org.openscience.cdk.smsd.interfaces.Algorithm}
+     * {@link org.openscience.smsd.interfaces.Algorithm}
      * @param bondTypeFlag Match bond types (i.e. double to double etc)
      * @param matchRings Match ring atoms and ring size
      * @param matchAtomType

@@ -37,10 +37,10 @@ import org.openscience.smsd.interfaces.IAtomMapping;
 
 /**
  *
- * @cdk.require java1.5+
+ *  java1.5+
  *
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *

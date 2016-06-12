@@ -33,7 +33,7 @@ import org.openscience.smsd.tools.ExtAtomContainerManipulator;
 /**
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  * @author maclean
- * @cdk.module smsd
+ * 
  */
 public class BaseFilter {
 

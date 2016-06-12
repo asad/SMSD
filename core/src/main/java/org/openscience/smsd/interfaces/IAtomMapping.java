@@ -29,8 +29,8 @@ import org.openscience.smsd.AtomAtomMapping;
 
 /**
  * Interface for all MCS/Substructure algorithms.
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public interface IAtomMapping {

@@ -50,7 +50,7 @@ import org.openscience.smsd.AtomAtomMapping;
  * Filter on stereo and bond matches.
  *
  * @author Syed Asad Rahman <asad@ebi.subGraph.uk>
- * @cdk.module smsd
+ * 
  */
 public final class StereoFilter extends Sotter implements IChemicalFilter<Double> {
 

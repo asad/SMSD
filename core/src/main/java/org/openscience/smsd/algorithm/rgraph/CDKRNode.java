@@ -40,9 +40,9 @@ import java.util.BitSet;
  *  this node in the same solution)
  *
  * @author      Stephane Werner from IXELIS mail@ixelis.net
- * @cdk.created 2002-07-17
- * @cdk.module  smsd
- * @cdk.githash
+ * 2002-07-17
+ *   smsd
+ * 
  */
 public class CDKRNode {
     // G1/G2 mapping

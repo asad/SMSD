@@ -38,8 +38,8 @@ import org.openscience.smsd.helper.BinaryTree;
 /**
  * Class to perform check/methods for McGregor class.
  *
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public class McGregorChecks {
@@ -142,7 +142,7 @@ public class McGregorChecks {
      * @param shouldMatchBonds
      * @param shouldMatchRings
      * @param matchAtomType
-     * @return
+     * @return true if condition meet else false
      */
     protected static boolean isMatchFeasible(
             IBond bondA1,
@@ -170,7 +170,7 @@ public class McGregorChecks {
      * @param atomFromOtherMolecule
      * @param molecule
      * @param mapped_atoms_org
-     * @return
+     * @return corresponding atom index
      */
     protected static int searchCorrespondingAtom(int mappedAtomsSize, int atomFromOtherMolecule, int molecule, List<Integer> mapped_atoms_org) {
 
@@ -178,10 +178,10 @@ public class McGregorChecks {
 
         int corresponding_atom = 0;
         for (int a = 0; a < mappedAtomsSize; a++) {
-            if ((molecule == 1) && (mapped_atoms.get(a * 2 + 0).intValue() == atomFromOtherMolecule)) {
+            if ((molecule == 1) && (mapped_atoms.get(a * 2 + 0) == atomFromOtherMolecule)) {
                 corresponding_atom = mapped_atoms.get(a * 2 + 1);
             }
-            if ((molecule == 2) && (mapped_atoms.get(a * 2 + 1).intValue() == atomFromOtherMolecule)) {
+            if ((molecule == 2) && (mapped_atoms.get(a * 2 + 1) == atomFromOtherMolecule)) {
                 corresponding_atom = mapped_atoms.get(a * 2 + 0);
             }
         }
@@ -194,7 +194,7 @@ public class McGregorChecks {
      * @param G2A
      * @param G1B
      * @param G2B
-     * @return
+     * @return true if condition meet else false
      */
     protected static boolean isAtomMatch(String G1A, String G2A, String G1B, String G2B) {
         return (G1A.compareToIgnoreCase(G1B) == 0 && G2A.compareToIgnoreCase(G2B) == 0)
@@ -228,7 +228,7 @@ public class McGregorChecks {
     /**
      *
      * @param atom_mapping
-     * @return
+     * @return List of Atom index to be removed
      */
     protected static List<Integer> removeRecurringMappings(List<Integer> atom_mapping) {
 
@@ -310,7 +310,7 @@ public class McGregorChecks {
      *
      * @param bond_number
      * @param c_set
-     * @return
+     * @return List
      */
     protected static List<String> generateCSetCopy(int bond_number, List<String> c_set) {
         List<String> cTabCopy = new ArrayList<>();
@@ -326,7 +326,7 @@ public class McGregorChecks {
     /**
      *
      * @param atomContainer
-     * @return
+     * @return List
      * @throws IOException
      */
     protected static List<String> generateCTabCopy(IAtomContainer atomContainer) throws IOException {
@@ -351,7 +351,7 @@ public class McGregorChecks {
      * @param row_atom2
      * @param column_atom3
      * @param column_atom4
-     * @return
+     * @return true if condition meet else false
      */
     protected static boolean case1(int G1_atom, int G3_atom, int G4_atom, int row_atom1, int row_atom2, int column_atom3, int column_atom4) {
         return ((G1_atom == row_atom1) || (G1_atom == row_atom2))
@@ -367,7 +367,7 @@ public class McGregorChecks {
      * @param row_atom2
      * @param column_atom3
      * @param column_atom4
-     * @return
+     * @return true if condition meet else false
      */
     protected static boolean case2(int G2_atom, int G3_atom, int G4_atom, int row_atom1, int row_atom2, int column_atom3, int column_atom4) {
         return ((G2_atom == row_atom1)
@@ -384,7 +384,7 @@ public class McGregorChecks {
      * @param row_atom2
      * @param column_atom3
      * @param column_atom4
-     * @return
+     * @return true if condition meet else false
      */
     protected static boolean case3(int G1_atom, int G3_atom, int G2_atom, int row_atom1, int row_atom2, int column_atom3, int column_atom4) {
         return ((G3_atom == column_atom3) || (G3_atom == column_atom4))
@@ -400,7 +400,7 @@ public class McGregorChecks {
      * @param row_atom2
      * @param column_atom3
      * @param column_atom4
-     * @return
+     * @return true if condition meet else false
      */
     protected static boolean case4(int G1_atom, int G2_atom, int G4_atom, int row_atom1, int row_atom2, int column_atom3, int column_atom4) {
         return ((G4_atom == column_atom3) || (G4_atom == column_atom4))
@@ -417,7 +417,7 @@ public class McGregorChecks {
      * @param row_atom2
      * @param column_atom3
      * @param column_atom4
-     * @return
+     * @return true if condition meet else false
      */
     protected static boolean cases(int G1_atom, int G2_atom, int G3_atom, int G4_atom, int row_atom1, int row_atom2, int column_atom3, int column_atom4) {
         return case1(G1_atom, G3_atom, G4_atom, row_atom1, row_atom2, column_atom3, column_atom4) || case2(G2_atom, G3_atom, G4_atom, row_atom1, row_atom2, column_atom3, column_atom4) || case3(G1_atom, G3_atom, G2_atom, row_atom1, row_atom2, column_atom3, column_atom4) || case4(G1_atom, G2_atom, G4_atom, row_atom1, row_atom2, column_atom3, column_atom4);
@@ -437,7 +437,7 @@ public class McGregorChecks {
      * @param shouldMatchBonds
      * @param shouldMatchRings
      * @param matchAtomType
-     * @return
+     * @return List
      */
     protected static List<Integer> setArcs(IAtomContainer source,
             IAtomContainer target,
@@ -489,7 +489,7 @@ public class McGregorChecks {
      * @param TEMPMARCS
      * @param neighborBondNumA
      * @param neighborBondNumB
-     * @return
+     * @return count
      */
     protected static int countArcsLeft(List<Integer> TEMPMARCS, int neighborBondNumA, int neighborBondNumB) {
         int arcsleft = 0;
@@ -512,7 +512,7 @@ public class McGregorChecks {
      * @param neighbor_bondnum
      * @param atomContainer
      * @param c_bond_neighbors
-     * @return
+     * @return bond index
      */
     protected static int changeCharBonds(int corresponding_atom, String new_symbol, int neighbor_bondnum,
             IAtomContainer atomContainer, List<String> c_bond_neighbors) {
@@ -542,7 +542,7 @@ public class McGregorChecks {
      * @param neighbor_bondnum
      * @param i_bond_neighbors
      * @param c_bond_neighbors
-     * @return
+     * @return bond index
      */
     protected static int changeCharBonds(int corresponding_atom, String new_symbol, int neighbor_bondnum,
             List<Integer> i_bond_neighbors, List<String> c_bond_neighbors) {
@@ -639,7 +639,7 @@ public class McGregorChecks {
     }
 
     static List<Integer> markUnMappedAtoms(boolean flag, IAtomContainer container, Map<Integer, Integer> present_Mapping) {
-        List<Integer> unmappedMolAtoms = new ArrayList<Integer>();
+        List<Integer> unmappedMolAtoms = new ArrayList<>();
 
         int unmapped_num = 0;
         boolean atom_is_unmapped = true;
@@ -660,7 +660,7 @@ public class McGregorChecks {
     }
 
     static List<Integer> markUnMappedAtoms(boolean flag, IAtomContainer container, List<Integer> mapped_atoms, int clique_siz) {
-        List<Integer> unmappedMolAtoms = new ArrayList<Integer>();
+        List<Integer> unmappedMolAtoms = new ArrayList<>();
         int unmapped_num = 0;
         boolean atom_is_unmapped = true;
         for (int a = 0; a < container.getAtomCount(); a++) {

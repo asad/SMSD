@@ -24,11 +24,11 @@ package org.openscience.smsd.tools;
 
 import org.junit.Assert;
 import org.junit.Test;
-import org.openscience.cdk.smsd.tools.TimeManager;
+import org.openscience.smsd.tools.TimeManager;
 
 /**
  * @author Asad
- * @cdk.module test-smsd
+ *  test-smsd
  */
 public class TimeManagerTest {
 

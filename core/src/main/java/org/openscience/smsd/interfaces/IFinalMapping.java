@@ -28,8 +28,8 @@ import java.util.Map;
 
 /**
  * Interface for mappings.
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 

@@ -37,9 +37,9 @@ import org.openscience.smsd.interfaces.IResults;
 
 /**
  * This class acts as a handler class for MCSPlus algorithm.
- * {@link org.openscience.cdk.smsd.algorithm.mcsplus.MCSPlus}
+ * {@link org.openscience.smsd.algorithm.mcsplus.MCSPlus}
  *
- * @cdk.module smsd @cdk.githash
+ *  
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */

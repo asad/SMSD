@@ -31,8 +31,8 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
 /**
  * Checks if atom is matching between query and target molecules.
  *
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */

@@ -17,7 +17,7 @@ package org.openscience.smsd.algorithm.vflib.vf2.sub;
  *
  * @author John May
  * @author Syed Asad Rahman
- * @cdk.module smsd
+ * 
  */
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;

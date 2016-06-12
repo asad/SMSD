@@ -34,8 +34,8 @@ import java.util.TimeZone;
  * long diffHours = time / (60 * 60 * 1000); 
  * long diffDays = time / (24 * 60 * 60 * 1000);
  *
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public class TimeManager {

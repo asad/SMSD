@@ -11,7 +11,7 @@ package org.openscience.smsd.algorithm.vflib.vf2.sub;
  *
  * @author John May
  * @author Syed Asad Rahman
- * @cdk.module smsd
+ * 
  */
 abstract class State {
 

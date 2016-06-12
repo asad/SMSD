@@ -33,8 +33,8 @@ import org.openscience.cdk.isomorphism.matchers.IQueryBond;
 /**
  * Class to handle mappings of target molecule based on the query.
  *
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */

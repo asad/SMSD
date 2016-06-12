@@ -323,7 +323,7 @@ public class InputHandler {
     /**
      * Return Query molecule
      *
-     * @return
+     * @return container
      * @throws IOException
      * @throws CDKException
      */
@@ -350,7 +350,7 @@ public class InputHandler {
     /**
      * Returns Target molecule
      *
-     * @return
+     * @return container
      * @throws IOException
      * @throws CDKException
      */
@@ -377,7 +377,7 @@ public class InputHandler {
     /**
      * Returns an SDF files iterator
      *
-     * @return
+     * @return List of containers
      * @throws FileNotFoundException
      * @throws IOException
      * @throws CDKException

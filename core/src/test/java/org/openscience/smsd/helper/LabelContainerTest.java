@@ -28,7 +28,7 @@ import org.junit.Test;
  * Unit testing for the {@link LabelContainer} class.
  * 
  * @author     Syed Asad Rahman
- * @cdk.module test-smsd
+ *  test-smsd
  */
 public class LabelContainerTest {
 

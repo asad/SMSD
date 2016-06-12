@@ -34,7 +34,7 @@ import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 
 /**
- * @author Syed Asad Rahman<asad@ebi.ac.uk> @cdk.module smsd
+ * @author Syed Asad Rahman<asad@ebi.ac.uk> 
  */
 public class AtomContainerComparator implements Comparator<IAtomContainer> {
 

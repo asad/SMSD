@@ -434,7 +434,7 @@ public class ArgumentHandler {
     /**
      * Use N-way MCS.
      *
-     * @return
+     * @return True if condition meet else False
      */
     public boolean isNMCS() {
         return isNMCS;
@@ -584,7 +584,6 @@ public class ArgumentHandler {
 
     /**
      * @param name
-     * @set the Target
      */
     public void setTargetMolOutName(String name) {
         this.targetOutfileName = name;
@@ -592,7 +591,6 @@ public class ArgumentHandler {
 
     /**
      * @param name
-     * @set the Query
      */
     public void setQueryMolOutName(String name) {
         this.queryOutfileName = name;

@@ -44,7 +44,7 @@ public class SubGraphMapper {
      *
      * @param mainMolecule
      * @param matchedCore
-     * @return
+     * @return container
      */
     public static IAtomContainer getNeedle(IAtomContainer mainMolecule, List<Integer> matchedCore) {
         IAtomContainer needle = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class);

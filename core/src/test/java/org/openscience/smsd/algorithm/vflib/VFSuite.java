@@ -33,8 +33,8 @@ import org.junit.runners.Suite;
 /**
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
- * @cdk.module test-smsd
- * @cdk.require java1.6+
+ *  test-smsd
+ *  java1.6+
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({

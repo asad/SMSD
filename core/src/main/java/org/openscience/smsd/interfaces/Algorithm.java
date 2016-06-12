@@ -37,8 +37,8 @@ package org.openscience.smsd.interfaces;
  * <lI>5: TurboSubStructure
  * </OL>
  *
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public enum Algorithm implements Comparable<Algorithm> {

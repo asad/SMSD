@@ -42,7 +42,7 @@ import org.openscience.smsd.helper.MoleculeInitializer;
  * molecule. If this case is true then it returns only all mapping.
  *
  * This is much faster than {@link
- * org.openscience.cdk.smsd.algorithm.vflib.substructure} class as it only
+ * org.openscience.smsd.algorithm.vflib.substructure} class as it only
  * reports first match and backtracks.
  *
  * This class should only be used to report if a query graph is a substructure
@@ -66,8 +66,8 @@ import org.openscience.smsd.helper.MoleculeInitializer;
  * </pre> </font>
  *
  *
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public final class Substructure extends BaseMapping {

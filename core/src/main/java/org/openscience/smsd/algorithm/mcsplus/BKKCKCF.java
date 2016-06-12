@@ -39,8 +39,8 @@ import java.util.Stack;
  *
  * BronKerboschCazalsKarandeKochCliqueFinder.java
  *
- * @cdk.githash
- * @cdk.module smsd
+ * 
+ * 
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public final class BKKCKCF {

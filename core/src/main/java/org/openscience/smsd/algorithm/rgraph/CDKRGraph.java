@@ -91,10 +91,10 @@ import org.openscience.cdk.exception.CDKException;
  * @cdk.cite HAN93}.
  *
  * @author Stephane Werner from IXELIS mail@ixelis.net, Syed Asad Rahman <asad@ebi.ac.uk> (modified the orignal code)
- * @cdk.created 2002-07-17
- * @cdk.require java1.4+
- * @cdk.module smsd
- * @cdk.githash
+ * 2002-07-17
+ *  java1.4+
+ * 
+ * 
  */
 public class CDKRGraph {
     // an CDKRGraph is a list of CDKRGraph nodes

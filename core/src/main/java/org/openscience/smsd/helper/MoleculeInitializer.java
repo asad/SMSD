@@ -45,8 +45,8 @@ import org.openscience.smsd.tools.ExtAtomContainerManipulator;
 
 /**
  *
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */

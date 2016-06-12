@@ -50,8 +50,8 @@ import java.util.Arrays;
 /**
  * This class keeps track of shared states
  * 
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 // The SharedState class holds four arrays containing the mapping between

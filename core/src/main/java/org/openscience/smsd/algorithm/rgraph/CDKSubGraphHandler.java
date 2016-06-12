@@ -33,9 +33,9 @@ import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.interfaces.IResults;
 
 /**
- * This class acts as a handler class for CDKMCS algorithm {@link org.openscience.cdk.smsd.algorithm.cdk.CDKMCS}.
+ * This class acts as a handler class for CDKMCS algorithm {@link org.openscience.smsd.algorithm.rgraph.CDKMCS}.
  *
- * @cdk.module smsd @cdk.githash
+ *  
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
@@ -61,6 +61,7 @@ public class CDKSubGraphHandler implements IResults {
      * @param target
      * @param shouldMatchBonds
      * @param shouldMatchRings
+     * @param matchAtomType
      */
     public CDKSubGraphHandler(IAtomContainer source, IAtomContainer target,
             boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) {
@@ -170,8 +171,8 @@ public class CDKSubGraphHandler implements IResults {
                 TreeMap<Integer, Integer> atomMappings = new TreeMap<>();
                 for (Map.Entry<Integer, Integer> Solutions : final_solution.entrySet()) {
 
-                    int IIndex = Solutions.getKey().intValue();
-                    int JIndex = Solutions.getValue().intValue();
+                    int IIndex = Solutions.getKey();
+                    int JIndex = Solutions.getValue();
 
                     if (rOnPFlag) {
                         atomMappings.put(IIndex, JIndex);
@@ -198,8 +199,8 @@ public class CDKSubGraphHandler implements IResults {
             AtomAtomMapping atomMappings = new AtomAtomMapping(source, target);
             for (Map.Entry<Integer, Integer> Solutions : final_solution.entrySet()) {
 
-                int IIndex = Solutions.getKey().intValue();
-                int JIndex = Solutions.getValue().intValue();
+                int IIndex = Solutions.getKey();
+                int JIndex = Solutions.getValue();
 
                 IAtom sourceAtom = null;
                 IAtom targetAtom = null;

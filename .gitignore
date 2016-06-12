@@ -14,3 +14,4 @@ build.properties
 /smsd-pom/target/
 /core/target/
 /exec/target/
+/target/

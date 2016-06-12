@@ -45,7 +45,7 @@ import org.openscience.cdk.smiles.SmilesParser;
  *
  * @author Syed Asad Rahman
  * @author egonw
- * @cdk.module test-smsd
+ *  test-smsd
  */
 public class SubstructureTest {
 

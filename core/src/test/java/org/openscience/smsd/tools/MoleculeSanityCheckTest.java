@@ -35,10 +35,10 @@ import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.smiles.SmilesParser;
-import org.openscience.cdk.smsd.tools.MoleculeSanityCheck;
 
 /**
- * @cdk.module test-smsd
+ * test-smsd
+ *
  * @author Asad
  */
 public class MoleculeSanityCheckTest {
@@ -64,7 +64,8 @@ public class MoleculeSanityCheckTest {
 
     /**
      * Test of checkAndCleanMolecule method, of class MoleculeSanityCheck.
-     * @throws InvalidSmilesException 
+     *
+     * @throws InvalidSmilesException
      */
     @Test
     public void testCheckAndCleanMolecule() throws InvalidSmilesException {
@@ -73,13 +74,14 @@ public class MoleculeSanityCheckTest {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer molecule = sp.parseSmiles(fragmentMolSmiles);
         IAtomContainer expResult = sp.parseSmiles("C1=CC2=C(C=C1)C=CC=C2");
-        IAtomContainer result = MoleculeSanityCheck.checkAndCleanMolecule(molecule);
+        IAtomContainer result = ExtAtomContainerManipulator.checkAndCleanMolecule(molecule);
         assertEquals(expResult.getBondCount(), result.getBondCount());
     }
 
     /**
      * Test of fixAromaticity method, of class MoleculeSanityCheck.
-     * @throws InvalidSmilesException 
+     *
+     * @throws InvalidSmilesException
      */
     @Test
     public void testFixAromaticity() throws InvalidSmilesException {
@@ -87,7 +89,7 @@ public class MoleculeSanityCheckTest {
         String rawMolSmiles = "C1=CC2=C(C=C1)C=CC=C2";
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer mol = sp.parseSmiles(rawMolSmiles);
-        MoleculeSanityCheck.checkAndCleanMolecule(mol);
+        ExtAtomContainerManipulator.checkAndCleanMolecule(mol);
         int count = 0;
         for (IBond b : mol.bonds()) {
             if (b.getFlag(CDKConstants.ISAROMATIC) && b.getOrder().equals(IBond.Order.DOUBLE)) {

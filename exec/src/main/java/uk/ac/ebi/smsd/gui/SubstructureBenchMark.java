@@ -116,7 +116,7 @@ public class SubstructureBenchMark {
     /**
      *
      * @param file
-     * @return
+     * @return IteratingChemObjectReader
      * @throws FileNotFoundException
      */
     public static IIteratingChemObjectReader read(File file) throws FileNotFoundException {

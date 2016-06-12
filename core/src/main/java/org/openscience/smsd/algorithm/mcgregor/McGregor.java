@@ -48,8 +48,8 @@ import org.openscience.smsd.tools.IterationManager;
  *
  * @cdk.cite SMSD2009}. </p>
  *
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */

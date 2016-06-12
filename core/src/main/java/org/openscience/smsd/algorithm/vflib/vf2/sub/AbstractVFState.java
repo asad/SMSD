@@ -11,7 +11,7 @@ import java.util.Arrays;
  *
  * @author John May
  * @author Syed Asad Rahman
- * @cdk.module isomorphism
+ *  isomorphism
  */
 abstract class AbstractVFState extends State {
 

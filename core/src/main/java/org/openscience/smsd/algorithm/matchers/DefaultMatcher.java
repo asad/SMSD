@@ -28,8 +28,8 @@ import org.openscience.cdk.interfaces.IBond;
 /**
  * Checks if atom is matching between query and target molecules.
  *
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
@@ -40,7 +40,7 @@ public class DefaultMatcher {
      * @param bondMatcher
      * @param bondA2
      * @param shouldMatchBonds
-     * @return
+     * @return true if condition meet else false
      */
     private static boolean isBondMatch(BondMatcher queryBondMatcher, IBond targetBond) {
         return queryBondMatcher.matches(targetBond);
@@ -74,7 +74,7 @@ public class DefaultMatcher {
      * @param matchBond
      * @param shouldMatchRings
      * @param matchAtomTypes (atom type also matched and symbol matched)
-     * @return
+     * @return true if condition meet else false
      */
     public static boolean matches(IBond bondA1, IBond bondA2,
             boolean matchBond, boolean shouldMatchRings, boolean matchAtomTypes) {

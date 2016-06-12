@@ -39,7 +39,7 @@ import org.openscience.smsd.AtomAtomMapping;
  * Filter the results based on fragment size.
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
- * @cdk.module smsd
+ * 
  */
 public final class FragmentFilter extends Sotter implements IChemicalFilter<Integer> {
 

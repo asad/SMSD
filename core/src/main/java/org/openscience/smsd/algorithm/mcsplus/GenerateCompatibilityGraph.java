@@ -46,8 +46,8 @@ import org.openscience.smsd.helper.LabelContainer;
  * This class generates compatibility graph between query and target molecule.
  * It also marks edges in the compatibility graph as c-edges or d-edges.
  *
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */

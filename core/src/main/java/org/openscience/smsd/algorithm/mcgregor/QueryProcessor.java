@@ -33,8 +33,8 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 /**
  * Class to handle mappings of query molecule.
  *
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public class QueryProcessor {

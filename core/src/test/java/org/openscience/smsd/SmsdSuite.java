@@ -33,13 +33,13 @@ import org.junit.runners.Suite;
 /**
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
- * @cdk.module test-smsd
- * @cdk.require java1.6+
+ *  test-smsd
+ *  java1.6+
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({org.openscience.smsd.IsomorphismTest.class,
     org.openscience.smsd.helper.HelperSuite.class,
-    //        org.openscience.cdk.smsd.interfaces.InterfacesSuite.class,
+    //        org.openscience.smsd.interfaces.InterfacesSuite.class,
     org.openscience.smsd.filters.FiltersSuite.class,
     org.openscience.smsd.SubstructureTest.class,
     org.openscience.smsd.algorithm.AlgorithmSuite.class,

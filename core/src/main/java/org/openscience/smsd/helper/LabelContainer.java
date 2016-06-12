@@ -30,8 +30,8 @@ import java.util.List;
 /**
  * Class that handles atoms and assigns an integer label to them.
  *
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public class LabelContainer {

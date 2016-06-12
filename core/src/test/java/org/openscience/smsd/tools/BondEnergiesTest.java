@@ -30,7 +30,7 @@ import org.openscience.cdk.interfaces.IBond.Order;
 
 /**
  * @author Asad
- * @cdk.module test-smsd
+ *  test-smsd
  */
 public class BondEnergiesTest {
 

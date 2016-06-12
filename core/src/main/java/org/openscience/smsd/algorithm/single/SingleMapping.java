@@ -46,8 +46,8 @@ import org.openscience.smsd.tools.BondEnergies;
  * This class handles single atom mapping. Either query and/or target molecule
  * with single atom is mapped by this class.
  *
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */

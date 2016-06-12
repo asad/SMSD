@@ -61,8 +61,8 @@ import org.openscience.smsd.algorithm.matchers.DefaultBondMatcher;
 /**
  * This class finds mapping states between query and target molecules.
  *
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 // The State class represents a single state in the isomorphism detection

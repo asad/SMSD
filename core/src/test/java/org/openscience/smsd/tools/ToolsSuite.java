@@ -31,7 +31,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 /**
- * @cdk.module test-smsd
+ *  test-smsd
  * @author Asad
  */
 @RunWith(Suite.class)

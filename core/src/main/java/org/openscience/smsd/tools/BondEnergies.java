@@ -187,8 +187,8 @@ import org.openscience.smsd.helper.BondEnergy;
  * Xe-O	84	175
  * Xe-F	130	195
  *
- * @cdk.githash
- * @cdk.module smsd
+ * 
+ * 
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public class BondEnergies {

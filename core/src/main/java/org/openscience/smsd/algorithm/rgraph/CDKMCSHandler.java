@@ -38,10 +38,10 @@ import org.openscience.smsd.interfaces.IResults;
 
 /**
  * This class acts as a handler class for CDKMCS algorithm
- * {@link org.openscience.cdk.smsd.algorithm.cdk.CDKMCS}.
+ * {@link org.openscience.smsd.algorithm.rgraph.CDKMCS}.
  *
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
@@ -178,8 +178,8 @@ public class CDKMCSHandler implements IResults {
                 TreeMap<Integer, Integer> atomMappings = new TreeMap<>();
                 for (Map.Entry<Integer, Integer> Solutions : final_solution.entrySet()) {
 
-                    int iIndex = Solutions.getKey().intValue();
-                    int jIndex = Solutions.getValue().intValue();
+                    int iIndex = Solutions.getKey();
+                    int jIndex = Solutions.getValue();
 
                     if (rOnPFlag) {
                         atomMappings.put(iIndex, jIndex);

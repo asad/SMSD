@@ -11,7 +11,7 @@ import org.openscience.smsd.algorithm.vflib.vf2.sub.Pattern.Patterns;
  *
  * @author John May
  * @author Syed Asad Rahman
- * @cdk.module smsd
+ * 
  */
 final class StateStream implements Iterator<int[]> {
 

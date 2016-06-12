@@ -31,8 +31,8 @@ import java.util.Comparator;
  * This class generates compatibility graph between query and target molecule. It also marks edges in the compatibility
  * graph as c-edges or d-edges.
  *
- * @cdk.module smsd
- * @cdk.githash
+ * 
+ * 
  *
  * @author Syed Asad Rahman <asad at ebi.ac.uk>
  */

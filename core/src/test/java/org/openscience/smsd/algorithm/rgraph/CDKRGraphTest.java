@@ -22,12 +22,12 @@ package org.openscience.smsd.algorithm.rgraph;
 
 import org.junit.Assert;
 import org.junit.Test;
-import org.openscience.cdk.smsd.algorithm.rgraph.CDKRGraph;
+import org.openscience.smsd.algorithm.rgraph.CDKRGraph;
 
 /**
- * @cdk.module test-smsd
+ *  test-smsd
  * @author     Syed Asad Rahman
- * @cdk.require java1.5+
+ *  java1.5+
  */
 public class CDKRGraphTest {
 

@@ -31,14 +31,14 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.openscience.cdk.smsd.filters.PostFilter;
+import org.openscience.smsd.filters.PostFilter;
 import static org.junit.Assert.*;
 
 /**
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
- * @cdk.module test-smsd
- * @cdk.require java1.6+
+ *  test-smsd
+ *  java1.6+
  */
 public class PostFilterTest {
 

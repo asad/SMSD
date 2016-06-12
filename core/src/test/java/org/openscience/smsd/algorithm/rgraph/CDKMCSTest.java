@@ -36,6 +36,7 @@ import org.openscience.cdk.Atom;
 import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
+import org.openscience.cdk.graph.AtomContainerAtomPermutor;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
@@ -44,7 +45,6 @@ import org.openscience.cdk.io.MDLV2000Reader;
 import org.openscience.cdk.isomorphism.matchers.*;
 import org.openscience.cdk.isomorphism.matchers.smarts.AnyAtom;
 import org.openscience.cdk.smiles.SmilesParser;
-import org.openscience.cdk.smsd.labelling.AtomContainerAtomPermutor;
 import org.openscience.cdk.templates.MoleculeFactory;
 import org.openscience.cdk.tools.CDKHydrogenAdder;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
@@ -53,9 +53,9 @@ import org.openscience.smsd.tools.ExtAtomContainerManipulator;
 import reader.mdl.SDFReaderTest;
 
 /**
- * @cdk.module test-smsd
+ *  test-smsd
  * @author Syed Asad Rahman
- * @cdk.require java1.5+
+ *  java1.5+
  */
 public class CDKMCSTest {
 
