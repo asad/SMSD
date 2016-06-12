@@ -1,0 +1,1 @@
+java -Xms500M -Xmx512M -cp SMSD.jar uk.ac.ebi.smsd.cmd.SMSDcmd %*
