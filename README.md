@@ -38,16 +38,17 @@ Maven POM configuration
 --------------------
 Command Line Options
 --------------------
+java -cp bin/smsd.jar: uk.ac.ebi.smsd.cmd.SMSDcmd
 
 ===================
-Windows Platform
+Windows Platform (DOS)
 ```
-java -Xms500M -Xmx512M -cp smsd.jar uk.ac.ebi.smsd.cmd.SMSDcmd %*
+java -Xms500M -Xmx512M -cp bin/smsd.jar: uk.ac.ebi.smsd.cmd.SMSDcmd %*
 ```
 
 Unix/Mac
 ```
-java -Xms500M -Xmx512M -cp java -cp smsd.jar: uk.ac.ebi.smsd.cmd.SMSDcmd $@
+java -Xms500M -Xmx512M -cp bin/smsd.jar: uk.ac.ebi.smsd.cmd.SMSDcmd $@
 ```
 ===================
 
