@@ -47,7 +47,7 @@ Windows Platform (DOS): SMSD.bat file
 java -Xms500M -Xmx512M -cp bin/smsd.jar: uk.ac.ebi.smsd.cmd.SMSDcmd %*
 ```
 
-Unix/Mac: SMSD file
+Unix/Mac: SMSD.sh file
 ```
 java -Xms500M -Xmx512M -cp bin/smsd.jar: uk.ac.ebi.smsd.cmd.SMSDcmd $@
 ```
