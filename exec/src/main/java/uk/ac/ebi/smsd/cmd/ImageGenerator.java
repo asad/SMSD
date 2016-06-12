@@ -88,11 +88,11 @@ public class ImageGenerator {
     }
     public final static int SUB_IMAGE_WIDTH = 300;
     public final static int SUB_IMAGE_HEIGHT = 300;
-    private List<QueryTargetPair> queryTargetPairs;
-    private ArgumentHandler argumentHandler;
+    private final List<QueryTargetPair> queryTargetPairs;
+    private final ArgumentHandler argumentHandler;
 
     public ImageGenerator(ArgumentHandler argumentHandler) {
-        queryTargetPairs = new ArrayList<QueryTargetPair>();
+        queryTargetPairs = new ArrayList<>();
         this.argumentHandler = argumentHandler;
     }
 
@@ -106,8 +106,8 @@ public class ImageGenerator {
 
         IAtomContainer querySubgraph = query.getBuilder().newInstance(IAtomContainer.class, cloneOfQuery);
         IAtomContainer targetSubgraph = target.getBuilder().newInstance(IAtomContainer.class, cloneOfTarget);
-        List<IAtom> n1 = new ArrayList<IAtom>(query.getAtomCount());
-        List<IAtom> n2 = new ArrayList<IAtom>(target.getAtomCount());
+        List<IAtom> n1 = new ArrayList<>(query.getAtomCount());
+        List<IAtom> n2 = new ArrayList<>(target.getAtomCount());
 
         for (Map.Entry<Integer, Integer> aMaps : maxac.entrySet()) {
             IAtom qAtom = cloneOfQuery.getAtom(aMaps.getKey());
@@ -214,7 +214,7 @@ public class ImageGenerator {
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                     RenderingHints.VALUE_ANTIALIAS_ON);
         }
-        List<IAtomContainer> mols = new ArrayList<IAtomContainer>();
+        List<IAtomContainer> mols = new ArrayList<>();
         for (QueryTargetPair pair : queryTargetPairs) {
             mols.add(pair.query);
             mols.add(pair.target);
@@ -248,7 +248,7 @@ public class ImageGenerator {
     public RenderedImage createHubWheelImage(IAtomContainer hub,
             List<IAtomContainer> rim, List<Map<Integer, Integer>> mappings,
             int subImageWidth, int subImageHeight) {
-        List<IAtomContainer> all = new ArrayList<IAtomContainer>();
+        List<IAtomContainer> all = new ArrayList<>();
         all.add(hub);
         all.addAll(rim);
         CircularCanvasGenerator generator = new CircularCanvasGenerator(true);
@@ -326,7 +326,7 @@ public class ImageGenerator {
         Image image = moleculeDrawer.makeBlankImage(width, height);
         Graphics2D g = (Graphics2D) image.getGraphics();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        List<IAtomContainer> mols = new ArrayList<IAtomContainer>();
+        List<IAtomContainer> mols = new ArrayList<>();
         for (QueryTargetPair pair : queryTargetPairs) {
             mols.add(pair.query);
             mols.add(pair.target);
