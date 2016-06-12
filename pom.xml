@@ -86,25 +86,12 @@
                     </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-gpg-plugin</artifactId>
-                        <version>1.5</version>
-                        <executions>
-                            <execution>
-                                <id>sign-artifacts</id>
-                                <phase>verify</phase>
-                                <goals>
-                                    <goal>sign</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-source-plugin</artifactId>
                         <version>3.0.0</version>
                         <executions>
                             <execution>
                                 <id>attach-sources</id>
+                                <!--phase>deploy</phase-->
                                 <goals>
                                     <goal>jar-no-fork</goal>
                                 </goals>
@@ -118,8 +105,23 @@
                         <executions>
                             <execution>
                                 <id>attach-javadocs</id>
+                                <!--phase>deploy</phase-->
                                 <goals>
                                     <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>1.5</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
                                 </goals>
                             </execution>
                         </executions>
@@ -146,6 +148,7 @@
                             </execution> 
                         </executions> 
                     </plugin>
+                    
                 </plugins>
             </build>
         </profile>
