@@ -1,18 +1,18 @@
 Single SMILES query vs single SMILES target:
 
-java -jar SMSD.jar -Q SMI -q "CCN" -T SMI -t "CCCNC"
+java -Xms500M -Xmx512M -cp smsd.jar: uk.ac.ebi.smsd.cmd.SMSDcmd -Q SMI -q "CCN" -T SMI -t "CCCNC"
 
 Single SMILES query vs single MOL target:
 
-java -jar SMSD.jar -Q SMI -q "CCN" -T MOL -t Data/ATP.mol
+java -Xms500M -Xmx512M -cp smsd.jar: uk.ac.ebi.smsd.cmd.SMSDcmd -Q SMI -q "CCN" -T MOL -t Data/ATP.mol
 
 Signature query vs smiles target, outputting the subgraph to stdout:
 
-java -jar SMSD.jar -Q SIG -q "[C]([C][C])" -T SMI -t "C(C)CC" -O SMI -o --
+java -Xms500M -Xmx512M -cp smsd.jar: uk.ac.ebi.smsd.cmd.SMSDcmd -Q SIG -q "[C]([C][C])" -T SMI -t "C(C)CC" -O SMI -o --
 
 Multiway N-MCS, outputing the subgraph as a smiles to stdout:
 
-java -jar SMSD.jar -T SDF -t Data/arom.sdf -N -O SMI -o --
+java -Xms500M -Xmx512M -cp smsd.jar: uk.ac.ebi.smsd.cmd.SMSDcmd -T SDF -t Data/arom.sdf -N -O SMI -o --
 
 Just use ./SMSD -I to list all the image options.
 
