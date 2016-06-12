@@ -19,33 +19,19 @@ Maven POM configuration
 -----------------------
 
 ```xml
-<project>
-...
-<repositories>
-   <repository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-   </repository>
-   <repository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-   </repository>
-</repositories>
-...
+
 <dependencies>
     <dependency>
         <groupId>uk.ac.ebi.smsd</groupId>
         <artifactId>smsd-core</artifactId>
-        <version>2.0.0-SNAPSHOT</version>
+        <version>LATEST</version>
     </dependency>
     <dependency>
         <groupId>uk.ac.ebi.smsd</groupId>
         <artifactId>smsd-exec</artifactId>
-        <version>2.0.0-SNAPSHOT</version>
+        <version>LATEST</version>
     </dependency>
 </dependencies>
-...
-</project>
 ```
 ---------------
 THIRD PARTY TOOL
