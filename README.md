@@ -42,12 +42,12 @@ Command Line Options
 java -Xms500M -Xmx512M -cp bin/smsd.jar: uk.ac.ebi.smsd.cmd.SMSDcmd
 ```
 ===================
-Windows Platform (DOS)
+Windows Platform (DOS): SMSD.bat file
 ```
 java -Xms500M -Xmx512M -cp bin/smsd.jar: uk.ac.ebi.smsd.cmd.SMSDcmd %*
 ```
 
-Unix/Mac
+Unix/Mac: SMSD file
 ```
 java -Xms500M -Xmx512M -cp bin/smsd.jar: uk.ac.ebi.smsd.cmd.SMSDcmd $@
 ```
