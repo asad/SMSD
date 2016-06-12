@@ -353,8 +353,9 @@ public class VF2MCSTest {
         Isomorphism smsd = new Isomorphism(query, target, Algorithm.VFLibMCS, false, false, false);
         smsd.setChemFilters(true, true, true);
         assertEquals("MMP: [CH3:1][CH:2]=[CH:3][CH:4]=[CH2:5]"
-                + ">>[CH3:5][CH:4]1CC([CH2:1][CH:2]=[CH:3]1)C(C)=O,"
-                + " AAM:[1:5|2:6|3:7|4:2|5:1|]", smsd.getFirstAtomMapping().toString());
+                + ">>[CH3:5][CH:4]1CC([CH2:1][CH:2]=[CH:3]1)C(C)=O, "
+                + "AAM:[1:5|2:6|3:7|4:2|5:1|], "
+                + "MCS: C=CC=CC", smsd.getFirstAtomMapping().toString());
         assertNotNull(smsd.getFirstAtomMapping());
         assertEquals(5, query.getAtomCount());
         assertEquals(10, target.getAtomCount());

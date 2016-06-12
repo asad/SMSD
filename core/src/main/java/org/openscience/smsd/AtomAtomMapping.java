@@ -48,7 +48,7 @@ import org.openscience.smsd.tools.ExtAtomContainerManipulator;
 /**
  * Holds atom-atom mappings information between source and target molecules
  *
- *  
+ *
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
@@ -171,6 +171,12 @@ public final class AtomAtomMapping implements Serializable {
             }
 
             s += "]";
+
+            try {
+                s += ", MCS: " + getCommonFragmentAsSMILES();
+            } catch (CDKException ex) {
+                Logger.getLogger(AtomAtomMapping.class.getName()).log(Level.SEVERE, null, ex);
+            }
 
         } catch (CloneNotSupportedException ex) {
             Logger.getLogger(AtomAtomMapping.class.getName()).log(Level.SEVERE, null, ex);

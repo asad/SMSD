@@ -30,11 +30,11 @@ import java.io.Writer;
 import java.util.Properties;
 
 import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.cli.PosixParser;
 
 /**
  *
@@ -68,13 +68,6 @@ public class ArgumentHandler {
     }
 
     /**
-     * @return the graphFile
-     */
-    public String getGraphFile() {
-        return graphFile;
-    }
-
-    /**
      * @return the descriptorFile
      */
     public String getDescriptorFile() {
@@ -103,7 +96,6 @@ public class ArgumentHandler {
      */
     private final String matchFile = "mcs";
     private final String fingerFile = "finger";
-    private final String graphFile = "graph";
     private final String descriptorFile = "molDescriptors";
     private String queryOutfileName;
     private String targetOutfileName;
@@ -156,48 +148,90 @@ public class ArgumentHandler {
         options.addOption("b", false, "Match Bond types (Single, Double etc)");
 
         options.addOption(
-                OptionBuilder.hasArg().withDescription("Query filename").withArgName("filepath").create("q"));
+                Option.builder("q")
+                .argName("query_file")
+                .hasArg()
+                .desc("Query filename")
+                .build());
 
         options.addOption(
-                OptionBuilder.hasArg().withDescription("Target filename").withArgName("filepath").create("t"));
-
+                Option.builder("t")
+                .argName("target_file")
+                .hasArg()
+                .desc("Target filename")
+                .build());
         options.addOption(
-                OptionBuilder.hasArg().withDescription("Add suffix to the files").withArgName("suffix").create("S"));
+                Option.builder("S")
+                .argName("suffix")
+                .hasArg()
+                .desc("Add suffix to the files")
+                .build());
 
         options.addOption("g", false, "create png of the mapping");
 
         options.addOption(
-                OptionBuilder.hasArg().withDescription("Dimension of the image in pixels").withArgName("WIDTHxHEIGHT").create("d"));
+                Option.builder("d")
+                .argName("WIDTHxHEIGHT")
+                .hasArg()
+                .desc("Dimension of the image in pixels")
+                .build());
 
         options.addOption("m", false, "Report all Mappings");
 
         String filterDescr = "Default: 0, Stereo: 1, "
                 + "Stereo+Fragment: 2, Stereo+Fragment+Energy: 3";
+
         options.addOption(
-                OptionBuilder.hasArg().withDescription(filterDescr).withArgName("number").create("f"));
+                Option.builder("f")
+                .argName("filter_number")
+                .hasArg()
+                .desc(filterDescr)
+                .build());
 
         options.addOption("A", false,
                 "Appends output to existing files, else creates new files");
 
         options.addOption(
-                OptionBuilder.withDescription("Do N-way MCS on the target SD file").create("N"));
+                Option.builder("N")
+                .desc("Do N-way MCS on the target SD file")
+                .build());
 
         options.addOption(
-                OptionBuilder.hasArg().withDescription("Query type (MOL, SMI, etc)").withArgName("type").create("Q"));
+                Option.builder("Q")
+                .argName("query_type")
+                .hasArg()
+                .desc("Query type (MOL, SMI, etc.)")
+                .build());
 
         options.addOption(
-                OptionBuilder.hasArg().withDescription("Target type (MOL, SMI, SMIF, etc)").withArgName("type").create("T"));
+                Option.builder("T")
+                .argName("target_type")
+                .hasArg()
+                .desc("Target type (MOL, SMI, SMIF, etc.)")
+                .build());
 
         options.addOption(
-                OptionBuilder.hasArg().withDescription("Output the substructure to a file").withArgName("filename").create("o"));
+                Option.builder("o")
+                .argName("filename")
+                .hasArg()
+                .desc("Output the substructure to a file")
+                .build());
 
         options.addOption(
-                OptionBuilder.hasArg().withDescription("Output type (SMI, MOL)").withArgName("type").create("O"));
+                Option.builder("O")
+                .argName("type")
+                .hasArg()
+                .desc("Output type (SMI, MOL)")
+                .build());
 
         options.addOption(
-                OptionBuilder.hasOptionalArgs(2).withValueSeparator().withDescription("Image options").withArgName("option=value").create("I"));
+                Option.builder("I")
+                .argName("option=value")
+                .hasArg()
+                .desc("Image options")
+                .build());
 
-        PosixParser parser = new PosixParser();
+        DefaultParser parser = new DefaultParser();
         CommandLine line = parser.parse(options, args, true);
 
         if (line.hasOption('Q')) {
@@ -374,19 +408,21 @@ public class ArgumentHandler {
         sb.append("Usage examples: ");
         sb.append(NEW_LINE);
         sb.append("To start the GUI: java -jar SMSD.jar ").append(NEW_LINE).append(NEW_LINE);
-        sb.append("Command Line Options (recommended flags):")
+        sb.append("Java Command: ").append("java -Xms500M -Xmx512M -cp smsd.jar: uk.ac.ebi.smsd.cmd.SMSDcmd").append(NEW_LINE).append(NEW_LINE);
+        sb.append("Help Command: ").append("java -Xms500M -Xmx512M -cp smsd.jar: uk.ac.ebi.smsd.cmd.SMSDcmd -h").append(NEW_LINE).append(NEW_LINE);
+        sb.append("Shell Command Line Options (recommended flags):")
                 .append("\n -r -z -b will remove hydrogens, match rings, match bond types respectively.").append(NEW_LINE).append(NEW_LINE);
         sb.append("a) Find MCS between two molecules and write the output as a MOL file:").append(NEW_LINE)
-                .append("\tsh SMSD -Q SMI -q \"CCC\" -T PDB -t ATP.pdb -O MOL -o subgraph.mol -r -z -b").append(NEW_LINE);
+                .append("\tsh SMSD.sh -Q SMI -q \"CCC\" -T PDB -t ATP.pdb -O MOL -o subgraph.mol -r -z -b").append(NEW_LINE);
         sb.append("b) Find MCS between two molecules and print the output:").append(NEW_LINE)
-                .append("\tsh SMSD -Q SMI -q \"CCC\" -T SMI -t \"CCN\" -O SMI -o -- -r -z -b").append(NEW_LINE);
+                .append("\tsh SMSD.sh -Q SMI -q \"CCC\" -T SMI -t \"CCN\" -O SMI -o - -r -z -b").append(NEW_LINE);
         sb.append("c) Find MCS between two molecules and generate an image highlighting the matched parts:").append(NEW_LINE)
-                .append("\tsh SMSD -Q MOL -q ADP.mol -T MOL -t ATP.mol -g -r -z -b").append(NEW_LINE);
+                .append("\tsh SMSD.sh -Q MOL -q ADP.mol -T MOL -t ATP.mol -g -r -z -b").append(NEW_LINE);
         sb.append("d) Find MCS between N-molecules and print the common substructure between them:").append(NEW_LINE)
-                .append("\tsh SMSD -T SDF -t arom.sdf -N -O SMI -o -- -r -z -b").append(NEW_LINE);
+                .append("\tsh SMSD.sh -T SDF -t arom.sdf -N -O SMI -o - -r -z -b").append(NEW_LINE);
         sb.append("e) Find MCS between N-molecules and highlighting the common substructure between them:").append(NEW_LINE);
         sb.append("\tWARNING: This option might require large virtual machine memory allocation").append(NEW_LINE)
-                .append("\tsh SMSD -T SDF -t arom.sdf -N -O SMI -o -- -g -r -z -b").append(NEW_LINE).append(NEW_LINE);
+                .append("\tsh SMSD.sh -T SDF -t arom.sdf -N -O SMI -o - -g -r -z -b").append(NEW_LINE).append(NEW_LINE);
         sb.append("Note: You could use various file formats").append(NEW_LINE);
         return sb;
     }

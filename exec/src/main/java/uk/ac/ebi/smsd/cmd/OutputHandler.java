@@ -51,6 +51,7 @@ import org.openscience.cdk.smiles.SmilesGenerator;
 import org.openscience.cdk.tools.ILoggingTool;
 import org.openscience.cdk.tools.LoggingToolFactory;
 import org.openscience.directgraphics.direct.Params;
+import org.openscience.smsd.AtomAtomMapping;
 
 /**
  * Writes the results of SMSD to text files and images.
@@ -63,7 +64,6 @@ public class OutputHandler {
     private final static ILoggingTool logger
             = LoggingToolFactory.createLoggingTool(OutputHandler.class);
     private final ArgumentHandler argumentHandler;
-    private BufferedWriter outGFile = null;
     private BufferedWriter outMFile = null;
     private BufferedWriter outDescriptorFile = null;
     private final ImageGenerator imageGenerator;
@@ -133,7 +133,6 @@ public class OutputHandler {
      */
     void startAppending(String out) throws IOException {
         String suffix = argumentHandler.getSuffix();
-        outGFile = new BufferedWriter(new FileWriter(argumentHandler.getGraphFile() + suffix + out));
         outMFile = new BufferedWriter(new FileWriter(argumentHandler.getMatchFile() + suffix + out));
         outDescriptorFile = new BufferedWriter(new FileWriter(argumentHandler.getDescriptorFile() + suffix + out));
     }
@@ -145,7 +144,6 @@ public class OutputHandler {
      */
     void startNew(String out) throws IOException {
         String suffix = argumentHandler.getSuffix();
-        outGFile = new BufferedWriter(new FileWriter(argumentHandler.getGraphFile() + suffix + out, true));
         outMFile = new BufferedWriter(new FileWriter(argumentHandler.getMatchFile() + suffix + out, true));
 
         File f = new File(argumentHandler.getDescriptorFile() + out);
@@ -173,19 +171,6 @@ public class OutputHandler {
         }
     }
 
-    /**
-     *
-     * @param queryMolInput
-     * @param targetMolInput
-     * @param tanimotoGraph
-     * @throws IOException
-     */
-    void writeGraphScores(String queryMolInput, String targetMolInput, double tanimotoGraph) throws IOException {
-        String graphScoresL = queryMolInput + "\t" + targetMolInput + "\t" + nf.format(tanimotoGraph);
-        outGFile.write(graphScoresL);
-        outGFile.newLine();
-    }
-
 //    public void writeResults(IAtomContainer mol1, IAtomContainer mol2,
 //            double tanimotoGraph, double tanimotoAtom, double tanimotoBond, double euclidianGraph, int nAtomsMatched,
 //            long executionTime) throws IOException, CloneNotSupportedException {
@@ -202,7 +187,7 @@ public class OutputHandler {
      */
     void writeResults(IAtomContainer mol1, IAtomContainer mol2,
             double tanimotoGraph, double euclidianGraph, int nAtomsMatched,
-            long executionTime) throws IOException, CloneNotSupportedException {
+            long executionTime, AtomAtomMapping mapping) throws IOException, CloneNotSupportedException {
         String queryMolInput = argumentHandler.getQueryFilepath();
         String targetMolInput = argumentHandler.getTargetFilepath();
 
@@ -239,6 +224,7 @@ public class OutputHandler {
             outDescriptorFile.write("Query (Bond Count)= " + mol1BondSize + " ");
             outDescriptorFile.write("Target (Bond Count)= " + mol2BondSize + " ");
             outDescriptorFile.write("Match (Size)= " + nAtomsMatched + " ");
+            outDescriptorFile.write("Best Match= " + "\"" + mapping.toString() + "\"" + " ");
             outDescriptorFile.write("Time (ms):" + executionTime + " ");
             outDescriptorFile.newLine();
         } else {
@@ -252,9 +238,9 @@ public class OutputHandler {
             outDescriptorFile.write(mol1BondSize + "\t");
             outDescriptorFile.write(mol2BondSize + "\t");
             outDescriptorFile.write(nAtomsMatched + "\t");
+            outDescriptorFile.write("\"" + mapping.toString() + "\"" + "\t");
             outDescriptorFile.write("Time (ms):" + executionTime + " ");
             outDescriptorFile.newLine();
-            outGFile.flush();
             outMFile.flush();
             outDescriptorFile.flush();
         }
@@ -320,8 +306,8 @@ public class OutputHandler {
      * @throws IOException
      */
     void printTopMapping(
-            int nAtomsMatched, 
-            Map<IAtom, IAtom> mcs, 
+            int nAtomsMatched,
+            Map<IAtom, IAtom> mcs,
             Map<Integer, Integer> mcsNumber,
             String qrefName, String trefName) throws IOException {
 
@@ -349,7 +335,6 @@ public class OutputHandler {
     }
 
     void closeFiles() throws IOException {
-        outGFile.close();
         outMFile.close();
         outDescriptorFile.close();
     }
@@ -429,7 +414,7 @@ public class OutputHandler {
      */
     void writeMolToMolfile(IAtomContainer mol, String filepath) throws IOException, IllegalArgumentException, CDKException {
         Writer out;
-        if (filepath.equals("--")) {
+        if (filepath.equals("-")) {
             out = new PrintWriter(System.out);
         } else {
             out = new FileWriter(filepath);
@@ -499,7 +484,7 @@ public class OutputHandler {
 
     void writeMol(String outputType, IAtomContainer mol, String filepath) throws IOException, IllegalArgumentException, CDKException {
         Writer out;
-        if (filepath.equals("--")) {
+        if (filepath.equals("-")) {
             Writer outWriter = argumentHandler.getOutputWriter();
             if (outWriter == null) {
                 out = new PrintWriter(System.out);
@@ -521,7 +506,7 @@ public class OutputHandler {
 
     void writeMol(String outputType, IAtomContainerSet mols, String filepath) throws IOException, IllegalArgumentException, CDKException {
         Writer out;
-        if (filepath.equals("--")) {
+        if (filepath.equals("-")) {
             Writer outWriter = argumentHandler.getOutputWriter();
             if (outWriter == null) {
                 out = new PrintWriter(System.out);
