@@ -48,10 +48,8 @@ import org.openscience.cdk.tools.CDKHydrogenAdder;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.Isomorphism;
-import org.openscience.smsd.algorithm.rgraph.CDKMCS;
 import org.openscience.smsd.algorithm.vflib.vf2.mcs.VFSeed;
 import org.openscience.smsd.algorithm.vflib.vf2.sub.Pattern;
-import org.openscience.smsd.algorithm.vflib.vf2.sub.VF;
 import org.openscience.smsd.helper.MoleculeInitializer;
 import org.openscience.smsd.interfaces.Algorithm;
 import org.openscience.smsd.tools.ExtAtomContainerManipulator;
@@ -59,7 +57,7 @@ import org.openscience.smsd.tools.ExtAtomContainerManipulator;
 /**
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
- *  test-smsd  java1.6+
+ * test-smsd java1.6+
  */
 public class VF2MCSTest {
 
@@ -331,9 +329,6 @@ public class VF2MCSTest {
 
         Isomorphism smsd = new Isomorphism(query, target, Algorithm.VFLibMCS, false, false, false);
         smsd.setChemFilters(true, true, true);
-        for (AtomAtomMapping map : smsd.getAllAtomMapping()) {
-            System.out.println("map " + map.toString());
-        }
 
         assertNotNull(smsd.getFirstAtomMapping());
         assertEquals(5, query.getAtomCount());
@@ -357,9 +352,9 @@ public class VF2MCSTest {
 
         Isomorphism smsd = new Isomorphism(query, target, Algorithm.VFLibMCS, false, false, false);
         smsd.setChemFilters(true, true, true);
-        for (AtomAtomMapping map : smsd.getAllAtomMapping()) {
-            System.out.println("map " + map.toString());
-        }
+        assertEquals("MMP: [CH3:1][CH:2]=[CH:3][CH:4]=[CH2:5]"
+                + ">>[CH3:5][CH:4]1CC([CH2:1][CH:2]=[CH:3]1)C(C)=O,"
+                + " AAM:[1:5|2:6|3:7|4:2|5:1|]", smsd.getFirstAtomMapping().toString());
         assertNotNull(smsd.getFirstAtomMapping());
         assertEquals(5, query.getAtomCount());
         assertEquals(10, target.getAtomCount());
@@ -403,6 +398,7 @@ public class VF2MCSTest {
 
     /**
      * This bug is present in the CDKMCS algorithm
+     *
      * @cdk.bug 1110537
      * @throws Exception
      */
@@ -428,6 +424,7 @@ public class VF2MCSTest {
 
     /**
      * This bug is present in the CDKMCS algorithm
+     *
      * @cdk.bug 1208740
      * @throws Exception
      */

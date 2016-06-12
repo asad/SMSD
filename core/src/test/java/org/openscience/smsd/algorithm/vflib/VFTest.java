@@ -46,8 +46,7 @@ import org.openscience.smsd.algorithm.vflib.vf2.sub.VF;
  * Unit testing for the {@link VF} class.
  *
  * @author Syed Asad Rahman
- * @author egonw
- *  test-smsd
+ * @author egonw test-smsd
  */
 public class VFTest {
 
@@ -157,13 +156,7 @@ public class VFTest {
         //////System.out.println();
 //        Pattern pattern = Ullmann.findSubstructure(query);
         Pattern pattern = VF.findSubstructure(query, true, true, true);
-        int hits = 0;
         List<Map<IAtom, IAtom>> matchAll = pattern.matchAll(target);
-        for (Map<IAtom, IAtom> mapping : matchAll) {
-            hits++;
-        }
-        System.out.println("HITS " + hits);
-
         Assert.assertEquals(768, matchAll.size());
 
         IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
