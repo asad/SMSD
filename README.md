@@ -33,7 +33,26 @@ Maven POM configuration
     </dependency>
 </dependencies>
 ```
----------------
+
+
+--------------------
+Command Line Options
+--------------------
+```
+java -Xms500M -Xmx512M -cp bin/smsd.jar: uk.ac.ebi.smsd.cmd.SMSDcmd
+```
+===================
+Windows Platform (DOS)
+```
+java -Xms500M -Xmx512M -cp bin/smsd.jar: uk.ac.ebi.smsd.cmd.SMSDcmd %*
+```
+
+Unix/Mac
+```
+java -Xms500M -Xmx512M -cp bin/smsd.jar: uk.ac.ebi.smsd.cmd.SMSDcmd $@
+```
+===================
+
 THIRD PARTY TOOL
 ---------------
 You need the CDK (https://github.com/cdk/cdk) as SMSD depends on the CDK for processing the Chemical information.
