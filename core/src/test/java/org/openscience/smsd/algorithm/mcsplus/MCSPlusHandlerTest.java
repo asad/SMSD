@@ -29,7 +29,6 @@ import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.normalize.SMSDNormalizer;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -198,10 +197,10 @@ public class MCSPlusHandlerTest {
         IAtomContainer query = sp.parseSmiles("Nc1cccc(NO)c1");
         IAtomContainer target = sp.parseSmiles("Nc1ccccc1");
 
-        SMSDNormalizer.percieveAtomTypesAndConfigureAtoms(target);
+        ExtAtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(target);
         ExtAtomContainerManipulator.aromatizeDayLight(target);
 
-        SMSDNormalizer.percieveAtomTypesAndConfigureAtoms(query);
+        ExtAtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(query);
         ExtAtomContainerManipulator.aromatizeDayLight(query);
 
         MCSPlusHandler smsd1 = new MCSPlusHandler(query, target, true, false, false);

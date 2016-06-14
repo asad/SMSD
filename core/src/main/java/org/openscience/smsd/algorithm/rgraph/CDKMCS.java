@@ -13,7 +13,6 @@ import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryBond;
-import org.openscience.cdk.isomorphism.matchers.QueryAtomContainer;
 import org.openscience.cdk.tools.manipulator.BondManipulator;
 import org.openscience.smsd.algorithm.matchers.AtomMatcher;
 import org.openscience.smsd.algorithm.matchers.DefaultAtomMatcher;
@@ -650,7 +649,7 @@ final public class CDKMCS {
             }
             return arrayList;
         } else if (g1.getAtomCount() == 1) {
-            List<CDKRMap> arrayList = new ArrayList<CDKRMap>();
+            List<CDKRMap> arrayList = new ArrayList<>();
             IAtom atom = g1.getAtom(0);
             for (int i = 0; i < g2.getAtomCount(); i++) {
                 IAtom atom2 = g2.getAtom(i);
@@ -677,7 +676,7 @@ final public class CDKMCS {
      * @param g1 The first atom container. Must not be a
      * {@link IQueryAtomContainer}.
      * @param g2 The second one (first and second as in getMap). May be an
-     * {@link QueryAtomContainer}.
+     * {@link IQueryAtomContainer}.
      * @return A List of {@link List}s of {@link CDKRMap} objects of matching
      * Atoms.
      */

@@ -6,11 +6,11 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.junit.Before;
 import org.junit.Test;
+import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
@@ -19,7 +19,6 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IAtomContainerSet;
 import org.openscience.cdk.io.SDFWriter;
 import org.openscience.cdk.io.iterator.IteratingSDFReader;
-import org.openscience.cdk.libio.md.MDMolecule;
 
 /*
  * To change this template, choose Tools | Templates and open the template in the editor.
@@ -54,7 +53,7 @@ public class SDFReaderTest {
         while (iteratingMDLReader.hasNext()) {
             IAtomContainer ac = iteratingMDLReader.next();
             boolean flag = ConnectivityChecker.isConnected(ac);
-            IAtomContainer mol = new MDMolecule(ac);
+            IAtomContainer mol = new AtomContainer(ac);
             mol.setID((String) ac.getProperty(CDKConstants.TITLE));
             mol.setProperty(CDKConstants.TITLE, mol.getID());
             if (!flag) {

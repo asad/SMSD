@@ -37,7 +37,6 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainerCreator;
-import org.openscience.cdk.normalize.SMSDNormalizer;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.smsd.algorithm.mcsplus.MCSPlusHandlerTest;
 import org.openscience.smsd.interfaces.Algorithm;
@@ -233,8 +232,8 @@ public class IsomorphismTest {
         IAtomContainer target = sp.parseSmiles("C\\C=C/Nc1cccc(c1)N(O)\\C=C\\C\\C=C\\C=C/C");
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
-        SMSDNormalizer.percieveAtomTypesAndConfigureAtoms(query);
-        SMSDNormalizer.percieveAtomTypesAndConfigureAtoms(target);
+        ExtAtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(query);
+        ExtAtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(target);
 
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, false, false, false);
         smsd1.setChemFilters(false, true, true);

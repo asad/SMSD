@@ -24,7 +24,6 @@
  */
 package org.openscience.smsd.algorithm.mcgregor;
 
-import com.hp.hpl.jena.vocabulary.DC_10;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
