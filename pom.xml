@@ -4,7 +4,7 @@
     <groupId>uk.ac.ebi.smsd</groupId>
     <artifactId>smsd</artifactId>
     <name>smsd</name>
-    <description>SMILES parsing and generation library for cheminformatics</description>
+    <description>Small Molecule Subgraph Detector (SMSD) - A Maximum Common Subgraph (MCS) and substructure generation library for chemoinformatics</description>
     <url>http://www.github.com/asad/smsd/</url>
     <packaging>pom</packaging>
     <version>2.1.0-SNAPSHOT</version>
