@@ -36,8 +36,6 @@ import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.algorithm.mcsplus.BKKCKCF;
 import org.openscience.smsd.algorithm.mcsplus.GenerateCompatibilityGraph;
 import org.openscience.smsd.algorithm.rgraph.CDKRMapHandler;
-import org.openscience.smsd.algorithm.vflib.Map1ValueComparator;
-import org.openscience.smsd.algorithm.vflib.SortOrder;
 import org.openscience.smsd.interfaces.Algorithm;
 
 /**

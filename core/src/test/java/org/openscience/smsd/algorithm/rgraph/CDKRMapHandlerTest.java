@@ -41,8 +41,8 @@ import org.openscience.cdk.smiles.SmilesParser;
 
 /**
  *  test-smsd
- * @author Syed Asad Rahman
- *  java1.5+
+ * @author Syed Asad Rahman <asad@ebi.ac.uk>
+ *  java1.8+
  */
 public class CDKRMapHandlerTest {
 

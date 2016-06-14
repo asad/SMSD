@@ -47,8 +47,7 @@ import org.openscience.smsd.tools.ExtAtomContainerManipulator;
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
- *  test-smsd
- *  java1.6+
+ * test-smsd java1.8+
  */
 public class IsomorphismTest {
 
@@ -871,7 +870,6 @@ public class IsomorphismTest {
 ////        ////System.out.println("SMILES Common:" + overlap.getFirstAtomMapping().getCommonFragmentAsSMILES());
 ////
 //    }
-
     private void setID(IAtomContainer ac) {
         for (IAtom a : ac.atoms()) {
             a.setID(ac.getAtomNumber(a) + "");

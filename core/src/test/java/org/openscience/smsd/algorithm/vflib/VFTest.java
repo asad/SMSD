@@ -45,7 +45,7 @@ import org.openscience.smsd.algorithm.vflib.vf2.sub.VF;
 /**
  * Unit testing for the {@link VF} class.
  *
- * @author Syed Asad Rahman
+ * @author Syed Asad Rahman <asad@ebi.ac.uk>
  * @author egonw test-smsd
  */
 public class VFTest {

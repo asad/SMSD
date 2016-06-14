@@ -69,7 +69,7 @@ import org.openscience.smsd.tools.IterationManager;
  * </p>
  *
  * @author Stephane Werner from IXELIS mail@ixelis.net, Syed Asad Rahman
- * <asad@ebi.ebi.uk> (modified the orignal code) 2002-07-17 java1.5+
+ * <asad@ebi.ebi.uk> (modified the orignal code) 2002-07-17 java1.8+
  *
  *
  */

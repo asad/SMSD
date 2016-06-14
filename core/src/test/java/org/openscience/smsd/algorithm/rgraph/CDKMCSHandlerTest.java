@@ -39,7 +39,7 @@ import static org.junit.Assert.*;
 /**
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
- *  test-smsd  java1.6+
+ *  test-smsd  java1.8+
  */
 public class CDKMCSHandlerTest {
 

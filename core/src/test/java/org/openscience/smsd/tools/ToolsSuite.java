@@ -31,8 +31,9 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 /**
- *  test-smsd
- * @author Asad
+ * test-smsd
+ *
+ * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({org.openscience.smsd.tools.BondEnergiesTest.class,

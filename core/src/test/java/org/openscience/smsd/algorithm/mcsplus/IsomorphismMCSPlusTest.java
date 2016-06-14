@@ -46,7 +46,7 @@ import org.openscience.smsd.interfaces.Algorithm;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
  *  test-smsd
- *  java1.6+
+ *  java1.8+
  */
 public class IsomorphismMCSPlusTest {
 

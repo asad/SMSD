@@ -34,7 +34,7 @@ import org.junit.runners.Suite;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
  *  test-smsd
- *  java1.6+
+ *  java1.8+
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({org.openscience.smsd.algorithm.single.SingleSuite.class,

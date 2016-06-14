@@ -31,14 +31,13 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.openscience.smsd.filters.PostFilter;
 import static org.junit.Assert.*;
 
 /**
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
  *  test-smsd
- *  java1.6+
+ *  java1.8+
  */
 public class PostFilterTest {
 

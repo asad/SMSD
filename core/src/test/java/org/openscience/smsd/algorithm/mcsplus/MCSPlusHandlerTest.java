@@ -42,7 +42,7 @@ import org.openscience.smsd.tools.ExtAtomContainerManipulator;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
  *  test-smsd
- *  java1.6+
+ *  java1.8+
  */
 public class MCSPlusHandlerTest {
 

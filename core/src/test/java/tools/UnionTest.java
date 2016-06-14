@@ -30,7 +30,7 @@ import org.openscience.smsd.tools.ExtAtomContainerManipulator;
 
 /**
  *
- * @author Asad <asad@ebi.ac.uk>
+ * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public class UnionTest {
 
@@ -56,7 +56,7 @@ public class UnionTest {
 
         int combinations = 1;
 
-        List<String> acSet = new ArrayList<String>();
+        List<String> acSet = new ArrayList<>();
 
         if (isomorphism.getFirstAtomMapping() != null) {
 
@@ -101,7 +101,7 @@ public class UnionTest {
                 }
                 /*check if this combination is chemically valid*/
                 if (isChemicallyValid(union)) {
-                    String molSMILES = getSMILES(union).toString();
+                    String molSMILES = getSMILES(union);
                     if (!acSet.contains(molSMILES)) {
                         acSet.add(molSMILES);
                     }
@@ -166,6 +166,7 @@ public class UnionTest {
      * for the new hydrogens.
      *
      * @param container to which implicit hydrogens are added.
+     * @throws java.lang.Exception
      */
     protected void addImplicitHydrogens(IAtomContainer container) throws Exception {
         CDKAtomTypeMatcher matcher = CDKAtomTypeMatcher.getInstance(container.getBuilder());

@@ -26,9 +26,9 @@ import org.junit.Test;
 
 /**
  * Unit testing for the {@link LabelContainer} class.
- * 
- * @author     Syed Asad Rahman
- *  test-smsd
+ *
+ * Syed Asad Rahman <asad@ebi.ac.uk>
+ * test-smsd
  */
 public class LabelContainerTest {
 

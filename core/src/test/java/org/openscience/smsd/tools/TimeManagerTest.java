@@ -24,11 +24,10 @@ package org.openscience.smsd.tools;
 
 import org.junit.Assert;
 import org.junit.Test;
-import org.openscience.smsd.tools.TimeManager;
 
 /**
- * @author Asad
- *  test-smsd
+ * @author Syed Asad Rahman <asad@ebi.ac.uk>
+ * test-smsd
  */
 public class TimeManagerTest {
 

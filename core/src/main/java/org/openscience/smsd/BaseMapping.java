@@ -37,7 +37,7 @@ import org.openscience.smsd.interfaces.IAtomMapping;
 
 /**
  *
- *  java1.5+
+ *  java1.8+
  *
  * 
  * 

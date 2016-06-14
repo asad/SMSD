@@ -29,8 +29,8 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IBond.Order;
 
 /**
- * @author Asad
- *  test-smsd
+ * @author Syed Asad Rahman <asad@ebi.ac.uk>
+ * test-smsd
  */
 public class BondEnergiesTest {
 

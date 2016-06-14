@@ -39,7 +39,7 @@ import org.openscience.cdk.smiles.SmilesParser;
 /**
  * test-smsd
  *
- * @author Asad
+ * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 public class MoleculeSanityCheckTest {
 

@@ -13,9 +13,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 /**
- * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
- * @author Syed Asad Rahman <asad at ebi.ac.uk>
+ * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({org.openscience.smsd.algorithm.mcsplus.MCSPlusHandlerTest.class,

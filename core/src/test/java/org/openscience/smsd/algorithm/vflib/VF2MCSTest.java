@@ -46,7 +46,6 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainerCreator;
 import org.openscience.cdk.tools.CDKHydrogenAdder;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
-import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.Isomorphism;
 import org.openscience.smsd.algorithm.vflib.vf2.mcs.VFSeed;
 import org.openscience.smsd.algorithm.vflib.vf2.sub.Pattern;
@@ -57,7 +56,7 @@ import org.openscience.smsd.tools.ExtAtomContainerManipulator;
 /**
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
- * test-smsd java1.6+
+ * test-smsd java1.8+
  */
 public class VF2MCSTest {
 

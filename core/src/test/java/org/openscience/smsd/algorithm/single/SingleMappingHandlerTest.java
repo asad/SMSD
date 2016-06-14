@@ -38,7 +38,7 @@ import org.openscience.cdk.interfaces.IAtomContainer;
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  *
  *  test-smsd
- *  java1.6+
+ *  java1.8+
  */
 public class SingleMappingHandlerTest {
 

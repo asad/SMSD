@@ -53,9 +53,10 @@ import org.openscience.smsd.tools.ExtAtomContainerManipulator;
 import reader.mdl.SDFReaderTest;
 
 /**
- *  test-smsd
- * @author Syed Asad Rahman
- *  java1.5+
+ * test-smsd
+ *
+ * @author Syed Asad Rahman <asad@ebi.ac.uk>
+ * java1.8+
  */
 public class CDKMCSTest {
 
@@ -237,7 +238,6 @@ public class CDKMCSTest {
 //        Assert.assertEquals(1, list.size());
 //        Assert.assertEquals(11, ((AtomContainer) list.get(0)).getAtomCount());
 //    }
-
 //    /**
 //     * @cdk.bug 1208740
 //     * @throws Exception

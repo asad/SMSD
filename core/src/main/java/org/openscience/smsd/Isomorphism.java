@@ -101,7 +101,7 @@ import static org.openscience.smsd.interfaces.Algorithm.VFLibMCS;
  *
  * </pre> </font>
  *
- *  java1.5+
+ *  java1.8+
  *
  * 
  * 
