@@ -2,10 +2,12 @@ package uk.ac.ebi.smsd.example;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.openscience.cdk.AtomContainer;
+import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.io.MDLV2000Reader;
@@ -168,7 +170,7 @@ public class MCSSearch {
             }
             ////System.out.println("");
 
-        } catch (Exception ex) {
+        } catch (FileNotFoundException | CDKException ex) {
             Logger.getLogger(MCSSearch.class.getName()).log(Level.SEVERE, null, ex);
         }
     }

@@ -160,6 +160,6 @@ public class RingTest {
      */
     public static void main(String[] args) throws Exception {
 
-        new RingTest();
+        RingTest ringTest = new RingTest();
     }
 }
