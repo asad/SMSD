@@ -26,8 +26,10 @@ package org.openscience.smsd.tools;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 
 import java.util.Set;
 import java.util.logging.Level;
@@ -70,8 +72,8 @@ import org.openscience.cdk.tools.manipulator.RingSetManipulator;
  * This is an extension of CDK GraphAtomContainer. Some part of this code was
  * taken from CDK source code and modified.</p>
  *
- * 
- * 
+ *
+ *
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
  */
@@ -206,7 +208,21 @@ public class ExtAtomContainerManipulator extends AtomContainerManipulator implem
      * @throws CloneNotSupportedException
      */
     public static IAtomContainer cloneWithIDs(IAtomContainer container) throws CloneNotSupportedException {
-        IAtomContainer ac = new AtomContainer(container).clone();
+        setNullHCountToZero(container);
+        IAtomContainer ac = new AtomContainer(container).clone();/*Set IDs as CDK clone doesn't*/
+        for (int i = 0; i < ac.getAtomCount(); i++) {
+            ac.getAtom(i).setID(container.getAtom(i).getID());
+            if (ac.getAtom(i).getProperties() == null) {
+                ac.getAtom(i).setProperties(new HashMap<>());
+            }
+        }
+
+        for (int i = 0; i < ac.getBondCount(); i++) {
+            if (ac.getBond(i).getProperties() == null) {
+                ac.getBond(i).setProperties(new HashMap<>());
+            }
+        }
+
         ac.setProperties(container.getProperties());
         ac.setFlags(container.getFlags());
         ac.setID(container.getID());
@@ -222,7 +238,21 @@ public class ExtAtomContainerManipulator extends AtomContainerManipulator implem
      * @throws CloneNotSupportedException
      */
     public static IAtomContainer newInstanceWithIDs(IAtomContainer container) throws CloneNotSupportedException {
+        setNullHCountToZero(container);
         IAtomContainer ac = container.getBuilder().newInstance(IAtomContainer.class, container);
+        /*Set IDs as CDK clone doesn't*/
+        for (int i = 0; i < ac.getAtomCount(); i++) {
+            ac.getAtom(i).setID(container.getAtom(i).getID());
+            if (ac.getAtom(i).getProperties() == null) {
+                ac.getAtom(i).setProperties(new HashMap<>());
+            }
+        }
+
+        for (int i = 0; i < ac.getBondCount(); i++) {
+            if (ac.getBond(i).getProperties() == null) {
+                ac.getBond(i).setProperties(new HashMap<>());
+            }
+        }
         ac.setProperties(container.getProperties());
         ac.setFlags(container.getFlags());
         ac.setID(container.getID());
@@ -239,12 +269,8 @@ public class ExtAtomContainerManipulator extends AtomContainerManipulator implem
      */
     public static int getExplicitHydrogenCount(IAtomContainer atomContainer, IAtom atom) {
         int hCount = 0;
-        for (IAtom iAtom : atomContainer.getConnectedAtomsList(atom)) {
-            IAtom connectedAtom = iAtom;
-            if (connectedAtom.getSymbol().equals("H")) {
-                hCount++;
-            }
-        }
+        hCount = atomContainer.getConnectedAtomsList(atom).stream().map((iAtom) -> iAtom).filter((connectedAtom)
+                -> (connectedAtom.getSymbol().equals("H"))).map((_item) -> 1).reduce(hCount, Integer::sum);
         return hCount;
     }
 
@@ -255,7 +281,7 @@ public class ExtAtomContainerManipulator extends AtomContainerManipulator implem
      * @return Implicit Hydrogen Count
      */
     public static int getImplicitHydrogenCount(IAtom atom) {
-        return atom.getImplicitHydrogenCount() == CDKConstants.UNSET ? 0 : atom.getImplicitHydrogenCount();
+        return Objects.equals(atom.getImplicitHydrogenCount(), CDKConstants.UNSET) ? 0 : atom.getImplicitHydrogenCount();
     }
 
     /**
@@ -279,6 +305,14 @@ public class ExtAtomContainerManipulator extends AtomContainerManipulator implem
      * @throws CloneNotSupportedException
      */
     public static IAtomContainer removeHydrogensExceptSingleAndPreserveAtomID(IAtomContainer container) throws CloneNotSupportedException {
+        /*
+         * @ASAD: IMP STEP to avoid unset Hydrogen arror:
+         * Set implicit Hydrogen count
+         */
+        for (IAtom a : container.atoms()) {
+            int implicitHydrogenCount = getImplicitHydrogenCount(a);
+            a.setImplicitHydrogenCount(implicitHydrogenCount);
+        }
         return removeHydrogens(container);
     }
 
@@ -488,9 +522,9 @@ public class ExtAtomContainerManipulator extends AtomContainerManipulator implem
                     remove.add(se);
                 }
             }
-            for (ISingleElectron se : remove) {
+            remove.stream().forEach((se) -> {
                 org.removeSingleElectron(se);
-            }
+            });
         }
 
         if (org.getLonePairCount() > 0) {
@@ -500,9 +534,9 @@ public class ExtAtomContainerManipulator extends AtomContainerManipulator implem
                     remove.add(lp);
                 }
             }
-            for (ILonePair lp : remove) {
+            remove.stream().forEach((lp) -> {
                 org.removeLonePair(lp);
-            }
+            });
         }
 
         return org;
