@@ -79,17 +79,17 @@ import uk.ac.ebi.smsd.gui.helper.ImagePreView;
 import uk.ac.ebi.smsd.gui.helper.molFileFilter;
 
 /*
- * SMSDGUI.java 
+ * SMSDFrame.java 
  * @author Syed Asad Rahman, EBI-EMBL, 
  * @contact: asad@ebi.ac.uk
  *
  * Created on Mar 29, 2009, 3:07:42 AM
  */
-public class SMSDGUI extends JFrame {
+public class SMSDFrame extends JFrame {
 
     private static final long serialVersionUID = 7878619981017L;
     /**
-     * Creates new form SMSDGUI
+     * Creates new form SMSDFrame
      */
     private final static String NEW_LINE = System.getProperty("line.separator");
     private File QueryFileName = null;
@@ -99,7 +99,7 @@ public class SMSDGUI extends JFrame {
     static private JPanel panels;
     private File file;
 
-    public SMSDGUI() {
+    public SMSDFrame() {
         count = 0;
         initComponents();
 
@@ -284,7 +284,7 @@ public class SMSDGUI extends JFrame {
 
                     jTextArea1.setCaretPosition(jTextArea1.getDocument().getLength());
                 } catch (Exception ex) {
-                    Logger.getLogger(SMSDGUI.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(SMSDFrame.class.getName()).log(Level.SEVERE, null, ex);
                 }
 
             }
@@ -418,7 +418,7 @@ public class SMSDGUI extends JFrame {
             }
 
         } catch (Exception ex) {
-            Logger.getLogger(SMSDGUI.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(SMSDFrame.class.getName()).log(Level.SEVERE, null, ex);
         }
 
     }//GEN-LAST:event_jButton3ActionPerformed
@@ -446,9 +446,9 @@ public class SMSDGUI extends JFrame {
             jTextArea1.setCaretPosition(jTextArea1.getDocument().getLength());
 
         } catch (IOException ex) {
-            Logger.getLogger(SMSDGUI.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(SMSDFrame.class.getName()).log(Level.SEVERE, null, ex);
         } catch (CDKException ex) {
-            Logger.getLogger(SMSDGUI.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(SMSDFrame.class.getName()).log(Level.SEVERE, null, ex);
         }
 
         return molecule;
@@ -532,7 +532,7 @@ public class SMSDGUI extends JFrame {
         }
 
         //Show it.
-        int returnVal = fileChooser.showDialog(SMSDGUI.this,
+        int returnVal = fileChooser.showDialog(SMSDFrame.this,
                 "Attach");
 
         //Process the results.
@@ -546,7 +546,7 @@ public class SMSDGUI extends JFrame {
                         molFiles.add(count++, mol);
                         jTextArea1.append("Attaching file: " + QueryFileName.getName() + "." + NEW_LINE);
                     } catch (Exception ex) {
-                        Logger.getLogger(SMSDGUI.class.getName()).log(Level.SEVERE, null, ex);
+                        Logger.getLogger(SMSDFrame.class.getName()).log(Level.SEVERE, null, ex);
                     }
                     break;
                 case "TargetFile":
@@ -557,7 +557,7 @@ public class SMSDGUI extends JFrame {
                         molFiles.add(count++, mol);
                         jTextArea1.append("Attaching file: " + TargetFileName.getName() + "." + NEW_LINE);
                     } catch (Exception ex) {
-                        Logger.getLogger(SMSDGUI.class.getName()).log(Level.SEVERE, null, ex);
+                        Logger.getLogger(SMSDFrame.class.getName()).log(Level.SEVERE, null, ex);
                     }
                     break;
             }
@@ -609,7 +609,7 @@ public class SMSDGUI extends JFrame {
         java.awt.EventQueue.invokeLater(new Runnable() {
             @Override
             public void run() {
-                new SMSDGUI().setVisible(true);
+                new SMSDFrame().setVisible(true);
 
             }
         });
