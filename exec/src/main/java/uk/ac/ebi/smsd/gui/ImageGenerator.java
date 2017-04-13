@@ -73,11 +73,11 @@ public class ImageGenerator {
     }
     public final static int SUB_IMAGE_WIDTH = 300;
     public final static int SUB_IMAGE_HEIGHT = 300;
-    private List<QueryTargetPair> queryTargetPairs;
-    private Params params;
+    private final List<QueryTargetPair> queryTargetPairs;
+    private final Params params;
 
     public ImageGenerator() {
-        queryTargetPairs = new ArrayList<QueryTargetPair>();
+        queryTargetPairs = new ArrayList<>();
         params = new Params();
     }
 
@@ -96,17 +96,17 @@ public class ImageGenerator {
 
         IAtomContainer querySubgraph = query.getBuilder().newInstance(IAtomContainer.class, cloneOfQuery);
         IAtomContainer targetSubgraph = target.getBuilder().newInstance(IAtomContainer.class, cloneOfTarget);
-        List<IAtom> n1 = new ArrayList<IAtom>(query.getAtomCount());
-        List<IAtom> n2 = new ArrayList<IAtom>(target.getAtomCount());
+        List<IAtom> n1 = new ArrayList<>(query.getAtomCount());
+        List<IAtom> n2 = new ArrayList<>(target.getAtomCount());
 
-        for (Map.Entry<Integer, Integer> aMaps : maxac.entrySet()) {
+        maxac.entrySet().stream().forEach((aMaps) -> {
             IAtom qAtom = cloneOfQuery.getAtom(aMaps.getKey());
             IAtom tAtom = cloneOfTarget.getAtom(aMaps.getValue());
             qAtom.setID(aMaps.getKey().toString());
             tAtom.setID(aMaps.getValue().toString());
             n1.add(qAtom);
             n2.add(tAtom);
-        }
+        });
 
         for (IAtom atom : cloneOfQuery.atoms()) {
             if (!n1.contains(atom)) {
@@ -132,12 +132,18 @@ public class ImageGenerator {
         IChemObjectBuilder builder = DefaultChemObjectBuilder.getInstance();
         IAtomContainerSet leftHandMoleculeSet = builder.newInstance(IAtomContainerSet.class);
         IAtomContainerSet rightHandMoleculeSet = builder.newInstance(IAtomContainerSet.class);
-        for (QueryTargetPair pair : queryTargetPairs) {
+        queryTargetPairs.stream().map((pair) -> {
             moleculeDrawer.addHighlights(pair.querySubgraph);
+            return pair;
+        }).map((pair) -> {
             moleculeDrawer.addHighlights(pair.targetSubgraph);
+            return pair;
+        }).map((pair) -> {
             leftHandMoleculeSet.addAtomContainer(pair.query);
+            return pair;
+        }).forEach((pair) -> {
             rightHandMoleculeSet.addAtomContainer(pair.target);
-        }
+        });
 
         // calculate the total dimensions of the final image
         int width = SUB_IMAGE_WIDTH * 2;
@@ -147,11 +153,13 @@ public class ImageGenerator {
         Image image = moleculeDrawer.makeBlankImage(width, height);
         Graphics2D g = (Graphics2D) image.getGraphics();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        List<IAtomContainer> mols = new ArrayList<IAtomContainer>();
-        for (QueryTargetPair pair : queryTargetPairs) {
+        List<IAtomContainer> mols = new ArrayList<>();
+        queryTargetPairs.stream().map((pair) -> {
             mols.add(pair.query);
+            return pair;
+        }).forEach((pair) -> {
             mols.add(pair.target);
-        }
+        });
         ZoomToFitGridLayout layoutDrawer = new ZoomToFitGridLayout(moleculeDrawer, queryTargetPairs.size(), 2);
         layoutDrawer.layout(mols, new Dimension(SUB_IMAGE_WIDTH, SUB_IMAGE_HEIGHT), g);
 
@@ -180,12 +188,18 @@ public class ImageGenerator {
         IChemObjectBuilder builder = DefaultChemObjectBuilder.getInstance();
         IAtomContainerSet leftHandMoleculeSet = builder.newInstance(IAtomContainerSet.class);
         IAtomContainerSet rightHandMoleculeSet = builder.newInstance(IAtomContainerSet.class);
-        for (QueryTargetPair pair : queryTargetPairs) {
+        queryTargetPairs.stream().map((pair) -> {
             moleculeDrawer.addHighlights(pair.querySubgraph);
+            return pair;
+        }).map((pair) -> {
             moleculeDrawer.addHighlights(pair.targetSubgraph);
+            return pair;
+        }).map((pair) -> {
             leftHandMoleculeSet.addAtomContainer(pair.query);
+            return pair;
+        }).forEach((pair) -> {
             rightHandMoleculeSet.addAtomContainer(pair.target);
-        }
+        });
 
         // calculate the total dimensions of the final image
         int width = SUB_IMAGE_WIDTH * 2;
@@ -195,11 +209,13 @@ public class ImageGenerator {
         Image image = moleculeDrawer.makeBlankImage(width, height);
         Graphics2D g = (Graphics2D) image.getGraphics();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        List<IAtomContainer> mols = new ArrayList<IAtomContainer>();
-        for (QueryTargetPair pair : queryTargetPairs) {
+        List<IAtomContainer> mols = new ArrayList<>();
+        queryTargetPairs.stream().map((pair) -> {
             mols.add(pair.query);
+            return pair;
+        }).forEach((pair) -> {
             mols.add(pair.target);
-        }
+        });
         ZoomToFitGridLayout layoutDrawer = new ZoomToFitGridLayout(moleculeDrawer, queryTargetPairs.size(), 2);
         layoutDrawer.layout(mols, new Dimension(SUB_IMAGE_WIDTH, SUB_IMAGE_HEIGHT), g);
 

@@ -135,13 +135,13 @@ public class SubGraphMapper {
         }
 
 //        System.out.println("bond Map size:" + maps.size());
-
         return maps;
 
     }
 
     /**
-     * This function will returns a subgraph extracted from the source or target molecules
+     * This function will returns a subgraph extracted from the source or target
+     * molecules
      *
      * @param container source/target container
      * @param matches source/target mapping
@@ -149,15 +149,14 @@ public class SubGraphMapper {
      */
     public IAtomContainer getMatchedSubgraph(IAtomContainer container, Collection<Integer> matches) {
         IAtomContainer needle = container.getBuilder().newInstance(IAtomContainer.class, container);
-        List<IAtom> atomListToBeRemoved = new ArrayList<IAtom>(matches.size());
-        for (Integer index : matches) {
-            IAtom atomToBeRemoved = needle.getAtom(index.intValue());
+        List<IAtom> atomListToBeRemoved = new ArrayList<>(matches.size());
+        matches.stream().map((index) -> needle.getAtom(index)).forEach((atomToBeRemoved) -> {
             atomListToBeRemoved.add(atomToBeRemoved);
-        }
+        });
 
-        for (IAtom removeAtom : atomListToBeRemoved) {
+        atomListToBeRemoved.stream().forEach((removeAtom) -> {
             needle.removeAtomAndConnectedElectronContainers(removeAtom);
-        }
+        });
         atomListToBeRemoved.clear();
         return needle;
     }

@@ -39,7 +39,7 @@ import org.openscience.smsd.Isomorphism;
 
 public class MCS {
 
-    public static IAtomContainer getMcsAsNewContainer(IAtomContainer mol1, IAtomContainer mol2) throws CDKException, CloneNotSupportedException, IOException {
+    public static IAtomContainer getMCSAsNewContainer(IAtomContainer mol1, IAtomContainer mol2) throws CDKException, CloneNotSupportedException, IOException {
         Isomorphism mcs = new Isomorphism(mol1, mol2, org.openscience.smsd.interfaces.Algorithm.DEFAULT, true, false, true);
         mcs.setChemFilters(true, true, true);
 
@@ -62,9 +62,9 @@ public class MCS {
             }
         }
 
-        for (IAtom atom : atomsToBeRemoved) {
+        atomsToBeRemoved.stream().forEach((atom) -> {
             mcsmolecule.removeAtomAndConnectedElectronContainers(atom);
-        }
+        });
 
         StringWriter stringWriter = new StringWriter();
         try (SMILESWriter smilesWriter = new SMILESWriter(stringWriter)) {
@@ -83,17 +83,17 @@ public class MCS {
         // Tri_06
         IAtomContainer A2 = sp.parseSmiles("c1cccc(COC(=O)NC(CC(C)C)C(=O)NCC#N)c1");
 
-        getMcsAsNewContainer(A2, A1);
+        getMCSAsNewContainer(A2, A1);
 
-        getMcsAsNewContainer(A1, A2);
+        getMCSAsNewContainer(A1, A2);
     }
 
     private static Map<Integer, Integer> getIndexMapping(AtomAtomMapping aam) {
         Map<IAtom, IAtom> mappings = aam.getMappingsByAtoms();
         Map<Integer, Integer> mapping = new TreeMap<>();
-        for (IAtom keys : mappings.keySet()) {
+        mappings.keySet().stream().forEach((keys) -> {
             mapping.put(aam.getQueryIndex(keys), aam.getTargetIndex(mappings.get(keys)));
-        }
+        });
         return mapping;
     }
 }
