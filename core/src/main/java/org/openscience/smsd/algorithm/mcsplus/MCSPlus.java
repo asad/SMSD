@@ -1,4 +1,4 @@
-/* Copyright (C) 2009-2018  Syed Asad Rahman <asad@ebi.ac.uk>
+/* Copyright (C) 2009-2018  Syed Asad Rahman <s9asad@gmail.com>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -44,7 +44,7 @@ import org.openscience.smsd.tools.IterationManager;
  * 
  * 
  *
- * @author Syed Asad Rahman <asad@ebi.ac.uk>
+ * @author Syed Asad Rahman <s9asad@gmail.com>
  */
 public final class MCSPlus {
 

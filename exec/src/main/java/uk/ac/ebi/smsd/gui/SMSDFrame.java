@@ -1,6 +1,6 @@
-/* Copyright (C) 2009-2017  Syed Asad Rahman <asad@ebi.ac.uk>
+/* Copyright (C) 2009-2017  Syed Asad Rahman <s9asad@gmail.com>
  *
- * Contact: Syed Asad Rahman <asad@ebi.ac.uk>
+ * Contact: Syed Asad Rahman <s9asad@gmail.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -81,7 +81,7 @@ import uk.ac.ebi.smsd.gui.helper.molFileFilter;
 /*
  * SMSDFrame.java 
  * @author Syed Asad Rahman, EBI-EMBL, 
- * @contact: asad@ebi.ac.uk
+ * @contact: s9asad@gmail.com
  *
  * Created on Mar 29, 2009, 3:07:42 AM
  */

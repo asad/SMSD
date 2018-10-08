@@ -55,7 +55,7 @@ import reader.mdl.SDFReaderTest;
 /**
  * test-smsd
  *
- * @author Syed Asad Rahman <asad@ebi.ac.uk>
+ * @author Syed Asad Rahman <s9asad@gmail.com>
  * java1.8+
  */
 public class CDKMCSTest {

@@ -1,6 +1,6 @@
 
 /* 
- * Copyright (C) 2009-2014 Syed Asad Rahman <asad@ebi.ac.uk>
+ * Copyright (C) 2009-2014 Syed Asad Rahman <s9asad@gmail.com>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -45,7 +45,7 @@ import org.openscience.smsd.tools.ExtAtomContainerManipulator;
 /**
  * Unit testing for the {@link Isomorphism} class.
  *
- * @author Syed Asad Rahman <asad@ebi.ac.uk>
+ * @author Syed Asad Rahman <s9asad@gmail.com>
  *
  * test-smsd java1.8+
  */

@@ -2,7 +2,7 @@
 /* $Revision$ $Author$ $Date$
  *
  * Copyright (C) 2002-2007  Stephane Werner <mail@ixelis.net>
- *               2007-2011  Syed Asad Rahman <asad@ebi.ac.uk>
+ *               2007-2011  Syed Asad Rahman <s9asad@gmail.com>
  *
  * This code has been kindly provided by Stephane Werner
  * and Thierry Hanser from IXELIS mail@ixelis.net.
@@ -90,7 +90,7 @@ import org.openscience.cdk.exception.CDKException;
  * @cdk.cite HAN90} and modified in the thesis of T. Hanser {
  * @cdk.cite HAN93}.
  *
- * @author Stephane Werner from IXELIS mail@ixelis.net, Syed Asad Rahman <asad@ebi.ac.uk> (modified the orignal code)
+ * @author Stephane Werner from IXELIS mail@ixelis.net, Syed Asad Rahman <s9asad@gmail.com> (modified the orignal code)
  * 2002-07-17
  *  java1.4+
  * 

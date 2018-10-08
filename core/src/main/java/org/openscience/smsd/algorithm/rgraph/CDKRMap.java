@@ -2,7 +2,7 @@
 /* $Revision$ $Author$ $Date$
  *
  * Copyright (C) 2002-2007  Stephane Werner <mail@ixelis.net>
- *               2009-2018  Syed Asad Rahman <asad@ebi.ac.uk>
+ *               2009-2018  Syed Asad Rahman <s9asad@gmail.com>
  *
  * This code has been kindly provided by Stephane Werner
  * and Thierry Hanser from IXELIS mail@ixelis.net.
@@ -35,7 +35,7 @@ package org.openscience.smsd.algorithm.rgraph;
  * edge (bond) in G2, G1 and G2 being the compared graphs in a RGraph context.
  *
  * @author Stephane Werner, IXELIS <mail@ixelis.net>, Syed Asad Rahman
- * <asad@ebi.ac.uk> (modified the orignal code)
+ * <s9asad@gmail.com> (modified the orignal code)
  * 2002-07-24
  * 
  * 

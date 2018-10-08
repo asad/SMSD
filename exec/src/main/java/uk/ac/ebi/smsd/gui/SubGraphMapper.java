@@ -1,6 +1,6 @@
-/* Copyright (C) 2009-2018  Syed Asad Rahman <asad@ebi.ac.uk>
+/* Copyright (C) 2009-2018  Syed Asad Rahman <s9asad@gmail.com>
  *
- * Contact: Syed Asad Rahman <asad@ebi.ac.uk>
+ * Contact: Syed Asad Rahman <s9asad@gmail.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -36,7 +36,7 @@ import org.openscience.cdk.interfaces.IBond;
 
 /**
  *
- * @author Syed Asad Rahman, EMBL-EBI, Cambridge, UK. e-mail: asad@ebi.ac.uk
+ * @author Syed Asad Rahman, EMBL-EBI, Cambridge, UK. e-mail: s9asad@gmail.com
  */
 public class SubGraphMapper {
 

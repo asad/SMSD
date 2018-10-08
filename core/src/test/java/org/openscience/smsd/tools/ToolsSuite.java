@@ -1,5 +1,5 @@
 
-/* Copyright (C) 2009-2014 Syed Asad Rahman <asad@ebi.ac.uk>
+/* Copyright (C) 2009-2014 Syed Asad Rahman <s9asad@gmail.com>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -33,7 +33,7 @@ import org.junit.runners.Suite;
 /**
  * test-smsd
  *
- * @author Syed Asad Rahman <asad@ebi.ac.uk>
+ * @author Syed Asad Rahman <s9asad@gmail.com>
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({org.openscience.smsd.tools.BondEnergiesTest.class,

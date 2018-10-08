@@ -25,7 +25,7 @@ import org.openscience.smsd.tools.ExtAtomContainerManipulator;
  * @modified 5 November, 2011, 11.06 AM
  *
  * @author Syed Asad Rahman, EMBL-EBI, Cambridge, UK
- * contact asad@ebi.ac.uk
+ * contact s9asad@gmail.com
  *
  */
 public class RingTest {
