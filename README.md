@@ -34,7 +34,7 @@ Maven POM configuration
 </dependencies>
 ```
 --------------------
-Compile
+Compile (compiled jar might be available under exec/target/ folder)
 --------------------
 ```
 -compile core modules
@@ -54,7 +54,7 @@ java -Xms500M -Xmx512M -cp smsd-2.2.0-SNAPSHOT.jar: uk.ac.ebi.smsd.cmd.SMSDcmd
 
 Windows Platform (DOS): SMSD.bat file
 ```
-java -Xms500M -Xmx512M -cp exec/target/smsd-2.2.0-SNAPSHOT.jar: uk.ac.ebi.smsd.cmd.SMSDcmd %*
+java -Xms500M -Xmx512M -cp smsd-2.2.0-SNAPSHOT.jar: uk.ac.ebi.smsd.cmd.SMSDcmd %*
 ```
 
 Unix/Mac: SMSD.sh file
