@@ -39,7 +39,7 @@ import org.openscience.smsd.tools.BondEnergies;
  * Filter based on energies.
  *
  * @author Syed Asad Rahman <asad@ebi.ac.uk>
- * 
+ *
  */
 public final class EnergyFilter extends Sotter implements IChemicalFilter<Double> {
 
@@ -106,20 +106,20 @@ public final class EnergyFilter extends Sotter implements IChemicalFilter<Double
         IAtomContainer product = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class, chemfilter.getTarget());
 
         for (int i = 0; i < educt.getAtomCount(); i++) {
-            educt.getAtom(i).setFlag(999, false);
+            educt.getAtom(i).setProperty("Energy", false);
         }
 
         for (int i = 0; i < product.getAtomCount(); i++) {
-            product.getAtom(i).setFlag(999, false);
+            product.getAtom(i).setProperty("Energy", false);
         }
 
         if (mcsAtomSolution != null) {
             Map<IAtom, IAtom> mappingsByAtoms = mcsAtomSolution.getMappingsByAtoms();
             mappingsByAtoms.entrySet().stream().map((mapping) -> {
-                mapping.getKey().setFlag(999, true);
+                mapping.getKey().setProperty("Energy", true);
                 return mapping;
             }).forEach((mapping) -> {
-                mapping.getValue().setFlag(999, true);
+                mapping.getValue().setProperty("Energy", true);
             });
             totalBondEnergy = getEnergy(educt, product);
         }
@@ -128,11 +128,11 @@ public final class EnergyFilter extends Sotter implements IChemicalFilter<Double
          * Reset the flag
          */
         for (int i = 0; i < educt.getAtomCount(); i++) {
-            educt.getAtom(i).setFlag(999, false);
+            educt.getAtom(i).setProperty("Energy", false);
         }
 
         for (int i = 0; i < product.getAtomCount(); i++) {
-            product.getAtom(i).setFlag(999, false);
+            product.getAtom(i).setProperty("Energy", false);
         }
 
         return totalBondEnergy;
@@ -155,8 +155,8 @@ public final class EnergyFilter extends Sotter implements IChemicalFilter<Double
 
     private synchronized static double getBondEnergy(IBond bond, BondEnergies bondEnergy) {
         double energy = 0.0;
-        if ((bond.getAtom(0).getFlag(999) == true && bond.getAtom(1).getFlag(999) == false)
-                || (bond.getAtom(0).getFlag(999) == false && bond.getAtom(1).getFlag(999) == true)) {
+        if ((bond.getAtom(0).getProperty("Energy").equals(true) && bond.getAtom(1).getProperty("Energy").equals(false))
+                || (bond.getAtom(0).getProperty("Energy").equals(false) && bond.getAtom(1).getProperty("Energy").equals(true))) {
             int val = bondEnergy.getEnergies(bond.getAtom(0), bond.getAtom(1), bond.getOrder());
             energy = val;
         }
