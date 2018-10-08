@@ -872,7 +872,7 @@ public class IsomorphismTest {
 //    }
     private void setID(IAtomContainer ac) {
         for (IAtom a : ac.atoms()) {
-            a.setID(ac.getAtomNumber(a) + "");
+            a.setID(ac.indexOf(a) + "");
         }
     }
 }
