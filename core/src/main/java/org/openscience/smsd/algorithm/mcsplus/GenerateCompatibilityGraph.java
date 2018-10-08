@@ -49,7 +49,7 @@ import org.openscience.smsd.helper.LabelContainer;
  * 
  * 
  *
- * @author Syed Asad Rahman <s9asad@gmail.com>
+ * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  */
 public final class GenerateCompatibilityGraph implements Serializable {
 

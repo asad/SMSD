@@ -17,7 +17,7 @@ import org.openscience.smsd.tools.ExtAtomContainerManipulator;
  *
  * SubstructureSearch.java @modified 4 April, 2011, 11.06 AM
  *
- * @author Syed Asad Rahman, EMBL-EBI, Cambridge, UK contact s9asad@gmail.com
+ * @author Syed Asad Rahman, EMBL-EBI, Cambridge, UK contact asad.rahman@bioinceptionlabs.com
  *
  */
 public class SubstructureSearch {

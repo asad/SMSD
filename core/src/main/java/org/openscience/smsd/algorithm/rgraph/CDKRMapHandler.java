@@ -1,4 +1,4 @@
-/* Copyright (C) 2009-2018  Syed Asad Rahman <s9asad@gmail.com>
+/* Copyright (C) 2009-2018  Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -46,7 +46,7 @@ import org.openscience.cdk.tools.manipulator.BondManipulator;
  *
  *
  *
- * @author Syed Asad Rahman <s9asad@gmail.com>
+ * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  */
 public final class CDKRMapHandler {
 

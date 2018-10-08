@@ -26,7 +26,7 @@ import org.openscience.smsd.tools.ExtAtomContainerManipulator;
  *
  * MCSSearch.java @modified 27 June, 2012, 11.06 AM
  *
- * @author Syed Asad Rahman, EMBL-EBI, Cambridge, UK contact s9asad@gmail.com
+ * @author Syed Asad Rahman, EMBL-EBI, Cambridge, UK contact asad.rahman@bioinceptionlabs.com
  *
  */
 public class MCSSearch {

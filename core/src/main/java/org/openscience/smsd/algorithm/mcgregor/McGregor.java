@@ -1,6 +1,6 @@
 
 /* Copyright (C) 2005-2006 Markus Leber
- *               2006-2014 Syed Asad Rahman <s9asad@gmail.com>
+ *               2006-2014 Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -50,7 +50,7 @@ import org.openscience.smsd.tools.IterationManager;
  * 
  * 
  *
- * @author Syed Asad Rahman <s9asad@gmail.com>
+ * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  */
 public final class McGregor {
 

@@ -1,7 +1,7 @@
 /* $Revision$ $Author$ $Date$
  *
  * Copyright (C) 2002-2007  Stephane Werner <mail@ixelis.net>
- *               2009-2018  Syed Asad Rahman <s9asad@gmail.com>
+ *               2009-2018  Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  *
  * This code has been kindly provided by Stephane Werner
  * and Thierry Hanser from IXELIS mail@ixelis.net.

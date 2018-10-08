@@ -2,7 +2,7 @@ package org.openscience.smsd.tools;
 
 /**
  *
- * Copyright (C) 2006-2016 Syed Asad Rahman {s9asad@gmail.com}
+ * Copyright (C) 2006-2016 Syed Asad Rahman {asad.rahman@bioinceptionlabs.com}
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -64,7 +64,7 @@ import org.openscience.cdk.tools.manipulator.RingSetManipulator;
  *
  *
  *
- * @author Syed Asad Rahman <s9asad@gmail.com>
+ * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  */
 public class ExtAtomContainerManipulator extends AtomContainerManipulator implements Serializable {
 

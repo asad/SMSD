@@ -1,4 +1,4 @@
-/* Copyright (C) 2009-2018  Syed Asad Rahman <s9asad@gmail.com>
+/* Copyright (C) 2009-2018  Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -36,7 +36,7 @@ import java.util.TimeZone;
  *
  * 
  * 
- * @author Syed Asad Rahman <s9asad@gmail.com>
+ * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  */
 public class TimeManager {
 

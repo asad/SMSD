@@ -1,4 +1,4 @@
-/* Copyright (C) 2009-2014 Syed Asad Rahman <s9asad@gmail.com>
+/* Copyright (C) 2009-2014 Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -41,7 +41,7 @@ import org.openscience.cdk.smiles.SmilesParser;
 
 /**
  *  test-smsd
- * @author Syed Asad Rahman <s9asad@gmail.com>
+ * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  *  java1.8+
  */
 public class CDKRMapHandlerTest {

@@ -8,7 +8,7 @@ package org.openscience.smsd.algorithm.vflib;
  * 
  * 
  *
- * @author Syed Asad Rahman <s9asad@gmail.com>
+ * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  */
 public enum SortOrder {
 

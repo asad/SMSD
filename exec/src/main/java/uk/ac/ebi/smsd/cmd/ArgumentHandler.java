@@ -1,7 +1,7 @@
 /*
  *
  *
- * Copyright (C) 2009-2018  Syed Asad Rahman <s9asad@gmail.com>
+ * Copyright (C) 2009-2018  Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -38,7 +38,7 @@ import org.apache.commons.cli.ParseException;
 
 /**
  *
- * @author Syed Asad Rahman <s9asad@gmail.com>
+ * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  */
 public class ArgumentHandler {
 
@@ -383,7 +383,7 @@ public class ArgumentHandler {
                 + NEW_LINE + "\t EMBL-EBI, Hinxton "
                 + NEW_LINE + "\t Cambridge CB10 1SD"
                 + NEW_LINE + "\t United Kingdom "
-                + NEW_LINE + "e-mail:  s9asad@gmail.com"
+                + NEW_LINE + "e-mail:  asad.rahman@bioinceptionlabs.com"
                 + NEW_LINE + "++++++++++++++++++++++++++++++++++++++++++++++" + NEW_LINE
                 + NEW_LINE + "SMSD can calculate similarity between small molecules"
                 + NEW_LINE + "by using an inhouse algorithm developed at EMBL-EBI. It"

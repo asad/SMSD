@@ -26,7 +26,7 @@ import org.junit.Test;
 /**
  * test-smsd
  *
- * @author Syed Asad Rahman <s9asad@gmail.com>
+ * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  * java1.8+
  */
 public class CDKRNodeTest {

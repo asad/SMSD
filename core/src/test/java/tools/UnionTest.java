@@ -31,7 +31,7 @@ import org.openscience.smsd.tools.ExtAtomContainerManipulator;
 
 /**
  *
- * @author Syed Asad Rahman <s9asad@gmail.com>
+ * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  */
 public class UnionTest {
 

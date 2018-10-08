@@ -1,7 +1,7 @@
 /*
  *
  *
- * Copyright (C) 2009-2018  Syed Asad Rahman <s9asad@gmail.com>
+ * Copyright (C) 2009-2018  Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  *                          Gilleain Torrance <gilleain.torrance@gmail.com>
  *
  * Contact: cdk-devel@lists.sourceforge.net
@@ -51,7 +51,7 @@ package org.openscience.smsd.algorithm.vflib.substructure;
  * 
  * 
  * 
- * @author Syed Asad Rahman <s9asad@gmail.com>
+ * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  */
 /**
  * @param <T>

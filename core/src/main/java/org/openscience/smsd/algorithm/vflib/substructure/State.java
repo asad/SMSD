@@ -1,7 +1,7 @@
 /*
  *
  *
- * Copyright (C) 2009-2018  Syed Asad Rahman <s9asad@gmail.com>
+ * Copyright (C) 2009-2018  Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  *                          Gilleain Torrance <gilleain.torrance@gmail.com>
  *
  * Contact: cdk-devel@lists.sourceforge.net
@@ -63,7 +63,7 @@ import org.openscience.smsd.algorithm.matchers.DefaultBondMatcher;
  *
  * 
  * 
- * @author Syed Asad Rahman <s9asad@gmail.com>
+ * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  */
 // The State class represents a single state in the isomorphism detection
 // algorithm. Every state uses and modifies the same SharedState object.

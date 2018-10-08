@@ -1,6 +1,6 @@
-/* Copyright (C) 2009-2018  Syed Asad Rahman <s9asad@gmail.com>
+/* Copyright (C) 2009-2018  Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  *
- * Contact: Syed Asad Rahman <s9asad@gmail.com>
+ * Contact: Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -52,7 +52,7 @@ import org.openscience.smsd.tools.ExtAtomContainerManipulator;
 
 /**
  *
- * @author Syed Asad Rahman <s9asad@gmail.com>
+ * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  */
 public class SMSDcmd {
 
