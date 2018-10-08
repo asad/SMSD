@@ -55,7 +55,7 @@ public class MCS {
 
         List<IAtom> atomsToBeRemoved = new ArrayList<>();
         for (IAtom atom : mcsmolecule.atoms()) {
-            int index = mcsmolecule.getAtomNumber(atom);
+            int index = mcsmolecule.indexOf(atom);
 //            System.out.println("index: " +index);
             if (!indexMapping.containsKey(index)) {
                 atomsToBeRemoved.add(atom);
@@ -63,7 +63,7 @@ public class MCS {
         }
 
         atomsToBeRemoved.stream().forEach((atom) -> {
-            mcsmolecule.removeAtomAndConnectedElectronContainers(atom);
+            mcsmolecule.removeAtom(atom);
         });
 
         StringWriter stringWriter = new StringWriter();

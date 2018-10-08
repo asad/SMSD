@@ -136,7 +136,7 @@ public class LigandHelper {
                 boolean isAromatic = atom.getFlag(CDKConstants.ISAROMATIC);
                 if (isAromatic && bosAtom < bosType1 - hCount) {
                     for (IAtom partner : atomContainer.getConnectedAtomsList(atom)) {
-                        int partnerIndex = atomContainer.getAtomNumber(partner);
+                        int partnerIndex = atomContainer.indexOf(partner);
                         IAtomType[] atomTypes2
                                 = typeFactory.getAtomTypes(partner.getSymbol());
                         if (atomTypes2.length == 0) {
@@ -164,7 +164,7 @@ public class LigandHelper {
                 bosAtom = bosLookup[atomIndex];
                 if (bosAtom < bosType1 - hCount) {
                     for (IAtom partner : atomContainer.getConnectedAtomsList(atom)) {
-                        int partnerIndex = atomContainer.getAtomNumber(partner);
+                        int partnerIndex = atomContainer.indexOf(partner);
                         IAtomType[] atomTypes2
                                 = typeFactory.getAtomTypes(partner.getSymbol());
                         if (atomTypes2.length == 0) {

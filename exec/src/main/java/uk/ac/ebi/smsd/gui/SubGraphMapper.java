@@ -155,7 +155,7 @@ public class SubGraphMapper {
         });
 
         atomListToBeRemoved.stream().forEach((removeAtom) -> {
-            needle.removeAtomAndConnectedElectronContainers(removeAtom);
+            needle.removeAtom(removeAtom);
         });
         atomListToBeRemoved.clear();
         return needle;
