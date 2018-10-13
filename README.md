@@ -48,18 +48,18 @@ mvn install
 Command Line Options
 --------------------
 ```
-java -Xms500M -Xmx512M -cp smsd-2.2.0-SNAPSHOT.jar: uk.ac.ebi.smsd.cmd.SMSDcmd
+java -Xms500M -Xmx512M -cp smsd-2.2.0.jar: uk.ac.ebi.smsd.cmd.SMSDcmd
 ```
 ===================
 
 Windows Platform (DOS): SMSD.bat file
 ```
-java -Xms500M -Xmx512M -cp smsd-2.2.0-SNAPSHOT.jar: uk.ac.ebi.smsd.cmd.SMSDcmd %*
+java -Xms500M -Xmx512M -cp smsd-2.2.0.jar: uk.ac.ebi.smsd.cmd.SMSDcmd %*
 ```
 
 Unix/Mac: SMSD.sh file
 ```
-java -Xms500M -Xmx512M -cp smsd-2.2.0-SNAPSHOT.jar: uk.ac.ebi.smsd.cmd.SMSDcmd $@
+java -Xms500M -Xmx512M -cp smsd-2.2.0.jar: uk.ac.ebi.smsd.cmd.SMSDcmd $@
 ```
 ===================
 
