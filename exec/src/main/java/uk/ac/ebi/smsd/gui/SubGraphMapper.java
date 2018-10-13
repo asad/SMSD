@@ -36,7 +36,13 @@ import org.openscience.cdk.interfaces.IBond;
 
 /**
  *
- * @author Syed Asad Rahman, EMBL-EBI, Cambridge, UK. e-mail: asad.rahman@bioinceptionlabs.com
+ *  java1.8+
+ *
+ * 
+ * 
+ *
+ * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
+ *
  */
 public class SubGraphMapper {
 

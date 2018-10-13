@@ -38,7 +38,13 @@ import org.openscience.smsd.Substructure;
 
 /**
  *
- * @author Asad
+ *  java1.8+
+ *
+ * 
+ * 
+ *
+ * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
+ *
  */
 public class SubstructureBenchMark {
 

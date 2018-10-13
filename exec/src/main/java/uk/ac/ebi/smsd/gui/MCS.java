@@ -37,6 +37,16 @@ import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.Isomorphism;
 
+/**
+ *
+ *  java1.8+
+ *
+ * 
+ * 
+ *
+ * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
+ *
+ */
 public class MCS {
 
     public static IAtomContainer getMCSAsNewContainer(IAtomContainer mol1, IAtomContainer mol2) throws CDKException, CloneNotSupportedException, IOException {

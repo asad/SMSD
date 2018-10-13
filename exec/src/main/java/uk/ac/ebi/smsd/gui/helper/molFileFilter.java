@@ -27,7 +27,7 @@ import javax.swing.filechooser.*;
 
 /**
  *
- * @author sar
+ * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  */
 public class molFileFilter extends FileFilter {
     //Accept all directories and all gif, jpg, tiff, or png files.

@@ -20,7 +20,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-
 package uk.ac.ebi.smsd.gui.helper;
 
 import java.awt.Dimension;
@@ -33,7 +32,16 @@ import javax.swing.ImageIcon;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 
-
+/**
+ *
+ * java1.8+
+ *
+ *
+ *
+ *
+ * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
+ *
+ */
 /* ImagePreview.java by FileChooserDemo2.java. */
 public class ImagePreView extends JComponent
         implements PropertyChangeListener {
@@ -64,7 +72,7 @@ public class ImagePreView extends JComponent
             if (tmpIcon.getIconWidth() > 90) {
                 thumbnail = new ImageIcon(tmpIcon.getImage().
                         getScaledInstance(90, -1,
-                        Image.SCALE_DEFAULT));
+                                Image.SCALE_DEFAULT));
             } else { //no need to miniaturize
                 thumbnail = tmpIcon;
             }

@@ -9,7 +9,16 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.openscience.cdk.interfaces.IBond;
-
+/**
+ *
+ *  java1.8+
+ *
+ * 
+ * 
+ *
+ * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
+ *
+ */
 public class BondTypeFactory {
 
     private class Dictionary {

@@ -20,9 +20,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-
-
-
 package uk.ac.ebi.smsd.gui;
 
 import java.awt.Color;
@@ -50,6 +47,16 @@ import org.openscience.directgraphics.direct.Params;
 import org.openscience.directgraphics.direct.layout.SingleMoleculeLayout;
 import org.openscience.directgraphics.direct.layout.ZoomToFitGridLayout;
 
+/**
+ *
+ * java1.8+
+ *
+ *
+ *
+ *
+ * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
+ *
+ */
 public class ImageGenerator {
 
     private class QueryTargetPair {
@@ -122,7 +129,7 @@ public class ImageGenerator {
 
         queryTargetPairs.add(
                 new QueryTargetPair(
-                cloneOfQuery, cloneOfTarget, querySubgraph, targetSubgraph, label));
+                        cloneOfQuery, cloneOfTarget, querySubgraph, targetSubgraph, label));
     }
 
     public void createImage(String outImageFileName, String qName, String tName) {

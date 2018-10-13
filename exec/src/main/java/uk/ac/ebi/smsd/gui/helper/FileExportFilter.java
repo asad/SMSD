@@ -31,9 +31,9 @@ import javax.swing.JFileChooser;
 /**
  * An export filter for JCP file formats
  *
- *  jchempaint
- * @author Egon Willighagen
- * 2003-04-01
+ * jchempaint
+ *
+ * @author Egon Willighagen 2003-04-01
  */
 public class FileExportFilter extends javax.swing.filechooser.FileFilter {
 

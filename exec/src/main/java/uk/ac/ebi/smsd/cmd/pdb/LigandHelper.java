@@ -13,7 +13,16 @@ import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.protein.data.PDBAtom;
 import org.openscience.cdk.tools.manipulator.BondManipulator;
-
+/**
+ *
+ *  java1.8+
+ *
+ * 
+ * 
+ *
+ * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
+ *
+ */
 public class LigandHelper {
 
     private static AtomTypeFactory atomTypeFactory;

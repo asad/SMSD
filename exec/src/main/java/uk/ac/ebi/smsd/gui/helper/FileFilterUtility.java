@@ -27,7 +27,13 @@ import javax.swing.ImageIcon;
 
 /**
  *
- * @author sar
+ *  java1.8+
+ *
+ * 
+ * 
+ *
+ * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
+ *
  */
 public class FileFilterUtility {
 
