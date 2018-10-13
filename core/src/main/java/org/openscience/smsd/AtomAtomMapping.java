@@ -110,7 +110,7 @@ public final class AtomAtomMapping implements Serializable {
         this.query = query;
         this.target = target;
         mapping = new TreeMap<>(new MyQueryIAtomComp());
-        this.mappingIndex = Collections.synchronizedSortedMap(new TreeMap<Integer, Integer>());
+        this.mappingIndex = Collections.synchronizedSortedMap(new TreeMap<>());
     }
 
     /**
@@ -165,11 +165,11 @@ public final class AtomAtomMapping implements Serializable {
             }
 
             s.append("MMP: ").append(createReactionSMILES).append(", AAM:[");
-            for (IAtom firstAtom : mapping.keySet()) {
+            mapping.keySet().forEach((firstAtom) -> {
                 int keyIndex = getQuery().indexOf(firstAtom) + 1;
                 int valueIndex = getTarget().indexOf(mapping.get(firstAtom)) + 1;
                 s.append(keyIndex).append(":").append(valueIndex).append("|");
-            }
+            });
 
             s.append("]");
 
@@ -277,7 +277,7 @@ public final class AtomAtomMapping implements Serializable {
      */
     public synchronized IAtomContainer getMapCommonFragmentOnQuery() throws CloneNotSupportedException {
         IAtomContainer ac = getQuery().clone();
-        List<IAtom> uniqueAtoms = Collections.synchronizedList(new ArrayList<IAtom>());
+        List<IAtom> uniqueAtoms = Collections.synchronizedList(new ArrayList<>());
         for (IAtom atom : getQuery().atoms()) {
             if (!mapping.containsKey(atom)) {
                 uniqueAtoms.add(ac.getAtom(getQueryIndex(atom)));
@@ -300,7 +300,7 @@ public final class AtomAtomMapping implements Serializable {
     public synchronized IAtomContainer getMapCommonFragmentOnTarget() throws CloneNotSupportedException {
 
         IAtomContainer ac = getTarget().clone();
-        List<IAtom> uniqueAtoms = Collections.synchronizedList(new ArrayList<IAtom>());
+        List<IAtom> uniqueAtoms = Collections.synchronizedList(new ArrayList<>());
         for (IAtom atom : getTarget().atoms()) {
             if (!mapping.containsValue(atom)) {
                 uniqueAtoms.add(ac.getAtom(getTargetIndex(atom)));

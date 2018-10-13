@@ -35,7 +35,7 @@ import org.openscience.smsd.AtomAtomMapping;
  *
  * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  * @author maclean
- * 
+ *
  */
 public interface IChemicalFilter<T> {
 

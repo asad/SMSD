@@ -132,7 +132,6 @@ public class MoleculeInitializer {
 
             // sets SSSR information
             //IRingSet sssr = new SSSRFinder(atomContainer).findEssentialRings();
-
             //New Method
             CycleFinder cf = Cycles.essential();
             Cycles cycles = cf.find(atomContainer); // ignore error - essential cycles do not check tractability
@@ -290,7 +289,7 @@ public class MoleculeInitializer {
         Map<String, Integer> map = new HashMap<>();
         for (int i = 0; i < ac1.getAtomCount(); i++) {
             atom = ac1.getAtom(i);
-            if (atom instanceof IQueryAtom) {
+            if (atom == null || atom instanceof IQueryAtom) {
                 continue;
             }
             if (map.containsKey(atom.getSymbol())) {

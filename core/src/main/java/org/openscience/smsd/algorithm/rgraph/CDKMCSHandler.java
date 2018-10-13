@@ -40,8 +40,8 @@ import org.openscience.smsd.interfaces.IResults;
  * This class acts as a handler class for CDKMCS algorithm
  * {@link org.openscience.smsd.algorithm.rgraph.CDKMCS}.
  *
- * 
- * 
+ *
+ *
  *
  * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  */
@@ -93,8 +93,8 @@ public class CDKMCSHandler implements IResults {
         this.shouldMatchRings = true;
         this.shouldMatchBonds = true;
         this.matchAtomType = true;
-        this.allAtomMCS = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
-        this.allMCS = Collections.synchronizedList(new ArrayList<Map<Integer, Integer>>());
+        this.allAtomMCS = Collections.synchronizedList(new ArrayList<>());
+        this.allMCS = Collections.synchronizedList(new ArrayList<>());
         this.timeout = searchMCS();
     }
 
@@ -153,14 +153,14 @@ public class CDKMCSHandler implements IResults {
         // at this point we have the serial numbers of the bonds to delete
         // we should get the actual bonds rather than delete by serial numbers
         ArrayList<IAtom> atomsToDelete = new ArrayList<>();
-        for (Integer serial : atomSerialsToDelete) {
+        atomSerialsToDelete.forEach((serial) -> {
             atomsToDelete.add(mol.getAtom(serial));
-        }
+        });
 
         // now lets get rid of the bonds themselves
-        for (IAtom atom : atomsToDelete) {
+        atomsToDelete.forEach((atom) -> {
             mol.removeAtom(atom);
-        }
+        });
 
         // now we probably have a set of disconnected components
         // so lets get a set of individual atom containers for
@@ -176,8 +176,7 @@ public class CDKMCSHandler implements IResults {
             int counter = 0;
             for (Map<Integer, Integer> final_solution : solutions) {
                 TreeMap<Integer, Integer> atomMappings = new TreeMap<>();
-                for (Map.Entry<Integer, Integer> Solutions : final_solution.entrySet()) {
-
+                final_solution.entrySet().forEach((Solutions) -> {
                     int iIndex = Solutions.getKey();
                     int jIndex = Solutions.getValue();
 
@@ -186,7 +185,7 @@ public class CDKMCSHandler implements IResults {
                     } else {
                         atomMappings.put(jIndex, iIndex);
                     }
-                }
+                });
                 if (!allMCS.contains(atomMappings)) {
                     if (!atomMappings.isEmpty()) {
                         allMCS.add(counter, atomMappings);
@@ -205,13 +204,13 @@ public class CDKMCSHandler implements IResults {
         int counter = 0;
         for (Map<Integer, Integer> final_solution : allMCS) {
             AtomAtomMapping atomMappings = new AtomAtomMapping(source, target);
-            for (Integer indexI : final_solution.keySet()) {
+            final_solution.keySet().forEach((indexI) -> {
                 IAtom sourceAtom = source.getAtom(indexI);
                 IAtom targetAtom = target.getAtom(final_solution.get(indexI));
                 if (sourceAtom != null && targetAtom != null) {
                     atomMappings.put(sourceAtom, targetAtom);
                 }
-            }
+            });
             if (!allAtomMCS.contains(atomMappings)) {
                 if (!atomMappings.isEmpty()) {
                     allAtomMCS.add(counter, atomMappings);

@@ -29,8 +29,8 @@ import java.util.Objects;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.AtomContainer;
+import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.aromaticity.Aromaticity;
 import org.openscience.cdk.aromaticity.ElectronDonation;
 import org.openscience.cdk.atomtype.CDKAtomTypeMatcher;
@@ -50,8 +50,6 @@ import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.ringsearch.AllRingsFinder;
 import org.openscience.cdk.tools.CDKHydrogenAdder;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
-import static org.openscience.cdk.tools.manipulator.AtomContainerManipulator.convertImplicitToExplicitHydrogens;
-import static org.openscience.cdk.tools.manipulator.AtomContainerManipulator.suppressHydrogens;
 import org.openscience.cdk.tools.manipulator.AtomTypeManipulator;
 import org.openscience.cdk.tools.manipulator.RingSetManipulator;
 

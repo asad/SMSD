@@ -1,4 +1,7 @@
 /* Copyright (C) 2009-2018  Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
+/* Copyright (C) 2009-2018  Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
+/* Copyright (C) 2009-2018  Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
+/* Copyright (C) 2009-2018  Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  *
  * Contact: cdk-devel@lists.sourceforge.net
  *
@@ -29,8 +32,8 @@ import org.openscience.cdk.isomorphism.matchers.IQueryBond;
 /**
  * Checks if a bond is matching between query and target molecules.
  *
- * 
- * 
+ *
+ *
  *
  * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  */

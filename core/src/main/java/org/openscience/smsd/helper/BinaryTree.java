@@ -23,12 +23,11 @@
  */
 package org.openscience.smsd.helper;
 
-
 /**
  * Class to construct a Binary tree for McGregor search.
  *
- * 
- * 
+ *
+ *
  * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  */
 public class BinaryTree {

@@ -486,7 +486,7 @@ final public class CDKMCS {
         }
 
         // reset result
-        List<List<CDKRMap>> rMapsList = new ArrayList<List<CDKRMap>>();
+        List<List<CDKRMap>> rMapsList = new ArrayList<>();
 
         // build the CDKRGraph corresponding to this problem
         CDKRGraph rGraph = buildRGraph(g1, g2, shouldMatchBonds, shouldMatchRings, matchAtomType);
@@ -497,9 +497,9 @@ final public class CDKMCS {
         List<BitSet> solutionList = rGraph.getSolutions();
 
         // conversions of CDKRGraph's internal solutions to G1/G2 mappings
-        for (BitSet set : solutionList) {
+        solutionList.forEach((set) -> {
             rMapsList.add(rGraph.bitSetToRMap(set));
-        }
+        });
 
         return rMapsList;
     }
@@ -688,9 +688,9 @@ final public class CDKMCS {
             return l; // since the CDKRMap is already an atom-atom mapping
         }
         List<List<CDKRMap>> result = new ArrayList<>();
-        for (List<CDKRMap> l2 : l) {
+        l.forEach((l2) -> {
             result.add(makeAtomsMapOfBondsMap(l2, g1, g2));
-        }
+        });
         return result;
     }
 
@@ -721,7 +721,7 @@ final public class CDKMCS {
                         IBond testBond = bondsConnectedToAtom1j.get(k);
                         for (int m = 0; m < l.size(); m++) {
                             IBond testBond2;
-                            if (l.get(m).getId1() == g1.getBondNumber(testBond)) {
+                            if (l.get(m).getId1() == g1.indexOf(testBond)) {
                                 testBond2 = g2.getBond(l.get(m).getId2());
                                 for (int n = 0; n < 2; n++) {
                                     List<IBond> bondsToTest = g2.getConnectedBondsList(atom2[n]);
@@ -981,10 +981,10 @@ final public class CDKMCS {
 
         if (centralAtom != null && centralQueryAtom != null
                 && ((IQueryAtom) centralQueryAtom).matches(centralAtom)) {
-            IQueryAtom queryAtom1 = (IQueryAtom) queryBond1.getConnectedAtom(centralQueryAtom);
-            IQueryAtom queryAtom2 = (IQueryAtom) queryBond2.getConnectedAtom(centralQueryAtom);
-            IAtom atom1 = bond1.getConnectedAtom(centralAtom);
-            IAtom atom2 = bond2.getConnectedAtom(centralAtom);
+            IQueryAtom queryAtom1 = (IQueryAtom) queryBond1.getOther(centralQueryAtom);
+            IQueryAtom queryAtom2 = (IQueryAtom) queryBond2.getOther(centralQueryAtom);
+            IAtom atom1 = bond1.getOther(centralAtom);
+            IAtom atom2 = bond2.getOther(centralAtom);
             if (queryAtom1.matches(atom1) && queryAtom2.matches(atom2)
                     || queryAtom1.matches(atom2) && queryAtom2.matches(atom1)) {
                 return true;

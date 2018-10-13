@@ -46,8 +46,8 @@ import org.openscience.smsd.helper.LabelContainer;
  * This class generates compatibility graph between query and target molecule.
  * It also marks edges in the compatibility graph as c-edges or d-edges.
  *
- * 
- * 
+ *
+ *
  *
  * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  */
@@ -89,13 +89,13 @@ public final class GenerateCompatibilityGraph implements Serializable {
         this.target = target;
         compGraphNodes = new ArrayList<>();
         compGraphNodesCZero = new ArrayList<>();
-        cEdges = Collections.synchronizedList(new ArrayList<Integer>());
-        dEdges = Collections.synchronizedList(new ArrayList<Integer>());
+        cEdges = Collections.synchronizedList(new ArrayList<>());
+        dEdges = Collections.synchronizedList(new ArrayList<>());
 
         /*
          Generate all possible graphs when no ring match or atom type is required
          */
-        /*
+ /*
          Modification for AAM only
          */
         if ((!shouldMatchBonds || !matchAtomType)
@@ -137,10 +137,14 @@ public final class GenerateCompatibilityGraph implements Serializable {
             }
 
             IAtom refAtom = atomCont.getAtom(i);
+            if (refAtom == null) {
+                continue;
+            }
             /*
              * Important Step: Discriminate between source atom types
              */
             String referenceAtom;
+
             if (refAtom instanceof IQueryAtom) {
                 referenceAtom = ((IQueryAtom) refAtom).getSymbol() == null ? "*" : ((IQueryAtom) refAtom).getSymbol();
 //                System.out.println("referenceAtom " + referenceAtom);

@@ -71,8 +71,8 @@ public final class MCSPlusHandler implements IResults {
         this.shouldMatchRings = shouldMatchRings;
         this.shouldMatchBonds = shouldMatchBonds;
         this.matchAtomType = matchAtomType;
-        allAtomMCS = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
-        allMCS = Collections.synchronizedList(new ArrayList<Map<Integer, Integer>>());
+        allAtomMCS = Collections.synchronizedList(new ArrayList<>());
+        allMCS = Collections.synchronizedList(new ArrayList<>());
         this.timeout = searchMCS();
     }
 
@@ -88,8 +88,8 @@ public final class MCSPlusHandler implements IResults {
         this.shouldMatchRings = true;
         this.shouldMatchBonds = true;
         this.matchAtomType = true;
-        allAtomMCS = Collections.synchronizedList(new ArrayList<AtomAtomMapping>());
-        allMCS = Collections.synchronizedList(new ArrayList<Map<Integer, Integer>>());
+        allAtomMCS = Collections.synchronizedList(new ArrayList<>());
+        allMCS = Collections.synchronizedList(new ArrayList<>());
         this.timeout = searchMCS();
     }
 
@@ -130,16 +130,15 @@ public final class MCSPlusHandler implements IResults {
             int bestSolSize = 0;
             for (Map<Integer, Integer> solution : solutions) {
 //                System.out.println("Number of MCS solution: " + solution);
-                Map<Integer, Integer> validSolution = Collections.synchronizedSortedMap(new TreeMap<Integer, Integer>());
+                Map<Integer, Integer> validSolution = Collections.synchronizedSortedMap(new TreeMap<>());
                 if (!flagExchange) {
-                    for (Map.Entry<Integer, Integer> map : solution.entrySet()) {
+                    solution.entrySet().forEach((map) -> {
                         validSolution.put(map.getKey(), map.getValue());
-                    }
+                    });
                 } else {
-                    for (Map.Entry<Integer, Integer> map : solution.entrySet()) {
+                    solution.entrySet().forEach((map) -> {
                         validSolution.put(map.getValue(), map.getKey());
-                    }
-//                    System.out.println("MCS solution: " + validSolution);
+                    });//                    System.out.println("MCS solution: " + validSolution);
                 }
                 if (validSolution.size() > bestSolSize) {
                     bestSolSize = validSolution.size();
@@ -161,8 +160,7 @@ public final class MCSPlusHandler implements IResults {
             int counter = 0;
             for (Map<Integer, Integer> solution : allMCS) {
                 AtomAtomMapping atomMappings = new AtomAtomMapping(source, target);
-                for (Map.Entry<Integer, Integer> map : solution.entrySet()) {
-
+                solution.entrySet().forEach((map) -> {
                     int IIndex = map.getKey();
                     int JIndex = map.getValue();
 
@@ -172,7 +170,7 @@ public final class MCSPlusHandler implements IResults {
                     sourceAtom = source.getAtom(IIndex);
                     targetAtom = target.getAtom(JIndex);
                     atomMappings.put(sourceAtom, targetAtom);
-                }
+                });
                 allAtomMCS.add(counter++, atomMappings);
             }
         } catch (Exception I) {

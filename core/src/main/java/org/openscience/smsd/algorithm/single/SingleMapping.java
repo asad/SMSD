@@ -46,8 +46,8 @@ import org.openscience.smsd.tools.BondEnergies;
  * This class handles single atom mapping. Either query and/or target molecule
  * with single atom is mapped by this class.
  *
- * 
- * 
+ *
+ *
  *
  * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  */
@@ -142,7 +142,8 @@ public class SingleMapping {
                         connectedBondOrder.put(counter, totalOrder);
                         mappings.add(counter++, mapAtoms);
                     }
-                } else if (sourceAtom.getSymbol().equalsIgnoreCase(targetAtom.getSymbol())) {
+                } else if (sourceAtom != null
+                        && sourceAtom.getSymbol().equalsIgnoreCase(targetAtom.getSymbol())) {
 
                     mapAtoms.put(sourceAtom, targetAtom);
                     List<IBond> Bonds = target.getConnectedBondsList(targetAtom);
@@ -227,22 +228,16 @@ public class SingleMapping {
         }
 
         Map<Integer, Double> sortedMapByValue = sortByValue(connectedBondOrder);
-        for (Integer key : sortedMapByValue.keySet()) {
-            Map<IAtom, IAtom> mapToBeMoved = mappings.get(key);
+        sortedMapByValue.keySet().stream().map((key) -> mappings.get(key)).forEachOrdered((mapToBeMoved) -> {
             sortedMap.add(mapToBeMoved);
-        }
+        });
         return sortedMap;
     }
 
     private <K, V> Map<K, V> sortByValue(Map<K, V> map) {
         List list = new LinkedList(map.entrySet());
-        Collections.sort(list, new Comparator() {
-            @Override
-            public int compare(Object object1, Object object2) {
-                return ((Comparable) ((Map.Entry<K, V>) (object1)).getValue()).compareTo(
-                        ((Map.Entry<K, V>) (object2)).getValue());
-            }
-        });
+        Collections.sort(list, (Object object1, Object object2) -> ((Comparable) ((Map.Entry<K, V>) (object1)).getValue()).compareTo(
+                ((Map.Entry<K, V>) (object2)).getValue()));
         Map<K, V> result = new LinkedHashMap<>();
         for (Iterator it = list.iterator(); it.hasNext();) {
             Map.Entry<K, V> entry = (Map.Entry<K, V>) it.next();

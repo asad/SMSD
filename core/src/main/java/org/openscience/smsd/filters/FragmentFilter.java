@@ -39,7 +39,7 @@ import org.openscience.smsd.AtomAtomMapping;
  * Filter the results based on fragment size.
  *
  * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
- * 
+ *
  */
 public final class FragmentFilter extends Sotter implements IChemicalFilter<Integer> {
 
@@ -97,7 +97,6 @@ public final class FragmentFilter extends Sotter implements IChemicalFilter<Inte
 
         IAtomContainer Educt = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class, chemfilter.getQuery());
         IAtomContainer product = DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class, chemfilter.getTarget());
-
 
         if (mcsAtomSolution != null) {
             for (Map.Entry<IAtom, IAtom> map : mcsAtomSolution.getMappingsByAtoms().entrySet()) {

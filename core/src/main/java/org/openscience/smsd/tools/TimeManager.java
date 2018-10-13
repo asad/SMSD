@@ -25,23 +25,21 @@ package org.openscience.smsd.tools;
 import java.text.SimpleDateFormat;
 import java.util.TimeZone;
 
-
 /**
  * Class that handles execution time of the MCS search.
  *
- * long diffSeconds = time / 1000; 
- * long diffMinutes = time / (60 * 1000); 
- * long diffHours = time / (60 * 60 * 1000); 
- * long diffDays = time / (24 * 60 * 60 * 1000);
+ * long diffSeconds = time / 1000; long diffMinutes = time / (60 * 1000); long
+ * diffHours = time / (60 * 60 * 1000); long diffDays = time / (24 * 60 * 60 *
+ * 1000);
  *
- * 
- * 
+ *
+ *
  * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  */
 public class TimeManager {
 
-    private double startTime;
-    private SimpleDateFormat dateFormat;
+    private final double startTime;
+    private final SimpleDateFormat dateFormat;
 
     /**
      * Constructor for storing execution time
@@ -61,7 +59,6 @@ public class TimeManager {
     public synchronized double getElapsedTimeInHours() {
         double currentTime = System.currentTimeMillis();
         return (currentTime - startTime) / (60 * 60 * 1000);
-
 
     }
 

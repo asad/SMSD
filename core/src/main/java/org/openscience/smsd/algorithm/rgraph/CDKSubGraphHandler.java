@@ -33,9 +33,10 @@ import org.openscience.smsd.AtomAtomMapping;
 import org.openscience.smsd.interfaces.IResults;
 
 /**
- * This class acts as a handler class for CDKMCS algorithm {@link org.openscience.smsd.algorithm.rgraph.CDKMCS}.
+ * This class acts as a handler class for CDKMCS algorithm
+ * {@link org.openscience.smsd.algorithm.rgraph.CDKMCS}.
  *
- *  
+ *
  *
  * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  */
@@ -145,14 +146,14 @@ public class CDKSubGraphHandler implements IResults {
         // at this point we have the serial numbers of the bonds to delete
         // we should get the actual bonds rather than delete by serial numbers
         ArrayList<IAtom> atomsToDelete = new ArrayList<>();
-        for (Integer serial : atomSerialsToDelete) {
+        atomSerialsToDelete.forEach((serial) -> {
             atomsToDelete.add(mol.getAtom(serial));
-        }
+        });
 
         // now lets get rid of the bonds themselves
-        for (IAtom atom : atomsToDelete) {
+        atomsToDelete.forEach((atom) -> {
             mol.removeAtom(atom);
-        }
+        });
 
         // now we probably have a set of disconnected components
         // so lets get a set of individual atom containers for
@@ -197,8 +198,7 @@ public class CDKSubGraphHandler implements IResults {
         int counter = 0;
         for (Map<Integer, Integer> final_solution : sol) {
             AtomAtomMapping atomMappings = new AtomAtomMapping(source, target);
-            for (Map.Entry<Integer, Integer> Solutions : final_solution.entrySet()) {
-
+            final_solution.entrySet().forEach((Solutions) -> {
                 int IIndex = Solutions.getKey();
                 int JIndex = Solutions.getValue();
 
@@ -208,8 +208,7 @@ public class CDKSubGraphHandler implements IResults {
                 sourceAtom = source.getAtom(IIndex);
                 targetAtom = target.getAtom(JIndex);
                 atomMappings.put(sourceAtom, targetAtom);
-
-            }
+            });
             allAtomMCS.add(counter++, atomMappings);
         }
     }

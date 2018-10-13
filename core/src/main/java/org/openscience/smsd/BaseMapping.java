@@ -37,10 +37,10 @@ import org.openscience.smsd.interfaces.IAtomMapping;
 
 /**
  *
- *  java1.8+
+ * java1.8+
  *
- * 
- * 
+ *
+ *
  *
  * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  *
@@ -317,10 +317,10 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
      */
     public synchronized List<Map<IBond, IBond>> makeBondMapsOfAtomMaps(IAtomContainer ac1,
             IAtomContainer ac2, List<AtomAtomMapping> mappings) {
-        List<Map<IBond, IBond>> bondMaps = Collections.synchronizedList(new ArrayList<Map<IBond, IBond>>());
-        for (AtomAtomMapping mapping : mappings) {
+        List<Map<IBond, IBond>> bondMaps = Collections.synchronizedList(new ArrayList<>());
+        mappings.forEach((mapping) -> {
             bondMaps.add(makeBondMapOfAtomMap(ac1, ac2, mapping));
-        }
+        });
         return bondMaps;
     }
 
@@ -339,19 +339,17 @@ public class BaseMapping extends ChemicalFilters implements IAtomMapping {
     private synchronized Map<IBond, IBond> makeBondMapOfAtomMap(IAtomContainer ac1, IAtomContainer ac2,
             AtomAtomMapping mapping) {
 
-        Map<IBond, IBond> bondbondMappingMap = Collections.synchronizedMap(new HashMap<IBond, IBond>());
+        Map<IBond, IBond> bondbondMappingMap = Collections.synchronizedMap(new HashMap<>());
 
-        for (Map.Entry<IAtom, IAtom> map1 : mapping.getMappingsByAtoms().entrySet()) {
-            for (Map.Entry<IAtom, IAtom> map2 : mapping.getMappingsByAtoms().entrySet()) {
-                if (map1.getKey() != map2.getKey()) {
-                    IBond bond1 = ac1.getBond(map1.getKey(), map2.getKey());
-                    IBond bond2 = ac2.getBond(map1.getValue(), map2.getValue());
-                    if (bond1 != null && bond2 != null && !bondbondMappingMap.containsKey(bond1)) {
-                        bondbondMappingMap.put(bond1, bond2);
-                    }
+        mapping.getMappingsByAtoms().entrySet().forEach((map1) -> {
+            mapping.getMappingsByAtoms().entrySet().stream().filter((map2) -> (map1.getKey() != map2.getKey())).forEachOrdered((map2) -> {
+                IBond bond1 = ac1.getBond(map1.getKey(), map2.getKey());
+                IBond bond2 = ac2.getBond(map1.getValue(), map2.getValue());
+                if (bond1 != null && bond2 != null && !bondbondMappingMap.containsKey(bond1)) {
+                    bondbondMappingMap.put(bond1, bond2);
                 }
-            }
-        }
+            });
+        });
 //        System.out.println("Mol Map size:" + bondbondMappingMap.size());
         return bondbondMappingMap;
     }

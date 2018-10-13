@@ -111,12 +111,11 @@ public class SingleMappingHandler implements IResults {
             int counter = 0;
             for (Map<IAtom, IAtom> solution : mappings) {
                 AtomAtomMapping atomMappings = new AtomAtomMapping(source, target);
-                for (Map.Entry<IAtom, IAtom> map : solution.entrySet()) {
-
+                solution.entrySet().forEach((map) -> {
                     IAtom sourceAtom = map.getKey();
                     IAtom targetAtom = map.getValue();
                     atomMappings.put(sourceAtom, targetAtom);
-                }
+                });
                 allAtomMCS.add(counter, atomMappings);
                 counter++;
             }

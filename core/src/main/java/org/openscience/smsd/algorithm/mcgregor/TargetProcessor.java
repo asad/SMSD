@@ -26,6 +26,7 @@ package org.openscience.smsd.algorithm.mcgregor;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.isomorphism.matchers.IQueryBond;
@@ -33,8 +34,8 @@ import org.openscience.cdk.isomorphism.matchers.IQueryBond;
 /**
  * Class to handle mappings of target molecule based on the query.
  *
- * 
- * 
+ *
+ *
  *
  * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  */
@@ -107,7 +108,7 @@ public class TargetProcessor {
             Integer indexJ = target.indexOf(target.getBond(atomIndex).getAtom(1));
             IBond bond = target.getBond(atomIndex);
             Integer order = null;
-            if (!(bond instanceof IQueryBond)) {
+            if (bond != null && !(bond instanceof IQueryBond)) {
                 order = (bond.getOrder().numeric());
             } else {
                 IQueryBond queryBond = (IQueryBond) bond;
@@ -118,7 +119,7 @@ public class TargetProcessor {
                 if (unmapped_atoms_molB.get(b).equals(indexI)) {
                     normal_bond = unMappedAtomsEqualsIndexI(target, mappingSize, atomIndex, counter, mapped_atoms, indexI, indexJ, order);
                     bond_considered = true;
-                } else if (unmapped_atoms_molB.get(b) == indexJ) {
+                } else if (Objects.equals(unmapped_atoms_molB.get(b), indexJ)) {
                     normal_bond = unMappedAtomsEqualsIndexJ(target, mappingSize, atomIndex, counter, mapped_atoms, indexI, indexJ, order);
                     bond_considered = true;
                 }
@@ -377,7 +378,8 @@ public class TargetProcessor {
 
     /**
      *
-     * @return number of remaining molecule A bonds after the clique search, which are neighbors of the MCS
+     * @return number of remaining molecule A bonds after the clique search,
+     * which are neighbors of the MCS
      *
      */
     protected int getNeighborBondNumB() {
@@ -386,7 +388,8 @@ public class TargetProcessor {
 
     /**
      *
-     * @return number of remaining molecule A bonds after the clique search, which aren't neighbors
+     * @return number of remaining molecule A bonds after the clique search,
+     * which aren't neighbors
      */
     protected int getBondNumB() {
         return this.setBondNumB;
