@@ -30,6 +30,8 @@ import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.openscience.cdk.AtomContainer;
+import org.openscience.cdk.AtomRef;
+import org.openscience.cdk.BondRef;
 import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.aromaticity.Aromaticity;
 import org.openscience.cdk.aromaticity.ElectronDonation;
@@ -47,6 +49,7 @@ import org.openscience.cdk.interfaces.IPseudoAtom;
 import org.openscience.cdk.interfaces.IRing;
 import org.openscience.cdk.interfaces.IRingSet;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
+import org.openscience.cdk.isomorphism.matchers.IQueryBond;
 import org.openscience.cdk.ringsearch.AllRingsFinder;
 import org.openscience.cdk.tools.CDKHydrogenAdder;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
@@ -370,15 +373,24 @@ public class ExtAtomContainerManipulator extends AtomContainerManipulator implem
     public static void percieveAtomTypesAndConfigureAtoms(IAtomContainer container) throws CDKException {
         CDKAtomTypeMatcher matcher = CDKAtomTypeMatcher.getInstance(container.getBuilder());
         for (IAtom atom : container.atoms()) {
-            if (!(atom instanceof IPseudoAtom)) {
-                try {
-                    IAtomType matched = matcher.findMatchingAtomType(container, atom);
-                    if (matched != null) {
-                        AtomTypeManipulator.configure(atom, matched);
+            if (!(AtomRef.deref(atom) instanceof IPseudoAtom)) {
+                boolean skip=false;
+                for(IBond bond : container.getConnectedBondsList(atom)){
+                    if(BondRef.deref(bond) instanceof IQueryBond){
+                        skip=true;
+                        break;
                     }
-                } catch (CDKException e) {
-                    logger.log(Level.WARNING,
-                            "Failed to find Matching AtomType! {0}{1}", new Object[]{atom.getSymbol(), e});
+                }
+                if(!skip) {
+                    try {
+                        IAtomType matched = matcher.findMatchingAtomType(container, atom);
+                        if (matched != null) {
+                            AtomTypeManipulator.configure(atom, matched);
+                        }
+                    } catch (CDKException e) {
+                        logger.log(Level.WARNING,
+                                "Failed to find Matching AtomType! {0}{1}", new Object[]{atom.getSymbol(), e});
+                    }
                 }
             }
         }
