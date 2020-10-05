@@ -1,3 +1,5 @@
+This is an NIH/NCATS fork of SMSD to make it use a current version of CDK.
+
 # SMSD
 Small Molecule Subgraph Detector (SMSD) is a Java based software library for finding Maximum Common Subgraph (MCS)/ Substructure between small molecules.
 This enables help us to find similarity/distance between two molecules. MCS is also used for screening drug like compounds by hitting molecules, which share common subgraph (substructure).
@@ -22,12 +24,12 @@ Maven POM configuration
 
 <dependencies>
     <dependency>
-        <groupId>uk.ac.ebi.smsd</groupId>
+        <groupId>gov.nih.ncats</groupId>
         <artifactId>smsd-core</artifactId>
         <version>LATEST</version>
     </dependency>
     <dependency>
-        <groupId>uk.ac.ebi.smsd</groupId>
+        <groupId>gov.nih.ncats</groupId>
         <artifactId>smsd-exec</artifactId>
         <version>LATEST</version>
     </dependency>
