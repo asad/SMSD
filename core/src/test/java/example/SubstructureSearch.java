@@ -26,7 +26,6 @@ import org.openscience.smsd.tools.ExtAtomContainerManipulator;
 public class SubstructureSearch {
 
     /**
-     *
      * @param args
      * @throws CDKException
      */
@@ -81,7 +80,7 @@ public class SubstructureSearch {
                         //Get the mapped atom number in Target AtomContainer
                         int targetMappingNumber = aams.getTargetIndex(targetAtom);
                         System.out.println(queryAtom.getSymbol() + "(" + queryMappingNumber + "), "
-                                        + targetAtom.getSymbol() + "(" + targetMappingNumber + ") ");
+                                + targetAtom.getSymbol() + "(" + targetMappingNumber + ") ");
                     }
                     ////System.out.println("");
 
@@ -99,4 +98,5 @@ public class SubstructureSearch {
         }
         ////System.out.println("");
     }
+
 }
