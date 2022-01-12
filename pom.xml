@@ -5,16 +5,23 @@
     <groupId>gov.nih.ncats</groupId>
     <artifactId>smsd</artifactId>
     <name>smsd</name>
-    <description>Small Molecule Subgraph Detector (SMSD) - A Maximum Common Subgraph (MCS) and substructure generation library for chemoinformatics</description>
+    <description>NCATS Fork of Small Molecule Subgraph Detector (SMSD) - A Maximum Common Subgraph (MCS) and substructure generation library for chemoinformatics</description>
     <url>https://github.com/ncats/SMSD</url>
     <packaging>pom</packaging>
-    <version>2.2.2</version>
+    <version>2.2.3</version>
 
     <modules>
         <module>core</module>
         <module>exec</module>
     </modules>
-    
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <cdk.version>2.7.1</cdk.version>
+    </properties>
+
     <scm>
 
         <url>https://github.com/ncats/SMSD.git</url>
@@ -34,11 +41,7 @@
             <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
         </repository>
     </distributionManagement>
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-    </properties>
+
     <licenses>
         <license>
             <name>The BSD 2-Clause License</name>
