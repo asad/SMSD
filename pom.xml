@@ -8,7 +8,7 @@
     <description>NCATS Fork of Small Molecule Subgraph Detector (SMSD) - A Maximum Common Subgraph (MCS) and substructure generation library for chemoinformatics</description>
     <url>https://github.com/ncats/SMSD</url>
     <packaging>pom</packaging>
-    <version>2.2.3</version>
+    <version>2.2.4</version>
 
     <modules>
         <module>core</module>
@@ -19,7 +19,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <cdk.version>2.7.1</cdk.version>
+        <cdk.version>2.9</cdk.version>
     </properties>
 
     <scm>
