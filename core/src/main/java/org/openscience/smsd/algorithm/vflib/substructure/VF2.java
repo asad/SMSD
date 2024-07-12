@@ -70,6 +70,8 @@ public final class VF2 implements IResults {
     private final boolean shouldMatchBonds;
     private final boolean matchAtomType;
 
+    private final boolean filterByBondTypeCount;
+
     private boolean isSubgraph = false;
     private final ILoggingTool Logger
             = LoggingToolFactory.createLoggingTool(VF2.class);
@@ -83,7 +85,7 @@ public final class VF2 implements IResults {
      * @param shouldMatchRings
      * @param matchAtomType
      */
-    public VF2(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType) {
+    public VF2(IAtomContainer source, IAtomContainer target, boolean shouldMatchBonds, boolean shouldMatchRings, boolean matchAtomType, boolean filterByBondTypeCount) {
         this.source = source;
         this.target = target;
         this.shouldMatchRings = shouldMatchRings;
@@ -91,6 +93,7 @@ public final class VF2 implements IResults {
         this.allAtomMCS = new ArrayList<>();
         this.isSubgraph = findSubgraph();
         this.matchAtomType = matchAtomType;
+        this.filterByBondTypeCount = filterByBondTypeCount;
     }
 
     /**
@@ -107,6 +110,7 @@ public final class VF2 implements IResults {
         this.matchAtomType = true;
         allAtomMCS = new ArrayList<>();
         this.isSubgraph = findSubgraph();
+        this.filterByBondTypeCount = true;
     }
 
     /**
@@ -115,20 +119,11 @@ public final class VF2 implements IResults {
      * graph 'a' is the subgraph, implying a.size() < b.size(). In the case that no isomorphism is found an empty
      * mapping is returned.
      *
-     *
-     *
-     *
-     *
-     *
-     *
-     *
-     * @param shouldMatchBonds
-     * @param shouldMatchRings
      * @return
      */
     private synchronized void isomorphism() {
 
-        if (!isDead(source, target) && MoleculeInitializer.testIsSubgraphHeuristics(source, target, shouldMatchBonds)) {
+        if (!isDead(source, target) && MoleculeInitializer.testIsSubgraphHeuristics(source, target, filterByBondTypeCount)) {
             State state = new State(source, target, shouldMatchBonds, shouldMatchRings, matchAtomType);
             if (!state.isDead()) {
                 state.matchFirst(state, allAtomMCS);
