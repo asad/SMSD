@@ -35,10 +35,14 @@ import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.io.MDLV2000Reader;
+import org.openscience.cdk.isomorphism.matchers.IQueryAtom;
 import org.openscience.cdk.isomorphism.matchers.IQueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainerCreator;
 import org.openscience.cdk.smiles.SmilesParser;
+
+import java.io.StringReader;
 
 /**
  * Unit testing for the {@link Substructure} class.
@@ -834,4 +838,96 @@ public class SubstructureTest {
 //        ////System.out.println("SMILES Common:" + overlap.getFirstAtomMapping().getCommonFragmentAsSMILES());
 //
     }
+
+    @Test
+    public void molWithAtomList() throws Exception{
+        String queryMol ="\n  ACCLDraw09152014282D\n\n" +
+                " 10 10  3  0  0  0  0  0  0  0999 V2000\n" +
+                "   12.5547   -9.5481    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n" +
+                "   11.7570   -9.5481    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n" +
+                "   12.9561  -10.2274    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n" +
+                "   11.3247   -8.7890    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n" +
+                "   11.3170  -10.2119    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n" +
+                "   12.5624  -10.9298    0.0000 L   0  0  0  0  0  0  0  0  0  0  0  0\n" +
+                "   12.9561   -8.8044    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n" +
+                "   13.7640  -10.2274    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n" +
+                "   13.7975   -8.8044    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n" +
+                "   14.2040   -9.5223    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n" +
+                "  2  1  1  0  0  0  0\n" +
+                "  3  1  2  0  0  0  0\n" +
+                "  4  2  2  0  0  0  0\n" +
+                "  5  2  1  0  0  0  0\n" +
+                "  6  3  1  0  0  0  0\n" +
+                "  7  1  1  0  0  0  0\n" +
+                "  8  3  1  0  0  0  0\n" +
+                "  9  7  2  0  0  0  0\n" +
+                " 10  9  1  0  0  0  0\n" +
+                " 10  8  2  0  0  0  0\n" +
+                "  4 F    2   8   7\n" +
+                "  5 F    2   7   8\n" +
+                "  6 F    2   7   8\n" +
+                "M  ALS   4  2 F O   N   \n" +
+                "M  ALS   5  2 F N   O   \n" +
+                "M  ALS   6  2 F N   O   \n" +
+                "M  END\n";
+
+        String targetMol = "\n" +
+                "  Marvin  02272023332D          \n" +
+                "\n" +
+                " 13 13  0  0  0  0            999 V2000\n" +
+                "    6.9733   -5.0238    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n" +
+                "    6.2558   -5.4363    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n" +
+                "    5.5383   -5.0238    0.0000 N   0  3  0  0  0  0  0  0  0  0  0  0\n" +
+                "    5.5383   -4.1988    0.0000 O   0  5  0  0  0  0  0  0  0  0  0  0\n" +
+                "    4.8189   -5.4363    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n" +
+                "    6.2558   -6.2613    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n" +
+                "    6.9733   -6.6631    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n" +
+                "    7.6834   -6.2613    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n" +
+                "    7.6834   -5.4363    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n" +
+                "    8.4009   -5.0130    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n" +
+                "    6.9733   -4.1988    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n" +
+                "    7.6834   -3.7863    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n" +
+                "    6.2558   -3.7930    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n" +
+                "  1  2  1  0  0  0  0\n" +
+                "  2  3  1  0  0  0  0\n" +
+                "  3  4  1  0  0  0  0\n" +
+                "  3  5  2  0  0  0  0\n" +
+                "  2  6  2  0  0  0  0\n" +
+                "  6  7  1  0  0  0  0\n" +
+                "  7  8  2  0  0  0  0\n" +
+                "  8  9  1  0  0  0  0\n" +
+                "  1  9  2  0  0  0  0\n" +
+                "  9 10  1  0  0  0  0\n" +
+                "  1 11  1  0  0  0  0\n" +
+                " 11 12  1  0  0  0  0\n" +
+                " 11 13  2  0  0  0  0\n" +
+                "M  CHG  2   3   1   4  -1\n" +
+                "M  END";
+
+
+        Substructure overlap = new Substructure(readMol(queryMol), readMol(targetMol), true, false, false, false);
+        AtomAtomMapping mapping = overlap.getFirstAtomMapping();
+        System.out.println(mapping.isEmpty());
+    }
+
+    private static IAtomContainer readMol(String mol) throws Exception {
+        try (MDLV2000Reader reader = new MDLV2000Reader(new StringReader(mol))) {
+            IAtomContainer read= reader.read(DefaultChemObjectBuilder.getInstance().newAtomContainer());
+
+            boolean hasQueryAtoms = false;
+            for(IAtom atom : read.atoms()){
+                if(atom instanceof IQueryAtom){
+                    hasQueryAtoms=true;
+                }
+            }
+            if(hasQueryAtoms){
+                return new QueryAtomContainer(read, DefaultChemObjectBuilder.getInstance());
+            }
+            return read;
+
+        }
+    }
+
+
+
 }

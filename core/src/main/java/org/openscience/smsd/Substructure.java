@@ -76,6 +76,8 @@ public final class Substructure extends BaseMapping {
     private final ILoggingTool Logger
             = LoggingToolFactory.createLoggingTool(Substructure.class);
 
+    private boolean filterByBondCount;
+
     /**
      * Constructor for VF Substructure Algorithm
      *
@@ -94,7 +96,31 @@ public final class Substructure extends BaseMapping {
             boolean matchRings,
             boolean matchAtomType,
             boolean findAllSubgraph) throws CDKException {
+        this(query, target, shouldMatchBonds, matchRings, matchAtomType, findAllSubgraph,  true);
+
+    }
+    /**
+     * Constructor for VF Substructure Algorithm
+     *
+     * @param query
+     * @param target
+     * @param shouldMatchBonds Match bond types (i.e. double to double etc)
+     * @param matchRings Match ring atoms and ring size
+     * @param findAllSubgraph report all subgraphs
+     * @param matchAtomType
+     * @throws CDKException
+     */
+    public Substructure(
+            IAtomContainer query,
+            IAtomContainer target,
+            boolean shouldMatchBonds,
+            boolean matchRings,
+            boolean matchAtomType,
+            boolean findAllSubgraph,
+            boolean filterByBondCount) throws CDKException {
         super(query, target, shouldMatchBonds, matchRings, matchAtomType);
+        this.filterByBondCount = filterByBondCount;
+
         if (isMatchRings()) {
             try {
                 MoleculeInitializer.initializeMolecule(getQuery());
@@ -165,7 +191,7 @@ public final class Substructure extends BaseMapping {
             if (getQuery() instanceof IQueryAtomContainer) {
                 mapper = new VF2((IQueryAtomContainer) getQuery(), getTarget());
             } else {
-                mapper = new VF2(getQuery(), getTarget(), isMatchBonds(), isMatchRings(), isMatchAtomType());
+                mapper = new VF2(getQuery(), getTarget(), isMatchBonds(), isMatchRings(), isMatchAtomType(), filterByBondCount);
             }
             isSubgraph = mapper.isSubgraph();
             List<AtomAtomMapping> atomMappings = mapper.getAllAtomMapping();

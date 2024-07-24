@@ -2,26 +2,35 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <artifactId>smsd</artifactId>
-        <groupId>uk.ac.ebi.smsd</groupId>
-        <version>2.2.0</version>
+        <groupId>gov.nih.ncats</groupId>
+        <version>2.2.4</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <name>smsd-core</name>
     <artifactId>smsd-core</artifactId>
-    <version>2.2.0</version>
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
 
     <dependencies>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.13.1</version>
+            <version>4.13.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.openscience.cdk</groupId>
             <artifactId>cdk-bundle</artifactId>
-            <version>2.1.1</version>
+            <version>${cdk.version}</version>
         </dependency>
     </dependencies>
     <profiles>
