@@ -1,0 +1,28 @@
+# Maven Build Artifacts
+# This is the most important rule for your Java project.
+target/
+*.jar
+*.war
+*.ear
+
+# Java & VM Crash Logs
+hs_err_pid*
+*.log
+
+# Python Artifacts
+# Useful for any scripts or legacy Python code.
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+venv/
+
+# IDE Configuration
+# For IntelliJ IDEA and similar tools.
+.idea/
+*.iml
+
+# Operating System Files
+# For macOS, Windows, and Linux.
+.DS_Store
+Thumbs.db

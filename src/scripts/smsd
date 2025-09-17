@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+# Auto-generated launcher (created during Maven build)
+BASE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+JAR="$BASE_DIR/target/${project.build.finalName}-jar-with-dependencies.jar"
+exec java -jar "$JAR" "$@"
+
