@@ -17,7 +17,7 @@ java -jar target/smsd-cdk-3.0.0-jar-with-dependencies.jar sub   --Q SMI --q "CCN
 target/bin/smsd sub --Q SMI --q "CCN" --T SMI --t "CCCNC" -m --json - --json-pretty
 ```
 
-### Example output (no icons; JSON first policy)
+### Example output (JSON first policy)
 ```json
 {
   "query": "CCN",
