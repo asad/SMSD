@@ -44,8 +44,8 @@ target/bin/smsd sub --Q SMI --q "CCN" --T SMI --t "CCCNC" -m --json - --json-pre
 - `src/test/java/...` — JUnit tests
 - `legacy/` — preserved prior code (read‑only)
 - `WHITEPAPER.md` — algorithms & design
-- Community docs: `CONTRIBUTING.md`, `LICENSE`, `CITATION.cff`, `WHITEPAPER.md`
+- Community docs: `LICENSE`, `WHITEPAPER.md`
 
 ## Notes
-- Output style is deliberately plain (no emojis). See `OUTPUT_STYLE_NOTES.md` for guidance. 
-- To apply SPDX/Apache headers to all Java files, see `POM_SNIPPETS.md`. 
+- Output style is deliberately plain
+- To apply SPDX/Apache headers to all Java files. 
