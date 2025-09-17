@@ -1,4 +1,4 @@
-# SMSD (CDK‑compat) — Algorithms & Design Whitepaper
+# SMSD — Algorithms & Design Whitepaper
 
 **Version**: 3.0.0  	**Toolkit**: Chemistry Development Kit (CDK)  	**Language**: Pure Java
 
