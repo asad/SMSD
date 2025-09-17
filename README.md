@@ -1,4 +1,4 @@
-# SMSD (CDK‑compat) — Pure‑Java CLI & API
+# SMSD - CLI & API
 
 Pure‑Java substructure & MCS search using CDK (no external toolkits).  Jar‑first usage is prioritised; launchers are generated at build.
 
