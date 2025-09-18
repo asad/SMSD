@@ -1,3 +1,7 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * © 2025 BioInception PVT LTD.
+ */
 package org.openscience.smsd.algorithm.vflib.vf2.sub;
 
 import org.openscience.cdk.graph.GraphUtil.EdgeToBondMap;

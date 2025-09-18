@@ -1,3 +1,7 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * © 2025 BioInception PVT LTD.
+ */
 
 /* Copyright (C) 2009-2018  Egon Willighagen <egonw@users.sf.net>
  *

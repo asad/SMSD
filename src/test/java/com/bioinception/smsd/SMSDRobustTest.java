@@ -33,7 +33,6 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * CDK-only; no external toolkits.
  */
-// FIX: The class name now matches the filename "SMSDRobustTest.java"
 public class SMSDRobustTest {
 
     // -----------------------------
@@ -150,7 +149,8 @@ public class SMSDRobustTest {
 
         ChemOptions chem = new ChemOptions();
         SMSD smsd = new SMSD(queryMol, targetMol, chem);
-        Map<Integer, Integer> mr = smsd.findMCS(true, true); // (connected, induced)
+        // FIX: Added the required third 'long' argument for the timeout.
+        Map<Integer, Integer> mr = smsd.findMCS(true, true, 2500L); // (connected, induced, timeout)
         assertTrue(mr == null || mr.size() >= 0);
     }
 

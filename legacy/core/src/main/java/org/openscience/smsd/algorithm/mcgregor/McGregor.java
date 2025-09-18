@@ -1,3 +1,7 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * © 2025 BioInception PVT LTD.
+ */
 
 /* Copyright (C) 2005-2006 Markus Leber
  *               2006-2014 Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>

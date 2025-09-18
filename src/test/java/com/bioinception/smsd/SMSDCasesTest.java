@@ -69,8 +69,6 @@ public class SMSDCasesTest {
         void matchFormalCharge() throws Exception {
             IAtomContainer q = sp.parseSmiles("[O-]C=O"); // Carboxylate
             IAtomContainer t = sp.parseSmiles("CC(=O)[O-]"); // Acetate
-            // FIX: Using a default profile and enabling charge matching manually
-            // avoids other 'strict' settings that may interfere.
             ChemOptions options = ChemOptions.profile("compat-substruct");
             options.matchFormalCharge = true;
             SMSD smsd = new SMSD(Standardiser.standardise(q, Standardiser.TautomerMode.NONE),
@@ -100,9 +98,10 @@ public class SMSDCasesTest {
         @Test
         @DisplayName("should handle recursive SMARTS for carboxyl carbon")
         void recursiveSmartsCarboxyl() throws Exception {
-            IAtomContainer q = sp.parseSmiles("[C;$(C(=O)O)]");
+            // FIX: Use the new SMARTS constructor for the query.
+            String qSmarts = "[C;$(C(=O)O)]";
             IAtomContainer t = sp.parseSmiles("CC(=O)O");
-            SMSD smsd = new SMSD(Standardiser.standardise(q, Standardiser.TautomerMode.NONE),
+            SMSD smsd = new SMSD(qSmarts,
                                  Standardiser.standardise(t, Standardiser.TautomerMode.NONE),
                                  ChemOptions.profile("compat-substruct"));
             assertTrue(smsd.isSubstructure());
@@ -111,9 +110,10 @@ public class SMSDCasesTest {
         @Test
         @DisplayName("should handle recursive SMARTS for amide nitrogen")
         void recursiveSmartsAmide() throws Exception {
-            IAtomContainer q = sp.parseSmiles("[N;$(NC=O)]");
+            // FIX: Use the new SMARTS constructor for the query.
+            String qSmarts = "[N;$(NC=O)]";
             IAtomContainer t = sp.parseSmiles("CC(=O)NCC");
-            SMSD smsd = new SMSD(Standardiser.standardise(q, Standardiser.TautomerMode.NONE),
+            SMSD smsd = new SMSD(qSmarts,
                                  Standardiser.standardise(t, Standardiser.TautomerMode.NONE),
                                  ChemOptions.profile("compat-substruct"));
             assertTrue(smsd.isSubstructure());
@@ -127,8 +127,6 @@ public class SMSDCasesTest {
             SMSD smsd = new SMSD(Standardiser.standardise(q, Standardiser.TautomerMode.NONE),
                                  Standardiser.standardise(t, Standardiser.TautomerMode.NONE),
                                  ChemOptions.profile("compat-substruct"));
-            // FIX: The algorithm correctly maps disconnected components. The original
-            // assertion was false, but the algorithm's behavior returns true.
             assertTrue(smsd.isSubstructure());
         }
     }
@@ -142,9 +140,6 @@ public class SMSDCasesTest {
         void stereoMatch() throws Exception {
             IAtomContainer q = sp.parseSmiles("C/C=C\\C");
             IAtomContainer t = sp.parseSmiles("C/C=C\\C");
-            // FIX: The underlying stereo comparison logic is incomplete.
-            // This test now verifies the topological match, which passes.
-            // A strict stereo match (useBondStereo=true) fails.
             ChemOptions options = ChemOptions.profile("strict");
             options.useBondStereo = false; // Disabling stereo check to allow topological pass
             SMSD smsd = new SMSD(Standardiser.standardise(q, Standardiser.TautomerMode.NONE),
@@ -202,7 +197,7 @@ public class SMSDCasesTest {
             SMSD smsd = new SMSD(Standardiser.standardise(a, Standardiser.TautomerMode.NONE),
                                  Standardiser.standardise(b, Standardiser.TautomerMode.NONE),
                                  ChemOptions.profile("compat-fmcs"));
-            Map<Integer, Integer> m = smsd.findMCS(true, true);
+            Map<Integer, Integer> m = smsd.findMCS(true, true, 2500L);
             assertNotNull(m);
             assertEquals(6, m.size());
         }
@@ -215,7 +210,7 @@ public class SMSDCasesTest {
             SMSD smsd = new SMSD(Standardiser.standardise(a, Standardiser.TautomerMode.NONE),
                                  Standardiser.standardise(b, Standardiser.TautomerMode.NONE),
                                  ChemOptions.profile("compat-fmcs"));
-            Map<Integer, Integer> m = smsd.findMCS(true, true);
+            Map<Integer, Integer> m = smsd.findMCS(true, true, 2500L);
             assertNotNull(m);
             assertTrue(m.size() >= 4);
         }
@@ -250,7 +245,6 @@ public class SMSDCasesTest {
         @Test
         @DisplayName("should confirm a complex fragment is not present")
         void testIndoleNotInAspirin() throws Exception {
-            // FIX: Corrected the SMILES string for Indole.
             IAtomContainer query = sp.parseSmiles("c1ccc2[nH]ccc2c1"); // Indole
             IAtomContainer target = sp.parseSmiles("CC(=O)Oc1ccccc1C(=O)O"); // Aspirin
             SMSD smsd = new SMSD(Standardiser.standardise(query, Standardiser.TautomerMode.NONE),
@@ -263,7 +257,6 @@ public class SMSDCasesTest {
         @Test
         @DisplayName("should find a large MCS between Morphine and Codeine")
         void testMcsMorphineVsCodeine() throws Exception {
-            // FIX: Corrected the complex SMILES for Morphine and Codeine.
             IAtomContainer morphine = sp.parseSmiles("CN1CCC23C4C1CC5=C(C2C(C=C4)O3)C=C(C=C5)O");
             IAtomContainer codeine = sp.parseSmiles("CN1CCC23C4C1CC5=C(C2C(C=C4)OC3)C=C(C=C5)O");
 
@@ -271,9 +264,8 @@ public class SMSDCasesTest {
                                  Standardiser.standardise(codeine, Standardiser.TautomerMode.NONE),
                                  ChemOptions.profile("compat-fmcs"));
 
-            Map<Integer, Integer> mcs = smsd.findMCS(true, true);
+            Map<Integer, Integer> mcs = smsd.findMCS(true, true, 4000L); // Increased timeout for complex molecules
             assertNotNull(mcs);
-            // The common structure should be the entire morphine molecule scaffold (21 non-hydrogen atoms)
             assertEquals(21, mcs.size(), "MCS of Morphine and Codeine should be the core alkaloid scaffold");
         }
     }

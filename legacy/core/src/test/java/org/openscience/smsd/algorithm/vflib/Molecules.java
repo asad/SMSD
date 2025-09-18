@@ -1,3 +1,7 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * © 2025 BioInception PVT LTD.
+ */
 package org.openscience.smsd.algorithm.vflib;
 
 /* Copyright (C) 2009-2014  Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>

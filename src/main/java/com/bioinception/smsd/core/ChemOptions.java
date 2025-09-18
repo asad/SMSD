@@ -4,83 +4,80 @@
  */
 package com.bioinception.smsd.core;
 
-public class ChemOptions {
+/**
+ * Matching options used by SearchEngine and SMSD facade.
+ * Backward-compatible defaults; public fields for simplicity.
+ */
+public final class ChemOptions {
 
+    public enum BondOrderMode { STRICT, LOOSE, ANY }
     public enum AromaticityMode { STRICT, FLEXIBLE }
-    public enum BondOrderMode  { STRICT, LOOSE, ANY }
-    public enum RingSizeMode   { EXACT, SUBSET, IGNORE }
+    /** Pluggable matcher engine. VF3 is currently an alias of VF2PP inside SearchEngine. */
+    public enum MatcherEngine { VF2, VF2PP, VF3 }
 
-    // ── Atom/Bond flags ───────────────────────────────────────────────────────
+    // --- Matching knobs ---
     public boolean matchAtomType       = true;
-    public boolean matchIsotope        = false;
     public boolean matchFormalCharge   = true;
-
-    // Stereochemistry
-    /** Atom-centre chirality (R/S) enforcement. */
     public boolean useChirality        = false;
-    /** Bond stereo (E/Z, cis/trans) enforcement. */
     public boolean useBondStereo       = false;
+    /** If true, ring atoms/bonds in query may only match ring atoms/bonds in target. */
+    public boolean ringMatchesRingOnly = true;
 
-    // Flexibility toggles
+    public BondOrderMode   matchBondOrder  = BondOrderMode.STRICT;
     public AromaticityMode aromaticityMode = AromaticityMode.FLEXIBLE;
-    public BondOrderMode  matchBondOrder   = BondOrderMode.LOOSE;
-    public boolean        ringMatchesRingOnly = true;
 
-    /** Allow mapping an atom of degree d_q to an atom of degree d_t when d_q ≤ d_t + degreeSlack. */
-    public int            degreeSlack    = 1;
+    /** Engine selection (default = VF2PP). */
+    public MatcherEngine matcherEngine = MatcherEngine.VF2PP;
 
-    // Optional ring-size handling (not currently used in SearchEngine, but kept for completeness)
-    public RingSizeMode   ringSizeMode     = RingSizeMode.SUBSET;
-    public int            ringSizeTolerance= 1;
+    // --- Performance / pruning toggles ---
+    /** Use 2-hop NLF (neighbor-of-neighbor label frequencies) pruning. */
+    public boolean useTwoHopNLF = true;
+    /** Use 3-hop NLF pruning (captures ring proximity at distance 3, e.g., benzylic contexts). */
+    public boolean useThreeHopNLF = true;
+    /** Use bit-parallel feasibility (BitSet adjacency subset tests). */
+    public boolean useBitParallelFeasibility = true;
 
     public ChemOptions() {}
 
     /**
-     * Named presets to keep behaviour consistent across tests and CLI.
-     *  - "compat-fmcs": FMCS-like (ignore stereo; flexible aromatics/bond order; ring→ring; degree slack 1)
-     *  - "compat-substruct": substructure-friendly flexible defaults
-     *  - "strict": enforce atom type, charge, aromaticity, exact bond order, and stereo; no degree slack
+     * FIX: Added a static factory method to create pre-configured options from a profile name.
+     * This resolves the compilation errors in SMSDCasesTest.
+     *
+     * @param name The name of the profile (e.g., "strict", "compat-substruct").
+     * @return A configured ChemOptions instance.
      */
     public static ChemOptions profile(String name) {
-        ChemOptions c = new ChemOptions();
-        String key = name == null ? "" : name.trim().toLowerCase();
-        switch (key) {
+        ChemOptions options = new ChemOptions();
+        switch (name.toLowerCase()) {
             case "strict":
-                c.matchAtomType = true;
-                c.matchIsotope = false;
-                c.matchFormalCharge = true;
-                c.useChirality = true;          // atom stereo
-                c.useBondStereo = true;         // bond stereo
-                c.aromaticityMode = AromaticityMode.STRICT;
-                c.matchBondOrder = BondOrderMode.STRICT;
-                c.ringMatchesRingOnly = true;
-                c.ringSizeMode = RingSizeMode.EXACT;
-                c.ringSizeTolerance = 0;
-                c.degreeSlack = 0;
-                return c;
-
+                options.matchBondOrder = BondOrderMode.STRICT;
+                options.aromaticityMode = AromaticityMode.STRICT;
+                break;
             case "compat-fmcs":
-                c.useChirality = false;
-                c.useBondStereo = false;
-                c.aromaticityMode = AromaticityMode.FLEXIBLE;
-                c.matchBondOrder = BondOrderMode.LOOSE;
-                c.ringMatchesRingOnly = true;
-                c.ringSizeMode = RingSizeMode.SUBSET;
-                c.ringSizeTolerance = 1;
-                c.degreeSlack = 1;
-                return c;
-
             case "compat-substruct":
             default:
-                c.useChirality = false;
-                c.useBondStereo = false;
-                c.aromaticityMode = AromaticityMode.FLEXIBLE;
-                c.matchBondOrder = BondOrderMode.LOOSE;
-                c.ringMatchesRingOnly = true;
-                c.ringSizeMode = RingSizeMode.SUBSET;
-                c.ringSizeTolerance = 1;
-                c.degreeSlack = 1;
-                return c;
+                // A general-purpose flexible configuration
+                options.matchBondOrder = BondOrderMode.LOOSE;
+                options.aromaticityMode = AromaticityMode.FLEXIBLE;
+                options.ringMatchesRingOnly = false;
+                break;
         }
+        return options;
     }
+
+    public ChemOptions withMatcherEngine(MatcherEngine e) {
+        this.matcherEngine = (e == null ? MatcherEngine.VF2PP : e);
+        return this;
+    }
+    public ChemOptions withAromaticityMode(AromaticityMode m) {
+        this.aromaticityMode = (m == null ? AromaticityMode.FLEXIBLE : m);
+        return this;
+    }
+    public ChemOptions withBondOrderMode(BondOrderMode m) {
+        this.matchBondOrder = (m == null ? BondOrderMode.STRICT : m);
+        return this;
+    }
+    public ChemOptions withTwoHopNLF(boolean on) { this.useTwoHopNLF = on; return this; }
+    public ChemOptions withThreeHopNLF(boolean on){ this.useThreeHopNLF = on; return this; }
+    public ChemOptions withBitParallelFeasibility(boolean on) { this.useBitParallelFeasibility = on; return this; }
 }

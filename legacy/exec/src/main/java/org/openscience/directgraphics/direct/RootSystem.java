@@ -1,4 +1,8 @@
 /*
+ * SPDX-License-Identifier: Apache-2.0
+ * © 2025 BioInception PVT LTD.
+ */
+/*
  * Decompiled with CFR 0_114.
  * 
  * Could not load the following classes:
