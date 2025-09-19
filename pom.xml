@@ -1,210 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+  <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.bioinception</groupId>
-    <artifactId>smsd-cdk</artifactId>
-    <version>3.0.0</version>
+  <groupId>com.bioinception.smsd</groupId>
+  <artifactId>smsd</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <name>SMSD</name>
+  <description>SMSD core + CLI using modular CDK</description>
 
-    <name>SMSD (CDK-compat) — Pure Java CLI &amp; API</name>
-    <description>Pure-Java SMSD: substructure &amp; MCS with advanced SMARTS, JSON, and CLI.</description>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.release>11</maven.compiler.release>
+    <cdk.version>2.11</cdk.version>
+    <picocli.version>4.7.7</picocli.version>
+    <jackson.version>2.20.0</jackson.version>
+    <junit.version>5.13.4</junit.version>
+    <maven.surefire.version>3.5.4</maven.surefire.version>
+  </properties>
 
-    <properties>
-        <maven.compiler.release>11</maven.compiler.release>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  <dependencies>
+    <!-- ===== CDK: include only what we use ===== -->
+    <!-- Core API + models -->
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-core</artifactId><version>${cdk.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-interfaces</artifactId><version>${cdk.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-silent</artifactId><version>${cdk.version}</version>
+    </dependency>
+    <!-- Default (eventful) builder -->
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-data</artifactId><version>${cdk.version}</version>
+    </dependency>
 
-        <cdk.version>2.11</cdk.version>
-        <picocli.version>4.7.6</picocli.version>
-        <junit.version>5.10.2</junit.version>
+    <!-- IO (SDF/MOL/MDL, CML, MOL2, PDB) -->
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-io</artifactId><version>${cdk.version}</version>
+    </dependency>
+    <!-- MDL V2000/V3000 readers & writers -->
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-ctab</artifactId><version>${cdk.version}</version>
+    </dependency>
+    <!-- PDB reader -->
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-pdb</artifactId><version>${cdk.version}</version>
+    </dependency>
 
-        <mycila.license.version>4.2</mycila.license.version>
-        <resources.plugin.version>3.3.1</resources.plugin.version>
-        <antrun.plugin.version>3.1.0</antrun.plugin.version>
-        <assembly.plugin.version>3.6.0</assembly.plugin.version>
-        <compiler.plugin.version>3.11.0</compiler.plugin.version>
-        <surefire.plugin.version>3.2.5</surefire.plugin.version>
-    </properties>
+    <!-- SMILES/SMARTS -->
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-smiles</artifactId><version>${cdk.version}</version>
+    </dependency>
+    <!-- Newer SMARTS API (SmartsPattern). Optional to preserve backwards compat -->
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-smarts</artifactId><version>${cdk.version}</version>
+      <optional>true</optional>
+    </dependency>
 
-    <dependencies>
-        <dependency>
-            <groupId>org.openscience.cdk</groupId>
-            <artifactId>cdk-bundle</artifactId>
-            <version>${cdk.version}</version>
-        </dependency>
+    <!-- Aromaticity, AtomContainerManipulator, HydrogenAdder, etc. -->
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-standard</artifactId><version>${cdk.version}</version>
+    </dependency>
+    <!-- Isomorphism utilities -->
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-isomorphism</artifactId><version>${cdk.version}</version>
+    </dependency>
 
-        <dependency>
-            <groupId>org.openscience.cdk</groupId>
-            <artifactId>cdk-inchi</artifactId>
-            <version>${cdk.version}</version>
-            <optional>true</optional>
-        </dependency>
+    <!-- Optional: InChI/tautomer support if enabled at runtime -->
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-inchi</artifactId><version>${cdk.version}</version>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-tautomer</artifactId><version>${cdk.version}</version>
+      <optional>true</optional>
+    </dependency>
 
-        <dependency>
-            <groupId>info.picocli</groupId>
-            <artifactId>picocli</artifactId>
-            <version>${picocli.version}</version>
-        </dependency>
+    <!-- ===== CLI & JSON used by SMSDcli ===== -->
+    <dependency>
+      <groupId>info.picocli</groupId><artifactId>picocli</artifactId><version>${picocli.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-databind</artifactId><version>${jackson.version}</version>
+    </dependency>
 
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>${junit.version}</version>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
+    <!-- ===== Test: JUnit 5 Jupiter (API + Params + Engine) ===== -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
 
-    <build>
-        <plugins>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-antrun-plugin</artifactId>
-                <version>${antrun.plugin.version}</version>
-                <executions>
-                    <execution>
-                        <id>write-license-header-template</id>
-                        <phase>initialize</phase>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                        <configuration>
-                            <target>
-                                <mkdir dir="${project.basedir}/templates"/>
-                                <echo file="${project.basedir}/templates/header-java.txt"><![CDATA[
-SPDX-License-Identifier: Apache-2.0
-© 2025 BioInception PVT LTD.
-]]></echo>
-                            </target>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>mkdir-launcher-dir</id>
-                        <phase>prepare-package</phase>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                        <configuration>
-                            <target>
-                                <mkdir dir="${project.build.directory}/bin"/>
-                            </target>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>chmod-launcher</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                        <configuration>
-                            <target>
-                                <chmod file="${project.build.directory}/bin/smsd" perm="755" failonerror="false"/>
-                            </target>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>com.mycila</groupId>
-                <artifactId>license-maven-plugin</artifactId>
-                <version>${mycila.license.version}</version>
-                <configuration>
-                    <licenseSets>
-                        <licenseSet>
-                            <header>${project.basedir}/templates/header-java.txt</header>
-                            <includes>
-                                <include>**/*.java</include>
-                            </includes>
-                            <excludes>
-                                <exclude>target/**</exclude>
-                            </excludes>
-                        </licenseSet>
-                    </licenseSets>
-                    <mapping>
-                        <java>SLASHSTAR_STYLE</java>
-                    </mapping>
-                    <failIfMissing>true</failIfMissing>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>apply-license-headers</id>
-                        <phase>process-sources</phase>
-                        <goals>
-                            <goal>format</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>${compiler.plugin.version}</version>
-                <configuration>
-                    <release>${maven.compiler.release}</release>
-                </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>${assembly.plugin.version}</version>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>com.bioinception.smsd.cli.SMSDcli</mainClass>
-                        </manifest>
-                    </archive>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>fat-jar</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-resources-plugin</artifactId>
-                <version>${resources.plugin.version}</version>
-                <executions>
-                    <execution>
-                        <id>copy-launchers</id>
-                        <phase>prepare-package</phase>
-                        <goals>
-                            <goal>copy-resources</goal>
-                        </goals>
-                        <configuration>
-                            <outputDirectory>${project.build.directory}/bin</outputDirectory>
-                            <resources>
-                                <resource>
-                                    <directory>src/scripts</directory>
-                                    <filtering>true</filtering>
-                                    <includes>
-                                        <include>smsd</include>
-                                        <include>smsd.ps1</include>
-                                        <include>smsd.bat</include>
-                                    </includes>
-                                </resource>
-                            </resources>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>${surefire.plugin.version}</version>
-            </plugin>
-        </plugins>
-    </build>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.11.0</version>
+        <configuration><release>${maven.compiler.release}</release></configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${maven.surefire.version}</version>
+        <configuration>
+          <!-- Ensure JUnit Platform is used; disable module path to avoid JPMS edge cases -->
+          <useModulePath>false</useModulePath>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>

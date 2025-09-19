@@ -10,9 +10,13 @@ import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
+import com.bioinception.smsd.io.OutputUtil;
+import com.bioinception.smsd.io.OutputUtil.OutType;
+
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.interfaces.IAtomContainer;
+import java.io.OutputStream;
 
 import java.io.PrintWriter;
 import java.util.*;
@@ -52,6 +56,15 @@ public class SMSDcli implements Callable<Integer> {
     @Option(names={"--json-pretty"}, description = "Pretty-print JSON.")
     boolean jsonPretty;
 
+    @Option(names={"--map-out"}, description = "Write mapping export to file path or '-' for stdout.")
+    String mapOut;
+
+    @Option(names={"--map-format"}, description = "Mapping export format: json|smiles|smarts|mdl. Default: json", defaultValue = "json")
+    String mapFormat;
+
+    @Option(names={"--map-pretty"}, description = "Pretty-print JSON mapping (when --map-format=json).")
+    boolean mapPretty;
+
     @Option(names={"--timeout"}, description = "Time limit in milliseconds (applies to the chosen mode). Default: 10000")
     long timeoutMs = 10_000L;
 
@@ -79,8 +92,7 @@ public class SMSDcli implements Callable<Integer> {
         result.put("timeout_ms", timeoutMs);
 
         if ("sub".equalsIgnoreCase(mode)) {
-            if (allMappings) {
-                List<Map<Integer,Integer>> maps = smsd.findAllSubstructures(10_000, timeoutMs);
+            if (allMappings) {List<Map<Integer,Integer>> maps = smsd.findAllSubstructures(10_000, timeoutMs);
                 List<Map<String,Object>> items = new ArrayList<>();
                 int idx = 0;
                 for (Map<Integer,Integer> m : maps) {
@@ -93,6 +105,14 @@ public class SMSDcli implements Callable<Integer> {
                     items.add(row);
                 }
                 result.put("mappings", items);
+                // Optional dedicated mapping export
+                if (mapOut != null) {
+                    OutputStream os = "-".equals(mapOut) ? System.out : new java.io.FileOutputStream(mapOut);
+                    try (os) {
+                        OutType type = parseOutType(mapFormat);
+                        OutputUtil.writeMappings(qm, tm, maps, type, os, mapPretty);
+                    }
+                }
                 writeJson(result);
                 return 0;
             } else {
@@ -133,7 +153,21 @@ public class SMSDcli implements Callable<Integer> {
         }
     }
 
-    private static String compactJson(Object o) throws Exception {
+    
+    private static OutType parseOutType(String s) {
+        String x = (s == null ? "json" : s).trim().toLowerCase();
+        switch (x) {
+            case "json": return OutType.JSON;
+            case "smiles":
+            case "smi": return OutType.SMI;
+            case "smarts": return OutType.SMARTS;
+            case "mdl":
+            case "mol":
+            case "sdf": return OutType.MOL;
+            default: throw new IllegalArgumentException("Unknown --map-format: " + s);
+        }
+    }
+private static String compactJson(Object o) throws Exception {
         return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(o);
     }
     private static String prettyJson(Object o) throws Exception {
