@@ -8,21 +8,36 @@
   <artifactId>smsd</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <name>SMSD</name>
-  <description>SMSD core + CLI using modular CDK</description>
+  <description>SMSD core + CLI using modular CDK, with cross-platform launcher scripts</description>
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>11</maven.compiler.release>
+
+    <!-- Libraries -->
     <cdk.version>2.11</cdk.version>
     <picocli.version>4.7.7</picocli.version>
     <jackson.version>2.20.0</jackson.version>
+
+    <!-- Test -->
     <junit.version>5.13.4</junit.version>
     <maven.surefire.version>3.5.4</maven.surefire.version>
+
+    <!-- Plugins -->
+    <exec.plugin.version>3.5.1</exec.plugin.version>
+    <appassembler.version>2.1.0</appassembler.version>
   </properties>
 
   <dependencies>
-    <!-- ===== CDK: include only what we use ===== -->
-    <!-- Core API + models -->
+    <!-- ===== CDK: include only what we use (no cdk-bundle) ===== -->
+    <!-- Core API + interfaces + builders -->
     <dependency>
       <groupId>org.openscience.cdk</groupId><artifactId>cdk-core</artifactId><version>${cdk.version}</version>
     </dependency>
@@ -32,12 +47,12 @@
     <dependency>
       <groupId>org.openscience.cdk</groupId><artifactId>cdk-silent</artifactId><version>${cdk.version}</version>
     </dependency>
-    <!-- Default (eventful) builder -->
+    <!-- DefaultChemObjectBuilder lives here -->
     <dependency>
       <groupId>org.openscience.cdk</groupId><artifactId>cdk-data</artifactId><version>${cdk.version}</version>
     </dependency>
 
-    <!-- IO (SDF/MOL/MDL, CML, MOL2, PDB) -->
+    <!-- IO (MDL/CML/Mol2/PDB) -->
     <dependency>
       <groupId>org.openscience.cdk</groupId><artifactId>cdk-io</artifactId><version>${cdk.version}</version>
     </dependency>
@@ -54,7 +69,7 @@
     <dependency>
       <groupId>org.openscience.cdk</groupId><artifactId>cdk-smiles</artifactId><version>${cdk.version}</version>
     </dependency>
-    <!-- Newer SMARTS API (SmartsPattern). Optional to preserve backwards compat -->
+    <!-- Newer SMARTS API (SmartsPattern). Optional to avoid forcing it. -->
     <dependency>
       <groupId>org.openscience.cdk</groupId><artifactId>cdk-smarts</artifactId><version>${cdk.version}</version>
       <optional>true</optional>
@@ -64,12 +79,8 @@
     <dependency>
       <groupId>org.openscience.cdk</groupId><artifactId>cdk-standard</artifactId><version>${cdk.version}</version>
     </dependency>
-    <!-- Isomorphism utilities -->
-    <dependency>
-      <groupId>org.openscience.cdk</groupId><artifactId>cdk-isomorphism</artifactId><version>${cdk.version}</version>
-    </dependency>
 
-    <!-- Optional: InChI/tautomer support if enabled at runtime -->
+    <!-- Optional: InChI-based tautomers if used at runtime -->
     <dependency>
       <groupId>org.openscience.cdk</groupId><artifactId>cdk-inchi</artifactId><version>${cdk.version}</version>
       <optional>true</optional>
@@ -96,19 +107,64 @@
 
   <build>
     <plugins>
+      <!-- Compile -->
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.11.0</version>
-        <configuration><release>${maven.compiler.release}</release></configuration>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.11.0</version>
+        <configuration>
+          <release>${maven.compiler.release}</release>
+        </configuration>
       </plugin>
+
+      <!-- Tests on JUnit 5 -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>${maven.surefire.version}</version>
         <configuration>
-          <!-- Ensure JUnit Platform is used; disable module path to avoid JPMS edge cases -->
           <useModulePath>false</useModulePath>
         </configuration>
+      </plugin>
+
+      <!-- Run via mvn exec:java if desired -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>${exec.plugin.version}</version>
+      </plugin>
+
+      <!-- Generate cross-platform launchers at src/scripts/smsd(.bat) -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>appassembler-maven-plugin</artifactId>
+        <version>${appassembler.version}</version>
+        <configuration>
+          <!-- Put scripts and runtime repo under project 'src/scripts' -->
+          <assembleDirectory>${project.basedir}/src/scripts</assembleDirectory>
+          <!-- Drop the script directly (no 'bin/' subdir) -->
+          <binFolder>.</binFolder>
+          <!-- Shorter, portable classpath (wildcard) -->
+          <repositoryLayout>flat</repositoryLayout>
+          <useWildcardClassPath>true</useWildcardClassPath>
+          <programs>
+            <program>
+              <mainClass>com.bioinception.smsd.cli.SMSDcli</mainClass>
+              <name>smsd</name>
+            </program>
+          </programs>
+        </configuration>
+        <executions>
+          <execution>
+            <id>make-launchers</id>
+            <phase>package</phase>
+            <goals>
+              <goal>assemble</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
 </project>
+

@@ -26,3 +26,7 @@ venv/
 # For macOS, Windows, and Linux.
 .DS_Store
 Thumbs.db
+
+src/scripts/lib/
+src/scripts/repo/
+
