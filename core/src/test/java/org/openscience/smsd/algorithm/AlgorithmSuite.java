@@ -23,12 +23,13 @@
  */
 package org.openscience.smsd.algorithm;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.platform.suite.api.SelectClasses;
+import org.junit.platform.suite.api.Suite;
+
 
 /**
  * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
@@ -36,8 +37,8 @@ import org.junit.runners.Suite;
  *  test-smsd
  *  java1.8+
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({org.openscience.smsd.algorithm.single.SingleSuite.class,
+@Suite
+@SelectClasses({org.openscience.smsd.algorithm.single.SingleSuite.class,
     org.openscience.smsd.algorithm.vflib.VFSuite.class,
     org.openscience.smsd.algorithm.mcsplus.McsplusSuite.class,
     //        org.openscience.smsd.algorithm.mcgregor.McgregorSuite.class,
@@ -45,19 +46,26 @@ import org.junit.runners.Suite;
 })
 public class AlgorithmSuite {
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() throws Exception {
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownClass() throws Exception {
     }
 
-    @Before
+    @BeforeEach 
+
     public void setUp() throws Exception {
     }
 
-    @After
+    @AfterEach 
+
     public void tearDown() throws Exception {
     }
 }
+
+
+
+
+

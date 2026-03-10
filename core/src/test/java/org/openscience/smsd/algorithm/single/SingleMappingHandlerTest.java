@@ -23,12 +23,12 @@
  */
 package org.openscience.smsd.algorithm.single;
 
-import junit.framework.Assert;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.openscience.cdk.Atom;
 import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.interfaces.IAtom;
@@ -45,19 +45,21 @@ public class SingleMappingHandlerTest {
     public SingleMappingHandlerTest() {
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() throws Exception {
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownClass() throws Exception {
     }
 
-    @Before
+    @BeforeEach 
+
     public void setUp() {
     }
 
-    @After
+    @AfterEach 
+
     public void tearDown() {
     }
 
@@ -74,7 +76,7 @@ public class SingleMappingHandlerTest {
         IAtomContainer target = new AtomContainer();
         target.addAtom(atomTarget);
         SingleMappingHandler instance = new SingleMappingHandler(source, target, false);
-        Assert.assertNotNull(instance.getFirstAtomMapping());
+        Assertions.assertNotNull(instance.getFirstAtomMapping());
     }
 
     /**
@@ -92,7 +94,7 @@ public class SingleMappingHandlerTest {
         IAtomContainer target = new AtomContainer();
         target.addAtom(atomTarget);
         SingleMappingHandler instance = new SingleMappingHandler(source, target, false);
-        Assert.assertNotNull(instance.getFirstAtomMapping());
+        Assertions.assertNotNull(instance.getFirstAtomMapping());
     }
 
     /**
@@ -109,7 +111,7 @@ public class SingleMappingHandlerTest {
         target.addAtom(atomTarget);
 
         SingleMappingHandler instance = new SingleMappingHandler(source, target, false);
-        Assert.assertNotNull(instance.getFirstAtomMapping());
+        Assertions.assertNotNull(instance.getFirstAtomMapping());
     }
 
     /**
@@ -125,8 +127,8 @@ public class SingleMappingHandlerTest {
         IAtomContainer target = new AtomContainer();
         target.addAtom(atomTarget);
         SingleMappingHandler instance = new SingleMappingHandler(source, target, false);
-        Assert.assertNotNull(instance.getAllAtomMapping());
-        Assert.assertEquals(1, instance.getAllAtomMapping().size());
+        Assertions.assertNotNull(instance.getAllAtomMapping());
+        Assertions.assertEquals(1, instance.getAllAtomMapping().size());
     }
 
     /**
@@ -142,7 +144,7 @@ public class SingleMappingHandlerTest {
         IAtomContainer target = new AtomContainer();
         target.addAtom(atomTarget);
         SingleMappingHandler instance = new SingleMappingHandler(source, target, false);
-        Assert.assertNotNull(instance.getAllAtomMapping());
+        Assertions.assertNotNull(instance.getAllAtomMapping());
     }
 
     /**
@@ -158,7 +160,7 @@ public class SingleMappingHandlerTest {
         IAtomContainer target = new AtomContainer();
         target.addAtom(atomTarget);
         SingleMappingHandler instance = new SingleMappingHandler(source, target, false);
-        Assert.assertNotNull(instance.getFirstAtomMapping());
+        Assertions.assertNotNull(instance.getFirstAtomMapping());
     }
 
     /**
@@ -174,7 +176,7 @@ public class SingleMappingHandlerTest {
         IAtomContainer target = new AtomContainer();
         target.addAtom(atomTarget);
         SingleMappingHandler instance = new SingleMappingHandler(source, target, false);
-        Assert.assertNotNull(instance.getAllAtomMapping());
+        Assertions.assertNotNull(instance.getAllAtomMapping());
     }
 
     /**
@@ -190,6 +192,10 @@ public class SingleMappingHandlerTest {
         IAtomContainer target = new AtomContainer();
         target.addAtom(atomTarget);
         SingleMappingHandler instance = new SingleMappingHandler(source, target, false);
-        Assert.assertNotNull(instance.getFirstAtomMapping());
+        Assertions.assertNotNull(instance.getFirstAtomMapping());
     }
 }
+
+
+
+

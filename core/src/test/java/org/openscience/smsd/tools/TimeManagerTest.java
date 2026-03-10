@@ -22,8 +22,8 @@
  */
 package org.openscience.smsd.tools;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
@@ -34,7 +34,7 @@ public class TimeManagerTest {
     @Test
     public void testTimeManager() throws Exception {
         TimeManager tMan = new TimeManager();
-        Assert.assertNotNull(tMan);
+        Assertions.assertNotNull(tMan);
     }
 
     /**
@@ -47,7 +47,7 @@ public class TimeManagerTest {
         double expResult = 0.0001;
         myMethod(360);
         double result = instance.getElapsedTimeInHours();
-        Assert.assertEquals(expResult, result, 0.0001);
+        Assertions.assertEquals(expResult, result, 0.0001);
     }
 
     /**
@@ -60,7 +60,7 @@ public class TimeManagerTest {
         double expResult = 0.006;
         myMethod(360);
         double result = instance.getElapsedTimeInMinutes();
-        Assert.assertEquals(expResult, result, 0.006);
+        Assertions.assertEquals(expResult, result, 0.006);
     }
 
     /**
@@ -73,7 +73,7 @@ public class TimeManagerTest {
         double expResult = 0.36;
         myMethod(360);
         double result = instance.getElapsedTimeInSeconds();
-        Assert.assertEquals(expResult, result, 0.36);
+        Assertions.assertEquals(expResult, result, 0.36);
     }
 
     /**
@@ -86,7 +86,7 @@ public class TimeManagerTest {
         double expResult = 360;
         myMethod(360);
         double result = instance.getElapsedTimeInMilliSeconds();
-        Assert.assertEquals(expResult, result, 360);
+        Assertions.assertEquals(expResult, result, 360);
     }
 
     public void myMethod(long timeMillis) {
@@ -103,3 +103,7 @@ public class TimeManagerTest {
 
     }
 }
+
+
+
+

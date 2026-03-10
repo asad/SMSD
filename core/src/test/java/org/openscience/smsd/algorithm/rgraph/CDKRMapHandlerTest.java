@@ -26,12 +26,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.Assert;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assertions;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.exception.InvalidSmilesException;
@@ -49,19 +49,21 @@ public class CDKRMapHandlerTest {
     public CDKRMapHandlerTest() {
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() throws Exception {
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownClass() throws Exception {
     }
 
-    @Before
+    @BeforeEach 
+
     public void setUp() {
     }
 
-    @After
+    @AfterEach 
+
     public void tearDown() {
     }
 
@@ -75,7 +77,7 @@ public class CDKRMapHandlerTest {
         CDKRMapHandler rMapHandler = new CDKRMapHandler();
         rMapHandler.setSource(expResult);
         IAtomContainer result = rMapHandler.getSource();
-        Assert.assertEquals(expResult, result);
+        Assertions.assertEquals(expResult, result);
     }
 
     /**
@@ -88,7 +90,7 @@ public class CDKRMapHandlerTest {
         CDKRMapHandler rMapHandler = new CDKRMapHandler();
         rMapHandler.setSource(expResult);
         IAtomContainer result = rMapHandler.getSource();
-        Assert.assertEquals(expResult, result);
+        Assertions.assertEquals(expResult, result);
     }
 
     /**
@@ -101,7 +103,7 @@ public class CDKRMapHandlerTest {
         CDKRMapHandler rMapHandler = new CDKRMapHandler();
         rMapHandler.setTarget(expResult);
         IAtomContainer result = rMapHandler.getTarget();
-        Assert.assertEquals(expResult, result);
+        Assertions.assertEquals(expResult, result);
     }
 
     /**
@@ -114,7 +116,7 @@ public class CDKRMapHandlerTest {
         CDKRMapHandler rMapHandler = new CDKRMapHandler();
         rMapHandler.setTarget(expResult);
         IAtomContainer result = rMapHandler.getTarget();
-        Assert.assertEquals(expResult, result);
+        Assertions.assertEquals(expResult, result);
     }
 
     /**
@@ -130,7 +132,7 @@ public class CDKRMapHandlerTest {
         IAtomContainer Molecule2 = sp.parseSmiles("C1CCCC1");
         CDKRMapHandler instance = new CDKRMapHandler();
         instance.calculateOverlapsAndReduce(Molecule1, Molecule2, true, false,false);
-        Assert.assertNotNull(instance.getMappings().size());
+        Assertions.assertNotNull(instance.getMappings().size());
     }
 
     /**
@@ -147,7 +149,7 @@ public class CDKRMapHandlerTest {
         CDKRMapHandler instance = new CDKRMapHandler();
         instance.calculateOverlapsAndReduceExactMatch(Molecule1, Molecule2, true, false,false);
         // TODO review the generated test code and remove the default call to fail.
-        Assert.assertNotNull(instance.getMappings());
+        Assertions.assertNotNull(instance.getMappings());
     }
 
     /**
@@ -164,7 +166,7 @@ public class CDKRMapHandlerTest {
         CDKRMapHandler instance = new CDKRMapHandler();
         instance.calculateOverlapsAndReduceExactMatch(Molecule1, Molecule2, true, false,false);
         List<Map<Integer, Integer>> result = instance.getMappings();
-        Assert.assertEquals(2, result.size());
+        Assertions.assertEquals(2, result.size());
     }
 
     /**
@@ -181,7 +183,7 @@ public class CDKRMapHandlerTest {
         mappings.add(map);
         CDKRMapHandler instance = new CDKRMapHandler();
         instance.setMappings(mappings);
-        Assert.assertNotNull(instance.getMappings());
+        Assertions.assertNotNull(instance.getMappings());
     }
 
     /**
@@ -194,7 +196,7 @@ public class CDKRMapHandlerTest {
         boolean expResult = true;
         instance.setTimeout(true);
         boolean result = instance.isTimeout();
-        Assert.assertEquals(expResult, result);
+        Assertions.assertEquals(expResult, result);
     }
 
     /**
@@ -206,6 +208,10 @@ public class CDKRMapHandlerTest {
         boolean timeoutFlag = false;
         CDKRMapHandler instance = new CDKRMapHandler();
         instance.setTimeout(timeoutFlag);
-        Assert.assertNotSame(true, instance.isTimeout());
+        Assertions.assertNotSame(true, instance.isTimeout());
     }
 }
+
+
+
+

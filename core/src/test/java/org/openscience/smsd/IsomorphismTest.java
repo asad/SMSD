@@ -27,7 +27,7 @@ package org.openscience.smsd;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.junit.*;
+import org.junit.jupiter.api.*;
 import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
@@ -56,29 +56,31 @@ public class IsomorphismTest {
      */
     @Test
     public void IsomorphismTest() {
-        Assert.assertNotNull(
+        Assertions.assertNotNull(
                 new Isomorphism(new AtomContainer(), new AtomContainer(),
                         Algorithm.DEFAULT,
                         true, false, true));
-        Assert.assertNotNull(
+        Assertions.assertNotNull(
                 new Isomorphism(new AtomContainer(), new AtomContainer(),
                         Algorithm.DEFAULT,
                         false, false, false));
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() throws Exception {
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownClass() throws Exception {
     }
 
-    @Before
+    @BeforeEach 
+
     public void setUp() {
     }
 
-    @After
+    @AfterEach 
+
     public void tearDown() {
     }
 
@@ -96,8 +98,8 @@ public class IsomorphismTest {
 
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, false, false, false);
         smsd1.setChemFilters(true, false, false);
-        Assert.assertNotNull(smsd1.getQuery());
-        Assert.assertNotNull(smsd1.getTarget());
+        Assertions.assertNotNull(smsd1.getQuery());
+        Assertions.assertNotNull(smsd1.getTarget());
     }
 
     /**
@@ -114,8 +116,8 @@ public class IsomorphismTest {
 
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, false, false, false);
         smsd1.setChemFilters(true, false, false);
-        Assert.assertNotNull(smsd1.getQuery());
-        Assert.assertNotNull(smsd1.getTarget());
+        Assertions.assertNotNull(smsd1.getQuery());
+        Assertions.assertNotNull(smsd1.getTarget());
     }
 
     /**
@@ -134,9 +136,9 @@ public class IsomorphismTest {
             IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
             Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.CDKMCS, true, false, false);
             smsd1.setChemFilters(false, true, true);
-            Assert.assertEquals(7, smsd1.getFirstAtomMapping().getCount());
-            Assert.assertEquals(2, smsd1.getAllAtomMapping().size());
-            Assert.assertNotNull(smsd1.getFirstAtomMapping());
+            Assertions.assertEquals(7, smsd1.getFirstAtomMapping().getCount());
+            Assertions.assertEquals(2, smsd1.getAllAtomMapping().size());
+            Assertions.assertNotNull(smsd1.getFirstAtomMapping());
         } catch (InvalidSmilesException ex) {
             Logger.getLogger(MCSPlusHandlerTest.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -156,7 +158,7 @@ public class IsomorphismTest {
 
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false, false);
         smsd1.setChemFilters(true, true, true);
-        Assert.assertNotNull(smsd1.getFirstAtomMapping());
+        Assertions.assertNotNull(smsd1.getFirstAtomMapping());
 
     }
 
@@ -174,7 +176,7 @@ public class IsomorphismTest {
 
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false, false);
         smsd1.setChemFilters(true, true, true);
-        Assert.assertNotNull(smsd1.getFirstAtomMapping());
+        Assertions.assertNotNull(smsd1.getFirstAtomMapping());
     }
 
     /**
@@ -199,7 +201,7 @@ public class IsomorphismTest {
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false, false);
         smsd1.setChemFilters(true, true, true);
         double score = 1.0;
-        Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.0001);
+        Assertions.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.0001);
     }
 
     /**
@@ -216,7 +218,7 @@ public class IsomorphismTest {
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false, false);
         smsd1.setChemFilters(true, true, true);
-        Assert.assertNotNull(smsd1.getFirstAtomMapping());
+        Assertions.assertNotNull(smsd1.getFirstAtomMapping());
     }
 
     /**
@@ -236,8 +238,8 @@ public class IsomorphismTest {
 
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, false, false, false);
         smsd1.setChemFilters(false, true, true);
-        Assert.assertNotNull(smsd1.getFirstAtomMapping());
-        Assert.assertEquals(2, smsd1.getAllAtomMapping().size());
+        Assertions.assertNotNull(smsd1.getFirstAtomMapping());
+        Assertions.assertEquals(2, smsd1.getAllAtomMapping().size());
     }
 
     /**
@@ -254,8 +256,8 @@ public class IsomorphismTest {
 
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false, false);
         smsd1.setChemFilters(false, true, true);
-        Assert.assertNotNull(smsd1.getFirstAtomMapping());
-        Assert.assertEquals(2, smsd1.getAllAtomMapping().size());
+        Assertions.assertNotNull(smsd1.getFirstAtomMapping());
+        Assertions.assertEquals(2, smsd1.getAllAtomMapping().size());
     }
 
     /**
@@ -272,8 +274,8 @@ public class IsomorphismTest {
 
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false, false);
         smsd1.setChemFilters(true, true, true);
-        Assert.assertNotNull(smsd1.getFirstAtomMapping());
-        Assert.assertEquals(7, smsd1.getFirstAtomMapping().getCount());
+        Assertions.assertNotNull(smsd1.getFirstAtomMapping());
+        Assertions.assertEquals(7, smsd1.getFirstAtomMapping().getCount());
     }
 
     /**
@@ -290,8 +292,8 @@ public class IsomorphismTest {
 
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false, false);
         smsd1.setChemFilters(true, true, true);
-        Assert.assertNotNull(smsd1.getFirstAtomMapping());
-        Assert.assertEquals(7, smsd1.getFirstAtomMapping().getCount());
+        Assertions.assertNotNull(smsd1.getFirstAtomMapping());
+        Assertions.assertEquals(7, smsd1.getFirstAtomMapping().getCount());
     }
 
     /**
@@ -308,8 +310,8 @@ public class IsomorphismTest {
 
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, true, false);
         smsd1.setChemFilters(true, true, true);
-        Assert.assertEquals(1, smsd1.getAllAtomMapping().size());
-        Assert.assertEquals(5, smsd1.getAllAtomMapping().listIterator().next().getCount());
+        Assertions.assertEquals(1, smsd1.getAllAtomMapping().size());
+        Assertions.assertEquals(5, smsd1.getAllAtomMapping().listIterator().next().getCount());
     }
 
     /**
@@ -327,7 +329,7 @@ public class IsomorphismTest {
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false, true);
         smsd1.setChemFilters(false, true, false);
         Integer score = 2;
-        Assert.assertEquals(score, smsd1.getFragmentSize(0));
+        Assertions.assertEquals(score, smsd1.getFragmentSize(0));
     }
 
     /**
@@ -345,7 +347,7 @@ public class IsomorphismTest {
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, false, false, false);
         smsd1.setChemFilters(true, false, false);
         Integer score = 77; //1024 to 77 due to new scoring fuction
-        Assert.assertEquals(score, smsd1.getStereoScore(0));
+        Assertions.assertEquals(score, smsd1.getStereoScore(0));
     }
 
     /**
@@ -363,7 +365,7 @@ public class IsomorphismTest {
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false, false);
         smsd1.setChemFilters(false, false, true);
         Double score = 610.0;
-        Assert.assertEquals(score, smsd1.getEnergyScore(0));
+        Assertions.assertEquals(score, smsd1.getEnergyScore(0));
     }
 
     /**
@@ -380,7 +382,7 @@ public class IsomorphismTest {
 
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false, true);
         smsd1.setChemFilters(true, true, true);
-        Assert.assertEquals(7, smsd1.getQuery().getAtomCount());
+        Assertions.assertEquals(7, smsd1.getQuery().getAtomCount());
     }
 
     /**
@@ -397,7 +399,7 @@ public class IsomorphismTest {
 
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, true, false, true);
         smsd1.setChemFilters(true, true, true);
-        Assert.assertEquals(20, smsd1.getTarget().getAtomCount());
+        Assertions.assertEquals(20, smsd1.getTarget().getAtomCount());
     }
 
     /**
@@ -416,7 +418,7 @@ public class IsomorphismTest {
         smsd1.setChemFilters(true, true, true);
 
         double score = 0.35;
-        Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0);
+        Assertions.assertEquals(score, smsd1.getTanimotoSimilarity(), 0);
     }
 
     /**
@@ -433,7 +435,7 @@ public class IsomorphismTest {
 
         Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.DEFAULT, false, false, true);
         smsd1.setChemFilters(true, true, true);
-        Assert.assertFalse(smsd1.isStereoMisMatch());
+        Assertions.assertFalse(smsd1.isStereoMisMatch());
     }
 
     @Test
@@ -446,7 +448,7 @@ public class IsomorphismTest {
         QueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
         Isomorphism smsd = new Isomorphism(queryContainer, target, Algorithm.VFLibMCS);
         boolean foundMatches = smsd.isSubgraph();
-        Assert.assertTrue(foundMatches);
+        Assertions.assertTrue(foundMatches);
     }
 
     @Test
@@ -457,12 +459,12 @@ public class IsomorphismTest {
         IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
         Isomorphism smsd = new Isomorphism(query, target, Algorithm.MCSPlus, true, false, true);
 
-        Assert.assertEquals(18, smsd.getAllAtomMapping().size());
-        Assert.assertTrue(smsd.isSubgraph());
+        Assertions.assertEquals(18, smsd.getAllAtomMapping().size());
+        Assertions.assertTrue(smsd.isSubgraph());
 
         IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
         smsd = new Isomorphism(queryContainer, target, Algorithm.MCSPlus);
-        Assert.assertTrue(smsd.isSubgraph());
+        Assertions.assertTrue(smsd.isSubgraph());
     }
 
     @Test
@@ -473,12 +475,12 @@ public class IsomorphismTest {
         IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
         Isomorphism smsd = new Isomorphism(query, target, Algorithm.DEFAULT, true, false, true);
 
-        Assert.assertEquals(18, smsd.getAllAtomMapping().size());
-        Assert.assertTrue(smsd.isSubgraph());
+        Assertions.assertEquals(18, smsd.getAllAtomMapping().size());
+        Assertions.assertTrue(smsd.isSubgraph());
 
         IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
         smsd = new Isomorphism(queryContainer, target, Algorithm.DEFAULT);
-        Assert.assertTrue(smsd.isSubgraph());
+        Assertions.assertTrue(smsd.isSubgraph());
     }
 
     @Test
@@ -488,8 +490,8 @@ public class IsomorphismTest {
         IAtomContainer query = sp.parseSmiles("CC");
         IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
         Isomorphism smsd = new Isomorphism(query, target, Algorithm.CDKMCS, true, false, true);
-        Assert.assertEquals(18, smsd.getAllAtomMapping().size());
-        Assert.assertTrue(smsd.isSubgraph());
+        Assertions.assertEquals(18, smsd.getAllAtomMapping().size());
+        Assertions.assertTrue(smsd.isSubgraph());
     }
 
     /**
@@ -508,7 +510,7 @@ public class IsomorphismTest {
         Isomorphism comparison = new Isomorphism(molecule1, molecule2, Algorithm.DEFAULT, true, false, true);
         comparison.setChemFilters(true, true, true);
 //        ////System.out.println("SMILES :" + comparison.getFirstAtomMapping().getCommonFragmentAsSMILES());
-        Assert.assertEquals(score, comparison.getTanimotoSimilarity(), 0.001);
+        Assertions.assertEquals(score, comparison.getTanimotoSimilarity(), 0.001);
     }
 
     /**
@@ -528,8 +530,8 @@ public class IsomorphismTest {
         // set chemical filter true
         comparison.setChemFilters(true, true, true);
 
-        Assert.assertEquals(0.6, comparison.getTanimotoSimilarity(), 0.001);
-        Assert.assertEquals(12, comparison.getAllAtomMapping().size());
+        Assertions.assertEquals(0.6, comparison.getTanimotoSimilarity(), 0.001);
+        Assertions.assertEquals(12, comparison.getAllAtomMapping().size());
     }
 
     /**
@@ -556,8 +558,8 @@ public class IsomorphismTest {
 
         //Get similarity score
 //        //////System.out.println("Tanimoto coefficient:  " + comparison.getTanimotoSimilarity());
-        Assert.assertEquals(0.6, comparison.getTanimotoSimilarity(), 0.001);
-        Assert.assertEquals(12, comparison.getAllAtomMapping().size());
+        Assertions.assertEquals(0.6, comparison.getTanimotoSimilarity(), 0.001);
+        Assertions.assertEquals(12, comparison.getAllAtomMapping().size());
         // Print the mapping between molecules
 //        //////System.out.println(" Mappings: ");
 //        for (AtomAtomMapping atomatomMapping : comparison.getAllAtomMapping()) {
@@ -592,8 +594,8 @@ public class IsomorphismTest {
         Isomorphism comparison = new Isomorphism(query, target, Algorithm.MCSPlus, false, false, true);
         // set chemical filter true
         comparison.setChemFilters(true, true, true);
-        Assert.assertEquals(0.6, comparison.getTanimotoSimilarity(), 0.001);
-        Assert.assertEquals(12, comparison.getAllAtomMapping().size());
+        Assertions.assertEquals(0.6, comparison.getTanimotoSimilarity(), 0.001);
+        Assertions.assertEquals(12, comparison.getAllAtomMapping().size());
     }
 
     /**
@@ -613,7 +615,7 @@ public class IsomorphismTest {
         double score = 1.0;
         Isomorphism smsd1 = new Isomorphism(ac1, ac2, Algorithm.DEFAULT, false, false, false);
         smsd1.setChemFilters(true, true, true);
-        Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
+        Assertions.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
     }
 
 //    @Test
@@ -628,7 +630,7 @@ public class IsomorphismTest {
 //        Isomorphism smsd1 = new Isomorphism(ac1, ac2, Algorithm.VFLibMCS, false, false, false);
 //        smsd1.setChemFilters(true, true, true);
 //        ////System.out.println(" overlap " + smsd1.getFirstAtomMapping().getCommonFragmentAsSMILES());
-//        Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
+//        Assertions.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
 //    }
 ////
 ////    @Test
@@ -643,7 +645,7 @@ public class IsomorphismTest {
 ////        Isomorphism smsd1 = new Isomorphism(ac1, ac2, Algorithm.VFLibMCS, false, false, false);
 ////        smsd1.setChemFilters(true, true, true);
 //////        ////System.out.println(" overlap " + smsd1.getFirstAtomMapping().getCommonFragmentAsSMILES());
-////        Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
+////        Assertions.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
 ////    }
 ////
 ////    @Test
@@ -658,8 +660,8 @@ public class IsomorphismTest {
 ////        Isomorphism smsd1 = new Isomorphism(ac1, ac2, Algorithm.VFLibMCS, false, false, false);
 ////        smsd1.setChemFilters(true, true, true);
 //////        ////System.out.println(" overlap " + smsd1.getFirstAtomMapping().getCommonFragmentAsSMILES());
-////        Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
-////        Assert.assertEquals(2, smsd1.getAllAtomMapping().size());
+////        Assertions.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
+////        Assertions.assertEquals(2, smsd1.getAllAtomMapping().size());
 ////    }
 ////    /**
 ////     * Time taking cases Test ring match using MCS VF2Plus
@@ -686,8 +688,8 @@ public class IsomorphismTest {
 ////        ////System.out.println("SMILES :" + aromatic.create(comparison.getFirstAtomMapping().getMapCommonFragmentOnTarget()));
 ////        ////System.out.println("SMILES :" + comparison.getFirstAtomMapping().getCommonFragmentAsSMILES());
 ////
-////        Assert.assertEquals(0.8235, comparison.getTanimotoSimilarity(), 0.1);
-////        Assert.assertEquals(2, comparison.getAllAtomMapping().size());
+////        Assertions.assertEquals(0.8235, comparison.getTanimotoSimilarity(), 0.1);
+////        Assertions.assertEquals(2, comparison.getAllAtomMapping().size());
 ////    }
 //    /**
 //     * Test Common Fragment Expected SMLIES is Given the two molecules CCCNCC &
@@ -708,7 +710,7 @@ public class IsomorphismTest {
 //        double score = 0.5714;
 //        Isomorphism overlap = new Isomorphism(ac1, ac2, Algorithm.VFLibMCS, true, true, true);
 //        overlap.setChemFilters(true, true, true);
-//        Assert.assertEquals(score, overlap.getTanimotoSimilarity(), 0.001);
+//        Assertions.assertEquals(score, overlap.getTanimotoSimilarity(), 0.001);
 //        SmilesGenerator aromatic = SmilesGenerator.unique().aromatic();
 //        System.out.println("SMILES Q :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnQuery()));
 //        System.out.println("SMILES T :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnTarget()));
@@ -742,7 +744,7 @@ public class IsomorphismTest {
 //        System.out.println("SMILES Q :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnQuery()));
 //        System.out.println("SMILES T :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnTarget()));
 //        System.out.println(" SMILES Common: " + overlap.getFirstAtomMapping().getCount() + ", " + overlap.getFirstAtomMapping().getCommonFragmentAsSMILES());
-//        Assert.assertEquals(score, overlap.getTanimotoSimilarity(), 0.001);
+//        Assertions.assertEquals(score, overlap.getTanimotoSimilarity(), 0.001);
 //
 //    }
 //
@@ -762,7 +764,7 @@ public class IsomorphismTest {
 ////        System.out.println("SMILES Q :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnQuery()));
 ////        System.out.println("SMILES T :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnTarget()));
 ////        System.out.println(" SMILES Common: " + overlap.getFirstAtomMapping().getCount() + ", " + overlap.getFirstAtomMapping().getCommonFragmentAsSMILES());
-//        Assert.assertEquals(score, overlap.getTanimotoSimilarity(), 0.001);
+//        Assertions.assertEquals(score, overlap.getTanimotoSimilarity(), 0.001);
 //
 //    }
 //
@@ -787,7 +789,7 @@ public class IsomorphismTest {
 ////        System.out.println("SMILES Q :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnQuery()));
 ////        System.out.println("SMILES T :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnTarget()));
 ////        System.out.println(" SMILES Common: " + overlap.getFirstAtomMapping().getCount() + ", " + overlap.getFirstAtomMapping().getCommonFragmentAsSMILES());
-//        Assert.assertEquals(score, overlap.getTanimotoSimilarity(), 0.001);
+//        Assertions.assertEquals(score, overlap.getTanimotoSimilarity(), 0.001);
 //
 //    }
 //
@@ -812,7 +814,7 @@ public class IsomorphismTest {
 ////        System.out.println("SMILES Q :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnQuery()));
 ////        System.out.println("SMILES T :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnTarget()));
 ////        System.out.println(" SMILES Common: " + overlap.getFirstAtomMapping().getCount() + ", " + overlap.getFirstAtomMapping().getCommonFragmentAsSMILES());
-//        Assert.assertEquals(score, overlap.getTanimotoSimilarity(), 0.001);
+//        Assertions.assertEquals(score, overlap.getTanimotoSimilarity(), 0.001);
 //
 //    }
 //
@@ -853,16 +855,16 @@ public class IsomorphismTest {
 //
 //        Isomorphism overlap = new Isomorphism(ac1, ac2, Algorithm.DEFAULT, true, false, false);
 //        overlap.setChemFilters(false, false, true);
-//        Assert.assertEquals(4, overlap.getAllAtomMapping().size());
+//        Assertions.assertEquals(4, overlap.getAllAtomMapping().size());
 //        overlap = new Isomorphism(ac1, ac3, Algorithm.DEFAULT, true, false, false);
 //        overlap.setChemFilters(false, false, true);
-//        Assert.assertEquals(4, overlap.getAllAtomMapping().size());
+//        Assertions.assertEquals(4, overlap.getAllAtomMapping().size());
 //        overlap = new Isomorphism(ac1, ac4, Algorithm.DEFAULT, true, false, false);
 //        overlap.setChemFilters(false, false, true);
-//        Assert.assertEquals(4, overlap.getAllAtomMapping().size());
+//        Assertions.assertEquals(4, overlap.getAllAtomMapping().size());
 //        overlap = new Isomorphism(ac1, ac1, Algorithm.DEFAULT, true, false, false);
 //        overlap.setChemFilters(false, false, true);
-//        Assert.assertEquals(2, overlap.getAllAtomMapping().size());
+//        Assertions.assertEquals(2, overlap.getAllAtomMapping().size());
 //
 ////        SmilesGenerator aromatic = SmilesGenerator.unique().aromatic();
 ////        ////System.out.println("SMILES Q :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnQuery()));
@@ -876,3 +878,8 @@ public class IsomorphismTest {
         }
     }
 }
+
+
+
+
+

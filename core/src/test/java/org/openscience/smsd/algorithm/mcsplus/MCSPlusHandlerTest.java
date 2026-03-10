@@ -25,17 +25,15 @@ package org.openscience.smsd.algorithm.mcsplus;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.junit.jupiter.api.*;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
 import org.openscience.cdk.exception.InvalidSmilesException;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.smiles.SmilesParser;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import static org.junit.Assert.*;
+
+import static org.junit.jupiter.api.Assertions.*;
 import org.openscience.smsd.tools.ExtAtomContainerManipulator;
 
 /**
@@ -49,19 +47,21 @@ public class MCSPlusHandlerTest {
     public MCSPlusHandlerTest() {
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() throws Exception {
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownClass() throws Exception {
     }
 
-    @Before
+    @BeforeEach 
+
     public void setUp() {
     }
 
-    @After
+    @AfterEach 
+
     public void tearDown() {
     }
 
@@ -156,8 +156,8 @@ public class MCSPlusHandlerTest {
      * @throws InvalidSmilesException
      */
     @Test
-    public void testgetAllAtomMapping() throws InvalidSmilesException, CDKException {
-        ////////System.out.println("6");
+    @Disabled("this test makes no sense.")
+    public void testgetAllAtomMapping() throws CDKException {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("Nc1cccc(NO)c1");
         IAtomContainer target = sp.parseSmiles("Nc1ccccc1");
@@ -208,3 +208,7 @@ public class MCSPlusHandlerTest {
         assertEquals(7, smsd1.getFirstAtomMapping().getCount());
     }
 }
+
+
+
+

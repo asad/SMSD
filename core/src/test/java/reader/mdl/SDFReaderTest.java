@@ -8,8 +8,8 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.CDKConstants;
 import org.openscience.cdk.DefaultChemObjectBuilder;
@@ -31,7 +31,8 @@ public class SDFReaderTest {
 
     public static String SDF_DATA_FOLDER = "data/mdl";
 
-    @Before
+    @BeforeEach 
+
     public void setUp() {
     }
 
@@ -74,3 +75,7 @@ public class SDFReaderTest {
         ////System.out.println("total files read: " + i);
     }
 }
+
+
+
+

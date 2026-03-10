@@ -20,8 +20,8 @@
  */
 package org.openscience.smsd.algorithm.rgraph;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  *  test-smsd
@@ -33,6 +33,10 @@ public class CDKRGraphTest {
     @Test
     public void testRGraph() {
         CDKRGraph graph = new CDKRGraph();
-        Assert.assertNotNull(graph);
+        Assertions.assertNotNull(graph);
     }
 }
+
+
+
+

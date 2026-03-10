@@ -26,12 +26,12 @@ package org.openscience.smsd.filters;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
@@ -44,19 +44,21 @@ public class PostFilterTest {
     public PostFilterTest() {
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() throws Exception {
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownClass() throws Exception {
     }
 
-    @Before
+    @BeforeEach 
+
     public void setUp() {
     }
 
-    @After
+    @AfterEach 
+
     public void tearDown() {
     }
 
@@ -101,3 +103,7 @@ public class PostFilterTest {
         assertEquals(2, expResult.size());
     }
 }
+
+
+
+

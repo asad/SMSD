@@ -22,11 +22,11 @@
  */
 package org.openscience.smsd;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
@@ -61,10 +61,10 @@ public class SubstructureTest {
      */
     @Test
     public void testSubStructureSearchAlgorithms() throws CDKException {
-        Assert.assertNotNull(
+        Assertions.assertNotNull(
                 new Substructure(new AtomContainer(), new AtomContainer(),
                         true, false, false, true));
-        Assert.assertNotNull(
+        Assertions.assertNotNull(
                 new Substructure(new QueryAtomContainer(DefaultChemObjectBuilder.getInstance()), new AtomContainer(), true));
     }
 
@@ -183,7 +183,7 @@ public class SubstructureTest {
         IAtomContainer target = sp.parseSmiles("CCCOCC(C)=C");
 
         Substructure smsd1 = new Substructure(query, target, true, false, true, false);
-        Assert.assertTrue(smsd1.isSubgraph());
+        Assertions.assertTrue(smsd1.isSubgraph());
         smsd1.setChemFilters(true, true, true);
         assertEquals(1, smsd1.getAllAtomMapping().size());
     }
@@ -202,7 +202,7 @@ public class SubstructureTest {
         IAtomContainer target = sp.parseSmiles("CCCOCC(C)=C");
 
         Substructure smsd1 = new Substructure(query, target, false, false, false, false);
-        Assert.assertTrue(smsd1.isSubgraph());
+        Assertions.assertTrue(smsd1.isSubgraph());
         smsd1.setChemFilters(true, true, true);
 
         Integer score = 111;//as per new score
@@ -260,7 +260,7 @@ public class SubstructureTest {
 
         Substructure smsd1 = new Substructure(query, target, false, false, false, false);
         smsd1.setChemFilters(true, true, true);
-        Assert.assertTrue(smsd1.isSubgraph());
+        Assertions.assertTrue(smsd1.isSubgraph());
         assertEquals(7, smsd1.getFirstAtomMapping().getCount());
     }
 
@@ -422,7 +422,7 @@ public class SubstructureTest {
         IAtomContainer target = mol;
 
         Substructure smsd1 = new Substructure(query, target, true, false, true, true);
-        Assert.assertTrue(smsd1.isSubgraph());
+        Assertions.assertTrue(smsd1.isSubgraph());
         smsd1.setChemFilters(true, true, true);
 
         assertEquals(2, smsd1.getAllAtomMapping().size());
@@ -479,7 +479,7 @@ public class SubstructureTest {
         IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
 
         Substructure smsd1 = new Substructure(query, target, true, false, true, false);
-        Assert.assertTrue(smsd1.isSubgraph());
+        Assertions.assertTrue(smsd1.isSubgraph());
         smsd1.setChemFilters(true, true, true);
 
         double score = 0.35;
@@ -501,7 +501,7 @@ public class SubstructureTest {
 
         Substructure smsd1 = new Substructure(query, target, false, false, true, false);
         smsd1.setChemFilters(true, true, true);
-        Assert.assertTrue(smsd1.isSubgraph());
+        Assertions.assertTrue(smsd1.isSubgraph());
         assertEquals(false, smsd1.isStereoMisMatch());
     }
 
@@ -522,7 +522,7 @@ public class SubstructureTest {
         Substructure smsd1 = new Substructure(query, target, true, false, true, false);
         smsd1.setChemFilters(true, true, true);
         //////System.out.println("smsd1.isSubgraph() " + smsd1.isSubgraph());
-        Assert.assertTrue(smsd1.isSubgraph());
+        Assertions.assertTrue(smsd1.isSubgraph());
         assertEquals(score, smsd1.getEuclideanDistance(), 0.005);
     }
 
@@ -533,7 +533,7 @@ public class SubstructureTest {
         IAtomContainer target = sp.parseSmiles("C");
         Substructure smsd = new Substructure(query, target, true, false, true, false);
         boolean foundMatches = smsd.isSubgraph();
-        Assert.assertFalse(foundMatches);
+        Assertions.assertFalse(foundMatches);
     }
 
     /**
@@ -552,8 +552,8 @@ public class SubstructureTest {
         double score = 0.0;
         Substructure smsd1 = new Substructure(molecule1, molecule2, true, false, true, false);
         smsd1.setChemFilters(true, true, true);
-        Assert.assertFalse(smsd1.isSubgraph());
-        Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
+        Assertions.assertFalse(smsd1.isSubgraph());
+        Assertions.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
     }
 
     /**
@@ -573,8 +573,8 @@ public class SubstructureTest {
         double score = 1.0;
         Substructure smsd1 = new Substructure(molecule1, molecule2, false, false, true, false);
         smsd1.setChemFilters(true, true, true);
-        Assert.assertTrue(smsd1.isSubgraph());
-        Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
+        Assertions.assertTrue(smsd1.isSubgraph());
+        Assertions.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
     }
 
     @Test
@@ -585,12 +585,12 @@ public class SubstructureTest {
         Substructure smsd = new Substructure(query, target, true, false, true, false);
 
         boolean foundMatches = smsd.isSubgraph();
-        Assert.assertTrue(foundMatches);
+        Assertions.assertTrue(foundMatches);
 
         IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
         smsd = new Substructure(queryContainer, target, false);
         foundMatches = smsd.isSubgraph();
-        Assert.assertTrue(foundMatches);
+        Assertions.assertTrue(foundMatches);
     }
 
     @Test
@@ -601,11 +601,11 @@ public class SubstructureTest {
         Substructure smsd = new Substructure(query, target, true, false, true, false);
 
         boolean foundMatches = smsd.isSubgraph();
-        Assert.assertTrue(foundMatches);
+        Assertions.assertTrue(foundMatches);
 
         IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
         Substructure smsd1 = new Substructure(queryContainer, target, false, true, true, false);
-        Assert.assertTrue(smsd1.isSubgraph());
+        Assertions.assertTrue(smsd1.isSubgraph());
     }
 
     @Test
@@ -631,16 +631,16 @@ public class SubstructureTest {
         }
 
         Substructure smsd = new Substructure(query, target, true, false, false, true);
-        Assert.assertTrue(smsd.isSubgraph());
+        Assertions.assertTrue(smsd.isSubgraph());
 //        for (AtomAtomMapping m : smsd.getAllAtomMapping()) {
 //            System.out.println(m.getMappingsByIndex());
 //        }
-        Assert.assertEquals(18, smsd.getAllAtomMapping().size());
+        Assertions.assertEquals(18, smsd.getAllAtomMapping().size());
 
         IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
         Substructure smsd2 = new Substructure(queryContainer, target, true);
-        Assert.assertTrue(smsd2.isSubgraph());
-        Assert.assertEquals(18, smsd2.getAllAtomMapping().size());
+        Assertions.assertTrue(smsd2.isSubgraph());
+        Assertions.assertEquals(18, smsd2.getAllAtomMapping().size());
     }
 
     @Test
@@ -663,12 +663,12 @@ public class SubstructureTest {
         }
 
         Substructure smsd = new Substructure(query, target, true, false, true, true);
-        Assert.assertTrue(smsd.isSubgraph());
-        Assert.assertEquals(768, smsd.getAllAtomMapping().size());
+        Assertions.assertTrue(smsd.isSubgraph());
+        Assertions.assertEquals(768, smsd.getAllAtomMapping().size());
 
         IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
         Substructure smsd2 = new Substructure(queryContainer, target, false);
-        Assert.assertTrue(smsd2.isSubgraph());
+        Assertions.assertTrue(smsd2.isSubgraph());
     }
 
     @Test
@@ -707,10 +707,10 @@ public class SubstructureTest {
         //////System.out.println();
 
         Substructure smsd = new Substructure(query, target, false, true, false, true);
-        Assert.assertTrue(smsd.isSubgraph());
+        Assertions.assertTrue(smsd.isSubgraph());
         IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
         Substructure smsd2 = new Substructure(queryContainer, target, false);
-        Assert.assertFalse(smsd2.isSubgraph());
+        Assertions.assertFalse(smsd2.isSubgraph());
     }
 
     @Test
@@ -754,7 +754,7 @@ public class SubstructureTest {
 //        IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
         Substructure smsd = new Substructure(createAnyAtomAnyBondContainer1, target, true);
         ////System.out.println("Subgraph " + smsd.isSubgraph());
-        Assert.assertTrue(smsd.isSubgraph());
+        Assertions.assertTrue(smsd.isSubgraph());
     }
 
     @Test
@@ -798,7 +798,7 @@ public class SubstructureTest {
 //        IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
         Substructure smsd = new Substructure(createAnyAtomAnyBondContainer1, target, true);
         ////System.out.println("Subgraph " + smsd.isSubgraph());
-        Assert.assertTrue(smsd.isSubgraph());
+        Assertions.assertTrue(smsd.isSubgraph());
     }
 
     @Test
@@ -821,16 +821,16 @@ public class SubstructureTest {
 
         Substructure overlap = new Substructure(ac1, ac2, true, false, false, true);
         overlap.setChemFilters(false, false, true);
-        Assert.assertEquals(4, overlap.getAllAtomMapping().size());
+        Assertions.assertEquals(4, overlap.getAllAtomMapping().size());
         overlap = new Substructure(ac1, ac3, true, false, false, true);
         overlap.setChemFilters(false, false, true);
-        Assert.assertEquals(2, overlap.getAllAtomMapping().size());
+        Assertions.assertEquals(2, overlap.getAllAtomMapping().size());
         overlap = new Substructure(ac1, ac4, true, false, false, true);
         overlap.setChemFilters(false, false, true);
-        Assert.assertEquals(4, overlap.getAllAtomMapping().size());
+        Assertions.assertEquals(4, overlap.getAllAtomMapping().size());
         overlap = new Substructure(ac1, ac1, true, false, false, true);
         overlap.setChemFilters(false, false, true);
-        Assert.assertEquals(2, overlap.getAllAtomMapping().size());
+        Assertions.assertEquals(2, overlap.getAllAtomMapping().size());
 
 //        SmilesGenerator aromatic = SmilesGenerator.unique().aromatic();
 //        ////System.out.println("SMILES Q :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnQuery()));
@@ -931,3 +931,7 @@ public class SubstructureTest {
 
 
 }
+
+
+
+

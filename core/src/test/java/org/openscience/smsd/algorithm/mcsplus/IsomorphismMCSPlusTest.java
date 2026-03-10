@@ -27,7 +27,7 @@ package org.openscience.smsd.algorithm.mcsplus;
 import org.openscience.smsd.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.junit.*;
+import org.junit.jupiter.api.*;
 import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.exception.CDKException;
@@ -55,29 +55,31 @@ public class IsomorphismMCSPlusTest {
      */
     @Test
     public void IsomorphismTest() {
-        Assert.assertNotNull(
+        Assertions.assertNotNull(
                 new Isomorphism(new AtomContainer(), new AtomContainer(),
                         Algorithm.DEFAULT,
                         true, false, false));
-        Assert.assertNotNull(
+        Assertions.assertNotNull(
                 new Isomorphism(new AtomContainer(), new AtomContainer(),
                         Algorithm.DEFAULT,
                         false, false, false));
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() throws Exception {
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownClass() throws Exception {
     }
 
-    @Before
+    @BeforeEach 
+
     public void setUp() {
     }
 
-    @After
+    @AfterEach 
+
     public void tearDown() {
     }
 
@@ -96,11 +98,11 @@ public class IsomorphismMCSPlusTest {
             IAtomContainer query = sp.parseSmiles("Nc1ccccc1");
             Isomorphism smsd1 = new Isomorphism(query, target, Algorithm.MCSPlus, true, false, false);
             smsd1.setChemFilters(false, false, false);
-            Assert.assertEquals(7, smsd1.getFirstAtomMapping().getCount());
-            Assert.assertEquals(4, smsd1.getAllAtomMapping().size());
-            Assert.assertNotNull(smsd1.getFirstAtomMapping());
+            Assertions.assertEquals(7, smsd1.getFirstAtomMapping().getCount());
+            Assertions.assertEquals(4, smsd1.getAllAtomMapping().size());
+            Assertions.assertNotNull(smsd1.getFirstAtomMapping());
             double score = 0.35;
-            Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0);
+            Assertions.assertEquals(score, smsd1.getTanimotoSimilarity(), 0);
         } catch (InvalidSmilesException ex) {
             Logger.getLogger(MCSPlusHandlerTest.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -114,12 +116,12 @@ public class IsomorphismMCSPlusTest {
         IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
         Isomorphism smsd = new Isomorphism(query, target, Algorithm.MCSPlus, true, false, false);
 
-        Assert.assertEquals(18, smsd.getAllAtomMapping().size());
-        Assert.assertTrue(smsd.isSubgraph());
+        Assertions.assertEquals(18, smsd.getAllAtomMapping().size());
+        Assertions.assertTrue(smsd.isSubgraph());
 
         IQueryAtomContainer queryContainer = QueryAtomContainerCreator.createSymbolAndBondOrderQueryContainer(query);
         smsd = new Isomorphism(queryContainer, target, Algorithm.MCSPlus);
-        Assert.assertTrue(smsd.isSubgraph());
+        Assertions.assertTrue(smsd.isSubgraph());
     }
 
     /**
@@ -137,7 +139,7 @@ public class IsomorphismMCSPlusTest {
         double score = 1.0;
         Isomorphism smsd1 = new Isomorphism(molecule1, molecule2, Algorithm.MCSPlus, true, false, false);
         //smsd1.setChemFilters(true, true, true);
-        Assert.assertNotEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
+        Assertions.assertNotEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
     }
 
     /**
@@ -158,7 +160,7 @@ public class IsomorphismMCSPlusTest {
         IAtomContainer ac2 = AtomContainerManipulator.removeNonChiralHydrogens(molecule2);
         Isomorphism smsd1 = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, false, false);
         smsd1.setChemFilters(true, true, true);
-        Assert.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
+        Assertions.assertEquals(score, smsd1.getTanimotoSimilarity(), 0.001);
     }
 
     /**
@@ -177,8 +179,8 @@ public class IsomorphismMCSPlusTest {
         Isomorphism comparison = new Isomorphism(query, target, Algorithm.MCSPlus, false, false, true);
         // set chemical filter true
         comparison.setChemFilters(true, true, true);
-        Assert.assertEquals(0.6, comparison.getTanimotoSimilarity(), 0.001);
-        Assert.assertEquals(12, comparison.getAllAtomMapping().size());
+        Assertions.assertEquals(0.6, comparison.getTanimotoSimilarity(), 0.001);
+        Assertions.assertEquals(12, comparison.getAllAtomMapping().size());
     }
 
     /**
@@ -199,8 +201,8 @@ public class IsomorphismMCSPlusTest {
         Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.VFLibMCS, false, false, false);
         // set chemical filter true
         comparison.setChemFilters(true, true, true);
-        Assert.assertEquals(0.5, comparison.getTanimotoSimilarity(), .09);
-        Assert.assertEquals(4, comparison.getAllAtomMapping().size());
+        Assertions.assertEquals(0.5, comparison.getTanimotoSimilarity(), .09);
+        Assertions.assertEquals(4, comparison.getAllAtomMapping().size());
     }
 
     /**
@@ -223,7 +225,7 @@ public class IsomorphismMCSPlusTest {
         Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.VFLibMCS, false, false, false);
         // set chemical filter true
         comparison.setChemFilters(true, true, true);
-        Assert.assertEquals(1, comparison.getAllAtomMapping().size());
+        Assertions.assertEquals(1, comparison.getAllAtomMapping().size());
     }
 
     /**
@@ -246,8 +248,8 @@ public class IsomorphismMCSPlusTest {
         Isomorphism comparison = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, false, false, false);
         // set chemical filter true
         comparison.setChemFilters(true, true, true);
-        Assert.assertEquals(1.0, comparison.getTanimotoSimilarity(), .09);
-        Assert.assertEquals(1, comparison.getAllAtomMapping().size());
+        Assertions.assertEquals(1.0, comparison.getTanimotoSimilarity(), .09);
+        Assertions.assertEquals(1, comparison.getAllAtomMapping().size());
     }
 
     @Test
@@ -274,16 +276,16 @@ public class IsomorphismMCSPlusTest {
 
         Isomorphism overlap = new Isomorphism(ac1, ac2, Algorithm.MCSPlus, true, false, false);
         overlap.setChemFilters(false, false, true);
-        Assert.assertEquals(4, overlap.getAllAtomMapping().size());
+        Assertions.assertEquals(4, overlap.getAllAtomMapping().size());
         overlap = new Isomorphism(ac1, ac3, Algorithm.MCSPlus, true, false, false);
         overlap.setChemFilters(false, false, true);
-        Assert.assertEquals(2, overlap.getAllAtomMapping().size());
+        Assertions.assertEquals(2, overlap.getAllAtomMapping().size());
         overlap = new Isomorphism(ac1, ac4, Algorithm.MCSPlus, true, false, false);
         overlap.setChemFilters(false, false, true);
-        Assert.assertEquals(4, overlap.getAllAtomMapping().size());
+        Assertions.assertEquals(4, overlap.getAllAtomMapping().size());
         overlap = new Isomorphism(ac1, ac1, Algorithm.MCSPlus, true, false, false);
         overlap.setChemFilters(false, false, true);
-        Assert.assertEquals(2, overlap.getAllAtomMapping().size());
+        Assertions.assertEquals(2, overlap.getAllAtomMapping().size());
 
 //        SmilesGenerator aromatic = SmilesGenerator.unique().aromatic();
 //        ////////System.out.println("SMILES Q :" + aromatic.create(overlap.getFirstAtomMapping().getMapCommonFragmentOnQuery()));
@@ -301,3 +303,8 @@ public class IsomorphismMCSPlusTest {
 }
 //c-edges 2288
 //d-edges 395230
+
+
+
+
+

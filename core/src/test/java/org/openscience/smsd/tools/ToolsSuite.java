@@ -23,37 +23,45 @@
  */
 package org.openscience.smsd.tools;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.platform.suite.api.SelectClasses;
+import org.junit.platform.suite.api.Suite;
+
 
 /**
  * test-smsd
  *
  * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({org.openscience.smsd.tools.BondEnergiesTest.class,
+@Suite
+@SelectClasses({org.openscience.smsd.tools.BondEnergiesTest.class,
     org.openscience.smsd.tools.MoleculeSanityCheckTest.class,
     org.openscience.smsd.tools.TimeManagerTest.class})
 public class ToolsSuite {
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() throws Exception {
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownClass() throws Exception {
     }
 
-    @Before
+    @BeforeEach 
+
     public void setUp() throws Exception {
     }
 
-    @After
+    @AfterEach 
+
     public void tearDown() throws Exception {
     }
 }
+
+
+
+
+

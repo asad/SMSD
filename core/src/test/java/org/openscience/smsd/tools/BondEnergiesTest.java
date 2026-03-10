@@ -22,8 +22,8 @@
  */
 package org.openscience.smsd.tools;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.openscience.cdk.Atom;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IBond.Order;
@@ -37,7 +37,7 @@ public class BondEnergiesTest {
     @Test
     public void testGetInstance() throws Exception {
         BondEnergies energies = BondEnergies.getInstance();
-        Assert.assertNotNull(energies);
+        Assertions.assertNotNull(energies);
     }
 
     /**
@@ -52,6 +52,10 @@ public class BondEnergiesTest {
         BondEnergies instance = new BondEnergies();
         Integer expResult = 346;
         Integer result = instance.getEnergies(sourceAtom, targetAtom, bondOrder);
-        Assert.assertEquals(expResult, result);
+        Assertions.assertEquals(expResult, result);
     }
 }
+
+
+
+

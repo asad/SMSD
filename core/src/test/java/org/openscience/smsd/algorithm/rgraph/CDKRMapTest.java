@@ -20,8 +20,8 @@
  */
 package org.openscience.smsd.algorithm.rgraph;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * test-smsd
@@ -34,8 +34,12 @@ public class CDKRMapTest {
     @Test
     public void testRMap_int_int() {
         CDKRMap node = new CDKRMap(1, 2);
-        Assert.assertNotNull(node);
-        Assert.assertEquals(1, node.getId1());
-        Assert.assertEquals(2, node.getId2());
+        Assertions.assertNotNull(node);
+        Assertions.assertEquals(1, node.getId1());
+        Assertions.assertEquals(2, node.getId2());
     }
 }
+
+
+
+

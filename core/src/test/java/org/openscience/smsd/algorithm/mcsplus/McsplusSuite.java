@@ -5,35 +5,43 @@
  */
 package org.openscience.smsd.algorithm.mcsplus;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.platform.suite.api.SelectClasses;
+import org.junit.platform.suite.api.Suite;
+
 
 /**
  *
  * @author Syed Asad Rahman <asad.rahman@bioinceptionlabs.com>
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({org.openscience.smsd.algorithm.mcsplus.MCSPlusHandlerTest.class,
+@Suite
+@SelectClasses({org.openscience.smsd.algorithm.mcsplus.MCSPlusHandlerTest.class,
     org.openscience.smsd.algorithm.mcsplus.IsomorphismMCSPlusTest.class})
 public class McsplusSuite {
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() throws Exception {
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownClass() throws Exception {
     }
 
-    @Before
+    @BeforeEach 
+
     public void setUp() throws Exception {
     }
 
-    @After
+    @AfterEach 
+
     public void tearDown() throws Exception {
     }
 }
+
+
+
+
+

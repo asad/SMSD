@@ -23,12 +23,12 @@
  */
 package org.openscience.smsd.algorithm.single;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.openscience.cdk.Atom;
 import org.openscience.cdk.AtomContainer;
 import org.openscience.cdk.exception.CDKException;
@@ -46,19 +46,21 @@ public class SingleMappingTest {
     public SingleMappingTest() {
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() throws Exception {
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownClass() throws Exception {
     }
 
-    @Before
+    @BeforeEach 
+
     public void setUp() {
     }
 
-    @After
+    @AfterEach 
+
     public void tearDown() {
     }
 
@@ -75,6 +77,10 @@ public class SingleMappingTest {
         IAtomContainer target = new AtomContainer();
         target.addAtom(atomTarget);
         SingleMapping instance = new SingleMapping();
-        Assert.assertNotNull(instance.getOverLaps(source, target));
+        Assertions.assertNotNull(instance.getOverLaps(source, target));
     }
 }
+
+
+
+
