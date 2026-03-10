@@ -74,7 +74,7 @@ public class VFTest {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("CC");
         IAtomContainer target = sp.parseSmiles("C1CCC12CCCC2");
-        Pattern findIdentical = VF.findSubstructure(query, true, true, true);
+        Pattern findIdentical = VF.findSubstructure(query, true, false, true);
 
         boolean foundMatches = findIdentical.matches(target);
         Assert.assertTrue(foundMatches);
@@ -123,7 +123,7 @@ public class VFTest {
             i++;
         }
 
-        Pattern findIdentical = VF.findSubstructure(query, true, true, true);
+        Pattern findIdentical = VF.findSubstructure(query, true, false, true);
         List<Map<IAtom, IAtom>> matchAll = findIdentical.matchAll(target);
         Assert.assertTrue(!matchAll.isEmpty());
         Assert.assertEquals(18, matchAll.size());
@@ -138,24 +138,23 @@ public class VFTest {
     public void testIsSubgraph() throws CDKException {
         SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
         IAtomContainer query = sp.parseSmiles("[#8]P([#8])(=O)[#8]-[#6@H]-1-[#6@H](-[#8]P([#8])([#8])=O)-[#6@@H](-[#8]P([#8])([#8])=O)-[#6@H](-[#8]P([#8])([#8])=O)-[#6@H](-[#8]P([#8])([#8])=O)-[#6@@H]-1-[#8]P([#8])([#8])=O");
+        query = sp.parseSmiles("[O]P([O])(=O)[O]-[C@H]-1-[C@H](-[O]P([O])([O])=O)-[C@@H](-[O]P([O])([O])=O)-[C@H](-[O]P([O])([O])=O)-[C@H](-[O]P([O])([O])=O)-[C@@H]-1-[O]P([O])([O])=O");
         IAtomContainer target = sp.parseSmiles("[#8]P([#8])(=O)[#8]-[#6@@H]-1-[#6@H](-[#8]P([#8])([#8])=O)-[#6@@H](-[#8]P([#8])([#8])=O)-[#6@H](-[#8]P([#8])(=O)[#8]P([#8])([#8])=O)-[#6@@H](-[#8]P([#8])([#8])=O)-[#6@@H]-1-[#8]P([#8])([#8])=O");
+        target = sp.parseSmiles("[O]P([O])(=O)[O]-[C@@H]-1-[C@H](-[O]P([O])([O])=O)-[C@@H](-[O]P([O])([O])=O)-[C@H](-[O]P([O])(=O)[O]P([O])([O])=O)-[C@@H](-[O]P([O])([O])=O)-[C@@H]-1-[O]P([O])([O])=O");
         int i = 1;
         for (IAtom a : query.atoms()) {
             a.setID(String.valueOf(i));
-            //System.out.print(i + ",");
             i++;
         }
-        //////System.out.println();
         i = 1;
         for (IAtom a : target.atoms()) {
             a.setID(String.valueOf(i));
-            //System.out.print(i + ",");
             i++;
         }
 
         //////System.out.println();
 //        Pattern pattern = Ullmann.findSubstructure(query);
-        Pattern pattern = VF.findSubstructure(query, true, true, true);
+        Pattern pattern = VF.findSubstructure(query, false, true, false);
         List<Map<IAtom, IAtom>> matchAll = pattern.matchAll(target);
         Assert.assertEquals(768, matchAll.size());
 
