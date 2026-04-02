@@ -77,6 +77,7 @@ MolGraphBuilder = _smsd.MolGraphBuilder
 
 BondOrderMode = _smsd.BondOrderMode
 AromaticityMode = _smsd.AromaticityMode
+AromaticityModel = _smsd.AromaticityModel
 RingFusionMode = _smsd.RingFusionMode
 
 _parse_smiles_raw = _smsd.parse_smiles
@@ -1513,6 +1514,27 @@ def prewarm(mol):
     return g
 
 
+def perceive_aromaticity(mol, *, model=AromaticityModel.DAYLIGHT_LIKE):
+    """Recompute ring membership and aromaticity on a MolGraph."""
+    g = _ensure_mol(mol)
+    g.perceive_aromaticity(model)
+    return g
+
+
+def kekulize(mol):
+    """Convert an aromatic MolGraph into an explicit Kekule form."""
+    g = _ensure_mol(mol)
+    g.kekulize()
+    return g
+
+
+def dearomatize(mol):
+    """Alias of kekulize() for explicit aromatic-flag removal."""
+    g = _ensure_mol(mol)
+    g.dearomatize()
+    return g
+
+
 def _ensure_smarts_query(smarts):
     if not _HAS_SMARTS:
         raise NotImplementedError(
@@ -2310,6 +2332,7 @@ __all__ = [
     # Enums
     "BondOrderMode",
     "AromaticityMode",
+    "AromaticityModel",
     "RingFusionMode",
     # SMILES / SMARTS
     "parse_smiles",
@@ -2334,6 +2357,9 @@ __all__ = [
     "mcs",
     "all_mcs",
     "prewarm",
+    "perceive_aromaticity",
+    "kekulize",
+    "dearomatize",
     # Index translation
     "translate_to_atom_ids",
     "find_mcs_progressive",

@@ -330,6 +330,10 @@ PYBIND11_MODULE(_smsd, m) {
         .value("FLEXIBLE", smsd::ChemOptions::AromaticityMode::FLEXIBLE)
         .export_values();
 
+    py::enum_<smsd::AromaticityModel>(m, "AromaticityModel")
+        .value("DAYLIGHT_LIKE", smsd::AromaticityModel::DAYLIGHT_LIKE)
+        .export_values();
+
     py::enum_<smsd::ChemOptions::RingFusionMode>(m, "RingFusionMode")
         .value("IGNORE",     smsd::ChemOptions::RingFusionMode::IGNORE)
         .value("PERMISSIVE", smsd::ChemOptions::RingFusionMode::PERMISSIVE)
@@ -465,6 +469,30 @@ PYBIND11_MODULE(_smsd, m) {
              },
              py::call_guard<py::gil_scoped_release>(),
              "Compute and cache common lazy invariants used by matching and batch APIs")
+        .def("perceive_aromaticity", [](smsd::MolGraph& g, smsd::AromaticityModel model) -> smsd::MolGraph& {
+                 g.perceiveAromaticity(model);
+                 return g;
+             },
+             py::return_value_policy::reference_internal,
+             py::arg("model") = smsd::AromaticityModel::DAYLIGHT_LIKE,
+             py::call_guard<py::gil_scoped_release>(),
+             "Recompute ring membership and aromaticity using the native model")
+        .def("kekulize", [](smsd::MolGraph& g) -> smsd::MolGraph& {
+                 if (!g.kekulize())
+                     throw py::value_error("kekulize could not assign a valid Kekule form for this aromatic system");
+                 return g;
+             },
+             py::return_value_policy::reference_internal,
+             py::call_guard<py::gil_scoped_release>(),
+             "Convert aromatic atoms and bonds into an explicit Kekule assignment")
+        .def("dearomatize", [](smsd::MolGraph& g) -> smsd::MolGraph& {
+                 if (!g.dearomatize())
+                     throw py::value_error("dearomatize could not assign a valid non-aromatic Kekule form for this aromatic system");
+                 return g;
+             },
+             py::return_value_policy::reference_internal,
+             py::call_guard<py::gil_scoped_release>(),
+             "Alias of kekulize(): remove aromatic flags via an explicit Kekule assignment")
         .def("has_bond", [](const smsd::MolGraph& g, int i, int j) {
                  if (i < 0 || i >= g.n || j < 0 || j >= g.n)
                      throw py::index_error("atom index out of range");
@@ -528,8 +556,14 @@ PYBIND11_MODULE(_smsd, m) {
             return b.properties(std::move(v));
         }, py::arg("values"), py::return_value_policy::reference_internal,
              "Set SDF-style molecule properties")
-        .def("build", &smsd::MolGraph::Builder::build,
-             "Build the immutable MolGraph");
+        .def("build", [](const smsd::MolGraph::Builder& b,
+                         bool perceive_aromaticity,
+                         smsd::AromaticityModel aromaticity_model) {
+            return b.build(perceive_aromaticity, aromaticity_model);
+        },
+             py::arg("perceive_aromaticity") = true,
+             py::arg("aromaticity_model") = smsd::AromaticityModel::DAYLIGHT_LIKE,
+             "Build the immutable MolGraph, optionally running aromaticity perception");
 
     // -----------------------------------------------------------------------
     // ParseOptions (for lenient SMILES parsing)

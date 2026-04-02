@@ -12,6 +12,7 @@ import pytest
 
 import smsd
 from smsd import (
+    AromaticityModel,
     MolGraphBuilder,
     assign_rs,
     batch_mcs_size,
@@ -21,6 +22,7 @@ from smsd import (
     fingerprint,
     mcs,
     parse_smiles,
+    perceive_aromaticity,
     prewarm,
     read_molfile,
     smarts_match,
@@ -227,6 +229,31 @@ def test_prewarm_helper_populates_lazy_graph_fields():
     assert len(mol.morgan_rank) == mol.n
     assert len(mol.canonical_label) == mol.n
     assert len(mol.orbit) == mol.n
+
+
+def test_explicit_aromaticity_perception_normalizes_raw_kekule_builder_graph():
+    """Python should expose aromaticity perception as an explicit MolGraph operation."""
+    builder = MolGraphBuilder()
+    builder.atom_count(6)
+    builder.atomic_numbers([6, 6, 6, 6, 6, 6])
+    builder.formal_charges([0, 0, 0, 0, 0, 0])
+    builder.ring_flags([0, 0, 0, 0, 0, 0])
+    builder.aromatic_flags([0, 0, 0, 0, 0, 0])
+    builder.neighbors([[1, 5], [0, 2], [1, 3], [2, 4], [3, 5], [4, 0]])
+    builder.bond_orders([[2, 1], [2, 1], [1, 2], [2, 1], [1, 2], [2, 1]])
+
+    mol = builder.build(
+        perceive_aromaticity=False,
+        aromaticity_model=AromaticityModel.DAYLIGHT_LIKE,
+    )
+    assert sum(bool(x) for x in mol.aromatic) == 0
+    assert sum(bool(x) for x in mol.ring) == 0
+
+    perceived = perceive_aromaticity(mol, model=AromaticityModel.DAYLIGHT_LIKE)
+    assert perceived is mol
+    assert sum(bool(x) for x in mol.aromatic) == 6
+    assert sum(bool(x) for x in mol.ring) == 6
+    assert to_smiles(mol) == "c1ccccc1"
 
 
 def test_size_first_batch_helpers_keep_hit_order_and_sizes():

@@ -2443,6 +2443,16 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
     }
     TimeBudget tb(timeout);
 
+    // Exact identity fast-path before canonicalization: same object or the
+    // same graph in the same index order should never pay the full MCS cost.
+    if (&g1 == &g2 || detail::isExactMatch(g1, g2, chem)) {
+        std::map<int,int> id;
+        for (int i = 0; i < g1.n; i++) id[i] = i;
+        if (opts.disconnectedMCS && (opts.minFragmentSize > 1 || opts.maxFragments < INT_MAX))
+            id = detail::applyFragmentConstraints(g1, id, opts.minFragmentSize, opts.maxFragments);
+        return id;
+    }
+
     // Ensure canonical labeling / Morgan ranks are available (lazy init)
     g1.ensureCanonical();
     g2.ensureCanonical();
@@ -2463,19 +2473,15 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
     std::map<int,int> best;
     int bestSize = 0, bestScore = 0;
 
-    // Identity check — zero-allocation flat-array queue (handles symmetric molecules)
-    if (&g1 == &g2 || ((!chem.useChirality && !chem.useBondStereo)
-                       && detail::sameCanonicalGraph(g1, g2))) {
+    // Canonical-equivalence fast-path for same graphs with permuted indices.
+    if ((!chem.useChirality && !chem.useBondStereo)
+        && detail::sameCanonicalGraph(g1, g2)) {
         std::map<int,int> id;
-        if (&g1 == &g2) {
-            for (int i = 0; i < g1.n; i++) id[i] = i;
-        } else {
-            std::vector<int> head(g2.n, -1), nxt(g2.n, -1);
-            for (int j = g2.n - 1; j >= 0; j--) { nxt[j] = head[g2.canonicalLabel[j]]; head[g2.canonicalLabel[j]] = j; }
-            for (int i = 0; i < g1.n; i++) { int cl = g1.canonicalLabel[i]; id[i] = head[cl]; head[cl] = nxt[head[cl]]; }
-        }
+        std::vector<int> head(g2.n, -1), nxt(g2.n, -1);
+        for (int j = g2.n - 1; j >= 0; j--) { nxt[j] = head[g2.canonicalLabel[j]]; head[g2.canonicalLabel[j]] = j; }
+        for (int i = 0; i < g1.n; i++) { int cl = g1.canonicalLabel[i]; id[i] = head[cl]; head[cl] = nxt[head[cl]]; }
         if (opts.disconnectedMCS && (opts.minFragmentSize > 1 || opts.maxFragments < INT_MAX))
-            id = applyFragmentConstraints(g1, id, opts.minFragmentSize, opts.maxFragments);
+            id = detail::applyFragmentConstraints(g1, id, opts.minFragmentSize, opts.maxFragments);
         return id;
     }
 
@@ -3031,6 +3037,12 @@ inline int64_t resolveMcsTimeoutMs(const MolGraph& g1, const MolGraph& g2,
     return std::max<int64_t>(1, std::min<int64_t>(30000, 500 + int64_t(g1.n) * g2.n * 2));
 }
 
+inline McsOptions withTimeoutMs(const McsOptions& opts, int64_t timeoutMs) {
+    McsOptions limited = opts;
+    limited.timeoutMs = std::max<int64_t>(1, timeoutMs);
+    return limited;
+}
+
 inline std::map<int,int> recoverValidMcsMapping(const MolGraph& g1, const MolGraph& g2,
                                                 const std::map<int,int>& raw,
                                                 const ChemOptions& chem,
@@ -3089,6 +3101,20 @@ inline std::map<int,int> runValidatedMcsDirection(const MolGraph& query, const M
 inline std::map<int,int> findMCSDirectionalCore(const MolGraph& g1, const MolGraph& g2,
                                                 const ChemOptions& chem, const McsOptions& opts) {
     if (g1.n == 0 || g2.n == 0) return {};
+    if (&g1 == &g2 || detail::isExactMatch(g1, g2, chem)) {
+        std::map<int,int> id;
+        for (int i = 0; i < g1.n; ++i) id[i] = i;
+        if (opts.disconnectedMCS && (opts.minFragmentSize > 1 || opts.maxFragments < INT_MAX))
+            id = detail::applyFragmentConstraints(g1, id, opts.minFragmentSize, opts.maxFragments);
+        return id;
+    }
+
+    using Clock = std::chrono::steady_clock;
+    auto deadline = Clock::now() + std::chrono::milliseconds(resolveMcsTimeoutMs(g1, g2, opts));
+    auto remainingMs = [&]() -> int64_t {
+        auto left = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - Clock::now()).count();
+        return std::max<int64_t>(0, left);
+    };
 
     g1.ensureCanonical();
     g2.ensureCanonical();
@@ -3103,11 +3129,17 @@ inline std::map<int,int> findMCSDirectionalCore(const MolGraph& g1, const MolGra
     bool weightMode = opts.maximizeBonds || !opts.atomWeights.empty();
 
     auto runDirection = [&](bool direct) {
+        int64_t budgetMs = remainingMs();
+        if (budgetMs <= 0) return std::map<int,int>{};
+        auto timedOpts = withTimeoutMs(opts, budgetMs);
         auto oriented = direct
-            ? runValidatedMcsDirection(g1, g2, chem, opts, false)
-            : runValidatedMcsDirection(g2, g1, chem, opts, true);
+            ? runValidatedMcsDirection(g1, g2, chem, timedOpts, false)
+            : runValidatedMcsDirection(g2, g1, chem, timedOpts, true);
         if (validateMapping(g1, g2, oriented, chem).empty()) return oriented;
-        return recoverValidMcsMapping(g1, g2, oriented, chem, opts);
+        budgetMs = remainingMs();
+        if (budgetMs <= 0) return oriented;
+        return recoverValidMcsMapping(
+            g1, g2, oriented, chem, withTimeoutMs(opts, budgetMs));
     };
 
     auto best = runDirection(plan.directFirst);
@@ -3152,12 +3184,33 @@ inline std::map<int,int> findMCSDirectionalCore(const MolGraph& g1, const MolGra
 
 inline std::map<int,int> findMCS(const MolGraph& g1, const MolGraph& g2,
                                  const ChemOptions& chem, const McsOptions& opts) {
-    auto best = findMCSDirectionalCore(g1, g2, chem, opts);
+    if (g1.n == 0 || g2.n == 0) return {};
+    if (&g1 == &g2 || detail::isExactMatch(g1, g2, chem)) {
+        std::map<int,int> id;
+        for (int i = 0; i < g1.n; ++i) id[i] = i;
+        if (opts.disconnectedMCS && (opts.minFragmentSize > 1 || opts.maxFragments < INT_MAX))
+            id = detail::applyFragmentConstraints(g1, id, opts.minFragmentSize, opts.maxFragments);
+        return id;
+    }
+
+    using Clock = std::chrono::steady_clock;
+    auto deadline = Clock::now() + std::chrono::milliseconds(resolveMcsTimeoutMs(g1, g2, opts));
+    auto remainingMs = [&]() -> int64_t {
+        auto left = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - Clock::now()).count();
+        return std::max<int64_t>(0, left);
+    };
+    auto runDirectionalCore = [&](const MolGraph& lhs, const MolGraph& rhs) {
+        int64_t budgetMs = remainingMs();
+        if (budgetMs <= 0) return std::map<int,int>{};
+        return findMCSDirectionalCore(lhs, rhs, chem, withTimeoutMs(opts, budgetMs));
+    };
+
+    auto best = runDirectionalCore(g1, g2);
     if (best.empty()) return best;
 
     bool weightMode = opts.maximizeBonds || !opts.atomWeights.empty();
     if (!weightMode) {
-        auto reverse = findMCSDirectionalCore(g2, g1, chem, opts);
+        auto reverse = runDirectionalCore(g2, g1);
         int bestSize = static_cast<int>(best.size());
         int reverseSize = static_cast<int>(reverse.size());
         if (std::abs(bestSize - reverseSize) >= 2 && reverseSize < bestSize) {

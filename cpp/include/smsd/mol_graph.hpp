@@ -33,6 +33,8 @@
 
 namespace smsd {
 
+enum class AromaticityModel { DAYLIGHT_LIKE };
+
 // ============================================================================
 // ChemOptions -- configuration for chemical matching constraints
 // ============================================================================
@@ -466,6 +468,22 @@ struct MolGraph {
             || z == 51 || z == 52;
     }
 
+    std::pair<bool, bool> exocyclicMultipleBondInfo(
+        int atom,
+        int prev = -1,
+        int next = -1) const {
+        bool hasExocyclicMultipleBond = false;
+        bool hasExocyclicMultipleBondToHetero = false;
+        for (int nb : neighbors[atom]) {
+            if (nb == prev || nb == next) continue;
+            int ord = bondOrder(atom, nb);
+            if (ord < 2 || ord == 4) continue;
+            hasExocyclicMultipleBond = true;
+            if (atomicNum[nb] != 6) hasExocyclicMultipleBondToHetero = true;
+        }
+        return {hasExocyclicMultipleBond, hasExocyclicMultipleBondToHetero};
+    }
+
     static bool isSimpleCycle(const std::vector<int>& cycle) {
         if (cycle.size() < 3) return false;
         std::unordered_set<int> seen;
@@ -498,21 +516,15 @@ struct MolGraph {
         if (cyclePiBonds == 1) return 1;
         if (cyclePiBonds > 1) return -1;
 
-        bool hasExocyclicMultipleBond = false;
-        for (int nb : neighbors[atom]) {
-            if (nb == prev || nb == next) continue;
-            int ord = bondOrder(atom, nb);
-            if (ord >= 2 && ord != 4) {
-                hasExocyclicMultipleBond = true;
-                break;
-            }
-        }
+        auto [hasExocyclicMultipleBond, hasExocyclicMultipleBondToHetero]
+            = exocyclicMultipleBondInfo(atom, prev, next);
 
         const int z = atomicNum[atom];
         const int q = formalCharge.empty() ? 0 : formalCharge[atom];
 
         if (z == 6) {
             if (q < 0 && !hasExocyclicMultipleBond) return 2;
+            if (q == 0 && hasExocyclicMultipleBondToHetero) return 0;
             if (q > 0) return 0;
             return -1;
         }
@@ -704,8 +716,34 @@ struct MolGraph {
         }
     }
 
-    void normalizeRingAndAromaticity() {
+    void markKekuleEdge(int i, int j, int order) {
+        if (useDense) {
+            bondOrdMatrix[i][j] = order;
+            bondOrdMatrix[j][i] = order;
+            bondAromMatrix[i][j] = false;
+            bondAromMatrix[j][i] = false;
+        } else {
+            auto it = sparseBondProps.find(bondKey(i, j));
+            if (it != sparseBondProps.end()) {
+                it->second[0] = order;
+                it->second[2] = 0;
+            }
+        }
+    }
+
+    void refreshAtomLabels() {
+        label.resize(n);
+        for (int i = 0; i < n; ++i) {
+            label[i] = (atomicNum[i] << 2)
+                     | (aromatic[i] ? 2 : 0)
+                     | (ring[i] ? 1 : 0);
+        }
+    }
+
+    void normalizeRingAndAromaticity(
+        AromaticityModel model = AromaticityModel::DAYLIGHT_LIKE) {
         if (n == 0) return;
+        (void) model;
 
         clearRingFlagsFromTopology();
         const auto& sssr = computeRings();
@@ -748,6 +786,196 @@ struct MolGraph {
         for (const auto& edge : aromaticEdges) {
             markAromaticEdge(edge.first, edge.second);
         }
+    }
+
+    void perceiveAromaticity(
+        AromaticityModel model = AromaticityModel::DAYLIGHT_LIKE) {
+        normalizeRingAndAromaticity(model);
+        refreshAtomLabels();
+        ringCount.assign(n, 0);
+        ringCountsComputed_ = false;
+        invalidateBondDerivedState();
+    }
+
+    int aromaticKekuleDemand(int atom) const {
+        if (!aromatic[atom]) return 0;
+        const int z = atomicNum[atom];
+        const int q = formalCharge.empty() ? 0 : formalCharge[atom];
+        const int h = hydrogenCount.empty() ? 0 : hydrogenCount[atom];
+        auto [hasExocyclicMultipleBond, hasExocyclicMultipleBondToHetero]
+            = exocyclicMultipleBondInfo(atom);
+        (void) hasExocyclicMultipleBond;
+
+        if (z == 6) {
+            if (q == 0 && hasExocyclicMultipleBondToHetero) return 0;
+            return q == 0 ? 1 : 0;
+        }
+        if (z == 5 || z == 13) return q >= 0 ? 1 : 0;
+        if (z == 7 || z == 15) {
+            if (h > 0 && q <= 0) return 0;
+            if (q < 0) return 0;
+            return 1;
+        }
+        if (z == 8 || z == 16 || z == 34 || z == 52) return 0;
+        return 1;
+    }
+
+    bool kekulizeAromaticComponent(const std::vector<int>& component) {
+        if (component.empty()) return true;
+
+        std::unordered_set<int> inComponent(component.begin(), component.end());
+        std::vector<std::pair<int, int>> aromaticEdges;
+        aromaticEdges.reserve(component.size() * 2);
+        for (int atom : component) {
+            for (int nb : neighbors[atom]) {
+                if (atom < nb && inComponent.count(nb)
+                    && (bondAromatic(atom, nb) || bondOrder(atom, nb) == 4)) {
+                    aromaticEdges.emplace_back(atom, nb);
+                }
+            }
+        }
+        if (aromaticEdges.empty()) {
+            for (int atom : component) aromatic[atom] = 0;
+            return true;
+        }
+
+        std::vector<int> demandAtoms;
+        demandAtoms.reserve(component.size());
+        std::unordered_map<int, int> localIndex;
+        for (int atom : component) {
+            if (aromaticKekuleDemand(atom) > 0) {
+                localIndex[atom] = static_cast<int>(demandAtoms.size());
+                demandAtoms.push_back(atom);
+            }
+        }
+
+        if (!demandAtoms.empty()) {
+            std::vector<std::vector<int>> demandAdj(demandAtoms.size());
+            for (const auto& edge : aromaticEdges) {
+                auto ita = localIndex.find(edge.first);
+                auto itb = localIndex.find(edge.second);
+                if (ita == localIndex.end() || itb == localIndex.end()) continue;
+                demandAdj[ita->second].push_back(itb->second);
+                demandAdj[itb->second].push_back(ita->second);
+            }
+
+            std::vector<int> color(demandAtoms.size(), -1);
+            std::deque<int> queue;
+            for (int start = 0; start < static_cast<int>(demandAtoms.size()); ++start) {
+                if (color[start] != -1) continue;
+                color[start] = 0;
+                queue.push_back(start);
+                while (!queue.empty()) {
+                    int u = queue.front();
+                    queue.pop_front();
+                    for (int v : demandAdj[u]) {
+                        if (color[v] == -1) {
+                            color[v] = color[u] ^ 1;
+                            queue.push_back(v);
+                        } else if (color[v] == color[u]) {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            std::vector<int> leftNodes, rightNodes;
+            leftNodes.reserve(demandAtoms.size());
+            rightNodes.reserve(demandAtoms.size());
+            for (int i = 0; i < static_cast<int>(demandAtoms.size()); ++i) {
+                if (color[i] == 0) leftNodes.push_back(i);
+                else rightNodes.push_back(i);
+            }
+            if (leftNodes.size() != rightNodes.size()) return false;
+
+            std::unordered_map<int, int> rightPos;
+            rightPos.reserve(rightNodes.size());
+            for (int i = 0; i < static_cast<int>(rightNodes.size()); ++i) {
+                rightPos[rightNodes[i]] = i;
+            }
+
+            std::vector<std::vector<int>> matchAdj(leftNodes.size());
+            for (int li = 0; li < static_cast<int>(leftNodes.size()); ++li) {
+                int u = leftNodes[li];
+                for (int v : demandAdj[u]) {
+                    auto it = rightPos.find(v);
+                    if (it != rightPos.end()) matchAdj[li].push_back(it->second);
+                }
+                if (matchAdj[li].empty()) return false;
+            }
+
+            std::vector<int> matchRight(rightNodes.size(), -1);
+            std::function<bool(int, std::vector<uint8_t>&)> augment =
+                [&](int li, std::vector<uint8_t>& seen) {
+                    for (int ri : matchAdj[li]) {
+                        if (seen[ri]) continue;
+                        seen[ri] = 1;
+                        if (matchRight[ri] == -1 || augment(matchRight[ri], seen)) {
+                            matchRight[ri] = li;
+                            return true;
+                        }
+                    }
+                    return false;
+                };
+
+            for (int li = 0; li < static_cast<int>(leftNodes.size()); ++li) {
+                std::vector<uint8_t> seen(rightNodes.size(), uint8_t(0));
+                if (!augment(li, seen)) return false;
+            }
+
+            for (const auto& edge : aromaticEdges) {
+                markKekuleEdge(edge.first, edge.second, 1);
+            }
+            for (int atom : component) aromatic[atom] = 0;
+
+            for (int ri = 0; ri < static_cast<int>(matchRight.size()); ++ri) {
+                int li = matchRight[ri];
+                if (li < 0) return false;
+                int a = demandAtoms[leftNodes[li]];
+                int b = demandAtoms[rightNodes[ri]];
+                markKekuleEdge(a, b, 2);
+            }
+            return true;
+        }
+
+        for (const auto& edge : aromaticEdges) {
+            markKekuleEdge(edge.first, edge.second, 1);
+        }
+        for (int atom : component) aromatic[atom] = 0;
+        return true;
+    }
+
+    bool kekulize() {
+        std::vector<uint8_t> visited(n, uint8_t(0));
+        for (int start = 0; start < n; ++start) {
+            if (!aromatic[start] || visited[start]) continue;
+
+            std::vector<int> component;
+            std::deque<int> queue;
+            queue.push_back(start);
+            visited[start] = 1;
+            while (!queue.empty()) {
+                int atom = queue.front();
+                queue.pop_front();
+                component.push_back(atom);
+                for (int nb : neighbors[atom]) {
+                    if (visited[nb] || !aromatic[nb]) continue;
+                    if (!(bondAromatic(atom, nb) || bondOrder(atom, nb) == 4)) continue;
+                    visited[nb] = 1;
+                    queue.push_back(nb);
+                }
+            }
+
+            if (!kekulizeAromaticComponent(component)) return false;
+        }
+
+        refreshAtomLabels();
+        invalidateBondDerivedState();
+        return true;
+    }
+
+    bool dearomatize() {
+        return kekulize();
     }
 
     // ========================================================================
@@ -3009,7 +3237,9 @@ public:
         Builder& solvent(ChemOptions::Solvent s)                            { solvent_ = s; return *this; }
         Builder& pH(double v)                                                { pH_ = v; return *this; }
 
-        MolGraph build() const {
+        MolGraph build(
+            bool perceiveAromaticity = true,
+            AromaticityModel model = AromaticityModel::DAYLIGHT_LIKE) const {
             if (n_ < 0)
                 throw std::invalid_argument("atomCount must be >= 0");
             if (static_cast<int>(atomicNum_.size()) != n_)
@@ -3283,15 +3513,8 @@ public:
             g.comment = comment_;
             g.properties = properties_;
 
-            g.normalizeRingAndAromaticity();
-
-            // Compute label = (atomicNum << 2) | (aromatic ? 2 : 0) | (ring ? 1 : 0)
-            g.label.resize(n_);
-            for (int i = 0; i < n_; i++) {
-                g.label[i] = (g.atomicNum[i] << 2)
-                            | (g.aromatic[i] ? 2 : 0)
-                            | (g.ring[i] ? 1 : 0);
-            }
+            if (perceiveAromaticity) g.normalizeRingAndAromaticity(model);
+            g.refreshAtomLabels();
 
             g.ringCount.assign(n_, 0);
             g.solvent_ = solvent_;

@@ -11,6 +11,7 @@ import pytest
 import smsd
 from smsd import (
     parse_smiles,
+    perceive_aromaticity,
     to_smiles,
     to_smarts,
     read_mol_block,
@@ -115,6 +116,30 @@ class TestParseSMILES:
 
         assert sum(bool(x) for x in dihydropyridine.aromatic) == 0
         assert sum(bool(x) for x in quinone.aromatic) == 0
+
+    def test_kekule_v2000_benzene_is_perceived_as_aromatic(self):
+        mol_block = (
+            "kekule-benzene\n"
+            "  SMSD  2D\n"
+            "\n"
+            "  6  6  0  0  0  0  0  0  0  0999 V2000\n"
+            "    1.2094    0.6985    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
+            "    0.0000    1.3970    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
+            "   -1.2094    0.6985    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
+            "   -1.2094   -0.6985    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
+            "    0.0000   -1.3970    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
+            "    1.2094   -0.6985    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
+            "  1  2  2  0  0  0  0\n"
+            "  2  3  1  0  0  0  0\n"
+            "  3  4  2  0  0  0  0\n"
+            "  4  5  1  0  0  0  0\n"
+            "  5  6  2  0  0  0  0\n"
+            "  6  1  1  0  0  0  0\n"
+            "M  END\n"
+        )
+        mol = read_mol_block(mol_block)
+        assert sum(bool(x) for x in mol.aromatic) == 6
+        assert to_smiles(mol) == "c1ccccc1"
 
     def test_charged_atom(self):
         mol = parse_smiles("[NH4+]")
@@ -613,6 +638,25 @@ class TestMolGraph:
         assert mol.n == 3
         assert mol.atomic_num[0] == 6
         assert mol.atomic_num[2] == 8
+
+    def test_builder_can_defer_and_explicitly_run_aromaticity_perception(self):
+        builder = MolGraphBuilder()
+        builder.atom_count(6)
+        builder.atomic_numbers([6, 6, 6, 6, 6, 6])
+        builder.formal_charges([0, 0, 0, 0, 0, 0])
+        builder.ring_flags([0, 0, 0, 0, 0, 0])
+        builder.aromatic_flags([0, 0, 0, 0, 0, 0])
+        builder.neighbors([[1, 5], [0, 2], [1, 3], [2, 4], [3, 5], [4, 0]])
+        builder.bond_orders([[2, 1], [2, 1], [1, 2], [2, 1], [1, 2], [2, 1]])
+
+        mol = builder.build(perceive_aromaticity=False)
+        assert sum(bool(x) for x in mol.aromatic) == 0
+        assert sum(bool(x) for x in mol.ring) == 0
+
+        perceive_aromaticity(mol)
+        assert sum(bool(x) for x in mol.aromatic) == 6
+        assert sum(bool(x) for x in mol.ring) == 6
+        assert to_smiles(mol) == "c1ccccc1"
 
     def test_builder_accepts_dense_bond_matrix_rows(self):
         builder = MolGraphBuilder()
