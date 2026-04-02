@@ -1,0 +1,46 @@
+# compare_mode=strict
+# === MCS Benchmark ===
+pair	category	smsd_best_us	smsd_median_us	smsd_mcs	rdkit_best_us	rdkit_median_us	rdkit_mcs	rdkit_timeout
+methane-ethane	Trivial	1111.0	1111.0	1	1593.3	1593.3	1	False
+benzene-toluene	Small aromatic	207.7	207.7	6	613.4	613.4	6	False
+benzene-phenol	Heteroatom	125.4	125.4	6	137.4	137.4	6	False
+aspirin-acetaminophen	Drug pair	958.8	958.8	8	335.6	335.6	7	False
+caffeine-theophylline	N-methyl diff	254.7	254.7	13	687.5	687.5	13	False
+morphine-codeine	Alkaloid	772.6	772.6	19	352852.3	352852.3	20	False
+ibuprofen-naproxen	NSAID	1521.0	1521.0	12	2051.2	2051.2	12	False
+ATP-ADP	Nucleotide	996.6	996.6	27	765.5	765.5	27	False
+NAD-NADH	Cofactor	43115751.7	43115751.7	36	2554.6	2554.6	34	False
+atorvastatin-rosuvastatin	Statin	1644139.2	1644139.2	22	3470.1	3470.1	15	False
+paclitaxel-docetaxel	Taxane	7840.8	7840.8	54	10023562.6	10023562.6	53	True
+erythromycin-azithromycin	Macrolide	5017.7	5017.7	49	5046945.9	5046945.9	50	False
+strychnine-quinine	Alkaloid scaffold	218370.3	218370.3	16	2347.4	2347.4	8	False
+vancomycin-self	Self-match large	6605.9	6605.9	101	6240.8	6240.8	101	False
+adamantane-self	Symmetric	443.0	443.0	10	257.7	257.7	10	False
+cubane-self	Cage	615.1	615.1	8	205.2	205.2	8	False
+PEG12-PEG16	Polymer	1562.5	1562.5	40	1540.5	1540.5	40	False
+coronene-self	PAH	6785.3	6785.3	24	593.4	593.4	24	False
+guanine-keto-enol	Tautomer	1030.2	1030.2	10	219.6	219.6	10	False
+rdkit-1585-pair	Known failure	5183.6	5183.6	21	1878864.7	1878864.7	21	False
+
+# === Substructure Benchmark ===
+pair	category	smsd_median_us	smsd_hit	rdkit_median_us	rdkit_hit
+methane-ethane	Trivial	898.8	True	1913.0	True
+benzene-toluene	Small aromatic	4.3	True	10.2	True
+benzene-phenol	Heteroatom	3.3	True	27.2	True
+aspirin-acetaminophen	Drug pair	1.4	False	5.2	False
+caffeine-theophylline	N-methyl diff	1.7	False	7.0	False
+morphine-codeine	Alkaloid	7.8	False	14.9	False
+ibuprofen-naproxen	NSAID	7.5	False	12.5	False
+ATP-ADP	Nucleotide	11.0	True	11.4	True
+NAD-NADH	Cofactor	3.4	False	11.5	False
+atorvastatin-rosuvastatin	Statin	1.2	False	6.4	False
+paclitaxel-docetaxel	Taxane	1.3	False	7.1	False
+erythromycin-azithromycin	Macrolide	2.6	False	20.8	False
+strychnine-quinine	Alkaloid scaffold	1.2	False	5.5	False
+vancomycin-self	Self-match large	14.8	True	21.9	True
+adamantane-self	Symmetric	2.9	True	26.2	True
+cubane-self	Cage	2.7	True	8.2	True
+PEG12-PEG16	Polymer	7.6	True	11.8	True
+coronene-self	PAH	5.1	True	9.9	True
+guanine-keto-enol	Tautomer	3.4	False	6.3	False
+rdkit-1585-pair	Known failure	2.4	False	19.0	False

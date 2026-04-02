@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2018-2026 BioInception PVT LTD
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - name: Build Docker image
+        run: docker build . --file Dockerfile --tag smsd:ci-${{ github.sha }}
+      - name: Smoke test
+        run: docker run --rm smsd:ci-${{ github.sha }} --help
