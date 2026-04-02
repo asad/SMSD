@@ -89,6 +89,33 @@ class TestParseSMILES:
         mol2 = parse_smiles(smi)
         assert mol2.n == mol1.n
 
+    def test_kekule_benzene_is_perceived_as_aromatic(self):
+        mol = parse_smiles("C1=CC=CC=C1")
+        assert sum(bool(x) for x in mol.aromatic) == 6
+        assert to_smiles(mol) == "c1ccccc1"
+
+    def test_kekule_naphthalene_is_perceived_as_aromatic(self):
+        mol = parse_smiles("C1=CC2=CC=CC=C2C=C1")
+        assert sum(bool(x) for x in mol.aromatic) == 10
+        assert to_smiles(mol) == "c1ccc2ccccc2c1"
+
+    def test_kekule_naphthalene_variant_is_perceived_as_aromatic(self):
+        mol = parse_smiles("C1=CC2=C(C=C1)C=CC=C2")
+        assert sum(bool(x) for x in mol.aromatic) == 10
+        assert to_smiles(mol) == "c1ccc2ccccc2c1"
+
+    def test_kekule_furan_is_perceived_as_aromatic(self):
+        mol = parse_smiles("O1C=CC=C1")
+        assert sum(bool(x) for x in mol.aromatic) == 5
+        assert to_smiles(mol) == "c1ccoc1"
+
+    def test_non_aromatic_ring_controls_stay_non_aromatic(self):
+        dihydropyridine = parse_smiles("C1=CCNC=C1")
+        quinone = parse_smiles("O=C1C=CC=CC1=O")
+
+        assert sum(bool(x) for x in dihydropyridine.aromatic) == 0
+        assert sum(bool(x) for x in quinone.aromatic) == 0
+
     def test_charged_atom(self):
         mol = parse_smiles("[NH4+]")
         assert mol.n == 1
@@ -204,6 +231,14 @@ class TestSubstructure:
         opts.use_bond_stereo = True
         assert is_substructure(query, target, opts) is False
 
+    def test_kekule_fused_aromatic_matches_strict_aromatic_query(self):
+        query = parse_smiles("c1ccc2ccccc2c1")
+        target = parse_smiles("C1=CC2=CC=CC=C2C=C1")
+        opts = ChemOptions()
+        opts.aromaticity_mode = AromaticityMode.STRICT
+        opts.ring_matches_ring_only = True
+        assert is_substructure(query, target, opts) is True
+
 
 # ===========================================================================
 # MCS (Maximum Common Substructure)
@@ -261,6 +296,15 @@ class TestMCS:
         assert len(find_mcs(ring, chain, relaxed)) == 5
         assert len(find_mcs(chain, ring, relaxed)) == 5
         assert is_substructure(chain, ring, relaxed) is True
+
+    def test_strict_aromatic_mcs_accepts_kekule_fused_ring(self):
+        aromatic = parse_smiles("c1ccc2ccccc2c1")
+        kekule = parse_smiles("C1=CC2=CC=CC=C2C=C1")
+        opts = ChemOptions()
+        opts.aromaticity_mode = AromaticityMode.STRICT
+        opts.ring_matches_ring_only = True
+        mapping = find_mcs(aromatic, kekule, opts)
+        assert len(mapping) == 10
 
 
 # ===========================================================================

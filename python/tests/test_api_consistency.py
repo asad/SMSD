@@ -14,13 +14,17 @@ import smsd
 from smsd import (
     MolGraphBuilder,
     assign_rs,
+    batch_mcs_size,
+    compile_smarts,
     export_sdf,
     from_hex,
     fingerprint,
     mcs,
     parse_smiles,
+    prewarm,
     read_molfile,
     smarts_match,
+    smarts_find_all,
     substructure_search,
     to_hex,
     to_smiles,
@@ -197,6 +201,48 @@ def test_rgroup_fragment_smarts_mcs_and_fingerprint_pipeline():
     assert smarts_match("[*]c1ccccc1", target) is True
     assert len(fingerprint(core, kind="path")) > 0
     assert len(mcs(core, target)) >= 6
+
+
+def test_compiled_smarts_queries_can_be_reused_across_targets():
+    """Compiled SMARTS objects should avoid reparsing while matching repeatedly."""
+    compiled = compile_smarts("[#6]~[#7]")
+    targets = [parse_smiles("CCN"), parse_smiles("CCC"), parse_smiles("NCCN")]
+
+    assert compiled.matches(targets[0]) is True
+    assert compiled.matches(targets[1]) is False
+    assert compiled.matches_many(targets) == [True, False, True]
+    assert smarts_match(compiled, targets[0]) is True
+    assert smarts_find_all(compiled, "CCN") == [{0: 1, 1: 2}]
+
+
+def test_prewarm_helper_populates_lazy_graph_fields():
+    """Explicit prewarm should fill canonical/orbit caches ahead of batch use."""
+    mol = parse_smiles("c1ccccc1")
+    assert mol.morgan_rank == []
+    assert mol.canonical_label == []
+    assert mol.orbit == []
+
+    prepared = prewarm(mol)
+    assert prepared is mol
+    assert len(mol.morgan_rank) == mol.n
+    assert len(mol.canonical_label) == mol.n
+    assert len(mol.orbit) == mol.n
+
+
+def test_size_first_batch_helpers_keep_hit_order_and_sizes():
+    """Size-oriented batch helpers should expose screening-friendly results."""
+    query = parse_smiles("c1ccccc1")
+    targets = [parse_smiles("c1ccccc1"), parse_smiles("c1ccc(O)cc1")]
+
+    assert batch_mcs_size(query, targets, timeout_ms=1000) == [6, 6]
+
+    mapping_hits = smsd.screen_and_match(query, targets, 0.95, timeout_ms=1000)
+    size_hits = smsd.screen_and_mcs_size(query, targets, 0.95, timeout_ms=1000)
+
+    assert len(mapping_hits) == 1
+    assert mapping_hits[0][0] == 0
+    assert len(mapping_hits[0][1]) == 6
+    assert size_hits == [(0, 6)]
 
 
 def test_stereo_smarts_substructure_and_mcs_pipeline():

@@ -68,6 +68,17 @@ inline int resolveThreads(int numThreads) {
 #endif
 }
 
+/// Precompute common lazy MolGraph invariants from a single thread before
+/// entering parallel matching code.
+inline void prewarmGraph(const MolGraph& g) {
+    g.ensureCanonical();
+    g.ensureRingCounts();
+    g.getNLF1();
+    g.getNLF2();
+    g.getNLF3();
+    g.getNeighborsByDegDesc();
+}
+
 /// Simple path-based fingerprint generation for a single molecule.
 /// Enumerates all paths up to pathLength and hashes them into fpSize bits.
 /// Returns a vector of uint64_t words representing the fingerprint.
@@ -868,15 +879,9 @@ inline std::vector<bool> batchSubstructure(
 
     // Eagerly initialize ALL lazy fields before entering the parallel region.
     // MolGraph lazy caches are not thread-safe on first construction.
-    auto prewarm = [](const MolGraph& g) {
-        g.ensureCanonical();
-        g.ensureRingCounts();
-        g.getNLF1(); g.getNLF2(); g.getNLF3();
-        g.getNeighborsByDegDesc();
-    };
-    prewarm(query);
+    detail::prewarmGraph(query);
     for (const MolGraph& t : targets) {
-        if (t.n >= query.n) prewarm(t);
+        if (t.n >= query.n) detail::prewarmGraph(t);
     }
 
     // Use uint8_t instead of vector<bool> — vector<bool> packs bits into
@@ -921,14 +926,8 @@ inline std::vector<std::map<int,int>> batchMCS(
     if (N == 0 || query.n == 0) return results;
 
     // Eagerly initialize all lazy fields before parallel region.
-    auto prewarm = [](const MolGraph& g) {
-        g.ensureCanonical();
-        g.ensureRingCounts();
-        g.getNLF1(); g.getNLF2(); g.getNLF3();
-        g.getNeighborsByDegDesc();
-    };
-    prewarm(query);
-    for (const MolGraph& t : targets) prewarm(t);
+    detail::prewarmGraph(query);
+    for (const MolGraph& t : targets) detail::prewarmGraph(t);
 
     int nThreads = detail::resolveThreads(numThreads);
     (void)nThreads;
@@ -939,6 +938,39 @@ inline std::vector<std::map<int,int>> batchMCS(
     for (int i = 0; i < N; ++i) {
         if (targets[i].n > 0) {
             results[i] = findMCS(query, targets[i], chem, opts);
+        }
+    }
+
+    return results;
+}
+
+/// Find the MCS size between query and each target molecule.
+/// Returns atom counts only, avoiding mapping materialization at the API
+/// boundary when callers only need screening sizes.
+inline std::vector<int> batchMCSSize(
+    const MolGraph& query,
+    const std::vector<MolGraph>& targets,
+    const ChemOptions& chem,
+    const McsOptions& opts,
+    int numThreads = 0)
+{
+    const int N = static_cast<int>(targets.size());
+    std::vector<int> results(N, 0);
+
+    if (N == 0 || query.n == 0) return results;
+
+    detail::prewarmGraph(query);
+    for (const MolGraph& t : targets) detail::prewarmGraph(t);
+
+    int nThreads = detail::resolveThreads(numThreads);
+    (void)nThreads;
+
+#ifdef _OPENMP
+    #pragma omp parallel for schedule(dynamic, 1) num_threads(nThreads)
+#endif
+    for (int i = 0; i < N; ++i) {
+        if (targets[i].n > 0) {
+            results[i] = static_cast<int>(findMCS(query, targets[i], chem, opts).size());
         }
     }
 
@@ -995,6 +1027,9 @@ inline std::vector<std::pair<int, std::map<int,int>>> screenAndMatch(
 
     if (hits.empty()) return {};
 
+    detail::prewarmGraph(query);
+    for (int idx : hits) detail::prewarmGraph(targets[idx]);
+
     // --- Phase 2: Exact MCS on hits only (parallel) ---
     const int H = static_cast<int>(hits.size());
     std::vector<std::map<int,int>> mcsMaps(H);
@@ -1013,6 +1048,69 @@ inline std::vector<std::pair<int, std::map<int,int>>> screenAndMatch(
     for (int h = 0; h < H; ++h) {
         if (!mcsMaps[h].empty()) {
             results.emplace_back(hits[h], std::move(mcsMaps[h]));
+        }
+    }
+
+    return results;
+}
+
+/// Two-phase RASCAL screening followed by exact MCS size computation on hits.
+/// Returns (target_index, mcs_size) for each screened-in target with a non-zero
+/// exact MCS.
+inline std::vector<std::pair<int, int>> screenAndMCSSize(
+    const MolGraph& query,
+    const std::vector<MolGraph>& targets,
+    const ChemOptions& chem,
+    const McsOptions& opts,
+    double rascalThreshold = 0.3,
+    int numThreads = 0)
+{
+    const int N = static_cast<int>(targets.size());
+    if (N == 0 || query.n == 0) return {};
+
+    int nThreads = detail::resolveThreads(numThreads);
+    (void)nThreads;
+
+    std::vector<double> scores(N, 0.0);
+
+#ifdef _OPENMP
+    #pragma omp parallel for schedule(dynamic, 64) num_threads(nThreads)
+#endif
+    for (int i = 0; i < N; ++i) {
+        if (targets[i].n > 0) {
+            scores[i] = similarityUpperBound(query, targets[i]);
+        }
+    }
+
+    std::vector<int> hits;
+    hits.reserve(N / 10);
+    for (int i = 0; i < N; ++i) {
+        if (scores[i] >= rascalThreshold) {
+            hits.push_back(i);
+        }
+    }
+
+    if (hits.empty()) return {};
+
+    detail::prewarmGraph(query);
+    for (int idx : hits) detail::prewarmGraph(targets[idx]);
+
+    const int H = static_cast<int>(hits.size());
+    std::vector<int> mcsSizes(H, 0);
+
+#ifdef _OPENMP
+    #pragma omp parallel for schedule(dynamic, 1) num_threads(nThreads)
+#endif
+    for (int h = 0; h < H; ++h) {
+        int idx = hits[h];
+        mcsSizes[h] = static_cast<int>(findMCS(query, targets[idx], chem, opts).size());
+    }
+
+    std::vector<std::pair<int, int>> results;
+    results.reserve(H);
+    for (int h = 0; h < H; ++h) {
+        if (mcsSizes[h] > 0) {
+            results.emplace_back(hits[h], mcsSizes[h]);
         }
     }
 

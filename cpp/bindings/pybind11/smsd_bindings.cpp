@@ -455,6 +455,16 @@ PYBIND11_MODULE(_smsd, m) {
         .def("ensure_ring_counts", [](const smsd::MolGraph& g) {
                  g.ensureRingCounts();
              }, "Compute and cache per-atom ring counts")
+        .def("prewarm", [](const smsd::MolGraph& g) {
+                 g.ensureCanonical();
+                 g.ensureRingCounts();
+                 g.getNLF1();
+                 g.getNLF2();
+                 g.getNLF3();
+                 g.getNeighborsByDegDesc();
+             },
+             py::call_guard<py::gil_scoped_release>(),
+             "Compute and cache common lazy invariants used by matching and batch APIs")
         .def("has_bond", [](const smsd::MolGraph& g, int i, int j) {
                  if (i < 0 || i >= g.n || j < 0 || j >= g.n)
                      throw py::index_error("atom index out of range");
@@ -877,6 +887,22 @@ PYBIND11_MODULE(_smsd, m) {
           "Parallel 1-query-vs-N MCS. Returns list[dict] of atom mappings. "
           "num_threads=0 uses all available processors.");
 
+    m.def("batch_mcs_size",
+          [](const smsd::MolGraph& query,
+             const std::vector<smsd::MolGraph>& targets,
+             const smsd::ChemOptions& chem,
+             const smsd::McsOptions& opts,
+             int numThreads) {
+              return smsd::batch::batchMCSSize(query, targets, chem, opts, numThreads);
+          },
+          py::arg("query"), py::arg("targets"),
+          py::arg("chem")        = smsd::ChemOptions(),
+          py::arg("opts")        = smsd::McsOptions(),
+          py::arg("num_threads") = 0,
+          py::call_guard<py::gil_scoped_release>(),
+          "Parallel 1-query-vs-N MCS size only. Returns list[int]. "
+          "num_threads=0 uses all available processors.");
+
     // -----------------------------------------------------------------------
     // Batch screening + fingerprint
     // -----------------------------------------------------------------------
@@ -895,6 +921,22 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("num_threads") = 0,
           py::call_guard<py::gil_scoped_release>(),
           "RASCAL pre-screen + exact MCS on hits. Returns list[(index, mapping)].");
+
+    m.def("screen_and_mcs_size",
+          [](const smsd::MolGraph& query,
+             const std::vector<smsd::MolGraph>& targets,
+             double threshold,
+             const smsd::ChemOptions& chem,
+             const smsd::McsOptions& opts,
+             int numThreads) {
+              return smsd::batch::screenAndMCSSize(query, targets, chem, opts, threshold, numThreads);
+          },
+          py::arg("query"), py::arg("targets"), py::arg("threshold"),
+          py::arg("chem")        = smsd::ChemOptions(),
+          py::arg("opts")        = smsd::McsOptions(),
+          py::arg("num_threads") = 0,
+          py::call_guard<py::gil_scoped_release>(),
+          "RASCAL pre-screen + exact MCS size on hits. Returns list[(index, size)].");
 
     m.def("batch_fingerprint",
           [](const std::vector<smsd::MolGraph>& mols,
@@ -1232,6 +1274,47 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("max_matches") = 1000,
           "Find all SMARTS substructure matches in a target molecule.\n"
           "Returns list of dicts (SMARTS atom idx -> target atom idx).");
+
+    py::class_<smsd::SmartsQuery>(m, "SmartsQuery")
+        .def("atom_count", &smsd::SmartsQuery::atomCount,
+             "Number of atoms in the compiled SMARTS query")
+        .def("matching_order", &smsd::SmartsQuery::matchingOrder,
+             "Return the historical/debug BFS matching order for the query")
+        .def("matches", &smsd::SmartsQuery::matches,
+             py::arg("target"),
+             py::call_guard<py::gil_scoped_release>(),
+             "Check if this compiled SMARTS query matches a target molecule")
+        .def("find_all", &smsd::SmartsQuery::findAll,
+             py::arg("target"),
+             py::arg("max_matches") = 1000,
+             py::call_guard<py::gil_scoped_release>(),
+             "Find all matches of this compiled SMARTS query in a target molecule")
+        .def("matches_many",
+             [](const smsd::SmartsQuery& query,
+                const std::vector<smsd::MolGraph>& targets) {
+                 std::vector<bool> results;
+                 results.reserve(targets.size());
+                 for (const auto& target : targets) {
+                     results.push_back(query.matches(target));
+                 }
+                 return results;
+             },
+             py::arg("targets"),
+             py::call_guard<py::gil_scoped_release>(),
+             "Match one compiled SMARTS query against many targets")
+        .def("__len__", &smsd::SmartsQuery::atomCount)
+        .def("__repr__", [](const smsd::SmartsQuery& q) {
+            return "<SmartsQuery atoms=" + std::to_string(q.atomCount()) + ">";
+        });
+
+    m.def("compile_smarts",
+          [](const std::string& smartsStr, int maxRecursionDepth) {
+              return smsd::parseSMARTS(smartsStr, maxRecursionDepth);
+          },
+          py::arg("smarts"),
+          py::arg("max_recursion_depth") = 20,
+          py::call_guard<py::gil_scoped_release>(),
+          "Parse SMARTS once and return a reusable compiled query object.");
 
     // -----------------------------------------------------------------------
     // Ring layout utilities

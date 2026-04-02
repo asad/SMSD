@@ -461,6 +461,295 @@ struct MolGraph {
         computeRingCounts(computeRings());
     }
 
+    static bool isAromaticDonorElement(int z) {
+        return z == 7 || z == 8 || z == 15 || z == 16 || z == 33 || z == 34
+            || z == 51 || z == 52;
+    }
+
+    static bool isSimpleCycle(const std::vector<int>& cycle) {
+        if (cycle.size() < 3) return false;
+        std::unordered_set<int> seen;
+        seen.reserve(cycle.size());
+        for (int atom : cycle) {
+            if (!seen.insert(atom).second) return false;
+        }
+        return true;
+    }
+
+    int aromaticPiContribution(const std::vector<int>& cycle, int pos) const {
+        const int len = static_cast<int>(cycle.size());
+        const int atom = cycle[pos];
+        const int prev = cycle[(pos + len - 1) % len];
+        const int next = cycle[(pos + 1) % len];
+
+        int cyclePiBonds = 0;
+        bool hasExplicitAromaticBond = false;
+        for (int nb : {prev, next}) {
+            int ord = bondOrder(atom, nb);
+            if (ord == 3) return -1;
+            if (ord == 4) {
+                hasExplicitAromaticBond = true;
+            } else if (ord == 2) {
+                ++cyclePiBonds;
+            }
+        }
+
+        if (hasExplicitAromaticBond) return 1;
+        if (cyclePiBonds == 1) return 1;
+        if (cyclePiBonds > 1) return -1;
+
+        bool hasExocyclicMultipleBond = false;
+        for (int nb : neighbors[atom]) {
+            if (nb == prev || nb == next) continue;
+            int ord = bondOrder(atom, nb);
+            if (ord >= 2 && ord != 4) {
+                hasExocyclicMultipleBond = true;
+                break;
+            }
+        }
+
+        const int z = atomicNum[atom];
+        const int q = formalCharge.empty() ? 0 : formalCharge[atom];
+
+        if (z == 6) {
+            if (q < 0 && !hasExocyclicMultipleBond) return 2;
+            if (q > 0) return 0;
+            return -1;
+        }
+
+        if (z == 5 || z == 13) {
+            if (q < 0 && !hasExocyclicMultipleBond) return 2;
+            return -1;
+        }
+
+        if (isAromaticDonorElement(z)) {
+            if (q > 0) return 0;
+            if (hasExocyclicMultipleBond) return -1;
+            return 2;
+        }
+
+        return -1;
+    }
+
+    bool cycleLooksAromatic(const std::vector<int>& cycle) const {
+        const int len = static_cast<int>(cycle.size());
+        if (len < 3 || len > 24) return false;
+
+        int piElectrons = 0;
+        bool sawCyclePi = false;
+        for (int pos = 0; pos < len; ++pos) {
+            int contrib = aromaticPiContribution(cycle, pos);
+            if (contrib < 0) return false;
+            if (contrib == 1 || contrib == 2) sawCyclePi = true;
+            piElectrons += contrib;
+        }
+
+        if (!sawCyclePi || piElectrons < 2) return false;
+        return ((piElectrons - 2) % 4) == 0;
+    }
+
+    void enumerateRingCyclesDfs(
+        int root,
+        int current,
+        const std::vector<std::vector<int>>& ringAdj,
+        const std::vector<uint8_t>& inComponent,
+        std::vector<uint8_t>& inPath,
+        std::vector<int>& path,
+        std::set<std::vector<int64_t>>& seenCycles,
+        std::vector<std::vector<int>>& cycles,
+        size_t maxCycles) const {
+        if (cycles.size() >= maxCycles || path.size() > 24) return;
+
+        for (int nb : ringAdj[current]) {
+            if (!inComponent[nb] || nb < root) continue;
+            if (nb == root) {
+                if (path.size() >= 3) {
+                    auto key = canonicalCycleKey(path);
+                    if (seenCycles.insert(key).second) cycles.push_back(path);
+                }
+                continue;
+            }
+            if (inPath[nb] || path.size() >= 24) continue;
+
+            inPath[nb] = 1;
+            path.push_back(nb);
+            enumerateRingCyclesDfs(
+                root, nb, ringAdj, inComponent, inPath, path,
+                seenCycles, cycles, maxCycles);
+            path.pop_back();
+            inPath[nb] = 0;
+
+            if (cycles.size() >= maxCycles) return;
+        }
+    }
+
+    std::vector<std::vector<int>> collectAromaticCandidateCycles() const {
+        std::vector<std::vector<int>> cycles;
+        std::set<std::vector<int64_t>> seenCycles;
+
+        auto addCycle = [&](const std::vector<int>& cycle) {
+            if (!isSimpleCycle(cycle)) return;
+            if (cycle.size() < 3 || cycle.size() > 24) return;
+            auto key = canonicalCycleKey(cycle);
+            if (seenCycles.insert(key).second) cycles.push_back(cycle);
+        };
+
+        for (const auto& cycle : computeRelevantCycles()) addCycle(cycle);
+
+        std::vector<std::vector<int>> ringAdj(n);
+        for (int i = 0; i < n; ++i) {
+            if (!ring[i]) continue;
+            for (int nb : neighbors[i]) {
+                if (i < nb && bondInRing(i, nb)) {
+                    ringAdj[i].push_back(nb);
+                    ringAdj[nb].push_back(i);
+                }
+            }
+        }
+
+        std::vector<uint8_t> visited(n, uint8_t(0));
+        std::vector<uint8_t> inComponent(n, uint8_t(0));
+        std::vector<uint8_t> inPath(n, uint8_t(0));
+        for (int start = 0; start < n; ++start) {
+            if (!ring[start] || visited[start] || ringAdj[start].empty()) continue;
+
+            std::vector<int> component;
+            std::deque<int> queue;
+            queue.push_back(start);
+            visited[start] = 1;
+            while (!queue.empty()) {
+                int atom = queue.front();
+                queue.pop_front();
+                component.push_back(atom);
+                for (int nb : ringAdj[atom]) {
+                    if (visited[nb]) continue;
+                    visited[nb] = 1;
+                    queue.push_back(nb);
+                }
+            }
+
+            int edgeCount = 0;
+            for (int atom : component) edgeCount += static_cast<int>(ringAdj[atom].size());
+            edgeCount /= 2;
+            const int cycleRank = edgeCount - static_cast<int>(component.size()) + 1;
+            if (cycleRank <= 1 || component.size() > 24 || cycleRank > 8) continue;
+
+            std::fill(inComponent.begin(), inComponent.end(), uint8_t(0));
+            for (int atom : component) inComponent[atom] = 1;
+
+            std::sort(component.begin(), component.end());
+            for (int root : component) {
+                if (ringAdj[root].size() < 2) continue;
+                std::fill(inPath.begin(), inPath.end(), uint8_t(0));
+                std::vector<int> path = { root };
+                inPath[root] = 1;
+
+                for (int nb : ringAdj[root]) {
+                    if (!inComponent[nb] || nb <= root) continue;
+                    inPath[nb] = 1;
+                    path.push_back(nb);
+                    enumerateRingCyclesDfs(
+                        root, nb, ringAdj, inComponent, inPath, path,
+                        seenCycles, cycles, 4096);
+                    path.pop_back();
+                    inPath[nb] = 0;
+                    if (cycles.size() >= 4096) break;
+                }
+                inPath[root] = 0;
+                if (cycles.size() >= 4096) break;
+            }
+            if (cycles.size() >= 4096) break;
+        }
+
+        return cycles;
+    }
+
+    void clearRingFlagsFromTopology() {
+        std::fill(ring.begin(), ring.end(), uint8_t(0));
+        if (useDense) {
+            for (auto& row : bondRingMatrix) {
+                std::fill(row.begin(), row.end(), false);
+            }
+        } else {
+            for (auto& kv : sparseBondProps) {
+                kv.second[1] = 0;
+            }
+        }
+    }
+
+    void markRingEdge(int i, int j) {
+        ring[i] = 1;
+        ring[j] = 1;
+        if (useDense) {
+            bondRingMatrix[i][j] = true;
+            bondRingMatrix[j][i] = true;
+        } else {
+            auto it = sparseBondProps.find(bondKey(i, j));
+            if (it != sparseBondProps.end()) it->second[1] = 1;
+        }
+    }
+
+    void markAromaticEdge(int i, int j) {
+        if (useDense) {
+            bondOrdMatrix[i][j] = 4;
+            bondOrdMatrix[j][i] = 4;
+            bondAromMatrix[i][j] = true;
+            bondAromMatrix[j][i] = true;
+        } else {
+            auto it = sparseBondProps.find(bondKey(i, j));
+            if (it != sparseBondProps.end()) {
+                it->second[0] = 4;
+                it->second[2] = 1;
+            }
+        }
+    }
+
+    void normalizeRingAndAromaticity() {
+        if (n == 0) return;
+
+        clearRingFlagsFromTopology();
+        const auto& sssr = computeRings();
+        for (const auto& cycle : sssr) {
+            for (size_t i = 0; i < cycle.size(); ++i) {
+                int a = cycle[i];
+                int b = cycle[(i + 1) % cycle.size()];
+                markRingEdge(a, b);
+            }
+        }
+
+        std::vector<uint8_t> perceivedAromatic = aromatic;
+        std::vector<std::pair<int, int>> aromaticEdges;
+        for (int i = 0; i < n; ++i) {
+            if (!ring[i]) continue;
+            for (int nb : neighbors[i]) {
+                if (i < nb && bondInRing(i, nb) && bondAromatic(i, nb)) {
+                    aromaticEdges.emplace_back(i, nb);
+                }
+            }
+        }
+
+        auto candidateCycles = collectAromaticCandidateCycles();
+        for (const auto& cycle : candidateCycles) {
+            if (!cycleLooksAromatic(cycle)) continue;
+            for (int atom : cycle) perceivedAromatic[atom] = 1;
+            for (size_t i = 0; i < cycle.size(); ++i) {
+                int a = cycle[i];
+                int b = cycle[(i + 1) % cycle.size()];
+                aromaticEdges.emplace_back(std::min(a, b), std::max(a, b));
+            }
+        }
+
+        for (int i = 0; i < n; ++i) {
+            if (perceivedAromatic[i]) aromatic[i] = 1;
+        }
+
+        std::sort(aromaticEdges.begin(), aromaticEdges.end());
+        aromaticEdges.erase(std::unique(aromaticEdges.begin(), aromaticEdges.end()), aromaticEdges.end());
+        for (const auto& edge : aromaticEdges) {
+            markAromaticEdge(edge.first, edge.second);
+        }
+    }
+
     // ========================================================================
     // SSSR ring computation (Horton-style shortest-path basis)
     // ========================================================================
@@ -2921,14 +3210,6 @@ public:
             if (ring_.empty())     g.ring.assign(n_, uint8_t(0));     else g.ring = ring_;
             if (aromatic_.empty()) g.aromatic.assign(n_, uint8_t(0)); else g.aromatic = aromatic_;
 
-            // Compute label = (atomicNum << 2) | (aromatic ? 2 : 0) | (ring ? 1 : 0)
-            g.label.resize(n_);
-            for (int i = 0; i < n_; i++) {
-                g.label[i] = (g.atomicNum[i] << 2)
-                            | (g.aromatic[i] ? 2 : 0)
-                            | (g.ring[i] ? 1 : 0);
-            }
-
             // Neighbors + degree
             g.neighbors = neighbors_;
             g.degree.resize(n_);
@@ -3001,6 +3282,16 @@ public:
             g.programLine = programLine_;
             g.comment = comment_;
             g.properties = properties_;
+
+            g.normalizeRingAndAromaticity();
+
+            // Compute label = (atomicNum << 2) | (aromatic ? 2 : 0) | (ring ? 1 : 0)
+            g.label.resize(n_);
+            for (int i = 0; i < n_; i++) {
+                g.label[i] = (g.atomicNum[i] << 2)
+                            | (g.aromatic[i] ? 2 : 0)
+                            | (g.ring[i] ? 1 : 0);
+            }
 
             g.ringCount.assign(n_, 0);
             g.solvent_ = solvent_;

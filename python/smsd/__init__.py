@@ -167,8 +167,18 @@ try:
         smarts_match as _smarts_match_raw,
         smarts_find_all as _smarts_find_all_raw,
     )
+    try:
+        from smsd._smsd import (
+            SmartsQuery,
+            compile_smarts as _compile_smarts_raw,
+        )
+    except ImportError:
+        SmartsQuery = None
+        _compile_smarts_raw = None
     _HAS_SMARTS = True
 except ImportError:
+    SmartsQuery = None
+    _compile_smarts_raw = None
     _HAS_SMARTS = False
 
 
@@ -533,9 +543,83 @@ def batch_mcs(query, targets, *, timeout_ms=10000, **kwargs):
     ts = [_ensure_mol(t) for t in targets]
     opts = McsOptions()
     opts.timeout_ms = timeout_ms
+    num_threads = kwargs.pop("num_threads", 0)
     for k, v in kwargs.items():
         setattr(opts, k, v)
-    return _batch_mcs(q, ts, ChemOptions(), opts)
+    return _batch_mcs(q, ts, ChemOptions(), opts, num_threads)
+
+
+def batch_mcs_size(query, targets, *, timeout_ms=10000, num_threads=0, **kwargs):
+    """Compute MCS atom counts for query against many targets in parallel.
+
+    This avoids Python-side dict construction when callers only need sizes.
+
+    Args:
+        query: MolGraph or SMILES string.
+        targets: List of MolGraph or SMILES strings.
+        timeout_ms: Per-pair timeout in milliseconds.
+        num_threads: OpenMP worker count. `0` uses all available processors.
+        **kwargs: Extra McsOptions fields.
+
+    Returns:
+        list[int]: MCS sizes in query-target order.
+    """
+    from smsd._smsd import batch_mcs_size as _batch_mcs_size  # type: ignore[import]
+    q = _ensure_mol(query)
+    ts = [_ensure_mol(t) for t in targets]
+    opts = McsOptions()
+    opts.timeout_ms = timeout_ms
+    for k, v in kwargs.items():
+        setattr(opts, k, v)
+    return _batch_mcs_size(q, ts, ChemOptions(), opts, num_threads)
+
+
+def screen_and_match(query, targets, threshold, *, timeout_ms=10000, num_threads=0, **kwargs):
+    """RASCAL pre-screen followed by exact MCS on screened-in targets.
+
+    Args:
+        query: MolGraph or SMILES string.
+        targets: List of MolGraph or SMILES strings.
+        threshold: Minimum RASCAL upper-bound score to keep a target.
+        timeout_ms: Per-pair timeout in milliseconds for the exact MCS phase.
+        num_threads: OpenMP worker count. `0` uses all available processors.
+        **kwargs: Extra McsOptions fields.
+
+    Returns:
+        list[tuple[int, dict]]: `(target_index, mapping)` pairs for hits.
+    """
+    from smsd._smsd import screen_and_match as _screen_and_match  # type: ignore[import]
+    q = _ensure_mol(query)
+    ts = [_ensure_mol(t) for t in targets]
+    opts = McsOptions()
+    opts.timeout_ms = timeout_ms
+    for k, v in kwargs.items():
+        setattr(opts, k, v)
+    return _screen_and_match(q, ts, threshold, ChemOptions(), opts, num_threads)
+
+
+def screen_and_mcs_size(query, targets, threshold, *, timeout_ms=10000, num_threads=0, **kwargs):
+    """RASCAL pre-screen followed by exact MCS size on screened-in targets.
+
+    Args:
+        query: MolGraph or SMILES string.
+        targets: List of MolGraph or SMILES strings.
+        threshold: Minimum RASCAL upper-bound score to keep a target.
+        timeout_ms: Per-pair timeout in milliseconds for the exact MCS phase.
+        num_threads: OpenMP worker count. `0` uses all available processors.
+        **kwargs: Extra McsOptions fields.
+
+    Returns:
+        list[tuple[int, int]]: `(target_index, mcs_size)` pairs for hits.
+    """
+    from smsd._smsd import screen_and_mcs_size as _screen_and_mcs_size  # type: ignore[import]
+    q = _ensure_mol(query)
+    ts = [_ensure_mol(t) for t in targets]
+    opts = McsOptions()
+    opts.timeout_ms = timeout_ms
+    for k, v in kwargs.items():
+        setattr(opts, k, v)
+    return _screen_and_mcs_size(q, ts, threshold, ChemOptions(), opts, num_threads)
 
 
 def assign_rs(mol):
@@ -1402,6 +1486,41 @@ def decompose_r_groups(core, molecules, *, timeout_ms=10000):
 # SMARTS-based MCS and matching
 # ---------------------------------------------------------------------------
 
+def compile_smarts(smarts, *, max_recursion_depth=20):
+    """Parse SMARTS once and return a reusable compiled query object."""
+    if not _HAS_SMARTS:
+        raise NotImplementedError(
+            "SMARTS matching not available in this build. "
+            "Rebuild with smarts_parser.hpp included."
+        )
+    if SmartsQuery is not None and isinstance(smarts, SmartsQuery):
+        return smarts
+    if not isinstance(smarts, str):
+        raise TypeError(
+            f"Expected SMARTS string or SmartsQuery, got {type(smarts).__name__}"
+        )
+    if _compile_smarts_raw is None:
+        raise RuntimeError(
+            "compile_smarts requires a rebuilt extension with the 6.9.1 SMARTS bindings."
+        )
+    return _compile_smarts_raw(smarts, max_recursion_depth)
+
+
+def prewarm(mol):
+    """Compute and cache common lazy invariants on a MolGraph once."""
+    g = _ensure_mol(mol)
+    g.prewarm()
+    return g
+
+
+def _ensure_smarts_query(smarts):
+    if not _HAS_SMARTS:
+        raise NotImplementedError(
+            "SMARTS matching not available in this build. "
+            "Rebuild with smarts_parser.hpp included."
+        )
+    return compile_smarts(smarts)
+
 def find_mcs_smarts(smarts, target, *, max_matches=1000):
     """Find the largest SMARTS substructure match in a target molecule.
 
@@ -1423,13 +1542,14 @@ def find_mcs_smarts(smarts, target, *, max_matches=1000):
         mapping = smsd.find_mcs_smarts("[CX3](=O)[NX3]", "CC(=O)Nc1ccc(O)cc1")
         print(f"Matched {len(mapping)} atoms")
     """
-    if not _HAS_SMARTS:
-        raise NotImplementedError(
-            "SMARTS matching not available in this build. "
-            "Rebuild with smarts_parser.hpp included."
-        )
     g = _ensure_mol(target)
-    return _find_mcs_smarts_raw(smarts, g, max_matches)
+    if isinstance(smarts, str) and _compile_smarts_raw is None:
+        return _find_mcs_smarts_raw(smarts, g, max_matches)
+    query = _ensure_smarts_query(smarts)
+    matches = query.find_all(g, max_matches=max_matches)
+    if not matches:
+        return {}
+    return max(matches, key=len)
 
 
 def smarts_match(smarts, target):
@@ -1448,12 +1568,11 @@ def smarts_match(smarts, target):
         assert smsd.smarts_match("[#6]~[#7]", "CCN")
         assert not smsd.smarts_match("[#6]~[#7]", "CCC")
     """
-    if not _HAS_SMARTS:
-        raise NotImplementedError(
-            "SMARTS matching not available in this build."
-        )
     g = _ensure_mol(target)
-    return _smarts_match_raw(smarts, g)
+    if isinstance(smarts, str) and _compile_smarts_raw is None:
+        return _smarts_match_raw(smarts, g)
+    query = _ensure_smarts_query(smarts)
+    return query.matches(g)
 
 
 def smarts_find_all(smarts, target, *, max_matches=1000):
@@ -1473,12 +1592,11 @@ def smarts_find_all(smarts, target, *, max_matches=1000):
         matches = smsd.smarts_find_all("[#6]", "CCCC")
         assert len(matches) == 4  # 4 carbon atoms
     """
-    if not _HAS_SMARTS:
-        raise NotImplementedError(
-            "SMARTS matching not available in this build."
-        )
     g = _ensure_mol(target)
-    return _smarts_find_all_raw(smarts, g, max_matches)
+    if isinstance(smarts, str) and _compile_smarts_raw is None:
+        return _smarts_find_all_raw(smarts, g, max_matches)
+    query = _ensure_smarts_query(smarts)
+    return query.find_all(g, max_matches=max_matches)
 
 
 def _ensure_mol(obj):
@@ -2201,6 +2319,7 @@ __all__ = [
     "strip_atom_maps",
     "to_smiles",
     "to_smarts",
+    "compile_smarts",
     "write_mol_block",
     "write_mol_block_v3000",
     "write_sdf_record",
@@ -2214,6 +2333,7 @@ __all__ = [
     "find_all_mcs",
     "mcs",
     "all_mcs",
+    "prewarm",
     # Index translation
     "translate_to_atom_ids",
     "find_mcs_progressive",
@@ -2255,6 +2375,9 @@ __all__ = [
     # Parallel batch
     "batch_substructure",
     "batch_mcs",
+    "batch_mcs_size",
+    "screen_and_match",
+    "screen_and_mcs_size",
     "batch_mcs_rdkit",
     # GPU / compute backend
     "gpu_is_available",
