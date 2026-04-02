@@ -22,15 +22,17 @@ SMSD Pro provides exact substructure search and maximum common substructure
 (header-only), and **Python**. Optional GPU paths are available for CUDA and
 Apple Metal builds.
 
-The `6.9.0` line adds native MOL V2000 metadata preservation, native V3000
-round-trip support, and patent-style R-group molfile handling.
+The `6.9.1` line improves Python bindings, strengthens aromaticity
+perception for Kekule and fused-ring systems, and tightens matching
+reliability across the native and Java-aligned paths.
 
 User guides:
 - [Python guide](docs/PYTHON.md)
 - [Java guide](docs/JAVA.md)
 - [C++ guide](docs/CPP.md)
+- [Optimization roadmap](docs/OPTIMIZATION_ROADMAP.md)
 
-Native molfile scope in 6.9.0:
+Native molfile scope in 6.9.1:
 - supported: V2000 and V3000 core graph round-trip, names/comments, SDF properties, charges, isotopes, atom classes/maps, `R#` plus `M  RGP`, and basic stereo flags
 - not yet implemented as full native query chemistry: the more exotic MDL query atom/bond semantics such as full atom lists, variable attachment/query bonds, link nodes, and the complete Markush feature set
 
@@ -46,16 +48,16 @@ Native molfile scope in 6.9.0:
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>6.9.0</version>
+  <version>6.9.1</version>
 </dependency>
 ```
 
 ### Java (Download JAR)
 
 ```bash
-curl -LO https://github.com/asad/SMSD/releases/download/v6.9.0/smsd-6.9.0-jar-with-dependencies.jar
+curl -LO https://github.com/asad/SMSD/releases/download/v6.9.1/smsd-6.9.1-jar-with-dependencies.jar
 
-java -jar smsd-6.9.0-jar-with-dependencies.jar \
+java -jar smsd-6.9.1-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 ```
 
@@ -307,29 +309,31 @@ docker run --rm smsd --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 
 ### MCS Performance (Python)
 
-Same machine, same Python process, best of 5 runs.
+Representative pairs from the checked-in Python benchmark results on the same
+machine and in the same Python process.
 Full data: [`benchmarks/results_python.tsv`](benchmarks/results_python.tsv)
 For the maintained local core leaderboard, run `python3 benchmarks/benchmark_leaderboard.py --mode core --compare-mode strict`.
-Treat the table below as illustrative historical data; current repo-side comparisons
-should use the mode-matched core leaderboard.
+Use the mode-matched core leaderboard for current cross-tool comparisons.
 
 | Pair | Category | SMSD (ms) | MCS Size |
 |---|---|---:|---:|
 | Cubane (self) | Cage | 0.003 | 8 |
 | Coronene (self) | PAH | 0.006 | 24 |
 | NAD / NADH | Cofactor | 0.012 | 44 |
-| Caffeine / Theophylline | Drug pair | 0.016 | 13 |
-| Morphine / Codeine | Alkaloid | 0.049 | 20 |
-| Ibuprofen / Naproxen | NSAID | 0.069 | 15 |
-| ATP / ADP | Nucleotide | 0.085 | 27 |
-| PEG-12 / PEG-16 | Polymer | 1.6 | 40 |
-| Paclitaxel / Docetaxel | Taxane | 2,405 | 56 |
+| Caffeine / Theophylline | N-methyl diff | 0.017 | 13 |
+| Morphine / Codeine | Alkaloid | 0.079 | 20 |
+| Ibuprofen / Naproxen | NSAID | 0.070 | 15 |
+| ATP / ADP | Nucleotide | 0.148 | 27 |
+| PEG-12 / PEG-16 | Polymer | 0.039 | 40 |
+| Paclitaxel / Docetaxel | Taxane | 1,691 | 56 |
 
 ### Substructure Performance (Java)
 
-**28/28 pairs correct.** Cached speedup: **2x-16x** faster across all pairs.
+Current maintained cached Java core summary:
+**28/28 hit agreement** and **28/28 speed wins vs CDK** on the local curated corpus.
 
-Run `python benchmarks/benchmark_python.py` to reproduce.
+Run `python3 benchmarks/benchmark_leaderboard.py --mode core --compare-mode strict`
+to refresh the maintained local summary.
 
 ### External Benchmark Datasets
 
@@ -510,19 +514,19 @@ Every release includes all platforms:
 
 | Download | Description |
 |----------|-------------|
-| `SMSD.Pro-6.9.0.dmg` | macOS installer (Apple Silicon) — drag to Applications |
-| `SMSD.Pro-6.9.0.msi` | Windows installer — next, next, finish |
-| `smsd-pro_6.9.0_amd64.deb` | Linux installer — `sudo dpkg -i` |
-| `smsd-6.9.0.jar` | Pure library JAR (Maven/Gradle dependency) |
-| `smsd-6.9.0-jar-with-dependencies.jar` | Standalone CLI (just `java -jar`) |
-| `smsd-cpp-6.9.0-headers.tar.gz` | C++ header-only library (unpack, `#include "smsd/smsd.hpp"`) |
+| `SMSD.Pro-6.9.1.dmg` | macOS installer (Apple Silicon) — drag to Applications |
+| `SMSD.Pro-6.9.1.msi` | Windows installer — next, next, finish |
+| `smsd-pro_6.9.1_amd64.deb` | Linux installer — `sudo dpkg -i` |
+| `smsd-6.9.1.jar` | Pure library JAR (Maven/Gradle dependency) |
+| `smsd-6.9.1-jar-with-dependencies.jar` | Standalone CLI (just `java -jar`) |
+| `smsd-cpp-6.9.1-headers.tar.gz` | C++ header-only library (unpack, `#include "smsd/smsd.hpp"`) |
 | `pip install smsd` | Python package (PyPI) |
 
 ```bash
 # Native installer — download .dmg / .msi / .deb, double-click, done
 
 # CLI
-java -jar smsd-6.9.0-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
+java -jar smsd-6.9.1-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 
 # Docker CLI
 docker build -t smsd .
@@ -548,7 +552,7 @@ pip install smsd
 
 | Document | Description |
 |---|---|
-| [RELEASE_NOTES_6.9.0](docs/RELEASE_NOTES_6.9.0.md) | Release summary, use, and attribution guidance for 6.9.0 |
+| [RELEASE_NOTES_6.9.1](docs/RELEASE_NOTES_6.9.1.md) | Release summary, use, and attribution guidance for 6.9.1 |
 | [WHITEPAPER](docs/WHITEPAPER.md) | Algorithms & design (11-level MCS, VF2++, ring perception) |
 | [HOWTO-INSTALL](docs/HOWTO-INSTALL.md) | Build from source guide |
 | [CHANGELOG](CHANGELOG.md) | Versioned change history |

@@ -2,6 +2,20 @@
 
 All notable changes to SMSD Pro are documented in this file.
 
+## [6.9.1] - 2026-04-02
+
+### Summary
+Python binding improvements, stronger aromaticity perception, and release
+alignment across code, packaging, and documentation.
+
+### Included
+- Improved Python bindings for native graph preparation and aromaticity workflows
+- Added explicit aromaticity controls with `AromaticityModel`, `perceive_aromaticity()`, `kekulize()`, and `dearomatize()`
+- Improved native aromaticity perception for Kekule inputs, fused aromatic systems, and ring-sensitive matching paths
+- Added shared Java/Python aromaticity parity coverage for key aromatic systems and edge cases
+- Fixed MCS timeout budgeting and strengthened self-match fast paths
+- Updated release-facing metadata, install snippets, and documentation to `6.9.1`
+
 ## [6.9.0] - 2026-04-02
 
 ### Summary

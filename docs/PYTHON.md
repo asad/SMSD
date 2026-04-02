@@ -104,7 +104,7 @@ smsd.write_molfile(g, "out.sdf", sdf=True)
 smsd.export_sdf([g], "library.sdf")
 ```
 
-Covered natively in `6.9.0`:
+Covered natively in `6.9.1`:
 - MOL V2000 and V3000 graph round-trip
 - names, program line, comments, and SDF properties
 - charges, isotopes, atom classes, atom maps

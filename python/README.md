@@ -102,10 +102,10 @@ Both toolkits excel at different tasks — use whichever fits your workflow, or 
 
 | Pair | SMSD | RDKit | Notes |
 |------|------|-------|-------|
-| Morphine / Codeine | 51 us | 569 ms | Complex ring system |
-| Coronene self-match | 6 us | 780 us | Symmetric PAH |
-| Caffeine / Theophylline | 17 us | 564 us | N-methyl difference |
-| PEG-12 / PEG-16 | 1.6 ms | 2.2 ms | Linear polymer |
+| Morphine / Codeine | 79 us | 579 ms | Complex ring system |
+| Coronene self-match | 6 us | 712 us | Symmetric PAH |
+| Caffeine / Theophylline | 17 us | 373 us | N-methyl difference |
+| PEG-12 / PEG-16 | 39 us | 2.1 ms | Linear polymer |
 
 Full data: [benchmarks/results_python.tsv](https://github.com/asad/SMSD/blob/master/benchmarks/results_python.tsv)
 
@@ -210,7 +210,7 @@ smsd.write_molfile(g, "out_v3000.mol", v3000=True)
 smsd.write_molfile(g, "out.sdf", sdf=True)
 ```
 
-The native writer preserves practical chemistry metadata in `6.9.0`:
+The native writer preserves practical chemistry metadata in `6.9.1`:
 - names, comments, and SDF properties
 - charges, isotopes, atom classes, and atom maps
 - `R#`/`R<n>` plus `M  RGP`
@@ -327,7 +327,7 @@ Each toolkit brings unique strengths to the cheminformatics ecosystem:
 
 ## Also Available
 
-- **Java**: `com.bioinceptionlabs:smsd:6.9.0` on [Maven Central](https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd)
+- **Java**: `com.bioinceptionlabs:smsd:6.9.1` on [Maven Central](https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd)
 - **C++**: Header-only, zero dependencies — [GitHub](https://github.com/asad/SMSD)
 
 ## Citation

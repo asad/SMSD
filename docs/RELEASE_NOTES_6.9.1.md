@@ -1,19 +1,20 @@
-# SMSD 6.9.0 Release Notes
+# SMSD 6.9.1 Release Notes
 
 ## Summary
 
-SMSD `6.9.0` focuses on chemistry correctness, native I/O coverage, and
-clearer benchmark parity across the Java, C++, and Python implementations.
+SMSD `6.9.1` improves Python bindings, strengthens native aromaticity
+perception, and makes ring-sensitive graph matching more reliable across the
+native and Java/CDK-aligned paths.
 
 ## Highlights
 
-- Native/public MCS handling is more direction-stable on hard asymmetric pairs.
-- `ringMatchesRingOnly=true` now enforces symmetric ring/non-ring parity in
-  the native core, Python binding, and Java implementation.
-- The local benchmark leaderboard now supports explicit comparison modes:
-  `defaults`, `strict`, and `fmcs`.
-- Native MOL V2000/V3000 handling, metadata round-trip, and patent-style
-  `R#` support remain part of the `6.9.0` release.
+- Added explicit aromaticity controls in Python and native APIs.
+- Improved aromaticity perception for Kekule and fused-ring systems.
+- Added `kekulize()` and `dearomatize()` support for `MolGraph`.
+- Harmonized important aromaticity cases with the Java/CDK path using a shared
+  parity test corpus.
+- Improved MCS timeout handling and self-match behavior.
+- Included housekeeping, bug fixes, and internal optimization work.
 
 ## Availability and Use
 

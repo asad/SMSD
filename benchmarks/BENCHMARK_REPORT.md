@@ -274,14 +274,14 @@ CDK's `DfPattern` is a **bond-driven** depth-first search that explores the quer
 ## 8. How to Reproduce
 
 All benchmark scripts are included in the repository under `benchmarks/`. The
-commands below run the current `6.9.0` repository state. They are suitable for
+commands below run the current `6.9.1` repository state. They are suitable for
 local reproduction and regression checks, but they do not exactly recreate the
 archived `6.8.1` default-vs-default numbers quoted above.
 
 ```bash
 # ── Install ───────────────────────────────────────────────────────────────────
 
-pip install smsd==6.9.0
+pip install smsd==6.9.1
 
 # ── Benchmark 1: MCS comparison (20 pairs, Python) ───────────────────────────
 
@@ -375,4 +375,4 @@ The cyclopeptide-mutant pair (2,147 ms) is the only case approaching the practic
 
 ---
 
-*SMSD benchmark report retained in the 6.9.0 repository — Copyright © 2018–2026 BioInception PVT LTD — Syed Asad Rahman*
+*SMSD benchmark report retained in the 6.9.1 repository — Copyright © 2018–2026 BioInception PVT LTD — Syed Asad Rahman*
