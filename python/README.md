@@ -210,7 +210,7 @@ smsd.write_molfile(g, "out_v3000.mol", v3000=True)
 smsd.write_molfile(g, "out.sdf", sdf=True)
 ```
 
-The native writer preserves practical chemistry metadata in `6.10.1`:
+The native writer preserves practical chemistry metadata in `6.10.2`:
 - names, comments, and SDF properties
 - charges, isotopes, atom classes, and atom maps
 - `R#`/`R<n>` plus `M  RGP`
@@ -327,7 +327,7 @@ Each toolkit brings unique strengths to the cheminformatics ecosystem:
 
 ## Also Available
 
-- **Java**: `com.bioinceptionlabs:smsd:6.10.1` on [Maven Central](https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd)
+- **Java**: `com.bioinceptionlabs:smsd:6.10.2` on [Maven Central](https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd)
 - **C++**: Header-only, zero dependencies — [GitHub](https://github.com/asad/SMSD)
 
 ## Citation

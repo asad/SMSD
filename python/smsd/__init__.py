@@ -30,7 +30,7 @@ import importlib.util
 import sys
 from pathlib import Path
 
-__version__ = "6.10.1"
+__version__ = "6.10.2"
 __author__ = "Syed Asad Rahman"
 
 
@@ -1525,7 +1525,7 @@ def compile_smarts(smarts, *, max_recursion_depth=20):
         )
     if _compile_smarts_raw is None:
         raise RuntimeError(
-            "compile_smarts requires a rebuilt extension with the 6.10.1 SMARTS bindings."
+            "compile_smarts requires a rebuilt extension with the 6.10.2 SMARTS bindings."
         )
     return _compile_smarts_raw(smarts, max_recursion_depth)
 

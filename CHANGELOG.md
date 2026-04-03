@@ -2,6 +2,18 @@
 
 All notable changes to SMSD Pro are documented in this file.
 
+## [6.10.2] - 2026-04-03
+
+### Summary
+Correctness release: fixed MCS connectivity filter for non-induced mode,
+added regression tests for challenging molecule pairs.
+
+### Included
+- Corrected connected-component filter to enforce common-bond reachability
+  in both query and target molecules (non-induced MCS mode)
+- Added GOLDEN_843 regression tests in Python and Java (timeout and size)
+- Version bump to 6.10.2
+
 ## [6.10.1] - 2026-04-03
 
 ### Summary
