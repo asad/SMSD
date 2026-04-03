@@ -1,349 +1,180 @@
-# SMSD Optimization Roadmap
-
-This note is the repo-specific performance plan for SMSD `6.10.x`.
-It is intentionally tied to the current code layout rather than generic
-"make Python faster" advice.
-
-## Current Read
+# SMSD Pro — Performance Optimization Roadmap
 
-The maintained strict leaderboard already shows the split clearly:
+**Version** 6.10.2 | **Copyright (c) 2018–2026 BioInception PVT LTD — Syed Asad Rahman**
 
-- Python overhead matters for microsecond-scale screening paths.
-- The worst outliers are native exact-MCS search-depth problems.
-- Handwritten assembly is not the next lever.
+---
 
-Current evidence from the codebase:
+## Executive Summary
 
-- Heavy Python bindings already release the GIL in
-  `cpp/bindings/pybind11/smsd_bindings.cpp`.
-- Batch APIs already exist in `cpp/include/smsd/batch.hpp` and
-  `python/smsd/__init__.py`.
-- The exact MCS core already uses bitsets, `popcount`, orbit data, LFUB,
-  McSplit, Bron-Kerbosch, and McGregor extension in
-  `cpp/include/smsd/mcs.hpp`.
-- VF2++ already uses flat bit domains and AC-3 pruning in
-  `cpp/include/smsd/vf2pp.hpp`.
-- The MCS connectivity filter now correctly enforces common-bond
-  reachability in both query and target (fixed in 6.10.2).
+SMSD Pro ships a mature, multi-algorithm MCS and substructure engine.
+Benchmark data shows that the remaining performance gaps fall into two
+distinct categories:
 
-That means the next wins should come from better cache reuse, stronger
-pruning, and instrumentation before any architecture-specific low-level work.
+| Category | Bottleneck | Lever |
+|---|---|---|
+| **Screening throughput** | Per-call Python overhead, repeated graph setup | Corpus reuse, size-only APIs |
+| **Hard-pair latency** | Exact-MCS search depth on symmetric / macrocyclic graphs | Pruning, routing, instrumentation |
 
-## Priority Order
+Low-level SIMD or assembly tuning is explicitly deferred until profiling
+data identifies a stable hot kernel.
 
-1. Measure the real split between binding cost, setup cost, and kernel cost.
-2. ~~Expose better reusable Python objects for repeated workloads.~~ **Done.**
-3. Reuse precomputed graph invariants across batches via corpus objects.
-4. Tighten exact-MCS pruning on the known hard pairs.
-5. Reduce container churn in the recursive core.
-6. Only then tune bitset kernels further with intrinsics if profiling justifies it.
+---
 
-## Completed in 6.10.x
+## What Ships Today (6.10.x)
 
-The following roadmap items have been implemented and are available in the
-current codebase:
+| Capability | API | Status |
+|---|---|---|
+| Compiled SMARTS queries | `compile_smarts()` → `.matches()`, `.find_all()`, `.matches_many()` | Shipped |
+| Pre-warmed molecules | `prewarm(mol)` — canonical labels, ring counts, NLF, degree order | Shipped |
+| Size-only MCS batch | `batch_mcs_size()` → `list[int]` | Shipped |
+| Screened MCS sizes | `screen_and_mcs_size()` → `list[tuple[int, int]]` | Shipped |
+| VF2++ bit-packed domains | Word-parallel uint64 domains, AC-3 pruning, `popcount` support | Shipped |
+| Common-bond connectivity (6.10.2) | `largestConnected()` validates bonds in both query and target | Shipped |
 
-- **Compiled SMARTS objects.** `SmartsQuery` is bound in
-  `cpp/bindings/pybind11/smsd_bindings.cpp`. Python exposes
-  `compile_smarts()` with `.matches()`, `.find_all()`, and
-  `.matches_many()` methods.
+These items are removed from the forward plan below.
 
-- **Reusable prewarmed molecules.** `smsd.prewarm(mol)` calls
-  `ensureCanonical()`, `ensureRingCounts()`, `getNLF1()` through
-  `getNLF3()`, and `getNeighborsByDegDesc()`. Users can parse once, prewarm
-  once, and safely reuse graphs across repeated threaded batches.
+---
 
-- **Size-only batch APIs.** `batch_mcs_size()` returns `list[int]`.
-  `screen_and_mcs_size()` returns `list[tuple[int, int]]`. Both avoid
-  per-result `dict` construction.
+## Forward Plan
 
-- **VF2++ bucketed domain init.** `targetByLabel` buckets targets by label
-  before building flat bit domains. AC-3 pruning operates on word-parallel
-  uint64_t arrays.
+### Phase 0 — Instrumentation
 
-- **Flat bit domains in VF2++.** Word-parallel bit-packed domains with
-  `popcount`-based support counting.
+**Goal:** Know *where* time is spent before changing *how* it is spent.
 
-- **MCS connectivity correctness (6.10.2).** `largestConnected()` now
-  verifies bond existence in both g1 and g2 before treating an edge as a
-  connectivity link. This eliminates inflated MCS sizes in non-induced mode.
+| Deliverable | Detail |
+|---|---|
+| MCS stage timer | Opt-in counters inside `findMCS`: orientation, seeds, McSplit, BK, McGregor, repair |
+| Substructure stage timer | Domain init, AC-3, recursive search |
+| Benchmark integration | Emit per-stage TSV columns in `benchmark_python.py` when `--profile` is passed |
 
-## Phase 0: Instrumentation First
+**Files:** `mcs.hpp`, `vf2pp.hpp`, `batch.hpp`, `benchmark_python.py`
 
-Before changing algorithms, split end-to-end time into:
+**Rationale.** The leaderboard identifies *which* pairs are slow; stage
+timers reveal *which algorithm stage* dominates for each.
 
-- parse / object conversion
-- lazy graph prewarm
-- compatibility graph or domain build
-- core search
-- Python result materialization
+---
 
-Primary targets:
+### Phase 1 — Python Throughput
 
-- `benchmarks/benchmark_python.py`
-- `cpp/include/smsd/mcs.hpp`
-- `cpp/include/smsd/vf2pp.hpp`
-- `cpp/include/smsd/batch.hpp`
+#### 1.1 Batch Substructure with Mappings
 
-Recommended work:
+`batch_substructure()` returns a boolean hit mask. Downstream workflows
+(reaction mapping, R-group alignment) need explicit atom-atom mappings.
 
-- Add an opt-in profiling mode for `findMCS` that records time spent in:
-  - orientation planning
-  - seed builders
-  - McSplit
-  - Bron-Kerbosch
-  - McGregor extension
-  - validation / repair
-- Add an opt-in profiling mode for substructure paths that records:
-  - domain initialization
-  - AC-3 pruning
-  - recursive search
-- Emit those counters in benchmark TSV output only when requested.
+**Deliverable:** `batch_find_substructure(query, targets) → list[list[tuple[int, int]]]`
 
-Reason:
+**Files:** `batch.hpp`, `smsd_bindings.cpp`, `__init__.py`
 
-- The current leaderboard tells us which pairs are slow.
-- It does not yet tell us which stage dominates for each slow pair.
+#### 1.2 Target Corpus Object
 
-## Phase 1: Python Throughput APIs
+Every call to `batchMCS()` / `batchSubstructure()` re-prewarms every
+target. A persistent `TargetCorpus` would parse, prewarm, and optionally
+fingerprint a target set once, then accept repeated queries.
 
-### 1. Batch Substructure with Mappings
+**Deliverable:** `TargetCorpus` class — stores `MolGraph`s, prewarms
+once, caches fingerprints, exposes `.mcs(query)`, `.substructure(query)`,
+`.screen(query, threshold)`.
 
-Current state:
+**Files:** `batch.hpp`, `smsd_bindings.cpp`, `__init__.py`
 
-- `batch_substructure()` returns a `list[bool]` hit mask.
-- `findAllSubstructures()` exists for single targets.
+---
 
-Missing:
+### Phase 2 — Exact MCS Core
 
-- A parallel batch variant that returns full mappings per target.
+#### 2.1 Bucketed Compatibility in `GraphBuilder`
 
-Recommended work:
+The constructor runs an O(n₁ × n₂) cross-product to build
+`compatTargets_`. Bucketing candidates by atom label (as VF2++ already
+does) would reduce this to O(n₁ × avg_bucket).
 
-- Add `batch_find_substructure(query, targets, ...) -> list[list[tuple[int, int]]]`
-  for callers who need explicit atom-atom mappings in bulk.
+**File:** `mcs.hpp`
 
-Primary files:
+#### 2.2 Stage-Aware Routing
 
-- `cpp/include/smsd/batch.hpp`
-- `cpp/bindings/pybind11/smsd_bindings.cpp`
-- `python/smsd/__init__.py`
+Add lightweight stage counters and use them to:
 
-Why:
+- Skip redundant orientation retries when both directions agree
+- Route to McGregor earlier when seed quality is low
+- Bail out when the LFUB is provably unreachable
 
-- Some downstream workflows (reaction mapping, R-group alignment) need
-  full mappings, not just hit/miss.
+**File:** `mcs.hpp`
 
-### 2. Corpus-Style Batch Objects
+#### 2.3 Ring-System Symmetry Breaking
 
-Recommended work:
+Current orbit data operates at the atom level. Adding ring-system-level
+signatures would let the search branch first on atoms that break
+symmetric fused-ring systems, reducing backtracking on macrocycles and
+highly regular scaffolds.
 
-- Add a reusable `TargetCorpus` concept for Python that:
-  - stores pre-parsed `MolGraph`s
-  - prewarms them once
-  - optionally stores fingerprints
-  - optionally stores bucketed metadata used by screeners
+**Files:** `mol_graph.hpp`, `mcs.hpp`
 
-Primary files:
+#### 2.4 Flat Array Pipeline
 
-- `cpp/include/smsd/batch.hpp`
-- `cpp/bindings/pybind11/smsd_bindings.cpp`
-- `python/smsd/__init__.py`
+Internal search already uses flat `q2t` / `t2q` arrays in some stages.
+Extending flat-array representation deeper into the pipeline and
+materializing `std::map<int,int>` only at the API boundary would cut
+allocation and tree-balancing overhead.
 
-Why:
+**File:** `mcs.hpp`
 
-- `batchSubstructure()` and `batchMCS()` currently prewarm every target on
-  each call.
-- Corpus reuse is the natural next step for screening and leaderboard
-  workloads.
+---
 
-## Phase 2: Exact MCS Core
+### Phase 3 — Substructure Micro-Optimization
 
-This is where the hard outliers live.
+#### 3.1 VF2++ Domain-Init Cleanup
 
-### 1. Compatibility Build Costs in `GraphBuilder`
+The `targetByLabel` hash map in the domain builder is functional but not
+cache-optimal. Profile and, if warranted, replace with pre-sized flat
+buckets.
 
-Current state:
+**File:** `vf2pp.hpp`
 
-- `GraphBuilder` precomputes atom compatibility once in the constructor.
-- It currently does a nested `for (i in g1) for (j in g2)` pass in
-  `cpp/include/smsd/mcs.hpp`.
+---
 
-Recommended work:
+### Phase 4 — Batch Scheduling
 
-- Replace the full cross-product with bucketed target candidates keyed by a
-  cheap policy-specific label (mirroring the VF2++ domain initializer).
-- Consider flat bit-domain storage for compatibility targets when it improves
-  downstream set intersections.
+- Corpus-level prewarming and fingerprint storage (depends on Phase 1.2)
+- Screening result reuse across successive similarity thresholds
+- Pair-level parallelism preferred over within-search parallelism
 
-Why:
+**Files:** `batch.hpp`, `__init__.py`, `benchmark_python.py`
 
-- This constructor runs on every exact-MCS call.
-- Hard pairs pay for this before search even begins.
+---
 
-### 2. Stage-Aware Routing for Hard Pairs
+### Phase 5 — Low-Level Tuning
 
-Current state:
+**Prerequisite:** Phase 0 instrumentation must identify a stable hot
+kernel before any work here begins.
 
-- `findMCSImpl()` already routes through seeds, McSplit, Bron-Kerbosch, and
-  McGregor extension.
-- The public path in `findMCS()` also performs orientation arbitration and
-  validation / recovery.
+Candidate targets:
 
-Recommended work:
+- Candidate-set intersections (`popcount` / `and` loops)
+- Support counting in AC-3
+- Pivot scoring in BK
+- Compiler-assisted vectorization, PGO, LTO
+- ARM NEON intrinsics on Apple Silicon (only if profiling justifies)
 
-- Add stage counters and pair-specific routing diagnostics.
-- Use those diagnostics to decide when to:
-  - skip expensive alternate seeds
-  - go earlier to McGregor
-  - avoid redundant orientation retries
-  - bail out earlier when the upper bound is clearly unattainable
+**Explicitly deferred:**
 
-Primary file:
+- Handwritten x86 assembly
+- Generic NumPy zero-copy bridging
+- Recursive parallelism inside a single MCS search
 
-- `cpp/include/smsd/mcs.hpp`
+---
 
-Why:
+## Quick-Start: Minimum Viable Improvement Sequence
 
-- The current pipeline is strong, but the hard pairs suggest that one or two
-  stages are still dominating on specific graph families.
+For limited engineering bandwidth, execute in this order:
 
-### 3. Stronger Symmetry Breaking for Macrocycles and Highly Regular Graphs
+| Step | Work | Expected Impact |
+|---|---|---|
+| 1 | Stage timers in `findMCS` + benchmark `--profile` flag | Unlocks data-driven decisions for all later steps |
+| 2 | `batch_find_substructure()` with mapping return | Unblocks reaction-mapping and R-group pipelines |
+| 3 | `TargetCorpus` persistent object | Eliminates repeated prewarm cost in screening loops |
+| 4 | Profile hard pairs → attack dominant MCS stage | Directly reduces worst-case latency |
+| 5 | Bucketed `GraphBuilder` compatibility | Cuts per-call setup cost for large molecules |
 
-Current state:
+---
 
-- `MolGraph` already computes orbit data and 2-hop orbit refinement.
-- `mcs.hpp` already uses orbit-aware ordering and symmetry-aware seeds.
-
-Recommended work:
-
-- Add ring-system-level signatures, not just atom-level orbit signals.
-- Prefer branching on atoms that break symmetric ring systems earliest.
-- Add stronger macrocycle routing heuristics before full BK / McGregor search.
-
-Primary files:
-
-- `cpp/include/smsd/mol_graph.hpp`
-- `cpp/include/smsd/mcs.hpp`
-
-Why:
-
-- This is the class of work most likely to help pairs such as dense
-  macrocycles and highly symmetric ring systems.
-- It is also where chemistry-aware gains will beat low-level micro-tuning.
-
-### 4. Reduce `std::map` Churn in the Exact-MCS Pipeline
-
-Current state:
-
-- Public APIs expose mappings as `std::map<int, int>`.
-- Internal search code uses flat `q2t` / `t2q` arrays in some stages
-  (greedy bond-extend, seed building) but still materializes maps at
-  stage boundaries and the API surface.
-
-Recommended work:
-
-- Keep flat `q2t` / `t2q` arrays as the internal representation deeper into
-  the pipeline.
-- Materialize `std::map<int, int>` only at the API boundary or for final
-  ranking.
-
-Primary file:
-
-- `cpp/include/smsd/mcs.hpp`
-
-Why:
-
-- Converging more of the pipeline onto flat arrays should reduce allocations,
-  tree churn, and comparison overhead.
-
-## Phase 3: Substructure and SMARTS
-
-Substructure is already fast, but there are still clear wins for repeated use.
-
-### 1. VF2++ Domain-Init Cleanup
-
-Current state:
-
-- `vf2pp.hpp` already uses flat bit domains, AC-3 pruning, and bit-parallel
-  support counting.
-- The CPU path for larger targets still builds a temporary
-  `std::unordered_map<int, std::vector<int>> targetByLabel`.
-
-Recommended work:
-
-- Profile the domain-build path separately.
-- Replace the temporary hash map with flatter pre-sized buckets if it shows up.
-- Keep bit-domain construction branch-light and cache-friendly.
-
-Primary file:
-
-- `cpp/include/smsd/vf2pp.hpp`
-
-Why:
-
-- This is the most likely remaining substructure micro-hotspot.
-- It matters less than exact-MCS pruning, but it is still a sensible cleanup.
-
-## Phase 4: Batch Scheduling and Reuse
-
-Recommended work:
-
-- Add corpus-level prewarming and fingerprint storage.
-- Reuse screening results between successive thresholds when possible.
-- Keep parallelism at the pair or target level before attempting deep
-  within-search parallelism.
-
-Primary files:
-
-- `cpp/include/smsd/batch.hpp`
-- `python/smsd/__init__.py`
-- `benchmarks/benchmark_python.py`
-
-Why:
-
-- Cross-pair parallelism is simple, safe, and already matches real screening
-  workloads.
-- It gives better return on engineering time than parallelizing recursive MCS.
-
-## Phase 5: Low-Level Work
-
-Only do this after profiling identifies a stable hot kernel.
-
-Current state:
-
-- `cpp/include/smsd/bitops.hpp` already centralizes `popcount` and `ctz`.
-- `mcs.hpp`, `vf2pp.hpp`, `smarts_parser.hpp`, and `batch.hpp` already use
-  word-parallel bitset operations heavily.
-
-Recommended work:
-
-- Focus on:
-  - candidate-set intersections
-  - support counting
-  - pivot scoring
-  - AC-3 support checks
-- Prefer:
-  - better data layout
-  - compiler vectorization
-  - PGO / LTO
-  - ARM NEON intrinsics on Apple Silicon if a hotspot is proven
-
-Do not prioritize:
-
-- handwritten x86 assembly
-- generic NumPy zero-copy work
-- deep recursive parallelism inside one exact-MCS search
-
-## First Concrete Execution Slice
-
-If only a small amount of engineering time is available, do this order:
-
-1. Add profiling counters to `findMCS` and the Python benchmark driver.
-2. Add `batch_find_substructure()` with full mapping return.
-3. Add `TargetCorpus` for persistent prewarmed target sets.
-4. Profile hard strict-mode pairs and attack the worst stage inside `mcs.hpp`.
-5. Bucketed compatibility in `GraphBuilder` to skip the O(n1 × n2) constructor.
-
-That sequence should improve both user-facing Python throughput and the native
-core diagnosis without committing too early to low-level tuning.
+*SMSD Pro is developed by BioInception PVT LTD. Apache-2.0 — see
+[LICENSE](../LICENSE) and [NOTICE](../NOTICE) for terms.*
