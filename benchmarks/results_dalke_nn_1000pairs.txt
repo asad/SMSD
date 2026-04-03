@@ -1,0 +1,12 @@
+================================================================================
+BENCHMARK 4: Dalke Nearest-Neighbor Pairs — High-Similarity MCS
+Source: dalke_nn_pairs.tsv (1,000 pairs, Tanimoto >= 0.7)
+Reference: Dalke, J. Cheminform. 2013 (FMCS benchmark protocol)
+Metric: median MCS time, MCS >= 5 atoms rate
+================================================================================
+  Pairs tested:      1000
+  Timeouts:          0
+  MCS >= 5 atoms:    992 (99.2%)
+  Median time:       583 us
+  Mean MCS size:     25.4 atoms
+

@@ -1,0 +1,21 @@
+pair_name	category	rdkit_best_ms	rdkit_median_ms	rdkit_mcs_size	rdkit_timed_out	smsd_best_ms	smsd_median_ms	smsd_mcs_size	smsd_error	cpp_best_ms	cpp_median_ms	cpp_mcs_size	winner	speedup	mcs_quality
+methane-ethane	Trivial	0.013	0.015	1	False	645.223	660.171	1		-1.000	-1.000	-1	RDKit	47794.3x	equal
+benzene-toluene	Small aromatic	0.098	0.119	6	False	650.269	652.454	6		-1.000	-1.000	-1	RDKit	6601.9x	equal
+benzene-phenol	Heteroatom	0.088	0.111	6	False	650.057	652.477	6		-1.000	-1.000	-1	RDKit	7409.6x	equal
+aspirin-acetaminophen	Drug pair	0.141	0.152	7	False	664.613	667.507	10		-1.000	-1.000	-1	RDKit	4714.5x	SMSD +3
+caffeine-theophylline	N-methyl diff	0.201	0.204	13	False	657.917	668.588	13		-1.000	-1.000	-1	RDKit	3267.1x	equal
+morphine-codeine	Alkaloid	336.029	338.187	20	False	656.278	666.810	20		-1.000	-1.000	-1	RDKit	2.0x	equal
+ibuprofen-naproxen	NSAID	2.306	2.508	15	False	661.349	666.414	15		-1.000	-1.000	-1	RDKit	286.8x	equal
+ATP-ADP	Nucleotide	0.570	0.579	27	False	673.119	676.569	27		-1.000	-1.000	-1	RDKit	1180.8x	equal
+NAD-NADH	Cofactor	10263.990	10277.333	33	True	1511.831	1603.192	23		-1.000	-1.000	-1	SMSD	6.8x	RDKit +10
+atorvastatin-rosuvastatin	Statin	7.821	8.545	15	False	1370.249	1477.963	23		-1.000	-1.000	-1	RDKit	175.2x	SMSD +8
+paclitaxel-docetaxel	Taxane	10018.178	10020.597	53	True	1609.779	1712.425	48		-1.000	-1.000	-1	SMSD	6.2x	RDKit +5
+erythromycin-azithromycin	Macrolide	4355.593	4398.771	50	False	1242.238	1272.973	50		-1.000	-1.000	-1	SMSD	3.5x	equal
+strychnine-quinine	Alkaloid scaffold	314.840	317.606	21	False	1156.513	1218.719	19		-1.000	-1.000	-1	RDKit	3.7x	RDKit +2
+vancomycin-self	Self-match large	4.972	5.035	101	False	646.180	651.500	101		-1.000	-1.000	-1	RDKit	130.0x	equal
+adamantane-self	Symmetric	0.151	0.172	10	False	626.567	634.477	10		-1.000	-1.000	-1	RDKit	4149.6x	equal
+cubane-self	Cage	0.143	0.145	8	False	633.343	638.709	8		-1.000	-1.000	-1	RDKit	4415.0x	equal
+PEG12-PEG16	Polymer	1.350	1.717	40	False	642.569	645.747	40		-1.000	-1.000	-1	RDKit	475.9x	equal
+coronene-self	PAH	0.458	0.463	24	False	645.709	646.601	24		-1.000	-1.000	-1	RDKit	1411.2x	equal
+guanine-keto-enol	Tautomer	0.158	0.160	10	False	636.169	641.873	11		-1.000	-1.000	-1	RDKit	4020.6x	SMSD +1
+rdkit-1585-pair	Known failure	9559.943	9849.381	24	False	1125.831	1132.030	29		-1.000	-1.000	-1	SMSD	8.5x	SMSD +5

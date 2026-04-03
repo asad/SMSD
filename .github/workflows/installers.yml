@@ -1,0 +1,120 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2018-2026 BioInception PVT LTD
+name: Native Installers
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build-installers:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            type: dmg
+            jpackage_type: dmg
+          - os: windows-latest
+            type: msi
+            jpackage_type: msi
+          - os: ubuntu-latest
+            type: deb
+            jpackage_type: deb
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4.7.1
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build CLI JAR
+        run: mvn -U -B -DskipTests=true clean install package
+        shell: bash
+
+      - name: Extract version
+        id: version
+        run: echo "ver=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Prepare app icon
+        run: |
+          if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            mkdir -p icon.iconset
+            for sz in 16 32 128 256 512; do
+              sips -z $sz $sz icons/icon.png --out icon.iconset/icon_${sz}x${sz}.png
+            done
+            iconutil -c icns icon.iconset -o icons/icon.icns
+          elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            magick icons/icon.png -define icon:auto-resize=256,128,64,48,32,16 icons/icon.ico 2>/dev/null || true
+          fi
+        shell: bash
+
+      - name: Create native installer (jpackage)
+        run: |
+          ICON_OPT=""
+          if [[ -f icons/icon.icns ]]; then
+            ICON_OPT="--icon icons/icon.icns"
+          elif [[ -f icons/icon.ico ]]; then
+            ICON_OPT="--icon icons/icon.ico"
+          elif [[ -f icons/icon.png ]]; then
+            ICON_OPT="--icon icons/icon.png"
+          fi
+          jpackage \
+            --input target \
+            --main-jar smsd-${{ steps.version.outputs.ver }}-jar-with-dependencies.jar \
+            --name "SMSD Pro" \
+            --app-version "${{ steps.version.outputs.ver }}" \
+            --vendor "BioInception PVT LTD" \
+            --copyright "Copyright 2018-2026 Syed Asad Rahman - BioInception PVT LTD" \
+            --description "Substructure & MCS Search for Chemical Graphs" \
+            --type ${{ matrix.jpackage_type }} \
+            --dest dist/ \
+            --java-options "-Xmx512m" \
+            --java-options "--add-opens=java.base/java.lang=ALL-UNNAMED" \
+            $ICON_OPT
+        shell: bash
+
+      - uses: actions/upload-artifact@v4.6.2
+        with:
+          name: installer-${{ matrix.type }}
+          path: dist/*
+
+  attach-to-release:
+    needs: build-installers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4.3.0
+        with:
+          name: installer-dmg
+          path: dist
+      - uses: actions/download-artifact@v4.3.0
+        with:
+          name: installer-msi
+          path: dist
+      - uses: actions/download-artifact@v4.3.0
+        with:
+          name: installer-deb
+          path: dist
+
+      - name: List installers
+        run: find dist -type f | sort
+
+      - name: Attach to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.ref_name }}" dist/* \
+            --repo "${{ github.repository }}" --clobber || true

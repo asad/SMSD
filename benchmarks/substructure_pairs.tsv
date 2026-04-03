@@ -1,0 +1,53 @@
+# SMSD Substructure Search Benchmark — Test Pairs
+# Format: query_smiles<TAB>target_smiles<TAB>label
+# All SMILES use kekulized form (no lowercase aromatic atoms) for CDK 2.11 compatibility.
+# Lines starting with # are comments and are skipped.
+#
+# SECTION 1: Trivial / chain (sanity checks)
+# ============================================================
+C	CC	Methane in Ethane
+CCC	CCCCC	Propane in Pentane
+CC=O	CCCC=O	Acetaldehyde in Butanal
+# ============================================================
+# SECTION 2: Ring containment
+# ============================================================
+C1CCCCC1	C1CCC2CCCCC2C1	Cyclohexane in Decalin
+C1CCCC1	C1CC2CC1CC2	Cyclopentane in Norbornane
+C1CCC1	C1CCCC1	Cyclobutane in Cyclopentane
+# ============================================================
+# SECTION 3: Aromatic queries
+# ============================================================
+C1=CC=CC=C1	CC1=CC=CC=C1	Benzene in Toluene
+C1=CC=CC=C1	OC1=CC=CC=C1	Benzene in Phenol
+C1=CC=CC=C1	C1=CC=C2C=CC=CC2=C1	Benzene in Naphthalene
+OC1=CC=CC=C1	CC(=O)NC1=CC=C(O)C=C1	Phenol in Acetaminophen
+# ============================================================
+# SECTION 4: Heterocyclic fragments in drugs
+# ============================================================
+C1CCNCC1	CCC(=O)N(C1=CC=CC=C1)C1CCN(CCC2=CC=CC=C2)CC1	Piperidine in Fentanyl
+C1CNCCN1	C1CN(C2=CC=CC=C2)CCN1	Piperazine in Phenylpiperazine
+C1=CN=CN1	NC(CC1=CN=CN1)C(=O)O	Imidazole in Histidine
+C1=CC=NC=C1	OC(=O)C1=CC=CN=C1	Pyridine in Niacin
+C1=CSC=N1	CC1=C(CC)SC(=NC2=CC=CC=C2)N1CC	Thiazole in Drug-like scaffold
+# ============================================================
+# SECTION 5: Drug fragment searches (larger molecules)
+# ============================================================
+CC(=O)O	CC(=O)OC1=CC=CC=C1C(=O)O	Acetic acid in Aspirin
+NC(=O)N	CCC1(CC)C(=O)NC(=O)NC1=O	Urea in Barbital
+OCC1OC(O)C(O)C(O)C1O	OCC1OC(OC2(CO)OC(CO)C(O)C2O)C(O)C(O)C1O	Glucose in Sucrose
+NS(=O)(=O)C1=CC=CC=C1	CC1=CC(NS(=O)(=O)C2=CC=CC=C2)=NO1	Sulfonamide in Sulfisoxazole
+CC(=O)NC1=CC=CC=C1	CC(=O)NC1=CC=C(O)C=C1	Acetanilide in Acetaminophen
+# ============================================================
+# SECTION 6: Edge cases
+# ============================================================
+[Na]	[Na]Cl	Sodium in NaCl
+[NH4+]	[NH4+].[Cl-]	Ammonium in NH4Cl
+O	OO	Water in Peroxide
+C#N	N#CC1=CC=CC=C1	Cyanide in Benzonitrile
+# ============================================================
+# SECTION 7: Negative controls (no match expected)
+# ============================================================
+C1=CC=CC=C1	C1CCCCC1	Benzene vs Cyclohexane (neg. ctrl)
+C1=CC=NC=C1	C1CCOCC1	Pyridine vs Tetrahydropyran (neg. ctrl)
+S	CCCCCCCC	Sulfur vs Octane (neg. ctrl)
+C1=CC=CC=C1	CCC	Benzene vs Propane (neg. ctrl)

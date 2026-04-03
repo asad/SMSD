@@ -1,0 +1,66 @@
+SMSD Pro — Small Molecule Subgraph Detector
+Copyright (c) 2018-2026 BioInception PVT LTD
+Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+
+This product includes software developed by Syed Asad Rahman
+at BioInception PVT LTD (https://github.com/asad/SMSD).
+
+ACADEMIC CITATION
+=================
+If you use SMSD Pro in academic research, please cite:
+
+  Rahman SA, Bashton M, Holliday GL, Schrader R, Thornton JM.
+  Small Molecule Subgraph Detector (SMSD) toolkit.
+  Journal of Cheminformatics, 1:12, 2009.
+  DOI: 10.1186/1758-2946-1-12
+
+A machine-readable citation file (CITATION.cff) is included in
+the repository for automated citation tools.
+
+COMMERCIAL ATTRIBUTION
+======================
+If you redistribute SMSD Pro or include it in a commercial product,
+the Apache License 2.0 (Section 4d) requires you to:
+
+  1. Include a copy of this NOTICE file in your distribution
+  2. Retain all copyright and attribution notices
+
+We also request (but do not require) the following attribution
+in your product documentation, About screen, or website:
+
+  "Powered by SMSD Pro — https://github.com/asad/SMSD
+   Copyright (c) BioInception PVT LTD"
+
+TRADEMARK NOTICE
+================
+"SMSD"(TM), "SMSD Pro"(TM), and the BioInception molecular graph
+logo(TM) are unregistered trademarks of Syed Asad Rahman /
+BioInception PVT LTD. You may not use these marks to endorse or
+promote products derived from this software without prior written
+permission from the copyright holder.
+
+NOVEL ALGORITHMS
+================
+The following algorithms implemented in this software are original
+works by Syed Asad Rahman:
+
+  1. Tautomer-aware circular fingerprint with pKa-informed atom
+     invariants (ECFP/FCFP with tautomer class integration)
+  2. 11-level MCS funnel with chain/tree DP fast-paths
+  3. Henderson-Hasselbalch pH-dependent tautomer relevance weighting
+  4. Tier 2 solvent-dependent pKa corrections for tautomer matching
+  5. VF2++ with 3-level NLF pruning and GPU-accelerated domain
+     initialisation (CUDA + Apple Metal)
+
+THIRD-PARTY NOTICES
+===================
+This software uses the Chemistry Development Kit (CDK) licensed
+under LGPL 2.1. CDK is Copyright (c) The CDK Project.
+See https://cdk.github.io/ for details.
+
+AVAILABLE PLATFORMS
+===================
+  Java:   com.bioinceptionlabs:smsd on Maven Central
+  Python: pip install smsd (PyPI)
+  C++:    Header-only library (cpp/include/smsd/)
+  Docker: ghcr.io/asad/smsd
