@@ -371,9 +371,16 @@ inline int mcsScore(const MolGraph& g1, const std::map<int,int>& m,
 // Largest connected component (in query graph induced by mapped atoms)
 // ---------------------------------------------------------------------------
 inline std::map<int,int> largestConnected(const MolGraph& g1,
-                                           const std::map<int,int>& m) {
+                                           const std::map<int,int>& m,
+                                           const MolGraph* g2 = nullptr) {
     if (m.empty()) return m;
-    // BFS to find components
+    // BFS to find components.
+    // Connectivity is defined through COMMON edges: bonds that exist in g1 between
+    // two mapped atoms AND (if g2 is provided) also in g2 between their target atoms.
+    // This is required for non-induced MCS — a bond in g1 that has no counterpart in
+    // g2 is not part of the common subgraph and must not be used for connectivity.
+    std::unordered_map<int,int> q2t;
+    if (g2) for (auto& [qi, ti] : m) q2t[qi] = ti;
     std::unordered_set<int> mapped;
     for (auto& [qi, ti] : m) mapped.insert(qi);
 
@@ -390,6 +397,9 @@ inline std::map<int,int> largestConnected(const MolGraph& g1,
             for (int v : g1.neighbors[u]) {
                 if (mapped.count(v) && !seen.count(v)) {
                     if (g1.hasBond(u, v)) {
+                        // For non-induced MCS: only use bond u-v as a connectivity
+                        // edge if the corresponding bond also exists in g2.
+                        if (g2 && !g2->hasBond(q2t.at(u), q2t.at(v))) continue;
                         seen.insert(v);
                         dq.push_back(v);
                     }
@@ -542,7 +552,7 @@ inline std::map<int,int> ppx(const MolGraph& g1, const MolGraph& g2,
         int startSize = (int)ext.size();
         if (M.induced) ext = pruneToInduced(g1, g2, ext, C);
         if (C.completeRingsOnly) ext = enforceCompleteRings(g1, g2, ext);
-        if (!M.disconnectedMCS && M.connectedOnly) ext = largestConnected(g1, ext);
+        if (!M.disconnectedMCS && M.connectedOnly) ext = largestConnected(g1, ext, &g2);
         changed = (int)ext.size() < startSize;
     }
     ext = applyRingAnchorGuard(g1, g2, ext, C);
@@ -2755,12 +2765,12 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
             (std::abs(g1.n - greedySz) <= fuzzy || std::abs(g2.n - greedySz) <= fuzzy);
         if (greedySz >= upperBound) {
             auto greedyC = applyRingAnchorGuard(g1, g2,
-                opts.connectedOnly ? largestConnected(g1, greedy) : greedy, chem);
+                opts.connectedOnly ? largestConnected(g1, greedy, &g2) : greedy, chem);
             if (static_cast<int>(greedyC.size()) >= upperBound) return greedyC;
         }
         if (fuzzyAccept && greedySz > bestSize) {
             auto greedyC = applyRingAnchorGuard(g1, g2,
-                opts.connectedOnly ? largestConnected(g1, greedy) : greedy, chem);
+                opts.connectedOnly ? largestConnected(g1, greedy, &g2) : greedy, chem);
             if (static_cast<int>(greedyC.size()) > bestSize) {
                 best = std::move(greedyC);
                 bestSize = static_cast<int>(best.size()); bestHetero = heteroatomScore(g1, best);
@@ -2771,7 +2781,7 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
         if (static_cast<int>(greedy.size()) > upperBound * 0.6
             && static_cast<int>(greedy.size()) > bestSize) {
             auto greedyC = applyRingAnchorGuard(g1, g2,
-                opts.connectedOnly ? largestConnected(g1, greedy) : greedy, chem);
+                opts.connectedOnly ? largestConnected(g1, greedy, &g2) : greedy, chem);
             if (static_cast<int>(greedyC.size()) > bestSize) {
                 best = std::move(greedyC);
                 bestSize = static_cast<int>(best.size()); bestHetero = heteroatomScore(g1, best);
@@ -2989,6 +2999,11 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
                            opts.useTwoHopNLFInExtension, opts.useThreeHopNLFInExtension, opts.connectedOnly),
             chem, opts);
     }
+    // Apply post-processing (connectivity filter, ring guard) before returning.
+    // All early-exit paths call ppx() explicitly; this covers the fall-through path
+    // where intermediate stages (McSplit, BK) may have left a disconnected mapping
+    // in `best` that was never passed through largestConnected().
+    best = ppx(g1, g2, best, chem, opts);
     // Invariant: MCS size must never exceed the smaller molecule's atom count
     assert(static_cast<int>(best.size()) <= std::min(g1.n, g2.n)
            && "MCS size exceeds min(n1, n2)");

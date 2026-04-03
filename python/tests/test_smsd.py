@@ -1488,6 +1488,46 @@ class TestTimeoutEnforcement:
 
 
 # ===========================================================================
+# GOLDEN regressions -- medium-sized benchmark pairs that previously stuck
+# ===========================================================================
+
+class TestGoldenPairRegressions:
+    GOLDEN_843_EDUCT = (
+        "O=C(C#CC)N(C1=CC=C(OC(C)(C)C)C=C1)C(C(=O)NC(C)(C)C)C=2C=CC=CC2"
+    )
+    GOLDEN_843_PRODUCT = (
+        "O=C1C=CC2(C=C1)C(=CC(=O)N2C(C=3C=CC=CC3)C(=O)NC(C)(C)C)C"
+    )
+
+    @pytest.mark.timeout(15)
+    def test_golden_843_max_style_pair_completes_within_timeout(self):
+        import time
+
+        educt = parse_smiles(self.GOLDEN_843_EDUCT)
+        product = parse_smiles(self.GOLDEN_843_PRODUCT)
+
+        chem = ChemOptions()
+        chem.match_atom_type = False
+        chem.match_bond_order = BondOrderMode.STRICT
+        chem.ring_matches_ring_only = False
+        chem.ring_fusion_mode = RingFusionMode.IGNORE
+
+        mcs_opts = McsOptions()
+        mcs_opts.timeout_ms = 10_000
+
+        t0 = time.monotonic()
+        mapping = find_mcs(educt, product, chem, mcs_opts)
+        elapsed = time.monotonic() - t0
+
+        assert elapsed < 12.0, (
+            f"GOLDEN_843 exceeded the 10s budget by too much: {elapsed:.2f}s"
+        )
+        assert len(mapping) >= 12, (
+            f"GOLDEN_843 should retain a substantial MCS, got {len(mapping)} atoms"
+        )
+
+
+# ===========================================================================
 # API Completeness Tests (v6.4.0 QA sweep)
 # ===========================================================================
 

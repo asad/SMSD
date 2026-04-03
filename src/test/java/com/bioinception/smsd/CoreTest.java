@@ -14,6 +14,12 @@ import java.util.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.DisplayName;
@@ -50,6 +56,10 @@ public class CoreTest {
 
 
   private static final SmilesParser SP = new SmilesParser(DefaultChemObjectBuilder.getInstance());
+  private static final String GOLDEN_843_EDUCT =
+      "O=C(C#CC)N(C1=CC=C(OC(C)(C)C)C=C1)C(C(=O)NC(C)(C)C)C=2C=CC=CC2";
+  private static final String GOLDEN_843_PRODUCT =
+      "O=C1C=CC2(C=C1)C(=CC(=O)N2C(C=3C=CC=CC3)C(=O)NC(C)(C)C)C";
 
   private static boolean hasAny() {
     try {
@@ -423,6 +433,111 @@ public class CoreTest {
             mol("c1ccc2ccccc2c1"), mol("c1cccc2ccc3cccc3c2c1"), opts(true, true, false, false));
     Map<Integer, Integer> m = smsd.findMCS(false, true, 1L); // 1 ms
     assertNotNull(m, "Should return (possibly empty) mapping without hanging");
+  }
+
+  @Test
+  @Timeout(value = 15, unit = TimeUnit.SECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+  @DisplayName("C.3b  GOLDEN_843 MAX-style pair completes inside timeout budget")
+  void c3b_golden843_max_style_pair_completes_within_timeout() {
+    IAtomContainer educt = mol(GOLDEN_843_EDUCT);
+    IAtomContainer product = mol(GOLDEN_843_PRODUCT);
+
+    // Mirrors the benchmark flags: atomType=false, bondMatch=true,
+    // ringMatch=false, ringSizeMatch=false (MAX algorithm).
+    ChemOptions chem = new ChemOptions();
+    chem.matchAtomType = false;
+    chem.matchBondOrder = ChemOptions.BondOrderMode.STRICT;
+    chem.ringMatchesRingOnly = false;
+    chem.ringFusionMode = ChemOptions.RingFusionMode.IGNORE;
+
+    SMSD smsd = new SMSD(educt, product, chem);
+
+    long start = System.nanoTime();
+    Map<Integer, Integer> mapping = smsd.findMCS(false, true, 10_000L);
+    long elapsedMs = (System.nanoTime() - start) / 1_000_000L;
+
+    assertNotNull(mapping, "GOLDEN_843 should return a mapping instead of hanging");
+    assertTrue(
+        elapsedMs < 12_000L,
+        "GOLDEN_843 exceeded the 10s budget by too much: " + elapsedMs + "ms");
+    assertTrue(
+        mapping.size() >= 12,
+        "GOLDEN_843 should keep a substantial MCS under MAX-style flags, got "
+            + mapping.size());
+  }
+
+  @Test
+  @Timeout(value = 30, unit = TimeUnit.SECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+  @DisplayName("C.3c  GOLDEN_843 shared molecules stay stable under parallel reuse")
+  void c3c_golden843_shared_molecules_parallel_reuse_is_stable() throws Exception {
+    final IAtomContainer educt = mol(GOLDEN_843_EDUCT);
+    final IAtomContainer product = mol(GOLDEN_843_PRODUCT);
+
+    ChemOptions chem = new ChemOptions();
+    chem.matchAtomType = false;
+    chem.matchBondOrder = ChemOptions.BondOrderMode.STRICT;
+    chem.ringMatchesRingOnly = false;
+    chem.ringFusionMode = ChemOptions.RingFusionMode.IGNORE;
+
+    SearchEngine.McsOptions baselineOpts = new SearchEngine.McsOptions();
+    baselineOpts.induced = false;
+    baselineOpts.connectedOnly = true;
+    baselineOpts.timeoutMs = 15_000L;
+
+    SearchEngine.clearMolGraphCache();
+    Map<Integer, Integer> baseline = SearchEngine.findMCS(educt, product, chem, baselineOpts);
+    assertNotNull(baseline, "Baseline GOLDEN_843 call should return a mapping");
+    assertTrue(
+        baseline.size() >= 12,
+        "Baseline GOLDEN_843 should keep a substantial MCS, got " + baseline.size());
+
+    int expectedSize = baseline.size();
+    int expectedMappedBonds = mappedBonds(educt, product, baseline);
+
+    final int threads = 8;
+    final int rounds = 4;
+    for (int round = 0; round < rounds; round++) {
+      SearchEngine.clearMolGraphCache();
+
+      CyclicBarrier barrier = new CyclicBarrier(threads);
+      ExecutorService pool = Executors.newFixedThreadPool(threads);
+      try {
+        List<Callable<Map<Integer, Integer>>> tasks = new ArrayList<>();
+        for (int i = 0; i < threads; i++) {
+          tasks.add(
+              () -> {
+                barrier.await();
+                SearchEngine.McsOptions opts = new SearchEngine.McsOptions();
+                opts.induced = false;
+                opts.connectedOnly = true;
+                opts.timeoutMs = 15_000L;
+                return SearchEngine.findMCS(educt, product, chem, opts);
+              });
+        }
+
+        List<Future<Map<Integer, Integer>>> futures = pool.invokeAll(tasks, 20, TimeUnit.SECONDS);
+        for (int i = 0; i < futures.size(); i++) {
+          Future<Map<Integer, Integer>> future = futures.get(i);
+          assertFalse(future.isCancelled(), "Round " + round + " task " + i + " timed out");
+
+          Map<Integer, Integer> mapping = future.get();
+          assertNotNull(mapping, "Round " + round + " task " + i + " returned null");
+          assertEquals(
+              expectedSize,
+              mapping.size(),
+              "Round " + round + " task " + i + " returned an unstable MCS size");
+          assertEquals(
+              expectedMappedBonds,
+              mappedBonds(educt, product, mapping),
+              "Round " + round + " task " + i + " returned an unstable mapped-bond count");
+        }
+      } finally {
+        pool.shutdownNow();
+        assertTrue(
+            pool.awaitTermination(5, TimeUnit.SECONDS),
+            "Worker pool did not terminate cleanly");
+      }
+    }
   }
 
   @Test
