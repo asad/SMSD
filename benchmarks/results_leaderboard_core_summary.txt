@@ -1,0 +1,35 @@
+SMSD Core Benchmark
+Date: 2026-04-02 17:04:30
+Platform: darwin
+Compare mode: strict
+Python core protocol: warmup=0, iters=1, timeout_sec=default
+
+MCS (Python core vs RDKit)
+  Pairs: 20
+  Speed wins: SMSD=8 RDKit=9
+  Hotspots:
+    NAD-NADH: SMSD 43116 ms vs RDKit 2.6 ms
+    atorvastatin-rosuvastatin: SMSD 1644 ms vs RDKit 3.5 ms
+    strychnine-quinine: SMSD 218 ms vs RDKit 2.3 ms
+    coronene-self: SMSD 6.8 ms vs RDKit 0.593 ms
+    guanine-keto-enol: SMSD 1.0 ms vs RDKit 0.220 ms
+
+Substructure (Python core vs RDKit)
+  Pairs: 20
+  Hotspots:
+    ATP-ADP: SMSD 11.0 us vs RDKit 11.4 us
+    guanine-keto-enol: SMSD 3.4 us vs RDKit 6.3 us
+    aspirin-acetaminophen: SMSD 1.4 us vs RDKit 5.2 us
+    PEG12-PEG16: SMSD 7.6 us vs RDKit 11.8 us
+    strychnine-quinine: SMSD 1.2 us vs RDKit 5.5 us
+
+Substructure (Java cached path vs CDK)
+  Pairs: 28
+  Speed wins vs CDK: SMSD=28 CDK=0
+  Hit agreement: 28/28
+  Hotspots:
+    Propane in Pentane: uncached 23.3 us -> cached 12.2 us (11.1 us saved)
+    Methane in Ethane: uncached 18.2 us -> cached 10.3 us (7.9 us saved)
+    Cyclohexane in Decalin: uncached 18.3 us -> cached 10.9 us (7.4 us saved)
+    Piperazine in Phenylpiperazine: uncached 12.3 us -> cached 6.8 us (5.5 us saved)
+    Urea in Barbital: uncached 8.3 us -> cached 5.2 us (3.1 us saved)

@@ -1,0 +1,69 @@
+[build-system]
+requires = ["scikit-build-core>=0.5", "pybind11>=2.12"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "smsd"
+version = "6.11.2"
+description = "SMSD -- Substructure & MCS search for chemical graphs"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+requires-python = ">=3.9"
+authors = [
+    {name = "Syed Asad Rahman", email = "asad.rahman@bioinceptionlabs.com"}
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: C++",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+keywords = ["cheminformatics", "mcs", "substructure", "graph-matching", "chemistry", "smiles"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "pytest-timeout>=2.0"]
+rdkit = ["rdkit>=2022.03"]
+# GPU batch screening:
+#
+#   Linux / Windows (NVIDIA):
+#     pip install 'smsd[gpu]'
+#     This ensures the CUDA 12 runtime is present.  The actual CUDA kernels are
+#     compiled at build time; to build from source with CUDA:
+#       SMSD_BUILD_CUDA=ON pip install smsd --no-binary smsd
+#
+#   macOS (Apple Silicon / Intel — Metal/MPS):
+#     Metal support is compiled in automatically when building on macOS.
+#     No extra runtime package is needed — Metal.framework ships with macOS.
+#     To build from source (Metal enabled by default on macOS):
+#       pip install smsd --no-binary smsd
+#     gpu_is_available() will return True once the build includes smsd_metal.
+#
+gpu = ["nvidia-cuda-runtime-cu12>=12.0; platform_system!='Darwin'"]
+
+[project.urls]
+Homepage = "https://github.com/asad/SMSD"
+Documentation = "https://github.com/asad/SMSD/wiki"
+Repository = "https://github.com/asad/SMSD"
+"Bug Tracker" = "https://github.com/asad/SMSD/issues"
+
+[tool.scikit-build]
+cmake.source-dir = "../cpp"
+cmake.args = ["-DSMSD_BUILD_PYTHON=ON", "-DSMSD_BUILD_TESTS=OFF"]
+wheel.packages = ["smsd"]
+minimum-version = "0.5"
+
+[tool.scikit-build.cmake.define]
+SMSD_BUILD_PYTHON = "ON"
+SMSD_BUILD_TESTS = "OFF"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+timeout = 60
