@@ -1,0 +1,59 @@
+cff-version: 1.2.0
+title: "SMSD Pro: Small Molecule Subgraph Detector"
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+license: Apache-2.0
+version: 6.10.1
+date-released: "2026-04-03"
+url: "https://github.com/asad/SMSD"
+repository-code: "https://github.com/asad/SMSD"
+
+authors:
+  - given-names: Syed Asad
+    family-names: Rahman
+    email: asad.rahman@bioinceptionlabs.com
+    affiliation: BioInception PVT LTD
+    orcid: "https://orcid.org/0000-0003-2049-3307"
+
+preferred-citation:
+  type: article
+  title: "SMSD Pro: Coverage-Driven, Tautomer-Aware Maximum Common Substructure Search"
+  authors:
+    - given-names: Syed Asad
+      family-names: Rahman
+      affiliation: BioInception PVT LTD
+      orcid: "https://orcid.org/0000-0003-2049-3307"
+  year: 2025
+  doi: "10.26434/chemrxiv.15001534"
+  url: "https://doi.org/10.26434/chemrxiv.15001534/v1"
+
+references:
+  - type: article
+    title: "Small Molecule Subgraph Detector (SMSD) toolkit"
+    authors:
+      - given-names: Syed Asad
+        family-names: Rahman
+      - given-names: Matthew
+        family-names: Bashton
+      - given-names: Gemma L.
+        family-names: Holliday
+      - given-names: Rainer
+        family-names: Schrader
+      - given-names: Janet M.
+        family-names: Thornton
+    journal: "Journal of Cheminformatics"
+    volume: 1
+    issue: 1
+    start: 12
+    year: 2009
+    doi: "10.1186/1758-2946-1-12"
+
+keywords:
+  - cheminformatics
+  - maximum common substructure
+  - substructure search
+  - molecular fingerprints
+  - graph isomorphism
+  - tautomer matching
+  - ECFP
+  - FCFP

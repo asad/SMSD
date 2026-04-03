@@ -1,0 +1,24 @@
+# compare_mode=defaults
+# === MCS Benchmark ===
+pair	category	smsd_best_us	smsd_median_us	smsd_mcs	rdkit_best_us	rdkit_median_us	rdkit_mcs	rdkit_timeout
+methane-ethane	Trivial	133.4	133.4	1	214.8	214.8	1	False
+benzene-toluene	Small aromatic	243.3	243.3	6	255.9	255.9	6	False
+benzene-phenol	Heteroatom	242.0	242.0	6	239.8	239.8	6	False
+aspirin-acetaminophen	Drug pair	573.7	573.7	8	201.2	201.2	7	False
+caffeine-theophylline	N-methyl diff	158.9	158.9	13	271.6	271.6	13	False
+morphine-codeine	Alkaloid	1051.0	1051.0	19	485291.3	485291.3	20	False
+ibuprofen-naproxen	NSAID	2458.9	2458.9	12	4103.0	4103.0	15	False
+ATP-ADP	Nucleotide	1326.2	1326.2	27	817.3	817.3	27	False
+NAD-NADH	Cofactor	419498251.6	419498251.6	36	3066850.0	3066850.0	33	True
+atorvastatin-rosuvastatin	Statin	3021807.8	3021807.8	22	16216.8	16216.8	15	False
+paclitaxel-docetaxel	Taxane	3006005.6	3006005.6	54	3016536.8	3016536.8	53	True
+erythromycin-azithromycin	Macrolide	7652.0	7652.0	49	3007850.9	3007850.9	50	True
+strychnine-quinine	Alkaloid scaffold	3328254.1	3328254.1	17	524362.8	524362.8	21	False
+vancomycin-self	Self-match large	74.9	74.9	101	8270.1	8270.1	101	False
+adamantane-self	Symmetric	9.9	9.9	10	338.2	338.2	10	False
+cubane-self	Cage	7.1	7.1	8	313.3	313.3	8	False
+PEG12-PEG16	Polymer	3198.3	3198.3	40	2507.5	2507.5	40	False
+coronene-self	PAH	16.8	16.8	24	2456.6	2456.6	24	False
+guanine-keto-enol	Tautomer	3301.5	3301.5	10	359.6	359.6	10	False
+rdkit-1585-pair	Known failure	4029816.1	4029816.1	18	3021268.2	3021268.2	24	True
+

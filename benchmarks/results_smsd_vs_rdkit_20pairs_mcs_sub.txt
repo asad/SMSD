@@ -1,0 +1,74 @@
+========================================================================================================================
+SMSD Python (C++ pybind11) vs RDKit FindMCS — Like-for-Like Benchmark
+Platform: Darwin x86_64
+Python:   3.9.6
+SMSD:     6.8.1
+RDKit:    2025.09.2
+Protocol: 3 warmup + 10 measured, median reported
+Timeout:  10s per pair
+========================================================================================================================
+
+ # Pair                           Category               SMSD(us)  RDKit(us) S.MCS R.MCS    Speedup MCS Quality    
+------------------------------------------------------------------------------------------------------------------------
+ 1 methane-ethane                 Trivial                     5us       22us     1     1  SMSD 4.4x equal          
+ 2 benzene-toluene                Small aromatic              8us      175us     6     6 SMSD 21.5x equal          
+ 3 benzene-phenol                 Heteroatom                  8us      186us     6     6 SMSD 22.7x equal          
+ 4 aspirin-acetaminophen          Drug pair                 573us      256us    10     7 RDKit 2.2x SMSD +3        
+ 5 caffeine-theophylline          N-methyl diff              18us      450us    13    13 SMSD 25.2x equal          
+ 6 morphine-codeine               Alkaloid                   83us   587.70ms    20    20 SMSD 7093.8x equal          
+ 7 ibuprofen-naproxen             NSAID                      72us     3.93ms    15    15 SMSD 54.9x equal          
+ 8 ATP-ADP                        Nucleotide                155us     1.19ms    27    27  SMSD 7.7x equal          
+ 9 NAD-NADH                       Cofactor                   12us    timeout    44    33    timeout SMSD +11       
+10 atorvastatin-rosuvastatin      Statin                     1.0s    11.82ms    25    15 RDKit 86.1x SMSD +10       
+11 paclitaxel-docetaxel           Taxane                     1.7s    timeout    56    53    timeout SMSD +3        
+12 erythromycin-azithromycin      Macrolide                  1.8s       7.3s    50    50  SMSD 4.1x equal          
+13 strychnine-quinine             Alkaloid scaffold       31.88ms   428.03ms    19    21 SMSD 13.4x RDKit +2       
+14 vancomycin-self                Self-match large           23us     6.09ms   101   101 SMSD 261.4x equal          
+15 adamantane-self                Symmetric                   3us      268us    10    10 SMSD 83.5x equal          
+16 cubane-self                    Cage                        3us      292us     8     8 SMSD 96.7x equal          
+17 PEG12-PEG16                    Polymer                    40us     2.24ms    40    40 SMSD 56.7x equal          
+18 coronene-self                  PAH                         6us      846us    24    24 SMSD 142.6x equal          
+19 guanine-keto-enol              Tautomer                    5us      283us    11    10 SMSD 59.7x SMSD +1        
+20 rdkit-1585-pair                Known failure           22.80ms    timeout    29    24    timeout SMSD +5        
+------------------------------------------------------------------------------------------------------------------------
+
+MCS SUMMARY
+  Speed wins:  SMSD=18  RDKit=2  tie=0
+  MCS quality: equal=13  SMSD better=6  RDKit better=1
+
+========================================================================================================================
+SUBSTRUCTURE SEARCH — SMSD Python (C++ pybind11) vs RDKit HasSubstructMatch
+Protocol: 3 warmup + 10 measured, median reported
+Query = smi1 searched within Target = smi2  (all 20 pairs)
+========================================================================================================================
+
+ # Pair                           Category               SMSD(us)  RDKit(us) SMSD hit RDKit hit    Speedup
+----------------------------------------------------------------------------------------------------
+ 1 methane-ethane                 Trivial                   3.5us      3.4us      yes       yes       ~tie
+ 2 benzene-toluene                Small aromatic            7.7us      3.9us      yes       yes RDKit 2.0x
+ 3 benzene-phenol                 Heteroatom                7.6us      3.9us      yes       yes RDKit 2.0x
+ 4 aspirin-acetaminophen          Drug pair                 0.5us      2.3us       no        no  SMSD 4.6x
+ 5 caffeine-theophylline          N-methyl diff             0.8us      2.4us       no        no  SMSD 2.8x
+ 6 morphine-codeine               Alkaloid                 39.9us     12.0us       no        no RDKit 3.3x
+ 7 ibuprofen-naproxen             NSAID                    17.5us      5.6us       no        no RDKit 3.1x
+ 8 ATP-ADP                        Nucleotide                0.5us      2.4us       no        no  SMSD 4.7x
+ 9 NAD-NADH                       Cofactor                115.0us      5.5us       no        no RDKit 20.8x
+10 atorvastatin-rosuvastatin      Statin                    0.5us      2.4us       no        no  SMSD 4.9x
+11 paclitaxel-docetaxel           Taxane                    0.5us      2.5us       no        no  SMSD 5.1x
+12 erythromycin-azithromycin      Macrolide               120.0us     12.0us       no        no RDKit 10.0x
+13 strychnine-quinine             Alkaloid scaffold         0.5us      2.3us       no        no  SMSD 4.8x
+14 vancomycin-self                Self-match large          10.0s     14.6us       no       yes RDKit 686148.4x
+15 adamantane-self                Symmetric                10.2us      3.9us      yes       yes RDKit 2.6x
+16 cubane-self                    Cage                      8.5us      3.8us      yes       yes RDKit 2.2x
+17 PEG12-PEG16                    Polymer                   10.0s      6.6us       no       yes RDKit 1509963.5x
+18 coronene-self                  PAH                      25.5us      5.1us      yes       yes RDKit 5.0x
+19 guanine-keto-enol              Tautomer                 10.6us      2.6us       no        no RDKit 4.1x
+20 rdkit-1585-pair                Known failure            30.0us      8.8us       no        no RDKit 3.4x
+----------------------------------------------------------------------------------------------------
+
+SUBSTRUCTURE SUMMARY
+  Speed wins:  SMSD=6  RDKit=13  tie=1
+  Hit agreement: 18/20 pairs agree
+  WARNING: 2 pair(s) disagree — verify SMILES semantics
+
+  Results written to /Users/asad/tool/SMSD/benchmarks/results_python.tsv

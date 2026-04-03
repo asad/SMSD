@@ -1,0 +1,89 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2018-2026 BioInception PVT LTD
+name: Publish Python Package to PyPI
+
+on:
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    name: Build wheels — ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux x86_64 — pin to 22.04; Docker on 24.04 has container-create issues with cibuildwheel
+          - os: ubuntu-22.04
+            cibw_archs: "x86_64"
+          # macOS — arm64 only: Metal/MPS GPU path is Apple Silicon-only.
+          # x86_64 wheels are built but Metal shader compiler hangs in headless CI.
+          - os: macos-latest
+            cibw_archs: "arm64"
+          # Windows x64 only
+          - os: windows-latest
+            cibw_archs: "AMD64"
+
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.22
+        with:
+          package-dir: .
+        env:
+          CIBW_ARCHS: ${{ matrix.cibw_archs }}
+          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
+          CIBW_SKIP: "*-musllinux_*"
+          CIBW_BEFORE_BUILD: "pip install pybind11 scikit-build-core cmake ninja"
+          CIBW_BUILD_VERBOSITY: "3"
+          # macOS: Metal auto-detected at build time (Metal.framework ships with macOS)
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: ""
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: ""
+          # Skip test on x86_64 macOS — Metal shader compiler blocks in headless CI.
+          # arm64 (Apple Silicon) and Linux/Windows test normally.
+          CIBW_TEST_SKIP: "*-macosx_x86_64"
+          CIBW_TEST_COMMAND: >
+            python -c "import smsd;
+            print('SMSD', smsd.__version__, 'imported OK');
+            m = smsd.parse_smiles('c1ccccc1');
+            print('Benzene:', len(m), 'atoms')"
+
+      - uses: actions/upload-artifact@v4.6.2
+        with:
+          name: wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
+
+  build-sdist:
+    name: Build source distribution
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - name: Build sdist
+        run: |
+          pip install build
+          python -m build --sdist
+      - uses: actions/upload-artifact@v4.6.2
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  publish:
+    name: Publish to PyPI
+    needs: [build, build-sdist]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v4.3.0
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
