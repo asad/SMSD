@@ -1,6 +1,6 @@
 # SMSD Optimization Roadmap
 
-This note is the repo-specific performance plan for SMSD `6.9.x`.
+This note is the repo-specific performance plan for SMSD `6.10.x`.
 It is intentionally tied to the current code layout rather than generic
 "make Python faster" advice.
 
@@ -23,18 +23,50 @@ Current evidence from the codebase:
   `cpp/include/smsd/mcs.hpp`.
 - VF2++ already uses flat bit domains and AC-3 pruning in
   `cpp/include/smsd/vf2pp.hpp`.
+- The MCS connectivity filter now correctly enforces common-bond
+  reachability in both query and target (fixed in 6.10.2).
 
-That means the next wins should come from better API shape, cache reuse, and
-stronger pruning before any architecture-specific low-level work.
+That means the next wins should come from better cache reuse, stronger
+pruning, and instrumentation before any architecture-specific low-level work.
 
 ## Priority Order
 
 1. Measure the real split between binding cost, setup cost, and kernel cost.
-2. Expose better reusable Python objects for repeated workloads.
-3. Reuse precomputed graph invariants across batches and threads.
+2. ~~Expose better reusable Python objects for repeated workloads.~~ **Done.**
+3. Reuse precomputed graph invariants across batches via corpus objects.
 4. Tighten exact-MCS pruning on the known hard pairs.
 5. Reduce container churn in the recursive core.
 6. Only then tune bitset kernels further with intrinsics if profiling justifies it.
+
+## Completed in 6.10.x
+
+The following roadmap items have been implemented and are available in the
+current codebase:
+
+- **Compiled SMARTS objects.** `SmartsQuery` is bound in
+  `cpp/bindings/pybind11/smsd_bindings.cpp`. Python exposes
+  `compile_smarts()` with `.matches()`, `.find_all()`, and
+  `.matches_many()` methods.
+
+- **Reusable prewarmed molecules.** `smsd.prewarm(mol)` calls
+  `ensureCanonical()`, `ensureRingCounts()`, `getNLF1()` through
+  `getNLF3()`, and `getNeighborsByDegDesc()`. Users can parse once, prewarm
+  once, and safely reuse graphs across repeated threaded batches.
+
+- **Size-only batch APIs.** `batch_mcs_size()` returns `list[int]`.
+  `screen_and_mcs_size()` returns `list[tuple[int, int]]`. Both avoid
+  per-result `dict` construction.
+
+- **VF2++ bucketed domain init.** `targetByLabel` buckets targets by label
+  before building flat bit domains. AC-3 pruning operates on word-parallel
+  uint64_t arrays.
+
+- **Flat bit domains in VF2++.** Word-parallel bit-packed domains with
+  `popcount`-based support counting.
+
+- **MCS connectivity correctness (6.10.2).** `largestConnected()` now
+  verifies bond existence in both g1 and g2 before treating an edge as a
+  connectivity link. This eliminates inflated MCS sizes in non-induced mode.
 
 ## Phase 0: Instrumentation First
 
@@ -75,83 +107,21 @@ Reason:
 
 ## Phase 1: Python Throughput APIs
 
-This is the highest-ROI Python work even though the native core is already
-fast.
-
-### 1. Compiled SMARTS Objects
+### 1. Batch Substructure with Mappings
 
 Current state:
 
-- Python exposes `smarts_match()` and `smarts_find_all()`.
-- Native SMARTS already has a reusable `SmartsQuery` type in
-  `cpp/include/smsd/smarts_parser.hpp`.
+- `batch_substructure()` returns a `list[bool]` hit mask.
+- `findAllSubstructures()` exists for single targets.
 
 Missing:
 
-- A Python-visible compiled SMARTS object.
+- A parallel batch variant that returns full mappings per target.
 
 Recommended work:
 
-- Bind `SmartsQuery` in `cpp/bindings/pybind11/smsd_bindings.cpp`.
-- Add a Python helper such as `compile_smarts()` in `python/smsd/__init__.py`.
-- Expose methods like:
-  - `.matches(target)`
-  - `.find_all(target, max_matches=...)`
-  - `.matches_many(targets)`
-
-Why:
-
-- Repeated SMARTS parsing is avoidable work.
-- Screening workloads benefit immediately from compiled query reuse.
-
-### 2. Reusable Prewarmed Molecules
-
-Current state:
-
-- `MolGraph` already caches canonical labels, orbit data, ring counts, and NLF.
-- Batch code in `cpp/include/smsd/batch.hpp` explicitly prewarms graphs before
-  entering parallel regions because lazy caches are not thread-safe on first
-  use.
-
-Missing:
-
-- A direct Python-level "prepare this molecule once" API.
-
-Recommended work:
-
-- Add `MolGraph.prewarm()` or `smsd.prewarm(mol)` in the binding.
-- Make it call:
-  - `ensureCanonical()`
-  - `ensureRingCounts()`
-  - `getNLF1()`
-  - `getNLF2()`
-  - `getNLF3()`
-  - `getNeighborsByDegDesc()`
-
-Why:
-
-- Python users can parse once, prewarm once, and safely reuse graphs across
-  repeated threaded batches.
-- This also removes hidden first-call latency from benchmarks.
-
-### 3. Cheaper Batch Return Types
-
-Current state:
-
-- `batch_mcs()` returns a list of full atom maps.
-- `screen_and_match()` returns `(index, mapping)` pairs.
-
-Missing:
-
-- Batch size-only and hit-only variants for high-throughput screening.
-
-Recommended work:
-
-- Add native plus Python APIs for:
-  - `batch_mcs_size(query, targets, ...) -> list[int]`
-  - `screen_and_mcs_size(query, targets, threshold, ...)`
-  - `batch_find_substructure(query, targets, ...) -> list[list[tuple[int, int]]]`
-    only when the caller explicitly wants mappings
+- Add `batch_find_substructure(query, targets, ...) -> list[list[tuple[int, int]]]`
+  for callers who need explicit atom-atom mappings in bulk.
 
 Primary files:
 
@@ -161,10 +131,10 @@ Primary files:
 
 Why:
 
-- For many workloads the user cares about hit/no-hit or MCS size first.
-- Avoiding per-result `dict` construction will help the fast Python paths.
+- Some downstream workflows (reaction mapping, R-group alignment) need
+  full mappings, not just hit/miss.
 
-### 4. Corpus-Style Batch Objects
+### 2. Corpus-Style Batch Objects
 
 Recommended work:
 
@@ -182,8 +152,8 @@ Primary files:
 
 Why:
 
-- `batchSubstructure()` and `batchMCS()` currently prewarm every target on each
-  call.
+- `batchSubstructure()` and `batchMCS()` currently prewarm every target on
+  each call.
 - Corpus reuse is the natural next step for screening and leaderboard
   workloads.
 
@@ -202,8 +172,7 @@ Current state:
 Recommended work:
 
 - Replace the full cross-product with bucketed target candidates keyed by a
-  cheap policy-specific label.
-- Reuse the same bucket idea already present in the VF2++ domain initializer.
+  cheap policy-specific label (mirroring the VF2++ domain initializer).
 - Consider flat bit-domain storage for compatibility targets when it improves
   downstream set intersections.
 
@@ -268,13 +237,14 @@ Why:
 Current state:
 
 - Public APIs expose mappings as `std::map<int, int>`.
-- Internal search code also still moves `std::map<int, int>` through multiple
-  stages and seeds.
+- Internal search code uses flat `q2t` / `t2q` arrays in some stages
+  (greedy bond-extend, seed building) but still materializes maps at
+  stage boundaries and the API surface.
 
 Recommended work:
 
-- Keep flat `q2t` / `t2q` arrays as the internal representation deeper into the
-  pipeline.
+- Keep flat `q2t` / `t2q` arrays as the internal representation deeper into
+  the pipeline.
 - Materialize `std::map<int, int>` only at the API boundary or for final
   ranking.
 
@@ -284,7 +254,6 @@ Primary file:
 
 Why:
 
-- The recursive core already uses flat arrays in several places.
 - Converging more of the pipeline onto flat arrays should reduce allocations,
   tree churn, and comparison overhead.
 
@@ -292,21 +261,7 @@ Why:
 
 Substructure is already fast, but there are still clear wins for repeated use.
 
-### 1. Persistent SMARTS Query Execution
-
-Primary files:
-
-- `cpp/include/smsd/smarts_parser.hpp`
-- `cpp/bindings/pybind11/smsd_bindings.cpp`
-- `python/smsd/__init__.py`
-
-Recommended work:
-
-- Expose persistent `SmartsQuery`.
-- Add a batch target path for one compiled SMARTS against many targets.
-- Reuse compiled ordering and query-side metadata across calls.
-
-### 2. VF2++ Domain-Init Cleanup
+### 1. VF2++ Domain-Init Cleanup
 
 Current state:
 
@@ -385,10 +340,10 @@ Do not prioritize:
 If only a small amount of engineering time is available, do this order:
 
 1. Add profiling counters to `findMCS` and the Python benchmark driver.
-2. Bind a reusable compiled SMARTS object.
-3. Add `MolGraph.prewarm()` and document it for Python.
-4. Add `batch_mcs_size()` and `screen_and_mcs_size()`.
-5. Profile hard strict-mode pairs and attack the worst stage inside `mcs.hpp`.
+2. Add `batch_find_substructure()` with full mapping return.
+3. Add `TargetCorpus` for persistent prewarmed target sets.
+4. Profile hard strict-mode pairs and attack the worst stage inside `mcs.hpp`.
+5. Bucketed compatibility in `GraphBuilder` to skip the O(n1 × n2) constructor.
 
 That sequence should improve both user-facing Python throughput and the native
 core diagnosis without committing too early to low-level tuning.
