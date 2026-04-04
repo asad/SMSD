@@ -384,7 +384,7 @@ def find_mcs_progressive(mol1, mol2, *, on_progress=None, tautomer_aware=False,
             best_size = len(best)
 
         elapsed_ms = int((time.monotonic() - t0) * 1000)
-        on_progress(dict(best), best_size, elapsed_ms)
+        on_progress(best, best_size, elapsed_ms)
 
         if best_size >= min_n:
             break
@@ -1749,15 +1749,15 @@ def _compute_index_map(rdkit_mol, canonical_smi):
     truth for SMILES parse order = SMSD's internal atom order.
 
     The mapping: index_map[smsd_idx] = rdkit_idx
+
+    NOTE: The caller (from_rdkit) must have already called MolToSmiles()
+    on this molecule, which populates _smilesAtomOutputOrder as a side effect.
     """
     from rdkit import Chem
 
     n = rdkit_mol.GetNumAtoms()
 
-    # RDKit records which original atom appears at each position in the
-    # canonical SMILES via the _smilesAtomOutputOrder property.
-    # We must call MolToSmiles first to populate this property.
-    _ = Chem.MolToSmiles(rdkit_mol)  # ensures property is set
+    # _smilesAtomOutputOrder is populated by the MolToSmiles() call in from_rdkit().
     try:
         output_order = list(rdkit_mol.GetPropsAsDict()
                             .get('_smilesAtomOutputOrder', []))

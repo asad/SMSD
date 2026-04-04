@@ -1275,7 +1275,7 @@ public:
     // Forward-checking, smallest domain first, break ties by highest degree.
 
     void fastisoOrder(int* order) const {
-        std::vector<bool> picked(Nq_, false);
+        std::vector<uint8_t> picked(Nq_, 0);
 
         // Compute connected components of the query graph via BFS
         std::vector<int> compId(Nq_, -1);

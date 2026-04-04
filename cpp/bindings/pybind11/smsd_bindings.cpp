@@ -658,12 +658,7 @@ PYBIND11_MODULE(_smsd, m) {
              const smsd::ChemOptions& chem, smsd::McsOptions opts,
              int maxResults, int64_t timeout_ms) {
               if (timeout_ms > 0) opts.timeoutMs = timeout_ms;
-              auto results = smsd::findAllMCS(g1, g2, chem, opts, maxResults);
-              // Convert vector<map<int,int>> to vector<dict>
-              std::vector<std::map<int,int>> out;
-              out.reserve(results.size());
-              for (auto& m : results) out.push_back(std::move(m));
-              return out;
+              return smsd::findAllMCS(g1, g2, chem, opts, maxResults);
           },
           py::arg("g1"), py::arg("g2"),
           py::arg("chem") = smsd::ChemOptions(),
@@ -1031,14 +1026,16 @@ PYBIND11_MODULE(_smsd, m) {
               auto fp = (mode == "fcfp")
                   ? smsd::batch::detail::computeCircularFingerprintFCFP(mol, radius, fpSize)
                   : smsd::batch::detail::computeCircularFingerprintECFP(mol, radius, fpSize);
-              // Convert uint64_t words to list of set-bit positions for Python
+              // Extract set-bit positions using CTZ intrinsic (O(popcount) not O(fpSize))
               std::vector<int> bits;
-              for (size_t w = 0; w < fp.size(); ++w)
-                  for (int b = 0; b < 64; ++b)
-                      if (fp[w] & (1ULL << b)) {
-                          int pos = static_cast<int>(w * 64 + b);
-                          if (pos < fpSize) bits.push_back(pos);
-                      }
+              for (size_t w = 0; w < fp.size(); ++w) {
+                  uint64_t word = fp[w];
+                  while (word) {
+                      int bit = static_cast<int>(w * 64) + smsd_ctz64(word);
+                      if (bit < fpSize) bits.push_back(bit);
+                      word &= word - 1;  // clear lowest set bit
+                  }
+              }
               return bits;
           },
           py::arg("mol"), py::arg("radius") = 2,
@@ -1077,14 +1074,16 @@ PYBIND11_MODULE(_smsd, m) {
     m.def("topological_torsion",
           [](const smsd::MolGraph& mol, int fpSize) {
               auto fp = smsd::batch::detail::computeTopologicalTorsion(mol, fpSize);
-              // Convert uint64_t words to list of set-bit positions
+              // Extract set-bit positions using CTZ intrinsic (O(popcount) not O(fpSize))
               std::vector<int> bits;
-              for (size_t w = 0; w < fp.size(); ++w)
-                  for (int b = 0; b < 64; ++b)
-                      if (fp[w] & (1ULL << b)) {
-                          int pos = static_cast<int>(w * 64 + b);
-                          if (pos < fpSize) bits.push_back(pos);
-                      }
+              for (size_t w = 0; w < fp.size(); ++w) {
+                  uint64_t word = fp[w];
+                  while (word) {
+                      int bit = static_cast<int>(w * 64) + smsd_ctz64(word);
+                      if (bit < fpSize) bits.push_back(bit);
+                      word &= word - 1;
+                  }
+              }
               return bits;
           },
           py::arg("mol"), py::arg("fp_size") = 2048,
@@ -1415,32 +1414,31 @@ PYBIND11_MODULE(_smsd, m) {
         });
 
     m.def("reduce_crossings",
-          [](const smsd::MolGraph& g, std::vector<std::vector<double>>& coordsList,
+          [](const smsd::MolGraph& g, py::list coordsList,
              int maxIter) {
-              if (coordsList.size() < static_cast<size_t>(g.n))
-                  coordsList.resize(static_cast<size_t>(g.n), std::vector<double>(2, 0.0));
-              for (auto& coord : coordsList) {
-                  if (coord.size() < 2) coord.resize(2, 0.0);
-              }
-              // Convert list of [x, y] pairs to vector<Point2D>
-              std::vector<smsd::Point2D> coords(coordsList.size());
+              size_t sz = std::max(coordsList.size(), static_cast<size_t>(g.n));
+              std::vector<smsd::Point2D> coords(sz);
               for (size_t i = 0; i < coordsList.size(); i++) {
-                  if (coordsList[i].size() >= 2) {
-                      coords[i].x = coordsList[i][0];
-                      coords[i].y = coordsList[i][1];
+                  py::sequence pair = coordsList[i].cast<py::sequence>();
+                  if (pair.size() >= 2) {
+                      coords[i].x = pair[0].cast<double>();
+                      coords[i].y = pair[1].cast<double>();
                   }
               }
-              int result = smsd::reduceCrossings(g, coords, maxIter);
-              // Copy back
-              for (size_t i = 0; i < coords.size(); i++) {
-                  coordsList[i][0] = coords[i].x;
-                  coordsList[i][1] = coords[i].y;
+              int result;
+              {
+                  py::gil_scoped_release release;
+                  result = smsd::reduceCrossings(g, coords, maxIter);
               }
-              return py::make_tuple(result, coordsList);
+              // Build output list directly — single allocation
+              py::list out(coords.size());
+              for (size_t i = 0; i < coords.size(); i++)
+                  out[i] = py::make_tuple(coords[i].x, coords[i].y);
+              return py::make_tuple(result, out);
           },
           py::arg("mol"), py::arg("coords"), py::arg("max_iter") = 1000,
           "Reduce bond crossings in a 2D layout by optimizing ring orientations.\n"
-          "coords: list of [x, y] pairs for each atom (modified in place).\n"
+          "coords: list of [x, y] pairs for each atom.\n"
           "Returns (crossings_remaining, updated_coords).");
 
     // -----------------------------------------------------------------------
@@ -1448,33 +1446,33 @@ PYBIND11_MODULE(_smsd, m) {
     // -----------------------------------------------------------------------
 
     m.def("force_directed_layout",
-          [](const smsd::MolGraph& g, std::vector<std::vector<double>>& coordsList,
+          [](const smsd::MolGraph& g, py::list coordsList,
              int maxIter, double targetBondLength) {
-              if (coordsList.size() < static_cast<size_t>(g.n))
-                  coordsList.resize(static_cast<size_t>(g.n), std::vector<double>(2, 0.0));
-              for (auto& coord : coordsList) {
-                  if (coord.size() < 2) coord.resize(2, 0.0);
-              }
-              std::vector<smsd::Point2D> coords(coordsList.size());
+              size_t sz = std::max(coordsList.size(), static_cast<size_t>(g.n));
+              std::vector<smsd::Point2D> coords(sz);
               for (size_t i = 0; i < coordsList.size(); i++) {
-                  if (coordsList[i].size() >= 2) {
-                      coords[i].x = coordsList[i][0];
-                      coords[i].y = coordsList[i][1];
+                  py::sequence pair = coordsList[i].cast<py::sequence>();
+                  if (pair.size() >= 2) {
+                      coords[i].x = pair[0].cast<double>();
+                      coords[i].y = pair[1].cast<double>();
                   }
               }
-              double stress = smsd::forceDirectedLayout(g, coords, maxIter, targetBondLength);
-              for (size_t i = 0; i < coords.size(); i++) {
-                  coordsList[i][0] = coords[i].x;
-                  coordsList[i][1] = coords[i].y;
+              double stress;
+              {
+                  py::gil_scoped_release release;
+                  stress = smsd::forceDirectedLayout(g, coords, maxIter, targetBondLength);
               }
-              return py::make_tuple(stress, coordsList);
+              py::list out(coords.size());
+              for (size_t i = 0; i < coords.size(); i++)
+                  out[i] = py::make_tuple(coords[i].x, coords[i].y);
+              return py::make_tuple(stress, out);
           },
           py::arg("mol"), py::arg("coords"),
           py::arg("max_iter") = 500, py::arg("target_bond_length") = 1.5,
           "Force-directed 2D layout minimisation.\n"
           "Iteratively moves atoms to minimise bond-length stress, non-bonded\n"
           "repulsion, and crossing penalties.\n"
-          "coords: list of [x, y] pairs for each atom (modified in place).\n"
+          "coords: list of [x, y] pairs for each atom.\n"
           "Returns (final_stress, updated_coords).");
 
     // -----------------------------------------------------------------------
@@ -1482,32 +1480,32 @@ PYBIND11_MODULE(_smsd, m) {
     // -----------------------------------------------------------------------
 
     m.def("stress_majorisation",
-          [](const smsd::MolGraph& g, std::vector<std::vector<double>>& coordsList,
+          [](const smsd::MolGraph& g, py::list coordsList,
              int maxIter, double targetBondLength) {
-              if (coordsList.size() < static_cast<size_t>(g.n))
-                  coordsList.resize(static_cast<size_t>(g.n), std::vector<double>(2, 0.0));
-              for (auto& coord : coordsList) {
-                  if (coord.size() < 2) coord.resize(2, 0.0);
-              }
-              std::vector<smsd::Point2D> coords(coordsList.size());
+              size_t sz = std::max(coordsList.size(), static_cast<size_t>(g.n));
+              std::vector<smsd::Point2D> coords(sz);
               for (size_t i = 0; i < coordsList.size(); i++) {
-                  if (coordsList[i].size() >= 2) {
-                      coords[i].x = coordsList[i][0];
-                      coords[i].y = coordsList[i][1];
+                  py::sequence pair = coordsList[i].cast<py::sequence>();
+                  if (pair.size() >= 2) {
+                      coords[i].x = pair[0].cast<double>();
+                      coords[i].y = pair[1].cast<double>();
                   }
               }
-              double stress = smsd::stressMajorisation(g, coords, maxIter, targetBondLength);
-              for (size_t i = 0; i < coords.size(); i++) {
-                  coordsList[i][0] = coords[i].x;
-                  coordsList[i][1] = coords[i].y;
+              double stress;
+              {
+                  py::gil_scoped_release release;
+                  stress = smsd::stressMajorisation(g, coords, maxIter, targetBondLength);
               }
-              return py::make_tuple(stress, coordsList);
+              py::list out(coords.size());
+              for (size_t i = 0; i < coords.size(); i++)
+                  out[i] = py::make_tuple(coords[i].x, coords[i].y);
+              return py::make_tuple(stress, out);
           },
           py::arg("mol"), py::arg("coords"),
           py::arg("max_iter") = 300, py::arg("target_bond_length") = 1.5,
           "Stress majorisation (SMACOF algorithm) for 2D layout.\n"
           "Minimises weighted stress to produce graph-distance-proportional layouts.\n"
-          "coords: list of [x, y] pairs for each atom (modified in place).\n"
+          "coords: list of [x, y] pairs for each atom.\n"
           "Returns (final_stress, updated_coords).");
 
     // -----------------------------------------------------------------------

@@ -594,7 +594,7 @@ inline std::map<int,int> greedyProbe(const MolGraph& g1, const MolGraph& g2,
         return a < b;
     });
 
-    std::vector<bool> usedT(n2, false);
+    std::vector<uint8_t> usedT(n2, 0);
     std::map<int,int> mapping;
 
     for (int idx = 0; idx < n1; ++idx) {
@@ -702,8 +702,8 @@ inline bool isPruned(int curSize, int bestSize, const int* qLF, const int* tLF, 
 // Build frontier for McGregor DFS
 // ---------------------------------------------------------------------------
 inline int buildFrontier(const MolGraph& g1, const std::map<int,int>& cur,
-                          const std::vector<bool>& usedQ,
-                          std::vector<bool>& inFrontier,
+                          const std::vector<uint8_t>& usedQ,
+                          std::vector<uint8_t>& inFrontier,
                           int* frontierBuf, bool connectedOnly = true) {
     int count = 0;
     for (auto& [qk, tv] : cur)
@@ -725,7 +725,7 @@ inline int buildFrontier(const MolGraph& g1, const std::map<int,int>& cur,
 // ---------------------------------------------------------------------------
 inline int findBestCandidate(
     const MolGraph& g1, const MolGraph& g2, const ChemOptions& C,
-    const int* q2tMap, const std::vector<bool>& usedT,
+    const int* q2tMap, const std::vector<uint8_t>& usedT,
     const std::vector<std::vector<int>>& qNLF1,
     const std::vector<std::vector<int>>& tNLF1,
     const std::vector<std::vector<int>>& qNLF2,
@@ -775,7 +775,7 @@ inline int findBestCandidate(
 inline void undoForcedAssignments(
     int forcedCount, const int* forcedQ, const int* forcedT,
     std::map<int,int>& cur,
-    std::vector<bool>& usedQ, std::vector<bool>& usedT,
+    std::vector<uint8_t>& usedQ, std::vector<uint8_t>& usedT,
     int* qLabelFreq, int* tLabelFreq,
     const int* jointQ, const int* jointT,
     int* q2tMap) {
@@ -804,11 +804,11 @@ inline void mcGregorDFS(
     const std::vector<std::vector<int>>& tNLF3,
     bool useTwoHopNLF, bool useThreeHopNLF,
     TimeBudget& tb, int64_t localDeadlineNs, int depth,
-    std::vector<bool>& usedQ, std::vector<bool>& usedT,
+    std::vector<uint8_t>& usedQ, std::vector<uint8_t>& usedT,
     int* q2tMap,
     int* candBuf, int* bestCandBuf,
     int* qLabelFreq, int* tLabelFreq, int freqSize,
-    std::vector<bool>& inFrontier, int* frontierBuf,
+    std::vector<uint8_t>& inFrontier, int* frontierBuf,
     const int* jointQ, const int* jointT) {
 
     // Amortized local-deadline check: only call Clock::now() every 1024 iterations
@@ -897,9 +897,9 @@ inline void mcGregorBondGrow(
     const std::vector<std::vector<int>>& qNLF3,
     const std::vector<std::vector<int>>& tNLF3,
     TimeBudget& tb, int64_t localDeadlineNs, int depth,
-    std::vector<bool>& usedQ, std::vector<bool>& usedT,
+    std::vector<uint8_t>& usedQ, std::vector<uint8_t>& usedT,
     int* qLabelFreq, int* tLabelFreq, int freqSize,
-    int* q2tMap, std::vector<bool>& inFrontier, int* frontierBuf,
+    int* q2tMap, std::vector<uint8_t>& inFrontier, int* frontierBuf,
     int* candBuf, int* bestCandBuf,
     const int* jointQ, const int* jointT) {
 
@@ -1063,9 +1063,9 @@ inline std::map<int,int> mcGregorExtend(
     auto& tNLF3 = useThreeHopNLF ? g2.getNLF3() : emptyNLF;
 
     int n1 = g1.n, n2 = g2.n;
-    std::vector<bool> usedQ(n1, false), usedT(n2, false);
+    std::vector<uint8_t> usedQ(n1, 0), usedT(n2, 0);
     std::vector<int> candBuf(n2), bestCandBuf(n2);
-    for (auto& [k,v] : seed) { usedQ[k] = true; usedT[v] = true; }
+    for (auto& [k,v] : seed) { usedQ[k] = 1; usedT[v] = 1; }
 
     int maxLabel = 0;
     for (int i = 0; i < n1; ++i) maxLabel = std::max(maxLabel, g1.label[i]);
@@ -1076,7 +1076,7 @@ inline std::map<int,int> mcGregorExtend(
     for (int i = 0; i < n1; ++i) { jointQ[i] = g1.label[i]; if (!usedQ[i]) qLabelFreq[jointQ[i]]++; }
     for (int j = 0; j < n2; ++j) { jointT[j] = g2.label[j]; if (!usedT[j]) tLabelFreq[jointT[j]]++; }
 
-    std::vector<bool> inFrontier(n1, false);
+    std::vector<uint8_t> inFrontier(n1, 0);
     std::vector<int> frontierBuf(n1);
 
     // Fast bail-out
@@ -1117,7 +1117,7 @@ inline std::map<int,int> mcGregorExtend(
                          usedQCopy, usedTCopy, qLFCopy.data(), tLFCopy.data(),
                          freqSize, q2tMap.data(), inFCopy, frontierBuf.data(),
                          candBuf.data(), bestCandBuf.data(), jointQ.data(), jointT.data());
-        std::fill(inFrontier.begin(), inFrontier.end(), false);
+        std::fill(inFrontier.begin(), inFrontier.end(), uint8_t(0));
         if (bondBest.size() > best.size()) best = bondBest;
     }
 
@@ -1367,7 +1367,7 @@ public:
         int64_t nodeCount = 0;
         int minN = std::min(n1, n2);
         int maxSeeds = std::min(g1BondCount, 10);
-        std::vector<bool> atomUsedAsSeed(n1, false);
+        std::vector<uint8_t> atomUsedAsSeed(n1, 0);
         std::set<int64_t> triedOrbitPairs;
         int seedsTried = 0;
 
@@ -1869,7 +1869,7 @@ private:
 
         // Partition bound
         if (pSize > 2) {
-            std::vector<bool> qiSeen(g1_.n, false), tjSeen(g2_.n, false);
+            std::vector<uint8_t> qiSeen(g1_.n, 0), tjSeen(g2_.n, 0);
             for (int w = 0; w < words; ++w) {
                 uint64_t bits = P[w];
                 while (bits) {
@@ -2064,7 +2064,7 @@ public:
         std::vector<int> R1, R2;
         for (int i = 0; i < g1_.n; ++i) if (g1_.ring[i]) R1.push_back(i);
         for (int j = 0; j < g2_.n; ++j) if (g2_.ring[j]) R2.push_back(j);
-        std::vector<bool> used(g2_.n, false);
+        std::vector<uint8_t> used(g2_.n, 0);
         for (int i : R1) {
             int bestJ = -1, bestScore = INT_MIN;
             for (int j : R2) {
@@ -2073,7 +2073,7 @@ public:
                 int score = (g1_.aromatic[i] && g2_.aromatic[j] ? 10 : 0) + std::min(g1_.degree[i], g2_.degree[j]);
                 if (score > bestScore) { bestScore = score; bestJ = j; }
             }
-            if (bestJ >= 0) { seed[i] = bestJ; used[bestJ] = true; }
+            if (bestJ >= 0) { seed[i] = bestJ; used[bestJ] = 1; }
             if (tb.expired()) break;
         }
         return seed;
@@ -2090,7 +2090,7 @@ public:
             int ra = freq[g1_.label[a]], rb = freq[g1_.label[b]];
             return ra != rb ? ra < rb : g1_.degree[a] > g1_.degree[b];
         });
-        std::vector<bool> used(g2_.n, false);
+        std::vector<uint8_t> used(g2_.n, 0);
         for (int qi : Q) {
             int bestJ = -1, bestScore = INT_MIN;
             for (int tj = 0; tj < g2_.n; ++tj) {
@@ -2099,7 +2099,7 @@ public:
                 int score = 10 - std::abs(g1_.degree[qi] - g2_.degree[tj]);
                 if (score > bestScore) { bestScore = score; bestJ = tj; }
             }
-            if (bestJ >= 0) { seed[qi] = bestJ; used[bestJ] = true; }
+            if (bestJ >= 0) { seed[qi] = bestJ; used[bestJ] = 1; }
             if (tb.expired()) break;
         }
         return seed;
@@ -2108,7 +2108,7 @@ public:
 
     std::map<int,int> vf2ppNeighborhoodSeed(
             TimeBudget& tb, int64_t millis, int /*radius*/, int maxAnchors,
-            const std::vector<bool>& qCand, const std::vector<bool>& tCand) {
+            const std::vector<uint8_t>& qCand, const std::vector<uint8_t>& tCand) {
         struct AP { int qi, tj, score; };
         std::vector<AP> pairs;
         for (int i = 0; i < g1_.n; ++i) {
@@ -2144,7 +2144,7 @@ public:
 
     std::map<int,int> vf2ppRingSkeletonSeed(TimeBudget& tb, int64_t millis,
                                              int radius, int maxAnchors) {
-        std::vector<bool> qRing(g1_.n, false), tRing(g2_.n, false);
+        std::vector<uint8_t> qRing(g1_.n, 0), tRing(g2_.n, 0);
         bool qEmpty = true, tEmpty = true;
         for (int i = 0; i < g1_.n; ++i) if (g1_.ring[i]) { qRing[i] = true; qEmpty = false; }
         for (int j = 0; j < g2_.n; ++j) if (g2_.ring[j]) { tRing[j] = true; tEmpty = false; }
@@ -2157,8 +2157,8 @@ public:
     std::map<int,int> vf2ppCoreSeed(TimeBudget& tb, int64_t millis,
                                      int radius, int maxAnchors) {
         // Iteratively prune non-ring, non-aromatic leaf carbons
-        std::vector<bool> qMask(g1_.n, true), tMask(g2_.n, true);
-        auto prune = [](const MolGraph& g, std::vector<bool>& mask) {
+        std::vector<uint8_t> qMask(g1_.n, 1), tMask(g2_.n, 1);
+        auto prune = [](const MolGraph& g, std::vector<uint8_t>& mask) {
             bool changed;
             do {
                 changed = false;
@@ -2516,7 +2516,7 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
                     if (g.degree[i] <= 1) { start = i; break; }
                 if (start < 0) start = 0; // ring — pick any
                 std::vector<int> seq;
-                std::vector<bool> visited(g.n, false);
+                std::vector<uint8_t> visited(g.n, 0);
                 int cur = start;
                 while (cur >= 0) {
                     visited[cur] = true;
@@ -2580,9 +2580,9 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
                 edgeCount += static_cast<int>(g.neighbors[i].size());
             edgeCount /= 2;
             if (edgeCount != g.n - 1) return false;
-            std::vector<bool> vis(g.n, false);
+            std::vector<uint8_t> vis(g.n, 0);
             std::deque<int> bfs;
-            bfs.push_back(0); vis[0] = true;
+            bfs.push_back(0); vis[0] = 1;
             int cnt = 1;
             while (!bfs.empty()) {
                 int u = bfs.front(); bfs.pop_front();
@@ -2630,9 +2630,9 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
                 rt.parent.assign(g.n, -1);
                 rt.children.resize(g.n);
                 rt.postorder.reserve(g.n);
-                std::vector<bool> vis(g.n, false);
+                std::vector<uint8_t> vis(g.n, 0);
                 std::deque<int> bfs;
-                bfs.push_back(root); vis[root] = true;
+                bfs.push_back(root); vis[root] = 1;
                 std::vector<int> bfsOrder;
                 bfsOrder.reserve(g.n);
                 while (!bfs.empty()) {
@@ -2715,7 +2715,7 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
                     }
                     std::sort(edges.begin(), edges.end(),
                               [](const CandEdge& a, const CandEdge& b) { return a.weight > b.weight; });
-                    std::vector<bool> usedI(d1, false), usedJ(d2, false);
+                    std::vector<uint8_t> usedI(d1, 0), usedJ(d2, 0);
                     int childSum = 0;
                     std::vector<std::pair<int,int>> matching;
                     for (auto& e : edges) {
@@ -2797,8 +2797,8 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
         bool grew = true;
         while (grew && !tb.expired()) {
             grew = false;
-            std::vector<bool> usedQ(g1.n, false), usedT(g2.n, false);
-            for (auto& [q,t] : augmented) { usedQ[q] = true; usedT[t] = true; }
+            std::vector<uint8_t> usedQ(g1.n, 0), usedT(g2.n, 0);
+            for (auto& [q,t] : augmented) { usedQ[q] = 1; usedT[t] = 1; }
             for (auto& [qi, ti] : augmented) {
                 for (int qk : g1.neighbors[qi]) {
                     if (usedQ[qk]) continue;
@@ -2879,7 +2879,7 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
         int k = bestSize;
         int n1k = g1.n, n2k = g2.n;
         std::vector<std::vector<int>> pgDeg(n1k, std::vector<int>(n2k, 0));
-        std::vector<std::vector<bool>> alive(n1k, std::vector<bool>(n2k, false));
+        std::vector<std::vector<uint8_t>> alive(n1k, std::vector<uint8_t>(n2k, 0));
         for (int qi = 0; qi < n1k; ++qi)
             for (int tj = 0; tj < n2k; ++tj)
                 if (atomsCompatFast(g1, qi, g2, tj, chem)) alive[qi][tj] = true;
