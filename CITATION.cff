@@ -4,7 +4,7 @@ message: "If you use this software, please cite it using the metadata from this 
 type: software
 license: Apache-2.0
 version: 6.11.0
-date-released: "2026-04-03"
+date-released: "2026-04-04"
 url: "https://github.com/asad/SMSD"
 repository-code: "https://github.com/asad/SMSD"
 

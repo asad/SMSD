@@ -7,7 +7,13 @@ at BioInception PVT LTD (https://github.com/asad/SMSD).
 
 ACADEMIC CITATION
 =================
-If you use SMSD Pro in academic research, please cite:
+If you use SMSD Pro in academic research, please cite both papers:
+
+  Rahman SA.
+  SMSD Pro: Coverage-Driven, Tautomer-Aware Maximum Common
+  Substructure Search.
+  ChemRxiv, 2025.
+  DOI: 10.26434/chemrxiv.15001534
 
   Rahman SA, Bashton M, Holliday GL, Schrader R, Thornton JM.
   Small Molecule Subgraph Detector (SMSD) toolkit.
@@ -51,6 +57,15 @@ works by Syed Asad Rahman:
   4. Tier 2 solvent-dependent pKa corrections for tautomer matching
   5. VF2++ with 3-level NLF pruning and GPU-accelerated domain
      initialisation (CUDA + Apple Metal)
+  6. Cache-optimal McGregor DFS with pre-indexed candidate lookup
+     and uint8_t hot-path data structures (v6.11.0)
+  7. 8-phase 2D molecular layout pipeline with simulated annealing
+     crossing reduction and 40+ scaffold templates (v6.11.0)
+  8. Distance geometry 3D embedding with power iteration
+     eigendecomposition and force-field refinement (v6.11.0)
+  9. Publication-quality SVG depiction engine conforming to
+     ACS 1996 standard with Jmol/CPK colors, asymmetric double
+     bonds, wedge/dash stereo, and bond-to-label clipping (v6.11.0)
 
 THIRD-PARTY NOTICES
 ===================
