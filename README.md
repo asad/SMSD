@@ -598,6 +598,32 @@ AddressSanitizer: zero memory errors.
 
 ---
 
+## License and Commercial Use
+
+SMSD Pro is released under the **Apache License 2.0** — free for any use,
+including commercial, with no fee, registration, or approval required.
+
+| Use Case | Permitted |
+|----------|-----------|
+| Commercial products and services | Yes |
+| Proprietary / closed-source software | Yes |
+| SaaS platforms and cloud services | Yes |
+| Pharmaceutical, biotech, agrochemical pipelines | Yes |
+| Academic research and teaching | Yes |
+| Internal corporate tools | Yes |
+| Modify and redistribute | Yes |
+
+**What you must do** (Apache 2.0 Section 4): include the [LICENSE](LICENSE) and
+[NOTICE](NOTICE) files in your distribution, retain copyright notices, and state
+any changes you made to source files.
+
+**What you must not do**: use "SMSD", "SMSD Pro", or BioInception trademarks to
+endorse your product without permission (see [NOTICE](NOTICE) for trademark terms).
+
+Full details: [LICENSE](LICENSE) | [NOTICE](NOTICE)
+
+---
+
 ## Citation
 
 If you use SMSD Pro in your research, please cite the following paper describing

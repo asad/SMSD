@@ -5,6 +5,38 @@ Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
 This product includes software developed by Syed Asad Rahman
 at BioInception PVT LTD (https://github.com/asad/SMSD).
 
+LICENSING AND COMMERCIAL USE
+============================
+SMSD Pro is released under the Apache License, Version 2.0.
+You are free to use, modify, and distribute this software for any
+purpose, including commercial use, subject to the license terms.
+
+  PERMITTED (no fee, no registration, no approval needed):
+    * Use SMSD Pro in commercial products and services
+    * Use SMSD Pro in proprietary / closed-source software
+    * Bundle SMSD Pro in SaaS platforms and cloud services
+    * Modify the source code for your own needs
+    * Redistribute SMSD Pro (modified or unmodified)
+    * Use in pharmaceutical, biotech, agrochemical pipelines
+    * Use in academic research and teaching
+    * Use in internal corporate tools and workflows
+
+  REQUIRED (Apache 2.0 Section 4):
+    * Include a copy of the LICENSE file in your distribution
+    * Include a copy of this NOTICE file in your distribution
+    * Retain all copyright and attribution notices
+    * State any changes you made to the source files
+
+  NOT PERMITTED:
+    * Use the names "SMSD", "SMSD Pro", or BioInception
+      trademarks to endorse your product (see TRADEMARK NOTICE)
+    * Claim you wrote the original software
+    * Hold contributors liable for damages
+
+  NO WARRANTY:
+    SMSD Pro is provided "AS IS", without warranty of any kind.
+    See the LICENSE file for the full disclaimer.
+
 ACADEMIC CITATION
 =================
 If you use SMSD Pro in academic research, please cite both papers:
