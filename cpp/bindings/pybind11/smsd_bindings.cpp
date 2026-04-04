@@ -456,6 +456,15 @@ PYBIND11_MODULE(_smsd, m) {
         .def("ensure_canonical", [](const smsd::MolGraph& g) {
                  g.ensureCanonical();
              }, "Compute and cache Morgan ranks, canonical labels, and orbits")
+        .def("get_automorphism_generators", [](const smsd::MolGraph& g) {
+                 return g.getAutomorphismGenerators();
+             }, "Return automorphism generators as list of permutation lists.\n"
+                "Each generator is a list of length n where gen[i] is the image\n"
+                "of atom i. The full automorphism group is the closure of these\n"
+                "generators.")
+        .def("automorphism_generators_truncated", [](const smsd::MolGraph& g) {
+                 return g.automorphismGeneratorsTruncated();
+             }, "True if generators were capped (group may be incomplete)")
         .def("get_canonical_hash", [](const smsd::MolGraph& g) -> uint64_t {
                  return g.getCanonicalHash();
              }, "Return the canonical hash of this molecule. "
@@ -666,6 +675,18 @@ PYBIND11_MODULE(_smsd, m) {
           "Returns a list of dicts, each mapping query atom index to target atom index.\n"
           "max_results caps the number of solutions (default 10).\n"
           "timeout_ms overrides opts.timeout_ms if > 0.");
+
+    m.def("canonicalize_mapping",
+          [](const smsd::MolGraph& g1, const smsd::MolGraph& g2,
+             const std::map<int,int>& mapping) {
+              return smsd::canonicalizeMapping(g1, g2, mapping);
+          },
+          py::arg("g1"), py::arg("g2"), py::arg("mapping"),
+          py::call_guard<py::gil_scoped_release>(),
+          "Canonicalize an atom-atom mapping under the automorphism groups of\n"
+          "both molecules. Returns the lexicographically smallest equivalent\n"
+          "mapping. Two mappings that differ only by symmetry of g1 and/or g2\n"
+          "will produce the same canonical result.");
 
     m.def("mcs_size",
           [](const smsd::MolGraph& g1, const smsd::MolGraph& g2,

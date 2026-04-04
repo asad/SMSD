@@ -25,6 +25,8 @@ public final class MolGraph {
   final int n;
   public final int[] atomicNum, formalCharge, label, massNumber;
   int[] morganRank, orbit, canonicalLabel;
+  int[][] autGenerators;
+  boolean autGeneratorsTruncated;
   long canonicalHash;
   private volatile boolean canonicalComputed = false;
   private volatile boolean tautomerClassesComputed = false;
@@ -1776,9 +1778,11 @@ public final class MolGraph {
     synchronized (this) {
       if (canonicalComputed) return;
       this.morganRank = computeMorganRanks(n, label, neighbors);
-      int[][] clResult = computeCanonicalLabeling(n, label, degree, neighbors);
-      this.canonicalLabel = clResult[0];
-      this.orbit = clResult[1];
+      CanonResult clResult = computeCanonicalLabeling(n, label, degree, neighbors);
+      this.canonicalLabel = clResult.canonLabel;
+      this.orbit = clResult.orbit;
+      this.autGenerators = clResult.autGenerators;
+      this.autGeneratorsTruncated = clResult.generatorsTruncated;
       this.canonicalHash = computeCanonicalHash(this, canonicalLabel);
       canonicalComputed = true;
     }
@@ -2658,9 +2662,20 @@ public final class MolGraph {
 
   private static final int MAX_SEARCH_NODES = 50000;
   private static final int CANON_SEARCH_LIMIT = 200;
+  private static final int MAX_GENERATORS = 500;
 
-  private static int[][] computeCanonicalLabeling(int n, int[] label, int[] degree, int[][] neighbors) {
-    if (n == 0) return new int[][] {new int[0], new int[0]};
+  private static final class CanonResult {
+    final int[] canonLabel;
+    final int[] orbit;
+    final int[][] autGenerators;
+    final boolean generatorsTruncated;
+    CanonResult(int[] cl, int[] orb, int[][] gens, boolean trunc) {
+      this.canonLabel = cl; this.orbit = orb; this.autGenerators = gens; this.generatorsTruncated = trunc;
+    }
+  }
+
+  private static CanonResult computeCanonicalLabeling(int n, int[] label, int[] degree, int[][] neighbors) {
+    if (n == 0) return new CanonResult(new int[0], new int[0], new int[0][], false);
     int[] mRank = new int[n];
     System.arraycopy(label, 0, mRank, 0, n);
     int[] mNew = new int[n];
@@ -2712,10 +2727,12 @@ public final class MolGraph {
       }
       int[] canonLabel = new int[n];
       for (int pos = 0; pos < n; pos++) canonLabel[initPerm[pos]] = pos;
-      return new int[][] {canonLabel, buildOrbits(uf, n)};
+      return new CanonResult(canonLabel, buildOrbits(uf, n), new int[0][], false);
     }
     refinePartition(n, initPerm, initCellEnd, neighbors, label, -1);
     int[] bestPerm = null;
+    List<int[]> generators = new ArrayList<>();
+    boolean generatorsTruncated = false;
     int nodeCount = 0;
     boolean budgetExceeded = false;
     ArrayDeque<int[]> permStack = new ArrayDeque<>();
@@ -2753,6 +2770,13 @@ public final class MolGraph {
           bestPerm = perm.clone();
         } else if (comparePerm(perm, bestPerm, n, label, neighbors) == 0) {
           for (int i = 0; i < n; i++) ufUnion(uf, perm[i], bestPerm[i]);
+          if (generators.size() < MAX_GENERATORS) {
+            int[] gen = new int[n];
+            for (int i = 0; i < n; i++) gen[bestPerm[i]] = perm[i];
+            generators.add(gen);
+          } else {
+            generatorsTruncated = true;
+          }
         }
         continue;
       }
@@ -2789,7 +2813,8 @@ public final class MolGraph {
         cs = i + 1;
       }
     }
-    return new int[][] {canonLabel, buildOrbits(uf, n)};
+    return new CanonResult(canonLabel, buildOrbits(uf, n),
+        generators.toArray(new int[0][]), generatorsTruncated);
   }
 
   private static int[] buildOrbits(int[] uf, int n) {
@@ -2957,6 +2982,17 @@ public final class MolGraph {
   public int[] getOrbits() { ensureCanonical(); return orbit.clone(); }
   public int[] getCanonicalLabeling() { ensureCanonical(); return canonicalLabel.clone(); }
   public long getCanonicalHash() { ensureCanonical(); return canonicalHash; }
+
+  /**
+   * Return automorphism generators discovered during canonical labeling.
+   * Each generator is a permutation array of length n where gen[i] is the
+   * image of atom i.  The full automorphism group is the closure of these
+   * generators.
+   */
+  public int[][] getAutomorphismGenerators() { ensureCanonical(); return autGenerators; }
+
+  /** True when the generator list was capped during canonical search. */
+  public boolean automorphismGeneratorsTruncated() { ensureCanonical(); return autGeneratorsTruncated; }
 
   // ---- Canonical SMILES generation ----
 

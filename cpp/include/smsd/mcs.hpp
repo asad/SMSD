@@ -3287,6 +3287,81 @@ inline std::map<int,int> findDisconnectedMCS(const MolGraph& g1, const MolGraph&
     return findMCS(g1, g2, chem, dM);
 }
 
+// ========================================================================
+// Mapping canonicalization by automorphism
+// ========================================================================
+
+/// Canonicalize an atom-atom mapping under the automorphism groups of both
+/// molecules.  Two mappings M1 and M2 are equivalent if there exist
+/// automorphisms alpha in Aut(g1) and beta in Aut(g2) such that
+/// M2 = beta . M1 . alpha^{-1}.  This function returns the lexicographically
+/// smallest representative of the equivalence class.
+///
+/// The algorithm iteratively applies each generator to the current best
+/// mapping (on both the query side and the target side) and keeps the
+/// lex-smallest result, repeating until a fixed point is reached.
+inline std::map<int,int> canonicalizeMapping(
+        const MolGraph& g1, const MolGraph& g2,
+        const std::map<int,int>& mapping) {
+    if (mapping.empty()) return mapping;
+
+    const auto& gens1 = g1.getAutomorphismGenerators();
+    const auto& gens2 = g2.getAutomorphismGenerators();
+
+    // No symmetry in either molecule — mapping is already canonical.
+    if (gens1.empty() && gens2.empty()) return mapping;
+
+    // Work with sorted pair vectors for efficient lex comparison.
+    using PairVec = std::vector<std::pair<int,int>>;
+    auto mapToPairs = [](const std::map<int,int>& m) {
+        PairVec v(m.begin(), m.end());
+        return v;
+    };
+
+    // Precompute inverses of g1 generators (query-side permutation).
+    std::vector<std::vector<int>> invGens1;
+    invGens1.reserve(gens1.size());
+    for (const auto& gen : gens1) {
+        std::vector<int> inv(gen.size());
+        for (int i = 0; i < static_cast<int>(gen.size()); ++i)
+            inv[gen[i]] = i;
+        invGens1.push_back(std::move(inv));
+    }
+
+    PairVec best = mapToPairs(mapping);
+    PairVec candidate;
+    candidate.reserve(best.size());
+
+    int maxIter = std::max(100, 2 * static_cast<int>(gens1.size() + gens2.size()));
+    for (int iter = 0; iter < maxIter; ++iter) {
+        bool improved = false;
+
+        // Try each g1-side generator (permute query atom indices).
+        for (const auto& inv : invGens1) {
+            candidate.clear();
+            for (const auto& [qi, ti] : best)
+                candidate.emplace_back(inv[qi], ti);
+            std::sort(candidate.begin(), candidate.end());
+            if (candidate < best) { best = candidate; improved = true; }
+        }
+
+        // Try each g2-side generator (permute target atom indices).
+        for (const auto& gen : gens2) {
+            candidate.clear();
+            for (const auto& [qi, ti] : best)
+                candidate.emplace_back(qi, gen[ti]);
+            std::sort(candidate.begin(), candidate.end());
+            if (candidate < best) { best = candidate; improved = true; }
+        }
+
+        if (!improved) break;
+    }
+
+    std::map<int,int> result;
+    for (const auto& [qi, ti] : best) result[qi] = ti;
+    return result;
+}
+
 /// Enumerate multiple distinct MCS mappings of the maximum size.
 ///
 /// First computes the single best MCS to determine the optimal size K, then
@@ -3312,20 +3387,18 @@ inline std::vector<std::map<int,int>> findAllMCS(const MolGraph& g1, const MolGr
     int K = static_cast<int>(best.size());
     if (K == 0) return {};
 
-    // Deduplicate by canonical SMILES of the extracted MCS subgraph,
-    // so two mappings producing structurally identical subgraphs (different
-    // atom indices) are recognised as the same MCS.
-    auto mcsCanonSmi = [&](const std::map<int,int>& m) -> std::string {
-        std::vector<int> keys;
-        keys.reserve(m.size());
-        for (const auto& p : m) keys.push_back(p.first);
-        return extractSubgraph(g1, keys).toCanonicalSmiles();
+    // Deduplicate by automorphism-canonical mapping.
+    // Two mappings are equivalent if they differ only by automorphisms of g1/g2.
+    using CanonKey = std::vector<std::pair<int,int>>;
+    auto canonKey = [&](const std::map<int,int>& m) -> CanonKey {
+        auto cm = canonicalizeMapping(g1, g2, m);
+        return CanonKey(cm.begin(), cm.end());
     };
-    std::map<std::string, std::map<int,int>> seenBySmi;
-    seenBySmi.emplace(mcsCanonSmi(best), best);
-    if (static_cast<int>(seenBySmi.size()) >= maxResults) {
+    std::map<CanonKey, std::map<int,int>> seen;
+    seen.emplace(canonKey(best), best);
+    if (static_cast<int>(seen.size()) >= maxResults) {
         std::vector<std::map<int,int>> result;
-        for (auto& [k, v] : seenBySmi) result.push_back(std::move(v));
+        for (auto& [k, v] : seen) result.push_back(std::move(v));
         return result;
     }
 
@@ -3344,7 +3417,7 @@ inline std::vector<std::map<int,int>> findAllMCS(const MolGraph& g1, const MolGr
         bool swapped = g1.n > g2.n;
         auto subMaps = findAllSubstructures(sml, lrg, chem, tb.remainingMs());
         for (const auto& raw : subMaps) {
-            if (tb.expired() || static_cast<int>(seenBySmi.size()) >= maxResults) break;
+            if (tb.expired() || static_cast<int>(seen.size()) >= maxResults) break;
             std::map<int,int> mapping;
             if (swapped) {
                 for (const auto& p : raw) mapping[p.second] = p.first;
@@ -3352,14 +3425,14 @@ inline std::vector<std::map<int,int>> findAllMCS(const MolGraph& g1, const MolGr
                 for (const auto& p : raw) mapping[p.first] = p.second;
             }
             if (static_cast<int>(mapping.size()) == K) {
-                auto smi = mcsCanonSmi(mapping);
-                if (seenBySmi.find(smi) == seenBySmi.end())
-                    seenBySmi.emplace(std::move(smi), mapping);
+                auto ck = canonKey(mapping);
+                if (seen.find(ck) == seen.end())
+                    seen.emplace(std::move(ck), mapping);
             }
         }
-        if (static_cast<int>(seenBySmi.size()) >= maxResults) {
+        if (static_cast<int>(seen.size()) >= maxResults) {
             std::vector<std::map<int,int>> result;
-            for (auto& [k, v] : seenBySmi) result.push_back(std::move(v));
+            for (auto& [k, v] : seen) result.push_back(std::move(v));
             return result;
         }
     }
@@ -3404,47 +3477,47 @@ inline std::vector<std::map<int,int>> findAllMCS(const MolGraph& g1, const MolGr
         // Extend each seed and collect K-sized results
         int64_t perSeedMs = std::max(int64_t(1), tb.remainingMs() / std::max(int(1), static_cast<int>(seeds.size())));
         for (auto& seed : seeds) {
-            if (tb.expired() || static_cast<int>(seenBySmi.size()) >= maxResults) break;
+            if (tb.expired() || static_cast<int>(seen.size()) >= maxResults) break;
             auto ext = ppx(g1, g2,
                 mcGregorExtend(g1, g2, seed, chem, tb, perSeedMs,
                     opts.useTwoHopNLFInExtension, opts.useThreeHopNLFInExtension, opts.connectedOnly),
                 chem, opts);
             if (static_cast<int>(ext.size()) == K) {
-                auto smi = mcsCanonSmi(ext);
-                if (seenBySmi.find(smi) == seenBySmi.end())
-                    seenBySmi.emplace(std::move(smi), ext);
+                auto ck = canonKey(ext);
+                if (seen.find(ck) == seen.end())
+                    seen.emplace(std::move(ck), ext);
             }
 
             // Greedy atom extension for alternative mappings
-            if (!tb.expired() && static_cast<int>(seenBySmi.size()) < maxResults) {
+            if (!tb.expired() && static_cast<int>(seen.size()) < maxResults) {
                 auto gext = ppx(g1, g2,
                     greedyAtomExtend(g1, g2, seed, chem, opts),
                     chem, opts);
                 if (static_cast<int>(gext.size()) == K) {
-                    auto smi = mcsCanonSmi(gext);
-                    if (seenBySmi.find(smi) == seenBySmi.end())
-                        seenBySmi.emplace(std::move(smi), gext);
+                    auto ck = canonKey(gext);
+                    if (seen.find(ck) == seen.end())
+                        seen.emplace(std::move(ck), gext);
                 }
             }
         }
 
         // Phase 2c: perturb existing solutions
-        if (!tb.expired() && static_cast<int>(seenBySmi.size()) < maxResults) {
+        if (!tb.expired() && static_cast<int>(seen.size()) < maxResults) {
             std::vector<std::map<int,int>> existing;
-            for (const auto& [k, v] : seenBySmi) existing.push_back(v);
+            for (const auto& [k, v] : seen) existing.push_back(v);
             for (const auto& ex : existing) {
-                if (tb.expired() || static_cast<int>(seenBySmi.size()) >= maxResults) break;
+                if (tb.expired() || static_cast<int>(seen.size()) >= maxResults) break;
                 for (const auto& entry : ex) {
-                    if (tb.expired() || static_cast<int>(seenBySmi.size()) >= maxResults) break;
+                    if (tb.expired() || static_cast<int>(seen.size()) >= maxResults) break;
                     std::map<int,int> reduced = ex;
                     reduced.erase(entry.first);
                     auto reext = ppx(g1, g2,
                         greedyAtomExtend(g1, g2, reduced, chem, opts),
                         chem, opts);
                     if (static_cast<int>(reext.size()) == K) {
-                        auto smi = mcsCanonSmi(reext);
-                        if (seenBySmi.find(smi) == seenBySmi.end())
-                            seenBySmi.emplace(std::move(smi), reext);
+                        auto ck = canonKey(reext);
+                        if (seen.find(ck) == seen.end())
+                            seen.emplace(std::move(ck), reext);
                     }
                 }
             }
@@ -3452,8 +3525,8 @@ inline std::vector<std::map<int,int>> findAllMCS(const MolGraph& g1, const MolGr
     }
 
     std::vector<std::map<int,int>> result;
-    result.reserve(seenBySmi.size());
-    for (auto& [k, v] : seenBySmi) result.push_back(std::move(v));
+    result.reserve(seen.size());
+    for (auto& [k, v] : seen) result.push_back(std::move(v));
     return result;
 }
 

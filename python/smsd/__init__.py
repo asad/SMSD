@@ -116,6 +116,7 @@ find_substructure = _smsd.find_substructure
 
 find_mcs = _smsd.find_mcs
 find_all_mcs = _smsd.find_all_mcs
+canonicalize_mapping = _smsd.canonicalize_mapping
 translate_to_atom_ids = _smsd.translate_to_atom_ids
 mcs_to_smiles = _smsd.mcs_to_smiles
 find_mcs_smiles = _smsd.find_mcs_smiles
@@ -2377,6 +2378,7 @@ __all__ = [
     # MCS
     "find_mcs",
     "find_all_mcs",
+    "canonicalize_mapping",
     "mcs",
     "all_mcs",
     "prewarm",

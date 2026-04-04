@@ -201,6 +201,8 @@ struct MolGraph {
     mutable std::vector<int>  morganRank;
     mutable std::vector<int>  canonicalLabel;
     mutable std::vector<int>  orbit;
+    mutable std::vector<std::vector<int>> autGenerators_;   // automorphism generators (permutations)
+    mutable bool              autGeneratorsTruncated_ = false;
     mutable uint64_t          canonicalHash = 0;  // uint64_t: wrapping is defined (no UB)
     mutable bool              canonicalComputed_ = false;
 
@@ -393,6 +395,8 @@ struct MolGraph {
         morganRank.clear();
         canonicalLabel.clear();
         orbit.clear();
+        autGenerators_.clear();
+        autGeneratorsTruncated_ = false;
         patternFPComputed_ = false;
         for (int w = 0; w < FP_WORDS; ++w) patternFP_[w] = 0;
         cachedPharmacophoreFeatures.clear();
@@ -443,6 +447,23 @@ struct MolGraph {
     const std::vector<int>& getOrbit() const          { return orbit; }
     const std::vector<int>& getCanonicalLabeling() const { return canonicalLabel; }
     uint64_t getCanonicalHash() const                   { return canonicalHash; }
+
+    /// Return automorphism generators discovered during canonical labeling.
+    /// Each generator is a permutation vector of length n where gen[i] is the
+    /// image of atom i.  The full automorphism group is the closure of these
+    /// generators.
+    const std::vector<std::vector<int>>& getAutomorphismGenerators() const {
+        ensureCanonical();
+        return autGenerators_;
+    }
+
+    /// True when the generator list was capped during canonical search.
+    /// The orbit partition is still exact; only the explicit generator list
+    /// may be incomplete.
+    bool automorphismGeneratorsTruncated() const {
+        ensureCanonical();
+        return autGeneratorsTruncated_;
+    }
 
     // ========================================================================
     // Ring-count per atom
@@ -2515,6 +2536,8 @@ public:
     struct CanonResult {
         std::vector<int> canonLabel;
         std::vector<int> orbit;
+        std::vector<std::vector<int>> autGenerators;
+        bool generatorsTruncated = false;
     };
 
     static CanonResult computeCanonicalLabeling(
@@ -2584,12 +2607,15 @@ public:
             auto orb = buildOrbits(uf, n);
             // Refine orbits using 2-hop neighborhood signatures
             orb = refineOrbitsBy2Hop(orb, n, label, degree, neighbors);
-            return { cl, orb };
+            return { cl, orb, {}, false };
         }
 
         refinePartition(n, initPerm, initCellEnd, neighbors, label, degree, -1);
 
         std::vector<int> bestPerm;
+        std::vector<std::vector<int>> generators;
+        static constexpr int MAX_GENERATORS = 500;
+        bool generatorsTruncated = false;
         int nodeCount = 0;
         bool budgetExceeded = false;
 
@@ -2635,6 +2661,15 @@ public:
                 } else if (comparePerm(perm, bestPerm, n, label, neighbors) == 0) {
                     for (int i = 0; i < n; i++)
                         ufUnion(uf, perm[i], bestPerm[i]);
+                    // Capture the automorphism generator: sigma maps
+                    // bestPerm[i] -> perm[i] for each position i.
+                    if (static_cast<int>(generators.size()) < MAX_GENERATORS) {
+                        std::vector<int> gen(n);
+                        for (int i = 0; i < n; i++) gen[bestPerm[i]] = perm[i];
+                        generators.push_back(std::move(gen));
+                    } else {
+                        generatorsTruncated = true;
+                    }
                 }
                 continue;
             }
@@ -2687,7 +2722,7 @@ public:
         auto orb = buildOrbits(uf, n);
         // Refine orbits using 2-hop neighborhood signatures
         orb = refineOrbitsBy2Hop(orb, n, label, degree, neighbors);
-        return { cl, orb };
+        return { cl, orb, std::move(generators), generatorsTruncated };
     }
 
     // ========================================================================
@@ -3093,6 +3128,8 @@ public:
         auto clResult = computeCanonicalLabeling(n, label, degree, neighbors);
         canonicalLabel = std::move(clResult.canonLabel);
         orbit = std::move(clResult.orbit);
+        autGenerators_ = std::move(clResult.autGenerators);
+        autGeneratorsTruncated_ = clResult.generatorsTruncated;
         canonicalHash = computeCanonicalHash(*this, canonicalLabel);
         canonicalComputed_ = true;
     }

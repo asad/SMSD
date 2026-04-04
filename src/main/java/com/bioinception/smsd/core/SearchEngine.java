@@ -1451,14 +1451,12 @@ public final class SearchEngine {
     int K = best.size();
     if (K == 0) return Collections.emptyList();
 
-    // Deduplicate by canonical SMILES of the extracted MCS subgraph,
-    // so two mappings producing structurally identical subgraphs (different
-    // atom indices) are recognised as the same MCS.
-    Map<String, Map<Integer, Integer>> seenBySmi = new LinkedHashMap<>();
-    String bestSmi = extractMolGraphSubgraph(g1, best.keySet()).toCanonicalSmiles();
-    seenBySmi.put(bestSmi, best);
+    // Deduplicate by automorphism-canonical mapping.
+    // Two mappings are equivalent if they differ only by automorphisms of g1/g2.
+    Map<String, Map<Integer, Integer>> seen = new LinkedHashMap<>();
+    seen.put(canonKey(g1, g2, best), best);
 
-    if (seenBySmi.size() >= maxResults) return new ArrayList<>(seenBySmi.values());
+    if (seen.size() >= maxResults) return new ArrayList<>(seen.values());
 
     // Resolve adaptive timeout for enumeration phase
     long enumTimeout = M.timeoutMs;
@@ -1478,7 +1476,7 @@ public final class SearchEngine {
       List<Map<Integer, Integer>> subMaps = SubstructureEngine.findAllSubstructures(
           sml, lrg, C, maxResults * 2, tb.remainingMillis());
       for (Map<Integer, Integer> raw : subMaps) {
-        if (tb.expired() || seenBySmi.size() >= maxResults) break;
+        if (tb.expired() || seen.size() >= maxResults) break;
         Map<Integer, Integer> mapping;
         if (swapped) {
           mapping = new LinkedHashMap<>();
@@ -1487,11 +1485,10 @@ public final class SearchEngine {
           mapping = raw;
         }
         if (mapping.size() == K) {
-          String smi = extractMolGraphSubgraph(g1, mapping.keySet()).toCanonicalSmiles();
-          seenBySmi.putIfAbsent(smi, mapping);
+          seen.putIfAbsent(canonKey(g1, g2, mapping), mapping);
         }
       }
-      if (seenBySmi.size() >= maxResults) return new ArrayList<>(seenBySmi.values());
+      if (seen.size() >= maxResults) return new ArrayList<>(seen.values());
     }
 
     // Phase 2b: re-run product graph pipeline stages to collect alternative
@@ -1535,48 +1532,45 @@ public final class SearchEngine {
       // Extend each seed via McGregor and collect K-sized results
       long perSeedMs = Math.max(1, tb.remainingMillis() / Math.max(1, seeds.size()));
       for (Map<Integer, Integer> seed : seeds) {
-        if (tb.expired() || seenBySmi.size() >= maxResults) break;
+        if (tb.expired() || seen.size() >= maxResults) break;
         Map<Integer, Integer> ext = ppx(g1, g2,
             mcGregorExtend(g1, g2, seed, C, tb, perSeedMs,
                 M.useTwoHopNLFInExtension, M.useThreeHopNLFInExtension, M.connectedOnly),
             C, M);
         if (ext.size() == K) {
-          String smi = extractMolGraphSubgraph(g1, ext.keySet()).toCanonicalSmiles();
-          seenBySmi.putIfAbsent(smi, ext);
+          seen.putIfAbsent(canonKey(g1, g2, ext), ext);
         }
 
         // Also try greedy atom extension for alternative mappings
-        if (!tb.expired() && seenBySmi.size() < maxResults) {
+        if (!tb.expired() && seen.size() < maxResults) {
           Map<Integer, Integer> gext = ppx(g1, g2,
               greedyAtomExtend(g1, g2, seed, C, M), C, M);
           if (gext.size() == K) {
-            String smi = extractMolGraphSubgraph(g1, gext.keySet()).toCanonicalSmiles();
-            seenBySmi.putIfAbsent(smi, gext);
+            seen.putIfAbsent(canonKey(g1, g2, gext), gext);
           }
         }
       }
 
       // Phase 2c: perturb existing solutions by removing one pair and re-extending
       // to discover alternative K-sized mappings.
-      if (!tb.expired() && seenBySmi.size() < maxResults) {
-        for (Map<Integer, Integer> existing : new ArrayList<>(seenBySmi.values())) {
-          if (tb.expired() || seenBySmi.size() >= maxResults) break;
+      if (!tb.expired() && seen.size() < maxResults) {
+        for (Map<Integer, Integer> existing : new ArrayList<>(seen.values())) {
+          if (tb.expired() || seen.size() >= maxResults) break;
           for (Map.Entry<Integer, Integer> entry : existing.entrySet()) {
-            if (tb.expired() || seenBySmi.size() >= maxResults) break;
+            if (tb.expired() || seen.size() >= maxResults) break;
             Map<Integer, Integer> reduced = new LinkedHashMap<>(existing);
             reduced.remove(entry.getKey());
             Map<Integer, Integer> reext = ppx(g1, g2,
                 greedyAtomExtend(g1, g2, reduced, C, M), C, M);
             if (reext.size() == K) {
-              String smi = extractMolGraphSubgraph(g1, reext.keySet()).toCanonicalSmiles();
-              seenBySmi.putIfAbsent(smi, reext);
+              seen.putIfAbsent(canonKey(g1, g2, reext), reext);
             }
           }
         }
       }
     }
 
-    return new ArrayList<>(seenBySmi.values());
+    return new ArrayList<>(seen.values());
   }
 
   /**
@@ -1598,6 +1592,95 @@ public final class SearchEngine {
     applySolvent(g1, C);
     applySolvent(g2, C);
     return findAllMCS(g1, g2, C, M, maxResults);
+  }
+
+  /**
+   * Canonicalize an atom-atom mapping under the automorphism groups of both
+   * molecules.  Two mappings are equivalent if they differ only by symmetry
+   * of g1 and/or g2; this method returns the lexicographically smallest
+   * representative.
+   *
+   * @param g1      query molecule
+   * @param g2      target molecule
+   * @param mapping atom-atom mapping (g1 index → g2 index)
+   * @return the canonical representative mapping
+   */
+  public static Map<Integer, Integer> canonicalizeMapping(
+      MolGraph g1, MolGraph g2, Map<Integer, Integer> mapping) {
+    if (mapping.isEmpty()) return mapping;
+
+    int[][] gens1 = g1.getAutomorphismGenerators();
+    int[][] gens2 = g2.getAutomorphismGenerators();
+    if (gens1.length == 0 && gens2.length == 0) return mapping;
+
+    // Precompute inverses of g1 generators
+    int[][] invGens1 = new int[gens1.length][];
+    for (int g = 0; g < gens1.length; g++) {
+      int[] gen = gens1[g];
+      int[] inv = new int[gen.length];
+      for (int i = 0; i < gen.length; i++) inv[gen[i]] = i;
+      invGens1[g] = inv;
+    }
+
+    // Convert mapping to sorted pair array for lex comparison
+    int[][] best = new int[mapping.size()][2];
+    int idx = 0;
+    for (Map.Entry<Integer, Integer> e : mapping.entrySet())
+      best[idx++] = new int[] {e.getKey(), e.getValue()};
+    Arrays.sort(best, (a, b) -> a[0] != b[0] ? Integer.compare(a[0], b[0]) : Integer.compare(a[1], b[1]));
+
+    int maxIter = Math.max(100, 2 * (gens1.length + gens2.length));
+    for (int iter = 0; iter < maxIter; iter++) {
+      boolean improved = false;
+
+      // Try g1-side generators (permute query atom indices)
+      for (int[] inv : invGens1) {
+        int[][] cand = new int[best.length][2];
+        for (int i = 0; i < best.length; i++) {
+          cand[i][0] = inv[best[i][0]];
+          cand[i][1] = best[i][1];
+        }
+        Arrays.sort(cand, (a, b) -> a[0] != b[0] ? Integer.compare(a[0], b[0]) : Integer.compare(a[1], b[1]));
+        if (comparePairArrays(cand, best) < 0) { best = cand; improved = true; }
+      }
+
+      // Try g2-side generators (permute target atom indices)
+      for (int[] gen : gens2) {
+        int[][] cand = new int[best.length][2];
+        for (int i = 0; i < best.length; i++) {
+          cand[i][0] = best[i][0];
+          cand[i][1] = gen[best[i][1]];
+        }
+        Arrays.sort(cand, (a, b) -> a[0] != b[0] ? Integer.compare(a[0], b[0]) : Integer.compare(a[1], b[1]));
+        if (comparePairArrays(cand, best) < 0) { best = cand; improved = true; }
+      }
+
+      if (!improved) break;
+    }
+
+    Map<Integer, Integer> result = new LinkedHashMap<>();
+    for (int[] pair : best) result.put(pair[0], pair[1]);
+    return result;
+  }
+
+  /** Compute a string key from the canonical mapping for use as a dedup key. */
+  private static String canonKey(MolGraph g1, MolGraph g2, Map<Integer, Integer> mapping) {
+    Map<Integer, Integer> cm = canonicalizeMapping(g1, g2, mapping);
+    StringBuilder sb = new StringBuilder();
+    for (Map.Entry<Integer, Integer> e : cm.entrySet())
+      sb.append(e.getKey()).append(':').append(e.getValue()).append(',');
+    return sb.toString();
+  }
+
+  private static int comparePairArrays(int[][] a, int[][] b) {
+    int len = Math.min(a.length, b.length);
+    for (int i = 0; i < len; i++) {
+      int c = Integer.compare(a[i][0], b[i][0]);
+      if (c != 0) return c;
+      c = Integer.compare(a[i][1], b[i][1]);
+      if (c != 0) return c;
+    }
+    return Integer.compare(a.length, b.length);
   }
 
   /**
