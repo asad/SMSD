@@ -238,6 +238,247 @@ static void test_reduce_crossings_short_coords_resized() {
 }
 
 // ============================================================================
+// v6.11.0 — generateCoords2D comprehensive pipeline tests
+// ============================================================================
+
+static void test_generate2d_benzene() {
+    auto g = smsd::parseSMILES("c1ccccc1");
+    auto coords = smsd::generateCoords2D(g);
+    TEST_ASSERT(static_cast<int>(coords.size()) == g.n, "Should generate n coordinates");
+    int crossings = smsd::detail_layout::countCrossings(g, coords);
+    TEST_ASSERT(crossings == 0, "Benzene layout should have zero crossings");
+}
+
+static void test_generate2d_naphthalene() {
+    auto g = smsd::parseSMILES("c1ccc2ccccc2c1");
+    auto coords = smsd::generateCoords2D(g);
+    TEST_ASSERT(static_cast<int>(coords.size()) == g.n, "Should generate n coordinates");
+    int crossings = smsd::detail_layout::countCrossings(g, coords);
+    TEST_ASSERT(crossings <= 2, "Naphthalene should have minimal crossings");
+}
+
+static void test_generate2d_aspirin() {
+    auto g = smsd::parseSMILES("CC(=O)Oc1ccccc1C(=O)O");
+    auto coords = smsd::generateCoords2D(g);
+    TEST_ASSERT(static_cast<int>(coords.size()) == g.n, "Aspirin: n coords");
+    int crossings = smsd::detail_layout::countCrossings(g, coords);
+    TEST_ASSERT(crossings == 0, "Aspirin should have zero crossings");
+}
+
+static void test_generate2d_caffeine() {
+    auto g = smsd::parseSMILES("Cn1c(=O)c2c(ncn2C)n(C)c1=O");
+    auto coords = smsd::generateCoords2D(g);
+    TEST_ASSERT(static_cast<int>(coords.size()) == g.n, "Caffeine: n coords");
+}
+
+static void test_generate2d_single_atom() {
+    auto g = smsd::parseSMILES("C");
+    auto coords = smsd::generateCoords2D(g);
+    TEST_ASSERT(coords.size() == 1, "Single atom: 1 coord");
+}
+
+static void test_generate2d_ethanol() {
+    auto g = smsd::parseSMILES("CCO");
+    auto coords = smsd::generateCoords2D(g);
+    TEST_ASSERT(static_cast<int>(coords.size()) == g.n, "Ethanol: n coords");
+    // Chain: atoms should not overlap
+    for (int i = 0; i < g.n; i++) {
+        for (int j = i + 1; j < g.n; j++) {
+            double dx = coords[i].x - coords[j].x;
+            double dy = coords[i].y - coords[j].y;
+            TEST_ASSERT(dx * dx + dy * dy > 0.01, "Atoms should not overlap");
+        }
+    }
+}
+
+static void test_generate2d_indole() {
+    auto g = smsd::parseSMILES("c1ccc2[nH]ccc2c1");
+    auto coords = smsd::generateCoords2D(g);
+    TEST_ASSERT(static_cast<int>(coords.size()) == g.n, "Indole: n coords");
+}
+
+static void test_generate2d_peg_chain() {
+    auto g = smsd::parseSMILES("COCCOCCOCCOCCO");
+    auto coords = smsd::generateCoords2D(g);
+    TEST_ASSERT(static_cast<int>(coords.size()) == g.n, "PEG chain: n coords");
+    int crossings = smsd::detail_layout::countCrossings(g, coords);
+    TEST_ASSERT(crossings == 0, "PEG chain should have zero crossings");
+}
+
+static void test_generate2d_salt() {
+    // Disconnected: sodium acetate
+    auto g = smsd::parseSMILES("CC(=O)[O-].[Na+]");
+    auto coords = smsd::generateCoords2D(g);
+    TEST_ASSERT(static_cast<int>(coords.size()) == g.n, "Salt: n coords");
+}
+
+// ============================================================================
+// v6.11.0 — 3D coordinate generation tests
+// ============================================================================
+
+static void test_generate3d_benzene() {
+    auto g = smsd::parseSMILES("c1ccccc1");
+    auto coords = smsd::generateCoords3D(g);
+    TEST_ASSERT(static_cast<int>(coords.size()) == g.n, "3D benzene: n coords");
+    // All atoms should be non-degenerate (not all at origin)
+    double sumDist2 = 0.0;
+    for (int i = 0; i < g.n; i++) {
+        sumDist2 += coords[i].x * coords[i].x + coords[i].y * coords[i].y + coords[i].z * coords[i].z;
+    }
+    TEST_ASSERT(sumDist2 > 0.1, "3D coords should not be degenerate");
+}
+
+static void test_generate3d_ethane() {
+    auto g = smsd::parseSMILES("CC");
+    auto coords = smsd::generateCoords3D(g);
+    TEST_ASSERT(coords.size() == 2, "Ethane: 2 coords");
+    double dx = coords[1].x - coords[0].x;
+    double dy = coords[1].y - coords[0].y;
+    double dz = coords[1].z - coords[0].z;
+    double dist = std::sqrt(dx * dx + dy * dy + dz * dz);
+    TEST_ASSERT(dist > 0.5, "3D bond length should be reasonable");
+}
+
+// ============================================================================
+// v6.11.0 — Coordinate transform tests
+// ============================================================================
+
+static void test_translate2d() {
+    std::vector<smsd::Point2D> coords = {{0, 0}, {1, 0}, {0, 1}};
+    smsd::transform::translate2D(coords, 5.0, 3.0);
+    TEST_ASSERT(std::abs(coords[0].x - 5.0) < 1e-10, "Translate X");
+    TEST_ASSERT(std::abs(coords[0].y - 3.0) < 1e-10, "Translate Y");
+    TEST_ASSERT(std::abs(coords[1].x - 6.0) < 1e-10, "Translate X2");
+}
+
+static void test_rotate2d() {
+    std::vector<smsd::Point2D> coords = {{1, 0}, {-1, 0}};
+    smsd::transform::rotate2D(coords, M_PI / 2.0);
+    // After 90-degree rotation about centroid (0,0): (1,0) -> (0,1)
+    TEST_ASSERT(std::abs(coords[0].x - 0.0) < 1e-6, "Rotate 90: x~0");
+    TEST_ASSERT(std::abs(coords[0].y - 1.0) < 1e-6, "Rotate 90: y~1");
+}
+
+static void test_scale2d() {
+    std::vector<smsd::Point2D> coords = {{0, 0}, {2, 0}};
+    smsd::transform::scale2D(coords, 2.0);
+    double dx = coords[1].x - coords[0].x;
+    TEST_ASSERT(std::abs(dx - 4.0) < 1e-6, "Scale 2x: distance doubles");
+}
+
+static void test_mirror_x() {
+    std::vector<smsd::Point2D> coords = {{0, 1}, {0, -1}};
+    smsd::transform::mirrorX(coords);
+    // Centroid y=0, mirror: (0,1) -> (0,-1)
+    TEST_ASSERT(std::abs(coords[0].y - (-1.0)) < 1e-6, "Mirror X: y flipped");
+}
+
+static void test_mirror_y() {
+    std::vector<smsd::Point2D> coords = {{1, 0}, {-1, 0}};
+    smsd::transform::mirrorY(coords);
+    TEST_ASSERT(std::abs(coords[0].x - (-1.0)) < 1e-6, "Mirror Y: x flipped");
+}
+
+static void test_center2d() {
+    std::vector<smsd::Point2D> coords = {{5, 5}, {7, 5}};
+    smsd::transform::center2D(coords);
+    double cx = (coords[0].x + coords[1].x) / 2.0;
+    double cy = (coords[0].y + coords[1].y) / 2.0;
+    TEST_ASSERT(std::abs(cx) < 1e-10, "Centered X");
+    TEST_ASSERT(std::abs(cy) < 1e-10, "Centered Y");
+}
+
+static void test_align2d() {
+    std::vector<smsd::Point2D> a = {{0, 0}, {1, 0}, {0, 1}};
+    std::vector<smsd::Point2D> ref = {{5, 5}, {6, 5}, {5, 6}};
+    double rmsd = smsd::transform::align2D(a, ref);
+    TEST_ASSERT(rmsd < 0.1, "Align RMSD should be near zero for congruent triangles");
+}
+
+static void test_normalise_bond_length() {
+    auto g = smsd::parseSMILES("CC");
+    std::vector<smsd::Point2D> coords = {{0, 0}, {3, 0}};
+    smsd::transform::normaliseBondLength(g, coords, 1.5);
+    double dx = coords[1].x - coords[0].x;
+    TEST_ASSERT(std::abs(dx - 1.5) < 0.1, "Bond length normalised to 1.5");
+}
+
+static void test_canonical_orientation() {
+    auto g = smsd::parseSMILES("c1ccccc1");
+    auto coords = smsd::generateCoords2D(g);
+    smsd::transform::canonicalOrientation(g, coords);
+    // Should not crash and should preserve atom count
+    TEST_ASSERT(static_cast<int>(coords.size()) == g.n, "Canonical orientation preserves size");
+}
+
+static void test_bounding_box() {
+    std::vector<smsd::Point2D> coords = {{-1, -2}, {3, 4}, {0, 0}};
+    auto bb = smsd::transform::boundingBox2D(coords);
+    TEST_ASSERT(std::abs(bb[0] - (-1.0)) < 1e-10, "BB minX");
+    TEST_ASSERT(std::abs(bb[1] - (-2.0)) < 1e-10, "BB minY");
+    TEST_ASSERT(std::abs(bb[2] - 3.0) < 1e-10, "BB maxX");
+    TEST_ASSERT(std::abs(bb[3] - 4.0) < 1e-10, "BB maxY");
+}
+
+static void test_project_lift_roundtrip() {
+    std::vector<smsd::Point3D> pts3d = {{1, 2, 3}, {4, 5, 6}};
+    auto pts2d = smsd::transform::projectTo2D(pts3d);
+    TEST_ASSERT(pts2d.size() == 2, "Project: correct count");
+    TEST_ASSERT(std::abs(pts2d[0].x - 1.0) < 1e-10, "Project: x preserved");
+    auto back = smsd::transform::liftTo3D(pts2d);
+    TEST_ASSERT(std::abs(back[0].z) < 1e-10, "Lift: z=0");
+}
+
+// ============================================================================
+// v6.11.0 — Overlap resolution tests
+// ============================================================================
+
+static void test_resolve_overlaps_separate() {
+    std::vector<smsd::Point2D> coords = {{0, 0}, {5, 5}};
+    int remaining = smsd::resolveOverlaps(coords, 0.5, 10);
+    TEST_ASSERT(remaining == 0, "Non-overlapping: 0 remaining");
+}
+
+static void test_resolve_overlaps_touching() {
+    std::vector<smsd::Point2D> coords = {{0, 0}, {0.1, 0.1}};
+    int remaining = smsd::resolveOverlaps(coords, 0.5, 50);
+    TEST_ASSERT(remaining == 0, "Overlapping pair resolved");
+    double dx = coords[1].x - coords[0].x;
+    double dy = coords[1].y - coords[0].y;
+    double dist = std::sqrt(dx * dx + dy * dy);
+    TEST_ASSERT(dist >= 0.49, "After resolution, distance >= threshold");
+}
+
+// ============================================================================
+// v6.11.0 — Layout quality metric tests
+// ============================================================================
+
+static void test_layout_quality_perfect() {
+    auto g = smsd::parseSMILES("c1ccccc1");
+    auto coords = smsd::generateCoords2D(g);
+    double q = smsd::layoutQuality(g, coords);
+    // Benzene with template match should be nearly perfect
+    TEST_ASSERT(q < 1.0, "Benzene quality should be very good");
+}
+
+static void test_layout_quality_bad() {
+    auto g = smsd::parseSMILES("c1ccccc1");
+    // All atoms at same point — terrible layout
+    std::vector<smsd::Point2D> coords(6, {0, 0});
+    double q = smsd::layoutQuality(g, coords);
+    TEST_ASSERT(q > 10.0, "Degenerate layout should have high quality score");
+}
+
+// ============================================================================
+// v6.11.0 — Extended template library tests
+// ============================================================================
+
+static void test_extended_templates_exist() {
+    auto& templates = smsd::detail_layout::getExtendedTemplates();
+    TEST_ASSERT(templates.size() >= 30, "Should have 30+ extended templates");
+}
+
+// ============================================================================
 // main
 // ============================================================================
 
@@ -266,6 +507,45 @@ int main() {
     std::cout << "\nIntegration:\n";
     RUN_TEST(pipeline_morphine_like);
     RUN_TEST(reduce_crossings_short_coords_resized);
+
+    std::cout << "\ngenerate_coords_2d pipeline (v6.11.0):\n";
+    RUN_TEST(generate2d_benzene);
+    RUN_TEST(generate2d_naphthalene);
+    RUN_TEST(generate2d_aspirin);
+    RUN_TEST(generate2d_caffeine);
+    RUN_TEST(generate2d_single_atom);
+    RUN_TEST(generate2d_ethanol);
+    RUN_TEST(generate2d_indole);
+    RUN_TEST(generate2d_peg_chain);
+    RUN_TEST(generate2d_salt);
+
+    std::cout << "\ngenerate_coords_3d (v6.11.0):\n";
+    RUN_TEST(generate3d_benzene);
+    RUN_TEST(generate3d_ethane);
+
+    std::cout << "\nCoordinate transforms (v6.11.0):\n";
+    RUN_TEST(translate2d);
+    RUN_TEST(rotate2d);
+    RUN_TEST(scale2d);
+    RUN_TEST(mirror_x);
+    RUN_TEST(mirror_y);
+    RUN_TEST(center2d);
+    RUN_TEST(align2d);
+    RUN_TEST(normalise_bond_length);
+    RUN_TEST(canonical_orientation);
+    RUN_TEST(bounding_box);
+    RUN_TEST(project_lift_roundtrip);
+
+    std::cout << "\nOverlap resolution (v6.11.0):\n";
+    RUN_TEST(resolve_overlaps_separate);
+    RUN_TEST(resolve_overlaps_touching);
+
+    std::cout << "\nLayout quality (v6.11.0):\n";
+    RUN_TEST(layout_quality_perfect);
+    RUN_TEST(layout_quality_bad);
+
+    std::cout << "\nExtended templates (v6.11.0):\n";
+    RUN_TEST(extended_templates_exist);
 
     std::cout << "\n=== Results: " << g_pass << " passed, " << g_fail << " failed ===\n\n";
     return g_fail > 0 ? 1 : 0;

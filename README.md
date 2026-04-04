@@ -22,7 +22,7 @@ SMSD Pro provides exact substructure search and maximum common substructure
 (header-only), and **Python**. Optional GPU paths are available for CUDA and
 Apple Metal builds.
 
-The `6.10.2` line improves Python bindings, strengthens aromaticity
+The `6.11.0` line improves Python bindings, strengthens aromaticity
 perception for Kekule and fused-ring systems, and tightens matching
 reliability across the native and Java-aligned paths.
 
@@ -32,7 +32,7 @@ User guides:
 - [C++ guide](docs/CPP.md)
 - [Optimization roadmap](docs/OPTIMIZATION_ROADMAP.md)
 
-Native molfile scope in 6.10.2:
+Native molfile scope in 6.11.0:
 - supported: V2000 and V3000 core graph round-trip, names/comments, SDF properties, charges, isotopes, atom classes/maps, `R#` plus `M  RGP`, and basic stereo flags
 - not yet implemented as full native query chemistry: the more exotic MDL query atom/bond semantics such as full atom lists, variable attachment/query bonds, link nodes, and the complete Markush feature set
 
@@ -48,16 +48,16 @@ Native molfile scope in 6.10.2:
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>6.10.2</version>
+  <version>6.11.0</version>
 </dependency>
 ```
 
 ### Java (Download JAR)
 
 ```bash
-curl -LO https://github.com/asad/SMSD/releases/download/v6.10.2/smsd-6.10.2-jar-with-dependencies.jar
+curl -LO https://github.com/asad/SMSD/releases/download/v6.11.0/smsd-6.11.0-jar-with-dependencies.jar
 
-java -jar smsd-6.10.2-jar-with-dependencies.jar \
+java -jar smsd-6.11.0-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 ```
 
@@ -514,19 +514,19 @@ Every release includes all platforms:
 
 | Download | Description |
 |----------|-------------|
-| `SMSD.Pro-6.10.2.dmg` | macOS installer (Apple Silicon) — drag to Applications |
-| `SMSD.Pro-6.10.2.msi` | Windows installer — next, next, finish |
-| `smsd-pro_6.10.2_amd64.deb` | Linux installer — `sudo dpkg -i` |
-| `smsd-6.10.2.jar` | Pure library JAR (Maven/Gradle dependency) |
-| `smsd-6.10.2-jar-with-dependencies.jar` | Standalone CLI (just `java -jar`) |
-| `smsd-cpp-6.10.2-headers.tar.gz` | C++ header-only library (unpack, `#include "smsd/smsd.hpp"`) |
+| `SMSD.Pro-6.11.0.dmg` | macOS installer (Apple Silicon) — drag to Applications |
+| `SMSD.Pro-6.11.0.msi` | Windows installer — next, next, finish |
+| `smsd-pro_6.11.0_amd64.deb` | Linux installer — `sudo dpkg -i` |
+| `smsd-6.11.0.jar` | Pure library JAR (Maven/Gradle dependency) |
+| `smsd-6.11.0-jar-with-dependencies.jar` | Standalone CLI (just `java -jar`) |
+| `smsd-cpp-6.11.0-headers.tar.gz` | C++ header-only library (unpack, `#include "smsd/smsd.hpp"`) |
 | `pip install smsd` | Python package (PyPI) |
 
 ```bash
 # Native installer — download .dmg / .msi / .deb, double-click, done
 
 # CLI
-java -jar smsd-6.10.2-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
+java -jar smsd-6.11.0-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 
 # Docker CLI
 docker build -t smsd .
@@ -552,7 +552,7 @@ pip install smsd
 
 | Document | Description |
 |---|---|
-| [RELEASE_NOTES_6.10.2](docs/RELEASE_NOTES_6.10.2.md) | Release summary, use, and attribution guidance for 6.10.2 |
+| [RELEASE_NOTES_6.11.0](docs/RELEASE_NOTES_6.11.0.md) | Release summary, use, and attribution guidance for 6.11.0 |
 | [WHITEPAPER](docs/WHITEPAPER.md) | Algorithms & design (11-level MCS, VF2++, ring perception) |
 | [HOWTO-INSTALL](docs/HOWTO-INSTALL.md) | Build from source guide |
 | [CHANGELOG](CHANGELOG.md) | Versioned change history |

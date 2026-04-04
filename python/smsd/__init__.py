@@ -30,7 +30,7 @@ import importlib.util
 import sys
 from pathlib import Path
 
-__version__ = "6.10.2"
+__version__ = "6.11.0"
 __author__ = "Syed Asad Rahman"
 
 
@@ -164,6 +164,175 @@ _reduce_crossings_raw = _smsd.reduce_crossings
 _force_directed_layout_raw = _smsd.force_directed_layout
 _stress_majorisation_raw = _smsd.stress_majorisation
 _match_template_raw = _smsd.match_template
+
+# -----------------------------------------------------------------------
+# Extended API — v6.11.0
+# -----------------------------------------------------------------------
+
+# Multi-molecule MCS
+find_nmcs = _smsd.find_nmcs
+find_scaffold_mcs = _smsd.find_scaffold_mcs
+
+# Mapping validation & maximality
+validate_mapping = _smsd.validate_mapping
+is_mapping_maximal = _smsd.is_mapping_maximal
+
+# R-group decomposition
+decompose_rgroups = _smsd.decompose_rgroups
+
+# Reaction mapping (MolGraph-based)
+map_reaction = _smsd.map_reaction
+
+# Graph utilities
+extract_subgraph = _smsd.extract_subgraph
+murcko_scaffold = _smsd.murcko_scaffold
+count_components = _smsd.count_components
+split_components = _smsd.split_components
+same_canonical_graph = _smsd.same_canonical_graph
+
+# All substructure matches
+find_all_substructures = _smsd.find_all_substructures
+
+# File I/O
+read_mol_file = _smsd.read_mol_file
+read_sdf = _smsd.read_sdf
+write_sdf = _smsd.write_sdf
+
+# Chemistry utilities
+classify_pharmacophore = _smsd.classify_pharmacophore
+implicit_h = _smsd.implicit_h
+
+# Layout utilities
+count_crossings = _smsd.count_crossings
+is_degenerate_layout = _smsd.is_degenerate_layout
+
+# Fingerprint utilities
+counts_to_array = _smsd.counts_to_array
+prewarm_graph = _smsd.prewarm_graph
+
+# Layout engine v6.11.0
+Point3D = _smsd.Point3D
+generate_coords_2d = _smsd.generate_coords_2d
+generate_coords_3d = _smsd.generate_coords_3d
+layout_quality = _smsd.layout_quality
+resolve_overlaps = _smsd.resolve_overlaps
+
+# Coordinate transforms
+translate_2d = _smsd.translate_2d
+rotate_2d = _smsd.rotate_2d
+scale_2d = _smsd.scale_2d
+mirror_x = _smsd.mirror_x
+mirror_y = _smsd.mirror_y
+center_2d = _smsd.center_2d
+align_2d = _smsd.align_2d
+bounding_box_2d = _smsd.bounding_box_2d
+normalise_bond_length = _smsd.normalise_bond_length
+canonical_orientation = _smsd.canonical_orientation
+
+# ── Depiction Engine v6.11.0 ──────────────────────────────────────────────
+# Publication-quality SVG rendering (ACS 1996 / Nature / Springer standard)
+DepictOptions = _smsd.DepictOptions
+
+
+def depict_svg(mol_or_smiles, opts=None, **kwargs):
+    """Render a molecule as publication-quality SVG string.
+
+    Parameters
+    ----------
+    mol_or_smiles : MolGraph or str
+        Molecule to render (accepts MolGraph, SMILES string, or RDKit Mol).
+    opts : DepictOptions, optional
+        Full options object. If None, uses ACS 1996 defaults.
+    **kwargs
+        Shorthand overrides applied to opts (e.g., bond_length=40, width=600).
+
+    Returns
+    -------
+    str
+        SVG string suitable for file output or Jupyter display.
+    """
+    if opts is None:
+        opts = DepictOptions()
+    for k, v in kwargs.items():
+        setattr(opts, k, v)
+    if isinstance(mol_or_smiles, str):
+        return _smsd.depict_smiles(mol_or_smiles, opts)
+    mol = _ensure_native(mol_or_smiles) if not isinstance(mol_or_smiles, _smsd.MolGraph) else mol_or_smiles
+    return _smsd.depict(mol, opts)
+
+
+def depict_mapping(mol_or_smiles, mapping, opts=None, **kwargs):
+    """Render a molecule with MCS/substructure atoms highlighted and numbered.
+
+    Parameters
+    ----------
+    mol_or_smiles : MolGraph or str
+        Molecule to render.
+    mapping : dict
+        Atom index -> partner atom index (from MCS or substructure result).
+    opts : DepictOptions, optional
+    **kwargs
+        Shorthand overrides (e.g., show_atom_indices=True).
+
+    Returns
+    -------
+    str
+        SVG string with matched atoms highlighted in green.
+    """
+    if opts is None:
+        opts = DepictOptions()
+    for k, v in kwargs.items():
+        setattr(opts, k, v)
+    if isinstance(mol_or_smiles, str):
+        mol_or_smiles = parse_smiles(mol_or_smiles)
+    mol = _ensure_native(mol_or_smiles) if not isinstance(mol_or_smiles, _smsd.MolGraph) else mol_or_smiles
+    return _smsd.depict_with_mapping(mol, mapping, opts)
+
+
+def depict_pair(mol1, mol2, mapping, opts=None, **kwargs):
+    """Render two molecules side-by-side with MCS mapping highlighted.
+
+    Parameters
+    ----------
+    mol1, mol2 : MolGraph or str
+        Molecules to compare.
+    mapping : dict
+        mol1 atom -> mol2 atom mapping (from find_mcs or find_all_mcs).
+    opts : DepictOptions, optional
+    **kwargs
+        Shorthand overrides (e.g., width=800, height=400).
+
+    Returns
+    -------
+    str
+        SVG string showing both molecules with matched regions highlighted.
+    """
+    if opts is None:
+        opts = DepictOptions()
+    for k, v in kwargs.items():
+        setattr(opts, k, v)
+    if isinstance(mol1, str):
+        mol1 = parse_smiles(mol1)
+    if isinstance(mol2, str):
+        mol2 = parse_smiles(mol2)
+    m1 = _ensure_native(mol1) if not isinstance(mol1, _smsd.MolGraph) else mol1
+    m2 = _ensure_native(mol2) if not isinstance(mol2, _smsd.MolGraph) else mol2
+    return _smsd.depict_pair(m1, m2, mapping, opts)
+
+
+def save_svg(svg_str, path):
+    """Write an SVG string to a file.
+
+    Parameters
+    ----------
+    svg_str : str
+        SVG content (from depict_svg, depict_pair, etc.).
+    path : str
+        Output file path (e.g., 'molecule.svg').
+    """
+    with open(path, 'w') as f:
+        f.write(svg_str)
+
 
 # Reaction-aware MCS — lazy import (available when compiled with v6.5.0+)
 try:
@@ -1526,7 +1695,7 @@ def compile_smarts(smarts, *, max_recursion_depth=20):
         )
     if _compile_smarts_raw is None:
         raise RuntimeError(
-            "compile_smarts requires a rebuilt extension with the 6.10.2 SMARTS bindings."
+            "compile_smarts requires a rebuilt extension with the 6.11.0 SMARTS bindings."
         )
     return _compile_smarts_raw(smarts, max_recursion_depth)
 

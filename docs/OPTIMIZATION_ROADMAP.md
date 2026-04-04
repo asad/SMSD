@@ -1,6 +1,6 @@
 # SMSD Pro — Performance Optimization Roadmap
 
-**Version** 6.10.2 | **Copyright (c) 2018–2026 BioInception PVT LTD — Syed Asad Rahman**
+**Version** 6.11.0 | **Copyright (c) 2018–2026 BioInception PVT LTD — Syed Asad Rahman**
 
 ---
 
@@ -29,7 +29,7 @@ data identifies a stable hot kernel.
 | Size-only MCS batch | `batch_mcs_size()` → `list[int]` | Shipped |
 | Screened MCS sizes | `screen_and_mcs_size()` → `list[tuple[int, int]]` | Shipped |
 | VF2++ bit-packed domains | Word-parallel uint64 domains, AC-3 pruning, `popcount` support | Shipped |
-| Common-bond connectivity (6.10.2) | `largestConnected()` validates bonds in both query and target | Shipped |
+| Common-bond connectivity (6.11.0) | `largestConnected()` validates bonds in both query and target | Shipped |
 
 These items are removed from the forward plan below.
 

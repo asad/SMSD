@@ -18,8 +18,12 @@ import org.openscience.cdk.graph.Cycles;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.silent.SilentChemObjectBuilder;
 import org.openscience.cdk.smarts.SmartsPattern;
+import org.openscience.cdk.atomtype.CDKAtomTypeMatcher;
+import org.openscience.cdk.interfaces.IAtom;
+import org.openscience.cdk.interfaces.IAtomType;
 import org.openscience.cdk.tools.CDKHydrogenAdder;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
+import org.openscience.cdk.tools.manipulator.AtomTypeManipulator;
 
 /**
  * One-stop preprocessing: molecule standardisation, SMARTS matching, named predicate expansion,
@@ -45,7 +49,19 @@ public final class Standardiser {
     if (mode == null) mode = TautomerMode.NONE;
 
     IAtomContainer m = mol.clone();
-    AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(m);
+    // Explicit per-atom type matching for robust handling of exotic valence states
+    // (organometallics, hypervalent S/P, charged aromatics).  The convenience
+    // shortcut percieveAtomTypesAndConfigureAtoms silently skips untyped atoms;
+    // explicit iteration lets us log them and still proceed safely.
+    CDKAtomTypeMatcher matcher = CDKAtomTypeMatcher.getInstance(m.getBuilder());
+    for (IAtom atom : m.atoms()) {
+      IAtomType matched = matcher.findMatchingAtomType(m, atom);
+      if (matched != null) {
+        AtomTypeManipulator.configure(atom, matched);
+      }
+      // Unmatched atoms retain their original properties — hydrogen adder
+      // will simply skip them, which is safer than the shortcut's silent failure.
+    }
     CDKHydrogenAdder.getInstance(SilentChemObjectBuilder.getInstance()).addImplicitHydrogens(m);
     Cycles.markRingAtomsAndBonds(m);
     @SuppressWarnings("deprecation")

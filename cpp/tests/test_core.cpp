@@ -1370,6 +1370,85 @@ void test_sub_benchmark_diagnostic() {
 }
 
 // ============================================================================
+// Precision chemistry — Kekulization, implicit H, stereo, charged aromatics
+// ============================================================================
+
+void test_kekulize_azulene() {
+    // Azulene: non-alternant fused 5-7 system, 10 pi electrons
+    auto g = smsd::parseSMILES("c1ccc2cccc2cc1");  // azulene SMILES
+    assert(g.n == 10 && "azulene: 10 atoms");
+    assert(g.kekulize() && "azulene: kekulization must succeed");
+}
+
+void test_kekulize_pyrene() {
+    // Pyrene: fused PAH with 16 atoms, 16 pi electrons
+    auto g = smsd::parseSMILES("c1cc2ccc3cccc4ccc(c1)c2c34");
+    assert(g.n == 16 && "pyrene: 16 atoms");
+    assert(g.kekulize() && "pyrene: kekulization must succeed");
+}
+
+void test_kekulize_pyridinium() {
+    // Charged aromatic N: pyridinium cation
+    auto g = smsd::parseSMILES("[nH+]1ccccc1");
+    assert(g.n == 6 && "pyridinium: 6 atoms");
+    assert(g.kekulize() && "pyridinium: kekulization must succeed");
+}
+
+void test_kekulize_cyclopentadienyl() {
+    // Cyclopentadienyl anion: 6 pi electrons in 5-ring
+    auto g = smsd::parseSMILES("[c-]1cccc1");
+    assert(g.n == 5 && "Cp-: 5 atoms");
+    assert(g.kekulize() && "Cp-: kekulization must succeed");
+}
+
+void test_implicit_h_neutral_boron() {
+    // B(OH)3: boron with valence 3, should have 0 implicit H
+    auto g = smsd::parseSMILES("B(O)(O)O");
+    // B has 3 explicit bonds, default valence 3 → 0 implicit H
+    int bIdx = -1;
+    for (int i = 0; i < g.n; i++) if (g.atomicNum[i] == 5) { bIdx = i; break; }
+    assert(bIdx >= 0);
+    assert(g.implicitH[bIdx] == 0 && "B(OH)3: boron has 0 implicit H");
+}
+
+void test_implicit_h_borohydride() {
+    // [BH4-]: boron anion, valence 4 (isoelectronic with C)
+    auto g = smsd::parseSMILES("[BH4-]");
+    int bIdx = -1;
+    for (int i = 0; i < g.n; i++) if (g.atomicNum[i] == 5) { bIdx = i; break; }
+    assert(bIdx >= 0);
+    assert(g.implicitH[bIdx] == 0 && "[BH4-]: explicit H in bracket, implicitH must be 0");
+}
+
+void test_implicit_h_sulfoxide() {
+    // DMSO: S has valence 4 (two bonds to C, one to O double)
+    auto g = smsd::parseSMILES("CS(=O)C");
+    int sIdx = -1;
+    for (int i = 0; i < g.n; i++) if (g.atomicNum[i] == 16) { sIdx = i; break; }
+    assert(sIdx >= 0);
+    assert(g.implicitH[sIdx] == 0 && "DMSO: S has 0 implicit H");
+}
+
+void test_implicit_h_phosphate() {
+    // Phosphoric acid: P with valence 5
+    auto g = smsd::parseSMILES("OP(=O)(O)O");
+    int pIdx = -1;
+    for (int i = 0; i < g.n; i++) if (g.atomicNum[i] == 15) { pIdx = i; break; }
+    assert(pIdx >= 0);
+    assert(g.implicitH[pIdx] == 0 && "phosphate: P has 0 implicit H");
+}
+
+void test_mcs_stereo_preserved() {
+    // E/Z isomers should produce same-size MCS (stereo doesn't reduce MCS size)
+    auto cis  = smsd::parseSMILES("C/C=C\\C");   // Z-2-butene
+    auto trans = smsd::parseSMILES("C/C=C/C");    // E-2-butene
+    smsd::ChemOptions C;
+    smsd::McsOptions opts;
+    auto mcs = smsd::findMCS(cis, trans, C, opts);
+    assert(mcs.size() == 4 && "E/Z butene: full MCS regardless of stereo");
+}
+
+// ============================================================================
 // main — must appear after all test function definitions
 // ============================================================================
 
@@ -1451,6 +1530,17 @@ int main() {
 
     std::cout << "\n-- Substructure benchmark diagnostic (v6.8.0) --\n";
     RUN_TEST(sub_benchmark_diagnostic);
+
+    std::cout << "\n-- Precision chemistry (v6.11.0) --\n";
+    RUN_TEST(kekulize_azulene);
+    RUN_TEST(kekulize_pyrene);
+    RUN_TEST(kekulize_pyridinium);
+    RUN_TEST(kekulize_cyclopentadienyl);
+    RUN_TEST(implicit_h_neutral_boron);
+    RUN_TEST(implicit_h_borohydride);
+    RUN_TEST(implicit_h_sulfoxide);
+    RUN_TEST(implicit_h_phosphate);
+    RUN_TEST(mcs_stereo_preserved);
 
     std::cout << "\n================================================\n";
     std::cout << g_pass << " passed, " << g_fail << " failed\n";

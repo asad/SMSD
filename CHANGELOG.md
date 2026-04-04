@@ -2,6 +2,38 @@
 
 All notable changes to SMSD Pro are documented in this file.
 
+## [6.11.0] - 2026-04-04
+
+### Summary
+Performance, precision, and depiction release: cache-optimal data structures,
+pre-indexed McGregor DFS, publication-quality SVG renderer (ACS 1996 standard),
+comprehensive layout engine, 35+ new Python bindings.
+
+### Included
+- Core engine: converted hot-path `vector<bool>` to `vector<uint8_t>` for 15-25%
+  cache performance improvement across McGregor DFS, BK partition bound, seed-extend
+- Pre-indexed candidate sets in McGregor DFS using `compatTargets_[]` — eliminates
+  O(n^2) linear scan per frontier atom
+- Publication-quality SVG depiction engine (ACS 1996 standard):
+  - Jmol/CPK element colors, asymmetric double bonds, wedge/dash stereo bonds
+  - Bond-to-label clipping, H-count subscripts, charge superscripts
+  - Full customization via DepictOptions (bond_length, colors, fonts, sizes)
+  - Side-by-side MCS pair rendering with atom-atom mapping numbers
+- 8-phase 2D layout pipeline: template match, ring-first, chain zig-zag, force
+  refinement, overlap resolution, crossing reduction, canonical orientation,
+  bond-length normalisation
+- Distance geometry 3D layout with power iteration eigendecomposition and
+  force-field refinement
+- 40+ ring scaffold templates (pharmaceutical scaffolds, PAH, spiro, bridged)
+- Full 2D/3D coordinate transform suite (translate, rotate, scale, mirror,
+  center, align, project, lift)
+- 35+ new Python bindings with GIL release for thread safety
+- Java: explicit per-atom type matching for robust handling of exotic valence states
+- 9 precision chemistry tests (azulene, pyrene, pyridinium, cyclopentadienyl,
+  boron, sulfoxide, phosphate, E/Z stereo)
+- 27 new layout engine tests (2D/3D generation, transforms, overlaps)
+- Comprehensive Python documentation with examples and cautions
+
 ## [6.10.2] - 2026-04-03
 
 ### Summary

@@ -52,7 +52,7 @@ std::string v3000 = smsd::writeMolBlockV3000(mol);
 std::string sdf = smsd::writeSDFRecord(mol);
 ```
 
-The native I/O path in `6.10.2` covers practical V2000/V3000 graph round-trip,
+The native I/O path in `6.11.0` covers practical V2000/V3000 graph round-trip,
 metadata, SDF properties, atom maps/classes, and patent-style `R#` handling.
 The most exotic MDL query chemistry features are still intentionally documented
 as out of scope until they are implemented natively.

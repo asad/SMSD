@@ -17,6 +17,7 @@
 #include "smsd/smarts_parser.hpp"
 #include "smsd/cip.hpp"
 #include "smsd/layout.hpp"
+#include "smsd/depict.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -1527,4 +1528,623 @@ PYBIND11_MODULE(_smsd, m) {
           "Returns list of (x, y) coordinate tuples if matched, empty list otherwise.\n"
           "Supports: benzene, naphthalene, indole, purine, steroid, morphinan,\n"
           "quinoline, biphenyl, cyclohexane, piperidine.");
+
+    // ===================================================================
+    // Extended API — v6.11.0
+    // ===================================================================
+
+    // -----------------------------------------------------------------------
+    // Multi-molecule & scaffold MCS
+    // -----------------------------------------------------------------------
+
+    m.def("find_nmcs",
+          [](const std::vector<smsd::MolGraph>& molecules,
+             const smsd::ChemOptions& opts,
+             double threshold, int64_t timeoutMs) {
+              py::gil_scoped_release release;
+              return smsd::findNMCS(molecules, opts, threshold, timeoutMs);
+          },
+          py::arg("molecules"),
+          py::arg("opts") = smsd::ChemOptions(),
+          py::arg("threshold") = 1.0,
+          py::arg("timeout_ms") = 30000,
+          "N-molecule MCS via sequential pairwise reduction.\n"
+          "Finds the common substructure shared by ALL input molecules.\n"
+          "threshold: fraction of molecules that must contain the MCS (0.0-1.0).\n"
+          "Returns mapping from atom indices in the smallest molecule to MCS positions.");
+
+    m.def("find_scaffold_mcs",
+          [](const smsd::MolGraph& g1, const smsd::MolGraph& g2,
+             const smsd::ChemOptions& opts, const smsd::McsOptions& mopts) {
+              py::gil_scoped_release release;
+              return smsd::findScaffoldMCS(g1, g2, opts, mopts);
+          },
+          py::arg("mol1"), py::arg("mol2"),
+          py::arg("opts") = smsd::ChemOptions(),
+          py::arg("mcs_opts") = smsd::McsOptions(),
+          "MCS on Murcko scaffolds of two molecules.\n"
+          "Strips side chains first, then computes MCS on ring frameworks.\n"
+          "Useful for scaffold-hopping analysis in medicinal chemistry.");
+
+    // -----------------------------------------------------------------------
+    // Mapping validation & maximality
+    // -----------------------------------------------------------------------
+
+    m.def("validate_mapping",
+          [](const smsd::MolGraph& g1, const smsd::MolGraph& g2,
+             const std::map<int,int>& mapping, const smsd::ChemOptions& opts) {
+              return smsd::validateMapping(g1, g2, mapping, opts);
+          },
+          py::arg("mol1"), py::arg("mol2"),
+          py::arg("mapping"), py::arg("opts") = smsd::ChemOptions(),
+          "Validate an atom mapping between two molecules.\n"
+          "Returns a list of error strings (empty = valid).\n"
+          "Checks atom compatibility, bond presence, and bond compatibility.");
+
+    m.def("is_mapping_maximal",
+          &smsd::isMappingMaximal,
+          py::arg("mol1"), py::arg("mol2"),
+          py::arg("mapping"), py::arg("opts") = smsd::ChemOptions(),
+          "Check if an MCS mapping is maximal (cannot be extended).\n"
+          "Returns True if no additional atom pair can be added to the mapping.\n"
+          "A non-maximal mapping indicates the MCS search terminated early.");
+
+    // -----------------------------------------------------------------------
+    // R-group decomposition
+    // -----------------------------------------------------------------------
+
+    m.def("decompose_rgroups",
+          [](const smsd::MolGraph& core,
+             const std::vector<smsd::MolGraph>& molecules,
+             const smsd::ChemOptions& opts,
+             int64_t timeoutMs) {
+              std::vector<smsd::RGroupResult> results;
+              { py::gil_scoped_release release;
+                results = smsd::decomposeRGroups(core, molecules, opts, timeoutMs); }
+              // Convert to Python: list of dicts with 'core' and 'rgroups'
+              py::list out;
+              for (auto& r : results) {
+                  py::dict d;
+                  d["core"] = r.core;
+                  py::dict rg;
+                  for (auto& [name, mol] : r.rgroups) {
+                      rg[py::cast(name)] = mol;
+                  }
+                  d["rgroups"] = rg;
+                  out.append(d);
+              }
+              return out;
+          },
+          py::arg("core"), py::arg("molecules"),
+          py::arg("opts") = smsd::ChemOptions(),
+          py::arg("timeout_ms") = 10000,
+          "R-group decomposition: decompose molecules into core + R-groups.\n"
+          "Returns list of dicts, each with 'core' (MolGraph) and 'rgroups' (dict of name->MolGraph).\n"
+          "Core is matched as a substructure; non-core connected components become R1, R2, etc.");
+
+    // -----------------------------------------------------------------------
+    // Reaction mapping
+    // -----------------------------------------------------------------------
+
+    m.def("map_reaction",
+          [](const smsd::MolGraph& reactants, const smsd::MolGraph& products,
+             const smsd::ChemOptions& opts, int64_t timeoutMs) {
+              py::gil_scoped_release release;
+              return smsd::mapReaction(reactants, products, opts, timeoutMs);
+          },
+          py::arg("reactants"), py::arg("products"),
+          py::arg("opts") = smsd::ChemOptions(),
+          py::arg("timeout_ms") = 10000,
+          "Atom-atom mapping between reactants and products via disconnected MCS.\n"
+          "Returns mapping from reactant atom indices to product atom indices.\n"
+          "Uses disconnected MCS to handle bond-breaking/forming reactions.");
+
+    // -----------------------------------------------------------------------
+    // Graph utilities
+    // -----------------------------------------------------------------------
+
+    m.def("extract_subgraph",
+          &smsd::extractSubgraph,
+          py::arg("mol"), py::arg("atom_indices"),
+          "Extract a subgraph containing only the specified atoms.\n"
+          "Returns a new MolGraph with atoms re-indexed from 0.\n"
+          "Preserves all atom and bond properties.");
+
+    m.def("murcko_scaffold",
+          &smsd::murckoScaffold,
+          py::arg("mol"),
+          "Compute the Murcko scaffold (ring framework + linkers).\n"
+          "Strips all side chains, keeping only ring atoms and atoms\n"
+          "on shortest paths between rings. Essential for scaffold analysis.");
+
+    m.def("count_components",
+          static_cast<int (*)(const smsd::MolGraph&)>(&smsd::detail::countComponents),
+          py::arg("mol"),
+          "Count the number of connected components in a molecule.\n"
+          "Returns 1 for normal connected molecules, >1 for salts/mixtures.");
+
+    m.def("split_components",
+          &smsd::detail::splitComponents,
+          py::arg("mol"),
+          "Split a molecule into its connected components.\n"
+          "Returns a list of MolGraphs, one per connected component.\n"
+          "Useful for separating salts, counterions, or mixture components.");
+
+    m.def("same_canonical_graph",
+          &smsd::detail::sameCanonicalGraph,
+          py::arg("mol1"), py::arg("mol2"),
+          "Check if two molecules are canonically identical.\n"
+          "Compares canonical SMILES — fast graph isomorphism test.\n"
+          "Does not consider stereochemistry unless encoded in SMILES.");
+
+    // -----------------------------------------------------------------------
+    // All substructure matches
+    // -----------------------------------------------------------------------
+
+    m.def("find_all_substructures",
+          [](const smsd::MolGraph& query, const smsd::MolGraph& target,
+             const smsd::ChemOptions& opts, int64_t timeoutMs) {
+              py::gil_scoped_release release;
+              return smsd::findAllSubstructures(query, target, opts, timeoutMs);
+          },
+          py::arg("query"), py::arg("target"),
+          py::arg("opts") = smsd::ChemOptions(),
+          py::arg("timeout_ms") = 10000,
+          "Find ALL substructure mappings (up to 10,000).\n"
+          "Returns list of mappings, each a list of (query_atom, target_atom) pairs.\n"
+          "CAUTION: Can be memory-intensive for symmetric molecules (e.g. benzene\n"
+          "has 12 automorphisms). Use find_substructure() for a single match.");
+
+    // -----------------------------------------------------------------------
+    // File I/O
+    // -----------------------------------------------------------------------
+
+    m.def("read_mol_file",
+          &smsd::readMolFile,
+          py::arg("filename"),
+          "Read a MOL file from disk into a MolGraph.\n"
+          "Supports V2000 and V3000 formats.\n"
+          "Raises ValueError if file cannot be opened.");
+
+    m.def("read_sdf",
+          &smsd::readSDF,
+          py::arg("filename"),
+          "Read all molecules from an SDF file.\n"
+          "Returns a list of MolGraphs. Malformed entries become empty graphs.\n"
+          "CAUTION: Loads entire file into memory — for very large SDFs (>100K mols),\n"
+          "consider streaming with read_mol_block() on individual records.");
+
+    m.def("write_sdf",
+          &smsd::writeSDF,
+          py::arg("molecules"), py::arg("filename"),
+          "Write a list of MolGraphs to an SDF file.\n"
+          "Each molecule is written as a V2000 MOL block followed by $$$$.");
+
+    // -----------------------------------------------------------------------
+    // Pharmacophore classification
+    // -----------------------------------------------------------------------
+
+    m.def("classify_pharmacophore",
+          &smsd::batch::detail::classifyPharmacophore,
+          py::arg("mol"), py::arg("atom_index"),
+          "Classify an atom into pharmacophoric feature classes (FCFP invariant).\n"
+          "Returns a bitmask: bit 0=H-bond donor, 1=H-bond acceptor,\n"
+          "2=positive ionisable, 3=negative ionisable, 4=aromatic, 5=hydrophobic.\n"
+          "Based on Rogers & Hahn 2010 ECFP/FCFP definitions.");
+
+    m.def("implicit_h",
+          &smsd::batch::detail::implicitH,
+          py::arg("atomic_num"), py::arg("bond_order_sum"), py::arg("formal_charge"),
+          "Compute implicit hydrogen count for an atom.\n"
+          "Uses MDL valence model: H = default_valence - bond_order_sum - |charge|.\n"
+          "Returns 0 if result would be negative (hypervalent atoms).");
+
+    // -----------------------------------------------------------------------
+    // Layout utilities
+    // -----------------------------------------------------------------------
+
+    m.def("count_crossings",
+          [](const smsd::MolGraph& g, py::list coordsList) {
+              std::vector<smsd::Point2D> coords(g.n);
+              for (size_t i = 0; i < coordsList.size() && i < static_cast<size_t>(g.n); i++) {
+                  py::sequence pair = coordsList[i].cast<py::sequence>();
+                  if (pair.size() >= 2) {
+                      coords[i].x = pair[0].cast<double>();
+                      coords[i].y = pair[1].cast<double>();
+                  }
+              }
+              return smsd::detail_layout::countCrossings(g, coords);
+          },
+          py::arg("mol"), py::arg("coords"),
+          "Count the number of bond crossings in a 2D layout.\n"
+          "coords: list of [x, y] pairs for each atom.\n"
+          "Returns the number of pairs of bonds that cross each other.\n"
+          "Useful for evaluating layout quality — 0 crossings is optimal for planar graphs.");
+
+    m.def("is_degenerate_layout",
+          [](py::list coordsList) {
+              std::vector<smsd::Point2D> coords;
+              coords.reserve(coordsList.size());
+              for (size_t i = 0; i < coordsList.size(); i++) {
+                  py::sequence pair = coordsList[i].cast<py::sequence>();
+                  smsd::Point2D p;
+                  if (pair.size() >= 2) {
+                      p.x = pair[0].cast<double>();
+                      p.y = pair[1].cast<double>();
+                  }
+                  coords.push_back(p);
+              }
+              return smsd::detail_layout::isDegenerateLayout(coords);
+          },
+          py::arg("coords"),
+          "Check if a 2D layout is degenerate (all points collinear or stacked).\n"
+          "Returns True if the layout has zero width or height.\n"
+          "Use before reduce_crossings() to detect bad initial layouts.");
+
+    // -----------------------------------------------------------------------
+    // Fingerprint utilities
+    // -----------------------------------------------------------------------
+
+    m.def("counts_to_array",
+          &smsd::batch::countsToArray,
+          py::arg("counts"), py::arg("fp_size") = 2048,
+          "Convert a count fingerprint (dict) to a dense integer array.\n"
+          "Returns a list of length fp_size where index i = count of feature i.\n"
+          "Useful for ML pipelines that require fixed-width feature vectors.");
+
+    m.def("prewarm_graph",
+          &smsd::batch::detail::prewarmGraph,
+          py::arg("mol"),
+          "Pre-compute and cache graph invariants (canonical hash, NLF, etc.).\n"
+          "Call this once before repeated MCS/substructure operations on the same\n"
+          "molecule to avoid redundant recomputation. Reduces latency 10-30%%.");
+
+    // ===================================================================
+    // Layout engine v6.11.0 — 2D/3D generation, transforms, quality
+    // ===================================================================
+
+    // Point3D type
+    py::class_<smsd::Point3D>(m, "Point3D")
+        .def(py::init<>())
+        .def(py::init([](double x, double y, double z) {
+            return smsd::Point3D{x, y, z};
+        }), py::arg("x"), py::arg("y"), py::arg("z"))
+        .def_readwrite("x", &smsd::Point3D::x)
+        .def_readwrite("y", &smsd::Point3D::y)
+        .def_readwrite("z", &smsd::Point3D::z)
+        .def("__repr__", [](const smsd::Point3D& p) {
+            return "Point3D(" + std::to_string(p.x) + ", "
+                   + std::to_string(p.y) + ", " + std::to_string(p.z) + ")";
+        });
+
+    // Comprehensive 2D coordinate generation (multi-phase pipeline)
+    m.def("generate_coords_2d",
+          [](const smsd::MolGraph& g, double targetBondLength) {
+              std::vector<smsd::Point2D> coords;
+              { py::gil_scoped_release release;
+                coords = smsd::generateCoords2D(g, targetBondLength); }
+              py::list out(coords.size());
+              for (size_t i = 0; i < coords.size(); i++)
+                  out[i] = py::make_tuple(coords[i].x, coords[i].y);
+              return out;
+          },
+          py::arg("mol"), py::arg("target_bond_length") = 1.5,
+          "Generate publication-quality 2D coordinates.\n"
+          "Multi-phase pipeline: template matching -> ring layout -> chain zig-zag\n"
+          "-> force refinement -> overlap resolution -> crossing reduction\n"
+          "-> canonical orientation -> bond length normalisation.\n"
+          "Returns list of (x, y) tuples.");
+
+    // 3D coordinate generation
+    m.def("generate_coords_3d",
+          [](const smsd::MolGraph& g, double targetBondLength) {
+              std::vector<smsd::Point3D> coords;
+              { py::gil_scoped_release release;
+                coords = smsd::generateCoords3D(g, targetBondLength); }
+              py::list out(coords.size());
+              for (size_t i = 0; i < coords.size(); i++)
+                  out[i] = py::make_tuple(coords[i].x, coords[i].y, coords[i].z);
+              return out;
+          },
+          py::arg("mol"), py::arg("target_bond_length") = 1.5,
+          "Generate 3D coordinates via distance geometry embedding.\n"
+          "Uses classical MDS + force-field refinement.\n"
+          "Returns list of (x, y, z) tuples.\n"
+          "NOTE: For production conformer generation, external tools (ETKDG, MMFF)\n"
+          "are recommended. This provides a reasonable starting geometry.");
+
+    // Layout quality score
+    m.def("layout_quality",
+          [](const smsd::MolGraph& g, py::list coordsList, double targetBondLength) {
+              std::vector<smsd::Point2D> coords(g.n);
+              for (size_t i = 0; i < coordsList.size() && i < static_cast<size_t>(g.n); i++) {
+                  py::sequence pair = coordsList[i].cast<py::sequence>();
+                  if (pair.size() >= 2) {
+                      coords[i].x = pair[0].cast<double>();
+                      coords[i].y = pair[1].cast<double>();
+                  }
+              }
+              return smsd::layoutQuality(g, coords, targetBondLength);
+          },
+          py::arg("mol"), py::arg("coords"), py::arg("target_bond_length") = 1.5,
+          "Compute layout quality score (0.0 = perfect).\n"
+          "Combines bond length uniformity, overlap count, and crossing count.\n"
+          "Use to compare different layout strategies.");
+
+    // Overlap resolution
+    m.def("resolve_overlaps",
+          [](py::list coordsList, double threshold, int maxIter) {
+              std::vector<smsd::Point2D> coords;
+              coords.reserve(coordsList.size());
+              for (size_t i = 0; i < coordsList.size(); i++) {
+                  py::sequence pair = coordsList[i].cast<py::sequence>();
+                  smsd::Point2D p{0, 0};
+                  if (pair.size() >= 2) {
+                      p.x = pair[0].cast<double>();
+                      p.y = pair[1].cast<double>();
+                  }
+                  coords.push_back(p);
+              }
+              int remaining = smsd::resolveOverlaps(coords, threshold, maxIter);
+              py::list out(coords.size());
+              for (size_t i = 0; i < coords.size(); i++)
+                  out[i] = py::make_tuple(coords[i].x, coords[i].y);
+              return py::make_tuple(remaining, out);
+          },
+          py::arg("coords"), py::arg("threshold") = 0.3, py::arg("max_iter") = 100,
+          "Resolve atom-atom overlaps by pushing apart.\n"
+          "Returns (remaining_overlaps, updated_coords).");
+
+    // --- Coordinate transforms ---
+
+    m.def("translate_2d",
+          [](py::list coordsList, double dx, double dy) {
+              std::vector<smsd::Point2D> coords;
+              coords.reserve(coordsList.size());
+              for (size_t i = 0; i < coordsList.size(); i++) {
+                  py::sequence pair = coordsList[i].cast<py::sequence>();
+                  coords.push_back({pair[0].cast<double>(), pair[1].cast<double>()});
+              }
+              smsd::transform::translate2D(coords, dx, dy);
+              py::list out(coords.size());
+              for (size_t i = 0; i < coords.size(); i++)
+                  out[i] = py::make_tuple(coords[i].x, coords[i].y);
+              return out;
+          },
+          py::arg("coords"), py::arg("dx"), py::arg("dy"),
+          "Translate 2D coordinates by (dx, dy).");
+
+    m.def("rotate_2d",
+          [](py::list coordsList, double angle) {
+              std::vector<smsd::Point2D> coords;
+              coords.reserve(coordsList.size());
+              for (size_t i = 0; i < coordsList.size(); i++) {
+                  py::sequence pair = coordsList[i].cast<py::sequence>();
+                  coords.push_back({pair[0].cast<double>(), pair[1].cast<double>()});
+              }
+              smsd::transform::rotate2D(coords, angle);
+              py::list out(coords.size());
+              for (size_t i = 0; i < coords.size(); i++)
+                  out[i] = py::make_tuple(coords[i].x, coords[i].y);
+              return out;
+          },
+          py::arg("coords"), py::arg("angle"),
+          "Rotate 2D coordinates by angle (radians) about centroid.");
+
+    m.def("scale_2d",
+          [](py::list coordsList, double factor) {
+              std::vector<smsd::Point2D> coords;
+              coords.reserve(coordsList.size());
+              for (size_t i = 0; i < coordsList.size(); i++) {
+                  py::sequence pair = coordsList[i].cast<py::sequence>();
+                  coords.push_back({pair[0].cast<double>(), pair[1].cast<double>()});
+              }
+              smsd::transform::scale2D(coords, factor);
+              py::list out(coords.size());
+              for (size_t i = 0; i < coords.size(); i++)
+                  out[i] = py::make_tuple(coords[i].x, coords[i].y);
+              return out;
+          },
+          py::arg("coords"), py::arg("factor"),
+          "Uniform scale 2D coordinates about centroid.");
+
+    m.def("mirror_x",
+          [](py::list coordsList) {
+              std::vector<smsd::Point2D> coords;
+              coords.reserve(coordsList.size());
+              for (size_t i = 0; i < coordsList.size(); i++) {
+                  py::sequence pair = coordsList[i].cast<py::sequence>();
+                  coords.push_back({pair[0].cast<double>(), pair[1].cast<double>()});
+              }
+              smsd::transform::mirrorX(coords);
+              py::list out(coords.size());
+              for (size_t i = 0; i < coords.size(); i++)
+                  out[i] = py::make_tuple(coords[i].x, coords[i].y);
+              return out;
+          },
+          py::arg("coords"),
+          "Mirror 2D coordinates about X-axis (flip vertically).");
+
+    m.def("mirror_y",
+          [](py::list coordsList) {
+              std::vector<smsd::Point2D> coords;
+              coords.reserve(coordsList.size());
+              for (size_t i = 0; i < coordsList.size(); i++) {
+                  py::sequence pair = coordsList[i].cast<py::sequence>();
+                  coords.push_back({pair[0].cast<double>(), pair[1].cast<double>()});
+              }
+              smsd::transform::mirrorY(coords);
+              py::list out(coords.size());
+              for (size_t i = 0; i < coords.size(); i++)
+                  out[i] = py::make_tuple(coords[i].x, coords[i].y);
+              return out;
+          },
+          py::arg("coords"),
+          "Mirror 2D coordinates about Y-axis (flip horizontally).");
+
+    m.def("center_2d",
+          [](py::list coordsList) {
+              std::vector<smsd::Point2D> coords;
+              coords.reserve(coordsList.size());
+              for (size_t i = 0; i < coordsList.size(); i++) {
+                  py::sequence pair = coordsList[i].cast<py::sequence>();
+                  coords.push_back({pair[0].cast<double>(), pair[1].cast<double>()});
+              }
+              smsd::transform::center2D(coords);
+              py::list out(coords.size());
+              for (size_t i = 0; i < coords.size(); i++)
+                  out[i] = py::make_tuple(coords[i].x, coords[i].y);
+              return out;
+          },
+          py::arg("coords"),
+          "Center 2D coordinates at origin.");
+
+    m.def("align_2d",
+          [](py::list coordsList, py::list refList) {
+              std::vector<smsd::Point2D> coords, ref;
+              for (size_t i = 0; i < coordsList.size(); i++) {
+                  py::sequence p = coordsList[i].cast<py::sequence>();
+                  coords.push_back({p[0].cast<double>(), p[1].cast<double>()});
+              }
+              for (size_t i = 0; i < refList.size(); i++) {
+                  py::sequence p = refList[i].cast<py::sequence>();
+                  ref.push_back({p[0].cast<double>(), p[1].cast<double>()});
+              }
+              double rmsd = smsd::transform::align2D(coords, ref);
+              py::list out(coords.size());
+              for (size_t i = 0; i < coords.size(); i++)
+                  out[i] = py::make_tuple(coords[i].x, coords[i].y);
+              return py::make_tuple(rmsd, out);
+          },
+          py::arg("coords"), py::arg("reference"),
+          "Align 2D coordinates to a reference via optimal rotation.\n"
+          "Returns (RMSD, aligned_coords).");
+
+    m.def("bounding_box_2d",
+          [](py::list coordsList) {
+              std::vector<smsd::Point2D> coords;
+              for (size_t i = 0; i < coordsList.size(); i++) {
+                  py::sequence p = coordsList[i].cast<py::sequence>();
+                  coords.push_back({p[0].cast<double>(), p[1].cast<double>()});
+              }
+              auto bb = smsd::transform::boundingBox2D(coords);
+              return py::make_tuple(bb[0], bb[1], bb[2], bb[3]);
+          },
+          py::arg("coords"),
+          "Compute bounding box. Returns (minX, minY, maxX, maxY).");
+
+    m.def("normalise_bond_length",
+          [](const smsd::MolGraph& g, py::list coordsList, double target) {
+              std::vector<smsd::Point2D> coords;
+              for (size_t i = 0; i < coordsList.size(); i++) {
+                  py::sequence p = coordsList[i].cast<py::sequence>();
+                  coords.push_back({p[0].cast<double>(), p[1].cast<double>()});
+              }
+              smsd::transform::normaliseBondLength(g, coords, target);
+              py::list out(coords.size());
+              for (size_t i = 0; i < coords.size(); i++)
+                  out[i] = py::make_tuple(coords[i].x, coords[i].y);
+              return out;
+          },
+          py::arg("mol"), py::arg("coords"), py::arg("target") = 1.5,
+          "Normalise bond lengths to target value.");
+
+    m.def("canonical_orientation",
+          [](const smsd::MolGraph& g, py::list coordsList) {
+              std::vector<smsd::Point2D> coords;
+              for (size_t i = 0; i < coordsList.size(); i++) {
+                  py::sequence p = coordsList[i].cast<py::sequence>();
+                  coords.push_back({p[0].cast<double>(), p[1].cast<double>()});
+              }
+              smsd::transform::canonicalOrientation(g, coords);
+              py::list out(coords.size());
+              for (size_t i = 0; i < coords.size(); i++)
+                  out[i] = py::make_tuple(coords[i].x, coords[i].y);
+              return out;
+          },
+          py::arg("mol"), py::arg("coords"),
+          "Rotate to canonical orientation (30-degree grid alignment).");
+
+    // ══════════════════════════════════════════════════════════════════════
+    //  Depiction — Publication-Quality SVG Rendering (v6.11.0)
+    // ═════��════════════════════════════���═══════════════════════════════════
+
+    py::class_<smsd::DepictOptions>(m, "DepictOptions",
+        "Publication-quality SVG depiction options (ACS 1996 standard defaults).")
+        .def(py::init<>())
+        .def_readwrite("bond_length",       &smsd::DepictOptions::bondLength,
+            "Bond length in pixels (default 30). All ACS proportions scale from this.")
+        .def_readwrite("line_width",         &smsd::DepictOptions::lineWidth,
+            "Bond line width (0 = auto from ACS ratio).")
+        .def_readwrite("bold_width",         &smsd::DepictOptions::boldWidth,
+            "Wedge bond max width (0 = auto from ACS ratio).")
+        .def_readwrite("bond_spacing",       &smsd::DepictOptions::bondSpacing,
+            "Double bond offset distance (0 = auto, 18% of bond_length).")
+        .def_readwrite("font_size",          &smsd::DepictOptions::fontSize,
+            "Atom label font size (0 = auto from ACS ratio).")
+        .def_readwrite("subscript_scale",    &smsd::DepictOptions::subscriptScale,
+            "Subscript/superscript size relative to font_size (default 0.70).")
+        .def_readwrite("show_carbon_labels", &smsd::DepictOptions::showCarbonLabels,
+            "Show 'C' labels at carbon positions (default False).")
+        .def_readwrite("show_atom_indices",  &smsd::DepictOptions::showAtomIndices,
+            "Show atom index numbers (default False).")
+        .def_readwrite("show_map_numbers",   &smsd::DepictOptions::showMapNumbers,
+            "Show atom-atom map numbers (default True).")
+        .def_readwrite("highlight_radius",   &smsd::DepictOptions::highlightRadius,
+            "Atom highlight circle radius (0 = auto, 40% of bond_length).")
+        .def_readwrite("highlight_opacity",  &smsd::DepictOptions::highlightOpacity,
+            "Highlight fill opacity (default 0.30).")
+        .def_readwrite("match_width",        &smsd::DepictOptions::matchWidth,
+            "Highlighted bond width (0 = auto, 2.2x line_width).")
+        .def_readwrite("padding",            &smsd::DepictOptions::padding,
+            "SVG padding in pixels (default 30).")
+        .def_readwrite("width",              &smsd::DepictOptions::width,
+            "Fixed SVG width (0 = auto-fit to molecule).")
+        .def_readwrite("height",             &smsd::DepictOptions::height,
+            "Fixed SVG height (0 = auto-fit to molecule).")
+        .def_readwrite("font_family",        &smsd::DepictOptions::fontFamily,
+            "CSS font family (default 'Arial, Helvetica, sans-serif').");
+
+    m.def("depict",
+          [](const smsd::MolGraph& g, const smsd::DepictOptions& opts) {
+              return smsd::depict(g, opts);
+          },
+          py::arg("mol"), py::arg("opts") = smsd::DepictOptions(),
+          "Render a molecule as SVG string (auto-layout, ACS 1996 standard).");
+
+    m.def("depict_with_mapping",
+          [](const smsd::MolGraph& g, const std::map<int,int>& mapping,
+             const smsd::DepictOptions& opts) {
+              return smsd::depictWithMapping(g, mapping, opts);
+          },
+          py::arg("mol"), py::arg("mapping"), py::arg("opts") = smsd::DepictOptions(),
+          "Render a molecule with MCS/substructure atoms highlighted and numbered.");
+
+    m.def("depict_pair",
+          [](const smsd::MolGraph& g1, const smsd::MolGraph& g2,
+             const std::map<int,int>& mapping, const smsd::DepictOptions& opts) {
+              return smsd::depictPair(g1, g2, mapping, opts);
+          },
+          py::arg("mol1"), py::arg("mol2"), py::arg("mapping"),
+          py::arg("opts") = smsd::DepictOptions(),
+          "Render two molecules side-by-side with MCS mapping highlighted.");
+
+    m.def("depict_smiles",
+          [](const std::string& smiles, const smsd::DepictOptions& opts) {
+              auto mol = smsd::parseSMILES(smiles);
+              return smsd::depict(mol, opts);
+          },
+          py::arg("smiles"), py::arg("opts") = smsd::DepictOptions(),
+          "Render SMILES as SVG string (parse + layout + render).");
+
+    m.def("depict_mcs_svg",
+          [](const std::string& smiles1, const std::string& smiles2,
+             const std::map<int,int>& mapping, const smsd::DepictOptions& opts) {
+              auto mol1 = smsd::parseSMILES(smiles1);
+              auto mol2 = smsd::parseSMILES(smiles2);
+              return smsd::depictPair(mol1, mol2, mapping, opts);
+          },
+          py::arg("smiles1"), py::arg("smiles2"), py::arg("mapping"),
+          py::arg("opts") = smsd::DepictOptions(),
+          "Render MCS comparison of two SMILES as SVG (side-by-side with highlights).");
 }
