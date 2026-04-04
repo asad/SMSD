@@ -735,26 +735,46 @@ inline int findBestCandidate(
     bool useTwoHopNLF, bool useThreeHopNLF,
     int frontierCount, const int* frontierBuf,
     int* candBuf, int* bestCandBuf,
-    int& outQi, int& outCandCount) {
+    int& outQi, int& outCandCount,
+    const std::vector<std::vector<int>>* compatTargets = nullptr) {
 
     int bestQi = -1, bestCandSize = INT_MAX, bestCandCount = 0;
     for (int fi = 0; fi < frontierCount; ++fi) {
         int qi = frontierBuf[fi];
         int candCount = 0;
-        for (int tj = 0; tj < g2.n; ++tj) {
-            if (usedT[tj]) continue;
-            if (!atomsCompatFast(g1, qi, g2, tj, C)) continue;
-            if (!nlfCheckOk(qi, tj, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3,
-                            useTwoHopNLF, useThreeHopNLF)) continue;
-            bool ok = true;
-            for (int qk : g1.neighbors[qi]) {
-                int tl = q2tMap[qk];
-                if (tl < 0) continue;
-                int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tl);
-                if ((qOrd==0) != (tOrd==0)) { ok = false; break; }
-                if (qOrd != 0 && !bondsCompatible(g1, qi, qk, g2, tj, tl, C)) { ok = false; break; }
+        // When pre-indexed compatibility is available, iterate only compatible
+        // targets instead of scanning all n2 atoms — O(compat) vs O(n2).
+        if (compatTargets && qi < static_cast<int>(compatTargets->size())) {
+            for (int tj : (*compatTargets)[qi]) {
+                if (usedT[tj]) continue;
+                if (!nlfCheckOk(qi, tj, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3,
+                                useTwoHopNLF, useThreeHopNLF)) continue;
+                bool ok = true;
+                for (int qk : g1.neighbors[qi]) {
+                    int tl = q2tMap[qk];
+                    if (tl < 0) continue;
+                    int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tl);
+                    if ((qOrd==0) != (tOrd==0)) { ok = false; break; }
+                    if (qOrd != 0 && !bondsCompatible(g1, qi, qk, g2, tj, tl, C)) { ok = false; break; }
+                }
+                if (ok) candBuf[candCount++] = tj;
             }
-            if (ok) candBuf[candCount++] = tj;
+        } else {
+            for (int tj = 0; tj < g2.n; ++tj) {
+                if (usedT[tj]) continue;
+                if (!atomsCompatFast(g1, qi, g2, tj, C)) continue;
+                if (!nlfCheckOk(qi, tj, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3,
+                                useTwoHopNLF, useThreeHopNLF)) continue;
+                bool ok = true;
+                for (int qk : g1.neighbors[qi]) {
+                    int tl = q2tMap[qk];
+                    if (tl < 0) continue;
+                    int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tl);
+                    if ((qOrd==0) != (tOrd==0)) { ok = false; break; }
+                    if (qOrd != 0 && !bondsCompatible(g1, qi, qk, g2, tj, tl, C)) { ok = false; break; }
+                }
+                if (ok) candBuf[candCount++] = tj;
+            }
         }
         if (candCount == 0) continue;
         if (candCount < bestCandSize) {
@@ -809,7 +829,8 @@ inline void mcGregorDFS(
     int* candBuf, int* bestCandBuf,
     int* qLabelFreq, int* tLabelFreq, int freqSize,
     std::vector<uint8_t>& inFrontier, int* frontierBuf,
-    const int* jointQ, const int* jointT) {
+    const int* jointQ, const int* jointT,
+    const std::vector<std::vector<int>>* compatTargets = nullptr) {
 
     // Amortized local-deadline check: only call Clock::now() every 1024 iterations
     static thread_local int64_t mcgDfsIter = 0;
@@ -833,7 +854,7 @@ inline void mcGregorDFS(
     int bestQi = -1, bestCandCount = 0;
     findBestCandidate(g1, g2, C, q2tMap, usedT, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3,
                       useTwoHopNLF, useThreeHopNLF, frontierCount, frontierBuf,
-                      candBuf, bestCandBuf, bestQi, bestCandCount);
+                      candBuf, bestCandBuf, bestQi, bestCandCount, compatTargets);
     if (bestQi == -1) return;
 
     // Unit propagation (forced assignment)
@@ -856,7 +877,7 @@ inline void mcGregorDFS(
         if (frontierCount == 0) break;
         findBestCandidate(g1, g2, C, q2tMap, usedT, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3,
                           useTwoHopNLF, useThreeHopNLF, frontierCount, frontierBuf,
-                          candBuf, bestCandBuf, bestQi, bestCandCount);
+                          candBuf, bestCandBuf, bestQi, bestCandCount, compatTargets);
         if (bestQi == -1) break;
     }
 
@@ -872,7 +893,7 @@ inline void mcGregorDFS(
                         useTwoHopNLF, useThreeHopNLF, tb, localDeadlineNs, depth + 1,
                         usedQ, usedT, q2tMap, candBuf, bestCandBuf,
                         qLabelFreq, tLabelFreq, freqSize,
-                        inFrontier, frontierBuf, jointQ, jointT);
+                        inFrontier, frontierBuf, jointQ, jointT, compatTargets);
             qLabelFreq[jointQ[bestQi]]++; tLabelFreq[jointT[bestTj]]++;
             q2tMap[bestQi] = -1;
             cur.erase(bestQi); usedQ[bestQi] = false; usedT[bestTj] = false;
@@ -1048,7 +1069,8 @@ inline std::map<int,int> mcGregorExtend(
     const std::map<int,int>& seed, const ChemOptions& C,
     TimeBudget& tb, int64_t localMillis,
     bool useTwoHopNLF, bool useThreeHopNLF,
-    bool connectedOnly = true) {
+    bool connectedOnly = true,
+    const std::vector<std::vector<int>>* compatTargets = nullptr) {
 
     using Clock = std::chrono::steady_clock;
     int64_t localDeadlineNs = std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -1129,7 +1151,8 @@ inline std::map<int,int> mcGregorExtend(
                     useTwoHopNLF, useThreeHopNLF, tb, localDeadlineNs, 0,
                     usedQ, usedT, q2tDFS.data(), candBuf.data(), bestCandBuf.data(),
                     qLabelFreq.data(), tLabelFreq.data(), freqSize,
-                    inFrontier, frontierBuf.data(), jointQ.data(), jointT.data());
+                    inFrontier, frontierBuf.data(), jointQ.data(), jointT.data(),
+                    compatTargets);
     }
     return best;
 }
@@ -1169,6 +1192,9 @@ public:
 
     /** Access precomputed compatibility targets for a query atom. */
     const std::vector<int>& compatTargets(int qi) const { return compatTargets_[qi]; }
+
+    /** Access the full precomputed compatibility table (for McGregor acceleration). */
+    const std::vector<std::vector<int>>& allCompatTargets() const { return compatTargets_; }
 
     // -- Greedy bond extend (used by seed-and-extend) ----------------------
     static int greedyBondExtend(const MolGraph& g1, const MolGraph& g2,
@@ -1370,6 +1396,8 @@ public:
         std::vector<uint8_t> atomUsedAsSeed(n1, 0);
         std::set<int64_t> triedOrbitPairs;
         int seedsTried = 0;
+        // Pre-allocate reusable buffers for seed extension (avoid per-seed allocation)
+        std::vector<int> q2t(n1, -1), t2q(n2, -1);
 
         for (int si = 0; si < g1BondCount && seedsTried < maxSeeds; ++si) {
             if (tb.expired() || nodeCount > MAX_NODE_LIMIT) break;
@@ -1390,7 +1418,8 @@ public:
                     if (nodeCount > MAX_NODE_LIMIT || tb.expired()) break;
                     if (!atomsCompatFast(g1_, qv, g2_, tb2, C_)) continue;
                     if (!bondsCompatible(g1_, qu, qv, g2_, ta, tb2, C_)) continue;
-                    std::vector<int> q2t(n1, -1), t2q(n2, -1);
+                    std::memset(q2t.data(), -1, n1 * sizeof(int));
+                    std::memset(t2q.data(), -1, n2 * sizeof(int));
                     q2t[qu] = ta; t2q[ta] = qu; q2t[qv] = tb2; t2q[tb2] = qv;
                     int mapSize = greedyBondExtend(g1_, g2_, C_, q2t.data(), t2q.data(), n1, n2, induced_);
                     nodeCount += mapSize;
@@ -1405,7 +1434,8 @@ public:
                     if (nodeCount > MAX_NODE_LIMIT || tb.expired()) break;
                     if (!atomsCompatFast(g1_, qu, g2_, tb2, C_)) continue;
                     if (!bondsCompatible(g1_, qu, qv, g2_, tb2, ta, C_)) continue;
-                    std::vector<int> q2t(n1, -1), t2q(n2, -1);
+                    std::memset(q2t.data(), -1, n1 * sizeof(int));
+                    std::memset(t2q.data(), -1, n2 * sizeof(int));
                     q2t[qu] = tb2; t2q[tb2] = qu; q2t[qv] = ta; t2q[ta] = qv;
                     int mapSize = greedyBondExtend(g1_, g2_, C_, q2t.data(), t2q.data(), n1, n2, induced_);
                     nodeCount += mapSize;
@@ -2875,7 +2905,9 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
     // and the derived bound is advisory only.
     int kcoreUB = upperBound;
     int pgSize = g1.n * g2.n;
-    if (bestSize > 1 && !tb.expired() && pgSize <= 1000) {
+    // Adaptive threshold: allow larger product graphs when time budget permits
+    int kcoreLimit = (tb.remainingMs() > opts.timeoutMs / 2) ? 2500 : 1000;
+    if (bestSize > 1 && !tb.expired() && pgSize <= kcoreLimit) {
         int k = bestSize;
         int n1k = g1.n, n2k = g2.n;
         std::vector<std::vector<int>> pgDeg(n1k, std::vector<int>(n2k, 0));
@@ -2983,7 +3015,8 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
         if (tb.expired()) break;
         auto ext = ppx(g1, g2,
             mcGregorExtend(g1, g2, seed, chem, tb, perSeedMs,
-                           opts.useTwoHopNLFInExtension, opts.useThreeHopNLFInExtension, opts.connectedOnly),
+                           opts.useTwoHopNLFInExtension, opts.useThreeHopNLFInExtension, opts.connectedOnly,
+                           &GB.allCompatTargets()),
             chem, opts);
         int seedScore = mcsScore(g1, ext, opts);
         if (weightMode ? seedScore > bestScore : static_cast<int>(ext.size()) > bestSize) {
@@ -2996,7 +3029,8 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
     if (bestScore <= 0 && !tb.expired()) {
         best = ppx(g1, g2,
             mcGregorExtend(g1, g2, {}, chem, tb, tb.remainingMs(),
-                           opts.useTwoHopNLFInExtension, opts.useThreeHopNLFInExtension, opts.connectedOnly),
+                           opts.useTwoHopNLFInExtension, opts.useThreeHopNLFInExtension, opts.connectedOnly,
+                           &GB.allCompatTargets()),
             chem, opts);
     }
     // Apply post-processing (connectivity filter, ring guard) before returning.
@@ -3480,7 +3514,8 @@ inline std::vector<std::map<int,int>> findAllMCS(const MolGraph& g1, const MolGr
             if (tb.expired() || static_cast<int>(seen.size()) >= maxResults) break;
             auto ext = ppx(g1, g2,
                 mcGregorExtend(g1, g2, seed, chem, tb, perSeedMs,
-                    opts.useTwoHopNLFInExtension, opts.useThreeHopNLFInExtension, opts.connectedOnly),
+                    opts.useTwoHopNLFInExtension, opts.useThreeHopNLFInExtension, opts.connectedOnly,
+                    &GB.allCompatTargets()),
                 chem, opts);
             if (static_cast<int>(ext.size()) == K) {
                 auto ck = canonKey(ext);
