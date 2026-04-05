@@ -4587,7 +4587,7 @@ public class AlgorithmTest extends TestBase {
     @DisplayName("L-alanine [C@@H] => S configuration")
     void lalanineIsS() throws Exception {
       MolGraph g = new MolGraph(mol("N[C@@H](C)C(=O)O"));
-      Map<Integer, Character> rs = CipAssigner.assignRS(g);
+      Map<Integer, Character> rs = CIPAssigner.assignRS(g);
       assertFalse(rs.isEmpty(), "L-alanine should have a stereocentre");
       // Find the chiral carbon (atomicNum=6, tetraChirality != 0)
       boolean foundS = false;
@@ -4601,7 +4601,7 @@ public class AlgorithmTest extends TestBase {
     @DisplayName("D-alanine [C@H] => R configuration")
     void dalanineIsR() throws Exception {
       MolGraph g = new MolGraph(mol("N[C@H](C)C(=O)O"));
-      Map<Integer, Character> rs = CipAssigner.assignRS(g);
+      Map<Integer, Character> rs = CIPAssigner.assignRS(g);
       assertFalse(rs.isEmpty(), "D-alanine should have a stereocentre");
       boolean foundR = false;
       for (var entry : rs.entrySet()) {
@@ -4614,7 +4614,7 @@ public class AlgorithmTest extends TestBase {
     @DisplayName("L-cysteine => R configuration (sulfur changes priority)")
     void lcysteineIsR() throws Exception {
       MolGraph g = new MolGraph(mol("N[C@@H](CS)C(=O)O"));
-      Map<Integer, Character> rs = CipAssigner.assignRS(g);
+      Map<Integer, Character> rs = CIPAssigner.assignRS(g);
       assertFalse(rs.isEmpty(), "L-cysteine should have a stereocentre");
       boolean foundR = false;
       for (var entry : rs.entrySet()) {
@@ -4627,7 +4627,7 @@ public class AlgorithmTest extends TestBase {
     @DisplayName("No stereocentre: isobutane CC(C)C => empty map")
     void noStereocentre() throws Exception {
       MolGraph g = new MolGraph(mol("CC(C)C"));
-      Map<Integer, Character> rs = CipAssigner.assignRS(g);
+      Map<Integer, Character> rs = CIPAssigner.assignRS(g);
       assertTrue(rs.isEmpty(), "Isobutane should have no stereocentres");
     }
 
@@ -4635,7 +4635,7 @@ public class AlgorithmTest extends TestBase {
     @DisplayName("Symmetric substituents: CF2Cl2 => no stereocentre")
     void symmetricNotStereo() throws Exception {
       MolGraph g = new MolGraph(mol("C(F)(F)(Cl)Cl"));
-      Map<Integer, Character> rs = CipAssigner.assignRS(g);
+      Map<Integer, Character> rs = CIPAssigner.assignRS(g);
       assertTrue(rs.isEmpty(), "CF2Cl2 has two identical pairs => not a stereocentre");
     }
 
@@ -4643,7 +4643,7 @@ public class AlgorithmTest extends TestBase {
     @DisplayName("Implicit H is lowest priority: [C@@H](F)(Cl)Br")
     void implicitHLowestPriority() throws Exception {
       MolGraph g = new MolGraph(mol("[C@@H](F)(Cl)Br"));
-      Map<Integer, Character> rs = CipAssigner.assignRS(g);
+      Map<Integer, Character> rs = CIPAssigner.assignRS(g);
       assertFalse(rs.isEmpty(), "CHFClBr should have a stereocentre");
       // With @@: F(9), Cl(17), Br(35), H(1)
       // Priorities: Br > Cl > F > H
@@ -4655,7 +4655,7 @@ public class AlgorithmTest extends TestBase {
     @DisplayName("(E)-2-butene: C/C=C/C => E")
     void eButene() throws Exception {
       MolGraph g = new MolGraph(mol("C/C=C/C"));
-      Map<Long, Character> ez = CipAssigner.assignEZ(g);
+      Map<Long, Character> ez = CIPAssigner.assignEZ(g);
       assertFalse(ez.isEmpty(), "(E)-2-butene should have a stereo double bond");
       boolean foundE = false;
       for (var entry : ez.entrySet()) {
@@ -4668,7 +4668,7 @@ public class AlgorithmTest extends TestBase {
     @DisplayName("(Z)-2-butene: C/C=C\\C => Z")
     void zButene() throws Exception {
       MolGraph g = new MolGraph(mol("C/C=C\\C"));
-      Map<Long, Character> ez = CipAssigner.assignEZ(g);
+      Map<Long, Character> ez = CIPAssigner.assignEZ(g);
       assertFalse(ez.isEmpty(), "(Z)-2-butene should have a stereo double bond");
       boolean foundZ = false;
       for (var entry : ez.entrySet()) {
@@ -4681,7 +4681,7 @@ public class AlgorithmTest extends TestBase {
     @DisplayName("Ethylene (no stereo annotation) => empty E/Z map")
     void ethyleneNoStereo() throws Exception {
       MolGraph g = new MolGraph(mol("C=C"));
-      Map<Long, Character> ez = CipAssigner.assignEZ(g);
+      Map<Long, Character> ez = CIPAssigner.assignEZ(g);
       assertTrue(ez.isEmpty(), "Ethylene without / \\ annotations has no E/Z");
     }
 
@@ -4691,7 +4691,7 @@ public class AlgorithmTest extends TestBase {
       // Simplified cholesterol SMILES with stereo annotations
       String cholesterolSmi = "C([C@@H]1CC2=CC(=O)CC[C@@]2(C)[C@H]1[C@@H]1CC[C@H]([C@@H](CCCC(C)C)C)[C@@]1(C)CC)O";
       MolGraph g = new MolGraph(mol(cholesterolSmi));
-      Map<Integer, Character> rs = CipAssigner.assignRS(g);
+      Map<Integer, Character> rs = CIPAssigner.assignRS(g);
       assertTrue(rs.size() >= 2, "Cholesterol should have multiple stereocentres, found: " + rs.size());
     }
 
@@ -4701,8 +4701,8 @@ public class AlgorithmTest extends TestBase {
       // [C@@](Cl)(C)(CC) vs [C@](Cl)(C)(CC) -- needs depth > 1 to distinguish ethyl from methyl
       MolGraph g1 = new MolGraph(mol("[C@@](Cl)(C)(CC)F"));
       MolGraph g2 = new MolGraph(mol("[C@](Cl)(C)(CC)F"));
-      Map<Integer, Character> rs1 = CipAssigner.assignRS(g1);
-      Map<Integer, Character> rs2 = CipAssigner.assignRS(g2);
+      Map<Integer, Character> rs1 = CIPAssigner.assignRS(g1);
+      Map<Integer, Character> rs2 = CIPAssigner.assignRS(g2);
       assertFalse(rs1.isEmpty(), "Enantiomer 1 should have a stereocentre");
       assertFalse(rs2.isEmpty(), "Enantiomer 2 should have a stereocentre");
       // The two enantiomers should have opposite R/S
@@ -5009,10 +5009,10 @@ public class AlgorithmTest extends TestBase {
           "c1ccccc1", "Cc1ccccc1",
           new ChemOptions(), new SearchEngine.McsOptions());
       assertNotNull(result, "McsResult must not be null");
-      assertTrue(result.size >= 6, "Benzene/toluene MCS should be at least 6 atoms");
-      assertTrue(result.tanimoto > 0.0, "Tanimoto should be positive");
-      assertNotNull(result.mapping, "Mapping must not be null");
-      assertFalse(result.mapping.isEmpty(), "Mapping must not be empty");
+      assertTrue(result.size() >= 6, "Benzene/toluene MCS should be at least 6 atoms");
+      assertTrue(result.tanimoto() > 0.0, "Tanimoto should be positive");
+      assertNotNull(result.mapping(), "Mapping must not be null");
+      assertFalse(result.mapping().isEmpty(), "Mapping must not be empty");
     }
 
     @Test

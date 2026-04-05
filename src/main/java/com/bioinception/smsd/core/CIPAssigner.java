@@ -25,7 +25,7 @@ import java.util.*;
  *
  * @author Syed Asad Rahman
  */
-public final class CipAssigner {
+public final class CIPAssigner {
 
   /** Maximum BFS depth for the CIP digraph expansion.
    *  Must match C++ maxDepth (30) for long-chain resolution parity. */
@@ -34,7 +34,7 @@ public final class CipAssigner {
   /** Maximum number of nodes in the digraph to prevent runaway on large molecules. */
   private static final int MAX_NODES = 5000;
 
-  private CipAssigner() {} // utility class
+  private CIPAssigner() {} // utility class
 
   // ==========================================================================
   // Default valence table (mirrors FingerprintEngine / smiles_parser.hpp)

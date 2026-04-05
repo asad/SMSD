@@ -102,11 +102,7 @@ public final class MolGraph {
   // Tier 1b: additional transforms (T16-T30), Dhaked & Nicklaus 2024
   public static final float TW_THIOAMIDE_IMINOTHIOL = 0.95f; // thioamide form dominant (pKa ~13)
   public static final float TW_PHOSPHONATE      = 0.50f;  // symmetric P(=O)(OH) ↔ P(OH)(=O)
-  // T18 removed: sulfoxide S=O is NOT a tautomeric equilibrium (true covalent bond)
-  public static final float TW_SULFOXIDE        = 0.0f;   // DISABLED
   public static final float TW_NITRO_ACI_NITRO  = 0.95f;  // nitro form strongly dominant
-  // T20 removed: nitrile/isonitrile is isomerism, not tautomerism (no proton shift)
-  public static final float TW_NITRILE_ISONITRILE = 0.0f;  // DISABLED
   public static final float TW_15_KETO_ENOL     = 0.75f;  // 1,5-shift through conjugation
   public static final float TW_FURANOSE_PYRANOSE = 0.60f;  // ring-chain: furanose/pyranose
   public static final float TW_LACTOL           = 0.65f;  // ring-chain: lactol
@@ -1130,15 +1126,15 @@ public final class MolGraph {
 
     // Try each template
     for (TemplateEntry t : SCAFFOLD_TEMPLATES) {
-      if (t.atomCount != g.n) continue;
-      int[] tSizes = Arrays.copyOf(t.ringSizes, t.numRings);
+      if (t.atomCount() != g.n) continue;
+      int[] tSizes = Arrays.copyOf(t.ringSizes(), t.ringSizes().length);
       Arrays.sort(tSizes);
       if (!Arrays.equals(sizes, tSizes)) continue;
       // Match found
-      Point2D[] result = new Point2D[t.atomCount];
-      for (int i = 0; i < t.atomCount; i++)
-        result[i] = new Point2D(t.coords[i][0] * targetBondLength,
-                                t.coords[i][1] * targetBondLength);
+      Point2D[] result = new Point2D[t.atomCount()];
+      for (int i = 0; i < t.atomCount(); i++)
+        result[i] = new Point2D(t.coords()[i][0] * targetBondLength,
+                                t.coords()[i][1] * targetBondLength);
       return result;
     }
     return null;
@@ -1150,20 +1146,7 @@ public final class MolGraph {
   }
 
   // Scaffold template storage
-  private static final class TemplateEntry {
-    final String name;
-    final int atomCount;
-    final int[] ringSizes;
-    final int numRings;
-    final double[][] coords;
-    TemplateEntry(String name, int atomCount, int[] ringSizes, double[][] coords) {
-      this.name = name;
-      this.atomCount = atomCount;
-      this.ringSizes = ringSizes;
-      this.numRings = ringSizes.length;
-      this.coords = coords;
-    }
-  }
+  private record TemplateEntry(String name, int atomCount, int[] ringSizes, double[][] coords) {}
 
   private static double[][] regularPolygonCoords(int n) {
     double r = 0.5 / Math.sin(Math.PI / n);
@@ -1564,7 +1547,7 @@ public final class MolGraph {
     // Skip the expensive CDK ring perception if the molecule already has ring flags
     // (e.g., from AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms + Aromaticity.apply).
     if (!hasRingFlags(mol)) {
-      try { Cycles.markRingAtomsAndBonds(mol); } catch (Exception ignored) {}
+      try { Cycles.markRingAtomsAndBonds(mol); } catch (Exception _) {}
     }
 
     IdentityHashMap<IAtom, Integer> idxMap = new IdentityHashMap<>(n);
@@ -1638,13 +1621,11 @@ public final class MolGraph {
     this.dbStereoConf = (hasStereo && n <= SPARSE_THRESHOLD) ? new int[n][n] : null;
     if (hasStereo) {
       for (IStereoElement<?, ?> se : stereoElements) {
-        if (se instanceof ITetrahedralChirality) {
-          ITetrahedralChirality tc = (ITetrahedralChirality) se;
+        if (se instanceof ITetrahedralChirality tc) {
           Integer idx = idxMap.get(tc.getChiralAtom());
           if (idx != null)
             tetraChirality[idx] = tc.getStereo() == ITetrahedralChirality.Stereo.CLOCKWISE ? 1 : 2;
-        } else if (se instanceof IDoubleBondStereochemistry) {
-          IDoubleBondStereochemistry dbs = (IDoubleBondStereochemistry) se;
+        } else if (se instanceof IDoubleBondStereochemistry dbs) {
           IBond stereoBond = dbs.getStereoBond();
           Integer a = idxMap.get(stereoBond.getAtom(0)), c = idxMap.get(stereoBond.getAtom(1));
           if (a != null && c != null && dbStereoConf != null) {
@@ -1779,10 +1760,10 @@ public final class MolGraph {
       if (canonicalComputed) return;
       this.morganRank = computeMorganRanks(n, label, neighbors);
       CanonResult clResult = computeCanonicalLabeling(n, label, degree, neighbors);
-      this.canonicalLabel = clResult.canonLabel;
-      this.orbit = clResult.orbit;
-      this.autGenerators = clResult.autGenerators;
-      this.autGeneratorsTruncated = clResult.generatorsTruncated;
+      this.canonicalLabel = clResult.canonLabel();
+      this.orbit = clResult.orbit();
+      this.autGenerators = clResult.autGenerators();
+      this.autGeneratorsTruncated = clResult.generatorsTruncated();
       this.canonicalHash = computeCanonicalHash(this, canonicalLabel);
       canonicalComputed = true;
     }
@@ -2246,19 +2227,6 @@ public final class MolGraph {
       }
 
       // -----------------------------------------------------------------------
-      // T18: DISABLED — sulfoxide S=O is a true covalent bond, not tautomerism
-      // -----------------------------------------------------------------------
-      if (false && atomicNum[i] == 16 && !aromatic[i] && tautomerClass[i] == -1) {
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 8 && bondOrder(i, j) == 2) {
-            int cls = classId++;
-            tc(new int[]{i, j}, cls, TW_SULFOXIDE, tautomerWeight);
-            break;
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
       // T19: Nitro/aci-nitro  C-N(=O)=O ↔ C=N(=O)-OH  (weight 0.95)
       //      N with two O neighbors (one double, one single/double) bonded to C
       // -----------------------------------------------------------------------
@@ -2275,19 +2243,6 @@ public final class MolGraph {
           tautomerClass[cNbr] = cls; tautomerWeight[cNbr] = TW_NITRO_ACI_NITRO;
           for (int o : oNbrs) {
             if (tautomerClass[o] == -1) { tautomerClass[o] = cls; tautomerWeight[o] = TW_NITRO_ACI_NITRO; }
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T20: DISABLED — nitrile/isonitrile is isomerism, not tautomerism (no proton shift)
-      // -----------------------------------------------------------------------
-      if (false && atomicNum[i] == 7 && !aromatic[i] && tautomerClass[i] == -1) {
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 6 && bondOrder(i, j) == 3) {
-            int cls = classId++;
-            tc(new int[]{i, j}, cls, TW_NITRILE_ISONITRILE, tautomerWeight);
-            break;
           }
         }
       }
@@ -2664,15 +2619,8 @@ public final class MolGraph {
   private static final int CANON_SEARCH_LIMIT = 200;
   private static final int MAX_GENERATORS = 500;
 
-  private static final class CanonResult {
-    final int[] canonLabel;
-    final int[] orbit;
-    final int[][] autGenerators;
-    final boolean generatorsTruncated;
-    CanonResult(int[] cl, int[] orb, int[][] gens, boolean trunc) {
-      this.canonLabel = cl; this.orbit = orb; this.autGenerators = gens; this.generatorsTruncated = trunc;
-    }
-  }
+  private record CanonResult(int[] canonLabel, int[] orbit, int[][] autGenerators,
+      boolean generatorsTruncated) {}
 
   private static CanonResult computeCanonicalLabeling(int n, int[] label, int[] degree, int[][] neighbors) {
     if (n == 0) return new CanonResult(new int[0], new int[0], new int[0][], false);

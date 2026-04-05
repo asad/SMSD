@@ -17,7 +17,7 @@ import java.util.Map;
  * @since 6.4.0
  */
 @FunctionalInterface
-public interface McsPostFilter {
+public interface MCSPostFilter {
   /**
    * Rank MCS candidates by domain-specific relevance.
    *

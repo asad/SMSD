@@ -203,17 +203,17 @@ class IOTest extends TestBase {
     @DisplayName("Load benzene SMILES -> 6 atoms, 6 bonds")
     void loadBenzene() throws Exception {
       MolIO.Query q = MolIO.loadQuery("SMI", "c1ccccc1");
-      assertFalse(q.isSmarts);
-      assertNotNull(q.container);
-      assertEquals(6, q.container.getAtomCount());
-      assertEquals(6, q.container.getBondCount());
+      assertFalse(q.isSmarts());
+      assertNotNull(q.container());
+      assertEquals(6, q.container().getAtomCount());
+      assertEquals(6, q.container().getBondCount());
     }
 
     @Test
     @DisplayName("Load ethanol SMILES -> 3 heavy atoms")
     void loadEthanol() throws Exception {
       MolIO.Query q = MolIO.loadQuery("SMI", "CCO");
-      assertEquals(3, q.container.getAtomCount());
+      assertEquals(3, q.container().getAtomCount());
     }
 
     @Test
@@ -233,17 +233,17 @@ class IOTest extends TestBase {
     @DisplayName("Load SMARTS -> isSmarts=true, container=null")
     void loadSmarts() throws Exception {
       MolIO.Query q = MolIO.loadQuery("SIG", "[#6]");
-      assertTrue(q.isSmarts);
-      assertNull(q.container);
-      assertEquals("[#6]", q.text);
+      assertTrue(q.isSmarts());
+      assertNull(q.container());
+      assertEquals("[#6]", q.text());
     }
 
     @Test
     @DisplayName("Load complex SMARTS")
     void loadComplexSmarts() throws Exception {
       MolIO.Query q = MolIO.loadQuery("SIG", "[#6][#7]");
-      assertTrue(q.isSmarts);
-      assertEquals("[#6][#7]", q.text);
+      assertTrue(q.isSmarts());
+      assertEquals("[#6][#7]", q.text());
     }
   }
 
@@ -317,7 +317,7 @@ class IOTest extends TestBase {
     void roundtripSubstructure() throws Exception {
       MolIO.Query q = MolIO.loadQuery("SMI", "c1ccccc1");
       IAtomContainer target = MolIO.loadTarget("SMI", "c1ccc(C)cc1");
-      IAtomContainer qStd = Standardiser.standardise(q.container, Standardiser.TautomerMode.NONE);
+      IAtomContainer qStd = Standardiser.standardise(q.container(), Standardiser.TautomerMode.NONE);
       IAtomContainer tStd = Standardiser.standardise(target, Standardiser.TautomerMode.NONE);
       SMSD smsd = new SMSD(qStd, tStd, new ChemOptions());
       assertTrue(smsd.isSubstructure(), "Benzene should be substructure of toluene");
@@ -329,7 +329,7 @@ class IOTest extends TestBase {
       MolIO.Query q = MolIO.loadQuery("SIG", "[#6]~[#6]");
       IAtomContainer target = MolIO.loadTarget("SMI", "CC");
       IAtomContainer tStd = Standardiser.standardise(target, Standardiser.TautomerMode.NONE);
-      SMSD smsd = new SMSD(q.text, tStd, new ChemOptions());
+      SMSD smsd = new SMSD(q.text(), tStd, new ChemOptions());
       assertTrue(smsd.isSubstructure(), "C~C SMARTS should match ethane");
     }
   }

@@ -187,7 +187,7 @@ extensible.  However, a bare callback imposes too much burden on users.  The
 design combines (b) and (c):
 
 - A boolean flag `McsOptions.reactionAware` for the common case.
-- A pluggable `McsPostFilter` interface for advanced users.
+- A pluggable `MCSPostFilter` interface for advanced users.
 - The flag simply installs the built-in `ReactionAwareScorer`.
 
 ### 4.2 New Types
@@ -201,7 +201,7 @@ design combines (b) and (c):
  * graphs, and must return the candidates in preferred order.
  */
 @FunctionalInterface
-public interface McsPostFilter {
+public interface MCSPostFilter {
     /**
      * @param candidates  unmodifiable list of MCS candidates (size K down to K-delta)
      * @param g1          first molecule graph
@@ -245,7 +245,7 @@ public static final class McsOptions {
      * Custom post-filter.  If non-null, overrides the built-in
      * reaction-aware scorer even when reactionAware=true.
      */
-    public McsPostFilter postFilter = null;
+    public MCSPostFilter postFilter = null;
 }
 ```
 
@@ -376,7 +376,7 @@ information.
 ### 6.4 User Override via Custom Post-Filter
 
 Users who need domain-specific logic (e.g., enzyme active site knowledge) can
-supply a custom `McsPostFilter` that encodes arbitrary scoring.
+supply a custom `MCSPostFilter` that encodes arbitrary scoring.
 
 ---
 
@@ -502,7 +502,7 @@ must stay under 5x.
 
 ```
 src/main/java/com/bioinception/smsd/core/
-  McsPostFilter.java          # @FunctionalInterface (Section 4.2)
+  MCSPostFilter.java          # @FunctionalInterface (Section 4.2)
   ReactionAwareScorer.java    # Built-in implementation (Section 3)
   SearchEngine.java           # Modified: findNearMCS (pkg-private), gating logic
   SMSD.java                   # Modified: mapReactionAware convenience method
@@ -541,7 +541,7 @@ src/test/java/com/bioinception/smsd/core/
 |------------------------|----------------------------------------------|
 | Core MCS algorithm     | UNCHANGED                                    |
 | Post-filter trigger    | `McsOptions.reactionAware = true`            |
-| Extensibility          | `McsPostFilter` callback interface           |
+| Extensibility          | `MCSPostFilter` callback interface           |
 | Candidate generation   | Deletion from K-sized + greedy re-extension  |
 | Scoring formula        | Weighted: size + heteroatom + rarity + conn  |
 | Default candidate cap  | 20 candidates, delta = 2                     |

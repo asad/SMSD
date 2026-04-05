@@ -125,7 +125,7 @@ public class ReactionAwareScorerTest extends TestBase {
     MolGraph g2 = new MolGraph(m2);
 
     // Custom filter that just returns candidates as-is
-    McsPostFilter identity = (candidates, q, t) -> candidates;
+    MCSPostFilter identity = (candidates, q, t) -> candidates;
 
     SearchEngine.McsOptions opts = new SearchEngine.McsOptions();
     opts.disconnectedMCS = false;

@@ -118,43 +118,15 @@ public final class SearchEngine {
    *
    * <p>Returned by {@link #isSubstructureWithStats} and {@link #findAllSubstructuresWithStats}.
    */
-  public static final class SubstructureStats {
-    public final long nodesVisited, backtracks, candidatesTried;
-    public final long prunesAtom, prunesBond, prunesDegree, prunesNLF;
-    public final long timeMillis;
-    public final boolean timeout;
-    public final int solutions;
-
-    SubstructureStats(long nodesVisited, long backtracks, long candidatesTried,
-        long prunesAtom, long prunesBond, long prunesDegree, long prunesNLF,
-        long timeMillis, boolean timeout, int solutions) {
-      this.nodesVisited = nodesVisited;
-      this.backtracks = backtracks;
-      this.candidatesTried = candidatesTried;
-      this.prunesAtom = prunesAtom;
-      this.prunesBond = prunesBond;
-      this.prunesDegree = prunesDegree;
-      this.prunesNLF = prunesNLF;
-      this.timeMillis = timeMillis;
-      this.timeout = timeout;
-      this.solutions = solutions;
-    }
-  }
+  public record SubstructureStats(long nodesVisited, long backtracks, long candidatesTried,
+      long prunesAtom, long prunesBond, long prunesDegree, long prunesNLF,
+      long timeMillis, boolean timeout, int solutions) {}
 
   /**
    * Result of a substructure search: match outcome, mappings, and detailed statistics.
    */
-  public static final class SubstructureResult {
-    public final boolean exists;
-    public final List<Map<Integer, Integer>> mappings;
-    public final SubstructureStats stats;
-
-    SubstructureResult(boolean exists, List<Map<Integer, Integer>> mappings, SubstructureStats stats) {
-      this.exists = exists;
-      this.mappings = mappings;
-      this.stats = stats;
-    }
-  }
+  public record SubstructureResult(boolean exists, List<Map<Integer, Integer>> mappings,
+      SubstructureStats stats) {}
 
   /**
    * Configuration options for MCS computation.
@@ -221,7 +193,7 @@ public final class SearchEngine {
      * reaction-aware scorer even when reactionAware=true.
      * @since 6.4.0
      */
-    public McsPostFilter postFilter = null;
+    public MCSPostFilter postFilter = null;
 
     /**
      * When true, apply bond-change penalty scoring after reaction-aware
@@ -249,27 +221,15 @@ public final class SearchEngine {
    *
    * @since 6.3.0
    */
-  public static final class McsResult {
-    /** Atom-index mapping from query to target (empty if no common substructure). */
-    public final Map<Integer, Integer> mapping;
-    /** Number of matched atoms. */
-    public final int size;
-    /** Tanimoto-like overlap: size / min(queryAtoms, targetAtoms). */
-    public final double tanimoto;
-    /** Canonical SMILES of the MCS subgraph, or {@code ""} if empty. */
-    public final String mcsSmiles;
+  public record McsResult(Map<Integer, Integer> mapping, int size, double tanimoto,
+      String mcsSmiles) {
 
-    McsResult(Map<Integer, Integer> mapping, int queryN, int targetN, String mcsSmiles) {
-      this.mapping = mapping;
-      this.size = mapping.size();
+    static McsResult create(Map<Integer, Integer> mapping, int queryN, int targetN,
+        String mcsSmiles) {
+      int sz = mapping.size();
       int minN = Math.min(queryN, targetN);
-      this.tanimoto = minN > 0 ? (double) this.size / minN : 0.0;
-      this.mcsSmiles = mcsSmiles != null ? mcsSmiles : "";
-    }
-
-    @Override public String toString() {
-      return "McsResult{size=" + size + ", tanimoto=" + String.format("%.3f", tanimoto)
-          + ", mcsSmiles=\"" + mcsSmiles + "\"}";
+      double tan = minN > 0 ? (double) sz / minN : 0.0;
+      return new McsResult(mapping, sz, tan, mcsSmiles != null ? mcsSmiles : "");
     }
   }
 
@@ -280,8 +240,8 @@ public final class SearchEngine {
    * <pre>{@code
    * McsResult r = SearchEngine.findMCSFromSmiles("c1ccccc1", "c1ccc(O)cc1",
    *     new ChemOptions(), new McsOptions());
-   * System.out.println(r.mcsSmiles);  // "c1ccccc1"
-   * System.out.println(r.tanimoto);   // 1.0
+   * System.out.println(r.mcsSmiles());  // "c1ccccc1"
+   * System.out.println(r.tanimoto());   // 1.0
    * }</pre>
    *
    * @param smi1 SMILES string for the first molecule
@@ -311,7 +271,7 @@ public final class SearchEngine {
 
     Map<Integer, Integer> mapping = findMCS(g1, g2, C, M);
     String smiles = mcsToSmiles(g1, mapping);
-    return new McsResult(mapping, g1.n, g2.n, smiles);
+    return McsResult.create(mapping, g1.n, g2.n, smiles);
   }
 
   /**
@@ -2577,10 +2537,7 @@ public final class SearchEngine {
       this.g1 = g1; this.g2 = g2; this.C = C; this.induced = induced;
     }
 
-    static final class Node {
-      final int qi, tj;
-      Node(int qi, int tj) { this.qi = qi; this.tj = tj; }
-    }
+    record Node(int qi, int tj) {}
 
     Map<Integer, Integer> maximumCliqueSeed(TimeBudget tb) {
       List<Node> nodes = new ArrayList<>();
@@ -2614,10 +2571,10 @@ public final class SearchEngine {
         for (int v = u + 1; v < N; v++) {
           if (tb.expired()) break;
           Node nv = nodes.get(v);
-          if (nu.qi == nv.qi || nu.tj == nv.tj) continue;
-          int qOrd = g1.bondOrder(nu.qi, nv.qi), tOrd = g2.bondOrder(nu.tj, nv.tj);
+          if (nu.qi() == nv.qi() || nu.tj() == nv.tj()) continue;
+          int qOrd = g1.bondOrder(nu.qi(), nv.qi()), tOrd = g2.bondOrder(nu.tj(), nv.tj());
           boolean ok;
-          if (qOrd != 0 && tOrd != 0) ok = MolGraph.ChemOps.bondsCompatible(g1, nu.qi, nv.qi, g2, nu.tj, nv.tj, C);
+          if (qOrd != 0 && tOrd != 0) ok = MolGraph.ChemOps.bondsCompatible(g1, nu.qi(), nv.qi(), g2, nu.tj(), nv.tj(), C);
           else if (induced) ok = (qOrd == 0 && tOrd == 0);
           else continue;
           if (ok) {
@@ -2673,7 +2630,7 @@ public final class SearchEngine {
       Map<Integer, Integer> seed = new LinkedHashMap<>();
       for (int u : bestClique) {
         Node nd = nodes.get(u);
-        if (!seed.containsKey(nd.qi) && !seed.containsValue(nd.tj)) seed.put(nd.qi, nd.tj);
+        if (!seed.containsKey(nd.qi()) && !seed.containsValue(nd.tj())) seed.put(nd.qi(), nd.tj());
       }
       return seed;
     }
@@ -2718,8 +2675,8 @@ public final class SearchEngine {
         for (int w = 0; w < words; w++) deg += Long.bitCount(adj[i][w]);
         // Include Morgan rank to distinguish atoms at different chain positions
         // (orbit alone fails for symmetric groups like phosphate oxygens)
-        long sig = ((long) g1.orbit[nd.qi] << 48) | ((long) g2.orbit[nd.tj] << 32)
-            | ((long) g1.morganRank[nd.qi] << 20) | ((long) g1.degree[nd.qi] << 10) | deg;
+        long sig = ((long) g1.orbit[nd.qi()] << 48) | ((long) g2.orbit[nd.tj()] << 32)
+            | ((long) g1.morganRank[nd.qi()] << 20) | ((long) g1.degree[nd.qi()] << 10) | deg;
         Integer c = sig2class.get(sig);
         if (c == null) { c = nextClass++; sig2class.put(sig, c); }
         cls[i] = c;
@@ -2774,7 +2731,7 @@ public final class SearchEngine {
           while (bits2 != 0) {
             int bit2 = Long.numberOfTrailingZeros(bits2);
             int v2 = (w2 << 6) | bit2;
-            if (v2 < N) { qiSeen.set(nodes.get(v2).qi); tjSeen.set(nodes.get(v2).tj); }
+            if (v2 < N) { qiSeen.set(nodes.get(v2).qi()); tjSeen.set(nodes.get(v2).tj()); }
             bits2 &= bits2 - 1;
           }
         }
@@ -3993,7 +3950,7 @@ public final class SearchEngine {
         final int idx = i;
         tasks.add(() -> {
           try { hits[idx] = isSubstructure(query, targets.get(idx), C, timeoutMs); }
-          catch (Exception ignored) { /* leave false */ }
+          catch (Exception _) { /* leave false */ }
           return null;
         });
       }
@@ -4002,7 +3959,7 @@ public final class SearchEngine {
       // sequential fallback
       for (int i = 0; i < n; i++) {
         try { hits[i] = isSubstructure(query, targets.get(i), C, timeoutMs); }
-        catch (Exception ignored) { /* leave false */ }
+        catch (Exception _) { /* leave false */ }
       }
     } finally {
       pool.shutdown();
@@ -4748,7 +4705,7 @@ public final class SearchEngine {
     }
 
     // Step 4: apply post-filter (custom or built-in)
-    McsPostFilter filter = M.postFilter;
+    MCSPostFilter filter = M.postFilter;
     if (filter == null) {
       filter = M.bondChangeAware ? new BondChangeScorer() : new ReactionAwareScorer();
     }

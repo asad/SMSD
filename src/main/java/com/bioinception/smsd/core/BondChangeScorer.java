@@ -31,10 +31,10 @@ import java.util.*;
  *
  * @author Syed Asad Rahman
  * @since 6.5.3
- * @see McsPostFilter
+ * @see MCSPostFilter
  * @see ReactionAwareScorer
  */
-public final class BondChangeScorer implements McsPostFilter {
+public final class BondChangeScorer implements MCSPostFilter {
 
   // Bond-change cost weights
   private static final double COST_CC_BREAK = 3.0;
@@ -77,14 +77,14 @@ public final class BondChangeScorer implements McsPostFilter {
 
     // Sort: highest combined score first. Tie-break: larger MCS, then insertion order.
     scored.sort((a, b) -> {
-      if (Math.abs(a.penalty - b.penalty) > 1e-9)
-        return Double.compare(b.penalty, a.penalty); // higher combined score better
-      if (a.size != b.size) return b.size - a.size; // larger MCS better
-      return a.insertionOrder - b.insertionOrder;
+      if (Math.abs(a.penalty() - b.penalty()) > 1e-9)
+        return Double.compare(b.penalty(), a.penalty()); // higher combined score better
+      if (a.size() != b.size()) return b.size() - a.size(); // larger MCS better
+      return a.insertionOrder() - b.insertionOrder();
     });
 
     List<Map<Integer, Integer>> result = new ArrayList<>(scored.size());
-    for (ScoredCandidate sc : scored) result.add(sc.mapping);
+    for (ScoredCandidate sc : scored) result.add(sc.mapping());
     return result;
   }
 
@@ -158,18 +158,6 @@ public final class BondChangeScorer implements McsPostFilter {
     return COST_HETERO_CHANGE;
   }
 
-  private static final class ScoredCandidate {
-    final Map<Integer, Integer> mapping;
-    final double penalty;
-    final int size;
-    final int insertionOrder;
-
-    ScoredCandidate(Map<Integer, Integer> mapping, double penalty,
-                    int size, int insertionOrder) {
-      this.mapping = mapping;
-      this.penalty = penalty;
-      this.size = size;
-      this.insertionOrder = insertionOrder;
-    }
-  }
+  private record ScoredCandidate(Map<Integer, Integer> mapping, double penalty,
+      int size, int insertionOrder) {}
 }

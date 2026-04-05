@@ -152,7 +152,7 @@ public class SMSDcli implements Callable<Integer> {
     MolIO.Query query = MolIO.loadQuery(qType, q);
     IAtomContainer tm = applyHydrogenOptions(MolIO.loadTarget(tType, t));
     SMSD smsd = createSMSD(query, tm, new ChemOptions());
-    IAtomContainer qm = query.isSmarts ? null : applyHydrogenOptions(query.container);
+    IAtomContainer qm = query.isSmarts() ? null : applyHydrogenOptions(query.container());
 
     Map<String, Object> result = new LinkedHashMap<>();
     result.put("query", q);
@@ -229,9 +229,9 @@ public class SMSDcli implements Callable<Integer> {
 
     // Apply hydrogen options to the query ONCE here, outside the parallel block.
     // CDK IAtomContainer is not thread-safe for concurrent modification; calling
-    // applyHydrogenOptions(query.container) from N threads simultaneously
+    // applyHydrogenOptions(query.container()) from N threads simultaneously
     // would corrupt it. Snapshot the result into a final local.
-    final IAtomContainer queryMol = query.isSmarts ? null : applyHydrogenOptions(query.container);
+    final IAtomContainer queryMol = query.isSmarts() ? null : applyHydrogenOptions(query.container());
 
     // Resolve thread count: 0 = all available processors
     int cores = (numThreads > 0) ? numThreads : Runtime.getRuntime().availableProcessors();
@@ -250,9 +250,9 @@ public class SMSDcli implements Callable<Integer> {
           try {
             IAtomContainer tm = applyHydrogenOptions(targets.get(idx));
             try { tm = Standardiser.standardise(tm, Standardiser.TautomerMode.NONE); }
-            catch (Exception ignored) { }
-            SMSD smsd = query.isSmarts
-                ? new SMSD(query.text, tm, chem)
+            catch (Exception _) { }
+            SMSD smsd = query.isSmarts()
+                ? new SMSD(query.text(), tm, chem)
                 : new SMSD(queryMol, tm, chem);
             if ("sub".equalsIgnoreCase(mode)) {
               row.put("exists", smsd.isSubstructure(timeoutMs));
@@ -280,9 +280,9 @@ public class SMSDcli implements Callable<Integer> {
         try {
           IAtomContainer tm = applyHydrogenOptions(targets.get(i));
           try { tm = Standardiser.standardise(tm, Standardiser.TautomerMode.NONE); }
-          catch (Exception ignored) { }
-          SMSD smsd = query.isSmarts
-              ? new SMSD(query.text, tm, chem)
+          catch (Exception _) { }
+          SMSD smsd = query.isSmarts()
+              ? new SMSD(query.text(), tm, chem)
               : new SMSD(queryMol, tm, chem);
           if ("sub".equalsIgnoreCase(mode)) {
             row.put("exists", smsd.isSubstructure(timeoutMs));
@@ -327,7 +327,7 @@ public class SMSDcli implements Callable<Integer> {
     for (int i = 0; i < warmupRuns; i++) {
       SMSD smsd = createSMSD(query, tm, chem);
       smsd.isSubstructure(timeoutMs);
-      if (!query.isSmarts) smsd.findMCS(false, true, timeoutMs);
+      if (!query.isSmarts()) smsd.findMCS(false, true, timeoutMs);
     }
 
     long subTotal = 0;
@@ -341,7 +341,7 @@ public class SMSDcli implements Callable<Integer> {
     pw.printf("Substructure: %s  avg %.3f ms%n",
         subResult ? "FOUND" : "NOT FOUND", (subTotal / (double) timedRuns) / 1_000_000.0);
 
-    if (!query.isSmarts) {
+    if (!query.isSmarts()) {
       long mcsTotal = 0;
       int mcsSize = 0;
       for (int i = 0; i < timedRuns; i++) {
@@ -362,9 +362,9 @@ public class SMSDcli implements Callable<Integer> {
   // ---- helpers ----
 
   private SMSD createSMSD(MolIO.Query query, IAtomContainer tm, ChemOptions chem) throws Exception {
-    return query.isSmarts
-        ? new SMSD(query.text, tm, chem)
-        : new SMSD(applyHydrogenOptions(query.container), tm, chem);
+    return query.isSmarts()
+        ? new SMSD(query.text(), tm, chem)
+        : new SMSD(applyHydrogenOptions(query.container()), tm, chem);
   }
 
   private IAtomContainer applyHydrogenOptions(IAtomContainer mol) throws Exception {
@@ -444,13 +444,13 @@ public class SMSDcli implements Callable<Integer> {
   }
 
   private static OutputUtil.OutType parseOutType(String s) {
-    switch ((s == null ? "json" : s).trim().toLowerCase()) {
-      case "json": return OutputUtil.OutType.JSON;
-      case "smiles": case "smi": return OutputUtil.OutType.SMI;
-      case "smarts": return OutputUtil.OutType.SMARTS;
-      case "mdl": case "mol": case "sdf": return OutputUtil.OutType.MOL;
-      default: throw new IllegalArgumentException("Unknown --map-format: " + s);
-    }
+    return switch ((s == null ? "json" : s).trim().toLowerCase()) {
+      case "json"                -> OutputUtil.OutType.JSON;
+      case "smiles", "smi"      -> OutputUtil.OutType.SMI;
+      case "smarts"             -> OutputUtil.OutType.SMARTS;
+      case "mdl", "mol", "sdf"  -> OutputUtil.OutType.MOL;
+      default -> throw new IllegalArgumentException("Unknown --map-format: " + s);
+    };
   }
 
   // ========================================================================
@@ -465,17 +465,7 @@ public class SMSDcli implements Callable<Integer> {
     private static final SmilesParser SP = new SmilesParser(SilentChemObjectBuilder.getInstance());
 
     /** Result of loading a query: either a SMARTS string or a parsed molecule. */
-    public static class Query {
-      public final boolean isSmarts;
-      public final String text;
-      public final IAtomContainer container;
-
-      public Query(boolean isSmarts, String text, IAtomContainer container) {
-        this.isSmarts = isSmarts;
-        this.text = text;
-        this.container = container;
-      }
-    }
+    public record Query(boolean isSmarts, String text, IAtomContainer container) {}
 
     /**
      * Load a query molecule or SMARTS pattern.
@@ -486,11 +476,11 @@ public class SMSDcli implements Callable<Integer> {
     public static Query loadQuery(String type, String value) throws Exception {
       Objects.requireNonNull(type, "Query type must not be null");
       Objects.requireNonNull(value, "Query value must not be null");
-      switch (type.toUpperCase()) {
-        case "SIG": return new Query(true, value, null);
-        case "SMI": return new Query(false, value, SP.parseSmiles(value));
-        default:    return new Query(false, value, readFile(type, value));
-      }
+      return switch (type.toUpperCase()) {
+        case "SIG" -> new Query(true, value, null);
+        case "SMI" -> new Query(false, value, SP.parseSmiles(value));
+        default    -> new Query(false, value, readFile(type, value));
+      };
     }
 
     /**
@@ -502,11 +492,11 @@ public class SMSDcli implements Callable<Integer> {
     public static IAtomContainer loadTarget(String type, String value) throws Exception {
       Objects.requireNonNull(type, "Target type must not be null");
       Objects.requireNonNull(value, "Target value must not be null");
-      switch (type.toUpperCase()) {
-        case "SMI": return SP.parseSmiles(value);
-        case "SDF": throw new IllegalArgumentException("Use loadTargetsSDF for multi-molecule SDF.");
-        default:    return readFile(type, value);
-      }
+      return switch (type.toUpperCase()) {
+        case "SMI" -> SP.parseSmiles(value);
+        case "SDF" -> throw new IllegalArgumentException("Use loadTargetsSDF for multi-molecule SDF.");
+        default    -> readFile(type, value);
+      };
     }
 
     /** Load all molecules from an SDF file for batch processing. */
@@ -522,14 +512,13 @@ public class SMSDcli implements Callable<Integer> {
     }
 
     private static IAtomContainer readFile(String type, String path) throws Exception {
-      Function<InputStream, ISimpleChemObjectReader> factory;
-      switch (type.toUpperCase()) {
-        case "MOL": factory = MDLV2000Reader::new; break;
-        case "ML2": factory = Mol2Reader::new; break;
-        case "PDB": factory = PDBReader::new; break;
-        case "CML": factory = CMLReader::new; break;
-        default: throw new IllegalArgumentException("Unsupported file type: " + type);
-      }
+      Function<InputStream, ISimpleChemObjectReader> factory = switch (type.toUpperCase()) {
+        case "MOL" -> MDLV2000Reader::new;
+        case "ML2" -> Mol2Reader::new;
+        case "PDB" -> PDBReader::new;
+        case "CML" -> CMLReader::new;
+        default -> throw new IllegalArgumentException("Unsupported file type: " + type);
+      };
       try (FileInputStream fis = new FileInputStream(path);
           ISimpleChemObjectReader reader = factory.apply(fis)) {
         return reader.read(
@@ -578,14 +567,10 @@ public class SMSDcli implements Callable<Integer> {
       Objects.requireNonNull(target, "target");
       Objects.requireNonNull(mappings, "mappings");
       switch (type) {
-        case JSON:
-          writeMappingsJSON(query, target, mappings, os, prettyJson, similarityUpperBound); break;
-        case SMI: case SMARTS:
-          writeMappingsSMILES(query, target, mappings, os); break;
-        case MOL:
-          writeMappingsMOL(target, mappings, os); break;
-        default:
-          throw new IllegalArgumentException("Unsupported: " + type);
+        case JSON -> writeMappingsJSON(query, target, mappings, os, prettyJson, similarityUpperBound);
+        case SMI, SMARTS -> writeMappingsSMILES(query, target, mappings, os);
+        case MOL -> writeMappingsMOL(target, mappings, os);
+        default -> throw new IllegalArgumentException("Unsupported: " + type);
       }
     }
 

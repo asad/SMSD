@@ -246,8 +246,8 @@ public final class SMSD {
    *
    * <pre>{@code
    * SearchEngine.SubstructureResult result = smsd.isSubstructureWithStats(5000);
-   * System.out.println("Match: " + result.exists);
-   * System.out.println("Nodes visited: " + result.stats.nodesVisited);
+   * System.out.println("Match: " + result.exists());
+   * System.out.println("Nodes visited: " + result.stats().nodesVisited());
    * }</pre>
    *
    * @param timeoutMs maximum time in milliseconds
@@ -264,8 +264,8 @@ public final class SMSD {
    *
    * <pre>{@code
    * SearchEngine.SubstructureResult result = smsd.findAllSubstructuresWithStats(100, 10000);
-   * System.out.println("Found " + result.mappings.size() + " mappings");
-   * System.out.println("Nodes: " + result.stats.nodesVisited);
+   * System.out.println("Found " + result.mappings().size() + " mappings");
+   * System.out.println("Nodes: " + result.stats().nodesVisited());
    * }</pre>
    *
    * @param maxSolutions maximum number of mappings to enumerate

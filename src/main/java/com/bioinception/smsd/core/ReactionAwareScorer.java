@@ -19,9 +19,9 @@ import java.util.*;
  *
  * @author Syed Asad Rahman
  * @since 6.4.0
- * @see McsPostFilter
+ * @see MCSPostFilter
  */
-public final class ReactionAwareScorer implements McsPostFilter {
+public final class ReactionAwareScorer implements MCSPostFilter {
 
   // Scoring weights tuned for reaction mapping: heteroatom coverage is critical.
   // A 6-atom mapping with S should beat a 7-atom mapping without S.
@@ -37,11 +37,11 @@ public final class ReactionAwareScorer implements McsPostFilter {
   // Tier 2 (weight 1.5): N(7), O(8), F(9), Cl(17), Br(35)
   // Tier 1 (weight 1.0): all other non-carbon
   private static double rarityWeight(int atomicNum) {
-    switch (atomicNum) {
-      case 16: case 15: case 34: case 5: case 14: return 3.0;
-      case 7: case 8: case 9: case 17: case 35:   return 1.5;
-      default: return 1.0;
-    }
+    return switch (atomicNum) {
+      case 16, 15, 34, 5, 14 -> 3.0;
+      case 7, 8, 9, 17, 35   -> 1.5;
+      default                 -> 1.0;
+    };
   }
 
   @Override
@@ -85,16 +85,16 @@ public final class ReactionAwareScorer implements McsPostFilter {
 
     // Sort best-first with tie-breaking
     scored.sort((a, b) -> {
-      double diff = b.score - a.score;
+      double diff = b.score() - a.score();
       if (Math.abs(diff) > EPSILON) return diff > 0 ? 1 : -1;
       // Tie-break 1: more mapped bonds
-      if (a.bondCount != b.bondCount) return b.bondCount - a.bondCount;
+      if (a.bondCount() != b.bondCount()) return b.bondCount() - a.bondCount();
       // Tie-break 2: insertion order (stable sort)
-      return a.insertionOrder - b.insertionOrder;
+      return a.insertionOrder() - b.insertionOrder();
     });
 
     List<Map<Integer, Integer>> result = new ArrayList<>(scored.size());
-    for (ScoredCandidate sc : scored) result.add(sc.mapping);
+    for (ScoredCandidate sc : scored) result.add(sc.mapping());
     return result;
   }
 
@@ -169,18 +169,6 @@ public final class ReactionAwareScorer implements McsPostFilter {
     return bonds;
   }
 
-  private static final class ScoredCandidate {
-    final Map<Integer, Integer> mapping;
-    final double score;
-    final int bondCount;
-    final int insertionOrder;
-
-    ScoredCandidate(Map<Integer, Integer> mapping, double score,
-        int bondCount, int insertionOrder) {
-      this.mapping = mapping;
-      this.score = score;
-      this.bondCount = bondCount;
-      this.insertionOrder = insertionOrder;
-    }
-  }
+  private record ScoredCandidate(Map<Integer, Integer> mapping, double score,
+      int bondCount, int insertionOrder) {}
 }

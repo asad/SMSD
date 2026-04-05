@@ -48,8 +48,8 @@ double sim = SearchEngine.mcsFingerprintSimilarity(mcsFp, mcsFp);
 ## Stereo, Layout, and R-groups
 
 ```java
-var rs = com.bioinception.smsd.core.CipAssigner.assignRS(g1);
-var ez = com.bioinception.smsd.core.CipAssigner.assignEZ(g1);
+var rs = com.bioinception.smsd.core.CIPAssigner.assignRS(g1);
+var ez = com.bioinception.smsd.core.CIPAssigner.assignEZ(g1);
 var rgroups = SearchEngine.decomposeRGroups(core, molecules, new ChemOptions(), 10_000);
 ```
 

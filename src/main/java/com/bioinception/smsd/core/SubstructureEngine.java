@@ -70,7 +70,7 @@ final class SubstructureEngine {
         if (qFreq[z] > tFreq[z]) return false;
       }
     }
-    return isSubstructureWithStats(query, target, C, timeoutMs).exists;
+    return isSubstructureWithStats(query, target, C, timeoutMs).exists();
   }
 
   static SearchEngine.SubstructureResult isSubstructureWithStats(
@@ -85,7 +85,7 @@ final class SubstructureEngine {
 
   static List<Map<Integer, Integer>> findAllSubstructures(
       MolGraph query, MolGraph target, ChemOptions C, int maxSolutions, long timeoutMs) {
-    return findAllSubstructuresWithStats(query, target, C, maxSolutions, timeoutMs).mappings;
+    return findAllSubstructuresWithStats(query, target, C, maxSolutions, timeoutMs).mappings();
   }
 
   static SearchEngine.SubstructureResult findAllSubstructuresWithStats(

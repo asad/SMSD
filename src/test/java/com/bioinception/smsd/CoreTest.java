@@ -1466,18 +1466,18 @@ public class CoreTest {
     void isSubstructureWithStatsReturnsData() throws Exception {
       SMSD smsd = new SMSD(mol("c1ccccc1"), mol("c1ccc2ccccc2c1"), new ChemOptions());
       SearchEngine.SubstructureResult res = smsd.isSubstructureWithStats(5000L);
-      assertTrue(res.exists);
-      assertTrue(res.stats.nodesVisited > 0, "Should report nodes visited");
-      assertTrue(res.stats.timeMillis >= 0, "Should report elapsed time");
+      assertTrue(res.exists());
+      assertTrue(res.stats().nodesVisited() > 0, "Should report nodes visited");
+      assertTrue(res.stats().timeMillis() >= 0, "Should report elapsed time");
     }
 
     @Test
     void findAllSubstructuresWithStatsReturnsData() throws Exception {
       SMSD smsd = new SMSD(mol("c1ccccc1"), mol("c1ccc(O)cc1"), new ChemOptions());
       SearchEngine.SubstructureResult res = smsd.findAllSubstructuresWithStats(100, 5000L);
-      assertTrue(res.exists);
-      assertFalse(res.mappings.isEmpty());
-      assertTrue(res.stats.solutions > 0);
+      assertTrue(res.exists());
+      assertFalse(res.mappings().isEmpty());
+      assertTrue(res.stats().solutions() > 0);
     }
 
     @Test

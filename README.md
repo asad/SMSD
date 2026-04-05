@@ -121,8 +121,8 @@ opts.bondChangeAware = true;  // penalise implausible bond transformations
 var rxnMcs = SearchEngine.reactionAwareMCS(g1, g2, new ChemOptions(), opts);
 
 // CIP stereo assignment (Rules 1-5, including pseudoasymmetric r/s)
-Map<Integer, Character> stereo = CipAssigner.assignRS(g);
-Map<Long, Character> ez = CipAssigner.assignEZ(g);
+Map<Integer, Character> stereo = CIPAssigner.assignRS(g);
+Map<Long, Character> ez = CIPAssigner.assignEZ(g);
 
 // Batch MCS with non-overlap constraints
 var mappings = SearchEngine.batchMcsConstrained(queries, targets, new ChemOptions(), 10_000);
