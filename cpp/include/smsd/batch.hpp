@@ -73,6 +73,8 @@ inline int resolveThreads(int numThreads) {
 inline void prewarmGraph(const MolGraph& g) {
     g.ensureCanonical();
     g.ensureRingCounts();
+    g.ensurePatternFP();
+    g.getPharmacophoreFeatures();
     g.getNLF1();
     g.getNLF2();
     g.getNLF3();
@@ -159,17 +161,18 @@ inline std::vector<uint64_t> computePathFingerprint(
                     pathData[pathLen++] = bondOrd + 1000;
                     pathData[pathLen++] = mol.label[nb];
 
-                    uint64_t h = fnv1a(pathData, pathLen);
-                    int bit = static_cast<int>(h % static_cast<uint64_t>(fpSize));
-                    fp[bit / 64] |= (1ULL << (bit % 64));
+                    uint64_t hFwd = fnv1a(pathData, pathLen);
 
-                    // Also hash reversed path for canonical invariance
+                    // Canonical hash: use min(fwd, rev) so A→B and B→A set the
+                    // same single bit, preserving correct bit density.
                     int revData[16];
                     for (int r = 0; r < pathLen; ++r)
                         revData[r] = pathData[pathLen - 1 - r];
-                    uint64_t h2 = fnv1a(revData, pathLen);
-                    int bit2 = static_cast<int>(h2 % static_cast<uint64_t>(fpSize));
-                    fp[bit2 / 64] |= (1ULL << (bit2 % 64));
+                    uint64_t hRev = fnv1a(revData, pathLen);
+
+                    uint64_t h = std::min(hFwd, hRev);
+                    int bit = static_cast<int>(h % static_cast<uint64_t>(fpSize));
+                    fp[bit / 64] |= (1ULL << (bit % 64));
 
                     // Push to stack if we can go deeper
                     if (newDepth < pathLength && top + 1 < 15) {
@@ -287,22 +290,23 @@ inline std::vector<uint64_t> computeCircularFingerprintECFP(
     };
 
     int n = mol.n;
-    // Initial atom invariants
+    // Initial atom invariants (Rogers & Hahn 2010, Table 1)
     std::vector<uint64_t> atomHash(n);
     for (int i = 0; i < n; ++i) {
         uint64_t h = FNV1A_SEED;
-        h = fnvMix(h, mol.atomicNum[i]);
-        h = fnvMix(h, mol.degree[i]);
-        // Implicit H count (Rogers & Hahn invariant #3)
-        // Uses the OpenSMILES multi-valence model: pick the smallest allowed
-        // valence that accommodates the observed bond-order sum.
+        h = fnvMix(h, mol.atomicNum[i]);                                  // R&H #1: atomic number
+        h = fnvMix(h, mol.degree[i]);                                     // R&H #2: heavy atom degree
         int bondOrdSum = 0;
         for (int nb : mol.neighbors[i]) bondOrdSum += mol.bondOrder(i, nb);
+        h = fnvMix(h, static_cast<uint64_t>(bondOrdSum));                 // R&H #3: bond order sum (valence)
+        int massNum = (static_cast<int>(mol.massNumber.size()) > i)
+                      ? mol.massNumber[i] : 0;
+        h = fnvMix(h, static_cast<uint64_t>(massNum));                    // R&H #4: atomic mass number
+        h = fnvMix(h, static_cast<uint64_t>(mol.formalCharge[i] + 4));    // R&H #5: formal charge
         int hCount = implicitH(mol.atomicNum[i], bondOrdSum, mol.formalCharge[i]);
-        h = fnvMix(h, static_cast<uint64_t>(hCount));
-        h = fnvMix(h, mol.ring[i] ? 1 : 0);
-        h = fnvMix(h, mol.aromatic[i] ? 1 : 0);
-        h = fnvMix(h, static_cast<uint64_t>(mol.formalCharge[i] + 4));
+        h = fnvMix(h, static_cast<uint64_t>(hCount));                     // R&H #6: attached H count
+        h = fnvMix(h, mol.ring[i] ? 1 : 0);                              // R&H #7: ring membership
+        h = fnvMix(h, mol.aromatic[i] ? 1 : 0);                          // Daylight extension: aromaticity
         if (!mol.tautomerClass.empty() && mol.tautomerClass[i] >= 0)
             h = fnvMix(h, 0xCAFE00ULL + static_cast<uint64_t>(mol.tautomerClass[i]));
         atomHash[i] = h;
@@ -314,7 +318,6 @@ inline std::vector<uint64_t> computeCircularFingerprintECFP(
     std::vector<uint64_t> prevHash = atomHash;
     std::vector<uint64_t> nextHash(n);
     std::vector<uint64_t> nbHashes;
-    std::unordered_set<uint64_t> seenHashes;
 
     for (int r = 1; r <= maxRadius; ++r) {
         bool anyNew = false;
@@ -364,14 +367,11 @@ inline int classifyPharmacophore(const MolGraph& g, int idx) {
     }
 
     // H-bond acceptor: N (not pyrrole-type), O, F, S (not thiophene-type)
-    // Pyrrole N: aromatic + has H (lone pair in pi) — NOT acceptor
-    // Pyridine N: aromatic + no H (lone pair in plane) — IS acceptor
+    // Pyrrole N: aromatic + has H (lone pair donated to pi) — NOT acceptor
+    // Pyridine N: aromatic + no H (lone pair in plane, available) — IS acceptor
     bool isPyrroleTypeN = false;
     if (z == 7 && arom) {
-        int bondSum = 0;
-        for (int nb : g.neighbors[idx]) bondSum += g.bondOrder(idx, nb);
-        int hCount = std::max(0, 3 - bondSum - std::abs(charge));
-        isPyrroleTypeN = (hCount > 0);
+        isPyrroleTypeN = (g.hydrogenCount[idx] > 0);
     }
     bool isAcceptorN = (z == 7 && charge <= 0 && !isPyrroleTypeN);
     bool isAcceptorS = (z == 16 && !arom);
@@ -508,18 +508,19 @@ inline std::vector<int> computeCircularFingerprintECFPCounts(
     std::vector<uint64_t> atomHash(n);
     for (int i = 0; i < n; ++i) {
         uint64_t h = FNV1A_SEED;
-        h = fnvMix(h, mol.atomicNum[i]);
-        h = fnvMix(h, mol.degree[i]);
-        // Implicit H count (Rogers & Hahn invariant #3)
-        // Uses the OpenSMILES multi-valence model: pick the smallest allowed
-        // valence that accommodates the observed bond-order sum.
+        h = fnvMix(h, mol.atomicNum[i]);                                  // R&H #1
+        h = fnvMix(h, mol.degree[i]);                                     // R&H #2
         int bondOrdSum = 0;
         for (int nb : mol.neighbors[i]) bondOrdSum += mol.bondOrder(i, nb);
+        h = fnvMix(h, static_cast<uint64_t>(bondOrdSum));                 // R&H #3
+        int massNum = (static_cast<int>(mol.massNumber.size()) > i)
+                      ? mol.massNumber[i] : 0;
+        h = fnvMix(h, static_cast<uint64_t>(massNum));                    // R&H #4
+        h = fnvMix(h, static_cast<uint64_t>(mol.formalCharge[i] + 4));    // R&H #5
         int hCount = implicitH(mol.atomicNum[i], bondOrdSum, mol.formalCharge[i]);
-        h = fnvMix(h, static_cast<uint64_t>(hCount));
-        h = fnvMix(h, mol.ring[i] ? 1 : 0);
-        h = fnvMix(h, mol.aromatic[i] ? 1 : 0);
-        h = fnvMix(h, static_cast<uint64_t>(mol.formalCharge[i] + 4));
+        h = fnvMix(h, static_cast<uint64_t>(hCount));                     // R&H #6
+        h = fnvMix(h, mol.ring[i] ? 1 : 0);                              // R&H #7
+        h = fnvMix(h, mol.aromatic[i] ? 1 : 0);                          // Daylight extension
         if (!mol.tautomerClass.empty() && mol.tautomerClass[i] >= 0)
             h = fnvMix(h, 0xCAFE00ULL + static_cast<uint64_t>(mol.tautomerClass[i]));
         atomHash[i] = h;

@@ -3184,12 +3184,11 @@ public:
                 }
 
                 // H-bond acceptor: N (not pyrrole), O, F, S (not thiophene)
+                // Pyrrole N: aromatic + has H (lone pair donated to pi) — NOT acceptor
+                // Pyridine N: aromatic + no H (lone pair in plane) — IS acceptor
                 bool isPyrroleN = false;
                 if (z == 7 && arom) {
-                    int boSum = 0;
-                    for (int nb : neighbors[i]) boSum += bondOrder(i, nb);
-                    int hc = std::max(0, 3 - boSum - std::abs(charge));
-                    isPyrroleN = (hc > 0);
+                    isPyrroleN = (hydrogenCount[i] > 0);
                 }
                 if ((z == 7 && charge <= 0 && !isPyrroleN) || z == 8 || z == 9 ||
                     (z == 16 && !arom))

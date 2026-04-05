@@ -356,18 +356,17 @@ public final class FingerprintEngine {
     long[] atomHash = new long[n];
     for (int i = 0; i < n; i++) {
       long h = FNV1A_SEED;
-      h ^= g.atomicNum[i];       h *= FNV1A_PRIME;
-      h ^= g.degree[i];          h *= FNV1A_PRIME;
-      // Implicit H count (Rogers & Hahn invariant #3)
-      // Uses the OpenSMILES multi-valence model: pick the smallest allowed
-      // valence that accommodates the observed bond-order sum.
+      h ^= g.atomicNum[i];       h *= FNV1A_PRIME;  // R&H #1: atomic number
+      h ^= g.degree[i];          h *= FNV1A_PRIME;  // R&H #2: heavy atom degree
       int bondOrdSum = 0;
       for (int nb : g.neighbors[i]) bondOrdSum += g.bondOrder(i, nb);
+      h ^= bondOrdSum;            h *= FNV1A_PRIME;  // R&H #3: bond order sum (valence)
+      h ^= g.massNumber[i];       h *= FNV1A_PRIME;  // R&H #4: atomic mass number
+      h ^= g.formalCharge[i] + 4; h *= FNV1A_PRIME;  // R&H #5: formal charge
       int hCount = implicitH(g.atomicNum[i], bondOrdSum, g.formalCharge[i]);
-      h ^= hCount;                h *= FNV1A_PRIME;
-      h ^= g.ring[i] ? 1 : 0;   h *= FNV1A_PRIME;
-      h ^= g.aromatic[i] ? 1 : 0; h *= FNV1A_PRIME;
-      h ^= g.formalCharge[i] + 4; h *= FNV1A_PRIME;
+      h ^= hCount;                h *= FNV1A_PRIME;  // R&H #6: attached H count
+      h ^= g.ring[i] ? 1 : 0;   h *= FNV1A_PRIME;  // R&H #7: ring membership
+      h ^= g.aromatic[i] ? 1 : 0; h *= FNV1A_PRIME; // Daylight extension: aromaticity
       if (g.tautomerClass != null && g.tautomerClass[i] >= 0) {
         h ^= 0xCAFE00L + g.tautomerClass[i]; h *= FNV1A_PRIME;
       }
@@ -500,18 +499,17 @@ public final class FingerprintEngine {
     long[] atomHash = new long[n];
     for (int i = 0; i < n; i++) {
       long h = FNV1A_SEED;
-      h ^= g.atomicNum[i];       h *= FNV1A_PRIME;
-      h ^= g.degree[i];          h *= FNV1A_PRIME;
-      // Implicit H count (Rogers & Hahn invariant #3)
-      // Uses the OpenSMILES multi-valence model: pick the smallest allowed
-      // valence that accommodates the observed bond-order sum.
+      h ^= g.atomicNum[i];       h *= FNV1A_PRIME;  // R&H #1
+      h ^= g.degree[i];          h *= FNV1A_PRIME;  // R&H #2
       int bondOrdSum = 0;
       for (int nb : g.neighbors[i]) bondOrdSum += g.bondOrder(i, nb);
+      h ^= bondOrdSum;            h *= FNV1A_PRIME;  // R&H #3
+      h ^= g.massNumber[i];       h *= FNV1A_PRIME;  // R&H #4
+      h ^= g.formalCharge[i] + 4; h *= FNV1A_PRIME;  // R&H #5
       int hCount = implicitH(g.atomicNum[i], bondOrdSum, g.formalCharge[i]);
-      h ^= hCount;                h *= FNV1A_PRIME;
-      h ^= g.ring[i] ? 1 : 0;   h *= FNV1A_PRIME;
-      h ^= g.aromatic[i] ? 1 : 0; h *= FNV1A_PRIME;
-      h ^= g.formalCharge[i] + 4; h *= FNV1A_PRIME;
+      h ^= hCount;                h *= FNV1A_PRIME;  // R&H #6
+      h ^= g.ring[i] ? 1 : 0;   h *= FNV1A_PRIME;  // R&H #7
+      h ^= g.aromatic[i] ? 1 : 0; h *= FNV1A_PRIME; // Daylight extension
       if (g.tautomerClass != null && g.tautomerClass[i] >= 0) {
         h ^= 0xCAFE00L + g.tautomerClass[i]; h *= FNV1A_PRIME;
       }

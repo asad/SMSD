@@ -2,6 +2,22 @@
 
 All notable changes to SMSD Pro are documented in this file.
 
+## [6.11.1] - 2026-04-04
+
+### Bug Fixes
+- **ECFP initial invariants**: added missing Rogers & Hahn invariants #3 (bond order
+  sum / valence) and #4 (atomic mass number) to both binary and count ECFP variants
+  in C++ and Java — fingerprints now encode the full 7-invariant set per the 2010 paper
+- **Path fingerprint canonical hash**: replaced double-bit-setting (forward + reverse)
+  with `min(fwd, rev)` single canonical hash, correcting bit density inflation
+- **FCFP pyrrole-N misclassification**: aromatic nitrogen acceptor classification now
+  uses direct hydrogen count instead of bond-sum heuristic, fixing incorrect pyridine-N
+  classification as non-acceptor (pyridine N has a free lone pair; pyrrole N does not)
+- **Thread safety**: `prewarmGraph()` now calls `ensurePatternFP()` before entering
+  OpenMP parallel regions, preventing data races on pattern fingerprint lazy init
+- **Dead code removal**: removed unused `seenHashes` set from binary ECFP (count
+  variant correctly uses hash-space convergence; binary variant uses bit-space)
+
 ## [6.11.0] - 2026-04-04
 
 ### Summary
