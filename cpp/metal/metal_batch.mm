@@ -123,9 +123,8 @@ struct DeviceProbe {
             (void)0;
 #else
             @autoreleasepool {
-                auto& self = DeviceProbe::instance();
-                self.device = MTLCreateSystemDefaultDevice();
-                self.found  = (self.device != nil);
+                p.device = MTLCreateSystemDefaultDevice();
+                p.found  = (p.device != nil);
             }
 #endif
         });

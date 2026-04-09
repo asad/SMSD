@@ -45,16 +45,16 @@ Changelog = "https://github.com/asad/SMSD/releases"
 [tool.scikit-build]
 cmake.source-dir = "cpp"
 cmake.build-type = "Release"
-cmake.args = ["-DSMSD_BUILD_PYTHON=ON", "-DSMSD_BUILD_TESTS=OFF", "-DSMSD_BUILD_OPENMP=OFF", "-DSMSD_BUILD_METAL=OFF", "-DSMSD_BUILD_CUDA=OFF"]
+cmake.args = ["-DSMSD_BUILD_PYTHON=ON", "-DSMSD_BUILD_TESTS=OFF", "-DSMSD_BUILD_OPENMP=ON", "-DSMSD_BUILD_METAL=AUTO", "-DSMSD_BUILD_CUDA=AUTO"]
 wheel.packages = ["python/smsd"]
 minimum-version = "0.5"
 
 [tool.scikit-build.cmake.define]
 SMSD_BUILD_PYTHON = "ON"
 SMSD_BUILD_TESTS = "OFF"
-SMSD_BUILD_OPENMP = "OFF"
-SMSD_BUILD_METAL = "OFF"
-SMSD_BUILD_CUDA = "OFF"
+SMSD_BUILD_OPENMP = "ON"
+SMSD_BUILD_METAL = "AUTO"
+SMSD_BUILD_CUDA = "AUTO"
 
 [tool.pytest.ini_options]
 testpaths = ["python/tests"]
