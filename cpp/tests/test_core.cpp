@@ -85,17 +85,14 @@ static void finalize(smsd::MolGraph& g, int bondOrd, bool bondRing, bool bondAro
     g.adjLong.assign(n, std::vector<uint64_t>(words, 0));
     g.useDense = (n <= 200);
     if (g.useDense) {
-        g.bondOrdMatrix.assign(n, std::vector<int>(n, 0));
-        g.bondRingMatrix.assign(n, std::vector<bool>(n, false));
-        g.bondAromMatrix.assign(n, std::vector<bool>(n, false));
+        g.bondPacked.assign(n, std::vector<uint8_t>(n, 0));
     }
     for (int i = 0; i < n; ++i) {
         for (int j : g.neighbors[i]) {
             g.adjLong[i][j >> 6] |= uint64_t(1) << (j & 63);
             if (g.useDense) {
-                g.bondOrdMatrix[i][j] = bondOrd;
-                g.bondRingMatrix[i][j] = bondRing;
-                g.bondAromMatrix[i][j] = bondArom;
+                g.bondPacked[i][j] = static_cast<uint8_t>(
+                    (bondOrd & 0x07) | (bondRing ? 0x08 : 0) | (bondArom ? 0x10 : 0));
             }
         }
     }
@@ -152,9 +149,7 @@ static smsd::MolGraph makePhenol() {
     g.label[6] = (8 << 2);
     g.neighbors[6] = {0}; g.degree[6] = 1;
     finalize(g, 4, true, true);
-    g.bondOrdMatrix[0][6] = 1; g.bondOrdMatrix[6][0] = 1;
-    g.bondRingMatrix[0][6] = false; g.bondRingMatrix[6][0] = false;
-    g.bondAromMatrix[0][6] = false; g.bondAromMatrix[6][0] = false;
+    g.bondPacked[0][6] = 1; g.bondPacked[6][0] = 1;  // order=1, no ring, no arom
     return g;
 }
 
@@ -178,9 +173,7 @@ static smsd::MolGraph makeToluene() {
     g.label[6] = (6 << 2);
     g.neighbors[6] = {0}; g.degree[6] = 1;
     finalize(g, 4, true, true);
-    g.bondOrdMatrix[0][6] = 1; g.bondOrdMatrix[6][0] = 1;
-    g.bondRingMatrix[0][6] = false; g.bondRingMatrix[6][0] = false;
-    g.bondAromMatrix[0][6] = false; g.bondAromMatrix[6][0] = false;
+    g.bondPacked[0][6] = 1; g.bondPacked[6][0] = 1;  // order=1, no ring, no arom
     return g;
 }
 

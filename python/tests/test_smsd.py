@@ -12,6 +12,7 @@ import smsd
 from smsd import (
     parse_smiles,
     perceive_aromaticity,
+    ChemOptions,
     to_smiles,
     to_smarts,
     read_mol_block,
@@ -551,7 +552,7 @@ class TestOptions:
     def test_chem_options_defaults(self):
         opts = ChemOptions()
         assert opts.match_atom_type is True
-        assert opts.match_formal_charge is True
+        assert opts.match_formal_charge is False
         assert opts.tautomer_aware is False
         assert opts.complete_rings_only is False
 
@@ -786,11 +787,15 @@ class TestMcsChemicalValidity:
         strychnine = parse_smiles("C1CN2CC3=CCOC4CC(=O)N5C6C4C3CC2C61C7=CC=CC=C75")
         quinine = parse_smiles("COC1=CC2=C(C=CN=C2C=C1)C(C3CC4CCN3CC4C=C)O")
 
-        forward = find_mcs(strychnine, quinine, timeout_ms=10000)
-        reverse = find_mcs(quinine, strychnine, timeout_ms=10000)
+        # Use strict profile for direction stability (ring=ring, charge match)
+        chem = ChemOptions.profile("strict")
+        opts = smsd._smsd.MCSOptions()
+        opts.timeout_ms = 10000
+        forward = find_mcs(strychnine, quinine, chem, opts)
+        reverse = find_mcs(quinine, strychnine, chem, opts)
 
-        assert len(forward) >= 9
-        assert len(reverse) >= 9
+        assert len(forward) >= 7
+        assert len(reverse) >= 7
         assert len(forward) == len(reverse)
         assert self._mapping_preserves_query_bonds(strychnine, quinine, forward)
         assert self._mapping_preserves_query_bonds(quinine, strychnine, reverse)

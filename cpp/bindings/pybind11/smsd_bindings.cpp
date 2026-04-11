@@ -18,6 +18,7 @@
 #include "smsd/cip.hpp"
 #include "smsd/layout.hpp"
 #include "smsd/depict.hpp"
+#include "smsd/clique_solver.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -350,6 +351,12 @@ PYBIND11_MODULE(_smsd, m) {
         .value("DIETHYL_ETHER", smsd::ChemOptions::Solvent::DIETHYL_ETHER)
         .export_values();
 
+    py::enum_<smsd::ChemOptions::MatcherEngine>(m, "MatcherEngine")
+        .value("VF2",   smsd::ChemOptions::MatcherEngine::VF2)
+        .value("VF2PP", smsd::ChemOptions::MatcherEngine::VF2PP)
+        .value("VF3",   smsd::ChemOptions::MatcherEngine::VF3)
+        .export_values();
+
     // -----------------------------------------------------------------------
     // ChemOptions
     // -----------------------------------------------------------------------
@@ -374,6 +381,15 @@ PYBIND11_MODULE(_smsd, m) {
         // Bond matching
         .def_readwrite("match_bond_order",      &smsd::ChemOptions::matchBondOrder)
         .def_readwrite("aromaticity_mode",      &smsd::ChemOptions::aromaticityMode)
+        .def_readwrite("aromaticity_model",     &smsd::ChemOptions::aromaticityModel)
+        // Engine & pruning
+        .def_readwrite("matcher_engine",        &smsd::ChemOptions::matcherEngine)
+        .def_readwrite("induced",               &smsd::ChemOptions::induced)
+        .def_readwrite("use_two_hop_nlf",       &smsd::ChemOptions::useTwoHopNLF)
+        .def_readwrite("use_three_hop_nlf",     &smsd::ChemOptions::useThreeHopNLF)
+        .def_readwrite("use_bit_parallel_feasibility", &smsd::ChemOptions::useBitParallelFeasibility)
+        // pH
+        .def_readwrite("pH",                    &smsd::ChemOptions::pH)
         // Ring fusion
         .def_readwrite("ring_fusion_mode",      &smsd::ChemOptions::ringFusionMode)
         // Named profiles
@@ -407,6 +423,11 @@ PYBIND11_MODULE(_smsd, m) {
         .def_readwrite("near_mcs_delta",     &smsd::MCSOptions::nearMcsDelta)
         .def_readwrite("near_mcs_candidates", &smsd::MCSOptions::nearMcsCandidates)
         .def_readwrite("bond_change_aware",  &smsd::MCSOptions::bondChangeAware)
+        .def_readwrite("max_stage",          &smsd::MCSOptions::maxStage)
+        .def_readwrite("seed_neighborhood_radius",     &smsd::MCSOptions::seedNeighborhoodRadius)
+        .def_readwrite("seed_max_anchors",             &smsd::MCSOptions::seedMaxAnchors)
+        .def_readwrite("use_two_hop_nlf_in_extension", &smsd::MCSOptions::useTwoHopNLFInExtension)
+        .def_readwrite("use_three_hop_nlf_in_extension", &smsd::MCSOptions::useThreeHopNLFInExtension)
         .def("__repr__", [](const smsd::MCSOptions& o) {
             return "<MCSOptions induced=" +
                    std::string(o.induced ? "True" : "False") +
@@ -477,6 +498,15 @@ PYBIND11_MODULE(_smsd, m) {
         .def("ensure_ring_counts", [](const smsd::MolGraph& g) {
                  g.ensureRingCounts();
              }, "Compute and cache per-atom ring counts")
+        .def("ring_system_of", [](const smsd::MolGraph& g, int atom) {
+                 return g.ringSystemOf(atom);
+             }, py::arg("atom"), "Ring system ID for an atom (-1 if acyclic)")
+        .def("ring_system_sig", [](const smsd::MolGraph& g, int rsId) {
+                 return g.ringSystemSig(rsId);
+             }, py::arg("rs_id"), "FNV-1a hash signature for a ring system")
+        .def("ring_system_count", [](const smsd::MolGraph& g) {
+                 return g.ringSystemCount();
+             }, "Number of distinct ring systems")
         .def("prewarm", [](const smsd::MolGraph& g) {
                  g.ensureCanonical();
                  g.ensureRingCounts();
@@ -487,6 +517,12 @@ PYBIND11_MODULE(_smsd, m) {
              },
              py::call_guard<py::gil_scoped_release>(),
              "Compute and cache common lazy invariants used by matching and batch APIs")
+        .def("num_rings", [](const smsd::MolGraph& g) {
+                 g.ensureRingCounts();
+                 auto sssr = smsd::computeSSSR(g);
+                 return static_cast<int>(sssr.size());
+             },
+             "Return the SSSR ring count for this molecule")
         .def("perceive_aromaticity", [](smsd::MolGraph& g, smsd::AromaticityModel model) -> smsd::MolGraph& {
                  g.perceiveAromaticity(model);
                  return g;
@@ -2247,4 +2283,87 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("smiles1"), py::arg("smiles2"), py::arg("mapping"),
           py::arg("opts") = smsd::DepictOptions(),
           "Render MCS comparison of two SMILES as SVG (side-by-side with highlights).");
+
+    // -------------------------------------------------------------------
+    // Clique solver bindings (v6.12.0)
+    // -------------------------------------------------------------------
+    py::class_<smsd::clique::ProductGraph>(m, "ProductGraph")
+        .def(py::init<>())
+        .def_readwrite("n", &smsd::clique::ProductGraph::n)
+        .def_readwrite("vertices", &smsd::clique::ProductGraph::vertices)
+        .def_readwrite("adj", &smsd::clique::ProductGraph::adj);
+
+    py::class_<smsd::clique::ProductVertex>(m, "ProductVertex")
+        .def(py::init<>())
+        .def_readwrite("query_atom", &smsd::clique::ProductVertex::query_atom)
+        .def_readwrite("target_atom", &smsd::clique::ProductVertex::target_atom);
+
+    py::class_<smsd::clique::CliqueResult>(m, "CliqueResult")
+        .def_readonly("cliques", &smsd::clique::CliqueResult::cliques)
+        .def_readonly("max_size", &smsd::clique::CliqueResult::max_size)
+        .def_readonly("timed_out", &smsd::clique::CliqueResult::timed_out)
+        .def_readonly("elapsed_us", &smsd::clique::CliqueResult::elapsed_us);
+
+    m.def("find_max_cliques",
+          &smsd::clique::findMaxCliques,
+          py::arg("pg"),
+          py::arg("max_cliques") = 8,
+          py::arg("timeout_ms") = 1000,
+          py::arg("incumbent_size") = 0,
+          py::call_guard<py::gil_scoped_release>(),
+          "Find maximum cliques in a product graph.");
+
+    py::class_<smsd::clique::MCSResult>(m, "CliqueMCSResult")
+        .def_readonly("candidates", &smsd::clique::MCSResult::candidates)
+        .def_readonly("best_size", &smsd::clique::MCSResult::best_size)
+        .def_readonly("lfub", &smsd::clique::MCSResult::lfub)
+        .def_readonly("elapsed_us", &smsd::clique::MCSResult::elapsed_us);
+
+    m.def("find_mcs_clique",
+          &smsd::clique::findMCSPipeline,
+          py::arg("compat"),
+          py::arg("bonds_a"), py::arg("bonds_b"),
+          py::arg("n_a"), py::arg("n_b"),
+          py::arg("bond_any") = true,
+          py::arg("timeout_ms") = 1000,
+          py::arg("max_results") = 8,
+          py::arg("ring_a") = std::vector<bool>{},
+          py::arg("ring_b") = std::vector<bool>{},
+          py::arg("arom_a") = std::vector<bool>{},
+          py::arg("arom_b") = std::vector<bool>{},
+          py::arg("lfub_value") = -1,
+          py::call_guard<py::gil_scoped_release>(),
+          "Clique-based MCS: greedy + seed-extend + BK, all in C++.");
+
+    m.def("match_substructure",
+          &smsd::clique::substructureMatch,
+          py::arg("n_query"), py::arg("n_target"),
+          py::arg("compat"),
+          py::arg("bonds_query"), py::arg("bonds_target"),
+          py::arg("bond_any") = false,
+          py::arg("timeout_ms") = 500,
+          py::arg("max_results") = 8,
+          py::call_guard<py::gil_scoped_release>(),
+          "Substructure match from pre-built compat pairs and bond maps.");
+
+    m.def("match_substructure_from_elements",
+          &smsd::clique::substructureMatchFromElements,
+          py::arg("elements_query"), py::arg("elements_target"),
+          py::arg("bonds_query"), py::arg("bonds_target"),
+          py::arg("bond_any") = false,
+          py::arg("timeout_ms") = 500,
+          py::arg("max_results") = 8,
+          py::call_guard<py::gil_scoped_release>(),
+          "Substructure match from element lists — C++ builds compat internally.");
+
+    m.def("score_mapping",
+          &smsd::clique::scorePairMapping,
+          py::arg("mapping"),
+          py::arg("elements_a"), py::arg("elements_b"),
+          py::arg("bonds_a"), py::arg("bonds_b"),
+          py::arg("ring_a") = std::vector<bool>{},
+          py::arg("ring_b") = std::vector<bool>{},
+          py::arg("arom_a") = std::vector<bool>{},
+          py::arg("arom_b") = std::vector<bool>{},
+          "Score a mapping based on bond compatibility and element matching.");
 }

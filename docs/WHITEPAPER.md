@@ -1,7 +1,7 @@
-# SMSD Pro 6.11.2 — Algorithms & Design
+# SMSD Pro 6.12.0 — Algorithms & Design
 
 **Author**: Syed Asad Rahman, BioInception PVT LTD
-**Version**: 6.11.2 | **Toolkit**: CDK 2.12 | **Language**: Java 25+ / C++17 / Python 3.9+ (recommended 3.12)
+**Version**: 6.12.0 | **Toolkit**: CDK 2.12 | **Language**: Java 25+ / C++17 / Python 3.9+ (recommended 3.12)
 
 ## Abstract
 

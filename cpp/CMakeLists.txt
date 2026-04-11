@@ -69,7 +69,7 @@ if(_SMSD_CUDA_ENABLED)
     add_library(smsd_cuda STATIC cuda/batch_screen.cu cuda/graph_kernels.cu)
     target_link_libraries(smsd_cuda PUBLIC smsd CUDA::cudart)
     set_target_properties(smsd_cuda PROPERTIES
-        CUDA_ARCHITECTURES "70;80;86;89;90"   # Volta, Ampere, Ada, Hopper
+        CUDA_ARCHITECTURES "75;80;86;89;90"   # Turing, Ampere, Ada, Hopper
         CUDA_SEPARABLE_COMPILATION ON)
     target_compile_features(smsd_cuda PUBLIC cxx_std_17)
     # Expose SMSD_ENABLE_CUDA so gpu.hpp picks up the right branch

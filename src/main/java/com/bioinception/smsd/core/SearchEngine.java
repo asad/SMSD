@@ -65,6 +65,26 @@ public final class SearchEngine {
 
   private static final long MAX_NODE_LIMIT = 800_000L;
 
+  // ---------------------------------------------------------------------------
+  // Global reaction deadline (thread-local, v6.12.0)
+  // ---------------------------------------------------------------------------
+
+  private static final ThreadLocal<Long> GLOBAL_DEADLINE_NS = new ThreadLocal<>();
+
+  /** Set a global deadline for the current thread (used by reaction mapping pipelines). */
+  public static void setGlobalDeadline(long ms) {
+    GLOBAL_DEADLINE_NS.set(System.nanoTime() + ms * 1_000_000L);
+  }
+
+  /** Clear the global deadline for the current thread. */
+  public static void clearGlobalDeadline() { GLOBAL_DEADLINE_NS.remove(); }
+
+  /** Check whether the global deadline for the current thread has expired. */
+  public static boolean isGlobalDeadlineExpired() {
+    Long d = GLOBAL_DEADLINE_NS.get();
+    return d != null && System.nanoTime() >= d;
+  }
+
   private SearchEngine() {}
 
   /**
@@ -101,6 +121,7 @@ public final class SearchEngine {
 
     public boolean expired() {
       if ((++counter & (checkEvery - 1)) != 0) return false;
+      if (isGlobalDeadlineExpired()) return true;
       return System.nanoTime() > deadlineNanos;
     }
 
@@ -210,6 +231,23 @@ public final class SearchEngine {
      * @since 6.6.1
      */
     public Set<Integer> excludedTargetAtoms = null;
+
+    /**
+     * Maximum algorithm stage to execute (0-5).
+     * <ul>
+     *   <li>0 — greedy only (return immediately if bestSize &gt; 0)</li>
+     *   <li>1 — greedy + seed-extend</li>
+     *   <li>2 — + McSplit</li>
+     *   <li>3 — + BK clique</li>
+     *   <li>4 — + McGregor extension (default seeds)</li>
+     *   <li>5 — + extra seeds (default)</li>
+     * </ul>
+     * @since 6.12.0
+     */
+    public int maxStage = 5;
+
+    /** Fluent setter for {@link #maxStage}. */
+    public MCSOptions withMaxStage(int s) { this.maxStage = s; return this; }
   }
 
   /**
@@ -1169,6 +1207,9 @@ public final class SearchEngine {
       }
     }
 
+    // maxStage gate: greedy-only early exit
+    if (M.maxStage <= 0 && bestSize > 0) return ppx(g1, g2, best, C, M);
+
     // Augmenting path refinement: grow mapping by forced single-candidate extensions
     if (bestSize > 0 && bestSize < upperBound && !tb.expired()) {
       Map<Integer, Integer> augmented = new LinkedHashMap<>(best);
@@ -1241,6 +1282,20 @@ public final class SearchEngine {
 
     { long[] _st = STAGE_TIMERS_TL.get(); if (_st != null) { _st[ST_GREEDY_END] = System.nanoTime(); _st[ST_BEST_AFTER_GREEDY] = bestSize; } }
 
+    // Small-exact branch-and-bound for tiny molecule pairs (v6.12.0)
+    int n1 = g1.n, n2 = g2.n;
+    if (M.disconnectedMCS && Math.min(n1, n2) <= 20 && Math.max(n1, n2) <= 40 && !tb.expired()) {
+      SmallExactMCSExplorer exact = new SmallExactMCSExplorer(g1, g2, C, M.induced, tb, upperBound, best);
+      Map<Integer, Integer> exactMap = exact.run();
+      int exScore = mcsScore(g1, exactMap, M);
+      if ((M.maximizeBonds || M.atomWeights != null) ? exScore > bestScore : exactMap.size() > bestSize) {
+        best = exactMap;
+        bestSize = exactMap.size();
+        bestScore = exScore;
+      }
+      if (!(M.maximizeBonds || M.atomWeights != null) && bestSize >= upperBound) return ppx(g1, g2, best, C, M);
+    }
+
     // Seed-and-extend MCS (bond growth, node-count limited)
     { long[] _st = STAGE_TIMERS_TL.get(); if (_st != null) _st[ST_SEED_START] = System.nanoTime(); }
     GraphBuilder GB = new GraphBuilder(g1, g2, C, M.induced);
@@ -1257,7 +1312,12 @@ public final class SearchEngine {
 
     { long[] _st = STAGE_TIMERS_TL.get(); if (_st != null) { _st[ST_SEED_END] = System.nanoTime(); _st[ST_BEST_AFTER_SEED] = bestSize; } }
 
+    // maxStage gate: stop after seed-extend
+    if (M.maxStage <= 1) return ppx(g1, g2, best, C, M);
+
     { long[] _st = STAGE_TIMERS_TL.get(); if (_st != null) _st[ST_MCSPLIT_START] = System.nanoTime(); }
+    // maxStage gate: stop before McSplit
+    if (M.maxStage < 2) return ppx(g1, g2, best, C, M);
     // k-core pre-pruning only pays for smaller product graphs.
     // On medium-sized pairs the setup cost can dominate the whole search,
     // and the derived bound is advisory only.
@@ -1334,6 +1394,8 @@ public final class SearchEngine {
       if (!(M.maximizeBonds || M.atomWeights != null) && bestSize >= upperBound) return ppx(g1, g2, best, C, M);
     }
 
+    // maxStage gate: stop before BK
+    if (M.maxStage < 3) return ppx(g1, g2, best, C, M);
     // BK clique on product graph
     { long[] _st = STAGE_TIMERS_TL.get(); if (_st != null) _st[ST_BK_START] = System.nanoTime(); }
     int bkSize = 0;
@@ -1359,7 +1421,7 @@ public final class SearchEngine {
     boolean skipExtraSeeds = mcSplitSize > 0 && bkSize > 0 && mcSplitSize == bkSize
         && mcSplitSize >= upperBound - 1;
 
-    if (M.extraSeeds && !skipExtraSeeds && bestSize < upperBound && !tb.expired()) {
+    if (M.extraSeeds && M.maxStage >= 5 && !skipExtraSeeds && bestSize < upperBound && !tb.expired()) {
       Map<Integer, Integer> s = GB.ringAnchorSeed(tb);
       if (!s.isEmpty()) seeds.add(s);
       if (!tb.expired()) {
@@ -1457,6 +1519,25 @@ public final class SearchEngine {
       if (!validateMapping(g1, g2, alt, C).isEmpty()) alt = recoverValidMcsMapping(g1, g2, alt, C, M);
       if (preferFinalMapping(g1, alt, best, M)) best = alt;
     }
+
+    // FixedSizeBondMaximizer: when the MCS already covers the smaller molecule,
+    // try to improve bond preservation quality (v6.12.0)
+    {
+      int fMinN = Math.min(g1.n, g2.n);
+      int fMaxN = Math.max(g1.n, g2.n);
+      if (best.size() == fMinN && fMinN <= 20 && fMaxN <= 40) {
+        long fbTimeout = M.timeoutMs > 0 ? Math.min(M.timeoutMs / 4, 2000L) : 2000L;
+        TimeBudget fbTb = new TimeBudget(fbTimeout);
+        FixedSizeBondMaximizer fbm = new FixedSizeBondMaximizer(
+            g1, g2, C, M.induced, fbTb, fMinN, best);
+        Map<Integer, Integer> fbResult = fbm.run();
+        if (fbResult.size() == best.size()
+            && countMappedBonds(g1, fbResult) > countMappedBonds(g1, best)) {
+          best = fbResult;
+        }
+      }
+    }
+
     return best;
   }
 
@@ -2743,6 +2824,355 @@ public final class SearchEngine {
   }
 
 
+  // ---------------------------------------------------------------------------
+  // SmallExactMCSExplorer -- exact branch-and-bound for small molecule pairs
+  // Port of C++ mcs.hpp SmallExactMCSExplorer (lines 686-936).
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Exact branch-and-bound MCS explorer for small molecule pairs.
+   *
+   * <p>Enumerates all compatible atom pairs with backtracking and pruning
+   * to find the optimal (maximum cardinality) atom mapping. Only invoked
+   * when {@code M.disconnectedMCS && min(n1,n2) <= 20 && max(n1,n2) <= 40}.
+   *
+   * @since 6.12.0
+   */
+  private static final class SmallExactMCSExplorer {
+    private final MolGraph g1, g2;
+    private final ChemOptions C;
+    private final boolean induced;
+    private final TimeBudget tb;
+    private final int upperBound;
+    private final int[] q2t;
+    private final int[] t2q;
+    private int[] bestQ2T;
+    private final byte[] state; // 0=pending, 1=assigned, 2=skipped
+    private final int[][] compatTargets;
+    private int bestSize;
+
+    SmallExactMCSExplorer(MolGraph g1, MolGraph g2, ChemOptions C, boolean induced,
+                          TimeBudget tb, int upperBound, Map<Integer, Integer> incumbent) {
+      this.g1 = g1; this.g2 = g2; this.C = C; this.induced = induced;
+      this.tb = tb; this.upperBound = upperBound;
+      this.q2t = new int[g1.n]; Arrays.fill(q2t, -1);
+      this.t2q = new int[g2.n]; Arrays.fill(t2q, -1);
+      this.bestQ2T = new int[g1.n]; Arrays.fill(bestQ2T, -1);
+      this.state = new byte[g1.n];
+      this.bestSize = 0;
+      // Seed from incumbent
+      for (Map.Entry<Integer, Integer> e : incumbent.entrySet()) {
+        int qi = e.getKey(), tj = e.getValue();
+        if (qi >= 0 && qi < g1.n && tj >= 0 && tj < g2.n) {
+          bestQ2T[qi] = tj;
+          bestSize++;
+        }
+      }
+      // Precompute compatible targets per query atom
+      this.compatTargets = new int[g1.n][];
+      for (int qi = 0; qi < g1.n; qi++) {
+        List<Integer> compat = new ArrayList<>();
+        for (int tj = 0; tj < g2.n; tj++) {
+          if (SubstructureEngine.AbstractVFMatcher.atomsCompatFast(g1, qi, g2, tj, C))
+            compat.add(tj);
+        }
+        compatTargets[qi] = compat.stream().mapToInt(Integer::intValue).toArray();
+      }
+    }
+
+    private boolean consistent(int qi, int tj) {
+      if (t2q[tj] >= 0) return false;
+      for (int qk = 0; qk < g1.n; qk++) {
+        if (qk == qi || q2t[qk] < 0) continue;
+        int tk = q2t[qk];
+        int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tk);
+        if (qOrd != 0) {
+          if (tOrd == 0) return false;
+          if (!MolGraph.ChemOps.bondsCompatible(g1, qi, qk, g2, tj, tk, C)) return false;
+        } else if (induced && tOrd != 0) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    private int mappedNeighborCount(int qi) {
+      int count = 0;
+      for (int nb : g1.neighbors[qi]) if (q2t[nb] >= 0) count++;
+      return count;
+    }
+
+    private Map<Integer, Integer> materialize(int[] arr) {
+      Map<Integer, Integer> m = new LinkedHashMap<>();
+      for (int qi = 0; qi < g1.n; qi++) if (arr[qi] >= 0) m.put(qi, arr[qi]);
+      return m;
+    }
+
+    private int[] collectCandidates(int qi) {
+      int count = 0;
+      int[] buf = new int[compatTargets[qi].length];
+      for (int tj : compatTargets[qi]) if (consistent(qi, tj)) buf[count++] = tj;
+      return Arrays.copyOf(buf, count);
+    }
+
+    /** Select next atom: prefer most mapped neighbors, ring atoms, highest degree, fewest candidates. */
+    private int selectNextAtom(int[][] candidatesOut) {
+      int bestQi = -1, bestMappedNbrs = -1, bestCandCount = Integer.MAX_VALUE, bestDegree = -1;
+      int[] bestCands = null;
+      for (int qi = 0; qi < g1.n; qi++) {
+        if (state[qi] != 0) continue;
+        int mappedNbrs = mappedNeighborCount(qi);
+        int[] cands = collectCandidates(qi);
+        int candCount = cands.length;
+        int degree = g1.degree[qi];
+        boolean better = false;
+        if (mappedNbrs != bestMappedNbrs) better = mappedNbrs > bestMappedNbrs;
+        else if (g1.ring[qi] != (bestQi >= 0 && g1.ring[bestQi])) {
+          better = g1.ring[qi] && !(bestQi >= 0 && g1.ring[bestQi]);
+        } else if (degree != bestDegree) better = degree > bestDegree;
+        else if (candCount != bestCandCount) better = candCount < bestCandCount;
+        else if (bestQi < 0 || qi < bestQi) better = true;
+        if (better) { bestQi = qi; bestMappedNbrs = mappedNbrs; bestCandCount = candCount; bestDegree = degree; bestCands = cands; }
+      }
+      candidatesOut[0] = bestCands;
+      return bestQi;
+    }
+
+    private void recordCurrent(int mappedCount) {
+      if (mappedCount > bestSize) {
+        bestSize = mappedCount;
+        System.arraycopy(q2t, 0, bestQ2T, 0, g1.n);
+      }
+    }
+
+    private void search(int mappedCount, int pendingCount) {
+      if (tb.expired()) return;
+      recordCurrent(mappedCount);
+      if (bestSize >= upperBound) return;
+      if (pendingCount <= 0) return;
+      int remainingTarget = g2.n - mappedCount;
+      int optimistic = mappedCount + Math.min(pendingCount, remainingTarget);
+      if (optimistic <= bestSize) return;
+
+      int[][] candidatesHolder = new int[1][];
+      int qi = selectNextAtom(candidatesHolder);
+      if (qi < 0) return;
+      int[] candidates = candidatesHolder[0];
+      if (candidates == null) return;
+
+      // Score and sort candidates
+      int mappedNbrs = mappedNeighborCount(qi);
+      int[][] scored = new int[candidates.length][2];
+      for (int k = 0; k < candidates.length; k++) {
+        int tj = candidates[k];
+        int score = mappedNbrs * 1000;
+        score += (g1.ring[qi] && g2.ring[tj]) ? 100 : 0;
+        score += 10 - Math.min(9, Math.abs(g1.degree[qi] - g2.degree[tj]));
+        scored[k][0] = -score; scored[k][1] = tj;
+      }
+      Arrays.sort(scored, (a, b) -> a[0] != b[0] ? Integer.compare(a[0], b[0]) : Integer.compare(a[1], b[1]));
+
+      state[qi] = 1;
+      for (int[] entry : scored) {
+        int tj = entry[1];
+        q2t[qi] = tj;
+        t2q[tj] = qi;
+        search(mappedCount + 1, pendingCount - 1);
+        q2t[qi] = -1;
+        t2q[tj] = -1;
+        if (bestSize >= upperBound || tb.expired()) { state[qi] = 0; return; }
+      }
+      // Skip this atom (allow partial mappings)
+      state[qi] = 2;
+      search(mappedCount, pendingCount - 1);
+      state[qi] = 0;
+    }
+
+    Map<Integer, Integer> run() {
+      search(0, g1.n);
+      return materialize(bestQ2T);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // FixedSizeBondMaximizer -- maximize bond count for a fixed atom-count MCS
+  // Port of C++ mcs.hpp FixedSizeBondMaximizer (lines 939-1122).
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Maximize bond preservation for a given MCS atom count.
+   *
+   * <p>Given a required mapping size (number of atoms), enumerate alternative
+   * atom mappings of exactly that size and score them by the number of
+   * preserved bonds. Used after the primary MCS computation to improve
+   * chemical quality of the mapping when the atom count already matches
+   * the smaller molecule.
+   *
+   * <p>Only invoked when {@code mapping.size() == minN && minN <= 20 && maxN <= 40}.
+   *
+   * @since 6.12.0
+   */
+  private static final class FixedSizeBondMaximizer {
+    private final MolGraph g1, g2;
+    private final ChemOptions C;
+    private final boolean induced;
+    private final TimeBudget tb;
+    private final int requiredSize;
+    private final int[] q2t;
+    private final int[] t2q;
+    private int[] bestQ2T;
+    private final byte[] state;
+    private final int[][] compatTargets;
+    private int bestBondCount;
+
+    FixedSizeBondMaximizer(MolGraph g1, MolGraph g2, ChemOptions C, boolean induced,
+                           TimeBudget tb, int requiredSize, Map<Integer, Integer> incumbent) {
+      this.g1 = g1; this.g2 = g2; this.C = C; this.induced = induced;
+      this.tb = tb; this.requiredSize = requiredSize;
+      this.q2t = new int[g1.n]; Arrays.fill(q2t, -1);
+      this.t2q = new int[g2.n]; Arrays.fill(t2q, -1);
+      this.bestQ2T = new int[g1.n]; Arrays.fill(bestQ2T, -1);
+      this.state = new byte[g1.n];
+      // Seed from incumbent
+      for (Map.Entry<Integer, Integer> e : incumbent.entrySet()) {
+        int qi = e.getKey(), tj = e.getValue();
+        if (qi >= 0 && qi < g1.n && tj >= 0 && tj < g2.n)
+          bestQ2T[qi] = tj;
+      }
+      this.bestBondCount = countMappedBonds(g1, incumbent);
+      // Precompute compatible targets per query atom
+      this.compatTargets = new int[g1.n][];
+      for (int qi = 0; qi < g1.n; qi++) {
+        List<Integer> compat = new ArrayList<>();
+        for (int tj = 0; tj < g2.n; tj++) {
+          if (SubstructureEngine.AbstractVFMatcher.atomsCompatFast(g1, qi, g2, tj, C))
+            compat.add(tj);
+        }
+        compatTargets[qi] = compat.stream().mapToInt(Integer::intValue).toArray();
+      }
+    }
+
+    private boolean consistent(int qi, int tj) {
+      if (t2q[tj] >= 0) return false;
+      for (int qk = 0; qk < g1.n; qk++) {
+        if (qk == qi || q2t[qk] < 0) continue;
+        int tk = q2t[qk];
+        int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tk);
+        if (qOrd != 0) {
+          if (tOrd == 0) return false;
+          if (!MolGraph.ChemOps.bondsCompatible(g1, qi, qk, g2, tj, tk, C)) return false;
+        } else if (induced && tOrd != 0) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    private int mappedNeighborCount(int qi) {
+      int count = 0;
+      for (int nb : g1.neighbors[qi]) if (q2t[nb] >= 0) count++;
+      return count;
+    }
+
+    private int bondGain(int qi, int tj) {
+      int gain = 0;
+      for (int qk : g1.neighbors[qi]) {
+        if (q2t[qk] < 0) continue;
+        int tk = q2t[qk];
+        if (g1.bondOrder(qi, qk) != 0 && g2.bondOrder(tj, tk) != 0) gain++;
+      }
+      return gain;
+    }
+
+    private Map<Integer, Integer> materialize(int[] arr) {
+      Map<Integer, Integer> m = new LinkedHashMap<>();
+      for (int qi = 0; qi < g1.n; qi++) if (arr[qi] >= 0) m.put(qi, arr[qi]);
+      return m;
+    }
+
+    private int[] collectCandidates(int qi) {
+      int count = 0;
+      int[] buf = new int[compatTargets[qi].length];
+      for (int tj : compatTargets[qi]) if (consistent(qi, tj)) buf[count++] = tj;
+      return Arrays.copyOf(buf, count);
+    }
+
+    private int selectNextAtom(int[][] candidatesOut) {
+      int bestQi = -1, bestMappedNbrs = -1, bestDegree = -1, bestCandCount = Integer.MAX_VALUE;
+      int[] bestCands = null;
+      for (int qi = 0; qi < g1.n; qi++) {
+        if (state[qi] != 0) continue;
+        int mappedNbrs = mappedNeighborCount(qi);
+        int[] cands = collectCandidates(qi);
+        int candCount = cands.length;
+        int degree = g1.degree[qi];
+        boolean better = false;
+        if (mappedNbrs != bestMappedNbrs) better = mappedNbrs > bestMappedNbrs;
+        else if (g1.ring[qi] != (bestQi >= 0 && g1.ring[bestQi])) {
+          better = g1.ring[qi] && !(bestQi >= 0 && g1.ring[bestQi]);
+        } else if (degree != bestDegree) better = degree > bestDegree;
+        else if (candCount != bestCandCount) better = candCount < bestCandCount;
+        else if (bestQi < 0 || qi < bestQi) better = true;
+        if (better) { bestQi = qi; bestMappedNbrs = mappedNbrs; bestDegree = degree; bestCandCount = candCount; bestCands = cands; }
+      }
+      candidatesOut[0] = bestCands;
+      return bestQi;
+    }
+
+    private void search(int mappedCount, int pendingCount, int mappedBondCount) {
+      if (tb.expiredNow()) return;
+      int remainingTarget = g2.n - mappedCount;
+      if (mappedCount + Math.min(pendingCount, remainingTarget) < requiredSize) return;
+      if (mappedCount == requiredSize) {
+        if (mappedBondCount > bestBondCount) {
+          bestBondCount = mappedBondCount;
+          System.arraycopy(q2t, 0, bestQ2T, 0, g1.n);
+        }
+        return;
+      }
+      if (pendingCount <= 0 || remainingTarget <= 0) return;
+
+      int[][] candidatesHolder = new int[1][];
+      int qi = selectNextAtom(candidatesHolder);
+      if (qi < 0) return;
+      int[] candidates = candidatesHolder[0];
+      if (candidates == null) return;
+
+      int mappedNbrs = mappedNeighborCount(qi);
+      int[][] scored = new int[candidates.length][2];
+      for (int k = 0; k < candidates.length; k++) {
+        int tj = candidates[k];
+        int score = mappedNbrs * 1000;
+        score += bondGain(qi, tj) * 200;
+        score += (g1.ring[qi] && g2.ring[tj]) ? 100 : 0;
+        score += 10 - Math.min(9, Math.abs(g1.degree[qi] - g2.degree[tj]));
+        scored[k][0] = -score; scored[k][1] = tj;
+      }
+      Arrays.sort(scored, (a, b) -> a[0] != b[0] ? Integer.compare(a[0], b[0]) : Integer.compare(a[1], b[1]));
+
+      state[qi] = 1;
+      for (int[] entry : scored) {
+        int tj = entry[1];
+        q2t[qi] = tj;
+        t2q[tj] = qi;
+        search(mappedCount + 1, pendingCount - 1, mappedBondCount + bondGain(qi, tj));
+        q2t[qi] = -1;
+        t2q[tj] = -1;
+        if (tb.expiredNow()) { state[qi] = 0; return; }
+      }
+      // Skip this atom
+      state[qi] = 2;
+      search(mappedCount, pendingCount - 1, mappedBondCount);
+      state[qi] = 0;
+    }
+
+    Map<Integer, Integer> run() {
+      search(0, g1.n, 0);
+      return materialize(bestQ2T);
+    }
+  }
+
+
   // GraphBuilder and seeds
 
   static final class GraphBuilder {
@@ -2755,6 +3185,9 @@ public final class SearchEngine {
     }
 
     record Node(int qi, int tj) {}
+
+    /** Equivalence-class signature incorporating orbit and ring-system fingerprints. */
+    record SigKey(long orbitSig, long rsSig1, long rsSig2) {}
 
     Map<Integer, Integer> maximumCliqueSeed(TimeBudget tb) {
       List<Node> nodes = new ArrayList<>();
@@ -2829,6 +3262,8 @@ public final class SearchEngine {
       }
 
       int[] equivClass = computeEquivClasses(nodes, adj, N, words);
+      int numEquivClasses = 0;
+      for (int ec : equivClass) if (ec >= numEquivClasses) numEquivClasses = ec + 1;
 
       long[] P = new long[words], X = new long[words];
       for (int i = 0; i < N; i++) {
@@ -2841,7 +3276,7 @@ public final class SearchEngine {
       long[][] pStack = new long[maxDepth][words];
       long[][] xStack = new long[maxDepth][words];
       int[] bkBest = bronKerboschPivot(new long[words], P, X, adj, bestClique, N, words,
-          equivClass, tb, rStack, pStack, xStack, 0, nodes);
+          equivClass, numEquivClasses, tb, rStack, pStack, xStack, 0, nodes);
       if (bkBest.length > bestClique.length) bestClique = bkBest;
 
       Map<Integer, Integer> seed = new LinkedHashMap<>();
@@ -2884,7 +3319,7 @@ public final class SearchEngine {
 
     private int[] computeEquivClasses(List<Node> nodes, long[][] adj, int N, int words) {
       int[] cls = new int[N];
-      Map<Long, Integer> sig2class = new HashMap<>();
+      Map<SigKey, Integer> sig2class = new HashMap<>();
       int nextClass = 0;
       for (int i = 0; i < N; i++) {
         Node nd = nodes.get(i);
@@ -2892,10 +3327,14 @@ public final class SearchEngine {
         for (int w = 0; w < words; w++) deg += Long.bitCount(adj[i][w]);
         // Include Morgan rank to distinguish atoms at different chain positions
         // (orbit alone fails for symmetric groups like phosphate oxygens)
-        long sig = ((long) g1.orbit[nd.qi()] << 48) | ((long) g2.orbit[nd.tj()] << 32)
+        long orbitSig = ((long) g1.orbit[nd.qi()] << 48) | ((long) g2.orbit[nd.tj()] << 32)
             | ((long) g1.morganRank[nd.qi()] << 20) | ((long) g1.degree[nd.qi()] << 10) | deg;
-        Integer c = sig2class.get(sig);
-        if (c == null) { c = nextClass++; sig2class.put(sig, c); }
+        // Ring-system signatures from MolGraph for finer equivalence partitioning
+        long rs1 = g1.ringSystemSig(g1.ringSystemOf(nd.qi()));
+        long rs2 = g2.ringSystemSig(g2.ringSystemOf(nd.tj()));
+        SigKey key = new SigKey(orbitSig, rs1, rs2);
+        Integer c = sig2class.get(key);
+        if (c == null) { c = nextClass++; sig2class.put(key, c); }
         cls[i] = c;
       }
       return cls;
@@ -2942,7 +3381,7 @@ public final class SearchEngine {
 
     private int[] bronKerboschPivot(
         long[] R, long[] P, long[] X, long[][] adj, int[] currentBest, int N, int words,
-        int[] equivClass, TimeBudget tb, long[][] rStack, long[][] pStack, long[][] xStack,
+        int[] equivClass, int numEquivClasses, TimeBudget tb, long[][] rStack, long[][] pStack, long[][] xStack,
         int depth, List<Node> nodes) {
       if (tb.expired()) return currentBest;
       int rSize = 0, pSize = 0, xSize = 0;
@@ -2987,7 +3426,7 @@ public final class SearchEngine {
       if (pivot >= 0) for (int w = 0; w < words; w++) candidates[w] = P[w] & ~adj[pivot][w];
       else System.arraycopy(P, 0, candidates, 0, words);
 
-      Set<Integer> triedClasses = new HashSet<>();
+      boolean[] triedClasses = new boolean[numEquivClasses];
       for (int w = 0; w < words; w++) {
         long bits = candidates[w];
         while (bits != 0) {
@@ -2995,7 +3434,9 @@ public final class SearchEngine {
           int bit = Long.numberOfTrailingZeros(bits);
           int v = (w << 6) | bit;
           bits &= bits - 1;
-          if (!triedClasses.add(equivClass[v])) continue;
+          int ec = equivClass[v];
+          if (triedClasses[ec]) continue;
+          triedClasses[ec] = true;
           long[] newR, newP, newX;
           if (depth < rStack.length) { newR = rStack[depth]; newP = pStack[depth]; newX = xStack[depth]; }
           else { newR = new long[words]; newP = new long[words]; newX = new long[words]; }
@@ -3004,7 +3445,7 @@ public final class SearchEngine {
           }
           newR[v >>> 6] |= 1L << (v & 63);
           currentBest = bronKerboschPivot(newR, newP, newX, adj, currentBest, N, words,
-              equivClass, tb, rStack, pStack, xStack, depth + 1, nodes);
+              equivClass, numEquivClasses, tb, rStack, pStack, xStack, depth + 1, nodes);
           P[v >>> 6] &= ~(1L << (v & 63));
           X[v >>> 6] |= 1L << (v & 63);
         }
@@ -5506,6 +5947,194 @@ public final class SearchEngine {
     for (IAtomContainer q : queries) gQueries.add(toMolGraph(q));
     for (IAtomContainer t : targets) gTargets.add(toMolGraph(t));
     return batchMcsConstrained(gQueries, gTargets, C, new MCSOptions(), timeoutMs);
+  }
+
+  // ---------------------------------------------------------------------------
+  // TargetCorpus — pre-warmed target library for batch substructure/MCS (v6.12.0)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * A pre-warmed collection of target molecules for efficient batch querying.
+   *
+   * <p>Call {@link #prewarm()} once after adding all targets to pre-compute
+   * canonical labels and ring counts, then use {@link #substructure} or
+   * {@link #mcsSize} for parallel screening.
+   *
+   * @since 6.12.0
+   */
+  public static class TargetCorpus {
+    private final List<MolGraph> targets = new ArrayList<>();
+    private boolean prewarmed = false;
+
+    /** Add a single target molecule. Invalidates prewarm state. */
+    public void addTarget(MolGraph g) { targets.add(g); prewarmed = false; }
+
+    /** Add multiple target molecules. Invalidates prewarm state. */
+    public void addTargets(List<MolGraph> gs) { targets.addAll(gs); prewarmed = false; }
+
+    /** Return the number of targets in this corpus. */
+    public int size() { return targets.size(); }
+
+    /** Return whether {@link #prewarm()} has been called since the last modification. */
+    public boolean isPrewarmed() { return prewarmed; }
+
+    /**
+     * Pre-compute canonical labels and ring counts for all targets.
+     * Idempotent — safe to call multiple times.
+     */
+    public void prewarm() {
+      for (MolGraph g : targets) {
+        g.ensureCanonical();
+        g.ensureRingCounts();
+      }
+      prewarmed = true;
+    }
+
+    /**
+     * Parallel substructure screening: check if query is a substructure of each target.
+     *
+     * @param query     the query molecule
+     * @param opts      chemical matching options
+     * @param timeoutMs per-target timeout in milliseconds
+     * @return boolean array — {@code true} at index i if query is a substructure of target i
+     */
+    public boolean[] substructure(MolGraph query, ChemOptions opts, long timeoutMs) {
+      if (!prewarmed) prewarm();
+      int n = targets.size();
+      boolean[] results = new boolean[n];
+      ForkJoinPool pool = new ForkJoinPool(
+          Math.min(n, Runtime.getRuntime().availableProcessors()));
+      try {
+        pool.submit(() ->
+          IntStream.range(0, n).parallel().forEach(i ->
+            results[i] = isSubstructure(query, targets.get(i), opts, timeoutMs)
+          )
+        ).get();
+      } catch (Exception e) {
+        // Sequential fallback on any fork/join failure
+        for (int i = 0; i < n; i++)
+          results[i] = isSubstructure(query, targets.get(i), opts, timeoutMs);
+      } finally {
+        pool.shutdown();
+      }
+      return results;
+    }
+
+    /**
+     * Parallel MCS-size computation: find MCS size between query and each target.
+     *
+     * @param query the query molecule
+     * @param chem  chemical matching options
+     * @param opts  MCS options
+     * @return int array — MCS size at index i for target i
+     */
+    public int[] mcsSize(MolGraph query, ChemOptions chem, MCSOptions opts) {
+      if (!prewarmed) prewarm();
+      int n = targets.size();
+      int[] results = new int[n];
+      ForkJoinPool pool = new ForkJoinPool(
+          Math.min(n, Runtime.getRuntime().availableProcessors()));
+      try {
+        pool.submit(() ->
+          IntStream.range(0, n).parallel().forEach(i ->
+            results[i] = findMCS(query, targets.get(i), chem, opts).size()
+          )
+        ).get();
+      } catch (Exception e) {
+        // Sequential fallback on any fork/join failure
+        for (int i = 0; i < n; i++)
+          results[i] = findMCS(query, targets.get(i), chem, opts).size();
+      } finally {
+        pool.shutdown();
+      }
+      return results;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // screenAndMatch — RASCAL screen + exact MCS (v6.12.0)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Two-phase screen-and-match: Phase 1 applies RASCAL upper-bound screening,
+   * Phase 2 computes exact MCS on hits that pass the threshold.
+   *
+   * @param query            the query molecule
+   * @param targets          list of target molecules
+   * @param chem             chemical matching options
+   * @param opts             MCS options
+   * @param rascalThreshold  minimum RASCAL upper bound to pass screening (0.0–1.0)
+   * @param timeoutMs        per-pair MCS timeout in milliseconds
+   * @return list of (targetIndex, mapping) entries for targets that passed screening
+   * @since 6.12.0
+   */
+  public static List<Map.Entry<Integer, Map<Integer, Integer>>> screenAndMatch(
+      MolGraph query, List<MolGraph> targets, ChemOptions chem, MCSOptions opts,
+      double rascalThreshold, long timeoutMs) {
+
+    if (query == null || targets == null || targets.isEmpty())
+      return Collections.emptyList();
+    if (chem == null) chem = new ChemOptions();
+    if (opts == null) opts = new MCSOptions();
+
+    // Phase 1: RASCAL upper-bound screening (sequential — lightweight)
+    List<Integer> hits = new ArrayList<>();
+    for (int i = 0; i < targets.size(); i++) {
+      MolGraph t = targets.get(i);
+      if (t == null || t.n == 0) continue;
+      double ub = similarityUpperBound(query, t, chem);
+      if (ub >= rascalThreshold) hits.add(i);
+    }
+
+    if (hits.isEmpty()) return Collections.emptyList();
+
+    // Phase 2: exact MCS on hits (parallel)
+    List<Map.Entry<Integer, Map<Integer, Integer>>> results =
+        Collections.synchronizedList(new ArrayList<>());
+    final ChemOptions C = chem;
+    final MCSOptions M = opts;
+    final long perPairTimeout = timeoutMs > 0 ? timeoutMs : 30_000L;
+
+    ForkJoinPool pool = new ForkJoinPool(
+        Math.min(hits.size(), Runtime.getRuntime().availableProcessors()));
+    try {
+      pool.submit(() ->
+        hits.parallelStream().forEach(idx -> {
+          MCSOptions local = new MCSOptions();
+          local.induced = M.induced;
+          local.connectedOnly = M.connectedOnly;
+          local.timeoutMs = perPairTimeout;
+          local.extraSeeds = M.extraSeeds;
+          local.maxStage = M.maxStage;
+          local.reactionAware = M.reactionAware;
+          local.maximizeBonds = M.maximizeBonds;
+          Map<Integer, Integer> mcs = findMCS(query, targets.get(idx), C, local);
+          if (!mcs.isEmpty())
+            results.add(new AbstractMap.SimpleImmutableEntry<>(idx, mcs));
+        })
+      ).get();
+    } catch (Exception e) {
+      // Sequential fallback on any fork/join failure
+      for (int idx : hits) {
+        MCSOptions local = new MCSOptions();
+        local.induced = M.induced;
+        local.connectedOnly = M.connectedOnly;
+        local.timeoutMs = perPairTimeout;
+        local.extraSeeds = M.extraSeeds;
+        local.maxStage = M.maxStage;
+        local.reactionAware = M.reactionAware;
+        local.maximizeBonds = M.maximizeBonds;
+        Map<Integer, Integer> mcs = findMCS(query, targets.get(idx), C, local);
+        if (!mcs.isEmpty())
+          results.add(new AbstractMap.SimpleImmutableEntry<>(idx, mcs));
+      }
+    } finally {
+      pool.shutdown();
+    }
+
+    // Sort by target index for deterministic output
+    results.sort(Comparator.comparingInt(Map.Entry::getKey));
+    return results;
   }
 
 }

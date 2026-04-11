@@ -30,7 +30,7 @@ import importlib.util
 import sys
 from pathlib import Path
 
-__version__ = "6.11.2"
+__version__ = "6.12.1"
 __author__ = "Syed Asad Rahman"
 
 
@@ -79,6 +79,8 @@ BondOrderMode = _smsd.BondOrderMode
 AromaticityMode = _smsd.AromaticityMode
 AromaticityModel = _smsd.AromaticityModel
 RingFusionMode = _smsd.RingFusionMode
+MatcherEngine = _smsd.MatcherEngine
+Solvent = _smsd.Solvent
 
 _parse_smiles_raw = _smsd.parse_smiles
 read_mol_block = _smsd.read_mol_block
@@ -257,7 +259,7 @@ def depict_svg(mol_or_smiles, opts=None, **kwargs):
         setattr(opts, k, v)
     if isinstance(mol_or_smiles, str):
         return _smsd.depict_smiles(mol_or_smiles, opts)
-    mol = _ensure_native(mol_or_smiles) if not isinstance(mol_or_smiles, _smsd.MolGraph) else mol_or_smiles
+    mol = _ensure_mol(mol_or_smiles) if not isinstance(mol_or_smiles, _smsd.MolGraph) else mol_or_smiles
     return _smsd.depict(mol, opts)
 
 
@@ -285,7 +287,7 @@ def depict_mapping(mol_or_smiles, mapping, opts=None, **kwargs):
         setattr(opts, k, v)
     if isinstance(mol_or_smiles, str):
         mol_or_smiles = parse_smiles(mol_or_smiles)
-    mol = _ensure_native(mol_or_smiles) if not isinstance(mol_or_smiles, _smsd.MolGraph) else mol_or_smiles
+    mol = _ensure_mol(mol_or_smiles) if not isinstance(mol_or_smiles, _smsd.MolGraph) else mol_or_smiles
     return _smsd.depict_with_mapping(mol, mapping, opts)
 
 
@@ -315,8 +317,8 @@ def depict_pair(mol1, mol2, mapping, opts=None, **kwargs):
         mol1 = parse_smiles(mol1)
     if isinstance(mol2, str):
         mol2 = parse_smiles(mol2)
-    m1 = _ensure_native(mol1) if not isinstance(mol1, _smsd.MolGraph) else mol1
-    m2 = _ensure_native(mol2) if not isinstance(mol2, _smsd.MolGraph) else mol2
+    m1 = _ensure_mol(mol1) if not isinstance(mol1, _smsd.MolGraph) else mol1
+    m2 = _ensure_mol(mol2) if not isinstance(mol2, _smsd.MolGraph) else mol2
     return _smsd.depict_pair(m1, m2, mapping, opts)
 
 
@@ -395,38 +397,122 @@ def similarity(mol1, mol2):
     return max(0.0, min(1.0, result))
 
 
-def mcs(mol1, mol2, *, tautomer_aware=False, prefer_rare_heteroatoms=False,
-        timeout_ms=10000, **kwargs):
+def mcs(mol1, mol2, *,
+        # Chemistry matching flags — defaults match RDKit FindMCS for fair comparison
+        ring_matches_ring_only=False,
+        complete_rings_only=False,
+        match_bond_order="strict",
+        match_atom_type=True,
+        match_formal_charge=False,
+        match_isotope=False,
+        use_chirality=False,
+        use_bond_stereo=False,
+        tautomer_aware=False,
+        # MCS search options
+        timeout_ms=10000,
+        connected_only=True,
+        induced=False,
+        maximize_bonds=False,
+        max_stage=5,
+        # Strategy
+        strategy="auto",
+        prefer_rare_heteroatoms=False,
+        # Advanced
+        **kwargs):
     """Find Maximum Common Substructure between two molecules.
 
+    All matching options are directly settable as keyword arguments,
+    similar to RDKit's FindMCS. No need to construct ChemOptions manually.
+
     Accepts MolGraph objects, SMILES strings, or RDKit Mol objects.
-    When RDKit Mol objects are passed, returned indices are automatically
-    translated to RDKit's native atom ordering.
 
     Args:
         mol1: First molecule (MolGraph, SMILES string, or RDKit Mol).
-        mol2: Second molecule (MolGraph, SMILES string, or RDKit Mol).
-        tautomer_aware: Use tautomer-aware matching.
-        prefer_rare_heteroatoms: Prefer mappings that include rare
-            heteroatoms (S, P, Se) even if slightly smaller. Activates
-            reaction-aware MCS with heteroatom-weighted scoring.
-        timeout_ms: Timeout in milliseconds.
-        **kwargs: Additional MCSOptions fields (e.g. connected_only=False).
+        mol2: Second molecule.
+        ring_matches_ring_only: Ring atom only matches ring atom (default True).
+        complete_rings_only: MCS must include full rings (default False).
+        match_bond_order: "strict" (exact), "loose" (aromatic ≈ single/double),
+                          "any" (ignore bond order). Default "strict".
+        match_atom_type: Match element type (default True).
+        match_formal_charge: Match formal charge (default True).
+        match_isotope: Match mass number (default False).
+        use_chirality: Consider R/S stereochemistry (default False).
+        use_bond_stereo: Consider E/Z stereochemistry (default False).
+        tautomer_aware: Use tautomer-aware matching (default False).
+        timeout_ms: Timeout in milliseconds (default 10000).
+        connected_only: Connected MCS only (default True).
+        induced: Induced subgraph MCS (default False).
+        maximize_bonds: Edge MCS / MCES (default False).
+        max_stage: Pipeline depth 0-5 (default 5).
+        strategy: "auto", "lightweight", or "native".
+        prefer_rare_heteroatoms: Prefer S, P, Se mappings (default False).
 
     Returns:
         dict: Mapping from mol1 atom indices to mol2 atom indices.
 
-    .. versionchanged:: 6.5.2
-       Now accepts RDKit Mol objects and auto-translates indices.
-       Added *prefer_rare_heteroatoms* parameter.
+    Examples::
+
+        # Default (fast, high quality)
+        mapping = smsd.mcs("c1ccc(O)cc1", "c1ccc(N)cc1")
+
+        # RDKit FMCS-compatible (loose matching)
+        mapping = smsd.mcs(mol1, mol2,
+                           ring_matches_ring_only=False,
+                           match_bond_order="loose")
+
+        # Strict matching
+        mapping = smsd.mcs(mol1, mol2,
+                           ring_matches_ring_only=True,
+                           match_formal_charge=True,
+                           use_chirality=True)
+
+        # Fast reaction mapping mode
+        mapping = smsd.mcs(mol1, mol2, max_stage=1)
+
+        # Force native C++ pipeline
+        mapping = smsd.mcs(mol1, mol2, strategy="native")
     """
     if prefer_rare_heteroatoms:
         return map_reaction_aware(mol1, mol2, timeout_ms=timeout_ms, **kwargs)
+
+    # Resolve bond order mode string
+    bond_any = match_bond_order in ("any", "ANY")
+
+    # Lightweight engine: faster and better coverage on most pairs
+    if strategy in ("auto", "lightweight"):
+        try:
+            from smsd.mcs_engine import find_mcs_lightweight
+            result = find_mcs_lightweight(
+                mol1, mol2,
+                timeout=timeout_ms / 1000.0,
+                ring_matches_ring=ring_matches_ring_only,
+                bond_any=bond_any,
+            )
+            if result.size > 0:
+                return {a - 1: b - 1 for a, b in result.mapping}
+        except Exception:
+            if strategy == "lightweight":
+                return {}
+
+    # Native C++ pipeline fallback
     g1, rdkit1 = _ensure_mol_ex(mol1)
     g2, rdkit2 = _ensure_mol_ex(mol2)
     chem = ChemOptions.tautomer_profile() if tautomer_aware else ChemOptions()
+    chem.match_atom_type = match_atom_type
+    chem.match_formal_charge = match_formal_charge
+    chem.match_isotope = match_isotope
+    chem.use_chirality = use_chirality
+    chem.use_bond_stereo = use_bond_stereo
+    chem.ring_matches_ring_only = ring_matches_ring_only
+    chem.complete_rings_only = complete_rings_only
+    bond_mode_map = {"strict": BondOrderMode.STRICT, "loose": BondOrderMode.LOOSE, "any": BondOrderMode.ANY}
+    chem.match_bond_order = bond_mode_map.get(match_bond_order.lower(), BondOrderMode.STRICT)
     opts = MCSOptions()
     opts.timeout_ms = timeout_ms
+    opts.connected_only = connected_only
+    opts.induced = induced
+    opts.maximize_bonds = maximize_bonds
+    opts.max_stage = max_stage
     for k, v in kwargs.items():
         setattr(opts, k, v)
     mapping = find_mcs(g1, g2, chem, opts)
@@ -678,16 +764,46 @@ def fingerprint(mol, *, kind="mcs", path_length=7, fp_size=2048):
         raise ValueError(f"Unknown fingerprint kind: {kind!r}. Use 'path' or 'mcs'.")
 
 
-def overlapCoefficient(fp1, fp2, fp_size=2048):
-    """Compute overlap coefficient between two fingerprints.
+def overlap_coefficient(fp1, fp2, fp_size=2048):
+    """Overlap coefficient (Szymkiewicz-Simpson): |A∩B| / min(|A|, |B|).
+
+    Measures how much the smaller fingerprint is contained in the larger.
+    Returns 1.0 when A is a subset of B (or vice versa).
+    Useful for substructure-like similarity where size difference is expected.
 
     Args:
-        fp1: List of set bit positions (from fingerprint()).
-        fp2: List of set bit positions (from fingerprint()).
+        fp1: Fingerprint as list of uint64 words or set bit positions.
+        fp2: Fingerprint as list of uint64 words or set bit positions.
+        fp_size: Fingerprint size in bits (used when fp is bit positions).
+
+    Returns:
+        float: Overlap coefficient in [0.0, 1.0].
+    """
+    if fp1 is None or fp2 is None:
+        return 0.0
+    s1 = set(fp1)
+    s2 = set(fp2)
+    intersection = len(s1 & s2)
+    min_size = min(len(s1), len(s2))
+    if min_size == 0:
+        return 0.0
+    return intersection / min_size
+
+
+def tanimoto_coefficient(fp1, fp2, fp_size=2048):
+    """Tanimoto coefficient (Jaccard index): |A∩B| / |A∪B|.
+
+    The standard fingerprint similarity metric in cheminformatics.
+    Returns 1.0 only when A and B are identical.
+    Symmetric and bounded in [0.0, 1.0].
+
+    Args:
+        fp1: Fingerprint as list of uint64 words or set bit positions.
+        fp2: Fingerprint as list of uint64 words or set bit positions.
         fp_size: Fingerprint size in bits.
 
     Returns:
-        float: Overlap coefficient similarity in [0.0, 1.0].
+        float: Tanimoto similarity in [0.0, 1.0].
     """
     if fp1 is None or fp2 is None:
         return 0.0
@@ -698,6 +814,13 @@ def overlapCoefficient(fp1, fp2, fp_size=2048):
     if union == 0:
         return 0.0
     return intersection / union
+
+
+# Backward-compatible aliases
+overlapCoefficient = overlap_coefficient    # camelCase compat
+tanimoto = tanimoto_coefficient             # short alias
+count_overlap_coefficient = _smsd.count_overlapCoefficient if hasattr(_smsd, 'count_overlapCoefficient') else None
+count_tanimoto = _smsd.count_tanimoto if hasattr(_smsd, 'count_tanimoto') else None
 
 
 def batch_substructure(query, targets, *, timeout_ms=10000):
@@ -2669,6 +2792,8 @@ __all__ = [
     "AromaticityMode",
     "AromaticityModel",
     "RingFusionMode",
+    "MatcherEngine",
+    "Solvent",
     # SMILES / SMARTS
     "parse_smiles",
     "read_mol_block",
@@ -2719,7 +2844,12 @@ __all__ = [
     "mcs_fingerprint",
     "fingerprint_subset",
     "analyze_fp_quality",
+    "overlap_coefficient",
     "overlapCoefficient",
+    "tanimoto_coefficient",
+    "tanimoto",
+    "count_overlap_coefficient",
+    "count_tanimoto",
     "topological_torsion",
     # Structured result
     "MatchResult",
@@ -2777,4 +2907,10 @@ __all__ = [
     # Ring perception
     "compute_sssr",
     "layout_sssr",
+    # Lightweight MCS engine (clique solver + Python pipeline)
+    "mcs_engine",
 ]
+
+# Lightweight Python MCS engine — uses clique solver C++ backend
+# with RDKit chemistry for reaction mapping workflows.
+from smsd import mcs_engine
