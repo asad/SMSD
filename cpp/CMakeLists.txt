@@ -20,6 +20,11 @@ target_include_directories(smsd INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 
+# ---- MSVC-specific flags ----
+if(MSVC)
+    target_compile_options(smsd INTERFACE /W4 /EHsc)
+endif()
+
 # ---- Optional: OpenMP for batch processing ----
 if(SMSD_BUILD_OPENMP)
     find_package(OpenMP)
@@ -139,6 +144,7 @@ if(SMSD_BUILD_PYTHON)
     endif()
     # Install the Python extension module (required by scikit-build-core)
     install(TARGETS _smsd LIBRARY DESTINATION smsd RUNTIME DESTINATION smsd)
+
 endif()
 
 # ---- Tests ----
@@ -196,6 +202,6 @@ if(SMSD_BUILD_TESTS)
 endif()
 
 # ---- Install ----
-install(DIRECTORY include/smsd DESTINATION include)
+install(DIRECTORY include/smsd include/fp DESTINATION include)
 install(TARGETS smsd EXPORT smsdTargets)
 install(EXPORT smsdTargets NAMESPACE smsd:: DESTINATION lib/cmake/smsd)

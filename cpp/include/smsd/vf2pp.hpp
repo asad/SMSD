@@ -68,24 +68,50 @@ using smsd::popcountN;
 using smsd::anyBitAnd;
 using smsd::popcountAndNot;
 
+// ---------- Global reaction deadline ----------------------------------------
+// Set by reaction mapping to enforce an absolute wall-clock deadline across
+// all MCS/VF2++ calls. When active, TimeBudget::expired() also checks this.
+namespace global_deadline {
+    inline thread_local std::chrono::steady_clock::time_point deadline{};
+    inline thread_local bool active = false;
+
+    inline void set(int64_t ms) {
+        deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(ms);
+        active = true;
+    }
+    inline void clear() { active = false; }
+    inline bool expired() {
+        return active && std::chrono::steady_clock::now() >= deadline;
+    }
+} // namespace global_deadline
+
 // ---------- Time budget ----------------------------------------------------
 
 struct TimeBudget {
     using Clock = std::chrono::steady_clock;
     Clock::time_point deadline;
     int64_t counter_ = 0;
-    static constexpr int64_t CHECK_EVERY = 1024;
+    static constexpr int64_t CHECK_EVERY = 256;
 
     explicit TimeBudget(int64_t ms)
         : deadline(Clock::now() + std::chrono::milliseconds(std::max<int64_t>(1, ms))) {}
 
     bool expired() {
         if ((++counter_ & (CHECK_EVERY - 1)) != 0) return false;
+        if (global_deadline::active && Clock::now() >= global_deadline::deadline) return true;
         return Clock::now() >= deadline;
     }
-    bool expiredNow() const { return Clock::now() >= deadline; }
+    bool expiredNow() const {
+        if (global_deadline::expired()) return true;
+        return Clock::now() >= deadline;
+    }
     int64_t remainingMs() const {
         auto r = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - Clock::now()).count();
+        if (global_deadline::active) {
+            auto gr = std::chrono::duration_cast<std::chrono::milliseconds>(
+                global_deadline::deadline - Clock::now()).count();
+            r = std::min(r, gr);
+        }
         return std::max<int64_t>(0, r);
     }
 };

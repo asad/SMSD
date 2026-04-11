@@ -30,7 +30,7 @@ import importlib.util
 import sys
 from pathlib import Path
 
-__version__ = "6.11.2"
+__version__ = "6.12.0"
 __author__ = "Syed Asad Rahman"
 
 
@@ -79,6 +79,8 @@ BondOrderMode = _smsd.BondOrderMode
 AromaticityMode = _smsd.AromaticityMode
 AromaticityModel = _smsd.AromaticityModel
 RingFusionMode = _smsd.RingFusionMode
+MatcherEngine = _smsd.MatcherEngine
+Solvent = _smsd.Solvent
 
 _parse_smiles_raw = _smsd.parse_smiles
 read_mol_block = _smsd.read_mol_block
@@ -2669,6 +2671,8 @@ __all__ = [
     "AromaticityMode",
     "AromaticityModel",
     "RingFusionMode",
+    "MatcherEngine",
+    "Solvent",
     # SMILES / SMARTS
     "parse_smiles",
     "read_mol_block",
@@ -2777,4 +2781,10 @@ __all__ = [
     # Ring perception
     "compute_sssr",
     "layout_sssr",
+    # Lightweight MCS engine (clique solver + Python pipeline)
+    "mcs_engine",
 ]
+
+# Lightweight Python MCS engine — uses clique solver C++ backend
+# with RDKit chemistry for reaction mapping workflows.
+from smsd import mcs_engine

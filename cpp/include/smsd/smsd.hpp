@@ -19,3 +19,8 @@
 #include "smsd/gpu.hpp"
 #include "smsd/cip.hpp"
 #include "smsd/layout.hpp"
+#include "smsd/depict.hpp"
+#include "smsd/clique_solver.hpp"
+#include "smsd/hungarian.hpp"
+#include "smsd/periodic_table.hpp"
+#include "smsd/scaffold_library.hpp"

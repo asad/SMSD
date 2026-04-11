@@ -7,25 +7,37 @@ on:
 
 jobs:
   build:
-    name: Build wheels — ${{ matrix.os }}
+    name: Build wheels — ${{ matrix.os }} ${{ matrix.cibw_archs }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Linux x86_64 — pin to 22.04; Docker on 24.04 has container-create issues with cibuildwheel
+          # Linux x86_64
           - os: ubuntu-22.04
             cibw_archs: "x86_64"
-          # macOS — arm64 only: Metal/MPS GPU path is Apple Silicon-only.
-          # x86_64 wheels are built but Metal shader compiler hangs in headless CI.
+          # Linux aarch64 (Graviton, Ampere, RPi)
+          - os: ubuntu-22.04
+            cibw_archs: "aarch64"
+          # macOS arm64 (Apple Silicon)
           - os: macos-latest
             cibw_archs: "arm64"
-          # Windows x64 only
+          # macOS x86_64 (Intel)
+          - os: macos-13
+            cibw_archs: "x86_64"
+          # Windows x64
           - os: windows-latest
             cibw_archs: "AMD64"
 
     steps:
       - uses: actions/checkout@v4.3.1
+
+      # QEMU for Linux aarch64 cross-compilation
+      - name: Set up QEMU
+        if: matrix.cibw_archs == 'aarch64'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.22
@@ -36,12 +48,14 @@ jobs:
           CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
           CIBW_SKIP: "*-musllinux_*"
           CIBW_BEFORE_BUILD: "pip install pybind11 scikit-build-core cmake ninja"
+          CIBW_BEFORE_BUILD_LINUX: >
+            yum install -y libgomp-devel 2>/dev/null ||
+            apt-get update && apt-get install -y libgomp1 libomp-dev 2>/dev/null ||
+            true
           CIBW_BUILD_VERBOSITY: "3"
-          # macOS: Metal auto-detected at build time (Metal.framework ships with macOS)
-          CIBW_REPAIR_WHEEL_COMMAND_MACOS: ""
+          # macOS: let delocate bundle libomp into the wheel
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: ""
-          # Skip test on x86_64 macOS — Metal shader compiler blocks in headless CI.
-          # arm64 (Apple Silicon) and Linux/Windows test normally.
+          # Skip Metal shader test on x86_64 macOS (hangs in headless CI)
           CIBW_TEST_SKIP: "*-macosx_x86_64"
           CIBW_TEST_COMMAND: >
             python -c "import smsd;
@@ -51,7 +65,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4.6.2
         with:
-          name: wheels-${{ matrix.os }}
+          name: wheels-${{ matrix.os }}-${{ matrix.cibw_archs }}
           path: wheelhouse/*.whl
 
   build-sdist:

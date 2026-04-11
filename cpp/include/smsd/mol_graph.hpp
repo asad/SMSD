@@ -80,6 +80,10 @@ struct ChemOptions {
     BondOrderMode  matchBondOrder  = BondOrderMode::STRICT;
     AromaticityMode aromaticityMode = AromaticityMode::FLEXIBLE;
 
+    // Aromaticity perception model — controls which model is used when
+    // the matching pipeline needs to re-perceive aromaticity.
+    AromaticityModel aromaticityModel = AromaticityModel::DAYLIGHT_LIKE;
+
     // Engine
     MatcherEngine matcherEngine   = MatcherEngine::VF2PP;
 

@@ -92,9 +92,9 @@ works by Syed Asad Rahman:
   6. Cache-optimal McGregor DFS with pre-indexed candidate lookup
      and uint8_t hot-path data structures (v6.11.0)
  10. CIP Rule 3 (Z > E) digraph-based stereodescriptor comparison
-     for complete IUPAC 2013 Rules 1-5 implementation (v6.11.2)
+     for complete IUPAC 2013 Rules 1-5 implementation (v6.12.0)
  11. Multi-word greedy coloring bound for BK clique search,
-     eliminating the 64-color ceiling on product graphs (v6.11.2)
+     eliminating the 64-color ceiling on product graphs (v6.12.0)
   7. 8-phase 2D molecular layout pipeline with simulated annealing
      crossing reduction and 40+ scaffold templates (v6.11.0)
   8. Distance geometry 3D embedding with power iteration

@@ -31,6 +31,11 @@ public final class MolGraph {
   private volatile boolean canonicalComputed = false;
   private volatile boolean tautomerClassesComputed = false;
   private volatile boolean ringCountsComputed = false;
+  // Ring-system decomposition (Phase 6.12.0: symmetry breaking)
+  private volatile int[] ringSystemId;       // atom -> ring system ID (-1 if acyclic)
+  private volatile long[] ringSysSignature;  // per ring system: hash signature
+  private volatile int ringSysCount;         // number of distinct ring systems
+  private volatile boolean ringSysComputed = false;
   final boolean[] ring, aromatic;
   final int[] degree;
   public final int[] ringCount;
@@ -120,6 +125,16 @@ public final class MolGraph {
   public boolean hasBond(int i, int j) { return bondOrder(i, j) != 0; }
 
   public int atomCount() { return n; }
+
+  /**
+   * Return the SSSR ring count (number of rings in the Smallest Set of Smallest Rings).
+   * Triggers lazy computation of SSSR if not already done.
+   * @return the number of SSSR rings
+   * @since 6.12.0
+   */
+  public int numRings() {
+    return computeRings().length;
+  }
 
   /**
    * Translate an MCS mapping from internal 0-based contiguous indices to external
@@ -1804,6 +1819,143 @@ public final class MolGraph {
     for (int[] r : relevant) {
       for (int atom : r) ringCount[atom]++;
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Ring-system decomposition via union-find (Phase 6.12.0)
+  // Ported from C++ mol_graph.hpp ensureRingSystems().
+  // Each ring system gets a canonical FNV-1a hash signature based on its
+  // member element types, bond orders, size, and aromatic atom count.
+  // @author Syed Asad Rahman, BioInception PVT LTD
+  // @since 6.12.0
+  // ---------------------------------------------------------------------------
+
+  /** Lazily compute ring-system decomposition using union-find. Thread-safe via double-checked locking. */
+  void ensureRingSystems() {
+    if (ringSysComputed) return;
+    synchronized (this) {
+      if (ringSysComputed) return;
+      computeRingSystems();
+      ringSysComputed = true;
+    }
+  }
+
+  private void computeRingSystems() {
+    int[] rsId = new int[n];
+    Arrays.fill(rsId, -1);
+
+    // Union-find parent array (only for ring atoms)
+    int[] parent = new int[n];
+    Arrays.fill(parent, -1);
+
+    // Initialize ring atoms as their own parent
+    for (int i = 0; i < n; i++) {
+      if (ring[i]) parent[i] = i;
+    }
+
+    // Union ring atoms connected by edges where both endpoints are ring atoms
+    for (int i = 0; i < n; i++) {
+      if (!ring[i]) continue;
+      for (int nb : neighbors[i]) {
+        if (nb > i && ring[nb]) ufUnion(parent, i, nb);
+      }
+    }
+
+    // Assign contiguous ring system IDs
+    Map<Integer, Integer> root2id = new HashMap<>();
+    int rsCount = 0;
+    for (int i = 0; i < n; i++) {
+      if (!ring[i]) continue;
+      int root = ufFind(parent, i);
+      Integer id = root2id.get(root);
+      if (id == null) {
+        id = rsCount++;
+        root2id.put(root, id);
+      }
+      rsId[i] = id;
+    }
+
+    // Compute FNV-1a signature per ring system
+    long[] rsSigs = new long[rsCount];
+    if (rsCount > 0) {
+      // Collect per-system: sorted atomic numbers, bond orders, size, aromatic count
+      List<List<Integer>> sysAtomicNums = new ArrayList<>(rsCount);
+      List<List<Integer>> sysBondOrders = new ArrayList<>(rsCount);
+      int[] sysSize = new int[rsCount];
+      int[] sysAromCount = new int[rsCount];
+      for (int rs = 0; rs < rsCount; rs++) {
+        sysAtomicNums.add(new ArrayList<>());
+        sysBondOrders.add(new ArrayList<>());
+      }
+
+      for (int i = 0; i < n; i++) {
+        int rsid = rsId[i];
+        if (rsid < 0) continue;
+        sysAtomicNums.get(rsid).add(atomicNum[i]);
+        sysSize[rsid]++;
+        if (aromatic[i]) sysAromCount[rsid]++;
+        // Collect bond orders for edges within this ring system (each edge once)
+        for (int nb : neighbors[i]) {
+          if (nb > i && rsId[nb] == rsid) {
+            sysBondOrders.get(rsid).add(bondOrder(i, nb));
+          }
+        }
+      }
+
+      for (int rs = 0; rs < rsCount; rs++) {
+        List<Integer> atomNums = sysAtomicNums.get(rs);
+        List<Integer> bondOrds = sysBondOrders.get(rs);
+        Collections.sort(atomNums);
+        Collections.sort(bondOrds);
+
+        // FNV-1a style hash
+        long h = -3750763034362895579L; // 14695981039346656037 as signed
+        h ^= sysSize[rs]; h *= 1099511628211L;
+        h ^= sysAromCount[rs]; h *= 1099511628211L;
+        for (int z : atomNums) { h ^= z; h *= 1099511628211L; }
+        for (int bo : bondOrds) { h ^= bo; h *= 1099511628211L; }
+        rsSigs[rs] = h;
+      }
+    }
+
+    this.ringSystemId = rsId;
+    this.ringSysSignature = rsSigs;
+    this.ringSysCount = rsCount;
+  }
+
+  // ufFind/ufUnion reuse existing methods below (canonical labeling section)
+
+  /**
+   * Ring system ID for an atom (-1 if acyclic).
+   * @param atom the atom index
+   * @return ring system ID, or -1 if the atom is not in any ring
+   * @since 6.12.0
+   */
+  public int ringSystemOf(int atom) {
+    ensureRingSystems();
+    return ringSystemId[atom];
+  }
+
+  /**
+   * Hash signature for a ring system (by ID). Returns 0 for invalid IDs.
+   * @param rsId the ring system ID
+   * @return the FNV-1a hash signature, or 0 if rsId is out of range
+   * @since 6.12.0
+   */
+  public long ringSystemSig(int rsId) {
+    ensureRingSystems();
+    if (rsId < 0 || rsId >= ringSysCount) return 0;
+    return ringSysSignature[rsId];
+  }
+
+  /**
+   * Number of distinct ring systems in this molecule.
+   * @return the ring system count
+   * @since 6.12.0
+   */
+  public int ringSystemCount() {
+    ensureRingSystems();
+    return ringSysCount;
   }
 
   /**
