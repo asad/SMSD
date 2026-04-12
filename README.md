@@ -22,7 +22,7 @@ SMSD Pro provides exact substructure search and maximum common substructure
 (header-only), and **Python**. Optional GPU paths are available for CUDA and
 Apple Metal builds.
 
-Version `6.12.1` adds a lightweight clique-based MCS solver, standalone
+Version `6.12.2` adds a lightweight clique-based MCS solver, standalone
 fingerprint modules (ECFP, path, pharmacophore, torsion, MCS-FP),
 SmallExactMCSExplorer for small molecule pairs, FixedSizeBondMaximizer,
 global reaction deadline, Hungarian algorithm, scaffold library, and
@@ -38,7 +38,7 @@ and standardised API naming (`MCSResult`, `MCSOptions`, `overlapCoefficient`).
 | [Python API Guide](docs/PYTHON.md) | Full Python API reference with code examples |
 | [Java Guide](docs/JAVA.md) | Java API and CLI usage |
 | [C++ Guide](docs/CPP.md) | Header-only C++ integration |
-| [Release Notes 6.12.1](docs/RELEASE_NOTES_6.12.1.md) | What's new in this release |
+| [Release Notes 6.12.2](docs/RELEASE_NOTES_6.12.2.md) | What's new in this release |
 | [Whitepaper](docs/WHITEPAPER.md) | Algorithm design (11-level MCS, VF2++, ring perception) |
 | [How to Install](docs/HOWTO-INSTALL.md) | Build from source on all platforms |
 | [Changelog](CHANGELOG.md) | Full versioned change history |
@@ -60,16 +60,16 @@ isotopes, atom classes/maps, `R#` plus `M  RGP`, and basic stereo flags.
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>6.12.1</version>
+  <version>6.12.2</version>
 </dependency>
 ```
 
 ### Java (Download JAR)
 
 ```bash
-curl -LO https://github.com/asad/SMSD/releases/download/v6.12.1/smsd-6.12.1-jar-with-dependencies.jar
+curl -LO https://github.com/asad/SMSD/releases/download/v6.12.2/smsd-6.12.2-jar-with-dependencies.jar
 
-java -jar smsd-6.12.1-jar-with-dependencies.jar \
+java -jar smsd-6.12.2-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 ```
 
@@ -545,19 +545,19 @@ Every release includes all platforms:
 
 | Download | Description |
 |----------|-------------|
-| `SMSD.Pro-6.12.1.dmg` | macOS installer (Apple Silicon) — drag to Applications |
-| `SMSD.Pro-6.12.1.msi` | Windows installer — next, next, finish |
-| `smsd-pro_6.12.1_amd64.deb` | Linux installer — `sudo dpkg -i` |
-| `smsd-6.12.1.jar` | Pure library JAR (Maven/Gradle dependency) |
-| `smsd-6.12.1-jar-with-dependencies.jar` | Standalone CLI (just `java -jar`) |
-| `smsd-cpp-6.12.1-headers.tar.gz` | C++ header-only library (unpack, `#include "smsd/smsd.hpp"`) |
+| `SMSD.Pro-6.12.2.dmg` | macOS installer (Apple Silicon) — drag to Applications |
+| `SMSD.Pro-6.12.2.msi` | Windows installer — next, next, finish |
+| `smsd-pro_6.12.2_amd64.deb` | Linux installer — `sudo dpkg -i` |
+| `smsd-6.12.2.jar` | Pure library JAR (Maven/Gradle dependency) |
+| `smsd-6.12.2-jar-with-dependencies.jar` | Standalone CLI (just `java -jar`) |
+| `smsd-cpp-6.12.2-headers.tar.gz` | C++ header-only library (unpack, `#include "smsd/smsd.hpp"`) |
 | `pip install smsd` | Python package (PyPI) |
 
 ```bash
 # Native installer — download .dmg / .msi / .deb, double-click, done
 
 # CLI
-java -jar smsd-6.12.1-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
+java -jar smsd-6.12.2-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 
 # Docker CLI
 docker build -t smsd .
@@ -594,7 +594,7 @@ AddressSanitizer: zero memory errors.
 | [Python API Guide](docs/PYTHON.md) | Full Python API reference |
 | [Java Guide](docs/JAVA.md) | Java API and CLI usage |
 | [C++ Guide](docs/CPP.md) | Header-only C++ integration |
-| [Release Notes 6.12.1](docs/RELEASE_NOTES_6.12.1.md) | Previous release |
+| [Release Notes 6.12.2](docs/RELEASE_NOTES_6.12.2.md) | Previous release |
 | [Whitepaper](docs/WHITEPAPER.md) | Algorithms and design (11-level MCS, VF2++, ring perception) |
 | [How to Install](docs/HOWTO-INSTALL.md) | Build from source on all platforms |
 | [Changelog](CHANGELOG.md) | Full versioned change history |

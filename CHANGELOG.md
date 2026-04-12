@@ -2,6 +2,26 @@
 
 All notable changes to SMSD Pro are documented in this file.
 
+## [6.12.2] - 2026-04-12
+
+### Summary
+MCS quality recovery, RDKit-compatible defaults, and coverage-driven engine.
+
+### Included
+- **RDKit-compatible defaults**: `ringMatchesRingOnly=false`, `matchFormalCharge=false`
+  by default; named profiles (`strict`, `pharma`, `reaction`, `compat-fmcs`)
+- **Ring-constrained MCS re-run**: when ring=false causes search-space explosion,
+  pipeline re-runs with ring=true to recover optimal mappings
+- **VF2PP seed budget capped** at 50 ms to prevent budget drain
+- **Coverage-driven MCS engine** (C++/Python): greedy → substructure →
+  seed-extend → BK clique → McGregor funnel with LFUB early termination;
+  42–90× faster on Dalke nearest-neighbour benchmark
+- **Java 25 language modernisation**: records, arrow switches, unnamed catch
+  variables, pattern-matching instanceof; dead tautomer rules T18/T20 removed
+- **CMake version synchronised** to 6.12.2 (was stuck at 6.11.1)
+- **Docker**: `maven:3.9.14-eclipse-temurin-25`, non-root `smsd` user in runtime image
+- All build-system versions aligned: Maven, CMake, Python sdist/wheel, CITATION.cff
+
 ## [6.12.0] - 2026-04-07
 
 ### Summary

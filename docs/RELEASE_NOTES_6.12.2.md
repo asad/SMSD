@@ -1,4 +1,4 @@
-# SMSD Pro 6.12.1
+# SMSD Pro 6.12.2
 
 **Syed Asad Rahman — BioInception PVT LTD**
 

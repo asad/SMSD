@@ -49,7 +49,7 @@ pip install "smsd[gpu]"
 | **Chemistry** | `classify_pharmacophore`, `implicit_h`, `validate_tautomer_consistency` |
 | **Depiction** | `depict_svg`, `depict_pair`, `depict_mapping`, `save_svg`, `DepictOptions` |
 | **GPU** | `gpu_is_available`, `gpu_device_info` |
-| **Clique Solver** *(6.12.1)* | `find_max_cliques`, `find_mcs_clique`, `match_substructure`, `match_substructure_from_elements`, `score_mapping` |
+| **Clique Solver** *(6.12.2)* | `find_max_cliques`, `find_mcs_clique`, `match_substructure`, `match_substructure_from_elements`, `score_mapping` |
 
 ## Options Reference
 
@@ -171,7 +171,7 @@ chem.aromaticity_model = smsd.AromaticityModel.DAYLIGHT_LIKE  # perception model
 chem.aromaticity_mode  = smsd.AromaticityMode.FLEXIBLE        # matching strictness
 ```
 
-## Lightweight MCS Engine (6.12.1)
+## Lightweight MCS Engine (6.12.2)
 
 High-level coverage-driven MCS with automatic LFUB termination.
 Accepts SMILES, MolGraph, or RDKit Mol. Uses the C++ clique solver
@@ -216,7 +216,7 @@ result = find_mcs_lightweight(
 Each stage checks against the label-frequency upper bound (LFUB).
 If the current best reaches LFUB, search stops immediately.
 
-## Clique Solver — Low-Level API (6.12.1)
+## Clique Solver — Low-Level API (6.12.2)
 
 Direct access to the C++ clique-based MCS and substructure engine.
 Chemistry stays in Python; only the graph search runs in C++.
