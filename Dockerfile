@@ -4,8 +4,10 @@ COPY . .
 RUN mvn -U -B -DskipTests=true clean package
 
 FROM eclipse-temurin:25-jre
+RUN groupadd -r smsd && useradd -r -g smsd -d /work smsd
 WORKDIR /work
 COPY --from=build /app/target/smsd-*-jar-with-dependencies.jar /usr/local/bin/smsd.jar
-# Run the fat JAR directly (jar-first UX)
+RUN chown -R smsd:smsd /work
+USER smsd
 ENTRYPOINT ["java","-jar","/usr/local/bin/smsd.jar"]
 CMD ["--help"]

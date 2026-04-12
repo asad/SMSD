@@ -76,7 +76,7 @@ SUBSTRUCTURE_CASES = [
         "[NH3+]CC([O-])=O",
         "NCC(=O)O",
         4,
-        False,
+        True,   # With default matchFormalCharge=False, zwitterion matches neutral
         {"match_formal_charge": False},
     ),
     (

@@ -85,17 +85,14 @@ static void finalize(smsd::MolGraph& g, int bondOrd, bool bondRing, bool bondAro
     g.adjLong.assign(n, std::vector<uint64_t>(words, 0));
     g.useDense = (n <= 200);
     if (g.useDense) {
-        g.bondOrdMatrix.assign(n, std::vector<int>(n, 0));
-        g.bondRingMatrix.assign(n, std::vector<bool>(n, false));
-        g.bondAromMatrix.assign(n, std::vector<bool>(n, false));
+        g.bondPacked.assign(n, std::vector<uint8_t>(n, 0));
     }
     for (int i = 0; i < n; ++i) {
         for (int j : g.neighbors[i]) {
             g.adjLong[i][j >> 6] |= uint64_t(1) << (j & 63);
             if (g.useDense) {
-                g.bondOrdMatrix[i][j] = bondOrd;
-                g.bondRingMatrix[i][j] = bondRing;
-                g.bondAromMatrix[i][j] = bondArom;
+                g.bondPacked[i][j] = static_cast<uint8_t>(
+                    (bondOrd & 0x07) | (bondRing ? 0x08 : 0) | (bondArom ? 0x10 : 0));
             }
         }
     }
@@ -152,9 +149,7 @@ static smsd::MolGraph makePhenol() {
     g.label[6] = (8 << 2);
     g.neighbors[6] = {0}; g.degree[6] = 1;
     finalize(g, 4, true, true);
-    g.bondOrdMatrix[0][6] = 1; g.bondOrdMatrix[6][0] = 1;
-    g.bondRingMatrix[0][6] = false; g.bondRingMatrix[6][0] = false;
-    g.bondAromMatrix[0][6] = false; g.bondAromMatrix[6][0] = false;
+    g.bondPacked[0][6] = 1; g.bondPacked[6][0] = 1;  // order=1, no ring, no arom
     return g;
 }
 
@@ -178,9 +173,7 @@ static smsd::MolGraph makeToluene() {
     g.label[6] = (6 << 2);
     g.neighbors[6] = {0}; g.degree[6] = 1;
     finalize(g, 4, true, true);
-    g.bondOrdMatrix[0][6] = 1; g.bondOrdMatrix[6][0] = 1;
-    g.bondRingMatrix[0][6] = false; g.bondRingMatrix[6][0] = false;
-    g.bondAromMatrix[0][6] = false; g.bondAromMatrix[6][0] = false;
+    g.bondPacked[0][6] = 1; g.bondPacked[6][0] = 1;  // order=1, no ring, no arom
     return g;
 }
 
@@ -376,14 +369,7 @@ void test_decomposeRGroups_phenol() {
     assert(it->second.atomicNum[0] == 8);
 }
 
-void test_mapReaction() {
-    auto benz1 = makeBenzene();
-    auto benz2 = makeBenzene();
-    smsd::ChemOptions opts;
-    auto mapping = smsd::mapReaction(benz1, benz2, opts, 10000);
-    std::cout << "reaction_map_size=" << mapping.size() << " ";
-    assert(static_cast<int>(mapping.size()) == 6);
-}
+// test_mapReaction: removed (proprietary reaction mapping IP)
 
 void test_extractSubgraph() {
     auto phen = makePhenol();
@@ -1226,90 +1212,7 @@ void test_canonical_roundtrip_ethanol() {
         "OCC and CCO are both ethanol — canonical SMILES must match");
 }
 
-// ===========================================================================
-// Reaction-Aware MCS Post-Filter (v6.4.0)
-// ===========================================================================
-
-void test_reaction_aware_sam_includes_sulfur() {
-    // SAM (simplified) and SAH -- the S atom should be captured
-    auto sam = smsd::parseSMILES("C[S+](CCC(N)C(=O)O)CC1OC(n2cnc3c(N)ncnc32)C(O)C1O");
-    auto sah = smsd::parseSMILES("SCCC(N)C(=O)OCC1OC(n2cnc3c(N)ncnc32)C(O)C1O");
-
-    smsd::MCSOptions opts;
-    opts.disconnectedMCS = true;
-    opts.connectedOnly = false;
-    opts.timeoutMs = 10000;
-    opts.reactionAware = true;
-
-    auto mapping = smsd::reactionAwareMCS(sam, sah, smsd::ChemOptions(), opts);
-    TEST_ASSERT(!mapping.empty(), "Reaction-aware MCS for SAM->SAH should be non-empty");
-
-    bool hasSulfur = false;
-    for (const auto& p : mapping) {
-        if (sam.atomicNum[p.first] == 16) { hasSulfur = true; break; }
-    }
-    TEST_ASSERT(hasSulfur,
-        "Reaction-aware MCS for SAM->SAH should include the sulfur atom");
-}
-
-void test_reaction_aware_pure_hydrocarbon() {
-    auto g1 = smsd::parseSMILES("C1CCCCC1");
-    auto g2 = smsd::parseSMILES("CC1CCCC1");
-
-    smsd::MCSOptions opts;
-    opts.timeoutMs = 5000;
-
-    auto stdMapping = smsd::findMCS(g1, g2, smsd::ChemOptions(), opts);
-    auto reactMapping = smsd::reactionAwareMCS(g1, g2, smsd::ChemOptions(), opts);
-
-    TEST_ASSERT_EQ(static_cast<int>(reactMapping.size()),
-                   static_cast<int>(stdMapping.size()),
-                   "Pure hydrocarbon: reaction-aware should match standard MCS size");
-}
-
-void test_reaction_aware_methionine_homocysteine() {
-    auto met = smsd::parseSMILES("CSCC(N)C(=O)O");
-    auto hcy = smsd::parseSMILES("SCC(N)C(=O)O");
-
-    smsd::MCSOptions opts;
-    opts.timeoutMs = 5000;
-    auto mapping = smsd::reactionAwareMCS(met, hcy, smsd::ChemOptions(), opts);
-    TEST_ASSERT(!mapping.empty(), "Met->Hcy should produce a mapping");
-
-    bool hasSulfur = false;
-    for (const auto& p : mapping) {
-        if (met.atomicNum[p.first] == 16) { hasSulfur = true; break; }
-    }
-    TEST_ASSERT(hasSulfur,
-        "Met->Hcy reaction-aware mapping should include S atom");
-}
-
-void test_map_reaction_aware_convenience() {
-    auto mapping = smsd::mapReactionAware("CSCC(N)C(=O)O", "SCC(N)C(=O)O");
-    TEST_ASSERT(!mapping.empty(), "mapReactionAware convenience should produce a mapping");
-}
-
-void test_reaction_aware_atp_adp_includes_phosphorus() {
-    // ATP (simplified) and ADP -- the P atom should be captured
-    auto atp = smsd::parseSMILES("c1nc(N)c2ncn(C3OC(COP(=O)(O)OP(=O)(O)OP(=O)(O)O)C(O)C3O)c2n1");
-    auto adp = smsd::parseSMILES("c1nc(N)c2ncn(C3OC(COP(=O)(O)OP(=O)(O)O)C(O)C3O)c2n1");
-
-    smsd::MCSOptions opts;
-    opts.disconnectedMCS = true;
-    opts.connectedOnly = false;
-    opts.timeoutMs = 10000;
-    opts.reactionAware = true;
-
-    auto mapping = smsd::reactionAwareMCS(atp, adp, smsd::ChemOptions(), opts);
-    TEST_ASSERT(!mapping.empty(), "Reaction-aware MCS for ATP->ADP should be non-empty");
-
-    bool hasPhosphorus = false;
-    for (const auto& p : mapping) {
-        if (atp.atomicNum[p.first] == 15) { hasPhosphorus = true; break; }
-    }
-    TEST_ASSERT(hasPhosphorus,
-        "Reaction-aware MCS for ATP->ADP should include a phosphorus atom");
-}
+// Reaction-aware MCS tests removed (proprietary reaction mapping IP).
 
 // ============================================================================
 // Substructure benchmark diagnostic (v6.8.0) — single-iteration correctness
@@ -1475,7 +1378,6 @@ int main() {
     RUN_TEST(findScaffoldMCS);
     RUN_TEST(decomposeRGroups_toluene);
     RUN_TEST(decomposeRGroups_phenol);
-    RUN_TEST(mapReaction);
     RUN_TEST(extractSubgraph);
 
     std::cout << "\n-- Chemistry (SMILES-based) --\n";
@@ -1520,13 +1422,6 @@ int main() {
     std::cout << "\n-- User-feedback (v6.2.0) --\n";
     RUN_TEST(empty_smiles_returns_empty_graph);
     RUN_TEST(canonical_roundtrip_ethanol);
-
-    std::cout << "\n-- Reaction-aware MCS (v6.4.0) --\n";
-    RUN_TEST(reaction_aware_sam_includes_sulfur);
-    RUN_TEST(reaction_aware_pure_hydrocarbon);
-    RUN_TEST(reaction_aware_methionine_homocysteine);
-    RUN_TEST(map_reaction_aware_convenience);
-    RUN_TEST(reaction_aware_atp_adp_includes_phosphorus);
 
     std::cout << "\n-- Substructure benchmark diagnostic (v6.8.0) --\n";
     RUN_TEST(sub_benchmark_diagnostic);

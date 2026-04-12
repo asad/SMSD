@@ -18,6 +18,7 @@
 #include "smsd/cip.hpp"
 #include "smsd/layout.hpp"
 #include "smsd/depict.hpp"
+#include "smsd/clique_solver.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -350,6 +351,12 @@ PYBIND11_MODULE(_smsd, m) {
         .value("DIETHYL_ETHER", smsd::ChemOptions::Solvent::DIETHYL_ETHER)
         .export_values();
 
+    py::enum_<smsd::ChemOptions::MatcherEngine>(m, "MatcherEngine")
+        .value("VF2",   smsd::ChemOptions::MatcherEngine::VF2)
+        .value("VF2PP", smsd::ChemOptions::MatcherEngine::VF2PP)
+        .value("VF3",   smsd::ChemOptions::MatcherEngine::VF3)
+        .export_values();
+
     // -----------------------------------------------------------------------
     // ChemOptions
     // -----------------------------------------------------------------------
@@ -374,6 +381,15 @@ PYBIND11_MODULE(_smsd, m) {
         // Bond matching
         .def_readwrite("match_bond_order",      &smsd::ChemOptions::matchBondOrder)
         .def_readwrite("aromaticity_mode",      &smsd::ChemOptions::aromaticityMode)
+        .def_readwrite("aromaticity_model",     &smsd::ChemOptions::aromaticityModel)
+        // Engine & pruning
+        .def_readwrite("matcher_engine",        &smsd::ChemOptions::matcherEngine)
+        .def_readwrite("induced",               &smsd::ChemOptions::induced)
+        .def_readwrite("use_two_hop_nlf",       &smsd::ChemOptions::useTwoHopNLF)
+        .def_readwrite("use_three_hop_nlf",     &smsd::ChemOptions::useThreeHopNLF)
+        .def_readwrite("use_bit_parallel_feasibility", &smsd::ChemOptions::useBitParallelFeasibility)
+        // pH
+        .def_readwrite("pH",                    &smsd::ChemOptions::pH)
         // Ring fusion
         .def_readwrite("ring_fusion_mode",      &smsd::ChemOptions::ringFusionMode)
         // Named profiles
@@ -403,10 +419,13 @@ PYBIND11_MODULE(_smsd, m) {
         .def_readwrite("timeout_ms",        &smsd::MCSOptions::timeoutMs)
         .def_readwrite("extra_seeds",       &smsd::MCSOptions::extraSeeds)
         .def_readwrite("template_fuzzy_atoms", &smsd::MCSOptions::templateFuzzyAtoms)
-        .def_readwrite("reaction_aware",     &smsd::MCSOptions::reactionAware)
         .def_readwrite("near_mcs_delta",     &smsd::MCSOptions::nearMcsDelta)
         .def_readwrite("near_mcs_candidates", &smsd::MCSOptions::nearMcsCandidates)
-        .def_readwrite("bond_change_aware",  &smsd::MCSOptions::bondChangeAware)
+        .def_readwrite("max_stage",          &smsd::MCSOptions::maxStage)
+        .def_readwrite("seed_neighborhood_radius",     &smsd::MCSOptions::seedNeighborhoodRadius)
+        .def_readwrite("seed_max_anchors",             &smsd::MCSOptions::seedMaxAnchors)
+        .def_readwrite("use_two_hop_nlf_in_extension", &smsd::MCSOptions::useTwoHopNLFInExtension)
+        .def_readwrite("use_three_hop_nlf_in_extension", &smsd::MCSOptions::useThreeHopNLFInExtension)
         .def("__repr__", [](const smsd::MCSOptions& o) {
             return "<MCSOptions induced=" +
                    std::string(o.induced ? "True" : "False") +
@@ -438,6 +457,14 @@ PYBIND11_MODULE(_smsd, m) {
         .def_readonly("morgan_rank",   &smsd::MolGraph::morganRank)
         .def_readonly("canonical_label", &smsd::MolGraph::canonicalLabel)
         .def_readonly("orbit",         &smsd::MolGraph::orbit)
+        .def_readonly("neighbors",     &smsd::MolGraph::neighbors)
+        .def("bonds", [](const smsd::MolGraph& g) {
+                 std::vector<std::tuple<int,int,int>> result;
+                 for (int i = 0; i < g.n; ++i)
+                     for (int j : g.neighbors[i])
+                         if (j > i) result.emplace_back(i, j, g.bondOrder(i, j));
+                 return result;
+             }, "Return all bonds as (atom_i, atom_j, order) tuples, 0-indexed")
         .def("bond_order", [](const smsd::MolGraph& g, int i, int j) {
                  if (i < 0 || i >= g.n || j < 0 || j >= g.n)
                      throw py::index_error("atom index out of range");
@@ -477,6 +504,15 @@ PYBIND11_MODULE(_smsd, m) {
         .def("ensure_ring_counts", [](const smsd::MolGraph& g) {
                  g.ensureRingCounts();
              }, "Compute and cache per-atom ring counts")
+        .def("ring_system_of", [](const smsd::MolGraph& g, int atom) {
+                 return g.ringSystemOf(atom);
+             }, py::arg("atom"), "Ring system ID for an atom (-1 if acyclic)")
+        .def("ring_system_sig", [](const smsd::MolGraph& g, int rsId) {
+                 return g.ringSystemSig(rsId);
+             }, py::arg("rs_id"), "FNV-1a hash signature for a ring system")
+        .def("ring_system_count", [](const smsd::MolGraph& g) {
+                 return g.ringSystemCount();
+             }, "Number of distinct ring systems")
         .def("prewarm", [](const smsd::MolGraph& g) {
                  g.ensureCanonical();
                  g.ensureRingCounts();
@@ -487,6 +523,12 @@ PYBIND11_MODULE(_smsd, m) {
              },
              py::call_guard<py::gil_scoped_release>(),
              "Compute and cache common lazy invariants used by matching and batch APIs")
+        .def("num_rings", [](const smsd::MolGraph& g) {
+                 g.ensureRingCounts();
+                 auto sssr = smsd::computeSSSR(g);
+                 return static_cast<int>(sssr.size());
+             },
+             "Return the SSSR ring count for this molecule")
         .def("perceive_aromaticity", [](smsd::MolGraph& g, smsd::AromaticityModel model) -> smsd::MolGraph& {
                  g.perceiveAromaticity(model);
                  return g;
@@ -765,54 +807,7 @@ PYBIND11_MODULE(_smsd, m) {
           "Compute MCS and return it as a canonical SMILES string. "
           "timeout_ms overrides opts.timeout_ms if > 0.");
 
-    // -----------------------------------------------------------------------
-    // Reaction-aware MCS (v6.4.0)
-    // -----------------------------------------------------------------------
-    m.def("reaction_aware_mcs",
-          [](const smsd::MolGraph& g1, const smsd::MolGraph& g2,
-             const smsd::ChemOptions& chem, smsd::MCSOptions opts,
-             int64_t timeout_ms) {
-              if (timeout_ms > 0) opts.timeoutMs = timeout_ms;
-              opts.reactionAware = true;
-              return smsd::reactionAwareMCS(g1, g2, chem, opts);
-          },
-          py::arg("g1"), py::arg("g2"),
-          py::arg("chem") = smsd::ChemOptions(),
-          py::arg("opts") = smsd::MCSOptions(),
-          py::arg("timeout_ms") = 10000,
-          py::call_guard<py::gil_scoped_release>(),
-          "Reaction-aware MCS: find MCS candidates, generate near-MCS\n"
-          "variants (K-1, K-2), and re-rank by heteroatom coverage,\n"
-          "rare-element importance, and connectivity.\n"
-          "Returns the best-scoring candidate mapping as a dict.");
-
-    m.def("map_reaction_aware",
-          [](const std::string& smi1, const std::string& smi2,
-             smsd::ChemOptions chem, smsd::MCSOptions opts,
-             int64_t timeout_ms) {
-              if (timeout_ms > 0) opts.timeoutMs = timeout_ms;
-              return smsd::mapReactionAware(smi1, smi2, chem, opts);
-          },
-          py::arg("smi1"), py::arg("smi2"),
-          py::arg("chem") = smsd::ChemOptions(),
-          py::arg("opts") = smsd::MCSOptions(),
-          py::arg("timeout_ms") = 10000,
-          py::call_guard<py::gil_scoped_release>(),
-          "Convenience: parse two SMILES, run reaction-aware MCS,\n"
-          "return the best mapping as a dict {reactant_idx: product_idx}.");
-
-    // -----------------------------------------------------------------------
-    // Bond-change scoring (v6.6.0)
-    // -----------------------------------------------------------------------
-    m.def("bond_change_score",
-          [](const std::map<int,int>& mapping,
-             const smsd::MolGraph& g1, const smsd::MolGraph& g2) {
-              return smsd::bondChangeScore(mapping, g1, g2);
-          },
-          py::arg("mapping"), py::arg("g1"), py::arg("g2"),
-          "Score an MCS mapping by bond-change plausibility.\n"
-          "Lower score = more chemically plausible.\n"
-          "C-C break=3.0, C-N/O=1.5, heteroatom=0.5.");
+    // Reaction-aware MCS and bond-change scoring: available in BioInception commercial license.
 
     // -----------------------------------------------------------------------
     // Batch MCS with non-overlap constraints (v6.6.0)
@@ -1722,22 +1717,7 @@ PYBIND11_MODULE(_smsd, m) {
           "Returns list of dicts, each with 'core' (MolGraph) and 'rgroups' (dict of name->MolGraph).\n"
           "Core is matched as a substructure; non-core connected components become R1, R2, etc.");
 
-    // -----------------------------------------------------------------------
-    // Reaction mapping
-    // -----------------------------------------------------------------------
-
-    m.def("map_reaction",
-          [](const smsd::MolGraph& reactants, const smsd::MolGraph& products,
-             const smsd::ChemOptions& opts, int64_t timeoutMs) {
-              py::gil_scoped_release release;
-              return smsd::mapReaction(reactants, products, opts, timeoutMs);
-          },
-          py::arg("reactants"), py::arg("products"),
-          py::arg("opts") = smsd::ChemOptions(),
-          py::arg("timeout_ms") = 10000,
-          "Atom-atom mapping between reactants and products via disconnected MCS.\n"
-          "Returns mapping from reactant atom indices to product atom indices.\n"
-          "Uses disconnected MCS to handle bond-breaking/forming reactions.");
+    // Reaction mapping: available in BioInception commercial license.
 
     // -----------------------------------------------------------------------
     // Graph utilities
@@ -2247,4 +2227,100 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("smiles1"), py::arg("smiles2"), py::arg("mapping"),
           py::arg("opts") = smsd::DepictOptions(),
           "Render MCS comparison of two SMILES as SVG (side-by-side with highlights).");
+
+    // -------------------------------------------------------------------
+    // Clique solver bindings (v6.12.0)
+    // -------------------------------------------------------------------
+    py::class_<smsd::clique::ProductGraph>(m, "ProductGraph")
+        .def(py::init<>())
+        .def_readwrite("n", &smsd::clique::ProductGraph::n)
+        .def_readwrite("vertices", &smsd::clique::ProductGraph::vertices)
+        .def_readwrite("adj", &smsd::clique::ProductGraph::adj);
+
+    py::class_<smsd::clique::ProductVertex>(m, "ProductVertex")
+        .def(py::init<>())
+        .def_readwrite("query_atom", &smsd::clique::ProductVertex::query_atom)
+        .def_readwrite("target_atom", &smsd::clique::ProductVertex::target_atom);
+
+    py::class_<smsd::clique::CliqueResult>(m, "CliqueResult")
+        .def_readonly("cliques", &smsd::clique::CliqueResult::cliques)
+        .def_readonly("max_size", &smsd::clique::CliqueResult::max_size)
+        .def_readonly("timed_out", &smsd::clique::CliqueResult::timed_out)
+        .def_readonly("elapsed_us", &smsd::clique::CliqueResult::elapsed_us);
+
+    m.def("find_max_cliques",
+          &smsd::clique::findMaxCliques,
+          py::arg("pg"),
+          py::arg("max_cliques") = 8,
+          py::arg("timeout_ms") = 1000,
+          py::arg("incumbent_size") = 0,
+          py::call_guard<py::gil_scoped_release>(),
+          "Find maximum cliques in a product graph.");
+
+    py::class_<smsd::clique::MCSResult>(m, "CliqueMCSResult")
+        .def_readonly("candidates", &smsd::clique::MCSResult::candidates)
+        .def_readonly("best_size", &smsd::clique::MCSResult::best_size)
+        .def_readonly("lfub", &smsd::clique::MCSResult::lfub)
+        .def_readonly("elapsed_us", &smsd::clique::MCSResult::elapsed_us);
+
+    m.def("find_mcs_clique",
+          &smsd::clique::findMCSPipeline,
+          py::arg("compat"),
+          py::arg("bonds_a"), py::arg("bonds_b"),
+          py::arg("n_a"), py::arg("n_b"),
+          py::arg("bond_any") = true,
+          py::arg("timeout_ms") = 1000,
+          py::arg("max_results") = 8,
+          py::arg("ring_a") = std::vector<bool>{},
+          py::arg("ring_b") = std::vector<bool>{},
+          py::arg("arom_a") = std::vector<bool>{},
+          py::arg("arom_b") = std::vector<bool>{},
+          py::arg("lfub_value") = -1,
+          py::call_guard<py::gil_scoped_release>(),
+          "Clique-based MCS: greedy + seed-extend + BK, all in C++.");
+
+    // Coverage MCS: MolGraph → clique_solver pipeline (replaces Python lightweight engine)
+    m.def("find_mcs_coverage",
+          static_cast<std::map<int,int>(*)(const smsd::MolGraph&, const smsd::MolGraph&,
+                                           bool, bool, int64_t, int)>(&smsd::findMCSCoverage),
+          py::arg("g1"), py::arg("g2"),
+          py::arg("ring_match") = false,
+          py::arg("bond_any") = false,
+          py::arg("timeout_ms") = 1000,
+          py::arg("max_results") = 8,
+          py::call_guard<py::gil_scoped_release>(),
+          "Lightweight coverage MCS: element-based compat + clique_solver pipeline.\n"
+          "Fully in C++. Returns dict mapping g1 atom indices to g2 atom indices (0-based).");
+
+    m.def("match_substructure",
+          &smsd::clique::substructureMatch,
+          py::arg("n_query"), py::arg("n_target"),
+          py::arg("compat"),
+          py::arg("bonds_query"), py::arg("bonds_target"),
+          py::arg("bond_any") = false,
+          py::arg("timeout_ms") = 500,
+          py::arg("max_results") = 8,
+          py::call_guard<py::gil_scoped_release>(),
+          "Substructure match from pre-built compat pairs and bond maps.");
+
+    m.def("match_substructure_from_elements",
+          &smsd::clique::substructureMatchFromElements,
+          py::arg("elements_query"), py::arg("elements_target"),
+          py::arg("bonds_query"), py::arg("bonds_target"),
+          py::arg("bond_any") = false,
+          py::arg("timeout_ms") = 500,
+          py::arg("max_results") = 8,
+          py::call_guard<py::gil_scoped_release>(),
+          "Substructure match from element lists — C++ builds compat internally.");
+
+    m.def("score_mapping",
+          &smsd::clique::scorePairMapping,
+          py::arg("mapping"),
+          py::arg("elements_a"), py::arg("elements_b"),
+          py::arg("bonds_a"), py::arg("bonds_b"),
+          py::arg("ring_a") = std::vector<bool>{},
+          py::arg("ring_b") = std::vector<bool>{},
+          py::arg("arom_a") = std::vector<bool>{},
+          py::arg("arom_b") = std::vector<bool>{},
+          "Score a mapping based on bond compatibility and element matching.");
 }

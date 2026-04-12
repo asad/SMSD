@@ -24,6 +24,7 @@
 #include "smsd/mol_graph.hpp"
 #include "smsd/smiles_parser.hpp"
 #include "smsd/vf2pp.hpp"
+#include "smsd/clique_solver.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -32,9 +33,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#ifdef _MSC_VER
-#include <intrin.h>
-#endif
 #include <functional>
 #include <map>
 #include <numeric>
@@ -47,6 +45,10 @@
 #include <vector>
 
 namespace smsd {
+
+inline std::map<int,int> canonicalizeMapping(
+        const MolGraph& g1, const MolGraph& g2,
+        const std::map<int,int>& mapping);
 
 // ---------------------------------------------------------------------------
 // MCSOptions
@@ -75,7 +77,6 @@ struct MCSOptions {
     // ---- Reaction-aware post-filter (v6.4.0) ----
 
     /// Enable built-in reaction-aware post-filtering.  Off by default.
-    bool     reactionAware     = false;
     /// Maximum size deficit from the mathematical maximum K to consider.
     /// Default: 2 (consider candidates of size K, K-1, K-2).
     int      nearMcsDelta      = 2;
@@ -83,7 +84,6 @@ struct MCSOptions {
     int      nearMcsCandidates = 20;
 
     /// Custom post-filter callback.  If set, overrides the built-in
-    /// reaction-aware scorer even when reactionAware=true.
     /// Signature: (candidates, g1, g2) -> ranked candidates.
     /// @since 6.6.0
     std::function<std::vector<std::map<int,int>>(
@@ -94,8 +94,47 @@ struct MCSOptions {
     /// candidate generation. Candidates ranked by chemical plausibility
     /// of implied bond transformations (C-C breaks penalised most).
     /// @since 6.6.0
-    bool     bondChangeAware   = false;
+
+    /// Cap the algorithmic funnel at this stage.  Default 5 = all stages.
+    ///   0 = L0.25-L0.75 only (chain/tree/greedy, polynomial)
+    ///   1 = + L1 substructure + L1.25 augmenting + L1.5 seed-extend
+    ///   2 = + L1.75 k-core + L2 McSplit (exponential)
+    ///   3 = + L3 Bron-Kerbosch (exponential)
+    ///   4 = + L4 McGregor (exponential)
+    ///   5 = + L5 extra seeds (default, full funnel)
+    /// For reaction mapping, stage 1 is usually sufficient and much faster.
+    /// @since 6.12.0
+    int      maxStage          = 5;
 };
+
+// ---------------------------------------------------------------------------
+// MCS Stage Timers — zero-overhead when SMSD_MCS_TIMERS is not defined.
+// Enable with -DSMSD_MCS_TIMERS to collect per-stage microsecond timings.
+// ---------------------------------------------------------------------------
+struct MCSTimers {
+    int64_t chainUs      = 0;   // L0.25 linear chain
+    int64_t treeUs       = 0;   // L0.5  tree
+    int64_t greedyUs     = 0;   // L0.75 greedy probe
+    int64_t substructUs  = 0;   // L1    substructure containment
+    int64_t seedExtendUs = 0;   // L1.5  seed-and-extend
+    int64_t mcSplitUs    = 0;   // L2    McSplit
+    int64_t bkUs         = 0;   // L3    Bron-Kerbosch
+    int64_t mcGregorUs   = 0;   // L4    McGregor extension
+    int64_t totalUs      = 0;   // total wall time
+    int     stageReached = 0;   // highest level entered
+    bool    timedOut     = false;
+};
+
+#ifdef SMSD_MCS_TIMERS
+#define SMSD_STAGE_START(name) \
+    auto _st_##name = std::chrono::steady_clock::now()
+#define SMSD_STAGE_END(name, timers, field) \
+    (timers).field = std::chrono::duration_cast<std::chrono::microseconds>( \
+        std::chrono::steady_clock::now() - _st_##name).count()
+#else
+#define SMSD_STAGE_START(name)               ((void)0)
+#define SMSD_STAGE_END(name, timers, field)  ((void)0)
+#endif
 
 // TimeBudget reused from vf2pp.hpp (TimeBudget)
 namespace detail {
@@ -636,6 +675,523 @@ inline std::map<int,int> ppx(const MolGraph& g1, const MolGraph& g2,
     if (M.disconnectedMCS && (M.minFragmentSize > 1 || M.maxFragments < INT_MAX))
         ext = applyFragmentConstraints(g1, ext, M.minFragmentSize, M.maxFragments);
     return ext;
+}
+
+// ---------------------------------------------------------------------------
+// SmallExactMCSExplorer -- exact branch-and-bound for small molecule pairs
+// ---------------------------------------------------------------------------
+class SmallExactMCSExplorer {
+    using CanonKey = std::vector<std::pair<int,int>>;
+    struct ExactCandidate {
+        std::map<int,int> mapping;
+        int bondCount = 0;
+    };
+
+    const MolGraph& g1_;
+    const MolGraph& g2_;
+    const ChemOptions& C_;
+    bool induced_;
+    TimeBudget& tb_;
+    int upperBound_;
+    std::vector<int> q2t_;
+    std::vector<int> t2q_;
+    std::vector<int> bestQ2T_;
+    std::vector<uint8_t> state_;
+    std::vector<std::vector<int>> compatTargets_;
+    std::map<CanonKey, ExactCandidate> allBest_;
+    int bestSize_ = 0;
+    int maxResults_ = 1;
+    int collectLimit_ = 1;
+    bool collectAll_ = false;
+
+    bool consistent(int qi, int tj) const {
+        if (t2q_[tj] >= 0) return false;
+        for (int qk = 0; qk < g1_.n; ++qk) {
+            if (qk == qi || q2t_[qk] < 0) continue;
+            int tk = q2t_[qk];
+            bool qBond = g1_.bondOrder(qi, qk) != 0;
+            bool tBond = g2_.bondOrder(tj, tk) != 0;
+            if (qBond) {
+                if (!tBond) return false;
+                if (!bondsCompatible(g1_, qi, qk, g2_, tj, tk, C_)) return false;
+            } else if (induced_ && tBond) {
+                return false;
+            }
+        }
+        if (C_.useChirality && !tetraParityCompatible(g1_, qi, g2_, tj, q2t_)) return false;
+        return true;
+    }
+
+    int mappedNeighborCount(int qi) const {
+        int count = 0;
+        for (int nb : g1_.neighbors[qi]) {
+            if (q2t_[nb] >= 0) ++count;
+        }
+        return count;
+    }
+
+    std::map<int,int> materialize(const std::vector<int>& q2t) const {
+        std::map<int,int> mapping;
+        for (int qi = 0; qi < g1_.n; ++qi) {
+            if (q2t[qi] >= 0) mapping[qi] = q2t[qi];
+        }
+        return mapping;
+    }
+
+    void recordCurrent(int mappedCount) {
+        if (mappedCount < bestSize_) return;
+        auto mapping = materialize(q2t_);
+        if (mappedCount > bestSize_) {
+            bestQ2T_ = q2t_;
+            bestSize_ = mappedCount;
+            allBest_.clear();
+        }
+        if (!collectAll_) return;
+        if (mappedCount != bestSize_) return;
+        int bondCount = countMappedBonds(g1_, mapping);
+        auto canonical = canonicalizeMapping(g1_, g2_, mapping);
+        CanonKey key(canonical.begin(), canonical.end());
+        auto it = allBest_.find(key);
+        if (it == allBest_.end() || bondCount > it->second.bondCount) {
+            if (it == allBest_.end() && static_cast<int>(allBest_.size()) >= collectLimit_) return;
+            allBest_[std::move(key)] = ExactCandidate{std::move(mapping), bondCount};
+        }
+    }
+
+    void collectCandidates(int qi, std::vector<int>& out) const {
+        out.clear();
+        out.reserve(compatTargets_[qi].size());
+        for (int tj : compatTargets_[qi]) {
+            if (consistent(qi, tj)) {
+                out.push_back(tj);
+            }
+        }
+    }
+
+    int selectNextAtom(std::vector<int>& candidates) const {
+        int bestQi = -1;
+        int bestMappedNbrs = -1;
+        int bestCandCount = INT_MAX;
+        int bestDegree = -1;
+        std::vector<int> scratch;
+        for (int qi = 0; qi < g1_.n; ++qi) {
+            if (state_[qi] != 0) continue;
+            int mappedNbrs = mappedNeighborCount(qi);
+            collectCandidates(qi, scratch);
+            int candCount = static_cast<int>(scratch.size());
+            int degree = g1_.degree[qi];
+            bool better = false;
+            if (mappedNbrs != bestMappedNbrs) better = mappedNbrs > bestMappedNbrs;
+            else if (g1_.ring[qi] != (bestQi >= 0 ? g1_.ring[bestQi] : 0)) {
+                better = g1_.ring[qi] > (bestQi >= 0 ? g1_.ring[bestQi] : 0);
+            } else if (degree != bestDegree) better = degree > bestDegree;
+            else if (candCount != bestCandCount) better = candCount < bestCandCount;
+            else if (bestQi < 0 || qi < bestQi) better = true;
+
+            if (better) {
+                bestQi = qi;
+                bestMappedNbrs = mappedNbrs;
+                bestCandCount = candCount;
+                bestDegree = degree;
+                candidates = scratch;
+            }
+        }
+        return bestQi;
+    }
+
+    void search(int mappedCount, int pendingCount) {
+        if (tb_.expired()) return;
+        recordCurrent(mappedCount);
+        if (!collectAll_ && bestSize_ >= upperBound_) return;
+        if (collectAll_ && bestSize_ >= upperBound_
+            && static_cast<int>(allBest_.size()) >= collectLimit_) return;
+        if (pendingCount <= 0) return;
+
+        int remainingTarget = g2_.n - mappedCount;
+        int optimistic = mappedCount + std::min(pendingCount, remainingTarget);
+        if ((!collectAll_ && optimistic <= bestSize_)
+            || (collectAll_ && optimistic < bestSize_)) return;
+
+        std::vector<int> candidates;
+        int qi = selectNextAtom(candidates);
+        if (qi < 0) return;
+
+        std::vector<std::pair<int, int>> scored;
+        scored.reserve(candidates.size());
+        int mappedNbrs = mappedNeighborCount(qi);
+        for (int tj : candidates) {
+            int score = mappedNbrs * 1000;
+            score += (g1_.ring[qi] && g2_.ring[tj]) ? 100 : 0;
+            score += 10 - std::min(9, std::abs(g1_.degree[qi] - g2_.degree[tj]));
+            scored.push_back({-score, tj});
+        }
+        std::sort(scored.begin(), scored.end());
+
+        state_[qi] = 1;
+        for (const auto& candidate : scored) {
+            int tj = candidate.second;
+            q2t_[qi] = tj;
+            t2q_[tj] = qi;
+            search(mappedCount + 1, pendingCount - 1);
+            q2t_[qi] = -1;
+            t2q_[tj] = -1;
+            if ((!collectAll_ && bestSize_ >= upperBound_) || tb_.expired()) {
+                state_[qi] = 0;
+                return;
+            }
+        }
+
+        state_[qi] = 2;
+        search(mappedCount, pendingCount - 1);
+        state_[qi] = 0;
+    }
+
+public:
+    SmallExactMCSExplorer(const MolGraph& g1, const MolGraph& g2,
+                          const ChemOptions& C, bool induced,
+                          TimeBudget& tb, int upperBound,
+                          const std::map<int,int>& incumbent)
+        : g1_(g1),
+          g2_(g2),
+          C_(C),
+          induced_(induced),
+          tb_(tb),
+          upperBound_(upperBound),
+          q2t_(g1.n, -1),
+          t2q_(g2.n, -1),
+          bestQ2T_(g1.n, -1),
+          state_(g1.n, 0),
+          compatTargets_(g1.n) {
+        for (const auto& entry : incumbent) {
+            if (entry.first < 0 || entry.first >= g1.n) continue;
+            if (entry.second < 0 || entry.second >= g2.n) continue;
+            bestQ2T_[entry.first] = entry.second;
+        }
+        bestSize_ = static_cast<int>(incumbent.size());
+        for (int qi = 0; qi < g1.n; ++qi) {
+            for (int tj = 0; tj < g2.n; ++tj) {
+                if (atomsCompatFast(g1_, qi, g2_, tj, C_)) {
+                    compatTargets_[qi].push_back(tj);
+                }
+            }
+        }
+    }
+
+    std::map<int,int> run() {
+        collectAll_ = false;
+        maxResults_ = 1;
+        collectLimit_ = 1;
+        allBest_.clear();
+        search(0, g1_.n);
+        return materialize(bestQ2T_);
+    }
+
+    std::vector<std::map<int,int>> runAll(int maxResults) {
+        collectAll_ = true;
+        maxResults_ = std::max(1, maxResults);
+        collectLimit_ = std::min(4096, std::max(maxResults_ * 32, maxResults_));
+        allBest_.clear();
+        if (bestSize_ > 0) {
+            auto incumbent = materialize(bestQ2T_);
+            int incumbentBondCount = countMappedBonds(g1_, incumbent);
+            auto canonical = canonicalizeMapping(g1_, g2_, incumbent);
+            CanonKey key(canonical.begin(), canonical.end());
+            allBest_[std::move(key)] = ExactCandidate{
+                std::move(incumbent),
+                incumbentBondCount
+            };
+        }
+        search(0, g1_.n);
+        std::vector<std::pair<CanonKey, ExactCandidate>> ranked;
+        ranked.reserve(allBest_.size());
+        for (auto& entry : allBest_) {
+            ranked.push_back({entry.first, std::move(entry.second)});
+        }
+        std::stable_sort(ranked.begin(), ranked.end(),
+                         [](const auto& lhs, const auto& rhs) {
+            if (lhs.second.mapping.size() != rhs.second.mapping.size()) {
+                return lhs.second.mapping.size() > rhs.second.mapping.size();
+            }
+            if (lhs.second.bondCount != rhs.second.bondCount) {
+                return lhs.second.bondCount > rhs.second.bondCount;
+            }
+            return lhs.first < rhs.first;
+        });
+        std::vector<std::map<int,int>> result;
+        result.reserve(std::min<int>(maxResults_, static_cast<int>(ranked.size())));
+        for (auto& entry : ranked) {
+            if (static_cast<int>(result.size()) >= maxResults_) break;
+            result.push_back(std::move(entry.second.mapping));
+        }
+        if (result.empty() && bestSize_ > 0) {
+            result.push_back(materialize(bestQ2T_));
+        }
+        return result;
+    }
+};
+
+// ---------------------------------------------------------------------------
+// FixedSizeBondMaximizer -- maximize bond count for a fixed atom-count MCS
+// ---------------------------------------------------------------------------
+class FixedSizeBondMaximizer {
+    const MolGraph& g1_;
+    const MolGraph& g2_;
+    const ChemOptions& C_;
+    bool induced_;
+    TimeBudget& tb_;
+    int requiredSize_;
+    std::vector<int> q2t_;
+    std::vector<int> t2q_;
+    std::vector<int> bestQ2T_;
+    std::vector<uint8_t> state_;
+    std::vector<std::vector<int>> compatTargets_;
+    int bestBondCount_ = -1;
+
+    bool consistent(int qi, int tj) const {
+        if (t2q_[tj] >= 0) return false;
+        for (int qk = 0; qk < g1_.n; ++qk) {
+            if (qk == qi || q2t_[qk] < 0) continue;
+            int tk = q2t_[qk];
+            bool qBond = g1_.bondOrder(qi, qk) != 0;
+            bool tBond = g2_.bondOrder(tj, tk) != 0;
+            if (qBond) {
+                if (!tBond) return false;
+                if (!bondsCompatible(g1_, qi, qk, g2_, tj, tk, C_)) return false;
+            } else if (induced_ && tBond) {
+                return false;
+            }
+        }
+        if (C_.useChirality && !tetraParityCompatible(g1_, qi, g2_, tj, q2t_)) return false;
+        return true;
+    }
+
+    int mappedNeighborCount(int qi) const {
+        int count = 0;
+        for (int nb : g1_.neighbors[qi]) {
+            if (q2t_[nb] >= 0) ++count;
+        }
+        return count;
+    }
+
+    int bondGain(int qi, int tj) const {
+        int gain = 0;
+        for (int qk : g1_.neighbors[qi]) {
+            if (q2t_[qk] < 0) continue;
+            int tk = q2t_[qk];
+            if (g1_.bondOrder(qi, qk) != 0 && g2_.bondOrder(tj, tk) != 0) {
+                ++gain;
+            }
+        }
+        return gain;
+    }
+
+    std::map<int,int> materialize(const std::vector<int>& q2t) const {
+        std::map<int,int> mapping;
+        for (int qi = 0; qi < g1_.n; ++qi) {
+            if (q2t[qi] >= 0) mapping[qi] = q2t[qi];
+        }
+        return mapping;
+    }
+
+    void collectCandidates(int qi, std::vector<int>& out) const {
+        out.clear();
+        out.reserve(compatTargets_[qi].size());
+        for (int tj : compatTargets_[qi]) {
+            if (consistent(qi, tj)) out.push_back(tj);
+        }
+    }
+
+    int selectNextAtom(std::vector<int>& candidates) const {
+        int bestQi = -1;
+        int bestMappedNbrs = -1;
+        int bestDegree = -1;
+        int bestCandCount = INT_MAX;
+        std::vector<int> scratch;
+        for (int qi = 0; qi < g1_.n; ++qi) {
+            if (state_[qi] != 0) continue;
+            int mappedNbrs = mappedNeighborCount(qi);
+            collectCandidates(qi, scratch);
+            int candCount = static_cast<int>(scratch.size());
+            int degree = g1_.degree[qi];
+            bool better = false;
+            if (mappedNbrs != bestMappedNbrs) better = mappedNbrs > bestMappedNbrs;
+            else if (g1_.ring[qi] != (bestQi >= 0 ? g1_.ring[bestQi] : 0)) {
+                better = g1_.ring[qi] > (bestQi >= 0 ? g1_.ring[bestQi] : 0);
+            } else if (degree != bestDegree) better = degree > bestDegree;
+            else if (candCount != bestCandCount) better = candCount < bestCandCount;
+            else if (bestQi < 0 || qi < bestQi) better = true;
+            if (better) {
+                bestQi = qi;
+                bestMappedNbrs = mappedNbrs;
+                bestDegree = degree;
+                bestCandCount = candCount;
+                candidates = scratch;
+            }
+        }
+        return bestQi;
+    }
+
+    void search(int mappedCount, int pendingCount, int mappedBondCount) {
+        if (tb_.expiredNow()) return;
+        int remainingTarget = g2_.n - mappedCount;
+        if (mappedCount + std::min(pendingCount, remainingTarget) < requiredSize_) return;
+        if (mappedCount == requiredSize_) {
+            if (mappedBondCount > bestBondCount_) {
+                bestBondCount_ = mappedBondCount;
+                bestQ2T_ = q2t_;
+            }
+            return;
+        }
+        if (pendingCount <= 0 || remainingTarget <= 0) return;
+
+        std::vector<int> candidates;
+        int qi = selectNextAtom(candidates);
+        if (qi < 0) return;
+
+        std::vector<std::pair<int,int>> scored;
+        scored.reserve(candidates.size());
+        int mappedNbrs = mappedNeighborCount(qi);
+        for (int tj : candidates) {
+            int score = mappedNbrs * 1000;
+            score += bondGain(qi, tj) * 200;
+            score += (g1_.ring[qi] && g2_.ring[tj]) ? 100 : 0;
+            score += 10 - std::min(9, std::abs(g1_.degree[qi] - g2_.degree[tj]));
+            scored.push_back({-score, tj});
+        }
+        std::sort(scored.begin(), scored.end());
+
+        state_[qi] = 1;
+        for (const auto& candidate : scored) {
+            int tj = candidate.second;
+            q2t_[qi] = tj;
+            t2q_[tj] = qi;
+            search(mappedCount + 1, pendingCount - 1, mappedBondCount + bondGain(qi, tj));
+            q2t_[qi] = -1;
+            t2q_[tj] = -1;
+            if (tb_.expiredNow()) {
+                state_[qi] = 0;
+                return;
+            }
+        }
+
+        state_[qi] = 2;
+        search(mappedCount, pendingCount - 1, mappedBondCount);
+        state_[qi] = 0;
+    }
+
+public:
+    FixedSizeBondMaximizer(const MolGraph& g1, const MolGraph& g2,
+                           const ChemOptions& C, bool induced,
+                           TimeBudget& tb, int requiredSize,
+                           const std::map<int,int>& incumbent)
+        : g1_(g1),
+          g2_(g2),
+          C_(C),
+          induced_(induced),
+          tb_(tb),
+          requiredSize_(requiredSize),
+          q2t_(g1.n, -1),
+          t2q_(g2.n, -1),
+          bestQ2T_(g1.n, -1),
+          state_(g1.n, 0),
+          compatTargets_(g1.n) {
+        for (const auto& entry : incumbent) {
+            if (entry.first < 0 || entry.first >= g1.n) continue;
+            if (entry.second < 0 || entry.second >= g2.n) continue;
+            bestQ2T_[entry.first] = entry.second;
+        }
+        bestBondCount_ = countMappedBonds(g1_, incumbent);
+        for (int qi = 0; qi < g1.n; ++qi) {
+            for (int tj = 0; tj < g2.n; ++tj) {
+                if (atomsCompatFast(g1_, qi, g2_, tj, C_)) {
+                    compatTargets_[qi].push_back(tj);
+                }
+            }
+        }
+    }
+
+    std::map<int,int> run() {
+        search(0, g1_.n, 0);
+        return materialize(bestQ2T_);
+    }
+};
+
+// ---------------------------------------------------------------------------
+// ComponentSlice + helpers for disconnected MCS support
+// ---------------------------------------------------------------------------
+struct ComponentSlice {
+    MolGraph graph;
+    std::vector<int> atomIndices;
+};
+
+inline std::vector<ComponentSlice> splitGraphComponents(const MolGraph& g) {
+    if (g.n == 0) return {};
+    if (countComponents(g) <= 1) {
+        std::vector<int> atoms(g.n);
+        std::iota(atoms.begin(), atoms.end(), 0);
+        return {{g, std::move(atoms)}};
+    }
+
+    std::vector<int> compId(g.n, -1);
+    int componentCount = 0;
+    for (int start = 0; start < g.n; ++start) {
+        if (compId[start] >= 0) continue;
+        std::deque<int> bfs;
+        bfs.push_back(start);
+        compId[start] = componentCount;
+        while (!bfs.empty()) {
+            int atom = bfs.front();
+            bfs.pop_front();
+            for (int neighbor : g.neighbors[atom]) {
+                if (compId[neighbor] >= 0) continue;
+                compId[neighbor] = componentCount;
+                bfs.push_back(neighbor);
+            }
+        }
+        ++componentCount;
+    }
+
+    std::vector<ComponentSlice> components;
+    components.reserve(componentCount);
+    for (int component = 0; component < componentCount; ++component) {
+        std::vector<int> atoms;
+        for (int atom = 0; atom < g.n; ++atom) {
+            if (compId[atom] == component) atoms.push_back(atom);
+        }
+        std::sort(atoms.begin(), atoms.end());
+        components.push_back({extractSubgraph(g, atoms), std::move(atoms)});
+    }
+    return components;
+}
+
+inline std::map<int,int> liftLocalMapping(const std::map<int,int>& localMapping,
+                                          const std::vector<int>& sourceAtoms,
+                                          const std::vector<int>& targetAtoms) {
+    std::map<int,int> lifted;
+    for (const auto& [localSource, localTarget] : localMapping) {
+        if (localSource < 0 || localSource >= static_cast<int>(sourceAtoms.size())) continue;
+        if (localTarget < 0 || localTarget >= static_cast<int>(targetAtoms.size())) continue;
+        lifted[sourceAtoms[localSource]] = targetAtoms[localTarget];
+    }
+    return lifted;
+}
+
+inline std::vector<int> removeMappedTargetAtoms(const std::vector<int>& availableAtoms,
+                                                const std::map<int,int>& liftedMapping,
+                                                int targetAtomCount) {
+    if (liftedMapping.empty()) return availableAtoms;
+    std::vector<uint8_t> removed(targetAtomCount, 0);
+    for (const auto& entry : liftedMapping) {
+        if (entry.second >= 0 && entry.second < targetAtomCount) {
+            removed[entry.second] = 1;
+        }
+    }
+    std::vector<int> residual;
+    residual.reserve(availableAtoms.size());
+    for (int atom : availableAtoms) {
+        if (!removed[atom]) residual.push_back(atom);
+    }
+    return residual;
 }
 
 // ---------------------------------------------------------------------------
@@ -3032,6 +3588,8 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
             }
         }
     }
+    // maxStage gate: stop after greedy probe if caller requested stage 0
+    if (opts.maxStage <= 0 && bestSize > 0) return ppx(g1, g2, best, chem, opts);
 
     // --- Level 1.25: Augmenting path refinement ---
     // Grow the greedy probe mapping by forced single-candidate extensions.
@@ -3101,6 +3659,24 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
         }
     }
 
+    // Exact branch-and-bound for small disconnected pairs where heuristics
+    // may miss the optimum. Deterministic on golden cases (<=20 x <=40 atoms).
+    if (!weightMode && opts.disconnectedMCS && !tb.expiredNow()
+        && std::min(g1.n, g2.n) <= 20
+        && std::max(g1.n, g2.n) <= 40) {
+        detail::SmallExactMCSExplorer exactSmall(g1, g2, chem, opts.induced, tb, upperBound, best);
+        auto exactMapping = exactSmall.run();
+        int exactScore = mcsScore(g1, exactMapping, opts);
+        if (isBetterMCS(g1, exactMapping, static_cast<int>(exactMapping.size()),
+                        best, bestSize, bestHetero)) {
+            best = std::move(exactMapping);
+            bestSize = static_cast<int>(best.size());
+            bestScore = exactScore;
+            bestHetero = heteroatomScore(g1, best);
+        }
+        if (!weightMode && bestSize >= upperBound) return ppx(g1, g2, best, chem, opts);
+    }
+
     // --- Level 1.5: Seed-and-extend ---
     // Phase 2.4: Use flat-array pipeline to avoid intermediate map construction.
     GraphBuilder GB(g1, g2, chem, opts.induced);
@@ -3113,6 +3689,8 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
         }
         if (!weightMode && bestSize >= upperBound) return ppx(g1, g2, best, chem, opts);
     }
+    // maxStage gate: stop after seed-extend if caller requested stage <= 1
+    if (opts.maxStage <= 1) return ppx(g1, g2, best, chem, opts);
 
     // Phase 2.2: route to McGregor early when seed quality is low.
     // Poor seeds on medium-to-large molecules indicate high symmetry where
@@ -3138,6 +3716,8 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
     }
 
     // --- Level 2: McSplit ---
+    // maxStage gate: skip McSplit and all later stages if caller requested stage < 2
+    if (opts.maxStage < 2) return ppx(g1, g2, best, chem, opts);
     // k-core pre-pruning only pays for smaller product graphs.
     // On medium-sized pairs the setup cost can dominate the whole search,
     // and the derived bound is advisory only.
@@ -3219,6 +3799,8 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
     }
 
     // --- Level 3: Bron-Kerbosch ---
+    // maxStage gate: skip BK and all later stages if caller requested stage < 3
+    if (opts.maxStage < 3) return ppx(g1, g2, best, chem, opts);
     int bkSize = 0;
     if (!skipBKDueToLFUB && bestSize < static_cast<int>(upperBound * BK_SKIP_RATIO) && !tb.expired()) {
         auto cliqueSeed = GB.maximumCliqueSeed(tb);
@@ -3231,13 +3813,15 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
     if (!weightMode && bestSize >= upperBound) return ppx(g1, g2, best, chem, opts);
 
     // --- Level 4: McGregor extension with seeds ---
+    // maxStage gate: skip McGregor and extra seeds if caller requested stage < 4
+    if (opts.maxStage < 4) return ppx(g1, g2, best, chem, opts);
     std::vector<std::map<int,int>> seeds;
     if (bestSize > 0) seeds.push_back(best);
 
     // --- Level 5: Extra seeds (only when McSplit and BK disagree) ---
     bool skipExtraSeeds = mcSplitSize > 0 && bkSize > 0 && mcSplitSize == bkSize
         && mcSplitSize >= upperBound - 1;
-    if (opts.extraSeeds && !skipExtraSeeds && bestSize < upperBound && !tb.expired()) {
+    if (opts.extraSeeds && opts.maxStage >= 5 && !skipExtraSeeds && bestSize < upperBound && !tb.expired()) {
         auto s = GB.ringAnchorSeed(tb);
         if (!s.empty()) seeds.push_back(s);
         if (!tb.expired()) {
@@ -3390,6 +3974,25 @@ inline std::map<int,int> runValidatedMcsDirection(const MolGraph& query, const M
     auto valid = validateMapping(query, target, raw, chem).empty()
         ? raw
         : recoverValidMcsMapping(query, target, raw, chem, opts);
+    bool weightMode = opts.maximizeBonds || !opts.atomWeights.empty();
+    int minN = std::min(query.n, target.n);
+    int maxN = std::max(query.n, target.n);
+    if (!weightMode
+        && !valid.empty()
+        && static_cast<int>(valid.size()) == minN
+        && minN <= 20
+        && maxN <= 40) {
+        int64_t refineMs = std::max<int64_t>(
+            1, std::min<int64_t>(2000, resolveMcsTimeoutMs(query, target, opts)));
+        detail::TimeBudget refineBudget(refineMs);
+        detail::FixedSizeBondMaximizer bondRefiner(
+            query, target, chem, opts.induced, refineBudget, minN, valid);
+        auto refined = bondRefiner.run();
+        if (validateMapping(query, target, refined, chem).empty()
+            && detail::preferFinalMapping(query, refined, valid, opts)) {
+            valid = std::move(refined);
+        }
+    }
     return orientMcsResult(valid, swappedBack);
 }
 
@@ -3856,6 +4459,14 @@ inline std::vector<std::map<int,int>> findAllMCS(const MolGraph& g1, const MolGr
     return result;
 }
 
+/// Test whether two MCS mappings are equivalent under automorphism.
+/// Two mappings are equivalent if their canonicalized forms are identical.
+inline bool areMappingsEquivalent(
+        const MolGraph& g1, const MolGraph& g2,
+        const std::map<int,int>& m1, const std::map<int,int>& m2) {
+    return canonicalizeMapping(g1, g2, m1) == canonicalizeMapping(g1, g2, m2);
+}
+
 /// Compute RASCAL-style similarity upper bound (Tanimoto-like, 0.0--1.0).
 inline double similarityUpperBound(const MolGraph& g1, const MolGraph& g2) {
     if (g1.n == 0 || g2.n == 0) return 0.0;
@@ -4232,20 +4843,7 @@ inline bool validateTautomerConsistency(
     return true;
 }
 
-// ===========================================================================
-// mapReaction -- atom-atom mapping between reactants and products via dMCS.
-// Port of Java SearchEngine.mapReaction()
-// Computes disconnected MCS between reactant and product atoms.
-// ===========================================================================
-
-inline std::map<int,int> mapReaction(const MolGraph& reactants, const MolGraph& products,
-                                      const ChemOptions& opts, int64_t timeoutMs) {
-    MCSOptions mcsOpts;
-    mcsOpts.disconnectedMCS = true;
-    mcsOpts.connectedOnly = false;
-    mcsOpts.timeoutMs = timeoutMs;
-    return findMCS(reactants, products, opts, mcsOpts);
-}
+// Reaction mapping algorithms available in BioInception commercial license.
 
 // ===========================================================================
 // mcsToSmiles -- extract the MCS induced subgraph as a canonical SMILES.
@@ -4403,542 +5001,7 @@ inline MCSResult findMCSFromSmiles(const std::string& smi1, const std::string& s
     return result;
 }
 
-// ===========================================================================
-// Reaction-Aware MCS Post-Filter (v6.4.0)
-// ===========================================================================
-
-namespace detail {
-
-/// Rarity tier weight for an atomic number. Tier 3 (S,P,Se,B,Si,I)=3.0,
-/// Tier 2 (N,O,F,Cl,Br)=1.5, Tier 1 (all other non-C)=1.0.
-inline double rarityWeight(int atomicNum) {
-    switch (atomicNum) {
-        case 16: case 15: case 34: case 5: case 14: case 53: return 3.0;
-        case 7: case 8: case 9: case 17: case 35:   return 1.5;
-        default: return 1.0;
-    }
-}
-
-/// Collect heteroatom types (non-C, non-H) from a molecule graph.
-inline std::unordered_set<int> heteroAtomTypes(const MolGraph& g) {
-    std::unordered_set<int> types;
-    for (int i = 0; i < g.n; ++i) {
-        int z = g.atomicNum[i];
-        if (z != 6 && z != 1) types.insert(z);
-    }
-    return types;
-}
-
-/// Count connected components among mapped atoms in g1 (BFS).
-inline int countComponents(const std::map<int,int>& m, const MolGraph& g1) {
-    if (m.size() <= 1) return 1;
-    std::unordered_set<int> mapped;
-    for (const auto& p : m) mapped.insert(p.first);
-    std::unordered_set<int> visited;
-    int components = 0;
-    for (int start : mapped) {
-        if (visited.count(start)) continue;
-        components++;
-        std::deque<int> q;
-        q.push_back(start);
-        visited.insert(start);
-        while (!q.empty()) {
-            int u = q.front(); q.pop_front();
-            for (int v : g1.neighbors[u]) {
-                if (mapped.count(v) && !visited.count(v)) {
-                    visited.insert(v);
-                    q.push_back(v);
-                }
-            }
-        }
-    }
-    return components;
-}
-
-/// Count bonds among mapped atoms in g1 (for reaction-aware scoring).
-inline int countMappedBondsRA(const std::map<int,int>& m, const MolGraph& g1) {
-    std::unordered_set<int> mapped;
-    for (const auto& p : m) mapped.insert(p.first);
-    int bonds = 0;
-    for (int u : mapped) {
-        for (int v : g1.neighbors[u]) {
-            if (v > u && mapped.count(v)) bonds++;
-        }
-    }
-    return bonds;
-}
-
-struct ScoredCandidate {
-    std::map<int,int> mapping;
-    double score;
-    int bondCount;
-    int insertionOrder;
-};
-
-} // namespace detail
-
-/**
- * Score and rank MCS candidates by reaction relevance.
- *
- * Composite score = 0.40*S_size + 0.35*S_hetero + 0.15*S_rare + 0.10*S_conn
- *
- * @param candidates  list of MCS candidates (size K down to K-delta)
- * @param g1          first molecule graph
- * @param g2          second molecule graph
- * @return candidates sorted best-first
- * @since 6.4.0
- */
-inline std::vector<std::map<int,int>> rankReactionAware(
-    const std::vector<std::map<int,int>>& candidates,
-    const MolGraph& g1, const MolGraph& g2) {
-
-    if (candidates.empty()) return candidates;
-
-    // Weights tuned for reaction mapping: heteroatom coverage is critical.
-    // A 6-atom mapping with S should beat a 7-atom mapping without S.
-    // PhD chemist recommendation: size weight reduced, hetero/rare increased.
-    constexpr double W_SIZE   = 0.25;
-    constexpr double W_HETERO = 0.40;
-    constexpr double W_RARE   = 0.25;
-    constexpr double W_CONN   = 0.10;
-    constexpr double EPS      = 1e-9;
-
-    // Determine K
-    int K = 0;
-    for (const auto& m : candidates)
-        if (static_cast<int>(m.size()) > K) K = static_cast<int>(m.size());
-    if (K == 0) return candidates;
-
-    // H_universe
-    auto hG1 = detail::heteroAtomTypes(g1);
-    auto hG2 = detail::heteroAtomTypes(g2);
-    std::unordered_set<int> hUniverse;
-    for (int z : hG1) { if (hG2.count(z)) hUniverse.insert(z); }
-
-    double rUniverse = 0.0;
-    for (int z : hUniverse) rUniverse += detail::rarityWeight(z);
-
-    // Score each
-    std::vector<detail::ScoredCandidate> scored;
-    scored.reserve(candidates.size());
-    for (int idx = 0; idx < static_cast<int>(candidates.size()); ++idx) {
-        const auto& m = candidates[idx];
-        double sSize = static_cast<double>(m.size()) / K;
-
-        // S_hetero and S_rare
-        std::unordered_set<int> hMapped;
-        for (const auto& p : m) {
-            int z = g1.atomicNum[p.first];
-            if (z != 6 && z != 1 && hUniverse.count(z)) hMapped.insert(z);
-        }
-        double sHetero = hUniverse.empty() ? 1.0
-            : static_cast<double>(hMapped.size()) / hUniverse.size();
-
-        double rMapped = 0.0;
-        for (int z : hMapped) rMapped += detail::rarityWeight(z);
-        double sRare = rUniverse <= 0.0 ? 1.0 : rMapped / rUniverse;
-
-        double sConn = 1.0 / detail::countComponents(m, g1);
-
-        double total = W_SIZE * sSize + W_HETERO * sHetero + W_RARE * sRare + W_CONN * sConn;
-        int bondCount = detail::countMappedBondsRA(m, g1);
-        scored.push_back({m, total, bondCount, idx});
-    }
-
-    std::sort(scored.begin(), scored.end(),
-        [EPS](const detail::ScoredCandidate& a, const detail::ScoredCandidate& b) {
-            double diff = b.score - a.score;
-            if (std::abs(diff) > EPS) return diff < 0; // higher score first
-            if (a.bondCount != b.bondCount) return a.bondCount > b.bondCount;
-            return a.insertionOrder < b.insertionOrder;
-        });
-
-    std::vector<std::map<int,int>> result;
-    result.reserve(scored.size());
-    for (auto& sc : scored) result.push_back(std::move(sc.mapping));
-    return result;
-}
-
-/**
- * Generate near-MCS candidates by systematic deletion from K-sized mappings
- * and greedy re-extension.
- *
- * @param g1            first molecule graph
- * @param g2            second molecule graph
- * @param chem          chemical matching options
- * @param exactMCS      the size-K MCS candidates from findAllMCS
- * @param delta         max size deficit (typically 2)
- * @param maxCandidates max candidates to generate
- * @return combined list of K, K-1, and K-2 sized candidates (deduplicated)
- * @since 6.4.0
- */
-inline std::vector<std::map<int,int>> findNearMCS(
-    const MolGraph& g1, const MolGraph& g2, const ChemOptions& chem,
-    const std::vector<std::map<int,int>>& exactMCS,
-    int delta, int maxCandidates) {
-
-    if (exactMCS.empty()) return {};
-
-    int K = static_cast<int>(exactMCS[0].size());
-    int effectiveDelta = std::min(delta, K - 1);
-
-    // Canonical SMILES dedup
-    auto canonSmi = [&](const std::map<int,int>& m) -> std::string {
-        std::vector<int> keys;
-        keys.reserve(m.size());
-        for (const auto& p : m) keys.push_back(p.first);
-        return extractSubgraph(g1, keys).toCanonicalSmiles();
-    };
-
-    std::map<std::string, std::map<int,int>> seenBySmi;
-    for (const auto& m : exactMCS) {
-        if (static_cast<int>(seenBySmi.size()) >= maxCandidates) break;
-        auto smi = canonSmi(m);
-        if (seenBySmi.find(smi) == seenBySmi.end())
-            seenBySmi.emplace(std::move(smi), m);
-    }
-
-    // Deletion variants: remove one atom pair from each K-sized mapping
-    std::vector<std::map<int,int>> deletionVariants;
-    for (const auto& exact : exactMCS) {
-        if (static_cast<int>(seenBySmi.size()) >= maxCandidates) break;
-        for (const auto& rem : exact) {
-            if (static_cast<int>(seenBySmi.size()) >= maxCandidates) break;
-            std::map<int,int> variant;
-            for (const auto& p : exact) {
-                if (p.first != rem.first) variant[p.first] = p.second;
-            }
-            auto smi = canonSmi(variant);
-            if (seenBySmi.find(smi) == seenBySmi.end()) {
-                seenBySmi.emplace(std::move(smi), variant);
-                deletionVariants.push_back(variant);
-            }
-        }
-    }
-
-    // Greedy re-extension: for each deletion variant, try adding a heteroatom
-    // of a new type that is a neighbor of the mapped subgraph
-    for (const auto& variant : deletionVariants) {
-        if (static_cast<int>(seenBySmi.size()) >= maxCandidates) break;
-
-        std::unordered_set<int> usedQ, usedT;
-        std::unordered_set<int> mappedHetero;
-        for (const auto& p : variant) {
-            usedQ.insert(p.first);
-            usedT.insert(p.second);
-            int z = g1.atomicNum[p.first];
-            if (z != 6 && z != 1) mappedHetero.insert(z);
-        }
-
-        bool found = false;
-        for (const auto& p : variant) {
-            if (found) break;
-            for (int nbQ : g1.neighbors[p.first]) {
-                if (found || static_cast<int>(seenBySmi.size()) >= maxCandidates) break;
-                if (usedQ.count(nbQ)) continue;
-                int zQ = g1.atomicNum[nbQ];
-                if (zQ == 6 || zQ == 1) continue;
-                if (mappedHetero.count(zQ)) continue;
-
-                for (const auto& tp : variant) {
-                    if (found) break;
-                    for (int nbT : g2.neighbors[tp.second]) {
-                        if (usedT.count(nbT)) continue;
-                        int zT = g2.atomicNum[nbT];
-                        if (zT != zQ) continue;
-                        if (chem.matchAtomType && g1.label[nbQ] != g2.label[nbT]) continue;
-                        if (chem.matchFormalCharge && g1.formalCharge[nbQ] != g2.formalCharge[nbT]) continue;
-
-                        std::map<int,int> extended = variant;
-                        extended[nbQ] = nbT;
-                        auto smi = canonSmi(extended);
-                        if (seenBySmi.find(smi) == seenBySmi.end())
-                            seenBySmi.emplace(std::move(smi), extended);
-                        found = true;
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    // Level 2 deletions (K-2) if delta >= 2
-    if (effectiveDelta >= 2) {
-        std::vector<std::map<int,int>> kMinus1;
-        for (const auto& kv : seenBySmi) {
-            if (static_cast<int>(kv.second.size()) == K - 1)
-                kMinus1.push_back(kv.second);
-        }
-        for (const auto& km1 : kMinus1) {
-            if (static_cast<int>(seenBySmi.size()) >= maxCandidates) break;
-            for (const auto& rem : km1) {
-                if (static_cast<int>(seenBySmi.size()) >= maxCandidates) break;
-                std::map<int,int> variant;
-                for (const auto& p : km1) {
-                    if (p.first != rem.first) variant[p.first] = p.second;
-                }
-                auto smi = canonSmi(variant);
-                if (seenBySmi.find(smi) == seenBySmi.end())
-                    seenBySmi.emplace(std::move(smi), variant);
-            }
-        }
-    }
-
-    std::vector<std::map<int,int>> result;
-    result.reserve(seenBySmi.size());
-    for (auto& kv : seenBySmi) result.push_back(std::move(kv.second));
-    return result;
-}
-
-/**
- * Heteroatom-seeded MCS: for a given element type, seed from every compatible
- * (query, target) heteroatom pair and greedily extend. Returns the best mapping
- * that includes at least one atom of the required element.
- *
- * This addresses the blind spot where findNearMCS (deletion + re-extension from
- * the size-K MCS) cannot reach subgraph selections that require a fundamentally
- * different seed -- e.g. the amino-acid+S chain in SAM vs. the amino-acid+ribose
- * chain that the standard MCS prefers.
- *
- * @param g1              first molecule graph
- * @param g2              second molecule graph
- * @param chem            chemical matching options
- * @param requiredElement atomic number that must appear in the mapping (e.g. 16 for S)
- * @return the best mapping seeded from that element, or empty if none found
- * @since 6.5.0
- */
-inline std::map<int,int> heteroatomSeededMCS(
-    const MolGraph& g1, const MolGraph& g2,
-    const ChemOptions& chem, int requiredElement) {
-
-    // Ensure lazy fields are initialised before accessing atomicNum/ring/degree
-    g1.ensureCanonical(); g2.ensureCanonical();
-    g1.ensureRingCounts(); g2.ensureRingCounts();
-
-    // Collect all atom indices in g1 and g2 with the required element
-    std::vector<int> qAtoms, tAtoms;
-    for (int i = 0; i < g1.n; ++i)
-        if (g1.atomicNum[i] == requiredElement) qAtoms.push_back(i);
-    for (int j = 0; j < g2.n; ++j)
-        if (g2.atomicNum[j] == requiredElement) tAtoms.push_back(j);
-    if (qAtoms.empty() || tAtoms.empty()) return {};
-
-    int n1 = g1.n, n2 = g2.n;
-    std::map<int,int> bestMapping;
-    int bestSize = 0;
-
-    // For each compatible (qi, tj) seed pair, greedily extend
-    for (int qi : qAtoms) {
-        for (int tj : tAtoms) {
-            if (!detail::atomsCompatFast(g1, qi, g2, tj, chem)) continue;
-
-            // Initialize mapping arrays
-            std::vector<int> q2t(n1, -1), t2q(n2, -1);
-            q2t[qi] = tj;
-            t2q[tj] = qi;
-            int mapSize = 1;
-
-            // Greedy bond-based extension: repeatedly find unmapped query atoms
-            // adjacent to mapped atoms, and pair them with compatible unmapped
-            // target atoms adjacent to the corresponding mapped target atom.
-            bool progress = true;
-            while (progress) {
-                progress = false;
-                for (int qk = 0; qk < n1; ++qk) {
-                    if (q2t[qk] >= 0) continue;
-                    int bestTk = -1, bestScore = -1;
-                    for (int nb : g1.neighbors[qk]) {
-                        if (q2t[nb] < 0) continue; // neighbor must be mapped
-                        int tNb = q2t[nb];
-                        for (int tk : g2.neighbors[tNb]) {
-                            if (t2q[tk] >= 0) continue;
-                            if (!detail::atomsCompatFast(g1, qk, g2, tk, chem)) continue;
-                            if (!detail::bondsCompatible(g1, qk, nb, g2, tk, tNb, chem)) continue;
-                            // Check consistency with all other mapped neighbors
-                            bool consistent = true;
-                            for (int qm : g1.neighbors[qk]) {
-                                if (qm == nb || q2t[qm] < 0) continue;
-                                int tm = q2t[qm];
-                                int qOrd = g1.bondOrder(qk, qm);
-                                int tOrd = g2.bondOrder(tk, tm);
-                                if (qOrd != 0 && tOrd != 0) {
-                                    if (!detail::bondsCompatible(g1, qk, qm, g2, tk, tm, chem))
-                                    { consistent = false; break; }
-                                }
-                            }
-                            if (!consistent) continue;
-                            int score = (g2.ring[tk] && g1.ring[qk] ? 50 : 0)
-                                      + std::min(g1.degree[qk], g2.degree[tk]);
-                            if (score > bestScore) { bestScore = score; bestTk = tk; }
-                        }
-                    }
-                    if (bestTk >= 0) {
-                        q2t[qk] = bestTk;
-                        t2q[bestTk] = qk;
-                        mapSize++;
-                        progress = true;
-                    }
-                }
-            }
-
-            if (mapSize > bestSize) {
-                bestSize = mapSize;
-                bestMapping.clear();
-                for (int i = 0; i < n1; ++i)
-                    if (q2t[i] >= 0) bestMapping[i] = q2t[i];
-            }
-        }
-    }
-    return bestMapping;
-}
-
-/**
- * Reaction-aware MCS: find MCS candidates, generate near-MCS variants,
- * add heteroatom-seeded candidates for shared rare elements, and re-rank
- * by composite scoring.
- *
- * @param g1   first molecule graph
- * @param g2   second molecule graph
- * @param chem chemical matching options
- * @param opts MCS options (reactionAware should be true)
- * @return the best-scoring candidate mapping
- * @since 6.4.0
- */
-inline std::map<int,int> reactionAwareMCS(const MolGraph& g1, const MolGraph& g2,
-                                           const ChemOptions& chem,
-                                           const MCSOptions& opts) {
-    if (g1.n == 0 || g2.n == 0) return {};
-
-    // Ensure all lazy fields are initialised
-    g1.ensureCanonical(); g2.ensureCanonical();
-    g1.ensureRingCounts(); g2.ensureRingCounts();
-    g1.getNLF1(); g2.getNLF1();
-
-    // For reaction mapping, relax charge matching: reaction centers change
-    // charge (e.g., S+ in SAM → S in homocysteine). Standard MCS with charge
-    // matching off naturally includes the reaction-center heteroatom.
-    ChemOptions reactionChem = chem;
-    reactionChem.matchFormalCharge = false;
-
-    int maxResults = std::max(5, opts.nearMcsCandidates / 4);
-    MCSOptions safeOpts = opts;
-    safeOpts.reactionAware = false; // prevent recursion
-    auto exactCandidates = findAllMCS(g1, g2, reactionChem, safeOpts, maxResults);
-    if (exactCandidates.empty()) return {};
-
-    auto allCandidates = findNearMCS(g1, g2, reactionChem, exactCandidates,
-                                     opts.nearMcsDelta, opts.nearMcsCandidates);
-    if (allCandidates.empty()) allCandidates = exactCandidates;
-
-    // Heteroatom-seeded candidates: for each heteroatom type shared between
-    // both molecules, generate a candidate seeded from that element type.
-    // This covers subgraph selections unreachable by deletion from the K-MCS.
-    // Use relaxed ChemOptions for seeding: charge matching is off because
-    // reaction centers often change charge (e.g., S+ in SAM → S in homocysteine).
-    ChemOptions relaxedChem = chem;
-    relaxedChem.matchFormalCharge = false;
-
-    auto hG1 = detail::heteroAtomTypes(g1);
-    auto hG2 = detail::heteroAtomTypes(g2);
-    for (int z : hG1) {
-        if (!hG2.count(z)) continue;
-        auto seeded = heteroatomSeededMCS(g1, g2, relaxedChem, z);
-        if (!seeded.empty()) {
-            allCandidates.push_back(std::move(seeded));
-        }
-    }
-
-    auto ranked = rankReactionAware(allCandidates, g1, g2);
-    return ranked.empty() ? exactCandidates[0] : ranked[0];
-}
-
-/**
- * Convenience: parse two SMILES, run reaction-aware MCS, return mapping.
- *
- * @param smi1  SMILES for molecule 1
- * @param smi2  SMILES for molecule 2
- * @param chem  chemical matching options
- * @param opts  MCS options
- * @return best reaction-aware mapping
- * @since 6.4.0
- */
-inline std::map<int,int> mapReactionAware(const std::string& smi1, const std::string& smi2,
-                                           const ChemOptions& chem = ChemOptions(),
-                                           MCSOptions opts = MCSOptions()) {
-    if (smi1.empty() || smi2.empty()) return {};
-    MolGraph g1 = parseSMILES(smi1);
-    MolGraph g2 = parseSMILES(smi2);
-
-    opts.disconnectedMCS = true;
-    opts.connectedOnly = false;
-    opts.reactionAware = true;
-
-    return reactionAwareMCS(g1, g2, chem, opts);
-}
-
-// ===========================================================================
-// Bond-change-aware MCS scoring (v6.5.3 — parity with Java BondChangeScorer)
-// ===========================================================================
-
-namespace detail {
-
-/** Cost of breaking/forming a bond between atoms of given elements. */
-inline double bondBreakCost(int z1, int z2) {
-    if (z1 == 6 && z2 == 6) return 3.0;   // C-C: rare in biochemistry
-    if ((z1 == 6 && (z2 == 7 || z2 == 8)) ||
-        (z2 == 6 && (z1 == 7 || z1 == 8)))
-        return 1.5;                          // C-N, C-O: amide/ester
-    return 0.5;                              // heteroatom bonds
-}
-
-/** Compute bond-change penalty for a mapping. */
-inline double bondChangePenalty(
-    const std::map<int,int>& mapping,
-    const MolGraph& g1, const MolGraph& g2)
-{
-    double penalty = 0.0;
-    for (auto& [qi, ti] : mapping) {
-        for (int qj : g1.neighbors[qi]) {
-            if (qj <= qi) continue;
-            auto it = mapping.find(qj);
-            if (it == mapping.end()) continue;
-            int tj = it->second;
-            int boQ = g1.bondOrder(qi, qj);
-            int boT = g2.bondOrder(ti, tj);
-            if (boQ == boT && boT > 0) continue;
-            if (boT == 0) penalty += bondBreakCost(g1.atomicNum[qi], g1.atomicNum[qj]);
-            else penalty += 1.0; // bond order change
-        }
-    }
-    // Check bonds in target not in query (bond formation)
-    for (auto& [qi, ti] : mapping) {
-        for (int tj : g2.neighbors[ti]) {
-            // Find qj mapped to tj
-            for (auto& [qj, mapped_tj] : mapping) {
-                if (mapped_tj == tj && qj > qi) {
-                    int boQ = g1.bondOrder(qi, qj);
-                    if (boQ == 0) penalty += bondBreakCost(g1.atomicNum[qi], g1.atomicNum[qj]);
-                    break;
-                }
-            }
-        }
-    }
-    return penalty;
-}
-
-} // namespace detail
-
-/**
- * Score an MCS mapping by bond-change plausibility.
- * Lower score = more chemically plausible mapping.
- * @since 6.5.3
- */
-inline double bondChangeScore(
-    const std::map<int,int>& mapping,
-    const MolGraph& g1, const MolGraph& g2)
-{
-    return detail::bondChangePenalty(mapping, g1, g2);
-}
+// Reaction-aware MCS post-filter algorithms available in BioInception commercial license.
 
 // ===========================================================================
 // Batch MCS with non-overlap constraints (v6.5.3 — parity with Java)
@@ -5026,6 +5089,353 @@ inline std::vector<std::map<int,int>> batchMcsConstrained(
         results[qi] = std::move(bestMapping);
     }
     return results;
+}
+
+// ---------------------------------------------------------------------------
+// MCS-cased aliases for bioinception API compatibility
+// ---------------------------------------------------------------------------
+inline int64_t resolveMCSTimeoutMs(const MolGraph& g1, const MolGraph& g2,
+                                   const MCSOptions& opts) {
+    return resolveMcsTimeoutMs(g1, g2, opts);
+}
+
+inline bool isValidMCSMapping(const MolGraph& g1, const MolGraph& g2,
+                              const std::map<int,int>& mapping,
+                              const ChemOptions& opts) {
+    return isValidMcsMapping(g1, g2, mapping, opts);
+}
+
+inline std::map<int,int> recoverValidMCSMapping(const MolGraph& g1, const MolGraph& g2,
+                                                const std::map<int,int>& raw,
+                                                const ChemOptions& chem,
+                                                const MCSOptions& opts) {
+    return recoverValidMcsMapping(g1, g2, raw, chem, opts);
+}
+
+inline std::map<int,int> orientMCSResult(const std::map<int,int>& mapping, bool swapped) {
+    return orientMcsResult(mapping, swapped);
+}
+
+inline std::map<int,int> runValidatedMCSDirection(const MolGraph& query, const MolGraph& target,
+                                                  const ChemOptions& chem,
+                                                  const MCSOptions& opts,
+                                                  bool swappedBack) {
+    return runValidatedMcsDirection(query, target, chem, opts, swappedBack);
+}
+
+inline std::string findMCSSmiles(const MolGraph& g1, const MolGraph& g2,
+                                  const ChemOptions& chem, const MCSOptions& opts) {
+    return findMcsSmiles(g1, g2, chem, opts);
+}
+
+inline std::vector<std::map<int,int>> batchMCSConstrained(
+    const std::vector<MolGraph>& queries,
+    const std::vector<MolGraph>& targets,
+    const ChemOptions& chem,
+    const MCSOptions& opts = MCSOptions()) {
+    return batchMcsConstrained(queries, targets, chem, opts);
+}
+
+// ---------------------------------------------------------------------------
+// findMCSCoverage — lightweight coverage pipeline, fully in C++.
+//
+// Bridges MolGraph objects to the clique_solver pipeline (findMCSPipeline)
+// using element-based atom compatibility with optional ring matching.
+// Equivalent to Python mcs_engine.py find_mcs_lightweight() but with zero
+// Python overhead — compat table built in C++, all stages run in C++.
+//
+// The clique_solver pipeline (greedy + seed-extend + VF2 re-embed + McGregor)
+// produces excellent quality on Dalke NN pairs and avoids the heavy McSplit/BK
+// stages that can explode with loose compatibility settings.
+// ---------------------------------------------------------------------------
+
+/// LFUB: label-frequency upper bound using atomic number as label.
+/// When ringMatch is true, ring/non-ring atoms are treated as distinct labels.
+inline int coverageLFUB(const MolGraph& g1, const MolGraph& g2, bool ringMatch) {
+    // Count atoms per label in each molecule
+    std::map<int, int> freq1, freq2;
+    for (int i = 0; i < g1.n; ++i) {
+        int lbl = g1.atomicNum[i];
+        if (ringMatch) lbl = lbl * 2 + (g1.ring[i] ? 1 : 0);
+        freq1[lbl]++;
+    }
+    for (int i = 0; i < g2.n; ++i) {
+        int lbl = g2.atomicNum[i];
+        if (ringMatch) lbl = lbl * 2 + (g2.ring[i] ? 1 : 0);
+        freq2[lbl]++;
+    }
+    int ub = 0;
+    for (auto& [lbl, cnt1] : freq1) {
+        auto it = freq2.find(lbl);
+        if (it != freq2.end()) ub += std::min(cnt1, it->second);
+    }
+    return std::min(ub, std::min(g1.n, g2.n));
+}
+
+/// Find MCS using the lightweight coverage pipeline.
+/// Returns a mapping from g1 atom indices to g2 atom indices (0-based).
+///
+/// @param g1       First molecule.
+/// @param g2       Second molecule.
+/// @param ringMatch  When true, ring atoms only match ring atoms.
+/// @param bondAny    When true, any bond matches any bond.
+/// @param timeoutMs  Wall-clock timeout in milliseconds.
+/// @param maxResults Maximum number of candidate mappings to collect.
+inline std::map<int,int> findMCSCoverage(
+    const MolGraph& g1, const MolGraph& g2,
+    bool ringMatch = false, bool bondAny = false,
+    int64_t timeoutMs = 1000, int maxResults = 8)
+{
+    using Clock = std::chrono::steady_clock;
+    if (g1.n == 0 || g2.n == 0) return {};
+
+    // Shared deadline across ALL stages
+    auto deadline = Clock::now() + std::chrono::milliseconds(timeoutMs);
+    auto remainingMs = [&]() -> int64_t {
+        return std::max<int64_t>(0,
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                deadline - Clock::now()).count());
+    };
+
+    // --- Build atom compatibility table (element + optional ring flag) ---
+    std::vector<std::pair<int,int>> compat;
+    compat.reserve(static_cast<size_t>(g1.n) * 4);
+    for (int i = 0; i < g1.n; ++i) {
+        for (int j = 0; j < g2.n; ++j) {
+            if (g1.atomicNum[i] != g2.atomicNum[j]) continue;
+            if (ringMatch && (g1.ring[i] != g2.ring[j])) continue;
+            compat.emplace_back(i, j);
+        }
+    }
+    if (compat.empty()) return {};
+
+    // --- Build bond lookup tables {(min,max) -> order} ---
+    std::map<std::pair<int,int>, int> bonds_a, bonds_b;
+    for (int i = 0; i < g1.n; ++i)
+        for (int nb : g1.neighbors[i])
+            if (nb > i) bonds_a[{i, nb}] = g1.bondOrder(i, nb);
+    for (int i = 0; i < g2.n; ++i)
+        for (int nb : g2.neighbors[i])
+            if (nb > i) bonds_b[{i, nb}] = g2.bondOrder(i, nb);
+
+    // --- Ring and aromatic flags (uint8_t -> bool) ---
+    std::vector<bool> ring_a(g1.n), ring_b(g2.n), arom_a(g1.n), arom_b(g2.n);
+    for (int i = 0; i < g1.n; ++i) { ring_a[i] = g1.ring[i]; arom_a[i] = g1.aromatic[i]; }
+    for (int i = 0; i < g2.n; ++i) { ring_b[i] = g2.ring[i]; arom_b[i] = g2.aromatic[i]; }
+
+    // --- LFUB ---
+    int ub = coverageLFUB(g1, g2, ringMatch);
+
+    std::map<int,int> bestMapping;
+    int bestSize = 0;
+
+    // --- L1: Substructure containment check (budget: min(100ms, remaining)) ---
+    if (g1.n != g2.n) {
+        const MolGraph* query  = (g1.n < g2.n) ? &g1 : &g2;
+        const MolGraph* target = (g1.n < g2.n) ? &g2 : &g1;
+        bool swapped = (g1.n > g2.n);
+
+        // Reuse the main compat if direction matches, else build directed
+        std::vector<std::pair<int,int>>& subCompat = swapped
+            ? *(new std::vector<std::pair<int,int>>()) : compat;
+        bool ownSubCompat = swapped;
+        if (swapped) {
+            for (auto& [i, j] : compat) subCompat.emplace_back(j, i);
+        }
+
+        auto embeddings = clique::substructureMatch(
+            query->n, target->n, swapped ? subCompat : compat,
+            swapped ? bonds_b : bonds_a,
+            swapped ? bonds_a : bonds_b,
+            bondAny, std::min(int64_t(100), remainingMs()), 4);
+
+        if (ownSubCompat) delete &subCompat;
+
+        for (auto& emb : embeddings) {
+            if (static_cast<int>(emb.size()) == query->n) {
+                std::map<int,int> subMap;
+                for (auto& [q, t] : emb) {
+                    if (swapped) subMap[t] = q; else subMap[q] = t;
+                }
+                if (static_cast<int>(subMap.size()) > bestSize) {
+                    bestSize = static_cast<int>(subMap.size());
+                    bestMapping = std::move(subMap);
+                }
+            }
+        }
+        if (bestSize >= ub) return bestMapping;
+    }
+
+    // --- Run the clique_solver pipeline (main budget) ---
+    if (remainingMs() > 10) {
+        auto result = clique::findMCSPipeline(
+            compat, bonds_a, bonds_b,
+            g1.n, g2.n,
+            bondAny, remainingMs(), maxResults,
+            ring_a, ring_b, arom_a, arom_b, ub);
+
+        for (const auto& cand : result.candidates) {
+            if (static_cast<int>(cand.size()) > bestSize) {
+                bestSize = static_cast<int>(cand.size());
+                bestMapping.clear();
+                for (auto& [q, t] : cand) bestMapping[q] = t;
+            }
+        }
+        if (bestSize >= ub) return bestMapping;
+    }
+
+    // --- L1.5b: Heteroatom-seeded BFS extend (remaining time only) ---
+    if (remainingMs() > 5) {
+        auto isHetero = [](int z) { return z != 6 && z != 1; };
+        std::vector<int> hetero1, hetero2;
+        for (int i = 0; i < g1.n; ++i)
+            if (isHetero(g1.atomicNum[i])) hetero1.push_back(i);
+        for (int j = 0; j < g2.n; ++j)
+            if (isHetero(g2.atomicNum[j])) hetero2.push_back(j);
+
+        // Index: for each atom in g1, compatible atoms in g2
+        std::vector<std::vector<int>> compat1to2(g1.n);
+        for (auto& [i, j] : compat) compat1to2[i].push_back(j);
+
+        auto bfsExtend = [&](int seedA, int seedB) {
+            std::vector<int> q2t(g1.n, -1);
+            std::vector<bool> usedT(g2.n, false);
+            q2t[seedA] = seedB; usedT[seedB] = true;
+            int mapSize = 1;
+            std::vector<int> queue = {seedA};
+            int head = 0;
+            while (head < static_cast<int>(queue.size())) {
+                int curA = queue[head++], curB = q2t[curA];
+                for (int nbA : g1.neighbors[curA]) {
+                    if (q2t[nbA] >= 0) continue;
+                    int bestNbB = -1; double bestScore = -1.0;
+                    int boA = g1.bondOrder(curA, nbA);
+                    for (int nbB : g2.neighbors[curB]) {
+                        if (usedT[nbB]) continue;
+                        if (g1.atomicNum[nbA] != g2.atomicNum[nbB]) continue;
+                        if (ringMatch && g1.ring[nbA] != g2.ring[nbB]) continue;
+                        int boB = g2.bondOrder(curB, nbB);
+                        if (!bondAny && boA != boB) {
+                            if (!(g1.aromatic[curA] && g1.aromatic[nbA]
+                                && g2.aromatic[curB] && g2.aromatic[nbB])) continue;
+                        }
+                        double score = 1.0;
+                        for (int nb2A : g1.neighbors[nbA]) {
+                            int nb2B = q2t[nb2A]; if (nb2B < 0) continue;
+                            int bo2B = g2.bondOrder(nbB, nb2B);
+                            if (bo2B > 0 && (bondAny || g1.bondOrder(nbA, nb2A) == bo2B
+                                || (g1.aromatic[nbA] && g1.aromatic[nb2A]
+                                    && g2.aromatic[nbB] && g2.aromatic[nb2B])))
+                                score += 3.0;
+                        }
+                        if (g1.ring[nbA] == g2.ring[nbB]) score += 1.0;
+                        if (g1.aromatic[nbA] == g2.aromatic[nbB]) score += 1.0;
+                        if (score > bestScore) { bestScore = score; bestNbB = nbB; }
+                    }
+                    if (bestNbB >= 0) {
+                        q2t[nbA] = bestNbB; usedT[bestNbB] = true;
+                        ++mapSize; queue.push_back(nbA);
+                    }
+                }
+            }
+            if (mapSize > bestSize) {
+                bestSize = mapSize;
+                bestMapping.clear();
+                for (int i = 0; i < g1.n; ++i)
+                    if (q2t[i] >= 0) bestMapping[i] = q2t[i];
+            }
+        };
+
+        for (int iA : hetero1) {
+            if (Clock::now() >= deadline || bestSize >= ub) break;
+            for (int jB : compat1to2[iA]) {
+                if (Clock::now() >= deadline) break;
+                if (!isHetero(g2.atomicNum[jB])) continue;
+                bfsExtend(iA, jB);
+            }
+        }
+
+        // For small molecules without heteroatoms (all-carbon), try ring
+        // atom seeds — the BFS extend can find mappings that the modular
+        // product approach misses (e.g. cyclopentane in cyclohexane).
+        if (bestSize < ub && std::min(g1.n, g2.n) <= 15
+            && Clock::now() < deadline) {
+            for (int iA = 0; iA < g1.n; ++iA) {
+                if (Clock::now() >= deadline || bestSize >= ub) break;
+                if (!g1.ring[iA]) continue;
+                for (int jB : compat1to2[iA]) {
+                    if (Clock::now() >= deadline) break;
+                    if (!g2.ring[jB]) continue;
+                    bfsExtend(iA, jB);
+                }
+            }
+        }
+    }
+
+    // --- Quality recovery probes when coverage is below LFUB ---
+
+    // Probe 1: ring-constrained re-run of the fast clique_solver pipeline.
+    //   Ring compat tightens the search space → finds solutions that loose
+    //   compat misses due to combinatorial explosion.  Any ring-true mapping
+    //   is valid under ring-false, so this is always sound.
+    if (bestSize < ub && !ringMatch && remainingMs() > 20) {
+        std::vector<std::pair<int,int>> ringCompat;
+        ringCompat.reserve(compat.size());
+        for (auto& [i, j] : compat) {
+            if (g1.ring[i] == g2.ring[j]) ringCompat.emplace_back(i, j);
+        }
+        if (!ringCompat.empty()) {
+            int ringUb = coverageLFUB(g1, g2, true);
+            auto ringResult = clique::findMCSPipeline(
+                ringCompat, bonds_a, bonds_b,
+                g1.n, g2.n, bondAny, remainingMs(), maxResults,
+                ring_a, ring_b, arom_a, arom_b, ringUb);
+            for (const auto& cand : ringResult.candidates) {
+                if (static_cast<int>(cand.size()) > bestSize) {
+                    bestSize = static_cast<int>(cand.size());
+                    bestMapping.clear();
+                    for (auto& [q, t] : cand) bestMapping[q] = t;
+                }
+            }
+        }
+    }
+
+    // Probe 2: native pipeline for small molecules (≤25 atoms each).
+    //   Uses atomsCompatFast (tautomer-aware, degree guards) and the full
+    //   9-stage search.  Budget-capped to 100ms.
+    if (bestSize < ub && remainingMs() > 20
+        && std::max(g1.n, g2.n) <= 20) {
+        ChemOptions chem;
+        chem.matchAtomType       = true;
+        chem.matchFormalCharge   = false;
+        chem.useChirality        = false;
+        chem.useBondStereo       = false;
+        chem.matchIsotope        = false;
+        chem.ringMatchesRingOnly = ringMatch;
+        chem.matchBondOrder      = bondAny
+            ? ChemOptions::BondOrderMode::ANY
+            : ChemOptions::BondOrderMode::STRICT;
+        MCSOptions mopts;
+        mopts.timeoutMs = std::min<int64_t>(100, remainingMs());
+        auto nativeMapping = findMCS(g1, g2, chem, mopts);
+        if (static_cast<int>(nativeMapping.size()) > bestSize) {
+            bestMapping = std::move(nativeMapping);
+            bestSize    = static_cast<int>(bestMapping.size());
+        }
+    }
+
+    return bestMapping;
+}
+
+/// Overload taking SMILES strings for convenience.
+inline std::map<int,int> findMCSCoverage(
+    const std::string& smi1, const std::string& smi2,
+    bool ringMatch = false, bool bondAny = false,
+    int64_t timeoutMs = 1000, int maxResults = 8)
+{
+    auto g1 = parseSMILES(smi1);
+    auto g2 = parseSMILES(smi2);
+    return findMCSCoverage(g1, g2, ringMatch, bondAny, timeoutMs, maxResults);
 }
 
 } // namespace smsd

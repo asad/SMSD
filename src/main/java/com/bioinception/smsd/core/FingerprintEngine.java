@@ -6,6 +6,7 @@
 package com.bioinception.smsd.core;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -193,6 +194,54 @@ public final class FingerprintEngine {
   public static double soergel(long[] fp1, long[] fp2) {
     if (fp1 == null || fp2 == null || fp1.length == 0 || fp2.length == 0) return 1.0; // max distance
     return 1.0 - tanimoto(fp1, fp2);
+  }
+
+  /**
+   * Overlap coefficient: |A ∩ B| / min(|A|, |B|).
+   *
+   * <p>Measures the overlap between two fingerprints relative to the smaller set.
+   * Returns 1.0 when the smaller fingerprint is a subset of the larger one.
+   * Useful for scaffold/sub-structure containment checks.
+   *
+   * @param fp1 first fingerprint (long[] bitset)
+   * @param fp2 second fingerprint (long[] bitset)
+   * @return overlap coefficient in [0.0, 1.0]; returns 0.0 when either fingerprint is empty
+   */
+  public static double overlapCoefficient(long[] fp1, long[] fp2) {
+    int intersection = 0, pop1 = 0, pop2 = 0;
+    int len = Math.min(fp1.length, fp2.length);
+    for (int w = 0; w < len; w++) {
+      intersection += Long.bitCount(fp1[w] & fp2[w]);
+      pop1 += Long.bitCount(fp1[w]);
+      pop2 += Long.bitCount(fp2[w]);
+    }
+    for (int w = len; w < fp1.length; w++) pop1 += Long.bitCount(fp1[w]);
+    for (int w = len; w < fp2.length; w++) pop2 += Long.bitCount(fp2[w]);
+    int minPop = Math.min(pop1, pop2);
+    return minPop == 0 ? 0.0 : (double) intersection / minPop;
+  }
+
+  /**
+   * Analyse fingerprint quality: density, expected collision rate, saturation.
+   *
+   * <p>Useful for diagnosing fingerprint parameters (size, radius) and detecting
+   * saturated fingerprints that have lost discriminative power.
+   *
+   * @param fp   fingerprint (long[] bitset)
+   * @param fpSize nominal fingerprint size in bits
+   * @return ordered map with keys: set_bits, fp_size, density, expected_collision_rate, is_saturated
+   */
+  public static Map<String, Object> analyzeFpQuality(long[] fp, int fpSize) {
+    int setBits = 0;
+    for (long w : fp) setBits += Long.bitCount(w);
+    double density = (double) setBits / fpSize;
+    Map<String, Object> result = new LinkedHashMap<>();
+    result.put("set_bits", setBits);
+    result.put("fp_size", fpSize);
+    result.put("density", density);
+    result.put("expected_collision_rate", 1.0 - Math.pow(1.0 - 1.0/fpSize, setBits));
+    result.put("is_saturated", density > 0.5);
+    return result;
   }
 
   // ---- Count-vector similarity metrics ----

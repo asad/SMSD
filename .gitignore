@@ -22,12 +22,15 @@ build/
 # C++ build
 cpp/build/
 cpp/build_py/
+cpp/build-py*/
 cpp/cmake-build*/
 build_test/
 *.o
 *.a
 *.dylib
 a.out
+CMakeCache.txt
+CMakeFiles/
 
 # IDE
 .idea/

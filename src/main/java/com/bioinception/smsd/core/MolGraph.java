@@ -71,6 +71,10 @@ public final class MolGraph {
   double pH = 7.4;
   int[][] sssrRings;
   int[][] rcbRings; // Relevant Cycle Basis (union of all MCBs)
+  private volatile int[] ringSystemId;
+  private volatile long[] ringSysSignature;
+  private volatile int ringSysCount;
+  private volatile boolean ringSysComputed = false;
 
   // ---------------------------------------------------------------------------
   // Empirical pKa-derived tautomer relevance weights at pH 7.4
@@ -337,6 +341,83 @@ public final class MolGraph {
     rcbRings = rcb.toArray(new int[0][]);
     return sssrRings;
   }
+
+  public int numRings() { return computeRings().length; }
+
+  // ---- Ring-system decomposition (lazy, thread-safe) ----
+
+  private void ensureRingSystems() {
+    if (ringSysComputed) return;
+    synchronized (this) {
+      if (ringSysComputed) return;
+      int[] uf = new int[n];
+      for (int i = 0; i < n; i++) uf[i] = i;
+      // Unite ring atoms connected by bonds where both endpoints are ring atoms
+      for (int i = 0; i < n; i++) {
+        if (!ring[i]) continue;
+        for (int j : neighbors[i]) {
+          if (j > i && ring[j]) ufUnion(uf, i, j);
+        }
+      }
+      // Assign contiguous IDs
+      int[] idMap = new int[n];
+      Arrays.fill(idMap, -1);
+      int count = 0;
+      int[] sysId = new int[n];
+      Arrays.fill(sysId, -1);
+      for (int i = 0; i < n; i++) {
+        if (!ring[i]) continue;
+        int root = ufFind(uf, i);
+        if (idMap[root] < 0) idMap[root] = count++;
+        sysId[i] = idMap[root];
+      }
+      // Compute FNV-1a hash per ring system
+      long FNV_OFFSET = -3750763034362895579L;
+      long FNV_PRIME  = 1099511628211L;
+      long[] sig = new long[count];
+      // Gather per-system data: size, aromCount, atomicNums, bondOrders
+      int[] sysSize = new int[count];
+      int[] sysArom = new int[count];
+      @SuppressWarnings("unchecked")
+      List<Integer>[] sysAtomicNums = new List[count];
+      @SuppressWarnings("unchecked")
+      List<Integer>[] sysBondOrds = new List[count];
+      for (int s = 0; s < count; s++) {
+        sysAtomicNums[s] = new ArrayList<>();
+        sysBondOrds[s] = new ArrayList<>();
+      }
+      for (int i = 0; i < n; i++) {
+        if (sysId[i] < 0) continue;
+        int s = sysId[i];
+        sysSize[s]++;
+        if (aromatic[i]) sysArom[s]++;
+        sysAtomicNums[s].add(atomicNum[i]);
+        for (int j : neighbors[i]) {
+          if (j > i && ring[j] && sysId[j] == s) {
+            sysBondOrds[s].add(bondOrder(i, j));
+          }
+        }
+      }
+      for (int s = 0; s < count; s++) {
+        long h = FNV_OFFSET;
+        h ^= sysSize[s]; h *= FNV_PRIME;
+        h ^= sysArom[s]; h *= FNV_PRIME;
+        Collections.sort(sysAtomicNums[s]);
+        for (int v : sysAtomicNums[s]) { h ^= v; h *= FNV_PRIME; }
+        Collections.sort(sysBondOrds[s]);
+        for (int v : sysBondOrds[s]) { h ^= v; h *= FNV_PRIME; }
+        sig[s] = h;
+      }
+      ringSystemId = sysId;
+      ringSysSignature = sig;
+      ringSysCount = count;
+      ringSysComputed = true;
+    }
+  }
+
+  public int ringSystemOf(int atom) { ensureRingSystems(); return ringSystemId[atom]; }
+  public long ringSystemSig(int rsId) { ensureRingSystems(); return rsId >= 0 && rsId < ringSysCount ? ringSysSignature[rsId] : 0; }
+  public int ringSystemCount() { ensureRingSystems(); return ringSysCount; }
 
   /**
    * Computes the set of relevant cycles (union of all minimum cycle bases).
