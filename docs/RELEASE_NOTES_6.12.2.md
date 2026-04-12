@@ -2,81 +2,67 @@
 
 **Syed Asad Rahman — BioInception PVT LTD**
 
-Defaults aligned with RDKit FMCS for fair benchmarking. Lightweight
-coverage-driven MCS engine as default. Full Java-C++-Python parity.
+Performance, quality, and API refinement release.
 
+---
 
-## What changed
+## What's New
 
-### RDKit-compatible defaults
+### Broader default matching behaviour
 
-ChemOptions now defaults to `ringMatchesRingOnly=false` and
-`matchFormalCharge=false`, matching RDKit FindMCS out of the box.
-Named profiles available for stricter settings:
+The default `ChemOptions` now applies relaxed ring and charge constraints,
+making out-of-the-box MCS results applicable to a wider range of workflows
+without any configuration. Named profiles are available for stricter settings:
 
-- `default` — RDKit-compatible (new)
-- `strict` — ring=ring, charge match, strict bond order
-- `pharma` — drug discovery (ring, charge, complete rings)
-- `reaction` — relaxed for AAM workflows
-- `compat-fmcs` — explicit RDKit FMCS parity
+| Profile | Use case |
+|---|---|
+| `default` | General-purpose, broad applicability |
+| `strict` | Ring-constrained, charge-sensitive |
+| `pharma` | Drug-discovery, complete-ring preference |
+| `reaction` | Atom–atom mapping, relaxed constraints |
 
-### Lightweight MCS engine as default
+### Configurable `mcs()` API
 
-`smsd.mcs()` now routes through the coverage-driven funnel first
-(greedy, substructure, seed-extend, BK clique, McGregor) with
-LFUB early termination. Falls back to native C++ pipeline on error.
+All matching options are now available as direct keyword arguments:
 
-Dalke NN benchmark (100 pairs, same settings):
-85x faster than RDKit FMCS. 28 wins, 0 losses.
+```python
+mapping = smsd.mcs(mol1, mol2,
+    ring_matches_ring_only=False,
+    match_bond_order="loose")
+```
 
-### Fully configurable mcs() API
+### Speed/quality trade-off control
 
-All matching flags settable directly — no need to construct
-ChemOptions for common use cases:
+A `max_stage` parameter controls the depth of the MCS search.
+Lower values return fast approximate results; higher values
+allow the engine to find the provably optimal solution.
 
-    mapping = smsd.mcs(mol1, mol2,
-        ring_matches_ring_only=False,
-        match_bond_order="loose",
-        max_stage=1)
+### Improved similarity metrics
 
-### maxStage pipeline control
+`overlap_coefficient` and `tanimoto_coefficient` are now separately
+available on all MCS results, with corrected formula definitions.
 
-Wired into both Java and C++ findMCSImpl with 4 stage gates:
-- Stage 0: greedy only (sub-millisecond)
-- Stage 1: + substructure + seed-extend (reaction mapping)
-- Stage 2: + McSplit
-- Stage 3: + Bron-Kerbosch
-- Stage 5: full pipeline with extra seeds
+### Java and Python parity
 
-### Java parity
+Java and Python APIs now expose the same set of options and return
+equivalent results for equivalent inputs across all platforms.
 
-SmallExactMCSExplorer, FixedSizeBondMaximizer, SigKey ring-system
-equivalence in BK, global reaction deadline, TargetCorpus,
-screenAndMatch, overlapCoefficient, FP quality analysis, fluent
-MCSOptions, boolean[] BK triedClasses, numRings, ensureRingSystems.
+### Security
 
-### C++ optimisations
+The Docker runtime image now runs SMSD as a non-privileged user.
 
-SMSD_LIKELY branch hints on bondOrder/bondInRing/bondAromatic.
-Packed bond matrix (3 matrices to 1 uint8). sm_75 CUDA for T4.
-Ring system accessors exposed in Python bindings.
-
-### Python fixes
-
-Fixed overlapCoefficient formula (was Tanimoto, now correct
-intersection/min). Added tanimoto_coefficient as separate function.
-Fixed _ensure_native NameError in depiction. Suppressed RDKit
-kekulisation warnings in lightweight engine.
-
+---
 
 ## Compatibility
 
 - Java 25+, C++17, Python 3.10+
-- GPU: Metal (Apple Silicon), CUDA (Volta+)
+- GPU acceleration: Apple Silicon (Metal), NVIDIA (CUDA Volta+)
 - Platforms: macOS (arm64, x86_64), Linux (x86_64, aarch64), Windows (AMD64)
 
+---
 
 ## Copyright
 
 Copyright (c) 2018-2026 BioInception PVT LTD
 Algorithm copyright (c) 2009-2026 Syed Asad Rahman
+Apache License 2.0 — see LICENSE and NOTICE for full terms.
