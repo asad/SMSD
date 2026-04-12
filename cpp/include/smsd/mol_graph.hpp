@@ -31,6 +31,13 @@
 #include <utility>
 #include <vector>
 
+// Branch prediction hint: dense bond storage is the common path.
+#if defined(__GNUC__) || defined(__clang__)
+#define SMSD_LIKELY(x) __builtin_expect(!!(x), 1)
+#else
+#define SMSD_LIKELY(x) (x)
+#endif
+
 namespace smsd {
 
 enum class AromaticityModel { DAYLIGHT_LIKE };
@@ -46,12 +53,12 @@ struct ChemOptions {
     enum class RingFusionMode  { IGNORE, PERMISSIVE, STRICT };
     enum class Solvent         { AQUEOUS, DMSO, METHANOL, CHLOROFORM, ACETONITRILE, DIETHYL_ETHER };
 
-    // Atom matching
+    // Atom matching — defaults match RDKit FindMCS for apples-to-apples comparison
     bool matchAtomType            = true;
-    bool matchFormalCharge        = true;
+    bool matchFormalCharge        = false;  // RDKit matchValences=False
     bool useChirality             = false;
     bool useBondStereo            = false;
-    bool ringMatchesRingOnly      = true;
+    bool ringMatchesRingOnly      = false;  // RDKit ringMatchesRingOnly=False
 
     // Ring completeness
     bool completeRingsOnly        = false;
@@ -80,6 +87,10 @@ struct ChemOptions {
     BondOrderMode  matchBondOrder  = BondOrderMode::STRICT;
     AromaticityMode aromaticityMode = AromaticityMode::FLEXIBLE;
 
+    // Aromaticity perception model — controls which model is used when
+    // the matching pipeline needs to re-perceive aromaticity.
+    AromaticityModel aromaticityModel = AromaticityModel::DAYLIGHT_LIKE;
+
     // Engine
     MatcherEngine matcherEngine   = MatcherEngine::VF2PP;
 
@@ -105,17 +116,38 @@ struct ChemOptions {
     ChemOptions& withTautomerAware(bool on)              { tautomerAware = on; return *this; }
     ChemOptions& withInduced(bool on)                    { induced = on; return *this; }
 
-    // Named profiles
+    // Named profiles — pre-configured for common use cases
     static ChemOptions profile(const std::string& name) {
         ChemOptions opts;
-        if (name == "strict") {
-            opts.matchBondOrder  = BondOrderMode::STRICT;
-            opts.aromaticityMode = AromaticityMode::STRICT;
-        } else {
-            // "compat-fmcs", "compat-substruct", default
+        if (name == "default") {
+            // Matches RDKit FindMCS defaults for fair comparison
+            return opts;  // constructor defaults already RDKit-compatible
+        } else if (name == "strict") {
+            // Strict pharmaceutical matching
+            opts.matchBondOrder      = BondOrderMode::STRICT;
+            opts.aromaticityMode     = AromaticityMode::STRICT;
+            opts.matchFormalCharge   = true;
+            opts.ringMatchesRingOnly = true;
+        } else if (name == "pharma") {
+            // Drug discovery screening — ring and charge aware
+            opts.matchBondOrder      = BondOrderMode::STRICT;
+            opts.matchFormalCharge   = true;
+            opts.ringMatchesRingOnly = true;
+            opts.completeRingsOnly   = true;
+        } else if (name == "compat-fmcs") {
+            // Explicit RDKit FMCS compatibility
             opts.matchBondOrder      = BondOrderMode::LOOSE;
             opts.aromaticityMode     = AromaticityMode::FLEXIBLE;
             opts.ringMatchesRingOnly = false;
+            opts.matchFormalCharge   = false;
+        } else if (name == "reaction") {
+            // Reaction mapping — relaxed for charge/bond changes
+            opts.matchBondOrder      = BondOrderMode::LOOSE;
+            opts.matchFormalCharge   = false;
+            opts.ringMatchesRingOnly = false;
+        } else {
+            // Unknown name = default
+            return opts;
         }
         return opts;
     }
@@ -329,11 +361,14 @@ struct MolGraph {
     // --- Bit-parallel adjacency (n x words) ---
     std::vector<std::vector<uint64_t>> adjLong;
 
-    // --- Bond storage: dense for small molecules, sparse for large ---
-    std::vector<std::vector<int>>  bondOrdMatrix;   // dense n x n
-    std::vector<std::vector<bool>> bondRingMatrix;
-    std::vector<std::vector<bool>> bondAromMatrix;
+    // --- Bond storage: packed dense for small molecules, sparse for large ---
+    // Dense mode: single uint8_t matrix packing order (bits 0-2), ring (bit 3), aromatic (bit 4).
+    // Saves 66% memory vs 3 separate matrices.
+    std::vector<std::vector<uint8_t>> bondPacked;    // dense n x n, 1 byte per pair
     bool useDense = false;
+    static constexpr uint8_t BOND_ORDER_MASK = 0x07; // bits 0-2
+    static constexpr uint8_t BOND_RING_BIT   = 0x08; // bit 3
+    static constexpr uint8_t BOND_AROM_BIT   = 0x10; // bit 4
 
     // Sparse bond props: key = bondKey(i,j), value = {order, inRing, aromatic}
     std::unordered_map<int64_t, std::array<int,3>> sparseBondProps;
@@ -377,19 +412,19 @@ struct MolGraph {
     // ========================================================================
 
     int bondOrder(int i, int j) const {
-        if (useDense) return bondOrdMatrix[i][j];
+        if (SMSD_LIKELY(useDense)) return bondPacked[i][j] & BOND_ORDER_MASK;
         auto it = sparseBondProps.find(bondKey(i, j));
         return it != sparseBondProps.end() ? it->second[0] : 0;
     }
 
     bool bondInRing(int i, int j) const {
-        if (useDense) return bondRingMatrix[i][j];
+        if (SMSD_LIKELY(useDense)) return (bondPacked[i][j] & BOND_RING_BIT) != 0;
         auto it = sparseBondProps.find(bondKey(i, j));
         return it != sparseBondProps.end() && it->second[1] != 0;
     }
 
     bool bondAromatic(int i, int j) const {
-        if (useDense) return bondAromMatrix[i][j];
+        if (SMSD_LIKELY(useDense)) return (bondPacked[i][j] & BOND_AROM_BIT) != 0;
         auto it = sparseBondProps.find(bondKey(i, j));
         return it != sparseBondProps.end() && it->second[2] != 0;
     }
@@ -427,7 +462,10 @@ struct MolGraph {
     }
 
     void setBondOrder(int i, int j, int ord) {
-        if (useDense) { bondOrdMatrix[i][j] = ord; bondOrdMatrix[j][i] = ord; }
+        if (useDense) {
+            bondPacked[i][j] = (bondPacked[i][j] & ~BOND_ORDER_MASK) | static_cast<uint8_t>(ord & 0x07);
+            bondPacked[j][i] = bondPacked[i][j];
+        }
         else {
             auto key = bondKey(i, j);
             auto it = sparseBondProps.find(key);
@@ -437,7 +475,10 @@ struct MolGraph {
     }
 
     void setBondAromatic(int i, int j, bool arom) {
-        if (useDense) { bondAromMatrix[i][j] = arom; bondAromMatrix[j][i] = arom; }
+        if (useDense) {
+            if (arom) { bondPacked[i][j] |= BOND_AROM_BIT; bondPacked[j][i] |= BOND_AROM_BIT; }
+            else      { bondPacked[i][j] &= ~BOND_AROM_BIT; bondPacked[j][i] &= ~BOND_AROM_BIT; }
+        }
         else {
             auto key = bondKey(i, j);
             auto it = sparseBondProps.find(key);
@@ -711,8 +752,8 @@ struct MolGraph {
     void clearRingFlagsFromTopology() {
         std::fill(ring.begin(), ring.end(), uint8_t(0));
         if (useDense) {
-            for (auto& row : bondRingMatrix) {
-                std::fill(row.begin(), row.end(), false);
+            for (auto& row : bondPacked) {
+                for (auto& b : row) b &= ~BOND_RING_BIT;
             }
         } else {
             for (auto& kv : sparseBondProps) {
@@ -725,8 +766,8 @@ struct MolGraph {
         ring[i] = 1;
         ring[j] = 1;
         if (useDense) {
-            bondRingMatrix[i][j] = true;
-            bondRingMatrix[j][i] = true;
+            bondPacked[i][j] |= BOND_RING_BIT;
+            bondPacked[j][i] |= BOND_RING_BIT;
         } else {
             auto it = sparseBondProps.find(bondKey(i, j));
             if (it != sparseBondProps.end()) it->second[1] = 1;
@@ -735,10 +776,8 @@ struct MolGraph {
 
     void markAromaticEdge(int i, int j) {
         if (useDense) {
-            bondOrdMatrix[i][j] = 4;
-            bondOrdMatrix[j][i] = 4;
-            bondAromMatrix[i][j] = true;
-            bondAromMatrix[j][i] = true;
+            bondPacked[i][j] = (bondPacked[i][j] & BOND_RING_BIT) | 4 | BOND_AROM_BIT;
+            bondPacked[j][i] = bondPacked[i][j];
         } else {
             auto it = sparseBondProps.find(bondKey(i, j));
             if (it != sparseBondProps.end()) {
@@ -750,10 +789,8 @@ struct MolGraph {
 
     void markKekuleEdge(int i, int j, int order) {
         if (useDense) {
-            bondOrdMatrix[i][j] = order;
-            bondOrdMatrix[j][i] = order;
-            bondAromMatrix[i][j] = false;
-            bondAromMatrix[j][i] = false;
+            bondPacked[i][j] = (bondPacked[i][j] & BOND_RING_BIT) | static_cast<uint8_t>(order & 0x07);
+            bondPacked[j][i] = bondPacked[i][j];
         } else {
             auto it = sparseBondProps.find(bondKey(i, j));
             if (it != sparseBondProps.end()) {
@@ -3632,9 +3669,7 @@ public:
             // Bond storage -- dense or sparse
             if (n_ <= SPARSE_THRESHOLD) {
                 g.useDense = true;
-                g.bondOrdMatrix.assign(n_, std::vector<int>(n_, 0));
-                g.bondRingMatrix.assign(n_, std::vector<bool>(n_, false));
-                g.bondAromMatrix.assign(n_, std::vector<bool>(n_, false));
+                g.bondPacked.assign(n_, std::vector<uint8_t>(n_, 0));
                 for (int i = 0; i < n_; i++) {
                     const auto& nbs = g.neighbors[i];
                     for (int k = 0; k < static_cast<int>(nbs.size()); k++) {
@@ -3642,9 +3677,9 @@ public:
                         int ord = intPropAt(bondOrders_, bondOrderEnc, i, k, j, 1);
                         bool inRing = boolPropAt(bondRings_, bondRingEnc, i, k, j, false);
                         bool arom = boolPropAt(bondAroms_, bondAromEnc, i, k, j, false);
-                        g.bondOrdMatrix[i][j]  = ord;
-                        g.bondRingMatrix[i][j] = inRing;
-                        g.bondAromMatrix[i][j] = arom;
+                        g.bondPacked[i][j] = static_cast<uint8_t>((ord & 0x07)
+                            | (inRing ? BOND_RING_BIT : 0)
+                            | (arom ? BOND_AROM_BIT : 0));
                     }
                 }
             } else {

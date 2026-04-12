@@ -1,0 +1,41 @@
+Present SMSD vs Light SMSD Scaling Benchmark
+============================================
+Present ext:   /Users/bioinception/tools/github/SMSD/cpp/build-py313/_smsd.cpython-313-darwin.so
+Light ext:     /Users/bioinception/tools/github/bioinception/build-local/_smsd.cpython-313-darwin.so
+Python:        /opt/anaconda3/bin/python3.13
+Timeout ms:    1000
+Warmup:        1
+Iters:         3
+MCS cases:     20
+Sub cases:     28
+
+MCS
+  cases=20 comparable=20 agreement=19/20
+  median present=0.574ms light=0.152ms speedup=3.2x
+  mismatches=strychnine-quinine
+  buckets by combined atom count:
+    <=16 cases=4 present=0.023ms light=0.035ms speedup=1.8x
+    17-32 cases=4 present=0.525ms light=0.141ms speedup=3.6x
+    33-64 cases=5 present=1.08ms light=0.877ms speedup=3.2x
+    65-128 cases=6 present=147.7ms light=19.98ms speedup=5.5x
+    129+ cases=1 present=0.038ms light=0.009ms speedup=4.5x
+  slowest present-extension cases:
+    strychnine-quinine [49 atoms] present=2106.5ms light=913.3ms speedup=2.3x
+    paclitaxel-docetaxel [120 atoms] present=1988.1ms light=1189.1ms speedup=1.7x
+    NAD-NADH [88 atoms] present=1912.3ms light=792.0ms speedup=2.4x
+    rdkit-1585-pair [68 atoms] present=206.7ms light=23.85ms speedup=8.7x
+    atorvastatin-rosuvastatin [74 atoms] present=88.70ms light=16.11ms speedup=5.5x
+
+Substructure
+  cases=28 comparable=28 agreement=28/28
+  median present=0.003ms light=0.001ms speedup=5.3x
+  buckets by combined atom count:
+    <=16 cases=19 present=0.003ms light=0.001ms speedup=5.0x
+    17-32 cases=8 present=0.004ms light=0.001ms speedup=5.6x
+    33-64 cases=1 present=0.005ms light=0.001ms speedup=5.5x
+  slowest present-extension cases:
+    Piperidine in Fentanyl [31 atoms] present=0.009ms light=0.002ms speedup=5.1x
+    Acetaldehyde in Butanal [8 atoms] present=0.007ms light=0.001ms speedup=12.8x
+    Glucose in Sucrose [35 atoms] present=0.005ms light=0.001ms speedup=5.5x
+    Cyclobutane in Cyclopentane [9 atoms] present=0.005ms light=0.001ms speedup=5.2x
+    Sulfonamide in Sulfisoxazole [26 atoms] present=0.005ms light=0.001ms speedup=5.4x

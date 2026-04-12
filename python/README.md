@@ -43,8 +43,8 @@ print(f"MCS: {len(mcs)} atoms")  # 6
 # Tautomer-aware MCS
 mcs = smsd.mcs("CC(=O)C", "CC(O)=C", tautomer_aware=True)
 
-# Circular fingerprint (ECFP4, tautomer-aware)
-ecfp4 = smsd.circular_fingerprint("c1ccccc1", radius=2, fp_size=2048)
+# Circular fingerprint (ECFP4)
+ecfp4 = smsd.fingerprint_from_smiles("c1ccccc1", radius=2, fp_size=2048)
 
 # Similarity
 sim = smsd.similarity("c1ccccc1", "c1ccc(O)cc1")
@@ -133,24 +133,24 @@ so tautomeric forms of the same molecule produce more similar fingerprints.
 import smsd
 
 # ECFP4 (structural, recommended default)
-ecfp4 = smsd.circular_fingerprint("c1ccccc1", radius=2, fp_size=2048)
+ecfp4 = smsd.fingerprint_from_smiles("c1ccccc1", radius=2, fp_size=2048)
 
 # FCFP4 (pharmacophoric — H-bond donors/acceptors, ionisable, aromatic, hydrophobic)
-fcfp4 = smsd.circular_fingerprint("c1ccccc1", radius=2, fp_size=2048, mode="fcfp")
+fcfp4 = smsd.fingerprint_from_smiles("c1ccccc1", radius=2, fp_size=2048, mode="fcfp")
 
 # ECFP6 (radius 3, captures larger environments)
-ecfp6 = smsd.circular_fingerprint("c1ccccc1", radius=3, fp_size=2048)
+ecfp6 = smsd.fingerprint_from_smiles("c1ccccc1", radius=3, fp_size=2048)
 
 # ECFP2 (radius 1, fastest, less discriminating)
-ecfp2 = smsd.circular_fingerprint("c1ccccc1", radius=1, fp_size=2048)
+ecfp2 = smsd.fingerprint_from_smiles("c1ccccc1", radius=1, fp_size=2048)
 
 # Whole molecule (radius -1 = expand until convergence)
-whole = smsd.circular_fingerprint("c1ccccc1", radius=-1, fp_size=2048)
+whole = smsd.fingerprint_from_smiles("c1ccccc1", radius=-1, fp_size=2048)
 
 # Tanimoto similarity (works with any fingerprint type)
 sim = smsd.overlapCoefficient(
-    smsd.circular_fingerprint("c1ccccc1", radius=2),
-    smsd.circular_fingerprint("c1ccc(O)cc1", radius=2))
+    smsd.fingerprint_from_smiles("c1ccccc1", radius=2),
+    smsd.fingerprint_from_smiles("c1ccc(O)cc1", radius=2))
 ```
 
 ## Using with RDKit
@@ -210,7 +210,7 @@ smsd.write_molfile(g, "out_v3000.mol", v3000=True)
 smsd.write_molfile(g, "out.sdf", sdf=True)
 ```
 
-The native writer preserves practical chemistry metadata in `6.11.2`:
+The native writer preserves practical chemistry metadata in `6.12.2`:
 - names, comments, and SDF properties
 - charges, isotopes, atom classes, and atom maps
 - `R#`/`R<n>` plus `M  RGP`
@@ -288,10 +288,10 @@ hits    = smsd.batch_fingerprint_screen(query_fp, target_fps)
 # RASCAL pre-screen + exact MCS in one call
 matches = smsd.screen_and_match(query, targets, threshold=0.5)
 
-# Batch find substructure with atom-atom mappings (v6.11.2)
+# Batch find substructure with atom-atom mappings (v6.12.2)
 mappings = smsd.batch_find_substructure(query, targets)
 
-# TargetCorpus — prewarm once, query many times (v6.11.2)
+# TargetCorpus — prewarm once, query many times (v6.12.2)
 corpus = smsd.TargetCorpus.from_smiles(["c1ccccc1", "c1ccc(O)cc1", "CCO"])
 corpus.prewarm()
 hits = corpus.substructure(smsd.parse_smiles("c1ccccc1"))
@@ -337,7 +337,7 @@ Each toolkit brings unique strengths to the cheminformatics ecosystem:
 
 ## Also Available
 
-- **Java**: `com.bioinceptionlabs:smsd:6.11.2` on [Maven Central](https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd)
+- **Java**: `com.bioinceptionlabs:smsd:6.12.2` on [Maven Central](https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd)
 - **C++**: Header-only, zero dependencies — [GitHub](https://github.com/asad/SMSD)
 
 ## Citation

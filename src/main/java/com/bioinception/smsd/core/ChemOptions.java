@@ -99,8 +99,8 @@ public final class ChemOptions {
   /** Whether to match atom types (element symbols). Default: {@code true}. */
   public boolean matchAtomType = true;
 
-  /** Whether to match formal charges on atoms. Default: {@code true}. */
-  public boolean matchFormalCharge = true;
+  /** Whether to match formal charges on atoms. Default: {@code false} (RDKit-compatible). */
+  public boolean matchFormalCharge = false;
 
   /** Whether to use chirality (R/S) in atom matching. Default: {@code false}. */
   public boolean useChirality = false;
@@ -109,10 +109,10 @@ public final class ChemOptions {
   public boolean useBondStereo = false;
 
   /**
-   * Whether ring atoms can only match ring atoms. Default: {@code true}.
+   * Whether ring atoms can only match ring atoms. Default: {@code false} (RDKit-compatible).
    * <p>When enabled, matched atoms and bonds must agree on ring membership.
    */
-  public boolean ringMatchesRingOnly = true;
+  public boolean ringMatchesRingOnly = false;
 
   // --- Ring completeness ---
 

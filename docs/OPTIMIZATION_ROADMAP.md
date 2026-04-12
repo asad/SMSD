@@ -1,6 +1,6 @@
 # SMSD Pro — Performance Optimization Roadmap
 
-**Version** 6.11.2 | **Copyright (c) 2018–2026 BioInception PVT LTD — Syed Asad Rahman**
+**Version** 6.12.0 | **Copyright (c) 2018–2026 BioInception PVT LTD — Syed Asad Rahman**
 
 ---
 

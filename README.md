@@ -22,10 +22,11 @@ SMSD Pro provides exact substructure search and maximum common substructure
 (header-only), and **Python**. Optional GPU paths are available for CUDA and
 Apple Metal builds.
 
-Version `6.11.2` adds CIP Rule 3 (Z > E) stereodescriptor support, fixes
-critical memory leak and BK color-bound overflow, corrects tautomer weights
-(nitroso-oxime, nitro/aci-nitro), and standardises API naming (`MCSResult`,
-`MCSOptions`, `overlapCoefficient`).
+Version `6.12.2` adds ring-constrained MCS quality recovery for the
+relaxed defaults introduced in 6.12.1, a zero-loss C++ coverage-driven
+MCS engine (42-90x faster than RDKit), and a rewritten Python MCS
+wrapper with zero orchestration overhead. All matching defaults now
+align with RDKit FMCS for fair benchmarking.
 
 ### Guides and References
 
@@ -35,8 +36,7 @@ critical memory leak and BK color-bound overflow, corrects tautomer weights
 | [Python API Guide](docs/PYTHON.md) | Full Python API reference with code examples |
 | [Java Guide](docs/JAVA.md) | Java API and CLI usage |
 | [C++ Guide](docs/CPP.md) | Header-only C++ integration |
-| [Release Notes 6.11.2](docs/RELEASE_NOTES_6.11.2.md) | What's new in this release |
-| [Release Notes 6.11.2](docs/RELEASE_NOTES_6.11.2.md) | Previous major release |
+| [Release Notes 6.12.2](https://github.com/asad/SMSD/releases/tag/v6.12.2) | What's new in this release |
 | [Whitepaper](docs/WHITEPAPER.md) | Algorithm design (11-level MCS, VF2++, ring perception) |
 | [How to Install](docs/HOWTO-INSTALL.md) | Build from source on all platforms |
 | [Changelog](CHANGELOG.md) | Full versioned change history |
@@ -58,27 +58,27 @@ isotopes, atom classes/maps, `R#` plus `M  RGP`, and basic stereo flags.
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>6.11.2</version>
+  <version>6.12.2</version>
 </dependency>
 ```
 
 ### Java (Download JAR)
 
 ```bash
-curl -LO https://github.com/asad/SMSD/releases/download/v6.11.2/smsd-6.11.2-jar-with-dependencies.jar
+curl -LO https://github.com/asad/SMSD/releases/download/v6.12.2/smsd-6.12.2-jar-with-dependencies.jar
 
-java -jar smsd-6.11.2-jar-with-dependencies.jar \
+java -jar smsd-6.12.2-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 ```
 
-### Python (pip)
+### Python ([PyPI](https://pypi.org/project/smsd/))
 
 ```bash
 pip install smsd
 ```
 
-Supported CPython versions: `3.9` through the latest stable release series.
-Current default test target: `Python 3.12`.
+Supported CPython versions: `3.10` through `3.13`.
+Wheels available for Linux (x86_64, aarch64), macOS (arm64, x86_64), and Windows (x64).
 CPU execution is the default path. CUDA and Metal acceleration are optional.
 RDKit and Open Babel are optional interop layers.
 
@@ -103,8 +103,8 @@ sim    = smsd.similarity("c1ccccc1", "c1ccc(O)cc1")
 
 fp     = smsd.fingerprint("c1ccccc1", kind="mcs")
 
-# Circular fingerprint (ECFP4 equivalent, tautomer-aware)
-ecfp4 = smsd.circular_fingerprint("c1ccccc1", radius=2, fp_size=2048)
+# Circular fingerprint (ECFP4 equivalent)
+ecfp4 = smsd.fingerprint_from_smiles("c1ccccc1", radius=2, fp_size=2048)
 ```
 
 ### Java API
@@ -127,7 +127,7 @@ Map<Integer, Character> stereo = CIPAssigner.assignRS(g);
 Map<Long, Character> ez = CIPAssigner.assignEZ(g);
 
 // Batch MCS with non-overlap constraints
-var mappings = SearchEngine.batchMcsConstrained(queries, targets, new ChemOptions(), 10_000);
+var mappings = SearchEngine.batchMCSConstrained(queries, targets, new ChemOptions(), 10_000);
 ```
 
 ### Python — Advanced Features
@@ -301,7 +301,7 @@ opts.bondChangeAware = true;
 auto rxnMcs = smsd::reactionAwareMCS(mol1, mol2, smsd::ChemOptions{}, opts);
 
 // Batch MCS with non-overlap constraints (multi-fragment reactions)
-auto mappings = smsd::batchMcsConstrained(queries, targets, smsd::ChemOptions{});
+auto mappings = smsd::batchMCSConstrained(queries, targets, smsd::ChemOptions{});
 ```
 
 ### Build from Source
@@ -519,7 +519,7 @@ Call `SearchEngine.clearMolGraphCache()` (Java) or reuse `MolGraph` instances (C
 | **SMACOF stress majorisation** | `stressMajorisation()` for optimal 2D embedding |
 | **Reaction-aware MCS** | `reactionAwareMCS()` post-filter for reaction mapping |
 | **Bond-change-aware MCS** | `BondChangeScorer` re-ranks candidates by bond transformation plausibility (C-C breaks=3.0, heteroatom=0.5) |
-| **Batch constrained MCS** | `batchMcsConstrained()` multi-pair MCS with non-overlap atom exclusion for multi-fragment reactions |
+| **Batch constrained MCS** | `batchMCSConstrained()` multi-pair MCS with non-overlap atom exclusion for multi-fragment reactions |
 | **Two-phase crossing reduction** | `reduceCrossings()` Phase 1: system-level flipping, Phase 2: individual ring flipping with fusion-atom pivots |
 | **computeSSSR / layoutSSSR** | Clean SSSR APIs: minimum cycle basis and layout-ordered ring perception |
 
@@ -543,19 +543,19 @@ Every release includes all platforms:
 
 | Download | Description |
 |----------|-------------|
-| `SMSD.Pro-6.11.2.dmg` | macOS installer (Apple Silicon) — drag to Applications |
-| `SMSD.Pro-6.11.2.msi` | Windows installer — next, next, finish |
-| `smsd-pro_6.11.2_amd64.deb` | Linux installer — `sudo dpkg -i` |
-| `smsd-6.11.2.jar` | Pure library JAR (Maven/Gradle dependency) |
-| `smsd-6.11.2-jar-with-dependencies.jar` | Standalone CLI (just `java -jar`) |
-| `smsd-cpp-6.11.2-headers.tar.gz` | C++ header-only library (unpack, `#include "smsd/smsd.hpp"`) |
-| `pip install smsd` | Python package (PyPI) |
+| `SMSD.Pro-6.12.2.dmg` | macOS installer (Apple Silicon) — drag to Applications |
+| `SMSD.Pro-6.12.2.msi` | Windows installer — next, next, finish |
+| `smsd-pro_6.12.2_amd64.deb` | Linux installer — `sudo dpkg -i` |
+| `smsd-6.12.2.jar` | Pure library JAR (Maven/Gradle dependency) |
+| `smsd-6.12.2-jar-with-dependencies.jar` | Standalone CLI (just `java -jar`) |
+| `smsd-cpp-6.12.2-headers.tar.gz` | C++ header-only library (unpack, `#include "smsd/smsd.hpp"`) |
+| [`pip install smsd`](https://pypi.org/project/smsd/) | Python package (PyPI — Linux, macOS, Windows wheels) |
 
 ```bash
 # Native installer — download .dmg / .msi / .deb, double-click, done
 
 # CLI
-java -jar smsd-6.11.2-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
+java -jar smsd-6.12.2-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 
 # Docker CLI
 docker build -t smsd .
@@ -592,7 +592,8 @@ AddressSanitizer: zero memory errors.
 | [Python API Guide](docs/PYTHON.md) | Full Python API reference |
 | [Java Guide](docs/JAVA.md) | Java API and CLI usage |
 | [C++ Guide](docs/CPP.md) | Header-only C++ integration |
-| [Release Notes 6.11.2](docs/RELEASE_NOTES_6.11.2.md) | What's new in this release |
+| [Release Notes 6.12.2](https://github.com/asad/SMSD/releases/tag/v6.12.2) | Current release |
+| [Release Notes 6.12.1](docs/RELEASE_NOTES_6.12.1.md) | Previous release |
 | [Whitepaper](docs/WHITEPAPER.md) | Algorithms and design (11-level MCS, VF2++, ring perception) |
 | [How to Install](docs/HOWTO-INSTALL.md) | Build from source on all platforms |
 | [Changelog](CHANGELOG.md) | Full versioned change history |

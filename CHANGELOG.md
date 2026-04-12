@@ -2,7 +2,7 @@
 
 All notable changes to SMSD Pro are documented in this file.
 
-## [6.11.2] - 2026-04-07
+## [6.12.0] - 2026-04-07
 
 ### Summary
 Correctness, performance, and API cleanup release.

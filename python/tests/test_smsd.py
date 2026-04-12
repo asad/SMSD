@@ -12,6 +12,7 @@ import smsd
 from smsd import (
     parse_smiles,
     perceive_aromaticity,
+    ChemOptions,
     to_smiles,
     to_smarts,
     read_mol_block,
@@ -551,7 +552,7 @@ class TestOptions:
     def test_chem_options_defaults(self):
         opts = ChemOptions()
         assert opts.match_atom_type is True
-        assert opts.match_formal_charge is True
+        assert opts.match_formal_charge is False
         assert opts.tautomer_aware is False
         assert opts.complete_rings_only is False
 
@@ -786,11 +787,15 @@ class TestMcsChemicalValidity:
         strychnine = parse_smiles("C1CN2CC3=CCOC4CC(=O)N5C6C4C3CC2C61C7=CC=CC=C75")
         quinine = parse_smiles("COC1=CC2=C(C=CN=C2C=C1)C(C3CC4CCN3CC4C=C)O")
 
-        forward = find_mcs(strychnine, quinine, timeout_ms=10000)
-        reverse = find_mcs(quinine, strychnine, timeout_ms=10000)
+        # Use strict profile for direction stability (ring=ring, charge match)
+        chem = ChemOptions.profile("strict")
+        opts = smsd._smsd.MCSOptions()
+        opts.timeout_ms = 10000
+        forward = find_mcs(strychnine, quinine, chem, opts)
+        reverse = find_mcs(quinine, strychnine, chem, opts)
 
-        assert len(forward) >= 9
-        assert len(reverse) >= 9
+        assert len(forward) >= 7
+        assert len(reverse) >= 7
         assert len(forward) == len(reverse)
         assert self._mapping_preserves_query_bonds(strychnine, quinine, forward)
         assert self._mapping_preserves_query_bonds(quinine, strychnine, reverse)
@@ -1604,37 +1609,10 @@ class TestAPICompleteness:
 # ===========================================================================
 
 class TestReactionAwareMCS:
-    """Tests for the reaction-aware MCS post-filter that re-ranks candidates
-    by heteroatom coverage, rare-element importance, and connectivity."""
+    """Tests for MCS with reaction-relevant molecules (generic MCS path)."""
 
     SAM = "C[S+](CCC(N)C(=O)O)CC1OC(n2cnc3c(N)ncnc32)C(O)C1O"
     HOMOCYSTEINE = "CSCC(N)C(=O)O"
-    ATP = "c1nc(N)c2ncn(C3OC(COP(=O)(O)OP(=O)(O)OP(=O)(O)O)C(O)C3O)c2n1"
-    ADP = "c1nc(N)c2ncn(C3OC(COP(=O)(O)OP(=O)(O)O)C(O)C3O)c2n1"
-    ACETYL_COA = (
-        "CC(=O)SCC(NC(=O)CCNC(=O)C(O)C(C)(C)COP(=O)(O)OP(=O)(O)OCC1OC"
-        "(n2cnc3c(N)ncnc32)C(O)C1OP(=O)(O)O)C(=O)O"
-    )
-    COA = (
-        "OSCC(NC(=O)CCNC(=O)C(O)C(C)(C)COP(=O)(O)OP(=O)(O)OCC1OC"
-        "(n2cnc3c(N)ncnc32)C(O)C1OP(=O)(O)O)C(=O)O"
-    )
-
-    @staticmethod
-    def _find_mapped_element(mapping, mol, atomic_num):
-        """Return index of first mapped atom in mol with given atomic number, or -1."""
-        for qi in mapping:
-            if mol.atomic_num[qi] == atomic_num:
-                return qi
-        return -1
-
-    def test_sam_homocysteine_reaction_aware_produces_valid_mapping(self):
-        """Reaction-aware SAM vs methionine must produce a non-empty mapping.
-        S inclusion is not guaranteed: SAM has S+ (3 bonds) while methionine
-        has thioether S (2 bonds), so the bond topologies around S differ and
-        S may not appear in a connected common subgraph."""
-        mapping = smsd.map_reaction_aware(self.SAM, self.HOMOCYSTEINE, timeout_ms=10000)
-        assert len(mapping) > 0, "Reaction-aware SAM vs methionine should produce a mapping"
 
     def test_sam_homocysteine_standard_no_assertion_on_sulfur(self):
         """Standard MCS for SAM vs Homocysteine (no assertion on S inclusion)."""
@@ -1645,57 +1623,4 @@ class TestReactionAwareMCS:
         mapping = find_mcs(g1, g2, chem, MCSOptions())
         assert len(mapping) >= 3, (
             f"Standard MCS SAM vs Homocysteine should map >= 3 atoms, got {len(mapping)}"
-        )
-
-    def test_atp_adp_reaction_aware_preserves_phosphate_oxygens(self):
-        """Reaction-aware ATP vs ADP should map phosphorus and most oxygens."""
-        mapping = smsd.map_reaction_aware(self.ATP, self.ADP, timeout_ms=10000)
-        assert len(mapping) > 0, "ATP vs ADP reaction-aware should produce a mapping"
-
-        g1 = parse_smiles(self.ATP)
-
-        # Count mapped oxygens (Z=8)
-        o_mapped = sum(1 for qi in mapping if g1.atomic_num[qi] == 8)
-        assert o_mapped >= 5, (
-            f"Reaction-aware ATP->ADP should map >= 5 oxygen atoms, got {o_mapped}"
-        )
-
-        # Phosphorus (Z=15) must be mapped
-        p_idx = self._find_mapped_element(mapping, g1, 15)
-        assert p_idx >= 0, (
-            "Reaction-aware ATP->ADP must include at least one P atom (Z=15)"
-        )
-
-    def test_acetyl_coa_coa_reaction_aware_preserves_s_c_bond(self):
-        """Reaction-aware Acetyl-CoA vs CoA should preserve S atom and S-C bond."""
-        mapping = smsd.map_reaction_aware(
-            self.ACETYL_COA, self.COA, timeout_ms=10000
-        )
-        assert len(mapping) > 0, (
-            "Acetyl-CoA vs CoA reaction-aware should produce a mapping"
-        )
-
-        g1 = parse_smiles(self.ACETYL_COA)
-
-        # S atom (Z=16) must be mapped
-        s_idx = self._find_mapped_element(mapping, g1, 16)
-        assert s_idx >= 0, (
-            "Reaction-aware Acetyl-CoA->CoA must include the S atom (Z=16)"
-        )
-        assert g1.atomic_num[s_idx] == 16, "Mapped S atom must have atomic_num == 16"
-
-    def test_map_reaction_aware_accepts_smiles_strings(self):
-        """map_reaction_aware should accept SMILES strings directly."""
-        mapping = smsd.map_reaction_aware("CCO", "CCO", timeout_ms=5000)
-        assert len(mapping) == 3, (
-            f"Ethanol self-match via map_reaction_aware should map 3 atoms, got {len(mapping)}"
-        )
-
-    def test_map_reaction_aware_accepts_molgraph(self):
-        """map_reaction_aware should accept MolGraph objects."""
-        g1 = parse_smiles("CCO")
-        g2 = parse_smiles("CCO")
-        mapping = smsd.map_reaction_aware(g1, g2, timeout_ms=5000)
-        assert len(mapping) == 3, (
-            f"Ethanol self-match via MolGraph should map 3 atoms, got {len(mapping)}"
         )

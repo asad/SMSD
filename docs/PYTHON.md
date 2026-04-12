@@ -49,6 +49,208 @@ pip install "smsd[gpu]"
 | **Chemistry** | `classify_pharmacophore`, `implicit_h`, `validate_tautomer_consistency` |
 | **Depiction** | `depict_svg`, `depict_pair`, `depict_mapping`, `save_svg`, `DepictOptions` |
 | **GPU** | `gpu_is_available`, `gpu_device_info` |
+| **Clique Solver** *(6.12.1)* | `find_max_cliques`, `find_mcs_clique`, `match_substructure`, `match_substructure_from_elements`, `score_mapping` |
+
+## Options Reference
+
+### ChemOptions — what counts as a "match"
+
+Controls atom/bond compatibility during substructure and MCS search.
+
+```python
+import smsd
+
+chem = smsd.ChemOptions()
+
+# Atom-level matching
+chem.match_atom_type    = True     # carbon only matches carbon
+chem.match_formal_charge = False   # ignore charge differences (good for reactions)
+chem.match_isotope      = False    # ignore mass number
+chem.use_chirality      = False    # ignore R/S
+chem.use_bond_stereo    = False    # ignore E/Z
+
+# Bond-level matching
+chem.match_bond_order = smsd.BondOrderMode.STRICT    # single≠double≠triple
+                      # smsd.BondOrderMode.LOOSE     # aromatic ≈ single/double
+                      # smsd.BondOrderMode.ANY       # any bond matches any bond
+
+# Ring constraints
+chem.ring_matches_ring_only = True   # ring atom only matches ring atom
+chem.complete_rings_only    = False  # MCS must include full rings (not partial)
+chem.ring_fusion_mode = smsd.RingFusionMode.IGNORE      # don't care about fusion
+                      # smsd.RingFusionMode.PERMISSIVE  # fused ≈ non-fused ok
+                      # smsd.RingFusionMode.STRICT      # fused must match fused
+
+# Aromaticity — two separate concepts:
+#   AromaticityModel = which algorithm detects aromaticity (perception)
+#   AromaticityMode  = how strict aromatic matching is during search
+chem.aromaticity_model = smsd.AromaticityModel.DAYLIGHT_LIKE  # only model for now
+chem.aromaticity_mode  = smsd.AromaticityMode.FLEXIBLE  # aromatic ≈ Kekulé ok
+                       # smsd.AromaticityMode.STRICT    # aromatic must match aromatic
+
+# Tautomer handling
+chem.tautomer_aware = False     # set True for keto/enol, amide, etc.
+chem.pH             = 7.4       # affects tautomer equilibrium weights
+chem.solvent        = smsd.Solvent.AQUEOUS  # DMSO, METHANOL, CHLOROFORM, etc.
+
+# Engine
+chem.matcher_engine = smsd.MatcherEngine.VF2PP  # fastest (default)
+                    # smsd.MatcherEngine.VF2    # classic
+                    # smsd.MatcherEngine.VF3    # experimental
+
+# Pruning (advanced — usually leave defaults)
+chem.use_two_hop_nlf   = True    # 2-hop neighbourhood label frequency
+chem.use_three_hop_nlf = False   # 3-hop (slower, stronger pruning)
+chem.use_bit_parallel_feasibility = True   # bitset-accelerated AC-3
+chem.induced           = False   # induced subgraph isomorphism
+
+# Profiles (shortcuts)
+strict = smsd.ChemOptions.profile("strict")      # exact matching
+taut   = smsd.ChemOptions.tautomer_profile()      # tautomer-aware defaults
+```
+
+### MCSOptions — how to search
+
+Controls the MCS search strategy and stopping criteria.
+
+```python
+mcs_opts = smsd.MCSOptions()
+
+# Basic
+mcs_opts.timeout_ms     = 1000     # wall-clock limit (-1 = no limit)
+mcs_opts.induced        = False    # induced MCS (no extra edges)
+mcs_opts.connected_only = True     # connected MCS only
+mcs_opts.disconnected_mcs = False  # allow disconnected MCS fragments
+mcs_opts.maximize_bonds = False    # edge MCS (MCES) instead of atom MCS
+
+# Fragment control (for disconnected MCS)
+mcs_opts.min_fragment_size = 1     # minimum atoms per fragment
+mcs_opts.max_fragments     = 100   # cap number of fragments
+
+# Pipeline depth — higher = more thorough, slower
+mcs_opts.max_stage = 5   # 0=identity only, 1=substructure (fast for reactions),
+                          # 2=McSplit, 3=Bron-Kerbosch, 4=McGregor, 5=full pipeline
+
+# Near-MCS exploration (reaction-aware)
+mcs_opts.near_mcs_delta      = 2    # try K-1, K-2 variants
+mcs_opts.near_mcs_candidates = 20   # how many near-MCS to evaluate
+
+# Chemistry-aware features
+mcs_opts.reaction_aware   = False   # prefer heteroatom mappings
+mcs_opts.bond_change_aware = False  # penalise implausible bond changes
+mcs_opts.extra_seeds       = True   # try additional seed strategies
+
+# Seed search tuning (advanced)
+mcs_opts.seed_neighborhood_radius = 2    # local neighbourhood for seed extension
+mcs_opts.seed_max_anchors         = 12   # max anchor points per seed
+mcs_opts.template_fuzzy_atoms     = 0    # fuzzy atom tolerance
+
+# NLF pruning during extension (advanced)
+mcs_opts.use_two_hop_nlf_in_extension   = True
+mcs_opts.use_three_hop_nlf_in_extension = False
+```
+
+### Aromaticity: Perception vs Matching
+
+SMSD separates *detecting* aromaticity from *comparing* it during search:
+
+```python
+mol = smsd.parse_smiles("c1ccccc1")
+
+# Perception — which algorithm detects aromatic atoms/bonds
+# Currently only DAYLIGHT_LIKE (Hückel 4n+2 on planar rings)
+mol.perceive_aromaticity(smsd.AromaticityModel.DAYLIGHT_LIKE)
+
+# Matching — how strict aromatic comparison is in MCS/substructure
+chem = smsd.ChemOptions()
+chem.aromaticity_mode = smsd.AromaticityMode.STRICT    # aromatic must match aromatic
+chem.aromaticity_mode = smsd.AromaticityMode.FLEXIBLE  # aromatic ≈ Kekulé single/double
+
+# Both can be set on ChemOptions:
+chem.aromaticity_model = smsd.AromaticityModel.DAYLIGHT_LIKE  # perception model
+chem.aromaticity_mode  = smsd.AromaticityMode.FLEXIBLE        # matching strictness
+```
+
+## Lightweight MCS Engine (6.12.1)
+
+High-level coverage-driven MCS with automatic LFUB termination.
+Accepts SMILES, MolGraph, or RDKit Mol. Uses the C++ clique solver
+for heavy combinatorial work; Python handles chemistry.
+
+```python
+from smsd.mcs_engine import find_mcs_lightweight
+
+# From SMILES — zero boilerplate
+result = find_mcs_lightweight("c1ccc(O)cc1", "c1ccc(N)cc1")
+print(result.size)          # 6
+print(result.mapping)       # [(1,1), (2,2), ...]
+print(result.candidates)    # all candidate mappings
+print(result.lfub)          # label-frequency upper bound
+print(result.elapsed_ms)    # wall-clock time
+
+# From MolGraph
+import smsd
+g1 = smsd.parse_smiles("c1ccc(O)cc1")
+g2 = smsd.parse_smiles("c1ccc(N)cc1")
+result = find_mcs_lightweight(g1, g2, timeout=2.0, ring_matches_ring=True)
+
+# From RDKit Mol
+from rdkit import Chem
+result = find_mcs_lightweight(
+    Chem.MolFromSmiles("c1ccccc1"),
+    Chem.MolFromSmiles("c1ccc(O)cc1"),
+    bond_any=True,
+)
+```
+
+### Pipeline stages (automatic escalation)
+
+| Stage | Algorithm | Typical coverage |
+|-------|-----------|-----------------|
+| L0.75 | Greedy atom-by-atom (Morgan rank + NLF) | 45% of pairs solved here |
+| L1 | Substructure containment (C++ VF2 or RDKit) | +20% |
+| L1.5 | Seed-and-extend from heteroatom anchors | +15% |
+| L3 | C++ clique solver (BK + Tomita pivoting) | +15% |
+| L4 | McGregor bond-grow backtracking | +5% |
+
+Each stage checks against the label-frequency upper bound (LFUB).
+If the current best reaches LFUB, search stops immediately.
+
+## Clique Solver — Low-Level API (6.12.1)
+
+Direct access to the C++ clique-based MCS and substructure engine.
+Chemistry stays in Python; only the graph search runs in C++.
+
+```python
+import smsd._smsd as _smsd
+
+# Substructure from element lists (C++ builds compat internally)
+matches = _smsd.match_substructure_from_elements(
+    ["C","C","C","C","C","C"],
+    ["C","C","C","C","C","C","O"],
+    {(0,1):1, (1,2):1, (2,3):1, (3,4):1, (4,5):1, (0,5):1},
+    {(0,1):1, (1,2):1, (2,3):1, (3,4):1, (4,5):1, (0,5):1, (3,6):1},
+    True, 500, 8,
+)
+
+# Substructure from pre-built compat pairs
+matches = _smsd.match_substructure(
+    n_query, n_target, compat,
+    bonds_query, bonds_target,
+    False, 500, 8,
+)
+
+# MCS via clique solver
+result = _smsd.find_mcs_clique(
+    compat, bonds_a, bonds_b, n_a, n_b,
+    True, 1000, 8,
+)
+# result.best_size, result.candidates, result.elapsed_us
+
+# Score a mapping
+score = _smsd.score_mapping(
+    mapping, elements_a, elements_b, bonds_a, bonds_b)
+```
 
 ## Core Search
 
@@ -91,7 +293,7 @@ import smsd
 
 path_fp = smsd.path_fingerprint("c1ccccc1", path_length=7, fp_size=2048)
 mcs_fp = smsd.mcs_fingerprint("c1ccc(O)cc1", path_length=7, fp_size=2048)
-ecfp4 = smsd.circular_fingerprint("c1ccccc1", radius=2, fp_size=2048)
+ecfp4 = smsd.fingerprint_from_smiles("c1ccccc1", radius=2, fp_size=2048)
 torsion = smsd.topological_torsion("CC(N)C(=O)O")
 
 assert smsd.fingerprint_subset(path_fp, path_fp)

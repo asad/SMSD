@@ -778,52 +778,11 @@ public final class SMSD {
 
   // ---- Atom-Atom Mapping for Reactions ----
 
-  /**
-   * Compute atom-atom mapping between reactants and products via MCS.
-   *
-   * <pre>{@code
-   * Map<Integer, Integer> aam =
-   *     SMSD.mapReaction(reactants, products, new ChemOptions(), 10000);
-   * for (var e : aam.entrySet()) {
-   *     System.out.println("Reactant atom " + e.getKey() + " -> Product atom " + e.getValue());
-   * }
-   * }</pre>
-   *
-   * @param reactants the combined reactant molecule
-   * @param products  the combined product molecule
-   * @param chem      chemical matching options
-   * @param timeoutMs timeout in milliseconds
-   * @return mapping from reactant atom indices to product atom indices
-   */
-  public static Map<Integer, Integer> mapReaction(
-      IAtomContainer reactants, IAtomContainer products, ChemOptions chem, long timeoutMs) {
-    return SearchEngine.mapReaction(reactants, products, chem, timeoutMs);
-  }
+  
 
-  /**
-   * Reaction atom-atom mapping with reaction-aware MCS post-filtering.
-   * Enumerates near-MCS candidates and re-ranks by heteroatom coverage,
-   * rare-element importance, and connectivity.
-   *
-   * <pre>{@code
-   * Map<Integer, Integer> aam =
-   *     SMSD.mapReactionAware(reactants, products, new ChemOptions(), 10000);
-   * for (var e : aam.entrySet()) {
-   *     System.out.println("Reactant atom " + e.getKey() + " -> Product atom " + e.getValue());
-   * }
-   * }</pre>
-   *
-   * @param reactants the combined reactant molecule
-   * @param products  the combined product molecule
-   * @param chem      chemical matching options
-   * @param timeoutMs timeout in milliseconds
-   * @return mapping from reactant atom indices to product atom indices
-   * @since 6.4.0
-   */
-  public static Map<Integer, Integer> mapReactionAware(
-      IAtomContainer reactants, IAtomContainer products, ChemOptions chem, long timeoutMs) {
-    return SearchEngine.mapReactionAware(reactants, products, chem, timeoutMs);
-  }
+
+  
+
 
   // ---- MCS SMILES ----
 

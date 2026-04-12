@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="/Users/asad/tool/SMSD"
+ROOT="${SMSD_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 CPP_DIR="$ROOT/cpp"
 BUILD_DIR="$CPP_DIR/build"
 

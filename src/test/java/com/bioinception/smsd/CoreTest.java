@@ -655,12 +655,12 @@ public class CoreTest {
 
   /**
    * Functional group tests: fx_0: amide NC(=O) is in NCC(=O)NCCC → true fx_1: [O-]C=O vs OC=O →
-   * false (matchFormalCharge=true by default: [O-] ≠ O)
+   * true (matchFormalCharge=false by default: charge ignored, [O-] matches O)
    */
   static Stream<Arguments> functionalCases() {
     return Stream.of(
         arguments("fx_0", "NC(=O)", "NCC(=O)NCCC", true),
-        arguments("fx_1", "[O-]C=O", "OC=O", false));
+        arguments("fx_1", "[O-]C=O", "OC=O", true));
   }
 
   /**

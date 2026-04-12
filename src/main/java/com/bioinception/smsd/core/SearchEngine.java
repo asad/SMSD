@@ -166,16 +166,14 @@ public final class SearchEngine {
 
     /**
      * Enable built-in reaction-aware post-filtering.  Off by default.
-     * When true, findMCS and mapReaction will enumerate near-MCS
+     * When true, findMCS will enumerate near-MCS
      * candidates (sizes K, K-1, K-2) and re-rank by heteroatom
      * coverage and reaction-center proximity.
      * @since 6.4.0
      */
-    public boolean reactionAware = false;
 
     /**
      * Maximum size deficit from the mathematical maximum K to consider.
-     * Only used when reactionAware=true or postFilter!=null.
      * Default: 2 (consider candidates of size K, K-1, K-2).
      * @since 6.4.0
      */
@@ -190,7 +188,6 @@ public final class SearchEngine {
 
     /**
      * Custom post-filter.  If non-null, overrides the built-in
-     * reaction-aware scorer even when reactionAware=true.
      * @since 6.4.0
      */
     public MCSPostFilter postFilter = null;
@@ -201,7 +198,6 @@ public final class SearchEngine {
      * of implied bond transformations (C-C breaks penalised most).
      * @since 6.5.3
      */
-    public boolean bondChangeAware = false;
 
     /**
      * Target atom indices to exclude from MCS search.
@@ -1367,11 +1363,11 @@ public final class SearchEngine {
         if (!s.isEmpty()) seeds.add(s);
       }
       if (!tb.expired()) {
-        s = GB.vf2ppRingSkeletonSeed(tb, Math.max(1, tb.remainingMillis() / 4), 2, 12);
+        s = GB.vf2ppRingSkeletonSeed(tb, Math.min(50, Math.max(1, tb.remainingMillis() / 4)), 2, 12);
         if (!s.isEmpty()) seeds.add(s);
       }
       if (!tb.expired()) {
-        s = GB.vf2ppCoreSeed(tb, Math.max(1, tb.remainingMillis() / 4), 2, 12);
+        s = GB.vf2ppCoreSeed(tb, Math.min(50, Math.max(1, tb.remainingMillis() / 4)), 2, 12);
         if (!s.isEmpty()) seeds.add(s);
       }
     }
@@ -1457,6 +1453,20 @@ public final class SearchEngine {
       if (!validateMapping(g1, g2, alt, C).isEmpty()) alt = recoverValidMcsMapping(g1, g2, alt, C, M);
       if (preferFinalMapping(g1, alt, best, M)) best = alt;
     }
+
+    // Ring-constrained quality recovery: when ringMatchesRingOnly=false (the
+    // default since 6.12.1), the compat space can explode, causing the search
+    // to return sub-optimal mappings. Re-run the full pipeline with ring=true
+    // which tightens the search space. Any ring-true valid mapping is also
+    // valid under ring-false (strictly more permissive).
+    // This recursive call is safe: ringC.ringMatchesRingOnly=true prevents re-entry.
+    if (!C.ringMatchesRingOnly && !weightMode && best.size() < baseUb) {
+      ChemOptions ringC = ChemOptions.copyOf(C);
+      ringC.ringMatchesRingOnly = true;
+      Map<Integer, Integer> ringBest = findMCS(g1, g2, ringC, M);
+      if (ringBest.size() > best.size()) best = ringBest;
+    }
+
     return best;
   }
 
@@ -1697,11 +1707,11 @@ public final class SearchEngine {
           if (!s.isEmpty()) seeds.add(s);
         }
         if (!tb.expired()) {
-          s = GB.vf2ppRingSkeletonSeed(tb, Math.max(1, tb.remainingMillis() / 4), 2, 12);
+          s = GB.vf2ppRingSkeletonSeed(tb, Math.min(50, Math.max(1, tb.remainingMillis() / 4)), 2, 12);
           if (!s.isEmpty()) seeds.add(s);
         }
         if (!tb.expired()) {
-          s = GB.vf2ppCoreSeed(tb, Math.max(1, tb.remainingMillis() / 4), 2, 12);
+          s = GB.vf2ppCoreSeed(tb, Math.min(50, Math.max(1, tb.remainingMillis() / 4)), 2, 12);
           if (!s.isEmpty()) seeds.add(s);
         }
       }
@@ -4607,376 +4617,27 @@ public final class SearchEngine {
 
   // ---- Feature 5: Atom-Atom Mapping for Reactions ----
 
-  /**
-   * Compute atom-atom mapping between reactants and products via disconnected MCS.
-   *
-   * <pre>{@code
-   * Map<Integer, Integer> aam =
-   *     SearchEngine.mapReaction(reactants, products, new ChemOptions(), 10000);
-   * }</pre>
-   *
-   * @param reactants the combined reactant molecule
-   * @param products  the combined product molecule
-   * @param chem      chemical matching options
-   * @param timeoutMs timeout in milliseconds
-   * @return mapping from reactant atom indices to product atom indices
-   */
-  public static Map<Integer, Integer> mapReaction(
-      IAtomContainer reactants, IAtomContainer products, ChemOptions chem, long timeoutMs) {
-    ChemOptions reactionC = ChemOptions.copyOf(chem);
-    reactionC.matchFormalCharge = false;
-    reactionC.ringMatchesRingOnly = false;
-    reactionC.completeRingsOnly = false;
-    MCSOptions opts = new MCSOptions();
-    opts.disconnectedMCS = true;
-    opts.connectedOnly = false;
-    opts.timeoutMs = timeoutMs;
-    return findMCS(reactants, products, reactionC, opts);
-  }
+  
+  // Reaction mapping available in BioInception commercial license.
+
 
   // ---- Feature 5b: Reaction-Aware MCS Post-Filter (v6.4.0) ----
 
-  /**
-   * Generate near-MCS candidates by systematic deletion from K-sized mappings
-   * and greedy re-extension.
-   *
-   * <p>For each K-sized mapping, systematically remove one mapped pair to produce
-   * (K-1)-sized candidates. Then attempt to re-extend each by adding a different
-   * atom that covers additional heteroatom types. Optionally repeat for (K-2).
-   *
-   * <p>Package-private: called internally when {@code reactionAware=true} or
-   * {@code postFilter != null}.
-   *
-   * @param g1            first molecule graph
-   * @param g2            second molecule graph
-   * @param C             chemical matching options
-   * @param M             MCS options
-   * @param exactMCS      the size-K MCS candidates from findAllMCS
-   * @param delta         max size deficit (typically 2)
-   * @param maxCandidates max candidates to generate
-   * @return combined list of K, K-1, and K-2 sized candidates (deduplicated)
-   * @since 6.4.0
-   */
-  static List<Map<Integer, Integer>> findNearMCS(
-      MolGraph g1, MolGraph g2, ChemOptions C, MCSOptions M,
-      List<Map<Integer, Integer>> exactMCS, int delta, int maxCandidates) {
+  
+  // Reaction mapping available in BioInception commercial license.
 
-    if (exactMCS == null || exactMCS.isEmpty()) return Collections.emptyList();
 
-    int K = exactMCS.get(0).size();
-    int effectiveDelta = Math.min(delta, K - 1);
+  
+  // Reaction mapping available in BioInception commercial license.
 
-    // Collect all candidates: start with the exact K-sized ones
-    Map<String, Map<Integer, Integer>> seenBySmi = new LinkedHashMap<>();
-    for (Map<Integer, Integer> m : exactMCS) {
-      String smi = extractMolGraphSubgraph(g1, m.keySet()).toCanonicalSmiles();
-      seenBySmi.putIfAbsent(smi, m);
-      if (seenBySmi.size() >= maxCandidates) break;
-    }
 
-    // Resolve timeout
-    long timeout = M.timeoutMs;
-    if (timeout < 0) timeout = Math.min(30_000L, 500L + (long) g1.n * g2.n * 2);
-    TimeBudget tb = new TimeBudget(timeout);
+  
+  // Reaction mapping available in BioInception commercial license.
 
-    // Build compatibility structures for re-extension
-    // For each exact MCS candidate, produce deletion variants
-    List<Map<Integer, Integer>> deletionVariants = new ArrayList<>();
 
-    for (Map<Integer, Integer> exact : exactMCS) {
-      if (tb.expiredNow() || seenBySmi.size() >= maxCandidates) break;
+  
+  // Reaction mapping available in BioInception commercial license.
 
-      for (int removeKey : exact.keySet()) {
-        if (tb.expiredNow() || seenBySmi.size() >= maxCandidates) break;
-
-        // Create K-1 variant by removing one atom pair
-        Map<Integer, Integer> variant = new LinkedHashMap<>(exact);
-        variant.remove(removeKey);
-
-        String smi = extractMolGraphSubgraph(g1, variant.keySet()).toCanonicalSmiles();
-        if (seenBySmi.putIfAbsent(smi, variant) == null) {
-          deletionVariants.add(variant);
-        }
-      }
-    }
-
-    // Greedy re-extension: for each deletion variant, try to add a different atom
-    // that covers an additional heteroatom type not already in the mapping
-    for (Map<Integer, Integer> variant : deletionVariants) {
-      if (tb.expiredNow() || seenBySmi.size() >= maxCandidates) break;
-
-      Set<Integer> usedQ = variant.keySet();
-      Set<Integer> usedT = new HashSet<>(variant.values());
-
-      // What heteroatom types are already mapped?
-      Set<Integer> mappedHetero = new HashSet<>();
-      for (int qi : usedQ) {
-        int z = g1.atomicNum[qi];
-        if (z != 6 && z != 1) mappedHetero.add(z);
-      }
-
-      // Try to find an unmapped atom in g1 that is:
-      // (a) a neighbor of some mapped atom (for connectivity)
-      // (b) a heteroatom type not yet mapped
-      // (c) compatible with an unmapped atom in g2
-      for (int qi : new ArrayList<>(usedQ)) {
-        if (tb.expiredNow() || seenBySmi.size() >= maxCandidates) break;
-        for (int nbQ : g1.neighbors[qi]) {
-          if (usedQ.contains(nbQ)) continue;
-          int zQ = g1.atomicNum[nbQ];
-          if (zQ == 6 || zQ == 1) continue; // only heteroatoms
-          if (mappedHetero.contains(zQ)) continue; // must be a NEW type
-
-          // Find a compatible target atom that is a neighbor of a mapped target atom
-          for (int ti : variant.values()) {
-            if (tb.expiredNow()) break;
-            for (int nbT : g2.neighbors[ti]) {
-              if (usedT.contains(nbT)) continue;
-              int zT = g2.atomicNum[nbT];
-              if (zT != zQ) continue; // must match element
-
-              // Check label compatibility
-              if (C.matchAtomType && g1.label[nbQ] != g2.label[nbT]) continue;
-              if (C.matchFormalCharge && g1.formalCharge[nbQ] != g2.formalCharge[nbT]) continue;
-
-              // Create re-extended variant
-              Map<Integer, Integer> extended = new LinkedHashMap<>(variant);
-              extended.put(nbQ, nbT);
-              String smi = extractMolGraphSubgraph(g1, extended.keySet()).toCanonicalSmiles();
-              seenBySmi.putIfAbsent(smi, extended);
-              break; // one extension per neighbor pair is enough
-            }
-          }
-        }
-      }
-    }
-
-    // Level 2: if delta >= 2, repeat deletion on K-1 candidates to get K-2
-    if (effectiveDelta >= 2 && !tb.expiredNow()) {
-      List<Map<Integer, Integer>> kMinus1 = new ArrayList<>();
-      for (Map<Integer, Integer> m : seenBySmi.values()) {
-        if (m.size() == K - 1) kMinus1.add(m);
-      }
-
-      for (Map<Integer, Integer> km1 : kMinus1) {
-        if (tb.expiredNow() || seenBySmi.size() >= maxCandidates) break;
-        for (int removeKey : km1.keySet()) {
-          if (tb.expiredNow() || seenBySmi.size() >= maxCandidates) break;
-          Map<Integer, Integer> variant = new LinkedHashMap<>(km1);
-          variant.remove(removeKey);
-          String smi = extractMolGraphSubgraph(g1, variant.keySet()).toCanonicalSmiles();
-          seenBySmi.putIfAbsent(smi, variant);
-        }
-      }
-    }
-
-    return new ArrayList<>(seenBySmi.values());
-  }
-
-  /**
-   * Heteroatom-seeded MCS: for a given element type, seed from every compatible
-   * (query, target) heteroatom pair and greedily extend. Returns the best mapping
-   * that includes at least one atom of the required element.
-   *
-   * <p>This addresses the blind spot where findNearMCS (deletion + re-extension
-   * from the size-K MCS) cannot reach subgraph selections that require a
-   * fundamentally different seed -- e.g. the amino-acid+S chain in SAM vs. the
-   * amino-acid+ribose chain that the standard MCS prefers.
-   *
-   * @param g1              first molecule graph
-   * @param g2              second molecule graph
-   * @param C               chemical matching options
-   * @param requiredElement atomic number that must appear in the mapping (e.g. 16 for S)
-   * @return the best mapping seeded from that element, or empty map if none found
-   * @since 6.5.0
-   */
-  static Map<Integer, Integer> heteroatomSeededMCS(
-      MolGraph g1, MolGraph g2, ChemOptions C, int requiredElement) {
-
-    // Collect atom indices with the required element in each molecule
-    List<Integer> qAtoms = new ArrayList<>();
-    List<Integer> tAtoms = new ArrayList<>();
-    for (int i = 0; i < g1.n; i++)
-      if (g1.atomicNum[i] == requiredElement) qAtoms.add(i);
-    for (int j = 0; j < g2.n; j++)
-      if (g2.atomicNum[j] == requiredElement) tAtoms.add(j);
-    if (qAtoms.isEmpty() || tAtoms.isEmpty()) return Collections.emptyMap();
-
-    int n1 = g1.n, n2 = g2.n;
-    Map<Integer, Integer> bestMapping = Collections.emptyMap();
-    int bestSize = 0;
-
-    for (int qi : qAtoms) {
-      for (int tj : tAtoms) {
-        if (!SubstructureEngine.AbstractVFMatcher.atomsCompatFast(g1, qi, g2, tj, C))
-          continue;
-
-        // Initialize mapping arrays
-        int[] q2t = new int[n1];
-        int[] t2q = new int[n2];
-        Arrays.fill(q2t, -1);
-        Arrays.fill(t2q, -1);
-        q2t[qi] = tj;
-        t2q[tj] = qi;
-        int mapSize = 1;
-
-        // Greedy bond-based extension
-        boolean progress = true;
-        while (progress) {
-          progress = false;
-          for (int qk = 0; qk < n1; qk++) {
-            if (q2t[qk] >= 0) continue;
-            int bestTk = -1, bestScore = -1;
-            for (int nb : g1.neighbors[qk]) {
-              if (q2t[nb] < 0) continue; // neighbor must be mapped
-              int tNb = q2t[nb];
-              for (int tk : g2.neighbors[tNb]) {
-                if (t2q[tk] >= 0) continue;
-                if (!SubstructureEngine.AbstractVFMatcher.atomsCompatFast(g1, qk, g2, tk, C))
-                  continue;
-                if (!MolGraph.ChemOps.bondsCompatible(g1, qk, nb, g2, tk, tNb, C))
-                  continue;
-                // Check consistency with all other mapped neighbors
-                boolean consistent = true;
-                for (int qm : g1.neighbors[qk]) {
-                  if (qm == nb || q2t[qm] < 0) continue;
-                  int tm = q2t[qm];
-                  int qOrd = g1.bondOrder(qk, qm);
-                  int tOrd = g2.bondOrder(tk, tm);
-                  if (qOrd != 0 && tOrd != 0) {
-                    if (!MolGraph.ChemOps.bondsCompatible(g1, qk, qm, g2, tk, tm, C)) {
-                      consistent = false;
-                      break;
-                    }
-                  }
-                }
-                if (!consistent) continue;
-                int score = (g2.ring[tk] && g1.ring[qk] ? 50 : 0)
-                    + Math.min(g1.degree[qk], g2.degree[tk]);
-                if (score > bestScore) { bestScore = score; bestTk = tk; }
-              }
-            }
-            if (bestTk >= 0) {
-              q2t[qk] = bestTk;
-              t2q[bestTk] = qk;
-              mapSize++;
-              progress = true;
-            }
-          }
-        }
-
-        if (mapSize > bestSize) {
-          bestSize = mapSize;
-          bestMapping = new LinkedHashMap<>();
-          for (int i = 0; i < n1; i++)
-            if (q2t[i] >= 0) bestMapping.put(i, q2t[i]);
-        }
-      }
-    }
-    return bestMapping;
-  }
-
-  /**
-   * Reaction-aware MCS: find MCS candidates, generate near-MCS variants,
-   * add heteroatom-seeded candidates for shared rare elements, and re-rank
-   * by composite scoring (size + heteroatom + rarity + connectivity).
-   *
-   * <pre>{@code
-   * MCSOptions opts = new MCSOptions();
-   * opts.reactionAware = true;
-   * Map<Integer, Integer> best = SearchEngine.reactionAwareMCS(g1, g2, chem, opts);
-   * }</pre>
-   *
-   * @param g1   first molecule graph
-   * @param g2   second molecule graph
-   * @param C    chemical matching options
-   * @param M    MCS options (must have reactionAware=true or postFilter set)
-   * @return the best-scoring candidate mapping
-   * @since 6.4.0
-   */
-  public static Map<Integer, Integer> reactionAwareMCS(
-      MolGraph g1, MolGraph g2, ChemOptions C, MCSOptions M) {
-    // For reaction mapping, relax charge matching: reaction centers change
-    // charge (e.g., S+ in SAM → S in homocysteine).
-    ChemOptions reactionC = ChemOptions.copyOf(C);
-    reactionC.matchFormalCharge = false;
-    reactionC.ringMatchesRingOnly = false;
-    reactionC.completeRingsOnly = false;
-
-    // Step 1: find all exact K-sized MCS candidates (charge-relaxed)
-    int maxResults = Math.max(5, M.nearMcsCandidates / 4);
-    List<Map<Integer, Integer>> exactCandidates = findAllMCS(g1, g2, reactionC, M, maxResults);
-    if (exactCandidates.isEmpty()) return Collections.emptyMap();
-
-    // Step 2: generate near-MCS candidates (K-1, K-2)
-    List<Map<Integer, Integer>> allCandidates = findNearMCS(
-        g1, g2, reactionC, M, exactCandidates, M.nearMcsDelta, M.nearMcsCandidates);
-    if (allCandidates.isEmpty()) allCandidates = new ArrayList<>(exactCandidates);
-
-    // Step 3: heteroatom-seeded candidates -- for each heteroatom type shared
-    // between both molecules, generate a candidate seeded from that element.
-    // This covers subgraph selections unreachable by deletion from the K-MCS.
-    Set<Integer> hG1 = new HashSet<>(), hG2 = new HashSet<>();
-    for (int i = 0; i < g1.n; i++) {
-      int z = g1.atomicNum[i];
-      if (z != 6 && z != 1) hG1.add(z);
-    }
-    for (int j = 0; j < g2.n; j++) {
-      int z = g2.atomicNum[j];
-      if (z != 6 && z != 1) hG2.add(z);
-    }
-    for (int z : hG1) {
-      if (!hG2.contains(z)) continue;
-      Map<Integer, Integer> seeded = heteroatomSeededMCS(g1, g2, reactionC, z);
-      if (!seeded.isEmpty()) {
-        allCandidates.add(seeded);
-      }
-    }
-
-    // Step 4: apply post-filter (custom or built-in)
-    MCSPostFilter filter = M.postFilter;
-    if (filter == null) {
-      filter = M.bondChangeAware ? new BondChangeScorer() : new ReactionAwareScorer();
-    }
-    List<Map<Integer, Integer>> ranked = filter.rank(
-        Collections.unmodifiableList(allCandidates), g1, g2);
-
-    return ranked.isEmpty() ? exactCandidates.get(0) : ranked.get(0);
-  }
-
-  /**
-   * Reaction atom-atom mapping with reaction-aware MCS post-filtering.
-   * Enumerates near-MCS candidates and re-ranks by heteroatom coverage,
-   * rare-element importance, and connectivity.
-   *
-   * <pre>{@code
-   * Map<Integer, Integer> aam =
-   *     SearchEngine.mapReactionAware(reactants, products, new ChemOptions(), 10000);
-   * }</pre>
-   *
-   * @param reactants the combined reactant molecule
-   * @param products  the combined product molecule
-   * @param chem      chemical matching options
-   * @param timeoutMs timeout in milliseconds
-   * @return mapping from reactant atom indices to product atom indices
-   * @since 6.4.0
-   */
-  public static Map<Integer, Integer> mapReactionAware(
-      IAtomContainer reactants, IAtomContainer products, ChemOptions chem, long timeoutMs) {
-    MolGraph g1 = toMolGraph(reactants), g2 = toMolGraph(products);
-    applySolvent(g1, chem);
-    applySolvent(g2, chem);
-
-    MCSOptions opts = new MCSOptions();
-    opts.disconnectedMCS = true;
-    opts.connectedOnly = false;
-    opts.timeoutMs = timeoutMs;
-    opts.reactionAware = true;
-    opts.nearMcsDelta = 2;
-    opts.nearMcsCandidates = 20;
-
-    return reactionAwareMCS(g1, g2, chem, opts);
-  }
 
   // ---- Feature 6: Fingerprint Quality Analysis ----
 
