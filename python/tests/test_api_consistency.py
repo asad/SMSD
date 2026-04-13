@@ -20,14 +20,14 @@ from smsd import (
     export_sdf,
     from_hex,
     fingerprint,
-    mcs,
+    find_mcs,
     parse_smiles,
     perceive_aromaticity,
     prewarm,
     read_molfile,
     smarts_match,
     smarts_find_all,
-    substructure_search,
+    find_substructure,
     to_hex,
     to_smiles,
     write_molfile,
@@ -69,9 +69,9 @@ def test_substructure_wrappers_stay_in_sync(query, target, expected):
     gt = parse_smiles(target)
 
     assert smsd.is_substructure(gq, gt) is expected
-    assert substructure_search(query, target) == substructure_search(gq, gt)
+    assert find_substructure(query, target) == find_substructure(gq, gt)
 
-    mapping = substructure_search(gq, gt)
+    mapping = find_substructure(gq, gt)
     assert bool(mapping) is expected
     if expected:
         assert len(mapping) == len(gq)
@@ -83,8 +83,8 @@ def test_mcs_wrappers_stay_in_sync(query, target, min_size):
     gq = parse_smiles(query)
     gt = parse_smiles(target)
 
-    mapping_smiles = smsd.mcs(query, target)
-    mapping_graph = smsd.mcs(gq, gt)
+    mapping_smiles = smsd.find_mcs(query, target)
+    mapping_graph = smsd.find_mcs(gq, gt)
 
     assert len(mapping_smiles) >= min_size
     assert len(mapping_graph) == len(mapping_smiles)
@@ -202,7 +202,7 @@ def test_rgroup_fragment_smarts_mcs_and_fingerprint_pipeline():
     assert to_smiles(core).startswith("[R1]")
     assert smarts_match("[*]c1ccccc1", target) is True
     assert len(fingerprint(core, kind="path")) > 0
-    assert len(mcs(core, target)) >= 6
+    assert len(find_mcs(core, target)) >= 6
 
 
 def test_compiled_smarts_queries_can_be_reused_across_targets():
@@ -278,6 +278,6 @@ def test_stereo_smarts_substructure_and_mcs_pipeline():
     target = parse_smiles("CC(N)C(=O)O")
 
     assert smarts_match("[NX3][CH]([#6])C(=O)O", query) is True
-    assert substructure_search("NC(C)C(=O)O", target)
-    assert len(mcs(query, target)) >= 5
+    assert find_substructure("NC(C)C(=O)O", target)
+    assert len(find_mcs(query, target)) >= 5
     assert assign_rs(query)

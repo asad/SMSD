@@ -533,8 +533,6 @@ def find_mcs(mol1, mol2, *,
     return translated
 
 
-# Backward-compat alias (deprecated — use find_mcs)
-mcs = find_mcs
 
 
 def find_mcs_progressive(mol1, mol2, *, on_progress=None, tautomer_aware=False,
@@ -606,35 +604,6 @@ def find_mcs_progressive(mol1, mol2, *, on_progress=None, tautomer_aware=False,
             break
 
     return best
-
-
-def all_mcs(mol1, mol2, *, max_results=10, tautomer_aware=False, timeout_ms=10000, **kwargs):
-    """Find multiple distinct MCS mappings of the maximum size.
-
-    Accepts either MolGraph objects or SMILES strings. Returns up to
-    ``max_results`` distinct atom-atom mappings that all share the same
-    (maximum) MCS size. Useful for scaffold analysis and SAR studies.
-
-    Args:
-        mol1: First molecule (MolGraph or SMILES string).
-        mol2: Second molecule (MolGraph or SMILES string).
-        max_results: Maximum number of distinct mappings to return (default 10).
-        tautomer_aware: Use tautomer-aware matching.
-        timeout_ms: Timeout in milliseconds.
-        **kwargs: Additional MCSOptions fields (e.g. connected_only=False).
-
-    Returns:
-        list[dict]: List of mappings from mol1 atom indices to mol2 atom indices.
-            Each mapping has the same (maximum) size.
-    """
-    g1 = _ensure_mol(mol1)
-    g2 = _ensure_mol(mol2)
-    chem = ChemOptions.tautomer_profile() if tautomer_aware else ChemOptions()
-    opts = MCSOptions()
-    opts.timeout_ms = timeout_ms
-    for k, v in kwargs.items():
-        setattr(opts, k, v)
-    return _native_find_all_mcs(g1, g2, chem, opts, max_results)
 
 
 def mcs_smiles(mol1, mol2, *, tautomer_aware=False, timeout_ms=10000, **kwargs):
@@ -720,8 +689,6 @@ def is_substructure(query, target, *, timeout_ms=10000):
     return _native_is_substructure(q, t, ChemOptions(), timeout_ms)
 
 
-# Backward-compat alias (deprecated — use find_substructure)
-substructure_search = find_substructure
 
 
 def topological_torsion(mol, fp_size=2048):
@@ -822,11 +789,6 @@ def tanimoto_coefficient(fp1, fp2, fp_size=2048):
     return intersection / union
 
 
-# Backward-compatible aliases
-overlapCoefficient = overlap_coefficient    # camelCase compat
-tanimoto = tanimoto_coefficient             # short alias
-count_overlap_coefficient = _smsd.count_overlapCoefficient if hasattr(_smsd, 'count_overlapCoefficient') else None
-count_tanimoto = _smsd.count_tanimoto if hasattr(_smsd, 'count_tanimoto') else None
 
 
 def batch_substructure(query, targets, *, timeout_ms=10000):
@@ -1597,7 +1559,7 @@ def mcs_from_smiles(smi1, smi2, **kwargs):
         raise ValueError("smi2 must be a non-empty SMILES string")
     g1 = parse_smiles(smi1)
     g2 = parse_smiles(smi2)
-    mapping = mcs(g1, g2, **kwargs)
+    mapping = find_mcs(g1, g2, **kwargs)
     smi = mcs_to_smiles(g1, mapping) if mapping else ""
     return MatchResult(mapping, g1.n, g2.n, smi)
 
@@ -2472,7 +2434,7 @@ def mcs_rdkit(mol1, mol2, **kwargs):
     """
     g1 = from_rdkit(mol1)
     g2 = from_rdkit(mol2)
-    return mcs(g1, g2, **kwargs)
+    return find_mcs(g1, g2, **kwargs)
 
 
 def substructure_rdkit(query_mol, target_mol, **kwargs):
@@ -2492,7 +2454,7 @@ def substructure_rdkit(query_mol, target_mol, **kwargs):
     """
     gq = from_rdkit(query_mol)
     gt = from_rdkit(target_mol)
-    return substructure_search(gq, gt, **kwargs)
+    return find_substructure(gq, gt, **kwargs)
 
 
 # =========================================================================
@@ -2558,7 +2520,7 @@ def depict_mcs(mol1, mol2, *, tautomer_aware=False, timeout_ms=10000,
     g2 = _ensure_mol(mol2)
 
     # Find MCS
-    mapping = mcs(g1, g2, tautomer_aware=tautomer_aware, timeout_ms=timeout_ms)
+    mapping = find_mcs(g1, g2, tautomer_aware=tautomer_aware, timeout_ms=timeout_ms)
 
     # Convert to RDKit mols for drawing
     smi1 = to_smiles(g1) if not isinstance(mol1, str) else mol1
@@ -2606,7 +2568,7 @@ def depict_substructure(query, target, *, timeout_ms=10000,
     gq = _ensure_mol(query)
     gt = _ensure_mol(target)
 
-    result = substructure_search(gq, gt, timeout_ms=timeout_ms)
+    result = find_substructure(gq, gt, timeout_ms=timeout_ms)
     mapping = result if isinstance(result, dict) else {}
 
     smi_q = to_smiles(gq) if not isinstance(query, str) else query
@@ -2773,11 +2735,8 @@ __all__ = [
     # Substructure
     "find_substructure",
     "is_substructure",
-    "substructure_search",  # deprecated alias
     # MCS
     "find_mcs",
-    "mcs",                  # deprecated alias
-    "all_mcs",
     "canonicalize_mapping",
     "prewarm",
     "perceive_aromaticity",
@@ -2803,11 +2762,7 @@ __all__ = [
     "fingerprint_subset",
     "analyze_fp_quality",
     "overlap_coefficient",
-    "overlapCoefficient",
     "tanimoto_coefficient",
-    "tanimoto",
-    "count_overlap_coefficient",
-    "count_tanimoto",
     "topological_torsion",
     # Structured result
     "MatchResult",
