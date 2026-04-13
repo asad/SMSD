@@ -61,7 +61,7 @@ import picocli.CommandLine.Option;
 @Command(
     name = "smsd",
     mixinStandardHelpOptions = true,
-    version = "SMSD Pro 6.12.2 — com.bioinceptionlabs",
+    version = "SMSD Pro 6.12.3 — com.bioinceptionlabs",
     description =
         "SMSD — Substructure & MCS search engine by BioInception PVT LTD"
             + " (com.bioinceptionlabs).%nSupports substructure matching, MCS computation, SMARTS"

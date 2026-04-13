@@ -15,6 +15,10 @@ Python bindings for SMSD native graph matching, including substructure search,
 maximum common substructure (MCS), fingerprints, and molecular similarity.
 RDKit and CDK are not required for the core SMSD path.
 
+**Benchmark** (Dalke NN, 1,000 pairs): 5x faster than RDKit FindMCS, finds
+larger MCS on 21% of pairs, zero timeouts. See
+[full results](https://github.com/asad/SMSD#dalke-nearest-neighbor-mcs-benchmark-1000-pairs).
+
 ## Install
 
 ```bash
@@ -210,7 +214,7 @@ smsd.write_molfile(g, "out_v3000.mol", v3000=True)
 smsd.write_molfile(g, "out.sdf", sdf=True)
 ```
 
-The native writer preserves practical chemistry metadata in `6.12.2`:
+The native writer preserves practical chemistry metadata in `6.12.3`:
 - names, comments, and SDF properties
 - charges, isotopes, atom classes, and atom maps
 - `R#`/`R<n>` plus `M  RGP`
@@ -288,10 +292,10 @@ hits    = smsd.batch_fingerprint_screen(query_fp, target_fps)
 # RASCAL pre-screen + exact MCS in one call
 matches = smsd.screen_and_match(query, targets, threshold=0.5)
 
-# Batch find substructure with atom-atom mappings (v6.12.2)
+# Batch find substructure with atom-atom mappings (v6.12.3)
 mappings = smsd.batch_find_substructure(query, targets)
 
-# TargetCorpus — prewarm once, query many times (v6.12.2)
+# TargetCorpus — prewarm once, query many times (v6.12.3)
 corpus = smsd.TargetCorpus.from_smiles(["c1ccccc1", "c1ccc(O)cc1", "CCO"])
 corpus.prewarm()
 hits = corpus.substructure(smsd.parse_smiles("c1ccccc1"))
@@ -337,7 +341,7 @@ Each toolkit brings unique strengths to the cheminformatics ecosystem:
 
 ## Also Available
 
-- **Java**: `com.bioinceptionlabs:smsd:6.12.2` on [Maven Central](https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd)
+- **Java**: `com.bioinceptionlabs:smsd:6.12.3` on [Maven Central](https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd)
 - **C++**: Header-only, zero dependencies — [GitHub](https://github.com/asad/SMSD)
 
 ## Citation
