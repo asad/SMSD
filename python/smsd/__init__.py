@@ -11,18 +11,22 @@ Licensed under Apache 2.0.
 
 Quick start::
 
-    from smsd import parse_smiles, find_mcs, is_substructure, similarity
+    import smsd
 
-    benzene = parse_smiles("c1ccccc1")
-    phenol  = parse_smiles("c1ccc(O)cc1")
+    # Substructure check — accepts SMILES strings directly
+    assert smsd.is_substructure("c1ccccc1", "c1ccc(O)cc1")
 
-    assert is_substructure(benzene, phenol)
+    # MCS — returns {query_atom: target_atom} mapping
+    mapping = smsd.find_mcs("c1ccc(O)cc1", "c1ccc(N)cc1")
+    print(f"MCS size: {len(mapping)}")
 
-    mcs = find_mcs(benzene, phenol)
-    print(f"MCS size: {len(mcs)}")
+    # Multiple MCS mappings for SAR analysis
+    mappings = smsd.find_mcs("c1ccc(O)cc1", "c1ccc(N)cc1", max_results=10)
 
-    sim = similarity(benzene, phenol)
-    print(f"Similarity: {sim:.3f}")
+    # Substructure with atom mapping
+    mapping = smsd.find_substructure("c1ccccc1", "c1ccc(O)cc1")
+    if mapping:
+        print("Benzene found in phenol")
 """
 
 import importlib.machinery
@@ -30,7 +34,7 @@ import importlib.util
 import sys
 from pathlib import Path
 
-__version__ = "6.12.3"
+__version__ = "7.0.0"
 __author__ = "Syed Asad Rahman"
 
 
@@ -113,11 +117,11 @@ write_mol_block = _smsd.write_mol_block
 write_mol_block_v3000 = _smsd.write_mol_block_v3000
 write_sdf_record = _smsd.write_sdf_record
 
-is_substructure = _smsd.is_substructure
-find_substructure = _smsd.find_substructure
-
-find_mcs = _smsd.find_mcs
-find_all_mcs = _smsd.find_all_mcs
+# Low-level C++ bindings (internal — use find_mcs / find_substructure instead)
+_native_is_substructure = _smsd.is_substructure
+_native_find_substructure = _smsd.find_substructure
+_native_find_mcs = _smsd.find_mcs
+_native_find_all_mcs = _smsd.find_all_mcs
 canonicalize_mapping = _smsd.canonicalize_mapping
 translate_to_atom_ids = _smsd.translate_to_atom_ids
 mcs_to_smiles = _smsd.mcs_to_smiles
@@ -383,41 +387,45 @@ def similarity(mol1, mol2):
     return max(0.0, min(1.0, result))
 
 
-def mcs(mol1, mol2, *,
-        # Chemistry matching flags — defaults match RDKit FindMCS for fair comparison
-        ring_matches_ring_only=False,
-        complete_rings_only=False,
-        match_bond_order="strict",
-        match_atom_type=True,
-        match_formal_charge=False,
-        match_isotope=False,
-        use_chirality=False,
-        use_bond_stereo=False,
-        tautomer_aware=False,
-        # MCS search options
-        timeout_ms=10000,
-        connected_only=True,
-        induced=False,
-        maximize_bonds=False,
-        max_stage=5,
-        # Strategy
-        strategy="auto",
-        prefer_rare_heteroatoms=False,
-        # Advanced
-        **kwargs):
+def find_mcs(mol1, mol2, *,
+             max_results=1,
+             # Chemistry matching flags — defaults match RDKit FindMCS for fair comparison
+             ring_matches_ring_only=False,
+             complete_rings_only=False,
+             match_bond_order="strict",
+             match_atom_type=True,
+             match_formal_charge=False,
+             match_isotope=False,
+             use_chirality=False,
+             use_bond_stereo=False,
+             tautomer_aware=False,
+             # MCS search options
+             timeout_ms=10000,
+             connected_only=True,
+             induced=False,
+             maximize_bonds=False,
+             max_stage=5,
+             # Strategy
+             strategy="auto",
+             prefer_rare_heteroatoms=False,
+             # Advanced
+             **kwargs):
     """Find Maximum Common Substructure between two molecules.
 
-    All matching options are directly settable as keyword arguments,
-    similar to RDKit's FindMCS. No need to construct ChemOptions manually.
-
-    Accepts MolGraph objects, SMILES strings, or RDKit Mol objects.
+    Unified MCS entry point — accepts SMILES strings, MolGraph objects, or
+    RDKit Mol objects. Uses the fast lightweight engine by default with
+    automatic fallback to the full native C++ pipeline.
 
     Args:
         mol1: First molecule (MolGraph, SMILES string, or RDKit Mol).
         mol2: Second molecule.
+        max_results: Number of distinct MCS mappings to return.
+            When 1 (default), returns a single ``dict``.
+            When > 1, returns a ``list[dict]`` of up to *max_results*
+            mappings that all share the maximum MCS size.
         ring_matches_ring_only: Ring atom only matches ring atom (default False).
         complete_rings_only: MCS must include full rings (default False).
-        match_bond_order: "strict" (exact), "loose" (aromatic ≈ single/double),
+        match_bond_order: "strict" (exact), "loose" (aromatic = single/double),
                           "any" (ignore bond order). Default "strict".
         match_atom_type: Match element type (default True).
         match_formal_charge: Match formal charge (default False).
@@ -434,29 +442,24 @@ def mcs(mol1, mol2, *,
         prefer_rare_heteroatoms: Prefer S, P, Se mappings (default False).
 
     Returns:
-        dict: Mapping from mol1 atom indices to mol2 atom indices.
+        dict when max_results=1, list[dict] when max_results > 1.
+        Each dict maps mol1 atom indices to mol2 atom indices.
 
     Examples::
 
-        # Default (fast, high quality)
-        mapping = smsd.mcs("c1ccc(O)cc1", "c1ccc(N)cc1")
+        # Single best MCS (default)
+        mapping = smsd.find_mcs("c1ccc(O)cc1", "c1ccc(N)cc1")
 
-        # RDKit FMCS-compatible (loose matching)
-        mapping = smsd.mcs(mol1, mol2,
-                           ring_matches_ring_only=False,
-                           match_bond_order="loose")
+        # Multiple MCS mappings for SAR analysis
+        mappings = smsd.find_mcs(mol1, mol2, max_results=10)
 
         # Strict matching
-        mapping = smsd.mcs(mol1, mol2,
-                           ring_matches_ring_only=True,
-                           match_formal_charge=True,
-                           use_chirality=True)
+        mapping = smsd.find_mcs(mol1, mol2,
+                                ring_matches_ring_only=True,
+                                match_formal_charge=True)
 
         # Fast reaction mapping mode
-        mapping = smsd.mcs(mol1, mol2, max_stage=1)
-
-        # Force native C++ pipeline
-        mapping = smsd.mcs(mol1, mol2, strategy="native")
+        mapping = smsd.find_mcs(mol1, mol2, max_stage=1)
     """
     if prefer_rare_heteroatoms:
         # Proprietary reaction-aware scorer removed from public API.
@@ -466,6 +469,36 @@ def mcs(mol1, mol2, *,
     # Resolve bond order mode string
     bond_any = match_bond_order in ("any", "ANY")
 
+    # Build ChemOptions / MCSOptions for native path
+    def _build_opts():
+        chem = ChemOptions.tautomer_profile() if tautomer_aware else ChemOptions()
+        chem.match_atom_type = match_atom_type
+        chem.match_formal_charge = match_formal_charge
+        chem.match_isotope = match_isotope
+        chem.use_chirality = use_chirality
+        chem.use_bond_stereo = use_bond_stereo
+        chem.ring_matches_ring_only = ring_matches_ring_only
+        chem.complete_rings_only = complete_rings_only
+        bond_mode_map = {"strict": BondOrderMode.STRICT, "loose": BondOrderMode.LOOSE, "any": BondOrderMode.ANY}
+        chem.match_bond_order = bond_mode_map.get(match_bond_order.lower(), BondOrderMode.STRICT)
+        opts = MCSOptions()
+        opts.timeout_ms = timeout_ms
+        opts.connected_only = connected_only
+        opts.induced = induced
+        opts.maximize_bonds = maximize_bonds
+        opts.max_stage = max_stage
+        for k, v in kwargs.items():
+            setattr(opts, k, v)
+        return chem, opts
+
+    # --- Multi-result path (max_results > 1) → native find_all_mcs ---
+    if max_results > 1:
+        g1 = _ensure_mol(mol1)
+        g2 = _ensure_mol(mol2)
+        chem, opts = _build_opts()
+        return _native_find_all_mcs(g1, g2, chem, opts, max_results)
+
+    # --- Single-result path (max_results == 1) ---
     # Lightweight engine: faster and better coverage on most pairs
     light_mapping = {}
     if strategy in ("auto", "lightweight"):
@@ -481,43 +514,27 @@ def mcs(mol1, mol2, *,
                 if strategy == "lightweight":
                     return light_mapping
                 # In auto: for dot-disconnected (salts), also try native
-                # because lightweight may miss fragment atoms.
                 smi1 = mol1 if isinstance(mol1, str) else ""
                 smi2 = mol2 if isinstance(mol2, str) else ""
                 if '.' not in smi1 and '.' not in smi2:
                     return light_mapping
-                # Fall through to native for salts
         except Exception:
             if strategy == "lightweight":
                 return {}
 
-    # Native C++ pipeline — for dot-disconnected molecules or explicit "native" strategy
+    # Native C++ pipeline — for salts or explicit "native" strategy
     g1, rdkit1 = _ensure_mol_ex(mol1)
     g2, rdkit2 = _ensure_mol_ex(mol2)
-    chem = ChemOptions.tautomer_profile() if tautomer_aware else ChemOptions()
-    chem.match_atom_type = match_atom_type
-    chem.match_formal_charge = match_formal_charge
-    chem.match_isotope = match_isotope
-    chem.use_chirality = use_chirality
-    chem.use_bond_stereo = use_bond_stereo
-    chem.ring_matches_ring_only = ring_matches_ring_only
-    chem.complete_rings_only = complete_rings_only
-    bond_mode_map = {"strict": BondOrderMode.STRICT, "loose": BondOrderMode.LOOSE, "any": BondOrderMode.ANY}
-    chem.match_bond_order = bond_mode_map.get(match_bond_order.lower(), BondOrderMode.STRICT)
-    opts = MCSOptions()
-    opts.timeout_ms = timeout_ms
-    opts.connected_only = connected_only
-    opts.induced = induced
-    opts.maximize_bonds = maximize_bonds
-    opts.max_stage = max_stage
-    for k, v in kwargs.items():
-        setattr(opts, k, v)
-    mapping = find_mcs(g1, g2, chem, opts)
+    chem, opts = _build_opts()
+    mapping = _native_find_mcs(g1, g2, chem, opts)
     translated, _ = _auto_translate(mapping, g1, g2, rdkit1, rdkit2)
-    # In auto mode: return the larger of lightweight vs native
     if strategy == "auto" and len(light_mapping) > len(translated):
         return light_mapping
     return translated
+
+
+# Backward-compat alias (deprecated — use find_mcs)
+mcs = find_mcs
 
 
 def find_mcs_progressive(mol1, mol2, *, on_progress=None, tautomer_aware=False,
@@ -559,7 +576,7 @@ def find_mcs_progressive(mol1, mol2, *, on_progress=None, tautomer_aware=False,
         setattr(opts, k, v)
 
     if on_progress is None:
-        return find_mcs(g1, g2, chem, opts)
+        return _native_find_mcs(g1, g2, chem, opts)
 
     phase_fractions = [0.02, 0.05, 0.10, 0.25, 0.50, 0.75, 1.00]
     best = {}
@@ -577,7 +594,7 @@ def find_mcs_progressive(mol1, mol2, *, on_progress=None, tautomer_aware=False,
                 setattr(phase_opts, attr, getattr(opts, attr))
         phase_opts.extra_seeds = (frac >= 1.0) and getattr(opts, "extra_seeds", True)
 
-        result = find_mcs(g1, g2, chem, phase_opts)
+        result = _native_find_mcs(g1, g2, chem, phase_opts)
         if len(result) > best_size:
             best = result
             best_size = len(best)
@@ -617,7 +634,7 @@ def all_mcs(mol1, mol2, *, max_results=10, tautomer_aware=False, timeout_ms=1000
     opts.timeout_ms = timeout_ms
     for k, v in kwargs.items():
         setattr(opts, k, v)
-    return find_all_mcs(g1, g2, chem, opts, max_results)
+    return _native_find_all_mcs(g1, g2, chem, opts, max_results)
 
 
 def mcs_smiles(mol1, mol2, *, tautomer_aware=False, timeout_ms=10000, **kwargs):
@@ -645,18 +662,66 @@ def mcs_smiles(mol1, mol2, *, tautomer_aware=False, timeout_ms=10000, **kwargs):
     return find_mcs_smiles(g1, g2, chem, opts, timeout_ms)
 
 
-def substructure_search(query, target, *, timeout_ms=10000):
-    """Find a substructure mapping of query in target.
+def find_substructure(query, target, *, max_results=1, timeout_ms=10000):
+    """Find substructure mapping(s) of *query* in *target*.
 
-    Accepts either MolGraph objects or SMILES strings.
+    Unified substructure entry point — accepts SMILES strings, MolGraph
+    objects, or RDKit Mol objects.
+
+    Args:
+        query: Query molecule (MolGraph, SMILES string, or RDKit Mol).
+        target: Target molecule.
+        max_results: Number of distinct mappings to return.
+            When 1 (default), returns a single ``dict`` (empty if no match).
+            When > 1, returns a ``list[dict]`` of up to *max_results*
+            distinct embeddings.
+        timeout_ms: Timeout in milliseconds (default 10000).
 
     Returns:
-        list: List of (query_atom, target_atom) pairs, or empty list if not
-        a substructure.
+        dict when max_results=1, list[dict] when max_results > 1.
+        Each dict maps query atom indices to target atom indices.
+
+    Examples::
+
+        # Single mapping (boolean-like: truthy if match found)
+        mapping = smsd.find_substructure("c1ccccc1", "c1ccc(O)cc1")
+        if mapping:
+            print("Benzene is a substructure of phenol")
+
+        # All distinct embeddings
+        mappings = smsd.find_substructure("c1ccccc1", target, max_results=100)
     """
     q = _ensure_mol(query)
     t = _ensure_mol(target)
-    return find_substructure(q, t, ChemOptions(), timeout_ms)
+    if max_results > 1:
+        return find_all_substructures(q, t, ChemOptions(), timeout_ms, max_results)
+    pairs = _native_find_substructure(q, t, ChemOptions(), timeout_ms)
+    # Convert list-of-tuples to dict for consistency with find_mcs
+    if isinstance(pairs, list):
+        return {a: b for a, b in pairs} if pairs else {}
+    return pairs
+
+
+def is_substructure(query, target, *, timeout_ms=10000):
+    """Check whether *query* is a substructure of *target*.
+
+    Convenience boolean wrapper around :func:`find_substructure`.
+
+    Args:
+        query: Query molecule (MolGraph, SMILES string, or RDKit Mol).
+        target: Target molecule.
+        timeout_ms: Timeout in milliseconds (default 10000).
+
+    Returns:
+        bool: True if query is a substructure of target.
+    """
+    q = _ensure_mol(query)
+    t = _ensure_mol(target)
+    return _native_is_substructure(q, t, ChemOptions(), timeout_ms)
+
+
+# Backward-compat alias (deprecated — use find_substructure)
+substructure_search = find_substructure
 
 
 def topological_torsion(mol, fp_size=2048):
@@ -1488,7 +1553,7 @@ def mcs_result(mol1, mol2, **kwargs):
     opts.timeout_ms = tms
     for k, v in kwargs.items():
         setattr(opts, k, v)
-    raw = find_mcs(g1, g2, chem, opts)
+    raw = _native_find_mcs(g1, g2, chem, opts)
     # Translate + keep SMSD mapping for SMILES extraction
     mapping, smsd_mapping = _auto_translate(raw, g1, g2, rdkit1, rdkit2)
     smi = ""
@@ -1785,7 +1850,7 @@ def decompose_r_groups(core, molecules, *, timeout_ms=10000):
         decomposition = {}
 
         # Find substructure mapping: core -> mol
-        mapping_pairs = find_substructure(g_core, g_mol, ChemOptions(), timeout_ms)
+        mapping_pairs = _native_find_substructure(g_core, g_mol, ChemOptions(), timeout_ms)
         if not mapping_pairs or (isinstance(mapping_pairs, list) and len(mapping_pairs) == 0):
             results.append(decomposition)
             continue
@@ -2280,7 +2345,7 @@ def mcs_rdkit_native(mol1, mol2, **kwargs):
     g2 = from_rdkit(mol2)
 
     # Step 1: Find MCS using SMSD's full 11-level pipeline
-    smsd_mapping = find_mcs(g1, g2, **kwargs)
+    smsd_mapping = _native_find_mcs(g1, g2, **kwargs)
     if not smsd_mapping:
         return {}
 
@@ -2377,7 +2442,7 @@ def batch_mcs_rdkit(query_mol, target_mols, **kwargs):
     results = []
     for t_mol in target_mols:
         g_target = from_rdkit(t_mol)
-        smsd_mapping = find_mcs(g_query, g_target, **kwargs)
+        smsd_mapping = _native_find_mcs(g_query, g_target, **kwargs)
         rdkit_mapping = translate_mapping(smsd_mapping, g_query, g_target)
         # Element validation
         n1, n2 = query_mol.GetNumAtoms(), t_mol.GetNumAtoms()
@@ -2706,15 +2771,14 @@ __all__ = [
     "write_sdf_record",
     "write_molfile",
     # Substructure
-    "is_substructure",
     "find_substructure",
-    "substructure_search",
+    "is_substructure",
+    "substructure_search",  # deprecated alias
     # MCS
     "find_mcs",
-    "find_all_mcs",
-    "canonicalize_mapping",
-    "mcs",
+    "mcs",                  # deprecated alias
     "all_mcs",
+    "canonicalize_mapping",
     "prewarm",
     "perceive_aromaticity",
     "kekulize",

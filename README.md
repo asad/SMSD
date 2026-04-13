@@ -22,11 +22,12 @@ SMSD Pro provides exact substructure search and maximum common substructure
 (header-only), and **Python**. Optional GPU paths are available for CUDA and
 Apple Metal builds.
 
-Version `6.12.3` adds ring-constrained MCS quality recovery for the
-relaxed defaults introduced in 6.12.1, a zero-loss C++ coverage-driven
-MCS engine, and a rewritten Python MCS wrapper with zero orchestration
-overhead. All matching defaults now align with RDKit FMCS for fair
-benchmarking.
+Version `7.0.0` introduces a **unified Python API** with two clean entry
+points: `find_mcs(mol1, mol2, max_results=1)` and
+`find_substructure(query, target, max_results=1)`. Both accept SMILES
+strings, MolGraph objects, or RDKit Mol objects. Includes ring-constrained
+MCS quality recovery, a coverage-driven C++ MCS engine, and all matching
+defaults aligned with RDKit FMCS for fair benchmarking.
 
 ### Dalke Nearest-Neighbor MCS Benchmark (1,000 pairs)
 
@@ -34,7 +35,7 @@ Apple-to-apple comparison on the standard Dalke NN dataset (1,000
 high-similarity ChEMBL pairs). Same SMILES input, same 10 s timeout,
 same process, same machine.
 
-| Metric | SMSD Pro 6.12.3 | RDKit FindMCS 2026.03 |
+| Metric | SMSD Pro 7.0.0 | RDKit FindMCS 2026.03 |
 |--------|:---------------:|:---------------------:|
 | Total time | **40 s** | 213 s |
 | Median time | 0.6 ms | 0.4 ms |
@@ -54,7 +55,7 @@ Full benchmark suite in [`benchmarks/`](benchmarks/).
 | [Python API Guide](docs/PYTHON.md) | Full Python API reference with code examples |
 | [Java Guide](docs/JAVA.md) | Java API and CLI usage |
 | [C++ Guide](docs/CPP.md) | Header-only C++ integration |
-| [Release Notes 6.12.3](https://github.com/asad/SMSD/releases/tag/v6.12.3) | What's new in this release |
+| [Release Notes 7.0.0](https://github.com/asad/SMSD/releases/tag/v7.0.0) | What's new in this release |
 | [Whitepaper](docs/WHITEPAPER.md) | Algorithm design (11-level MCS, VF2++, ring perception) |
 | [How to Install](docs/HOWTO-INSTALL.md) | Build from source on all platforms |
 | [Changelog](CHANGELOG.md) | Full versioned change history |
@@ -76,16 +77,16 @@ isotopes, atom classes/maps, `R#` plus `M  RGP`, and basic stereo flags.
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>6.12.3</version>
+  <version>7.0.0</version>
 </dependency>
 ```
 
 ### Java (Download JAR)
 
 ```bash
-curl -LO https://github.com/asad/SMSD/releases/download/v6.12.3/smsd-6.12.3-jar-with-dependencies.jar
+curl -LO https://github.com/asad/SMSD/releases/download/v7.0.0/smsd-7.0.0-jar-with-dependencies.jar
 
-java -jar smsd-6.12.3-jar-with-dependencies.jar \
+java -jar smsd-7.0.0-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 ```
 
@@ -103,14 +104,14 @@ RDKit and Open Babel are optional interop layers.
 ```python
 import smsd
 
-result = smsd.substructure_search("c1ccccc1", "c1ccc(O)cc1")
-mcs    = smsd.mcs("c1ccccc1", "c1ccc2ccccc2c1")
+result = smsd.find_substructure("c1ccccc1", "c1ccc(O)cc1")
+mcs    = smsd.find_mcs("c1ccccc1", "c1ccc2ccccc2c1")
 
 # Tautomer-aware MCS
-mcs    = smsd.mcs("CC(=O)C", "CC(O)=C", tautomer_aware=True)
+mcs    = smsd.find_mcs("CC(=O)C", "CC(O)=C", tautomer_aware=True)
 
 # Prefer rare heteroatoms (S, P, Se) for reaction mapping
-mcs    = smsd.mcs("C[S+](C)CCC(N)C(=O)O", "SCCC(N)C(=O)O",
+mcs    = smsd.find_mcs("C[S+](C)CCC(N)C(=O)O", "SCCC(N)C(=O)O",
                    prefer_rare_heteroatoms=True)
 
 # Reaction-aware atom mapping
@@ -169,16 +170,16 @@ print(result.mapping)       # {0: 0, 1: 1, ...}
 
 # --- Works with any input type ---
 # SMILES strings
-mcs = smsd.mcs("c1ccccc1", "c1ccc(O)cc1")
+mcs = smsd.find_mcs("c1ccccc1", "c1ccc(O)cc1")
 
 # MolGraph objects (pre-parsed, fastest for batch)
 g1 = smsd.parse_smiles("c1ccccc1")
 g2 = smsd.parse_smiles("c1ccc(O)cc1")
-mcs = smsd.mcs(g1, g2)
+mcs = smsd.find_mcs(g1, g2)
 
 # Native Mol objects (auto-detected, indices returned in native ordering)
 # from rdkit import Chem
-# mcs = smsd.mcs(Chem.MolFromSmiles("c1ccccc1"), Chem.MolFromSmiles("c1ccc(O)cc1"))
+# mcs = smsd.find_mcs(Chem.MolFromSmiles("c1ccccc1"), Chem.MolFromSmiles("c1ccc(O)cc1"))
 
 # --- Fingerprints ---
 ecfp4  = smsd.circular_fingerprint("c1ccccc1", radius=2, fp_size=2048)
@@ -200,10 +201,10 @@ crossings = smsd.reduce_crossings(g, coords, max_iter=2000)
 import smsd
 
 # --- All MCS variants ---
-mcs = smsd.mcs("c1ccccc1", "c1ccc(O)cc1")                     # Connected MCS (default)
-mcs = smsd.mcs("c1ccccc1", "c1ccc(O)cc1", connected_only=False) # Disconnected MCS
-mcs = smsd.mcs("c1ccccc1", "c1ccc(O)cc1", induced=True)         # Induced MCS
-mcs = smsd.mcs("c1ccccc1", "c1ccc(O)cc1", maximize_bonds=True)  # Edge MCS (MCES)
+mcs = smsd.find_mcs("c1ccccc1", "c1ccc(O)cc1")                     # Connected MCS (default)
+mcs = smsd.find_mcs("c1ccccc1", "c1ccc(O)cc1", connected_only=False) # Disconnected MCS
+mcs = smsd.find_mcs("c1ccccc1", "c1ccc(O)cc1", induced=True)         # Induced MCS
+mcs = smsd.find_mcs("c1ccccc1", "c1ccc(O)cc1", maximize_bonds=True)  # Edge MCS (MCES)
 
 # Find top-N distinct MCS solutions
 all_mcs = smsd.find_all_mcs("c1ccccc1", "c1ccc(O)cc1", max_results=5)
@@ -218,7 +219,7 @@ scaffold = smsd.find_scaffold_mcs("CC(=O)Oc1ccccc1C(=O)O", "Oc1ccccc1C(=O)O")
 rgroups = smsd.decompose_r_groups("c1ccccc1", ["c1ccc(O)cc1", "c1ccc(N)cc1"])
 
 # --- Substructure Search ---
-hit = smsd.substructure_search("c1ccccc1", "c1ccc(O)cc1")
+hit = smsd.find_substructure("c1ccccc1", "c1ccc(O)cc1")
 all_matches = smsd.find_all_substructures("c1ccccc1", "c1ccc(O)cc1", max_matches=10)
 
 # SMARTS pattern matching
@@ -236,11 +237,11 @@ dice = smsd.dice_similarity(
 
 # --- Chemistry Options ---
 # Tautomer-aware with solvent and pH
-mcs = smsd.mcs("CC(=O)C", "CC(O)=C",
+mcs = smsd.find_mcs("CC(=O)C", "CC(O)=C",
                tautomer_aware=True, solvent="DMSO", pH=5.0)
 
 # Loose bond matching (FMCS-style)
-mcs = smsd.mcs("c1ccccc1", "C1CCCCC1", bond_order_mode="loose")
+mcs = smsd.find_mcs("c1ccccc1", "C1CCCCC1", bond_order_mode="loose")
 
 # --- Canonical SMILES ---
 smi = smsd.canonical_smiles("OC(=O)c1ccccc1")   # deterministic canonical form
@@ -561,19 +562,19 @@ Every release includes all platforms:
 
 | Download | Description |
 |----------|-------------|
-| `SMSD.Pro-6.12.3.dmg` | macOS installer (Apple Silicon) — drag to Applications |
-| `SMSD.Pro-6.12.3.msi` | Windows installer — next, next, finish |
-| `smsd-pro_6.12.3_amd64.deb` | Linux installer — `sudo dpkg -i` |
-| `smsd-6.12.3.jar` | Pure library JAR (Maven/Gradle dependency) |
-| `smsd-6.12.3-jar-with-dependencies.jar` | Standalone CLI (just `java -jar`) |
-| `smsd-cpp-6.12.3-headers.tar.gz` | C++ header-only library (unpack, `#include "smsd/smsd.hpp"`) |
+| `SMSD.Pro-7.0.0.dmg` | macOS installer (Apple Silicon) — drag to Applications |
+| `SMSD.Pro-7.0.0.msi` | Windows installer — next, next, finish |
+| `smsd-pro_7.0.0_amd64.deb` | Linux installer — `sudo dpkg -i` |
+| `smsd-7.0.0.jar` | Pure library JAR (Maven/Gradle dependency) |
+| `smsd-7.0.0-jar-with-dependencies.jar` | Standalone CLI (just `java -jar`) |
+| `smsd-cpp-7.0.0-headers.tar.gz` | C++ header-only library (unpack, `#include "smsd/smsd.hpp"`) |
 | [`pip install smsd`](https://pypi.org/project/smsd/) | Python package (PyPI — Linux, macOS, Windows wheels) |
 
 ```bash
 # Native installer — download .dmg / .msi / .deb, double-click, done
 
 # CLI
-java -jar smsd-6.12.3-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
+java -jar smsd-7.0.0-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 
 # Docker CLI
 docker build -t smsd .
@@ -610,7 +611,7 @@ AddressSanitizer: zero memory errors.
 | [Python API Guide](docs/PYTHON.md) | Full Python API reference |
 | [Java Guide](docs/JAVA.md) | Java API and CLI usage |
 | [C++ Guide](docs/CPP.md) | Header-only C++ integration |
-| [Release Notes 6.12.3](https://github.com/asad/SMSD/releases/tag/v6.12.3) | Current release |
+| [Release Notes 7.0.0](https://github.com/asad/SMSD/releases/tag/v7.0.0) | Current release |
 | [Release Notes 6.12.1](docs/RELEASE_NOTES_6.12.1.md) | Previous release |
 | [Whitepaper](docs/WHITEPAPER.md) | Algorithms and design (11-level MCS, VF2++, ring perception) |
 | [How to Install](docs/HOWTO-INSTALL.md) | Build from source on all platforms |

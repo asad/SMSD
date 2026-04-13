@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.18)
-project(smsd VERSION 6.12.3 LANGUAGES CXX)
+project(smsd VERSION 7.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

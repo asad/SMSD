@@ -19,9 +19,10 @@ from smsd import (
     write_mol_block,
     write_mol_block_v3000,
     write_sdf_record,
-    is_substructure,
-    find_substructure,
-    find_mcs,
+    # Tests use raw MolGraph + ChemOptions positional args → native bindings
+    _native_is_substructure as is_substructure,
+    _native_find_substructure as find_substructure,
+    _native_find_mcs as find_mcs,
     similarity_upper_bound,
     screen_targets,
     path_fingerprint,

@@ -17,7 +17,8 @@ Key invariants
 Run with:  pytest python/tests/test_hydrogen_handling.py -v
 """
 import pytest
-from smsd import parse_smiles, find_mcs, is_substructure, ChemOptions, MCSOptions
+from smsd import parse_smiles, ChemOptions, MCSOptions
+from smsd import _native_find_mcs as find_mcs, _native_is_substructure as is_substructure
 
 
 # ---------------------------------------------------------------------------

@@ -144,7 +144,7 @@ class TestPairwiseCoverage:
         if relaxed_opts:
             mcs_opts = smsd.MCSOptions()
             mcs_opts.timeout_ms = 10000
-            mcs = smsd.find_mcs(q, t, relaxed_opts, mcs_opts)
+            mcs = smsd._native_find_mcs(q, t, relaxed_opts, mcs_opts)
         else:
             mcs = smsd.find_mcs(q, t, timeout_ms=10000)
         assert len(mcs) >= min_mcs, f"{name}: expected MCS >= {min_mcs}, got {len(mcs)}"
@@ -153,7 +153,7 @@ class TestPairwiseCoverage:
         assert strict_hit is strict_sub, f"{name}: strict substructure expected {strict_sub}, got {strict_hit}"
 
         if relaxed_opts:
-            relaxed_hit = smsd.is_substructure(q, t, relaxed_opts)
+            relaxed_hit = smsd._native_is_substructure(q, t, relaxed_opts)
             assert relaxed_hit, f"{name}: relaxed substructure should succeed"
 
 
