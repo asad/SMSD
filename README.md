@@ -22,7 +22,7 @@ SMSD Pro provides exact substructure search and maximum common substructure
 (header-only), and **Python**. Optional GPU paths are available for CUDA and
 Apple Metal builds.
 
-Version `6.12.2` adds ring-constrained MCS quality recovery for the
+Version `7.0.0` adds ring-constrained MCS quality recovery for the
 relaxed defaults introduced in 6.12.1, a zero-loss C++ coverage-driven
 MCS engine (42-90x faster than RDKit), and a rewritten Python MCS
 wrapper with zero orchestration overhead. All matching defaults now
@@ -36,7 +36,7 @@ align with RDKit FMCS for fair benchmarking.
 | [Python API Guide](docs/PYTHON.md) | Full Python API reference with code examples |
 | [Java Guide](docs/JAVA.md) | Java API and CLI usage |
 | [C++ Guide](docs/CPP.md) | Header-only C++ integration |
-| [Release Notes 6.12.2](https://github.com/asad/SMSD/releases/tag/v6.12.2) | What's new in this release |
+| [Release Notes 7.0.0](https://github.com/asad/SMSD/releases/tag/v7.0.0) | What's new in this release |
 | [Whitepaper](docs/WHITEPAPER.md) | Algorithm design (11-level MCS, VF2++, ring perception) |
 | [How to Install](docs/HOWTO-INSTALL.md) | Build from source on all platforms |
 | [Changelog](CHANGELOG.md) | Full versioned change history |
@@ -58,16 +58,16 @@ isotopes, atom classes/maps, `R#` plus `M  RGP`, and basic stereo flags.
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>6.12.2</version>
+  <version>7.0.0</version>
 </dependency>
 ```
 
 ### Java (Download JAR)
 
 ```bash
-curl -LO https://github.com/asad/SMSD/releases/download/v6.12.2/smsd-6.12.2-jar-with-dependencies.jar
+curl -LO https://github.com/asad/SMSD/releases/download/v7.0.0/smsd-7.0.0-jar-with-dependencies.jar
 
-java -jar smsd-6.12.2-jar-with-dependencies.jar \
+java -jar smsd-7.0.0-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 ```
 
@@ -543,19 +543,19 @@ Every release includes all platforms:
 
 | Download | Description |
 |----------|-------------|
-| `SMSD.Pro-6.12.2.dmg` | macOS installer (Apple Silicon) — drag to Applications |
-| `SMSD.Pro-6.12.2.msi` | Windows installer — next, next, finish |
-| `smsd-pro_6.12.2_amd64.deb` | Linux installer — `sudo dpkg -i` |
-| `smsd-6.12.2.jar` | Pure library JAR (Maven/Gradle dependency) |
-| `smsd-6.12.2-jar-with-dependencies.jar` | Standalone CLI (just `java -jar`) |
-| `smsd-cpp-6.12.2-headers.tar.gz` | C++ header-only library (unpack, `#include "smsd/smsd.hpp"`) |
+| `SMSD.Pro-7.0.0.dmg` | macOS installer (Apple Silicon) — drag to Applications |
+| `SMSD.Pro-7.0.0.msi` | Windows installer — next, next, finish |
+| `smsd-pro_7.0.0_amd64.deb` | Linux installer — `sudo dpkg -i` |
+| `smsd-7.0.0.jar` | Pure library JAR (Maven/Gradle dependency) |
+| `smsd-7.0.0-jar-with-dependencies.jar` | Standalone CLI (just `java -jar`) |
+| `smsd-cpp-7.0.0-headers.tar.gz` | C++ header-only library (unpack, `#include "smsd/smsd.hpp"`) |
 | [`pip install smsd`](https://pypi.org/project/smsd/) | Python package (PyPI — Linux, macOS, Windows wheels) |
 
 ```bash
 # Native installer — download .dmg / .msi / .deb, double-click, done
 
 # CLI
-java -jar smsd-6.12.2-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
+java -jar smsd-7.0.0-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 
 # Docker CLI
 docker build -t smsd .
@@ -592,7 +592,7 @@ AddressSanitizer: zero memory errors.
 | [Python API Guide](docs/PYTHON.md) | Full Python API reference |
 | [Java Guide](docs/JAVA.md) | Java API and CLI usage |
 | [C++ Guide](docs/CPP.md) | Header-only C++ integration |
-| [Release Notes 6.12.2](https://github.com/asad/SMSD/releases/tag/v6.12.2) | Current release |
+| [Release Notes 7.0.0](https://github.com/asad/SMSD/releases/tag/v7.0.0) | Current release |
 | [Release Notes 6.12.1](docs/RELEASE_NOTES_6.12.1.md) | Previous release |
 | [Whitepaper](docs/WHITEPAPER.md) | Algorithms and design (11-level MCS, VF2++, ring perception) |
 | [How to Install](docs/HOWTO-INSTALL.md) | Build from source on all platforms |

@@ -1331,24 +1331,97 @@ inline bool isPruned(int curSize, int bestSize, const int* qLF, const int* tLF, 
     return potential <= bestSize;
 }
 
+inline bool bitIsSet(const std::vector<uint64_t>& bits, int idx) noexcept {
+    return (bits[idx >> 6] & (uint64_t(1) << (idx & 63))) != 0;
+}
+
+inline void setBit(std::vector<uint64_t>& bits, int idx) noexcept {
+    bits[idx >> 6] |= uint64_t(1) << (idx & 63);
+}
+
+inline void clearBit(std::vector<uint64_t>& bits, int idx) noexcept {
+    bits[idx >> 6] &= ~(uint64_t(1) << (idx & 63));
+}
+
+inline bool hasMappedNeighbor(const MolGraph& g, int atom,
+                              const std::vector<uint64_t>& mappedBits) noexcept {
+    return !mappedBits.empty() && anyBitAnd(g.adjLong[atom].data(), mappedBits.data(), g.words);
+}
+
+inline bool mappedBondCompatQuery(
+    const MolGraph& g1, const MolGraph& g2, const ChemOptions& C, bool induced,
+    int qi, int tj, const int* q2t, const std::vector<uint64_t>& mappedBitsQ,
+    int skipQ = -1) {
+    for (int w = 0; w < g1.words; ++w) {
+        uint64_t bits = g1.adjLong[qi][w] & mappedBitsQ[w];
+        while (bits) {
+            int qk = (w << 6) | ctz64(bits);
+            bits &= bits - 1;
+            if (qk == skipQ) continue;
+            int tk = q2t[qk];
+            int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tk);
+            if (qOrd != 0 && tOrd != 0) {
+                if (!bondsCompatible(g1, qi, qk, g2, tj, tk, C)) return false;
+            } else if (induced && ((qOrd != 0) != (tOrd != 0))) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+inline bool mappedBondCompatTarget(
+    const MolGraph& g1, const MolGraph& g2, const ChemOptions& C, bool induced,
+    int qi, int tj, const int* t2q, const std::vector<uint64_t>& mappedBitsT,
+    int skipT = -1) {
+    for (int w = 0; w < g2.words; ++w) {
+        uint64_t bits = g2.adjLong[tj][w] & mappedBitsT[w];
+        while (bits) {
+            int tk = (w << 6) | ctz64(bits);
+            bits &= bits - 1;
+            if (tk == skipT) continue;
+            int qk = t2q[tk];
+            int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tk);
+            if (qOrd != 0 && tOrd != 0) {
+                if (!bondsCompatible(g1, qi, qk, g2, tj, tk, C)) return false;
+            } else if (induced && ((qOrd != 0) != (tOrd != 0))) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 // ---------------------------------------------------------------------------
 // Build frontier for McGregor DFS
 // ---------------------------------------------------------------------------
-inline int buildFrontier(const MolGraph& g1, const std::map<int,int>& cur,
-                          const std::vector<uint8_t>& usedQ,
+inline int buildFrontier(const MolGraph& g1,
+                          const std::vector<uint64_t>& mappedBitsQ,
                           std::vector<uint8_t>& inFrontier,
                           int* frontierBuf, bool connectedOnly = true) {
     int count = 0;
-    for (auto& [qk, tv] : cur)
-        for (int qn : g1.neighbors[qk])
-            if (!usedQ[qn] && !inFrontier[qn] && !cur.count(qn)) {
-                inFrontier[qn] = true;
-                frontierBuf[count++] = qn;
+    for (int mw = 0; mw < g1.words; ++mw) {
+        uint64_t mapped = mappedBitsQ[mw];
+        while (mapped) {
+            int qk = (mw << 6) | ctz64(mapped);
+            mapped &= mapped - 1;
+            for (int nw = 0; nw < g1.words; ++nw) {
+                uint64_t bits = g1.adjLong[qk][nw] & ~mappedBitsQ[nw];
+                while (bits) {
+                    int qn = (nw << 6) | ctz64(bits);
+                    bits &= bits - 1;
+                    if (!inFrontier[qn]) {
+                        inFrontier[qn] = true;
+                        frontierBuf[count++] = qn;
+                    }
+                }
             }
+        }
+    }
     // Only jump to disconnected atoms if disconnected MCS is allowed
     if (count == 0 && !connectedOnly)
         for (int i = 0; i < g1.n; ++i)
-            if (!usedQ[i] && !cur.count(i)) frontierBuf[count++] = i;
+            if (!bitIsSet(mappedBitsQ, i)) frontierBuf[count++] = i;
     for (int f = 0; f < count; ++f) inFrontier[frontierBuf[f]] = false;
     return count;
 }
@@ -1358,7 +1431,9 @@ inline int buildFrontier(const MolGraph& g1, const std::map<int,int>& cur,
 // ---------------------------------------------------------------------------
 inline int findBestCandidate(
     const MolGraph& g1, const MolGraph& g2, const ChemOptions& C,
-    const int* q2tMap, const std::vector<uint8_t>& usedT,
+    const int* q2tMap,
+    const std::vector<uint64_t>& mappedBitsQ,
+    const std::vector<uint64_t>& mappedBitsT,
     const std::vector<std::vector<int>>& qNLF1,
     const std::vector<std::vector<int>>& tNLF1,
     const std::vector<std::vector<int>>& qNLF2,
@@ -1379,34 +1454,20 @@ inline int findBestCandidate(
         // targets instead of scanning all n2 atoms — O(compat) vs O(n2).
         if (compatTargets && qi < static_cast<int>(compatTargets->size())) {
             for (int tj : (*compatTargets)[qi]) {
-                if (usedT[tj]) continue;
+                if (bitIsSet(mappedBitsT, tj)) continue;
                 if (!nlfCheckOk(qi, tj, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3,
                                 useTwoHopNLF, useThreeHopNLF)) continue;
-                bool ok = true;
-                for (int qk : g1.neighbors[qi]) {
-                    int tl = q2tMap[qk];
-                    if (tl < 0) continue;
-                    int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tl);
-                    if ((qOrd==0) != (tOrd==0)) { ok = false; break; }
-                    if (qOrd != 0 && !bondsCompatible(g1, qi, qk, g2, tj, tl, C)) { ok = false; break; }
-                }
-                if (ok) candBuf[candCount++] = tj;
+                if (!mappedBondCompatQuery(g1, g2, C, true, qi, tj, q2tMap, mappedBitsQ)) continue;
+                candBuf[candCount++] = tj;
             }
         } else {
             for (int tj = 0; tj < g2.n; ++tj) {
-                if (usedT[tj]) continue;
+                if (bitIsSet(mappedBitsT, tj)) continue;
                 if (!atomsCompatFast(g1, qi, g2, tj, C)) continue;
                 if (!nlfCheckOk(qi, tj, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3,
                                 useTwoHopNLF, useThreeHopNLF)) continue;
-                bool ok = true;
-                for (int qk : g1.neighbors[qi]) {
-                    int tl = q2tMap[qk];
-                    if (tl < 0) continue;
-                    int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tl);
-                    if ((qOrd==0) != (tOrd==0)) { ok = false; break; }
-                    if (qOrd != 0 && !bondsCompatible(g1, qi, qk, g2, tj, tl, C)) { ok = false; break; }
-                }
-                if (ok) candBuf[candCount++] = tj;
+                if (!mappedBondCompatQuery(g1, g2, C, true, qi, tj, q2tMap, mappedBitsQ)) continue;
+                candBuf[candCount++] = tj;
             }
         }
         if (candCount == 0) continue;
@@ -1429,6 +1490,7 @@ inline void undoForcedAssignments(
     int forcedCount, const int* forcedQ, const int* forcedT,
     std::map<int,int>& cur,
     std::vector<uint8_t>& usedQ, std::vector<uint8_t>& usedT,
+    std::vector<uint64_t>& mappedBitsQ, std::vector<uint64_t>& mappedBitsT,
     int* qLabelFreq, int* tLabelFreq,
     const int* jointQ, const int* jointT,
     int* q2tMap) {
@@ -1439,6 +1501,8 @@ inline void undoForcedAssignments(
         cur.erase(fq);
         usedQ[fq] = false;
         usedT[ft] = false;
+        clearBit(mappedBitsQ, fq);
+        clearBit(mappedBitsT, ft);
         if (q2tMap) q2tMap[fq] = -1;
     }
 }
@@ -1458,6 +1522,7 @@ inline void mcGregorDFS(
     bool useTwoHopNLF, bool useThreeHopNLF,
     TimeBudget& tb, int64_t localDeadlineNs, int depth,
     std::vector<uint8_t>& usedQ, std::vector<uint8_t>& usedT,
+    std::vector<uint64_t>& mappedBitsQ, std::vector<uint64_t>& mappedBitsT,
     int* q2tMap,
     int* candBuf, int* bestCandBuf,
     int* qLabelFreq, int* tLabelFreq, int freqSize,
@@ -1481,11 +1546,11 @@ inline void mcGregorDFS(
     if (isPruned(static_cast<int>(cur.size()), static_cast<int>(best.size()),
                  qLabelFreq, tLabelFreq, freqSize)) return;
 
-    int frontierCount = buildFrontier(g1, cur, usedQ, inFrontier, frontierBuf);
+    int frontierCount = buildFrontier(g1, mappedBitsQ, inFrontier, frontierBuf);
     if (frontierCount == 0) return;
 
     int bestQi = -1, bestCandCount = 0;
-    findBestCandidate(g1, g2, C, q2tMap, usedT, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3,
+    findBestCandidate(g1, g2, C, q2tMap, mappedBitsQ, mappedBitsT, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3,
                       useTwoHopNLF, useThreeHopNLF, frontierCount, frontierBuf,
                       candBuf, bestCandBuf, bestQi, bestCandCount, compatTargets);
     if (bestQi == -1) return;
@@ -1498,6 +1563,7 @@ inline void mcGregorDFS(
     while (bestCandCount == 1 && !(localExpired() || tb.expired())) {
         int fq = bestQi, ft = bestCandBuf[0];
         cur[fq] = ft; usedQ[fq] = true; usedT[ft] = true;
+        setBit(mappedBitsQ, fq); setBit(mappedBitsT, ft);
         q2tMap[fq] = ft;
         qLabelFreq[jointQ[fq]]--; tLabelFreq[jointT[ft]]--;
         forcedQ[forcedCount] = fq; forcedT[forcedCount] = ft;
@@ -1506,9 +1572,9 @@ inline void mcGregorDFS(
         if (isPruned(static_cast<int>(cur.size()), static_cast<int>(best.size()),
                      qLabelFreq, tLabelFreq, freqSize)) break;
 
-        frontierCount = buildFrontier(g1, cur, usedQ, inFrontier, frontierBuf);
+        frontierCount = buildFrontier(g1, mappedBitsQ, inFrontier, frontierBuf);
         if (frontierCount == 0) break;
-        findBestCandidate(g1, g2, C, q2tMap, usedT, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3,
+        findBestCandidate(g1, g2, C, q2tMap, mappedBitsQ, mappedBitsT, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3,
                           useTwoHopNLF, useThreeHopNLF, frontierCount, frontierBuf,
                           candBuf, bestCandBuf, bestQi, bestCandCount, compatTargets);
         if (bestQi == -1) break;
@@ -1520,20 +1586,23 @@ inline void mcGregorDFS(
             if (localExpired() || tb.expired()) break;
             int bestTj = bestCandBuf[i];
             cur[bestQi] = bestTj; usedQ[bestQi] = true; usedT[bestTj] = true;
+            setBit(mappedBitsQ, bestQi); setBit(mappedBitsT, bestTj);
             q2tMap[bestQi] = bestTj;
             qLabelFreq[jointQ[bestQi]]--; tLabelFreq[jointT[bestTj]]--;
             mcGregorDFS(g1, g2, C, cur, best, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3,
                         useTwoHopNLF, useThreeHopNLF, tb, localDeadlineNs, depth + 1,
-                        usedQ, usedT, q2tMap, candBuf, bestCandBuf,
+                        usedQ, usedT, mappedBitsQ, mappedBitsT, q2tMap, candBuf, bestCandBuf,
                         qLabelFreq, tLabelFreq, freqSize,
                         inFrontier, frontierBuf, jointQ, jointT, compatTargets);
             qLabelFreq[jointQ[bestQi]]++; tLabelFreq[jointT[bestTj]]++;
             q2tMap[bestQi] = -1;
+            clearBit(mappedBitsQ, bestQi); clearBit(mappedBitsT, bestTj);
             cur.erase(bestQi); usedQ[bestQi] = false; usedT[bestTj] = false;
         }
     }
 
     undoForcedAssignments(forcedCount, forcedQ.data(), forcedT.data(), cur, usedQ, usedT,
+                          mappedBitsQ, mappedBitsT,
                           qLabelFreq, tLabelFreq, jointQ, jointT, q2tMap);
 }
 
@@ -1552,6 +1621,7 @@ inline void mcGregorBondGrow(
     const std::vector<std::vector<int>>& tNLF3,
     TimeBudget& tb, int64_t localDeadlineNs, int depth,
     std::vector<uint8_t>& usedQ, std::vector<uint8_t>& usedT,
+    std::vector<uint64_t>& mappedBitsQ, std::vector<uint64_t>& mappedBitsT,
     int* qLabelFreq, int* tLabelFreq, int freqSize,
     int* q2tMap, std::vector<uint8_t>& inFrontier, int* frontierBuf,
     int* candBuf, int* bestCandBuf,
@@ -1573,33 +1643,40 @@ inline void mcGregorBondGrow(
 
     // Find best frontier bond
     int bestQk = -1, bestQi_local = -1, bestCandSize = INT_MAX, bestCandCount = 0;
-    for (auto& [qi, mappedTi_v] : cur) {
-        int mappedTi = q2tMap[qi];
-        for (int qk : g1.neighbors[qi]) {
-            if (usedQ[qk] || inFrontier[qk]) continue;
-            int candCount = 0;
-            for (int tk : g2.neighbors[mappedTi]) {
-                if (usedT[tk]) continue;
-                int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(mappedTi, tk);
-                if ((qOrd==0) != (tOrd==0)) continue;
-                if (qOrd != 0 && !bondsCompatible(g1, qi, qk, g2, mappedTi, tk, C)) continue;
-                if (!atomsCompatFast(g1, qk, g2, tk, C)) continue;
-                if (!nlfCheckOk(qk, tk, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3,
-                                useTwoHopNLF, useThreeHopNLF)) continue;
-                bool ok = true;
-                for (int qn : g1.neighbors[qk]) {
-                    if (qn == qi || !usedQ[qn]) continue;
-                    int tn = q2tMap[qn];
-                    int qOrd2 = g1.bondOrder(qk, qn), tOrd2 = g2.bondOrder(tk, tn);
-                    if ((qOrd2==0) != (tOrd2==0)) { ok = false; break; }
-                    if (qOrd2 != 0 && !bondsCompatible(g1, qk, qn, g2, tk, tn, C)) { ok = false; break; }
+    for (int mw = 0; mw < g1.words; ++mw) {
+        uint64_t mapped = mappedBitsQ[mw];
+        while (mapped) {
+            int qi = (mw << 6) | ctz64(mapped);
+            mapped &= mapped - 1;
+            int mappedTi = q2tMap[qi];
+            for (int nw = 0; nw < g1.words; ++nw) {
+                uint64_t qBits = g1.adjLong[qi][nw] & ~mappedBitsQ[nw];
+                while (qBits) {
+                    int qk = (nw << 6) | ctz64(qBits);
+                    qBits &= qBits - 1;
+                    if (inFrontier[qk]) continue;
+                    int candCount = 0;
+                    for (int tw = 0; tw < g2.words; ++tw) {
+                        uint64_t tBits = g2.adjLong[mappedTi][tw] & ~mappedBitsT[tw];
+                        while (tBits) {
+                            int tk = (tw << 6) | ctz64(tBits);
+                            tBits &= tBits - 1;
+                            int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(mappedTi, tk);
+                            if ((qOrd==0) != (tOrd==0)) continue;
+                            if (qOrd != 0 && !bondsCompatible(g1, qi, qk, g2, mappedTi, tk, C)) continue;
+                            if (!atomsCompatFast(g1, qk, g2, tk, C)) continue;
+                            if (!nlfCheckOk(qk, tk, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3,
+                                            useTwoHopNLF, useThreeHopNLF)) continue;
+                            if (!mappedBondCompatQuery(g1, g2, C, true, qk, tk, q2tMap, mappedBitsQ, qi)) continue;
+                            candBuf[candCount++] = tk;
+                        }
+                    }
+                    if (candCount > 0 && candCount < bestCandSize) {
+                        bestCandSize = candCount; bestQk = qk; bestQi_local = qi;
+                        bestCandCount = candCount;
+                        std::memcpy(bestCandBuf, candBuf, candCount * sizeof(int));
+                    }
                 }
-                if (ok) candBuf[candCount++] = tk;
-            }
-            if (candCount > 0 && candCount < bestCandSize) {
-                bestCandSize = candCount; bestQk = qk; bestQi_local = qi;
-                bestCandCount = candCount;
-                std::memcpy(bestCandBuf, candBuf, candCount * sizeof(int));
             }
         }
     }
@@ -1633,6 +1710,7 @@ inline void mcGregorBondGrow(
     while (bestCandCount == 1 && !(localExpired() || tb.expired())) {
         int fq = bestQk, ft = bestCandBuf[0];
         cur[fq] = ft; usedQ[fq] = true; usedT[ft] = true; q2tMap[fq] = ft;
+        setBit(mappedBitsQ, fq); setBit(mappedBitsT, ft);
         qLabelFreq[jointQ[fq]]--; tLabelFreq[jointT[ft]]--;
         forcedQ[forcedCount] = fq; forcedT[forcedCount] = ft;
         forcedCount++; depth++;
@@ -1641,33 +1719,39 @@ inline void mcGregorBondGrow(
                      qLabelFreq, tLabelFreq, freqSize)) break;
 
         bestQk = -1; bestCandSize = INT_MAX; bestCandCount = 0;
-        for (auto& [qi, mappedTi_v] : cur) {
-            int mappedTi = q2tMap[qi];
-            for (int qk : g1.neighbors[qi]) {
-                if (usedQ[qk]) continue;
-                int candCount = 0;
-                for (int tk : g2.neighbors[mappedTi]) {
-                    if (usedT[tk]) continue;
-                    int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(mappedTi, tk);
-                    if ((qOrd==0) != (tOrd==0)) continue;
-                    if (qOrd != 0 && !bondsCompatible(g1, qi, qk, g2, mappedTi, tk, C)) continue;
-                    if (!atomsCompatFast(g1, qk, g2, tk, C)) continue;
-                    if (!nlfCheckOk(qk, tk, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3,
-                                    useTwoHopNLF, useThreeHopNLF)) continue;
-                    bool ok = true;
-                    for (int qn : g1.neighbors[qk]) {
-                        if (qn == qi || !usedQ[qn]) continue;
-                        int tn = q2tMap[qn];
-                        int qOrd2 = g1.bondOrder(qk, qn), tOrd2 = g2.bondOrder(tk, tn);
-                        if ((qOrd2==0) != (tOrd2==0)) { ok = false; break; }
-                        if (qOrd2 != 0 && !bondsCompatible(g1, qk, qn, g2, tk, tn, C)) { ok = false; break; }
+        for (int mw = 0; mw < g1.words; ++mw) {
+            uint64_t mapped = mappedBitsQ[mw];
+            while (mapped) {
+                int qi = (mw << 6) | ctz64(mapped);
+                mapped &= mapped - 1;
+                int mappedTi = q2tMap[qi];
+                for (int nw = 0; nw < g1.words; ++nw) {
+                    uint64_t qBits = g1.adjLong[qi][nw] & ~mappedBitsQ[nw];
+                    while (qBits) {
+                        int qk = (nw << 6) | ctz64(qBits);
+                        qBits &= qBits - 1;
+                        int candCount = 0;
+                        for (int tw = 0; tw < g2.words; ++tw) {
+                            uint64_t tBits = g2.adjLong[mappedTi][tw] & ~mappedBitsT[tw];
+                            while (tBits) {
+                                int tk = (tw << 6) | ctz64(tBits);
+                                tBits &= tBits - 1;
+                                int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(mappedTi, tk);
+                                if ((qOrd==0) != (tOrd==0)) continue;
+                                if (qOrd != 0 && !bondsCompatible(g1, qi, qk, g2, mappedTi, tk, C)) continue;
+                                if (!atomsCompatFast(g1, qk, g2, tk, C)) continue;
+                                if (!nlfCheckOk(qk, tk, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3,
+                                                useTwoHopNLF, useThreeHopNLF)) continue;
+                                if (!mappedBondCompatQuery(g1, g2, C, true, qk, tk, q2tMap, mappedBitsQ, qi)) continue;
+                                candBuf[candCount++] = tk;
+                            }
+                        }
+                        if (candCount > 0 && candCount < bestCandSize) {
+                            bestCandSize = candCount; bestQk = qk; bestQi_local = qi;
+                            bestCandCount = candCount;
+                            std::memcpy(bestCandBuf, candBuf, candCount * sizeof(int));
+                        }
                     }
-                    if (ok) candBuf[candCount++] = tk;
-                }
-                if (candCount > 0 && candCount < bestCandSize) {
-                    bestCandSize = candCount; bestQk = qk; bestQi_local = qi;
-                    bestCandCount = candCount;
-                    std::memcpy(bestCandBuf, candBuf, candCount * sizeof(int));
                 }
             }
         }
@@ -1680,17 +1764,20 @@ inline void mcGregorBondGrow(
             if (localExpired() || tb.expired()) break;
             int btj = bestCandBuf[i];
             cur[bestQk] = btj; usedQ[bestQk] = true; usedT[btj] = true; q2tMap[bestQk] = btj;
+            setBit(mappedBitsQ, bestQk); setBit(mappedBitsT, btj);
             qLabelFreq[jointQ[bestQk]]--; tLabelFreq[jointT[btj]]--;
             mcGregorBondGrow(g1, g2, C, cur, best, qNLF1, tNLF1, useTwoHopNLF, useThreeHopNLF,
                              qNLF2, tNLF2, qNLF3, tNLF3, tb, localDeadlineNs, depth + 1,
-                             usedQ, usedT, qLabelFreq, tLabelFreq, freqSize, q2tMap,
+                             usedQ, usedT, mappedBitsQ, mappedBitsT, qLabelFreq, tLabelFreq, freqSize, q2tMap,
                              inFrontier, frontierBuf, candBuf, bestCandBuf, jointQ, jointT);
             qLabelFreq[jointQ[bestQk]]++; tLabelFreq[jointT[btj]]++;
+            clearBit(mappedBitsQ, bestQk); clearBit(mappedBitsT, btj);
             cur.erase(bestQk); usedQ[bestQk] = false; usedT[btj] = false; q2tMap[bestQk] = -1;
         }
     }
 
     undoForcedAssignments(forcedCount, forcedQ.data(), forcedT.data(), cur, usedQ, usedT,
+                          mappedBitsQ, mappedBitsT,
                           qLabelFreq, tLabelFreq, jointQ, jointT, q2tMap);
 }
 
@@ -1719,8 +1806,9 @@ inline std::map<int,int> mcGregorExtend(
 
     int n1 = g1.n, n2 = g2.n;
     std::vector<uint8_t> usedQ(n1, 0), usedT(n2, 0);
+    std::vector<uint64_t> mappedBitsQ(g1.words, 0), mappedBitsT(g2.words, 0);
     std::vector<int> candBuf(n2), bestCandBuf(n2);
-    for (auto& [k,v] : seed) { usedQ[k] = 1; usedT[v] = 1; }
+    for (auto& [k,v] : seed) { usedQ[k] = 1; usedT[v] = 1; setBit(mappedBitsQ, k); setBit(mappedBitsT, v); }
 
     int maxLabel = 0;
     for (int i = 0; i < n1; ++i) maxLabel = std::max(maxLabel, g1.label[i]);
@@ -1769,7 +1857,7 @@ inline std::map<int,int> mcGregorExtend(
         mcGregorBondGrow(g1, g2, C, curCopy, bondBest, qNLF1, tNLF1,
                          useTwoHopNLF, useThreeHopNLF, qNLF2, tNLF2, qNLF3, tNLF3,
                          tb, bondDeadlineNs, 0,
-                         usedQCopy, usedTCopy, qLFCopy.data(), tLFCopy.data(),
+                         usedQCopy, usedTCopy, mappedBitsQ, mappedBitsT, qLFCopy.data(), tLFCopy.data(),
                          freqSize, q2tMap.data(), inFCopy, frontierBuf.data(),
                          candBuf.data(), bestCandBuf.data(), jointQ.data(), jointT.data());
         std::fill(inFrontier.begin(), inFrontier.end(), uint8_t(0));
@@ -1782,7 +1870,7 @@ inline std::map<int,int> mcGregorExtend(
         for (auto& [k,v] : seed) q2tDFS[k] = v;
         mcGregorDFS(g1, g2, C, curDFS, best, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3,
                     useTwoHopNLF, useThreeHopNLF, tb, localDeadlineNs, 0,
-                    usedQ, usedT, q2tDFS.data(), candBuf.data(), bestCandBuf.data(),
+                    usedQ, usedT, mappedBitsQ, mappedBitsT, q2tDFS.data(), candBuf.data(), bestCandBuf.data(),
                     qLabelFreq.data(), tLabelFreq.data(), freqSize,
                     inFrontier, frontierBuf.data(), jointQ.data(), jointT.data(),
                     compatTargets);
@@ -2172,16 +2260,9 @@ public:
 private:
     static bool checkBondCompat(const MolGraph& g1, const MolGraph& g2,
                                  const ChemOptions& C, bool induced,
-                                 int qi, int tj, const int* q2t) {
-        for (int qk : g1.neighbors[qi]) {
-            if (q2t[qk] < 0) continue;
-            int tk = q2t[qk];
-            int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tk);
-            if (qOrd != 0 && tOrd != 0) {
-                if (!bondsCompatible(g1, qi, qk, g2, tj, tk, C)) return false;
-            } else if (induced && ((qOrd!=0) != (tOrd!=0))) return false;
-        }
-        return true;
+                                 int qi, int tj, const int* q2t,
+                                 const std::vector<uint64_t>& mappedBitsQ) {
+        return mappedBondCompatQuery(g1, g2, C, induced, qi, tj, q2t, mappedBitsQ);
     }
 
     // Hardware-accelerated bitset for McSplit partition classes.
@@ -2248,7 +2329,8 @@ private:
         std::vector<BitClass>& qSets, std::vector<BitClass>& tSets, int numClasses,
         int* q2t, int* t2q, int curSize, int upperBound,
         int* bestQ2T, int& bestSize, int64_t& nodeCount,
-        int n1, int n2, int depth, int maxDepth) {
+        int n1, int n2, int depth, int maxDepth,
+        std::vector<uint64_t>& mappedBitsQ, std::vector<uint64_t>& mappedBitsT) {
 
         nodeCount++;
         if (nodeCount > MAX_NODE_LIMIT) return;
@@ -2280,8 +2362,7 @@ private:
             // Select qi with connectivity-aware ordering
             int qi = -1, qiBestScore = -1;
             for (int v = qSets[bestClass].nextSetBit(0); v >= 0; v = qSets[bestClass].nextSetBit(v + 1)) {
-                bool conn = false;
-                for (int nb : g1.neighbors[v]) if (q2t[nb] >= 0) { conn = true; break; }
+                bool conn = hasMappedNeighbor(g1, v, mappedBitsQ);
                 int score = (conn ? 1000 : 0) + (g1.ring[v] ? 100 : 0) + g1.degree[v] * 10;
                 if (score > qiBestScore) { qiBestScore = score; qi = v; }
             }
@@ -2294,8 +2375,7 @@ private:
             bool rsActiveQ = (g1.ringSystemCount() > 0 || g2.ringSystemCount() > 0);
             uint64_t qiRsSig = rsActiveQ ? g1.ringSystemSig(g1.ringSystemOf(qi)) : 0;
             std::unordered_set<uint64_t> triedOrbitRS;
-            bool qiHasMappedNb = false;
-            for (int nb : g1.neighbors[qi]) if (q2t[nb] >= 0) { qiHasMappedNb = true; break; }
+            bool qiHasMappedNb = hasMappedNeighbor(g1, qi, mappedBitsQ);
             for (int tj = tSets[bestClass].nextSetBit(0); tj >= 0; tj = tSets[bestClass].nextSetBit(tj + 1)) {
                 nodeCount++;
                 if (nodeCount > MAX_NODE_LIMIT || tb.expired()) return;
@@ -2311,23 +2391,25 @@ private:
                 }
 
                 if (!atomsCompatFast(g1, qi, g2, tj, C)) continue;
-                if (!checkBondCompat(g1, g2, C, induced, qi, tj, q2t)) continue;
+                if (!checkBondCompat(g1, g2, C, induced, qi, tj, q2t, mappedBitsQ)) continue;
 
                 q2t[qi] = tj; t2q[tj] = qi;
+                setBit(mappedBitsQ, qi); setBit(mappedBitsT, tj);
                 refineAndRecurse(g1, g2, C, induced, tb, qAdjMasks, tAdjMasks, qSets, tSets, numClasses,
-                                 q2t, t2q, curSize, bestQ2T, bestSize, nodeCount, n1, n2, depth, maxDepth, qi, tj);
+                                 q2t, t2q, curSize, bestQ2T, bestSize, nodeCount, n1, n2, depth, maxDepth, qi, tj,
+                                 mappedBitsQ, mappedBitsT);
+                clearBit(mappedBitsQ, qi); clearBit(mappedBitsT, tj);
                 q2t[qi] = -1; t2q[tj] = -1;
             }
 
             // Skip qi branch
             mcSplitSkipVertex(g1, g2, C, induced, tb, qAdjMasks, tAdjMasks, qSets, tSets, numClasses,
                               q2t, t2q, curSize, bestQ2T, bestSize, nodeCount, n1, n2, depth, maxDepth,
-                              bestClass, qi, true);
+                              bestClass, qi, true, mappedBitsQ, mappedBitsT);
         } else {
             int tj = -1, tjBestScore = -1;
             for (int v = tSets[bestClass].nextSetBit(0); v >= 0; v = tSets[bestClass].nextSetBit(v + 1)) {
-                bool conn = false;
-                for (int nb : g2.neighbors[v]) if (t2q[nb] >= 0) { conn = true; break; }
+                bool conn = hasMappedNeighbor(g2, v, mappedBitsT);
                 int score = (conn ? 1000 : 0) + (g2.ring[v] ? 100 : 0) + g2.degree[v] * 10;
                 if (score > tjBestScore) { tjBestScore = score; tj = v; }
             }
@@ -2337,8 +2419,7 @@ private:
             bool rsActiveT = (g1.ringSystemCount() > 0 || g2.ringSystemCount() > 0);
             uint64_t tjRsSig = rsActiveT ? g2.ringSystemSig(g2.ringSystemOf(tj)) : 0;
             std::unordered_set<uint64_t> triedOrbitRS;
-            bool tjHasMappedNb = false;
-            for (int nb : g2.neighbors[tj]) if (t2q[nb] >= 0) { tjHasMappedNb = true; break; }
+            bool tjHasMappedNb = hasMappedNeighbor(g2, tj, mappedBitsT);
             for (int qi = qSets[bestClass].nextSetBit(0); qi >= 0; qi = qSets[bestClass].nextSetBit(qi + 1)) {
                 nodeCount++;
                 if (nodeCount > MAX_NODE_LIMIT || tb.expired()) return;
@@ -2352,28 +2433,20 @@ private:
                 }
 
                 if (!atomsCompatFast(g1, qi, g2, tj, C)) continue;
-
-                // Check bond compat from target side
-                bool bondOk = true;
-                for (int tk : g2.neighbors[tj]) {
-                    if (t2q[tk] < 0) continue;
-                    int qk = t2q[tk];
-                    int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tk);
-                    if (qOrd != 0 && tOrd != 0) {
-                        if (!bondsCompatible(g1, qi, qk, g2, tj, tk, C)) { bondOk = false; break; }
-                    } else if (induced && ((qOrd!=0) != (tOrd!=0))) { bondOk = false; break; }
-                }
-                if (!bondOk) continue;
+                if (!mappedBondCompatTarget(g1, g2, C, induced, qi, tj, t2q, mappedBitsT)) continue;
 
                 q2t[qi] = tj; t2q[tj] = qi;
+                setBit(mappedBitsQ, qi); setBit(mappedBitsT, tj);
                 refineAndRecurse(g1, g2, C, induced, tb, qAdjMasks, tAdjMasks, qSets, tSets, numClasses,
-                                 q2t, t2q, curSize, bestQ2T, bestSize, nodeCount, n1, n2, depth, maxDepth, qi, tj);
+                                 q2t, t2q, curSize, bestQ2T, bestSize, nodeCount, n1, n2, depth, maxDepth, qi, tj,
+                                 mappedBitsQ, mappedBitsT);
+                clearBit(mappedBitsQ, qi); clearBit(mappedBitsT, tj);
                 q2t[qi] = -1; t2q[tj] = -1;
             }
 
             mcSplitSkipVertex(g1, g2, C, induced, tb, qAdjMasks, tAdjMasks, qSets, tSets, numClasses,
                               q2t, t2q, curSize, bestQ2T, bestSize, nodeCount, n1, n2, depth, maxDepth,
-                              bestClass, tj, false);
+                              bestClass, tj, false, mappedBitsQ, mappedBitsT);
         }
     }
 
@@ -2385,7 +2458,8 @@ private:
         std::vector<BitClass>& qSets, std::vector<BitClass>& tSets, int numClasses,
         int* q2t, int* t2q, int curSize,
         int* bestQ2T, int& bestSize, int64_t& nodeCount,
-        int n1, int n2, int depth, int maxDepth, int qi, int tj) {
+        int n1, int n2, int depth, int maxDepth, int qi, int tj,
+        std::vector<uint64_t>& mappedBitsQ, std::vector<uint64_t>& mappedBitsT) {
         std::vector<BitClass> newQ, newT;
         int newUB = 0;
         newQ.reserve(numClasses * 2);
@@ -2418,7 +2492,8 @@ private:
             int newNum = static_cast<int>(newQ.size());
             mcSplitRecurse(g1, g2, C, induced, tb, qAdjMasks, tAdjMasks, newQ, newT, newNum,
                            q2t, t2q, curSize + 1, newUB,
-                           bestQ2T, bestSize, nodeCount, n1, n2, depth + 1, maxDepth);
+                           bestQ2T, bestSize, nodeCount, n1, n2, depth + 1, maxDepth,
+                           mappedBitsQ, mappedBitsT);
         }
     }
 
@@ -2431,7 +2506,8 @@ private:
         int* q2t, int* t2q, int curSize,
         int* bestQ2T, int& bestSize, int64_t& nodeCount,
         int n1, int n2, int depth, int maxDepth,
-        int bestClass, int vertex, bool isQuery) {
+        int bestClass, int vertex, bool isQuery,
+        std::vector<uint64_t>& mappedBitsQ, std::vector<uint64_t>& mappedBitsT) {
 
         std::vector<BitClass> skipQ, skipT;
         int skipUB = 0;
@@ -2461,7 +2537,8 @@ private:
             int skipNum = static_cast<int>(skipQ.size());
             mcSplitRecurse(g1, g2, C, induced, tb, qAdjMasks, tAdjMasks, skipQ, skipT, skipNum,
                            q2t, t2q, curSize, skipUB,
-                           bestQ2T, bestSize, nodeCount, n1, n2, depth + 1, maxDepth);
+                           bestQ2T, bestSize, nodeCount, n1, n2, depth + 1, maxDepth,
+                           mappedBitsQ, mappedBitsT);
         }
     }
 
@@ -2526,12 +2603,14 @@ public:
 
         std::vector<int> q2t(n1, -1), t2q(n2, -1);
         std::vector<int> bestQ2T(n1, -1);
+        std::vector<uint64_t> mappedBitsQ(g1_.words, 0), mappedBitsT(g2_.words, 0);
         int bestSize = 0;
         int64_t nodeCount = 0;
 
         mcSplitRecurse(g1_, g2_, C_, induced_, tb, qAdjMasks, tAdjMasks, initQSets, initTSets, numClasses,
                        q2t.data(), t2q.data(), 0, initUB,
-                       bestQ2T.data(), bestSize, nodeCount, n1, n2, 0, std::min(n1, n2) + 1);
+                       bestQ2T.data(), bestSize, nodeCount, n1, n2, 0, std::min(n1, n2) + 1,
+                       mappedBitsQ, mappedBitsT);
 
         nodeCountOut = nodeCount;
         return {std::move(bestQ2T), bestSize};

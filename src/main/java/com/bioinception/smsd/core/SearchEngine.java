@@ -2393,29 +2393,101 @@ public final class SearchEngine {
     return potential <= bestSize;
   }
 
+  private static boolean bitIsSet(long[] bits, int idx) {
+    return (bits[idx >>> 6] & (1L << (idx & 63))) != 0L;
+  }
+
+  private static void setBit(long[] bits, int idx) {
+    bits[idx >>> 6] |= 1L << (idx & 63);
+  }
+
+  private static void clearBit(long[] bits, int idx) {
+    bits[idx >>> 6] &= ~(1L << (idx & 63));
+  }
+
+  private static boolean hasMappedNeighbor(MolGraph g, int atom, long[] mappedBits) {
+    for (int w = 0; w < g.words; w++) {
+      if ((g.adjLong[atom][w] & mappedBits[w]) != 0L) return true;
+    }
+    return false;
+  }
+
+  private static boolean mappedBondCompatQuery(
+      MolGraph g1, MolGraph g2, ChemOptions C, boolean induced, int qi, int tj,
+      int[] q2t, long[] mappedBitsQ, int skipQ) {
+    for (int w = 0; w < g1.words; w++) {
+      long bits = g1.adjLong[qi][w] & mappedBitsQ[w];
+      while (bits != 0) {
+        int qk = (w << 6) | Long.numberOfTrailingZeros(bits);
+        bits &= bits - 1;
+        if (qk == skipQ) continue;
+        int tk = q2t[qk];
+        int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tk);
+        if (qOrd != 0 && tOrd != 0) {
+          if (!MolGraph.ChemOps.bondsCompatible(g1, qi, qk, g2, tj, tk, C)) return false;
+        } else if (induced && ((qOrd != 0) != (tOrd != 0))) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  private static boolean mappedBondCompatTarget(
+      MolGraph g1, MolGraph g2, ChemOptions C, boolean induced, int qi, int tj,
+      int[] t2q, long[] mappedBitsT, int skipT) {
+    for (int w = 0; w < g2.words; w++) {
+      long bits = g2.adjLong[tj][w] & mappedBitsT[w];
+      while (bits != 0) {
+        int tk = (w << 6) | Long.numberOfTrailingZeros(bits);
+        bits &= bits - 1;
+        if (tk == skipT) continue;
+        int qk = t2q[tk];
+        int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tk);
+        if (qOrd != 0 && tOrd != 0) {
+          if (!MolGraph.ChemOps.bondsCompatible(g1, qi, qk, g2, tj, tk, C)) return false;
+        } else if (induced && ((qOrd != 0) != (tOrd != 0))) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   static int buildFrontier(
-      MolGraph g1, int[] curMap, boolean[] usedQ, boolean[] inFrontier, int[] frontierBuf,
+      MolGraph g1, long[] mappedBitsQ, boolean[] inFrontier, int[] frontierBuf,
       boolean connectedOnly) {
     int count = 0;
-    for (int qk = 0; qk < g1.n; qk++) {
-      if (curMap[qk] == -1) continue;
-      for (int qn : g1.neighbors[qk])
-        if (!usedQ[qn] && !inFrontier[qn] && curMap[qn] == -1) {
-          inFrontier[qn] = true;
-          frontierBuf[count++] = qn;
+    for (int mw = 0; mw < g1.words; mw++) {
+      long mapped = mappedBitsQ[mw];
+      while (mapped != 0) {
+        int qk = (mw << 6) | Long.numberOfTrailingZeros(mapped);
+        mapped &= mapped - 1;
+        for (int nw = 0; nw < g1.words; nw++) {
+          long bits = g1.adjLong[qk][nw] & ~mappedBitsQ[nw];
+          while (bits != 0) {
+            int qn = (nw << 6) | Long.numberOfTrailingZeros(bits);
+            bits &= bits - 1;
+            if (!inFrontier[qn]) {
+              inFrontier[qn] = true;
+              frontierBuf[count++] = qn;
+            }
+          }
         }
+      }
     }
     // Only jump to disconnected atoms if disconnected MCS is allowed
     if (count == 0 && !connectedOnly)
       for (int i = 0; i < g1.n; i++)
-        if (!usedQ[i] && curMap[i] == -1) frontierBuf[count++] = i;
+        if (!bitIsSet(mappedBitsQ, i)) frontierBuf[count++] = i;
     for (int f = 0; f < count; f++) inFrontier[frontierBuf[f]] = false;
     return count;
   }
 
   static void undoForcedAssignments(
       int forcedCount, int[] forcedQ, int[] forcedT, int[] curMap, int[] curSize,
-      boolean[] usedQ, boolean[] usedT, int[] qLabelFreq, int[] tLabelFreq,
+      boolean[] usedQ, boolean[] usedT, long[] mappedBitsQ, long[] mappedBitsT,
+      int[] qLabelFreq, int[] tLabelFreq,
       int[] jointQ, int[] jointT, int[] q2tMap) {
     for (int f = forcedCount - 1; f >= 0; f--) {
       int fq = forcedQ[f], ft = forcedT[f];
@@ -2424,6 +2496,8 @@ public final class SearchEngine {
       curMap[fq] = -1; curSize[0]--;
       usedQ[fq] = false;
       usedT[ft] = false;
+      clearBit(mappedBitsQ, fq);
+      clearBit(mappedBitsT, ft);
       if (q2tMap != null) q2tMap[fq] = -1;
     }
   }
@@ -2448,6 +2522,7 @@ public final class SearchEngine {
     int[] bestSize = new int[]{0};
 
     boolean[] usedQ = new boolean[g1.n], usedT = new boolean[g2.n];
+    long[] mappedBitsQ = new long[g1.words], mappedBitsT = new long[g2.words];
     int[] candBuf = new int[g2.n], bestCandBuf = new int[g2.n];
     for (Map.Entry<Integer, Integer> e : seed.entrySet()) {
       int qi = e.getKey(), tj = e.getValue();
@@ -2455,6 +2530,8 @@ public final class SearchEngine {
       bestMap[qi] = tj; bestSize[0]++;
       usedQ[qi] = true;
       usedT[tj] = true;
+      setBit(mappedBitsQ, qi);
+      setBit(mappedBitsT, tj);
     }
 
     int maxLabel = 0;
@@ -2506,6 +2583,7 @@ public final class SearchEngine {
           qNLF1, tNLF1, useTwoHopNLF, useThreeHopNLF, qNLF2, tNLF2, qNLF3, tNLF3,
           tb, bondDeadline, 0,
           java.util.Arrays.copyOf(usedQ, usedQ.length), java.util.Arrays.copyOf(usedT, usedT.length),
+          java.util.Arrays.copyOf(mappedBitsQ, mappedBitsQ.length), java.util.Arrays.copyOf(mappedBitsT, mappedBitsT.length),
           java.util.Arrays.copyOf(qLabelFreq, qLabelFreq.length), java.util.Arrays.copyOf(tLabelFreq, tLabelFreq.length),
           freqSize, q2tMap, inFrontier, frontierBuf, candBuf, bestCandBuf, jointQ, jointT);
       java.util.Arrays.fill(inFrontier, false);
@@ -2514,7 +2592,7 @@ public final class SearchEngine {
 
     mcGregorDFS(g1, g2, C, curMap, curSize, bestMap, bestSize, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3,
         useTwoHopNLF, useThreeHopNLF, tb, localDeadline, 0,
-        usedQ, usedT, candBuf, bestCandBuf, qLabelFreq, tLabelFreq, freqSize,
+        usedQ, usedT, mappedBitsQ, mappedBitsT, candBuf, bestCandBuf, qLabelFreq, tLabelFreq, freqSize,
         inFrontier, frontierBuf, jointQ, jointT, connectedOnly);
 
     // Convert bestMap back to Map<Integer, Integer>
@@ -2526,7 +2604,7 @@ public final class SearchEngine {
   /** Shared candidate-finding logic for McGregor DFS and unit propagation. */
   static int findBestCandidate(
       MolGraph g1, MolGraph g2, ChemOptions C, int[] curMap,
-      boolean[] usedT, int[][] qNLF1, int[][] tNLF1, int[][] qNLF2, int[][] tNLF2,
+      long[] mappedBitsQ, long[] mappedBitsT, int[][] qNLF1, int[][] tNLF1, int[][] qNLF2, int[][] tNLF2,
       int[][] qNLF3, int[][] tNLF3, boolean useTwoHopNLF, boolean useThreeHopNLF,
       int frontierCount, int[] frontierBuf, int[] candBuf, int[] bestCandBuf,
       int[] outQi, int[] outCandCount) {
@@ -2535,18 +2613,11 @@ public final class SearchEngine {
       int qi = frontierBuf[fi];
       int candCount = 0;
       for (int tj = 0; tj < g2.n; tj++) {
-        if (usedT[tj]) continue;
+        if (bitIsSet(mappedBitsT, tj)) continue;
         if (!SubstructureEngine.AbstractVFMatcher.atomsCompatFast(g1, qi, g2, tj, C)) continue;
         if (!MolGraph.nlfCheckOk(qi, tj, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3, useTwoHopNLF, useThreeHopNLF)) continue;
-        boolean ok = true;
-        for (int qk : g1.neighbors[qi]) {
-          if (curMap[qk] == -1) continue;
-          int tl = curMap[qk];
-          int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tl);
-          if ((qOrd == 0) != (tOrd == 0)) { ok = false; break; }
-          if (qOrd != 0 && !MolGraph.ChemOps.bondsCompatible(g1, qi, qk, g2, tj, tl, C)) { ok = false; break; }
-        }
-        if (ok) candBuf[candCount++] = tj;
+        if (!mappedBondCompatQuery(g1, g2, C, true, qi, tj, curMap, mappedBitsQ, -1)) continue;
+        candBuf[candCount++] = tj;
       }
       if (candCount == 0) continue;
       if (candCount < bestCandSize) {
@@ -2565,7 +2636,8 @@ public final class SearchEngine {
       MolGraph g1, MolGraph g2, ChemOptions C, int[] curMap, int[] curSize, int[] bestMap, int[] bestSize,
       int[][] qNLF1, int[][] tNLF1, int[][] qNLF2, int[][] tNLF2, int[][] qNLF3, int[][] tNLF3,
       boolean useTwoHopNLF, boolean useThreeHopNLF, TimeBudget tb, long localDeadline, int depth,
-      boolean[] usedQ, boolean[] usedT, int[] candBuf, int[] bestCandBuf,
+      boolean[] usedQ, boolean[] usedT, long[] mappedBitsQ, long[] mappedBitsT,
+      int[] candBuf, int[] bestCandBuf,
       int[] qLabelFreq, int[] tLabelFreq, int freqSize,
       boolean[] inFrontier, int[] frontierBuf, int[] jointQ, int[] jointT,
       boolean connectedOnly) {
@@ -2573,11 +2645,11 @@ public final class SearchEngine {
     if (curSize[0] > bestSize[0]) { System.arraycopy(curMap, 0, bestMap, 0, curMap.length); bestSize[0] = curSize[0]; }
     if (isPruned(curSize[0], bestSize[0], qLabelFreq, tLabelFreq, freqSize)) return;
 
-    int frontierCount = buildFrontier(g1, curMap, usedQ, inFrontier, frontierBuf, connectedOnly);
+    int frontierCount = buildFrontier(g1, mappedBitsQ, inFrontier, frontierBuf, connectedOnly);
     if (frontierCount == 0) return;
 
     int[] outQi = new int[1], outCandCount = new int[1];
-    findBestCandidate(g1, g2, C, curMap, usedT, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3,
+    findBestCandidate(g1, g2, C, curMap, mappedBitsQ, mappedBitsT, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3,
         useTwoHopNLF, useThreeHopNLF, frontierCount, frontierBuf, candBuf, bestCandBuf, outQi, outCandCount);
     int bestQi = outQi[0], bestCandCount = outCandCount[0];
     if (bestQi == -1) return;
@@ -2588,15 +2660,16 @@ public final class SearchEngine {
     while (bestCandCount == 1 && !(System.nanoTime() >= localDeadline || tb.expired())) {
       int fq = bestQi, ft = bestCandBuf[0];
       curMap[fq] = ft; curSize[0]++; usedQ[fq] = true; usedT[ft] = true;
+      setBit(mappedBitsQ, fq); setBit(mappedBitsT, ft);
       qLabelFreq[jointQ[fq]]--; tLabelFreq[jointT[ft]]--;
       forcedQ[forcedCount] = fq; forcedT[forcedCount] = ft;
       forcedCount++; depth++;
       if (curSize[0] > bestSize[0]) { System.arraycopy(curMap, 0, bestMap, 0, curMap.length); bestSize[0] = curSize[0]; }
       if (isPruned(curSize[0], bestSize[0], qLabelFreq, tLabelFreq, freqSize)) break;
 
-      frontierCount = buildFrontier(g1, curMap, usedQ, inFrontier, frontierBuf, connectedOnly);
+      frontierCount = buildFrontier(g1, mappedBitsQ, inFrontier, frontierBuf, connectedOnly);
       if (frontierCount == 0) break;
-      findBestCandidate(g1, g2, C, curMap, usedT, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3,
+      findBestCandidate(g1, g2, C, curMap, mappedBitsQ, mappedBitsT, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3,
           useTwoHopNLF, useThreeHopNLF, frontierCount, frontierBuf, candBuf, bestCandBuf, outQi, outCandCount);
       bestQi = outQi[0]; bestCandCount = outCandCount[0];
       if (bestQi == -1) break;
@@ -2608,17 +2681,19 @@ public final class SearchEngine {
         if (System.nanoTime() >= localDeadline || tb.expired()) break;
         int bestTj = bestCandBuf[i];
         curMap[bestQi] = bestTj; curSize[0]++; usedQ[bestQi] = true; usedT[bestTj] = true;
+        setBit(mappedBitsQ, bestQi); setBit(mappedBitsT, bestTj);
         qLabelFreq[jointQ[bestQi]]--; tLabelFreq[jointT[bestTj]]--;
         mcGregorDFS(g1, g2, C, curMap, curSize, bestMap, bestSize, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3,
             useTwoHopNLF, useThreeHopNLF, tb, localDeadline, depth + 1,
-            usedQ, usedT, candBuf, bestCandBuf, qLabelFreq, tLabelFreq, freqSize,
+            usedQ, usedT, mappedBitsQ, mappedBitsT, candBuf, bestCandBuf, qLabelFreq, tLabelFreq, freqSize,
             inFrontier, frontierBuf, jointQ, jointT, connectedOnly);
         qLabelFreq[jointQ[bestQi]]++; tLabelFreq[jointT[bestTj]]++;
+        clearBit(mappedBitsQ, bestQi); clearBit(mappedBitsT, bestTj);
         curMap[bestQi] = -1; curSize[0]--; usedQ[bestQi] = false; usedT[bestTj] = false;
       }
     }
 
-    undoForcedAssignments(forcedCount, forcedQ, forcedT, curMap, curSize, usedQ, usedT,
+    undoForcedAssignments(forcedCount, forcedQ, forcedT, curMap, curSize, usedQ, usedT, mappedBitsQ, mappedBitsT,
         qLabelFreq, tLabelFreq, jointQ, jointT, null);
   }
 
@@ -2628,7 +2703,8 @@ public final class SearchEngine {
       int[][] qNLF1, int[][] tNLF1, boolean useTwoHopNLF, boolean useThreeHopNLF,
       int[][] qNLF2, int[][] tNLF2, int[][] qNLF3, int[][] tNLF3,
       TimeBudget tb, long localDeadline, int depth,
-      boolean[] usedQ, boolean[] usedT, int[] qLabelFreq, int[] tLabelFreq, int freqSize,
+      boolean[] usedQ, boolean[] usedT, long[] mappedBitsQ, long[] mappedBitsT,
+      int[] qLabelFreq, int[] tLabelFreq, int freqSize,
       int[] q2tMap, boolean[] inFrontier, int[] frontierBuf, int[] candBuf, int[] bestCandBuf,
       int[] jointQ, int[] jointT) {
 
@@ -2638,32 +2714,38 @@ public final class SearchEngine {
 
     // Find best frontier bond
     int bestQk = -1, bestQi = -1, bestCandSize = Integer.MAX_VALUE, bestCandCount = 0;
-    for (int qi = 0; qi < g1.n; qi++) {
-      if (curMap[qi] == -1) continue;
-      int mappedTi = q2tMap[qi];
-      for (int qk : g1.neighbors[qi]) {
-        if (usedQ[qk] || inFrontier[qk]) continue;
-        int candCount = 0;
-        for (int tk : g2.neighbors[mappedTi]) {
-          if (usedT[tk]) continue;
-          int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(mappedTi, tk);
-          if ((qOrd == 0) != (tOrd == 0)) continue;
-          if (qOrd != 0 && !MolGraph.ChemOps.bondsCompatible(g1, qi, qk, g2, mappedTi, tk, C)) continue;
-          if (!SubstructureEngine.AbstractVFMatcher.atomsCompatFast(g1, qk, g2, tk, C)) continue;
-          if (!MolGraph.nlfCheckOk(qk, tk, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3, useTwoHopNLF, useThreeHopNLF)) continue;
-          boolean ok = true;
-          for (int qn : g1.neighbors[qk]) {
-            if (qn == qi || !usedQ[qn]) continue;
-            int tn = q2tMap[qn];
-            int qOrd2 = g1.bondOrder(qk, qn), tOrd2 = g2.bondOrder(tk, tn);
-            if ((qOrd2 == 0) != (tOrd2 == 0)) { ok = false; break; }
-            if (qOrd2 != 0 && !MolGraph.ChemOps.bondsCompatible(g1, qk, qn, g2, tk, tn, C)) { ok = false; break; }
+    for (int mw = 0; mw < g1.words; mw++) {
+      long mapped = mappedBitsQ[mw];
+      while (mapped != 0) {
+        int qi = (mw << 6) | Long.numberOfTrailingZeros(mapped);
+        mapped &= mapped - 1;
+        int mappedTi = q2tMap[qi];
+        for (int nw = 0; nw < g1.words; nw++) {
+          long qBits = g1.adjLong[qi][nw] & ~mappedBitsQ[nw];
+          while (qBits != 0) {
+            int qk = (nw << 6) | Long.numberOfTrailingZeros(qBits);
+            qBits &= qBits - 1;
+            if (inFrontier[qk]) continue;
+            int candCount = 0;
+            for (int tw = 0; tw < g2.words; tw++) {
+              long tBits = g2.adjLong[mappedTi][tw] & ~mappedBitsT[tw];
+              while (tBits != 0) {
+                int tk = (tw << 6) | Long.numberOfTrailingZeros(tBits);
+                tBits &= tBits - 1;
+                int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(mappedTi, tk);
+                if ((qOrd == 0) != (tOrd == 0)) continue;
+                if (qOrd != 0 && !MolGraph.ChemOps.bondsCompatible(g1, qi, qk, g2, mappedTi, tk, C)) continue;
+                if (!SubstructureEngine.AbstractVFMatcher.atomsCompatFast(g1, qk, g2, tk, C)) continue;
+                if (!MolGraph.nlfCheckOk(qk, tk, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3, useTwoHopNLF, useThreeHopNLF)) continue;
+                if (!mappedBondCompatQuery(g1, g2, C, true, qk, tk, q2tMap, mappedBitsQ, qi)) continue;
+                candBuf[candCount++] = tk;
+              }
+            }
+            if (candCount > 0 && candCount < bestCandSize) {
+              bestCandSize = candCount; bestQk = qk; bestQi = qi; bestCandCount = candCount;
+              System.arraycopy(candBuf, 0, bestCandBuf, 0, candCount);
+            }
           }
-          if (ok) candBuf[candCount++] = tk;
-        }
-        if (candCount > 0 && candCount < bestCandSize) {
-          bestCandSize = candCount; bestQk = qk; bestQi = qi; bestCandCount = candCount;
-          System.arraycopy(candBuf, 0, bestCandBuf, 0, candCount);
         }
       }
     }
@@ -2693,6 +2775,7 @@ public final class SearchEngine {
     while (bestCandCount == 1 && !(System.nanoTime() >= localDeadline || tb.expired())) {
       int fq = bestQk, ft = bestCandBuf[0];
       curMap[fq] = ft; curSize[0]++; usedQ[fq] = true; usedT[ft] = true; q2tMap[fq] = ft;
+      setBit(mappedBitsQ, fq); setBit(mappedBitsT, ft);
       qLabelFreq[jointQ[fq]]--; tLabelFreq[jointT[ft]]--;
       forcedQ[forcedCount] = fq; forcedT[forcedCount] = ft;
       forcedCount++; depth++;
@@ -2700,32 +2783,37 @@ public final class SearchEngine {
       if (isPruned(curSize[0], bestSize[0], qLabelFreq, tLabelFreq, freqSize)) break;
 
       bestQk = -1; bestCandSize = Integer.MAX_VALUE; bestCandCount = 0;
-      for (int qi = 0; qi < g1.n; qi++) {
-        if (curMap[qi] == -1) continue;
-        int mappedTi = q2tMap[qi];
-        for (int qk : g1.neighbors[qi]) {
-          if (usedQ[qk]) continue;
-          int candCount = 0;
-          for (int tk : g2.neighbors[mappedTi]) {
-            if (usedT[tk]) continue;
-            int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(mappedTi, tk);
-            if ((qOrd == 0) != (tOrd == 0)) continue;
-            if (qOrd != 0 && !MolGraph.ChemOps.bondsCompatible(g1, qi, qk, g2, mappedTi, tk, C)) continue;
-            if (!SubstructureEngine.AbstractVFMatcher.atomsCompatFast(g1, qk, g2, tk, C)) continue;
-            if (!MolGraph.nlfCheckOk(qk, tk, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3, useTwoHopNLF, useThreeHopNLF)) continue;
-            boolean ok = true;
-            for (int qn : g1.neighbors[qk]) {
-              if (qn == qi || !usedQ[qn]) continue;
-              int tn = q2tMap[qn];
-              int qOrd2 = g1.bondOrder(qk, qn), tOrd2 = g2.bondOrder(tk, tn);
-              if ((qOrd2 == 0) != (tOrd2 == 0)) { ok = false; break; }
-              if (qOrd2 != 0 && !MolGraph.ChemOps.bondsCompatible(g1, qk, qn, g2, tk, tn, C)) { ok = false; break; }
+      for (int mw = 0; mw < g1.words; mw++) {
+        long mapped = mappedBitsQ[mw];
+        while (mapped != 0) {
+          int qi = (mw << 6) | Long.numberOfTrailingZeros(mapped);
+          mapped &= mapped - 1;
+          int mappedTi = q2tMap[qi];
+          for (int nw = 0; nw < g1.words; nw++) {
+            long qBits = g1.adjLong[qi][nw] & ~mappedBitsQ[nw];
+            while (qBits != 0) {
+              int qk = (nw << 6) | Long.numberOfTrailingZeros(qBits);
+              qBits &= qBits - 1;
+              int candCount = 0;
+              for (int tw = 0; tw < g2.words; tw++) {
+                long tBits = g2.adjLong[mappedTi][tw] & ~mappedBitsT[tw];
+                while (tBits != 0) {
+                  int tk = (tw << 6) | Long.numberOfTrailingZeros(tBits);
+                  tBits &= tBits - 1;
+                  int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(mappedTi, tk);
+                  if ((qOrd == 0) != (tOrd == 0)) continue;
+                  if (qOrd != 0 && !MolGraph.ChemOps.bondsCompatible(g1, qi, qk, g2, mappedTi, tk, C)) continue;
+                  if (!SubstructureEngine.AbstractVFMatcher.atomsCompatFast(g1, qk, g2, tk, C)) continue;
+                  if (!MolGraph.nlfCheckOk(qk, tk, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3, useTwoHopNLF, useThreeHopNLF)) continue;
+                  if (!mappedBondCompatQuery(g1, g2, C, true, qk, tk, q2tMap, mappedBitsQ, qi)) continue;
+                  candBuf[candCount++] = tk;
+                }
+              }
+              if (candCount > 0 && candCount < bestCandSize) {
+                bestCandSize = candCount; bestQk = qk; bestQi = qi; bestCandCount = candCount;
+                System.arraycopy(candBuf, 0, bestCandBuf, 0, candCount);
+              }
             }
-            if (ok) candBuf[candCount++] = tk;
-          }
-          if (candCount > 0 && candCount < bestCandSize) {
-            bestCandSize = candCount; bestQk = qk; bestQi = qi; bestCandCount = candCount;
-            System.arraycopy(candBuf, 0, bestCandBuf, 0, candCount);
           }
         }
       }
@@ -2738,17 +2826,19 @@ public final class SearchEngine {
         if (System.nanoTime() >= localDeadline || tb.expired()) break;
         int btj = bestCandBuf[i];
         curMap[bestQk] = btj; curSize[0]++; usedQ[bestQk] = true; usedT[btj] = true; q2tMap[bestQk] = btj;
+        setBit(mappedBitsQ, bestQk); setBit(mappedBitsT, btj);
         qLabelFreq[jointQ[bestQk]]--; tLabelFreq[jointT[btj]]--;
         mcGregorBondGrow(g1, g2, C, curMap, curSize, bestMap, bestSize, qNLF1, tNLF1, useTwoHopNLF, useThreeHopNLF,
             qNLF2, tNLF2, qNLF3, tNLF3, tb, localDeadline, depth + 1,
-            usedQ, usedT, qLabelFreq, tLabelFreq, freqSize, q2tMap,
+            usedQ, usedT, mappedBitsQ, mappedBitsT, qLabelFreq, tLabelFreq, freqSize, q2tMap,
             inFrontier, frontierBuf, candBuf, bestCandBuf, jointQ, jointT);
         qLabelFreq[jointQ[bestQk]]++; tLabelFreq[jointT[btj]]++;
+        clearBit(mappedBitsQ, bestQk); clearBit(mappedBitsT, btj);
         curMap[bestQk] = -1; curSize[0]--; usedQ[bestQk] = false; usedT[btj] = false; q2tMap[bestQk] = -1;
       }
     }
 
-    undoForcedAssignments(forcedCount, forcedQ, forcedT, curMap, curSize, usedQ, usedT,
+    undoForcedAssignments(forcedCount, forcedQ, forcedT, curMap, curSize, usedQ, usedT, mappedBitsQ, mappedBitsT,
         qLabelFreq, tLabelFreq, jointQ, jointT, q2tMap);
   }
 
@@ -3183,11 +3273,12 @@ public final class SearchEngine {
       Arrays.fill(q2t, -1); Arrays.fill(t2q, -1);
       int[] bestQ2T = new int[n1];
       Arrays.fill(bestQ2T, -1);
+      long[] mappedBitsQ = new long[g1.words], mappedBitsT = new long[g2.words];
       int[] bestSize = {0};
       long[] nodeCount = {0};
 
       mcSplitRecurse(g1, g2, C, induced, tb, qSets, tSets, numClasses, q2t, t2q, 0, initUB,
-          bestQ2T, bestSize, nodeCount, n1, n2, 0, Math.min(n1, n2) + 1);
+          bestQ2T, bestSize, nodeCount, n1, n2, 0, Math.min(n1, n2) + 1, mappedBitsQ, mappedBitsT);
 
       if (nodeCountOut != null) nodeCountOut[0] = nodeCount[0];
       Map<Integer, Integer> seed = new LinkedHashMap<>();
@@ -3199,7 +3290,7 @@ public final class SearchEngine {
         MolGraph g1, MolGraph g2, ChemOptions C, boolean induced, TimeBudget tb,
         BitSet[] qSets, BitSet[] tSets, int numClasses, int[] q2t, int[] t2q,
         int curSize, int upperBound, int[] bestQ2T, int[] bestSize, long[] nodeCount,
-        int n1, int n2, int depth, int maxDepth) {
+        int n1, int n2, int depth, int maxDepth, long[] mappedBitsQ, long[] mappedBitsT) {
 
       nodeCount[0]++;
       if (nodeCount[0] > MAX_NODE_LIMIT) return;
@@ -3231,8 +3322,7 @@ public final class SearchEngine {
         // Select qi with connectivity-aware ordering
         int qi = -1, qiBestScore = -1;
         for (int v = qSets[bestClass].nextSetBit(0); v >= 0; v = qSets[bestClass].nextSetBit(v + 1)) {
-          boolean conn = false;
-          for (int nb : g1.neighbors[v]) if (q2t[nb] >= 0) { conn = true; break; }
+          boolean conn = hasMappedNeighbor(g1, v, mappedBitsQ);
           int score = (conn ? 1000 : 0) + (g1.ring[v] ? 100 : 0) + g1.degree[v] * 10;
           if (score > qiBestScore) { qiBestScore = score; qi = v; }
         }
@@ -3240,8 +3330,7 @@ public final class SearchEngine {
         Set<Integer> triedOrbits = new HashSet<>();
         // Check if qi has any already-mapped neighbor — if so, orbit pruning is unsafe
         // because the connectivity context differentiates "equivalent" atoms
-        boolean qiHasMappedNeighbor = false;
-        for (int nb : g1.neighbors[qi]) if (q2t[nb] >= 0) { qiHasMappedNeighbor = true; break; }
+        boolean qiHasMappedNeighbor = hasMappedNeighbor(g1, qi, mappedBitsQ);
         for (int tj = tSets[bestClass].nextSetBit(0); tj >= 0; tj = tSets[bestClass].nextSetBit(tj + 1)) {
           nodeCount[0]++;
           if (nodeCount[0] > MAX_NODE_LIMIT || ((nodeCount[0] & 15) == 0 && tb.expiredNow())) return;
@@ -3252,33 +3341,31 @@ public final class SearchEngine {
           // Guard: class membership may group atoms that differ on properties checked
           // by atomsCompatFast (e.g. ringCount under STRICT ring-fusion mode).
           if (!SubstructureEngine.AbstractVFMatcher.atomsCompatFast(g1, qi, g2, tj, C)) continue;
-          boolean bondOk = checkBondCompat(g1, g2, C, induced, qi, tj, q2t);
+          boolean bondOk = checkBondCompat(g1, g2, C, induced, qi, tj, q2t, mappedBitsQ);
           if (!bondOk) continue;
 
-          q2t[qi] = tj; t2q[tj] = qi;
+          q2t[qi] = tj; t2q[tj] = qi; setBit(mappedBitsQ, qi); setBit(mappedBitsT, tj);
           int[] refined = refineAndRecurse(g1, g2, C, induced, tb, qSets, tSets, numClasses,
-              q2t, t2q, curSize, bestQ2T, bestSize, nodeCount, n1, n2, depth, maxDepth, qi, tj);
-          q2t[qi] = -1; t2q[tj] = -1;
+              q2t, t2q, curSize, bestQ2T, bestSize, nodeCount, n1, n2, depth, maxDepth, qi, tj, mappedBitsQ, mappedBitsT);
+          clearBit(mappedBitsQ, qi); clearBit(mappedBitsT, tj); q2t[qi] = -1; t2q[tj] = -1;
         }
 
         // Try NOT matching qi
         mcSplitSkipVertex(g1, g2, C, induced, tb, qSets, tSets, numClasses, q2t, t2q,
-            curSize, bestQ2T, bestSize, nodeCount, n1, n2, depth, maxDepth, bestClass, qi, true);
+            curSize, bestQ2T, bestSize, nodeCount, n1, n2, depth, maxDepth, bestClass, qi, true, mappedBitsQ, mappedBitsT);
 
       } else {
         // Select tj with connectivity-aware ordering
         int tj = -1, tjBestScore = -1;
         for (int v = tSets[bestClass].nextSetBit(0); v >= 0; v = tSets[bestClass].nextSetBit(v + 1)) {
-          boolean conn = false;
-          for (int nb : g2.neighbors[v]) if (t2q[nb] >= 0) { conn = true; break; }
+          boolean conn = hasMappedNeighbor(g2, v, mappedBitsT);
           int score = (conn ? 1000 : 0) + (g2.ring[v] ? 100 : 0) + g2.degree[v] * 10;
           if (score > tjBestScore) { tjBestScore = score; tj = v; }
         }
 
         Set<Integer> triedOrbits = new HashSet<>();
         // Check if tj has any already-mapped neighbor
-        boolean tjHasMappedNeighbor = false;
-        for (int nb : g2.neighbors[tj]) if (t2q[nb] >= 0) { tjHasMappedNeighbor = true; break; }
+        boolean tjHasMappedNeighbor = hasMappedNeighbor(g2, tj, mappedBitsT);
         for (int qi = qSets[bestClass].nextSetBit(0); qi >= 0; qi = qSets[bestClass].nextSetBit(qi + 1)) {
           nodeCount[0]++;
           if (nodeCount[0] > MAX_NODE_LIMIT || ((nodeCount[0] & 15) == 0 && tb.expiredNow())) return;
@@ -3286,39 +3373,24 @@ public final class SearchEngine {
 
           // Guard: verify atom-level compatibility (ringCount etc.) before pairing.
           if (!SubstructureEngine.AbstractVFMatcher.atomsCompatFast(g1, qi, g2, tj, C)) continue;
-          boolean bondOk = true;
-          for (int tk : g2.neighbors[tj]) {
-            if (t2q[tk] < 0) continue;
-            int qk = t2q[tk];
-            int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tk);
-            if (qOrd != 0 && tOrd != 0) {
-              if (!MolGraph.ChemOps.bondsCompatible(g1, qi, qk, g2, tj, tk, C)) { bondOk = false; break; }
-            } else if (induced && ((qOrd != 0) != (tOrd != 0))) { bondOk = false; break; }
-          }
+          boolean bondOk = mappedBondCompatTarget(g1, g2, C, induced, qi, tj, t2q, mappedBitsT, -1);
           if (!bondOk) continue;
 
-          q2t[qi] = tj; t2q[tj] = qi;
+          q2t[qi] = tj; t2q[tj] = qi; setBit(mappedBitsQ, qi); setBit(mappedBitsT, tj);
           refineAndRecurse(g1, g2, C, induced, tb, qSets, tSets, numClasses,
-              q2t, t2q, curSize, bestQ2T, bestSize, nodeCount, n1, n2, depth, maxDepth, qi, tj);
-          q2t[qi] = -1; t2q[tj] = -1;
+              q2t, t2q, curSize, bestQ2T, bestSize, nodeCount, n1, n2, depth, maxDepth, qi, tj, mappedBitsQ, mappedBitsT);
+          clearBit(mappedBitsQ, qi); clearBit(mappedBitsT, tj); q2t[qi] = -1; t2q[tj] = -1;
         }
 
         mcSplitSkipVertex(g1, g2, C, induced, tb, qSets, tSets, numClasses, q2t, t2q,
-            curSize, bestQ2T, bestSize, nodeCount, n1, n2, depth, maxDepth, bestClass, tj, false);
+            curSize, bestQ2T, bestSize, nodeCount, n1, n2, depth, maxDepth, bestClass, tj, false, mappedBitsQ, mappedBitsT);
       }
     }
 
     private static boolean checkBondCompat(
-        MolGraph g1, MolGraph g2, ChemOptions C, boolean induced, int qi, int tj, int[] q2t) {
-      for (int qk : g1.neighbors[qi]) {
-        if (q2t[qk] < 0) continue;
-        int tk = q2t[qk];
-        int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tk);
-        if (qOrd != 0 && tOrd != 0) {
-          if (!MolGraph.ChemOps.bondsCompatible(g1, qi, qk, g2, tj, tk, C)) return false;
-        } else if (induced && ((qOrd != 0) != (tOrd != 0))) return false;
-      }
-      return true;
+        MolGraph g1, MolGraph g2, ChemOptions C, boolean induced, int qi, int tj, int[] q2t,
+        long[] mappedBitsQ) {
+      return mappedBondCompatQuery(g1, g2, C, induced, qi, tj, q2t, mappedBitsQ, -1);
     }
 
     /** Refine label classes after assigning qi->tj and recurse. */
@@ -3326,7 +3398,7 @@ public final class SearchEngine {
         MolGraph g1, MolGraph g2, ChemOptions C, boolean induced, TimeBudget tb,
         BitSet[] qSets, BitSet[] tSets, int numClasses, int[] q2t, int[] t2q,
         int curSize, int[] bestQ2T, int[] bestSize, long[] nodeCount,
-        int n1, int n2, int depth, int maxDepth, int qi, int tj) {
+        int n1, int n2, int depth, int maxDepth, int qi, int tj, long[] mappedBitsQ, long[] mappedBitsT) {
       BitSet[] newQ = new BitSet[numClasses * 2], newT = new BitSet[numClasses * 2];
       int newNum = 0, newUB = 0;
       BitSet qiAdj = g1.getAdj()[qi], tjAdj = g2.getAdj()[tj];
@@ -3348,7 +3420,7 @@ public final class SearchEngine {
       }
       if (curSize + 1 + newUB > bestSize[0])
         mcSplitRecurse(g1, g2, C, induced, tb, newQ, newT, newNum, q2t, t2q, curSize + 1, newUB,
-            bestQ2T, bestSize, nodeCount, n1, n2, depth + 1, maxDepth);
+            bestQ2T, bestSize, nodeCount, n1, n2, depth + 1, maxDepth, mappedBitsQ, mappedBitsT);
       return bestQ2T;
     }
 
@@ -3357,7 +3429,8 @@ public final class SearchEngine {
         MolGraph g1, MolGraph g2, ChemOptions C, boolean induced, TimeBudget tb,
         BitSet[] qSets, BitSet[] tSets, int numClasses, int[] q2t, int[] t2q,
         int curSize, int[] bestQ2T, int[] bestSize, long[] nodeCount,
-        int n1, int n2, int depth, int maxDepth, int bestClass, int vertex, boolean isQuery) {
+        int n1, int n2, int depth, int maxDepth, int bestClass, int vertex, boolean isQuery,
+        long[] mappedBitsQ, long[] mappedBitsT) {
       BitSet[] skipQ = new BitSet[numClasses], skipT = new BitSet[numClasses];
       int skipNum = 0, skipUB = 0;
       for (int c = 0; c < numClasses; c++) {
@@ -3381,7 +3454,7 @@ public final class SearchEngine {
       }
       if (curSize + skipUB > bestSize[0])
         mcSplitRecurse(g1, g2, C, induced, tb, skipQ, skipT, skipNum, q2t, t2q, curSize, skipUB,
-            bestQ2T, bestSize, nodeCount, n1, n2, depth + 1, maxDepth);
+            bestQ2T, bestSize, nodeCount, n1, n2, depth + 1, maxDepth, mappedBitsQ, mappedBitsT);
     }
 
     // Seed-and-extend MCS (bond-growth)
