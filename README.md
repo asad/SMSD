@@ -55,7 +55,7 @@ Full benchmark suite in [`benchmarks/`](benchmarks/).
 | [Python API Guide](docs/PYTHON.md) | Full Python API reference with code examples |
 | [Java Guide](docs/JAVA.md) | Java API and CLI usage |
 | [C++ Guide](docs/CPP.md) | Header-only C++ integration |
-| [Release Notes 7.0.0](https://github.com/asad/SMSD/releases/tag/v7.0.0) | What's new in this release |
+| [Release Notes](docs/RELEASE_NOTES.md) | What's new in this release |
 | [Whitepaper](docs/WHITEPAPER.md) | Algorithm design (11-level MCS, VF2++, ring perception) |
 | [How to Install](docs/HOWTO-INSTALL.md) | Build from source on all platforms |
 | [Changelog](CHANGELOG.md) | Full versioned change history |
@@ -611,11 +611,10 @@ AddressSanitizer: zero memory errors.
 | [Python API Guide](docs/PYTHON.md) | Full Python API reference |
 | [Java Guide](docs/JAVA.md) | Java API and CLI usage |
 | [C++ Guide](docs/CPP.md) | Header-only C++ integration |
-| [Release Notes 7.0.0](https://github.com/asad/SMSD/releases/tag/v7.0.0) | Current release |
-| [Release Notes 6.12.1](docs/RELEASE_NOTES_6.12.1.md) | Previous release |
+| [Release Notes](docs/RELEASE_NOTES.md) | Current release |
+| [Changelog](CHANGELOG.md) | Full versioned change history |
 | [Whitepaper](docs/WHITEPAPER.md) | Algorithms and design (11-level MCS, VF2++, ring perception) |
 | [How to Install](docs/HOWTO-INSTALL.md) | Build from source on all platforms |
-| [Changelog](CHANGELOG.md) | Full versioned change history |
 | [NOTICE](NOTICE) | Attribution, trademark, and novel algorithm terms |
 
 ---

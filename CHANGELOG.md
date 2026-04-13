@@ -2,6 +2,33 @@
 
 All notable changes to SMSD Pro are documented in this file.
 
+## [7.0.0] - 2026-04-13
+
+### Summary
+Major release: unified API, clean break from legacy aliases, full Java parity.
+
+### Breaking Changes
+- Removed `smsd.mcs()` — use `smsd.find_mcs()`
+- Removed `smsd.substructure_search()` — use `smsd.find_substructure()`
+- Removed `smsd.all_mcs()` — use `smsd.find_mcs(mol1, mol2, max_results=N)`
+- Removed camelCase aliases: `overlapCoefficient`, `tanimoto`, `count_overlap_coefficient`, `count_tanimoto`
+
+### Added
+- Unified Python API: `find_mcs(mol1, mol2, max_results=1)` and `find_substructure(query, target, max_results=1)`
+- Java convenience methods: `SearchEngine.findMCS(g1, g2)` and `SearchEngine.findSubstructure(query, target)` with MolGraph and IAtomContainer overloads
+- Raw C++ bindings renamed to `_native_*` prefix (clearly internal)
+
+### Changed
+- All internal calls updated to unified API names
+- `mcs_from_smiles()`, `mcs_rdkit()`, `substructure_rdkit()`, `depict_mcs()`, `depict_substructure()` use new API
+- `__all__` cleaned of all deprecated entries
+- `overlapCoefficient([], [])` returns 1.0 (trivially identical empty sets)
+
+### Platforms
+- macOS (arm64 Apple Silicon, x86_64), Linux (x86_64, aarch64), Windows (AMD64)
+- GPU: Metal (Apple Silicon), CUDA (Volta+)
+- Java 25+, C++17, Python 3.10-3.13
+
 ## [6.12.0] - 2026-04-07
 
 ### Summary
