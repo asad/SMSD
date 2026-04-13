@@ -29,7 +29,7 @@ auto mcs = smsd::findMCS(q, t, chem, mcsOpts);
 ## Fingerprints
 
 ```cpp
-// Standalone fingerprint modules (6.12.1)
+// Standalone fingerprint modules
 #include "fp/mol/circular.hpp"
 #include "fp/mol/path.hpp"
 #include "fp/mol/pharmacophore.hpp"
@@ -49,7 +49,7 @@ auto pathFp = smsd::batch::detail::computePathFingerprint(q, 7, 2048);
 auto ecfp = smsd::batch::detail::computeCircularFingerprintECFP(q, 2, 2048);
 ```
 
-## Clique Solver (6.12.1)
+## Clique Solver
 
 Lightweight maximum clique finder for Python/RDKit integration where
 chemistry stays in the caller and only the combinatorial search runs
@@ -72,16 +72,16 @@ auto sub = smsd::clique::substructureMatch(
     n_query, n_target, compat, bonds_query, bonds_target);
 ```
 
-## Scaffold Library (6.12.1)
+## Scaffold Library
 
 ```cpp
 #include "smsd/scaffold_library.hpp"
 auto scaffold = smsd::scaffold::murckoScaffold(mol);
 ```
 
-## Hungarian Algorithm (6.12.1)
+## Hungarian Algorithm
 
-Optimal O(n^3) assignment for atom matching cost matrices.
+Optimal assignment solver for atom matching cost matrices.
 
 ```cpp
 #include "smsd/hungarian.hpp"
@@ -105,7 +105,7 @@ std::string v3000 = smsd::writeMolBlockV3000(mol);
 std::string sdf = smsd::writeSDFRecord(mol);
 ```
 
-The native I/O path in `6.12.1` covers practical V2000/V3000 graph round-trip,
+The native I/O path covers practical V2000/V3000 graph round-trip,
 metadata, SDF properties, atom maps/classes, and patent-style `R#` handling.
 The most exotic MDL query chemistry features are still intentionally documented
 as out of scope until they are implemented natively.

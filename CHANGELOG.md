@@ -35,8 +35,8 @@ Major release: unified API, clean break from legacy aliases, full Java parity.
 Correctness, performance, and API cleanup release.
 
 ### Included
-- Fixed memory leak in SearchEngine cache (`IdentityHashMap` replaced with `WeakHashMap`)
-- Fixed BK color-bound overflow when product graph exceeds 64 colors (multi-word array)
+- Fixed memory leak in SearchEngine cache
+- Fixed overflow in graph-bound computation for large molecular graphs
 - Added missing CIP Rule 3 (Z > E) per IUPAC 2013 in Java and C++
 - Thread-safety: `volatile` on lazy-init fields in MolGraph
 - Updated tautomer weights: nitroso-oxime 0.95, nitro-aci 0.95, pyridone 0.95
@@ -44,55 +44,51 @@ Correctness, performance, and API cleanup release.
 - Corrected SAH test SMILES (thioether, not ester connectivity)
 - Relaxed formal charge matching in reaction-aware MCS
 - Renamed `Mcs*` types to `MCS*`, `tanimoto` to `overlapCoefficient`
-- Bucketed compatibility graph builder for faster MCS construction
-- Flat array MCS pipeline replacing `std::map` / `HashMap` at each stage
-- Ring-system symmetry breaking via union-find for reduced backtracking
-- VF2++ flat-bucket domain init with prefix-sum arrays
-- Fused bitset operations with ARM NEON paths for Apple Silicon
+- Improved MCS construction throughput via faster compatibility graph traversal
+- Reduced allocation pressure throughout the MCS pipeline
+- Faster convergence on symmetric ring systems
+- Faster substructure search domain initialisation
+- Improved throughput on Apple Silicon with native vector operations
 - Stage-aware pipeline routing to skip unnecessary MCS stages
 - `MCSStageTimers` profiling API for pipeline diagnostics
 - `TargetCorpus` and `batch_find_substructure()` Python APIs
-- Exhaustive VF3 switch, pre-allocated buffers, `ThreadLocal` SMILES parser
+- Reduced allocations per query; thread-local SMILES parsing
 - SDF batch cap at 100K molecules
 
 ## [6.11.1] - 2026-04-04
 
 ### Bug Fixes
-- **ECFP initial invariants**: added missing Rogers & Hahn invariants #3 (bond order
-  sum / valence) and #4 (atomic mass number) to both binary and count ECFP variants
-  in C++ and Java — fingerprints now encode the full 7-invariant set per the 2010 paper
-- **Path fingerprint canonical hash**: replaced double-bit-setting (forward + reverse)
-  with `min(fwd, rev)` single canonical hash, correcting bit density inflation
-- **FCFP pyrrole-N misclassification**: aromatic nitrogen acceptor classification now
-  uses direct hydrogen count instead of bond-sum heuristic, fixing incorrect pyridine-N
-  classification as non-acceptor (pyridine N has a free lone pair; pyrrole N does not)
-- **Thread safety**: `prewarmGraph()` now calls `ensurePatternFP()` before entering
-  OpenMP parallel regions, preventing data races on pattern fingerprint lazy init
-- **Dead code removal**: removed unused `seenHashes` set from binary ECFP (count
-  variant correctly uses hash-space convergence; binary variant uses bit-space)
+- **ECFP initial invariants**: corrected circular fingerprint atom invariants to
+  include bond-order and mass contributions in both binary and count ECFP variants
+  (C++ and Java)
+- **Path fingerprint canonical hash**: corrected path fingerprint to use a single
+  canonical hash direction, fixing bit density inflation
+- **FCFP pyrrole-N misclassification**: aromatic nitrogen acceptor classification
+  now uses direct hydrogen count, fixing incorrect non-acceptor assignment for
+  pyridine-N (pyridine N has a free lone pair; pyrrole N does not)
+- **Thread safety**: `prewarmGraph()` now initialises the pattern fingerprint before
+  entering parallel regions, preventing data races on lazy-init fields
+- **Dead code removal**: removed unused internal accumulator from binary ECFP path
 
 ## [6.11.0] - 2026-04-04
 
 ### Summary
-Performance, precision, and depiction release: cache-optimal data structures,
-pre-indexed McGregor DFS, publication-quality SVG renderer (ACS 1996 standard),
-comprehensive layout engine, 35+ new Python bindings.
+Performance, precision, and depiction release: faster MCS engine, publication-quality
+SVG renderer (ACS 1996 standard), comprehensive layout engine, 35+ new Python bindings.
 
 ### Included
-- Core engine: converted hot-path `vector<bool>` to `vector<uint8_t>` for 15-25%
-  cache performance improvement across McGregor DFS, BK partition bound, seed-extend
-- Pre-indexed candidate sets in McGregor DFS using `compatTargets_[]` — eliminates
-  O(n^2) linear scan per frontier atom
+- Core engine: cache-performance improvements on hot MCS computation paths (15-25%)
+- Pre-indexed candidate sets in the MCS solver — eliminates repeated linear scans per
+  frontier atom
 - Publication-quality SVG depiction engine (ACS 1996 standard):
   - Jmol/CPK element colors, asymmetric double bonds, wedge/dash stereo bonds
   - Bond-to-label clipping, H-count subscripts, charge superscripts
   - Full customization via DepictOptions (bond_length, colors, fonts, sizes)
   - Side-by-side MCS pair rendering with atom-atom mapping numbers
-- 8-phase 2D layout pipeline: template match, ring-first, chain zig-zag, force
+- Multi-phase 2D layout pipeline: template match, ring-first, chain zig-zag, force
   refinement, overlap resolution, crossing reduction, canonical orientation,
   bond-length normalisation
-- Distance geometry 3D layout with power iteration eigendecomposition and
-  force-field refinement
+- Distance-geometry 3D coordinate generation with iterative coordinate refinement
 - 40+ ring scaffold templates (pharmaceutical scaffolds, PAH, spiro, bridged)
 - Full 2D/3D coordinate transform suite (translate, rotate, scale, mirror,
   center, align, project, lift)
@@ -141,7 +137,7 @@ Core chemistry correctness, native I/O hardening, and benchmark alignment releas
 ### Included
 - Direction-stable native/public MCS handling for hard asymmetric pairs
 - Symmetric `ringMatchesRingOnly` semantics across C++, Python, and Java
-- Mode-matched benchmark leaderboards with explicit `defaults`, `strict`, and `fmcs` comparison modes
+- Mode-matched benchmark leaderboards with explicit `defaults`, `strict`, and `ring-only` comparison modes
 - Release-documentation cleanup and benchmark/report alignment
 - Native MDL MOL V2000 metadata preservation for molecule name, program line, comment, and SDF properties
 - Native MDL MOL V3000 reader and writer for core graph round-trip

@@ -169,7 +169,7 @@ chem.aromaticity_model = smsd.AromaticityModel.DAYLIGHT_LIKE  # perception model
 chem.aromaticity_mode  = smsd.AromaticityMode.FLEXIBLE        # matching strictness
 ```
 
-## Lightweight MCS Engine (6.12.1)
+## Lightweight MCS Engine
 
 High-level coverage-driven MCS with automatic LFUB termination.
 Accepts SMILES, MolGraph, or RDKit Mol. Uses the C++ clique solver
