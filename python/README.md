@@ -152,7 +152,7 @@ ecfp2 = smsd.fingerprint_from_smiles("c1ccccc1", radius=1, fp_size=2048)
 whole = smsd.fingerprint_from_smiles("c1ccccc1", radius=-1, fp_size=2048)
 
 # Tanimoto similarity (works with any fingerprint type)
-sim = smsd.overlapCoefficient(
+sim = smsd.overlap_coefficient(
     smsd.fingerprint_from_smiles("c1ccccc1", radius=2),
     smsd.fingerprint_from_smiles("c1ccc(O)cc1", radius=2))
 ```
@@ -275,7 +275,7 @@ hits = smsd.screen_targets(query, library, threshold=0.5)
 fp = smsd.path_fingerprint(mol, path_length=7, fp_size=2048)
 fp = smsd.circular_fingerprint(mol, radius=2, fp_size=2048)           # ECFP4
 fp = smsd.circular_fingerprint(mol, radius=2, fp_size=2048, mode="fcfp")  # FCFP4
-sim = smsd.overlapCoefficient(fp1, fp2)
+sim = smsd.overlap_coefficient(fp1, fp2)
 ok = smsd.fingerprint_subset(query_fp, target_fp)
 
 # Format conversions (database storage, REST APIs)
