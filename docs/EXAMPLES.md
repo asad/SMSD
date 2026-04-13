@@ -102,7 +102,7 @@ print(mapping)  # {0: 0, 1: 1, 2: 2, 3: 4, 4: 5, 5: 6} (example)
 
 ```python
 # Find up to 10 distinct mappings
-all_matches = smsd.find_all_substructures(query, target, max_matches=10)
+all_matches = smsd.find_substructure(query, target, max_results=10)
 print(f"Found {len(all_matches)} distinct mappings")
 ```
 

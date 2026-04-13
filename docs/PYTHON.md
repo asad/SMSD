@@ -479,7 +479,7 @@ Find every possible way a pattern embeds into a target:
 benzene = smsd.parse_smiles("c1ccccc1")
 phenol = smsd.parse_smiles("c1ccc(O)cc1")
 
-all_maps = smsd.find_all_substructures(benzene, phenol)
+all_maps = smsd.find_substructure(benzene, phenol, max_results=100)
 print(f"Found {len(all_maps)} embeddings")
 # benzene in phenol: 12 (6 rotations x 2 reflections)
 ```

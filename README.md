@@ -186,7 +186,7 @@ ecfp4  = smsd.circular_fingerprint("c1ccccc1", radius=2, fp_size=2048)
 fcfp4  = smsd.circular_fingerprint("c1ccccc1", radius=2, fp_size=2048, mode="fcfp")
 counts = smsd.ecfp_counts("c1ccccc1", radius=2, fp_size=2048)
 torsion = smsd.topological_torsion("c1ccccc1", fp_size=2048)
-tan    = smsd.overlapCoefficient(ecfp4, ecfp4)
+tan    = smsd.overlap_coefficient(ecfp4, ecfp4)
 
 # --- 2D Layout ---
 g = smsd.parse_smiles("c1ccc2c(c1)cc1ccccc1c2")  # phenanthrene
@@ -207,7 +207,7 @@ mcs = smsd.find_mcs("c1ccccc1", "c1ccc(O)cc1", induced=True)         # Induced M
 mcs = smsd.find_mcs("c1ccccc1", "c1ccc(O)cc1", maximize_bonds=True)  # Edge MCS (MCES)
 
 # Find top-N distinct MCS solutions
-all_mcs = smsd.find_all_mcs("c1ccccc1", "c1ccc(O)cc1", max_results=5)
+all_mcs = smsd.find_mcs("c1ccccc1", "c1ccc(O)cc1", max_results=5)
 
 # SMARTS-based MCS
 mcs = smsd.find_mcs_smarts("[#6]~[#7]", "c1ccc(N)cc1")
@@ -220,13 +220,13 @@ rgroups = smsd.decompose_r_groups("c1ccccc1", ["c1ccc(O)cc1", "c1ccc(N)cc1"])
 
 # --- Substructure Search ---
 hit = smsd.find_substructure("c1ccccc1", "c1ccc(O)cc1")
-all_matches = smsd.find_all_substructures("c1ccccc1", "c1ccc(O)cc1", max_matches=10)
+all_matches = smsd.find_substructure("c1ccccc1", "c1ccc(O)cc1", max_results=10)
 
 # SMARTS pattern matching
 matches = smsd.smarts_search("[OH]", "c1ccc(O)cc1")
 
 # --- Similarity & Screening ---
-sim = smsd.overlapCoefficient(
+sim = smsd.overlap_coefficient(
     smsd.circular_fingerprint("CCO", radius=2),
     smsd.circular_fingerprint("CCCO", radius=2)
 )
