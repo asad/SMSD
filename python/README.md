@@ -15,6 +15,10 @@ Python bindings for SMSD native graph matching, including substructure search,
 maximum common substructure (MCS), fingerprints, and molecular similarity.
 RDKit and CDK are not required for the core SMSD path.
 
+**Benchmark** (Dalke NN, 1,000 pairs): 5x faster than RDKit FindMCS, finds
+larger MCS on 21% of pairs, zero timeouts. See
+[full results](https://github.com/asad/SMSD#dalke-nearest-neighbor-mcs-benchmark-1000-pairs).
+
 ## Install
 
 ```bash
@@ -37,11 +41,11 @@ assert smsd.is_substructure(
     smsd.parse_smiles("c1ccc(O)cc1"))  # phenol
 
 # Maximum Common Substructure
-mcs = smsd.mcs("c1ccccc1", "c1ccc2ccccc2c1")
+mcs = smsd.find_mcs("c1ccccc1", "c1ccc2ccccc2c1")
 print(f"MCS: {len(mcs)} atoms")  # 6
 
 # Tautomer-aware MCS
-mcs = smsd.mcs("CC(=O)C", "CC(O)=C", tautomer_aware=True)
+mcs = smsd.find_mcs("CC(=O)C", "CC(O)=C", tautomer_aware=True)
 
 # Circular fingerprint (ECFP4)
 ecfp4 = smsd.fingerprint_from_smiles("c1ccccc1", radius=2, fp_size=2048)
@@ -190,7 +194,7 @@ opts = smsd.ChemOptions.tautomer_profile()
 opts.solvent = smsd.Solvent.DMSO       # adjust for DMSO
 opts.with_ph(5.0)                       # adjust for pH 5.0
 
-mcs = smsd.mcs("CC(=O)C", "CC(O)=C", chem=opts)
+mcs = smsd.find_mcs("CC(=O)C", "CC(O)=C", chem=opts)
 ```
 
 Supported solvents: `AQUEOUS`, `DMSO`, `METHANOL`, `CHLOROFORM`, `ACETONITRILE`, `DIETHYL_ETHER`
@@ -210,7 +214,7 @@ smsd.write_molfile(g, "out_v3000.mol", v3000=True)
 smsd.write_molfile(g, "out.sdf", sdf=True)
 ```
 
-The native writer preserves practical chemistry metadata in `6.12.2`:
+The native writer preserves practical chemistry metadata in `7.0.0`:
 - names, comments, and SDF properties
 - charges, isotopes, atom classes, and atom maps
 - `R#`/`R<n>` plus `M  RGP`
@@ -260,7 +264,7 @@ mapping = smsd.find_substructure(query, target)
 
 # MCS
 mapping = smsd.find_mcs(mol1, mol2)
-mapping = smsd.mcs("SMILES1", "SMILES2", tautomer_aware=True)
+mapping = smsd.find_mcs("SMILES1", "SMILES2", tautomer_aware=True)
 
 # Similarity
 sim = smsd.similarity("SMILES1", "SMILES2")
@@ -288,10 +292,10 @@ hits    = smsd.batch_fingerprint_screen(query_fp, target_fps)
 # RASCAL pre-screen + exact MCS in one call
 matches = smsd.screen_and_match(query, targets, threshold=0.5)
 
-# Batch find substructure with atom-atom mappings (v6.12.2)
+# Batch find substructure with atom-atom mappings (v7.0.0)
 mappings = smsd.batch_find_substructure(query, targets)
 
-# TargetCorpus — prewarm once, query many times (v6.12.2)
+# TargetCorpus — prewarm once, query many times (v7.0.0)
 corpus = smsd.TargetCorpus.from_smiles(["c1ccccc1", "c1ccc(O)cc1", "CCO"])
 corpus.prewarm()
 hits = corpus.substructure(smsd.parse_smiles("c1ccccc1"))
@@ -337,7 +341,7 @@ Each toolkit brings unique strengths to the cheminformatics ecosystem:
 
 ## Also Available
 
-- **Java**: `com.bioinceptionlabs:smsd:6.12.2` on [Maven Central](https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd)
+- **Java**: `com.bioinceptionlabs:smsd:7.0.0` on [Maven Central](https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd)
 - **C++**: Header-only, zero dependencies — [GitHub](https://github.com/asad/SMSD)
 
 ## Citation

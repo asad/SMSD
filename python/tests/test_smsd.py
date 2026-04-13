@@ -19,9 +19,10 @@ from smsd import (
     write_mol_block,
     write_mol_block_v3000,
     write_sdf_record,
-    is_substructure,
-    find_substructure,
-    find_mcs,
+    # Tests use raw MolGraph + ChemOptions positional args → native bindings
+    _native_is_substructure as is_substructure,
+    _native_find_substructure as find_substructure,
+    _native_find_mcs as find_mcs,
     similarity_upper_bound,
     screen_targets,
     path_fingerprint,
@@ -480,7 +481,7 @@ class TestTautomer:
 
     def test_convenience_mcs_tautomer(self):
         """Test the convenience mcs() with tautomer_aware flag."""
-        mapping = smsd.mcs("Oc1ccccn1", "O=C1C=CC=CN1", tautomer_aware=True)
+        mapping = smsd.find_mcs("Oc1ccccn1", "O=C1C=CC=CN1", tautomer_aware=True)
         assert isinstance(mapping, dict)
         assert len(mapping) > 0
 
@@ -1106,12 +1107,12 @@ class TestRGroupDecomposition:
         assert isinstance(fp, list)
         assert len(fp) == 0
 
-    # 5. overlapCoefficient([], []) -> 0.0
+    # 5. overlapCoefficient([], []) -> 1.0 (trivially identical empty sets)
     def test_overlapCoefficient_empty_fingerprints(self):
-        """overlapCoefficient of two empty fingerprints should be 0.0."""
+        """overlapCoefficient of two empty fingerprints should be 1.0 (identical empty sets)."""
         sim = smsd.overlapCoefficient([], [])
-        assert sim == pytest.approx(0.0), (
-            f"overlapCoefficient([], []) should be 0.0, got {sim}"
+        assert sim == pytest.approx(1.0), (
+            f"overlapCoefficient([], []) should be 1.0, got {sim}"
         )
 
     def test_overlapCoefficient_one_empty(self):
@@ -1482,13 +1483,13 @@ class TestTimeoutEnforcement:
         )
 
     def test_python_mcs_passes_timeout(self):
-        """The high-level smsd.mcs() wrapper must respect timeout_ms."""
+        """The high-level smsd.find_mcs() wrapper must respect timeout_ms."""
         import time
         t0 = time.monotonic()
-        mapping = smsd.mcs(self.COA_SMILES, self.TAXOL_SMILES, timeout_ms=1000)
+        mapping = smsd.find_mcs(self.COA_SMILES, self.TAXOL_SMILES, timeout_ms=1000)
         elapsed = time.monotonic() - t0
         assert elapsed < 3.0, (
-            f"smsd.mcs() CoA vs Taxol took {elapsed:.1f}s, expected < 3.0s"
+            f"smsd.find_mcs() CoA vs Taxol took {elapsed:.1f}s, expected < 3.0s"
         )
 
 

@@ -1599,6 +1599,80 @@ public final class SearchEngine {
     return findMCS(g1, g2, C, M);
   }
 
+  // ---- Unified convenience API (v7.0) ----
+
+  /**
+   * Find the Maximum Common Substructure with default options.
+   *
+   * <pre>{@code
+   * Map<Integer, Integer> mcs = SearchEngine.findMCS(g1, g2);
+   * }</pre>
+   *
+   * @param g1 the first molecule graph
+   * @param g2 the second molecule graph
+   * @return mapping from g1 atom indices to g2 atom indices
+   */
+  public static Map<Integer, Integer> findMCS(MolGraph g1, MolGraph g2) {
+    return findMCS(g1, g2, new ChemOptions(), new MCSOptions());
+  }
+
+  /**
+   * Find MCS with default options (CDK API).
+   */
+  public static Map<Integer, Integer> findMCS(IAtomContainer m1, IAtomContainer m2) {
+    return findMCS(m1, m2, new ChemOptions(), new MCSOptions());
+  }
+
+  /**
+   * Find substructure mapping of query in target with default options.
+   * Returns empty map if query is not a substructure of target.
+   *
+   * <pre>{@code
+   * Map<Integer, Integer> mapping = SearchEngine.findSubstructure(query, target);
+   * if (!mapping.isEmpty()) { // query is a substructure }
+   * }</pre>
+   *
+   * @param query  the query molecule graph
+   * @param target the target molecule graph
+   * @return mapping from query atom indices to target atom indices, or empty map
+   */
+  public static Map<Integer, Integer> findSubstructure(MolGraph query, MolGraph target) {
+    return findSubstructure(query, target, new ChemOptions(), 10_000L);
+  }
+
+  /**
+   * Find substructure mapping with specified options and timeout.
+   *
+   * @param query     the query molecule graph
+   * @param target    the target molecule graph
+   * @param C         chemical matching options
+   * @param timeoutMs maximum time in milliseconds
+   * @return mapping from query atom indices to target atom indices, or empty map
+   */
+  public static Map<Integer, Integer> findSubstructure(
+      MolGraph query, MolGraph target, ChemOptions C, long timeoutMs) {
+    List<Map<Integer, Integer>> all = findAllSubstructures(query, target, C, 1, timeoutMs);
+    return all.isEmpty() ? Collections.emptyMap() : all.get(0);
+  }
+
+  /**
+   * Find substructure mapping with default options (CDK API).
+   */
+  public static Map<Integer, Integer> findSubstructure(IAtomContainer query, IAtomContainer target) {
+    return findSubstructure(query, target, new ChemOptions(), 10_000L);
+  }
+
+  /**
+   * Find substructure mapping with options (CDK API).
+   */
+  public static Map<Integer, Integer> findSubstructure(
+      IAtomContainer query, IAtomContainer target, ChemOptions C, long timeoutMs) {
+    MolGraph gq = toMolGraph(query), gt = toMolGraph(target);
+    applySolvent(gq, C);
+    applySolvent(gt, C);
+    return findSubstructure(gq, gt, C, timeoutMs);
+  }
+
   /**
    * Enumerate multiple distinct MCS mappings of the maximum size.
    *

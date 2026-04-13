@@ -22,11 +22,30 @@ SMSD Pro provides exact substructure search and maximum common substructure
 (header-only), and **Python**. Optional GPU paths are available for CUDA and
 Apple Metal builds.
 
-Version `7.0.0` adds ring-constrained MCS quality recovery for the
-relaxed defaults introduced in 6.12.1, a zero-loss C++ coverage-driven
-MCS engine (42-90x faster than RDKit), and a rewritten Python MCS
-wrapper with zero orchestration overhead. All matching defaults now
-align with RDKit FMCS for fair benchmarking.
+Version `7.0.0` introduces a **unified Python API** with two clean entry
+points: `find_mcs(mol1, mol2, max_results=1)` and
+`find_substructure(query, target, max_results=1)`. Both accept SMILES
+strings, MolGraph objects, or RDKit Mol objects. Includes ring-constrained
+MCS quality recovery, a coverage-driven C++ MCS engine, and all matching
+defaults aligned with RDKit FMCS for fair benchmarking.
+
+### Dalke Nearest-Neighbor MCS Benchmark (1,000 pairs)
+
+Apple-to-apple comparison on the standard Dalke NN dataset (1,000
+high-similarity ChEMBL pairs). Same SMILES input, same 10 s timeout,
+same process, same machine.
+
+| Metric | SMSD Pro 7.0.0 | RDKit FindMCS 2026.03 |
+|--------|:---------------:|:---------------------:|
+| Total time | **40 s** | 213 s |
+| Median time | 0.6 ms | 0.4 ms |
+| Mean MCS size | **25.8 atoms** | 25.0 atoms |
+| Timeouts | **0** | 8 |
+| Larger-MCS wins | **211 (21 %)** | 29 (3 %) |
+
+**5x faster overall, finds larger MCS 7x more often, zero timeouts.**
+
+Full benchmark suite in [`benchmarks/`](benchmarks/).
 
 ### Guides and References
 
@@ -36,7 +55,7 @@ align with RDKit FMCS for fair benchmarking.
 | [Python API Guide](docs/PYTHON.md) | Full Python API reference with code examples |
 | [Java Guide](docs/JAVA.md) | Java API and CLI usage |
 | [C++ Guide](docs/CPP.md) | Header-only C++ integration |
-| [Release Notes 7.0.0](https://github.com/asad/SMSD/releases/tag/v7.0.0) | What's new in this release |
+| [Release Notes](docs/RELEASE_NOTES.md) | What's new in this release |
 | [Whitepaper](docs/WHITEPAPER.md) | Algorithm design (11-level MCS, VF2++, ring perception) |
 | [How to Install](docs/HOWTO-INSTALL.md) | Build from source on all platforms |
 | [Changelog](CHANGELOG.md) | Full versioned change history |
@@ -85,14 +104,14 @@ RDKit and Open Babel are optional interop layers.
 ```python
 import smsd
 
-result = smsd.substructure_search("c1ccccc1", "c1ccc(O)cc1")
-mcs    = smsd.mcs("c1ccccc1", "c1ccc2ccccc2c1")
+result = smsd.find_substructure("c1ccccc1", "c1ccc(O)cc1")
+mcs    = smsd.find_mcs("c1ccccc1", "c1ccc2ccccc2c1")
 
 # Tautomer-aware MCS
-mcs    = smsd.mcs("CC(=O)C", "CC(O)=C", tautomer_aware=True)
+mcs    = smsd.find_mcs("CC(=O)C", "CC(O)=C", tautomer_aware=True)
 
 # Prefer rare heteroatoms (S, P, Se) for reaction mapping
-mcs    = smsd.mcs("C[S+](C)CCC(N)C(=O)O", "SCCC(N)C(=O)O",
+mcs    = smsd.find_mcs("C[S+](C)CCC(N)C(=O)O", "SCCC(N)C(=O)O",
                    prefer_rare_heteroatoms=True)
 
 # Reaction-aware atom mapping
@@ -151,23 +170,23 @@ print(result.mapping)       # {0: 0, 1: 1, ...}
 
 # --- Works with any input type ---
 # SMILES strings
-mcs = smsd.mcs("c1ccccc1", "c1ccc(O)cc1")
+mcs = smsd.find_mcs("c1ccccc1", "c1ccc(O)cc1")
 
 # MolGraph objects (pre-parsed, fastest for batch)
 g1 = smsd.parse_smiles("c1ccccc1")
 g2 = smsd.parse_smiles("c1ccc(O)cc1")
-mcs = smsd.mcs(g1, g2)
+mcs = smsd.find_mcs(g1, g2)
 
 # Native Mol objects (auto-detected, indices returned in native ordering)
 # from rdkit import Chem
-# mcs = smsd.mcs(Chem.MolFromSmiles("c1ccccc1"), Chem.MolFromSmiles("c1ccc(O)cc1"))
+# mcs = smsd.find_mcs(Chem.MolFromSmiles("c1ccccc1"), Chem.MolFromSmiles("c1ccc(O)cc1"))
 
 # --- Fingerprints ---
 ecfp4  = smsd.circular_fingerprint("c1ccccc1", radius=2, fp_size=2048)
 fcfp4  = smsd.circular_fingerprint("c1ccccc1", radius=2, fp_size=2048, mode="fcfp")
 counts = smsd.ecfp_counts("c1ccccc1", radius=2, fp_size=2048)
 torsion = smsd.topological_torsion("c1ccccc1", fp_size=2048)
-tan    = smsd.overlapCoefficient(ecfp4, ecfp4)
+tan    = smsd.overlap_coefficient(ecfp4, ecfp4)
 
 # --- 2D Layout ---
 g = smsd.parse_smiles("c1ccc2c(c1)cc1ccccc1c2")  # phenanthrene
@@ -182,13 +201,13 @@ crossings = smsd.reduce_crossings(g, coords, max_iter=2000)
 import smsd
 
 # --- All MCS variants ---
-mcs = smsd.mcs("c1ccccc1", "c1ccc(O)cc1")                     # Connected MCS (default)
-mcs = smsd.mcs("c1ccccc1", "c1ccc(O)cc1", connected_only=False) # Disconnected MCS
-mcs = smsd.mcs("c1ccccc1", "c1ccc(O)cc1", induced=True)         # Induced MCS
-mcs = smsd.mcs("c1ccccc1", "c1ccc(O)cc1", maximize_bonds=True)  # Edge MCS (MCES)
+mcs = smsd.find_mcs("c1ccccc1", "c1ccc(O)cc1")                     # Connected MCS (default)
+mcs = smsd.find_mcs("c1ccccc1", "c1ccc(O)cc1", connected_only=False) # Disconnected MCS
+mcs = smsd.find_mcs("c1ccccc1", "c1ccc(O)cc1", induced=True)         # Induced MCS
+mcs = smsd.find_mcs("c1ccccc1", "c1ccc(O)cc1", maximize_bonds=True)  # Edge MCS (MCES)
 
 # Find top-N distinct MCS solutions
-all_mcs = smsd.find_all_mcs("c1ccccc1", "c1ccc(O)cc1", max_results=5)
+all_mcs = smsd.find_mcs("c1ccccc1", "c1ccc(O)cc1", max_results=5)
 
 # SMARTS-based MCS
 mcs = smsd.find_mcs_smarts("[#6]~[#7]", "c1ccc(N)cc1")
@@ -200,14 +219,14 @@ scaffold = smsd.find_scaffold_mcs("CC(=O)Oc1ccccc1C(=O)O", "Oc1ccccc1C(=O)O")
 rgroups = smsd.decompose_r_groups("c1ccccc1", ["c1ccc(O)cc1", "c1ccc(N)cc1"])
 
 # --- Substructure Search ---
-hit = smsd.substructure_search("c1ccccc1", "c1ccc(O)cc1")
-all_matches = smsd.find_all_substructures("c1ccccc1", "c1ccc(O)cc1", max_matches=10)
+hit = smsd.find_substructure("c1ccccc1", "c1ccc(O)cc1")
+all_matches = smsd.find_substructure("c1ccccc1", "c1ccc(O)cc1", max_results=10)
 
 # SMARTS pattern matching
 matches = smsd.smarts_search("[OH]", "c1ccc(O)cc1")
 
 # --- Similarity & Screening ---
-sim = smsd.overlapCoefficient(
+sim = smsd.overlap_coefficient(
     smsd.circular_fingerprint("CCO", radius=2),
     smsd.circular_fingerprint("CCCO", radius=2)
 )
@@ -218,11 +237,11 @@ dice = smsd.dice_similarity(
 
 # --- Chemistry Options ---
 # Tautomer-aware with solvent and pH
-mcs = smsd.mcs("CC(=O)C", "CC(O)=C",
+mcs = smsd.find_mcs("CC(=O)C", "CC(O)=C",
                tautomer_aware=True, solvent="DMSO", pH=5.0)
 
 # Loose bond matching (FMCS-style)
-mcs = smsd.mcs("c1ccccc1", "C1CCCCC1", bond_order_mode="loose")
+mcs = smsd.find_mcs("c1ccccc1", "C1CCCCC1", bond_order_mode="loose")
 
 # --- Canonical SMILES ---
 smi = smsd.canonical_smiles("OC(=O)c1ccccc1")   # deterministic canonical form
@@ -592,11 +611,10 @@ AddressSanitizer: zero memory errors.
 | [Python API Guide](docs/PYTHON.md) | Full Python API reference |
 | [Java Guide](docs/JAVA.md) | Java API and CLI usage |
 | [C++ Guide](docs/CPP.md) | Header-only C++ integration |
-| [Release Notes 7.0.0](https://github.com/asad/SMSD/releases/tag/v7.0.0) | Current release |
-| [Release Notes 6.12.1](docs/RELEASE_NOTES_6.12.1.md) | Previous release |
+| [Release Notes](docs/RELEASE_NOTES.md) | Current release |
+| [Changelog](CHANGELOG.md) | Full versioned change history |
 | [Whitepaper](docs/WHITEPAPER.md) | Algorithms and design (11-level MCS, VF2++, ring perception) |
 | [How to Install](docs/HOWTO-INSTALL.md) | Build from source on all platforms |
-| [Changelog](CHANGELOG.md) | Full versioned change history |
 | [NOTICE](NOTICE) | Attribution, trademark, and novel algorithm terms |
 
 ---

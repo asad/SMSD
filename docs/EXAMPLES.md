@@ -178,19 +178,19 @@ mol1 = smsd.parse_smiles("c1ccccc1")
 mol2 = smsd.parse_smiles("c1ccc(O)cc1")
 
 # Connected MCS (default) — all matched atoms form a single connected component
-mcs = smsd.mcs(mol1, mol2)
+mcs = smsd.find_mcs(mol1, mol2)
 
 # Disconnected MCS — matched atoms may be in separate fragments
-mcs = smsd.mcs(mol1, mol2, connected_only=False)
+mcs = smsd.find_mcs(mol1, mol2, connected_only=False)
 
 # Induced MCS — preserved bond orders between matched atoms
-mcs = smsd.mcs(mol1, mol2, induced=True)
+mcs = smsd.find_mcs(mol1, mol2, induced=True)
 
 # Edge MCS (MCES) — maximise matched bonds rather than atoms
-mcs = smsd.mcs(mol1, mol2, maximize_bonds=True)
+mcs = smsd.find_mcs(mol1, mol2, maximize_bonds=True)
 
 # Find top-5 distinct MCS solutions
-all_mcs = smsd.find_all_mcs(mol1, mol2, max_results=5)
+all_mcs = smsd.find_mcs(mol1, mol2, max_results=5)
 for i, m in enumerate(all_mcs):
     print(f"Solution {i+1}: {len(m)} atoms")
 ```
@@ -225,15 +225,15 @@ keto = smsd.parse_smiles("CC(=O)C")
 enol = smsd.parse_smiles("CC(O)=C")
 
 # Without tautomer awareness — misses the equivalence
-mcs_strict = smsd.mcs(keto, enol)
+mcs_strict = smsd.find_mcs(keto, enol)
 print(f"Strict MCS: {len(mcs_strict)} atoms")
 
 # With tautomer awareness — recognises keto-enol equivalence
-mcs_tauto = smsd.mcs(keto, enol, tautomer_aware=True)
+mcs_tauto = smsd.find_mcs(keto, enol, tautomer_aware=True)
 print(f"Tautomer MCS: {len(mcs_tauto)} atoms")  # larger
 
 # Solvent-aware tautomer equilibrium
-mcs = smsd.mcs(keto, enol, tautomer_aware=True, solvent="DMSO", pH=7.4)
+mcs = smsd.find_mcs(keto, enol, tautomer_aware=True, solvent="DMSO", pH=7.4)
 ```
 
 ### Caution: tautomer-aware is slower

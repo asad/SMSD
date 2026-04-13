@@ -78,15 +78,14 @@ class TestTautobase:
         total = 0
         gains = 0
         total_gain_atoms = 0
-        taut_opts = smsd.ChemOptions()
-        taut_opts.tautomer_aware = True
+        # tautomer_aware is now a keyword arg on find_mcs()
 
         for name, smi1, smi2 in pairs:
             try:
                 g1 = smsd.parse_smiles(smi1)
                 g2 = smsd.parse_smiles(smi2)
                 m_strict = smsd.find_mcs(g1, g2, timeout_ms=10000)
-                m_taut = smsd.find_mcs(g1, g2, chem=taut_opts, timeout_ms=10000)
+                m_taut = smsd.find_mcs(g1, g2, tautomer_aware=True, timeout_ms=10000)
                 total += 1
                 if len(m_taut) > len(m_strict):
                     gains += 1

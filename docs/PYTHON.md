@@ -268,8 +268,8 @@ mcs = smsd.find_mcs(query, target)
 Convenience wrappers accept `MolGraph`, SMILES, or RDKit molecules:
 
 ```python
-mcs = smsd.mcs("CC(=O)O", "CCC(=O)O")
-hit = smsd.substructure_search("c1ccccc1", "c1ccc(O)cc1")
+mcs = smsd.find_mcs("CC(=O)O", "CCC(=O)O")
+hit = smsd.find_substructure("c1ccccc1", "c1ccc(O)cc1")
 ```
 
 ## SMARTS
