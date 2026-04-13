@@ -32,24 +32,22 @@ pip install "smsd[gpu]"
 
 | Category | Functions |
 |----------|-----------|
-| **Parsing/I/O** | `parse_smiles`, `to_smiles`, `read_mol_block`, `write_mol_block`, `write_mol_block_v3000`, `read_mol_file`, `read_sdf`, `write_sdf`, `write_sdf_record` |
-| **Substructure** | `is_substructure`, `find_substructure`, `find_all_substructures` |
-| **MCS** | `find_mcs`, `find_all_mcs`, `find_mcs_progressive`, `find_mcs_smiles`, `mcs_size`, `mcs_to_smiles`, `find_nmcs`, `find_scaffold_mcs` |
+| **Parsing/I/O** | `parse_smiles`, `to_smiles`, `read_mol_block`, `write_mol_block`, `write_mol_block_v3000`, `read_molfile`, `read_mol_file`, `read_sdf`, `write_sdf`, `write_sdf_record`, `write_molfile`, `export_sdf` |
+| **Substructure** | `is_substructure`, `find_substructure` |
+| **MCS** | `find_mcs`, `find_mcs_progressive`, `find_mcs_smiles`, `mcs_to_smiles`, `find_nmcs`, `find_scaffold_mcs` |
 | **Mapping** | `validate_mapping`, `is_mapping_maximal`, `canonicalize_mapping`, `translate_to_atom_ids` |
-| **Reaction** | `map_reaction`, `reaction_aware_mcs`, `map_reaction_aware`, `bond_change_score` |
 | **Scaffold/R-group** | `murcko_scaffold`, `decompose_rgroups`, `extract_subgraph` |
 | **Graph Utils** | `count_components`, `split_components`, `same_canonical_graph`, `prewarm_graph` |
-| **Fingerprints** | `circular_fingerprint`, `circular_fingerprint_counts`, `topological_torsion`, `topological_torsion_counts`, `path_fingerprint`, `mcs_fingerprint`, `counts_to_array` |
-| **Similarity** | `tanimoto`, `dice`, `cosine`, `soergel`, `count_tanimoto`, `count_dice`, `count_cosine`, `similarity_upper_bound` |
-| **Batch** | `batch_substructure`, `batch_mcs`, `batch_mcs_size`, `batch_mcs_constrained`, `batch_fingerprint`, `batch_fingerprint_screen`, `screen_targets`, `screen_and_match`, `screen_and_mcs_size` |
-| **Stereo/CIP** | `assign_rs`, `assign_ez`, `assign_cip`, `assign_cip_from_smiles` |
+| **Fingerprints** | `circular_fingerprint`, `circular_fingerprint_counts`, `topological_torsion`, `topological_torsion_counts`, `path_fingerprint`, `mcs_fingerprint`, `fingerprint_from_smiles`, `counts_to_array`, `fingerprint_subset` |
+| **Similarity** | `tanimoto_coefficient`, `overlap_coefficient`, `dice`, `cosine`, `soergel`, `count_dice`, `count_cosine`, `similarity_upper_bound` |
+| **Batch** | `batch_substructure`, `batch_mcs`, `batch_mcs_size`, `batch_mcs_constrained`, `screen_targets`, `screen_and_match`, `screen_and_mcs_size` |
+| **Stereo/CIP** | `assign_rs`, `assign_ez`, `assign_cip` |
 | **SMARTS** | `smarts_match`, `smarts_find_all`, `find_mcs_smarts`, `compile_smarts`, `to_smarts` |
 | **Layout** | `generate_coords_2d`, `generate_coords_3d`, `force_directed_layout`, `stress_majorisation`, `reduce_crossings`, `match_template`, `compute_sssr`, `layout_sssr`, `count_crossings`, `is_degenerate_layout`, `resolve_overlaps`, `layout_quality` |
 | **Transforms** | `translate_2d`, `rotate_2d`, `scale_2d`, `mirror_x`, `mirror_y`, `center_2d`, `align_2d`, `bounding_box_2d`, `normalise_bond_length`, `canonical_orientation` |
-| **Chemistry** | `classify_pharmacophore`, `implicit_h`, `validate_tautomer_consistency` |
+| **Chemistry** | `classify_pharmacophore`, `implicit_h` |
 | **Depiction** | `depict_svg`, `depict_pair`, `depict_mapping`, `save_svg`, `DepictOptions` |
 | **GPU** | `gpu_is_available`, `gpu_device_info` |
-| **Clique Solver** *(6.12.1)* | `find_max_cliques`, `find_mcs_clique`, `match_substructure`, `match_substructure_from_elements`, `score_mapping` |
 
 ## Options Reference
 
@@ -216,15 +214,16 @@ result = find_mcs_lightweight(
 Each stage checks against the label-frequency upper bound (LFUB).
 If the current best reaches LFUB, search stops immediately.
 
-## Clique Solver — Low-Level API (6.12.1)
+## Low-Level C++ Bindings (Advanced)
 
-Direct access to the C++ clique-based MCS and substructure engine.
-Chemistry stays in Python; only the graph search runs in C++.
+Direct access to the C++ engine via `smsd._smsd`. These are internal
+bindings — use the high-level API (`find_mcs`, `find_substructure`) for
+normal workflows.
 
 ```python
 import smsd._smsd as _smsd
 
-# Substructure from element lists (C++ builds compat internally)
+# Low-level substructure from element lists
 matches = _smsd.match_substructure_from_elements(
     ["C","C","C","C","C","C"],
     ["C","C","C","C","C","C","O"],
@@ -233,23 +232,11 @@ matches = _smsd.match_substructure_from_elements(
     True, 500, 8,
 )
 
-# Substructure from pre-built compat pairs
-matches = _smsd.match_substructure(
-    n_query, n_target, compat,
-    bonds_query, bonds_target,
-    False, 500, 8,
-)
-
-# MCS via clique solver
+# Low-level MCS via clique solver
 result = _smsd.find_mcs_clique(
     compat, bonds_a, bonds_b, n_a, n_b,
     True, 1000, 8,
 )
-# result.best_size, result.candidates, result.elapsed_us
-
-# Score a mapping
-score = _smsd.score_mapping(
-    mapping, elements_a, elements_b, bonds_a, bonds_b)
 ```
 
 ## Core Search
@@ -462,14 +449,13 @@ Map atoms between reactants and products using disconnected MCS:
 reactant = smsd.parse_smiles("CCO")      # ethanol
 product  = smsd.parse_smiles("CC=O")     # acetaldehyde
 
-mapping = smsd.map_reaction(reactant, product, timeout_ms=10000)
+mapping = smsd.find_mcs(reactant, product, connected_only=False, timeout_ms=10000)
 # mapping: {reactant_atom_idx: product_atom_idx}
 print(f"Mapped {len(mapping)} atoms")
 ```
 
 **Caution:** Uses disconnected MCS internally, which may over-map for complex
-multi-center reactions. For reaction-class-aware mapping with bond-change
-scoring, use `smsd.reaction_aware_mcs()` and `smsd.bond_change_score()` instead.
+multi-center reactions. Use `prefer_rare_heteroatoms=True` for better reaction mapping.
 
 ## All Substructure Matches (v6.11.0)
 
