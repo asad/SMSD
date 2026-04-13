@@ -53,7 +53,7 @@ print(f"MCS size: {len(mapping)} atoms")  # 10
 # Similarity
 fp1 = smsd.circular_fingerprint("CC(=O)Oc1ccccc1C(=O)O", radius=2, fp_size=2048)
 fp2 = smsd.circular_fingerprint("Oc1ccccc1C(=O)O", radius=2, fp_size=2048)
-print(f"Tanimoto: {smsd.tanimoto(fp1, fp2):.3f}")
+print(f"Tanimoto: {smsd.tanimoto_coefficient(fp1, fp2):.3f}")
 ```
 
 ### Java
@@ -270,14 +270,14 @@ torsion = smsd.topological_torsion("c1ccc(O)cc1", fp_size=2048)
 fp1 = smsd.circular_fingerprint("CCO", radius=2)
 fp2 = smsd.circular_fingerprint("CCCO", radius=2)
 
-tan  = smsd.tanimoto(fp1, fp2)          # Jaccard index
+tan  = smsd.tanimoto_coefficient(fp1, fp2)  # Jaccard index
 dice = smsd.dice(fp1, fp2)              # Dice coefficient
 cos  = smsd.cosine(fp1, fp2)            # Cosine similarity
 
 # Count-based metrics (use count vectors, not binary)
 c1 = smsd.ecfp_counts("CCO", radius=2)
 c2 = smsd.ecfp_counts("CCCO", radius=2)
-ct = smsd.count_tanimoto(c1, c2)
+ct = smsd.tanimoto_coefficient(c1, c2)
 cd = smsd.count_dice(c1, c2)
 ```
 

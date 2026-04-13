@@ -297,7 +297,7 @@ ecfp4 = smsd.fingerprint_from_smiles("c1ccccc1", radius=2, fp_size=2048)
 torsion = smsd.topological_torsion("CC(N)C(=O)O")
 
 assert smsd.fingerprint_subset(path_fp, path_fp)
-score = smsd.tanimoto(ecfp4, ecfp4)
+score = smsd.tanimoto_coefficient(ecfp4, ecfp4)
 ```
 
 ## Stereo and CIP
