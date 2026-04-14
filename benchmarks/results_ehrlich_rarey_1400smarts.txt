@@ -1,0 +1,12 @@
+================================================================================
+BENCHMARK 5: Ehrlich-Rarey SMARTS v2.0 — Substructure Search
+Source: ehrlich_rarey_smarts.txt (1,400 patterns, ZBH Hamburg)
+Reference: Ehrlich & Rarey, J. Chem. Inf. Model. 2011, 51(6):1316-1324
+Target: ibuprofen (CC(C)Cc1ccc(CC(C)C(O)=O)cc1)
+Metric: median query time (us), hit rate
+================================================================================
+  Patterns tested: 1395
+  Matched:         94 (6.7%)
+  Unsupported:     5
+  Median time:     10 us
+

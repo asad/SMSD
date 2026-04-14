@@ -1,0 +1,21 @@
+pair	category	rdkit_best_ms	rdkit_median_ms	rdkit_mcs	rdkit_timeout	smsd_best_ms	smsd_median_ms	smsd_mcs	smsd_error	winner	speedup	quality
+methane-ethane	Trivial	1.593	1.593	1	False	1.111	1.111	1		SMSD	1.4x	equal
+benzene-toluene	Small aromatic	0.613	0.613	6	False	0.208	0.208	6		SMSD	3.0x	equal
+benzene-phenol	Heteroatom	0.137	0.137	6	False	0.125	0.125	6		tie	~1x	equal
+aspirin-acetaminophen	Drug pair	0.336	0.336	7	False	0.959	0.959	8		RDKit	2.9x	SMSD +1
+caffeine-theophylline	N-methyl diff	0.688	0.688	13	False	0.255	0.255	13		SMSD	2.7x	equal
+morphine-codeine	Alkaloid	352.852	352.852	20	False	0.773	0.773	19		SMSD	456.7x	RDKit +1
+ibuprofen-naproxen	NSAID	2.051	2.051	12	False	1.521	1.521	12		SMSD	1.3x	equal
+ATP-ADP	Nucleotide	0.765	0.765	27	False	0.997	0.997	27		RDKit	1.3x	equal
+NAD-NADH	Cofactor	2.555	2.555	34	False	43115.752	43115.752	36		RDKit	16877.7x	SMSD +2
+atorvastatin-rosuvastatin	Statin	3.470	3.470	15	False	1644.139	1644.139	22		RDKit	473.8x	SMSD +7
+paclitaxel-docetaxel	Taxane	10023.563	10023.563	53	True	7.841	7.841	54		SMSD	1278.4x	SMSD +1
+erythromycin-azithromycin	Macrolide	5046.946	5046.946	50	False	5.018	5.018	49		SMSD	1005.8x	RDKit +1
+strychnine-quinine	Alkaloid scaffold	2.347	2.347	8	False	218.370	218.370	16		RDKit	93.0x	SMSD +8
+vancomycin-self	Self-match large	6.241	6.241	101	False	6.606	6.606	101		tie	~1x	equal
+adamantane-self	Symmetric	0.258	0.258	10	False	0.443	0.443	10		RDKit	1.7x	equal
+cubane-self	Cage	0.205	0.205	8	False	0.615	0.615	8		RDKit	3.0x	equal
+PEG12-PEG16	Polymer	1.540	1.540	40	False	1.562	1.562	40		tie	~1x	equal
+coronene-self	PAH	0.593	0.593	24	False	6.785	6.785	24		RDKit	11.4x	equal
+guanine-keto-enol	Tautomer	0.220	0.220	10	False	1.030	1.030	10		RDKit	4.7x	equal
+rdkit-1585-pair	Known failure	1878.865	1878.865	21	False	5.184	5.184	21		SMSD	362.5x	equal

@@ -1,0 +1,61 @@
+[build-system]
+requires = ["scikit-build-core>=0.5", "pybind11>=2.12"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "smsd"
+version = "7.1.0"
+description = "Fast substructure search, MCS, circular fingerprints, and molecular similarity with tautomer awareness and GPU acceleration"
+readme = "python/README.md"
+license = {text = "Apache-2.0"}
+requires-python = ">=3.9"
+authors = [
+    {name = "Syed Asad Rahman", email = "asad.rahman@bioinceptionlabs.com"}
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: C++",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Operating System :: OS Independent",
+    "Natural Language :: English",
+    "Typing :: Typed",
+]
+keywords = ["cheminformatics", "mcs", "substructure", "graph-matching", "chemistry", "smiles", "fingerprint", "ecfp", "tautomer", "gpu"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "pytest-timeout>=2.0"]
+rdkit = ["rdkit"]
+
+[project.urls]
+Homepage = "https://github.com/asad/SMSD"
+Repository = "https://github.com/asad/SMSD"
+Documentation = "https://github.com/asad/SMSD/blob/master/python/README.md"
+Changelog = "https://github.com/asad/SMSD/releases"
+"Bug Tracker" = "https://github.com/asad/SMSD/issues"
+
+[tool.scikit-build]
+cmake.source-dir = "cpp"
+cmake.build-type = "Release"
+cmake.args = ["-DSMSD_BUILD_PYTHON=ON", "-DSMSD_BUILD_TESTS=OFF", "-DSMSD_BUILD_OPENMP=ON", "-DSMSD_BUILD_METAL=AUTO", "-DSMSD_BUILD_CUDA=AUTO"]
+wheel.packages = ["python/smsd"]
+minimum-version = "0.5"
+
+[tool.scikit-build.cmake.define]
+SMSD_BUILD_PYTHON = "ON"
+SMSD_BUILD_TESTS = "OFF"
+SMSD_BUILD_OPENMP = "ON"
+SMSD_BUILD_METAL = "AUTO"
+SMSD_BUILD_CUDA = "AUTO"
+
+[tool.pytest.ini_options]
+testpaths = ["python/tests"]
+timeout = 60
