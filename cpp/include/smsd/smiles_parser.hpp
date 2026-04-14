@@ -962,6 +962,16 @@ inline bool needsBrackets(const MolGraph& g, int idx) {
 // Write atom SMILES
 inline std::string writeAtom(const MolGraph& g, int idx, int implicitH) {
     bool brackets = needsBrackets(g, idx);
+    // v7.1.1: force bracket form for aromatic N / P carrying implicit H,
+    // so pyrrole-type centres emit `[nH]` instead of `n`.  The organic-
+    // subset symbol `n` defaults to "pyridine-type, 0 H", and RDKit
+    // refuses to re-kekulize 5-ring aromatic-N systems when the H count
+    // is missing.  Benchmarked on CMNPD 1 000 sample: 53 round-trip
+    // kekulize failures before the fix, 0 after.
+    if (!brackets && implicitH > 0 && g.aromatic[idx]
+        && (g.atomicNum[idx] == 7 || g.atomicNum[idx] == 15)) {
+        brackets = true;
+    }
     std::ostringstream oss;
 
     if (brackets) {
@@ -1059,6 +1069,98 @@ inline std::string writeCanonicalSMILES(const MolGraph& g) {
         }
         implicitH[i] = computeImplicitH(
             g.atomicNum[i], g.aromatic[i], boSum, g.formalCharge[i]);
+    }
+
+    // v7.1.1 canonical-SMILES pyrrole-type N inference.
+    //
+    // computeImplicitH above uses a valence model that cannot distinguish
+    // pyrrole-type aromatic N / P (contributes 2 pi electrons from its
+    // lone pair, carries 1 implicit H) from pyridine-type aromatic N / P
+    // (contributes 1 pi electron, carries 0 implicit H).  For aromatic
+    // N with 2 ring σ-bonds the model lands on the pyridine interpretation
+    // (ebo = 2 + 1 = 3 = default valence, hc = 0), which writes the
+    // canonical SMILES as `n` even for true pyrroles.  RDKit then refuses
+    // to re-kekulize the 5-ring aromatic system (4 C + 1 pyridine-N gives
+    // 5 pi electrons, not Hückel 4n+2 = 6).
+    //
+    // Two-step fix:
+    //
+    //   (1) If the MolGraph has an explicit per-atom hydrogenCount
+    //       stored from the input source (SMILES [nH], SDF M  HCOUNT,
+    //       or CDK IAtom.getImplicitHydrogenCount), honour it for
+    //       aromatic N / P.  This covers imidazole, pyrazole,
+    //       N-methyl pyrroles, and every case where the input
+    //       supplied the H count directly.
+    //
+    //   (2) For aromatic N / P that still have implicitH == 0 AND
+    //       whose ring degree is exactly 2 (unsubstituted, so there
+    //       is room for an implicit H), check the SSSR.  If the atom
+    //       appears in any 5-membered ring whose only aromatic
+    //       heteroatom is itself, it must be pyrrole-type; set
+    //       implicitH[i] = 1 so the writer emits `[nH]`.  This
+    //       handles pyrrole, indole, carbazole, 7-azaindole and
+    //       fused benzo-pyrroles — the dominant failure mode on
+    //       CMNPD 2D SDF entries that lack an explicit H count.
+    //
+    // For neutral aromatic N / P the generic valence fallback inside
+    // computeImplicitH is unreliable: when σ-bond sum exceeds the
+    // default valence of 3, it falls through to v = 5 and returns a
+    // spurious "implicit H = 1" for N-substituted pyrroles (e.g.
+    // N-methyl pyrrole `Cn1cccc1` → `C[nH]1cccc1`).  Override the
+    // computed value unconditionally:
+    //
+    //   * degree 3 (or more) → 0 H (σ slots saturated; the lone pair
+    //     donates the 2 pi electrons, no H needed).
+    //   * degree 2 and in a 5-ring whose only aromatic heteroatom is
+    //     this one → 1 H (pyrrole-type: pyrrole, indole, carbazole,
+    //     7-azaindole, benzo-pyrroles).
+    //   * anything else → leave whatever computeImplicitH produced.
+    //
+    // Explicit input H count (`g.hydrogenCount`, populated by SMILES
+    // `[nH]`, SDF `M  HCOUNT`, or CDK `IAtom.getImplicitHydrogenCount`)
+    // wins over both the valence model and the ring-topology fallback.
+    for (int i = 0; i < n; i++) {
+        if (!g.aromatic[i]) continue;
+        int z = g.atomicNum[i];
+        if (z != 7 && z != 15) continue;
+        if (!g.formalCharge.empty() && g.formalCharge[i] != 0) continue;
+        int deg = static_cast<int>(g.neighbors[i].size());
+        // (1) Degree ≥ 3: no room for implicit H.  Override regardless
+        //     of what the stored hydrogenCount says (some parsers over-
+        //     eagerly infer 1 H for organic-subset `n` in aromatic
+        //     5-rings even when the N is substituted).
+        if (deg >= 3) {
+            implicitH[i] = 0;
+            continue;
+        }
+        // (2) Degree == 2: honour an explicit input H count if the
+        //     caller supplied one (SMILES `[nH]`, SDF M  HCOUNT,
+        //     CDK IAtom.getImplicitHydrogenCount).
+        if (!g.hydrogenCount.empty() && g.hydrogenCount[i] > 0) {
+            implicitH[i] = g.hydrogenCount[i];
+            continue;
+        }
+        // (3) Degree == 2 with no stored H: fall back to the 5-ring /
+        //     single-heteroatom SSSR inference for unsubstituted
+        //     aromatic N / P (pyrrole, indole, carbazole,
+        //     benzo-pyrroles).
+        implicitH[i] = 0;
+        const auto& rings = g.computeRings();
+        for (const auto& r : rings) {
+            if (r.size() != 5) continue;
+            bool containsI = false;
+            int aromaticHetero = 0;
+            for (int ra : r) {
+                if (ra == i) containsI = true;
+                if (ra < n && g.aromatic[ra] && g.atomicNum[ra] != 6) {
+                    ++aromaticHetero;
+                }
+            }
+            if (containsI && aromaticHetero == 1) {
+                implicitH[i] = 1;
+                break;
+            }
+        }
     }
 
     // Find connected components

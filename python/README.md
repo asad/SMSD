@@ -59,8 +59,8 @@ sim = smsd.similarity("c1ccccc1", "c1ccc(O)cc1")
 ### Search & Matching
 | Feature | Description |
 |---------|-------------|
-| **Substructure search** | VF2++ with 3-level NLF pruning, GPU-accelerated domain init |
-| **MCS** | 11-level funnel: chain/tree DP → greedy → McSplit → BK → McGregor |
+| **Substructure search** | Native engine with 3-level NLF pruning, GPU-accelerated domain init |
+| **MCS** | Multi-strategy native pipeline (chain/tree fast paths + general clique solver) |
 | **SMARTS matching** | Full SMARTS support including `X` (total connectivity), `D` (degree), `v` (valence), `R` (ring count), `r` (ring size), `x` (ring connectivity), `/` `\` (E/Z stereo), `$()` (recursive), logical AND/OR/NOT |
 | **Tautomer matching** | 30 transforms with pKa-informed weights, 6 solvents, pH-sensitive |
 | **CIP R/S/E/Z** | `assign_rs()`, `assign_ez()` — full digraph-based stereo descriptors (IUPAC 2013) |
@@ -95,7 +95,6 @@ sim = smsd.similarity("c1ccccc1", "c1ccc(O)cc1")
 | **Force-directed layout** | `force_directed_layout()` for bond-crossing minimisation |
 | **SMACOF stress majorisation** | `stress_majorisation()` for optimal 2D embedding |
 | **Scaffold templates** | `match_template()` for 10 pre-computed common scaffolds |
-| **Reaction-aware MCS** | `find_mcs(..., reaction_aware=True)` — prefer heteroatom-heavy mappings |
 | **Ring perception** | `compute_sssr()`, `layout_sssr()` — clean SSSR APIs |
 
 ## Performance
@@ -209,7 +208,7 @@ smsd.write_molfile(g, "out_v3000.mol", v3000=True)
 smsd.write_molfile(g, "out.sdf", sdf=True)
 ```
 
-The native writer preserves practical chemistry metadata in `7.1.0`:
+The native writer preserves practical chemistry metadata in `7.1.1`:
 - names, comments, and SDF properties
 - charges, isotopes, atom classes, and atom maps
 - `R#`/`R<n>` plus `M  RGP`
@@ -285,10 +284,10 @@ results = smsd.batch_mcs(query, targets)
 # RASCAL pre-screen + exact MCS in one call
 matches = smsd.screen_and_match(query, targets, threshold=0.5)
 
-# Batch find substructure with atom-atom mappings (v7.1.0)
+# Batch find substructure with atom-atom mappings (v7.1.1)
 mappings = smsd.batch_find_substructure(query, targets)
 
-# TargetCorpus — prewarm once, query many times (v7.1.0)
+# TargetCorpus — prewarm once, query many times (v7.1.1)
 corpus = smsd.TargetCorpus.from_smiles(["c1ccccc1", "c1ccc(O)cc1", "CCO"])
 corpus.prewarm()
 hits = corpus.substructure(smsd.parse_smiles("c1ccccc1"))
@@ -323,7 +322,7 @@ Each toolkit brings unique strengths to the cheminformatics ecosystem:
 |---|---|---|---|
 | Tautomer-aware circular FP | Yes | — | — |
 | pH/solvent-sensitive matching | Yes | — | — |
-| Multi-level MCS pipeline | 11 levels | FMCS | MCSPlus |
+| Multi-strategy MCS engine | Yes | FMCS | MCSPlus |
 | GPU acceleration | CUDA + Metal | — | — |
 | Descriptor calculation | — | Extensive | Extensive |
 | Reaction handling | Basic | Comprehensive | Comprehensive |
@@ -334,7 +333,7 @@ Each toolkit brings unique strengths to the cheminformatics ecosystem:
 
 ## Also Available
 
-- **Java**: `com.bioinceptionlabs:smsd:7.1.0` on [Maven Central](https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd)
+- **Java**: `com.bioinceptionlabs:smsd:7.1.1` on [Maven Central](https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd)
 - **C++**: Header-only, zero dependencies — [GitHub](https://github.com/asad/SMSD)
 
 ## Citation
@@ -342,7 +341,7 @@ Each toolkit brings unique strengths to the cheminformatics ecosystem:
 If you use SMSD Pro in your research, please cite:
 
 > Rahman SA.
-> *SMSD Pro: Coverage-Driven, Tautomer-Aware Maximum Common Substructure Search.*
+> *SMSD Pro: Tautomer-Aware Maximum Common Substructure Search.*
 > ChemRxiv, 2025.
 > DOI: [10.26434/chemrxiv.15001534](https://doi.org/10.26434/chemrxiv.15001534/v1)
 

@@ -132,10 +132,9 @@ class TestDalkeBenchmark:
 
     @benchmark
     def test_random_pairs(self):
-        """1000 random pairs: measure LFUB certificate rate."""
+        """1000 random pairs: measure median MCS latency."""
         pairs = load_tsv_pairs("dalke_random_pairs.tsv")
         total = 0
-        lfub_hit = 0
         times_us = []
 
         for parts in pairs[:200]:  # First 200 for speed in CI

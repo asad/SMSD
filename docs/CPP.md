@@ -28,48 +28,54 @@ auto mcs = smsd::findMCS(q, t, chem, mcsOpts);
 
 ## Fingerprints
 
+The canonical C++ fingerprint API lives in `smsd::batch::detail` and is
+verified byte-identical with the Java and Python engines in 7.1.1 (same
+bits for the same molecules at every radius).
+
 ```cpp
-// Standalone fingerprint modules (7.1.0)
-#include "fp/mol/circular.hpp"
-#include "fp/mol/path.hpp"
-#include "fp/mol/pharmacophore.hpp"
-#include "fp/mol/torsion.hpp"
-#include "fp/similarity.hpp"
+#include "smsd/batch.hpp"
 
-auto ecfp = fp::mol::computeCircularFingerprintECFP(q, 2, 2048);
-auto fcfp = fp::mol::computeCircularFingerprintFCFP(q, 2, 2048);
-auto pathFp = fp::mol::computePathFingerprint(q, 7, 1024);
-auto torsion = fp::mol::computeTopologicalTorsion(q, 2048);
-double tani = fp::fingerprintTanimoto(ecfp, pathFp);
-double dice = fp::fingerprintDice(ecfp, pathFp);
-bool subset = fp::fingerprintSubset(ecfp, pathFp);
+auto q = smsd::parseSMILES("c1ccc(O)cc1");
 
-// Batch API (via batch.hpp, delegates to fp/)
-auto pathFp = smsd::batch::detail::computePathFingerprint(q, 7, 2048);
-auto ecfp = smsd::batch::detail::computeCircularFingerprintECFP(q, 2, 2048);
+// Circular (ECFP / FCFP) — binary and count-based
+auto ecfp  = smsd::batch::detail::computeCircularFingerprintECFP(q, 2, 2048);
+auto fcfp  = smsd::batch::detail::computeCircularFingerprintFCFP(q, 2, 2048);
+auto ecfpc = smsd::batch::detail::computeCircularFingerprintECFPCount(q, 2, 2048);
+auto fcfpc = smsd::batch::detail::computeCircularFingerprintFCFPCount(q, 2, 2048);
+
+// Path / topological torsion / MACCS
+auto pathFP  = smsd::batch::detail::computePathFingerprint(q, 7, 2048);
+auto torsion = smsd::batch::detail::computeTopologicalTorsion(q, 2048);
+auto maccs   = smsd::batch::detail::computeMACCSKeys(q);
+
+// Similarity
+double tani = smsd::batch::detail::tanimoto(ecfp, fcfp);
+double dice = smsd::batch::detail::dice(ecfp, fcfp);
 ```
 
-## Clique Solver (7.1.0)
+> **Note.** The pre-7.1.1 `fp/mol/circular.hpp`, `fp/mol/path.hpp`,
+> `fp/mol/pharmacophore.hpp`, and `fp/mol/torsion.hpp` headers were
+> unmaintained shims that drifted from the real Python/Java bit pattern.
+> They have been removed. Use the `smsd::batch::detail::*` entry points
+> documented above — these are the exact functions the Python binding and
+> the Java `FingerprintEngine` are tested against.
 
-Lightweight maximum clique finder for Python/RDKit integration where
-chemistry stays in the caller and only the combinatorial search runs
-in C++.
+## Public MCS / Substructure Entry Points
+
+The high-level entry points are `smsd::findMCS()`, `smsd::findSubstructure()`
+and `smsd::isSubstructure()` declared in `smsd/mcs.hpp` and `smsd/substructure.hpp`.
+The internal solver headers (`smsd/clique_solver.hpp`, the partition-refinement
+backtracker, edge-growth refinement) are private implementation details whose
+signatures may change between minor releases — do not depend on them in
+out-of-tree code.
 
 ```cpp
-#include "smsd/clique_solver.hpp"
+#include "smsd/mcs.hpp"
+#include "smsd/substructure.hpp"
 
-smsd::clique::ProductGraph pg;
-pg.build(vertices, edges);
-
-auto result = smsd::clique::findMaxCliques(pg, 8, 1000);
-// result.cliques, result.max_size, result.timed_out
-
-auto mcs = smsd::clique::findMCSPipeline(
-    compat, bonds_a, bonds_b, n_a, n_b);
-// mcs.candidates, mcs.best_size, mcs.lfub
-
-auto sub = smsd::clique::substructureMatch(
-    n_query, n_target, compat, bonds_query, bonds_target);
+auto mapping     = smsd::findMCS(g1, g2, smsd::ChemOptions{}, smsd::MCSOptions{});
+auto sub_mapping = smsd::findSubstructure(query, target, smsd::ChemOptions{});
+bool contained   = smsd::isSubstructure(query, target, smsd::ChemOptions{});
 ```
 
 ## Scaffold Library (7.1.0)

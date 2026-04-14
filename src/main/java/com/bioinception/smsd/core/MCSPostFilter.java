@@ -9,9 +9,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Post-filter that re-ranks MCS candidates for reaction relevance.
- * Implementations receive the full candidate list and both molecule
- * graphs, and must return the candidates in preferred order.
+ * Post-filter hook that re-ranks enumerated near-MCS candidates by
+ * caller-supplied criteria. Implementations receive the full candidate
+ * list and both molecule graphs, and must return the candidates in
+ * preferred order.
  *
  * @author Syed Asad Rahman
  * @since 6.4.0
@@ -19,7 +20,7 @@ import java.util.Map;
 @FunctionalInterface
 public interface MCSPostFilter {
   /**
-   * Rank MCS candidates by domain-specific relevance.
+   * Rank MCS candidates.
    *
    * @param candidates unmodifiable list of MCS candidates (size K down to K-delta)
    * @param g1         first molecule graph

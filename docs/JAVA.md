@@ -12,14 +12,14 @@ Maven:
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>7.1.0</version>
+  <version>7.1.1</version>
 </dependency>
 ```
 
 CLI:
 
 ```bash
-java -jar smsd-7.1.0-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
+java -jar smsd-7.1.1-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 ```
 
 ## Core API

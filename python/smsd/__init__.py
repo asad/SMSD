@@ -34,7 +34,7 @@ import importlib.util
 import sys
 from pathlib import Path
 
-__version__ = "7.1.0"
+__version__ = "7.1.1"
 __author__ = "Syed Asad Rahman"
 
 
@@ -88,9 +88,38 @@ Solvent = _smsd.Solvent
 
 _parse_smiles_raw = _smsd.parse_smiles
 read_mol_block = _smsd.read_mol_block
-to_smiles = _smsd.to_smiles
-canonical_smiles = _smsd.to_smiles   # alias: stereo-aware canonical SMILES
+_to_smiles_native = _smsd.to_smiles
 to_smarts = _smsd.to_smarts
+
+
+def to_smiles(mol):
+    """Write a canonical SMILES string for a molecule.
+
+    Accepts either a :class:`MolGraph` or a SMILES string (which is
+    parsed to a :class:`MolGraph` first).  The output is the
+    canonical SMILES defined by SMSD's Morgan-based ordering, and is
+    byte-identical across the Java, C++, and Python engines.
+
+    .. versionchanged:: 7.1.1
+       Now accepts a SMILES string in addition to :class:`MolGraph`.
+       Previously raised ``TypeError: incompatible function arguments``
+       because the wrapper was aliased directly to a pybind11 overload
+       that only accepted :class:`MolGraph`.
+    """
+    if isinstance(mol, str):
+        mol = _parse_smiles_raw(mol)
+    return _to_smiles_native(mol)
+
+
+def canonical_smiles(mol):
+    """Stereo-aware canonical SMILES, accepting a SMILES string or :class:`MolGraph`.
+
+    Thin alias of :func:`to_smiles`.  See :func:`to_smiles` for details.
+
+    .. versionchanged:: 7.1.1
+       Now accepts a SMILES string in addition to :class:`MolGraph`.
+    """
+    return to_smiles(mol)
 
 
 def canonical_hash(mol):
@@ -139,13 +168,18 @@ circular_fingerprint_counts = _smsd.circular_fingerprint_counts
 topological_torsion = _smsd.topological_torsion
 topological_torsion_counts = _smsd.topological_torsion_counts
 
-overlapCoefficient = _smsd.overlapCoefficient
 dice = _smsd.dice
 cosine = _smsd.cosine
 soergel = _smsd.soergel
-count_overlapCoefficient = _smsd.count_overlapCoefficient
 count_dice = _smsd.count_dice
 count_cosine = _smsd.count_cosine
+# v7.1.1: `smsd.overlapCoefficient` and `smsd.count_overlapCoefficient`
+# are now redirected to the correct Szymkiewicz-Simpson implementation
+# in `overlap_coefficient` / `count_overlap_coefficient` (defined below).
+# The underlying C++ binding with the same name actually computed
+# Tanimoto, matching the `MatchResult.overlapCoefficient` semantic bug
+# in v7.1.0.  The rebound aliases are declared after the pure-Python
+# helpers so they pick up the corrected implementation.
 
 _to_hex_cpp = _smsd.to_hex
 _from_hex_cpp = _smsd.from_hex
@@ -437,9 +471,11 @@ def find_mcs(mol1, mol2, *,
         connected_only: Connected MCS only (default True).
         induced: Induced subgraph MCS (default False).
         maximize_bonds: Edge MCS / MCES (default False).
-        max_stage: Pipeline depth 0-5 (default 5).
+        max_stage: Internal effort knob 0-5 (default 5 — highest effort).
+            Advanced tuning only; intended for callers willing to trade
+            MCS size for speed.
         strategy: "auto", "lightweight", or "native".
-        prefer_rare_heteroatoms: Prefer S, P, Se mappings (default False).
+        prefer_rare_heteroatoms: Accepted for API stability; currently a no-op.
 
     Returns:
         dict when max_results=1, list[dict] when max_results > 1.
@@ -458,13 +494,12 @@ def find_mcs(mol1, mol2, *,
                                 ring_matches_ring_only=True,
                                 match_formal_charge=True)
 
-        # Fast reaction mapping mode
+        # Minimum-effort mode (faster, possibly smaller MCS)
         mapping = smsd.find_mcs(mol1, mol2, max_stage=1)
     """
-    if prefer_rare_heteroatoms:
-        # Proprietary reaction-aware scorer removed from public API.
-        # Use reactionAware=True on MCSOptions for generic heteroatom weighting.
-        pass
+    # prefer_rare_heteroatoms is accepted for API stability but currently
+    # has no effect; retained so existing callers do not need to be edited.
+    del prefer_rare_heteroatoms
 
     # Resolve bond order mode string
     bond_any = match_bond_order in ("any", "ANY")
@@ -772,6 +807,10 @@ def overlap_coefficient(fp1, fp2, fp_size=2048):
     Accepts binary fingerprints (list of set bit positions) or sparse count
     fingerprints (list of (position, count) tuples).
 
+    The empty-vs-empty corner case returns 1.0 (trivially identical
+    empty sets), matching the convention used elsewhere in the library.
+    If exactly one fingerprint is empty, the result is 0.0.
+
     Args:
         fp1: Fingerprint as list of set bit positions or sparse counts.
         fp2: Fingerprint as list of set bit positions or sparse counts.
@@ -780,12 +819,16 @@ def overlap_coefficient(fp1, fp2, fp_size=2048):
     Returns:
         float: Overlap coefficient in [0.0, 1.0].
     """
+    if fp1 is None or fp2 is None:
+        return 0.0
     s1 = _fp_to_positions(fp1)
     s2 = _fp_to_positions(fp2)
-    intersection = len(s1 & s2)
+    if not s1 and not s2:
+        return 1.0   # two empty sets are trivially identical
     min_size = min(len(s1), len(s2))
     if min_size == 0:
-        return 0.0
+        return 0.0   # exactly one is empty → no overlap
+    intersection = len(s1 & s2)
     return intersection / min_size
 
 
@@ -793,11 +836,12 @@ def tanimoto_coefficient(fp1, fp2, fp_size=2048):
     """Tanimoto coefficient (Jaccard index): |A∩B| / |A∪B|.
 
     The standard fingerprint similarity metric in cheminformatics.
-    Returns 1.0 only when A and B are identical.
-    Symmetric and bounded in [0.0, 1.0].
+    Returns 1.0 when A and B are identical (including the empty-vs-empty
+    corner case, which is conventionally 1.0 — two empty sets are
+    trivially identical).  Symmetric and bounded in [0.0, 1.0].
 
-    Accepts binary fingerprints (list of set bit positions) or sparse count
-    fingerprints (list of (position, count) tuples).
+    Accepts binary fingerprints (list of set bit positions) or sparse
+    count fingerprints (list of (position, count) tuples).
 
     Args:
         fp1: Fingerprint as list of set bit positions or sparse counts.
@@ -807,13 +851,86 @@ def tanimoto_coefficient(fp1, fp2, fp_size=2048):
     Returns:
         float: Tanimoto similarity in [0.0, 1.0].
     """
+    if fp1 is None or fp2 is None:
+        return 0.0
     s1 = _fp_to_positions(fp1)
     s2 = _fp_to_positions(fp2)
+    if not s1 and not s2:
+        return 1.0   # two empty sets are trivially identical
     intersection = len(s1 & s2)
     union = len(s1 | s2)
     if union == 0:
         return 0.0
     return intersection / union
+
+
+# v7.1.1: redirect the camelCase aliases to the Szymkiewicz-Simpson
+# implementation.  In v7.1.0 they were bound directly to a C++ lambda
+# that silently computed Tanimoto / Jaccard, so any caller using
+# `smsd.overlapCoefficient(fp1, fp2)` was getting a different value
+# from the documented semantic "overlap coefficient = |A∩B| / min(|A|,|B|)".
+# Callers who relied on that wrong value should switch to
+# `smsd.tanimoto_coefficient(fp1, fp2)`.
+overlapCoefficient = overlap_coefficient
+
+
+def count_overlap_coefficient(fp1, fp2):
+    """Count-vector Szymkiewicz-Simpson overlap: sum(min(a,b)) / min(sum(a), sum(b)).
+
+    Generalisation of the binary overlap coefficient for integer
+    count fingerprints (e.g. ECFP counts, topological torsion counts).
+
+    .. versionadded:: 7.1.1
+       v7.1.0 had a `count_overlapCoefficient` binding that silently
+       computed count-based Tanimoto (`sum(min(a,b)) / sum(max(a,b))`).
+       Call :func:`count_tanimoto_coefficient` for the Tanimoto value.
+    """
+    def _to_counts(fp):
+        counts = {}
+        for item in fp:
+            if isinstance(item, (tuple, list)) and len(item) == 2:
+                counts[item[0]] = counts.get(item[0], 0) + int(item[1])
+            else:
+                counts[int(item)] = counts.get(int(item), 0) + 1
+        return counts
+    a = _to_counts(fp1)
+    b = _to_counts(fp2)
+    inter = sum(min(a.get(k, 0), b[k]) for k in b)
+    s1 = sum(a.values())
+    s2 = sum(b.values())
+    mn = min(s1, s2)
+    if mn == 0:
+        return 0.0
+    return inter / mn
+
+
+def count_tanimoto_coefficient(fp1, fp2):
+    """Count-vector Tanimoto (generalised Jaccard):
+    sum(min(a,b)) / sum(max(a,b)).
+
+    The standard count-based fingerprint similarity metric.
+    """
+    def _to_counts(fp):
+        counts = {}
+        for item in fp:
+            if isinstance(item, (tuple, list)) and len(item) == 2:
+                counts[item[0]] = counts.get(item[0], 0) + int(item[1])
+            else:
+                counts[int(item)] = counts.get(int(item), 0) + 1
+        return counts
+    a = _to_counts(fp1)
+    b = _to_counts(fp2)
+    keys = set(a) | set(b)
+    inter = sum(min(a.get(k, 0), b.get(k, 0)) for k in keys)
+    union = sum(max(a.get(k, 0), b.get(k, 0)) for k in keys)
+    if union == 0:
+        return 0.0
+    return inter / union
+
+
+# v7.1.1: redirect the camelCase count alias.  Same semantic fix
+# as the binary overlapCoefficient alias above.
+count_overlapCoefficient = count_overlap_coefficient
 
 
 
@@ -1474,12 +1591,25 @@ class MatchResult:
     Attributes:
         mapping (dict): Atom index mapping {mol1_idx: mol2_idx}.
         size (int): Number of matched atoms.
-        overlapCoefficient (float): Overlap coefficient similarity = size / min(query_atoms, target_atoms).
+        overlap (float): Szymkiewicz-Simpson overlap = size / min(query_atoms, target_atoms).
+            Returns 1.0 when the smaller molecule is fully contained in the larger.
+        overlapCoefficient (float): Alias of ``overlap`` (Szymkiewicz-Simpson).
+            Kept for backward compatibility with v7.1.0 code that read this field.
+        tanimoto (float): Jaccard / Tanimoto = size / (query_atoms + target_atoms - size).
+            Symmetric and penalised by size mismatch.
         query_atoms (int): Number of atoms in the query molecule.
         target_atoms (int): Number of atoms in the target molecule.
         mcs_smiles (str): Canonical SMILES of the MCS subgraph, or "" if empty.
+
+    .. versionchanged:: 7.1.1
+       Fixed a long-standing semantic bug: ``overlapCoefficient`` was
+       documented as Szymkiewicz-Simpson but silently computed Tanimoto.
+       Both ``overlap`` and ``overlapCoefficient`` now return Simpson
+       overlap as documented.  The Jaccard / Tanimoto value is available
+       via the new ``tanimoto`` attribute.
     """
-    __slots__ = ('mapping', 'size', 'overlap', 'overlapCoefficient', 'query_atoms', 'target_atoms', 'mcs_smiles')
+    __slots__ = ('mapping', 'size', 'overlap', 'overlapCoefficient', 'tanimoto',
+                 'query_atoms', 'target_atoms', 'mcs_smiles')
 
     def __init__(self, mapping, query_n, target_n, mcs_smi=""):
         self.mapping = mapping
@@ -1487,16 +1617,22 @@ class MatchResult:
         self.query_atoms = query_n
         self.target_atoms = target_n
         min_n = min(query_n, target_n)
-        self.overlap = self.size / min_n if min_n > 0 else 0.0  # Simpson overlap
+        # Szymkiewicz-Simpson overlap = |A∩B| / min(|A|,|B|); equals 1.0 on containment.
+        self.overlap = self.size / min_n if min_n > 0 else 0.0
+        # Back-compat: the documented semantics of `overlapCoefficient` is
+        # Simpson overlap, matching the class docstring and the usage example.
+        self.overlapCoefficient = self.overlap
+        # Jaccard / Tanimoto = |A∩B| / |A∪B|; penalises size mismatch.
         denom = query_n + target_n - self.size
-        self.overlapCoefficient = self.size / denom if denom > 0 else 0.0  # overlap coefficient
+        self.tanimoto = self.size / denom if denom > 0 else 0.0
         self.mcs_smiles = mcs_smi
 
     def __len__(self):
         return self.size
 
     def __repr__(self):
-        return f"MatchResult(size={self.size}, overlapCoefficient={self.overlapCoefficient:.3f}, mcs_smiles={self.mcs_smiles!r})"
+        return (f"MatchResult(size={self.size}, overlap={self.overlap:.3f}, "
+                f"tanimoto={self.tanimoto:.3f}, mcs_smiles={self.mcs_smiles!r})")
 
 
 def mcs_result(mol1, mol2, **kwargs):
@@ -2306,9 +2442,10 @@ def translate_mapping(mapping, g_query=None, g_target=None):
 def mcs_rdkit_native(mol1, mol2, **kwargs):
     """Find MCS between two RDKit Mols, returning RDKit-compatible atom indices.
 
-    Uses SMSD's 11-level MCS funnel for the search, then re-matches the MCS
-    SMILES against both RDKit molecules using RDKit's own GetSubstructMatch
-    to get correct native indices. This guarantees element-correct mappings.
+    Uses the SMSD native MCS engine for the search, then re-matches the
+    MCS SMILES against both RDKit molecules using RDKit's own
+    GetSubstructMatch to get correct native indices.  This guarantees
+    element-correct mappings.
 
     Returns a dict where keys are atom indices in mol1 and values are atom
     indices in mol2 — matching RDKit's atom ordering.
@@ -2335,7 +2472,7 @@ def mcs_rdkit_native(mol1, mol2, **kwargs):
     g1 = from_rdkit(mol1)
     g2 = from_rdkit(mol2)
 
-    # Step 1: Find MCS using SMSD's full 11-level pipeline
+    # Step 1: find MCS using the SMSD native engine
     smsd_mapping = _native_find_mcs(g1, g2, **kwargs)
     if not smsd_mapping:
         return {}

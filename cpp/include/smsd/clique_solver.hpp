@@ -4,13 +4,12 @@
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
  * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  *
- * Lightweight maximum clique solver for MCS atom mapping.
- * Takes a precomputed modular product graph and finds maximum clique(s)
- * via Bron-Kerbosch with Tomita pivoting + k-core pruning.
- * McGregor bond-grow extension for completeness.
+ * Internal maximum-clique solver used by the MCS engine.  Takes a
+ * precomputed modular product graph and returns the largest clique(s).
  *
- * Designed for reaction mapping: chemistry stays in Python/RDKit,
- * only the combinatorial search runs in C++. Zero MolGraph overhead.
+ * This header is an implementation detail; the symbols declared here
+ * are not part of the public SMSD API and may change between minor
+ * releases.  Use `smsd::findMCS(...)` from `smsd/mcs.hpp` instead.
  */
 #pragma once
 
@@ -135,7 +134,7 @@ struct CliqueResult {
 };
 
 // ---------------------------------------------------------------------------
-// Bron-Kerbosch with Tomita pivoting + k-core pruning
+// Internal maximum-clique search
 // ---------------------------------------------------------------------------
 
 inline CliqueResult findMaxCliques(
@@ -302,7 +301,7 @@ inline CliqueResult findMaxCliques(
 }
 
 // ---------------------------------------------------------------------------
-// Full MCS pipeline: greedy → seed-extend → BK → McGregor DFS
+// Internal MCS search pipeline
 // ---------------------------------------------------------------------------
 
 struct MCSResult {
@@ -310,7 +309,7 @@ struct MCSResult {
     std::vector<std::vector<std::pair<int,int>>> candidates;
     /// Best mapping size
     int best_size = 0;
-    /// LFUB (label-frequency upper bound)
+    /// Upper bound on the MCS size
     int lfub = 0;
     /// Microseconds spent
     int64_t elapsed_us = 0;
@@ -329,7 +328,7 @@ struct MCSResult {
  * @param max_results Maximum candidates to return
  */
 // ---------------------------------------------------------------------------
-// McGregor DFS backtracking extension
+// Backtracking extension
 // ---------------------------------------------------------------------------
 
 /**
@@ -529,7 +528,7 @@ inline MCSResult findMCSPipeline(
     if (compat.empty()) return result;
     int n = static_cast<int>(compat.size());
 
-    // LFUB: true label-frequency upper bound passed from Python
+    // Optional upper-bound hint from the caller
     result.lfub = (lfub_value > 0) ? lfub_value : std::min(n_a, n_b);
 
     // Build adjacency index for fast neighbor lookup
@@ -618,10 +617,10 @@ inline MCSResult findMCSPipeline(
         result.candidates.push_back(greedy);
     }
 
-    // LFUB early termination after greedy
+    // Early termination when the upper bound is reached
     if (result.lfub > 0 && result.best_size >= result.lfub) return result;
 
-    // --- L1.5: Seed-and-extend from best greedy ---
+    // --- Extend from best candidate ---
     static const std::vector<std::pair<int,int>> empty_mapping;
     auto& best_greedy = result.candidates.empty()
         ? empty_mapping
@@ -688,7 +687,7 @@ inline MCSResult findMCSPipeline(
         }
     } // if (!result.candidates.empty())
 
-    // LFUB early termination after seed-extend
+    // Early termination when the upper bound is reached
     if (result.lfub > 0 && result.best_size >= result.lfub) return result;
 
     // --- VF2 re-embedding: diverse embeddings ---
@@ -705,9 +704,9 @@ inline MCSResult findMCSPipeline(
                 best_map, compat, compat_by_query, bonds_a, bonds_b, adj_a, adj_b,
                 n_a, n_b, bond_any, vf2_deadline, std::min(max_results, 4));
 
-            // McGregor DFS backtracking: extend each VF2 embedding
+            // Extend each candidate
             // by exploring ALL possible extensions with backtracking.
-            // Unlike greedy BFS, this tries all candidates at each step
+            // Tries all candidates at each step
             // and backtracks when a choice blocks a better downstream path.
             for (auto& emb : embeddings) {
                 if (std::chrono::steady_clock::now() >= deadline) break;

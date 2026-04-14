@@ -807,8 +807,6 @@ PYBIND11_MODULE(_smsd, m) {
           "Compute MCS and return it as a canonical SMILES string. "
           "timeout_ms overrides opts.timeout_ms if > 0.");
 
-    // Reaction-aware MCS and bond-change scoring: available in BioInception commercial license.
-
     // -----------------------------------------------------------------------
     // Batch MCS with non-overlap constraints (v6.6.0)
     // -----------------------------------------------------------------------
@@ -1717,8 +1715,6 @@ PYBIND11_MODULE(_smsd, m) {
           "Returns list of dicts, each with 'core' (MolGraph) and 'rgroups' (dict of name->MolGraph).\n"
           "Core is matched as a substructure; non-core connected components become R1, R2, etc.");
 
-    // Reaction mapping: available in BioInception commercial license.
-
     // -----------------------------------------------------------------------
     // Graph utilities
     // -----------------------------------------------------------------------
@@ -2260,7 +2256,7 @@ PYBIND11_MODULE(_smsd, m) {
     py::class_<smsd::clique::MCSResult>(m, "CliqueMCSResult")
         .def_readonly("candidates", &smsd::clique::MCSResult::candidates)
         .def_readonly("best_size", &smsd::clique::MCSResult::best_size)
-        .def_readonly("lfub", &smsd::clique::MCSResult::lfub)
+        .def_readonly("upper_bound", &smsd::clique::MCSResult::lfub)
         .def_readonly("elapsed_us", &smsd::clique::MCSResult::elapsed_us);
 
     m.def("find_mcs_clique",
@@ -2275,9 +2271,9 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("ring_b") = std::vector<bool>{},
           py::arg("arom_a") = std::vector<bool>{},
           py::arg("arom_b") = std::vector<bool>{},
-          py::arg("lfub_value") = -1,
+          py::arg("upper_bound_hint") = -1,
           py::call_guard<py::gil_scoped_release>(),
-          "Clique-based MCS: greedy + seed-extend + BK, all in C++.");
+          "Internal clique-based MCS entry point.");
 
     // Coverage MCS: MolGraph → clique_solver pipeline (replaces Python lightweight engine)
     m.def("find_mcs_coverage",

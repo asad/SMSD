@@ -2,22 +2,13 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
- * See the NOTICE file for attribution, trademark, and algorithm IP terms. *
- * MCS (Maximum Common Substructure) engine -- header-only C++17 port.
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  *
- * Coverage-driven funnel with 7 levels:
- *   L0    Label-frequency upper bound
- *   L0.25 Linear chain fast-path (PEG, polyethylene)
- *   L0.5  Tree fast-path (branched polymers, dendrimers, glycogen)
- *   L0.75 Greedy probe
- *   L1    Substructure containment check
- *   L1.5 Seed-and-extend (bond growth)
- *   L2   McSplit partition refinement (bidirectional, RRSplit maximality)
- *   L3   Bron-Kerbosch + Tomita pivoting + k-core reduction
- *   L4   McGregor extension (bond-grow + atom-frontier DFS + forced assignment)
- *   L5   Extra seeds (only when McSplit and BK disagree)
+ * SMSD Pro — Maximum Common Substructure engine.
  *
- * Zero external dependencies -- pure C++17 standard library only.
+ * Header-only C++17 with zero external dependencies.  Public entry
+ * points are declared below; implementation details are opaque and
+ * may change between minor releases.
  */
 #pragma once
 
@@ -74,55 +65,41 @@ struct MCSOptions {
     /// 0 = exact match required (default), 2 = allow +/-2 unmatched atoms.
     int      templateFuzzyAtoms        = 0;
 
-    // ---- Reaction-aware post-filter (v6.4.0) ----
+    // ---- Near-MCS candidate enumeration ----
 
-    /// Enable built-in reaction-aware post-filtering.  Off by default.
-    /// Maximum size deficit from the mathematical maximum K to consider.
-    /// Default: 2 (consider candidates of size K, K-1, K-2).
+    /// Maximum size deficit from the mathematical maximum K at which the
+    /// solver will keep enumerating near-MCS candidates.  Default 2 means
+    /// the solver collects hits of size K, K-1, and K-2.
     int      nearMcsDelta      = 2;
-    /// Maximum number of near-MCS candidates to generate before scoring.
+
+    /// Maximum number of near-MCS candidates to generate before handing
+    /// them to the post-filter.  Default 20.
     int      nearMcsCandidates = 20;
 
-    /// Custom post-filter callback.  If set, overrides the built-in
-    /// Signature: (candidates, g1, g2) -> ranked candidates.
+    /// Optional post-filter callback.  When set, receives the enumerated
+    /// near-MCS candidates together with the two molecule graphs and
+    /// returns them in the caller's preferred order.  Leave null to skip
+    /// post-filtering entirely.  Signature:
+    ///   (candidates, g1, g2) -> ranked candidates
     /// @since 6.6.0
     std::function<std::vector<std::map<int,int>>(
         const std::vector<std::map<int,int>>&,
         const MolGraph&, const MolGraph&)> postFilter;
 
-    /// When true, apply bond-change penalty scoring after reaction-aware
-    /// candidate generation. Candidates ranked by chemical plausibility
-    /// of implied bond transformations (C-C breaks penalised most).
-    /// @since 6.6.0
-
-    /// Cap the algorithmic funnel at this stage.  Default 5 = all stages.
-    ///   0 = L0.25-L0.75 only (chain/tree/greedy, polynomial)
-    ///   1 = + L1 substructure + L1.25 augmenting + L1.5 seed-extend
-    ///   2 = + L1.75 k-core + L2 McSplit (exponential)
-    ///   3 = + L3 Bron-Kerbosch (exponential)
-    ///   4 = + L4 McGregor (exponential)
-    ///   5 = + L5 extra seeds (default, full funnel)
-    /// For reaction mapping, stage 1 is usually sufficient and much faster.
+    /// Internal effort knob.  Higher values take longer and may find a
+    /// larger MCS; lower values return a smaller MCS faster.  Intended
+    /// for advanced callers only — the default is tuned for general use.
     /// @since 6.12.0
     int      maxStage          = 5;
 };
 
 // ---------------------------------------------------------------------------
-// MCS Stage Timers — zero-overhead when SMSD_MCS_TIMERS is not defined.
-// Enable with -DSMSD_MCS_TIMERS to collect per-stage microsecond timings.
+// Optional per-call diagnostic timers.  Zero-overhead when SMSD_MCS_TIMERS
+// is not defined at build time.
 // ---------------------------------------------------------------------------
 struct MCSTimers {
-    int64_t chainUs      = 0;   // L0.25 linear chain
-    int64_t treeUs       = 0;   // L0.5  tree
-    int64_t greedyUs     = 0;   // L0.75 greedy probe
-    int64_t substructUs  = 0;   // L1    substructure containment
-    int64_t seedExtendUs = 0;   // L1.5  seed-and-extend
-    int64_t mcSplitUs    = 0;   // L2    McSplit
-    int64_t bkUs         = 0;   // L3    Bron-Kerbosch
-    int64_t mcGregorUs   = 0;   // L4    McGregor extension
-    int64_t totalUs      = 0;   // total wall time
-    int     stageReached = 0;   // highest level entered
-    bool    timedOut     = false;
+    int64_t totalUs = 0;   // total wall time
+    bool    timedOut = false;
 };
 
 #ifdef SMSD_MCS_TIMERS
@@ -4922,8 +4899,6 @@ inline bool validateTautomerConsistency(
     return true;
 }
 
-// Reaction mapping algorithms available in BioInception commercial license.
-
 // ===========================================================================
 // mcsToSmiles -- extract the MCS induced subgraph as a canonical SMILES.
 // ===========================================================================
@@ -5079,8 +5054,6 @@ inline MCSResult findMCSFromSmiles(const std::string& smi1, const std::string& s
     result.mcsSmiles = std::move(smiOut);
     return result;
 }
-
-// Reaction-aware MCS post-filter algorithms available in BioInception commercial license.
 
 // ===========================================================================
 // Batch MCS with non-overlap constraints (v6.5.3 — parity with Java)

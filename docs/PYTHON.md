@@ -96,11 +96,7 @@ chem.matcher_engine = smsd.MatcherEngine.VF2PP  # fastest (default)
                     # smsd.MatcherEngine.VF2    # classic
                     # smsd.MatcherEngine.VF3    # experimental
 
-# Pruning (advanced — usually leave defaults)
-chem.use_two_hop_nlf   = True    # 2-hop neighbourhood label frequency
-chem.use_three_hop_nlf = False   # 3-hop (slower, stronger pruning)
-chem.use_bit_parallel_feasibility = True   # bitset-accelerated AC-3
-chem.induced           = False   # induced subgraph isomorphism
+chem.induced = False   # induced subgraph isomorphism
 
 # Profiles (shortcuts)
 strict = smsd.ChemOptions.profile("strict")      # exact matching
@@ -109,7 +105,7 @@ taut   = smsd.ChemOptions.tautomer_profile()      # tautomer-aware defaults
 
 ### MCSOptions — how to search
 
-Controls the MCS search strategy and stopping criteria.
+Controls the MCS search stopping criteria.
 
 ```python
 mcs_opts = smsd.MCSOptions()
@@ -125,26 +121,9 @@ mcs_opts.maximize_bonds = False    # edge MCS (MCES) instead of atom MCS
 mcs_opts.min_fragment_size = 1     # minimum atoms per fragment
 mcs_opts.max_fragments     = 100   # cap number of fragments
 
-# Pipeline depth — higher = more thorough, slower
-mcs_opts.max_stage = 5   # 0=identity only, 1=substructure (fast for reactions),
-                          # 2=McSplit, 3=Bron-Kerbosch, 4=McGregor, 5=full pipeline
-
-# Near-MCS exploration (reaction-aware)
-mcs_opts.near_mcs_delta      = 2    # try K-1, K-2 variants
-mcs_opts.near_mcs_candidates = 20   # how many near-MCS to evaluate
-
-# Chemistry-aware features
-mcs_opts.bond_change_aware = False  # penalise implausible bond changes
-mcs_opts.extra_seeds       = True   # try additional seed strategies
-
-# Seed search tuning (advanced)
-mcs_opts.seed_neighborhood_radius = 2    # local neighbourhood for seed extension
-mcs_opts.seed_max_anchors         = 12   # max anchor points per seed
-mcs_opts.template_fuzzy_atoms     = 0    # fuzzy atom tolerance
-
-# NLF pruning during extension (advanced)
-mcs_opts.use_two_hop_nlf_in_extension   = True
-mcs_opts.use_three_hop_nlf_in_extension = False
+# Effort knob (advanced) — higher = more thorough, slower
+mcs_opts.max_stage = 5   # default 5; lower values return faster but may
+                          # find a smaller MCS
 ```
 
 ### Aromaticity: Perception vs Matching
@@ -168,11 +147,10 @@ chem.aromaticity_model = smsd.AromaticityModel.DAYLIGHT_LIKE  # perception model
 chem.aromaticity_mode  = smsd.AromaticityMode.FLEXIBLE        # matching strictness
 ```
 
-## Lightweight MCS Engine (7.1.0)
+## Lightweight MCS Wrapper (7.1.1)
 
-High-level coverage-driven MCS with automatic LFUB termination.
-Accepts SMILES, MolGraph, or RDKit Mol. Uses the C++ clique solver
-for heavy combinatorial work; Python handles chemistry.
+A thin Python wrapper around the native MCS engine.  Accepts SMILES,
+MolGraph, or RDKit Mol — the heavy combinatorial work runs in C++.
 
 ```python
 from smsd.mcs_engine import find_mcs_lightweight
@@ -182,7 +160,6 @@ result = find_mcs_lightweight("c1ccc(O)cc1", "c1ccc(N)cc1")
 print(result.size)          # 6
 print(result.mapping)       # [(1,1), (2,2), ...]
 print(result.candidates)    # all candidate mappings
-print(result.lfub)          # label-frequency upper bound
 print(result.elapsed_ms)    # wall-clock time
 
 # From MolGraph
@@ -200,43 +177,9 @@ result = find_mcs_lightweight(
 )
 ```
 
-### Pipeline stages (automatic escalation)
-
-| Stage | Algorithm | Typical coverage |
-|-------|-----------|-----------------|
-| L0.75 | Greedy atom-by-atom (Morgan rank + NLF) | 45% of pairs solved here |
-| L1 | Substructure containment (C++ VF2 or RDKit) | +20% |
-| L1.5 | Seed-and-extend from heteroatom anchors | +15% |
-| L3 | C++ clique solver (BK + Tomita pivoting) | +15% |
-| L4 | McGregor bond-grow backtracking | +5% |
-
-Each stage checks against the label-frequency upper bound (LFUB).
-If the current best reaches LFUB, search stops immediately.
-
-## Low-Level C++ Bindings (Advanced)
-
-Direct access to the C++ engine via `smsd._smsd`. These are internal
-bindings — use the high-level API (`find_mcs`, `find_substructure`) for
-normal workflows.
-
-```python
-import smsd._smsd as _smsd
-
-# Low-level substructure from element lists
-matches = _smsd.match_substructure_from_elements(
-    ["C","C","C","C","C","C"],
-    ["C","C","C","C","C","C","O"],
-    {(0,1):1, (1,2):1, (2,3):1, (3,4):1, (4,5):1, (0,5):1},
-    {(0,1):1, (1,2):1, (2,3):1, (3,4):1, (4,5):1, (0,5):1, (3,6):1},
-    True, 500, 8,
-)
-
-# Low-level MCS via clique solver
-result = _smsd.find_mcs_clique(
-    compat, bonds_a, bonds_b, n_a, n_b,
-    True, 1000, 8,
-)
-```
+Implementation details of the native engine are subject to change
+between minor releases.  Use the high-level API (`smsd.find_mcs`,
+`smsd.find_substructure`) for all normal workflows.
 
 ## Core Search
 
@@ -452,8 +395,8 @@ mapping = smsd.find_mcs(reactant, product, connected_only=False, timeout_ms=1000
 print(f"Mapped {len(mapping)} atoms")
 ```
 
-**Caution:** Uses disconnected MCS internally, which may over-map for complex
-multi-center reactions. Use `prefer_rare_heteroatoms=True` for better reaction mapping.
+**Caution:** Uses disconnected MCS internally and may over-map on
+molecules with multiple similar substructures.
 
 ## All Substructure Matches (v7.1.0)
 
@@ -651,7 +594,7 @@ for m in mols:
 results = smsd.batch_mcs(mols[0], mols[1:])
 ```
 
-**Impact:** `prewarm_graph()` pre-computes canonical hashes and NLF invariants.
+**Impact:** `prewarm_graph()` pre-computes canonical hashes and graph invariants.
 Call it once per molecule before repeated MCS/substructure operations to avoid
 redundant recomputation. Measurable benefit on batch workflows (>10 molecules).
 

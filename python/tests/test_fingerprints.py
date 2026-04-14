@@ -1,4 +1,4 @@
-"""Comprehensive fingerprint tests for SMSD Pro v7.1.0.
+"""Comprehensive fingerprint tests for SMSD Pro v7.1.1.
 
 Tests every fingerprint type, similarity metric, edge case, and known
 challenging molecules from chemoinformatics literature.
@@ -507,9 +507,16 @@ class TestEdgeCases:
         assert len(fp) >= 1
 
     def test_empty_fingerprint_similarity(self):
-        """Tanimoto of two empty FPs should be 0."""
-        assert smsd.tanimoto_coefficient([], []) == 0.0
-        assert smsd.overlap_coefficient([], []) == 0.0
+        """Similarity of two empty fingerprints.
+
+        v7.1.1: aligned on the convention that two empty sets are
+        trivially identical (similarity = 1.0), matching the behaviour
+        of the camelCase `smsd.overlapCoefficient` alias in v7.1.0 and
+        the mathematical convention for Jaccard on the empty set.  If
+        exactly one fingerprint is empty, the similarity is 0.0.
+        """
+        assert smsd.tanimoto_coefficient([], []) == 1.0
+        assert smsd.overlap_coefficient([], []) == 1.0
 
     def test_none_fingerprint_similarity(self):
         """None input should return 0."""

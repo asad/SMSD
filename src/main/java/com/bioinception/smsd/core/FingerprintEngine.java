@@ -846,7 +846,12 @@ public final class FingerprintEngine {
           int nb = g.neighbors[i][k];
           nbHashes[k] = prevHash[nb] ^ (g.bondOrder(i, nb) * 31L);
         }
+        // Sort as unsigned (matches C++/Python std::sort on uint64_t).
+        // Java's Arrays.sort is signed; XOR with Long.MIN_VALUE flips the sign bit so
+        // that signed ordering reproduces unsigned ordering, then XOR back to restore.
+        for (int k = 0; k < deg; k++) nbHashes[k] ^= Long.MIN_VALUE;
         java.util.Arrays.sort(nbHashes);
+        for (int k = 0; k < deg; k++) nbHashes[k] ^= Long.MIN_VALUE;
 
         long h = FNV1A_SEED;
         h ^= r;            h *= FNV1A_PRIME;
@@ -913,12 +918,18 @@ public final class FingerprintEngine {
     // H-bond acceptor: N (not pyrrole-type), O, F, S (not thiophene-type)
     // Pyrrole N: aromatic, has implicit H (lone pair in pi system) — NOT acceptor
     // Pyridine N: aromatic, no implicit H (lone pair in ring plane) — IS acceptor
+    //
+    // v7.1.1: uses MolGraph.hydrogenCount() (reads CDK's stored implicit H
+    // directly) to mirror the C++ classifyPharmacophore byte-for-byte. The
+    // previous inline `3 - bondSum - |charge|` formula was broken because
+    // SMSD encodes aromatic bonds as order 4, which drove bondSum past every
+    // valence-table entry and forced hCount → 0 for every aromatic atom.
+    // That bug classified pyrrole N as an H-bond acceptor (features=19),
+    // while C++/Python correctly classified it as donor-only (features=17),
+    // producing a 1-bit drift in ECFP parity tests (e.g. pyrrole fcfp_r0).
     boolean isPyrroleTypeN = false;
     if (z == 7 && arom) {
-      int bondSum = 0;
-      for (int nb : g.neighbors[idx]) bondSum += g.bondOrder(idx, nb);
-      int hCount = Math.max(0, 3 - bondSum - Math.abs(charge));
-      isPyrroleTypeN = (hCount > 0); // has H = lone pair in pi system
+      isPyrroleTypeN = (g.hydrogenCount(idx) > 0);
     }
     boolean isAcceptorN = (z == 7 && charge <= 0 && !isPyrroleTypeN);
     boolean isAcceptorS = (z == 16 && !arom);

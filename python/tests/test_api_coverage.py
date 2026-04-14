@@ -152,7 +152,10 @@ class TestMCSUtilities:
         r = repr(result)
         assert "MatchResult" in r
         assert "size=" in r
-        assert "overlapCoefficient=" in r
+        # v7.1.1 fix: separate `overlap=` (Simpson) and `tanimoto=` fields
+        # after the overlapCoefficient semantic bug fix.
+        assert "overlap=" in r
+        assert "tanimoto=" in r
 
     def test_mcs_from_smiles_basic(self):
         """mcs_from_smiles should parse, compute MCS, and return MatchResult."""
@@ -1411,3 +1414,114 @@ class TestSMARTSAdvanced:
         assert query.matches(smsd.parse_smiles(PHENOL)) is True
         assert query.matches(smsd.parse_smiles(BENZENE)) is False
         assert query.matches(smsd.parse_smiles(ETHANOL)) is True
+
+
+# ===========================================================================
+# v7.1.1 bug-fix regression tests
+# ===========================================================================
+
+class TestV711BugFixes:
+    """Regression guards for the three bug fixes shipped in v7.1.1."""
+
+    def test_match_result_overlap_is_simpson(self):
+        """MatchResult.overlap must return Szymkiewicz-Simpson overlap
+        `size / min(|A|, |B|)`, NOT the Tanimoto / Jaccard index.
+
+        v7.1.1 fix: the historical `overlapCoefficient` attribute was
+        documented as Simpson overlap but silently computed Tanimoto.
+        """
+        # Phenol (7 atoms) vs benzene (6 atoms).  MCS is benzene (6 atoms).
+        # Simpson  = 6 / min(7, 6)     = 6/6 = 1.000
+        # Tanimoto = 6 / (7 + 6 - 6)   = 6/7 ≈ 0.857
+        r = smsd.mcs_result(PHENOL, BENZENE)
+        assert r.size == 6
+        assert r.overlap == pytest.approx(1.0, abs=1e-6)
+        assert r.overlapCoefficient == pytest.approx(1.0, abs=1e-6)
+        assert r.tanimoto == pytest.approx(6.0 / 7.0, abs=1e-6)
+
+    def test_match_result_repr_exposes_both_metrics(self):
+        """MatchResult.__repr__ must show both `overlap=` and `tanimoto=`
+        so the semantic distinction is visible at a glance."""
+        r = smsd.mcs_result(BENZENE, PHENOL)
+        s = repr(r)
+        assert "MatchResult" in s
+        assert "overlap=" in s
+        assert "tanimoto=" in s
+
+    def test_canonical_smiles_accepts_string(self):
+        """v7.1.1 fix: `smsd.canonical_smiles(smi_str)` and
+        `smsd.to_smiles(smi_str)` must accept a SMILES string as input,
+        not just a MolGraph.
+
+        Before the fix both raised
+        `TypeError: incompatible function arguments` because the wrapper
+        was aliased directly to a pybind11 overload that only took a
+        MolGraph.
+        """
+        # String input should work without raising
+        out = smsd.canonical_smiles("c1ccccc1")
+        assert isinstance(out, str)
+        assert out  # non-empty
+        # MolGraph input should continue to work
+        g = smsd.parse_smiles("c1ccccc1")
+        out2 = smsd.canonical_smiles(g)
+        assert isinstance(out2, str)
+        # The two results should be identical
+        assert out == out2
+
+    def test_to_smiles_accepts_string(self):
+        """`smsd.to_smiles` sibling of `canonical_smiles` must also
+        accept a SMILES string (same TypeError fix as above)."""
+        out = smsd.to_smiles("c1ccccc1")
+        assert isinstance(out, str)
+        assert out
+
+    def test_pyrrole_type_n_emits_nh_in_canonical_smiles(self):
+        """v7.1.1 Kekulé fix: canonical SMILES writer must emit `[nH]`
+        for pyrrole-type aromatic N so downstream kekulizers (RDKit,
+        ChemAxon, etc.) can reconstitute the structure.
+
+        Before the fix `Cn1cccc1` round-tripped correctly but the same
+        pyrrole topology parsed from SDF without an explicit H count
+        came out as `n` (no bracket), which failed Hückel validation in
+        RDKit (4 C + 1 pyridine-N = 5 pi electrons, not 4n+2 = 6).
+        """
+        # Pyrrole — the N must emit [nH]
+        out_pyrrole = smsd.canonical_smiles("c1cc[nH]c1")
+        assert "[nH]" in out_pyrrole
+
+        # Indole — the pyrrole-side N must also emit [nH]
+        out_indole = smsd.canonical_smiles("c1ccc2[nH]ccc2c1")
+        assert "[nH]" in out_indole
+
+        # N-methyl pyrrole — no implicit H, must NOT emit [nH]
+        out_nmepyrrole = smsd.canonical_smiles("Cn1cccc1")
+        assert "[nH]" not in out_nmepyrrole
+
+        # Pyridine — 6-ring, never pyrrole-type, must NOT emit [nH]
+        out_pyridine = smsd.canonical_smiles("c1ccncc1")
+        assert "[nH]" not in out_pyridine
+
+    def test_pyrrole_type_n_round_trips_via_rdkit(self):
+        """SMSD's canonical SMILES output must be RDKit-parseable for
+        pyrrole / indole / carbazole / benzo-pyrrole systems.  This is
+        the real-world bug that triggered the v7.1.1 Kekulé fix — SMSD
+        was outputting `n` for pyrrole-type N, and RDKit's kekulize
+        refused to assign pi electrons for the resulting aromatic 5-ring.
+        """
+        rdkit = pytest.importorskip("rdkit.Chem")
+        from rdkit.Chem import MolFromSmiles
+
+        for smi_in in [
+            "c1cc[nH]c1",          # pyrrole
+            "c1ccc2[nH]ccc2c1",    # indole
+            "c1ccc2cc[nH]c2c1",    # isoindole
+            "c1ccc2c(c1)[nH]c3ccccc23",  # carbazole
+        ]:
+            m = smsd.parse_smiles(smi_in)
+            out = smsd.canonical_smiles(m)
+            rd = MolFromSmiles(out)
+            assert rd is not None, (
+                f"SMSD canonical output {out!r} (from {smi_in!r}) "
+                f"is not RDKit-parseable"
+            )

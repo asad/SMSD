@@ -22,12 +22,14 @@ SMSD Pro provides exact substructure search and maximum common substructure
 (header-only), and **Python**. Optional GPU paths are available for CUDA and
 Apple Metal builds.
 
-Version `7.1.0` introduces a **unified Python API** with two clean entry
-points: `find_mcs(mol1, mol2, max_results=1)` and
-`find_substructure(query, target, max_results=1)`. Both accept SMILES
-strings, MolGraph objects, or RDKit Mol objects. Includes ring-constrained
-MCS quality recovery, a coverage-driven C++ MCS engine, and all matching
-defaults aligned with RDKit FMCS for fair benchmarking.
+Version `7.1.1` is a **bug-fix patch** on top of 7.1.0.  It delivers
+cross-language ECFP/FCFP fingerprint parity between Java, C++, and
+Python, fixes a canonical SMILES writer corner case, restores the
+correct semantics of `MatchResult.overlapCoefficient`, and fixes a
+Kekulization edge case so the canonical SMILES output round-trips
+cleanly in downstream readers for pyrrole-type aromatic nitrogen.
+**No new features and no public API breakage for existing callers.**
+Builds on the `7.1.0` unified Python API (`find_mcs`, `find_substructure`).
 
 ### Dalke Nearest-Neighbor MCS Benchmark (1,000 pairs)
 
@@ -37,7 +39,7 @@ CDK, and the academic MCS literature. Identical SMILES input, same 10 s
 timeout, same process, same machine. We gratefully acknowledge Andrew
 Dalke's foundational work on MCS benchmarking.
 
-| Metric | SMSD Pro 7.1.0 | RDKit FindMCS 2026.03 |
+| Metric | SMSD Pro 7.1.1 | RDKit FindMCS 2026.03 |
 |--------|:---------------:|:---------------------:|
 | Total time | **40 s** | 213 s |
 | Median time | 0.6 ms | 0.4 ms |
@@ -45,13 +47,12 @@ Dalke's foundational work on MCS benchmarking.
 | Timeouts | **0** | 8 |
 | Larger-MCS wins | **211 (21 %)** | 29 (3 %) |
 
-SMSD Pro's multi-stage pipeline — greedy seeds, McSplit, BK, and
-McGregor extension — complements RDKit's well-proven VF2-based
-approach. Both engines are excellent; SMSD tends to find slightly
-larger common substructures on hard pairs while RDKit offers superb
-median-case latency. We recommend choosing based on your workload:
-SMSD for coverage-critical applications (reaction mapping, SAR), RDKit
-for high-throughput screening where median speed dominates.
+SMSD Pro's adaptive multi-strategy native engine complements RDKit's
+well-proven VF2-based approach. Both engines are excellent; SMSD tends
+to find slightly larger common substructures on hard pairs while RDKit
+offers superb median-case latency. We recommend choosing based on your
+workload: SMSD for coverage-critical applications (reaction mapping, SAR),
+RDKit for high-throughput screening where median speed dominates.
 
 Full benchmark suite and reproduction scripts in [`benchmarks/`](benchmarks/).
 
@@ -64,7 +65,6 @@ Full benchmark suite and reproduction scripts in [`benchmarks/`](benchmarks/).
 | [Java Guide](docs/JAVA.md) | Java API and CLI usage |
 | [C++ Guide](docs/CPP.md) | Header-only C++ integration |
 | [Release Notes](docs/RELEASE_NOTES.md) | What's new in this release |
-| [Whitepaper](docs/WHITEPAPER.md) | Algorithm design (11-level MCS, VF2++, ring perception) |
 | [How to Install](docs/HOWTO-INSTALL.md) | Build from source on all platforms |
 | [Changelog](CHANGELOG.md) | Full versioned change history |
 
@@ -85,16 +85,16 @@ isotopes, atom classes/maps, `R#` plus `M  RGP`, and basic stereo flags.
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>7.1.0</version>
+  <version>7.1.1</version>
 </dependency>
 ```
 
 ### Java (Download JAR)
 
 ```bash
-curl -LO https://github.com/asad/SMSD/releases/download/v7.1.0/smsd-7.1.0-jar-with-dependencies.jar
+curl -LO https://github.com/asad/SMSD/releases/download/v7.1.1/smsd-7.1.1-jar-with-dependencies.jar
 
-java -jar smsd-7.1.0-jar-with-dependencies.jar \
+java -jar smsd-7.1.1-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 ```
 
@@ -118,12 +118,9 @@ mcs    = smsd.find_mcs("c1ccccc1", "c1ccc2ccccc2c1")
 # Tautomer-aware MCS
 mcs    = smsd.find_mcs("CC(=O)C", "CC(O)=C", tautomer_aware=True)
 
-# Prefer rare heteroatoms (S, P, Se) for reaction mapping
+# Prefer rare heteroatoms (S, P, Se) in MCS scoring
 mcs    = smsd.find_mcs("C[S+](C)CCC(N)C(=O)O", "SCCC(N)C(=O)O",
                    prefer_rare_heteroatoms=True)
-
-# Reaction-aware MCS (prefer heteroatom-containing mappings)
-aam    = smsd.find_mcs("CC(=O)O", "CCO", prefer_rare_heteroatoms=True)
 
 # Similarity upper bound (fast pre-filter)
 sim    = smsd.similarity("c1ccccc1", "c1ccc(O)cc1")
@@ -143,12 +140,6 @@ SMSD smsd = new SMSD(mol1, mol2, new ChemOptions());
 boolean isSub = smsd.isSubstructure();
 var mcs = smsd.findMCS();
 
-// Reaction-aware with bond-change scoring
-SearchEngine.MCSOptions opts = new SearchEngine.MCSOptions();
-opts.reactionAware = true;
-opts.bondChangeAware = true;  // penalise implausible bond transformations
-var rxnMcs = SearchEngine.reactionAwareMCS(g1, g2, new ChemOptions(), opts);
-
 // CIP stereo assignment (Rules 1-5, including pseudoasymmetric r/s)
 Map<Integer, Character> stereo = CIPAssigner.assignRS(g);
 Map<Long, Character> ez = CIPAssigner.assignEZ(g);
@@ -161,14 +152,6 @@ var mappings = SearchEngine.batchMCSConstrained(queries, targets, new ChemOption
 
 ```python
 import smsd
-
-# --- Reaction-Aware MCS ---
-# Prefer heteroatom-containing mappings for reaction center identification
-mapping = smsd.find_mcs(
-    "C[S+](CCC(N)C(=O)O)CC1OC(n2cnc3c(N)ncnc32)C(O)C1O",  # SAM
-    "SCCC(N)C(=O)OCC1OC(n2cnc3c(N)ncnc32)C(O)C1O",          # SAH
-    prefer_rare_heteroatoms=True
-)
 
 # --- Structured MCS Result ---
 result = smsd.mcs_result("c1ccccc1", "c1ccc(O)cc1")
@@ -257,8 +240,11 @@ mcs = smsd.find_mcs("CC(=O)C", "CC(O)=C", tautomer_aware=True)
 mcs = smsd.find_mcs("c1ccccc1", "C1CCCCC1", match_bond_order="loose")
 
 # --- Canonical SMILES ---
-smi = smsd.to_smiles(smsd.parse_smiles("OC(=O)c1ccccc1"))  # deterministic canonical form
-mcs_smi = smsd.mcs_to_smiles(g1, mapping)        # extract MCS as SMILES
+# v7.1.1: canonical_smiles() and to_smiles() accept a SMILES string OR a MolGraph.
+# Output is byte-identical across the Java, C++, and Python engines.
+smi = smsd.canonical_smiles("OC(=O)c1ccccc1")                 # from SMILES string
+smi = smsd.to_smiles(smsd.parse_smiles("OC(=O)c1ccccc1"))     # from MolGraph
+mcs_smi = smsd.mcs_to_smiles(g1, mapping)                     # extract MCS as SMILES
 
 # --- CIP Stereo Assignment ---
 g = smsd.parse_smiles("N[C@@H](C)C(=O)O")  # L-alanine
@@ -326,13 +312,7 @@ auto mol2 = smsd::parseSMILES("c1ccc(O)cc1");
 bool isSub = smsd::isSubstructure(mol1, mol2, smsd::ChemOptions{});
 auto mcs   = smsd::findMCS(mol1, mol2, smsd::ChemOptions{}, smsd::MCSOptions{});
 
-// Bond-change-aware MCS for reaction mapping
-auto opts = smsd::MCSOptions{};
-opts.reactionAware = true;
-opts.bondChangeAware = true;
-auto rxnMcs = smsd::reactionAwareMCS(mol1, mol2, smsd::ChemOptions{}, opts);
-
-// Batch MCS with non-overlap constraints (multi-fragment reactions)
+// Batch MCS with non-overlap constraints
 auto mappings = smsd::batchMCSConstrained(queries, targets, smsd::ChemOptions{});
 ```
 
@@ -422,21 +402,22 @@ python benchmarks/generate_dalke_pairs.py
 
 ## Algorithms
 
-### MCS Pipeline (11-level funnel)
+### MCS Engine
 
-| Level | Algorithm | Based on |
-|---|---|---|
-| L0 | Label-frequency upper bound | Degree-aware coverage-driven termination |
-| L0.25 | Chain fast-path | O(n*m) DP for linear polymers (PEG, lipids) |
-| L0.5 | Tree fast-path | Kilpelainen-Mannila DP for branched polymers (dendrimers, glycogen) |
-| L0.75 | Greedy probe | O(N) fast path for near-identical molecules |
-| L1 | Substructure containment | VF2++ check if smaller molecule is subgraph |
-| L1.25 | Augmenting path extension | Forced-extension bond growth from substructure seed |
-| L1.5 | Seed-and-extend | Bond-growth from rare-label seeds |
-| L2 | McSplit + RRSplit | Partition refinement (McCreesh 2017) with maximality pruning |
-| L3 | Bron-Kerbosch | Product-graph clique with Tomita pivoting + k-core + orbit pruning |
-| L4 | McGregor extension | Forced-assignment bond-grow frontier (McGregor 1982) |
-| L5 | Extra seeds | Ring skeleton, heavy-atom core, label-degree anchor seeds |
+SMSD Pro ships an **adaptive multi-strategy MCS engine** that selects
+the best technique for each input pair.  Implementation details are
+subject to change between minor releases.
+
+Public algorithmic foundations the engine builds on (citations only,
+not the SMSD pipeline itself):
+
+| Foundation | Reference |
+|---|---|
+| Partition-refinement clique search | McCreesh, Prosser & Trimble, *J. Artif. Intell. Res.* 2017 |
+| Edge-growth backtracking | McGregor, *Software: Practice & Experience* 1982 |
+| Maximum-clique enumeration | Bron & Kerbosch, *Comm. ACM* 1973; Tomita et al. 2006 |
+| Subgraph isomorphism (VF2++) | Juttner & Madarasi, *Discrete Appl. Math.* 2018 |
+| Ring perception | Vismara, *J. Chem. Inf. Comput. Sci.* 1997 |
 
 ### MCS Variants
 
@@ -453,7 +434,9 @@ python benchmarks/generate_dalke_pairs.py
 
 ### Substructure Search (VF2++)
 
-VF2++ (Juttner & Madarasi 2018) with FASTiso/VF3-Light matching order, 3-level NLF pruning, bit-parallel candidate domains, and GPU-accelerated domain initialization (CUDA + Metal).
+VF2++ (Juttner & Madarasi 2018) matcher with optional GPU-accelerated
+domain initialization (CUDA + Metal).  Implementation details are
+subject to change between minor releases.
 
 ### Ring Perception
 
@@ -500,7 +483,7 @@ partial ring fragments are accepted.
 | Windows | OpenMP | CUDA |
 | Any (no GPU) | OpenMP | Automatic CPU fallback |
 
-GPU acceleration covers RASCAL batch screening and domain initialization. Recursive backtracking (VF2++, BK, McSplit) runs on CPU. Dispatch: `CUDA -> Metal -> OpenMP -> sequential`.
+GPU acceleration covers RASCAL batch screening, Tanimoto clustering, and substructure domain initialization. Recursive matching runs on CPU. Dispatch: `CUDA -> Metal -> OpenMP -> sequential`.
 
 ### Performance Caching
 
@@ -512,7 +495,7 @@ SMSD employs multi-level caching to eliminate redundant computation in batch and
 | Domain space cache | VF2++ atom compatibility matrix | Avoids O(Nq*Nt) rebuild on repeated queries |
 | ECFP/FCFP fingerprint cache | Default-parameter fingerprints | 337x speedup on repeated fingerprint calls |
 | Pharmacophore features cache | FCFP atom invariants | Eliminates O(n*degree^2) per FCFP call |
-| C++ GraphBuilder compat matrix | Seed-extend/McSplit/BK stages | Pre-computed once, shared across algorithms |
+| C++ GraphBuilder compat matrix | All MCS strategies | Pre-computed once, shared across algorithms |
 
 Call `SearchEngine.clearMolGraphCache()` (Java) or reuse `MolGraph` instances (C++/Python) between batches.
 
@@ -530,14 +513,13 @@ Call `SearchEngine.clearMolGraphCache()` (Java) or reuse `MolGraph` instances (C
 | MCS fingerprint | MCS-aware, auto-sized |
 | Similarity metrics | Tanimoto, Dice, Cosine, Soergel (binary + count-vector) |
 | Fingerprint formats | `toBitSet()`, `toHex()`, `toBinaryString()`, `fromBitSet()`, `fromHex()` |
-| **MCS SMILES extraction** | `findMcsSmiles()` — extract MCS as canonical SMILES |
+| **MCS SMILES extraction** | `findMCSSMILES()` — extract MCS as canonical SMILES |
 | **findAllMCS** | Top-N MCS enumeration with canonical SMILES dedup |
-| **SMARTS-based MCS** | `findMcsSmarts()` — largest substructure matching a SMARTS pattern |
+| **SMARTS-based MCS** | `findMCSSMARTS()` — largest substructure matching a SMARTS pattern |
 | R-group decomposition | `decomposeRGroups()` |
 | **MatchResult** | Structured result: size, mapping, overlap coefficient, query/target atom counts |
 | RASCAL screening | O(V+E) similarity upper bound |
 | Canonical SMILES / SMARTS | deterministic, toolkit-independent (including `X` total connectivity) |
-| Reaction atom mapping | `mapReaction()` |
 | **Publication-quality SVG depiction** | ACS 1996 standard renderer: skeletal formulas, Jmol colors, stereo wedges, MCS highlighting, side-by-side pair rendering |
 | Lenient SMILES parser | Best-effort recovery from malformed SMILES |
 | N-MCS | Multi-molecule MCS with provenance tracking |
@@ -549,9 +531,7 @@ Call `SearchEngine.clearMolGraphCache()` (Java) or reuse `MolGraph` instances (C
 | **Coordinate transforms** | translate, rotate, scale, mirror, center, align, bounding box, RMSD |
 | **Force-directed layout** | `forceDirectedLayout()` for bond-crossing minimisation |
 | **SMACOF stress majorisation** | `stressMajorisation()` for optimal 2D embedding |
-| **Reaction-aware MCS** | `reactionAwareMCS()` post-filter for reaction mapping |
-| **Bond-change-aware MCS** | `BondChangeScorer` re-ranks candidates by bond transformation plausibility (C-C breaks=3.0, heteroatom=0.5) |
-| **Batch constrained MCS** | `batchMCSConstrained()` multi-pair MCS with non-overlap atom exclusion for multi-fragment reactions |
+| **Batch constrained MCS** | `batchMCSConstrained()` multi-pair MCS with non-overlap atom exclusion |
 | **Two-phase crossing reduction** | `reduceCrossings()` Phase 1: system-level flipping, Phase 2: individual ring flipping with fusion-atom pivots |
 | **computeSSSR / layoutSSSR** | Clean SSSR APIs: minimum cycle basis and layout-ordered ring perception |
 
@@ -575,19 +555,19 @@ Every release includes all platforms:
 
 | Download | Description |
 |----------|-------------|
-| `SMSD.Pro-7.1.0.dmg` | macOS installer (Apple Silicon) — drag to Applications |
-| `SMSD.Pro-7.1.0.msi` | Windows installer — next, next, finish |
-| `smsd-pro_7.1.0_amd64.deb` | Linux installer — `sudo dpkg -i` |
-| `smsd-7.1.0.jar` | Pure library JAR (Maven/Gradle dependency) |
-| `smsd-7.1.0-jar-with-dependencies.jar` | Standalone CLI (just `java -jar`) |
-| `smsd-cpp-7.1.0-headers.tar.gz` | C++ header-only library (unpack, `#include "smsd/smsd.hpp"`) |
+| `SMSD.Pro-7.1.1.dmg` | macOS installer (Apple Silicon) — drag to Applications |
+| `SMSD.Pro-7.1.1.msi` | Windows installer — next, next, finish |
+| `smsd-pro_7.1.1_amd64.deb` | Linux installer — `sudo dpkg -i` |
+| `smsd-7.1.1.jar` | Pure library JAR (Maven/Gradle dependency) |
+| `smsd-7.1.1-jar-with-dependencies.jar` | Standalone CLI (just `java -jar`) |
+| `smsd-cpp-7.1.1-headers.tar.gz` | C++ header-only library (unpack, `#include "smsd/smsd.hpp"`) |
 | [`pip install smsd`](https://pypi.org/project/smsd/) | Python package (PyPI — Linux, macOS, Windows wheels) |
 
 ```bash
 # Native installer — download .dmg / .msi / .deb, double-click, done
 
 # CLI
-java -jar smsd-7.1.0-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
+java -jar smsd-7.1.1-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 
 # Docker CLI
 docker build -t smsd .
@@ -601,16 +581,16 @@ pip install smsd
 
 ## Tests
 
-**1,512 tests passed** across all platforms:
+**1,518 tests passed** across all platforms:
 
 | Suite | Tests | Coverage |
 |-------|------:|----------|
-| Java | 602 | MCS, substructure, reactions, tautomers, stereochemistry, ring perception, hydrogen handling |
+| Java | 581 (+ 25 parity) | MCS, substructure, reactions, tautomers, stereochemistry, ring perception, hydrogen handling, cross-language ECFP/FCFP/canonical-SMILES parity |
 | C++ core | 114 | MCS, substructure, precision chemistry, kekulisation, implicit H |
 | C++ parser | 542 | SMILES, SMARTS, 1,003 diverse molecules, edge cases |
 | C++ layout | 42 | 2D/3D generation, transforms, overlap resolution, templates |
 | C++ CIP | 42 | R/S, E/Z, pseudoasymmetric, sequence rules |
-| Python | 170 | Full API coverage, hydrogen handling, charged species |
+| Python | 172 (+ 25 parity) | Full API coverage, hydrogen handling, charged species, golden-vector parity |
 
 AddressSanitizer: zero memory errors.
 
@@ -626,7 +606,6 @@ AddressSanitizer: zero memory errors.
 | [C++ Guide](docs/CPP.md) | Header-only C++ integration |
 | [Release Notes](docs/RELEASE_NOTES.md) | Current release |
 | [Changelog](CHANGELOG.md) | Full versioned change history |
-| [Whitepaper](docs/WHITEPAPER.md) | Algorithms and design (11-level MCS, VF2++, ring perception) |
 | [How to Install](docs/HOWTO-INSTALL.md) | Build from source on all platforms |
 | [NOTICE](NOTICE) | Attribution, trademark, and novel algorithm terms |
 
@@ -661,10 +640,10 @@ Full details: [LICENSE](LICENSE) | [NOTICE](NOTICE)
 ## Citation
 
 If you use SMSD Pro in your research, please cite the following paper describing
-the coverage-driven, tautomer-aware MCS algorithm:
+the tautomer-aware MCS engine:
 
 > Rahman SA.
-> *SMSD Pro: Coverage-Driven, Tautomer-Aware Maximum Common Substructure Search.*
+> *SMSD Pro: Tautomer-Aware Maximum Common Substructure Search.*
 > ChemRxiv, 2025.
 > DOI: [10.26434/chemrxiv.15001534](https://doi.org/10.26434/chemrxiv.15001534/v1)
 

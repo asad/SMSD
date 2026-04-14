@@ -126,6 +126,45 @@ public final class MolGraph {
   public int atomCount() { return n; }
 
   /**
+   * Implicit hydrogen count for atom {@code idx}.
+   *
+   * <p>Mirrors the C++ {@code MolGraph::hydrogenCount[]} field byte-for-byte.
+   * Used by {@link FingerprintEngine#classifyPharmacophore} to distinguish
+   * pyrrole-type aromatic N (has H, not an H-bond acceptor) from pyridine-type
+   * aromatic N (no H, is an H-bond acceptor), and by the canonical SMILES
+   * writer to emit the stereo H count inside bracket atoms.
+   *
+   * <p>For CDK-backed graphs this reads
+   * {@code IAtom.getImplicitHydrogenCount()} directly, which is always
+   * accurate regardless of how bond orders are encoded. For graphs built via
+   * {@link Builder} (no CDK backing), it falls back to {@link
+   * FingerprintEngine#implicitH} using a Kekulé-equivalent bond-order sum
+   * (aromatic bonds counted as 1) so that pyrrole-like detection still works.
+   *
+   * <p>Why this method exists: SMSD internally encodes aromatic bonds as bond
+   * order 4 (for bond-order matching semantics), so callers cannot compute
+   * implicit H from {@code bondOrder()} summation alone — the aromatic-4
+   * encoding would blow past the valence table and return 0 for every
+   * aromatic atom.
+   */
+  public int hydrogenCount(int idx) {
+    if (mol != null) {
+      Integer h = mol.getAtom(idx).getImplicitHydrogenCount();
+      return h != null ? h : 0;
+    }
+    // Builder path: no CDK backing. Reconstruct a Kekulé-equivalent bond
+    // order sum by counting aromatic bonds as order 1 (single) for implicit-H
+    // arithmetic. This matches the openSMILES model used by the C++ engine
+    // when it populates its own hydrogenCount[] field.
+    int bondOrdSum = 0;
+    for (int nb : neighbors[idx]) {
+      int bo = bondOrder(idx, nb);
+      bondOrdSum += (bo == 4) ? 1 : bo;
+    }
+    return FingerprintEngine.implicitH(atomicNum[idx], bondOrdSum, formalCharge[idx]);
+  }
+
+  /**
    * Translate an MCS mapping from internal 0-based contiguous indices to external
    * atom IDs. If either graph has an {@code atomId} array set, the corresponding
    * keys or values in the returned map are translated. If neither graph has external
@@ -3142,13 +3181,18 @@ public final class MolGraph {
     int z = atomicNum[atom], charge = formalCharge[atom];
     boolean arom = aromatic[atom];
     int chiral = (tetraChirality != null) ? tetraChirality[atom] : 0;
+    int mass = (massNumber != null) ? massNumber[atom] : 0;
     // Only emit @/@@  when stereo is defined (1=CW, 2=CCW in our encoding)
     boolean hasStereo = chiral != 0;
+    boolean hasIsotope = mass != 0;
     String sym = ORGANIC_SYMBOLS.get(z);
-    if (sym != null && charge == 0 && !hasStereo) {
+    // Bare organic-subset form is legal only when there is no stereo, no
+    // charge, and no isotope label — otherwise we must open brackets.
+    if (sym != null && charge == 0 && !hasStereo && !hasIsotope) {
       sb.append(arom ? Character.toLowerCase(sym.charAt(0)) : sym);
     } else {
       sb.append('[');
+      if (hasIsotope) sb.append(mass);
       String elemSym = (z >= 0 && z < ELEMENT_SYMBOL.length && ELEMENT_SYMBOL[z] != null) ? ELEMENT_SYMBOL[z] : "?";
       if (arom) {
         sb.append(Character.toLowerCase(elemSym.charAt(0)));
@@ -3171,10 +3215,45 @@ public final class MolGraph {
         // emit @@ for CLOCKWISE, @ for ANTICLOCKWISE
         sb.append(chiral == 1 ? "@@" : "@");
       }
+      // Emit implicit hydrogen count inside brackets. This is required for
+      // stereo centres (e.g. [C@@H]) and is standard practice for all bracket
+      // atoms — the reader cannot infer H count once brackets are in play.
+      int hCount = computeImplicitHForWrite(atom);
+      if (hCount > 0) {
+        sb.append('H');
+        if (hCount > 1) sb.append(hCount);
+      }
       if (charge > 0) { sb.append('+'); if (charge > 1) sb.append(charge); }
       else if (charge < 0) { sb.append('-'); if (charge < -1) sb.append(-charge); }
       sb.append(']');
     }
+  }
+
+  /**
+   * Compute implicit H count for an atom for use in canonical SMILES output.
+   * Uses the OpenSMILES multi-valence model via
+   * {@link FingerprintEngine#implicitH}. This reuses the same calculation
+   * used in fingerprint invariants so canonical SMILES stays consistent
+   * with the rest of the stack.
+   *
+   * <p>Note: Java {@link #bondOrder} returns Kekulised orders (1 or 2)
+   * rather than a dedicated aromatic token like C++ uses (4), so no extra
+   * "+1 for aromatic π" adjustment is required here — the Kekule sum already
+   * captures the aromatic atom's contribution. We still clamp any order-4
+   * tokens down to 1 defensively for molecules built directly via
+   * {@code MolGraph.Builder}.
+   */
+  private int computeImplicitHForWrite(int atom) {
+    int z = atomicNum[atom];
+    int charge = formalCharge[atom];
+    int boSum = 0;
+    int[] nbs = neighbors[atom];
+    for (int k = 0; k < nbs.length; k++) {
+      int bo = bondOrder(atom, nbs[k]);
+      if (bo == 4) bo = 1;
+      boSum += bo;
+    }
+    return FingerprintEngine.implicitH(z, boSum, charge);
   }
 
   /**
@@ -3186,16 +3265,22 @@ public final class MolGraph {
   private void writeBondSymbol(int from, int to, StringBuilder sb) {
     int order = bondOrder(from, to);
     boolean fromArom = aromatic[from], toArom = aromatic[to];
-    if (order == 4 || (fromArom && toArom)) return;
+    // Order 4 = aromatic bond inside an aromatic ring → implicit (no symbol).
+    if (order == 4) return;
     if (order == 2) { sb.append('='); return; }
     if (order == 3) { sb.append('#'); return; }
-    if (order == 1 && (fromArom != toArom)) { sb.append('-'); return; }
-    // Single bond: check if it is adjacent to a stereo double bond
-    if (order == 1 && dbStereoConf != null) {
-      int dbConf = dbStereo(from, to);
-      if (dbConf != 0) {
-        // dbConf==1 → TOGETHER → '/', dbConf==2 → OPPOSITE → '\'
-        sb.append(dbConf == 1 ? '/' : '\\');
+    if (order == 1) {
+      // Single bond between TWO aromatic atoms must be emitted explicitly
+      // as '-' so that biphenyl c1ccc(-c2ccccc2)cc1 is distinguished from an
+      // aromatic ring fusion. Otherwise single bonds are implicit.
+      if (fromArom && toArom) { sb.append('-'); return; }
+      // Single bond may carry E/Z direction when adjacent to a stereo double bond.
+      if (dbStereoConf != null) {
+        int dbConf = dbStereo(from, to);
+        if (dbConf != 0) {
+          // dbConf==1 → TOGETHER → '/', dbConf==2 → OPPOSITE → '\'
+          sb.append(dbConf == 1 ? '/' : '\\');
+        }
       }
     }
   }

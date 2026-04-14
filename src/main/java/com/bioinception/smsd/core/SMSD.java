@@ -721,7 +721,7 @@ public final class SMSD {
   // ---- Upper-bound delegates (v6.1) ----
 
   /**
-   * Label-frequency upper bound (LFUB) on MCS size.
+   * Element-count upper bound on MCS size.
    *
    * @see SearchEngine#labelFrequencyUpperBound
    */

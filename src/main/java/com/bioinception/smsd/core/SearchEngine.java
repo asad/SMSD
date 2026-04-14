@@ -162,42 +162,27 @@ public final class SearchEngine {
      *  0 = exact match required (default), 2 = allow +/-2 unmatched atoms. */
     public int templateFuzzyAtoms = 0;
 
-    // ---- Reaction-aware post-filter (v6.4.0) ----
+    // ---- Near-MCS candidate enumeration ----
 
     /**
-     * Enable built-in reaction-aware post-filtering.  Off by default.
-     * When true, findMCS will enumerate near-MCS
-     * candidates (sizes K, K-1, K-2) and re-rank by heteroatom
-     * coverage and reaction-center proximity.
-     * @since 6.4.0
-     */
-
-    /**
-     * Maximum size deficit from the mathematical maximum K to consider.
-     * Default: 2 (consider candidates of size K, K-1, K-2).
+     * Maximum size deficit from the mathematical maximum K to enumerate as
+     * near-MCS candidates. Default: 2 (consider sizes K, K-1, K-2).
      * @since 6.4.0
      */
     public int nearMcsDelta = 2;
 
     /**
-     * Maximum number of near-MCS candidates to generate before scoring.
-     * Default: 20.
+     * Maximum number of near-MCS candidates to generate. Default: 20.
      * @since 6.4.0
      */
     public int nearMcsCandidates = 20;
 
     /**
-     * Custom post-filter.  If non-null, overrides the built-in
+     * Custom post-filter applied to enumerated near-MCS candidates. When
+     * non-null, overrides the default (identity) filter.
      * @since 6.4.0
      */
     public MCSPostFilter postFilter = null;
-
-    /**
-     * When true, apply bond-change penalty scoring after reaction-aware
-     * candidate generation. Candidates are ranked by chemical plausibility
-     * of implied bond transformations (C-C breaks penalised most).
-     * @since 6.5.3
-     */
 
     /**
      * Target atom indices to exclude from MCS search.
@@ -230,27 +215,28 @@ public final class SearchEngine {
   }
 
   // ---------------------------------------------------------------------------
-  // Stage-level profiling (opt-in, Phase 0 instrumentation)
+  // Optional per-call timing
   // ---------------------------------------------------------------------------
 
   /**
-   * Per-stage timing data captured during a profiled MCS run.
+   * Aggregate timing data captured during a profiled MCS run.
    *
-   * <p>All duration values are in microseconds. The {@code bestAfter*} fields record
-   * the MCS mapping size after the named pipeline stage completes, enabling
-   * callers to see which stage contributed the most to the final result.
+   * <p>Durations are in microseconds.  Internal breakdown fields are retained
+   * for source-compatibility with earlier releases; their individual values
+   * are implementation details and may be zero or merged into other fields
+   * in future versions.
    *
-   * @param orientationUs     time spent in orientation planning (upper bounds, canonical prep)
-   * @param seedsUs           time spent in greedy probe, augmenting path, and seed-extend stages
-   * @param mcSplitUs         time spent in McSplit partition-refinement
-   * @param bkUs              time spent in Bron-Kerbosch clique search
-   * @param mcGregorUs        time spent in McGregor extension (including extra seeds)
-   * @param repairUs          time spent in alternate-direction re-run and repair
+   * @param orientationUs     internal: pre-search setup
+   * @param seedsUs           internal: seed / fast-path work
+   * @param mcSplitUs         internal: intermediate refinement stage
+   * @param bkUs              internal: clique search stage
+   * @param mcGregorUs        internal: extension stage
+   * @param repairUs          internal: repair / re-run stage
    * @param totalUs           wall-clock total for the entire findMCS call
-   * @param bestAfterGreedy   mapping size after greedy probe stage
-   * @param bestAfterSeed     mapping size after seed-and-extend stage
-   * @param bestAfterBK       mapping size after BK clique stage
-   * @param bestAfterMcGregor mapping size after McGregor extension stage
+   * @param bestAfterGreedy   internal: best size after fast-path stage
+   * @param bestAfterSeed     internal: best size after seed stage
+   * @param bestAfterBK       internal: best size after clique stage
+   * @param bestAfterMcGregor internal: best size after extension stage
    * @since 6.7.0
    */
   public record MCSStageTimers(
@@ -260,10 +246,10 @@ public final class SearchEngine {
   ) {}
 
   /**
-   * Result of a profiled MCS computation: the normal MCS result plus per-stage timers.
+   * Result of a profiled MCS computation: the normal MCS result plus timing data.
    *
    * @param result the MCS result (mapping, size, overlap, SMILES)
-   * @param timers per-stage timing breakdown
+   * @param timers per-call timing data
    * @since 6.7.0
    */
   public record MCSProfiledResult(MCSResult result, MCSStageTimers timers) {}
@@ -521,10 +507,9 @@ public final class SearchEngine {
   }
 
   /**
-   * Find MCS with optional progress callback.
-   * The callback is invoked after each major pipeline level (chain, tree,
-   * greedy, substructure, seed-extend, McSplit, BK, McGregor) with the
-   * current best mapping.
+   * Find MCS with optional progress callback.  The callback is invoked
+   * periodically during the search with the current best mapping, and
+   * may be used to monitor long-running queries.
    *
    * @param g1       the first molecule graph
    * @param g2       the second molecule graph
@@ -936,8 +921,8 @@ public final class SearchEngine {
   /**
    * Find the Maximum Common Substructure between two molecule graphs.
    *
-   * <p>Uses a multi-strategy pipeline: identity check, substructure containment,
-   * seed-and-extend, McSplit partition refinement, BK clique, and McGregor extension.
+   * <p>Uses an adaptive multi-strategy native engine; implementation
+   * details are subject to change between minor releases.
    *
    * <pre>{@code
    * MCSOptions opts = new MCSOptions();
@@ -4761,30 +4746,6 @@ public final class SearchEngine {
       for (int qi : frag) result.put(qi, map.get(qi));
     return result;
   }
-
-  // ---- Feature 5: Atom-Atom Mapping for Reactions ----
-
-  
-  // Reaction mapping available in BioInception commercial license.
-
-
-  // ---- Feature 5b: Reaction-Aware MCS Post-Filter (v6.4.0) ----
-
-  
-  // Reaction mapping available in BioInception commercial license.
-
-
-  
-  // Reaction mapping available in BioInception commercial license.
-
-
-  
-  // Reaction mapping available in BioInception commercial license.
-
-
-  
-  // Reaction mapping available in BioInception commercial license.
-
 
   // ---- Feature 6: Fingerprint Quality Analysis ----
 

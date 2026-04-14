@@ -213,7 +213,7 @@ public final class ChemOptions {
    * Create a deep copy of the given {@code ChemOptions}.
    *
    * <p>Useful when a caller needs a modified copy without mutating the original
-   * (e.g., reaction-aware MCS relaxes {@code matchFormalCharge}).
+   * (e.g. temporarily relaxing {@code matchFormalCharge} for one query).
    *
    * @param src the source options to copy
    * @return a new independent copy with all fields duplicated

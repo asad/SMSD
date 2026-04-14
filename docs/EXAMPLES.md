@@ -1,6 +1,6 @@
 # SMSD Pro — Examples, How-To, and Cautions
 
-**Version 7.1.0** | Copyright (c) 2018-2026 BioInception PVT LTD
+**Version 7.1.1** | Copyright (c) 2018-2026 BioInception PVT LTD
 
 This document provides worked examples for every major SMSD Pro feature. Each section
 includes runnable code, expected output, practical cautions, and performance notes.
@@ -567,24 +567,23 @@ If a target does not contain the core, it will be skipped silently.
 
 ---
 
-## 12. Reaction Atom Mapping
+## 12. Atom Mapping Between Related Molecules
 
 ```python
 import smsd
 
-# Map atoms between reactant and product
-reactant = smsd.parse_smiles("CC(=O)Oc1ccccc1C(=O)O")  # aspirin
-product  = smsd.parse_smiles("Oc1ccccc1C(=O)O")         # salicylic acid
+# Map atoms between two related structures (e.g., parent and metabolite)
+parent = smsd.parse_smiles("CC(=O)Oc1ccccc1C(=O)O")  # aspirin
+child  = smsd.parse_smiles("Oc1ccccc1C(=O)O")         # salicylic acid
 
-mapping = smsd.find_mcs(reactant, product, prefer_rare_heteroatoms=True)
-print(mapping)  # {reactant_atom: product_atom, ...}
+mapping = smsd.find_mcs(parent, child)
+print(mapping)  # {parent_atom: child_atom, ...}
 ```
 
-### Caution: reaction mapping is NP-hard
+### Caution: MCS is NP-hard
 
-For complex multi-step reactions with many bond changes, the mapping may
-time out. Use `timeout_ms` to bound the computation and accept a
-best-effort result.
+For very complex molecule pairs the search may time out.  Use
+`timeout_ms` to bound the computation and accept a best-effort result.
 
 ---
 
@@ -618,7 +617,7 @@ fps = [smsd.circular_fingerprint(mol, radius=2) for mol in library]
 ### Caution: prewarm for batch workflows
 
 Always call `prewarm_graph()` on molecules used in batch operations.
-This pre-computes canonical hashes and NLF invariants, avoiding redundant
+This pre-computes canonical hashes and graph invariants, avoiding redundant
 recomputation on every query.
 
 ---

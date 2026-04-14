@@ -2,16 +2,14 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
- * See the NOTICE file for attribution, trademark, and algorithm IP terms. *
- * VF2++ Substructure Search Engine -- header-only C++17 port.
- * Zero external dependencies; requires "smsd/mol_graph.hpp" for MolGraph / ChemOptions.
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  *
- * Algorithms ported from the Java SMSD SubstructureEngine:
- *   - Greedy probe (O(N) fast-path)
- *   - FASTiso ordering (forward-checking, smallest domain first, < 30 atoms)
- *   - VF3-Light ordering (label rarity sort, >= 30 atoms)
- *   - VF2PP backtracking with bit-parallel domains, NLF-1/2/3 pruning
- *   - Full feasibility check: degree, NLF, mapped-neighbor adjacency, bond compat
+ * SMSD Pro — substructure search engine.
+ *
+ * Header-only C++17 with zero external dependencies; requires
+ * "smsd/mol_graph.hpp" for MolGraph / ChemOptions.  Public entry
+ * points are declared below; implementation details are opaque and
+ * may change between minor releases.
  */
 #ifndef SMSD_VF2PP_HPP
 #define SMSD_VF2PP_HPP

@@ -3,15 +3,11 @@ SPDX-License-Identifier: Apache-2.0
 Copyright (c) 2018-2026 BioInception PVT LTD
 Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
 
-Lightweight MCS engine — thin Python wrapper over C++ findMCSCoverage.
-
-The entire coverage pipeline (greedy + substructure + seed-extend + VF2 +
-McGregor + heteroatom-seeded BFS) runs in C++ with zero Python overhead.
+Thin Python wrapper over the native SMSD MCS engine.
 """
 from __future__ import annotations
 
 import time
-from collections import Counter
 from dataclasses import dataclass, field
 
 try:
@@ -27,11 +23,10 @@ except ImportError:
 
 @dataclass
 class LightMCSResult:
-    """Result from the lightweight MCS engine."""
+    """Result from the lightweight MCS wrapper."""
     size: int = 0
     mapping: list = field(default_factory=list)
     candidates: list = field(default_factory=list)
-    lfub: int = 0
     elapsed_ms: float = 0.0
 
 
@@ -56,25 +51,7 @@ def _ensure_molgraph(mol):
 
 
 # ---------------------------------------------------------------------------
-# LFUB — Label-Frequency Upper Bound
-# ---------------------------------------------------------------------------
-
-def lfub(mol_a, mol_b) -> int:
-    """Maximum possible MCS size based on element frequency overlap.
-
-    Accepts raw MolGraph objects (uses atomic_num) or wrapper objects
-    (uses element_counts).
-    """
-    if hasattr(mol_a, 'element_counts') and hasattr(mol_b, 'element_counts'):
-        return sum((mol_a.element_counts & mol_b.element_counts).values())
-    # Raw MolGraph — count by atomicNum
-    freq_a = Counter(mol_a.atomic_num)
-    freq_b = Counter(mol_b.atomic_num)
-    return sum(min(freq_a[k], freq_b.get(k, 0)) for k in freq_a)
-
-
-# ---------------------------------------------------------------------------
-# Main entry point — delegates to C++ findMCSCoverage
+# Main entry point — delegates to the native engine
 # ---------------------------------------------------------------------------
 
 def find_mcs_lightweight(
@@ -83,11 +60,10 @@ def find_mcs_lightweight(
     ring_matches_ring: bool = False,
     bond_any: bool = False,
 ) -> LightMCSResult:
-    """Find MCS using the lightweight coverage-driven pipeline.
+    """Compute a maximum common subgraph between two molecules.
 
     Accepts SMILES strings, SMSD MolGraph objects, or RDKit Mol objects.
-    The entire pipeline (greedy, substructure, seed-extend, VF2, McGregor,
-    heteroatom-seeded BFS) runs in C++ — zero Python orchestration overhead.
+    All matching is delegated to the native engine.
 
     Args:
         mol1: First molecule (SMILES, MolGraph, or RDKit Mol).
@@ -97,7 +73,7 @@ def find_mcs_lightweight(
         bond_any: If True, any bond matches any bond.
 
     Returns:
-        LightMCSResult with size, mapping, candidates, lfub, elapsed_ms.
+        LightMCSResult with size, mapping, candidates, elapsed_ms.
     """
     t0 = time.monotonic()
 
@@ -121,6 +97,5 @@ def find_mcs_lightweight(
         size=len(pairs),
         mapping=pairs,
         candidates=[pairs] if pairs else [],
-        lfub=min(g1.n, g2.n),
         elapsed_ms=elapsed,
     )

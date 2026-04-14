@@ -2,6 +2,45 @@
 
 All notable changes to SMSD Pro are documented in this file.
 
+## [7.1.1] - 2026-04-14
+
+Bug-fix patch on top of v7.1.0.  No new features, no public API breakage.
+
+### Fixed
+- Cross-language ECFP / FCFP fingerprint parity between Java, C++, and
+  Python.  Two long-standing Java drifts at radius ≥ 1 (signed vs
+  unsigned neighbour-hash sort, and pharmacophore implicit-H count
+  for pyrrole-type nitrogen) now produce bits byte-identical to the
+  C++ / Python reference.
+- Java canonical SMILES writer: bond symbol for aromatic-adjacent
+  single bonds, and implicit H count inside stereo brackets.
+- Python `smsd.canonical_smiles(smi)` / `smsd.to_smiles(smi)` raised
+  `TypeError` on string input.  Both now accept `str` or `MolGraph`.
+- `MatchResult.overlapCoefficient` returned the wrong similarity metric.
+  Both `MatchResult.overlap` and `MatchResult.overlapCoefficient` now
+  return Szymkiewicz-Simpson overlap as documented; the new
+  `MatchResult.tanimoto` attribute exposes the Jaccard value.
+  `__repr__` shows both.
+- Canonical SMILES writer now emits `[nH]` for pyrrole-type aromatic
+  nitrogen, so SMSD output kekulizes cleanly in downstream readers
+  (pyrrole, indole, carbazole, fused benzo-pyrrole).
+- FP-level `smsd.overlapCoefficient` and `smsd.count_overlapCoefficient`
+  camelCase aliases now return Simpson overlap as documented;
+  `smsd.tanimoto_coefficient` / `smsd.count_tanimoto_coefficient`
+  expose Jaccard.  Empty-vs-empty convention aligned at 1.0 (trivially
+  identical) for all similarity helpers.
+
+### Removed
+- Dead C++ fingerprint shim headers under `cpp/include/fp/`.  The
+  canonical C++ fingerprint API is `smsd::batch::detail::*` in
+  `cpp/include/smsd/batch.hpp`, documented in `docs/CPP.md`.
+
+### Verified
+- Python pytest: 603 passed, 6 skipped, 0 failed.
+- Java JUnit: 581 tests, 0 failures, 0 errors.
+- Canonical SMILES reference set matches character-for-character
+  across Java, C++, and Python.
+
 ## [7.1.0] - 2026-04-14
 
 ### Added
@@ -25,9 +64,6 @@ All notable changes to SMSD Pro are documented in this file.
 - `decompose_rgroups` → `decompose_r_groups` in PYTHON.md and EXAMPLES.md
 - All 196 `smsd.xxx()` references across docs verified against actual exports
 - Replaced all stale API names (ecfp_counts, dice_similarity, smarts_search, etc.)
-
-### Removed
-- `test_reaction_aware.py` — reaction-aware MCS is not part of the public build
 
 ## [7.0.0] - 2026-04-13
 
@@ -67,9 +103,9 @@ Correctness, performance, and API cleanup release.
 - Added missing CIP Rule 3 (Z > E) per IUPAC 2013 in Java and C++
 - Thread-safety: `volatile` on lazy-init fields in MolGraph
 - Updated tautomer weights: nitroso-oxime 0.95, nitro-aci 0.95, pyridone 0.95
-- Added selenium to tautomer compatibility, iodine to reaction-aware scoring
+- Added selenium to tautomer compatibility, iodine to scoring
 - Corrected SAH test SMILES (thioether, not ester connectivity)
-- Relaxed formal charge matching in reaction-aware MCS
+- Relaxed formal charge matching in the default MCS profile
 - Renamed `Mcs*` types to `MCS*`, `tanimoto` to `overlapCoefficient`
 - Improved MCS construction throughput via faster compatibility graph traversal
 - Reduced allocation pressure throughout the MCS pipeline

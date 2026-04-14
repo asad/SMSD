@@ -10,7 +10,7 @@
 mvn -U clean package
 ```
 
-This produces `target/smsd-7.1.0-jar-with-dependencies.jar` (fat JAR with all dependencies).
+This produces `target/smsd-7.1.1-jar-with-dependencies.jar` (fat JAR with all dependencies).
 
 ## Run Tests
 
