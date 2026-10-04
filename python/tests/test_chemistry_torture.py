@@ -113,7 +113,8 @@ class TestRepresentativeRoundTrip:
         reparsed = smsd.parse_smiles(canonical)
         assert reparsed.n == mol.n, f"{name}: canonical round-trip should preserve atom count"
 
-        mapping = smsd.find_mcs(mol, reparsed, timeout_ms=10000)
+        # A round-trip must retain every fragment, including disconnected salts.
+        mapping = smsd.find_mcs(mol, reparsed, timeout_ms=10000, connected_only=False)
         assert len(mapping) == mol.n, f"{name}: self-equivalent round-trip should preserve full MCS"
 
 

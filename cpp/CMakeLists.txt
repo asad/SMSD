@@ -208,9 +208,46 @@ if(SMSD_BUILD_TESTS)
     target_link_libraries(smsd_general_matching_tests PRIVATE smsd)
     add_test(NAME smsd_general_matching_tests COMMAND smsd_general_matching_tests)
 
+    add_executable(smsd_substructure_regression_tests tests/test_substructure_regression.cpp)
+    target_link_libraries(smsd_substructure_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_substructure_regression_tests COMMAND smsd_substructure_regression_tests)
+
+    add_executable(smsd_gpu_domain_regression_tests tests/test_gpu_domain_regression.cpp)
+    target_link_libraries(smsd_gpu_domain_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_gpu_domain_regression_tests COMMAND smsd_gpu_domain_regression_tests)
+
+    add_executable(smsd_clique_regression_tests tests/test_clique_regression.cpp)
+    target_link_libraries(smsd_clique_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_clique_regression_tests COMMAND smsd_clique_regression_tests)
+
+    add_executable(smsd_assignment_regression_tests tests/test_assignment_regression.cpp)
+    target_link_libraries(smsd_assignment_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_assignment_regression_tests COMMAND smsd_assignment_regression_tests)
+
+    add_executable(smsd_mcs_regression_tests tests/test_mcs_regression.cpp)
+    target_link_libraries(smsd_mcs_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_mcs_regression_tests COMMAND smsd_mcs_regression_tests)
+
+    if(_SMSD_METAL_ENABLED OR _SMSD_CUDA_ENABLED)
+        add_executable(smsd_native_gpu_domain_tests tests/test_gpu_domain_regression.cpp)
+        target_compile_definitions(smsd_native_gpu_domain_tests PRIVATE SMSD_TEST_NATIVE_GPU)
+        if(_SMSD_METAL_ENABLED)
+            target_link_libraries(smsd_native_gpu_domain_tests PRIVATE smsd_metal)
+        else()
+            target_link_libraries(smsd_native_gpu_domain_tests PRIVATE smsd_cuda)
+        endif()
+        add_test(NAME smsd_native_gpu_domain_tests COMMAND smsd_native_gpu_domain_tests)
+        set_tests_properties(smsd_native_gpu_domain_tests PROPERTIES SKIP_RETURN_CODE 77)
+        target_compile_options(smsd_native_gpu_domain_tests PRIVATE
+            $<$<CXX_COMPILER_ID:MSVC>:/UNDEBUG>
+            $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-UNDEBUG>)
+    endif()
+
     # Assertions are part of the test harness, including in Release builds.
     foreach(test_target IN ITEMS smsd_core_tests smsd_parser_tests
-            smsd_batch_gpu_tests smsd_cip_tests smsd_layout_tests smsd_general_matching_tests)
+            smsd_batch_gpu_tests smsd_cip_tests smsd_layout_tests smsd_general_matching_tests
+            smsd_substructure_regression_tests smsd_gpu_domain_regression_tests
+            smsd_clique_regression_tests smsd_assignment_regression_tests smsd_mcs_regression_tests)
         target_compile_options(${test_target} PRIVATE
             $<$<CXX_COMPILER_ID:MSVC>:/UNDEBUG>
             $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-UNDEBUG>)

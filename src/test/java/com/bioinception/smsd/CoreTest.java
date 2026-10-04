@@ -467,7 +467,9 @@ public class CoreTest {
   }
 
   @Test
-  @Timeout(value = 30, unit = TimeUnit.SECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+  // One 15-second baseline plus four sequential 15-second parallel rounds
+  // can legitimately consume 75 seconds; each round still has its 20s guard.
+  @Timeout(value = 90, unit = TimeUnit.SECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
   @DisplayName("C.3c  GOLDEN_843 shared molecules stay stable under parallel reuse")
   void c3c_golden843_shared_molecules_parallel_reuse_is_stable() throws Exception {
     final IAtomContainer educt = mol(GOLDEN_843_EDUCT);
@@ -1246,9 +1248,22 @@ public class CoreTest {
     @Test
     void ketoEnolTautomer() throws Exception {
       // Keto-enol: acetone ↔ propen-2-ol
-      SMSD smsd = new SMSD(mol("CC(=O)C"), mol("CC(O)=C"), new ChemOptions());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
-      assertTrue(mcs.size() >= 3, "Tautomers share backbone");
+      MolGraph keto = new MolGraph(mol("CC(=O)C"));
+      MolGraph enol = new MolGraph(mol("CC(O)=C"));
+      ChemOptions strict = new ChemOptions();
+      SearchEngine.MCSOptions options = new SearchEngine.MCSOptions();
+      options.timeoutMs = 5_000L;
+      Map<Integer, Integer> witness = Map.of(0, 0, 1, 1);
+      assertTrue(SearchEngine.validateMapping(keto, enol, witness, strict).isEmpty());
+      // Each connected three-atom subset would need either C=O to match C-O,
+      // or both query C-C bonds to match the target's C-C and C=C bonds.
+      assertEquals(2, SearchEngine.findMCS(keto, enol, strict, options).size(),
+          "Strict bond orders retain only the two-atom C-C backbone");
+
+      ChemOptions tautomer = ChemOptions.tautomerProfile();
+      Map<Integer, Integer> relaxed = SearchEngine.findMCS(keto, enol, tautomer, options);
+      assertEquals(4, relaxed.size(), "Tautomer-aware matching preserves the full backbone");
+      assertTrue(SearchEngine.validateMapping(keto, enol, relaxed, tautomer).isEmpty());
     }
 
     @Test

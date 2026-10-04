@@ -474,7 +474,11 @@ def find_mcs(mol1, mol2, *,
         max_stage: Internal effort knob 0-5 (default 5 — highest effort).
             Advanced tuning only; intended for callers willing to trade
             MCS size for speed.
-        strategy: "auto", "lightweight", or "native".
+        strategy: "auto", "lightweight", or "native". "auto" uses lightweight
+            for a single result with default chemistry/search settings, plus
+            timeout, ring matching, and "strict"/"any" bond order. Other requested
+            options use native. "lightweight" raises ValueError for unsupported
+            options, including "loose" bond order and advanced kwargs.
         prefer_rare_heteroatoms: Accepted for API stability; currently a no-op.
 
     Returns:
@@ -501,8 +505,39 @@ def find_mcs(mol1, mol2, *,
     # has no effect; retained so existing callers do not need to be edited.
     del prefer_rare_heteroatoms
 
-    # Resolve bond order mode string
-    bond_any = match_bond_order in ("any", "ANY")
+    if strategy not in ("auto", "lightweight", "native"):
+        raise ValueError("strategy must be 'auto', 'lightweight', or 'native'")
+    if not isinstance(match_bond_order, str) or match_bond_order.lower() not in ("strict", "loose", "any"):
+        raise ValueError("match_bond_order must be 'strict', 'loose', or 'any'")
+    bond_mode = match_bond_order.lower()
+    bond_any = bond_mode == "any"
+
+    # The coverage wrapper accepts only timeout, ring matching, and a boolean
+    # bond-order mode. Never let its early return bypass requested constraints.
+    lightweight_unsupported = [
+        name for name, unsupported in (
+            ("max_results", max_results != 1),
+            ("complete_rings_only", complete_rings_only),
+            ("match_bond_order", bond_mode == "loose"),
+            ("match_atom_type", not match_atom_type),
+            ("match_formal_charge", match_formal_charge),
+            ("match_isotope", match_isotope),
+            ("use_chirality", use_chirality),
+            ("use_bond_stereo", use_bond_stereo),
+            ("tautomer_aware", tautomer_aware),
+            ("connected_only", not connected_only),
+            ("induced", induced),
+            ("maximize_bonds", maximize_bonds),
+            ("max_stage", max_stage != 5),
+        ) if unsupported
+    ]
+    lightweight_unsupported.extend(sorted(kwargs))
+    if strategy == "lightweight" and lightweight_unsupported:
+        raise ValueError(
+            "strategy='lightweight' does not support requested options: "
+            + ", ".join(lightweight_unsupported)
+            + "; use strategy='native' or 'auto'"
+        )
 
     # Build ChemOptions / MCSOptions for native path
     def _build_opts():
@@ -515,7 +550,7 @@ def find_mcs(mol1, mol2, *,
         chem.ring_matches_ring_only = ring_matches_ring_only
         chem.complete_rings_only = complete_rings_only
         bond_mode_map = {"strict": BondOrderMode.STRICT, "loose": BondOrderMode.LOOSE, "any": BondOrderMode.ANY}
-        chem.match_bond_order = bond_mode_map.get(match_bond_order.lower(), BondOrderMode.STRICT)
+        chem.match_bond_order = bond_mode_map[bond_mode]
         opts = MCSOptions()
         opts.timeout_ms = timeout_ms
         opts.connected_only = connected_only
@@ -536,7 +571,7 @@ def find_mcs(mol1, mol2, *,
     # --- Single-result path (max_results == 1) ---
     # Lightweight engine: faster and better coverage on most pairs
     light_mapping = {}
-    if strategy in ("auto", "lightweight"):
+    if strategy in ("auto", "lightweight") and not lightweight_unsupported:
         try:
             result = _find_mcs_light(
                 mol1, mol2,
@@ -557,7 +592,7 @@ def find_mcs(mol1, mol2, *,
             if strategy == "lightweight":
                 return {}
 
-    # Native C++ pipeline — for salts or explicit "native" strategy
+    # Native C++ pipeline — for advanced options, salts, or explicit "native".
     g1, rdkit1 = _ensure_mol_ex(mol1)
     g2, rdkit2 = _ensure_mol_ex(mol2)
     chem, opts = _build_opts()

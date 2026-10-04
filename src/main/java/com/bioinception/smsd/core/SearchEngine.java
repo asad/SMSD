@@ -78,6 +78,14 @@ public final class SearchEngine {
     }
   }
 
+  // Nested stages and quality retries share the caller's MCS deadline.
+  private static final ThreadLocal<TimeBudget> MCS_BUDGET_TL = new ThreadLocal<>();
+
+  private static boolean mcsBudgetExpired() {
+    TimeBudget budget = MCS_BUDGET_TL.get();
+    return budget != null && budget.expiredNow();
+  }
+
   /**
    * Time budget tracker for bounded search operations.
    *
@@ -93,27 +101,41 @@ public final class SearchEngine {
     final long deadlineNanos;
     private final long checkEvery;
     private long counter;
+    private boolean exhausted;
 
     public TimeBudget(long timeoutMs) {
       // TimeUnit saturates huge millisecond values instead of overflowing the
       // conversion. Signed differences handle nanoTime's arbitrary origin and
       // a deadline that crosses the long boundary.
-      this.deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(Math.max(1, timeoutMs));
+      long now = System.nanoTime();
+      long duration = TimeUnit.MILLISECONDS.toNanos(Math.max(1, timeoutMs));
+      TimeBudget outer = MCS_BUDGET_TL.get();
+      if (outer != null) {
+        long remaining = outer.deadlineNanos - now;
+        if (outer.exhausted || remaining <= 0L) { duration = 0L; exhausted = true; }
+        else duration = Math.min(duration, remaining);
+      }
+      this.deadlineNanos = now + duration;
       this.checkEvery = 1024L;
       this.counter = 0L;
     }
 
     public boolean expired() {
-      if ((++counter & (checkEvery - 1)) != 0) return false;
+      if (exhausted) return true;
+      if ((counter++ & (checkEvery - 1)) != 0) return false;
       return expiredNow();
     }
 
     public boolean expiredNow() {
-      return System.nanoTime() - deadlineNanos >= 0;
+      if (!exhausted) exhausted = System.nanoTime() - deadlineNanos >= 0;
+      return exhausted;
     }
 
     long remainingMillis() {
-      return Math.max(0L, (deadlineNanos - System.nanoTime()) / 1_000_000L);
+      if (exhausted) return 0L;
+      long remaining = deadlineNanos - System.nanoTime();
+      if (remaining <= 0L) { exhausted = true; return 0L; }
+      return remaining / 1_000_000L;
     }
   }
 
@@ -757,6 +779,7 @@ public final class SearchEngine {
   private static Map<Integer, Integer> repairInvalidMcsMapping(
       MolGraph g1, MolGraph g2, Map<Integer, Integer> mapping, ChemOptions C) {
     if (mapping == null || mapping.isEmpty()) return Collections.emptyMap();
+    if (validateMapping(g1, g2, mapping, C).isEmpty()) return mapping;
     Map<Integer, Integer> current = new LinkedHashMap<>(mapping);
     int maxRounds = mapping.size(); // each round removes exactly 1 entry; bounded by initial size
     for (int round = 0; round < maxRounds && !current.isEmpty(); round++) {
@@ -807,7 +830,9 @@ public final class SearchEngine {
       MolGraph g1, MolGraph g2, Map<Integer, Integer> raw, ChemOptions C, MCSOptions M) {
     Map<Integer, Integer> repaired = repairInvalidMcsMapping(g1, g2, raw, C);
     if (!validateMapping(g1, g2, repaired, C).isEmpty()) repaired = new LinkedHashMap<>();
+    repaired = ppx(g1, g2, repaired, C, M);
     int repairedSize = repaired.size();
+    if (mcsBudgetExpired()) return ppx(g1, g2, repaired, C, M);
     long timeout = resolveMcsTimeout(g1, g2, M);
 
     // If one graph is fully contained in the other, prefer a real substructure mapping
@@ -974,8 +999,8 @@ public final class SearchEngine {
       timeout = Math.min(30_000L, 500L + (long) g1.n * g2.n * 2);
     }
     TimeBudget tb = new TimeBudget(timeout);
-    // DSB is only admissible for induced MCS (degree constraint valid).
-    // For non-induced (default), use the looser but safe label-frequency bound.
+    // Partial subgraphs can discard neighbors, so full-graph degrees cannot
+    // constrain atom compatibility even when the common subgraph is induced.
     int upperBound = M.induced
         ? degreeSequenceUpperBound(g1, g2, C)
         : labelFrequencyUpperBound(g1, g2, C);
@@ -1032,8 +1057,10 @@ public final class SearchEngine {
           Map<Integer, Integer> chainMCS = new LinkedHashMap<>();
           for (int k = 0; k < bestLen; k++)
             chainMCS.put(seq1[bestI - bestLen + k], seq2[bestJ - bestLen + k]);
-          bestSize = bestLen; best = chainMCS;
-          if (bestLen >= upperBound) return ppx(g1, g2, best, C, M);
+          best = ppx(g1, g2, chainMCS, C, M);
+          bestSize = best.size();
+          bestScore = mcsScore(g1, best, M);
+          if (bestSize >= upperBound) return ppx(g1, g2, best, C, M);
         }
       }
     }
@@ -1138,7 +1165,7 @@ public final class SearchEngine {
     // Greedy probing for small similar molecules (skip fast-exit in bond-maximizing mode)
     { long[] _st = STAGE_TIMERS_TL.get(); if (_st != null) _st[ST_GREEDY_START] = System.nanoTime(); }
     if (!(M.maximizeBonds || M.atomWeights != null) && minN > 2 && minN < GREEDY_PROBE_MAX_SIZE && upperBound >= minN) {
-      Map<Integer, Integer> greedy = greedyProbe(g1, g2, C);
+      Map<Integer, Integer> greedy = ppx(g1, g2, greedyProbe(g1, g2, C), C, M);
       int fuzzy = M.templateFuzzyAtoms;
       int greedySz = greedy.size();
       boolean fuzzyAccept = (fuzzy > 0) &&
@@ -1214,8 +1241,12 @@ public final class SearchEngine {
         }
       }
       if (augmented.size() > bestSize) {
-        best = augmented; bestSize = best.size();
-        bestScore = mcsScore(g1, best, M);
+        Map<Integer, Integer> candidate = ppx(g1, g2, augmented, C, M);
+        if (preferFinalMapping(g1, candidate, best, M)) {
+          best = candidate;
+          bestSize = best.size();
+          bestScore = mcsScore(g1, best, M);
+        }
       }
       if (!weightMode && bestSize >= upperBound) return ppx(g1, g2, best, C, M);
     }
@@ -1225,17 +1256,17 @@ public final class SearchEngine {
       MolGraph sml = g1.n <= g2.n ? g1 : g2;
       MolGraph lrg = g1.n <= g2.n ? g2 : g1;
       boolean swapped = g1.n > g2.n;
-      SubstructureEngine.Matcher subMatcher = SubstructureEngine.makeMatcher(sml, lrg, C, tb);
-      if (subMatcher.exists()) {
-        List<Map<Integer, Integer>> subMaps = new ArrayList<>();
-        subMatcher.enumerate(1, subMaps);
-        if (!subMaps.isEmpty()) {
-          Map<Integer, Integer> raw = subMaps.get(0);
-          if (!swapped) return ppx(g1, g2, raw, C, M);
-          Map<Integer, Integer> full = new LinkedHashMap<>();
-          for (Map.Entry<Integer, Integer> e : raw.entrySet()) full.put(e.getValue(), e.getKey());
-          return ppx(g1, g2, full, C, M);
+      List<Map<Integer, Integer>> subMaps = new ArrayList<>();
+      SubstructureEngine.makeMatcher(sml, lrg, C, tb).enumerate(1, subMaps);
+      if (!subMaps.isEmpty()) {
+        Map<Integer, Integer> candidate = orientMcsResult(subMaps.get(0), swapped);
+        candidate = ppx(g1, g2, candidate, C, M);
+        if (candidate.size() > bestSize) {
+          best = candidate;
+          bestSize = best.size();
+          bestScore = mcsScore(g1, best, M);
         }
+        if (bestSize >= upperBound) return best;
       }
     }
 
@@ -1245,7 +1276,7 @@ public final class SearchEngine {
     { long[] _st = STAGE_TIMERS_TL.get(); if (_st != null) _st[ST_SEED_START] = System.nanoTime(); }
     GraphBuilder GB = new GraphBuilder(g1, g2, C, M.induced);
     if (minN >= 4 && Math.max(g1.n, g2.n) <= SEED_EXTEND_MAX_ATOMS && !tb.expired()) {
-      Map<Integer, Integer> seSeed = GB.seedExtendMCS(tb, upperBound);
+      Map<Integer, Integer> seSeed = ppx(g1, g2, GB.seedExtendMCS(tb, upperBound), C, M);
       int seScore = mcsScore(g1, seSeed, M);
       if ((M.maximizeBonds || M.atomWeights != null) ? seScore > bestScore : seSeed.size() > bestSize) {
         best = seSeed;
@@ -1253,6 +1284,22 @@ public final class SearchEngine {
         bestScore = seScore;
       }
       if (!(M.maximizeBonds || M.atomWeights != null) && bestSize >= upperBound) return ppx(g1, g2, best, C, M);
+    }
+
+    // Medium connected graphs can have useful partial matches despite very
+    // different full-graph neighborhoods. Try inexpensive valid anchors before
+    // partition/clique search spends the remaining budget.
+    int maxAtoms = Math.max(g1.n, g2.n);
+    if (M.connectedOnly && !M.disconnectedMCS && maxAtoms > SEED_EXTEND_MAX_ATOMS
+        && maxAtoms <= SEED_EXTEND_MAX_ATOMS * 2 && !tb.expiredNow()) {
+      long anchorMillis = Math.max(1L, Math.min(50L, tb.remainingMillis() / 8));
+      Map<Integer, Integer> anchor = greedyAnchorSeed(g1, g2, C, M, new TimeBudget(anchorMillis));
+      if (preferFinalMapping(g1, anchor, best, M)) {
+        best = anchor;
+        bestSize = best.size();
+        bestScore = mcsScore(g1, best, M);
+      }
+      if (!weightMode && bestSize >= upperBound) return best;
     }
 
     { long[] _st = STAGE_TIMERS_TL.get(); if (_st != null) { _st[ST_SEED_END] = System.nanoTime(); _st[ST_BEST_AFTER_SEED] = bestSize; } }
@@ -1307,7 +1354,7 @@ public final class SearchEngine {
     int mcSplitSize;
     {
       long[] nodeCount = {0};
-      Map<Integer, Integer> mcSeed = GB.mcSplitSeed(tb, nodeCount);
+      Map<Integer, Integer> mcSeed = ppx(g1, g2, GB.mcSplitSeed(tb, nodeCount), C, M);
       mcSplitSize = mcSeed.size();
       int mcScore = mcsScore(g1, mcSeed, M);
       if ((M.maximizeBonds || M.atomWeights != null) ? mcScore > bestScore : mcSeed.size() > bestSize) {
@@ -1338,7 +1385,7 @@ public final class SearchEngine {
     { long[] _st = STAGE_TIMERS_TL.get(); if (_st != null) _st[ST_BK_START] = System.nanoTime(); }
     int bkSize = 0;
     if (bestSize < (int) (upperBound * BK_SKIP_RATIO) && !tb.expired()) {
-      Map<Integer, Integer> cliqueSeed = GB.maximumCliqueSeed(tb);
+      Map<Integer, Integer> cliqueSeed = ppx(g1, g2, GB.maximumCliqueSeed(tb), C, M);
       bkSize = cliqueSeed.size();
       int cScore = mcsScore(g1, cliqueSeed, M);
       if ((M.maximizeBonds || M.atomWeights != null) ? cScore > bestScore : cliqueSeed.size() > bestSize) {
@@ -1392,11 +1439,18 @@ public final class SearchEngine {
     }
 
     // Last resort: start from empty seed
-    if (bestScore <= 0 && !tb.expired()) {
+    if (best.isEmpty() && !tb.expired()) {
       best = ppx(g1, g2,
           mcGregorExtend(g1, g2, Collections.emptyMap(), C, tb, tb.remainingMillis(),
               M.useTwoHopNLFInExtension, M.useThreeHopNLFInExtension, M.connectedOnly),
           C, M);
+    }
+    // Partial MCS seeds can be extended even when they are far below the label
+    // bound. Full-graph neighborhood pruning in other stages can miss these.
+    if (!best.isEmpty() && M.connectedOnly && !M.disconnectedMCS
+        && Math.max(g1.n, g2.n) <= SEED_EXTEND_MAX_ATOMS && !tb.expiredNow()) {
+      Map<Integer, Integer> candidate = ppx(g1, g2, greedyAtomExtend(g1, g2, best, C, M), C, M);
+      if (preferFinalMapping(g1, candidate, best, M)) best = candidate;
     }
     { long[] _st = STAGE_TIMERS_TL.get(); if (_st != null) { _st[ST_MCGREGOR_END] = System.nanoTime(); _st[ST_BEST_AFTER_MCGREGOR] = best.size(); } }
     // Invariant: MCS size must never exceed the smaller molecule's atom count
@@ -1406,6 +1460,20 @@ public final class SearchEngine {
   }
 
   public static Map<Integer, Integer> findMCS(MolGraph g1, MolGraph g2, ChemOptions C, MCSOptions M) {
+    if (g1 == null || g2 == null || g1.n == 0 || g2.n == 0) return Collections.emptyMap();
+    MCSOptions options = M == null ? new MCSOptions() : M;
+    TimeBudget previous = MCS_BUDGET_TL.get();
+    TimeBudget budget = previous == null ? new TimeBudget(resolveMcsTimeout(g1, g2, options)) : previous;
+    MCS_BUDGET_TL.set(budget);
+    try {
+      return findMcsWithinBudget(g1, g2, C, options);
+    } finally {
+      if (previous == null) MCS_BUDGET_TL.remove();
+      else MCS_BUDGET_TL.set(previous);
+    }
+  }
+
+  private static Map<Integer, Integer> findMcsWithinBudget(MolGraph g1, MolGraph g2, ChemOptions C, MCSOptions M) {
     if (g1 == null || g2 == null) return Collections.emptyMap();
     if (C == null) C = new ChemOptions();
     if (M == null) M = new MCSOptions();
@@ -1417,12 +1485,16 @@ public final class SearchEngine {
 
     int ub12 = labelFrequencyUpperBoundDirected(g1, g2, C);
     int ub21 = labelFrequencyUpperBoundDirected(g2, g1, C);
-    OrientationPlan plan = chooseOrientationPlan(g1, g2, C, ub12, ub21);
+    // Non-induced matching preserves query edges and is directional. Atom
+    // weights also belong to query indices, so neither mode can be reversed.
+    OrientationPlan plan = M.induced && M.atomWeights == null
+        ? chooseOrientationPlan(g1, g2, C, ub12, ub21) : new OrientationPlan();
     boolean weightMode = M.maximizeBonds || M.atomWeights != null;
 
     Map<Integer, Integer> best = plan.directFirst
         ? runValidatedMcsDirection(g1, g2, C, M, false)
         : runValidatedMcsDirection(g2, g1, C, M, true);
+    best = ppx(g1, g2, best, C, M);
     if (!validateMapping(g1, g2, best, C).isEmpty()) best = recoverValidMcsMapping(g1, g2, best, C, M);
 
     int baseUb = M.induced ? degreeSequenceUpperBound(g1, g2, C) : labelFrequencyUpperBound(g1, g2, C);
@@ -1450,10 +1522,11 @@ public final class SearchEngine {
     }
     if (!runAlternate && !weightMode && best.size() + 2 < baseUb && Math.abs(g1.n - g2.n) >= 4) runAlternate = true;
 
-    if (runAlternate) {
+    if (runAlternate && M.induced && M.atomWeights == null && !mcsBudgetExpired()) {
       Map<Integer, Integer> alt = plan.directFirst
           ? runValidatedMcsDirection(g2, g1, C, M, true)
           : runValidatedMcsDirection(g1, g2, C, M, false);
+      alt = ppx(g1, g2, alt, C, M);
       if (!validateMapping(g1, g2, alt, C).isEmpty()) alt = recoverValidMcsMapping(g1, g2, alt, C, M);
       if (preferFinalMapping(g1, alt, best, M)) best = alt;
     }
@@ -1464,7 +1537,7 @@ public final class SearchEngine {
     // which tightens the search space. Any ring-true valid mapping is also
     // valid under ring-false (strictly more permissive).
     // This recursive call is safe: ringC.ringMatchesRingOnly=true prevents re-entry.
-    if (!C.ringMatchesRingOnly && !weightMode && best.size() < baseUb) {
+    if (!C.ringMatchesRingOnly && !weightMode && best.size() < baseUb && !mcsBudgetExpired()) {
       ChemOptions ringC = ChemOptions.copyOf(C);
       ringC.ringMatchesRingOnly = true;
       Map<Integer, Integer> ringBest = findMCS(g1, g2, ringC, M);
@@ -1476,18 +1549,26 @@ public final class SearchEngine {
 
   static Map<Integer, Integer> greedyAtomExtend(
       MolGraph g1, MolGraph g2, Map<Integer, Integer> seed, ChemOptions C, MCSOptions M) {
+    return greedyAtomExtend(g1, g2, seed, C, M, MCS_BUDGET_TL.get());
+  }
+
+  private static Map<Integer, Integer> greedyAtomExtend(
+      MolGraph g1, MolGraph g2, Map<Integer, Integer> seed, ChemOptions C, MCSOptions M, TimeBudget budget) {
     int n1 = g1.n, n2 = g2.n;
     int[] q2t = new int[n1], t2q = new int[n2];
+    long[] mappedBitsQ = new long[g1.words];
     Arrays.fill(q2t, -1);
     Arrays.fill(t2q, -1);
     for (Map.Entry<Integer, Integer> e : seed.entrySet()) {
       q2t[e.getKey()] = e.getValue();
       t2q[e.getValue()] = e.getKey();
+      setBit(mappedBitsQ, e.getKey());
     }
     boolean progress = true;
-    while (progress) {
+    while (progress && (budget == null || !budget.expiredNow())) {
       progress = false;
       for (int qi = 0; qi < n1; qi++) {
+        if (budget != null && budget.expiredNow()) break;
         if (q2t[qi] >= 0) continue;
         boolean onFrontier = false;
         for (int nb : g1.neighbors[qi])
@@ -1496,24 +1577,17 @@ public final class SearchEngine {
 
         int bestTj = -1, bestScore = -1;
         for (int tj = 0; tj < n2; tj++) {
+          if ((tj & 63) == 0 && budget != null && budget.expiredNow()) break;
           if (t2q[tj] >= 0) continue;
           if (!SubstructureEngine.AbstractVFMatcher.atomsCompatFast(g1, qi, g2, tj, C)) continue;
-          boolean consistent = true;
-          for (int qk : g1.neighbors[qi]) {
-            if (q2t[qk] < 0) continue;
-            int tk = q2t[qk];
-            int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tk);
-            if (qOrd != 0 && tOrd != 0) {
-              if (!MolGraph.ChemOps.bondsCompatible(g1, qi, qk, g2, tj, tk, C)) { consistent = false; break; }
-            } else if (M.induced && ((qOrd != 0) != (tOrd != 0))) { consistent = false; break; }
-          }
-          if (!consistent) continue;
+          if (!mappedBondCompatQuery(g1, g2, C, M.induced, qi, tj, q2t, mappedBitsQ, -1)) continue;
           int score = (g2.ring[tj] && g1.ring[qi] ? 50 : 0) + Math.min(g1.degree[qi], g2.degree[tj]);
           if (score > bestScore) { bestScore = score; bestTj = tj; }
         }
         if (bestTj >= 0) {
           q2t[qi] = bestTj;
           t2q[bestTj] = qi;
+          setBit(mappedBitsQ, qi);
           progress = true;
         }
       }
@@ -1565,15 +1639,39 @@ public final class SearchEngine {
     return result;
   }
 
+  static Map<Integer, Integer> greedyAnchorSeed(
+      MolGraph query, MolGraph target, ChemOptions chemistry, MCSOptions options, TimeBudget budget) {
+    Integer[] order = new Integer[query.n];
+    int[] domainSizes = new int[query.n];
+    for (int qi = 0; qi < query.n; qi++) {
+      order[qi] = qi;
+      for (int tj = 0; tj < target.n; tj++)
+        if (SubstructureEngine.AbstractVFMatcher.atomsCompatFast(query, qi, target, tj, chemistry)) domainSizes[qi]++;
+    }
+    Arrays.sort(order, Comparator.comparingInt(qi -> domainSizes[qi]));
+    Map<Integer, Integer> best = Collections.emptyMap();
+    for (int qi : order) {
+      for (int tj = 0; tj < target.n; tj++) {
+        if (budget.expiredNow()) return best;
+        if (!SubstructureEngine.AbstractVFMatcher.atomsCompatFast(query, qi, target, tj, chemistry)) continue;
+        Map<Integer, Integer> candidate = greedyAtomExtend(query, target, Map.of(qi, tj), chemistry, options, budget);
+        candidate = ppx(query, target, candidate, chemistry, options);
+        if (preferFinalMapping(query, candidate, best, options)) best = candidate;
+      }
+    }
+    return best;
+  }
+
   /** Post-process MCS: iteratively apply filters until stable (filters can interact). */
   static Map<Integer, Integer> ppx(
       MolGraph g1, MolGraph g2, Map<Integer, Integer> ext, ChemOptions C, MCSOptions M) {
+    ext = repairInvalidMcsMapping(g1, g2, ext, C);
     boolean changed = true;
     while (changed) {
       int startSize = ext.size();
       if (M.induced) ext = pruneToInduced(g1, g2, ext, C);
       if (C.completeRingsOnly) ext = enforceCompleteRings(g1, g2, ext);
-      if (!M.disconnectedMCS && M.connectedOnly) ext = largestConnected(g1, ext);
+      if (!M.disconnectedMCS && M.connectedOnly) ext = largestConnected(g1, ext, M);
       changed = ext.size() < startSize;
     }
     ext = applyRingAnchorGuard(g1, g2, ext, C);
@@ -1709,6 +1807,8 @@ public final class SearchEngine {
    */
   public static List<Map<Integer, Integer>> findAllMCS(
       MolGraph g1, MolGraph g2, ChemOptions C, MCSOptions M, int maxResults) {
+    if (C == null) C = new ChemOptions();
+    if (M == null) M = new MCSOptions();
     if (maxResults <= 0) maxResults = 10;
 
     // Phase 1: find the optimal MCS size
@@ -1749,9 +1849,7 @@ public final class SearchEngine {
         } else {
           mapping = raw;
         }
-        if (mapping.size() == K) {
-          seen.putIfAbsent(canonKey(g1, g2, mapping), mapping);
-        }
+        rememberMcsMapping(g1, g2, mapping, K, C, M, seen);
       }
       if (seen.size() >= maxResults) return new ArrayList<>(seen.values());
     }
@@ -1772,7 +1870,7 @@ public final class SearchEngine {
 
       // BK clique seed
       if (!tb.expired()) {
-        Map<Integer, Integer> cliqueSeed = GB.maximumCliqueSeed(tb);
+        Map<Integer, Integer> cliqueSeed = ppx(g1, g2, GB.maximumCliqueSeed(tb), C, M);
         if (cliqueSeed.size() >= K) seeds.add(cliqueSeed);
       }
 
@@ -1802,17 +1900,13 @@ public final class SearchEngine {
             mcGregorExtend(g1, g2, seed, C, tb, perSeedMs,
                 M.useTwoHopNLFInExtension, M.useThreeHopNLFInExtension, M.connectedOnly),
             C, M);
-        if (ext.size() == K) {
-          seen.putIfAbsent(canonKey(g1, g2, ext), ext);
-        }
+        rememberMcsMapping(g1, g2, ext, K, C, M, seen);
 
         // Also try greedy atom extension for alternative mappings
         if (!tb.expired() && seen.size() < maxResults) {
           Map<Integer, Integer> gext = ppx(g1, g2,
               greedyAtomExtend(g1, g2, seed, C, M), C, M);
-          if (gext.size() == K) {
-            seen.putIfAbsent(canonKey(g1, g2, gext), gext);
-          }
+          rememberMcsMapping(g1, g2, gext, K, C, M, seen);
         }
       }
 
@@ -1827,15 +1921,21 @@ public final class SearchEngine {
             reduced.remove(entry.getKey());
             Map<Integer, Integer> reext = ppx(g1, g2,
                 greedyAtomExtend(g1, g2, reduced, C, M), C, M);
-            if (reext.size() == K) {
-              seen.putIfAbsent(canonKey(g1, g2, reext), reext);
-            }
+            rememberMcsMapping(g1, g2, reext, K, C, M, seen);
           }
         }
       }
     }
 
     return new ArrayList<>(seen.values());
+  }
+
+  private static void rememberMcsMapping(
+      MolGraph g1, MolGraph g2, Map<Integer, Integer> candidate, int size,
+      ChemOptions C, MCSOptions M, Map<String, Map<Integer, Integer>> seen) {
+    candidate = ppx(g1, g2, candidate, C, M);
+    if (candidate.size() == size && validateMapping(g1, g2, candidate, C).isEmpty())
+      seen.putIfAbsent(canonKey(g1, g2, candidate), candidate);
   }
 
   /**
@@ -2416,16 +2516,15 @@ public final class SearchEngine {
   }
 
   static Map<Integer, Integer> largestConnected(MolGraph g1, Map<Integer, Integer> map) {
+    return largestConnected(g1, map, null);
+  }
+
+  private static Map<Integer, Integer> largestConnected(
+      MolGraph g1, Map<Integer, Integer> map, MCSOptions options) {
     if (map.isEmpty()) return map;
-    Map<Integer, List<Integer>> adj = new HashMap<>();
-    for (int qi : map.keySet()) adj.put(qi, new ArrayList<>());
-    for (int qi : map.keySet())
-      for (int qk : map.keySet()) {
-        if (qi >= qk) continue;
-        if (g1.hasBond(qi, qk)) { adj.get(qi).add(qk); adj.get(qk).add(qi); }
-      }
     Set<Integer> seen = new HashSet<>();
-    List<Set<Integer>> comps = new ArrayList<>();
+    Set<Integer> best = Collections.emptySet();
+    int bestScore = Integer.MIN_VALUE;
     for (int qi : map.keySet()) {
       if (seen.contains(qi)) continue;
       Set<Integer> comp = new LinkedHashSet<>();
@@ -2435,16 +2534,33 @@ public final class SearchEngine {
       while (!dq.isEmpty()) {
         int u = dq.pollFirst();
         comp.add(u);
-        for (int v : adj.getOrDefault(u, Collections.emptyList()))
-          if (!seen.contains(v)) { seen.add(v); dq.addLast(v); }
+        for (int v : g1.neighbors[u])
+          if (map.containsKey(v) && seen.add(v)) dq.addLast(v);
       }
-      comps.add(comp);
+      int score = connectedComponentScore(g1, comp, options);
+      if (score > bestScore || (score == bestScore && comp.size() > best.size())) {
+        best = comp;
+        bestScore = score;
+      }
     }
-    Set<Integer> best = comps.stream().max(Comparator.comparingInt(Set::size)).orElse(Collections.emptySet());
     if (best.size() == map.size()) return map;
     Map<Integer, Integer> pruned = new LinkedHashMap<>();
     for (int qi : best) pruned.put(qi, map.get(qi));
     return pruned;
+  }
+
+  private static int connectedComponentScore(MolGraph graph, Set<Integer> component, MCSOptions options) {
+    if (options == null || (options.atomWeights == null && !options.maximizeBonds)) return component.size();
+    if (options.atomWeights != null) {
+      double weight = 0.0;
+      for (int atom : component) weight += options.atomWeights[atom];
+      return (int) (weight * 1000);
+    }
+    int bonds = 0;
+    for (int atom : component)
+      for (int neighbor : graph.neighbors[atom])
+        if (neighbor > atom && component.contains(neighbor)) bonds++;
+    return bonds;
   }
 
   static Map<Integer, Integer> applyRingAnchorGuard(
@@ -2494,18 +2610,16 @@ public final class SearchEngine {
       MolGraph g1, MolGraph g2, ChemOptions C, boolean induced, int qi, int tj,
       int[] q2t, long[] mappedBitsQ, int skipQ) {
     for (int w = 0; w < g1.words; w++) {
-      long bits = g1.adjLong[qi][w] & mappedBitsQ[w];
+      long bits = induced ? mappedBitsQ[w] : g1.adjLong[qi][w] & mappedBitsQ[w];
       while (bits != 0) {
         int qk = (w << 6) | Long.numberOfTrailingZeros(bits);
         bits &= bits - 1;
         if (qk == skipQ) continue;
         int tk = q2t[qk];
         int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tk);
-        if (qOrd != 0 && tOrd != 0) {
-          if (!MolGraph.ChemOps.bondsCompatible(g1, qi, qk, g2, tj, tk, C)) return false;
-        } else if (induced && ((qOrd != 0) != (tOrd != 0))) {
-          return false;
-        }
+        if (qOrd != 0 && (tOrd == 0
+            || !MolGraph.ChemOps.bondsCompatible(g1, qi, qk, g2, tj, tk, C))) return false;
+        if (induced && ((qOrd != 0) != (tOrd != 0))) return false;
       }
     }
     return true;
@@ -2515,18 +2629,15 @@ public final class SearchEngine {
       MolGraph g1, MolGraph g2, ChemOptions C, boolean induced, int qi, int tj,
       int[] t2q, long[] mappedBitsT, int skipT) {
     for (int w = 0; w < g2.words; w++) {
-      long bits = g2.adjLong[tj][w] & mappedBitsT[w];
+      long bits = mappedBitsT[w];
       while (bits != 0) {
         int tk = (w << 6) | Long.numberOfTrailingZeros(bits);
         bits &= bits - 1;
         if (tk == skipT) continue;
         int qk = t2q[tk];
         int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tk);
-        if (qOrd != 0 && tOrd != 0) {
-          if (!MolGraph.ChemOps.bondsCompatible(g1, qi, qk, g2, tj, tk, C)) return false;
-        } else if (induced && ((qOrd != 0) != (tOrd != 0))) {
-          return false;
-        }
+        if (qOrd != 0 && (tOrd == 0 || !MolGraph.ChemOps.bondsCompatible(g1, qi, qk, g2, tj, tk, C))) return false;
+        if (induced && ((qOrd != 0) != (tOrd != 0))) return false;
       }
     }
     return true;
@@ -2754,10 +2865,12 @@ public final class SearchEngine {
     }
 
     if (bestQi != -1 && bestCandCount > 1) {
+      // Recursive calls reuse bestCandBuf; preserve this frame's candidates.
       int branchLimit = depth < 5 ? bestCandCount : Math.min(bestCandCount, 16);
+      int[] branchCandidates = Arrays.copyOf(bestCandBuf, branchLimit);
       for (int i = 0; i < branchLimit; i++) {
         if (System.nanoTime() >= localDeadline || tb.expired()) break;
-        int bestTj = bestCandBuf[i];
+        int bestTj = branchCandidates[i];
         curMap[bestQi] = bestTj; curSize[0]++; usedQ[bestQi] = true; usedT[bestTj] = true;
         setBit(mappedBitsQ, bestQi); setBit(mappedBitsT, bestTj);
         qLabelFreq[jointQ[bestQi]]--; tLabelFreq[jointT[bestTj]]--;
@@ -2899,10 +3012,12 @@ public final class SearchEngine {
     }
 
     if (bestQk != -1 && bestCandCount > 1) {
+      // Recursive calls reuse bestCandBuf; preserve this frame's candidates.
       int branchLimit = depth < 5 ? bestCandCount : Math.min(bestCandCount, 16);
+      int[] branchCandidates = Arrays.copyOf(bestCandBuf, branchLimit);
       for (int i = 0; i < branchLimit; i++) {
         if (System.nanoTime() >= localDeadline || tb.expired()) break;
-        int btj = bestCandBuf[i];
+        int btj = branchCandidates[i];
         curMap[bestQk] = btj; curSize[0]++; usedQ[bestQk] = true; usedT[btj] = true; q2tMap[bestQk] = btj;
         setBit(mappedBitsQ, bestQk); setBit(mappedBitsT, btj);
         qLabelFreq[jointQ[bestQk]]--; tLabelFreq[jointT[btj]]--;
@@ -2951,7 +3066,6 @@ public final class SearchEngine {
       for (int i = 0; i < n1; i++)
         for (int j = 0; j < n2; j++) {
           if (!SubstructureEngine.AbstractVFMatcher.atomsCompatFast(g1, i, g2, j, C)) continue;
-          if (!induced && g1.degree[i] > g2.degree[j]) continue;
           nodes.add(new Node(i, j));
         }
       int N = nodes.size();
@@ -2971,7 +3085,7 @@ public final class SearchEngine {
           boolean ok;
           if (qOrd != 0 && tOrd != 0) ok = MolGraph.ChemOps.bondsCompatible(g1, nu.qi(), nv.qi(), g2, nu.tj(), nv.tj(), C);
           else if (induced) ok = (qOrd == 0 && tOrd == 0);
-          else continue;
+          else ok = qOrd == 0;
           if (ok) {
             adj[u][v >>> 6] |= 1L << (v & 63);
             adj[v][u >>> 6] |= 1L << (u & 63);
@@ -3061,25 +3175,23 @@ public final class SearchEngine {
     }
 
     private int[] computeEquivClasses(List<Node> nodes, long[][] adj, int N, int words) {
+      // Only identical open neighborhoods are interchangeable in every clique
+      // context. Coarse atom orbits and degrees do not prove this equivalence.
       int[] cls = new int[N];
-      Map<Long, Integer> sig2class = new HashMap<>();
-      int nextClass = 0;
+      Map<BitSet, Integer> classes = new HashMap<>();
       for (int i = 0; i < N; i++) {
-        Node nd = nodes.get(i);
-        int deg = 0;
-        for (int w = 0; w < words; w++) deg += Long.bitCount(adj[i][w]);
-        // Include Morgan rank to distinguish atoms at different chain positions
-        // (orbit alone fails for symmetric groups like phosphate oxygens)
-        long sig = ((long) g1.orbit[nd.qi()] << 48) | ((long) g2.orbit[nd.tj()] << 32)
-            | ((long) g1.morganRank[nd.qi()] << 20) | ((long) g1.degree[nd.qi()] << 10) | deg;
-        Integer c = sig2class.get(sig);
-        if (c == null) { c = nextClass++; sig2class.put(sig, c); }
-        cls[i] = c;
+        BitSet neighborhood = BitSet.valueOf(adj[i]);
+        Integer equivalent = classes.get(neighborhood);
+        if (equivalent == null) {
+          equivalent = classes.size();
+          classes.put(neighborhood, equivalent);
+        }
+        cls[i] = equivalent;
       }
       return cls;
     }
 
-    private int colorBound(long[] P, long[][] adj, int words) {
+    private int colorBound(long[] P, long[][] adj, int words, TimeBudget tb) {
       int[] color = new int[adj.length];
       Arrays.fill(color, -1);
       int maxColor = 0;
@@ -3092,6 +3204,7 @@ public final class SearchEngine {
         while (bits != 0) {
           int bit = Long.numberOfTrailingZeros(bits);
           int v = (w << 6) | bit;
+          if (tb.expiredNow()) return Integer.MAX_VALUE;
           Arrays.fill(usedColors, 0, ucWords, 0L);
           for (int nw = 0; nw < words; nw++) {
             long nbits = adj[v][nw] & P[nw];
@@ -3122,7 +3235,7 @@ public final class SearchEngine {
         long[] R, long[] P, long[] X, long[][] adj, int[] currentBest, int N, int words,
         int[] equivClass, TimeBudget tb, long[][] rStack, long[][] pStack, long[][] xStack,
         int depth, List<Node> nodes) {
-      if (tb.expired()) return currentBest;
+      if (tb.expiredNow()) return currentBest;
       int rSize = 0, pSize = 0, xSize = 0;
       for (int w = 0; w < words; w++) {
         rSize += Long.bitCount(R[w]); pSize += Long.bitCount(P[w]); xSize += Long.bitCount(X[w]);
@@ -3145,11 +3258,16 @@ public final class SearchEngine {
         if (rSize + Math.min(qiSeen.cardinality(), tjSeen.cardinality()) <= currentBest.length) return currentBest;
       }
 
-      if (pSize > 0 && rSize + colorBound(P, adj, words) <= currentBest.length) return currentBest;
+      if (pSize > 0) {
+        int colors = colorBound(P, adj, words, tb);
+        if (tb.expiredNow()) return currentBest;
+        if (rSize + colors <= currentBest.length) return currentBest;
+      }
 
       // Choose pivot maximizing |P intersect N(u)|
       int pivot = -1, pivotConn = -1;
       for (int w = 0; w < words; w++) {
+        if (tb.expiredNow()) return currentBest;
         long bits = P[w] | X[w];
         while (bits != 0) {
           int bit = Long.numberOfTrailingZeros(bits);
@@ -3169,7 +3287,7 @@ public final class SearchEngine {
       for (int w = 0; w < words; w++) {
         long bits = candidates[w];
         while (bits != 0) {
-          if (tb.expired()) return currentBest;
+          if (tb.expiredNow()) return currentBest;
           int bit = Long.numberOfTrailingZeros(bits);
           int v = (w << 6) | bit;
           bits &= bits - 1;
@@ -3356,7 +3474,7 @@ public final class SearchEngine {
       long[] nodeCount = {0};
 
       mcSplitRecurse(g1, g2, C, induced, tb, qSets, tSets, numClasses, q2t, t2q, 0, initUB,
-          bestQ2T, bestSize, nodeCount, n1, n2, 0, Math.min(n1, n2) + 1, mappedBitsQ, mappedBitsT);
+          bestQ2T, bestSize, nodeCount, n1, n2, 0, n1 + n2, mappedBitsQ, mappedBitsT);
 
       if (nodeCountOut != null) nodeCountOut[0] = nodeCount[0];
       Map<Integer, Integer> seed = new LinkedHashMap<>();
@@ -3406,15 +3524,11 @@ public final class SearchEngine {
         }
 
         Set<Integer> triedOrbits = new HashSet<>();
-        // Check if qi has any already-mapped neighbor — if so, orbit pruning is unsafe
-        // because the connectivity context differentiates "equivalent" atoms
-        boolean qiHasMappedNeighbor = hasMappedNeighbor(g1, qi, mappedBitsQ);
+        // Global orbits are safe only before any atom pair fixes the context.
         for (int tj = tSets[bestClass].nextSetBit(0); tj >= 0; tj = tSets[bestClass].nextSetBit(tj + 1)) {
           nodeCount[0]++;
           if (nodeCount[0] > MAX_NODE_LIMIT || ((nodeCount[0] & 15) == 0 && tb.expiredNow())) return;
-          // Only use orbit pruning when there is no connectivity constraint;
-          // with mapped neighbors the position in the molecule matters
-          if (!qiHasMappedNeighbor && !triedOrbits.add(g2.orbit[tj])) continue;
+          if (curSize == 0 && !triedOrbits.add(g2.orbit[tj])) continue;
 
           // Guard: class membership may group atoms that differ on properties checked
           // by atomsCompatFast (e.g. ringCount under STRICT ring-fusion mode).
@@ -3442,12 +3556,10 @@ public final class SearchEngine {
         }
 
         Set<Integer> triedOrbits = new HashSet<>();
-        // Check if tj has any already-mapped neighbor
-        boolean tjHasMappedNeighbor = hasMappedNeighbor(g2, tj, mappedBitsT);
         for (int qi = qSets[bestClass].nextSetBit(0); qi >= 0; qi = qSets[bestClass].nextSetBit(qi + 1)) {
           nodeCount[0]++;
           if (nodeCount[0] > MAX_NODE_LIMIT || ((nodeCount[0] & 15) == 0 && tb.expiredNow())) return;
-          if (!tjHasMappedNeighbor && !triedOrbits.add(g1.orbit[qi])) continue;
+          if (curSize == 0 && !triedOrbits.add(g1.orbit[qi])) continue;
 
           // Guard: verify atom-level compatibility (ringCount etc.) before pairing.
           if (!SubstructureEngine.AbstractVFMatcher.atomsCompatFast(g1, qi, g2, tj, C)) continue;
@@ -3486,7 +3598,10 @@ public final class SearchEngine {
         BitSet qAdj = new BitSet(n1); qAdj.or(qc); qAdj.and(qiAdj); qAdj.clear(qi);
         BitSet qNon = new BitSet(n1); qNon.or(qc); qNon.andNot(qiAdj); qNon.clear(qi);
         BitSet tAdj = new BitSet(n2); tAdj.or(tc); tAdj.and(tjAdj); tAdj.clear(tj);
-        BitSet tNon = new BitSet(n2); tNon.or(tc); tNon.andNot(tjAdj); tNon.clear(tj);
+        BitSet tNon = new BitSet(n2); tNon.or(tc);
+        // A query non-edge may map to either a target edge or a non-edge.
+        if (induced) tNon.andNot(tjAdj);
+        tNon.clear(tj);
         int qAdjC = qAdj.cardinality(), tAdjC = tAdj.cardinality();
         if (qAdjC > 0 && tAdjC > 0) {
           newQ[newNum] = qAdj; newT[newNum] = tAdj; newUB += Math.min(qAdjC, tAdjC); newNum++;
@@ -3859,49 +3974,14 @@ public final class SearchEngine {
   }
 
   /**
-   * Degree Sequence Upper Bound (DSB) on MCS size.
+   * Admissible MCS size bound, retained under the historical DSB name.
    *
-   * <p>For each atom label present in both graphs, collects the degree sequences,
-   * sorts them descending, and greedily counts matchable pairs: an atom of degree d
-   * in the shorter list can only match an atom of degree >= d in the longer list.
-   * This is provably at least as tight as the label-frequency upper bound.
-   *
-   * <p>Runs in O(n log n) time.
+   * <p>Deleting unmapped vertices can reduce any matched atom's degree. A
+   * comparison of full-graph degrees therefore underestimates some partial
+   * induced matches. Use the chemical label-frequency bound instead.
    */
   static int degreeSequenceUpperBound(MolGraph g1, MolGraph g2, ChemOptions C) {
-    if (g1.n == 0 || g2.n == 0) return 0;
-
-    // Group atom degrees by label for each graph
-    Map<Integer, List<Integer>> degs1 = new HashMap<>(), degs2 = new HashMap<>();
-    for (int i = 0; i < g1.n; i++)
-      degs1.computeIfAbsent(ubLabel(g1, i, C), k -> new ArrayList<>()).add(g1.neighbors[i].length);
-    for (int j = 0; j < g2.n; j++)
-      degs2.computeIfAbsent(ubLabel(g2, j, C), k -> new ArrayList<>()).add(g2.neighbors[j].length);
-
-    int ub = 0;
-    for (Map.Entry<Integer, List<Integer>> e : degs1.entrySet()) {
-      List<Integer> d2 = degs2.get(e.getKey());
-      if (d2 == null) continue;
-      List<Integer> d1 = e.getValue();
-      // Sort both in descending order
-      d1.sort(Collections.reverseOrder());
-      d2.sort(Collections.reverseOrder());
-      // Ensure d1 is the shorter list (we iterate over it)
-      List<Integer> shorter = d1, longer = d2;
-      if (d1.size() > d2.size()) { shorter = d2; longer = d1; }
-      // Greedy two-pointer: for each atom in shorter (desc), find next atom in longer with degree >= it
-      int j = 0;
-      for (int i = 0; i < shorter.size() && j < longer.size(); i++) {
-        // longer is sorted desc, so longer[j] is the largest remaining degree
-        if (longer.get(j) >= shorter.get(i)) {
-          ub++;
-          j++;
-        }
-        // If longer[j] < shorter[i], this atom in shorter cannot match any remaining
-        // atom in longer (all subsequent are <= longer[j]), so skip it
-      }
-    }
-    return Math.min(ub, Math.min(g1.n, g2.n));
+    return labelFrequencyUpperBound(g1, g2, C);
   }
 
   private static int graphOrbitRedundancy(MolGraph g) {
@@ -4141,13 +4221,9 @@ public final class SearchEngine {
    */
   public static double similarityUpperBound(MolGraph g1, MolGraph g2, ChemOptions C) {
     if (g1.n == 0 || g2.n == 0) return 0.0;
-    Map<Integer, Integer> freq1 = new HashMap<>(), freq2 = new HashMap<>();
-    for (int i = 0; i < g1.n; i++) freq1.merge(g1.label[i], 1, Integer::sum);
-    for (int j = 0; j < g2.n; j++) freq2.merge(g2.label[j], 1, Integer::sum);
-    int maxCommonAtoms = 0;
-    for (Map.Entry<Integer, Integer> e : freq1.entrySet())
-      maxCommonAtoms += Math.min(e.getValue(), freq2.getOrDefault(e.getKey(), 0));
-    int ubAtoms = Math.min(Math.min(g1.n, g2.n), maxCommonAtoms);
+    if (C == null) C = new ChemOptions();
+    if (C.ringFusionMode == ChemOptions.RingFusionMode.STRICT) { g1.ensureRingCounts(); g2.ensureRingCounts(); }
+    int ubAtoms = C.tautomerAware ? Math.min(g1.n, g2.n) : labelFrequencyUpperBound(g1, g2, C);
     return ubAtoms == 0 ? 0.0 : (double) ubAtoms / (g1.n + g2.n - ubAtoms);
   }
 
