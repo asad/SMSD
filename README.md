@@ -22,13 +22,12 @@ SMSD Pro provides exact substructure search and maximum common substructure
 (header-only), and **Python**. Optional GPU paths are available for CUDA and
 Apple Metal builds.
 
-Version `7.1.1` is a **bug-fix patch** on top of 7.1.0.  It delivers
-cross-language ECFP/FCFP fingerprint parity between Java, C++, and
-Python, fixes a canonical SMILES writer corner case, restores the
-correct semantics of `MatchResult.overlapCoefficient`, and fixes a
-Kekulization edge case so the canonical SMILES output round-trips
-cleanly in downstream readers for pyrrole-type aromatic nitrogen.
-**No new features and no public API breakage for existing callers.**
+Version `7.1.2` updates the Java chemistry layer to **CDK 2.13** and fixes
+search correctness in Java and C++. Matching options now remain isolated in
+the Java domain cache, permissive searches use compatible pruning, and
+C++ maximum-clique searches continue until larger solutions are ruled out
+or the time budget expires. C++ neighborhood construction and clique pivot
+selection also perform less work. Release packaging is built and tested locally.
 Builds on the `7.1.0` unified Python API (`find_mcs`, `find_substructure`).
 
 ### Dalke Nearest-Neighbor MCS Benchmark (1,000 pairs)
@@ -85,16 +84,16 @@ isotopes, atom classes/maps, `R#` plus `M  RGP`, and basic stereo flags.
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>7.1.1</version>
+  <version>7.1.2</version>
 </dependency>
 ```
 
 ### Java (Download JAR)
 
 ```bash
-curl -LO https://github.com/asad/SMSD/releases/download/v7.1.1/smsd-7.1.1-jar-with-dependencies.jar
+curl -LO https://github.com/asad/SMSD/releases/download/v7.1.2/smsd-7.1.2-jar-with-dependencies.jar
 
-java -jar smsd-7.1.1-jar-with-dependencies.jar \
+java -jar smsd-7.1.2-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 ```
 
@@ -331,7 +330,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j$(nproc)
 
 # Python
-cd python && pip install -e .
+pip install -e .  # from the repository root
 ```
 
 ### Docker
@@ -551,48 +550,50 @@ Call `SearchEngine.clearMolGraphCache()` (Java) or reuse `MolGraph` instances (C
 
 ## Release Downloads
 
-Every release includes all platforms:
+The 7.1.2 release is prepared from local builds. Java JARs and C++ headers
+are portable; the Python wheel targets CPython 3.13 on macOS 26+ arm64, with a source
+distribution for other systems. Native installers and additional wheels can
+be built separately. Hosted release workflows require manual dispatch.
 
 | Download | Description |
 |----------|-------------|
-| `SMSD.Pro-7.1.1.dmg` | macOS installer (Apple Silicon) — drag to Applications |
-| `SMSD.Pro-7.1.1.msi` | Windows installer — next, next, finish |
-| `smsd-pro_7.1.1_amd64.deb` | Linux installer — `sudo dpkg -i` |
-| `smsd-7.1.1.jar` | Pure library JAR (Maven/Gradle dependency) |
-| `smsd-7.1.1-jar-with-dependencies.jar` | Standalone CLI (just `java -jar`) |
-| `smsd-cpp-7.1.1-headers.tar.gz` | C++ header-only library (unpack, `#include "smsd/smsd.hpp"`) |
-| [`pip install smsd`](https://pypi.org/project/smsd/) | Python package (PyPI — Linux, macOS, Windows wheels) |
+| `smsd-7.1.2.jar` | Java library JAR |
+| `smsd-7.1.2-jar-with-dependencies.jar` | Standalone CLI (Java 25+) |
+| `smsd-7.1.2-sources.jar`, `smsd-7.1.2-javadoc.jar` | Java sources and API documentation |
+| `smsd-7.1.2-cli.tar.gz` | Java launcher distribution (bin/ and repo/) |
+| `smsd-cpp-7.1.2-headers.tar.gz` | C++17 header-only library, with LICENSE and NOTICE |
+| `smsd-7.1.2.tar.gz`, `smsd-7.1.2-*.whl` | Python source distribution and locally built wheel |
+| `SHA256SUMS` | Checksums for the release assets |
 
 ```bash
-# Native installer — download .dmg / .msi / .deb, double-click, done
-
 # CLI
-java -jar smsd-7.1.1-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
+java -jar smsd-7.1.2-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 
 # Docker CLI
 docker build -t smsd .
 docker run --rm smsd --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 
-# Python
-pip install smsd
+# Python — build from the downloaded source distribution
+pip install ./smsd-7.1.2.tar.gz
 ```
 
 ---
 
 ## Tests
 
-**1,518 tests passed** across all platforms:
+The 7.1.2 local preflight passed on macOS arm64:
 
-| Suite | Tests | Coverage |
-|-------|------:|----------|
-| Java | 581 (+ 25 parity) | MCS, substructure, reactions, tautomers, stereochemistry, ring perception, hydrogen handling, cross-language ECFP/FCFP/canonical-SMILES parity |
-| C++ core | 114 | MCS, substructure, precision chemistry, kekulisation, implicit H |
-| C++ parser | 542 | SMILES, SMARTS, 1,003 diverse molecules, edge cases |
-| C++ layout | 42 | 2D/3D generation, transforms, overlap resolution, templates |
-| C++ CIP | 42 | R/S, E/Z, pseudoasymmetric, sequence rules |
-| Python | 172 (+ 25 parity) | Full API coverage, hydrogen handling, charged species, golden-vector parity |
+| Suite | Result | Coverage |
+|-------|--------|----------|
+| Java | 1,192 passed; 15 opt-in benchmark cases skipped | Search, chemistry, regression and cross-language parity tests |
+| C++ CPU | All six suites passed with assertions enabled | Core search, SMILES/SMARTS parsing, layout, CIP, batch operations and general matching |
+| Python | 603 passed; 6 optional cases skipped | Installed wheel built from the source distribution, API and parity tests |
+| Metal/OpenMP | Batch suite passed on Apple M5 | Native GPU availability and batch operations |
 
-AddressSanitizer: zero memory errors.
+Focused AddressSanitizer and UndefinedBehaviorSanitizer checks passed. CUDA,
+native Windows execution and other wheel platforms were not validated.
+See [local validation](docs/VALIDATION_7.1.2.md) for reproduction commands,
+exhaustive oracle checks and measured C++ primitive improvements.
 
 ---
 

@@ -109,6 +109,10 @@ This software uses the Chemistry Development Kit (CDK) licensed
 under LGPL 2.1. CDK is Copyright (c) The CDK Project.
 See https://cdk.github.io/ for details.
 
+Python wheels built with OpenMP may bundle the LLVM OpenMP runtime,
+licensed under Apache License 2.0 with LLVM Exceptions. Its license
+is provided in licenses/libomp/LICENSE.TXT and in wheel license metadata.
+
 AVAILABLE PLATFORMS
 ===================
   Java:   com.bioinceptionlabs:smsd on Maven Central

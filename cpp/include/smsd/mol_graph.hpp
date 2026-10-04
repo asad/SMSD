@@ -11,6 +11,7 @@
 #define SMSD_MOL_GRAPH_HPP
 
 #include "smsd/bitops.hpp"
+#include "smsd/general_matching.hpp"
 
 #include <algorithm>
 #include <array>
@@ -240,8 +241,8 @@ struct MolGraph {
 
     // --- Pattern fingerprint for O(1) substructure pre-screening (v6.8.0) ---
     // 256-bit structural bitset encoding local atom-pair and path features.
-    // Computed lazily; if (query_fp & target_fp) != query_fp, the target is
-    // guaranteed to be missing a required feature → abort before VF2++.
+    // Computed lazily. Substructure screening selects policy-compatible words;
+    // the exact degree/ring word is not monotone under query embeddings.
     static constexpr int FP_WORDS = 4;  // 4 × 64 = 256 bits
     mutable uint64_t patternFP_[FP_WORDS] = {};
     mutable bool     patternFPComputed_ = false;
@@ -919,6 +920,7 @@ struct MolGraph {
         }
 
         if (!demandAtoms.empty()) {
+            if (demandAtoms.size() % 2 != 0) return false;
             std::vector<std::vector<int>> demandAdj(demandAtoms.size());
             for (const auto& edge : aromaticEdges) {
                 auto ita = localIndex.find(edge.first);
@@ -929,6 +931,7 @@ struct MolGraph {
             }
 
             std::vector<int> color(demandAtoms.size(), -1);
+            bool bipartite = true;
             std::deque<int> queue;
             for (int start = 0; start < static_cast<int>(demandAtoms.size()); ++start) {
                 if (color[start] != -1) continue;
@@ -942,10 +945,26 @@ struct MolGraph {
                             color[v] = color[u] ^ 1;
                             queue.push_back(v);
                         } else if (color[v] == color[u]) {
-                            return false;
+                            bipartite = false;
                         }
                     }
                 }
+            }
+
+            // Non-alternant aromatic systems such as azulene contain odd
+            // cycles. They can still have a perfect matching of double-bond
+            // demands; use blossom matching rather than rejecting the system.
+            if (!bipartite) {
+                const auto mate = detail::maximumMatching(demandAdj);
+                if (std::any_of(mate.begin(), mate.end(), [](int v) { return v < 0; }))
+                    return false;
+                for (const auto& edge : aromaticEdges)
+                    markKekuleEdge(edge.first, edge.second, 1);
+                for (int atom : component) aromatic[atom] = 0;
+                for (int i = 0; i < static_cast<int>(mate.size()); ++i) {
+                    if (i < mate[i]) markKekuleEdge(demandAtoms[i], demandAtoms[mate[i]], 2);
+                }
+                return true;
             }
 
             std::vector<int> leftNodes, rightNodes;
@@ -2326,9 +2345,14 @@ public:
                 nbSorted.resize(deg);
                 for (int k = 0; k < deg; k++) nbSorted[k] = rank[nbs[k]];
                 std::sort(nbSorted.begin(), nbSorted.end());
-                int h = rank[v] * HASH_PRIME;
-                for (int k = 0; k < deg; k++) h = h * 31 + nbSorted[k];
-                rankNew[v] = h;
+                // Hash modulo 2^32 explicitly; preserve the signed rank ordering
+                // without relying on undefined signed-overflow behavior.
+                uint32_t h = static_cast<uint32_t>(rank[v]) * static_cast<uint32_t>(HASH_PRIME);
+                for (int k = 0; k < deg; k++)
+                    h = h * 31u + static_cast<uint32_t>(nbSorted[k]);
+                int32_t signedHash;
+                std::memcpy(&signedHash, &h, sizeof(h));
+                rankNew[v] = signedHash;
             }
             rank = rankNew;
 
@@ -2369,34 +2393,34 @@ public:
      * in spiro compounds or fused ring systems, Morgan may converge prematurely
      * but 2-hop signatures can still distinguish structurally distinct positions.
      */
-    static int64_t twoHopSignature(
+    static uint64_t twoHopSignature(
             int v, const std::vector<int>& label,
             const std::vector<int>& degree,
             const std::vector<std::vector<int>>& neighbors) {
         // 1-hop: sorted (label, degree) of direct neighbors
-        std::vector<int64_t> sig1;
+        std::vector<uint64_t> sig1;
         sig1.reserve(neighbors[v].size());
         for (int u : neighbors[v]) {
-            sig1.push_back(static_cast<int64_t>(label[u]) * 1000003LL + degree[u]);
+            sig1.push_back(static_cast<uint64_t>(label[u]) * 1000003LL + degree[u]);
         }
         std::sort(sig1.begin(), sig1.end());
 
         // 2-hop: for each direct neighbor, the sorted (label, degree) of THEIR neighbors
-        std::vector<int64_t> sig2;
+        std::vector<uint64_t> sig2;
         for (int u : neighbors[v]) {
             for (int w : neighbors[u]) {
                 if (w == v) continue;  // skip back-link to v itself
-                sig2.push_back(static_cast<int64_t>(label[w]) * 1000003LL + degree[w]);
+                sig2.push_back(static_cast<uint64_t>(label[w]) * 1000003LL + degree[w]);
             }
         }
         std::sort(sig2.begin(), sig2.end());
 
-        // Combine into a single hash
-        int64_t h = static_cast<int64_t>(label[v]) * HASH_PRIME + degree[v];
-        h = h * HASH_PRIME + static_cast<int64_t>(sig1.size());
-        for (int64_t x : sig1) h = h * 31 + x;
-        h = h * HASH_PRIME + static_cast<int64_t>(sig2.size());
-        for (int64_t x : sig2) h = h * 31 + x;
+        // Combine modulo 2^64; orbit refinement only compares signatures.
+        uint64_t h = static_cast<uint64_t>(label[v]) * HASH_PRIME + degree[v];
+        h = h * HASH_PRIME + static_cast<uint64_t>(sig1.size());
+        for (uint64_t x : sig1) h = h * 31 + x;
+        h = h * HASH_PRIME + static_cast<uint64_t>(sig2.size());
+        for (uint64_t x : sig2) h = h * 31 + x;
         return h;
     }
 
@@ -2424,9 +2448,9 @@ public:
                 continue;
             }
             // Compute 2-hop signature for each member
-            std::unordered_map<int64_t, int> sigToRep;
+            std::unordered_map<uint64_t, int> sigToRep;
             for (int v : members) {
-                int64_t sig = twoHopSignature(v, label, degree, neighbors);
+                uint64_t sig = twoHopSignature(v, label, degree, neighbors);
                 auto it = sigToRep.find(sig);
                 if (it == sigToRep.end()) {
                     sigToRep[sig] = v;
@@ -2511,9 +2535,12 @@ public:
                         // Use robust 2-hop signature for topological tie-breaking
                         // instead of raw node index — ensures deterministic canonical
                         // hashes regardless of input atom ordering.  (v6.8.0)
-                        int64_t sigA = twoHopSignature(va, label, degree, neighbors);
-                        int64_t sigB = twoHopSignature(vb, label, degree, neighbors);
-                        if (sigA != sigB) return sigA < sigB;
+                        uint64_t sigA = twoHopSignature(va, label, degree, neighbors);
+                        uint64_t sigB = twoHopSignature(vb, label, degree, neighbors);
+                        // Preserve the historical signed signature order while
+                        // computing its hash with defined unsigned arithmetic.
+                        if (sigA != sigB)
+                            return (sigA ^ (uint64_t(1) << 63)) < (sigB ^ (uint64_t(1) << 63));
                         return va < vb;
                     });
 
@@ -2608,9 +2635,13 @@ public:
                 scratch.resize(d);
                 for (int k = 0; k < d; k++) scratch[k] = mRank[nbs[k]];
                 std::sort(scratch.begin(), scratch.end());
-                int h = mRank[v] * HASH_PRIME;
-                for (int k = 0; k < d; k++) h = h * 31 + scratch[k];
-                mNew[v] = h;
+                // Keep wrapping arithmetic defined, as in computeMorganRanks.
+                uint32_t h = static_cast<uint32_t>(mRank[v]) * static_cast<uint32_t>(HASH_PRIME);
+                for (int k = 0; k < d; k++)
+                    h = h * 31u + static_cast<uint32_t>(scratch[k]);
+                int32_t signedHash;
+                std::memcpy(&signedHash, &h, sizeof(h));
+                mNew[v] = signedHash;
             }
             mRank = mNew;
             std::unordered_set<int> ns(mRank.begin(), mRank.end());
@@ -3058,41 +3089,35 @@ public:
         return freqMapToSortedArray(freq);
     }
 
-    static std::vector<int> buildNLF2(const MolGraph& g, int idx) {
+    // Count distinct atoms within the radius, excluding the root. Exact
+    // distance shells are unsafe for substructure pruning: additional target
+    // bonds can shorten distances without invalidating a query embedding.
+    static std::vector<int> buildRadiusNLF(const MolGraph& g, int idx, int radius) {
         std::unordered_map<int,int> freq;
-        std::vector<bool> direct(g.n, false);
-        for (int nb : g.neighbors[idx]) direct[nb] = true;
-        std::vector<bool> seen(g.n, false);
-        for (int nb : g.neighbors[idx]) {
-            for (int j : g.neighbors[nb]) {
-                if (j == idx || direct[j] || seen[j]) continue;
-                seen[j] = true;
-                freq[nlfLabel(g, j)]++;
+        std::vector<uint8_t> seen(g.n, 0);
+        std::vector<int> queue{idx};
+        seen[idx] = 1;
+        size_t begin = 0;
+        for (int depth = 0; depth < radius && begin < queue.size(); ++depth) {
+            const size_t end = queue.size();
+            for (; begin < end; ++begin) {
+                for (int nb : g.neighbors[queue[begin]]) {
+                    if (seen[nb]) continue;
+                    seen[nb] = 1;
+                    queue.push_back(nb);
+                    ++freq[nlfLabel(g, nb)];
+                }
             }
         }
         return freqMapToSortedArray(freq);
     }
 
-    static std::vector<int> buildNLF3(const MolGraph& g, int idx) {
-        std::unordered_map<int,int> freq;
-        std::vector<bool> level1(g.n, false);
-        for (int nb : g.neighbors[idx]) level1[nb] = true;
+    static std::vector<int> buildNLF2(const MolGraph& g, int idx) {
+        return buildRadiusNLF(g, idx, 2);
+    }
 
-        std::vector<bool> level2(g.n, false);
-        for (int i = 0; i < g.n; i++) {
-            if (!level1[i]) continue;
-            for (int j : g.neighbors[i])
-                if (j != idx && !level1[j]) level2[j] = true;
-        }
-        std::vector<bool> level3(g.n, false);
-        for (int i = 0; i < g.n; i++) {
-            if (!level2[i]) continue;
-            for (int j : g.neighbors[i])
-                if (j != idx && !level1[j] && !level2[j]) level3[j] = true;
-        }
-        for (int j = 0; j < g.n; j++)
-            if (level3[j]) freq[nlfLabel(g, j)]++;
-        return freqMapToSortedArray(freq);
+    static std::vector<int> buildNLF3(const MolGraph& g, int idx) {
+        return buildRadiusNLF(g, idx, 3);
     }
 
     using NLFBuilder = std::vector<int>(*)(const MolGraph&, int);

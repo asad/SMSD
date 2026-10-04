@@ -13,7 +13,6 @@ ARCH="$(uname -m)"
 
 METAL_FLAG="OFF"
 CUDA_FLAG="OFF"
-CTEST_EXCLUDE=""
 JOBS="$(sysctl -n hw.logicalcpu 2>/dev/null || nproc 2>/dev/null || echo 8)"
 
 # Default to CPU-safe runtime
@@ -25,7 +24,6 @@ case "$MODE" in
   cpu)
     METAL_FLAG="OFF"
     CUDA_FLAG="OFF"
-    CTEST_EXCLUDE="-E smsd_batch_gpu_tests"
     ;;
 
   gpu)
@@ -87,11 +85,7 @@ cmake -S "$CPP_DIR" -B "$BUILD_DIR" \
 
 cmake --build "$BUILD_DIR" --config Release -j "$JOBS"
 
-if [[ -n "$CTEST_EXCLUDE" ]]; then
-  ctest --test-dir "$BUILD_DIR" --output-on-failure -V $CTEST_EXCLUDE
-else
-  ctest --test-dir "$BUILD_DIR" --output-on-failure -V
-fi
+ctest --test-dir "$BUILD_DIR" --output-on-failure -V
 
 cd "$ROOT"
 mvn clean test

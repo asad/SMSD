@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.18)
-project(smsd VERSION 7.1.0 LANGUAGES CXX)
+project(smsd VERSION 7.1.2 LANGUAGES CXX)
+
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -16,11 +19,13 @@ set(SMSD_BUILD_METAL "AUTO" CACHE STRING "Metal/MPS batch screening (macOS): ON 
 
 # ---- Header-only library (no RDKit dependency) ----
 add_library(smsd INTERFACE)
+target_compile_features(smsd INTERFACE cxx_std_17)
 target_include_directories(smsd INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>)
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 # ---- Optional: OpenMP for batch processing ----
+set(SMSD_PACKAGE_REQUIRES_OPENMP FALSE)
 if(SMSD_BUILD_OPENMP)
     find_package(OpenMP)
     if(OpenMP_CXX_FOUND)
@@ -28,6 +33,7 @@ if(SMSD_BUILD_OPENMP)
         # Propagate OpenMP flags via the INTERFACE library so that any target
         # linking smsd automatically picks up OpenMP support for batch.hpp.
         target_link_libraries(smsd INTERFACE OpenMP::OpenMP_CXX)
+        set(SMSD_PACKAGE_REQUIRES_OPENMP TRUE)
     else()
         message(STATUS "SMSD: OpenMP not found -- batch.hpp will use sequential fallback")
     endif()
@@ -193,9 +199,39 @@ if(SMSD_BUILD_TESTS)
     add_executable(smsd_layout_tests tests/test_layout.cpp)
     target_link_libraries(smsd_layout_tests PRIVATE smsd)
     add_test(NAME smsd_layout_tests COMMAND smsd_layout_tests)
+
+    add_executable(smsd_general_matching_tests tests/test_general_matching.cpp)
+    target_link_libraries(smsd_general_matching_tests PRIVATE smsd)
+    add_test(NAME smsd_general_matching_tests COMMAND smsd_general_matching_tests)
+
+    # Assertions are part of the test harness, including in Release builds.
+    foreach(test_target IN ITEMS smsd_core_tests smsd_parser_tests
+            smsd_batch_gpu_tests smsd_cip_tests smsd_layout_tests smsd_general_matching_tests)
+        target_compile_options(${test_target} PRIVATE
+            $<$<CXX_COMPILER_ID:MSVC>:/UNDEBUG>
+            $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-UNDEBUG>)
+    endforeach()
 endif()
 
 # ---- Install ----
-install(DIRECTORY include/smsd DESTINATION include)
+set(SMSD_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/smsd")
+configure_package_config_file(
+    cmake/smsdConfig.cmake.in
+    "${CMAKE_CURRENT_BINARY_DIR}/smsdConfig.cmake"
+    INSTALL_DESTINATION "${SMSD_INSTALL_CMAKEDIR}")
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/smsdConfigVersion.cmake"
+    VERSION "${PROJECT_VERSION}"
+    COMPATIBILITY SameMajorVersion
+    ARCH_INDEPENDENT)
+
+install(DIRECTORY include/smsd DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 install(TARGETS smsd EXPORT smsdTargets)
-install(EXPORT smsdTargets NAMESPACE smsd:: DESTINATION lib/cmake/smsd)
+install(EXPORT smsdTargets NAMESPACE smsd:: DESTINATION "${SMSD_INSTALL_CMAKEDIR}")
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/smsdConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/smsdConfigVersion.cmake"
+    DESTINATION "${SMSD_INSTALL_CMAKEDIR}")
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../NOTICE"
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/smsd")

@@ -15,6 +15,7 @@
 #define SMSD_VF2PP_HPP
 
 #include "smsd/mol_graph.hpp"
+#include "smsd/time_budget.hpp"
 
 #include <algorithm>
 #include <array>
@@ -74,7 +75,7 @@ namespace global_deadline {
     inline thread_local bool active = false;
 
     inline void set(int64_t ms) {
-        deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(ms);
+        deadline = steadyDeadline(ms);
         active = true;
     }
     inline void clear() { active = false; }
@@ -92,7 +93,7 @@ struct TimeBudget {
     static constexpr int64_t CHECK_EVERY = 256;
 
     explicit TimeBudget(int64_t ms)
-        : deadline(Clock::now() + std::chrono::milliseconds(std::max<int64_t>(1, ms))) {}
+        : deadline(steadyDeadline(std::max<int64_t>(1, ms))) {}
 
     bool expired() {
         if ((++counter_ & (CHECK_EVERY - 1)) != 0) return false;
@@ -174,83 +175,22 @@ inline std::vector<int> buildNLF1(const MolGraph& g, int idx) {
     return arr;
 }
 
-// 2-hop NLF: nodes at distance exactly 2.
+// Multi-hop NLF counts cumulative neighborhoods; target shortcuts may reduce
+// distances, so exact-distance shells cannot safely prune embeddings.
 inline std::vector<int> buildNLF2(const MolGraph& g, int idx) {
-    std::unordered_map<int,int> freq;
-    std::vector<bool> seen(g.n, false);
-    // Mark direct neighbors
-    for (int k = 0; k < g.degree[idx]; ++k) seen[g.neighbors[idx][k]] = true;
-    seen[idx] = true;
-    for (int k = 0; k < g.degree[idx]; ++k) {
-        int nb = g.neighbors[idx][k];
-        for (int m = 0; m < g.degree[nb]; ++m) {
-            int j = g.neighbors[nb][m];
-            if (!seen[j]) {
-                seen[j] = true;
-                ++freq[nlfLabel(g, j)];
-            }
-        }
-    }
-    std::vector<int> arr(freq.size() * 2);
-    int p = 0;
-    for (auto& kv : freq) { arr[p++] = kv.first; arr[p++] = kv.second; }
-    int pairs = static_cast<int>(freq.size());
-    for (int i = 1; i < pairs; ++i) {
-        int kl = arr[i*2], kf = arr[i*2+1], j = i - 1;
-        while (j >= 0 && arr[j*2] > kl) {
-            arr[(j+1)*2] = arr[j*2]; arr[(j+1)*2+1] = arr[j*2+1]; --j;
-        }
-        arr[(j+1)*2] = kl; arr[(j+1)*2+1] = kf;
-    }
-    return arr;
+    return MolGraph::buildNLF2(g, idx);
 }
 
-// 3-hop NLF: nodes at distance exactly 3.
 inline std::vector<int> buildNLF3(const MolGraph& g, int idx) {
-    // level1 = direct neighbors
-    std::vector<bool> level1(g.n, false), level2(g.n, false), level3(g.n, false);
-    level1[idx] = true;
-    for (int k = 0; k < g.degree[idx]; ++k) level1[g.neighbors[idx][k]] = true;
-    // level2
-    for (int k = 0; k < g.degree[idx]; ++k) {
-        int nb = g.neighbors[idx][k];
-        for (int m = 0; m < g.degree[nb]; ++m) {
-            int j = g.neighbors[nb][m];
-            if (!level1[j]) level2[j] = true;
-        }
-    }
-    // level3
-    for (int j = 0; j < g.n; ++j) {
-        if (!level2[j]) continue;
-        for (int m = 0; m < g.degree[j]; ++m) {
-            int v = g.neighbors[j][m];
-            if (!level1[v] && !level2[v]) level3[v] = true;
-        }
-    }
-    std::unordered_map<int,int> freq;
-    for (int j = 0; j < g.n; ++j)
-        if (level3[j]) ++freq[nlfLabel(g, j)];
-    std::vector<int> arr(freq.size() * 2);
-    int p = 0;
-    for (auto& kv : freq) { arr[p++] = kv.first; arr[p++] = kv.second; }
-    int pairs = static_cast<int>(freq.size());
-    for (int i = 1; i < pairs; ++i) {
-        int kl = arr[i*2], kf = arr[i*2+1], j = i - 1;
-        while (j >= 0 && arr[j*2] > kl) {
-            arr[(j+1)*2] = arr[j*2]; arr[(j+1)*2+1] = arr[j*2+1]; --j;
-        }
-        arr[(j+1)*2] = kl; arr[(j+1)*2+1] = kf;
-    }
-    return arr;
+    return MolGraph::buildNLF3(g, idx);
 }
-
 
 // Policy-aware NLF label. Reuses the strict/default cached tables only when
 // ChemOptions matches that exact policy; otherwise build a conservative label.
 inline int nlfLabelPolicy(const MolGraph& g, int idx, const ChemOptions& C) {
     if (!C.matchAtomType) return 0; // all atoms in one class
     int z = g.atomicNum[idx];
-    if (C.tautomerAware && (z == 6 || z == 7 || z == 8 || z == 16)) z = 6;
+    if (C.tautomerAware && (z == 6 || z == 7 || z == 8 || z == 16 || z == 34)) z = 6;
     if (C.aromaticityMode == ChemOptions::AromaticityMode::STRICT)
         return (z << 1) | (g.aromatic[idx] ? 1 : 0);
     return z;
@@ -441,7 +381,7 @@ inline bool quickPrescreen(const MolGraph& query, const MolGraph& target,
         if (target.degree[i] > tMaxDeg) tMaxDeg = target.degree[i];
         if (target.ring[i]) tRingCount++;
     }
-    if (opts.matchAtomType) {
+    if (opts.matchAtomType && !opts.tautomerAware) {
         for (int z = 0; z < 120; ++z)
             if (qFreq[z] > tFreq[z]) return false;
     }
@@ -454,13 +394,17 @@ inline bool quickPrescreen(const MolGraph& query, const MolGraph& target,
     if (qMaxDeg > tMaxDeg) return false;
     if (opts.ringMatchesRingOnly && qRingCount > tRingCount) return false;
 
-    // Pattern fingerprint pre-screen (v6.8.0): O(1) structural feature check.
-    // If the query has a structural feature (atom-pair, 2-hop path, ring+degree)
-    // that the target lacks, abort before expensive VF2++ setup.
-    if (opts.matchAtomType && query.n > 16) {
+    // Use only fingerprint features preserved by the selected policy.
+    // Exact degree/ring features are not monotone under substructure matching;
+    // aromaticity and bond-order features are unsafe when those are relaxed.
+    if (opts.matchAtomType && !opts.tautomerAware && query.n > 16) {
         query.ensurePatternFP();
         target.ensurePatternFP();
-        for (int w = 0; w < MolGraph::FP_WORDS; ++w) {
+        const bool strictAromaticity = opts.aromaticityMode == ChemOptions::AromaticityMode::STRICT;
+        for (int w = 0; w < 3; ++w) {
+            if (w == 0 && !strictAromaticity) continue;
+            if (w == 1 && (!strictAromaticity
+                || opts.matchBondOrder != ChemOptions::BondOrderMode::STRICT)) continue;
             if ((query.patternFP_[w] & target.patternFP_[w]) != query.patternFP_[w])
                 return false;
         }
@@ -707,10 +651,12 @@ struct SmallMolMatcher {
     int order[MAX_QUERY_ATOMS]; // BFS-based search order
     int parentNbr[MAX_QUERY_ATOMS]; // for each position, index of a mapped neighbor (-1 = root)
     bool found;
+    bool timedOut = false;
+    TimeBudget budget;
 
     SmallMolMatcher(const MolGraph& gq_, const MolGraph& gt_,
-                    const ChemOptions& C_)
-        : gq(gq_), gt(gt_), C(C_), Nq(gq_.n), Nt(gt_.n), found(false) {
+                    const ChemOptions& C_, int64_t timeoutMs = 10000)
+        : gq(gq_), gt(gt_), C(C_), Nq(gq_.n), Nt(gt_.n), found(false), budget(timeoutMs) {
         if (Nq > MAX_QUERY_ATOMS || Nt > MAX_TARGET_ATOMS)
             throw std::out_of_range("SmallMolMatcher: molecule exceeds fixed-size array bounds");
         std::memset(q2t, -1, sizeof(q2t));
@@ -772,7 +718,11 @@ struct SmallMolMatcher {
     }
 
     void dfs(int pos) {
-        if (found) return;
+        if (found || timedOut) return;
+        if ((pos == 0 && budget.expiredNow()) || budget.expired()) {
+            timedOut = true;
+            return;
+        }
         if (pos == Nq) { found = true; return; }
         int qi = order[pos];
         int pnb = parentNbr[pos]; // a mapped neighbor, or -1
@@ -1941,7 +1891,7 @@ inline bool isSubstructure(const MolGraph& query, const MolGraph& target,
         && target.n <= detail::SmallMolMatcher::MAX_TARGET_ATOMS
         && static_cast<int64_t>(query.n) * target.n <= 1200) {
         if (detail::isExactMatch(query, target, opts)) return true;
-        detail::SmallMolMatcher sm(query, target, opts);
+        detail::SmallMolMatcher sm(query, target, opts, timeoutMs);
         return sm.exists();
     }
 
@@ -1949,16 +1899,8 @@ inline bool isSubstructure(const MolGraph& query, const MolGraph& target,
     if (!opts.useChirality && !opts.useBondStereo
         && detail::sameCanonicalGraph(query, target)) return true;
 
-    // --- Disconnected query splitting (v6.8.0) ---
-    if (detail::countComponents(query) > 1) {
-        auto comps = detail::splitComponents(query);
-        for (const auto& comp : comps) {
-            if (!isSubstructure(comp, target, opts, timeoutMs))
-                return false;
-        }
-        return true;
-    }
-
+    // Match all components together so target atoms cannot be reused across
+    // components and induced constraints also apply between components.
     detail::TimeBudget tb(timeoutMs);
     bool timedOut = false;
 
@@ -1996,7 +1938,7 @@ inline std::vector<std::pair<int,int>> findSubstructure(
             for (int i = 0; i < query.n; ++i) id[i] = {i, i};
             return id;
         }
-        detail::SmallMolMatcher sm(query, target, opts);
+        detail::SmallMolMatcher sm(query, target, opts, timeoutMs);
         return sm.findOne();
     }
 

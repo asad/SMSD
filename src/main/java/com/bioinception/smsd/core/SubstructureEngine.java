@@ -29,19 +29,31 @@ final class SubstructureEngine {
 
   static final class DomainCacheKey {
     final MolGraph gq, gt;
+    final int atomOptions;
     final int hash;
 
-    DomainCacheKey(MolGraph gq, MolGraph gt) {
+    DomainCacheKey(MolGraph gq, MolGraph gt, ChemOptions C) {
       this.gq = gq;
       this.gt = gt;
-      this.hash = 31 * System.identityHashCode(gq) + System.identityHashCode(gt);
+      // Snapshot the atom constraints: ChemOptions is mutable and a graph pair
+      // can be searched repeatedly with different chemical matching profiles.
+      this.atomOptions = (C.matchAtomType ? 1 : 0)
+          | (C.matchFormalCharge ? 2 : 0)
+          | (C.aromaticityMode == ChemOptions.AromaticityMode.STRICT ? 4 : 0)
+          | (C.ringMatchesRingOnly ? 8 : 0)
+          | (C.matchIsotope ? 16 : 0)
+          | (C.useChirality ? 32 : 0)
+          | (C.tautomerAware ? 64 : 0)
+          | (C.ringFusionMode.ordinal() << 7);
+      this.hash = 31 * (31 * System.identityHashCode(gq) + System.identityHashCode(gt))
+          + atomOptions;
     }
 
     @Override public boolean equals(Object o) {
       if (this == o) return true;
       if (!(o instanceof DomainCacheKey)) return false;
       DomainCacheKey other = (DomainCacheKey) o;
-      return gq == other.gq && gt == other.gt;
+      return gq == other.gq && gt == other.gt && atomOptions == other.atomOptions;
     }
 
     @Override public int hashCode() { return hash; }
@@ -56,7 +68,7 @@ final class SubstructureEngine {
     if (query.n > target.n) return false;
     if (query == target) return true; // self-match
     // Fingerprint pre-screen: element frequency + degree check
-    if (C.matchAtomType) {
+    if (C.matchAtomType && !C.tautomerAware) {
       int[] qFreq = new int[120], tFreq = new int[120];
       for (int i = 0; i < query.n; i++) {
         int z = query.atomicNum[i];
@@ -120,7 +132,7 @@ final class SubstructureEngine {
     final int Nq, Nt;
     final int[] q2t, t2q;
     final int[][] qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3;
-    final boolean useTwoHop, useThreeHop, useBitParallel, useRingOnly, useStereo;
+    final boolean useNLF, useTwoHop, useThreeHop, useBitParallel, useRingOnly, useStereo;
     final boolean bitParallelSufficient;
     final long[][] domain;
     final long[] usedMask;
@@ -147,24 +159,29 @@ final class SubstructureEngine {
       this.singleWord = (tWords <= 1);
       this.q2t = new int[Nq]; this.t2q = new int[Nt];
       Arrays.fill(q2t, -1); Arrays.fill(t2q, -1);
-      this.useTwoHop = C.useTwoHopNLF && Nq > 12 && Nt > 12;
-      this.useThreeHop = C.useThreeHopNLF && Nq > 20 && Nt > 20;
+      this.useNLF = C.matchAtomType && !C.tautomerAware;
+      this.useTwoHop = useNLF && C.useTwoHopNLF && Nq > 12 && Nt > 12;
+      this.useThreeHop = useNLF && C.useThreeHopNLF && Nq > 20 && Nt > 20;
       this.useBitParallel = C.useBitParallelFeasibility;
       this.useRingOnly = C.ringMatchesRingOnly; this.useStereo = C.useBondStereo;
       this.bitParallelSufficient = useBitParallel
-          && C.matchBondOrder == ChemOptions.BondOrderMode.ANY && !useStereo && !useRingOnly;
+          && C.matchBondOrder == ChemOptions.BondOrderMode.ANY && !useStereo && !useRingOnly
+          && C.aromaticityMode != ChemOptions.AromaticityMode.STRICT;
       // Use MolGraph's cached neighbor-by-degree sort (v6.5.3 perf fix)
       this.qNeighborsByDegDesc = gq.getNeighborsByDegDesc();
       // Use cached NLF tables from MolGraph (lazy-built, reused across calls on the same graph).
-      this.qNLF1 = gq.getNLF1(); this.tNLF1 = gt.getNLF1();
-      this.qNLF2 = useTwoHop ? gq.getNLF2() : null; this.tNLF2 = useTwoHop ? gt.getNLF2() : null;
-      this.qNLF3 = useThreeHop ? gq.getNLF3() : null; this.tNLF3 = useThreeHop ? gt.getNLF3() : null;
+      this.qNLF1 = useNLF ? matchingNLF(gq.getNLF1(), C) : null;
+      this.tNLF1 = useNLF ? matchingNLF(gt.getNLF1(), C) : null;
+      this.qNLF2 = useTwoHop ? matchingNLF(gq.getNLF2(), C) : null;
+      this.tNLF2 = useTwoHop ? matchingNLF(gt.getNLF2(), C) : null;
+      this.qNLF3 = useThreeHop ? matchingNLF(gq.getNLF3(), C) : null;
+      this.tNLF3 = useThreeHop ? matchingNLF(gt.getNLF3(), C) : null;
       // Ensure expensive lazy fields are computed only when the options actually need them.
       if (C.tautomerAware) { gq.ensureTautomerClasses(); gt.ensureTautomerClasses(); }
       if (C.ringFusionMode != ChemOptions.RingFusionMode.IGNORE) { gq.ensureRingCounts(); gt.ensureRingCounts(); }
       // Domain space: try cache first (v6.5.3 perf fix).
       // Same graph pair queried 6-18x per reaction gets O(1) domain reuse.
-      DomainCacheKey dKey = new DomainCacheKey(gq, gt);
+      DomainCacheKey dKey = new DomainCacheKey(gq, gt, C);
       long[][] cached = domainCache.get(dKey);
       if (cached != null && cached.length == Nq
           && (Nq == 0 || cached[0].length == tWords)) {
@@ -206,7 +223,8 @@ final class SubstructureEngine {
             for (int k = 0; k <= maxKey; k++) {
               int bStart = bucketStart[k], bEnd = bucketStart[k + 1];
               if (bStart == bEnd) continue; // empty bucket
-              if (C.matchAtomType && gq.atomicNum[i] != gt.atomicNum[flatBucket[bStart]]) { prunesAtom += (bEnd - bStart); continue; }
+              if (C.matchAtomType && !C.tautomerAware
+                  && gq.atomicNum[i] != gt.atomicNum[flatBucket[bStart]]) { prunesAtom += (bEnd - bStart); continue; }
               for (int b = bStart; b < bEnd; b++) {
                 int j = flatBucket[b];
                 if (atomsCompatFast(gq, i, gt, j, C)) domain[i][j >>> 6] |= 1L << (j & 63);
@@ -232,8 +250,29 @@ final class SubstructureEngine {
       this.usedMask = new long[tWords];
       this.availBuf = new long[tWords];
       this.candBuf = new int[Nt];
-      int candDepthCols = Math.min(Nt, 4096);
-      this.candBufByDepth = new int[Nq][candDepthCols];
+      this.candBufByDepth = new int[Nq][];
+    }
+
+    /** Project cached labels onto the constraints enforced by this search. */
+    static int[][] matchingNLF(int[][] tables, ChemOptions C) {
+      if (C.aromaticityMode == ChemOptions.AromaticityMode.STRICT) return tables;
+      int[][] result = new int[tables.length][];
+      for (int i = 0; i < tables.length; i++) {
+        int[] source = tables[i], merged = new int[source.length];
+        int size = 0;
+        for (int j = 0; j < source.length; j += 2) {
+          int element = source[j] >>> 1;
+          if (size > 0 && merged[size - 2] == element) merged[size - 1] += source[j + 1];
+          else { merged[size++] = element; merged[size++] = source[j + 1]; }
+        }
+        result[i] = Arrays.copyOf(merged, size);
+      }
+      return result;
+    }
+
+    int[] candidateBuffer(int depth) {
+      if (candBufByDepth[depth] == null) candBufByDepth[depth] = new int[Nt];
+      return candBufByDepth[depth];
     }
 
     static boolean atomsCompatFast(MolGraph gq, int qi, MolGraph gt, int tj, ChemOptions C) {
@@ -397,7 +436,7 @@ final class SubstructureEngine {
       if (gt.degree[tj] < gq.degree[qi]) { prunesDegree++; return false; }
       // Ring-only check (cheapest boolean test — run early for fast exit)
       if (useRingOnly && gq.ring[qi] != gt.ring[tj]) { prunesAtom++; return false; }
-      if (!MolGraph.nlfOk(qNLF1[qi], tNLF1[tj])) { prunesNLF++; return false; }
+      if (useNLF && !MolGraph.nlfOk(qNLF1[qi], tNLF1[tj])) { prunesNLF++; return false; }
       if (useTwoHop && !MolGraph.nlfOk(qNLF2[qi], tNLF2[tj])) { prunesNLF++; return false; }
       if (useThreeHop && !MolGraph.nlfOk(qNLF3[qi], tNLF3[tj])) { prunesNLF++; return false; }
       int[] nbSorted = qNeighborsByDegDesc[qi];
@@ -487,7 +526,7 @@ final class SubstructureEngine {
       enumerateRec(fastisoOrder(), 0, out, maxSolutions);
     }
     int selectCandidates(int qi, int pos) {
-      int[] buf = candBufByDepth[pos];
+      int[] buf = candidateBuffer(pos);
       long[] termMask = new long[tWords]; boolean hasTerminal = false;
       for (int qk : gq.neighbors[qi]) { int tk = q2t[qk]; if (tk != -1) { for (int w = 0; w < tWords; w++) termMask[w] |= gt.adjLong[tk][w]; hasTerminal = true; } }
       if (hasTerminal) {
@@ -520,7 +559,7 @@ final class SubstructureEngine {
       Arrays.fill(tFrontierMask, 0); enumerateRec(Nq > 30 ? vf3LightOrder() : fastisoOrder(), 0, out, maxSolutions);
     }
     int selectCandidates(int qi, int pos) {
-      int[] buf = candBufByDepth[pos];
+      int[] buf = candidateBuffer(pos);
       boolean hasFrontier = false; for (int w = 0; w < tWords; w++) if (tFrontierMask[w] != 0) { hasFrontier = true; break; }
       // Only apply frontier if qi is connected to the mapped subgraph (prevents
       // false negatives on disconnected queries like pharmacophores [#6].[#8])

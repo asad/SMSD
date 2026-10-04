@@ -1967,7 +1967,10 @@ public class StressTest extends TestBase {
     @Test @Timeout(10) @DisplayName("15.07 Azulene (5+7 fused non-benzenoid aromatic) self-match")
     void azuleneSelfMatch() throws Exception {
       // Azulene: fused 5+7 aromatic ring
-      IAtomContainer az = mol("c1ccc2ccccc2c1");
+      IAtomContainer az = mol("c1cc2cccccc2c1");
+      assertArrayEquals(new int[] {5, 7},
+          Arrays.stream(new MolGraph(az).computeRings()).mapToInt(ring -> ring.length).sorted().toArray(),
+          "Azulene must contain fused five- and seven-membered rings");
       SMSD smsd = new SMSD(az, az, defaultOpts());
       assertTrue(smsd.isSubstructure(), "Azulene should self-match");
       Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
@@ -2467,7 +2470,8 @@ public class StressTest extends TestBase {
     @Test @Timeout(10)
     @DisplayName("16.11 Hard case #4266 multi-fragment: benzene + prismane (aromatic + cage in one SMILES)")
     void hardCase4266SelfSubstructure() throws Exception {
-      IAtomContainer m = safeMol("c1ccccc1.C12C3C4C1C5C3C45");
+      IAtomContainer m = mol("c1ccccc1.C12C3C1C4C2C34");
+      assertEquals(12, m.getAtomCount(), "Benzene plus prismane should have 12 heavy atoms");
       SMSD smsd = new SMSD(m, m, defaultOpts());
       assertTrue(smsd.isSubstructure(),
           "Multi-fragment benzene+prismane should be a substructure of itself");
@@ -2476,12 +2480,16 @@ public class StressTest extends TestBase {
     @Test @Timeout(10)
     @DisplayName("16.12 Hard case #4266 multi-fragment self-MCS >= 10 atoms")
     void hardCase4266SelfMCS() throws Exception {
-      IAtomContainer m = safeMol("c1ccccc1.C12C3C4C1C5C3C45");
+      IAtomContainer m = mol("c1ccccc1.C12C3C1C4C2C34");
+      assertEquals(12, m.getAtomCount(), "Benzene plus prismane should have 12 heavy atoms");
       SMSD smsd = new SMSD(m, m, defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      // Mapping both disconnected fragments requires connectedOnly=false.
+      Map<Integer, Integer> mcs = smsd.findMCS(false, false, 5000L);
       assertNotNull(mcs, "Multi-fragment self-MCS should not be null");
       assertTrue(mcs.size() >= 10,
           "Multi-fragment self-MCS should map >= 10 atoms (got " + mcs.size() + ")");
+      assertEquals(6, smsd.findMCS(false, true, 5000L).size(),
+          "Connected self-MCS should select one six-atom fragment");
     }
 
     // --- Kekulene ---
