@@ -57,9 +57,9 @@ cp "target/smsd-$SMSD_RELEASE_VERSION.jar" \
   "target/smsd-$SMSD_RELEASE_VERSION-jar-with-dependencies.jar" \
   "target/smsd-$SMSD_RELEASE_VERSION-sources.jar" \
   "target/smsd-$SMSD_RELEASE_VERSION-javadoc.jar" "$SMSD_RELEASE_DIR/"
-tar -czf "$SMSD_RELEASE_DIR/smsd-cpp-$SMSD_RELEASE_VERSION-headers.tar.gz" \
+COPYFILE_DISABLE=1 tar -czf "$SMSD_RELEASE_DIR/smsd-cpp-$SMSD_RELEASE_VERSION-headers.tar.gz" \
   LICENSE NOTICE -C cpp/include smsd
-tar -czf "$SMSD_RELEASE_DIR/smsd-$SMSD_RELEASE_VERSION-cli.tar.gz" \
+COPYFILE_DISABLE=1 tar -czf "$SMSD_RELEASE_DIR/smsd-$SMSD_RELEASE_VERSION-cli.tar.gz" \
   LICENSE NOTICE -C target/appassembler bin repo
 cp docs/RELEASE_NOTES.md "$SMSD_RELEASE_DIR/RELEASE_NOTES.md"
 if [[ -f "docs/VALIDATION_$SMSD_RELEASE_VERSION.md" ]]; then
