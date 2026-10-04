@@ -551,7 +551,7 @@ Call `SearchEngine.clearMolGraphCache()` (Java) or reuse `MolGraph` instances (C
 ## Release Downloads
 
 The 7.1.2 release is prepared from local builds. Java JARs and C++ headers
-are portable; the Python wheel is built for the local platform, with a source
+are portable; the Python wheel targets CPython 3.13 on macOS 26+ arm64, with a source
 distribution for other systems. Native installers and additional wheels can
 be built separately. Hosted release workflows require manual dispatch.
 
@@ -566,8 +566,6 @@ be built separately. Hosted release workflows require manual dispatch.
 | `SHA256SUMS` | Checksums for the release assets |
 
 ```bash
-# Native installer — download .dmg / .msi / .deb, double-click, done
-
 # CLI
 java -jar smsd-7.1.2-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 
@@ -575,26 +573,27 @@ java -jar smsd-7.1.2-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --
 docker build -t smsd .
 docker run --rm smsd --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 
-# Python
-pip install smsd
+# Python — build from the downloaded source distribution
+pip install ./smsd-7.1.2.tar.gz
 ```
 
 ---
 
 ## Tests
 
-**1,518 tests passed** across all platforms:
+The 7.1.2 local preflight passed on macOS arm64:
 
-| Suite | Tests | Coverage |
-|-------|------:|----------|
-| Java | 581 (+ 25 parity) | MCS, substructure, reactions, tautomers, stereochemistry, ring perception, hydrogen handling, cross-language ECFP/FCFP/canonical-SMILES parity |
-| C++ core | 114 | MCS, substructure, precision chemistry, kekulisation, implicit H |
-| C++ parser | 542 | SMILES, SMARTS, 1,003 diverse molecules, edge cases |
-| C++ layout | 42 | 2D/3D generation, transforms, overlap resolution, templates |
-| C++ CIP | 42 | R/S, E/Z, pseudoasymmetric, sequence rules |
-| Python | 172 (+ 25 parity) | Full API coverage, hydrogen handling, charged species, golden-vector parity |
+| Suite | Result | Coverage |
+|-------|--------|----------|
+| Java | 1,192 passed; 15 opt-in benchmark cases skipped | Search, chemistry, regression and cross-language parity tests |
+| C++ CPU | All six suites passed with assertions enabled | Core search, SMILES/SMARTS parsing, layout, CIP, batch operations and general matching |
+| Python | 603 passed; 6 optional cases skipped | Installed wheel built from the source distribution, API and parity tests |
+| Metal/OpenMP | Batch suite passed on Apple M5 | Native GPU availability and batch operations |
 
-AddressSanitizer: zero memory errors.
+Focused AddressSanitizer and UndefinedBehaviorSanitizer checks passed. CUDA,
+native Windows execution and other wheel platforms were not validated.
+See [local validation](docs/VALIDATION_7.1.2.md) for reproduction commands,
+exhaustive oracle checks and measured C++ primitive improvements.
 
 ---
 
