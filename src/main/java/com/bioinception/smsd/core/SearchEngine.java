@@ -8,6 +8,7 @@ package com.bioinception.smsd.core;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -94,18 +95,21 @@ public final class SearchEngine {
     private long counter;
 
     public TimeBudget(long timeoutMs) {
-      this.deadlineNanos = System.nanoTime() + Math.max(1, timeoutMs) * 1_000_000L;
+      // TimeUnit saturates huge millisecond values instead of overflowing the
+      // conversion. Signed differences handle nanoTime's arbitrary origin and
+      // a deadline that crosses the long boundary.
+      this.deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(Math.max(1, timeoutMs));
       this.checkEvery = 1024L;
       this.counter = 0L;
     }
 
     public boolean expired() {
       if ((++counter & (checkEvery - 1)) != 0) return false;
-      return System.nanoTime() > deadlineNanos;
+      return expiredNow();
     }
 
     public boolean expiredNow() {
-      return System.nanoTime() > deadlineNanos;
+      return System.nanoTime() - deadlineNanos >= 0;
     }
 
     long remainingMillis() {
@@ -564,6 +568,9 @@ public final class SearchEngine {
    */
   public static SubstructureResult isSubstructureWithStats(
       MolGraph query, MolGraph target, ChemOptions C, long timeoutMs) {
+    if (query == null || target == null) return emptySubstructureResult();
+    if (C == null) C = new ChemOptions();
+    if (timeoutMs <= 0) timeoutMs = 10_000L;
     TimeBudget tb = new TimeBudget(timeoutMs);
     SubstructureEngine.Matcher m = SubstructureEngine.makeMatcher(query, target, C, tb);
     long t0 = System.nanoTime();
@@ -603,6 +610,10 @@ public final class SearchEngine {
    */
   public static SubstructureResult findAllSubstructuresWithStats(
       MolGraph query, MolGraph target, ChemOptions C, int maxSolutions, long timeoutMs) {
+    if (query == null || target == null) return emptySubstructureResult();
+    if (C == null) C = new ChemOptions();
+    if (maxSolutions <= 0) maxSolutions = 100;
+    if (timeoutMs <= 0) timeoutMs = 10_000L;
     TimeBudget tb = new TimeBudget(timeoutMs);
     SubstructureEngine.Matcher m = SubstructureEngine.makeMatcher(query, target, C, tb);
     long t0 = System.nanoTime();
@@ -610,6 +621,11 @@ public final class SearchEngine {
     m.enumerate(maxSolutions, out);
     long elapsed = (System.nanoTime() - t0) / 1_000_000L;
     return new SubstructureResult(!out.isEmpty(), out, m.buildStats(elapsed, out.size()));
+  }
+
+  private static SubstructureResult emptySubstructureResult() {
+    return new SubstructureResult(false, Collections.emptyList(),
+        new SubstructureStats(0, 0, 0, 0, 0, 0, 0, 0, false, 0));
   }
 
   // Public API: IAtomContainer-based (CDK adapter)
@@ -706,6 +722,7 @@ public final class SearchEngine {
   public static List<String> validateMapping(MolGraph g1, MolGraph g2, Map<Integer, Integer> mapping, ChemOptions C) {
     List<String> errors = new ArrayList<>();
     if (mapping == null || mapping.isEmpty()) return errors;
+    if (C == null) C = new ChemOptions();
     Set<Integer> usedT = new HashSet<>();
     for (Map.Entry<Integer, Integer> e : mapping.entrySet()) {
       int qi = e.getKey(), tj = e.getValue();
@@ -718,11 +735,13 @@ public final class SearchEngine {
     // Check bonds: every mapped query bond must exist in the target and be compatible.
     for (Map.Entry<Integer, Integer> e1 : mapping.entrySet()) {
       int qi = e1.getKey(), tj = e1.getValue();
+      if (qi < 0 || qi >= g1.n || tj < 0 || tj >= g2.n) continue;
       for (int qk : g1.neighbors[qi]) {
         if (qk <= qi) continue;
         Integer tkObj = mapping.get(qk);
         if (tkObj == null) continue;
         int tk = tkObj;
+        if (tk < 0 || tk >= g2.n) continue;
         if (g1.bondOrder(qi, qk) == 0) continue;
         if (g2.bondOrder(tj, tk) == 0) {
           errors.add("bond missing: q(" + qi + "-" + qk + ") vs t(" + tj + "-" + tk + ")");

@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "smsd"
-version = "7.1.1"
+version = "7.1.2"
 description = "Fast substructure search, MCS, circular fingerprints, and molecular similarity with tautomer awareness and GPU acceleration"
 readme = "python/README.md"
 license = {text = "Apache-2.0"}
@@ -34,6 +34,7 @@ keywords = ["cheminformatics", "mcs", "substructure", "graph-matching", "chemist
 [project.optional-dependencies]
 dev = ["pytest>=7.0", "pytest-timeout>=2.0"]
 rdkit = ["rdkit"]
+gpu = ["nvidia-cuda-runtime-cu12>=12.0; platform_system!='Darwin'"]
 
 [project.urls]
 Homepage = "https://github.com/asad/SMSD"
@@ -47,6 +48,7 @@ cmake.source-dir = "cpp"
 cmake.build-type = "Release"
 cmake.args = ["-DSMSD_BUILD_PYTHON=ON", "-DSMSD_BUILD_TESTS=OFF", "-DSMSD_BUILD_OPENMP=ON", "-DSMSD_BUILD_METAL=AUTO", "-DSMSD_BUILD_CUDA=AUTO"]
 wheel.packages = ["python/smsd"]
+wheel.license-files = ["LICENSE", "NOTICE", "licenses/libomp/LICENSE.TXT"]
 minimum-version = "0.5"
 
 [tool.scikit-build.cmake.define]

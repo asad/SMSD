@@ -1,6 +1,6 @@
 # SMSD Pro — Examples, How-To, and Cautions
 
-**Version 7.1.1** | Copyright (c) 2018-2026 BioInception PVT LTD
+**Version 7.1.2** | Copyright (c) 2018-2026 BioInception PVT LTD
 
 This document provides worked examples for every major SMSD Pro feature. Each section
 includes runnable code, expected output, practical cautions, and performance notes.

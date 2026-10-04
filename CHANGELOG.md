@@ -2,6 +2,44 @@
 
 All notable changes to SMSD Pro are documented in this file.
 
+## [7.1.2] - 2026-10-04
+
+### Updated
+- Java dependency: CDK 2.12 to the latest stable CDK 2.13; standardisation
+  now uses `Aromaticity.Model.Daylight`.
+- Jackson databind 2.20.0 to 2.21.7, covering the patched-version requirements
+  of all 11 current repository dependency advisories.
+- Version metadata aligned across Java, C++, Python, CLI, and citation.
+
+### Fixed
+- Java domain cache isolation across mutable chemical matching options,
+  permissive/tautomer pruning, strict aromatic bond matching, and enumeration
+  of targets with more than 4,096 candidates.
+- Java telemetry defaults, mapping validation bounds, and timeout overflow.
+- Java and C++ multi-hop substructure pruning under extra target edges.
+- C++ maximum-clique result cap and incumbent tie handling, disconnected-query
+  target reuse, policy-incompatible fingerprint pruning, and small-matcher budgets.
+- C++ MCS discarding a larger validated directional result.
+- C++ non-bipartite aromatic kekulization (including azulene) and undefined
+  signed overflow in graph hashing; existing canonical output is preserved.
+- Broken Java cage test fixtures and impossible historical C++ MCS thresholds;
+  replacement lower bounds have explicit conserved-substructure witnesses.
+- CMake package discovery, C++17/OpenMP propagation, and license installation.
+- Incomplete nested Python source packaging, PowerShell launcher path, GPU
+  build script portability, and skipped CPU batch validation.
+- Source launchers and isolated generated distributions; C++ assertions
+  remain active in every test build configuration.
+
+### Optimised
+- C++ clique pivot scanning removes temporary allocations and adds a safe
+  branch bound. Neighborhood construction traverses only the local frontier.
+
+### Release preparation
+- Added a local build/test/packaging script with source-distribution builds,
+  installed-wheel validation, macOS library repair, and SHA-256 checksums.
+- Hosted workflows now require manual dispatch; release artifacts are built
+  locally before preparing the GitHub draft.
+
 ## [7.1.1] - 2026-04-14
 
 Bug-fix patch on top of v7.1.0.  No new features, no public API breakage.

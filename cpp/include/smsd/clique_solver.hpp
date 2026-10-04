@@ -18,9 +18,11 @@
 #include <map>
 #include <algorithm>
 #include <chrono>
+#include <climits>
 #include <cstdint>
 #include <functional>
 #include "smsd/bitops.hpp"
+#include "smsd/time_budget.hpp"
 
 namespace smsd {
 namespace clique {
@@ -55,13 +57,14 @@ struct ProductGraph {
         n = static_cast<int>(vertices.size());
         adj.assign(n, {});
         for (auto& [u, v] : edges) {
-            if (u >= 0 && u < n && v >= 0 && v < n) {
+            if (u >= 0 && u < n && v >= 0 && v < n && u != v) {
                 adj[u].push_back(v);
                 adj[v].push_back(u);
             }
         }
         for (auto& nbrs : adj) {
             std::sort(nbrs.begin(), nbrs.end());
+            nbrs.erase(std::unique(nbrs.begin(), nbrs.end()), nbrs.end());
         }
     }
 
@@ -147,7 +150,7 @@ inline CliqueResult findMaxCliques(
     if (pg.n == 0) return result;
 
     auto start = std::chrono::steady_clock::now();
-    auto deadline = start + std::chrono::milliseconds(timeout_ms);
+    auto deadline = detail::steadyDeadline(timeout_ms, start);
 
     // Build bitset adjacency for fast intersection
     // For graphs up to ~4000 vertices, use vector<uint64_t> bitsets
@@ -162,14 +165,16 @@ inline CliqueResult findMaxCliques(
         }
     }
 
-    // k-core pruning: iteratively remove vertices with degree < incumbent
-    int best_size = incumbent_size;
+    // A clique of size k needs degree k-1. Retain incumbent-size ties so
+    // their mappings can be returned even when no larger clique exists.
+    int best_size = std::max(0, incumbent_size);
+    const int result_limit = std::max(0, max_cliques);
     std::vector<bool> alive(pg.n, true);
     bool changed = true;
     while (changed) {
         changed = false;
         for (int u = 0; u < pg.n; u++) {
-            if (alive[u] && degree[u] < best_size) {
+            if (alive[u] && degree[u] < best_size - 1) {
                 alive[u] = false;
                 for (int v : pg.adj[u]) {
                     if (alive[v]) degree[v]--;
@@ -185,15 +190,15 @@ inline CliqueResult findMaxCliques(
         if (alive[u]) active.push_back(u);
     }
     if (static_cast<int>(active.size()) < best_size) {
+        result.max_size = best_size;
+        result.elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now() - start).count();
         return result;
     }
 
     // Rebuild bitsets for alive vertices only
     auto setBit = [&](std::vector<uint64_t>& bits, int v) {
         bits[v / 64] |= (uint64_t(1) << (v % 64));
-    };
-    auto testBit = [&](const std::vector<uint64_t>& bits, int v) -> bool {
-        return (bits[v / 64] >> (v % 64)) & 1;
     };
     auto intersectCount = [&](const std::vector<uint64_t>& a, const std::vector<uint64_t>& b) -> int {
         int count = 0;
@@ -230,9 +235,8 @@ inline CliqueResult findMaxCliques(
     std::function<void(std::vector<int>&, std::vector<uint64_t>&, std::vector<uint64_t>&)>
     bk = [&](std::vector<int>& R, std::vector<uint64_t>& P, std::vector<uint64_t>& X) {
         if (timeout_flag) return;
-        if (static_cast<int>(result.cliques.size()) >= max_cliques) return;
 
-        if (++call_count % 1024 == 0) {
+        if (++call_count == 1 || call_count % 256 == 0) {
             if (std::chrono::steady_clock::now() >= deadline) {
                 timeout_flag = true;
                 return;
@@ -244,25 +248,34 @@ inline CliqueResult findMaxCliques(
             if (sz > best_size) {
                 best_size = sz;
                 result.cliques.clear();
-                result.cliques.push_back(R);
-            } else if (sz == best_size && sz > 0) {
+                if (result_limit > 0) result.cliques.push_back(R);
+            } else if (sz == best_size && sz > 0
+                       && static_cast<int>(result.cliques.size()) < result_limit) {
                 result.cliques.push_back(R);
             }
             return;
         }
 
-        // Pivot: vertex in P ∪ X with most neighbors in P
-        std::vector<uint64_t> PuX(words);
-        for (int w = 0; w < words; w++) PuX[w] = P[w] | X[w];
-        auto puxList = bitList(PuX);
-        if (puxList.empty()) return;
+        // Limit stored results, not the search: an unexplored branch may
+        // contain a larger clique. Prune only with an admissible size bound.
+        int possible_size = static_cast<int>(R.size());
+        for (uint64_t word : P) possible_size += smsd::popcount64(word);
+        if (possible_size < best_size
+            || (possible_size == best_size
+                && static_cast<int>(result.cliques.size()) >= result_limit)) return;
 
-        int pivot = puxList[0];
-        int pivotCount = intersectCount(adjBits[pivot], P);
-        for (int v : puxList) {
-            int cnt = intersectCount(adjBits[v], P);
-            if (cnt > pivotCount) { pivot = v; pivotCount = cnt; }
+        // Pivot: scan P ∪ X directly, avoiding two allocations per branch.
+        int pivot = -1, pivotCount = -1;
+        for (int w = 0; w < words; ++w) {
+            uint64_t bits = P[w] | X[w];
+            while (bits) {
+                int v = w * 64 + smsd::ctz64(bits);
+                bits &= bits - 1;
+                int cnt = intersectCount(adjBits[v], P);
+                if (cnt > pivotCount) { pivot = v; pivotCount = cnt; }
+            }
         }
+        if (pivot == -1) return;
 
         // Candidates: P \ N(pivot)
         std::vector<uint64_t> cands(words);
@@ -270,7 +283,7 @@ inline CliqueResult findMaxCliques(
         auto candList = bitList(cands);
 
         for (int v : candList) {
-            if (timeout_flag || static_cast<int>(result.cliques.size()) >= max_cliques) return;
+            if (timeout_flag) return;
 
             R.push_back(v);
             std::vector<uint64_t> newP(words), newX(words);
@@ -522,7 +535,7 @@ inline MCSResult findMCSPipeline(
     int lfub_value = -1)
 {
     auto start = std::chrono::steady_clock::now();
-    auto deadline = start + std::chrono::milliseconds(timeout_ms);
+    auto deadline = detail::steadyDeadline(timeout_ms, start);
     MCSResult result;
 
     if (compat.empty()) return result;
@@ -697,7 +710,7 @@ inline MCSResult findMCSPipeline(
         auto& best_map = *std::max_element(result.candidates.begin(), result.candidates.end(),
             [](const auto& a, const auto& b) { return a.size() < b.size(); });
         auto vf2_deadline = std::min(deadline,
-            std::chrono::steady_clock::now() + std::chrono::milliseconds(50));
+            detail::steadyDeadline(50));
 
         {
             auto embeddings = vf2ReEmbed(
@@ -909,8 +922,7 @@ inline std::vector<std::vector<std::pair<int,int>>> substructureMatch(
         }
     }
 
-    auto deadline = std::chrono::steady_clock::now()
-        + std::chrono::milliseconds(timeout_ms);
+    auto deadline = detail::steadyDeadline(timeout_ms);
 
     // Empty seed: VF2 starts from scratch
     std::vector<std::pair<int,int>> empty_seed;

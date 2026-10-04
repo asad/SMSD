@@ -1,0 +1,9 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+if(@SMSD_PACKAGE_REQUIRES_OPENMP@)
+    find_dependency(OpenMP COMPONENTS CXX)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/smsdTargets.cmake")
+check_required_components(smsd)
