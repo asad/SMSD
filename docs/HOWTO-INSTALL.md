@@ -41,6 +41,22 @@ docker run --rm smsd --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 - Source launchers are at `src/scripts/smsd`, `smsd.bat`, and `smsd.ps1`.
   Maven also generates an isolated distribution under `target/appassembler/`.
 
+## Configure Python bindings directly with CMake
+
+Use CMake 3.18+, a C++17 compiler, and Python 3.9+ with pybind11 installed.
+Select the same interpreter used to install pybind11:
+
+```bash
+cmake -S cpp -B build/python \
+  -DSMSD_BUILD_PYTHON=ON -DSMSD_BUILD_TESTS=OFF \
+  -DPython_EXECUTABLE="$PWD/.venv/bin/python" \
+  -Dpybind11_DIR="$(.venv/bin/python -m pybind11 --cmakedir)"
+cmake --build build/python --parallel 4
+```
+
+Python discovery uses `FindPython` and its `Development.Module` component.
+Use `Python_EXECUTABLE` with this capitalization when selecting an interpreter.
+
 ## Prepare release assets locally
 
 Use a dedicated Python environment with CMake, a C++17 compiler, and Java 25:

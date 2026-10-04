@@ -2,6 +2,13 @@
 
 All notable changes to SMSD Pro are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- Python bindings use CMake's modern `FindPython` module discovery, removing
+  pybind11's CMP0148 deprecation warnings and unnecessary embedding-library
+  discovery on Unix.
+
 ## [7.1.2] - 2026-10-04
 
 ### Updated

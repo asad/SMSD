@@ -131,7 +131,11 @@ endif()
 
 # ---- Optional: Python bindings ----
 if(SMSD_BUILD_PYTHON)
-    find_package(pybind11 REQUIRED)
+    # Discover one interpreter and its extension-module headers together.
+    # Development.Module avoids requiring an embedding libpython on Unix.
+    set(PYBIND11_FINDPYTHON ON)
+    find_package(Python 3.9 REQUIRED COMPONENTS Interpreter Development.Module)
+    find_package(pybind11 CONFIG REQUIRED)
     pybind11_add_module(_smsd bindings/pybind11/smsd_bindings.cpp)
     target_link_libraries(_smsd PRIVATE smsd)
     if(SMSD_WITH_RDKIT)
