@@ -3,10 +3,7 @@
 name: maven
 
 on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -29,4 +26,4 @@ jobs:
           name: smsd-jar-and-launchers
           path: |
             target/*-jar-with-dependencies.jar
-            src/scripts/
+            target/appassembler/

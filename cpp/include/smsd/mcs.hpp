@@ -1771,7 +1771,7 @@ inline std::map<int,int> mcGregorExtend(
 
     using Clock = std::chrono::steady_clock;
     int64_t localDeadlineNs = std::chrono::duration_cast<std::chrono::nanoseconds>(
-        (Clock::now() + std::chrono::milliseconds(localMillis)).time_since_epoch()).count();
+        (detail::steadyDeadline(localMillis)).time_since_epoch()).count();
 
     std::map<int,int> best = seed;
     auto& qNLF1 = g1.getNLF1(); auto& tNLF1 = g2.getNLF1();
@@ -1822,7 +1822,7 @@ inline std::map<int,int> mcGregorExtend(
         for (auto& [k,v] : seed) q2tMap[k] = v;
         std::map<int,int> bondBest = seed;
         int64_t bondDeadlineNs = std::chrono::duration_cast<std::chrono::nanoseconds>(
-            (Clock::now() + std::chrono::milliseconds(std::max<int64_t>(1, std::min(localMillis / 10, (int64_t)20)))).time_since_epoch()).count();
+            (detail::steadyDeadline(std::max<int64_t>(1, std::min(localMillis / 10, (int64_t)20)))).time_since_epoch()).count();
 
         auto usedQCopy = usedQ;
         auto usedTCopy = usedT;
@@ -4064,7 +4064,7 @@ inline std::map<int,int> findMCSDirectionalCore(const MolGraph& g1, const MolGra
     }
 
     using Clock = std::chrono::steady_clock;
-    auto deadline = Clock::now() + std::chrono::milliseconds(resolveMcsTimeoutMs(g1, g2, opts));
+    auto deadline = detail::steadyDeadline(resolveMcsTimeoutMs(g1, g2, opts));
     auto remainingMs = [&]() -> int64_t {
         auto left = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - Clock::now()).count();
         return std::max<int64_t>(0, left);
@@ -4162,7 +4162,7 @@ inline std::map<int,int> findMCS(const MolGraph& g1, const MolGraph& g2,
     }
 
     using Clock = std::chrono::steady_clock;
-    auto deadline = Clock::now() + std::chrono::milliseconds(resolveMcsTimeoutMs(g1, g2, opts));
+    auto deadline = detail::steadyDeadline(resolveMcsTimeoutMs(g1, g2, opts));
     auto remainingMs = [&]() -> int64_t {
         auto left = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - Clock::now()).count();
         return std::max<int64_t>(0, left);
@@ -4189,14 +4189,14 @@ inline std::map<int,int> findMCS(const MolGraph& g1, const MolGraph& g2,
         if (remainingMs() <= 0) return best;
 
         auto reverse = runDirectionalCore(g2, g1);
-        int bestSize = static_cast<int>(best.size());
-        int reverseSize = static_cast<int>(reverse.size());
-        if (std::abs(bestSize - reverseSize) >= 2 && reverseSize < bestSize) {
-            auto consensus = orientMcsResult(reverse, true);
-            if (!validateMapping(g1, g2, consensus, chem).empty()) {
-                consensus = recoverValidMcsMapping(g1, g2, consensus, chem, opts);
-            }
-            if (!consensus.empty()) best = std::move(consensus);
+        auto candidate = orientMcsResult(reverse, true);
+        if (!validateMapping(g1, g2, candidate, chem).empty()) {
+            candidate = recoverValidMcsMapping(g1, g2, candidate, chem, opts);
+        }
+        // Directional searches may discover different valid mappings. Keep
+        // the better result rather than reducing its size to force agreement.
+        if (detail::preferFinalMapping(g1, candidate, best, opts)) {
+            best = std::move(candidate);
         }
     }
     return best;
@@ -5242,7 +5242,7 @@ inline std::map<int,int> findMCSCoverage(
     if (g1.n == 0 || g2.n == 0) return {};
 
     // Shared deadline across ALL stages
-    auto deadline = Clock::now() + std::chrono::milliseconds(timeoutMs);
+    auto deadline = detail::steadyDeadline(timeoutMs);
     auto remainingMs = [&]() -> int64_t {
         return std::max<int64_t>(0,
             std::chrono::duration_cast<std::chrono::milliseconds>(

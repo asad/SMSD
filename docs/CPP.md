@@ -10,6 +10,14 @@ molfile I/O, stereo/CIP assignment, and layout utilities.
 #include "smsd/smsd.hpp"
 ```
 
+Installed CMake packages can be consumed without manually setting language or
+OpenMP flags:
+
+```cmake
+find_package(smsd 7.1 CONFIG REQUIRED)
+target_link_libraries(my_program PRIVATE smsd::smsd)
+```
+
 ## Core Use
 
 ```cpp
@@ -20,11 +28,16 @@ auto t = smsd::parseSMILES("c1ccc(O)cc1");
 
 smsd::ChemOptions chem;
 smsd::MCSOptions mcsOpts;
-mcsOpts.timeout_ms = 10000;
+mcsOpts.timeoutMs = 10000;
 
 bool hit = smsd::isSubstructure(q, t, chem, 10000);
 auto mcs = smsd::findMCS(q, t, chem, mcsOpts);
 ```
+
+Mappings are oriented from query to target and validate every mapped query
+bond. In non-induced mode, extra target bonds are allowed, so the best valid
+mapping can have a different size when the arguments are reversed. The solver
+retains the larger valid candidate for the requested direction.
 
 ## Fingerprints
 

@@ -3571,29 +3571,35 @@ public final class MolGraph {
   }
 
   static int[] buildNLF2(MolGraph g, int idx) {
-    Map<Integer, Integer> freq = new HashMap<>();
-    BitSet direct = g.getAdj()[idx];
-    BitSet seen = new BitSet(g.n);
-    for (int nb : g.neighbors[idx])
-      for (int j : g.neighbors[nb]) {
-        if (j == idx || direct.get(j) || seen.get(j)) continue;
-        seen.set(j);
-        freq.merge(nlfLabel(g, j), 1, Integer::sum);
-      }
-    return freqMapToSortedArray(freq);
+    return buildNeighborhoodNLF(g, idx, 2);
   }
 
   static int[] buildNLF3(MolGraph g, int idx) {
+    return buildNeighborhoodNLF(g, idx, 3);
+  }
+
+  /**
+   * Count atoms within the radius, excluding the root. Exact distance shells
+   * are unsafe for non-induced matching: extra target edges can shorten a
+   * mapped atom's distance without invalidating the query embedding.
+   */
+  private static int[] buildNeighborhoodNLF(MolGraph g, int idx, int radius) {
     Map<Integer, Integer> freq = new HashMap<>();
-    BitSet level1 = g.getAdj()[idx];
-    BitSet level2 = new BitSet(g.n);
-    for (int v = level1.nextSetBit(0); v >= 0; v = level1.nextSetBit(v + 1))
-      for (int j : g.neighbors[v]) if (j != idx && !level1.get(j)) level2.set(j);
-    BitSet level3 = new BitSet(g.n);
-    for (int v = level2.nextSetBit(0); v >= 0; v = level2.nextSetBit(v + 1))
-      for (int j : g.neighbors[v]) if (j != idx && !level1.get(j) && !level2.get(j)) level3.set(j);
-    for (int j = level3.nextSetBit(0); j >= 0; j = level3.nextSetBit(j + 1))
-      freq.merge(nlfLabel(g, j), 1, Integer::sum);
+    BitSet seen = new BitSet(g.n);
+    seen.set(idx);
+    BitSet frontier = new BitSet(g.n);
+    frontier.set(idx);
+    for (int distance = 0; distance < radius && !frontier.isEmpty(); distance++) {
+      BitSet next = new BitSet(g.n);
+      for (int v = frontier.nextSetBit(0); v >= 0; v = frontier.nextSetBit(v + 1))
+        for (int j : g.neighbors[v]) {
+          if (seen.get(j)) continue;
+          seen.set(j);
+          next.set(j);
+          freq.merge(nlfLabel(g, j), 1, Integer::sum);
+        }
+      frontier = next;
+    }
     return freqMapToSortedArray(freq);
   }
 

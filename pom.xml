@@ -6,7 +6,7 @@
 
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>7.1.1</version>
+  <version>7.1.2</version>
   <packaging>jar</packaging>
   <name>SMSD</name>
   <description>High-performance substructure and MCS search for chemical graphs</description>
@@ -55,7 +55,7 @@
     <maven.compiler.release>25</maven.compiler.release>
 
     <!-- Libraries -->
-    <cdk.version>2.12</cdk.version>
+    <cdk.version>2.13</cdk.version>
     <picocli.version>4.7.7</picocli.version>
     <jackson.version>2.20.0</jackson.version>
 
@@ -154,7 +154,7 @@
         <artifactId>maven-javadoc-plugin</artifactId>
         <version>3.6.3</version>
         <configuration>
-          <source>21</source>
+          <source>${maven.compiler.release}</source>
           <doclint>none</doclint>
           <quiet>true</quiet>
           <reportOutputDirectory>${project.basedir}/docs</reportOutputDirectory>
@@ -194,6 +194,7 @@
             <phase>package</phase>
             <goals><goal>shade</goal></goals>
             <configuration>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
               <shadedArtifactAttached>true</shadedArtifactAttached>
               <shadedClassifierName>jar-with-dependencies</shadedClassifierName>
               <transformers>
@@ -217,23 +218,21 @@
         </executions>
       </plugin>
 
-      <!-- Generate cross-platform launchers at src/scripts/smsd(.bat) -->
+      <!-- Generate an isolated launcher distribution without overwriting source scripts. -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>appassembler-maven-plugin</artifactId>
         <version>${appassembler.version}</version>
         <configuration>
-          <!-- Put scripts and runtime repo under project 'src/scripts' -->
-          <assembleDirectory>${project.basedir}/src/scripts</assembleDirectory>
-          <!-- Drop the script directly (no 'bin/' subdir) -->
-          <binFolder>.</binFolder>
+          <assembleDirectory>${project.build.directory}/appassembler</assembleDirectory>
+          <binFolder>bin</binFolder>
           <!-- Shorter, portable classpath (wildcard) -->
           <repositoryLayout>flat</repositoryLayout>
           <useWildcardClassPath>true</useWildcardClassPath>
           <programs>
             <program>
               <mainClass>com.bioinception.smsd.cli.SMSDcli</mainClass>
-              <name>smsd</name>
+              <id>smsd</id>
             </program>
           </programs>
         </configuration>

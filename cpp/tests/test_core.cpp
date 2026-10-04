@@ -18,6 +18,8 @@
 #include <cstdio>
 #include <functional>
 #include <iostream>
+#include <limits>
+#include <random>
 #include <string>
 
 // ============================================================================
@@ -579,9 +581,26 @@ void test_hard_pair_1585_mcs() {
 static void assert_directional_mcs(const std::string& smi1,
                                    const std::string& smi2,
                                    int minForward,
-                                   int minReverse) {
+                                   int minReverse,
+                                   const std::string& witnessSmiles = "") {
     auto g1 = smsd::parseSMILES(smi1);
     auto g2 = smsd::parseSMILES(smi2);
+    if (!witnessSmiles.empty()) {
+        auto fragment = smsd::parseSMILES(witnessSmiles);
+        auto inFirst = smsd::findSubstructure(fragment, g1, smsd::ChemOptions{});
+        auto inSecond = smsd::findSubstructure(fragment, g2, smsd::ChemOptions{});
+        ASSERT_EQ(static_cast<int>(inFirst.size()), fragment.n);
+        ASSERT_EQ(static_cast<int>(inSecond.size()), fragment.n);
+        std::map<int, int> firstByFragment, secondByFragment, witness;
+        for (auto [q, t] : inFirst) firstByFragment[q] = t;
+        for (auto [q, t] : inSecond) secondByFragment[q] = t;
+        for (int i = 0; i < fragment.n; ++i)
+            witness[firstByFragment.at(i)] = secondByFragment.at(i);
+        ASSERT_TRUE(smsd::validateMapping(g1, g2, witness, smsd::ChemOptions{}).empty());
+        ASSERT_TRUE(smsd::validateMapping(g2, g1, smsd::orientMcsResult(witness, true),
+                                        smsd::ChemOptions{}).empty());
+        ASSERT_TRUE(fragment.n >= minForward && fragment.n >= minReverse);
+    }
     smsd::ChemOptions chem;
     smsd::MCSOptions mcsOpts;
     mcsOpts.timeoutMs = 10000;
@@ -598,7 +617,7 @@ static void assert_directional_mcs(const std::string& smi1,
     assert(baErrors.empty());
 }
 
-static void assert_stable_mcs(const std::string& smi1,
+static void assert_valid_mcs_both_directions(const std::string& smi1,
                               const std::string& smi2,
                               int minSize) {
     auto g1 = smsd::parseSMILES(smi1);
@@ -615,7 +634,9 @@ static void assert_stable_mcs(const std::string& smi1,
 
     assert(static_cast<int>(ab.size()) >= minSize);
     assert(static_cast<int>(ba.size()) >= minSize);
-    assert(ab.size() == ba.size());
+    // Non-induced mapping validity is directional: reversing a mapping can
+    // require target bonds absent from the original query. Do not enforce equal
+    // sizes by discarding a larger valid result in either direction.
     assert(abErrors.empty());
     assert(baErrors.empty());
 }
@@ -636,19 +657,25 @@ void test_mcs_strict_chirality_returns_valid_mapping() {
 }
 
 void test_mcs_directional_validity_diverse_pairs() {
+    // RDKit 2026.03.3, MaximizeBonds=false, CompareAny and no ring restrictions
+    // completed with 7 atoms for this pair. The historical minimum 8 exceeded
+    // that permissive upper bound; phenol explicitly witnesses the feasible 7.
     assert_directional_mcs(
         "CC(=O)Oc1ccccc1C(=O)O",
         "CC(=O)Nc1ccc(O)cc1",
-        8, 8);
+        7, 7, "Oc1ccccc1");
     assert_directional_mcs(
         "c1nc(c2c(n1)n(cn2)C3C(C(C(O3)COP(=O)(O)OP(=O)(O)OP(=O)(O)O)O)O)N",
         "c1nc(c2c(n1)n(cn2)C3C(C(C(O3)COP(=O)(O)OP(=O)(O)O)O)O)N",
         27, 27);
+    // The same permissive, atom-maximizing oracle completed at 20 atoms, so
+    // the historical minimum 25 was impossible. Preserve the established
+    // 10-atom guarantee and verify its conserved-tail witness in both graphs.
     assert_directional_mcs(
         "CC(C)c1c(C(=O)Nc2ccccc2)c(-c2ccccc2)c(-c2ccc(F)cc2)n1CC[C@H](O)C[C@H](O)CC(=O)O",
         "CC(C)c1nc(N(C)S(C)(=O)=O)nc(-c2ccc(F)cc2)c1/C=C/[C@H](O)C[C@H](O)CC(=O)O",
-        25, 25);
-    assert_stable_mcs(
+        10, 10, "CC(O)CC(O)CC(=O)O");
+    assert_valid_mcs_both_directions(
         "C1CN2CC3=CCOC4CC(=O)N5C6C4C3CC2C61C7=CC=CC=C75",
         "COC1=CC2=C(C=CN=C2C=C1)C(C3CC4CCN3CC4C=C)O",
         11);
@@ -1281,6 +1308,22 @@ void test_kekulize_azulene() {
     auto g = smsd::parseSMILES("c1ccc2cccc2cc1");  // azulene SMILES
     assert(g.n == 10 && "azulene: 10 atoms");
     assert(g.kekulize() && "azulene: kekulization must succeed");
+    int doubleBonds = 0;
+    for (int i = 0; i < g.n; ++i) {
+        ASSERT_TRUE(!g.aromatic[i]);
+        int incidentDoubleBonds = 0;
+        for (int j : g.neighbors[i]) {
+            const int order = g.bondOrder(i, j);
+            ASSERT_TRUE(order == 1 || order == 2);
+            ASSERT_TRUE(!g.bondAromatic(i, j));
+            if (order == 2) {
+                ++incidentDoubleBonds;
+                if (i < j) ++doubleBonds;
+            }
+        }
+        ASSERT_EQ(incidentDoubleBonds, 1);
+    }
+    ASSERT_EQ(doubleBonds, 5);
 }
 
 void test_kekulize_pyrene() {
@@ -1311,7 +1354,7 @@ void test_implicit_h_neutral_boron() {
     int bIdx = -1;
     for (int i = 0; i < g.n; i++) if (g.atomicNum[i] == 5) { bIdx = i; break; }
     assert(bIdx >= 0);
-    assert(g.implicitH[bIdx] == 0 && "B(OH)3: boron has 0 implicit H");
+    assert(g.hydrogenCount[bIdx] == 0 && "B(OH)3: boron has 0 implicit H");
 }
 
 void test_implicit_h_borohydride() {
@@ -1320,7 +1363,7 @@ void test_implicit_h_borohydride() {
     int bIdx = -1;
     for (int i = 0; i < g.n; i++) if (g.atomicNum[i] == 5) { bIdx = i; break; }
     assert(bIdx >= 0);
-    assert(g.implicitH[bIdx] == 0 && "[BH4-]: explicit H in bracket, implicitH must be 0");
+    assert(g.hydrogenCount[bIdx] == 4 && "[BH4-]: preserve four bracket hydrogens");
 }
 
 void test_implicit_h_sulfoxide() {
@@ -1329,7 +1372,7 @@ void test_implicit_h_sulfoxide() {
     int sIdx = -1;
     for (int i = 0; i < g.n; i++) if (g.atomicNum[i] == 16) { sIdx = i; break; }
     assert(sIdx >= 0);
-    assert(g.implicitH[sIdx] == 0 && "DMSO: S has 0 implicit H");
+    assert(g.hydrogenCount[sIdx] == 0 && "DMSO: S has 0 implicit H");
 }
 
 void test_implicit_h_phosphate() {
@@ -1338,7 +1381,7 @@ void test_implicit_h_phosphate() {
     int pIdx = -1;
     for (int i = 0; i < g.n; i++) if (g.atomicNum[i] == 15) { pIdx = i; break; }
     assert(pIdx >= 0);
-    assert(g.implicitH[pIdx] == 0 && "phosphate: P has 0 implicit H");
+    assert(g.hydrogenCount[pIdx] == 0 && "phosphate: P has 0 implicit H");
 }
 
 void test_mcs_stereo_preserved() {
@@ -1349,6 +1392,221 @@ void test_mcs_stereo_preserved() {
     smsd::MCSOptions opts;
     auto mcs = smsd::findMCS(cis, trans, C, opts);
     assert(mcs.size() == 4 && "E/Z butene: full MCS regardless of stereo");
+}
+
+// Regression coverage for policy-aware pruning and capped clique search.
+static smsd::MolGraph makePruningGraph(
+    int n, const std::vector<std::pair<int, int>>& edges,
+    std::vector<int> elements = {}, std::vector<uint8_t> aromatic = {}) {
+    if (elements.empty()) elements.assign(n, 6);
+    if (aromatic.empty()) aromatic.assign(n, 0);
+    std::vector<std::vector<int>> neighbors(n), orders(n);
+    for (auto [u, v] : edges) {
+        neighbors[u].push_back(v); orders[u].push_back(1);
+        neighbors[v].push_back(u); orders[v].push_back(1);
+    }
+    return smsd::MolGraph::Builder().atomCount(n)
+        .atomicNumbers(std::move(elements)).aromaticFlags(std::move(aromatic))
+        .setNeighbors(std::move(neighbors)).setBondOrders(std::move(orders)).build();
+}
+
+static std::vector<std::pair<int, int>> chainEdges(int n) {
+    std::vector<std::pair<int, int>> edges;
+    for (int i = 1; i < n; ++i) edges.emplace_back(i - 1, i);
+    return edges;
+}
+
+void test_substructure_fingerprint_preserves_relaxed_policies() {
+    auto query = smsd::parseSMILES(std::string(17, 'C'));
+    auto ring = smsd::parseSMILES("C1" + std::string(16, 'C') + "1");
+    smsd::ChemOptions strict;
+    strict.aromaticityMode = smsd::ChemOptions::AromaticityMode::STRICT;
+    ASSERT_TRUE(smsd::isSubstructure(query, ring, strict));
+    ASSERT_EQ(static_cast<int>(smsd::findSubstructure(query, ring, strict).size()), query.n);
+
+    auto doubleBond = smsd::parseSMILES("C=" + std::string(16, 'C'));
+    auto loose = strict;
+    loose.matchBondOrder = smsd::ChemOptions::BondOrderMode::ANY;
+    ASSERT_TRUE(smsd::isSubstructure(doubleBond, query, loose));
+    ASSERT_TRUE(!smsd::isSubstructure(doubleBond, query, strict));
+
+    auto aromaticQuery = makePruningGraph(17, chainEdges(17), {}, std::vector<uint8_t>(17, 1));
+    auto flexible = strict;
+    flexible.aromaticityMode = smsd::ChemOptions::AromaticityMode::FLEXIBLE;
+    ASSERT_TRUE(smsd::isSubstructure(aromaticQuery, query, flexible));
+    ASSERT_TRUE(!smsd::isSubstructure(aromaticQuery, query, strict));
+}
+
+void test_tautomer_prescreens_allow_selenium_region_matches() {
+    auto query = makePruningGraph(2, {{0, 1}}, {6, 34});
+    auto target = makePruningGraph(2, {{0, 1}}, {6, 8});
+    query.tautomerClass.assign(2, 0);
+    target.tautomerClass.assign(2, 0);
+    smsd::ChemOptions opts;
+    opts.tautomerAware = true;
+    ASSERT_TRUE(smsd::isSubstructure(query, target, opts));
+    smsd::detail::VF2PPMatcher matcher(query, target, opts, 1000);
+    ASSERT_TRUE(matcher.exists());
+    opts.tautomerAware = false;
+    ASSERT_TRUE(!smsd::isSubstructure(query, target, opts));
+}
+
+void test_disconnected_substructure_requires_distinct_target_atoms() {
+    auto query = smsd::parseSMILES("CCCC.CCCC");
+    // Only one connected four-carbon path exists; isolated carbons make the
+    // element histogram pass, and target size bypasses the small-molecule path.
+    auto target = smsd::parseSMILES("CCCC.C.C.C.C." + std::string(143, 'N'));
+    ASSERT_TRUE(!smsd::isSubstructure(query, target, smsd::ChemOptions{}));
+    ASSERT_TRUE(smsd::findSubstructure(query, target, smsd::ChemOptions{}).empty());
+    auto validTarget = smsd::parseSMILES("CCCC.CCCC." + std::string(143, 'N'));
+    ASSERT_TRUE(smsd::isSubstructure(query, validTarget, smsd::ChemOptions{}));
+}
+
+void test_multihop_nlf_preserves_target_shortcuts() {
+    smsd::ChemOptions opts;
+    opts.aromaticityMode = smsd::ChemOptions::AromaticityMode::STRICT;
+    std::vector<int> elements(13, 6);
+    elements[0] = 7; elements[2] = 8;
+    auto query = makePruningGraph(13, chainEdges(13), elements);
+    auto edges = chainEdges(13);
+    edges.emplace_back(0, 2);
+    auto target = makePruningGraph(13, edges, elements);
+    smsd::detail::VF2PPMatcher twoHop(query, target, opts, 1000);
+    ASSERT_TRUE(twoHop.exists());
+    for (int i = 0; i < query.n; ++i)
+        ASSERT_TRUE(smsd::MolGraph::nlfOk(query.getNLF2()[i], target.getNLF2()[i]));
+
+    // An unmapped target atom creates a shorter path without violating induced
+    // matching between mapped atoms. The unique oxygen moves from distance 3 to 2.
+    elements.assign(21, 6); elements[0] = 7; elements[3] = 8;
+    query = makePruningGraph(21, chainEdges(21), elements);
+    edges = chainEdges(21);
+    edges.emplace_back(0, 21); edges.emplace_back(21, 3);
+    elements.push_back(6);
+    target = makePruningGraph(22, edges, elements);
+    opts.useTwoHopNLF = false;
+    opts.useThreeHopNLF = true;
+    opts.induced = true;
+    smsd::detail::VF2PPMatcher threeHop(query, target, opts, 1000);
+    ASSERT_TRUE(threeHop.exists());
+    ASSERT_TRUE(smsd::MolGraph::nlfOk(query.getNLF3()[0], target.getNLF3()[0]));
+}
+
+void test_mcs_preserves_larger_valid_direction() {
+    auto query = makePruningGraph(12, chainEdges(12));
+    std::vector<std::pair<int, int>> cubeEdges;
+    for (int i = 0; i < 8; ++i) for (int bit = 0; bit < 3; ++bit) {
+        const int j = i ^ (1 << bit);
+        if (i < j) cubeEdges.emplace_back(i, j);
+    }
+    // Four isolated atoms keep the frequency bound above the connected optimum.
+    auto target = makePruningGraph(12, cubeEdges);
+    smsd::ChemOptions chem;
+    smsd::MCSOptions opts;
+    opts.timeoutMs = 10000;
+    const int hamiltonPath[] = {0, 1, 3, 2, 6, 7, 5, 4};
+    std::map<int, int> witness;
+    for (int i = 0; i < 8; ++i) witness[i] = hamiltonPath[i];
+    ASSERT_TRUE(smsd::validateMapping(query, target, witness, chem).empty());
+    const auto result = smsd::findMCS(query, target, chem, opts);
+    ASSERT_TRUE(smsd::validateMapping(query, target, result, chem).empty());
+    // Eight is achievable and is the largest target component. The historical
+    // final selector downgraded this valid mapping to the four-atom reverse hit.
+    ASSERT_EQ(static_cast<int>(result.size()), 8);
+}
+
+void test_small_matcher_obeys_global_deadline() {
+    auto query = smsd::parseSMILES("CO");
+    auto target = smsd::parseSMILES("CCO");
+    smsd::detail::global_deadline::set(0);
+    smsd::ChemOptions opts;
+    smsd::detail::SmallMolMatcher matcher(query, target, opts, 1000);
+    const bool matched = matcher.exists();
+    smsd::detail::global_deadline::clear();
+    ASSERT_TRUE(!matched);
+    ASSERT_TRUE(matcher.timedOut);
+}
+
+void test_large_timeouts_do_not_overflow() {
+    const int64_t maximum = std::numeric_limits<int64_t>::max();
+    ASSERT_TRUE(smsd::detail::steadyDeadline(maximum)
+                == std::chrono::steady_clock::time_point::max());
+    smsd::detail::TimeBudget budget(maximum);
+    ASSERT_TRUE(!budget.expiredNow());
+    ASSERT_TRUE(budget.remainingMs() > 0);
+    smsd::detail::global_deadline::set(maximum);
+    const bool expired = smsd::detail::global_deadline::expired();
+    smsd::detail::global_deadline::clear();
+    ASSERT_TRUE(!expired);
+    smsd::clique::ProductGraph graph;
+    graph.build(std::vector<smsd::clique::ProductVertex>(2), {{0, 1}});
+    const auto result = smsd::clique::findMaxCliques(graph, 1, maximum);
+    ASSERT_TRUE(!result.timed_out);
+    ASSERT_EQ(result.max_size, 2);
+}
+
+void test_clique_limit_does_not_limit_maximum_search() {
+    smsd::clique::ProductGraph graph;
+    graph.build(std::vector<smsd::clique::ProductVertex>(8),
+                {{0, 1}, {0, 2}, {0, 3}, {0, 4}, {5, 6}, {5, 7}, {6, 7}});
+    auto result = smsd::clique::findMaxCliques(graph, 1);
+    ASSERT_EQ(result.max_size, 3);
+    ASSERT_EQ(static_cast<int>(result.cliques.size()), 1);
+    ASSERT_EQ(static_cast<int>(result.cliques[0].size()), 3);
+    result = smsd::clique::findMaxCliques(graph, 0);
+    ASSERT_EQ(result.max_size, 3);
+    ASSERT_TRUE(result.cliques.empty());
+
+    graph.build(std::vector<smsd::clique::ProductVertex>(3),
+                {{0, 1}, {0, 2}, {1, 2}, {0, 0}, {0, 1}});
+    result = smsd::clique::findMaxCliques(graph, 8, 1000, 3);
+    ASSERT_EQ(result.max_size, 3);
+    ASSERT_EQ(static_cast<int>(result.cliques.size()), 1);
+    ASSERT_EQ(static_cast<int>(graph.adj[0].size()), 2);
+}
+
+void test_clique_search_matches_exhaustive_small_graphs() {
+    std::mt19937 random(73491);
+    for (int trial = 0; trial < 100; ++trial) {
+        constexpr int n = 9;
+        bool adjacent[n][n] = {};
+        std::vector<std::pair<int, int>> edges;
+        for (int i = 0; i < n; ++i) for (int j = i + 1; j < n; ++j) {
+            if (random() % 100 < static_cast<unsigned>(trial)) {
+                adjacent[i][j] = adjacent[j][i] = true;
+                edges.emplace_back(i, j);
+            }
+        }
+        int expected = 0, count = 0;
+        for (int mask = 1; mask < (1 << n); ++mask) {
+            bool clique = true;
+            int size = 0;
+            for (int i = 0; i < n && clique; ++i) if (mask & (1 << i)) {
+                ++size;
+                for (int j = i + 1; j < n; ++j)
+                    if ((mask & (1 << j)) && !adjacent[i][j]) { clique = false; break; }
+            }
+            if (!clique) continue;
+            if (size > expected) { expected = size; count = 1; }
+            else if (size == expected) ++count;
+        }
+        smsd::clique::ProductGraph graph;
+        graph.build(std::vector<smsd::clique::ProductVertex>(n), edges);
+        for (int limit : {0, 1, 8}) {
+            const auto result = smsd::clique::findMaxCliques(graph, limit, 1000, expected);
+            ASSERT_TRUE(!result.timed_out);
+            ASSERT_EQ(result.max_size, expected);
+            ASSERT_EQ(static_cast<int>(result.cliques.size()), std::min(limit, count));
+            for (const auto& clique : result.cliques) {
+                ASSERT_EQ(static_cast<int>(clique.size()), expected);
+                for (size_t i = 0; i < clique.size(); ++i)
+                    for (size_t j = i + 1; j < clique.size(); ++j)
+                        ASSERT_TRUE(adjacent[clique[i]][clique[j]]);
+            }
+        }
+        const auto unseeded = smsd::clique::findMaxCliques(graph, 1);
+        ASSERT_EQ(unseeded.max_size, expected);
+    }
 }
 
 // ============================================================================
@@ -1364,6 +1622,15 @@ int main() {
     RUN_TEST(phenol_not_in_benzene);
     RUN_TEST(benzene_phenol_mcs);
     RUN_TEST(rascal);
+    RUN_TEST(substructure_fingerprint_preserves_relaxed_policies);
+    RUN_TEST(disconnected_substructure_requires_distinct_target_atoms);
+    RUN_TEST(tautomer_prescreens_allow_selenium_region_matches);
+    RUN_TEST(multihop_nlf_preserves_target_shortcuts);
+    RUN_TEST(small_matcher_obeys_global_deadline);
+    RUN_TEST(large_timeouts_do_not_overflow);
+    RUN_TEST(mcs_preserves_larger_valid_direction);
+    RUN_TEST(clique_limit_does_not_limit_maximum_search);
+    RUN_TEST(clique_search_matches_exhaustive_small_graphs);
     RUN_TEST(performance);
 
     std::cout << "\n-- Advanced features --\n";

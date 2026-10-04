@@ -1,0 +1,2 @@
+# Preserve the upstream third-party license text verbatim.
+licenses/libomp/LICENSE.TXT whitespace=-blank-at-eof

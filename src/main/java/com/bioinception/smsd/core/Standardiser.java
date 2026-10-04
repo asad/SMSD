@@ -13,7 +13,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.openscience.cdk.aromaticity.Aromaticity;
-import org.openscience.cdk.aromaticity.ElectronDonation;
 import org.openscience.cdk.graph.Cycles;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.silent.SilentChemObjectBuilder;
@@ -64,9 +63,8 @@ public final class Standardiser {
     }
     CDKHydrogenAdder.getInstance(SilentChemObjectBuilder.getInstance()).addImplicitHydrogens(m);
     Cycles.markRingAtomsAndBonds(m);
-    @SuppressWarnings("deprecation")
     Aromaticity arom =
-        new Aromaticity(ElectronDonation.daylight(), Cycles.all());
+        new Aromaticity(Aromaticity.Model.Daylight, Cycles.all());
     arom.apply(m);
 
     return m;

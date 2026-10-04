@@ -25,6 +25,14 @@ larger MCS on 21% of pairs, zero timeouts. See
 pip install smsd
 ```
 
+Build from source from the repository root, which contains the C++ sources
+and the canonical package metadata:
+
+```bash
+python -m pip install -e ".[dev]"
+python -m build
+```
+
 Supported CPython versions: `3.9` through the latest stable release series.
 Current default test target: `Python 3.12`.
 The native SMSD path is CPU-first with optional GPU acceleration. RDKit
