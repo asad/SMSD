@@ -57,7 +57,7 @@
     <!-- Libraries -->
     <cdk.version>2.13</cdk.version>
     <picocli.version>4.7.7</picocli.version>
-    <jackson.version>2.20.0</jackson.version>
+    <jackson.version>2.21.7</jackson.version>
 
     <!-- Test -->
     <junit.version>5.13.4</junit.version>

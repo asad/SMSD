@@ -1,7 +1,12 @@
 # SMSD Pro 7.1.2 local validation
 
 Validated on 4 October 2026 using macOS arm64, AppleClang 21, Java 25.0.2,
-Maven 3.9.14, CPython 3.13, CDK 2.13 and RDKit 2026.3.6.
+Maven 3.9.14, CPython 3.13, CDK 2.13, Jackson 2.21.7 and RDKit 2026.3.6.
+
+GitHub's 11 open advisories for Jackson 2.20.0 require patched versions up to
+2.21.7; the release resolves Jackson databind/core to 2.21.7. Java tests and
+CLI JSON output were revalidated after this dependency change. Alerts on the
+default branch remain until the changes are merged.
 
 ```bash
 MACOSX_DEPLOYMENT_TARGET=26.0 SMSD_RELEASE_PYTHON=.venv/bin/python scripts/prepare-release.sh

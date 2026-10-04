@@ -2,6 +2,9 @@
 
 Java now uses [CDK 2.13](https://github.com/cdk/cdk/releases/tag/cdk-2.13),
 the latest stable Chemistry Development Kit release verified on 4 October 2026.
+Jackson is updated from 2.20.0 to 2.21.7 to satisfy the patched-version
+requirements of the 11 dependency advisories reported by GitHub for the
+repository's previous version.
 This patch fixes search correctness and release packaging without changing
 the public search APIs. Java requires JDK 25; C++ requires C++17.
 

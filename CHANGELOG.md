@@ -7,6 +7,8 @@ All notable changes to SMSD Pro are documented in this file.
 ### Updated
 - Java dependency: CDK 2.12 to the latest stable CDK 2.13; standardisation
   now uses `Aromaticity.Model.Daylight`.
+- Jackson databind 2.20.0 to 2.21.7, covering the patched-version requirements
+  of all 11 current repository dependency advisories.
 - Version metadata aligned across Java, C++, Python, CLI, and citation.
 
 ### Fixed
