@@ -45,5 +45,6 @@ use `find_package(smsd 7.2 CONFIG REQUIRED)` and link `smsd::smsd`.
 
 Bounded MCS searches can return a valid mapping without proving a global
 optimum. The retained [7.2.0 benchmark report](../benchmarks/RESULTS_7.2.0.md)
-records its original source versions and measurement scope; the 7.2.1 layout
-change has no new benchmark measurements.
+records its original source versions and measurement scope. The 7.2.1 seed
+deadline regression is recorded separately; the full corpus comparison has
+not been rerun for its patched source.

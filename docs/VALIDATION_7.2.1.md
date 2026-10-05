@@ -13,22 +13,27 @@ sources/tests remain in `python/`, and shared scripts, documentation and
 licenses stay at the root. The root `pyproject.toml` is the single Python
 manifest because it builds the extension from the C++ tree.
 
-The release commit, production-file fingerprint, source archive hash and
-final asset checksums will be recorded after the source is frozen and the
-checks below complete. Every wheel must correspond to that same source.
+The frozen build source is commit
+`815efdfc9d7ecaf2f7957bff8f6e32882a503e44`, prepared from a clean checkout.
+Its 215-file source distribution has SHA-256
+`1ef98789ffeaf8f2fe22586a12eef46bdb2ec8af6226f98b12f4cc6f849e7a2c`.
+Later documentation updates record results without changing the build inputs.
+Every wheel must correspond to this frozen source; final asset checksums are
+recorded in the release directory's `SHA256SUMS`.
 
 ## Release gates
 
 | Gate | 7.2.1 status | Required evidence |
 |---|---|---|
-| Source freeze | Pending | Exact commit, clean checkout and coherent Java/CMake/Python versions |
+| Source freeze | Passed | Exact commit above, 215 source files checked, coherent Java/CMake/Python versions |
 | Java 25 module | Passed across full and focused runs | 1,242 distinct passing cases, 15 opt-in skips; four JARs and both Unix launchers checked |
-| macOS arm64 CPU/OpenMP | Initial candidate passed; final archive build pending | 12 native Debug suites, 691 Python passes and 8 skips on Python 3.14.8/RDKit 2026.03.6 |
+| macOS arm64 CPU/OpenMP | Passed from frozen archive | 12 native Debug suites, 691 Python passes and 8 skips on Python 3.14.8/RDKit 2026.03.6 |
 | Docker CLI | Passed locally | Filtered source context; Linux arm64/Temurin 25.0.4.1; version/help and validated substructure/MCS results |
-| Linux x86_64 CPU/OpenMP | Pending | Local manylinux build with glibc 2.28 target; native Debug suites and installed CPython 3.14 tests |
+| Linux x86_64 CPU/OpenMP | Passed locally under emulation | Same frozen archive; 12 native Debug suites, 691 Python passes and 8 skips on Python 3.14.5/RDKit 2026.03.6 |
+| Windows cross-compilation | Passed locally; no execution | All 12 native targets compile/link with MinGW GCC 16.2.0 and have AMD64 PE headers; sequential fallback |
 | Windows x86_64 CPU/OpenMP | Pending | Native GitHub Windows build from the exact 7.2.1 source; MSVC Debug suites, repaired DLLs and installed CPython 3.14 tests |
-| Three-wheel collection | Pending | Source/version agreement, binary architecture, runtime libraries, wrappers/headers, licenses and all RECORD hashes |
-| Source and release assets | Pending | Complete source inputs, no private files, strict metadata checks and verified checksums |
+| Three-wheel collection | macOS/Linux checks passed; Windows pending | Source/version agreement, binary architecture, runtime libraries, wrappers/headers, licenses and all RECORD hashes |
+| Source and release assets | Local set checked; Windows pending | Complete source inputs, no private files, strict metadata checks, CLI/header packages and verified checksums |
 | PyPI, Maven Central and GitHub | Pending | Publication followed by clean download/install checks |
 
 The CPU configuration registers 12 native suites with assertions enabled.
@@ -56,24 +61,47 @@ also passed with signing disabled. All four JARs contain the exact root
 LICENSE/NOTICE; own class files target Java 25, source copies match, and both
 Unix launchers report 7.2.1.
 
-Two local macOS candidates passed 12 native Debug suites and 691 Python
+The final frozen-source macOS wheel passed 12 native Debug suites and 691 Python
 tests with 8 optional skips. It used Python 3.14.8, RDKit 2026.03.6 and bundled
 libomp 23.1.0. It executed on macOS 27.0.1, with a macOS 26 deployment tag;
-execution on the minimum OS was not tested. The later Linux deadline fix
-requires rebuilding platform wheels from a new common archive; final source
-manifest and checksums remain pending.
+execution on the minimum OS was not tested. Native CTest took 93.47 seconds;
+installed-wheel pytest took 7.69 seconds. Delocate repair bundled libomp;
+strict Twine metadata, architecture, all RECORD hashes, exact wrappers/headers
+and legal copies passed. The wheel SHA-256 is
+`535a08cb8baaebc2c9750fa5a915c0f40143f86a8b9f86e5716655cce5e2e903`.
 
 The first complete Linux native run passed 11 suites and failed the existing
 MCS deadline regression: a 5 ms budget exceeded its unchanged 100 ms guard.
-Private repeated probes on the same emulated x86_64 host measured about
+Repeated probes on the same emulated x86_64 host measured about
 146 ms for the 32-atom fixture. Individual seed extensions took at most
 1.33 ms; throttled checks allowed many extensions after expiry. Immediate
 checks at candidate boundaries reduced the focused fixture to about 5 ms,
 with valid mappings and exact deadline restoration. The source also skips
 already-expired seed and orientation setup. Fresh full native and installed
-wheel runs must pass before these diagnostic results satisfy release gates.
+wheel runs now pass on macOS and Linux; the timeout assertion remains unchanged.
 These timings describe that regression on an emulated host, not a general
 performance comparison.
+
+The final Linux wheel used the same frozen source archive in the local
+manylinux 2.28 x86_64 container, running AlmaLinux 8.10/glibc 2.28 under QEMU
+on an arm64 host. GCC 14.2.1 compiled the CPU/OpenMP build. All 12 Debug
+suites passed in 402.06 seconds, including the MCS regression suite;
+installed-wheel pytest passed 691 tests with 8 skips in 32.89 seconds.
+The runtime was Python 3.14.5, RDKit 2026.03.6 and pytest 9.1.1, with active
+OpenMP. Auditwheel repair and strict Twine metadata checks passed; collection
+verified AMD64 ELF architecture, all RECORD hashes, exact source headers and
+wrappers, and license copies. The bundled libgomp 8.5.0 runtime comes from the
+AlmaLinux image; its executable section matches the original library, and the
+extension's relative RPATH resolves the repaired copy. Auditwheel added both manylinux 2.27 and 2.28
+tags; execution was tested on glibc 2.28 only. The repaired wheel SHA-256 is
+`e2197aef8f2f310c77bf4637b32846bad2e58aef14a73efdc56c0558c8347a3d`.
+Emulated execution establishes these checks, not native hardware timings.
+
+Local MinGW cross-compilation from the frozen archive built all 12 native
+Debug executables with assertions enabled and verified AMD64 PE headers.
+That toolchain has no OpenMP runtime and used the sequential fallback. This
+proves compilation/linking only; the native MSVC Windows wheel and its OpenMP
+runtime still require execution on Windows.
 
 The Docker allowlist excludes generated Java API pages, test reports and
 build artifacts. Inspection of the actual builder COPY layer found only the

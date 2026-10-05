@@ -61,7 +61,7 @@ mvn -Dtest=ExternalBenchmarkTest -Dbenchmark=true test
 mvn -Dtest=JavaCdkVsSmsdBenchmarkTest -Dbenchmark=true test
 ```
 
-Java uses the CDK version pinned in `pom.xml` (2.13 for this checkout). The
+Java uses the CDK version pinned in `java/pom.xml` (2.13 for this checkout). The
 Java CDK comparison measures substructure search rather than MCS. See the
 [benchmark guide](../README.md) for the remaining entry points and the
 [current report](../RESULTS_7.2.0.md) for coverage and observed limitations.

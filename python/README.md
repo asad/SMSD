@@ -18,8 +18,8 @@ RDKit and CDK are not required for the core SMSD path.
 Performance depends on corpus, chemistry constraints, search budget and
 result validity. See the [current local report](https://github.com/asad/SMSD/blob/master/benchmarks/RESULTS_7.2.0.md)
 for the 7.1.2 baseline, 7.2.0 source candidate and RDKit 2026.09.1 comparison.
-The 7.2.1 version, repository layout and packaging changes have no new
-benchmark measurements.
+The 7.2.1 deadline regression is recorded separately. Full corpus comparisons
+have not been rerun for its patched source, layout and packaging changes.
 The MoleculeNet-derived Dalke-style pairs are not the original Dalke benchmark.
 
 ## Install
@@ -148,13 +148,16 @@ Debug suites also passed
 on Windows with MSVC. These checks do not extend the macOS benchmark timings
 to other platforms.
 These 7.2.0 results are separate from 7.2.1 validation.
-The initial 7.2.1 macOS arm64 wheel passed all 12 native Debug suites and
+The frozen-source 7.2.1 macOS arm64 wheel passed all 12 native Debug suites and
 691 Python tests with 8 skips on Python 3.14.8/RDKit 2026.03.6, with bundled
 OpenMP. Execution was on macOS 27.0.1; the wheel targets macOS 26+, without
-a claim of testing the minimum OS. Final-source local platform builds, a
-native GitHub Windows build and three-wheel collection remain required. See
-[7.2.1 validation](https://github.com/asad/SMSD/blob/master/docs/VALIDATION_7.2.1.md)
-for pending checks. Publication remains pending.
+a claim of testing the minimum OS. The same-source Linux x86_64 wheel also
+passed all 12 native suites and 691 Python tests with 8 skips on Python
+3.14.5/RDKit 2026.03.6, using glibc 2.28 under local emulation with bundled
+OpenMP. Native Windows execution and full three-wheel collection remain
+pending; see
+[7.2.1 validation](https://github.com/asad/SMSD/blob/master/docs/VALIDATION_7.2.1.md).
+Publication remains pending.
 
 ## Circular Fingerprints
 

@@ -25,8 +25,9 @@ Apple Metal builds.
 The proposed `7.2.1` release separates Java, C++ and Python source modules and
 prepares a compact release for Linux, macOS and Windows. It carries forward
 the reviewed element-preserving tautomer, stereo, objective and symmetry fixes
-from the 7.2.0 source candidate. Python wrappers preserve input indices and
-options; core batches reuse native graphs. Java uses **CDK 2.13**. The published release remains
+from the 7.2.0 source candidate and fixes native seed deadline checks.
+Python wrappers preserve input indices and options; core batches reuse native
+graphs. Java uses **CDK 2.13**. The published release remains
 `7.1.2` on GitHub and `7.1.1` on Maven Central/PyPI until the new artifacts
 are released.
 
@@ -37,8 +38,9 @@ mapping validity. The current review compares source snapshot `6807f31`
 (versioned 7.1.2) with the 7.2.0 source candidate and RDKit 2026.09.1.
 That snapshot includes changes made after the original 7.1.2 release tag.
 See [measured results and reproduction commands](benchmarks/RESULTS_7.2.0.md).
-The 7.2.1 version, layout and packaging changes have no new benchmark
-measurements; the report retains its original versions, hashes and scope.
+The 7.2.1 deadline regression check is recorded separately. The full corpus
+comparisons have not been rerun for its patched source; the report retains
+its original versions, hashes and scope.
 
 The checked-in random and nearest-neighbor pairs are **Dalke-style datasets
 derived from MoleculeNet**. They are not the original Dalke benchmark; the
@@ -363,8 +365,9 @@ docker run --rm smsd --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 ## Benchmarks
 
 The [7.2.0 benchmark report](benchmarks/RESULTS_7.2.0.md) records that source
-candidate's local runs, versions, budgets and mapping checks. No new timing
-or quality measurements are claimed for the 7.2.1 layout and packaging update.
+candidate's local runs, versions, budgets and mapping checks. The 7.2.1
+deadline fix, layout and packaging changes have no new cross-solver corpus
+comparison. Its focused deadline regression is recorded in current validation.
 Historical result files are retained for reference; they are not evidence for
 new performance claims.
 
@@ -601,9 +604,10 @@ pip install ./smsd-7.2.1.tar.gz
 ## Tests
 
 The reorganised 7.2.1 Java module has 1,242 distinct passing cases and 15
-opt-in skips across full and focused runs. Its initial macOS arm64 wheel
-passed all 12 native Debug suites and 691 Python tests with 8 skips on
-Python 3.14.8/RDKit 2026.03.6. Final-source platform builds and collection are
+opt-in skips across full and focused runs. Its frozen-source macOS arm64 and
+emulated Linux x86_64 wheels each passed all 12 native Debug suites and 691
+Python tests with 8 skips on CPython 3.14/RDKit 2026.03.6. Native Windows
+execution and complete three-wheel collection remain pending and are
 tracked in [current validation](docs/VALIDATION_7.2.1.md). The following
 results remain historical 7.2.0 local validation on macOS arm64:
 

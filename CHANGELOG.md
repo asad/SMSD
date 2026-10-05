@@ -21,9 +21,10 @@ All notable changes to SMSD Pro are documented in this file.
 - Updated current version examples and release artifacts to 7.2.1. The compact
   release targets portable Java 25 packages and CPython 3.14 CPU/OpenMP wheels
   for Linux x86_64, macOS arm64 and Windows x86_64, plus a source distribution.
-- Fresh local macOS/Linux builds, a native GitHub Windows check, same-source
-  three-wheel collection and publication are pending. Track their results in
-  `docs/VALIDATION_7.2.1.md`.
+- Frozen-source local macOS and emulated Linux wheels each pass all 12 native
+  Debug suites and 691 Python tests with 8 optional skips. Native Windows
+  execution, full three-wheel collection and publication are pending. Track
+  results in `docs/VALIDATION_7.2.1.md`.
 - Adjusted Java test wall-clock guards to 35 seconds around a 30-second drug
   pair search and 12 seconds around a 10-second pharmacophore search. Search
   budgets and result assertions are unchanged.

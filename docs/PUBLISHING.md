@@ -24,8 +24,9 @@ operating systems. Java sources and artifacts live under `java/src/` and
 The root Maven aggregator supports `mvn verify`. The root `pyproject.toml`
 remains the single Python manifest for the C++ extension and Python package.
 
-The retained 7.2.0 benchmarks use Python 3.13.14 with RDKit 2026.09.1. No new
-measurements are claimed for the 7.2.1 version, layout and packaging changes.
+The retained 7.2.0 benchmarks use Python 3.13.14 with RDKit 2026.09.1. The
+7.2.1 deadline regression check is recorded separately; no new cross-solver
+benchmark ranking is claimed.
 Keep `RESULTS_7.2.0.md` and the original benchmark archive name/hash when
 including that historical evidence. RDKit is optional at runtime.
 

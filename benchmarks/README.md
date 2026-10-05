@@ -9,8 +9,9 @@ separately. Atom counts alone do not establish equivalent results or optimality.
 ## 7.2.1 release scope
 
 Version 7.2.1 reorganizes the repository into `java/`, `cpp/` and `python/`
-modules and updates release packaging. No new measurements are attributed to
-those changes. `RESULTS_7.2.0.md`, its measured numbers, source fingerprints,
+modules, updates release packaging and fixes native seed deadline checks.
+The focused deadline regression is recorded separately. No new cross-solver
+corpus measurements are attributed to those changes. `RESULTS_7.2.0.md`, its measured numbers, source fingerprints,
 input hashes and the `smsd-7.2.0-benchmark-data.tar.gz` archive retain their
 original names and scope. Commands below use the current checkout layout;
 new 7.2.1 release checks are tracked in
