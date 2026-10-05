@@ -17,10 +17,11 @@ includes Unix and Windows launchers. Native DMG, MSI and DEB installers are a
 separate manual workflow and are not required to run the portable CLI.
 
 Python wheels contain native code and must match the operating system,
-architecture and Python interpreter. The current 7.2.0 local validation covers
+architecture and Python interpreter. The current 7.2.0 validation covers
 CPython 3.14 on macOS arm64, executed on macOS 27.0.1 with a macOS 26+ deployment
 target. Linux x86_64 passes 691 Python tests with 8 skips under local emulation;
-native Windows x86_64 validation is pending. Intel
+Windows x86_64 passes the same counts on Windows Server 2022 with CPython
+3.14.7; corrected runtime packaging awaits a rerun before release. Intel
 macOS is outside this compact wheel set; use a source build. A wheel tagged `cp314` is for ordinary CPython
 3.14, not the free-threaded `cp314t` interpreter. Use a source build when a
 matching wheel is unavailable. C++ headers are also available for source
@@ -144,7 +145,7 @@ from Xcode Command Line Tools on macOS, or MSVC from Visual Studio Build Tools
 with the Desktop development with C++ workload on Windows. On Windows, use a
 Developer PowerShell prompt. The configuration flags below cover both
 single-configuration and Visual Studio generators. All 12 native suites pass
-on macOS and emulated Linux; native Windows execution remains pending:
+on macOS, emulated Linux and native Windows Server 2022:
 
 ```text
 cmake -S cpp -B build/cpu -DCMAKE_BUILD_TYPE=Debug -DSMSD_BUILD_PYTHON=OFF -DSMSD_BUILD_TESTS=ON -DSMSD_BUILD_METAL=OFF -DSMSD_BUILD_CUDA=OFF

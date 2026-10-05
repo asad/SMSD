@@ -46,7 +46,9 @@ def inspect_source(path):
                 "cpp/include/smsd/mcs.hpp", "cpp/bindings/pybind11/smsd_bindings.cpp",
                 "python/tests/test_smsd.py", "scripts/check_python_wheel.py",
                 "scripts/check_native_wheel_build.py", "scripts/build_python_wheels.py",
-                "scripts/cibuildwheel.toml", "LICENSE", "NOTICE"}
+                "scripts/cibuildwheel.toml", "scripts/repair_windows_wheel.py",
+                "licenses/msvc/README.md", "licenses/msvc/LICENSE-2022.docx",
+                "licenses/msvc/LICENSE-2026.docx", "LICENSE", "NOTICE"}
     missing = sorted(required - files.keys())
     if missing:
         raise ValueError("Incomplete source distribution: " + ", ".join(missing))

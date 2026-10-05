@@ -1,4 +1,4 @@
-# SMSD 7.2.0 local validation
+# SMSD 7.2.0 validation
 
 This is an unreleased-source validation record, dated 2026-10-05. The baseline
 is the 7.1.2 source snapshot `6807f31`. Earlier release artifacts are distinct
@@ -128,11 +128,12 @@ OS installer. Native installers are outside the compact asset set.
 |---|---|
 | macOS 26+ arm64 | Installed wheel tested on macOS 27.0.1; counts above |
 | Linux x86_64, glibc 2.28+ | All 12 native Debug suites; 691 Python tests passed, 8 skips |
-| Windows x86_64 | Native build and execution checks pending |
+| Windows x86_64 | First MSVC build passes all 12 native Debug suites and 691 Python tests, 8 skips; corrected runtime packaging awaits a rerun |
 
 Following the portability edits, all 12 native CPU suites pass on macOS and
 the rebuilt CPython 3.14.8 wheel again passes 691 tests with 8 skips. Its SHA-256
-is `5d974fe90f5b973d72d56fb108c9f500a320c2fa3ac386b59e2834ca1ab3054a`.
+before the metadata refresh is
+`5d974fe90f5b973d72d56fb108c9f500a320c2fa3ac386b59e2834ca1ab3054a`.
 The additional native suite checks the standalone depiction header and
 Unicode MOL/SDF round-trips. Release-wheel hashes differ from the comparison
 wheels recorded in the benchmark report.
@@ -144,7 +145,7 @@ emits both manylinux 2.27 and 2.28 compatibility tags; execution was checked
 on the glibc 2.28 container. Twine checks, installed-module origin, CPU/OpenMP
 functionality, full Python tests and artifact hashes pass. Timings from
 emulation do not extend the macOS benchmark comparisons.
-The final Linux wheel SHA-256 is
+The original tested Linux wheel SHA-256 is
 `9ec857dd14969eb05316428f4836b2604c87a3ad512a612a770f2a818ae22672`.
 
 The initial Linux run exposed a batch test's one-second hardware speed
@@ -159,10 +160,41 @@ checks ring geometry and SVG output. Native MOL/SDF APIs now interpret filenames
 as UTF-8, and MSVC builds select UTF-8 source and executable character sets.
 A MinGW-w64 GCC 16.2.0 Windows cross-build compiles and links all 12 native
 targets and an installed CMake consumer; this is compiler evidence rather than Windows runtime
-validation. Windows publication requires its native wheel and tests.
+validation. The subsequent native Windows check is recorded below.
+
+The [Windows build](https://github.com/asad/SMSD/actions/runs/37289445321)
+uses the clean `d1acdd988edac6ee476f5bcef3a94886bf2a9586` source commit on
+Windows Server 2022 x86_64, MSVC 19.44.35229.0 and CPython 3.14.7. All 12
+native Debug suites pass with assertions enabled, including Unicode file
+round-trips. The installed CPU/OpenMP wheel passes 691 Python tests with 8
+skips in 7.85 seconds, using RDKit 2026.03.6. One skip is for absent Open Babel
+bindings; seven are opt-in external benchmarks. Publication was disabled.
+
+The Windows run's source archive has 205 files matching the local archive byte for byte.
+Delvewheel 1.13.1 bundles hash-renamed `msvcp140` and `vcomp140` DLLs and adds
+the package's DLL-directory loader. The extension and both bundled DLLs are
+AMD64 PE binaries. Remaining imports are Windows system libraries and the
+CPython-provided runtime. The original tested Windows wheel SHA-256 is
+`8b15bde8e2b8e456e98881f0d1f6794c27fc2e8fbfffc54f49568595c191765c`.
+These timings record test execution, not a Windows performance comparison.
+
+Dependency inspection found that the first repair selected `msvcp140` 14.40
+from the runner's Java installation, below the MSVC 14.44 toolset's supported
+runtime baseline. Its `vcomp140` 14.51 came from ImageMagick. The repair helper
+now selects compatible Microsoft runtime files explicitly instead of relying
+on unrelated applications in `PATH`. The corrected Windows wheel must pass
+another native build and installed-wheel test run before publication. The
+original tested wheel above is retained as validation evidence only.
 
 All three release wheels must match the source distribution's Python wrappers,
 C++ headers and license copies. `scripts/collect-release-wheels.py` also checks
 wheel RECORD hashes and requires all three platforms by default. The Linux
 repair includes the GCC OpenMP runtime license and runtime-library exception;
 macOS includes the LLVM OpenMP license.
+Windows runtime license documents and attribution are included under
+`licenses/msvc` and copied into wheel license metadata.
+
+Release staging refreshes the Linux and macOS wheels' README metadata and
+runtime license copies. Their native libraries, Python application code and
+C++ headers remain byte-identical to the tested wheels. Final distribution
+hashes are recorded in the release's `SHA256SUMS` file.

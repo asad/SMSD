@@ -595,9 +595,11 @@ The Python guide's executable snippets also passed. Full corpus and optional
 benchmark executions are reported separately in the
 [benchmark report](benchmarks/RESULTS_7.2.0.md). These checks establish the
 reported test coverage, rather than a guarantee for every molecule, objective
-or platform. The additional Linux x86_64 release checks pass all 12 native
-suites and 691 Python tests with 8 skips under local emulation. CUDA and native
-Windows execution remain untested.
+or platform. The Linux x86_64 release checks pass all 12 native suites and
+691 Python tests with 8 skips under local emulation. The Windows x86_64 build
+passes the same suites and Python test counts on Windows Server 2022 with
+MSVC and CPython 3.14.7. CUDA remains untested.
+Corrected Windows runtime packaging still requires a validation rerun before release.
 See [current validation](docs/VALIDATION_7.2.0.md); the
 [7.1.2 record](docs/VALIDATION_7.1.2.md) is historical.
 

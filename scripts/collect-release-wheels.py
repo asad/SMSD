@@ -2,6 +2,7 @@
 """Check and collect matching CPython 3.14 wheels without publishing."""
 
 import argparse
+import ast
 import base64
 import csv
 import hashlib
@@ -37,6 +38,56 @@ def source_files(path):
         if len(roots) != 1:
             raise ValueError("Expected one source archive root")
         return files
+
+
+def matches_windows_repaired_init(wheel, prefix, original, repaired):
+    """Accept only delvewheel 1.13.1's known CPython 3.14 DLL bootstrap."""
+    repair_metadata = prefix + "DELVEWHEEL"
+    names = wheel.namelist()
+    if (repair_metadata not in names
+            or not wheel.read(repair_metadata).startswith(b"Version: 1.13.1\n")
+            or not any(name.startswith("smsd.libs/") and name.count("/") == 1
+                       and name.endswith(".dll") for name in names)):
+        return False
+    # This release uses LF source with a module docstring. Reconstruct the
+    # repair's insertion instead of removing arbitrary marker-delimited code.
+    if (b"\r" in original or not original.endswith(b"\n")
+            or b"# start delvewheel patch" in original
+            or b"# end delvewheel patch" in original):
+        return False
+    try:
+        tree = ast.parse(original)
+    except SyntaxError:
+        return False
+    if not ast.get_docstring(tree) or len(tree.body) < 2:
+        return False
+    patch = b"""# start delvewheel patch
+def _delvewheel_patch_1_13_1():
+    import os
+    if os.path.isdir(libs_dir := os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, 'smsd.libs'))):
+        os.add_dll_directory(libs_dir)
+
+
+_delvewheel_patch_1_13_1()
+del _delvewheel_patch_1_13_1
+# end delvewheel patch
+"""
+    lines = original.splitlines(keepends=True)
+    future_imports = [node for node in tree.body
+                      if isinstance(node, ast.ImportFrom) and node.module == "__future__"]
+    if future_imports:
+        boundary = sum(map(len, lines[:future_imports[-1].end_lineno]))
+    else:
+        docstring = tree.body[0].value
+        boundary = (sum(map(len, lines[:docstring.end_lineno - 1]))
+                    + docstring.end_col_offset)
+        # Upstream requires the closing docstring line to contain only whitespace.
+        trailing = original[boundary:].split(b"\n", 1)[0]
+        if trailing and not trailing.isspace():
+            return False
+    expected = (original[:boundary].rstrip() + b"\n\n\n" + patch
+                + b"\n" + original[boundary:].lstrip())
+    return repaired == expected
 
 
 def check_wheel(path, version, sources):
@@ -112,10 +163,21 @@ def check_wheel(path, version, sources):
             else:
                 continue
             matches = [entry for entry in names if entry == suffix or entry.endswith("/" + suffix)]
-            if len(matches) != 1 or wheel.read(matches[0]) != data:
+            if len(matches) != 1:
                 raise ValueError(f"Wheel and source differ: {path.name}: {name}")
+            installed = wheel.read(matches[0])
+            if installed == data:
+                continue
+            if (family == "windows" and suffix == "smsd/__init__.py" and matches[0] == suffix
+                    and matches_windows_repaired_init(wheel, prefix, data, installed)):
+                continue
+            raise ValueError(f"Wheel and source differ: {path.name}: {name}")
         licenses = ["LICENSE", "NOTICE", "licenses/libomp/LICENSE.TXT",
                     "licenses/libgomp/COPYING3", "licenses/libgomp/COPYING.RUNTIME"]
+        licenses.extend(name for name in ("licenses/msvc/README.md",
+                                          "licenses/msvc/LICENSE-2022.docx",
+                                          "licenses/msvc/LICENSE-2026.docx")
+                        if name in sources)
         for name in licenses:
             if wheel.read(prefix + "licenses/" + name) != sources[name]:
                 raise ValueError(f"Wrong license copy: {path.name}: {name}")

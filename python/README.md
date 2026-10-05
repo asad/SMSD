@@ -138,7 +138,11 @@ and targets macOS 26 or later. See
 [validation](https://github.com/asad/SMSD/blob/master/docs/VALIDATION_7.2.0.md)
 for scope and reproduction commands. The Linux x86_64 wheel also passes 691
 tests with 8 skips on CPython 3.14.5/RDKit 2026.03.6 under local emulation.
-Native Windows execution is still pending; these results do not certify it.
+The Windows x86_64 wheel passes the same Python test counts on Windows Server
+2022 with CPython 3.14.7/RDKit 2026.03.6. All 12 native Debug suites also pass
+on Windows with MSVC. These checks do not extend the macOS benchmark timings
+to other platforms.
+Corrected Windows runtime packaging still requires a validation rerun before release.
 
 ## Circular Fingerprints
 

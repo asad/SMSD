@@ -64,10 +64,14 @@ The optional C++ RDKit adapter has a public header and exported CMake target;
 the current RDKit headers require C++20. The core remains C++17.
 All four Java JARs include SMSD's LICENSE and NOTICE: `META-INF/smsd` for
 library, CLI and source JARs, and `doc-files/smsd` for Javadoc.
-The platform checks pass all 12 native suites on macOS and emulated Linux,
-with 691 installed-wheel Python tests passed and 8 skips on each. Native
-Windows runtime checks remain a publication gate; cross-compilation alone
-does not establish that platform's execution.
+The platform checks pass all 12 native suites on macOS, emulated Linux and
+Windows Server 2022, with 691 installed-wheel Python tests passed and 8 skips
+on each. The Windows build uses MSVC 19.44 and CPython 3.14.7; its repaired
+wheel bundles the C++ and OpenMP runtime DLLs. These execution checks do not
+extend the macOS benchmark comparisons to other platforms.
+The first Windows repair selected an older C++ runtime from the runner's
+Java installation. Runtime selection is now explicit; the corrected wheel
+requires a validation rerun before publication.
 
 Earlier 7.1.2 test counts and primitive measurements are retained as a
 [historical validation record](VALIDATION_7.1.2.md), rather than current results.

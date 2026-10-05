@@ -80,6 +80,11 @@ py -3.14 -m venv .venv-release
 The helper runs dependency repair, all native Debug suites and installed-wheel
 tests. Keep its source and wheel provenance JSON alongside the build logs.
 These native Windows commands are an alternative to the manual hosted workflow.
+Windows repair uses `scripts/repair_windows_wheel.py` to select AMD64 Microsoft
+release runtimes from Visual Studio redistributables or Windows System32.
+It checks the DLL versions against the extension's linker family and verifies
+that wheel repair bundled those exact files. Microsoft runtime terms are
+included in the wheel's license metadata.
 
 The manual `python-publish.yml` workflow defaults to Windows only and does not
 publish unless explicitly requested. Its platform selector avoids rebuilding
@@ -104,7 +109,9 @@ python -m twine check --strict \
 
 Collection verifies package versions, CPython/ABI/platform tags, native binary
 format and architecture, all wheel RECORD hashes, Python wrappers, installed
-C++ headers and license copies against the release checkout and source distribution. It
+C++ headers and license copies against the release checkout and source distribution.
+For Windows, the supported delvewheel loader is checked separately; the
+application code must still match the source exactly. Collection
 requires all three target wheels by default and rejects inconsistent builds.
 This artifact check complements target-platform tests; it cannot establish
 that a Windows wheel executes by inspecting it on macOS. Use

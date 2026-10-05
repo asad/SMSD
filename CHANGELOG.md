@@ -34,6 +34,11 @@ All notable changes to SMSD Pro are documented in this file.
   than depending on a platform-specific `M_PI` macro.
 - Native MOL/SDF file APIs interpret filenames as UTF-8 on Windows. MSVC
   builds use UTF-8 source and executable character sets.
+- Release wheel collection validates the Windows DLL loader added by repair,
+  while retaining exact source checks for the application code.
+- Windows wheel repair selects compatible Microsoft runtimes explicitly,
+  avoiding older DLLs from unrelated applications in the build host's PATH.
+  Wheels include the Microsoft runtime license documents.
 
 ### Optimised
 - Core Python batch and compiled SMARTS multi-target bindings retain graph
@@ -54,6 +59,9 @@ All notable changes to SMSD Pro are documented in this file.
 - Limited Python wheel builds to CPython 3.14 across Linux x86_64, macOS arm64
   and Windows x86_64, plus a source distribution. Added installed-wheel checks
   and local PyPI and Maven Central publishing commands.
+- All 12 native Debug suites and 691 installed-wheel Python tests pass on
+  macOS, emulated Linux and native Windows Server 2022, with 8 Python skips
+  for optional Open Babel bindings and opt-in external benchmarks.
 
 ### Earlier source fixes included in this release
 - Standardized `MCS` capitalization in Java/C++ APIs, classes, helper names,
