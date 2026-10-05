@@ -36,8 +36,12 @@ auto mcs = smsd::findMCS(q, t, chem, mcsOpts);
 
 Mappings are oriented from query to target and validate every mapped query
 bond. In non-induced mode, extra target bonds are allowed, so the best valid
-mapping can have a different size when the arguments are reversed. The solver
-retains the larger valid candidate for the requested direction.
+mapping can have a different size when the arguments are reversed. Non-induced
+searches retain the caller's query orientation. Atom weights refer to query indices.
+Weights must be finite and cover every query atom. The native scoring API uses
+integer millipoints: positive and negative weight sums must each fit that score
+range after multiplication by 1,000 and truncation. Unsupported inputs raise
+`std::invalid_argument` before search, including on identity fast paths.
 
 ## Fingerprints
 
@@ -76,7 +80,7 @@ double dice = smsd::batch::detail::dice(ecfp, fcfp);
 ## Public MCS / Substructure Entry Points
 
 The high-level entry points are `smsd::findMCS()`, `smsd::findSubstructure()`
-and `smsd::isSubstructure()` declared in `smsd/mcs.hpp` and `smsd/substructure.hpp`.
+and `smsd::isSubstructure()` declared in `smsd/mcs.hpp` and `smsd/vf2pp.hpp`.
 The internal solver headers (`smsd/clique_solver.hpp`, the partition-refinement
 backtracker, edge-growth refinement) are private implementation details whose
 signatures may change between minor releases — do not depend on them in
@@ -84,12 +88,20 @@ out-of-tree code.
 
 ```cpp
 #include "smsd/mcs.hpp"
-#include "smsd/substructure.hpp"
+#include "smsd/vf2pp.hpp"
 
 auto mapping     = smsd::findMCS(g1, g2, smsd::ChemOptions{}, smsd::MCSOptions{});
 auto sub_mapping = smsd::findSubstructure(query, target, smsd::ChemOptions{});
 bool contained   = smsd::isSubstructure(query, target, smsd::ChemOptions{});
+auto all_maps    = smsd::findAllSubstructures(query, target, smsd::ChemOptions{});
 ```
+
+`findAllSubstructures` includes distinct atom mappings related by molecular
+symmetry, including self matches. It returns up to 10,000 mappings within the
+requested time budget; a timeout can return a partial enumeration.
+
+See [the algorithm review](ALGORITHM_REVIEW.md) for regression oracles, local
+validation commands and reproducible primitive benchmarks.
 
 ## Scaffold Library (7.1.0)
 
@@ -104,8 +116,14 @@ Optimal assignment solver for atom matching cost matrices.
 
 ```cpp
 #include "smsd/hungarian.hpp"
-auto assignment = smsd::hungarian::solve(costMatrix);
+auto assignment = smsd::optimalAssign(costMatrix);
 ```
+
+For an `m × n` matrix, the solver assigns `min(m,n)` pairs using
+`O(min(m,n)² max(m,n))` time and `O(m+n)` auxiliary space. A uniform unmatched
+penalty does not change the selected pairs. `totalCost` sums real assigned costs
+and excludes unmatched penalties. Ragged matrices and nonfinite inputs raise
+`std::invalid_argument`; reduced-cost arithmetic overflow raises `std::overflow_error`.
 
 ## SMARTS and CIP
 

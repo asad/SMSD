@@ -10,6 +10,8 @@
 #include <cmath>
 #include <limits>
 #include <numeric>
+#include <stdexcept>
+#include <utility>
 #include <vector>
 
 namespace smsd {
@@ -18,11 +20,11 @@ namespace smsd {
 // Optimal assignment solver
 //
 // Computes a minimum-cost assignment for a rectangular m x n cost matrix.
-// For unbalanced problems (m != n), virtual rows or columns with penalty
-// cost are added to make the problem square.
+// Assigns every vertex of the smaller side. Uniform unmatched penalties
+// contribute the same constant to every assignment and need no dummy matrix.
 //
-// Time complexity : O(max(m,n)^3)
-// Space complexity: O(max(m,n)^2)
+// Time complexity : O(min(m,n)^2 * max(m,n))
+// Auxiliary space: O(m+n)
 // ============================================================================
 
 struct AssignmentResult {
@@ -35,43 +37,59 @@ struct AssignmentResult {
  *
  * @param cost     m x n cost matrix (may be rectangular)
  * @param penalty  cost for unmatched rows/columns in rectangular problems (default 1.0)
- * @return         AssignmentResult with optimal (row, col) assignment pairs and total cost
+ * @return         Optimal (row, col) pairs and the sum of their real costs;
+ *                 totalCost excludes unmatched penalties, as in earlier releases
+ * @throws         std::invalid_argument for ragged matrices or nonfinite costs/penalty
+ * @throws         std::overflow_error if reduced-cost arithmetic overflows
  */
 inline AssignmentResult optimalAssign(
         const std::vector<std::vector<double>>& cost,
         double penalty = 1.0) {
 
-    int m = static_cast<int>(cost.size());
-    if (m == 0) return {{}, 0.0};
-    int n = static_cast<int>(cost[0].size());
-    if (n == 0) return {{}, 0.0};
+    if (cost.empty()) return {{}, 0.0};
+    const std::size_t columns = cost[0].size();
+    if (!std::isfinite(penalty))
+        throw std::invalid_argument("optimalAssign: penalty must be finite");
+    for (const auto& row : cost) {
+        if (row.size() != columns)
+            throw std::invalid_argument("optimalAssign: matrix must be rectangular");
+        for (double value : row)
+            if (!std::isfinite(value))
+                throw std::invalid_argument("optimalAssign: costs must be finite");
+    }
+    if (columns == 0) return {{}, 0.0};
+    const auto indexLimit = static_cast<std::size_t>(std::numeric_limits<int>::max());
+    if (cost.size() >= indexLimit || columns >= indexLimit)
+        throw std::length_error("optimalAssign: matrix dimensions exceed integer indexing");
 
-    // Pad to square matrix
-    int sz = std::max(m, n);
-    std::vector<std::vector<double>> c(sz, std::vector<double>(sz, penalty));
-    for (int i = 0; i < m; i++)
-        for (int j = 0; j < n; j++)
-            c[i][j] = cost[i][j];
+    const int m = static_cast<int>(cost.size()), n = static_cast<int>(columns);
+    const bool transpose = m > n;
+    const int rows = std::min(m, n), cols = std::max(m, n);
+    auto realCost = [&](int i, int j) {
+        return transpose ? cost[j][i] : cost[i][j];
+    };
 
     // u[i] = potential for row i, v[j] = potential for column j
-    std::vector<double> u(sz + 1, 0.0), v(sz + 1, 0.0);
+    std::vector<double> u(rows + 1, 0.0), v(cols + 1, 0.0);
     // p[j] = row assigned to column j (1-indexed, 0 = unassigned)
-    std::vector<int> p(sz + 1, 0), way(sz + 1, 0);
+    std::vector<int> p(cols + 1, 0), way(cols + 1, 0);
+    std::vector<double> minv(cols + 1);
+    std::vector<bool> used(cols + 1);
 
-    for (int i = 1; i <= sz; i++) {
+    for (int i = 1; i <= rows; i++) {
         p[0] = i;
         int j0 = 0;
-        std::vector<double> minv(sz + 1, std::numeric_limits<double>::infinity());
-        std::vector<bool> used(sz + 1, false);
+        std::fill(minv.begin(), minv.end(), std::numeric_limits<double>::infinity());
+        std::fill(used.begin(), used.end(), false);
 
         do {
             used[j0] = true;
             int i0 = p[j0], j1 = 0;
             double delta = std::numeric_limits<double>::infinity();
 
-            for (int j = 1; j <= sz; j++) {
+            for (int j = 1; j <= cols; j++) {
                 if (used[j]) continue;
-                double cur = c[i0 - 1][j - 1] - u[i0] - v[j];
+                double cur = realCost(i0 - 1, j - 1) - u[i0] - v[j];
                 if (cur < minv[j]) {
                     minv[j] = cur;
                     way[j] = j0;
@@ -82,7 +100,11 @@ inline AssignmentResult optimalAssign(
                 }
             }
 
-            for (int j = 0; j <= sz; j++) {
+            // Finite input can still overflow reduced-cost arithmetic. Fail
+            // explicitly instead of repeatedly choosing the sentinel column.
+            if (!std::isfinite(delta) || j1 == 0)
+                throw std::overflow_error("optimalAssign: reduced cost overflow");
+            for (int j = 0; j <= cols; j++) {
                 if (used[j]) {
                     u[p[j]] += delta;
                     v[j] -= delta;
@@ -105,13 +127,13 @@ inline AssignmentResult optimalAssign(
     // Extract assignment (only real rows and columns)
     AssignmentResult result;
     result.totalCost = 0.0;
-    for (int j = 1; j <= sz; j++) {
-        int row = p[j] - 1;
-        int col = j - 1;
-        if (row < m && col < n) {
-            result.assignment.emplace_back(row, col);
-            result.totalCost += cost[row][col];
-        }
+    result.assignment.reserve(rows);
+    for (int j = 1; j <= cols; j++) {
+        if (p[j] == 0) continue;
+        const int row = transpose ? j - 1 : p[j] - 1;
+        const int col = transpose ? p[j] - 1 : j - 1;
+        result.assignment.emplace_back(row, col);
+        result.totalCost += cost[row][col];
     }
 
     // Sort by row for deterministic output

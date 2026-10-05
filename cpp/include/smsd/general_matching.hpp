@@ -36,6 +36,18 @@ public:
     }
 
     std::vector<int> solve() {
+        // A valid maximal matching gives the alternating-forest search a head
+        // start. Augmentation still proves maximum cardinality; unlike a greedy
+        // answer alone, this also repairs choices trapped by odd cycles.
+        for (int v = 0; v < n_; ++v) {
+            if (mate_[v] != -1) continue;
+            for (int u : graph_[v]) {
+                if (u == v || mate_[u] != -1) continue;
+                mate_[v] = u;
+                mate_[u] = v;
+                break;
+            }
+        }
         for (int root = 0; root < n_; ++root) {
             if (mate_[root] != -1) continue;
             int endpoint = augmentingPath(root);

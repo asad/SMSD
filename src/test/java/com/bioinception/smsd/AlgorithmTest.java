@@ -2955,11 +2955,12 @@ public class AlgorithmTest extends TestBase {
   class CompleteRingsOnlyTests {
 
     @Test
-    @DisplayName("Naphthalene vs ethylbenzene: completeRingsOnly MCS completes")
+    @DisplayName("Complete query rings exclude a partial naphthalene fused system")
     void naphthalenePartialRingExcluded() throws Exception {
       // Naphthalene has two fused 6-member rings sharing 2 atoms.
       // Ethylbenzene has one 6-member ring + 2-carbon chain.
-      // With completeRingsOnly, fused ring systems may include bridgehead atoms.
+      // The rings share atoms, so completing either query ring forces both
+      // rings (all 10 query atoms). The 8-atom target cannot contain that system.
       IAtomContainer naphthalene = mol("c1ccc2ccccc2c1");
       IAtomContainer ethylbenzene = mol("CCc1ccccc1");
 
@@ -2969,10 +2970,28 @@ public class AlgorithmTest extends TestBase {
       mcsOpts.timeoutMs = 10_000;
 
       Map<Integer, Integer> mcs = SearchEngine.findMCS(naphthalene, ethylbenzene, opts, mcsOpts);
-      // MCS should contain benzene ring overlap; fused bridgehead atoms are acceptable
       assertNotNull(mcs, "completeRingsOnly should return a result");
-      assertTrue(mcs.size() >= 4,
-          "Naphthalene/ethylbenzene should share aromatic ring atoms, got " + mcs.size());
+      assertTrue(mcs.isEmpty(), "Both overlapping query rings must be complete");
+    }
+
+    @Test
+    @DisplayName("Complete query benzene ring can map into a fused target ring")
+    void reversedFusedTargetPreservesCompleteQueryRing() throws Exception {
+      IAtomContainer ethylbenzene = mol("CCc1ccccc1");
+      IAtomContainer naphthalene = mol("c1ccc2ccccc2c1");
+      ChemOptions opts = new ChemOptions();
+      opts.completeRingsOnly = true;
+      MolGraph query = new MolGraph(ethylbenzene);
+      MolGraph target = new MolGraph(naphthalene);
+      // Independent six-atom witness: the complete query benzene ring maps
+      // onto one target cycle. Ring completion applies to the caller's query.
+      Map<Integer, Integer> witness = Map.of(2, 0, 3, 1, 4, 2, 5, 3, 6, 8, 7, 9);
+      assertTrue(SearchEngine.validateMapping(query, target, witness, opts).isEmpty());
+      SearchEngine.MCSOptions mcsOpts = new SearchEngine.MCSOptions();
+      mcsOpts.timeoutMs = 5_000;
+      Map<Integer, Integer> mcs = SearchEngine.findMCS(query, target, opts, mcsOpts);
+      assertTrue(mcs.keySet().containsAll(witness.keySet()), "The complete query ring must be retained");
+      assertTrue(SearchEngine.validateMapping(query, target, mcs, opts).isEmpty());
     }
 
     @Test

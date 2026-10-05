@@ -90,19 +90,25 @@ struct TimeBudget {
     using Clock = std::chrono::steady_clock;
     Clock::time_point deadline;
     int64_t counter_ = 0;
+    mutable bool timedOut_ = false;
     static constexpr int64_t CHECK_EVERY = 256;
 
     explicit TimeBudget(int64_t ms)
         : deadline(steadyDeadline(std::max<int64_t>(1, ms))) {}
 
     bool expired() {
-        if ((++counter_ & (CHECK_EVERY - 1)) != 0) return false;
-        if (global_deadline::active && Clock::now() >= global_deadline::deadline) return true;
-        return Clock::now() >= deadline;
+        if (timedOut_) return true;
+        if (++counter_ != 1 && (counter_ & (CHECK_EVERY - 1)) != 0) return false;
+        return expiredNow();
     }
     bool expiredNow() const {
-        if (global_deadline::expired()) return true;
-        return Clock::now() >= deadline;
+        // Keep expiry sticky so recursive unwinding cannot resume search work
+        // during the next interval of throttled clock checks.
+        if (timedOut_ || global_deadline::expired() || Clock::now() >= deadline) {
+            timedOut_ = true;
+            return true;
+        }
+        return false;
     }
     int64_t remainingMs() const {
         auto r = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - Clock::now()).count();
@@ -561,15 +567,28 @@ inline bool isSimplePathGraph(const MolGraph& g) {
     if (g.n == 0) return true;
     int edgeCount = 0;
     int endpoints = 0;
+    int start = -1;
     for (int i = 0; i < g.n; ++i) {
         int deg = g.degree[i];
         if (deg > 2) return false;
-        if (deg <= 1) endpoints++;
+        if (deg <= 1) { endpoints++; start = i; }
         edgeCount += deg;
     }
     edgeCount /= 2;
     if (g.n == 1) return true;
-    return edgeCount == g.n - 1 && endpoints == 2;
+    if (edgeCount != g.n - 1 || endpoints != 2) return false;
+    // A disjoint cycle plus a path has the same degree/edge counts.
+    // Walk from an endpoint to require that the path includes every atom.
+    int visited = 0, previous = -1, current = start;
+    while (current != -1) {
+        ++visited;
+        int next = -1;
+        for (int nb : g.neighbors[current])
+            if (nb != previous) { next = nb; break; }
+        previous = current;
+        current = next;
+    }
+    return visited == g.n;
 }
 
 inline std::vector<int> linearizeSimplePath(const MolGraph& g) {
@@ -925,7 +944,7 @@ protected:
     const int* tdeg_;
 
     // Query neighbors sorted by descending degree
-    std::vector<std::vector<int>> qNeighborsByDegDesc_;
+    const std::vector<std::vector<int>>& qNeighborsByDegDesc_;
 
     // Scratch buffers: flat 1D layout to minimise malloc calls (v6.8.0)
     std::vector<int> probeCandBuf_;                // for non-recursive greedy probe
@@ -965,12 +984,13 @@ public:
           useInduced_(C.induced),
           bitParallelSufficient_(C.useBitParallelFeasibility
               && C.matchBondOrder == ChemOptions::BondOrderMode::ANY
+              && C.aromaticityMode != ChemOptions::AromaticityMode::STRICT
               && !C.useBondStereo && !C.ringMatchesRingOnly && !C.induced),
           domain_(static_cast<size_t>(gq.n) * ((gt.n + 63) >> 6), 0),
           usedMask_(((gt.n + 63) >> 6), 0),
           qdeg_(gq.degree.data()),
           tdeg_(gt.degree.data()),
-          qNeighborsByDegDesc_(gq.n),
+          qNeighborsByDegDesc_(gq.getNeighborsByDegDesc()),
           probeCandBuf_(gt.n + 64),
           candBufFlat_(static_cast<size_t>(std::max(1, gq.n)) * (gt.n + 64)),
           candStride_(gt.n + 64),
@@ -979,27 +999,6 @@ public:
         // Adaptive NLF disable for small molecules
         if (Nq_ <= 12 || Nt_ <= 12) useTwoHop_ = false;
         if (Nq_ <= 20 || Nt_ <= 20) useThreeHop_ = false;
-
-        // Build query neighbors sorted by descending degree
-        for (int i = 0; i < Nq_; ++i) {
-            int deg = gq_.degree[i];
-            qNeighborsByDegDesc_[i].resize(deg);
-            for (int k = 0; k < deg; ++k)
-                qNeighborsByDegDesc_[i][k] = gq_.neighbors[i][k];
-            // Insertion sort descending by degree
-            auto& nb = qNeighborsByDegDesc_[i];
-            for (int a = 1; a < deg; ++a) {
-                int key = nb[a], keyDeg = gq_.degree[key];
-                int b = a - 1;
-                while (b >= 0 && gq_.degree[nb[b]] < keyDeg) {
-                    nb[b+1] = nb[b]; --b;
-                }
-                nb[b+1] = key;
-            }
-        }
-
-        // Ensure canonical data is available for sameCanonicalGraph fast-path
-        gt_.ensureCanonical();
 
         // Ensure lazy-computed fields are ready before matching
         if (C.ringFusionMode != ChemOptions::RingFusionMode::IGNORE) {
@@ -1034,8 +1033,8 @@ public:
         // For large enough workloads, dispatch the Nq×Nt compatibility matrix
         // to GPU.  The GPU implements common-case checks only (atomicNum,
         // charge, aromaticity, ringOnly).  Advanced checks (tautomer, isotope,
-        // chirality, ring fusion) are handled by the CPU feasibility check
-        // during backtracking — the GPU domain is a safe superset.
+        // chirality, ring fusion) are applied to the returned domain on CPU.
+        // Disable the GPU's element equality when tautomer matching relaxes it.
         bool gpuDomainOk = false;
         if (Nq_ > 0 && Nt_ > 0 && static_cast<int64_t>(Nq_) * Nt_ > 2000
             && gpu_kern::graphKernelsAvailable()) {
@@ -1048,13 +1047,26 @@ public:
                 Nq_, Nt_, tWords_,
                 gq_.atomicNum.data(), gq_.formalCharge.data(), qRi.data(), qAr.data(),
                 gt_.atomicNum.data(), gt_.formalCharge.data(), tRi.data(), tAr.data(),
-                C_.matchAtomType, C_.matchFormalCharge, C_.ringMatchesRingOnly,
+                C_.matchAtomType && !C_.tautomerAware, C_.matchFormalCharge, C_.ringMatchesRingOnly,
                 C_.aromaticityMode == ChemOptions::AromaticityMode::STRICT,
                 flatDom.data());
             if (gpuDomainOk) {
-                for (int i = 0; i < Nq_; ++i)
+                for (int i = 0; i < Nq_; ++i) {
                     std::memcpy(domRow(i), &flatDom[i * tWords_],
                                 tWords_ * sizeof(uint64_t));
+                    if (C_.tautomerAware || C_.matchIsotope || C_.useChirality || C_.ringMatchesRingOnly
+                        || C_.ringFusionMode != ChemOptions::RingFusionMode::IGNORE) {
+                        for (int w = 0; w < tWords_; ++w) {
+                            uint64_t bits = domRow(i)[w];
+                            while (bits) {
+                                const int j = (w << 6) | ctz64(bits);
+                                bits &= bits - 1;
+                                if (!atomsCompatFast(gq_, i, gt_, j, C_))
+                                    domRow(i)[w] &= ~(uint64_t(1) << (j & 63));
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -1089,7 +1101,7 @@ public:
                 for (int k = 0; k <= maxKey; ++k) {
                     int bStart = bucketStart[k], bEnd = bucketStart[k + 1];
                     if (bStart == bEnd) continue; // empty bucket
-                    if (C_.matchAtomType
+                    if (C_.matchAtomType && !C_.tautomerAware
                         && gq_.atomicNum[i] != gt_.atomicNum[flatBucket[bStart]]) {
                         prunesAtom_ += static_cast<int64_t>(bEnd - bStart);
                         continue;
@@ -1972,15 +1984,6 @@ inline std::vector<std::vector<std::pair<int,int>>> findAllSubstructures(
 
     if (query.n == 0) return {{}};
     if (!detail::quickPrescreen(query, target, opts)) return {};
-    if (&query == &target || detail::isExactMatch(query, target, opts)) {
-        std::vector<std::pair<int,int>> id(query.n);
-        for (int i = 0; i < query.n; ++i) id[i] = {i, i};
-        return {id};
-    }
-    if (!opts.useChirality && !opts.useBondStereo
-        && detail::sameCanonicalGraph(query, target))
-        return {detail::canonicalIsoMap(query, target)};
-
     detail::TimeBudget tb(timeoutMs);
     bool timedOut = false;
 

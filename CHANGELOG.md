@@ -8,6 +8,43 @@ All notable changes to SMSD Pro are documented in this file.
 - Python bindings use CMake's modern `FindPython` module discovery, removing
   pybind11's CMP0148 deprecation warnings and unnecessary embedding-library
   discovery on Unix.
+- MCS fast paths enforce induced, connectivity and fragment constraints;
+  weighted searches preserve query atom indices. Full-graph degree sequences
+  no longer undercut bounds for partial induced matches.
+- Reversed Java and C++ MCS results reapply the original query's complete-ring
+  and fragment filters before being compared with the incumbent.
+- Java McSplit and product-graph pruning preserve valid partial mappings;
+  recursive extensions retain their candidate buffers. MCS enumeration
+  applies defaults and validity filters, and similarity bounds honor options.
+- Java and C++ connected MCS components respect weighted/bond objectives;
+  candidates are postfiltered before promoting incumbents. C++ MCS enumeration
+  preserves induced constraints on containment candidates.
+- Expired search budgets stay expired during recursive unwinding. Java clique
+  search checks deadlines around coloring and pivot work; orientation probes,
+  recovery and retries share the caller's total budget.
+- Python automatic MCS selection routes unsupported lightweight constraints
+  to the native solver; explicit lightweight requests reject unsupported
+  options instead of silently ignoring them.
+- C++ substructure enumeration retains symmetric self mappings; disconnected
+  cycles plus paths cannot enter the linear-path shortcut.
+- C++ unrestricted bond order preserves strict aromaticity. CPU/GPU candidate
+  domains consistently enforce isotope, chirality, ring and tautomer options.
+- Native clique helper seeds and extensions preserve query bonds, select the
+  largest connected component and honor result caps and expired deadlines.
+- Rectangular assignment rejects ragged and nonfinite inputs instead of
+  reading outside rows or failing to terminate.
+- C++ weighted MCS rejects nonfinite and out-of-range millipoint scores,
+  including partial-score overflow hidden by cancellation.
+
+### Optimised
+- C++ matcher setup reuses sorted query neighbors and skips unused target
+  canonicalization. Connected-component postprocessing traverses adjacency.
+- Rectangular assignment avoids square padding, using
+  `O(min(m,n)² max(m,n))` time and `O(m+n)` auxiliary space.
+- General matching seeds a valid maximal matching before blossom augmentation,
+  preserving maximum cardinality while reducing augmenting-search work.
+- Valid connected MCS seeds can extend despite different full neighborhoods;
+  Java adds a bounded anchor stage for medium graphs before expensive search.
 
 ## [7.1.2] - 2026-10-04
 

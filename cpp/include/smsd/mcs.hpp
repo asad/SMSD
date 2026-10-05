@@ -41,6 +41,10 @@ inline std::map<int,int> canonicalizeMapping(
         const MolGraph& g1, const MolGraph& g2,
         const std::map<int,int>& mapping);
 
+inline bool isValidMcsMapping(const MolGraph& g1, const MolGraph& g2,
+                              const std::map<int,int>& mapping,
+                              const ChemOptions& opts);
+
 // ---------------------------------------------------------------------------
 // MCSOptions
 // ---------------------------------------------------------------------------
@@ -51,6 +55,9 @@ struct MCSOptions {
     bool     maximizeBonds   = false;
     int      minFragmentSize = 1;
     int      maxFragments    = INT_MAX;
+    /// Finite per-query weights, scored as integer millipoints. The sum of
+    /// positive weights and the sum of negative weights must each fit that
+    /// score range, so every partial mapping has a representable score.
     std::vector<double> atomWeights;
     /// Timeout in milliseconds.  -1 (default) = adaptive:
     /// std::min(30000, 500 + g1.n * g2.n * 2).
@@ -249,7 +256,9 @@ inline std::vector<std::vector<int>> buildNLF3(const MolGraph& g) {
 // ---------------------------------------------------------------------------
 inline int ubLabel(const MolGraph& g, int i, const ChemOptions& C) {
     if (!C.matchAtomType) return 0;
-    int key = g.atomicNum[i] << 2;
+    int z = g.atomicNum[i];
+    if (C.tautomerAware && (z == 6 || z == 7 || z == 8 || z == 16 || z == 34)) z = 6;
+    int key = z << 2;
     if (C.aromaticityMode == ChemOptions::AromaticityMode::STRICT) key |= g.aromatic[i] ? 2 : 0;
     if (C.ringMatchesRingOnly) key |= g.ring[i] ? 1 : 0;
     return key;
@@ -257,7 +266,9 @@ inline int ubLabel(const MolGraph& g, int i, const ChemOptions& C) {
 
 inline int ubBaseLabel(const MolGraph& g, int i, const ChemOptions& C) {
     if (!C.matchAtomType) return 0;
-    int key = g.atomicNum[i] << 1;
+    int z = g.atomicNum[i];
+    if (C.tautomerAware && (z == 6 || z == 7 || z == 8 || z == 16 || z == 34)) z = 6;
+    int key = z << 1;
     if (C.aromaticityMode == ChemOptions::AromaticityMode::STRICT) key |= g.aromatic[i] ? 1 : 0;
     return key;
 }
@@ -314,11 +325,12 @@ inline int labelFrequencyUpperBoundDirected(const MolGraph& query, const MolGrap
 }
 
 // ---------------------------------------------------------------------------
-// Upper bound: Degree Sequence Bound (DSB) — provably >= LFUB
+// Degree filter for full substructure embeddings (not an MCS upper bound)
 // ---------------------------------------------------------------------------
 // For each atom label present in both graphs, collects degree sequences,
 // sorts descending, and greedily counts matchable pairs using two pointers.
-// An atom of degree d can only match an atom of degree >= d.
+// In a full embedding an atom of degree d needs at least d target neighbors.
+// Partial MCS mappings can omit neighbors, so their search must not use this.
 // O(n log n) time.
 inline int degreeSequenceUpperBound(const MolGraph& g1, const MolGraph& g2,
                                      const ChemOptions& C) {
@@ -370,6 +382,35 @@ inline int countMappedBonds(const MolGraph& g1, const std::map<int,int>& m) {
 // ---------------------------------------------------------------------------
 // MCS scoring
 // ---------------------------------------------------------------------------
+inline int weightScoreMillipoints(double weight) {
+    double score = weight * 1000.0;
+    // Conversion truncates toward zero; preserve the fractional boundary values
+    // that still truncate to a representable integer.
+    if (!std::isfinite(score) || score <= static_cast<double>(INT_MIN) - 1.0
+        || score >= static_cast<double>(INT_MAX) + 1.0) {
+        throw std::invalid_argument("atomWeights exceed the supported integer millipoint score range");
+    }
+    return static_cast<int>(score);
+}
+
+inline void validateAtomWeights(const MolGraph& query, const MCSOptions& opts) {
+    if (opts.atomWeights.empty()) return;
+    if (opts.atomWeights.size() < static_cast<size_t>(query.n))
+        throw std::invalid_argument("atomWeights size is smaller than query atom count");
+    double positive = 0.0, negative = 0.0;
+    for (int atom = 0; atom < query.n; ++atom) {
+        double weight = opts.atomWeights[atom];
+        if (!std::isfinite(weight))
+            throw std::invalid_argument("atomWeights must contain finite values");
+        if (weight > 0.0) positive += weight;
+        else negative += weight;
+    }
+    // Opposing large weights can cancel in a full mapping while overflowing
+    // a partial mapping. Validate both extrema independently.
+    (void)weightScoreMillipoints(positive);
+    (void)weightScoreMillipoints(negative);
+}
+
 inline int mcsScore(const MolGraph& g1, const std::map<int,int>& m,
                     const MCSOptions& M) {
     if (!M.atomWeights.empty()) {
@@ -378,7 +419,7 @@ inline int mcsScore(const MolGraph& g1, const std::map<int,int>& m,
         for (auto& [qi, ti] : m) {
             if (qi >= 0 && qi < awSz) w += M.atomWeights[qi];
         }
-        return static_cast<int>(w * 1000);
+        return weightScoreMillipoints(w);
     }
     return M.maximizeBonds ? countMappedBonds(g1, m) : static_cast<int>(m.size());
 }
@@ -409,7 +450,7 @@ inline int mcsScoreFlat(const MolGraph& g1, const int* q2t, int n1, int mapSize,
         for (int qi = 0; qi < n1; ++qi) {
             if (q2t[qi] >= 0 && qi < awSz) w += M.atomWeights[qi];
         }
-        return static_cast<int>(w * 1000);
+        return weightScoreMillipoints(w);
     }
     return M.maximizeBonds ? countMappedBondsFlat(g1, q2t, n1) : mapSize;
 }
@@ -465,50 +506,66 @@ inline int flatMapSize(const int* q2t, int n1) {
 // ---------------------------------------------------------------------------
 inline std::map<int,int> largestConnected(const MolGraph& g1,
                                            const std::map<int,int>& m,
-                                           const MolGraph* g2 = nullptr) {
+                                           const MolGraph* g2 = nullptr,
+                                           const MCSOptions* scoringOptions = nullptr) {
     if (m.empty()) return m;
-    // BFS to find components.
-    // Connectivity is defined through COMMON edges: bonds that exist in g1 between
-    // two mapped atoms AND (if g2 is provided) also in g2 between their target atoms.
-    // This is required for non-induced MCS — a bond in g1 that has no counterpart in
-    // g2 is not part of the common subgraph and must not be used for connectivity.
-    std::unordered_map<int,int> q2t;
-    if (g2) for (auto& [qi, ti] : m) q2t[qi] = ti;
-    std::unordered_set<int> mapped;
-    for (auto& [qi, ti] : m) mapped.insert(qi);
-
-    std::unordered_set<int> seen;
-    std::vector<std::vector<int>> comps;
-    for (auto& [qi, ti] : m) {
-        if (seen.count(qi)) continue;
-        std::vector<int> comp;
-        std::vector<int> dq = {qi};
-        seen.insert(qi);
-        while (!dq.empty()) {
-            int u = dq.back(); dq.pop_back();
-            comp.push_back(u);
-            for (int v : g1.neighbors[u]) {
-                if (mapped.count(v) && !seen.count(v)) {
-                    if (g1.hasBond(u, v)) {
-                        // For non-induced MCS: only use bond u-v as a connectivity
-                        // edge if the corresponding bond also exists in g2.
-                        if (g2 && !g2->hasBond(q2t.at(u), q2t.at(v))) continue;
-                        seen.insert(v);
-                        dq.push_back(v);
-                    }
-                }
+    // Atom indices are dense; avoid hash tables and repeated map lookups during
+    // this frequently used post-processing step. Connectivity uses common edges.
+    // Tiny partial mappings of large graphs should not clear graph-sized arrays.
+    const bool dense = g1.n <= 1024 || static_cast<size_t>(g1.n) <= m.size() * 16;
+    std::vector<int> q2t(dense ? g1.n : 0, -1);
+    if (dense) for (const auto& [qi, ti] : m) q2t[qi] = ti;
+    std::vector<uint8_t> seen(dense ? g1.n : 0, 0);
+    std::unordered_set<int> sparseSeen;
+    auto targetFor = [&](int atom) {
+        if (dense) return q2t[atom];
+        auto it = m.find(atom);
+        return it == m.end() ? -1 : it->second;
+    };
+    auto wasSeen = [&](int atom) {
+        return dense ? seen[atom] != 0 : sparseSeen.count(atom) != 0;
+    };
+    auto markSeen = [&](int atom) {
+        if (dense) seen[atom] = 1;
+        else sparseSeen.insert(atom);
+    };
+    std::vector<int> component, bestComponent;
+    component.reserve(m.size());
+    int bestScore = INT_MIN;
+    const bool weighted = scoringOptions
+        && (scoringOptions->maximizeBonds || !scoringOptions->atomWeights.empty());
+    for (const auto& [root, target] : m) {
+        if (wasSeen(root)) continue;
+        component.clear();
+        component.push_back(root);
+        markSeen(root);
+        for (size_t head = 0; head < component.size(); ++head) {
+            const int atom = component[head];
+            const int mappedAtom = targetFor(atom);
+            for (int nb : g1.neighbors[atom]) {
+                const int mappedNeighbor = targetFor(nb);
+                if (mappedNeighbor < 0 || wasSeen(nb)) continue;
+                if (!g1.hasBond(atom, nb)) continue;
+                if (g2 && !g2->hasBond(mappedAtom, mappedNeighbor)) continue;
+                markSeen(nb);
+                component.push_back(nb);
             }
         }
-        comps.push_back(std::move(comp));
+        int score = static_cast<int>(component.size());
+        if (weighted) {
+            std::map<int, int> fragment;
+            for (int atom : component) fragment.emplace(atom, targetFor(atom));
+            score = mcsScore(g1, fragment, *scoringOptions);
+        }
+        if (score > bestScore
+            || (score == bestScore && component.size() > bestComponent.size())) {
+            bestScore = score;
+            bestComponent = component;
+        }
     }
-    // Pick largest
-    int bestIdx = 0;
-    for (int i = 1; i < static_cast<int>(comps.size()); ++i)
-        if (comps[i].size() > comps[bestIdx].size()) bestIdx = i;
-
-    if (comps[bestIdx].size() == m.size()) return m;
+    if (bestComponent.size() == m.size()) return m;
     std::map<int,int> result;
-    for (int qi : comps[bestIdx]) result[qi] = m.at(qi);
+    for (int atom : bestComponent) result.emplace(atom, targetFor(atom));
     return result;
 }
 
@@ -645,7 +702,7 @@ inline std::map<int,int> ppx(const MolGraph& g1, const MolGraph& g2,
         int startSize = (int)ext.size();
         if (M.induced) ext = pruneToInduced(g1, g2, ext, C);
         if (C.completeRingsOnly) ext = enforceCompleteRings(g1, g2, ext);
-        if (!M.disconnectedMCS && M.connectedOnly) ext = largestConnected(g1, ext, &g2);
+        if (!M.disconnectedMCS && M.connectedOnly) ext = largestConnected(g1, ext, &g2, &M);
         changed = (int)ext.size() < startSize;
     }
     ext = applyRingAnchorGuard(g1, g2, ext, C);
@@ -668,6 +725,7 @@ class SmallExactMCSExplorer {
     const MolGraph& g2_;
     const ChemOptions& C_;
     bool induced_;
+    const MCSOptions* options_;
     TimeBudget& tb_;
     int upperBound_;
     std::vector<int> q2t_;
@@ -718,13 +776,17 @@ class SmallExactMCSExplorer {
     void recordCurrent(int mappedCount) {
         if (mappedCount < bestSize_) return;
         auto mapping = materialize(q2t_);
-        if (mappedCount > bestSize_) {
-            bestQ2T_ = q2t_;
-            bestSize_ = mappedCount;
+        if (options_) mapping = ppx(g1_, g2_, std::move(mapping), C_, *options_);
+        int candidateSize = static_cast<int>(mapping.size());
+        if (candidateSize < bestSize_) return;
+        if (candidateSize > bestSize_) {
+            std::fill(bestQ2T_.begin(), bestQ2T_.end(), -1);
+            for (const auto& entry : mapping) bestQ2T_[entry.first] = entry.second;
+            bestSize_ = candidateSize;
             allBest_.clear();
         }
         if (!collectAll_) return;
-        if (mappedCount != bestSize_) return;
+        if (candidateSize != bestSize_) return;
         int bondCount = countMappedBonds(g1_, mapping);
         auto canonical = canonicalizeMapping(g1_, g2_, mapping);
         CanonKey key(canonical.begin(), canonical.end());
@@ -827,11 +889,13 @@ public:
     SmallExactMCSExplorer(const MolGraph& g1, const MolGraph& g2,
                           const ChemOptions& C, bool induced,
                           TimeBudget& tb, int upperBound,
-                          const std::map<int,int>& incumbent)
+                          const std::map<int,int>& incumbent,
+                          const MCSOptions* options = nullptr)
         : g1_(g1),
           g2_(g2),
           C_(C),
           induced_(induced),
+          options_(options),
           tb_(tb),
           upperBound_(upperBound),
           q2t_(g1.n, -1),
@@ -1255,14 +1319,15 @@ inline std::map<int,int> greedyProbe(const MolGraph& g1, const MolGraph& g2,
 inline std::map<int,int> greedyAtomExtend(
     const MolGraph& g1, const MolGraph& g2,
     const std::map<int,int>& seed,
-    const ChemOptions& C, const MCSOptions& M) {
+    const ChemOptions& C, const MCSOptions& M, TimeBudget* budget = nullptr) {
     int n1 = g1.n, n2 = g2.n;
     std::vector<int> q2t(n1, -1), t2q(n2, -1);
     for (auto& [k,v] : seed) { q2t[k] = v; t2q[v] = k; }
     bool progress = true;
-    while (progress) {
+    while (progress && (!budget || !budget->expiredNow())) {
         progress = false;
         for (int qi = 0; qi < n1; ++qi) {
+            if (budget && budget->expiredNow()) break;
             if (q2t[qi] >= 0) continue;
             bool onFrontier = false;
             for (int nb : g1.neighbors[qi])
@@ -1271,6 +1336,7 @@ inline std::map<int,int> greedyAtomExtend(
 
             int bestTj = -1, bestScore = -1;
             for (int tj = 0; tj < n2; ++tj) {
+                if (budget && (tj & 15) == 0 && budget->expiredNow()) break;
                 if (t2q[tj] >= 0) continue;
                 if (!atomsCompatFast(g1, qi, g2, tj, C)) continue;
                 bool consistent = true;
@@ -1278,9 +1344,18 @@ inline std::map<int,int> greedyAtomExtend(
                     if (q2t[qk] < 0) continue;
                     int tk = q2t[qk];
                     int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tk);
-                    if (qOrd != 0 && tOrd != 0) {
-                        if (!bondsCompatible(g1, qi, qk, g2, tj, tk, C)) { consistent = false; break; }
-                    } else if (M.induced && ((qOrd!=0) != (tOrd!=0))) { consistent = false; break; }
+                    if (qOrd != 0 && (tOrd == 0
+                        || !bondsCompatible(g1, qi, qk, g2, tj, tk, C))) {
+                        consistent = false; break;
+                    }
+                }
+                if (consistent && M.induced) {
+                    for (int qk = 0; qk < n1; ++qk) {
+                        if (q2t[qk] >= 0 && g1.bondOrder(qi, qk) == 0
+                            && g2.bondOrder(tj, q2t[qk]) != 0) {
+                            consistent = false; break;
+                        }
+                    }
                 }
                 if (!consistent) continue;
                 int score = (g2.ring[tj] && g1.ring[qi] ? 50 : 0)
@@ -3291,11 +3366,7 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
     // Defensive: empty graphs have no common substructure
     if (g1.n == 0 || g2.n == 0) return {};
 
-    // Validate atomWeights size if provided
-    if (!opts.atomWeights.empty() && static_cast<int>(opts.atomWeights.size()) < g1.n)
-        throw std::invalid_argument(
-            "atomWeights size (" + std::to_string(opts.atomWeights.size()) +
-            ") < query atom count (" + std::to_string(g1.n) + ")");
+    validateAtomWeights(g1, opts);
 
     static constexpr int GREEDY_PROBE_MAX_SIZE = 40;
     static constexpr int SEED_EXTEND_MAX_ATOMS = 50;
@@ -3313,9 +3384,7 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
     if (&g1 == &g2 || detail::isExactMatch(g1, g2, chem)) {
         std::map<int,int> id;
         for (int i = 0; i < g1.n; i++) id[i] = i;
-        if (opts.disconnectedMCS && (opts.minFragmentSize > 1 || opts.maxFragments < INT_MAX))
-            id = detail::applyFragmentConstraints(g1, id, opts.minFragmentSize, opts.maxFragments);
-        return id;
+        return detail::ppx(g1, g2, std::move(id), chem, opts);
     }
 
     // Ensure canonical labeling / Morgan ranks are available (lazy init)
@@ -3326,11 +3395,9 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
         g2.ensureRingCounts();
     }
 
-    // DSB is only admissible for induced MCS (degree constraint valid).
-    // For non-induced (default), use the looser but safe label-frequency bound.
-    int upperBound = opts.induced
-        ? degreeSequenceUpperBound(g1, g2, chem)
-        : labelFrequencyUpperBound(g1, g2, chem);
+    // Full graph degrees are not an admissible MCS bound, even for induced
+    // matching: neighbors may be omitted from a partial mapping.
+    int upperBound = labelFrequencyUpperBound(g1, g2, chem);
     if (!opts.induced) {
         upperBound = std::min(upperBound, detail::labelFrequencyUpperBoundDirected(g1, g2, chem));
         upperBound = std::min(upperBound, detail::labelFrequencyUpperBoundDirected(g2, g1, chem));
@@ -3345,9 +3412,7 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
         std::vector<int> head(g2.n, -1), nxt(g2.n, -1);
         for (int j = g2.n - 1; j >= 0; j--) { nxt[j] = head[g2.canonicalLabel[j]]; head[g2.canonicalLabel[j]] = j; }
         for (int i = 0; i < g1.n; i++) { int cl = g1.canonicalLabel[i]; id[i] = head[cl]; head[cl] = nxt[head[cl]]; }
-        if (opts.disconnectedMCS && (opts.minFragmentSize > 1 || opts.maxFragments < INT_MAX))
-            id = detail::applyFragmentConstraints(g1, id, opts.minFragmentSize, opts.maxFragments);
-        return id;
+        return detail::ppx(g1, g2, std::move(id), chem, opts);
     }
 
     int minN = std::min(g1.n, g2.n);
@@ -3363,7 +3428,8 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
         bool g1Chain = true, g2Chain = true;
         for (int i = 0; i < g1.n && g1Chain; ++i) if (g1.degree[i] > 2) g1Chain = false;
         for (int j = 0; j < g2.n && g2Chain; ++j) if (g2.degree[j] > 2) g2Chain = false;
-        if (g1Chain && g2Chain && g1.n >= 2 && g2.n >= 2) {
+        if (g1Chain && g2Chain && g1.n >= 2 && g2.n >= 2
+            && isSimplePathGraph(g1) && isSimplePathGraph(g2)) {
             // Extract chain atom sequences by walking from an endpoint
             auto walkChain = [](const MolGraph& g) -> std::vector<int> {
                 int start = -1;
@@ -3415,11 +3481,13 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
                 std::map<int, int> chainMCS;
                 for (int k = 0; k < bestLen; ++k)
                     chainMCS[seq1[bestI - bestLen + k]] = seq2[bestJ - bestLen + k];
+                chainMCS = ppx(g1, g2, std::move(chainMCS), chem, opts);
+                bestLen = static_cast<int>(chainMCS.size());
                 int chainScore = mcsScore(g1, chainMCS, opts);
                 if (!weightMode ? bestLen >= bestSize : chainScore > bestScore) {
                     best = chainMCS; bestSize = bestLen; bestScore = chainScore;
                 }
-                if (bestLen >= upperBound) return best;
+                if (bestLen >= upperBound) return ppx(g1, g2, best, chem, opts);
             }
         }
     }
@@ -3599,13 +3667,14 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
                 };
                 reconstruct(bestU, bestV);
 
+                treeMap = ppx(g1, g2, std::move(treeMap), chem, opts);
                 int treeScore = mcsScore(g1, treeMap, opts);
                 if (static_cast<int>(treeMap.size()) > bestSize) {
                     best = std::move(treeMap);
                     bestSize = static_cast<int>(best.size()); bestHetero = heteroatomScore(g1, best);
                     bestScore = treeScore;
                 }
-                if (bestSize >= upperBound) return best;
+                if (bestSize >= upperBound) return ppx(g1, g2, best, chem, opts);
             }
         }
     }
@@ -3619,13 +3688,11 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
         bool fuzzyAccept = (fuzzy > 0) &&
             (std::abs(g1.n - greedySz) <= fuzzy || std::abs(g2.n - greedySz) <= fuzzy);
         if (greedySz >= upperBound) {
-            auto greedyC = applyRingAnchorGuard(g1, g2,
-                opts.connectedOnly ? largestConnected(g1, greedy, &g2) : greedy, chem);
+            auto greedyC = ppx(g1, g2, greedy, chem, opts);
             if (static_cast<int>(greedyC.size()) >= upperBound) return greedyC;
         }
         if (fuzzyAccept && greedySz > bestSize) {
-            auto greedyC = applyRingAnchorGuard(g1, g2,
-                opts.connectedOnly ? largestConnected(g1, greedy, &g2) : greedy, chem);
+            auto greedyC = ppx(g1, g2, greedy, chem, opts);
             if (static_cast<int>(greedyC.size()) > bestSize) {
                 best = std::move(greedyC);
                 bestSize = static_cast<int>(best.size()); bestHetero = heteroatomScore(g1, best);
@@ -3635,8 +3702,7 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
         // Seed downstream McSplit with greedy result if it covers > 60% of upper bound
         if (static_cast<int>(greedy.size()) > upperBound * 0.6
             && static_cast<int>(greedy.size()) > bestSize) {
-            auto greedyC = applyRingAnchorGuard(g1, g2,
-                opts.connectedOnly ? largestConnected(g1, greedy, &g2) : greedy, chem);
+            auto greedyC = ppx(g1, g2, greedy, chem, opts);
             if (static_cast<int>(greedyC.size()) > bestSize) {
                 best = std::move(greedyC);
                 bestSize = static_cast<int>(best.size()); bestHetero = heteroatomScore(g1, best);
@@ -3688,39 +3754,47 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
                 }
             }
         }
+        augmented = ppx(g1, g2, std::move(augmented), chem, opts);
         if (static_cast<int>(augmented.size()) > bestSize) {
             best = augmented; bestSize = static_cast<int>(best.size()); bestHetero = heteroatomScore(g1, best);
             bestScore = mcsScore(g1, best, opts);
         }
-        if (!weightMode && bestSize >= upperBound) return best;
+        if (!weightMode && bestSize >= upperBound) return ppx(g1, g2, best, chem, opts);
     }
 
     // --- Level 1: Substructure containment ---
     if (!weightMode && g1.n > 0 && g2.n > 0
+        && (g1.n <= g2.n || opts.induced)
         && std::min(g1.n, g2.n) <= std::max(g1.n, g2.n) * 3 / 4) {
         const MolGraph& sml = g1.n <= g2.n ? g1 : g2;
         const MolGraph& lrg = g1.n <= g2.n ? g2 : g1;
         bool swapped = g1.n > g2.n;
         // Use VF2PP for substructure check
-        auto subMap = findSubstructure(sml, lrg, chem, tb.remainingMs());
+        ChemOptions subChem = chem;
+        subChem.induced = opts.induced;
+        auto subMap = findSubstructure(sml, lrg, subChem, tb.remainingMs());
         if (!subMap.empty()) {
             if (!swapped) {
                 std::map<int,int> result;
                 for (auto& [k,v] : subMap) result[k] = v;
-                return result;
+                return ppx(g1, g2, std::move(result), chem, opts);
             }
             std::map<int,int> full;
             for (auto& [k,v] : subMap) full[v] = k;
-            return full;
+            return ppx(g1, g2, std::move(full), chem, opts);
         }
     }
 
-    // Exact branch-and-bound for small disconnected pairs where heuristics
-    // may miss the optimum. Deterministic on golden cases (<=20 x <=40 atoms).
-    if (!weightMode && opts.disconnectedMCS && !tb.expiredNow()
+    // Exact branch-and-bound for disconnected pairs and very small connected
+    // pairs. A maximum disconnected seed need not contain the maximum connected
+    // answer, so the latter must score connected components during the search.
+    bool exactConnected = !opts.disconnectedMCS && opts.connectedOnly
+        && std::max(g1.n, g2.n) <= 8;
+    if (!weightMode && (opts.disconnectedMCS || exactConnected) && !tb.expiredNow()
         && std::min(g1.n, g2.n) <= 20
         && std::max(g1.n, g2.n) <= 40) {
-        detail::SmallExactMCSExplorer exactSmall(g1, g2, chem, opts.induced, tb, upperBound, best);
+        detail::SmallExactMCSExplorer exactSmall(
+            g1, g2, chem, opts.induced, tb, upperBound, best, &opts);
         auto exactMapping = exactSmall.run();
         int exactScore = mcsScore(g1, exactMapping, opts);
         if (isBetterMCS(g1, exactMapping, static_cast<int>(exactMapping.size()),
@@ -3730,7 +3804,10 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
             bestScore = exactScore;
             bestHetero = heteroatomScore(g1, best);
         }
-        if (!weightMode && bestSize >= upperBound) return ppx(g1, g2, best, chem, opts);
+        // Exhaustion proves this optimum; a timeout exhausts the same budget
+        // used by every later stage. Neither case benefits from heuristic seeds
+        // that may have a larger raw size before applying the requested filters.
+        return ppx(g1, g2, best, chem, opts);
     }
 
     // --- Level 1.5: Seed-and-extend ---
@@ -3738,10 +3815,11 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
     GraphBuilder GB(g1, g2, chem, opts.induced);
     if (minN >= 4 && std::max(g1.n, g2.n) <= SEED_EXTEND_MAX_ATOMS && !tb.expired()) {
         auto [seFlat, seFlatSize] = GB.seedExtendMCSFlat(tb, upperBound);
-        int seScore = mcsScoreFlat(g1, seFlat.data(), g1.n, seFlatSize, opts);
-        if (weightMode ? seScore > bestScore : seFlatSize > bestSize) {
-            best = flatToMap(seFlat.data(), g1.n);
-            bestSize = seFlatSize; bestScore = seScore;
+        auto seed = ppx(g1, g2, flatToMap(seFlat.data(), g1.n), chem, opts);
+        int seScore = mcsScore(g1, seed, opts);
+        if (weightMode ? seScore > bestScore : static_cast<int>(seed.size()) > bestSize) {
+            best = std::move(seed);
+            bestSize = static_cast<int>(best.size()); bestScore = seScore;
         }
         if (!weightMode && bestSize >= upperBound) return ppx(g1, g2, best, chem, opts);
     }
@@ -3826,12 +3904,14 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
     {
         int64_t nodeCount = 0;
         auto [mcFlat, mcFlatSize] = GB.mcSplitSeedFlat(tb, nodeCount);
-        mcSplitSize = mcFlatSize;
-        int mcScore = mcsScoreFlat(g1, mcFlat.data(), g1.n, mcFlatSize, opts);
-        if (weightMode ? mcScore > bestScore : (mcFlatSize > bestSize || (mcFlatSize == bestSize && mcFlatSize > 0 && heteroatomScoreFlat(g1, mcFlat.data(), g1.n) > bestHetero))) {
-            best = flatToMap(mcFlat.data(), g1.n);
-            bestSize = mcFlatSize; bestScore = mcScore;
-            bestHetero = heteroatomScoreFlat(g1, mcFlat.data(), g1.n);
+        auto seed = ppx(g1, g2, flatToMap(mcFlat.data(), g1.n), chem, opts);
+        mcSplitSize = static_cast<int>(seed.size());
+        int mcScore = mcsScore(g1, seed, opts);
+        if (weightMode ? mcScore > bestScore : isBetterMCS(
+                g1, seed, mcSplitSize, best, bestSize, bestHetero)) {
+            best = std::move(seed);
+            bestSize = mcSplitSize; bestScore = mcScore;
+            bestHetero = heteroatomScore(g1, best);
         }
         mcSplitExhaustive = nodeCount < 200000;
     }
@@ -3851,7 +3931,7 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
         if (weightMode ? extScore > bestScore : static_cast<int>(ext.size()) > bestSize) {
             best = ext; bestSize = static_cast<int>(ext.size()); bestScore = extScore;
         }
-        if (!weightMode && bestSize >= upperBound) return best;
+        if (!weightMode && bestSize >= upperBound) return ppx(g1, g2, best, chem, opts);
     }
 
     // --- Level 3: Bron-Kerbosch ---
@@ -3859,7 +3939,7 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
     if (opts.maxStage < 3) return ppx(g1, g2, best, chem, opts);
     int bkSize = 0;
     if (!skipBKDueToLFUB && bestSize < static_cast<int>(upperBound * BK_SKIP_RATIO) && !tb.expired()) {
-        auto cliqueSeed = GB.maximumCliqueSeed(tb);
+        auto cliqueSeed = ppx(g1, g2, GB.maximumCliqueSeed(tb), chem, opts);
         bkSize = static_cast<int>(cliqueSeed.size());
         int cScore = mcsScore(g1, cliqueSeed, opts);
         if (weightMode ? cScore > bestScore : static_cast<int>(cliqueSeed.size()) > bestSize) {
@@ -3908,16 +3988,29 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
         if (weightMode ? seedScore > bestScore : static_cast<int>(ext.size()) > bestSize) {
             best = ext; bestSize = static_cast<int>(ext.size()); bestScore = seedScore;
         }
-        if (!weightMode && bestSize >= upperBound) return best;
+        if (!weightMode && bestSize >= upperBound) return ppx(g1, g2, best, chem, opts);
     }
 
     // Last resort: start from empty seed
-    if (bestScore <= 0 && !tb.expired()) {
-        best = ppx(g1, g2,
+    if (best.empty() && !tb.expired()) {
+        auto fallback = ppx(g1, g2,
             mcGregorExtend(g1, g2, {}, chem, tb, tb.remainingMs(),
                            opts.useTwoHopNLFInExtension, opts.useThreeHopNLFInExtension, opts.connectedOnly,
                            &GB.allCompatTargets()),
             chem, opts);
+        if ((!weightMode || mcsScore(g1, fallback, opts) >= bestScore)
+            && preferFinalMapping(g1, fallback, best, opts)) best = std::move(fallback);
+    }
+    // Full-neighborhood heuristics can miss partial aromatic-to-chain extensions
+    // allowed by FLEXIBLE matching. Try a cheap connected extension of the valid
+    // incumbent, then compare its actual filtered objective before promotion.
+    if (!best.empty() && std::max(g1.n, g2.n) <= SEED_EXTEND_MAX_ATOMS && !tb.expiredNow()
+        && !chem.useChirality && !chem.useBondStereo
+        && isValidMcsMapping(g1, g2, best, chem)) {
+        auto extended = ppx(g1, g2,
+            greedyAtomExtend(g1, g2, best, chem, opts, &tb), chem, opts);
+        if (isValidMcsMapping(g1, g2, extended, chem)
+            && preferFinalMapping(g1, extended, best, opts)) best = std::move(extended);
     }
     // Apply post-processing (connectivity filter, ring guard) before returning.
     // All early-exit paths call ppx() explicitly; this covers the fall-through path
@@ -3982,7 +4075,8 @@ inline std::map<int,int> recoverValidMcsMapping(const MolGraph& g1, const MolGra
                                                 const std::map<int,int>& raw,
                                                 const ChemOptions& chem,
                                                 const MCSOptions& opts) {
-    auto repaired = repairInvalidMcsMapping(g1, g2, raw, chem);
+    auto repaired = detail::ppx(
+        g1, g2, repairInvalidMcsMapping(g1, g2, raw, chem), chem, opts);
     if (!validateMapping(g1, g2, repaired, chem).empty()) repaired.clear();
     int repairedSize = static_cast<int>(repaired.size());
     int64_t timeoutMs = resolveMcsTimeoutMs(g1, g2, opts);
@@ -4006,7 +4100,8 @@ inline std::map<int,int> recoverValidMcsMapping(const MolGraph& g1, const MolGra
 
     if (!repaired.empty()) {
         auto regrown = detail::ppx(g1, g2, detail::greedyAtomExtend(g1, g2, repaired, chem, opts), chem, opts);
-        regrown = repairInvalidMcsMapping(g1, g2, std::move(regrown), chem);
+        regrown = detail::ppx(g1, g2,
+            repairInvalidMcsMapping(g1, g2, std::move(regrown), chem), chem, opts);
         if (validateMapping(g1, g2, regrown, chem).empty()
             && static_cast<int>(regrown.size()) > repairedSize) {
             return regrown;
@@ -4043,7 +4138,7 @@ inline std::map<int,int> runValidatedMcsDirection(const MolGraph& query, const M
         detail::TimeBudget refineBudget(refineMs);
         detail::FixedSizeBondMaximizer bondRefiner(
             query, target, chem, opts.induced, refineBudget, minN, valid);
-        auto refined = bondRefiner.run();
+        auto refined = detail::ppx(query, target, bondRefiner.run(), chem, opts);
         if (validateMapping(query, target, refined, chem).empty()
             && detail::preferFinalMapping(query, refined, valid, opts)) {
             valid = std::move(refined);
@@ -4055,12 +4150,11 @@ inline std::map<int,int> runValidatedMcsDirection(const MolGraph& query, const M
 inline std::map<int,int> findMCSDirectionalCore(const MolGraph& g1, const MolGraph& g2,
                                                 const ChemOptions& chem, const MCSOptions& opts) {
     if (g1.n == 0 || g2.n == 0) return {};
+    detail::validateAtomWeights(g1, opts);
     if (&g1 == &g2 || detail::isExactMatch(g1, g2, chem)) {
         std::map<int,int> id;
         for (int i = 0; i < g1.n; ++i) id[i] = i;
-        if (opts.disconnectedMCS && (opts.minFragmentSize > 1 || opts.maxFragments < INT_MAX))
-            id = detail::applyFragmentConstraints(g1, id, opts.minFragmentSize, opts.maxFragments);
-        return id;
+        return detail::ppx(g1, g2, std::move(id), chem, opts);
     }
 
     using Clock = std::chrono::steady_clock;
@@ -4079,7 +4173,12 @@ inline std::map<int,int> findMCSDirectionalCore(const MolGraph& g1, const MolGra
 
     int ub12 = detail::labelFrequencyUpperBoundDirected(g1, g2, chem);
     int ub21 = detail::labelFrequencyUpperBoundDirected(g2, g1, chem);
-    auto plan = detail::chooseOrientationPlan(g1, g2, chem, ub12, ub21);
+    auto plan = opts.atomWeights.empty()
+        ? detail::chooseOrientationPlan(g1, g2, chem, ub12, ub21)
+        : detail::OrientationPlan{};
+    // Non-induced query-edge constraints and per-query weights are directional.
+    // Searching only a preferred reverse orientation can miss valid caller hits.
+    if (!opts.induced || !opts.atomWeights.empty()) plan.directFirst = true;
     bool weightMode = opts.maximizeBonds || !opts.atomWeights.empty();
 
     auto runDirection = [&](bool direct) {
@@ -4089,6 +4188,7 @@ inline std::map<int,int> findMCSDirectionalCore(const MolGraph& g1, const MolGra
         auto oriented = direct
             ? runValidatedMcsDirection(g1, g2, chem, timedOpts, false)
             : runValidatedMcsDirection(g2, g1, chem, timedOpts, true);
+        oriented = detail::ppx(g1, g2, std::move(oriented), chem, opts);
         if (validateMapping(g1, g2, oriented, chem).empty()) return oriented;
         budgetMs = remainingMs();
         if (budgetMs <= 0) return oriented;
@@ -4097,9 +4197,7 @@ inline std::map<int,int> findMCSDirectionalCore(const MolGraph& g1, const MolGra
     };
 
     auto best = runDirection(plan.directFirst);
-    int baseUb = opts.induced
-        ? detail::degreeSequenceUpperBound(g1, g2, chem)
-        : detail::labelFrequencyUpperBound(g1, g2, chem);
+    int baseUb = detail::labelFrequencyUpperBound(g1, g2, chem);
     if (!opts.induced) {
         baseUb = std::min(baseUb, ub12);
         baseUb = std::min(baseUb, ub21);
@@ -4143,7 +4241,7 @@ inline std::map<int,int> findMCSDirectionalCore(const MolGraph& g1, const MolGra
     if (!runAlternate && !weightMode && static_cast<int>(best.size()) + 2 < baseUb
         && std::abs(g1.n - g2.n) >= 4) runAlternate = true;
 
-    if (runAlternate) {
+    if (runAlternate && opts.atomWeights.empty()) {
         auto alt = runDirection(!plan.directFirst);
         if (detail::preferFinalMapping(g1, alt, best, opts)) best = std::move(alt);
     }
@@ -4153,12 +4251,11 @@ inline std::map<int,int> findMCSDirectionalCore(const MolGraph& g1, const MolGra
 inline std::map<int,int> findMCS(const MolGraph& g1, const MolGraph& g2,
                                  const ChemOptions& chem, const MCSOptions& opts) {
     if (g1.n == 0 || g2.n == 0) return {};
+    detail::validateAtomWeights(g1, opts);
     if (&g1 == &g2 || detail::isExactMatch(g1, g2, chem)) {
         std::map<int,int> id;
         for (int i = 0; i < g1.n; ++i) id[i] = i;
-        if (opts.disconnectedMCS && (opts.minFragmentSize > 1 || opts.maxFragments < INT_MAX))
-            id = detail::applyFragmentConstraints(g1, id, opts.minFragmentSize, opts.maxFragments);
-        return id;
+        return detail::ppx(g1, g2, std::move(id), chem, opts);
     }
 
     using Clock = std::chrono::steady_clock;
@@ -4178,9 +4275,7 @@ inline std::map<int,int> findMCS(const MolGraph& g1, const MolGraph& g2,
 
     bool weightMode = opts.maximizeBonds || !opts.atomWeights.empty();
     if (!weightMode) {
-        int globalUb = opts.induced
-            ? detail::degreeSequenceUpperBound(g1, g2, chem)
-            : detail::labelFrequencyUpperBound(g1, g2, chem);
+        int globalUb = detail::labelFrequencyUpperBound(g1, g2, chem);
         if (!opts.induced) {
             globalUb = std::min(globalUb, detail::labelFrequencyUpperBoundDirected(g1, g2, chem));
             globalUb = std::min(globalUb, detail::labelFrequencyUpperBoundDirected(g2, g1, chem));
@@ -4189,9 +4284,11 @@ inline std::map<int,int> findMCS(const MolGraph& g1, const MolGraph& g2,
         if (remainingMs() <= 0) return best;
 
         auto reverse = runDirectionalCore(g2, g1);
-        auto candidate = orientMcsResult(reverse, true);
+        auto candidate = detail::ppx(
+            g1, g2, orientMcsResult(reverse, true), chem, opts);
         if (!validateMapping(g1, g2, candidate, chem).empty()) {
-            candidate = recoverValidMcsMapping(g1, g2, candidate, chem, opts);
+            candidate = detail::ppx(g1, g2,
+                recoverValidMcsMapping(g1, g2, candidate, chem, opts), chem, opts);
         }
         // Directional searches may discover different valid mappings. Keep
         // the better result rather than reducing its size to force agreement.
@@ -4380,6 +4477,13 @@ inline std::vector<std::map<int,int>> findAllMCS(const MolGraph& g1, const MolGr
     };
     std::map<CanonKey, std::map<int,int>> seen;
     seen.emplace(canonKey(best), best);
+    auto remember = [&](std::map<int, int> mapping) {
+        mapping = ppx(g1, g2, std::move(mapping), chem, opts);
+        if (static_cast<int>(mapping.size()) != K
+            || !isValidMcsMapping(g1, g2, mapping, chem)) return;
+        auto key = canonKey(mapping);
+        if (seen.find(key) == seen.end()) seen.emplace(std::move(key), std::move(mapping));
+    };
     if (static_cast<int>(seen.size()) >= maxResults) {
         std::vector<std::map<int,int>> result;
         for (auto& [k, v] : seen) result.push_back(std::move(v));
@@ -4399,7 +4503,9 @@ inline std::vector<std::map<int,int>> findAllMCS(const MolGraph& g1, const MolGr
         const MolGraph& sml = g1.n <= g2.n ? g1 : g2;
         const MolGraph& lrg = g1.n <= g2.n ? g2 : g1;
         bool swapped = g1.n > g2.n;
-        auto subMaps = findAllSubstructures(sml, lrg, chem, tb.remainingMs());
+        ChemOptions subChem = chem;
+        subChem.induced = opts.induced;
+        auto subMaps = findAllSubstructures(sml, lrg, subChem, tb.remainingMs());
         for (const auto& raw : subMaps) {
             if (tb.expired() || static_cast<int>(seen.size()) >= maxResults) break;
             std::map<int,int> mapping;
@@ -4408,11 +4514,7 @@ inline std::vector<std::map<int,int>> findAllMCS(const MolGraph& g1, const MolGr
             } else {
                 for (const auto& p : raw) mapping[p.first] = p.second;
             }
-            if (static_cast<int>(mapping.size()) == K) {
-                auto ck = canonKey(mapping);
-                if (seen.find(ck) == seen.end())
-                    seen.emplace(std::move(ck), mapping);
-            }
+            remember(std::move(mapping));
         }
         if (static_cast<int>(seen.size()) >= maxResults) {
             std::vector<std::map<int,int>> result;
@@ -4467,22 +4569,14 @@ inline std::vector<std::map<int,int>> findAllMCS(const MolGraph& g1, const MolGr
                     opts.useTwoHopNLFInExtension, opts.useThreeHopNLFInExtension, opts.connectedOnly,
                     &GB.allCompatTargets()),
                 chem, opts);
-            if (static_cast<int>(ext.size()) == K) {
-                auto ck = canonKey(ext);
-                if (seen.find(ck) == seen.end())
-                    seen.emplace(std::move(ck), ext);
-            }
+            remember(std::move(ext));
 
             // Greedy atom extension for alternative mappings
             if (!tb.expired() && static_cast<int>(seen.size()) < maxResults) {
                 auto gext = ppx(g1, g2,
                     greedyAtomExtend(g1, g2, seed, chem, opts),
                     chem, opts);
-                if (static_cast<int>(gext.size()) == K) {
-                    auto ck = canonKey(gext);
-                    if (seen.find(ck) == seen.end())
-                        seen.emplace(std::move(ck), gext);
-                }
+                remember(std::move(gext));
             }
         }
 
@@ -4499,11 +4593,7 @@ inline std::vector<std::map<int,int>> findAllMCS(const MolGraph& g1, const MolGr
                     auto reext = ppx(g1, g2,
                         greedyAtomExtend(g1, g2, reduced, chem, opts),
                         chem, opts);
-                    if (static_cast<int>(reext.size()) == K) {
-                        auto ck = canonKey(reext);
-                        if (seen.find(ck) == seen.end())
-                            seen.emplace(std::move(ck), reext);
-                    }
+                    remember(std::move(reext));
                 }
             }
         }

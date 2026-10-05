@@ -27,8 +27,8 @@ namespace gpu_kern {
 // compatible with qi.
 //
 // The GPU domain is a SUPERSET of the true domain — advanced checks
-// (tautomer, isotope, chirality, ring fusion) are omitted.  The CPU
-// feasibility check catches any false positives during backtracking.
+// (tautomer, isotope, chirality, ring fusion) are omitted. Callers must
+// refine its candidates on CPU and disable element equality for tautomers.
 //
 // Returns true if GPU succeeded; false means use the CPU path.
 // ============================================================================

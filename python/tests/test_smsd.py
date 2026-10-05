@@ -788,10 +788,12 @@ class TestMcsChemicalValidity:
         strychnine = parse_smiles("C1CN2CC3=CCOC4CC(=O)N5C6C4C3CC2C61C7=CC=CC=C75")
         quinine = parse_smiles("COC1=CC2=C(C=CN=C2C=C1)C(C3CC4CCN3CC4C=C)O")
 
-        # Use strict profile for direction stability (ring=ring, charge match)
+        # Induced topology is symmetric. A strict chemical profile alone still
+        # allows extra target edges in non-induced, directional matching.
         chem = ChemOptions.profile("strict")
         opts = smsd._smsd.MCSOptions()
         opts.timeout_ms = 10000
+        opts.induced = True
         forward = find_mcs(strychnine, quinine, chem, opts)
         reverse = find_mcs(quinine, strychnine, chem, opts)
 
@@ -1603,5 +1605,4 @@ class TestAPICompleteness:
         assert len(result.mapping) >= 6, "Mapping should have >= 6 entries"
         assert isinstance(result.mcs_smiles, str), "mcs_smiles should be a string"
         assert len(result.mcs_smiles) > 0, "mcs_smiles should not be empty"
-
 

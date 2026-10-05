@@ -21,6 +21,9 @@
 #include <climits>
 #include <cstdint>
 #include <functional>
+#include <numeric>
+#include <string>
+#include <utility>
 #include "smsd/bitops.hpp"
 #include "smsd/time_budget.hpp"
 
@@ -431,7 +434,7 @@ inline std::vector<std::pair<int,int>> mcgregorDFSExtend(
 
     std::function<void(std::vector<int>)> dfs = [&](std::vector<int> frontier) {
         if (timed_out) return;
-        if (++call_count % 2048 == 0) {
+        if (++call_count == 1 || call_count % 256 == 0) {
             if (std::chrono::steady_clock::now() >= deadline) {
                 timed_out = true;
                 return;
@@ -538,7 +541,26 @@ inline MCSResult findMCSPipeline(
     auto deadline = detail::steadyDeadline(timeout_ms, start);
     MCSResult result;
 
-    if (compat.empty()) return result;
+    // Keep the search independent of the output cap, then retain the largest
+    // distinct candidates. Early upper-bound returns need the same cap.
+    auto finish = [&]() -> MCSResult {
+        for (auto& candidate : result.candidates)
+            std::sort(candidate.begin(), candidate.end());
+        std::stable_sort(result.candidates.begin(), result.candidates.end(),
+            [](const auto& a, const auto& b) { return a.size() > b.size(); });
+        std::set<std::vector<std::pair<int,int>>> seen;
+        result.candidates.erase(std::remove_if(
+            result.candidates.begin(), result.candidates.end(),
+            [&](const auto& candidate) { return !seen.insert(candidate).second; }),
+            result.candidates.end());
+        const auto limit = static_cast<std::size_t>(std::max(0, max_results));
+        if (result.candidates.size() > limit) result.candidates.resize(limit);
+        result.elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now() - start).count();
+        return std::move(result);
+    };
+
+    if (compat.empty()) return finish();
     int n = static_cast<int>(compat.size());
 
     // Optional upper-bound hint from the caller
@@ -561,6 +583,21 @@ inline MCSResult findMCSPipeline(
         compat_by_query[compat[i].first].push_back(i);
     }
 
+    // Every query bond between mapped atoms must survive, including its order
+    // in strict mode. Scoring alone cannot establish a valid seed/extension.
+    auto compatibleWithMapped = [&](int qa, int ta, const std::map<int,int>& mapped) {
+        for (int neighbor : adj_a[qa]) {
+            const auto found = mapped.find(neighbor);
+            if (found == mapped.end()) continue;
+            const auto queryKey = std::make_pair(std::min(qa, neighbor), std::max(qa, neighbor));
+            const auto targetKey = std::make_pair(std::min(ta, found->second), std::max(ta, found->second));
+            const auto targetBond = bonds_b.find(targetKey);
+            if (targetBond == bonds_b.end()) return false;
+            if (!bond_any && targetBond->second != bonds_a.at(queryKey)) return false;
+        }
+        return true;
+    };
+
     // --- L0.75: Greedy probe with multiple orderings for diversity ---
     auto runGreedy = [&](const std::vector<int>& order) -> std::vector<std::pair<int,int>> {
         std::set<int> used_q, used_t;
@@ -574,6 +611,7 @@ inline MCSResult findMCSPipeline(
             for (int ci : compat_by_query[qa]) {
                 int ta = compat[ci].second;
                 if (used_t.count(ta)) continue;
+                if (!compatibleWithMapped(qa, ta, q_to_t)) continue;
                 double score = 0.0;
                 for (int nb_q : adj_a[qa]) {
                     auto it = q_to_t.find(nb_q);
@@ -602,17 +640,25 @@ inline MCSResult findMCSPipeline(
         if (mapping.size() > 1) {
             std::set<int> mq;
             for (auto& [q,t] : mapping) mq.insert(q);
-            std::set<int> vis;
-            std::vector<int> bfs = {mapping[0].first};
-            vis.insert(mapping[0].first);
-            while (!bfs.empty()) {
-                int cur = bfs.back(); bfs.pop_back();
-                for (int nb : adj_a[cur]) {
-                    if (mq.count(nb) && !vis.count(nb)) { vis.insert(nb); bfs.push_back(nb); }
+            std::set<int> visited, largest;
+            for (const auto& [root, target] : mapping) {
+                if (visited.count(root)) continue;
+                std::set<int> component{root};
+                std::vector<int> bfs{root};
+                visited.insert(root);
+                while (!bfs.empty()) {
+                    const int cur = bfs.back(); bfs.pop_back();
+                    for (int nb : adj_a[cur]) {
+                        if (mq.count(nb) && visited.insert(nb).second) {
+                            component.insert(nb);
+                            bfs.push_back(nb);
+                        }
+                    }
                 }
+                if (component.size() > largest.size()) largest = std::move(component);
             }
             std::vector<std::pair<int,int>> conn;
-            for (auto& [q,t] : mapping) if (vis.count(q)) conn.emplace_back(q,t);
+            for (auto& [q,t] : mapping) if (largest.count(q)) conn.emplace_back(q,t);
             return conn;
         }
         return mapping;
@@ -631,7 +677,7 @@ inline MCSResult findMCSPipeline(
     }
 
     // Early termination when the upper bound is reached
-    if (result.lfub > 0 && result.best_size >= result.lfub) return result;
+    if (result.lfub > 0 && result.best_size >= result.lfub) return finish();
 
     // --- Extend from best candidate ---
     static const std::vector<std::pair<int,int>> empty_mapping;
@@ -662,6 +708,7 @@ inline MCSResult findMCSPipeline(
                 for (int ci : compat_by_query[qa]) {
                     int ta = compat[ci].second;
                     if (used_t.count(ta)) continue;
+                    if (!compatibleWithMapped(qa, ta, q_to_t)) continue;
                     double score = 0.0;
                     for (int nb_q : adj_a[qa]) {
                         auto it = q_to_t.find(nb_q);
@@ -701,7 +748,7 @@ inline MCSResult findMCSPipeline(
     } // if (!result.candidates.empty())
 
     // Early termination when the upper bound is reached
-    if (result.lfub > 0 && result.best_size >= result.lfub) return result;
+    if (result.lfub > 0 && result.best_size >= result.lfub) return finish();
 
     // --- VF2 re-embedding: diverse embeddings ---
     // Tight per-pair deadline (100ms) for VF2 — enough for diversity,
@@ -735,9 +782,7 @@ inline MCSResult findMCSPipeline(
         }
     }
 
-    auto end = std::chrono::steady_clock::now();
-    result.elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-    return result;
+    return finish();
 }
 
 // ---------------------------------------------------------------------------
@@ -765,12 +810,19 @@ inline std::vector<std::vector<std::pair<int,int>>> vf2ReEmbed(
     int max_results = 8)
 {
     std::vector<std::vector<std::pair<int,int>>> results;
-    if (seed_mapping.empty()) return results;
+    if (n_a <= 0 || n_b <= 0 || max_results <= 0) return results;
 
     // Extract query atom ordering (same atoms as seed, sorted by connectivity)
     std::vector<int> query_atoms;
-    query_atoms.reserve(seed_mapping.size());
-    for (auto& [q, t] : seed_mapping) query_atoms.push_back(q);
+    if (seed_mapping.empty()) {
+        // The standalone substructure entry point starts without a seed and
+        // searches the complete query rather than a selected query subgraph.
+        query_atoms.resize(n_a);
+        std::iota(query_atoms.begin(), query_atoms.end(), 0);
+    } else {
+        query_atoms.reserve(seed_mapping.size());
+        for (auto& [q, t] : seed_mapping) query_atoms.push_back(q);
+    }
 
     // Sort query atoms: most-constrained first (fewest compatible targets)
     std::sort(query_atoms.begin(), query_atoms.end(), [&](int a, int b) {
@@ -823,6 +875,7 @@ inline std::vector<std::vector<std::pair<int,int>>> vf2ReEmbed(
         // Find feasible targets for this query atom
         for (int ci : compat_by_query[qa]) {
             int ta = compat[ci].second;
+            if (ta < 0 || ta >= n_b) continue;
             if (used_targets.count(ta)) continue;
 
             // Feasibility: check bonds to already-mapped query neighbors
@@ -899,7 +952,8 @@ inline std::vector<std::vector<std::pair<int,int>>> substructureMatch(
     std::vector<std::vector<int>> compat_by_query(static_cast<size_t>(n_query));
     for (size_t i = 0; i < compat.size(); i++) {
         int q = compat[i].first;
-        if (q >= 0 && q < n_query) {
+        const int t = compat[i].second;
+        if (q >= 0 && q < n_query && t >= 0 && t < n_target) {
             compat_by_query[static_cast<size_t>(q)].push_back(static_cast<int>(i));
         }
     }
