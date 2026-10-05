@@ -103,8 +103,10 @@ pip install smsd
 
 The source package declares CPython `3.9` or later. Existing PyPI releases
 provide several platform wheels; availability varies by release and interpreter.
-The proposed 7.2.0 release uses one macOS arm64/Python 3.14 wheel and a source
-distribution. The search comparison uses Python 3.13.14 and RDKit 2026.09.1.
+The proposed 7.2.0 release uses Python 3.14 wheels for Linux x86_64, macOS arm64
+and Windows x86_64, plus a source distribution. Each platform must pass its
+installed-wheel checks before publication. The search comparison uses Python
+3.13.14 and RDKit 2026.09.1 on macOS arm64.
 CPU execution is the default path. CUDA and Metal acceleration are optional.
 RDKit and Open Babel are optional interop layers.
 
@@ -537,10 +539,10 @@ Call `SearchEngine.clearMolGraphCache()` (Java) or reuse `MolGraph` instances (C
 
 ## Release Downloads
 
-The proposed 7.2.0 asset set is prepared locally: Java 25 library/CLI packages,
-C++17 headers, one CPython 3.14 macOS arm64 wheel and a source distribution.
-Native installers and additional wheel versions are omitted from this release
-preparation. Hosted release workflows remain manual. See
+The proposed 7.2.0 asset set contains portable Java 25 library/CLI packages,
+C++17 headers, CPython 3.14 wheels for three operating systems and a source
+distribution. The Java packages run on Linux, macOS and Windows with JDK 25
+installed. Hosted release workflows remain manual. See
 [publishing steps](docs/PUBLISHING.md); existing GitHub downloads remain at
 7.1.2 until the new release is published.
 
@@ -549,10 +551,17 @@ preparation. Hosted release workflows remain manual. See
 | `smsd-7.2.0.jar` | Java library JAR |
 | `smsd-7.2.0-jar-with-dependencies.jar` | Standalone CLI (Java 25+) |
 | `smsd-7.2.0-sources.jar`, `smsd-7.2.0-javadoc.jar` | Java sources and API documentation |
-| `smsd-7.2.0-cli.tar.gz` | Java launcher distribution (bin/ and repo/) |
+| `smsd-7.2.0-cli.tar.gz` | Java launcher distribution for Linux, macOS and Windows (bin/ and repo/) |
 | `smsd-cpp-7.2.0-headers.tar.gz` | C++17 headers with LICENSE and NOTICE |
-| `smsd-7.2.0.tar.gz`, `smsd-7.2.0-cp314-*.whl` | Python source distribution and one macOS arm64 wheel |
+| `smsd-7.2.0.tar.gz` | Python source distribution |
+| `smsd-7.2.0-cp314-cp314-manylinux*.whl` | Python 3.14, Linux x86_64 with glibc 2.28+ |
+| `smsd-7.2.0-cp314-cp314-macosx_26_0_arm64.whl` | Python 3.14, Apple Silicon, macOS 26+ |
+| `smsd-7.2.0-cp314-cp314-win_amd64.whl` | Python 3.14, Windows x86_64 |
 | `SHA256SUMS` | Checksums for the release assets |
+
+These are release targets; current execution evidence is recorded in
+[validation](docs/VALIDATION_7.2.0.md). Other architectures, including Intel
+macOS and Linux arm64, can build from source and are outside this wheel set.
 
 ```bash
 # CLI
@@ -575,7 +584,7 @@ Current 7.2.0 local validation on macOS arm64:
 | Suite | Result | Scope |
 |---|---|---|
 | Java | 1,242 passed; 15 opt-in cases skipped | Clean verification, CLI, sources and Javadoc artifacts |
-| C++ CPU | All 11 suites passed with assertions enabled | Search, parsing, chemistry, batch, assignment and matching |
+| C++ CPU | All 12 suites passed with assertions enabled | Search, parsing, chemistry, batch, assignment, matching and portability |
 | Selected Metal regressions | All 3 selected suites passed | Batch and matching-domain checks on local hardware |
 | Python | 691 passed; 8 optional/opt-in cases skipped in each environment | Installed CPU wheels: Python 3.13.14/RDKit 2026.09.1 and Python 3.14.8/RDKit 2026.03.6 |
 | Independent native oracles | 84,096 cases passed | Small graph objectives, fragments, McSplit/clique and enumeration |
@@ -586,7 +595,9 @@ The Python guide's executable snippets also passed. Full corpus and optional
 benchmark executions are reported separately in the
 [benchmark report](benchmarks/RESULTS_7.2.0.md). These checks establish the
 reported test coverage, rather than a guarantee for every molecule, objective
-or platform. CUDA, native Windows and other wheel platforms were not tested.
+or platform. The additional Linux x86_64 release checks pass all 12 native
+suites and 691 Python tests with 8 skips under local emulation. CUDA and native
+Windows execution remain untested.
 See [current validation](docs/VALIDATION_7.2.0.md); the
 [7.1.2 record](docs/VALIDATION_7.1.2.md) is historical.
 

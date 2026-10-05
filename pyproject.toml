@@ -47,7 +47,7 @@ Changelog = "https://github.com/asad/SMSD/releases"
 cmake.source-dir = "cpp"
 cmake.build-type = "Release"
 wheel.packages = ["python/smsd"]
-wheel.license-files = ["LICENSE", "NOTICE", "licenses/libomp/LICENSE.TXT"]
+wheel.license-files = ["LICENSE", "NOTICE", "licenses/libomp/LICENSE.TXT", "licenses/libgomp/COPYING3", "licenses/libgomp/COPYING.RUNTIME"]
 minimum-version = "0.5"
 
 [tool.scikit-build.cmake.define]

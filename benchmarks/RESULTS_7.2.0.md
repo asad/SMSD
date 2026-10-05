@@ -11,6 +11,14 @@ Baseline wheel SHA-256: `536eca08e9f8deebb5ca46c3de999f3bd3800747efe39b87b44b336
 
 Hardware/runtime: macOS 27.0.1, arm64, Python 3.13.14, Apple clang 21, JDK 25.0.2, CDK 2.13. Both SMSD wheels use CPU builds with Metal and CUDA disabled; OpenMP is enabled and search measurements set `OMP_NUM_THREADS=1`. RDKit source build uses Boost 1.92 and conda-forge NumPy 2.5.3. A PyPI NumPy 2.5.3 wheel failed to load an Accelerate symbol on this runtime, so the working conda-forge build is used. This dependency failure is not an RDKit/FMCS failure.
 
+Platform release preparation followed these measurements. It replaces the
+depiction header's `M_PI` dependency with the same numeric constant, uses UTF-8
+filesystem paths for native MOL/SDF file I/O, and enables MSVC's UTF-8 compiler
+mode. The benchmark fingerprints above identify the measured source before
+those portability edits. Search algorithms and binding dispatch are unchanged;
+the new platform builds have their own [validation record](../docs/VALIDATION_7.2.0.md)
+and do not extend these macOS measurements to Linux or Windows.
+
 MCS requests explicitly maximize **atoms**, with connected mappings, non-induced matching and the same per-pair budget. SMSD’s default atom objective differs from RDKit FMCS’s default bond objective; both are configured explicitly. Search timings exclude parsing, graph conversion, warmup and independent witness validation. Engine order alternates.
 
 All complete corpus rows below use a common **1-second budget, zero warmups and one timed trial**, and ran alongside local builds or tests. Their timings are diagnostic and support no speed rankings. The controlled curated timing cohort uses 10 seconds, one warmup and three trials; the completed results are reported separately below. Budgeted results do not prove global optimality.

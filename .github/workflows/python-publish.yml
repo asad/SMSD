@@ -1,79 +1,153 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2018-2026 BioInception PVT LTD
-name: Publish Python Package to PyPI
+name: Build and validate Python wheels
 
 on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: Existing locally validated release tag
+        description: Exact release commit or existing validated tag
         required: true
         type: string
+      platform:
+        description: Platform requiring validation; prefer local Linux/macOS builds
+        required: true
+        default: windows
+        type: choice
+        options: [windows, linux, macos, all]
+      publish:
+        description: Publish the full matrix and sdist to PyPI (requires platform=all)
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  build:
-    name: Build CPython 3.14 macOS arm64 wheel
-    runs-on: macos-latest
-
+  source:
+    name: Prepare one source distribution
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.matrix.outputs.value }}
     steps:
       - uses: actions/checkout@v4.3.1
         with:
           ref: ${{ inputs.release_tag }}
-
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v4.2.1
+          fetch-depth: 0
+      - uses: actions/setup-python@v6.1.0
         with:
-          package-dir: .
+          python-version: '3.14'
+      - name: Validate source ref and select explicit platforms
+        id: matrix
         env:
-          CIBW_ARCHS: "arm64"
-          CIBW_BUILD: "cp314-macosx_arm64"
-          CIBW_BEFORE_BUILD: "pip install pybind11 scikit-build-core cmake ninja"
-          CIBW_BEFORE_ALL: "brew install libomp"
-          CIBW_ENVIRONMENT: 'MACOSX_DEPLOYMENT_TARGET=26.0 CMAKE_ARGS="-DSMSD_BUILD_METAL=OFF -DSMSD_BUILD_CUDA=OFF"'
-          CIBW_BUILD_VERBOSITY: "3"
-          CIBW_TEST_COMMAND: >
-            python -c "import smsd;
-            print('SMSD', smsd.__version__, 'imported OK');
-            m = smsd.parse_smiles('c1ccccc1');
-            print('Benzene:', len(m), 'atoms')"
-
+          RELEASE_REF: ${{ inputs.release_tag }}
+          BUILD_TARGET: ${{ inputs.platform }}
+          PUBLISH: ${{ inputs.publish }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os, re, subprocess
+          ref = os.environ['RELEASE_REF']
+          if not re.fullmatch(r'(?:v\d+\.\d+\.\d+|[0-9a-fA-F]{40})', ref):
+              raise SystemExit('Expected a stable release tag or exact 40-character commit SHA')
+          commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          resolved = subprocess.check_output(['git', 'rev-parse', ref + '^{commit}'], text=True).strip()
+          if resolved != commit:
+              raise SystemExit('Checkout does not match the requested release ref')
+          target = os.environ['BUILD_TARGET']
+          if os.environ['PUBLISH'] == 'true' and target != 'all':
+              raise SystemExit('Publishing requires the complete matrix (platform=all)')
+          entries = [
+              {'platform': 'windows', 'os': 'windows-2022', 'arch': 'AMD64'},
+              {'platform': 'linux', 'os': 'ubuntu-24.04', 'arch': 'x86_64'},
+              {'platform': 'macos', 'os': 'macos-26', 'arch': 'arm64'},
+          ]
+          selected = [entry for entry in entries if target == 'all' or entry['platform'] == target]
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('value=' + json.dumps({'include': selected}) + '\n')
+          PY
+      - name: Build and check source distribution
+        env:
+          RELEASE_REF: ${{ inputs.release_tag }}
+        run: |
+          python -m pip install build twine
+          python scripts/build_python_wheels.py prepare --output-dir dist --release-ref "$RELEASE_REF"
+          python -m twine check --strict dist/*.tar.gz
       - uses: actions/upload-artifact@v4.6.2
         with:
-          name: wheel-cp314-macos-arm64
-          path: wheelhouse/*.whl
+          name: python-release-source
+          path: dist/*
+          if-no-files-found: error
 
-  build-sdist:
-    name: Build source distribution
-    runs-on: ubuntu-22.04
+  build:
+    name: CPython 3.14 ${{ matrix.platform }} ${{ matrix.arch }}
+    needs: source
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.source.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4.3.1
         with:
           ref: ${{ inputs.release_tag }}
-      - name: Build sdist
+      - uses: actions/setup-python@v6.1.0
+        with:
+          python-version: '3.14'
+      - uses: actions/download-artifact@v4.3.0
+        with:
+          name: python-release-source
+          path: release-source
+      - name: Build, repair and test installed wheel from the sdist
+        env:
+          WHEEL_PLATFORM: ${{ matrix.platform }}
+          WHEEL_ARCH: ${{ matrix.arch }}
+        shell: bash
         run: |
-          pip install build
-          python -m build --sdist
+          python -m pip install cibuildwheel==4.2.1
+          python scripts/build_python_wheels.py build \
+            --sdist release-source/smsd-*.tar.gz --source-manifest release-source/source-manifest.json \
+            --platform "$WHEEL_PLATFORM" --arch "$WHEEL_ARCH" --output-dir wheelhouse
       - uses: actions/upload-artifact@v4.6.2
         with:
-          name: sdist
-          path: dist/*.tar.gz
+          name: python-wheel-${{ matrix.platform }}-${{ matrix.arch }}
+          path: wheelhouse/*
+          if-no-files-found: error
 
   publish:
-    name: Publish to PyPI
-    needs: [build, build-sdist]
-    runs-on: ubuntu-latest
+    name: Publish explicitly approved full matrix
+    if: ${{ inputs.publish && inputs.platform == 'all' }}
+    needs: [source, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     environment: pypi
     permissions:
       id-token: write
-
+      contents: read
     steps:
       - uses: actions/download-artifact@v4.3.0
         with:
-          path: dist
-          merge-multiple: true
-
+          pattern: python-*
+          path: artifacts
+      - name: Collect only distributions
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import shutil
+          output = Path('dist')
+          output.mkdir()
+          for path in Path('artifacts').rglob('*'):
+              if path.is_file() and (path.suffix == '.whl' or path.name.endswith('.tar.gz')):
+                  if (output / path.name).exists():
+                      raise SystemExit('Duplicate distribution: ' + path.name)
+                  shutil.copy2(path, output / path.name)
+          if len(list(output.glob('*.whl'))) != 3 or len(list(output.glob('*.tar.gz'))) != 1:
+              raise SystemExit('Expected three tested wheels and one source distribution')
+          PY
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1

@@ -53,16 +53,21 @@ its measurements remain separate from regenerated input.
 ## Build and release preparation
 
 Use [the local preparation script](../scripts/prepare-release.sh) to validate
-and assemble artifacts for this source. Additional wheel platforms, native
-installers, hosted builds and publishing require their own execution and
-validation. These notes do not claim that current artifacts have been published.
-The compact set uses Java 25/CDK 2.13 and one CPU/OpenMP Python 3.14 macOS arm64
-wheel plus a source distribution. See [local publishing commands](PUBLISHING.md)
+and assemble artifacts for this source. Platform wheels require their own
+installed-package checks. These notes do not claim that current artifacts have
+been published. The compact set uses Java 25/CDK 2.13 packages shared across
+Linux, macOS and Windows, and CPU/OpenMP Python 3.14 wheels for Linux x86_64,
+macOS arm64 and Windows x86_64, plus a source distribution. Intel macOS and
+Linux arm64 use source builds. See [publishing commands](PUBLISHING.md)
 for PyPI, Maven Central and GitHub.
 The optional C++ RDKit adapter has a public header and exported CMake target;
 the current RDKit headers require C++20. The core remains C++17.
 All four Java JARs include SMSD's LICENSE and NOTICE: `META-INF/smsd` for
 library, CLI and source JARs, and `doc-files/smsd` for Javadoc.
+The platform checks pass all 12 native suites on macOS and emulated Linux,
+with 691 installed-wheel Python tests passed and 8 skips on each. Native
+Windows runtime checks remain a publication gate; cross-compilation alone
+does not establish that platform's execution.
 
 Earlier 7.1.2 test counts and primitive measurements are retained as a
 [historical validation record](VALIDATION_7.1.2.md), rather than current results.

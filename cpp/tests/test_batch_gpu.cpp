@@ -396,8 +396,9 @@ TEST(performance_batch_1000) {
     auto t1 = std::chrono::high_resolution_clock::now();
     double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
     std::cout << "    batch substruct 1000 molecules: " << ms << " ms\n";
-    ASSERT_TRUE(ms < 1000.0);
     ASSERT_EQ(results.size(), 1000u);
+    for (size_t i = 0; i < results.size(); ++i)
+        ASSERT_EQ(results[i], i % 10 != 0);
 }
 
 TEST(performance_batch_fingerprint_1000) {
@@ -410,8 +411,13 @@ TEST(performance_batch_fingerprint_1000) {
     auto t1 = std::chrono::high_resolution_clock::now();
     double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
     std::cout << "    batch fingerprint 1000 molecules: " << ms << " ms\n";
-    ASSERT_TRUE(ms < 1000.0);
     ASSERT_EQ(fps.size(), 1000u);
+    for (size_t i = 0; i < fps.size(); ++i) {
+        ASSERT_EQ(fps[i].size(), 16u);
+        ASSERT_TRUE(std::any_of(fps[i].begin(), fps[i].end(),
+                                [](uint64_t word) { return word != 0; }));
+        ASSERT_EQ(fps[i], fps[i % 15]);
+    }
 }
 
 TEST(batchMCS_empty_inputs) {
