@@ -118,6 +118,38 @@ final class SubstructureEngine {
     };
   }
 
+  /** Return the first annotated center whose fully mapped ligand permutation reverses winding. */
+  static int stereoMismatchAtom(MolGraph query, MolGraph target, int[] mapping, ChemOptions chemistry) {
+    if (!chemistry.useChirality || query.tetraChirality == null || target.tetraChirality == null) return -1;
+    for (int atom = 0; atom < query.n; atom++) {
+      int mapped = mapping[atom];
+      if (mapped < 0 || mapped >= target.n || query.tetraChirality[atom] == 0
+          || target.tetraChirality[mapped] == 0) continue;
+      int[] queryOrder = query.tetrahedralLigands(atom), targetOrder = target.tetrahedralLigands(mapped);
+      if (queryOrder == null || targetOrder == null || queryOrder.length != 4 || targetOrder.length != 4) continue;
+      int[] permutation = new int[4];
+      boolean complete = true;
+      for (int i = 0; i < 4; i++) {
+        int ligand = queryOrder[i];
+        if (ligand >= 0 && mapping[ligand] < 0) { complete = false; break; }
+        int mappedLigand = ligand < 0 ? -1 : mapping[ligand];
+        permutation[i] = -1;
+        for (int j = 0; j < 4; j++)
+          if (targetOrder[j] == mappedLigand) { permutation[i] = j; break; }
+        if (permutation[i] < 0) { complete = false; break; }
+      }
+      if (!complete) continue;
+      int inversions = 0;
+      for (int i = 0; i < 4; i++)
+        for (int j = i + 1; j < 4; j++) if (permutation[i] > permutation[j]) inversions++;
+      // Builder tags use implicit-H-first SMILES winding; CDK tags use its ligand order.
+      int queryTag = query.mol == null ? 3 - query.tetraChirality[atom] : query.tetraChirality[atom];
+      int targetTag = target.mol == null ? 3 - target.tetraChirality[mapped] : target.tetraChirality[mapped];
+      if ((queryTag == targetTag) != ((inversions & 1) == 0)) return atom;
+    }
+    return -1;
+  }
+
   interface Matcher {
     boolean exists();
     void enumerate(int maxSolutions, List<Map<Integer, Integer>> out);
@@ -181,8 +213,8 @@ final class SubstructureEngine {
       if (C.ringFusionMode != ChemOptions.RingFusionMode.IGNORE) { gq.ensureRingCounts(); gt.ensureRingCounts(); }
       // Domain space: try cache first (v6.5.3 perf fix).
       // Same graph pair queried 6-18x per reaction gets O(1) domain reuse.
-      DomainCacheKey dKey = new DomainCacheKey(gq, gt, C);
-      long[][] cached = domainCache.get(dKey);
+      DomainCacheKey dKey = C.mcsExcludedTargetAtoms == null ? new DomainCacheKey(gq, gt, C) : null;
+      long[][] cached = dKey == null ? null : domainCache.get(dKey);
       if (cached != null && cached.length == Nq
           && (Nq == 0 || cached[0].length == tWords)) {
         // Deep copy to avoid shared mutation across matchers
@@ -240,7 +272,7 @@ final class SubstructureEngine {
             }
         }
         // Cache for reuse by subsequent matchers on same graph pair
-        if (domainCache.size() < DOMAIN_CACHE_MAX) {
+        if (dKey != null && domainCache.size() < DOMAIN_CACHE_MAX) {
           long[][] copy = new long[Nq][tWords];
           for (int i = 0; i < Nq; i++)
             System.arraycopy(this.domain[i], 0, copy[i], 0, tWords);
@@ -276,20 +308,12 @@ final class SubstructureEngine {
     }
 
     static boolean atomsCompatFast(MolGraph gq, int qi, MolGraph gt, int tj, ChemOptions C) {
-      // Tautomer-aware: C/N/O can interchange within tautomeric regions,
-      // but all OTHER atom-level constraints still apply.
-      boolean tautRelax = C.tautomerAware && gq.tautomerClass != null && gt.tautomerClass != null
-          && gq.tautomerClass[qi] != -1 && gt.tautomerClass[tj] != -1;
-      if (tautRelax) {
-        int aq = gq.atomicNum[qi], at = gt.atomicNum[tj];
-        if (!((aq == 6 || aq == 7 || aq == 8 || aq == 16 || aq == 34) && (at == 6 || at == 7 || at == 8 || at == 16 || at == 34)))
-          tautRelax = false;
-        // Degree guard: genuine tautomers shift at most 1 proton,
-        // so degree difference should be <= 1 for same-element matches.
-        if (tautRelax && aq == at && Math.abs(gq.degree[qi] - gt.degree[tj]) > 1)
-          tautRelax = false;
-      }
-      if (!tautRelax && C.matchAtomType && gq.atomicNum[qi] != gt.atomicNum[tj]) return false;
+      if (C.mcsExcludedTargetGraph != null
+          && ((gt == C.mcsExcludedTargetGraph && C.mcsExcludedTargetAtoms.contains(tj))
+              || (gq == C.mcsExcludedTargetGraph && gq != C.mcsOriginalQueryGraph
+                  && C.mcsExcludedTargetAtoms.contains(qi)))) return false;
+      // Tautomerism changes hydrogen placement and bond order, not elemental identity.
+      if (C.matchAtomType && gq.atomicNum[qi] != gt.atomicNum[tj]) return false;
       if (C.matchFormalCharge && gq.formalCharge[qi] != gt.formalCharge[tj]) return false;
       if (C.aromaticityMode == ChemOptions.AromaticityMode.STRICT && gq.aromatic[qi] != gt.aromatic[tj]) return false;
       if (C.ringMatchesRingOnly && gq.ring[qi] != gt.ring[tj]) return false;
@@ -299,7 +323,12 @@ final class SubstructureEngine {
       }
       if (C.useChirality && gq.tetraChirality != null && gt.tetraChirality != null) {
         int qs = gq.tetraChirality[qi], ts = gt.tetraChirality[tj];
-        if (qs != 0 && ts != 0 && qs != ts) return false;
+        if (qs != 0 && ts != 0) {
+          int qc = gq.tetrahedralConfiguration(qi), tc = gt.tetrahedralConfiguration(tj);
+          if (qc != 0 && tc != 0 && qc != tc) return false;
+          // Preserve the comparison of explicitly supplied invalid builder annotations.
+          if ((gq.tetrahedralLigands(qi) == null || gt.tetrahedralLigands(tj) == null) && qs != ts) return false;
+        }
       }
       if (C.ringFusionMode != ChemOptions.RingFusionMode.IGNORE && gq.ring[qi] && gt.ring[tj]) {
         if (C.ringFusionMode == ChemOptions.RingFusionMode.STRICT) {
@@ -352,7 +381,14 @@ final class SubstructureEngine {
         }
         q2t[qi] = bestTj; t2q[bestTj] = qi; usedMask[bestTj >>> 6] |= 1L << (bestTj & 63); matched++;
       }
-      return true;
+      if (stereoMismatchAtom(gq, gt, q2t, C) < 0) return true;
+      for (int qi : order) {
+        int tj = q2t[qi];
+        q2t[qi] = -1;
+        t2q[tj] = -1;
+        usedMask[tj >>> 6] &= ~(1L << (tj & 63));
+      }
+      return false;
     }
 
     int[] fastisoOrder() {
@@ -479,7 +515,7 @@ final class SubstructureEngine {
     void backtrack(int[] order, int pos) {
       if (tb.expired()) { timedOut = true; return; }
       nodesVisited++; if (found) return;
-      if (pos == order.length) { found = true; return; }
+      if (pos == order.length) { found = stereoMismatchAtom(gq, gt, q2t, C) < 0; return; }
       int qi = order[pos];
       int candCount = selectCandidates(qi, pos);
       for (int k = 0; k < candCount; k++) {
@@ -496,6 +532,7 @@ final class SubstructureEngine {
       if (tb.expired()) { timedOut = true; return; }
       nodesVisited++; if (out.size() >= maxSolutions) return;
       if (pos == order.length) {
+        if (stereoMismatchAtom(gq, gt, q2t, C) >= 0) return;
         Map<Integer, Integer> map = new LinkedHashMap<>(); for (int k : order) map.put(k, q2t[k]); out.add(map); return;
       }
       int qi = order[pos];

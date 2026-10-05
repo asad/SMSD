@@ -1,111 +1,86 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2018-2026 BioInception PVT LTD
+"""Generate reproducible Dalke-style pairs from a specified molecule collection.
+
+These are derived corpora, not the original ChEMBL-13 FMCS benchmark. A nearest
+neighbor is the highest Morgan-radius-2/1024-bit Tanimoto match after explicitly
+excluding the query index; no similarity cutoff is applied. Existing checked-in
+corpora are not overwritten by default.
 """
-Generate Dalke-style MCS benchmark pairs from a molecule collection.
-
-Produces two benchmark sets:
-  1. Random pairs (low similarity) — 1000 pairs
-  2. Nearest-neighbor pairs (high similarity, k=2) — 1000 pairs
-
-Usage:
-    python benchmarks/generate_dalke_pairs.py
-
-Input:  benchmarks/data/chembl_mcs_benchmark.smi
-Output: benchmarks/data/dalke_random_pairs.tsv
-        benchmarks/data/dalke_nn_pairs.tsv
-"""
+import argparse
+import hashlib
+from pathlib import Path
 import random
-import os
-import sys
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(SCRIPT_DIR, "data")
+DATA = Path(__file__).resolve().parent / "data"
 
-def main():
-    try:
-        from rdkit import Chem
-        from rdkit.Chem import AllChem, DataStructs
-    except ImportError:
-        print("ERROR: RDKit required. Install with: pip install rdkit")
-        sys.exit(1)
 
-    smi_file = os.path.join(DATA_DIR, "chembl_mcs_benchmark.smi")
-    if not os.path.exists(smi_file):
-        print(f"ERROR: {smi_file} not found")
-        sys.exit(1)
+def sample_pool(items, maximum, rng):
+    return [items[i] for i in rng.sample(range(len(items)), maximum)] if len(items) > maximum else list(items)
 
-    # Load molecules
-    print("Loading molecules...")
-    mols = []
-    smiles_list = []
-    names = []
-    with open(smi_file) as f:
-        for line in f:
-            parts = line.strip().split()
-            if len(parts) < 1:
-                continue
-            smi = parts[0]
-            name = parts[1] if len(parts) > 1 else f"mol_{len(mols)}"
-            mol = Chem.MolFromSmiles(smi)
-            if mol is not None and mol.GetNumHeavyAtoms() >= 5:
-                mols.append(mol)
-                smiles_list.append(Chem.MolToSmiles(mol))
-                names.append(name)
 
-    print(f"Loaded {len(mols)} valid molecules (>= 5 heavy atoms)")
+def random_pair_indices(count, pairs, rng):
+    if count < 2 or pairs > count*(count-1)//2:
+        raise ValueError("not enough distinct unordered index pairs")
+    seen, result = set(), []
+    while len(result) < pairs:
+        i, j = rng.sample(range(count), 2)
+        key = tuple(sorted((i, j)))
+        if key not in seen:
+            seen.add(key); result.append((i, j))
+    return result
 
-    # Cap at 5000 for manageable fingerprint computation
-    if len(mols) > 5000:
-        idx = random.sample(range(len(mols)), 5000)
-        mols = [mols[i] for i in idx]
-        smiles_list = [smiles_list[i] for i in idx]
-        names = [names[i] for i in idx]
-        print(f"Subsampled to {len(mols)} molecules")
 
-    # === 1. Random pairs (1000) ===
-    print("Generating 1000 random pairs...")
-    random.seed(42)
-    random_out = os.path.join(DATA_DIR, "dalke_random_pairs.tsv")
-    with open(random_out, "w") as f:
-        f.write("# Dalke-style random MCS benchmark pairs\n")
-        f.write("# Source: chembl_mcs_benchmark.smi (MoleculeNet drug collections)\n")
-        f.write("# SMILES1\\tSMILES2\\tName1\\tName2\n")
-        seen = set()
-        count = 0
-        while count < 1000:
-            i, j = random.sample(range(len(mols)), 2)
-            key = (min(i, j), max(i, j))
-            if key in seen:
-                continue
-            seen.add(key)
-            f.write(f"{smiles_list[i]}\t{smiles_list[j]}\t{names[i]}\t{names[j]}\n")
-            count += 1
-    print(f"  Written to {random_out}")
+def nearest_neighbor_index(query, similarities):
+    candidates = (i for i in range(len(similarities)) if i != query)
+    # Break ties by index, rather than assuming the query sorts before its neighbors.
+    return max(candidates, key=lambda i: (similarities[i], -i))
 
-    # === 2. Nearest-neighbor pairs (1000) ===
-    print("Computing Morgan fingerprints for nearest-neighbor search...")
-    fps = [AllChem.GetMorganFingerprintAsBitVect(m, 2, 1024) for m in mols]
 
-    nn_out = os.path.join(DATA_DIR, "dalke_nn_pairs.tsv")
-    # Pick 1000 random query molecules, find their nearest neighbor
-    query_indices = random.sample(range(len(mols)), min(1000, len(mols)))
+def main(argv=None):
+    from rdkit import Chem, DataStructs
+    from rdkit.Chem import rdFingerprintGenerator
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--input", type=Path, default=DATA / "chembl_mcs_benchmark.smi")
+    parser.add_argument("--output-dir", type=Path, default=Path("build/local-benchmarks/generated-pairs"))
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--pairs", type=int, default=1000)
+    parser.add_argument("--max-molecules", type=int, default=5000)
+    args = parser.parse_args(argv)
+    if args.pairs < 1 or args.max_molecules < 2:
+        parser.error("pairs must be positive and max-molecules at least 2")
+    rng = random.Random(args.seed)
+    items = []
+    for line in args.input.read_text().splitlines():
+        if not line.strip() or line.startswith("#"):
+            continue
+        row = line.split()
+        mol = Chem.MolFromSmiles(row[0])
+        if mol is not None and mol.GetNumHeavyAtoms() >= 5:
+            items.append((mol, Chem.MolToSmiles(mol), row[1] if len(row)>1 else f"mol_{len(items)}"))
+    items = sample_pool(items, args.max_molecules, rng)
+    pairs = random_pair_indices(len(items), args.pairs, rng)
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    metadata = (f"# Derived Dalke-style corpus; not the original ChEMBL-13 data\n"
+                f"# source_file={args.input.name}; source_sha256={hashlib.sha256(args.input.read_bytes()).hexdigest()}\n"
+                f"# seed={args.seed}; pool_size={len(items)}; rdkit={Chem.rdBase.rdkitVersion}\n")
+    with (args.output_dir / "dalke_random_pairs.tsv").open("w") as handle:
+        handle.write(metadata+"# SMILES1\tSMILES2\tName1\tName2\n")
+        for i, j in pairs:
+            handle.write(f"{items[i][1]}\t{items[j][1]}\t{items[i][2]}\t{items[j][2]}\n")
+    generator = rdFingerprintGenerator.GetMorganGenerator(radius=2, fpSize=1024)
+    fingerprints = [generator.GetFingerprint(item[0]) for item in items]
+    queries = rng.sample(range(len(items)), min(args.pairs, len(items)))
+    with (args.output_dir / "dalke_nn_pairs.tsv").open("w") as handle:
+        handle.write(metadata+"# One nearest neighbor per query; query index excluded; no similarity cutoff\n")
+        handle.write("# SMILES1\tSMILES2\tName1\tName2\tTanimoto\n")
+        for query in queries:
+            similarities = DataStructs.BulkTanimotoSimilarity(fingerprints[query], fingerprints)
+            neighbor = nearest_neighbor_index(query, similarities)
+            handle.write(f"{items[query][1]}\t{items[neighbor][1]}\t{items[query][2]}\t{items[neighbor][2]}\t{similarities[neighbor]:.4f}\n")
+    print(f"Wrote {len(pairs)} random and {len(queries)} nearest-neighbor pairs to {args.output_dir}")
 
-    print("Generating nearest-neighbor pairs...")
-    with open(nn_out, "w") as f:
-        f.write("# Dalke-style nearest-neighbor MCS benchmark pairs (k=2)\n")
-        f.write("# Source: chembl_mcs_benchmark.smi (MoleculeNet drug collections)\n")
-        f.write("# SMILES1\\tSMILES2\\tName1\\tName2\\tTanimoto\n")
-        for qi in query_indices:
-            sims = DataStructs.BulkTanimotoSimilarity(fps[qi], fps)
-            # Sort by descending similarity, skip self (index 0)
-            ranked = sorted(range(len(sims)), key=lambda x: sims[x], reverse=True)
-            nn = ranked[1]  # nearest neighbor (not self)
-            tc = sims[nn]
-            f.write(f"{smiles_list[qi]}\t{smiles_list[nn]}\t{names[qi]}\t{names[nn]}\t{tc:.4f}\n")
-    print(f"  Written to {nn_out}")
-
-    print("Done!")
 
 if __name__ == "__main__":
     main()

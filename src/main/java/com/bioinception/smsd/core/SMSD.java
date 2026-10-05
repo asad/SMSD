@@ -71,7 +71,7 @@ public final class SMSD {
   /**
    * Create an SMSD instance with explicit control over standardisation.
    *
-   * <p>Pass {@code standardise=false} for pre-processed molecules (~2-5x faster construction).
+   * <p>Pass {@code standardise=false} when aromaticity and atom typing have already been prepared.
    *
    * <pre>{@code
    * // Skip standardisation for pre-processed molecules
@@ -304,8 +304,8 @@ public final class SMSD {
    * Map<Integer, Integer> mcs = smsd.findMCS(true, true, 30000);
    * }</pre>
    *
-   * @param induced       {@code true} for induced MCS (edge-preserving); {@code false} for
-   *                      non-induced (allows edge mismatches)
+   * @param induced       {@code true} to preserve query edges and nonedges;
+   *                      {@code false} to preserve query edges and allow extra target edges
    * @param connectedOnly {@code true} to require the MCS to be a connected subgraph
    * @param timeoutMs     maximum time in milliseconds for the computation
    * @return mapping from query atom indices to target atom indices; empty if no common substructure
@@ -404,7 +404,7 @@ public final class SMSD {
    * List<Map<Integer, Integer>> allMCS = smsd.findAllMCS(true, true, 30000, 5);
    * }</pre>
    *
-   * @param induced       {@code true} for induced MCS (edge-preserving)
+   * @param induced       {@code true} to preserve query nonedges as well as edges
    * @param connectedOnly {@code true} to require connected subgraph
    * @param timeoutMs     maximum time in milliseconds
    * @param maxResults    maximum number of distinct mappings to return
@@ -804,7 +804,7 @@ public final class SMSD {
   /**
    * Find the MCS with full parameter control and return it as a canonical SMILES string.
    *
-   * @param induced       {@code true} for induced MCS (edge-preserving)
+   * @param induced       {@code true} to preserve query nonedges as well as edges
    * @param connectedOnly {@code true} to require a connected MCS subgraph
    * @param timeoutMs     maximum computation time in milliseconds
    * @return canonical SMILES of the MCS, or {@code ""} if no common substructure

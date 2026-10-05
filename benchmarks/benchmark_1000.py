@@ -21,13 +21,14 @@ Output:
 
 Requirements:
     - RDKit (pip install rdkit)
-    - Java 11+ on PATH (for SMSD comparison)
+    - JDK 25 on PATH (for SMSD comparison)
     - SMSD jar (built via: cd .. && mvn package -DskipTests)
 """
 
 import argparse
 import csv
 import hashlib
+import json
 import os
 import random
 import signal
@@ -58,7 +59,6 @@ except ImportError:
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent
 MOLECULES_FILE = SCRIPT_DIR / "diverse_molecules.txt"
-DEFAULT_SMSD_JAR = SCRIPT_DIR.parent / "target" / "smsd-6.4.0.jar"
 OUTPUT_TSV = SCRIPT_DIR / "benchmark_results.tsv"
 OUTPUT_SUMMARY = SCRIPT_DIR / "benchmark_summary.txt"
 
@@ -262,6 +262,7 @@ def rdkit_mcs_single(smi_a: str, smi_b: str, timeout_sec: int = 10) -> tuple[flo
         result = rdFMCS.FindMCS(
             [mol_a, mol_b],
             timeout=timeout_sec,
+            maximizeBonds=False,
             matchValences=False,
             ringMatchesRingOnly=True,
             completeRingsOnly=False,
@@ -317,13 +318,9 @@ def find_smsd_jar(user_path: str | None) -> Path | None:
         p = Path(user_path)
         if p.exists():
             return p
-    # Try default location
-    if DEFAULT_SMSD_JAR.exists():
-        return DEFAULT_SMSD_JAR
-    # Try globbing target/
     target = SCRIPT_DIR.parent / "target"
     if target.is_dir():
-        jars = sorted(target.glob("smsd-*.jar"))
+        jars = sorted(target.glob("smsd-*-jar-with-dependencies.jar"), key=lambda p: p.stat().st_mtime)
         if jars:
             return jars[-1]
     return None
@@ -334,14 +331,9 @@ def smsd_mcs_single(smi_a: str, smi_b: str, smsd_jar: Path, timeout_sec: int = 1
     Run SMSD via CLI on a single pair.
     Returns (elapsed_seconds, mcs_atom_count, completed).
     """
-    cmd = [
-        "java", "-cp", str(smsd_jar),
-        "com.bioinception.smsd.cli.SMSDcli",
-        "-q", smi_a,
-        "-t", smi_b,
-        "-o", "MCS",
-        "-I", "SMI",
-    ]
+    cmd = ["java", "-jar", str(smsd_jar), "--Q", "SMI", "--q", smi_a,
+           "--T", "SMI", "--t", smi_b, "--mode", "mcs",
+           "--timeout", str(timeout_sec*1000), "--json", "-"]
     t0 = time.perf_counter()
     try:
         proc = subprocess.run(
@@ -351,24 +343,10 @@ def smsd_mcs_single(smi_a: str, smi_b: str, smsd_jar: Path, timeout_sec: int = 1
             timeout=timeout_sec + 2,
         )
         elapsed = time.perf_counter() - t0
-        # Parse output for MCS size
-        mcs_size = -1
-        for line in proc.stdout.splitlines():
-            if "MCS_SIZE" in line or "mcs_size" in line.lower():
-                parts = line.split()
-                for p in parts:
-                    try:
-                        mcs_size = int(p)
-                    except ValueError:
-                        pass
-            elif "AtomCount" in line or "atom_count" in line.lower():
-                parts = line.split()
-                for p in parts:
-                    try:
-                        mcs_size = int(p)
-                    except ValueError:
-                        pass
-        return (elapsed, mcs_size, proc.returncode == 0)
+        if proc.returncode != 0:
+            return (elapsed, -1, False)
+        data = json.loads(proc.stdout)
+        return (elapsed, int(data.get("mcs_size", -1)), True)
     except subprocess.TimeoutExpired:
         elapsed = time.perf_counter() - t0
         return (elapsed, -1, False)
@@ -434,7 +412,7 @@ def write_results(
             "smsd_median_s",
             "smsd_mean_s",
             "smsd_mcs_size",
-            "smsd_completed",
+            "smsd_returned_without_exception",
             "size_diff",
             "winner",
         ])
@@ -446,19 +424,7 @@ def write_results(
             rdkit_med = rr.get("median_time", -1)
             smsd_med = sr.get("median_time", -1)
 
-            if rdkit_med > 0 and smsd_med > 0:
-                if smsd_med < rdkit_med * 0.9:
-                    winner = "SMSD"
-                elif rdkit_med < smsd_med * 0.9:
-                    winner = "RDKit"
-                else:
-                    winner = "TIE"
-            elif rdkit_med > 0:
-                winner = "RDKit_ONLY"
-            elif smsd_med > 0:
-                winner = "SMSD_ONLY"
-            else:
-                winner = "NONE"
+            winner = "not compared"
 
             mcs_diff = ""
             rdkit_mcs = rr.get("mcs_size", -1)
@@ -504,7 +470,7 @@ def write_summary(
 
     for engine_name, results in [("RDKit", rdkit_results), ("SMSD", smsd_results)]:
         if not results:
-            lines.append(f"{engine_name}: NOT TESTED (unavailable)")
+            lines.append(f"{engine_name}: NOT TESTED (not run)")
             lines.append("")
             continue
 
@@ -522,7 +488,8 @@ def write_summary(
         if all_mcs:
             lines.append(f"  Median MCS size:             {median(all_mcs):.1f}")
             lines.append(f"  Mean MCS size:               {mean(all_mcs):.1f}")
-        lines.append(f"  Completion rate:             {completed}/{total} ({100*completed/total:.1f}%)")
+        status = "Calls returned without exception" if engine_name == "SMSD" else "Uncanceled calls"
+        lines.append(f"  {status}: {completed}/{total} ({100*completed/total:.1f}%)")
         lines.append("")
 
     # Per-section breakdown
@@ -548,46 +515,12 @@ def write_summary(
 
             r_str = f"{median(rdkit_sec)*1000:.2f}" if rdkit_sec else "N/A"
             s_str = f"{median(smsd_sec)*1000:.2f}" if smsd_sec else "N/A"
-            if rdkit_sec and smsd_sec:
-                r_med = median(rdkit_sec)
-                s_med = median(smsd_sec)
-                winner = "SMSD" if s_med < r_med * 0.9 else ("RDKit" if r_med < s_med * 0.9 else "TIE")
-            else:
-                winner = "-"
+            winner = "not compared"
             lines.append(f"{section_name:<15} {r_str:>12} {s_str:>12} {winner:>10}")
         lines.append("")
 
-    # Head-to-head
     if rdkit_results and smsd_results:
-        smsd_wins = rdkit_wins = ties = 0
-        smsd_bigger_mcs = rdkit_bigger_mcs = equal_mcs = 0
-        for pair in pairs:
-            pair_key = f"{pair['name_a']}__vs__{pair['name_b']}"
-            rr = rdkit_results.get(pair_key, {})
-            sr = smsd_results.get(pair_key, {})
-            rt = rr.get("median_time", -1)
-            st = sr.get("median_time", -1)
-            if rt > 0 and st > 0:
-                if st < rt * 0.9:
-                    smsd_wins += 1
-                elif rt < st * 0.9:
-                    rdkit_wins += 1
-                else:
-                    ties += 1
-            rm = rr.get("mcs_size", -1)
-            sm = sr.get("mcs_size", -1)
-            if rm >= 0 and sm >= 0:
-                if sm > rm:
-                    smsd_bigger_mcs += 1
-                elif rm > sm:
-                    rdkit_bigger_mcs += 1
-                else:
-                    equal_mcs += 1
-
-        lines.append("--- Head-to-Head Comparison ---")
-        lines.append(f"  Speed: SMSD faster: {smsd_wins}, RDKit faster: {rdkit_wins}, Tie: {ties}")
-        lines.append(f"  Quality: SMSD larger MCS: {smsd_bigger_mcs}, RDKit larger: {rdkit_bigger_mcs}, Equal: {equal_mcs}")
-
+        lines.append("No head-to-head ranking: CLI startup, chemistry policies and unvalidated mappings differ.")
     text = "\n".join(lines)
     with open(output_path, "w") as fh:
         fh.write(text + "\n")
@@ -598,7 +531,9 @@ def write_summary(
 # Main
 # ---------------------------------------------------------------------------
 def main():
+    global OUTPUT_TSV, OUTPUT_SUMMARY
     parser = argparse.ArgumentParser(description="SMSD 1000-Molecule Benchmark")
+    parser.add_argument("--output-dir", type=Path, default=SCRIPT_DIR.parent / "build/local-benchmarks/pool1000")
     parser.add_argument("--pairs", type=int, default=1000, help="Total pairs (split 50/50 random/systematic)")
     parser.add_argument("--rounds", type=int, default=5, help="Rounds per pair (report median)")
     parser.add_argument("--timeout", type=int, default=10, help="Timeout in seconds per pair")
@@ -608,6 +543,9 @@ def main():
     parser.add_argument("--seed", type=int, default=42, help="Random seed for pair generation")
     parser.add_argument("--molecules", type=str, default=None, help="Path to molecules file")
     args = parser.parse_args()
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    OUTPUT_TSV = args.output_dir / "benchmark_results.tsv"
+    OUTPUT_SUMMARY = args.output_dir / "benchmark_summary.txt"
 
     mol_path = Path(args.molecules) if args.molecules else MOLECULES_FILE
     print(f"Loading molecules from {mol_path} ...", file=sys.stderr)

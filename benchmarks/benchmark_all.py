@@ -16,20 +16,21 @@ Usage:
     python3 benchmarks/benchmark_all.py          # run everything
 
 Output:
-    - benchmarks/results_smsd_vs_rdkit_20pairs_mcs_all.tsv          (machine-readable)
-    - benchmarks/results_smsd_vs_rdkit_20pairs_summary.txt  (human-readable formatted table)
+    - build/local-benchmarks/integration/*.tsv (machine-readable)
+    - build/local-benchmarks/integration/*summary.txt (formatted diagnostics)
     - stdout: formatted comparison table
 
 Requirements:
-    - Python 3.8+
+    - Python 3.9+
     - rdkit  (pip install rdkit)
-    - Java 11+  (for SMSD CLI)
+    - JDK 25  (for SMSD CLI)
     - Built SMSD shaded jar at target/smsd-*-jar-with-dependencies.jar
 
 Author: Syed Asad Rahman, BioInception PVT LTD
 """
 
 import json
+import csv
 import os
 import platform
 import subprocess
@@ -224,7 +225,7 @@ def benchmark_rdkit(pairs) -> List[BenchResult]:
         for _ in range(NUM_RUNS):
             t0 = time.perf_counter()
             try:
-                result = rdFMCS.FindMCS([mol1, mol2], timeout=TIMEOUT_SEC)
+                result = rdFMCS.FindMCS([mol1, mol2], timeout=TIMEOUT_SEC, maximizeBonds=False)
                 mcs_size = result.numAtoms
                 mcs_smarts = result.smartsString if result.smartsString else ""
                 timed_out = result.canceled
@@ -359,9 +360,9 @@ def benchmark_smsd_java(pairs, existing_results: List[BenchResult]) -> List[Benc
 
 def benchmark_cpp_if_available(existing_results: List[BenchResult]) -> List[BenchResult]:
     """If the C++ benchmark binary exists, run it and parse results."""
-    if not CPP_BINARY.exists():
+    if CPP_BINARY is None or not CPP_BINARY.exists():
         print(f"[INFO] C++ binary not found at {CPP_BINARY} -- skipping.", file=sys.stderr)
-        print("       Build with: cd cpp && mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make",
+        print("       Build with benchmark_cpp.sh and pass --cpp-binary explicitly.",
               file=sys.stderr)
         return existing_results
 
@@ -370,21 +371,14 @@ def benchmark_cpp_if_available(existing_results: List[BenchResult]) -> List[Benc
             [str(CPP_BINARY)],
             capture_output=True, text=True, timeout=300,
         )
-        # Parse the C++ benchmark output (expects TSV-like lines)
-        for line in proc.stdout.splitlines():
-            parts = line.split()
-            if len(parts) < 4:
-                continue
-            pair_name = parts[0]
-            for res in existing_results:
-                if res.pair_name == pair_name:
-                    try:
-                        res.cpp_best_ms = float(parts[1])
-                        res.cpp_median_ms = float(parts[2])
-                        res.cpp_mcs_size = int(parts[3])
-                    except (ValueError, IndexError):
-                        pass
-                    break
+        lines = [line for line in proc.stdout.splitlines() if line and not line.startswith("#")]
+        observations = list(csv.DictReader(lines, delimiter="\t"))
+        for res in existing_results:
+            values = [r for r in observations if r.get("pair") == res.pair_name]
+            if values:
+                elapsed = [float(r["elapsed_us"])/1000 for r in values]
+                res.cpp_best_ms, res.cpp_median_ms = min(elapsed), median(elapsed)
+                res.cpp_mcs_size = min(int(r["atoms"]) for r in values)
     except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as e:
         print(f"[WARN] C++ benchmark failed: {e}", file=sys.stderr)
 
@@ -398,7 +392,8 @@ def benchmark_cpp_if_available(existing_results: List[BenchResult]) -> List[Benc
 def benchmark_smsd_python(pairs, existing_results: List[BenchResult]) -> List[BenchResult]:
     """Benchmark the smsd Python package (C++ bindings via pybind11)."""
     try:
-        from smsd import parse_smiles, find_mcs, ChemOptions, MCSOptions
+        from smsd import parse_smiles, ChemOptions, MCSOptions
+        from smsd._smsd import find_mcs
     except ImportError:
         print("[WARN] smsd Python package not found -- pip install smsd", file=sys.stderr)
         return existing_results
@@ -446,26 +441,8 @@ def benchmark_smsd_python(pairs, existing_results: List[BenchResult]) -> List[Be
 # ---------------------------------------------------------------------------
 
 def winner_and_speedup(rdkit_ms: float, smsd_ms: float) -> Tuple[str, str]:
-    """Determine winner and speedup factor."""
-    if rdkit_ms < 0 and smsd_ms < 0:
-        return "N/A", ""
-    if rdkit_ms < 0:
-        return "SMSD", ""
-    if smsd_ms < 0:
-        return "RDKit", ""
-    if rdkit_ms <= 0.001 and smsd_ms <= 0.001:
-        return "tie", "~1x"
-    if smsd_ms <= 0.001:
-        return "SMSD", ">999x"
-    if rdkit_ms <= 0.001:
-        return "RDKit", ">999x"
-    ratio = rdkit_ms / smsd_ms
-    if ratio > 1.1:
-        return "SMSD", f"{ratio:.1f}x"
-    elif ratio < 0.9:
-        return "RDKit", f"{1.0/ratio:.1f}x"
-    else:
-        return "tie", f"~1x"
+    """Integration timings have unequal overhead and unvalidated witnesses."""
+    return "not compared", ""
 
 
 def mcs_quality(rdkit_size: int, smsd_size: int) -> str:
@@ -580,11 +557,8 @@ def print_results(results: List[BenchResult]):
     print("SUMMARY")
     print(f"  Total RDKit time:  {rdkit_total:>10.1f} ms")
     print(f"  Total SMSD  time:  {smsd_total:>10.1f} ms")
-    if smsd_total > 0:
-        print(f"  Overall speedup:   {rdkit_total / smsd_total:.2f}x (SMSD vs RDKit)")
-    print()
-    print(f"  Speed wins:   SMSD={smsd_wins}  RDKit={rdkit_wins}  tie={ties}")
-    print(f"  MCS quality:  equal={quality_equal}  SMSD better={quality_smsd_better}  RDKit better={quality_rdkit_better}")
+    print("  Speed ranking: not compared (setup, chemistry and witness validity differ)")
+    print(f"  Unvalidated atom-count differences: equal={quality_equal} SMSD larger={quality_smsd_better} RDKit larger={quality_rdkit_better}")
     print()
 
 
@@ -632,6 +606,23 @@ def write_summary(results: List[BenchResult], path: Path):
 # ---------------------------------------------------------------------------
 
 def main() -> int:
+    import argparse
+    global NUM_RUNS, TIMEOUT_SEC, TIMEOUT_MS, JAR_PATH, CPP_BINARY
+    parser = argparse.ArgumentParser(description="Legacy integration diagnostic; mapping quality and semantics are not validated")
+    parser.add_argument("--runs", type=int, default=5)
+    parser.add_argument("--timeout-sec", type=int, default=10)
+    parser.add_argument("--jar", type=Path)
+    parser.add_argument("--cpp-binary", type=Path)
+    parser.add_argument("--output-dir", type=Path, default=PROJECT_DIR / "build/local-benchmarks/integration")
+    args = parser.parse_args()
+    if args.runs < 1 or args.timeout_sec < 1:
+        parser.error("runs and timeout must be positive")
+    CPP_BINARY = args.cpp_binary
+    NUM_RUNS = args.runs; TIMEOUT_SEC = args.timeout_sec; TIMEOUT_MS = args.timeout_sec*1000
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    if args.jar is not None:
+        globals()["find_smsd_jar"] = lambda: args.jar
+    print("Integration diagnostics include CLI startup and unvalidated mappings; do not interpret ranks as algorithm speed/quality claims.")
     print("[1/5] Running RDKit FindMCS benchmarks...", file=sys.stderr)
     results = benchmark_rdkit(PAIRS)
 
@@ -645,8 +636,8 @@ def main() -> int:
     results = benchmark_cpp_if_available(results)
 
     print("[5/5] Writing results...", file=sys.stderr)
-    tsv_path = SCRIPT_DIR / "results_smsd_vs_rdkit_20pairs_mcs_all.tsv"
-    summary_path = SCRIPT_DIR / "results_smsd_vs_rdkit_20pairs_summary.txt"
+    tsv_path = args.output_dir / "results_smsd_vs_rdkit_20pairs_mcs_all.tsv"
+    summary_path = args.output_dir / "results_smsd_vs_rdkit_20pairs_summary.txt"
 
     write_tsv(results, tsv_path)
     write_summary(results, summary_path)

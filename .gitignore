@@ -11,7 +11,7 @@ hs_err_pid*
 __pycache__/
 *.pyc
 *.egg-info/
-.venv/
+.venv*/
 venv/
 .pyuser/
 dist/
@@ -52,4 +52,3 @@ benchmarks/runs/
 paper/
 legacy/
 *.class
-.claude/

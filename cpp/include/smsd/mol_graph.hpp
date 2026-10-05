@@ -503,16 +503,15 @@ struct MolGraph {
 
     /// Return automorphism generators discovered during canonical labeling.
     /// Each generator is a permutation vector of length n where gen[i] is the
-    /// image of atom i.  The full automorphism group is the closure of these
-    /// generators.
+    /// image of atom i. Their closure is the full molecular automorphism group
+    /// only when automorphismGeneratorsTruncated() is false.
     const std::vector<std::vector<int>>& getAutomorphismGenerators() const {
         ensureCanonical();
         return autGenerators_;
     }
 
-    /// True when the generator list was capped during canonical search.
-    /// The orbit partition is still exact; only the explicit generator list
-    /// may be incomplete.
+    /// True when search limits or molecular-property checks prevent a complete
+    /// molecular automorphism generator list. The orbit partition is advisory.
     bool automorphismGeneratorsTruncated() const {
         ensureCanonical();
         return autGeneratorsTruncated_;
@@ -2686,7 +2685,7 @@ public:
             auto orb = buildOrbits(uf, n);
             // Refine orbits using 2-hop neighborhood signatures
             orb = refineOrbitsBy2Hop(orb, n, label, degree, neighbors);
-            return { cl, orb, {}, false };
+            return { cl, orb, {}, true };
         }
 
         refinePartition(n, initPerm, initCellEnd, neighbors, label, degree, -1);
@@ -2801,7 +2800,7 @@ public:
         auto orb = buildOrbits(uf, n);
         // Refine orbits using 2-hop neighborhood signatures
         orb = refineOrbitsBy2Hop(orb, n, label, degree, neighbors);
-        return { cl, orb, std::move(generators), generatorsTruncated };
+        return { cl, orb, std::move(generators), generatorsTruncated || budgetExceeded };
     }
 
     // ========================================================================
@@ -3203,6 +3202,51 @@ public:
         orbit = std::move(clResult.orbit);
         autGenerators_ = std::move(clResult.autGenerators);
         autGeneratorsTruncated_ = clResult.generatorsTruncated;
+        auto preservesProperties = [&](const std::vector<int>& permutation) {
+            if (permutation.size() != static_cast<size_t>(n)) return false;
+            std::vector<uint8_t> used(n, 0);
+            auto equal = [](const auto& values, int a, int b) {
+                return (a < static_cast<int>(values.size()) ? static_cast<int>(values[a]) : 0)
+                    == (b < static_cast<int>(values.size()) ? static_cast<int>(values[b]) : 0);
+            };
+            for (int atom = 0; atom < n; ++atom) {
+                int image = permutation[atom];
+                if (image < 0 || image >= n || used[image]++) return false;
+                if (!equal(atomicNum, atom, image) || !equal(formalCharge, atom, image)
+                    || !equal(massNumber, atom, image) || !equal(hydrogenCount, atom, image)
+                    || !equal(atomClass, atom, image) || !equal(ring, atom, image)
+                    || !equal(aromatic, atom, image) || !equal(tetraChirality, atom, image)) return false;
+                // Relative stereo tags require ligand-order parity. Retain only
+                // generators fixing annotated centres and their ligand order.
+                if (atom < static_cast<int>(tetraChirality.size()) && tetraChirality[atom] != 0) {
+                    if (image != atom) return false;
+                    for (int neighbor : neighbors[atom])
+                        if (permutation[neighbor] != neighbor) return false;
+                }
+                for (int neighbor : neighbors[atom]) {
+                    if (neighbor <= atom) continue;
+                    int other = permutation[neighbor];
+                    if (other < 0 || other >= n
+                        || bondOrder(atom, neighbor) != bondOrder(image, other)
+                        || bondInRing(atom, neighbor) != bondInRing(image, other)
+                        || bondAromatic(atom, neighbor) != bondAromatic(image, other)
+                        || dbStereo(atom, neighbor) != dbStereo(image, other)) return false;
+                    if (dbStereo(atom, neighbor) != 0) {
+                        if (image != atom || other != neighbor) return false;
+                        for (int ligand : neighbors[atom])
+                            if (permutation[ligand] != ligand) return false;
+                        for (int ligand : neighbors[neighbor])
+                            if (permutation[ligand] != ligand) return false;
+                    }
+                }
+            }
+            return true;
+        };
+        autGenerators_.erase(std::remove_if(autGenerators_.begin(), autGenerators_.end(), [&](const auto& generator) {
+            if (preservesProperties(generator)) return false;
+            autGeneratorsTruncated_ = true;
+            return true;
+        }), autGenerators_.end());
         canonicalHash = computeCanonicalHash(*this, canonicalLabel);
         canonicalComputed_ = true;
     }
@@ -3778,18 +3822,6 @@ struct ChemOps {
             const MolGraph& gq, int qi,
             const MolGraph& gt, int tj,
             const ChemOptions& C) {
-        // Tautomer-aware: relaxed matching for C/N/O/S in tautomeric positions
-        if (C.tautomerAware
-            && !gq.tautomerClass.empty() && !gt.tautomerClass.empty()
-            && gq.tautomerClass[qi] != -1 && gt.tautomerClass[tj] != -1) {
-            int aq = gq.atomicNum[qi], at = gt.atomicNum[tj];
-            auto isTautElem = [](int z) { return z==6||z==7||z==8||z==16; };
-            if (isTautElem(aq) && isTautElem(at)) {
-                if (C.ringMatchesRingOnly && gq.ring[qi] != gt.ring[tj])
-                    return false;
-                return true;
-            }
-        }
         if (C.matchAtomType && gq.atomicNum[qi] != gt.atomicNum[tj])
             return false;
         if (C.matchFormalCharge && gq.formalCharge[qi] != gt.formalCharge[tj])
@@ -3803,10 +3835,7 @@ struct ChemOps {
             int qm = gq.massNumber[qi], tm = gt.massNumber[tj];
             if (qm != 0 && tm != 0 && qm != tm) return false;
         }
-        if (C.useChirality) {
-            int qs = gq.tetraChirality[qi], ts = gt.tetraChirality[tj];
-            if (qs != 0 && ts != 0 && qs != ts) return false;
-        }
+        // Relative tetrahedral tags require ligand-order checks by the matcher.
         if (C.ringFusionMode == ChemOptions::RingFusionMode::STRICT
             && gq.ring[qi] && gt.ring[tj]) {
             if (gq.ringCount[qi] != gt.ringCount[tj]) return false;
@@ -3822,14 +3851,15 @@ struct ChemOps {
         int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tk);
         if (qOrd == 0 || tOrd == 0) return false;
 
-        // Tautomer-aware: both endpoints tautomeric => any order matches
+        // Tautomer-aware relaxation affects bond order only.
+        bool tautomerBond = false;
         if (C.tautomerAware
             && !g1.tautomerClass.empty() && !g2.tautomerClass.empty()) {
             bool qBothTaut = g1.tautomerClass[qi] != -1
                           && g1.tautomerClass[qk] != -1;
             bool tBothTaut = g2.tautomerClass[tj] != -1
                           && g2.tautomerClass[tk] != -1;
-            if (qBothTaut && tBothTaut) return true;
+            tautomerBond = qBothTaut && tBothTaut;
         }
 
         // Strict aromaticity: check bond aromaticity directly (no ring guard)
@@ -3846,7 +3876,7 @@ struct ChemOps {
             && g1.bondInRing(qi, qk) != g2.bondInRing(tj, tk))
             return false;
 
-        if (C.matchBondOrder == ChemOptions::BondOrderMode::ANY)
+        if (tautomerBond || C.matchBondOrder == ChemOptions::BondOrderMode::ANY)
             return true;
         if (qOrd == tOrd) return true;
         if (C.matchBondOrder == ChemOptions::BondOrderMode::LOOSE)

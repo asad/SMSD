@@ -1437,18 +1437,25 @@ void test_substructure_fingerprint_preserves_relaxed_policies() {
     ASSERT_TRUE(!smsd::isSubstructure(aromaticQuery, query, strict));
 }
 
-void test_tautomer_prescreens_allow_selenium_region_matches() {
+void test_tautomer_prescreens_preserve_element_identity() {
     auto query = makePruningGraph(2, {{0, 1}}, {6, 34});
     auto target = makePruningGraph(2, {{0, 1}}, {6, 8});
     query.tautomerClass.assign(2, 0);
     target.tautomerClass.assign(2, 0);
     smsd::ChemOptions opts;
     opts.tautomerAware = true;
-    ASSERT_TRUE(smsd::isSubstructure(query, target, opts));
+    ASSERT_TRUE(!smsd::isSubstructure(query, target, opts));
     smsd::detail::VF2PPMatcher matcher(query, target, opts, 1000);
-    ASSERT_TRUE(matcher.exists());
+    ASSERT_TRUE(!matcher.exists());
+    auto enol = makePruningGraph(2, {{0, 1}}, {6, 8});
+    enol.tautomerClass.assign(2, 0);
+    target.setBondOrder(0, 1, 2);
+    target.tautomerClass.assign(2, 0);
+    ASSERT_TRUE(smsd::isSubstructure(enol, target, opts));
+    ASSERT_TRUE(smsd::detail::bondsCompatible(enol, 0, 1, target, 0, 1, opts));
     opts.tautomerAware = false;
     ASSERT_TRUE(!smsd::isSubstructure(query, target, opts));
+    ASSERT_TRUE(!smsd::isSubstructure(enol, target, opts));
 }
 
 void test_disconnected_substructure_requires_distinct_target_atoms() {
@@ -1624,7 +1631,7 @@ int main() {
     RUN_TEST(rascal);
     RUN_TEST(substructure_fingerprint_preserves_relaxed_policies);
     RUN_TEST(disconnected_substructure_requires_distinct_target_atoms);
-    RUN_TEST(tautomer_prescreens_allow_selenium_region_matches);
+    RUN_TEST(tautomer_prescreens_preserve_element_identity);
     RUN_TEST(multihop_nlf_preserves_target_shortcuts);
     RUN_TEST(small_matcher_obeys_global_deadline);
     RUN_TEST(large_timeouts_do_not_overflow);

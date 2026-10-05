@@ -8,14 +8,19 @@
 #   cd SMSD && mvn package -DskipTests
 #   bash benchmarks/benchmark_java.sh
 #
-# Requires: Java 11+, built SMSD jar with dependencies
+# Requires: JDK 25, built SMSD jar with dependencies
 # =============================================================================
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-JAR="$PROJECT_DIR/target/smsd-6.0.0-jar-with-dependencies.jar"
+JAR="${SMSD_JAR:-}"
+if [ -z "$JAR" ]; then
+  for candidate in "$PROJECT_DIR"/target/smsd-*-jar-with-dependencies.jar; do
+    if [ -f "$candidate" ] && { [ -z "$JAR" ] || [ "$candidate" -nt "$JAR" ]; }; then JAR="$candidate"; fi
+  done
+fi
 
 if [ ! -f "$JAR" ]; then
   echo "ERROR: JAR not found at $JAR"
@@ -23,8 +28,8 @@ if [ ! -f "$JAR" ]; then
   exit 1
 fi
 
-NUM_RUNS=5
-TIMEOUT_MS=10000
+NUM_RUNS="${NUM_RUNS:-5}"
+TIMEOUT_MS="${TIMEOUT_MS:-10000}"
 
 # Molecule pairs: smi1|smi2|name
 PAIRS=(
@@ -75,7 +80,7 @@ for entry in "${PAIRS[@]}"; do
 import sys, json
 try:
     d = json.load(sys.stdin)
-    print(d.get('mcsSize', d.get('mappingSize', 0)))
+    print(d.get('mcs_size', d.get('mcsSize', d.get('mappingSize', -1))))
 except:
     print(0)
 " 2>/dev/null) || mcs_size=0

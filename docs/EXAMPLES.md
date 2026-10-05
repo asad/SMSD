@@ -1,6 +1,6 @@
 # SMSD Pro — Examples, How-To, and Cautions
 
-**Version 7.1.2** | Copyright (c) 2018-2026 BioInception PVT LTD
+**Version 7.2.0 (unreleased)** | Copyright (c) 2018-2026 BioInception PVT LTD
 
 This document provides worked examples for every major SMSD Pro feature. Each section
 includes runnable code, expected output, practical cautions, and performance notes.
@@ -236,11 +236,11 @@ print(f"Tautomer MCS: {len(mcs_tauto)} atoms")  # larger
 mcs = smsd.find_mcs(keto, enol, tautomer_aware=True)
 ```
 
-### Caution: tautomer-aware is slower
+### Tautomer matching and budgets
 
-Tautomer-aware MCS explores up to 15 tautomeric transforms per atom. This is
-typically 2-5x slower than strict MCS. For large-scale screening, use strict
-mode first, then tautomer-aware on the top hits only.
+Tautomer-aware matching relaxes eligible bonds while preserving atom identity.
+Its cost depends on the molecules and constraints. Measure both policies on
+your workload; see `benchmarks/RESULTS_7.2.0.md` for the local protocol.
 
 ---
 
@@ -303,7 +303,7 @@ if ub > 0.3:
 
 ## 7. Depiction (SVG)
 
-SMSD includes a zero-dependency SVG renderer conforming to ACS 1996 standard
+SMSD includes a zero-dependency SVG renderer with ACS-style drawing defaults
 (Nature, Science, JACS, Springer). No external tools required.
 
 ### Single molecule
@@ -349,7 +349,7 @@ smsd.save_svg(svg, "acetanilide_highlight.svg")
 ### Custom styling
 
 ```python
-# All ACS 1996 proportions auto-scale from bond_length
+# Drawing proportions auto-scale from bond_length
 svg = smsd.depict_svg("c1ccc2c(c1)cc1ccccc1c2",  # phenanthrene
     bond_length=50,           # larger for poster / slide
     width=800,                # fixed canvas size
@@ -427,7 +427,7 @@ coords_3d = smsd.generate_coords_3d(mol, target_bond_length=1.5)
 # Force-directed (Fruchterman-Reingold + crossing penalty)
 _, coords = smsd.force_directed_layout(mol, coords, max_iter=500, target_bond_length=1.5)
 
-# Stress majorisation (SMACOF — globally optimal distances)
+# Stress majorisation (SMACOF — reduces distance stress)
 _, coords = smsd.stress_majorisation(mol, coords, max_iter=300, target_bond_length=1.5)
 
 # Simulated annealing crossing reduction
@@ -598,7 +598,7 @@ library = [smsd.parse_smiles(s) for s in [
     "c1ccc(Cl)cc1", "c1ccc(F)cc1"
 ]]
 
-# Pre-warm for repeated use (10-30% speedup)
+# Initialize caches before sharing graphs across threads
 for mol in library:
     smsd.prewarm_graph(mol)
 
@@ -697,7 +697,7 @@ print(smsd.same_canonical_graph(mol1, mol2))  # True
 ### Pre-warm molecules for batch use
 
 ```python
-smsd.prewarm_graph(mol)  # 10-30% latency reduction on repeated ops
+smsd.prewarm_graph(mol)  # initialize caches before sharing across threads
 ```
 
 ### Use timeouts for safety
@@ -713,7 +713,7 @@ mapping = smsd.find_mcs(mol1, mol2, timeout_ms=10000)  # 10 second limit
 # For large-scale screening, use RASCAL upper bound first
 ub = smsd.similarity_upper_bound(query, target)
 if ub < 0.2:
-    pass  # skip — guaranteed dissimilar
+    pass  # upper bound is below the requested atom-overlap threshold
 else:
     mcs = smsd.find_mcs(query, target)  # only compute MCS on promising pairs
 ```
@@ -757,10 +757,10 @@ The default `ringMatchesRingOnly=True` prevents a ring atom from matching a
 chain atom. This is correct for most chemical applications. Use `fmcsProfile()`
 only when you explicitly want loose FMCS-style topology.
 
-### Tautomer-aware is 2-5x slower
+### Tautomer matching and budgets
 
 Only enable tautomer-aware mode when chemical equivalence of tautomers is
-required. For pure topological comparison, strict mode is faster and sufficient.
+required. Measure the cost with your own chemistry settings and molecules.
 
 ### Fingerprint choice for ML
 

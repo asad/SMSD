@@ -46,6 +46,9 @@ public final class MolGraph {
   final boolean[][] bondRingMatrix, bondAromMatrix;
   final HashMap<Long, int[]> sparseBondProps;
   final int[] tetraChirality;
+  // CDK winding is relative to this exact ligand order; -1 is the implicit ligand.
+  final int[][] tetraLigands;
+  private volatile int[] tetraConfigurations;
   final int[][] dbStereoConf;
   public int[]   tautomerClass;
   /**
@@ -122,6 +125,34 @@ public final class MolGraph {
   static final int HASH_PRIME = 1000003;
 
   public boolean hasBond(int i, int j) { return bondOrder(i, j) != 0; }
+
+  int tetrahedralConfiguration(int atom) {
+    if (tetraChirality == null || tetraChirality[atom] == 0) return 0;
+    int[] configurations = tetraConfigurations;
+    if (configurations == null) {
+      synchronized (this) {
+        configurations = tetraConfigurations;
+        if (configurations == null) {
+          configurations = new int[n];
+          for (var descriptor : CIPAssigner.assignRS(this).entrySet())
+            configurations[descriptor.getKey()] = descriptor.getValue();
+          tetraConfigurations = configurations;
+        }
+      }
+    }
+    return configurations[atom];
+  }
+
+  int[] tetrahedralLigands(int atom) {
+    if (tetraLigands != null && tetraLigands[atom] != null) return tetraLigands[atom];
+    int hydrogen = hydrogenCount(atom);
+    if (neighbors[atom].length + hydrogen != 4 || hydrogen > 1) return null;
+    int[] order = new int[4];
+    int offset = hydrogen == 1 ? 1 : 0;
+    if (offset == 1) order[0] = -1;
+    System.arraycopy(neighbors[atom], 0, order, offset, neighbors[atom].length);
+    return order;
+  }
 
   public int atomCount() { return n; }
 
@@ -1739,13 +1770,20 @@ public final class MolGraph {
     Iterable<IStereoElement<?, ?>> stereoElements = (Iterable) mol.stereoElements();
     boolean hasStereo = stereoElements.iterator().hasNext();
     this.tetraChirality = hasStereo ? new int[n] : null;
+    this.tetraLigands = hasStereo ? new int[n][] : null;
     this.dbStereoConf = (hasStereo && n <= SPARSE_THRESHOLD) ? new int[n][n] : null;
     if (hasStereo) {
       for (IStereoElement<?, ?> se : stereoElements) {
         if (se instanceof ITetrahedralChirality tc) {
           Integer idx = idxMap.get(tc.getChiralAtom());
-          if (idx != null)
+          if (idx != null) {
             tetraChirality[idx] = tc.getStereo() == ITetrahedralChirality.Stereo.CLOCKWISE ? 1 : 2;
+            IAtom[] ligands = tc.getLigands();
+            int[] order = new int[ligands.length];
+            for (int k = 0; k < ligands.length; k++)
+              order[k] = ligands[k] == tc.getChiralAtom() ? -1 : idxMap.get(ligands[k]);
+            tetraLigands[idx] = order;
+          }
         } else if (se instanceof IDoubleBondStereochemistry dbs) {
           IBond stereoBond = dbs.getStereoBond();
           Integer a = idxMap.get(stereoBond.getAtom(0)), c = idxMap.get(stereoBond.getAtom(1));
@@ -1832,6 +1870,7 @@ public final class MolGraph {
     }
 
     this.tetraChirality = b.tetraChirality != null ? b.tetraChirality.clone() : new int[n];
+    this.tetraLigands = null;
     this.atomId = b.atomIds != null ? b.atomIds.clone() : null;
     if (n <= SPARSE_THRESHOLD) {
       this.dbStereoConf = new int[n][n];
@@ -1882,12 +1921,59 @@ public final class MolGraph {
       this.morganRank = computeMorganRanks(n, label, neighbors);
       CanonResult clResult = computeCanonicalLabeling(n, label, degree, neighbors);
       this.canonicalLabel = clResult.canonLabel();
-      this.orbit = clResult.orbit();
-      this.autGenerators = clResult.autGenerators();
       this.autGeneratorsTruncated = clResult.generatorsTruncated();
+      int[] hydrogens = new int[n];
+      boolean[] stereoFixed = new boolean[n];
+      for (int atom = 0; atom < n; atom++) {
+        hydrogens[atom] = hydrogenCount(atom);
+        if (tetraChirality != null && tetraChirality[atom] != 0) {
+          stereoFixed[atom] = true;
+          for (int ligand : neighbors[atom]) stereoFixed[ligand] = true;
+        }
+        for (int neighbor : neighbors[atom]) {
+          if (neighbor <= atom || dbStereo(atom, neighbor) == 0) continue;
+          stereoFixed[atom] = stereoFixed[neighbor] = true;
+          for (int ligand : neighbors[atom]) stereoFixed[ligand] = true;
+          for (int ligand : neighbors[neighbor]) stereoFixed[ligand] = true;
+        }
+      }
+      List<int[]> chemicalGenerators = new ArrayList<>();
+      int[] provenOrbits = new int[n];
+      for (int atom = 0; atom < n; atom++) provenOrbits[atom] = atom;
+      for (int[] generator : clResult.autGenerators()) {
+        if (!preservesChemicalProperties(generator, hydrogens, stereoFixed)) {
+          // Valid subgroup generators can require products of rejected topology
+          // generators, so filtering does not prove completeness of the subgroup.
+          this.autGeneratorsTruncated = true;
+          continue;
+        }
+        chemicalGenerators.add(generator);
+        for (int atom = 0; atom < n; atom++) ufUnion(provenOrbits, atom, generator[atom]);
+      }
+      this.autGenerators = chemicalGenerators.toArray(new int[0][]);
+      // Unproved refinement-cell equivalence cannot justify chemical orbit pruning.
+      this.orbit = buildOrbits(provenOrbits, n);
       this.canonicalHash = computeCanonicalHash(this, canonicalLabel);
       canonicalComputed = true;
     }
+  }
+
+  private boolean preservesChemicalProperties(int[] generator, int[] hydrogens, boolean[] stereoFixed) {
+    for (int atom = 0; atom < n; atom++) {
+      int image = generator[atom];
+      if (label[atom] != label[image] || formalCharge[atom] != formalCharge[image]
+          || massNumber[atom] != massNumber[image] || hydrogens[atom] != hydrogens[image]
+          || ring[atom] != ring[image] || aromatic[atom] != aromatic[image]
+          || (stereoFixed[atom] && image != atom)) return false;
+      for (int neighbor : neighbors[atom]) {
+        int mappedNeighbor = generator[neighbor];
+        if (bondOrder(atom, neighbor) != bondOrder(image, mappedNeighbor)
+            || bondInRing(atom, neighbor) != bondInRing(image, mappedNeighbor)
+            || bondAromatic(atom, neighbor) != bondAromatic(image, mappedNeighbor)
+            || dbStereo(atom, neighbor) != dbStereo(image, mappedNeighbor)) return false;
+      }
+    }
+    return true;
   }
 
   /** Lazily compute tautomer class assignments and pKa-based relevance weights. */
@@ -2796,7 +2882,7 @@ public final class MolGraph {
       }
       int[] canonLabel = new int[n];
       for (int pos = 0; pos < n; pos++) canonLabel[initPerm[pos]] = pos;
-      return new CanonResult(canonLabel, buildOrbits(uf, n), new int[0][], false);
+      return new CanonResult(canonLabel, buildOrbits(uf, n), new int[0][], true);
     }
     refinePartition(n, initPerm, initCellEnd, neighbors, label, -1);
     int[] bestPerm = null;
@@ -2883,7 +2969,7 @@ public final class MolGraph {
       }
     }
     return new CanonResult(canonLabel, buildOrbits(uf, n),
-        generators.toArray(new int[0][]), generatorsTruncated);
+        generators.toArray(new int[0][]), generatorsTruncated || budgetExceeded);
   }
 
   private static int[] buildOrbits(int[] uf, int n) {
@@ -3055,12 +3141,13 @@ public final class MolGraph {
   /**
    * Return automorphism generators discovered during canonical labeling.
    * Each generator is a permutation array of length n where gen[i] is the
-   * image of atom i.  The full automorphism group is the closure of these
-   * generators.
+   * image of atom i. Their closure is the full chemical automorphism group only
+   * when {@link #automorphismGeneratorsTruncated()} is false. Otherwise they
+   * describe a proven subgroup.
    */
   public int[][] getAutomorphismGenerators() { ensureCanonical(); return autGenerators; }
 
-  /** True when the generator list was capped during canonical search. */
+  /** True when generator capture was skipped/capped or chemical-property filtering was incomplete. */
   public boolean automorphismGeneratorsTruncated() { ensureCanonical(); return autGeneratorsTruncated; }
 
   // ---- Canonical SMILES generation ----

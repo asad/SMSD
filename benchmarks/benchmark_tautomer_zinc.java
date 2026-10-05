@@ -3,14 +3,13 @@
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
  *
- * SMSD Pro 6.4.0 — ZINC20 Tautomer Over-Matching Benchmark
+ * SMSD tautomer feature diagnostics on the curated molecule pool
  * =========================================================
- * Paper Item 15 (Future Work): quantify how tautomer-aware MCS relaxation
- * causes over-matching (matching atoms that violate proton conservation).
+ * Compare returned sizes and the engine's proton-consistency diagnostics.
+ * Validator failures are not independent proof of chemical false positives.
  *
- * Since ZINC20 cannot be downloaded in CI, this benchmark uses the
- * tautomer section (lines 801-900) of diverse_molecules.txt as a proxy
- * for drug-like ZINC20 tautomeric pairs.
+ * This benchmark uses the labelled tautomer section of diverse_molecules.txt.
+ * The historical filename does not identify an original ZINC20 corpus.
  *
  * For each consecutive pair of tautomers:
  *   1. Run MCS with ChemOptions.tautomerProfile() (tautomer-aware)
@@ -21,9 +20,9 @@
  * Compile and run:
  *   cd <project-root>
  *   mvn package -DskipTests
- *   javac -cp target/smsd-6.4.0.jar:target/dependency/* \
- *         benchmarks/benchmark_tautomer_zinc.java -d benchmarks/
- *   java  -cp target/smsd-6.4.0.jar:target/dependency/*:benchmarks/ \
+ *   javac -cp target/smsd-7.2.0-jar-with-dependencies.jar \
+ *         benchmarks/benchmark_tautomer_zinc.java -d build/local-benchmarks/java
+ *   java  -cp target/smsd-7.2.0-jar-with-dependencies.jar:build/local-benchmarks/java \
  *         benchmark_tautomer_zinc benchmarks/diverse_molecules.txt
  */
 
@@ -41,9 +40,7 @@ import java.util.stream.*;
 public class benchmark_tautomer_zinc {
 
     // --- Configuration ---
-    static final int TIMEOUT_MS = 10_000;
-    static final int TAUT_SECTION_START = 801;  // 1-based molecule index
-    static final int TAUT_SECTION_END   = 900;
+    static final int TIMEOUT_MS = Integer.getInteger("smsd.benchmark.timeoutMs", 10_000);
 
     record Molecule(String smiles, String name, IAtomContainer mol) {}
 
@@ -64,12 +61,17 @@ public class benchmark_tautomer_zinc {
         List<Molecule> mols = new ArrayList<>();
         int lineNum = 0;
         int molIdx  = 0;
+        boolean inTautomerSection = false;
         for (String line : Files.readAllLines(path)) {
             lineNum++;
             line = line.trim();
+            if (line.startsWith("# SECTION ")) {
+                inTautomerSection = line.startsWith("# SECTION 7:");
+                continue;
+            }
             if (line.isEmpty() || line.startsWith("#")) continue;
             molIdx++;
-            if (molIdx < TAUT_SECTION_START || molIdx > TAUT_SECTION_END) continue;
+            if (!inTautomerSection) continue;
 
             String[] parts = line.split("\t", 2);
             String smi  = parts[0].trim();
@@ -80,6 +82,7 @@ public class benchmark_tautomer_zinc {
                 mols.add(new Molecule(smi, name, mol));
             } catch (Exception e) {
                 System.err.printf("  SKIP: %s [%s] -> %s%n", name, smi, e.getMessage());
+                mols.add(new Molecule(smi, name, null));
             }
         }
         return mols;
@@ -171,10 +174,9 @@ public class benchmark_tautomer_zinc {
     public static void main(String[] args) throws Exception {
         Path molPath = args.length > 0 ? Path.of(args[0]) : Path.of("benchmarks/diverse_molecules.txt");
 
-        System.err.printf("Loading tautomer molecules from %s (lines %d-%d) ...%n",
-            molPath, TAUT_SECTION_START, TAUT_SECTION_END);
+        System.err.printf("Loading labelled tautomer section from %s ...%n", molPath);
         List<Molecule> mols = loadTautomerMolecules(molPath);
-        System.err.printf("  %d valid tautomer molecules loaded%n", mols.size());
+        System.err.printf("  %d tautomer records loaded%n", mols.size());
 
         if (mols.size() < 2) {
             System.err.println("ERROR: Need at least 2 molecules. Aborting.");
@@ -184,25 +186,27 @@ public class benchmark_tautomer_zinc {
         // Form consecutive pairs (keto/enol, amide/iminol, etc.)
         List<int[]> pairIndices = new ArrayList<>();
         for (int i = 0; i + 1 < mols.size(); i += 2) {
-            pairIndices.add(new int[]{i, i + 1});
+            if (mols.get(i).mol() != null && mols.get(i+1).mol() != null) pairIndices.add(new int[]{i, i + 1});
+            else System.err.printf("  SKIP PAIR: %s / %s%n", mols.get(i).name(), mols.get(i+1).name());
         }
         System.err.printf("  %d tautomer pairs formed%n", pairIndices.size());
 
         // Warmup JIT
         System.err.println("JVM warmup ...");
-        if (mols.size() >= 2) {
+        if (!pairIndices.isEmpty()) {
             ChemOptions warmOpts = ChemOptions.tautomerProfile();
             SearchEngine.MCSOptions warmMCS = new SearchEngine.MCSOptions();
             warmMCS.timeoutMs = 2000;
             for (int w = 0; w < 5; w++) {
                 try {
-                    SearchEngine.findMCS(mols.get(0).mol(), mols.get(1).mol(), warmOpts, warmMCS);
+                    int[] first = pairIndices.get(0);
+                    SearchEngine.findMCS(mols.get(first[0]).mol(), mols.get(first[1]).mol(), warmOpts, warmMCS);
                 } catch (Exception ignored) {}
             }
         }
 
         // Run benchmark
-        System.err.println("Running tautomer over-matching benchmark ...");
+        System.err.println("Running tautomer feature diagnostics ...");
         List<PairResult> results = new ArrayList<>();
         for (int i = 0; i < pairIndices.size(); i++) {
             int[] pi = pairIndices.get(i);
@@ -220,13 +224,13 @@ public class benchmark_tautomer_zinc {
         // ================================================================
         System.out.println();
         System.out.println("=".repeat(78));
-        System.out.println("SMSD Pro 6.4.0 — ZINC20 Tautomer Over-Matching Benchmark Results");
+        System.out.println("SMSD tautomer feature diagnostics on the curated molecule pool");
         System.out.println("=".repeat(78));
         System.out.printf("Pairs tested:              %d%n", results.size());
 
         // Header
         System.out.printf("%n%-42s %5s %5s %6s %6s %8s%n",
-            "Pair", "Taut", "Def", "Delta", "Valid", "TautConf");
+            "Pair", "Taut", "Def", "Delta", "Proton", "TautConf");
         System.out.println("-".repeat(78));
 
         int overMatchCount = 0;
@@ -256,7 +260,7 @@ public class benchmark_tautomer_zinc {
 
         System.out.printf("%nSummary Statistics:%n");
         System.out.printf("  Total pairs:                     %d%n", n);
-        System.out.printf("  Pairs with over-matching:        %d (%.1f%%)%n", overMatchCount, overMatchPct);
+        System.out.printf("  Pairs with positive atom delta:        %d (%.1f%%)%n", overMatchCount, overMatchPct);
         System.out.printf("  Proton consistency PASS rate:    %.1f%% (%d/%d)%n", passRate, n - failCount, n);
         System.out.printf("  Proton consistency FAIL count:   %d%n", failCount);
         System.out.printf("  Average TautConf score:          %.4f%n", avgTautConf);
@@ -272,7 +276,7 @@ public class benchmark_tautomer_zinc {
             .collect(Collectors.toList());
 
         if (!overMatched.isEmpty()) {
-            System.out.printf("%nOver-matched pairs (tautomer MCS > default MCS):%n");
+            System.out.printf("%nPositive atom deltas (tautomer MCS > default MCS):%n");
             for (PairResult pr : overMatched) {
                 System.out.printf("  %s / %s: delta=%+d (taut=%d, def=%d) consistent=%s tautConf=%.3f%n",
                     pr.nameA(), pr.nameB(), pr.overMatchDelta(),
@@ -281,11 +285,11 @@ public class benchmark_tautomer_zinc {
             }
         }
 
-        // False positives: over-matched AND proton-inconsistent
+        // Positive size deltas with the engine's proton-consistency failure.
         List<PairResult> falsePositives = results.stream()
             .filter(r -> r.overMatchDelta() > 0 && !r.protonConsistent())
             .collect(Collectors.toList());
-        System.out.printf("%nFalse positives (over-matched + proton violation): %d%n", falsePositives.size());
+        System.out.printf("%nPositive atom deltas with proton-consistency failures: %d%n", falsePositives.size());
         for (PairResult pr : falsePositives) {
             System.out.printf("  %s / %s: delta=%+d tautConf=%.3f%n",
                 pr.nameA(), pr.nameB(), pr.overMatchDelta(), pr.tautConfScore());

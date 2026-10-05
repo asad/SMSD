@@ -71,4 +71,4 @@ SUBSTRUCTURE SUMMARY
   Hit agreement: 18/20 pairs agree
   WARNING: 2 pair(s) disagree — verify SMILES semantics
 
-  Results written to /Users/asad/tool/SMSD/benchmarks/results_python.tsv
+  Results written to benchmarks/results_python.tsv

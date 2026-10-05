@@ -77,6 +77,10 @@ inline std::string to_string(EZLabel l) {
 // ============================================================================
 namespace detail {
 
+inline int atomPropertyOrZero(const std::vector<int>& values, int atom) noexcept {
+    return atom >= 0 && atom < static_cast<int>(values.size()) ? values[atom] : 0;
+}
+
 struct DigraphNode {
     int  atomIdx;       // index into MolGraph
     int  atomicNum;     // atomic number (copied for speed)
@@ -107,7 +111,7 @@ inline std::vector<DigraphNode> buildDigraph(
     DigraphNode rootNode;
     rootNode.atomIdx    = root;
     rootNode.atomicNum  = g.atomicNum[root];
-    rootNode.massNumber = g.massNumber[root];
+    rootNode.massNumber = atomPropertyOrZero(g.massNumber, root);
     rootNode.isDuplicate = false;
     rootNode.parent     = -1;
     rootNode.depth      = 0;
@@ -194,7 +198,7 @@ inline std::vector<DigraphNode> buildDigraph(
                 child.atomicNum  = g.atomicNum[exp.neighborAtom];
                 // Duplicate nodes: mass = 0 per CIP rules
                 // (including mancude / aromatic ring closures)
-                child.massNumber = makeDuplicate ? 0 : g.massNumber[exp.neighborAtom];
+                child.massNumber = makeDuplicate ? 0 : atomPropertyOrZero(g.massNumber, exp.neighborAtom);
                 child.isDuplicate = makeDuplicate;
                 child.parent     = ni;
                 child.depth      = depth + 1;
@@ -448,7 +452,7 @@ inline std::vector<std::pair<int, int>> computePriorities(
         boSum += bo;
     }
     int implH = ::smsd::detail::computeImplicitH(g.atomicNum[centre], g.aromatic[centre] != 0,
-                                 boSum, g.formalCharge[centre]);
+                                 boSum, atomPropertyOrZero(g.formalCharge, centre));
 
     // Total ligands = explicit neighbors + implicit H
     int totalLigands = nNbr + implH;
@@ -563,7 +567,7 @@ inline std::vector<std::pair<int, int>> computePriorities(
 // and the SMILES chirality annotation is nonzero.
 // --------------------------------------------------------------------------
 inline bool isPotentialStereocentre(const MolGraph& g, int atom) {
-    if (g.tetraChirality[atom] == 0) return false;
+    if (atomPropertyOrZero(g.tetraChirality, atom) == 0) return false;
     // Typically sp3 carbon with 4 different substituents
     // We allow any atom with chirality annotation
     return true;
@@ -593,7 +597,7 @@ inline bool isPotentialStereocentre(const MolGraph& g, int atom) {
 inline RSLabel assignRS(const MolGraph& g, int centre,
                         const std::unordered_map<int, int>& descriptorMap = {}) {
     if (centre < 0 || centre >= g.n) return RSLabel::NONE;
-    if (g.tetraChirality[centre] == 0) return RSLabel::NONE;
+    if (detail::atomPropertyOrZero(g.tetraChirality, centre) == 0) return RSLabel::NONE;
 
     auto priorities = detail::computePriorities(g, centre, descriptorMap);
 
@@ -671,7 +675,7 @@ inline RSLabel assignRS(const MolGraph& g, int centre,
     }
     int implH = ::smsd::detail::computeImplicitH(g.atomicNum[centre],
                                  g.aromatic[centre] != 0,
-                                 boSum, g.formalCharge[centre]);
+                                 boSum, detail::atomPropertyOrZero(g.formalCharge, centre));
 
     // SMILES order depends on whether the stereocentre has a preceding
     // bond (i.e., was not the first atom in the SMILES string).
@@ -933,7 +937,7 @@ inline CIPDescriptors assignAll(const MolGraph& g) {
 
     // Pass 1: Assign R/S using Rules 1-2 only
     for (int i = 0; i < g.n; ++i) {
-        if (g.tetraChirality[i] != 0) {
+        if (detail::atomPropertyOrZero(g.tetraChirality, i) != 0) {
             result.rsLabels[i] = assignRS(g, i);
         }
     }
@@ -952,7 +956,7 @@ inline CIPDescriptors assignAll(const MolGraph& g) {
     // Pass 2: Re-assign NONE centres using Rules 4b-c + 5
     if (!descriptorMap.empty()) {
         for (int i = 0; i < g.n; ++i) {
-            if (g.tetraChirality[i] != 0 && result.rsLabels[i] == RSLabel::NONE) {
+            if (detail::atomPropertyOrZero(g.tetraChirality, i) != 0 && result.rsLabels[i] == RSLabel::NONE) {
                 result.rsLabels[i] = assignRS(g, i, descriptorMap);
             }
         }

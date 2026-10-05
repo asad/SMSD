@@ -6,20 +6,18 @@
 """
 Unified SMSD benchmark driver.
 
-This script produces a like-for-like comparison across:
+This script collects descriptive measurements across:
 
 * MCS: SMSD Java CLI vs RDKit FindMCS
 * Substructure: SMSD Java VF2++ vs RDKit HasSubstructMatch vs CDK DfPattern
 
-The goal is to keep the benchmark organization clean before touching any core
-search heuristics. The report also highlights where the expensive paths are:
-Java CLI startup, IAtomContainer -> MolGraph conversion, and the cached vs
-uncached substructure path.
+Java CLI startup, chemistry options and witness checks differ across these
+experiments. Only the maintained native protocol can establish eligible MCS
+timing comparisons; integration outputs do not support engine rankings.
 
 Outputs:
-    - benchmarks/results_leaderboard_mcs.tsv
-    - benchmarks/results_leaderboard_substructure.tsv
-    - benchmarks/results_leaderboard_summary.txt
+    - build/local-benchmarks/leaderboard/*.tsv and *.json
+    - build/local-benchmarks/leaderboard/*summary.txt
 """
 
 from __future__ import annotations
@@ -135,6 +133,7 @@ class MCSRow:
     smsd_median_ms: float
     smsd_mcs: int
     smsd_error: str
+    speed_comparable: bool = False
 
 
 @dataclass
@@ -215,7 +214,7 @@ def benchmark_rdkit_mcs(smi1: str, smi2: str) -> Tuple[float, float, int, bool]:
     for _ in range(MCS_RUNS):
         t0 = time.perf_counter()
         try:
-            result = rdFMCS.FindMCS([mol1, mol2], timeout=MCS_TIMEOUT_SEC)
+            result = rdFMCS.FindMCS([mol1, mol2], timeout=MCS_TIMEOUT_SEC, maximizeBonds=False)
             mcs_size = result.numAtoms
             timed_out = bool(result.canceled)
         except Exception:
@@ -242,14 +241,14 @@ def benchmark_smsd_java_mcs(jar: Path, smi1: str, smi2: str) -> Tuple[float, flo
         "--Q", "SMI", "--q", smi1,
         "--T", "SMI", "--t", smi2,
         "--mode", "mcs",
-        "--timeout", "10000",
+        "--timeout", str(MCS_TIMEOUT_SEC*1000),
         "--json", "-",
     ]
 
     try:
         subprocess.run(
             [java_bin, "-jar", str(jar), "--Q", "SMI", "--q", smi1, "--T", "SMI", "--t", smi2,
-             "--mode", "mcs", "--timeout", "10000", "--json", "-"],
+             "--mode", "mcs", "--timeout", str(MCS_TIMEOUT_SEC*1000), "--json", "-"],
             capture_output=True, text=True, timeout=MCS_TIMEOUT_SEC + 30,
         )
     except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
@@ -281,8 +280,8 @@ def benchmark_smsd_java_mcs(jar: Path, smi1: str, smi2: str) -> Tuple[float, flo
     return min(times), median(times), mcs_size, error
 
 
-def run_mcs_benchmark() -> List[MCSRow]:
-    jar = find_smsd_jar()
+def run_mcs_benchmark(jar=None) -> List[MCSRow]:
+    jar = jar if jar is not None else find_smsd_jar()
     if jar is None:
         raise RuntimeError("SMSD jar not found in target/")
 
@@ -351,24 +350,27 @@ def benchmark_rdkit_substructure(pairs: List[Tuple[str, str, str, str]]) -> Dict
 
 
 def run_java_substructure_benchmark(jar: Path) -> Dict[str, SubRow]:
-    class_file = SCRIPT_DIR / "benchmark_substructure_java.class"
-    if not class_file.exists():
+    class_dir = SUB_RESULTS_TSV.parent / "java-classes"
+    class_dir.mkdir(parents=True, exist_ok=True)
+    class_file = class_dir / "benchmark_substructure_java.class"
+    if not class_file.exists() or class_file.stat().st_mtime < (SCRIPT_DIR / "benchmark_substructure_java.java").stat().st_mtime:
         compile_cmd = [
             "javac",
             "-cp", str(jar),
             str(SCRIPT_DIR / "benchmark_substructure_java.java"),
-            "-d", str(SCRIPT_DIR),
+            "-d", str(class_dir),
         ]
         subprocess.run(compile_cmd, check=True)
 
     run_cmd = [
         "java",
-        "-cp", f"{jar}:{SCRIPT_DIR}",
+        "-cp", f"{jar}:{class_dir}",
         "benchmark_substructure_java",
         str(SUBSTRUCTURE_PAIRS_FILE),
+        str(SUB_RESULTS_TSV),
     ]
     subprocess.run(run_cmd, check=True)
-    return load_java_substructure_rows(SCRIPT_DIR / "results_substructure.tsv")
+    return load_java_substructure_rows(SUB_RESULTS_TSV)
 
 
 def build_substructure_rows(java_rows: Dict[str, SubRow]) -> List[SubRow]:
@@ -451,7 +453,7 @@ def run_core_python_benchmark(warmup: Optional[int] = None,
 
     with tempfile.TemporaryDirectory(prefix="smsd-bench-") as tmpdir:
         tsv_path = Path(tmpdir) / "python_benchmark.tsv"
-        cmd = ["python3", str(py_script), "--output", str(tsv_path), "--compare-mode", COMPARE_MODE]
+        cmd = [sys.executable, str(py_script), "--output", str(tsv_path), "--compare-mode", COMPARE_MODE]
         if warmup is not None:
             cmd.extend(["--warmup", str(warmup)])
         if iters is not None:
@@ -460,6 +462,7 @@ def run_core_python_benchmark(warmup: Optional[int] = None,
             cmd.extend(["--timeout-sec", str(timeout_sec)])
         subprocess.run(cmd, check=True)
         CORE_PY_RESULTS_TSV.write_text(tsv_path.read_text())
+        CORE_PY_RESULTS_TSV.with_suffix(".json").write_text(tsv_path.with_suffix(".json").read_text())
         return parse_python_benchmark_tsv(tsv_path)
 
 
@@ -468,9 +471,9 @@ def write_mcs_tsv(rows: List[MCSRow], path: Path) -> None:
         f.write("pair\tcategory\trdkit_best_ms\trdkit_median_ms\trdkit_mcs\trdkit_timeout\t")
         f.write("smsd_best_ms\tsmsd_median_ms\tsmsd_mcs\tsmsd_error\twinner\tspeedup\tquality\n")
         for row in rows:
-            winner = "N/A"
+            winner = "not compared"
             speedup = ""
-            if row.rdkit_median_ms > 0 and row.smsd_median_ms > 0:
+            if row.speed_comparable:
                 ratio = row.rdkit_median_ms / row.smsd_median_ms
                 if ratio > 1.1:
                     winner, speedup = "SMSD", f"{ratio:.1f}x"
@@ -542,7 +545,7 @@ def mcs_hotspots(rows: List[MCSRow]) -> List[str]:
 def write_summary(mcs_rows: List[MCSRow], sub_rows: List[SubRow], path: Path, title: str) -> None:
     mcs_smsd_wins = mcs_rdkit_wins = mcs_ties = 0
     for row in mcs_rows:
-        if row.rdkit_median_ms > 0 and row.smsd_median_ms > 0:
+        if row.speed_comparable:
             ratio = row.rdkit_median_ms / row.smsd_median_ms
             if ratio > 1.1:
                 mcs_smsd_wins += 1
@@ -556,7 +559,7 @@ def write_summary(mcs_rows: List[MCSRow], sub_rows: List[SubRow], path: Path, ti
     for row in sub_rows:
         if row.smsd_hit == row.rdkit_hit == row.cdk_hit:
             agree += 1
-        if row.cdk_median_us > 0 and row.smsd_median_us > 0:
+        if row.smsd_hit == row.cdk_hit and row.cdk_median_us > 0 and row.smsd_median_us > 0:
             ratio = row.cdk_median_us / row.smsd_median_us
             if ratio > 1.1:
                 sub_smsd_wins += 1
@@ -572,7 +575,7 @@ def write_summary(mcs_rows: List[MCSRow], sub_rows: List[SubRow], path: Path, ti
     lines.append("")
     lines.append("MCS")
     lines.append(f"  Pairs: {len(mcs_rows)}")
-    lines.append(f"  Speed wins: SMSD={mcs_smsd_wins} RDKit={mcs_rdkit_wins} tie={mcs_ties}")
+    lines.append("  Speed comparisons require witness validation and identical chemistry/objective; integration rows are not ranked.")
     lines.append("  Hotspots:")
     for item in mcs_hotspots(mcs_rows):
         lines.append(f"    {item}")
@@ -603,8 +606,8 @@ def write_core_summary(mcs_rows: List[MCSRow], py_sub_rows: List[SubRow], java_r
 
     lines.append("MCS (Python core vs RDKit)")
     lines.append(f"  Pairs: {len(mcs_rows)}")
-    lines.append(f"  Speed wins: SMSD={sum(1 for r in mcs_rows if r.rdkit_median_ms > 0 and r.smsd_median_ms > 0 and (r.rdkit_median_ms / r.smsd_median_ms) > 1.1)} "
-                 f"RDKit={sum(1 for r in mcs_rows if r.rdkit_median_ms > 0 and r.smsd_median_ms > 0 and (r.rdkit_median_ms / r.smsd_median_ms) < 0.9)}")
+    lines.append(f"  Speed wins: SMSD={sum(1 for r in mcs_rows if r.speed_comparable and r.rdkit_median_ms > 0 and r.smsd_median_ms > 0 and (r.rdkit_median_ms / r.smsd_median_ms) > 1.1)} "
+                 f"RDKit={sum(1 for r in mcs_rows if r.speed_comparable and r.rdkit_median_ms > 0 and r.smsd_median_ms > 0 and (r.rdkit_median_ms / r.smsd_median_ms) < 0.9)}")
     lines.append("  Hotspots:")
     for item in mcs_hotspots(mcs_rows):
         lines.append(f"    {item}")
@@ -642,6 +645,9 @@ def main() -> int:
         default="integration",
         help="integration = CLI/CDK/RDKit leaderboard, core = in-process core+RDKit, profile = summary only",
     )
+    parser.add_argument("--output-dir", type=Path, default=PROJECT_DIR / "build/local-benchmarks/leaderboard")
+    parser.add_argument("--jar", type=Path)
+    parser.add_argument("--timeout-sec", type=int, default=10)
     parser.add_argument("--mcs-runs", type=int,
                         help="Override the number of MCS runs for integration-mode RDKit/SMSD-Java timing")
     parser.add_argument("--sub-warmup", type=int,
@@ -654,12 +660,22 @@ def main() -> int:
                         help="Override the measured-run count for benchmark_python.py in core mode")
     parser.add_argument("--py-timeout-sec", type=int,
                         help="Override the per-pair MCS timeout passed to benchmark_python.py in core mode")
-    parser.add_argument("--compare-mode", choices=["defaults", "strict", "fmcs"],
+    parser.add_argument("--compare-mode", choices=["defaults", "strict", "fmcs", "any"],
                         default="defaults",
-                        help="defaults = toolkit defaults, strict = exact/ring-parity baseline, fmcs = loose FMCS-style baseline")
+                        help="defaults = fmcs; strict = exact/aromatic/ring/charge; fmcs = different chemistry; any = common bond-any policy")
     args = parser.parse_args()
 
     global MCS_RUNS, SUB_WARMUP, SUB_ITERS, COMPARE_MODE, PY_WARMUP, PY_ITERS, PY_TIMEOUT_SEC
+    global MCS_RESULTS_TSV, SUB_RESULTS_TSV, SUMMARY_TXT, CORE_RESULTS_TSV, CORE_PY_RESULTS_TSV, CORE_JAVA_SUB_TSV, CORE_SUMMARY_TXT, MCS_TIMEOUT_SEC
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    MCS_TIMEOUT_SEC = args.timeout_sec
+    MCS_RESULTS_TSV = args.output_dir / MCS_RESULTS_TSV.name
+    SUB_RESULTS_TSV = args.output_dir / SUB_RESULTS_TSV.name
+    SUMMARY_TXT = args.output_dir / SUMMARY_TXT.name
+    CORE_RESULTS_TSV = args.output_dir / CORE_RESULTS_TSV.name
+    CORE_PY_RESULTS_TSV = args.output_dir / CORE_PY_RESULTS_TSV.name
+    CORE_JAVA_SUB_TSV = args.output_dir / CORE_JAVA_SUB_TSV.name
+    CORE_SUMMARY_TXT = args.output_dir / CORE_SUMMARY_TXT.name
     if args.mcs_runs is not None:
         MCS_RUNS = args.mcs_runs
     if args.sub_warmup is not None:
@@ -674,13 +690,13 @@ def main() -> int:
     from rdkit import Chem  # noqa: F401 - fail fast if RDKit is missing
 
     if args.mode == "integration":
-        jar = find_smsd_jar()
+        jar = args.jar if args.jar is not None else find_smsd_jar()
         if jar is None:
             print("ERROR: SMSD jar not found in target/", file=sys.stderr)
             return 1
 
         print(f"[1/3] Running MCS benchmark with {jar.name}...", file=sys.stderr)
-        mcs_rows = run_mcs_benchmark()
+        mcs_rows = run_mcs_benchmark(jar)
         write_mcs_tsv(mcs_rows, MCS_RESULTS_TSV)
 
         print(f"[2/3] Running Java substructure benchmark with {jar.name}...", file=sys.stderr)
@@ -705,7 +721,7 @@ def main() -> int:
         )
 
         print("[2/2] Running Java cached substructure benchmark...", file=sys.stderr)
-        jar = find_smsd_jar()
+        jar = args.jar if args.jar is not None else find_smsd_jar()
         if jar is None:
             print("ERROR: SMSD jar not found in target/", file=sys.stderr)
             return 1

@@ -2,9 +2,55 @@
 
 All notable changes to SMSD Pro are documented in this file.
 
-## [Unreleased]
+## [7.2.0] - Unreleased
 
 ### Fixed
+- Tautomer matching preserves element identity and other requested chemistry
+  constraints. Relative tetrahedral tags are compared using R/S and mapped
+  ligand parity, including SMILES ring-opening neighbor order.
+- Signed and bond objectives drive bounds, fragment selection, enumeration and
+  constrained target choice. Native non-induced domain refinement preserves
+  valid partial mappings and shared search deadlines.
+- Native recursive extensions keep undo lists and candidate buffers local to
+  each call, preventing inconsistent assignments and invalid bond indices.
+- Coverage repair applies the requested bond policy consistently, preserving
+  valid aromatic/Kekule matches under flexible aromaticity.
+- The optional C++ RDKit adapter now exposes a public header and an installed
+  CMake target. Its build enables the implementation and propagates C++20 for
+  the current RDKit headers.
+- Java library, CLI, source and Javadoc JARs include SMSD's LICENSE and NOTICE
+  in project-specific directories, alongside dependency notices.
+- Exact symmetry canonicalization uses molecular automorphism generators;
+  incomplete generators, orbit caps or expiry now raise explicit errors.
+  Enumeration retains raw keys when symmetry proof is unavailable.
+- Python RDKit wrappers, multi-result searches and batches preserve original
+  atom indices and caller options. Conversion caches detect molecule edits,
+  use weak keys and retain metadata for live converted graphs.
+- Python batch substructure passes its timeout independently of thread count.
+  Invalid weighted batch options raise before OpenMP workers start.
+- Python progress reporting performs one native search and forwards the final
+  result. It does not currently report intermediate stages.
+
+### Optimised
+- Core Python batch and compiled SMARTS multi-target bindings retain graph
+  references and their Python owners instead of copying graph caches.
+- Batch prewarming includes ring systems before parallel workers start.
+- Bounded connected seeds and clique-stage allocation reserve time for native
+  recovery, including valid statin and taxane lower-bound fixtures.
+- Source build options can override Metal/CUDA auto-detection without duplicate
+  CMake arguments. Local release comparisons build CPU-only wheels explicitly.
+
+### Validation and documentation
+- Added independent small-graph objective/enumeration oracles, molecular
+  symmetry checks, lifetime/index tests and randomized stereo traversals.
+- Reworked benchmark protocols around explicit chemistry, objective, budget
+  and witness validation. The current comparison uses RDKit 2026.09.1.
+- Removed unsupported README speed, quality and dataset provenance claims.
+  See `benchmarks/RESULTS_7.2.0.md` for measurements and limits.
+- Reduced Python publishing to one CPython 3.14 macOS arm64 wheel plus a source
+  distribution. Added local PyPI and Maven Central publishing commands.
+
+### Earlier source fixes included in this release
 - Standardized `MCS` capitalization in Java/C++ APIs, classes, helper names,
   benchmarks and tests. Java callers should use `setMCSTimeoutMs`,
   `findMCSSmiles`, `findMCSSmarts` and `batchMCSConstrained`; tuning fields use
@@ -42,7 +88,7 @@ All notable changes to SMSD Pro are documented in this file.
 - C++ weighted MCS rejects nonfinite and out-of-range millipoint scores,
   including partial-score overflow hidden by cancellation.
 
-### Optimised
+### Earlier source optimisations included in this release
 - C++ matcher setup reuses sorted query neighbors and skips unused target
   canonicalization. Connected-component postprocessing traverses adjacency.
 - Rectangular assignment avoids square padding, using

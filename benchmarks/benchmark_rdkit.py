@@ -64,6 +64,14 @@ NUM_RUNS = 5
 
 
 def main():
+    import argparse
+    global NUM_RUNS, TIMEOUT_SEC
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--runs", type=int, default=5)
+    parser.add_argument("--timeout-sec", type=int, default=10)
+    args = parser.parse_args()
+    NUM_RUNS = args.runs; TIMEOUT_SEC = args.timeout_sec
+    print(f"RDKit {Chem.rdBase.rdkitVersion}; atom objective; {TIMEOUT_SEC}s; {NUM_RUNS} runs; legacy unilateral timing")
     print(f"{'Pair':30s}  {'Best(ms)':>10s}  {'Median(ms)':>10s}  {'MCS':>4s}")
     print("-" * 62)
 
@@ -90,7 +98,7 @@ def main():
         for _ in range(NUM_RUNS):
             t0 = time.perf_counter()
             try:
-                result = rdFMCS.FindMCS([mol1, mol2], timeout=TIMEOUT_SEC)
+                result = rdFMCS.FindMCS([mol1, mol2], timeout=TIMEOUT_SEC, maximizeBonds=False)
                 mcs_size = result.numAtoms
             except Exception:
                 mcs_size = -1

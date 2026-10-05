@@ -15,6 +15,7 @@
 #define SMSD_VF2PP_HPP
 
 #include "smsd/mol_graph.hpp"
+#include "smsd/cip.hpp"
 #include "smsd/time_budget.hpp"
 
 #include <algorithm>
@@ -196,7 +197,6 @@ inline std::vector<int> buildNLF3(const MolGraph& g, int idx) {
 inline int nlfLabelPolicy(const MolGraph& g, int idx, const ChemOptions& C) {
     if (!C.matchAtomType) return 0; // all atoms in one class
     int z = g.atomicNum[idx];
-    if (C.tautomerAware && (z == 6 || z == 7 || z == 8 || z == 16 || z == 34)) z = 6;
     if (C.aromaticityMode == ChemOptions::AromaticityMode::STRICT)
         return (z << 1) | (g.aromatic[idx] ? 1 : 0);
     return z;
@@ -236,38 +236,29 @@ inline std::vector<std::vector<int>> buildAllPolicyNLF1(const MolGraph& g, const
 inline bool atomsCompatFast(const MolGraph& gq, int qi,
                             const MolGraph& gt, int tj,
                             const ChemOptions& C) {
-    // Tautomer-aware: C/N/O can interchange within tautomeric regions,
-    // but all OTHER atom-level constraints still apply (charge, aromaticity,
-    // ring membership, isotope, chirality, ring fusion).
-    bool tautRelax = C.tautomerAware
-        && !gq.tautomerClass.empty() && !gt.tautomerClass.empty()
-        && gq.tautomerClass[qi] != -1 && gt.tautomerClass[tj] != -1;
-    if (tautRelax) {
-        int aq = gq.atomicNum[qi], at = gt.atomicNum[tj];
-        if (!((aq == 6 || aq == 7 || aq == 8 || aq == 16 || aq == 34) &&
-              (at == 6 || at == 7 || at == 8 || at == 16 || at == 34)))
-            tautRelax = false;  // not C/N/O pair — fall through to normal matching
-        // Degree guard: genuine tautomers shift at most 1 proton,
-        // so degree difference should be <= 1 for same-element matches.
-        // Prevents over-matching unrelated functional groups (e.g., -OH vs =O).
-        if (tautRelax && aq == at && std::abs(gq.degree[qi] - gt.degree[tj]) > 1)
-            tautRelax = false;
-    }
-    if (!tautRelax && C.matchAtomType && gq.atomicNum[qi] != gt.atomicNum[tj]) return false;
-    if (C.matchFormalCharge && gq.formalCharge[qi] != gt.formalCharge[tj]) return false;
+    // Tautomerism changes proton positions and bond orders, not elements.
+    if (C.matchAtomType && gq.atomicNum[qi] != gt.atomicNum[tj]) return false;
+    auto property = [](const auto& values, int atom) { return atom < static_cast<int>(values.size()) ? static_cast<int>(values[atom]) : 0; };
+    if (C.matchFormalCharge && property(gq.formalCharge, qi) != property(gt.formalCharge, tj)) return false;
     if (C.aromaticityMode == ChemOptions::AromaticityMode::STRICT && gq.aromatic[qi] != gt.aromatic[tj]) return false;
     if (C.ringMatchesRingOnly && gq.ring[qi] != gt.ring[tj]) return false;
     if (C.matchIsotope) {
-        int qm = gq.massNumber[qi], tm = gt.massNumber[tj];
+        int qm = property(gq.massNumber, qi), tm = property(gt.massNumber, tj);
         if (qm != 0 && tm != 0 && qm != tm) return false;
     }
     if (C.useChirality) {
-        int qs = gq.tetraChirality[qi], ts = gt.tetraChirality[tj];
-        if (qs != 0 && ts != 0 && qs != ts) return false;
+        int qs = property(gq.tetraChirality, qi), ts = property(gt.tetraChirality, tj);
+        if (qs != 0 && ts != 0) {
+            const auto qr = cip::assignRS(gq, qi), tr = cip::assignRS(gt, tj);
+            if (qr != cip::RSLabel::NONE && tr != cip::RSLabel::NONE && qr != tr)
+                return false;
+            if ((qr == cip::RSLabel::NONE || tr == cip::RSLabel::NONE) && qs != ts)
+                return false;
+        }
     }
     if (C.ringFusionMode != ChemOptions::RingFusionMode::IGNORE && gq.ring[qi] && gt.ring[tj]) {
         if (C.ringFusionMode == ChemOptions::RingFusionMode::STRICT) {
-            if (gq.ringCount[qi] != gt.ringCount[tj]) return false;
+            if (property(gq.ringCount, qi) != property(gt.ringCount, tj)) return false;
         }
     }
     return true;
@@ -316,51 +307,68 @@ template <typename Mapping>
 inline bool tetraParityCompatible(const MolGraph& gq, int qi,
                                   const MolGraph& gt, int tj,
                                   const Mapping& q2t) {
-    int qs = gq.tetraChirality[qi];
-    int ts = gt.tetraChirality[tj];
+    int qs = qi < static_cast<int>(gq.tetraChirality.size()) ? gq.tetraChirality[qi] : 0;
+    int ts = tj < static_cast<int>(gt.tetraChirality.size()) ? gt.tetraChirality[tj] : 0;
     if (qs == 0 || ts == 0) return true;
 
-    int mapped = 0;
-    int qnbIdx[4], tnbIdx[4];
-    for (int nk = 0; nk < gq.degree[qi] && mapped < 4; ++nk) {
-        int qk = gq.neighbors[qi][nk];
-        int tk = q2t[qk];
-        if (tk != -1) {
-            qnbIdx[mapped] = qk;
-            tnbIdx[mapped] = tk;
-            ++mapped;
+    auto ligands = [](const MolGraph& g, int atom, std::array<int, 4>& out) {
+        if (g.degree[atom] != 3 && g.degree[atom] != 4) return false;
+        const auto& neighbors = g.neighbors[atom];
+        int position = 0;
+        // SMILES places a bracket hydrogen after the incoming bond, or first
+        // when the centre starts a component.
+        const int hydrogenSlot = !neighbors.empty() && neighbors[0] < atom ? 1 : 0;
+        for (int slot = 0; slot < 4; ++slot) {
+            out[slot] = g.degree[atom] == 3 && slot == hydrogenSlot
+                ? -1 : neighbors[position++];
         }
+        return true;
+    };
+    std::array<int, 4> qLigands{}, tLigands{}, permutation{};
+    permutation.fill(-1);
+    if (!ligands(gq, qi, qLigands) || !ligands(gt, tj, tLigands)) return true;
+    int mapped = 0;
+    std::array<bool, 4> used{};
+    for (int slot = 0; slot < 4; ++slot) {
+        const int neighbor = qLigands[slot];
+        if (neighbor < 0 || q2t[neighbor] < 0) continue;
+        const int target = q2t[neighbor];
+        auto match = std::find(tLigands.begin(), tLigands.end(), target);
+        if (match == tLigands.end()) return false;
+        const int targetSlot = static_cast<int>(match - tLigands.begin());
+        if (used[targetSlot]) return false;
+        used[targetSlot] = true;
+        permutation[slot] = targetSlot;
+        ++mapped;
     }
     if (mapped < 3) return true;
-
-    int qPerm[4], tPerm[4];
-    for (int a = 0; a < mapped; ++a) {
-        qPerm[a] = 0;
-        for (int nk = 0; nk < gq.degree[qi]; ++nk) {
-            if (gq.neighbors[qi][nk] == qnbIdx[a]) {
-                qPerm[a] = nk;
-                break;
-            }
-        }
-        tPerm[a] = 0;
-        for (int nk = 0; nk < gt.degree[tj]; ++nk) {
-            if (gt.neighbors[tj][nk] == tnbIdx[a]) {
-                tPerm[a] = nk;
+    for (int slot = 0; slot < 4; ++slot) {
+        if (permutation[slot] >= 0) continue;
+        for (int targetSlot = 0; targetSlot < 4; ++targetSlot) {
+            if (!used[targetSlot]) {
+                permutation[slot] = targetSlot;
+                used[targetSlot] = true;
                 break;
             }
         }
     }
-
-    int qInv = 0, tInv = 0;
-    for (int a = 0; a < mapped; ++a) {
-        for (int b = a + 1; b < mapped; ++b) {
-            if (qPerm[a] > qPerm[b]) ++qInv;
-            if (tPerm[a] > tPerm[b]) ++tInv;
-        }
-    }
-
-    bool parityMatch = ((qInv ^ tInv) & 1) == 0;
+    int inversions = 0;
+    for (int a = 0; a < 4; ++a)
+        for (int b = a + 1; b < 4; ++b)
+            inversions += permutation[a] > permutation[b];
+    bool parityMatch = (inversions & 1) == 0;
     return (qs == ts) ? parityMatch : !parityMatch;
+}
+
+template <typename Mapping>
+inline bool mappingStereoCompatible(const MolGraph& gq, const MolGraph& gt,
+                                    const ChemOptions& opts, const Mapping& q2t) {
+    if (!opts.useChirality) return true;
+    for (int qi = 0; qi < gq.n; ++qi) {
+        const int tj = q2t[qi];
+        if (tj >= 0 && !tetraParityCompatible(gq, qi, gt, tj, q2t)) return false;
+    }
+    return true;
 }
 
 
@@ -376,18 +384,20 @@ inline bool quickPrescreen(const MolGraph& query, const MolGraph& target,
     for (int i = 0; i < query.n; ++i) {
         int z = query.atomicNum[i];
         if (z >= 0 && z < 120) qFreq[z]++;
-        if (opts.matchFormalCharge) qChargeFreq[query.formalCharge[i]]++;
+        if (opts.matchFormalCharge) qChargeFreq[i < static_cast<int>(query.formalCharge.size())
+            ? query.formalCharge[i] : 0]++;
         if (query.degree[i] > qMaxDeg) qMaxDeg = query.degree[i];
         if (query.ring[i]) qRingCount++;
     }
     for (int i = 0; i < target.n; ++i) {
         int z = target.atomicNum[i];
         if (z >= 0 && z < 120) tFreq[z]++;
-        if (opts.matchFormalCharge) tChargeFreq[target.formalCharge[i]]++;
+        if (opts.matchFormalCharge) tChargeFreq[i < static_cast<int>(target.formalCharge.size())
+            ? target.formalCharge[i] : 0]++;
         if (target.degree[i] > tMaxDeg) tMaxDeg = target.degree[i];
         if (target.ring[i]) tRingCount++;
     }
-    if (opts.matchAtomType && !opts.tautomerAware) {
+    if (opts.matchAtomType) {
         for (int z = 0; z < 120; ++z)
             if (qFreq[z] > tFreq[z]) return false;
     }
@@ -530,7 +540,7 @@ inline bool isExactMatch(const MolGraph& q, const MolGraph& t,
         if (vecAt(q.massNumber, i) != vecAt(t.massNumber, i)) return false;
         if (vecAt(q.hydrogenCount, i) != vecAt(t.hydrogenCount, i)) return false;
         if (vecAt(q.atomClass, i) != vecAt(t.atomClass, i)) return false;
-        if (opts.useChirality && vecAt(q.tetraChirality, i) != vecAt(t.tetraChirality, i)) return false;
+        if (!atomsCompatFast(q, i, t, i, opts)) return false;
     }
     // Check bonds: for each edge in q, verify same edge exists in t with same order
     for (int i = 0; i < q.n; ++i) {
@@ -545,6 +555,11 @@ inline bool isExactMatch(const MolGraph& q, const MolGraph& t,
             if (q.bondAromatic(i, j) != t.bondAromatic(i, j)) return false;
             if (opts.useBondStereo && q.dbStereo(i, j) != t.dbStereo(i, j)) return false;
         }
+    }
+    if (opts.useChirality) {
+        std::vector<int> identity(q.n);
+        std::iota(identity.begin(), identity.end(), 0);
+        if (!mappingStereoCompatible(q, t, opts, identity)) return false;
     }
     return true;
 }
@@ -742,7 +757,10 @@ struct SmallMolMatcher {
             timedOut = true;
             return;
         }
-        if (pos == Nq) { found = true; return; }
+        if (pos == Nq) {
+            found = mappingStereoCompatible(gq, gt, C, q2t);
+            return;
+        }
         int qi = order[pos];
         int pnb = parentNbr[pos]; // a mapped neighbor, or -1
 
@@ -848,11 +866,11 @@ inline std::vector<MolGraph> splitComponents(const MolGraph& g) {
         for (int k = 0; k < cn; ++k) {
             int oi = atoms[k];
             atomicNums[k]  = g.atomicNum[oi];
-            charges[k]     = g.formalCharge[oi];
-            masses[k]      = g.massNumber[oi];
+            charges[k]     = oi < static_cast<int>(g.formalCharge.size()) ? g.formalCharge[oi] : 0;
+            masses[k]      = oi < static_cast<int>(g.massNumber.size()) ? g.massNumber[oi] : 0;
             ringFlags[k]   = g.ring[oi];
             aromFlags[k]   = g.aromatic[oi];
-            tetraChir[k]   = g.tetraChirality[oi];
+            tetraChir[k]   = oi < static_cast<int>(g.tetraChirality.size()) ? g.tetraChirality[oi] : 0;
             if (!g.tautomerClass.empty()) tautClass[k] = g.tautomerClass[oi];
             if (!g.tautomerWeight.empty()) tautWeight[k] = g.tautomerWeight[oi];
             for (int nb : g.neighbors[oi]) {
@@ -1280,6 +1298,14 @@ public:
             usedMask_[bestTj >> 6] |= uint64_t(1) << (bestTj & 63);
             ++matched;
         }
+        if (!mappingStereoCompatible(gq_, gt_, C_, q2t_)) {
+            for (int k = matched - 1; k >= 0; --k) {
+                int qk = order[k], tk = q2t_[qk];
+                q2t_[qk] = -1; t2q_[tk] = -1;
+                usedMask_[tk >> 6] &= ~(uint64_t(1) << (tk & 63));
+            }
+            return false;
+        }
         return true;
     }
 
@@ -1610,7 +1636,10 @@ public:
         if (tb_.expired()) { timedOut_ = true; return; }
         ++nodesVisited_;
         if (found_) return;
-        if (pos == Nq_) { found_ = true; return; }
+        if (pos == Nq_) {
+            found_ = mappingStereoCompatible(gq_, gt_, C_, q2t_);
+            return;
+        }
         int qi = order[pos];
         int nCands = selectCandidates(qi, candRow(pos));
         for (int c = 0; c < nCands; ++c) {
@@ -1641,6 +1670,7 @@ public:
         ++nodesVisited_;
         if (static_cast<int>(out.size()) >= maxSolutions) return;
         if (pos == Nq_) {
+            if (!mappingStereoCompatible(gq_, gt_, C_, q2t_)) return;
             std::vector<std::pair<int,int>> map;
             map.reserve(Nq_);
             for (int k = 0; k < Nq_; ++k)

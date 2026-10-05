@@ -15,9 +15,10 @@ Python bindings for SMSD native graph matching, including substructure search,
 maximum common substructure (MCS), fingerprints, and molecular similarity.
 RDKit and CDK are not required for the core SMSD path.
 
-**Benchmark** (Dalke NN, 1,000 pairs): 5x faster than RDKit FindMCS, finds
-larger MCS on 21% of pairs, zero timeouts. See
-[full results](https://github.com/asad/SMSD#dalke-nearest-neighbor-mcs-benchmark-1000-pairs).
+Performance depends on corpus, chemistry constraints, search budget and
+result validity. See the [current local report](https://github.com/asad/SMSD/blob/master/benchmarks/RESULTS_7.2.0.md)
+for the 7.1.2 baseline, proposed 7.2.0 changes and RDKit 2026.09.1 comparison.
+The MoleculeNet-derived Dalke-style pairs are not the original Dalke benchmark.
 
 ## Install
 
@@ -33,9 +34,12 @@ python -m pip install -e ".[dev]"
 python -m build
 ```
 
-Supported CPython versions: `3.9` through the latest stable release series.
-Current default test target: `Python 3.12`.
-The native SMSD path is CPU-first with optional GPU acceleration. RDKit
+The package declares CPython `3.9` or later; wheel availability depends on
+platform and architecture. The proposed 7.2.0 release provides one Python 3.14
+wheel for macOS arm64 and a source distribution. The controlled search review
+uses Python `3.13.14` on macOS arm64.
+Source builds default to Metal/CUDA auto-detection; comparison wheels disable
+both explicitly. Core batch matching uses CPU/OpenMP. RDKit
 remains optional for interop and depiction rather than a core dependency.
 
 ## Quick Start
@@ -69,9 +73,9 @@ sim = smsd.similarity("c1ccccc1", "c1ccc(O)cc1")
 |---------|-------------|
 | **Substructure search** | Native engine with 3-level NLF pruning, GPU-accelerated domain init |
 | **MCS** | Multi-strategy native pipeline (chain/tree fast paths + general clique solver) |
-| **SMARTS matching** | Full SMARTS support including `X` (total connectivity), `D` (degree), `v` (valence), `R` (ring count), `r` (ring size), `x` (ring connectivity), `/` `\` (E/Z stereo), `$()` (recursive), logical AND/OR/NOT |
+| **SMARTS matching** | Connectivity, degree, valence, rings, stereo, recursive patterns and logical operators; dialect differences are recorded in the benchmark report |
 | **Tautomer matching** | 30 transforms with pKa-informed weights, 6 solvents, pH-sensitive |
-| **CIP R/S/E/Z** | `assign_rs()`, `assign_ez()` — full digraph-based stereo descriptors (IUPAC 2013) |
+| **CIP R/S/E/Z** | `assign_rs()`, `assign_ez()` — native stereo descriptor assignment; see validation scope |
 | **MCS SMILES** | `find_mcs_smiles()` — extract MCS as canonical SMILES string |
 | **Multi-result MCS** | `find_mcs(mol1, mol2, max_results=N)` — top-N MCS enumeration |
 | **SMARTS MCS** | `find_mcs_smarts()` — largest substructure matching a SMARTS pattern |
@@ -82,8 +86,8 @@ sim = smsd.similarity("c1ccccc1", "c1ccc(O)cc1")
 |------|-------------|
 | **Circular ECFP** | Tautomer-aware structural invariants, configurable radius (2=ECFP4, 3=ECFP6, -1=whole molecule) |
 | **Circular FCFP** | Pharmacophoric invariants (H-bond donor/acceptor, ionisable, aromatic, hydrophobic) |
-| **Count-based ECFP/FCFP** | `circular_fingerprint_counts()` / `fcfp_counts()` — superior to binary for ML |
-| **Topological Torsion** | `topological_torsion()` — 4-atom path fingerprint (SOTA on peptides) |
+| **Count-based ECFP/FCFP** | `circular_fingerprint_counts()` / `fcfp_counts()` — retain feature multiplicities |
+| **Topological Torsion** | `topological_torsion()` — 4-atom path fingerprint |
 | **Path fingerprint** | Graph-aware DFS path enumeration, tautomer-invariant |
 | **MCS fingerprint** | MCS-aware, uses chemical matching rules for path compatibility |
 | **Similarity metrics** | `overlap_coefficient()`, `tanimoto_coefficient()`, `dice()`, `cosine()`, `soergel()` — binary + count-vector |
@@ -101,33 +105,47 @@ sim = smsd.similarity("c1ccccc1", "c1ccc(O)cc1")
 | **Adaptive timeout** | `min(30s, 500+n1*n2*2)` based on molecule size |
 | **GPU acceleration** | CUDA + Apple Metal for domain init and RASCAL screening |
 | **Force-directed layout** | `force_directed_layout()` for bond-crossing minimisation |
-| **SMACOF stress majorisation** | `stress_majorisation()` for optimal 2D embedding |
+| **SMACOF stress majorisation** | `stress_majorisation()` to reduce embedding stress |
 | **Scaffold templates** | `match_template()` for 10 pre-computed common scaffolds |
 | **Ring perception** | `compute_sssr()`, `layout_sssr()` — clean SSSR APIs |
 
-## Performance
+## Performance and validation
 
-Benchmarked alongside RDKit 2025.09.2 on the same machine, same Python process.
-Both toolkits excel at different tasks — use whichever fits your workflow, or both together.
+The [benchmark report](https://github.com/asad/SMSD/blob/master/benchmarks/RESULTS_7.2.0.md)
+records timings alongside atom/bond counts, mapping validity, budgets and
+RDKit cancellation flags. Differences in MCS semantics can make raw size or
+speed comparisons misleading. No universal speed or quality claim is made.
 
-| Pair | SMSD | RDKit | Notes |
-|------|------|-------|-------|
-| Morphine / Codeine | 79 us | 579 ms | Complex ring system |
-| Coronene self-match | 6 us | 712 us | Symmetric PAH |
-| Caffeine / Theophylline | 17 us | 373 us | N-methyl difference |
-| PEG-12 / PEG-16 | 39 us | 2.1 ms | Linear polymer |
+For repeated work, reuse parsed `MolGraph` objects and use `batch_mcs_size`
+when only counts are needed. Core batch bindings retain graph references
+instead of copying their caches into a temporary vector. Measurements of
+conversion, cache hits and batch overhead are reported separately.
 
-Full data: [benchmarks/results_python.tsv](https://github.com/asad/SMSD/blob/master/benchmarks/results_python.tsv)
+On the controlled local workload, cached RDKit conversion changed from
+4.36 to 1.96 microseconds, a 32-target substructure batch from 78.9 to 5.0
+microseconds, and compiled SMARTS matching on 32 repeated 448-atom targets
+from 5,807 to 78.4 microseconds. Small native MCS dispatch increased from
+17.1 to 21.4 microseconds. These checksum-matched measurements exclude setup;
+they describe this workload rather than an application-wide speedup.
 
-## Circular Fingerprint (Novel)
+The installed CPU wheels each pass **691 Python tests** with **8 skips**
+on macOS arm64: Python 3.13.14 with RDKit 2026.09.1, and Python 3.14.8 with
+the published RDKit 2026.03.6 wheel. The 3.14 release wheel bundles OpenMP
+and targets macOS 26 or later. See
+[validation](https://github.com/asad/SMSD/blob/master/docs/VALIDATION_7.2.0.md)
+for scope and reproduction commands. Other wheel platforms are not covered
+by this local run.
+
+## Circular Fingerprints
 
 Tautomer-aware Morgan/ECFP — includes tautomer class in the atom invariant,
-so tautomeric forms of the same molecule produce more similar fingerprints.
+with an optional tautomer-class invariant. Similarity depends on the selected
+features and molecules.
 
 **ECFP vs FCFP:** SMSD supports **both** fingerprint types (Rogers & Hahn 2010):
 
-- **ECFP** (Extended Connectivity): atom invariant = atomic number, degree, charge, ring, aromaticity, tautomer class. Best for structural similarity.
-- **FCFP** (Functional Class): atom invariant = pharmacophoric features (H-bond donor/acceptor, positive/negative ionisable, aromatic, hydrophobic). Best for activity-based similarity and SAR.
+- **ECFP** (Extended Connectivity): atom invariant = atomic number, degree, charge, ring, aromaticity, tautomer class. Encodes atom environments.
+- **FCFP** (Functional Class): atom invariant = pharmacophoric features (H-bond donor/acceptor, positive/negative ionisable, aromatic, hydrophobic). Encodes feature environments.
 
 | Name | Radius | Type | SMSD call |
 |------|--------|------|-----------|
@@ -151,7 +169,7 @@ fcfp4 = smsd.fingerprint_from_smiles("c1ccccc1", radius=2, fp_size=2048, mode="f
 # ECFP6 (radius 3, captures larger environments)
 ecfp6 = smsd.fingerprint_from_smiles("c1ccccc1", radius=3, fp_size=2048)
 
-# ECFP2 (radius 1, fastest, less discriminating)
+# ECFP2 (radius 1, smaller neighborhoods)
 ecfp2 = smsd.fingerprint_from_smiles("c1ccccc1", radius=1, fp_size=2048)
 
 # Whole molecule (radius -1 = expand until convergence)
@@ -166,7 +184,7 @@ sim = smsd.overlap_coefficient(
 ## Using with RDKit
 
 SMSD works standalone or alongside RDKit. Use RDKit for parsing and drawing,
-SMSD for fast matching:
+SMSD for native graph matching:
 
 ```python
 from rdkit import Chem
@@ -228,7 +246,7 @@ SMSD automatically dispatches to the best available compute backend:
 
 | Platform | CPU | GPU |
 |----------|-----|-----|
-| macOS (Apple Silicon) | OpenMP | Metal (zero-copy unified memory) |
+| macOS (Apple Silicon) | OpenMP | Metal (shared buffers) |
 | macOS (Intel) | OpenMP | CPU fallback |
 | Linux | OpenMP | CUDA (if available) |
 | Windows | OpenMP | CUDA (if available) |
@@ -242,13 +260,9 @@ if smsd.gpu_is_available():
     # e.g. "Metal GPU: Apple M2 Pro [OpenMP 5.0, 10 threads]"
     # e.g. "GPU: Tesla T4 [OpenMP 4.5, 8 threads]"
 
-# GPU is used automatically for:
-# - Domain initialization in VF2++ substructure search
-# - RASCAL batch screening
-# - NLF histogram computation
-
-# CPU fallback is seamless — no code changes needed
-results = smsd.batch_substructure(query, targets)  # uses GPU if available
+# Some screening operations can use an available compiled GPU backend.
+# Core batch matching uses OpenMP on the CPU.
+results = smsd.batch_substructure(query, targets, num_threads=2)
 ```
 
 ## API Reference
@@ -321,23 +335,12 @@ opts = smsd.ChemOptions.tautomer_profile()
 opts = smsd.ChemOptions.profile("strict")
 ```
 
-## Complementary Strengths
+## Scope and interoperability
 
-SMSD is designed to work alongside existing toolkits, not replace them.
-Each toolkit brings unique strengths to the cheminformatics ecosystem:
-
-| Capability | SMSD Pro | RDKit | CDK |
-|---|---|---|---|
-| Tautomer-aware circular FP | Yes | — | — |
-| pH/solvent-sensitive matching | Yes | — | — |
-| Multi-strategy MCS engine | Yes | FMCS | MCSPlus |
-| GPU acceleration | CUDA + Metal | — | — |
-| Descriptor calculation | — | Extensive | Extensive |
-| Reaction handling | Basic | Comprehensive | Comprehensive |
-| 3D conformers | — | Yes | Yes |
-| Header-only C++ | Yes | — | — |
-
-**Recommended workflow:** Use RDKit or CDK for parsing, descriptors, and 3D — use SMSD for MCS and substructure matching.
+SMSD provides molecular graph search, fingerprints, basic I/O and depiction.
+RDKit integration is optional. Choose tools using your own molecules,
+chemistry settings and validation requirements; feature lists alone do not
+establish comparative accuracy or performance.
 
 ## Also Available
 

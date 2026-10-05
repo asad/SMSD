@@ -10,11 +10,6 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 
-try:
-    from rdkit import Chem
-    HAS_RDKIT = True
-except ImportError:
-    HAS_RDKIT = False
 
 
 # ---------------------------------------------------------------------------
@@ -35,19 +30,9 @@ class LightMCSResult:
 # ---------------------------------------------------------------------------
 
 def _ensure_molgraph(mol):
-    """Convert SMILES, MolGraph, or RDKit Mol to raw C++ MolGraph."""
-    if isinstance(mol, str):
-        import smsd._smsd as _smsd
-        return _smsd.parse_smiles(mol)
-    # Already a C++ MolGraph
-    if hasattr(mol, 'atomic_num') and hasattr(mol, 'bond_order'):
-        return mol
-    # RDKit Mol
-    if HAS_RDKIT and hasattr(mol, 'GetNumAtoms'):
-        smi = Chem.MolToSmiles(mol)
-        import smsd._smsd as _smsd
-        return _smsd.parse_smiles(smi)
-    raise TypeError(f"Cannot convert {type(mol)} to MolGraph")
+    """Convert inputs through the shared parser and RDKit conversion cache."""
+    from smsd import _ensure_mol
+    return _ensure_mol(mol)
 
 
 # ---------------------------------------------------------------------------
@@ -77,8 +62,9 @@ def find_mcs_lightweight(
     """
     t0 = time.monotonic()
 
-    g1 = _ensure_molgraph(mol1)
-    g2 = _ensure_molgraph(mol2)
+    from smsd import _ensure_mol_ex, _auto_translate
+    g1, rdkit1 = _ensure_mol_ex(mol1)
+    g2, rdkit2 = _ensure_mol_ex(mol2)
 
     from smsd._smsd import find_mcs_coverage
 
@@ -89,7 +75,8 @@ def find_mcs_lightweight(
         timeout_ms=int(timeout * 1000),
     )
 
-    # Convert 0-based C++ mapping to 1-based pairs for backward compat
+    mapping = _auto_translate(mapping, g1, g2, rdkit1, rdkit2)[0]
+    # Historical wrapper returns one-based indices in each input's atom order.
     pairs = [(k + 1, v + 1) for k, v in mapping.items()]
     elapsed = (time.monotonic() - t0) * 1000
 

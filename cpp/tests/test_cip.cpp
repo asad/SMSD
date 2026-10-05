@@ -51,6 +51,20 @@ void test_L_alanine() {
     CIP_ASSERT(rs == RSLabel::S, "L-alanine should be S");
 }
 
+void test_component_root_ring_stereo() {
+    using smsd::cip::RSLabel;
+    auto s = smsd::parseSMILES("CC1.[C@H]1(N)O");
+    auto r = smsd::parseSMILES("CC1.[C@@H]1(N)O");
+    CIP_ASSERT(smsd::cip::assignRS(s, 2) == RSLabel::S, "component-root ring closure should preserve S");
+    CIP_ASSERT(smsd::cip::assignRS(r, 2) == RSLabel::R, "component-root ring closure should preserve R");
+    auto reference = smsd::parseSMILES("CC[C@@H](N)O");
+    smsd::ChemOptions chemistry;
+    chemistry.useChirality = true;
+    CIP_ASSERT(smsd::isSubstructure(s, reference, chemistry), "equivalent stereo traversals should embed");
+    CIP_ASSERT(!smsd::isSubstructure(r, reference, chemistry), "opposite stereoisomers should not embed");
+    CIP_ASSERT(smsd::findMCS(s, reference, chemistry, {}).size() == 5, "equivalent stereo MCS should include all atoms");
+}
+
 void test_D_alanine() {
     // D-alanine: N[C@H](C)C(=O)O -> R
     auto g = parseSMILES("N[C@H](C)C(=O)O");
@@ -232,6 +246,7 @@ int main() {
 
     std::cout << "\n--- R/S assignment ---\n";
     RUN_TEST(L_alanine);
+    RUN_TEST(component_root_ring_stereo);
     RUN_TEST(D_alanine);
     RUN_TEST(bromochlorofluoromethane);
     RUN_TEST(bromochlorofluoromethane_R);

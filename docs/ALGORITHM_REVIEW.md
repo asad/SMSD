@@ -1,10 +1,51 @@
 # Search algorithm review
 
-These changes are recorded under **Unreleased**, against baseline commit
-`49d7303` (the merge of PR #22). The published `v7.1.2` artifacts remain the
-record of that release.
+The current review targets **7.2.0 (Unreleased)** against the immutable 7.1.2
+source snapshot `6807f31`. Latest cross-engine measurements, policies, input
+hashes and quality/cancellation outcomes are in the
+[benchmark report](../benchmarks/RESULTS_7.2.0.md). Earlier review results below
+are historical and are identified separately.
 
-## Correctness changes
+## Current objective, chemistry and cache fixes
+
+Tautomer-aware Java and native matching preserves element identity when atom
+matching is enabled. Tetrahedral matching compares normalized R/S descriptors
+and fully mapped ligand permutations rather than raw traversal tags; the Java
+graph retains CDK's exact ligand ordering. Opposite resolved configurations
+exclude the center even in partial mappings. Unspecified stereo retains its
+existing wildcard behavior.
+
+Signed weights can make an identity mapping worse than a proper subset.
+Small objective searches use positive-weight or bond-count upper bounds;
+component/fragment selection and constrained target choice use the selected
+objective. Java weight comparisons retain double precision. Native scores
+retain their documented integer-millipoint range and input validation.
+Constrained Java batches preserve original target chemistry and indices while
+masking claimed atoms, support Builder graphs, and apply the per-pair timeout
+without modifying caller options.
+
+Canonical mapping selection explores generator-orbit closure rather than a
+greedy local descent. Incomplete generators or exceeded resource bounds raise
+an explicit error; internal enumeration uses raw keys if symmetry work cannot
+complete. Weighted enumeration does not treat an unweighted graph automorphism
+as evidence that user-weighted mappings are equivalent.
+
+Java's molecule cache has weak values as well as weak keys: a cached MolGraph
+otherwise retains its own CDK key. New focused Java coverage passed 77 cases,
+including 25 new regressions and 1,024 independent three-vertex comparisons
+across signed/positive weights, bond objectives, connectedness and induced
+matching. Seven of the initial eight defect fixtures failed against the
+baseline; valid positive-weight behavior was retained as an additional check.
+The focused suite also covers CDK bond-storage reordering, completed ligand
+permutations, Builder winding, scoped exclusions and constrained batch budgets.
+Three of four additional chemical-symmetry fixtures failed before their fixes;
+the valid methyl symmetry away from an annotated center remained available.
+Large/skipped or node-capped generator capture is marked incomplete, discovered
+permutations preserve chemical properties, and orbit pruning uses only proven
+subgroup equivalences. Another 20 existing orbit, canonical-label and SMILES
+tests passed after this change; canonical labels/hashes were left unchanged.
+
+## Earlier correctness changes (review baseline `49d7303`)
 
 Java and C++ MCS searches preserve the caller's query direction for
 non-induced matching and keep atom weights attached to query indices.
@@ -58,7 +99,7 @@ already expired deadline. Rectangular assignment validates matrix shape and
 finite values, and rejects reduced-cost overflow. C++ atom-weight validation
 rejects nonfinite values and unrepresentable integer millipoint scores.
 
-## Independent validation
+## Earlier independent validation
 
 The regression suites use independent brute-force oracles rather than
 expected results copied from the implementation:
@@ -95,7 +136,7 @@ baseline had 5,280 size mismatches in the small-graph oracle; the updated
 implementation has zero. Focused AddressSanitizer/UndefinedBehaviorSanitizer
 runs cover the native algorithm regressions.
 
-Local validation on 2026-10-05:
+Historical validation recorded on 2026-10-05, before the current 7.2.0 changes:
 
 | Check | Result |
 |---|---|
@@ -131,42 +172,29 @@ validated in this local review. Hosted workflows require manual dispatch.
 
 The existing [release preparation script](../scripts/prepare-release.sh)
 builds source distributions, repairs macOS wheels and validates the installed
-package. This review validates candidate wheels under
-`build/algorithm-ringfix-wheel-assets`. Assign the next release version before
-preparing its official artifacts.
+package. The earlier review validated candidate wheels under
+`build/algorithm-ringfix-wheel-assets`. Current source and release preparation
+target 7.2.0; neither those older artifacts nor a 7.1.2 version label identifies
+the current changes.
 
-## Measured primitive performance
+## Performance evidence
 
-Measurements used Apple M5, macOS 27.0.1 and Apple Clang 21.0.0, alternating
-baseline/current runs with identical input checksums. Values are medians of
-three runs, in microseconds. Assignment/matching use `-O2`; setup uses `-O3`.
-Each benchmark source includes exact baseline and current build commands.
+Use the [current benchmark report](../benchmarks/RESULTS_7.2.0.md) for measured
+results. Primitive timings, cross-engine molecular searches, conversion costs,
+subprocess startup and tautomer feature runs are distinct workloads. A timing
+ratio does not establish a speedup when mappings differ in validity, objective,
+chemical policy or completion status.
 
-| Primitive | Repetitions | Baseline µs | Updated µs |
-|---|---:|---:|---:|
-| Assignment, 8 × 512 | 10 | 671,878 | 72 |
-| Assignment, 512 × 8 | 10 | 679,921 | 66 |
-| Assignment, 128 × 128 | 10 | 2,940 | 2,720 |
-| General matching, complete 128-vertex graph | 5 | 594 | 20 |
-| General matching, complete 512-vertex graph | 5 | 30,679 | 256 |
-| VF2++ setup, 24-vertex cycle into cold 128-vertex cycle | 20 | 13,516,838 | 926 |
+Reproducible primitive sources include
+[assignment/matching](../benchmarks/benchmark_assignment_matching.cpp),
+[matcher setup](../benchmarks/benchmark_substructure_setup.cpp),
+[component filtering](../benchmarks/benchmark_mcs_components.cpp) and
+[search primitives](../benchmarks/benchmark_search_primitives.cpp).
+Rectangular assignment uses `O(min(m,n)² max(m,n))` time with `O(m+n)`
+auxiliary space. Component filtering traverses graph neighbors instead of
+scanning every pair of mapped vertices. These implementation properties do
+not by themselves establish representative molecular-search throughput.
 
-Sources: [assignment/matching](../benchmarks/benchmark_assignment_matching.cpp),
-[matcher setup](../benchmarks/benchmark_substructure_setup.cpp), and
-[component filtering](../benchmarks/benchmark_mcs_components.cpp).
-
-Rectangular assignment removes square padding and uses
-`O(min(m,n)² max(m,n))` time with `O(m+n)` auxiliary space. General matching
-starts with a valid maximal matching before blossom augmentation. Matcher
-setup reuses sorted query neighbors and avoids unused canonicalization of
-the target. Connected-component filtering traverses graph neighbors and
-uses sparse storage when the mapping is tiny relative to the graph.
-
-These intentionally rectangular matrices, complete graphs and highly
-symmetric cold targets expose specific costs. They do not establish a
-whole-application or representative molecular-search speedup. Prewarmed
-graphs will not show the cold-canonicalization saving.
-
-Large MCS searches retain their existing time and node budgets and heuristic
-stages. Exhaustive small-graph checks prove the tested cases; they do not
-prove optimality for arbitrary large graphs or weighted objectives.
+Large MCS searches retain bounded heuristic stages. Exhaustive oracles prove
+the tested cases; a time or node limit can leave a valid incumbent without a
+proof of global optimality.

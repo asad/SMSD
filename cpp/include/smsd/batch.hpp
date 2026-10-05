@@ -34,7 +34,9 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <functional>
 #include <map>
+#include <limits>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -57,6 +59,18 @@ constexpr uint64_t FNV1A_PRIME = 0x100000001B3ULL;
 // ============================================================================
 namespace detail {
 
+/// Non-owning targets for bindings; the caller retains every graph's lifetime.
+class MolGraphView {
+    std::vector<std::reference_wrapper<const MolGraph>> graphs_;
+public:
+    void reserve(size_t size) { graphs_.reserve(size); }
+    void push_back(const MolGraph& graph) { graphs_.emplace_back(graph); }
+    size_t size() const { return graphs_.size(); }
+    const MolGraph& operator[](size_t index) const { return graphs_[index].get(); }
+    auto begin() const { return graphs_.begin(); }
+    auto end() const { return graphs_.end(); }
+};
+
 /// Resolve thread count: 0 = auto (use all available), else clamp to [1, max].
 inline int resolveThreads(int numThreads) {
 #ifdef _OPENMP
@@ -75,6 +89,7 @@ inline int resolveThreads(int numThreads) {
 inline void prewarmGraph(const MolGraph& g) {
     g.ensureCanonical();
     g.ensureRingCounts();
+    g.ensureRingSystems();
     g.ensurePatternFP();
     g.getPharmacophoreFeatures();
     g.getNLF1();
@@ -90,7 +105,8 @@ inline std::vector<uint64_t> computePathFingerprint(
     const MolGraph& mol, int pathLength, int fpSize)
 {
     if (fpSize <= 0) throw std::invalid_argument("fpSize must be positive");
-    int numWords = (fpSize + 63) / 64;
+    if (pathLength <= 0) throw std::invalid_argument("pathLength must be positive");
+    int numWords = (fpSize - 1) / 64 + 1;
     std::vector<uint64_t> fp(numWords, 0ULL);
 
     if (mol.n == 0) return fp;
@@ -283,7 +299,7 @@ inline std::vector<uint64_t> computeCircularFingerprintECFP(
     const MolGraph& mol, int radius, int fpSize)
 {
     if (fpSize <= 0) throw std::invalid_argument("fpSize must be positive");
-    int numWords = (fpSize + 63) / 64;
+    int numWords = (fpSize - 1) / 64 + 1;
     std::vector<uint64_t> fp(numWords, 0ULL);
     if (mol.n == 0) return fp;
 
@@ -434,7 +450,7 @@ inline std::vector<uint64_t> computeCircularFingerprintFCFP(
     const MolGraph& mol, int radius, int fpSize)
 {
     if (fpSize <= 0) throw std::invalid_argument("fpSize must be positive");
-    int numWords = (fpSize + 63) / 64;
+    int numWords = (fpSize - 1) / 64 + 1;
     std::vector<uint64_t> fp(numWords, 0ULL);
     if (mol.n == 0) return fp;
     auto fnvMix = [](uint64_t h, uint64_t val) -> uint64_t {
@@ -706,7 +722,8 @@ inline std::vector<uint64_t> computeMCSFingerprint(
     const MolGraph& mol, int pathLength, int fpSize)
 {
     if (fpSize <= 0) throw std::invalid_argument("fpSize must be positive");
-    int numWords = (fpSize + 63) / 64;
+    if (pathLength <= 0) throw std::invalid_argument("pathLength must be positive");
+    int numWords = (fpSize - 1) / 64 + 1;
     std::vector<uint64_t> fp(numWords, 0ULL);
     int n = mol.n;
     if (n == 0) return fp;
@@ -765,7 +782,7 @@ inline std::vector<uint64_t> computeTopologicalTorsion(
     const MolGraph& mol, int fpSize)
 {
     if (fpSize <= 0) throw std::invalid_argument("fpSize must be positive");
-    int numWords = (fpSize + 63) / 64;
+    int numWords = (fpSize - 1) / 64 + 1;
     std::vector<uint64_t> fp(numWords, 0ULL);
     int n = mol.n;
     if (n < 4) return fp;
@@ -869,11 +886,13 @@ inline std::vector<int> computeTopologicalTorsionCounts(
 ///
 /// Thread-safe: each thread runs its own VF2PP instance with independent state.
 /// @param numThreads  0 = auto (all cores), >0 = specific thread count.
-inline std::vector<bool> batchSubstructure(
+template<class TargetRange>
+inline std::vector<bool> batchSubstructureImpl(
     const MolGraph& query,
-    const std::vector<MolGraph>& targets,
+    const TargetRange& targets,
     const ChemOptions& opts,
-    int numThreads = 0)
+    int numThreads = 0,
+    int64_t timeoutMs = 10000)
 {
     const int N = static_cast<int>(targets.size());
 
@@ -899,7 +918,7 @@ inline std::vector<bool> batchSubstructure(
 #endif
     for (int i = 0; i < N; ++i) {
         if (targets[i].n >= query.n) {
-            buf[i] = isSubstructure(query, targets[i], opts) ? 1 : 0;
+            buf[i] = isSubstructure(query, targets[i], opts, timeoutMs) ? 1 : 0;
         }
     }
 
@@ -916,11 +935,13 @@ inline std::vector<bool> batchSubstructure(
 ///
 /// Thread-safe: each thread runs its own VF2PP instance with independent state.
 /// @param numThreads  0 = auto (all cores), >0 = specific thread count.
-inline std::vector<std::vector<std::pair<int,int>>> batchFindSubstructure(
+template<class TargetRange>
+inline std::vector<std::vector<std::pair<int,int>>> batchFindSubstructureImpl(
     const MolGraph& query,
-    const std::vector<MolGraph>& targets,
+    const TargetRange& targets,
     const ChemOptions& opts,
-    int numThreads = 0)
+    int numThreads = 0,
+    int64_t timeoutMs = 10000)
 {
     const int N = static_cast<int>(targets.size());
     std::vector<std::vector<std::pair<int,int>>> results(N);
@@ -942,7 +963,7 @@ inline std::vector<std::vector<std::pair<int,int>>> batchFindSubstructure(
 #endif
     for (int i = 0; i < N; ++i) {
         if (targets[i].n >= query.n) {
-            results[i] = findSubstructure(query, targets[i], opts);
+            results[i] = findSubstructure(query, targets[i], opts, timeoutMs);
         }
     }
 
@@ -959,13 +980,15 @@ inline std::vector<std::vector<std::pair<int,int>>> batchFindSubstructure(
 ///
 /// Thread-safe: each thread creates its own MCS scratch buffers internally.
 /// @param numThreads  0 = auto, >0 = specific thread count.
-inline std::vector<std::map<int,int>> batchMCS(
+template<class TargetRange>
+inline std::vector<std::map<int,int>> batchMCSImpl(
     const MolGraph& query,
-    const std::vector<MolGraph>& targets,
+    const TargetRange& targets,
     const ChemOptions& chem,
     const MCSOptions& opts,
     int numThreads = 0)
 {
+    smsd::detail::validateAtomWeights(query, opts);
     const int N = static_cast<int>(targets.size());
     std::vector<std::map<int,int>> results(N);
 
@@ -995,13 +1018,15 @@ inline std::vector<std::map<int,int>> batchMCS(
 /// boundary when callers only need screening sizes.
 /// Phase 2.4: Uses findMCSSize() to avoid constructing std::map<int,int>
 /// at the caller boundary.
-inline std::vector<int> batchMCSSize(
+template<class TargetRange>
+inline std::vector<int> batchMCSSizeImpl(
     const MolGraph& query,
-    const std::vector<MolGraph>& targets,
+    const TargetRange& targets,
     const ChemOptions& chem,
     const MCSOptions& opts,
     int numThreads = 0)
 {
+    smsd::detail::validateAtomWeights(query, opts);
     const int N = static_cast<int>(targets.size());
     std::vector<int> results(N, 0);
 
@@ -1023,6 +1048,32 @@ inline std::vector<int> batchMCSSize(
     }
 
     return results;
+}
+
+// ============================================================================
+// Preserve the owning C++ API; bindings use the same implementation with a view.
+inline std::vector<bool> batchSubstructure(
+    const MolGraph& query, const std::vector<MolGraph>& targets,
+    const ChemOptions& opts, int numThreads = 0, int64_t timeoutMs = 10000) {
+    return batchSubstructureImpl(query, targets, opts, numThreads, timeoutMs);
+}
+
+inline std::vector<std::vector<std::pair<int,int>>> batchFindSubstructure(
+    const MolGraph& query, const std::vector<MolGraph>& targets,
+    const ChemOptions& opts, int numThreads = 0, int64_t timeoutMs = 10000) {
+    return batchFindSubstructureImpl(query, targets, opts, numThreads, timeoutMs);
+}
+
+inline std::vector<std::map<int,int>> batchMCS(
+    const MolGraph& query, const std::vector<MolGraph>& targets,
+    const ChemOptions& chem, const MCSOptions& opts, int numThreads = 0) {
+    return batchMCSImpl(query, targets, chem, opts, numThreads);
+}
+
+inline std::vector<int> batchMCSSize(
+    const MolGraph& query, const std::vector<MolGraph>& targets,
+    const ChemOptions& chem, const MCSOptions& opts, int numThreads = 0) {
+    return batchMCSSizeImpl(query, targets, chem, opts, numThreads);
 }
 
 // ============================================================================
@@ -1181,6 +1232,10 @@ inline std::vector<std::vector<uint64_t>> batchFingerprint(
     int fpSize = 1024,
     int numThreads = 0)
 {
+    if (fpSize <= 0 || fpSize > std::numeric_limits<int>::max() - 63)
+        throw std::invalid_argument("fpSize must be positive and representable after rounding");
+    if (pathLength <= 0) throw std::invalid_argument("pathLength must be positive");
+
     const int N = static_cast<int>(mols.size());
     std::vector<std::vector<uint64_t>> results(N);
 

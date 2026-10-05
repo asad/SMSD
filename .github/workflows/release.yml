@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing release tag to build and upload (e.g. v7.1.2)
+        description: Existing release tag to build and upload (e.g. v7.2.0)
         required: true
         type: string
 

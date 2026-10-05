@@ -149,6 +149,7 @@ struct ParsedAtom {
     int atomClass     = 0;
     bool isAromatic   = false;
     bool isBracket    = false;
+    bool hasIncomingBond = false;
 };
 
 // --------------------------------------------------------------------------
@@ -194,6 +195,7 @@ public:
 
     const std::vector<ParsedAtom>& atoms() const { return atoms_; }
     const std::vector<ParsedBond>& bonds() const { return bonds_; }
+    const std::vector<std::vector<int>>& neighborOrder() const { return neighborOrder_; }
 
 private:
     std::string smi_;
@@ -201,9 +203,10 @@ private:
     bool lenient_;
     std::vector<ParsedAtom> atoms_;
     std::vector<ParsedBond> bonds_;
+    std::vector<std::vector<int>> neighborOrder_;
 
-    // Ring closure map: ring number -> (atom index, bond order, stereo)
-    std::unordered_map<int, std::tuple<int, int, int>> ringOpenings_;
+    // Ring number -> atom, bond order, stereo, and neighbor-order placeholder.
+    std::unordered_map<int, std::tuple<int, int, int, int>> ringOpenings_;
 
     void parseChain(int prevAtom, int pendingBondOrder, int pendingStereo) {
         while (pos_ < smi_.size()) {
@@ -267,6 +270,8 @@ private:
             }
 
             // Connect to previous atom
+            atoms_[atomIdx].hasIncomingBond = prevAtom >= 0;
+            neighborOrder_.resize(atoms_.size());
             if (prevAtom >= 0) {
                 int bo = pendingBondOrder;
                 int st = pendingStereo;
@@ -278,6 +283,8 @@ private:
                         bo = 1;
                 }
                 bonds_.push_back({prevAtom, atomIdx, bo, st});
+                neighborOrder_[prevAtom].push_back(atomIdx);
+                neighborOrder_[atomIdx].push_back(prevAtom);
             }
             pendingBondOrder = 0;
             pendingStereo = 0;
@@ -576,10 +583,12 @@ private:
             auto it = ringOpenings_.find(ringNum);
             if (it == ringOpenings_.end()) {
                 // Open ring
-                ringOpenings_[ringNum] = std::make_tuple(atomIdx, ringBondOrder, ringBondStereo);
+                const int slot = static_cast<int>(neighborOrder_[atomIdx].size());
+                neighborOrder_[atomIdx].push_back(-1);
+                ringOpenings_[ringNum] = std::make_tuple(atomIdx, ringBondOrder, ringBondStereo, slot);
             } else {
                 // Close ring
-                auto [openAtom, openBo, openStereo] = it->second;
+                auto [openAtom, openBo, openStereo, openSlot] = it->second;
                 ringOpenings_.erase(it);
 
                 int bo = 0, st = 0;
@@ -612,6 +621,8 @@ private:
                 }
 
                 bonds_.push_back({openAtom, atomIdx, bo, st});
+                neighborOrder_[openAtom][openSlot] = atomIdx;
+                neighborOrder_[atomIdx].push_back(openAtom);
             }
         }
     }
@@ -760,7 +771,8 @@ inline void detectRings(int n,
 // --------------------------------------------------------------------------
 inline MolGraph buildMolGraph(const std::vector<ParsedAtom>& atoms,
                                const std::vector<ParsedBond>& bonds,
-                               bool lenient = false) {
+                               bool lenient = false,
+                               const std::vector<std::vector<int>>& neighborOrder = {}) {
     int n = static_cast<int>(atoms.size());
     if (n == 0) {
         if (!lenient) throw std::invalid_argument("SMILES produced no atoms");
@@ -802,6 +814,22 @@ inline MolGraph buildMolGraph(const std::vector<ParsedAtom>& atoms,
         bondOrderSum[j] += effectiveOrd;
     }
 
+    // Ring digits count at their first appearance in SMILES stereo ordering.
+    for (int atom = 0; atom < n && atom < static_cast<int>(neighborOrder.size()); ++atom) {
+        if (atoms[atom].chirality == 0) continue;
+        std::vector<int> orderedNeighbors, orderedBonds;
+        for (int neighbor : neighborOrder[atom]) {
+            const auto found = std::find(neighbors[atom].begin(), neighbors[atom].end(), neighbor);
+            if (found == neighbors[atom].end()) continue;
+            orderedNeighbors.push_back(neighbor);
+            orderedBonds.push_back(bondOrders[atom][found - neighbors[atom].begin()]);
+        }
+        if (orderedNeighbors.size() == neighbors[atom].size()) {
+            neighbors[atom] = std::move(orderedNeighbors);
+            bondOrders[atom] = std::move(orderedBonds);
+        }
+    }
+
     // Ring detection
     std::vector<bool> atomInRing;
     std::vector<std::set<int>> bondInRingSet;
@@ -837,6 +865,10 @@ inline MolGraph buildMolGraph(const std::vector<ParsedAtom>& atoms,
         aromaticFlags[i] = a.isAromatic;
         ringFlags[i] = atomInRing[i];
         chirality[i] = a.chirality;
+        // A ring closure can connect a new component to an earlier atom.
+        // Normalize its H position to the graph's ligand-order convention.
+        if (chirality[i] != 0 && a.hcount > 0 && neighbors[i].size() == 3
+            && a.hasIncomingBond != (neighbors[i][0] < i)) chirality[i] = 3 - chirality[i];
 
         // Implicit H: bracket atoms have explicit hcount, organic atoms compute from valence
         if (a.hcount == -1) {
@@ -1560,7 +1592,7 @@ inline MolGraph parseSMILES(const std::string& smiles) {
     if (static_cast<int>(parser.atoms().size()) > MAX_ATOMS)
         throw std::invalid_argument("Molecule exceeds MAX_ATOMS limit ("
             + std::to_string(MAX_ATOMS) + ")");
-    return detail::buildMolGraph(parser.atoms(), parser.bonds());
+    return detail::buildMolGraph(parser.atoms(), parser.bonds(), false, parser.neighborOrder());
 }
 
 /**
@@ -1583,7 +1615,7 @@ inline MolGraph parseSMILES(const std::string& smiles, const ParseOptions& opts)
     if (static_cast<int>(parser.atoms().size()) > MAX_ATOMS)
         throw std::invalid_argument("Molecule exceeds MAX_ATOMS limit ("
             + std::to_string(MAX_ATOMS) + ")");
-    return detail::buildMolGraph(parser.atoms(), parser.bonds(), opts.lenient);
+    return detail::buildMolGraph(parser.atoms(), parser.bonds(), opts.lenient, parser.neighborOrder());
 }
 
 /**

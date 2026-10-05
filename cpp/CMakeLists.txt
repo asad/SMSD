@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.18)
-project(smsd VERSION 7.1.2 LANGUAGES CXX)
+project(smsd VERSION 7.2.0 LANGUAGES CXX)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
@@ -40,12 +40,16 @@ if(SMSD_BUILD_OPENMP)
 endif()
 
 # ---- Optional: RDKit adapter ----
+set(SMSD_PACKAGE_REQUIRES_RDKIT FALSE)
 if(SMSD_WITH_RDKIT)
     find_package(RDKit REQUIRED)
     add_library(smsd_rdkit STATIC src/rdkit_adapter.cpp)
+    target_compile_definitions(smsd_rdkit PRIVATE SMSD_WITH_RDKIT)
+    target_compile_features(smsd_rdkit PUBLIC cxx_std_20)
+    set_target_properties(smsd_rdkit PROPERTIES POSITION_INDEPENDENT_CODE ON)
     target_link_libraries(smsd_rdkit PUBLIC smsd RDKit::SmilesParse RDKit::GraphMol
         RDKit::RingDecomposerLib RDKit::Depictor)
-    target_include_directories(smsd_rdkit PUBLIC ${RDKit_INCLUDE_DIRS})
+    set(SMSD_PACKAGE_REQUIRES_RDKIT TRUE)
 endif()
 
 # ---- Optional: CUDA batch screening ----
@@ -260,14 +264,22 @@ configure_package_config_file(
     cmake/smsdConfig.cmake.in
     "${CMAKE_CURRENT_BINARY_DIR}/smsdConfig.cmake"
     INSTALL_DESTINATION "${SMSD_INSTALL_CMAKEDIR}")
+set(SMSD_PACKAGE_ARCH_OPTION "")
+if(NOT SMSD_WITH_RDKIT)
+    set(SMSD_PACKAGE_ARCH_OPTION ARCH_INDEPENDENT)
+endif()
 write_basic_package_version_file(
     "${CMAKE_CURRENT_BINARY_DIR}/smsdConfigVersion.cmake"
     VERSION "${PROJECT_VERSION}"
     COMPATIBILITY SameMajorVersion
-    ARCH_INDEPENDENT)
+    ${SMSD_PACKAGE_ARCH_OPTION})
 
 install(DIRECTORY include/smsd DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 install(TARGETS smsd EXPORT smsdTargets)
+if(SMSD_WITH_RDKIT)
+    install(TARGETS smsd_rdkit EXPORT smsdTargets
+        ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+endif()
 install(EXPORT smsdTargets NAMESPACE smsd:: DESTINATION "${SMSD_INSTALL_CMAKEDIR}")
 install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/smsdConfig.cmake"
