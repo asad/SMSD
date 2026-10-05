@@ -17,7 +17,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 JAR="${SMSD_JAR:-}"
 if [ -z "$JAR" ]; then
-  for candidate in "$PROJECT_DIR"/target/smsd-*-jar-with-dependencies.jar; do
+  for candidate in "$PROJECT_DIR"/java/target/smsd-*-jar-with-dependencies.jar; do
     if [ -f "$candidate" ] && { [ -z "$JAR" ] || [ "$candidate" -nt "$JAR" ]; }; then JAR="$candidate"; fi
   done
 fi

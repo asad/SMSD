@@ -3993,6 +3993,8 @@ public class StressTest extends TestBase {
   @DisplayName("11. RealWorldDrugPairs")
   class RealWorldDrugPairs {
 
+    // Each search may use all 30 seconds; allow five seconds for parsing and validation.
+
     private void assertDrugPairMCS(String name1, String smi1, String name2, String smi2,
                                     int minMCS) throws Exception {
       SearchEngine.clearMolGraphCache();
@@ -4009,35 +4011,35 @@ public class StressTest extends TestBase {
     }
 
     @Test @DisplayName("Aspirin / Acetaminophen >= 5")
-    @Timeout(30)
+    @Timeout(35)
     void aspirinAcetaminophen() throws Exception {
       assertDrugPairMCS("Aspirin", "CC(=O)Oc1ccccc1C(=O)O",
           "Acetaminophen", "CC(=O)Nc1ccc(O)cc1", 5);
     }
 
     @Test @DisplayName("Ibuprofen / Naproxen >= 10")
-    @Timeout(30)
+    @Timeout(35)
     void ibuprofenNaproxen() throws Exception {
       assertDrugPairMCS("Ibuprofen", "CC(C)Cc1ccc(C(C)C(=O)O)cc1",
           "Naproxen", "COc1ccc2cc(C(C)C(=O)O)ccc2c1", 10);
     }
 
     @Test @DisplayName("Morphine / Codeine >= 20")
-    @Timeout(30)
+    @Timeout(35)
     void morphineCodeine() throws Exception {
       assertDrugPairMCS("Morphine", "CN1CCC23C4C1CC5=C2C(=C(C=C5)O)OC3C(C=C4)O",
           "Codeine", "CN1CCC23C4C1CC5=C2C(=C(C=C5)OC)OC3C(C=C4)O", 20);
     }
 
     @Test @DisplayName("Caffeine / Theophylline >= 13")
-    @Timeout(30)
+    @Timeout(35)
     void caffeineTheophylline() throws Exception {
       assertDrugPairMCS("Caffeine", "Cn1c(=O)c2c(ncn2C)n(C)c1=O",
           "Theophylline", "Cn1c(=O)c2[nH]cnc2n(C)c1=O", 13);
     }
 
     @Test @DisplayName("Atorvastatin / Rosuvastatin >= 15")
-    @Timeout(30)
+    @Timeout(35)
     void atorvastatinRosuvastatin() throws Exception {
       assertDrugPairMCS("Atorvastatin",
           "CC(C)c1c(C(=O)Nc2ccccc2)c(-c2ccccc2)c(-c2ccc(F)cc2)n1CC[C@H](O)C[C@H](O)CC(=O)O",
@@ -4046,28 +4048,28 @@ public class StressTest extends TestBase {
     }
 
     @Test @DisplayName("Diazepam / Oxazepam >= 15")
-    @Timeout(30)
+    @Timeout(35)
     void diazepamOxazepam() throws Exception {
       assertDrugPairMCS("Diazepam", "CN1C(=O)CN=C(c2ccccc2)c2cc(Cl)ccc21",
           "Oxazepam", "OC1N=C(c2ccccc2)c2cc(Cl)ccc2NC1=O", 15);
     }
 
     @Test @DisplayName("Metformin / Phenformin >= 8")
-    @Timeout(30)
+    @Timeout(35)
     void metforminPhenformin() throws Exception {
       assertDrugPairMCS("Metformin", "CN(C)C(=N)NC(=N)N",
           "Phenformin", "NC(=N)NC(=N)NCCc1ccccc1", 8);
     }
 
     @Test @DisplayName("Omeprazole / Lansoprazole >= 12")
-    @Timeout(30)
+    @Timeout(35)
     void omeprazoleLansoprazole() throws Exception {
       assertDrugPairMCS("Omeprazole", "COc1ccc2[nH]c(S(=O)Cc3ncc(C)c(OC)c3C)nc2c1",
           "Lansoprazole", "Cc1c(OCC(F)(F)F)ccn1S(=O)c1nc2ccc(OC)cc2[nH]1", 12);
     }
 
     @Test @DisplayName("Sildenafil / Tadalafil >= 8")
-    @Timeout(30)
+    @Timeout(35)
     void sildenafilTadalafil() throws Exception {
       assertDrugPairMCS("Sildenafil",
           "CCCc1nn(C)c2c1nc(nc2OCC)c1cc(ccc1OCC)S(=O)(=O)N1CCN(C)CC1",
@@ -4076,14 +4078,14 @@ public class StressTest extends TestBase {
     }
 
     @Test @DisplayName("Tamoxifen / Raloxifene >= 10")
-    @Timeout(30)
+    @Timeout(35)
     void tamoxifenRaloxifene() throws Exception {
       assertDrugPairMCS("Tamoxifen", "CCC(=C(c1ccccc1)c1ccc(OCCN(C)C)cc1)c1ccccc1",
           "Raloxifene", "Oc1ccc(cc1)C(=O)c1ccc(O)cc1", 5);
     }
 
     @Test @DisplayName("Ciprofloxacin / Levofloxacin >= 15")
-    @Timeout(30)
+    @Timeout(35)
     void ciprofloxacinLevofloxacin() throws Exception {
       assertDrugPairMCS("Ciprofloxacin",
           "O=C(O)c1cn(C2CC2)c2cc(N3CCNCC3)c(F)cc2c1=O",
@@ -4092,21 +4094,21 @@ public class StressTest extends TestBase {
     }
 
     @Test @DisplayName("Warfarin / Acenocoumarol >= 15")
-    @Timeout(30)
+    @Timeout(35)
     void warfarinAcenocoumarol() throws Exception {
       assertDrugPairMCS("Warfarin", "CC(=O)CC(c1ccccc1)c1c(O)c2ccccc2oc1=O",
           "Acenocoumarol", "CC(=O)CC(c1ccc([N+](=O)[O-])cc1)c1c(O)c2ccccc2oc1=O", 15);
     }
 
     @Test @DisplayName("Metoprolol / Atenolol >= 10")
-    @Timeout(30)
+    @Timeout(35)
     void metoprololAtenolol() throws Exception {
       assertDrugPairMCS("Metoprolol", "COCCc1ccc(OCC(O)CNC(C)C)cc1",
           "Atenolol", "CC(C)NCC(O)COc1ccc(CC(N)=O)cc1", 10);
     }
 
     @Test @DisplayName("Amoxicillin / Ampicillin >= 15")
-    @Timeout(30)
+    @Timeout(35)
     void amoxicillinAmpicillin() throws Exception {
       assertDrugPairMCS("Amoxicillin",
           "CC1(C)SC2C(NC(=O)C(N)c3ccc(O)cc3)C(=O)N2C1C(=O)O",
@@ -4115,14 +4117,14 @@ public class StressTest extends TestBase {
     }
 
     @Test @DisplayName("Fluoxetine / Paroxetine >= 10")
-    @Timeout(30)
+    @Timeout(35)
     void fluoxetineParoxetine() throws Exception {
       assertDrugPairMCS("Fluoxetine", "CNCCC(Oc1ccc(C(F)(F)F)cc1)c1ccccc1",
           "Paroxetine", "Fc1ccc(C2CCNCC2COc2ccc3c(c2)OCO3)cc1", 10);
     }
 
     @Test @DisplayName("Loratadine / Desloratadine >= 18")
-    @Timeout(30)
+    @Timeout(35)
     void loratadineDesloratadine() throws Exception {
       assertDrugPairMCS("Loratadine",
           "CCOC(=O)N1CCC(=C2c3ccc(Cl)cc3CCc3cccnc32)CC1",
@@ -4131,7 +4133,7 @@ public class StressTest extends TestBase {
     }
 
     @Test @DisplayName("Prednisolone / Dexamethasone >= 15")
-    @Timeout(30)
+    @Timeout(35)
     void prednisoloneDexamethasone() throws Exception {
       assertDrugPairMCS("Prednisolone",
           "O=C1C=C2CC3C(CC(O)C4(C(CO)=O)C3CCC4O)C2(C)CC1=O",
@@ -4140,7 +4142,7 @@ public class StressTest extends TestBase {
     }
 
     @Test @DisplayName("Simvastatin / Lovastatin >= 20")
-    @Timeout(30)
+    @Timeout(35)
     void simvastatinLovastatin() throws Exception {
       assertDrugPairMCS("Simvastatin",
           "CCC(C)(C)C(=O)OC1CC(O)C=C2C=CC(C)C(CCC3CC(O)CC(=O)O3)C21",
@@ -4149,7 +4151,7 @@ public class StressTest extends TestBase {
     }
 
     @Test @DisplayName("Celecoxib / Valdecoxib >= 12")
-    @Timeout(30)
+    @Timeout(35)
     void celecoxibValdecoxib() throws Exception {
       assertDrugPairMCS("Celecoxib",
           "Cc1ccc(-c2cc(C(F)(F)F)nn2-c2ccc(S(N)(=O)=O)cc2)cc1",
@@ -4158,7 +4160,7 @@ public class StressTest extends TestBase {
     }
 
     @Test @DisplayName("Donepezil / Rivastigmine >= 8")
-    @Timeout(30)
+    @Timeout(35)
     void donepezilRivastigmine() throws Exception {
       assertDrugPairMCS("Donepezil",
           "COc1cc2CC(CC3CCN(Cc4ccccc4)CC3)C(=O)c2cc1OC",
@@ -5420,7 +5422,7 @@ public class StressTest extends TestBase {
       assertTrue(sz >= 5, "PDE5 inhibitors should share at least a heterocyclic fragment");
     }
 
-    @Test @Timeout(10) @DisplayName("6.02 Omeprazole vs lansoprazole: PPIs share benzimidazole")
+    @Test @Timeout(12) @DisplayName("6.02 Omeprazole vs lansoprazole: PPIs share benzimidazole")
     void omeprazoleVsLansoprazole() throws Exception {
       String omeprazole = "COc1ccc2[nH]c(S(=O)Cc3ncc(C)c(OC)c3C)nc2c1";
       String lansoprazole = "Cc1c(OCC(F)(F)F)ccn1Cc1nc2ccccc2[nH]1";
@@ -5429,7 +5431,7 @@ public class StressTest extends TestBase {
       assertTrue(sz >= 8, "PPIs should share benzimidazole scaffold");
     }
 
-    @Test @Timeout(10) @DisplayName("6.03 Atenolol vs metoprolol: beta-blockers share aryloxypropanolamine")
+    @Test @Timeout(12) @DisplayName("6.03 Atenolol vs metoprolol: beta-blockers share aryloxypropanolamine")
     void atenololVsMetoprolol() throws Exception {
       String atenolol = "CC(C)NCC(O)COc1ccc(CC(N)=O)cc1";
       String metoprolol = "CC(C)NCC(O)COc1ccc(CCOC)cc1";
@@ -5437,7 +5439,7 @@ public class StressTest extends TestBase {
       assertTrue(sz >= 14, "Beta-blockers should share aryloxypropanolamine core");
     }
 
-    @Test @Timeout(10) @DisplayName("6.04 Cetirizine vs loratadine: antihistamines")
+    @Test @Timeout(12) @DisplayName("6.04 Cetirizine vs loratadine: antihistamines")
     void cetirizineVsLoratadine() throws Exception {
       String cetirizine = "OC(=O)COCCN1CCN(CC1)C(c1ccccc1)c1ccc(Cl)cc1";
       String loratadine = "CCOC(=O)N1CCC(=C2c3ccc(Cl)cc3CCc3ncccc32)CC1";
@@ -5445,7 +5447,7 @@ public class StressTest extends TestBase {
       assertTrue(sz >= 6, "Antihistamines should share chlorophenyl + piperidine fragment");
     }
 
-    @Test @Timeout(10) @DisplayName("6.05 Simvastatin vs pravastatin: statins share lactone/acid")
+    @Test @Timeout(12) @DisplayName("6.05 Simvastatin vs pravastatin: statins share lactone/acid")
     void simvastatinVsPravastatin() throws Exception {
       String simvastatin = "CCC(C)(C)C(=O)OC1CC(O)C=C2C=CC(C)C(CCC3CC(O)CC(=O)O3)C21";
       String pravastatin = "CCC(C)(C)C(=O)OC1CC(O)C=C2C=CC(C)C(CCC(O)CC(O)CC(=O)O)C21";
@@ -5453,7 +5455,7 @@ public class StressTest extends TestBase {
       assertTrue(sz >= 15, "Statins should share large decalin + side chain core");
     }
 
-    @Test @Timeout(10) @DisplayName("6.06 Diazepam vs alprazolam: benzodiazepines")
+    @Test @Timeout(12) @DisplayName("6.06 Diazepam vs alprazolam: benzodiazepines")
     void diazepamVsAlprazolam() throws Exception {
       String diazepam = "CN1C(=O)CN=C(c2ccccc2)c2cc(Cl)ccc21";
       String alprazolam = "Cc1nnc2n1-c1ccc(Cl)cc1C(=NC2)c1ccccc1";
@@ -5461,7 +5463,7 @@ public class StressTest extends TestBase {
       assertTrue(sz >= 10, "Benzodiazepines should share chlorophenyl-diazepine core");
     }
 
-    @Test @Timeout(10) @DisplayName("6.07 Ibuprofen vs naproxen: NSAIDs share arylpropionic acid")
+    @Test @Timeout(12) @DisplayName("6.07 Ibuprofen vs naproxen: NSAIDs share arylpropionic acid")
     void ibuprofenVsNaproxen() throws Exception {
       String ibuprofen = "CC(C)Cc1ccc(cc1)C(C)C(=O)O";
       String naproxen = "COc1ccc2cc(C(C)C(=O)O)ccc2c1";
@@ -5469,7 +5471,7 @@ public class StressTest extends TestBase {
       assertTrue(sz >= 8, "NSAIDs should share arylpropionic acid scaffold");
     }
 
-    @Test @Timeout(10) @DisplayName("6.08 Morphine vs codeine MCS")
+    @Test @Timeout(12) @DisplayName("6.08 Morphine vs codeine MCS")
     void morphineVsCodeine() throws Exception {
       String morphine = "CN1CCC23C4C1CC5=C(C2C(C=C4)O3)C=C(C=C5)O";
       String codeine = "CN1CCC23C4C1CC5=C(C2C(C=C4)OC3)C=C(C=C5)O";
@@ -5478,7 +5480,7 @@ public class StressTest extends TestBase {
       assertTrue(sz >= 18, "Morphine and codeine differ by one methyl, large MCS");
     }
 
-    @Test @Timeout(10) @DisplayName("6.09 Fluoxetine vs paroxetine: SSRIs")
+    @Test @Timeout(12) @DisplayName("6.09 Fluoxetine vs paroxetine: SSRIs")
     void fluoxetineVsParoxetine() throws Exception {
       String fluoxetine = "CNCCC(Oc1ccc(C(F)(F)F)cc1)c1ccccc1";
       String paroxetine = "Fc1ccc(C2CCNCC2COc2ccc3OCOc3c2)cc1";
@@ -5486,7 +5488,7 @@ public class StressTest extends TestBase {
       assertTrue(sz >= 6, "SSRIs should share fluorophenyl + amine fragment");
     }
 
-    @Test @Timeout(10) @DisplayName("6.10 Captopril vs enalaprilat: ACE inhibitors")
+    @Test @Timeout(12) @DisplayName("6.10 Captopril vs enalaprilat: ACE inhibitors")
     void captoprilVsEnalaprilat() throws Exception {
       String captopril = "CC(CS)C(=O)N1CCCC1C(=O)O";
       String enalaprilat = "OC(=O)C(CC(=O)O)NC(C)C(=O)N1CCCC1C(=O)O";

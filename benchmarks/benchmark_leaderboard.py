@@ -59,8 +59,8 @@ PY_TIMEOUT_SEC = None
 
 
 def find_smsd_jar() -> Optional[Path]:
-    """Locate the latest SMSD jar in target/."""
-    for base in [PROJECT_DIR / "target", PROJECT_DIR / "src" / "scripts" / "repo"]:
+    """Locate the latest SMSD jar in java/target/."""
+    for base in [PROJECT_DIR / "java" / "target", PROJECT_DIR / "java" / "src" / "scripts" / "repo"]:
         if not base.exists():
             continue
         jars = list(base.glob("smsd-*-jar-with-dependencies.jar"))
@@ -283,7 +283,7 @@ def benchmark_smsd_java_mcs(jar: Path, smi1: str, smi2: str) -> Tuple[float, flo
 def run_mcs_benchmark(jar=None) -> List[MCSRow]:
     jar = jar if jar is not None else find_smsd_jar()
     if jar is None:
-        raise RuntimeError("SMSD jar not found in target/")
+        raise RuntimeError("SMSD jar not found in java/target/")
 
     rows: List[MCSRow] = []
     for smi1, smi2, pair, category in MCS_PAIRS:
@@ -692,7 +692,7 @@ def main() -> int:
     if args.mode == "integration":
         jar = args.jar if args.jar is not None else find_smsd_jar()
         if jar is None:
-            print("ERROR: SMSD jar not found in target/", file=sys.stderr)
+            print("ERROR: SMSD jar not found in java/target/", file=sys.stderr)
             return 1
 
         print(f"[1/3] Running MCS benchmark with {jar.name}...", file=sys.stderr)
@@ -723,7 +723,7 @@ def main() -> int:
         print("[2/2] Running Java cached substructure benchmark...", file=sys.stderr)
         jar = args.jar if args.jar is not None else find_smsd_jar()
         if jar is None:
-            print("ERROR: SMSD jar not found in target/", file=sys.stderr)
+            print("ERROR: SMSD jar not found in java/target/", file=sys.stderr)
             return 1
         java_rows = run_java_substructure_benchmark(jar)
         sub_rows = build_substructure_rows(java_rows)

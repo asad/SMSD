@@ -1,10 +1,28 @@
-# SMSD Pro 7.2.0 — Unreleased
+# SMSD Pro 7.2.1 — Unreleased
 
-This source targets 7.2.0. The reviewed baseline is the 7.1.2 source snapshot
-`6807f31`; an earlier 7.1.2 tag or artifact does not contain these changes.
-Java requires JDK 25 and uses CDK 2.13. C++ requires C++17.
+Version 7.2.1 separates Java, C++ and Python source modules and updates release
+packaging. Publication is pending. It carries forward the reviewed 7.2.0
+search fixes against the 7.1.2 source snapshot `6807f31`; an earlier 7.1.2 tag
+or artifact does not contain those changes. Java requires JDK 25 and uses
+CDK 2.13. The native core requires C++17.
 
-## Correctness and resource behavior
+## Repository layout
+
+- Java sources, resources and launchers move into `java/src/`; Maven uses
+  `java/pom.xml` and writes artifacts to `java/target/`. The root aggregator
+  supports `mvn verify`; direct module builds and publication use
+  `mvn -f java/pom.xml`.
+- C++ remains under `cpp/`, and Python sources/tests remain under `python/`.
+  Shared scripts, documentation and licenses stay at the root.
+- The root `pyproject.toml` remains the single Python manifest, building the
+  native extension from `cpp/` and packaging `python/smsd/`.
+
+Java test wall-clock guards allow 35 seconds for a 30-second drug pair search
+and 12 seconds for a 10-second pharmacophore search. Search budgets and result
+assertions are unchanged; fresh execution results belong to the release gates
+below.
+
+## Search fixes carried forward from 7.2.0
 
 - Tautomer matching preserves elements when atom-type matching is enabled.
   Tetrahedral matching uses normalized R/S configuration and mapped ligand
@@ -37,8 +55,10 @@ reproduction commands.
 
 ## Benchmark reporting
 
-The [current benchmark report](../benchmarks/RESULTS_7.2.0.md) records source
-versions, dependencies, policies, input hashes, validity, mapping quality and
+The [7.2.0 benchmark report](../benchmarks/RESULTS_7.2.0.md) retains its original
+source versions, measured numbers, fingerprints, input hashes and archive
+names. No new measurements are claimed for the 7.2.1 version, layout and
+packaging changes. That report records validity, mapping quality and
 cancellation observations. Controlled curated comparisons use 10-second
 budgets; full-corpus quality runs use common 1-second budgets. Conversion,
 startup, SMARTS compilation and tautomer feature measurements are
@@ -62,16 +82,16 @@ Linux arm64 use source builds. See [publishing commands](PUBLISHING.md)
 for PyPI, Maven Central and GitHub.
 The optional C++ RDKit adapter has a public header and exported CMake target;
 the current RDKit headers require C++20. The core remains C++17.
-All four Java JARs include SMSD's LICENSE and NOTICE: `META-INF/smsd` for
-library, CLI and source JARs, and `doc-files/smsd` for Javadoc.
-The platform checks pass all 12 native suites on macOS, emulated Linux and
-Windows Server 2022, with 691 installed-wheel Python tests passed and 8 skips
-on each. The Windows build uses MSVC 19.44 and CPython 3.14.7; its repaired
-wheel bundles the C++ and OpenMP runtime DLLs. These execution checks do not
-extend the macOS benchmark comparisons to other platforms.
-The first Windows repair selected an older C++ runtime from the runner's
-Java installation. Runtime selection is now explicit; the corrected wheel
-requires a validation rerun before publication.
+Java packages include SMSD's LICENSE and NOTICE: `META-INF/smsd` for library,
+CLI and source JARs, and `doc-files/smsd` for Javadoc.
+
+The release plan uses local macOS and Linux builds, a native GitHub Windows
+build, and verified collection of three wheels from the same source. Fresh
+Java, native and installed-wheel checks are pending in
+[7.2.1 validation](VALIDATION_7.2.1.md). The corrected 7.2.0 Windows runtime
+build passed, but remains [historical evidence](VALIDATION_7.2.0.md), not a
+7.2.1 result. Platform execution checks do not extend macOS benchmark timings
+to other operating systems.
 
 Earlier 7.1.2 test counts and primitive measurements are retained as a
 [historical validation record](VALIDATION_7.1.2.md), rather than current results.

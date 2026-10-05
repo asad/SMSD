@@ -44,8 +44,8 @@ Thumbs.db
 
 # Generated (rebuild anytime)
 api/
-src/scripts/lib/
-src/scripts/repo/
+java/src/scripts/lib/
+java/src/scripts/repo/
 benchmarks/runs/
 
 # Not for public repo

@@ -6,6 +6,16 @@ corpus, search budget and mapping validity. The maintained comparison records
 latency, returned atoms, RDKit cancellation and independent mapping checks
 separately. Atom counts alone do not establish equivalent results or optimality.
 
+## 7.2.1 release scope
+
+Version 7.2.1 reorganizes the repository into `java/`, `cpp/` and `python/`
+modules and updates release packaging. No new measurements are attributed to
+those changes. `RESULTS_7.2.0.md`, its measured numbers, source fingerprints,
+input hashes and the `smsd-7.2.0-benchmark-data.tar.gz` archive retain their
+original names and scope. Commands below use the current checkout layout;
+new 7.2.1 release checks are tracked in
+[validation](../docs/VALIDATION_7.2.1.md).
+
 ## Maintained measurements
 
 | Entry point | Scope |
@@ -109,16 +119,16 @@ standalone shell harness compiles the actual headers with optimization and
 neither configures GPU backends nor substitutes a different algorithm.
 
 ```bash
-mvn package -DskipTests
-SMSD_JAR=target/smsd-7.2.0-jar-with-dependencies.jar \
+mvn -f java/pom.xml package -DskipTests
+SMSD_JAR=java/target/smsd-7.2.1-jar-with-dependencies.jar \
   NUM_RUNS=3 TIMEOUT_MS=10000 bash benchmarks/benchmark_java.sh
 bash benchmarks/benchmark_cpp.sh
 SMSD_BENCHMARK=1 SMSD_BENCHMARK_TIMEOUT_MS=1000 \
   python -m pytest --import-mode=importlib python/tests/test_external_benchmarks.py -v -s
-mvn test -Dslow.tests.exclude=nothing -Dbenchmark=true -Dsmsd.benchmark=true \
+mvn -f java/pom.xml test -Dslow.tests.exclude=nothing -Dbenchmark=true -Dsmsd.benchmark=true \
   '-Dtest=BenchmarkSuiteTest*,ExternalBenchmarkTest*,JavaCdkVsSmsdBenchmarkTest' \
   -Dsmsd.benchmark.timeoutMs=1000 -Dsmsd.benchmark.rounds=1 \
-  -Dsmsd.benchmark.warmup=0 -Dsmsd.benchmark.outputDir=build/local-benchmarks/java
+  -Dsmsd.benchmark.warmup=0 -Dsmsd.benchmark.outputDir="$PWD/build/local-benchmarks/java"
 ```
 
 No hosted runner is required for these commands.

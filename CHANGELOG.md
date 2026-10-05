@@ -2,7 +2,32 @@
 
 All notable changes to SMSD Pro are documented in this file.
 
-## [7.2.0] - Unreleased
+## [7.2.1] - Unreleased
+
+### Repository and release packaging
+- Moved Java sources, resources and launchers into `java/src/`, with its Maven
+  module at `java/pom.xml` and build artifacts under `java/target/`. The root
+  Maven aggregator supports `mvn verify`; publishing uses the Java module.
+- Kept C++ under `cpp/` and Python under `python/`, with shared release scripts,
+  documentation and licenses at the root. The root `pyproject.toml` remains
+  the single manifest for the Python package and C++ extension.
+- Updated current version examples and release artifacts to 7.2.1. The compact
+  release targets portable Java 25 packages and CPython 3.14 CPU/OpenMP wheels
+  for Linux x86_64, macOS arm64 and Windows x86_64, plus a source distribution.
+- Fresh local macOS/Linux builds, a native GitHub Windows check, same-source
+  three-wheel collection and publication are pending. Track their results in
+  `docs/VALIDATION_7.2.1.md`.
+- Adjusted Java test wall-clock guards to 35 seconds around a 30-second drug
+  pair search and 12 seconds around a 10-second pharmacophore search. Search
+  budgets and result assertions are unchanged.
+- Carried forward the reviewed 7.2.0 search and chemistry fixes. The benchmark
+  report, fingerprints, archive names and measured numbers remain 7.2.0
+  evidence; no new performance measurements are claimed for this layout change.
+
+## [7.2.0] - Source candidate
+
+This candidate was validated during release preparation. Publication will use
+7.2.1; the historical validation and benchmark report retain their 7.2.0 scope.
 
 ### Fixed
 - Tautomer matching preserves element identity and other requested chemistry

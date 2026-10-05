@@ -1,5 +1,11 @@
 # SMSD 7.2.0 validation
 
+This page records the 7.2.0 source candidate. Its test counts, hashes and
+platform checks do not certify the new 7.2.1 artifacts. See
+[7.2.1 validation](VALIDATION_7.2.1.md) for fresh release gates. Reproduction
+commands below retain the 7.2.0 checkout layout; current module paths are
+explained in [the installation guide](HOWTO-INSTALL.md).
+
 This is an unreleased-source validation record, dated 2026-10-05. The baseline
 is the 7.1.2 source snapshot `6807f31`. Earlier release artifacts are distinct
 from the candidate tested here.
@@ -128,7 +134,7 @@ OS installer. Native installers are outside the compact asset set.
 |---|---|
 | macOS 26+ arm64 | Installed wheel tested on macOS 27.0.1; counts above |
 | Linux x86_64, glibc 2.28+ | All 12 native Debug suites; 691 Python tests passed, 8 skips |
-| Windows x86_64 | First MSVC build passes all 12 native Debug suites and 691 Python tests, 8 skips; corrected runtime packaging awaits a rerun |
+| Windows x86_64 | Corrected runtime build passes all 12 native Debug suites and 691 Python tests, 8 skips |
 
 Following the portability edits, all 12 native CPU suites pass on macOS and
 the rebuilt CPython 3.14.8 wheel again passes 691 tests with 8 skips. Its SHA-256
@@ -182,9 +188,17 @@ Dependency inspection found that the first repair selected `msvcp140` 14.40
 from the runner's Java installation, below the MSVC 14.44 toolset's supported
 runtime baseline. Its `vcomp140` 14.51 came from ImageMagick. The repair helper
 now selects compatible Microsoft runtime files explicitly instead of relying
-on unrelated applications in `PATH`. The corrected Windows wheel must pass
-another native build and installed-wheel test run before publication. The
-original tested wheel above is retained as validation evidence only.
+on unrelated applications in `PATH`. The original tested wheel above is
+retained as validation evidence only.
+
+The [corrected Windows build](https://github.com/asad/SMSD/actions/runs/37293365203)
+passes all 12 native suites and 691 installed-wheel Python tests with 8 skips.
+Both selected Microsoft DLLs are release AMD64 files, version 14.44.35211.0,
+from the Visual Studio redistributable. They match the extension's 14.44
+linker family, and their selected hashes match the bundled wheel files.
+The corrected wheel SHA-256 is
+`f403dc4595d8e171cb76b7aaf8d7ca99e394d5650823c5f0d0ea847baa7e9e09`.
+This is a 7.2.0 runtime-packaging result before the 7.2.1 module relocation.
 
 All three release wheels must match the source distribution's Python wrappers,
 C++ headers and license copies. `scripts/collect-release-wheels.py` also checks

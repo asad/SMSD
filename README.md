@@ -22,10 +22,11 @@ SMSD Pro provides substructure search and maximum common substructure
 (header-only), and **Python**. Optional GPU paths are available for CUDA and
 Apple Metal builds.
 
-The proposed `7.2.0` update fixes element-preserving tautomer matching,
-stereochemical traversal handling, weighted/bond objectives and symmetry
-validation. Python wrappers preserve input indices and options; core batches
-reuse native graphs. Java uses **CDK 2.13**. The published release remains
+The proposed `7.2.1` release separates Java, C++ and Python source modules and
+prepares a compact release for Linux, macOS and Windows. It carries forward
+the reviewed element-preserving tautomer, stereo, objective and symmetry fixes
+from the 7.2.0 source candidate. Python wrappers preserve input indices and
+options; core batches reuse native graphs. Java uses **CDK 2.13**. The published release remains
 `7.1.2` on GitHub and `7.1.1` on Maven Central/PyPI until the new artifacts
 are released.
 
@@ -33,9 +34,11 @@ are released.
 
 Performance depends on the corpus, chemistry constraints, search budget and
 mapping validity. The current review compares source snapshot `6807f31`
-(versioned 7.1.2) with the proposed 7.2.0 changes and RDKit 2026.09.1.
+(versioned 7.1.2) with the 7.2.0 source candidate and RDKit 2026.09.1.
 That snapshot includes changes made after the original 7.1.2 release tag.
 See [measured results and reproduction commands](benchmarks/RESULTS_7.2.0.md).
+The 7.2.1 version, layout and packaging changes have no new benchmark
+measurements; the report retains its original versions, hashes and scope.
 
 The checked-in random and nearest-neighbor pairs are **Dalke-style datasets
 derived from MoleculeNet**. They are not the original Dalke benchmark; the
@@ -103,7 +106,7 @@ pip install smsd
 
 The source package declares CPython `3.9` or later. Existing PyPI releases
 provide several platform wheels; availability varies by release and interpreter.
-The proposed 7.2.0 release uses Python 3.14 wheels for Linux x86_64, macOS arm64
+The proposed 7.2.1 release uses Python 3.14 wheels for Linux x86_64, macOS arm64
 and Windows x86_64, plus a source distribution. Each platform must pass its
 installed-wheel checks before publication. The search comparison uses Python
 3.13.14 and RDKit 2026.09.1 on macOS arm64.
@@ -317,22 +320,35 @@ auto mcs   = smsd::findMCS(mol1, mol2, smsd::ChemOptions{}, smsd::MCSOptions{});
 auto mappings = smsd::batchMCSConstrained(queries, targets, smsd::ChemOptions{});
 ```
 
+### Repository layout
+
+| Path | Contents |
+|---|---|
+| `java/` | Maven module, `src/` sources and launchers, and generated `target/` artifacts |
+| `cpp/` | C++ headers, CMake configuration, native tests and Python bindings |
+| `python/` | Python package, tests and language-specific README |
+| `scripts/`, `docs/`, `licenses/`, `benchmarks/` | Shared release tooling, documentation, licenses and evaluation inputs |
+
+The root `pom.xml` aggregates the Java module, so `mvn verify` works from the
+repository root. The root `pyproject.toml` is the single Python package
+manifest: it builds the extension from `cpp/` and packages `python/smsd/`.
+Run Python build commands from the root; there is no second Python manifest.
+
 ### Build from Source
 
 ```bash
 git clone https://github.com/asad/SMSD.git
 cd SMSD
 
-# Java
-mvn -U clean package
+# Java module (the root aggregator also supports mvn verify)
+mvn -f java/pom.xml -U clean package
 
-# C++
-mkdir cpp/build && cd cpp/build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-make -j$(nproc)
+# C++ CPU build
+cmake -S cpp -B build/cpp -DCMAKE_BUILD_TYPE=Release -DSMSD_BUILD_METAL=OFF -DSMSD_BUILD_CUDA=OFF
+cmake --build build/cpp --config Release --parallel 4
 
-# Python
-pip install -e .  # from the repository root
+# Python, from the repository root
+python -m pip install -e .
 ```
 
 ### Docker
@@ -346,9 +362,11 @@ docker run --rm smsd --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 
 ## Benchmarks
 
-The [7.2.0 benchmark report](benchmarks/RESULTS_7.2.0.md) records the current
-local runs, versions, budgets and mapping checks. Historical result files are
-retained for reference; they are not evidence for current performance claims.
+The [7.2.0 benchmark report](benchmarks/RESULTS_7.2.0.md) records that source
+candidate's local runs, versions, budgets and mapping checks. No new timing
+or quality measurements are claimed for the 7.2.1 layout and packaging update.
+Historical result files are retained for reference; they are not evidence for
+new performance claims.
 
 The [benchmark guide](benchmarks/README.md) provides commands for the Python,
 Java and native C++ programs. CPU timing comparisons exclude incompatible or
@@ -372,11 +390,11 @@ Checked-in datasets used by the local evaluation, stored in [`benchmarks/data/`]
 
 ```bash
 # Run bounded external diagnostics (Java)
-mvn -B -Dslow.tests.exclude=nothing \
+mvn -f java/pom.xml -B -Dslow.tests.exclude=nothing \
   '-Dtest=BenchmarkSuiteTest*,ExternalBenchmarkTest*,JavaCdkVsSmsdBenchmarkTest' \
   -Dbenchmark=true -Dsmsd.benchmark.timeoutMs=1000 \
   -Dsmsd.benchmark.rounds=1 -Dsmsd.benchmark.warmup=0 \
-  -Dsmsd.benchmark.outputDir=build/local-benchmarks/java test
+  -Dsmsd.benchmark.outputDir="$PWD/build/local-benchmarks/java" test
 
 # Run external benchmarks (Python)
 SMSD_BENCHMARK=1 python -m pytest python/tests/test_external_benchmarks.py \
@@ -539,47 +557,52 @@ Call `SearchEngine.clearMolGraphCache()` (Java) or reuse `MolGraph` instances (C
 
 ## Release Downloads
 
-The proposed 7.2.0 asset set contains portable Java 25 library/CLI packages,
+The proposed 7.2.1 asset set contains portable Java 25 library/CLI packages,
 C++17 headers, CPython 3.14 wheels for three operating systems and a source
-distribution. The Java packages run on Linux, macOS and Windows with JDK 25
-installed. Hosted release workflows remain manual. See
+distribution. The portable Java packages require Java 25 on each operating
+system; they do not bundle a Java runtime. The release plan uses local macOS
+and Linux builds, a manually dispatched GitHub Windows build, and collection
+of three verified wheels from the same source. Publication is pending. See
 [publishing steps](docs/PUBLISHING.md); existing GitHub downloads remain at
 7.1.2 until the new release is published.
 
 | Download | Description |
 |----------|-------------|
-| `smsd-7.2.0.jar` | Java library JAR |
-| `smsd-7.2.0-jar-with-dependencies.jar` | Standalone CLI (Java 25+) |
-| `smsd-7.2.0-sources.jar`, `smsd-7.2.0-javadoc.jar` | Java sources and API documentation |
-| `smsd-7.2.0-cli.tar.gz` | Java launcher distribution for Linux, macOS and Windows (bin/ and repo/) |
-| `smsd-cpp-7.2.0-headers.tar.gz` | C++17 headers with LICENSE and NOTICE |
-| `smsd-7.2.0.tar.gz` | Python source distribution |
-| `smsd-7.2.0-cp314-cp314-manylinux*.whl` | Python 3.14, Linux x86_64 with glibc 2.28+ |
-| `smsd-7.2.0-cp314-cp314-macosx_26_0_arm64.whl` | Python 3.14, Apple Silicon, macOS 26+ |
-| `smsd-7.2.0-cp314-cp314-win_amd64.whl` | Python 3.14, Windows x86_64 |
+| `smsd-7.2.1.jar` | Java library JAR |
+| `smsd-7.2.1-jar-with-dependencies.jar` | Standalone CLI (Java 25+) |
+| `smsd-7.2.1-sources.jar`, `smsd-7.2.1-javadoc.jar` | Java sources and API documentation |
+| `smsd-7.2.1-cli.tar.gz` | Java launcher distribution for Linux, macOS and Windows (bin/ and repo/) |
+| `smsd-cpp-7.2.1-headers.tar.gz` | C++17 headers with LICENSE and NOTICE |
+| `smsd-7.2.1.tar.gz` | Python source distribution |
+| `smsd-7.2.1-cp314-cp314-manylinux*.whl` | Python 3.14, Linux x86_64 with glibc 2.28+ |
+| `smsd-7.2.1-cp314-cp314-macosx_26_0_arm64.whl` | Python 3.14, Apple Silicon, macOS 26+ |
+| `smsd-7.2.1-cp314-cp314-win_amd64.whl` | Python 3.14, Windows x86_64 |
 | `SHA256SUMS` | Checksums for the release assets |
 
-These are release targets; current execution evidence is recorded in
-[validation](docs/VALIDATION_7.2.0.md). Other architectures, including Intel
+These are release targets; new 7.2.1 checks are tracked in
+[validation](docs/VALIDATION_7.2.1.md). The earlier platform results belong to
+the [7.2.0 source candidate](docs/VALIDATION_7.2.0.md). Other architectures, including Intel
 macOS and Linux arm64, can build from source and are outside this wheel set.
 
 ```bash
 # CLI
-java -jar smsd-7.2.0-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
+java -jar smsd-7.2.1-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 
 # Docker CLI
 docker build -t smsd .
 docker run --rm smsd --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 
 # Python — build from the downloaded source distribution
-pip install ./smsd-7.2.0.tar.gz
+pip install ./smsd-7.2.1.tar.gz
 ```
 
 ---
 
 ## Tests
 
-Current 7.2.0 local validation on macOS arm64:
+New 7.2.1 Java, native and installed-wheel checks are pending; see
+[current validation](docs/VALIDATION_7.2.1.md). The following results are the
+historical 7.2.0 local validation on macOS arm64:
 
 | Suite | Result | Scope |
 |---|---|---|
@@ -595,13 +618,12 @@ The Python guide's executable snippets also passed. Full corpus and optional
 benchmark executions are reported separately in the
 [benchmark report](benchmarks/RESULTS_7.2.0.md). These checks establish the
 reported test coverage, rather than a guarantee for every molecule, objective
-or platform. The Linux x86_64 release checks pass all 12 native suites and
-691 Python tests with 8 skips under local emulation. The Windows x86_64 build
-passes the same suites and Python test counts on Windows Server 2022 with
-MSVC and CPython 3.14.7. CUDA remains untested.
-Corrected Windows runtime packaging still requires a validation rerun before release.
-See [current validation](docs/VALIDATION_7.2.0.md); the
-[7.1.2 record](docs/VALIDATION_7.1.2.md) is historical.
+or platform. The historical Linux x86_64 and first Windows x86_64 checks
+also passed all 12 native suites and 691 Python tests with 8 skips. The
+corrected 7.2.0 Windows runtime rerun passed and remains separate from the
+new 7.2.1 release gates. CUDA remains untested. See [7.2.0 validation](docs/VALIDATION_7.2.0.md)
+for those results and the [7.1.2 record](docs/VALIDATION_7.1.2.md) for earlier
+history.
 
 ---
 

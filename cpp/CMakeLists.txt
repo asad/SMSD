@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.18)
-project(smsd VERSION 7.2.0 LANGUAGES CXX)
+project(smsd VERSION 7.2.1 LANGUAGES CXX)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)

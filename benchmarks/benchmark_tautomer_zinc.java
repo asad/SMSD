@@ -20,9 +20,9 @@
  * Compile and run:
  *   cd <project-root>
  *   mvn package -DskipTests
- *   javac -cp target/smsd-7.2.0-jar-with-dependencies.jar \
+ *   javac -cp java/target/smsd-7.2.1-jar-with-dependencies.jar \
  *         benchmarks/benchmark_tautomer_zinc.java -d build/local-benchmarks/java
- *   java  -cp target/smsd-7.2.0-jar-with-dependencies.jar:build/local-benchmarks/java \
+ *   java  -cp java/target/smsd-7.2.1-jar-with-dependencies.jar:build/local-benchmarks/java \
  *         benchmark_tautomer_zinc benchmarks/diverse_molecules.txt
  */
 

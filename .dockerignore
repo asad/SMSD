@@ -2,6 +2,10 @@
 !pom.xml
 !LICENSE
 !NOTICE
-!src/
-!src/**
+!java/
+!java/pom.xml
+!java/src/
+!java/src/**
+java/src/scripts/lib/
+java/src/scripts/repo/
 **/*.class

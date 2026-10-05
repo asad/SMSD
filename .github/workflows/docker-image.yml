@@ -9,7 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.3.1
+      - uses: actions/checkout@v7.0.1
       - name: Build Docker image
         run: docker build . --file Dockerfile --tag smsd:ci-${{ github.sha }}
       - name: Smoke test

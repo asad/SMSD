@@ -20,7 +20,7 @@ from smsd import (
 
 CORPUS_PATH = (
     Path(__file__).resolve().parents[2]
-    / "src/test/resources/com/bioinception/smsd/aromaticity_parity.json"
+    / "java/src/test/resources/com/bioinception/smsd/aromaticity_parity.json"
 )
 with CORPUS_PATH.open(encoding="utf-8") as handle:
     AROMATICITY_CASES = json.load(handle)

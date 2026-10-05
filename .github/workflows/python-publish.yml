@@ -24,9 +24,6 @@ on:
 permissions:
   contents: read
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   source:
     name: Prepare one source distribution
@@ -35,11 +32,11 @@ jobs:
     outputs:
       matrix: ${{ steps.matrix.outputs.value }}
     steps:
-      - uses: actions/checkout@v4.3.1
+      - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ inputs.release_tag }}
           fetch-depth: 0
-      - uses: actions/setup-python@v6.1.0
+      - uses: actions/setup-python@v7.0.0
         with:
           python-version: '3.14'
       - name: Validate source ref and select explicit platforms
@@ -78,7 +75,7 @@ jobs:
           python -m pip install build twine
           python scripts/build_python_wheels.py prepare --output-dir dist --release-ref "$RELEASE_REF"
           python -m twine check --strict dist/*.tar.gz
-      - uses: actions/upload-artifact@v4.6.2
+      - uses: actions/upload-artifact@v7.0.1
         with:
           name: python-release-source
           path: dist/*
@@ -93,13 +90,13 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.source.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v4.3.1
+      - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ inputs.release_tag }}
-      - uses: actions/setup-python@v6.1.0
+      - uses: actions/setup-python@v7.0.0
         with:
           python-version: '3.14'
-      - uses: actions/download-artifact@v4.3.0
+      - uses: actions/download-artifact@v8.0.1
         with:
           name: python-release-source
           path: release-source
@@ -113,7 +110,7 @@ jobs:
           python scripts/build_python_wheels.py build \
             --sdist release-source/smsd-*.tar.gz --source-manifest release-source/source-manifest.json \
             --platform "$WHEEL_PLATFORM" --arch "$WHEEL_ARCH" --output-dir wheelhouse
-      - uses: actions/upload-artifact@v4.6.2
+      - uses: actions/upload-artifact@v7.0.1
         with:
           name: python-wheel-${{ matrix.platform }}-${{ matrix.arch }}
           path: wheelhouse/*
@@ -130,7 +127,7 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/download-artifact@v4.3.0
+      - uses: actions/download-artifact@v8.0.1
         with:
           pattern: python-*
           path: artifacts
