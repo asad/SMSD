@@ -1,0 +1,24 @@
+SMSD Integration Leaderboard Benchmark
+Date: 2026-04-02 07:07:41
+Platform: darwin
+
+MCS
+  Pairs: 20
+  Speed wins: SMSD=4 RDKit=16 tie=0
+  Hotspots:
+    methane-ethane: SMSD 684 ms vs RDKit 0.013 ms
+    benzene-toluene: SMSD 711 ms vs RDKit 0.092 ms
+    benzene-phenol: SMSD 622 ms vs RDKit 0.093 ms
+    cubane-self: SMSD 663 ms vs RDKit 0.142 ms
+    aspirin-acetaminophen: SMSD 628 ms vs RDKit 0.159 ms
+
+Substructure
+  Pairs: 28
+  Speed wins vs CDK: SMSD=28 CDK=0 tie=0
+  Hit agreement across SMSD/RDKit/CDK: 27/28
+  Hotspots:
+    Cyclohexane in Decalin: uncached 35.5 us -> cached 20.5 us (15.0 us saved)
+    Propane in Pentane: uncached 23.7 us -> cached 15.8 us (7.9 us saved)
+    Piperidine in Fentanyl: uncached 16.7 us -> cached 9.9 us (6.8 us saved)
+    Methane in Ethane: uncached 11.8 us -> cached 6.4 us (5.4 us saved)
+    Ammonium in NH4Cl: uncached 3.2 us -> cached 1.7 us (1.5 us saved)

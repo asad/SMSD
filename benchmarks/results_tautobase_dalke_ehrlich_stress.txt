@@ -1,0 +1,56 @@
+SMSD External Benchmark Suite
+SMSD version: 6.8.1
+Date: 2026-03-31 23:02
+Timeout: 10000ms per pair
+
+================================================================================
+BENCHMARK 1: Stress Pairs (12 adversarial hard cases)
+================================================================================
+  cubane-cuneane                      MCS=  8         0.8ms    Symmetric cages, heavy orbit pruning
+  anthracene-phenanthrene             MCS= 14         0.4ms    Fused aromatic isomers, cyclic degeneracy
+  crown-ether-15c5-18c6               MCS= 15         0.8ms    Macrocyclic symmetry, featureless chains
+  cyclohexadecane-cyclooctadecane     MCS= 16         2.8ms    Large mono-elemental rings
+  naphthalene-anthracene              MCS= 10         0.5ms    Fused PAH size mismatch
+  cubane-self                         MCS=  8         0.3ms    Perfect symmetric self-match
+  coronene-self                       MCS= 24         1.7ms    Large PAH self-match (24 atoms)
+  neopentane-self                     MCS=  5         0.3ms    Highly branched symmetric
+  adamantane-self                     MCS= 11         0.2ms    Cage self-match (10 heavy atoms)
+  icosane-hexadecane                  MCS= 16         0.3ms    Long chain polymer-like
+  kekulene-self                       MCS= 48         0.5ms    Massive symmetric PAH
+  cyclopeptide-mutant                 MCS= 50     2,147.2ms    Dense cyclic peptide, >50 atoms
+
+  Result: 12 pairs, 0 timeouts
+
+================================================================================
+BENCHMARK 2: Tautobase Tautomer Pairs (468 Chodera subset)
+================================================================================
+  Pairs tested:       468
+  Full match:         437 (93.4%)
+  Partial gain:       0
+  No gain:            31
+  Total atoms gained: +2
+  Median time:        310 us
+
+================================================================================
+BENCHMARK: Dalke Random Pairs (low similarity) (first 200 of 1000)
+================================================================================
+  Pairs tested:  200
+  Timeouts:      0
+  Median time:   779447 us
+  Mean MCS size: 14.4 atoms
+
+================================================================================
+BENCHMARK: Dalke Nearest-Neighbor Pairs (high similarity) (first 200 of 1000)
+================================================================================
+  Pairs tested:  200
+  Timeouts:      0
+  Median time:   739 us
+  Mean MCS size: 25.7 atoms
+
+================================================================================
+BENCHMARK 5: Ehrlich-Rarey SMARTS Substructure (first 500 of 1400)
+================================================================================
+  Patterns tested: 375
+  Matched:         39
+  Errors:          125
+  Median time:     7 us

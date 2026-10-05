@@ -1,0 +1,13 @@
+.git
+.github
+.claude
+.idea
+*.iml
+target
+cpp/build*
+python/__pycache__
+python/*.egg-info
+benchmarks/results_*
+**/*.pyc
+**/*.so
+**/*.dylib

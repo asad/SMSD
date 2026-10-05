@@ -1,0 +1,20 @@
+================================================================================
+BENCHMARK 1: Stress Pairs — 12 Adversarial Hard Cases
+Source: stress_pairs.tsv (BioInception curated)
+Cases: cubane/cuneane, coronene, vancomycin, macrocycles, cyclopeptides
+================================================================================
+  cubane-cuneane                      MCS=  8         0.7ms    Symmetric cages, heavy orbit pruning
+  anthracene-phenanthrene             MCS= 14         0.3ms    Fused aromatic isomers, cyclic degeneracy
+  crown-ether-15c5-18c6               MCS= 15         0.7ms    Macrocyclic symmetry, featureless chains
+  cyclohexadecane-cyclooctadecane     MCS= 16         3.4ms    Large mono-elemental rings
+  naphthalene-anthracene              MCS= 10         0.3ms    Fused PAH size mismatch
+  cubane-self                         MCS=  8         0.4ms    Perfect symmetric self-match
+  coronene-self                       MCS= 24         1.6ms    Large PAH self-match (24 atoms)
+  neopentane-self                     MCS=  5         0.2ms    Highly branched symmetric
+  adamantane-self                     MCS= 11         0.1ms    Cage self-match (10 heavy atoms)
+  icosane-hexadecane                  MCS= 16         0.2ms    Long chain polymer-like
+  kekulene-self                       MCS= 48         0.4ms    Massive symmetric PAH
+  cyclopeptide-mutant                 MCS= 50       592.1ms    Dense cyclic peptide, >50 atoms
+
+  Result: 12 pairs, 0 timeouts
+

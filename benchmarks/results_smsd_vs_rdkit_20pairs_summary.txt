@@ -1,0 +1,43 @@
+
+============================================================================================================================================
+SMSD vs RDKit FindMCS -- Benchmark Results
+Date: 2026-04-02 07:08:44
+Platform: Darwin x86_64
+Python: 3.11.6
+RDKit: 2025.09.3
+Runs per pair: 5  (best time reported)
+Timeout: 10s (RDKit), 10000ms (SMSD)
+============================================================================================================================================
+
+ #  Pair                          Category              RDKit ms  R.MCS     SMSD ms  S.MCS     Py ms  P.MCS  Winner    Speed  Quality       
+--------------------------------------------------------------------------------------------------------------------------------------------
+ 1  methane-ethane                Trivial                  0.013      1         645      1     0.002      1  RDKit   47794.3x  equal         
+ 2  benzene-toluene               Small aromatic           0.098      6         650      6     0.006      6  RDKit   6601.9x  equal         
+ 3  benzene-phenol                Heteroatom               0.088      6         650      6     0.006      6  RDKit   7409.6x  equal         
+ 4  aspirin-acetaminophen         Drug pair                0.141      7         665     10     0.305     10  RDKit   4714.5x  SMSD +3       
+ 5  caffeine-theophylline         N-methyl diff            0.201     13         658     13     0.012     13  RDKit   3267.1x  equal         
+ 6  morphine-codeine              Alkaloid                   336     20         656     20     0.047     20  RDKit      2.0x  equal         
+ 7  ibuprofen-naproxen            NSAID                      2.3     15         661     15     0.052     15  RDKit    286.8x  equal         
+ 8  ATP-ADP                       Nucleotide               0.570     27         673     27     0.095     27  RDKit   1180.8x  equal         
+ 9  NAD-NADH                      Cofactor                10264*     33        1512     23     0.013     44  SMSD       6.8x  RDKit +10     
+10  atorvastatin-rosuvastatin     Statin                     7.8     15        1370     23       365     26  RDKit    175.2x  SMSD +8       
+11  paclitaxel-docetaxel          Taxane                  10018*     53        1610     48       729     53  SMSD       6.2x  RDKit +5      
+12  erythromycin-azithromycin     Macrolide                 4356     50        1242     50       818     50  SMSD       3.5x  equal         
+13  strychnine-quinine            Alkaloid scaffold          315     21        1157     19      60.3     24  RDKit      3.7x  RDKit +2      
+14  vancomycin-self               Self-match large           5.0    101         646    101     0.023    101  RDKit    130.0x  equal         
+15  adamantane-self               Symmetric                0.151     10         627     10     0.003     10  RDKit   4149.6x  equal         
+16  cubane-self                   Cage                     0.143      8         633      8     0.003      8  RDKit   4415.0x  equal         
+17  PEG12-PEG16                   Polymer                    1.4     40         643     40     0.031     40  RDKit    475.9x  equal         
+18  coronene-self                 PAH                      0.458     24         646     24     0.006     24  RDKit   1411.2x  equal         
+19  guanine-keto-enol             Tautomer                 0.158     10         636     11     0.005     11  RDKit   4020.6x  SMSD +1       
+20  rdkit-1585-pair               Known failure             9560     24        1126     29      11.0     29  SMSD       8.5x  SMSD +5       
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+SUMMARY
+  Total RDKit time:     34867.0 ms
+  Total SMSD  time:     17105.8 ms
+  Overall speedup:   2.04x (SMSD vs RDKit)
+
+  Speed wins:   SMSD=4  RDKit=16  tie=0
+  MCS quality:  equal=13  SMSD better=4  RDKit better=3
+

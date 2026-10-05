@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# SMSD standalone CLI launcher. JAVA_OPTS is split on whitespace.
+set -eo pipefail
+SMSD_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SMSD_JAR_PATH="${SMSD_JAR:-}"
+if [[ -z "$SMSD_JAR_PATH" ]]; then
+  for SMSD_CANDIDATE in "$SMSD_SCRIPT_DIR/../../target/"smsd-*-jar-with-dependencies.jar "$SMSD_SCRIPT_DIR/"smsd-*-jar-with-dependencies.jar; do
+    if [[ -f "$SMSD_CANDIDATE" ]] && { [[ -z "$SMSD_JAR_PATH" ]] || [[ "$SMSD_CANDIDATE" -nt "$SMSD_JAR_PATH" ]]; }; then
+      SMSD_JAR_PATH="$SMSD_CANDIDATE"
+    fi
+  done
+fi
+if [[ ! -f "$SMSD_JAR_PATH" ]]; then
+  echo "SMSD JAR not found. Run 'mvn package' first or set SMSD_JAR." >&2
+  exit 1
+fi
+SMSD_JAVA=java
+if [[ -n "${JAVA_HOME:-}" ]]; then SMSD_JAVA="$JAVA_HOME/bin/java"; fi
+read -r -a SMSD_JAVA_OPTIONS <<< "${JAVA_OPTS:-}"
+exec "$SMSD_JAVA" "${SMSD_JAVA_OPTIONS[@]}" -jar "$SMSD_JAR_PATH" "$@"

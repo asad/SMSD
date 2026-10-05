@@ -1,0 +1,278 @@
+cmake_minimum_required(VERSION 3.18)
+project(smsd VERSION 7.1.2 LANGUAGES CXX)
+
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# ---- Options ----
+option(SMSD_BUILD_TESTS   "Build unit tests" ON)
+option(SMSD_BUILD_PYTHON  "Build Python bindings via pybind11" OFF)
+option(SMSD_BUILD_OPENMP  "Enable OpenMP for batch processing" ON)
+option(SMSD_WITH_RDKIT    "Build RDKit adapter for SMILES/MOL parsing" OFF)
+# SMSD_BUILD_CUDA:  ON=always build, OFF=never build, AUTO=build if nvcc found (default)
+set(SMSD_BUILD_CUDA  "AUTO" CACHE STRING "CUDA batch screening: ON / OFF / AUTO (default)")
+# SMSD_BUILD_METAL: ON=always build, OFF=never build, AUTO=build on macOS if Metal found (default)
+set(SMSD_BUILD_METAL "AUTO" CACHE STRING "Metal/MPS batch screening (macOS): ON / OFF / AUTO (default)")
+
+# ---- Header-only library (no RDKit dependency) ----
+add_library(smsd INTERFACE)
+target_compile_features(smsd INTERFACE cxx_std_17)
+target_include_directories(smsd INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+
+# ---- Optional: OpenMP for batch processing ----
+set(SMSD_PACKAGE_REQUIRES_OPENMP FALSE)
+if(SMSD_BUILD_OPENMP)
+    find_package(OpenMP)
+    if(OpenMP_CXX_FOUND)
+        message(STATUS "SMSD: OpenMP found (version ${OpenMP_CXX_VERSION})")
+        # Propagate OpenMP flags via the INTERFACE library so that any target
+        # linking smsd automatically picks up OpenMP support for batch.hpp.
+        target_link_libraries(smsd INTERFACE OpenMP::OpenMP_CXX)
+        set(SMSD_PACKAGE_REQUIRES_OPENMP TRUE)
+    else()
+        message(STATUS "SMSD: OpenMP not found -- batch.hpp will use sequential fallback")
+    endif()
+endif()
+
+# ---- Optional: RDKit adapter ----
+if(SMSD_WITH_RDKIT)
+    find_package(RDKit REQUIRED)
+    add_library(smsd_rdkit STATIC src/rdkit_adapter.cpp)
+    target_link_libraries(smsd_rdkit PUBLIC smsd RDKit::SmilesParse RDKit::GraphMol
+        RDKit::RingDecomposerLib RDKit::Depictor)
+    target_include_directories(smsd_rdkit PUBLIC ${RDKit_INCLUDE_DIRS})
+endif()
+
+# ---- Optional: CUDA batch screening ----
+# AUTO: probe for nvcc / CUDAToolkit and enable if found
+# ON:   require CUDA (fails configuration if not found)
+# OFF:  skip entirely
+if(SMSD_BUILD_CUDA STREQUAL "AUTO")
+    find_package(CUDAToolkit QUIET)
+    if(CUDAToolkit_FOUND)
+        set(_SMSD_CUDA_ENABLED TRUE)
+        message(STATUS "SMSD: CUDA ${CUDAToolkit_VERSION} found — GPU batch screening enabled (auto)")
+    else()
+        set(_SMSD_CUDA_ENABLED FALSE)
+        message(STATUS "SMSD: CUDA not found — GPU batch screening disabled (CPU/OpenMP only)")
+    endif()
+elseif(SMSD_BUILD_CUDA)
+    find_package(CUDAToolkit REQUIRED)
+    set(_SMSD_CUDA_ENABLED TRUE)
+    message(STATUS "SMSD: CUDA ${CUDAToolkit_VERSION} found — GPU batch screening enabled (forced)")
+else()
+    set(_SMSD_CUDA_ENABLED FALSE)
+    message(STATUS "SMSD: CUDA disabled by SMSD_BUILD_CUDA=OFF")
+endif()
+
+if(_SMSD_CUDA_ENABLED)
+    enable_language(CUDA)
+    add_library(smsd_cuda STATIC cuda/batch_screen.cu cuda/graph_kernels.cu)
+    target_link_libraries(smsd_cuda PUBLIC smsd CUDA::cudart)
+    set_target_properties(smsd_cuda PROPERTIES
+        CUDA_ARCHITECTURES "75;80;86;89;90"   # Turing, Ampere, Ada, Hopper
+        CUDA_SEPARABLE_COMPILATION ON)
+    target_compile_features(smsd_cuda PUBLIC cxx_std_17)
+    # Expose SMSD_ENABLE_CUDA so gpu.hpp picks up the right branch
+    target_compile_definitions(smsd_cuda PUBLIC SMSD_ENABLE_CUDA)
+    target_include_directories(smsd_cuda PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+endif()
+
+# ---- Optional: Metal/MPS batch screening (macOS only) ----
+# AUTO: enable on macOS when Metal.framework is present (always true on macOS 10.13+)
+# ON:   require Metal — fails configuration on non-macOS
+# OFF:  skip entirely
+set(_SMSD_METAL_ENABLED FALSE)
+if(SMSD_BUILD_METAL STREQUAL "ON" AND NOT APPLE)
+    message(FATAL_ERROR "SMSD: SMSD_BUILD_METAL=ON but Metal is only available on macOS/Apple platforms.")
+endif()
+
+if(APPLE AND NOT (SMSD_BUILD_METAL STREQUAL "OFF"))
+    find_library(METAL_LIBRARY    Metal)
+    find_library(FOUNDATION_LIBRARY Foundation)
+    if(METAL_LIBRARY AND FOUNDATION_LIBRARY)
+        set(_SMSD_METAL_ENABLED TRUE)
+        message(STATUS "SMSD: Metal.framework found — GPU batch screening enabled on macOS")
+    else()
+        if(SMSD_BUILD_METAL STREQUAL "ON")
+            message(FATAL_ERROR "SMSD: SMSD_BUILD_METAL=ON but Metal.framework was not found.")
+        else()
+            message(STATUS "SMSD: Metal.framework not found — GPU batch screening disabled (CPU/OpenMP only)")
+        endif()
+    endif()
+elseif(NOT APPLE)
+    message(STATUS "SMSD: Metal not applicable (non-Apple platform)")
+else()
+    message(STATUS "SMSD: Metal disabled by SMSD_BUILD_METAL=OFF")
+endif()
+
+if(_SMSD_METAL_ENABLED)
+    # Objective-C++ requires the OBJCXX language to be enabled.
+    enable_language(OBJCXX)
+    add_library(smsd_metal STATIC metal/metal_batch.mm metal/metal_graph_kernels.mm)
+    # ARC (Automatic Reference Counting) for the Objective-C objects.
+    target_compile_options(smsd_metal PRIVATE -fobjc-arc)
+    target_link_libraries(smsd_metal PUBLIC smsd ${METAL_LIBRARY} ${FOUNDATION_LIBRARY})
+    # Expose SMSD_ENABLE_METAL so gpu.hpp picks up the Metal branch.
+    target_compile_definitions(smsd_metal PUBLIC SMSD_ENABLE_METAL)
+    target_include_directories(smsd_metal PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+    # Mark .mm as Objective-C++ (CMake may infer this from the extension,
+    # but being explicit avoids edge cases with older CMake versions).
+    set_source_files_properties(metal/metal_batch.mm PROPERTIES
+        LANGUAGE OBJCXX)
+endif()
+
+# ---- Optional: Python bindings ----
+if(SMSD_BUILD_PYTHON)
+    # Discover one interpreter and its extension-module headers together.
+    # Development.Module avoids requiring an embedding libpython on Unix.
+    set(PYBIND11_FINDPYTHON ON)
+    find_package(Python 3.9 REQUIRED COMPONENTS Interpreter Development.Module)
+    find_package(pybind11 CONFIG REQUIRED)
+    pybind11_add_module(_smsd bindings/pybind11/smsd_bindings.cpp)
+    target_link_libraries(_smsd PRIVATE smsd)
+    if(SMSD_WITH_RDKIT)
+        target_link_libraries(_smsd PRIVATE smsd_rdkit)
+    endif()
+    if(_SMSD_CUDA_ENABLED)
+        target_link_libraries(_smsd PRIVATE smsd_cuda)
+    endif()
+    if(_SMSD_METAL_ENABLED)
+        target_link_libraries(_smsd PRIVATE smsd_metal)
+    endif()
+    # Install the Python extension module (required by scikit-build-core)
+    install(TARGETS _smsd LIBRARY DESTINATION smsd RUNTIME DESTINATION smsd)
+endif()
+
+# ---- Tests ----
+if(SMSD_BUILD_TESTS)
+    enable_testing()
+
+    # Core test suite (substructure, MCS, ring perception, chemistry, v6.4.1 features)
+    add_executable(smsd_core_tests tests/test_core.cpp)
+    target_link_libraries(smsd_core_tests PRIVATE smsd)
+    if(SMSD_WITH_RDKIT)
+        target_link_libraries(smsd_core_tests PRIVATE smsd_rdkit)
+    endif()
+    if(_SMSD_CUDA_ENABLED)
+        target_link_libraries(smsd_core_tests PRIVATE smsd_cuda)
+    endif()
+    if(_SMSD_METAL_ENABLED)
+        target_link_libraries(smsd_core_tests PRIVATE smsd_metal)
+    endif()
+    add_test(NAME smsd_core_tests COMMAND smsd_core_tests)
+
+    # Parser test suite (SMARTS, hydrogen handling, comprehensive SMILES)
+    # The comprehensive SMILES tests (441) are compiled from test_smiles_comprehensive.cpp
+    # as a second translation unit, gated by SMSD_TEST_SMILES_COMPREHENSIVE.
+    add_executable(smsd_parser_tests
+        tests/test_parsers.cpp
+        tests/test_smiles_comprehensive.cpp)
+    target_compile_definitions(smsd_parser_tests PRIVATE
+        SMSD_TEST_SMILES_COMPREHENSIVE SMSD_PARSERS_SUITE)
+    target_link_libraries(smsd_parser_tests PRIVATE smsd)
+    add_test(NAME smsd_parser_tests COMMAND smsd_parser_tests)
+
+    # Batch & GPU test suite (OpenMP, fingerprint, CUDA/Metal)
+    add_executable(smsd_batch_gpu_tests tests/test_batch_gpu.cpp)
+    target_link_libraries(smsd_batch_gpu_tests PRIVATE smsd)
+    if(SMSD_WITH_RDKIT)
+        target_link_libraries(smsd_batch_gpu_tests PRIVATE smsd_rdkit)
+    endif()
+    if(_SMSD_CUDA_ENABLED)
+        target_link_libraries(smsd_batch_gpu_tests PRIVATE smsd_cuda)
+    endif()
+    if(_SMSD_METAL_ENABLED)
+        target_link_libraries(smsd_batch_gpu_tests PRIVATE smsd_metal)
+    endif()
+    add_test(NAME smsd_batch_gpu_tests COMMAND smsd_batch_gpu_tests)
+
+    # CIP stereo descriptor test suite
+    add_executable(smsd_cip_tests tests/test_cip.cpp)
+    target_link_libraries(smsd_cip_tests PRIVATE smsd)
+    add_test(NAME smsd_cip_tests COMMAND smsd_cip_tests)
+
+    # Layout test suite
+    add_executable(smsd_layout_tests tests/test_layout.cpp)
+    target_link_libraries(smsd_layout_tests PRIVATE smsd)
+    add_test(NAME smsd_layout_tests COMMAND smsd_layout_tests)
+
+    add_executable(smsd_general_matching_tests tests/test_general_matching.cpp)
+    target_link_libraries(smsd_general_matching_tests PRIVATE smsd)
+    add_test(NAME smsd_general_matching_tests COMMAND smsd_general_matching_tests)
+
+    add_executable(smsd_substructure_regression_tests tests/test_substructure_regression.cpp)
+    target_link_libraries(smsd_substructure_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_substructure_regression_tests COMMAND smsd_substructure_regression_tests)
+
+    add_executable(smsd_gpu_domain_regression_tests tests/test_gpu_domain_regression.cpp)
+    target_link_libraries(smsd_gpu_domain_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_gpu_domain_regression_tests COMMAND smsd_gpu_domain_regression_tests)
+
+    add_executable(smsd_clique_regression_tests tests/test_clique_regression.cpp)
+    target_link_libraries(smsd_clique_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_clique_regression_tests COMMAND smsd_clique_regression_tests)
+
+    add_executable(smsd_assignment_regression_tests tests/test_assignment_regression.cpp)
+    target_link_libraries(smsd_assignment_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_assignment_regression_tests COMMAND smsd_assignment_regression_tests)
+
+    add_executable(smsd_mcs_regression_tests tests/test_mcs_regression.cpp)
+    target_link_libraries(smsd_mcs_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_mcs_regression_tests COMMAND smsd_mcs_regression_tests)
+
+    if(_SMSD_METAL_ENABLED OR _SMSD_CUDA_ENABLED)
+        add_executable(smsd_native_gpu_domain_tests tests/test_gpu_domain_regression.cpp)
+        target_compile_definitions(smsd_native_gpu_domain_tests PRIVATE SMSD_TEST_NATIVE_GPU)
+        if(_SMSD_METAL_ENABLED)
+            target_link_libraries(smsd_native_gpu_domain_tests PRIVATE smsd_metal)
+        else()
+            target_link_libraries(smsd_native_gpu_domain_tests PRIVATE smsd_cuda)
+        endif()
+        add_test(NAME smsd_native_gpu_domain_tests COMMAND smsd_native_gpu_domain_tests)
+        set_tests_properties(smsd_native_gpu_domain_tests PROPERTIES SKIP_RETURN_CODE 77)
+        target_compile_options(smsd_native_gpu_domain_tests PRIVATE
+            $<$<CXX_COMPILER_ID:MSVC>:/UNDEBUG>
+            $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-UNDEBUG>)
+    endif()
+
+    # Assertions are part of the test harness, including in Release builds.
+    foreach(test_target IN ITEMS smsd_core_tests smsd_parser_tests
+            smsd_batch_gpu_tests smsd_cip_tests smsd_layout_tests smsd_general_matching_tests
+            smsd_substructure_regression_tests smsd_gpu_domain_regression_tests
+            smsd_clique_regression_tests smsd_assignment_regression_tests smsd_mcs_regression_tests)
+        target_compile_options(${test_target} PRIVATE
+            $<$<CXX_COMPILER_ID:MSVC>:/UNDEBUG>
+            $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-UNDEBUG>)
+    endforeach()
+endif()
+
+# ---- Install ----
+set(SMSD_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/smsd")
+configure_package_config_file(
+    cmake/smsdConfig.cmake.in
+    "${CMAKE_CURRENT_BINARY_DIR}/smsdConfig.cmake"
+    INSTALL_DESTINATION "${SMSD_INSTALL_CMAKEDIR}")
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/smsdConfigVersion.cmake"
+    VERSION "${PROJECT_VERSION}"
+    COMPATIBILITY SameMajorVersion
+    ARCH_INDEPENDENT)
+
+install(DIRECTORY include/smsd DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+install(TARGETS smsd EXPORT smsdTargets)
+install(EXPORT smsdTargets NAMESPACE smsd:: DESTINATION "${SMSD_INSTALL_CMAKEDIR}")
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/smsdConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/smsdConfigVersion.cmake"
+    DESTINATION "${SMSD_INSTALL_CMAKEDIR}")
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../NOTICE"
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/smsd")

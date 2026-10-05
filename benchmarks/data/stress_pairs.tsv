@@ -1,0 +1,15 @@
+# Hard-case stress pairs for MCS benchmarking
+# Sources: Duesbury et al. (2017), graph-theory adversarial cases
+# Format: SMILES1\tSMILES2\tName\tChallenge
+C12C3C4C1C5C3C4C25	C12C3C4C1C5C2C3C45	cubane-cuneane	Symmetric cages, heavy orbit pruning
+c1ccc2cc3ccccc3cc2c1	c1ccc2c(c1)ccc3ccccc23	anthracene-phenanthrene	Fused aromatic isomers, cyclic degeneracy
+C1COCCOCCOCCOCCO1	C1COCCOCCOCCOCCOCCO1	crown-ether-15c5-18c6	Macrocyclic symmetry, featureless chains
+C1CCCCCCCCCCCCCCC1	C1CCCCCCCCCCCCCCCCCC1	cyclohexadecane-cyclooctadecane	Large mono-elemental rings
+c1ccc2ccccc2c1	c1ccc2cc3ccccc3cc2c1	naphthalene-anthracene	Fused PAH size mismatch
+C12C3C4C1C5C3C4C25	C12C3C4C1C5C3C4C25	cubane-self	Perfect symmetric self-match
+c1cc2ccc3ccc4ccc5ccc6ccc1c7c2c3c4c5c67	c1cc2ccc3ccc4ccc5ccc6ccc1c7c2c3c4c5c67	coronene-self	Large PAH self-match (24 atoms)
+C(C)(C)(C)C	C(C)(C)(C)C	neopentane-self	Highly branched symmetric
+C1CC2CC3CC1CC(C2)C3	C1CC2CC3CC1CC(C2)C3	adamantane-self	Cage self-match (10 heavy atoms)
+CCCCCCCCCCCCCCCCCCCC	CCCCCCCCCCCCCCCC	icosane-hexadecane	Long chain polymer-like
+C1=CC2=CC3=CC4=CC5=CC6=CC7=CC8=CC9=CC%10=CC1=C1C2=C2C3=C3C4=C4C5=C5C6=C6C7=C7C8=C8C9=C9C%10=C1C2=C3C4=C5C6=C7C8C9	C1=CC2=CC3=CC4=CC5=CC6=CC7=CC8=CC9=CC%10=CC1=C1C2=C2C3=C3C4=C4C5=C5C6=C6C7=C7C8=C8C9=C9C%10=C1C2=C3C4=C5C6=C7C8C9	kekulene-self	Massive symmetric PAH
+CC(C)CC1NC(=O)C(CC(=O)O)NC(=O)C(CC(C)C)NC(=O)C(Cc2ccccc2)NC(=O)C(CCCCN)NC(=O)C(CO)NC1=O	CC(C)CC1NC(=O)C(CC(=O)N)NC(=O)C(CC(C)C)NC(=O)C(Cc2ccc(O)cc2)NC(=O)C(CCCCN)NC(=O)C(CO)NC1=O	cyclopeptide-mutant	Dense cyclic peptide, >50 atoms

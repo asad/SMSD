@@ -1,0 +1,55 @@
+# Build artifacts
+target/
+dependency-reduced-pom.xml
+*.jar
+*.war
+*.ear
+hs_err_pid*
+*.log
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+venv/
+.pyuser/
+dist/
+build/
+*.so
+*.pyd
+
+# C++ build
+cpp/build/
+cpp/build_py/
+cpp/build-py*/
+cpp/cmake-build*/
+build_test/
+*.o
+*.a
+*.dylib
+a.out
+CMakeCache.txt
+CMakeFiles/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated (rebuild anytime)
+api/
+src/scripts/lib/
+src/scripts/repo/
+benchmarks/runs/
+
+# Not for public repo
+paper/
+legacy/
+*.class
+.claude/

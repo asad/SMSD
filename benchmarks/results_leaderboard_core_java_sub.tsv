@@ -1,0 +1,29 @@
+pair	category	smsd_us	smsd_cached_us	rdkit_us	cdk_us	smsd_hit	rdkit_hit	cdk_hit	cached_speedup_vs_smsd	cdk_speedup_vs_smsd	cdk_speedup_vs_rdkit
+Methane in Ethane	Trivial / chain	18.2	10.3	3.3	62.8	True	True	True	1.77	3.45	19.15
+Propane in Pentane	Trivial / chain	23.3	12.2	2.4	130.5	True	True	True	1.91	5.60	55.12
+Acetaldehyde in Butanal	Trivial / chain	7.0	6.6	2.7	87.5	True	True	True	1.06	12.50	32.43
+Cyclohexane in Decalin	Ring containment	18.3	10.9	2.7	139.1	True	True	True	1.68	7.60	51.41
+Cyclopentane in Norbornane	Ring containment	9.1	9.3	2.5	73.9	True	True	True	0.98	8.12	29.20
+Cyclobutane in Cyclopentane	Ring containment	13.5	12.5	3.3	50.2	False	False	False	1.08	3.72	15.10
+Benzene in Toluene	Aromatic queries	7.3	5.9	2.6	40.5	True	True	True	1.24	5.55	15.66
+Benzene in Phenol	Aromatic queries	8.5	9.3	2.6	56.5	True	True	True	0.91	6.65	21.59
+Benzene in Naphthalene	Aromatic queries	13.1	14.3	2.7	54.9	True	True	True	0.92	4.19	20.29
+Phenol in Acetaminophen	Aromatic queries	11.4	11.0	2.9	34.4	True	True	True	1.04	3.02	11.85
+Piperidine in Fentanyl	Heterocyclic fragments	8.7	8.2	5.9	38.0	True	True	True	1.06	4.37	6.43
+Piperazine in Phenylpiperazine	Heterocyclic fragments	12.3	6.8	4.6	29.9	True	True	True	1.81	2.43	6.54
+Imidazole in Histidine	Heterocyclic fragments	9.6	9.4	2.8	40.1	True	True	True	1.02	4.18	14.42
+Pyridine in Niacin	Heterocyclic fragments	6.7	10.9	2.9	41.9	True	True	True	0.61	6.25	14.23
+Thiazole in Drug-like scaffold	Heterocyclic fragments	7.2	6.3	2.6	24.0	True	True	True	1.14	3.33	9.24
+Acetic acid in Aspirin	Drug fragment searches	5.2	5.1	2.5	20.4	True	True	True	1.02	3.92	8.22
+Urea in Barbital	Drug fragment searches	8.3	5.2	2.7	24.5	True	True	True	1.60	2.95	9.02
+Glucose in Sucrose	Drug fragment searches	21.8	22.3	3.0	79.3	True	True	True	0.98	3.64	26.36
+Sulfonamide in Sulfisoxazole	Drug fragment searches	18.2	18.0	2.8	68.7	True	True	True	1.01	3.77	24.27
+Acetanilide in Acetaminophen	Drug fragment searches	14.7	14.8	3.1	46.1	True	True	True	0.99	3.14	14.85
+Sodium in NaCl	Edge cases	1.8	1.8	1.8	10.6	True	False	True	1.00	5.89	5.79
+Ammonium in NH4Cl	Edge cases	1.6	1.6	2.3	10.9	True	True	True	1.00	6.81	4.83
+Water in Peroxide	Edge cases	1.7	1.7	2.3	11.1	True	True	True	1.00	6.53	4.86
+Cyanide in Benzonitrile	Edge cases	2.1	2.1	2.3	17.0	True	True	True	1.00	8.10	7.29
+Benzene vs Cyclohexane (neg. ctrl)	Negative controls	4.1	5.9	3.7	32.5	False	False	False	0.69	7.93	8.80
+Pyridine vs Tetrahydropyran (neg. ctrl)	Negative controls	0.4	0.3	2.1	20.3	False	False	False	1.33	50.75	9.52
+Sulfur vs Octane (neg. ctrl)	Negative controls	0.4	0.2	1.7	9.0	False	False	False	2.00	22.50	5.29
+Benzene vs Propane (neg. ctrl)	Negative controls	0.2	0.1	1.6	16.2	False	False	False	2.00	81.00	10.38

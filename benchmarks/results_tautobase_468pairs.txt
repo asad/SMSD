@@ -1,0 +1,13 @@
+================================================================================
+BENCHMARK 2: Tautobase — Tautomer-Aware MCS
+Source: chodera_tautobase_subset.txt (468 pairs)
+Reference: Wahl & Sander, J. Chem. Inf. Model. 2020, 60(3):1085-1089
+Metric: tautomer-aware MCS vs strict MCS; % full heavy-atom match
+================================================================================
+  Pairs tested:       468
+  Full match:         437 (93.4%)
+  Partial gain:       0
+  No gain:            31
+  Total atoms gained: +2
+  Median time:        186 us
+

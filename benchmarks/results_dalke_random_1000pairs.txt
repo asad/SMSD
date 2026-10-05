@@ -1,0 +1,11 @@
+================================================================================
+BENCHMARK 3: Dalke Random Pairs — Low-Similarity MCS
+Source: dalke_random_pairs.tsv (1,000 pairs from ChEMBL drug-like set)
+Reference: Dalke, J. Cheminform. 2013 (FMCS benchmark protocol)
+Metric: median MCS time, LFUB certificate rate (fast-exit fraction)
+================================================================================
+  Pairs tested:  1000
+  Timeouts:      0
+  Median time:   462516 us
+  Mean MCS size: 14.8 atoms
+

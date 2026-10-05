@@ -1,0 +1,29 @@
+Pair	SMSD_us	SMSD_cached_us	CDK_us	Speedup	Cached_Speedup	SMSD_match	CDK_match
+Methane in Ethane	8.1	5.3	62.4	7.7	11.8	Y	Y
+Propane in Pentane	17.1	6.3	87.9	5.1	14.0	Y	Y
+Acetaldehyde in Butanal	5.3	4.4	78.2	14.8	18.0	Y	Y
+Cyclohexane in Decalin	16.8	10.4	91.4	5.4	8.8	Y	Y
+Cyclopentane in Norbornane	6.1	6.4	57.3	9.4	8.9	Y	Y
+Cyclobutane in Cyclopentane	21.1	20.2	55.8	2.6	2.8	N	N
+Benzene in Toluene	7.4	6.1	53.0	7.2	8.7	Y	Y
+Benzene in Phenol	4.9	6.0	32.4	6.6	5.4	Y	Y
+Benzene in Naphthalene	8.9	9.9	44.1	4.9	4.5	Y	Y
+Phenol in Acetaminophen	6.7	6.2	30.2	4.5	4.9	Y	Y
+Piperidine in Fentanyl	12.0	7.4	32.8	2.7	4.4	Y	Y
+Piperazine in Phenylpiperazine	6.1	4.8	23.6	3.9	4.9	Y	Y
+Imidazole in Histidine	3.4	6.4	22.5	6.6	3.5	Y	Y
+Pyridine in Niacin	5.6	4.2	24.3	4.3	5.8	Y	Y
+Thiazole in Drug-like scaffold	8.4	6.6	36.5	4.3	5.5	Y	Y
+Acetic acid in Aspirin	7.1	5.3	29.4	4.2	5.5	Y	Y
+Urea in Barbital	2.8	3.8	29.2	10.5	7.6	Y	Y
+Glucose in Sucrose	12.2	17.1	72.0	5.9	4.2	Y	Y
+Sulfonamide in Sulfisoxazole	11.7	11.7	73.7	6.3	6.3	Y	Y
+Acetanilide in Acetaminophen	9.4	11.4	59.0	6.3	5.2	Y	Y
+Sodium in NaCl	1.2	1.0	12.5	10.6	12.7	Y	Y
+Ammonium in NH4Cl	1.9	2.2	18.5	10.0	8.3	Y	Y
+Water in Peroxide	2.2	1.9	16.8	7.8	9.0	Y	Y
+Cyanide in Benzonitrile	1.8	1.4	14.2	8.0	9.8	Y	Y
+Benzene vs Cyclohexane (neg. ctrl)	6.2	5.5	37.3	6.0	6.8	N	N
+Pyridine vs Tetrahydropyran (neg. ctrl)	11.9	10.3	37.3	3.1	3.6	N	N
+Sulfur vs Octane (neg. ctrl)	3.6	2.8	12.5	3.5	4.5	N	N
+Benzene vs Propane (neg. ctrl)	4.7	4.5	31.5	6.7	6.9	N	N

@@ -1,0 +1,21 @@
+====================================================================================================
+BENCHMARK 4: Dalke Nearest-Neighbor Pairs — High-Similarity MCS  |  SMSD Pro vs RDKit FindMCS
+Source: dalke_nn_pairs.tsv (1,000 pairs, Tanimoto >= 0.7)
+Reference: Dalke & Hastings, J. Cheminform. 2013, 5(Suppl 1):O6
+Metric: median MCS time (us), timeout count, MCS >= 5 atoms rate
+====================================================================================================
+  Pairs tested:           1000
+
+  SMSD Pro:
+    Timeouts:             0
+    Median time:          67 us
+    Mean MCS size:        25.7 atoms
+
+  RDKit FindMCS (baseline):
+    Timeouts:             8
+    Median time:          364 us
+    Mean MCS size:        24.8 atoms
+
+  SMSD speedup (median): 5.4x
+  MCS quality: SMSD better=211, RDKit better=29, equal=760
+

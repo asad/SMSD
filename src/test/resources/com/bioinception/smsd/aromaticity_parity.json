@@ -1,0 +1,86 @@
+[
+  {
+    "name": "benzene",
+    "kekule": "C1=CC=CC=C1",
+    "aromatic_atom_count": 6,
+    "aromatic_bond_count": 6,
+    "ring_atom_count": 6
+  },
+  {
+    "name": "naphthalene",
+    "kekule": "C1=CC=C2C=CC=CC2=C1",
+    "aromatic_atom_count": 10,
+    "aromatic_bond_count": 11,
+    "ring_atom_count": 10
+  },
+  {
+    "name": "anthracene",
+    "kekule": "C1=CC=C2C=C3C=CC=CC3=CC2=C1",
+    "aromatic_atom_count": 14,
+    "aromatic_bond_count": 16,
+    "ring_atom_count": 14
+  },
+  {
+    "name": "phenanthrene",
+    "kekule": "C1=CC=C2C(=C1)C=CC1=CC=CC=C12",
+    "aromatic_atom_count": 14,
+    "aromatic_bond_count": 16,
+    "ring_atom_count": 14
+  },
+  {
+    "name": "furan",
+    "kekule": "O1C=CC=C1",
+    "aromatic_atom_count": 5,
+    "aromatic_bond_count": 5,
+    "ring_atom_count": 5
+  },
+  {
+    "name": "pyrrole",
+    "kekule": "[NH]1C=CC=C1",
+    "aromatic_atom_count": 5,
+    "aromatic_bond_count": 5,
+    "ring_atom_count": 5
+  },
+  {
+    "name": "imidazole",
+    "kekule": "[NH]1C=NC=C1",
+    "aromatic_atom_count": 5,
+    "aromatic_bond_count": 5,
+    "ring_atom_count": 5
+  },
+  {
+    "name": "indole",
+    "kekule": "C1=CC=C2[NH]C=CC2=C1",
+    "aromatic_atom_count": 9,
+    "aromatic_bond_count": 10,
+    "ring_atom_count": 9
+  },
+  {
+    "name": "tetrazole",
+    "kekule": "[NH]1N=NC=N1",
+    "aromatic_atom_count": 5,
+    "aromatic_bond_count": 5,
+    "ring_atom_count": 5
+  },
+  {
+    "name": "2-hydroxypyridine",
+    "kekule": "OC1=CC=CC=N1",
+    "aromatic_atom_count": 6,
+    "aromatic_bond_count": 6,
+    "ring_atom_count": 6
+  },
+  {
+    "name": "2-pyridone",
+    "kekule": "O=C1NC=CC=C1",
+    "aromatic_atom_count": 6,
+    "aromatic_bond_count": 6,
+    "ring_atom_count": 6
+  },
+  {
+    "name": "quinone",
+    "kekule": "O=C1C=CC=CC1=O",
+    "aromatic_atom_count": 0,
+    "aromatic_bond_count": 0,
+    "ring_atom_count": 6
+  }
+]
