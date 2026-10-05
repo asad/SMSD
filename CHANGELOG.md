@@ -4,6 +4,11 @@ All notable changes to SMSD Pro are documented in this file.
 
 ## [7.2.1] - Unreleased
 
+### Fixed
+- Native MCS seed searches check the shared deadline before each candidate
+  extension. Already-expired seeds and orientation probes return before setup.
+  This fixes a Linux regression without relaxing its timeout assertion.
+
 ### Repository and release packaging
 - Moved Java sources, resources and launchers into `java/src/`, with its Maven
   module at `java/pom.xml` and build artifacts under `java/target/`. The root
@@ -24,7 +29,8 @@ All notable changes to SMSD Pro are documented in this file.
   budgets and result assertions are unchanged.
 - Carried forward the reviewed 7.2.0 search and chemistry fixes. The benchmark
   report, fingerprints, archive names and measured numbers remain 7.2.0
-  evidence; no new performance measurements are claimed for this layout change.
+  evidence. The deadline regression check is separate from those benchmarks;
+  no new cross-solver performance ranking is claimed.
 
 ## [7.2.0] - Source candidate
 

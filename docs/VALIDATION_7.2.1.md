@@ -56,12 +56,24 @@ also passed with signing disabled. All four JARs contain the exact root
 LICENSE/NOTICE; own class files target Java 25, source copies match, and both
 Unix launchers report 7.2.1.
 
-The initial local macOS wheel passed 12 native Debug suites and 691 Python
+Two local macOS candidates passed 12 native Debug suites and 691 Python
 tests with 8 optional skips. It used Python 3.14.8, RDKit 2026.03.6 and bundled
 libomp 23.1.0. It executed on macOS 27.0.1, with a macOS 26 deployment tag;
-execution on the minimum OS was not tested. A later Docker-context fix
-requires rebuilding platform wheels from the final archive; their final
-source manifest and checksums remain pending.
+execution on the minimum OS was not tested. The later Linux deadline fix
+requires rebuilding platform wheels from a new common archive; final source
+manifest and checksums remain pending.
+
+The first complete Linux native run passed 11 suites and failed the existing
+MCS deadline regression: a 5 ms budget exceeded its unchanged 100 ms guard.
+Private repeated probes on the same emulated x86_64 host measured about
+146 ms for the 32-atom fixture. Individual seed extensions took at most
+1.33 ms; throttled checks allowed many extensions after expiry. Immediate
+checks at candidate boundaries reduced the focused fixture to about 5 ms,
+with valid mappings and exact deadline restoration. The source also skips
+already-expired seed and orientation setup. Fresh full native and installed
+wheel runs must pass before these diagnostic results satisfy release gates.
+These timings describe that regression on an emulated host, not a general
+performance comparison.
 
 The Docker allowlist excludes generated Java API pages, test reports and
 build artifacts. Inspection of the actual builder COPY layer found only the
@@ -70,7 +82,7 @@ build artifacts. Inspection of the actual builder COPY layer found only the
 The production fingerprint covers 40 files: ten Java source files, 27 C++
 headers, the native binding and two Python modules. SHA-256 over sorted
 `SHA256  relative-path` records with newline delimiters is
-`78bff09c9c79b3aa12240d7b90f46a56d728226383e8f2e1926d10d24f5cfe26`.
+`5818910469b616dd5aec65197bc98dab6211b539015b06b14ae91c9a8cb66980`.
 This identifies the 7.2.1 code; it does not relabel historical benchmarks.
 
 ## Reproduce and assemble
@@ -122,7 +134,7 @@ versions, test counts, measured numbers, fingerprints and input hashes.
 The retained raw archive is `smsd-7.2.0-benchmark-data.tar.gz`, SHA-256
 `217e42f3b7f9cf7a2996120d57037826419ec075b23e82059afc2d44fb5a8ea5`.
 
-The 7.2.1 version, layout and packaging changes have no new benchmark
-measurements. These historical bounded-search and small-oracle results do
+The 7.2.1 deadline diagnostic is separate from the historical cross-solver
+benchmarks. These historical bounded-search and small-oracle results do
 not prove global optimality for arbitrary molecular graphs, nor do macOS
 timings establish performance on Linux or Windows.

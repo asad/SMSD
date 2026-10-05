@@ -1,7 +1,8 @@
 # SMSD Pro 7.2.1 — Unreleased
 
 Version 7.2.1 separates Java, C++ and Python source modules and updates release
-packaging. Publication is pending. It carries forward the reviewed 7.2.0
+packaging, and fixes native MCS seed deadline checks. Publication is pending.
+It carries forward the reviewed 7.2.0
 search fixes against the 7.1.2 source snapshot `6807f31`; an earlier 7.1.2 tag
 or artifact does not contain those changes. Java requires JDK 25 and uses
 CDK 2.13. The native core requires C++17.
@@ -21,6 +22,10 @@ Java test wall-clock guards allow 35 seconds for a 30-second drug pair search
 and 12 seconds for a 10-second pharmacophore search. Search budgets and result
 assertions are unchanged; fresh execution results belong to the release gates
 below.
+
+Native seeds check the shared deadline before each candidate extension, and
+expired seeds and orientation probes skip setup. The existing Linux deadline
+regression retains its 100 ms wall-clock assertion for a 5 ms search budget.
 
 ## Search fixes carried forward from 7.2.0
 
@@ -57,8 +62,9 @@ reproduction commands.
 
 The [7.2.0 benchmark report](../benchmarks/RESULTS_7.2.0.md) retains its original
 source versions, measured numbers, fingerprints, input hashes and archive
-names. No new measurements are claimed for the 7.2.1 version, layout and
-packaging changes. That report records validity, mapping quality and
+names. The 7.2.1 deadline regression check is recorded separately in the
+validation record; no new cross-solver benchmark ranking is claimed.
+That report records validity, mapping quality and
 cancellation observations. Controlled curated comparisons use 10-second
 budgets; full-corpus quality runs use common 1-second budgets. Conversion,
 startup, SMARTS compilation and tautomer feature measurements are
