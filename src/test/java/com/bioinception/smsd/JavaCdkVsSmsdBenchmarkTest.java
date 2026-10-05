@@ -16,12 +16,13 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.isomorphism.DfPattern;
 
 /**
- * Java-to-Java like-for-like substructure benchmark:
+ * Java-to-Java substructure diagnostic:
  * CDK DfPattern (bond-driven VF2) vs SMSD Pro VF2++ (vertex-driven).
  *
  * <p>Both engines operate within the same JVM, same JIT, and receive
- * identical standardised {@link IAtomContainer} objects from CDK 2.11.
- * Protocol: {@value WARMUP} warmup + {@value ITERS} measured runs, median reported.
+ * identical standardised {@link IAtomContainer} objects from CDK 2.13.
+ * Protocol is configured with smsd.benchmark.warmup, rounds and timeoutMs;
+ * defaults are no warmup, one measured trial and a one-second SMSD budget.
  *
  * <p>Run with: {@code mvn test -Dtest=JavaCdkVsSmsdBenchmarkTest -Dbenchmark=true}
  *
@@ -33,13 +34,12 @@ public class JavaCdkVsSmsdBenchmarkTest extends TestBase {
 
     // -----------------------------------------------------------------------
     // Protocol constants
-    // Protocol: 3 warmup + 10 measured, report median.
-    // Rationale: 10 runs exceeds the McCreesh/Glasgow (2017) standard of 5
-    // and gives a coefficient of variation < 0.5% for timings >= 10us.
+    // Configurable diagnostic repetition counts; single-trial defaults make no speed claim.
+    // Report observed variability; repetition count alone does not bound it.
     // -----------------------------------------------------------------------
-    private static final int WARMUP = 3;
-    private static final int ITERS  = 10;
-    private static final long SUB_TIMEOUT_MS = 10_000;
+    private static final int WARMUP = BenchmarkRunSettings.WARMUP;
+    private static final int ITERS  = BenchmarkRunSettings.ROUNDS;
+    private static final long SUB_TIMEOUT_MS = BenchmarkRunSettings.TIMEOUT_MS;
 
     private static final String VANCOMYCIN =
         "CC1C(C(CC(O1)OC2C(C(C(OC2OC3=C4C=C5C=C3OC6=C(C=C(C=C6)C(C(C(=O)" +
@@ -51,7 +51,7 @@ public class JavaCdkVsSmsdBenchmarkTest extends TestBase {
         "OCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCO";
 
     /**
-     * All 20 molecule pairs — identical to the Python benchmark for direct comparison.
+     * All20 curated molecule pairs; interpretation depends on each engine's chemistry policy.
      * Format: { smi1, smi2, pairName, category }
      */
     private static final String[][] PAIRS = {
@@ -142,20 +142,20 @@ public class JavaCdkVsSmsdBenchmarkTest extends TestBase {
     void cdkVsSmsdSubstructure() throws Exception {
         System.out.println();
         System.out.println("=".repeat(110));
-        System.out.println("Java CDK DfPattern vs SMSD Pro VF2++ — Like-for-Like Substructure Benchmark");
+        System.out.println("Java CDK DfPattern vs SMSD Pro VF2++ — Substructure Diagnostic");
         System.out.printf("Protocol: %d warmup + %d measured, median reported | All %d molecule pairs%n",
                 WARMUP, ITERS, PAIRS.length);
         System.out.println("=".repeat(110));
-        System.out.printf(" # %-28s %-20s %12s %12s %7s %7s %12s%n",
-                "Pair", "Category", "SMSD(us)", "CDK(us)", "SMSD?", "CDK?", "Speedup");
+        System.out.printf(" # %-28s %-20s %12s %12s %7s %7s%n",
+                "Pair", "Category", "SMSD(us)", "CDK(us)", "SMSD?", "CDK?");
         System.out.println("-".repeat(110));
 
         List<PairResult> results = new ArrayList<>();
         ChemOptions opts = new ChemOptions();
-        int smsdWins = 0, cdkWins = 0, ties = 0;
         int agree = 0, disagree = 0;
 
         for (int pi = 0; pi < PAIRS.length; pi++) {
+            BenchmarkRunSettings.checkInterrupted();
             String[] p = PAIRS[pi];
             String smi1 = p[0], smi2 = p[1], name = p[2], category = p[3];
 
@@ -165,6 +165,7 @@ public class JavaCdkVsSmsdBenchmarkTest extends TestBase {
                 mol2 = mol(smi2);
             } catch (Exception e) {
                 System.out.printf("%2d %-28s PARSE ERROR: %s%n", pi + 1, name, e.getMessage());
+                BenchmarkRunSettings.checkpoint("cdk-substructure", Integer.toString(pi), "PARSE_ERROR", 0, 0, e.toString());
                 continue;
             }
 
@@ -173,9 +174,11 @@ public class JavaCdkVsSmsdBenchmarkTest extends TestBase {
             long[] smsdTimes = new long[ITERS];
             try {
                 for (int i = 0; i < WARMUP; i++) {
+                    BenchmarkRunSettings.checkInterrupted();
                     new SMSD(mol1, mol2, opts).isSubstructure(SUB_TIMEOUT_MS);
                 }
                 for (int i = 0; i < ITERS; i++) {
+                    BenchmarkRunSettings.checkInterrupted();
                     long t0 = System.nanoTime();
                     smsdHit = new SMSD(mol1, mol2, opts).isSubstructure(SUB_TIMEOUT_MS);
                     smsdTimes[i] = System.nanoTime() - t0;
@@ -190,9 +193,11 @@ public class JavaCdkVsSmsdBenchmarkTest extends TestBase {
             try {
                 DfPattern dfp = DfPattern.findSubstructure(mol1);
                 for (int i = 0; i < WARMUP; i++) {
+                    BenchmarkRunSettings.checkInterrupted();
                     dfp.matches(mol2);
                 }
                 for (int i = 0; i < ITERS; i++) {
+                    BenchmarkRunSettings.checkInterrupted();
                     long t0 = System.nanoTime();
                     cdkHit = dfp.matches(mol2);
                     cdkTimes[i] = System.nanoTime() - t0;
@@ -211,24 +216,16 @@ public class JavaCdkVsSmsdBenchmarkTest extends TestBase {
 
             if (smsdHit == cdkHit) agree++; else disagree++;
 
-            // Speedup
-            String speedup;
-            if (smsdMedian == Long.MAX_VALUE || cdkMedian == Long.MAX_VALUE) {
-                speedup = "N/A";
-                ties++;
-            } else {
-                double ratio = (double) cdkMedian / smsdMedian;
-                if (ratio > 1.1)      { speedup = String.format("SMSD %.1fx", ratio); smsdWins++; }
-                else if (ratio < 0.9) { speedup = String.format("CDK %.1fx", 1.0/ratio); cdkWins++;  }
-                else                  { speedup = "~tie"; ties++; }
-            }
-
-            System.out.printf("%2d %-28s %-20s %12s %12s %7s %7s %12s%n",
+            System.out.printf("%2d %-28s %-20s %12s %12s %7s %7s%n",
                     pi + 1, name, category,
                     fmtNs(smsdMedian), fmtNs(cdkMedian),
-                    smsdHit ? "yes" : "no", cdkHit ? "yes" : "no",
-                    speedup);
+                    smsdHit ? "yes" : "no", cdkHit ? "yes" : "no");
 
+            BenchmarkRunSettings.checkpoint("cdk-substructure", Integer.toString(pi),
+                    smsdMedian == Long.MAX_VALUE || cdkMedian == Long.MAX_VALUE ? "ERROR" : "OK",
+                    smsdHit ? mol1.getAtomCount() : 0,
+                    smsdMedian == Long.MAX_VALUE ? 0 : smsdMedian,
+                    name + "; SMSD=" + smsdHit + "; CDK=" + cdkHit + "; CDK_ns=" + cdkMedian);
             results.add(new PairResult(name, category,
                     smsdBest, smsdMedian, smsdHit,
                     cdkBest, cdkMedian, cdkHit));
@@ -237,7 +234,7 @@ public class JavaCdkVsSmsdBenchmarkTest extends TestBase {
         System.out.println("-".repeat(110));
         System.out.println();
         System.out.printf("SUMMARY (%d pairs)%n", results.size());
-        System.out.printf("  Speed wins : SMSD=%d  CDK=%d  tie=%d%n", smsdWins, cdkWins, ties);
+        System.out.println("  Latencies are descriptive; matching policies and time-budget controls differ.");
         System.out.printf("  Hit agreement: %d/%d pairs agree%n", agree, PAIRS.length);
         if (disagree > 0) {
             System.out.printf("  NOTE: %d pair(s) disagree — check SMILES/aromaticity conventions%n",
@@ -263,6 +260,7 @@ public class JavaCdkVsSmsdBenchmarkTest extends TestBase {
         int passed = 0;
 
         for (String[] p : PAIRS) {
+            BenchmarkRunSettings.checkInterrupted();
             String smi = p[0], name = p[2];
             if (!name.contains("self") && !p[3].equals("Trivial")) continue;
 

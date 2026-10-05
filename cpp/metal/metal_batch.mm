@@ -19,8 +19,7 @@
  *   3. Create an MTLComputePipelineState and MTLCommandQueue.
  *
  * Per call to batchRascalScreen():
- *   1. Pack query + targets into MTLBuffers (shared memory on Apple Silicon
- *      — zero-copy; on discrete GPUs the runtime copies to VRAM automatically).
+ *   1. Copy query + targets into shared MTLBuffers.
  *   2. Encode a single compute pass: one thread per target molecule.
  *   3. Commit, wait for completion, read float results back.
  *   4. Filter results above threshold and return.
@@ -28,7 +27,7 @@
  * Compatibility
  * -------------
  *   macOS 10.14+  (Metal Shading Language 2.1, dispatchThreadgroups API)
- *   Apple Silicon  (M1 / M2 / M3 / M4) — unified memory, zero-copy
+ *   Apple Silicon — shared CPU/GPU buffer storage
  *   Intel Mac      (integrated/discrete AMD or Intel GPU) — normal copy path
  *   iOS / tvOS     — header-compatible; not tested
  */
@@ -242,9 +241,7 @@ std::vector<MetalScreenResult> batchRascalScreen(
         const NSUInteger N = static_cast<NSUInteger>(targets.size());
 
         // ---- Allocate buffers -----------------------------------------------
-        // MTLResourceStorageModeShared = CPU+GPU share the same physical memory
-        // on Apple Silicon (zero-copy).  On Intel Macs with discrete GPUs the
-        // runtime transparently copies to VRAM and back.
+        // Input data is copied into buffers shared by CPU and GPU.
 
         id<MTLBuffer> targBuf =
             [dev newBufferWithBytes:targets.data()

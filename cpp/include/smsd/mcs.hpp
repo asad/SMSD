@@ -25,6 +25,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <functional>
+#include <iterator>
 #include <map>
 #include <numeric>
 #include <deque>
@@ -44,6 +45,10 @@ inline std::map<int,int> canonicalizeMapping(
 inline bool isValidMCSMapping(const MolGraph& g1, const MolGraph& g2,
                               const std::map<int,int>& mapping,
                               const ChemOptions& opts);
+inline std::map<int,int> repairInvalidMCSMapping(const MolGraph& g1, const MolGraph& g2,
+    std::map<int,int> mapping, const ChemOptions& opts);
+inline std::map<int,int> findMCSCoverage(const MolGraph& g1, const MolGraph& g2,
+    bool ringMatch, bool bondAny, int64_t timeoutMs, int maxResults);
 
 // ---------------------------------------------------------------------------
 // MCSOptions
@@ -122,6 +127,24 @@ struct MCSTimers {
 
 // TimeBudget reused from vf2pp.hpp (TimeBudget)
 namespace detail {
+
+class MCSDeadlineScope {
+    bool previousActive_;
+    std::chrono::steady_clock::time_point previousDeadline_;
+public:
+    explicit MCSDeadlineScope(int64_t milliseconds)
+        : previousActive_(global_deadline::active), previousDeadline_(global_deadline::deadline) {
+        auto deadline = steadyDeadline(milliseconds);
+        global_deadline::deadline = previousActive_ ? std::min(deadline, previousDeadline_) : deadline;
+        global_deadline::active = true;
+    }
+    ~MCSDeadlineScope() {
+        global_deadline::deadline = previousDeadline_;
+        global_deadline::active = previousActive_;
+    }
+    MCSDeadlineScope(const MCSDeadlineScope&) = delete;
+    MCSDeadlineScope& operator=(const MCSDeadlineScope&) = delete;
+};
 
 // ---------------------------------------------------------------------------
 // Scratch -- pre-allocated buffers reused across calls
@@ -411,6 +434,11 @@ inline void validateAtomWeights(const MolGraph& query, const MCSOptions& opts) {
     (void)weightScoreMillipoints(negative);
 }
 
+inline bool hasNegativeAtomWeights(const MCSOptions& opts) {
+    return std::any_of(opts.atomWeights.begin(), opts.atomWeights.end(),
+        [](double weight) { return weight < 0.0; });
+}
+
 inline int mcsScore(const MolGraph& g1, const std::map<int,int>& m,
                     const MCSOptions& M) {
     if (!M.atomWeights.empty()) {
@@ -574,7 +602,7 @@ inline std::map<int,int> largestConnected(const MolGraph& g1,
 // ---------------------------------------------------------------------------
 inline std::map<int,int> applyFragmentConstraints(
     const MolGraph& g1, const std::map<int,int>& m,
-    int minFragSize, int maxFrags) {
+    int minFragSize, int maxFrags, const MCSOptions* scoringOptions = nullptr) {
     if (m.empty() || (minFragSize <= 1 && maxFrags >= static_cast<int>(m.size()))) return m;
 
     std::unordered_set<int> mapped;
@@ -601,9 +629,19 @@ inline std::map<int,int> applyFragmentConstraints(
     frags.erase(std::remove_if(frags.begin(), frags.end(),
         [minFragSize](const std::vector<int>& f) { return static_cast<int>(f.size()) < minFragSize; }),
         frags.end());
-    // Sort descending by size
-    std::sort(frags.begin(), frags.end(),
-        [](const std::vector<int>& a, const std::vector<int>& b) { return a.size() > b.size(); });
+    auto score = [&](const std::vector<int>& fragment) {
+        if (!scoringOptions) return static_cast<int>(fragment.size());
+        std::map<int, int> mapped;
+        for (int atom : fragment) mapped.emplace(atom, m.at(atom));
+        return mcsScore(g1, mapped, *scoringOptions);
+    };
+    if (scoringOptions && !scoringOptions->atomWeights.empty())
+        frags.erase(std::remove_if(frags.begin(), frags.end(),
+            [&](const auto& fragment) { return score(fragment) < 0; }), frags.end());
+    std::stable_sort(frags.begin(), frags.end(), [&](const auto& a, const auto& b) {
+        int aScore = score(a), bScore = score(b);
+        return aScore != bScore ? aScore > bScore : a.size() > b.size();
+    });
     if (static_cast<int>(frags.size()) > maxFrags)
         frags.resize(maxFrags);
 
@@ -696,6 +734,8 @@ inline std::map<int,int> pruneToInduced(
 inline std::map<int,int> ppx(const MolGraph& g1, const MolGraph& g2,
                               std::map<int,int> ext,
                               const ChemOptions& C, const MCSOptions& M) {
+    if (!isValidMCSMapping(g1, g2, ext, C))
+        ext = repairInvalidMCSMapping(g1, g2, std::move(ext), C);
     // Iteratively apply filters until stable (filters can interact)
     bool changed = true;
     while (changed) {
@@ -707,8 +747,62 @@ inline std::map<int,int> ppx(const MolGraph& g1, const MolGraph& g2,
     }
     ext = applyRingAnchorGuard(g1, g2, ext, C);
     if (M.disconnectedMCS && (M.minFragmentSize > 1 || M.maxFragments < INT_MAX))
-        ext = applyFragmentConstraints(g1, ext, M.minFragmentSize, M.maxFragments);
+        ext = applyFragmentConstraints(g1, ext, M.minFragmentSize, M.maxFragments, &M);
     return ext;
+}
+
+inline std::map<int,int> weightedGreedyExtend(const MolGraph& query, const MolGraph& target,
+    std::map<int,int> mapping, const ChemOptions& chemistry, const MCSOptions& options, TimeBudget& budget) {
+    std::vector<int> order(query.n), q2t(query.n, -1), used(target.n);
+    std::iota(order.begin(), order.end(), 0);
+    std::stable_sort(order.begin(), order.end(), [&](int a, int b) {
+        return options.atomWeights[a] > options.atomWeights[b];
+    });
+    for (const auto& [q, t] : mapping) { q2t[q] = t; used[t] = 1; }
+    bool changed = true;
+    while (changed && !budget.expiredNow()) {
+        changed = false;
+        for (int q : order) {
+            if (q2t[q] >= 0 || options.atomWeights[q] < 0.0) continue;
+            if (!mapping.empty() && options.connectedOnly && !options.disconnectedMCS) {
+                bool adjacent = false;
+                for (int neighbor : query.neighbors[q]) adjacent |= q2t[neighbor] >= 0;
+                if (!adjacent) continue;
+            }
+            for (int t = 0; t < target.n; ++t) {
+                if (budget.expiredNow()) return mapping;
+                if (used[t] || !atomsCompatFast(query, q, target, t, chemistry)) continue;
+                bool consistent = true;
+                for (const auto& [qk, tk] : mapping) {
+                    bool qb = query.hasBond(q, qk), tb = target.hasBond(t, tk);
+                    if ((qb && (!tb || !bondsCompatible(query, q, qk, target, t, tk, chemistry)))
+                        || (options.induced && qb != tb)) { consistent = false; break; }
+                }
+                if (!consistent) continue;
+                auto candidate = mapping;
+                candidate[q] = t;
+                if (!isValidMCSMapping(query, target, candidate, chemistry)) continue;
+                mapping = std::move(candidate);
+                q2t[q] = t; used[t] = 1;
+                changed = true;
+                break;
+            }
+        }
+    }
+    return mapping;
+}
+
+inline std::map<int,int> enumerationMappingKey(const MolGraph& query, const MolGraph& target,
+    const std::map<int,int>& mapping, const MCSOptions* options = nullptr) {
+    // Query automorphisms need not preserve user-supplied weights.
+    if (options && !options->atomWeights.empty()) return mapping;
+    try {
+        return canonicalizeMapping(query, target, mapping);
+    } catch (const std::length_error&) {
+        return mapping;
+    } catch (const std::runtime_error&) {
+        return mapping;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -723,7 +817,7 @@ class SmallExactMCSExplorer {
 
     const MolGraph& g1_;
     const MolGraph& g2_;
-    const ChemOptions& C_;
+    ChemOptions C_;
     bool induced_;
     const MCSOptions* options_;
     TimeBudget& tb_;
@@ -735,9 +829,36 @@ class SmallExactMCSExplorer {
     std::vector<std::vector<int>> compatTargets_;
     std::map<CanonKey, ExactCandidate> allBest_;
     int bestSize_ = 0;
+    int bestScore_ = 0;
     int maxResults_ = 1;
     int collectLimit_ = 1;
     bool collectAll_ = false;
+
+    bool objectiveMode() const {
+        return options_ && (options_->maximizeBonds || !options_->atomWeights.empty());
+    }
+
+    int score(const std::map<int,int>& mapping) const {
+        return options_ ? mcsScore(g1_, mapping, *options_) : static_cast<int>(mapping.size());
+    }
+
+    int optimisticScore() const {
+        if (!objectiveMode()) return upperBound_;
+        if (!options_->atomWeights.empty()) {
+            double positive = 0.0;
+            for (int atom = 0; atom < g1_.n; ++atom)
+                if (state_[atom] != 2 && options_->atomWeights[atom] > 0.0)
+                    positive += options_->atomWeights[atom];
+            return weightScoreMillipoints(positive);
+        }
+        int bonds = 0;
+        for (int atom = 0; atom < g1_.n; ++atom) {
+            if (state_[atom] == 2) continue;
+            for (int neighbor : g1_.neighbors[atom])
+                if (neighbor > atom && state_[neighbor] != 2 && g1_.hasBond(atom, neighbor)) ++bonds;
+        }
+        return bonds;
+    }
 
     bool consistent(int qi, int tj) const {
         if (t2q_[tj] >= 0) return false;
@@ -753,7 +874,11 @@ class SmallExactMCSExplorer {
                 return false;
             }
         }
-        if (C_.useChirality && !tetraParityCompatible(g1_, qi, g2_, tj, q2t_)) return false;
+        if (C_.useChirality || C_.useBondStereo) {
+            auto proposed = q2t_;
+            proposed[qi] = tj;
+            if (!mappingStereoCompatible(g1_, g2_, C_, proposed)) return false;
+        }
         return true;
     }
 
@@ -774,21 +899,23 @@ class SmallExactMCSExplorer {
     }
 
     void recordCurrent(int mappedCount) {
-        if (mappedCount < bestSize_) return;
+        if (!objectiveMode() && mappedCount < bestSize_) return;
         auto mapping = materialize(q2t_);
         if (options_) mapping = ppx(g1_, g2_, std::move(mapping), C_, *options_);
         int candidateSize = static_cast<int>(mapping.size());
-        if (candidateSize < bestSize_) return;
-        if (candidateSize > bestSize_) {
+        int candidateScore = score(mapping);
+        if (candidateScore < bestScore_ || (candidateScore == bestScore_ && candidateSize < bestSize_)) return;
+        if (candidateScore > bestScore_ || candidateSize > bestSize_) {
             std::fill(bestQ2T_.begin(), bestQ2T_.end(), -1);
             for (const auto& entry : mapping) bestQ2T_[entry.first] = entry.second;
             bestSize_ = candidateSize;
+            bestScore_ = candidateScore;
             allBest_.clear();
         }
         if (!collectAll_) return;
         if (candidateSize != bestSize_) return;
         int bondCount = countMappedBonds(g1_, mapping);
-        auto canonical = canonicalizeMapping(g1_, g2_, mapping);
+        auto canonical = enumerationMappingKey(g1_, g2_, mapping, options_);
         CanonKey key(canonical.begin(), canonical.end());
         auto it = allBest_.find(key);
         if (it == allBest_.end() || bondCount > it->second.bondCount) {
@@ -841,15 +968,16 @@ class SmallExactMCSExplorer {
     void search(int mappedCount, int pendingCount) {
         if (tb_.expired()) return;
         recordCurrent(mappedCount);
-        if (!collectAll_ && bestSize_ >= upperBound_) return;
-        if (collectAll_ && bestSize_ >= upperBound_
+        if (!objectiveMode() && !collectAll_ && bestSize_ >= upperBound_) return;
+        if (!objectiveMode() && collectAll_ && bestSize_ >= upperBound_
             && static_cast<int>(allBest_.size()) >= collectLimit_) return;
         if (pendingCount <= 0) return;
 
         int remainingTarget = g2_.n - mappedCount;
         int optimistic = mappedCount + std::min(pendingCount, remainingTarget);
-        if ((!collectAll_ && optimistic <= bestSize_)
-            || (collectAll_ && optimistic < bestSize_)) return;
+        int scoreBound = objectiveMode() ? optimisticScore() : optimistic;
+        if (scoreBound < bestScore_ || (scoreBound == bestScore_
+            && ((!collectAll_ && optimistic <= bestSize_) || (collectAll_ && optimistic < bestSize_)))) return;
 
         std::vector<int> candidates;
         int qi = selectNextAtom(candidates);
@@ -874,7 +1002,7 @@ class SmallExactMCSExplorer {
             search(mappedCount + 1, pendingCount - 1);
             q2t_[qi] = -1;
             t2q_[tj] = -1;
-            if ((!collectAll_ && bestSize_ >= upperBound_) || tb_.expired()) {
+            if ((!objectiveMode() && !collectAll_ && bestSize_ >= upperBound_) || tb_.expired()) {
                 state_[qi] = 0;
                 return;
             }
@@ -909,6 +1037,11 @@ public:
             bestQ2T_[entry.first] = entry.second;
         }
         bestSize_ = static_cast<int>(incumbent.size());
+        bestScore_ = score(incumbent);
+        if (bestScore_ < 0) {
+            bestSize_ = bestScore_ = 0;
+            std::fill(bestQ2T_.begin(), bestQ2T_.end(), -1);
+        }
         for (int qi = 0; qi < g1.n; ++qi) {
             for (int tj = 0; tj < g2.n; ++tj) {
                 if (atomsCompatFast(g1_, qi, g2_, tj, C_)) {
@@ -930,12 +1063,12 @@ public:
     std::vector<std::map<int,int>> runAll(int maxResults) {
         collectAll_ = true;
         maxResults_ = std::max(1, maxResults);
-        collectLimit_ = std::min(4096, std::max(maxResults_ * 32, maxResults_));
+        collectLimit_ = static_cast<int>(std::min<int64_t>(4096, int64_t(maxResults_) * 32));
         allBest_.clear();
         if (bestSize_ > 0) {
             auto incumbent = materialize(bestQ2T_);
             int incumbentBondCount = countMappedBonds(g1_, incumbent);
-            auto canonical = canonicalizeMapping(g1_, g2_, incumbent);
+            auto canonical = enumerationMappingKey(g1_, g2_, incumbent, options_);
             CanonKey key(canonical.begin(), canonical.end());
             allBest_[std::move(key)] = ExactCandidate{
                 std::move(incumbent),
@@ -977,7 +1110,7 @@ public:
 class FixedSizeBondMaximizer {
     const MolGraph& g1_;
     const MolGraph& g2_;
-    const ChemOptions& C_;
+    ChemOptions C_;
     bool induced_;
     TimeBudget& tb_;
     int requiredSize_;
@@ -1002,7 +1135,11 @@ class FixedSizeBondMaximizer {
                 return false;
             }
         }
-        if (C_.useChirality && !tetraParityCompatible(g1_, qi, g2_, tj, q2t_)) return false;
+        if (C_.useChirality || C_.useBondStereo) {
+            auto proposed = q2t_;
+            proposed[qi] = tj;
+            if (!mappingStereoCompatible(g1_, g2_, C_, proposed)) return false;
+        }
         return true;
     }
 
@@ -1358,6 +1495,12 @@ inline std::map<int,int> greedyAtomExtend(
                     }
                 }
                 if (!consistent) continue;
+                if (C.useChirality || C.useBondStereo) {
+                    q2t[qi] = tj;
+                    bool stereoCompatible = mappingStereoCompatible(g1, g2, C, q2t);
+                    q2t[qi] = -1;
+                    if (!stereoCompatible) continue;
+                }
                 int score = (g2.ring[tj] && g1.ring[qi] ? 50 : 0)
                           + std::min(g1.degree[qi], g2.degree[tj]);
                 if (score > bestScore) { bestScore = score; bestTj = tj; }
@@ -1405,19 +1548,23 @@ inline bool mappedBondCompatQuery(
     int qi, int tj, const int* q2t, const std::vector<uint64_t>& mappedBitsQ,
     int skipQ = -1) {
     for (int w = 0; w < g1.words; ++w) {
-        uint64_t bits = g1.adjLong[qi][w] & mappedBitsQ[w];
+        uint64_t bits = (induced ? mappedBitsQ[w] : g1.adjLong[qi][w] & mappedBitsQ[w]);
         while (bits) {
             int qk = (w << 6) | ctz64(bits);
             bits &= bits - 1;
             if (qk == skipQ) continue;
             int tk = q2t[qk];
+            if (tk < 0 || tk >= g2.n) return false;
             int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tk);
-            if (qOrd != 0 && tOrd != 0) {
-                if (!bondsCompatible(g1, qi, qk, g2, tj, tk, C)) return false;
-            } else if (induced && ((qOrd != 0) != (tOrd != 0))) {
-                return false;
-            }
+            if (qOrd != 0 && (tOrd == 0 || !bondsCompatible(g1, qi, qk, g2, tj, tk, C))) return false;
+            if (induced && qOrd == 0 && tOrd != 0) return false;
         }
+    }
+    if (C.useChirality || C.useBondStereo) {
+        std::vector<int> proposed(q2t, q2t + g1.n);
+        if (skipQ >= 0) proposed[skipQ] = -1;
+        proposed[qi] = tj;
+        if (!mappingStereoCompatible(g1, g2, C, proposed)) return false;
     }
     return true;
 }
@@ -1427,19 +1574,24 @@ inline bool mappedBondCompatTarget(
     int qi, int tj, const int* t2q, const std::vector<uint64_t>& mappedBitsT,
     int skipT = -1) {
     for (int w = 0; w < g2.words; ++w) {
-        uint64_t bits = g2.adjLong[tj][w] & mappedBitsT[w];
+        uint64_t bits = mappedBitsT[w];
         while (bits) {
             int tk = (w << 6) | ctz64(bits);
             bits &= bits - 1;
             if (tk == skipT) continue;
             int qk = t2q[tk];
+            if (qk < 0 || qk >= g1.n) return false;
             int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tk);
-            if (qOrd != 0 && tOrd != 0) {
-                if (!bondsCompatible(g1, qi, qk, g2, tj, tk, C)) return false;
-            } else if (induced && ((qOrd != 0) != (tOrd != 0))) {
-                return false;
-            }
+            if (qOrd != 0 && (tOrd == 0 || !bondsCompatible(g1, qi, qk, g2, tj, tk, C))) return false;
+            if (induced && qOrd == 0 && tOrd != 0) return false;
         }
+    }
+    if (C.useChirality || C.useBondStereo) {
+        std::vector<int> proposed(g1.n, -1);
+        for (int target = 0; target < g2.n; ++target)
+            if (target != skipT && t2q[target] >= 0) proposed[t2q[target]] = target;
+        proposed[qi] = tj;
+        if (!mappingStereoCompatible(g1, g2, C, proposed)) return false;
     }
     return true;
 }
@@ -1609,16 +1761,14 @@ inline void mcGregorDFS(
 
     // Unit propagation (forced assignment)
     int forcedCount = 0;
-    // Reuse caller-provided scratch buffers (sized to g1.n / g2.n)
-    thread_local std::vector<int> forcedQ, forcedT;
-    forcedQ.resize(g1.n); forcedT.resize(g2.n);
+    std::vector<int> forcedQ, forcedT;
     while (bestCandCount == 1 && !(localExpired() || tb.expired())) {
         int fq = bestQi, ft = bestCandBuf[0];
         cur[fq] = ft; usedQ[fq] = true; usedT[ft] = true;
         setBit(mappedBitsQ, fq); setBit(mappedBitsT, ft);
         q2tMap[fq] = ft;
         qLabelFreq[jointQ[fq]]--; tLabelFreq[jointT[ft]]--;
-        forcedQ[forcedCount] = fq; forcedT[forcedCount] = ft;
+        forcedQ.push_back(fq); forcedT.push_back(ft);
         forcedCount++; depth++;
         if (static_cast<int>(cur.size()) > static_cast<int>(best.size())) best = cur;
         if (isPruned(static_cast<int>(cur.size()), static_cast<int>(best.size()),
@@ -1634,9 +1784,10 @@ inline void mcGregorDFS(
 
     if (bestQi != -1 && bestCandCount > 1) {
         int branchLimit = depth < 5 ? bestCandCount : std::min(bestCandCount, 16);
+        const std::vector<int> branchTargets(bestCandBuf, bestCandBuf + branchLimit);
         for (int i = 0; i < branchLimit; ++i) {
             if (localExpired() || tb.expired()) break;
-            int bestTj = bestCandBuf[i];
+            int bestTj = branchTargets[i];
             cur[bestQi] = bestTj; usedQ[bestQi] = true; usedT[bestTj] = true;
             setBit(mappedBitsQ, bestQi); setBit(mappedBitsT, bestTj);
             q2tMap[bestQi] = bestTj;
@@ -1677,7 +1828,7 @@ inline void mcGregorBondGrow(
     int* qLabelFreq, int* tLabelFreq, int freqSize,
     int* q2tMap, std::vector<uint8_t>& inFrontier, int* frontierBuf,
     int* candBuf, int* bestCandBuf,
-    const int* jointQ, const int* jointT) {
+    const int* jointQ, const int* jointT, bool connectedOnly = true) {
 
     // Amortized local-deadline check: only call Clock::now() every 1024 iterations
     static thread_local int64_t mcgBondIter = 0;
@@ -1734,7 +1885,7 @@ inline void mcGregorBondGrow(
     }
 
     // Fallback: disconnected extension
-    if (bestQk == -1) {
+    if (bestQk == -1 && !connectedOnly) {
         for (int i = 0; i < g1.n; ++i) {
             if (usedQ[i]) continue;
             int candCount = 0;
@@ -1743,6 +1894,7 @@ inline void mcGregorBondGrow(
                 if (!atomsCompatFast(g1, i, g2, tj, C)) continue;
                 if (!nlfCheckOk(i, tj, qNLF1, tNLF1, qNLF2, tNLF2, qNLF3, tNLF3,
                                 useTwoHopNLF, useThreeHopNLF)) continue;
+                if (!mappedBondCompatQuery(g1, g2, C, true, i, tj, q2tMap, mappedBitsQ)) continue;
                 candBuf[candCount++] = tj;
             }
             if (candCount > 0 && candCount < bestCandSize) {
@@ -1756,15 +1908,13 @@ inline void mcGregorBondGrow(
 
     // Unit propagation
     int forcedCount = 0;
-    // Reuse caller-provided scratch buffers (sized to g1.n / g2.n)
-    thread_local std::vector<int> forcedQ, forcedT;
-    forcedQ.resize(g1.n); forcedT.resize(g2.n);
+    std::vector<int> forcedQ, forcedT;
     while (bestCandCount == 1 && !(localExpired() || tb.expired())) {
         int fq = bestQk, ft = bestCandBuf[0];
         cur[fq] = ft; usedQ[fq] = true; usedT[ft] = true; q2tMap[fq] = ft;
         setBit(mappedBitsQ, fq); setBit(mappedBitsT, ft);
         qLabelFreq[jointQ[fq]]--; tLabelFreq[jointT[ft]]--;
-        forcedQ[forcedCount] = fq; forcedT[forcedCount] = ft;
+        forcedQ.push_back(fq); forcedT.push_back(ft);
         forcedCount++; depth++;
         if (static_cast<int>(cur.size()) > static_cast<int>(best.size())) best = cur;
         if (isPruned(static_cast<int>(cur.size()), static_cast<int>(best.size()),
@@ -1812,16 +1962,17 @@ inline void mcGregorBondGrow(
 
     if (bestQk != -1 && bestCandCount > 1) {
         int branchLimit = depth < 5 ? bestCandCount : std::min(bestCandCount, 16);
+        const std::vector<int> branchTargets(bestCandBuf, bestCandBuf + branchLimit);
         for (int i = 0; i < branchLimit; ++i) {
             if (localExpired() || tb.expired()) break;
-            int btj = bestCandBuf[i];
+            int btj = branchTargets[i];
             cur[bestQk] = btj; usedQ[bestQk] = true; usedT[btj] = true; q2tMap[bestQk] = btj;
             setBit(mappedBitsQ, bestQk); setBit(mappedBitsT, btj);
             qLabelFreq[jointQ[bestQk]]--; tLabelFreq[jointT[btj]]--;
             mcGregorBondGrow(g1, g2, C, cur, best, qNLF1, tNLF1, useTwoHopNLF, useThreeHopNLF,
                              qNLF2, tNLF2, qNLF3, tNLF3, tb, localDeadlineNs, depth + 1,
                              usedQ, usedT, mappedBitsQ, mappedBitsT, qLabelFreq, tLabelFreq, freqSize, q2tMap,
-                             inFrontier, frontierBuf, candBuf, bestCandBuf, jointQ, jointT);
+                             inFrontier, frontierBuf, candBuf, bestCandBuf, jointQ, jointT, connectedOnly);
             qLabelFreq[jointQ[bestQk]]++; tLabelFreq[jointT[btj]]++;
             clearBit(mappedBitsQ, bestQk); clearBit(mappedBitsT, btj);
             cur.erase(bestQk); usedQ[bestQk] = false; usedT[btj] = false; q2tMap[bestQk] = -1;
@@ -1901,6 +2052,8 @@ inline std::map<int,int> mcGregorExtend(
 
         auto usedQCopy = usedQ;
         auto usedTCopy = usedT;
+        auto mappedQCopy = mappedBitsQ;
+        auto mappedTCopy = mappedBitsT;
         auto qLFCopy = qLabelFreq;
         auto tLFCopy = tLabelFreq;
         auto inFCopy = inFrontier;
@@ -1909,9 +2062,9 @@ inline std::map<int,int> mcGregorExtend(
         mcGregorBondGrow(g1, g2, C, curCopy, bondBest, qNLF1, tNLF1,
                          useTwoHopNLF, useThreeHopNLF, qNLF2, tNLF2, qNLF3, tNLF3,
                          tb, bondDeadlineNs, 0,
-                         usedQCopy, usedTCopy, mappedBitsQ, mappedBitsT, qLFCopy.data(), tLFCopy.data(),
+                         usedQCopy, usedTCopy, mappedQCopy, mappedTCopy, qLFCopy.data(), tLFCopy.data(),
                          freqSize, q2tMap.data(), inFCopy, frontierBuf.data(),
-                         candBuf.data(), bestCandBuf.data(), jointQ.data(), jointT.data());
+                         candBuf.data(), bestCandBuf.data(), jointQ.data(), jointT.data(), connectedOnly);
         std::fill(inFrontier.begin(), inFrontier.end(), uint8_t(0));
         if (bondBest.size() > best.size()) best = bondBest;
     }
@@ -1936,7 +2089,7 @@ inline std::map<int,int> mcGregorExtend(
 class GraphBuilder {
     const MolGraph& g1_;
     const MolGraph& g2_;
-    const ChemOptions& C_;
+    ChemOptions C_;
     bool induced_;
 
     static constexpr int64_t MAX_NODE_LIMIT  = 500000;
@@ -2044,15 +2197,20 @@ public:
                         if (!atomsCompatFast(g1, qi, g2, tj, C)) continue;
                         if (!bondsCompatible(g1, qi, nb, g2, tj, tNb, C)) continue;
                         bool consistent = true;
-                        for (int qk : g1.neighbors[qi]) {
-                            if (qk == nb || q2t[qk] < 0) continue;
+                        for (int qk = 0; qk < n1; ++qk) {
+                            if (qk == qi || q2t[qk] < 0) continue;
                             int tk = q2t[qk];
                             int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tk);
-                            if (qOrd != 0 && tOrd != 0) {
-                                if (!bondsCompatible(g1, qi, qk, g2, tj, tk, C)) { consistent = false; break; }
-                            } else if (induced && ((qOrd!=0) != (tOrd!=0))) { consistent = false; break; }
+                            if ((qOrd != 0 && (tOrd == 0 || !bondsCompatible(g1, qi, qk, g2, tj, tk, C)))
+                                || (induced && qOrd == 0 && tOrd != 0)) { consistent = false; break; }
                         }
                         if (!consistent) continue;
+                        if (C.useChirality || C.useBondStereo) {
+                            q2t[qi] = tj;
+                            bool stereoCompatible = mappingStereoCompatible(g1, g2, C, q2t);
+                            q2t[qi] = -1;
+                            if (!stereoCompatible) continue;
+                        }
                         int score = (g2.ring[tj] && g1.ring[qi] ? 50 : 0) + std::min(g1.degree[qi], g2.degree[tj]);
                         if (score > bestScore) { bestScore = score; bestTj = tj; }
                     }
@@ -2099,21 +2257,22 @@ public:
             if (!bondsCompatible(g1, qi, seedQk, g2, tj, seedTk, C)) continue;
 
             bool consistent = true;
-            for (int qk : g1.neighbors[qi]) {
-                if (qk == seedQk || q2t[qk] < 0) continue;
+            for (int qk = 0; qk < g1.n; ++qk) {
+                if (qk == qi || q2t[qk] < 0) continue;
                 int tk = q2t[qk];
                 int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tk);
-                if (qOrd != 0 && tOrd != 0) {
-                    if (!bondsCompatible(g1, qi, qk, g2, tj, tk, C)) {
-                        consistent = false;
-                        break;
-                    }
-                } else if (induced && ((qOrd != 0) != (tOrd != 0))) {
+                if ((qOrd != 0 && (tOrd == 0 || !bondsCompatible(g1, qi, qk, g2, tj, tk, C)))
+                    || (induced && qOrd == 0 && tOrd != 0)) {
                     consistent = false;
                     break;
                 }
             }
             if (!consistent) continue;
+            if (C.useChirality || C.useBondStereo) {
+                std::vector<int> proposed(q2t, q2t + g1.n);
+                proposed[qi] = tj;
+                if (!mappingStereoCompatible(g1, g2, C, proposed)) continue;
+            }
 
             int score = mappedNbrs * 100
                 + (g1.ring[qi] && g2.ring[tj] ? 50 : 0)
@@ -2139,7 +2298,6 @@ public:
         if (curSize > bestSize) { bestSize = curSize; std::memcpy(bestQ2T, q2t, n1 * sizeof(int)); }
         if (nodeCount > nodeLimit || tb.expired()) return;
 
-        int frontier = 0;
         int bestQi = -1, bestConstraint = -1, bestCandCount = INT_MAX;
         std::vector<int> scratchCandidates;
         std::vector<int> bestCandidates;
@@ -2149,7 +2307,6 @@ public:
             if (mappedNb == 0) continue;
             collectBondExtendCandidates(g1, g2, C, induced, qi, q2t, t2q, scratchCandidates);
             if (scratchCandidates.empty()) continue;
-            frontier++;
             int constraint = mappedNb * 100 + (g1.ring[qi] ? 50 : 0) + g1.degree[qi];
             int candCount = static_cast<int>(scratchCandidates.size());
             if (candCount < bestCandCount
@@ -2160,7 +2317,8 @@ public:
                 bestCandidates = scratchCandidates;
             }
         }
-        if (curSize + frontier <= bestSize) return;
+        // New frontier vertices can become available after extending a path.
+        if (curSize + std::min(n1 - curSize, n2 - curSize) <= bestSize) return;
         if (bestQi < 0) return;
 
         int qi = bestQi;
@@ -2398,108 +2556,39 @@ private:
         }
 
         // Select most constrained class
-        int bestClass = -1, bestMin = INT_MAX, bestClassQC = 0, bestClassTC = 0;
+        int bestClass = -1, bestMin = INT_MAX;
         for (int c = 0; c < numClasses; ++c) {
             int qc = qSets[c].cardinality(), tc = tSets[c].cardinality();
             if (qc == 0 || tc == 0) continue;
             int m = std::min(qc, tc);
-            if (m < bestMin) { bestMin = m; bestClass = c; bestClassQC = qc; bestClassTC = tc; }
+            if (m < bestMin) { bestMin = m; bestClass = c; }
         }
         if (bestClass == -1) return;
 
-        // Bidirectional selection
-        bool branchFromTarget = bestClassTC < bestClassQC;
-
-        if (!branchFromTarget) {
-            // Select qi with connectivity-aware ordering
-            int qi = -1, qiBestScore = -1;
-            for (int v = qSets[bestClass].nextSetBit(0); v >= 0; v = qSets[bestClass].nextSetBit(v + 1)) {
-                bool conn = hasMappedNeighbor(g1, v, mappedBitsQ);
-                int score = (conn ? 1000 : 0) + (g1.ring[v] ? 100 : 0) + g1.degree[v] * 10;
-                if (score > qiBestScore) { qiBestScore = score; qi = v; }
-            }
-
-            // RRSplit: try each orbit of target.
-            // Orbit pruning is only safe when qi has no mapped neighbor --
-            // connectivity context differentiates "equivalent" atoms.
-            // Phase 2.3: augment orbit key with ring-system signature pair
-            // so that atoms from different ring systems are not pruned together.
-            bool rsActiveQ = (g1.ringSystemCount() > 0 || g2.ringSystemCount() > 0);
-            uint64_t qiRsSig = rsActiveQ ? g1.ringSystemSig(g1.ringSystemOf(qi)) : 0;
-            std::unordered_set<uint64_t> triedOrbitRS;
-            bool qiHasMappedNb = hasMappedNeighbor(g1, qi, mappedBitsQ);
-            for (int tj = tSets[bestClass].nextSetBit(0); tj >= 0; tj = tSets[bestClass].nextSetBit(tj + 1)) {
-                nodeCount++;
-                if (nodeCount > MAX_NODE_LIMIT || tb.expired()) return;
-                if (!qiHasMappedNb) {
-                    // Combine orbit ID with ring-system signature for a finer-grained key
-                    uint64_t orbitKey = static_cast<uint64_t>(g2.orbit[tj]);
-                    if (rsActiveQ) {
-                        uint64_t tjRsSig = g2.ringSystemSig(g2.ringSystemOf(tj));
-                        // Mix ring-system pair into orbit key
-                        orbitKey ^= (qiRsSig * 0x9e3779b97f4a7c15ULL) ^ (tjRsSig * 0x517cc1b727220a95ULL);
-                    }
-                    if (!triedOrbitRS.insert(orbitKey).second) continue;
-                }
-
-                if (!atomsCompatFast(g1, qi, g2, tj, C)) continue;
-                if (!checkBondCompat(g1, g2, C, induced, qi, tj, q2t, mappedBitsQ)) continue;
-
-                q2t[qi] = tj; t2q[tj] = qi;
-                setBit(mappedBitsQ, qi); setBit(mappedBitsT, tj);
-                refineAndRecurse(g1, g2, C, induced, tb, qAdjMasks, tAdjMasks, qSets, tSets, numClasses,
-                                 q2t, t2q, curSize, bestQ2T, bestSize, nodeCount, n1, n2, depth, maxDepth, qi, tj,
-                                 mappedBitsQ, mappedBitsT);
-                clearBit(mappedBitsQ, qi); clearBit(mappedBitsT, tj);
-                q2t[qi] = -1; t2q[tj] = -1;
-            }
-
-            // Skip qi branch
-            mcSplitSkipVertex(g1, g2, C, induced, tb, qAdjMasks, tAdjMasks, qSets, tSets, numClasses,
-                              q2t, t2q, curSize, bestQ2T, bestSize, nodeCount, n1, n2, depth, maxDepth,
-                              bestClass, qi, true, mappedBitsQ, mappedBitsT);
-        } else {
-            int tj = -1, tjBestScore = -1;
-            for (int v = tSets[bestClass].nextSetBit(0); v >= 0; v = tSets[bestClass].nextSetBit(v + 1)) {
-                bool conn = hasMappedNeighbor(g2, v, mappedBitsT);
-                int score = (conn ? 1000 : 0) + (g2.ring[v] ? 100 : 0) + g2.degree[v] * 10;
-                if (score > tjBestScore) { tjBestScore = score; tj = v; }
-            }
-
-            // Orbit pruning guard: skip only when tj has no mapped neighbor.
-            // Phase 2.3: augment orbit key with ring-system signature pair.
-            bool rsActiveT = (g1.ringSystemCount() > 0 || g2.ringSystemCount() > 0);
-            uint64_t tjRsSig = rsActiveT ? g2.ringSystemSig(g2.ringSystemOf(tj)) : 0;
-            std::unordered_set<uint64_t> triedOrbitRS;
-            bool tjHasMappedNb = hasMappedNeighbor(g2, tj, mappedBitsT);
-            for (int qi = qSets[bestClass].nextSetBit(0); qi >= 0; qi = qSets[bestClass].nextSetBit(qi + 1)) {
-                nodeCount++;
-                if (nodeCount > MAX_NODE_LIMIT || tb.expired()) return;
-                if (!tjHasMappedNb) {
-                    uint64_t orbitKey = static_cast<uint64_t>(g1.orbit[qi]);
-                    if (rsActiveT) {
-                        uint64_t qiRsSig2 = g1.ringSystemSig(g1.ringSystemOf(qi));
-                        orbitKey ^= (qiRsSig2 * 0x9e3779b97f4a7c15ULL) ^ (tjRsSig * 0x517cc1b727220a95ULL);
-                    }
-                    if (!triedOrbitRS.insert(orbitKey).second) continue;
-                }
-
-                if (!atomsCompatFast(g1, qi, g2, tj, C)) continue;
-                if (!mappedBondCompatTarget(g1, g2, C, induced, qi, tj, t2q, mappedBitsT)) continue;
-
-                q2t[qi] = tj; t2q[tj] = qi;
-                setBit(mappedBitsQ, qi); setBit(mappedBitsT, tj);
-                refineAndRecurse(g1, g2, C, induced, tb, qAdjMasks, tAdjMasks, qSets, tSets, numClasses,
-                                 q2t, t2q, curSize, bestQ2T, bestSize, nodeCount, n1, n2, depth, maxDepth, qi, tj,
-                                 mappedBitsQ, mappedBitsT);
-                clearBit(mappedBitsQ, qi); clearBit(mappedBitsT, tj);
-                q2t[qi] = -1; t2q[tj] = -1;
-            }
-
-            mcSplitSkipVertex(g1, g2, C, induced, tb, qAdjMasks, tAdjMasks, qSets, tSets, numClasses,
-                              q2t, t2q, curSize, bestQ2T, bestSize, nodeCount, n1, n2, depth, maxDepth,
-                              bestClass, tj, false, mappedBitsQ, mappedBitsT);
+        // Query classes are disjoint; target domains may overlap under permissive chemistry.
+        int qi = -1, qiBestScore = -1;
+        for (int v = qSets[bestClass].nextSetBit(0); v >= 0; v = qSets[bestClass].nextSetBit(v + 1)) {
+            int score = (hasMappedNeighbor(g1, v, mappedBitsQ) ? 1000 : 0)
+                + (g1.ring[v] ? 100 : 0) + g1.degree[v] * 10;
+            if (score > qiBestScore) { qiBestScore = score; qi = v; }
         }
+        if (qi < 0 || q2t[qi] >= 0) return;
+        for (int tj = tSets[bestClass].nextSetBit(0); tj >= 0; tj = tSets[bestClass].nextSetBit(tj + 1)) {
+            ++nodeCount;
+            if (nodeCount > MAX_NODE_LIMIT || tb.expired()) return;
+            if (t2q[tj] >= 0 || !atomsCompatFast(g1, qi, g2, tj, C)) continue;
+            if (!checkBondCompat(g1, g2, C, induced, qi, tj, q2t, mappedBitsQ)) continue;
+            q2t[qi] = tj; t2q[tj] = qi;
+            setBit(mappedBitsQ, qi); setBit(mappedBitsT, tj);
+            refineAndRecurse(g1, g2, C, induced, tb, qAdjMasks, tAdjMasks, qSets, tSets, numClasses,
+                q2t, t2q, curSize, bestQ2T, bestSize, nodeCount, n1, n2, depth, maxDepth, qi, tj,
+                mappedBitsQ, mappedBitsT);
+            clearBit(mappedBitsQ, qi); clearBit(mappedBitsT, tj);
+            q2t[qi] = -1; t2q[tj] = -1;
+        }
+        mcSplitSkipVertex(g1, g2, C, induced, tb, qAdjMasks, tAdjMasks, qSets, tSets, numClasses,
+            q2t, t2q, curSize, bestQ2T, bestSize, nodeCount, n1, n2, depth, maxDepth,
+            bestClass, qi, true, mappedBitsQ, mappedBitsT);
     }
 
     static void refineAndRecurse(
@@ -2525,7 +2614,7 @@ private:
             qNon.clear(qi);
             BitClass tAdj = tSets[c].intersectWith(tAdjMasks[tj]);
             tAdj.clear(tj);
-            BitClass tNon = tSets[c].subtractMask(tAdjMasks[tj]);
+            BitClass tNon = induced ? tSets[c].subtractMask(tAdjMasks[tj]) : tSets[c];
             tNon.clear(tj);
 
             if (qAdj.cardinality() > 0 && tAdj.cardinality() > 0) {
@@ -2608,30 +2697,17 @@ public:
         int n1 = g1_.n, n2 = g2_.n;
         if (n1 == 0 || n2 == 0) return {std::vector<int>(std::max(n1, 1), -1), 0};
 
-        bool useMorgan = n1 >= 30 && n2 >= 30;
-        if (useMorgan) {
-            std::unordered_set<int> qDistinct;
-            for (int i = 0; i < n1; ++i) qDistinct.insert(g1_.morganRank[i]);
-            if (static_cast<int>(qDistinct.size()) > n1 * 3 / 4) useMorgan = false;
-        }
-
-        std::unordered_map<int, std::vector<int>> qGroups, tGroups;
-        for (int i = 0; i < n1; ++i)
-            qGroups[useMorgan ? g1_.morganRank[i] : g1_.label[i]].push_back(i);
-        for (int j = 0; j < n2; ++j)
-            tGroups[useMorgan ? g2_.morganRank[j] : g2_.label[j]].push_back(j);
-
+        std::map<std::vector<int>, std::vector<int>> queryGroups;
+        for (int atom = 0; atom < n1; ++atom)
+            if (!compatTargets_[atom].empty()) queryGroups[compatTargets_[atom]].push_back(atom);
         std::vector<BitClass> initQSets, initTSets;
-        for (auto& [qlabel, qList] : qGroups)
-            for (auto& [tlabel, tList] : tGroups) {
-                if (qList.empty() || tList.empty()) continue;
-                if (!atomsCompatFast(g1_, qList[0], g2_, tList[0], C_)) continue;
-                BitClass qbs(n1), tbs(n2);
-                for (int v : qList) qbs.set(v);
-                for (int v : tList) tbs.set(v);
-                initQSets.push_back(std::move(qbs));
-                initTSets.push_back(std::move(tbs));
-            }
+        for (const auto& [domain, atoms] : queryGroups) {
+            BitClass querySet(n1), targetSet(n2);
+            for (int atom : atoms) querySet.set(atom);
+            for (int atom : domain) targetSet.set(atom);
+            initQSets.push_back(std::move(querySet));
+            initTSets.push_back(std::move(targetSet));
+        }
         if (initQSets.empty()) return {std::vector<int>(n1, -1), 0};
 
         int numClasses = static_cast<int>(initQSets.size());
@@ -2661,7 +2737,7 @@ public:
 
         mcSplitRecurse(g1_, g2_, C_, induced_, tb, qAdjMasks, tAdjMasks, initQSets, initTSets, numClasses,
                        q2t.data(), t2q.data(), 0, initUB,
-                       bestQ2T.data(), bestSize, nodeCount, n1, n2, 0, std::min(n1, n2) + 1,
+                       bestQ2T.data(), bestSize, nodeCount, n1, n2, 0, n1 + 1,
                        mappedBitsQ, mappedBitsT);
 
         nodeCountOut = nodeCount;
@@ -2854,7 +2930,6 @@ public:
         for (int i = 0; i < n1; ++i)
             for (int j = 0; j < n2; ++j) {
                 if (!atomsCompatFast(g1_, i, g2_, j, C_)) continue;
-                if (!induced_ && g1_.degree[i] > g2_.degree[j]) continue;
                 nodes.push_back({i, j});
             }
         int N = static_cast<int>(nodes.size());
@@ -2878,7 +2953,7 @@ public:
                 else if (induced_)
                     ok = (qOrd == 0 && tOrd == 0);
                 else
-                    continue;
+                    ok = (qOrd == 0);
                 if (ok) {
                     adj[u][v >> 6] |= 1ULL << (v & 63);
                     adj[v][u >> 6] |= 1ULL << (u & 63);
@@ -2914,49 +2989,10 @@ public:
             }
         }
 
-        // Equivalence classes (orbit + ring-system signature)
-        // Phase 2.3: augment orbit-based equivalence with ring-system pair signatures
-        // so that nodes from different ring-system pairings are never treated as equivalent.
-        bool useRingSysSym = (g1_.ringSystemCount() > 0 || g2_.ringSystemCount() > 0);
+        // Global automorphism orbits do not identify interchangeable residual branches.
         std::vector<int> equivClass(N);
-        int numEquivClasses = 0;
-        {
-            struct SigKey {
-                int64_t orbitSig;
-                uint64_t rsSig1;
-                uint64_t rsSig2;
-                bool operator==(const SigKey& o) const {
-                    return orbitSig == o.orbitSig && rsSig1 == o.rsSig1 && rsSig2 == o.rsSig2;
-                }
-            };
-            struct SigKeyHash {
-                size_t operator()(const SigKey& k) const {
-                    size_t h = std::hash<int64_t>{}(k.orbitSig);
-                    h ^= std::hash<uint64_t>{}(k.rsSig1) + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
-                    h ^= std::hash<uint64_t>{}(k.rsSig2) + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
-                    return h;
-                }
-            };
-            std::unordered_map<SigKey, int, SigKeyHash> sig2class;
-            int& nextClass = numEquivClasses;
-            for (int i = 0; i < N; ++i) {
-                auto& nd = nodes[i];
-                int deg = popcountN(adj[i].data(), words);
-                int64_t orbitSig = (static_cast<int64_t>(g1_.orbit[nd.qi])          << 44)
-                    | (static_cast<int64_t>(g2_.orbit[nd.tj])                       << 28)
-                    | (static_cast<int64_t>(g1_.morganRank[nd.qi] & 0xFF)           << 20)
-                    | (static_cast<int64_t>(g1_.degree[nd.qi])                      << 10) | deg;
-                uint64_t rs1 = 0, rs2 = 0;
-                if (useRingSysSym) {
-                    rs1 = g1_.ringSystemSig(g1_.ringSystemOf(nd.qi));
-                    rs2 = g2_.ringSystemSig(g2_.ringSystemOf(nd.tj));
-                }
-                SigKey key{orbitSig, rs1, rs2};
-                auto it = sig2class.find(key);
-                if (it == sig2class.end()) { sig2class[key] = nextClass; equivClass[i] = nextClass++; }
-                else equivClass[i] = it->second;
-            }
-        }
+        std::iota(equivClass.begin(), equivClass.end(), 0);
+        int numEquivClasses = N;
 
         // BK search
         std::vector<uint64_t> P(words, 0), X(words, 0), R(words, 0);
@@ -3329,13 +3365,13 @@ inline bool preferFinalMapping(const MolGraph& g1,
                                const std::map<int,int>& candidate,
                                const std::map<int,int>& incumbent,
                                const MCSOptions& opts) {
-    if (candidate.empty()) return false;
-    if (incumbent.empty()) return true;
-
     int candScore = mcsScore(g1, candidate, opts);
     int bestScore = mcsScore(g1, incumbent, opts);
     bool weightMode = opts.maximizeBonds || !opts.atomWeights.empty();
     if (weightMode && candScore != bestScore) return candScore > bestScore;
+
+    if (candidate.empty()) return false;
+    if (incumbent.empty()) return true;
 
     if (candidate.size() != incumbent.size()) return candidate.size() > incumbent.size();
 
@@ -3367,10 +3403,11 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
     if (g1.n == 0 || g2.n == 0) return {};
 
     validateAtomWeights(g1, opts);
+    MCSDeadlineScope deadlineScope(opts.timeoutMs < 0
+        ? std::min<int64_t>(30000, 500 + int64_t(g1.n) * g2.n * 2) : std::max<int64_t>(1, opts.timeoutMs));
 
     static constexpr int GREEDY_PROBE_MAX_SIZE = 40;
     static constexpr int SEED_EXTEND_MAX_ATOMS = 50;
-    static constexpr double BK_SKIP_RATIO = 0.8;
 
     // Resolve adaptive timeout: scale with product of atom counts, capped at 30s
     int64_t timeout = opts.timeoutMs;
@@ -3381,15 +3418,38 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
 
     // Exact identity fast-path before canonicalization: same object or the
     // same graph in the same index order should never pay the full MCS cost.
-    if (&g1 == &g2 || detail::isExactMatch(g1, g2, chem)) {
+    if (!detail::hasNegativeAtomWeights(opts) && (&g1 == &g2 || detail::isExactMatch(g1, g2, chem))) {
         std::map<int,int> id;
         for (int i = 0; i < g1.n; i++) id[i] = i;
         return detail::ppx(g1, g2, std::move(id), chem, opts);
     }
 
+    std::map<int,int> best;
+    int bestSize = 0, bestScore = 0;
+    if (!opts.atomWeights.empty()) {
+        if (chem.ringFusionMode != ChemOptions::RingFusionMode::IGNORE) {
+            g1.ensureRingCounts(); g2.ensureRingCounts();
+        }
+        std::vector<int> order(g1.n);
+        std::iota(order.begin(), order.end(), 0);
+        std::stable_sort(order.begin(), order.end(), [&](int a, int b) { return opts.atomWeights[a] > opts.atomWeights[b]; });
+        for (int qi : order) {
+            if (tb.expiredNow()) break;
+            for (int tj = 0; tj < g2.n; ++tj) {
+                if (tb.expiredNow()) break;
+                if (!atomsCompatFast(g1, qi, g2, tj, chem)) continue;
+                auto singleton = ppx(g1, g2, {{qi, tj}}, chem, opts);
+                if (preferFinalMapping(g1, singleton, best, opts)) best = std::move(singleton);
+                break;
+            }
+        }
+        bestSize = static_cast<int>(best.size()); bestScore = mcsScore(g1, best, opts);
+    }
+
     // Ensure canonical labeling / Morgan ranks are available (lazy init)
     g1.ensureCanonical();
     g2.ensureCanonical();
+    if (tb.expiredNow()) return ppx(g1, g2, best, chem, opts);
     if (chem.ringFusionMode != ChemOptions::RingFusionMode::IGNORE) {
         g1.ensureRingCounts();
         g2.ensureRingCounts();
@@ -3402,11 +3462,9 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
         upperBound = std::min(upperBound, detail::labelFrequencyUpperBoundDirected(g1, g2, chem));
         upperBound = std::min(upperBound, detail::labelFrequencyUpperBoundDirected(g2, g1, chem));
     }
-    std::map<int,int> best;
-    int bestSize = 0, bestScore = 0;
 
     // Canonical-equivalence fast-path for same graphs with permuted indices.
-    if ((!chem.useChirality && !chem.useBondStereo)
+    if (!hasNegativeAtomWeights(opts) && (!chem.useChirality && !chem.useBondStereo)
         && detail::sameCanonicalGraph(g1, g2)) {
         std::map<int,int> id;
         std::vector<int> head(g2.n, -1), nxt(g2.n, -1);
@@ -3418,6 +3476,30 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
     int minN = std::min(g1.n, g2.n);
     int bestHetero = 0; // heteroatom tiebreaker for equal-size MCS
     bool weightMode = opts.maximizeBonds || !opts.atomWeights.empty();
+    if (weightMode) {
+        std::vector<int> order(g1.n);
+        std::iota(order.begin(), order.end(), 0);
+        if (!opts.atomWeights.empty()) std::stable_sort(order.begin(), order.end(), [&](int a, int b) {
+            return opts.atomWeights[a] > opts.atomWeights[b];
+        });
+        for (int qi : order) {
+            if (tb.expiredNow()) break;
+            for (int tj = 0; tj < g2.n; ++tj) {
+                if (tb.expiredNow()) break;
+                if (!atomsCompatFast(g1, qi, g2, tj, chem)) continue;
+                auto singleton = ppx(g1, g2, {{qi, tj}}, chem, opts);
+                if (preferFinalMapping(g1, singleton, best, opts)) best = std::move(singleton);
+                break;
+            }
+        }
+        if (!opts.atomWeights.empty() && !tb.expiredNow()) {
+            auto grown = ppx(g1, g2, weightedGreedyExtend(g1, g2, best, chem, opts, tb), chem, opts);
+            if (preferFinalMapping(g1, grown, best, opts)) best = std::move(grown);
+        }
+        bestSize = static_cast<int>(best.size());
+        bestScore = mcsScore(g1, best, opts);
+        bestHetero = heteroatomScore(g1, best);
+    }
 
     // --- Level 0.25: Linear chain fast-path ---
     // For chain-like molecules (max degree ≤ 2, e.g., PEG), the general MCS
@@ -3790,15 +3872,14 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
     // answer, so the latter must score connected components during the search.
     bool exactConnected = !opts.disconnectedMCS && opts.connectedOnly
         && std::max(g1.n, g2.n) <= 8;
-    if (!weightMode && (opts.disconnectedMCS || exactConnected) && !tb.expiredNow()
+    if ((weightMode || opts.disconnectedMCS || exactConnected) && !tb.expiredNow()
         && std::min(g1.n, g2.n) <= 20
         && std::max(g1.n, g2.n) <= 40) {
         detail::SmallExactMCSExplorer exactSmall(
             g1, g2, chem, opts.induced, tb, upperBound, best, &opts);
         auto exactMapping = exactSmall.run();
         int exactScore = mcsScore(g1, exactMapping, opts);
-        if (isBetterMCS(g1, exactMapping, static_cast<int>(exactMapping.size()),
-                        best, bestSize, bestHetero)) {
+        if (preferFinalMapping(g1, exactMapping, best, opts)) {
             best = std::move(exactMapping);
             bestSize = static_cast<int>(best.size());
             bestScore = exactScore;
@@ -3822,6 +3903,27 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
             bestSize = static_cast<int>(best.size()); bestScore = seScore;
         }
         if (!weightMode && bestSize >= upperBound) return ppx(g1, g2, best, chem, opts);
+    }
+    // Diversify connected seeds before an expensive product-graph search.
+    if (!weightMode && opts.maxStage >= 1 && opts.connectedOnly && !opts.disconnectedMCS
+        && minN >= 12 && std::max(g1.n, g2.n) <= SEED_EXTEND_MAX_ATOMS
+        && bestSize < upperBound && !tb.expiredNow()
+        && !chem.useChirality && !chem.useBondStereo) {
+        TimeBudget seedBudget(std::max<int64_t>(1, std::min<int64_t>(25, tb.remainingMs() / 8)));
+        for (int qi = 0; qi < g1.n && !seedBudget.expiredNow(); ++qi) {
+            for (int tj : GB.allCompatTargets()[qi]) {
+                if (seedBudget.expiredNow()) break;
+                auto candidate = ppx(g1, g2,
+                    greedyAtomExtend(g1, g2, {{qi, tj}}, chem, opts, &seedBudget), chem, opts);
+                if (preferFinalMapping(g1, candidate, best, opts)) {
+                    best = std::move(candidate);
+                    bestSize = static_cast<int>(best.size());
+                    bestScore = mcsScore(g1, best, opts);
+                    bestHetero = heteroatomScore(g1, best);
+                }
+                if (bestSize >= upperBound) return best;
+            }
+        }
     }
     // maxStage gate: stop after seed-extend if caller requested stage <= 1
     if (opts.maxStage <= 1) return ppx(g1, g2, best, chem, opts);
@@ -3852,54 +3954,7 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
     // --- Level 2: McSplit ---
     // maxStage gate: skip McSplit and all later stages if caller requested stage < 2
     if (opts.maxStage < 2) return ppx(g1, g2, best, chem, opts);
-    // k-core pre-pruning only pays for smaller product graphs.
-    // On medium-sized pairs the setup cost can dominate the whole search,
-    // and the derived bound is advisory only.
-    int kcoreUB = upperBound;
-    int pgSize = g1.n * g2.n;
-    // Adaptive threshold: allow larger product graphs when time budget permits
-    int kcoreLimit = (tb.remainingMs() > opts.timeoutMs / 2) ? 2500 : 1000;
-    if (bestSize > 1 && !tb.expired() && pgSize <= kcoreLimit) {
-        int k = bestSize;
-        int n1k = g1.n, n2k = g2.n;
-        std::vector<std::vector<int>> pgDeg(n1k, std::vector<int>(n2k, 0));
-        std::vector<std::vector<uint8_t>> alive(n1k, std::vector<uint8_t>(n2k, 0));
-        for (int qi = 0; qi < n1k; ++qi)
-            for (int tj = 0; tj < n2k; ++tj)
-                if (atomsCompatFast(g1, qi, g2, tj, chem)) alive[qi][tj] = true;
-        for (int qi = 0; qi < n1k; ++qi)
-            for (int tj = 0; tj < n2k; ++tj) {
-                if (!alive[qi][tj]) continue;
-                int deg = 0;
-                for (int qk : g1.neighbors[qi])
-                    for (int tl : g2.neighbors[tj])
-                        if (alive[qk][tl] && bondsCompatible(g1, qi, qk, g2, tj, tl, chem)) deg++;
-                pgDeg[qi][tj] = deg;
-            }
-        bool changed = true;
-        while (changed && !tb.expired()) {
-            changed = false;
-            for (int qi = 0; qi < n1k; ++qi)
-                for (int tj = 0; tj < n2k; ++tj) {
-                    if (!alive[qi][tj] || pgDeg[qi][tj] >= k - 1) continue;
-                    alive[qi][tj] = false;
-                    changed = true;
-                    for (int qk : g1.neighbors[qi])
-                        for (int tl : g2.neighbors[tj])
-                            if (alive[qk][tl]) pgDeg[qk][tl]--;
-                }
-        }
-        int kcUB = 0;
-        for (int qi = 0; qi < n1k; ++qi) {
-            bool has = false;
-            for (int tj = 0; tj < n2k; ++tj)
-                if (alive[qi][tj]) { has = true; break; }
-            if (has) kcUB++;
-        }
-        if (kcUB < kcoreUB) kcoreUB = kcUB;
-    }
     // Phase 2.4: Use flat-array pipeline for McSplit to avoid intermediate map construction.
-    bool mcSplitExhaustive;
     int mcSplitSize;
     {
         int64_t nodeCount = 0;
@@ -3913,16 +3968,9 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
             bestSize = mcSplitSize; bestScore = mcScore;
             bestHetero = heteroatomScore(g1, best);
         }
-        mcSplitExhaustive = nodeCount < 200000;
     }
-    if (!weightMode && mcSplitExhaustive && bestSize >= upperBound)
+    if (!weightMode && bestSize >= upperBound)
         return ppx(g1, g2, best, chem, opts);
-
-    // Phase 2.2: bail on unreachable LFUB -- if McSplit was exhaustive and
-    // bestSize >= 85% of upperBound, BK cannot improve meaningfully. Skip it
-    // and fall through to McGregor extension which can close the small gap.
-    bool skipBKDueToLFUB = !weightMode && mcSplitExhaustive
-        && bestSize >= static_cast<int>(upperBound * 0.85) && bestSize > 0;
 
     // Near-optimal fast path: greedy atom extension
     if (bestSize >= upperBound - 2 && bestSize > 0 && bestSize < upperBound && !tb.expired()) {
@@ -3938,8 +3986,12 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
     // maxStage gate: skip BK and all later stages if caller requested stage < 3
     if (opts.maxStage < 3) return ppx(g1, g2, best, chem, opts);
     int bkSize = 0;
-    if (!skipBKDueToLFUB && bestSize < static_cast<int>(upperBound * BK_SKIP_RATIO) && !tb.expired()) {
-        auto cliqueSeed = ppx(g1, g2, GB.maximumCliqueSeed(tb), chem, opts);
+    if ((weightMode || bestSize < upperBound) && !tb.expired()) {
+        const bool connectedAtomObjective = !weightMode && opts.connectedOnly && !opts.disconnectedMCS;
+        TimeBudget cliqueBudget(connectedAtomObjective
+            ? std::max<int64_t>(1, std::min<int64_t>(200, tb.remainingMs() / 4))
+            : tb.remainingMs());
+        auto cliqueSeed = ppx(g1, g2, GB.maximumCliqueSeed(cliqueBudget), chem, opts);
         bkSize = static_cast<int>(cliqueSeed.size());
         int cScore = mcsScore(g1, cliqueSeed, opts);
         if (weightMode ? cScore > bestScore : static_cast<int>(cliqueSeed.size()) > bestSize) {
@@ -4036,6 +4088,11 @@ inline bool isValidMCSMapping(const MolGraph& g1, const MolGraph& g2,
         if (!detail::atomsCompatFast(g1, qi, g2, tj, opts)) return false;
     }
 
+    if (opts.useChirality || opts.useBondStereo) {
+        std::vector<int> q2t(g1.n, -1);
+        for (const auto& [q, t] : mapping) q2t[q] = t;
+        if (!detail::mappingStereoCompatible(g1, g2, opts, q2t)) return false;
+    }
     for (const auto& [qi, tj] : mapping) {
         for (int qk : g1.neighbors[qi]) {
             if (qk <= qi) continue;
@@ -4044,10 +4101,16 @@ inline bool isValidMCSMapping(const MolGraph& g1, const MolGraph& g2,
             int tk = it->second;
             if (g1.bondOrder(qi, qk) == 0) continue;
             if (g2.bondOrder(tj, tk) == 0) return false;
-            if (!ChemOps::bondsCompatible(g1, qi, qk, g2, tj, tk, opts)) {
+            if (!detail::bondsCompatible(g1, qi, qk, g2, tj, tk, opts)) {
                 return false;
             }
         }
+    }
+    if (opts.induced) {
+        for (auto first = mapping.begin(); first != mapping.end(); ++first)
+            for (auto second = std::next(first); second != mapping.end(); ++second)
+                if (!g1.hasBond(first->first, second->first)
+                    && g2.hasBond(first->second, second->second)) return false;
     }
     return true;
 }
@@ -4150,8 +4213,9 @@ inline std::map<int,int> runValidatedMCSDirection(const MolGraph& query, const M
 inline std::map<int,int> findMCSDirectionalCore(const MolGraph& g1, const MolGraph& g2,
                                                 const ChemOptions& chem, const MCSOptions& opts) {
     if (g1.n == 0 || g2.n == 0) return {};
+    detail::MCSDeadlineScope deadlineScope(::smsd::resolveMCSTimeoutMs(g1, g2, opts));
     detail::validateAtomWeights(g1, opts);
-    if (&g1 == &g2 || detail::isExactMatch(g1, g2, chem)) {
+    if (!detail::hasNegativeAtomWeights(opts) && (&g1 == &g2 || detail::isExactMatch(g1, g2, chem))) {
         std::map<int,int> id;
         for (int i = 0; i < g1.n; ++i) id[i] = i;
         return detail::ppx(g1, g2, std::move(id), chem, opts);
@@ -4164,8 +4228,9 @@ inline std::map<int,int> findMCSDirectionalCore(const MolGraph& g1, const MolGra
         return std::max<int64_t>(0, left);
     };
 
-    g1.ensureCanonical();
-    g2.ensureCanonical();
+    if (opts.atomWeights.empty()) {
+        g1.ensureCanonical(); g2.ensureCanonical();
+    }
     if (chem.ringFusionMode != ChemOptions::RingFusionMode::IGNORE) {
         g1.ensureRingCounts();
         g2.ensureRingCounts();
@@ -4189,6 +4254,12 @@ inline std::map<int,int> findMCSDirectionalCore(const MolGraph& g1, const MolGra
             ? runValidatedMCSDirection(g1, g2, chem, timedOpts, false)
             : runValidatedMCSDirection(g2, g1, chem, timedOpts, true);
         oriented = detail::ppx(g1, g2, std::move(oriented), chem, opts);
+        if (!oriented.empty() && std::max(g1.n, g2.n) <= 50 && remainingMs() > 0) {
+            detail::TimeBudget extensionBudget(remainingMs());
+            auto extended = detail::ppx(g1, g2,
+                detail::greedyAtomExtend(g1, g2, oriented, chem, opts, &extensionBudget), chem, opts);
+            if (detail::preferFinalMapping(g1, extended, oriented, opts)) oriented = std::move(extended);
+        }
         if (validateMapping(g1, g2, oriented, chem).empty()) return oriented;
         budgetMs = remainingMs();
         if (budgetMs <= 0) return oriented;
@@ -4251,8 +4322,9 @@ inline std::map<int,int> findMCSDirectionalCore(const MolGraph& g1, const MolGra
 inline std::map<int,int> findMCS(const MolGraph& g1, const MolGraph& g2,
                                  const ChemOptions& chem, const MCSOptions& opts) {
     if (g1.n == 0 || g2.n == 0) return {};
+    detail::MCSDeadlineScope deadlineScope(::smsd::resolveMCSTimeoutMs(g1, g2, opts));
     detail::validateAtomWeights(g1, opts);
-    if (&g1 == &g2 || detail::isExactMatch(g1, g2, chem)) {
+    if (!detail::hasNegativeAtomWeights(opts) && (&g1 == &g2 || detail::isExactMatch(g1, g2, chem))) {
         std::map<int,int> id;
         for (int i = 0; i < g1.n; ++i) id[i] = i;
         return detail::ppx(g1, g2, std::move(id), chem, opts);
@@ -4270,7 +4342,18 @@ inline std::map<int,int> findMCS(const MolGraph& g1, const MolGraph& g2,
         return findMCSDirectionalCore(lhs, rhs, chem, withTimeoutMs(opts, budgetMs));
     };
 
-    auto best = runDirectionalCore(g1, g2);
+    std::map<int,int> best;
+    if (opts.atomWeights.empty() && !opts.maximizeBonds && opts.connectedOnly
+        && !opts.disconnectedMCS && opts.maxStage >= 1 && std::min(g1.n, g2.n) > 50
+        && remainingMs() > 0) {
+        // Both graphs exceed coverage's small native-recovery scope.
+        auto seed = detail::ppx(g1, g2, findMCSCoverage(g1, g2,
+            chem.ringMatchesRingOnly, chem.matchBondOrder == ChemOptions::BondOrderMode::ANY,
+            std::min<int64_t>(500, remainingMs()), 8), chem, opts);
+        if (isValidMCSMapping(g1, g2, seed, chem)) best = std::move(seed);
+    }
+    auto directional = runDirectionalCore(g1, g2);
+    if (detail::preferFinalMapping(g1, directional, best, opts)) best = std::move(directional);
     if (best.empty()) return best;
 
     bool weightMode = opts.maximizeBonds || !opts.atomWeights.empty();
@@ -4304,13 +4387,12 @@ inline std::map<int,int> findMCS(const MolGraph& g1, const MolGraph& g2,
 // ---------------------------------------------------------------------------
 
 /// Progress callback type: receives (bestMappingSoFar, bestSize, elapsedMs).
-/// Called after each major pipeline level with the current best result.
+/// Called once after the search returns, with the final result.
 using MCSProgressFn = std::function<void(const std::map<int,int>&, int, int64_t)>;
 
 /// Find MCS with optional progress callback.
-/// The callback is invoked after each pipeline level (L0.25 chain, L0.5 tree,
-/// L0.75 greedy, L1 substructure, L1.5 seed-extend, L2 McSplit, L3 BK, L4/L5
-/// McGregor) with the current best mapping, its size, and elapsed time in ms.
+/// The callback is invoked once after the search returns, with the final
+/// mapping, its size, and elapsed time in milliseconds.
 /// Passing nullptr as progress disables progress reporting.
 inline std::map<int,int> findMCS(const MolGraph& g1, const MolGraph& g2,
                                   const ChemOptions& chem, const MCSOptions& opts,
@@ -4377,75 +4459,75 @@ inline int findMCSSize(const MolGraph& g1, const MolGraph& g2,
 /// automorphisms alpha in Aut(g1) and beta in Aut(g2) such that
 /// M2 = beta . M1 . alpha^{-1}.  This function returns the lexicographically
 /// smallest representative of the equivalence class.
+/// Throws std::length_error for incomplete generators or an orbit above 65,536 states
+/// or 1,000,000 mapped pairs,
+/// and std::runtime_error when the one-second canonicalization budget or an
+/// active search deadline expires.
 ///
-/// The algorithm iteratively applies each generator to the current best
-/// mapping (on both the query side and the target side) and keeps the
-/// lex-smallest result, repeating until a fixed point is reached.
+/// Enumerates the complete generator orbit on both sides and returns its
+/// lexicographically smallest mapping.
 inline std::map<int,int> canonicalizeMapping(
         const MolGraph& g1, const MolGraph& g2,
         const std::map<int,int>& mapping) {
     if (mapping.empty()) return mapping;
-
-    const auto& gens1 = g1.getAutomorphismGenerators();
-    const auto& gens2 = g2.getAutomorphismGenerators();
-
-    // No symmetry in either molecule — mapping is already canonical.
-    if (gens1.empty() && gens2.empty()) return mapping;
-
-    // Work with sorted pair vectors for efficient lex comparison.
-    using PairVec = std::vector<std::pair<int,int>>;
-    auto mapToPairs = [](const std::map<int,int>& m) {
-        PairVec v(m.begin(), m.end());
-        return v;
+    auto deadline = detail::steadyDeadline(1000);
+    auto expired = [&] {
+        return detail::global_deadline::expired() || std::chrono::steady_clock::now() >= deadline;
     };
 
-    // Precompute inverses of g1 generators (query-side permutation).
-    std::vector<std::vector<int>> invGens1;
-    invGens1.reserve(gens1.size());
-    for (const auto& gen : gens1) {
-        std::vector<int> inv(gen.size());
-        for (int i = 0; i < static_cast<int>(gen.size()); ++i)
-            inv[gen[i]] = i;
-        invGens1.push_back(std::move(inv));
-    }
+    for (const auto& [query, target] : mapping)
+        if (query < 0 || query >= g1.n || target < 0 || target >= g2.n)
+            throw std::out_of_range("canonicalizeMapping: atom index out of range");
+    if (expired())
+        throw std::runtime_error("canonicalizeMapping: deadline expired");
+    const auto& gens1 = g1.getAutomorphismGenerators();
+    const auto& gens2 = g2.getAutomorphismGenerators();
+    if (expired()) throw std::runtime_error("canonicalizeMapping: deadline expired");
+    if (g1.automorphismGeneratorsTruncated() || g2.automorphismGeneratorsTruncated())
+        throw std::length_error("canonicalizeMapping: incomplete automorphism generators");
+    if (gens1.empty() && gens2.empty()) return mapping;
 
-    PairVec best = mapToPairs(mapping);
-    PairVec candidate;
-    candidate.reserve(best.size());
-
-    int maxIter = std::max(100, 2 * static_cast<int>(gens1.size() + gens2.size()));
-    for (int iter = 0; iter < maxIter; ++iter) {
-        bool improved = false;
-
-        // Try each g1-side generator (permute query atom indices).
-        for (const auto& inv : invGens1) {
-            candidate.clear();
-            for (const auto& [qi, ti] : best)
-                candidate.emplace_back(inv[qi], ti);
-            std::sort(candidate.begin(), candidate.end());
-            if (candidate < best) { best = candidate; improved = true; }
+    using PairVec = std::vector<std::pair<int,int>>;
+    size_t maximumStates = std::min<size_t>(65536, 1000000 / mapping.size());
+    std::vector<PairVec> frontier{PairVec(mapping.begin(), mapping.end())};
+    std::set<PairVec> seen{frontier.front()};
+    auto remember = [&](PairVec candidate) {
+        std::sort(candidate.begin(), candidate.end());
+        if (!seen.insert(candidate).second) return;
+        if (seen.size() > maximumStates)
+            throw std::length_error("canonicalizeMapping: automorphism orbit exceeds state limit");
+        frontier.push_back(std::move(candidate));
+    };
+    for (size_t head = 0; head < frontier.size(); ++head) {
+        if (expired())
+            throw std::runtime_error("canonicalizeMapping: deadline expired");
+        // Copy because appending to the frontier may reallocate its storage.
+        PairVec current = frontier[head];
+        for (const auto& generator : gens1) {
+            if (expired()) throw std::runtime_error("canonicalizeMapping: deadline expired");
+            PairVec candidate;
+            candidate.reserve(current.size());
+            for (const auto& [query, target] : current)
+                candidate.emplace_back(generator[query], target);
+            remember(std::move(candidate));
         }
-
-        // Try each g2-side generator (permute target atom indices).
-        for (const auto& gen : gens2) {
-            candidate.clear();
-            for (const auto& [qi, ti] : best)
-                candidate.emplace_back(qi, gen[ti]);
-            std::sort(candidate.begin(), candidate.end());
-            if (candidate < best) { best = candidate; improved = true; }
+        for (const auto& generator : gens2) {
+            if (expired()) throw std::runtime_error("canonicalizeMapping: deadline expired");
+            PairVec candidate;
+            candidate.reserve(current.size());
+            for (const auto& [query, target] : current)
+                candidate.emplace_back(query, generator[target]);
+            remember(std::move(candidate));
         }
-
-        if (!improved) break;
     }
-
     std::map<int,int> result;
-    for (const auto& [qi, ti] : best) result[qi] = ti;
+    for (const auto& [query, target] : *seen.begin()) result.emplace(query, target);
     return result;
 }
 
 /// Enumerate multiple distinct MCS mappings of the maximum size.
 ///
-/// First computes the single best MCS to determine the optimal size K, then
+/// First computes the single best MCS to determine the incumbent size K, then
 /// re-searches the solution space to collect up to @p maxResults distinct
 /// atom-atom mappings of that same size K. Useful for scaffold analysis and
 /// SAR studies where alternative mappings provide different chemical perspectives.
@@ -4455,24 +4537,26 @@ inline std::map<int,int> canonicalizeMapping(
 /// @param chem       chemical matching options
 /// @param opts       MCS options (timeout, induced, connected, etc.)
 /// @param maxResults maximum number of distinct mappings to return (default 10)
-/// @return vector of distinct atom-index mappings, each of the maximum MCS size
+/// @return mappings with the incumbent size and objective score. Search limits
+/// may prevent complete enumeration; symmetry limits retain raw mapping keys.
 inline std::vector<std::map<int,int>> findAllMCS(const MolGraph& g1, const MolGraph& g2,
                                                   const ChemOptions& chem, const MCSOptions& opts,
                                                   int maxResults = 10) {
     using namespace detail;
     if (g1.n == 0 || g2.n == 0) return {};
     if (maxResults <= 0) maxResults = 10;
+    MCSDeadlineScope deadlineScope(::smsd::resolveMCSTimeoutMs(g1, g2, opts));
 
-    // Phase 1: find the optimal MCS size
+    // Phase 1: determine the incumbent size
     std::map<int,int> best = findMCS(g1, g2, chem, opts);
     int K = static_cast<int>(best.size());
     if (K == 0) return {};
+    int incumbentScore = mcsScore(g1, best, opts);
 
-    // Deduplicate by automorphism-canonical mapping.
-    // Two mappings are equivalent if they differ only by automorphisms of g1/g2.
+    // Exact symmetry keys when available; raw keys retain candidates after resource limits.
     using CanonKey = std::vector<std::pair<int,int>>;
     auto canonKey = [&](const std::map<int,int>& m) -> CanonKey {
-        auto cm = canonicalizeMapping(g1, g2, m);
+        auto cm = enumerationMappingKey(g1, g2, m, &opts);
         return CanonKey(cm.begin(), cm.end());
     };
     std::map<CanonKey, std::map<int,int>> seen;
@@ -4480,6 +4564,7 @@ inline std::vector<std::map<int,int>> findAllMCS(const MolGraph& g1, const MolGr
     auto remember = [&](std::map<int, int> mapping) {
         mapping = ppx(g1, g2, std::move(mapping), chem, opts);
         if (static_cast<int>(mapping.size()) != K
+            || mcsScore(g1, mapping, opts) != incumbentScore
             || !isValidMCSMapping(g1, g2, mapping, chem)) return;
         auto key = canonKey(mapping);
         if (seen.find(key) == seen.end()) seen.emplace(std::move(key), std::move(mapping));
@@ -4497,6 +4582,26 @@ inline std::vector<std::map<int,int>> findAllMCS(const MolGraph& g1, const MolGr
     }
     TimeBudget tb(enumTimeout);
     int minN = std::min(g1.n, g2.n);
+    if (minN <= 20 && std::max(g1.n, g2.n) <= 40
+        && (opts.maximizeBonds || !opts.atomWeights.empty() || opts.disconnectedMCS
+            || !opts.connectedOnly || std::max(g1.n, g2.n) <= 8)) {
+        SmallExactMCSExplorer explorer(g1, g2, chem, opts.induced, tb,
+            labelFrequencyUpperBound(g1, g2, chem), best, &opts);
+        auto mappings = explorer.runAll(maxResults);
+        if (!mappings.empty() && preferFinalMapping(g1, mappings.front(), best, opts)) {
+            best = mappings.front();
+            K = static_cast<int>(best.size());
+            incumbentScore = mcsScore(g1, best, opts);
+            seen.clear();
+        }
+        for (auto& mapping : mappings) remember(std::move(mapping));
+        std::vector<std::map<int,int>> result;
+        for (auto& [key, mapping] : seen) {
+            if (static_cast<int>(result.size()) >= maxResults) break;
+            result.push_back(std::move(mapping));
+        }
+        return result;
+    }
 
     // Phase 2a: if MCS == smaller molecule, enumerate substructure mappings
     if (K == minN && !tb.expired()) {
@@ -4661,6 +4766,14 @@ inline std::vector<std::string> validateMapping(const MolGraph& g1, const MolGra
         }
     }
 
+    if (opts.useChirality || opts.useBondStereo) {
+        std::vector<int> q2t(g1.n, -1);
+        for (const auto& [q, t] : mapping)
+            if (q >= 0 && q < g1.n && t >= 0 && t < g2.n) q2t[q] = t;
+        if (!detail::mappingStereoCompatible(g1, g2, opts, q2t))
+            errors.push_back("mapping stereochemistry is incompatible");
+    }
+
     // Check bonds: every mapped query bond must exist in the target and be compatible.
     for (auto& [qi, tj] : mapping) {
         if (qi < 0 || qi >= g1.n || tj < 0 || tj >= g2.n) continue;
@@ -4669,15 +4782,26 @@ inline std::vector<std::string> validateMapping(const MolGraph& g1, const MolGra
             auto it = mapping.find(qk);
             if (it == mapping.end()) continue;
             int tk = it->second;
+            if (tk < 0 || tk >= g2.n) continue;
             if (g1.bondOrder(qi, qk) == 0) continue;
             if (g2.bondOrder(tj, tk) == 0) {
                 errors.push_back("bond missing: q(" + std::to_string(qi) + "-" + std::to_string(qk)
                                 + ") vs t(" + std::to_string(tj) + "-" + std::to_string(tk) + ")");
                 continue;
             }
-            if (!ChemOps::bondsCompatible(g1, qi, qk, g2, tj, tk, opts)) {
+            if (!detail::bondsCompatible(g1, qi, qk, g2, tj, tk, opts)) {
                 errors.push_back("bond incompatible: q(" + std::to_string(qi) + "-" + std::to_string(qk)
                                 + ") vs t(" + std::to_string(tj) + "-" + std::to_string(tk) + ")");
+            }
+        }
+    }
+    if (opts.induced) {
+        for (auto first = mapping.begin(); first != mapping.end(); ++first) {
+            if (first->first < 0 || first->first >= g1.n || first->second < 0 || first->second >= g2.n) continue;
+            for (auto second = std::next(first); second != mapping.end(); ++second) {
+                if (second->first < 0 || second->first >= g1.n || second->second < 0 || second->second >= g2.n) continue;
+                if (!g1.hasBond(first->first, second->first) && g2.hasBond(first->second, second->second))
+                    errors.push_back("unexpected target bond between mapped query non-neighbors");
             }
         }
     }
@@ -4690,6 +4814,10 @@ inline std::map<int,int> repairInvalidMCSMapping(const MolGraph& g1, const MolGr
     while (!mapping.empty()) {
         auto errors = validateMapping(g1, g2, mapping, opts);
         if (errors.empty()) return mapping;
+        if (detail::global_deadline::expired()) {
+            mapping.erase(mapping.begin());
+            continue;
+        }
 
         std::vector<int> candidates;
         const std::string& err = errors.front();
@@ -4741,6 +4869,7 @@ inline std::map<int,int> repairInvalidMCSMapping(const MolGraph& g1, const MolGr
 inline bool isMappingMaximal(const MolGraph& g1, const MolGraph& g2,
                               const std::map<int,int>& mapping,
                               const ChemOptions& opts) {
+    if (!isValidMCSMapping(g1, g2, mapping, opts)) return false;
     std::unordered_set<int> usedQ, usedT;
     for (auto& [qi, tj] : mapping) {
         usedQ.insert(qi);
@@ -4753,19 +4882,9 @@ inline bool isMappingMaximal(const MolGraph& g1, const MolGraph& g2,
             if (usedT.count(tj)) continue;
             if (!detail::atomsCompatFast(g1, qi, g2, tj, opts)) continue;
 
-            // Check that all mapped neighbors of qi have compatible bonds
-            bool bondOk = true;
-            for (int qk : g1.neighbors[qi]) {
-                auto it = mapping.find(qk);
-                if (it == mapping.end()) continue;
-                int tk = it->second;
-                if (g2.bondOrder(tj, tk) == 0
-                    || !ChemOps::bondsCompatible(g1, qi, qk, g2, tj, tk, opts)) {
-                    bondOk = false;
-                    break;
-                }
-            }
-            if (bondOk) return false; // found extensible pair -> not maximal
+            auto extended = mapping;
+            extended[qi] = tj;
+            if (isValidMCSMapping(g1, g2, extended, opts)) return false;
         }
     }
     return true;
@@ -5161,6 +5280,7 @@ inline MCSResult findMCSFromSmiles(const std::string& smi1, const std::string& s
  * @param targets  product fragment(s) — typically one combined product
  * @param chem     chemical matching options
  * @param opts     MCS options
+ * @param selectedTargets optional selected target index per query; -1 for empty mappings
  * @return vector of mappings, one per query (same order as input).
  *         Each mapping: {query_atom_idx: target_atom_idx}.
  * @since 6.6.0
@@ -5169,17 +5289,19 @@ inline std::vector<std::map<int,int>> batchMCSConstrained(
     const std::vector<MolGraph>& queries,
     const std::vector<MolGraph>& targets,
     const ChemOptions& chem,
-    const MCSOptions& opts = MCSOptions())
+    const MCSOptions& opts = MCSOptions(),
+    std::vector<int>* selectedTargets = nullptr)
 {
     int nQ = static_cast<int>(queries.size());
     int nT = static_cast<int>(targets.size());
 
     std::vector<std::map<int,int>> results(nQ);
+    if (selectedTargets) selectedTargets->assign(nQ, -1);
 
     // Sort queries by decreasing size (larger fragments first)
     std::vector<int> order(nQ);
     std::iota(order.begin(), order.end(), 0);
-    std::sort(order.begin(), order.end(), [&](int a, int b) {
+    std::stable_sort(order.begin(), order.end(), [&](int a, int b) {
         return queries[a].n > queries[b].n;
     });
 
@@ -5188,7 +5310,6 @@ inline std::vector<std::map<int,int>> batchMCSConstrained(
 
     for (int qi : order) {
         std::map<int,int> bestMapping;
-        int bestSize = 0;
         int bestTarget = -1;
 
         for (int ti = 0; ti < nT; ++ti) {
@@ -5211,14 +5332,13 @@ inline std::vector<std::map<int,int>> batchMCSConstrained(
 
                 // Translate residual indices → original target indices
                 for (auto& [qAtom, rAtom] : residualMCS) {
-                    if (rAtom < static_cast<int>(residualAtoms.size()))
+                    if (rAtom >= 0 && rAtom < static_cast<int>(residualAtoms.size()))
                         mapping[qAtom] = residualAtoms[rAtom];
                 }
             }
             if (mapping.empty()) continue;
 
-            if (static_cast<int>(mapping.size()) > bestSize) {
-                bestSize = static_cast<int>(mapping.size());
+            if (detail::preferFinalMapping(queries[qi], mapping, bestMapping, opts)) {
                 bestMapping = std::move(mapping);
                 bestTarget = ti;
             }
@@ -5228,6 +5348,7 @@ inline std::vector<std::map<int,int>> batchMCSConstrained(
             for (auto& [q, t] : bestMapping)
                 usedTargetAtoms[bestTarget].insert(t);
         }
+        if (selectedTargets) (*selectedTargets)[qi] = bestTarget;
         results[qi] = std::move(bestMapping);
     }
     return results;
@@ -5285,6 +5406,7 @@ inline std::map<int,int> findMCSCoverage(
 {
     using Clock = std::chrono::steady_clock;
     if (g1.n == 0 || g2.n == 0) return {};
+    detail::MCSDeadlineScope deadlineScope(std::max<int64_t>(1, timeoutMs));
 
     // Shared deadline across ALL stages
     auto deadline = detail::steadyDeadline(timeoutMs);
@@ -5294,17 +5416,63 @@ inline std::map<int,int> findMCSCoverage(
                 deadline - Clock::now()).count());
     };
 
+    ChemOptions chemistry;
+    chemistry.aromaticityMode = ChemOptions::AromaticityMode::FLEXIBLE;
+    chemistry.matchBondOrder = bondAny ? ChemOptions::BondOrderMode::ANY
+                                      : ChemOptions::BondOrderMode::STRICT;
+    chemistry.ringMatchesRingOnly = ringMatch;
+    auto compatiblePair = [&](int q, int t, const std::map<int,int>& mapped) {
+        if (q < 0 || q >= g1.n || t < 0 || t >= g2.n
+            || !detail::atomsCompatFast(g1, q, g2, t, chemistry)) return false;
+        for (const auto& [qk, tk] : mapped) {
+            if (t == tk) return false;
+            int queryOrder = g1.bondOrder(q, qk);
+            if (!queryOrder) continue;
+            int targetOrder = g2.bondOrder(t, tk);
+            if (!targetOrder || !detail::bondsCompatible(g1, q, qk, g2, t, tk, chemistry)) return false;
+        }
+        return true;
+    };
+    auto repair = [&](const std::map<int,int>& raw) {
+        bool valid = isValidMCSMapping(g1, g2, raw, chemistry);
+        if (valid) return detail::largestConnected(g1, raw, &g2);
+        std::vector<std::pair<int,int>> order(raw.begin(), raw.end());
+        std::map<int,int> repaired;
+        for (int attempt = 0; attempt < 4; ++attempt) {
+            if (attempt == 1) std::reverse(order.begin(), order.end());
+            if (attempt >= 2) std::stable_sort(order.begin(), order.end(), [&](const auto& a, const auto& b) {
+                auto score = [&](int atom) {
+                    if (atom < 0 || atom >= g1.n) return -1;
+                    return g1.degree[atom] + (attempt == 3 && g1.atomicNum[atom] != 6 ? g1.n : 0);
+                };
+                return score(a.first) > score(b.first);
+            });
+            std::map<int,int> candidate;
+            for (const auto& [q, t] : order) {
+                if (!candidate.empty() && detail::global_deadline::expired()) break;
+                if (compatiblePair(q, t, candidate)) candidate[q] = t;
+            }
+            candidate = detail::largestConnected(g1, candidate, &g2);
+            if (candidate.size() > repaired.size()) repaired = std::move(candidate);
+            if (repaired.size() == raw.size() || detail::global_deadline::expired()) break;
+        }
+        return repaired;
+    };
+
     // --- Build atom compatibility table (element + optional ring flag) ---
     std::vector<std::pair<int,int>> compat;
     compat.reserve(static_cast<size_t>(g1.n) * 4);
     for (int i = 0; i < g1.n; ++i) {
+        if (i > 0 && detail::global_deadline::expired()) break;
         for (int j = 0; j < g2.n; ++j) {
+            if (j > 0 && (j & 63) == 0 && detail::global_deadline::expired()) break;
             if (g1.atomicNum[i] != g2.atomicNum[j]) continue;
             if (ringMatch && (g1.ring[i] != g2.ring[j])) continue;
             compat.emplace_back(i, j);
         }
     }
     if (compat.empty()) return {};
+    if (detail::global_deadline::expired()) return {compat.front()};
 
     // --- Build bond lookup tables {(min,max) -> order} ---
     std::map<std::pair<int,int>, int> bonds_a, bonds_b;
@@ -5325,6 +5493,13 @@ inline std::map<int,int> findMCSCoverage(
 
     std::map<int,int> bestMapping;
     int bestSize = 0;
+    auto promote = [&](std::map<int,int> candidate) {
+        candidate = repair(candidate);
+        if (static_cast<int>(candidate.size()) > bestSize) {
+            bestSize = static_cast<int>(candidate.size()); bestMapping = std::move(candidate);
+        }
+    };
+    promote({compat.front()});
 
     // --- L1: Substructure containment check (budget: min(100ms, remaining)) ---
     if (g1.n != g2.n) {
@@ -5333,9 +5508,8 @@ inline std::map<int,int> findMCSCoverage(
         bool swapped = (g1.n > g2.n);
 
         // Reuse the main compat if direction matches, else build directed
-        std::vector<std::pair<int,int>>& subCompat = swapped
-            ? *(new std::vector<std::pair<int,int>>()) : compat;
-        bool ownSubCompat = swapped;
+        std::vector<std::pair<int,int>> reversedCompat;
+        std::vector<std::pair<int,int>>& subCompat = swapped ? reversedCompat : compat;
         if (swapped) {
             for (auto& [i, j] : compat) subCompat.emplace_back(j, i);
         }
@@ -5346,18 +5520,13 @@ inline std::map<int,int> findMCSCoverage(
             swapped ? bonds_a : bonds_b,
             bondAny, std::min(int64_t(100), remainingMs()), 4);
 
-        if (ownSubCompat) delete &subCompat;
-
         for (auto& emb : embeddings) {
             if (static_cast<int>(emb.size()) == query->n) {
                 std::map<int,int> subMap;
                 for (auto& [q, t] : emb) {
                     if (swapped) subMap[t] = q; else subMap[q] = t;
                 }
-                if (static_cast<int>(subMap.size()) > bestSize) {
-                    bestSize = static_cast<int>(subMap.size());
-                    bestMapping = std::move(subMap);
-                }
+                promote(std::move(subMap));
             }
         }
         if (bestSize >= ub) return bestMapping;
@@ -5372,11 +5541,7 @@ inline std::map<int,int> findMCSCoverage(
             ring_a, ring_b, arom_a, arom_b, ub);
 
         for (const auto& cand : result.candidates) {
-            if (static_cast<int>(cand.size()) > bestSize) {
-                bestSize = static_cast<int>(cand.size());
-                bestMapping.clear();
-                for (auto& [q, t] : cand) bestMapping[q] = t;
-            }
+            promote(std::map<int,int>(cand.begin(), cand.end()));
         }
         if (bestSize >= ub) return bestMapping;
     }
@@ -5402,29 +5567,26 @@ inline std::map<int,int> findMCSCoverage(
             std::vector<int> queue = {seedA};
             int head = 0;
             while (head < static_cast<int>(queue.size())) {
+                if (detail::global_deadline::expired()) break;
                 int curA = queue[head++], curB = q2t[curA];
                 for (int nbA : g1.neighbors[curA]) {
                     if (q2t[nbA] >= 0) continue;
                     int bestNbB = -1; double bestScore = -1.0;
-                    int boA = g1.bondOrder(curA, nbA);
                     for (int nbB : g2.neighbors[curB]) {
+                        if (detail::global_deadline::expired()) break;
                         if (usedT[nbB]) continue;
                         if (g1.atomicNum[nbA] != g2.atomicNum[nbB]) continue;
                         if (ringMatch && g1.ring[nbA] != g2.ring[nbB]) continue;
-                        int boB = g2.bondOrder(curB, nbB);
-                        if (!bondAny && boA != boB) {
-                            if (!(g1.aromatic[curA] && g1.aromatic[nbA]
-                                && g2.aromatic[curB] && g2.aromatic[nbB])) continue;
-                        }
+                        if (!detail::bondsCompatible(g1, curA, nbA, g2, curB, nbB, chemistry)) continue;
                         double score = 1.0;
+                        bool consistent = true;
                         for (int nb2A : g1.neighbors[nbA]) {
                             int nb2B = q2t[nb2A]; if (nb2B < 0) continue;
-                            int bo2B = g2.bondOrder(nbB, nb2B);
-                            if (bo2B > 0 && (bondAny || g1.bondOrder(nbA, nb2A) == bo2B
-                                || (g1.aromatic[nbA] && g1.aromatic[nb2A]
-                                    && g2.aromatic[nbB] && g2.aromatic[nb2B])))
+                            if (detail::bondsCompatible(g1, nbA, nb2A, g2, nbB, nb2B, chemistry))
                                 score += 3.0;
+                            else { consistent = false; break; }
                         }
+                        if (!consistent) continue;
                         if (g1.ring[nbA] == g2.ring[nbB]) score += 1.0;
                         if (g1.aromatic[nbA] == g2.aromatic[nbB]) score += 1.0;
                         if (score > bestScore) { bestScore = score; bestNbB = nbB; }
@@ -5436,10 +5598,10 @@ inline std::map<int,int> findMCSCoverage(
                 }
             }
             if (mapSize > bestSize) {
-                bestSize = mapSize;
-                bestMapping.clear();
+                std::map<int,int> candidate;
                 for (int i = 0; i < g1.n; ++i)
-                    if (q2t[i] >= 0) bestMapping[i] = q2t[i];
+                    if (q2t[i] >= 0) candidate[i] = q2t[i];
+                promote(std::move(candidate));
             }
         };
 
@@ -5488,11 +5650,7 @@ inline std::map<int,int> findMCSCoverage(
                 g1.n, g2.n, bondAny, remainingMs(), maxResults,
                 ring_a, ring_b, arom_a, arom_b, ringUb);
             for (const auto& cand : ringResult.candidates) {
-                if (static_cast<int>(cand.size()) > bestSize) {
-                    bestSize = static_cast<int>(cand.size());
-                    bestMapping.clear();
-                    for (auto& [q, t] : cand) bestMapping[q] = t;
-                }
+                promote(std::map<int,int>(cand.begin(), cand.end()));
             }
         }
     }
@@ -5515,12 +5673,15 @@ inline std::map<int,int> findMCSCoverage(
         MCSOptions mopts;
         mopts.timeoutMs = std::min<int64_t>(100, remainingMs());
         auto nativeMapping = findMCS(g1, g2, chem, mopts);
-        if (static_cast<int>(nativeMapping.size()) > bestSize) {
-            bestMapping = std::move(nativeMapping);
-            bestSize    = static_cast<int>(bestMapping.size());
-        }
+        promote(std::move(nativeMapping));
     }
-
+    if (!bestMapping.empty() && remainingMs() > 0 && std::max(g1.n, g2.n) <= 50) {
+        ChemOptions extensionChemistry = chemistry;
+        extensionChemistry.matchBondOrder = bondAny ? ChemOptions::BondOrderMode::ANY : ChemOptions::BondOrderMode::STRICT;
+        MCSOptions extensionOptions;
+        detail::TimeBudget extensionBudget(remainingMs());
+        promote(detail::greedyAtomExtend(g1, g2, bestMapping, extensionChemistry, extensionOptions, &extensionBudget));
+    }
     return bestMapping;
 }
 

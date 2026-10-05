@@ -3,12 +3,12 @@
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
  *
- * SMSD Pro 6.0.0 — ZINC20 Tautomer Over-Matching Benchmark (C++)
+ * SMSD tautomer feature comparison on the curated diverse-molecule pool (C++)
  * ===============================================================
- * Paper Item 15 (Future Work): quantify how tautomer-aware MCS relaxation
- * causes over-matching (matching atoms that violate proton conservation).
+ * Compare returned sizes and the engine's proton-consistency diagnostics.
+ * Validator failures are not independent proof of chemical false positives.
  *
- * Uses the tautomer section (lines 801-900) of diverse_molecules.txt,
+ * Uses the labelled tautomer section of diverse_molecules.txt,
  * forming consecutive keto/enol pairs.  For each pair:
  *   1. Run MCS with ChemOptions::tautomerProfile() (tautomer-aware)
  *   2. Run MCS with default ChemOptions()          (strict)
@@ -27,6 +27,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <fstream>
 #include <map>
 #include <numeric>
@@ -45,7 +46,7 @@ struct Mol {
 };
 
 // ============================================================================
-// Load tautomer molecules (section 7: mol indices 801-900, 1-based)
+// Load tautomer molecules by section marker, independent of earlier row counts.
 // ============================================================================
 static std::vector<Mol> loadTautomerMolecules(const std::string& path) {
     std::vector<Mol> mols;
@@ -55,11 +56,9 @@ static std::vector<Mol> loadTautomerMolecules(const std::string& path) {
         return mols;
     }
 
-    constexpr int TAUT_START = 801;
-    constexpr int TAUT_END   = 900;
-
     std::string line;
     int molIdx = 0;
+    bool inTautomerSection = false;
     ParseOptions popts;
     popts.lenient = true;
 
@@ -67,9 +66,13 @@ static std::vector<Mol> loadTautomerMolecules(const std::string& path) {
         // Trim
         while (!line.empty() && (line.back() == '\r' || line.back() == '\n' || line.back() == ' '))
             line.pop_back();
+        if (line.rfind("# SECTION ", 0) == 0) {
+            inTautomerSection = line.rfind("# SECTION 7:", 0) == 0;
+            continue;
+        }
         if (line.empty() || line[0] == '#') continue;
         molIdx++;
-        if (molIdx < TAUT_START || molIdx > TAUT_END) continue;
+        if (!inTautomerSection) continue;
 
         // Split on tab
         std::string smi, name;
@@ -87,6 +90,9 @@ static std::vector<Mol> loadTautomerMolecules(const std::string& path) {
             mols.push_back({smi, name, std::move(g)});
         } catch (const std::exception& e) {
             fprintf(stderr, "  SKIP: %s [%s] -> %s\n", name.c_str(), smi.c_str(), e.what());
+            // Retain the record position so its partner is never paired with
+            // the next tautomer after a parse failure.
+            mols.push_back({smi, name, MolGraph{}});
         }
     }
     return mols;
@@ -136,7 +142,8 @@ static PairResult benchmarkPair(Mol& a, Mol& b) {
     ChemOptions tautOpts = ChemOptions::tautomerProfile();
     ChemOptions defOpts;
     MCSOptions mcsOpts;
-    mcsOpts.timeoutMs = 10000;
+    const char* configuredTimeout = std::getenv("SMSD_BENCHMARK_TIMEOUT_MS");
+    mcsOpts.timeoutMs = configuredTimeout ? std::stoll(configuredTimeout) : 10000;
 
     // Tautomer-aware MCS
     auto t0 = std::chrono::high_resolution_clock::now();
@@ -176,7 +183,7 @@ int main(int argc, char** argv) {
 
     fprintf(stderr, "Loading tautomer molecules from %s ...\n", molPath.c_str());
     auto mols = loadTautomerMolecules(molPath);
-    fprintf(stderr, "  %zu valid tautomer molecules loaded\n", mols.size());
+    fprintf(stderr, "  %zu tautomer records loaded\n", mols.size());
 
     if (mols.size() < 2) {
         fprintf(stderr, "ERROR: Need at least 2 molecules. Aborting.\n");
@@ -186,10 +193,11 @@ int main(int argc, char** argv) {
     // Form consecutive pairs
     std::vector<std::pair<int,int>> pairs;
     for (int i = 0; i + 1 < (int)mols.size(); i += 2) {
-        pairs.push_back({i, i + 1});
+        if (mols[i].graph.n > 0 && mols[i+1].graph.n > 0) pairs.push_back({i, i + 1});
+        else fprintf(stderr, "  SKIP PAIR: %s / %s\n", mols[i].name.c_str(), mols[i+1].name.c_str());
     }
     fprintf(stderr, "  %zu tautomer pairs formed\n", pairs.size());
-    fprintf(stderr, "Running tautomer over-matching benchmark ...\n");
+    fprintf(stderr, "Running tautomer feature diagnostics ...\n");
 
     std::vector<PairResult> results;
     for (int i = 0; i < (int)pairs.size(); i++) {
@@ -208,12 +216,12 @@ int main(int argc, char** argv) {
     // ================================================================
     printf("\n");
     printf("==============================================================================\n");
-    printf("SMSD Pro 6.0.0 — ZINC20 Tautomer Over-Matching Benchmark Results (C++)\n");
+    printf("SMSD tautomer feature diagnostics on the curated molecule pool (C++)\n");
     printf("==============================================================================\n");
     printf("Pairs tested:              %zu\n", results.size());
 
     printf("\n%-42s %5s %5s %6s %6s %8s\n",
-        "Pair", "Taut", "Def", "Delta", "Valid", "TautConf");
+        "Pair", "Taut", "Def", "Delta", "Proton", "TautConf");
     printf("------------------------------------------------------------------------------\n");
 
     int overMatchCount = 0, failCount = 0;
@@ -241,7 +249,7 @@ int main(int argc, char** argv) {
 
     printf("\nSummary Statistics:\n");
     printf("  Total pairs:                     %d\n", n);
-    printf("  Pairs with over-matching:        %d (%.1f%%)\n", overMatchCount, overMatchPct);
+    printf("  Pairs with positive atom delta:        %d (%.1f%%)\n", overMatchCount, overMatchPct);
     printf("  Proton consistency PASS rate:    %.1f%% (%d/%d)\n", passRate, n - failCount, n);
     printf("  Proton consistency FAIL count:   %d\n", failCount);
     printf("  Average TautConf score:          %.4f\n", avgTautConf);
@@ -261,7 +269,7 @@ int main(int argc, char** argv) {
         });
 
     if (!overMatched.empty()) {
-        printf("\nOver-matched pairs (tautomer MCS > default MCS):\n");
+        printf("\nPositive atom deltas (tautomer MCS > default MCS):\n");
         for (auto* pr : overMatched) {
             printf("  %s / %s: delta=%+d (taut=%d, def=%d) %s tautConf=%.3f\n",
                 pr->nameA.c_str(), pr->nameB.c_str(), pr->overMatchDelta,
@@ -270,9 +278,9 @@ int main(int argc, char** argv) {
         }
     }
 
-    // False positives
+    // Diagnostic proton-consistency failures
     int fpCount = 0;
-    printf("\nFalse positives (over-matched + proton violation):\n");
+    printf("\nPositive atom deltas with proton-consistency failures:\n");
     for (auto& pr : results) {
         if (pr.overMatchDelta > 0 && !pr.protonConsistent) {
             printf("  %s / %s: delta=%+d tautConf=%.3f\n",

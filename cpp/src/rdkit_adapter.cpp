@@ -10,7 +10,7 @@
 
 #ifdef SMSD_WITH_RDKIT
 
-#include "smsd/mol_graph.hpp"
+#include "smsd/rdkit_adapter.hpp"
 #include <GraphMol/GraphMol.h>
 #include <GraphMol/SmilesParse/SmilesParse.h>
 #include <GraphMol/MolOps.h>
@@ -22,7 +22,7 @@ namespace smsd {
 
 /// Convert an RDKit ROMol to an SMSD MolGraph.
 /// Strips explicit hydrogens by default.
-MolGraph fromRDKit(const RDKit::ROMol& mol, bool removeHs = true) {
+MolGraph fromRDKit(const RDKit::ROMol& mol, bool removeHs) {
     // Optionally remove Hs
     std::unique_ptr<RDKit::RWMol> molCopy;
     const RDKit::ROMol* m = &mol;

@@ -6,14 +6,14 @@
 """
 Benchmark the present SMSD Python native extension against the lighter native one.
 
-This is an apples-to-apples Python comparison:
+This is a diagnostic Python comparison:
 
 * Present SMSD: native `_smsd` extension built from this repository
 * Light SMSD: native `_smsd` extension from the sibling `bioinception` repo
 
-Both are benchmarked through the same Python 3.13 driver and the same timing
-loop, so we avoid JVM / CLI / wrapper differences and compare the native Python
-surface directly.
+Both use the same timing driver. Extension versions, default chemistry and
+returned mapping validity are not independently matched here, so the output
+does not establish speed rankings or MCS quality differences.
 
 Coverage:
 
@@ -22,9 +22,9 @@ Coverage:
 
 Outputs:
 
-* `benchmarks/results_present_vs_light_scaling_mcs.tsv`
-* `benchmarks/results_present_vs_light_scaling_sub.tsv`
-* `benchmarks/results_present_vs_light_scaling_summary.txt`
+* `build/local-benchmarks/results_present_vs_light_scaling_mcs.tsv`
+* `build/local-benchmarks/results_present_vs_light_scaling_sub.tsv`
+* `build/local-benchmarks/results_present_vs_light_scaling_summary.txt`
 """
 
 from __future__ import annotations
@@ -36,6 +36,7 @@ import re
 import shutil
 import statistics
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
@@ -44,9 +45,9 @@ from typing import Dict, List, Optional, Sequence, Tuple
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = SCRIPT_DIR.parent
 
-MCS_RESULTS_TSV = SCRIPT_DIR / "results_present_vs_light_scaling_mcs.tsv"
-SUB_RESULTS_TSV = SCRIPT_DIR / "results_present_vs_light_scaling_sub.tsv"
-SUMMARY_TXT = SCRIPT_DIR / "results_present_vs_light_scaling_summary.txt"
+MCS_RESULTS_TSV = PROJECT_DIR / "build/local-benchmarks/results_present_vs_light_scaling_mcs.tsv"
+SUB_RESULTS_TSV = PROJECT_DIR / "build/local-benchmarks/results_present_vs_light_scaling_sub.tsv"
+SUMMARY_TXT = PROJECT_DIR / "build/local-benchmarks/results_present_vs_light_scaling_summary.txt"
 SUBSTRUCTURE_PAIRS_FILE = SCRIPT_DIR / "substructure_pairs.tsv"
 
 DEFAULT_TIMEOUT_MS = 10_000
@@ -269,6 +270,18 @@ def extension_versions(path: Path) -> List[str]:
 
 
 def find_present_extension(explicit: Optional[Path]) -> Path:
+    if explicit is not None:
+        if not explicit.is_file():
+            raise FileNotFoundError(f"Present extension does not exist: {explicit}")
+        return explicit.resolve()
+    # Prefer the extension imported by this environment over a stale local build.
+    import importlib.util
+    try:
+        spec = importlib.util.find_spec("smsd._smsd")
+        if spec is not None and spec.origin and Path(spec.origin).is_file():
+            return Path(spec.origin).resolve()
+    except ImportError:
+        pass
     candidates: List[Path] = []
     if explicit is not None:
         candidates.append(explicit)
@@ -292,6 +305,10 @@ def find_present_extension(explicit: Optional[Path]) -> Path:
 
 
 def find_light_extension(explicit: Optional[Path], light_repo: Optional[Path]) -> Path:
+    if explicit is not None:
+        if not explicit.is_file():
+            raise FileNotFoundError(f"Light extension does not exist: {explicit}")
+        return explicit.resolve()
     candidates: List[Path] = []
     if explicit is not None:
         candidates.append(explicit)
@@ -326,6 +343,9 @@ def detect_python_for_extensions(present_ext: Path, light_ext: Path) -> str:
     present_versions = set(extension_versions(present_ext))
     light_versions = set(extension_versions(light_ext))
     shared = sorted(present_versions & light_versions, reverse=True)
+    current = f"{sys.version_info.major}.{sys.version_info.minor}"
+    if current in shared:
+        return sys.executable
     probe_names: List[str] = []
     for version in shared:
         probe_names.append(f"python{version}")
@@ -395,9 +415,8 @@ def atom_bucket(total_atoms: int) -> str:
 
 
 def speedup_ratio(present_ms: float, light_ms: float) -> float:
-    if present_ms <= 0 or light_ms <= 0:
-        return -1.0
-    return present_ms / light_ms
+    # The driver lacks independent mapping/chemistry validation for both APIs.
+    return -1.0
 
 
 def fmt_ms(value: float) -> str:
@@ -417,6 +436,7 @@ def fmt_speedup(value: float) -> str:
 
 
 def write_tsv(path: Path, fieldnames: Sequence[str], rows: Sequence[Dict[str, object]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames, delimiter="\t")
         writer.writeheader()
@@ -660,6 +680,7 @@ def main() -> int:
     summary_lines.extend(summarize_rows("Substructure", sub_rows, "present_avg_ms", "light_avg_ms"))
 
     summary_text = "\n".join(summary_lines) + "\n"
+    args.summary_output.parent.mkdir(parents=True, exist_ok=True)
     args.summary_output.write_text(summary_text)
 
     print(summary_text, end="")

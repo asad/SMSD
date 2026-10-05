@@ -122,6 +122,10 @@ public final class ChemOptions {
    */
   public boolean completeRingsOnly = false;
 
+  // Per-call MCS exclusions are carried only in a private options copy.
+  MolGraph mcsExcludedTargetGraph, mcsOriginalQueryGraph;
+  java.util.Set<Integer> mcsExcludedTargetAtoms;
+
   // --- Isotope matching ---
 
   /** Whether to match isotope labels on atoms. Default: {@code false}. */
@@ -240,6 +244,9 @@ public final class ChemOptions {
     c.useThreeHopNLF           = src.useThreeHopNLF;
     c.useBitParallelFeasibility = src.useBitParallelFeasibility;
     c.lenientSmiles            = src.lenientSmiles;
+    c.mcsExcludedTargetGraph   = src.mcsExcludedTargetGraph;
+    c.mcsOriginalQueryGraph    = src.mcsOriginalQueryGraph;
+    c.mcsExcludedTargetAtoms   = src.mcsExcludedTargetAtoms;
     return c;
   }
 

@@ -6,18 +6,20 @@
  * Substructure Search Benchmark: SMSD vs CDK (Java-to-Java)
  * ==========================================================
  *
- * Fair like-for-like comparison of substructure search performance.
- * Both SMSD and CDK run in the same JVM process with identical molecules.
+ * Descriptive same-JVM diagnostics with identical input molecules.
+ * SMSD's flexible aromaticity and CDK's matching rules can produce different hits.
  *
  * Compile and run:
  *   cd <project-root>
  *   mvn package -DskipTests
- *   javac -cp target/smsd-*.jar:target/dependency/* \
- *         benchmarks/benchmark_substructure_java.java -d benchmarks/
- *   java -cp target/smsd-*.jar:target/dependency/*:benchmarks/ \
- *         benchmark_substructure_java
+ *   mkdir -p build/local-benchmarks/java-classes
+ *   javac -cp target/smsd-7.2.0-jar-with-dependencies.jar \
+ *         benchmarks/benchmark_substructure_java.java -d build/local-benchmarks/java-classes
+ *   java -cp target/smsd-7.2.0-jar-with-dependencies.jar:build/local-benchmarks/java-classes \
+ *         benchmark_substructure_java benchmarks/substructure_pairs.tsv \
+ *         build/local-benchmarks/results_substructure.tsv
  *
- * Output: results_substructure.tsv
+ * Requires JDK 25. Output path is configurable.
  */
 
 import com.bioinception.smsd.core.*;
@@ -103,8 +105,9 @@ public class benchmark_substructure_java {
         }
 
         // TSV output
-        PrintWriter tsv = new PrintWriter(
-            new FileWriter("benchmarks/results_substructure.tsv"));
+        Path output = Path.of(args.length > 1 ? args[1] : "build/local-benchmarks/results_substructure.tsv");
+        if (output.getParent() != null) Files.createDirectories(output.getParent());
+        PrintWriter tsv = new PrintWriter(new FileWriter(output.toFile()));
         tsv.println("Pair\tSMSD_us\tSMSD_cached_us\tCDK_us\tSpeedup\tCached_Speedup\tSMSD_match\tCDK_match");
 
         ChemOptions opts = new ChemOptions();
@@ -173,6 +176,6 @@ public class benchmark_substructure_java {
         }
 
         tsv.close();
-        System.out.println("\nResults written to benchmarks/results_substructure.tsv");
+        System.out.println("\nResults written to " + output);
     }
 }

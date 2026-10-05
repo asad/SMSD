@@ -34,7 +34,7 @@ import importlib.util
 import sys
 from pathlib import Path
 
-__version__ = "7.1.2"
+__version__ = "7.2.0"
 __author__ = "Syed Asad Rahman"
 
 
@@ -130,8 +130,9 @@ def canonical_hash(mol):
     double-bond configuration). Configurable stereo inclusion is controlled
     by the stereo data stored in the MolGraph itself.
 
-    Two molecules with the same hash are almost certainly identical including
-    stereo; distinct hashes guarantee they differ.
+    Hashes are compact screening keys. Collisions and bounded canonical
+    labeling mean they are not proofs of molecular identity or difference;
+    use a validated graph mapping when identity matters.
 
     Example::
 
@@ -267,19 +268,19 @@ normalise_bond_length = _smsd.normalise_bond_length
 canonical_orientation = _smsd.canonical_orientation
 
 # ── Depiction Engine v6.11.0 ──────────────────────────────────────────────
-# Publication-quality SVG rendering (ACS 1996 / Nature / Springer standard)
+# SVG rendering with configurable bond and atom-label styling.
 DepictOptions = _smsd.DepictOptions
 
 
 def depict_svg(mol_or_smiles, opts=None, **kwargs):
-    """Render a molecule as publication-quality SVG string.
+    """Render a molecule as an SVG string.
 
     Parameters
     ----------
     mol_or_smiles : MolGraph or str
         Molecule to render (accepts MolGraph, SMILES string, or RDKit Mol).
     opts : DepictOptions, optional
-        Full options object. If None, uses ACS 1996 defaults.
+        Full options object. If None, uses the default depiction settings.
     **kwargs
         Shorthand overrides applied to opts (e.g., bond_length=40, width=600).
 
@@ -423,7 +424,7 @@ def similarity(mol1, mol2):
 
 def find_mcs(mol1, mol2, *,
              max_results=1,
-             # Chemistry matching flags — defaults match RDKit FindMCS for fair comparison
+             # Chemistry matching flags
              ring_matches_ring_only=False,
              complete_rings_only=False,
              match_bond_order="strict",
@@ -459,7 +460,7 @@ def find_mcs(mol1, mol2, *,
             mappings that all share the maximum MCS size.
         ring_matches_ring_only: Ring atom only matches ring atom (default False).
         complete_rings_only: MCS must include full rings (default False).
-        match_bond_order: "strict" (exact), "loose" (aromatic = single/double),
+        match_bond_order: "strict" (exact), "loose" (ignore bond order),
                           "any" (ignore bond order). Default "strict".
         match_atom_type: Match element type (default True).
         match_formal_charge: Match formal charge (default False).
@@ -561,15 +562,22 @@ def find_mcs(mol1, mol2, *,
             setattr(opts, k, v)
         return chem, opts
 
+    if not isinstance(max_results, int) or isinstance(max_results, bool) or max_results < 1:
+        raise ValueError("max_results must be a positive integer")
+
     # --- Multi-result path (max_results > 1) → native find_all_mcs ---
     if max_results > 1:
-        g1 = _ensure_mol(mol1)
-        g2 = _ensure_mol(mol2)
+        g1, rdkit1 = _ensure_mol_ex(mol1)
+        g2, rdkit2 = _ensure_mol_ex(mol2)
         chem, opts = _build_opts()
-        return _native_find_all_mcs(g1, g2, chem, opts, max_results)
+        _remap_query_weights(opts, g1, rdkit1)
+        return [_auto_translate(mapping, g1, g2, rdkit1, rdkit2)[0]
+                for mapping in _native_find_all_mcs(g1, g2, chem, opts, max_results)]
 
     # --- Single-result path (max_results == 1) ---
-    # Lightweight engine: faster and better coverage on most pairs
+    # Coverage search for the supported default settings
+    import time
+    started = time.monotonic()
     light_mapping = {}
     if strategy in ("auto", "lightweight") and not lightweight_unsupported:
         try:
@@ -596,6 +604,12 @@ def find_mcs(mol1, mol2, *,
     g1, rdkit1 = _ensure_mol_ex(mol1)
     g2, rdkit2 = _ensure_mol_ex(mol2)
     chem, opts = _build_opts()
+    _remap_query_weights(opts, g1, rdkit1)
+    if strategy == "auto" and not lightweight_unsupported and timeout_ms > 0:
+        remaining = timeout_ms - int((time.monotonic() - started) * 1000)
+        if remaining <= 0:
+            return light_mapping
+        opts.timeout_ms = remaining
     mapping = _native_find_mcs(g1, g2, chem, opts)
     translated, _ = _auto_translate(mapping, g1, g2, rdkit1, rdkit2)
     if strategy == "auto" and len(light_mapping) > len(translated):
@@ -609,15 +623,15 @@ def find_mcs_progressive(mol1, mol2, *, on_progress=None, tautomer_aware=False,
                          timeout_ms=10000, **kwargs):
     """Find MCS with progressive intermediate reporting via callback.
 
-    The search runs in phases with increasing time budgets. After each phase,
-    on_progress is called with the best mapping found so far, its size, and
-    the elapsed wall-clock time in milliseconds.
+    The search uses one deadline across its native pipeline. The current
+    implementation calls on_progress once with the final mapping, its size,
+    and elapsed wall-clock time in milliseconds.
 
     Args:
         mol1: First molecule (MolGraph or SMILES string).
         mol2: Second molecule (MolGraph or SMILES string).
         on_progress: Callback ``(best_mapping, best_size, elapsed_ms) -> None``.
-            Called after each pipeline phase. May be None (no reporting).
+            Called with the final mapping. May be None (no reporting).
         tautomer_aware: Use tautomer-aware matching.
         timeout_ms: Total timeout in milliseconds.
         **kwargs: Additional MCSOptions fields (e.g. connected_only=False).
@@ -635,45 +649,30 @@ def find_mcs_progressive(mol1, mol2, *, on_progress=None, tautomer_aware=False,
     """
     import time
 
-    g1 = _ensure_mol(mol1)
-    g2 = _ensure_mol(mol2)
+    g1, rdkit1 = _ensure_mol_ex(mol1)
+    g2, rdkit2 = _ensure_mol_ex(mol2)
     chem = ChemOptions.tautomer_profile() if tautomer_aware else ChemOptions()
-    opts = MCSOptions()
-    opts.timeout_ms = timeout_ms
-    for k, v in kwargs.items():
-        setattr(opts, k, v)
+    chem, opts = _search_options(timeout_ms, dict(kwargs, tautomer_aware=tautomer_aware))
+    _remap_query_weights(opts, g1, rdkit1)
 
     if on_progress is None:
-        return _native_find_mcs(g1, g2, chem, opts)
+        result = _native_find_mcs(g1, g2, chem, opts)
+        return _auto_translate(result, g1, g2, rdkit1, rdkit2)[0]
 
-    phase_fractions = [0.02, 0.05, 0.10, 0.25, 0.50, 0.75, 1.00]
-    best = {}
-    best_size = 0
+    last = None
     t0 = time.monotonic()
-    min_n = min(g1.n, g2.n)
 
-    for frac in phase_fractions:
-        phase_opts = MCSOptions()
-        phase_opts.timeout_ms = int(timeout_ms * frac)
-        # Copy relevant fields
-        for attr in ("induced", "connected_only", "disconnected_mcs",
-                     "maximize_bonds", "min_fragment_size", "max_fragments"):
-            if hasattr(opts, attr):
-                setattr(phase_opts, attr, getattr(opts, attr))
-        phase_opts.extra_seeds = (frac >= 1.0) and getattr(opts, "extra_seeds", True)
+    def report(mapping, size, elapsed_ms):
+        nonlocal last
+        translated = _auto_translate(mapping, g1, g2, rdkit1, rdkit2)[0]
+        last = dict(translated)
+        on_progress(translated, len(translated), elapsed_ms)
 
-        result = _native_find_mcs(g1, g2, chem, phase_opts)
-        if len(result) > best_size:
-            best = result
-            best_size = len(best)
-
-        elapsed_ms = int((time.monotonic() - t0) * 1000)
-        on_progress(best, best_size, elapsed_ms)
-
-        if best_size >= min_n:
-            break
-
-    return best
+    result = _smsd.find_mcs_progressive(g1, g2, chem, opts, report)
+    translated = _auto_translate(result, g1, g2, rdkit1, rdkit2)[0]
+    if last != translated:
+        on_progress(translated, len(translated), int((time.monotonic() - t0) * 1000))
+    return translated
 
 
 def mcs_smiles(mol1, mol2, *, tautomer_aware=False, timeout_ms=10000, **kwargs):
@@ -730,16 +729,16 @@ def find_substructure(query, target, *, max_results=1, timeout_ms=10000):
         # All distinct embeddings
         mappings = smsd.find_substructure("c1ccccc1", target, max_results=100)
     """
-    q = _ensure_mol(query)
-    t = _ensure_mol(target)
+    if not isinstance(max_results, int) or isinstance(max_results, bool) or max_results < 1:
+        raise ValueError("max_results must be a positive integer")
+    q, rdkit_q = _ensure_mol_ex(query)
+    t, rdkit_t = _ensure_mol_ex(target)
     if max_results > 1:
         all_maps = find_all_substructures(q, t, ChemOptions(), timeout_ms)
-        return [{a: b for a, b in mapping} for mapping in all_maps[:max_results]]
-    pairs = _native_find_substructure(q, t, ChemOptions(), timeout_ms)
-    # Convert list-of-tuples to dict for consistency with find_mcs
-    if isinstance(pairs, list):
-        return {a: b for a, b in pairs} if pairs else {}
-    return pairs
+        return [_auto_translate(dict(mapping), q, t, rdkit_q, rdkit_t)[0]
+                for mapping in all_maps[:max_results]]
+    mapping = dict(_native_find_substructure(q, t, ChemOptions(), timeout_ms))
+    return _auto_translate(mapping, q, t, rdkit_q, rdkit_t)[0]
 
 
 def is_substructure(query, target, *, timeout_ms=10000):
@@ -970,96 +969,95 @@ count_overlapCoefficient = count_overlap_coefficient
 
 
 
-def batch_substructure(query, targets, *, timeout_ms=10000):
-    """Check whether query is a substructure of each molecule in targets.
-
-    Automatically dispatches to multi-core OpenMP via the C++ extension.
-    Pass pre-parsed MolGraph objects for best performance (avoids per-call
-    SMILES parsing).
-
-    Args:
-        query:      MolGraph or SMILES string.
-        targets:    List of MolGraph or SMILES strings.
-        timeout_ms: Per-pair timeout in milliseconds.
-
-    Returns:
-        list[bool]: True at index i when query is a substructure of targets[i].
-    """
-    from smsd._smsd import batch_substructure as _batch_sub  # type: ignore[import]
-    q = _ensure_mol(query)
-    ts = [_ensure_mol(t) for t in targets]
-    return _batch_sub(q, ts, ChemOptions(), timeout_ms)
+def _remap_query_weights(opts, graph, rdkit_mol):
+    """Convert weights from original RDKit atom order into native graph order."""
+    weights = opts.atom_weights
+    if rdkit_mol is not None and weights:
+        if len(weights) < rdkit_mol.GetNumAtoms():
+            raise ValueError("atom_weights size is smaller than query atom count")
+        index_map = get_index_map(graph)
+        if index_map is None or len(index_map) != len(graph):
+            raise ValueError("Cannot translate query atom weights")
+        opts.atom_weights = [weights[index] for index in index_map]
 
 
-def batch_find_substructure(query, targets, *, num_threads=0):
-    """Find substructure atom-atom mappings for query against each target.
-
-    Like :func:`batch_substructure` but returns the actual atom mappings
-    instead of a boolean mask. Dispatches to multi-core OpenMP automatically.
-
-    Args:
-        query:       MolGraph or SMILES string.
-        targets:     List of MolGraph or SMILES strings.
-        num_threads: OpenMP worker count. ``0`` uses all available processors.
-
-    Returns:
-        list[list[tuple[int, int]]]: Atom mappings ``(query_atom, target_atom)``
-            for each target. Empty inner list means no substructure match.
-    """
-    from smsd._smsd import batch_find_substructure as _batch_find  # type: ignore[import]
-    q = _ensure_mol(query)
-    ts = [_ensure_mol(t) for t in targets]
-    return _batch_find(q, ts, ChemOptions(), num_threads)
-
-
-def batch_mcs(query, targets, *, timeout_ms=10000, **kwargs):
-    """Compute MCS between query and every molecule in targets in parallel.
-
-    Dispatches to multi-core OpenMP automatically.
-
-    Args:
-        query:      MolGraph or SMILES string.
-        targets:    List of MolGraph or SMILES strings.
-        timeout_ms: Per-pair timeout in milliseconds.
-        **kwargs:   Extra MCSOptions fields (e.g. connected_only=False).
-
-    Returns:
-        list[dict]: MCS atom mappings (query → target index) for each target.
-    """
-    from smsd._smsd import batch_mcs as _batch_mcs  # type: ignore[import]
-    q = _ensure_mol(query)
-    ts = [_ensure_mol(t) for t in targets]
+def _search_options(timeout_ms, options):
+    """Build native chemistry/search options without dropping caller settings."""
+    options = dict(options)
+    tautomer = options.pop("tautomer_aware", False)
+    chem = ChemOptions.tautomer_profile() if tautomer else ChemOptions()
     opts = MCSOptions()
     opts.timeout_ms = timeout_ms
-    num_threads = kwargs.pop("num_threads", 0)
-    for k, v in kwargs.items():
-        setattr(opts, k, v)
-    return _batch_mcs(q, ts, ChemOptions(), opts, num_threads)
+    for key, value in options.items():
+        if key == "match_bond_order" and isinstance(value, str):
+            modes = {"strict": BondOrderMode.STRICT, "loose": BondOrderMode.LOOSE,
+                     "any": BondOrderMode.ANY}
+            if value.lower() not in modes:
+                raise ValueError("match_bond_order must be 'strict', 'loose', or 'any'")
+            value = modes[value.lower()]
+        if hasattr(opts, key):
+            setattr(opts, key, value)
+        elif hasattr(chem, key):
+            setattr(chem, key, value)
+        else:
+            raise AttributeError(f"Unknown search option: {key}")
+    return chem, opts
+
+
+def _batch_inputs(query, targets):
+    q, rdkit_q = _ensure_mol_ex(query)
+    converted = [_ensure_mol_ex(target) for target in targets]
+    return q, rdkit_q, [g for g, _ in converted], [mol for _, mol in converted]
+
+
+def batch_substructure(query, targets, *, timeout_ms=10000, num_threads=0):
+    """Check one query against many targets using a per-pair time budget.
+
+    Inputs may be SMILES, MolGraph or RDKit Mol objects. ``num_threads=0``
+    uses the available OpenMP workers; ``1`` runs sequentially.
+    """
+    q, _, ts, _ = _batch_inputs(query, targets)
+    return _smsd.batch_substructure(q, ts, ChemOptions(), num_threads, timeout_ms)
+
+
+def batch_find_substructure(query, targets, *, num_threads=0, timeout_ms=10000):
+    """Return substructure pairs in each input molecule's atom ordering.
+
+    The output contains one list of ``(query_atom, target_atom)`` pairs per
+    target. An empty list means no match. Inputs may be SMILES, MolGraph or
+    RDKit Mol objects. Each pair receives ``timeout_ms`` milliseconds.
+    """
+    q, rdkit_q, ts, rdkit_ts = _batch_inputs(query, targets)
+    results = _smsd.batch_find_substructure(q, ts, ChemOptions(), num_threads, timeout_ms)
+    return [list(_auto_translate(dict(mapping), q, t, rdkit_q, rdkit_t)[0].items())
+            for mapping, t, rdkit_t in zip(results, ts, rdkit_ts)]
+
+
+def batch_mcs(query, targets, *, timeout_ms=10000, num_threads=0, **kwargs):
+    """Compute native MCS mappings for one query against many targets.
+
+    Inputs may be SMILES, MolGraph or RDKit Mol objects. Mappings use each
+    input's atom ordering. Chemistry and MCSOptions keywords are preserved;
+    ``timeout_ms`` applies to each pair. Pre-parsed graphs avoid repeat parsing.
+    """
+    q, rdkit_q, ts, rdkit_ts = _batch_inputs(query, targets)
+    chem, opts = _search_options(timeout_ms, kwargs)
+    _remap_query_weights(opts, q, rdkit_q)
+    results = _smsd.batch_mcs(q, ts, chem, opts, num_threads)
+    return [_auto_translate(mapping, q, t, rdkit_q, rdkit_t)[0]
+            for mapping, t, rdkit_t in zip(results, ts, rdkit_ts)]
 
 
 def batch_mcs_size(query, targets, *, timeout_ms=10000, num_threads=0, **kwargs):
-    """Compute MCS atom counts for query against many targets in parallel.
+    """Compute native MCS atom counts in target order without Python mappings.
 
-    This avoids Python-side dict construction when callers only need sizes.
-
-    Args:
-        query: MolGraph or SMILES string.
-        targets: List of MolGraph or SMILES strings.
-        timeout_ms: Per-pair timeout in milliseconds.
-        num_threads: OpenMP worker count. `0` uses all available processors.
-        **kwargs: Extra MCSOptions fields.
-
-    Returns:
-        list[int]: MCS sizes in query-target order.
+    Accepts the same chemistry/search keywords as :func:`batch_mcs`.
+    ``timeout_ms`` applies to each pair; ``num_threads=0`` uses OpenMP defaults.
     """
-    from smsd._smsd import batch_mcs_size as _batch_mcs_size  # type: ignore[import]
-    q = _ensure_mol(query)
-    ts = [_ensure_mol(t) for t in targets]
-    opts = MCSOptions()
-    opts.timeout_ms = timeout_ms
-    for k, v in kwargs.items():
-        setattr(opts, k, v)
-    return _batch_mcs_size(q, ts, ChemOptions(), opts, num_threads)
+    q, rdkit_q, ts, _ = _batch_inputs(query, targets)
+    chem, opts = _search_options(timeout_ms, kwargs)
+    _remap_query_weights(opts, q, rdkit_q)
+    return _smsd.batch_mcs_size(q, ts, chem, opts, num_threads)
 
 
 def screen_and_match(query, targets, threshold, *, timeout_ms=10000, num_threads=0, **kwargs):
@@ -1302,7 +1300,8 @@ def assign_cip(mol):
 # Batch constrained MCS (v6.6.0)
 # ---------------------------------------------------------------------------
 
-def batch_mcs_constrained(queries, targets, *, timeout_ms=10000, **kwargs):
+def batch_mcs_constrained(queries, targets, *, timeout_ms=10000,
+                          return_target_indices=False, **kwargs):
     """Find MCS for each query against ALL targets with non-overlapping
     target atom constraints.
 
@@ -1318,7 +1317,9 @@ def batch_mcs_constrained(queries, targets, *, timeout_ms=10000, **kwargs):
         queries: list of reactant molecules.
         targets: list of product molecules (often just one combined product).
         timeout_ms: per-pair timeout in milliseconds.
-        **kwargs: additional MCSOptions fields.
+        return_target_indices: Return ``(target_index, mapping)`` pairs when True.
+            The target index is -1 for an empty result. Use this for multiple targets.
+        **kwargs: additional chemistry/search options.
 
     Returns:
         list[dict]: One mapping per query (same order as input).
@@ -1355,29 +1356,21 @@ def batch_mcs_constrained(queries, targets, *, timeout_ms=10000, **kwargs):
         gt_list.append(g)
         rdkit_t_list.append(rdkit_mol)
 
-    opts = MCSOptions()
-    opts.timeout_ms = timeout_ms
-    for k, v in kwargs.items():
-        setattr(opts, k, v)
-
-    raw_results = _batch_mcs_constrained_raw(gq_list, gt_list, ChemOptions(), opts)
-
-    # Translate indices if native Mol objects were used
-    translated_results = []
-    for i, mapping in enumerate(raw_results):
-        if not mapping:
-            translated_results.append(mapping)
-            continue
-        # Find which target this mapping refers to (by checking which target
-        # atoms are present). For now, translate query indices using query's map.
-        rdkit_q = rdkit_q_list[i] if i < len(rdkit_q_list) else None
-        # Target index translation: find the target that contains the mapped atoms
-        # For simplicity, translate using first target's map (common case: 1 target)
-        rdkit_t = rdkit_t_list[0] if rdkit_t_list else None
-        translated, _ = _auto_translate(mapping, gq_list[i], gt_list[0], rdkit_q, rdkit_t)
-        translated_results.append(translated)
-
-    return translated_results
+    chem, opts = _search_options(timeout_ms, kwargs)
+    if opts.atom_weights and any(mol is not None for mol in rdkit_q_list):
+        if len(gq_list) != 1:
+            raise ValueError("Weighted constrained batches with RDKit inputs require one query; "
+                             "convert multiple queries to MolGraph and supply weights in graph order")
+        _remap_query_weights(opts, gq_list[0], rdkit_q_list[0])
+    raw_results, selected_targets = _smsd.batch_mcs_constrained_with_targets(
+        gq_list, gt_list, chem, opts)
+    translated = []
+    for i, (mapping, target_index) in enumerate(zip(raw_results, selected_targets)):
+        if target_index >= 0:
+            mapping = _auto_translate(mapping, gq_list[i], gt_list[target_index],
+                                      rdkit_q_list[i], rdkit_t_list[target_index])[0]
+        translated.append((target_index, mapping) if return_target_indices else mapping)
+    return translated
 
 
 # ---------------------------------------------------------------------------
@@ -2258,19 +2251,17 @@ def _auto_translate(mapping, g1, g2, rdkit1, rdkit2):
     if not mapping:
         return mapping, mapping
     smsd_mapping = dict(mapping)  # preserve original before translation
-    translated = translate_mapping(mapping, g1, g2)
-    # Element validation — check whichever RDKit Mol is available
+    translated = translate_mapping(mapping, g1 if rdkit1 is not None else None,
+                                   g2 if rdkit2 is not None else None)
+    # Translation preserves the native chemistry policy, including atom-type
+    # relaxation explicitly requested by the caller.
     validated = {}
     for q, t in translated.items():
         ok = True
         if rdkit1 is not None:
-            if q >= rdkit1.GetNumAtoms():
+            if q < 0 or q >= rdkit1.GetNumAtoms():
                 ok = False
-            elif rdkit2 is not None and t < rdkit2.GetNumAtoms():
-                if rdkit1.GetAtomWithIdx(q).GetAtomicNum() != \
-                   rdkit2.GetAtomWithIdx(t).GetAtomicNum():
-                    ok = False
-        if rdkit2 is not None and t >= rdkit2.GetNumAtoms():
+        if rdkit2 is not None and (t < 0 or t >= rdkit2.GetNumAtoms()):
             ok = False
         if ok:
             validated[q] = t
@@ -2283,20 +2274,19 @@ def _auto_translate(mapping, g1, g2, rdkit1, rdkit2):
 
 class _RdkitResult:
     """Wrapper holding a MolGraph + its SMSD→RDKit index mapping."""
-    __slots__ = ('graph', 'index_map')
-    def __init__(self, graph, index_map):
+    __slots__ = ('graph', 'index_map', 'signature')
+    def __init__(self, graph, index_map, signature):
         self.graph = graph
         self.index_map = index_map  # list: index_map[smsd_idx] = rdkit_idx
+        self.signature = signature
 
 
-# Cache keyed by id(rdkit_mol) -> _RdkitResult.
-# Per-Mol-object cache avoids the problem of different Mol objects with
-# the same canonical SMILES having different atom orderings.
-# NOTE: These caches are NOT thread-safe. In multi-threaded applications,
-# guard from_rdkit() and clear_cache() calls with an external lock.
+# Cache each live molecule independently so reordered molecules cannot share
+# atom-index metadata. Weak keys release entries when their inputs are discarded.
 import threading as _threading
+import weakref as _weakref
 _rdkit_cache_lock = _threading.Lock()
-_rdkit_cache = {}
+_rdkit_cache = _weakref.WeakKeyDictionary()
 _mol_graph_cache = {}  # SMILES -> MolGraph (for parse_smiles caching only)
 
 
@@ -2318,32 +2308,23 @@ def _compute_index_map(rdkit_mol, canonical_smi):
 
     # _smilesAtomOutputOrder is populated by the MolToSmiles() call in from_rdkit().
     try:
-        output_order = list(rdkit_mol.GetPropsAsDict()
+        output_order = list(rdkit_mol.GetPropsAsDict(includePrivate=True, includeComputed=True)
                             .get('_smilesAtomOutputOrder', []))
     except Exception:
         output_order = []
 
-    if output_order and len(output_order) >= n:
+    if len(output_order) == n and sorted(output_order) == list(range(n)):
         # output_order[smiles_position] = rdkit_atom_idx
         # SMSD parses the canonical SMILES, so smsd_idx = smiles_position
-        # But output_order may include implicit H indices beyond n — filter them
-        index_map = []
-        for rdkit_idx in output_order:
-            if rdkit_idx < n:
-                index_map.append(rdkit_idx)
-        # Pad if needed (shouldn't happen for valid molecules)
-        while len(index_map) < n:
-            index_map.append(len(index_map))
-        return index_map
+        return output_order
     else:
         # Fallback: use GetSubstructMatch on re-parsed canonical SMILES
         mol_from_smi = Chem.MolFromSmiles(canonical_smi)
         if mol_from_smi is not None:
-            match = rdkit_mol.GetSubstructMatch(mol_from_smi)
+            match = rdkit_mol.GetSubstructMatch(mol_from_smi, useChirality=True)
             if match and len(match) == n:
                 return list(match)
-        # Last resort: identity
-        return list(range(n))
+        raise ValueError("Cannot determine the SMSD-to-RDKit atom-index mapping")
 
 
 def from_rdkit(mol, use_cache=True):
@@ -2353,8 +2334,9 @@ def from_rdkit(mol, use_cache=True):
     and used by :func:`translate_mapping` and :func:`mcs_rdkit_native`.
 
     Each distinct RDKit Mol object gets its own mapping (no cross-Mol
-    cache collisions). The cache is keyed by ``id(mol)`` and automatically
-    evicted when the cache exceeds 10K entries.
+    cache collisions). Weak cache keys release discarded molecules. In-place
+    molecule changes invalidate their cached conversion. Index metadata remains
+    available while a converted graph is alive, including after clear_cache().
 
     Example::
 
@@ -2374,22 +2356,22 @@ def from_rdkit(mol, use_cache=True):
 
     if mol is None:
         raise TypeError("mol must not be None")
+    if not isinstance(mol, Chem.Mol):
+        raise TypeError("mol must be an RDKit Mol")
     if mol.GetNumAtoms() == 0:
         raise ValueError("mol has 0 atoms; cannot convert empty molecule")
 
     # Check if molecule is only implicit/explicit H (no heavy atoms)
-    heavy = sum(1 for a in mol.GetAtoms() if a.GetAtomicNum() != 1)
+    heavy = mol.GetNumHeavyAtoms()
     if heavy == 0:
         raise ValueError("mol contains only hydrogen atoms; no heavy atoms to convert")
 
-    mol_id = id(mol)
+    signature = mol.ToBinary()
     if use_cache:
         with _rdkit_cache_lock:
-            cached = _rdkit_cache.get(mol_id)
-            if cached is not None:
-                cached_mol, cached_result = cached
-                if cached_mol is mol:
-                    return cached_result.graph
+            cached = _rdkit_cache.get(mol)
+            if cached is not None and cached.signature == signature:
+                return cached.graph
 
     smi = Chem.MolToSmiles(mol)
     if not smi:
@@ -2398,27 +2380,26 @@ def from_rdkit(mol, use_cache=True):
     # Each RDKit Mol gets its OWN MolGraph instance to prevent index map
     # collisions.  Two Mols with the same canonical SMILES but different
     # atom orderings must have separate index maps, and get_index_map()
-    # uses id(MolGraph) for reverse lookup.  Sharing a MolGraph across
+    # associates metadata with the live graph.  Sharing a MolGraph across
     # Mols would cause the second Mol's index map to overwrite the first.
     g = parse_smiles(smi)
 
     # Compute deterministic index mapping for THIS specific Mol object
     index_map = _compute_index_map(mol, smi)
-    result = _RdkitResult(g, index_map)
+    result = _RdkitResult(g, index_map, mol.ToBinary())
 
     with _rdkit_cache_lock:
-        _graph_to_result[id(g)] = result  # safe: unique g per Mol
+        _graph_to_result[g] = tuple(index_map)
 
         if use_cache:
-            if len(_rdkit_cache) > 10000:
+            if len(_rdkit_cache) >= 10000:
                 _rdkit_cache.clear()
-                _graph_to_result.clear()
-            _rdkit_cache[mol_id] = (mol, result)
+            _rdkit_cache[mol] = result
 
     return g
 
 
-_graph_to_result = {}  # id(MolGraph) → _RdkitResult (O(1) reverse lookup)
+_graph_to_result = _weakref.WeakKeyDictionary()  # live graph -> immutable index map
 
 
 def get_index_map(g):
@@ -2427,8 +2408,9 @@ def get_index_map(g):
     Returns a list where ``result[smsd_idx] = rdkit_idx``, or None if the
     MolGraph was not created by from_rdkit().
     """
-    r = _graph_to_result.get(id(g))
-    return r.index_map if r is not None else None
+    with _rdkit_cache_lock:
+        index_map = _graph_to_result.get(g)
+        return list(index_map) if index_map is not None else None
 
 
 def translate_mapping(mapping, g_query=None, g_target=None):
@@ -2475,187 +2457,48 @@ def translate_mapping(mapping, g_query=None, g_target=None):
 
 
 def mcs_rdkit_native(mol1, mol2, **kwargs):
-    """Find MCS between two RDKit Mols, returning RDKit-compatible atom indices.
+    """Run native MCS and return indices in the original RDKit molecules.
 
-    Uses the SMSD native MCS engine for the search, then re-matches the
-    MCS SMILES against both RDKit molecules using RDKit's own
-    GetSubstructMatch to get correct native indices.  This guarantees
-    element-correct mappings.
-
-    Returns a dict where keys are atom indices in mol1 and values are atom
-    indices in mol2 — matching RDKit's atom ordering.
-
-    Example::
-
-        from rdkit import Chem
-        import smsd
-
-        m1 = Chem.MolFromSmiles("c1ccccc1")
-        m2 = Chem.MolFromSmiles("c1ccc(O)cc1")
-        mapping = smsd.mcs_rdkit_native(m1, m2)
-        for q, t in mapping.items():
-            assert m1.GetAtomWithIdx(q).GetAtomicNum() == m2.GetAtomWithIdx(t).GetAtomicNum()
+    Accepts :func:`find_mcs` options. Index translation preserves the selected
+    mapping, including explicitly relaxed atom or bond matching.
     """
-    if mol1 is None or mol2 is None:
-        raise ValueError("mol1 and mol2 must not be None")
-    try:
-        from rdkit import Chem
-        from rdkit.Chem import AllChem
-    except ImportError:
-        raise ImportError("RDKit is required for mcs_rdkit_native()")
-
-    g1 = from_rdkit(mol1)
-    g2 = from_rdkit(mol2)
-
-    # Step 1: find MCS using the SMSD native engine
-    smsd_mapping = _native_find_mcs(g1, g2, **kwargs)
-    if not smsd_mapping:
-        return {}
-
-    # Step 2: Extract MCS as SMILES via SMSD
-    try:
-        mcs_smi = mcs_to_smiles(g1, smsd_mapping)
-    except Exception:
-        mcs_smi = ""
-
-    if not mcs_smi:
-        # Fallback: try index-based translation
-        rdkit_mapping = translate_mapping(smsd_mapping, g1, g2)
-        n1, n2 = mol1.GetNumAtoms(), mol2.GetNumAtoms()
-        validated = {}
-        for q, t in rdkit_mapping.items():
-            if q < n1 and t < n2:
-                if mol1.GetAtomWithIdx(q).GetAtomicNum() == mol2.GetAtomWithIdx(t).GetAtomicNum():
-                    validated[q] = t
-        return validated
-
-    # Step 3: Parse MCS SMILES in RDKit and match against both molecules
-    mcs_mol = Chem.MolFromSmarts(mcs_smi)
-    if mcs_mol is None:
-        # Try as SMILES if SMARTS parse fails
-        mcs_mol = Chem.MolFromSmiles(mcs_smi)
-    if mcs_mol is None:
-        return {}
-
-    match1 = mol1.GetSubstructMatch(mcs_mol)
-    match2 = mol2.GetSubstructMatch(mcs_mol)
-
-    if not match1 or not match2:
-        # SMARTS/SMILES match failed — fall back to index translation
-        rdkit_mapping = translate_mapping(smsd_mapping, g1, g2)
-        n1, n2 = mol1.GetNumAtoms(), mol2.GetNumAtoms()
-        validated = {}
-        for q, t in rdkit_mapping.items():
-            if q < n1 and t < n2:
-                if mol1.GetAtomWithIdx(q).GetAtomicNum() == mol2.GetAtomWithIdx(t).GetAtomicNum():
-                    validated[q] = t
-        return validated
-
-    # Step 4: Build RDKit→RDKit mapping via the MCS bridge
-    # match1[mcs_idx] = mol1_atom_idx, match2[mcs_idx] = mol2_atom_idx
-    result = {}
-    for mcs_idx in range(min(len(match1), len(match2))):
-        q_idx = match1[mcs_idx]
-        t_idx = match2[mcs_idx]
-        # Element validation (should always pass with proper SMARTS match)
-        if mol1.GetAtomWithIdx(q_idx).GetAtomicNum() == mol2.GetAtomWithIdx(t_idx).GetAtomicNum():
-            result[q_idx] = t_idx
-    return result
+    from_rdkit(mol1)
+    from_rdkit(mol2)
+    kwargs["strategy"] = "native"
+    return find_mcs(mol1, mol2, **kwargs)
 
 
 def clear_cache():
-    """Clear all from_rdkit() caches. Thread-safe."""
+    """Clear reusable conversions without invalidating live graphs' index maps."""
     with _rdkit_cache_lock:
         _rdkit_cache.clear()
         _mol_graph_cache.clear()
-        _graph_to_result.clear()
 
 
 def batch_mcs_rdkit(query_mol, target_mols, **kwargs):
-    """Batch MCS with correct RDKit atom indices.
+    """Run native batch MCS using original RDKit atom indices.
 
-    Computes MCS between a single query and multiple targets using SMSD's
-    MCS engine, returning atom-index mappings in RDKit's native atom ordering
-    with full element validation.
-
-    Args:
-        query_mol: RDKit Mol object for the query.
-        target_mols: List of RDKit Mol objects for the targets.
-        **kwargs: Keyword arguments forwarded to find_mcs()
-            (e.g. tautomer_aware, timeout_ms).
-
-    Returns:
-        list[dict]: One mapping per target. Each dict maps
-            query RDKit atom index -> target RDKit atom index.
-            Mismatched elements are excluded.
-
-    Example::
-
-        from rdkit import Chem
-        import smsd
-
-        query = Chem.MolFromSmiles("c1ccccc1")
-        targets = [Chem.MolFromSmiles(s) for s in ["c1ccc(O)cc1", "c1ccncc1"]]
-        results = smsd.batch_mcs_rdkit(query, targets)
-        for mapping in results:
-            for q, t in mapping.items():
-                assert query.GetAtomWithIdx(q).GetAtomicNum() == targets[0].GetAtomWithIdx(t).GetAtomicNum()
+    Accepts the chemistry/search options and thread count of :func:`batch_mcs`.
     """
-    g_query = from_rdkit(query_mol)
-    results = []
-    for t_mol in target_mols:
-        g_target = from_rdkit(t_mol)
-        smsd_mapping = _native_find_mcs(g_query, g_target, **kwargs)
-        rdkit_mapping = translate_mapping(smsd_mapping, g_query, g_target)
-        # Element validation
-        n1, n2 = query_mol.GetNumAtoms(), t_mol.GetNumAtoms()
-        validated = {}
-        for q, t in rdkit_mapping.items():
-            if q < n1 and t < n2:
-                if query_mol.GetAtomWithIdx(q).GetAtomicNum() == t_mol.GetAtomWithIdx(t).GetAtomicNum():
-                    validated[q] = t
-        results.append(validated)
-    return results
+    target_mols = list(target_mols)
+    from_rdkit(query_mol)
+    for mol in target_mols:
+        from_rdkit(mol)
+    return batch_mcs(query_mol, target_mols, **kwargs)
 
 
 def mcs_rdkit(mol1, mol2, **kwargs):
-    """Find Maximum Common Substructure between two RDKit Mol objects.
-
-    Accepts any keyword arguments supported by :func:`mcs` (e.g.
-    ``tautomer_aware``, ``timeout_ms``).
-
-    Example::
-
-        from rdkit import Chem
-        import smsd
-
-        m1 = Chem.MolFromSmiles("c1ccccc1")
-        m2 = Chem.MolFromSmiles("c1ccc(O)cc1")
-        result = smsd.mcs_rdkit(m1, m2)
-    """
-    g1 = from_rdkit(mol1)
-    g2 = from_rdkit(mol2)
-    return find_mcs(g1, g2, **kwargs)
+    """Find MCS using :func:`find_mcs` options and original RDKit indices."""
+    from_rdkit(mol1)
+    from_rdkit(mol2)
+    return find_mcs(mol1, mol2, **kwargs)
 
 
 def substructure_rdkit(query_mol, target_mol, **kwargs):
-    """Check substructure relationship between two RDKit Mol objects.
-
-    Accepts any keyword arguments supported by :func:`substructure_search`
-    (e.g. ``timeout_ms``).
-
-    Example::
-
-        from rdkit import Chem
-        import smsd
-
-        benzene = Chem.MolFromSmiles("c1ccccc1")
-        phenol  = Chem.MolFromSmiles("c1ccc(O)cc1")
-        result = smsd.substructure_rdkit(benzene, phenol)
-    """
-    gq = from_rdkit(query_mol)
-    gt = from_rdkit(target_mol)
-    return find_substructure(gq, gt, **kwargs)
+    """Find substructure mappings using original RDKit atom indices."""
+    from_rdkit(query_mol)
+    from_rdkit(target_mol)
+    return find_substructure(query_mol, target_mol, **kwargs)
 
 
 # =========================================================================

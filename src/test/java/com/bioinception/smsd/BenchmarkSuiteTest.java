@@ -141,6 +141,7 @@ public class BenchmarkSuiteTest extends TestBase {
   @Nested
   @EnabledIfSystemProperty(named = "smsd.benchmark", matches = "true")
   @DisplayName("SMSD Internal Benchmark")
+  @Timeout(value = 30, unit = TimeUnit.MINUTES, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
   class InternalBenchmark {
 
     private static final String[][] COMPARISON_PAIRS = {
@@ -181,24 +182,30 @@ public class BenchmarkSuiteTest extends TestBase {
       System.out.println("-".repeat(70));
 
       ChemOptions opts = new ChemOptions();
-      int warmup = 5;
-      int runs = 10;
+      int warmup = BenchmarkRunSettings.WARMUP;
+      int runs = BenchmarkRunSettings.ROUNDS;
 
       for (String[] pair : COMPARISON_PAIRS) {
+        BenchmarkRunSettings.checkInterrupted();
         var q = mol(pair[1]);
         var t = mol(pair[2]);
 
         for (int i = 0; i < warmup; i++) {
-          new SMSD(q, t, opts, false).findMCS(true, true, 5000);
+          BenchmarkRunSettings.checkInterrupted();
+          new SMSD(q, t, opts, false).findMCS(true, true, BenchmarkRunSettings.TIMEOUT_MS);
         }
 
         long[] times = new long[runs];
         int mcsSize = 0;
         for (int i = 0; i < runs; i++) {
+          BenchmarkRunSettings.checkInterrupted();
           long t0 = System.nanoTime();
           SMSD smsd = new SMSD(q, t, opts, false);
-          Map<Integer, Integer> result = smsd.findMCS(true, true, 5000);
+          Map<Integer, Integer> result = smsd.findMCS(true, true, BenchmarkRunSettings.TIMEOUT_MS);
           times[i] = System.nanoTime() - t0;
+          BenchmarkRunSettings.validate(q, t, result, opts, pair[0]);
+          BenchmarkRunSettings.checkpoint("internal-mcs", pair[0] + "/" + i, "OK",
+              result.size(), times[i], "induced=true connected=true");
           if (i == 0 && result != null && !result.isEmpty()) {
             mcsSize = result.size();
           }
@@ -229,24 +236,29 @@ public class BenchmarkSuiteTest extends TestBase {
       System.out.println("-".repeat(60));
 
       ChemOptions opts = new ChemOptions();
-      int warmup = 20;
-      int runs = 100;
+      int warmup = BenchmarkRunSettings.WARMUP;
+      int runs = BenchmarkRunSettings.ROUNDS;
 
       for (String[] pair : COMPARISON_PAIRS) {
+        BenchmarkRunSettings.checkInterrupted();
         var q = mol(pair[1]);
         var t = mol(pair[2]);
 
         for (int i = 0; i < warmup; i++) {
-          new SMSD(q, t, opts, false).isSubstructure();
+          BenchmarkRunSettings.checkInterrupted();
+          new SMSD(q, t, opts, false).isSubstructure(BenchmarkRunSettings.TIMEOUT_MS);
         }
 
         long[] times = new long[runs];
         boolean match = false;
         for (int i = 0; i < runs; i++) {
+          BenchmarkRunSettings.checkInterrupted();
           long t0 = System.nanoTime();
           SMSD smsd = new SMSD(q, t, opts, false);
-          match = smsd.isSubstructure();
+          match = smsd.isSubstructure(BenchmarkRunSettings.TIMEOUT_MS);
           times[i] = System.nanoTime() - t0;
+          BenchmarkRunSettings.checkpoint("internal-substructure", pair[0] + "/" + i, "OK",
+              match ? q.getAtomCount() : 0, times[i], "matched=" + match);
         }
 
         java.util.Arrays.sort(times);
@@ -271,12 +283,19 @@ public class BenchmarkSuiteTest extends TestBase {
 
       ChemOptions opts = new ChemOptions();
       SMSD smsd = new SMSD(atp, adp, opts, false);
-      Map<Integer, Integer> mapping = smsd.findMCS(true, true, 10000);
+      BenchmarkRunSettings.checkInterrupted();
+      long started = System.nanoTime();
+      Map<Integer, Integer> mapping = smsd.findMCS(true, true, BenchmarkRunSettings.TIMEOUT_MS);
+      long elapsed = System.nanoTime() - started;
+      BenchmarkRunSettings.validate(atp, adp, mapping, opts, "ATP/ADP");
+      BenchmarkRunSettings.checkpoint("internal-atp-adp", "ATP/ADP", "OK", mapping.size(), elapsed,
+          "induced=true connected=true");
 
       if (mapping != null && !mapping.isEmpty()) {
         System.out.println("MCS size: " + mapping.size());
         System.out.println("\nMapping (ATP idx -> ADP idx):");
         for (var entry : mapping.entrySet()) {
+          BenchmarkRunSettings.checkInterrupted();
           int qi = entry.getKey();
           int ti = entry.getValue();
           String qSym = atp.getAtom(qi).getSymbol();
@@ -286,6 +305,7 @@ public class BenchmarkSuiteTest extends TestBase {
 
         Map<String, Integer> elements = new java.util.TreeMap<>();
         for (var entry : mapping.entrySet()) {
+          BenchmarkRunSettings.checkInterrupted();
           String sym = atp.getAtom(entry.getKey()).getSymbol();
           elements.merge(sym, 1, Integer::sum);
         }
@@ -303,23 +323,28 @@ public class BenchmarkSuiteTest extends TestBase {
       System.out.println("-".repeat(60));
 
       ChemOptions opts = new ChemOptions();
-      int warmup = 50;
-      int runs = 200;
+      int warmup = BenchmarkRunSettings.WARMUP;
+      int runs = BenchmarkRunSettings.ROUNDS;
 
       for (String[] pair : COMPARISON_PAIRS) {
+        BenchmarkRunSettings.checkInterrupted();
         var q = mol(pair[1]);
         var t = mol(pair[2]);
 
         for (int i = 0; i < warmup; i++) {
+          BenchmarkRunSettings.checkInterrupted();
           new SMSD(q, t, opts, false).similarityUpperBound();
         }
 
         long[] times = new long[runs];
         double ub = 0;
         for (int i = 0; i < runs; i++) {
+          BenchmarkRunSettings.checkInterrupted();
           long t0 = System.nanoTime();
           ub = new SMSD(q, t, opts, false).similarityUpperBound();
           times[i] = System.nanoTime() - t0;
+          BenchmarkRunSettings.checkpoint("internal-rascal", pair[0] + "/" + i, "OK", 0,
+              times[i], "upper_bound=" + ub);
         }
 
         java.util.Arrays.sort(times);
@@ -337,10 +362,11 @@ public class BenchmarkSuiteTest extends TestBase {
   @Nested
   @EnabledIfSystemProperty(named = "benchmark", matches = "true")
   @DisplayName("Head-to-Head Benchmark Suite")
+  @Timeout(value = 30, unit = TimeUnit.MINUTES, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
   class HeadToHead {
 
-    private static final int WARMUP = 20;
-    private static final int ITERS = 100;
+    private static final int WARMUP = BenchmarkRunSettings.WARMUP;
+    private static final int ITERS = BenchmarkRunSettings.ROUNDS;
 
     private static final String[][] H2H_PAIRS = {
       {"c1ccccc1", "Cc1ccccc1", "Benzene/Toluene"},
@@ -392,15 +418,20 @@ public class BenchmarkSuiteTest extends TestBase {
 
       ChemOptions opts = new ChemOptions();
       for (String[] p : H2H_PAIRS) {
+        BenchmarkRunSettings.checkInterrupted();
         IAtomContainer q = mol(p[0]), t = mol(p[1]);
         for (int i = 0; i < WARMUP; i++) {
-          SearchEngine.isSubstructure(q, t, opts, 5000);
+          BenchmarkRunSettings.checkInterrupted();
+          SearchEngine.isSubstructure(q, t, opts, BenchmarkRunSettings.TIMEOUT_MS);
         }
         long[] times = new long[ITERS];
         for (int i = 0; i < ITERS; i++) {
+          BenchmarkRunSettings.checkInterrupted();
           long t0 = System.nanoTime();
-          SearchEngine.isSubstructure(q, t, opts, 5000);
+          boolean matched = SearchEngine.isSubstructure(q, t, opts, BenchmarkRunSettings.TIMEOUT_MS);
           times[i] = System.nanoTime() - t0;
+          BenchmarkRunSettings.checkpoint("h2h-substructure", p[2] + "/" + i, "OK",
+              matched ? q.getAtomCount() : 0, times[i], "matched=" + matched);
         }
         Arrays.sort(times);
         long best = times[0] / 1000;
@@ -422,19 +453,25 @@ public class BenchmarkSuiteTest extends TestBase {
 
       ChemOptions opts = new ChemOptions();
       SearchEngine.MCSOptions mcsOpts = new SearchEngine.MCSOptions();
-      mcsOpts.timeoutMs = 10_000;
+      mcsOpts.timeoutMs = BenchmarkRunSettings.TIMEOUT_MS;
 
       for (String[] p : H2H_PAIRS) {
+        BenchmarkRunSettings.checkInterrupted();
         IAtomContainer q = mol(p[0]), t = mol(p[1]);
         for (int i = 0; i < WARMUP; i++) {
+          BenchmarkRunSettings.checkInterrupted();
           SearchEngine.findMCS(q, t, opts, mcsOpts);
         }
         long[] times = new long[ITERS];
         int mcsSize = 0;
         for (int i = 0; i < ITERS; i++) {
+          BenchmarkRunSettings.checkInterrupted();
           long t0 = System.nanoTime();
           Map<Integer, Integer> mcs = SearchEngine.findMCS(q, t, opts, mcsOpts);
           times[i] = System.nanoTime() - t0;
+          BenchmarkRunSettings.validate(q, t, mcs, opts, p[2]);
+          BenchmarkRunSettings.checkpoint("h2h-mcs", p[2] + "/" + i, "OK", mcs.size(), times[i],
+              "induced=false connected=true");
           mcsSize = mcs.size();
         }
         Arrays.sort(times);
@@ -457,16 +494,21 @@ public class BenchmarkSuiteTest extends TestBase {
 
       ChemOptions opts = new ChemOptions();
       for (String[] p : H2H_PAIRS) {
+        BenchmarkRunSettings.checkInterrupted();
         IAtomContainer q = mol(p[0]), t = mol(p[1]);
         for (int i = 0; i < WARMUP; i++) {
+          BenchmarkRunSettings.checkInterrupted();
           SearchEngine.similarityUpperBound(q, t, opts);
         }
         long[] times = new long[ITERS];
         double ub = 0;
         for (int i = 0; i < ITERS; i++) {
+          BenchmarkRunSettings.checkInterrupted();
           long t0 = System.nanoTime();
           ub = SearchEngine.similarityUpperBound(q, t, opts);
           times[i] = System.nanoTime() - t0;
+          BenchmarkRunSettings.checkpoint("h2h-rascal", p[2] + "/" + i, "OK", 0,
+              times[i], "upper_bound=" + ub);
         }
         Arrays.sort(times);
         long best = times[0] / 1000;
@@ -527,18 +569,22 @@ public class BenchmarkSuiteTest extends TestBase {
 
       ChemOptions opts = new ChemOptions();
       SearchEngine.MCSOptions mcsOpts = new SearchEngine.MCSOptions();
-      mcsOpts.timeoutMs = 5000;
+      mcsOpts.timeoutMs = BenchmarkRunSettings.TIMEOUT_MS;
 
       for (int i = 0; i < WARMUP; i++) {
-        SearchEngine.isSubstructure(benzene, phenol, opts, 5000);
+        BenchmarkRunSettings.checkInterrupted();
+        SearchEngine.isSubstructure(benzene, phenol, opts, BenchmarkRunSettings.TIMEOUT_MS);
         SearchEngine.findMCS(benzene, phenol, opts, mcsOpts);
       }
 
       long[] times = new long[ITERS];
       for (int i = 0; i < ITERS; i++) {
+        BenchmarkRunSettings.checkInterrupted();
         long t0 = System.nanoTime();
-        SearchEngine.isSubstructure(benzene, phenol, opts, 5000);
+        boolean matched = SearchEngine.isSubstructure(benzene, phenol, opts, BenchmarkRunSettings.TIMEOUT_MS);
         times[i] = System.nanoTime() - t0;
+        BenchmarkRunSettings.checkpoint("builder-substructure", "benzene-phenol/" + i, "OK",
+            matched ? benzene.atomCount() : 0, times[i], "matched=" + matched);
       }
       Arrays.sort(times);
       System.out.printf(
@@ -548,9 +594,13 @@ public class BenchmarkSuiteTest extends TestBase {
       times = new long[ITERS];
       int mcsSize = 0;
       for (int i = 0; i < ITERS; i++) {
+        BenchmarkRunSettings.checkInterrupted();
         long t0 = System.nanoTime();
         Map<Integer, Integer> mcs = SearchEngine.findMCS(benzene, phenol, opts, mcsOpts);
         times[i] = System.nanoTime() - t0;
+        BenchmarkRunSettings.validate(benzene, phenol, mcs, opts, "benzene-phenol");
+        BenchmarkRunSettings.checkpoint("builder-mcs", "benzene-phenol/" + i, "OK", mcs.size(),
+            times[i], "induced=false connected=true");
         mcsSize = mcs.size();
       }
       Arrays.sort(times);

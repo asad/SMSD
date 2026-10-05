@@ -4,18 +4,18 @@
 # Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
 # See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """
-SMSD Python (C++ pybind11) vs RDKit — Fair Python-to-Python MCS + Substructure Benchmark
+SMSD Python (C++ pybind11) and RDKit — MCS and substructure measurements
 
 Both tools are called from the same Python process with identical SMILES
-inputs and matching parameters. This eliminates cross-language overhead
-(no subprocess, no JVM startup) and gives a like-for-like comparison.
+inputs. Chemistry settings, validity, quality and cancellation are reported
+separately; policy differences do not receive speedup claims.
 
 Usage:
     pip install smsd rdkit
     python3 benchmarks/benchmark_python.py
 
 Output:
-    - benchmarks/results_smsd_vs_rdkit_20pairs_mcs_sub.tsv   (machine-readable)
+    - build/local-benchmarks/20pairs.tsv and .json (machine-readable)
     - stdout: formatted comparison table
 
 Sections:
@@ -27,6 +27,7 @@ Reference datasets (molecule pairs):
     includes self-match, tautomer, known-hard, and macrolide cases.
 """
 
+import json
 import platform
 import statistics
 import sys
@@ -34,6 +35,8 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Tuple
+
+from mcs_protocol import chem_options, rdkit_parameters, measure_pair, summarize
 
 # ---------------------------------------------------------------------------
 # Imports
@@ -60,12 +63,9 @@ except ImportError:
 # Configuration
 # ---------------------------------------------------------------------------
 
-# Protocol: 3 warmup + 10 measured, report median.
-# Rationale: 10 runs exceeds the McCreesh/Glasgow (2017) standard of 5 while
-# remaining practical for large-molecule pairs (paclitaxel, vancomycin).
-# Median across 10 runs gives <0.5% coefficient of variation for timings >=10us.
-WARMUP = 3
-ITERS = 10
+# Default protocol: 1 warmup + 3 measured; report all observations and median.
+WARMUP = 1
+ITERS = 3
 TIMEOUT_SEC = 10
 COMPARE_MODE = "defaults"
 
@@ -171,54 +171,11 @@ class SubResult:
 # ---------------------------------------------------------------------------
 
 def make_smsd_chem_options():
-    """Return ChemOptions for the selected comparison mode."""
-    if COMPARE_MODE == "strict":
-        return smsd.ChemOptions.profile("strict")
-    if COMPARE_MODE == "fmcs":
-        opts = smsd.ChemOptions()
-        opts.match_bond_order = smsd.BondOrderMode.LOOSE
-        opts.aromaticity_mode = smsd.AromaticityMode.FLEXIBLE
-        opts.ring_matches_ring_only = False
-        opts.complete_rings_only = False
-        opts.match_formal_charge = False
-        return opts
-    return smsd.ChemOptions()
+    return chem_options("fmcs" if COMPARE_MODE == "defaults" else COMPARE_MODE)
 
 
 def make_rdkit_mcs_call():
-    """Return an RDKit FindMCS callable for the selected comparison mode."""
-    if COMPARE_MODE == "defaults":
-        return lambda mols: rdFMCS.FindMCS(mols, timeout=TIMEOUT_SEC)
-
-    params = rdFMCS.MCSParameters()
-    params.Timeout = TIMEOUT_SEC
-    params.AtomTyper = rdFMCS.AtomCompare.CompareElements
-    atom = params.AtomCompareParameters
-    bond = params.BondCompareParameters
-    atom.MatchChiralTag = False
-    atom.MatchIsotope = False
-    atom.MatchValences = False
-    bond.MatchStereo = False
-    bond.MatchFusedRings = False
-    bond.MatchFusedRingsStrict = False
-
-    if COMPARE_MODE == "strict":
-        params.BondTyper = rdFMCS.BondCompare.CompareOrderExact
-        atom.MatchFormalCharge = True
-        atom.RingMatchesRingOnly = True
-        bond.RingMatchesRingOnly = True
-        atom.CompleteRingsOnly = False
-        bond.CompleteRingsOnly = False
-    elif COMPARE_MODE == "fmcs":
-        params.BondTyper = rdFMCS.BondCompare.CompareOrder
-        atom.MatchFormalCharge = False
-        atom.RingMatchesRingOnly = False
-        bond.RingMatchesRingOnly = False
-        atom.CompleteRingsOnly = False
-        bond.CompleteRingsOnly = False
-    else:
-        raise ValueError(f"Unsupported compare mode: {COMPARE_MODE}")
-
+    params = rdkit_parameters("fmcs" if COMPARE_MODE == "defaults" else COMPARE_MODE, TIMEOUT_SEC)
     return lambda mols: rdFMCS.FindMCS(mols, params)
 
 def bench_smsd(smi1: str, smi2: str) -> Tuple[List[float], int]:
@@ -231,14 +188,14 @@ def bench_smsd(smi1: str, smi2: str) -> Tuple[List[float], int]:
 
     # Warmup
     for _ in range(WARMUP):
-        smsd.find_mcs(g1, g2, opts, mcs_opts)
+        smsd_native.find_mcs(g1, g2, opts, mcs_opts)
 
     # Timed
     times = []
     mcs_size = 0
     for _ in range(ITERS):
         t0 = time.perf_counter_ns()
-        mapping = smsd.find_mcs(g1, g2, opts, mcs_opts)
+        mapping = smsd_native.find_mcs(g1, g2, opts, mcs_opts)
         dt = (time.perf_counter_ns() - t0) / 1000.0  # ns -> us
         times.append(dt)
         mcs_size = len(mapping)
@@ -291,13 +248,13 @@ def bench_smsd_sub(query_smi: str, target_smi: str) -> Tuple[List[float], bool]:
     opts = make_smsd_chem_options()
 
     for _ in range(WARMUP):
-        smsd.is_substructure(g_query, g_target, opts)
+        smsd_native.is_substructure(g_query, g_target, opts, TIMEOUT_SEC * 1000)
 
     times = []
     match = False
     for _ in range(ITERS):
         t0 = time.perf_counter_ns()
-        match = smsd.is_substructure(g_query, g_target, opts)
+        match = smsd_native.is_substructure(g_query, g_target, opts, TIMEOUT_SEC * 1000)
         dt = (time.perf_counter_ns() - t0) / 1000.0
         times.append(dt)
 
@@ -373,238 +330,61 @@ def main(sub_only=False, mcs_only=False, output_path=None,
          print_smsd_path=False, require_local_smsd=False,
          warmup=None, iters=None, timeout_sec=None, compare_mode=None):
     global WARMUP, ITERS, TIMEOUT_SEC, COMPARE_MODE
-    if warmup is not None:
-        WARMUP = warmup
-    if iters is not None:
-        ITERS = iters
-    if timeout_sec is not None:
-        TIMEOUT_SEC = timeout_sec
-    if compare_mode is not None:
-        COMPARE_MODE = compare_mode
-
+    if warmup is not None: WARMUP = warmup
+    if iters is not None: ITERS = iters
+    if timeout_sec is not None: TIMEOUT_SEC = timeout_sec
+    if compare_mode is not None: COMPARE_MODE = compare_mode
+    if WARMUP < 0 or ITERS < 1 or TIMEOUT_SEC < 1:
+        raise ValueError("warmup must be nonnegative; iterations/timeout positive")
     pkg_path, native_path = get_smsd_paths()
-    local_smsd = is_local_smsd_import()
-    if require_local_smsd and not local_smsd:
-        sys.exit(
-            "ERROR: smsd did not resolve to this repo.\n"
-            f"  package: {pkg_path}\n"
-            f"  native:  {native_path}\n"
-            "Reinstall the local tree first, for example: python3 -m pip install -e ."
-        )
-
-    print("=" * 120)
-    print("SMSD Python (C++ pybind11) vs RDKit FindMCS")
-    print(f"Platform: {platform.system()} {platform.machine()}")
-    print(f"Python:   {platform.python_version()}")
-    print(f"SMSD:     {smsd.__version__}")
-    print(f"RDKit:    {Chem.rdBase.rdkitVersion}")
-    print(f"Protocol: {WARMUP} warmup + {ITERS} measured, median reported")
-    print(f"Timeout:  {TIMEOUT_SEC}s per pair")
-    print(f"Mode:     {COMPARE_MODE}")
-    if print_smsd_path or require_local_smsd:
-        print(f"SMSD pkg: {pkg_path}")
-        print(f"SMSD ext: {native_path}")
-        print(f"Local:    {'yes' if local_smsd else 'no'}")
-    print("=" * 120)
-    print()
-
-    results: List[Result] = []
-    sub_results: List[SubResult] = []
-    smsd_wins = rdkit_wins = ties = 0
-    mcs_equal = mcs_smsd_better = mcs_rdkit_better = 0
-
+    if require_local_smsd and not is_local_smsd_import():
+        raise RuntimeError(f"SMSD package/extension outside repository: {pkg_path}, {native_path}")
+    print(f"SMSD {smsd.__version__}, RDKit {Chem.rdBase.rdkitVersion}, Python {platform.python_version()}")
+    print(f"Protocol: {WARMUP} warmup + {ITERS} measured, timeout {TIMEOUT_SEC}s, atom objective, connected")
+    print(f"SMSD package: {pkg_path}; extension: {native_path}; {smsd_native.gpu_device_info()}")
+    policy = "fmcs" if COMPARE_MODE == "defaults" else COMPARE_MODE
+    print(f"Policy: {policy}. Strict RDKit atom comparison uses Python callbacks; FMCS chemistry differs.")
+    print("Search-only medians. Invalid, canceled, unequal-quality or different-policy rows have no speed ratio.")
+    results, sub_results, detailed = [], [], []
     if not sub_only:
-        hdr = (f" # {'Pair':<30s} {'Category':<20s} "
-               f"{'SMSD(us)':>10s} {'RDKit(us)':>10s} "
-               f"{'S.MCS':>5s} {'R.MCS':>5s} "
-               f"{'Speedup':>10s} {'MCS Quality':<15s}")
-        print(hdr)
-        print("-" * 120)
-
-        for idx, (smi1, smi2, name, category) in enumerate(PAIRS, 1):
-            # --- SMSD ---
+        for index, (smi1, smi2, name, category) in enumerate(PAIRS):
+            detail = {"pair": name, "category": category, "policy": policy}
             try:
-                s_times, s_mcs = bench_smsd(smi1, smi2)
-                s_best = min(s_times)
-                s_median = statistics.median(s_times)
-            except Exception as e:
-                s_best = s_median = float("inf")
-                s_mcs = -1
-
-            # --- RDKit ---
+                rows = measure_pair(smi1, smi2, policy, TIMEOUT_SEC, WARMUP, ITERS, index)
+                detail.update(summarize(rows, policy)); detail["observations"] = rows
+                values = {engine: [r for r in rows if r["engine"] == engine] for engine in ("smsd", "rdkit")}
+                results.append(Result(name, category,
+                    min(r["elapsed_us"] for r in values["smsd"]), detail["smsd_median_us"],
+                    min(detail["smsd_atoms"]), min(r["elapsed_us"] for r in values["rdkit"]),
+                    detail["rdkit_median_us"], min(detail["rdkit_atoms"]), detail["rdkit_timeouts"] > 0))
+                print(f"{name}: SMSD {detail['smsd_median_us']:.1f}us {detail['smsd_atoms']} atoms; "
+                      f"RDKit {detail['rdkit_median_us']:.1f}us {detail['rdkit_atoms']} atoms; "
+                      f"valid {detail['smsd_valid']}/{detail['rdkit_valid']}; comparable={detail['speed_comparable']}", flush=True)
+            except Exception as exc:
+                detail["error"] = str(exc)
+                print(f"{name}: input/search error: {exc}", flush=True)
+                results.append(Result(name, category, float("inf"), float("inf"), -1,
+                                      float("inf"), float("inf"), -1, False))
+            detailed.append(detail)
+    if not mcs_only:
+        for smi1, smi2, name, category in PAIRS:
             try:
-                r_times, r_mcs, r_timeout = bench_rdkit(smi1, smi2)
-                r_best = min(r_times)
-                r_median = statistics.median(r_times)
-            except Exception as e:
-                r_best = r_median = float("inf")
-                r_mcs = -1
-                r_timeout = False
-
-            # --- Speedup ---
-            if r_timeout:
-                speedup_str = "timeout"
-                smsd_wins += 1
-            elif s_median == 0 or r_median == 0:
-                speedup_str = "N/A"
-                ties += 1
-            else:
-                ratio = r_median / s_median
-                if ratio > 1.1:
-                    speedup_str = f"SMSD {ratio:.1f}x"
-                    smsd_wins += 1
-                elif ratio < 0.9:
-                    speedup_str = f"RDKit {1/ratio:.1f}x"
-                    rdkit_wins += 1
-                else:
-                    speedup_str = "~tie"
-                    ties += 1
-
-            # --- MCS quality ---
-            if s_mcs > 0 and r_mcs > 0:
-                if s_mcs > r_mcs:
-                    quality = f"SMSD +{s_mcs - r_mcs}"
-                    mcs_smsd_better += 1
-                elif r_mcs > s_mcs:
-                    quality = f"RDKit +{r_mcs - s_mcs}"
-                    mcs_rdkit_better += 1
-                else:
-                    quality = "equal"
-                    mcs_equal += 1
-            elif s_mcs > 0 and (r_mcs <= 0 or r_timeout):
-                quality = f"SMSD only ({s_mcs})"
-                mcs_smsd_better += 1
-            elif r_mcs > 0 and s_mcs <= 0:
-                quality = f"RDKit only ({r_mcs})"
-                mcs_rdkit_better += 1
-            else:
-                quality = "both failed"
-
-            # --- Format times ---
-            def fmt_us(val):
-                if val == float("inf"):
-                    return "ERR"
-                if val >= 1_000_000:
-                    return f"{val/1_000_000:.1f}s"
-                if val >= 1_000:
-                    return f"{val/1_000:.2f}ms"
-                return f"{val:.0f}us"
-
-            r_display = "timeout" if r_timeout else fmt_us(r_median)
-
-            print(f"{idx:2d} {name:<30s} {category:<20s} "
-                  f"{fmt_us(s_median):>10s} {r_display:>10s} "
-                  f"{s_mcs:>5d} {r_mcs:>5d} "
-                  f"{speedup_str:>10s} {quality:<15s}")
-
-            results.append(Result(
-                name=name, category=category,
-                smsd_best_us=s_best, smsd_median_us=s_median, smsd_mcs=s_mcs,
-                rdkit_best_us=r_best, rdkit_median_us=r_median, rdkit_mcs=r_mcs,
-                rdkit_timed_out=r_timeout,
-            ))
-
-        print("-" * 120)
-        print()
-        print("MCS SUMMARY")
-        print(f"  Speed wins:  SMSD={smsd_wins}  RDKit={rdkit_wins}  tie={ties}")
-        print(f"  MCS quality: equal={mcs_equal}  SMSD better={mcs_smsd_better}  RDKit better={mcs_rdkit_better}")
-
-    if mcs_only:
-        tsv_path = Path(output_path) if output_path else SCRIPT_DIR / "results_smsd_vs_rdkit_20pairs_mcs_sub.tsv"
-        write_results_tsv(tsv_path, results, sub_results)
-        print(f"\n  Results written to {tsv_path}")
-        return
-
-    # =========================================================================
-    # Substructure benchmark: SMSD is_substructure vs RDKit HasSubstructMatch
-    # =========================================================================
-    print()
-    print("=" * 120)
-    print("SUBSTRUCTURE SEARCH — SMSD Python (C++ pybind11) vs RDKit HasSubstructMatch")
-    print(f"Protocol: {WARMUP} warmup + {ITERS} measured, median reported")
-    print(f"Query = smi1 searched within Target = smi2  (all {len(PAIRS)} pairs)")
-    print("=" * 120)
-    print()
-
-    sub_hdr = (f" # {'Pair':<30s} {'Category':<20s} "
-               f"{'SMSD(us)':>10s} {'RDKit(us)':>10s} "
-               f"{'SMSD hit':>8s} {'RDKit hit':>9s} "
-               f"{'Speedup':>10s}")
-    print(sub_hdr)
-    print("-" * 100)
-
-    sub_smsd_wins = sub_rdkit_wins = sub_ties = 0
-    agree = disagree = 0
-
-    for idx, (smi1, smi2, name, category) in enumerate(PAIRS, 1):
-        try:
-            s_times, s_hit = bench_smsd_sub(smi1, smi2)
-            s_med = statistics.median(s_times)
-        except Exception:
-            s_med = float("inf")
-            s_hit = False
-
-        try:
-            r_times, r_hit = bench_rdkit_sub(smi1, smi2)
-            r_med = statistics.median(r_times)
-        except Exception:
-            r_med = float("inf")
-            r_hit = False
-
-        # Agreement check
-        if s_hit == r_hit:
-            agree += 1
-        else:
-            disagree += 1
-
-        # Speedup
-        if s_med == float("inf") or r_med == float("inf") or s_med == 0 or r_med == 0:
-            speedup_str = "N/A"
-            sub_ties += 1
-        else:
-            ratio = r_med / s_med
-            if ratio > 1.1:
-                speedup_str = f"SMSD {ratio:.1f}x"
-                sub_smsd_wins += 1
-            elif ratio < 0.9:
-                speedup_str = f"RDKit {1/ratio:.1f}x"
-                sub_rdkit_wins += 1
-            else:
-                speedup_str = "~tie"
-                sub_ties += 1
-
-        def fmt_us(val):
-            if val == float("inf"):
-                return "ERR"
-            if val >= 1_000_000:
-                return f"{val/1_000_000:.1f}s"
-            if val >= 1_000:
-                return f"{val/1_000:.2f}ms"
-            return f"{val:.1f}us"
-
-        print(f"{idx:2d} {name:<30s} {category:<20s} "
-              f"{fmt_us(s_med):>10s} {fmt_us(r_med):>10s} "
-              f"{'yes' if s_hit else 'no':>8s} {'yes' if r_hit else 'no':>9s} "
-              f"{speedup_str:>10s}")
-
-        sub_results.append(SubResult(
-            name=name, category=category,
-            smsd_median_us=s_med, smsd_hit=s_hit,
-            rdkit_median_us=r_med, rdkit_hit=r_hit,
-        ))
-
-    print("-" * 100)
-    print()
-    print("SUBSTRUCTURE SUMMARY")
-    print(f"  Speed wins:  SMSD={sub_smsd_wins}  RDKit={sub_rdkit_wins}  tie={sub_ties}")
-    print(f"  Hit agreement: {agree}/{len(PAIRS)} pairs agree")
-    if disagree > 0:
-        print(f"  WARNING: {disagree} pair(s) disagree — verify SMILES semantics")
-
-    tsv_path = Path(output_path) if output_path else SCRIPT_DIR / "results_smsd_vs_rdkit_20pairs_mcs_sub.tsv"
-    write_results_tsv(tsv_path, results, sub_results)
-    print(f"\n  Results written to {tsv_path}")
+                st, sh = bench_smsd_sub(smi1, smi2)
+                rt, rh = bench_rdkit_sub(smi1, smi2)
+                sub_results.append(SubResult(name, category, statistics.median(st), sh,
+                                             statistics.median(rt), rh))
+                print(f"substructure {name}: hit agreement={sh == rh}", flush=True)
+            except Exception as exc:
+                detailed.append({"pair": name, "operation": "substructure", "error": str(exc)})
+    path = Path(output_path) if output_path else REPO_ROOT / "build/local-benchmarks/20pairs.tsv"
+    write_results_tsv(path, results, sub_results)
+    path.with_suffix(".json").write_text(json.dumps({"smsd_version": smsd.__version__,
+        "smsd_backend": smsd_native.gpu_device_info(), "smsd_package": str(pkg_path),
+        "smsd_extension": str(native_path), "rdkit_version": Chem.rdBase.rdkitVersion,
+        "timeout_sec": TIMEOUT_SEC, "warmup": WARMUP, "iterations": ITERS,
+        "smsd_timeout_status": "unknown: mapping API does not expose cancellation",
+        "results": detailed}, indent=2)+"\n")
+    print(f"Results: {path}")
 
 
 if __name__ == "__main__":
@@ -626,8 +406,8 @@ if __name__ == "__main__":
                         help="Override the number of measured runs")
     parser.add_argument("--timeout-sec", type=int,
                         help="Override the per-pair MCS timeout in seconds")
-    parser.add_argument("--compare-mode", choices=["defaults", "strict", "fmcs"],
-                        help="defaults = toolkit defaults, strict = exact/ring-parity baseline, fmcs = loose FMCS-style baseline")
+    parser.add_argument("--compare-mode", choices=["defaults", "strict", "fmcs", "any"],
+                        help="defaults = fmcs; strict = exact/aromatic/ring/charge, fmcs = toolkit chemistry comparison, any = common bond-any policy")
     args = parser.parse_args()
     main(sub_only=args.sub_only,
          mcs_only=args.mcs_only,

@@ -7,13 +7,18 @@
  * ==========================================
  *
  * Reads diverse_molecules.txt, generates 500 random + 500 systematic pairs,
- * and benchmarks SMSD MCS on each pair (5 rounds, 10s timeout).
+ * and benchmarks SMSD MCS on the available deduplicated pairs.
+ * Rounds and per-pair budget are configurable system properties.
  *
  * Compile and run:
  *   cd <project-root>
  *   mvn package -DskipTests
- *   javac -cp target/smsd-6.0.0.jar:target/dependency/* benchmarks/benchmark_1000_java.java -d benchmarks/
- *   java -cp target/smsd-6.0.0.jar:target/dependency/*:benchmarks/ benchmark_1000_java benchmarks/diverse_molecules.txt
+ *   mkdir -p build/local-benchmarks/java-classes
+ *   javac -cp target/smsd-7.2.0-jar-with-dependencies.jar benchmarks/benchmark_1000_java.java -d build/local-benchmarks/java-classes
+ *   java -Dsmsd.benchmark.rounds=1 -Dsmsd.benchmark.timeoutMs=1000 \
+ *        -cp target/smsd-7.2.0-jar-with-dependencies.jar:build/local-benchmarks/java-classes \
+ *        benchmark_1000_java benchmarks/diverse_molecules.txt build/local-benchmarks/pool1000
+ * Requires JDK 25.
  *
  * Output:
  *   benchmark_smsd_results.tsv — per-pair timing and MCS sizes
@@ -33,8 +38,8 @@ import java.util.stream.*;
 public class benchmark_1000_java {
 
     // --- Configuration ---
-    static final int ROUNDS = 5;
-    static final int TIMEOUT_MS = 10_000;
+    static final int ROUNDS = Integer.getInteger("smsd.benchmark.rounds", 5);
+    static final int TIMEOUT_MS = Integer.getInteger("smsd.benchmark.timeoutMs", 10_000);
     static final int N_RANDOM_PAIRS = 500;
     static final int N_SYSTEMATIC_PAIRS = 500;
     static final long SEED = 42L;
@@ -128,7 +133,7 @@ public class benchmark_1000_java {
         int completed = 0;
 
         // Warmup (2 rounds)
-        for (int w = 0; w < 2; w++) {
+        for (int w = 0; w < Integer.getInteger("smsd.benchmark.warmup", 2); w++) {
             try {
                 SearchEngine.findMCS(a.mol(), b.mol(), opts, mcsOpts);
             } catch (Exception e) {
@@ -169,7 +174,7 @@ public class benchmark_1000_java {
     static void writeResults(List<Pair> pairs, Map<String, BenchResult> results, Path outPath) throws IOException {
         try (PrintWriter pw = new PrintWriter(Files.newBufferedWriter(outPath))) {
             pw.println("pair_id\tpair_type\tname_a\tname_b\tsmi_a\tsmi_b\t" +
-                       "smsd_median_ms\tsmsd_mean_ms\tsmsd_mcs_size\tsmsd_completed");
+                       "smsd_median_ms\tsmsd_mean_ms\tsmsd_mcs_size\tsmsd_returned_without_exception");
             for (int i = 0; i < pairs.size(); i++) {
                 Pair p = pairs.get(i);
                 String key = p.nameA() + "__vs__" + p.nameB();
@@ -215,11 +220,12 @@ public class benchmark_1000_java {
             double maxTime = allMedians[allMedians.length - 1];
 
             sb.append("--- SMSD Timing ---\n");
+            sb.append("Cancellation is not exposed; returned calls may be partial.\n");
             sb.append(String.format("  Median of medians:  %.3f ms%n", medOfMed));
             sb.append(String.format("  Mean of medians:    %.3f ms%n", meanOfMed));
             sb.append(String.format("  Fastest pair:       %.3f ms%n", minTime));
             sb.append(String.format("  Slowest pair:       %.3f ms%n", maxTime));
-            sb.append(String.format("  Completion rate:    %d/%d (%.1f%%)%n",
+            sb.append(String.format("  Returned without exception:    %d/%d (%.1f%%)%n",
                 completedAll, results.size(), 100.0 * completedAll / results.size()));
         }
         if (allMCS.length > 0) {
@@ -294,8 +300,10 @@ public class benchmark_1000_java {
     // ======================================================================
     public static void main(String[] args) throws Exception {
         Path molPath = args.length > 0 ? Path.of(args[0]) : Path.of("benchmarks/diverse_molecules.txt");
-        Path outTsv = molPath.resolveSibling("benchmark_smsd_results.tsv");
-        Path outSummary = molPath.resolveSibling("benchmark_smsd_summary.txt");
+        Path outDir = args.length > 1 ? Path.of(args[1]) : Path.of("build/local-benchmarks/pool1000");
+        Files.createDirectories(outDir);
+        Path outTsv = outDir.resolve("benchmark_smsd_results.tsv");
+        Path outSummary = outDir.resolve("benchmark_smsd_summary.txt");
 
         System.err.printf("Loading molecules from %s ...%n", molPath);
         List<Molecule> mols = loadMolecules(molPath);

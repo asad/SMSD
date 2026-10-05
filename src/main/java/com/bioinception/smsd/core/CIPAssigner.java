@@ -553,18 +553,28 @@ public final class CIPAssigner {
     for (int[] p : priorities) ranks.add(p[1]);
     if (ranks.size() != 4) return null;
 
-    int[] smilesOrder;
-    if (hc > 0) {
-      smilesOrder = new int[4];
-      smilesOrder[0] = deg;
-      for (int i = 0; i < deg; i++) smilesOrder[i + 1] = i;
-    } else {
-      smilesOrder = new int[]{0, 1, 2, 3};
-    }
-
     int[] cipRanks = new int[4];
-    for (int k = 0; k < 4; k++) {
-      cipRanks[k] = priorities[smilesOrder[k]][1];
+    boolean cdkOrder = g.tetraLigands != null && g.tetraLigands[idx] != null;
+    if (cdkOrder) {
+      int[] ligandOrder = g.tetraLigands[idx];
+      if (ligandOrder.length != 4) return null;
+      for (int k = 0; k < 4; k++) {
+        boolean found = false;
+        for (int[] priority : priorities) {
+          if (priority[0] == ligandOrder[k]) {
+            cipRanks[k] = priority[1];
+            found = true;
+            break;
+          }
+        }
+        if (!found) return null;
+      }
+    } else {
+      // Builder annotations retain the original implicit-H-first convention.
+      for (int k = 0; k < 4; k++) {
+        int ligand = hc > 0 ? (k == 0 ? deg : k - 1) : k;
+        cipRanks[k] = priorities[ligand][1];
+      }
     }
 
     int inversions = 0;
@@ -574,7 +584,7 @@ public final class CIPAssigner {
       }
     }
     boolean evenPerm = (inversions % 2 == 0);
-    boolean smilesIsACW = (g.tetraChirality[idx] == 1);
+    boolean smilesIsACW = (g.tetraChirality[idx] == 1) != cdkOrder;
 
     if (evenPerm) {
       return smilesIsACW ? 'S' : 'R';

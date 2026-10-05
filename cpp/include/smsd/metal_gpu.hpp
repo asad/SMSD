@@ -17,7 +17,7 @@
  * compile definition, and gpu.hpp automatically dispatches to Metal.
  *
  * On Apple Silicon the Metal buffers use MTLResourceStorageModeShared —
- * the CPU and GPU share the same physical memory, so data is never copied.
+ * the CPU and GPU share each buffer after input data is copied into it.
  * On Intel Macs with a discrete GPU the runtime falls back gracefully.
  */
 #pragma once
@@ -45,7 +45,7 @@ static constexpr int METAL_LABEL_BINS = 256;
  *
  * The struct is 4 + 256*4 + 12 = 1040 bytes (16-byte aligned).
  * Explicit padding ensures the C++ stride matches the Metal shader stride.
- * On Apple Silicon (unified memory) these are passed as zero-copy shared buffers.
+ * Descriptors are copied into shared Metal buffers before dispatch.
  */
 struct alignas(16) MetalMolecule {
     int n = 0;

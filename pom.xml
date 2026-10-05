@@ -6,7 +6,7 @@
 
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>7.1.2</version>
+  <version>7.2.0</version>
   <packaging>jar</packaging>
   <name>SMSD</name>
   <description>High-performance substructure and MCS search for chemical graphs</description>
@@ -137,6 +137,20 @@
   </dependencies>
 
   <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+      <resource>
+        <directory>${project.basedir}</directory>
+        <targetPath>META-INF/smsd</targetPath>
+        <filtering>false</filtering>
+        <includes>
+          <include>LICENSE</include>
+          <include>NOTICE</include>
+        </includes>
+      </resource>
+    </resources>
     <plugins>
       <!-- Compile -->
       <plugin>
@@ -148,6 +162,33 @@
         </configuration>
       </plugin>
 
+      <!-- Copy project legal files without replacing dependency notices. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>3.4.0</version>
+        <executions>
+          <execution>
+            <id>copy-javadoc-legal</id>
+            <phase>generate-resources</phase>
+            <goals><goal>copy-resources</goal></goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}/javadoc-resources/doc-files/smsd</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${project.basedir}</directory>
+                  <filtering>false</filtering>
+                  <includes>
+                    <include>LICENSE</include>
+                    <include>NOTICE</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
       <!-- Javadoc generation -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -157,6 +198,8 @@
           <source>${maven.compiler.release}</source>
           <doclint>none</doclint>
           <quiet>true</quiet>
+          <javadocDirectory>${project.build.directory}/javadoc-resources</javadocDirectory>
+          <docfilessubdirs>true</docfilessubdirs>
           <reportOutputDirectory>${project.basedir}/docs</reportOutputDirectory>
           <destDir>api</destDir>
         </configuration>

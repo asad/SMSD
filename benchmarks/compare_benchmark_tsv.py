@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List
@@ -30,6 +31,8 @@ class MCSRow:
     rdkit_median_us: float
     rdkit_mcs: int
     rdkit_timed_out: bool
+    timing_verified: bool = False
+    contract: str = ""
 
 
 @dataclass
@@ -49,6 +52,9 @@ def parse_bool(value: str) -> bool:
 def parse_sections(path: Path) -> tuple[Dict[str, MCSRow], Dict[str, SubRow]]:
     mcs_rows: Dict[str, MCSRow] = {}
     sub_rows: Dict[str, SubRow] = {}
+    metadata_path = path.with_suffix(".json")
+    metadata = json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
+    details = {r["pair"]: r for r in metadata.get("results", []) if "policy" in r}
 
     current_section = None
     header: List[str] | None = None
@@ -85,6 +91,13 @@ def parse_sections(path: Path) -> tuple[Dict[str, MCSRow], Dict[str, SubRow]]:
                 rdkit_mcs=int(row["rdkit_mcs"]),
                 rdkit_timed_out=parse_bool(row["rdkit_timeout"]),
             )
+            detail = details.get(item.pair, {})
+            item.timing_verified = (detail.get("smsd_valid") is True
+                and detail.get("smsd_budget_reached") == 0
+                and detail.get("smsd_near_budget", 0) == 0
+                and len(detail.get("smsd_atoms", [])) == 1)
+            item.contract = json.dumps({key: metadata.get(key) for key in
+                ("timeout_sec", "warmup", "iterations")}, sort_keys=True) + str(detail.get("policy"))
             mcs_rows[item.pair] = item
         elif current_section == "sub":
             item = SubRow(
@@ -134,6 +147,14 @@ def compare_mcs(before: Dict[str, MCSRow], after: Dict[str, MCSRow], threshold: 
     if not common_pairs:
         print("No common MCS rows found.")
         return
+    all_pairs = common_pairs
+    common_pairs = [p for p in common_pairs if before[p].timing_verified and after[p].timing_verified
+                    and before[p].contract == after[p].contract and before[p].smsd_mcs == after[p].smsd_mcs]
+    print(f"MCS atom-count changes (quality not ranked): larger={sum(after[p].smsd_mcs > before[p].smsd_mcs for p in all_pairs)} "
+          f"smaller={sum(after[p].smsd_mcs < before[p].smsd_mcs for p in all_pairs)}")
+    if not common_pairs:
+        print("No verified, equal-size MCS timing rows with matching protocol JSON.")
+        return
 
     improved = 0
     regressed = 0
@@ -173,7 +194,7 @@ def compare_mcs(before: Dict[str, MCSRow], after: Dict[str, MCSRow], threshold: 
     print("MCS")
     print(f"  Pairs compared: {len(common_pairs)}")
     print(f"  SMSD timing: improved={improved} regressed={regressed} unchanged={unchanged} (threshold {threshold * 100:.1f}%)")
-    print(f"  SMSD MCS size: improved={size_up} regressed={size_down} unchanged={size_same}")
+    print(f"  Timing eligibility: {len(common_pairs)}/{len(all_pairs)}; validated equal-size mappings")
     summary = total_timing_summary(before_total, after_total, threshold)
     if summary:
         print(f"  Total SMSD median time: {summary}")

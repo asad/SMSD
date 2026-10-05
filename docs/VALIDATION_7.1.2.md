@@ -1,4 +1,10 @@
-# SMSD Pro 7.1.2 local validation
+# SMSD Pro 7.1.2 historical local validation
+
+This records the earlier 7.1.2 preparation against baseline `52733cb`. It is
+not the validation result for current 7.2.0 Unreleased changes. Current
+measurements and coverage are linked from the
+[7.2.0 benchmark report](../benchmarks/RESULTS_7.2.0.md) and
+[algorithm review](ALGORITHM_REVIEW.md).
 
 Validated on 4 October 2026 using macOS arm64, AppleClang 21, Java 25.0.2,
 Maven 3.9.14, CPython 3.13, CDK 2.13, Jackson 2.21.7 and RDKit 2026.3.6.
@@ -23,8 +29,8 @@ The separate Metal/OpenMP batch test passed on the Apple M5 GPU. CUDA and
 native Windows execution were not tested. Additional platform wheels, native
 installers, PyPI publishing, and container publishing are outside this draft.
 
-The 23 new Java regression cases all fail against the original sources and pass
-with these fixes. Another 6,000 deterministic comparisons agree with exhaustive
+The earlier review recorded targeted Java baseline failures and passing fixed
+regressions. Its 6,000 deterministic comparisons agreed with exhaustive
 injective-mapping oracles across matching profiles and search engines.
 
 The general matcher agrees with an exhaustive oracle on all 33,868 graphs with
@@ -35,11 +41,12 @@ Canonical SMILES and hashes are unchanged for a 13-molecule before/after corpus.
 Relocated CMake installations compile and run independent consumers with OpenMP
 enabled and disabled, while propagating C++17.
 
-## C++ primitive measurements
+## Historical C++ primitive measurements
 
 These are three-run median synthetic measurements with `clang++ -std=c++17 -O3`
 against original commit `52733cb` and the updated headers on the same machine.
-They measure the individual primitives, not whole-application throughput.
+They measure the individual primitives, not whole-application throughput, and
+are not the current 7.2.0 baseline/candidate comparison.
 
 | Primitive | Original | Updated | Ratio |
 |---|---:|---:|---:|

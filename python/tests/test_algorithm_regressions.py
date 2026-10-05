@@ -71,10 +71,8 @@ def test_explicit_lightweight_rejects_unsupported_options(options, name):
 
 
 def test_unknown_native_keyword_cannot_be_hidden_by_auto_fast_return():
-    # Weight fields are not currently exported by MCSOptions; surface the
-    # native binding's rejection rather than silently ignoring the request.
-    with pytest.raises(AttributeError, match="atom_weights"):
-        smsd.find_mcs("CC", "CCC", atom_weights=[1.0, 2.0])
+    with pytest.raises(AttributeError, match="unknown_option"):
+        smsd.find_mcs("CC", "CCC", unknown_option=True)
 
 
 def test_default_and_supported_options_keep_lightweight_fast_path(monkeypatch):

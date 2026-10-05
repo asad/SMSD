@@ -4,7 +4,7 @@
 # Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
 # See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """
-SMSD v6 Performance Benchmark Suite
+SMSD MCS, fingerprint and batch feature microbenchmarks
 
 Times three core operations:
   1. MCS computation for 10 standard molecule pairs
@@ -178,8 +178,12 @@ def benchmark_batch_substructure():
 # ---------------------------------------------------------------------------
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, default=SCRIPT_DIR.parent / "build/local-benchmarks/features.tsv")
+    args = parser.parse_args()
     print("=" * 72)
-    print("SMSD v6 Performance Benchmark Suite")
+    print("SMSD MCS, fingerprint and batch feature microbenchmarks")
     print(f"SMSD version: {smsd.__version__}")
     print("=" * 72)
     print()
@@ -234,7 +238,8 @@ def main():
     print()
 
     # --- Save results ---
-    out_file = SCRIPT_DIR / "results_v6.tsv"
+    out_file = args.output
+    out_file.parent.mkdir(parents=True, exist_ok=True)
     with open(out_file, "w") as f:
         f.write("\n".join(tsv_lines) + "\n")
     print(f"Results saved to {out_file}")

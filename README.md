@@ -17,54 +17,52 @@
 
 ---
 
-SMSD Pro provides exact substructure search and maximum common substructure
+SMSD Pro provides substructure search and maximum common substructure
 (MCS) search for chemical graphs. It is available for **Java**, **C++**
 (header-only), and **Python**. Optional GPU paths are available for CUDA and
 Apple Metal builds.
 
-Version `7.1.2` updates the Java chemistry layer to **CDK 2.13** and fixes
-search correctness in Java and C++. Matching options now remain isolated in
-the Java domain cache, permissive searches use compatible pruning, and
-C++ maximum-clique searches continue until larger solutions are ruled out
-or the time budget expires. C++ neighborhood construction and clique pivot
-selection also perform less work. Release packaging is built and tested locally.
-Builds on the `7.1.0` unified Python API (`find_mcs`, `find_substructure`).
+The proposed `7.2.0` update fixes element-preserving tautomer matching,
+stereochemical traversal handling, weighted/bond objectives and symmetry
+validation. Python wrappers preserve input indices and options; core batches
+reuse native graphs. Java uses **CDK 2.13**. The published release remains
+`7.1.2` on GitHub and `7.1.1` on Maven Central/PyPI until the new artifacts
+are released.
 
-### Dalke Nearest-Neighbor MCS Benchmark (1,000 pairs)
+### Local benchmark results
 
-We benchmark on the community-standard Dalke NN dataset (1,000
-high-similarity ChEMBL pairs) — the same dataset widely used by RDKit,
-CDK, and the academic MCS literature. Identical SMILES input, same 10 s
-timeout, same process, same machine. We gratefully acknowledge Andrew
-Dalke's foundational work on MCS benchmarking.
+Performance depends on the corpus, chemistry constraints, search budget and
+mapping validity. The current review compares source snapshot `6807f31`
+(versioned 7.1.2) with the proposed 7.2.0 changes and RDKit 2026.09.1.
+That snapshot includes changes made after the original 7.1.2 release tag.
+See [measured results and reproduction commands](benchmarks/RESULTS_7.2.0.md).
 
-| Metric | SMSD Pro 7.1.1 | RDKit FindMCS 2026.03 |
-|--------|:---------------:|:---------------------:|
-| Total time | **40 s** | 213 s |
-| Median time | 0.6 ms | 0.4 ms |
-| Mean MCS size | **25.8 atoms** | 25.0 atoms |
-| Timeouts | **0** | 8 |
-| Larger-MCS wins | **211 (21 %)** | 29 (3 %) |
+The checked-in random and nearest-neighbor pairs are **Dalke-style datasets
+derived from MoleculeNet**. They are not the original Dalke benchmark; the
+nearest-neighbor file includes self-pairs, repeated pairs and low-similarity
+pairs. SMSD and RDKit FMCS also differ in which query edges an MCS may omit.
+The report separates timing, atom/bond counts, cancellations and validated
+mapping witnesses; it does not establish a universal speed or quality winner.
 
-SMSD Pro's adaptive multi-strategy native engine complements RDKit's
-well-proven VF2-based approach. Both engines are excellent; SMSD tends
-to find slightly larger common substructures on hard pairs while RDKit
-offers superb median-case latency. We recommend choosing based on your
-workload: SMSD for coverage-critical applications (reaction mapping, SAR),
-RDKit for high-throughput screening where median speed dominates.
-
-Full benchmark suite and reproduction scripts in [`benchmarks/`](benchmarks/).
+Controlled local binding measurements show workload-specific tradeoffs:
+cached RDKit conversion fell from 4.36 to 1.96 microseconds, the 32-target
+substructure batch from 78.9 to 5.0 microseconds, and compiled SMARTS matching
+on 32 repeated 448-atom targets from 5,807 to 78.4 microseconds. Small native
+MCS dispatch increased from 17.1 to 21.4 microseconds. These measurements
+exclude setup and are not application-wide speedups; the report records the
+inputs, checksums and search timing regressions.
 
 ### Guides and References
 
 | Document | Description |
 |----------|-------------|
 | **[Examples, How-To, and Cautions](docs/EXAMPLES.md)** | Worked examples for every feature with cautions and performance tips |
-| [Python API Guide](docs/PYTHON.md) | Full Python API reference with code examples |
+| [Python API Guide](docs/PYTHON.md) | Search, bindings and RDKit examples |
 | [Java Guide](docs/JAVA.md) | Java API and CLI usage |
 | [C++ Guide](docs/CPP.md) | Header-only C++ integration |
 | [Release Notes](docs/RELEASE_NOTES.md) | What's new in this release |
-| [How to Install](docs/HOWTO-INSTALL.md) | Build from source on all platforms |
+| [How to Install](docs/HOWTO-INSTALL.md) | Installation and source builds |
+| [Publishing](docs/PUBLISHING.md) | Local GitHub, PyPI and Maven Central release steps |
 | [Changelog](CHANGELOG.md) | Full versioned change history |
 
 ### Molfile Support
@@ -84,7 +82,7 @@ isotopes, atom classes/maps, `R#` plus `M  RGP`, and basic stereo flags.
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>7.1.2</version>
+  <version>7.1.1</version>
 </dependency>
 ```
 
@@ -103,8 +101,10 @@ java -jar smsd-7.1.2-jar-with-dependencies.jar \
 pip install smsd
 ```
 
-Supported CPython versions: `3.10` through `3.13`.
-Wheels available for Linux (x86_64, aarch64), macOS (arm64, x86_64), and Windows (x64).
+The source package declares CPython `3.9` or later. Existing PyPI releases
+provide several platform wheels; availability varies by release and interpreter.
+The proposed 7.2.0 release uses one macOS arm64/Python 3.14 wheel and a source
+distribution. The search comparison uses Python 3.13.14 and RDKit 2026.09.1.
 CPU execution is the default path. CUDA and Metal acceleration are optional.
 RDKit and Open Babel are optional interop layers.
 
@@ -163,7 +163,7 @@ print(result.mapping)       # {0: 0, 1: 1, ...}
 # SMILES strings
 mcs = smsd.find_mcs("c1ccccc1", "c1ccc(O)cc1")
 
-# MolGraph objects (pre-parsed, fastest for batch)
+# MolGraph objects (pre-parsed, avoids repeat parsing)
 g1 = smsd.parse_smiles("c1ccccc1")
 g2 = smsd.parse_smiles("c1ccc(O)cc1")
 mcs = smsd.find_mcs(g1, g2)
@@ -259,7 +259,7 @@ smsd.write_molfile(g, "molecule_out.mol", v3000=True)
 smsd.export_sdf([g1, g2], "output.sdf")
 ```
 
-### Publication-Quality Depiction (ACS 1996 Standard)
+### SVG Depiction
 
 Zero-dependency SVG renderer — the same specification used by Nature, Science,
 JACS, and Springer journals. See [Examples](docs/EXAMPLES.md#7-depiction-svg)
@@ -268,7 +268,7 @@ for full usage guide.
 ```python
 import smsd
 
-# Render any molecule as publication-quality SVG
+# Render any molecule as SVG
 svg = smsd.depict_svg("CC(=O)Oc1ccccc1C(=O)O")  # aspirin
 smsd.save_svg(svg, "aspirin.svg")
 
@@ -344,54 +344,41 @@ docker run --rm smsd --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 
 ## Benchmarks
 
-### MCS Performance (Python)
+The [7.2.0 benchmark report](benchmarks/RESULTS_7.2.0.md) records the current
+local runs, versions, budgets and mapping checks. Historical result files are
+retained for reference; they are not evidence for current performance claims.
 
-Representative pairs from the checked-in Python benchmark results on the same
-machine and in the same Python process.
-Full data: [`benchmarks/results_python.tsv`](benchmarks/results_python.tsv)
-For the maintained local core leaderboard, run `python3 benchmarks/benchmark_leaderboard.py --mode core --compare-mode strict`.
-Use the mode-matched core leaderboard for current cross-tool comparisons.
-
-| Pair | Category | SMSD (ms) | MCS Size |
-|---|---|---:|---:|
-| Cubane (self) | Cage | 0.003 | 8 |
-| Coronene (self) | PAH | 0.006 | 24 |
-| NAD / NADH | Cofactor | 0.012 | 44 |
-| Caffeine / Theophylline | N-methyl diff | 0.017 | 13 |
-| Morphine / Codeine | Alkaloid | 0.079 | 20 |
-| Ibuprofen / Naproxen | NSAID | 0.070 | 15 |
-| ATP / ADP | Nucleotide | 0.148 | 27 |
-| PEG-12 / PEG-16 | Polymer | 0.039 | 40 |
-| Paclitaxel / Docetaxel | Taxane | 1,691 | 56 |
-
-### Substructure Performance (Java)
-
-Current maintained cached Java core summary:
-**28/28 hit agreement** and **28/28 favourable timings** on the local curated corpus.
-
-Run `python3 benchmarks/benchmark_leaderboard.py --mode core --compare-mode strict`
-to refresh the maintained local summary.
+The [benchmark guide](benchmarks/README.md) provides commands for the Python,
+Java and native C++ programs. CPU timing comparisons exclude incompatible or
+invalid mapping witnesses and report canceled RDKit searches separately.
+SMSD's public mapping API does not currently expose an optimality certificate
+or a cancellation flag, so completion cannot be inferred from elapsed time.
 
 ### External Benchmark Datasets
 
-Community-standard datasets for reproducible evaluation, stored in [`benchmarks/data/`](benchmarks/data/):
+Checked-in datasets used by the local evaluation, stored in [`benchmarks/data/`](benchmarks/data/):
 
 | Dataset | Pairs/Patterns | Source | Purpose |
 |---------|---------------|--------|---------|
 | Tautobase (Chodera subset) | 468 tautomer pairs | [Wahl & Sander 2020](https://doi.org/10.1021/acs.jcim.0c00035) | Tautomer-aware MCS validation |
 | Tautobase (full SMIRKS) | 1,680 pairs | [Wahl & Sander 2020](https://doi.org/10.1021/acs.jcim.0c00035) | Tautomer transform coverage |
 | Ehrlich-Rarey SMARTS v2.0 | 1,400 patterns | [Ehrlich & Rarey 2012](https://doi.org/10.1186/1758-2946-4-13) | Substructure search validation |
-| Dalke-style random pairs | 1,000 pairs | MoleculeNet drug collections | Low-similarity MCS scaling |
-| Dalke-style NN pairs | 1,000 pairs | MoleculeNet drug collections | High-similarity MCS quality |
-| Stress pairs | 12 pairs | Duesbury et al. 2017 | Timeout/robustness |
+| Dalke-style random pairs | 1,000 pairs | MoleculeNet drug collections | Random-pair MCS evaluation |
+| Dalke-style NN pairs | 1,000 pairs | MoleculeNet drug collections | Nearest-neighbor sample, including self-pairs and repeats |
+| Stress pairs | 12 curated pairs | Repository fixtures | Budget and robustness checks |
 | Molecule pool | 5,590 SMILES | MoleculeNet (BBBP, SIDER, ClinTox, BACE) | Pair generation source |
 
 ```bash
-# Run external benchmarks (Java)
-mvn test -Dtest=ExternalBenchmarkTest -Dbenchmark=true
+# Run bounded external diagnostics (Java)
+mvn -B -Dslow.tests.exclude=nothing \
+  '-Dtest=BenchmarkSuiteTest*,ExternalBenchmarkTest*,JavaCdkVsSmsdBenchmarkTest' \
+  -Dbenchmark=true -Dsmsd.benchmark.timeoutMs=1000 \
+  -Dsmsd.benchmark.rounds=1 -Dsmsd.benchmark.warmup=0 \
+  -Dsmsd.benchmark.outputDir=build/local-benchmarks/java test
 
 # Run external benchmarks (Python)
-SMSD_BENCHMARK=1 pytest python/tests/test_external_benchmarks.py -v -s
+SMSD_BENCHMARK=1 python -m pytest python/tests/test_external_benchmarks.py \
+  --import-mode=importlib -v -s
 
 # Regenerate Dalke-style pairs (requires RDKit)
 python benchmarks/generate_dalke_pairs.py
@@ -477,7 +464,7 @@ partial ring fragments are accepted.
 
 | Platform | CPU | GPU |
 |---|---|---|
-| macOS (Apple Silicon) | OpenMP | Metal (zero-copy unified memory) |
+| macOS (Apple Silicon) | OpenMP | Metal (shared buffers) |
 | Linux | OpenMP | CUDA |
 | Windows | OpenMP | CUDA |
 | Any (no GPU) | OpenMP | Automatic CPU fallback |
@@ -492,7 +479,7 @@ SMSD employs multi-level caching to eliminate redundant computation in batch and
 |---|---|---|
 | MolGraph identity cache | Molecule object conversion | Same molecule reused across 6-18 calls per reaction pair |
 | Domain space cache | VF2++ atom compatibility matrix | Avoids O(Nq*Nt) rebuild on repeated queries |
-| ECFP/FCFP fingerprint cache | Default-parameter fingerprints | 337x speedup on repeated fingerprint calls |
+| ECFP/FCFP fingerprint cache | Default-parameter fingerprints | Reuses cached results for repeated calls |
 | Pharmacophore features cache | FCFP atom invariants | Eliminates O(n*degree^2) per FCFP call |
 | C++ GraphBuilder compat matrix | All MCS strategies | Pre-computed once, shared across algorithms |
 
@@ -506,20 +493,20 @@ Call `SearchEngine.clearMolGraphCache()` (Java) or reuse `MolGraph` instances (C
 |---|---|
 | **CIP R/S/E/Z assignment** | Full digraph-based stereo descriptors (IUPAC 2013 Rules 1-5) including Rule 3 (Z > E), like/unlike pairing, and pseudoasymmetric r/s |
 | Circular fingerprint (ECFP/FCFP) | Tautomer-aware Morgan/ECFP with configurable radius (-1 = whole molecule) |
-| Count-based ECFP/FCFP | `ecfpCounts()` / `fcfpCounts()` — superior to binary for ML |
-| Topological Torsion fingerprint | 4-atom path with atom typing (SOTA on peptide benchmarks) |
+| Count-based ECFP/FCFP | `ecfpCounts()` / `fcfpCounts()` — retain feature multiplicities |
+| Topological Torsion fingerprint | 4-atom path with atom typing (path descriptor) |
 | Path fingerprint | Graph-aware, tautomer-invariant path enumeration |
 | MCS fingerprint | MCS-aware, auto-sized |
 | Similarity metrics | Tanimoto, Dice, Cosine, Soergel (binary + count-vector) |
 | Fingerprint formats | `toBitSet()`, `toHex()`, `toBinaryString()`, `fromBitSet()`, `fromHex()` |
-| **MCS SMILES extraction** | `findMCSSMILES()` — extract MCS as canonical SMILES |
-| **findAllMCS** | Top-N MCS enumeration with canonical SMILES dedup |
-| **SMARTS-based MCS** | `findMCSSMARTS()` — largest substructure matching a SMARTS pattern |
+| **MCS SMILES extraction** | `findMCSSmiles()` — extract MCS as canonical SMILES |
+| **findAllMCS** | Bounded enumeration; symmetry deduplication requires complete generators |
+| **SMARTS-based MCS** | `findMCSSmarts()` — largest substructure matching a SMARTS pattern |
 | R-group decomposition | `decomposeRGroups()` |
 | **MatchResult** | Structured result: size, mapping, overlap coefficient, query/target atom counts |
 | RASCAL screening | O(V+E) similarity upper bound |
 | Canonical SMILES / SMARTS | deterministic, toolkit-independent (including `X` total connectivity) |
-| **Publication-quality SVG depiction** | ACS 1996 standard renderer: skeletal formulas, Jmol colors, stereo wedges, MCS highlighting, side-by-side pair rendering |
+| **SVG depiction** | Renderer with ACS-style defaults: skeletal formulas, Jmol colors, stereo wedges, MCS highlighting, side-by-side pair rendering |
 | Lenient SMILES parser | Best-effort recovery from malformed SMILES |
 | N-MCS | Multi-molecule MCS with provenance tracking |
 | Tautomer validation | `validateTautomerConsistency()` — proton conservation check |
@@ -529,7 +516,7 @@ Call `SearchEngine.clearMolGraphCache()` (Java) or reuse `MolGraph` instances (C
 | **40+ scaffold templates** | Pharmaceutical scaffolds, PAH, spiro, bridged (norbornane, adamantane) |
 | **Coordinate transforms** | translate, rotate, scale, mirror, center, align, bounding box, RMSD |
 | **Force-directed layout** | `forceDirectedLayout()` for bond-crossing minimisation |
-| **SMACOF stress majorisation** | `stressMajorisation()` for optimal 2D embedding |
+| **SMACOF stress majorisation** | `stressMajorisation()` to reduce embedding stress |
 | **Batch constrained MCS** | `batchMCSConstrained()` multi-pair MCS with non-overlap atom exclusion |
 | **Two-phase crossing reduction** | `reduceCrossings()` Phase 1: system-level flipping, Phase 2: individual ring flipping with fusion-atom pivots |
 | **computeSSSR / layoutSSSR** | Clean SSSR APIs: minimum cycle basis and layout-ordered ring perception |
@@ -550,50 +537,58 @@ Call `SearchEngine.clearMolGraphCache()` (Java) or reuse `MolGraph` instances (C
 
 ## Release Downloads
 
-The 7.1.2 release is prepared from local builds. Java JARs and C++ headers
-are portable; the Python wheel targets CPython 3.13 on macOS 26+ arm64, with a source
-distribution for other systems. Native installers and additional wheels can
-be built separately. Hosted release workflows require manual dispatch.
+The proposed 7.2.0 asset set is prepared locally: Java 25 library/CLI packages,
+C++17 headers, one CPython 3.14 macOS arm64 wheel and a source distribution.
+Native installers and additional wheel versions are omitted from this release
+preparation. Hosted release workflows remain manual. See
+[publishing steps](docs/PUBLISHING.md); existing GitHub downloads remain at
+7.1.2 until the new release is published.
 
 | Download | Description |
 |----------|-------------|
-| `smsd-7.1.2.jar` | Java library JAR |
-| `smsd-7.1.2-jar-with-dependencies.jar` | Standalone CLI (Java 25+) |
-| `smsd-7.1.2-sources.jar`, `smsd-7.1.2-javadoc.jar` | Java sources and API documentation |
-| `smsd-7.1.2-cli.tar.gz` | Java launcher distribution (bin/ and repo/) |
-| `smsd-cpp-7.1.2-headers.tar.gz` | C++17 header-only library, with LICENSE and NOTICE |
-| `smsd-7.1.2.tar.gz`, `smsd-7.1.2-*.whl` | Python source distribution and locally built wheel |
+| `smsd-7.2.0.jar` | Java library JAR |
+| `smsd-7.2.0-jar-with-dependencies.jar` | Standalone CLI (Java 25+) |
+| `smsd-7.2.0-sources.jar`, `smsd-7.2.0-javadoc.jar` | Java sources and API documentation |
+| `smsd-7.2.0-cli.tar.gz` | Java launcher distribution (bin/ and repo/) |
+| `smsd-cpp-7.2.0-headers.tar.gz` | C++17 headers with LICENSE and NOTICE |
+| `smsd-7.2.0.tar.gz`, `smsd-7.2.0-cp314-*.whl` | Python source distribution and one macOS arm64 wheel |
 | `SHA256SUMS` | Checksums for the release assets |
 
 ```bash
 # CLI
-java -jar smsd-7.1.2-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
+java -jar smsd-7.2.0-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 
 # Docker CLI
 docker build -t smsd .
 docker run --rm smsd --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 
 # Python — build from the downloaded source distribution
-pip install ./smsd-7.1.2.tar.gz
+pip install ./smsd-7.2.0.tar.gz
 ```
 
 ---
 
 ## Tests
 
-The 7.1.2 local preflight passed on macOS arm64:
+Current 7.2.0 local validation on macOS arm64:
 
-| Suite | Result | Coverage |
-|-------|--------|----------|
-| Java | 1,192 passed; 15 opt-in benchmark cases skipped | Search, chemistry, regression and cross-language parity tests |
-| C++ CPU | All six suites passed with assertions enabled | Core search, SMILES/SMARTS parsing, layout, CIP, batch operations and general matching |
-| Python | 603 passed; 6 optional cases skipped | Installed wheel built from the source distribution, API and parity tests |
-| Metal/OpenMP | Batch suite passed on Apple M5 | Native GPU availability and batch operations |
+| Suite | Result | Scope |
+|---|---|---|
+| Java | 1,242 passed; 15 opt-in cases skipped | Clean verification, CLI, sources and Javadoc artifacts |
+| C++ CPU | All 11 suites passed with assertions enabled | Search, parsing, chemistry, batch, assignment and matching |
+| Selected Metal regressions | All 3 selected suites passed | Batch and matching-domain checks on local hardware |
+| Python | 691 passed; 8 optional/opt-in cases skipped in each environment | Installed CPU wheels: Python 3.13.14/RDKit 2026.09.1 and Python 3.14.8/RDKit 2026.03.6 |
+| Independent native oracles | 84,096 cases passed | Small graph objectives, fragments, McSplit/clique and enumeration |
+| Native recursion state | 1,024 additional cases passed | Connected/disconnected McGregor assignment and undo validity |
+| ASan/UBSan | Focused checks passed | Coverage validity, stereo, bounds, deadlines and optional arrays |
 
-Focused AddressSanitizer and UndefinedBehaviorSanitizer checks passed. CUDA,
-native Windows execution and other wheel platforms were not validated.
-See [local validation](docs/VALIDATION_7.1.2.md) for reproduction commands,
-exhaustive oracle checks and measured C++ primitive improvements.
+The Python guide's executable snippets also passed. Full corpus and optional
+benchmark executions are reported separately in the
+[benchmark report](benchmarks/RESULTS_7.2.0.md). These checks establish the
+reported test coverage, rather than a guarantee for every molecule, objective
+or platform. CUDA, native Windows and other wheel platforms were not tested.
+See [current validation](docs/VALIDATION_7.2.0.md); the
+[7.1.2 record](docs/VALIDATION_7.1.2.md) is historical.
 
 ---
 
@@ -602,12 +597,12 @@ exhaustive oracle checks and measured C++ primitive improvements.
 | Document | Description |
 |---|---|
 | **[Examples, How-To, and Cautions](docs/EXAMPLES.md)** | Worked examples for every feature with cautions and performance tips |
-| [Python API Guide](docs/PYTHON.md) | Full Python API reference |
+| [Python API Guide](docs/PYTHON.md) | Search, bindings and RDKit examples |
 | [Java Guide](docs/JAVA.md) | Java API and CLI usage |
 | [C++ Guide](docs/CPP.md) | Header-only C++ integration |
 | [Release Notes](docs/RELEASE_NOTES.md) | Current release |
 | [Changelog](CHANGELOG.md) | Full versioned change history |
-| [How to Install](docs/HOWTO-INSTALL.md) | Build from source on all platforms |
+| [How to Install](docs/HOWTO-INSTALL.md) | Installation and source builds |
 | [NOTICE](NOTICE) | Attribution, trademark, and novel algorithm terms |
 
 ---

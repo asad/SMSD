@@ -4,7 +4,7 @@
 # Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
 # See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """
-SMSD (pip install smsd) vs RDKit FindMCS — like-for-like Python benchmark.
+Historical ten-pair compatibility entrypoint; uses the maintained protocol.
 
 Both libraries called purely from Python on the same molecule pairs,
 same hardware, same process — no JVM, no subprocess overhead.
@@ -14,7 +14,7 @@ Usage:
     python benchmarks/benchmark_python_vs_rdkit.py
 
 Requirements:
-    smsd  >= 6.0.0   (pip install smsd)
+    smsd (the intended baseline or candidate wheel)
     rdkit >= 2022.03 (pip install rdkit)
 """
 
@@ -101,7 +101,8 @@ def bench_rdkit(pairs):
 # ---------------------------------------------------------------------------
 
 def run_smsd(g1, g2):
-    from smsd import find_mcs, ChemOptions, MCSOptions
+    from smsd import ChemOptions, MCSOptions
+    from smsd._smsd import find_mcs
     opts = MCSOptions()
     opts.timeout_ms = int(TIMEOUT_S * 1000)
     mapping = find_mcs(g1, g2, ChemOptions(), opts)
@@ -151,76 +152,20 @@ def speedup(rdkit_ms, smsd_ms):
 
 
 def main():
-    have_rdkit = True
-    have_smsd  = True
-    try:
-        import rdkit
-    except ImportError:
-        have_rdkit = False
-        print("[WARN] rdkit not found — pip install rdkit", file=sys.stderr)
-
-    try:
-        import smsd as _smsd_mod
-        smsd_ver = getattr(_smsd_mod, "__version__", "?")
-    except ImportError:
-        have_smsd = False
-        smsd_ver  = "not installed"
-        print("[WARN] smsd not found — pip install smsd", file=sys.stderr)
-
-    if not have_rdkit and not have_smsd:
-        print("Nothing to benchmark.", file=sys.stderr)
-        return 1
-
-    print()
-    print("=" * 80)
-    print("SMSD (pip) vs RDKit FindMCS  —  Python benchmark")
-    print(f"Date:      {time.strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"Platform:  {platform.system()} {platform.machine()}")
-    print(f"Python:    {platform.python_version()}")
-    if have_rdkit:
-        try:
-            from rdkit import rdBase
-            print(f"RDKit:     {rdBase.rdkitVersion}")
-        except Exception:
-            print("RDKit:     (version unknown)")
-    print(f"SMSD:      {smsd_ver}")
-    print(f"Runs:      {NUM_RUNS}  (best time reported, ms)")
-    print("=" * 80)
-    print()
-
-    hdr = f"{'Pair':<28s}  {'Category':<18s}  {'RDKit ms':>8s}  {'SMSD ms':>8s}  {'Speedup':>7s}  {'RDKit MCS':>9s}  {'SMSD MCS':>8s}"
-    print(hdr)
-    print("-" * len(hdr))
-
-    rdkit_rows = bench_rdkit(PAIRS) if have_rdkit else [(n, c, -1.0, -1, False) for _, _, n, c in PAIRS]
-    smsd_rows  = bench_smsd(PAIRS)  if have_smsd  else [(n, c, -1.0, -1)        for _, _, n, c in PAIRS]
-
-    total_rdkit = 0.0
-    total_smsd  = 0.0
-
-    for (name, cat, rms, rmcs, timedout), (_, _, sms, smcs) in zip(rdkit_rows, smsd_rows):
-        to_marker = "*" if timedout else " "
-        print(
-            f"{name:<28s}  {cat:<18s}  "
-            f"{fmt(rms):>8s}{to_marker} "
-            f"{fmt(sms):>8s}  "
-            f"{speedup(rms, sms):>7s}  "
-            f"{rmcs if rmcs >= 0 else 'ERR':>9}  "
-            f"{smcs if smcs >= 0 else 'ERR':>8}"
-        )
-        if rms > 0: total_rdkit += rms
-        if sms > 0: total_smsd  += sms
-
-    print("-" * len(hdr))
-    print()
-    if total_rdkit > 0 and total_smsd > 0:
-        print(f"  Total RDKit:  {total_rdkit:8.1f} ms")
-        print(f"  Total SMSD:   {total_smsd:8.1f} ms")
-        print(f"  Overall:      {speedup(total_rdkit, total_smsd).strip()} faster with SMSD")
-    print()
-    print("  * = RDKit timed out at 10 s")
-    print()
-    return 0
+    # Compatibility entrypoint retaining its historical ten-pair corpus.
+    import runpy
+    import benchmark_python
+    benchmark_python.PAIRS = PAIRS
+    import argparse
+    parser = argparse.ArgumentParser(description="Historical ten-pair corpus using the maintained validity-aware protocol")
+    parser.add_argument("--timeout-sec", type=int, default=10)
+    parser.add_argument("--iters", type=int, default=3)
+    parser.add_argument("--warmup", type=int, default=1)
+    parser.add_argument("--compare-mode", choices=("strict", "fmcs", "any"), default="fmcs")
+    parser.add_argument("--output")
+    args = parser.parse_args()
+    return benchmark_python.main(mcs_only=True, timeout_sec=args.timeout_sec,
+        iters=args.iters, warmup=args.warmup, compare_mode=args.compare_mode, output_path=args.output)
 
 
 if __name__ == "__main__":

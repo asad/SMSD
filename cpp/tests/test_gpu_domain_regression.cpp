@@ -66,7 +66,7 @@ static void verifyNativeKernel(const smsd::MolGraph& q, const smsd::MolGraph& t,
 #endif
 
 static void check(const smsd::MolGraph& q, const smsd::MolGraph& t,
-                  smsd::ChemOptions c, bool expected, const char* name) {
+                  smsd::ChemOptions c, bool expected, const char* name, bool requireKernel = true) {
     for (auto engine : {smsd::ChemOptions::MatcherEngine::VF2,
                         smsd::ChemOptions::MatcherEngine::VF2PP}) {
         c.matcherEngine = engine;
@@ -76,7 +76,7 @@ static void check(const smsd::MolGraph& q, const smsd::MolGraph& t,
         smsd::gpu_kern::available = true;
         const int before = smsd::gpu_kern::calls;
         const bool gpu = smsd::isSubstructure(q, t, c);
-        if (cpu != expected || gpu != cpu || smsd::gpu_kern::calls == before)
+        if (cpu != expected || gpu != cpu || (requireKernel && smsd::gpu_kern::calls == before))
             throw std::runtime_error(name);
 #else
         verifyNativeKernel(q, t, c);
@@ -115,7 +115,9 @@ int main() {
         q = atoms(33, 6); t = atoms(65, 7); c = {};
         q.tautomerClass.assign(q.n, 0); t.tautomerClass.assign(t.n, 0);
         c.tautomerAware = true;
-        check(q, t, c, true, "accelerator must retain cross-element tautomer candidates");
+        check(q, t, c, false, "accelerator must preserve tautomer element identity", false);
+        t = atoms(65, 6); t.tautomerClass.assign(t.n, 0);
+        check(q, t, c, true, "accelerator must retain same-element tautomer candidates");
         std::cout << "CPU/accelerator domain policy parity passed\n";
         return 0;
     } catch (const std::exception& e) {
