@@ -11,6 +11,8 @@ All notable changes to SMSD Pro are documented in this file.
 - Kept C++ under `cpp/` and Python under `python/`, with shared release scripts,
   documentation and licenses at the root. The root `pyproject.toml` remains
   the single manifest for the Python package and C++ extension.
+- Restricted the Docker build context to Maven manifests, Java sources and
+  legal files, excluding generated API pages, test reports and build artifacts.
 - Updated current version examples and release artifacts to 7.2.1. The compact
   release targets portable Java 25 packages and CPython 3.14 CPU/OpenMP wheels
   for Linux x86_64, macOS arm64 and Windows x86_64, plus a source distribution.

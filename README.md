@@ -600,9 +600,12 @@ pip install ./smsd-7.2.1.tar.gz
 
 ## Tests
 
-New 7.2.1 Java, native and installed-wheel checks are pending; see
-[current validation](docs/VALIDATION_7.2.1.md). The following results are the
-historical 7.2.0 local validation on macOS arm64:
+The reorganised 7.2.1 Java module has 1,242 distinct passing cases and 15
+opt-in skips across full and focused runs. Its initial macOS arm64 wheel
+passed all 12 native Debug suites and 691 Python tests with 8 skips on
+Python 3.14.8/RDKit 2026.03.6. Final-source platform builds and collection are
+tracked in [current validation](docs/VALIDATION_7.2.1.md). The following
+results remain historical 7.2.0 local validation on macOS arm64:
 
 | Suite | Result | Scope |
 |---|---|---|

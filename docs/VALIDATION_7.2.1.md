@@ -22,8 +22,9 @@ checks below complete. Every wheel must correspond to that same source.
 | Gate | 7.2.1 status | Required evidence |
 |---|---|---|
 | Source freeze | Pending | Exact commit, clean checkout and coherent Java/CMake/Python versions |
-| Java 25 module | Pending | Clean full verification; library, CLI, sources and Javadoc; version/license checks and portable launchers |
-| macOS arm64 CPU/OpenMP | Pending | Local native Debug suites and installed CPython 3.14 wheel tests; repaired dependencies and deployment tag |
+| Java 25 module | Passed across full and focused runs | 1,242 distinct passing cases, 15 opt-in skips; four JARs and both Unix launchers checked |
+| macOS arm64 CPU/OpenMP | Initial candidate passed; final archive build pending | 12 native Debug suites, 691 Python passes and 8 skips on Python 3.14.8/RDKit 2026.03.6 |
+| Docker CLI | Passed locally | Filtered source context; Linux arm64/Temurin 25.0.4.1; version/help and validated substructure/MCS results |
 | Linux x86_64 CPU/OpenMP | Pending | Local manylinux build with glibc 2.28 target; native Debug suites and installed CPython 3.14 tests |
 | Windows x86_64 CPU/OpenMP | Pending | Native GitHub Windows build from the exact 7.2.1 source; MSVC Debug suites, repaired DLLs and installed CPython 3.14 tests |
 | Three-wheel collection | Pending | Source/version agreement, binary architecture, runtime libraries, wrappers/headers, licenses and all RECORD hashes |
@@ -41,6 +42,36 @@ CPython, Intel macOS and Linux arm64 wheels. Other architectures can use
 source builds, without a claim that this release tested them. CUDA and the
 optional C++ RDKit adapter are outside the required CPU wheel gates; any new
 GPU or adapter checks must be listed separately.
+
+## Recorded preparation checks
+
+The first Java full run had 1,241 passes, 15 opt-in skips and one outer-guard
+timeout. The affected fixture allowed a 30-second search and a 30-second test
+guard, leaving no time for parsing or validation. After allowing 35 seconds
+for 30-second drug searches and 12 seconds for 10-second pharmacophore
+searches, all 30 affected fixtures passed. Search budgets and assertions
+remain unchanged. Combined evidence covers 1,242 distinct passing cases;
+it is not described as one clean full run. Root reactor release packaging
+also passed with signing disabled. All four JARs contain the exact root
+LICENSE/NOTICE; own class files target Java 25, source copies match, and both
+Unix launchers report 7.2.1.
+
+The initial local macOS wheel passed 12 native Debug suites and 691 Python
+tests with 8 optional skips. It used Python 3.14.8, RDKit 2026.03.6 and bundled
+libomp 23.1.0. It executed on macOS 27.0.1, with a macOS 26 deployment tag;
+execution on the minimum OS was not tested. A later Docker-context fix
+requires rebuilding platform wheels from the final archive; their final
+source manifest and checksums remain pending.
+
+The Docker allowlist excludes generated Java API pages, test reports and
+build artifacts. Inspection of the actual builder COPY layer found only the
+35 required manifests, source/resource/launcher and legal files.
+
+The production fingerprint covers 40 files: ten Java source files, 27 C++
+headers, the native binding and two Python modules. SHA-256 over sorted
+`SHA256  relative-path` records with newline delimiters is
+`78bff09c9c79b3aa12240d7b90f46a56d728226383e8f2e1926d10d24f5cfe26`.
+This identifies the 7.2.1 code; it does not relabel historical benchmarks.
 
 ## Reproduce and assemble
 

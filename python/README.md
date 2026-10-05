@@ -148,8 +148,11 @@ Debug suites also passed
 on Windows with MSVC. These checks do not extend the macOS benchmark timings
 to other platforms.
 These 7.2.0 results are separate from 7.2.1 validation.
-The new release requires fresh macOS/Linux builds, a native GitHub Windows
-build and verified collection of three wheels from the same source. See
+The initial 7.2.1 macOS arm64 wheel passed all 12 native Debug suites and
+691 Python tests with 8 skips on Python 3.14.8/RDKit 2026.03.6, with bundled
+OpenMP. Execution was on macOS 27.0.1; the wheel targets macOS 26+, without
+a claim of testing the minimum OS. Final-source local platform builds, a
+native GitHub Windows build and three-wheel collection remain required. See
 [7.2.1 validation](https://github.com/asad/SMSD/blob/master/docs/VALIDATION_7.2.1.md)
 for pending checks. Publication remains pending.
 
