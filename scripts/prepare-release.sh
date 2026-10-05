@@ -41,6 +41,12 @@ tar -xzf "$SMSD_RELEASE_DIR/smsd-$SMSD_RELEASE_VERSION.tar.gz" -C "$SMSD_RELEASE
 if [[ "$(uname -s)" == "Darwin" ]]; then
   # Bundle external libraries such as OpenMP and validate macOS deployment tags.
   "$SMSD_RELEASE_PYTHON" -m delocate.cmd.delocate_wheel "$SMSD_RELEASE_DIR"/smsd-*.whl
+elif [[ "$(uname -s)" == "Linux" ]]; then
+  SMSD_RELEASE_REPAIRED="$(mktemp -d "$SMSD_RELEASE_SOURCE/repaired.XXXXXX")"
+  "$SMSD_RELEASE_PYTHON" -m auditwheel repair --plat manylinux_2_28_x86_64 \
+    --wheel-dir "$SMSD_RELEASE_REPAIRED" "$SMSD_RELEASE_DIR"/smsd-*.whl
+  rm "$SMSD_RELEASE_DIR"/smsd-*.whl
+  mv "$SMSD_RELEASE_REPAIRED"/smsd-*.whl "$SMSD_RELEASE_DIR/"
 fi
 shopt -s nullglob
 SMSD_RELEASE_WHEELS=("$SMSD_RELEASE_DIR"/smsd-*.whl)
@@ -79,14 +85,11 @@ if [[ -n "${SMSD_BENCHMARK_ARCHIVE:-}" ]]; then
   [[ -f "$SMSD_BENCHMARK_ARCHIVE" ]] || { echo "Benchmark archive not found" >&2; exit 1; }
   cp "$SMSD_BENCHMARK_ARCHIVE" "$SMSD_RELEASE_DIR/"
 fi
-"$SMSD_RELEASE_PYTHON" - "$SMSD_RELEASE_DIR" <<'PY'
-from hashlib import sha256
-from pathlib import Path
-import sys
-directory = Path(sys.argv[1])
-assets = sorted(p for p in directory.iterdir() if p.is_file() and p.name != "SHA256SUMS")
-(directory / "SHA256SUMS").write_text("".join(f"{sha256(p.read_bytes()).hexdigest()}  {p.name}\n" for p in assets))
-PY
+SMSD_RELEASE_COLLECT_ARGS=(--release-dir "$SMSD_RELEASE_DIR" --allow-incomplete)
+if [[ -n "${SMSD_PLATFORM_WHEELS_DIR:-}" ]]; then
+  SMSD_RELEASE_COLLECT_ARGS+=(--wheel-dir "$SMSD_PLATFORM_WHEELS_DIR")
+fi
+"$SMSD_RELEASE_PYTHON" scripts/collect-release-wheels.py "${SMSD_RELEASE_COLLECT_ARGS[@]}"
 rm -rf "$SMSD_RELEASE_FINAL_DIR"
 mv "$SMSD_RELEASE_DIR" "$SMSD_RELEASE_FINAL_DIR"
 echo "Verified local release assets: $SMSD_RELEASE_FINAL_DIR"

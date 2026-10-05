@@ -5,6 +5,7 @@
  * See the NOTICE file for attribution, trademark, and algorithm IP terms. *
  * Header-only MDL MOL V2000 / SDF file reader and writer for smsd::MolGraph.
  * Zero external dependencies -- pure C++17 standard library.
+ * File paths use UTF-8 on every platform.
  */
 #pragma once
 #ifndef SMSD_MOL_READER_HPP
@@ -18,6 +19,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <filesystem>
 #include <fstream>
 #include <set>
 #include <sstream>
@@ -758,7 +760,7 @@ inline MolGraph readMolBlock(const std::string& molBlock) {
 // ============================================================================
 
 inline MolGraph readMolFile(const std::string& filename) {
-    std::ifstream ifs(filename, std::ios::in);
+    std::ifstream ifs(std::filesystem::u8path(filename), std::ios::in);
     if (!ifs.is_open()) {
         throw std::invalid_argument("Cannot open MOL file: " + filename);
     }
@@ -772,7 +774,7 @@ inline MolGraph readMolFile(const std::string& filename) {
 // ============================================================================
 
 inline std::vector<MolGraph> readSDF(const std::string& filename) {
-    std::ifstream ifs(filename, std::ios::in);
+    std::ifstream ifs(std::filesystem::u8path(filename), std::ios::in);
     if (!ifs.is_open()) {
         throw std::invalid_argument("Cannot open SDF file: " + filename);
     }
@@ -1037,7 +1039,7 @@ inline std::string writeSDFRecord(const MolGraph& g) {
 }
 
 inline void writeSDF(const std::vector<MolGraph>& molecules, const std::string& filename) {
-    std::ofstream ofs(filename, std::ios::out);
+    std::ofstream ofs(std::filesystem::u8path(filename), std::ios::out);
     if (!ofs.is_open()) {
         throw std::invalid_argument("Cannot open output SDF file: " + filename);
     }

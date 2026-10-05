@@ -20,6 +20,7 @@ set(SMSD_BUILD_METAL "AUTO" CACHE STRING "Metal/MPS batch screening (macOS): ON 
 # ---- Header-only library (no RDKit dependency) ----
 add_library(smsd INTERFACE)
 target_compile_features(smsd INTERFACE cxx_std_17)
+target_compile_options(smsd INTERFACE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>)
 target_include_directories(smsd INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
@@ -208,6 +209,10 @@ if(SMSD_BUILD_TESTS)
     target_link_libraries(smsd_layout_tests PRIVATE smsd)
     add_test(NAME smsd_layout_tests COMMAND smsd_layout_tests)
 
+    add_executable(smsd_portability_tests tests/test_portability.cpp)
+    target_link_libraries(smsd_portability_tests PRIVATE smsd)
+    add_test(NAME smsd_portability_tests COMMAND smsd_portability_tests)
+
     add_executable(smsd_general_matching_tests tests/test_general_matching.cpp)
     target_link_libraries(smsd_general_matching_tests PRIVATE smsd)
     add_test(NAME smsd_general_matching_tests COMMAND smsd_general_matching_tests)
@@ -249,7 +254,8 @@ if(SMSD_BUILD_TESTS)
 
     # Assertions are part of the test harness, including in Release builds.
     foreach(test_target IN ITEMS smsd_core_tests smsd_parser_tests
-            smsd_batch_gpu_tests smsd_cip_tests smsd_layout_tests smsd_general_matching_tests
+            smsd_batch_gpu_tests smsd_cip_tests smsd_layout_tests smsd_portability_tests
+            smsd_general_matching_tests
             smsd_substructure_regression_tests smsd_gpu_domain_regression_tests
             smsd_clique_regression_tests smsd_assignment_regression_tests smsd_mcs_regression_tests)
         target_compile_options(${test_target} PRIVATE

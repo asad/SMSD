@@ -1,0 +1,31 @@
+# CPU wheels share one source distribution and the same build options.
+[tool.cibuildwheel]
+build = "cp314-*"
+build-frontend = "build"
+build-verbosity = 1
+config-settings = { "cmake.define.SMSD_BUILD_METAL" = "OFF", "cmake.define.SMSD_BUILD_CUDA" = "OFF", "cmake.define.SMSD_BUILD_OPENMP" = "ON", "cmake.define.SMSD_WITH_RDKIT" = "OFF" }
+environment = { OMP_NUM_THREADS = "1", CMAKE_BUILD_PARALLEL_LEVEL = "2" }
+before-build = [
+  "python -m pip install cmake ninja",
+  'python "{package}/scripts/check_native_wheel_build.py" --source "{package}"',
+]
+test-requires = ["pytest>=7", "pytest-timeout>=2", "rdkit==2026.03.6"]
+test-command = [
+  'python "{package}/scripts/check_python_wheel.py" --source "{package}" --require-rdkit --require-openmp',
+  'python -m pytest "{package}/python/tests" -q -ra --import-mode=importlib',
+]
+audit-requires = ["twine"]
+audit-command = "python -m twine check --strict {wheel}"
+
+[tool.cibuildwheel.linux]
+manylinux-x86_64-image = "manylinux_2_28"
+manylinux-aarch64-image = "manylinux_2_28"
+repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
+
+[tool.cibuildwheel.macos]
+before-all = "brew install libomp"
+environment = { OMP_NUM_THREADS = "1", CMAKE_BUILD_PARALLEL_LEVEL = "2", MACOSX_DEPLOYMENT_TARGET = "26.0", CMAKE_PREFIX_PATH = "$(brew --prefix libomp)" }
+repair-wheel-command = "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
+
+[tool.cibuildwheel.windows]
+repair-wheel-command = 'python "{package}/scripts/repair_windows_wheel.py" --dest-dir "{dest_dir}" --wheel "{wheel}"'

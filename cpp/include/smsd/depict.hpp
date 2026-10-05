@@ -18,6 +18,10 @@
 
 namespace smsd {
 
+namespace detail_depict {
+inline constexpr double PI = 3.14159265358979323846;
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 //  2D Geometry Primitives
 // ════════════════════════════════════════════════════════════════════════════
@@ -324,9 +328,9 @@ inline std::vector<Vec2> layout2D(const MolGraph& g, const DepictOptions& opts =
             double cx = 0, cy = 0;
             for (int i = 0; i < n; i++)
                 if (placed[i]) { cx = pos[i].x + BL * 2.5; cy = pos[i].y; break; }
-            double R = BL / (2.0 * std::sin(M_PI / sz));
+            double R = BL / (2.0 * std::sin(detail_depict::PI / sz));
             for (int i = 0; i < sz; i++) {
-                double angle = 2.0 * M_PI * i / sz - M_PI / 2.0;
+                double angle = 2.0 * detail_depict::PI * i / sz - detail_depict::PI / 2.0;
                 pos[ring[i]] = {cx + R * std::cos(angle), cy + R * std::sin(angle)};
                 placed[ring[i]] = true;
             }
@@ -342,11 +346,11 @@ inline std::vector<Vec2> layout2D(const MolGraph& g, const DepictOptions& opts =
                 }
             }
             if (a2 == -1) {
-                double R = BL / (2.0 * std::sin(M_PI / sz));
+                double R = BL / (2.0 * std::sin(detail_depict::PI / sz));
                 double cx = pos[a1].x + BL;
                 for (int i = 0; i < sz; i++) {
                     if (!placed[ring[i]]) {
-                        double angle = 2.0 * M_PI * i / sz - M_PI / 2.0;
+                        double angle = 2.0 * detail_depict::PI * i / sz - detail_depict::PI / 2.0;
                         pos[ring[i]] = {cx + R * std::cos(angle), pos[a1].y + R * std::sin(angle)};
                         placed[ring[i]] = true;
                     }
@@ -355,7 +359,7 @@ inline std::vector<Vec2> layout2D(const MolGraph& g, const DepictOptions& opts =
                 Vec2 mid = (pos[a1] + pos[a2]) * 0.5;
                 Vec2 dir = norm(pos[a2] - pos[a1]);
                 Vec2 outward = perp(dir);
-                double R = BL / (2.0 * std::sin(M_PI / sz));
+                double R = BL / (2.0 * std::sin(detail_depict::PI / sz));
                 Vec2 center1 = mid + outward * R * 0.8;
                 Vec2 center2 = mid - outward * R * 0.8;
                 // Pick side farther from average of already-placed ring atoms
@@ -375,7 +379,7 @@ inline std::vector<Vec2> layout2D(const MolGraph& g, const DepictOptions& opts =
                 int k = 0;
                 for (int i = 0; i < sz; i++) {
                     if (!placed[ring[i]]) {
-                        double angle = startAngle + 2.0 * M_PI * (++k) / sz;
+                        double angle = startAngle + 2.0 * detail_depict::PI * (++k) / sz;
                         pos[ring[i]] = {center.x + R * std::cos(angle), center.y + R * std::sin(angle)};
                         placed[ring[i]] = true;
                     }
@@ -409,8 +413,8 @@ inline std::vector<Vec2> layout2D(const MolGraph& g, const DepictOptions& opts =
                     usedCount++;
                 }
             }
-            double baseAngle = usedCount > 0 ? std::atan2(sumSin, sumCos) + M_PI : 0;
-            double spread = 2.0 * M_PI / 3.0;
+            double baseAngle = usedCount > 0 ? std::atan2(sumSin, sumCos) + detail_depict::PI : 0;
+            double spread = 2.0 * detail_depict::PI / 3.0;
             double angle = baseAngle + (branchIdx - 1) * spread
                 / std::max(1, (int)g.neighbors[u].size() - 1);
             pos[v] = {pos[u].x + BL * std::cos(angle), pos[u].y + BL * std::sin(angle)};

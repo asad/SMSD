@@ -35,10 +35,13 @@ python -m build
 ```
 
 The package declares CPython `3.9` or later; wheel availability depends on
-platform and architecture. The proposed 7.2.0 release provides one Python 3.14
-wheel for macOS arm64 and a source distribution. The controlled search review
-uses Python `3.13.14` on macOS arm64.
-Source builds default to Metal/CUDA auto-detection; comparison wheels disable
+platform and architecture. The proposed 7.2.0 release targets Python 3.14 wheels
+for Linux x86_64 (glibc 2.28+), macOS arm64 (26+) and Windows x86_64, plus a
+source distribution. Each wheel requires an installed-package test on its
+target operating system before publication. Intel macOS and Linux arm64
+remain source-build targets. The controlled search review uses Python
+`3.13.14` on macOS arm64.
+Source builds default to Metal/CUDA auto-detection; release and comparison wheels disable
 both explicitly. Core batch matching uses CPU/OpenMP. RDKit
 remains optional for interop and depiction rather than a core dependency.
 
@@ -133,8 +136,13 @@ on macOS arm64: Python 3.13.14 with RDKit 2026.09.1, and Python 3.14.8 with
 the published RDKit 2026.03.6 wheel. The 3.14 release wheel bundles OpenMP
 and targets macOS 26 or later. See
 [validation](https://github.com/asad/SMSD/blob/master/docs/VALIDATION_7.2.0.md)
-for scope and reproduction commands. Other wheel platforms are not covered
-by this local run.
+for scope and reproduction commands. The Linux x86_64 wheel also passes 691
+tests with 8 skips on CPython 3.14.5/RDKit 2026.03.6 under local emulation.
+The Windows x86_64 wheel passes the same Python test counts on Windows Server
+2022 with CPython 3.14.7/RDKit 2026.03.6. All 12 native Debug suites also pass
+on Windows with MSVC. These checks do not extend the macOS benchmark timings
+to other platforms.
+Corrected Windows runtime packaging still requires a validation rerun before release.
 
 ## Circular Fingerprints
 
