@@ -702,7 +702,7 @@ inline void enumeratePaths(const MolGraph& g, bool tautAware,
 ///
 /// @param pathLength  Maximum path length in bonds (default 7)
 /// @param fpSize      Fingerprint size in bits (default 2048)
-inline std::vector<uint64_t> computeMcsFingerprint(
+inline std::vector<uint64_t> computeMCSFingerprint(
     const MolGraph& mol, int pathLength, int fpSize)
 {
     if (fpSize <= 0) throw std::invalid_argument("fpSize must be positive");

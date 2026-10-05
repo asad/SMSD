@@ -419,8 +419,8 @@ PYBIND11_MODULE(_smsd, m) {
         .def_readwrite("timeout_ms",        &smsd::MCSOptions::timeoutMs)
         .def_readwrite("extra_seeds",       &smsd::MCSOptions::extraSeeds)
         .def_readwrite("template_fuzzy_atoms", &smsd::MCSOptions::templateFuzzyAtoms)
-        .def_readwrite("near_mcs_delta",     &smsd::MCSOptions::nearMcsDelta)
-        .def_readwrite("near_mcs_candidates", &smsd::MCSOptions::nearMcsCandidates)
+        .def_readwrite("near_mcs_delta",     &smsd::MCSOptions::nearMCSDelta)
+        .def_readwrite("near_mcs_candidates", &smsd::MCSOptions::nearMCSCandidates)
         .def_readwrite("max_stage",          &smsd::MCSOptions::maxStage)
         .def_readwrite("seed_neighborhood_radius",     &smsd::MCSOptions::seedNeighborhoodRadius)
         .def_readwrite("seed_max_anchors",             &smsd::MCSOptions::seedMaxAnchors)
@@ -797,7 +797,7 @@ PYBIND11_MODULE(_smsd, m) {
              const smsd::ChemOptions& chem, smsd::MCSOptions opts,
              int64_t timeout_ms) {
               if (timeout_ms > 0) opts.timeoutMs = timeout_ms;
-              return smsd::findMcsSmiles(g1, g2, chem, opts);
+              return smsd::findMCSSmiles(g1, g2, chem, opts);
           },
           py::arg("g1"), py::arg("g2"),
           py::arg("chem") = smsd::ChemOptions(),
@@ -815,7 +815,7 @@ PYBIND11_MODULE(_smsd, m) {
              const std::vector<smsd::MolGraph>& targets,
              const smsd::ChemOptions& chem,
              const smsd::MCSOptions& opts) {
-              return smsd::batchMcsConstrained(queries, targets, chem, opts);
+              return smsd::batchMCSConstrained(queries, targets, chem, opts);
           },
           py::arg("queries"), py::arg("targets"),
           py::arg("chem") = smsd::ChemOptions(),
@@ -846,7 +846,7 @@ PYBIND11_MODULE(_smsd, m) {
 
     m.def("mcs_fingerprint",
           [](const smsd::MolGraph& mol, int pathLength, int fpSize) {
-              auto fp = smsd::batch::detail::computeMcsFingerprint(mol, pathLength, fpSize);
+              auto fp = smsd::batch::detail::computeMCSFingerprint(mol, pathLength, fpSize);
               std::vector<int> bits;
               for (size_t w = 0; w < fp.size(); ++w)
                   for (int b = 0; b < 64; ++b)
@@ -1404,7 +1404,7 @@ PYBIND11_MODULE(_smsd, m) {
     m.def("find_mcs_smarts",
           [](const std::string& smartsStr, const smsd::MolGraph& target,
              int maxMatches) {
-              return smsd::findMcsSmarts(smartsStr, target, maxMatches);
+              return smsd::findMCSSmarts(smartsStr, target, maxMatches);
           },
           py::arg("smarts"), py::arg("target"),
           py::arg("max_matches") = 1000,

@@ -15,7 +15,7 @@ import org.openscience.cdk.silent.SilentChemObjectBuilder;
 import org.openscience.cdk.smiles.SmilesParser;
 import static org.junit.jupiter.api.Assertions.*;
 
-class McsAlgorithmRegressionTest {
+class MCSAlgorithmRegressionTest {
   private static MolGraph graph(int[] elements, int[][] neighbors) {
     return new MolGraph.Builder().atomCount(elements.length).atomicNumbers(elements).neighbors(neighbors).build();
   }
@@ -29,7 +29,7 @@ class McsAlgorithmRegressionTest {
   }
 
   @Test
-  void inducedMcsCannotUseFullGraphDegreesAsAnUpperBound() {
+  void inducedMCSCannotUseFullGraphDegreesAsAnUpperBound() {
     MolGraph query = graph(new int[] {6, 8, 8}, new int[][] {{1}, {0}, {}});
     MolGraph target = graph(new int[] {6, 7, 8}, new int[][] {{}, {2}, {1}});
     Map<Integer, Integer> mapping = SearchEngine.findMCS(query, target, new ChemOptions(), disconnected(true));
@@ -129,7 +129,7 @@ class McsAlgorithmRegressionTest {
   }
 
   @Test
-  void nonInducedMcsKeepsCallerQueryOrientation() {
+  void nonInducedMCSKeepsCallerQueryOrientation() {
     MolGraph query = graph(new int[] {6, 6, 6}, new int[][] {{}, {}, {}});
     MolGraph target = graph(new int[] {6, 6, 6}, new int[][] {{1}, {0}, {}});
     Map<Integer, Integer> mapping = SearchEngine.findMCS(query, target, new ChemOptions(), disconnected(false));
@@ -255,7 +255,7 @@ class McsAlgorithmRegressionTest {
   }
 
   @Test
-  void rejectedMcsClearsItsBudgetScope() throws InterruptedException {
+  void rejectedMCSClearsItsBudgetScope() throws InterruptedException {
     MolGraph graph = graph(new int[] {6, 6}, new int[][] {{1}, {0}});
     SearchEngine.MCSOptions invalid = new SearchEngine.MCSOptions();
     invalid.timeoutMs = 1;

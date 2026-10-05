@@ -608,7 +608,7 @@ void test_smarts_ext_range_hetero_neighbors() {
 // SECTION 2: Hydrogen handling tests
 // ============================================================================
 
-static smsd::MCSOptions defaultMcsOpts() {
+static smsd::MCSOptions defaultMCSOpts() {
     smsd::MCSOptions o;
     o.timeoutMs = 10000;
     return o;
@@ -618,7 +618,7 @@ static int mcsSize(const std::string& smi1, const std::string& smi2,
                    smsd::ChemOptions chem = smsd::ChemOptions{}) {
     auto g1 = smsd::parseSMILES(smi1);
     auto g2 = smsd::parseSMILES(smi2);
-    auto m  = smsd::findMCS(g1, g2, chem, defaultMcsOpts());
+    auto m  = smsd::findMCS(g1, g2, chem, defaultMCSOpts());
     return static_cast<int>(m.size());
 }
 

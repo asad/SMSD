@@ -332,9 +332,9 @@ void test_findScaffoldMCS() {
     auto phen = makePhenol();
     smsd::ChemOptions opts;
     smsd::MCSOptions mopts;
-    auto scaffMcs = smsd::findScaffoldMCS(tol, phen, opts, mopts);
-    std::cout << "scaffoldMCS_size=" << scaffMcs.size() << " ";
-    assert(static_cast<int>(scaffMcs.size()) == 6);
+    auto scaffMCS = smsd::findScaffoldMCS(tol, phen, opts, mopts);
+    std::cout << "scaffoldMCS_size=" << scaffMCS.size() << " ";
+    assert(static_cast<int>(scaffMCS.size()) == 6);
 }
 
 void test_decomposeRGroups_toluene() {
@@ -597,7 +597,7 @@ static void assert_directional_mcs(const std::string& smi1,
         for (int i = 0; i < fragment.n; ++i)
             witness[firstByFragment.at(i)] = secondByFragment.at(i);
         ASSERT_TRUE(smsd::validateMapping(g1, g2, witness, smsd::ChemOptions{}).empty());
-        ASSERT_TRUE(smsd::validateMapping(g2, g1, smsd::orientMcsResult(witness, true),
+        ASSERT_TRUE(smsd::validateMapping(g2, g1, smsd::orientMCSResult(witness, true),
                                         smsd::ChemOptions{}).empty());
         ASSERT_TRUE(fragment.n >= minForward && fragment.n >= minReverse);
     }

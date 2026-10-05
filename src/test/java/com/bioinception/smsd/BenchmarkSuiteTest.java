@@ -48,7 +48,7 @@ public class BenchmarkSuiteTest extends TestBase {
 
     @Test
     @DisplayName("Drug pair MCS completes under 5s")
-    void drugMcsRegression() throws Exception {
+    void drugMCSRegression() throws Exception {
       IAtomContainer aspirin = mol("CC(=O)Oc1ccccc1C(=O)O");
       IAtomContainer ibuprofen = mol("CC(C)Cc1ccc(cc1)C(C)C(=O)O");
       long t0 = System.nanoTime();
@@ -88,7 +88,7 @@ public class BenchmarkSuiteTest extends TestBase {
 
     @Test
     @DisplayName("Batch MCS completes and returns results")
-    void batchMcsCompletes() throws Exception {
+    void batchMCSCompletes() throws Exception {
       List<IAtomContainer> mols = new ArrayList<>();
       mols.add(mol("c1ccccc1"));
       mols.add(mol("c1ccc(O)cc1"));
@@ -261,7 +261,7 @@ public class BenchmarkSuiteTest extends TestBase {
 
     @Test
     @DisplayName("ATP/ADP MCS detail -- inspect mapping")
-    void atpAdpMcsDetail() throws Exception {
+    void atpAdpMCSDetail() throws Exception {
       var atp = mol("c1nc(c2c(n1)n(cn2)C3C(C(C(O3)COP(=O)(O)OP(=O)(O)OP(=O)(O)O)O)O)N");
       var adp = mol("c1nc(c2c(n1)n(cn2)C3C(C(C(O3)COP(=O)(O)OP(=O)(O)O)O)O)N");
 
@@ -415,7 +415,7 @@ public class BenchmarkSuiteTest extends TestBase {
 
     @Test
     @DisplayName("MCS benchmark")
-    void h2hMcsBenchmark() throws Exception {
+    void h2hMCSBenchmark() throws Exception {
       System.out.println("\n=== MCS BENCHMARK ===");
       System.out.printf("%-30s %10s %10s %10s %6s%n", "Pair", "Best(us)", "Med(us)", "Mean(us)", "MCS");
       System.out.println("-".repeat(72));

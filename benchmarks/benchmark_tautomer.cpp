@@ -120,8 +120,8 @@ static double computeTautConfScore(const MolGraph& g1, const MolGraph& g2,
 // ============================================================================
 struct PairResult {
     std::string nameA, nameB;
-    int tautMcsSize;
-    int defaultMcsSize;
+    int tautMCSSize;
+    int defaultMCSSize;
     int overMatchDelta;
     bool protonConsistent;
     double tautConfScore;
@@ -140,27 +140,27 @@ static PairResult benchmarkPair(Mol& a, Mol& b) {
 
     // Tautomer-aware MCS
     auto t0 = std::chrono::high_resolution_clock::now();
-    std::map<int,int> tautMcs;
+    std::map<int,int> tautMCS;
     try {
-        tautMcs = findMCS(a.graph, b.graph, tautOpts, mcsOpts);
+        tautMCS = findMCS(a.graph, b.graph, tautOpts, mcsOpts);
     } catch (...) {}
     auto t1 = std::chrono::high_resolution_clock::now();
     double tautTimeMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
 
     // Default MCS
     t0 = std::chrono::high_resolution_clock::now();
-    std::map<int,int> defMcs;
+    std::map<int,int> defMCS;
     try {
-        defMcs = findMCS(a.graph, b.graph, defOpts, mcsOpts);
+        defMCS = findMCS(a.graph, b.graph, defOpts, mcsOpts);
     } catch (...) {}
     t1 = std::chrono::high_resolution_clock::now();
     double defTimeMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
 
-    int tautSize = (int)tautMcs.size();
-    int defSize  = (int)defMcs.size();
+    int tautSize = (int)tautMCS.size();
+    int defSize  = (int)defMCS.size();
 
-    bool consistent = validateTautomerConsistency(a.graph, b.graph, tautMcs);
-    double tautConf = computeTautConfScore(a.graph, b.graph, tautMcs);
+    bool consistent = validateTautomerConsistency(a.graph, b.graph, tautMCS);
+    double tautConf = computeTautConfScore(a.graph, b.graph, tautMCS);
 
     return {a.name, b.name, tautSize, defSize,
             tautSize - defSize, consistent, tautConf,
@@ -199,7 +199,7 @@ int main(int argc, char** argv) {
         fprintf(stderr, "  [%2d/%zu] %-40s taut=%2d def=%2d delta=%+d %s tautConf=%.3f\n",
             i + 1, pairs.size(),
             (pr.nameA + " / " + pr.nameB).substr(0, 40).c_str(),
-            pr.tautMcsSize, pr.defaultMcsSize, pr.overMatchDelta,
+            pr.tautMCSSize, pr.defaultMCSSize, pr.overMatchDelta,
             pr.protonConsistent ? "PASS" : "FAIL", pr.tautConfScore);
     }
 
@@ -223,7 +223,7 @@ int main(int argc, char** argv) {
         std::string pair = pr.nameA + " / " + pr.nameB;
         if (pair.size() > 42) pair = pair.substr(0, 39) + "...";
         printf("%-42s %5d %5d %+6d %6s %8.3f\n",
-            pair.c_str(), pr.tautMcsSize, pr.defaultMcsSize, pr.overMatchDelta,
+            pair.c_str(), pr.tautMCSSize, pr.defaultMCSSize, pr.overMatchDelta,
             pr.protonConsistent ? "PASS" : "FAIL", pr.tautConfScore);
 
         if (pr.overMatchDelta > 0) overMatchCount++;
@@ -265,7 +265,7 @@ int main(int argc, char** argv) {
         for (auto* pr : overMatched) {
             printf("  %s / %s: delta=%+d (taut=%d, def=%d) %s tautConf=%.3f\n",
                 pr->nameA.c_str(), pr->nameB.c_str(), pr->overMatchDelta,
-                pr->tautMcsSize, pr->defaultMcsSize,
+                pr->tautMCSSize, pr->defaultMCSSize,
                 pr->protonConsistent ? "PASS" : "FAIL", pr->tautConfScore);
         }
     }

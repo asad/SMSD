@@ -41,7 +41,7 @@ inline std::map<int,int> canonicalizeMapping(
         const MolGraph& g1, const MolGraph& g2,
         const std::map<int,int>& mapping);
 
-inline bool isValidMcsMapping(const MolGraph& g1, const MolGraph& g2,
+inline bool isValidMCSMapping(const MolGraph& g1, const MolGraph& g2,
                               const std::map<int,int>& mapping,
                               const ChemOptions& opts);
 
@@ -77,11 +77,11 @@ struct MCSOptions {
     /// Maximum size deficit from the mathematical maximum K at which the
     /// solver will keep enumerating near-MCS candidates.  Default 2 means
     /// the solver collects hits of size K, K-1, and K-2.
-    int      nearMcsDelta      = 2;
+    int      nearMCSDelta      = 2;
 
     /// Maximum number of near-MCS candidates to generate before handing
     /// them to the post-filter.  Default 20.
-    int      nearMcsCandidates = 20;
+    int      nearMCSCandidates = 20;
 
     /// Optional post-filter callback.  When set, receives the enumerated
     /// near-MCS candidates together with the two molecule graphs and
@@ -3141,7 +3141,7 @@ inline bool isBetterMCS(const MolGraph& g1,
     return false;
 }
 
-inline std::map<int,int> repairInvalidMcsMapping(const MolGraph& g1, const MolGraph& g2,
+inline std::map<int,int> repairInvalidMCSMapping(const MolGraph& g1, const MolGraph& g2,
                                                  std::map<int,int> mapping,
                                                  const ChemOptions& opts);
 inline std::vector<std::string> validateMapping(const MolGraph& g1, const MolGraph& g2,
@@ -3150,7 +3150,7 @@ inline std::vector<std::string> validateMapping(const MolGraph& g1, const MolGra
 
 namespace detail {
 
-inline int64_t resolveMcsTimeoutMs(const MolGraph& g1, const MolGraph& g2,
+inline int64_t resolveMCSTimeoutMs(const MolGraph& g1, const MolGraph& g2,
                                    const MCSOptions& opts) {
     if (opts.timeoutMs >= 0) return opts.timeoutMs;
     return std::min<int64_t>(30000, int64_t(500) + int64_t(g1.n) * g2.n * 2);
@@ -4006,10 +4006,10 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
     // incumbent, then compare its actual filtered objective before promotion.
     if (!best.empty() && std::max(g1.n, g2.n) <= SEED_EXTEND_MAX_ATOMS && !tb.expiredNow()
         && !chem.useChirality && !chem.useBondStereo
-        && isValidMcsMapping(g1, g2, best, chem)) {
+        && isValidMCSMapping(g1, g2, best, chem)) {
         auto extended = ppx(g1, g2,
             greedyAtomExtend(g1, g2, best, chem, opts, &tb), chem, opts);
-        if (isValidMcsMapping(g1, g2, extended, chem)
+        if (isValidMCSMapping(g1, g2, extended, chem)
             && preferFinalMapping(g1, extended, best, opts)) best = std::move(extended);
     }
     // Apply post-processing (connectivity filter, ring guard) before returning.
@@ -4023,7 +4023,7 @@ inline std::map<int,int> findMCSImpl(const MolGraph& g1, const MolGraph& g2,
     return best;
 }
 
-inline bool isValidMcsMapping(const MolGraph& g1, const MolGraph& g2,
+inline bool isValidMCSMapping(const MolGraph& g1, const MolGraph& g2,
                               const std::map<int,int>& mapping,
                               const ChemOptions& opts) {
     if (mapping.empty()) return true;
@@ -4052,14 +4052,14 @@ inline bool isValidMcsMapping(const MolGraph& g1, const MolGraph& g2,
     return true;
 }
 
-inline std::map<int,int> repairInvalidMcsMapping(const MolGraph& g1, const MolGraph& g2,
+inline std::map<int,int> repairInvalidMCSMapping(const MolGraph& g1, const MolGraph& g2,
                                                  std::map<int,int> mapping,
                                                  const ChemOptions& opts);
 inline std::vector<std::string> validateMapping(const MolGraph& g1, const MolGraph& g2,
                                                 const std::map<int,int>& mapping,
                                                 const ChemOptions& opts);
 
-inline int64_t resolveMcsTimeoutMs(const MolGraph& g1, const MolGraph& g2,
+inline int64_t resolveMCSTimeoutMs(const MolGraph& g1, const MolGraph& g2,
                                    const MCSOptions& opts) {
     if (opts.timeoutMs >= 0) return std::max<int64_t>(1, opts.timeoutMs);
     return std::max<int64_t>(1, std::min<int64_t>(30000, 500 + int64_t(g1.n) * g2.n * 2));
@@ -4071,15 +4071,15 @@ inline MCSOptions withTimeoutMs(const MCSOptions& opts, int64_t timeoutMs) {
     return limited;
 }
 
-inline std::map<int,int> recoverValidMcsMapping(const MolGraph& g1, const MolGraph& g2,
+inline std::map<int,int> recoverValidMCSMapping(const MolGraph& g1, const MolGraph& g2,
                                                 const std::map<int,int>& raw,
                                                 const ChemOptions& chem,
                                                 const MCSOptions& opts) {
     auto repaired = detail::ppx(
-        g1, g2, repairInvalidMcsMapping(g1, g2, raw, chem), chem, opts);
+        g1, g2, repairInvalidMCSMapping(g1, g2, raw, chem), chem, opts);
     if (!validateMapping(g1, g2, repaired, chem).empty()) repaired.clear();
     int repairedSize = static_cast<int>(repaired.size());
-    int64_t timeoutMs = resolveMcsTimeoutMs(g1, g2, opts);
+    int64_t timeoutMs = resolveMCSTimeoutMs(g1, g2, opts);
 
     const MolGraph& sml = g1.n <= g2.n ? g1 : g2;
     const MolGraph& lrg = g1.n <= g2.n ? g2 : g1;
@@ -4101,7 +4101,7 @@ inline std::map<int,int> recoverValidMcsMapping(const MolGraph& g1, const MolGra
     if (!repaired.empty()) {
         auto regrown = detail::ppx(g1, g2, detail::greedyAtomExtend(g1, g2, repaired, chem, opts), chem, opts);
         regrown = detail::ppx(g1, g2,
-            repairInvalidMcsMapping(g1, g2, std::move(regrown), chem), chem, opts);
+            repairInvalidMCSMapping(g1, g2, std::move(regrown), chem), chem, opts);
         if (validateMapping(g1, g2, regrown, chem).empty()
             && static_cast<int>(regrown.size()) > repairedSize) {
             return regrown;
@@ -4110,21 +4110,21 @@ inline std::map<int,int> recoverValidMcsMapping(const MolGraph& g1, const MolGra
     return repaired;
 }
 
-inline std::map<int,int> orientMcsResult(const std::map<int,int>& mapping, bool swapped) {
+inline std::map<int,int> orientMCSResult(const std::map<int,int>& mapping, bool swapped) {
     if (!swapped) return mapping;
     std::map<int,int> restored;
     for (const auto& p : mapping) restored[p.second] = p.first;
     return restored;
 }
 
-inline std::map<int,int> runValidatedMcsDirection(const MolGraph& query, const MolGraph& target,
+inline std::map<int,int> runValidatedMCSDirection(const MolGraph& query, const MolGraph& target,
                                                   const ChemOptions& chem,
                                                   const MCSOptions& opts,
                                                   bool swappedBack) {
     auto raw = findMCSImpl(query, target, chem, opts);
     auto valid = validateMapping(query, target, raw, chem).empty()
         ? raw
-        : recoverValidMcsMapping(query, target, raw, chem, opts);
+        : recoverValidMCSMapping(query, target, raw, chem, opts);
     bool weightMode = opts.maximizeBonds || !opts.atomWeights.empty();
     int minN = std::min(query.n, target.n);
     int maxN = std::max(query.n, target.n);
@@ -4134,7 +4134,7 @@ inline std::map<int,int> runValidatedMcsDirection(const MolGraph& query, const M
         && minN <= 20
         && maxN <= 40) {
         int64_t refineMs = std::max<int64_t>(
-            1, std::min<int64_t>(2000, resolveMcsTimeoutMs(query, target, opts)));
+            1, std::min<int64_t>(2000, resolveMCSTimeoutMs(query, target, opts)));
         detail::TimeBudget refineBudget(refineMs);
         detail::FixedSizeBondMaximizer bondRefiner(
             query, target, chem, opts.induced, refineBudget, minN, valid);
@@ -4144,7 +4144,7 @@ inline std::map<int,int> runValidatedMcsDirection(const MolGraph& query, const M
             valid = std::move(refined);
         }
     }
-    return orientMcsResult(valid, swappedBack);
+    return orientMCSResult(valid, swappedBack);
 }
 
 inline std::map<int,int> findMCSDirectionalCore(const MolGraph& g1, const MolGraph& g2,
@@ -4158,7 +4158,7 @@ inline std::map<int,int> findMCSDirectionalCore(const MolGraph& g1, const MolGra
     }
 
     using Clock = std::chrono::steady_clock;
-    auto deadline = detail::steadyDeadline(resolveMcsTimeoutMs(g1, g2, opts));
+    auto deadline = detail::steadyDeadline(resolveMCSTimeoutMs(g1, g2, opts));
     auto remainingMs = [&]() -> int64_t {
         auto left = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - Clock::now()).count();
         return std::max<int64_t>(0, left);
@@ -4186,13 +4186,13 @@ inline std::map<int,int> findMCSDirectionalCore(const MolGraph& g1, const MolGra
         if (budgetMs <= 0) return std::map<int,int>{};
         auto timedOpts = withTimeoutMs(opts, budgetMs);
         auto oriented = direct
-            ? runValidatedMcsDirection(g1, g2, chem, timedOpts, false)
-            : runValidatedMcsDirection(g2, g1, chem, timedOpts, true);
+            ? runValidatedMCSDirection(g1, g2, chem, timedOpts, false)
+            : runValidatedMCSDirection(g2, g1, chem, timedOpts, true);
         oriented = detail::ppx(g1, g2, std::move(oriented), chem, opts);
         if (validateMapping(g1, g2, oriented, chem).empty()) return oriented;
         budgetMs = remainingMs();
         if (budgetMs <= 0) return oriented;
-        return recoverValidMcsMapping(
+        return recoverValidMCSMapping(
             g1, g2, oriented, chem, withTimeoutMs(opts, budgetMs));
     };
 
@@ -4259,7 +4259,7 @@ inline std::map<int,int> findMCS(const MolGraph& g1, const MolGraph& g2,
     }
 
     using Clock = std::chrono::steady_clock;
-    auto deadline = detail::steadyDeadline(resolveMcsTimeoutMs(g1, g2, opts));
+    auto deadline = detail::steadyDeadline(resolveMCSTimeoutMs(g1, g2, opts));
     auto remainingMs = [&]() -> int64_t {
         auto left = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - Clock::now()).count();
         return std::max<int64_t>(0, left);
@@ -4285,10 +4285,10 @@ inline std::map<int,int> findMCS(const MolGraph& g1, const MolGraph& g2,
 
         auto reverse = runDirectionalCore(g2, g1);
         auto candidate = detail::ppx(
-            g1, g2, orientMcsResult(reverse, true), chem, opts);
+            g1, g2, orientMCSResult(reverse, true), chem, opts);
         if (!validateMapping(g1, g2, candidate, chem).empty()) {
             candidate = detail::ppx(g1, g2,
-                recoverValidMcsMapping(g1, g2, candidate, chem, opts), chem, opts);
+                recoverValidMCSMapping(g1, g2, candidate, chem, opts), chem, opts);
         }
         // Directional searches may discover different valid mappings. Keep
         // the better result rather than reducing its size to force agreement.
@@ -4480,7 +4480,7 @@ inline std::vector<std::map<int,int>> findAllMCS(const MolGraph& g1, const MolGr
     auto remember = [&](std::map<int, int> mapping) {
         mapping = ppx(g1, g2, std::move(mapping), chem, opts);
         if (static_cast<int>(mapping.size()) != K
-            || !isValidMcsMapping(g1, g2, mapping, chem)) return;
+            || !isValidMCSMapping(g1, g2, mapping, chem)) return;
         auto key = canonKey(mapping);
         if (seen.find(key) == seen.end()) seen.emplace(std::move(key), std::move(mapping));
     };
@@ -4684,7 +4684,7 @@ inline std::vector<std::string> validateMapping(const MolGraph& g1, const MolGra
     return errors;
 }
 
-inline std::map<int,int> repairInvalidMcsMapping(const MolGraph& g1, const MolGraph& g2,
+inline std::map<int,int> repairInvalidMCSMapping(const MolGraph& g1, const MolGraph& g2,
                                                  std::map<int,int> mapping,
                                                  const ChemOptions& opts) {
     while (!mapping.empty()) {
@@ -4724,7 +4724,7 @@ inline std::map<int,int> repairInvalidMcsMapping(const MolGraph& g1, const MolGr
         for (int qi : candidates) {
             auto reduced = mapping;
             reduced.erase(qi);
-            auto repaired = repairInvalidMcsMapping(g1, g2, std::move(reduced), opts);
+            auto repaired = repairInvalidMCSMapping(g1, g2, std::move(reduced), opts);
             if (repaired.size() > best.size()) best = std::move(repaired);
         }
         return best;
@@ -5087,7 +5087,7 @@ inline std::string mcsToSmiles(const MolGraph& g, const std::map<int,int>& mappi
  * @param opts MCS options
  * @return canonical SMILES of the MCS, or "" if no common substructure
  */
-inline std::string findMcsSmiles(const MolGraph& g1, const MolGraph& g2,
+inline std::string findMCSSmiles(const MolGraph& g1, const MolGraph& g2,
                                   const ChemOptions& chem, const MCSOptions& opts) {
     auto mapping = findMCS(g1, g2, chem, opts);
     return mcsToSmiles(g1, mapping);
@@ -5165,7 +5165,7 @@ inline MCSResult findMCSFromSmiles(const std::string& smi1, const std::string& s
  *         Each mapping: {query_atom_idx: target_atom_idx}.
  * @since 6.6.0
  */
-inline std::vector<std::map<int,int>> batchMcsConstrained(
+inline std::vector<std::map<int,int>> batchMCSConstrained(
     const std::vector<MolGraph>& queries,
     const std::vector<MolGraph>& targets,
     const ChemOptions& chem,
@@ -5207,10 +5207,10 @@ inline std::vector<std::map<int,int>> batchMcsConstrained(
                 if (residualAtoms.empty()) continue;
 
                 auto residual = extractSubgraph(targets[ti], residualAtoms);
-                auto residualMcs = findMCS(queries[qi], residual, chem, opts);
+                auto residualMCS = findMCS(queries[qi], residual, chem, opts);
 
                 // Translate residual indices → original target indices
-                for (auto& [qAtom, rAtom] : residualMcs) {
+                for (auto& [qAtom, rAtom] : residualMCS) {
                     if (rAtom < static_cast<int>(residualAtoms.size()))
                         mapping[qAtom] = residualAtoms[rAtom];
                 }
@@ -5231,51 +5231,6 @@ inline std::vector<std::map<int,int>> batchMcsConstrained(
         results[qi] = std::move(bestMapping);
     }
     return results;
-}
-
-// ---------------------------------------------------------------------------
-// MCS-cased aliases for bioinception API compatibility
-// ---------------------------------------------------------------------------
-inline int64_t resolveMCSTimeoutMs(const MolGraph& g1, const MolGraph& g2,
-                                   const MCSOptions& opts) {
-    return resolveMcsTimeoutMs(g1, g2, opts);
-}
-
-inline bool isValidMCSMapping(const MolGraph& g1, const MolGraph& g2,
-                              const std::map<int,int>& mapping,
-                              const ChemOptions& opts) {
-    return isValidMcsMapping(g1, g2, mapping, opts);
-}
-
-inline std::map<int,int> recoverValidMCSMapping(const MolGraph& g1, const MolGraph& g2,
-                                                const std::map<int,int>& raw,
-                                                const ChemOptions& chem,
-                                                const MCSOptions& opts) {
-    return recoverValidMcsMapping(g1, g2, raw, chem, opts);
-}
-
-inline std::map<int,int> orientMCSResult(const std::map<int,int>& mapping, bool swapped) {
-    return orientMcsResult(mapping, swapped);
-}
-
-inline std::map<int,int> runValidatedMCSDirection(const MolGraph& query, const MolGraph& target,
-                                                  const ChemOptions& chem,
-                                                  const MCSOptions& opts,
-                                                  bool swappedBack) {
-    return runValidatedMcsDirection(query, target, chem, opts, swappedBack);
-}
-
-inline std::string findMCSSmiles(const MolGraph& g1, const MolGraph& g2,
-                                  const ChemOptions& chem, const MCSOptions& opts) {
-    return findMcsSmiles(g1, g2, chem, opts);
-}
-
-inline std::vector<std::map<int,int>> batchMCSConstrained(
-    const std::vector<MolGraph>& queries,
-    const std::vector<MolGraph>& targets,
-    const ChemOptions& chem,
-    const MCSOptions& opts = MCSOptions()) {
-    return batchMcsConstrained(queries, targets, chem, opts);
 }
 
 // ---------------------------------------------------------------------------

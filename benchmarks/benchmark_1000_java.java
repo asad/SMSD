@@ -121,7 +121,7 @@ public class benchmark_1000_java {
     static BenchResult benchmarkPair(Molecule a, Molecule b) {
         ChemOptions opts = new ChemOptions();
         SearchEngine.MCSOptions mcsOpts = new SearchEngine.MCSOptions();
-        mcsOpts.timeoutMillis = TIMEOUT_MS;
+        mcsOpts.timeoutMs = TIMEOUT_MS;
 
         double[] times = new double[ROUNDS];
         int[] mcsSizes = new int[ROUNDS];
@@ -158,9 +158,9 @@ public class benchmark_1000_java {
         for (double t : times) meanTime += t;
         meanTime /= ROUNDS;
 
-        int maxMcs = Arrays.stream(mcsSizes).max().orElse(-1);
+        int maxMCS = Arrays.stream(mcsSizes).max().orElse(-1);
 
-        return new BenchResult(medianTime, meanTime, maxMcs, completed, ROUNDS);
+        return new BenchResult(medianTime, meanTime, maxMCS, completed, ROUNDS);
     }
 
     // ======================================================================
@@ -187,7 +187,7 @@ public class benchmark_1000_java {
             .mapToDouble(BenchResult::medianTimeMs)
             .filter(t -> t >= 0)
             .toArray();
-        int[] allMcs = results.values().stream()
+        int[] allMCS = results.values().stream()
             .mapToInt(BenchResult::mcsSize)
             .filter(s -> s >= 0)
             .toArray();
@@ -196,7 +196,7 @@ public class benchmark_1000_java {
             .count();
 
         Arrays.sort(allMedians);
-        Arrays.sort(allMcs);
+        Arrays.sort(allMCS);
 
         StringBuilder sb = new StringBuilder();
         sb.append("=".repeat(70)).append("\n");
@@ -222,11 +222,11 @@ public class benchmark_1000_java {
             sb.append(String.format("  Completion rate:    %d/%d (%.1f%%)%n",
                 completedAll, results.size(), 100.0 * completedAll / results.size()));
         }
-        if (allMcs.length > 0) {
-            double medMcs = allMcs[allMcs.length / 2];
-            double meanMcs = Arrays.stream(allMcs).average().orElse(-1);
-            sb.append(String.format("  Median MCS size:    %.1f%n", medMcs));
-            sb.append(String.format("  Mean MCS size:      %.1f%n", meanMcs));
+        if (allMCS.length > 0) {
+            double medMCS = allMCS[allMCS.length / 2];
+            double meanMCS = Arrays.stream(allMCS).average().orElse(-1);
+            sb.append(String.format("  Median MCS size:    %.1f%n", medMCS));
+            sb.append(String.format("  Mean MCS size:      %.1f%n", meanMCS));
         }
         sb.append("\n");
 
@@ -315,11 +315,11 @@ public class benchmark_1000_java {
         System.err.println("JVM warmup ...");
         if (mols.size() >= 2) {
             ChemOptions warmOpts = new ChemOptions();
-            SearchEngine.MCSOptions warmMcs = new SearchEngine.MCSOptions();
-            warmMcs.timeoutMillis = 2000;
+            SearchEngine.MCSOptions warmMCS = new SearchEngine.MCSOptions();
+            warmMCS.timeoutMs = 2000;
             for (int w = 0; w < 10; w++) {
                 try {
-                    SearchEngine.findMCS(mols.get(0).mol(), mols.get(1).mol(), warmOpts, warmMcs);
+                    SearchEngine.findMCS(mols.get(0).mol(), mols.get(1).mol(), warmOpts, warmMCS);
                 } catch (Exception e) { /* ignore */ }
             }
         }

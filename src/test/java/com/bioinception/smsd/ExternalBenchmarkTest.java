@@ -99,20 +99,20 @@ public class ExternalBenchmarkTest extends TestBase {
                     // Tautomer-aware MCS
                     SMSD smsdTaut = new SMSD(m1, m2, tautOpts);
                     Map<Integer,Integer> tautMap = smsdTaut.findMCS(false, false, MCS_TIMEOUT_MS);
-                    int tautMcs = tautMap.size();
+                    int tautMCS = tautMap.size();
 
                     // Strict MCS (for comparison)
                     SMSD smsdStrict = new SMSD(m1, m2, strictOpts);
                     Map<Integer,Integer> strictMap = smsdStrict.findMCS(false, false, MCS_TIMEOUT_MS);
-                    int strictMcs = strictMap.size();
+                    int strictMCS = strictMap.size();
 
                     total++;
-                    int gain = tautMcs - strictMcs;
+                    int gain = tautMCS - strictMCS;
                     if (gain > 0) totalGain += gain;
 
-                    if (tautMcs >= maxAtoms) {
+                    if (tautMCS >= maxAtoms) {
                         fullMatch++;
-                    } else if (tautMcs > strictMcs) {
+                    } else if (tautMCS > strictMCS) {
                         partialMatch++;
                     } else {
                         failed++;
@@ -225,7 +225,7 @@ public class ExternalBenchmarkTest extends TestBase {
         @Test
         @DisplayName("Nearest-neighbor pairs: MCS >= 5 atoms on >80% of pairs")
         @EnabledIfSystemProperty(named = "benchmark", matches = "true")
-        void nnPairsMcsQuality() throws Exception {
+        void nnPairsMCSQuality() throws Exception {
             List<String[]> pairs = loadTsvPairs("dalke_nn_pairs.tsv");
             if (pairs.isEmpty()) return;
 

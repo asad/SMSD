@@ -49,7 +49,7 @@ public class benchmark_tautomer_zinc {
 
     record PairResult(
         String nameA, String nameB, String smiA, String smiB,
-        int tautMcsSize, int defaultMcsSize, int overMatchDelta,
+        int tautMCSSize, int defaultMCSSize, int overMatchDelta,
         boolean protonConsistent, double tautConfScore,
         double tautTimeMs, double defaultTimeMs
     ) {}
@@ -89,16 +89,17 @@ public class benchmark_tautomer_zinc {
     // Compute TautConf score for a mapping
     // ======================================================================
     static double computeTautConfScore(MolGraph g1, MolGraph g2, Map<Integer,Integer> mcs) {
-        g1.ensureTautomerClasses();
-        g2.ensureTautomerClasses();
-        if (g1.tautomerClass == null || g2.tautomerClass == null) return 1.0;
         if (mcs == null || mcs.isEmpty()) return 1.0;
+        // The public confidence API initializes the exported tautomer annotations.
+        // Keep this benchmark's arithmetic mean below rather than its geometric mean.
+        SearchEngine.computeTautomerConfidence(g1, g2, mcs);
+        if (g1.tautomerClass == null || g2.tautomerClass == null) return 1.0;
 
         double weightSum = 0.0;
         int tautAtomCount = 0;
         for (Map.Entry<Integer,Integer> e : mcs.entrySet()) {
             int qi = e.getKey(), ti = e.getValue();
-            if (qi < 0 || qi >= g1.n || ti < 0 || ti >= g2.n) continue;
+            if (qi < 0 || qi >= g1.atomCount() || ti < 0 || ti >= g2.atomCount()) continue;
             boolean isTaut = (g1.tautomerClass[qi] >= 0) || (g2.tautomerClass[ti] >= 0);
             if (isTaut) {
                 double w1 = (g1.tautomerWeight != null && qi < g1.tautomerWeight.length)
@@ -119,13 +120,13 @@ public class benchmark_tautomer_zinc {
         ChemOptions tautOpts    = ChemOptions.tautomerProfile();
         ChemOptions defaultOpts = new ChemOptions();
         SearchEngine.MCSOptions mcsOpts = new SearchEngine.MCSOptions();
-        mcsOpts.timeoutMillis = TIMEOUT_MS;
+        mcsOpts.timeoutMs = TIMEOUT_MS;
 
         // Tautomer-aware MCS
-        Map<Integer,Integer> tautMcs = null;
+        Map<Integer,Integer> tautMCS = null;
         long t0 = System.nanoTime();
         try {
-            tautMcs = SearchEngine.findMCS(a.mol(), b.mol(), tautOpts, mcsOpts);
+            tautMCS = SearchEngine.findMCS(a.mol(), b.mol(), tautOpts, mcsOpts);
         } catch (Exception e) {
             System.err.printf("  TAUT MCS error: %s vs %s -> %s%n",
                 a.name(), b.name(), e.getMessage());
@@ -133,30 +134,30 @@ public class benchmark_tautomer_zinc {
         double tautTimeMs = (System.nanoTime() - t0) / 1_000_000.0;
 
         // Default MCS
-        Map<Integer,Integer> defMcs = null;
+        Map<Integer,Integer> defMCS = null;
         t0 = System.nanoTime();
         try {
-            defMcs = SearchEngine.findMCS(a.mol(), b.mol(), defaultOpts, mcsOpts);
+            defMCS = SearchEngine.findMCS(a.mol(), b.mol(), defaultOpts, mcsOpts);
         } catch (Exception e) {
             System.err.printf("  DEF MCS error: %s vs %s -> %s%n",
                 a.name(), b.name(), e.getMessage());
         }
         double defTimeMs = (System.nanoTime() - t0) / 1_000_000.0;
 
-        int tautSize = tautMcs != null ? tautMcs.size() : 0;
-        int defSize  = defMcs  != null ? defMcs.size()  : 0;
+        int tautSize = tautMCS != null ? tautMCS.size() : 0;
+        int defSize  = defMCS  != null ? defMCS.size()  : 0;
         int overMatchDelta = tautSize - defSize;
 
         // Validate proton consistency
         boolean consistent = true;
-        if (tautMcs != null && !tautMcs.isEmpty()) {
-            consistent = SearchEngine.validateTautomerConsistency(a.mol(), b.mol(), tautMcs);
+        if (tautMCS != null && !tautMCS.isEmpty()) {
+            consistent = SearchEngine.validateTautomerConsistency(a.mol(), b.mol(), tautMCS);
         }
 
         // TautConf score
         double tautConf = 1.0;
-        if (tautMcs != null && !tautMcs.isEmpty()) {
-            tautConf = computeTautConfScore(new MolGraph(a.mol()), new MolGraph(b.mol()), tautMcs);
+        if (tautMCS != null && !tautMCS.isEmpty()) {
+            tautConf = computeTautConfScore(new MolGraph(a.mol()), new MolGraph(b.mol()), tautMCS);
         }
 
         return new PairResult(a.name(), b.name(), a.smiles(), b.smiles(),
@@ -191,11 +192,11 @@ public class benchmark_tautomer_zinc {
         System.err.println("JVM warmup ...");
         if (mols.size() >= 2) {
             ChemOptions warmOpts = ChemOptions.tautomerProfile();
-            SearchEngine.MCSOptions warmMcs = new SearchEngine.MCSOptions();
-            warmMcs.timeoutMillis = 2000;
+            SearchEngine.MCSOptions warmMCS = new SearchEngine.MCSOptions();
+            warmMCS.timeoutMs = 2000;
             for (int w = 0; w < 5; w++) {
                 try {
-                    SearchEngine.findMCS(mols.get(0).mol(), mols.get(1).mol(), warmOpts, warmMcs);
+                    SearchEngine.findMCS(mols.get(0).mol(), mols.get(1).mol(), warmOpts, warmMCS);
                 } catch (Exception ignored) {}
             }
         }
@@ -210,7 +211,7 @@ public class benchmark_tautomer_zinc {
             System.err.printf("  [%2d/%d] %-40s taut=%2d def=%2d delta=%+d consistent=%s tautConf=%.3f%n",
                 i + 1, pairIndices.size(),
                 pr.nameA() + " / " + pr.nameB(),
-                pr.tautMcsSize(), pr.defaultMcsSize(), pr.overMatchDelta(),
+                pr.tautMCSSize(), pr.defaultMCSSize(), pr.overMatchDelta(),
                 pr.protonConsistent() ? "PASS" : "FAIL", pr.tautConfScore());
         }
 
@@ -237,7 +238,7 @@ public class benchmark_tautomer_zinc {
             String pair = pr.nameA() + " / " + pr.nameB();
             if (pair.length() > 42) pair = pair.substring(0, 39) + "...";
             System.out.printf("%-42s %5d %5d %+6d %6s %8.3f%n",
-                pair, pr.tautMcsSize(), pr.defaultMcsSize(), pr.overMatchDelta(),
+                pair, pr.tautMCSSize(), pr.defaultMCSSize(), pr.overMatchDelta(),
                 pr.protonConsistent() ? "PASS" : "FAIL", pr.tautConfScore());
 
             if (pr.overMatchDelta() > 0) overMatchCount++;
@@ -275,7 +276,7 @@ public class benchmark_tautomer_zinc {
             for (PairResult pr : overMatched) {
                 System.out.printf("  %s / %s: delta=%+d (taut=%d, def=%d) consistent=%s tautConf=%.3f%n",
                     pr.nameA(), pr.nameB(), pr.overMatchDelta(),
-                    pr.tautMcsSize(), pr.defaultMcsSize(),
+                    pr.tautMCSSize(), pr.defaultMCSSize(),
                     pr.protonConsistent() ? "PASS" : "FAIL", pr.tautConfScore());
             }
         }

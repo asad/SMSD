@@ -102,7 +102,7 @@ public class AlgorithmTest extends TestBase {
 
   // 4. DISCONNECTED MCS
   @Test
-  void disconnectedMcsLarger() throws Exception {
+  void disconnectedMCSLarger() throws Exception {
     IAtomContainer q = mol("c1ccccc1.CCCC");
     IAtomContainer t = mol("c1ccccc1OCCCC");
     SMSD s1 = new SMSD(q, t, new ChemOptions());
@@ -179,7 +179,7 @@ public class AlgorithmTest extends TestBase {
 
   // 10. CAFFEINE vs THEOPHYLLINE MCS
   @Test
-  void caffeineTheophyllineMcs() throws Exception {
+  void caffeineTheophyllineMCS() throws Exception {
     IAtomContainer caffeine = mol("Cn1cnc2c1c(=O)n(C)c(=O)n2C");
     IAtomContainer theophylline = mol("Cn1cnc2c1c(=O)[nH]c(=O)n2C");
     SMSD s = new SMSD(caffeine, theophylline, new ChemOptions());
@@ -190,7 +190,7 @@ public class AlgorithmTest extends TestBase {
 
   // 11. BIPHENYL vs NAPHTHALENE MCS
   @Test
-  void biphenylNaphthaleneMcs() throws Exception {
+  void biphenylNaphthaleneMCS() throws Exception {
     IAtomContainer biphenyl = mol("c1ccc(-c2ccccc2)cc1");
     IAtomContainer naphthalene = mol("c1ccc2ccccc2c1");
     SMSD s = new SMSD(biphenyl, naphthalene, new ChemOptions());
@@ -210,7 +210,7 @@ public class AlgorithmTest extends TestBase {
   }
 
   @Test
-  void oppositeAlanineEnantiomersChiralityOnReturnValidMcs() throws Exception {
+  void oppositeAlanineEnantiomersChiralityOnReturnValidMCS() throws Exception {
     IAtomContainer lAla = mol("N[C@@H](C)C(=O)O");
     IAtomContainer dAla = mol("N[C@H](C)C(=O)O");
     ChemOptions opts = new ChemOptions();
@@ -250,7 +250,7 @@ public class AlgorithmTest extends TestBase {
 
   // 15. DISCONNECTED MCS drug pair
   @Test
-  void disconnectedMcsLargerDrugPair() throws Exception {
+  void disconnectedMCSLargerDrugPair() throws Exception {
     IAtomContainer phenylacetic = mol("c1ccc(CC(=O)O)cc1");
     IAtomContainer phenylbutyric = mol("c1ccc(CCCC(=O)O)cc1");
     SMSD s = new SMSD(phenylacetic, phenylbutyric, new ChemOptions());
@@ -533,7 +533,7 @@ public class AlgorithmTest extends TestBase {
     @Test
     @Timeout(10)
     @DisplayName("Adamantane self-match (48 automorphisms)")
-    void adamantaneSelfMatchMcs() throws Exception {
+    void adamantaneSelfMatchMCS() throws Exception {
       long t0 = System.nanoTime();
       IAtomContainer adam = mol("C1C2CC3CC1CC(C2)C3");
       assertEquals(10, adam.getAtomCount(), "Adamantane should have 10 heavy atoms");
@@ -551,7 +551,7 @@ public class AlgorithmTest extends TestBase {
     @Test
     @Timeout(10)
     @DisplayName("Cubane self-match (Oh symmetry)")
-    void cubaneSelfMatchMcs() throws Exception {
+    void cubaneSelfMatchMCS() throws Exception {
       long t0 = System.nanoTime();
       IAtomContainer cubane = mol("C12C3C4C1C5C3C4C25");
       assertEquals(8, cubane.getAtomCount(), "Cubane should have 8 heavy atoms");
@@ -614,7 +614,7 @@ public class AlgorithmTest extends TestBase {
     @Test
     @Timeout(10)
     @DisplayName("Coronene self-match (D6h, 24 atoms)")
-    void coroneneSelfMatchMcs() throws Exception {
+    void coroneneSelfMatchMCS() throws Exception {
       long t0 = System.nanoTime();
       IAtomContainer coronene = mol("c1cc2ccc3ccc4ccc5ccc6ccc1c7c2c3c4c5c67");
       assertEquals(24, coronene.getAtomCount(), "Coronene should have 24 heavy atoms");
@@ -708,7 +708,7 @@ public class AlgorithmTest extends TestBase {
     @Test
     @Timeout(10)
     @DisplayName("PEG-12 vs PEG-16 MCS size")
-    void peg12VsPeg16Mcs() throws Exception {
+    void peg12VsPeg16MCS() throws Exception {
       long t0 = System.nanoTime();
       IAtomContainer peg12 = mol("OCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCO");
       IAtomContainer peg16 = mol("OCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCO");
@@ -2062,7 +2062,7 @@ public class AlgorithmTest extends TestBase {
 
     // Removed: chiralityInsensitive — duplicated by StereochemistryTests.rsAlanineChiralityOff
     // above.
-    // Removed: quinolineIsoquinolineMcs — duplicated by FusedRingTests.quinolineVsIsoquinoline
+    // Removed: quinolineIsoquinolineMCS — duplicated by FusedRingTests.quinolineVsIsoquinoline
     // above.
   }
 
@@ -2159,7 +2159,7 @@ public class AlgorithmTest extends TestBase {
 
     @Test
     @DisplayName("Builder MCS: benzene vs phenol = 6 atoms")
-    void builderMcs() {
+    void builderMCS() {
       MolGraph benzene = buildBenzene();
       MolGraph phenol = buildPhenol();
       SearchEngine.MCSOptions mcsOpts = new SearchEngine.MCSOptions();
@@ -2202,9 +2202,9 @@ public class AlgorithmTest extends TestBase {
       assertEquals(7, phenol.atomCount(), "Phenol builder graph should have 7 atoms");
       assertTrue(phenol.hasBond(0, 6), "Phenol should contain the exocyclic O bond");
       assertFalse(phenol.hasBond(2, 6), "Phenol should not invent a non-existent bond");
-      Map<Integer, Integer> selfMcs =
+      Map<Integer, Integer> selfMCS =
           SearchEngine.findMCS(phenol, phenol, new ChemOptions(), new SearchEngine.MCSOptions());
-      assertEquals(7, selfMcs.size(), "Phenol self-MCS should preserve all builder atoms");
+      assertEquals(7, selfMCS.size(), "Phenol self-MCS should preserve all builder atoms");
     }
 
     @Test
@@ -2243,9 +2243,9 @@ public class AlgorithmTest extends TestBase {
       assertTrue(chain.hasBond(0, 1), "Sparse chain should keep the first edge");
       assertTrue(chain.hasBond(103, 104), "Sparse chain should keep a middle edge");
       assertFalse(chain.hasBond(0, n - 1), "Sparse graph should not invent wraparound bonds");
-      Map<Integer, Integer> selfMcs =
+      Map<Integer, Integer> selfMCS =
           SearchEngine.findMCS(chain, chain, new ChemOptions(), new SearchEngine.MCSOptions());
-      assertEquals(n, selfMcs.size(), "Sparse builder graph should self-match completely");
+      assertEquals(n, selfMCS.size(), "Sparse builder graph should self-match completely");
     }
   }
 
@@ -2294,7 +2294,7 @@ public class AlgorithmTest extends TestBase {
 
   @Test
   @DisplayName("Phenylacetic vs phenylbutyric acid: dMCS >= connected MCS")
-  void disconnectedMcsLargerThanConnected() throws Exception {
+  void disconnectedMCSLargerThanConnected() throws Exception {
     IAtomContainer phenylacetic = mol("OC(=O)Cc1ccccc1");
     IAtomContainer phenylbutyric = mol("OC(=O)CCCc1ccccc1");
     ChemOptions opts = new ChemOptions();
@@ -2303,28 +2303,28 @@ public class AlgorithmTest extends TestBase {
     SearchEngine.MCSOptions connOpts = new SearchEngine.MCSOptions();
     connOpts.connectedOnly = true;
     connOpts.timeoutMs = 10_000;
-    Map<Integer, Integer> connMcs =
+    Map<Integer, Integer> connMCS =
         SearchEngine.findMCS(phenylacetic, phenylbutyric, opts, connOpts);
     assertTrue(
-        connMcs.size() >= 6, "Connected MCS should be >= 6 (phenyl ring), got " + connMcs.size());
+        connMCS.size() >= 6, "Connected MCS should be >= 6 (phenyl ring), got " + connMCS.size());
 
     // Disconnected MCS: phenyl + carboxylic acid fragments
-    Map<Integer, Integer> dMcs =
+    Map<Integer, Integer> dMCS =
         SearchEngine.findDisconnectedMCS(phenylacetic, phenylbutyric, opts, connOpts);
     assertTrue(
-        dMcs.size() >= 8, "Disconnected MCS should be >= 8 (phenyl + COOH), got " + dMcs.size());
+        dMCS.size() >= 8, "Disconnected MCS should be >= 8 (phenyl + COOH), got " + dMCS.size());
     assertTrue(
-        dMcs.size() >= connMcs.size(),
+        dMCS.size() >= connMCS.size(),
         "Disconnected MCS ("
-            + dMcs.size()
+            + dMCS.size()
             + ") should be >= connected MCS ("
-            + connMcs.size()
+            + connMCS.size()
             + ")");
   }
 
   @Test
   @DisplayName("disconnectedMCS flag in MCSOptions works directly")
-  void disconnectedMcsFlagDirect() throws Exception {
+  void disconnectedMCSFlagDirect() throws Exception {
     IAtomContainer m1 = mol("OC(=O)Cc1ccccc1");
     IAtomContainer m2 = mol("OC(=O)CCCc1ccccc1");
     ChemOptions opts = new ChemOptions();
@@ -2332,22 +2332,22 @@ public class AlgorithmTest extends TestBase {
     SearchEngine.MCSOptions dOpts = new SearchEngine.MCSOptions();
     dOpts.disconnectedMCS = true;
     dOpts.timeoutMs = 10_000;
-    Map<Integer, Integer> dMcs = SearchEngine.findMCS(m1, m2, opts, dOpts);
+    Map<Integer, Integer> dMCS = SearchEngine.findMCS(m1, m2, opts, dOpts);
     assertTrue(
-        dMcs.size() >= 8,
-        "Direct disconnectedMCS flag should yield >= 8 atoms, got " + dMcs.size());
+        dMCS.size() >= 8,
+        "Direct disconnectedMCS flag should yield >= 8 atoms, got " + dMCS.size());
   }
 
   @Test
   @DisplayName("Identical molecules: disconnected MCS = full mapping")
-  void identicalMoleculesDisconnectedMcs() throws Exception {
+  void identicalMoleculesDisconnectedMCS() throws Exception {
     IAtomContainer aspirin = mol("CC(=O)Oc1ccccc1C(=O)O");
     ChemOptions opts = new ChemOptions();
     SearchEngine.MCSOptions mOpts = new SearchEngine.MCSOptions();
-    Map<Integer, Integer> dMcs = SearchEngine.findDisconnectedMCS(aspirin, aspirin, opts, mOpts);
+    Map<Integer, Integer> dMCS = SearchEngine.findDisconnectedMCS(aspirin, aspirin, opts, mOpts);
     assertEquals(
         aspirin.getAtomCount(),
-        dMcs.size(),
+        dMCS.size(),
         "Disconnected MCS of identical molecule should equal atom count");
   }
 
@@ -2674,7 +2674,7 @@ public class AlgorithmTest extends TestBase {
 
   @Nested
   @DisplayName("Tautomer-aware MCS")
-  class TautomerAwareMcsTests {
+  class TautomerAwareMCSTests {
 
     /** Keto/enol: acetone vs propen-2-ol — should find MCS = 4 atoms with tautomer mode. */
     @Test
@@ -2861,7 +2861,7 @@ public class AlgorithmTest extends TestBase {
           mol("COc1ccc2[nH]c(S(=O)Cc3ncc(C)c(OC)c3C)nc2c1"),
           mol("COc1ccc2nc(S(=O)Cc3ncc(C)c(OC)c3C)[nH]c2c1"),
           c);
-      smsd.setMcsTimeoutMs(15_000);
+      smsd.setMCSTimeoutMs(15_000);
       var mcs = smsd.findMCS(true, false, 15_000);
       assertTrue(mcs.size() >= 10, "Omeprazole tautomers should find substantial MCS, got " + mcs.size());
     }
@@ -3095,23 +3095,23 @@ public class AlgorithmTest extends TestBase {
       SearchEngine.MCSOptions atomOpts = new SearchEngine.MCSOptions();
       atomOpts.timeoutMs = 10_000;
       atomOpts.maximizeBonds = false;
-      Map<Integer, Integer> atomMcs = SearchEngine.findMCS(cyclohexane, hexane, opts, atomOpts);
+      Map<Integer, Integer> atomMCS = SearchEngine.findMCS(cyclohexane, hexane, opts, atomOpts);
       int atomBonds = SearchEngine.countMappedBonds(
-          new MolGraph(cyclohexane), atomMcs);
+          new MolGraph(cyclohexane), atomMCS);
 
       // Bond-maximized MCS
       SearchEngine.MCSOptions bondOpts = new SearchEngine.MCSOptions();
       bondOpts.timeoutMs = 10_000;
       bondOpts.maximizeBonds = true;
-      Map<Integer, Integer> bondMcs = SearchEngine.findMCS(cyclohexane, hexane, opts, bondOpts);
+      Map<Integer, Integer> bondMCS = SearchEngine.findMCS(cyclohexane, hexane, opts, bondOpts);
       int bondBonds = SearchEngine.countMappedBonds(
-          new MolGraph(cyclohexane), bondMcs);
+          new MolGraph(cyclohexane), bondMCS);
 
       // Bond-maximized should have >= as many bonds as atom-maximized
       assertTrue(bondBonds >= atomBonds,
           "Bond-maximized MCS should have >= bonds than atom-maximized: "
               + bondBonds + " vs " + atomBonds);
-      assertTrue(bondMcs.size() > 0, "Bond-maximized MCS should not be empty");
+      assertTrue(bondMCS.size() > 0, "Bond-maximized MCS should not be empty");
     }
 
     @Test
@@ -3611,7 +3611,7 @@ public class AlgorithmTest extends TestBase {
 
   @Nested
   @DisplayName("Scaffold MCS (Murcko)")
-  class ScaffoldMcsTests {
+  class ScaffoldMCSTests {
 
     @Test
     @DisplayName("Murcko scaffold of toluene is benzene ring")
@@ -3635,7 +3635,7 @@ public class AlgorithmTest extends TestBase {
 
     @Test
     @DisplayName("Scaffold MCS of substituted molecules focuses on ring systems")
-    void scaffoldMcsSubstituted() throws Exception {
+    void scaffoldMCSSubstituted() throws Exception {
       // 4-methylphenol vs 4-ethylphenol: scaffolds are both phenol
       IAtomContainer m1 = mol("Cc1ccc(O)cc1"); // 4-methylphenol: 8 heavy atoms
       IAtomContainer m2 = mol("CCc1ccc(O)cc1"); // 4-ethylphenol: 9 heavy atoms
@@ -3643,10 +3643,10 @@ public class AlgorithmTest extends TestBase {
       opts.ringMatchesRingOnly = false;
       SearchEngine.MCSOptions mcsOpts = new SearchEngine.MCSOptions();
       mcsOpts.timeoutMs = 5000;
-      Map<Integer, Integer> scaffoldMcs = SearchEngine.findScaffoldMCS(m1, m2, opts, mcsOpts);
+      Map<Integer, Integer> scaffoldMCS = SearchEngine.findScaffoldMCS(m1, m2, opts, mcsOpts);
       // Both scaffolds should be phenol (7 atoms), MCS should be 7
-      assertTrue(scaffoldMcs.size() >= 6,
-          "Scaffold MCS should find at least 6 atoms (ring), got " + scaffoldMcs.size());
+      assertTrue(scaffoldMCS.size() >= 6,
+          "Scaffold MCS should find at least 6 atoms (ring), got " + scaffoldMCS.size());
     }
 
     @Test
@@ -3711,7 +3711,7 @@ public class AlgorithmTest extends TestBase {
 
   @Nested
   @DisplayName("Weighted/Property MCS")
-  class WeightedMcsTests {
+  class WeightedMCSTests {
 
     @Test
     @DisplayName("atomWeights influence MCS optimization target")
@@ -3733,7 +3733,7 @@ public class AlgorithmTest extends TestBase {
 
     @Test
     @DisplayName("Weighted MCS with varying weights produces valid mapping")
-    void weightedMcsVaryingWeights() throws Exception {
+    void weightedMCSVaryingWeights() throws Exception {
       IAtomContainer m1 = mol("c1ccc(O)cc1"); // phenol
       IAtomContainer m2 = mol("c1ccc(N)cc1"); // aniline
       ChemOptions opts = new ChemOptions();
@@ -3896,7 +3896,7 @@ public class AlgorithmTest extends TestBase {
 
     @Test
     @DisplayName("Ethanol self-MCS = 3 heavy atoms (C, C, O)")
-    void ethanolSelfMcs() throws Exception {
+    void ethanolSelfMCS() throws Exception {
       IAtomContainer eth = mol("CCO");
       var mcs = SearchEngine.findMCS(new MolGraph(eth), new MolGraph(eth),
           new ChemOptions(), new SearchEngine.MCSOptions());
@@ -3906,7 +3906,7 @@ public class AlgorithmTest extends TestBase {
 
     @Test
     @DisplayName("Piperazine self-MCS = 6 heavy atoms (4C + 2N)")
-    void piperazineSelfMcs() throws Exception {
+    void piperazineSelfMCS() throws Exception {
       IAtomContainer pip = mol("C1CNCCN1");
       assertEquals(6, pip.getAtomCount(),
           "Piperazine has exactly 6 heavy atoms");
@@ -3928,7 +3928,7 @@ public class AlgorithmTest extends TestBase {
 
     @Test
     @DisplayName("Benzene / toluene MCS = 6 (benzene ring)")
-    void benzeneTolueneMcs() throws Exception {
+    void benzeneTolueneMCS() throws Exception {
       IAtomContainer benz = mol("c1ccccc1");
       IAtomContainer tol = mol("Cc1ccccc1");
       var mcs = SearchEngine.findMCS(new MolGraph(benz), new MolGraph(tol),
@@ -4055,13 +4055,13 @@ public class AlgorithmTest extends TestBase {
   class MCSElementCorrectness {
 
     /** Verify every mapped pair has matching atomic numbers. */
-    private void assertElementCorrect(String smi1, String smi2, int minMcs) throws Exception {
+    private void assertElementCorrect(String smi1, String smi2, int minMCS) throws Exception {
       IAtomContainer m1 = mol(smi1), m2 = mol(smi2);
       MolGraph g1 = new MolGraph(m1), g2 = new MolGraph(m2);
       var mcs = SearchEngine.findMCS(g1, g2, new ChemOptions(), new SearchEngine.MCSOptions());
 
-      assertTrue(mcs.size() >= minMcs,
-          "MCS(" + smi1 + ", " + smi2 + ") = " + mcs.size() + ", expected >= " + minMcs);
+      assertTrue(mcs.size() >= minMCS,
+          "MCS(" + smi1 + ", " + smi2 + ") = " + mcs.size() + ", expected >= " + minMCS);
 
       for (var e : mcs.entrySet()) {
         int qi = e.getKey(), ti = e.getValue();
@@ -4187,7 +4187,7 @@ public class AlgorithmTest extends TestBase {
     // 1. Empty molecule self-MCS -> empty mapping
     @Test
     @DisplayName("Empty molecule self-MCS yields empty mapping")
-    void emptyMoleculeSelfMcs() throws Exception {
+    void emptyMoleculeSelfMCS() throws Exception {
       IAtomContainer empty = SilentChemObjectBuilder.getInstance().newAtomContainer();
       SMSD s = new SMSD(empty, empty, new ChemOptions());
       Map<Integer, Integer> mcs = s.findMCS();
@@ -4198,7 +4198,7 @@ public class AlgorithmTest extends TestBase {
     // 2. Single atom self-MCS -> size 1
     @Test
     @DisplayName("Single atom self-MCS yields size 1")
-    void singleAtomSelfMcs() throws Exception {
+    void singleAtomSelfMCS() throws Exception {
       IAtomContainer methane = mol("C");
       SMSD s = new SMSD(methane, methane, new ChemOptions());
       Map<Integer, Integer> mcs = s.findMCS();
@@ -4342,7 +4342,7 @@ public class AlgorithmTest extends TestBase {
     // 13. findAllMCS with maxResults=0 -> empty list
     @Test
     @DisplayName("findAllMCS with maxResults=0 yields empty list")
-    void findAllMcsMaxResultsZero() throws Exception {
+    void findAllMCSMaxResultsZero() throws Exception {
       IAtomContainer benzene = mol("c1ccccc1");
       IAtomContainer toluene = mol("Cc1ccccc1");
       SMSD s = new SMSD(benzene, toluene, new ChemOptions());
@@ -4355,7 +4355,7 @@ public class AlgorithmTest extends TestBase {
     // 14. findAllMCS with maxResults=1 -> same as findMCS
     @Test
     @DisplayName("findAllMCS with maxResults=1 matches findMCS result")
-    void findAllMcsMaxResultsOne() throws Exception {
+    void findAllMCSMaxResultsOne() throws Exception {
       IAtomContainer benzene = mol("c1ccccc1");
       IAtomContainer toluene = mol("Cc1ccccc1");
       SMSD s1 = new SMSD(benzene, toluene, new ChemOptions());
@@ -4561,7 +4561,7 @@ public class AlgorithmTest extends TestBase {
   @DisplayName("Timeout Enforcement")
   class TimeoutEnforcement {
 
-    private void assertMcsWithinTimeout(String smi1, String smi2, long timeoutMs, String label) throws Exception {
+    private void assertMCSWithinTimeout(String smi1, String smi2, long timeoutMs, String label) throws Exception {
       MolGraph g1 = new MolGraph(mol(smi1)), g2 = new MolGraph(mol(smi2));
       SearchEngine.MCSOptions opts = new SearchEngine.MCSOptions();
       opts.timeoutMs = timeoutMs;
@@ -4573,7 +4573,7 @@ public class AlgorithmTest extends TestBase {
 
     @Test @Timeout(10) @DisplayName("CoA self-match within timeout")
     void coaSelfMatch() throws Exception {
-      assertMcsWithinTimeout(
+      assertMCSWithinTimeout(
           "CC(C)(COP(=O)(O)OP(=O)(O)OCC1OC(n2cnc3c(N)ncnc32)C(O)C1OP(=O)(O)O)C(O)C(=O)NCCC(=O)NCCSC(=O)C",
           "CC(C)(COP(=O)(O)OP(=O)(O)OCC1OC(n2cnc3c(N)ncnc32)C(O)C1OP(=O)(O)O)C(O)C(=O)NCCC(=O)NCCSC(=O)C",
           2000, "CoA self-match");
@@ -4581,7 +4581,7 @@ public class AlgorithmTest extends TestBase {
 
     @Test @Timeout(10) @DisplayName("ATP + CoA cross-match within timeout")
     void atpCoaCross() throws Exception {
-      assertMcsWithinTimeout(
+      assertMCSWithinTimeout(
           "c1nc(N)c2ncn(C3OC(COP(=O)(O)OP(=O)(O)OP(=O)(O)O)C(O)C3O)c2n1",
           "CC(C)(COP(=O)(O)OP(=O)(O)OCC1OC(n2cnc3c(N)ncnc32)C(O)C1OP(=O)(O)O)C(O)C(=O)NCCC(=O)NCCSC(=O)C",
           2000, "ATP+CoA cross-match");
@@ -4589,7 +4589,7 @@ public class AlgorithmTest extends TestBase {
 
     @Test @Timeout(10) @DisplayName("SAM self-match within timeout")
     void samSelfMatch() throws Exception {
-      assertMcsWithinTimeout(
+      assertMCSWithinTimeout(
           "C[S+](CCC(N)C(=O)O)CC1OC(n2cnc3c(N)ncnc32)C(O)C1O",
           "C[S+](CCC(N)C(=O)O)CC1OC(n2cnc3c(N)ncnc32)C(O)C1O",
           2000, "SAM self-match");

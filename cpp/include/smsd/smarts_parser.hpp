@@ -2353,7 +2353,7 @@ inline SmartsQuery parseSMARTS(const std::string& smarts, int maxRecursionDepth)
  * @return Mapping from SMARTS atom index to target atom index for the largest
  *         match, or empty map if no match.
  */
-inline std::map<int,int> findMcsSmarts(
+inline std::map<int,int> findMCSSmarts(
         const std::string& smartsStr,
         const MolGraph& target,
         int maxMatches = 1000) {

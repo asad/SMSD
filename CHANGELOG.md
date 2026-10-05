@@ -5,6 +5,12 @@ All notable changes to SMSD Pro are documented in this file.
 ## [Unreleased]
 
 ### Fixed
+- Standardized `MCS` capitalization in Java/C++ APIs, classes, helper names,
+  benchmarks and tests. Java callers should use `setMCSTimeoutMs`,
+  `findMCSSmiles`, `findMCSSmarts` and `batchMCSConstrained`; tuning fields use
+  `nearMCSDelta` and `nearMCSCandidates`. Python snake_case APIs are unchanged.
+- Java benchmark sources use the current timeout field and public graph APIs,
+  restoring compilation while retaining their scoring calculations.
 - Python bindings use CMake's modern `FindPython` module discovery, removing
   pybind11's CMP0148 deprecation warnings and unnecessary embedding-library
   discovery on Unix.
@@ -188,7 +194,7 @@ Correctness, performance, and API cleanup release.
 - Added selenium to tautomer compatibility, iodine to scoring
 - Corrected SAH test SMILES (thioether, not ester connectivity)
 - Relaxed formal charge matching in the default MCS profile
-- Renamed `Mcs*` types to `MCS*`, `tanimoto` to `overlapCoefficient`
+- Standardized maximum common substructure types as `MCS*`, and renamed `tanimoto` to `overlapCoefficient`
 - Improved MCS construction throughput via faster compatibility graph traversal
 - Reduced allocation pressure throughout the MCS pipeline
 - Faster convergence on symmetric ring systems

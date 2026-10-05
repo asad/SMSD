@@ -195,13 +195,13 @@ public final class SearchEngine {
      * near-MCS candidates. Default: 2 (consider sizes K, K-1, K-2).
      * @since 6.4.0
      */
-    public int nearMcsDelta = 2;
+    public int nearMCSDelta = 2;
 
     /**
      * Maximum number of near-MCS candidates to generate. Default: 20.
      * @since 6.4.0
      */
-    public int nearMcsCandidates = 20;
+    public int nearMCSCandidates = 20;
 
     /**
      * Custom post-filter applied to enumerated near-MCS candidates. When
@@ -212,7 +212,7 @@ public final class SearchEngine {
 
     /**
      * Target atom indices to exclude from MCS search.
-     * Used by batchMcsConstrained to prevent re-mapping atoms
+     * Used by batchMCSConstrained to prevent re-mapping atoms
      * already claimed by earlier queries.
      * @since 6.6.1
      */
@@ -776,7 +776,7 @@ public final class SearchEngine {
     return errors;
   }
 
-  private static Map<Integer, Integer> repairInvalidMcsMapping(
+  private static Map<Integer, Integer> repairInvalidMCSMapping(
       MolGraph g1, MolGraph g2, Map<Integer, Integer> mapping, ChemOptions C) {
     if (mapping == null || mapping.isEmpty()) return Collections.emptyMap();
     if (validateMapping(g1, g2, mapping, C).isEmpty()) return mapping;
@@ -820,20 +820,20 @@ public final class SearchEngine {
     catch (NumberFormatException e) { return -1; }
   }
 
-  private static long resolveMcsTimeout(MolGraph g1, MolGraph g2, MCSOptions M) {
+  private static long resolveMCSTimeout(MolGraph g1, MolGraph g2, MCSOptions M) {
     long timeout = M.timeoutMs;
     if (timeout < 0) timeout = Math.min(30_000L, 500L + (long) g1.n * g2.n * 2);
     return Math.max(1L, timeout);
   }
 
-  private static Map<Integer, Integer> recoverValidMcsMapping(
+  private static Map<Integer, Integer> recoverValidMCSMapping(
       MolGraph g1, MolGraph g2, Map<Integer, Integer> raw, ChemOptions C, MCSOptions M) {
-    Map<Integer, Integer> repaired = repairInvalidMcsMapping(g1, g2, raw, C);
+    Map<Integer, Integer> repaired = repairInvalidMCSMapping(g1, g2, raw, C);
     if (!validateMapping(g1, g2, repaired, C).isEmpty()) repaired = new LinkedHashMap<>();
     repaired = ppx(g1, g2, repaired, C, M);
     int repairedSize = repaired.size();
     if (mcsBudgetExpired()) return ppx(g1, g2, repaired, C, M);
-    long timeout = resolveMcsTimeout(g1, g2, M);
+    long timeout = resolveMCSTimeout(g1, g2, M);
 
     // If one graph is fully contained in the other, prefer a real substructure mapping
     // over trimming an invalid MCS candidate.
@@ -856,7 +856,7 @@ public final class SearchEngine {
 
     if (!repaired.isEmpty()) {
       Map<Integer, Integer> regrown = ppx(g1, g2, greedyAtomExtend(g1, g2, repaired, C, M), C, M);
-      regrown = repairInvalidMcsMapping(g1, g2, regrown, C);
+      regrown = repairInvalidMCSMapping(g1, g2, regrown, C);
       if (validateMapping(g1, g2, regrown, C).isEmpty() && regrown.size() > repairedSize) return regrown;
     }
     return repaired;
@@ -1259,7 +1259,7 @@ public final class SearchEngine {
       List<Map<Integer, Integer>> subMaps = new ArrayList<>();
       SubstructureEngine.makeMatcher(sml, lrg, C, tb).enumerate(1, subMaps);
       if (!subMaps.isEmpty()) {
-        Map<Integer, Integer> candidate = orientMcsResult(subMaps.get(0), swapped);
+        Map<Integer, Integer> candidate = orientMCSResult(subMaps.get(0), swapped);
         candidate = ppx(g1, g2, candidate, C, M);
         if (candidate.size() > bestSize) {
           best = candidate;
@@ -1463,17 +1463,17 @@ public final class SearchEngine {
     if (g1 == null || g2 == null || g1.n == 0 || g2.n == 0) return Collections.emptyMap();
     MCSOptions options = M == null ? new MCSOptions() : M;
     TimeBudget previous = MCS_BUDGET_TL.get();
-    TimeBudget budget = previous == null ? new TimeBudget(resolveMcsTimeout(g1, g2, options)) : previous;
+    TimeBudget budget = previous == null ? new TimeBudget(resolveMCSTimeout(g1, g2, options)) : previous;
     MCS_BUDGET_TL.set(budget);
     try {
-      return findMcsWithinBudget(g1, g2, C, options);
+      return findMCSWithinBudget(g1, g2, C, options);
     } finally {
       if (previous == null) MCS_BUDGET_TL.remove();
       else MCS_BUDGET_TL.set(previous);
     }
   }
 
-  private static Map<Integer, Integer> findMcsWithinBudget(MolGraph g1, MolGraph g2, ChemOptions C, MCSOptions M) {
+  private static Map<Integer, Integer> findMCSWithinBudget(MolGraph g1, MolGraph g2, ChemOptions C, MCSOptions M) {
     if (g1 == null || g2 == null) return Collections.emptyMap();
     if (C == null) C = new ChemOptions();
     if (M == null) M = new MCSOptions();
@@ -1492,10 +1492,10 @@ public final class SearchEngine {
     boolean weightMode = M.maximizeBonds || M.atomWeights != null;
 
     Map<Integer, Integer> best = plan.directFirst
-        ? runValidatedMcsDirection(g1, g2, C, M, false)
-        : runValidatedMcsDirection(g2, g1, C, M, true);
+        ? runValidatedMCSDirection(g1, g2, C, M, false)
+        : runValidatedMCSDirection(g2, g1, C, M, true);
     best = ppx(g1, g2, best, C, M);
-    if (!validateMapping(g1, g2, best, C).isEmpty()) best = recoverValidMcsMapping(g1, g2, best, C, M);
+    if (!validateMapping(g1, g2, best, C).isEmpty()) best = recoverValidMCSMapping(g1, g2, best, C, M);
 
     int baseUb = M.induced ? degreeSequenceUpperBound(g1, g2, C) : labelFrequencyUpperBound(g1, g2, C);
     if (!M.induced) {
@@ -1524,10 +1524,10 @@ public final class SearchEngine {
 
     if (runAlternate && M.induced && M.atomWeights == null && !mcsBudgetExpired()) {
       Map<Integer, Integer> alt = plan.directFirst
-          ? runValidatedMcsDirection(g2, g1, C, M, true)
-          : runValidatedMcsDirection(g1, g2, C, M, false);
+          ? runValidatedMCSDirection(g2, g1, C, M, true)
+          : runValidatedMCSDirection(g1, g2, C, M, false);
       alt = ppx(g1, g2, alt, C, M);
-      if (!validateMapping(g1, g2, alt, C).isEmpty()) alt = recoverValidMcsMapping(g1, g2, alt, C, M);
+      if (!validateMapping(g1, g2, alt, C).isEmpty()) alt = recoverValidMCSMapping(g1, g2, alt, C, M);
       if (preferFinalMapping(g1, alt, best, M)) best = alt;
     }
 
@@ -1665,7 +1665,7 @@ public final class SearchEngine {
   /** Post-process MCS: iteratively apply filters until stable (filters can interact). */
   static Map<Integer, Integer> ppx(
       MolGraph g1, MolGraph g2, Map<Integer, Integer> ext, ChemOptions C, MCSOptions M) {
-    ext = repairInvalidMcsMapping(g1, g2, ext, C);
+    ext = repairInvalidMCSMapping(g1, g2, ext, C);
     boolean changed = true;
     while (changed) {
       int startSize = ext.size();
@@ -1849,7 +1849,7 @@ public final class SearchEngine {
         } else {
           mapping = raw;
         }
-        rememberMcsMapping(g1, g2, mapping, K, C, M, seen);
+        rememberMCSMapping(g1, g2, mapping, K, C, M, seen);
       }
       if (seen.size() >= maxResults) return new ArrayList<>(seen.values());
     }
@@ -1900,13 +1900,13 @@ public final class SearchEngine {
             mcGregorExtend(g1, g2, seed, C, tb, perSeedMs,
                 M.useTwoHopNLFInExtension, M.useThreeHopNLFInExtension, M.connectedOnly),
             C, M);
-        rememberMcsMapping(g1, g2, ext, K, C, M, seen);
+        rememberMCSMapping(g1, g2, ext, K, C, M, seen);
 
         // Also try greedy atom extension for alternative mappings
         if (!tb.expired() && seen.size() < maxResults) {
           Map<Integer, Integer> gext = ppx(g1, g2,
               greedyAtomExtend(g1, g2, seed, C, M), C, M);
-          rememberMcsMapping(g1, g2, gext, K, C, M, seen);
+          rememberMCSMapping(g1, g2, gext, K, C, M, seen);
         }
       }
 
@@ -1921,7 +1921,7 @@ public final class SearchEngine {
             reduced.remove(entry.getKey());
             Map<Integer, Integer> reext = ppx(g1, g2,
                 greedyAtomExtend(g1, g2, reduced, C, M), C, M);
-            rememberMcsMapping(g1, g2, reext, K, C, M, seen);
+            rememberMCSMapping(g1, g2, reext, K, C, M, seen);
           }
         }
       }
@@ -1930,7 +1930,7 @@ public final class SearchEngine {
     return new ArrayList<>(seen.values());
   }
 
-  private static void rememberMcsMapping(
+  private static void rememberMCSMapping(
       MolGraph g1, MolGraph g2, Map<Integer, Integer> candidate, int size,
       ChemOptions C, MCSOptions M, Map<String, Map<Integer, Integer>> seen) {
     candidate = ppx(g1, g2, candidate, C, M);
@@ -4134,21 +4134,21 @@ public final class SearchEngine {
     return directRan ? Math.max(plan.seed21, plan.mc21) : Math.max(plan.seed12, plan.mc12);
   }
 
-  private static Map<Integer, Integer> orientMcsResult(Map<Integer, Integer> mapping, boolean swappedBack) {
+  private static Map<Integer, Integer> orientMCSResult(Map<Integer, Integer> mapping, boolean swappedBack) {
     if (!swappedBack) return mapping;
     Map<Integer, Integer> restored = new LinkedHashMap<>();
     for (Map.Entry<Integer, Integer> e : mapping.entrySet()) restored.put(e.getValue(), e.getKey());
     return restored;
   }
 
-  private static Map<Integer, Integer> runValidatedMcsDirection(MolGraph query, MolGraph target,
+  private static Map<Integer, Integer> runValidatedMCSDirection(MolGraph query, MolGraph target,
                                                                 ChemOptions C, MCSOptions M,
                                                                 boolean swappedBack) {
     Map<Integer, Integer> raw = findMCSImpl(query, target, C, M);
     Map<Integer, Integer> valid = validateMapping(query, target, raw, C).isEmpty()
         ? raw
-        : recoverValidMcsMapping(query, target, raw, C, M);
-    return orientMcsResult(valid, swappedBack);
+        : recoverValidMCSMapping(query, target, raw, C, M);
+    return orientMCSResult(valid, swappedBack);
   }
 
   private static boolean preferFinalMapping(MolGraph g1,
@@ -4792,7 +4792,7 @@ public final class SearchEngine {
    *
    * <pre>{@code
    * MCSOptions opts = new MCSOptions();
-   * Map<Integer, Integer> scaffMcs =
+   * Map<Integer, Integer> scaffMCS =
    *     SearchEngine.findScaffoldMCS(mol1, mol2, new ChemOptions(), opts);
    * }</pre>
    *
@@ -5103,7 +5103,7 @@ public final class SearchEngine {
    * @param M  MCS options (timeout, induced, connected, etc.)
    * @return canonical SMILES of the MCS, or {@code ""} if no common substructure
    */
-  public static String findMcsSmiles(MolGraph g1, MolGraph g2, ChemOptions C, MCSOptions M) {
+  public static String findMCSSmiles(MolGraph g1, MolGraph g2, ChemOptions C, MCSOptions M) {
     Map<Integer, Integer> mapping = findMCS(g1, g2, C, M);
     return mcsToSmiles(g1, mapping);
   }
@@ -5118,11 +5118,11 @@ public final class SearchEngine {
    * @param M  MCS options
    * @return canonical SMILES of the MCS, or {@code ""} if no common substructure
    */
-  public static String findMcsSmiles(IAtomContainer m1, IAtomContainer m2, ChemOptions C, MCSOptions M) {
+  public static String findMCSSmiles(IAtomContainer m1, IAtomContainer m2, ChemOptions C, MCSOptions M) {
     MolGraph g1 = toMolGraph(m1), g2 = toMolGraph(m2);
     applySolvent(g1, C);
     applySolvent(g2, C);
-    return findMcsSmiles(g1, g2, C, M);
+    return findMCSSmiles(g1, g2, C, M);
   }
 
   // ---- SMARTS-based MCS ----
@@ -5140,7 +5140,7 @@ public final class SearchEngine {
    *
    * <pre>{@code
    * MolGraph target = MolGraph.fromSmiles("CC(=O)Nc1ccc(O)cc1");
-   * Map<Integer,Integer> result = SearchEngine.findMcsSmarts(
+   * Map<Integer,Integer> result = SearchEngine.findMCSSmarts(
    *     "[CX3](=O)[NX3]", target, new ChemOptions(), 10000);
    * // result maps SMARTS atom indices to target atom indices
    * }</pre>
@@ -5152,7 +5152,7 @@ public final class SearchEngine {
    * @return mapping from SMARTS atom indices to target atom indices for the
    *         largest match; empty map if no match
    */
-  public static Map<Integer, Integer> findMcsSmarts(
+  public static Map<Integer, Integer> findMCSSmarts(
       String smartsQuery, MolGraph target, ChemOptions C, long timeoutMs) {
     if (smartsQuery == null || smartsQuery.isEmpty() || target == null)
       return Collections.emptyMap();
@@ -5199,12 +5199,12 @@ public final class SearchEngine {
    * @return mapping from SMARTS atom indices to target atom indices for the
    *         largest match; empty map if no match
    */
-  public static Map<Integer, Integer> findMcsSmarts(
+  public static Map<Integer, Integer> findMCSSmarts(
       String smartsQuery, IAtomContainer target, ChemOptions C, long timeoutMs) {
     if (target == null) return Collections.emptyMap();
     MolGraph gt = toMolGraph(target);
     applySolvent(gt, C);
-    return findMcsSmarts(smartsQuery, gt, C, timeoutMs);
+    return findMCSSmarts(smartsQuery, gt, C, timeoutMs);
   }
 
   // =========================================================================
@@ -5257,7 +5257,7 @@ public final class SearchEngine {
    *         Target atom indices refer to the target that gave the best MCS.
    * @since 6.6.0
    */
-  public static List<Map<Integer, Integer>> batchMcsConstrained(
+  public static List<Map<Integer, Integer>> batchMCSConstrained(
       List<MolGraph> queries, List<MolGraph> targets,
       ChemOptions C, MCSOptions M, long timeoutMs) {
     int nQ = queries.size();
@@ -5319,19 +5319,19 @@ public final class SearchEngine {
             }
             MolGraph residual = new MolGraph(residualMol);
 
-            Map<Integer, Integer> residualMcs = findMCS(gq, residual, C, M);
+            Map<Integer, Integer> residualMCS = findMCS(gq, residual, C, M);
             // Translate residual indices → original target indices
             mapping = new LinkedHashMap<>();
-            for (Map.Entry<Integer, Integer> e : residualMcs.entrySet()) {
+            for (Map.Entry<Integer, Integer> e : residualMCS.entrySet()) {
               if (e.getValue() < residualToOriginal.length) {
                 mapping.put(e.getKey(), residualToOriginal[e.getValue()]);
               }
             }
           } catch (CloneNotSupportedException ex) {
             // Fallback: filter-only approach
-            Map<Integer, Integer> rawMcs = findMCS(gq, gt, C, M);
+            Map<Integer, Integer> rawMCS = findMCS(gq, gt, C, M);
             mapping = new LinkedHashMap<>();
-            for (Map.Entry<Integer, Integer> e : rawMcs.entrySet()) {
+            for (Map.Entry<Integer, Integer> e : rawMCS.entrySet()) {
               if (!used.contains(e.getValue())) mapping.put(e.getKey(), e.getValue());
             }
           }
@@ -5362,14 +5362,14 @@ public final class SearchEngine {
    * Convenience: batch MCS with IAtomContainer inputs.
    * @since 6.6.0
    */
-  public static List<Map<Integer, Integer>> batchMcsConstrained(
+  public static List<Map<Integer, Integer>> batchMCSConstrained(
       List<IAtomContainer> queries, List<IAtomContainer> targets,
       ChemOptions C, long timeoutMs) {
     List<MolGraph> gQueries = new ArrayList<>(queries.size());
     List<MolGraph> gTargets = new ArrayList<>(targets.size());
     for (IAtomContainer q : queries) gQueries.add(toMolGraph(q));
     for (IAtomContainer t : targets) gTargets.add(toMolGraph(t));
-    return batchMcsConstrained(gQueries, gTargets, C, new MCSOptions(), timeoutMs);
+    return batchMCSConstrained(gQueries, gTargets, C, new MCSOptions(), timeoutMs);
   }
 
 }

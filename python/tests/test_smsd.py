@@ -747,7 +747,7 @@ def test_molgraph_category_coverage(name, smiles):
 # ===========================================================================
 # MCS Chemical Validity Tests
 # ===========================================================================
-class TestMcsChemicalValidity:
+class TestMCSChemicalValidity:
     """Verify MCS results obey basic chemistry invariants."""
 
     @staticmethod

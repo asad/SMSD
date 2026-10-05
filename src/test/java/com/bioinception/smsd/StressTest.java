@@ -1673,10 +1673,10 @@ public class StressTest extends TestBase {
       assertTrue(smsd.isSubstructure());
     }
 
-    @Test @Timeout(10) @DisplayName("13.06 setMcsTimeoutMs works")
-    void setMcsTimeout() throws Exception {
+    @Test @Timeout(10) @DisplayName("13.06 setMCSTimeoutMs works")
+    void setMCSTimeout() throws Exception {
       SMSD smsd = new SMSD(mol("CCO"), mol("CCCO"), defaultOpts());
-      smsd.setMcsTimeoutMs(100L);
+      smsd.setMCSTimeoutMs(100L);
       Map<Integer, Integer> mcs = smsd.findMCS();
       assertNotNull(mcs);
     }
@@ -2599,7 +2599,7 @@ public class StressTest extends TestBase {
   // ======================================================================
   private static int mcsSize(String smi1, String smi2, ChemOptions opts, long timeoutMs) throws Exception {
     SMSD smsd = new SMSD(mol(smi1), mol(smi2), opts);
-    smsd.setMcsTimeoutMs(timeoutMs);
+    smsd.setMCSTimeoutMs(timeoutMs);
     Map<Integer, Integer> mcs = smsd.findMCS(false, true, timeoutMs);
     return mcs.size();
   }
@@ -2610,7 +2610,7 @@ public class StressTest extends TestBase {
 
   private static Map<Integer, Integer> mcs(String smi1, String smi2, ChemOptions opts, long timeoutMs) throws Exception {
     SMSD smsd = new SMSD(mol(smi1), mol(smi2), opts);
-    smsd.setMcsTimeoutMs(timeoutMs);
+    smsd.setMCSTimeoutMs(timeoutMs);
     return smsd.findMCS(false, true, timeoutMs);
   }
 
@@ -3473,7 +3473,7 @@ public class StressTest extends TestBase {
     }
 
     @Test @DisplayName("Weighted MCS (atomWeights)")
-    void weightedMcs() throws Exception {
+    void weightedMCS() throws Exception {
       SearchEngine.MCSOptions opts = new SearchEngine.MCSOptions();
       opts.atomWeights = new double[]{1.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0};
       opts.timeoutMs = 10_000L;
@@ -3484,7 +3484,7 @@ public class StressTest extends TestBase {
     }
 
     @Test @DisplayName("Scaffold MCS (Murcko)")
-    void scaffoldMcs() throws Exception {
+    void scaffoldMCS() throws Exception {
       IAtomContainer m1 = mol("CC(=O)Oc1ccccc1C(=O)O"); // aspirin
       IAtomContainer m2 = mol("CC(C)Cc1ccc(C(C)C(=O)O)cc1"); // ibuprofen
       SearchEngine.MCSOptions mcsOpts = new SearchEngine.MCSOptions();
@@ -3740,7 +3740,7 @@ public class StressTest extends TestBase {
       String paclitaxel = "CC1=C2C(C(=O)C3(C(CC4C(C3C(C(C2(C)C)(CC1OC(=O)C(C(C5=CC=CC=C5)NC(=O)C6=CC=CC=C6)O)O)OC(=O)C7=CC=CC=C7)(CO4)OC(=O)C)O)C)OC(=O)C";
       String docetaxel = "CC1=C2C(C(=O)C3(C(CC4C(C3C(C(C2(C)C)(CC1O)O)OC(=O)C5=CC=CC=C5)(CO4)OC(=O)C)O)C)OC(=O)C";
       SMSD smsd = new SMSD(mol(paclitaxel), mol(docetaxel), new ChemOptions());
-      smsd.setMcsTimeoutMs(1L);
+      smsd.setMCSTimeoutMs(1L);
       // Should not crash; result may be empty or partial
       assertDoesNotThrow(() -> smsd.findMCS(false, true, 1L));
     }
@@ -3751,7 +3751,7 @@ public class StressTest extends TestBase {
       String aspirin = "CC(=O)Oc1ccccc1C(=O)O";
       String salicylicAcid = "OC(=O)c1ccccc1O";
       SMSD smsd = new SMSD(mol(aspirin), mol(salicylicAcid), new ChemOptions());
-      smsd.setMcsTimeoutMs(100L);
+      smsd.setMCSTimeoutMs(100L);
       Map<Integer, Integer> m = smsd.findMCS(false, true, 100L);
       // Should return a valid (possibly partial) result
       assertNotNull(m);
@@ -3927,7 +3927,7 @@ public class StressTest extends TestBase {
 
     @Test @DisplayName("Batch MCS with threshold: 10 molecules < 5s")
     @Timeout(15)
-    void batchMcs10() throws Exception {
+    void batchMCS10() throws Exception {
       String[] smiles = {
           "c1ccccc1", "c1ccc(O)cc1", "c1ccc(N)cc1", "c1ccc(F)cc1", "c1ccc(Cl)cc1",
           "c1ccc(Br)cc1", "c1ccc(I)cc1", "c1ccc(C)cc1", "c1ccc(S)cc1", "c1ccc(P)cc1"
@@ -4388,7 +4388,7 @@ public class StressTest extends TestBase {
 
     @Test
     @DisplayName("ATP vs ADP MCS < 500ms")
-    void atpAdpMcs() throws Exception {
+    void atpAdpMCS() throws Exception {
       IAtomContainer q = mol(ATP), t = mol(ADP);
       long t0 = System.nanoTime();
       SMSD s = new SMSD(q, t, new ChemOptions());
@@ -4400,7 +4400,7 @@ public class StressTest extends TestBase {
 
     @Test
     @DisplayName("ATP vs AMP MCS < 500ms")
-    void atpAmpMcs() throws Exception {
+    void atpAmpMCS() throws Exception {
       IAtomContainer q = mol(ATP), t = mol(AMP);
       long t0 = System.nanoTime();
       SMSD s = new SMSD(q, t, new ChemOptions());
@@ -4412,7 +4412,7 @@ public class StressTest extends TestBase {
 
     @Test
     @DisplayName("Atorvastatin vs rosuvastatin MCS < 500ms")
-    void statinMcs() throws Exception {
+    void statinMCS() throws Exception {
       IAtomContainer q = mol(ATORVASTATIN), t = mol(ROSUVASTATIN);
       long t0 = System.nanoTime();
       SMSD s = new SMSD(q, t, new ChemOptions());
@@ -4424,7 +4424,7 @@ public class StressTest extends TestBase {
 
     @Test
     @DisplayName("UDP-glucose vs UDP-galactose MCS < 500ms")
-    void udpSugarMcs() throws Exception {
+    void udpSugarMCS() throws Exception {
       IAtomContainer q = mol(UDP_GLUCOSE), t = mol(UDP_GALACTOSE);
       long t0 = System.nanoTime();
       SMSD s = new SMSD(q, t, new ChemOptions());
@@ -4436,7 +4436,7 @@ public class StressTest extends TestBase {
 
     @Test
     @DisplayName("NAD+ self-MCS < 500ms")
-    void nadSelfMcs() throws Exception {
+    void nadSelfMCS() throws Exception {
       IAtomContainer q = mol(NAD_PLUS);
       long t0 = System.nanoTime();
       SMSD s = new SMSD(q, q, new ChemOptions());
@@ -4448,7 +4448,7 @@ public class StressTest extends TestBase {
 
     @Test
     @DisplayName("Dexamethasone vs vitamin D3 MCS < 500ms")
-    void steroidMcs() throws Exception {
+    void steroidMCS() throws Exception {
       IAtomContainer q = mol(DEXAMETHASONE), t = mol(VITAMIN_D3);
       long t0 = System.nanoTime();
       SMSD s = new SMSD(q, t, new ChemOptions());
@@ -4460,7 +4460,7 @@ public class StressTest extends TestBase {
 
     @Test
     @DisplayName("Paclitaxel vs docetaxel MCS < 500ms (taxane pair)")
-    void taxaneMcs() throws Exception {
+    void taxaneMCS() throws Exception {
       IAtomContainer q = mol(PACLITAXEL), t = mol(DOCETAXEL);
       long t0 = System.nanoTime();
       SMSD s = new SMSD(q, t, new ChemOptions());
@@ -4472,7 +4472,7 @@ public class StressTest extends TestBase {
 
     @Test
     @DisplayName("CoA vs acetyl-CoA MCS < 500ms")
-    void coaMcs() throws Exception {
+    void coaMCS() throws Exception {
       IAtomContainer q = mol(COA), t = mol(ACETYL_COA);
       long t0 = System.nanoTime();
       SMSD s = new SMSD(q, t, new ChemOptions());
@@ -4484,7 +4484,7 @@ public class StressTest extends TestBase {
 
     @Test
     @DisplayName("FAD self-MCS < 500ms (53 heavy atoms)")
-    void fadSelfMcs() throws Exception {
+    void fadSelfMCS() throws Exception {
       IAtomContainer q = mol(FAD);
       long t0 = System.nanoTime();
       SMSD s = new SMSD(q, q, new ChemOptions());
@@ -4496,7 +4496,7 @@ public class StressTest extends TestBase {
 
     @Test
     @DisplayName("Vincristine self-match < 500ms (56 heavy atoms)")
-    void vincristineSelfMcs() throws Exception {
+    void vincristineSelfMCS() throws Exception {
       IAtomContainer q = mol(VINCRISTINE);
       long t0 = System.nanoTime();
       SMSD s = new SMSD(q, q, new ChemOptions());
@@ -4508,7 +4508,7 @@ public class StressTest extends TestBase {
 
     @Test
     @DisplayName("SAM self-MCS < 500ms")
-    void samSelfMcs() throws Exception {
+    void samSelfMCS() throws Exception {
       IAtomContainer q = mol(SAM);
       long t0 = System.nanoTime();
       SMSD s = new SMSD(q, q, new ChemOptions());
@@ -4543,7 +4543,7 @@ public class StressTest extends TestBase {
 
     @Test
     @DisplayName("Vancomycin self-MCS (101 atoms)")
-    void vancomycinSelfMcs() throws Exception {
+    void vancomycinSelfMCS() throws Exception {
       IAtomContainer t = mol(VANCOMYCIN);
       long t0 = System.nanoTime();
       SMSD s = new SMSD(t, t, new ChemOptions());
@@ -4592,7 +4592,7 @@ public class StressTest extends TestBase {
 
     @Test
     @DisplayName("C200 self-MCS")
-    void longChainSelfMcs() throws Exception {
+    void longChainSelfMCS() throws Exception {
       IAtomContainer q = mol("C".repeat(200));
       long t0 = System.nanoTime();
       SMSD s = new SMSD(q, q, new ChemOptions());
@@ -4723,7 +4723,7 @@ public class StressTest extends TestBase {
 
   @Nested
   @DisplayName("Chemically Validated MCS Pairs")
-  class ChemicallyValidatedMcsPairs {
+  class ChemicallyValidatedMCSPairs {
 
     // Small molecule SMILES used only in this group
     static final String ASPIRIN = "CC(=O)Oc1ccccc1C(=O)O";
@@ -4740,7 +4740,7 @@ public class StressTest extends TestBase {
     // most of the macrolide backbone. MCS must be >= 25 atoms.
     @Test
     @DisplayName("Erythromycin vs Azithromycin MCS >= 25 (macrolide pair)")
-    void erythromycinAzithromycinMcs() throws Exception {
+    void erythromycinAzithromycinMCS() throws Exception {
       IAtomContainer q = mol(ERYTHROMYCIN), t = mol(AZITHROMYCIN);
       long t0 = System.nanoTime();
       SMSD s = new SMSD(q, t, new ChemOptions());
@@ -4760,7 +4760,7 @@ public class StressTest extends TestBase {
     // Must disable charge matching since charge is part of the redox chemistry.
     @Test
     @DisplayName("NAD+ vs NADH MCS >= 35 (redox pair, charge-insensitive)")
-    void nadPlusNadhMcs() throws Exception {
+    void nadPlusNadhMCS() throws Exception {
       IAtomContainer q = mol(NAD_PLUS), t = mol(NADH);
       ChemOptions opts = new ChemOptions();
       opts.matchFormalCharge = false; // redox pair: charge changes are chemical, not structural
@@ -4892,7 +4892,7 @@ public class StressTest extends TestBase {
 
   private static int hc_mcsSize(String smi1, String smi2, ChemOptions opts, long timeoutMs) throws Exception {
     SMSD smsd = new SMSD(mol(smi1), mol(smi2), opts);
-    smsd.setMcsTimeoutMs(timeoutMs);
+    smsd.setMCSTimeoutMs(timeoutMs);
     Map<Integer, Integer> mcs = smsd.findMCS(false, true, timeoutMs);
     return mcs.size();
   }
@@ -5068,7 +5068,7 @@ public class StressTest extends TestBase {
   class HighlyBranched {
 
     @Test @Timeout(10) @DisplayName("2.01 Neopentane self-match MCS = 5")
-    void neopentaneSelfMcs() throws Exception {
+    void neopentaneSelfMCS() throws Exception {
       assertEquals(5, hc_mcsSize("CC(C)(C)C", "CC(C)(C)C"),
           "Neopentane self-match should be 5 heavy atoms");
     }
@@ -5254,7 +5254,7 @@ public class StressTest extends TestBase {
 
   @Nested
   @DisplayName("4. Reaction-relevant MCS")
-  class ReactionRelevantMcs {
+  class ReactionRelevantMCS {
 
     @Test @Timeout(10) @DisplayName("4.01 Ethanol to acetaldehyde: MCS reveals OH->CHO")
     void ethanolToAcetaldehyde() throws Exception {
@@ -5406,7 +5406,7 @@ public class StressTest extends TestBase {
 
   @Nested
   @DisplayName("6. Pharmacophore-relevant MCS")
-  class PharmacophoreMcs {
+  class PharmacophoreMCS {
 
     // Allow graph construction and assertions in addition to the ten-second search budget.
     @Test @Timeout(12) @DisplayName("6.01 Sildenafil vs tadalafil: PDE5 inhibitors share fused ring")

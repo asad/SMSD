@@ -175,12 +175,12 @@ public final class SMSD {
    * Set the timeout for MCS computation operations.
    *
    * <pre>{@code
-   * smsd.setMcsTimeoutMs(30000); // 30 seconds for complex molecules
+   * smsd.setMCSTimeoutMs(30000); // 30 seconds for complex molecules
    * }</pre>
    *
    * @param ms timeout in milliseconds (default: 10000)
    */
-  public void setMcsTimeoutMs(long ms) {
+  public void setMCSTimeoutMs(long ms) {
     if (ms <= 0) throw new IllegalArgumentException("timeout must be > 0, got " + ms);
     this.mcsTimeoutMs = ms;
   }
@@ -317,7 +317,7 @@ public final class SMSD {
     opt.induced = induced;
     opt.connectedOnly = connectedOnly;
     opt.timeoutMs = timeoutMs;
-    Map<Integer, Integer> result = exactIdentityMcsMapping();
+    Map<Integer, Integer> result = exactIdentityMCSMapping();
     if (result.isEmpty()) result = SearchEngine.findMCS(query, target, chem, opt);
     // Compute pKa-informed tautomer confidence for tautomer-aware searches.
     tautomerConfidence = chem.tautomerAware
@@ -326,7 +326,7 @@ public final class SMSD {
     return result;
   }
 
-  private Map<Integer, Integer> exactIdentityMcsMapping() {
+  private Map<Integer, Integer> exactIdentityMCSMapping() {
     if (query == null || target == null) return java.util.Collections.emptyMap();
     if (query.getAtomCount() != target.getAtomCount()) return java.util.Collections.emptyMap();
 
@@ -761,7 +761,7 @@ public final class SMSD {
    * <pre>{@code
    * SearchEngine.MCSOptions mcsOpts = new SearchEngine.MCSOptions();
    * mcsOpts.timeoutMs = 10000;
-   * Map<Integer, Integer> scaffoldMcs =
+   * Map<Integer, Integer> scaffoldMCS =
    *     SMSD.findScaffoldMCS(mol1, mol2, new ChemOptions(), mcsOpts);
    * }</pre>
    *
@@ -791,14 +791,14 @@ public final class SMSD {
    *
    * <pre>{@code
    * SMSD smsd = new SMSD(mol1, mol2, new ChemOptions());
-   * String mcsSmi = smsd.findMcsSmiles();
+   * String mcsSmi = smsd.findMCSSmiles();
    * System.out.println("MCS SMILES: " + mcsSmi);
    * }</pre>
    *
    * @return canonical SMILES of the MCS, or {@code ""} if no common substructure
    */
-  public String findMcsSmiles() {
-    return findMcsSmiles(false, true, mcsTimeoutMs);
+  public String findMCSSmiles() {
+    return findMCSSmiles(false, true, mcsTimeoutMs);
   }
 
   /**
@@ -809,13 +809,13 @@ public final class SMSD {
    * @param timeoutMs     maximum computation time in milliseconds
    * @return canonical SMILES of the MCS, or {@code ""} if no common substructure
    */
-  public String findMcsSmiles(boolean induced, boolean connectedOnly, long timeoutMs) {
-    requireMoleculeQuery("findMcsSmiles");
+  public String findMCSSmiles(boolean induced, boolean connectedOnly, long timeoutMs) {
+    requireMoleculeQuery("findMCSSmiles");
     SearchEngine.MCSOptions opt = new SearchEngine.MCSOptions();
     opt.induced = induced;
     opt.connectedOnly = connectedOnly;
     opt.timeoutMs = timeoutMs;
-    return SearchEngine.findMcsSmiles(query, target, chem, opt);
+    return SearchEngine.findMCSSmiles(query, target, chem, opt);
   }
 
   /**

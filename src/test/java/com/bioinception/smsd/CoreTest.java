@@ -1048,7 +1048,7 @@ public class CoreTest {
 
     @Test
     @DisplayName("should find a large MCS between Morphine and Codeine")
-    void testMcsMorphineVsCodeine() throws Exception {
+    void testMCSMorphineVsCodeine() throws Exception {
       // Morphine (21 atoms) and Codeine (22 atoms) differ at the ether bridge:
       // Morphine has a direct C-O bridge; Codeine has C-O-CH3.
       // Induced MCS = 19 (bridge topology mismatch), non-induced = 20.
@@ -1499,7 +1499,7 @@ public class CoreTest {
     void timeoutSetters() throws Exception {
       SMSD smsd = new SMSD(mol("c1ccccc1"), mol("c1ccc2ccccc2c1"), new ChemOptions());
       smsd.setSubstructureTimeoutMs(100L);
-      smsd.setMcsTimeoutMs(100L);
+      smsd.setMCSTimeoutMs(100L);
       // Should work with custom timeouts
       assertTrue(smsd.isSubstructure());
       assertNotNull(smsd.findMCS());
