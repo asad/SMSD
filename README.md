@@ -370,6 +370,26 @@ python -m pip install -e .
 
 ### Docker
 
+The 7.2.2 draft provides Java CLI image archives for Linux x86_64 (`amd64`)
+and arm64. Docker Desktop uses Linux containers on macOS and Windows.
+The Python package is distributed separately. Select your Docker host's
+architecture, then download and load the tested image:
+
+```bash
+SMSD_DOCKER_ARCH=arm64 # use amd64 for an x86_64 Docker host
+gh release download v7.2.2 --repo asad/SMSD --dir downloads \
+  --pattern "smsd-7.2.2-docker-linux-${SMSD_DOCKER_ARCH}.tar.gz"
+docker load --input "downloads/smsd-7.2.2-docker-linux-${SMSD_DOCKER_ARCH}.tar.gz"
+docker run --rm "smsd:7.2.2-linux-${SMSD_DOCKER_ARCH}" --version
+```
+
+Draft downloads require repository access. Both images use the validated
+release JAR with Java 25 and passed ten CLI checks locally; x86_64 execution
+uses QEMU. No container registry tag is published. See `DOCKER.md` in the
+release downloads for usage and validation scope.
+
+To build from the checkout:
+
 ```bash
 docker build -t smsd .
 docker run --rm smsd --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -

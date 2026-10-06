@@ -19,6 +19,7 @@ builds and bundled installers. Both Java compatibility suites passed.
 | macOS arm64 Python wheel | 12 identical-source native Debug suites; 691 fresh Python tests passed, 8 optional skips |
 | Linux x86_64 DEB | Passed all ten CLI checks, extraction, installation and removal under QEMU |
 | Linux x86_64 Python wheel | 12 identical-source native Debug suites; 691 fresh Python tests passed, 8 optional skips |
+| Docker Linux arm64 and x86_64 images | Ten CLI checks per image, exact release JAR, non-root execution and licence checks passed locally; x86_64 uses QEMU |
 | Windows x86_64 Python wheel and MSI | Pending native Windows execution |
 | Three-wheel and three-installer collection | Pending |
 | GitHub publication and download verification | Pending |
@@ -37,6 +38,14 @@ Metal and CUDA are disabled; bundled OpenMP is required. Native Debug evidence
 is reused after independently verifying identical C++/Python/build inputs across
 the documentation and Maven dependency update; final wheels are rebuilt and
 installed-package tests rerun against the corrected source archive.
+
+Docker images provide the Java CLI with Temurin 25.0.4.1+1. Both Linux
+architectures run in a local arm64 Colima VM; x86_64 uses QEMU. Each passes
+the same ten semantic cases with the exact final shaded JAR. Tests run with
+UID/GID 10001, no network and a read-only container filesystem. Image archives
+retain project licences, 184 runtime legal files and the vendor notice;
+the existing pinned OpenJDK source archive matches both runtime identities.
+Container registry publication remains pending.
 
 Linux wheel checks use AlmaLinux 8.10/glibc 2.28, GCC 14.2.1, CPython 3.14.5
 and RDKit 2026.03.6 under local QEMU x86_64. The unchanged native Debug suite

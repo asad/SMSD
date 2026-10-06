@@ -9,7 +9,9 @@
 
 Python wheels target CPython 3.14 on Windows x86_64, Linux x86_64 and macOS arm64.
 Java uses CDK 2.13; the C++ core requires C++17.
+Java CLI Docker archives target Linux x86_64 and arm64.
 
 Use `SHA256SUMS` to verify downloads. macOS and Windows installers are unsigned.
 
-Release preparation is in progress. PyPI and Maven Central publication remain pending.
+Release preparation is in progress. Native Windows installer/wheel validation,
+PyPI and Maven Central publication remain pending.

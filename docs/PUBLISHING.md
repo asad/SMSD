@@ -242,6 +242,15 @@ Upload the validated JAR, source archive, source manifest and checksum list
 so **Native Windows release packages** (`installers.yml`) uses the same inputs. Keep the release private while native
 Windows checks remain pending.
 
+Attach validated local platform packages to the draft as they become ready;
+their presence does not establish complete three-platform validation.
+Docker image archives provide the Java CLI for Linux x86_64 and arm64.
+Build them locally from the exact validated shaded JAR, preserve project and
+runtime licences, and retain matching OpenJDK source. Verify the image
+architecture, non-root user, archive reload and CLI semantics before upload.
+Include `DOCKER.md` with load/run commands. Registry publication is separate;
+the current Docker CI workflow only builds and tests an image.
+
 After all three wheels and all three installers pass collection, regenerate
 `SHA256SUMS`, upload the complete asset set and publish the draft. Verify the
 public downloads against local checksums. Release notes should contain only
