@@ -118,7 +118,7 @@ def java_release(path, java_executable=None):
         environment = os.environ.copy()
         for name in ("JAVA_HOME", "JRE_HOME", "JAVA_TOOL_OPTIONS", "_JAVA_OPTIONS", "JDK_JAVA_OPTIONS", "CLASSPATH"):
             environment.pop(name, None)
-        output = run([java_executable, "-XshowSettings:properties", "-version"],
+        output = run([java_executable, "-Dstderr.encoding=UTF-8", "-XshowSettings:properties", "-version"],
                      capture_output=True, env=environment, timeout=30).stderr
         properties = dict(re.findall(r"^\s+([a-z.]+) = (.+)$", output, re.M))
         require(result.get("JAVA_VERSION") == properties.get("java.version"), "Runtime version metadata differs from its JVM")
