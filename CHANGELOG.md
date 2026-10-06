@@ -15,6 +15,7 @@ All notable changes to SMSD Pro are documented in this file.
 
 ### Fixed
 - Fixed Java CLI CML and PDB input using the correct CDK reader object.
+- Write CLI JSON to standard output in UTF-8, preserving Unicode file paths on Windows.
 - Reject empty files and ambiguous multi-molecule/model input. Use SDF for batch targets.
 - Validate the NAD redox pair against an explicit shared-core witness, with bounded-search validity checked separately.
 

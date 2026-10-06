@@ -440,7 +440,7 @@ public class SMSDcli implements Callable<Integer> {
         ? MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(data)
         : MAPPER.writeValueAsString(data);
     if ("-".equals(jsonOut)) {
-      PrintWriter pw = new PrintWriter(System.out);
+      PrintWriter pw = new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8));
       pw.println(payload);
       pw.flush();
     } else {

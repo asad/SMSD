@@ -1,6 +1,7 @@
 # SMSD 7.2.2
 
 - Fix Java CLI CML and PDB input.
+- Write CLI JSON output as UTF-8, including Unicode file paths on Windows.
 - Include the SMARTS dependency for Maven library users.
 - Target Java 8 or later; prefer Java 25 LTS for builds and execution.
 - Use Java 8-compatible value classes; see the [changelog](https://github.com/asad/SMSD/blob/master/CHANGELOG.md) for record API changes.

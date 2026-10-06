@@ -13,7 +13,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.bioinception.smsd.cli.SMSDcli.MolIO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
@@ -121,6 +123,52 @@ class CLIFileFormatRegressionTest {
     assertEquals(2, result.path("mcs_size").asInt());
     assertEquals(2, result.path("pairs").size());
     assertTrue(result.path("mcs_smiles").isTextual());
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void stdoutJsonUsesUTF8AndLeavesNonUTF8StreamOpen(boolean pretty) throws Exception {
+    Path directory = Files.createDirectories(temporary.resolve("Molécules 東京"));
+    Path file = Files.write(directory.resolve("éthane.sdf"),
+        (ethane("MOL") + "$$$$\n").getBytes(StandardCharsets.UTF_8));
+    CloseTrackingOutputStream bytes = new CloseTrackingOutputStream();
+    PrintStream original = System.out;
+    try (PrintStream output = new PrintStream(bytes, true, "windows-1252")) {
+      System.setOut(output);
+      try {
+        StringWriter errors = new StringWriter();
+        CommandLine command = cli(errors);
+        int result = pretty
+            ? command.execute("--Q", "SMI", "--q", "CC", "--T", "SDF", "--t", file.toString(),
+                "--threads", "1", "--json", "-", "--json-pretty")
+            : command.execute("--Q", "SMI", "--q", "CC", "--T", "SDF", "--t", file.toString(),
+                "--threads", "1", "--json", "-");
+        assertEquals(0, result, errors.toString());
+        JsonNode json = new ObjectMapper().readTree(bytes.toByteArray());
+        assertEquals(file.toString(), json.path("target_file").asText());
+        assertEquals(1, json.path("target_count").asInt());
+        assertEquals(1, json.path("results").size());
+        assertTrue(json.path("results").get(0).path("exists").asBoolean());
+        assertFalse(json.path("results").get(0).has("error"));
+        assertFalse(bytes.closed, "JSON output must not close stdout");
+        bytes.reset();
+        output.print("stdout remains open");
+        output.flush();
+        assertEquals("stdout remains open", bytes.toString("UTF-8"));
+      } finally {
+        System.setOut(original);
+      }
+    }
+  }
+
+  private static final class CloseTrackingOutputStream extends ByteArrayOutputStream {
+    private boolean closed;
+
+    @Override
+    public void close() throws IOException {
+      closed = true;
+      super.close();
+    }
   }
 
   @ParameterizedTest
