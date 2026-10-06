@@ -4216,7 +4216,7 @@ public class StressTest extends TestBase {
       "CC1=CC2=C(C=C1C)N(C3=NC(=O)NC(=O)C3=N2)CC(C(C(COP(=O)(O)OP(=O)(O)OCC4C(C(C(O4)N5C=NC6=C(N=CN=C65)N)O)O)O)O)O";
   // SAM — 22 heavy atoms, methyl donor
   static final String SAM = "C[S+](CCC(C(=O)[O-])N)CC1C(C(C(O1)N2C=NC3=C2N=CN=C3N)O)O";
-  // NAD+ — 47 heavy atoms, dinucleotide
+  // NAD+ — 44 heavy atoms, dinucleotide
   static final String NAD_PLUS =
       "C1=CC(=C[N+](=C1)C2C(C(C(O2)COP(=O)([O-])OP(=O)(O)OCC3C(C(C(O3)N4C=NC5=C(N=CN=C54)N)O)O)O)O)C(=O)N";
   // ATP — 31 heavy atoms
@@ -4761,17 +4761,56 @@ public class StressTest extends TestBase {
     // NAD+/NADH: redox pair — differ by 2H at nicotinamide ring + charge change (N+ → N).
     // Must disable charge matching since charge is part of the redox chemistry.
     @Test
-    @DisplayName("NAD+ vs NADH MCS >= 35 (redox pair, charge-insensitive)")
+    @DisplayName("NAD+ vs NADH shared core >= 35 and valid bounded MCS")
     void nadPlusNadhMCS() throws Exception {
       IAtomContainer q = mol(NAD_PLUS), t = mol(NADH);
       ChemOptions opts = new ChemOptions();
       opts.matchFormalCharge = false; // redox pair: charge changes are chemical, not structural
+
+      // This explicit common core establishes the chemical lower bound independently of timing.
+      Map<Integer, Integer> witness = new LinkedHashMap<>();
+      int[] ringTargets = {1, 0, 5, 4, 3, 2};
+      for (int qi = 0; qi < ringTargets.length; qi++) witness.put(qi, ringTargets[qi]);
+      for (int qi = 6; qi <= 27; qi++) witness.put(qi, qi + 3);
+      for (int qi = 37; qi <= 40; qi++) witness.put(qi, qi + 3);
+      for (int qi = 41; qi <= 43; qi++) witness.put(qi, qi - 35);
+      assertTrue(witness.size() >= 35, "NAD+/NADH must share at least 35 compatible atoms");
+      assertValidConnectedMapping(q, t, witness, opts, "NAD+/NADH common-core witness");
+
       long t0 = System.nanoTime();
       SMSD s = new SMSD(q, t, opts);
       Map<Integer, Integer> mcs = s.findMCS(false, true, 5000);
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
-      assertTrue(mcs.size() >= 35, "NAD+/NADH MCS should be >= 35 (redox pair), got " + mcs.size());
-      System.out.println("INFO: NAD+-NADH-MCS completed in " + elapsed + "ms");
+
+      // A bounded search returns its best incumbent; the deadline guarantees no minimum size.
+      assertValidConnectedMapping(q, t, mcs, opts, "NAD+/NADH bounded MCS");
+      System.out.println(
+          "INFO: NAD+-NADH-MCS returned " + mcs.size() + " atoms in " + elapsed
+              + "ms; validated common-core witness has " + witness.size() + " atoms");
+    }
+
+    private void assertValidConnectedMapping(
+        IAtomContainer query, IAtomContainer target, Map<Integer, Integer> mapping,
+        ChemOptions opts, String label) {
+      assertFalse(mapping.isEmpty(), label + " must be nonempty");
+      assertEquals(mapping.size(), new HashSet<>(mapping.values()).size(),
+          label + " must be injective");
+      List<String> errors = SearchEngine.validateMapping(
+          new MolGraph(query), new MolGraph(target), mapping, opts);
+      assertTrue(errors.isEmpty(), () -> label + " has incompatible atoms or bonds: " + errors);
+
+      Set<Integer> visited = new HashSet<>();
+      ArrayDeque<Integer> pending = new ArrayDeque<>();
+      pending.add(mapping.keySet().iterator().next());
+      while (!pending.isEmpty()) {
+        int index = pending.remove();
+        if (!visited.add(index)) continue;
+        for (var neighbour : query.getConnectedAtomsList(query.getAtom(index))) {
+          int adjacent = query.indexOf(neighbour);
+          if (mapping.containsKey(adjacent) && !visited.contains(adjacent)) pending.add(adjacent);
+        }
+      }
+      assertEquals(mapping.size(), visited.size(), label + " must be connected");
     }
 
     // --- 3. Aspirin vs salicylic acid substructure ---

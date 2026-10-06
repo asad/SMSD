@@ -22,6 +22,8 @@ SMSD Pro provides substructure search and maximum common substructure
 (header-only), and **Python**. Optional GPU paths are available for CUDA and
 Apple Metal builds.
 
+Version `7.2.2` fixes Java CML/PDB input and adds native Java CLI installers.
+The source remains organised into Java, C++ and Python modules.
 Version `7.2.1` separates Java, C++ and Python source modules and
 provides a compact release for Linux, macOS and Windows. It carries forward
 the reviewed element-preserving tautomer, stereo, objective and symmetry fixes
@@ -30,6 +32,11 @@ Python wrappers preserve input indices and options; core batches reuse native
 graphs. Java uses **CDK 2.13**. GitHub's current release is
 [`7.2.1`](https://github.com/asad/SMSD/releases/tag/v7.2.1); Maven Central/PyPI
 remain at `7.1.1` pending separate publication.
+
+The 7.2.2 release is in preparation. It will include one Windows MSI, one macOS
+DMG and one Linux DEB with bundled Java 25, alongside the Python wheels and
+portable packages. See [installer instructions](docs/INSTALLERS.md) and
+[current validation](docs/VALIDATION_7.2.2.md).
 
 ### Local benchmark results
 

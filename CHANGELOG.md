@@ -2,6 +2,19 @@
 
 All notable changes to SMSD Pro are documented in this file.
 
+## [7.2.2] - Unreleased
+
+### Fixed
+- Fixed Java CLI CML and PDB input using the correct CDK reader object.
+- Reject empty files and ambiguous multi-molecule/model input. Use SDF for batch targets.
+- Validate the NAD redox pair against an explicit shared-core witness, with bounded-search validity checked separately.
+
+### Packaging
+- Add Windows MSI, macOS DMG and Linux DEB packages with bundled Java 25.
+- Check installation, chemical searches, licences, architecture and removal.
+- Build the Windows installer and Python wheel together from verified release inputs.
+- Retain the existing manual PyPI publishing workflow.
+
 ## [7.2.1] - 2026-10-06
 
 Released on GitHub. PyPI and Maven Central publication remain pending.

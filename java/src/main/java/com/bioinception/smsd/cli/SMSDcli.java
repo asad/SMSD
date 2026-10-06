@@ -38,6 +38,7 @@ import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
+import org.openscience.cdk.interfaces.IChemFile;
 import org.openscience.cdk.io.CMLReader;
 import org.openscience.cdk.io.ISimpleChemObjectReader;
 import org.openscience.cdk.io.MDLV2000Reader;
@@ -50,6 +51,7 @@ import org.openscience.cdk.smiles.SmiFlavor;
 import org.openscience.cdk.smiles.SmilesGenerator;
 import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
+import org.openscience.cdk.tools.manipulator.ChemFileManipulator;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -61,7 +63,7 @@ import picocli.CommandLine.Option;
 @Command(
     name = "smsd",
     mixinStandardHelpOptions = true,
-    version = "SMSD Pro 7.2.1 — com.bioinceptionlabs",
+    version = "SMSD Pro 7.2.2 — com.bioinceptionlabs",
     description =
         "SMSD — Substructure & MCS search engine by BioInception PVT LTD"
             + " (com.bioinceptionlabs).%nSupports substructure matching, MCS computation, SMARTS"
@@ -470,6 +472,8 @@ public class SMSDcli implements Callable<Integer> {
 
     /**
      * Load a query molecule or SMARTS pattern.
+     * File input must be non-empty; CML and PDB input must contain exactly one
+     * molecule/model. Use SDF target input for batch searches.
      *
      * @param type input type: SMI (SMILES), SIG (SMARTS), MOL, ML2, PDB, or CML
      * @param value SMILES/SMARTS string or file path
@@ -486,6 +490,8 @@ public class SMSDcli implements Callable<Integer> {
 
     /**
      * Load a single target molecule.
+     * CML and PDB input must contain exactly one non-empty molecule/model.
+     * Files with multiple molecules are rejected; SDF supports batch targets.
      *
      * @param type input type: SMI (SMILES), MOL, ML2, PDB, or CML
      * @param value SMILES string or file path
@@ -529,8 +535,24 @@ public class SMSDcli implements Callable<Integer> {
       };
       try (FileInputStream fis = new FileInputStream(path);
           ISimpleChemObjectReader reader = factory.apply(fis)) {
-        return reader.read(
-            DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class));
+        IAtomContainer molecule;
+        if ("CML".equalsIgnoreCase(type) || "PDB".equalsIgnoreCase(type)) {
+          IChemFile file = reader.read(
+              DefaultChemObjectBuilder.getInstance().newInstance(IChemFile.class));
+          List<IAtomContainer> molecules = file == null
+              ? List.of() : ChemFileManipulator.getAllAtomContainers(file);
+          if (molecules.size() != 1) {
+            throw new IOException(type + " input must contain exactly one molecule/model; found "
+                + molecules.size() + ". Use SDF for batch targets.");
+          }
+          molecule = molecules.get(0);
+        } else {
+          molecule = reader.read(
+              DefaultChemObjectBuilder.getInstance().newInstance(IAtomContainer.class));
+        }
+        if (molecule == null || molecule.getAtomCount() == 0)
+          throw new IOException(type + " input does not contain a non-empty molecule.");
+        return molecule;
       }
     }
   }

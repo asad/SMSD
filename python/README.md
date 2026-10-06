@@ -22,6 +22,10 @@ The 7.2.1 deadline regression is recorded separately. Full corpus comparisons
 have not been rerun for its patched source, layout and packaging changes.
 The MoleculeNet-derived Dalke-style pairs are not the original Dalke benchmark.
 
+This source targets 7.2.2. The compact wheel set remains CPython 3.14 on
+Windows x86_64, Linux x86_64 and macOS arm64. See
+[current validation](https://github.com/asad/SMSD/blob/master/docs/VALIDATION_7.2.2.md).
+
 ## Install
 
 ```bash

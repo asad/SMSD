@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "smsd"
-version = "7.2.1"
+version = "7.2.2"
 description = "Molecular substructure and MCS search, fingerprints and similarity with optional tautomer matching and GPU screening"
 readme = "python/README.md"
 license = {text = "Apache-2.0"}

@@ -1,4 +1,4 @@
-# Publishing SMSD 7.2.1
+# Publishing SMSD 7.2.2
 
 Build and validate before publishing. The release uses Java 25 and CDK 2.13,
 one CPU/OpenMP wheel per operating system for CPython 3.14, and a Python source
@@ -10,26 +10,17 @@ distribution. Keep one Python version across the wheel set:
 | macOS arm64 | CPython 3.14, macOS 26+ |
 | Windows x86_64 | CPython 3.14, 64-bit Windows |
 
-All three prepared wheels passed target-platform tests and strict collection
-against one source archive. Linux execution used local emulation. GitHub 7.2.1
-is released; PyPI and Maven publication remain pending. See
-[7.2.1 validation](VALIDATION_7.2.1.md) for the complete
-build and artifact record.
-The [7.2.0 validation](VALIDATION_7.2.0.md) records historical execution results. Other
-interpreters and architectures can build from source; they are outside this
-wheel set. Each new wheel must pass its own installed-package tests; a
-minimum deployment tag does not prove execution on that minimum OS version.
+Version 7.2.2 is in preparation. Use
+[7.2.2 validation](VALIDATION_7.2.2.md) for current checks;
+[7.2.1 validation](VALIDATION_7.2.1.md) is historical evidence.
 
-The GitHub asset set also includes the Java library, CLI, sources and Javadoc,
-and C++ headers. The portable Java 25 package is shared across the three
-operating systems. Java sources and artifacts live under `java/src/` and
-`java/target/`; publish Maven artifacts with `mvn -f java/pom.xml deploy`.
-The root Maven aggregator supports `mvn verify`. The root `pyproject.toml`
-remains the single Python manifest for the C++ extension and Python package.
+Each release also includes the Java library, CLI, sources and Javadoc,
+C++ headers, and one MSI, DMG and DEB with bundled Java. Follow
+[installer preparation](INSTALLERS.md) for packaging and installation checks.
+Java publication uses `mvn -f java/pom.xml deploy`; the root Maven POM is an
+aggregator. The root `pyproject.toml` builds the C++ extension and Python package.
 
-The retained 7.2.0 benchmarks use Python 3.13.14 with RDKit 2026.09.1. The
-7.2.1 deadline regression check is recorded separately; no new cross-solver
-benchmark ranking is claimed.
+The retained 7.2.0 benchmarks use Python 3.13.14 with RDKit 2026.09.1. The 7.2.1 deadline fix is retained; no new cross-solver benchmark ranking is claimed.
 Keep `RESULTS_7.2.0.md` and the original benchmark archive name/hash when
 including that historical evidence. RDKit is optional at runtime.
 
@@ -50,19 +41,19 @@ python -m pip install --upgrade pip build scikit-build-core pybind11 \
 SMSD_RELEASE_PYTHON="$PWD/.venv-release/bin/python" \
   SMSD_RELEASE_JOBS=2 bash scripts/prepare-release.sh
 
-cd dist/release-7.2.1
+cd dist/release-7.2.2
 shasum -a 256 -c SHA256SUMS
 cd ../..
 python -m twine check --strict \
-  dist/release-7.2.1/smsd-7.2.1.tar.gz \
-  dist/release-7.2.1/smsd-7.2.1-*.whl
+  dist/release-7.2.2/smsd-7.2.2.tar.gz \
+  dist/release-7.2.2/smsd-7.2.2-*.whl
 ```
 
 The [benchmark guide](../benchmarks/README.md) gives reproduction commands.
 The [7.2.0 report](../benchmarks/RESULTS_7.2.0.md) remains unchanged; do not
-relabel its timings or quality cohorts as new 7.2.1 measurements. Record fresh
+relabel its timings or quality cohorts as new 7.2.2 measurements. Record fresh
 release checks, source identity and asset hashes in
-[7.2.1 validation](VALIDATION_7.2.1.md).
+[7.2.2 validation](VALIDATION_7.2.2.md).
 The preparation script tests and assembles artifacts for the local platform;
 it does not publish. It can include other tested wheels from a directory
 specified by `SMSD_PLATFORM_WHEELS_DIR`. Build the Linux wheel locally in a
@@ -78,7 +69,7 @@ Docker or Podman provides the manylinux environment:
 ```bash
 python -m pip install cibuildwheel==4.2.1
 python scripts/build_python_wheels.py build \
-  --sdist dist/release-7.2.1/smsd-7.2.1.tar.gz \
+  --sdist dist/release-7.2.2/smsd-7.2.2.tar.gz \
   --platform linux --arch x86_64 \
   --output-dir build/platform-release/linux
 ```
@@ -89,7 +80,7 @@ native Windows machine, from Developer PowerShell:
 ```powershell
 py -3.14 -m venv .venv-release
 .\.venv-release\Scripts\python.exe -m pip install cibuildwheel==4.2.1
-.\.venv-release\Scripts\python.exe scripts/build_python_wheels.py build --sdist dist/release-7.2.1/smsd-7.2.1.tar.gz --platform windows --arch AMD64 --output-dir build/platform-release/windows
+.\.venv-release\Scripts\python.exe scripts/build_python_wheels.py build --sdist dist/release-7.2.2/smsd-7.2.2.tar.gz --platform windows --arch AMD64 --output-dir build/platform-release/windows
 ```
 
 The helper runs dependency repair, all native Debug suites and installed-wheel
@@ -101,26 +92,24 @@ It checks the DLL versions against the extension's linker family and verifies
 that wheel repair bundled those exact files. Microsoft runtime terms are
 included in the wheel's license metadata.
 
-The release plan builds macOS and Linux locally and uses the manual
-`python-publish.yml` workflow for native Windows validation. It defaults to
-Windows only and does not publish unless explicitly requested. Use the same
-exact 7.2.1 release commit for every build and retain the source manifests,
-wheel provenance and test logs. The corrected 7.2.0 Windows run passed and is separate
-historical evidence; it does not satisfy the 7.2.1 gate.
+Build macOS and Linux locally. The manual `installers.yml` workflow builds
+and tests the Windows MSI and Python wheel together from the existing draft
+release inputs. The `python-publish.yml` workflow remains available for
+Python-only builds and explicit PyPI publication.
 
 After downloading the tested Windows artifact, collect all three wheels and
 check them against the prepared source distribution:
 
 ```bash
 python scripts/collect-release-wheels.py \
-  --release-dir dist/release-7.2.1 \
+  --release-dir dist/release-7.2.2 \
   --wheel-dir build/platform-release/linux \
   --wheel-dir build/platform-release/windows
 python scripts/collect-release-wheels.py \
-  --release-dir dist/release-7.2.1 --check-only
+  --release-dir dist/release-7.2.2 --check-only
 python -m twine check --strict \
-  dist/release-7.2.1/smsd-7.2.1.tar.gz \
-  dist/release-7.2.1/smsd-7.2.1-*.whl
+  dist/release-7.2.2/smsd-7.2.2.tar.gz \
+  dist/release-7.2.2/smsd-7.2.2-*.whl
 ```
 
 Collection verifies package versions, CPython/ABI/platform tags, native binary
@@ -136,6 +125,33 @@ before publishing.
 
 ## PyPI
 
+### Publish through GitHub
+
+Configure the `smsd` project's Trusted Publisher on PyPI:
+
+| Field | Value |
+|---|---|
+| Owner | `asad` |
+| Repository | `SMSD` |
+| Workflow filename | `python-publish.yml` |
+| Environment | `pypi` |
+
+Open [Build and validate Python wheels](https://github.com/asad/SMSD/actions/workflows/python-publish.yml).
+Choose **Run workflow**, branch `master`, `release_tag=v7.2.2`,
+`platform=all` and `publish=true`. This rebuilds and tests all three platforms
+before publishing. Configure the publisher and finish the release checks first.
+See [PyPI's Trusted Publisher setup](https://docs.pypi.org/trusted-publishers/adding-a-publisher/).
+
+Equivalent shell command, once ready:
+
+```bash
+gh workflow run python-publish.yml --repo asad/SMSD --ref master \
+  -f release_tag=v7.2.2 -f platform=all -f publish=true
+gh run list --repo asad/SMSD --workflow python-publish.yml --limit 3
+```
+
+### Upload the locally validated files
+
 Use an account with permission to publish `smsd`. Create a project-scoped
 token under [PyPI account settings](https://pypi.org/manage/account/#api-tokens)
 and store it locally. Twine prompts for the token with hidden input; do not
@@ -146,19 +162,19 @@ Upload only the Python source distribution and the three tested wheels:
 ```bash
 source .venv-release/bin/activate
 python scripts/collect-release-wheels.py \
-  --release-dir dist/release-7.2.1 --check-only
+  --release-dir dist/release-7.2.2 --check-only
 python -m twine upload --username __token__ \
-  dist/release-7.2.1/smsd-7.2.1.tar.gz \
-  dist/release-7.2.1/smsd-7.2.1-*.whl
+  dist/release-7.2.2/smsd-7.2.2.tar.gz \
+  dist/release-7.2.2/smsd-7.2.2-*.whl
 ```
 
-Confirm [the PyPI release](https://pypi.org/project/smsd/7.2.1/), then install
+Confirm [the PyPI release](https://pypi.org/project/smsd/7.2.2/), then install
 in a separate environment:
 
 ```bash
 SMSD_PYPI_CHECK="$(mktemp -d /tmp/smsd-pypi-check.XXXXXX)"
 python3.14 -m venv "$SMSD_PYPI_CHECK"
-"$SMSD_PYPI_CHECK/bin/python" -m pip install --no-cache-dir smsd==7.2.1
+"$SMSD_PYPI_CHECK/bin/python" -m pip install --no-cache-dir smsd==7.2.2
 "$SMSD_PYPI_CHECK/bin/python" -c \
   'import smsd; print(smsd.__version__); assert smsd.is_substructure("CC", "CCC")'
 ```
@@ -170,7 +186,7 @@ describes authentication and installation checks.
 
 ## Maven Central
 
-The coordinates are `com.bioinceptionlabs:smsd:7.2.1`. The `release` profile
+The coordinates are `com.bioinceptionlabs:smsd:7.2.2`. The `release` profile
 attaches sources and Javadoc, signs the artifacts, uploads through the Central
 Publishing plugin, and waits for publication. Its `autoPublish=true` setting
 publishes after Central validation succeeds.
@@ -212,28 +228,18 @@ After publication, verify a clean Maven download:
 ```bash
 SMSD_CENTRAL_CHECK="$(mktemp -d /tmp/smsd-central-check.XXXXXX)"
 mvn -f java/pom.xml -B -Dmaven.repo.local="$SMSD_CENTRAL_CHECK" dependency:get \
-  -Dartifact=com.bioinceptionlabs:smsd:7.2.1 \
+  -Dartifact=com.bioinceptionlabs:smsd:7.2.2 \
   -DremoteRepositories=central::default::https://repo.maven.apache.org/maven2
 ```
 
 ## GitHub
 
-Create the tag from the tested release commit on `master`, then upload the
-prepared asset set. This does not require a hosted build:
+Prepare an authenticated draft release after local checks and source freeze.
+Upload the validated JAR, source archive, source manifest and checksum list
+so the Windows job uses the same inputs. Keep the release private while native
+Windows checks remain pending.
 
-```bash
-git switch master
-git pull --ff-only origin master
-git tag -a v7.2.1 -m "SMSD 7.2.1"
-git push origin v7.2.1
-gh release create v7.2.1 --repo asad/SMSD --verify-tag \
-  --title "SMSD 7.2.1" --notes-file docs/RELEASE_NOTES.md \
-  dist/release-7.2.1/*
-```
-
-The GitHub 7.2.1 release is already published; the commands above record the
-release process. GitHub publication can precede PyPI and Maven. For future
-releases, run them after the fixes are merged and local checks pass. Compare
-the tag's production inputs with the source used for validation.
-Hosted release workflows remain manual; local publishing does not dispatch
-them.
+After all three wheels and all three installers pass collection, regenerate
+`SHA256SUMS`, upload the complete asset set and publish the draft. Verify the
+public downloads against local checksums. Release notes should contain only
+changes, downloads and platform requirements.

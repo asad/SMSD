@@ -1,29 +1,24 @@
 # How to Build and Run
 
-This source checkout targets version 7.2.1, released on GitHub. Current measured
-results and benchmark coverage are in
-[the benchmark report](../benchmarks/RESULTS_7.2.0.md).
-The currently published Maven Central and PyPI packages are 7.1.1; GitHub has
-the [7.2.1 release](https://github.com/asad/SMSD/releases/tag/v7.2.1). The commands
-below use the 7.2.1 source or GitHub assets. PyPI and Maven publication are
-separate and remain pending.
+This source checkout targets 7.2.2, currently in preparation. GitHub's published
+release is [7.2.1](https://github.com/asad/SMSD/releases/tag/v7.2.1).
+PyPI and Maven Central publication remain pending. Commands below use 7.2.2
+build outputs; release downloads become available after validation.
 
 ## Choose a distribution
 
 The Java CLI JAR and portable CLI archive contain platform-independent Java
 code. Use the same files on Linux, macOS or Windows with Java 25 installed for
 your machine's architecture; they do not include a Java runtime. The archive
-includes Unix and Windows launchers. Native DMG, MSI and DEB installers are a
-separate manual workflow and are not required to run the portable CLI.
+includes Unix and Windows launchers. Native DMG, MSI and DEB installers include Java 25.
+See [installer instructions](INSTALLERS.md) for each platform.
 
 Python wheels contain native code and must match the operating system,
-architecture and Python interpreter. Version 7.2.1 targets CPython 3.14 on
+architecture and Python interpreter. Version 7.2.2 targets CPython 3.14 on
 Linux x86_64 (glibc 2.28+), macOS arm64 (macOS 26+) and Windows x86_64.
-Fresh macOS, emulated Linux and native Windows checks pass. Strict collection
-of all three wheels against one source archive also passes; PyPI and Maven
-publication remain pending. See
-[7.2.1 validation](VALIDATION_7.2.1.md). The earlier
-[7.2.0 results](VALIDATION_7.2.0.md) do not validate renamed 7.2.1 artifacts.
+Fresh platform checks are tracked in
+[7.2.2 validation](VALIDATION_7.2.2.md). Each package must pass its target-platform
+checks before publication.
 Intel macOS and Linux arm64 are outside this compact wheel set; use a source build. A wheel tagged `cp314` is for ordinary CPython
 3.14, not the free-threaded `cp314t` interpreter. Use a source build when a
 matching wheel is unavailable. C++ headers are also available for source
@@ -31,7 +26,7 @@ builds on each operating system.
 
 ## Install the portable Java CLI
 
-Download or copy `smsd-7.2.1-jar-with-dependencies.jar` from the release assets
+Download or copy `smsd-7.2.2-jar-with-dependencies.jar` from the release assets
 after they are published, or build it with Maven below. Keep its exact filename
 in these commands; shells differ in how they expand JAR filename wildcards.
 
@@ -39,16 +34,16 @@ Linux or macOS, from the directory containing the JAR:
 
 ```bash
 java -version
-java -jar smsd-7.2.1-jar-with-dependencies.jar --version
-java -jar smsd-7.2.1-jar-with-dependencies.jar --Q SMI --q "CCN" --T SMI --t "CCCNC" -m --json -
+java -jar smsd-7.2.2-jar-with-dependencies.jar --version
+java -jar smsd-7.2.2-jar-with-dependencies.jar --Q SMI --q "CCN" --T SMI --t "CCCNC" -m --json -
 ```
 
 Windows PowerShell, with Java 25 on `PATH`:
 
 ```powershell
 java -version
-java -jar .\smsd-7.2.1-jar-with-dependencies.jar --version
-java -jar .\smsd-7.2.1-jar-with-dependencies.jar --Q SMI --q "CCN" --T SMI --t "CCCNC" -m --json -
+java -jar .\smsd-7.2.2-jar-with-dependencies.jar --version
+java -jar .\smsd-7.2.2-jar-with-dependencies.jar --Q SMI --q "CCN" --T SMI --t "CCCNC" -m --json -
 ```
 
 If using the portable archive instead, extract it into its own directory so
@@ -56,7 +51,7 @@ If using the portable archive instead, extract it into its own directory so
 
 ```bash
 mkdir smsd-cli
-tar -xzf smsd-7.2.1-cli.tar.gz -C smsd-cli
+tar -xzf smsd-7.2.2-cli.tar.gz -C smsd-cli
 ./smsd-cli/bin/smsd --version
 ```
 
@@ -64,7 +59,7 @@ Windows PowerShell with the system `tar` command:
 
 ```powershell
 New-Item -ItemType Directory -Path smsd-cli
-tar -xzf .\smsd-7.2.1-cli.tar.gz -C .\smsd-cli
+tar -xzf .\smsd-7.2.2-cli.tar.gz -C .\smsd-cli
 .\smsd-cli\bin\smsd.bat --version
 ```
 
@@ -93,7 +88,7 @@ uses the C++ tree; Python builds run from the root.
 mvn -f java/pom.xml -U clean package
 ```
 
-This produces `java/target/smsd-7.2.1-jar-with-dependencies.jar` (fat JAR with all dependencies, including CDK 2.13).
+This produces `java/target/smsd-7.2.2-jar-with-dependencies.jar` (fat JAR with all dependencies, including CDK 2.13).
 
 ## Run Tests
 
@@ -128,7 +123,7 @@ same cancellation control as SMSD and do not establish a speed ranking.
 ## Run the CLI
 
 ```bash
-java -jar java/target/smsd-7.2.1-jar-with-dependencies.jar \
+java -jar java/target/smsd-7.2.2-jar-with-dependencies.jar \
   --Q SMI --q "CCN" \
   --T SMI --t "CCCNC" \
   -m --json - --json-pretty
@@ -156,7 +151,7 @@ with the Desktop development with C++ workload on Windows. On Windows, use a
 Developer PowerShell prompt. The configuration flags below cover both
 single-configuration and Visual Studio generators. Run all native suites
 with assertions enabled; all 12 suites passed on macOS, emulated Linux and
-native Windows for the frozen 7.2.1 source:
+native Windows for the frozen 7.2.2 source:
 
 ```text
 cmake -S cpp -B build/cpu -DCMAKE_BUILD_TYPE=Debug -DSMSD_BUILD_PYTHON=OFF -DSMSD_BUILD_TESTS=ON -DSMSD_BUILD_METAL=OFF -DSMSD_BUILD_CUDA=OFF
@@ -248,7 +243,7 @@ batch matching.
 ## Prepare release assets locally
 
 The Bash preflight below prepares the local platform. The current release
-record lists the separate builds and checks already completed for 7.2.1. Use
+record lists the separate builds and checks already completed for 7.2.2. Use
 a dedicated Python environment with CMake, a C++17 compiler, and Java 25:
 
 ```bash
@@ -259,7 +254,7 @@ python3.14 -m venv .venv-release
 SMSD_RELEASE_PYTHON=.venv-release/bin/python scripts/prepare-release.sh
 ```
 
-Artifacts are assembled under `dist/release-7.2.1/` after validation succeeds.
+Artifacts are assembled under `dist/release-7.2.2/` after validation succeeds.
 This prepares assets for the current native platform; it does not cross-build
 Linux, macOS and Windows wheels in one invocation.
 The macOS release target defaults to 26.0; delocate verifies bundled libraries
@@ -267,5 +262,5 @@ against it. The release preflight requires RDKit 2026.03.6 for interoperability
 checks and active OpenMP. GPU test builds are separate from the CPU preflight. Build macOS and
 Linux wheels locally, validate Windows with the manual GitHub workflow, then
 collect the three wheels against the same source before publishing. See
-[publishing](PUBLISHING.md) and [7.2.1 validation](VALIDATION_7.2.1.md).
+[publishing](PUBLISHING.md) and [7.2.2 validation](VALIDATION_7.2.2.md).
 The GitHub release is published and tagged; PyPI and Maven publication remain pending.
