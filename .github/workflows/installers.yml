@@ -23,10 +23,15 @@ jobs:
     name: Windows AMD64 MSI and optional CPython 3.14 wheel
     runs-on: windows-2022
     timeout-minutes: 45
+    permissions:
+      # GitHub requires repository write access to read draft releases.
+      contents: write
     steps:
       # Packaging helpers come from the selected workflow branch. Payloads
       # come from the named release and are checked against its SHA256SUMS.
       - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v7.0.0
         with:
           python-version: '3.14'
