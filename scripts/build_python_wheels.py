@@ -18,6 +18,7 @@ import subprocess
 import sys
 import tarfile
 import tomllib
+import xml.etree.ElementTree as ET
 import zipfile
 
 
@@ -42,9 +43,11 @@ def inspect_source(path):
                 files[relative] = archive.extractfile(member).read()
         if len(roots) != 1:
             raise ValueError("Expected one source archive root")
-    required = {"pyproject.toml", "python/smsd/__init__.py", "cpp/CMakeLists.txt",
+    required = {"pyproject.toml", "pom.xml", "java/pom.xml", "python/smsd/__init__.py", "cpp/CMakeLists.txt",
                 "cpp/include/smsd/mcs.hpp", "cpp/bindings/pybind11/smsd_bindings.cpp",
-                "python/tests/test_smsd.py", "scripts/check_python_wheel.py",
+                "python/tests/test_smsd.py", "python/tests/test_aromaticity_parity.py",
+                "java/src/test/resources/com/bioinception/smsd/aromaticity_parity.json",
+                "scripts/check_python_wheel.py",
                 "scripts/check_native_wheel_build.py", "scripts/build_python_wheels.py",
                 "scripts/cibuildwheel.toml", "scripts/repair_windows_wheel.py",
                 "licenses/msvc/README.md", "licenses/msvc/LICENSE-2022.docx",
@@ -57,6 +60,9 @@ def inspect_source(path):
     cpp_version = re.search(rb'project\(smsd VERSION ([^ ]+)', files["cpp/CMakeLists.txt"])
     if not python_version or not cpp_version or python_version[1].decode() != version or cpp_version[1].decode() != version:
         raise ValueError("Python, CMake and package versions differ")
+    for pom in ("pom.xml", "java/pom.xml"):
+        if ET.fromstring(files[pom]).findtext("{http://maven.apache.org/POM/4.0.0}version") != version:
+            raise ValueError("Java and package versions differ: " + pom)
     return {"version": version, "sdist": path.name, "sdist_sha256": sha256(path),
             "source_file_count": len(files)}
 

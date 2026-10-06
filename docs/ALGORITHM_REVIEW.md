@@ -1,12 +1,14 @@
 # Search algorithm review
 
-The current review targets **7.2.0 (Unreleased)** against the immutable 7.1.2
-source snapshot `6807f31`. Latest cross-engine measurements, policies, input
+This review records the **7.2.0 source candidate** against the immutable 7.1.2
+source snapshot `6807f31`. Those search fixes carry forward into 7.2.1; the
+version, layout and packaging checks are tracked separately in
+[7.2.1 validation](VALIDATION_7.2.1.md). Latest cross-engine measurements, policies, input
 hashes and quality/cancellation outcomes are in the
 [benchmark report](../benchmarks/RESULTS_7.2.0.md). Earlier review results below
 are historical and are identified separately.
 
-## Current objective, chemistry and cache fixes
+## Reviewed objective, chemistry and cache fixes
 
 Tautomer-aware Java and native matching preserves element identity when atom
 matching is enabled. Tetrahedral matching compares normalized R/S descriptors
@@ -136,7 +138,7 @@ baseline had 5,280 size mismatches in the small-graph oracle; the updated
 implementation has zero. Focused AddressSanitizer/UndefinedBehaviorSanitizer
 runs cover the native algorithm regressions.
 
-Historical validation recorded on 2026-10-05, before the current 7.2.0 changes:
+Historical validation recorded on 2026-10-05, before the reviewed 7.2.0 changes:
 
 | Check | Result |
 |---|---|
@@ -155,7 +157,7 @@ count as GPU validation.
 Run from the repository root:
 
 ```sh
-mvn -B -Dslow.tests.exclude=nothing clean verify
+mvn -f java/pom.xml -B -Dslow.tests.exclude=nothing clean verify
 
 cmake -S cpp -B build/algorithm-tests \
   -DCMAKE_BUILD_TYPE=Debug \
@@ -174,8 +176,10 @@ The existing [release preparation script](../scripts/prepare-release.sh)
 builds source distributions, repairs macOS wheels and validates the installed
 package. The earlier review validated candidate wheels under
 `build/algorithm-ringfix-wheel-assets`. Current source and release preparation
-target 7.2.0; neither those older artifacts nor a 7.1.2 version label identifies
-the current changes.
+target 7.2.1; neither those older artifacts nor a 7.1.2 version label identifies
+the current changes. The reproduction commands use the new `java/` module
+layout; the recorded counts and benchmark measurements retain their historical
+source scope.
 
 ## Performance evidence
 

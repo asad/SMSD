@@ -2345,7 +2345,8 @@ public:
     /// Avoids constructing std::map<int,int> for internal pipeline consumers.
     std::pair<std::vector<int>, int> seedExtendMCSFlat(TimeBudget& tb, int upperBound) {
         int n1 = g1_.n, n2 = g2_.n;
-        if (n1 == 0 || n2 == 0) return {std::vector<int>(std::max(n1, 1), -1), 0};
+        if (n1 == 0 || n2 == 0 || tb.expiredNow())
+            return {std::vector<int>(std::max(n1, 1), -1), 0};
 
         int maxLabel = 0;
         for (int i = 0; i < n1; ++i) maxLabel = std::max(maxLabel, g1_.label[i]);
@@ -2424,7 +2425,7 @@ public:
                 if (tb.expired() || nodeCount > MAX_NODE_LIMIT) break;
                 for (int tb2 : g2_.neighbors[ta]) {
                     nodeCount++;
-                    if (nodeCount > MAX_NODE_LIMIT || tb.expired()) break;
+                    if (nodeCount > MAX_NODE_LIMIT || tb.expiredNow()) break;
                     if (!atomsCompatFast(g1_, qv, g2_, tb2, C_)) continue;
                     if (!bondsCompatible(g1_, qu, qv, g2_, ta, tb2, C_)) continue;
                     std::memset(q2t.data(), -1, n1 * sizeof(int));
@@ -2439,7 +2440,7 @@ public:
                 if (tb.expired() || nodeCount > MAX_NODE_LIMIT) break;
                 for (int tb2 : g2_.neighbors[ta]) {
                     nodeCount++;
-                    if (nodeCount > MAX_NODE_LIMIT || tb.expired()) break;
+                    if (nodeCount > MAX_NODE_LIMIT || tb.expiredNow()) break;
                     if (!atomsCompatFast(g1_, qu, g2_, tb2, C_)) continue;
                     if (!bondsCompatible(g1_, qu, qv, g2_, tb2, ta, C_)) continue;
                     std::memset(q2t.data(), -1, n1 * sizeof(int));
@@ -2695,7 +2696,10 @@ public:
     /// Returns (q2t flat array where -1=unmapped, mapping size).
     std::pair<std::vector<int>, int> mcSplitSeedFlat(TimeBudget& tb, int64_t& nodeCountOut) {
         int n1 = g1_.n, n2 = g2_.n;
-        if (n1 == 0 || n2 == 0) return {std::vector<int>(std::max(n1, 1), -1), 0};
+        if (n1 == 0 || n2 == 0 || tb.expiredNow()) {
+            nodeCountOut = 0;
+            return {std::vector<int>(std::max(n1, 1), -1), 0};
+        }
 
         std::map<std::vector<int>, std::vector<int>> queryGroups;
         for (int atom = 0; atom < n1; ++atom)
@@ -3242,7 +3246,7 @@ inline int64_t orientationConstraintMass(const MolGraph& query, const MolGraph& 
 
 inline int orientationSeedProbeSize(const MolGraph& query, const MolGraph& target,
                                     const ChemOptions& chem) {
-    if (query.n == 0 || target.n == 0) return 0;
+    if (query.n == 0 || target.n == 0 || global_deadline::expired()) return 0;
     GraphBuilder gb(query, target, chem, false);
     TimeBudget tb(24LL * 60 * 60 * 1000);
     int upperBound = labelFrequencyUpperBound(query, target, chem);
@@ -3252,7 +3256,7 @@ inline int orientationSeedProbeSize(const MolGraph& query, const MolGraph& targe
 
 inline int orientationMcSplitProbeSize(const MolGraph& query, const MolGraph& target,
                                        const ChemOptions& chem) {
-    if (query.n == 0 || target.n == 0) return 0;
+    if (query.n == 0 || target.n == 0 || global_deadline::expired()) return 0;
     GraphBuilder gb(query, target, chem, false);
     TimeBudget tb(24LL * 60 * 60 * 1000);
     int64_t nodeCount = 0;

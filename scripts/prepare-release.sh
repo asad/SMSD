@@ -6,7 +6,7 @@ SMSD_RELEASE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$SMSD_RELEASE_ROOT"
 SMSD_RELEASE_PYTHON="${SMSD_RELEASE_PYTHON:-python3}"
 "$SMSD_RELEASE_PYTHON" -c 'import sys; assert sys.prefix != sys.base_prefix, "Run with a dedicated Python virtual environment"'
-SMSD_RELEASE_VERSION="$("$SMSD_RELEASE_PYTHON" -c 'import xml.etree.ElementTree as E; print(E.parse("pom.xml").findtext("{http://maven.apache.org/POM/4.0.0}version"))')"
+SMSD_RELEASE_VERSION="$("$SMSD_RELEASE_PYTHON" -c 'import xml.etree.ElementTree as E; print(E.parse("java/pom.xml").findtext("{http://maven.apache.org/POM/4.0.0}version"))')"
 SMSD_RELEASE_FINAL_DIR="$SMSD_RELEASE_ROOT/dist/release-$SMSD_RELEASE_VERSION"
 SMSD_RELEASE_JOBS="${SMSD_RELEASE_JOBS:-4}"
 if [[ "$(uname -s)" == "Darwin" ]]; then
@@ -18,16 +18,17 @@ SMSD_RELEASE_DIR="$(mktemp -d "$SMSD_RELEASE_ROOT/build/release-assets.XXXXXX")"
 SMSD_RELEASE_SOURCE="$(mktemp -d "$SMSD_RELEASE_ROOT/build/release-source.XXXXXX")"
 trap 'rm -rf "$SMSD_RELEASE_SOURCE" "$SMSD_RELEASE_DIR"' EXIT
 
-# Include the slow chemistry/benchmark suites and generate library documentation.
-mvn -B -Dslow.tests.exclude=nothing clean verify \
+# Include the slow chemistry suites and generate library documentation.
+mvn -f java/pom.xml -B -Dslow.tests.exclude=nothing clean verify \
   org.apache.maven.plugins:maven-source-plugin:3.3.1:jar-no-fork \
   org.apache.maven.plugins:maven-javadoc-plugin:3.6.3:jar
-src/scripts/smsd --version
-target/appassembler/bin/smsd --version
+java/src/scripts/smsd --version
+java/target/appassembler/bin/smsd --version
 
 # Debug keeps C++ assert-based checks enabled. GPU builds are validated separately.
 cmake -S cpp -B build/release-preflight -DCMAKE_BUILD_TYPE=Debug \
   -DSMSD_BUILD_TESTS=ON -DSMSD_BUILD_PYTHON=OFF \
+  -DSMSD_BUILD_OPENMP=ON -DSMSD_WITH_RDKIT=OFF \
   -DSMSD_BUILD_CUDA=OFF -DSMSD_BUILD_METAL=OFF
 cmake --build build/release-preflight --parallel "$SMSD_RELEASE_JOBS"
 ctest --test-dir build/release-preflight --output-on-failure
@@ -54,6 +55,9 @@ SMSD_RELEASE_WHEELS=("$SMSD_RELEASE_DIR"/smsd-*.whl)
 "$SMSD_RELEASE_PYTHON" -m twine check --strict \
   "$SMSD_RELEASE_DIR/smsd-$SMSD_RELEASE_VERSION.tar.gz" "${SMSD_RELEASE_WHEELS[0]}"
 "$SMSD_RELEASE_PYTHON" -m pip install --no-deps --force-reinstall "${SMSD_RELEASE_WHEELS[0]}"
+"$SMSD_RELEASE_PYTHON" scripts/check_python_wheel.py \
+  --source "$SMSD_RELEASE_SOURCE/smsd-$SMSD_RELEASE_VERSION" \
+  --require-rdkit --require-openmp
 "$SMSD_RELEASE_PYTHON" - "$SMSD_RELEASE_VERSION" <<'PY'
 import importlib.metadata
 from pathlib import Path
@@ -66,20 +70,21 @@ print("Verified installed wheel:", smsd.__file__)
 PY
 "$SMSD_RELEASE_PYTHON" -m pytest python/tests -q --import-mode=importlib
 
-cp "target/smsd-$SMSD_RELEASE_VERSION.jar" \
-  "target/smsd-$SMSD_RELEASE_VERSION-jar-with-dependencies.jar" \
-  "target/smsd-$SMSD_RELEASE_VERSION-sources.jar" \
-  "target/smsd-$SMSD_RELEASE_VERSION-javadoc.jar" "$SMSD_RELEASE_DIR/"
+cp "java/target/smsd-$SMSD_RELEASE_VERSION.jar" \
+  "java/target/smsd-$SMSD_RELEASE_VERSION-jar-with-dependencies.jar" \
+  "java/target/smsd-$SMSD_RELEASE_VERSION-sources.jar" \
+  "java/target/smsd-$SMSD_RELEASE_VERSION-javadoc.jar" "$SMSD_RELEASE_DIR/"
 COPYFILE_DISABLE=1 tar -czf "$SMSD_RELEASE_DIR/smsd-cpp-$SMSD_RELEASE_VERSION-headers.tar.gz" \
   LICENSE NOTICE -C cpp/include smsd
 COPYFILE_DISABLE=1 tar -czf "$SMSD_RELEASE_DIR/smsd-$SMSD_RELEASE_VERSION-cli.tar.gz" \
-  LICENSE NOTICE -C target/appassembler bin repo
+  LICENSE NOTICE -C java/target/appassembler bin repo
 cp docs/RELEASE_NOTES.md "$SMSD_RELEASE_DIR/RELEASE_NOTES.md"
 if [[ -f "docs/VALIDATION_$SMSD_RELEASE_VERSION.md" ]]; then
   cp "docs/VALIDATION_$SMSD_RELEASE_VERSION.md" "$SMSD_RELEASE_DIR/VALIDATION.md"
 fi
-if [[ -f "benchmarks/RESULTS_$SMSD_RELEASE_VERSION.md" ]]; then
-  cp "benchmarks/RESULTS_$SMSD_RELEASE_VERSION.md" "$SMSD_RELEASE_DIR/BENCHMARK_RESULTS.md"
+SMSD_BENCHMARK_REPORT="${SMSD_BENCHMARK_REPORT:-benchmarks/RESULTS_7.2.0.md}"
+if [[ -f "$SMSD_BENCHMARK_REPORT" ]]; then
+  cp "$SMSD_BENCHMARK_REPORT" "$SMSD_RELEASE_DIR/BENCHMARK_RESULTS.md"
 fi
 if [[ -n "${SMSD_BENCHMARK_ARCHIVE:-}" ]]; then
   [[ -f "$SMSD_BENCHMARK_ARCHIVE" ]] || { echo "Benchmark archive not found" >&2; exit 1; }

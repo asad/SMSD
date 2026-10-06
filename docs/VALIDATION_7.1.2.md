@@ -1,7 +1,8 @@
 # SMSD Pro 7.1.2 historical local validation
 
 This records the earlier 7.1.2 preparation against baseline `52733cb`. It is
-not the validation result for current 7.2.0 Unreleased changes. Current
+not the validation result for the current 7.2.1 release. Fresh release checks
+are tracked in [7.2.1 validation](VALIDATION_7.2.1.md). Later historical
 measurements and coverage are linked from the
 [7.2.0 benchmark report](../benchmarks/RESULTS_7.2.0.md) and
 [algorithm review](ALGORITHM_REVIEW.md).
@@ -46,7 +47,7 @@ enabled and disabled, while propagating C++17.
 These are three-run median synthetic measurements with `clang++ -std=c++17 -O3`
 against original commit `52733cb` and the updated headers on the same machine.
 They measure the individual primitives, not whole-application throughput, and
-are not the current 7.2.0 baseline/candidate comparison.
+are not the later 7.2.0 baseline/candidate comparison.
 
 | Primitive | Original | Updated | Ratio |
 |---|---:|---:|---:|

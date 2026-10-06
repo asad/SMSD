@@ -318,7 +318,7 @@ def find_smsd_jar(user_path: str | None) -> Path | None:
         p = Path(user_path)
         if p.exists():
             return p
-    target = SCRIPT_DIR.parent / "target"
+    target = SCRIPT_DIR.parent / "java" / "target"
     if target.is_dir():
         jars = sorted(target.glob("smsd-*-jar-with-dependencies.jar"), key=lambda p: p.stat().st_mtime)
         if jars:

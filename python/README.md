@@ -17,7 +17,9 @@ RDKit and CDK are not required for the core SMSD path.
 
 Performance depends on corpus, chemistry constraints, search budget and
 result validity. See the [current local report](https://github.com/asad/SMSD/blob/master/benchmarks/RESULTS_7.2.0.md)
-for the 7.1.2 baseline, proposed 7.2.0 changes and RDKit 2026.09.1 comparison.
+for the 7.1.2 baseline, 7.2.0 source candidate and RDKit 2026.09.1 comparison.
+The 7.2.1 deadline regression is recorded separately. Full corpus comparisons
+have not been rerun for its patched source, layout and packaging changes.
 The MoleculeNet-derived Dalke-style pairs are not the original Dalke benchmark.
 
 ## Install
@@ -27,7 +29,9 @@ pip install smsd
 ```
 
 Build from source from the repository root, which contains the C++ sources
-and the canonical package metadata:
+and the canonical package metadata. `python/smsd/` contains the Python layer,
+`cpp/` contains its native extension, and the root `pyproject.toml` builds both.
+There is no separate Python manifest under `python/`:
 
 ```bash
 python -m pip install -e ".[dev]"
@@ -35,7 +39,7 @@ python -m build
 ```
 
 The package declares CPython `3.9` or later; wheel availability depends on
-platform and architecture. The proposed 7.2.0 release targets Python 3.14 wheels
+platform and architecture. The proposed 7.2.1 release targets Python 3.14 wheels
 for Linux x86_64 (glibc 2.28+), macOS arm64 (26+) and Windows x86_64, plus a
 source distribution. Each wheel requires an installed-package test on its
 target operating system before publication. Intel macOS and Linux arm64
@@ -131,18 +135,30 @@ from 5,807 to 78.4 microseconds. Small native MCS dispatch increased from
 17.1 to 21.4 microseconds. These checksum-matched measurements exclude setup;
 they describe this workload rather than an application-wide speedup.
 
-The installed CPU wheels each pass **691 Python tests** with **8 skips**
+The historical 7.2.0 installed CPU wheels each passed **691 Python tests** with **8 skips**
 on macOS arm64: Python 3.13.14 with RDKit 2026.09.1, and Python 3.14.8 with
 the published RDKit 2026.03.6 wheel. The 3.14 release wheel bundles OpenMP
 and targets macOS 26 or later. See
-[validation](https://github.com/asad/SMSD/blob/master/docs/VALIDATION_7.2.0.md)
-for scope and reproduction commands. The Linux x86_64 wheel also passes 691
+[7.2.0 validation](https://github.com/asad/SMSD/blob/master/docs/VALIDATION_7.2.0.md)
+for scope and reproduction commands. Its Linux x86_64 wheel also passed 691
 tests with 8 skips on CPython 3.14.5/RDKit 2026.03.6 under local emulation.
-The Windows x86_64 wheel passes the same Python test counts on Windows Server
-2022 with CPython 3.14.7/RDKit 2026.03.6. All 12 native Debug suites also pass
+The corrected 7.2.0 Windows x86_64 wheel passed the same Python test counts
+on Windows Server 2022 with CPython 3.14.7/RDKit 2026.03.6. All 12 native
+Debug suites also passed
 on Windows with MSVC. These checks do not extend the macOS benchmark timings
 to other platforms.
-Corrected Windows runtime packaging still requires a validation rerun before release.
+These 7.2.0 results are separate from 7.2.1 validation.
+The frozen-source 7.2.1 macOS arm64 wheel passed all 12 native Debug suites and
+691 Python tests with 8 skips on Python 3.14.8/RDKit 2026.03.6, with bundled
+OpenMP. Execution was on macOS 27.0.1; the wheel targets macOS 26+, without
+a claim of testing the minimum OS. The same-source Linux x86_64 wheel also
+passed all 12 native suites and 691 Python tests with 8 skips on Python
+3.14.5/RDKit 2026.03.6, using glibc 2.28 under local emulation with bundled
+OpenMP. The Windows Server 2022/AMD64 wheel passed the same test counts on
+Python 3.14.7/RDKit 2026.03.6 with active OpenMP and checked Microsoft runtimes.
+Strict collection of all three wheels passed against one source archive; see
+[7.2.1 validation](https://github.com/asad/SMSD/blob/master/docs/VALIDATION_7.2.1.md).
+Publication remains pending.
 
 ## Circular Fingerprints
 

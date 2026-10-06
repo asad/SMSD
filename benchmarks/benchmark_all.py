@@ -24,7 +24,7 @@ Requirements:
     - Python 3.9+
     - rdkit  (pip install rdkit)
     - JDK 25  (for SMSD CLI)
-    - Built SMSD shaded jar at target/smsd-*-jar-with-dependencies.jar
+    - Built SMSD shaded jar at java/target/smsd-*-jar-with-dependencies.jar
 
 Author: Syed Asad Rahman, BioInception PVT LTD
 """
@@ -47,9 +47,9 @@ from typing import List, Optional, Tuple
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = SCRIPT_DIR.parent
-JAR_PATH = PROJECT_DIR / "target"
-# Fallback: check src/scripts/repo for older shaded jars
-JAR_FALLBACK_DIR = PROJECT_DIR / "src" / "scripts" / "repo"
+JAR_PATH = PROJECT_DIR / "java" / "target"
+# Fallback: check the Java launcher's installed repository.
+JAR_FALLBACK_DIR = PROJECT_DIR / "java" / "src" / "scripts" / "repo"
 
 CPP_BUILD_DIR = PROJECT_DIR / "cpp" / "build"
 CPP_BINARY = CPP_BUILD_DIR / "smsd_benchmark"

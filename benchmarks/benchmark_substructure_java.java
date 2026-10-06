@@ -13,9 +13,9 @@
  *   cd <project-root>
  *   mvn package -DskipTests
  *   mkdir -p build/local-benchmarks/java-classes
- *   javac -cp target/smsd-7.2.0-jar-with-dependencies.jar \
+ *   javac -cp java/target/smsd-7.2.1-jar-with-dependencies.jar \
  *         benchmarks/benchmark_substructure_java.java -d build/local-benchmarks/java-classes
- *   java -cp target/smsd-7.2.0-jar-with-dependencies.jar:build/local-benchmarks/java-classes \
+ *   java -cp java/target/smsd-7.2.1-jar-with-dependencies.jar:build/local-benchmarks/java-classes \
  *         benchmark_substructure_java benchmarks/substructure_pairs.tsv \
  *         build/local-benchmarks/results_substructure.tsv
  *

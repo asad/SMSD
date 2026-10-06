@@ -2,7 +2,43 @@
 
 All notable changes to SMSD Pro are documented in this file.
 
-## [7.2.0] - Unreleased
+## [7.2.1] - Unreleased
+
+### Fixed
+- Native MCS seed searches check the shared deadline before each candidate
+  extension. Already-expired seeds and orientation probes return before setup.
+  This fixes a Linux regression without relaxing its timeout assertion.
+
+### Repository and release packaging
+- Moved Java sources, resources and launchers into `java/src/`, with its Maven
+  module at `java/pom.xml` and build artifacts under `java/target/`. The root
+  Maven aggregator supports `mvn verify`; publishing uses the Java module.
+- Kept C++ under `cpp/` and Python under `python/`, with shared release scripts,
+  documentation and licenses at the root. The root `pyproject.toml` remains
+  the single manifest for the Python package and C++ extension.
+- Restricted the Docker build context to Maven manifests, Java sources and
+  legal files, excluding generated API pages, test reports and build artifacts.
+- Updated current version examples and release artifacts to 7.2.1. The compact
+  release targets portable Java 25 packages and CPython 3.14 CPU/OpenMP wheels
+  for Linux x86_64, macOS arm64 and Windows x86_64, plus a source distribution.
+- Frozen-source local macOS and emulated Linux wheels each pass all 12 native
+  Debug suites and 691 Python tests with 8 optional skips. Native Windows
+  Server 2022 validation passed the same counts; strict collection of all
+  three wheels passed against one source archive. Publication is pending. Track
+  results in `docs/VALIDATION_7.2.1.md`.
+- Adjusted Java test wall-clock guards to 35 seconds around a 30-second drug
+  pair search and 12 seconds around a 10-second pharmacophore search. Search
+  budgets and result assertions are unchanged.
+- Carried forward the reviewed 7.2.0 search and chemistry fixes. The benchmark
+  report, fingerprints, archive names and measured numbers remain 7.2.0
+  evidence. The deadline regression check is separate from those benchmarks;
+  no new cross-solver performance ranking is claimed.
+
+## [7.2.0] - 2026-10-05
+
+Published on GitHub. Maven Central and PyPI remain at 7.1.1. The historical
+validation and benchmark report retain their 7.2.0 source scope; native Windows
+builds were checked separately after publication. Version 7.2.1 is in preparation.
 
 ### Fixed
 - Tautomer matching preserves element identity and other requested chemistry

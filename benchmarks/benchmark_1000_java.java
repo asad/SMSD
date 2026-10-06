@@ -14,9 +14,9 @@
  *   cd <project-root>
  *   mvn package -DskipTests
  *   mkdir -p build/local-benchmarks/java-classes
- *   javac -cp target/smsd-7.2.0-jar-with-dependencies.jar benchmarks/benchmark_1000_java.java -d build/local-benchmarks/java-classes
+ *   javac -cp java/target/smsd-7.2.1-jar-with-dependencies.jar benchmarks/benchmark_1000_java.java -d build/local-benchmarks/java-classes
  *   java -Dsmsd.benchmark.rounds=1 -Dsmsd.benchmark.timeoutMs=1000 \
- *        -cp target/smsd-7.2.0-jar-with-dependencies.jar:build/local-benchmarks/java-classes \
+ *        -cp java/target/smsd-7.2.1-jar-with-dependencies.jar:build/local-benchmarks/java-classes \
  *        benchmark_1000_java benchmarks/diverse_molecules.txt build/local-benchmarks/pool1000
  * Requires JDK 25.
  *

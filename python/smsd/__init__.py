@@ -34,7 +34,7 @@ import importlib.util
 import sys
 from pathlib import Path
 
-__version__ = "7.2.0"
+__version__ = "7.2.1"
 __author__ = "Syed Asad Rahman"
 
 
