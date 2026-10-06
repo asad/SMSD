@@ -239,7 +239,7 @@ mvn -f java/pom.xml -B -Dmaven.repo.local="$SMSD_CENTRAL_CHECK" dependency:get \
 
 Prepare an authenticated draft release after local checks and source freeze.
 Upload the validated JAR, source archive, source manifest and checksum list
-so the Windows job uses the same inputs. Keep the release private while native
+so **Native Windows release packages** (`installers.yml`) uses the same inputs. Keep the release private while native
 Windows checks remain pending.
 
 After all three wheels and all three installers pass collection, regenerate

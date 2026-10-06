@@ -31,7 +31,9 @@ macOS: open the DMG and copy `SMSD.app` to Applications. From Terminal:
 "/Applications/SMSD.app/Contents/MacOS/SMSD" --Q SMI --q CC --T SMI --t CCC --json -
 ```
 
-The application is not notarised. The bundled Java runtime requires macOS 11
+The application is not notarised. If Gatekeeper blocks a verified download,
+follow [Apple's opening instructions](https://support.apple.com/en-gb/102445).
+The bundled Java runtime requires macOS 11
 or later; execution checks use the OS version listed in the release validation.
 Python wheels have a separate macOS 26 minimum.
 

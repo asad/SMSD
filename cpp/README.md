@@ -6,11 +6,12 @@ are in `include/smsd/`, native tests in `tests/`, and the Python extension
 bindings in `bindings/pybind11/`. Java is not required for the native core.
 
 See [the C++ guide](../docs/CPP.md) for APIs, matching contracts, installation
-and RDKit integration. The current source targets 7.2.2. Previous 7.2.1 release checks
-passed all 12 native Debug suites on macOS arm64, emulated Linux x86_64 and
-native Windows x86_64. These CPU/OpenMP builds use the same frozen source.
-See [validation](../docs/VALIDATION_7.2.1.md) for toolchains and execution scope;
-the headers are available in the GitHub release.
+and RDKit integration. The current source targets 7.2.2. All 12 native Debug
+suites pass on macOS arm64 and emulated Linux x86_64. Native Windows checks
+remain pending. The native build inputs are unchanged by the final metadata
+update, and reused evidence is recorded explicitly in
+[current validation](../docs/VALIDATION_7.2.2.md). The
+[7.2.1 results](../docs/VALIDATION_7.2.1.md) retain their historical scope.
 
 ## Build and test
 

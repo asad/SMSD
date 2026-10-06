@@ -619,8 +619,12 @@ pip install ./smsd-7.2.1.tar.gz
 
 The 7.2.2 Java code passed 1,276 tests with 15 opt-in skips on both Java 8
 and Java 25, using the same compiled classes. The shaded JAR, source copies,
-licences and Unix launchers passed compatibility checks. Native installer and
-Python wheel checks are tracked in [7.2.2 validation](docs/VALIDATION_7.2.2.md).
+licences and Unix launchers passed compatibility checks. The macOS arm64 and
+emulated Linux x86_64 wheels each passed 691 installed-package tests with 8
+optional skips; all 12 native Debug suites passed on unchanged native inputs.
+Both DMG and DEB installers passed ten CLI cases and installation/removal checks.
+Native Windows validation remains pending. See
+[7.2.2 validation](docs/VALIDATION_7.2.2.md).
 
 The reorganised 7.2.1 Java module has 1,242 distinct passing cases and 15
 opt-in skips across full and focused runs. Its frozen-source macOS arm64 and

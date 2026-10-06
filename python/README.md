@@ -122,6 +122,12 @@ sim = smsd.similarity("c1ccccc1", "c1ccc(O)cc1")
 
 ## Performance and validation
 
+The 7.2.2 macOS arm64 and emulated Linux x86_64 wheels each pass 691
+installed-package tests with 8 optional skips. All 12 native Debug suites pass
+on unchanged native inputs; reused evidence is identified explicitly. Windows
+validation and publication remain pending. See
+[current validation](https://github.com/asad/SMSD/blob/master/docs/VALIDATION_7.2.2.md).
+
 The [benchmark report](https://github.com/asad/SMSD/blob/master/benchmarks/RESULTS_7.2.0.md)
 records timings alongside atom/bond counts, mapping validity, budgets and
 RDKit cancellation flags. Differences in MCS semantics can make raw size or

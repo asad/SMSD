@@ -37,6 +37,8 @@ aggregates local builds.
 The 7.2.2 code passed 1,276 tests with 15 opt-in skips on both Java 8 and
 Java 25, using the same compiled classes. All four JARs target Java 8 and
 retain source and licence copies; both Unix launchers ran on both runtimes.
+A separate Maven consumer declaring only SMSD passed six SMARTS cases on each
+runtime, confirming the required CDK dependency is resolved transitively.
 Maven publication remains pending. See [current validation](../docs/VALIDATION_7.2.2.md)
 and [historical 7.2.1 results](../docs/VALIDATION_7.2.1.md).
 
