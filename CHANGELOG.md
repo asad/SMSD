@@ -23,7 +23,8 @@ All notable changes to SMSD Pro are documented in this file.
   for Linux x86_64, macOS arm64 and Windows x86_64, plus a source distribution.
 - Frozen-source local macOS and emulated Linux wheels each pass all 12 native
   Debug suites and 691 Python tests with 8 optional skips. Native Windows
-  execution, full three-wheel collection and publication are pending. Track
+  Server 2022 validation passed the same counts; strict collection of all
+  three wheels passed against one source archive. Publication is pending. Track
   results in `docs/VALIDATION_7.2.1.md`.
 - Adjusted Java test wall-clock guards to 35 seconds around a 30-second drug
   pair search and 12 seconds around a 10-second pharmacophore search. Search

@@ -154,8 +154,9 @@ OpenMP. Execution was on macOS 27.0.1; the wheel targets macOS 26+, without
 a claim of testing the minimum OS. The same-source Linux x86_64 wheel also
 passed all 12 native suites and 691 Python tests with 8 skips on Python
 3.14.5/RDKit 2026.03.6, using glibc 2.28 under local emulation with bundled
-OpenMP. Native Windows execution and full three-wheel collection remain
-pending; see
+OpenMP. The Windows Server 2022/AMD64 wheel passed the same test counts on
+Python 3.14.7/RDKit 2026.03.6 with active OpenMP and checked Microsoft runtimes.
+Strict collection of all three wheels passed against one source archive; see
 [7.2.1 validation](https://github.com/asad/SMSD/blob/master/docs/VALIDATION_7.2.1.md).
 Publication remains pending.
 

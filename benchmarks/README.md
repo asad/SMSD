@@ -14,8 +14,10 @@ The focused deadline regression is recorded separately. No new cross-solver
 corpus measurements are attributed to those changes. `RESULTS_7.2.0.md`, its measured numbers, source fingerprints,
 input hashes and the `smsd-7.2.0-benchmark-data.tar.gz` archive retain their
 original names and scope. Commands below use the current checkout layout;
-new 7.2.1 release checks are tracked in
-[validation](../docs/VALIDATION_7.2.1.md).
+new 7.2.1 release checks passed all 12 native suites and 691 installed-wheel
+Python tests with 8 optional skips on macOS, emulated Linux and native Windows.
+These execution checks do not extend the historical benchmark timings to
+other operating systems. See [validation](../docs/VALIDATION_7.2.1.md).
 
 ## Maintained measurements
 

@@ -10,8 +10,10 @@ distribution. Keep one Python version across the wheel set:
 | macOS arm64 | CPython 3.14, macOS 26+ |
 | Windows x86_64 | CPython 3.14, 64-bit Windows |
 
-Publication remains pending. See [7.2.1 validation](VALIDATION_7.2.1.md)
-for the status of fresh builds, target-platform tests and artifact collection.
+All three prepared wheels passed target-platform tests and strict collection
+against one source archive. Linux execution used local emulation. Publication
+remains pending. See [7.2.1 validation](VALIDATION_7.2.1.md) for the complete
+build and artifact record.
 The [7.2.0 validation](VALIDATION_7.2.0.md) records historical execution results. Other
 interpreters and architectures can build from source; they are outside this
 wheel set. Each new wheel must pass its own installed-package tests; a

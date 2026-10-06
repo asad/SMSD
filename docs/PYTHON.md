@@ -21,9 +21,11 @@ python -m pip install rdkit
 The package declares Python 3.9 or later; wheel availability depends on Python,
 platform and architecture. Release preparation targets CPython 3.14 wheels
 for Linux x86_64, macOS arm64 and Windows x86_64, plus a source distribution.
-Local macOS/Linux builds and native GitHub Windows checks must validate the
-same 7.2.1 source before publication. See [7.2.1 validation](VALIDATION_7.2.1.md)
-for pending results. The historical 7.2.0 search comparison runs Python 3.13.14
+Local macOS, emulated Linux and native GitHub Windows builds passed all 12
+native suites and 691 installed-wheel Python tests with 8 optional skips.
+Strict collection checked all three wheels against the same 7.2.1 source;
+publication remains pending. See [7.2.1 validation](VALIDATION_7.2.1.md)
+for versions and scope. The historical 7.2.0 search comparison runs Python 3.13.14
 on macOS arm64 so both versions use the same interpreter and RDKit.
 
 The root `pyproject.toml` is the canonical package manifest. It combines the

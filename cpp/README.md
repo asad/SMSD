@@ -7,7 +7,10 @@ bindings in `bindings/pybind11/`. Java is not required for the native core.
 
 See [the C++ guide](../docs/CPP.md) for APIs, matching contracts, installation
 and RDKit integration. The current source targets 7.2.1; fresh release checks
-are tracked in [validation](../docs/VALIDATION_7.2.1.md).
+passed all 12 native Debug suites on macOS arm64, emulated Linux x86_64 and
+native Windows x86_64. These CPU/OpenMP builds use the same frozen source.
+See [validation](../docs/VALIDATION_7.2.1.md) for toolchains and execution scope;
+publication remains pending.
 
 ## Build and test
 

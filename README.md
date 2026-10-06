@@ -606,9 +606,10 @@ pip install ./smsd-7.2.1.tar.gz
 The reorganised 7.2.1 Java module has 1,242 distinct passing cases and 15
 opt-in skips across full and focused runs. Its frozen-source macOS arm64 and
 emulated Linux x86_64 wheels each passed all 12 native Debug suites and 691
-Python tests with 8 skips on CPython 3.14/RDKit 2026.03.6. Native Windows
-execution and complete three-wheel collection remain pending and are
-tracked in [current validation](docs/VALIDATION_7.2.1.md). The following
+Python tests with 8 skips on CPython 3.14/RDKit 2026.03.6. The native Windows
+Server 2022 wheel passed the same test counts. Strict collection of all three
+wheels against one frozen source archive also passed; publication remains
+pending. See [current validation](docs/VALIDATION_7.2.1.md). The following
 results remain historical 7.2.0 local validation on macOS arm64:
 
 | Suite | Result | Scope |

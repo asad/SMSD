@@ -19,8 +19,9 @@ separate manual workflow and are not required to run the portable CLI.
 Python wheels contain native code and must match the operating system,
 architecture and Python interpreter. Version 7.2.1 targets CPython 3.14 on
 Linux x86_64 (glibc 2.28+), macOS arm64 (macOS 26+) and Windows x86_64.
-Fresh macOS and emulated Linux checks pass; native Windows execution and
-collection of all three wheels remain pending. See
+Fresh macOS, emulated Linux and native Windows checks pass. Strict collection
+of all three wheels against one source archive also passes; publication remains
+pending. See
 [7.2.1 validation](VALIDATION_7.2.1.md). The earlier
 [7.2.0 results](VALIDATION_7.2.0.md) do not validate renamed 7.2.1 artifacts.
 Intel macOS and Linux arm64 are outside this compact wheel set; use a source build. A wheel tagged `cp314` is for ordinary CPython
@@ -154,7 +155,8 @@ from Xcode Command Line Tools on macOS, or MSVC from Visual Studio Build Tools
 with the Desktop development with C++ workload on Windows. On Windows, use a
 Developer PowerShell prompt. The configuration flags below cover both
 single-configuration and Visual Studio generators. Run all native suites
-with assertions enabled; new 7.2.1 results remain pending:
+with assertions enabled; all 12 suites passed on macOS, emulated Linux and
+native Windows for the frozen 7.2.1 source:
 
 ```text
 cmake -S cpp -B build/cpu -DCMAKE_BUILD_TYPE=Debug -DSMSD_BUILD_PYTHON=OFF -DSMSD_BUILD_TESTS=ON -DSMSD_BUILD_METAL=OFF -DSMSD_BUILD_CUDA=OFF
@@ -245,8 +247,9 @@ batch matching.
 
 ## Prepare release assets locally
 
-The Bash preflight below prepares the local platform; its 7.2.1 rerun is pending. Use a dedicated Python
-environment with CMake, a C++17 compiler, and Java 25:
+The Bash preflight below prepares the local platform. The current release
+record lists the separate builds and checks already completed for 7.2.1. Use
+a dedicated Python environment with CMake, a C++17 compiler, and Java 25:
 
 ```bash
 python3.14 -m venv .venv-release

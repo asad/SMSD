@@ -92,8 +92,10 @@ Java packages include SMSD's LICENSE and NOTICE: `META-INF/smsd` for library,
 CLI and source JARs, and `doc-files/smsd` for Javadoc.
 
 The release plan uses local macOS and Linux builds, a native GitHub Windows
-build, and verified collection of three wheels from the same source. Fresh
-platform checks are tracked in
+build, and verified collection of three wheels from the same source. Each
+7.2.1 platform passed all 12 native Debug suites and 691 installed-wheel
+Python tests with 8 optional skips. Strict three-wheel collection passed.
+Fresh platform checks are tracked in
 [7.2.1 validation](VALIDATION_7.2.1.md). The corrected 7.2.0 Windows runtime
 build passed, but remains [historical evidence](VALIDATION_7.2.0.md), not a
 7.2.1 result. Platform execution checks do not extend macOS benchmark timings

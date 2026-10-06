@@ -6,8 +6,8 @@ does not inherit a passing result merely because a 7.2.0 artifact passed.
 
 As checked on 2026-10-06, GitHub has published
 [7.2.0](https://github.com/asad/SMSD/releases/tag/v7.2.0); PyPI and Maven Central
-remain at 7.1.1. No native Windows 7.2.1 workflow has run, and the complete
-wheel collection still requires its Windows artifact.
+remain at 7.1.1. The native Windows 7.2.1 workflow passed, and all three
+wheels have passed strict collection against the same source archive.
 
 ## Source and layout
 
@@ -36,9 +36,9 @@ recorded in the release directory's `SHA256SUMS`.
 | Docker CLI | Passed locally | Filtered source context; Linux arm64/Temurin 25.0.4.1; version/help and validated substructure/MCS results |
 | Linux x86_64 CPU/OpenMP | Passed locally under emulation | Same frozen archive; 12 native Debug suites, 691 Python passes and 8 skips on Python 3.14.5/RDKit 2026.03.6 |
 | Windows cross-compilation | Passed locally; no execution | All 12 native targets compile/link with MinGW GCC 16.2.0 and have AMD64 PE headers; sequential fallback |
-| Windows x86_64 CPU/OpenMP | Pending | Native GitHub Windows build from the exact 7.2.1 source; MSVC Debug suites, repaired DLLs and installed CPython 3.14 tests |
-| Three-wheel collection | macOS/Linux checks passed; Windows pending | Source/version agreement, binary architecture, runtime libraries, wrappers/headers, licenses and all RECORD hashes |
-| Source and release assets | Local set checked; Windows pending | Complete source inputs, no private files, strict metadata checks, CLI/header packages and verified checksums |
+| Windows x86_64 CPU/OpenMP | Passed on Windows Server 2022 | Same frozen archive; 12 MSVC Debug suites, 691 Python passes and 8 skips on Python 3.14.7/RDKit 2026.03.6; repaired DLLs checked |
+| Three-wheel collection | Passed | Source/version agreement, binary architecture, runtime libraries, wrappers/headers, licenses and all RECORD hashes |
+| Source and release assets | Passed locally | Complete source inputs, no private files, strict metadata checks, CLI/header packages and verified checksums |
 | PyPI, Maven Central and GitHub | Pending | Publication followed by clean download/install checks |
 
 The CPU configuration registers 12 native suites with assertions enabled.
@@ -83,7 +83,7 @@ Repeated probes on the same emulated x86_64 host measured about
 checks at candidate boundaries reduced the focused fixture to about 5 ms,
 with valid mappings and exact deadline restoration. The source also skips
 already-expired seed and orientation setup. Fresh full native and installed
-wheel runs now pass on macOS and Linux; the timeout assertion remains unchanged.
+wheel runs now pass on macOS, Linux and Windows; the timeout assertion remains unchanged.
 These timings describe that regression on an emulated host, not a general
 performance comparison.
 
@@ -105,8 +105,33 @@ Emulated execution establishes these checks, not native hardware timings.
 Local MinGW cross-compilation from the frozen archive built all 12 native
 Debug executables with assertions enabled and verified AMD64 PE headers.
 That toolchain has no OpenMP runtime and used the sequential fallback. This
-proves compilation/linking only; the native MSVC Windows wheel and its OpenMP
-runtime still require execution on Windows.
+proves compilation/linking only; the native MSVC build below provides separate
+Windows execution evidence.
+
+The native Windows build passed in
+[run 37394450131](https://github.com/asad/SMSD/actions/runs/37394450131), using
+the byte-identical frozen source archive above. Windows Server 2022/AMD64 ran
+all 12 MSVC Debug suites in 260.51 seconds and the installed-wheel Python suite
+with 691 passes and 8 optional skips in 8.40 seconds. It used CPython 3.14.7,
+RDKit 2026.03.6, pytest 9.1.1 and MSVC 19.44.35229.0; active OpenMP was checked.
+The repaired wheel SHA-256 is
+`36080c0929f8962a27bea33088d98dccd10cc17859f07d98ee21ad5df27e70fb`.
+
+Both bundled Microsoft runtimes (`msvcp140.dll` and `vcomp140.dll`) are AMD64
+release DLLs at version 14.44.35211.0, matching the extension's 14.44 linker
+family. Their hashes match the explicitly selected Visual Studio
+redistributables. Independent PE inspection resolved all 78 imports from those
+DLLs and found no delay imports. Exact Microsoft license copies and the
+supported delvewheel 1.13.1 loader passed inspection. Native execution also
+checked UTF-8 file paths and the installed OpenMP backend. The workflow used
+the updated checkout/upload/download actions and skipped publication.
+
+Strict collection of the macOS, Linux and Windows wheels passed against the
+single frozen archive. All wheel RECORD entries, installed Python wrappers,
+27 C++ headers and legal copies were checked. Strict Twine metadata checks and
+the complete release asset checksum list passed. These checks establish the
+prepared artifacts; clean public download/install checks remain pending until
+publication.
 
 The Docker allowlist excludes generated Java API pages, test reports and
 build artifacts. Inspection of the actual builder COPY layer found only the
@@ -138,17 +163,17 @@ ctest --test-dir build/release-preflight --build-config Debug --output-on-failur
 
 Follow [publishing preparation](PUBLISHING.md) to build macOS and Linux
 locally, validate Windows with the manual GitHub workflow, and retain the
-source manifests and installed-wheel logs. The corrected 7.2.0 Windows run
-([37293365203](https://github.com/asad/SMSD/actions/runs/37293365203)) passed and
-is historical evidence, not a 7.2.1 test result.
+source manifests and installed-wheel logs. The fresh 7.2.1 Windows run is
+[37394450131](https://github.com/asad/SMSD/actions/runs/37394450131). The corrected
+7.2.0 Windows run remains separate historical evidence.
 
 Collect the verified wheels and check the complete set before publishing:
 
 ```bash
 python scripts/collect-release-wheels.py \
   --release-dir dist/release-7.2.1 \
-  --wheel-dir build/platform-release/linux \
-  --wheel-dir build/platform-release/windows
+  --wheel-dir build/platform-release/7.2.1/linux \
+  --wheel-dir build/platform-release/7.2.1/windows-run-37394450131/wheel
 python scripts/collect-release-wheels.py \
   --release-dir dist/release-7.2.1 --check-only
 python -m twine check --strict \
