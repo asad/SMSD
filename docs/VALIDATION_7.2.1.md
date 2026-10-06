@@ -4,6 +4,11 @@ Version 7.2.1 is in preparation; publication is pending. This record tracks
 fresh checks after separating the Java, C++ and Python source modules. It
 does not inherit a passing result merely because a 7.2.0 artifact passed.
 
+As checked on 2026-10-06, GitHub has published
+[7.2.0](https://github.com/asad/SMSD/releases/tag/v7.2.0); PyPI and Maven Central
+remain at 7.1.1. No native Windows 7.2.1 workflow has run, and the complete
+wheel collection still requires its Windows artifact.
+
 ## Source and layout
 
 Java sources and launchers are in `java/src/`, its Maven module is

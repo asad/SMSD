@@ -27,9 +27,9 @@ prepares a compact release for Linux, macOS and Windows. It carries forward
 the reviewed element-preserving tautomer, stereo, objective and symmetry fixes
 from the 7.2.0 source candidate and fixes native seed deadline checks.
 Python wrappers preserve input indices and options; core batches reuse native
-graphs. Java uses **CDK 2.13**. The published release remains
-`7.1.2` on GitHub and `7.1.1` on Maven Central/PyPI until the new artifacts
-are released.
+graphs. Java uses **CDK 2.13**. GitHub's current release is
+[`7.2.0`](https://github.com/asad/SMSD/releases/tag/v7.2.0); Maven Central/PyPI
+remain at `7.1.1`. Version `7.2.1` is in preparation.
 
 ### Local benchmark results
 
@@ -94,9 +94,9 @@ isotopes, atom classes/maps, `R#` plus `M  RGP`, and basic stereo flags.
 ### Java (Download JAR)
 
 ```bash
-curl -LO https://github.com/asad/SMSD/releases/download/v7.1.2/smsd-7.1.2-jar-with-dependencies.jar
+curl -LO https://github.com/asad/SMSD/releases/download/v7.2.0/smsd-7.2.0-jar-with-dependencies.jar
 
-java -jar smsd-7.1.2-jar-with-dependencies.jar \
+java -jar smsd-7.2.0-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 ```
 
@@ -566,8 +566,8 @@ distribution. The portable Java packages require Java 25 on each operating
 system; they do not bundle a Java runtime. The release plan uses local macOS
 and Linux builds, a manually dispatched GitHub Windows build, and collection
 of three verified wheels from the same source. Publication is pending. See
-[publishing steps](docs/PUBLISHING.md); existing GitHub downloads remain at
-7.1.2 until the new release is published.
+[publishing steps](docs/PUBLISHING.md); current GitHub downloads are in the
+[7.2.0 release](https://github.com/asad/SMSD/releases/tag/v7.2.0).
 
 | Download | Description |
 |----------|-------------|

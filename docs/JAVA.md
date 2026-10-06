@@ -35,7 +35,7 @@ mvn -f java/pom.xml install
 ```
 
 The 7.2.1 coordinate is available from that local build until it is published
-to Maven Central. GitHub's 7.1.2 release is separate from the registry version.
+to Maven Central. GitHub's 7.2.0 release is separate from the registry version.
 
 Run the locally built candidate CLI:
 

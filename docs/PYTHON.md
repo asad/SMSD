@@ -5,7 +5,7 @@ MCS, substructure, fingerprints and SVG depiction work without RDKit. RDKit
 is optional for molecule conversion, independent checks and drawing.
 
 The proposed 7.2.1 changes are unreleased. The current PyPI release is
-7.1.1; the GitHub release is 7.1.2. See the [local benchmark report](../benchmarks/RESULTS_7.2.0.md) for
+7.1.1; the GitHub release is 7.2.0. See the [local benchmark report](../benchmarks/RESULTS_7.2.0.md) for
 versions, settings, measurements and limitations.
 
 ## Install and build

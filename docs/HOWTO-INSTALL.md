@@ -4,7 +4,7 @@ This source checkout targets version 7.2.1 with changes under Unreleased. Build
 the checkout to use them. Current measured results and benchmark coverage are in
 [the benchmark report](../benchmarks/RESULTS_7.2.0.md).
 The currently published Maven Central and PyPI packages are 7.1.1; GitHub has
-the [7.1.2 release](https://github.com/asad/SMSD/releases/tag/v7.1.2). The commands
+the [7.2.0 release](https://github.com/asad/SMSD/releases/tag/v7.2.0). The commands
 below use the proposed 7.2.1 source or locally prepared assets and do not assume
 its packages have already been published.
 
@@ -19,8 +19,9 @@ separate manual workflow and are not required to run the portable CLI.
 Python wheels contain native code and must match the operating system,
 architecture and Python interpreter. Version 7.2.1 targets CPython 3.14 on
 Linux x86_64 (glibc 2.28+), macOS arm64 (macOS 26+) and Windows x86_64.
-Fresh execution checks and collection of three wheels from the same source
-are pending; see [7.2.1 validation](VALIDATION_7.2.1.md). The earlier
+Fresh macOS and emulated Linux checks pass; native Windows execution and
+collection of all three wheels remain pending. See
+[7.2.1 validation](VALIDATION_7.2.1.md). The earlier
 [7.2.0 results](VALIDATION_7.2.0.md) do not validate renamed 7.2.1 artifacts.
 Intel macOS and Linux arm64 are outside this compact wheel set; use a source build. A wheel tagged `cp314` is for ordinary CPython
 3.14, not the free-threaded `cp314t` interpreter. Use a source build when a

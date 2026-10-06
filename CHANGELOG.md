@@ -33,10 +33,11 @@ All notable changes to SMSD Pro are documented in this file.
   evidence. The deadline regression check is separate from those benchmarks;
   no new cross-solver performance ranking is claimed.
 
-## [7.2.0] - Source candidate
+## [7.2.0] - 2026-10-05
 
-This candidate was validated during release preparation. Publication will use
-7.2.1; the historical validation and benchmark report retain their 7.2.0 scope.
+Published on GitHub. Maven Central and PyPI remain at 7.1.1. The historical
+validation and benchmark report retain their 7.2.0 source scope; native Windows
+builds were checked separately after publication. Version 7.2.1 is in preparation.
 
 ### Fixed
 - Tautomer matching preserves element identity and other requested chemistry
