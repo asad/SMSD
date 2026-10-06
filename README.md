@@ -200,7 +200,7 @@ ecfp4  = smsd.circular_fingerprint(g, radius=2, fp_size=2048)
 fcfp4  = smsd.circular_fingerprint(g, radius=2, fp_size=2048, mode="fcfp")
 counts = smsd.circular_fingerprint_counts(g, radius=2, fp_size=2048)
 torsion = smsd.topological_torsion("c1ccccc1", fp_size=2048)
-tan    = smsd.overlap_coefficient(ecfp4, ecfp4)
+overlap = smsd.overlap_coefficient(ecfp4, ecfp4)
 
 # --- 2D Layout ---
 g = smsd.parse_smiles("c1ccc2c(c1)cc1ccccc1c2")  # phenanthrene
@@ -507,7 +507,7 @@ partial ring fragments are accepted.
 | Windows | OpenMP | CUDA |
 | Any (no GPU) | OpenMP | Automatic CPU fallback |
 
-GPU acceleration covers RASCAL batch screening, Tanimoto clustering, and substructure domain initialization. Recursive matching runs on CPU. Dispatch: `CUDA -> Metal -> OpenMP -> sequential`.
+Available GPU backends provide screening and substructure domain initialisation. Recursive matching and core batch matching run on the CPU. Release wheels use CPU/OpenMP; GPU builds require separate hardware validation.
 
 ### Performance Caching
 
@@ -529,7 +529,7 @@ Call `SearchEngine.clearMolGraphCache()` (Java) or reuse `MolGraph` instances (C
 
 | Tool | Description |
 |---|---|
-| **CIP R/S/E/Z assignment** | Full digraph-based stereo descriptors (IUPAC 2013 Rules 1-5) including Rule 3 (Z > E), like/unlike pairing, and pseudoasymmetric r/s |
+| **CIP R/S/E/Z assignment** | Native R/S/E/Z and pseudoasymmetric stereo assignment; see validation scope |
 | Circular fingerprint (ECFP/FCFP) | Tautomer-aware Morgan/ECFP with configurable radius (-1 = whole molecule) |
 | Count-based ECFP/FCFP | `ecfpCounts()` / `fcfpCounts()` — retain feature multiplicities |
 | Topological Torsion fingerprint | 4-atom path with atom typing (path descriptor) |

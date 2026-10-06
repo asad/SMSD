@@ -22,7 +22,7 @@ To run the same compiled tests on a Java 8 runtime while Maven uses Java 25:
 
 ```bash
 mvn -f java/pom.xml -Dslow.tests.exclude=nothing \
-  "-Djvm=$SMSD_JAVA8_HOME/bin/java" test
+  "-Djvm=$SMSD_JAVA8_HOME/bin/java" surefire:test
 ```
 
 Set `SMSD_JAVA8_HOME` to an installed Java 8 JDK. Published 7.2.1 JARs require

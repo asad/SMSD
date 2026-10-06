@@ -4,6 +4,8 @@ All notable changes to SMSD Pro are documented in this file.
 
 ## [7.2.2] - Unreleased
 
+- Include CDK SMARTS transitively for Maven library users.
+
 ### Java compatibility
 - Target Java 8 bytecode and APIs; prefer Java 25 LTS for builds and bundled installers.
 - Replace public result records with final value classes. Constructors, accessors,

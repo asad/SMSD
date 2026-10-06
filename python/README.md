@@ -197,13 +197,13 @@ fcfp4 = smsd.fingerprint_from_smiles("c1ccccc1", radius=2, fp_size=2048, mode="f
 # ECFP6 (radius 3, captures larger environments)
 ecfp6 = smsd.fingerprint_from_smiles("c1ccccc1", radius=3, fp_size=2048)
 
-# ECFP2 (radius 1, smaller neighborhoods)
+# ECFP2 (radius 1, smaller neighbourhoods)
 ecfp2 = smsd.fingerprint_from_smiles("c1ccccc1", radius=1, fp_size=2048)
 
 # Whole molecule (radius -1 = expand until convergence)
 whole = smsd.fingerprint_from_smiles("c1ccccc1", radius=-1, fp_size=2048)
 
-# Tanimoto similarity (works with any fingerprint type)
+# Overlap coefficient (works with any fingerprint type)
 sim = smsd.overlap_coefficient(
     smsd.fingerprint_from_smiles("c1ccccc1", radius=2),
     smsd.fingerprint_from_smiles("c1ccc(O)cc1", radius=2))

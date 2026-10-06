@@ -1,6 +1,7 @@
 # SMSD 7.2.2
 
 - Fix Java CLI CML and PDB input.
+- Include the SMARTS dependency for Maven library users.
 - Target Java 8 or later; prefer Java 25 LTS for builds and execution.
 - Reject empty files and files containing multiple molecules/models; use SDF for batch targets.
 - Add Windows MSI, macOS DMG and Linux DEB installers with bundled Java 25.

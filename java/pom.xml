@@ -106,10 +106,9 @@
     <dependency>
       <groupId>org.openscience.cdk</groupId><artifactId>cdk-smiles</artifactId><version>${cdk.version}</version>
     </dependency>
-    <!-- Newer SMARTS API (SmartsPattern). Optional to avoid forcing it. -->
+    <!-- SMARTS matching is part of the public search API. -->
     <dependency>
       <groupId>org.openscience.cdk</groupId><artifactId>cdk-smarts</artifactId><version>${cdk.version}</version>
-      <optional>true</optional>
     </dependency>
     <!-- CDK DfPattern / Mappings / Pattern — needed by Standardiser and benchmark -->
     <dependency>
