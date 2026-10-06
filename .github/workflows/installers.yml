@@ -46,7 +46,80 @@ jobs:
             --pattern "smsd-$version-jar-with-dependencies.jar" --pattern "smsd-$version.tar.gz" `
             --pattern SOURCE_MANIFEST.json --pattern SHA256SUMS
           if ($LASTEXITCODE -ne 0) { throw 'Release input download failed' }
-          python -c "from pathlib import Path; import hashlib,json; p=Path('release-input'); rows=(p/'SHA256SUMS').read_text().splitlines(); sums={r.split(maxsplit=1)[1].lstrip('*'):r.split()[0] for r in rows}; files=[f for f in p.iterdir() if f.name!='SHA256SUMS']; assert len(files)==3; assert all(sums.get(f.name)==hashlib.sha256(f.read_bytes()).hexdigest() for f in files); m=json.loads((p/'SOURCE_MANIFEST.json').read_text()); assert m['working_tree_clean'] and m['release_ref'] and m['source_commit']; print('Verified JAR, source archive and source manifest')"
+          $check = @'
+          from pathlib import Path, PurePosixPath
+          import hashlib
+          import json
+          import re
+          import subprocess
+          import sys
+          import tarfile
+
+          sys.path.insert(0, str(Path('scripts').resolve()))
+          from build_java_installer import require, release_inputs
+          from build_python_wheels import inspect_source
+
+          def git(*arguments):
+              return subprocess.check_output(['git', *arguments], text=True, encoding='utf-8').strip()
+
+          version, tag = sys.argv[1:]
+          directory = Path('release-input')
+          names = {f'smsd-{version}-jar-with-dependencies.jar', f'smsd-{version}.tar.gz', 'SOURCE_MANIFEST.json'}
+          require({path.name for path in directory.iterdir()} == names | {'SHA256SUMS'},
+                  'Release input filenames differ from the selected version')
+          sums = {}
+          for line in (directory / 'SHA256SUMS').read_text(encoding='utf-8').splitlines():
+              row = re.fullmatch(r'([0-9a-f]{64}) [ *](.+)', line)
+              require(row is not None and row[2] not in sums, 'Malformed or duplicate release checksum')
+              sums[row[2]] = row[1]
+          require(all(sums.get(name) == hashlib.sha256((directory / name).read_bytes()).hexdigest()
+                      for name in names), 'Release input checksum differs')
+          require(release_inputs(directory)['version'] == version, 'CLI JAR release version differs')
+          manifest = json.loads((directory / 'SOURCE_MANIFEST.json').read_text(encoding='utf-8'))
+          require(manifest.get('working_tree_clean') is True, 'Source freeze must have a clean checkout')
+          source = inspect_source(directory / f'smsd-{version}.tar.gz')
+          for field in ('version', 'sdist', 'sdist_sha256', 'source_file_count'):
+              require(manifest.get(field) == source[field], 'Source manifest identity differs: ' + field)
+          require(source['version'] == version, 'SDK metadata differs from the selected release')
+          for field in ('release_ref', 'source_commit'):
+              require(isinstance(manifest.get(field), str)
+                      and re.fullmatch(r'[0-9a-f]{40}', manifest[field]) is not None,
+                      'Expected a full frozen Git identity: ' + field)
+
+          fetch = ['fetch', '--no-tags', '--filter=blob:none']
+          if git('rev-parse', '--is-shallow-repository') == 'true':
+              fetch.append('--unshallow')
+          subprocess.run(['git', *fetch, 'origin', manifest['release_ref'],
+                          f'refs/tags/{tag}:refs/tags/{tag}'], check=True)
+          frozen = git('rev-parse', '--verify', manifest['release_ref'] + '^{commit}')
+          require(frozen == manifest['source_commit'], 'Frozen source ref resolves to another commit')
+          tagged = git('rev-parse', '--verify', f'refs/tags/{tag}' + '^{commit}')
+          subprocess.run(['git', 'merge-base', '--is-ancestor', frozen, tagged], check=True)
+          # Validation notes can advance after the frozen SDK. Production files cannot.
+          changed = git('diff', '--name-only', frozen, tagged).splitlines()
+          require(all(Path(name).suffix in ('.md', '.rst') or name == 'CITATION.cff' for name in changed),
+                  'Tagged production files differ from the frozen SDK source')
+          tree = subprocess.check_output(['git', 'ls-tree', '-r', '-z', '--full-tree', frozen])
+          blobs = {}
+          for entry in tree.split(b'\0'):
+              if entry:
+                  metadata, name = entry.split(b'\t', 1)
+                  mode, kind, identity = metadata.split()
+                  if kind == b'blob' and mode in (b'100644', b'100755'):
+                      blobs[name.decode('utf-8')] = identity.decode('ascii')
+          with tarfile.open(directory / source['sdist'], 'r:gz') as archive:
+              for member in archive.getmembers():
+                  if not member.isfile():
+                      continue
+                  relative = PurePosixPath(*PurePosixPath(member.name).parts[1:]).as_posix()
+                  if relative == 'PKG-INFO':
+                      continue
+                  content = archive.extractfile(member).read()
+                  identity = hashlib.sha1(b'blob ' + str(len(content)).encode('ascii') + b'\0' + content).hexdigest()
+                  require(blobs.get(relative) == identity, 'SDK file differs from frozen source: ' + relative)
+          print('Verified JAR, SDK, source manifest and frozen Git identity')
+          '@
+          $check | python - "$version" "$env:RELEASE_TAG"
           if ($LASTEXITCODE -ne 0) { throw 'Release checksum verification failed' }
           "SMSD_RELEASE_VERSION=$version" >> $env:GITHUB_ENV
       - name: Download the pinned Temurin 25 JDK
