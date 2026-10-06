@@ -1,6 +1,6 @@
 # SMSD Pro — Examples, How-To, and Cautions
 
-**Version 7.2.1 (GitHub release)** | Copyright (c) 2018-2026 BioInception PVT LTD
+**Version 7.2.2 (in preparation)** | Copyright (c) 2018-2026 BioInception PVT LTD
 
 This document provides worked examples for every major SMSD Pro feature. Each section
 includes runnable code, expected output, practical cautions, and performance notes.
@@ -63,7 +63,7 @@ import com.bioinception.smsd.core.*;
 
 SMSD smsd = new SMSD(mol1, mol2, new ChemOptions());
 boolean isSub = smsd.isSubstructure();
-var mapping = smsd.findMCS();
+java.util.Map<Integer, Integer> mapping = smsd.findMCS();
 ```
 
 ### C++

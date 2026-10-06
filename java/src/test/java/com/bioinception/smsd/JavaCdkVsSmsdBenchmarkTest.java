@@ -6,6 +6,8 @@
  */
 package com.bioinception.smsd;
 
+import static com.bioinception.smsd.TestSupport.repeat;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.bioinception.smsd.core.*;
@@ -121,17 +123,87 @@ public class JavaCdkVsSmsdBenchmarkTest extends TestBase {
     };
 
     // -----------------------------------------------------------------------
-    // Result record
+    // Pair results
     // -----------------------------------------------------------------------
-    private record PairResult(
-            String name,
-            String category,
-            long smsdBestNs,
-            long smsdMedianNs,
-            boolean smsdHit,
-            long cdkBestNs,
-            long cdkMedianNs,
-            boolean cdkHit) {}
+    private static final class PairResult {
+      private final String name;
+      private final String category;
+      private final long smsdBestNs;
+      private final long smsdMedianNs;
+      private final boolean smsdHit;
+      private final long cdkBestNs;
+      private final long cdkMedianNs;
+      private final boolean cdkHit;
+
+      PairResult(
+          String name,
+          String category,
+          long smsdBestNs,
+          long smsdMedianNs,
+          boolean smsdHit,
+          long cdkBestNs,
+          long cdkMedianNs,
+          boolean cdkHit) {
+        this.name = name;
+        this.category = category;
+        this.smsdBestNs = smsdBestNs;
+        this.smsdMedianNs = smsdMedianNs;
+        this.smsdHit = smsdHit;
+        this.cdkBestNs = cdkBestNs;
+        this.cdkMedianNs = cdkMedianNs;
+        this.cdkHit = cdkHit;
+      }
+
+      public String name() { return name; }
+      public String category() { return category; }
+      public long smsdBestNs() { return smsdBestNs; }
+      public long smsdMedianNs() { return smsdMedianNs; }
+      public boolean smsdHit() { return smsdHit; }
+      public long cdkBestNs() { return cdkBestNs; }
+      public long cdkMedianNs() { return cdkMedianNs; }
+      public boolean cdkHit() { return cdkHit; }
+
+      @Override
+      public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof PairResult)) return false;
+        PairResult value = (PairResult) other;
+        return java.util.Objects.equals(name, value.name)
+          && java.util.Objects.equals(category, value.category)
+          && smsdBestNs == value.smsdBestNs
+          && smsdMedianNs == value.smsdMedianNs
+          && smsdHit == value.smsdHit
+          && cdkBestNs == value.cdkBestNs
+          && cdkMedianNs == value.cdkMedianNs
+          && cdkHit == value.cdkHit;
+      }
+
+      @Override
+      public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(name);
+        hash = 31 * hash + java.util.Objects.hashCode(category);
+        hash = 31 * hash + java.util.Objects.hashCode(smsdBestNs);
+        hash = 31 * hash + java.util.Objects.hashCode(smsdMedianNs);
+        hash = 31 * hash + java.util.Objects.hashCode(smsdHit);
+        hash = 31 * hash + java.util.Objects.hashCode(cdkBestNs);
+        hash = 31 * hash + java.util.Objects.hashCode(cdkMedianNs);
+        hash = 31 * hash + java.util.Objects.hashCode(cdkHit);
+        return hash;
+      }
+
+      @Override
+      public String toString() {
+        return "PairResult[name=" + name
+            + ", category=" + category
+            + ", smsdBestNs=" + smsdBestNs
+            + ", smsdMedianNs=" + smsdMedianNs
+            + ", smsdHit=" + smsdHit
+            + ", cdkBestNs=" + cdkBestNs
+            + ", cdkMedianNs=" + cdkMedianNs
+            + ", cdkHit=" + cdkHit + "]";
+      }
+    }
 
     // -----------------------------------------------------------------------
     // Core benchmark test
@@ -141,14 +213,14 @@ public class JavaCdkVsSmsdBenchmarkTest extends TestBase {
     @DisplayName("CDK DfPattern vs SMSD VF2++ — substructure (all 20 pairs)")
     void cdkVsSmsdSubstructure() throws Exception {
         System.out.println();
-        System.out.println("=".repeat(110));
+        System.out.println(repeat("=", 110));
         System.out.println("Java CDK DfPattern vs SMSD Pro VF2++ — Substructure Diagnostic");
         System.out.printf("Protocol: %d warmup + %d measured, median reported | All %d molecule pairs%n",
                 WARMUP, ITERS, PAIRS.length);
-        System.out.println("=".repeat(110));
+        System.out.println(repeat("=", 110));
         System.out.printf(" # %-28s %-20s %12s %12s %7s %7s%n",
                 "Pair", "Category", "SMSD(us)", "CDK(us)", "SMSD?", "CDK?");
-        System.out.println("-".repeat(110));
+        System.out.println(repeat("-", 110));
 
         List<PairResult> results = new ArrayList<>();
         ChemOptions opts = new ChemOptions();
@@ -231,7 +303,7 @@ public class JavaCdkVsSmsdBenchmarkTest extends TestBase {
                     cdkBest, cdkMedian, cdkHit));
         }
 
-        System.out.println("-".repeat(110));
+        System.out.println(repeat("-", 110));
         System.out.println();
         System.out.printf("SUMMARY (%d pairs)%n", results.size());
         System.out.println("  Latencies are descriptive; matching policies and time-budget controls differ.");

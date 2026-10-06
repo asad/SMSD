@@ -5,6 +5,8 @@
  * See the NOTICE file for attribution, trademark, and algorithm IP terms. */
 package com.bioinception.smsd.core;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.*;
 import java.lang.ref.WeakReference;
 import java.util.concurrent.ConcurrentHashMap;
@@ -140,15 +142,162 @@ public final class SearchEngine {
    *
    * <p>Returned by {@link #isSubstructureWithStats} and {@link #findAllSubstructuresWithStats}.
    */
-  public record SubstructureStats(long nodesVisited, long backtracks, long candidatesTried,
-      long prunesAtom, long prunesBond, long prunesDegree, long prunesNLF,
-      long timeMillis, boolean timeout, int solutions) {}
+  public static final class SubstructureStats {
+    private final long nodesVisited;
+    private final long backtracks;
+    private final long candidatesTried;
+    private final long prunesAtom;
+    private final long prunesBond;
+    private final long prunesDegree;
+    private final long prunesNLF;
+    private final long timeMillis;
+    private final boolean timeout;
+    private final int solutions;
+
+    @JsonCreator
+    public SubstructureStats(
+        @JsonProperty("nodesVisited") long nodesVisited,
+        @JsonProperty("backtracks") long backtracks,
+        @JsonProperty("candidatesTried") long candidatesTried,
+        @JsonProperty("prunesAtom") long prunesAtom,
+        @JsonProperty("prunesBond") long prunesBond,
+        @JsonProperty("prunesDegree") long prunesDegree,
+        @JsonProperty("prunesNLF") long prunesNLF,
+        @JsonProperty("timeMillis") long timeMillis,
+        @JsonProperty("timeout") boolean timeout,
+        @JsonProperty("solutions") int solutions) {
+      this.nodesVisited = nodesVisited;
+      this.backtracks = backtracks;
+      this.candidatesTried = candidatesTried;
+      this.prunesAtom = prunesAtom;
+      this.prunesBond = prunesBond;
+      this.prunesDegree = prunesDegree;
+      this.prunesNLF = prunesNLF;
+      this.timeMillis = timeMillis;
+      this.timeout = timeout;
+      this.solutions = solutions;
+    }
+
+    @JsonProperty("nodesVisited")
+    public long nodesVisited() { return nodesVisited; }
+    @JsonProperty("backtracks")
+    public long backtracks() { return backtracks; }
+    @JsonProperty("candidatesTried")
+    public long candidatesTried() { return candidatesTried; }
+    @JsonProperty("prunesAtom")
+    public long prunesAtom() { return prunesAtom; }
+    @JsonProperty("prunesBond")
+    public long prunesBond() { return prunesBond; }
+    @JsonProperty("prunesDegree")
+    public long prunesDegree() { return prunesDegree; }
+    @JsonProperty("prunesNLF")
+    public long prunesNLF() { return prunesNLF; }
+    @JsonProperty("timeMillis")
+    public long timeMillis() { return timeMillis; }
+    @JsonProperty("timeout")
+    public boolean timeout() { return timeout; }
+    @JsonProperty("solutions")
+    public int solutions() { return solutions; }
+
+    @Override
+    public final boolean equals(Object other) {
+      if (this == other) return true;
+      if (!(other instanceof SubstructureStats)) return false;
+      SubstructureStats that = (SubstructureStats) other;
+      return nodesVisited == that.nodesVisited
+          && backtracks == that.backtracks
+          && candidatesTried == that.candidatesTried
+          && prunesAtom == that.prunesAtom
+          && prunesBond == that.prunesBond
+          && prunesDegree == that.prunesDegree
+          && prunesNLF == that.prunesNLF
+          && timeMillis == that.timeMillis
+          && timeout == that.timeout
+          && solutions == that.solutions;
+    }
+
+    @Override
+    public final int hashCode() {
+      int hash = 0;
+      hash = 31 * hash + Long.hashCode(nodesVisited);
+      hash = 31 * hash + Long.hashCode(backtracks);
+      hash = 31 * hash + Long.hashCode(candidatesTried);
+      hash = 31 * hash + Long.hashCode(prunesAtom);
+      hash = 31 * hash + Long.hashCode(prunesBond);
+      hash = 31 * hash + Long.hashCode(prunesDegree);
+      hash = 31 * hash + Long.hashCode(prunesNLF);
+      hash = 31 * hash + Long.hashCode(timeMillis);
+      hash = 31 * hash + Boolean.hashCode(timeout);
+      hash = 31 * hash + Integer.hashCode(solutions);
+      return hash;
+    }
+
+    @Override
+    public final String toString() {
+      return "SubstructureStats[nodesVisited=" + nodesVisited
+          + ", backtracks=" + backtracks
+          + ", candidatesTried=" + candidatesTried
+          + ", prunesAtom=" + prunesAtom
+          + ", prunesBond=" + prunesBond
+          + ", prunesDegree=" + prunesDegree
+          + ", prunesNLF=" + prunesNLF
+          + ", timeMillis=" + timeMillis
+          + ", timeout=" + timeout
+          + ", solutions=" + solutions + "]";
+    }
+  }
 
   /**
    * Result of a substructure search: match outcome, mappings, and detailed statistics.
    */
-  public record SubstructureResult(boolean exists, List<Map<Integer, Integer>> mappings,
-      SubstructureStats stats) {}
+  public static final class SubstructureResult {
+    private final boolean exists;
+    private final List<Map<Integer, Integer>> mappings;
+    private final SubstructureStats stats;
+
+    @JsonCreator
+    public SubstructureResult(
+        @JsonProperty("exists") boolean exists,
+        @JsonProperty("mappings") List<Map<Integer, Integer>> mappings,
+        @JsonProperty("stats") SubstructureStats stats) {
+      this.exists = exists;
+      this.mappings = mappings;
+      this.stats = stats;
+    }
+
+    @JsonProperty("exists")
+    public boolean exists() { return exists; }
+    @JsonProperty("mappings")
+    public List<Map<Integer, Integer>> mappings() { return mappings; }
+    @JsonProperty("stats")
+    public SubstructureStats stats() { return stats; }
+
+    @Override
+    public final boolean equals(Object other) {
+      if (this == other) return true;
+      if (!(other instanceof SubstructureResult)) return false;
+      SubstructureResult that = (SubstructureResult) other;
+      return exists == that.exists
+          && Objects.equals(mappings, that.mappings)
+          && Objects.equals(stats, that.stats);
+    }
+
+    @Override
+    public final int hashCode() {
+      int hash = 0;
+      hash = 31 * hash + Boolean.hashCode(exists);
+      hash = 31 * hash + Objects.hashCode(mappings);
+      hash = 31 * hash + Objects.hashCode(stats);
+      return hash;
+    }
+
+    @Override
+    public final String toString() {
+      return "SubstructureResult[exists=" + exists
+          + ", mappings=" + mappings
+          + ", stats=" + stats + "]";
+    }
+  }
 
   /**
    * Configuration options for MCS computation.
@@ -247,8 +396,61 @@ public final class SearchEngine {
    *
    * @since 6.3.0
    */
-  public record MCSResult(Map<Integer, Integer> mapping, int size, double overlapCoefficient,
-      String mcsSmiles) {
+  public static final class MCSResult {
+    private final Map<Integer, Integer> mapping;
+    private final int size;
+    private final double overlapCoefficient;
+    private final String mcsSmiles;
+
+    @JsonCreator
+    public MCSResult(
+        @JsonProperty("mapping") Map<Integer, Integer> mapping,
+        @JsonProperty("size") int size,
+        @JsonProperty("overlapCoefficient") double overlapCoefficient,
+        @JsonProperty("mcsSmiles") String mcsSmiles) {
+      this.mapping = mapping;
+      this.size = size;
+      this.overlapCoefficient = overlapCoefficient;
+      this.mcsSmiles = mcsSmiles;
+    }
+
+    @JsonProperty("mapping")
+    public Map<Integer, Integer> mapping() { return mapping; }
+    @JsonProperty("size")
+    public int size() { return size; }
+    @JsonProperty("overlapCoefficient")
+    public double overlapCoefficient() { return overlapCoefficient; }
+    @JsonProperty("mcsSmiles")
+    public String mcsSmiles() { return mcsSmiles; }
+
+    @Override
+    public final boolean equals(Object other) {
+      if (this == other) return true;
+      if (!(other instanceof MCSResult)) return false;
+      MCSResult that = (MCSResult) other;
+      return Objects.equals(mapping, that.mapping)
+          && size == that.size
+          && Double.compare(overlapCoefficient, that.overlapCoefficient) == 0
+          && Objects.equals(mcsSmiles, that.mcsSmiles);
+    }
+
+    @Override
+    public final int hashCode() {
+      int hash = 0;
+      hash = 31 * hash + Objects.hashCode(mapping);
+      hash = 31 * hash + Integer.hashCode(size);
+      hash = 31 * hash + Double.hashCode(overlapCoefficient);
+      hash = 31 * hash + Objects.hashCode(mcsSmiles);
+      return hash;
+    }
+
+    @Override
+    public final String toString() {
+      return "MCSResult[mapping=" + mapping
+          + ", size=" + size
+          + ", overlapCoefficient=" + overlapCoefficient
+          + ", mcsSmiles=" + mcsSmiles + "]";
+    }
 
     static MCSResult create(Map<Integer, Integer> mapping, int queryN, int targetN,
         String mcsSmiles) {
@@ -271,33 +473,187 @@ public final class SearchEngine {
    * are implementation details and may be zero or merged into other fields
    * in future versions.
    *
-   * @param orientationUs     internal: pre-search setup
-   * @param seedsUs           internal: seed / fast-path work
-   * @param mcSplitUs         internal: intermediate refinement stage
-   * @param bkUs              internal: clique search stage
-   * @param mcGregorUs        internal: extension stage
-   * @param repairUs          internal: repair / re-run stage
-   * @param totalUs           wall-clock total for the entire findMCS call
-   * @param bestAfterGreedy   internal: best size after fast-path stage
-   * @param bestAfterSeed     internal: best size after seed stage
-   * @param bestAfterBK       internal: best size after clique stage
-   * @param bestAfterMcGregor internal: best size after extension stage
    * @since 6.7.0
    */
-  public record MCSStageTimers(
-      long orientationUs, long seedsUs, long mcSplitUs,
-      long bkUs, long mcGregorUs, long repairUs, long totalUs,
-      int bestAfterGreedy, int bestAfterSeed, int bestAfterBK, int bestAfterMcGregor
-  ) {}
+  public static final class MCSStageTimers {
+    private final long orientationUs;
+    private final long seedsUs;
+    private final long mcSplitUs;
+    private final long bkUs;
+    private final long mcGregorUs;
+    private final long repairUs;
+    private final long totalUs;
+    private final int bestAfterGreedy;
+    private final int bestAfterSeed;
+    private final int bestAfterBK;
+    private final int bestAfterMcGregor;
+
+    /**
+     * Create a timing result.
+     *
+     * @param orientationUs     internal: pre-search setup
+     * @param seedsUs           internal: seed / fast-path work
+     * @param mcSplitUs         internal: intermediate refinement stage
+     * @param bkUs              internal: clique search stage
+     * @param mcGregorUs        internal: extension stage
+     * @param repairUs          internal: repair / re-run stage
+     * @param totalUs           wall-clock total for the entire findMCS call
+     * @param bestAfterGreedy   internal: best size after fast-path stage
+     * @param bestAfterSeed     internal: best size after seed stage
+     * @param bestAfterBK       internal: best size after clique stage
+     * @param bestAfterMcGregor internal: best size after extension stage
+     */
+    @JsonCreator
+    public MCSStageTimers(
+        @JsonProperty("orientationUs") long orientationUs,
+        @JsonProperty("seedsUs") long seedsUs,
+        @JsonProperty("mcSplitUs") long mcSplitUs,
+        @JsonProperty("bkUs") long bkUs,
+        @JsonProperty("mcGregorUs") long mcGregorUs,
+        @JsonProperty("repairUs") long repairUs,
+        @JsonProperty("totalUs") long totalUs,
+        @JsonProperty("bestAfterGreedy") int bestAfterGreedy,
+        @JsonProperty("bestAfterSeed") int bestAfterSeed,
+        @JsonProperty("bestAfterBK") int bestAfterBK,
+        @JsonProperty("bestAfterMcGregor") int bestAfterMcGregor) {
+      this.orientationUs = orientationUs;
+      this.seedsUs = seedsUs;
+      this.mcSplitUs = mcSplitUs;
+      this.bkUs = bkUs;
+      this.mcGregorUs = mcGregorUs;
+      this.repairUs = repairUs;
+      this.totalUs = totalUs;
+      this.bestAfterGreedy = bestAfterGreedy;
+      this.bestAfterSeed = bestAfterSeed;
+      this.bestAfterBK = bestAfterBK;
+      this.bestAfterMcGregor = bestAfterMcGregor;
+    }
+
+    @JsonProperty("orientationUs")
+    public long orientationUs() { return orientationUs; }
+    @JsonProperty("seedsUs")
+    public long seedsUs() { return seedsUs; }
+    @JsonProperty("mcSplitUs")
+    public long mcSplitUs() { return mcSplitUs; }
+    @JsonProperty("bkUs")
+    public long bkUs() { return bkUs; }
+    @JsonProperty("mcGregorUs")
+    public long mcGregorUs() { return mcGregorUs; }
+    @JsonProperty("repairUs")
+    public long repairUs() { return repairUs; }
+    @JsonProperty("totalUs")
+    public long totalUs() { return totalUs; }
+    @JsonProperty("bestAfterGreedy")
+    public int bestAfterGreedy() { return bestAfterGreedy; }
+    @JsonProperty("bestAfterSeed")
+    public int bestAfterSeed() { return bestAfterSeed; }
+    @JsonProperty("bestAfterBK")
+    public int bestAfterBK() { return bestAfterBK; }
+    @JsonProperty("bestAfterMcGregor")
+    public int bestAfterMcGregor() { return bestAfterMcGregor; }
+
+    @Override
+    public final boolean equals(Object other) {
+      if (this == other) return true;
+      if (!(other instanceof MCSStageTimers)) return false;
+      MCSStageTimers that = (MCSStageTimers) other;
+      return orientationUs == that.orientationUs
+          && seedsUs == that.seedsUs
+          && mcSplitUs == that.mcSplitUs
+          && bkUs == that.bkUs
+          && mcGregorUs == that.mcGregorUs
+          && repairUs == that.repairUs
+          && totalUs == that.totalUs
+          && bestAfterGreedy == that.bestAfterGreedy
+          && bestAfterSeed == that.bestAfterSeed
+          && bestAfterBK == that.bestAfterBK
+          && bestAfterMcGregor == that.bestAfterMcGregor;
+    }
+
+    @Override
+    public final int hashCode() {
+      int hash = 0;
+      hash = 31 * hash + Long.hashCode(orientationUs);
+      hash = 31 * hash + Long.hashCode(seedsUs);
+      hash = 31 * hash + Long.hashCode(mcSplitUs);
+      hash = 31 * hash + Long.hashCode(bkUs);
+      hash = 31 * hash + Long.hashCode(mcGregorUs);
+      hash = 31 * hash + Long.hashCode(repairUs);
+      hash = 31 * hash + Long.hashCode(totalUs);
+      hash = 31 * hash + Integer.hashCode(bestAfterGreedy);
+      hash = 31 * hash + Integer.hashCode(bestAfterSeed);
+      hash = 31 * hash + Integer.hashCode(bestAfterBK);
+      hash = 31 * hash + Integer.hashCode(bestAfterMcGregor);
+      return hash;
+    }
+
+    @Override
+    public final String toString() {
+      return "MCSStageTimers[orientationUs=" + orientationUs
+          + ", seedsUs=" + seedsUs
+          + ", mcSplitUs=" + mcSplitUs
+          + ", bkUs=" + bkUs
+          + ", mcGregorUs=" + mcGregorUs
+          + ", repairUs=" + repairUs
+          + ", totalUs=" + totalUs
+          + ", bestAfterGreedy=" + bestAfterGreedy
+          + ", bestAfterSeed=" + bestAfterSeed
+          + ", bestAfterBK=" + bestAfterBK
+          + ", bestAfterMcGregor=" + bestAfterMcGregor + "]";
+    }
+  }
 
   /**
    * Result of a profiled MCS computation: the normal MCS result plus timing data.
    *
-   * @param result the MCS result (mapping, size, overlap, SMILES)
-   * @param timers per-call timing data
    * @since 6.7.0
    */
-  public record MCSProfiledResult(MCSResult result, MCSStageTimers timers) {}
+  public static final class MCSProfiledResult {
+    private final MCSResult result;
+    private final MCSStageTimers timers;
+
+    /**
+     * Create a profiled MCS result.
+     *
+     * @param result the MCS result (mapping, size, overlap, SMILES)
+     * @param timers per-call timing data
+     */
+    @JsonCreator
+    public MCSProfiledResult(
+        @JsonProperty("result") MCSResult result,
+        @JsonProperty("timers") MCSStageTimers timers) {
+      this.result = result;
+      this.timers = timers;
+    }
+
+    @JsonProperty("result")
+    public MCSResult result() { return result; }
+    @JsonProperty("timers")
+    public MCSStageTimers timers() { return timers; }
+
+    @Override
+    public final boolean equals(Object other) {
+      if (this == other) return true;
+      if (!(other instanceof MCSProfiledResult)) return false;
+      MCSProfiledResult that = (MCSProfiledResult) other;
+      return Objects.equals(result, that.result)
+          && Objects.equals(timers, that.timers);
+    }
+
+    @Override
+    public final int hashCode() {
+      int hash = 0;
+      hash = 31 * hash + Objects.hashCode(result);
+      hash = 31 * hash + Objects.hashCode(timers);
+      return hash;
+    }
+
+    @Override
+    public final String toString() {
+      return "MCSProfiledResult[result=" + result
+          + ", timers=" + timers + "]";
+    }
+  }
 
   /**
    * Thread-local accumulator for stage timing. When non-null, {@link #findMCSImpl}
@@ -372,7 +728,7 @@ public final class SearchEngine {
    * <p>This method does <em>not</em> modify the normal findMCS code path. It
    * activates a thread-local timing accumulator that the existing pipeline
    * populates at stage boundaries, then converts the raw nanosecond snapshots
-   * into a {@link MCSStageTimers} record.
+   * into a {@link MCSStageTimers} value.
    *
    * @param g1 the first molecule graph
    * @param g2 the second molecule graph
@@ -795,7 +1151,7 @@ public final class SearchEngine {
     if (C.useChirality) {
       int[] indexed = new int[g1.n];
       Arrays.fill(indexed, -1);
-      for (var pair : mapping.entrySet())
+      for (Map.Entry<Integer, Integer> pair : mapping.entrySet())
         if (pair.getKey() >= 0 && pair.getKey() < g1.n && pair.getValue() >= 0 && pair.getValue() < g2.n)
           indexed[pair.getKey()] = pair.getValue();
       int mismatch = SubstructureEngine.stereoMismatchAtom(g1, g2, indexed, C);
@@ -1008,7 +1364,7 @@ public final class SearchEngine {
       for (int atom : order) {
         if (budget.expiredNow()) return best;
         if (domains[atom].length == 0) continue;
-        Map<Integer, Integer> singleton = ppx(query, target, Map.of(atom, domains[atom][0]), chemistry, options);
+        Map<Integer, Integer> singleton = ppx(query, target, Collections.singletonMap(atom, domains[atom][0]), chemistry, options);
         if (preferFinalMapping(query, singleton, best, options)) best = singleton;
       }
       visit(0, 0.0);
@@ -1042,7 +1398,7 @@ public final class SearchEngine {
     }
 
     boolean compatibleWithMapped(int atom, int candidateTarget) {
-      for (var mapped : current.entrySet()) {
+      for (Map.Entry<Integer, Integer> mapped : current.entrySet()) {
         boolean queryEdge = query.hasBond(atom, mapped.getKey());
         boolean targetEdge = target.hasBond(candidateTarget, mapped.getValue());
         if (queryEdge && (!targetEdge || !MolGraph.ChemOps.bondsCompatible(query, atom, mapped.getKey(),
@@ -1186,7 +1542,7 @@ public final class SearchEngine {
         for (int tj = 0; tj < g2.n; tj++) {
           if (M.excludedTargetAtoms != null && M.excludedTargetAtoms.contains(tj)) continue;
           if (!SubstructureEngine.AbstractVFMatcher.atomsCompatFast(g1, qi, g2, tj, C)) continue;
-          Map<Integer, Integer> singleton = ppx(g1, g2, Map.of(qi, tj), C, M);
+          Map<Integer, Integer> singleton = ppx(g1, g2, Collections.singletonMap(qi, tj), C, M);
           if (preferFinalMapping(g1, singleton, best, M)) best = singleton;
           break;
         }
@@ -1639,7 +1995,9 @@ public final class SearchEngine {
       chemistry = ChemOptions.copyOf(chemistry);
       chemistry.mcsExcludedTargetGraph = g2;
       chemistry.mcsOriginalQueryGraph = g1;
-      chemistry.mcsExcludedTargetAtoms = Set.copyOf(options.excludedTargetAtoms);
+      Set<Integer> exclusions = new HashSet<>(options.excludedTargetAtoms);
+      if (exclusions.contains(null)) throw new NullPointerException("Excluded target atom must not be null");
+      chemistry.mcsExcludedTargetAtoms = Collections.unmodifiableSet(exclusions);
     }
     TimeBudget previous = MCS_BUDGET_TL.get();
     TimeBudget budget = previous == null ? new TimeBudget(resolveMCSTimeout(g1, g2, options)) : previous;
@@ -1839,7 +2197,7 @@ public final class SearchEngine {
       for (int tj = 0; tj < target.n; tj++) {
         if (budget.expiredNow()) return best;
         if (!SubstructureEngine.AbstractVFMatcher.atomsCompatFast(query, qi, target, tj, chemistry)) continue;
-        Map<Integer, Integer> candidate = greedyAtomExtend(query, target, Map.of(qi, tj), chemistry, options, budget);
+        Map<Integer, Integer> candidate = greedyAtomExtend(query, target, Collections.singletonMap(qi, tj), chemistry, options, budget);
         candidate = ppx(query, target, candidate, chemistry, options);
         if (preferFinalMapping(query, candidate, best, options)) best = candidate;
       }
@@ -1852,7 +2210,7 @@ public final class SearchEngine {
       MolGraph g1, MolGraph g2, Map<Integer, Integer> ext, ChemOptions C, MCSOptions M) {
     if (M.excludedTargetAtoms != null && !M.excludedTargetAtoms.isEmpty()) {
       Map<Integer, Integer> allowed = new LinkedHashMap<>();
-      for (var pair : ext.entrySet())
+      for (Map.Entry<Integer, Integer> pair : ext.entrySet())
         if (!M.excludedTargetAtoms.contains(pair.getValue())) allowed.put(pair.getKey(), pair.getValue());
       ext = allowed;
     }
@@ -2192,7 +2550,7 @@ public final class SearchEngine {
         int[][] generators = side == 0 ? queryGenerators : targetGenerators;
         for (int[] generator : generators) {
           Map<Integer, Integer> next = new TreeMap<>();
-          for (var pair : current.entrySet())
+          for (Map.Entry<Integer, Integer> pair : current.entrySet())
             next.put(side == 0 ? generator[pair.getKey()] : pair.getKey(),
                 side == 0 ? pair.getValue() : generator[pair.getValue()]);
           if (!seen.add(next)) continue;
@@ -2210,8 +2568,8 @@ public final class SearchEngine {
     Iterator<Map.Entry<Integer, Integer>> a = left.entrySet().iterator();
     Iterator<Map.Entry<Integer, Integer>> b = right.entrySet().iterator();
     while (a.hasNext() && b.hasNext()) {
-      var ap = a.next();
-      var bp = b.next();
+      Map.Entry<Integer, Integer> ap = a.next();
+      Map.Entry<Integer, Integer> bp = b.next();
       int keyOrder = Integer.compare(ap.getKey(), bp.getKey());
       if (keyOrder != 0) return keyOrder;
       int valueOrder = Integer.compare(ap.getValue(), bp.getValue());
@@ -2229,7 +2587,7 @@ public final class SearchEngine {
       canonical = new TreeMap<>(mapping);
     }
     StringBuilder key = new StringBuilder();
-    for (var pair : canonical.entrySet())
+    for (Map.Entry<Integer, Integer> pair : canonical.entrySet())
       key.append(pair.getKey()).append(':').append(pair.getValue()).append(',');
     return key.toString();
   }
@@ -2239,7 +2597,7 @@ public final class SearchEngine {
     if (options.atomWeights == null) return canonKey(query, target, mapping);
     // Unweighted graph automorphisms can exchange atoms having different query weights.
     StringBuilder key = new StringBuilder();
-    for (var pair : new TreeMap<>(mapping).entrySet())
+    for (Map.Entry<Integer, Integer> pair : new TreeMap<>(mapping).entrySet())
       key.append(pair.getKey()).append(':').append(pair.getValue()).append(',');
     return key.toString();
   }
@@ -3254,7 +3612,43 @@ public final class SearchEngine {
       this.g1 = g1; this.g2 = g2; this.C = C; this.induced = induced;
     }
 
-    record Node(int qi, int tj) {}
+    static final class Node {
+      private final int qi;
+      private final int tj;
+
+      Node(
+          int qi,
+          int tj) {
+        this.qi = qi;
+        this.tj = tj;
+      }
+
+      public int qi() { return qi; }
+      public int tj() { return tj; }
+
+      @Override
+      public final boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Node)) return false;
+        Node that = (Node) other;
+        return qi == that.qi
+            && tj == that.tj;
+      }
+
+      @Override
+      public final int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + Integer.hashCode(qi);
+        hash = 31 * hash + Integer.hashCode(tj);
+        return hash;
+      }
+
+      @Override
+      public final String toString() {
+        return "Node[qi=" + qi
+            + ", tj=" + tj + "]";
+      }
+    }
 
     Map<Integer, Integer> maximumCliqueSeed(TimeBudget tb) {
       List<Node> nodes = new ArrayList<>();
@@ -4623,7 +5017,7 @@ public final class SearchEngine {
         final int idx = i;
         tasks.add(() -> {
           try { hits[idx] = isSubstructure(query, targets.get(idx), C, timeoutMs); }
-          catch (Exception _) { /* leave false */ }
+          catch (Exception ignored) { /* leave false */ }
           return null;
         });
       }
@@ -4632,7 +5026,7 @@ public final class SearchEngine {
       // sequential fallback
       for (int i = 0; i < n; i++) {
         try { hits[i] = isSubstructure(query, targets.get(i), C, timeoutMs); }
-        catch (Exception _) { /* leave false */ }
+        catch (Exception ignored) { /* leave false */ }
       }
     } finally {
       pool.shutdown();

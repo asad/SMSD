@@ -27,6 +27,8 @@ UPGRADE_UUID = "a8925984-4386-5a94-b379-a2b2140c5120"
 JLINK_OPTIONS = "--bind-services --strip-debug --no-man-pages --no-header-files"
 JAVA_VERSION = "25.0.4.1"
 JAVA_BUILD = "25.0.4.1+1"
+CLI_JAVA_TARGET = 8
+CLI_CLASSFILE_MAJOR = 52
 
 
 def require(condition, message):
@@ -63,13 +65,32 @@ def release_inputs(directory):
     require(checksums.get(jar.name) == digest(jar), "CLI JAR checksum does not match the release")
     with zipfile.ZipFile(jar) as archive:
         manifest = archive.read("META-INF/MANIFEST.MF").decode("utf-8")
-        require("Main-Class: " + MAIN_CLASS in manifest, "Unexpected CLI main class")
-        require("Java-Version: 25" in manifest, "CLI JAR must target Java 25")
+        manifest = manifest.replace("\r\n", "\n").replace("\n ", "").split("\n\n", 1)[0]
+        attributes = dict(line.split(": ", 1) for line in manifest.splitlines() if ": " in line)
+        require(attributes.get("Main-Class") == MAIN_CLASS, "Unexpected CLI main class")
+        require(attributes.get("Java-Version") in ("8", "1.8"), "CLI JAR must target Java 8")
+        application_classes = 0
+        for entry in archive.infolist():
+            if not entry.filename.endswith(".class"):
+                continue
+            # Java 8 ignores multi-release entries and module descriptors.
+            if entry.filename.startswith("META-INF/versions/") or entry.filename.rsplit("/", 1)[-1] == "module-info.class":
+                continue
+            with archive.open(entry) as stream:
+                header = stream.read(8)
+            require(len(header) == 8 and header[:4] == b"\xca\xfe\xba\xbe", "Invalid class file: " + entry.filename)
+            major = struct.unpack_from(">H", header, 6)[0]
+            require(major <= CLI_CLASSFILE_MAJOR, "Class requires a newer Java release: " + entry.filename)
+            if entry.filename.startswith("com/bioinception/smsd/"):
+                require(major == CLI_CLASSFILE_MAJOR, "SMSD class must target Java 8: " + entry.filename)
+                application_classes += 1
+        require(application_classes > 0, "CLI JAR contains no SMSD classes")
         legal = {name: archive.read("META-INF/smsd/" + name) for name in ("LICENSE", "NOTICE")}
     root = Path(__file__).resolve().parents[1]
     for name, data in legal.items():
         require((root / name).read_bytes() == data, "Published JAR and root " + name + " differ")
-    return {"version": match[1], "jar": jar, "jar_sha256": checksums[jar.name], "legal": legal}
+    return {"version": match[1], "jar": jar, "jar_sha256": checksums[jar.name], "legal": legal,
+            "cli_java_target": CLI_JAVA_TARGET, "cli_classfile_major": CLI_CLASSFILE_MAJOR}
 
 
 def host_target():
@@ -342,6 +363,7 @@ def verify_image(image, release_dir):
     qa = smoke_cli(launcher, runtime, inputs["version"])
     return {"version": inputs["version"], "platform": target, "architecture": architecture,
             "cli_jar": inputs["jar"].name, "cli_jar_sha256": inputs["jar_sha256"], "launcher": native,
+            "cli_java_target": inputs["cli_java_target"], "cli_classfile_major": inputs["cli_classfile_major"],
             "runtime": {key: metadata[key] for key in ("IMPLEMENTOR", "IMPLEMENTOR_VERSION", "JAVA_VERSION",
                         "JAVA_RUNTIME_VERSION", "OS_ARCH", "OS_NAME", "SOURCE", "BUILD_SOURCE", "SOURCE_REPO",
                         "BUILD_SOURCE_REPO") if key in metadata},

@@ -6,6 +6,9 @@
  */
 package com.bioinception.smsd;
 
+import static com.bioinception.smsd.TestSupport.mapping;
+import static com.bioinception.smsd.TestSupport.repeat;
+
 import com.bioinception.smsd.core.*;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -1158,7 +1161,7 @@ public class StressTest extends TestBase {
           mol("C1COCCOCCOCCOCCOCCO1"),
           looseOpts());
       // MCS should find the shared -C-O-C-C-O-C- fragment
-      var mcs = smsd.findMCS(false, false, 5000L);
+      Map<Integer, Integer> mcs = smsd.findMCS(false, false, 5000L);
       assertTrue(mcs.size() >= 5, "Crown fragment MCS should be >= 5, got " + mcs.size());
     }
   }
@@ -3849,7 +3852,7 @@ public class StressTest extends TestBase {
   class ScaleStress {
 
     private String linearAlkane(int n) {
-      return "C".repeat(n);
+      return repeat("C", n);
     }
 
     @Test @DisplayName("50-atom self-match < 1s")
@@ -4583,8 +4586,8 @@ public class StressTest extends TestBase {
     @DisplayName("C200 chain substructure of C300 chain")
     void longChainSubstructure() throws Exception {
       // Pure aliphatic chains — tests scalability
-      IAtomContainer q = mol("C".repeat(200));
-      IAtomContainer t = mol("C".repeat(300));
+      IAtomContainer q = mol(repeat("C", 200));
+      IAtomContainer t = mol(repeat("C", 300));
       long t0 = System.nanoTime();
       SMSD s = new SMSD(q, t, new ChemOptions());
       assertTrue(s.isSubstructure(2000), "C200 must be substructure of C300");
@@ -4595,7 +4598,7 @@ public class StressTest extends TestBase {
     @Test
     @DisplayName("C200 self-MCS")
     void longChainSelfMCS() throws Exception {
-      IAtomContainer q = mol("C".repeat(200));
+      IAtomContainer q = mol(repeat("C", 200));
       long t0 = System.nanoTime();
       SMSD s = new SMSD(q, q, new ChemOptions());
       Map<Integer, Integer> mcs = s.findMCS(false, true, 2000);
@@ -4651,7 +4654,7 @@ public class StressTest extends TestBase {
     @Test
     @DisplayName("C500 chain self-substructure")
     void c500SelfMatch() throws Exception {
-      IAtomContainer t = mol("C".repeat(500));
+      IAtomContainer t = mol(repeat("C", 500));
       assertTrue(t.getAtomCount() >= 400, "C500 should have 400+ heavy atoms");
       long t0 = System.nanoTime();
       SMSD s = new SMSD(t, t, new ChemOptions());
@@ -4663,7 +4666,7 @@ public class StressTest extends TestBase {
     @Test
     @DisplayName("C1000 chain self-substructure")
     void c1000SelfMatch() throws Exception {
-      IAtomContainer t = mol("C".repeat(1000));
+      IAtomContainer t = mol(repeat("C", 1000));
       assertTrue(t.getAtomCount() >= 800, "C1000 should have 800+ heavy atoms");
       long t0 = System.nanoTime();
       SMSD s = new SMSD(t, t, new ChemOptions());
@@ -4675,8 +4678,8 @@ public class StressTest extends TestBase {
     @Test
     @DisplayName("C100 in C1000 chain substructure")
     void c100InC1000() throws Exception {
-      IAtomContainer q = mol("C".repeat(100));
-      IAtomContainer t = mol("C".repeat(1000));
+      IAtomContainer q = mol(repeat("C", 100));
+      IAtomContainer t = mol(repeat("C", 1000));
       long t0 = System.nanoTime();
       SMSD s = new SMSD(q, t, new ChemOptions());
       assertTrue(s.isSubstructure(10000), "C100 must be substructure of C1000");
@@ -4805,7 +4808,7 @@ public class StressTest extends TestBase {
       while (!pending.isEmpty()) {
         int index = pending.remove();
         if (!visited.add(index)) continue;
-        for (var neighbour : query.getConnectedAtomsList(query.getAtom(index))) {
+        for (org.openscience.cdk.interfaces.IAtom neighbour : query.getConnectedAtomsList(query.getAtom(index))) {
           int adjacent = query.indexOf(neighbour);
           if (mapping.containsKey(adjacent) && !visited.contains(adjacent)) pending.add(adjacent);
         }
@@ -5203,7 +5206,7 @@ public class StressTest extends TestBase {
       SMSD smsd = new SMSD(queryMol, targetMol, opts);
       // Excluding the incompatible stereocenter splits the query into N, C,
       // and C(=O)O. The largest connected component is the three-atom carboxyl.
-      Map<Integer, Integer> witness = Map.of(3, 3, 4, 4, 5, 5);
+      Map<Integer, Integer> witness = mapping(3, 3, 4, 4, 5, 5);
       assertTrue(SearchEngine.validateMapping(query, target, witness, opts).isEmpty());
       Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000);
       assertEquals(3, mcs.size(), "Connected matching retains the carboxyl component");

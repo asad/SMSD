@@ -112,10 +112,12 @@ final class SubstructureEngine {
   }
 
   static Matcher makeMatcher(MolGraph gq, MolGraph gt, ChemOptions C, SearchEngine.TimeBudget tb) {
-    return switch (C.matcherEngine) {
-      case VF2  -> new VF2Matcher(gq, gt, C, tb);
-      case VF2PP, VF3 -> new VF2PPMatcher(gq, gt, C, tb);
-    };
+    switch (C.matcherEngine) {
+      case VF2: return new VF2Matcher(gq, gt, C, tb);
+      case VF2PP:
+      case VF3: return new VF2PPMatcher(gq, gt, C, tb);
+      default: throw new IllegalArgumentException("Unsupported matcher: " + C.matcherEngine);
+    }
   }
 
   /** Return the first annotated center whose fully mapped ligand permutation reverses winding. */

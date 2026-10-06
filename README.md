@@ -38,6 +38,11 @@ DMG and one Linux DEB with bundled Java 25, alongside the Python wheels and
 portable packages. See [installer instructions](docs/INSTALLERS.md) and
 [current validation](docs/VALIDATION_7.2.2.md).
 
+Java 8 is the minimum target for 7.2.2. Java 25 LTS is preferred for builds
+and included in the native installers. One JAR serves both versions;
+compatibility checks are required before publication. The published 7.2.1
+JARs still require Java 25.
+
 ### Local benchmark results
 
 Performance depends on the corpus, chemistry constraints, search budget and
@@ -148,17 +153,20 @@ ecfp4 = smsd.fingerprint_from_smiles("c1ccccc1", radius=2, fp_size=2048)
 
 ```java
 import com.bioinception.smsd.core.*;
+import java.util.List;
+import java.util.Map;
 
 SMSD smsd = new SMSD(mol1, mol2, new ChemOptions());
 boolean isSub = smsd.isSubstructure();
-var mcs = smsd.findMCS();
+Map<Integer, Integer> mcs = smsd.findMCS();
 
 // CIP stereo assignment (Rules 1-5, including pseudoasymmetric r/s)
 Map<Integer, Character> stereo = CIPAssigner.assignRS(g);
 Map<Long, Character> ez = CIPAssigner.assignEZ(g);
 
 // Batch MCS with non-overlap constraints
-var mappings = SearchEngine.batchMCSConstrained(queries, targets, new ChemOptions(), 10_000);
+List<Map<Integer, Integer>> mappings =
+    SearchEngine.batchMCSConstrained(queries, targets, new ChemOptions(), 10_000);
 ```
 
 ### Python — Advanced Features
@@ -609,13 +617,18 @@ pip install ./smsd-7.2.1.tar.gz
 
 ## Tests
 
+The 7.2.2 Java code passed 1,276 tests with 15 opt-in skips on both Java 8
+and Java 25, using the same compiled classes. The shaded JAR, source copies,
+licences and Unix launchers passed compatibility checks. Native installer and
+Python wheel checks are tracked in [7.2.2 validation](docs/VALIDATION_7.2.2.md).
+
 The reorganised 7.2.1 Java module has 1,242 distinct passing cases and 15
 opt-in skips across full and focused runs. Its frozen-source macOS arm64 and
 emulated Linux x86_64 wheels each passed all 12 native Debug suites and 691
 Python tests with 8 skips on CPython 3.14/RDKit 2026.03.6. The native Windows
 Server 2022 wheel passed the same test counts. Strict collection of all three
 wheels against one frozen source archive also passed; PyPI and Maven publication
-remain pending. See [current validation](docs/VALIDATION_7.2.1.md). The following
+remain pending. See [7.2.1 validation](docs/VALIDATION_7.2.1.md). The following
 results remain historical 7.2.0 local validation on macOS arm64:
 
 | Suite | Result | Scope |

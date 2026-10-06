@@ -8,6 +8,8 @@ package com.bioinception.smsd.cli;
 import com.bioinception.smsd.core.ChemOptions;
 import com.bioinception.smsd.core.SMSD;
 import com.bioinception.smsd.core.Standardiser;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -216,7 +218,8 @@ public class SMSDcli implements Callable<Integer> {
       if ("-".equals(mcsFragmentOut)) {
         System.out.println(mcsSmi);
       } else {
-        java.nio.file.Files.writeString(java.nio.file.Path.of(mcsFragmentOut), mcsSmi + "\n");
+        java.nio.file.Files.write(java.nio.file.Paths.get(mcsFragmentOut),
+            (mcsSmi + "\n").getBytes(StandardCharsets.UTF_8));
       }
     }
     return 0;
@@ -252,7 +255,7 @@ public class SMSDcli implements Callable<Integer> {
           try {
             IAtomContainer tm = applyHydrogenOptions(targets.get(idx));
             try { tm = Standardiser.standardise(tm, Standardiser.TautomerMode.NONE); }
-            catch (Exception _) { }
+            catch (Exception ignored) { }
             SMSD smsd = query.isSmarts()
                 ? new SMSD(query.text(), tm, chem)
                 : new SMSD(queryMol, tm, chem);
@@ -282,7 +285,7 @@ public class SMSDcli implements Callable<Integer> {
         try {
           IAtomContainer tm = applyHydrogenOptions(targets.get(i));
           try { tm = Standardiser.standardise(tm, Standardiser.TautomerMode.NONE); }
-          catch (Exception _) { }
+          catch (Exception ignored) { }
           SMSD smsd = query.isSmarts()
               ? new SMSD(query.text(), tm, chem)
               : new SMSD(queryMol, tm, chem);
@@ -441,18 +444,21 @@ public class SMSDcli implements Callable<Integer> {
       pw.println(payload);
       pw.flush();
     } else {
-      java.nio.file.Files.writeString(java.nio.file.Path.of(jsonOut), payload);
+      java.nio.file.Files.write(java.nio.file.Paths.get(jsonOut), payload.getBytes(StandardCharsets.UTF_8));
     }
   }
 
   private static OutputUtil.OutType parseOutType(String s) {
-    return switch ((s == null ? "json" : s).trim().toLowerCase()) {
-      case "json"                -> OutputUtil.OutType.JSON;
-      case "smiles", "smi"      -> OutputUtil.OutType.SMI;
-      case "smarts"             -> OutputUtil.OutType.SMARTS;
-      case "mdl", "mol", "sdf"  -> OutputUtil.OutType.MOL;
-      default -> throw new IllegalArgumentException("Unknown --map-format: " + s);
-    };
+    switch ((s == null ? "json" : s).trim().toLowerCase()) {
+      case "json": return OutputUtil.OutType.JSON;
+      case "smiles":
+      case "smi": return OutputUtil.OutType.SMI;
+      case "smarts": return OutputUtil.OutType.SMARTS;
+      case "mdl":
+      case "mol":
+      case "sdf": return OutputUtil.OutType.MOL;
+      default: throw new IllegalArgumentException("Unknown --map-format: " + s);
+    }
   }
 
   // ========================================================================
@@ -468,7 +474,47 @@ public class SMSDcli implements Callable<Integer> {
         () -> new SmilesParser(SilentChemObjectBuilder.getInstance()));
 
     /** Result of loading a query: either a SMARTS string or a parsed molecule. */
-    public record Query(boolean isSmarts, String text, IAtomContainer container) {}
+    public static final class Query {
+      private final boolean isSmarts;
+      private final String text;
+      private final IAtomContainer container;
+
+      @JsonCreator
+      public Query(@JsonProperty("isSmarts") boolean isSmarts,
+          @JsonProperty("text") String text, @JsonProperty("container") IAtomContainer container) {
+        this.isSmarts = isSmarts;
+        this.text = text;
+        this.container = container;
+      }
+
+      @JsonProperty("isSmarts")
+      public boolean isSmarts() { return isSmarts; }
+
+      @JsonProperty("text")
+      public String text() { return text; }
+
+      @JsonProperty("container")
+      public IAtomContainer container() { return container; }
+
+      @Override
+      public final boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Query)) return false;
+        Query query = (Query) other;
+        return isSmarts == query.isSmarts && Objects.equals(text, query.text)
+            && Objects.equals(container, query.container);
+      }
+
+      @Override
+      public final int hashCode() {
+        return 31 * (31 * Boolean.hashCode(isSmarts) + Objects.hashCode(text)) + Objects.hashCode(container);
+      }
+
+      @Override
+      public final String toString() {
+        return "Query[isSmarts=" + isSmarts + ", text=" + text + ", container=" + container + "]";
+      }
+    }
 
     /**
      * Load a query molecule or SMARTS pattern.
@@ -481,11 +527,11 @@ public class SMSDcli implements Callable<Integer> {
     public static Query loadQuery(String type, String value) throws Exception {
       Objects.requireNonNull(type, "Query type must not be null");
       Objects.requireNonNull(value, "Query value must not be null");
-      return switch (type.toUpperCase()) {
-        case "SIG" -> new Query(true, value, null);
-        case "SMI" -> new Query(false, value, SP.get().parseSmiles(value));
-        default    -> new Query(false, value, readFile(type, value));
-      };
+      switch (type.toUpperCase()) {
+        case "SIG": return new Query(true, value, null);
+        case "SMI": return new Query(false, value, SP.get().parseSmiles(value));
+        default: return new Query(false, value, readFile(type, value));
+      }
     }
 
     /**
@@ -499,11 +545,11 @@ public class SMSDcli implements Callable<Integer> {
     public static IAtomContainer loadTarget(String type, String value) throws Exception {
       Objects.requireNonNull(type, "Target type must not be null");
       Objects.requireNonNull(value, "Target value must not be null");
-      return switch (type.toUpperCase()) {
-        case "SMI" -> SP.get().parseSmiles(value);
-        case "SDF" -> throw new IllegalArgumentException("Use loadTargetsSDF for multi-molecule SDF.");
-        default    -> readFile(type, value);
-      };
+      switch (type.toUpperCase()) {
+        case "SMI": return SP.get().parseSmiles(value);
+        case "SDF": throw new IllegalArgumentException("Use loadTargetsSDF for multi-molecule SDF.");
+        default: return readFile(type, value);
+      }
     }
 
     /** Maximum number of molecules to load from a single SDF file. */
@@ -526,13 +572,14 @@ public class SMSDcli implements Callable<Integer> {
     }
 
     private static IAtomContainer readFile(String type, String path) throws Exception {
-      Function<InputStream, ISimpleChemObjectReader> factory = switch (type.toUpperCase()) {
-        case "MOL" -> MDLV2000Reader::new;
-        case "ML2" -> Mol2Reader::new;
-        case "PDB" -> PDBReader::new;
-        case "CML" -> CMLReader::new;
-        default -> throw new IllegalArgumentException("Unsupported file type: " + type);
-      };
+      Function<InputStream, ISimpleChemObjectReader> factory;
+      switch (type.toUpperCase()) {
+        case "MOL": factory = MDLV2000Reader::new; break;
+        case "ML2": factory = Mol2Reader::new; break;
+        case "PDB": factory = PDBReader::new; break;
+        case "CML": factory = CMLReader::new; break;
+        default: throw new IllegalArgumentException("Unsupported file type: " + type);
+      }
       try (FileInputStream fis = new FileInputStream(path);
           ISimpleChemObjectReader reader = factory.apply(fis)) {
         IAtomContainer molecule;
@@ -540,7 +587,7 @@ public class SMSDcli implements Callable<Integer> {
           IChemFile file = reader.read(
               DefaultChemObjectBuilder.getInstance().newInstance(IChemFile.class));
           List<IAtomContainer> molecules = file == null
-              ? List.of() : ChemFileManipulator.getAllAtomContainers(file);
+              ? Collections.emptyList() : ChemFileManipulator.getAllAtomContainers(file);
           if (molecules.size() != 1) {
             throw new IOException(type + " input must contain exactly one molecule/model; found "
                 + molecules.size() + ". Use SDF for batch targets.");
@@ -597,10 +644,17 @@ public class SMSDcli implements Callable<Integer> {
       Objects.requireNonNull(target, "target");
       Objects.requireNonNull(mappings, "mappings");
       switch (type) {
-        case JSON -> writeMappingsJSON(query, target, mappings, os, prettyJson, similarityUpperBound);
-        case SMI, SMARTS -> writeMappingsSMILES(query, target, mappings, os);
-        case MOL -> writeMappingsMOL(target, mappings, os);
-        default -> throw new IllegalArgumentException("Unsupported: " + type);
+        case JSON:
+          writeMappingsJSON(query, target, mappings, os, prettyJson, similarityUpperBound);
+          break;
+        case SMI:
+        case SMARTS:
+          writeMappingsSMILES(query, target, mappings, os);
+          break;
+        case MOL:
+          writeMappingsMOL(target, mappings, os);
+          break;
+        default: throw new IllegalArgumentException("Unsupported: " + type);
       }
     }
 

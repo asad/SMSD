@@ -34,8 +34,8 @@ class CLIFileFormatRegressionTest {
 
   private Path input(String type, String contents) throws IOException {
     Path directory = Files.createDirectories(temporary.resolve("Molécules with spaces"));
-    return Files.writeString(directory.resolve("éthane." + type.toLowerCase()), contents,
-        StandardCharsets.UTF_8);
+    return Files.write(directory.resolve("éthane." + type.toLowerCase()),
+        contents.getBytes(StandardCharsets.UTF_8));
   }
 
   private static String cmlMolecule(String id) {
@@ -58,18 +58,18 @@ class CLIFileFormatRegressionTest {
   }
 
   private static String ethane(String type) {
-    return switch (type) {
-      case "CML" -> cml(cmlMolecule("ethane"));
-      case "PDB" -> pdbAtoms() + "END\n";
-      case "MOL" -> "Ethane\n  SMSD\n\n  2  1  0  0  0  0            999 V2000\n"
+    switch (type) {
+      case "CML": return cml(cmlMolecule("ethane"));
+      case "PDB": return pdbAtoms() + "END\n";
+      case "MOL": return "Ethane\n  SMSD\n\n  2  1  0  0  0  0            999 V2000\n"
           + "    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
           + "    1.5400    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
           + "  1  2  1  0  0  0  0\nM  END\n";
-      case "ML2" -> "@<TRIPOS>MOLECULE\nEthane\n2 1 0 0 0\nSMALL\nNO_CHARGES\n\n"
+      case "ML2": return "@<TRIPOS>MOLECULE\nEthane\n2 1 0 0 0\nSMALL\nNO_CHARGES\n\n"
           + "@<TRIPOS>ATOM\n1 C1 0.0 0.0 0.0 C.3 1 ETH 0.0\n"
           + "2 C2 1.54 0.0 0.0 C.3 1 ETH 0.0\n@<TRIPOS>BOND\n1 1 2 1\n";
-      default -> throw new IllegalArgumentException("Unknown fixture format: " + type);
-    };
+      default: throw new IllegalArgumentException("Unknown fixture format: " + type);
+    }
   }
 
   private CommandLine cli(StringWriter errors) {

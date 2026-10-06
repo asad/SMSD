@@ -6,6 +6,10 @@
  */
 package com.bioinception.smsd.core;
 
+import static com.bioinception.smsd.TestSupport.list;
+import static com.bioinception.smsd.TestSupport.mapping;
+import static com.bioinception.smsd.TestSupport.set;
+
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.util.*;
@@ -34,7 +38,7 @@ class ObjectiveChemistryRegressionTest {
   }
 
   private static SearchEngine.MCSOptions weighted(double... weights) {
-    var options = new SearchEngine.MCSOptions();
+    SearchEngine.MCSOptions options = new SearchEngine.MCSOptions();
     options.atomWeights = weights;
     options.timeoutMs = 2_000;
     return options;
@@ -46,13 +50,13 @@ class ObjectiveChemistryRegressionTest {
 
   @Test
   void tautomerMatchingPreservesElements() throws Exception {
-    var chemistry = ChemOptions.tautomerProfile();
+    ChemOptions chemistry = ChemOptions.tautomerProfile();
     MolGraph ketone = parse("CC(=O)C");
-    for (String other : List.of("CC(=S)C", "CC(=O)N")) {
+    for (String other : list("CC(=S)C", "CC(=O)N")) {
       MolGraph target = parse(other);
       Map<Integer, Integer> mapping = SearchEngine.findMCS(ketone, target, chemistry, new SearchEngine.MCSOptions());
       assertTrue(mapping.size() <= 3, "Only three atoms of each element can be shared with " + other);
-      for (var pair : mapping.entrySet())
+      for (Map.Entry<Integer, Integer> pair : mapping.entrySet())
         assertEquals(ketone.atomicNum[pair.getKey()], target.atomicNum[pair.getValue()]);
       assertFalse(SearchEngine.isSubstructure(ketone, target, chemistry, 1_000));
     }
@@ -65,9 +69,9 @@ class ObjectiveChemistryRegressionTest {
     MolGraph query = parse("N[C@@H](C)C(=O)O");
     MolGraph equivalent = parse("C[C@H](N)C(=O)O");
     MolGraph opposite = parse("C[C@@H](N)C(=O)O");
-    var chemistry = new ChemOptions();
+    ChemOptions chemistry = new ChemOptions();
     chemistry.useChirality = true;
-    Map<Integer, Integer> witness = Map.of(0, 2, 1, 1, 2, 0, 3, 3, 4, 4, 5, 5);
+    Map<Integer, Integer> witness = mapping(0, 2, 1, 1, 2, 0, 3, 3, 4, 4, 5, 5);
     assertTrue(SearchEngine.validateMapping(query, equivalent, witness, chemistry).isEmpty(),
         "The swapped N and methyl traversal and reversed @ tag describe the same configuration");
     assertFalse(SearchEngine.validateMapping(query, opposite, witness, chemistry).isEmpty());
@@ -79,36 +83,36 @@ class ObjectiveChemistryRegressionTest {
 
   @Test
   void stereoLigandOrderSurvivesBondStorageReordering() throws Exception {
-    var molecule = new SmilesParser(SilentChemObjectBuilder.getInstance()).parseSmiles("N[C@@H](C)C(=O)O");
-    var reordered = molecule.clone();
-    var bonds = new org.openscience.cdk.interfaces.IBond[reordered.getBondCount()];
+    org.openscience.cdk.interfaces.IAtomContainer molecule = new SmilesParser(SilentChemObjectBuilder.getInstance()).parseSmiles("N[C@@H](C)C(=O)O");
+    org.openscience.cdk.interfaces.IAtomContainer reordered = molecule.clone();
+    org.openscience.cdk.interfaces.IBond[] bonds = new org.openscience.cdk.interfaces.IBond[reordered.getBondCount()];
     for (int i = 0; i < bonds.length; i++) bonds[i] = reordered.getBond(bonds.length - 1 - i);
     reordered.setBonds(bonds);
     MolGraph query = new MolGraph(molecule), target = new MolGraph(reordered);
-    assertEquals(Map.of(1, 'S'), CIPAssigner.assignRS(query));
+    assertEquals(Collections.singletonMap(1, 'S'), CIPAssigner.assignRS(query));
     assertEquals(CIPAssigner.assignRS(query), CIPAssigner.assignRS(target));
-    var chemistry = new ChemOptions();
+    ChemOptions chemistry = new ChemOptions();
     chemistry.useChirality = true;
     assertTrue(SearchEngine.validateMapping(query, target,
-        Map.of(0,0,1,1,2,2,3,3,4,4,5,5), chemistry).isEmpty());
+        mapping(0,0,1,1,2,2,3,3,4,4,5,5), chemistry).isEmpty());
     assertTrue(SearchEngine.isSubstructure(query, target, chemistry, 1_000));
   }
 
   @Test
   void tetrahedralPermutationIsCheckedAfterNeighborsAreMapped() throws Exception {
     MolGraph molecule = parse("F[C@](Cl)(Br)I");
-    var chemistry = new ChemOptions();
+    ChemOptions chemistry = new ChemOptions();
     chemistry.useChirality = true;
     chemistry.matchAtomType = false;
     assertFalse(SearchEngine.validateMapping(molecule, molecule,
-        Map.of(0,2,1,1,2,0,3,3,4,4), chemistry).isEmpty(), "Swapping two ligands reverses winding");
+        mapping(0,2,1,1,2,0,3,3,4,4), chemistry).isEmpty(), "Swapping two ligands reverses winding");
     assertTrue(SearchEngine.validateMapping(molecule, molecule,
-        Map.of(0,2,1,1,2,3,3,0,4,4), chemistry).isEmpty(), "A three-ligand rotation preserves winding");
-    for (var engine : ChemOptions.MatcherEngine.values()) {
+        mapping(0,2,1,1,2,3,3,0,4,4), chemistry).isEmpty(), "A three-ligand rotation preserves winding");
+    for (ChemOptions.MatcherEngine engine : ChemOptions.MatcherEngine.values()) {
       chemistry.matcherEngine = engine;
-      var mappings = SearchEngine.findAllSubstructures(molecule, molecule, chemistry, 100, 1_000);
+      List<Map<Integer, Integer>> mappings = SearchEngine.findAllSubstructures(molecule, molecule, chemistry, 100, 1_000);
       assertEquals(12, mappings.size(), "Half of the 4! ligand permutations preserve stereo for " + engine);
-      for (var mapping : mappings)
+      for (Map<Integer, Integer> mapping : mappings)
         assertTrue(SearchEngine.validateMapping(molecule, molecule, mapping, chemistry).isEmpty());
     }
   }
@@ -116,7 +120,7 @@ class ObjectiveChemistryRegressionTest {
   @Test
   void unspecifiedStereoRetainsItsExistingWildcardBehavior() throws Exception {
     MolGraph specified = parse("N[C@@H](C)C(=O)O"), unspecified = parse("NC(C)C(=O)O");
-    var chemistry = new ChemOptions();
+    ChemOptions chemistry = new ChemOptions();
     chemistry.useChirality = true;
     assertTrue(SearchEngine.isSubstructure(specified, unspecified, chemistry, 1_000));
     assertTrue(SearchEngine.isSubstructure(unspecified, specified, chemistry, 1_000));
@@ -131,7 +135,7 @@ class ObjectiveChemistryRegressionTest {
     MolGraph target = new MolGraph.Builder().atomCount(5).atomicNumbers(elements)
         .neighbors(new int[][] {{2,1,3,4},{0},{0},{0},{0}})
         .tetrahedralChirality(new int[] {2,0,0,0,0}).build();
-    var chemistry = new ChemOptions();
+    ChemOptions chemistry = new ChemOptions();
     chemistry.useChirality = true;
     assertEquals(CIPAssigner.assignRS(query), CIPAssigner.assignRS(target));
     assertTrue(SearchEngine.isSubstructure(query, target, chemistry, 1_000));
@@ -140,7 +144,7 @@ class ObjectiveChemistryRegressionTest {
   @Test
   void negativeBridgeDoesNotMakeAnIdentityMappingOptimal() throws Exception {
     MolGraph chain = parse("CCC");
-    var options = weighted(1, -5, 1);
+    SearchEngine.MCSOptions options = weighted(1, -5, 1);
     Map<Integer, Integer> mapping = SearchEngine.findMCS(chain, chain, new ChemOptions(), options);
     assertEquals(1.0, score(mapping, options.atomWeights));
     assertEquals(1, mapping.size(), "A connected singleton scores better than the negative bridge");
@@ -155,7 +159,7 @@ class ObjectiveChemistryRegressionTest {
   void positiveWeightsCanPreferFewerMappedAtoms() {
     MolGraph query = graph(5, new int[][] {{0,1},{0,2},{0,3},{1,2},{1,3},{2,3}});
     MolGraph target = graph(3, new int[][] {{0,1},{0,2},{1,2}});
-    var options = weighted(1, 1, 1, 1, 100);
+    SearchEngine.MCSOptions options = weighted(1, 1, 1, 1, 100);
     options.connectedOnly = false;
     Map<Integer, Integer> mapping = SearchEngine.findMCS(query, target, new ChemOptions(), options);
     assertEquals(102.0, score(mapping, options.atomWeights),
@@ -167,16 +171,16 @@ class ObjectiveChemistryRegressionTest {
   @Test
   void fragmentLimitsUseTheSelectedObjective() throws Exception {
     MolGraph components = parse("CCCC.CC");
-    var options = weighted(1, 1, 1, 1, 5, 5);
+    SearchEngine.MCSOptions options = weighted(1, 1, 1, 1, 5, 5);
     options.disconnectedMCS = true;
     options.maxFragments = 1;
     Map<Integer, Integer> mapping = SearchEngine.findMCS(components, components, new ChemOptions(), options);
     assertEquals(10.0, score(mapping, options.atomWeights));
-    assertEquals(Set.of(4, 5), mapping.keySet());
+    assertEquals(set(4, 5), mapping.keySet());
 
     MolGraph bondComponents = graph(9, new int[][] {
         {0,1},{1,2},{2,3},{3,4},{5,6},{5,7},{5,8},{6,7},{6,8},{7,8}});
-    var bondOptions = new SearchEngine.MCSOptions();
+    SearchEngine.MCSOptions bondOptions = new SearchEngine.MCSOptions();
     bondOptions.disconnectedMCS = true;
     bondOptions.maxFragments = 1;
     bondOptions.maximizeBonds = true;
@@ -187,14 +191,14 @@ class ObjectiveChemistryRegressionTest {
   @Test
   void smallWeightsKeepTheirPrecision() throws Exception {
     MolGraph components = parse("C.C");
-    var options = weighted(0.0001, 0.0002);
-    assertEquals(Set.of(1), SearchEngine.findMCS(components, components, new ChemOptions(), options).keySet());
+    SearchEngine.MCSOptions options = weighted(0.0001, 0.0002);
+    assertEquals(set(1), SearchEngine.findMCS(components, components, new ChemOptions(), options).keySet());
   }
 
   @Test
   void cachedGraphDoesNotStronglyRetainTheWeakKey() throws Exception {
     SearchEngine.clearMolGraphCache();
-    var molecule = new SmilesParser(SilentChemObjectBuilder.getInstance()).parseSmiles("CCO");
+    org.openscience.cdk.interfaces.IAtomContainer molecule = new SmilesParser(SilentChemObjectBuilder.getInstance()).parseSmiles("CCO");
     MolGraph graph = SearchEngine.toMolGraph(molecule);
     assertSame(graph, SearchEngine.toMolGraph(molecule));
     Field field = SearchEngine.class.getDeclaredField("molGraphCache");
@@ -210,7 +214,7 @@ class ObjectiveChemistryRegressionTest {
   @Test
   void canonicalizationFindsTheGlobalGeneratorOrbitMinimum() {
     MolGraph cycle = graph(4, new int[][] {{0,1},{1,2},{2,3},{3,0}});
-    Map<Integer, Integer> mapping = Map.of(0, 2, 1, 3, 2, 0);
+    Map<Integer, Integer> mapping = mapping(0, 2, 1, 3, 2, 0);
     Map<Integer, Integer> expected = orbitMinimum(cycle, cycle, mapping);
     assertEquals(expected, SearchEngine.canonicalizeMapping(cycle, cycle, mapping));
     for (int[] generator : cycle.getAutomorphismGenerators()) {
@@ -229,14 +233,14 @@ class ObjectiveChemistryRegressionTest {
       for (int a = 0; a < 3; a++)
         for (int b = a + 1; b < 3; b++)
           if ((mask & (1 << bit++)) != 0) edges.add(new int[] {a,b});
-      graphs[mask] = graph(3, edges.toArray(int[][]::new));
+      graphs[mask] = graph(3, edges.toArray(new int[edges.size()][]));
     }
     for (int q = 0; q < graphs.length; q++) {
       for (int t = 0; t < graphs.length; t++) {
         for (boolean connected : new boolean[] {true, false}) {
           for (boolean induced : new boolean[] {true, false}) {
             for (double[] weights : new double[][] {{1,-5,2},{0.0001,0.0003,-0.0002},{1,2,3},null}) {
-              var options = new SearchEngine.MCSOptions();
+              SearchEngine.MCSOptions options = new SearchEngine.MCSOptions();
               options.connectedOnly = connected;
               options.induced = induced;
               options.atomWeights = weights;
@@ -261,7 +265,7 @@ class ObjectiveChemistryRegressionTest {
     cycle.ensureCanonical();
     cycle.autGeneratorsTruncated = true;
     assertThrows(IllegalStateException.class,
-        () -> SearchEngine.canonicalizeMapping(cycle, cycle, Map.of(0,0,1,1)));
+        () -> SearchEngine.canonicalizeMapping(cycle, cycle, mapping(0,0,1,1)));
   }
 
   @Test
@@ -269,7 +273,7 @@ class ObjectiveChemistryRegressionTest {
     MolGraph large = graph(201, new int[][] {});
     assertTrue(large.automorphismGeneratorsTruncated(), "Large-graph refinement does not enumerate its automorphism group");
     assertThrows(IllegalStateException.class,
-        () -> SearchEngine.canonicalizeMapping(large, large, Map.of(200,200)));
+        () -> SearchEngine.canonicalizeMapping(large, large, mapping(200,200)));
   }
 
   @Test
@@ -279,7 +283,7 @@ class ObjectiveChemistryRegressionTest {
     MolGraph charge = new MolGraph.Builder().atomCount(2).atomicNumbers(new int[] {6,6})
         .neighbors(new int[][] {{},{}}).formalCharges(new int[] {1,-1}).build();
     MolGraph alternatingBonds = parse("C1=CC=C1");
-    for (MolGraph molecule : List.of(isotope,charge,alternatingBonds)) {
+    for (MolGraph molecule : list(isotope,charge,alternatingBonds)) {
       for (int[] generator : molecule.getAutomorphismGenerators()) {
         for (int atom = 0; atom < molecule.n; atom++) {
           assertEquals(molecule.formalCharge[atom], molecule.formalCharge[generator[atom]]);
@@ -305,21 +309,21 @@ class ObjectiveChemistryRegressionTest {
       assertEquals(6, generator[6]);
     }
     assertThrows(IllegalStateException.class,
-        () -> SearchEngine.canonicalizeMapping(molecule,molecule,Map.of(6,6)));
+        () -> SearchEngine.canonicalizeMapping(molecule,molecule,mapping(6,6)));
   }
 
   @Test
   void safeSymmetryAwayFromAnAnnotatedCenterRemainsAvailable() throws Exception {
     MolGraph molecule = parse("CC(C)[C@H](F)Cl");
     assertFalse(molecule.automorphismGeneratorsTruncated());
-    assertEquals(Map.of(0,0), SearchEngine.canonicalizeMapping(molecule,molecule,Map.of(2,2)));
+    assertEquals(mapping(0,0), SearchEngine.canonicalizeMapping(molecule,molecule,mapping(2,2)));
   }
 
   @Test
   void nonfiniteWeightsAreRejected() throws Exception {
     MolGraph query = parse("CC");
     for (double invalid : new double[] {Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY}) {
-      var options = weighted(1, invalid);
+      SearchEngine.MCSOptions options = weighted(1, invalid);
       assertThrows(IllegalArgumentException.class,
           () -> SearchEngine.findMCS(query, query, new ChemOptions(), options));
     }
@@ -328,9 +332,9 @@ class ObjectiveChemistryRegressionTest {
   @Test
   void targetExclusionsApplyToIdentityAndDoNotLeakIntoLaterDomains() throws Exception {
     MolGraph molecule = parse("CCC");
-    var chemistry = new ChemOptions();
-    var options = weighted(100, 1, 1);
-    options.excludedTargetAtoms = Set.of(0);
+    ChemOptions chemistry = new ChemOptions();
+    SearchEngine.MCSOptions options = weighted(100, 1, 1);
+    options.excludedTargetAtoms = set(0);
     Map<Integer, Integer> mapping = SearchEngine.findMCS(molecule, molecule, chemistry, options);
     assertFalse(mapping.values().contains(0));
     assertEquals(101.0, score(mapping, options.atomWeights),
@@ -338,41 +342,54 @@ class ObjectiveChemistryRegressionTest {
     assertTrue(mapping.containsKey(0));
     options.atomWeights = null;
     options.induced = true;
-    for (var engine : ChemOptions.MatcherEngine.values()) {
+    for (ChemOptions.MatcherEngine engine : ChemOptions.MatcherEngine.values()) {
       chemistry.matcherEngine = engine;
       assertEquals(2, SearchEngine.findMCS(molecule, molecule, chemistry, options).size());
       assertEquals(3, SearchEngine.findMCS(molecule, molecule, chemistry, new SearchEngine.MCSOptions()).size());
     }
     assertNull(chemistry.mcsExcludedTargetAtoms, "Caller chemical options must remain unchanged");
-    assertEquals(Set.of(0), options.excludedTargetAtoms);
+    assertEquals(set(0), options.excludedTargetAtoms);
   }
 
   @Test
   void excludedIndicesAreValidatedBeforeSearch() throws Exception {
     MolGraph molecule = parse("CC");
-    var options = new SearchEngine.MCSOptions();
+    SearchEngine.MCSOptions options = new SearchEngine.MCSOptions();
     for (int invalid : new int[] {-1, 2}) {
-      options.excludedTargetAtoms = Set.of(invalid);
+      options.excludedTargetAtoms = set(invalid);
       assertThrows(IllegalArgumentException.class,
           () -> SearchEngine.findMCS(molecule, molecule, new ChemOptions(), options));
     }
   }
 
   @Test
+  void nullTargetExclusionsAreRejectedBeforeSearch() throws Exception {
+    MolGraph molecule = parse("CC");
+    SearchEngine.MCSOptions options = new SearchEngine.MCSOptions();
+    options.excludedTargetAtoms = new HashSet<>();
+    options.excludedTargetAtoms.add(null);
+    assertThrows(NullPointerException.class,
+        () -> SearchEngine.findMCS(molecule, molecule, new ChemOptions(), options));
+    assertEquals(Collections.singleton(null), options.excludedTargetAtoms);
+    assertEquals(2, SearchEngine.findMCS(molecule, molecule, new ChemOptions(),
+        new SearchEngine.MCSOptions()).size());
+  }
+
+  @Test
   void constrainedBatchSupportsBuilderTargetsAndRetainsOriginalIndices() {
     MolGraph query = graph(2, new int[][] {{0,1}});
     MolGraph target = graph(4, new int[][] {{0,1},{1,2},{2,3}});
-    var options = new SearchEngine.MCSOptions();
-    var mappings = SearchEngine.batchMCSConstrained(List.of(query,query), List.of(target),
+    SearchEngine.MCSOptions options = new SearchEngine.MCSOptions();
+    List<Map<Integer, Integer>> mappings = SearchEngine.batchMCSConstrained(list(query,query), list(target),
         new ChemOptions(), options, 1_000);
     assertEquals(2, mappings.size());
     Set<Integer> used = new HashSet<>();
-    for (var mapping : mappings) {
+    for (Map<Integer, Integer> mapping : mappings) {
       assertEquals(2, mapping.size());
       assertTrue(SearchEngine.validateMapping(query, target, mapping, new ChemOptions()).isEmpty());
       for (int atom : mapping.values()) assertTrue(used.add(atom), "Target atoms cannot be reused");
     }
-    assertEquals(Set.of(0,1,2,3), used);
+    assertEquals(set(0,1,2,3), used);
     assertNull(options.excludedTargetAtoms);
   }
 
@@ -383,11 +400,11 @@ class ObjectiveChemistryRegressionTest {
     MolGraph carbons = graph(2, new int[][] {{0,1}});
     MolGraph nitrogen = new MolGraph.Builder().atomCount(1).atomicNumbers(new int[] {7})
         .neighbors(new int[][] {{}}).build();
-    var options = weighted(1,1,100);
+    SearchEngine.MCSOptions options = weighted(1,1,100);
     options.connectedOnly = false;
-    var mappings = SearchEngine.batchMCSConstrained(List.of(query), List.of(carbons,nitrogen),
+    List<Map<Integer, Integer>> mappings = SearchEngine.batchMCSConstrained(list(query), list(carbons,nitrogen),
         new ChemOptions(), options, 1_000);
-    assertEquals(Map.of(2,0), mappings.get(0), "The single nitrogen scores100 versus two carbons scoring2");
+    assertEquals(mapping(2,0), mappings.get(0), "The single nitrogen scores100 versus two carbons scoring2");
   }
 
   @Test
@@ -396,10 +413,10 @@ class ObjectiveChemistryRegressionTest {
     MolGraph target = parse("CCNc1cc(c2c(c1)N(C(=O)NC2)c3ccc(cc3)n4ccc-5ncnc5c4)c6ccnnc6");
     query.ensureCanonical();
     target.ensureCanonical();
-    var options = new SearchEngine.MCSOptions();
+    SearchEngine.MCSOptions options = new SearchEngine.MCSOptions();
     options.timeoutMs = 10_000;
     long started = System.nanoTime();
-    var mappings = SearchEngine.batchMCSConstrained(List.of(query), List.of(target),
+    List<Map<Integer, Integer>> mappings = SearchEngine.batchMCSConstrained(list(query), list(target),
         new ChemOptions(), options, 50);
     long elapsedMillis = (System.nanoTime() - started) / 1_000_000;
     assertTrue(elapsedMillis < 500, "The batch argument must override the10s option; elapsed=" + elapsedMillis);
@@ -410,10 +427,10 @@ class ObjectiveChemistryRegressionTest {
   @Test
   void multipleMCSMappingsRetainTheIncumbentObjective() throws Exception {
     MolGraph query = parse("CCCC"), target = parse("CC");
-    var options = weighted(100,1,1,1);
-    var mappings = SearchEngine.findAllMCS(query, target, new ChemOptions(), options, 20);
+    SearchEngine.MCSOptions options = weighted(100,1,1,1);
+    List<Map<Integer, Integer>> mappings = SearchEngine.findAllMCS(query, target, new ChemOptions(), options, 20);
     assertFalse(mappings.isEmpty());
-    for (var mapping : mappings) {
+    for (Map<Integer, Integer> mapping : mappings) {
       assertEquals(2, mapping.size());
       assertEquals(101.0, score(mapping, options.atomWeights));
       assertTrue(SearchEngine.validateMapping(query, target, mapping, new ChemOptions()).isEmpty());
@@ -454,7 +471,7 @@ class ObjectiveChemistryRegressionTest {
           changed = false;
           for (int a = 0; a < 3; a++) {
             if (mapping[a] < 0 || reached.contains(a)) continue;
-            for (int b : reached.toArray(Integer[]::new))
+            for (int b : reached.toArray(new Integer[reached.size()]))
               if (query.hasBond(a,b)) { reached.add(a); changed = true; break; }
           }
         } while (changed);
@@ -491,6 +508,6 @@ class ObjectiveChemistryRegressionTest {
         if (visited.add(next)) work.add(next);
       }
     }
-    return work.stream().min(order).orElseThrow();
+    return work.stream().min(order).orElseThrow(NoSuchElementException::new);
   }
 }

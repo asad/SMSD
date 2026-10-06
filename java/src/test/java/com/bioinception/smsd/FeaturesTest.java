@@ -66,7 +66,7 @@ public class FeaturesTest extends TestBase {
     @DisplayName("Tree: branched vs linear (isobutane vs butane)")
     void testTreeFastPathBranched() throws Exception {
       SMSD s = new SMSD(rawMol("CC(C)C"), rawMol("CCCC"), new ChemOptions());
-      var mcs = s.findMCS();
+      Map<Integer, Integer> mcs = s.findMCS();
       assertTrue(mcs.size() >= 3, "Isobutane/butane MCS >= 3, got " + mcs.size());
     }
 
@@ -74,7 +74,7 @@ public class FeaturesTest extends TestBase {
     @DisplayName("Tree: dendrimer-like branching")
     void testTreeFastPathDendrimer() throws Exception {
       SMSD s = new SMSD(rawMol("CC(CC)(CC)CC"), rawMol("CC(CCC)(CCC)CCC"), new ChemOptions());
-      var mcs = s.findMCS();
+      Map<Integer, Integer> mcs = s.findMCS();
       assertTrue(mcs.size() >= 5, "Dendrimer MCS >= 5, got " + mcs.size());
     }
 
@@ -96,7 +96,7 @@ public class FeaturesTest extends TestBase {
               rawMol("OCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCO"),
               rawMol("OCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCO"),
               new ChemOptions());
-      var mcs = s.findMCS(false, true, 10000);
+      Map<Integer, Integer> mcs = s.findMCS(false, true, 10000);
       long ms = (System.nanoTime() - t0) / 1_000_000;
       assertTrue(mcs.size() >= 30, "PEG MCS >= 30, got " + mcs.size());
       assertTrue(ms < 5000, "PEG should complete in < 5s, took " + ms + "ms");
@@ -109,7 +109,7 @@ public class FeaturesTest extends TestBase {
     void testSolventCorrectionDMSO() throws Exception {
       ChemOptions opts = ChemOptions.tautomerProfile().withSolvent(ChemOptions.Solvent.DMSO);
       SMSD s = new SMSD(rawMol("CC(=O)C"), rawMol("CC(O)=C"), opts);
-      var mcs = s.findMCS();
+      Map<Integer, Integer> mcs = s.findMCS();
       assertTrue(mcs.size() >= 3, "Keto/enol MCS in DMSO >= 3, got " + mcs.size());
     }
 
@@ -118,7 +118,7 @@ public class FeaturesTest extends TestBase {
     void testSolventCorrectionCHCl3() throws Exception {
       ChemOptions opts = ChemOptions.tautomerProfile().withSolvent(ChemOptions.Solvent.CHLOROFORM);
       SMSD s = new SMSD(rawMol("CC(=O)C"), rawMol("CC(O)=C"), opts);
-      var mcs = s.findMCS();
+      Map<Integer, Integer> mcs = s.findMCS();
       assertTrue(mcs.size() >= 3, "Keto/enol MCS in CHCl3 >= 3, got " + mcs.size());
     }
 
@@ -127,7 +127,7 @@ public class FeaturesTest extends TestBase {
     void testSolventCorrectionAqueous() throws Exception {
       ChemOptions opts = ChemOptions.tautomerProfile().withSolvent(ChemOptions.Solvent.AQUEOUS);
       SMSD s = new SMSD(rawMol("CC(=O)C"), rawMol("CC(O)=C"), opts);
-      var mcs = s.findMCS();
+      Map<Integer, Integer> mcs = s.findMCS();
       assertTrue(mcs.size() >= 3, "Keto/enol MCS in water >= 3, got " + mcs.size());
     }
 

@@ -134,7 +134,7 @@ public final class MolGraph {
         configurations = tetraConfigurations;
         if (configurations == null) {
           configurations = new int[n];
-          for (var descriptor : CIPAssigner.assignRS(this).entrySet())
+          for (Map.Entry<Integer, Character> descriptor : CIPAssigner.assignRS(this).entrySet())
             configurations[descriptor.getKey()] = descriptor.getValue();
           tetraConfigurations = configurations;
         }
@@ -1298,7 +1298,57 @@ public final class MolGraph {
   }
 
   // Scaffold template storage
-  private record TemplateEntry(String name, int atomCount, int[] ringSizes, double[][] coords) {}
+  private static final class TemplateEntry {
+    private final String name;
+    private final int atomCount;
+    private final int[] ringSizes;
+    private final double[][] coords;
+
+    private TemplateEntry(
+        String name,
+        int atomCount,
+        int[] ringSizes,
+        double[][] coords) {
+      this.name = name;
+      this.atomCount = atomCount;
+      this.ringSizes = ringSizes;
+      this.coords = coords;
+    }
+
+    public String name() { return name; }
+    public int atomCount() { return atomCount; }
+    public int[] ringSizes() { return ringSizes; }
+    public double[][] coords() { return coords; }
+
+    @Override
+    public final boolean equals(Object other) {
+      if (this == other) return true;
+      if (!(other instanceof TemplateEntry)) return false;
+      TemplateEntry that = (TemplateEntry) other;
+      return Objects.equals(name, that.name)
+          && atomCount == that.atomCount
+          && Objects.equals(ringSizes, that.ringSizes)
+          && Objects.equals(coords, that.coords);
+    }
+
+    @Override
+    public final int hashCode() {
+      int hash = 0;
+      hash = 31 * hash + Objects.hashCode(name);
+      hash = 31 * hash + Integer.hashCode(atomCount);
+      hash = 31 * hash + Objects.hashCode(ringSizes);
+      hash = 31 * hash + Objects.hashCode(coords);
+      return hash;
+    }
+
+    @Override
+    public final String toString() {
+      return "TemplateEntry[name=" + name
+          + ", atomCount=" + atomCount
+          + ", ringSizes=" + ringSizes
+          + ", coords=" + coords + "]";
+    }
+  }
 
   private static double[][] regularPolygonCoords(int n) {
     double r = 0.5 / Math.sin(Math.PI / n);
@@ -1699,7 +1749,7 @@ public final class MolGraph {
     // Skip the expensive CDK ring perception if the molecule already has ring flags
     // (e.g., from AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms + Aromaticity.apply).
     if (!hasRingFlags(mol)) {
-      try { Cycles.markRingAtomsAndBonds(mol); } catch (Exception _) {}
+      try { Cycles.markRingAtomsAndBonds(mol); } catch (Exception ignored) {}
     }
 
     IdentityHashMap<IAtom, Integer> idxMap = new IdentityHashMap<>(n);
@@ -1774,7 +1824,8 @@ public final class MolGraph {
     this.dbStereoConf = (hasStereo && n <= SPARSE_THRESHOLD) ? new int[n][n] : null;
     if (hasStereo) {
       for (IStereoElement<?, ?> se : stereoElements) {
-        if (se instanceof ITetrahedralChirality tc) {
+        if (se instanceof ITetrahedralChirality) {
+          ITetrahedralChirality tc = (ITetrahedralChirality) se;
           Integer idx = idxMap.get(tc.getChiralAtom());
           if (idx != null) {
             tetraChirality[idx] = tc.getStereo() == ITetrahedralChirality.Stereo.CLOCKWISE ? 1 : 2;
@@ -1784,7 +1835,8 @@ public final class MolGraph {
               order[k] = ligands[k] == tc.getChiralAtom() ? -1 : idxMap.get(ligands[k]);
             tetraLigands[idx] = order;
           }
-        } else if (se instanceof IDoubleBondStereochemistry dbs) {
+        } else if (se instanceof IDoubleBondStereochemistry) {
+          IDoubleBondStereochemistry dbs = (IDoubleBondStereochemistry) se;
           IBond stereoBond = dbs.getStereoBond();
           Integer a = idxMap.get(stereoBond.getAtom(0)), c = idxMap.get(stereoBond.getAtom(1));
           if (a != null && c != null && dbStereoConf != null) {
@@ -2826,8 +2878,57 @@ public final class MolGraph {
   private static final int CANON_SEARCH_LIMIT = 200;
   private static final int MAX_GENERATORS = 500;
 
-  private record CanonResult(int[] canonLabel, int[] orbit, int[][] autGenerators,
-      boolean generatorsTruncated) {}
+  private static final class CanonResult {
+    private final int[] canonLabel;
+    private final int[] orbit;
+    private final int[][] autGenerators;
+    private final boolean generatorsTruncated;
+
+    private CanonResult(
+        int[] canonLabel,
+        int[] orbit,
+        int[][] autGenerators,
+        boolean generatorsTruncated) {
+      this.canonLabel = canonLabel;
+      this.orbit = orbit;
+      this.autGenerators = autGenerators;
+      this.generatorsTruncated = generatorsTruncated;
+    }
+
+    public int[] canonLabel() { return canonLabel; }
+    public int[] orbit() { return orbit; }
+    public int[][] autGenerators() { return autGenerators; }
+    public boolean generatorsTruncated() { return generatorsTruncated; }
+
+    @Override
+    public final boolean equals(Object other) {
+      if (this == other) return true;
+      if (!(other instanceof CanonResult)) return false;
+      CanonResult that = (CanonResult) other;
+      return Objects.equals(canonLabel, that.canonLabel)
+          && Objects.equals(orbit, that.orbit)
+          && Objects.equals(autGenerators, that.autGenerators)
+          && generatorsTruncated == that.generatorsTruncated;
+    }
+
+    @Override
+    public final int hashCode() {
+      int hash = 0;
+      hash = 31 * hash + Objects.hashCode(canonLabel);
+      hash = 31 * hash + Objects.hashCode(orbit);
+      hash = 31 * hash + Objects.hashCode(autGenerators);
+      hash = 31 * hash + Boolean.hashCode(generatorsTruncated);
+      return hash;
+    }
+
+    @Override
+    public final String toString() {
+      return "CanonResult[canonLabel=" + canonLabel
+          + ", orbit=" + orbit
+          + ", autGenerators=" + autGenerators
+          + ", generatorsTruncated=" + generatorsTruncated + "]";
+    }
+  }
 
   private static CanonResult computeCanonicalLabeling(int n, int[] label, int[] degree, int[][] neighbors) {
     if (n == 0) return new CanonResult(new int[0], new int[0], new int[0][], false);

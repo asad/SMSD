@@ -6,6 +6,9 @@
  */
 package com.bioinception.smsd;
 
+import static com.bioinception.smsd.TestSupport.mapping;
+import static com.bioinception.smsd.TestSupport.repeat;
+
 import com.bioinception.smsd.core.*;
 import com.bioinception.smsd.core.ChemOptions;
 import com.bioinception.smsd.core.SMSD;
@@ -631,7 +634,7 @@ public class CoreTest {
   static Stream<Arguments> chainCases() {
     List<Arguments> out = new ArrayList<>();
     for (int k = 2; k <= 21; k++) {
-      out.add(arguments("chain_" + k, "C".repeat(k), "C".repeat(k + 2), true));
+      out.add(arguments("chain_" + k, repeat("C", k), repeat("C", k + 2), true));
     }
     return out.stream();
   }
@@ -1253,7 +1256,7 @@ public class CoreTest {
       ChemOptions strict = new ChemOptions();
       SearchEngine.MCSOptions options = new SearchEngine.MCSOptions();
       options.timeoutMs = 5_000L;
-      Map<Integer, Integer> witness = Map.of(0, 0, 1, 1);
+      Map<Integer, Integer> witness = mapping(0, 0, 1, 1);
       assertTrue(SearchEngine.validateMapping(keto, enol, witness, strict).isEmpty());
       // Each connected three-atom subset would need either C=O to match C-O,
       // or both query C-C bonds to match the target's C-C and C=C bonds.
@@ -1784,8 +1787,8 @@ public class CoreTest {
     @Test
     @DisplayName("Very long chain: C*200 contains C*100 substructure, completes < 5s")
     void veryLongChainSubstructure() throws Exception {
-      String longChain200 = "C".repeat(200);
-      String longChain100 = "C".repeat(100);
+      String longChain200 = repeat("C", 200);
+      String longChain100 = repeat("C", 100);
       IAtomContainer q = SP.parseSmiles(longChain100);
       IAtomContainer t = SP.parseSmiles(longChain200);
       ChemOptions opts = new ChemOptions();
@@ -1875,14 +1878,14 @@ public class CoreTest {
     @Test
     @DisplayName("findMCSProfiledFromSmiles returns valid timers")
     void profiledFromSmiles_validTimers() throws Exception {
-      var pr = SearchEngine.findMCSProfiledFromSmiles(
+      SearchEngine.MCSProfiledResult pr = SearchEngine.findMCSProfiledFromSmiles(
           "c1ccccc1", "c1ccc(O)cc1", new ChemOptions(), new SearchEngine.MCSOptions());
 
       assertNotNull(pr, "profiled result must not be null");
       assertNotNull(pr.result(), "MCSResult must not be null");
       assertNotNull(pr.timers(), "timers must not be null");
 
-      var t = pr.timers();
+      SearchEngine.MCSStageTimers t = pr.timers();
       assertTrue(t.totalUs() > 0, "totalUs must be positive");
       assertTrue(t.orientationUs() >= 0, "orientationUs must be non-negative");
       assertTrue(t.seedsUs() >= 0, "seedsUs must be non-negative");
@@ -1898,14 +1901,14 @@ public class CoreTest {
     @Test
     @DisplayName("findMCSProfiled (MolGraph API) returns valid timers")
     void profiledMolGraph_validTimers() throws Exception {
-      var sp = new SmilesParser(SilentChemObjectBuilder.getInstance());
-      var mol1 = sp.parseSmiles("c1ccccc1");
-      var mol2 = sp.parseSmiles("c1ccc(O)cc1");
+      SmilesParser sp = new SmilesParser(SilentChemObjectBuilder.getInstance());
+      IAtomContainer mol1 = sp.parseSmiles("c1ccccc1");
+      IAtomContainer mol2 = sp.parseSmiles("c1ccc(O)cc1");
 
-      var pr = SearchEngine.findMCSProfiled(mol1, mol2, new ChemOptions(), new SearchEngine.MCSOptions());
+      SearchEngine.MCSProfiledResult pr = SearchEngine.findMCSProfiled(mol1, mol2, new ChemOptions(), new SearchEngine.MCSOptions());
 
       assertNotNull(pr);
-      var t = pr.timers();
+      SearchEngine.MCSStageTimers t = pr.timers();
       assertTrue(t.totalUs() > 0, "totalUs must be positive");
       assertTrue(t.orientationUs() >= 0, "orientationUs must be non-negative");
       assertTrue(t.seedsUs() >= 0, "seedsUs must be non-negative");
@@ -1918,11 +1921,11 @@ public class CoreTest {
     @Test
     @DisplayName("bestAfter* fields are non-negative and consistent")
     void profiledBestAfterFields() throws Exception {
-      var pr = SearchEngine.findMCSProfiledFromSmiles(
+      SearchEngine.MCSProfiledResult pr = SearchEngine.findMCSProfiledFromSmiles(
           "CC(=O)Oc1ccccc1C(O)=O", "CC(=O)Oc1ccccc1",
           new ChemOptions(), new SearchEngine.MCSOptions());
 
-      var t = pr.timers();
+      SearchEngine.MCSStageTimers t = pr.timers();
       assertTrue(t.bestAfterGreedy() >= 0, "bestAfterGreedy must be non-negative");
       assertTrue(t.bestAfterSeed() >= 0, "bestAfterSeed must be non-negative");
       assertTrue(t.bestAfterBK() >= 0, "bestAfterBK must be non-negative");

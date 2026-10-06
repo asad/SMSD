@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7.0.1
       - name: Set up JDK 25
@@ -16,10 +17,16 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
-      - name: Build and test
-        run: mvn -U -B clean verify
-      - name: Package
-        run: mvn -B -DskipTests=true package
+      - name: Build Java 8-compatible packages and test on Java 25
+        run: mvn -U -B -Dslow.tests.exclude=nothing -Dsurefire.reportNameSuffix=java25 clean verify
+      - name: Set up Java 8 compatibility runtime
+        uses: actions/setup-java@v6.0.1
+        with:
+          distribution: corretto
+          java-version: '8'
+          cache: maven
+      - name: Test the same compiled classes on Java 8
+        run: mvn -f java/pom.xml -B -Dslow.tests.exclude=nothing -Dsurefire.reportNameSuffix=java8 surefire:test
       - name: Upload fat JAR and launchers
         uses: actions/upload-artifact@v7.0.1
         with:

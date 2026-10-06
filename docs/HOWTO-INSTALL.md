@@ -8,7 +8,7 @@ build outputs; release downloads become available after validation.
 ## Choose a distribution
 
 The Java CLI JAR and portable CLI archive contain platform-independent Java
-code. Use the same files on Linux, macOS or Windows with Java 25 installed for
+code. Use the same files on Linux, macOS or Windows with Java 8 or later installed for
 your machine's architecture; they do not include a Java runtime. The archive
 includes Unix and Windows launchers. Native DMG, MSI and DEB installers include Java 25.
 See [installer instructions](INSTALLERS.md) for each platform.
@@ -38,7 +38,7 @@ java -jar smsd-7.2.2-jar-with-dependencies.jar --version
 java -jar smsd-7.2.2-jar-with-dependencies.jar --Q SMI --q "CCN" --T SMI --t "CCCNC" -m --json -
 ```
 
-Windows PowerShell, with Java 25 on `PATH`:
+Windows PowerShell, with Java 8 or later on `PATH`:
 
 ```powershell
 java -version
@@ -64,14 +64,14 @@ tar -xzf .\smsd-7.2.2-cli.tar.gz -C .\smsd-cli
 ```
 
 The Windows archive launcher uses `java` from `PATH`; confirm that it is Java
-25 even when `JAVA_HOME` is set. Retain the launcher's CRLF line endings. On
+8 or later even when `JAVA_HOME` is set. Retain the launcher's CRLF line endings. On
 Unix, retain its executable permission or invoke it with `sh`. Paths containing
 spaces should be quoted. The direct JAR command works independently of the
 archive launchers.
 
 ## Requirements
 
-- Java 25+ (JDK 25 recommended)
+- Java 8 or later (JDK 25 LTS preferred)
 - Maven 3.9+
 
 ## Build
@@ -102,6 +102,17 @@ stress suites:
 ```bash
 mvn -f java/pom.xml -Dslow.tests.exclude=nothing clean verify
 ```
+
+For Java 8 compatibility, run the same tests on an installed Java 8 JVM:
+
+```bash
+mvn -f java/pom.xml -Dslow.tests.exclude=nothing \
+  "-Djvm=$SMSD_JAVA8_HOME/bin/java" test
+```
+
+Maven can use JDK 25 for compilation while the test process uses Java 8.
+Set `SMSD_JAVA8_HOME` to that JDK's home directory. The published 7.2.1 JARs
+still require Java 25; this compatibility target applies to 7.2.2.
 
 Opt-in corpus benchmarks are separate. Their bounded defaults are one-second
 pair budgets, no warmup and one measured trial; checkpoints are flushed after

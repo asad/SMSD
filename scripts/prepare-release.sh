@@ -6,9 +6,17 @@ SMSD_RELEASE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$SMSD_RELEASE_ROOT"
 SMSD_RELEASE_PYTHON="${SMSD_RELEASE_PYTHON:-python3}"
 "$SMSD_RELEASE_PYTHON" -c 'import sys; assert sys.prefix != sys.base_prefix, "Run with a dedicated Python virtual environment"'
+mvn -version | "$SMSD_RELEASE_PYTHON" -c 'import re, sys; text = sys.stdin.read(); assert re.search(r"Java version: 25(?:[.,]|\s)", text), "Use JDK 25 for release builds; set JAVA_HOME accordingly"'
 SMSD_RELEASE_VERSION="$("$SMSD_RELEASE_PYTHON" -c 'import xml.etree.ElementTree as E; print(E.parse("java/pom.xml").findtext("{http://maven.apache.org/POM/4.0.0}version"))')"
 SMSD_RELEASE_FINAL_DIR="$SMSD_RELEASE_ROOT/dist/release-$SMSD_RELEASE_VERSION"
 SMSD_RELEASE_JOBS="${SMSD_RELEASE_JOBS:-4}"
+SMSD_RELEASE_JAVA8_HOME="${SMSD_RELEASE_JAVA8_HOME:-}"
+[[ -x "$SMSD_RELEASE_JAVA8_HOME/bin/java" ]] || {
+  echo 'Set SMSD_RELEASE_JAVA8_HOME to a Java 8 JDK for compatibility checks.' >&2
+  exit 1
+}
+"$SMSD_RELEASE_JAVA8_HOME/bin/java" -version 2>&1 | \
+  "$SMSD_RELEASE_PYTHON" -c 'import sys; assert "1.8.0_" in sys.stdin.read().splitlines()[0], "Compatibility runtime must be Java 8"'
 if [[ "$(uname -s)" == "Darwin" ]]; then
   # The release wheel targets macOS 26; bundled libraries must support this target.
   export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-26.0}"
@@ -22,6 +30,10 @@ trap 'rm -rf "$SMSD_RELEASE_SOURCE" "$SMSD_RELEASE_DIR"' EXIT
 mvn -f java/pom.xml -B -Dslow.tests.exclude=nothing clean verify \
   org.apache.maven.plugins:maven-source-plugin:3.3.1:jar-no-fork \
   org.apache.maven.plugins:maven-javadoc-plugin:3.6.3:jar
+mvn -f java/pom.xml -B -Dslow.tests.exclude=nothing \
+  "-Djvm=$SMSD_RELEASE_JAVA8_HOME/bin/java" surefire:test
+"$SMSD_RELEASE_JAVA8_HOME/bin/java" -jar \
+  "java/target/smsd-$SMSD_RELEASE_VERSION-jar-with-dependencies.jar" --version
 java/src/scripts/smsd --version
 java/target/appassembler/bin/smsd --version
 

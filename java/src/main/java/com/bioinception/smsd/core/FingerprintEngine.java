@@ -1023,7 +1023,7 @@ public final class FingerprintEngine {
     if (fpSize <= 0) throw new IllegalArgumentException("fpSize must be > 0");
     int[] arr = new int[fpSize];
     if (counts == null) return arr;
-    for (var entry : counts.entrySet()) {
+    for (java.util.Map.Entry<Integer, Integer> entry : counts.entrySet()) {
       int pos = entry.getKey();
       if (pos >= 0 && pos < fpSize) {
         arr[pos] = entry.getValue();

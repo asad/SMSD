@@ -2,11 +2,12 @@
 
 The Java API uses CDK 2.13 for molecular input and standardisation, with SMSD
 algorithms for substructure, MCS, fingerprints, stereo/CIP, layout and R-group
-decomposition. This checkout targets version 7.2.1, released on GitHub and
-recorded in the changelog. Maven Central publication remains pending.
+decomposition. This checkout targets version 7.2.2, currently in preparation.
+GitHub's published release is 7.2.1; Maven Central remains at 7.1.1.
 Java sources and launchers are in `java/src/`; Maven output is in
 `java/target/`. The root aggregator supports `mvn verify`, while direct module
-builds use `mvn -f java/pom.xml`. The Java packages require JDK 25.
+builds use `mvn -f java/pom.xml`. Version 7.2.2 targets Java 8 or later;
+Java 25 LTS is preferred. The same JAR is tested on Java 8 and Java 25.
 They accept CDK `IAtomContainer` inputs;
 the native C++/Python graph layer uses its own molecule representation.
 
@@ -17,7 +18,7 @@ universal ranking between Java, native SMSD or CDK.
 ## Install
 
 The current published Maven Central version is 7.1.1. It does not include the
-7.2.1 changes documented here:
+7.2.2 changes documented here:
 
 ```xml
 <dependency>
@@ -28,19 +29,19 @@ The current published Maven Central version is 7.1.1. It does not include the
 ```
 
 To use these changes, install this checkout into your local Maven
-repository and set the dependency version to `7.2.1`:
+repository and set the dependency version to `7.2.2`:
 
 ```sh
 mvn -f java/pom.xml install
 ```
 
-The 7.2.1 coordinate is available from that local build until it is published
+The 7.2.2 coordinate is available from that local build until it is published
 to Maven Central. GitHub's 7.2.1 release is separate from the registry version.
 
 Run the locally built CLI:
 
 ```bash
-java -jar java/target/smsd-7.2.1-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
+java -jar java/target/smsd-7.2.2-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 ```
 
 ## Core API
@@ -72,7 +73,7 @@ public class MCSExample {
     options.connectedOnly = true;
     options.induced = false;
     Map<Integer, Integer> mapping = SearchEngine.findMCS(g1, g2, chemistry, options);
-    for (var pair : mapping.entrySet()) {
+    for (Map.Entry<Integer, Integer> pair : mapping.entrySet()) {
       System.out.printf("query[%d] %s -> target[%d] %s%n",
           pair.getKey(), query.getAtom(pair.getKey()).getSymbol(),
           pair.getValue(), target.getAtom(pair.getValue()).getSymbol());
@@ -86,14 +87,14 @@ public class MCSExample {
 Save it as `MCSExample.java`, then compile and run against the shaded JAR:
 
 ```bash
-javac -cp java/target/smsd-7.2.1-jar-with-dependencies.jar MCSExample.java
-java -cp java/target/smsd-7.2.1-jar-with-dependencies.jar:. MCSExample
+javac -cp java/target/smsd-7.2.2-jar-with-dependencies.jar MCSExample.java
+java -cp java/target/smsd-7.2.2-jar-with-dependencies.jar:. MCSExample
 ```
 
 On Windows, use a semicolon classpath separator and quote the classpath:
 
 ```powershell
-java -cp "java/target/smsd-7.2.1-jar-with-dependencies.jar;." MCSExample
+java -cp "java/target/smsd-7.2.2-jar-with-dependencies.jar;." MCSExample
 ```
 
 `MolGraph` retains CDK atom order. Weights and target exclusions use those
@@ -105,16 +106,16 @@ consistently when importing containers from other CDK readers.
 For substructure matching, use the same containers and chemistry options:
 
 ```java
-var first = SearchEngine.findSubstructure(query, target, chemistry, 1000);
-var all = SearchEngine.findAllSubstructures(query, target, chemistry, 100, 1000);
+Map<Integer, Integer> first = SearchEngine.findSubstructure(query, target, chemistry, 1000);
+java.util.List<Map<Integer, Integer>> all = SearchEngine.findAllSubstructures(query, target, chemistry, 100, 1000);
 boolean hit = SearchEngine.isSubstructure(query, target, chemistry, 1000);
 ```
 
 The `SMSD` facade also accepts CDK containers and standardises them by default:
 
 ```java
-var matcher = new com.bioinception.smsd.core.SMSD(query, target, chemistry);
-var mapping = matcher.findMCS(false, true, 1000); // non-induced, connected
+com.bioinception.smsd.core.SMSD matcher = new com.bioinception.smsd.core.SMSD(query, target, chemistry);
+Map<Integer, Integer> mapping = matcher.findMCS(false, true, 1000); // non-induced, connected
 ```
 
 Pass `standardise=false` to the four-argument constructor only for inputs you
@@ -158,9 +159,9 @@ double sim = SearchEngine.mcsFingerprintSimilarity(mcsFp, mcsFp);
 ## Stereo, Layout, and R-groups
 
 ```java
-var rs = com.bioinception.smsd.core.CIPAssigner.assignRS(g1);
-var ez = com.bioinception.smsd.core.CIPAssigner.assignEZ(g1);
-var rgroups = SearchEngine.decomposeRGroups(core, molecules, new ChemOptions(), 10_000);
+Map<Integer, Character> rs = com.bioinception.smsd.core.CIPAssigner.assignRS(g1);
+Map<Long, Character> ez = com.bioinception.smsd.core.CIPAssigner.assignEZ(g1);
+java.util.List<Map<String, IAtomContainer>> rgroups = SearchEngine.decomposeRGroups(core, molecules, new ChemOptions(), 10_000);
 ```
 
 ## Matching contracts

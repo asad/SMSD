@@ -13,13 +13,13 @@
  *   cd <project-root>
  *   mvn package -DskipTests
  *   mkdir -p build/local-benchmarks/java-classes
- *   javac -cp java/target/smsd-7.2.1-jar-with-dependencies.jar \
+ *   javac -cp java/target/smsd-7.2.2-jar-with-dependencies.jar \
  *         benchmarks/benchmark_substructure_java.java -d build/local-benchmarks/java-classes
- *   java -cp java/target/smsd-7.2.1-jar-with-dependencies.jar:build/local-benchmarks/java-classes \
+ *   java -cp java/target/smsd-7.2.2-jar-with-dependencies.jar:build/local-benchmarks/java-classes \
  *         benchmark_substructure_java benchmarks/substructure_pairs.tsv \
  *         build/local-benchmarks/results_substructure.tsv
  *
- * Requires JDK 25. Output path is configurable.
+ * Requires Java 8 or later. Output path is configurable.
  */
 
 import com.bioinception.smsd.core.*;
@@ -82,7 +82,7 @@ public class benchmark_substructure_java {
     // =====================================================================
     public static void main(String[] args) throws Exception {
         String pairsFile = args.length > 0 ? args[0] : DEFAULT_PAIRS_FILE;
-        List<TestPair> pairs = loadPairs(Path.of(pairsFile));
+        List<TestPair> pairs = loadPairs(Paths.get(pairsFile));
         System.out.printf("Substructure Benchmark: SMSD vs CDK (Java-to-Java)%n");
         System.out.printf("Loaded %d pairs from %s%n", pairs.size(), pairsFile);
         System.out.println("WARMUP=" + WARMUP + " ITERS=" + ITERS);
@@ -105,7 +105,7 @@ public class benchmark_substructure_java {
         }
 
         // TSV output
-        Path output = Path.of(args.length > 1 ? args[1] : "build/local-benchmarks/results_substructure.tsv");
+        Path output = Paths.get(args.length > 1 ? args[1] : "build/local-benchmarks/results_substructure.tsv");
         if (output.getParent() != null) Files.createDirectories(output.getParent());
         PrintWriter tsv = new PrintWriter(new FileWriter(output.toFile()));
         tsv.println("Pair\tSMSD_us\tSMSD_cached_us\tCDK_us\tSpeedup\tCached_Speedup\tSMSD_match\tCDK_match");

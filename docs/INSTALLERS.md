@@ -2,6 +2,9 @@
 
 Each release provides one installer per platform, with Java 25 included:
 
+The 7.2.2 JAR targets Java 8 or later. Installers include Java 25 LTS so users
+do not need a separate Java installation.
+
 | Platform | Package | Architecture |
 |---|---|---|
 | Windows | MSI | x86_64 |
@@ -42,7 +45,7 @@ sudo apt install ./smsd-7.2.2-linux-amd64.deb
 
 Remove the Windows package through Installed apps, delete `SMSD.app` on macOS,
 or run `sudo apt remove smsd` on Linux. Other Linux distributions can use the
-portable Java package with Java 25 installed.
+portable Java package with Java 8 or later installed; Java 25 LTS is preferred.
 
 ## Prepare release packages
 

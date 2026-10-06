@@ -128,7 +128,7 @@ class SubstructureRegressionTest {
     List<Map<Integer, Integer>> maps = SearchEngine.findAllSubstructures(
         isolatedCarbons(1), isolatedCarbons(4_200), options(engine), 5_000, TIMEOUT_MS);
     assertEquals(4_200, maps.size());
-    assertEquals(4_199, maps.getLast().get(0));
+    assertEquals(4_199, maps.get(maps.size() - 1).get(0));
   }
 
   @ParameterizedTest

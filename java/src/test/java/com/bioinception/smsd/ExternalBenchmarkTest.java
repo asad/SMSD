@@ -6,6 +6,8 @@
  */
 package com.bioinception.smsd;
 
+import static com.bioinception.smsd.TestSupport.isBlank;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.bioinception.smsd.core.*;
@@ -76,7 +78,7 @@ public class ExternalBenchmarkTest extends TestBase {
             return Collections.emptyList();
         }
         return Files.readAllLines(p, StandardCharsets.UTF_8).stream()
-                .filter(line -> !line.startsWith("#") && !line.isBlank())
+                .filter(line -> !line.startsWith("#") && !isBlank(line))
                 .map(line -> line.split("\t"))
                 .filter(parts -> parts.length >= 2)
                 .collect(Collectors.toList());
@@ -109,7 +111,7 @@ public class ExternalBenchmarkTest extends TestBase {
 
             for (String line : lines) {
                 BenchmarkRunSettings.checkInterrupted();
-                if (line.startsWith("name") || line.isBlank()) continue;
+                if (line.startsWith("name") || isBlank(line)) continue;
                 String[] parts = line.split(",\\s*");
                 if (parts.length < 3) continue;
 
@@ -171,7 +173,7 @@ public class ExternalBenchmarkTest extends TestBase {
 
             for (String line : lines) {
                 BenchmarkRunSettings.checkInterrupted();
-                if (line.startsWith("name") || line.isBlank()) continue;
+                if (line.startsWith("name") || isBlank(line)) continue;
                 String[] parts = line.split(",\\s*");
                 if (parts.length < 3) continue;
 
@@ -386,7 +388,7 @@ public class ExternalBenchmarkTest extends TestBase {
 
             // Load SMARTS patterns
             List<String> smarts = Files.readAllLines(p, StandardCharsets.UTF_8).stream()
-                    .filter(line -> !line.startsWith("#") && !line.isBlank())
+                    .filter(line -> !line.startsWith("#") && !isBlank(line))
                     .map(line -> line.split("\t")[0].trim())
                     .filter(s -> !s.isEmpty())
                     .collect(Collectors.toList());

@@ -1,6 +1,7 @@
 # Publishing SMSD 7.2.2
 
-Build and validate before publishing. The release uses Java 25 and CDK 2.13,
+Build and validate before publishing. The Java JAR targets Java 8 with CDK 2.13;
+builds and native installers use Java 25 LTS. Validate on both runtimes. Prepare
 one CPU/OpenMP wheel per operating system for CPython 3.14, and a Python source
 distribution. Keep one Python version across the wheel set:
 
@@ -28,6 +29,8 @@ including that historical evidence. RDKit is optional at runtime.
 
 Use JDK 25, Maven, CMake, a C++17 compiler and Python 3.14. On macOS, OpenMP
 requires an available `libomp`; the wheel repair bundles that library.
+Set `SMSD_RELEASE_JAVA8_HOME` to an installed Java 8 JDK for the compatibility
+test run. Compilation uses Java 25 with `--release 8`.
 The preparation script defaults to a macOS 26 deployment target. If overriding
 `MACOSX_DEPLOYMENT_TARGET`, all bundled libraries must support the chosen target.
 

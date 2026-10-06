@@ -14,11 +14,11 @@
  *   cd <project-root>
  *   mvn package -DskipTests
  *   mkdir -p build/local-benchmarks/java-classes
- *   javac -cp java/target/smsd-7.2.1-jar-with-dependencies.jar benchmarks/benchmark_1000_java.java -d build/local-benchmarks/java-classes
+ *   javac -cp java/target/smsd-7.2.2-jar-with-dependencies.jar benchmarks/benchmark_1000_java.java -d build/local-benchmarks/java-classes
  *   java -Dsmsd.benchmark.rounds=1 -Dsmsd.benchmark.timeoutMs=1000 \
- *        -cp java/target/smsd-7.2.1-jar-with-dependencies.jar:build/local-benchmarks/java-classes \
+ *        -cp java/target/smsd-7.2.2-jar-with-dependencies.jar:build/local-benchmarks/java-classes \
  *        benchmark_1000_java benchmarks/diverse_molecules.txt build/local-benchmarks/pool1000
- * Requires JDK 25.
+ * Requires Java 8 or later.
  *
  * Output:
  *   benchmark_smsd_results.tsv — per-pair timing and MCS sizes
@@ -36,6 +36,12 @@ import java.util.*;
 import java.util.stream.*;
 
 public class benchmark_1000_java {
+    private static String repeat(String text, int count) {
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < count; i++) result.append(text);
+        return result.toString();
+    }
+
 
     // --- Configuration ---
     static final int ROUNDS = Integer.getInteger("smsd.benchmark.rounds", 5);
@@ -45,9 +51,163 @@ public class benchmark_1000_java {
     static final long SEED = 42L;
 
     // --- Data structures ---
-    record Molecule(String smiles, String name, IAtomContainer mol) {}
-    record Pair(int idxA, int idxB, String nameA, String nameB, String smiA, String smiB, String pairType) {}
-    record BenchResult(double medianTimeMs, double meanTimeMs, int mcsSize, int completed, int rounds) {}
+    static final class Molecule {
+      private final String smiles;
+      private final String name;
+      private final IAtomContainer mol;
+
+      Molecule(String smiles, String name, IAtomContainer mol) {
+        this.smiles = smiles;
+        this.name = name;
+        this.mol = mol;
+      }
+
+      public String smiles() { return smiles; }
+      public String name() { return name; }
+      public IAtomContainer mol() { return mol; }
+
+      @Override
+      public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Molecule)) return false;
+        Molecule value = (Molecule) other;
+        return java.util.Objects.equals(smiles, value.smiles)
+          && java.util.Objects.equals(name, value.name)
+          && java.util.Objects.equals(mol, value.mol);
+      }
+
+      @Override
+      public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(smiles);
+        hash = 31 * hash + java.util.Objects.hashCode(name);
+        hash = 31 * hash + java.util.Objects.hashCode(mol);
+        return hash;
+      }
+
+      @Override
+      public String toString() {
+        return "Molecule[smiles=" + smiles + ", name=" + name + ", mol=" + mol + "]";
+      }
+    }
+    static final class Pair {
+      private final int idxA;
+      private final int idxB;
+      private final String nameA;
+      private final String nameB;
+      private final String smiA;
+      private final String smiB;
+      private final String pairType;
+
+      Pair(int idxA, int idxB, String nameA, String nameB, String smiA, String smiB, String pairType) {
+        this.idxA = idxA;
+        this.idxB = idxB;
+        this.nameA = nameA;
+        this.nameB = nameB;
+        this.smiA = smiA;
+        this.smiB = smiB;
+        this.pairType = pairType;
+      }
+
+      public int idxA() { return idxA; }
+      public int idxB() { return idxB; }
+      public String nameA() { return nameA; }
+      public String nameB() { return nameB; }
+      public String smiA() { return smiA; }
+      public String smiB() { return smiB; }
+      public String pairType() { return pairType; }
+
+      @Override
+      public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Pair)) return false;
+        Pair value = (Pair) other;
+        return idxA == value.idxA
+          && idxB == value.idxB
+          && java.util.Objects.equals(nameA, value.nameA)
+          && java.util.Objects.equals(nameB, value.nameB)
+          && java.util.Objects.equals(smiA, value.smiA)
+          && java.util.Objects.equals(smiB, value.smiB)
+          && java.util.Objects.equals(pairType, value.pairType);
+      }
+
+      @Override
+      public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(idxA);
+        hash = 31 * hash + java.util.Objects.hashCode(idxB);
+        hash = 31 * hash + java.util.Objects.hashCode(nameA);
+        hash = 31 * hash + java.util.Objects.hashCode(nameB);
+        hash = 31 * hash + java.util.Objects.hashCode(smiA);
+        hash = 31 * hash + java.util.Objects.hashCode(smiB);
+        hash = 31 * hash + java.util.Objects.hashCode(pairType);
+        return hash;
+      }
+
+      @Override
+      public String toString() {
+        return "Pair[idxA=" + idxA
+            + ", idxB=" + idxB
+            + ", nameA=" + nameA
+            + ", nameB=" + nameB
+            + ", smiA=" + smiA
+            + ", smiB=" + smiB
+            + ", pairType=" + pairType + "]";
+      }
+    }
+    static final class BenchResult {
+      private final double medianTimeMs;
+      private final double meanTimeMs;
+      private final int mcsSize;
+      private final int completed;
+      private final int rounds;
+
+      BenchResult(double medianTimeMs, double meanTimeMs, int mcsSize, int completed, int rounds) {
+        this.medianTimeMs = medianTimeMs;
+        this.meanTimeMs = meanTimeMs;
+        this.mcsSize = mcsSize;
+        this.completed = completed;
+        this.rounds = rounds;
+      }
+
+      public double medianTimeMs() { return medianTimeMs; }
+      public double meanTimeMs() { return meanTimeMs; }
+      public int mcsSize() { return mcsSize; }
+      public int completed() { return completed; }
+      public int rounds() { return rounds; }
+
+      @Override
+      public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof BenchResult)) return false;
+        BenchResult value = (BenchResult) other;
+        return Double.compare(medianTimeMs, value.medianTimeMs) == 0
+          && Double.compare(meanTimeMs, value.meanTimeMs) == 0
+          && mcsSize == value.mcsSize
+          && completed == value.completed
+          && rounds == value.rounds;
+      }
+
+      @Override
+      public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(medianTimeMs);
+        hash = 31 * hash + java.util.Objects.hashCode(meanTimeMs);
+        hash = 31 * hash + java.util.Objects.hashCode(mcsSize);
+        hash = 31 * hash + java.util.Objects.hashCode(completed);
+        hash = 31 * hash + java.util.Objects.hashCode(rounds);
+        return hash;
+      }
+
+      @Override
+      public String toString() {
+        return "BenchResult[medianTimeMs=" + medianTimeMs
+            + ", meanTimeMs=" + meanTimeMs
+            + ", mcsSize=" + mcsSize
+            + ", completed=" + completed
+            + ", rounds=" + rounds + "]";
+      }
+    }
 
     private static final SmilesParser SP = new SmilesParser(SilentChemObjectBuilder.getInstance());
 
@@ -204,9 +364,9 @@ public class benchmark_1000_java {
         Arrays.sort(allMCS);
 
         StringBuilder sb = new StringBuilder();
-        sb.append("=".repeat(70)).append("\n");
+        sb.append(repeat("=", 70)).append("\n");
         sb.append("SMSD 1000-Molecule Benchmark — Java Results\n");
-        sb.append("=".repeat(70)).append("\n");
+        sb.append(repeat("=", 70)).append("\n");
         sb.append(String.format("Total molecules loaded: %d%n", totalMols));
         sb.append(String.format("Total pairs tested:     %d%n", pairs.size()));
         sb.append(String.format("Rounds per pair:        %d%n", ROUNDS));
@@ -247,7 +407,7 @@ public class benchmark_1000_java {
 
         sb.append("--- Per-Section Breakdown (median time ms) ---\n");
         sb.append(String.format("%-15s %12s %12s %8s%n", "Section", "Median(ms)", "Mean(ms)", "Pairs"));
-        sb.append("-".repeat(50)).append("\n");
+        sb.append(repeat("-", 50)).append("\n");
 
         for (String[] sec : sections) {
             String secName = sec[0];
@@ -291,7 +451,7 @@ public class benchmark_1000_java {
         }
 
         String text = sb.toString();
-        Files.writeString(outPath, text);
+        Files.write(outPath, text.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         System.out.println(text);
     }
 
@@ -299,8 +459,8 @@ public class benchmark_1000_java {
     // Main
     // ======================================================================
     public static void main(String[] args) throws Exception {
-        Path molPath = args.length > 0 ? Path.of(args[0]) : Path.of("benchmarks/diverse_molecules.txt");
-        Path outDir = args.length > 1 ? Path.of(args[1]) : Path.of("build/local-benchmarks/pool1000");
+        Path molPath = args.length > 0 ? Paths.get(args[0]) : Paths.get("benchmarks/diverse_molecules.txt");
+        Path outDir = args.length > 1 ? Paths.get(args[1]) : Paths.get("build/local-benchmarks/pool1000");
         Files.createDirectories(outDir);
         Path outTsv = outDir.resolve("benchmark_smsd_results.tsv");
         Path outSummary = outDir.resolve("benchmark_smsd_summary.txt");

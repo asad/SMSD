@@ -6,6 +6,9 @@
  */
 package com.bioinception.smsd;
 
+import static com.bioinception.smsd.TestSupport.mapping;
+import static com.bioinception.smsd.TestSupport.repeat;
+
 import com.bioinception.smsd.core.*;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -45,7 +48,7 @@ public class AlgorithmTest extends TestBase {
 
   @Test
   void fullerelikeSymmetric() throws Exception {
-    String c20 = "C".repeat(20);
+    String c20 = repeat("C", 20);
     IAtomContainer q = mol(c20);
     IAtomContainer t = mol(c20);
     SMSD s = new SMSD(q, t, new ChemOptions());
@@ -115,7 +118,7 @@ public class AlgorithmTest extends TestBase {
   // 5. VERY LARGE SYMMETRIC
   @Test
   void c60BuckminsterfullereneTimeout() throws Exception {
-    String big = "C".repeat(60);
+    String big = repeat("C", 60);
     IAtomContainer q = mol(big);
     IAtomContainer t = mol(big);
     long t0 = System.nanoTime();
@@ -351,7 +354,7 @@ public class AlgorithmTest extends TestBase {
       IAtomContainer nitrobenzene = mol("[O-][N+](=O)c1ccccc1");
       IAtomContainer phenol = mol("Oc1ccccc1");
       SMSD smsd = new SMSD(nitrobenzene, phenol, c);
-      var mcs = smsd.findMCS(true, false, 5000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 5000);
       assertTrue(mcs.size() <= 7,
           "Nitro N=O should not inflate MCS via tautomer rules, got " + mcs.size());
       assertTrue(mcs.size() >= 6,
@@ -365,7 +368,7 @@ public class AlgorithmTest extends TestBase {
       IAtomContainer phosphoric = mol("OP(=O)(O)O");
       IAtomContainer carbonic = mol("OC(=O)O");
       SMSD smsd = new SMSD(phosphoric, carbonic, c);
-      var mcs = smsd.findMCS(true, false, 5000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 5000);
       assertTrue(mcs.size() <= 3,
           "P=O should not match C=O as tautomeric, MCS got " + mcs.size());
     }
@@ -377,7 +380,7 @@ public class AlgorithmTest extends TestBase {
       IAtomContainer sulfone = mol("CS(=O)(=O)C");
       IAtomContainer acetone = mol("CC(=O)C");
       SMSD smsd = new SMSD(sulfone, acetone, c);
-      var mcs = smsd.findMCS(true, false, 5000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 5000);
       assertTrue(mcs.size() <= 3,
           "S=O should not match C=O as tautomeric, MCS got " + mcs.size());
     }
@@ -400,7 +403,7 @@ public class AlgorithmTest extends TestBase {
       IAtomContainer diketo = mol("CC(=O)CC(=O)C");
       IAtomContainer ketoEnol = mol("CC(=O)/C=C(\\C)O");
       SMSD smsd = new SMSD(diketo, ketoEnol, c);
-      var mcs = smsd.findMCS(true, false, 5000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 5000);
       assertTrue(mcs.size() >= 6,
           "Acetylacetone diketo vs keto-enol tautomers should share >= 6 atoms, got " + mcs.size());
     }
@@ -412,7 +415,7 @@ public class AlgorithmTest extends TestBase {
       IAtomContainer his1 = mol("OC(=O)C(N)Cc1c[nH]cn1");
       IAtomContainer his2 = mol("OC(=O)C(N)Cc1cnc[nH]1");
       SMSD smsd = new SMSD(his1, his2, c);
-      var mcs = smsd.findMCS(true, false, 5000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 5000);
       assertTrue(mcs.size() >= 9,
           "Histidine imidazole tautomers should share >= 9 atoms, got " + mcs.size());
     }
@@ -425,7 +428,7 @@ public class AlgorithmTest extends TestBase {
       IAtomContainer ketoAmide = mol("NC(=O)CC(=O)C");
       IAtomContainer enolAmide = mol("NC(=O)/C=C(\\C)O");
       SMSD smsd = new SMSD(ketoAmide, enolAmide, c);
-      var mcs = smsd.findMCS(true, false, 5000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 5000);
       assertTrue(mcs.size() >= 6,
           "Multiple tautomeric sites should not interfere, MCS >= 6, got " + mcs.size());
     }
@@ -438,7 +441,7 @@ public class AlgorithmTest extends TestBase {
       IAtomContainer pyridazineNH = mol("C1=CC=NN=C1");
       IAtomContainer pyridazine = mol("c1ccnnc1");
       SMSD smsd = new SMSD(pyridazineNH, pyridazine, c);
-      var mcs = smsd.findMCS(true, false, 5000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 5000);
       assertTrue(mcs.size() >= 4,
           "Pyridazine N-N tautomers should share >= 4 atoms via N-N fallback, got " + mcs.size());
     }
@@ -946,8 +949,8 @@ public class AlgorithmTest extends TestBase {
     @DisplayName("Query with >64 atoms triggers multi-word bitset (68 carbons)")
     void multiWordBitsetLongChain() throws Exception {
       // 68 carbons - requires 2 long words (>64 bits)
-      String chain68 = "C".repeat(68);
-      String chain70 = "C".repeat(70);
+      String chain68 = repeat("C", 68);
+      String chain70 = repeat("C", 70);
       IAtomContainer query = mol(chain68);
       IAtomContainer target = mol(chain70);
       assertEquals(68, query.getAtomCount(), "Query should have 68 atoms");
@@ -961,7 +964,7 @@ public class AlgorithmTest extends TestBase {
     @Test
     @DisplayName("Multi-word bitset: 65-atom query matches 65-atom self")
     void multiWordBitsetSelfMatch() throws Exception {
-      String chain65 = "C".repeat(65);
+      String chain65 = repeat("C", 65);
       IAtomContainer m = mol(chain65);
       SMSD smsd = new SMSD(m, m, new ChemOptions());
       assertTrue(smsd.isSubstructure(), "65-carbon chain should match itself");
@@ -1449,8 +1452,8 @@ public class AlgorithmTest extends TestBase {
     @Test
     @DisplayName("Chain of 100 carbons as substructure of chain of 150")
     void longChainSubstructure() throws Exception {
-      IAtomContainer c100 = mol("C".repeat(100));
-      IAtomContainer c150 = mol("C".repeat(150));
+      IAtomContainer c100 = mol(repeat("C", 100));
+      IAtomContainer c150 = mol(repeat("C", 150));
       assertEquals(100, c100.getAtomCount());
       assertEquals(150, c150.getAtomCount());
 
@@ -1480,14 +1483,14 @@ public class AlgorithmTest extends TestBase {
     void largeBranchedMolecule() throws Exception {
       // Create a branched molecule with >64 atoms
       // Long chain with branches: main chain of 50 + branches totaling >14
-      String smiles = "C".repeat(50) + "(CCCCCCCCCC)" + "CCCCCCCCCC";
+      String smiles = repeat("C", 50) + "(CCCCCCCCCC)" + "CCCCCCCCCC";
       IAtomContainer branched = mol(smiles);
       assertTrue(
           branched.getAtomCount() >= 65,
           "Branched molecule should have >64 atoms for multi-word test");
 
       // A shorter subchain should match
-      IAtomContainer sub = mol("C".repeat(30));
+      IAtomContainer sub = mol(repeat("C", 30));
       SMSD smsd = new SMSD(sub, branched, new ChemOptions());
       assertTrue(
           smsd.isSubstructure(15000L),
@@ -2682,7 +2685,7 @@ public class AlgorithmTest extends TestBase {
     void ketoEnolTautomerAware() throws Exception {
       ChemOptions c = ChemOptions.tautomerProfile();
       SMSD smsd = new SMSD(mol("CC(=O)C"), mol("CC(O)=C"), c);
-      var mcs = smsd.findMCS(true, false, 5000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 5000);
       assertTrue(mcs.size() >= 4, "Keto/enol tautomers should share all heavy atoms, got " + mcs.size());
     }
 
@@ -2692,7 +2695,7 @@ public class AlgorithmTest extends TestBase {
     void lactamLactimTautomerAware() throws Exception {
       ChemOptions c = ChemOptions.tautomerProfile();
       SMSD smsd = new SMSD(mol("O=c1cc[nH]cc1"), mol("Oc1ccncc1"), c);
-      var mcs = smsd.findMCS(true, false, 5000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 5000);
       assertTrue(mcs.size() >= 6, "Lactam/lactim should share most atoms, got " + mcs.size());
     }
 
@@ -2702,7 +2705,7 @@ public class AlgorithmTest extends TestBase {
     void imidazoleTautomerAware() throws Exception {
       ChemOptions c = ChemOptions.tautomerProfile();
       SMSD smsd = new SMSD(mol("c1c[nH]cn1"), mol("c1cnc[nH]1"), c);
-      var mcs = smsd.findMCS(true, false, 5000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 5000);
       assertTrue(mcs.size() >= 4, "Imidazole tautomers should share most atoms, got " + mcs.size());
     }
 
@@ -2712,7 +2715,7 @@ public class AlgorithmTest extends TestBase {
     void xanthineTautomerAware() throws Exception {
       ChemOptions c = ChemOptions.tautomerProfile();
       SMSD smsd = new SMSD(mol("O=c1[nH]c(=O)c2[nH]cnc2[nH]1"), mol("Oc1nc(O)c2[nH]cnc2n1"), c);
-      var mcs = smsd.findMCS(true, false, 5000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 5000);
       assertTrue(mcs.size() >= 8, "Xanthine tautomers should share most atoms, got " + mcs.size());
     }
 
@@ -2722,7 +2725,7 @@ public class AlgorithmTest extends TestBase {
     void ketoEnolWithoutTautomerMode() throws Exception {
       ChemOptions c = new ChemOptions();
       SMSD smsd = new SMSD(mol("CC(=O)C"), mol("CC(O)=C"), c);
-      var mcs = smsd.findMCS(true, false, 5000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 5000);
       assertTrue(mcs.size() >= 2, "Without tautomer awareness, MCS should still find >= 2 atoms, got " + mcs.size());
     }
 
@@ -2733,7 +2736,7 @@ public class AlgorithmTest extends TestBase {
     void warfarinKetoEnol() throws Exception {
       ChemOptions c = ChemOptions.tautomerProfile();
       SMSD smsd = new SMSD(mol("CC(=O)CC1=C(c2ccccc2OC1=O)O"), mol("CC(=O)C=C1c2ccccc2OC1=O"), c);
-      var mcs = smsd.findMCS(true, false, 10_000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 10_000);
       assertTrue(mcs.size() >= 12, "Warfarin keto/enol MCS should be >= 12, got " + mcs.size());
     }
 
@@ -2742,7 +2745,7 @@ public class AlgorithmTest extends TestBase {
     void barbituricAcidKetoEnol() throws Exception {
       ChemOptions c = ChemOptions.tautomerProfile();
       SMSD smsd = new SMSD(mol("O=C1CC(=O)NC(=O)N1"), mol("OC1=CC(=O)NC(=O)N1"), c);
-      var mcs = smsd.findMCS(true, false, 10_000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 10_000);
       assertTrue(mcs.size() >= 7, "Barbituric acid keto/enol MCS should be >= 7, got " + mcs.size());
     }
 
@@ -2765,7 +2768,7 @@ public class AlgorithmTest extends TestBase {
       ChemOptions c = ChemOptions.tautomerProfile();
       // Use valid kekulé SMILES for the imino form
       SMSD smsd = new SMSD(mol("Nc1cc[nH]c(=O)n1"), mol("N=C1C=CN=C(O)N1"), c);
-      var mcs = smsd.findMCS(true, false, 10_000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 10_000);
       assertTrue(mcs.size() >= 7, "Cytosine amino/imino MCS should be >= 7, got " + mcs.size());
     }
 
@@ -2774,7 +2777,7 @@ public class AlgorithmTest extends TestBase {
     void thymineKetoEnol() throws Exception {
       ChemOptions c = ChemOptions.tautomerProfile();
       SMSD smsd = new SMSD(mol("Cc1c[nH]c(=O)[nH]c1=O"), mol("Cc1cnc(O)nc1O"), c);
-      var mcs = smsd.findMCS(true, false, 10_000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 10_000);
       assertTrue(mcs.size() >= 8, "Thymine keto/enol MCS should be >= 8, got " + mcs.size());
     }
 
@@ -2783,7 +2786,7 @@ public class AlgorithmTest extends TestBase {
     void uracilKetoEnol() throws Exception {
       ChemOptions c = ChemOptions.tautomerProfile();
       SMSD smsd = new SMSD(mol("O=c1cc[nH]c(=O)[nH]1"), mol("Oc1ccnc(O)n1"), c);
-      var mcs = smsd.findMCS(true, false, 10_000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 10_000);
       assertTrue(mcs.size() >= 7, "Uracil keto/enol MCS should be >= 7, got " + mcs.size());
     }
 
@@ -2794,7 +2797,7 @@ public class AlgorithmTest extends TestBase {
     void benzeneVsCyclohexaneNegative() throws Exception {
       ChemOptions c = ChemOptions.tautomerProfile();
       SMSD smsd = new SMSD(mol("c1ccccc1"), mol("C1CCCCC1"), c);
-      var mcs = smsd.findMCS(true, false, 5000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 5000);
       // Tautomer mode uses LOOSE bond order + FLEXIBLE aromaticity,
       // so benzene carbons match cyclohexane carbons (all carbon, same element).
       // This is expected — tautomer mode relaxes matching. The MCS is valid.
@@ -2806,7 +2809,7 @@ public class AlgorithmTest extends TestBase {
     void methaneVsEthaneNegative() throws Exception {
       ChemOptions c = ChemOptions.tautomerProfile();
       SMSD smsd = new SMSD(mol("C"), mol("CC"), c);
-      var mcs = smsd.findMCS(true, false, 5000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 5000);
       assertTrue(mcs.size() <= 1, "Methane vs ethane MCS should be <= 1, got " + mcs.size());
     }
 
@@ -2817,11 +2820,11 @@ public class AlgorithmTest extends TestBase {
     void lactamLactimWithoutTautomerMode() throws Exception {
       ChemOptions cOff = new ChemOptions();
       SMSD smsdOff = new SMSD(mol("O=c1cc[nH]cc1"), mol("Oc1ccncc1"), cOff);
-      var mcsOff = smsdOff.findMCS(true, false, 5000);
+      Map<Integer, Integer> mcsOff = smsdOff.findMCS(true, false, 5000);
 
       ChemOptions cOn = ChemOptions.tautomerProfile();
       SMSD smsdOn = new SMSD(mol("O=c1cc[nH]cc1"), mol("Oc1ccncc1"), cOn);
-      var mcsOn = smsdOn.findMCS(true, false, 5000);
+      Map<Integer, Integer> mcsOn = smsdOn.findMCS(true, false, 5000);
 
       assertTrue(mcsOn.size() >= mcsOff.size(),
           "Tautomer-ON MCS (" + mcsOn.size() + ") should be >= tautomer-OFF MCS (" + mcsOff.size() + ")");
@@ -2832,11 +2835,11 @@ public class AlgorithmTest extends TestBase {
     void imidazoleWithoutTautomerMode() throws Exception {
       ChemOptions cOff = new ChemOptions();
       SMSD smsdOff = new SMSD(mol("c1c[nH]cn1"), mol("c1cnc[nH]1"), cOff);
-      var mcsOff = smsdOff.findMCS(true, false, 5000);
+      Map<Integer, Integer> mcsOff = smsdOff.findMCS(true, false, 5000);
 
       ChemOptions cOn = ChemOptions.tautomerProfile();
       SMSD smsdOn = new SMSD(mol("c1c[nH]cn1"), mol("c1cnc[nH]1"), cOn);
-      var mcsOn = smsdOn.findMCS(true, false, 5000);
+      Map<Integer, Integer> mcsOn = smsdOn.findMCS(true, false, 5000);
 
       assertTrue(mcsOn.size() >= mcsOff.size(),
           "Tautomer-ON MCS (" + mcsOn.size() + ") should be >= tautomer-OFF MCS (" + mcsOff.size() + ")");
@@ -2849,7 +2852,7 @@ public class AlgorithmTest extends TestBase {
     void singleAtomNoTautomerMatch() throws Exception {
       ChemOptions c = ChemOptions.tautomerProfile();
       SMSD smsd = new SMSD(mol("O"), mol("N"), c);
-      var mcs = smsd.findMCS(true, false, 5000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 5000);
       assertEquals(0, mcs.size(), "Isolated O vs N should not match even with tautomer mode, got " + mcs.size());
     }
 
@@ -2862,7 +2865,7 @@ public class AlgorithmTest extends TestBase {
           mol("COc1ccc2nc(S(=O)Cc3ncc(C)c(OC)c3C)[nH]c2c1"),
           c);
       smsd.setMCSTimeoutMs(15_000);
-      var mcs = smsd.findMCS(true, false, 15_000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 15_000);
       assertTrue(mcs.size() >= 10, "Omeprazole tautomers should find substantial MCS, got " + mcs.size());
     }
 
@@ -2874,7 +2877,7 @@ public class AlgorithmTest extends TestBase {
       ChemOptions c = ChemOptions.tautomerProfile();
       IAtomContainer caffeine = mol("Cn1c(=O)c2c(ncn2C)n(C)c1=O");
       SMSD smsd = new SMSD(caffeine, caffeine, c);
-      var mcs = smsd.findMCS(true, false, 5000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 5000);
       assertEquals(caffeine.getAtomCount(), mcs.size(),
           "Self-match should find full MCS, got " + mcs.size() + " of " + caffeine.getAtomCount());
     }
@@ -2887,7 +2890,7 @@ public class AlgorithmTest extends TestBase {
           mol("Cn1c(=O)c2c(ncn2C)n(C)c1=O"),   // caffeine (3 N-methyls)
           mol("Cn1c(=O)c2[nH]cnc2n(C)c1=O"),     // theophylline (2 N-methyls)
           c);
-      var mcs = smsd.findMCS(true, false, 10_000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 10_000);
       // Tautomer-aware induced MCS: theophylline [nH] vs caffeine N-CH3 creates
       // a tautomer class difference on 1 atom, so induced MCS may be 12 not 13.
       // Both 12 and 13 are chemically valid depending on tautomer class assignment.
@@ -2903,7 +2906,7 @@ public class AlgorithmTest extends TestBase {
       ChemOptions c = ChemOptions.tautomerProfile();
       // 2-thiouracil (thione form) vs 2-mercaptopyrimidine (thiol form)
       SMSD smsd = new SMSD(mol("O=c1cc[nH]c(=S)[nH]1"), mol("Oc1ccnc(S)n1"), c);
-      var mcs = smsd.findMCS(true, false, 10_000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 10_000);
       assertTrue(mcs.size() >= 7, "Thiouracil thione/thiol tautomers should share >= 7 atoms, got " + mcs.size());
     }
 
@@ -2916,7 +2919,7 @@ public class AlgorithmTest extends TestBase {
       // Acetaldehyde oxime: CC=NO (C-CH=N-OH)
       // Nitrosoethane: CCN=O (C-C(=O)-NH or C-N=O)
       SMSD smsd = new SMSD(mol("CC=NO"), mol("CCN=O"), c);
-      var mcs = smsd.findMCS(true, false, 10_000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 10_000);
       assertTrue(mcs.size() >= 3, "Nitroso/oxime tautomers should share >= 3 atoms, got " + mcs.size());
     }
 
@@ -2928,7 +2931,7 @@ public class AlgorithmTest extends TestBase {
       ChemOptions c = ChemOptions.tautomerProfile();
       // Hydroquinone (1,4-benzenediol) vs p-benzoquinone
       SMSD smsd = new SMSD(mol("Oc1ccc(O)cc1"), mol("O=C1C=CC(=O)C=C1"), c);
-      var mcs = smsd.findMCS(true, false, 10_000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 10_000);
       assertTrue(mcs.size() >= 4, "Hydroquinone/benzoquinone should share >= 4 atoms with tautomer mode, got " + mcs.size());
     }
 
@@ -2941,7 +2944,7 @@ public class AlgorithmTest extends TestBase {
       // Acetylacetone keto form: CC(=O)CC(=O)C
       // Acetylacetone enol form: CC(=O)C=C(O)C
       SMSD smsd = new SMSD(mol("CC(=O)CC(=O)C"), mol("CC(=O)/C=C(\\O)C"), c);
-      var mcs = smsd.findMCS(true, false, 10_000);
+      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 10_000);
       assertTrue(mcs.size() >= 5, "Acetylacetone keto/enol tautomers should share >= 5 atoms, got " + mcs.size());
     }
   }
@@ -2985,7 +2988,7 @@ public class AlgorithmTest extends TestBase {
       MolGraph target = new MolGraph(naphthalene);
       // Independent six-atom witness: the complete query benzene ring maps
       // onto one target cycle. Ring completion applies to the caller's query.
-      Map<Integer, Integer> witness = Map.of(2, 0, 3, 1, 4, 2, 5, 3, 6, 8, 7, 9);
+      Map<Integer, Integer> witness = mapping(2, 0, 3, 1, 4, 2, 5, 3, 6, 8, 7, 9);
       assertTrue(SearchEngine.validateMapping(query, target, witness, opts).isEmpty());
       SearchEngine.MCSOptions mcsOpts = new SearchEngine.MCSOptions();
       mcsOpts.timeoutMs = 5_000;
@@ -3898,7 +3901,7 @@ public class AlgorithmTest extends TestBase {
     @DisplayName("Ethanol self-MCS = 3 heavy atoms (C, C, O)")
     void ethanolSelfMCS() throws Exception {
       IAtomContainer eth = mol("CCO");
-      var mcs = SearchEngine.findMCS(new MolGraph(eth), new MolGraph(eth),
+      Map<Integer, Integer> mcs = SearchEngine.findMCS(new MolGraph(eth), new MolGraph(eth),
           new ChemOptions(), new SearchEngine.MCSOptions());
       assertEquals(3, mcs.size(),
           "Ethanol (CCO) self-MCS must be exactly 3 heavy atoms");
@@ -3910,7 +3913,7 @@ public class AlgorithmTest extends TestBase {
       IAtomContainer pip = mol("C1CNCCN1");
       assertEquals(6, pip.getAtomCount(),
           "Piperazine has exactly 6 heavy atoms");
-      var mcs = SearchEngine.findMCS(new MolGraph(pip), new MolGraph(pip),
+      Map<Integer, Integer> mcs = SearchEngine.findMCS(new MolGraph(pip), new MolGraph(pip),
           new ChemOptions(), new SearchEngine.MCSOptions());
       assertEquals(6, mcs.size(),
           "Piperazine self-MCS must be exactly 6 heavy atoms, not 17");
@@ -3931,7 +3934,7 @@ public class AlgorithmTest extends TestBase {
     void benzeneTolueneMCS() throws Exception {
       IAtomContainer benz = mol("c1ccccc1");
       IAtomContainer tol = mol("Cc1ccccc1");
-      var mcs = SearchEngine.findMCS(new MolGraph(benz), new MolGraph(tol),
+      Map<Integer, Integer> mcs = SearchEngine.findMCS(new MolGraph(benz), new MolGraph(tol),
           new ChemOptions(), new SearchEngine.MCSOptions());
       assertEquals(6, mcs.size(),
           "Benzene/toluene MCS must be 6 (the benzene ring)");
@@ -3942,7 +3945,7 @@ public class AlgorithmTest extends TestBase {
     void ethanolVsDimethylEther() throws Exception {
       IAtomContainer eth = mol("CCO");
       IAtomContainer dme = mol("COC");
-      var mcs = SearchEngine.findMCS(new MolGraph(eth), new MolGraph(dme),
+      Map<Integer, Integer> mcs = SearchEngine.findMCS(new MolGraph(eth), new MolGraph(dme),
           new ChemOptions(), new SearchEngine.MCSOptions());
       assertTrue(mcs.size() >= 2,
           "Ethanol vs dimethyl ether must share at least C-O: got " + mcs.size());
@@ -3960,7 +3963,7 @@ public class AlgorithmTest extends TestBase {
       for (String[] pair : pairs) {
         MolGraph g1 = new MolGraph(mol(pair[0]));
         MolGraph g2 = new MolGraph(mol(pair[1]));
-        var mcs = SearchEngine.findMCS(g1, g2, new ChemOptions(), new SearchEngine.MCSOptions());
+        Map<Integer, Integer> mcs = SearchEngine.findMCS(g1, g2, new ChemOptions(), new SearchEngine.MCSOptions());
         int minSize = Math.min(g1.atomCount(), g2.atomCount());
         assertTrue(mcs.size() <= minSize,
             "MCS(" + pair[0] + ", " + pair[1] + ") = " + mcs.size()
@@ -4058,12 +4061,12 @@ public class AlgorithmTest extends TestBase {
     private void assertElementCorrect(String smi1, String smi2, int minMCS) throws Exception {
       IAtomContainer m1 = mol(smi1), m2 = mol(smi2);
       MolGraph g1 = new MolGraph(m1), g2 = new MolGraph(m2);
-      var mcs = SearchEngine.findMCS(g1, g2, new ChemOptions(), new SearchEngine.MCSOptions());
+      Map<Integer, Integer> mcs = SearchEngine.findMCS(g1, g2, new ChemOptions(), new SearchEngine.MCSOptions());
 
       assertTrue(mcs.size() >= minMCS,
           "MCS(" + smi1 + ", " + smi2 + ") = " + mcs.size() + ", expected >= " + minMCS);
 
-      for (var e : mcs.entrySet()) {
+      for (Map.Entry<Integer, Integer> e : mcs.entrySet()) {
         int qi = e.getKey(), ti = e.getValue();
         assertTrue(qi >= 0 && qi < g1.atomCount(),
             "Query index " + qi + " out of bounds for " + smi1);
@@ -4433,7 +4436,7 @@ public class AlgorithmTest extends TestBase {
       assertFalse(rs.isEmpty(), "L-alanine should have a stereocentre");
       // Find the chiral carbon (atomicNum=6, tetraChirality != 0)
       boolean foundS = false;
-      for (var entry : rs.entrySet()) {
+      for (Map.Entry<Integer, Character> entry : rs.entrySet()) {
         if (entry.getValue() == 'S') foundS = true;
       }
       assertTrue(foundS, "L-alanine should be assigned S");
@@ -4446,7 +4449,7 @@ public class AlgorithmTest extends TestBase {
       Map<Integer, Character> rs = CIPAssigner.assignRS(g);
       assertFalse(rs.isEmpty(), "D-alanine should have a stereocentre");
       boolean foundR = false;
-      for (var entry : rs.entrySet()) {
+      for (Map.Entry<Integer, Character> entry : rs.entrySet()) {
         if (entry.getValue() == 'R') foundR = true;
       }
       assertTrue(foundR, "D-alanine should be assigned R");
@@ -4459,7 +4462,7 @@ public class AlgorithmTest extends TestBase {
       Map<Integer, Character> rs = CIPAssigner.assignRS(g);
       assertFalse(rs.isEmpty(), "L-cysteine should have a stereocentre");
       boolean foundR = false;
-      for (var entry : rs.entrySet()) {
+      for (Map.Entry<Integer, Character> entry : rs.entrySet()) {
         if (entry.getValue() == 'R') foundR = true;
       }
       assertTrue(foundR, "L-cysteine should be assigned R (sulfur raises -CH2SH priority)");
@@ -4500,7 +4503,7 @@ public class AlgorithmTest extends TestBase {
       Map<Long, Character> ez = CIPAssigner.assignEZ(g);
       assertFalse(ez.isEmpty(), "(E)-2-butene should have a stereo double bond");
       boolean foundE = false;
-      for (var entry : ez.entrySet()) {
+      for (Map.Entry<Long, Character> entry : ez.entrySet()) {
         if (entry.getValue() == 'E') foundE = true;
       }
       assertTrue(foundE, "C/C=C/C should be assigned E");
@@ -4513,7 +4516,7 @@ public class AlgorithmTest extends TestBase {
       Map<Long, Character> ez = CIPAssigner.assignEZ(g);
       assertFalse(ez.isEmpty(), "(Z)-2-butene should have a stereo double bond");
       boolean foundZ = false;
-      for (var entry : ez.entrySet()) {
+      for (Map.Entry<Long, Character> entry : ez.entrySet()) {
         if (entry.getValue() == 'Z') foundZ = true;
       }
       assertTrue(foundZ, "C/C=C\\C should be assigned Z");
@@ -4566,7 +4569,7 @@ public class AlgorithmTest extends TestBase {
       SearchEngine.MCSOptions opts = new SearchEngine.MCSOptions();
       opts.timeoutMs = timeoutMs;
       long start = System.currentTimeMillis();
-      var mcs = SearchEngine.findMCS(g1, g2, new ChemOptions(), opts);
+      Map<Integer, Integer> mcs = SearchEngine.findMCS(g1, g2, new ChemOptions(), opts);
       long elapsed = System.currentTimeMillis() - start;
       System.out.println("INFO: " + label + " completed in " + elapsed + "ms");
     }

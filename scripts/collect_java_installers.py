@@ -100,6 +100,7 @@ def check_summary(record, inputs, path):
     name = f"smsd-{inputs['version']}-{target}-{architecture}.{extension}"
     expected = {"version": inputs["version"], "platform": target, "architecture": architecture,
                 "installer": name, "cli_jar_sha256": inputs["jar_sha256"], "runtime": JAVA_BUILD,
+                "cli_java_target": inputs["cli_java_target"], "cli_classfile_major": inputs["cli_classfile_major"],
                 "installation_method": INSTALL_METHODS[target], "cli_checks_passed": len(CLI_CASES),
                 "installation": "passed", "removal": "passed"}
     require(all(record.get(key) == value for key, value in expected.items()), "Collected installer summary differs")
@@ -153,6 +154,9 @@ def check_report(directory, inputs):
     require(isinstance(image, dict), "Installed image report is missing")
     for key in ("version", "platform", "architecture", "cli_jar_sha256"):
         require(image.get(key) == expected[key], "Installed image identity differs: " + key)
+    for key in ("cli_java_target", "cli_classfile_major"):
+        require(provenance.get(key) == inputs[key] and image.get(key) == inputs[key],
+                "Built or installed CLI compatibility differs: " + key)
     runtime = image.get("runtime", {})
     check_runtime(runtime, target)
     require(runtime == provenance.get("runtime") and image.get("launcher") == provenance.get("launcher"),
@@ -164,6 +168,7 @@ def check_report(directory, inputs):
     for report in (provenance, image):
         check_qa(report.get("qa"), inputs["version"])
     summary = {**expected, "size_bytes": path.stat().st_size, "runtime": JAVA_BUILD,
+               "cli_java_target": inputs["cli_java_target"], "cli_classfile_major": inputs["cli_classfile_major"],
                "installation_method": installation["installation_method"],
                "execution_environment": installation["execution_environment"],
                "cli_checks_passed": image["qa"]["passed_cases"], "runtime_details": runtime,

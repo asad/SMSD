@@ -6,9 +6,12 @@
  */
 package com.bioinception.smsd.core;
 
+import static com.bioinception.smsd.TestSupport.mapping;
+
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.List;
 import java.util.Random;
 import org.junit.jupiter.api.Test;
 import org.openscience.cdk.silent.SilentChemObjectBuilder;
@@ -54,7 +57,7 @@ class MCSAlgorithmRegressionTest {
   void mcsEnumerationAppliesInducedConstraintsToContainmentCandidates() {
     MolGraph query = graph(new int[] {6, 6}, new int[][] {{}, {}});
     MolGraph target = graph(new int[] {6, 6, 6}, new int[][] {{1}, {0, 2}, {1}});
-    var mappings = SearchEngine.findAllMCS(query, target, new ChemOptions(), disconnected(true), 10);
+    List<Map<Integer, Integer>> mappings = SearchEngine.findAllMCS(query, target, new ChemOptions(), disconnected(true), 10);
     assertFalse(mappings.isEmpty());
     for (Map<Integer, Integer> mapping : mappings) {
       assertEquals(2, mapping.size());
@@ -67,7 +70,7 @@ class MCSAlgorithmRegressionTest {
   void mcsEnumerationUsesDefaultOptionsConsistently() {
     MolGraph query = graph(new int[] {6, 6}, new int[][] {{1}, {0}});
     MolGraph target = graph(new int[] {6, 6, 6}, new int[][] {{1}, {0, 2}, {1}});
-    var expected = SearchEngine.findAllMCS(query, target, new ChemOptions(), new SearchEngine.MCSOptions(), 10);
+    List<Map<Integer, Integer>> expected = SearchEngine.findAllMCS(query, target, new ChemOptions(), new SearchEngine.MCSOptions(), 10);
     assertEquals(expected, SearchEngine.findAllMCS(query, target, null, null, 10));
     assertEquals(expected, SearchEngine.findAllMCS(query, target, null, new SearchEngine.MCSOptions(), 10));
   }
@@ -89,8 +92,8 @@ class MCSAlgorithmRegressionTest {
     MolGraph query = graph(new int[] {6, 6, 8}, new int[][] {{1}, {0, 2}, {1}});
     MolGraph target = graph(new int[] {6, 6, 8}, new int[][] {{}, {}, {}});
     Map<Integer, Integer> extended = SearchEngine.greedyAtomExtend(
-        query, target, Map.of(0, 0), new ChemOptions(), disconnected(false));
-    assertEquals(Map.of(0, 0), extended);
+        query, target, mapping(0, 0), new ChemOptions(), disconnected(false));
+    assertEquals(mapping(0, 0), extended);
     assertTrue(SearchEngine.validateMapping(query, target, extended, new ChemOptions()).isEmpty());
   }
 
@@ -98,7 +101,7 @@ class MCSAlgorithmRegressionTest {
   void greedyInducedExtensionChecksMappedNonNeighbors() {
     MolGraph query = graph(new int[] {6, 6, 8}, new int[][] {{1}, {0, 2}, {1}});
     MolGraph target = graph(new int[] {6, 6, 8}, new int[][] {{1, 2}, {0, 2}, {0, 1}});
-    Map<Integer, Integer> seed = Map.of(0, 0, 1, 1);
+    Map<Integer, Integer> seed = mapping(0, 0, 1, 1);
     assertEquals(seed, SearchEngine.greedyAtomExtend(query, target, seed, new ChemOptions(), disconnected(true)));
   }
 
@@ -125,7 +128,7 @@ class MCSAlgorithmRegressionTest {
         new int[][] {{1}, {0, 2}, {1}, {4}, {3, 5}, {4}});
     Map<Integer, Integer> mapping = new LinkedHashMap<>();
     for (int atom : new int[] {4, 0, 3, 1, 5, 2}) mapping.put(atom, atom + 10);
-    assertEquals(Map.of(3, 13, 4, 14, 5, 15), SearchEngine.largestConnected(graph, mapping));
+    assertEquals(mapping(3, 13, 4, 14, 5, 15), SearchEngine.largestConnected(graph, mapping));
   }
 
   @Test
@@ -202,7 +205,7 @@ class MCSAlgorithmRegressionTest {
         new int[][] {{1}, {0, 2}, {1, 3}, {2}, {5}, {4}});
     SearchEngine.MCSOptions options = new SearchEngine.MCSOptions();
     options.atomWeights = new double[] {1, 1, 1, 1, 5, 5};
-    assertEquals(Map.of(4, 4, 5, 5), SearchEngine.findMCS(graph, graph, new ChemOptions(), options));
+    assertEquals(mapping(4, 4, 5, 5), SearchEngine.findMCS(graph, graph, new ChemOptions(), options));
   }
 
   @Test
@@ -212,7 +215,7 @@ class MCSAlgorithmRegressionTest {
     SearchEngine.MCSOptions options = new SearchEngine.MCSOptions();
     options.maximizeBonds = true;
     Map<Integer, Integer> mapping = SearchEngine.findMCS(graph, graph, new ChemOptions(), options);
-    assertEquals(Map.of(5, 5, 6, 6, 7, 7, 8, 8), mapping);
+    assertEquals(mapping(5, 5, 6, 6, 7, 7, 8, 8), mapping);
     assertEquals(6, SearchEngine.mcsScore(graph, mapping, options));
   }
 
@@ -275,7 +278,7 @@ class MCSAlgorithmRegressionTest {
     ChemOptions chemistry = new ChemOptions();
     // Complete first ring plus its attachment. Default FLEXIBLE aromaticity
     // permits the query's aromatic junction to match the target methylene.
-    Map<Integer, Integer> witness = Map.of(0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 10, 11, 11, 12);
+    Map<Integer, Integer> witness = mapping(0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 10, 11, 11, 12);
     assertTrue(SearchEngine.validateMapping(query, target, witness, chemistry).isEmpty());
     SearchEngine.MCSOptions options = new SearchEngine.MCSOptions();
     options.timeoutMs = 2_000;
@@ -294,32 +297,32 @@ class MCSAlgorithmRegressionTest {
     ChemOptions chemistry = new ChemOptions();
     // This connected 25-atom subset comes from an independently computed
     // 49-atom literal-graph witness, rather than the search being tested.
-    Map<Integer, Integer> witness = Map.ofEntries(
-        Map.entry(0, 0),
-        Map.entry(1, 1),
-        Map.entry(2, 2),
-        Map.entry(3, 17),
-        Map.entry(4, 15),
-        Map.entry(5, 16),
-        Map.entry(6, 14),
-        Map.entry(7, 18),
-        Map.entry(8, 13),
-        Map.entry(9, 19),
-        Map.entry(10, 20),
-        Map.entry(11, 21),
-        Map.entry(12, 22),
-        Map.entry(13, 28),
-        Map.entry(14, 29),
-        Map.entry(15, 30),
-        Map.entry(16, 23),
-        Map.entry(17, 27),
-        Map.entry(18, 24),
-        Map.entry(19, 26),
-        Map.entry(20, 25),
-        Map.entry(21, 12),
-        Map.entry(22, 31),
-        Map.entry(23, 11),
-        Map.entry(24, 32));
+    Map<Integer, Integer> witness = mapping(
+        0, 0,
+        1, 1,
+        2, 2,
+        3, 17,
+        4, 15,
+        5, 16,
+        6, 14,
+        7, 18,
+        8, 13,
+        9, 19,
+        10, 20,
+        11, 21,
+        12, 22,
+        13, 28,
+        14, 29,
+        15, 30,
+        16, 23,
+        17, 27,
+        18, 24,
+        19, 26,
+        20, 25,
+        21, 12,
+        22, 31,
+        23, 11,
+        24, 32);
     assertTrue(SearchEngine.validateMapping(query, target, witness, chemistry).isEmpty());
     assertEquals(witness, SearchEngine.largestConnected(query, witness));
     SearchEngine.MCSOptions options = new SearchEngine.MCSOptions();
@@ -344,7 +347,7 @@ class MCSAlgorithmRegressionTest {
     options.timeoutMs = 1_000;
     // A complete mapped fused query system would require all ten carbons,
     // while the target has only six. The pendant N-N bond is a valid witness.
-    Map<Integer, Integer> witness = Map.of(10, 6, 11, 7);
+    Map<Integer, Integer> witness = mapping(10, 6, 11, 7);
     assertTrue(SearchEngine.validateMapping(query, target, witness, chemistry).isEmpty());
     assertEquals(witness, SearchEngine.ppx(query, target, witness, chemistry, options));
     Map<Integer, Integer> mapping = SearchEngine.findMCS(query, target, chemistry, options);

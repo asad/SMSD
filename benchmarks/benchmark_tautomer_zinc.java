@@ -20,9 +20,9 @@
  * Compile and run:
  *   cd <project-root>
  *   mvn package -DskipTests
- *   javac -cp java/target/smsd-7.2.1-jar-with-dependencies.jar \
+ *   javac -cp java/target/smsd-7.2.2-jar-with-dependencies.jar \
  *         benchmarks/benchmark_tautomer_zinc.java -d build/local-benchmarks/java
- *   java  -cp java/target/smsd-7.2.1-jar-with-dependencies.jar:build/local-benchmarks/java \
+ *   java  -cp java/target/smsd-7.2.2-jar-with-dependencies.jar:build/local-benchmarks/java \
  *         benchmark_tautomer_zinc benchmarks/diverse_molecules.txt
  */
 
@@ -38,18 +38,156 @@ import java.util.*;
 import java.util.stream.*;
 
 public class benchmark_tautomer_zinc {
+    private static String repeat(String text, int count) {
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < count; i++) result.append(text);
+        return result.toString();
+    }
+
 
     // --- Configuration ---
     static final int TIMEOUT_MS = Integer.getInteger("smsd.benchmark.timeoutMs", 10_000);
 
-    record Molecule(String smiles, String name, IAtomContainer mol) {}
+    static final class Molecule {
+      private final String smiles;
+      private final String name;
+      private final IAtomContainer mol;
 
-    record PairResult(
-        String nameA, String nameB, String smiA, String smiB,
-        int tautMCSSize, int defaultMCSSize, int overMatchDelta,
-        boolean protonConsistent, double tautConfScore,
-        double tautTimeMs, double defaultTimeMs
-    ) {}
+      Molecule(String smiles, String name, IAtomContainer mol) {
+        this.smiles = smiles;
+        this.name = name;
+        this.mol = mol;
+      }
+
+      public String smiles() { return smiles; }
+      public String name() { return name; }
+      public IAtomContainer mol() { return mol; }
+
+      @Override
+      public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof Molecule)) return false;
+        Molecule value = (Molecule) other;
+        return java.util.Objects.equals(smiles, value.smiles)
+          && java.util.Objects.equals(name, value.name)
+          && java.util.Objects.equals(mol, value.mol);
+      }
+
+      @Override
+      public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(smiles);
+        hash = 31 * hash + java.util.Objects.hashCode(name);
+        hash = 31 * hash + java.util.Objects.hashCode(mol);
+        return hash;
+      }
+
+      @Override
+      public String toString() {
+        return "Molecule[smiles=" + smiles + ", name=" + name + ", mol=" + mol + "]";
+      }
+    }
+
+    static final class PairResult {
+      private final String nameA;
+      private final String nameB;
+      private final String smiA;
+      private final String smiB;
+      private final int tautMCSSize;
+      private final int defaultMCSSize;
+      private final int overMatchDelta;
+      private final boolean protonConsistent;
+      private final double tautConfScore;
+      private final double tautTimeMs;
+      private final double defaultTimeMs;
+
+      PairResult(
+          String nameA,
+          String nameB,
+          String smiA,
+          String smiB,
+          int tautMCSSize,
+          int defaultMCSSize,
+          int overMatchDelta,
+          boolean protonConsistent,
+          double tautConfScore,
+          double tautTimeMs,
+          double defaultTimeMs) {
+        this.nameA = nameA;
+        this.nameB = nameB;
+        this.smiA = smiA;
+        this.smiB = smiB;
+        this.tautMCSSize = tautMCSSize;
+        this.defaultMCSSize = defaultMCSSize;
+        this.overMatchDelta = overMatchDelta;
+        this.protonConsistent = protonConsistent;
+        this.tautConfScore = tautConfScore;
+        this.tautTimeMs = tautTimeMs;
+        this.defaultTimeMs = defaultTimeMs;
+      }
+
+      public String nameA() { return nameA; }
+      public String nameB() { return nameB; }
+      public String smiA() { return smiA; }
+      public String smiB() { return smiB; }
+      public int tautMCSSize() { return tautMCSSize; }
+      public int defaultMCSSize() { return defaultMCSSize; }
+      public int overMatchDelta() { return overMatchDelta; }
+      public boolean protonConsistent() { return protonConsistent; }
+      public double tautConfScore() { return tautConfScore; }
+      public double tautTimeMs() { return tautTimeMs; }
+      public double defaultTimeMs() { return defaultTimeMs; }
+
+      @Override
+      public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof PairResult)) return false;
+        PairResult value = (PairResult) other;
+        return java.util.Objects.equals(nameA, value.nameA)
+          && java.util.Objects.equals(nameB, value.nameB)
+          && java.util.Objects.equals(smiA, value.smiA)
+          && java.util.Objects.equals(smiB, value.smiB)
+          && tautMCSSize == value.tautMCSSize
+          && defaultMCSSize == value.defaultMCSSize
+          && overMatchDelta == value.overMatchDelta
+          && protonConsistent == value.protonConsistent
+          && Double.compare(tautConfScore, value.tautConfScore) == 0
+          && Double.compare(tautTimeMs, value.tautTimeMs) == 0
+          && Double.compare(defaultTimeMs, value.defaultTimeMs) == 0;
+      }
+
+      @Override
+      public int hashCode() {
+        int hash = 0;
+        hash = 31 * hash + java.util.Objects.hashCode(nameA);
+        hash = 31 * hash + java.util.Objects.hashCode(nameB);
+        hash = 31 * hash + java.util.Objects.hashCode(smiA);
+        hash = 31 * hash + java.util.Objects.hashCode(smiB);
+        hash = 31 * hash + java.util.Objects.hashCode(tautMCSSize);
+        hash = 31 * hash + java.util.Objects.hashCode(defaultMCSSize);
+        hash = 31 * hash + java.util.Objects.hashCode(overMatchDelta);
+        hash = 31 * hash + java.util.Objects.hashCode(protonConsistent);
+        hash = 31 * hash + java.util.Objects.hashCode(tautConfScore);
+        hash = 31 * hash + java.util.Objects.hashCode(tautTimeMs);
+        hash = 31 * hash + java.util.Objects.hashCode(defaultTimeMs);
+        return hash;
+      }
+
+      @Override
+      public String toString() {
+        return "PairResult[nameA=" + nameA
+            + ", nameB=" + nameB
+            + ", smiA=" + smiA
+            + ", smiB=" + smiB
+            + ", tautMCSSize=" + tautMCSSize
+            + ", defaultMCSSize=" + defaultMCSSize
+            + ", overMatchDelta=" + overMatchDelta
+            + ", protonConsistent=" + protonConsistent
+            + ", tautConfScore=" + tautConfScore
+            + ", tautTimeMs=" + tautTimeMs
+            + ", defaultTimeMs=" + defaultTimeMs + "]";
+      }
+    }
 
     private static final SmilesParser SP =
         new SmilesParser(SilentChemObjectBuilder.getInstance());
@@ -172,7 +310,7 @@ public class benchmark_tautomer_zinc {
     // Main
     // ======================================================================
     public static void main(String[] args) throws Exception {
-        Path molPath = args.length > 0 ? Path.of(args[0]) : Path.of("benchmarks/diverse_molecules.txt");
+        Path molPath = args.length > 0 ? Paths.get(args[0]) : Paths.get("benchmarks/diverse_molecules.txt");
 
         System.err.printf("Loading labelled tautomer section from %s ...%n", molPath);
         List<Molecule> mols = loadTautomerMolecules(molPath);
@@ -223,15 +361,15 @@ public class benchmark_tautomer_zinc {
         // Report
         // ================================================================
         System.out.println();
-        System.out.println("=".repeat(78));
+        System.out.println(repeat("=", 78));
         System.out.println("SMSD tautomer feature diagnostics on the curated molecule pool");
-        System.out.println("=".repeat(78));
+        System.out.println(repeat("=", 78));
         System.out.printf("Pairs tested:              %d%n", results.size());
 
         // Header
         System.out.printf("%n%-42s %5s %5s %6s %6s %8s%n",
             "Pair", "Taut", "Def", "Delta", "Proton", "TautConf");
-        System.out.println("-".repeat(78));
+        System.out.println(repeat("-", 78));
 
         int overMatchCount = 0;
         int failCount      = 0;
@@ -252,7 +390,7 @@ public class benchmark_tautomer_zinc {
             totalDefTime  += pr.defaultTimeMs();
         }
 
-        System.out.println("-".repeat(78));
+        System.out.println(repeat("-", 78));
         int n = results.size();
         double avgTautConf = n > 0 ? totalTautConf / n : 0.0;
         double passRate    = n > 0 ? 100.0 * (n - failCount) / n : 0.0;
@@ -295,6 +433,6 @@ public class benchmark_tautomer_zinc {
                 pr.nameA(), pr.nameB(), pr.overMatchDelta(), pr.tautConfScore());
         }
 
-        System.out.println("=".repeat(78));
+        System.out.println(repeat("=", 78));
     }
 }

@@ -12,9 +12,11 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.List;
 import java.util.Set;
 import org.openscience.cdk.interfaces.IAtomContainer;
 
@@ -52,26 +54,25 @@ final class BenchmarkRunSettings {
 
   static void validate(MolGraph query, MolGraph target,
                        Map<Integer, Integer> mapping, ChemOptions chemistry, String name) {
-    var errors = SearchEngine.validateMapping(query, target, mapping, chemistry);
+    List<String> errors = SearchEngine.validateMapping(query, target, mapping, chemistry);
     if (!errors.isEmpty()) throw new AssertionError(name + " invalid mapping: " + errors);
   }
 
   static synchronized void checkpoint(String suite, String row, String status, int atoms,
                                       long elapsedNs, String detail) {
-    Path output = Path.of(System.getProperty("smsd.benchmark.outputDir", "build/local-benchmarks/java"),
+    Path output = Paths.get(System.getProperty("smsd.benchmark.outputDir", "build/local-benchmarks/java"),
                           suite + ".tsv");
     try {
       Files.createDirectories(output.getParent());
       if (STARTED.add(output)) {
-        Files.writeString(output,
+        Files.write(output, (
             "# timeout_ms=" + TIMEOUT_MS + " warmup=" + WARMUP + " rounds=" + ROUNDS
                 + " java=" + System.getProperty("java.version") + "\n"
-                + "row\tstatus\tatoms\telapsed_ns\telapsed_budget_crossing\tdetail\n",
-            StandardCharsets.UTF_8);
+                + "row\tstatus\tatoms\telapsed_ns\telapsed_budget_crossing\tdetail\n")
+            .getBytes(StandardCharsets.UTF_8));
       }
-      Files.writeString(output, clean(row) + "\t" + status + "\t" + atoms + "\t" + elapsedNs
-          + "\t" + (elapsedNs / 1_000_000.0 > TIMEOUT_MS) + "\t" + clean(detail) + "\n",
-          StandardCharsets.UTF_8, StandardOpenOption.APPEND);
+      Files.write(output, (clean(row) + "\t" + status + "\t" + atoms + "\t" + elapsedNs
+          + "\t" + (elapsedNs / 1_000_000.0 > TIMEOUT_MS) + "\t" + clean(detail) + "\n").getBytes(StandardCharsets.UTF_8), StandardOpenOption.APPEND);
     } catch (IOException exception) {
       throw new AssertionError("Cannot write benchmark checkpoint " + output, exception);
     }

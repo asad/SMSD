@@ -6,6 +6,8 @@
  */
 package com.bioinception.smsd;
 
+import static com.bioinception.smsd.TestSupport.repeat;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.bioinception.smsd.core.*;
@@ -36,8 +38,8 @@ public class BenchmarkSuiteTest extends TestBase {
     @Test
     @DisplayName("Large molecule substructure completes under 200ms")
     void largeMolSubstructureRegression() throws Exception {
-      IAtomContainer q = mol("C".repeat(50));
-      IAtomContainer t = mol("C".repeat(70));
+      IAtomContainer q = mol(repeat("C", 50));
+      IAtomContainer t = mol(repeat("C", 70));
       long t0 = System.nanoTime();
       SMSD smsd = new SMSD(q, t, new ChemOptions());
       boolean result = smsd.isSubstructure(5000);
@@ -144,7 +146,7 @@ public class BenchmarkSuiteTest extends TestBase {
   @Timeout(value = 30, unit = TimeUnit.MINUTES, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
   class InternalBenchmark {
 
-    private static final String[][] COMPARISON_PAIRS = {
+    private final String[][] COMPARISON_PAIRS = {
       {"benzene-toluene", "c1ccccc1", "Cc1ccccc1"},
       {"aspirin-acetaminophen", "CC(=O)Oc1ccccc1C(=O)O", "CC(=O)Nc1ccc(O)cc1"},
       {"morphine-codeine",
@@ -179,7 +181,7 @@ public class BenchmarkSuiteTest extends TestBase {
       System.out.println("\n=== SMSD MCS Benchmark (internal use only) ===");
       System.out.printf("%-30s %8s %8s %8s %6s%n",
           "Pair", "Best(ms)", "Med(ms)", "Mean(ms)", "MCS");
-      System.out.println("-".repeat(70));
+      System.out.println(repeat("-", 70));
 
       ChemOptions opts = new ChemOptions();
       int warmup = BenchmarkRunSettings.WARMUP;
@@ -187,8 +189,8 @@ public class BenchmarkSuiteTest extends TestBase {
 
       for (String[] pair : COMPARISON_PAIRS) {
         BenchmarkRunSettings.checkInterrupted();
-        var q = mol(pair[1]);
-        var t = mol(pair[2]);
+        IAtomContainer q = mol(pair[1]);
+        IAtomContainer t = mol(pair[2]);
 
         for (int i = 0; i < warmup; i++) {
           BenchmarkRunSettings.checkInterrupted();
@@ -233,7 +235,7 @@ public class BenchmarkSuiteTest extends TestBase {
     void substructureBenchmark() throws Exception {
       System.out.println("\n=== SMSD Substructure Benchmark (internal use only) ===");
       System.out.printf("%-30s %8s %8s %6s%n", "Pair", "Best(us)", "Med(us)", "Match");
-      System.out.println("-".repeat(60));
+      System.out.println(repeat("-", 60));
 
       ChemOptions opts = new ChemOptions();
       int warmup = BenchmarkRunSettings.WARMUP;
@@ -241,8 +243,8 @@ public class BenchmarkSuiteTest extends TestBase {
 
       for (String[] pair : COMPARISON_PAIRS) {
         BenchmarkRunSettings.checkInterrupted();
-        var q = mol(pair[1]);
-        var t = mol(pair[2]);
+        IAtomContainer q = mol(pair[1]);
+        IAtomContainer t = mol(pair[2]);
 
         for (int i = 0; i < warmup; i++) {
           BenchmarkRunSettings.checkInterrupted();
@@ -274,8 +276,8 @@ public class BenchmarkSuiteTest extends TestBase {
     @Test
     @DisplayName("ATP/ADP MCS detail -- inspect mapping")
     void atpAdpMCSDetail() throws Exception {
-      var atp = mol("c1nc(c2c(n1)n(cn2)C3C(C(C(O3)COP(=O)(O)OP(=O)(O)OP(=O)(O)O)O)O)N");
-      var adp = mol("c1nc(c2c(n1)n(cn2)C3C(C(C(O3)COP(=O)(O)OP(=O)(O)O)O)O)N");
+      IAtomContainer atp = mol("c1nc(c2c(n1)n(cn2)C3C(C(C(O3)COP(=O)(O)OP(=O)(O)OP(=O)(O)O)O)O)N");
+      IAtomContainer adp = mol("c1nc(c2c(n1)n(cn2)C3C(C(C(O3)COP(=O)(O)OP(=O)(O)O)O)O)N");
 
       System.out.println("\n=== ATP/ADP MCS Detail ===");
       System.out.println("ATP atoms: " + atp.getAtomCount());
@@ -294,7 +296,7 @@ public class BenchmarkSuiteTest extends TestBase {
       if (mapping != null && !mapping.isEmpty()) {
         System.out.println("MCS size: " + mapping.size());
         System.out.println("\nMapping (ATP idx -> ADP idx):");
-        for (var entry : mapping.entrySet()) {
+        for (Map.Entry<Integer, Integer> entry : mapping.entrySet()) {
           BenchmarkRunSettings.checkInterrupted();
           int qi = entry.getKey();
           int ti = entry.getValue();
@@ -304,7 +306,7 @@ public class BenchmarkSuiteTest extends TestBase {
         }
 
         Map<String, Integer> elements = new java.util.TreeMap<>();
-        for (var entry : mapping.entrySet()) {
+        for (Map.Entry<Integer, Integer> entry : mapping.entrySet()) {
           BenchmarkRunSettings.checkInterrupted();
           String sym = atp.getAtom(entry.getKey()).getSymbol();
           elements.merge(sym, 1, Integer::sum);
@@ -320,7 +322,7 @@ public class BenchmarkSuiteTest extends TestBase {
     void rascalScreeningBenchmark() throws Exception {
       System.out.println("\n=== RASCAL Screening Benchmark (internal use only) ===");
       System.out.printf("%-30s %8s %8s %6s%n", "Pair", "Best(us)", "Med(us)", "UB");
-      System.out.println("-".repeat(60));
+      System.out.println(repeat("-", 60));
 
       ChemOptions opts = new ChemOptions();
       int warmup = BenchmarkRunSettings.WARMUP;
@@ -328,8 +330,8 @@ public class BenchmarkSuiteTest extends TestBase {
 
       for (String[] pair : COMPARISON_PAIRS) {
         BenchmarkRunSettings.checkInterrupted();
-        var q = mol(pair[1]);
-        var t = mol(pair[2]);
+        IAtomContainer q = mol(pair[1]);
+        IAtomContainer t = mol(pair[2]);
 
         for (int i = 0; i < warmup; i++) {
           BenchmarkRunSettings.checkInterrupted();
@@ -365,10 +367,10 @@ public class BenchmarkSuiteTest extends TestBase {
   @Timeout(value = 30, unit = TimeUnit.MINUTES, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
   class HeadToHead {
 
-    private static final int WARMUP = BenchmarkRunSettings.WARMUP;
-    private static final int ITERS = BenchmarkRunSettings.ROUNDS;
+    private final int WARMUP = BenchmarkRunSettings.WARMUP;
+    private final int ITERS = BenchmarkRunSettings.ROUNDS;
 
-    private static final String[][] H2H_PAIRS = {
+    private final String[][] H2H_PAIRS = {
       {"c1ccccc1", "Cc1ccccc1", "Benzene/Toluene"},
       {"CC(=O)Oc1ccccc1C(=O)O", "CC(=O)Nc1ccc(O)cc1", "Aspirin/Acetaminophen"},
       {
@@ -414,7 +416,7 @@ public class BenchmarkSuiteTest extends TestBase {
     void h2hSubstructureBenchmark() throws Exception {
       System.out.println("\n=== SUBSTRUCTURE BENCHMARK ===");
       System.out.printf("%-30s %10s %10s %10s%n", "Pair", "Best(us)", "Med(us)", "Mean(us)");
-      System.out.println("-".repeat(65));
+      System.out.println(repeat("-", 65));
 
       ChemOptions opts = new ChemOptions();
       for (String[] p : H2H_PAIRS) {
@@ -449,7 +451,7 @@ public class BenchmarkSuiteTest extends TestBase {
     void h2hMCSBenchmark() throws Exception {
       System.out.println("\n=== MCS BENCHMARK ===");
       System.out.printf("%-30s %10s %10s %10s %6s%n", "Pair", "Best(us)", "Med(us)", "Mean(us)", "MCS");
-      System.out.println("-".repeat(72));
+      System.out.println(repeat("-", 72));
 
       ChemOptions opts = new ChemOptions();
       SearchEngine.MCSOptions mcsOpts = new SearchEngine.MCSOptions();
@@ -490,7 +492,7 @@ public class BenchmarkSuiteTest extends TestBase {
     void h2hRascalBenchmark() throws Exception {
       System.out.println("\n=== RASCAL SCREENING BENCHMARK ===");
       System.out.printf("%-30s %10s %10s %8s%n", "Pair", "Best(us)", "Med(us)", "UB");
-      System.out.println("-".repeat(60));
+      System.out.println(repeat("-", 60));
 
       ChemOptions opts = new ChemOptions();
       for (String[] p : H2H_PAIRS) {
@@ -523,7 +525,7 @@ public class BenchmarkSuiteTest extends TestBase {
     void h2hBuilderBenchmark() throws Exception {
       System.out.println("\n=== MOLGRAPH.BUILDER BENCHMARK (CDK-free) ===");
       System.out.printf("%-30s %10s %10s %6s%n", "Pair", "Best(us)", "Med(us)", "MCS");
-      System.out.println("-".repeat(60));
+      System.out.println(repeat("-", 60));
 
       MolGraph benzene =
           new MolGraph.Builder()

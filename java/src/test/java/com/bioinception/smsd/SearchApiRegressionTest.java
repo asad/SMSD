@@ -6,12 +6,16 @@
  */
 package com.bioinception.smsd;
 
+import static com.bioinception.smsd.TestSupport.list;
+import static com.bioinception.smsd.TestSupport.mapping;
+
 import com.bioinception.smsd.core.ChemOptions;
 import com.bioinception.smsd.core.MolGraph;
 import com.bioinception.smsd.core.SearchEngine;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.silent.SilentChemObjectBuilder;
 import org.openscience.cdk.smiles.SmilesParser;
 import static org.junit.jupiter.api.Assertions.*;
@@ -34,8 +38,8 @@ class SearchApiRegressionTest {
   @Test
   void cdkTelemetryAcceptsDefaultChemicalOptions() throws Exception {
     SmilesParser parser = new SmilesParser(SilentChemObjectBuilder.getInstance());
-    var query = parser.parseSmiles("CC");
-    var target = parser.parseSmiles("CCC");
+    IAtomContainer query = parser.parseSmiles("CC");
+    IAtomContainer target = parser.parseSmiles("CCC");
     assertTrue(SearchEngine.isSubstructureWithStats(query, target, null, 1_000).exists());
     assertEquals(SearchEngine.findAllSubstructures(query, target, null, 0, 1_000),
         SearchEngine.findAllSubstructuresWithStats(query, target, null, 0, 1_000).mappings());
@@ -52,13 +56,13 @@ class SearchApiRegressionTest {
   @Test
   void invalidMappingIndicesAreReportedWithoutDereferencingThem() {
     MolGraph query = ethane(), target = ethane();
-    for (Map<Integer, Integer> mapping : List.of(
-        Map.of(-1, 0), Map.of(2, 0), Map.of(0, -1), Map.of(0, 2), Map.of(0, 0, 1, 2))) {
+    for (Map<Integer, Integer> mapping : list(
+        mapping(-1, 0), mapping(2, 0), mapping(0, -1), mapping(0, 2), mapping(0, 0, 1, 2))) {
       List<String> errors = assertDoesNotThrow(
           () -> SearchEngine.validateMapping(query, target, mapping, new ChemOptions()));
       assertTrue(errors.stream().anyMatch(error -> error.contains("out of range")));
     }
-    assertTrue(SearchEngine.validateMapping(query, target, Map.of(0, 0, 1, 1), null).isEmpty());
+    assertTrue(SearchEngine.validateMapping(query, target, mapping(0, 0, 1, 1), null).isEmpty());
   }
 
   @Test

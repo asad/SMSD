@@ -4,6 +4,13 @@ All notable changes to SMSD Pro are documented in this file.
 
 ## [7.2.2] - Unreleased
 
+### Java compatibility
+- Target Java 8 bytecode and APIs; prefer Java 25 LTS for builds and bundled installers.
+- Replace public result records with final value classes. Constructors, accessors,
+  equality, hash codes and JSON properties retain their existing contracts;
+  `java.lang.Record` inheritance and record reflection are no longer available.
+- Validate the same compiled code on Java 8 and Java 25.
+
 ### Fixed
 - Fixed Java CLI CML and PDB input using the correct CDK reader object.
 - Reject empty files and ambiguous multi-molecule/model input. Use SDF for batch targets.
