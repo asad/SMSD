@@ -2,11 +2,11 @@
 
 The Java API uses CDK 2.13 for molecular input and standardisation, with SMSD
 algorithms for substructure, MCS, fingerprints, stereo/CIP, layout and R-group
-decomposition. This checkout targets version 7.2.1; current changes are recorded
-under Unreleased in the changelog. Build this source to use those changes.
+decomposition. This checkout targets version 7.2.1, released on GitHub and
+recorded in the changelog. Maven Central publication remains pending.
 Java sources and launchers are in `java/src/`; Maven output is in
 `java/target/`. The root aggregator supports `mvn verify`, while direct module
-builds use `mvn -f java/pom.xml`. The candidate Java artifacts require JDK 25.
+builds use `mvn -f java/pom.xml`. The Java packages require JDK 25.
 They accept CDK `IAtomContainer` inputs;
 the native C++/Python graph layer uses its own molecule representation.
 
@@ -17,7 +17,7 @@ universal ranking between Java, native SMSD or CDK.
 ## Install
 
 The current published Maven Central version is 7.1.1. It does not include the
-proposed 7.2.1 changes documented here:
+7.2.1 changes documented here:
 
 ```xml
 <dependency>
@@ -27,7 +27,7 @@ proposed 7.2.1 changes documented here:
 </dependency>
 ```
 
-To use the candidate changes, install this checkout into your local Maven
+To use these changes, install this checkout into your local Maven
 repository and set the dependency version to `7.2.1`:
 
 ```sh
@@ -35,9 +35,9 @@ mvn -f java/pom.xml install
 ```
 
 The 7.2.1 coordinate is available from that local build until it is published
-to Maven Central. GitHub's 7.2.0 release is separate from the registry version.
+to Maven Central. GitHub's 7.2.1 release is separate from the registry version.
 
-Run the locally built candidate CLI:
+Run the locally built CLI:
 
 ```bash
 java -jar java/target/smsd-7.2.1-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -

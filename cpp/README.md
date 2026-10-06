@@ -10,7 +10,7 @@ and RDKit integration. The current source targets 7.2.1; fresh release checks
 passed all 12 native Debug suites on macOS arm64, emulated Linux x86_64 and
 native Windows x86_64. These CPU/OpenMP builds use the same frozen source.
 See [validation](../docs/VALIDATION_7.2.1.md) for toolchains and execution scope;
-publication remains pending.
+the headers are available in the GitHub release.
 
 ## Build and test
 

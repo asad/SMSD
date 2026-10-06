@@ -1,10 +1,11 @@
-# SMSD Pro 7.2.1 — Unreleased
+# SMSD Pro 7.2.1 — 6 October 2026
 
 Version 7.2.1 separates Java, C++ and Python source modules and updates release
-packaging, and fixes native MCS seed deadline checks. Publication is pending.
+packaging and fixes native MCS seed deadline checks. The release is available
+on GitHub; PyPI and Maven Central publication remain pending.
 It carries forward the reviewed 7.2.0
 search fixes against the 7.1.2 source snapshot `6807f31`; an earlier 7.1.2 tag
-or artifact does not contain those changes. Java requires JDK 25 and uses
+or artefact does not contain those changes. Java requires JDK 25 and uses
 CDK 2.13. The native core requires C++17.
 
 ## Repository layout
@@ -30,7 +31,7 @@ regression retains its 100 ms wall-clock assertion for a 5 ms search budget.
 ## Search fixes carried forward from 7.2.0
 
 - Tautomer matching preserves elements when atom-type matching is enabled.
-  Tetrahedral matching uses normalized R/S configuration and mapped ligand
+  Tetrahedral matching uses normalised R/S configuration and mapped ligand
   parity, including traversal and CDK ligand-order changes.
 - Signed-weight and bond objectives use objective-aware candidate, component,
   fragment and target selection. Java keeps double weight precision; native
@@ -54,7 +55,7 @@ regression retains its 100 ms wall-clock assertion for a 5 ms search budget.
 - Coverage validation and recovery share the requested bond policy, including
   aromatic/Kekule matches under flexible aromaticity.
 
-See [the changelog](../CHANGELOG.md) for API behavior changes and
+See [the changelog](../CHANGELOG.md) for API behaviour changes and
 [the algorithm review](ALGORITHM_REVIEW.md) for regression contracts and
 reproduction commands.
 
@@ -72,16 +73,15 @@ reported separately. Different chemistry or mapping quality cannot support a
 headline speedup.
 
 Derived MoleculeNet pair collections are identified as such rather than being
-presented as the original Dalke/Hastings corpus. The checked-in neighbor
+presented as the original Dalke/Hastings corpus. The checked-in neighbour
 collection contains self-source IDs, duplicate pairs and variable similarity;
 its measurements remain separate from regenerated input.
 
 ## Build and release preparation
 
 Use [the local preparation script](../scripts/prepare-release.sh) to validate
-and assemble artifacts for this source. Platform wheels require their own
-installed-package checks. These notes do not claim that current artifacts have
-been published. The compact set uses Java 25/CDK 2.13 packages shared across
+and assemble packages for this source. All three platform wheels passed their
+installed-package checks. The GitHub release uses Java 25/CDK 2.13 packages shared across
 Linux, macOS and Windows, and CPU/OpenMP Python 3.14 wheels for Linux x86_64,
 macOS arm64 and Windows x86_64, plus a source distribution. Intel macOS and
 Linux arm64 use source builds. See [publishing commands](PUBLISHING.md)
@@ -91,7 +91,7 @@ the current RDKit headers require C++20. The core remains C++17.
 Java packages include SMSD's LICENSE and NOTICE: `META-INF/smsd` for library,
 CLI and source JARs, and `doc-files/smsd` for Javadoc.
 
-The release plan uses local macOS and Linux builds, a native GitHub Windows
+The release uses local macOS and Linux builds, a native GitHub Windows
 build, and verified collection of three wheels from the same source. Each
 7.2.1 platform passed all 12 native Debug suites and 691 installed-wheel
 Python tests with 8 optional skips. Strict three-wheel collection passed.

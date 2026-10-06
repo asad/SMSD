@@ -1,11 +1,12 @@
 # SMSD 7.2.1 release validation
 
-Version 7.2.1 is in preparation; publication is pending. This record tracks
+Version 7.2.1 is released on GitHub; PyPI and Maven publication remain pending.
+This record tracks
 fresh checks after separating the Java, C++ and Python source modules. It
 does not inherit a passing result merely because a 7.2.0 artifact passed.
 
 As checked on 2026-10-06, GitHub has published
-[7.2.0](https://github.com/asad/SMSD/releases/tag/v7.2.0); PyPI and Maven Central
+[7.2.1](https://github.com/asad/SMSD/releases/tag/v7.2.1); PyPI and Maven Central
 remain at 7.1.1. The native Windows 7.2.1 workflow passed, and all three
 wheels have passed strict collection against the same source archive.
 
@@ -39,7 +40,8 @@ recorded in the release directory's `SHA256SUMS`.
 | Windows x86_64 CPU/OpenMP | Passed on Windows Server 2022 | Same frozen archive; 12 MSVC Debug suites, 691 Python passes and 8 skips on Python 3.14.7/RDKit 2026.03.6; repaired DLLs checked |
 | Three-wheel collection | Passed | Source/version agreement, binary architecture, runtime libraries, wrappers/headers, licenses and all RECORD hashes |
 | Source and release assets | Passed locally | Complete source inputs, no private files, strict metadata checks, CLI/header packages and verified checksums |
-| PyPI, Maven Central and GitHub | Pending | Publication followed by clean download/install checks |
+| GitHub release | 7.2.1 | Complete validated asset set with SHA256SUMS |
+| PyPI and Maven Central | Pending | Publication followed by clean download/install checks |
 
 The CPU configuration registers 12 native suites with assertions enabled.
 Record the actual Python pass/skip counts, interpreter and RDKit versions for
@@ -130,8 +132,8 @@ Strict collection of the macOS, Linux and Windows wheels passed against the
 single frozen archive. All wheel RECORD entries, installed Python wrappers,
 27 C++ headers and legal copies were checked. Strict Twine metadata checks and
 the complete release asset checksum list passed. These checks establish the
-prepared artifacts; clean public download/install checks remain pending until
-publication.
+release packages. PyPI and Maven clean download/install checks remain pending
+until those registries are updated.
 
 The Docker allowlist excludes generated Java API pages, test reports and
 build artifacts. Inspection of the actual builder COPY layer found only the

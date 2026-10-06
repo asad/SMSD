@@ -11,8 +11,9 @@ distribution. Keep one Python version across the wheel set:
 | Windows x86_64 | CPython 3.14, 64-bit Windows |
 
 All three prepared wheels passed target-platform tests and strict collection
-against one source archive. Linux execution used local emulation. Publication
-remains pending. See [7.2.1 validation](VALIDATION_7.2.1.md) for the complete
+against one source archive. Linux execution used local emulation. GitHub 7.2.1
+is released; PyPI and Maven publication remain pending. See
+[7.2.1 validation](VALIDATION_7.2.1.md) for the complete
 build and artifact record.
 The [7.2.0 validation](VALIDATION_7.2.0.md) records historical execution results. Other
 interpreters and architectures can build from source; they are outside this
@@ -230,7 +231,9 @@ gh release create v7.2.1 --repo asad/SMSD --verify-tag \
   dist/release-7.2.1/*
 ```
 
-Run these commands after the fixes are merged and the package publication
-checks succeed. Compare the tag commit with the commit used for validation.
+The GitHub 7.2.1 release is already published; the commands above record the
+release process. GitHub publication can precede PyPI and Maven. For future
+releases, run them after the fixes are merged and local checks pass. Compare
+the tag's production inputs with the source used for validation.
 Hosted release workflows remain manual; local publishing does not dispatch
 them.

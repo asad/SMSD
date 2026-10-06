@@ -2,7 +2,9 @@
 
 All notable changes to SMSD Pro are documented in this file.
 
-## [7.2.1] - Unreleased
+## [7.2.1] - 2026-10-06
+
+Released on GitHub. PyPI and Maven Central publication remain pending.
 
 ### Fixed
 - Native MCS seed searches check the shared deadline before each candidate
@@ -24,7 +26,8 @@ All notable changes to SMSD Pro are documented in this file.
 - Frozen-source local macOS and emulated Linux wheels each pass all 12 native
   Debug suites and 691 Python tests with 8 optional skips. Native Windows
   Server 2022 validation passed the same counts; strict collection of all
-  three wheels passed against one source archive. Publication is pending. Track
+  three wheels passed against one source archive. PyPI and Maven publication
+  remain pending. Track
   results in `docs/VALIDATION_7.2.1.md`.
 - Adjusted Java test wall-clock guards to 35 seconds around a 30-second drug
   pair search and 12 seconds around a 10-second pharmacophore search. Search
@@ -38,7 +41,7 @@ All notable changes to SMSD Pro are documented in this file.
 
 Published on GitHub. Maven Central and PyPI remain at 7.1.1. The historical
 validation and benchmark report retain their 7.2.0 source scope; native Windows
-builds were checked separately after publication. Version 7.2.1 is in preparation.
+builds were checked separately after publication.
 
 ### Fixed
 - Tautomer matching preserves element identity and other requested chemistry

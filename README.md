@@ -22,14 +22,14 @@ SMSD Pro provides substructure search and maximum common substructure
 (header-only), and **Python**. Optional GPU paths are available for CUDA and
 Apple Metal builds.
 
-The proposed `7.2.1` release separates Java, C++ and Python source modules and
-prepares a compact release for Linux, macOS and Windows. It carries forward
+Version `7.2.1` separates Java, C++ and Python source modules and
+provides a compact release for Linux, macOS and Windows. It carries forward
 the reviewed element-preserving tautomer, stereo, objective and symmetry fixes
 from the 7.2.0 source candidate and fixes native seed deadline checks.
 Python wrappers preserve input indices and options; core batches reuse native
 graphs. Java uses **CDK 2.13**. GitHub's current release is
-[`7.2.0`](https://github.com/asad/SMSD/releases/tag/v7.2.0); Maven Central/PyPI
-remain at `7.1.1`. Version `7.2.1` is in preparation.
+[`7.2.1`](https://github.com/asad/SMSD/releases/tag/v7.2.1); Maven Central/PyPI
+remain at `7.1.1` pending separate publication.
 
 ### Local benchmark results
 
@@ -94,9 +94,9 @@ isotopes, atom classes/maps, `R#` plus `M  RGP`, and basic stereo flags.
 ### Java (Download JAR)
 
 ```bash
-curl -LO https://github.com/asad/SMSD/releases/download/v7.2.0/smsd-7.2.0-jar-with-dependencies.jar
+curl -LO https://github.com/asad/SMSD/releases/download/v7.2.1/smsd-7.2.1-jar-with-dependencies.jar
 
-java -jar smsd-7.2.0-jar-with-dependencies.jar \
+java -jar smsd-7.2.1-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 ```
 
@@ -108,9 +108,9 @@ pip install smsd
 
 The source package declares CPython `3.9` or later. Existing PyPI releases
 provide several platform wheels; availability varies by release and interpreter.
-The proposed 7.2.1 release uses Python 3.14 wheels for Linux x86_64, macOS arm64
-and Windows x86_64, plus a source distribution. Each platform must pass its
-installed-wheel checks before publication. The search comparison uses Python
+The GitHub 7.2.1 release provides Python 3.14 wheels for Linux x86_64, macOS
+arm64 and Windows x86_64, plus a source distribution. All three wheels passed
+installed-package checks; PyPI publication is pending. The search comparison uses Python
 3.13.14 and RDKit 2026.09.1 on macOS arm64.
 CPU execution is the default path. CUDA and Metal acceleration are optional.
 RDKit and Open Babel are optional interop layers.
@@ -560,14 +560,13 @@ Call `SearchEngine.clearMolGraphCache()` (Java) or reuse `MolGraph` instances (C
 
 ## Release Downloads
 
-The proposed 7.2.1 asset set contains portable Java 25 library/CLI packages,
+The [7.2.1 release](https://github.com/asad/SMSD/releases/tag/v7.2.1) contains portable Java 25 library/CLI packages,
 C++17 headers, CPython 3.14 wheels for three operating systems and a source
 distribution. The portable Java packages require Java 25 on each operating
-system; they do not bundle a Java runtime. The release plan uses local macOS
+system; they do not bundle a Java runtime. The release uses local macOS
 and Linux builds, a manually dispatched GitHub Windows build, and collection
-of three verified wheels from the same source. Publication is pending. See
-[publishing steps](docs/PUBLISHING.md); current GitHub downloads are in the
-[7.2.0 release](https://github.com/asad/SMSD/releases/tag/v7.2.0).
+of three verified wheels from the same source. PyPI and Maven publication are
+pending. See [publishing steps](docs/PUBLISHING.md).
 
 | Download | Description |
 |----------|-------------|
@@ -582,7 +581,7 @@ of three verified wheels from the same source. Publication is pending. See
 | `smsd-7.2.1-cp314-cp314-win_amd64.whl` | Python 3.14, Windows x86_64 |
 | `SHA256SUMS` | Checksums for the release assets |
 
-These are release targets; new 7.2.1 checks are tracked in
+These assets are available on GitHub; 7.2.1 checks are tracked in
 [validation](docs/VALIDATION_7.2.1.md). The earlier platform results belong to
 the [7.2.0 source candidate](docs/VALIDATION_7.2.0.md). Other architectures, including Intel
 macOS and Linux arm64, can build from source and are outside this wheel set.
@@ -608,8 +607,8 @@ opt-in skips across full and focused runs. Its frozen-source macOS arm64 and
 emulated Linux x86_64 wheels each passed all 12 native Debug suites and 691
 Python tests with 8 skips on CPython 3.14/RDKit 2026.03.6. The native Windows
 Server 2022 wheel passed the same test counts. Strict collection of all three
-wheels against one frozen source archive also passed; publication remains
-pending. See [current validation](docs/VALIDATION_7.2.1.md). The following
+wheels against one frozen source archive also passed; PyPI and Maven publication
+remain pending. See [current validation](docs/VALIDATION_7.2.1.md). The following
 results remain historical 7.2.0 local validation on macOS arm64:
 
 | Suite | Result | Scope |

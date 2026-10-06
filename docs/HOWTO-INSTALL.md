@@ -1,12 +1,12 @@
 # How to Build and Run
 
-This source checkout targets version 7.2.1 with changes under Unreleased. Build
-the checkout to use them. Current measured results and benchmark coverage are in
+This source checkout targets version 7.2.1, released on GitHub. Current measured
+results and benchmark coverage are in
 [the benchmark report](../benchmarks/RESULTS_7.2.0.md).
 The currently published Maven Central and PyPI packages are 7.1.1; GitHub has
-the [7.2.0 release](https://github.com/asad/SMSD/releases/tag/v7.2.0). The commands
-below use the proposed 7.2.1 source or locally prepared assets and do not assume
-its packages have already been published.
+the [7.2.1 release](https://github.com/asad/SMSD/releases/tag/v7.2.1). The commands
+below use the 7.2.1 source or GitHub assets. PyPI and Maven publication are
+separate and remain pending.
 
 ## Choose a distribution
 
@@ -20,8 +20,8 @@ Python wheels contain native code and must match the operating system,
 architecture and Python interpreter. Version 7.2.1 targets CPython 3.14 on
 Linux x86_64 (glibc 2.28+), macOS arm64 (macOS 26+) and Windows x86_64.
 Fresh macOS, emulated Linux and native Windows checks pass. Strict collection
-of all three wheels against one source archive also passes; publication remains
-pending. See
+of all three wheels against one source archive also passes; PyPI and Maven
+publication remain pending. See
 [7.2.1 validation](VALIDATION_7.2.1.md). The earlier
 [7.2.0 results](VALIDATION_7.2.0.md) do not validate renamed 7.2.1 artifacts.
 Intel macOS and Linux arm64 are outside this compact wheel set; use a source build. A wheel tagged `cp314` is for ordinary CPython
@@ -268,4 +268,4 @@ checks and active OpenMP. GPU test builds are separate from the CPU preflight. B
 Linux wheels locally, validate Windows with the manual GitHub workflow, then
 collect the three wheels against the same source before publishing. See
 [publishing](PUBLISHING.md) and [7.2.1 validation](VALIDATION_7.2.1.md).
-Publication and tagging remain pending.
+The GitHub release is published and tagged; PyPI and Maven publication remain pending.

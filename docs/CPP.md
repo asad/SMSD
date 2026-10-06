@@ -3,8 +3,8 @@
 SMSD Pro’s C++ layer is header-only and provides the native implementations for
 MolGraph construction, substructure search, MCS, fingerprints, SMARTS matching,
 molfile I/O, stereo/CIP assignment, and layout utilities. The checkout targets
-version 7.2.1, with current changes under Unreleased. Build this source for those
-changes; a version label alone does not identify the reviewed source snapshot.
+version 7.2.1, released on GitHub. The release record identifies the reviewed
+source snapshot and tested build inputs.
 C++ stays under `cpp/`; its CMake package is independent of the Java Maven
 module. Python extension builds use this C++ tree through the root
 `pyproject.toml`. The 7.2.0 measurements remain historical; new release checks

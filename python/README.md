@@ -39,10 +39,10 @@ python -m build
 ```
 
 The package declares CPython `3.9` or later; wheel availability depends on
-platform and architecture. The proposed 7.2.1 release targets Python 3.14 wheels
+platform and architecture. The GitHub 7.2.1 release provides Python 3.14 wheels
 for Linux x86_64 (glibc 2.28+), macOS arm64 (26+) and Windows x86_64, plus a
-source distribution. Each wheel requires an installed-package test on its
-target operating system before publication. Intel macOS and Linux arm64
+source distribution. Each wheel passed installed-package tests on its
+target operating system. PyPI publication remains pending. Intel macOS and Linux arm64
 remain source-build targets. The controlled search review uses Python
 `3.13.14` on macOS arm64.
 Source builds default to Metal/CUDA auto-detection; release and comparison wheels disable
@@ -158,7 +158,7 @@ OpenMP. The Windows Server 2022/AMD64 wheel passed the same test counts on
 Python 3.14.7/RDKit 2026.03.6 with active OpenMP and checked Microsoft runtimes.
 Strict collection of all three wheels passed against one source archive; see
 [7.2.1 validation](https://github.com/asad/SMSD/blob/master/docs/VALIDATION_7.2.1.md).
-Publication remains pending.
+The wheels are available on GitHub; PyPI publication remains pending.
 
 ## Circular Fingerprints
 

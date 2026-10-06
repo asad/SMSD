@@ -4,8 +4,8 @@ SMSD exposes native C++ molecular graph search through pybind11. Core parsing,
 MCS, substructure, fingerprints and SVG depiction work without RDKit. RDKit
 is optional for molecule conversion, independent checks and drawing.
 
-The proposed 7.2.1 changes are unreleased. The current PyPI release is
-7.1.1; the GitHub release is 7.2.0. See the [local benchmark report](../benchmarks/RESULTS_7.2.0.md) for
+Version 7.2.1 is available on GitHub. The current PyPI release is
+7.1.1; PyPI publication is pending. See the [local benchmark report](../benchmarks/RESULTS_7.2.0.md) for
 versions, settings, measurements and limitations.
 
 ## Install and build
@@ -24,7 +24,7 @@ for Linux x86_64, macOS arm64 and Windows x86_64, plus a source distribution.
 Local macOS, emulated Linux and native GitHub Windows builds passed all 12
 native suites and 691 installed-wheel Python tests with 8 optional skips.
 Strict collection checked all three wheels against the same 7.2.1 source;
-publication remains pending. See [7.2.1 validation](VALIDATION_7.2.1.md)
+PyPI publication remains pending. See [7.2.1 validation](VALIDATION_7.2.1.md)
 for versions and scope. The historical 7.2.0 search comparison runs Python 3.13.14
 on macOS arm64 so both versions use the same interpreter and RDKit.
 
