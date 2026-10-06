@@ -29,6 +29,9 @@ jobs:
     steps:
       # Packaging helpers come from the selected workflow branch. Payloads
       # come from the named release and are checked against its SHA256SUMS.
+      - name: Preserve source file bytes
+        shell: pwsh
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
