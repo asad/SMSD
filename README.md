@@ -637,7 +637,7 @@ pip install ./smsd-7.2.1.tar.gz
 
 ## Tests
 
-The 7.2.2 Java code passed 1,276 tests with 15 opt-in skips on both Java 8
+The 7.2.2 Java code passed 1,278 tests with 15 opt-in skips on both Java 8
 and Java 25, using the same compiled classes. The shaded JAR, source copies,
 licences and Unix launchers passed compatibility checks. The macOS arm64 and
 emulated Linux x86_64 wheels each passed 691 installed-package tests with 8

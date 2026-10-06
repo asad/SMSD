@@ -8,17 +8,18 @@ builds and bundled installers. Both Java compatibility suites passed.
 
 | Check | Status |
 |---|---|
-| Full Java 8 suite | 1,276 passed, 15 opt-in skips, zero failures/errors; 5m9s |
-| Full Java 25 suite | 1,276 passed, 15 opt-in skips, zero failures/errors; 5m9s |
+| Full Java 8 suite | 1,278 passed, 15 opt-in skips, zero failures/errors; 5m16s |
+| Full Java 25 suite | 1,278 passed, 15 opt-in skips, zero failures/errors; 5m15s |
 | Public value-type and file-format contracts | Passed on both runtimes, including 17 new value-contract cases |
 | Four Java JARs | Passed Java 8 bytecode, source and licence checks |
 | Frozen source archive | All 224 source files match the clean source commit; one generated metadata file |
-| Shaded CLI JAR on Java 8 | Five startup/search cases passed |
+| Shaded CLI JAR on Java 8 | Seven startup/search cases passed, including compact and pretty Unicode SDF JSON |
+| CLI JSON under Windows-style encodings | Ten Java 25 cases passed without a JVM encoding workaround; native Windows execution pending |
 | Unix source and generated launchers | Passed on both runtimes; Windows execution pending |
 | macOS arm64 DMG | Passed all ten CLI checks, native installation/removal and 58 arm64 binary checks |
-| macOS arm64 Python wheel | 12 identical-source native Debug suites; 691 fresh Python tests passed, 8 optional skips |
+| macOS arm64 Python wheel | 12 native Debug suites on unchanged inputs (reused evidence); 691 fresh Python tests passed, 8 optional skips |
 | Linux x86_64 DEB | Passed all ten CLI checks, extraction, installation and removal under QEMU |
-| Linux x86_64 Python wheel | 12 identical-source native Debug suites; 691 fresh Python tests passed, 8 optional skips |
+| Linux x86_64 Python wheel | 12 native Debug suites on unchanged inputs (reused evidence); 691 fresh Python tests passed, 8 optional skips |
 | Docker Linux arm64 and x86_64 images | Ten CLI checks per image, exact release JAR, non-root execution and licence checks passed locally; x86_64 uses QEMU |
 | Windows x86_64 Python wheel and MSI | Pending native Windows execution |
 | Three-wheel and three-installer collection | Pending |
@@ -33,11 +34,11 @@ The macOS Java runtime declares macOS 11
 as its minimum version; this does not establish execution on that version.
 The macOS Python wheel requires macOS 26 or later. Its fresh installed-wheel
 checks use CPython 3.14.8 and RDKit 2026.03.6 on macOS 27.0.1 arm64; native
-Debug checks take 99.09 seconds and the final Python checks take 5.96 seconds.
+Debug checks take 99.09 seconds and the final Python checks take 7.80 seconds.
 Metal and CUDA are disabled; bundled OpenMP is required. Native Debug evidence
 is reused after independently verifying identical C++/Python/build inputs across
-the documentation and Maven dependency update; final wheels are rebuilt and
-installed-package tests rerun against the corrected source archive.
+the packaging and Java updates; final wheels are rebuilt and installed-package
+tests rerun against the corrected source archive.
 
 Docker images provide the Java CLI with Temurin 25.0.4.1+1. Both Linux
 architectures run in a local arm64 Colima VM; x86_64 uses QEMU. Each passes
@@ -49,19 +50,20 @@ Container registry publication remains pending.
 
 Linux wheel checks use AlmaLinux 8.10/glibc 2.28, GCC 14.2.1, CPython 3.14.5
 and RDKit 2026.03.6 under local QEMU x86_64. The unchanged native Debug suite
-took 335.40 seconds; fresh installed-wheel tests took 35.87 seconds. Release
+took 335.40 seconds; fresh installed-wheel tests took 33.83 seconds. Release
 compilation retains `-O3` and OpenMP. Link-time optimisation is disabled after
 GCC crashes under emulation; compile and link commands confirm the setting.
 
 The Java tests use the same compiled classes on macOS arm64 with Temurin
 25.0.4.1+1 and Corretto 8.504.04.1 (`1.8.0_504-b04`). All 53 production classes
-and 167 test classes target class-file version 52. The packaged sources match
+and 169 test classes target class-file version 52. The packaged sources match
 the checkout, and all four JARs retain the project's LICENSE and NOTICE.
 
-The final Maven dependency correction changes package metadata only. All 2,437
-Java class entries, including runtime dependencies, remain byte-identical to the
-full dual-runtime test build. A separate consumer declaring only SMSD passes
-six SMARTS cases on both runtimes and receives CDK SMARTS transitively.
+Packaged Java classes match the full dual-runtime test build. A separate consumer
+declaring only SMSD passes six SMARTS cases on both runtimes and receives CDK
+SMARTS transitively. The updated CLI passes compact and pretty JSON regressions
+with Unicode file paths and a Windows-1252 output stream; standard output remains
+open after writing. The bundled-runtime verifier reads JVM diagnostics as UTF-8.
 
 No new cross-solver benchmark claim is made. The
 [7.2.0 benchmark report](../benchmarks/RESULTS_7.2.0.md) retains its measured scope.

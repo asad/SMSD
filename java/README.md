@@ -34,9 +34,10 @@ root LICENSE and NOTICE; keep those files when building from a checkout.
 Use `java/pom.xml` for publishing the Java artifacts; the root POM only
 aggregates local builds.
 
-The 7.2.2 code passed 1,276 tests with 15 opt-in skips on both Java 8 and
-Java 25, using the same compiled classes. All four JARs target Java 8 and
-retain source and licence copies; both Unix launchers ran on both runtimes.
+The 7.2.2 code passed 1,278 tests with 15 opt-in skips on both Java 8 and
+Java 25, using the same compiled classes. Library and CLI classes target Java 8;
+packaged sources match the checkout and all four JARs retain licence copies.
+Both Unix launchers ran on both runtimes.
 A separate Maven consumer declaring only SMSD passed six SMARTS cases on each
 runtime, confirming the required CDK dependency is resolved transitively.
 Maven publication remains pending. See [current validation](../docs/VALIDATION_7.2.2.md)
@@ -45,6 +46,7 @@ and [historical 7.2.1 results](../docs/VALIDATION_7.2.1.md).
 See the [Java guide](../docs/JAVA.md) for CDK examples and the
 [installation guide](../docs/HOWTO-INSTALL.md) for platform requirements.
 
-Version 7.2.2 fixes CML/PDB input and rejects empty or multi-molecule/model files.
+Version 7.2.2 fixes CML/PDB input, preserves UTF-8 JSON output and rejects empty
+or multi-molecule/model files.
 Use SDF for batch targets. See [current validation](../docs/VALIDATION_7.2.2.md)
 and [native installers](../docs/INSTALLERS.md).
