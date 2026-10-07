@@ -23,7 +23,7 @@ builds and bundled installers. Both Java compatibility suites passed.
 | Linux x86_64 Python wheel | 12 native Debug suites on unchanged inputs (reused evidence); 691 fresh Python tests passed, 8 optional skips |
 | Docker Linux arm64 and x86_64 images | Ten CLI checks per image, exact release JAR, non-root execution and licence checks passed locally; x86_64 uses QEMU |
 | Windows x86_64 MSI | Passed all ten CLI checks, native installation and removal; unsigned |
-| Windows x86_64 Python wheel | 12 native Debug suites; 691 installed-package tests passed, 8 optional skips |
+| Windows x86_64 Python wheel | 12 native Debug suites and 691 installed-package tests passed, 8 optional skips; proof reused for byte-identical payloads after metadata refresh |
 | Three-wheel and three-installer collection | Passed for the complete platform set |
 | GitHub publication and download verification | Pending |
 | PyPI and Maven Central | Pending |
@@ -36,7 +36,8 @@ The macOS Java runtime declares macOS 11
 as its minimum version; this does not establish execution on that version.
 The macOS Python wheel requires macOS 26 or later. Its fresh installed-wheel
 checks use CPython 3.14.8 and RDKit 2026.03.6 on macOS 27.0.1 arm64; native
-Debug checks take 99.09 seconds and the final Python checks take 7.80 seconds.
+Debug checks take 99.09 seconds; fresh tests of the metadata-refreshed installed
+wheel take 12.01 seconds.
 Metal and CUDA are disabled; bundled OpenMP is required. Native Debug evidence
 is reused after independently verifying identical C++/Python/build inputs across
 the packaging and Java updates. Final distributions refresh documentation and
@@ -55,15 +56,19 @@ Container registry publication remains pending.
 
 Linux wheel checks use AlmaLinux 8.10/glibc 2.28, GCC 14.2.1, CPython 3.14.5
 and RDKit 2026.03.6 under local QEMU x86_64. The unchanged native Debug suite
-took 335.40 seconds; fresh installed-wheel tests took 33.83 seconds. Release
+took 335.40 seconds; fresh tests of the metadata-refreshed installed wheel
+took 34.69 seconds. Release
 compilation retains `-O3` and OpenMP. Link-time optimisation is disabled after
 GCC crashes under emulation; compile and link commands confirm the setting.
 
 Native Windows checks ran on Windows Server 2022 AMD64 with MSVC
 19.44.35229.0, CPython 3.14.7 and RDKit 2026.03.6. All 12 Debug suites passed
 in 235.87 seconds; installed-wheel tests passed 691 cases with 8 optional skips
-in 8.60 seconds. Repair bundles the checked Microsoft 14.44.35211.0 release
-runtimes; all three PE binaries are AMD64. The MSI passed installation, all ten
+in 8.60 seconds. The final Windows wheel refreshes only its description and
+RECORD; native and installed-package proof is reused after verifying all 65 other
+members, including their compressed payloads, remain identical. No native Windows
+execution of the metadata-refreshed archive is claimed. Repair bundles the checked
+Microsoft 14.44.35211.0 release runtimes; all three PE binaries are AMD64. The MSI passed installation, all ten
 semantic cases and removal. See [the native run](https://github.com/asad/SMSD/actions/runs/37557118227).
 
 The Java tests use the same compiled classes on macOS arm64 with Temurin
