@@ -11,7 +11,7 @@ distribution. Keep one Python version across the wheel set:
 | macOS arm64 | CPython 3.14, macOS 26+ |
 | Windows x86_64 | CPython 3.14, 64-bit Windows |
 
-Version 7.2.2 is in preparation. Use
+All 7.2.2 platform checks and strict collection passed. Use
 [7.2.2 validation](VALIDATION_7.2.2.md) for current checks;
 [7.2.1 validation](VALIDATION_7.2.1.md) is historical evidence.
 
@@ -141,8 +141,12 @@ Configure the `smsd` project's Trusted Publisher on PyPI:
 
 Open [Build and validate Python wheels](https://github.com/asad/SMSD/actions/workflows/python-publish.yml).
 Choose **Run workflow**, branch `master`, `release_tag=v7.2.2`,
-`platform=all` and `publish=true`. This rebuilds and tests all three platforms
-before publishing. Configure the publisher and finish the release checks first.
+`platform=all` and `publish=true`. Publication downloads the SDK and three
+validated wheels from the published GitHub release. It verifies checksums,
+frozen source identity and all three packages before uploading those exact files
+through Trusted Publishing. Use the current `master` workflow; `publish=false`
+keeps the separate platform build path. Configure the publisher and finish the
+GitHub release first.
 See [PyPI's Trusted Publisher setup](https://docs.pypi.org/trusted-publishers/adding-a-publisher/).
 
 Equivalent shell command, once ready:

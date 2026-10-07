@@ -14,5 +14,5 @@ Java CLI Docker archives target Linux x86_64 and arm64.
 
 Use `SHA256SUMS` to verify downloads. macOS and Windows installers are unsigned.
 
-Release preparation is in progress. Native Windows installer/wheel validation,
-PyPI and Maven Central publication remain pending.
+All three platform checks passed. See the GitHub release and package indexes
+for publication status.

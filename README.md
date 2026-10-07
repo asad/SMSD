@@ -22,26 +22,24 @@ SMSD Pro provides substructure search and maximum common substructure
 (header-only), and **Python**. Optional GPU paths are available for CUDA and
 Apple Metal builds.
 
-Version `7.2.2` fixes Java CML/PDB input and adds native Java CLI installers.
-The source remains organised into Java, C++ and Python modules.
+Version `7.2.2` fixes Java CML/PDB input, preserves UTF-8 CLI JSON and supports
+Java 8 or later. Release packages include Windows MSI, macOS DMG and Linux DEB
+installers with bundled Java 25 LTS, alongside portable Java packages, C++ headers
+and CPython 3.14 wheels. The source is organised into Java, C++ and Python modules.
 Version `7.2.1` separates Java, C++ and Python source modules and
 provides a compact release for Linux, macOS and Windows. It carries forward
 the reviewed element-preserving tautomer, stereo, objective and symmetry fixes
 from the 7.2.0 source candidate and fixes native seed deadline checks.
 Python wrappers preserve input indices and options; core batches reuse native
-graphs. Java uses **CDK 2.13**. GitHub's current release is
-[`7.2.1`](https://github.com/asad/SMSD/releases/tag/v7.2.1); Maven Central/PyPI
-remain at `7.1.1` pending separate publication.
-
-The 7.2.2 release is in preparation. It will include one Windows MSI, one macOS
-DMG and one Linux DEB with bundled Java 25, alongside the Python wheels and
-portable packages. See [installer instructions](docs/INSTALLERS.md) and
-[current validation](docs/VALIDATION_7.2.2.md).
+graphs. Java uses **CDK 2.13**. See the
+[7.2.2 release](https://github.com/asad/SMSD/releases/tag/v7.2.2),
+[installer instructions](docs/INSTALLERS.md) and
+[current validation](docs/VALIDATION_7.2.2.md) for files and check scope.
+PyPI and Maven Central publication are separate; see [publishing steps](docs/PUBLISHING.md).
 
 Java 8 is the minimum target for 7.2.2. Java 25 LTS is preferred for builds
-and included in the native installers. One JAR serves both versions;
-compatibility checks are required before publication. The published 7.2.1
-JARs still require Java 25.
+and included in the native installers. One JAR serves both versions, and both
+compatibility suites passed. The earlier 7.2.1 JARs require Java 25.
 
 ### Local benchmark results
 
@@ -95,6 +93,9 @@ isotopes, atom classes/maps, `R#` plus `M  RGP`, and basic stereo flags.
 
 ### Java (Maven)
 
+The current Central example uses 7.1.1. Use the GitHub JAR below for the
+Java 8-compatible 7.2.2 release until its separate Central publication.
+
 ```xml
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
@@ -106,9 +107,9 @@ isotopes, atom classes/maps, `R#` plus `M  RGP`, and basic stereo flags.
 ### Java (Download JAR)
 
 ```bash
-curl -LO https://github.com/asad/SMSD/releases/download/v7.2.1/smsd-7.2.1-jar-with-dependencies.jar
+curl -LO https://github.com/asad/SMSD/releases/download/v7.2.2/smsd-7.2.2-jar-with-dependencies.jar
 
-java -jar smsd-7.2.1-jar-with-dependencies.jar \
+java -jar smsd-7.2.2-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 ```
 
@@ -120,9 +121,11 @@ pip install smsd
 
 The source package declares CPython `3.9` or later. Existing PyPI releases
 provide several platform wheels; availability varies by release and interpreter.
-The GitHub 7.2.1 release provides Python 3.14 wheels for Linux x86_64, macOS
-arm64 and Windows x86_64, plus a source distribution. All three wheels passed
-installed-package checks; PyPI publication is pending. The search comparison uses Python
+The 7.2.2 release packages include Python 3.14 wheels for Linux x86_64, macOS
+arm64 and Windows x86_64, plus a source distribution. Use the matching
+[GitHub wheel](https://github.com/asad/SMSD/releases/tag/v7.2.2) if 7.2.2 is not yet
+listed on PyPI. Tested package code passed on each target platform; final package
+metadata preserves the tested code. The search comparison uses Python
 3.13.14 and RDKit 2026.09.1 on macOS arm64.
 CPU execution is the default path. CUDA and Metal acceleration are optional.
 RDKit and Open Babel are optional interop layers.
@@ -370,7 +373,7 @@ python -m pip install -e .
 
 ### Docker
 
-The 7.2.2 draft provides Java CLI image archives for Linux x86_64 (`amd64`)
+The 7.2.2 release packages include Java CLI image archives for Linux x86_64 (`amd64`)
 and arm64. Docker Desktop uses Linux containers on macOS and Windows.
 The Python package is distributed separately. Select your Docker host's
 architecture, then download and load the tested image:
@@ -383,7 +386,7 @@ docker load --input "downloads/smsd-7.2.2-docker-linux-${SMSD_DOCKER_ARCH}.tar.g
 docker run --rm "smsd:7.2.2-linux-${SMSD_DOCKER_ARCH}" --version
 ```
 
-Draft downloads require repository access. Both images use the validated
+Both images use the validated
 release JAR with Java 25 and passed ten CLI checks locally; x86_64 execution
 uses QEMU. No container registry tag is published. See `DOCKER.md` in the
 release downloads for usage and validation scope.
@@ -595,42 +598,46 @@ Call `SearchEngine.clearMolGraphCache()` (Java) or reuse `MolGraph` instances (C
 
 ## Release Downloads
 
-The [7.2.1 release](https://github.com/asad/SMSD/releases/tag/v7.2.1) contains portable Java 25 library/CLI packages,
+The [7.2.2 release](https://github.com/asad/SMSD/releases/tag/v7.2.2) contains portable Java 8+ library/CLI packages,
 C++17 headers, CPython 3.14 wheels for three operating systems and a source
-distribution. The portable Java packages require Java 25 on each operating
+distribution. The portable Java packages require Java 8 or later on each operating
 system; they do not bundle a Java runtime. The release uses local macOS
 and Linux builds, a manually dispatched GitHub Windows build, and collection
-of three verified wheels from the same source. PyPI and Maven publication are
-pending. See [publishing steps](docs/PUBLISHING.md).
+of three verified wheels from the same source. PyPI and Maven Central publication are separate. See [publishing steps](docs/PUBLISHING.md).
 
 | Download | Description |
 |----------|-------------|
-| `smsd-7.2.1.jar` | Java library JAR |
-| `smsd-7.2.1-jar-with-dependencies.jar` | Standalone CLI (Java 25+) |
-| `smsd-7.2.1-sources.jar`, `smsd-7.2.1-javadoc.jar` | Java sources and API documentation |
-| `smsd-7.2.1-cli.tar.gz` | Java launcher distribution for Linux, macOS and Windows (bin/ and repo/) |
-| `smsd-cpp-7.2.1-headers.tar.gz` | C++17 headers with LICENSE and NOTICE |
-| `smsd-7.2.1.tar.gz` | Python source distribution |
-| `smsd-7.2.1-cp314-cp314-manylinux*.whl` | Python 3.14, Linux x86_64 with glibc 2.28+ |
-| `smsd-7.2.1-cp314-cp314-macosx_26_0_arm64.whl` | Python 3.14, Apple Silicon, macOS 26+ |
-| `smsd-7.2.1-cp314-cp314-win_amd64.whl` | Python 3.14, Windows x86_64 |
+| `smsd-7.2.2.jar` | Java library JAR |
+| `smsd-7.2.2-jar-with-dependencies.jar` | Standalone CLI (Java 8+) |
+| `smsd-7.2.2-sources.jar`, `smsd-7.2.2-javadoc.jar` | Java sources and API documentation |
+| `smsd-7.2.2-cli.tar.gz` | Java launcher distribution for Linux, macOS and Windows (bin/ and repo/) |
+| `smsd-cpp-7.2.2-headers.tar.gz` | C++17 headers with LICENSE and NOTICE |
+| `smsd-7.2.2.tar.gz` | Python source distribution |
+| `smsd-7.2.2-cp314-cp314-manylinux*.whl` | Python 3.14, Linux x86_64 with glibc 2.28+ |
+| `smsd-7.2.2-cp314-cp314-macosx_26_0_arm64.whl` | Python 3.14, Apple Silicon, macOS 26+ |
+| `smsd-7.2.2-cp314-cp314-win_amd64.whl` | Python 3.14, Windows x86_64 |
+| `smsd-7.2.2-windows-amd64.msi` | Windows x86_64 installer with bundled Java 25 |
+| `smsd-7.2.2-macos-arm64.dmg` | macOS arm64 installer with bundled Java 25 |
+| `smsd-7.2.2-linux-amd64.deb` | Linux x86_64 installer with bundled Java 25 |
+| `OpenJDK25U-jdk-sources_25.0.4.1_1.tar.gz` | Matching bundled Java runtime source |
+| `SOURCE_MANIFEST.json`, `WHEEL_MANIFEST.json`, `INSTALLER_MANIFEST.json` | Source identity and platform validation |
 | `SHA256SUMS` | Checksums for the release assets |
 
-These assets are available on GitHub; 7.2.1 checks are tracked in
-[validation](docs/VALIDATION_7.2.1.md). The earlier platform results belong to
+Final platform checks are tracked in
+[validation](docs/VALIDATION_7.2.2.md). The earlier platform results belong to
 the [7.2.0 source candidate](docs/VALIDATION_7.2.0.md). Other architectures, including Intel
 macOS and Linux arm64, can build from source and are outside this wheel set.
 
 ```bash
 # CLI
-java -jar smsd-7.2.1-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
+java -jar smsd-7.2.2-jar-with-dependencies.jar --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 
 # Docker CLI
 docker build -t smsd .
 docker run --rm smsd --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 
 # Python — build from the downloaded source distribution
-pip install ./smsd-7.2.1.tar.gz
+pip install ./smsd-7.2.2.tar.gz
 ```
 
 ---
@@ -639,11 +646,12 @@ pip install ./smsd-7.2.1.tar.gz
 
 The 7.2.2 Java code passed 1,278 tests with 15 opt-in skips on both Java 8
 and Java 25, using the same compiled classes. The shaded JAR, source copies,
-licences and Unix launchers passed compatibility checks. The macOS arm64 and
-emulated Linux x86_64 wheels each passed 691 installed-package tests with 8
-optional skips; all 12 native Debug suites passed on unchanged native inputs.
-Both DMG and DEB installers passed ten CLI cases and installation/removal checks.
-Native Windows validation remains pending. See
+licences and Unix launchers passed compatibility checks. Package code on macOS
+arm64, emulated Linux x86_64 and native Windows AMD64 passed 691 installed-package
+tests with 8 optional skips per platform. Windows ran all 12 native Debug suites;
+macOS and Linux reuse explicitly identified evidence from unchanged native inputs.
+Each MSI, DMG and DEB passed ten CLI cases and installation/removal checks.
+The final documentation update preserves tested binaries and package code. See
 [7.2.2 validation](docs/VALIDATION_7.2.2.md).
 
 The reorganised 7.2.1 Java module has 1,242 distinct passing cases and 15

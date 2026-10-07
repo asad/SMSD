@@ -2,7 +2,7 @@
 
 All notable changes to SMSD Pro are documented in this file.
 
-## [7.2.2] - Unreleased
+## [7.2.2] - 2026-10-07
 
 - Include CDK SMARTS transitively for Maven library users.
 

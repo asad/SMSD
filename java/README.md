@@ -4,8 +4,8 @@ This module contains the Java implementation and CLI, using CDK 2.13.
 Java 8 is the minimum target; Java 25 LTS is preferred for builds and execution.
 The same JAR runs on both. Release validation covers both runtimes.
 Its Maven coordinates remain `com.bioinceptionlabs:smsd`; this source targets
-version `7.2.2`. The current published GitHub release is 7.2.1;
-7.2.2 preparation and Maven Central publication are pending.
+version `7.2.2`. See the [GitHub release](https://github.com/asad/SMSD/releases/tag/v7.2.2)
+for the Java packages and native installers. Maven Central publication is separate.
 
 From the repository root:
 

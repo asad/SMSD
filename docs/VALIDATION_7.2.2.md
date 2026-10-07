@@ -1,6 +1,7 @@
 # SMSD 7.2.2 validation
 
-Release preparation is in progress. Previous release results remain in
+All three platform builds and strict collection passed. GitHub, PyPI and Maven
+Central publication are tracked separately. Previous release results remain in
 [7.2.1 validation](VALIDATION_7.2.1.md); they are not new 7.2.2 results.
 
 Version 7.2.2 now targets Java 8 or later, with Java 25 LTS preferred for
@@ -14,15 +15,16 @@ builds and bundled installers. Both Java compatibility suites passed.
 | Four Java JARs | Passed Java 8 bytecode, source and licence checks |
 | Frozen source archive | All 224 source files match the clean source commit; one generated metadata file |
 | Shaded CLI JAR on Java 8 | Seven startup/search cases passed, including compact and pretty Unicode SDF JSON |
-| CLI JSON under Windows-style encodings | Ten Java 25 cases passed without a JVM encoding workaround; native Windows execution pending |
+| CLI JSON under Windows-style encodings | Ten Java 25 cases passed without a JVM encoding workaround; native MSI cases also passed |
 | Unix source and generated launchers | Passed on both runtimes; Windows execution pending |
 | macOS arm64 DMG | Passed all ten CLI checks, native installation/removal and 58 arm64 binary checks |
 | macOS arm64 Python wheel | 12 native Debug suites on unchanged inputs (reused evidence); 691 fresh Python tests passed, 8 optional skips |
 | Linux x86_64 DEB | Passed all ten CLI checks, extraction, installation and removal under QEMU |
 | Linux x86_64 Python wheel | 12 native Debug suites on unchanged inputs (reused evidence); 691 fresh Python tests passed, 8 optional skips |
 | Docker Linux arm64 and x86_64 images | Ten CLI checks per image, exact release JAR, non-root execution and licence checks passed locally; x86_64 uses QEMU |
-| Windows x86_64 Python wheel and MSI | Pending native Windows execution |
-| Three-wheel and three-installer collection | Pending |
+| Windows x86_64 MSI | Passed all ten CLI checks, native installation and removal; unsigned |
+| Windows x86_64 Python wheel | 12 native Debug suites; 691 installed-package tests passed, 8 optional skips |
+| Three-wheel and three-installer collection | Passed for the complete platform set |
 | GitHub publication and download verification | Pending |
 | PyPI and Maven Central | Pending |
 
@@ -37,8 +39,11 @@ checks use CPython 3.14.8 and RDKit 2026.03.6 on macOS 27.0.1 arm64; native
 Debug checks take 99.09 seconds and the final Python checks take 7.80 seconds.
 Metal and CUDA are disabled; bundled OpenMP is required. Native Debug evidence
 is reused after independently verifying identical C++/Python/build inputs across
-the packaging and Java updates; final wheels are rebuilt and installed-package
-tests rerun against the corrected source archive.
+the packaging and Java updates. Final distributions refresh documentation and
+package metadata only; all tested binaries, Python wrappers, headers and licences
+remain byte-identical. The final source archive differs only in documentation and generated package
+metadata.
+Manifests retain the original test identities and make reused evidence explicit.
 
 Docker images provide the Java CLI with Temurin 25.0.4.1+1. Both Linux
 architectures run in a local arm64 Colima VM; x86_64 uses QEMU. Each passes
@@ -53,6 +58,13 @@ and RDKit 2026.03.6 under local QEMU x86_64. The unchanged native Debug suite
 took 335.40 seconds; fresh installed-wheel tests took 33.83 seconds. Release
 compilation retains `-O3` and OpenMP. Link-time optimisation is disabled after
 GCC crashes under emulation; compile and link commands confirm the setting.
+
+Native Windows checks ran on Windows Server 2022 AMD64 with MSVC
+19.44.35229.0, CPython 3.14.7 and RDKit 2026.03.6. All 12 Debug suites passed
+in 235.87 seconds; installed-wheel tests passed 691 cases with 8 optional skips
+in 8.60 seconds. Repair bundles the checked Microsoft 14.44.35211.0 release
+runtimes; all three PE binaries are AMD64. The MSI passed installation, all ten
+semantic cases and removal. See [the native run](https://github.com/asad/SMSD/actions/runs/37557118227).
 
 The Java tests use the same compiled classes on macOS arm64 with Temurin
 25.0.4.1+1 and Corretto 8.504.04.1 (`1.8.0_504-b04`). All 53 production classes

@@ -7,9 +7,9 @@ bindings in `bindings/pybind11/`. Java is not required for the native core.
 
 See [the C++ guide](../docs/CPP.md) for APIs, matching contracts, installation
 and RDKit integration. The current source targets 7.2.2. All 12 native Debug
-suites pass on macOS arm64 and emulated Linux x86_64. Native Windows checks
-remain pending. The native build inputs are unchanged by the final metadata
-update, and reused evidence is recorded explicitly in
+suites pass on macOS arm64, emulated Linux x86_64 and native Windows AMD64.
+Windows ran a fresh suite; macOS and Linux reuse evidence from identical native
+inputs. The final documentation update preserves all native code; evidence is recorded in
 [current validation](../docs/VALIDATION_7.2.2.md). The
 [7.2.1 results](../docs/VALIDATION_7.2.1.md) retain their historical scope.
 

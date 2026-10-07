@@ -43,11 +43,12 @@ python -m build
 ```
 
 The package declares CPython `3.9` or later; wheel availability depends on
-platform and architecture. The GitHub 7.2.1 release provides Python 3.14 wheels
+platform and architecture. The 7.2.2 release packages include Python 3.14 wheels
 for Linux x86_64 (glibc 2.28+), macOS arm64 (26+) and Windows x86_64, plus a
-source distribution. Each wheel passed installed-package tests on its
-target operating system. PyPI publication remains pending. Intel macOS and Linux arm64
-remain source-build targets. The controlled search review uses Python
+source distribution. Use the matching [GitHub wheel](https://github.com/asad/SMSD/releases/tag/v7.2.2)
+if 7.2.2 is not yet listed on PyPI. Tested package code passed on each target
+operating system; the final documentation update preserves its binaries and code.
+Intel macOS and Linux arm64 remain source-build targets. The controlled search review uses Python
 `3.13.14` on macOS arm64.
 Source builds default to Metal/CUDA auto-detection; release and comparison wheels disable
 both explicitly. Core batch matching uses CPU/OpenMP. RDKit
@@ -122,10 +123,11 @@ sim = smsd.similarity("c1ccccc1", "c1ccc(O)cc1")
 
 ## Performance and validation
 
-The 7.2.2 macOS arm64 and emulated Linux x86_64 wheels each pass 691
-installed-package tests with 8 optional skips. All 12 native Debug suites pass
-on unchanged native inputs; reused evidence is identified explicitly. Windows
-validation and publication remain pending. See
+Package code for 7.2.2 passed 691 installed-package tests with 8 optional skips
+on macOS arm64, emulated Linux x86_64 and native Windows AMD64. Windows ran all
+12 native Debug suites; macOS and Linux reuse evidence from unchanged native
+inputs. Final distributions refresh documentation only and preserve the tested
+binaries, wrappers, headers and licences. See
 [current validation](https://github.com/asad/SMSD/blob/master/docs/VALIDATION_7.2.2.md).
 
 The [benchmark report](https://github.com/asad/SMSD/blob/master/benchmarks/RESULTS_7.2.0.md)
@@ -168,7 +170,7 @@ OpenMP. The Windows Server 2022/AMD64 wheel passed the same test counts on
 Python 3.14.7/RDKit 2026.03.6 with active OpenMP and checked Microsoft runtimes.
 Strict collection of all three wheels passed against one source archive; see
 [7.2.1 validation](https://github.com/asad/SMSD/blob/master/docs/VALIDATION_7.2.1.md).
-The wheels are available on GitHub; PyPI publication remains pending.
+The 7.2.1 wheels remain available on GitHub as historical packages.
 
 ## Circular Fingerprints
 
