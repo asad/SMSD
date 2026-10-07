@@ -12,7 +12,6 @@ authors:
     family-names: Rahman
     email: asad.rahman@bioinceptionlabs.com
     affiliation: BioInception PVT LTD
-    orcid: "https://orcid.org/0000-0003-2049-3307"
 
 preferred-citation:
   type: article
@@ -21,9 +20,9 @@ preferred-citation:
     - given-names: Syed Asad
       family-names: Rahman
       affiliation: BioInception PVT LTD
-      orcid: "https://orcid.org/0000-0003-2049-3307"
-  year: 2025
-  doi: "10.26434/chemrxiv.15001534"
+  year: 2026
+  date-published: 2026-04-02
+  doi: "10.26434/chemrxiv.15001534/v1"
   url: "https://doi.org/10.26434/chemrxiv.15001534/v1"
 
 references:

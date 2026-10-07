@@ -142,9 +142,9 @@ until 7.2.2 is published there.
 If you use SMSD Pro in your research, please cite:
 
 > Rahman SA.
-> *SMSD Pro: Tautomer-Aware Maximum Common Substructure Search.*
-> ChemRxiv, 2025.
-> DOI: [10.26434/chemrxiv.15001534](https://doi.org/10.26434/chemrxiv.15001534/v1)
+> *SMSD Pro: Coverage-Driven, Tautomer-Aware Maximum Common Substructure Search.*
+> ChemRxiv, 2026.
+> DOI: [10.26434/chemrxiv.15001534/v1](https://doi.org/10.26434/chemrxiv.15001534/v1)
 
 For the original SMSD toolkit, please also cite:
 

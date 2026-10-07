@@ -226,9 +226,9 @@ Bundled dependencies include their own licence notices.
 
 If you use SMSD in research, please cite:
 
-> Rahman SA. *SMSD Pro: Tautomer-Aware Maximum Common Substructure Search.*
-> ChemRxiv, 2025.
-> DOI: [10.26434/chemrxiv.15001534](https://doi.org/10.26434/chemrxiv.15001534/v1)
+> Rahman SA. *SMSD Pro: Coverage-Driven, Tautomer-Aware Maximum Common Substructure Search.*
+> ChemRxiv, 2026.
+> DOI: [10.26434/chemrxiv.15001534/v1](https://doi.org/10.26434/chemrxiv.15001534/v1)
 
 > Rahman SA, Bashton M, Holliday GL, Schrader R, Thornton JM.
 > *Small Molecule Subgraph Detector (SMSD) toolkit.*
