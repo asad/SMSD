@@ -25,7 +25,7 @@ builds and bundled installers. Both Java compatibility suites passed.
 | Windows x86_64 MSI | Passed all ten CLI checks, native installation and removal; unsigned |
 | Windows x86_64 Python wheel | 12 native Debug suites and 691 installed-package tests passed, 8 optional skips; proof reused for byte-identical payloads after metadata refresh |
 | Three-wheel and three-installer collection | Passed for the complete platform set |
-| GitHub publication and download verification | Pending |
+| GitHub publication and download verification | Published; all 25 assets downloaded anonymously and matched their checksums |
 | PyPI and Maven Central | Pending |
 
 The installer runtime is Eclipse Temurin 25.0.4.1+1. Local Linux execution uses

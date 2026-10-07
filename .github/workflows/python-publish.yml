@@ -16,7 +16,7 @@ on:
         type: choice
         options: [windows, linux, macos, all]
       publish:
-        description: Publish the full matrix and sdist to PyPI (requires platform=all)
+        description: Upload the validated published GitHub SDK and three wheels to PyPI (requires platform=all)
         required: true
         default: false
         type: boolean
@@ -26,6 +26,7 @@ permissions:
 
 jobs:
   source:
+    if: ${{ !inputs.publish }}
     name: Prepare one source distribution
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -82,6 +83,7 @@ jobs:
           if-no-files-found: error
 
   build:
+    if: ${{ !inputs.publish }}
     name: CPython 3.14 ${{ matrix.platform }} ${{ matrix.arch }}
     needs: source
     runs-on: ${{ matrix.os }}
@@ -117,9 +119,8 @@ jobs:
           if-no-files-found: error
 
   publish:
-    name: Publish explicitly approved full matrix
-    if: ${{ inputs.publish && inputs.platform == 'all' }}
-    needs: [source, build]
+    name: Publish validated GitHub release files
+    if: ${{ inputs.publish }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment: pypi
@@ -127,24 +128,40 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/download-artifact@v8.0.1
+      - uses: actions/checkout@v7.0.1
         with:
-          pattern: python-*
-          path: artifacts
-      - name: Collect only distributions
+          persist-credentials: false
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.14'
+      - name: Download only the published release distributions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          BUILD_TARGET: ${{ inputs.platform }}
+          RELEASE_REPOSITORY: ${{ github.repository }}
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          import shutil
-          output = Path('dist')
-          output.mkdir()
-          for path in Path('artifacts').rglob('*'):
-              if path.is_file() and (path.suffix == '.whl' or path.name.endswith('.tar.gz')):
-                  if (output / path.name).exists():
-                      raise SystemExit('Duplicate distribution: ' + path.name)
-                  shutil.copy2(path, output / path.name)
-          if len(list(output.glob('*.whl'))) != 3 or len(list(output.glob('*.tar.gz'))) != 1:
-              raise SystemExit('Expected three tested wheels and one source distribution')
-          PY
+          python scripts/check_pypi_release.py download \
+            --tag "$RELEASE_TAG" --platform "$BUILD_TARGET" --repository "$RELEASE_REPOSITORY" \
+            --release-dir release-input --metadata-file release-metadata.json
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.release_tag }}
+          fetch-depth: 0
+          path: release-checkout
+          persist-credentials: false
+      - name: Check release hashes, frozen source and all three wheels
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          python scripts/check_pypi_release.py validate \
+            --tag "$RELEASE_TAG" --release-dir release-input --metadata-file release-metadata.json \
+            --source-checkout release-checkout --dist-dir dist --receipt-file upload-receipt.json
+          python -m pip install twine
+          python -m twine check --strict dist/*
+      - name: Verify the exact four files immediately before upload
+        run: |
+          python scripts/check_pypi_release.py verify-staged \
+            --dist-dir dist --receipt-file upload-receipt.json
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1

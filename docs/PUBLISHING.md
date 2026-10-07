@@ -11,6 +11,8 @@ distribution. Keep one Python version across the wheel set:
 | macOS arm64 | CPython 3.14, macOS 26+ |
 | Windows x86_64 | CPython 3.14, 64-bit Windows |
 
+The GitHub 7.2.2 release is published; all 25 public downloads match their
+checksums. PyPI and Maven Central publication remain pending.
 All 7.2.2 platform checks and strict collection passed. Use
 [7.2.2 validation](VALIDATION_7.2.2.md) for current checks;
 [7.2.1 validation](VALIDATION_7.2.1.md) is historical evidence.
