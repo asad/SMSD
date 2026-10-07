@@ -1,8 +1,8 @@
 # SMSD 7.2.0 validation
 
 This page records the 7.2.0 source candidate. Its test counts, hashes and
-platform checks do not certify the new 7.2.1 artifacts. See
-[7.2.1 validation](VALIDATION_7.2.1.md) for fresh release gates. Reproduction
+platform checks do not certify the current 7.2.2 packages. See
+[7.2.2 validation](VALIDATION_7.2.2.md) for current release checks. Reproduction
 commands below retain the 7.2.0 checkout layout; current module paths are
 explained in [the installation guide](HOWTO-INSTALL.md).
 

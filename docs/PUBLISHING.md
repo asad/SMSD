@@ -12,7 +12,8 @@ distribution. Keep one Python version across the wheel set:
 | Windows x86_64 | CPython 3.14, Windows 10 or later |
 
 The GitHub 7.2.2 release is published; all 25 public downloads match their
-checksums. PyPI and Maven Central publication remain pending.
+checksums. [PyPI 7.2.2](https://pypi.org/project/smsd/7.2.2/) is published with
+the same source archive and three wheels. Maven Central publication remains pending.
 All 7.2.2 platform checks and strict collection passed. Use
 [7.2.2 validation](VALIDATION_7.2.2.md) for current checks;
 [7.2.1 validation](VALIDATION_7.2.1.md) is historical evidence.
@@ -135,6 +136,8 @@ that a Windows wheel executes by inspecting it on macOS. Use
 before publishing.
 
 ## PyPI
+
+Version 7.2.2 is published. For future releases, use their version and tag in these commands.
 
 ### Publish through GitHub
 

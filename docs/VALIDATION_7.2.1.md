@@ -1,13 +1,12 @@
 # SMSD 7.2.1 release validation
 
-Version 7.2.1 is released on GitHub; PyPI and Maven publication remain pending.
-This record tracks
-fresh checks after separating the Java, C++ and Python source modules. It
-does not inherit a passing result merely because a 7.2.0 artifact passed.
+This report records the GitHub 7.2.1 packages and their checks after separating
+the Java, C++ and Python source modules. See
+[7.2.2 validation](VALIDATION_7.2.2.md) for the current release.
 
 As checked on 2026-10-06, GitHub has published
 [7.2.1](https://github.com/asad/SMSD/releases/tag/v7.2.1); PyPI and Maven Central
-remain at 7.1.1. The native Windows 7.2.1 workflow passed, and all three
+were at 7.1.1 at that time. The native Windows 7.2.1 workflow passed, and all three
 wheels have passed strict collection against the same source archive.
 
 ## Source and layout

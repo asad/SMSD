@@ -14,7 +14,7 @@ Release wheels use CPython 3.14 with CPU/OpenMP support:
 | Linux | x86_64 | glibc 2.28+ |
 | macOS | arm64 / Apple Silicon | macOS 26+ |
 
-Install from PyPI when 7.2.2 is listed, or download the matching wheel from the
+Install 7.2.2 from PyPI, or download the matching wheel from the
 [GitHub release](https://github.com/asad/SMSD/releases/tag/v7.2.2):
 
 ```bash

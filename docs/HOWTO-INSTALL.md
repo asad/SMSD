@@ -1,8 +1,8 @@
 # Build and run SMSD 7.2.2
 
 Download packages from the [GitHub release](https://github.com/asad/SMSD/releases/tag/v7.2.2).
-PyPI and Maven Central publication are pending. Verify downloads against
-`SHA256SUMS` before installing.
+[Python 7.2.2 is on PyPI](https://pypi.org/project/smsd/7.2.2/); Maven Central
+publication remains pending. Verify GitHub downloads against `SHA256SUMS`.
 
 | Distribution | Requirements |
 |---|---|
@@ -97,7 +97,7 @@ See the [C++ guide](CPP.md) for integration examples.
 ## Python installation and source build
 
 Install the wheel matching your interpreter and platform from the GitHub
-release. When 7.2.2 is listed on PyPI:
+release, or use PyPI:
 
 ```bash
 python -m pip install smsd==7.2.2

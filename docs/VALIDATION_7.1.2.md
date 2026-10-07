@@ -1,8 +1,8 @@
 # SMSD Pro 7.1.2 historical local validation
 
 This records the earlier 7.1.2 preparation against baseline `52733cb`. It is
-not the validation result for the current 7.2.1 release. Fresh release checks
-are tracked in [7.2.1 validation](VALIDATION_7.2.1.md). Later historical
+not the validation result for the current 7.2.2 release. Current release checks
+are tracked in [7.2.2 validation](VALIDATION_7.2.2.md). Later historical
 measurements and coverage are linked from the
 [7.2.0 benchmark report](../benchmarks/RESULTS_7.2.0.md) and
 [algorithm review](ALGORITHM_REVIEW.md).

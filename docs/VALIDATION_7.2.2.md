@@ -26,7 +26,14 @@ builds and bundled installers. Both Java compatibility suites passed.
 | Windows x86_64 Python wheel | 12 native Debug suites and 691 Python tests passed, 8 optional skips; unchanged code verified |
 | Three-wheel and three-installer collection | Passed for the complete platform set |
 | GitHub publication and download verification | Published; all 25 assets downloaded anonymously and matched their checksums |
-| PyPI and Maven Central | Pending |
+| PyPI publication | Published; source archive, three wheel hashes and package description match the GitHub release |
+| Fresh macOS PyPI installation | Core search, SMARTS, batches and fingerprints passed without RDKit; RDKit integration also passed |
+| Maven Central | Pending |
+
+PyPI publication completed on 7 October 2026 through the
+[GitHub workflow](https://github.com/asad/SMSD/actions/runs/37582370663).
+The fresh installation used CPython 3.14.8 on macOS 27.0.1 arm64; this consumer
+check does not add a new full-suite or minimum-OS test result.
 
 The installer runtime is Eclipse Temurin 25.0.4.1+1. Local Linux execution uses
 QEMU on an arm64 macOS host. macOS and Windows installers are unsigned;

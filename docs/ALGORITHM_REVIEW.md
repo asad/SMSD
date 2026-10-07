@@ -175,7 +175,7 @@ The existing [release preparation script](../scripts/prepare-release.sh)
 builds source distributions, repairs macOS wheels and validates the installed
 package. The earlier review validated candidate wheels under
 `build/algorithm-ringfix-wheel-assets`. Current source and release preparation
-target 7.2.1; neither those older artifacts nor a 7.1.2 version label identifies
+target 7.2.2; neither those older packages nor a 7.1.2 version label identifies
 the current changes. The reproduction commands use the new `java/` module
 layout; the recorded counts and benchmark measurements retain their historical
 source scope.

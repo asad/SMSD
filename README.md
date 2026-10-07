@@ -23,8 +23,8 @@ binds the native library and supports optional RDKit integration.
 The current [GitHub release is 7.2.2](https://github.com/asad/SMSD/releases/tag/v7.2.2).
 It supports Java 8 or later, fixes CML/PDB input and preserves UTF-8 CLI JSON.
 Downloads include Java packages, C++ headers, Python wheels and native installers
-for Windows, macOS and Linux. PyPI and Maven Central publication are separate;
-check the package indexes before requesting version 7.2.2 there.
+for Windows, macOS and Linux. [Python 7.2.2 is also on PyPI](https://pypi.org/project/smsd/7.2.2/);
+Maven Central publication remains pending.
 
 ## Installation
 
@@ -107,16 +107,16 @@ See the [Java module](java/README.md) for CDK container examples.
 
 ### Python
 
-Once version 7.2.2 is listed on PyPI, install it with:
+Install Python 7.2.2 from PyPI:
 
 ```bash
 python -m pip install smsd==7.2.2
 python -c "import smsd; print(smsd.__version__)"
 ```
 
-For 7.2.2 before its PyPI publication, download the wheel matching your platform
-from the [GitHub release](https://github.com/asad/SMSD/releases/tag/v7.2.2) and
-install that file with `python -m pip install`.
+You can also download the matching wheel from the
+[GitHub release](https://github.com/asad/SMSD/releases/tag/v7.2.2) and install
+that file with `python -m pip install`.
 
 ```python
 import smsd
