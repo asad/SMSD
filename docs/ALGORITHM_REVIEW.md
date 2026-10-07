@@ -1,9 +1,8 @@
 # Search algorithm review
 
 This review records the **7.2.0 source candidate** against the immutable 7.1.2
-source snapshot `6807f31`. Those search fixes carry forward into 7.2.1; the
-version, layout and packaging checks are tracked separately in
-[7.2.1 validation](VALIDATION_7.2.1.md). Latest cross-engine measurements, policies, input
+source snapshot `6807f31`. Those search fixes carry forward into 7.2.2; current release checks are in
+[7.2.2 validation](VALIDATION_7.2.2.md). Latest cross-engine measurements, policies, input
 hashes and quality/cancellation outcomes are in the
 [benchmark report](../benchmarks/RESULTS_7.2.0.md). Earlier review results below
 are historical and are identified separately.

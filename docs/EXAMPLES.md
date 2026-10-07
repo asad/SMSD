@@ -1,796 +1,543 @@
-# SMSD Pro — Examples, How-To, and Cautions
+# SMSD 7.2.2 Python examples
 
-**Version 7.2.2 (in preparation)** | Copyright (c) 2018-2026 BioInception PVT LTD
+Worked examples for substructure search, MCS, fingerprints, drawing and molecular
+I/O. Each Python block runs independently after installing SMSD. Examples that
+write files use the current directory. See the [Python guide](PYTHON.md) for
+CPython 3.14 wheel platforms and matching options.
 
-This document provides worked examples for every major SMSD Pro feature. Each section
-includes runnable code, expected output, practical cautions, and performance notes.
+Java and C++ examples are in the [Java guide](JAVA.md) and [C++ guide](CPP.md).
 
----
+## Contents
 
-## Table of Contents
+- [1. Quick start](#1-quick-start)
+- [2. Substructure search](#2-substructure-search)
+- [3. Maximum common substructure](#3-maximum-common-substructure)
+- [4. MCS variants](#4-mcs-variants)
+- [5. Tautomer and solvent settings](#5-tautomer-and-solvent-settings)
+- [6. Fingerprints and similarity](#6-fingerprints-and-similarity)
+- [7. SVG drawing](#7-svg-drawing)
+- [8. Coordinates and layout](#8-coordinates-and-layout)
+- [9. Stereo assignment](#9-stereo-assignment)
+- [10. MOL and SDF files](#10-mol-and-sdf-files)
+- [11. R-group decomposition](#11-r-group-decomposition)
+- [12. Related molecules and constrained batches](#12-related-molecules-and-constrained-batches)
+- [13. Batch operations](#13-batch-operations)
+- [14. SMARTS](#14-smarts)
+- [15. Scaffolds](#15-scaffolds)
+- [16. Graph utilities](#16-graph-utilities)
+- [17. Repeated searches](#17-repeated-searches)
+- [18. Atom maps](#18-atom-maps)
 
-- [1. Quick Start](#1-quick-start)
-- [2. Substructure Search](#2-substructure-search)
-- [3. Maximum Common Substructure (MCS)](#3-maximum-common-substructure-mcs)
-- [4. MCS Variants](#4-mcs-variants)
-- [5. Tautomer-Aware MCS](#5-tautomer-aware-mcs)
-- [6. Fingerprints and Similarity](#6-fingerprints-and-similarity)
-- [7. Depiction (SVG)](#7-depiction-svg)
-- [8. 2D / 3D Layout](#8-2d--3d-layout)
-- [9. Stereo and CIP Assignment](#9-stereo-and-cip-assignment)
-- [10. File I/O (MOL, SDF)](#10-file-io-mol-sdf)
-- [11. R-Group Decomposition](#11-r-group-decomposition)
-- [12. Reaction Atom Mapping](#12-reaction-atom-mapping)
-- [13. Batch Operations](#13-batch-operations)
-- [14. SMARTS Matching](#14-smarts-matching)
-- [15. Scaffold Analysis](#15-scaffold-analysis)
-- [16. Graph Utilities](#16-graph-utilities)
-- [17. Performance Tuning](#17-performance-tuning)
-- [18. Common Cautions](#18-common-cautions)
-
----
-
-## 1. Quick Start
-
-### Python
+## 1. Quick start
 
 ```python
 import smsd
 
-# Substructure: is benzene a substructure of phenol?
-assert smsd.is_substructure(
-    smsd.parse_smiles("c1ccccc1"),    # query
-    smsd.parse_smiles("c1ccc(O)cc1")  # target
-)
-
-# MCS: what do aspirin and salicylic acid share?
-mapping = smsd.find_mcs(
-    smsd.parse_smiles("CC(=O)Oc1ccccc1C(=O)O"),  # aspirin
-    smsd.parse_smiles("Oc1ccccc1C(=O)O")          # salicylic acid
-)
-print(f"MCS size: {len(mapping)} atoms")  # 10
-
-# Similarity
-fp1 = smsd.circular_fingerprint(smsd.parse_smiles("CC(=O)Oc1ccccc1C(=O)O"), radius=2, fp_size=2048)
-fp2 = smsd.circular_fingerprint(smsd.parse_smiles("Oc1ccccc1C(=O)O"), radius=2, fp_size=2048)
-print(f"Tanimoto: {smsd.tanimoto_coefficient(fp1, fp2):.3f}")
+query = "c1ccccc1"       # benzene
+target = "c1ccc(O)cc1"   # phenol
+assert smsd.is_substructure(query, target)
+mapping = smsd.find_mcs(query, target, timeout_ms=1000)
+assert len(mapping) == 6
+print(f"MCS: {len(mapping)} atoms")  # MCS: 6 atoms
 ```
 
-### Java
+Mappings use zero-based input atom indices. SMILES use parser order; RDKit
+inputs use their original atom order. Exact pairs can vary for symmetric
+molecules even when the chemical result is equivalent.
 
-```java
-import com.bioinception.smsd.core.*;
-
-SMSD smsd = new SMSD(mol1, mol2, new ChemOptions());
-boolean isSub = smsd.isSubstructure();
-java.util.Map<Integer, Integer> mapping = smsd.findMCS();
-```
-
-### C++
-
-```cpp
-#include "smsd/smsd.hpp"
-
-auto mol1 = smsd::parseSMILES("c1ccccc1");
-auto mol2 = smsd::parseSMILES("c1ccc(O)cc1");
-
-bool isSub = smsd::isSubstructure(mol1, mol2, smsd::ChemOptions{});
-auto mcs = smsd::findMCS(mol1, mol2, smsd::ChemOptions{}, smsd::MCSOptions{});
-```
-
----
-
-## 2. Substructure Search
-
-### Basic substructure check
+## 2. Substructure search
 
 ```python
 import smsd
 
-query  = smsd.parse_smiles("c1ccccc1")      # benzene ring
+query = smsd.parse_smiles("c1ccccc1")
 target = smsd.parse_smiles("c1ccc(N)cc1")   # aniline
-
-hit = smsd.is_substructure(query, target)
-print(hit)  # True
-
-# Get the atom mapping
+assert smsd.is_substructure(query, target)
 mapping = smsd.find_substructure(query, target)
-print(mapping)  # {0: 0, 1: 1, 2: 2, 3: 4, 4: 5, 5: 6} (example)
+assert len(mapping) == 6
+embeddings = smsd.find_substructure(query, target, max_results=10)
+assert embeddings and all(len(m) == 6 for m in embeddings)
+
+# Require strict aromaticity for benzene versus saturated cyclohexane.
+strict = smsd.ChemOptions.profile("strict")
+assert not smsd._smsd.is_substructure(query, smsd.parse_smiles("C1CCCCC1"), strict, 1000)
 ```
 
-### All substructure matches
-
-```python
-# Find up to 10 distinct mappings
-all_matches = smsd.find_substructure(query, target, max_results=10)
-print(f"Found {len(all_matches)} distinct mappings")
-```
-
-### Caution: ring-matches-ring
-
-By default, `ringMatchesRingOnly=True` — a ring atom in the query will only
-match ring atoms in the target. This prevents false positives where a benzene
-ring matches a cyclohexane chain.
-
-```python
-# This will NOT match with default options (ring vs. non-ring)
-ring   = smsd.parse_smiles("c1ccccc1")  # aromatic ring
-chain  = smsd.parse_smiles("C1CCCCC1")  # non-aromatic ring
-print(smsd.is_substructure(ring, chain))  # False with default options
-```
-
----
-
-## 3. Maximum Common Substructure (MCS)
-
-### Basic MCS
+`max_results > 1` returns a list of mappings. Aromaticity and bond order are
+separate from ring membership: benzene and cyclohexane are both rings. The default
+aromaticity policy is flexible; the native call above uses an explicit strict profile.
+Ring-only matching is off by default; enable it explicitly for MCS when needed:
 
 ```python
 import smsd
 
-mol1 = smsd.parse_smiles("c1ccc2c(c1)cc1ccccc1c2")  # phenanthrene
-mol2 = smsd.parse_smiles("c1cc2ccc3cccc4ccc(c1)c2c34")  # pyrene
-
-mapping = smsd.find_mcs(mol1, mol2)
-print(f"MCS size: {len(mapping)} atoms")
-
-# Extract MCS as SMILES
-mcs_smiles = smsd.mcs_to_smiles(mol1, mapping)
-print(f"MCS SMILES: {mcs_smiles}")
+chain = "CCC"
+ring = "C1CC1"
+assert len(smsd.find_mcs(chain, ring, timeout_ms=1000)) == 3
+assert not smsd.find_mcs(chain, ring, ring_matches_ring_only=True, timeout_ms=1000)
 ```
+
+## 3. Maximum common substructure
+
+```python
+import smsd
+
+query = smsd.parse_smiles("CC(=O)Oc1ccccc1C(=O)O")  # aspirin
+target = smsd.parse_smiles("Oc1ccccc1C(=O)O")         # salicylic acid
+mapping = smsd.find_mcs(query, target, timeout_ms=1000)
+assert len(mapping) == 10
+assert smsd.validate_mapping(query, target, mapping) == []
+fragment = smsd.mcs_to_smiles(query, mapping)
+assert len(smsd.parse_smiles(fragment)) == len(mapping)
+print(fragment)
+```
+
+A timeout bounds search effort, not every preparation step. The returned mapping
+has no cancellation flag or optimality certificate; a timed search can return a
+smaller valid result. `validate_mapping()` checks atom and bond compatibility,
+not optimality or every search-objective restriction.
 
 ### Structured result
 
 ```python
-result = smsd.mcs_result("c1ccccc1", "c1ccc(O)cc1")
-print(f"Size: {result.size}")
-print(f"Overlap: {result.overlap:.3f}")
-print(f"MCS SMILES: {result.mcs_smiles}")
-print(f"Mapping: {result.mapping}")
+import smsd
+
+result = smsd.mcs_result("c1ccccc1", "c1ccc(O)cc1", timeout_ms=1000)
+assert result.size == 6
+assert result.overlap == 1.0
+assert abs(result.tanimoto - 6 / 7) < 1e-12
+print(result.mcs_smiles)
 ```
 
-### With timeout
+Overlap is `size / min(query_atoms, target_atoms)`; Tanimoto is
+`size / (query_atoms + target_atoms - size)`. Choose the measure that answers
+your question instead of comparing atom counts alone.
 
-```python
-# For very large molecules, set a timeout to prevent hanging
-mapping = smsd.find_mcs(mol1, mol2, timeout_ms=5000)  # 5 seconds max
-```
-
-### Caution: MCS size vs. similarity
-
-MCS size alone does not indicate similarity — always normalise. A 6-atom MCS
-between two 50-atom molecules is a poor match, but a 6-atom MCS between a
-6-atom and a 7-atom molecule is excellent.
-
-```python
-# Always compute Tanimoto for meaningful comparison
-tanimoto = len(mapping) / (len(mol1) + len(mol2) - len(mapping))
-```
-
----
-
-## 4. MCS Variants
+## 4. MCS variants
 
 ```python
 import smsd
 
-mol1 = smsd.parse_smiles("c1ccccc1")
-mol2 = smsd.parse_smiles("c1ccc(O)cc1")
+query = smsd.parse_smiles("c1ccccc1")
+target = smsd.parse_smiles("c1ccc(O)cc1")
+connected = smsd.find_mcs(query, target, timeout_ms=1000)
+disconnected = smsd.find_mcs(query, target, connected_only=False, timeout_ms=1000)
+induced = smsd.find_mcs(query, target, induced=True, timeout_ms=1000)
+edge_objective = smsd.find_mcs(query, target, maximize_bonds=True, timeout_ms=1000)
+assert all(len(m) == 6 for m in (connected, disconnected, induced, edge_objective))
 
-# Connected MCS (default) — all matched atoms form a single connected component
-mcs = smsd.find_mcs(mol1, mol2)
-
-# Disconnected MCS — matched atoms may be in separate fragments
-mcs = smsd.find_mcs(mol1, mol2, connected_only=False)
-
-# Induced MCS — preserved bond orders between matched atoms
-mcs = smsd.find_mcs(mol1, mol2, induced=True)
-
-# Edge MCS (MCES) — maximise matched bonds rather than atoms
-mcs = smsd.find_mcs(mol1, mol2, maximize_bonds=True)
-
-# Find top-5 distinct MCS solutions
-all_mcs = smsd.find_mcs(mol1, mol2, max_results=5)
-for i, m in enumerate(all_mcs):
-    print(f"Solution {i+1}: {len(m)} atoms")
+# Up to five MCS mappings, rather than a ranking of five different sizes.
+mappings = smsd.find_mcs(query, target, max_results=5, timeout_ms=1000)
+assert 1 <= len(mappings) <= 5 and all(len(m) == 6 for m in mappings)
 ```
 
-### Multi-Molecule MCS (N-MCS)
+Connected MCS retains one query fragment. Disconnected MCS can retain several.
+Induced matching also preserves nonedges between mapped atoms.
+`maximize_bonds=True` ranks matched bonds before atom count.
 
-```python
-# Find the common substructure shared by 3+ molecules
-molecules = [
-    smsd.parse_smiles("c1ccc(O)cc1"),   # phenol
-    smsd.parse_smiles("c1ccc(N)cc1"),   # aniline
-    smsd.parse_smiles("c1ccc(Cl)cc1"),  # chlorobenzene
-]
-nmcs = smsd.find_nmcs(molecules, threshold=0.5, timeout_ms=10000)
-print(f"N-MCS size: {len(nmcs)} atoms")
-```
-
-### Caution: disconnected MCS
-
-Disconnected MCS can return fragments that have no chemical meaning when
-considered independently. Always check fragment connectivity for downstream use.
-
----
-
-## 5. Tautomer-Aware MCS
+### Multiple molecules
 
 ```python
 import smsd
 
-# Keto-enol tautomers: acetone and prop-1-en-2-ol
-keto = smsd.parse_smiles("CC(=O)C")
-enol = smsd.parse_smiles("CC(O)=C")
-
-# Without tautomer awareness — misses the equivalence
-mcs_strict = smsd.find_mcs(keto, enol)
-print(f"Strict MCS: {len(mcs_strict)} atoms")
-
-# With tautomer awareness — recognises keto-enol equivalence
-mcs_tauto = smsd.find_mcs(keto, enol, tautomer_aware=True)
-print(f"Tautomer MCS: {len(mcs_tauto)} atoms")  # larger
-
-# Solvent-aware tautomer equilibrium
-mcs = smsd.find_mcs(keto, enol, tautomer_aware=True)
+molecules = [smsd.parse_smiles(s) for s in
+             ["c1ccc(O)cc1", "c1ccc(N)cc1", "c1ccc(Cl)cc1"]]
+mapping = smsd.find_nmcs(molecules, threshold=1.0, timeout_ms=1000)
+assert len(mapping) == 6
 ```
 
-### Tautomer matching and budgets
+`find_nmcs()` uses sequential pairwise reduction. Its mapping relates the
+smallest molecule's atom indices to common-fragment positions. This workflow
+is order-dependent and does not prove a globally optimal multi-molecule result.
 
-Tautomer-aware matching relaxes eligible bonds while preserving atom identity.
-Its cost depends on the molecules and constraints. Measure both policies on
-your workload; see `benchmarks/RESULTS_7.2.0.md` for the local protocol.
+## 5. Tautomer and solvent settings
 
----
-
-## 6. Fingerprints and Similarity
-
-### ECFP4 (Morgan) fingerprint
+Tautomer matching and bond-order matching are separate choices. For this
+keto/enol pair, loose bond order permits all four heavy atoms to match:
 
 ```python
 import smsd
 
-# Binary ECFP4 (2048 bits, radius 2)
+keto = "CC(=O)C"
+enol = "CC(O)=C"
+strict = smsd.find_mcs(keto, enol, timeout_ms=1000)
+loose = smsd.find_mcs(keto, enol, tautomer_aware=True,
+                      match_bond_order="loose", timeout_ms=1000)
+assert len(strict) == 2 and len(loose) == 4
+```
+
+For native functions, solvent and pH settings belong to `ChemOptions`:
+
+```python
+import smsd
+
+chem = smsd.ChemOptions.tautomer_profile().with_solvent(smsd.Solvent.DMSO)
+chem.pH = 7.0
+chem.match_bond_order = smsd.BondOrderMode.LOOSE
+search = smsd.MCSOptions()
+search.timeout_ms = 1000
+fragment = smsd.find_mcs_smiles(smsd.parse_smiles("CC(=O)C"),
+                               smsd.parse_smiles("CC(O)=C"), chem=chem, opts=search)
+assert len(smsd.parse_smiles(fragment)) == 4
+```
+
+These settings control matching; the result is not a calculated equilibrium
+population or a guarantee that every tautomer is equivalent.
+
+## 6. Fingerprints and similarity
+
+### Circular and torsion fingerprints
+
+```python
+import smsd
+
 mol = smsd.parse_smiles("c1ccc(O)cc1")
-fp = smsd.circular_fingerprint(mol, radius=2, fp_size=2048)
-
-# Count-based ECFP4 (better for ML)
+fp = smsd.circular_fingerprint(mol, radius=2, fp_size=2048)  # ECFP4
 counts = smsd.circular_fingerprint_counts(mol, radius=2, fp_size=2048)
-
-# FCFP4 (pharmacophore-aware)
 fcfp = smsd.circular_fingerprint(mol, radius=2, fp_size=2048, mode="fcfp")
-
-# Topological torsion
-torsion = smsd.topological_torsion("c1ccc(O)cc1", fp_size=2048)
+torsion = smsd.topological_torsion(mol, fp_size=2048)
+assert fp and counts and fcfp and torsion
 ```
 
-### Similarity metrics
+ECFP describes structural environments; FCFP describes functional classes
+(Rogers and Hahn, 2010). Binary fingerprints contain set bit positions; count
+fingerprints contain `(position, count)` pairs. Validate the representation and
+thresholds on your own task; no fingerprint is universally best for similarity
+or machine learning.
 
-```python
-fp1 = smsd.circular_fingerprint(smsd.parse_smiles("CCO"), radius=2)
-fp2 = smsd.circular_fingerprint(smsd.parse_smiles("CCCO"), radius=2)
-
-tan  = smsd.tanimoto_coefficient(fp1, fp2)  # Jaccard index
-dice = smsd.dice(fp1, fp2)              # Dice coefficient
-cos  = smsd.cosine(fp1, fp2)            # Cosine similarity
-
-# Count-based metrics (use count vectors, not binary)
-c1 = smsd.circular_fingerprint_counts(smsd.parse_smiles("CCO"), radius=2)
-c2 = smsd.circular_fingerprint_counts(smsd.parse_smiles("CCCO"), radius=2)
-ct = smsd.tanimoto_coefficient(c1, c2)
-cd = smsd.count_dice(c1, c2)
-```
-
-### RASCAL upper bound (fast pre-filter)
-
-```python
-# Fast similarity upper bound — avoids full MCS on dissimilar pairs
-ub = smsd.similarity_upper_bound(mol1, mol2)
-if ub > 0.3:
-    # Only compute full MCS if upper bound suggests a reasonable match
-    mcs = smsd.find_mcs(mol1, mol2)
-```
-
-### Caution: fingerprint choice matters
-
-- **ECFP4** (radius=2): best for small-molecule similarity
-- **FCFP4**: better for pharmacophore-level comparison
-- **Topological torsion**: best for peptides and linear chains
-- **Count-based**: always prefer over binary for machine learning models
-
----
-
-## 7. Depiction (SVG)
-
-SMSD includes a zero-dependency SVG renderer with ACS-style drawing defaults
-(Nature, Science, JACS, Springer). No external tools required.
-
-### Single molecule
+### Binary and count metrics
 
 ```python
 import smsd
 
-# From SMILES (auto-layout)
-svg = smsd.depict_svg("CC(=O)Oc1ccccc1C(=O)O")  # aspirin
+mol1 = smsd.parse_smiles("CCO")
+mol2 = smsd.parse_smiles("CCCO")
+fp1 = smsd.circular_fingerprint(mol1, radius=2)
+fp2 = smsd.circular_fingerprint(mol2, radius=2)
+scores = [smsd.tanimoto_coefficient(fp1, fp2), smsd.dice(fp1, fp2),
+          smsd.cosine(fp1, fp2)]
+assert all(0.0 <= score <= 1.0 for score in scores)
+
+c1 = smsd.circular_fingerprint_counts(mol1, radius=2)
+c2 = smsd.circular_fingerprint_counts(mol2, radius=2)
+count_tanimoto = smsd.count_tanimoto_coefficient(c1, c2)
+dense1 = smsd.counts_to_array(c1, 2048)
+dense2 = smsd.counts_to_array(c2, 2048)
+count_dice = smsd.count_dice(dense1, dense2)
+assert 0.0 <= count_tanimoto <= 1.0 and 0.0 <= count_dice <= 1.0
+
+# Hexadecimal storage for a binary fingerprint.
+hex_string = smsd.to_hex(fp1, fp_size=2048)
+assert set(smsd.from_hex(hex_string)) == set(fp1)
+```
+
+`count_dice()` and `count_cosine()` require dense vectors. The sparse count
+helpers are `count_overlap_coefficient()` and `count_tanimoto_coefficient()`.
+Binary `tanimoto_coefficient()` compares set positions, even for sparse input;
+it does not retain feature multiplicities.
+
+## 7. SVG drawing
+
+The native SVG renderer works without RDKit. Check the drawing before using it
+in a report; layout and font rendering depend on the molecule and viewer.
+
+```python
+import xml.etree.ElementTree as ET
+import smsd
+
+svg = smsd.depict_svg("CC(=O)Oc1ccccc1C(=O)O")
+assert ET.fromstring(svg).tag.endswith("svg")
 smsd.save_svg(svg, "aspirin.svg")
 
-# From MolGraph
-mol = smsd.parse_smiles("Cn1cnc2c1c(=O)n(c(=O)n2C)C")  # caffeine
-svg = smsd.depict_svg(mol)
-smsd.save_svg(svg, "caffeine.svg")
+query = smsd.parse_smiles("c1ccccc1")
+target = smsd.parse_smiles("c1ccc(O)cc1")
+mapping = smsd.find_mcs(query, target, timeout_ms=1000)
+smsd.save_svg(smsd.depict_pair(query, target, mapping), "mcs_pair.svg")
+
+# Highlight target atoms: keys must be indices in the rendered molecule.
+target_mapping = {b: a for a, b in mapping.items()}
+smsd.save_svg(smsd.depict_mapping(target, target_mapping), "target.svg")
 ```
 
-### MCS comparison (side-by-side)
-
-```python
-mol1 = smsd.parse_smiles("c1ccccc1")
-mol2 = smsd.parse_smiles("c1ccc(O)cc1")
-mapping = smsd.find_mcs(mol1, mol2)
-
-svg = smsd.depict_pair(mol1, mol2, mapping)
-smsd.save_svg(svg, "benzene_vs_phenol.svg")
-```
-
-Both molecules are rendered with matched atoms highlighted in green, matched
-bonds drawn bold, and blue superscript numbers showing the atom-atom correspondence.
-
-### Substructure highlighting
-
-```python
-query  = smsd.parse_smiles("c1ccccc1")
-target = smsd.parse_smiles("c1ccc(NC(=O)C)cc1")  # acetanilide
-mapping = smsd.find_substructure(query, target)
-
-svg = smsd.depict_mapping(target, mapping)
-smsd.save_svg(svg, "acetanilide_highlight.svg")
-```
-
-### Custom styling
-
-```python
-# Drawing proportions auto-scale from bond_length
-svg = smsd.depict_svg("c1ccc2c(c1)cc1ccccc1c2",  # phenanthrene
-    bond_length=50,           # larger for poster / slide
-    width=800,                # fixed canvas size
-    height=400,
-    padding=40,
-    show_atom_indices=True,   # debug: show atom numbers
-    font_family="Times New Roman, serif"
-)
-
-# Using DepictOptions for batch consistency
-opts = smsd.DepictOptions()
-opts.bond_length = 35
-opts.show_map_numbers = False
-
-for smi in ["CCO", "c1ccccc1", "CC(=O)O"]:
-    svg = smsd.depict_svg(smi, opts=opts)
-    smsd.save_svg(svg, f"{smi.replace('(', '').replace(')', '')}.svg")
-```
-
-### Converting SVG to PNG (external tools)
-
-```bash
-# Inkscape (highest quality for publication)
-inkscape molecule.svg --export-type=png --export-dpi=600
-
-# ImageMagick
-convert -density 600 molecule.svg molecule.png
-
-# cairosvg (Python)
-pip install cairosvg
-python -c "import cairosvg; cairosvg.svg2png(url='molecule.svg', write_to='molecule.png', dpi=600)"
-```
-
-### Caution: font rendering
-
-SVG text rendering depends on the viewer's installed fonts. Arial and Helvetica
-are near-universal. If using a custom font, embed it as a base64 web font in
-the SVG or ensure the font is installed on the target system.
-
-### Caution: large molecules
-
-For molecules with >100 atoms, the built-in auto-layout may produce suboptimal
-results. Use `generate_coords_2d()` first for better placement, then pass
-pre-computed coordinates to the renderer.
-
----
-
-## 8. 2D / 3D Layout
-
-### Generate 2D coordinates
+### Styling
 
 ```python
 import smsd
 
-mol = smsd.parse_smiles("c1ccc2c(c1)cc1ccccc1c2")  # phenanthrene
-coords = smsd.generate_coords_2d(mol, target_bond_length=1.5)
-# coords is a list of (x, y) tuples, one per atom
+options = smsd.DepictOptions()
+options.bond_length = 35
+options.show_map_numbers = False
+options.font_family = "Arial, sans-serif"
+for index, smiles in enumerate(["CCO", "c1ccccc1", "CC(=O)O"]):
+    smsd.save_svg(smsd.depict_svg(smiles, opts=options), f"molecule_{index}.svg")
 
-# Check layout quality
-quality = smsd.layout_quality(mol, coords)
-print(f"Layout quality score: {quality:.3f}")  # lower is better
+svg = smsd.depict_svg("c1ccc2c(c1)cc1ccccc1c2", bond_length=50,
+                      width=800, height=400, padding=40, show_atom_indices=True)
+smsd.save_svg(svg, "large.svg")
 ```
 
-### Generate 3D coordinates
+### Optional SVG conversion
+
+After creating `aspirin.svg` above, choose an external converter. These commands
+require Inkscape or CairoSVG to be installed separately:
+
+```bash
+inkscape aspirin.svg --export-type=png --export-filename=aspirin.png --export-dpi=600
+python -c "import cairosvg; cairosvg.svg2png(url='aspirin.svg', write_to='aspirin.png', dpi=600)"
+```
+
+## 8. Coordinates and layout
+
+### Two and three dimensions
 
 ```python
+import smsd
+
 mol = smsd.parse_smiles("c1ccccc1")
+coords = smsd.generate_coords_2d(mol, target_bond_length=1.5)
+assert len(coords) == len(mol) and all(len(point) == 2 for point in coords)
+quality = smsd.layout_quality(mol, coords)
+assert quality >= 0.0
 coords_3d = smsd.generate_coords_3d(mol, target_bond_length=1.5)
-# coords_3d is a list of (x, y, z) tuples
+assert len(coords_3d) == len(mol) and all(len(point) == 3 for point in coords_3d)
 ```
 
-### Layout algorithms
+Three-dimensional coordinates provide a starting geometry, not a validated
+conformer ensemble or energy minimum.
+
+### Refinement
 
 ```python
-# Force-directed (Fruchterman-Reingold + crossing penalty)
-_, coords = smsd.force_directed_layout(mol, coords, max_iter=500, target_bond_length=1.5)
+import smsd
 
-# Stress majorisation (SMACOF — reduces distance stress)
-_, coords = smsd.stress_majorisation(mol, coords, max_iter=300, target_bond_length=1.5)
-
-# Simulated annealing crossing reduction
-coords = smsd.reduce_crossings(mol, coords, max_iter=2000)
+mol = smsd.parse_smiles("c1ccccc1")
+coords = smsd.generate_coords_2d(mol)
+_, coords = smsd.force_directed_layout(mol, coords, max_iter=100)
+_, coords = smsd.stress_majorisation(mol, coords, max_iter=100)
+crossings, coords = smsd.reduce_crossings(mol, coords, max_iter=100)
+assert len(coords) == len(mol)
 ```
 
-### Coordinate transforms
+Compare layouts with `layout_quality()` and inspect the drawing. Refinement
+does not guarantee a better result for every molecule.
+
+### Transform coordinates
 
 ```python
-# All transforms operate on (x, y) coordinate lists
+import math
+import smsd
+
+mol = smsd.parse_smiles("c1ccccc1")
+coords = smsd.generate_coords_2d(mol)
 coords = smsd.translate_2d(coords, dx=10.0, dy=5.0)
-coords = smsd.rotate_2d(coords, angle=45.0)
+coords = smsd.rotate_2d(coords, angle=math.radians(45))
 coords = smsd.scale_2d(coords, factor=2.0)
 coords = smsd.mirror_x(coords)
 coords = smsd.mirror_y(coords)
 coords = smsd.center_2d(coords)
 coords = smsd.normalise_bond_length(mol, coords, target=1.5)
 coords = smsd.canonical_orientation(mol, coords)
-
-# Align one molecule onto another (Kabsch rotation)
-ref_coords = smsd.generate_coords_2d(mol)
-rmsd, coords = smsd.align_2d(coords, ref_coords)
-
-# Bounding box
-bbox = smsd.bounding_box_2d(coords)  # (min_x, min_y, max_x, max_y)
+reference = smsd.generate_coords_2d(mol)
+rmsd, aligned = smsd.align_2d(coords, reference)
+box = smsd.bounding_box_2d(aligned)
+assert len(aligned) == len(mol) and len(box) == 4 and rmsd >= 0.0
 ```
 
-### Caution: layout is non-deterministic
+Rotation angles are in radians. Coordinate generation and refinement can change
+with algorithms or settings; save coordinates when exact reproducibility matters.
 
-Force-directed and SMACOF layouts use random initialisation. Results may vary
-between runs. For reproducible output, use `generate_coords_2d()` which uses
-template matching and deterministic placement.
-
----
-
-## 9. Stereo and CIP Assignment
+## 9. Stereo assignment
 
 ```python
 import smsd
 
-# R/S tetrahedral chirality
-mol = smsd.parse_smiles("N[C@@H](C)C(=O)O")  # L-alanine
-stereo = smsd.assign_rs(mol)
-print(stereo)  # {1: 'S'}
-
-# E/Z double bond geometry
-mol = smsd.parse_smiles("C/C=C/C")  # E-2-butene
-ez = smsd.assign_ez(mol)
-print(ez)  # {(1,2): 'E'}
-
-# Full CIP assignment from SMILES (convenience)
-mol = smsd.parse_smiles("N[C@@H](C)C(=O)O")
-result = smsd.assign_cip(mol)
+alanine = smsd.parse_smiles("N[C@@H](C)C(=O)O")
+assert smsd.assign_rs(alanine) == {1: "S"}
+butene = smsd.parse_smiles("C/C=C/C")
+assert smsd.assign_ez(butene) == {(1, 2): "E"}
+result = smsd.assign_cip(alanine)
 ```
 
-### Caution: CIP requires 3D or stereo flags
+Include explicit SMILES stereo markers when the assignment should reflect
+input stereochemistry. Unspecified stereo is not a resolved configuration.
 
-CIP assignment operates on stored stereo flags (`@`, `@@`, `/`, `\` in SMILES).
-If your molecule was parsed from a SMILES without stereo notation, no
-assignments will be returned. Ensure input SMILES contain explicit stereo
-markers when stereo analysis is required.
+## 10. MOL and SDF files
 
----
-
-## 10. File I/O (MOL, SDF)
-
-### Read/write MOL files
+These examples create their own input files:
 
 ```python
 import smsd
 
-# Read from file
-mol = smsd.read_mol_file("molecule.mol")
-
-# Read from string
-mol_block = """\
-  molecule
-     BioInception
-
-  3  2  0  0  0  0  0  0  0  0999 V2000
-    0.0000    0.0000    0.0000 C   0  0  0  0  0  0
-    1.5000    0.0000    0.0000 C   0  0  0  0  0  0
-    3.0000    0.0000    0.0000 O   0  0  0  0  0  0
-  1  2  1  0
-  2  3  1  0
-M  END
-"""
-mol = smsd.read_mol_block(mol_block)
-
-# Write V2000
-block = smsd.write_mol_block(mol)
-print(block)
-
-# Write V3000
-block_v3 = smsd.write_mol_block_v3000(mol)
+mol = smsd.parse_smiles("CCO")
+smsd.write_molfile(mol, "molecule.mol")
+loaded = smsd.read_mol_file("molecule.mol")
+assert len(loaded) == 3
+block = smsd.write_mol_block(loaded)
+block_v3000 = smsd.write_mol_block_v3000(loaded)
+assert len(smsd.read_mol_block(block)) == 3
+assert len(smsd.read_mol_block(block_v3000)) == 3
 ```
-
-### Read/write SDF files
-
-```python
-# Read an SDF (returns list of MolGraph)
-mols = smsd.read_sdf("compounds.sdf")
-
-# Write molecules to SDF
-smsd.write_sdf(mols, "output.sdf")
-```
-
-### Caution: V2000 atom limit
-
-V2000 format has a hard limit of 999 atoms. For larger molecules, use V3000
-format or SMILES.
-
----
-
-## 11. R-Group Decomposition
 
 ```python
 import smsd
 
-core = smsd.parse_smiles("c1ccccc1")  # benzene core
-targets = [
-    smsd.parse_smiles("c1ccc(O)cc1"),    # phenol
-    smsd.parse_smiles("c1ccc(N)cc1"),    # aniline
-    smsd.parse_smiles("c1ccc(Cl)cc1"),   # chlorobenzene
-]
-
-results = smsd.decompose_r_groups(core, targets)
-for r in results:
-    rg = {k: v for k, v in r.items() if k.startswith("R")}
-    print(f"Core: {r['core']}, R-groups: {rg}")
+molecules = [smsd.parse_smiles(s) for s in ["CCO", "c1ccccc1"]]
+smsd.write_sdf(molecules, "compounds.sdf")
+loaded = smsd.read_sdf("compounds.sdf")
+assert [len(mol) for mol in loaded] == [3, 6]
+smsd.export_sdf(loaded, "output.sdf")
 ```
 
-### Caution: core must be a valid substructure
+`read_sdf()` loads the whole file; malformed records may produce empty graphs.
+Check each record before use. For large files, iterate records and pass each to
+`read_mol_block()`. V2000 supports at most 999 atoms; use V3000 for larger graphs.
 
-R-group decomposition requires the core to be a substructure of every target.
-If a target does not contain the core, it will be skipped silently.
-
----
-
-## 12. Atom Mapping Between Related Molecules
+## 11. R-group decomposition
 
 ```python
 import smsd
 
-# Map atoms between two related structures (e.g., parent and metabolite)
-parent = smsd.parse_smiles("CC(=O)Oc1ccccc1C(=O)O")  # aspirin
-child  = smsd.parse_smiles("Oc1ccccc1C(=O)O")         # salicylic acid
-
-mapping = smsd.find_mcs(parent, child)
-print(mapping)  # {parent_atom: child_atom, ...}
+core = "c1ccccc1"
+targets = ["c1ccc(O)cc1", "c1ccc(N)cc1", "CCO"]
+results = smsd.decompose_r_groups(core, targets, timeout_ms=1000)
+assert len(results) == len(targets)
+assert len(results[0]["core"]) == 6 and len(results[1]["core"]) == 6
+assert results[2] == {}
 ```
 
-### Caution: MCS is NP-hard
+Results retain target order. A missing core produces an empty dictionary.
+R-group atom lists describe attached substituents; they are not a complete
+chemical standardisation or reaction-mapping workflow.
 
-For very complex molecule pairs the search may time out.  Use
-`timeout_ms` to bound the computation and accept a best-effort result.
-
----
-
-## 13. Batch Operations
+## 12. Related molecules and constrained batches
 
 ```python
 import smsd
 
-# Parse a library
-library = [smsd.parse_smiles(s) for s in [
-    "c1ccccc1", "c1ccc(O)cc1", "c1ccc(N)cc1",
-    "c1ccc(Cl)cc1", "c1ccc(F)cc1"
-]]
+parent = smsd.parse_smiles("CC(=O)Oc1ccccc1C(=O)O")
+child = smsd.parse_smiles("Oc1ccccc1C(=O)O")
+mapping = smsd.find_mcs(parent, child, timeout_ms=1000)
+assert len(mapping) == 10
 
-# Initialize caches before sharing graphs across threads
-for mol in library:
-    smsd.prewarm_graph(mol)
+assigned = smsd.batch_mcs_constrained(["NO"], ["C", "CNO"],
+                                      return_target_indices=True, timeout_ms=1000)
+target_index, atom_mapping = assigned[0]
+assert target_index == 1 and len(atom_mapping) == 2
+```
 
-# Batch substructure screening
+The constrained batch assigns queries greedily without overlapping target atoms.
+It does not prove a globally optimal reaction mapping or account for reaction
+mechanisms. Preserve the returned target index when annotating several products.
+
+## 13. Batch operations
+
+```python
+import smsd
+
+library = [smsd.parse_smiles(s) for s in
+           ["c1ccccc1", "c1ccc(O)cc1", "c1ccc(N)cc1", "CCO"]]
 query = smsd.parse_smiles("c1ccccc1")
-hits = smsd.batch_substructure(query, library)
-print(f"Hits: {sum(hits)}/{len(library)}")
-
-# Batch MCS
-mcs_results = smsd.batch_mcs(library[0], library[1:])
-
-# Batch fingerprint screening (RASCAL upper bound)
-fps = [smsd.circular_fingerprint(mol, radius=2) for mol in library]
+assert smsd.batch_substructure(query, library, num_threads=2) == [True, True, True, False]
+mappings = smsd.batch_mcs(query, library, timeout_ms=1000, num_threads=2)
+sizes = smsd.batch_mcs_size(query, library, timeout_ms=1000, num_threads=2)
+assert sizes == [len(mapping) for mapping in mappings]
 ```
 
-### Caution: prewarm for batch workflows
+Each query/target pair receives its own time budget. Batch calls prepare graphs
+before starting workers. Before separate concurrent calls share graphs, prewarm
+them and avoid mutation while matching is running.
 
-Always call `prewarm_graph()` on molecules used in batch operations.
-This pre-computes canonical hashes and graph invariants, avoiding redundant
-recomputation on every query.
-
----
-
-## 14. SMARTS Matching
+## 14. SMARTS
 
 ```python
 import smsd
 
-# Match a SMARTS pattern
-mol = smsd.parse_smiles("c1ccc(O)cc1")
-
-# Hydroxyl group
-has_oh = smsd.smarts_match("[OH]", mol)
-print(f"Found hydroxyl: {has_oh}")  # True
-
-# Find all occurrences of a pattern
-all_matches = smsd.smarts_find_all("[#6]~[#6]", mol, max_matches=50)
-print(f"C-C bonds: {len(all_matches)}")
-
-# SMARTS-based MCS
-mcs = smsd.find_mcs_smarts("[#6]~[#7]", mol)
+pattern = smsd.compile_smarts("[#6]-[#8]")
+targets = [smsd.parse_smiles(s) for s in ["CCO", "CCN"]]
+assert pattern.matches_many(targets) == [True, False]
+phenol = smsd.parse_smiles("c1ccc(O)cc1")
+assert smsd.smarts_match("[OH]", phenol)
+embeddings = smsd.smarts_find_all("[#6]~[#6]", phenol, max_matches=50)
+assert embeddings
+assert not smsd.find_mcs_smarts("[#6]~[#7]", phenol)
 ```
 
-### Caution: SMARTS performance
+SMARTS results are embeddings; their count is not necessarily a count of unique
+bonds or functional groups. `find_mcs_smarts()` returns a complete pattern
+embedding or an empty mapping. Check dialect-specific patterns on your inputs.
 
-Complex SMARTS patterns with many wildcards can be expensive. Keep patterns
-specific — use `[#6]` (any carbon) rather than `[*]` (any atom) when possible.
-
----
-
-## 15. Scaffold Analysis
+## 15. Scaffolds
 
 ```python
 import smsd
 
-# Murcko scaffold (ring systems + linkers, side chains removed)
-mol = smsd.parse_smiles("CC(=O)Oc1ccccc1C(=O)O")  # aspirin
+mol = smsd.parse_smiles("CC(=O)Oc1ccccc1C(=O)O")
 scaffold = smsd.murcko_scaffold(mol)
-print(f"Scaffold: {smsd.to_smiles(scaffold)}")
-
-# Scaffold MCS — find shared scaffold between two molecules
-s = smsd.find_scaffold_mcs(
-    smsd.parse_smiles("c1ccc2c(c1)cccc2"),    # naphthalene
-    smsd.parse_smiles("c1ccc2c(c1)cc1ccccc1c2") # phenanthrene
-)
+assert len(scaffold) == 6
+mapping = smsd.find_scaffold_mcs(smsd.parse_smiles("c1ccc2c(c1)cccc2"),
+                                smsd.parse_smiles("c1ccc2c(c1)cc1ccccc1c2"))
+assert mapping
 ```
 
----
+Scaffold extraction removes side chains. Scaffold-MCS mappings use the extracted
+scaffold indices, not the original molecule indices.
 
-## 16. Graph Utilities
+## 16. Graph utilities
 
 ```python
 import smsd
 
-mol = smsd.parse_smiles("c1ccccc1.CCO")  # benzene + ethanol (disconnected)
-
-# Count connected components
-n = smsd.count_components(mol)
-print(f"Components: {n}")  # 2
-
-# Split into separate molecules
+mol = smsd.parse_smiles("c1ccccc1.CCO")
+assert smsd.count_components(mol) == 2
 components = smsd.split_components(mol)
-for c in components:
-    print(f"  Fragment: {smsd.to_smiles(c)}")
-
-# Check canonical equivalence
-mol1 = smsd.parse_smiles("c1ccccc1")
-mol2 = smsd.parse_smiles("C1=CC=CC=C1")
-print(smsd.same_canonical_graph(mol1, mol2))  # True
+assert sorted(len(part) for part in components) == [3, 6]
+assert smsd.same_canonical_graph(smsd.parse_smiles("c1ccccc1"),
+                                 smsd.parse_smiles("C1=CC=CC=C1"))
 ```
 
----
+Canonical graph comparison concerns structure. Use the requested chemistry and
+stereo settings when matching stereoisomers.
 
-## 17. Performance Tuning
-
-### Pre-warm molecules for batch use
+## 17. Repeated searches
 
 ```python
-smsd.prewarm_graph(mol)  # initialize caches before sharing across threads
+import smsd
+
+query = smsd.parse_smiles("c1ccccc1")
+targets = [smsd.parse_smiles(s) for s in ["c1ccc(O)cc1", "CCO"]]
+for graph in [query, *targets]:
+    smsd.prewarm_graph(graph)
+selected = smsd.screen_targets(query, targets, threshold=0.5)
+assert selected == [0]
+mappings = [smsd.find_mcs(query, targets[index], timeout_ms=1000) for index in selected]
+assert len(mappings[0]) == 6
+print(smsd.gpu_device_info())
 ```
 
-### Use timeouts for safety
+Prewarming helps repeated work; it is not required before every batch call.
+`similarity_upper_bound()` and `screen_targets()` provide RASCAL screening bounds.
+Release wheels use CPU/OpenMP; optional GPU screening requires a source build
+and compatible hardware. Benchmark your own molecules and settings.
+
+## 18. Atom maps
 
 ```python
-# Always set timeouts on large molecules to prevent hanging
-mapping = smsd.find_mcs(mol1, mol2, timeout_ms=10000)  # 10 second limit
+import smsd
+
+mapped = "[CH3:1][C:2](=[O:3])[OH:4]"
+clean = smsd.strip_atom_maps(mapped)
+assert clean == "[CH3][C](=[O])[OH]"
+assert len(smsd.parse_smiles(clean)) == 4
 ```
 
-### RASCAL pre-screening
+Use `strip_atom_maps()` rather than a regular expression. Colons can also belong
+to aromatic ring closures, so a text-only replacement can alter the structure.
 
-```python
-# For large-scale screening, use RASCAL upper bound first
-ub = smsd.similarity_upper_bound(query, target)
-if ub < 0.2:
-    pass  # upper bound is below the requested atom-overlap threshold
-else:
-    mcs = smsd.find_mcs(query, target)  # only compute MCS on promising pairs
-```
+## Further reading
 
-### GPU acceleration
+- [Python guide](PYTHON.md): options, atom indices and interoperability.
+- [Validation](VALIDATION_7.2.2.md): platform tests and their scope.
+- [Benchmark report](../benchmarks/RESULTS_7.2.0.md): measured results for its recorded versions.
+- [Citation information](../CITATION.cff), [LICENSE](../LICENSE) and [NOTICE](../NOTICE).
 
-```python
-if smsd.gpu_is_available():
-    print(smsd.gpu_device_info())
-    # GPU automatically used for RASCAL batch screening and domain init
-```
-
----
-
-## 18. Common Cautions
-
-### Never use regex to strip atom maps
-
-```python
-# WRONG — regex can corrupt ring closures like "C1CC1" → "CCC"
-import re
-smi = re.sub(r':\d+', '', mapped_smiles)  # DO NOT DO THIS
-
-# CORRECT — use the SMSD parser which preserves ring closures
-mol = smsd.parse_smiles(mapped_smiles)
-clean_smi = smsd.to_smiles(mol)  # atom maps stripped safely
-```
-
-### Timeout on large molecules
-
-SMSD will never hang on any molecule. However, MCS computation is NP-hard.
-For molecules with >80 heavy atoms, always set a timeout:
-
-```python
-mapping = smsd.find_mcs(mol1, mol2, timeout_ms=5000)
-```
-
-### Ring-matches-ring (default)
-
-The default `ringMatchesRingOnly=True` prevents a ring atom from matching a
-chain atom. This is correct for most chemical applications. Use `fmcsProfile()`
-only when you explicitly want loose FMCS-style topology.
-
-### Tautomer matching and budgets
-
-Only enable tautomer-aware mode when chemical equivalence of tautomers is
-required. Measure the cost with your own chemistry settings and molecules.
-
-### Fingerprint choice for ML
-
-Always prefer **count-based** fingerprints (`circular_fingerprint_counts`, `tanimoto_coefficient`)
-over binary fingerprints for machine learning models. Count vectors preserve
-frequency information that binary vectors discard.
-
-### V2000 atom limit
-
-V2000 MOL format is limited to 999 atoms. For larger molecules, use V3000 or
-SMILES format.
-
-### Font rendering in SVG
-
-SVG depiction uses Arial/Helvetica by default. If the viewing system lacks
-these fonts, atom labels may render in a fallback font. For publication,
-convert SVG to PDF/PNG using Inkscape at 600 DPI.
-
----
-
-## Language-Specific Guides
-
-For in-depth API reference and language-specific examples:
-
-| Language | Guide |
-|----------|-------|
-| Python | [docs/PYTHON.md](PYTHON.md) |
-| Java | [docs/JAVA.md](JAVA.md) |
-| C++ | [docs/CPP.md](CPP.md) |
-
----
-
-*SMSD Pro by BioInception PVT LTD. Algorithm Copyright 2009-2026 Syed Asad Rahman. Apache-2.0.*
+Copyright (c) 2009-2026 Syed Asad Rahman, BioInception PVT LTD. Apache-2.0.

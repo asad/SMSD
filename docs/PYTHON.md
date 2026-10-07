@@ -1,50 +1,45 @@
-# SMSD Python Guide
+# SMSD 7.2.2 Python guide
 
-SMSD exposes native C++ molecular graph search through pybind11. Core parsing,
-MCS, substructure, fingerprints and SVG depiction work without RDKit. RDKit
-is optional for molecule conversion, independent checks and drawing.
+Substructure search, maximum common substructure (MCS), fingerprints, molecular
+I/O and SVG drawing. Core functions do not require RDKit or Java. RDKit is
+optional for molecule conversion and drawing.
 
-Version 7.2.1 is available on GitHub. The current PyPI release is
-7.1.1; PyPI publication is pending. See the [local benchmark report](../benchmarks/RESULTS_7.2.0.md) for
-versions, settings, measurements and limitations.
+## Install
 
-## Install and build
+Release wheels use CPython 3.14 with CPU/OpenMP support:
+
+| Platform | Architecture | Requirement |
+|---|---|---|
+| Windows | x86_64 / AMD64 | Windows 10 or later |
+| Linux | x86_64 | glibc 2.28+ |
+| macOS | arm64 / Apple Silicon | macOS 26+ |
+
+Install from PyPI when 7.2.2 is listed, or download the matching wheel from the
+[GitHub release](https://github.com/asad/SMSD/releases/tag/v7.2.2):
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install smsd
-# Optional interoperability:
+python -m pip install smsd==7.2.2
+# Optional RDKit interoperability and drawing:
 python -m pip install rdkit
 ```
 
-The package declares Python 3.9 or later; wheel availability depends on Python,
-platform and architecture. Release preparation targets CPython 3.14 wheels
-for Linux x86_64, macOS arm64 and Windows x86_64, plus a source distribution.
-Local macOS, emulated Linux and native GitHub Windows builds passed all 12
-native suites and 691 installed-wheel Python tests with 8 optional skips.
-Strict collection checked all three wheels against the same 7.2.1 source;
-PyPI publication remains pending. See [7.2.1 validation](VALIDATION_7.2.1.md)
-for versions and scope. The historical 7.2.0 search comparison runs Python 3.13.14
-on macOS arm64 so both versions use the same interpreter and RDKit.
+## Build from source
 
-The root `pyproject.toml` is the canonical package manifest. It combines the
-native extension in `cpp/` with the Python package in `python/smsd/`; build
-from the repository root. Java sources and Maven artifacts are separate under
-`java/`.
-Source builds enable OpenMP when available. Metal and CUDA detection default
-to `AUTO`; the local comparison uses CPU-only builds explicitly:
+Source metadata allows Python 3.9 or later. Other interpreters and architectures
+require a source build. Run at the repository root with a C++17 compiler and
+CMake 3.18 or later. The root `pyproject.toml` builds `python/smsd/` together
+with the native extension in `cpp/`:
 
 ```bash
-python -m pip install build scikit-build-core pybind11
-python -m build --wheel --no-isolation \
+python -m pip install build
+python -m build --wheel \
   -Ccmake.define.SMSD_BUILD_METAL=OFF \
   -Ccmake.define.SMSD_BUILD_CUDA=OFF
 ```
 
-Check the installed backend with `smsd.gpu_device_info()`. GPU screening is
-optional; MCS search does not become a GPU solver merely because a backend is
-available.
+Metal and CUDA are optional source-build features requiring compatible tools
+and hardware. Release wheels use CPU/OpenMP. Check the active backend with
+`smsd.gpu_device_info()`; core MCS and batch matching run on the CPU.
 
 ## Search and indices
 
@@ -67,26 +62,25 @@ the conversion. Bracket hydrogen counts do not create separate vertices.
 
 Mappings are injective. SMSD preserves every query edge whose endpoints are
 mapped, with the requested chemistry constraints. `induced=True` also rejects
-extra target edges. RDKit FMCS can omit query edges from its selected common
-subgraph, so equal atom counts do not necessarily mean equivalent results.
+extra target edges between mapped atoms. Equal atom counts from different
+engines do not establish that their atom and bond mappings are equivalent.
 
-The default `strategy="auto"` uses the native coverage pipeline for supported
-settings and the full native solver for advanced options. `strategy="native"`
-selects the full solver explicitly. `strategy="lightweight"` supports a single
-connected atom objective, timeout, ring matching and strict/any bond order;
-unsupported options raise `ValueError`. Its separate historical wrapper,
-`find_mcs_lightweight`, returns **one-based** pairs in `LightMCSResult.mapping`.
+The default `strategy="auto"` selects a solver that supports the requested
+options. `strategy="native"` selects the full native solver.
+`strategy="lightweight"` supports one connected atom objective, a timeout,
+ring matching and strict/any bond order; unsupported options raise `ValueError`.
 
 A time budget produces the best valid mapping found by the pipeline. The
 public mapping API has no cancellation flag or optimality certificate.
-Larger searches use heuristics; reaching the budget does not prove maximum
-size. A false/empty substructure result can mean no witness was found within
-the budget, rather than a completed proof of absence. Deadlines are cooperative: graph preparation and a work unit may
-overshoot the requested wall-clock limit.
+Reaching the budget does not prove maximum size. A false/empty substructure result can mean no witness was found within
+the budget, rather than a completed proof of absence. Timeouts are cooperative;
+preparation and a search step can take the elapsed time beyond the budget.
 
 ## Chemistry and search options
 
 ```python
+import smsd
+
 mapping = smsd.find_mcs(
     "CCC", "C1CC1", strategy="native", timeout_ms=1000,
     induced=True, connected_only=True, match_bond_order="strict",
@@ -94,7 +88,7 @@ mapping = smsd.find_mcs(
 assert len(mapping) == 2
 
 weighted = smsd.find_mcs(
-    "CCC", "CCC", strategy="native", atom_weights=[10.0, -30.0, 1.0],
+    "CCC", "CCC", strategy="native", timeout_ms=1000, atom_weights=[10.0, -30.0, 1.0],
 )
 assert set(weighted) == {0}
 ```
@@ -109,7 +103,7 @@ assert set(weighted) == {0}
 | `complete_rings_only` | `False` | Preserve complete query rings in a result |
 | `use_chirality` | `False` | Compare resolved R/S labels and mapped ligand parity; unspecified target tags remain permissive |
 | `use_bond_stereo` | `False` | Compare annotated double-bond stereo |
-| `tautomer_aware` | `False` | Relax eligible tautomer bonds while preserving elements unless explicitly disabled |
+| `tautomer_aware` | `False` | Relax eligible tautomer bonds while preserving elements; bond order remains an explicit setting |
 | `connected_only` | `True` | Return one connected query fragment |
 | `induced` | `False` | Preserve query nonedges as well as edges |
 | `maximize_bonds` | `False` | Rank mapped bonds before atom count |
@@ -119,16 +113,16 @@ assert set(weighted) == {0}
 | `max_fragments` | native limit | Maximum retained fragments |
 | `max_stage` | `5` | Effort setting; reducing it can reduce result size |
 
-Native weights scale sums to integer millipoints by truncation toward zero and must fit
-the supported integer score range. Weight vectors follow the query input's atom ordering, including original
-RDKit indices; high-level wrappers translate them into native graph order.
-Raw native calls use graph order. Weighted constrained batches with RDKit
-inputs currently support one query; multiple queries must be converted to
-graphs with weights supplied in graph order.
+Weights follow the query input's atom order, including original RDKit indices.
+Scores are converted to integer millipoints and must fit the supported range.
+Weighted constrained batches with RDKit inputs support one query; for multiple
+queries, convert them to graphs and provide weights in graph order.
 
 Raw functions in `smsd._smsd` accept `ChemOptions` and `MCSOptions` objects:
 
 ```python
+import smsd
+
 q = smsd.parse_smiles("CC")
 t = smsd.parse_smiles("CCC")
 chem = smsd.ChemOptions()
@@ -145,6 +139,8 @@ is weaker than a proof of the maximum objective.
 ## Batch search and thread safety
 
 ```python
+import smsd
+
 query = smsd.parse_smiles("C1CC1")
 targets = [smsd.parse_smiles(s) for s in ["CC1CC1", "C1CC1", "CCC"]]
 mappings = smsd.batch_mcs(query, targets, timeout_ms=1000, num_threads=2)
@@ -159,20 +155,15 @@ The four core batch functions accept SMILES, graph or RDKit inputs.
 `num_threads=0` uses OpenMP defaults; `1` runs sequentially. `timeout_ms`
 applies to each pair, independently of the worker count.
 
-Bindings retain Python graph owners and pass native references through these
-core batches and `SmartsQuery.matches_many`, avoiding graph copies. Native
-search releases the GIL; progress callbacks reacquire it. Batch setup warms
-canonical, ring, fingerprint, neighborhood and pharmacophore caches before
-workers start. Owning collections such as `TargetCorpus` still copy graphs.
-
-For concurrent calls that share graphs, call `smsd.prewarm_graph(graph)` once
-before starting threads. Do not mutate graph properties or shared option
-objects while a native call is running. Prewarming establishes initialized
-caches; it does not promise a fixed percentage improvement.
+Before concurrent calls share a graph, call `smsd.prewarm_graph(graph)` once.
+Do not mutate shared graphs or option objects while matching is running. Ordinary
+batch calls prepare their input graphs before starting workers.
 
 Constrained reaction batches also expose which target was selected:
 
 ```python
+import smsd
+
 results = smsd.batch_mcs_constrained(
     ["NO"], ["C", "CNO"], return_target_indices=True, timeout_ms=1000,
 )
@@ -186,9 +177,9 @@ is not a proof of the globally best reaction mapping. Without
 `return_target_indices=True`, the existing API returns mappings only; empty
 results use target index `-1`.
 
-## RDKit conversion and caches
+## Working with RDKit
 
-### A molecule-first workflow
+### Preserve input atom indices
 
 Keep RDKit molecules as the inputs when their atom order is needed for
 annotations, reaction maps or drawing. The high-level functions translate
@@ -247,28 +238,28 @@ use the original RDKit indices. Translation preserves the selected native
 mapping; it does not rematch a derived SMARTS or discard explicitly relaxed
 atom matches.
 
-RDKit conversions are cached per live molecule using weak keys. A binary
-structure signature invalidates a cached conversion after molecule edits.
-`use_cache=False` bypasses reuse. Clearing conversion caches preserves index
-metadata for graphs the caller still holds. Returned index maps are copies.
-A failed index-order reconstruction raises an error instead of inventing an
-identity mapping. Empty or hydrogen-only RDKit molecules are rejected.
+Conversions are reused while the RDKit molecule remains unchanged.
+`from_rdkit(mol, use_cache=False)` bypasses that reuse. Clearing caches preserves
+index metadata for graphs still held by the caller. Returned index maps are
+copies; empty or hydrogen-only RDKit molecules are rejected.
 
 ### Reuse compiled SMARTS
 
 ```python
+import smsd
+
 pattern = smsd.compile_smarts("[#6]-[#8]")
 graphs = [smsd.parse_smiles(s) for s in ("CCO", "CCN")]
 assert pattern.matches_many(graphs) == [True, False]
 ```
 
-Compile once for repeated queries and reuse parsed target graphs. This keeps
-compilation and conversion out of the matching loop. The binding benchmark
-reports those setup costs separately from search latency.
+Compile once for repeated queries and reuse parsed target graphs.
 
 ## Progress callbacks
 
 ```python
+import smsd
+
 seen = []
 mapping = smsd.find_mcs_progressive(
     "CCO", "CCN", timeout_ms=1000,
@@ -277,28 +268,27 @@ mapping = smsd.find_mcs_progressive(
 assert seen[-1][0] == len(mapping)
 ```
 
-The current native implementation performs one search and invokes the callback
-with the final mapping. The API name is retained for compatibility; it does
-not currently emit intermediate stage results. Caller options and atom-index
-translation are preserved. Callback exceptions propagate to Python.
+The callback receives the final mapping once; it does not report intermediate
+stages. Callback exceptions propagate to the caller.
 
 ## Other APIs
 
 - SMARTS: `compile_smarts`, `smarts_match`, `smarts_find_all`, `find_mcs_smarts`.
 - Fingerprints: `fingerprint`, `circular_fingerprint`, `topological_torsion`
   and count variants; `tanimoto_coefficient` and count similarity functions.
+- Fingerprint storage: `to_hex`, `from_hex`, `to_binary_string`, `counts_to_array`.
 - I/O: `parse_smiles`, `to_smiles`, `read_mol_block`, `write_mol_block`,
   `read_sdf`, `write_sdf`, `write_mol_block_v3000`.
 - Chemistry: `assign_rs`, `assign_ez`, `assign_cip`, `murcko_scaffold`.
 - Graph operations: `extract_subgraph`, `split_components`, `count_components`.
-- Mapping enumeration: `find_all_mcs`, `canonicalize_mapping` and validation.
+- Mapping enumeration: `find_mcs(..., max_results=10)`, `canonicalize_mapping`
+  and `validate_mapping`.
 - Depiction: `depict_svg`, `depict_pair`, `generate_coords_2d` and layout helpers.
 
-Exact symmetry canonicalization can fail when molecular automorphism
-generators are incomplete or the orbit exceeds resource limits. Native
-`length_error` is translated to Python `ValueError`; expiry is `RuntimeError`.
-Internal enumeration conservatively retains raw mappings when symmetry proof
-is unavailable, so chemically equivalent embeddings may remain in the output.
+Exact symmetry canonicalisation can exceed the time or resource budget.
+`ValueError` or `RuntimeError` reports that the canonical representative was
+not established. Mapping enumeration can retain chemically equivalent results
+when symmetry reduction is incomplete.
 
 See [examples](EXAMPLES.md), the [C++ guide](CPP.md) and the
 [benchmark protocol](../benchmarks/README.md) for detailed usage and scope.

@@ -1,53 +1,39 @@
-# How to Build and Run
+# Build and run SMSD 7.2.2
 
-This source checkout targets 7.2.2, currently in preparation. GitHub's published
-release is [7.2.1](https://github.com/asad/SMSD/releases/tag/v7.2.1).
-PyPI and Maven Central publication remain pending. Commands below use 7.2.2
-build outputs; release downloads become available after validation.
+Download packages from the [GitHub release](https://github.com/asad/SMSD/releases/tag/v7.2.2).
+PyPI and Maven Central publication are pending. Verify downloads against
+`SHA256SUMS` before installing.
 
-## Choose a distribution
+| Distribution | Requirements |
+|---|---|
+| Java library and portable CLI | Java 8 or later on Windows, macOS or Linux; Java 25 LTS preferred |
+| Java CLI installers | Windows x86_64 MSI, macOS arm64 DMG, Linux x86_64 DEB; Java 25.0.4.1+1 included |
+| Python wheels | CPython 3.14: Windows 10+/x86_64, Linux x86_64/glibc 2.28+, macOS arm64/macOS 26+ |
+| C++ headers | C++17 compiler; no RDKit or CDK dependency for core matching |
 
-The Java CLI JAR and portable CLI archive contain platform-independent Java
-code. Use the same files on Linux, macOS or Windows with Java 8 or later installed for
-your machine's architecture; they do not include a Java runtime. The archive
-includes Unix and Windows launchers. Native DMG, MSI and DEB installers include Java 25.
-See [installer instructions](INSTALLERS.md) for each platform.
+See [installer instructions](INSTALLERS.md) and the
+[validation report](VALIDATION_7.2.2.md) for supported platforms and checks.
 
-Python wheels contain native code and must match the operating system,
-architecture and Python interpreter. Version 7.2.2 targets CPython 3.14 on
-Linux x86_64 (glibc 2.28+), macOS arm64 (macOS 26+) and Windows x86_64.
-Fresh platform checks are tracked in
-[7.2.2 validation](VALIDATION_7.2.2.md). Each package must pass its target-platform
-checks before publication.
-Intel macOS and Linux arm64 are outside this compact wheel set; use a source build. A wheel tagged `cp314` is for ordinary CPython
-3.14, not the free-threaded `cp314t` interpreter. Use a source build when a
-matching wheel is unavailable. C++ headers are also available for source
-builds on each operating system.
+## Portable Java CLI
 
-## Install the portable Java CLI
-
-Download or copy `smsd-7.2.2-jar-with-dependencies.jar` from the release assets
-after they are published, or build it with Maven below. Keep its exact filename
-in these commands; shells differ in how they expand JAR filename wildcards.
-
-Linux or macOS, from the directory containing the JAR:
+Run these commands in the directory containing the downloaded JAR:
 
 ```bash
 java -version
 java -jar smsd-7.2.2-jar-with-dependencies.jar --version
-java -jar smsd-7.2.2-jar-with-dependencies.jar --Q SMI --q "CCN" --T SMI --t "CCCNC" -m --json -
+java -jar smsd-7.2.2-jar-with-dependencies.jar \
+  --Q SMI --q "CCN" --T SMI --t "CCCNC" -m --json -
 ```
 
-Windows PowerShell, with Java 8 or later on `PATH`:
+Windows PowerShell:
 
 ```powershell
-java -version
 java -jar .\smsd-7.2.2-jar-with-dependencies.jar --version
 java -jar .\smsd-7.2.2-jar-with-dependencies.jar --Q SMI --q "CCN" --T SMI --t "CCCNC" -m --json -
 ```
 
-If using the portable archive instead, extract it into its own directory so
-`bin` and `repo` remain together:
+The portable archive also contains Unix and Windows launchers. Extract it into
+one directory so `bin` and `repo` remain together:
 
 ```bash
 mkdir smsd-cli
@@ -55,68 +41,33 @@ tar -xzf smsd-7.2.2-cli.tar.gz -C smsd-cli
 ./smsd-cli/bin/smsd --version
 ```
 
-Windows PowerShell with the system `tar` command:
+On Windows, use `smsd-cli\bin\smsd.bat`. The launchers use Java from `PATH`;
+the portable packages do not include a runtime.
 
-```powershell
-New-Item -ItemType Directory -Path smsd-cli
-tar -xzf .\smsd-7.2.2-cli.tar.gz -C .\smsd-cli
-.\smsd-cli\bin\smsd.bat --version
-```
+## Java source build
 
-The Windows archive launcher uses `java` from `PATH`; confirm that it is Java
-8 or later even when `JAVA_HOME` is set. Retain the launcher's CRLF line endings. On
-Unix, retain its executable permission or invoke it with `sh`. Paths containing
-spaces should be quoted. The direct JAR command works independently of the
-archive launchers.
-
-## Requirements
-
-- Java 8 or later (JDK 25 LTS preferred)
-- Maven 3.9+
-
-## Build
-
-Java sources and launchers are under `java/src/`, with the module manifest at
-`java/pom.xml` and generated artifacts in `java/target/`. The root `pom.xml`
-is an aggregator, so `mvn verify` also builds and tests the Java module.
-C++ stays under `cpp/`, and Python sources/tests stay under `python/`.
-Shared scripts, documentation and licenses remain at the root. The root
-`pyproject.toml` is the single Python package manifest because its extension
-uses the C++ tree; Python builds run from the root.
+Use Maven 3.9+ and a JDK; Java 25 LTS is preferred. Run from the repository root:
 
 ```bash
 mvn -f java/pom.xml -U clean package
+java -jar java/target/smsd-7.2.2-jar-with-dependencies.jar --version
 ```
 
-This produces `java/target/smsd-7.2.2-jar-with-dependencies.jar` (fat JAR with all dependencies, including CDK 2.13).
-
-## Run Tests
-
-```bash
-mvn -f java/pom.xml clean test
-```
-
-The full local correctness run includes the normally excluded algorithm and
-stress suites:
+The shaded JAR includes CDK 2.13. The root `pom.xml` also builds the Java module.
+To include the normally excluded algorithm and stress tests:
 
 ```bash
 mvn -f java/pom.xml -Dslow.tests.exclude=nothing clean verify
 ```
 
-For Java 8 compatibility, run the same tests on an installed Java 8 JVM:
+To test Java 8 compatibility, set `SMSD_JAVA8_HOME` to an installed Java 8 JDK:
 
 ```bash
 mvn -f java/pom.xml -Dslow.tests.exclude=nothing \
   "-Djvm=$SMSD_JAVA8_HOME/bin/java" test
 ```
 
-Maven can use JDK 25 for compilation while the test process uses Java 8.
-Set `SMSD_JAVA8_HOME` to that JDK's home directory. The published 7.2.1 JARs
-still require Java 25; this compatibility target applies to 7.2.2.
-
-Opt-in corpus benchmarks are separate. Their bounded defaults are one-second
-pair budgets, no warmup and one measured trial; checkpoints are flushed after
-each result. They retain their documented individual chemistry policies:
+Opt-in corpus benchmarks are separate from correctness tests:
 
 ```bash
 mvn -f java/pom.xml test -Dslow.tests.exclude=nothing \
@@ -127,42 +78,11 @@ mvn -f java/pom.xml test -Dslow.tests.exclude=nothing \
   -Dsmsd.benchmark.outputDir="$PWD/build/local-benchmarks/java"
 ```
 
-An elapsed-budget crossing does not identify cancellation: MCS may return a
-valid incumbent when its budget ends. CDK diagnostic timings do not have the
-same cancellation control as SMSD and do not establish a speed ranking.
+## C++ source build
 
-## Run the CLI
-
-```bash
-java -jar java/target/smsd-7.2.2-jar-with-dependencies.jar \
-  --Q SMI --q "CCN" \
-  --T SMI --t "CCCNC" \
-  -m --json - --json-pretty
-```
-
-## Docker
-
-```bash
-docker build -t smsd .
-docker run --rm smsd --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
-```
-
-## Notes
-- The test suite exercises substructure and MCS, including recursive SMARTS,
-  adversarial edge cases, and large molecules. Enable normally excluded suites
-  with `mvn -f java/pom.xml -Dslow.tests.exclude=nothing test`.
-- Source launchers `smsd`, `smsd.bat`, and `smsd.ps1` are in `java/src/scripts/`.
-  Maven also generates an isolated distribution under `java/target/appassembler/`.
-
-## Build C++ locally on Linux, macOS or Windows
-
-Install CMake 3.18+ and a C++17 compiler: GCC or Clang on Linux, Apple Clang
-from Xcode Command Line Tools on macOS, or MSVC from Visual Studio Build Tools
-with the Desktop development with C++ workload on Windows. On Windows, use a
-Developer PowerShell prompt. The configuration flags below cover both
-single-configuration and Visual Studio generators. Run all native suites
-with assertions enabled; all 12 suites passed on macOS, emulated Linux and
-native Windows for the frozen 7.2.2 source:
+Use a C++17 compiler and CMake 3.20+ for these commands. The library itself
+supports CMake 3.18+. On Windows, use Developer PowerShell with Visual Studio's
+Desktop development with C++ tools installed.
 
 ```text
 cmake -S cpp -B build/cpu -DCMAKE_BUILD_TYPE=Debug -DSMSD_BUILD_PYTHON=OFF -DSMSD_BUILD_TESTS=ON -DSMSD_BUILD_METAL=OFF -DSMSD_BUILD_CUDA=OFF
@@ -170,108 +90,62 @@ cmake --build build/cpu --config Debug --parallel 4
 ctest --test-dir build/cpu --build-config Debug --output-on-failure
 ```
 
-OpenMP is detected when available; otherwise batch processing uses the
-sequential fallback. The core headers do not require RDKit. The optional C++
-RDKit adapter additionally requires an RDKit development installation and
-C++20. See [the C++ guide](CPP.md) for integration details.
+OpenMP is used when available; otherwise batch operations run sequentially.
+The optional C++ RDKit adapter requires RDKit development files and C++20.
+See the [C++ guide](CPP.md) for integration examples.
 
-## Install or build Python locally
+## Python installation and source build
 
-Install ordinary CPython 3.14 for the compact release wheel set. Native source
-builds require the C++ compiler described above and Python development headers.
-Start in the source checkout. On Linux or macOS:
+Install the wheel matching your interpreter and platform from the GitHub
+release. When 7.2.2 is listed on PyPI:
+
+```bash
+python -m pip install smsd==7.2.2
+python -c 'import smsd; print(smsd.__version__); assert smsd.is_substructure("CC", "CCC")'
+```
+
+Wheels target ordinary CPython 3.14, rather than the free-threaded `cp314t`
+interpreter. Other interpreters and architectures require a source build.
+Source metadata supports Python 3.9+; use a C++17 compiler, CMake and Python
+development headers. The root `pyproject.toml` builds the C++ extension and
+`python/smsd` package.
+
+Linux or macOS, from the repository root:
 
 ```bash
 python3.14 -m venv .venv
-.venv/bin/python -m pip install --upgrade pip
-.venv/bin/python -m pip install build scikit-build-core pybind11 cmake ninja
+.venv/bin/python -m pip install --upgrade pip build
 .venv/bin/python -m build --wheel -Ccmake.define.SMSD_BUILD_METAL=OFF -Ccmake.define.SMSD_BUILD_CUDA=OFF
 ```
 
-For the macOS release target, set `export MACOSX_DEPLOYMENT_TARGET=26.0` before
-building. Install `libomp` separately if OpenMP support is desired. A local
-source build is distinct from a repaired redistributable wheel that bundles
-its external libraries.
-
-On Windows, use Developer PowerShell with CPython 3.14 installed:
+Windows Developer PowerShell:
 
 ```powershell
 py -3.14 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --upgrade pip
-.\.venv\Scripts\python.exe -m pip install build scikit-build-core pybind11 cmake ninja
+.\.venv\Scripts\python.exe -m pip install --upgrade pip build
 .\.venv\Scripts\python.exe -m build --wheel -Ccmake.define.SMSD_BUILD_METAL=OFF -Ccmake.define.SMSD_BUILD_CUDA=OFF
 ```
 
-Install the exact wheel matching your environment, from the release downloads
-or the `dist` directory created by the build. Replace the filename below with
-that wheel's full filename. Linux or macOS:
+Install the resulting wheel with that environment's Python. For local tests,
+install `pytest` and `pytest-timeout`, then run:
 
 ```bash
-.venv/bin/python -m pip install /path/to/matching-smsd-wheel.whl
-.venv/bin/python -c 'import smsd; print(smsd.__version__); assert len(smsd.parse_smiles("c1ccccc1")) == 6'
+python -m pytest python/tests -q --import-mode=importlib
 ```
 
-Windows PowerShell:
+RDKit is optional for molecule conversion and drawing. Metal and CUDA are
+optional source-build backends; core batch matching uses CPU/OpenMP.
+See the [Python guide](PYTHON.md) for examples and build options.
 
-```powershell
-.\.venv\Scripts\python.exe -m pip install "C:\path\to\matching-smsd-wheel.whl"
-.\.venv\Scripts\python.exe -c "import smsd; print(smsd.__version__); assert len(smsd.parse_smiles('c1ccccc1')) == 6"
-```
+## Docker
 
-RDKit is optional. Install it in the same environment for the high-level RDKit
-molecule wrappers. For local tests, install `pytest` and `pytest-timeout`, then
-run the selected virtual environment's Python with
-`-m pytest python/tests -q --import-mode=importlib`.
-
-## Configure Python bindings directly with CMake
-
-Use CMake 3.18+, a C++17 compiler, and Python 3.9+ with pybind11 installed.
-Select the same interpreter used to install pybind11:
+The GitHub release includes Java CLI image archives for Linux x86_64 and arm64,
+with load/run commands in its `DOCKER.md` asset. To build locally:
 
 ```bash
-cmake -S cpp -B build/python \
-  -DSMSD_BUILD_PYTHON=ON -DSMSD_BUILD_TESTS=OFF \
-  -DSMSD_BUILD_METAL=OFF -DSMSD_BUILD_CUDA=OFF \
-  -DPython_EXECUTABLE="$PWD/.venv/bin/python" \
-  -Dpybind11_DIR="$(.venv/bin/python -m pybind11 --cmakedir)"
-cmake --build build/python --parallel 4
+docker build -t smsd .
+docker run --rm smsd --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 ```
 
-Python discovery uses `FindPython` and its `Development.Module` component.
-Use `Python_EXECUTABLE` with this capitalization when selecting an interpreter.
-The core extension does not require RDKit. Install RDKit in the same Python
-environment for `from_rdkit` and the high-level RDKit molecule wrappers. Their
-returned indices refer to the original RDKit inputs; raw native bindings use
-`MolGraph` indices. See [the Python guide](PYTHON.md).
-
-The direct CMake example uses Linux/macOS virtual environment paths. On Windows,
-use `.venv/Scripts/python.exe` for `Python_EXECUTABLE`, and obtain `pybind11_DIR`
-by running that interpreter with `-m pybind11 --cmakedir`.
-`SMSD_BUILD_METAL` and `SMSD_BUILD_CUDA` also accept `AUTO` or `ON` for optional
-backends. Their availability does not change the CPU/OpenMP execution of core
-batch matching.
-
-## Prepare release assets locally
-
-The Bash preflight below prepares the local platform. The current release
-record lists the separate builds and checks already completed for 7.2.2. Use
-a dedicated Python environment with CMake, a C++17 compiler, and Java 25:
-
-```bash
-python3.14 -m venv .venv-release
-.venv-release/bin/python -m pip install build scikit-build-core pybind11 pytest pytest-timeout twine rdkit==2026.03.6
-# macOS dependency repair:
-.venv-release/bin/python -m pip install delocate
-SMSD_RELEASE_PYTHON=.venv-release/bin/python scripts/prepare-release.sh
-```
-
-Artifacts are assembled under `dist/release-7.2.2/` after validation succeeds.
-This prepares assets for the current native platform; it does not cross-build
-Linux, macOS and Windows wheels in one invocation.
-The macOS release target defaults to 26.0; delocate verifies bundled libraries
-against it. The release preflight requires RDKit 2026.03.6 for interoperability
-checks and active OpenMP. GPU test builds are separate from the CPU preflight. Build macOS and
-Linux wheels locally, validate Windows with the manual GitHub workflow, then
-collect the three wheels against the same source before publishing. See
-[publishing](PUBLISHING.md) and [7.2.2 validation](VALIDATION_7.2.2.md).
-The GitHub release is published and tagged; PyPI and Maven publication remain pending.
+For release preparation, platform collection and package publication, see
+[publishing](PUBLISHING.md).

@@ -19,6 +19,9 @@ All notable changes to SMSD Pro are documented in this file.
 - Reject empty files and ambiguous multi-molecule/model input. Use SDF for batch targets.
 - Validate the NAD redox pair against an explicit shared-core witness, with bounded-search validity checked separately.
 
+### Documentation
+- Refresh language guides and working examples; align Python package descriptions.
+
 ### Packaging
 - Add Windows MSI, macOS DMG and Linux DEB packages with bundled Java 25.
 - Check installation, chemical searches, licences, architecture and removal.
