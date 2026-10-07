@@ -182,7 +182,10 @@ def check_git(checkout, tag, manifest, files):
     tagged = git(checkout, "rev-parse", "--verify", f"refs/tags/{tag}" + "^{commit}").decode()
     require(git(checkout, "rev-parse", "HEAD").decode() == tagged,
             "Collector checkout differs from the selected tag")
-    subprocess.run(["git", "-C", str(checkout), "merge-base", "--is-ancestor", frozen, tagged], check=True)
+    related = any(subprocess.run(
+        ["git", "-C", str(checkout), "merge-base", "--is-ancestor", earlier, later],
+        check=False).returncode == 0 for earlier, later in ((frozen, tagged), (tagged, frozen)))
+    require(related, "Frozen source and release tag have unrelated histories")
     changed = git(checkout, "diff", "--name-only", "-z", frozen, tagged).split(b"\0")
     require(all(not name or Path(name.decode()).suffix in (".md", ".rst")
                 or name == b"CITATION.cff" for name in changed),

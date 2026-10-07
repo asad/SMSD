@@ -9,7 +9,7 @@ distribution. Keep one Python version across the wheel set:
 |---|---|
 | Linux x86_64 | CPython 3.14, glibc 2.28+ |
 | macOS arm64 | CPython 3.14, macOS 26+ |
-| Windows x86_64 | CPython 3.14, 64-bit Windows |
+| Windows x86_64 | CPython 3.14, Windows 10 or later |
 
 The GitHub 7.2.2 release is published; all 25 public downloads match their
 checksums. PyPI and Maven Central publication remain pending.
@@ -23,9 +23,15 @@ C++ headers, and one MSI, DMG and DEB with bundled Java. Follow
 Java publication uses `mvn -f java/pom.xml deploy`; the root Maven POM is an
 aggregator. The root `pyproject.toml` builds the C++ extension and Python package.
 
-The retained 7.2.0 benchmarks use Python 3.13.14 with RDKit 2026.09.1. The 7.2.1 deadline fix is retained; no new cross-solver benchmark ranking is claimed.
-Keep `RESULTS_7.2.0.md` and the original benchmark archive name/hash when
-including that historical evidence. RDKit is optional at runtime.
+The [7.2.0 benchmark report](../benchmarks/RESULTS_7.2.0.md) retains its original
+versions and measured scope. RDKit is optional at runtime.
+
+## Before publishing
+
+- Check current versions, platform requirements and download links in every README and guide.
+- Run code examples with their stated dependencies and review all public claims.
+- Require the Python README, SDK description and all wheel descriptions to match.
+- Verify package checksums and installation; after publication, check the files and descriptions on each package index.
 
 ## Prepare locally
 
@@ -59,7 +65,7 @@ The [7.2.0 report](../benchmarks/RESULTS_7.2.0.md) remains unchanged; do not
 relabel its timings or quality cohorts as new 7.2.2 measurements. Record fresh
 release checks, source identity and asset hashes in
 [7.2.2 validation](VALIDATION_7.2.2.md).
-The preparation script tests and assembles artifacts for the local platform;
+The preparation script tests and assembles packages for the local platform;
 it does not publish. It can include other tested wheels from a directory
 specified by `SMSD_PLATFORM_WHEELS_DIR`. Build the Linux wheel locally in a
 manylinux container and the Windows wheel on a native Windows host. Each
@@ -95,7 +101,7 @@ Windows repair uses `scripts/repair_windows_wheel.py` to select AMD64 Microsoft
 release runtimes from Visual Studio redistributables or Windows System32.
 It checks the DLL versions against the extension's linker family and verifies
 that wheel repair bundled those exact files. Microsoft runtime terms are
-included in the wheel's license metadata.
+included in the wheel's licence metadata.
 
 Build macOS and Linux locally. The manual `installers.yml` workflow builds
 and tests the Windows MSI and Python wheel together from the existing draft
@@ -119,11 +125,11 @@ python -m twine check --strict \
 
 Collection verifies package versions, CPython/ABI/platform tags, native binary
 format and architecture, all wheel RECORD hashes, Python wrappers, installed
-C++ headers and license copies against the release checkout and source distribution.
+C++ headers and licence copies against the release checkout and source distribution.
 For Windows, the supported delvewheel loader is checked separately; the
 application code must still match the source exactly. Collection
 requires all three target wheels by default and rejects inconsistent builds.
-This artifact check complements target-platform tests; it cannot establish
+This package check complements target-platform tests; it cannot establish
 that a Windows wheel executes by inspecting it on macOS. Use
 `--allow-incomplete` only during preparation, then run the strict check above
 before publishing.
@@ -196,7 +202,7 @@ describes authentication and installation checks.
 ## Maven Central
 
 The coordinates are `com.bioinceptionlabs:smsd:7.2.2`. The `release` profile
-attaches sources and Javadoc, signs the artifacts, uploads through the Central
+attaches sources and Javadoc, signs the packages, uploads through the Central
 Publishing plugin, and waits for publication. Its `autoPublish=true` setting
 publishes after Central validation succeeds.
 

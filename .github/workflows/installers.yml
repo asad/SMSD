@@ -102,8 +102,11 @@ jobs:
           frozen = git('rev-parse', '--verify', manifest['release_ref'] + '^{commit}')
           require(frozen == manifest['source_commit'], 'Frozen source ref resolves to another commit')
           tagged = git('rev-parse', '--verify', f'refs/tags/{tag}' + '^{commit}')
-          subprocess.run(['git', 'merge-base', '--is-ancestor', frozen, tagged], check=True)
-          # Validation notes can advance after the frozen SDK. Production files cannot.
+          related = any(subprocess.run(
+              ['git', 'merge-base', '--is-ancestor', earlier, later], check=False).returncode == 0
+              for earlier, later in ((frozen, tagged), (tagged, frozen)))
+          require(related, 'Frozen source and release tag have unrelated histories')
+          # Documentation may advance after tagging; production files must match.
           changed = git('diff', '--name-only', frozen, tagged).splitlines()
           require(all(Path(name).suffix in ('.md', '.rst') or name == 'CITATION.cff' for name in changed),
                   'Tagged production files differ from the frozen SDK source')

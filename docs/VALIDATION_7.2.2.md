@@ -18,12 +18,12 @@ builds and bundled installers. Both Java compatibility suites passed.
 | CLI JSON under Windows-style encodings | Ten Java 25 cases passed without a JVM encoding workaround; native MSI cases also passed |
 | Unix source and generated launchers | Passed on both runtimes; Windows execution pending |
 | macOS arm64 DMG | Passed all ten CLI checks, native installation/removal and 58 arm64 binary checks |
-| macOS arm64 Python wheel | 12 native Debug suites on unchanged inputs (reused evidence); 691 fresh Python tests passed, 8 optional skips |
+| macOS arm64 Python wheel | 12 native Debug suites and 691 Python tests passed, 8 optional skips; unchanged code verified |
 | Linux x86_64 DEB | Passed all ten CLI checks, extraction, installation and removal under QEMU |
-| Linux x86_64 Python wheel | 12 native Debug suites on unchanged inputs (reused evidence); 691 fresh Python tests passed, 8 optional skips |
+| Linux x86_64 Python wheel | 12 native Debug suites and 691 Python tests passed, 8 optional skips; unchanged code verified |
 | Docker Linux arm64 and x86_64 images | Ten CLI checks per image, exact release JAR, non-root execution and licence checks passed locally; x86_64 uses QEMU |
 | Windows x86_64 MSI | Passed all ten CLI checks, native installation and removal; unsigned |
-| Windows x86_64 Python wheel | 12 native Debug suites and 691 installed-package tests passed, 8 optional skips; proof reused for byte-identical payloads after metadata refresh |
+| Windows x86_64 Python wheel | 12 native Debug suites and 691 Python tests passed, 8 optional skips; unchanged code verified |
 | Three-wheel and three-installer collection | Passed for the complete platform set |
 | GitHub publication and download verification | Published; all 25 assets downloaded anonymously and matched their checksums |
 | PyPI and Maven Central | Pending |
@@ -36,14 +36,14 @@ The macOS Java runtime declares macOS 11
 as its minimum version; this does not establish execution on that version.
 The macOS Python wheel requires macOS 26 or later. Its fresh installed-wheel
 checks use CPython 3.14.8 and RDKit 2026.03.6 on macOS 27.0.1 arm64; native
-Debug checks take 99.09 seconds; fresh tests of the metadata-refreshed installed
-wheel take 12.01 seconds.
+Debug checks take 99.09 seconds; installed-package tests take 12.01 seconds.
+Their results are retained after description-only updates.
 Metal and CUDA are disabled; bundled OpenMP is required. Native Debug evidence
 is reused after independently verifying identical C++/Python/build inputs across
 the packaging and Java updates. Final distributions refresh documentation and
 package metadata only; all tested binaries, Python wrappers, headers and licences
-remain byte-identical. The final source archive differs only in documentation and generated package
-metadata.
+remain byte-identical. Source changes after the release tag are limited to documentation.
+The SDK and all three wheel descriptions match the Python README.
 Manifests retain the original test identities and make reused evidence explicit.
 
 Docker images provide the Java CLI with Temurin 25.0.4.1+1. Both Linux
@@ -56,8 +56,8 @@ Container registry publication remains pending.
 
 Linux wheel checks use AlmaLinux 8.10/glibc 2.28, GCC 14.2.1, CPython 3.14.5
 and RDKit 2026.03.6 under local QEMU x86_64. The unchanged native Debug suite
-took 335.40 seconds; fresh tests of the metadata-refreshed installed wheel
-took 34.69 seconds. Release
+took 335.40 seconds; installed-package tests took 34.69 seconds.
+Their results are retained after description-only updates. Release
 compilation retains `-O3` and OpenMP. Link-time optimisation is disabled after
 GCC crashes under emulation; compile and link commands confirm the setting.
 

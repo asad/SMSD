@@ -1,9 +1,8 @@
 # Java CLI installers
 
-Each release provides one installer per platform, with Java 25 included:
-
-The 7.2.2 JAR targets Java 8 or later. Installers include Java 25 LTS so users
-do not need a separate Java installation.
+The [7.2.2 release](https://github.com/asad/SMSD/releases/tag/v7.2.2) provides
+one installer per platform with Temurin Java 25.0.4.1+1 included. The portable
+JAR also runs on Java 8 or later.
 
 | Platform | Package | Architecture |
 |---|---|---|
@@ -83,7 +82,7 @@ platform-native icon with `--icon`.
 The manual `installers.yml` workflow prepares the Windows MSI and optionally
 the Python wheel together. It downloads the validated JAR and source archive
 from an existing draft or published release, verifies checksums, then installs,
-runs and removes the MSI. It collects build artifacts without publishing them.
+runs and removes the MSI. It collects build packages without publishing them.
 macOS and Linux builds remain local.
 
 Before publication, collect all three tested packages:
