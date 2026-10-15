@@ -1,3 +1,4 @@
+#include "search_test_helpers.hpp"
 /*
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
@@ -51,13 +52,13 @@ static int g_failed = 0;
 static bool smartsMatches(const std::string& smarts, const std::string& smiles) {
     auto q = smsd::parseSMARTS(smarts);
     auto mol = smsd::parseSMILES(smiles);
-    return q.matches(mol);
+    return smsd_test::patternMatches(q, mol);
 }
 
 static int smartsCountAll(const std::string& smarts, const std::string& smiles, int max = 1000) {
     auto q = smsd::parseSMARTS(smarts);
     auto mol = smsd::parseSMILES(smiles);
-    return static_cast<int>(q.findAll(mol, max).size());
+    return static_cast<int>(smsd_test::allPatternAtoms(q, mol, max).size());
 }
 
 // --- Atom primitives ---
@@ -176,12 +177,12 @@ void test_smarts_bond_ring() {
 
 void test_smarts_bond_wedge() {
     assert(smartsMatches("C/C", "CC"));
-    assert(smartsMatches("C/C", "C=C"));
+    assert(!smartsMatches("C/C", "C=C"));
 }
 
 void test_smarts_bond_dash_stereo() {
     assert(smartsMatches("C\\C", "CC"));
-    assert(smartsMatches("C\\C", "C=C"));
+    assert(!smartsMatches("C\\C", "C=C"));
 }
 
 // --- Logical operators ---
@@ -232,7 +233,7 @@ void test_smarts_writer_roundtrip_ring_charge_and_hcount() {
     opts.includeHCount = true;
     std::string smarts = smsd::toSMARTS(mol, opts);
     auto q = smsd::parseSMARTS(smarts);
-    assert(q.matches(mol));
+    assert(smsd_test::patternMatches(q, mol));
 }
 
 void test_smarts_writer_preserves_atom_class_queries() {
@@ -241,7 +242,7 @@ void test_smarts_writer_preserves_atom_class_queries() {
     assert(smarts.find(":7") != std::string::npos);
     assert(smarts.find(":1") != std::string::npos);
     auto q = smsd::parseSMARTS(smarts);
-    assert(q.matches(mol));
+    assert(smsd_test::patternMatches(q, mol));
 }
 
 void test_mol_block_preserves_headers_and_properties() {
@@ -400,22 +401,22 @@ void test_smarts_predicate_isHalogen_match() {
     std::string expanded = reg.expandPredicates("[$isHalogen]");
     auto q = smsd::parseSMARTS(expanded);
     auto mol = smsd::parseSMILES("CF");
-    assert(q.matches(mol));
+    assert(smsd_test::patternMatches(q, mol));
 }
 
 void test_smarts_predicate_isPositive_match() {
     auto reg = smsd::SmartsPredicateRegistry::builtinRegistry();
     std::string expanded = reg.expandPredicates("[$isPositive]");
     auto q = smsd::parseSMARTS(expanded);
-    assert(q.matches(smsd::parseSMILES("[NH4+]")));
-    assert(!q.matches(smsd::parseSMILES("C")));
+    assert(smsd_test::patternMatches(q, smsd::parseSMILES("[NH4+]")));
+    assert(!smsd_test::patternMatches(q, smsd::parseSMILES("C")));
 }
 
 void test_smarts_predicate_isNegative_match() {
     auto reg = smsd::SmartsPredicateRegistry::builtinRegistry();
     std::string expanded = reg.expandPredicates("[$isNegative]");
     auto q = smsd::parseSMARTS(expanded);
-    assert(q.matches(smsd::parseSMILES("[O-]C")));
+    assert(smsd_test::patternMatches(q, smsd::parseSMILES("[O-]C")));
 }
 
 // --- Complex patterns ---
@@ -443,7 +444,7 @@ void test_smarts_complex_carbonyl() {
 void test_smarts_edge_empty_pattern() {
     auto q = smsd::parseSMARTS("");
     auto mol = smsd::parseSMILES("C");
-    assert(q.matches(mol));
+    assert(smsd_test::patternMatches(q, mol));
 }
 
 void test_smarts_edge_single_bracket_atom() {
@@ -471,7 +472,7 @@ void test_smarts_edge_invalid_smarts_throws() {
 void test_smarts_edge_multi_component() {
     auto q = smsd::parseSMARTS("C.N");
     auto mol = smsd::parseSMILES("CN");
-    assert(q.matches(mol));
+    assert(smsd_test::patternMatches(q, mol));
 }
 
 void test_smarts_edge_findAll_count() {
@@ -596,7 +597,8 @@ void test_smarts_ext_combined_hybridization_and_element() {
 
 void test_smarts_ext_range_valence() {
     assert(smartsMatches("[v{2-4}]", "C=C"));
-    assert(!smartsMatches("[v{2-4}]", "C"));
+    assert(smartsMatches("[v{2-4}]", "C"));
+    assert(!smartsMatches("[v{2-4}]", "[C]"));
 }
 
 void test_smarts_ext_range_hetero_neighbors() {
@@ -618,7 +620,7 @@ static int mcsSize(const std::string& smi1, const std::string& smi2,
                    smsd::ChemOptions chem = smsd::ChemOptions{}) {
     auto g1 = smsd::parseSMILES(smi1);
     auto g2 = smsd::parseSMILES(smi2);
-    auto m  = smsd::findMCS(g1, g2, chem, defaultMCSOpts());
+    auto m  = smsd_test::commonAtoms(g1, g2, chem, defaultMCSOpts());
     return static_cast<int>(m.size());
 }
 
@@ -626,7 +628,7 @@ static bool isSub(const std::string& query, const std::string& target,
                   smsd::ChemOptions chem = smsd::ChemOptions{}) {
     auto q = smsd::parseSMILES(query);
     auto t = smsd::parseSMILES(target);
-    return smsd::isSubstructure(q, t, chem, 10000);
+    return smsd_test::substructureExists(q, t, chem, 10000);
 }
 
 // -- Implicit-H normalisation --
@@ -712,11 +714,11 @@ void test_h_caffeine_theophylline_nH() {
 
 void test_h_morphine_stereo_h_notation() {
     int sz = mcsSize(
-        "CN1CCC23C4C1CC5=C(C2C(C=C4)O3)C=C(C=C5)O",
-        "C[N]1CC[C@@]23[C@@H]4[C@H]1C[C@@H]5=C([C@@H]2[C@H](C=C4)O3)C=C(C=C5)O"
+        "CN1CC[C@]23[C@@H]4[C@H]1CC5=C2C(=C(C=C5)O)O[C@H]3[C@H](C=C4)O",
+        "[CH3][N]1[CH2][CH2][C@]23[C@@H]4[C@H]1[CH2][c]1[c]2[c]([c]([OH])[cH][cH]1)[O][C@H]3[C@@H]([OH])[CH]=[CH]4"
     );
     std::cout << "mcs=" << sz << " ";
-    assert(sz >= 17);
+    assert(sz == 21);
 }
 
 void test_h_ibuprofen_stereo_bracket() {

@@ -79,7 +79,7 @@ smsd = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(smsd)
 
 chem = smsd.ChemOptions()
-mcs_opts = smsd.MCSOptions()
+mcs_opts = smsd.MCS.Options() if hasattr(smsd, "MCS") else smsd.MCSOptions()
 mcs_opts.timeout_ms = int(payload["timeout_ms"])
 warmup = int(payload["warmup"])
 iters = int(payload["iters"])
@@ -107,23 +107,43 @@ for case in payload["cases"]:
             target.prewarm()
 
         times_ms = []
+        if hasattr(smsd, "MCS"):
+            mcs_opts.chemistry = chem
+            prepared = smsd.MCS.find(query).with_options(mcs_opts)
+            substructure = smsd.Substructure.find(query)
+            def mcs_call():
+                result = prepared.match(target)
+                row["optimal"] = result.optimal
+                row["complete"] = result.complete
+                row["status"] = result.status.name
+                row["objective"] = "MCIS"
+                return result.matches[0].atom_mapping if result.matches else {}
+            def substructure_call():
+                return bool(substructure.match(target).matches)
+        else:
+            # The comparison extension retains its historical API.
+            def mcs_call():
+                row["objective"] = "historical"
+                return smsd.find_mcs(query, target, chem, mcs_opts)
+            def substructure_call():
+                return smsd.is_substructure(query, target, chem)
         if mode == "mcs":
             for _ in range(warmup):
-                smsd.find_mcs(query, target, chem, mcs_opts)
+                mcs_call()
             result_value = 0
             for _ in range(iters):
                 t0 = time.perf_counter_ns()
-                mapping = smsd.find_mcs(query, target, chem, mcs_opts)
+                mapping = mcs_call()
                 times_ms.append((time.perf_counter_ns() - t0) / 1_000_000.0)
                 result_value = len(mapping)
             row["result"] = int(result_value)
         else:
             for _ in range(warmup):
-                smsd.is_substructure(query, target, chem)
+                substructure_call()
             result_value = False
             for _ in range(iters):
                 t0 = time.perf_counter_ns()
-                result_value = bool(smsd.is_substructure(query, target, chem))
+                result_value = bool(substructure_call())
                 times_ms.append((time.perf_counter_ns() - t0) / 1_000_000.0)
             row["result"] = bool(result_value)
 

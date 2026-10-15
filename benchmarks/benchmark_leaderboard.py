@@ -9,7 +9,7 @@ Unified SMSD benchmark driver.
 This script collects descriptive measurements across:
 
 * MCS: SMSD Java CLI vs RDKit FindMCS
-* Substructure: SMSD Java VF2++ vs RDKit HasSubstructMatch vs CDK DfPattern
+* Substructure: SMSD Java Substructure vs RDKit HasSubstructMatch vs CDK DfPattern
 
 Java CLI startup, chemistry options and witness checks differ across these
 experiments. Only the maintained native protocol can establish eligible MCS

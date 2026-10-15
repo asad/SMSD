@@ -6,6 +6,10 @@
  */
 package com.bioinception.smsd;
 
+import com.bioinception.smsd.TestSupport;
+
+import com.bioinception.smsd.TestSupport.MoleculePair;
+
 import com.bioinception.smsd.core.Standardiser;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.silent.SilentChemObjectBuilder;

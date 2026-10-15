@@ -7,6 +7,11 @@
 package com.bioinception.smsd.core;
 
 import java.util.*;
+import org.openscience.cdk.aromaticity.Kekulization;
+import org.openscience.cdk.interfaces.IAtom;
+import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.interfaces.IBond;
+import org.openscience.cdk.silent.SilentChemObjectBuilder;
 
 /**
  * CIP (Cahn-Ingold-Prelog) stereodescriptor assignment engine for MolGraph.
@@ -18,7 +23,9 @@ import java.util.*;
  *   Rule 3: Z double-bond configuration gets higher priority than E
  *
  * Implements the digraph (extended connectivity tree) approach with phantom
- * (duplicate) nodes for ring closures and correct handling of multiple bonds.
+ * (duplicate) nodes for ring closures and multiple bonds. Aromatic ligands use
+ * a Kekule representation; fractional mancude averaging and the complete
+ * Rule 4/5 machinery are not implemented.
  *
  * References:
  *   Prelog and Helmchen, Angew. Chem. Int. Ed. Engl. 21, 567 (1982)
@@ -66,6 +73,12 @@ public final class CIPAssigner {
    * OpenSMILES multi-valence model.
    */
   static int implicitH(MolGraph g, int idx) {
+    if (g.hasHydrogenCounts()) return g.hydrogenCount(idx);
+    if (g.aromatic[idx]) {
+      int element = g.atomicNum[idx];
+      if (element == 8 || element == 16 || element == 34 || element == 52
+          || ((element == 7 || element == 15) && g.neighbors[idx].length >= 3)) return 0;
+    }
     int bondOrdSum = 0;
     for (int nb : g.neighbors[idx]) {
       int bo = g.bondOrder(idx, nb);
@@ -106,12 +119,95 @@ public final class CIPAssigner {
     final List<Integer> children = new ArrayList<>(4);
   }
 
+  private static boolean hasLonePairLigand(MolGraph graph, int atom, int hydrogens) {
+    if (hydrogens != 0 || graph.neighbors[atom].length != 3 || graph.tetraChirality == null
+        || graph.tetraChirality[atom] == 0) return false;
+    int element = graph.atomicNum[atom];
+    return element == 7 || element == 15 || element == 16 || element == 33
+        || element == 34 || element == 51 || element == 52;
+  }
+
+  /** Prepare aromatic bond orders without changing the caller's molecule. */
+  private static IAtomContainer kekuleCopy(MolGraph graph) {
+    try {
+      IAtomContainer copy;
+      if (graph.mol != null) {
+        copy = graph.mol.clone();
+      } else {
+        copy = SilentChemObjectBuilder.getInstance().newAtomContainer();
+        for (int atom = 0; atom < graph.n; atom++) {
+          IAtom value = SilentChemObjectBuilder.getInstance().newAtom();
+          value.setAtomicNumber(graph.atomicNum[atom]);
+          value.setFormalCharge(graph.formalCharge[atom]);
+          value.setImplicitHydrogenCount(implicitH(graph, atom));
+          value.setIsAromatic(graph.aromatic[atom]);
+          copy.addAtom(value);
+        }
+        for (int atom = 0; atom < graph.n; atom++) {
+          for (int neighbor : graph.neighbors[atom]) {
+            if (neighbor <= atom) continue;
+            int order = graph.bondOrder(atom, neighbor);
+            copy.addBond(atom, neighbor, order == 2 ? IBond.Order.DOUBLE
+                : order == 3 ? IBond.Order.TRIPLE : IBond.Order.SINGLE);
+            copy.getBond(copy.getBondCount() - 1).setIsAromatic(order == 4);
+          }
+        }
+      }
+      Kekulization.kekulize(copy);
+      return copy;
+    } catch (Exception unavailable) {
+      return null;
+    }
+  }
+
+  /** Compare spheres in parent order, padding absent phantom children with zero. */
+  private static int compareOrderedBranches(List<DigraphNode> firstNodes, int firstRoot,
+                                            List<DigraphNode> secondNodes, int secondRoot,
+                                            boolean compareMass) {
+    List<int[]> frontier = new ArrayList<>();
+    frontier.add(new int[] {firstRoot, secondRoot});
+    while (!frontier.isEmpty()) {
+      for (int[] pair : frontier) {
+        int firstValue = pair[0] < 0 ? 0 : (compareMass
+            ? firstNodes.get(pair[0]).massNumber : firstNodes.get(pair[0]).atomicNum);
+        int secondValue = pair[1] < 0 ? 0 : (compareMass
+            ? secondNodes.get(pair[1]).massNumber : secondNodes.get(pair[1]).atomicNum);
+        if (firstValue != secondValue) return Integer.compare(firstValue, secondValue);
+      }
+      List<int[]> next = new ArrayList<>();
+      for (int[] pair : frontier) {
+        List<Integer> firstChildren = pair[0] < 0 ? Collections.emptyList() : firstNodes.get(pair[0]).children;
+        List<Integer> secondChildren = pair[1] < 0 ? Collections.emptyList() : secondNodes.get(pair[1]).children;
+        for (int slot = 0; slot < Math.max(firstChildren.size(), secondChildren.size()); slot++)
+          next.add(new int[] {slot < firstChildren.size() ? firstChildren.get(slot) : -1,
+                             slot < secondChildren.size() ? secondChildren.get(slot) : -1});
+      }
+      frontier = next;
+    }
+    return 0;
+  }
+
+  /** Rank children from the leaves while preserving all earlier atomic-number decisions. */
+  private static void orderDigraph(List<DigraphNode> nodes) {
+    for (int node = nodes.size() - 1; node >= 0; node--) {
+      nodes.get(node).children.sort((first, second) -> {
+        int atomicComparison = compareOrderedBranches(nodes, first, nodes, second, false);
+        return atomicComparison != 0 ? -atomicComparison
+            : -compareOrderedBranches(nodes, first, nodes, second, true);
+      });
+    }
+  }
+
   /**
    * Build the CIP digraph (extended connectivity tree) rooted at the
    * specified atom. Ring closures produce duplicate (phantom) nodes.
    * Double and triple bonds produce additional phantom copies.
    */
   private static List<DigraphNode> buildDigraph(MolGraph g, int root) {
+    boolean aromatic = false;
+    for (boolean flag : g.aromatic) aromatic |= flag;
+    IAtomContainer kekule = aromatic ? kekuleCopy(g) : null;
+    if (aromatic && kekule == null) return Collections.emptyList();
     List<DigraphNode> nodes = new ArrayList<>(128);
 
     DigraphNode rootNode = new DigraphNode();
@@ -142,7 +238,7 @@ public final class CIPAssigner {
           if (nbr == parentAtom && !nodes.get(ni).isDuplicate) continue;
 
           int bo = g.bondOrder(atom, nbr);
-          if (bo == 4) bo = 1; // aromatic -> single for expansion
+          if (bo == 4) bo = kekule.getBond(kekule.getAtom(atom), kekule.getAtom(nbr)).getOrder().numeric();
 
           expansions.add(new int[]{nbr, 0}); // real child
           for (int extra = 1; extra < bo; ++extra) {
@@ -153,7 +249,7 @@ public final class CIPAssigner {
         // Phantoms for bond back to parent (higher-order bonds)
         if (parentAtom >= 0 && !nodes.get(ni).isDuplicate) {
           int bo = g.bondOrder(atom, parentAtom);
-          if (bo == 4) bo = 1;
+          if (bo == 4) bo = kekule.getBond(kekule.getAtom(atom), kekule.getAtom(parentAtom)).getOrder().numeric();
           for (int extra = 1; extra < bo; ++extra) {
             expansions.add(new int[]{parentAtom, 1});
           }
@@ -195,10 +291,21 @@ public final class CIPAssigner {
             nextFrontier.add(childIdx);
           }
         }
+        for (int hydrogen = 0; hydrogen < implicitH(g, atom) && nodes.size() < MAX_NODES; hydrogen++) {
+          DigraphNode child = new DigraphNode();
+          child.atomIdx = -1;
+          child.atomicNum = 1;
+          child.massNumber = 0;
+          child.parent = ni;
+          child.depth = depth + 1;
+          nodes.get(ni).children.add(nodes.size());
+          nodes.add(child);
+        }
       }
       frontier = nextFrontier;
     }
 
+    orderDigraph(nodes);
     return nodes;
   }
 
@@ -225,55 +332,28 @@ public final class CIPAssigner {
                                      List<DigraphNode> nodesB, int rootB,
                                      Map<Integer, Integer> descriptorMap,
                                      MolGraph molGraph) {
-    List<Integer> frontA = new ArrayList<>();
-    frontA.add(rootA);
-    List<Integer> frontB = new ArrayList<>();
-    frontB.add(rootB);
-
-    while (!frontA.isEmpty() || !frontB.isEmpty()) {
-      // Collect atomic numbers at this level, sorted descending
-      int[] zA = toSortedDescArray(frontA, nodesA, true);
-      int[] zB = toSortedDescArray(frontB, nodesB, true);
-
-      int len = Math.max(zA.length, zB.length);
-      for (int k = 0; k < len; k++) {
-        int a = k < zA.length ? zA[k] : 0;
-        int b = k < zB.length ? zB[k] : 0;
-        if (a != b) return a - b;
-      }
-
-      // Tie on atomic number: try mass number
-      int[] mA = toSortedDescArray(frontA, nodesA, false);
-      int[] mB = toSortedDescArray(frontB, nodesB, false);
-
-      len = Math.max(mA.length, mB.length);
-      for (int k = 0; k < len; k++) {
-        int a = k < mA.length ? mA[k] : 0;
-        int b = k < mB.length ? mB[k] : 0;
-        if (a != b) return a - b;
-      }
-
-      // Rule 3: Z > E tie-break on double-bond stereo
-      if (molGraph != null) {
-        int[] ezA = ezDescriptors(frontA, nodesA, molGraph);
-        int[] ezB = ezDescriptors(frontB, nodesB, molGraph);
-        int ezLen = Math.max(ezA.length, ezB.length);
-        for (int k = 0; k < ezLen; k++) {
-          int a = k < ezA.length ? ezA[k] : 0;
-          int b = k < ezB.length ? ezB[k] : 0;
-          if (a != b) return a - b;
+    int atomicComparison = compareOrderedBranches(nodesA, rootA, nodesB, rootB, false);
+    if (atomicComparison != 0) return atomicComparison;
+    int isotopeComparison = compareOrderedBranches(nodesA, rootA, nodesB, rootB, true);
+    if (isotopeComparison != 0) return isotopeComparison;
+    if (molGraph != null) {
+      List<Integer> frontA = new ArrayList<>(), frontB = new ArrayList<>();
+      frontA.add(rootA);
+      frontB.add(rootB);
+      while (!frontA.isEmpty() || !frontB.isEmpty()) {
+        int[] firstDescriptors = ezDescriptors(frontA, nodesA, molGraph);
+        int[] secondDescriptors = ezDescriptors(frontB, nodesB, molGraph);
+        for (int position = 0; position < Math.max(firstDescriptors.length, secondDescriptors.length); position++) {
+          int first = position < firstDescriptors.length ? firstDescriptors[position] : 0;
+          int second = position < secondDescriptors.length ? secondDescriptors[position] : 0;
+          if (first != second) return Integer.compare(first, second);
         }
+        List<Integer> nextA = new ArrayList<>(), nextB = new ArrayList<>();
+        for (int node : frontA) nextA.addAll(nodesA.get(node).children);
+        for (int node : frontB) nextB.addAll(nodesB.get(node).children);
+        frontA = nextA;
+        frontB = nextB;
       }
-
-      // Expand to next BFS level
-      List<Integer> nextA = new ArrayList<>(), nextB = new ArrayList<>();
-      for (int i : frontA)
-        for (int c : nodesA.get(i).children) nextA.add(c);
-      for (int i : frontB)
-        for (int c : nodesB.get(i).children) nextB.add(c);
-
-      frontA = nextA;
-      frontB = nextB;
     }
 
     // Rules 1-3 exhausted. Try Rule 4b-c if descriptor map is available.
@@ -365,7 +445,7 @@ public final class CIPAssigner {
       if (parentIdx >= 0 && nd.atomIdx >= 0 && !nd.isDuplicate) {
         int parentAtom = nodes.get(parentIdx).atomIdx;
         if (parentAtom >= 0 && g.bondOrder(parentAtom, nd.atomIdx) == 2) {
-          int conf = g.dbStereo(parentAtom, nd.atomIdx); // 1=Z, 2=E
+          int conf = atomicPriorityDoubleBondConfiguration(g, parentAtom, nd.atomIdx);
           ez = (conf == 1) ? 2 : (conf == 2) ? 1 : 0;   // Z→2, E→1, NONE→0
         }
       }
@@ -397,6 +477,11 @@ public final class CIPAssigner {
    */
   private static int[][] computePriorities(MolGraph g, int centre,
                                             Map<Integer, Integer> descriptorMap) {
+    return computePriorities(g, centre, descriptorMap, true);
+  }
+
+  private static int[][] computePriorities(MolGraph g, int centre,
+                                            Map<Integer, Integer> descriptorMap, boolean includeStereo) {
     int[] nbrs = g.neighbors[centre];
     int nExplicit = nbrs.length;
 
@@ -407,15 +492,17 @@ public final class CIPAssigner {
       boSum += bo;
     }
     int hCount = implicitH(g, centre);
-    int total = nExplicit + hCount;
+    boolean lonePair = hasLonePairLigand(g, centre, hCount);
+    int total = nExplicit + hCount + (lonePair ? 1 : 0);
 
     // Build full digraph from centre (shared for all ligands)
     List<DigraphNode> digraph = buildDigraph(g, centre);
+    if (digraph.isEmpty()) return new int[0][0];
 
-    // Find the digraph child node for each explicit neighbor
+    // Find the digraph child node for each explicit neighbour
     int[][] result = new int[total][2]; // {atomIdx, rank}
 
-    // Map each explicit neighbor to its digraph root child
+    // Map each explicit neighbour to its digraph root child
     int[] ligandRoots = new int[total];
     for (int i = 0; i < nExplicit; i++) {
       result[i][0] = nbrs[i];
@@ -438,10 +525,15 @@ public final class CIPAssigner {
       }
     }
 
-    // Implicit H ligands: atomIdx=-1, trivial single-node digraph
-    for (int i = 0; i < hCount; i++) {
-      result[nExplicit + i][0] = -1;
-      ligandRoots[nExplicit + i] = -2; // sentinel for H
+    for (int implicit = 0; implicit < hCount + (lonePair ? 1 : 0); implicit++) {
+      boolean phantom = implicit >= hCount;
+      DigraphNode node = new DigraphNode();
+      node.atomIdx = phantom ? -2 : -1;
+      node.atomicNum = phantom ? 0 : 1;
+      node.parent = -1;
+      result[nExplicit + implicit][0] = node.atomIdx;
+      ligandRoots[nExplicit + implicit] = digraph.size();
+      digraph.add(node);
     }
 
     // Sort ligand indices by CIP priority
@@ -452,17 +544,14 @@ public final class CIPAssigner {
 
     // Comparison helper that uses full rules when descriptor map is available
     java.util.function.BiFunction<Integer, Integer, Integer> cmpLigands = (a, b) -> {
-      int zA = (a < nExplicit) ? g.atomicNum[nbrs[a]] : 1;
-      int zB = (b < nExplicit) ? g.atomicNum[nbrs[b]] : 1;
+      int zA = result[a][0] >= 0 ? g.atomicNum[result[a][0]] : result[a][0] == -2 ? 0 : 1;
+      int zB = result[b][0] >= 0 ? g.atomicNum[result[b][0]] : result[b][0] == -2 ? 0 : 1;
       if (zA != zB) return Integer.compare(zA, zB);
 
       int rootA = ligandRoots[a];
       int rootB = ligandRoots[b];
-      if (rootA == -2 && rootB == -2) return 0;
-      if (rootA == -2) return -1;
-      if (rootB == -2) return 1;
       if (rootA >= 0 && rootB >= 0)
-        return compareBranches(digraph, rootA, digraph, rootB, dMap, g);
+        return compareBranches(digraph, rootA, digraph, rootB, dMap, includeStereo ? g : null);
       return 0;
     };
 
@@ -543,7 +632,8 @@ public final class CIPAssigner {
 
     int deg = g.neighbors[idx].length;
     int hc = implicitH(g, idx);
-    int totalSubs = deg + hc;
+    boolean lonePair = hasLonePairLigand(g, idx, hc);
+    int totalSubs = deg + hc + (lonePair ? 1 : 0);
     if (totalSubs != 4) return null;
 
     int[][] priorities = computePriorities(g, idx, descriptorMap);
@@ -561,7 +651,8 @@ public final class CIPAssigner {
       for (int k = 0; k < 4; k++) {
         boolean found = false;
         for (int[] priority : priorities) {
-          if (priority[0] == ligandOrder[k]) {
+          int ligand = lonePair && ligandOrder[k] < 0 ? -2 : ligandOrder[k];
+          if (priority[0] == ligand) {
             cipRanks[k] = priority[1];
             found = true;
             break;
@@ -572,7 +663,7 @@ public final class CIPAssigner {
     } else {
       // Builder annotations retain the original implicit-H-first convention.
       for (int k = 0; k < 4; k++) {
-        int ligand = hc > 0 ? (k == 0 ? deg : k - 1) : k;
+        int ligand = hc > 0 || lonePair ? (k == 0 ? deg : k - 1) : k;
         cipRanks[k] = priorities[ligand][1];
       }
     }
@@ -620,7 +711,7 @@ public final class CIPAssigner {
         int highJ = higherPrioritySub(g, j, i);
         if (highI == Integer.MIN_VALUE || highJ == Integer.MIN_VALUE) continue;
 
-        // Check if the CIP high-priority atom matches the SMILES reference atom
+        // The stored relation uses the first non-double-bond neighbour at each end.
         int refI = firstNonDBNeighbor(g, i, j);
         int refJ = firstNonDBNeighbor(g, j, i);
 
@@ -641,7 +732,11 @@ public final class CIPAssigner {
 
   /** Find the higher-priority substituent on one end of a double bond. */
   private static int higherPrioritySub(MolGraph g, int thisEnd, int otherEnd) {
-    int[][] prios = computePriorities(g, thisEnd);
+    return higherPrioritySub(g, thisEnd, otherEnd, true);
+  }
+
+  private static int higherPrioritySub(MolGraph g, int thisEnd, int otherEnd, boolean includeStereo) {
+    int[][] prios = computePriorities(g, thisEnd, null, includeStereo);
     int bestRank = -1, bestAtom = Integer.MIN_VALUE;
     int secondRank = -1;
     int subCount = 0;
@@ -663,7 +758,19 @@ public final class CIPAssigner {
     return bestAtom;
   }
 
-  /** Get the first neighbor of thisEnd that is not the double-bond partner. */
+  /** Rule 3 descriptors use atomic/isotopic priorities, independent of input carrier order. */
+  private static int atomicPriorityDoubleBondConfiguration(MolGraph graph, int first, int second) {
+    int configuration = graph.dbStereo(first, second);
+    if (configuration == 0) return 0;
+    int highFirst = higherPrioritySub(graph, first, second, false);
+    int highSecond = higherPrioritySub(graph, second, first, false);
+    if (highFirst == Integer.MIN_VALUE || highSecond == Integer.MIN_VALUE) return 0;
+    if (highFirst != firstNonDBNeighbor(graph, first, second)) configuration = 3 - configuration;
+    if (highSecond != firstNonDBNeighbor(graph, second, first)) configuration = 3 - configuration;
+    return configuration;
+  }
+
+  /** Get the first neighbour of thisEnd that is not the double-bond partner. */
   private static int firstNonDBNeighbor(MolGraph g, int thisEnd, int otherEnd) {
     for (int nb : g.neighbors[thisEnd]) {
       if (nb != otherEnd) return nb;

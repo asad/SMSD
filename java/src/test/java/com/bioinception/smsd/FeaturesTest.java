@@ -6,6 +6,12 @@
  */
 package com.bioinception.smsd;
 
+import com.bioinception.smsd.core.MCS;
+
+import com.bioinception.smsd.TestSupport;
+
+import com.bioinception.smsd.TestSupport.MoleculePair;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.bioinception.smsd.core.*;
@@ -51,30 +57,30 @@ public class FeaturesTest extends TestBase {
     @Test
     @DisplayName("Tree: single atom self-MCS")
     void testTreeFastPathSingleAtom() throws Exception {
-      SMSD s = new SMSD(rawMol("C"), rawMol("C"), new ChemOptions());
-      assertEquals(1, s.findMCS().size());
+      MoleculePair s = new MoleculePair(rawMol("C"), rawMol("C"), new ChemOptions());
+      assertEquals(1, s.mcsMapping().size());
     }
 
     @Test
     @DisplayName("Tree: two atoms self-MCS")
     void testTreeFastPathTwoAtoms() throws Exception {
-      SMSD s = new SMSD(rawMol("CC"), rawMol("CC"), new ChemOptions());
-      assertEquals(2, s.findMCS().size());
+      MoleculePair s = new MoleculePair(rawMol("CC"), rawMol("CC"), new ChemOptions());
+      assertEquals(2, s.mcsMapping().size());
     }
 
     @Test
     @DisplayName("Tree: branched vs linear (isobutane vs butane)")
     void testTreeFastPathBranched() throws Exception {
-      SMSD s = new SMSD(rawMol("CC(C)C"), rawMol("CCCC"), new ChemOptions());
-      Map<Integer, Integer> mcs = s.findMCS();
+      MoleculePair s = new MoleculePair(rawMol("CC(C)C"), rawMol("CCCC"), new ChemOptions());
+      Map<Integer, Integer> mcs = s.mcsMapping();
       assertTrue(mcs.size() >= 3, "Isobutane/butane MCS >= 3, got " + mcs.size());
     }
 
     @Test
     @DisplayName("Tree: dendrimer-like branching")
     void testTreeFastPathDendrimer() throws Exception {
-      SMSD s = new SMSD(rawMol("CC(CC)(CC)CC"), rawMol("CC(CCC)(CCC)CCC"), new ChemOptions());
-      Map<Integer, Integer> mcs = s.findMCS();
+      MoleculePair s = new MoleculePair(rawMol("CC(CC)(CC)CC"), rawMol("CC(CCC)(CCC)CCC"), new ChemOptions());
+      Map<Integer, Integer> mcs = s.mcsMapping();
       assertTrue(mcs.size() >= 5, "Dendrimer MCS >= 5, got " + mcs.size());
     }
 
@@ -83,20 +89,20 @@ public class FeaturesTest extends TestBase {
     @Test
     @DisplayName("Chain: single atom in chain")
     void testChainFastPathSingleAtom() throws Exception {
-      SMSD s = new SMSD(rawMol("C"), rawMol("CCCCCC"), new ChemOptions());
-      assertTrue(s.isSubstructure(), "Single C should be in hexane");
+      MoleculePair s = new MoleculePair(rawMol("C"), rawMol("CCCCCC"), new ChemOptions());
+      assertTrue(s.contains(), "Single C should be in hexane");
     }
 
     @Test
     @DisplayName("Chain: PEG completes fast")
     void testChainFastPathPEG() throws Exception {
       long t0 = System.nanoTime();
-      SMSD s =
-          new SMSD(
+      MoleculePair s =
+          new MoleculePair(
               rawMol("OCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCO"),
               rawMol("OCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCO"),
               new ChemOptions());
-      Map<Integer, Integer> mcs = s.findMCS(false, true, 10000);
+      Map<Integer, Integer> mcs = s.mcsMapping( true, 10000);
       long ms = (System.nanoTime() - t0) / 1_000_000;
       assertTrue(mcs.size() >= 30, "PEG MCS >= 30, got " + mcs.size());
       assertTrue(ms < 5000, "PEG should complete in < 5s, took " + ms + "ms");
@@ -108,8 +114,8 @@ public class FeaturesTest extends TestBase {
     @DisplayName("Solvent: DMSO shifts tautomer weights")
     void testSolventCorrectionDMSO() throws Exception {
       ChemOptions opts = ChemOptions.tautomerProfile().withSolvent(ChemOptions.Solvent.DMSO);
-      SMSD s = new SMSD(rawMol("CC(=O)C"), rawMol("CC(O)=C"), opts);
-      Map<Integer, Integer> mcs = s.findMCS();
+      MoleculePair s = new MoleculePair(rawMol("CC(=O)C"), rawMol("CC(O)=C"), opts);
+      Map<Integer, Integer> mcs = s.mcsMapping();
       assertTrue(mcs.size() >= 3, "Keto/enol MCS in DMSO >= 3, got " + mcs.size());
     }
 
@@ -117,8 +123,8 @@ public class FeaturesTest extends TestBase {
     @DisplayName("Solvent: Chloroform shifts tautomer weights")
     void testSolventCorrectionCHCl3() throws Exception {
       ChemOptions opts = ChemOptions.tautomerProfile().withSolvent(ChemOptions.Solvent.CHLOROFORM);
-      SMSD s = new SMSD(rawMol("CC(=O)C"), rawMol("CC(O)=C"), opts);
-      Map<Integer, Integer> mcs = s.findMCS();
+      MoleculePair s = new MoleculePair(rawMol("CC(=O)C"), rawMol("CC(O)=C"), opts);
+      Map<Integer, Integer> mcs = s.mcsMapping();
       assertTrue(mcs.size() >= 3, "Keto/enol MCS in CHCl3 >= 3, got " + mcs.size());
     }
 
@@ -126,8 +132,8 @@ public class FeaturesTest extends TestBase {
     @DisplayName("Solvent: Aqueous (default) unchanged")
     void testSolventCorrectionAqueous() throws Exception {
       ChemOptions opts = ChemOptions.tautomerProfile().withSolvent(ChemOptions.Solvent.AQUEOUS);
-      SMSD s = new SMSD(rawMol("CC(=O)C"), rawMol("CC(O)=C"), opts);
-      Map<Integer, Integer> mcs = s.findMCS();
+      MoleculePair s = new MoleculePair(rawMol("CC(=O)C"), rawMol("CC(O)=C"), opts);
+      Map<Integer, Integer> mcs = s.mcsMapping();
       assertTrue(mcs.size() >= 3, "Keto/enol MCS in water >= 3, got " + mcs.size());
     }
 
@@ -267,8 +273,8 @@ public class FeaturesTest extends TestBase {
       void benzeneConfidence() throws Exception {
         IAtomContainer benz = rawMol("c1ccccc1");
         ChemOptions c = ChemOptions.tautomerProfile();
-        SMSD smsd = new SMSD(benz, benz, c);
-        Map<Integer,Integer> mcs = smsd.findMCS();
+        MoleculePair smsd = new MoleculePair(benz, benz, c);
+        Map<Integer,Integer> mcs = smsd.mcsMapping();
         assertEquals(6, mcs.size());
         assertEquals(1.0, smsd.getTautomerConfidence(), 1e-9,
             "Self-match on benzene should yield confidence 1.0");
@@ -279,8 +285,8 @@ public class FeaturesTest extends TestBase {
         IAtomContainer a = rawMol("c1ccccc1");
         IAtomContainer b = rawMol("c1ccc(F)cc1");
         ChemOptions c = new ChemOptions();
-        SMSD smsd = new SMSD(a, b, c);
-        smsd.findMCS();
+        MoleculePair smsd = new MoleculePair(a, b, c);
+        smsd.mcsMapping();
         assertEquals(1.0, smsd.getTautomerConfidence(), 1e-9,
             "Non-tautomeric mode always reports confidence 1.0");
       }
@@ -290,8 +296,8 @@ public class FeaturesTest extends TestBase {
         IAtomContainer keto = rawMol("CC(=O)CC");
         IAtomContainer enol = rawMol("CC(O)=CC");
         ChemOptions c = ChemOptions.tautomerProfile();
-        SMSD smsd = new SMSD(keto, enol, c);
-        Map<Integer,Integer> mcs = smsd.findMCS();
+        MoleculePair smsd = new MoleculePair(keto, enol, c);
+        Map<Integer,Integer> mcs = smsd.mcsMapping();
         double conf = smsd.getTautomerConfidence();
         assertTrue(conf <= 1.0 && conf >= 0.0,
             "Confidence must be in [0,1], got " + conf);
@@ -302,9 +308,9 @@ public class FeaturesTest extends TestBase {
         IAtomContainer a = rawMol("CC(=O)C");
         IAtomContainer b = rawMol("CC(=O)CC");
         ChemOptions c = new ChemOptions();
-        SearchEngine.MCSOptions m = new SearchEngine.MCSOptions();
-        Map<Integer,Integer> mcs = SearchEngine.findMCS(a, b, c, m);
-        double conf = SearchEngine.computeTautomerConfidence(a, b, mcs);
+        MCS.Options m = new MCS.Options();
+        Map<Integer,Integer> mcs = TestSupport.mcsMapping(a, b, c, m);
+        double conf = MCS.computeTautomerConfidence(a, b, mcs);
         assertEquals(1.0, conf, 1e-9);
       }
     }
@@ -355,17 +361,17 @@ public class FeaturesTest extends TestBase {
       void methaneImplicitVsBracket() throws Exception {
         IAtomContainer implicit = mol("C");
         IAtomContainer bracket  = mol("[CH4]");
-        SMSD a = new SMSD(implicit, bracket, OPTS);
-        assertTrue(a.isSubstructure(), "[CH4] should match implicit C");
-        SMSD b = new SMSD(bracket, implicit, OPTS);
-        assertTrue(b.isSubstructure(), "implicit C should match [CH4]");
+        MoleculePair a = new MoleculePair(implicit, bracket, OPTS);
+        assertTrue(a.contains(), "[CH4] should match implicit C");
+        MoleculePair b = new MoleculePair(bracket, implicit, OPTS);
+        assertTrue(b.contains(), "implicit C should match [CH4]");
       }
 
       @Test @Timeout(10) @DisplayName("1.02 benzene implicit vs bracketed aromatic H -- same MCS")
       void benzeneImplicitVsBracketed() throws Exception {
         IAtomContainer implicit  = mol("c1ccccc1");
         IAtomContainer bracketed = mol("[cH]1[cH][cH][cH][cH][cH]1");
-        Map<Integer, Integer> mcs = new SMSD(implicit, bracketed, OPTS).findMCS();
+        Map<Integer, Integer> mcs = new MoleculePair(implicit, bracketed, OPTS).mcsMapping();
         assertEquals(6, mcs.size(), "MCS should span all 6 carbons regardless of H notation");
       }
 
@@ -373,7 +379,7 @@ public class FeaturesTest extends TestBase {
       void ethanolImplicitVsExplicitCount() throws Exception {
         IAtomContainer a = mol("CCO");
         IAtomContainer b = mol("[CH3][CH2][OH]");
-        Map<Integer, Integer> mcs = new SMSD(a, b, OPTS).findMCS();
+        Map<Integer, Integer> mcs = new MoleculePair(a, b, OPTS).mcsMapping();
         assertEquals(3, mcs.size());
       }
 
@@ -381,7 +387,7 @@ public class FeaturesTest extends TestBase {
       void aspirinHeavyAtomCount() throws Exception {
         IAtomContainer implicit = mol("CC(=O)Oc1ccccc1C(=O)O");
         IAtomContainer explicit = mol("[CH3]C(=O)Oc1ccccc1C(=O)O");
-        Map<Integer, Integer> mcs = new SMSD(implicit, explicit, OPTS).findMCS();
+        Map<Integer, Integer> mcs = new MoleculePair(implicit, explicit, OPTS).mcsMapping();
         assertEquals(13, mcs.size(), "MCS must cover all 13 heavy atoms");
       }
     }
@@ -393,16 +399,16 @@ public class FeaturesTest extends TestBase {
       @Test @Timeout(10) @DisplayName("2.01 [H][H] hydrogen molecule -- 2-atom self match")
       void hydrogenMolecule() throws Exception {
         IAtomContainer h2 = mol("[H][H]");
-        SMSD smsd = new SMSD(h2, h2, OPTS);
-        assertTrue(smsd.isSubstructure(), "H2 should match itself");
+        MoleculePair smsd = new MoleculePair(h2, h2, OPTS);
+        assertTrue(smsd.contains(), "H2 should match itself");
       }
 
       @Test @Timeout(10) @DisplayName("2.02 explicit [H] query does NOT match implicit-H target")
       void explicitHQueryVsImplicitTarget() throws Exception {
         IAtomContainer withH    = mol("[H]C([H])([H])[H]");
         IAtomContainer withoutH = mol("C");
-        SMSD smsd = new SMSD(withH, withoutH, OPTS);
-        assertFalse(smsd.isSubstructure(),
+        MoleculePair smsd = new MoleculePair(withH, withoutH, OPTS);
+        assertFalse(smsd.contains(),
             "Explicit-H methane (5 atoms) cannot be substructure of implicit-H methane (1 atom)");
       }
 
@@ -410,7 +416,7 @@ public class FeaturesTest extends TestBase {
       void mcsExplicitVsImplicit() throws Exception {
         IAtomContainer water_explicit = mol("[H]O[H]");
         IAtomContainer water_implicit = mol("O");
-        Map<Integer, Integer> mcs = new SMSD(water_explicit, water_implicit, OPTS).findMCS();
+        Map<Integer, Integer> mcs = new MoleculePair(water_explicit, water_implicit, OPTS).mcsMapping();
         assertEquals(1, mcs.size(), "MCS across explicit/implicit water is the O atom");
       }
     }
@@ -425,16 +431,16 @@ public class FeaturesTest extends TestBase {
         IAtomContainer aniline = mol("Nc1ccccc1");
         ChemOptions loose = new ChemOptions();
         loose.matchBondOrder = ChemOptions.BondOrderMode.LOOSE;
-        SMSD smsd = new SMSD(nh2, aniline, loose);
-        assertTrue(smsd.isSubstructure(), "N (ammonia-like) should match aniline N in LOOSE mode");
+        MoleculePair smsd = new MoleculePair(nh2, aniline, loose);
+        assertTrue(smsd.contains(), "N (ammonia-like) should match aniline N in LOOSE mode");
       }
 
       @Test @Timeout(10) @DisplayName("3.02 secondary amine does not match primary-amine query in strict mode")
       void primaryVsSecondaryAmine() throws Exception {
         IAtomContainer primary   = mol("CN");
         IAtomContainer secondary = mol("CNC");
-        SMSD smsd = new SMSD(primary, secondary, OPTS);
-        Map<Integer, Integer> mcs = smsd.findMCS();
+        MoleculePair smsd = new MoleculePair(primary, secondary, OPTS);
+        Map<Integer, Integer> mcs = smsd.mcsMapping();
         assertTrue(mcs.size() >= 2, "C-N fragment should still map in MCS");
       }
 
@@ -442,8 +448,8 @@ public class FeaturesTest extends TestBase {
       void waterSymmetry() throws Exception {
         IAtomContainer implicit = mol("O");
         IAtomContainer explicit = mol("[OH2]");
-        assertTrue(new SMSD(implicit, explicit, OPTS).isSubstructure());
-        assertTrue(new SMSD(explicit, implicit, OPTS).isSubstructure());
+        assertTrue(new MoleculePair(implicit, explicit, OPTS).contains());
+        assertTrue(new MoleculePair(explicit, implicit, OPTS).contains());
       }
 
       @Test @Timeout(10) @DisplayName("3.04 charged species NH4+ has same heavy atom as NH3")
@@ -452,7 +458,7 @@ public class FeaturesTest extends TestBase {
         IAtomContainer nh4p = mol("[NH4+]");
         ChemOptions noCharge = new ChemOptions();
         noCharge.matchFormalCharge = false;
-        Map<Integer, Integer> mcs = new SMSD(nh3, nh4p, noCharge).findMCS();
+        Map<Integer, Integer> mcs = new MoleculePair(nh3, nh4p, noCharge).mcsMapping();
         assertEquals(1, mcs.size(), "MCS of NH3 and NH4+ is a single N when charge ignored");
       }
     }
@@ -463,9 +469,13 @@ public class FeaturesTest extends TestBase {
 
       @Test @Timeout(30) @DisplayName("4.01 morphine implicit vs bracketed-CH -- same MCS size")
       void morphineHNormalisation() throws Exception {
-        IAtomContainer std = mol("CN1CCC23C4C1CC5=C(C2C(C=C4)O3)C=C(C=C5)O");
-        IAtomContainer brk = mol("C[N]1CC[C@@]23[C@@H]4[C@H]1C[C@@H]5=C([C@@H]2[C@H](C=C4)O3)C=C(C=C5)O");
-        Map<Integer, Integer> mcs = new SMSD(std, brk, OPTS).findMCS();
+        IAtomContainer std = mol("CN1CC[C@]23[C@@H]4[C@H]1CC5=C2C(=C(C=C5)O)O[C@H]3[C@H](C=C4)O");
+        IAtomContainer brk = mol("C[N]1[CH2][CH2][C@]23[C@@H]4[C@H]1[CH2]C5=C2C(=C(C=C5)O)O[C@H]3[C@H](C=C4)O");
+        assertEquals(21, std.getAtomCount());
+        assertEquals(21, brk.getAtomCount());
+        assertEquals(new MolGraph(std).getCanonicalHash(), new MolGraph(brk).getCanonicalHash());
+        Map<Integer, Integer> mcs = new MoleculePair(std, brk, OPTS).mcsMapping();
+        assertEquals(21, mcs.size());
         assertTrue(mcs.size() >= 17,
             "Morphine MCS across H-notation variants must be >= 17 heavy atoms, got " + mcs.size());
       }
@@ -474,7 +484,7 @@ public class FeaturesTest extends TestBase {
       void caffeineTheophylline() throws Exception {
         IAtomContainer caff = mol("Cn1cnc2c1c(=O)n(C)c(=O)n2C");
         IAtomContainer theo = mol("Cn1cnc2c1c(=O)[nH]c(=O)n2C");
-        Map<Integer, Integer> mcs = new SMSD(caff, theo, OPTS).findMCS();
+        Map<Integer, Integer> mcs = new MoleculePair(caff, theo, OPTS).mcsMapping();
         assertTrue(mcs.size() >= 11,
             "Caffeine/theophylline MCS should be >= 11 regardless of [nH] notation, got " + mcs.size());
       }
@@ -483,7 +493,7 @@ public class FeaturesTest extends TestBase {
       void ibuprofenSelfMatch() throws Exception {
         IAtomContainer a = mol("CC(C)Cc1ccc(CC(C)C(=O)O)cc1");
         IAtomContainer b = mol("[CH3][C@@H]([CH3])Cc1ccc(CC(C)C(=O)O)cc1");
-        Map<Integer, Integer> mcs = new SMSD(a, b, OPTS).findMCS();
+        Map<Integer, Integer> mcs = new MoleculePair(a, b, OPTS).mcsMapping();
         assertTrue(mcs.size() >= 12,
             "Ibuprofen MCS across H/stereo notations must be >= 12, got " + mcs.size());
       }
@@ -497,7 +507,7 @@ public class FeaturesTest extends TestBase {
       void benzeneImplicit() throws Exception {
         IAtomContainer a = mol("c1ccccc1");
         IAtomContainer b = mol("c1ccccc1");
-        Map<Integer, Integer> mcs = new SMSD(a, b, OPTS).findMCS();
+        Map<Integer, Integer> mcs = new MoleculePair(a, b, OPTS).mcsMapping();
         assertEquals(6, mcs.size());
       }
 
@@ -505,7 +515,7 @@ public class FeaturesTest extends TestBase {
       void cyclohexaneHNotation() throws Exception {
         IAtomContainer a = mol("C1CCCCC1");
         IAtomContainer b = mol("[CH2]1[CH2][CH2][CH2][CH2][CH2]1");
-        Map<Integer, Integer> mcs = new SMSD(a, b, OPTS).findMCS();
+        Map<Integer, Integer> mcs = new MoleculePair(a, b, OPTS).mcsMapping();
         assertEquals(6, mcs.size());
       }
     }

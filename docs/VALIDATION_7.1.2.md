@@ -62,5 +62,5 @@ build/search-primitives
 
 Compile the same harness against an isolated checkout of `52733cb` for the
 baseline. Clique results retain the same maximum size (9). The NLF change also
-corrects its semantics to cumulative neighborhoods, so its label counts differ
+corrects its semantics to cumulative neighbourhoods, so its label counts differ
 where required for safe substructure pruning.

@@ -5,7 +5,7 @@
  * See the NOTICE file for attribution, trademark, and algorithm IP terms. *
  * GPU kernel dispatch API for graph matching acceleration.
  * Pure C++ header — no CUDA or Metal types.  Algorithm headers
- * (vf2pp.hpp, mcs.hpp) include this freely.
+ * (search.hpp, mcs.hpp) include this freely.
  *
  * When SMSD_ENABLE_CUDA or SMSD_ENABLE_METAL is defined, the functions
  * are declared extern and resolved at link time from graph_kernels.cu
@@ -14,12 +14,45 @@
  */
 #pragma once
 #include <cstdint>
+#include <cstddef>
+#include <cstdlib>
+#include <cstring>
 
 namespace smsd {
 namespace gpu_kern {
 
+namespace detail {
+
+inline bool disabledByEnvironment() noexcept {
+    const char* value = std::getenv("SMSD_DISABLE_GPU");
+    return value && value[0] != '\0' && std::strcmp(value, "0") != 0;
+}
+
+/** Preserve a valid allocation if growing the workspace fails. */
+template<class Runtime>
+struct DeviceWorkspace {
+    void* ptr = nullptr;
+    size_t capacity = 0;
+
+    bool ensure(size_t needed) {
+        if (needed <= capacity) return true;
+        void* replacement = nullptr;
+        if (!Runtime::allocate(&replacement, needed)) return false;
+        if (ptr) Runtime::release(ptr);
+        ptr = replacement;
+        capacity = needed;
+        return true;
+    }
+    ~DeviceWorkspace() { if (ptr) Runtime::release(ptr); }
+    DeviceWorkspace() = default;
+    DeviceWorkspace(const DeviceWorkspace&) = delete;
+    DeviceWorkspace& operator=(const DeviceWorkspace&) = delete;
+};
+
+} // namespace detail
+
 // ============================================================================
-// Kernel 1: Domain Initialization (Nq × Nt atom compatibility matrix)
+// Kernel 1: Domain Initialisation (Nq × Nt atom compatibility matrix)
 //
 // Computes the common-case atom compatibility checks (atomicNum, charge,
 // aromaticity, ringMatchesRingOnly) for all (qi, tj) pairs.  Output is
@@ -48,7 +81,7 @@ bool domainInit(
 // Kernel 2: NLF Batch Compute
 //
 // Pre-computes NLF-1 histograms for all atoms across multiple molecules.
-// Input: concatenated CSR adjacency (offsets + neighbor list + labels).
+// Input: concatenated CSR adjacency (offsets + neighbour list + labels).
 // Output: flat NLF pairs array.
 // Returns true if GPU succeeded.
 // ============================================================================
@@ -67,7 +100,7 @@ bool nlfBatchBuild(
 // Kernel 3: Batch Feasibility Check
 //
 // Evaluates feasibility for multiple (qi, tj) candidate pairs in parallel.
-// Checks: degree, NLF-1 subset, mapped-neighbor adjacency (bit-parallel).
+// Checks: degree, NLF-1 subset, mapped-neighbour adjacency (bit-parallel).
 // Bond compatibility stays on CPU.
 // Returns true if GPU succeeded.
 // ============================================================================

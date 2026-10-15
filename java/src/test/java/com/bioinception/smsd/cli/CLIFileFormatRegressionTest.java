@@ -5,6 +5,8 @@
  */
 package com.bioinception.smsd.cli;
 
+
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -179,7 +181,7 @@ class CLIFileFormatRegressionTest {
     assertTrue(error.getMessage().contains("molecule"));
     Path output = temporary.resolve("empty-result.json");
     StringWriter errors = new StringWriter();
-    assertEquals(1, cli(errors).execute("--Q", "SMI", "--q", "C", "--T", type,
+    assertEquals(2, cli(errors).execute("--Q", "SMI", "--q", "C", "--T", type,
         "--t", file.toString(), "--json", output.toString()));
     assertFalse(Files.exists(output));
     assertTrue(errors.toString().contains("molecule"));
@@ -197,7 +199,7 @@ class CLIFileFormatRegressionTest {
     assertThrows(IOException.class, () -> MolIO.loadQuery(type, file.toString()));
     Path output = temporary.resolve("multiple-result.json");
     StringWriter errors = new StringWriter();
-    assertEquals(1, cli(errors).execute("--Q", "SMI", "--q", "C", "--T", type,
+    assertEquals(2, cli(errors).execute("--Q", "SMI", "--q", "C", "--T", type,
         "--t", file.toString(), "--json", output.toString()));
     assertFalse(Files.exists(output));
     assertTrue(errors.toString().contains("exactly one"));

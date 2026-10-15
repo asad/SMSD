@@ -10,6 +10,7 @@
  */
 
 #include <cuda_runtime.h>
+#include "smsd/gpu_kernels.hpp"
 #include <cstdint>
 #include <cstdio>
 #include <algorithm>
@@ -28,23 +29,15 @@ namespace gpu_kern {
 // Avoids repeated cudaMalloc/cudaFree per kernel launch.
 // ============================================================================
 
-struct CudaWorkspace {
-    void* ptr = nullptr;
-    size_t capacity = 0;
-
-    void ensure(size_t needed) {
-        if (needed <= capacity) return;
-        if (ptr) cudaFree(ptr);
-        cudaMalloc(&ptr, needed);
-        capacity = needed;
+struct CudaRuntime {
+    static bool allocate(void** pointer, size_t bytes) {
+        if (cudaMalloc(pointer, bytes) == cudaSuccess) return true;
+        (void)cudaGetLastError();
+        return false;
     }
-
-    ~CudaWorkspace() { if (ptr) cudaFree(ptr); }
-
-    CudaWorkspace() = default;
-    CudaWorkspace(const CudaWorkspace&) = delete;
-    CudaWorkspace& operator=(const CudaWorkspace&) = delete;
+    static void release(void* pointer) { (void)cudaFree(pointer); }
 };
+using CudaWorkspace = detail::DeviceWorkspace<CudaRuntime>;
 
 static thread_local CudaWorkspace workspace;
 
@@ -58,12 +51,13 @@ static inline char* wsAt(size_t offset) {
 // ============================================================================
 
 bool graphKernelsAvailable() noexcept {
+    if (detail::disabledByEnvironment()) return false;
     int count = 0;
     return cudaGetDeviceCount(&count) == cudaSuccess && count > 0;
 }
 
 // ============================================================================
-// Kernel 1: Domain Initialization
+// Kernel 1: Domain Initialisation
 // ============================================================================
 
 __global__ void domainInitKernel(
@@ -125,7 +119,7 @@ bool domainInit(
     off = (off + 7) & ~size_t(7);
     size_t o_dom = off; off += domBytes;
 
-    workspace.ensure(off);
+    if (!workspace.ensure(off)) return false;
 
     int* d_qAN = reinterpret_cast<int*>(wsAt(o_qAN));
     int* d_qCh = reinterpret_cast<int*>(wsAt(o_qCh));
@@ -169,7 +163,7 @@ bool domainInit(
 // Kernel 2: NLF Batch Build
 // ============================================================================
 
-static constexpr int MAX_NLF_LABELS = 32;  // max distinct neighbor labels per atom
+static constexpr int MAX_NLF_LABELS = 32;  // max distinct neighbour labels per atom
 
 __global__ void nlfBuildKernel(
     int totalAtoms,
@@ -248,7 +242,7 @@ bool nlfBatchBuild(
     size_t o_nlfPairs = off; off += pairBytes;
     size_t o_nlfLens  = off; off += atomBytes;
 
-    workspace.ensure(off);
+    if (!workspace.ensure(off)) return false;
 
     int* d_offsets  = reinterpret_cast<int*>(wsAt(o_offsets));
     int* d_nbList   = reinterpret_cast<int*>(wsAt(o_nbList));
@@ -300,10 +294,10 @@ __global__ void feasibilityKernel(
     // Degree check
     if (tDegree[tj] < qDegree[qi]) { feasibleOut[idx] = 0; return; }
 
-    // Mapped-neighbor adjacency: for each mapped neighbor of qi,
+    // Mapped-neighbour adjacency: for each mapped neighbour of qi,
     // verify that tj is adjacent to the mapped target atom
     const unsigned long long* tAdj = &tAdjLong[tj * tWords];
-    // Note: we can't iterate query neighbors on GPU without the neighbor list.
+    // Note: we can't iterate query neighbours on GPU without the neighbour list.
     // This kernel handles the degree check; full adjacency stays on CPU.
     feasibleOut[idx] = 1;
 }
@@ -333,7 +327,7 @@ bool feasibilityBatch(
     off = (off + 7) & ~size_t(7);
     size_t o_tAdj   = off; off += adjBytes;
 
-    workspace.ensure(off);
+    if (!workspace.ensure(off)) return false;
 
     int* d_qi     = reinterpret_cast<int*>(wsAt(o_qi));
     int* d_tj     = reinterpret_cast<int*>(wsAt(o_tj));

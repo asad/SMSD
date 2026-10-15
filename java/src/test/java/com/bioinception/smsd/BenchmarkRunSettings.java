@@ -7,7 +7,7 @@ package com.bioinception.smsd;
 
 import com.bioinception.smsd.core.ChemOptions;
 import com.bioinception.smsd.core.MolGraph;
-import com.bioinception.smsd.core.SearchEngine;
+import com.bioinception.smsd.core.MCS;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -22,7 +22,7 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 
 /** Shared bounded protocol and flushed checkpoints for opt-in benchmark tests. */
 final class BenchmarkRunSettings {
-  static final long TIMEOUT_MS = positiveLong("smsd.benchmark.timeoutMs", 1000);
+  static final long TIMEOUT_MS = positiveLong("smsd.benchmark.timeoutMillis", 1000);
   static final int WARMUP = count("smsd.benchmark.warmup", 0, true);
   static final int ROUNDS = count("smsd.benchmark.rounds", 1, false);
   private static final Set<Path> STARTED = new HashSet<>();
@@ -54,7 +54,7 @@ final class BenchmarkRunSettings {
 
   static void validate(MolGraph query, MolGraph target,
                        Map<Integer, Integer> mapping, ChemOptions chemistry, String name) {
-    List<String> errors = SearchEngine.validateMapping(query, target, mapping, chemistry);
+    List<String> errors = MCS.validateMapping(query, target, mapping, chemistry);
     if (!errors.isEmpty()) throw new AssertionError(name + " invalid mapping: " + errors);
   }
 

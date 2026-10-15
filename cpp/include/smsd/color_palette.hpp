@@ -21,7 +21,7 @@ inline PaletteColor mapNumberToPaletteColor(int mapNumber) {
         {173, 216, 230}, // light blue
         {122, 201, 111}, // green
         {222, 166,  86}, // amber
-        {150, 150, 150}, // gray
+        {150, 150, 150}, // grey
         {255, 202,  58}, // gold
         { 79, 172, 232}, // blue
         {214,  93,  93}, // red
@@ -34,7 +34,7 @@ inline PaletteColor mapNumberToPaletteColor(int mapNumber) {
         {151, 174,  84}, // olive
         {205,  92,  92}, // indian red
         {232, 111,  91}, // coral
-        {209, 209, 209}, // light gray
+        {209, 209, 209}, // light grey
         {255,  53,  53}, // strong red
         {255, 140, 105}, // salmon
         { 75, 135, 185}  // steel blue

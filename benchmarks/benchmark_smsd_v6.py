@@ -111,12 +111,12 @@ def benchmark_mcs():
         g2 = smsd.parse_smiles(smi2)
 
         def run_mcs(a=g1, b=g2):
-            return smsd.find_mcs(a, b)
+            return smsd.MCS.find(a).match(b)
 
         median_ms, _ = time_func(run_mcs, warmup=2, iters=5)
 
-        mapping = smsd.find_mcs(g1, g2)
-        mcs_size = len(mapping)
+        mapping = smsd.MCS.find(g1).match(g2)
+        mcs_size = mapping.best.atom_count if mapping.found else 0
         results.append((name, mcs_size, median_ms))
     return results
 
@@ -166,10 +166,10 @@ def benchmark_batch_substructure():
     targets = [g for _, g in molecules]
 
     def run_batch():
-        return smsd.batch_substructure(query, targets)
+        return smsd.Substructure.find(query).match_many(targets)
 
     median_ms, _ = time_func(run_batch, warmup=1, iters=3)
-    hits = sum(smsd.batch_substructure(query, targets))
+    hits = sum(result.found for result in smsd.Substructure.find(query).match_many(targets))
     return (len(molecules), hits, median_ms)
 
 

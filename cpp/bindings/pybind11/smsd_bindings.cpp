@@ -4,7 +4,7 @@
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
  * See the NOTICE file for attribution, trademark, and algorithm IP terms. *
  * Python bindings for SMSD via pybind11.
- * Usage: import smsd; result = smsd.find_mcs(mol1, mol2)
+ * Usage: import smsd; result = smsd.MCS.find(query).match(target)
  */
 
 #include <pybind11/pybind11.h>
@@ -18,11 +18,12 @@
 #include "smsd/cip.hpp"
 #include "smsd/layout.hpp"
 #include "smsd/depict.hpp"
-#include "smsd/clique_solver.hpp"
+#include "smsd/substructure.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <exception>
 #include <functional>
 #include <map>
 #include <limits>
@@ -71,10 +72,18 @@ inline int smsd_ctz64(uint64_t x) {
 namespace py = pybind11;
 
 // ============================================================================
-// Fingerprint implementation (ported from Java SearchEngine)
+// Shared fingerprint implementation
 // ============================================================================
 
 namespace {
+
+/** Keep metadata mutations attached to the owning molecule. */
+struct PropertyView {
+    py::object owner;
+    std::map<std::string, std::string>& values() const {
+        return owner.cast<smsd::MolGraph&>().properties;
+    }
+};
 
 int fingerprintWords(int fpSize) {
     if (fpSize <= 0) throw std::invalid_argument("fp_size must be positive");
@@ -95,6 +104,29 @@ PythonGraphView graphView(const py::sequence& targets) {
         view.graphs.push_back(target.cast<const smsd::MolGraph&>());
     }
     return view;
+}
+
+/** Keep native failures outside the OpenMP region so Python receives an exception. */
+template<class Query>
+std::vector<smsd::SearchResult> matchMany(const Query& query, const py::sequence& targets, int numThreads) {
+    if (numThreads < 0) throw std::invalid_argument("num_threads must be non-negative");
+    auto view = graphView(targets);
+    std::vector<smsd::SearchResult> results(view.graphs.size());
+    std::vector<std::exception_ptr> failures(view.graphs.size());
+    {
+        py::gil_scoped_release release;
+#ifdef _OPENMP
+        const int workers = numThreads == 0 ? omp_get_max_threads() : numThreads;
+        #pragma omp parallel for schedule(dynamic, 1) num_threads(workers)
+#endif
+        for (int targetIndex = 0; targetIndex < static_cast<int>(view.graphs.size()); ++targetIndex) {
+            try { results[targetIndex] = query.match(view.graphs[targetIndex]); }
+            catch (...) { failures[targetIndex] = std::current_exception(); }
+        }
+    }
+    for (const auto& failure : failures)
+        if (failure) std::rethrow_exception(failure);
+    return results;
 }
 
 // Hash a path of atomic numbers (path fingerprint, simpler variant).
@@ -206,10 +238,17 @@ static bool fingerprintSubset(const std::vector<int>& fp1,
     return true;
 }
 
-// Analyze fingerprint quality: density, number of set bits, expected
+// Analyse fingerprint quality: density, number of set bits, expected
 // collision rate.
 static py::dict analyzeFpQuality(const std::vector<int>& fp, int fpSize = 2048) {
-    int setBits = static_cast<int>(fp.size());
+    if (fpSize <= 0) throw std::invalid_argument("Fingerprint size must be positive");
+    std::set<int> uniqueBits;
+    for (int bit : fp) {
+        if (bit < 0 || bit >= fpSize)
+            throw std::invalid_argument("Fingerprint bit is outside the declared size");
+        uniqueBits.insert(bit);
+    }
+    int setBits = static_cast<int>(uniqueBits.size());
     double density = static_cast<double>(setBits) / fpSize;
     // Expected collision probability for random hashing
     double expectedCollisions = 1.0 - std::exp(-static_cast<double>(setBits) / fpSize);
@@ -229,9 +268,6 @@ static py::dict analyzeFpQuality(const std::vector<int>& fp, int fpSize = 2048) 
 PYBIND11_MODULE(_smsd, m) {
     m.doc() = "SMSD -- Substructure & MCS search for chemical graphs";
 
-    // -----------------------------------------------------------------------
-    // Enums
-    // -----------------------------------------------------------------------
     py::enum_<smsd::ChemOptions::BondOrderMode>(m, "BondOrderMode")
         .value("STRICT", smsd::ChemOptions::BondOrderMode::STRICT)
         .value("LOOSE",  smsd::ChemOptions::BondOrderMode::LOOSE)
@@ -262,15 +298,6 @@ PYBIND11_MODULE(_smsd, m) {
         .value("DIETHYL_ETHER", smsd::ChemOptions::Solvent::DIETHYL_ETHER)
         .export_values();
 
-    py::enum_<smsd::ChemOptions::MatcherEngine>(m, "MatcherEngine")
-        .value("VF2",   smsd::ChemOptions::MatcherEngine::VF2)
-        .value("VF2PP", smsd::ChemOptions::MatcherEngine::VF2PP)
-        .value("VF3",   smsd::ChemOptions::MatcherEngine::VF3)
-        .export_values();
-
-    // -----------------------------------------------------------------------
-    // ChemOptions
-    // -----------------------------------------------------------------------
     py::class_<smsd::ChemOptions>(m, "ChemOptions")
         .def(py::init<>())
         // Atom matching
@@ -293,14 +320,10 @@ PYBIND11_MODULE(_smsd, m) {
         .def_readwrite("match_bond_order",      &smsd::ChemOptions::matchBondOrder)
         .def_readwrite("aromaticity_mode",      &smsd::ChemOptions::aromaticityMode)
         .def_readwrite("aromaticity_model",     &smsd::ChemOptions::aromaticityModel)
-        // Engine & pruning
-        .def_readwrite("matcher_engine",        &smsd::ChemOptions::matcherEngine)
-        .def_readwrite("induced",               &smsd::ChemOptions::induced)
-        .def_readwrite("use_two_hop_nlf",       &smsd::ChemOptions::useTwoHopNLF)
-        .def_readwrite("use_three_hop_nlf",     &smsd::ChemOptions::useThreeHopNLF)
-        .def_readwrite("use_bit_parallel_feasibility", &smsd::ChemOptions::useBitParallelFeasibility)
         // pH
         .def_readwrite("pH",                    &smsd::ChemOptions::pH)
+        .def("with_ph", &smsd::ChemOptions::withPH, py::arg("pH"),
+             "Set finite pH for the tautomer confidence helper, clamped to [0, 14]")
         // Ring fusion
         .def_readwrite("ring_fusion_mode",      &smsd::ChemOptions::ringFusionMode)
         // Named profiles
@@ -316,39 +339,42 @@ PYBIND11_MODULE(_smsd, m) {
                    std::string(o.tautomerAware ? "True" : "False") + ">";
         });
 
-    // -----------------------------------------------------------------------
-    // MCSOptions
-    // -----------------------------------------------------------------------
-    py::class_<smsd::MCSOptions>(m, "MCSOptions")
-        .def(py::init<>())
-        .def_readwrite("induced",           &smsd::MCSOptions::induced)
-        .def_readwrite("connected_only",    &smsd::MCSOptions::connectedOnly)
-        .def_readwrite("disconnected_mcs",  &smsd::MCSOptions::disconnectedMCS)
-        .def_readwrite("maximize_bonds",    &smsd::MCSOptions::maximizeBonds)
-        .def_readwrite("min_fragment_size", &smsd::MCSOptions::minFragmentSize)
-        .def_readwrite("max_fragments",     &smsd::MCSOptions::maxFragments)
-        .def_readwrite("atom_weights",      &smsd::MCSOptions::atomWeights)
-        .def_readwrite("timeout_ms",        &smsd::MCSOptions::timeoutMs)
-        .def_readwrite("extra_seeds",       &smsd::MCSOptions::extraSeeds)
-        .def_readwrite("template_fuzzy_atoms", &smsd::MCSOptions::templateFuzzyAtoms)
-        .def_readwrite("near_mcs_delta",     &smsd::MCSOptions::nearMCSDelta)
-        .def_readwrite("near_mcs_candidates", &smsd::MCSOptions::nearMCSCandidates)
-        .def_readwrite("max_stage",          &smsd::MCSOptions::maxStage)
-        .def_readwrite("seed_neighborhood_radius",     &smsd::MCSOptions::seedNeighborhoodRadius)
-        .def_readwrite("seed_max_anchors",             &smsd::MCSOptions::seedMaxAnchors)
-        .def_readwrite("use_two_hop_nlf_in_extension", &smsd::MCSOptions::useTwoHopNLFInExtension)
-        .def_readwrite("use_three_hop_nlf_in_extension", &smsd::MCSOptions::useThreeHopNLFInExtension)
-        .def("__repr__", [](const smsd::MCSOptions& o) {
-            return "<MCSOptions induced=" +
-                   std::string(o.induced ? "True" : "False") +
-                   " connected_only=" +
-                   std::string(o.connectedOnly ? "True" : "False") +
-                   " timeout_ms=" + std::to_string(o.timeoutMs) + ">";
-        });
+    py::class_<PropertyView>(m, "_Properties")
+        .def("__len__", [](const PropertyView& view) { return view.values().size(); })
+        .def("__contains__", [](const PropertyView& view, const std::string& key) {
+            return view.values().count(key) != 0;
+        })
+        .def("__getitem__", [](const PropertyView& view, const std::string& key) {
+            auto entry = view.values().find(key);
+            if (entry == view.values().end()) throw py::key_error(key);
+            return entry->second;
+        })
+        .def("__setitem__", [](PropertyView& view, const std::string& key, const std::string& value) {
+            view.values()[key] = value;
+        })
+        .def("__delitem__", [](PropertyView& view, const std::string& key) {
+            if (view.values().erase(key) == 0) throw py::key_error(key);
+        })
+        .def("__iter__", [](const PropertyView& view) { return py::iter(py::cast(view.values())); })
+        .def("keys", [](const PropertyView& view) { return py::cast(view.values()).attr("keys")(); })
+        .def("items", [](const PropertyView& view) { return py::cast(view.values()).attr("items")(); })
+        .def("values", [](const PropertyView& view) { return py::cast(view.values()).attr("values")(); })
+        .def("get", [](const PropertyView& view, const std::string& key, py::object fallback) -> py::object {
+            auto entry = view.values().find(key);
+            return entry == view.values().end() ? fallback : py::cast(entry->second);
+        }, py::arg("key"), py::arg("default") = py::none())
+        .def("update", [](PropertyView& view, const py::dict& values) {
+            const auto entries = values.cast<std::map<std::string, std::string>>();
+            for (const auto& entry : entries) view.values()[entry.first] = entry.second;
+        }, py::arg("values"))
+        .def("clear", [](PropertyView& view) { view.values().clear(); })
+        .def("copy", [](const PropertyView& view) { return py::cast(view.values()); })
+        .def("__repr__", [](const PropertyView& view) { return py::repr(py::cast(view.values())); })
+        .def("__eq__", [](const PropertyView& view, py::object other) {
+            py::object values = py::cast(view.values());
+            return values.equal(py::hasattr(other, "keys") ? py::object(py::dict(other)) : other);
+        }, py::is_operator());
 
-    // -----------------------------------------------------------------------
-    // MolGraph
-    // -----------------------------------------------------------------------
     py::class_<smsd::MolGraph>(m, "MolGraph")
         .def(py::init<>())
         .def_readonly("n",          &smsd::MolGraph::n)
@@ -363,12 +389,24 @@ PYBIND11_MODULE(_smsd, m) {
         .def_readwrite("name",         &smsd::MolGraph::name)
         .def_readwrite("program_line", &smsd::MolGraph::programLine)
         .def_readwrite("comment",      &smsd::MolGraph::comment)
-        .def_readwrite("properties",   &smsd::MolGraph::properties)
+        .def_property("properties", [](py::object owner) { return PropertyView{owner}; },
+            [](smsd::MolGraph& graph, const std::map<std::string, std::string>& values) {
+                graph.properties = values;
+            })
         .def_readonly("label",         &smsd::MolGraph::label)
         .def_readonly("tautomer_class",&smsd::MolGraph::tautomerClass)
-        .def_readonly("morgan_rank",   &smsd::MolGraph::morganRank)
-        .def_readonly("canonical_label", &smsd::MolGraph::canonicalLabel)
-        .def_readonly("orbit",         &smsd::MolGraph::orbit)
+        .def_property_readonly("morgan_rank", [](const smsd::MolGraph& graph) {
+            const std::lock_guard<std::recursive_mutex> cacheLock(graph.lazyCacheMutex());
+            return graph.morganRank;
+        })
+        .def_property_readonly("canonical_label", [](const smsd::MolGraph& graph) {
+            const std::lock_guard<std::recursive_mutex> cacheLock(graph.lazyCacheMutex());
+            return graph.canonicalLabel;
+        })
+        .def_property_readonly("orbit", [](const smsd::MolGraph& graph) {
+            const std::lock_guard<std::recursive_mutex> cacheLock(graph.lazyCacheMutex());
+            return graph.orbit;
+        })
         .def_readonly("neighbors",     &smsd::MolGraph::neighbors)
         .def("bonds", [](const smsd::MolGraph& g) {
                  std::vector<std::tuple<int,int,int>> result;
@@ -470,9 +508,6 @@ PYBIND11_MODULE(_smsd, m) {
         })
         .def("__len__", [](const smsd::MolGraph& g) { return g.n; });
 
-    // -----------------------------------------------------------------------
-    // MolGraph.Builder
-    // -----------------------------------------------------------------------
     py::class_<smsd::MolGraph::Builder>(m, "MolGraphBuilder")
         .def(py::init<>())
         .def("atom_count", [](smsd::MolGraph::Builder& b, int n) -> smsd::MolGraph::Builder& {
@@ -544,17 +579,11 @@ PYBIND11_MODULE(_smsd, m) {
              py::arg("aromaticity_model") = smsd::AromaticityModel::DAYLIGHT_LIKE,
              "Build the immutable MolGraph, optionally running aromaticity perception");
 
-    // -----------------------------------------------------------------------
-    // ParseOptions (for lenient SMILES parsing)
-    // -----------------------------------------------------------------------
     py::class_<smsd::ParseOptions>(m, "ParseOptions")
         .def(py::init<>())
         .def_readwrite("lenient", &smsd::ParseOptions::lenient,
                        "If true, recover from malformed SMILES instead of throwing");
 
-    // -----------------------------------------------------------------------
-    // SMILES parser / writer
-    // -----------------------------------------------------------------------
     m.def("parse_smiles",
           static_cast<smsd::MolGraph (*)(const std::string&)>(&smsd::parseSMILES),
           py::arg("smiles"),
@@ -581,62 +610,114 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("mol"),
           "Write a MolGraph as a single SDF record");
 
-    // -----------------------------------------------------------------------
-    // Substructure search
-    // -----------------------------------------------------------------------
-    m.def("is_substructure", &smsd::isSubstructure,
-          py::arg("query"), py::arg("target"),
-          py::arg("opts") = smsd::ChemOptions(),
-          py::arg("timeout_ms") = 10000,
-          py::call_guard<py::gil_scoped_release>(),
-          "Check if query is a substructure of target");
+    py::enum_<smsd::SearchStatus>(m, "SearchStatus")
+        .value("COMPLETED", smsd::SearchStatus::Completed)
+        .value("TIMED_OUT", smsd::SearchStatus::TimedOut)
+        .value("CANCELLED", smsd::SearchStatus::Cancelled)
+        .value("LIMIT_REACHED", smsd::SearchStatus::LimitReached);
 
-    m.def("find_substructure", &smsd::findSubstructure,
-          py::arg("query"), py::arg("target"),
-          py::arg("opts") = smsd::ChemOptions(),
-          py::arg("timeout_ms") = 10000,
-          py::call_guard<py::gil_scoped_release>(),
-          "Find one substructure mapping (query->target atom pairs)");
+    py::class_<smsd::CancellationToken, std::shared_ptr<smsd::CancellationToken>>(m, "CancellationToken")
+        .def(py::init<>())
+        .def("cancel", &smsd::CancellationToken::cancel)
+        .def_property_readonly("is_cancelled", &smsd::CancellationToken::isCancelled);
 
-    // -----------------------------------------------------------------------
-    // MCS search
-    // -----------------------------------------------------------------------
-    m.def("find_mcs",
-          [](const smsd::MolGraph& g1, const smsd::MolGraph& g2,
-             const smsd::ChemOptions& chem, smsd::MCSOptions opts,
-             int64_t timeout_ms) {
-              if (timeout_ms > 0) opts.timeoutMs = timeout_ms;
-              return smsd::findMCS(g1, g2, chem, opts);
-          },
-          py::arg("g1"), py::arg("g2"),
-          py::arg("chem") = smsd::ChemOptions(),
-          py::arg("opts") = smsd::MCSOptions(),
-          py::arg("timeout_ms") = -1,
-          py::call_guard<py::gil_scoped_release>(),
-          "Find Maximum Common Substructure. timeout_ms overrides opts.timeout_ms if > 0.");
+    py::class_<smsd::SearchOptions>(m, "_SearchOptions")
+        .def(py::init<>())
+        .def_readwrite("chemistry", &smsd::SearchOptions::chemistry)
+        .def_readwrite("timeout_ms", &smsd::SearchOptions::timeoutMs)
+        .def_readwrite("node_limit", &smsd::SearchOptions::nodeLimit)
+        .def_readwrite("cancellation", &smsd::SearchOptions::cancellation);
 
-    m.def("find_all_mcs",
-          [](const smsd::MolGraph& g1, const smsd::MolGraph& g2,
-             const smsd::ChemOptions& chem, smsd::MCSOptions opts,
-             int maxResults, int64_t timeout_ms) {
-              if (timeout_ms > 0) opts.timeoutMs = timeout_ms;
-              return smsd::findAllMCS(g1, g2, chem, opts, maxResults);
-          },
-          py::arg("g1"), py::arg("g2"),
-          py::arg("chem") = smsd::ChemOptions(),
-          py::arg("opts") = smsd::MCSOptions(),
-          py::arg("max_results") = 10,
-          py::arg("timeout_ms") = -1,
-          py::call_guard<py::gil_scoped_release>(),
-          "Find multiple distinct MCS mappings of the maximum size.\n"
-          "Returns a list of dicts, each mapping query atom index to target atom index.\n"
-          "max_results caps the number of solutions (default 10).\n"
-          "timeout_ms overrides opts.timeout_ms if > 0.");
+    py::class_<smsd::Match>(m, "Match")
+        .def(py::init<>())
+        .def_readwrite("atom_mapping", &smsd::Match::atomMapping)
+        .def_readwrite("bond_mapping", &smsd::Match::bondMapping)
+        .def_readwrite("fragments", &smsd::Match::fragments)
+        .def("to_graph", &smsd::Match::toGraph, py::arg("query"))
+        .def("to_smiles", &smsd::Match::toSmiles, py::arg("query"));
 
-    m.def("canonicalize_mapping",
+    py::class_<smsd::SearchResult>(m, "SearchResult")
+        .def_readonly("matches", &smsd::SearchResult::matches)
+        .def_readonly("status", &smsd::SearchResult::status)
+        .def_readonly("optimal", &smsd::SearchResult::optimal)
+        .def_readonly("complete", &smsd::SearchResult::complete)
+        .def_readonly("score", &smsd::SearchResult::score)
+        .def_readonly("nodes_visited", &smsd::SearchResult::nodesVisited)
+        .def_readonly("elapsed_ms", &smsd::SearchResult::elapsedMillis);
+
+    auto mcs = py::class_<smsd::MCS>(m, "MCS");
+    py::enum_<smsd::MCS::Objective>(mcs, "Objective")
+        .value("MCIS", smsd::MCS::Objective::MCIS)
+        .value("MCES", smsd::MCS::Objective::MCES);
+    py::enum_<smsd::MCS::Connectivity>(mcs, "Connectivity")
+        .value("CONNECTED", smsd::MCS::Connectivity::Connected)
+        .value("FRAGMENTS", smsd::MCS::Connectivity::Fragments);
+    py::class_<smsd::MCS::Options, smsd::SearchOptions>(mcs, "Options")
+        .def(py::init<>())
+        .def(py::init<const smsd::MCS::Options&>())
+        .def_readwrite("objective", &smsd::MCS::Options::objective)
+        .def_readwrite("connectivity", &smsd::MCS::Options::connectivity)
+        .def_readwrite("atom_weights", &smsd::MCS::Options::atomWeights)
+        .def_readwrite("min_fragment_atoms", &smsd::MCS::Options::minFragmentAtoms)
+        .def_readwrite("max_fragments", &smsd::MCS::Options::maxFragments)
+        .def_readwrite("excluded_target_atoms", &smsd::MCS::Options::excludedTargetAtoms);
+    mcs.def_static("find", py::overload_cast<const smsd::MolGraph&>(&smsd::MCS::find), py::arg("query"))
+        .def("with_options", &smsd::MCS::withOptions, py::arg("options"))
+        .def("with_timeout", &smsd::MCS::withTimeout, py::arg("milliseconds"))
+        .def("match", py::overload_cast<const smsd::MolGraph&>(&smsd::MCS::match, py::const_),
+             py::arg("target"), py::call_guard<py::gil_scoped_release>())
+        .def("match_all", [](const smsd::MCS& query, const smsd::MolGraph& target, int limit) {
+            if (limit < 1) throw std::invalid_argument("limit must be positive");
+            py::gil_scoped_release release;
+            return query.matchAll(target, static_cast<size_t>(limit));
+        }, py::arg("target"), py::arg("limit") = 1000)
+        .def("match_many", &matchMany<smsd::MCS>, py::arg("targets"), py::arg("num_threads") = 0);
+
+    py::class_<smsd::MCS::ConsensusResult>(mcs, "ConsensusResult")
+        .def_readonly("fragment", &smsd::MCS::ConsensusResult::fragment)
+        .def_readonly("source_index", &smsd::MCS::ConsensusResult::sourceIndex)
+        .def_readonly("graph", &smsd::MCS::ConsensusResult::graph)
+        .def_readonly("mappings", &smsd::MCS::ConsensusResult::mappings)
+        .def_readonly("support_count", &smsd::MCS::ConsensusResult::supportCount)
+        .def_readonly("found", &smsd::MCS::ConsensusResult::found)
+        .def_readonly("status", &smsd::MCS::ConsensusResult::status)
+        .def_readonly("optimal", &smsd::MCS::ConsensusResult::optimal)
+        .def_readonly("complete", &smsd::MCS::ConsensusResult::complete)
+        .def_readonly("nodes_visited", &smsd::MCS::ConsensusResult::nodesVisited)
+        .def_readonly("elapsed_ms", &smsd::MCS::ConsensusResult::elapsedMillis)
+        .def("to_smiles", &smsd::MCS::ConsensusResult::toSmiles);
+    mcs.def_static("consensus", &smsd::MCS::consensus,
+        py::arg("molecules"), py::arg("options") = smsd::MCS::Options(), py::arg("threshold") = 1.0,
+        py::call_guard<py::gil_scoped_release>());
+    mcs.def_static("match_constrained", &smsd::MCS::matchConstrained,
+        py::arg("queries"), py::arg("target"), py::arg("options") = smsd::MCS::Options(),
+        py::call_guard<py::gil_scoped_release>());
+    mcs.def_static("compute_tautomer_confidence", &smsd::MCS::computeTautomerConfidence,
+        py::arg("query"), py::arg("target"), py::arg("match"), py::arg("chemistry"),
+        py::call_guard<py::gil_scoped_release>());
+
+    auto substructure = py::class_<smsd::Substructure>(m, "Substructure");
+    py::class_<smsd::Substructure::Options, smsd::SearchOptions>(substructure, "Options")
+        .def(py::init<>())
+        .def(py::init<const smsd::Substructure::Options&>())
+        .def_readwrite("induced", &smsd::Substructure::Options::induced);
+    substructure.def_static("find", py::overload_cast<const smsd::MolGraph&>(&smsd::Substructure::find), py::arg("query"))
+        .def_static("smarts", py::overload_cast<const std::string&>(&smsd::Substructure::smarts), py::arg("query"))
+        .def("with_options", &smsd::Substructure::withOptions, py::arg("options"))
+        .def("with_timeout", &smsd::Substructure::withTimeout, py::arg("milliseconds"))
+        .def("match", py::overload_cast<const smsd::MolGraph&>(&smsd::Substructure::match, py::const_),
+             py::arg("target"), py::call_guard<py::gil_scoped_release>())
+        .def("match_all", [](const smsd::Substructure& query, const smsd::MolGraph& target, int limit) {
+            if (limit < 1) throw std::invalid_argument("limit must be positive");
+            py::gil_scoped_release release;
+            return query.matchAll(target, static_cast<size_t>(limit));
+        }, py::arg("target"), py::arg("limit") = 1000)
+        .def("match_many", &matchMany<smsd::Substructure>, py::arg("targets"), py::arg("num_threads") = 0);
+
+    mcs.def_static("canonicalize_mapping",
           [](const smsd::MolGraph& g1, const smsd::MolGraph& g2,
              const std::map<int,int>& mapping) {
-              return smsd::canonicalizeMapping(g1, g2, mapping);
+              return smsd::MCS::canonicalizeMapping(g1, g2, mapping);
           },
           py::arg("g1"), py::arg("g2"), py::arg("mapping"),
           py::call_guard<py::gil_scoped_release>(),
@@ -644,51 +725,6 @@ PYBIND11_MODULE(_smsd, m) {
           "both molecules. Returns the lexicographically smallest equivalent\n"
           "mapping. Two mappings that differ only by symmetry of g1 and/or g2\n"
           "will produce the same canonical result.");
-
-    m.def("mcs_size",
-          [](const smsd::MolGraph& g1, const smsd::MolGraph& g2,
-             const smsd::ChemOptions& chem, smsd::MCSOptions opts,
-             int64_t timeout_ms) {
-              if (timeout_ms > 0) opts.timeoutMs = timeout_ms;
-              return smsd::findMCSSize(g1, g2, chem, opts);
-          },
-          py::arg("g1"), py::arg("g2"),
-          py::arg("chem") = smsd::ChemOptions(),
-          py::arg("opts") = smsd::MCSOptions(),
-          py::arg("timeout_ms") = 500,
-          py::call_guard<py::gil_scoped_release>(),
-          "Return MCS size only (faster for screening). Default timeout 500ms.");
-
-    m.def("find_mcs_progressive",
-          [](const smsd::MolGraph& g1, const smsd::MolGraph& g2,
-             const smsd::ChemOptions& chem, smsd::MCSOptions opts,
-             py::object callback, int64_t timeout_ms) {
-              if (timeout_ms > 0) opts.timeoutMs = timeout_ms;
-              // Check is_none() BEFORE releasing GIL (py::object access needs GIL)
-              bool hasCallback = !callback.is_none();
-              if (!hasCallback) {
-                  py::gil_scoped_release release;
-                  return smsd::findMCS(g1, g2, chem, opts);
-              }
-              // The synchronous callback borrows this owner until the GIL is restored.
-              py::object cb = callback;
-              smsd::MCSProgressFn fn = [&cb](
-                  const std::map<int,int>& best, int bestSize, int64_t elapsedMs) {
-                  py::gil_scoped_acquire acq;
-                  cb(best, bestSize, elapsedMs);
-              };
-              {
-                  py::gil_scoped_release release;
-                  return smsd::findMCS(g1, g2, chem, opts, fn);
-              }
-          },
-          py::arg("g1"), py::arg("g2"),
-          py::arg("chem") = smsd::ChemOptions(),
-          py::arg("opts") = smsd::MCSOptions(),
-          py::arg("callback") = py::none(),
-          py::arg("timeout_ms") = -1,
-          "Find MCS with optional progress callback.\n"
-          "callback(best_mapping, best_size, elapsed_ms) is called once with the final result.");
 
     m.def("translate_to_atom_ids",
           [](const std::map<int,int>& mapping,
@@ -705,79 +741,31 @@ PYBIND11_MODULE(_smsd, m) {
           "tautomeric groups. Returns True if consistent, False if proton "
           "counts mismatch (impossible proton transfer required).");
 
-    m.def("mcs_to_smiles", &smsd::mcsToSmiles,
-          py::arg("g"), py::arg("mapping"),
-          "Extract the MCS induced subgraph as a canonical SMILES string. "
-          "Takes the query MolGraph and the MCS mapping (query->target). "
-          "Returns \"\" if the mapping is empty.");
-
-    m.def("find_mcs_smiles",
-          [](const smsd::MolGraph& g1, const smsd::MolGraph& g2,
-             const smsd::ChemOptions& chem, smsd::MCSOptions opts,
-             int64_t timeout_ms) {
-              if (timeout_ms > 0) opts.timeoutMs = timeout_ms;
-              return smsd::findMCSSmiles(g1, g2, chem, opts);
+    m.def("similarity_upper_bound",
+          [](const smsd::MolGraph& g1, const smsd::MolGraph& g2, const smsd::ChemOptions& chemistry) {
+              return smsd::similarityUpperBound(g1, g2, chemistry);
           },
-          py::arg("g1"), py::arg("g2"),
-          py::arg("chem") = smsd::ChemOptions(),
-          py::arg("opts") = smsd::MCSOptions(),
-          py::arg("timeout_ms") = -1,
-          py::call_guard<py::gil_scoped_release>(),
-          "Compute MCS and return it as a canonical SMILES string. "
-          "timeout_ms overrides opts.timeout_ms if > 0.");
-
-    // -----------------------------------------------------------------------
-    // Batch MCS with non-overlap constraints (v6.6.0)
-    // -----------------------------------------------------------------------
-    m.def("batch_mcs_constrained",
-          [](const std::vector<smsd::MolGraph>& queries,
-             const std::vector<smsd::MolGraph>& targets,
-             const smsd::ChemOptions& chem,
-             const smsd::MCSOptions& opts) {
-              return smsd::batchMCSConstrained(queries, targets, chem, opts);
-          },
-          py::arg("queries"), py::arg("targets"),
-          py::arg("chem") = smsd::ChemOptions(),
-          py::arg("opts") = smsd::MCSOptions(),
-          py::call_guard<py::gil_scoped_release>(),
-          "Find MCS across multiple molecule pairs with non-overlap\n"
-          "atom exclusion constraints. Larger pairs processed first.\n"
-          "Returns list of mappings (same order as input).");
-
-    m.def("batch_mcs_constrained_with_targets",
-          [](const std::vector<smsd::MolGraph>& queries,
-             const std::vector<smsd::MolGraph>& targets,
-             smsd::ChemOptions chem, smsd::MCSOptions opts) {
-              std::vector<int> selected;
-              auto mappings = smsd::batchMCSConstrained(queries, targets, chem, opts, &selected);
-              return std::make_pair(std::move(mappings), std::move(selected));
-          }, py::arg("queries"), py::arg("targets"),
-          py::arg("chem") = smsd::ChemOptions(), py::arg("opts") = smsd::MCSOptions(),
-          py::call_guard<py::gil_scoped_release>(),
-          "Return constrained mappings and their selected target indices.");
-
-    // -----------------------------------------------------------------------
-    // RASCAL screening
-    // -----------------------------------------------------------------------
-    m.def("similarity_upper_bound", &smsd::similarityUpperBound,
-          py::arg("g1"), py::arg("g2"),
+          py::arg("g1"), py::arg("g2"), py::arg("chem") = smsd::ChemOptions(),
           "RASCAL O(V+E) similarity upper bound");
 
-    m.def("screen_targets", &smsd::screenTargets,
-          py::arg("query"), py::arg("targets"), py::arg("threshold"),
+    m.def("screen_targets",
+          [](const smsd::MolGraph& query, const std::vector<smsd::MolGraph>& targets,
+             double threshold, const smsd::ChemOptions& chemistry) {
+              return smsd::screenTargets(query, targets, threshold, chemistry);
+          },
+          py::arg("query"), py::arg("targets"), py::arg("threshold"), py::arg("chem") = smsd::ChemOptions(),
           py::call_guard<py::gil_scoped_release>(),
           "Batch RASCAL screening: returns indices of targets above threshold");
 
-    // -----------------------------------------------------------------------
-    // Fingerprints
-    // -----------------------------------------------------------------------
     m.def("path_fingerprint", &pathFingerprint,
           py::arg("mol"), py::arg("path_length") = 7, py::arg("fp_size") = 2048,
           "Compute path-based fingerprint. Returns list of set bit positions.");
 
     m.def("mcs_fingerprint",
-          [](const smsd::MolGraph& mol, int pathLength, int fpSize) {
-              auto fp = smsd::batch::detail::computeMCSFingerprint(mol, pathLength, fpSize);
+          [](const smsd::MolGraph& mol, int pathLength, int fpSize, bool tautomerAware) {
+              smsd::ChemOptions chemistry;
+              chemistry.tautomerAware = tautomerAware;
+              auto fp = smsd::batch::detail::computeMCSFingerprintForChemistry(mol, pathLength, fpSize, chemistry);
               std::vector<int> bits;
               for (size_t w = 0; w < fp.size(); ++w)
                   for (int b = 0; b < 64; ++b)
@@ -788,6 +776,7 @@ PYBIND11_MODULE(_smsd, m) {
               return bits;
           },
           py::arg("mol"), py::arg("path_length") = 7, py::arg("fp_size") = 2048,
+          py::arg("tautomer_aware") = false,
           "Compute MCS-aware path fingerprint. Returns list of set bit positions.");
 
     m.def("fingerprint_subset", &fingerprintSubset,
@@ -798,9 +787,6 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("fp"), py::arg("fp_size") = 2048,
           "Analyze fingerprint quality: density, set bits, collision rate");
 
-    // -----------------------------------------------------------------------
-    // SMARTS writer
-    // -----------------------------------------------------------------------
     m.def("to_smarts",
           [](const smsd::MolGraph& g,
              bool inclArom, bool inclCharge,
@@ -821,9 +807,6 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("include_isotope")     = false,
           "Generate canonical SMARTS with configurable predicates");
 
-    // -----------------------------------------------------------------------
-    // GPU / compute backend
-    // -----------------------------------------------------------------------
     m.def("gpu_is_available",
           []() { return smsd::gpu::isAvailable(); },
           "True when a GPU is available at runtime (CUDA on Linux/Windows, "
@@ -836,111 +819,6 @@ PYBIND11_MODULE(_smsd, m) {
           "  'GPU: Tesla T4 (compute 7.5)  [OpenMP 4.5, 8 threads]'\n"
           "  'Metal GPU: Apple M2 Pro  [OpenMP 5.0, 10 threads]'\n"
           "  'CPU: OpenMP 4.5, 16 threads'");
-
-    // -----------------------------------------------------------------------
-    // Parallel batch operations (OpenMP on CPU, CUDA on GPU when available)
-    // -----------------------------------------------------------------------
-    m.def("batch_substructure",
-          [](const smsd::MolGraph& query,
-             const py::sequence& targets,
-             smsd::ChemOptions opts,
-             int numThreads, int64_t timeoutMs) {
-              auto view = graphView(targets);
-              py::gil_scoped_release release;
-              return smsd::batch::batchSubstructureImpl(query, view.graphs, opts, numThreads, timeoutMs);
-          },
-          py::arg("query"), py::arg("targets"),
-          py::arg("opts")        = smsd::ChemOptions(),
-          py::arg("num_threads") = 0,
-          py::arg("timeout_ms") = 10000,
-          "Parallel 1-query-vs-N substructure check. Returns list[bool]. "
-          "num_threads=0 uses all available processors.");
-
-    m.def("batch_find_substructure",
-          [](const smsd::MolGraph& query,
-             const py::sequence& targets,
-             smsd::ChemOptions opts,
-             int numThreads, int64_t timeoutMs) {
-              auto view = graphView(targets);
-              py::gil_scoped_release release;
-              return smsd::batch::batchFindSubstructureImpl(query, view.graphs, opts, numThreads, timeoutMs);
-          },
-          py::arg("query"), py::arg("targets"),
-          py::arg("opts")        = smsd::ChemOptions(),
-          py::arg("num_threads") = 0,
-          py::arg("timeout_ms") = 10000,
-          "Parallel 1-query-vs-N substructure with atom mappings. "
-          "Returns list[list[tuple[int,int]]]. Empty inner list = no match. "
-          "num_threads=0 uses all available processors.");
-
-    m.def("batch_mcs",
-          [](const smsd::MolGraph& query,
-             const py::sequence& targets,
-             smsd::ChemOptions chem,
-             smsd::MCSOptions opts,
-             int numThreads) {
-              auto view = graphView(targets);
-              py::gil_scoped_release release;
-              return smsd::batch::batchMCSImpl(query, view.graphs, chem, opts, numThreads);
-          },
-          py::arg("query"), py::arg("targets"),
-          py::arg("chem")        = smsd::ChemOptions(),
-          py::arg("opts")        = smsd::MCSOptions(),
-          py::arg("num_threads") = 0,
-          "Parallel 1-query-vs-N MCS. Returns list[dict] of atom mappings. "
-          "num_threads=0 uses all available processors.");
-
-    m.def("batch_mcs_size",
-          [](const smsd::MolGraph& query,
-             const py::sequence& targets,
-             smsd::ChemOptions chem,
-             smsd::MCSOptions opts,
-             int numThreads) {
-              auto view = graphView(targets);
-              py::gil_scoped_release release;
-              return smsd::batch::batchMCSSizeImpl(query, view.graphs, chem, opts, numThreads);
-          },
-          py::arg("query"), py::arg("targets"),
-          py::arg("chem")        = smsd::ChemOptions(),
-          py::arg("opts")        = smsd::MCSOptions(),
-          py::arg("num_threads") = 0,
-          "Parallel 1-query-vs-N MCS size only. Returns list[int]. "
-          "num_threads=0 uses all available processors.");
-
-    // -----------------------------------------------------------------------
-    // Batch screening + fingerprint
-    // -----------------------------------------------------------------------
-    m.def("screen_and_match",
-          [](const smsd::MolGraph& query,
-             const std::vector<smsd::MolGraph>& targets,
-             double threshold,
-             const smsd::ChemOptions& chem,
-             const smsd::MCSOptions& opts,
-             int numThreads) {
-              return smsd::batch::screenAndMatch(query, targets, chem, opts, threshold, numThreads);
-          },
-          py::arg("query"), py::arg("targets"), py::arg("threshold"),
-          py::arg("chem")        = smsd::ChemOptions(),
-          py::arg("opts")        = smsd::MCSOptions(),
-          py::arg("num_threads") = 0,
-          py::call_guard<py::gil_scoped_release>(),
-          "RASCAL pre-screen + exact MCS on hits. Returns list[(index, mapping)].");
-
-    m.def("screen_and_mcs_size",
-          [](const smsd::MolGraph& query,
-             const std::vector<smsd::MolGraph>& targets,
-             double threshold,
-             const smsd::ChemOptions& chem,
-             const smsd::MCSOptions& opts,
-             int numThreads) {
-              return smsd::batch::screenAndMCSSize(query, targets, chem, opts, threshold, numThreads);
-          },
-          py::arg("query"), py::arg("targets"), py::arg("threshold"),
-          py::arg("chem")        = smsd::ChemOptions(),
-          py::arg("opts")        = smsd::MCSOptions(),
-          py::arg("num_threads") = 0,
-          py::call_guard<py::gil_scoped_release>(),
-          "RASCAL pre-screen + exact MCS size on hits. Returns list[(index, size)].");
 
     m.def("batch_fingerprint",
           [](const std::vector<smsd::MolGraph>& mols,
@@ -963,22 +841,26 @@ PYBIND11_MODULE(_smsd, m) {
           py::call_guard<py::gil_scoped_release>(),
           "Parallel fingerprint subset screening: returns indices where query is subset of target.");
 
-    // -----------------------------------------------------------------------
-    // TargetCorpus: pre-warmed target collection for repeated queries
-    // -----------------------------------------------------------------------
     py::class_<smsd::batch::TargetCorpus>(m, "TargetCorpus",
         "Pre-warmed, fingerprinted target collection for efficient repeated queries. "
         "Call prewarm() once after loading targets, then run substructure / MCS / screen "
         "queries many times without redundant graph invariant computation.")
         .def(py::init<>())
         .def("add_target",
-             [](smsd::batch::TargetCorpus& self, smsd::MolGraph g) {
-                 self.addTarget(std::move(g));
+             [](smsd::batch::TargetCorpus& self, const smsd::MolGraph& g) {
+                 smsd::batch::detail::prewarmGraph(g);
+                 self.addTarget(g);
              },
              py::arg("mol"),
              "Add a single target molecule.")
         .def("add_targets",
-             [](smsd::batch::TargetCorpus& self, std::vector<smsd::MolGraph> gs) {
+             [](smsd::batch::TargetCorpus& self, const py::iterable& molecules) {
+                 std::vector<smsd::MolGraph> gs;
+                 for (py::handle molecule : molecules) {
+                     const auto& graph = py::cast<const smsd::MolGraph&>(molecule);
+                     smsd::batch::detail::prewarmGraph(graph);
+                     gs.push_back(graph);
+                 }
                  self.addTargets(std::move(gs));
              },
              py::arg("mols"),
@@ -993,43 +875,9 @@ PYBIND11_MODULE(_smsd, m) {
              "num_threads=0 uses all available processors.")
         .def("__len__", &smsd::batch::TargetCorpus::size,
              "Number of targets in the corpus.")
+        .def("targets", &smsd::batch::TargetCorpus::targets)
         .def_property_readonly("is_prewarmed", &smsd::batch::TargetCorpus::isPrewarmed,
              "True if prewarm() has been called since last target addition.")
-        .def("substructure",
-             [](const smsd::batch::TargetCorpus& self,
-                const smsd::MolGraph& query, const smsd::ChemOptions& opts,
-                int nThreads) {
-                 return self.substructure(query, opts, nThreads);
-             },
-             py::arg("query"),
-             py::arg("opts")        = smsd::ChemOptions(),
-             py::arg("num_threads") = 0,
-             py::call_guard<py::gil_scoped_release>(),
-             "Check if query is a substructure of each target. Returns list[bool].")
-        .def("find_substructure",
-             [](const smsd::batch::TargetCorpus& self,
-                const smsd::MolGraph& query, const smsd::ChemOptions& opts,
-                int nThreads) {
-                 return self.findSubstructure(query, opts, nThreads);
-             },
-             py::arg("query"),
-             py::arg("opts")        = smsd::ChemOptions(),
-             py::arg("num_threads") = 0,
-             py::call_guard<py::gil_scoped_release>(),
-             "Find substructure atom mappings for query vs each target. "
-             "Returns list[list[tuple[int,int]]]. Empty inner list = no match.")
-        .def("mcs_size",
-             [](const smsd::batch::TargetCorpus& self,
-                const smsd::MolGraph& query, const smsd::ChemOptions& chem,
-                const smsd::MCSOptions& opts, int nThreads) {
-                 return self.mcsSize(query, chem, opts, nThreads);
-             },
-             py::arg("query"),
-             py::arg("chem")        = smsd::ChemOptions(),
-             py::arg("opts")        = smsd::MCSOptions(),
-             py::arg("num_threads") = 0,
-             py::call_guard<py::gil_scoped_release>(),
-             "MCS size between query and each target. Returns list[int].")
         .def("screen",
              [](const smsd::batch::TargetCorpus& self,
                 const smsd::MolGraph& query, double threshold, int nThreads) {
@@ -1042,9 +890,6 @@ PYBIND11_MODULE(_smsd, m) {
              "Tanimoto fingerprint screening. Returns indices of targets above threshold. "
              "Requires prewarm() to have been called.");
 
-    // -----------------------------------------------------------------------
-    // Circular Fingerprints (ECFP / FCFP)
-    // -----------------------------------------------------------------------
     m.def("circular_fingerprint",
           [](const smsd::MolGraph& mol, int radius, int fpSize,
              const std::string& mode) {
@@ -1068,9 +913,6 @@ PYBIND11_MODULE(_smsd, m) {
           "Circular fingerprint (Morgan). mode='ecfp' (structural) or 'fcfp' "
           "(pharmacophoric). Returns list of set bit positions.");
 
-    // -----------------------------------------------------------------------
-    // Count-based Circular Fingerprints (ECFP/FCFP counts) — v6.0.1
-    // -----------------------------------------------------------------------
     m.def("circular_fingerprint_counts",
           [](const smsd::MolGraph& mol, int radius, int fpSize,
              const std::string& mode) {
@@ -1093,9 +935,6 @@ PYBIND11_MODULE(_smsd, m) {
           "tuples for non-zero bins. Preserves multiplicity information lost by "
           "binary fingerprints.");
 
-    // -----------------------------------------------------------------------
-    // Topological Torsion Fingerprint (Nilakantan et al. 1987) — v6.0.1
-    // -----------------------------------------------------------------------
     m.def("topological_torsion",
           [](const smsd::MolGraph& mol, int fpSize) {
               auto fp = smsd::batch::detail::computeTopologicalTorsion(mol, fpSize);
@@ -1133,8 +972,6 @@ PYBIND11_MODULE(_smsd, m) {
           "(bit_position, count) tuples for non-zero bins.");
 
     // -----------------------------------------------------------------------
-    // Tanimoto similarity
-    // -----------------------------------------------------------------------
     auto overlapCoefficient_fn = [](const std::vector<int>& fp1, const std::vector<int>& fp2,
              int fpSize) {
               // Convert set-bit lists to uint64_t arrays, compute Tanimoto
@@ -1153,9 +990,6 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("fp1"), py::arg("fp2"), py::arg("fp_size") = 2048,
           "Deprecated alias for overlapCoefficient.");
 
-    // -----------------------------------------------------------------------
-    // Dice similarity
-    // -----------------------------------------------------------------------
     m.def("dice",
           [](const std::vector<int>& fp1, const std::vector<int>& fp2,
              int fpSize) {
@@ -1172,9 +1006,6 @@ PYBIND11_MODULE(_smsd, m) {
           "Dice = 2*|A&B| / (|A| + |B|). Weights shared features more heavily "
           "than Tanimoto.");
 
-    // -----------------------------------------------------------------------
-    // Cosine similarity
-    // -----------------------------------------------------------------------
     m.def("cosine",
           [](const std::vector<int>& fp1, const std::vector<int>& fp2,
              int fpSize) {
@@ -1190,9 +1021,6 @@ PYBIND11_MODULE(_smsd, m) {
           "Cosine similarity between two fingerprints (lists of set bit positions). "
           "Cosine = |A&B| / sqrt(|A| * |B|). Normalises for fingerprint density.");
 
-    // -----------------------------------------------------------------------
-    // Soergel distance
-    // -----------------------------------------------------------------------
     m.def("soergel",
           [](const std::vector<int>& fp1, const std::vector<int>& fp2,
              int fpSize) {
@@ -1209,8 +1037,6 @@ PYBIND11_MODULE(_smsd, m) {
           "Soergel = 1 - Tanimoto. A proper metric distance for clustering.");
 
     // -----------------------------------------------------------------------
-    // Count-vector Tanimoto
-    // -----------------------------------------------------------------------
     auto count_overlapCoefficient_fn = [](const std::vector<int>& fp1, const std::vector<int>& fp2) {
               return smsd::batch::countTanimoto(fp1, fp2);
           };
@@ -1222,9 +1048,6 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("fp1"), py::arg("fp2"),
           "Deprecated alias for count_overlapCoefficient.");
 
-    // -----------------------------------------------------------------------
-    // Count-vector Dice
-    // -----------------------------------------------------------------------
     m.def("count_dice",
           [](const std::vector<int>& fp1, const std::vector<int>& fp2) {
               return smsd::batch::countDice(fp1, fp2);
@@ -1233,9 +1056,6 @@ PYBIND11_MODULE(_smsd, m) {
           "Count-vector Dice: 2*sum(min(a,b)) / (sum(a) + sum(b)). "
           "Generalisation of Dice for integer count vectors.");
 
-    // -----------------------------------------------------------------------
-    // Count-vector Cosine
-    // -----------------------------------------------------------------------
     m.def("count_cosine",
           [](const std::vector<int>& fp1, const std::vector<int>& fp2) {
               return smsd::batch::countCosine(fp1, fp2);
@@ -1244,9 +1064,6 @@ PYBIND11_MODULE(_smsd, m) {
           "Count-vector Cosine: dot(a,b) / (|a| * |b|). "
           "Generalisation of cosine similarity for integer count vectors.");
 
-    // -----------------------------------------------------------------------
-    // Fingerprint Format Conversions
-    // -----------------------------------------------------------------------
     m.def("to_hex",
           [](const std::vector<int>& fp, int fpSize) {
               int numWords = fingerprintWords(fpSize);
@@ -1282,9 +1099,6 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("fp"), py::arg("fp_size") = 2048,
           "Convert fingerprint to binary string of 0s and 1s.");
 
-    // -----------------------------------------------------------------------
-    // CIP stereo descriptors
-    // -----------------------------------------------------------------------
     py::enum_<smsd::cip::RSLabel>(m, "RSLabel",
         "CIP tetrahedral stereo descriptor (R, S, or NONE)")
         .value("NONE", smsd::cip::RSLabel::NONE)
@@ -1335,85 +1149,6 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("smiles"),
           "Parse SMILES and compute CIP descriptors");
 
-    // -----------------------------------------------------------------------
-    // SMARTS-based MCS
-    // -----------------------------------------------------------------------
-    m.def("find_mcs_smarts",
-          [](const std::string& smartsStr, const smsd::MolGraph& target,
-             int maxMatches) {
-              return smsd::findMCSSmarts(smartsStr, target, maxMatches);
-          },
-          py::arg("smarts"), py::arg("target"),
-          py::arg("max_matches") = 1000,
-          "Find the largest SMARTS substructure match in a target molecule.\n"
-          "Returns a dict mapping SMARTS atom indices to target atom indices.\n"
-          "If no match, returns an empty dict.");
-
-    m.def("smarts_match",
-          [](const std::string& smartsStr, const smsd::MolGraph& target) {
-              auto q = smsd::parseSMARTS(smartsStr);
-              return q.matches(target);
-          },
-          py::arg("smarts"), py::arg("target"),
-          "Check if a SMARTS pattern matches a target molecule. Returns bool.");
-
-    m.def("smarts_find_all",
-          [](const std::string& smartsStr, const smsd::MolGraph& target,
-             int maxMatches) {
-              auto q = smsd::parseSMARTS(smartsStr);
-              return q.findAll(target, maxMatches);
-          },
-          py::arg("smarts"), py::arg("target"),
-          py::arg("max_matches") = 1000,
-          "Find all SMARTS substructure matches in a target molecule.\n"
-          "Returns list of dicts (SMARTS atom idx -> target atom idx).");
-
-    py::class_<smsd::SmartsQuery>(m, "SmartsQuery")
-        .def("atom_count", &smsd::SmartsQuery::atomCount,
-             "Number of atoms in the compiled SMARTS query")
-        .def("matching_order", &smsd::SmartsQuery::matchingOrder,
-             "Return the historical/debug BFS matching order for the query")
-        .def("matches", &smsd::SmartsQuery::matches,
-             py::arg("target"),
-             py::call_guard<py::gil_scoped_release>(),
-             "Check if this compiled SMARTS query matches a target molecule")
-        .def("find_all", &smsd::SmartsQuery::findAll,
-             py::arg("target"),
-             py::arg("max_matches") = 1000,
-             py::call_guard<py::gil_scoped_release>(),
-             "Find all matches of this compiled SMARTS query in a target molecule")
-        .def("matches_many",
-             [](const smsd::SmartsQuery& query,
-                const py::sequence& targets) {
-                 auto view = graphView(targets);
-                 py::gil_scoped_release release;
-                 std::vector<bool> results;
-                 results.reserve(view.graphs.size());
-                 for (const smsd::MolGraph& target : view.graphs) {
-                     results.push_back(query.matches(target));
-                 }
-                 return results;
-             },
-             py::arg("targets"),
-             "Match one compiled SMARTS query against many targets")
-        .def("__len__", &smsd::SmartsQuery::atomCount)
-        .def("__repr__", [](const smsd::SmartsQuery& q) {
-            return "<SmartsQuery atoms=" + std::to_string(q.atomCount()) + ">";
-        });
-
-    m.def("compile_smarts",
-          [](const std::string& smartsStr, int maxRecursionDepth) {
-              return smsd::parseSMARTS(smartsStr, maxRecursionDepth);
-          },
-          py::arg("smarts"),
-          py::arg("max_recursion_depth") = 20,
-          py::call_guard<py::gil_scoped_release>(),
-          "Parse SMARTS once and return a reusable compiled query object.");
-
-    // -----------------------------------------------------------------------
-    // Ring layout utilities
-    // -----------------------------------------------------------------------
-
     m.def("compute_sssr",
           [](const smsd::MolGraph& g) {
               return smsd::computeSSSR(g);
@@ -1429,10 +1164,6 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("mol"),
           "Return SSSR rings optimized for 2D coordinate generation:\n"
           "largest ring system first, fused rings by adjacency, smallest first.");
-
-    // -----------------------------------------------------------------------
-    // Point2D + reduceCrossings
-    // -----------------------------------------------------------------------
 
     py::class_<smsd::Point2D>(m, "Point2D")
         .def(py::init<>())
@@ -1473,10 +1204,6 @@ PYBIND11_MODULE(_smsd, m) {
           "coords: list of [x, y] pairs for each atom.\n"
           "Returns (crossings_remaining, updated_coords).");
 
-    // -----------------------------------------------------------------------
-    // Force-directed layout
-    // -----------------------------------------------------------------------
-
     m.def("force_directed_layout",
           [](const smsd::MolGraph& g, py::list coordsList,
              int maxIter, double targetBondLength) {
@@ -1507,10 +1234,6 @@ PYBIND11_MODULE(_smsd, m) {
           "coords: list of [x, y] pairs for each atom.\n"
           "Returns (final_stress, updated_coords).");
 
-    // -----------------------------------------------------------------------
-    // Stress majorisation (SMACOF)
-    // -----------------------------------------------------------------------
-
     m.def("stress_majorisation",
           [](const smsd::MolGraph& g, py::list coordsList,
              int maxIter, double targetBondLength) {
@@ -1540,10 +1263,6 @@ PYBIND11_MODULE(_smsd, m) {
           "coords: list of [x, y] pairs for each atom.\n"
           "Returns (final_stress, updated_coords).");
 
-    // -----------------------------------------------------------------------
-    // Template matching
-    // -----------------------------------------------------------------------
-
     m.def("match_template",
           [](const smsd::MolGraph& g, double targetBondLength) {
               auto result = smsd::matchTemplate(g, targetBondLength);
@@ -1560,102 +1279,37 @@ PYBIND11_MODULE(_smsd, m) {
           "Supports: benzene, naphthalene, indole, purine, steroid, morphinan,\n"
           "quinoline, biphenyl, cyclohexane, piperidine.");
 
-    // ===================================================================
-    // Extended API — v6.11.0
-    // ===================================================================
+    mcs.def_static("validate_mapping",
+          py::overload_cast<const smsd::MolGraph&, const smsd::MolGraph&, const smsd::Match&, const smsd::MCS::Options&>(&smsd::MCS::validateMapping),
+          py::arg("query"), py::arg("target"), py::arg("match"), py::arg("options") = smsd::MCS::Options());
+    mcs.def_static("validate_mapping",
+          py::overload_cast<const smsd::MolGraph&, const smsd::MolGraph&, const std::map<int,int>&, const smsd::MCS::Options&>(&smsd::MCS::validateMapping),
+          py::arg("query"), py::arg("target"), py::arg("match"), py::arg("options") = smsd::MCS::Options());
+    mcs.def_static("is_mapping_maximal",
+          py::overload_cast<const smsd::MolGraph&, const smsd::MolGraph&, const smsd::Match&, const smsd::MCS::Options&>(&smsd::MCS::isMappingMaximal),
+          py::arg("query"), py::arg("target"), py::arg("match"), py::arg("options") = smsd::MCS::Options());
+    mcs.def_static("is_mapping_maximal",
+          py::overload_cast<const smsd::MolGraph&, const smsd::MolGraph&, const std::map<int,int>&, const smsd::MCS::Options&>(&smsd::MCS::isMappingMaximal),
+          py::arg("query"), py::arg("target"), py::arg("match"), py::arg("options") = smsd::MCS::Options());
 
-    // -----------------------------------------------------------------------
-    // Multi-molecule & scaffold MCS
-    // -----------------------------------------------------------------------
-
-    m.def("find_nmcs",
-          [](const std::vector<smsd::MolGraph>& molecules,
-             const smsd::ChemOptions& opts,
-             double threshold, int64_t timeoutMs) {
-              py::gil_scoped_release release;
-              return smsd::findNMCS(molecules, opts, threshold, timeoutMs);
-          },
-          py::arg("molecules"),
-          py::arg("opts") = smsd::ChemOptions(),
-          py::arg("threshold") = 1.0,
-          py::arg("timeout_ms") = 30000,
-          "N-molecule MCS via sequential pairwise reduction.\n"
-          "Finds the common substructure shared by ALL input molecules.\n"
-          "threshold: fraction of molecules that must contain the MCS (0.0-1.0).\n"
-          "Returns mapping from atom indices in the smallest molecule to MCS positions.");
-
-    m.def("find_scaffold_mcs",
-          [](const smsd::MolGraph& g1, const smsd::MolGraph& g2,
-             const smsd::ChemOptions& opts, const smsd::MCSOptions& mopts) {
-              py::gil_scoped_release release;
-              return smsd::findScaffoldMCS(g1, g2, opts, mopts);
-          },
-          py::arg("mol1"), py::arg("mol2"),
-          py::arg("opts") = smsd::ChemOptions(),
-          py::arg("mcs_opts") = smsd::MCSOptions(),
-          "MCS on Murcko scaffolds of two molecules.\n"
-          "Strips side chains first, then computes MCS on ring frameworks.\n"
-          "Useful for scaffold-hopping analysis in medicinal chemistry.");
-
-    // -----------------------------------------------------------------------
-    // Mapping validation & maximality
-    // -----------------------------------------------------------------------
-
-    m.def("validate_mapping",
-          [](const smsd::MolGraph& g1, const smsd::MolGraph& g2,
-             const std::map<int,int>& mapping, const smsd::ChemOptions& opts) {
-              return smsd::validateMapping(g1, g2, mapping, opts);
-          },
-          py::arg("mol1"), py::arg("mol2"),
-          py::arg("mapping"), py::arg("opts") = smsd::ChemOptions(),
-          "Validate an atom mapping between two molecules.\n"
-          "Returns a list of error strings (empty = valid).\n"
-          "Checks atom compatibility, bond presence, and bond compatibility.");
-
-    m.def("is_mapping_maximal",
-          &smsd::isMappingMaximal,
-          py::arg("mol1"), py::arg("mol2"),
-          py::arg("mapping"), py::arg("opts") = smsd::ChemOptions(),
-          "Check if an MCS mapping is maximal (cannot be extended).\n"
-          "Returns True if no additional atom pair can be added to the mapping.\n"
-          "A non-maximal mapping indicates the MCS search terminated early.");
-
-    // -----------------------------------------------------------------------
-    // R-group decomposition
-    // -----------------------------------------------------------------------
-
-    m.def("decompose_rgroups",
-          [](const smsd::MolGraph& core,
-             const std::vector<smsd::MolGraph>& molecules,
-             const smsd::ChemOptions& opts,
-             int64_t timeoutMs) {
+    substructure.def_static("decompose_r_groups",
+          [](const smsd::MolGraph& core, const std::vector<smsd::MolGraph>& molecules,
+             const smsd::Substructure::Options& options) {
               std::vector<smsd::RGroupResult> results;
               { py::gil_scoped_release release;
-                results = smsd::decomposeRGroups(core, molecules, opts, timeoutMs); }
-              // Convert to Python: list of dicts with 'core' and 'rgroups'
+                results = smsd::Substructure::decomposeRGroups(core, molecules, options); }
               py::list out;
-              for (auto& r : results) {
-                  py::dict d;
-                  d["core"] = r.core;
-                  py::dict rg;
-                  for (auto& [name, mol] : r.rgroups) {
-                      rg[py::cast(name)] = mol;
-                  }
-                  d["rgroups"] = rg;
-                  out.append(d);
+              for (auto& result : results) {
+                  py::dict item;
+                  item["core"] = result.core;
+                  py::dict groups;
+                  for (auto& group : result.rgroups) groups[py::cast(group.first)] = group.second;
+                  item["rgroups"] = groups;
+                  item["search"] = result.search;
+                  out.append(item);
               }
               return out;
-          },
-          py::arg("core"), py::arg("molecules"),
-          py::arg("opts") = smsd::ChemOptions(),
-          py::arg("timeout_ms") = 10000,
-          "R-group decomposition: decompose molecules into core + R-groups.\n"
-          "Returns list of dicts, each with 'core' (MolGraph) and 'rgroups' (dict of name->MolGraph).\n"
-          "Core is matched as a substructure; non-core connected components become R1, R2, etc.");
-
-    // -----------------------------------------------------------------------
-    // Graph utilities
-    // -----------------------------------------------------------------------
+          }, py::arg("core"), py::arg("targets"), py::arg("options") = smsd::Substructure::Options());
 
     m.def("extract_subgraph",
           &smsd::extractSubgraph,
@@ -1672,46 +1326,24 @@ PYBIND11_MODULE(_smsd, m) {
           "on shortest paths between rings. Essential for scaffold analysis.");
 
     m.def("count_components",
-          static_cast<int (*)(const smsd::MolGraph&)>(&smsd::detail::countComponents),
+          static_cast<int (*)(const smsd::MolGraph&)>(&smsd::search_detail::countComponents),
           py::arg("mol"),
           "Count the number of connected components in a molecule.\n"
           "Returns 1 for normal connected molecules, >1 for salts/mixtures.");
 
     m.def("split_components",
-          &smsd::detail::splitComponents,
+          &smsd::search_detail::splitComponents,
           py::arg("mol"),
           "Split a molecule into its connected components.\n"
           "Returns a list of MolGraphs, one per connected component.\n"
           "Useful for separating salts, counterions, or mixture components.");
 
     m.def("same_canonical_graph",
-          &smsd::detail::sameCanonicalGraph,
+          &smsd::search_detail::sameCanonicalGraph,
           py::arg("mol1"), py::arg("mol2"),
           "Check if two molecules are canonically identical.\n"
           "Compares canonical SMILES — fast graph isomorphism test.\n"
           "Does not consider stereochemistry unless encoded in SMILES.");
-
-    // -----------------------------------------------------------------------
-    // All substructure matches
-    // -----------------------------------------------------------------------
-
-    m.def("find_all_substructures",
-          [](const smsd::MolGraph& query, const smsd::MolGraph& target,
-             const smsd::ChemOptions& opts, int64_t timeoutMs) {
-              py::gil_scoped_release release;
-              return smsd::findAllSubstructures(query, target, opts, timeoutMs);
-          },
-          py::arg("query"), py::arg("target"),
-          py::arg("opts") = smsd::ChemOptions(),
-          py::arg("timeout_ms") = 10000,
-          "Find ALL substructure mappings (up to 10,000).\n"
-          "Returns list of mappings, each a list of (query_atom, target_atom) pairs.\n"
-          "CAUTION: Can be memory-intensive for symmetric molecules (e.g. benzene\n"
-          "has 12 automorphisms). Use find_substructure() for a single match.");
-
-    // -----------------------------------------------------------------------
-    // File I/O
-    // -----------------------------------------------------------------------
 
     m.def("read_mol_file",
           &smsd::readMolFile,
@@ -1734,10 +1366,6 @@ PYBIND11_MODULE(_smsd, m) {
           "Write a list of MolGraphs to an SDF file.\n"
           "Each molecule is written as a V2000 MOL block followed by $$$$.");
 
-    // -----------------------------------------------------------------------
-    // Pharmacophore classification
-    // -----------------------------------------------------------------------
-
     m.def("classify_pharmacophore",
           &smsd::batch::detail::classifyPharmacophore,
           py::arg("mol"), py::arg("atom_index"),
@@ -1750,12 +1378,8 @@ PYBIND11_MODULE(_smsd, m) {
           &smsd::batch::detail::implicitH,
           py::arg("atomic_num"), py::arg("bond_order_sum"), py::arg("formal_charge"),
           "Compute implicit hydrogen count for an atom.\n"
-          "Uses MDL valence model: H = default_valence - bond_order_sum - |charge|.\n"
+          "Uses element- and charge-dependent default valences.\n"
           "Returns 0 if result would be negative (hypervalent atoms).");
-
-    // -----------------------------------------------------------------------
-    // Layout utilities
-    // -----------------------------------------------------------------------
 
     m.def("count_crossings",
           [](const smsd::MolGraph& g, py::list coordsList) {
@@ -1795,10 +1419,6 @@ PYBIND11_MODULE(_smsd, m) {
           "Returns True if the layout has zero width or height.\n"
           "Use before reduce_crossings() to detect bad initial layouts.");
 
-    // -----------------------------------------------------------------------
-    // Fingerprint utilities
-    // -----------------------------------------------------------------------
-
     m.def("counts_to_array",
           &smsd::batch::countsToArray,
           py::arg("counts"), py::arg("fp_size") = 2048,
@@ -1813,11 +1433,6 @@ PYBIND11_MODULE(_smsd, m) {
           "Call this once before repeated MCS/substructure operations on the same\n"
           "molecule to avoid redundant recomputation. Reduces latency 10-30%%.");
 
-    // ===================================================================
-    // Layout engine v6.11.0 — 2D/3D generation, transforms, quality
-    // ===================================================================
-
-    // Point3D type
     py::class_<smsd::Point3D>(m, "Point3D")
         .def(py::init<>())
         .def(py::init([](double x, double y, double z) {
@@ -1831,7 +1446,6 @@ PYBIND11_MODULE(_smsd, m) {
                    + std::to_string(p.y) + ", " + std::to_string(p.z) + ")";
         });
 
-    // Comprehensive 2D coordinate generation (multi-phase pipeline)
     m.def("generate_coords_2d",
           [](const smsd::MolGraph& g, double targetBondLength) {
               std::vector<smsd::Point2D> coords;
@@ -1849,7 +1463,6 @@ PYBIND11_MODULE(_smsd, m) {
           "-> canonical orientation -> bond length normalisation.\n"
           "Returns list of (x, y) tuples.");
 
-    // 3D coordinate generation
     m.def("generate_coords_3d",
           [](const smsd::MolGraph& g, double targetBondLength) {
               std::vector<smsd::Point3D> coords;
@@ -1867,7 +1480,6 @@ PYBIND11_MODULE(_smsd, m) {
           "NOTE: For production conformer generation, external tools (ETKDG, MMFF)\n"
           "are recommended. This provides a reasonable starting geometry.");
 
-    // Layout quality score
     m.def("layout_quality",
           [](const smsd::MolGraph& g, py::list coordsList, double targetBondLength) {
               std::vector<smsd::Point2D> coords(g.n);
@@ -1885,7 +1497,6 @@ PYBIND11_MODULE(_smsd, m) {
           "Combines bond length uniformity, overlap count, and crossing count.\n"
           "Use to compare different layout strategies.");
 
-    // Overlap resolution
     m.def("resolve_overlaps",
           [](py::list coordsList, double threshold, int maxIter) {
               std::vector<smsd::Point2D> coords;
@@ -1908,8 +1519,6 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("coords"), py::arg("threshold") = 0.3, py::arg("max_iter") = 100,
           "Resolve atom-atom overlaps by pushing apart.\n"
           "Returns (remaining_overlaps, updated_coords).");
-
-    // --- Coordinate transforms ---
 
     m.def("translate_2d",
           [](py::list coordsList, double dx, double dy) {
@@ -2079,10 +1688,6 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("mol"), py::arg("coords"),
           "Rotate to canonical orientation (30-degree grid alignment).");
 
-    // ══════════════════════════════════════════════════════════════════════
-    //  Depiction — Publication-Quality SVG Rendering (v6.11.0)
-    // ═════��════════════════════════════���═══════════════════════════════════
-
     py::class_<smsd::DepictOptions>(m, "DepictOptions",
         "SVG depiction options for bond, atom-label and highlight styling.")
         .def(py::init<>())
@@ -2162,99 +1767,12 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("opts") = smsd::DepictOptions(),
           "Render MCS comparison of two SMILES as SVG (side-by-side with highlights).");
 
-    // -------------------------------------------------------------------
-    // Clique solver bindings (v6.12.0)
-    // -------------------------------------------------------------------
-    py::class_<smsd::clique::ProductGraph>(m, "ProductGraph")
-        .def(py::init<>())
-        .def_readwrite("n", &smsd::clique::ProductGraph::n)
-        .def_readwrite("vertices", &smsd::clique::ProductGraph::vertices)
-        .def_readwrite("adj", &smsd::clique::ProductGraph::adj);
 
-    py::class_<smsd::clique::ProductVertex>(m, "ProductVertex")
-        .def(py::init<>())
-        .def_readwrite("query_atom", &smsd::clique::ProductVertex::query_atom)
-        .def_readwrite("target_atom", &smsd::clique::ProductVertex::target_atom);
 
-    py::class_<smsd::clique::CliqueResult>(m, "CliqueResult")
-        .def_readonly("cliques", &smsd::clique::CliqueResult::cliques)
-        .def_readonly("max_size", &smsd::clique::CliqueResult::max_size)
-        .def_readonly("timed_out", &smsd::clique::CliqueResult::timed_out)
-        .def_readonly("elapsed_us", &smsd::clique::CliqueResult::elapsed_us);
 
-    m.def("find_max_cliques",
-          &smsd::clique::findMaxCliques,
-          py::arg("pg"),
-          py::arg("max_cliques") = 8,
-          py::arg("timeout_ms") = 1000,
-          py::arg("incumbent_size") = 0,
-          py::call_guard<py::gil_scoped_release>(),
-          "Find maximum cliques in a product graph.");
 
-    py::class_<smsd::clique::MCSResult>(m, "CliqueMCSResult")
-        .def_readonly("candidates", &smsd::clique::MCSResult::candidates)
-        .def_readonly("best_size", &smsd::clique::MCSResult::best_size)
-        .def_readonly("upper_bound", &smsd::clique::MCSResult::lfub)
-        .def_readonly("elapsed_us", &smsd::clique::MCSResult::elapsed_us);
 
-    m.def("find_mcs_clique",
-          &smsd::clique::findMCSPipeline,
-          py::arg("compat"),
-          py::arg("bonds_a"), py::arg("bonds_b"),
-          py::arg("n_a"), py::arg("n_b"),
-          py::arg("bond_any") = true,
-          py::arg("timeout_ms") = 1000,
-          py::arg("max_results") = 8,
-          py::arg("ring_a") = std::vector<bool>{},
-          py::arg("ring_b") = std::vector<bool>{},
-          py::arg("arom_a") = std::vector<bool>{},
-          py::arg("arom_b") = std::vector<bool>{},
-          py::arg("upper_bound_hint") = -1,
-          py::call_guard<py::gil_scoped_release>(),
-          "Internal clique-based MCS entry point.");
 
-    // Coverage MCS: MolGraph → clique_solver pipeline (replaces Python lightweight engine)
-    m.def("find_mcs_coverage",
-          static_cast<std::map<int,int>(*)(const smsd::MolGraph&, const smsd::MolGraph&,
-                                           bool, bool, int64_t, int)>(&smsd::findMCSCoverage),
-          py::arg("g1"), py::arg("g2"),
-          py::arg("ring_match") = false,
-          py::arg("bond_any") = false,
-          py::arg("timeout_ms") = 1000,
-          py::arg("max_results") = 8,
-          py::call_guard<py::gil_scoped_release>(),
-          "Lightweight coverage MCS: element-based compat + clique_solver pipeline.\n"
-          "Fully in C++. Returns dict mapping g1 atom indices to g2 atom indices (0-based).");
 
-    m.def("match_substructure",
-          &smsd::clique::substructureMatch,
-          py::arg("n_query"), py::arg("n_target"),
-          py::arg("compat"),
-          py::arg("bonds_query"), py::arg("bonds_target"),
-          py::arg("bond_any") = false,
-          py::arg("timeout_ms") = 500,
-          py::arg("max_results") = 8,
-          py::call_guard<py::gil_scoped_release>(),
-          "Substructure match from pre-built compat pairs and bond maps.");
 
-    m.def("match_substructure_from_elements",
-          &smsd::clique::substructureMatchFromElements,
-          py::arg("elements_query"), py::arg("elements_target"),
-          py::arg("bonds_query"), py::arg("bonds_target"),
-          py::arg("bond_any") = false,
-          py::arg("timeout_ms") = 500,
-          py::arg("max_results") = 8,
-          py::call_guard<py::gil_scoped_release>(),
-          "Substructure match from element lists — C++ builds compat internally.");
-
-    m.def("score_mapping",
-          &smsd::clique::scorePairMapping,
-          py::arg("mapping"),
-          py::arg("elements_a"), py::arg("elements_b"),
-          py::arg("bonds_a"), py::arg("bonds_b"),
-          py::arg("ring_a") = std::vector<bool>{},
-          py::arg("ring_b") = std::vector<bool>{},
-          py::arg("arom_a") = std::vector<bool>{},
-          py::arg("arom_b") = std::vector<bool>{},
-          "Score a mapping based on bond compatibility and element matching.");
 }

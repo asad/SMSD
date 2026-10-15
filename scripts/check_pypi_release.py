@@ -4,6 +4,7 @@
 import argparse
 from email.parser import BytesParser
 import hashlib
+import importlib.util
 import json
 from pathlib import Path, PurePosixPath
 import re
@@ -14,6 +15,12 @@ import tarfile
 import tomllib
 import xml.etree.ElementTree as ET
 import zipfile
+
+
+_BUILD_SPEC = importlib.util.spec_from_file_location(
+    "smsd_release_build", Path(__file__).resolve().with_name("build_python_wheels.py"))
+BUILD = importlib.util.module_from_spec(_BUILD_SPEC)
+_BUILD_SPEC.loader.exec_module(BUILD)
 
 
 def require(condition, message):
@@ -210,6 +217,8 @@ def check_git(checkout, tag, manifest, files):
 
 def check_wheel_manifest(directory, version, source, families, package_metadata):
     manifest = read_json(directory / "WHEEL_MANIFEST.json")
+    BUILD.checked_wheel_manifest(directory, source,
+                                 {family: directory / name for family, name in families.items()}, manifest)
     require(manifest.get("schema_version") == 1, "Unexpected wheel manifest schema")
     for field in ("version", "source_commit", "sdist", "sdist_sha256"):
         require(manifest.get(field) == source[field], "Wheel manifest identity differs: " + field)

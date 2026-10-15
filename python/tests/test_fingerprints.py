@@ -239,11 +239,10 @@ class TestTopologicalTorsion:
         assert isinstance(fp, list)
 
     def test_linear_chain_more_torsions(self):
-        """Linear chains have more 4-atom paths than compact rings."""
+        """Hexane has more distinct torsion environments than benzene."""
         hexane = smsd.topological_torsion("CCCCCC", fp_size=2048)
         benzene_t = smsd.topological_torsion("c1ccccc1", fp_size=2048)
-        # Hexane should have more diverse torsion features
-        assert len(hexane) >= 1
+        assert len(hexane) > len(benzene_t)
 
     def test_peptide_backbone(self):
         """Topological torsion is SOTA on peptide benchmarks (known from lit)."""
@@ -589,8 +588,8 @@ class TestChallengingMolecules:
         """Caffeine (1,3,7-trimethylxanthine) vs theophylline (1,3-dimethylxanthine).
         Differ by one N-methyl group. Should have high but not perfect similarity.
         (Standard pair from Daylight fingerprint benchmark)"""
-        caffeine = smsd.parse_smiles("Cn1c2c(c(=O)n(c1=O)C)nc(n2)C")
-        theophylline = smsd.parse_smiles("Cn1c2c(c(=O)n(c1=O)C)[nH]cn2")
+        caffeine = smsd.parse_smiles("Cn1cnc2c1c(=O)n(C)c(=O)n2C")
+        theophylline = smsd.parse_smiles("Cn1cnc2c1c(=O)[nH]c(=O)n2C")
         fp_c = smsd.circular_fingerprint(caffeine, radius=2, fp_size=2048)
         fp_t = smsd.circular_fingerprint(theophylline, radius=2, fp_size=2048)
         sim = smsd.tanimoto_coefficient(fp_c, fp_t)
@@ -624,15 +623,24 @@ class TestChallengingMolecules:
     def test_cubane_high_symmetry(self):
         """Cubane (C8H8) — highly symmetric cage. All 8 carbons equivalent.
         ECFP4 should produce few unique features due to symmetry."""
-        cubane = smsd.parse_smiles("C12C3C4C1C5C3C4C25")
+        cubane = smsd.parse_smiles("C12C3C4C1C5C2C3C45")
         fp = smsd.circular_fingerprint(cubane, radius=2, fp_size=2048)
         assert len(fp) >= 1
         counts = smsd.circular_fingerprint_counts(cubane, radius=2, fp_size=2048)
-        # All atoms equivalent — each feature should have count = 8
-        for pos, count in counts:
-            assert count == 8 or count == 4, (
-                f"Cubane symmetry: expected count 8 (or 4 for bond features), got {count}"
-            )
+        assert cubane.n == 8
+        assert all(sum(cubane.has_bond(atom, other) for other in range(8)) == 3 for atom in range(8))
+        colours = {0: 0}
+        pending = [0]
+        for atom in pending:
+            for neighbor in range(8):
+                if not cubane.has_bond(atom, neighbor):
+                    continue
+                if neighbor not in colours:
+                    colours[neighbor] = 1 - colours[atom]
+                    pending.append(neighbor)
+                assert colours[neighbor] != colours[atom]
+        assert len(colours) == 8
+        assert counts and all(count == 8 for _, count in counts)
 
     def test_adamantane_cage(self):
         """Adamantane — diamond cage structure. Tests ring perception in FP."""
@@ -1151,14 +1159,12 @@ class TestTopologicalTorsionEdgeCases:
         assert len(fp) == 0, "Neopentane has no 4-atom linear paths"
 
     def test_aromatic_vs_aliphatic_ring_torsion(self):
-        """Benzene vs cyclohexane -- both are 6-carbon rings with identical
-        connectivity, so torsion FPs may coincide. ECFP should distinguish them."""
+        """Aromatic pi electrons distinguish benzene from cyclohexane torsions."""
         fp_benzene_t = smsd.topological_torsion("c1ccccc1", fp_size=2048)
         fp_cyclohexane_t = smsd.topological_torsion("C1CCCCC1", fp_size=2048)
-        # Both produce valid torsion FPs
         assert len(fp_benzene_t) >= 1
         assert len(fp_cyclohexane_t) >= 1
-        # ECFP does distinguish aromatic vs aliphatic
+        assert fp_benzene_t != fp_cyclohexane_t
         fp_benzene_e = smsd.circular_fingerprint(
             smsd.parse_smiles("c1ccccc1"), radius=2, fp_size=2048
         )

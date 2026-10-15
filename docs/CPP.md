@@ -1,39 +1,24 @@
 # SMSD C++ guide
 
-SMSD 7.2.2 provides a C++17 header-only core for
-MolGraph construction, substructure search, MCS, fingerprints, SMARTS matching,
-molfile I/O, stereo/CIP assignment, and layout utilities.
-C++ stays under `cpp/`; its CMake package is independent of the Java Maven
-module. Python extension builds use this C++ tree through the root
-`pyproject.toml`. See [the C++ README](../cpp/README.md) for build, test and
-installation commands, and [release validation](VALIDATION_7.2.2.md) for
-tested platforms and evidence. The 7.2.0 measurements remain historical.
+The C++17 header-only source API provides `MCS` and `Substructure` queries.
+It replaces the search entry points in release 7.2.2. Include `smsd/smsd.hpp`
+for the main API, or include `smsd/mcs.hpp` and `smsd/substructure.hpp` directly.
 
-The examples below are standalone C++17 programs. Save a block as
-`example.cpp`, then compile it from the repository root on macOS/Linux:
+Save each C++ example as `example.cpp` and compile from the repository root:
 
 ```bash
-c++ -std=c++17 -O2 -I cpp/include example.cpp -o example
+c++ -std=c++17 -O2 -Icpp/include example.cpp -o example
 ./example
 ```
 
-For Windows or an installed CMake package, use the consumer project in
-[the C++ README](../cpp/README.md#build-test-and-install).
-
-## Include
-
-Include `smsd/smsd.hpp` for the main API. SMARTS requires its own
-`smsd/smarts_parser.hpp` header.
-
-Installed CMake packages can be consumed without manually setting language or
-OpenMP flags:
+An installed CMake package provides the `smsd::smsd` target:
 
 ```cmake
 find_package(smsd 7.2 CONFIG REQUIRED)
 target_link_libraries(my_program PRIVATE smsd::smsd)
 ```
 
-## Core Use
+## Molecule and SMARTS search
 
 ```cpp
 #include <cassert>
@@ -42,318 +27,117 @@ target_link_libraries(my_program PRIVATE smsd::smsd)
 int main() {
     const auto query = smsd::parseSMILES("c1ccccc1");
     const auto target = smsd::parseSMILES("c1ccc(O)cc1");
-    const smsd::ChemOptions chemistry;
-    smsd::MCSOptions options;
-    options.timeoutMs = 1000;
-
-    assert(smsd::isSubstructure(query, target, chemistry, 1000));
-    const auto mapping = smsd::findMCS(query, target, chemistry, options);
-    assert(mapping.size() == 6);
-    assert(smsd::validateMapping(query, target, mapping, chemistry).empty());
+    const auto result = smsd::MCS::find(query).withTimeout(1000).match(target);
+    assert(result.optimal && result.matches.front().atomMapping.size() == 6);
+    assert(smsd::MCS::validateMapping(query, target, result.matches.front()).empty());
+    assert(!smsd::Substructure::find(query).match(target).matches.empty());
+    assert(!smsd::Substructure::smarts("[OH]").match(target).matches.empty());
+    const auto all = smsd::Substructure::find("CO").matchAll("OCO", 10);
+    assert(all.complete && all.matches.size() == 2);
 }
 ```
 
-## Workflow for RDKit users
+Prepared queries own their query and options. Fluent methods return new
+queries. Each call owns its search state, so a prepared query may be reused
+concurrently. Do not mutate a target while it is being searched.
 
-SMSD uses a query/target workflow, chemistry options and zero-based atom pairs,
-but its native types are `smsd::MolGraph` and `smsd::MCSOptions`. Parsing and
-search results use the supplied graph's order:
+`match` requests one best match; `matchAll(target, limit)` enumerates optimal
+atom and selected-bond embeddings up to a positive limit. `matchMany(targets,
+numThreads)` returns one result per target in input order. Each pair has its
+own timeout. Zero workers uses the available hardware concurrency; one worker
+runs sequentially. Native matching uses standard C++ threads.
 
-| Operation | Native SMSD API |
-|---|---|
-| Parse a molecule | `smsd::parseSMILES(smiles)` |
-| Test a query against a target | `smsd::isSubstructure(query, target, chemistry, timeoutMs)` |
-| Return one substructure embedding | `smsd::findSubstructure(query, target, chemistry, timeoutMs)` |
-| Enumerate embeddings | `smsd::findAllSubstructures(query, target, chemistry, timeoutMs)` |
-| Compute MCS | `smsd::findMCS(query, target, chemistry, searchOptions)` |
+## Results, objectives and fragments
 
-Substructure mappings are vectors of `(query_atom, target_atom)` pairs; MCS
-returns `std::map<int, int>`. These are mappings of graph vertices. RDKit FMCS
-instead exposes a common query pattern, whose embeddings need a separate
-mapping step and may omit edges that SMSD requires between mapped vertices.
+`SearchResult` contains `matches`, `status`, `optimal`, `complete`, `score`,
+`nodesVisited` and `elapsedMillis`. Status is `Completed`, `TimedOut`,
+`Cancelled` or `LimitReached`. A stopped call may return a valid incumbent
+without proving the optimum. A capped enumeration may prove the objective
+while leaving enumeration incomplete.
 
-Set chemistry separately from the search objective and budget:
+`Match` contains `atomMapping`, `bondMapping` entries
+`{queryFirst, querySecond, targetFirst, targetSecond}`, and `fragments`
+containing query atom indices. All indices are zero-based. Explicit hydrogen
+vertices remain vertices; bracket hydrogen counts do not add vertices.
 
 ```cpp
 #include <cassert>
 #include "smsd/smsd.hpp"
 
 int main() {
-    const auto query = smsd::parseSMILES("c1ccccc1");
-    const auto target = smsd::parseSMILES("c1ccc(O)cc1");
-    smsd::ChemOptions chemistry;
-    chemistry.matchFormalCharge = true;
-    chemistry.matchIsotope = true;
-    chemistry.useChirality = true;
-    chemistry.matchBondOrder = smsd::ChemOptions::BondOrderMode::STRICT;
-    chemistry.aromaticityMode = smsd::ChemOptions::AromaticityMode::STRICT;
+    const auto query = smsd::parseSMILES("C1CC1");
+    const auto target = smsd::parseSMILES("CCC");
+    const auto induced = smsd::MCS::find(query).match(target);
+    assert(induced.matches.front().atomMapping.size() == 2);
 
-    smsd::MCSOptions options;
-    options.timeoutMs = 1000;
-    options.connectedOnly = true;
-    options.induced = false;
-    const auto mapping = smsd::findMCS(query, target, chemistry, options);
-    assert(mapping.size() == 6);
-    assert(smsd::validateMapping(query, target, mapping, chemistry).empty());
+    smsd::MCS::Options options;
+    options.objective = smsd::MCS::Objective::MCES;
+    const auto edges = smsd::MCS::find(query).withOptions(options).match(target);
+    const auto& match = edges.matches.front();
+    assert(match.atomMapping.size() == 3 && match.bondMapping.size() == 2);
+    const auto output = smsd::parseSMILES(match.toSmiles(query));
+    std::size_t degreeSum = 0;
+    for (const auto& neighbors : output.neighbors) degreeSum += neighbors.size();
+    assert(output.n == 3 && degreeSum == 4);
+    assert(smsd::MCS::validateMapping(query, target, match, options).empty());
+
+    options.objective = smsd::MCS::Objective::MCIS;
+    options.connectivity = smsd::MCS::Connectivity::Fragments;
+    const auto fragments = smsd::MCS::find("CO.CN").withOptions(options).match("CO.CN");
+    assert(fragments.matches.front().fragments.size() == 2);
 }
 ```
 
-For an external molecule representation, `MolGraph::Builder` preserves the
-order of the property arrays you supply. A minimal heavy-atom connectivity
-example is:
+MCIS is the default: maximise atoms, then common bonds, preserving edges and
+nonedges between mapped vertices. MCES maximises selected compatible common
+edges, then incident atoms; isolated atoms cannot pad the result. Extra input
+edges can be omitted. Connectivity and fragment limits apply to selected
+common edges. `Match::toSmiles(query)` writes selected atoms and bonds with
+cut valences capped. `toGraph(query)` preserves the original chemical context
+for further matching and is distinct from a capped output molecule.
 
-```cpp
-#include <cassert>
-#include "smsd/smsd.hpp"
+## Chemistry and controls
 
-int main() {
-    const auto query = smsd::MolGraph::Builder()
-        .atomCount(4)
-        .atomicNumbers({7, 6, 6, 8})
-        .setNeighbors({{1}, {0, 2}, {1, 3}, {2}})
-        .setBondOrders({{1}, {1, 1}, {1, 1}, {1}})
-        .build();
-    const auto target = smsd::parseSMILES("CC(O)CN");
-    const auto mapping = smsd::findMCS(
-        query, target, smsd::ChemOptions{}, smsd::MCSOptions{});
-    assert(mapping.size() == 4);
-    assert(smsd::validateMapping(query, target, mapping, smsd::ChemOptions{}).empty());
-}
-```
+`MCS::computeTautomerConfidence(query, target, match, chemistry)` reports a
+heuristic confidence for selected tautomeric chemistry relaxations. The
+supplied pH and solvent apply when called, without changing molecules or
+the search objective. Identical selected chemistry returns 1; this value
+is not a probability.
 
-A complete importer must also preserve charge, isotope, hydrogen, ring,
-aromatic and stereo metadata. Connectivity alone does not establish equivalent
-chemistry.
+`MCS::Options` and `Substructure::Options` contain `chemistry`, `timeoutMs`,
+`nodeLimit` and `cancellation`. `Substructure::Options::induced` optionally
+requires nonedges to be preserved. MCS uses its explicit objective instead.
 
-## RDKit integration
+`ChemOptions` controls element, bond order, aromaticity, ring, isotope, charge,
+mapped tetrahedral and double-bond stereo, and tautomer predicates. Defaults
+match elements and strict bond order. Charge, isotope and stereo matching are
+opt-in. `tautomerAware` does not change `matchBondOrder`.
+`completeRingsOnly` checks both inputs: retained ring atoms and bonds must
+belong to a fully selected relevant ring in their own input. A fusion atom
+may survive through one complete ring.
 
-The optional `smsd/rdkit_adapter.hpp` API and
-`smsd::smsd_rdkit` CMake target require a compatible RDKit development
-installation and C++20. Enable them with `SMSD_WITH_RDKIT=ON`. `fromRDKit` imports atom
-numbers, charge, isotope and ring/aromatic flags, but does not import hydrogen
-counts or double-bond stereo. Explicit hydrogens are removed by default,
-changing indices; unsupported bond types become single bonds. Aromaticity is
-re-perceived, and tetrahedral tags lack full ligand-order normalisation. Python's
-`smsd.from_rdkit` is the maintained RDKit conversion entry point and tracks
-original RDKit atom indices; see [the Python guide](PYTHON.md).
+`timeoutMs=-1` selects an adaptive budget; zero requests an immediate stop.
+`nodeLimit=0` leaves the node count unlimited. Set `cancellation` to a shared
+`CancellationToken` and call `cancel()` to stop cooperatively. Preparation and
+individual steps can extend elapsed time beyond the deadline.
 
-## Batch matching and build configuration
+MCIS accepts finite signed query `atomWeights`, with weight before atom and
+bond tie-breaks. Native weights use bounded integer millipoints. MCES rejects
+atom weights. `minFragmentAtoms`, `maxFragments` and `excludedTargetAtoms`
+refer to selected fragments and original target atom indices.
 
-The batch namespace retains target order and applies the search budget to
-each query/target pair. Parse once when performing repeated queries:
+`MCS::matchConstrained(queries, target, options)` returns per-query results
+without reusing claimed target atoms or re-perceiving a residual target.
+`MCS::consensus(molecules, options, threshold)` returns a progressive common
+graph, verified supporting mappings and support count for a fraction of the
+inputs. Consensus is heuristic and reports `optimal=false`.
 
-```cpp
-#include <cassert>
-#include <vector>
-#include "smsd/smsd.hpp"
+`MCS::canonicalizeMapping` chooses an atom mapping representative under
+molecular symmetry and raises if the required symmetry calculation cannot
+complete. `MCS::isMappingMaximal` checks for an extension retaining the supplied
+correspondence; maximality is weaker than an optimum proof.
 
-int main() {
-    const auto query = smsd::parseSMILES("CCO");
-    const std::vector<smsd::MolGraph> targets{
-        smsd::parseSMILES("CCO"), smsd::parseSMILES("CCCC")};
-    smsd::MCSOptions options;
-    options.timeoutMs = 1000;
-    const auto mappings = smsd::batch::batchMCS(
-        query, targets, smsd::ChemOptions{}, options, 1);
-    const auto counts = smsd::batch::batchMCSSize(
-        query, targets, smsd::ChemOptions{}, options, 1);
-    assert((counts == std::vector<int>{3, 2}));
-    assert(mappings.size() == targets.size());
-    for (std::size_t i = 0; i < targets.size(); ++i) {
-        assert(mappings[i].size() == static_cast<std::size_t>(counts[i]));
-        assert(smsd::validateMapping(
-            query, targets[i], mappings[i], smsd::ChemOptions{}).empty());
-    }
-}
-```
-
-The final argument is the worker count: `1` uses one worker and `0` uses OpenMP
-defaults. Without OpenMP, operations run sequentially. Core matching uses
-CPU/OpenMP; GPU domain kernels require a source build and their own hardware
-validation. Published Python wheels use CPU/OpenMP.
-For a reproducible CPU build:
-
-```bash
-cmake -S cpp -B build/native -DCMAKE_BUILD_TYPE=Release \
-  -DSMSD_BUILD_TESTS=OFF -DSMSD_BUILD_PYTHON=OFF \
-  -DSMSD_BUILD_METAL=OFF -DSMSD_BUILD_CUDA=OFF -DSMSD_WITH_RDKIT=OFF
-cmake --build build/native --parallel 4
-cmake --install build/native --prefix "$PWD/build/native-install"
-```
-
-Mappings are oriented from query to target and validate every mapped query
-bond. In non-induced mode, extra target bonds are allowed, so the best valid
-mapping can have a different size when the arguments are reversed. Non-induced
-searches retain the caller's query orientation. Atom weights refer to query indices.
-Weights must be finite and cover every query atom. The native scoring API uses
-integer millipoints: positive and negative weight sums must each fit that score
-range after multiplication by 1,000 and truncation. Unsupported inputs raise
-`std::invalid_argument` before search, including on identity fast paths.
-
-## Fingerprints
-
-The shared fingerprint functions used by the Python binding live in
-`smsd::batch::detail`. Regression fixtures compare their outputs with Java;
-this does not establish identical results for every molecule representation,
-option or radius.
-
-```cpp
-#include <cassert>
-#include <cmath>
-#include <cstdint>
-#include <vector>
-#include "smsd/smsd.hpp"
-
-int main() {
-    const auto molecule = smsd::parseSMILES("c1ccc(O)cc1");
-    const auto ecfp = smsd::batch::detail::computeCircularFingerprintECFP(molecule, 2, 2048);
-    const auto fcfp = smsd::batch::detail::computeCircularFingerprintFCFP(molecule, 2, 2048);
-    const auto ecfpCounts = smsd::batch::detail::computeCircularFingerprintECFPCounts(molecule, 2, 2048);
-    const auto fcfpCounts = smsd::batch::detail::computeCircularFingerprintFCFPCounts(molecule, 2, 2048);
-    const auto path = smsd::batch::detail::computePathFingerprint(molecule, 7, 2048);
-    const auto torsion = smsd::batch::detail::computeTopologicalTorsion(molecule, 2048);
-    assert(ecfp.size() == 32 && fcfp.size() == 32);
-    assert(path.size() == 32 && torsion.size() == 32);
-    assert(ecfpCounts.size() == 2048 && fcfpCounts.size() == 2048);
-    assert(smsd::batch::fingerprintTanimoto(ecfp, ecfp) == 1.0);
-    assert(smsd::batch::countTanimoto(ecfpCounts, ecfpCounts) == 1.0);
-
-    const std::vector<std::uint64_t> a{0b11}, b{0b10};
-    assert(smsd::batch::fingerprintTanimoto(a, b) == 0.5);
-    assert(std::abs(smsd::batch::fingerprintDice(a, b) - 2.0 / 3.0) < 1e-12);
-}
-```
-
-Binary fingerprints contain packed 64-bit words; count fingerprints contain
-integer bins. Compare molecules using the same fingerprint family, radius
-and size. `fingerprintTanimoto` computes intersection divided by union;
-`fingerprintDice` computes twice the intersection divided by the sum of set
-bits. Count Tanimoto uses bin-wise minima and maxima. These measures differ
-from the overlap coefficient.
-
-The removed `fp/mol/*.hpp` shims are not part of the current API. There is
-no native `computeMACCSKeys` entry point in 7.2.2.
-
-## Public MCS / Substructure Entry Points
-
-The high-level entry points are `smsd::findMCS()`, `smsd::findSubstructure()`
-and `smsd::isSubstructure()` declared in `smsd/mcs.hpp` and `smsd/vf2pp.hpp`.
-The internal solver headers (`smsd/clique_solver.hpp`, the partition-refinement
-backtracker, edge-growth refinement) are private implementation details whose
-signatures may change between minor releases — do not depend on them in
-out-of-tree code.
-
-```cpp
-#include <cassert>
-#include "smsd/smiles_parser.hpp"
-#include "smsd/mcs.hpp"
-#include "smsd/vf2pp.hpp"
-
-int main() {
-    const auto query = smsd::parseSMILES("c1ccccc1");
-    const auto target = smsd::parseSMILES("c1ccc(O)cc1");
-    const auto mapping = smsd::findMCS(query, target, smsd::ChemOptions{}, smsd::MCSOptions{});
-    const auto embedding = smsd::findSubstructure(query, target, smsd::ChemOptions{});
-    const auto allEmbeddings = smsd::findAllSubstructures(query, target, smsd::ChemOptions{});
-    assert(smsd::isSubstructure(query, target, smsd::ChemOptions{}));
-    assert(mapping.size() == 6 && embedding.size() == 6);
-    assert(!allEmbeddings.empty());
-}
-```
-
-`findAllSubstructures` includes distinct atom mappings related by molecular
-symmetry, including self matches. It returns up to 10,000 mappings within the
-requested time budget; a timeout can return a partial enumeration.
-
-See [the algorithm review](ALGORITHM_REVIEW.md) for regression oracles and local
-validation commands. Historical timing, quality and cancellation observations are
-in the [benchmark report](../benchmarks/RESULTS_7.2.0.md); timings with different
-matching policies are not pooled into a headline speedup.
-
-Weighted objectives and bond maximisation use objective-aware component and
-fragment selection. Signed weights can favour a smaller subgraph than an
-identity mapping. Small graphs use bounded exact exploration; reaching a time
-or node limit does not prove an optimum.
-
-`canonicalizeMapping` computes automorphism-orbit closure and reports incomplete
-generators or exceeded storage bounds with `std::length_error`, and deadline
-expiry with `std::runtime_error`. Internal
-mapping deduplication retains raw keys when canonicalisation cannot complete.
-Weighted mapping deduplication keeps query weights attached to their vertices.
-
-## Scaffold extraction
-
-`smsd::murckoScaffold` retains ring systems and connecting paths and removes
-side chains. It returns an acyclic input unchanged; callers expecting an
-empty scaffold for acyclic molecules must handle that case separately.
-
-```cpp
-#include <cassert>
-#include "smsd/smsd.hpp"
-
-int main() {
-    const auto molecule = smsd::parseSMILES("Cc1ccccc1");
-    const auto scaffold = smsd::murckoScaffold(molecule);
-    assert(scaffold.n == 6);
-    assert(smsd::isSubstructure(scaffold, molecule, smsd::ChemOptions{}));
-}
-```
-
-`smsd/scaffold_library.hpp` separately supplies reference scaffold data;
-it does not contain the extraction function.
-
-## Optimal assignment
-
-Optimal assignment solver for atom matching cost matrices.
-
-```cpp
-#include <cassert>
-#include <vector>
-#include "smsd/hungarian.hpp"
-
-int main() {
-    const std::vector<std::vector<double>> costs{{1.0, 3.0}, {4.0, 2.0}};
-    const auto result = smsd::optimalAssign(costs);
-    assert(result.assignment.size() == 2);
-    assert(result.totalCost == 3.0);
-}
-```
-
-For an `m × n` matrix, the solver assigns `min(m,n)` pairs using
-`O(min(m,n)² max(m,n))` time and `O(m+n)` auxiliary space. A uniform unmatched
-penalty does not change the selected pairs. `totalCost` sums real assigned costs
-and excludes unmatched penalties. Ragged matrices and nonfinite inputs raise
-`std::invalid_argument`; reduced-cost arithmetic overflow raises `std::overflow_error`.
-
-## SMARTS and CIP
-
-```cpp
-#include <cassert>
-#include <tuple>
-#include "smsd/smiles_parser.hpp"
-#include "smsd/smarts_parser.hpp"
-#include "smsd/cip.hpp"
-
-int main() {
-    const auto query = smsd::parseSMARTS("[#6]~[#7]");
-    const auto target = smsd::parseSMILES("CCN");
-    const auto matches = query.findAll(target, 100);
-    assert(!matches.empty() && matches.front().size() == 2);
-
-    const auto alanine = smsd::parseSMILES("N[C@@H](C)C(=O)O");
-    const auto alanineDescriptors = smsd::cip::assignAll(alanine);
-    assert(alanineDescriptors.rsLabels[1] == smsd::cip::RSLabel::S);
-    const auto butene = smsd::parseSMILES("C/C=C/C");
-    const auto buteneDescriptors = smsd::cip::assignAll(butene);
-    assert(buteneDescriptors.ezBonds.size() == 1);
-    assert(std::get<2>(buteneDescriptors.ezBonds.front()) == smsd::cip::EZLabel::E);
-}
-```
-
-`smsd::cip::assignAll` returns per-atom R/S labels in `rsLabels` and
-stereogenic double-bond atom pairs with E/Z labels in `ezBonds`.
-
-## Native MOL/SDF I/O
+## Graphs, MOL and SDF
 
 ```cpp
 #include <cassert>
@@ -361,19 +145,41 @@ stereogenic double-bond atom pairs with E/Z labels in `ezBonds`.
 #include "smsd/smsd.hpp"
 
 int main() {
-    const auto molecule = smsd::parseSMILES("CCO");
-    const std::string v2000 = smsd::writeMolBlock(molecule);
-    const std::string v3000 = smsd::writeMolBlockV3000(molecule);
-    const std::string sdf = smsd::writeSDFRecord(molecule);
-    const auto fromV2000 = smsd::readMolBlock(v2000);
-    const auto fromV3000 = smsd::readMolBlock(v3000);
-    assert(fromV2000.n == 3 && fromV3000.n == 3);
-    assert(smsd::isSubstructure(molecule, fromV2000, smsd::ChemOptions{}));
-    assert(smsd::isSubstructure(molecule, fromV3000, smsd::ChemOptions{}));
-    assert(sdf.find("$$$$") != std::string::npos);
+    const auto query = smsd::MolGraph::Builder().atomCount(4)
+        .atomicNumbers({7, 6, 6, 8})
+        .setNeighbors({{1}, {0, 2}, {1, 3}, {2}})
+        .setBondOrders({{1}, {1, 1}, {1, 1}, {1}}).build();
+    assert(smsd::MCS::find(query).match("CC(O)CN").matches.front().atomMapping.size() == 4);
+    const auto text = smsd::writeMolBlockV3000(query);
+    const auto restored = smsd::readMolBlock(text);
+    assert(!smsd::Substructure::find(query).match(restored).matches.empty());
+    assert(smsd::writeSDFRecord(query).find("$$$$") != std::string::npos);
 }
 ```
 
-The native I/O path covers practical V2000/V3000 graph round-trip,
-metadata, SDF properties, atom maps/classes, and patent-style `R#` handling.
-Graph round-trip support does not imply complete MDL query chemistry support.
+A complete importer must also supply charge, isotope, hydrogen, ring,
+aromatic and stereo metadata. MOL round trips do not imply full MDL query
+chemistry support. The optional native adapter requires its external SDK;
+Python conversion tracks original external atom indices separately.
+
+## Fingerprints and assignment
+
+```cpp
+#include <cassert>
+#include "smsd/smsd.hpp"
+
+int main() {
+    const auto molecule = smsd::parseSMILES("c1ccc(O)cc1");
+    const auto fingerprint = smsd::batch::detail::computeCircularFingerprintECFP(molecule, 2, 2048);
+    assert(fingerprint.size() == 32);
+    assert(smsd::batch::fingerprintTanimoto(fingerprint, fingerprint) == 1.0);
+    const auto assignment = smsd::optimalAssign({{1.0, 3.0}, {4.0, 2.0}});
+    assert(assignment.totalCost == 3.0);
+}
+```
+
+Packed fingerprints contain 64-bit words; count fingerprints contain integer
+bins. Compare using the same family, radius and size. Screening scores and
+canonical hashes do not prove molecular identity. See the
+[C++ README](../cpp/README.md) for build configuration and the
+[examples](EXAMPLES.md) for other utilities.

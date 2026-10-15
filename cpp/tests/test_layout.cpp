@@ -254,7 +254,7 @@ static void test_generate2d_naphthalene() {
     auto coords = smsd::generateCoords2D(g);
     TEST_ASSERT(static_cast<int>(coords.size()) == g.n, "Should generate n coordinates");
     int crossings = smsd::detail_layout::countCrossings(g, coords);
-    TEST_ASSERT(crossings <= 2, "Naphthalene should have minimal crossings");
+    TEST_ASSERT(crossings == 0, "Naphthalene should have zero crossings");
 }
 
 static void test_generate2d_aspirin() {

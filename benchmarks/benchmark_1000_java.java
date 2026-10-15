@@ -161,13 +161,15 @@ public class benchmark_1000_java {
       private final int mcsSize;
       private final int completed;
       private final int rounds;
+      private final int proven;
 
-      BenchResult(double medianTimeMs, double meanTimeMs, int mcsSize, int completed, int rounds) {
+      BenchResult(double medianTimeMs, double meanTimeMs, int mcsSize, int completed, int rounds, int proven) {
         this.medianTimeMs = medianTimeMs;
         this.meanTimeMs = meanTimeMs;
         this.mcsSize = mcsSize;
         this.completed = completed;
         this.rounds = rounds;
+        this.proven=proven;
       }
 
       public double medianTimeMs() { return medianTimeMs; }
@@ -175,6 +177,7 @@ public class benchmark_1000_java {
       public int mcsSize() { return mcsSize; }
       public int completed() { return completed; }
       public int rounds() { return rounds; }
+      public int proven(){return proven;}
 
       @Override
       public boolean equals(Object other) {
@@ -185,7 +188,7 @@ public class benchmark_1000_java {
           && Double.compare(meanTimeMs, value.meanTimeMs) == 0
           && mcsSize == value.mcsSize
           && completed == value.completed
-          && rounds == value.rounds;
+          && rounds == value.rounds&&proven==value.proven;
       }
 
       @Override
@@ -196,6 +199,7 @@ public class benchmark_1000_java {
         hash = 31 * hash + java.util.Objects.hashCode(mcsSize);
         hash = 31 * hash + java.util.Objects.hashCode(completed);
         hash = 31 * hash + java.util.Objects.hashCode(rounds);
+        hash=31*hash+proven;
         return hash;
       }
 
@@ -205,7 +209,7 @@ public class benchmark_1000_java {
             + ", meanTimeMs=" + meanTimeMs
             + ", mcsSize=" + mcsSize
             + ", completed=" + completed
-            + ", rounds=" + rounds + "]";
+            + ", rounds=" + rounds + ", proven="+proven+"]";
       }
     }
 
@@ -285,17 +289,18 @@ public class benchmark_1000_java {
     // ======================================================================
     static BenchResult benchmarkPair(Molecule a, Molecule b) {
         ChemOptions opts = new ChemOptions();
-        SearchEngine.MCSOptions mcsOpts = new SearchEngine.MCSOptions();
-        mcsOpts.timeoutMs = TIMEOUT_MS;
+        MCS.Options mcsOpts = new MCS.Options();
+        mcsOpts.timeoutMillis = TIMEOUT_MS;
+        mcsOpts.chemistry=opts;
 
         double[] times = new double[ROUNDS];
         int[] mcsSizes = new int[ROUNDS];
-        int completed = 0;
+        int completed = 0,proven=0;
 
         // Warmup (2 rounds)
         for (int w = 0; w < Integer.getInteger("smsd.benchmark.warmup", 2); w++) {
             try {
-                SearchEngine.findMCS(a.mol(), b.mol(), opts, mcsOpts);
+                MCS.find(a.mol()).withOptions(mcsOpts).match(b.mol());
             } catch (Exception e) {
                 // ignore warmup errors
             }
@@ -305,7 +310,9 @@ public class benchmark_1000_java {
         for (int r = 0; r < ROUNDS; r++) {
             long t0 = System.nanoTime();
             try {
-                Map<Integer, Integer> mcs = SearchEngine.findMCS(a.mol(), b.mol(), opts, mcsOpts);
+                SearchResult search=MCS.find(a.mol()).withOptions(mcsOpts).match(b.mol());
+                Map<Integer,Integer> mcs=search.found()?search.matches().get(0).atomMapping():Collections.emptyMap();
+                if(search.optimal())proven++;
                 long elapsed = System.nanoTime() - t0;
                 times[r] = elapsed / 1_000_000.0; // ms
                 mcsSizes[r] = mcs != null ? mcs.size() : 0;
@@ -325,7 +332,7 @@ public class benchmark_1000_java {
 
         int maxMCS = Arrays.stream(mcsSizes).max().orElse(-1);
 
-        return new BenchResult(medianTime, meanTime, maxMCS, completed, ROUNDS);
+        return new BenchResult(medianTime, meanTime, maxMCS, completed, ROUNDS,proven);
     }
 
     // ======================================================================
@@ -334,14 +341,14 @@ public class benchmark_1000_java {
     static void writeResults(List<Pair> pairs, Map<String, BenchResult> results, Path outPath) throws IOException {
         try (PrintWriter pw = new PrintWriter(Files.newBufferedWriter(outPath))) {
             pw.println("pair_id\tpair_type\tname_a\tname_b\tsmi_a\tsmi_b\t" +
-                       "smsd_median_ms\tsmsd_mean_ms\tsmsd_mcs_size\tsmsd_returned_without_exception");
+                       "smsd_median_ms\tsmsd_mean_ms\tsmsd_mcs_size\tsmsd_returned_without_exception\tsmsd_optimal_rounds");
             for (int i = 0; i < pairs.size(); i++) {
                 Pair p = pairs.get(i);
                 String key = p.nameA() + "__vs__" + p.nameB();
-                BenchResult br = results.getOrDefault(key, new BenchResult(-1, -1, -1, 0, ROUNDS));
-                pw.printf("%d\t%s\t%s\t%s\t%s\t%s\t%.3f\t%.3f\t%d\t%d/%d%n",
+                BenchResult br = results.getOrDefault(key, new BenchResult(-1, -1, -1, 0, ROUNDS,0));
+                pw.printf("%d\t%s\t%s\t%s\t%s\t%s\t%.3f\t%.3f\t%d\t%d/%d\t%d/%d%n",
                     i + 1, p.pairType(), p.nameA(), p.nameB(), p.smiA(), p.smiB(),
-                    br.medianTimeMs(), br.meanTimeMs(), br.mcsSize(), br.completed(), br.rounds());
+                    br.medianTimeMs(), br.meanTimeMs(), br.mcsSize(), br.completed(), br.rounds(),br.proven(),br.rounds());
             }
         }
     }
@@ -483,11 +490,12 @@ public class benchmark_1000_java {
         System.err.println("JVM warmup ...");
         if (mols.size() >= 2) {
             ChemOptions warmOpts = new ChemOptions();
-            SearchEngine.MCSOptions warmMCS = new SearchEngine.MCSOptions();
-            warmMCS.timeoutMs = 2000;
+            MCS.Options warmMCS = new MCS.Options();
+            warmMCS.timeoutMillis = 2000;
+            warmMCS.chemistry=warmOpts;
             for (int w = 0; w < 10; w++) {
                 try {
-                    SearchEngine.findMCS(mols.get(0).mol(), mols.get(1).mol(), warmOpts, warmMCS);
+                    MCS.find(mols.get(0).mol()).withOptions(warmMCS).match(mols.get(1).mol());
                 } catch (Exception e) { /* ignore */ }
             }
         }

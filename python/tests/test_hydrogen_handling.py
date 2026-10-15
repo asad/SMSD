@@ -17,8 +17,7 @@ Key invariants
 Run with:  pytest python/tests/test_hydrogen_handling.py -v
 """
 import pytest
-from smsd import parse_smiles, ChemOptions, MCSOptions
-from smsd import _native_find_mcs as find_mcs, _native_is_substructure as is_substructure
+from smsd import parse_smiles, ChemOptions, MCS, Substructure
 
 
 # ---------------------------------------------------------------------------
@@ -31,15 +30,17 @@ def mcs_size(smi1: str, smi2: str, **opts_kwargs) -> int:
     chem = ChemOptions()
     for k, v in opts_kwargs.items():
         setattr(chem, k, v)
-    mo = MCSOptions()
+    mo = MCS.Options()
+    mo.chemistry = chem
     mo.timeout_ms = 10_000
-    return len(find_mcs(g1, g2, chem, mo))
+    result = MCS.find(g1).with_options(mo).match(g2)
+    return result.best.atom_count if result.found else 0
 
 
 def is_sub(query: str, target: str) -> bool:
     q = parse_smiles(query)
     t = parse_smiles(target)
-    return is_substructure(q, t, ChemOptions(), 10_000)
+    return Substructure.find(q).with_timeout(10_000).match(t).found
 
 
 # ---------------------------------------------------------------------------
@@ -119,7 +120,9 @@ class TestHCountSubstructure:
         chem = ChemOptions()
         from smsd import BondOrderMode
         chem.match_bond_order = BondOrderMode.LOOSE
-        assert is_substructure(nh3, aniline, chem, 10_000)
+        options = Substructure.Options()
+        options.chemistry = chem
+        assert Substructure.find(nh3).with_options(options).with_timeout(10_000).match(aniline).found
 
     def test_caffeine_vs_theophylline_nH_notation(self):
         # [nH] vs n — MCS should be ≥ 11 atoms
@@ -134,9 +137,10 @@ class TestHCountSubstructure:
 
     def test_morphine_stereo_notation_mcs(self):
         # Stereo/H notation variants of morphine must give the same heavy-atom MCS
-        plain  = "CN1CCC23C4C1CC5=C(C2C(C=C4)O3)C=C(C=C5)O"
-        stereo = "C[N]1CC[C@@]23[C@@H]4[C@H]1C[C@@H]5=C([C@@H]2[C@H](C=C4)O3)C=C(C=C5)O"
-        assert mcs_size(plain, stereo) >= 17
+        plain  = "CN1CC[C@]23[C@@H]4[C@H]1CC5=C2C(=C(C=C5)O)O[C@H]3[C@H](C=C4)O"
+        stereo = "[CH3][N]1[CH2][CH2][C@]23[C@@H]4[C@H]1[CH2][c]1[c]2[c]([c]([OH])[cH][cH]1)[O][C@H]3[C@@H]([OH])[CH]=[CH]4"
+        assert parse_smiles(plain).n == parse_smiles(stereo).n == 21
+        assert mcs_size(plain, stereo) == 21
 
     def test_ibuprofen_stereo_h_notation(self):
         plain  = "CC(C)Cc1ccc(CC(C)C(=O)O)cc1"
@@ -156,26 +160,29 @@ class TestChargedSpecies:
         nh4p = parse_smiles("[NH4+]")
         chem = ChemOptions()
         chem.match_formal_charge = False
-        mo = MCSOptions()
+        mo = MCS.Options()
+        mo.chemistry = chem
         mo.timeout_ms = 5_000
-        assert len(find_mcs(nh3, nh4p, chem, mo)) == 1
+        assert MCS.find(nh3).with_options(mo).match(nh4p).best.atom_count == 1
 
     def test_carboxylate_vs_carboxylic_acid(self):
         # CC(=O)[O-] vs CC(=O)O — same heavy-atom skeleton
         chem = ChemOptions()
         chem.match_formal_charge = False
-        mo = MCSOptions()
+        mo = MCS.Options()
+        mo.chemistry = chem
         mo.timeout_ms = 5_000
         g1 = parse_smiles("CC(=O)[O-]")
         g2 = parse_smiles("CC(=O)O")
-        assert len(find_mcs(g1, g2, chem, mo)) == 4
+        assert MCS.find(g1).with_options(mo).match(g2).best.atom_count == 4
 
     def test_phosphate_charged_vs_neutral(self):
         # [O-]P(=O)([O-])[O-] vs OP(=O)(O)O — 4-atom P+O skeleton charge-agnostic
         chem = ChemOptions()
         chem.match_formal_charge = False
-        mo = MCSOptions()
+        mo = MCS.Options()
+        mo.chemistry = chem
         mo.timeout_ms = 5_000
         g1 = parse_smiles("[O-]P(=O)([O-])[O-]")
         g2 = parse_smiles("OP(=O)(O)O")
-        assert len(find_mcs(g1, g2, chem, mo)) >= 4
+        assert MCS.find(g1).with_options(mo).match(g2).best.atom_count >= 4

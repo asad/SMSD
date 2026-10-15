@@ -8,7 +8,11 @@ SMSD_RELEASE_PYTHON="${SMSD_RELEASE_PYTHON:-python3}"
 "$SMSD_RELEASE_PYTHON" -c 'import sys; assert sys.prefix != sys.base_prefix, "Run with a dedicated Python virtual environment"'
 mvn -version | "$SMSD_RELEASE_PYTHON" -c 'import re, sys; text = sys.stdin.read(); assert re.search(r"Java version: 25(?:[.,]|\s)", text), "Use JDK 25 for release builds; set JAVA_HOME accordingly"'
 SMSD_RELEASE_VERSION="$("$SMSD_RELEASE_PYTHON" -c 'import xml.etree.ElementTree as E; print(E.parse("java/pom.xml").findtext("{http://maven.apache.org/POM/4.0.0}version"))')"
-SMSD_RELEASE_FINAL_DIR="$SMSD_RELEASE_ROOT/dist/release-$SMSD_RELEASE_VERSION"
+SMSD_RELEASE_FINAL_DIR="${SMSD_RELEASE_OUTPUT_DIR:-$SMSD_RELEASE_ROOT/dist/release-$SMSD_RELEASE_VERSION}"
+if [[ -e "$SMSD_RELEASE_FINAL_DIR" ]]; then
+  echo 'Release output already exists; set SMSD_RELEASE_OUTPUT_DIR to a new directory.' >&2
+  exit 1
+fi
 SMSD_RELEASE_JOBS="${SMSD_RELEASE_JOBS:-4}"
 SMSD_RELEASE_JAVA8_HOME="${SMSD_RELEASE_JAVA8_HOME:-}"
 [[ -x "$SMSD_RELEASE_JAVA8_HOME/bin/java" ]] || {
@@ -27,6 +31,7 @@ SMSD_RELEASE_SOURCE="$(mktemp -d "$SMSD_RELEASE_ROOT/build/release-source.XXXXXX
 trap 'rm -rf "$SMSD_RELEASE_SOURCE" "$SMSD_RELEASE_DIR"' EXIT
 
 # Include the slow chemistry suites and generate library documentation.
+"$SMSD_RELEASE_PYTHON" -m pytest scripts/tests -q
 mvn -f java/pom.xml -B -Dslow.tests.exclude=nothing clean verify \
   org.apache.maven.plugins:maven-source-plugin:3.3.1:jar-no-fork \
   org.apache.maven.plugins:maven-javadoc-plugin:3.6.3:jar
@@ -37,16 +42,9 @@ mvn -f java/pom.xml -B -Dslow.tests.exclude=nothing \
 java/src/scripts/smsd --version
 java/target/appassembler/bin/smsd --version
 
-# Debug keeps C++ assert-based checks enabled. GPU builds are validated separately.
-cmake -S cpp -B build/release-preflight -DCMAKE_BUILD_TYPE=Debug \
-  -DSMSD_BUILD_TESTS=ON -DSMSD_BUILD_PYTHON=OFF \
-  -DSMSD_BUILD_OPENMP=ON -DSMSD_WITH_RDKIT=OFF \
-  -DSMSD_BUILD_CUDA=OFF -DSMSD_BUILD_METAL=OFF
-cmake --build build/release-preflight --parallel "$SMSD_RELEASE_JOBS"
-ctest --test-dir build/release-preflight --output-on-failure
-
 # Build from the source distribution to verify that it contains all build inputs.
-"$SMSD_RELEASE_PYTHON" -m build --sdist --no-isolation --outdir "$SMSD_RELEASE_DIR"
+"$SMSD_RELEASE_PYTHON" scripts/build_python_wheels.py prepare \
+  --output-dir "$SMSD_RELEASE_DIR" --release-ref "${SMSD_RELEASE_REF:-HEAD}" --no-isolation
 tar -xzf "$SMSD_RELEASE_DIR/smsd-$SMSD_RELEASE_VERSION.tar.gz" -C "$SMSD_RELEASE_SOURCE"
 "$SMSD_RELEASE_PYTHON" -m build --wheel --no-isolation \
   -Ccmake.define.SMSD_BUILD_METAL=OFF -Ccmake.define.SMSD_BUILD_CUDA=OFF \
@@ -67,9 +65,12 @@ SMSD_RELEASE_WHEELS=("$SMSD_RELEASE_DIR"/smsd-*.whl)
 "$SMSD_RELEASE_PYTHON" -m twine check --strict \
   "$SMSD_RELEASE_DIR/smsd-$SMSD_RELEASE_VERSION.tar.gz" "${SMSD_RELEASE_WHEELS[0]}"
 "$SMSD_RELEASE_PYTHON" -m pip install --no-deps --force-reinstall "${SMSD_RELEASE_WHEELS[0]}"
-"$SMSD_RELEASE_PYTHON" scripts/check_python_wheel.py \
-  --source "$SMSD_RELEASE_SOURCE/smsd-$SMSD_RELEASE_VERSION" \
-  --require-rdkit --require-openmp
+CMAKE_BUILD_PARALLEL_LEVEL="$SMSD_RELEASE_JOBS" \
+"$SMSD_RELEASE_PYTHON" scripts/build_python_wheels.py verify-local \
+  --sdist "$SMSD_RELEASE_DIR/smsd-$SMSD_RELEASE_VERSION.tar.gz" \
+  --wheel "${SMSD_RELEASE_WHEELS[0]}" \
+  --native-test-dir "$SMSD_RELEASE_SOURCE/native-tests" \
+  --source-dir "$SMSD_RELEASE_SOURCE/smsd-$SMSD_RELEASE_VERSION"
 "$SMSD_RELEASE_PYTHON" - "$SMSD_RELEASE_VERSION" <<'PY'
 import importlib.metadata
 from pathlib import Path
@@ -80,8 +81,6 @@ assert Path(smsd.__file__).resolve().is_relative_to(Path(sys.prefix).resolve())
 assert len(smsd.parse_smiles("c1ccccc1")) == 6
 print("Verified installed wheel:", smsd.__file__)
 PY
-"$SMSD_RELEASE_PYTHON" -m pytest python/tests -q --import-mode=importlib
-
 cp "java/target/smsd-$SMSD_RELEASE_VERSION.jar" \
   "java/target/smsd-$SMSD_RELEASE_VERSION-jar-with-dependencies.jar" \
   "java/target/smsd-$SMSD_RELEASE_VERSION-sources.jar" \
@@ -107,6 +106,9 @@ if [[ -n "${SMSD_PLATFORM_WHEELS_DIR:-}" ]]; then
   SMSD_RELEASE_COLLECT_ARGS+=(--wheel-dir "$SMSD_PLATFORM_WHEELS_DIR")
 fi
 "$SMSD_RELEASE_PYTHON" scripts/collect-release-wheels.py "${SMSD_RELEASE_COLLECT_ARGS[@]}"
-rm -rf "$SMSD_RELEASE_FINAL_DIR"
+if [[ -e "$SMSD_RELEASE_FINAL_DIR" ]]; then
+  echo 'Release output was created during the build; it has been retained.' >&2
+  exit 1
+fi
 mv "$SMSD_RELEASE_DIR" "$SMSD_RELEASE_FINAL_DIR"
 echo "Verified local release assets: $SMSD_RELEASE_FINAL_DIR"

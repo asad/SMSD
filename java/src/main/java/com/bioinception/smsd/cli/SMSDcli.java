@@ -6,7 +6,9 @@
 package com.bioinception.smsd.cli;
 
 import com.bioinception.smsd.core.ChemOptions;
-import com.bioinception.smsd.core.SMSD;
+import com.bioinception.smsd.core.MCS;
+import com.bioinception.smsd.core.Substructure;
+import com.bioinception.smsd.core.SearchResult;
 import com.bioinception.smsd.core.Standardiser;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -65,6 +67,8 @@ import picocli.CommandLine.Option;
 @Command(
     name = "smsd",
     mixinStandardHelpOptions = true,
+    exitCodeOnExecutionException = 2,
+    footer = "Exit status: 0 = match, 1 = no match, 2 = invalid input, error or incomplete search.",
     version = "SMSD Pro 7.2.2 — com.bioinceptionlabs",
     description =
         "SMSD — Substructure & MCS search engine by BioInception PVT LTD"
@@ -93,8 +97,17 @@ public class SMSDcli implements Callable<Integer> {
       defaultValue = "sub")
   String mode;
 
+  @Option(names = {"--objective"}, defaultValue = "MCIS", description = "MCS objective: MCIS or MCES.")
+  MCS.Objective objective = MCS.Objective.MCIS;
+
+  @Option(names = {"--fragments"}, description = "Allow disconnected common fragments in MCS mode.")
+  boolean fragments;
+
+  @Option(names = {"--induced"}, description = "Require an induced substructure embedding.")
+  boolean induced;
+
   @Option(names = {"-m", "--mappings"},
-      description = "Enumerate all unique substructure mappings.")
+      description = "Enumerate substructure atom mappings.")
   boolean allMappings;
 
   @Option(names = {"--timeout"}, description = "Time limit in ms (default: 10000).")
@@ -147,6 +160,10 @@ public class SMSDcli implements Callable<Integer> {
 
   @Override
   public Integer call() throws Exception {
+    if (!"sub".equalsIgnoreCase(mode) && !"mcs".equalsIgnoreCase(mode))
+      throw new CommandLine.ParameterException(new CommandLine(this), "Unknown mode: " + mode);
+    if ("mcs".equalsIgnoreCase(mode) && "SIG".equalsIgnoreCase(qType))
+      throw new CommandLine.ParameterException(new CommandLine(this), "SMARTS queries require substructure mode");
     if (benchmark) return runBenchmark();
     if ("SDF".equalsIgnoreCase(tType)) return runBatch();
     return runSingle();
@@ -155,8 +172,9 @@ public class SMSDcli implements Callable<Integer> {
   private int runSingle() throws Exception {
     MolIO.Query query = MolIO.loadQuery(qType, q);
     IAtomContainer tm = applyHydrogenOptions(MolIO.loadTarget(tType, t));
-    SMSD smsd = createSMSD(query, tm, new ChemOptions());
-    IAtomContainer qm = query.isSmarts() ? null : applyHydrogenOptions(query.container());
+    tm = prepare(tm);
+    IAtomContainer qm = query.isSmarts() ? null : prepare(applyHydrogenOptions(query.container()));
+    Substructure substructure = createSubstructure(query, qm, new ChemOptions());
 
     Map<String, Object> result = new LinkedHashMap<>();
     result.put("query", q);
@@ -165,20 +183,23 @@ public class SMSDcli implements Callable<Integer> {
     result.put("timeout_ms", timeoutMs);
 
     return "sub".equalsIgnoreCase(mode)
-        ? runSubstructure(smsd, qm, tm, result)
-        : runMCS(smsd, qm, tm, result);
+        ? runSubstructure(substructure, qm, tm, result)
+        : runMCS(qm, tm, result);
   }
 
   private int runSubstructure(
-      SMSD smsd, IAtomContainer qm, IAtomContainer tm, Map<String, Object> result)
+      Substructure query, IAtomContainer qm, IAtomContainer tm, Map<String, Object> result)
       throws Exception {
     if (!allMappings) {
-      boolean ok = smsd.isSubstructure(timeoutMs);
-      result.put("exists", ok);
+      SearchResult search = query.withTimeout(timeoutMs).match(tm);
+      result.put("exists", search.found());
+      recordOutcome(result, search);
       writeJson(result);
-      return ok ? 0 : 1;
+      return exitCode(search);
     }
-    List<Map<Integer, Integer>> maps = smsd.findAllSubstructures(10_000, timeoutMs);
+    SearchResult search = query.withTimeout(timeoutMs).matchAll(tm, 10_000);
+    recordOutcome(result, search);
+    List<Map<Integer, Integer>> maps = mappings(search);
     List<Map<String, Object>> items = new ArrayList<>();
     int idx = 0;
     for (Map<Integer, Integer> m : maps) {
@@ -195,21 +216,25 @@ public class SMSDcli implements Callable<Integer> {
     }
     if (mapOut != null) writeMappingExport(qm, tm, maps);
     writeJson(result);
-    return 0;
+    return exitCode(search);
   }
 
-  private int runMCS(SMSD smsd, IAtomContainer qm, IAtomContainer tm, Map<String, Object> result)
+  private int runMCS(IAtomContainer qm, IAtomContainer tm, Map<String, Object> result)
       throws Exception {
-    Map<Integer, Integer> m = smsd.findMCS(false, true, timeoutMs);
+    if (qm == null) throw new IllegalArgumentException("SMARTS queries require substructure mode");
+    SearchResult search = MCS.find(qm).withOptions(mcsOptions(new ChemOptions())).withTimeout(timeoutMs).match(tm);
+    Map<Integer, Integer> m = firstMapping(search);
+    recordOutcome(result, search);
+    result.put("objective", objective.toString());
     result.put("mcs_size", m.size());
     result.put("pairs", toPairs(m));
     result.put("query_atoms", new ArrayList<>(m.keySet()));
     result.put("target_atoms", new ArrayList<>(m.values()));
 
-    String mcsSmi = (qm != null && tm != null) ? mcsFragmentSmiles(tm, m) : null;
+    String mcsSmi = search.found() ? search.matches().get(0).toSmiles(qm) : null;
     if (qm != null && tm != null) {
-      result.put("tanimoto", tanimoto(qm, tm, m.size()));
-      result.put("similarity_upper_bound", smsd.similarityUpperBound());
+      result.put("tanimoto", mcsSimilarity(qm, tm, search));
+      result.put("similarity_upper_bound", similarityUpperBound(qm, tm));
       if (mcsSmi != null) result.put("mcs_smiles", mcsSmi);
     }
     writeJson(result);
@@ -222,7 +247,11 @@ public class SMSDcli implements Callable<Integer> {
             (mcsSmi + "\n").getBytes(StandardCharsets.UTF_8));
       }
     }
-    return 0;
+    return exitCode(search);
+  }
+
+  private static int exitCode(SearchResult search) {
+    return search.complete() ? (search.found() ? 0 : 1) : 2;
   }
 
   @SuppressWarnings("unchecked")
@@ -236,13 +265,17 @@ public class SMSDcli implements Callable<Integer> {
     // CDK IAtomContainer is not thread-safe for concurrent modification; calling
     // applyHydrogenOptions(query.container()) from N threads simultaneously
     // would corrupt it. Snapshot the result into a final local.
-    final IAtomContainer queryMol = query.isSmarts() ? null : applyHydrogenOptions(query.container());
+    final IAtomContainer queryMol = query.isSmarts() ? null : prepare(applyHydrogenOptions(query.container()));
+    final Substructure substructure = createSubstructure(query, queryMol, chem).withTimeout(timeoutMs);
+    final MCS maximum = queryMol == null ? null : MCS.find(queryMol).withOptions(mcsOptions(chem)).withTimeout(timeoutMs);
 
     // Resolve thread count: 0 = all available processors
     int cores = (numThreads > 0) ? numThreads : Runtime.getRuntime().availableProcessors();
 
     // Pre-allocate result slots so parallel writes stay at distinct indices
     Map<String, Object>[] results = new Map[n];
+    int[] exitCodes = new int[n];
+    Arrays.fill(exitCodes, 2);
 
     ForkJoinPool pool = new ForkJoinPool(cores);
     try {
@@ -256,17 +289,22 @@ public class SMSDcli implements Callable<Integer> {
             IAtomContainer tm = applyHydrogenOptions(targets.get(idx));
             try { tm = Standardiser.standardise(tm, Standardiser.TautomerMode.NONE); }
             catch (Exception ignored) { }
-            SMSD smsd = query.isSmarts()
-                ? new SMSD(query.text(), tm, chem)
-                : new SMSD(queryMol, tm, chem);
+
             if ("sub".equalsIgnoreCase(mode)) {
-              row.put("exists", smsd.isSubstructure(timeoutMs));
+              SearchResult search = substructure.match(tm);
+              exitCodes[idx] = exitCode(search);
+              recordOutcome(row, search);
+              row.put("exists", search.found());
             } else {
-              Map<Integer, Integer> m = smsd.findMCS(false, true, timeoutMs);
+              if (maximum == null) throw new IllegalArgumentException("SMARTS queries require substructure mode");
+              SearchResult search = maximum.match(tm);
+              exitCodes[idx] = exitCode(search);
+              recordOutcome(row, search);
+              Map<Integer, Integer> m = firstMapping(search);
               row.put("mcs_size", m.size());
               row.put("pairs", toPairs(m));
               if (queryMol != null && tm != null)
-                row.put("tanimoto", tanimoto(queryMol, tm, m.size()));
+                row.put("tanimoto", mcsSimilarity(queryMol, tm, search));
             }
           } catch (Exception e) {
             row.put("error", e.getMessage());
@@ -286,17 +324,22 @@ public class SMSDcli implements Callable<Integer> {
           IAtomContainer tm = applyHydrogenOptions(targets.get(i));
           try { tm = Standardiser.standardise(tm, Standardiser.TautomerMode.NONE); }
           catch (Exception ignored) { }
-          SMSD smsd = query.isSmarts()
-              ? new SMSD(query.text(), tm, chem)
-              : new SMSD(queryMol, tm, chem);
+
           if ("sub".equalsIgnoreCase(mode)) {
-            row.put("exists", smsd.isSubstructure(timeoutMs));
+            SearchResult search = substructure.match(tm);
+            exitCodes[i] = exitCode(search);
+              recordOutcome(row, search);
+              row.put("exists", search.found());
           } else {
-            Map<Integer, Integer> m = smsd.findMCS(false, true, timeoutMs);
+            if (maximum == null) throw new IllegalArgumentException("SMARTS queries require substructure mode");
+              SearchResult search = maximum.match(tm);
+              exitCodes[i] = exitCode(search);
+              recordOutcome(row, search);
+              Map<Integer, Integer> m = firstMapping(search);
             row.put("mcs_size", m.size());
             row.put("pairs", toPairs(m));
             if (queryMol != null && tm != null)
-              row.put("tanimoto", tanimoto(queryMol, tm, m.size()));
+              row.put("tanimoto", mcsSimilarity(queryMol, tm, search));
           }
         } catch (Exception ex) {
           row.put("error", ex.getMessage());
@@ -315,61 +358,126 @@ public class SMSDcli implements Callable<Integer> {
     output.put("mode", mode);
     output.put("results", Arrays.asList(results));
     writeJson(output);
-    return 0;
+    boolean found = false;
+    for (int code : exitCodes) {
+      if (code == 2) return 2;
+      found |= code == 0;
+    }
+    return found ? 0 : 1;
   }
 
   private int runBenchmark() throws Exception {
     MolIO.Query query = MolIO.loadQuery(qType, q);
-    IAtomContainer tm = applyHydrogenOptions(MolIO.loadTarget(tType, t));
-    ChemOptions chem = new ChemOptions();
+    IAtomContainer target = prepare(applyHydrogenOptions(MolIO.loadTarget(tType, t)));
+    IAtomContainer queryMolecule = query.isSmarts() ? null : prepare(applyHydrogenOptions(query.container()));
+    Substructure substructure = createSubstructure(query, queryMolecule, new ChemOptions()).withTimeout(timeoutMs);
+    MCS maximum = queryMolecule == null ? null : MCS.find(queryMolecule)
+        .withOptions(mcsOptions(new ChemOptions())).withTimeout(timeoutMs);
     int warmupRuns = 3, timedRuns = 10;
-    PrintWriter pw = new PrintWriter(System.out, true);
-    pw.println("SMSD Benchmark (com.bioinceptionlabs)");
-    pw.println("======================================");
-    pw.printf("Query:  %s%nTarget: %s%nWarmup: %d runs, Timed: %d runs%n%n",
-        q, t, warmupRuns, timedRuns);
-
-    for (int i = 0; i < warmupRuns; i++) {
-      SMSD smsd = createSMSD(query, tm, chem);
-      smsd.isSubstructure(timeoutMs);
-      if (!query.isSmarts()) smsd.findMCS(false, true, timeoutMs);
+    PrintWriter writer = new PrintWriter(System.out, true);
+    writer.println("SMSD Benchmark (com.bioinceptionlabs)");
+    writer.printf("Query: %s%nTarget: %s%nWarmup: %d runs, Timed: %d runs%n", q, t, warmupRuns, timedRuns);
+    for (int run = 0; run < warmupRuns; run++) {
+      substructure.match(target);
+      if (maximum != null) maximum.match(target);
     }
-
-    long subTotal = 0;
-    boolean subResult = false;
-    for (int i = 0; i < timedRuns; i++) {
-      SMSD smsd = createSMSD(query, tm, chem);
-      long t0 = System.nanoTime();
-      subResult = smsd.isSubstructure(timeoutMs);
-      subTotal += System.nanoTime() - t0;
+    long substructureNanos = 0;
+    SearchResult result = null;
+    boolean foundMatch = false, incomplete = false;
+    for (int run = 0; run < timedRuns; run++) {
+      long started = System.nanoTime();
+      result = substructure.match(target);
+      foundMatch |= result.found();
+      incomplete |= !result.complete();
+      substructureNanos += System.nanoTime() - started;
     }
-    pw.printf("Substructure: %s  avg %.3f ms%n",
-        subResult ? "FOUND" : "NOT FOUND", (subTotal / (double) timedRuns) / 1_000_000.0);
-
-    if (!query.isSmarts()) {
-      long mcsTotal = 0;
-      int mcsSize = 0;
-      for (int i = 0; i < timedRuns; i++) {
-        SMSD smsd = createSMSD(query, tm, chem);
-        long t0 = System.nanoTime();
-        Map<Integer, Integer> m = smsd.findMCS(false, true, timeoutMs);
-        mcsTotal += System.nanoTime() - t0;
-        mcsSize = m.size();
+    writer.printf("Substructure: %s, %s, average %.3f ms%n", result.found() ? "FOUND" : "NOT FOUND",
+        result.status(), substructureNanos / (double) timedRuns / 1_000_000);
+    if (maximum != null) {
+      long mcsNanos = 0;
+      for (int run = 0; run < timedRuns; run++) {
+        long started = System.nanoTime();
+        result = maximum.match(target);
+        foundMatch |= result.found();
+        incomplete |= !result.complete();
+        mcsNanos += System.nanoTime() - started;
       }
-      pw.printf("MCS:          size %d  avg %.3f ms%n",
-          mcsSize, (mcsTotal / (double) timedRuns) / 1_000_000.0);
-      pw.printf("Sim UB:       %.4f%n", createSMSD(query, tm, chem).similarityUpperBound());
+      writer.printf("MCS: %s, score %.3f, %s, average %.3f ms%n", objective, result.score(),
+          result.status(), mcsNanos / (double) timedRuns / 1_000_000);
     }
-    pw.println("======================================");
-    return 0;
+    return incomplete ? 2 : foundMatch ? 0 : 1;
   }
 
-  // ---- helpers ----
+  private Substructure createSubstructure(MolIO.Query query, IAtomContainer molecule, ChemOptions chemistry) {
+    Substructure.Options options = new Substructure.Options();
+    options.chemistry = chemistry;
+    options.induced = induced;
+    return (query.isSmarts() ? Substructure.smarts(query.text()) : Substructure.find(molecule)).withOptions(options);
+  }
 
-  private SMSD createSMSD(MolIO.Query query, IAtomContainer tm, ChemOptions chem) throws Exception {
-    return query.isSmarts()
-        ? new SMSD(query.text(), tm, chem)
-        : new SMSD(applyHydrogenOptions(query.container()), tm, chem);
+  private MCS.Options mcsOptions(ChemOptions chemistry) {
+    MCS.Options options = new MCS.Options();
+    options.chemistry = chemistry;
+    options.objective = objective;
+    options.connectivity = fragments ? MCS.Connectivity.Fragments : MCS.Connectivity.Connected;
+    return options;
+  }
+
+  private static IAtomContainer prepare(IAtomContainer molecule) {
+    try { return Standardiser.standardise(molecule, Standardiser.TautomerMode.NONE); }
+    catch (Exception failure) { return molecule; }
+  }
+
+  private static Map<Integer, Integer> firstMapping(SearchResult result) {
+    return result.found() ? result.matches().get(0).atomMapping() : java.util.Collections.emptyMap();
+  }
+
+  private static List<Map<Integer, Integer>> mappings(SearchResult result) {
+    List<Map<Integer, Integer>> mappings = new ArrayList<>();
+    for (SearchResult.Match match : result.matches()) mappings.add(match.atomMapping());
+    return mappings;
+  }
+
+  private static void recordOutcome(Map<String, Object> output, SearchResult result) {
+    output.put("status", result.status().toString());
+    output.put("optimal", result.optimal());
+    output.put("complete", result.complete());
+    output.put("score", result.score());
+    output.put("nodes_visited", result.nodesVisited());
+    output.put("elapsed_ms", result.elapsedMillis());
+    if (result.found()) {
+      SearchResult.Match match = result.matches().get(0);
+      List<Map<String, Object>> bonds = new ArrayList<>();
+      for (Map.Entry<SearchResult.Bond, SearchResult.Bond> bond : match.bondMapping().entrySet()) {
+        Map<String, Object> pair = new LinkedHashMap<>();
+        pair.put("query", Arrays.asList(bond.getKey().first(), bond.getKey().second()));
+        pair.put("target", Arrays.asList(bond.getValue().first(), bond.getValue().second()));
+        bonds.add(pair);
+      }
+      output.put("bonds", bonds);
+      output.put("fragments", match.fragments());
+    }
+  }
+
+  private double mcsSimilarity(IAtomContainer query, IAtomContainer target, SearchResult result) {
+    if (objective == MCS.Objective.MCIS) return tanimoto(query, target, firstMapping(result).size());
+    int shared = result.found() ? result.matches().get(0).bondCount() : 0;
+    int total = query.getBondCount() + target.getBondCount() - shared;
+    return total > 0 ? (double) shared / total : 0;
+  }
+
+  private double similarityUpperBound(IAtomContainer query, IAtomContainer target) {
+    if (objective == MCS.Objective.MCES) {
+      int shared = Math.min(query.getBondCount(), target.getBondCount());
+      int total = query.getBondCount() + target.getBondCount() - shared;
+      return total > 0 ? (double) shared / total : 0;
+    }
+    int[] queryCounts = new int[119], targetCounts = new int[119];
+    for (IAtom atom : query.atoms()) queryCounts[atom.getAtomicNumber()]++;
+    for (IAtom atom : target.atoms()) targetCounts[atom.getAtomicNumber()]++;
+    int shared = 0;
+    for (int element = 0; element < queryCounts.length; element++) shared += Math.min(queryCounts[element], targetCounts[element]);
+    return tanimoto(query, target, shared);
   }
 
   private IAtomContainer applyHydrogenOptions(IAtomContainer mol) throws Exception {
@@ -405,15 +513,6 @@ public class SMSDcli implements Callable<Integer> {
         sub.newBond(idx2new.get(ai), idx2new.get(bi), bo.getOrder());
     }
     return sub;
-  }
-
-  private static String mcsFragmentSmiles(IAtomContainer target, Map<Integer, Integer> mapping) {
-    if (mapping == null || mapping.isEmpty() || target == null) return null;
-    try {
-      return SMIGEN.create(buildSubgraph(target, new HashSet<>(mapping.values())));
-    } catch (Exception e) {
-      return null;
-    }
   }
 
   private void writeMappingExport(
@@ -618,6 +717,7 @@ public class SMSDcli implements Callable<Integer> {
     /** Write a single molecule as SMILES or MDL V2000 MOL. */
     public static void writeMolecule(IAtomContainer mol, OutType type, OutputStream os)
         throws Exception {
+      os=nonClosing(os);
       if (type == OutType.MOL) {
         try (MDLV2000Writer w = new MDLV2000Writer(os)) { w.write(mol); }
       } else {
@@ -641,6 +741,7 @@ public class SMSDcli implements Callable<Integer> {
         IAtomContainer query, IAtomContainer target, List<Map<Integer, Integer>> mappings,
         OutType type, OutputStream os, boolean prettyJson, double similarityUpperBound)
         throws Exception {
+      os=nonClosing(os);
       Objects.requireNonNull(target, "target");
       Objects.requireNonNull(mappings, "mappings");
       switch (type) {
@@ -656,6 +757,12 @@ public class SMSDcli implements Callable<Integer> {
           break;
         default: throw new IllegalArgumentException("Unsupported: " + type);
       }
+    }
+
+    private static OutputStream nonClosing(OutputStream output) {
+      return new FilterOutputStream(Objects.requireNonNull(output,"output")) {
+        @Override public void close()throws IOException {flush();}
+      };
     }
 
     private static void writeMappingsJSON(
@@ -714,9 +821,7 @@ public class SMSDcli implements Callable<Integer> {
     private static void writeMappingsMOL(
         IAtomContainer target, List<Map<Integer, Integer>> mappings, OutputStream os)
         throws Exception {
-      OutputStream nonClosing = new FilterOutputStream(os) {
-        @Override public void close() throws IOException { flush(); }
-      };
+      OutputStream nonClosing = os;
       for (Map<Integer, Integer> m : mappings) {
         try (MDLV2000Writer w = new MDLV2000Writer(nonClosing)) {
           w.write(buildSubgraph(target, new HashSet<>(m.values())));

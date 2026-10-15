@@ -26,6 +26,23 @@ Downloads include Java packages, C++ headers, Python wheels and native installer
 for Windows, macOS and Linux. [Python 7.2.2 is also on PyPI](https://pypi.org/project/smsd/7.2.2/);
 Maven Central publication remains pending.
 
+The current source introduces a breaking search API change. Use `MCS` for
+maximum common substructure and `Substructure` for molecule or SMARTS queries.
+Both prepare a reusable query and return mappings with completion and stopping
+status. The examples below require a source build.
+
+| Search | C++ and Java | Python |
+| --- | --- | --- |
+| One result | `match(target)` | `match(target)` |
+| All embeddings, with a limit | `matchAll(target, limit)` | `match_all(target, limit)` |
+| A collection of targets | `matchMany(targets)` | `match_many(targets)` |
+| MCS objectives | MCIS or MCES; connected or disconnected fragments | Same |
+
+MCIS preserves edges and non-edges and maximises atoms, then bonds. MCES
+selects compatible common edges and maximises bonds, then incident atoms.
+See the [examples](docs/EXAMPLES.md) for chemistry, fragments and search limits,
+and the [benchmark guide](benchmarks/README.md) for measuring the source API.
+
 ## Installation
 
 | Package | Requirements |
@@ -72,24 +89,37 @@ Use these Maven coordinates for 7.2.2:
 ```
 
 Until 7.2.2 is available on Maven Central, install it from this source checkout
-with `mvn -f java/pom.xml install` using Java 25. The downloadable JAR also
-provides the complete classpath for the following example.
+with `mvn -f java/pom.xml install` using Java 25. The example below uses the
+unreleased prepared-query API; build the current source checkout with `mvn -f java/pom.xml package -DskipTests` first.
 
 Save this as `MCSExample.java`:
 
 ```java
-import com.bioinception.smsd.core.ChemOptions;
-import com.bioinception.smsd.core.SMSD;
+import com.bioinception.smsd.core.MCS;
+import com.bioinception.smsd.core.SearchResult;
+import com.bioinception.smsd.core.Substructure;
 import java.util.Map;
+import org.openscience.cdk.interfaces.IAtomContainer;
+import org.openscience.cdk.silent.SilentChemObjectBuilder;
+import org.openscience.cdk.smiles.SmilesParser;
 
 public class MCSExample {
     public static void main(String[] args) throws Exception {
-        SMSD matcher = new SMSD("c1ccccc1", "c1ccc(O)cc1", new ChemOptions());
-        Map<Integer, Integer> mapping = matcher.findMCS(false, true, 1000);
-        if (!matcher.isSubstructure() || mapping.size() != 6) {
-            throw new IllegalStateException("Expected a six-atom benzene match");
+        SmilesParser parser = new SmilesParser(SilentChemObjectBuilder.getInstance());
+        IAtomContainer query = parser.parseSmiles("c1ccccc1");
+        IAtomContainer target = parser.parseSmiles("c1ccc(O)cc1");
+        SearchResult result = MCS.find(query).withTimeout(1000).match(target);
+        if (!result.optimal() || !result.found()
+                || result.matches().get(0).atomCount() != 6
+                || !Substructure.find(query).match(target).found()) {
+            throw new IllegalStateException("Expected a proven six-atom benzene match");
         }
-        System.out.println("MCS atoms: " + mapping.size());
+        SearchResult.Match match = result.matches().get(0);
+        for (Map.Entry<Integer, Integer> pair : match.atomMapping().entrySet()) {
+            System.out.println(query.getAtom(pair.getKey()).getSymbol() + " -> "
+                    + target.getAtom(pair.getValue()).getSymbol());
+        }
+        System.out.println("Common fragment: " + match.toSmiles(query));
     }
 }
 ```
@@ -97,15 +127,18 @@ public class MCSExample {
 Compile with Java 25 and run on Java 8 or later:
 
 ```bash
-javac --release 8 -cp smsd-7.2.2-jar-with-dependencies.jar MCSExample.java
-java -cp "smsd-7.2.2-jar-with-dependencies.jar:." MCSExample
+javac --release 8 -cp java/target/smsd-7.2.2-jar-with-dependencies.jar MCSExample.java
+java -cp "java/target/smsd-7.2.2-jar-with-dependencies.jar:." MCSExample
 ```
 
 When compiling with Java 8, omit `--release 8`. On Windows, use
-`"smsd-7.2.2-jar-with-dependencies.jar;."` as the classpath.
+`"java/target/smsd-7.2.2-jar-with-dependencies.jar;."` as the classpath.
 See the [Java module](java/README.md) for CDK container examples.
 
 ### Python
+
+The examples use the current source API, which replaces the search entry
+points in release 7.2.2. Build from source to use `MCS` and `Substructure`.
 
 Install Python 7.2.2 from PyPI:
 
@@ -123,10 +156,10 @@ import smsd
 
 query = "c1ccccc1"
 target = "c1ccc(O)cc1"
-assert smsd.is_substructure(query, target)
-mapping = smsd.find_mcs(query, target)
-assert len(mapping) == 6
-print(len(mapping))
+assert smsd.Substructure.find(query).match(target).found
+result = smsd.MCS.find(query).match(target)
+assert result.best.atom_count == 6
+print(result.best.atom_count, result.optimal)
 ```
 
 Release wheels use CPU and OpenMP. Optional CUDA and Apple Metal support
@@ -143,8 +176,8 @@ Save this as `example.cpp` in a source checkout:
 int main() {
     auto query = smsd::parseSMILES("c1ccccc1");
     auto target = smsd::parseSMILES("c1ccc(O)cc1");
-    auto mapping = smsd::findMCS(query, target, smsd::ChemOptions{}, smsd::MCSOptions{});
-    return mapping.size() == 6 ? 0 : 1;
+    const auto result = smsd::MCS::find(query).match(target);
+    return result.optimal && result.matches.front().atomMapping.size() == 6 ? 0 : 1;
 }
 ```
 
@@ -217,6 +250,19 @@ platforms, counts and installer checks.
 [Benchmark results](benchmarks/RESULTS_7.2.0.md) retain their measured versions,
 hardware and matching policies. They were not rerun for 7.2.2.
 See [benchmark instructions](benchmarks/README.md) to reproduce them.
+
+Check the standalone Python, Java and C++ examples with the current SMSD source
+built and installed, a JDK and GCC or Clang. Install RDKit to include its
+integration examples:
+
+```bash
+python scripts/check_examples.py \
+  --jar java/target/smsd-7.2.2-jar-with-dependencies.jar \
+  --report build/example-check.json
+```
+
+Use `--languages python` to check only Python. Each example runs in a separate
+temporary directory; the report lists failures and missing optional dependencies.
 
 ## Licence and attribution
 

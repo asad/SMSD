@@ -2,6 +2,29 @@
 
 All notable changes to SMSD Pro are documented in this file.
 
+## Unreleased
+
+- Preserve supplied hydrogen counts, cap scaffold fragments and leave caller-owned output streams open.
+- Use attached hydrogen counts for circular fingerprints and donor classification, and exclude multiple-bond nitrogen from neutral basic-amine features.
+- Add the explicit Match-based tautomer confidence helper with read-time pH and solvent context; search objectives are unchanged.
+- Distinguish CLI no-match outcomes from errors and incomplete searches, and reject unknown modes.
+- Correct SMARTS element, hydrogen and valence predicates, and initialise canonical hashes lazily.
+- Preserve tetrahedral and double-bond stereochemistry through MOL and SMILES round trips and mapped matching.
+- Replace search facades and algorithm selectors with `MCS` and `Substructure` prepared queries; update callers and bindings. This is a breaking API change.
+- Retire near-MCS, post-filter and progress-callback options; SMARTS queries use `Substructure`.
+- Add explicit MCIS and MCES objectives, selected bond mappings and disconnected fragments.
+- Return search completion, stopping status and optimality separately from matches.
+- Move multi-target, constrained, consensus and R-group searches under the query APIs.
+- Add Java `Substructure.matchMany` with ordered per-target outcomes, matching the MCS batch contract.
+- Snapshot prepared Java query graphs so later changes to caller-owned arrays do not change searches.
+- Tighten MCS bounds and prioritise mapped neighbours in Java substructure searches.
+- Add shared cross-language benchmark workloads and independent mapping checks.
+- Apply strict bond defaults consistently across Python search helpers and align named chemistry profiles.
+- Make tautomer-aware MCS fingerprints explicit and use circular fingerprints for batch similarity.
+- Add `path_length` to `fingerprint_from_smiles` for path and MCS fingerprints.
+- Preserve supplied hydrogen counts in SMILES and SMARTS, and write valid MCS fragments.
+- Add optional `MolGraph.Builder.hydrogenCounts(int[])` for Java graphs with explicit hydrogen counts.
+
 ## [7.2.2] - 2026-10-07
 
 - Include CDK SMARTS transitively for Maven library users.

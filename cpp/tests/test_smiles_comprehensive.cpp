@@ -825,7 +825,7 @@ static void testStereochemistry() {
     // 5. L-alanine
     { auto g = smsd::parseSMILES("N[C@@H](C)C(=O)O");
       TEST_ASSERT_EQ(g.n, 6, "L-alanine: 6 atoms");
-      // Find chirality center
+      // Find chirality centre
       bool found = false;
       for (int i = 0; i < g.n; i++) {
           if (g.tetraChirality[i] != 0) found = true;
@@ -874,9 +874,9 @@ static void testStereochemistry() {
           TEST_ASSERT(true, "trans-DCE: parsed");
       } }
 
-    // 13. Multiple stereo centers: L-threonine
+    // 13. Multiple stereo centres: L-threonine
     { auto g = smsd::parseSMILES("[C@@H]([C@H](C(=O)O)N)(O)C");
-      // 2 stereo centers expected
+      // 2 stereo centres expected
       int sc = 0;
       for (int i = 0; i < g.n; i++) {
           if (g.tetraChirality[i] != 0) sc++;
@@ -1103,7 +1103,7 @@ static void testEdgeCases() {
     { auto g = smsd::parseSMILES("[C]");
       TEST_ASSERT_EQ(g.n, 1, "[C]: 1 atom"); }
 
-    // 20. Aromatic bond in bracket with non-aromatic neighbors
+    // 20. Aromatic bond in bracket with non-aromatic neighbours
     { auto g = smsd::parseSMILES("[cH]1cccc1");
       TEST_ASSERT_EQ(g.n, 5, "[cH]1cccc1: 5 atoms");
       TEST_ASSERT_EQ(countAromatic(g), 5, "[cH]1cccc1: all aromatic"); }

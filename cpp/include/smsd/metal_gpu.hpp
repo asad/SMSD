@@ -34,24 +34,26 @@ namespace metal {
 // Molecule descriptor (mirrors cuda::GpuMolecule for code-path symmetry)
 // ---------------------------------------------------------------------------
 
-/// Number of atom-label histogram bins (element atomic number 0–255).
-static constexpr int METAL_LABEL_BINS = 256;
+/// Number of atom-label histogram bins covering element, aromaticity and ring flags.
+static constexpr int METAL_LABEL_BINS = 512;
 
 /**
  * Compact molecule representation for GPU screening.
  *
  * n             — heavy-atom count
- * labelCounts   — per-element histogram: labelCounts[atomicNumber] = count
+ * labelCounts   — atom-label histogram
  *
- * The struct is 4 + 256*4 + 12 = 1040 bytes (16-byte aligned).
+ * The struct is 4 + 512*4 + 12 = 2064 bytes (16-byte aligned).
  * Explicit padding ensures the C++ stride matches the Metal shader stride.
  * Descriptors are copied into shared Metal buffers before dispatch.
  */
 struct alignas(16) MetalMolecule {
     int n = 0;
     int labelCounts[METAL_LABEL_BINS] = {};
-    int _padding[3] = {};  // explicit 12-byte pad to reach 1040 (16-byte multiple)
+    int _padding[3] = {};  // explicit 12-byte pad to reach 2064 (16-byte multiple)
 };
+
+static_assert(sizeof(MetalMolecule) == 2064, "Metal molecule layout must match the shader");
 
 /**
  * Single screening result: target index + RASCAL upper-bound score.
@@ -82,7 +84,7 @@ std::string metalDeviceInfo();
  * Pack a MolGraph-style atom array into a MetalMolecule descriptor.
  *
  * @param atomCount  Number of heavy atoms.
- * @param labels     Array of length atomCount; each entry is the atomic number.
+ * @param labels     Array of length atomCount containing encoded atom labels.
  */
 MetalMolecule toMetalMolecule(int atomCount, const int* labels);
 
@@ -92,8 +94,8 @@ MetalMolecule toMetalMolecule(int atomCount, const int* labels);
  * Dispatches a parallel Metal compute kernel; each GPU thread evaluates one
  * (query, target[i]) pair using the label-histogram bound:
  *
- *   score[i] = sum_Z  min(q.labelCounts[Z], t.labelCounts[Z])
- *              ÷  max(q.n, t.n)
+ *   overlap = sum_Z min(q.labelCounts[Z], t.labelCounts[Z])
+ *   score[i] = overlap / (q.n + t.n - overlap)
  *
  * This is a conservative upper bound — any pair whose true RASCAL similarity
  * exceeds `threshold` is guaranteed to appear in the output.

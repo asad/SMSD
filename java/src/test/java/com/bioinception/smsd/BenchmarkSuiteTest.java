@@ -6,6 +6,12 @@
  */
 package com.bioinception.smsd;
 
+import com.bioinception.smsd.core.MCS;
+
+import com.bioinception.smsd.TestSupport;
+
+import com.bioinception.smsd.TestSupport.MoleculePair;
+
 import static com.bioinception.smsd.TestSupport.repeat;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -41,8 +47,8 @@ public class BenchmarkSuiteTest extends TestBase {
       IAtomContainer q = mol(repeat("C", 50));
       IAtomContainer t = mol(repeat("C", 70));
       long t0 = System.nanoTime();
-      SMSD smsd = new SMSD(q, t, new ChemOptions());
-      boolean result = smsd.isSubstructure(5000);
+      MoleculePair smsd = new MoleculePair(q, t, new ChemOptions());
+      boolean result = smsd.contains(5000);
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       assertTrue(result, "C50 should be substructure of C70");
       assertTrue(elapsed < 200, "Should complete under 200ms, took " + elapsed + "ms");
@@ -54,8 +60,8 @@ public class BenchmarkSuiteTest extends TestBase {
       IAtomContainer aspirin = mol("CC(=O)Oc1ccccc1C(=O)O");
       IAtomContainer ibuprofen = mol("CC(C)Cc1ccc(cc1)C(C)C(=O)O");
       long t0 = System.nanoTime();
-      SMSD smsd = new SMSD(aspirin, ibuprofen, new ChemOptions());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000);
+      MoleculePair smsd = new MoleculePair(aspirin, ibuprofen, new ChemOptions());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000);
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       assertFalse(mcs.isEmpty(), "MCS should find common atoms");
       assertTrue(elapsed < 5000, "Should complete under 5s, took " + elapsed + "ms");
@@ -74,9 +80,9 @@ public class BenchmarkSuiteTest extends TestBase {
       ChemOptions opts = new ChemOptions();
       for (String[] p : pairs) {
         IAtomContainer m1 = mol(p[0]), m2 = mol(p[1]);
-        double ub = SearchEngine.similarityUpperBound(m1, m2, opts);
-        SMSD smsd = new SMSD(m1, m2, opts);
-        Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000);
+        double ub = MCS.similarityUpperBound(m1, m2, opts);
+        MoleculePair smsd = new MoleculePair(m1, m2, opts);
+        Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000);
         int common = mcs.size();
         int total = m1.getAtomCount() + m2.getAtomCount() - common;
         double actual = total > 0 ? (double) common / total : 0.0;
@@ -100,7 +106,7 @@ public class BenchmarkSuiteTest extends TestBase {
       ChemOptions opts = new ChemOptions();
       long t0 = System.nanoTime();
       Map<Integer, Map<Integer, Integer>> results =
-          SearchEngine.batchMCS(mols, opts, new SearchEngine.MCSOptions(), 0.1);
+          TestSupport.pairMappings(mols, opts, new MCS.Options(), 0.1);
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       assertNotNull(results, "Batch MCS should return results");
       assertFalse(results.isEmpty(), "Should find at least one pair above threshold");
@@ -124,12 +130,12 @@ public class BenchmarkSuiteTest extends TestBase {
       for (String[] p : pairs) {
         MolGraph g1 = new MolGraph(mol(p[0]));
         MolGraph g2 = new MolGraph(mol(p[1]));
-        Map<Integer, Integer> mcs = SearchEngine.findMCS(g1, g2, opts, new SearchEngine.MCSOptions());
-        List<String> errors = SearchEngine.validateMapping(g1, g2, mcs, opts);
+        Map<Integer, Integer> mcs = TestSupport.mcsMapping(g1, g2, opts, new MCS.Options());
+        List<String> errors = MCS.validateMapping(g1, g2, mcs, opts);
         assertTrue(errors.isEmpty(),
             p[2] + " mapping has errors: " + errors);
         if (mcs.size() > 0) {
-          boolean maximal = SearchEngine.isMappingMaximal(g1, g2, mcs, opts);
+          boolean maximal = MCS.isMappingMaximal(g1, g2, mcs, opts);
           if (!maximal) System.out.println("INFO: " + p[2] + " MCS (" + mcs.size() + " atoms) is extensible");
         }
       }
@@ -194,7 +200,7 @@ public class BenchmarkSuiteTest extends TestBase {
 
         for (int i = 0; i < warmup; i++) {
           BenchmarkRunSettings.checkInterrupted();
-          new SMSD(q, t, opts, false).findMCS(true, true, BenchmarkRunSettings.TIMEOUT_MS);
+          new MoleculePair(q, t, opts, false).mcsMapping( true, BenchmarkRunSettings.TIMEOUT_MS);
         }
 
         long[] times = new long[runs];
@@ -202,8 +208,8 @@ public class BenchmarkSuiteTest extends TestBase {
         for (int i = 0; i < runs; i++) {
           BenchmarkRunSettings.checkInterrupted();
           long t0 = System.nanoTime();
-          SMSD smsd = new SMSD(q, t, opts, false);
-          Map<Integer, Integer> result = smsd.findMCS(true, true, BenchmarkRunSettings.TIMEOUT_MS);
+          MoleculePair smsd = new MoleculePair(q, t, opts, false);
+          Map<Integer, Integer> result = smsd.mcsMapping( true, BenchmarkRunSettings.TIMEOUT_MS);
           times[i] = System.nanoTime() - t0;
           BenchmarkRunSettings.validate(q, t, result, opts, pair[0]);
           BenchmarkRunSettings.checkpoint("internal-mcs", pair[0] + "/" + i, "OK",
@@ -248,7 +254,7 @@ public class BenchmarkSuiteTest extends TestBase {
 
         for (int i = 0; i < warmup; i++) {
           BenchmarkRunSettings.checkInterrupted();
-          new SMSD(q, t, opts, false).isSubstructure(BenchmarkRunSettings.TIMEOUT_MS);
+          new MoleculePair(q, t, opts, false).contains(BenchmarkRunSettings.TIMEOUT_MS);
         }
 
         long[] times = new long[runs];
@@ -256,8 +262,8 @@ public class BenchmarkSuiteTest extends TestBase {
         for (int i = 0; i < runs; i++) {
           BenchmarkRunSettings.checkInterrupted();
           long t0 = System.nanoTime();
-          SMSD smsd = new SMSD(q, t, opts, false);
-          match = smsd.isSubstructure(BenchmarkRunSettings.TIMEOUT_MS);
+          MoleculePair smsd = new MoleculePair(q, t, opts, false);
+          match = smsd.contains(BenchmarkRunSettings.TIMEOUT_MS);
           times[i] = System.nanoTime() - t0;
           BenchmarkRunSettings.checkpoint("internal-substructure", pair[0] + "/" + i, "OK",
               match ? q.getAtomCount() : 0, times[i], "matched=" + match);
@@ -284,10 +290,10 @@ public class BenchmarkSuiteTest extends TestBase {
       System.out.println("ADP atoms: " + adp.getAtomCount());
 
       ChemOptions opts = new ChemOptions();
-      SMSD smsd = new SMSD(atp, adp, opts, false);
+      MoleculePair smsd = new MoleculePair(atp, adp, opts, false);
       BenchmarkRunSettings.checkInterrupted();
       long started = System.nanoTime();
-      Map<Integer, Integer> mapping = smsd.findMCS(true, true, BenchmarkRunSettings.TIMEOUT_MS);
+      Map<Integer, Integer> mapping = smsd.mcsMapping( true, BenchmarkRunSettings.TIMEOUT_MS);
       long elapsed = System.nanoTime() - started;
       BenchmarkRunSettings.validate(atp, adp, mapping, opts, "ATP/ADP");
       BenchmarkRunSettings.checkpoint("internal-atp-adp", "ATP/ADP", "OK", mapping.size(), elapsed,
@@ -335,7 +341,7 @@ public class BenchmarkSuiteTest extends TestBase {
 
         for (int i = 0; i < warmup; i++) {
           BenchmarkRunSettings.checkInterrupted();
-          new SMSD(q, t, opts, false).similarityUpperBound();
+          new MoleculePair(q, t, opts, false).similarityUpperBound();
         }
 
         long[] times = new long[runs];
@@ -343,7 +349,7 @@ public class BenchmarkSuiteTest extends TestBase {
         for (int i = 0; i < runs; i++) {
           BenchmarkRunSettings.checkInterrupted();
           long t0 = System.nanoTime();
-          ub = new SMSD(q, t, opts, false).similarityUpperBound();
+          ub = new MoleculePair(q, t, opts, false).similarityUpperBound();
           times[i] = System.nanoTime() - t0;
           BenchmarkRunSettings.checkpoint("internal-rascal", pair[0] + "/" + i, "OK", 0,
               times[i], "upper_bound=" + ub);
@@ -424,13 +430,13 @@ public class BenchmarkSuiteTest extends TestBase {
         IAtomContainer q = mol(p[0]), t = mol(p[1]);
         for (int i = 0; i < WARMUP; i++) {
           BenchmarkRunSettings.checkInterrupted();
-          SearchEngine.isSubstructure(q, t, opts, BenchmarkRunSettings.TIMEOUT_MS);
+          TestSupport.contains(q, t, opts, BenchmarkRunSettings.TIMEOUT_MS);
         }
         long[] times = new long[ITERS];
         for (int i = 0; i < ITERS; i++) {
           BenchmarkRunSettings.checkInterrupted();
           long t0 = System.nanoTime();
-          boolean matched = SearchEngine.isSubstructure(q, t, opts, BenchmarkRunSettings.TIMEOUT_MS);
+          boolean matched = TestSupport.contains(q, t, opts, BenchmarkRunSettings.TIMEOUT_MS);
           times[i] = System.nanoTime() - t0;
           BenchmarkRunSettings.checkpoint("h2h-substructure", p[2] + "/" + i, "OK",
               matched ? q.getAtomCount() : 0, times[i], "matched=" + matched);
@@ -454,22 +460,22 @@ public class BenchmarkSuiteTest extends TestBase {
       System.out.println(repeat("-", 72));
 
       ChemOptions opts = new ChemOptions();
-      SearchEngine.MCSOptions mcsOpts = new SearchEngine.MCSOptions();
-      mcsOpts.timeoutMs = BenchmarkRunSettings.TIMEOUT_MS;
+      MCS.Options mcsOpts = new MCS.Options();
+      mcsOpts.timeoutMillis = BenchmarkRunSettings.TIMEOUT_MS;
 
       for (String[] p : H2H_PAIRS) {
         BenchmarkRunSettings.checkInterrupted();
         IAtomContainer q = mol(p[0]), t = mol(p[1]);
         for (int i = 0; i < WARMUP; i++) {
           BenchmarkRunSettings.checkInterrupted();
-          SearchEngine.findMCS(q, t, opts, mcsOpts);
+          TestSupport.mcsMapping(q, t, opts, mcsOpts);
         }
         long[] times = new long[ITERS];
         int mcsSize = 0;
         for (int i = 0; i < ITERS; i++) {
           BenchmarkRunSettings.checkInterrupted();
           long t0 = System.nanoTime();
-          Map<Integer, Integer> mcs = SearchEngine.findMCS(q, t, opts, mcsOpts);
+          Map<Integer, Integer> mcs = TestSupport.mcsMapping(q, t, opts, mcsOpts);
           times[i] = System.nanoTime() - t0;
           BenchmarkRunSettings.validate(q, t, mcs, opts, p[2]);
           BenchmarkRunSettings.checkpoint("h2h-mcs", p[2] + "/" + i, "OK", mcs.size(), times[i],
@@ -500,14 +506,14 @@ public class BenchmarkSuiteTest extends TestBase {
         IAtomContainer q = mol(p[0]), t = mol(p[1]);
         for (int i = 0; i < WARMUP; i++) {
           BenchmarkRunSettings.checkInterrupted();
-          SearchEngine.similarityUpperBound(q, t, opts);
+          MCS.similarityUpperBound(q, t, opts);
         }
         long[] times = new long[ITERS];
         double ub = 0;
         for (int i = 0; i < ITERS; i++) {
           BenchmarkRunSettings.checkInterrupted();
           long t0 = System.nanoTime();
-          ub = SearchEngine.similarityUpperBound(q, t, opts);
+          ub = MCS.similarityUpperBound(q, t, opts);
           times[i] = System.nanoTime() - t0;
           BenchmarkRunSettings.checkpoint("h2h-rascal", p[2] + "/" + i, "OK", 0,
               times[i], "upper_bound=" + ub);
@@ -570,20 +576,20 @@ public class BenchmarkSuiteTest extends TestBase {
               .build();
 
       ChemOptions opts = new ChemOptions();
-      SearchEngine.MCSOptions mcsOpts = new SearchEngine.MCSOptions();
-      mcsOpts.timeoutMs = BenchmarkRunSettings.TIMEOUT_MS;
+      MCS.Options mcsOpts = new MCS.Options();
+      mcsOpts.timeoutMillis = BenchmarkRunSettings.TIMEOUT_MS;
 
       for (int i = 0; i < WARMUP; i++) {
         BenchmarkRunSettings.checkInterrupted();
-        SearchEngine.isSubstructure(benzene, phenol, opts, BenchmarkRunSettings.TIMEOUT_MS);
-        SearchEngine.findMCS(benzene, phenol, opts, mcsOpts);
+        TestSupport.contains(benzene, phenol, opts, BenchmarkRunSettings.TIMEOUT_MS);
+        TestSupport.mcsMapping(benzene, phenol, opts, mcsOpts);
       }
 
       long[] times = new long[ITERS];
       for (int i = 0; i < ITERS; i++) {
         BenchmarkRunSettings.checkInterrupted();
         long t0 = System.nanoTime();
-        boolean matched = SearchEngine.isSubstructure(benzene, phenol, opts, BenchmarkRunSettings.TIMEOUT_MS);
+        boolean matched = TestSupport.contains(benzene, phenol, opts, BenchmarkRunSettings.TIMEOUT_MS);
         times[i] = System.nanoTime() - t0;
         BenchmarkRunSettings.checkpoint("builder-substructure", "benzene-phenol/" + i, "OK",
             matched ? benzene.atomCount() : 0, times[i], "matched=" + matched);
@@ -598,7 +604,7 @@ public class BenchmarkSuiteTest extends TestBase {
       for (int i = 0; i < ITERS; i++) {
         BenchmarkRunSettings.checkInterrupted();
         long t0 = System.nanoTime();
-        Map<Integer, Integer> mcs = SearchEngine.findMCS(benzene, phenol, opts, mcsOpts);
+        Map<Integer, Integer> mcs = TestSupport.mcsMapping(benzene, phenol, opts, mcsOpts);
         times[i] = System.nanoTime() - t0;
         BenchmarkRunSettings.validate(benzene, phenol, mcs, opts, "benzene-phenol");
         BenchmarkRunSettings.checkpoint("builder-mcs", "benzene-phenol/" + i, "OK", mcs.size(),

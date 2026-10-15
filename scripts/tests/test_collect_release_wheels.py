@@ -32,7 +32,7 @@ del _delvewheel_patch_1_13_1
 REPAIRED = b'"""SMSD fixture."""\n\n\n' + BOOTSTRAP + b'\nimport os\n\n__version__ = "7.2.0"\n'
 SOURCES = {
     "python/smsd/__init__.py": ORIGINAL,
-    "python/smsd/mcs_engine.py": b"def find_mcs():\n    return {}\n",
+    "python/smsd/search.py": b"class MCS:\n    pass\n",
     "cpp/include/smsd/smsd.hpp": b"#pragma once\n",
     "LICENSE": b"package license\n",
     "NOTICE": b"package notice\n",
@@ -63,7 +63,7 @@ def make_wheel(directory, family="windows", changes=None, repaired=True, sources
         binary = b"\xcf\xfa\xed\xfe\x0c\0\0\x01"
     contents = {
         "smsd/__init__.py": REPAIRED if repaired else ORIGINAL,
-        "smsd/mcs_engine.py": sources["python/smsd/mcs_engine.py"],
+        "smsd/search.py": sources["python/smsd/search.py"],
         "include/smsd/smsd.hpp": sources["cpp/include/smsd/smsd.hpp"],
         extension: bytes(binary),
         PREFIX + "METADATA": b"Name: smsd\nVersion: 7.2.0\n",
@@ -165,7 +165,7 @@ class CollectReleaseWheelsTest(unittest.TestCase):
                     self.check(family=family)
 
     def test_other_python_and_headers_stay_byte_exact(self):
-        for name in ("smsd/mcs_engine.py", "include/smsd/smsd.hpp"):
+        for name in ("smsd/search.py", "include/smsd/smsd.hpp"):
             with self.subTest(name=name):
                 with self.assertRaisesRegex(ValueError, "Wheel and source differ"):
                     self.check(changes={name: b"modified contents\n"})

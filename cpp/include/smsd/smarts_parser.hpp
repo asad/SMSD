@@ -3,7 +3,7 @@
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
  * See the NOTICE file for attribution, trademark, and algorithm IP terms. *
- * Header-only SMARTS pattern parser and matcher for smsd::MolGraph.
+ * Header-only SMARTS pattern parser for smsd::MolGraph.
  * Zero external dependencies -- pure C++17 standard library.
  *
  * Supports:
@@ -17,13 +17,14 @@
  *   - Ring closures, branches ()
  *   - Recursive SMARTS: $(...)
  *   - Named predicate registry (SmartsPredicateRegistry) with 10 built-ins
- *   - VF2-style backtracking matcher
  */
 #pragma once
 #ifndef SMSD_SMARTS_PARSER_HPP
 #define SMSD_SMARTS_PARSER_HPP
 
 #include "mol_graph.hpp"
+#include "parser_utils.hpp"
+#include "stereo.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -55,6 +56,9 @@ SmartsQuery parseSMARTS(const std::string& smarts, int maxRecursionDepth = 20);
 // Element table for SMARTS (shared inline, same as smiles_parser)
 // ============================================================================
 namespace smarts_detail {
+
+using RecursiveMatcher = bool (*)(const SmartsQuery&, const MolGraph&, int);
+inline thread_local RecursiveMatcher recursiveMatcher = nullptr;
 
 inline int elementToAtomicNum(const std::string& sym) {
     static const std::unordered_map<std::string, int> table = {
@@ -104,8 +108,8 @@ enum class AtomPrimType {
     RING_CONNECTIVITY, // x<n>
     MASS,            // isotope
     RECURSIVE,       // $(...)
-    HETERO_NEIGHBORS,          // z<n> — count of heteroatom neighbors (not C, not H)
-    ALIPHATIC_HETERO_NEIGHBORS,// Z<n> — count of aliphatic heteroatom neighbors
+    HETERO_NEIGHBORS,          // z<n> — count of heteroatom neighbours (not C, not H)
+    ALIPHATIC_HETERO_NEIGHBORS,// Z<n> — count of aliphatic heteroatom neighbours
     TOTAL_CONNECTIVITY,        // X<n> — total connections (degree + implicit H)
     HEAVY_DEGREE,              // d<n> — non-hydrogen degree (heavy atom connections)
     HYBRIDIZATION,             // ^<n> — hybridization (0=S,1=SP,2=SP2,3=SP3,4=SP3D,5=SP3D2)
@@ -132,11 +136,8 @@ struct AtomExpr {
     int rangeMin = 0;              // minimum (inclusive), -1 = unbounded
     int rangeMax = 0;              // maximum (inclusive), -1 = unbounded
     // For RECURSIVE:
-    std::string recursiveSmarts; // parsed lazily when evaluated
-    mutable std::shared_ptr<SmartsQuery> cachedRecursive; // cached parse result
-    mutable const MolGraph* cachedRecursiveTarget = nullptr; // last target used for recursive memo
-    mutable uint64_t cachedRecursiveTargetNonce = 0;
-    mutable std::vector<int8_t> cachedRecursiveState;        // -1 unknown, 0 false, 1 true per target atom
+    std::string recursiveSmarts;
+    std::shared_ptr<const SmartsQuery> cachedRecursive;
 
     // For AND/OR: children
     std::vector<AtomExpr> children;
@@ -282,14 +283,41 @@ inline int computeHCountFromValence(const MolGraph& g, int idx, int explicitVale
     auto it = defaultValences.find(z);
     if (it == defaultValences.end()) return 0;
 
-    int charge = std::abs(g.formalCharge[idx]);
+    const int64_t charge = g.formalCharge[idx] < 0
+        ? -int64_t(g.formalCharge[idx]) : int64_t(g.formalCharge[idx]);
 
     // Find the smallest default valence >= explicitValence + charge
     for (int dv : it->second) {
-        int hc = dv - explicitValence - charge;
+        const int64_t hc = dv - int64_t(explicitValence) - charge;
         if (hc >= 0) return hc;
     }
     return 0;
+}
+
+inline int computeTotalValence(const MolGraph& g, int atom, int explicitValence,
+                               int implicitHydrogens) {
+    int valence = explicitValence + implicitHydrogens;
+    if (!g.aromatic[atom]) return valence;
+
+    int64_t normalValence;
+    switch (g.atomicNum[atom]) {
+        case 5: case 7: case 15: case 33: normalValence = 3; break;
+        case 6: normalValence = 4; break;
+        case 8: case 16: case 34: case 52: normalValence = 2; break;
+        default: return valence;
+    }
+    const int charge = g.formalCharge[atom];
+    const int atomicNum = g.atomicNum[atom];
+    if ((charge > 0 && (atomicNum == 7 || atomicNum == 15 || atomicNum == 33
+                       || atomicNum == 8 || atomicNum == 16 || atomicNum == 34))
+        || (charge < 0 && atomicNum == 5)) {
+        normalValence += charge < 0 ? -int64_t(charge) : int64_t(charge);
+    } else {
+        normalValence -= charge < 0 ? -int64_t(charge) : int64_t(charge);
+    }
+    // A Kekulé double bond adds one, except at an occupied lone-pair donor.
+    if (valence < normalValence) ++valence;
+    return valence;
 }
 
 inline int computeRingMembershipRaw(const MolGraph& g, int idx) {
@@ -428,7 +456,12 @@ struct SmartsTargetPropertyCache {
         }
 
         for (int i = 0; i < g.n; ++i) {
-            hcount[i] = computeHCountFromValence(g, i, valence[i]);
+            const int implicitHydrogens = computeHCountFromValence(g, i, valence[i]);
+            hcount[i] = implicitHydrogens;
+            for (int neighbor : g.neighbors[i]) {
+                if (g.atomicNum[neighbor] == 1) ++hcount[i];
+            }
+            valence[i] = computeTotalValence(g, i, valence[i], implicitHydrogens);
             smallestRingSize[i] = g.ring[i] ? computeSmallestRingSizeRaw(g, i) : 0;
         }
     }
@@ -560,7 +593,7 @@ inline bool evalAtomPrim(const AtomExpr& expr, const MolGraph& g, int idx) {
             return matchNumeric(expr, computeAliphaticHeteroNeighbors(g, idx));
 
         case AtomPrimType::TOTAL_CONNECTIVITY:
-            return matchNumeric(expr, g.degree[idx] + computeHCount(g, idx));
+            return matchNumeric(expr, computeHeavyDegree(g, idx) + computeHCount(g, idx));
 
         case AtomPrimType::HEAVY_DEGREE:
             return matchNumeric(expr, computeHeavyDegree(g, idx));
@@ -626,24 +659,8 @@ inline bool evalBondPrim(const BondExpr& expr, const MolGraph& g, int i, int j) 
             return g.bondInRing(i, j);
 
         case BondPrimType::WEDGE:
-            // SMARTS '/' — directional bond. Matches single or double bonds.
-            // When E/Z stereo is available (dbStereo != 0), checks direction;
-            // otherwise matches any single/double bond (permissive fallback).
-            {
-                int ord = g.bondOrder(i, j);
-                if (ord != 1 && ord != 2) return false;
-                int stereo = g.dbStereo(i, j);
-                return stereo == 0 || stereo == 1; // unspecified or same-direction
-            }
-
         case BondPrimType::DASH:
-            // SMARTS '\' — directional bond (opposite direction).
-            {
-                int ord = g.bondOrder(i, j);
-                if (ord != 1 && ord != 2) return false;
-                int stereo = g.dbStereo(i, j);
-                return stereo == 0 || stereo == 2; // unspecified or opposite-direction
-            }
+            return g.bondOrder(i, j) == 1 && !g.bondAromatic(i, j);
 
         case BondPrimType::DEFAULT_: {
             // Default SMARTS bond: matches single (1) or aromatic (4)
@@ -677,6 +694,64 @@ inline bool evalBondExpr(const BondExpr& expr, const MolGraph& g, int i, int j) 
     return false;
 }
 
+/** Preserve Boolean expressions while mapped chirality is not yet known. */
+enum class StereoTruth { FALSE_VALUE, TRUE_VALUE, UNKNOWN };
+
+template <typename ChiralityEvaluator>
+inline StereoTruth evalAtomExprWithStereo(const AtomExpr& expression, const MolGraph& graph,
+                                          int atom, const ChiralityEvaluator& evaluateChirality) {
+    if (expression.op == ExprOp::PRIM) {
+        if (expression.primType == AtomPrimType::CHIRALITY) return evaluateChirality(expression.intVal);
+        return evalAtomPrim(expression, graph, atom) ? StereoTruth::TRUE_VALUE : StereoTruth::FALSE_VALUE;
+    }
+    if (expression.op == ExprOp::NOT) {
+        const auto result = evalAtomExprWithStereo(expression.children[0], graph, atom, evaluateChirality);
+        return result == StereoTruth::UNKNOWN ? result
+            : (result == StereoTruth::TRUE_VALUE ? StereoTruth::FALSE_VALUE : StereoTruth::TRUE_VALUE);
+    }
+    bool unknown = false;
+    for (const auto& child : expression.children) {
+        const auto result = evalAtomExprWithStereo(child, graph, atom, evaluateChirality);
+        if (expression.op == ExprOp::AND && result == StereoTruth::FALSE_VALUE) return result;
+        if (expression.op == ExprOp::OR && result == StereoTruth::TRUE_VALUE) return result;
+        if (result == StereoTruth::UNKNOWN) unknown = true;
+    }
+    if (unknown) return StereoTruth::UNKNOWN;
+    return expression.op == ExprOp::AND ? StereoTruth::TRUE_VALUE : StereoTruth::FALSE_VALUE;
+}
+
+inline bool hasChiralityPrimitive(const AtomExpr& expression) {
+    if (expression.op == ExprOp::PRIM) return expression.primType == AtomPrimType::CHIRALITY;
+    for (const auto& child : expression.children) if (hasChiralityPrimitive(child)) return true;
+    return false;
+}
+
+inline bool hasDirectionalPrimitive(const BondExpr& expression) {
+    if (expression.op == ExprOp::PRIM)
+        return expression.primType == BondPrimType::WEDGE || expression.primType == BondPrimType::DASH;
+    for (const auto& child : expression.children) if (hasDirectionalPrimitive(child)) return true;
+    return false;
+}
+
+/** Evaluate a directional bond expression for one candidate slash direction. */
+inline bool evalBondExprWithDirection(const BondExpr& expression, const MolGraph& graph,
+                                      int first, int second, int direction) {
+    if (expression.op == ExprOp::PRIM) {
+        if (expression.primType == BondPrimType::WEDGE || expression.primType == BondPrimType::DASH)
+            return graph.bondOrder(first, second) == 1 && !graph.bondAromatic(first, second)
+                && direction == (expression.primType == BondPrimType::WEDGE ? 1 : -1);
+        return evalBondPrim(expression, graph, first, second);
+    }
+    if (expression.op == ExprOp::NOT)
+        return !evalBondExprWithDirection(expression.children[0], graph, first, second, direction);
+    for (const auto& child : expression.children) {
+        const bool matched = evalBondExprWithDirection(child, graph, first, second, direction);
+        if (expression.op == ExprOp::AND && !matched) return false;
+        if (expression.op == ExprOp::OR && matched) return true;
+    }
+    return expression.op == ExprOp::AND;
+}
+
 // ============================================================================
 // SMARTS parser
 // ============================================================================
@@ -684,6 +759,17 @@ inline bool evalBondExpr(const BondExpr& expr, const MolGraph& g, int i, int j) 
 class SmartsParser {
     const std::string& smarts_;
     int pos_ = 0;
+    std::vector<std::vector<int>> neighborOrder_;
+    std::vector<bool> hasIncomingBond_;
+
+    void recordAtomOrder(int atom, int parent) {
+        neighborOrder_.emplace_back();
+        hasIncomingBond_.push_back(parent >= 0);
+        if (parent >= 0) {
+            neighborOrder_[parent].push_back(atom);
+            neighborOrder_[atom].push_back(parent);
+        }
+    }
 
     char peek() const {
         if (pos_ >= static_cast<int>(smarts_.size())) return '\0';
@@ -701,13 +787,7 @@ class SmartsParser {
     }
 
     int parseDigits() {
-        int val = 0;
-        bool gotDigit = false;
-        while (pos_ < static_cast<int>(smarts_.size()) && std::isdigit(peek())) {
-            val = val * 10 + (advance() - '0');
-            gotDigit = true;
-        }
-        return gotDigit ? val : -1;
+        return parser_detail::readDecimal(smarts_, pos_);
     }
 
     // Try to parse a range query {min-max}, {min-}, or {-max}.
@@ -916,12 +996,12 @@ class SmartsParser {
             return expr;
         }
 
-        // z = heteroatom neighbor count
+        // z = heteroatom neighbour count
         if (c == 'z') {
             advance();
             int num = parseDigits();
             if (num < 0) {
-                // z without number = at least 1 heteroatom neighbor
+                // z without number = at least 1 heteroatom neighbour
                 auto expr = AtomExpr::makePrim(AtomPrimType::HETERO_NEIGHBORS, 0, false);
                 applyOptionalRange(expr);
                 return expr;
@@ -931,7 +1011,7 @@ class SmartsParser {
             return expr;
         }
 
-        // Z = aliphatic heteroatom neighbor count (but Zn, Zr = elements)
+        // Z = aliphatic heteroatom neighbour count (but Zn, Zr = elements)
         // Only treat as primitive inside brackets when followed by digit, '{', or
         // at end/delimiter position (not followed by lowercase letter forming element).
         if (c == 'Z') {
@@ -1037,7 +1117,7 @@ class SmartsParser {
             AtomExpr expr;
             expr.op = ExprOp::PRIM;
             expr.primType = AtomPrimType::RECURSIVE;
-            expr.recursiveSmarts = subSmarts; // parsed lazily in evalRecursiveSmarts
+            expr.recursiveSmarts = subSmarts;
             return expr;
         }
 
@@ -1058,11 +1138,13 @@ class SmartsParser {
 
     // Parse NOT-level: !prim
     AtomExpr parseNotExpr() {
-        if (peek() == '!') {
+        bool negated = false;
+        while (peek() == '!') {
             advance();
-            return AtomExpr::makeNot(parseNotExpr());
+            negated = !negated;
         }
-        return parsePrimitive();
+        AtomExpr expression = parsePrimitive();
+        return negated ? AtomExpr::makeNot(std::move(expression)) : std::move(expression);
     }
 
     // Parse AND-high: prim & prim & ... (implicit AND between consecutive primitives)
@@ -1114,101 +1196,58 @@ class SmartsParser {
         return parseAndLow();
     }
 
-    // Parse a bond expression
+    // Bond precedence: negation, high AND, OR, low AND.
     BondExpr parseBondExpr() {
         std::vector<BondExpr> parts;
-
-        while (pos_ < static_cast<int>(smarts_.size())) {
-            char c = peek();
-            BondExpr be;
-            bool gotBond = false;
-
-            if (c == '!') {
-                advance();
-                be = BondExpr::makeNot(parseSingleBond());
-                gotBond = true;
-            } else if (c == '-') {
-                advance();
-                be = BondExpr::makePrim(BondPrimType::SINGLE);
-                gotBond = true;
-            } else if (c == '=') {
-                advance();
-                be = BondExpr::makePrim(BondPrimType::DOUBLE);
-                gotBond = true;
-            } else if (c == '#') {
-                advance();
-                be = BondExpr::makePrim(BondPrimType::TRIPLE);
-                gotBond = true;
-            } else if (c == ':') {
-                advance();
-                be = BondExpr::makePrim(BondPrimType::AROMATIC);
-                gotBond = true;
-            } else if (c == '~') {
-                advance();
-                be = BondExpr::makePrim(BondPrimType::ANY);
-                gotBond = true;
-            } else if (c == '@') {
-                advance();
-                be = BondExpr::makePrim(BondPrimType::RING);
-                gotBond = true;
-            } else if (c == '/') {
-                advance();
-                be = BondExpr::makePrim(BondPrimType::WEDGE);
-                gotBond = true;
-            } else if (c == '\\') {
-                advance();
-                be = BondExpr::makePrim(BondPrimType::DASH);
-                gotBond = true;
-            } else {
-                break;
-            }
-
-            if (gotBond) {
-                // Check for logical operators between bonds
-                if (peek() == ',') {
-                    // OR: collect all OR'd bonds
-                    std::vector<BondExpr> orParts;
-                    orParts.push_back(std::move(be));
-                    while (peek() == ',') {
-                        advance();
-                        orParts.push_back(parseSingleBond());
-                    }
-                    parts.push_back(BondExpr::makeOr(std::move(orParts)));
-                } else if (peek() == ';') {
-                    // AND-low (semicolon): e.g. -;!@ = single AND NOT ring
-                    std::vector<BondExpr> andParts;
-                    andParts.push_back(std::move(be));
-                    while (peek() == ';') {
-                        advance();
-                        andParts.push_back(parseSingleBond());
-                    }
-                    parts.push_back(BondExpr::makeAnd(std::move(andParts)));
-                } else {
-                    parts.push_back(std::move(be));
-                }
-            }
+        parts.push_back(parseBondOr());
+        while (peek() == ';') {
+            advance();
+            parts.push_back(parseBondOr());
         }
+        return BondExpr::makeAnd(std::move(parts));
+    }
 
-        if (parts.empty()) return BondExpr::makePrim(BondPrimType::DEFAULT_);
-        if (parts.size() == 1) return std::move(parts[0]);
+    BondExpr parseBondOr() {
+        std::vector<BondExpr> parts;
+        parts.push_back(parseBondAndHigh());
+        while (peek() == ',') {
+            advance();
+            parts.push_back(parseBondAndHigh());
+        }
+        return BondExpr::makeOr(std::move(parts));
+    }
+
+    BondExpr parseBondAndHigh() {
+        std::vector<BondExpr> parts;
+        parts.push_back(parseSingleBond());
+        while (peek() == '&' || isBondChar(peek())) {
+            if (peek() == '&') advance();
+            parts.push_back(parseSingleBond());
+        }
         return BondExpr::makeAnd(std::move(parts));
     }
 
     BondExpr parseSingleBond() {
-        char c = peek();
-        if (c == '!') {
+        bool negated = false;
+        while (peek() == '!') {
             advance();
-            return BondExpr::makeNot(parseSingleBond());
+            negated = !negated;
         }
-        if (c == '-') { advance(); return BondExpr::makePrim(BondPrimType::SINGLE); }
-        if (c == '=') { advance(); return BondExpr::makePrim(BondPrimType::DOUBLE); }
-        if (c == '#') { advance(); return BondExpr::makePrim(BondPrimType::TRIPLE); }
-        if (c == ':') { advance(); return BondExpr::makePrim(BondPrimType::AROMATIC); }
-        if (c == '~') { advance(); return BondExpr::makePrim(BondPrimType::ANY); }
-        if (c == '@') { advance(); return BondExpr::makePrim(BondPrimType::RING); }
-        if (c == '/') { advance(); return BondExpr::makePrim(BondPrimType::WEDGE); }
-        if (c == '\\') { advance(); return BondExpr::makePrim(BondPrimType::DASH); }
-        return BondExpr::makePrim(BondPrimType::DEFAULT_);
+        BondPrimType type;
+        switch (peek()) {
+            case '-': type = BondPrimType::SINGLE; break;
+            case '=': type = BondPrimType::DOUBLE; break;
+            case '#': type = BondPrimType::TRIPLE; break;
+            case ':': type = BondPrimType::AROMATIC; break;
+            case '~': type = BondPrimType::ANY; break;
+            case '@': type = BondPrimType::RING; break;
+            case '/': type = BondPrimType::WEDGE; break;
+            case '\\': type = BondPrimType::DASH; break;
+            default: throw std::invalid_argument("Expected bond primitive in SMARTS");
+        }
+        advance();
+        BondExpr expression = BondExpr::makePrim(type);
+        return negated ? BondExpr::makeNot(std::move(expression)) : std::move(expression);
     }
 
     bool isBondChar(char c) const {
@@ -1223,13 +1262,41 @@ class SmartsParser {
 public:
     SmartsParser(const std::string& smarts) : smarts_(smarts) {}
 
+    /** Normalise parsed tetrahedral primitives to the query adjacency order. */
+    void normaliseChirality(std::vector<SmartsAtom>& atoms,
+                            const std::vector<std::vector<int>>& neighbors) const {
+        std::function<void(AtomExpr&)> flip = [&](AtomExpr& expression) {
+            if (expression.op == ExprOp::PRIM && expression.primType == AtomPrimType::CHIRALITY
+                && expression.intVal != 0) expression.intVal = 3 - expression.intVal;
+            for (auto& child : expression.children) flip(child);
+        };
+        for (int atom = 0; atom < static_cast<int>(atoms.size()); ++atom) {
+            if (!hasChiralityPrimitive(atoms[atom].expr)) continue;
+            std::array<int, 4> storedOrder{};
+            if (!stereo_detail::tetrahedralLigands(neighbors[atom], atom, storedOrder)) continue;
+            auto parsedOrder = neighborOrder_[atom];
+            if (parsedOrder.size() == 3)
+                parsedOrder.insert(parsedOrder.begin() + (hasIncomingBond_[atom] ? 1 : 0), -1);
+            int inversions = 0;
+            for (size_t first = 0; first < parsedOrder.size(); ++first) {
+                const auto firstPosition = std::find(storedOrder.begin(), storedOrder.end(), parsedOrder[first]);
+                for (size_t second = first + 1; second < parsedOrder.size(); ++second) {
+                    const auto secondPosition = std::find(storedOrder.begin(), storedOrder.end(), parsedOrder[second]);
+                    inversions += firstPosition > secondPosition;
+                }
+            }
+            if (inversions % 2 != 0) flip(atoms[atom].expr);
+        }
+    }
+
     // Parse the full SMARTS string into atoms and bonds
     void parse(std::vector<SmartsAtom>& atoms, std::vector<SmartsBond>& bonds) {
         if (smarts_.empty()) return;
 
         std::vector<int> branchStack;   // stack of parent atom indices
         int currentAtom = -1;
-        std::unordered_map<int, std::pair<int, BondExpr>> ringClosures;
+        struct RingClosure { int atom; BondExpr expression; int neighborSlot; };
+        std::unordered_map<int, RingClosure> ringClosures;
         BondExpr pendingBond;
         bool hasPendingBond = false;
 
@@ -1280,15 +1347,18 @@ public:
                 if (it != ringClosures.end()) {
                     // Close the ring
                     SmartsBond bond;
-                    bond.from = it->second.first;
-                    bond.to = currentAtom;
+                    const int openAtom = it->second.atom;
+                    bond.from = hasPendingBond ? currentAtom : openAtom;
+                    bond.to = hasPendingBond ? openAtom : currentAtom;
+                    neighborOrder_[openAtom][it->second.neighborSlot] = currentAtom;
+                    neighborOrder_[currentAtom].push_back(openAtom);
                     // Use the bond from open if it had one, or the current pending bond
                     if (hasPendingBond) {
                         bond.expr = std::move(pendingBond);
                         hasPendingBond = false;
-                    } else if (it->second.second.primType != BondPrimType::DEFAULT_
-                               || it->second.second.op != ExprOp::PRIM) {
-                        bond.expr = std::move(it->second.second);
+                    } else if (it->second.expression.primType != BondPrimType::DEFAULT_
+                               || it->second.expression.op != ExprOp::PRIM) {
+                        bond.expr = std::move(it->second.expression);
                     } else {
                         bond.expr = BondExpr::makePrim(BondPrimType::DEFAULT_);
                     }
@@ -1300,7 +1370,9 @@ public:
                         ? std::move(pendingBond)
                         : BondExpr::makePrim(BondPrimType::DEFAULT_);
                     hasPendingBond = false;
-                    ringClosures[ringNum] = {currentAtom, std::move(ringBondExpr)};
+                    const int slot = static_cast<int>(neighborOrder_[currentAtom].size());
+                    neighborOrder_[currentAtom].push_back(-1);
+                    ringClosures[ringNum] = {currentAtom, std::move(ringBondExpr), slot};
                 }
                 continue;
             }
@@ -1320,6 +1392,7 @@ public:
 
                 int newIdx = static_cast<int>(atoms.size());
                 atoms.push_back(std::move(atom));
+                recordAtomOrder(newIdx, currentAtom);
 
                 if (currentAtom >= 0) {
                     SmartsBond bond;
@@ -1342,6 +1415,7 @@ public:
                 atom.expr = AtomExpr::makePrim(AtomPrimType::TRUE_);
                 int newIdx = static_cast<int>(atoms.size());
                 atoms.push_back(std::move(atom));
+                recordAtomOrder(newIdx, currentAtom);
 
                 if (currentAtom >= 0) {
                     SmartsBond bond;
@@ -1358,67 +1432,33 @@ public:
             }
 
             if (std::isalpha(c)) {
-                // SMARTS wildcards: 'a' = any aromatic, 'A' = any aliphatic
-                // 'a' is aromatic wildcard UNLESS followed by a lowercase letter
-                // that forms a valid two-letter aromatic element (as, se, te)
-                if (c == 'a') {
-                    bool isElement = false;
-                    if (pos_ + 1 < static_cast<int>(smarts_.size()) && std::islower(smarts_[pos_ + 1])) {
-                        std::string twoChar = std::string(1, c) + smarts_[pos_ + 1];
-                        if (elementToAtomicNum(twoChar) >= 0) isElement = true;
+                // Outside brackets, a and A are always atom wildcards.
+                if (c == 'a' || c == 'A') {
+                    advance();
+                    SmartsAtom atom;
+                    atom.isAromatic = (c == 'a');
+                    atom.expr = AtomExpr::makePrim(c == 'a' ? AtomPrimType::AROMATIC
+                                                           : AtomPrimType::ALIPHATIC, 0, true);
+                    int newIdx = static_cast<int>(atoms.size());
+                    atoms.push_back(std::move(atom));
+                    recordAtomOrder(newIdx, currentAtom);
+                    if (currentAtom >= 0) {
+                        SmartsBond bond;
+                        bond.from = currentAtom; bond.to = newIdx;
+                        bond.expr = hasPendingBond ? std::move(pendingBond)
+                            : BondExpr::makePrim(BondPrimType::DEFAULT_);
+                        hasPendingBond = false;
+                        bonds.push_back(std::move(bond));
                     }
-                    if (!isElement) {
-                        advance();
-                        SmartsAtom atom;
-                        atom.expr = AtomExpr::makePrim(AtomPrimType::AROMATIC, 0, true);
-                        int newIdx = static_cast<int>(atoms.size());
-                        atoms.push_back(std::move(atom));
-                        if (currentAtom >= 0) {
-                            SmartsBond bond;
-                            bond.from = currentAtom; bond.to = newIdx;
-                            bond.expr = hasPendingBond ? std::move(pendingBond)
-                                : BondExpr::makePrim(BondPrimType::DEFAULT_);
-                            hasPendingBond = false;
-                            bonds.push_back(std::move(bond));
-                        }
-                        currentAtom = newIdx;
-                        continue;
-                    }
-                }
-                if (c == 'A') {
-                    bool isElement = false;
-                    if (pos_ + 1 < static_cast<int>(smarts_.size()) && std::islower(smarts_[pos_ + 1])) {
-                        std::string twoChar = std::string(1, c) + smarts_[pos_ + 1];
-                        if (elementToAtomicNum(twoChar) >= 0) isElement = true;
-                    }
-                    if (!isElement) {
-                        advance();
-                        SmartsAtom atom;
-                        atom.expr = AtomExpr::makePrim(AtomPrimType::ALIPHATIC, 0, true);
-                        int newIdx = static_cast<int>(atoms.size());
-                        atoms.push_back(std::move(atom));
-                        if (currentAtom >= 0) {
-                            SmartsBond bond;
-                            bond.from = currentAtom; bond.to = newIdx;
-                            bond.expr = hasPendingBond ? std::move(pendingBond)
-                                : BondExpr::makePrim(BondPrimType::DEFAULT_);
-                            hasPendingBond = false;
-                            bonds.push_back(std::move(bond));
-                        }
-                        currentAtom = newIdx;
-                        continue;
-                    }
+                    currentAtom = newIdx;
+                    continue;
                 }
                 bool aromatic = std::islower(c);
                 std::string sym(1, c);
                 advance();
 
-                if (pos_ < static_cast<int>(smarts_.size()) && std::islower(peek())) {
-                    std::string twoChar = sym + peek();
-                    if (elementToAtomicNum(twoChar) >= 0) {
-                        sym = twoChar;
-                        advance();
-                    }
+                if ((sym == "C" && peek() == 'l') || (sym == "B" && peek() == 'r')) {
+                    sym += advance();
                 }
 
                 int z = elementToAtomicNum(sym);
@@ -1443,6 +1483,7 @@ public:
 
                 int newIdx = static_cast<int>(atoms.size());
                 atoms.push_back(std::move(atom));
+                recordAtomOrder(newIdx, currentAtom);
 
                 if (currentAtom >= 0) {
                     SmartsBond bond;
@@ -1498,8 +1539,8 @@ struct SmartsQuery {
     std::vector<smarts_detail::SmartsBond> bonds;
 
     // Adjacency for the query graph
-    std::vector<std::vector<int>> neighbors;   // neighbor atom indices
-    std::vector<std::vector<int>> bondIndices; // parallel to neighbors: bond index
+    std::vector<std::vector<int>> neighbors;   // neighbour atom indices
+    std::vector<std::vector<int>> bondIndices; // parallel to neighbours: bond index
 
     int atomCount() const { return static_cast<int>(atoms.size()); }
 
@@ -1513,18 +1554,16 @@ struct SmartsQuery {
     /**
      * Historical/debug ordering: plain BFS from atom 0.
      *
-     * The optimized matcher below uses a target-aware, anchor-preserving order;
+     * The optimised matcher below uses a target-aware, anchor-preserving order;
      * this method remains intentionally simple for callers that relied on the
-     * previous behavior.
+     * previous behaviour.
      */
     std::vector<int> matchingOrder() const;
 
-    bool matches(const MolGraph& target) const;
-    std::vector<std::map<int,int>> findAll(const MolGraph& target, int maxMatches = 1000) const;
 
-    // Match with atom 0 of the query anchored to a specific target atom
-    // (used for recursive SMARTS).
-    bool matchesAtAtom(const MolGraph& target, int targetAtom) const;
+    bool hasStereochemistry() const;
+    bool stereoCompatible(const MolGraph& target, const std::vector<int>& mapping) const;
+
 };
 
 inline void SmartsQuery::buildAdjacency() {
@@ -1540,12 +1579,130 @@ inline void SmartsQuery::buildAdjacency() {
     }
 }
 
+inline bool SmartsQuery::hasStereochemistry() const {
+    for (const auto& atom : atoms)
+        if (smarts_detail::hasChiralityPrimitive(atom.expr)) return true;
+    for (const auto& bond : bonds)
+        if (smarts_detail::hasDirectionalPrimitive(bond.expr)) return true;
+    return false;
+}
+
+inline bool SmartsQuery::stereoCompatible(const MolGraph& target, const std::vector<int>& mapping) const {
+    using smarts_detail::StereoTruth;
+    for (int atom = 0; atom < atomCount(); ++atom) {
+        if (!smarts_detail::hasChiralityPrimitive(atoms[atom].expr)) continue;
+        const int targetAtom = mapping[atom];
+        std::array<int, 4> queryLigands{}, targetLigands{};
+        const bool validLigands = stereo_detail::tetrahedralLigands(neighbors[atom], atom, queryLigands)
+            && stereo_detail::tetrahedralLigands(target.neighbors[targetAtom], targetAtom, targetLigands);
+        const int targetTag = target.tetraChirality.empty() ? 0 : target.tetraChirality[targetAtom];
+        const auto matched = smarts_detail::evalAtomExprWithStereo(atoms[atom].expr, target, targetAtom, [&](int queryTag) {
+            if (queryTag == 0) return StereoTruth::TRUE_VALUE;
+            if (targetTag == 0) return StereoTruth::FALSE_VALUE;
+            const bool compatible = validLigands
+                ? stereo_detail::tetrahedralParityMatches(queryTag, queryLigands, targetTag, targetLigands, mapping)
+                : queryTag == targetTag;
+            return compatible ? StereoTruth::TRUE_VALUE : StereoTruth::FALSE_VALUE;
+        });
+        if (matched != StereoTruth::TRUE_VALUE) return false;
+    }
+
+    std::vector<int> variableForBond(bonds.size(), -1), allowedDirections;
+    for (int bondIndex = 0; bondIndex < static_cast<int>(bonds.size()); ++bondIndex) {
+        const auto& bond = bonds[bondIndex];
+        if (!smarts_detail::hasDirectionalPrimitive(bond.expr)) continue;
+        const int first = mapping[bond.from], second = mapping[bond.to];
+        if (target.bondOrder(first, second) != 1 || target.bondAromatic(first, second)) continue;
+        int allowed = 0;
+        if (smarts_detail::evalBondExprWithDirection(bond.expr, target, first, second, 1)) allowed |= 1;
+        if (smarts_detail::evalBondExprWithDirection(bond.expr, target, first, second, -1)) allowed |= 2;
+        if (allowed == 0) return false;
+        variableForBond[bondIndex] = static_cast<int>(allowedDirections.size());
+        allowedDirections.push_back(allowed);
+    }
+    if (allowedDirections.empty()) return true;
+    std::vector<std::vector<std::pair<int, int>>> constraints(allowedDirections.size());
+    auto addConstraint = [&](int firstBond, int secondBond, int relation) {
+        const int firstVariable = variableForBond[firstBond], secondVariable = variableForBond[secondBond];
+        constraints[firstVariable].push_back({secondVariable, relation});
+        constraints[secondVariable].push_back({firstVariable, relation});
+    };
+    auto outwardOrientation = [&](int bondIndex, int atom) { return bonds[bondIndex].from == atom ? 1 : -1; };
+    for (const auto& focus : bonds) {
+        const int first = focus.from, second = focus.to;
+        const int mappedFirst = mapping[first], mappedSecond = mapping[second];
+        if (target.bondOrder(mappedFirst, mappedSecond) != 2) continue;
+        std::array<std::vector<int>, 2> carriers;
+        for (int end = 0; end < 2; ++end) {
+            const int atom = end == 0 ? first : second, other = end == 0 ? second : first;
+            for (size_t position = 0; position < neighbors[atom].size(); ++position) {
+                const int bondIndex = bondIndices[atom][position];
+                if (neighbors[atom][position] != other && variableForBond[bondIndex] >= 0)
+                    carriers[end].push_back(bondIndex);
+            }
+            for (size_t previous = 0; previous < carriers[end].size(); ++previous)
+                for (size_t next = previous + 1; next < carriers[end].size(); ++next)
+                    addConstraint(carriers[end][previous], carriers[end][next],
+                        -outwardOrientation(carriers[end][previous], atom) * outwardOrientation(carriers[end][next], atom));
+        }
+        if (carriers[0].empty() || carriers[1].empty()) continue;
+        const int configuration = target.dbStereo(mappedFirst, mappedSecond);
+        if (configuration == 0) {
+            bool firstRequired = false, secondRequired = false;
+            for (int bondIndex : carriers[0]) if (allowedDirections[variableForBond[bondIndex]] != 3) firstRequired = true;
+            for (int bondIndex : carriers[1]) if (allowedDirections[variableForBond[bondIndex]] != 3) secondRequired = true;
+            if (firstRequired && secondRequired) return false;
+            continue;
+        }
+        const int firstReference = stereo_detail::doubleBondReference(target, mappedFirst, mappedSecond);
+        const int secondReference = stereo_detail::doubleBondReference(target, mappedSecond, mappedFirst);
+        for (int firstBond : carriers[0]) {
+            const auto& firstCarrier = bonds[firstBond];
+            const int firstLigand = firstCarrier.from == first ? firstCarrier.to : firstCarrier.from;
+            for (int secondBond : carriers[1]) {
+                const auto& secondCarrier = bonds[secondBond];
+                const int secondLigand = secondCarrier.from == second ? secondCarrier.to : secondCarrier.from;
+                const int relation = (configuration == 1 ? 1 : -1)
+                    * (mapping[firstLigand] == firstReference ? 1 : -1)
+                    * (mapping[secondLigand] == secondReference ? 1 : -1)
+                    * outwardOrientation(firstBond, first) * outwardOrientation(secondBond, second);
+                addConstraint(firstBond, secondBond, relation);
+            }
+        }
+    }
+    std::vector<int> relativeDirections(allowedDirections.size(), 0);
+    for (int start = 0; start < static_cast<int>(allowedDirections.size()); ++start) {
+        if (relativeDirections[start] != 0) continue;
+        relativeDirections[start] = 1;
+        int allowedRoot = 3;
+        std::deque<int> pending{start};
+        while (!pending.empty()) {
+            const int current = pending.front(); pending.pop_front();
+            const int allowed = allowedDirections[current];
+            allowedRoot &= relativeDirections[current] == 1 ? allowed : ((allowed & 1) << 1) | ((allowed & 2) >> 1);
+            if (allowedRoot == 0) return false;
+            for (const auto& constraint : constraints[current]) {
+                const int required = relativeDirections[current] * constraint.second;
+                if (relativeDirections[constraint.first] == 0) {
+                    relativeDirections[constraint.first] = required;
+                    pending.push_back(constraint.first);
+                } else if (relativeDirections[constraint.first] != required) return false;
+            }
+        }
+    }
+    return true;
+}
+
 inline bool SmartsQuery::atomCompat(int qi, const MolGraph& target, int ti) const {
     return smarts_detail::evalAtomExpr(atoms[qi].expr, target, ti);
 }
 
 inline bool SmartsQuery::bondCompat(int bi, const MolGraph& target, int ti, int tj) const {
-    return smarts_detail::evalBondExpr(bonds[bi].expr, target, ti, tj);
+    const auto& expression = bonds[bi].expr;
+    if (smarts_detail::hasDirectionalPrimitive(expression))
+        return smarts_detail::evalBondExprWithDirection(expression, target, ti, tj, 1)
+            || smarts_detail::evalBondExprWithDirection(expression, target, ti, tj, -1);
+    return smarts_detail::evalBondExpr(expression, target, ti, tj);
 }
 
 inline std::vector<int> SmartsQuery::matchingOrder() const {
@@ -1586,633 +1743,15 @@ inline std::vector<int> SmartsQuery::matchingOrder() const {
     return order;
 }
 
-namespace smarts_detail {
-
-class SmartsMatchEngine {
-    const SmartsQuery& q_;
-    const MolGraph& target_;
-    int nQ_ = 0;
-    int nT_ = 0;
-    int tWords_ = 0;
-    int anchorQ_ = -1;
-    bool anyEmptyDomain_ = false;
-
-    std::vector<std::vector<uint64_t>> domain_;
-    std::vector<int> domainSize_;
-    std::vector<int8_t> atomMemo_;   // -1 unknown, 0 false, 1 true
-
-    std::vector<int> q2t_;
-    std::vector<int> t2q_;
-    std::vector<uint64_t> usedMask_;
-    std::vector<std::vector<int>> candBuf_;
-
-    std::vector<int> compId_;
-    std::vector<std::vector<int>> qNbrsByTightness_;
-    std::vector<std::vector<int>> qNbrBondByTightness_;
-    std::vector<int> order_;
-
-    mutable std::vector<uint64_t> availBuf_;
-    mutable std::vector<uint64_t> tmpMaskBuf_;
-
-    bool domainHas(int qi, int tj) const {
-        return (domain_[qi][tj >> 6] & (uint64_t(1) << (tj & 63))) != 0;
-    }
-
-    int popcountWords(const std::vector<uint64_t>& bits) const {
-        int cnt = 0;
-        for (uint64_t w : bits) cnt += smsd::popcount64(w);
-        return cnt;
-    }
-
-    void collectBits(const std::vector<uint64_t>& bits, std::vector<int>& out) const {
-        out.clear();
-        out.reserve(nT_);
-        for (int w = 0; w < tWords_; ++w) {
-            uint64_t word = bits[w];
-            while (word != 0) {
-                int bit = smsd::ctz64(word);
-                int idx = (w << 6) | bit;
-                if (idx < nT_) out.push_back(idx);
-                word &= word - 1;
-            }
-        }
-    }
-
-    bool atomCompatCached(int qi, int tj) {
-        const size_t memoIdx = static_cast<size_t>(qi) * static_cast<size_t>(nT_) + static_cast<size_t>(tj);
-        int8_t& memo = atomMemo_[memoIdx];
-        if (memo >= 0) return memo != 0;
-        memo = q_.atomCompat(qi, target_, tj) ? int8_t(1) : int8_t(0);
-        return memo != 0;
-    }
-
-    void buildDomains() {
-        for (int qi = 0; qi < nQ_; ++qi) {
-            int qDeg = static_cast<int>(q_.neighbors[qi].size());
-            for (int tj = 0; tj < nT_; ++tj) {
-                if (target_.degree[tj] < qDeg) continue;
-                if (!atomCompatCached(qi, tj)) continue;
-                domain_[qi][tj >> 6] |= uint64_t(1) << (tj & 63);
-            }
-            domainSize_[qi] = popcountWords(domain_[qi]);
-            if (domainSize_[qi] == 0) anyEmptyDomain_ = true;
-        }
-    }
-
-    void buildComponents() {
-        compId_.assign(nQ_, -1);
-        int cid = 0;
-        for (int s = 0; s < nQ_; ++s) {
-            if (compId_[s] >= 0) continue;
-            std::deque<int> dq;
-            dq.push_back(s);
-            compId_[s] = cid;
-            while (!dq.empty()) {
-                int u = dq.front();
-                dq.pop_front();
-                for (int v : q_.neighbors[u]) {
-                    if (compId_[v] < 0) {
-                        compId_[v] = cid;
-                        dq.push_back(v);
-                    }
-                }
-            }
-            ++cid;
-        }
-    }
-
-    void buildNeighborOrder() {
-        qNbrsByTightness_.assign(nQ_, {});
-        qNbrBondByTightness_.assign(nQ_, {});
-        for (int qi = 0; qi < nQ_; ++qi) {
-            std::vector<std::pair<int,int>> items;
-            items.reserve(q_.neighbors[qi].size());
-            for (size_t ni = 0; ni < q_.neighbors[qi].size(); ++ni) {
-                items.emplace_back(q_.neighbors[qi][ni], q_.bondIndices[qi][ni]);
-            }
-            std::sort(items.begin(), items.end(), [&](const auto& lhs, const auto& rhs) {
-                int a = lhs.first;
-                int b = rhs.first;
-                if (domainSize_[a] != domainSize_[b]) return domainSize_[a] < domainSize_[b];
-                if (q_.neighbors[a].size() != q_.neighbors[b].size())
-                    return q_.neighbors[a].size() > q_.neighbors[b].size();
-                return a < b;
-            });
-            auto& nbs = qNbrsByTightness_[qi];
-            auto& bis = qNbrBondByTightness_[qi];
-            nbs.reserve(items.size());
-            bis.reserve(items.size());
-            for (const auto& item : items) {
-                nbs.push_back(item.first);
-                bis.push_back(item.second);
-            }
-        }
-    }
-
-    void reachableThroughBond(const std::vector<uint64_t>& srcDomain, int queryBondIndex,
-                              std::vector<uint64_t>& reachable) const {
-        std::fill(reachable.begin(), reachable.end(), uint64_t(0));
-        for (int w = 0; w < tWords_; ++w) {
-            uint64_t bits = srcDomain[w];
-            while (bits != 0) {
-                int bit = smsd::ctz64(bits);
-                int tj = (w << 6) | bit;
-                bits &= bits - 1;
-                if (tj >= nT_) continue;
-                for (int tn : target_.neighbors[tj]) {
-                    if (q_.bondCompat(queryBondIndex, target_, tj, tn)) {
-                        reachable[tn >> 6] |= uint64_t(1) << (tn & 63);
-                    }
-                }
-            }
-        }
-    }
-
-    std::vector<int> buildOrder(int anchor, int anchorTarget = -1) const {
-        if (nQ_ == 0) return {};
-
-        std::vector<int> order;
-        order.reserve(nQ_);
-        std::vector<bool> picked(nQ_, false);
-        std::vector<std::vector<uint64_t>> workDomain = domain_;
-        if (anchor >= 0 && anchorTarget >= 0 && anchorTarget < nT_) {
-            std::fill(workDomain[anchor].begin(), workDomain[anchor].end(), uint64_t(0));
-            workDomain[anchor][anchorTarget >> 6] |= uint64_t(1) << (anchorTarget & 63);
-        }
-        std::vector<uint64_t> reachable(tWords_, 0);
-        int activeComp = -1;
-
-        auto countPickedNeighbors = [&](int qi) {
-            int cnt = 0;
-            for (int qk : q_.neighbors[qi]) {
-                if (picked[qk]) ++cnt;
-            }
-            return cnt;
-        };
-
-        auto chooseBest = [&](int comp, bool frontierOnly) {
-            int bestQ = -1;
-            int bestSize = 0x7fffffff;
-            int bestPickedNbrs = -1;
-            int bestDegree = -1;
-            for (int qi = 0; qi < nQ_; ++qi) {
-                if (picked[qi]) continue;
-                if (comp >= 0 && compId_[qi] != comp) continue;
-                int pickedNbrs = countPickedNeighbors(qi);
-                if (frontierOnly && pickedNbrs == 0) continue;
-                int size = popcountWords(workDomain[qi]);
-                int degree = static_cast<int>(q_.neighbors[qi].size());
-                if (bestQ < 0 ||
-                    size < bestSize ||
-                    (size == bestSize && pickedNbrs > bestPickedNbrs) ||
-                    (size == bestSize && pickedNbrs == bestPickedNbrs && degree > bestDegree) ||
-                    (size == bestSize && pickedNbrs == bestPickedNbrs && degree == bestDegree && qi < bestQ)) {
-                    bestQ = qi;
-                    bestSize = size;
-                    bestPickedNbrs = pickedNbrs;
-                    bestDegree = degree;
-                }
-            }
-            return bestQ;
-        };
-
-        auto forwardCheck = [&](int qi) {
-            for (size_t ni = 0; ni < q_.neighbors[qi].size(); ++ni) {
-                int qk = q_.neighbors[qi][ni];
-                if (picked[qk]) continue;
-                int bi = q_.bondIndices[qi][ni];
-                reachableThroughBond(workDomain[qi], bi, reachable);
-                for (int w = 0; w < tWords_; ++w) {
-                    workDomain[qk][w] &= reachable[w];
-                }
-            }
-        };
-
-        if (anchor >= 0) {
-            order.push_back(anchor);
-            picked[anchor] = true;
-            activeComp = compId_[anchor];
-            forwardCheck(anchor);
-        }
-
-        while (static_cast<int>(order.size()) < nQ_) {
-            int next = -1;
-            if (activeComp >= 0) {
-                next = chooseBest(activeComp, true);
-                if (next < 0) next = chooseBest(activeComp, false);
-            }
-            if (next < 0) {
-                next = chooseBest(-1, false);
-                if (next >= 0) activeComp = compId_[next];
-            }
-            if (next < 0) break;
-            order.push_back(next);
-            picked[next] = true;
-            forwardCheck(next);
-        }
-
-        return order;
-    }
-
-    int selectCandidates(int qi, std::vector<int>& out) const {
-        bool seeded = false;
-        for (size_t ni = 0; ni < q_.neighbors[qi].size(); ++ni) {
-            int qk = q_.neighbors[qi][ni];
-            int tk = q2t_[qk];
-            if (tk < 0) continue;
-            int bi = q_.bondIndices[qi][ni];
-            std::fill(tmpMaskBuf_.begin(), tmpMaskBuf_.end(), uint64_t(0));
-            for (int tn : target_.neighbors[tk]) {
-                if (!domainHas(qi, tn)) continue;
-                if (!q_.bondCompat(bi, target_, tk, tn)) continue;
-                tmpMaskBuf_[tn >> 6] |= uint64_t(1) << (tn & 63);
-            }
-            if (!seeded) {
-                availBuf_ = tmpMaskBuf_;
-                seeded = true;
-            } else {
-                for (int w = 0; w < tWords_; ++w) availBuf_[w] &= tmpMaskBuf_[w];
-            }
-        }
-
-        if (!seeded) {
-            availBuf_ = domain_[qi];
-        }
-        for (int w = 0; w < tWords_; ++w) availBuf_[w] &= ~usedMask_[w];
-
-        collectBits(availBuf_, out);
-
-        const int qDeg = static_cast<int>(q_.neighbors[qi].size());
-        for (size_t i = 1; i < out.size(); ++i) {
-            int key = out[i];
-            int keyDist = target_.degree[key] - qDeg;
-            if (keyDist < 0) keyDist = -keyDist;
-            size_t j = i;
-            while (j > 0) {
-                int prev = out[j - 1];
-                int prevDist = target_.degree[prev] - qDeg;
-                if (prevDist < 0) prevDist = -prevDist;
-                if (prevDist <= keyDist) break;
-                out[j] = prev;
-                --j;
-            }
-            out[j] = key;
-        }
-
-        return static_cast<int>(out.size());
-    }
-
-    bool feasible(int qi, int ti) const {
-        if (ti < 0 || ti >= nT_) return false;
-        if (t2q_[ti] != -1) return false;
-        if (!domainHas(qi, ti)) return false;
-        if (target_.degree[ti] < static_cast<int>(q_.neighbors[qi].size())) return false;
-
-        int unmappedNbrs = 0;
-        int availableTargetNbrs = 0;
-        for (int tn : target_.neighbors[ti]) {
-            if (t2q_[tn] == -1) ++availableTargetNbrs;
-        }
-
-        for (size_t ni = 0; ni < q_.neighbors[qi].size(); ++ni) {
-            int qk = q_.neighbors[qi][ni];
-            int bi = q_.bondIndices[qi][ni];
-            int tk = q2t_[qk];
-            if (tk >= 0) {
-                if (!target_.hasBond(ti, tk)) return false;
-                if (!q_.bondCompat(bi, target_, ti, tk)) return false;
-            } else {
-                ++unmappedNbrs;
-            }
-        }
-
-        if (availableTargetNbrs < unmappedNbrs) return false;
-
-        for (size_t pi = 0; pi < qNbrsByTightness_[qi].size(); ++pi) {
-            int qk = qNbrsByTightness_[qi][pi];
-            int tk = q2t_[qk];
-            if (tk >= 0) continue;
-            int bondIndex = qNbrBondByTightness_[qi][pi];
-            bool supported = false;
-            for (int tn : target_.neighbors[ti]) {
-                if (t2q_[tn] != -1) continue;
-                if (!domainHas(qk, tn)) continue;
-                if (!q_.bondCompat(bondIndex, target_, ti, tn)) continue;
-                supported = true;
-                break;
-            }
-            if (!supported) return false;
-        }
-
-        return true;
-    }
-
-    void mapPair(int qi, int ti) {
-        q2t_[qi] = ti;
-        t2q_[ti] = qi;
-        usedMask_[ti >> 6] |= uint64_t(1) << (ti & 63);
-    }
-
-    void unmapPair(int qi, int ti) {
-        q2t_[qi] = -1;
-        t2q_[ti] = -1;
-        usedMask_[ti >> 6] &= ~(uint64_t(1) << (ti & 63));
-    }
-
-    bool backtrackExists(int pos) {
-        if (pos == nQ_) return true;
-        int qi = order_[pos];
-        auto& buf = candBuf_[pos];
-        selectCandidates(qi, buf);
-        for (int ti : buf) {
-            if (!feasible(qi, ti)) continue;
-            mapPair(qi, ti);
-            if (backtrackExists(pos + 1)) return true;
-            unmapPair(qi, ti);
-        }
-        return false;
-    }
-
-    void backtrackAll(int pos, std::vector<std::map<int,int>>& out, int maxMatches) {
-        if (static_cast<int>(out.size()) >= maxMatches) return;
-        if (pos == nQ_) {
-            std::map<int,int> mapping;
-            for (int qi = 0; qi < nQ_; ++qi) {
-                mapping[qi] = q2t_[qi];
-            }
-            out.push_back(std::move(mapping));
-            return;
-        }
-        int qi = order_[pos];
-        auto& buf = candBuf_[pos];
-        selectCandidates(qi, buf);
-        for (int ti : buf) {
-            if (!feasible(qi, ti)) continue;
-            mapPair(qi, ti);
-            backtrackAll(pos + 1, out, maxMatches);
-            unmapPair(qi, ti);
-            if (static_cast<int>(out.size()) >= maxMatches) return;
-        }
-    }
-
-public:
-    SmartsMatchEngine(const SmartsQuery& q, const MolGraph& target, int anchorQ = -1)
-        : q_(q), target_(target), nQ_(q.atomCount()), nT_(target.n),
-          tWords_((target.n + 63) >> 6), anchorQ_(anchorQ),
-          domain_(q.atomCount(), std::vector<uint64_t>(((target.n + 63) >> 6), 0)),
-          domainSize_(q.atomCount(), 0),
-          atomMemo_(static_cast<size_t>(std::max(1, q.atomCount())) * static_cast<size_t>(std::max(1, target.n)), int8_t(-1)),
-          q2t_(q.atomCount(), -1), t2q_(target.n, -1),
-          usedMask_(((target.n + 63) >> 6), 0),
-          candBuf_(std::max(1, q.atomCount() + 1)),
-          qNbrsByTightness_(q.atomCount()), qNbrBondByTightness_(q.atomCount()),
-          availBuf_(((target.n + 63) >> 6), 0),
-          tmpMaskBuf_(((target.n + 63) >> 6), 0) {
-        if (nQ_ == 0 || nT_ == 0) return;
-        buildDomains();
-        if (anyEmptyDomain_) return;
-        buildComponents();
-        buildNeighborOrder();
-        order_ = buildOrder(anchorQ_);
-        if (anchorQ_ >= 0 && !order_.empty()) assert(order_[0] == anchorQ_);
-    }
-
-    bool exists() {
-        if (nQ_ == 0) return true;
-        if (nT_ < nQ_ || anyEmptyDomain_ || order_.size() != static_cast<size_t>(nQ_)) return false;
-        return backtrackExists(0);
-    }
-
-    bool existsAnchored(int targetAtom) {
-        if (nQ_ == 0) return true;
-        if (nT_ < nQ_ || anyEmptyDomain_ || targetAtom < 0 || targetAtom >= nT_) return false;
-        if (anchorQ_ < 0) return false;
-        if (!domainHas(anchorQ_, targetAtom)) return false;
-
-        std::vector<int> savedOrder = order_;
-        order_ = buildOrder(anchorQ_, targetAtom);
-        if (order_.empty() || order_[0] != anchorQ_) {
-            order_ = std::move(savedOrder);
-            return false;
-        }
-
-        if (!feasible(anchorQ_, targetAtom)) {
-            order_ = std::move(savedOrder);
-            return false;
-        }
-
-        mapPair(anchorQ_, targetAtom);
-        bool ok = backtrackExists(1);
-        unmapPair(anchorQ_, targetAtom);
-        order_ = std::move(savedOrder);
-        return ok;
-    }
-
-    std::vector<std::map<int,int>> findAll(int maxMatches) {
-        std::vector<std::map<int,int>> out;
-        if (maxMatches <= 0) return out;
-        if (nQ_ == 0) {
-            out.push_back({});
-            return out;
-        }
-        if (nT_ < nQ_ || anyEmptyDomain_ || order_.size() != static_cast<size_t>(nQ_)) return out;
-        backtrackAll(0, out, maxMatches);
-        return out;
-    }
-};
-
-} // namespace smarts_detail
-
-
-
-enum class SmartsProbeResult {
-    FOUND,
-    NOT_FOUND,
-    UNKNOWN
-};
-
-inline SmartsProbeResult legacyBacktrackProbe(
-        const SmartsQuery& query,
-        const MolGraph& target,
-        const std::vector<int>& order,
-        int pos,
-        std::vector<int>& q2t,
-        std::vector<bool>& tUsed,
-        std::vector<int>& mark,
-        int& markStamp,
-        int& nodesVisited,
-        int nodeLimit) {
-    if (nodesVisited++ >= nodeLimit) return SmartsProbeResult::UNKNOWN;
-
-    int qn = query.atomCount();
-    if (pos == qn) return SmartsProbeResult::FOUND;
-
-    int qi = order[pos];
-    std::vector<int> candidates;
-    bool constrained = false;
-
-    auto nextStamp = [&]() {
-        if (++markStamp == std::numeric_limits<int>::max()) {
-            std::fill(mark.begin(), mark.end(), 0);
-            markStamp = 1;
-        }
-        return markStamp;
-    };
-
-    for (size_t ni = 0; ni < query.neighbors[qi].size(); ++ni) {
-        int qk = query.neighbors[qi][ni];
-        int tk = q2t[qk];
-        if (tk < 0) continue;
-
-        int bi = query.bondIndices[qi][ni];
-        if (!constrained) {
-            constrained = true;
-            for (int tn : target.neighbors[tk]) {
-                if (tUsed[tn]) continue;
-                if (!query.atomCompat(qi, target, tn)) continue;
-                if (!query.bondCompat(bi, target, tk, tn)) continue;
-                candidates.push_back(tn);
-            }
-        } else {
-            int stamp = nextStamp();
-            for (int tn : target.neighbors[tk]) {
-                if (!query.bondCompat(bi, target, tk, tn)) continue;
-                mark[tn] = stamp;
-            }
-            candidates.erase(
-                std::remove_if(candidates.begin(), candidates.end(),
-                    [&](int c) { return mark[c] != stamp; }),
-                candidates.end());
-        }
-
-        if (candidates.empty()) return SmartsProbeResult::NOT_FOUND;
-    }
-
-    if (!constrained) {
-        candidates.reserve(target.n);
-        for (int t = 0; t < target.n; ++t) {
-            if (!tUsed[t] && query.atomCompat(qi, target, t)) {
-                candidates.push_back(t);
-            }
-        }
-    }
-
-    for (int ti : candidates) {
-        if (tUsed[ti]) continue;
-
-        bool bondsOk = true;
-        for (size_t ni = 0; ni < query.neighbors[qi].size(); ++ni) {
-            int qk = query.neighbors[qi][ni];
-            if (q2t[qk] >= 0) {
-                int tk = q2t[qk];
-                int bi = query.bondIndices[qi][ni];
-                if (!target.hasBond(ti, tk) || !query.bondCompat(bi, target, ti, tk)) {
-                    bondsOk = false;
-                    break;
-                }
-            }
-        }
-        if (!bondsOk) continue;
-
-        q2t[qi] = ti;
-        tUsed[ti] = true;
-
-        SmartsProbeResult sub = legacyBacktrackProbe(
-            query, target, order, pos + 1, q2t, tUsed, mark, markStamp, nodesVisited, nodeLimit);
-
-        q2t[qi] = -1;
-        tUsed[ti] = false;
-
-        if (sub == SmartsProbeResult::FOUND || sub == SmartsProbeResult::UNKNOWN) {
-            return sub;
-        }
-    }
-
-    return SmartsProbeResult::NOT_FOUND;
-}
-
-inline SmartsProbeResult legacyExistsProbe(
-        const SmartsQuery& query,
-        const MolGraph& target,
-        int nodeLimit,
-        bool anchored = false,
-        int targetAtom = -1) {
-    if (query.atomCount() == 0) return SmartsProbeResult::FOUND;
-    if (target.n < query.atomCount()) return SmartsProbeResult::NOT_FOUND;
-
-    auto order = query.matchingOrder();
-    std::vector<int> q2t(query.atomCount(), -1);
-    std::vector<bool> tUsed(target.n, false);
-    std::vector<int> mark(std::max(1, target.n), 0);
-    int markStamp = 1;
-    int nodesVisited = 0;
-
-    if (anchored) {
-        if (order.empty() || order[0] != 0) return SmartsProbeResult::UNKNOWN;
-        if (targetAtom < 0 || targetAtom >= target.n) return SmartsProbeResult::NOT_FOUND;
-        if (!query.atomCompat(0, target, targetAtom)) return SmartsProbeResult::NOT_FOUND;
-        q2t[0] = targetAtom;
-        tUsed[targetAtom] = true;
-        return legacyBacktrackProbe(query, target, order, 1, q2t, tUsed, mark, markStamp, nodesVisited, nodeLimit);
-    }
-
-    return legacyBacktrackProbe(query, target, order, 0, q2t, tUsed, mark, markStamp, nodesVisited, nodeLimit);
-}
-
-inline bool SmartsQuery::matches(const MolGraph& target) const {
-    if (atomCount() == 0) return true;
-    if (target.n < atomCount()) return false;
-
-    constexpr int kProbeNodeLimit = 2048;
-    SmartsProbeResult probe = legacyExistsProbe(*this, target, kProbeNodeLimit, false, -1);
-    if (probe == SmartsProbeResult::FOUND) return true;
-    if (probe == SmartsProbeResult::NOT_FOUND) return false;
-
-    smarts_detail::SmartsMatchEngine engine(*this, target, -1);
-    return engine.exists();
-}
-
-inline std::vector<std::map<int,int>> SmartsQuery::findAll(const MolGraph& target, int maxMatches) const {
-    if (atomCount() == 0) return {{}};
-    if (target.n < atomCount()) return {};
-    smarts_detail::SmartsMatchEngine engine(*this, target, -1);
-    return engine.findAll(maxMatches);
-}
-
-inline bool SmartsQuery::matchesAtAtom(const MolGraph& target, int targetAtom) const {
-    if (atomCount() == 0) return true;
-    if (target.n < atomCount()) return false;
-
-    constexpr int kProbeNodeLimit = 1024;
-    SmartsProbeResult probe = legacyExistsProbe(*this, target, kProbeNodeLimit, true, targetAtom);
-    if (probe == SmartsProbeResult::FOUND) return true;
-    if (probe == SmartsProbeResult::NOT_FOUND) return false;
-
-    smarts_detail::SmartsMatchEngine engine(*this, target, 0);
-    return engine.existsAnchored(targetAtom);
-}
-
 // Deferred recursive SMARTS evaluation (needs complete SmartsQuery type)
 inline bool smarts_detail::evalRecursiveSmarts(const smarts_detail::AtomExpr& expr, const MolGraph& g, int idx) {
     if (expr.recursiveSmarts.empty()) return false;
 
-    if (!expr.cachedRecursive) {
-        expr.cachedRecursive = std::make_shared<SmartsQuery>(parseSMARTS(expr.recursiveSmarts));
+    if (smarts_detail::recursiveMatcher) {
+        if (expr.cachedRecursive) return smarts_detail::recursiveMatcher(*expr.cachedRecursive, g, idx);
+        return smarts_detail::recursiveMatcher(parseSMARTS(expr.recursiveSmarts), g, idx);
     }
-
-    if (expr.cachedRecursiveTarget != &g
-        || expr.cachedRecursiveTargetNonce != g.cacheNonce
-        || static_cast<int>(expr.cachedRecursiveState.size()) != g.n) {
-        expr.cachedRecursiveTarget = &g;
-        expr.cachedRecursiveTargetNonce = g.cacheNonce;
-        expr.cachedRecursiveState.assign(g.n, int8_t(-1));
-    }
-
-    int8_t& memo = expr.cachedRecursiveState[idx];
-    if (memo >= 0) return memo != 0;
-
-    memo = expr.cachedRecursive->matchesAtAtom(g, idx) ? int8_t(1) : int8_t(0);
-    return memo != 0;
+    throw std::logic_error("Recursive SMARTS evaluation requires a Substructure search context");
 }
 
 // ============================================================================
@@ -2329,389 +1868,16 @@ inline SmartsQuery parseSMARTS(const std::string& smarts, int maxRecursionDepth)
     smarts_detail::SmartsParser parser(smarts);
     parser.parse(query.atoms, query.bonds);
     query.buildAdjacency();
+    parser.normaliseChirality(query.atoms, query.neighbors);
+    std::function<void(smarts_detail::AtomExpr&)> compileRecursive = [&](smarts_detail::AtomExpr& expression) {
+        if (expression.primType == smarts_detail::AtomPrimType::RECURSIVE)
+            expression.cachedRecursive = std::make_shared<SmartsQuery>(parseSMARTS(expression.recursiveSmarts, maxRecursionDepth));
+        for (auto& child : expression.children) compileRecursive(child);
+    };
+    for (auto& atom : query.atoms) compileRecursive(atom.expr);
     return query;
 }
 
-// ============================================================================
-// SMARTS-based MCS: find the largest SMARTS match in a target molecule
-// ============================================================================
-
-/**
- * Find the largest substructure match of a SMARTS pattern in a target MolGraph.
- *
- * Parses the SMARTS query, enumerates all matches in the target, and returns
- * the mapping with the most matched atoms.  For simple SMARTS patterns that
- * map to connected substructures, all matches will have the same size (equal
- * to the number of query atoms), so this simply returns the first match.
- *
- * For patterns with wildcards or optional components, different embeddings
- * may cover different numbers of target atoms; this function picks the largest.
- *
- * @param smartsStr  SMARTS pattern string
- * @param target     Target molecule
- * @param maxMatches Maximum number of matches to enumerate before picking best
- * @return Mapping from SMARTS atom index to target atom index for the largest
- *         match, or empty map if no match.
- */
-inline std::map<int,int> findMCSSmarts(
-        const std::string& smartsStr,
-        const MolGraph& target,
-        int maxMatches = 1000) {
-    if (smartsStr.empty() || target.n == 0) return {};
-
-    SmartsQuery query = parseSMARTS(smartsStr);
-    if (query.atomCount() == 0) return {};
-
-    auto matches = query.findAll(target, maxMatches);
-    if (matches.empty()) return {};
-
-    // Return the largest match (most atoms mapped)
-    std::map<int,int>* best = &matches[0];
-    for (size_t i = 1; i < matches.size(); i++) {
-        if (matches[i].size() > best->size()) {
-            best = &matches[i];
-        }
-    }
-    return *best;
-}
-
 } // namespace smsd
-
-// ============================================================================
-// Basic tests (compile with -DSMSD_TEST_SMARTS)
-// ============================================================================
-#ifdef SMSD_TEST_SMARTS
-
-#include "smiles_parser.hpp"
-#include <cassert>
-#include <iostream>
-
-namespace smsd_smarts_test {
-
-inline void testWildcard() {
-    auto q = smsd::parseSMARTS("*");
-    auto mol = smsd::parseSMILES("C");
-    assert(q.matches(mol));
-    std::cout << "  [PASS] testWildcard\n";
-}
-
-inline void testElementMatch() {
-    auto q = smsd::parseSMARTS("[#6]");
-    auto mol = smsd::parseSMILES("C");
-    assert(q.matches(mol));
-
-    auto q2 = smsd::parseSMARTS("[#7]");
-    assert(!q2.matches(mol));
-    std::cout << "  [PASS] testElementMatch\n";
-}
-
-inline void testOrganicShorthand() {
-    auto q = smsd::parseSMARTS("C");
-    auto mol = smsd::parseSMILES("CC");
-    assert(q.matches(mol));
-
-    auto q2 = smsd::parseSMARTS("N");
-    assert(!q2.matches(mol));
-    std::cout << "  [PASS] testOrganicShorthand\n";
-}
-
-inline void testBondSingle() {
-    auto q = smsd::parseSMARTS("C-C");
-    auto mol = smsd::parseSMILES("CC");
-    assert(q.matches(mol));
-
-    auto mol2 = smsd::parseSMILES("C=C");
-    assert(!q.matches(mol2));
-    std::cout << "  [PASS] testBondSingle\n";
-}
-
-inline void testBondDouble() {
-    auto q = smsd::parseSMARTS("C=O");
-    auto mol = smsd::parseSMILES("CC=O");
-    assert(q.matches(mol));
-    std::cout << "  [PASS] testBondDouble\n";
-}
-
-inline void testBondTriple() {
-    auto q = smsd::parseSMARTS("C#N");
-    auto mol = smsd::parseSMILES("CC#N");
-    assert(q.matches(mol));
-
-    auto mol2 = smsd::parseSMILES("CC=N");
-    assert(!q.matches(mol2));
-    std::cout << "  [PASS] testBondTriple\n";
-}
-
-inline void testBondAny() {
-    auto q = smsd::parseSMARTS("C~C");
-    auto mol1 = smsd::parseSMILES("CC");
-    auto mol2 = smsd::parseSMILES("C=C");
-    assert(q.matches(mol1));
-    assert(q.matches(mol2));
-    std::cout << "  [PASS] testBondAny\n";
-}
-
-inline void testDegree() {
-    // D2 = degree 2
-    auto q = smsd::parseSMARTS("[D2]");
-    auto mol = smsd::parseSMILES("CCC");  // middle C has degree 2
-    assert(q.matches(mol));
-
-    auto mol2 = smsd::parseSMILES("C");   // single C has degree 0
-    assert(!q.matches(mol2));
-    std::cout << "  [PASS] testDegree\n";
-}
-
-inline void testRing() {
-    auto q = smsd::parseSMARTS("[R]");
-    auto mol = smsd::parseSMILES("C1CCC1");
-    assert(q.matches(mol));
-
-    auto mol2 = smsd::parseSMILES("CCC");
-    assert(!q.matches(mol2));
-    std::cout << "  [PASS] testRing\n";
-}
-
-inline void testNotRing() {
-    auto q = smsd::parseSMARTS("[!R]");
-    auto mol = smsd::parseSMILES("CCC");
-    assert(q.matches(mol));
-    std::cout << "  [PASS] testNotRing\n";
-}
-
-inline void testOrExpression() {
-    // [#6,#7] = carbon or nitrogen
-    auto q = smsd::parseSMARTS("[#6,#7]");
-    auto molC = smsd::parseSMILES("C");
-    auto molN = smsd::parseSMILES("N");
-    auto molO = smsd::parseSMILES("O");
-    assert(q.matches(molC));
-    assert(q.matches(molN));
-    assert(!q.matches(molO));
-    std::cout << "  [PASS] testOrExpression\n";
-}
-
-inline void testAndExpression() {
-    // [#6&D2] = carbon with degree 2
-    auto q = smsd::parseSMARTS("[#6&D2]");
-    auto mol = smsd::parseSMILES("CCC");
-    assert(q.matches(mol));  // middle C is #6 and D2
-    std::cout << "  [PASS] testAndExpression\n";
-}
-
-inline void testCharge() {
-    auto q = smsd::parseSMARTS("[+1]");
-    auto mol = smsd::parseSMILES("[NH4+]");
-    assert(q.matches(mol));
-
-    auto mol2 = smsd::parseSMILES("C");
-    assert(!q.matches(mol2));
-    std::cout << "  [PASS] testCharge\n";
-}
-
-inline void testTwoLetterElement() {
-    auto q = smsd::parseSMARTS("[Cl]");
-    auto mol = smsd::parseSMILES("CCl");
-    assert(q.matches(mol));
-    std::cout << "  [PASS] testTwoLetterElement\n";
-}
-
-inline void testPattern_CC() {
-    auto q = smsd::parseSMARTS("CC");
-    auto mol = smsd::parseSMILES("CCC");  // has C-C substructure
-    auto matches = q.findAll(mol, 100);
-    assert(!matches.empty());
-    std::cout << "  [PASS] testPattern_CC (" << matches.size() << " matches)\n";
-}
-
-inline void testAromatic() {
-    auto q = smsd::parseSMARTS("[a]");
-    auto mol = smsd::parseSMILES("c1ccccc1");  // benzene
-    assert(q.matches(mol));
-
-    auto mol2 = smsd::parseSMILES("C1CCCCC1");  // cyclohexane
-    assert(!q.matches(mol2));
-    std::cout << "  [PASS] testAromatic\n";
-}
-
-inline void testRingBond() {
-    auto q = smsd::parseSMARTS("[#6]@[#6]");
-    auto mol = smsd::parseSMILES("C1CCC1");  // cyclobutane: ring bond
-    assert(q.matches(mol));
-
-    auto mol2 = smsd::parseSMILES("CCC");  // no ring
-    assert(!q.matches(mol2));
-    std::cout << "  [PASS] testRingBond\n";
-}
-
-inline void testBranches() {
-    // C(=O)O = carboxylic acid
-    auto q = smsd::parseSMARTS("C(=O)O");
-    auto mol = smsd::parseSMILES("CC(=O)O");  // acetic acid
-    assert(q.matches(mol));
-    std::cout << "  [PASS] testBranches (carboxylic acid)\n";
-}
-
-inline void testNotOperator() {
-    // [!#6] = not carbon
-    auto q = smsd::parseSMARTS("[!#6]");
-    auto molC = smsd::parseSMILES("C");
-    auto molN = smsd::parseSMILES("N");
-    assert(!q.matches(molC));
-    assert(q.matches(molN));
-    std::cout << "  [PASS] testNotOperator\n";
-}
-
-inline void testRingClosure() {
-    // c1ccccc1 = aromatic 6-ring
-    auto q = smsd::parseSMARTS("c1ccccc1");
-    auto mol = smsd::parseSMILES("c1ccccc1");
-    assert(q.matches(mol));
-    std::cout << "  [PASS] testRingClosure\n";
-}
-
-inline void testEmptySmarts() {
-    auto q = smsd::parseSMARTS("");
-    auto mol = smsd::parseSMILES("C");
-    assert(q.matches(mol));  // empty pattern matches anything
-    std::cout << "  [PASS] testEmptySmarts\n";
-}
-
-inline void testInvalidSmarts() {
-    bool threw = false;
-    try {
-        smsd::parseSMARTS("[#6");  // missing ]
-    } catch (const std::invalid_argument&) {
-        threw = true;
-    }
-    assert(threw);
-    std::cout << "  [PASS] testInvalidSmarts\n";
-}
-
-inline void testSemicolonAnd() {
-    // [#6;R] = carbon AND in ring (semicolon = low-priority AND)
-    auto q = smsd::parseSMARTS("[#6;R]");
-    auto mol = smsd::parseSMILES("C1CCC1");
-    assert(q.matches(mol));
-
-    auto mol2 = smsd::parseSMILES("CCC");
-    assert(!q.matches(mol2));
-    std::cout << "  [PASS] testSemicolonAnd\n";
-}
-
-inline void testMultipleMatches() {
-    auto q = smsd::parseSMARTS("[#6]");
-    auto mol = smsd::parseSMILES("CCCC");
-    auto matches = q.findAll(mol, 100);
-    assert(static_cast<int>(matches.size()) == 4);  // 4 carbons
-    std::cout << "  [PASS] testMultipleMatches (" << matches.size() << " matches)\n";
-}
-
-inline void testRecursiveSmarts() {
-    // [$([#6][#8])] = carbon bonded to oxygen
-    auto q = smsd::parseSMARTS("[$([#6][#8])]");
-    auto mol = smsd::parseSMILES("CCO");
-    assert(q.matches(mol));  // C bonded to O
-
-    auto mol2 = smsd::parseSMILES("CCC");
-    assert(!q.matches(mol2));
-    std::cout << "  [PASS] testRecursiveSmarts\n";
-}
-
-inline void testHeteroNeighbors() {
-    // z1 in methylamine: C has 1 N neighbor
-    auto q1 = smsd::parseSMARTS("[z1]");
-    auto mol1 = smsd::parseSMILES("CN");
-    assert(q1.matches(mol1));
-
-    // z0 in ethane: only carbon neighbors
-    auto q2 = smsd::parseSMARTS("[z0]");
-    auto mol2 = smsd::parseSMILES("CC");
-    assert(q2.matches(mol2));
-
-    std::cout << "  [PASS] testHeteroNeighbors\n";
-}
-
-inline void testHeavyDegree() {
-    // d2 in propane: middle C has 2 heavy neighbors
-    auto q = smsd::parseSMARTS("[d2]");
-    auto mol = smsd::parseSMILES("CCC");
-    assert(q.matches(mol));
-    std::cout << "  [PASS] testHeavyDegree\n";
-}
-
-inline void testHybridization() {
-    // ^2 matches SP2 (aromatic carbon)
-    auto q1 = smsd::parseSMARTS("[^2]");
-    auto mol1 = smsd::parseSMILES("c1ccccc1");
-    assert(q1.matches(mol1));
-
-    // ^3 matches SP3 (methane)
-    auto q2 = smsd::parseSMARTS("[^3]");
-    auto mol2 = smsd::parseSMILES("C");
-    assert(q2.matches(mol2));
-
-    // ^1 matches SP (acetylene)
-    auto q3 = smsd::parseSMARTS("[^1]");
-    auto mol3 = smsd::parseSMILES("C#C");
-    assert(q3.matches(mol3));
-
-    std::cout << "  [PASS] testHybridization\n";
-}
-
-inline void testRangeQuery() {
-    // D{2-4} matches degree 2 through 4
-    auto q = smsd::parseSMARTS("[D{2-4}]");
-    auto mol = smsd::parseSMILES("CC(C)(C)C"); // central C has D4
-    assert(q.matches(mol));
-
-    auto mol2 = smsd::parseSMILES("C"); // D0
-    assert(!q.matches(mol2));
-
-    // D{2-} means >= 2
-    auto q2 = smsd::parseSMARTS("[D{2-}]");
-    auto mol3 = smsd::parseSMILES("CCC"); // middle C has D2
-    assert(q2.matches(mol3));
-
-    std::cout << "  [PASS] testRangeQuery\n";
-}
-
-inline void runAllTests() {
-    std::cout << "smarts_parser tests:\n";
-    testWildcard();
-    testElementMatch();
-    testOrganicShorthand();
-    testBondSingle();
-    testBondDouble();
-    testBondTriple();
-    testBondAny();
-    testDegree();
-    testRing();
-    testNotRing();
-    testOrExpression();
-    testAndExpression();
-    testCharge();
-    testTwoLetterElement();
-    testPattern_CC();
-    testAromatic();
-    testRingBond();
-    testBranches();
-    testNotOperator();
-    testRingClosure();
-    testEmptySmarts();
-    testInvalidSmarts();
-    testSemicolonAnd();
-    testMultipleMatches();
-    testRecursiveSmarts();
-    testHeteroNeighbors();
-    testHeavyDegree();
-    testHybridization();
-    testRangeQuery();
-    std::cout << "All smarts_parser tests passed.\n";
-}
-
-} // namespace smsd_smarts_test
-
-#endif // SMSD_TEST_SMARTS
 
 #endif // SMSD_SMARTS_PARSER_HPP

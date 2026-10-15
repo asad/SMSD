@@ -1,5 +1,9 @@
 # Search algorithm review
 
+The current source API is documented in the [Python](PYTHON.md),
+[C++](CPP.md) and [Java](JAVA.md) guides. The implementation names and
+measurements below describe historical source versions.
+
 This review records the **7.2.0 source candidate** against the immutable 7.1.2
 source snapshot `6807f31`. Those search fixes carry forward into 7.2.2; current release checks are in
 [7.2.2 validation](VALIDATION_7.2.2.md). Latest cross-engine measurements, policies, input
@@ -10,11 +14,11 @@ are historical and are identified separately.
 ## Reviewed objective, chemistry and cache fixes
 
 Tautomer-aware Java and native matching preserves element identity when atom
-matching is enabled. Tetrahedral matching compares normalized R/S descriptors
+matching is enabled. Tetrahedral matching compares normalised R/S descriptors
 and fully mapped ligand permutations rather than raw traversal tags; the Java
 graph retains CDK's exact ligand ordering. Opposite resolved configurations
-exclude the center even in partial mappings. Unspecified stereo retains its
-existing wildcard behavior.
+exclude the centre even in partial mappings. Unspecified stereo retains its
+existing wildcard behaviour.
 
 Signed weights can make an identity mapping worse than a proper subset.
 Small objective searches use positive-weight or bond-count upper bounds;
@@ -36,11 +40,11 @@ otherwise retains its own CDK key. New focused Java coverage passed 77 cases,
 including 25 new regressions and 1,024 independent three-vertex comparisons
 across signed/positive weights, bond objectives, connectedness and induced
 matching. Seven of the initial eight defect fixtures failed against the
-baseline; valid positive-weight behavior was retained as an additional check.
+baseline; valid positive-weight behaviour was retained as an additional check.
 The focused suite also covers CDK bond-storage reordering, completed ligand
 permutations, Builder winding, scoped exclusions and constrained batch budgets.
 Three of four additional chemical-symmetry fixtures failed before their fixes;
-the valid methyl symmetry away from an annotated center remained available.
+the valid methyl symmetry away from an annotated centre remained available.
 Large/skipped or node-capped generator capture is marked incomplete, discovered
 permutations preserve chemical properties, and orbit pruning uses only proven
 subgroup equivalences. Another 20 existing orbit, canonical-label and SMILES
@@ -51,7 +55,7 @@ tests passed after this change; canonical labels/hashes were left unchanged.
 Java and C++ MCS searches preserve the caller's query direction for
 non-induced matching and keep atom weights attached to query indices.
 Partial induced subgraphs use conservative chemical-label bounds: vertices
-may omit neighbors, so their full-graph degrees cannot bound an MCS.
+may omit neighbours, so their full-graph degrees cannot bound an MCS.
 Candidates are validated and postfiltered before becoming incumbents or
 triggering an upper-bound exit. Identity results obey connectivity and
 fragment options. Connected components are selected by the requested
@@ -66,9 +70,9 @@ vertices. McSplit allows sufficient skip depth, preserves non-induced
 candidate partitions, and restricts symmetry pruning to valid contexts.
 Recursive extension branches preserve their candidate buffers. MCS
 enumeration applies default options and the same validity filters as the
-single-result search. Similarity bounds honor chemical matching options.
+single-result search. Similarity bounds honour chemical matching options.
 Expired Java and C++ budgets stay expired during recursive unwinding. Java
-clique search checks deadlines around costly coloring and pivot work;
+clique search checks deadlines around costly colouring and pivot work;
 orientation probes, recovery and ring retries share the caller's total budget.
 Valid connected incumbents can extend even below the near-optimal threshold.
 For graphs with 51–100 atoms, Java tries compatible single-atom anchors within
@@ -95,7 +99,7 @@ test additionally requires successful kernel execution and checks its full
 domain bitmatrix against an independent basic-compatibility oracle.
 
 The native clique helpers enforce mapped query bonds, select the largest
-connected component, normalize results before applying caps, and check an
+connected component, normalise results before applying caps, and check an
 already expired deadline. Rectangular assignment validates matrix shape and
 finite values, and rejects reduced-cost overflow. C++ atom-weight validation
 rejects nonfinite values and unrepresentable integer millipoint scores.
@@ -194,7 +198,7 @@ Reproducible primitive sources include
 [component filtering](../benchmarks/benchmark_mcs_components.cpp) and
 [search primitives](../benchmarks/benchmark_search_primitives.cpp).
 Rectangular assignment uses `O(min(m,n)² max(m,n))` time with `O(m+n)`
-auxiliary space. Component filtering traverses graph neighbors instead of
+auxiliary space. Component filtering traverses graph neighbours instead of
 scanning every pair of mapped vertices. These implementation properties do
 not by themselves establish representative molecular-search throughput.
 

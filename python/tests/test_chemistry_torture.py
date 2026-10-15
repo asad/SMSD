@@ -15,6 +15,7 @@ from __future__ import annotations
 import pytest
 
 import smsd
+from .search_helpers import configured_mcs, atom_map
 
 
 REPRESENTATIVE_MOLECULES = [
@@ -114,7 +115,7 @@ class TestRepresentativeRoundTrip:
         assert reparsed.n == mol.n, f"{name}: canonical round-trip should preserve atom count"
 
         # A round-trip must retain every fragment, including disconnected salts.
-        mapping = smsd.find_mcs(mol, reparsed, timeout_ms=10000, connected_only=False)
+        mapping = atom_map(configured_mcs(mol, timeout_ms=10000, fragments=not False).match(reparsed))
         assert len(mapping) == mol.n, f"{name}: self-equivalent round-trip should preserve full MCS"
 
 
@@ -143,18 +144,18 @@ class TestPairwiseCoverage:
                 setattr(relaxed_opts, key, value)
 
         if relaxed_opts:
-            mcs_opts = smsd.MCSOptions()
-            mcs_opts.timeout_ms = 10000
-            mcs = smsd._native_find_mcs(q, t, relaxed_opts, mcs_opts)
+            mcs = atom_map(configured_mcs(q, timeout_ms=10000, chemistry=relaxed_opts).match(t))
         else:
-            mcs = smsd.find_mcs(q, t, timeout_ms=10000)
+            mcs = atom_map(configured_mcs(q, timeout_ms=10000).match(t))
         assert len(mcs) >= min_mcs, f"{name}: expected MCS >= {min_mcs}, got {len(mcs)}"
 
-        strict_hit = smsd.is_substructure(q, t)
+        strict_hit = smsd.Substructure.find(q).match(t).found
         assert strict_hit is strict_sub, f"{name}: strict substructure expected {strict_sub}, got {strict_hit}"
 
         if relaxed_opts:
-            relaxed_hit = smsd._native_is_substructure(q, t, relaxed_opts)
+            options = smsd.Substructure.Options()
+            options.chemistry = relaxed_opts
+            relaxed_hit = smsd.Substructure.find(q).with_options(options).match(t).found
             assert relaxed_hit, f"{name}: relaxed substructure should succeed"
 
 
@@ -162,9 +163,9 @@ class TestSmartsCoverage:
     @pytest.mark.parametrize(("name", "smarts", "target"), SMARTS_CASES, ids=[name for name, *_ in SMARTS_CASES])
     def test_smarts_motifs(self, name: str, smarts: str, target: str) -> None:
         mol = smsd.parse_smiles(target)
-        got = smsd.smarts_match(smarts, mol)
+        got = smsd.Substructure.smarts(smarts).match(mol).found
         assert got, f"{name}: SMARTS {smarts!r} should match"
 
     def test_aromatic_nh_smarts_matches(self) -> None:
         mol = smsd.parse_smiles("c1cc2cc3ccc(cc4ccc(cc1[nH]2)[nH]4)n3")
-        assert smsd.smarts_match("[nH]", mol)
+        assert smsd.Substructure.smarts('[nH]').match(mol).found

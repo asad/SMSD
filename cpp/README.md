@@ -6,6 +6,9 @@ and depiction. It uses the standard library and does not require Java or
 RDKit. Public headers are in `include/smsd/`, native tests in `tests/`, and
 Python extension bindings in `bindings/pybind11/`.
 
+The prepared-query API below is an unreleased breaking change. Build the
+current source; release 7.2.2 retains the previous search entry points.
+
 ## Quick start
 
 Save this program as `example.cpp` in the repository root:
@@ -18,17 +21,19 @@ int main() {
     const auto query = smsd::parseSMILES("c1ccccc1");
     const auto target = smsd::parseSMILES("c1ccc(O)cc1");
     const smsd::ChemOptions chemistry;
-    smsd::MCSOptions options;
+    smsd::MCS::Options options;
     options.timeoutMs = 1000;
 
-    const auto embedding = smsd::findSubstructure(query, target, chemistry, 1000);
-    const auto mapping = smsd::findMCS(query, target, chemistry, options);
-    if (embedding.size() != 6 || mapping.size() != 6 ||
-        !smsd::validateMapping(query, target, mapping, chemistry).empty()) {
+    options.chemistry = chemistry;
+    const auto embedding = smsd::Substructure::find(query).withTimeout(1000).match(target);
+    const auto maximum = smsd::MCS::find(query).withOptions(options).match(target);
+    if (embedding.matches.empty() || maximum.matches.empty() ||
+        embedding.matches.front().atomMapping.size() != 6 || maximum.matches.front().atomMapping.size() != 6 ||
+        !smsd::MCS::validateMapping(query, target, maximum.matches.front(), options).empty()) {
         return 1;
     }
-    std::cout << "Substructure atoms: " << embedding.size() << '\n'
-              << "MCS atoms: " << mapping.size() << '\n';
+    std::cout << "Substructure atoms: " << embedding.matches.front().atomMapping.size() << '\n'
+              << "MCS atoms: " << maximum.matches.front().atomMapping.size() << '\n';
 }
 ```
 
@@ -43,6 +48,12 @@ The program reports six substructure atoms and six MCS atoms. Mappings use
 zero-based query-to-target atom indices. See [the C++ guide](../docs/CPP.md)
 for chemistry options, mapping contracts and more examples.
 
+`MCS` supports MCIS and MCES, with connected or disconnected fragments.
+`Substructure` accepts molecules or SMARTS. Both expose `match`, `matchAll`
+and ordered `matchMany` calls, with completion, optimality and stopping status
+on each result. The [benchmark guide](../benchmarks/README.md) covers shared
+workloads across C++, Java and Python.
+
 ## Build, test and install
 
 Run from the repository root with CMake 3.20+ and a C++17 compiler. The CPU
@@ -55,7 +66,8 @@ ctest --test-dir build/cpp --build-config Debug --output-on-failure
 ```
 
 Assertions stay enabled in the test targets. OpenMP is used when detected;
-otherwise batch operations run sequentially. Install the headers and
+otherwise fingerprint batch operations run sequentially. Prepared search queries
+use independent per-call state and support parallel `matchMany` calls. Install the headers and
 exported `smsd::smsd` CMake target with:
 
 ```text
@@ -84,7 +96,7 @@ cmake --build build/example --config Release
 
 Run `build/example/smsd_example` on macOS/Linux, or
 `build/example/Release/smsd_example.exe` with a Visual Studio generator.
-The imported target supplies C++17 and any configured OpenMP dependency.
+The imported target supplies C++17, threads and any configured OpenMP dependency.
 
 ## Optional builds
 

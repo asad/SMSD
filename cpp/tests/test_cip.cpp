@@ -1,3 +1,4 @@
+#include "search_test_helpers.hpp"
 /*
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
@@ -60,9 +61,9 @@ void test_component_root_ring_stereo() {
     auto reference = smsd::parseSMILES("CC[C@@H](N)O");
     smsd::ChemOptions chemistry;
     chemistry.useChirality = true;
-    CIP_ASSERT(smsd::isSubstructure(s, reference, chemistry), "equivalent stereo traversals should embed");
-    CIP_ASSERT(!smsd::isSubstructure(r, reference, chemistry), "opposite stereoisomers should not embed");
-    CIP_ASSERT(smsd::findMCS(s, reference, chemistry, {}).size() == 5, "equivalent stereo MCS should include all atoms");
+    CIP_ASSERT(smsd_test::substructureExists(s, reference, chemistry), "equivalent stereo traversals should embed");
+    CIP_ASSERT(!smsd_test::substructureExists(r, reference, chemistry), "opposite stereoisomers should not embed");
+    CIP_ASSERT(smsd_test::commonAtoms(s, reference, chemistry, {}).size() == 5, "equivalent stereo MCS should include all atoms");
 }
 
 void test_D_alanine() {

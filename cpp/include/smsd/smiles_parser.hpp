@@ -11,6 +11,8 @@
 #define SMSD_SMILES_PARSER_HPP
 
 #include "mol_graph.hpp"
+#include "parser_utils.hpp"
+#include "smiles_utils.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -41,101 +43,6 @@ struct ParseOptions {
 // Internal implementation details
 // ============================================================================
 namespace detail {
-
-// --------------------------------------------------------------------------
-// Element table: symbol -> atomic number
-// --------------------------------------------------------------------------
-inline int elementToAtomicNum(const std::string& sym) {
-    // This covers elements up to Oganesson (118).  Only the ones that
-    // are likely to appear in SMILES strings are listed; the rest can
-    // be added trivially.
-    static const std::unordered_map<std::string, int> table = {
-        {"*",0},
-        {"H",1},{"He",2},
-        {"Li",3},{"Be",4},{"B",5},{"C",6},{"N",7},{"O",8},{"F",9},{"Ne",10},
-        {"Na",11},{"Mg",12},{"Al",13},{"Si",14},{"P",15},{"S",16},{"Cl",17},{"Ar",18},
-        {"K",19},{"Ca",20},
-        {"Sc",21},{"Ti",22},{"V",23},{"Cr",24},{"Mn",25},{"Fe",26},{"Co",27},{"Ni",28},
-        {"Cu",29},{"Zn",30},{"Ga",31},{"Ge",32},{"As",33},{"Se",34},{"Br",35},{"Kr",36},
-        {"Rb",37},{"Sr",38},
-        {"Y",39},{"Zr",40},{"Nb",41},{"Mo",42},{"Tc",43},{"Ru",44},{"Rh",45},{"Pd",46},
-        {"Ag",47},{"Cd",48},{"In",49},{"Sn",50},{"Sb",51},{"Te",52},{"I",53},{"Xe",54},
-        {"Cs",55},{"Ba",56},
-        {"La",57},{"Ce",58},{"Pr",59},{"Nd",60},{"Pm",61},{"Sm",62},{"Eu",63},{"Gd",64},
-        {"Tb",65},{"Dy",66},{"Ho",67},{"Er",68},{"Tm",69},{"Yb",70},{"Lu",71},
-        {"Hf",72},{"Ta",73},{"W",74},{"Re",75},{"Os",76},{"Ir",77},{"Pt",78},
-        {"Au",79},{"Hg",80},{"Tl",81},{"Pb",82},{"Bi",83},{"Po",84},{"At",85},{"Rn",86},
-        {"Fr",87},{"Ra",88},
-        {"Ac",89},{"Th",90},{"Pa",91},{"U",92},{"Np",93},{"Pu",94},{"Am",95},{"Cm",96},
-        {"Bk",97},{"Cf",98},{"Es",99},{"Fm",100},{"Md",101},{"No",102},{"Lr",103},
-        {"Rf",104},{"Db",105},{"Sg",106},{"Bh",107},{"Hs",108},{"Mt",109},{"Ds",110},
-        {"Rg",111},{"Cn",112},{"Nh",113},{"Fl",114},{"Mc",115},{"Lv",116},{"Ts",117},{"Og",118},
-        // Aromatic lowercase forms
-        {"b",5},{"c",6},{"n",7},{"o",8},{"p",15},{"s",16},{"se",34},{"te",52},
-    };
-    auto it = table.find(sym);
-    return it != table.end() ? it->second : -1;
-}
-
-inline const char* atomicNumToSymbol(int z) {
-    static const char* const syms[] = {
-        "*","H","He",
-        "Li","Be","B","C","N","O","F","Ne",
-        "Na","Mg","Al","Si","P","S","Cl","Ar",
-        "K","Ca",
-        "Sc","Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn",
-        "Ga","Ge","As","Se","Br","Kr",
-        "Rb","Sr","Y","Zr","Nb","Mo","Tc","Ru","Rh","Pd",
-        "Ag","Cd","In","Sn","Sb","Te","I","Xe",
-        "Cs","Ba",
-        "La","Ce","Pr","Nd","Pm","Sm","Eu","Gd","Tb","Dy","Ho","Er","Tm","Yb","Lu",
-        "Hf","Ta","W","Re","Os","Ir","Pt","Au","Hg","Tl","Pb","Bi","Po","At","Rn",
-        "Fr","Ra",
-        "Ac","Th","Pa","U","Np","Pu","Am","Cm","Bk","Cf","Es","Fm","Md","No","Lr",
-        "Rf","Db","Sg","Bh","Hs","Mt","Ds","Rg","Cn","Nh","Fl","Mc","Lv","Ts","Og"
-    };
-    if (z < 0 || z > 118) return "?";
-    return syms[z];
-}
-
-// --------------------------------------------------------------------------
-// Organic subset: atoms that can appear without brackets
-// --------------------------------------------------------------------------
-inline bool isOrganicSubset(int z) {
-    return z == 5 || z == 6 || z == 7 || z == 8 || z == 15 || z == 16 ||
-           z == 9 || z == 17 || z == 35 || z == 53;
-}
-
-// --------------------------------------------------------------------------
-// Default valences for implicit H computation (organic subset)
-// --------------------------------------------------------------------------
-inline std::vector<int> defaultValences(int z) {
-    switch (z) {
-        // Period 1
-        case 1:  return {1};             // H
-        // Period 2
-        case 5:  return {3};             // B
-        case 6:  return {4};             // C
-        case 7:  return {3, 5};          // N
-        case 8:  return {2};             // O
-        case 9:  return {1};             // F
-        // Period 3
-        case 13: return {3};             // Al
-        case 14: return {4};             // Si
-        case 15: return {3, 5};          // P
-        case 16: return {2, 4, 6};       // S
-        case 17: return {1};             // Cl
-        // Period 4
-        case 33: return {3, 5};          // As
-        case 34: return {2, 4, 6};       // Se
-        case 35: return {1};             // Br
-        // Period 5
-        case 51: return {3, 5};          // Sb
-        case 52: return {2, 4, 6};       // Te
-        case 53: return {1, 3, 5, 7};    // I
-        default: return {};
-    }
-}
 
 // --------------------------------------------------------------------------
 // Parsed atom struct (internal)
@@ -205,10 +112,11 @@ private:
     std::vector<ParsedBond> bonds_;
     std::vector<std::vector<int>> neighborOrder_;
 
-    // Ring number -> atom, bond order, stereo, and neighbor-order placeholder.
+    // Ring number -> atom, bond order, stereo, and neighbour-order placeholder.
     std::unordered_map<int, std::tuple<int, int, int, int>> ringOpenings_;
 
     void parseChain(int prevAtom, int pendingBondOrder, int pendingStereo) {
+        std::vector<std::tuple<int, int, int>> branches;
         while (pos_ < smi_.size()) {
             char c = smi_[pos_];
 
@@ -223,23 +131,21 @@ private:
 
             // Branch open
             if (c == '(') {
+                branches.emplace_back(prevAtom, pendingBondOrder, pendingStereo);
                 pos_++;
-                int bo = 0, st = 0;
-                parseBondSymbol(bo, st);
-                parseChain(prevAtom, bo, st);
-                if (pos_ >= smi_.size() || smi_[pos_] != ')') {
-                    if (!lenient_)
-                        throw std::invalid_argument("Unmatched opening parenthesis");
-                    // lenient: silently close the open branch
-                } else {
-                    pos_++;
-                }
+                pendingBondOrder = 0;
+                pendingStereo = 0;
+                parseBondSymbol(pendingBondOrder, pendingStereo);
                 continue;
             }
 
             // Branch close
             if (c == ')') {
-                return;
+                if (branches.empty()) return;
+                std::tie(prevAtom, pendingBondOrder, pendingStereo) = branches.back();
+                branches.pop_back();
+                ++pos_;
+                continue;
             }
 
             // Bond symbol (not followed by atom yet, just record)
@@ -266,6 +172,8 @@ private:
                     pendingBondOrder = 0;
                     pendingStereo = 0;
                 }
+                if (!branches.empty() && !lenient_)
+                    throw std::invalid_argument("Unmatched opening parenthesis");
                 return;
             }
 
@@ -294,6 +202,8 @@ private:
 
             prevAtom = atomIdx;
         }
+        if (!branches.empty() && !lenient_)
+            throw std::invalid_argument("Unmatched opening parenthesis");
     }
 
     bool parseBondSymbol(int& order, int& stereo) {
@@ -318,14 +228,8 @@ private:
         a.isBracket = true;
 
         // Isotope (optional digits)
-        int iso = 0;
-        bool hasIso = false;
-        while (pos_ < smi_.size() && std::isdigit(smi_[pos_])) {
-            iso = iso * 10 + (smi_[pos_] - '0');
-            pos_++;
-            hasIso = true;
-        }
-        if (hasIso) a.isotope = iso;
+        const int isotope = parser_detail::readDecimal(smi_, pos_);
+        if (isotope >= 0) a.isotope = isotope;
 
         // Element symbol
         if (pos_ >= smi_.size()) {
@@ -362,12 +266,7 @@ private:
                 // Patent-style R-group placeholder, e.g. [R1] -> wildcard + class 1.
                 sym = "*";
                 pos_++;
-                int cls = 0;
-                while (pos_ < smi_.size() && std::isdigit(static_cast<unsigned char>(smi_[pos_]))) {
-                    cls = cls * 10 + (smi_[pos_] - '0');
-                    pos_++;
-                }
-                a.atomClass = cls;
+                a.atomClass = parser_detail::readDecimal(smi_, pos_);
             } else {
                 sym = std::string(1, c);
                 pos_++;
@@ -427,17 +326,16 @@ private:
             } else {
                 a.chirality = 1;
             }
-            // Skip known CIP chirality class prefixes: TH, AL, SP, TB, OH.
-            // Only consume uppercase letters + trailing digits when we see one
-            // of these exact two-letter prefixes. This avoids consuming 'H'
-            // (hydrogen count) or other valid bracket-atom tokens.
-            if (pos_ < smi_.size() && (pos_ + 1) < smi_.size()) {
-                char c0 = smi_[pos_], c1 = smi_[pos_ + 1];
-                if ((c0 == 'T' && c1 == 'H') || (c0 == 'A' && c1 == 'L') ||
-                    (c0 == 'S' && c1 == 'P') || (c0 == 'T' && c1 == 'B') ||
-                    (c0 == 'O' && c1 == 'H')) {
-                    while (pos_ < smi_.size() && std::isalpha(smi_[pos_])) pos_++;
-                    while (pos_ < smi_.size() && std::isdigit(smi_[pos_])) pos_++;
+            if (pos_ + 1 < smi_.size()) {
+                const std::string stereoClass = smi_.substr(pos_, 2);
+                if (stereoClass == "TH") {
+                    pos_ += 2;
+                    if (pos_ >= smi_.size() || (smi_[pos_] != '1' && smi_[pos_] != '2'))
+                        throw std::invalid_argument("Tetrahedral chirality must be @TH1 or @TH2");
+                    a.chirality = smi_[pos_++] - '0';
+                } else if (stereoClass == "AL" || stereoClass == "SP" ||
+                           stereoClass == "TB" || stereoClass == "OH") {
+                    throw std::invalid_argument("Unsupported SMILES chirality class: " + stereoClass);
                 }
             }
         }
@@ -447,11 +345,7 @@ private:
             pos_++;
             int hc = 1;
             if (pos_ < smi_.size() && std::isdigit(smi_[pos_])) {
-                hc = 0;
-                while (pos_ < smi_.size() && std::isdigit(smi_[pos_])) {
-                    hc = hc * 10 + (smi_[pos_] - '0');
-                    pos_++;
-                }
+                hc = parser_detail::readDecimal(smi_, pos_);
             }
             a.hcount = hc;
         } else {
@@ -464,11 +358,7 @@ private:
             pos_++;
             int chg = 1;
             if (pos_ < smi_.size() && std::isdigit(smi_[pos_])) {
-                chg = 0;
-                while (pos_ < smi_.size() && std::isdigit(smi_[pos_])) {
-                    chg = chg * 10 + (smi_[pos_] - '0');
-                    pos_++;
-                }
+                chg = parser_detail::readDecimal(smi_, pos_);
             } else {
                 // Count repeated signs: ++ = +2, +++ = +3
                 while (pos_ < smi_.size() && smi_[pos_] == sign) {
@@ -482,12 +372,8 @@ private:
         // Atom class (optional :nn)
         if (pos_ < smi_.size() && smi_[pos_] == ':') {
             pos_++;
-            int cls = 0;
-            while (pos_ < smi_.size() && std::isdigit(smi_[pos_])) {
-                cls = cls * 10 + (smi_[pos_] - '0');
-                pos_++;
-            }
-            a.atomClass = cls;
+            const int atomClass = parser_detail::readDecimal(smi_, pos_);
+            a.atomClass = atomClass < 0 ? 0 : atomClass;
         }
 
         if (pos_ >= smi_.size() || smi_[pos_] != ']') {
@@ -637,60 +523,6 @@ private:
         }
     }
 };
-
-// --------------------------------------------------------------------------
-// Compute implicit H count for an organic-subset atom
-// Following OpenSMILES valence model:
-//   effectiveBondOrder = sum(bond orders) [aromatic bonds count as 1]
-//                        + 1 if atom is aromatic (pi contribution)
-//   implicitH = smallestFittingValence - effectiveBondOrder
-// where smallestFittingValence is the smallest default valence v such that
-//   (v - charge) >= effectiveBondOrder   [charge adjustment per group]
-// --------------------------------------------------------------------------
-inline int computeImplicitH(int atomicNum, bool isAromatic, int totalBondOrder, int charge) {
-    auto valences = defaultValences(atomicNum);
-    if (valences.empty()) return 0;
-
-    // Effective bond order: sum of explicit bond orders + aromatic pi
-    int ebo = totalBondOrder;
-    if (isAromatic) ebo += 1;
-
-    // Per OpenSMILES / Daylight convention:
-    //   For organic-subset atoms (always charge 0), implicitH = v - ebo
-    //   for the smallest fitting default valence v.
-    //
-    //   For charged bracket atoms, MolGraph doesn't store the original
-    //   explicit H count.  We use the heuristic:  target = v + absCharge
-    //   for cations of group-15/16 elements (N+->4, S+->3, etc.) and
-    //   target = v - absCharge otherwise.  This covers the vast majority
-    //   of drug-like molecules.
-    // Early out: if ebo exceeds the largest conceivable target, no valence can fit
-    int maxVal = valences.back();
-    int maxTarget = maxVal + std::abs(charge); // upper bound across all heuristics
-    if (ebo > maxTarget) return 0;
-
-    for (int v : valences) {
-        int target;
-        // Cations of group-15/16 elements expand into the next valence shell
-        // (N+->4, P+->4, O+->3, S+->3, As+->4, Se+->3).
-        // All other cases (anions, metals, etc.) simply lose available valence.
-        if (charge > 0 && (atomicNum == 7  || atomicNum == 15 ||
-                           atomicNum == 8  || atomicNum == 16 ||
-                           atomicNum == 33 || atomicNum == 34)) {
-            target = v + charge;
-        } else if (charge < 0 && (atomicNum == 5 || atomicNum == 13)) {
-            // Group 13 anions (B⁻, Al⁻) gain valence capacity,
-            // becoming isoelectronic with Group 14 (e.g., [BH4-] has valence 4)
-            target = v + std::abs(charge);
-        } else {
-            target = v - std::abs(charge);
-        }
-        int hc = target - ebo;
-        if (hc >= 0) return hc;
-    }
-
-    return 0;
-}
 
 // --------------------------------------------------------------------------
 // Detect ring membership via DFS
@@ -846,6 +678,7 @@ inline MolGraph buildMolGraph(const std::vector<ParsedAtom>& atoms,
             int j = neighbors[i][k];
             bool inRing = bondInRingSet[i].count(j) > 0;
             bondRingFlags[i][k] = inRing;
+            if (bondOrders[i][k] == 4 && !inRing) bondOrders[i][k] = 1;
             bool arom = (bondOrders[i][k] == 4);
             bondAromFlags[i][k] = arom;
         }
@@ -866,8 +699,8 @@ inline MolGraph buildMolGraph(const std::vector<ParsedAtom>& atoms,
         ringFlags[i] = atomInRing[i];
         chirality[i] = a.chirality;
         // A ring closure can connect a new component to an earlier atom.
-        // Normalize its H position to the graph's ligand-order convention.
-        if (chirality[i] != 0 && a.hcount > 0 && neighbors[i].size() == 3
+        // Normalise its H position to the graph's ligand-order convention.
+        if (chirality[i] != 0 && neighbors[i].size() == 3
             && a.hasIncomingBond != (neighbors[i][0] < i)) chirality[i] = 3 - chirality[i];
 
         // Implicit H: bracket atoms have explicit hcount, organic atoms compute from valence
@@ -881,12 +714,18 @@ inline MolGraph buildMolGraph(const std::vector<ParsedAtom>& atoms,
         } else {
             hydrogenCounts[i] = a.hcount;
         }
+        // Target properties use int counts, including explicit bonds and H atoms.
+        const int64_t totalValence = int64_t(hydrogenCounts[i]) + bondOrderSum[i];
+        const int64_t connectivity = int64_t(hydrogenCounts[i]) + neighbors[i].size();
+        if (totalValence + (a.isAromatic ? 1 : 0) > std::numeric_limits<int>::max()
+            || connectivity > std::numeric_limits<int>::max())
+            throw std::invalid_argument("Hydrogen count exceeds the supported atom property range");
     }
 
-    // Build double bond stereo configuration matrix
+    // Collect double bond configurations without a dense intermediate matrix.
     // For / and \ bonds on C=C systems, determine E/Z
     // dbStereoConf[i][j] = 1 for Z (cis), 2 for E (trans) on the C=C bond
-    std::vector<std::vector<int>> dbStereoMat;
+    std::vector<std::tuple<int, int, int>> doubleBondConfigurations;
     bool hasAnyStereo = false;
 
     // Collect / and \ annotations
@@ -902,32 +741,40 @@ inline MolGraph buildMolGraph(const std::vector<ParsedAtom>& atoms,
     }
 
     if (hasAnyStereo) {
-        dbStereoMat.assign(n, std::vector<int>(n, 0));
-
         // Find C=C bonds and determine configuration from / \ on adjacent single bonds
         for (auto& b : bonds) {
             if (b.order == 2) {
                 int a1 = b.from, a2 = b.to;
-                // Find stereo bonds adjacent to a1 and a2
-                int s1 = 0, s2 = 0; // stereo values for neighbors of a1, a2
-                int n1 = -1, n2 = -1; // the neighbor atoms
-
-                for (auto& sa : stereoAnnotations) {
-                    if (sa.from == a1 && sa.to != a2) { s1 = sa.stereo; n1 = sa.to; }
-                    if (sa.to == a1 && sa.from != a2) { s1 = sa.stereo; n1 = sa.from; }
-                    if (sa.from == a2 && sa.to != a1) { s2 = sa.stereo; n2 = sa.to; }
-                    if (sa.to == a2 && sa.from != a1) { s2 = sa.stereo; n2 = sa.from; }
+                int firstSide = 0, secondSide = 0;
+                int firstLigand = -1, secondLigand = -1;
+                for (const auto& annotation : stereoAnnotations) {
+                    const int direction = annotation.stereo == 1 ? 1 : -1;
+                    if (annotation.from == a1 && annotation.to != a2) {
+                        firstSide = direction; firstLigand = annotation.to;
+                    } else if (annotation.to == a1 && annotation.from != a2) {
+                        firstSide = -direction; firstLigand = annotation.from;
+                    }
+                    if (annotation.from == a2 && annotation.to != a1) {
+                        secondSide = direction; secondLigand = annotation.to;
+                    } else if (annotation.to == a2 && annotation.from != a1) {
+                        secondSide = -direction; secondLigand = annotation.from;
+                    }
                 }
-
-                if (s1 != 0 && s2 != 0) {
-                    // Same direction = Z (cis), different = E (trans)
-                    // / means the bond goes up from left to right
-                    // \ means the bond goes down from left to right
-                    // Two / or two \ = trans (E), / + \ = cis (Z)
-                    if (s1 == s2)
-                        dbStereoMat[a1][a2] = dbStereoMat[a2][a1] = 2; // E (trans)
-                    else
-                        dbStereoMat[a1][a2] = dbStereoMat[a2][a1] = 1; // Z (cis)
+                if (firstSide != 0 && secondSide != 0) {
+                    bool together = firstSide == secondSide;
+                    // Store the relation against the first non-double-bond ligand.
+                    // This reference is also used by CIP assignment and the writer.
+                    for (int neighbor : neighbors[a1]) {
+                        if (neighbor == a2) continue;
+                        if (neighbor != firstLigand) together = !together;
+                        break;
+                    }
+                    for (int neighbor : neighbors[a2]) {
+                        if (neighbor == a1) continue;
+                        if (neighbor != secondLigand) together = !together;
+                        break;
+                    }
+                    doubleBondConfigurations.emplace_back(a1, a2, together ? 1 : 2);
                 }
             }
         }
@@ -949,385 +796,11 @@ inline MolGraph buildMolGraph(const std::vector<ParsedAtom>& atoms,
            .bondAromaticFlags(bondAromFlags)
            .tetrahedralChirality(chirality);
 
-    if (hasAnyStereo && !dbStereoMat.empty()) {
-        builder.doubleBondStereo(dbStereoMat);
+    if (!doubleBondConfigurations.empty()) {
+        builder.doubleBondStereoSparse(std::move(doubleBondConfigurations));
     }
 
     return builder.build();
-}
-
-// --------------------------------------------------------------------------
-// Canonical SMILES writer internals
-// --------------------------------------------------------------------------
-
-// Get the aromatic lowercase symbol for an element (returns "" if not applicable)
-inline std::string aromaticSymbol(int z) {
-    switch (z) {
-        case 5:  return "b";
-        case 6:  return "c";
-        case 7:  return "n";
-        case 8:  return "o";
-        case 15: return "p";
-        case 16: return "s";
-        case 34: return "se";
-        case 52: return "te";
-        default: return "";
-    }
-}
-
-// Determine if atom needs brackets
-inline bool needsBrackets(const MolGraph& g, int idx) {
-    int z = g.atomicNum[idx];
-    if (!isOrganicSubset(z)) return true;
-    if (g.formalCharge[idx] != 0) return true;
-    if (g.massNumber[idx] != 0) return true;
-    if (!g.atomClass.empty() && g.atomClass[idx] != 0) return true;
-    if (g.tetraChirality[idx] != 0) return true;
-    // If aromatic, check if it's one of the standard aromatic atoms
-    if (g.aromatic[idx]) {
-        std::string asym = aromaticSymbol(z);
-        if (asym.empty()) return true;
-    }
-    return false;
-}
-
-// Write atom SMILES
-inline std::string writeAtom(const MolGraph& g, int idx, int implicitH) {
-    bool brackets = needsBrackets(g, idx);
-    // v7.1.1: force bracket form for aromatic N / P carrying implicit H,
-    // so pyrrole-type centres emit `[nH]` instead of `n`.  The organic-
-    // subset symbol `n` defaults to "pyridine-type, 0 H", and RDKit
-    // refuses to re-kekulize 5-ring aromatic-N systems when the H count
-    // is missing.  Benchmarked on CMNPD 1 000 sample: 53 round-trip
-    // kekulize failures before the fix, 0 after.
-    if (!brackets && implicitH > 0 && g.aromatic[idx]
-        && (g.atomicNum[idx] == 7 || g.atomicNum[idx] == 15)) {
-        brackets = true;
-    }
-    std::ostringstream oss;
-
-    if (brackets) {
-        oss << '[';
-        if (g.massNumber[idx] != 0) oss << g.massNumber[idx];
-
-        if (g.atomicNum[idx] == 0 && !g.atomClass.empty() && g.atomClass[idx] > 0
-            && g.formalCharge[idx] == 0 && g.massNumber[idx] == 0
-            && g.tetraChirality[idx] == 0 && implicitH == 0) {
-            oss << 'R' << g.atomClass[idx];
-        } else if (g.aromatic[idx]) {
-            std::string asym = aromaticSymbol(g.atomicNum[idx]);
-            if (!asym.empty())
-                oss << asym;
-            else
-                oss << atomicNumToSymbol(g.atomicNum[idx]);
-        } else {
-            oss << atomicNumToSymbol(g.atomicNum[idx]);
-        }
-
-        if (g.tetraChirality[idx] == 1) oss << '@';
-        else if (g.tetraChirality[idx] == 2) oss << "@@";
-
-        if (implicitH > 0) {
-            oss << 'H';
-            if (implicitH > 1) oss << implicitH;
-        }
-
-        if (g.formalCharge[idx] > 0) {
-            oss << '+';
-            if (g.formalCharge[idx] > 1) oss << g.formalCharge[idx];
-        } else if (g.formalCharge[idx] < 0) {
-            oss << '-';
-            if (g.formalCharge[idx] < -1) oss << -g.formalCharge[idx];
-        }
-
-        if (!g.atomClass.empty() && g.atomClass[idx] != 0 && g.atomicNum[idx] != 0) {
-            oss << ':' << g.atomClass[idx];
-        } else if (!g.atomClass.empty() && g.atomClass[idx] != 0 && g.atomicNum[idx] == 0
-                   && !(g.formalCharge[idx] == 0 && g.massNumber[idx] == 0
-                        && g.tetraChirality[idx] == 0 && implicitH == 0)) {
-            oss << ':' << g.atomClass[idx];
-        }
-
-        oss << ']';
-    } else {
-        if (g.aromatic[idx]) {
-            oss << aromaticSymbol(g.atomicNum[idx]);
-        } else {
-            oss << atomicNumToSymbol(g.atomicNum[idx]);
-        }
-    }
-
-    return oss.str();
-}
-
-// Bond order symbol
-inline std::string bondSymbol(int order, bool fromAromatic, bool toAromatic) {
-    if (order == 4) return ""; // aromatic implicit
-    if (order == 1) {
-        if (fromAromatic && toAromatic) return "-"; // explicit single between aromatics
-        return ""; // implicit single
-    }
-    if (order == 2) return "=";
-    if (order == 3) return "#";
-    return "";
-}
-
-// Canonical SMILES writer using DFS with canonical ordering.
-//
-// Strategy:
-//   1. Run a preliminary DFS to identify all back-edges (ring closures)
-//      and assign ring numbers.  For each ring bond, record the ring
-//      number at both endpoint atoms.
-//   2. Run a second DFS that emits atom symbols, ring digits, bonds,
-//      and branches.
-inline std::string writeCanonicalSMILES(const MolGraph& g) {
-    if (g.n == 0) return "";
-
-    g.ensureCanonical();   // canonicalLabel is lazy
-    int n = g.n;
-    const auto& canon = g.canonicalLabel;
-
-    // Compute implicit H for each atom
-    std::vector<int> implicitH(n, 0);
-    for (int i = 0; i < n; i++) {
-        if (!isOrganicSubset(g.atomicNum[i]) && g.formalCharge[i] == 0 &&
-            g.massNumber[i] == 0 && g.tetraChirality[i] == 0 && !g.aromatic[i])
-            continue;
-        int boSum = 0;
-        for (int j : g.neighbors[i]) {
-            int bo = g.bondOrder(i, j);
-            if (bo == 4) bo = 1;
-            boSum += bo;
-        }
-        implicitH[i] = computeImplicitH(
-            g.atomicNum[i], g.aromatic[i], boSum, g.formalCharge[i]);
-    }
-
-    // v7.1.1 canonical-SMILES pyrrole-type N inference.
-    //
-    // computeImplicitH above uses a valence model that cannot distinguish
-    // pyrrole-type aromatic N / P (contributes 2 pi electrons from its
-    // lone pair, carries 1 implicit H) from pyridine-type aromatic N / P
-    // (contributes 1 pi electron, carries 0 implicit H).  For aromatic
-    // N with 2 ring σ-bonds the model lands on the pyridine interpretation
-    // (ebo = 2 + 1 = 3 = default valence, hc = 0), which writes the
-    // canonical SMILES as `n` even for true pyrroles.  RDKit then refuses
-    // to re-kekulize the 5-ring aromatic system (4 C + 1 pyridine-N gives
-    // 5 pi electrons, not Hückel 4n+2 = 6).
-    //
-    // Two-step fix:
-    //
-    //   (1) If the MolGraph has an explicit per-atom hydrogenCount
-    //       stored from the input source (SMILES [nH], SDF M  HCOUNT,
-    //       or CDK IAtom.getImplicitHydrogenCount), honour it for
-    //       aromatic N / P.  This covers imidazole, pyrazole,
-    //       N-methyl pyrroles, and every case where the input
-    //       supplied the H count directly.
-    //
-    //   (2) For aromatic N / P that still have implicitH == 0 AND
-    //       whose ring degree is exactly 2 (unsubstituted, so there
-    //       is room for an implicit H), check the SSSR.  If the atom
-    //       appears in any 5-membered ring whose only aromatic
-    //       heteroatom is itself, it must be pyrrole-type; set
-    //       implicitH[i] = 1 so the writer emits `[nH]`.  This
-    //       handles pyrrole, indole, carbazole, 7-azaindole and
-    //       fused benzo-pyrroles — the dominant failure mode on
-    //       CMNPD 2D SDF entries that lack an explicit H count.
-    //
-    // For neutral aromatic N / P the generic valence fallback inside
-    // computeImplicitH is unreliable: when σ-bond sum exceeds the
-    // default valence of 3, it falls through to v = 5 and returns a
-    // spurious "implicit H = 1" for N-substituted pyrroles (e.g.
-    // N-methyl pyrrole `Cn1cccc1` → `C[nH]1cccc1`).  Override the
-    // computed value unconditionally:
-    //
-    //   * degree 3 (or more) → 0 H (σ slots saturated; the lone pair
-    //     donates the 2 pi electrons, no H needed).
-    //   * degree 2 and in a 5-ring whose only aromatic heteroatom is
-    //     this one → 1 H (pyrrole-type: pyrrole, indole, carbazole,
-    //     7-azaindole, benzo-pyrroles).
-    //   * anything else → leave whatever computeImplicitH produced.
-    //
-    // Explicit input H count (`g.hydrogenCount`, populated by SMILES
-    // `[nH]`, SDF `M  HCOUNT`, or CDK `IAtom.getImplicitHydrogenCount`)
-    // wins over both the valence model and the ring-topology fallback.
-    for (int i = 0; i < n; i++) {
-        if (!g.aromatic[i]) continue;
-        int z = g.atomicNum[i];
-        if (z != 7 && z != 15) continue;
-        if (!g.formalCharge.empty() && g.formalCharge[i] != 0) continue;
-        int deg = static_cast<int>(g.neighbors[i].size());
-        // (1) Degree ≥ 3: no room for implicit H.  Override regardless
-        //     of what the stored hydrogenCount says (some parsers over-
-        //     eagerly infer 1 H for organic-subset `n` in aromatic
-        //     5-rings even when the N is substituted).
-        if (deg >= 3) {
-            implicitH[i] = 0;
-            continue;
-        }
-        // (2) Degree == 2: honour an explicit input H count if the
-        //     caller supplied one (SMILES `[nH]`, SDF M  HCOUNT,
-        //     CDK IAtom.getImplicitHydrogenCount).
-        if (!g.hydrogenCount.empty() && g.hydrogenCount[i] > 0) {
-            implicitH[i] = g.hydrogenCount[i];
-            continue;
-        }
-        // (3) Degree == 2 with no stored H: fall back to the 5-ring /
-        //     single-heteroatom SSSR inference for unsubstituted
-        //     aromatic N / P (pyrrole, indole, carbazole,
-        //     benzo-pyrroles).
-        implicitH[i] = 0;
-        const auto& rings = g.computeRings();
-        for (const auto& r : rings) {
-            if (r.size() != 5) continue;
-            bool containsI = false;
-            int aromaticHetero = 0;
-            for (int ra : r) {
-                if (ra == i) containsI = true;
-                if (ra < n && g.aromatic[ra] && g.atomicNum[ra] != 6) {
-                    ++aromaticHetero;
-                }
-            }
-            if (containsI && aromaticHetero == 1) {
-                implicitH[i] = 1;
-                break;
-            }
-        }
-    }
-
-    // Find connected components
-    std::vector<bool> compVis(n, false);
-    std::vector<std::vector<int>> components;
-    for (int i = 0; i < n; i++) {
-        if (compVis[i]) continue;
-        std::vector<int> comp;
-        std::deque<int> q;
-        q.push_back(i);
-        compVis[i] = true;
-        while (!q.empty()) {
-            int u = q.front(); q.pop_front();
-            comp.push_back(u);
-            for (int v : g.neighbors[u]) {
-                if (!compVis[v]) { compVis[v] = true; q.push_back(v); }
-            }
-        }
-        components.push_back(std::move(comp));
-    }
-
-    // Per-atom ring-digit annotations:
-    // {ringNumber, bondOrder, partner}
-    struct RingDigit { int rn; int bo; int partner; };
-    std::vector<std::vector<RingDigit>> ringDigits(n);
-
-    // DFS parent map for tree identification
-    std::vector<int> dfsParent(n, -1);
-
-    std::ostringstream result;
-
-    auto sortedNeighbors = [&](int atom) {
-        std::vector<int> nbs = g.neighbors[atom];
-        std::sort(nbs.begin(), nbs.end(), [&](int a, int b) {
-            return canon[a] < canon[b];
-        });
-        return nbs;
-    };
-
-    for (size_t ci = 0; ci < components.size(); ci++) {
-        if (ci > 0) result << '.';
-        auto& comp = components[ci];
-
-        int root = comp[0];
-        for (int a : comp) {
-            if (canon[a] < canon[root]) root = a;
-        }
-
-        // --- Phase 1: DFS to find tree and assign ring numbers ---
-        std::vector<bool> vis(n, false);
-        std::set<int64_t> treeEdges; // set of bondKey for tree edges
-        std::set<int64_t> assignedRings; // prevent double-counting same bond
-        int ringCounter = 1;
-
-        std::function<void(int, int)> dfs1 = [&](int atom, int parent) {
-            vis[atom] = true;
-            dfsParent[atom] = parent;
-            auto nbs = sortedNeighbors(atom);
-            bool parentSkipped = false;
-            for (int nb : nbs) {
-                if (nb == parent && !parentSkipped) { parentSkipped = true; continue; }
-                if (vis[nb]) {
-                    // Back-edge: each bond gets exactly one ring-closure number.
-                    // Guard with a bond-key set to avoid assigning from both ends.
-                    int64_t bk = MolGraph::bondKey(atom, nb);
-                    if (assignedRings.insert(bk).second) {
-                        int rn = ringCounter++;
-                        int bo = g.bondOrder(atom, nb);
-                        ringDigits[atom].push_back({rn, bo, nb});
-                        ringDigits[nb].push_back({rn, bo, atom});
-                    }
-                } else {
-                    treeEdges.insert(MolGraph::bondKey(atom, nb));
-                    dfs1(nb, atom);
-                }
-            }
-        };
-        dfs1(root, -1);
-
-        // --- Phase 2: DFS to emit SMILES ---
-        vis.assign(n, false);
-        std::string smiStr;
-        // Track which ring digits have been emitted (first occurrence opens,
-        // second occurrence closes).
-        std::unordered_set<int> emittedRings;
-
-        std::function<void(int, int)> dfs2 = [&](int atom, int parent) {
-            vis[atom] = true;
-            smiStr += writeAtom(g, atom, implicitH[atom]);
-
-            // Emit ring digits for this atom
-            for (auto& rd : ringDigits[atom]) {
-                bool isOpen = (emittedRings.find(rd.rn) == emittedRings.end());
-                if (isOpen) {
-                    emittedRings.insert(rd.rn);
-                }
-                // Write bond symbol if needed
-                std::string bs = bondSymbol(rd.bo, g.aromatic[atom], g.aromatic[rd.partner]);
-                smiStr += bs;
-                if (rd.rn < 10) smiStr += std::to_string(rd.rn);
-                else smiStr += "%" + std::to_string(rd.rn);
-            }
-
-            // Collect tree children (unvisited neighbors connected by tree edges)
-            auto nbs = sortedNeighbors(atom);
-            std::vector<int> children;
-            for (int nb : nbs) {
-                if (vis[nb]) continue;
-                int64_t key = MolGraph::bondKey(atom, nb);
-                if (treeEdges.count(key)) children.push_back(nb);
-            }
-
-            for (size_t i = 0; i < children.size(); i++) {
-                int nb = children[i];
-                if (vis[nb]) continue;
-
-                int bo = g.bondOrder(atom, nb);
-                std::string bs = bondSymbol(bo, g.aromatic[atom], g.aromatic[nb]);
-
-                if (i < children.size() - 1) {
-                    smiStr += "(" + bs;
-                    dfs2(nb, atom);
-                    smiStr += ")";
-                } else {
-                    smiStr += bs;
-                    dfs2(nb, atom);
-                }
-            }
-        };
-
-        dfs2(root, -1);
-        result << smiStr;
-    }
-
-    return result.str();
 }
 
 // --------------------------------------------------------------------------
@@ -1395,7 +868,7 @@ inline std::string bondSymbolSMARTS(int bo) {
     }
 }
 
-// Canonical SMARTS writer. Uses the same Morgan-based canonical labeling and
+// Canonical SMARTS writer. Uses the same Morgan-based canonical labelling and
 // DFS traversal order as writeCanonicalSMILES, so two isomorphic MolGraphs
 // always produce the same SMARTS string (canonical + invariant).
 inline std::string writeCanonicalSMARTS(const MolGraph& g,
@@ -1408,19 +881,9 @@ inline std::string writeCanonicalSMARTS(const MolGraph& g,
     int n = g.n;
     const auto& canon = g.canonicalLabel;
 
-    // Implicit H per atom (needed if inclHCount is true; computed regardless
-    // to keep the logic simple — it is cheap)
     std::vector<int> implicitH(n, 0);
-    for (int i = 0; i < n; i++) {
-        int boSum = 0;
-        for (int j : g.neighbors[i]) {
-            int bo = g.bondOrder(i, j);
-            if (bo == 4) bo = 1;
-            boSum += bo;
-        }
-        implicitH[i] = computeImplicitH(
-            g.atomicNum[i], g.aromatic[i], boSum, g.formalCharge[i]);
-    }
+    for (int atom = 0; atom < n; ++atom)
+        implicitH[atom] = hydrogenCountForWrite(g, atom);
 
     // Connected components
     std::vector<bool> compVis(n, false);
@@ -1579,7 +1042,7 @@ struct SmartsWriteOptions {
  * branches, aromatic atoms, stereochemistry (@ @@ / \), dot disconnection.
  *
  * @param smiles  The SMILES string to parse.
- * @return        A fully initialized MolGraph with Morgan ranks,
+ * @return        A fully initialised MolGraph with Morgan ranks,
  *                canonical labels, bit-parallel adjacency, etc.
  * @throws std::invalid_argument on malformed SMILES.
  */
@@ -1621,7 +1084,7 @@ inline MolGraph parseSMILES(const std::string& smiles, const ParseOptions& opts)
 /**
  * Generate a canonical SMILES string from a MolGraph.
  *
- * Uses the canonical labeling computed by MolGraph::initDerivedFields()
+ * Uses the canonical labelling computed by MolGraph::initDerivedFields()
  * to produce a deterministic SMILES output.
  *
  * @param g  The molecular graph.
@@ -1635,7 +1098,7 @@ inline std::string toSMILES(const MolGraph& g) {
  * Generate a canonical SMARTS string from a MolGraph.
  *
  * The output is invariant under atom renumbering: the Morgan-based canonical
- * labeling drives the DFS traversal in the same way as toSMILES(), so two
+ * labelling drives the DFS traversal in the same way as toSMILES(), so two
  * isomorphic graphs always produce the same SMARTS string.
  *
  * Atom primitives use the [#Z] form (atomic number) as the base, with
@@ -1645,7 +1108,7 @@ inline std::string toSMILES(const MolGraph& g) {
  *
  * Typical use — write the scaffold of an MCS result:
  * @code
- * auto mcs = smsd.findMCS();
+ * auto common = smsd::MCS::find(query).match(target);
  * std::vector<int> atoms;
  * for (auto& [qi, ti] : mcs) atoms.push_back(qi);
  * auto sub = smsd::extractSubgraph(mol1, atoms);

@@ -5,7 +5,8 @@
 #ifndef SMSD_TEST_NATIVE_GPU
 #define SMSD_ENABLE_METAL
 #endif
-#include "smsd/vf2pp.hpp"
+#include "search_test_helpers.hpp"
+#include "smsd/substructure.hpp"
 #include <iostream>
 #include <stdexcept>
 
@@ -67,20 +68,19 @@ static void verifyNativeKernel(const smsd::MolGraph& q, const smsd::MolGraph& t,
 
 static void check(const smsd::MolGraph& q, const smsd::MolGraph& t,
                   smsd::ChemOptions c, bool expected, const char* name, bool requireKernel = true) {
-    for (auto engine : {smsd::ChemOptions::MatcherEngine::VF2,
-                        smsd::ChemOptions::MatcherEngine::VF2PP}) {
-        c.matcherEngine = engine;
+    {
+
 #ifndef SMSD_TEST_NATIVE_GPU
         smsd::gpu_kern::available = false;
-        const bool cpu = smsd::isSubstructure(q, t, c);
+        const bool cpu = smsd_test::substructureExists(q, t, c);
         smsd::gpu_kern::available = true;
         const int before = smsd::gpu_kern::calls;
-        const bool gpu = smsd::isSubstructure(q, t, c);
+        const bool gpu = smsd_test::substructureExists(q, t, c);
         if (cpu != expected || gpu != cpu || (requireKernel && smsd::gpu_kern::calls == before))
             throw std::runtime_error(name);
 #else
         verifyNativeKernel(q, t, c);
-        if (smsd::isSubstructure(q, t, c) != expected)
+        if (smsd_test::substructureExists(q, t, c) != expected)
             throw std::runtime_error(name);
 #endif
     }

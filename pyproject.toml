@@ -58,5 +58,6 @@ SMSD_BUILD_METAL = "AUTO"
 SMSD_BUILD_CUDA = "AUTO"
 
 [tool.pytest.ini_options]
-testpaths = ["python/tests"]
+testpaths = ["python/tests", "scripts/tests"]
 timeout = 60
+addopts = "--import-mode=importlib"

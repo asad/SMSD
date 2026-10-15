@@ -101,12 +101,11 @@ def bench_rdkit(pairs):
 # ---------------------------------------------------------------------------
 
 def run_smsd(g1, g2):
-    from smsd import ChemOptions, MCSOptions
-    from smsd._smsd import find_mcs
-    opts = MCSOptions()
+    from smsd import MCS
+    opts = MCS.Options()
     opts.timeout_ms = int(TIMEOUT_S * 1000)
-    mapping = find_mcs(g1, g2, ChemOptions(), opts)
-    return len(mapping)
+    result = MCS.find(g1).with_options(opts).match(g2)
+    return result.best.atom_count if result.found else 0
 
 
 def bench_smsd(pairs):

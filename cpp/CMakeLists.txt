@@ -16,9 +16,23 @@ option(SMSD_WITH_RDKIT    "Build RDKit adapter for SMILES/MOL parsing" OFF)
 set(SMSD_BUILD_CUDA  "AUTO" CACHE STRING "CUDA batch screening: ON / OFF / AUTO (default)")
 # SMSD_BUILD_METAL: ON=always build, OFF=never build, AUTO=build on macOS if Metal found (default)
 set(SMSD_BUILD_METAL "AUTO" CACHE STRING "Metal/MPS batch screening (macOS): ON / OFF / AUTO (default)")
+foreach(accelerator IN ITEMS CUDA METAL)
+    set_property(CACHE SMSD_BUILD_${accelerator} PROPERTY STRINGS AUTO ON OFF)
+    string(TOUPPER "${SMSD_BUILD_${accelerator}}" accelerator_mode)
+    if(NOT accelerator_mode STREQUAL "AUTO")
+        if(SMSD_BUILD_${accelerator})
+            set(accelerator_mode "ON")
+        else()
+            set(accelerator_mode "OFF")
+        endif()
+    endif()
+    set(_SMSD_${accelerator}_MODE "${accelerator_mode}")
+endforeach()
 
 # ---- Header-only library (no RDKit dependency) ----
 add_library(smsd INTERFACE)
+find_package(Threads REQUIRED)
+target_link_libraries(smsd INTERFACE Threads::Threads)
 target_compile_features(smsd INTERFACE cxx_std_17)
 target_compile_options(smsd INTERFACE $<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/utf-8>)
 target_include_directories(smsd INTERFACE
@@ -57,16 +71,23 @@ endif()
 # AUTO: probe for nvcc / CUDAToolkit and enable if found
 # ON:   require CUDA (fails configuration if not found)
 # OFF:  skip entirely
-if(SMSD_BUILD_CUDA STREQUAL "AUTO")
+if(_SMSD_CUDA_MODE STREQUAL "AUTO")
     find_package(CUDAToolkit QUIET)
     if(CUDAToolkit_FOUND)
-        set(_SMSD_CUDA_ENABLED TRUE)
-        message(STATUS "SMSD: CUDA ${CUDAToolkit_VERSION} found — GPU batch screening enabled (auto)")
+        include(CheckLanguage)
+        check_language(CUDA)
+        if(CMAKE_CUDA_COMPILER)
+            set(_SMSD_CUDA_ENABLED TRUE)
+            message(STATUS "SMSD: CUDA ${CUDAToolkit_VERSION} found — GPU batch screening enabled (auto)")
+        else()
+            set(_SMSD_CUDA_ENABLED FALSE)
+            message(STATUS "SMSD: CUDA compiler unavailable — GPU batch screening disabled")
+        endif()
     else()
         set(_SMSD_CUDA_ENABLED FALSE)
         message(STATUS "SMSD: CUDA not found — GPU batch screening disabled (CPU/OpenMP only)")
     endif()
-elseif(SMSD_BUILD_CUDA)
+elseif(_SMSD_CUDA_MODE STREQUAL "ON")
     find_package(CUDAToolkit REQUIRED)
     set(_SMSD_CUDA_ENABLED TRUE)
     message(STATUS "SMSD: CUDA ${CUDAToolkit_VERSION} found — GPU batch screening enabled (forced)")
@@ -94,18 +115,18 @@ endif()
 # ON:   require Metal — fails configuration on non-macOS
 # OFF:  skip entirely
 set(_SMSD_METAL_ENABLED FALSE)
-if(SMSD_BUILD_METAL STREQUAL "ON" AND NOT APPLE)
+if(_SMSD_METAL_MODE STREQUAL "ON" AND NOT APPLE)
     message(FATAL_ERROR "SMSD: SMSD_BUILD_METAL=ON but Metal is only available on macOS/Apple platforms.")
 endif()
 
-if(APPLE AND NOT (SMSD_BUILD_METAL STREQUAL "OFF"))
+if(APPLE AND NOT _SMSD_METAL_MODE STREQUAL "OFF")
     find_library(METAL_LIBRARY    Metal)
     find_library(FOUNDATION_LIBRARY Foundation)
     if(METAL_LIBRARY AND FOUNDATION_LIBRARY)
         set(_SMSD_METAL_ENABLED TRUE)
         message(STATUS "SMSD: Metal.framework found — GPU batch screening enabled on macOS")
     else()
-        if(SMSD_BUILD_METAL STREQUAL "ON")
+        if(_SMSD_METAL_MODE STREQUAL "ON")
             message(FATAL_ERROR "SMSD: SMSD_BUILD_METAL=ON but Metal.framework was not found.")
         else()
             message(STATUS "SMSD: Metal.framework not found — GPU batch screening disabled (CPU/OpenMP only)")
@@ -161,6 +182,42 @@ if(SMSD_BUILD_TESTS)
     enable_testing()
 
     # Core test suite (substructure, MCS, ring perception, chemistry, v6.4.1 features)
+    add_executable(smsd_search_api_tests tests/test_search_api.cpp)
+    target_link_libraries(smsd_search_api_tests PRIVATE smsd)
+    add_test(NAME smsd_search_api_tests COMMAND smsd_search_api_tests)
+    add_executable(smsd_smarts_basics_tests tests/test_smarts_basics.cpp)
+    target_link_libraries(smsd_smarts_basics_tests PRIVATE smsd)
+    add_test(NAME smsd_smarts_basics_tests COMMAND smsd_smarts_basics_tests)
+    add_executable(smsd_feature_backend_regression_tests tests/test_feature_backend_regression.cpp)
+    target_link_libraries(smsd_feature_backend_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_feature_backend_regression_tests COMMAND smsd_feature_backend_regression_tests)
+    add_executable(smsd_device_workspace_regression_tests tests/test_device_workspace_regression.cpp)
+    target_link_libraries(smsd_device_workspace_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_device_workspace_regression_tests COMMAND smsd_device_workspace_regression_tests)
+    add_executable(smsd_tautomer_confidence_tests tests/test_tautomer_confidence.cpp)
+    target_link_libraries(smsd_tautomer_confidence_tests PRIVATE smsd)
+    add_test(NAME smsd_tautomer_confidence_tests COMMAND smsd_tautomer_confidence_tests)
+    add_executable(smsd_fingerprint_extent_regression_tests tests/test_fingerprint_extent_regression.cpp)
+    target_link_libraries(smsd_fingerprint_extent_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_fingerprint_extent_regression_tests COMMAND smsd_fingerprint_extent_regression_tests)
+    add_executable(smsd_search_bound_regression_tests tests/test_search_bound_regression.cpp)
+    target_link_libraries(smsd_search_bound_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_search_bound_regression_tests COMMAND smsd_search_bound_regression_tests)
+    add_test(NAME smsd_cmake_option_regression_tests COMMAND "${CMAKE_COMMAND}"
+        "-DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}" "-DBINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/option-tests"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_cmake_options.cmake")
+    if(APPLE)
+        enable_language(OBJCXX)
+        find_library(SMSD_TEST_FOUNDATION Foundation REQUIRED)
+        find_library(SMSD_TEST_METAL Metal REQUIRED)
+        add_executable(smsd_metal_failure_regression_tests tests/test_metal_failure_regression.mm)
+        target_link_libraries(smsd_metal_failure_regression_tests PRIVATE smsd ${SMSD_TEST_FOUNDATION} ${SMSD_TEST_METAL})
+        target_compile_options(smsd_metal_failure_regression_tests PRIVATE -fobjc-arc)
+        foreach(failure IN ITEMS pipeline buffer command encoder status disabled)
+            add_test(NAME smsd_metal_failure_${failure}_tests COMMAND smsd_metal_failure_regression_tests ${failure})
+        endforeach()
+    endif()
+
     add_executable(smsd_core_tests tests/test_core.cpp)
     target_link_libraries(smsd_core_tests PRIVATE smsd)
     if(SMSD_WITH_RDKIT)
@@ -174,6 +231,12 @@ if(SMSD_BUILD_TESTS)
     endif()
     add_test(NAME smsd_core_tests COMMAND smsd_core_tests)
 
+    if(SMSD_WITH_RDKIT)
+        add_executable(smsd_rdkit_adapter_regression_tests tests/test_rdkit_adapter_regression.cpp)
+        target_link_libraries(smsd_rdkit_adapter_regression_tests PRIVATE smsd smsd_rdkit)
+        add_test(NAME smsd_rdkit_adapter_regression_tests COMMAND smsd_rdkit_adapter_regression_tests)
+    endif()
+
     # Parser test suite (SMARTS, hydrogen handling, comprehensive SMILES)
     # The comprehensive SMILES tests (441) are compiled from test_smiles_comprehensive.cpp
     # as a second translation unit, gated by SMSD_TEST_SMILES_COMPREHENSIVE.
@@ -184,6 +247,54 @@ if(SMSD_BUILD_TESTS)
         SMSD_TEST_SMILES_COMPREHENSIVE SMSD_PARSERS_SUITE)
     target_link_libraries(smsd_parser_tests PRIVATE smsd)
     add_test(NAME smsd_parser_tests COMMAND smsd_parser_tests)
+
+    add_executable(smsd_parser_property_regression_tests tests/test_parser_property_regression.cpp)
+    target_link_libraries(smsd_parser_property_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_parser_property_regression_tests COMMAND smsd_parser_property_regression_tests)
+
+    add_executable(smsd_parser_robustness_regression_tests tests/test_parser_robustness_regression.cpp)
+    target_link_libraries(smsd_parser_robustness_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_parser_robustness_regression_tests COMMAND smsd_parser_robustness_regression_tests)
+
+    add_executable(smsd_member_smiles_regression_tests tests/test_member_smiles_regression.cpp)
+    target_link_libraries(smsd_member_smiles_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_member_smiles_regression_tests COMMAND smsd_member_smiles_regression_tests)
+
+    add_executable(smsd_member_smiles_parity_tests tests/test_member_smiles_parity.cpp)
+    target_link_libraries(smsd_member_smiles_parity_tests PRIVATE smsd)
+    add_test(NAME smsd_member_smiles_parity_tests COMMAND smsd_member_smiles_parity_tests)
+
+    add_executable(smsd_thread_safety_regression_tests tests/test_thread_safety_regression.cpp)
+    target_link_libraries(smsd_thread_safety_regression_tests PRIVATE smsd Threads::Threads)
+    add_test(NAME smsd_thread_safety_regression_tests COMMAND smsd_thread_safety_regression_tests)
+
+    add_executable(smsd_graph_identity_regression_tests tests/test_graph_identity_regression.cpp)
+    target_link_libraries(smsd_graph_identity_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_graph_identity_regression_tests COMMAND smsd_graph_identity_regression_tests)
+
+    add_executable(smsd_aromatic_ring_regression_tests tests/test_aromatic_ring_regression.cpp)
+    target_link_libraries(smsd_aromatic_ring_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_aromatic_ring_regression_tests COMMAND smsd_aromatic_ring_regression_tests)
+
+    add_executable(smsd_stereo_io_regression_tests tests/test_stereo_io_regression.cpp)
+    target_link_libraries(smsd_stereo_io_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_stereo_io_regression_tests COMMAND smsd_stereo_io_regression_tests)
+
+    add_executable(smsd_stereo_matching_regression_tests tests/test_stereo_matching_regression.cpp)
+    target_link_libraries(smsd_stereo_matching_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_stereo_matching_regression_tests COMMAND smsd_stereo_matching_regression_tests)
+
+    add_executable(smsd_input_validation_regression_tests tests/test_input_validation_regression.cpp)
+    target_link_libraries(smsd_input_validation_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_input_validation_regression_tests COMMAND smsd_input_validation_regression_tests)
+
+    add_executable(smsd_mol_properties_regression_tests tests/test_mol_properties_regression.cpp)
+    target_link_libraries(smsd_mol_properties_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_mol_properties_regression_tests COMMAND smsd_mol_properties_regression_tests)
+
+    add_executable(smsd_depiction_regression_tests tests/test_depiction_regression.cpp)
+    target_link_libraries(smsd_depiction_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_depiction_regression_tests COMMAND smsd_depiction_regression_tests)
 
     # Batch & GPU test suite (OpenMP, fingerprint, CUDA/Metal)
     add_executable(smsd_batch_gpu_tests tests/test_batch_gpu.cpp)
@@ -225,9 +336,9 @@ if(SMSD_BUILD_TESTS)
     target_link_libraries(smsd_gpu_domain_regression_tests PRIVATE smsd)
     add_test(NAME smsd_gpu_domain_regression_tests COMMAND smsd_gpu_domain_regression_tests)
 
-    add_executable(smsd_clique_regression_tests tests/test_clique_regression.cpp)
-    target_link_libraries(smsd_clique_regression_tests PRIVATE smsd)
-    add_test(NAME smsd_clique_regression_tests COMMAND smsd_clique_regression_tests)
+    add_executable(smsd_search_enumeration_tests tests/test_search_enumeration.cpp)
+    target_link_libraries(smsd_search_enumeration_tests PRIVATE smsd)
+    add_test(NAME smsd_search_enumeration_tests COMMAND smsd_search_enumeration_tests)
 
     add_executable(smsd_assignment_regression_tests tests/test_assignment_regression.cpp)
     target_link_libraries(smsd_assignment_regression_tests PRIVATE smsd)
@@ -236,6 +347,12 @@ if(SMSD_BUILD_TESTS)
     add_executable(smsd_mcs_regression_tests tests/test_mcs_regression.cpp)
     target_link_libraries(smsd_mcs_regression_tests PRIVATE smsd)
     add_test(NAME smsd_mcs_regression_tests COMMAND smsd_mcs_regression_tests)
+
+    if(_SMSD_CUDA_ENABLED)
+        add_executable(smsd_cuda_host_link_tests tests/test_cuda_host_link.cpp)
+        target_link_libraries(smsd_cuda_host_link_tests PRIVATE smsd_cuda)
+        add_test(NAME smsd_cuda_host_link_tests COMMAND smsd_cuda_host_link_tests)
+    endif()
 
     if(_SMSD_METAL_ENABLED OR _SMSD_CUDA_ENABLED)
         add_executable(smsd_native_gpu_domain_tests tests/test_gpu_domain_regression.cpp)
@@ -252,12 +369,38 @@ if(SMSD_BUILD_TESTS)
             $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-UNDEBUG>)
     endif()
 
+    add_executable(smsd_screening_regression_tests tests/test_screening_regression.cpp)
+    target_link_libraries(smsd_screening_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_screening_regression_tests COMMAND smsd_screening_regression_tests)
+    add_executable(smsd_fragment_output_regression_tests tests/test_fragment_output_regression.cpp)
+    target_link_libraries(smsd_fragment_output_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_fragment_output_regression_tests COMMAND smsd_fragment_output_regression_tests)
+    add_executable(smsd_option_fingerprint_regression_tests tests/test_option_fingerprint_regression.cpp)
+    target_link_libraries(smsd_option_fingerprint_regression_tests PRIVATE smsd)
+    add_test(NAME smsd_option_fingerprint_regression_tests COMMAND smsd_option_fingerprint_regression_tests)
+    if(_SMSD_METAL_ENABLED)
+        add_executable(smsd_metal_screening_regression_tests tests/test_screening_regression.cpp)
+        target_link_libraries(smsd_metal_screening_regression_tests PRIVATE smsd smsd_metal)
+        add_test(NAME smsd_metal_screening_regression_tests COMMAND smsd_metal_screening_regression_tests)
+    endif()
+
     # Assertions are part of the test harness, including in Release builds.
-    foreach(test_target IN ITEMS smsd_core_tests smsd_parser_tests
+    foreach(test_target IN ITEMS smsd_core_tests smsd_parser_tests smsd_mol_properties_regression_tests smsd_depiction_regression_tests
+            smsd_search_api_tests smsd_smarts_basics_tests smsd_fragment_output_regression_tests smsd_option_fingerprint_regression_tests
+            smsd_feature_backend_regression_tests smsd_device_workspace_regression_tests
+            smsd_tautomer_confidence_tests
+            smsd_fingerprint_extent_regression_tests
+            smsd_search_bound_regression_tests
+            smsd_thread_safety_regression_tests
+            smsd_graph_identity_regression_tests smsd_aromatic_ring_regression_tests
+            smsd_parser_property_regression_tests smsd_parser_robustness_regression_tests
+            smsd_member_smiles_regression_tests smsd_member_smiles_parity_tests smsd_stereo_io_regression_tests
+            smsd_stereo_matching_regression_tests
+            smsd_input_validation_regression_tests smsd_screening_regression_tests
             smsd_batch_gpu_tests smsd_cip_tests smsd_layout_tests smsd_portability_tests
             smsd_general_matching_tests
             smsd_substructure_regression_tests smsd_gpu_domain_regression_tests
-            smsd_clique_regression_tests smsd_assignment_regression_tests smsd_mcs_regression_tests)
+            smsd_search_enumeration_tests smsd_assignment_regression_tests smsd_mcs_regression_tests)
         target_compile_options(${test_target} PRIVATE
             $<$<CXX_COMPILER_ID:MSVC>:/UNDEBUG>
             $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-UNDEBUG>)

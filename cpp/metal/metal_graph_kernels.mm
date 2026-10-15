@@ -11,6 +11,9 @@
 #import <Metal/Metal.h>
 #include <cstdint>
 #include <vector>
+#include <mutex>
+#include <cstring>
+#include "smsd/gpu_kernels.hpp"
 
 namespace smsd {
 namespace gpu_kern {
@@ -104,6 +107,7 @@ struct GraphKernelContext {
 // ============================================================================
 
 bool graphKernelsAvailable() noexcept {
+    if (detail::disabledByEnvironment()) return false;
 #if defined(__arm64__) || defined(__aarch64__)
     return GraphKernelContext::instance().valid;
 #else
@@ -118,6 +122,7 @@ bool domainInit(
     bool matchAtomType, bool matchCharge, bool ringOnly, bool strictArom,
     uint64_t* domainOut)
 {
+    if (detail::disabledByEnvironment()) return false;
 #if !defined(__arm64__) && !defined(__aarch64__)
     return false;
 #else
@@ -140,12 +145,16 @@ bool domainInit(
         id<MTLBuffer> bTRi = [dev newBufferWithBytes:tRing      length:Nt*sizeof(int) options:MTLResourceStorageModeShared];
         id<MTLBuffer> bTAr = [dev newBufferWithBytes:tAromatic  length:Nt*sizeof(int) options:MTLResourceStorageModeShared];
         id<MTLBuffer> bDom = [dev newBufferWithLength:domBytes32 options:MTLResourceStorageModeShared];
+        if (!bQAN || !bQCh || !bQRi || !bQAr || !bTAN || !bTCh || !bTRi || !bTAr || !bDom || !bDom.contents)
+            return false;
         memset([bDom contents], 0, domBytes32);
 
         int flags = (matchAtomType ? 1 : 0) | (matchCharge ? 2 : 0) | (ringOnly ? 4 : 0) | (strictArom ? 8 : 0);
 
         id<MTLCommandBuffer> cmd = [ctx.queue commandBuffer];
+        if (!cmd) return false;
         id<MTLComputeCommandEncoder> enc = [cmd computeCommandEncoder];
+        if (!enc) return false;
         [enc setComputePipelineState:ctx.domainPipeline];
         [enc setBuffer:bQAN offset:0 atIndex:0];
         [enc setBuffer:bQCh offset:0 atIndex:1];
@@ -169,6 +178,7 @@ bool domainInit(
         [enc endEncoding];
         [cmd commit];
         [cmd waitUntilCompleted];
+        if (cmd.status != MTLCommandBufferStatusCompleted) return false;
 
         // Convert 32-bit domain words to 64-bit
         const uint32_t* dom32 = static_cast<const uint32_t*>([bDom contents]);

@@ -5,11 +5,7 @@
  * See the NOTICE file for attribution, trademark, and algorithm IP terms. *
  * Header-only OpenMP batch processing for SMSD.
  *
- * Provides multi-CPU parallel batch operations:
- *   - batchSubstructure: 1 query vs N targets, returns hit mask
- *   - batchFindSubstructure: 1 query vs N targets, returns atom mappings
- *   - batchMCS: 1 query vs N targets, returns all MCS mappings
- *   - screenAndMatch: RASCAL pre-screen + exact MCS on hits
+ * Provides parallel fingerprint operations and reusable target storage.
  *   - batchFingerprint: parallel fingerprint generation
  *   - TargetCorpus: pre-warmed target collection for repeated queries
  *
@@ -24,8 +20,7 @@
 #define SMSD_BATCH_HPP
 
 #include "smsd/mol_graph.hpp"
-#include "smsd/vf2pp.hpp"
-#include "smsd/mcs.hpp"
+#include "smsd/smiles_parser.hpp"
 
 #include <algorithm>
 #include <cinttypes>
@@ -37,6 +32,8 @@
 #include <functional>
 #include <map>
 #include <limits>
+#include <mutex>
+#include <shared_mutex>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -84,18 +81,9 @@ inline int resolveThreads(int numThreads) {
 #endif
 }
 
-/// Precompute common lazy MolGraph invariants from a single thread before
-/// entering parallel matching code.
+/// Precompute the lazy MolGraph invariants used by matching and fingerprints.
 inline void prewarmGraph(const MolGraph& g) {
-    g.ensureCanonical();
-    g.ensureRingCounts();
-    g.ensureRingSystems();
-    g.ensurePatternFP();
-    g.getPharmacophoreFeatures();
-    g.getNLF1();
-    g.getNLF2();
-    g.getNLF3();
-    g.getNeighborsByDegDesc();
+    g.prewarm();
 }
 
 /// Simple path-based fingerprint generation for a single molecule.
@@ -127,7 +115,7 @@ inline std::vector<uint64_t> computePathFingerprint(
     struct Frame {
         int atom;
         int depth;
-        int nbIdx;   // neighbor iteration index — resume after backtrack
+        int nbIdx;   // neighbour iteration index — resume after backtrack
         int path[8]; // atom labels, max path length + 1
         int bonds[7]; // bond orders between consecutive path atoms
     };
@@ -195,7 +183,7 @@ inline std::vector<uint64_t> computePathFingerprint(
                     // Push to stack if we can go deeper
                     if (newDepth < pathLength && top + 1 < 15) {
                         visited[nb] = true;
-                        f.nbIdx++; // advance BEFORE push so we resume at next neighbor on return
+                        f.nbIdx++; // advance BEFORE push so we resume at next neighbour on return
                         top++;
                         stack[top].atom = nb;
                         stack[top].depth = newDepth;
@@ -272,20 +260,31 @@ inline std::pair<const int*, int> defaultValences(int z) {
     #undef VSPAN
 }
 
-/// Computes implicit hydrogen count for an atom using the OpenSMILES
-/// multi-valence model: pick the smallest allowed valence v such that
-/// (v - |charge|) >= bondOrderSum, then implicitH = (v - |charge|) - bondOrderSum.
-/// Returns 0 for elements with no known default valence or when no
-/// valence can accommodate the observed bond order sum.
+/** Valence fallback for omitted H counts, including charged group 13/15/16 atoms. */
 inline int implicitH(int atomicNum, int bondOrderSum, int formalCharge) {
-    auto [vals, count] = defaultValences(atomicNum);
-    if (!vals) return 0;
-    int absCharge = std::abs(formalCharge);
-    for (int i = 0; i < count; i++) {
-        int capacity = vals[i] - absCharge;
-        if (capacity >= bondOrderSum) return capacity - bondOrderSum;
+    return smsd::detail::computeImplicitH(atomicNum, false, bondOrderSum, formalCharge);
+}
+
+/** Largest shortest-path distance within any connected component. */
+inline int maximumComponentExtent(const MolGraph& graph) {
+    int extent = 0;
+    std::vector<int> distance(graph.n), queue(graph.n);
+    for (int start = 0; start < graph.n; ++start) {
+        std::fill(distance.begin(), distance.end(), -1);
+        size_t head = 0, tail = 0;
+        queue[tail++] = start;
+        distance[start] = 0;
+        while (head < tail) {
+            const int atom = queue[head++];
+            for (int neighbor : graph.neighbors[atom]) {
+                if (distance[neighbor] >= 0) continue;
+                distance[neighbor] = distance[atom] + 1;
+                extent = std::max(extent, distance[neighbor]);
+                queue[tail++] = neighbor;
+            }
+        }
     }
-    return 0;
+    return extent;
 }
 
 /// Circular (Morgan/ECFP-style) fingerprint for a single molecule.
@@ -320,8 +319,8 @@ inline std::vector<uint64_t> computeCircularFingerprintECFP(
         int massNum = (static_cast<int>(mol.massNumber.size()) > i)
                       ? mol.massNumber[i] : 0;
         h = fnvMix(h, static_cast<uint64_t>(massNum));                    // R&H #4: atomic mass number
-        h = fnvMix(h, static_cast<uint64_t>(mol.formalCharge[i] + 4));    // R&H #5: formal charge
-        int hCount = implicitH(mol.atomicNum[i], bondOrdSum, mol.formalCharge[i]);
+        h = fnvMix(h, static_cast<uint64_t>(int64_t(mol.formalCharge[i]) + 4)); // R&H #5: formal charge
+        const int64_t hCount = mol.attachedHydrogenCount(i);
         h = fnvMix(h, static_cast<uint64_t>(hCount));                     // R&H #6: attached H count
         h = fnvMix(h, mol.ring[i] ? 1 : 0);                              // R&H #7: ring membership
         h = fnvMix(h, mol.aromatic[i] ? 1 : 0);                          // Daylight extension: aromaticity
@@ -332,13 +331,12 @@ inline std::vector<uint64_t> computeCircularFingerprintECFP(
         fp[bit / 64] |= (1ULL << (bit % 64));
     }
 
-    int maxRadius = (radius < 0) ? n : radius;
+    const int maxRadius = radius < 0 ? maximumComponentExtent(mol) : radius;
     std::vector<uint64_t> prevHash = atomHash;
     std::vector<uint64_t> nextHash(n);
     std::vector<uint64_t> nbHashes;
 
     for (int r = 1; r <= maxRadius; ++r) {
-        bool anyNew = false;
         for (int i = 0; i < n; ++i) {
             int deg = static_cast<int>(mol.neighbors[i].size());
             if (deg == 0) { nextHash[i] = prevHash[i]; continue; } // isolated atom — no expansion
@@ -357,11 +355,9 @@ inline std::vector<uint64_t> computeCircularFingerprintECFP(
 
             int bit = static_cast<int>(h % static_cast<uint64_t>(fpSize));
             uint64_t mask = 1ULL << (bit % 64);
-            if (!(fp[bit / 64] & mask)) anyNew = true;
             fp[bit / 64] |= mask;
         }
         std::swap(prevHash, nextHash);
-        if (radius < 0 && !anyNew) break;
     }
     return fp;
 }
@@ -371,78 +367,8 @@ enum class FingerprintMode { ECFP, FCFP };
 
 /// Classify atom into pharmacophoric feature classes (FCFP invariant).
 /// Returns bitmask: bit 0=donor, 1=acceptor, 2=positive, 3=negative, 4=aromatic, 5=hydrophobic.
-inline int classifyPharmacophore(const MolGraph& g, int idx) {
-    int z = g.atomicNum[idx];
-    int charge = g.formalCharge[idx];
-    bool arom = g.aromatic[idx];
-    int deg = g.degree[idx];
-    int features = 0;
-
-    // H-bond donor: N-H, O-H, S-H (Rogers & Hahn 2010)
-    if (z == 7 || z == 8 || z == 16) {
-        int typVal = (z == 7) ? 3 : 2; // S typical valence 2
-        if (deg < typVal && charge >= 0) features |= 1;
-    }
-
-    // H-bond acceptor: N (not pyrrole-type), O, F, S (not thiophene-type)
-    // Pyrrole N: aromatic + has H (lone pair donated to pi) — NOT acceptor
-    // Pyridine N: aromatic + no H (lone pair in plane, available) — IS acceptor
-    bool isPyrroleTypeN = false;
-    if (z == 7 && arom) {
-        isPyrroleTypeN = (g.hydrogenCount[idx] > 0);
-    }
-    bool isAcceptorN = (z == 7 && charge <= 0 && !isPyrroleTypeN);
-    bool isAcceptorS = (z == 16 && !arom);
-    if (isAcceptorN || z == 8 || z == 9 || isAcceptorS) features |= 2;
-
-    // Positive ionisable: charged N, or basic amine (exclude amide N, aniline N)
-    if (z == 7 && charge > 0) features |= 4;
-    if (z == 7 && !arom && deg <= 3 && charge == 0) {
-        bool isAmide = false;
-        bool isAniline = false;
-        for (int nb : g.neighbors[idx]) {
-            if (g.atomicNum[nb] == 6) {
-                if (g.aromatic[nb]) { isAniline = true; break; }
-                for (int nb2 : g.neighbors[nb]) {
-                    if (nb2 != idx && g.atomicNum[nb2] == 8 && g.bondOrder(nb, nb2) == 2) {
-                        isAmide = true; break;
-                    }
-                }
-            }
-            if (isAmide) break;
-        }
-        if (!isAmide && !isAniline) features |= 4;
-    }
-
-    // Negative ionisable: carboxylic acid (require C=O pattern), phosphoric, sulfonic
-    if (z == 8 && charge < 0) features |= 8;
-    if (z == 8 && charge == 0 && deg == 1) {
-        for (int nb : g.neighbors[idx]) {
-            int nbZ = g.atomicNum[nb];
-            if (nbZ == 6 && g.bondOrder(idx, nb) == 1) { // this O is single-bonded (OH)
-                for (int nb2 : g.neighbors[nb])
-                    if (nb2 != idx && g.atomicNum[nb2] == 8 && g.bondOrder(nb, nb2) == 2)
-                        features |= 8;
-            }
-            if (nbZ == 15 || nbZ == 16) features |= 8;
-        }
-    }
-
-    // Aromatic
-    if (arom) features |= 16;
-
-    // Hydrophobic: non-aromatic C with no heteroatom neighbors, or halogens
-    if (z == 6 && !arom) {
-        bool hasHetero = false;
-        for (int nb : g.neighbors[idx]) {
-            int nbZ = g.atomicNum[nb];
-            if (nbZ != 6 && nbZ != 1) { hasHetero = true; break; }
-        }
-        if (!hasHetero) features |= 32;
-    }
-    if (z == 17 || z == 35 || z == 53) features |= 32; // Cl, Br, I
-
-    return features;
+inline int classifyPharmacophore(const MolGraph& graph, int atom) {
+    return graph.getPharmacophoreFeatures().at(atom);
 }
 
 /// FCFP-style circular fingerprint using pharmacophoric feature classes.
@@ -469,12 +395,11 @@ inline std::vector<uint64_t> computeCircularFingerprintFCFP(
         int bit = static_cast<int>(h % static_cast<uint64_t>(fpSize));
         fp[bit / 64] |= (1ULL << (bit % 64));
     }
-    int maxRadius = (radius < 0) ? n : radius;
+    const int maxRadius = radius < 0 ? maximumComponentExtent(mol) : radius;
     std::vector<uint64_t> prevHash = atomHash;
     std::vector<uint64_t> nextHash(n);
     std::vector<uint64_t> nbHashes;
     for (int r = 1; r <= maxRadius; ++r) {
-        bool anyNew = false;
         for (int i = 0; i < n; ++i) {
             int deg = static_cast<int>(mol.neighbors[i].size());
             if (deg == 0) { nextHash[i] = prevHash[i]; continue; }
@@ -491,11 +416,9 @@ inline std::vector<uint64_t> computeCircularFingerprintFCFP(
             nextHash[i] = h;
             int bit = static_cast<int>(h % static_cast<uint64_t>(fpSize));
             uint64_t mask = 1ULL << (bit % 64);
-            if (!(fp[bit / 64] & mask)) anyNew = true;
             fp[bit / 64] |= mask;
         }
         std::swap(prevHash, nextHash);
-        if (radius < 0 && !anyNew) break;
     }
     return fp;
 }
@@ -534,8 +457,8 @@ inline std::vector<int> computeCircularFingerprintECFPCounts(
         int massNum = (static_cast<int>(mol.massNumber.size()) > i)
                       ? mol.massNumber[i] : 0;
         h = fnvMix(h, static_cast<uint64_t>(massNum));                    // R&H #4
-        h = fnvMix(h, static_cast<uint64_t>(mol.formalCharge[i] + 4));    // R&H #5
-        int hCount = implicitH(mol.atomicNum[i], bondOrdSum, mol.formalCharge[i]);
+        h = fnvMix(h, static_cast<uint64_t>(int64_t(mol.formalCharge[i]) + 4)); // R&H #5
+        const int64_t hCount = mol.attachedHydrogenCount(i);
         h = fnvMix(h, static_cast<uint64_t>(hCount));                     // R&H #6
         h = fnvMix(h, mol.ring[i] ? 1 : 0);                              // R&H #7
         h = fnvMix(h, mol.aromatic[i] ? 1 : 0);                          // Daylight extension
@@ -546,14 +469,12 @@ inline std::vector<int> computeCircularFingerprintECFPCounts(
         counts[idx]++;
     }
 
-    int maxRadius = (radius < 0) ? n : radius;
+    const int maxRadius = radius < 0 ? maximumComponentExtent(mol) : radius;
     std::vector<uint64_t> prevHash = atomHash;
     std::vector<uint64_t> nextHash(n);
     std::vector<uint64_t> nbHashes;
-    std::unordered_set<uint64_t> seenHashes;
 
     for (int r = 1; r <= maxRadius; ++r) {
-        bool anyNew = false;
         for (int i = 0; i < n; ++i) {
             int deg = static_cast<int>(mol.neighbors[i].size());
             if (deg == 0) { nextHash[i] = prevHash[i]; continue; }
@@ -572,10 +493,8 @@ inline std::vector<int> computeCircularFingerprintECFPCounts(
 
             int idx = static_cast<int>(h % static_cast<uint64_t>(fpSize));
             counts[idx]++;
-            if (seenHashes.insert(h).second) anyNew = true;
         }
         std::swap(prevHash, nextHash);
-        if (radius < 0 && !anyNew) break;
     }
     return counts;
 }
@@ -611,14 +530,12 @@ inline std::vector<int> computeCircularFingerprintFCFPCounts(
         counts[idx]++;
     }
 
-    int maxRadius = (radius < 0) ? n : radius;
+    const int maxRadius = radius < 0 ? maximumComponentExtent(mol) : radius;
     std::vector<uint64_t> prevHash = atomHash;
     std::vector<uint64_t> nextHash(n);
     std::vector<uint64_t> nbHashes;
-    std::unordered_set<uint64_t> seenHashes;
 
     for (int r = 1; r <= maxRadius; ++r) {
-        bool anyNew = false;
         for (int i = 0; i < n; ++i) {
             int deg = static_cast<int>(mol.neighbors[i].size());
             if (deg == 0) { nextHash[i] = prevHash[i]; continue; }
@@ -637,10 +554,8 @@ inline std::vector<int> computeCircularFingerprintFCFPCounts(
 
             int idx = static_cast<int>(h % static_cast<uint64_t>(fpSize));
             counts[idx]++;
-            if (seenHashes.insert(h).second) anyNew = true;
         }
         std::swap(prevHash, nextHash);
-        if (radius < 0 && !anyNew) break;
     }
     return counts;
 }
@@ -718,11 +633,12 @@ inline void enumeratePaths(const MolGraph& g, bool tautAware,
 ///
 /// @param pathLength  Maximum path length in bonds (default 7)
 /// @param fpSize      Fingerprint size in bits (default 2048)
-inline std::vector<uint64_t> computeMCSFingerprint(
-    const MolGraph& mol, int pathLength, int fpSize)
+inline std::vector<uint64_t> computeMCSFingerprintForChemistry(
+    const MolGraph& mol, int pathLength, int fpSize, const ChemOptions& chemistry)
 {
     if (fpSize <= 0) throw std::invalid_argument("fpSize must be positive");
-    if (pathLength <= 0) throw std::invalid_argument("pathLength must be positive");
+    if (pathLength <= 0 || pathLength == std::numeric_limits<int>::max())
+        throw std::invalid_argument("pathLength must be positive and representable");
     int numWords = (fpSize - 1) / 64 + 1;
     std::vector<uint64_t> fp(numWords, 0ULL);
     int n = mol.n;
@@ -736,7 +652,7 @@ inline std::vector<uint64_t> computeMCSFingerprint(
     }
     if (heavyCount == 0) return fp;
 
-    bool tautAware = !mol.tautomerClass.empty();
+    bool tautAware = chemistry.tautomerAware;
     std::vector<int> pathBuf(pathLength + 1);
     std::vector<uint8_t> visited(n, 0);
     for (int start = 0; start < n; ++start) {
@@ -749,6 +665,12 @@ inline std::vector<uint64_t> computeMCSFingerprint(
         visited[start] = false;
     }
     return fp;
+}
+
+inline std::vector<uint64_t> computeMCSFingerprint(
+    const MolGraph& mol, int pathLength, int fpSize)
+{
+    return computeMCSFingerprintForChemistry(mol, pathLength, fpSize, ChemOptions{});
 }
 
 // ============================================================================
@@ -766,6 +688,7 @@ inline int ttAtomType(const MolGraph& g, int idx) {
         if (bo == 2) nPi += 1;
         else if (bo == 3) nPi += 2;
     }
+    if (g.aromatic[idx]) ++nPi;
     int inRing = g.ring[idx] ? 1 : 0;
     return (z << 16) | (heavyDeg << 8) | (nPi << 4) | inRing;
 }
@@ -876,345 +799,6 @@ inline std::vector<int> computeTopologicalTorsionCounts(
 }
 
 } // namespace detail
-
-// ============================================================================
-// Batch Substructure: 1 query vs N targets
-// ============================================================================
-
-/// Check if query is a substructure of each target molecule.
-/// Returns a boolean vector: true if query is substructure of targets[i].
-///
-/// Thread-safe: each thread runs its own VF2PP instance with independent state.
-/// @param numThreads  0 = auto (all cores), >0 = specific thread count.
-template<class TargetRange>
-inline std::vector<bool> batchSubstructureImpl(
-    const MolGraph& query,
-    const TargetRange& targets,
-    const ChemOptions& opts,
-    int numThreads = 0,
-    int64_t timeoutMs = 10000)
-{
-    const int N = static_cast<int>(targets.size());
-
-    if (N == 0) return {};
-    if (query.n == 0) return std::vector<bool>(N, true);
-
-    // Eagerly initialize ALL lazy fields before entering the parallel region.
-    // MolGraph lazy caches are not thread-safe on first construction.
-    detail::prewarmGraph(query);
-    for (const MolGraph& t : targets) {
-        if (t.n >= query.n) detail::prewarmGraph(t);
-    }
-
-    // Use uint8_t instead of vector<bool> — vector<bool> packs bits into
-    // shared bytes, causing data races under OpenMP concurrent writes.
-    std::vector<uint8_t> buf(N, 0);
-
-    int nThreads = detail::resolveThreads(numThreads);
-    (void)nThreads; // suppress unused warning when no OpenMP
-
-#ifdef _OPENMP
-    #pragma omp parallel for schedule(dynamic, 1) num_threads(nThreads)
-#endif
-    for (int i = 0; i < N; ++i) {
-        if (targets[i].n >= query.n) {
-            buf[i] = isSubstructure(query, targets[i], opts, timeoutMs) ? 1 : 0;
-        }
-    }
-
-    return std::vector<bool>(buf.begin(), buf.end());
-}
-
-// ============================================================================
-// Batch Find Substructure: 1 query vs N targets (with atom mappings)
-// ============================================================================
-
-/// Find substructure atom-atom mappings for query against each target molecule.
-/// Returns a vector of atom mappings (query atom, target atom) for each target.
-/// Empty inner vector means no substructure match.
-///
-/// Thread-safe: each thread runs its own VF2PP instance with independent state.
-/// @param numThreads  0 = auto (all cores), >0 = specific thread count.
-template<class TargetRange>
-inline std::vector<std::vector<std::pair<int,int>>> batchFindSubstructureImpl(
-    const MolGraph& query,
-    const TargetRange& targets,
-    const ChemOptions& opts,
-    int numThreads = 0,
-    int64_t timeoutMs = 10000)
-{
-    const int N = static_cast<int>(targets.size());
-    std::vector<std::vector<std::pair<int,int>>> results(N);
-
-    if (N == 0) return results;
-    if (query.n == 0) return results;  // empty query: no meaningful mapping
-
-    // Eagerly initialize ALL lazy fields before entering the parallel region.
-    detail::prewarmGraph(query);
-    for (const MolGraph& t : targets) {
-        if (t.n >= query.n) detail::prewarmGraph(t);
-    }
-
-    int nThreads = detail::resolveThreads(numThreads);
-    (void)nThreads; // suppress unused warning when no OpenMP
-
-#ifdef _OPENMP
-    #pragma omp parallel for schedule(dynamic, 1) num_threads(nThreads)
-#endif
-    for (int i = 0; i < N; ++i) {
-        if (targets[i].n >= query.n) {
-            results[i] = findSubstructure(query, targets[i], opts, timeoutMs);
-        }
-    }
-
-    return results;
-}
-
-// ============================================================================
-// Batch MCS: 1 query vs N targets
-// ============================================================================
-
-/// Find the MCS between query and each target molecule.
-/// Returns a vector of mappings (query atom -> target atom).
-/// Empty map means no significant common substructure found.
-///
-/// Thread-safe: each thread creates its own MCS scratch buffers internally.
-/// @param numThreads  0 = auto, >0 = specific thread count.
-template<class TargetRange>
-inline std::vector<std::map<int,int>> batchMCSImpl(
-    const MolGraph& query,
-    const TargetRange& targets,
-    const ChemOptions& chem,
-    const MCSOptions& opts,
-    int numThreads = 0)
-{
-    smsd::detail::validateAtomWeights(query, opts);
-    const int N = static_cast<int>(targets.size());
-    std::vector<std::map<int,int>> results(N);
-
-    if (N == 0 || query.n == 0) return results;
-
-    // Eagerly initialize all lazy fields before parallel region.
-    detail::prewarmGraph(query);
-    for (const MolGraph& t : targets) detail::prewarmGraph(t);
-
-    int nThreads = detail::resolveThreads(numThreads);
-    (void)nThreads;
-
-#ifdef _OPENMP
-    #pragma omp parallel for schedule(dynamic, 1) num_threads(nThreads)
-#endif
-    for (int i = 0; i < N; ++i) {
-        if (targets[i].n > 0) {
-            results[i] = findMCS(query, targets[i], chem, opts);
-        }
-    }
-
-    return results;
-}
-
-/// Find the MCS size between query and each target molecule.
-/// Returns atom counts only, avoiding mapping materialization at the API
-/// boundary when callers only need screening sizes.
-/// Phase 2.4: Uses findMCSSize() to avoid constructing std::map<int,int>
-/// at the caller boundary.
-template<class TargetRange>
-inline std::vector<int> batchMCSSizeImpl(
-    const MolGraph& query,
-    const TargetRange& targets,
-    const ChemOptions& chem,
-    const MCSOptions& opts,
-    int numThreads = 0)
-{
-    smsd::detail::validateAtomWeights(query, opts);
-    const int N = static_cast<int>(targets.size());
-    std::vector<int> results(N, 0);
-
-    if (N == 0 || query.n == 0) return results;
-
-    detail::prewarmGraph(query);
-    for (const MolGraph& t : targets) detail::prewarmGraph(t);
-
-    int nThreads = detail::resolveThreads(numThreads);
-    (void)nThreads;
-
-#ifdef _OPENMP
-    #pragma omp parallel for schedule(dynamic, 1) num_threads(nThreads)
-#endif
-    for (int i = 0; i < N; ++i) {
-        if (targets[i].n > 0) {
-            results[i] = findMCSSize(query, targets[i], chem, opts);
-        }
-    }
-
-    return results;
-}
-
-// ============================================================================
-// Preserve the owning C++ API; bindings use the same implementation with a view.
-inline std::vector<bool> batchSubstructure(
-    const MolGraph& query, const std::vector<MolGraph>& targets,
-    const ChemOptions& opts, int numThreads = 0, int64_t timeoutMs = 10000) {
-    return batchSubstructureImpl(query, targets, opts, numThreads, timeoutMs);
-}
-
-inline std::vector<std::vector<std::pair<int,int>>> batchFindSubstructure(
-    const MolGraph& query, const std::vector<MolGraph>& targets,
-    const ChemOptions& opts, int numThreads = 0, int64_t timeoutMs = 10000) {
-    return batchFindSubstructureImpl(query, targets, opts, numThreads, timeoutMs);
-}
-
-inline std::vector<std::map<int,int>> batchMCS(
-    const MolGraph& query, const std::vector<MolGraph>& targets,
-    const ChemOptions& chem, const MCSOptions& opts, int numThreads = 0) {
-    return batchMCSImpl(query, targets, chem, opts, numThreads);
-}
-
-inline std::vector<int> batchMCSSize(
-    const MolGraph& query, const std::vector<MolGraph>& targets,
-    const ChemOptions& chem, const MCSOptions& opts, int numThreads = 0) {
-    return batchMCSSizeImpl(query, targets, chem, opts, numThreads);
-}
-
-// ============================================================================
-// Screen and Match: RASCAL pre-screen + exact MCS on hits
-// ============================================================================
-
-/// Two-phase pipeline:
-///   Phase 1: RASCAL similarity upper-bound screening (parallel)
-///   Phase 2: Exact MCS computation on hits only (parallel)
-///
-/// Returns vector of (target_index, MCS_mapping) for targets that pass
-/// the RASCAL threshold AND have a non-empty MCS.
-///
-/// This is the recommended workflow for large databases: RASCAL screening
-/// eliminates ~90% of targets cheaply, then exact MCS runs only on candidates.
-inline std::vector<std::pair<int, std::map<int,int>>> screenAndMatch(
-    const MolGraph& query,
-    const std::vector<MolGraph>& targets,
-    const ChemOptions& chem,
-    const MCSOptions& opts,
-    double rascalThreshold = 0.3,
-    int numThreads = 0)
-{
-    const int N = static_cast<int>(targets.size());
-    if (N == 0 || query.n == 0) return {};
-
-    int nThreads = detail::resolveThreads(numThreads);
-    (void)nThreads;
-
-    // --- Phase 1: RASCAL screening (parallel) ---
-    std::vector<double> scores(N, 0.0);
-
-#ifdef _OPENMP
-    #pragma omp parallel for schedule(dynamic, 64) num_threads(nThreads)
-#endif
-    for (int i = 0; i < N; ++i) {
-        if (targets[i].n > 0) {
-            scores[i] = similarityUpperBound(query, targets[i]);
-        }
-    }
-
-    // Collect hits
-    std::vector<int> hits;
-    hits.reserve(N / 10);
-    for (int i = 0; i < N; ++i) {
-        if (scores[i] >= rascalThreshold) {
-            hits.push_back(i);
-        }
-    }
-
-    if (hits.empty()) return {};
-
-    detail::prewarmGraph(query);
-    for (int idx : hits) detail::prewarmGraph(targets[idx]);
-
-    // --- Phase 2: Exact MCS on hits only (parallel) ---
-    const int H = static_cast<int>(hits.size());
-    std::vector<std::map<int,int>> mcsMaps(H);
-
-#ifdef _OPENMP
-    #pragma omp parallel for schedule(dynamic, 1) num_threads(nThreads)
-#endif
-    for (int h = 0; h < H; ++h) {
-        int idx = hits[h];
-        mcsMaps[h] = findMCS(query, targets[idx], chem, opts);
-    }
-
-    // Collect non-empty results
-    std::vector<std::pair<int, std::map<int,int>>> results;
-    results.reserve(H);
-    for (int h = 0; h < H; ++h) {
-        if (!mcsMaps[h].empty()) {
-            results.emplace_back(hits[h], std::move(mcsMaps[h]));
-        }
-    }
-
-    return results;
-}
-
-/// Two-phase RASCAL screening followed by exact MCS size computation on hits.
-/// Returns (target_index, mcs_size) for each screened-in target with a non-zero
-/// exact MCS.
-inline std::vector<std::pair<int, int>> screenAndMCSSize(
-    const MolGraph& query,
-    const std::vector<MolGraph>& targets,
-    const ChemOptions& chem,
-    const MCSOptions& opts,
-    double rascalThreshold = 0.3,
-    int numThreads = 0)
-{
-    const int N = static_cast<int>(targets.size());
-    if (N == 0 || query.n == 0) return {};
-
-    int nThreads = detail::resolveThreads(numThreads);
-    (void)nThreads;
-
-    std::vector<double> scores(N, 0.0);
-
-#ifdef _OPENMP
-    #pragma omp parallel for schedule(dynamic, 64) num_threads(nThreads)
-#endif
-    for (int i = 0; i < N; ++i) {
-        if (targets[i].n > 0) {
-            scores[i] = similarityUpperBound(query, targets[i]);
-        }
-    }
-
-    std::vector<int> hits;
-    hits.reserve(N / 10);
-    for (int i = 0; i < N; ++i) {
-        if (scores[i] >= rascalThreshold) {
-            hits.push_back(i);
-        }
-    }
-
-    if (hits.empty()) return {};
-
-    detail::prewarmGraph(query);
-    for (int idx : hits) detail::prewarmGraph(targets[idx]);
-
-    const int H = static_cast<int>(hits.size());
-    std::vector<int> mcsSizes(H, 0);
-
-#ifdef _OPENMP
-    #pragma omp parallel for schedule(dynamic, 1) num_threads(nThreads)
-#endif
-    for (int h = 0; h < H; ++h) {
-        int idx = hits[h];
-        mcsSizes[h] = static_cast<int>(findMCS(query, targets[idx], chem, opts).size());
-    }
-
-    std::vector<std::pair<int, int>> results;
-    results.reserve(H);
-    for (int h = 0; h < H; ++h) {
-        if (mcsSizes[h] > 0) {
-            results.emplace_back(hits[h], mcsSizes[h]);
-        }
-    }
-
-    return results;
-}
 
 // ============================================================================
 // Batch Fingerprint Generation
@@ -1558,7 +1142,7 @@ inline std::vector<int> countsToArray(const std::map<int,int>& counts, int fpSiz
 ///   corpus.addTargets(targets);
 ///   corpus.prewarm();  // one-time cost
 ///   auto hits = corpus.substructure(query, opts);       // reuse many times
-///   auto maps = corpus.findSubstructure(query, opts);
+///   auto matches = Substructure::find(query).matchMany(corpus.targets());
 ///   auto sizes = corpus.mcsSize(query, chem, mcsOpts);
 ///   auto idxs  = corpus.screen(query, 0.7);
 class TargetCorpus {
@@ -1566,15 +1150,22 @@ class TargetCorpus {
     std::vector<std::vector<uint64_t>> fingerprints_;
     bool prewarmed_ = false;
 
+    std::shared_mutex& corpusMutex() const {
+        static std::array<std::shared_mutex, 64> mutexes;
+        return mutexes[(reinterpret_cast<uintptr_t>(this) >> 4) % mutexes.size()];
+    }
+
 public:
     /// Add a single target molecule.
     void addTarget(MolGraph g) {
+        const std::unique_lock<std::shared_mutex> corpusLock(corpusMutex());
         targets_.push_back(std::move(g));
         prewarmed_ = false;
     }
 
     /// Add multiple target molecules.
     void addTargets(std::vector<MolGraph> gs) {
+        const std::unique_lock<std::shared_mutex> corpusLock(corpusMutex());
         targets_.reserve(targets_.size() + gs.size());
         for (auto& g : gs) {
             targets_.push_back(std::move(g));
@@ -1583,9 +1174,9 @@ public:
     }
 
     /// Pre-compute lazy graph invariants and ECFP fingerprints for all targets.
-    /// Call once after loading all targets. Thread-safe to call from one thread;
-    /// subsequent query methods are safe to call concurrently.
+    /// Query methods may run concurrently; additions and prewarming are exclusive.
     void prewarm(int numThreads = 0) {
+        const std::unique_lock<std::shared_mutex> corpusLock(corpusMutex());
         const int N = static_cast<int>(targets_.size());
         if (N == 0) { prewarmed_ = true; return; }
 
@@ -1614,100 +1205,27 @@ public:
     }
 
     /// Number of targets in the corpus.
-    size_t size() const { return targets_.size(); }
+    size_t size() const {
+        const std::shared_lock<std::shared_mutex> corpusLock(corpusMutex());
+        return targets_.size();
+    }
 
     /// Whether prewarm() has been called since the last addTarget/addTargets.
-    bool isPrewarmed() const { return prewarmed_; }
-
-    /// Check if query is a substructure of each target.
-    /// Returns boolean hit mask. Automatically prewarms query.
-    std::vector<bool> substructure(
-        const MolGraph& query, const ChemOptions& opts, int nThreads = 0) const
-    {
-        const int N = static_cast<int>(targets_.size());
-        if (N == 0) return {};
-        if (query.n == 0) return std::vector<bool>(N, true);
-
-        detail::prewarmGraph(query);
-        // If not prewarmed, prewarm targets inline (const-safe: lazy caches are mutable)
-        if (!prewarmed_) {
-            for (const MolGraph& t : targets_) {
-                if (t.n >= query.n) detail::prewarmGraph(t);
-            }
-        }
-
-        std::vector<uint8_t> buf(N, 0);
-        int nt = detail::resolveThreads(nThreads);
-        (void)nt;
-
-#ifdef _OPENMP
-        #pragma omp parallel for schedule(dynamic, 1) num_threads(nt)
-#endif
-        for (int i = 0; i < N; ++i) {
-            if (targets_[i].n >= query.n) {
-                buf[i] = isSubstructure(query, targets_[i], opts) ? 1 : 0;
-            }
-        }
-        return std::vector<bool>(buf.begin(), buf.end());
+    bool isPrewarmed() const {
+        const std::shared_lock<std::shared_mutex> corpusLock(corpusMutex());
+        return prewarmed_;
     }
 
-    /// Find substructure atom-atom mappings for query against each target.
-    /// Empty inner vector = no match.
-    std::vector<std::vector<std::pair<int,int>>> findSubstructure(
-        const MolGraph& query, const ChemOptions& opts, int nThreads = 0) const
-    {
-        const int N = static_cast<int>(targets_.size());
-        std::vector<std::vector<std::pair<int,int>>> results(N);
-        if (N == 0 || query.n == 0) return results;
-
-        detail::prewarmGraph(query);
-        if (!prewarmed_) {
-            for (const MolGraph& t : targets_) {
-                if (t.n >= query.n) detail::prewarmGraph(t);
-            }
+    /** Snapshot original target graphs for immutable prepared queries. */
+    std::vector<MolGraph> targets() const {
+        const std::shared_lock<std::shared_mutex> corpusLock(corpusMutex());
+        std::vector<MolGraph> result;
+        result.reserve(targets_.size());
+        for (const auto& target : targets_) {
+            const std::lock_guard<std::recursive_mutex> graphLock(target.lazyCacheMutex());
+            result.push_back(target);
         }
-
-        int nt = detail::resolveThreads(nThreads);
-        (void)nt;
-
-#ifdef _OPENMP
-        #pragma omp parallel for schedule(dynamic, 1) num_threads(nt)
-#endif
-        for (int i = 0; i < N; ++i) {
-            if (targets_[i].n >= query.n) {
-                results[i] = smsd::findSubstructure(query, targets_[i], opts);
-            }
-        }
-        return results;
-    }
-
-    /// Find MCS sizes between query and each target.
-    std::vector<int> mcsSize(
-        const MolGraph& query, const ChemOptions& chem,
-        const MCSOptions& opts, int nThreads = 0) const
-    {
-        const int N = static_cast<int>(targets_.size());
-        std::vector<int> results(N, 0);
-        if (N == 0 || query.n == 0) return results;
-
-        detail::prewarmGraph(query);
-        if (!prewarmed_) {
-            for (const MolGraph& t : targets_) detail::prewarmGraph(t);
-        }
-
-        int nt = detail::resolveThreads(nThreads);
-        (void)nt;
-
-#ifdef _OPENMP
-        #pragma omp parallel for schedule(dynamic, 1) num_threads(nt)
-#endif
-        for (int i = 0; i < N; ++i) {
-            if (targets_[i].n > 0) {
-                results[i] = static_cast<int>(
-                    findMCS(query, targets_[i], chem, opts).size());
-            }
-        }
-        return results;
+        return result;
     }
 
     /// Fingerprint-based Tanimoto screening: returns indices of targets
@@ -1716,6 +1234,7 @@ public:
     std::vector<int> screen(
         const MolGraph& query, double threshold, int nThreads = 0) const
     {
+        const std::shared_lock<std::shared_mutex> corpusLock(corpusMutex());
         const int N = static_cast<int>(targets_.size());
         if (N == 0) return {};
 

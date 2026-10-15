@@ -5,7 +5,7 @@
  * See the NOTICE file for attribution, trademark, and algorithm IP terms. *
  * CIP (Cahn-Ingold-Prelog) stereodescriptor assignment for MolGraph.
  *
- * Implements the IUPAC 2013 recommendations (Blue Book) for assigning
+ * Uses the IUPAC 2013 sequence rules (Blue Book) when assigning
  * R/S descriptors to tetrahedral stereocentres and E/Z descriptors to
  * double bonds using CIP sequence rules:
  *   Rule 1: higher atomic number gets higher priority
@@ -13,8 +13,9 @@
  *   Rule 3: Z double-bond configuration gets higher priority than E
  *
  * Uses the digraph (extended-connectivity tree) approach
- * with phantom/duplicate nodes for ring closures and correct handling
- * of mancude (aromatic) systems.
+ * with phantom/duplicate nodes for ring closures and multiple bonds.
+ * Aromatic ligands use a Kekule representation; fractional mancude averaging
+ * and the complete Rule 4/5 machinery are not implemented.
  *
  * References:
  *   - Prelog & Helmchen, Angew. Chem. Int. Ed. Engl. 21, 567 (1982)
@@ -35,6 +36,7 @@
 #include <cstdint>
 #include <functional>
 #include <limits>
+#include <memory>
 #include <numeric>
 #include <string>
 #include <tuple>
@@ -91,6 +93,66 @@ struct DigraphNode {
     std::vector<int> children; // indices of child nodes in digraph
 };
 
+/** Hydrogen inference retains the fallback for Builder graphs without supplied counts. */
+inline int implicitHydrogens(const MolGraph& graph, int atom) {
+    const int stored = atomPropertyOrZero(graph.hydrogenCount, atom);
+    if (graph.hydrogenCountsKnown || stored > 0) return stored;
+    int bondOrderSum = 0;
+    for (int neighbor : graph.neighbors[atom]) {
+        const int order = graph.bondOrder(atom, neighbor);
+        bondOrderSum += order == 4 ? 1 : order;
+    }
+    return ::smsd::detail::computeImplicitH(graph.atomicNum[atom], graph.aromatic[atom] != 0,
+                                           bondOrderSum, atomPropertyOrZero(graph.formalCharge, atom));
+}
+
+inline bool hasLonePairLigand(const MolGraph& graph, int atom, int hydrogens) {
+    if (hydrogens != 0 || graph.neighbors[atom].size() != 3
+        || atomPropertyOrZero(graph.tetraChirality, atom) == 0) return false;
+    const int element = graph.atomicNum[atom];
+    return element == 7 || element == 15 || element == 16 || element == 33
+        || element == 34 || element == 51 || element == 52;
+}
+
+/** Compare spheres in parent order, padding missing phantom children with zero. */
+inline int compareOrderedBranches(const std::vector<DigraphNode>& firstNodes, int firstRoot,
+                                  const std::vector<DigraphNode>& secondNodes, int secondRoot,
+                                  bool compareMass) {
+    std::vector<std::pair<int, int>> frontier{{firstRoot, secondRoot}};
+    const std::vector<int> empty;
+    while (!frontier.empty()) {
+        for (const auto& pair : frontier) {
+            const int firstValue = pair.first < 0 ? 0 : (compareMass
+                ? firstNodes[pair.first].massNumber : firstNodes[pair.first].atomicNum);
+            const int secondValue = pair.second < 0 ? 0 : (compareMass
+                ? secondNodes[pair.second].massNumber : secondNodes[pair.second].atomicNum);
+            if (firstValue != secondValue) return firstValue - secondValue;
+        }
+        std::vector<std::pair<int, int>> next;
+        for (const auto& pair : frontier) {
+            const auto& firstChildren = pair.first < 0 ? empty : firstNodes[pair.first].children;
+            const auto& secondChildren = pair.second < 0 ? empty : secondNodes[pair.second].children;
+            for (size_t slot = 0; slot < std::max(firstChildren.size(), secondChildren.size()); ++slot)
+                next.push_back({slot < firstChildren.size() ? firstChildren[slot] : -1,
+                                slot < secondChildren.size() ? secondChildren[slot] : -1});
+        }
+        frontier = std::move(next);
+    }
+    return 0;
+}
+
+/** Child ordering is established from the leaves, preserving earlier-rule ranks. */
+inline void orderDigraph(std::vector<DigraphNode>& nodes) {
+    for (int node = static_cast<int>(nodes.size()) - 1; node >= 0; --node) {
+        auto& children = nodes[node].children;
+        std::stable_sort(children.begin(), children.end(), [&](int first, int second) {
+            const int atomicComparison = compareOrderedBranches(nodes, first, nodes, second, false);
+            return atomicComparison != 0 ? atomicComparison > 0
+                : compareOrderedBranches(nodes, first, nodes, second, true) > 0;
+        });
+    }
+}
+
 // --------------------------------------------------------------------------
 // Build the CIP digraph (extended connectivity tree) rooted at `centre`
 // going out through `startNbr`.  Ring closures produce duplicate (phantom)
@@ -104,6 +166,12 @@ inline std::vector<DigraphNode> buildDigraph(
     int maxDepth = 30,
     int maxNodes = 5000)
 {
+    std::unique_ptr<MolGraph> kekule;
+    if (std::any_of(g.aromatic.begin(), g.aromatic.end(), [](uint8_t aromatic) { return aromatic != 0; })) {
+        kekule.reset(new MolGraph(g));
+        if (!kekule->kekulize()) return {};
+    }
+    const MolGraph& bonding = kekule ? *kekule : g;
     std::vector<DigraphNode> nodes;
     nodes.reserve(128);
 
@@ -130,7 +198,7 @@ inline std::vector<DigraphNode> buildDigraph(
             int parentNodeIdx = nodes[ni].parent;
             int parentAtom = (parentNodeIdx >= 0) ? nodes[parentNodeIdx].atomIdx : -1;
 
-            // Collect neighbors, expanding double/triple bonds as per CIP
+            // Collect neighbours, expanding double/triple bonds as per CIP
             // convention: a double bond A=B adds one extra phantom B on A's
             // side (and vice versa); a triple bond adds two.
             struct Expansion {
@@ -150,7 +218,7 @@ inline std::vector<DigraphNode> buildDigraph(
                     continue;
                 }
 
-                int bo = g.bondOrder(atom, nbr);
+                int bo = bonding.bondOrder(atom, nbr);
                 if (bo == 4) bo = 1; // aromatic bond treated as single for expansion
 
                 // Real child node
@@ -167,7 +235,7 @@ inline std::vector<DigraphNode> buildDigraph(
             //  already added phantoms for us, but we need phantom
             //  copies of the parent on THIS node's child list).
             if (parentAtom >= 0 && !nodes[ni].isDuplicate) {
-                int bo = g.bondOrder(atom, parentAtom);
+                int bo = bonding.bondOrder(atom, parentAtom);
                 if (bo == 4) bo = 1;
                 for (int extra = 1; extra < bo; ++extra) {
                     expansions.push_back({parentAtom, true, bo});
@@ -212,10 +280,23 @@ inline std::vector<DigraphNode> buildDigraph(
                     nextFrontier.push_back(childIdx);
                 }
             }
+            for (int hydrogen = 0; hydrogen < implicitHydrogens(g, atom)
+                 && static_cast<int>(nodes.size()) < maxNodes; ++hydrogen) {
+                DigraphNode child;
+                child.atomIdx = -1;
+                child.atomicNum = 1;
+                child.massNumber = 0;
+                child.isDuplicate = false;
+                child.parent = ni;
+                child.depth = depth + 1;
+                nodes[ni].children.push_back(static_cast<int>(nodes.size()));
+                nodes.push_back(std::move(child));
+            }
         }
         frontier = std::move(nextFrontier);
     }
 
+    orderDigraph(nodes);
     return nodes;
 }
 
@@ -231,54 +312,12 @@ inline int compareBranches_Rule1(
     const std::vector<DigraphNode>& nodesA, int rootA,
     const std::vector<DigraphNode>& nodesB, int rootB)
 {
-    // BFS level-by-level
-    std::vector<int> frontA = {rootA};
-    std::vector<int> frontB = {rootB};
-
-    while (!frontA.empty() || !frontB.empty()) {
-        // Gather atomic numbers at this level, sorted descending
-        std::vector<int> zA, zB;
-        for (int i : frontA) zA.push_back(nodesA[i].atomicNum);
-        for (int i : frontB) zB.push_back(nodesB[i].atomicNum);
-
-        // Sort descending (highest priority first)
-        std::sort(zA.begin(), zA.end(), std::greater<int>());
-        std::sort(zB.begin(), zB.end(), std::greater<int>());
-
-        // Compare element by element
-        size_t len = std::max(zA.size(), zB.size());
-        for (size_t k = 0; k < len; ++k) {
-            int a = (k < zA.size()) ? zA[k] : 0;
-            int b = (k < zB.size()) ? zB[k] : 0;
-            if (a != b) return a - b;
-        }
-
-        // Tie on atomic number at this level -- try mass number
-        std::vector<int> mA, mB;
-        for (int i : frontA) mA.push_back(nodesA[i].massNumber);
-        for (int i : frontB) mB.push_back(nodesB[i].massNumber);
-        std::sort(mA.begin(), mA.end(), std::greater<int>());
-        std::sort(mB.begin(), mB.end(), std::greater<int>());
-
-        for (size_t k = 0; k < std::max(mA.size(), mB.size()); ++k) {
-            int a = (k < mA.size()) ? mA[k] : 0;
-            int b = (k < mB.size()) ? mB[k] : 0;
-            if (a != b) return a - b;
-        }
-
-        // Expand to next BFS level
-        std::vector<int> nextA, nextB;
-        for (int i : frontA)
-            for (int c : nodesA[i].children) nextA.push_back(c);
-        for (int i : frontB)
-            for (int c : nodesB[i].children) nextB.push_back(c);
-
-        frontA = std::move(nextA);
-        frontB = std::move(nextB);
-    }
-
-    return 0; // truly equal by Rules 1-2
+    const int atomicComparison = compareOrderedBranches(nodesA, rootA, nodesB, rootB, false);
+    if (atomicComparison != 0) return atomicComparison;
+    return compareOrderedBranches(nodesA, rootA, nodesB, rootB, true);
 }
+
+inline int atomicPriorityDoubleBondConfiguration(const MolGraph& graph, int first, int second);
 
 // --------------------------------------------------------------------------
 // CIP Rule 3: Z > E tie-break on double-bond stereo configuration.
@@ -305,7 +344,7 @@ inline int compareBranches_Rule3(
                 if (nd.parent >= 0 && nd.atomIdx >= 0 && !nd.isDuplicate) {
                     int parentAtom = nodes[nd.parent].atomIdx;
                     if (parentAtom >= 0 && g.bondOrder(parentAtom, nd.atomIdx) == 2) {
-                        int conf = g.dbStereo(parentAtom, nd.atomIdx); // 1=Z, 2=E
+                        int conf = atomicPriorityDoubleBondConfiguration(g, parentAtom, nd.atomIdx);
                         val = (conf == 1) ? 2 : (conf == 2) ? 1 : 0;  // Z->2, E->1
                     }
                 }
@@ -431,115 +470,58 @@ inline int compareBranches_Full(
 }
 
 // --------------------------------------------------------------------------
-// Compute CIP priorities for the neighbors of a given atom.
+// Compute CIP priorities for the neighbours of a given atom.
 // Returns a vector of (neighbor_atom_index, priority) pairs,
 // where priority 1 is lowest and higher numbers are higher priority.
 // Atoms with the same priority share the same rank.
 // --------------------------------------------------------------------------
 inline std::vector<std::pair<int, int>> computePriorities(
     const MolGraph& g, int centre,
-    const std::unordered_map<int, int>& descriptorMap = {})
+    const std::unordered_map<int, int>& descriptorMap = {}, bool includeStereo = true)
 {
     const auto& nbrs = g.neighbors[centre];
     int nNbr = static_cast<int>(nbrs.size());
 
-    // Also account for implicit hydrogen(s) as a pseudo-neighbor
-    // with atomic number 1, mass 0, no further substituents.
-    int boSum = 0;
-    for (int nb : nbrs) {
-        int bo = g.bondOrder(centre, nb);
-        if (bo == 4) bo = 1;
-        boSum += bo;
-    }
-    int implH = ::smsd::detail::computeImplicitH(g.atomicNum[centre], g.aromatic[centre] != 0,
-                                 boSum, atomPropertyOrZero(g.formalCharge, centre));
-
-    // Total ligands = explicit neighbors + implicit H
-    int totalLigands = nNbr + implH;
-
-    // Build a digraph for each ligand
-    struct LigandInfo {
-        int atomIdx;      // -1 for implicit H
-        int atomicNum;
-        std::vector<DigraphNode> digraph;
-        int digraphRoot;  // index of ligand's root in its digraph
-    };
-
+    const int implH = implicitHydrogens(g, centre);
+    const bool lonePair = hasLonePairLigand(g, centre, implH);
+    const int totalLigands = nNbr + implH + (lonePair ? 1 : 0);
+    struct LigandInfo { int atomIdx; int atomicNum; int digraphRoot; };
     std::vector<LigandInfo> ligands;
     ligands.reserve(totalLigands);
-
-    for (int nb : nbrs) {
-        // Build full digraph from centre
-        auto dg = buildDigraph(g, centre);
-
-        // Find the child of root (node 0) that corresponds to neighbor nb
-        int ligRoot = -1;
-        for (int c : dg[0].children) {
-            if (dg[c].atomIdx == nb && !dg[c].isDuplicate) {
-                ligRoot = c;
-                break;
-            }
-        }
-        // If not found as real node, try duplicate (for multiply-bonded)
-        if (ligRoot < 0) {
-            for (int c : dg[0].children) {
-                if (dg[c].atomIdx == nb) {
-                    ligRoot = c;
-                    break;
-                }
-            }
-        }
-
-        LigandInfo li;
-        li.atomIdx = nb;
-        li.atomicNum = g.atomicNum[nb];
-        li.digraph = std::move(dg);
-        li.digraphRoot = ligRoot;
-        ligands.push_back(std::move(li));
+    auto digraph = buildDigraph(g, centre);
+    if (digraph.empty()) return {};
+    for (int neighbor : nbrs) {
+        int ligandRoot = -1;
+        for (int child : digraph[0].children)
+            if (digraph[child].atomIdx == neighbor && !digraph[child].isDuplicate) { ligandRoot = child; break; }
+        ligands.push_back({neighbor, g.atomicNum[neighbor], ligandRoot});
     }
-
-    // Add implicit H ligands
-    for (int h = 0; h < implH; ++h) {
-        LigandInfo li;
-        li.atomIdx = -1;
-        li.atomicNum = 1;
-        // Create a trivial single-node digraph for H
-        DigraphNode hNode;
-        hNode.atomIdx = -1;
-        hNode.atomicNum = 1;
-        hNode.massNumber = 0;
-        hNode.isDuplicate = false;
-        hNode.parent = -1;
-        hNode.depth = 0;
-        li.digraph = {hNode};
-        li.digraphRoot = 0;
-        ligands.push_back(std::move(li));
+    for (int implicit = 0; implicit < implH + (lonePair ? 1 : 0); ++implicit) {
+        const bool phantom = implicit >= implH;
+        DigraphNode node;
+        node.atomIdx = phantom ? -2 : -1;
+        node.atomicNum = phantom ? 0 : 1;
+        node.massNumber = 0;
+        node.isDuplicate = false;
+        node.parent = -1;
+        node.depth = 0;
+        const int root = static_cast<int>(digraph.size());
+        digraph.push_back(node);
+        ligands.push_back({node.atomIdx, node.atomicNum, root});
     }
 
     // Sort indices by CIP priority (Rule 1 comparison)
     std::vector<int> order(totalLigands);
     std::iota(order.begin(), order.end(), 0);
 
-    // Choose comparison function based on whether descriptor map is available
-    bool useFull = !descriptorMap.empty();
-
-    auto compareLigands = [&](int a, int b) -> int {
-        auto& la = ligands[a];
-        auto& lb = ligands[b];
-        if (la.atomicNum != lb.atomicNum)
-            return la.atomicNum - lb.atomicNum;
-        if (la.digraphRoot >= 0 && lb.digraphRoot >= 0) {
-            if (useFull)
-                return compareBranches_Full(
-                    la.digraph, la.digraphRoot,
-                    lb.digraph, lb.digraphRoot,
-                    descriptorMap, &g);
-            else
-                return compareBranches_Rule1(
-                    la.digraph, la.digraphRoot,
-                    lb.digraph, lb.digraphRoot);
-        }
-        return 0;
+    auto compareLigands = [&](int first, int second) -> int {
+        const auto& firstLigand = ligands[first];
+        const auto& secondLigand = ligands[second];
+        if (firstLigand.atomicNum != secondLigand.atomicNum)
+            return firstLigand.atomicNum - secondLigand.atomicNum;
+        if (firstLigand.digraphRoot < 0 || secondLigand.digraphRoot < 0) return 0;
+        return compareBranches_Full(digraph, firstLigand.digraphRoot, digraph, secondLigand.digraphRoot,
+                                    descriptorMap, includeStereo ? &g : nullptr);
     };
 
     std::sort(order.begin(), order.end(), [&](int a, int b) {
@@ -559,6 +541,31 @@ inline std::vector<std::pair<int, int>> computePriorities(
     }
 
     return result;
+}
+
+/** Rule 3 descriptors use atomic/isotopic priorities, independent of input carrier order. */
+inline int atomicPriorityDoubleBondConfiguration(const MolGraph& graph, int first, int second) {
+    int configuration = graph.dbStereo(first, second);
+    if (configuration == 0) return 0;
+    for (const auto& ends : {std::pair<int, int>{first, second}, {second, first}}) {
+        const auto priorities = computePriorities(graph, ends.first, {}, false);
+        int bestRank = -1, secondRank = -1, bestAtom = -1;
+        for (const auto& priority : priorities) {
+            if (priority.first == ends.second) continue;
+            if (priority.second > bestRank) {
+                secondRank = bestRank;
+                bestRank = priority.second;
+                bestAtom = priority.first;
+            } else secondRank = std::max(secondRank, priority.second);
+        }
+        if (bestRank < 0 || bestRank == secondRank) return 0;
+        for (int neighbor : graph.neighbors[ends.first]) {
+            if (neighbor == ends.second) continue;
+            if (neighbor != bestAtom) configuration = 3 - configuration;
+            break;
+        }
+    }
+    return configuration;
 }
 
 // --------------------------------------------------------------------------
@@ -634,11 +641,11 @@ inline RSLabel assignRS(const MolGraph& g, int centre,
     }
 
     // The SMILES chirality (@/@@ ) encodes the winding order of
-    // the last three neighbors as seen from the first neighbor
+    // the last three neighbours as seen from the first neighbour
     // (or implicit H if it's first).
     //
-    // @ = anticlockwise winding of neighbors 2,3,4 when viewed
-    //     from neighbor 1 (or implicit H).
+    // @ = anticlockwise winding of neighbours 2,3,4 when viewed
+    //     from neighbour 1 (or implicit H).
     // @@ = clockwise winding.
     //
     // To determine R/S:
@@ -655,27 +662,20 @@ inline RSLabel assignRS(const MolGraph& g, int centre,
     //
     // To map SMILES ordering to CIP:
     //   We need to figure out the permutation parity between
-    //   the SMILES neighbor order and the CIP priority order.
+    //   the SMILES neighbour order and the CIP priority order.
 
     // Build map: ligand index -> CIP priority rank
     // ligand index 0..3 corresponds to:
-    //   0 = first explicit neighbor (or implicit H)
-    //   1,2,3 = subsequent neighbors in SMILES order
+    //   0 = first explicit neighbour (or implicit H)
+    //   1,2,3 = subsequent neighbours in SMILES order
 
-    // Get the SMILES order of neighbors
+    // Get the SMILES order of neighbours
     const auto& nbrs = g.neighbors[centre];
     int nExplicit = static_cast<int>(nbrs.size());
 
-    // Compute implicit H count
-    int boSum = 0;
-    for (int nb : nbrs) {
-        int bo = g.bondOrder(centre, nb);
-        if (bo == 4) bo = 1;
-        boSum += bo;
-    }
-    int implH = ::smsd::detail::computeImplicitH(g.atomicNum[centre],
-                                 g.aromatic[centre] != 0,
-                                 boSum, detail::atomPropertyOrZero(g.formalCharge, centre));
+    const int implH = detail::implicitHydrogens(g, centre);
+    const bool lonePair = detail::hasLonePairLigand(g, centre, implH);
+    const int virtualLigand = lonePair ? -2 : -1;
 
     // SMILES order depends on whether the stereocentre has a preceding
     // bond (i.e., was not the first atom in the SMILES string).
@@ -688,20 +688,20 @@ inline RSLabel assignRS(const MolGraph& g, int centre,
     //   The "from" direction is the implicit H itself.
     //   → smilesOrder = [H(-1), Br(1), Cl(2), F(3)]
     //
-    // Heuristic: if centre > 0 and first neighbor has lower index,
+    // Heuristic: if centre > 0 and first neighbour has lower index,
     // it was the preceding-bond atom. Otherwise H is the from-atom.
     std::vector<int> smilesOrder; // atom indices, -1 for implicit H
-    if (implH > 0) {
+    if (implH > 0 || lonePair) {
         bool hasPrecedingAtom = (centre > 0 && nExplicit >= 1 && nbrs[0] < centre);
         if (hasPrecedingAtom) {
             // From-atom is nbrs[0], H is second
             smilesOrder.push_back(nbrs[0]);
-            smilesOrder.push_back(-1);
+            smilesOrder.push_back(virtualLigand);
             for (int k = 1; k < nExplicit; ++k)
                 smilesOrder.push_back(nbrs[k]);
         } else {
             // H is the from-atom (bracket starts the SMILES or no preceding bond)
-            smilesOrder.push_back(-1);
+            smilesOrder.push_back(virtualLigand);
             for (int nb : nbrs) smilesOrder.push_back(nb);
         }
     } else {
@@ -845,7 +845,7 @@ inline EZLabel assignEZ(const MolGraph& g, int a1, int a2) {
 
     // storedConfig:  1 = Z (cis), 2 = E (trans) — as computed by SMILES parser
     // But the SMILES parser's cis/trans is based on the / \ notation relative
-    // to the atoms in the SMILES string, which uses a specific neighbor as reference.
+    // to the atoms in the SMILES string, which uses a specific neighbour as reference.
     // We need to check whether the SMILES convention's "cis" corresponds to
     // the CIP high-priority groups being cis or trans.
 
@@ -868,19 +868,19 @@ inline EZLabel assignEZ(const MolGraph& g, int a1, int a2) {
 
     // For now, use a simpler approach: the SMILES parser stores Z=1, E=2
     // based on whether the annotated substituents are cis or trans.
-    // In the common case (the annotated substituents = first neighbor =
-    // highest-priority neighbor for each end), this is correct.
+    // In the common case (the annotated substituents = first neighbour =
+    // highest-priority neighbour for each end), this is correct.
 
     // We determine if the high-priority atom at each end is the same as
     // the "reference" atom used by the SMILES parser.  The reference
-    // atoms are the neighbors that had / or \ annotations.
+    // atoms are the neighbours that had / or \ annotations.
 
-    // Since we may not have direct access to which specific neighbor
+    // Since we may not have direct access to which specific neighbour
     // was the reference, we use the stored config as a starting point
-    // and adjust based on whether high-priority != first neighbor.
+    // and adjust based on whether high-priority != first neighbour.
 
     // Simple approach: check if the high-priority substituent at each end
-    // is the first neighbor (in the neighbor list) that isn't the other
+    // is the first neighbour (in the neighbour list) that isn't the other
     // double-bond atom.  If both match, use stored config directly.
     // If one doesn't match, invert.  If both don't match, keep stored.
 

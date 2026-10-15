@@ -10,7 +10,7 @@
 
 #include "smsd/mol_graph.hpp"
 #include "smsd/ring_finder.hpp"
-#include "smsd/vf2pp.hpp"
+#include "smsd/substructure.hpp"
 #include "smsd/mcs.hpp"
 #include "smsd/rascal.hpp"
 #include "smsd/batch.hpp"
@@ -20,7 +20,6 @@
 #include "smsd/cip.hpp"
 #include "smsd/layout.hpp"
 #include "smsd/depict.hpp"
-#include "smsd/clique_solver.hpp"
 #include "smsd/hungarian.hpp"
 #include "smsd/periodic_table.hpp"
 #include "smsd/scaffold_library.hpp"

@@ -6,7 +6,9 @@ import ast
 import base64
 import csv
 import hashlib
+import importlib.util
 import io
+import json
 from pathlib import Path, PurePosixPath
 import re
 import shutil
@@ -14,6 +16,12 @@ import tarfile
 import tomllib
 import zipfile
 from email.parser import BytesParser
+
+
+_BUILD_SPEC = importlib.util.spec_from_file_location(
+    "smsd_release_build", Path(__file__).resolve().with_name("build_python_wheels.py"))
+BUILD = importlib.util.module_from_spec(_BUILD_SPEC)
+_BUILD_SPEC.loader.exec_module(BUILD)
 
 
 def digest(path):
@@ -188,6 +196,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--release-dir", type=Path, required=True)
     parser.add_argument("--wheel-dir", type=Path, action="append", default=[])
+    parser.add_argument("--source-manifest", type=Path)
+    parser.add_argument("--provenance", type=Path, action="append", default=[],
+                        help="Checked build receipt; adjacent wheel-build-provenance.json files are found automatically")
     parser.add_argument("--allow-incomplete", action="store_true",
                         help="Collect local build results before all three platforms are available")
     parser.add_argument("--check-only", action="store_true")
@@ -198,12 +209,13 @@ def main():
     if len(archives) != 1:
         raise ValueError("Expected one Python source distribution in the release directory")
     version = archives[0].name[len("smsd-"):-len(".tar.gz")]
+    source = BUILD.checked_source(archives[0], args.source_manifest)
     sources = source_files(archives[0])
     project = tomllib.loads(sources["pyproject.toml"].decode("utf-8"))["project"]
     if project["name"] != "smsd" or project["version"] != version:
         raise ValueError("Source filename and package metadata disagree")
     checkout = Path(__file__).resolve().parents[1]
-    required = {"python/smsd/__init__.py", "python/smsd/mcs_engine.py",
+    required = {"python/smsd/__init__.py", "python/smsd/search.py",
                 "cpp/CMakeLists.txt", "cpp/bindings/pybind11/smsd_bindings.cpp"}
     required.update(p.relative_to(checkout).as_posix()
                     for p in (checkout / "cpp/include/smsd").rglob("*.hpp"))
@@ -225,11 +237,48 @@ def main():
     missing = {"linux", "macos", "windows"} - set(selected)
     if missing and not args.allow_incomplete:
         raise ValueError("Missing release wheels: " + ", ".join(sorted(missing)))
-    if not args.check_only:
+    manifest_path = directory / "WHEEL_MANIFEST.json"
+    if args.check_only:
+        BUILD.checked_wheel_manifest(directory, source, selected, BUILD.read_manifest(manifest_path))
+    else:
+        receipts = {path.resolve() for path in args.provenance}
+        receipts.update(path.parent / "wheel-build-provenance.json" for path in candidates
+                        if (path.parent / "wheel-build-provenance.json").is_file())
+        proofs = [BUILD.read_manifest(path) for path in sorted(receipts)]
+        if manifest_path.exists():
+            existing = BUILD.read_manifest(manifest_path)
+            recorded_entries = existing.get("wheels")
+            if (isinstance(recorded_entries, list)
+                    and {entry.get("platform") for entry in recorded_entries if isinstance(entry, dict)} != set(selected)):
+                raise ValueError("Existing wheel manifest has different platforms; collect the full set in a new release directory")
+            BUILD.checked_wheel_manifest(directory, source, selected, existing)
+            proofs.extend(entry["build_provenance"] for entry in existing["wheels"])
+        entries = []
+        for family, wheel in sorted(selected.items()):
+            matching = [proof for proof in proofs if proof.get("wheel") == wheel.name]
+            if not matching:
+                raise ValueError("Missing checked-build provenance: " + wheel.name)
+            entry = BUILD.wheel_entry(wheel, family, source, matching[0])
+            if any(BUILD.wheel_entry(wheel, family, source, proof) != entry for proof in matching[1:]):
+                raise ValueError("Conflicting checked-build provenance: " + wheel.name)
+            entries.append(entry)
+        for path in args.provenance:
+            proof = BUILD.read_manifest(path)
+            if proof.get("wheel") not in {wheel.name for wheel in selected.values()}:
+                raise ValueError("Explicit provenance does not identify a selected wheel")
+        manifest = {"schema_version": 1,
+                    **{field: source[field] for field in ("version", "source_commit", "sdist", "sdist_sha256")},
+                    "complete": not missing, "missing_platforms": sorted(missing), "wheels": entries}
+        # Check both destinations before copying any release assets.
+        for path, document in ((directory / "SOURCE_MANIFEST.json", source), (manifest_path, manifest)):
+            if path.is_symlink() or (path.exists() and BUILD.read_manifest(path) != document):
+                raise ValueError("Existing manifest differs: " + path.name)
         for wheel in selected.values():
             destination = directory / wheel.name
             if wheel != destination:
                 shutil.copy2(wheel, destination)
+        BUILD.write_manifest(directory / "SOURCE_MANIFEST.json", source)
+        BUILD.write_manifest(manifest_path, manifest)
         files = sorted(p for p in directory.iterdir() if p.is_file() and p.name != "SHA256SUMS")
         (directory / "SHA256SUMS").write_text(
             "".join(f"{digest(p)}  {p.name}\n" for p in files), encoding="utf-8")

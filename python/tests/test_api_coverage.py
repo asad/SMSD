@@ -16,6 +16,10 @@ import pytest
 import smsd
 
 
+def _atom_mapping(result):
+    return dict(result.best.atom_mapping) if result.found else {}
+
+
 # ---------------------------------------------------------------------------
 # Common SMILES constants used across multiple test classes
 # ---------------------------------------------------------------------------
@@ -42,157 +46,104 @@ BATCH_CORPUS = [PHENOL, TOLUENE, ANILINE, ETHANOL, ACETIC_ACID,
 # ===========================================================================
 
 class TestMCSUtilities:
-    """Tests for MCS utility functions: mcs_to_smiles, find_mcs_smiles,
-    mcs_smiles, find_mcs_progressive, mcs_result, mcs_from_smiles,
-    and MatchResult."""
+    """Prepared searches, explicit result data and selected-graph output."""
 
-    def test_mcs_to_smiles_basic(self):
-        """mcs_to_smiles should extract MCS SMILES from a graph + mapping."""
-        g1 = smsd.parse_smiles(BENZENE)
-        g2 = smsd.parse_smiles(PHENOL)
-        mapping = smsd.find_mcs(g1, g2)
-        assert len(mapping) > 0
-        smi = smsd.mcs_to_smiles(g1, mapping)
-        assert isinstance(smi, str)
-        assert len(smi) > 0
+    def test_match_to_smiles_basic(self):
+        query = smsd.parse_smiles(BENZENE)
+        match = smsd.MCS.find(query).match(PHENOL).best
+        assert match.atom_count == 6
+        assert smsd.parse_smiles(match.to_smiles(query)).n == 6
 
-    def test_mcs_to_smiles_empty_mapping(self):
-        """mcs_to_smiles with empty mapping should return empty string."""
-        g1 = smsd.parse_smiles(BENZENE)
-        smi = smsd.mcs_to_smiles(g1, {})
-        assert smi == ""
+    def test_empty_match_to_smiles(self):
+        assert smsd.Match({}, (), ()).to_smiles(BENZENE) == ""
 
-    def test_find_mcs_smiles_basic(self):
-        """find_mcs_smiles should return a SMILES string for the MCS."""
-        g1 = smsd.parse_smiles(BENZENE)
-        g2 = smsd.parse_smiles(PHENOL)
-        chem = smsd.ChemOptions()
-        opts = smsd.MCSOptions()
-        result = smsd.find_mcs_smiles(g1, g2, chem, opts, 10000)
-        assert isinstance(result, str)
-        assert len(result) > 0
+    def test_match_to_smiles_with_options(self):
+        options = smsd.MCS.Options()
+        result = smsd.MCS.find(BENZENE).with_options(options).with_timeout(10000).match(PHENOL)
+        assert isinstance(result.best.to_smiles(BENZENE), str)
+        assert result.best.to_smiles(BENZENE)
 
-    def test_mcs_smiles_convenience(self):
-        """mcs_smiles convenience wrapper should return non-empty SMILES."""
-        result = smsd.mcs_smiles(BENZENE, PHENOL)
-        assert isinstance(result, str)
-        assert len(result) > 0
+    def test_match_to_smiles_from_text_query(self):
+        result = smsd.MCS.find(BENZENE).match(PHENOL)
+        assert smsd.parse_smiles(result.best.to_smiles(BENZENE)).n == 6
 
-    def test_mcs_smiles_identical_molecules(self):
-        """MCS of identical molecules should yield the full molecule SMILES."""
-        result = smsd.mcs_smiles(BENZENE, BENZENE)
-        assert isinstance(result, str)
-        assert len(result) > 0
+    def test_match_to_smiles_identical_molecules(self):
+        result = smsd.MCS.find(BENZENE).match(BENZENE)
+        assert smsd.same_canonical_graph(smsd.parse_smiles(BENZENE), smsd.parse_smiles(result.best.to_smiles(BENZENE)))
 
-    def test_mcs_smiles_with_timeout(self):
-        """mcs_smiles should accept timeout_ms parameter."""
-        result = smsd.mcs_smiles(BENZENE, PHENOL, timeout_ms=5000)
-        assert isinstance(result, str)
+    def test_match_to_smiles_with_timeout(self):
+        result = smsd.MCS.find(BENZENE).with_timeout(5000).match(PHENOL)
+        assert isinstance(result.best.to_smiles(BENZENE), str)
+        assert result.optimal
 
-    def test_find_mcs_progressive_basic(self):
-        """find_mcs_progressive should find MCS with progress callback."""
-        progress_calls = []
+    def test_search_reports_proof_and_statistics(self):
+        result = smsd.MCS.find(BENZENE).match(PHENOL)
+        assert result.best.atom_count >= 6
+        assert result.optimal and result.complete
+        assert result.nodes_visited >= 0 and result.elapsed_ms >= 0
 
-        def on_progress(mapping, size, elapsed_ms):
-            progress_calls.append((size, elapsed_ms))
+    def test_search_without_observer_returns_witness(self):
+        result = smsd.MCS.find(BENZENE).match(PHENOL)
+        assert result.found and result.best.atom_mapping
+        assert smsd.MCS.validate_mapping(BENZENE, PHENOL, result.best) == []
 
-        mapping = smsd.find_mcs_progressive(BENZENE, PHENOL,
-                                            on_progress=on_progress)
-        assert isinstance(mapping, dict)
-        assert len(mapping) >= 6  # benzene ring is common
-        assert len(progress_calls) > 0
-        # Each progress call should report non-negative size and time
-        for size, ms in progress_calls:
-            assert size >= 0
-            assert ms >= 0
+    def test_completed_enumeration_retains_optimum_score(self):
+        query = smsd.MCS.find(BENZENE)
+        first, all_results = query.match(ASPIRIN), query.match_all(ASPIRIN)
+        assert first.score == all_results.score == 6
+        assert all(match.atom_count == 6 for match in all_results.matches)
+        assert first.optimal and all_results.complete
 
-    def test_find_mcs_progressive_no_callback(self):
-        """find_mcs_progressive with no callback should still return result."""
-        mapping = smsd.find_mcs_progressive(BENZENE, PHENOL, on_progress=None)
-        assert isinstance(mapping, dict)
-        assert len(mapping) > 0
+    def test_search_result_basic(self):
+        result = smsd.MCS.find(BENZENE).match(PHENOL)
+        assert isinstance(result, smsd.SearchResult)
+        assert isinstance(result.best, smsd.Match)
+        assert result.best.atom_count >= 6
+        assert len(result.best.atom_mapping) == result.best.atom_count
+        assert result.best.bond_count == 6
+        assert len(result.best.fragments) == 1
 
-    def test_find_mcs_progressive_sizes_monotonic(self):
-        """Progress callback sizes should be monotonically non-decreasing."""
-        sizes = []
+    def test_search_result_smiles(self):
+        result = smsd.MCS.find(BENZENE).match(PHENOL)
+        assert isinstance(result.best.to_smiles(BENZENE), str)
 
-        def on_progress(mapping, size, elapsed_ms):
-            sizes.append(size)
+    def test_search_result_counts(self):
+        match = smsd.MCS.find(BENZENE).match(PHENOL).best
+        assert len(match.atom_mapping) == match.atom_count
+        assert len(match.bond_mapping) == match.bond_count
 
-        smsd.find_mcs_progressive(BENZENE, ASPIRIN, on_progress=on_progress)
-        for i in range(1, len(sizes)):
-            assert sizes[i] >= sizes[i - 1], \
-                f"Size decreased from {sizes[i-1]} to {sizes[i]}"
+    def test_search_result_repr(self):
+        rendered = repr(smsd.MCS.find(BENZENE).match(PHENOL))
+        assert "SearchResult" in rendered and "status=" in rendered
+        assert "optimal=" in rendered and "complete=" in rendered
 
-    def test_mcs_result_basic(self):
-        """mcs_result should return a MatchResult with correct attributes."""
-        result = smsd.mcs_result(BENZENE, PHENOL)
-        assert isinstance(result, smsd.MatchResult)
-        assert result.size >= 6
-        assert isinstance(result.mapping, dict)
-        assert len(result.mapping) == result.size
-        assert result.query_atoms == 6   # benzene
-        assert result.target_atoms == 7  # phenol
-        assert 0.0 <= result.overlap <= 1.0
-        assert 0.0 <= result.overlapCoefficient <= 1.0
+    def test_smiles_search_materialises_common_graph(self):
+        result = smsd.MCS.find(BENZENE).match(PHENOL)
+        assert isinstance(result, smsd.SearchResult)
+        assert result.best.atom_count >= 6
+        assert result.best.to_smiles(BENZENE)
 
-    def test_mcs_result_mcs_smiles(self):
-        """mcs_result should include mcs_smiles string."""
-        result = smsd.mcs_result(BENZENE, PHENOL)
-        assert isinstance(result.mcs_smiles, str)
+    def test_smiles_search_identical(self):
+        result = smsd.MCS.find(ETHANOL).match(ETHANOL)
+        assert result.best.atom_count == 3
+        assert result.score == 3 and result.optimal
 
-    def test_mcs_result_len(self):
-        """len(MatchResult) should equal .size."""
-        result = smsd.mcs_result(BENZENE, PHENOL)
-        assert len(result) == result.size
-
-    def test_mcs_result_repr(self):
-        """MatchResult repr should contain useful info."""
-        result = smsd.mcs_result(BENZENE, PHENOL)
-        r = repr(result)
-        assert "MatchResult" in r
-        assert "size=" in r
-        # v7.1.1 fix: separate `overlap=` (Simpson) and `tanimoto=` fields
-        # after the overlapCoefficient semantic bug fix.
-        assert "overlap=" in r
-        assert "tanimoto=" in r
-
-    def test_mcs_from_smiles_basic(self):
-        """mcs_from_smiles should parse, compute MCS, and return MatchResult."""
-        result = smsd.mcs_from_smiles(BENZENE, PHENOL)
-        assert isinstance(result, smsd.MatchResult)
-        assert result.size >= 6
-        assert isinstance(result.mcs_smiles, str)
-        assert len(result.mcs_smiles) > 0
-
-    def test_mcs_from_smiles_identical(self):
-        """mcs_from_smiles with identical SMILES should give perfect overlap."""
-        result = smsd.mcs_from_smiles(ETHANOL, ETHANOL)
-        assert result.size == 3  # C, C, O
-        assert result.overlap == pytest.approx(1.0)
-
-    def test_mcs_from_smiles_invalid_empty(self):
-        """mcs_from_smiles should raise ValueError on empty SMILES."""
+    def test_empty_smiles_is_rejected(self):
         with pytest.raises(ValueError):
-            smsd.mcs_from_smiles("", BENZENE)
+            smsd.MCS.find("").match(BENZENE)
         with pytest.raises(ValueError):
-            smsd.mcs_from_smiles(BENZENE, "")
+            smsd.MCS.find(BENZENE).match("")
 
-    def test_match_result_construction(self):
-        """MatchResult can be manually constructed."""
-        r = smsd.MatchResult({0: 0, 1: 1}, 5, 8, "CC")
-        assert r.size == 2
-        assert r.query_atoms == 5
-        assert r.target_atoms == 8
-        assert r.mcs_smiles == "CC"
-        assert r.overlap == pytest.approx(2.0 / 5.0)
+    def test_match_construction(self):
+        match = smsd.Match({0: 0, 1: 1}, ((0, 1, 0, 1),), ((0, 1),))
+        assert match.atom_count == 2 and match.bond_count == 1
+        assert smsd.parse_smiles(match.to_smiles("CCN")).n == 2
+        assert match.fragments == ((0, 1),)
 
-    def test_match_result_zero_atoms(self):
-        """MatchResult with zero-size molecule should handle gracefully."""
-        r = smsd.MatchResult({}, 0, 0, "")
-        assert r.size == 0
-        assert r.overlap == 0.0
-        assert r.overlapCoefficient == 0.0
+    def test_match_zero_atoms(self):
+        match = smsd.Match({}, (), ())
+        assert match.atom_count == 0 and match.bond_count == 0
+        assert match.to_smiles(smsd.parse_smiles("")) == ""
 
 
 # ===========================================================================
@@ -384,96 +335,68 @@ class TestBatchOps:
         """Pre-parsed molecules for batch tests."""
         return [smsd.parse_smiles(s) for s in BATCH_CORPUS]
 
-    def test_batch_substructure_basic(self, corpus):
-        """batch_substructure should return list of bools."""
-        query = smsd.parse_smiles(BENZENE)
-        results = smsd.batch_substructure(query, corpus)
-        assert isinstance(results, list)
+    def test_match_many_substructure_basic(self, corpus):
+        results = smsd.Substructure.find(BENZENE).match_many(corpus)
+        assert isinstance(results, list) and len(results) == len(corpus)
+        assert all(isinstance(result, smsd.SearchResult) for result in results)
+        assert all(result.complete for result in results)
+
+    def test_match_many_benzene_in_phenol(self, corpus):
+        results = smsd.Substructure.find(BENZENE).match_many(BATCH_CORPUS)
+        assert [result.found for result in results[:4]] == [True, True, True, False]
+
+    def test_match_many_substructure_witnesses(self, corpus):
+        results = smsd.Substructure.find(BENZENE).match_many(corpus)
         assert len(results) == len(corpus)
-        assert all(isinstance(r, bool) for r in results)
+        assert all(result.best.atom_count == 6 for result in results if result.found)
 
-    def test_batch_substructure_benzene_in_phenol(self, corpus):
-        """Benzene should be substructure of phenol, toluene, aniline, etc."""
-        results = smsd.batch_substructure(BENZENE, BATCH_CORPUS)
-        # Phenol (index 0), Toluene (1), Aniline (2) should match
-        assert results[0] is True   # phenol
-        assert results[1] is True   # toluene
-        assert results[2] is True   # aniline
-        assert results[3] is False  # ethanol
+    def test_match_many_substructure_presence(self):
+        results = smsd.Substructure.find(BENZENE).match_many([PHENOL, ETHANOL])
+        assert results[0].best.atom_mapping
+        assert not results[1].found and results[1].complete
 
-    def test_batch_find_substructure_basic(self, corpus):
-        """batch_find_substructure should return mappings per target."""
-        query = smsd.parse_smiles(BENZENE)
-        results = smsd.batch_find_substructure(query, corpus)
-        assert isinstance(results, list)
+    def test_match_many_mcs_basic(self, corpus):
+        results = smsd.MCS.find(BENZENE).match_many(corpus)
+        assert isinstance(results, list) and len(results) == len(corpus)
+        assert all(result.optimal for result in results)
+
+    def test_match_many_mcs_benzene_phenol_size(self):
+        results = smsd.MCS.find(BENZENE).match_many([PHENOL])
+        assert len(results) == 1 and results[0].best.atom_count >= 6
+
+    def test_match_many_mcs_scores(self, corpus):
+        results = smsd.MCS.find(BENZENE).match_many(corpus)
         assert len(results) == len(corpus)
+        assert all(result.score >= 0 for result in results)
+        assert all(result.score == (result.best.atom_count if result.found else 0) for result in results)
 
-    def test_batch_find_substructure_has_mappings(self):
-        """batch_find_substructure should produce non-empty mappings for matches."""
-        results = smsd.batch_find_substructure(BENZENE,
-                                               [PHENOL, ETHANOL])
-        # Phenol should have a mapping
-        assert len(results[0]) > 0
-        # Ethanol should not
-        assert len(results[1]) == 0
+    def test_match_many_mcs_size_values(self):
+        results = smsd.MCS.find(BENZENE).match_many([PHENOL, ETHANOL])
+        assert results[0].best.atom_count >= 6
+        assert results[1].best.atom_count >= 1
 
-    def test_batch_mcs_basic(self, corpus):
-        """batch_mcs should return dicts of atom mappings."""
+    def test_screened_search_returns_original_target_indices(self, corpus):
         query = smsd.parse_smiles(BENZENE)
-        results = smsd.batch_mcs(query, corpus)
-        assert isinstance(results, list)
-        assert len(results) == len(corpus)
+        indices = smsd.screen_targets(query, corpus, 0.0)
+        results = smsd.Substructure.find(query).match_many([corpus[index] for index in indices])
+        hits = [(index, result.best.atom_mapping) for index, result in zip(indices, results) if result.found]
+        assert hits
+        assert all(0 <= index < len(corpus) and len(mapping) == 6 for index, mapping in hits)
 
-    def test_batch_mcs_benzene_phenol_size(self):
-        """batch_mcs of benzene vs phenol should have MCS size >= 6."""
-        results = smsd.batch_mcs(BENZENE, [PHENOL])
-        assert len(results) == 1
-        assert len(results[0]) >= 6
-
-    def test_batch_mcs_size_basic(self, corpus):
-        """batch_mcs_size should return list of integers."""
+    def test_screened_search_high_threshold(self, corpus):
         query = smsd.parse_smiles(BENZENE)
-        results = smsd.batch_mcs_size(query, corpus)
+        indices = smsd.screen_targets(query, corpus, 0.99)
+        results = smsd.Substructure.find(query).match_many([corpus[index] for index in indices])
         assert isinstance(results, list)
-        assert len(results) == len(corpus)
-        assert all(isinstance(r, int) for r in results)
+        assert all(result.complete for result in results)
 
-    def test_batch_mcs_size_values(self):
-        """batch_mcs_size should give correct sizes for known pairs."""
-        results = smsd.batch_mcs_size(BENZENE, [PHENOL, ETHANOL])
-        assert results[0] >= 6   # benzene ring is in phenol
-        assert results[1] >= 1   # at least one common atom
-
-    def test_screen_and_match_basic(self, corpus):
-        """screen_and_match should return (index, mapping) tuples."""
+    def test_screened_mcs_reports_scores(self, corpus):
         query = smsd.parse_smiles(BENZENE)
-        results = smsd.screen_and_match(query, corpus, threshold=0.0)
-        assert isinstance(results, list)
-        # With threshold=0.0, should return some hits
-        for item in results:
-            assert isinstance(item, tuple)
-            assert len(item) == 2
-            idx, mapping = item
-            assert isinstance(idx, int)
-
-    def test_screen_and_match_high_threshold(self, corpus):
-        """screen_and_match with threshold=1.0 should return few/no results."""
-        results = smsd.screen_and_match(METHANE, corpus, threshold=0.99)
-        # Very high threshold with tiny query should filter most out
-        assert isinstance(results, list)
-
-    def test_screen_and_mcs_size_basic(self, corpus):
-        """screen_and_mcs_size should return (index, size) tuples."""
-        query = smsd.parse_smiles(BENZENE)
-        results = smsd.screen_and_mcs_size(query, corpus, threshold=0.0)
-        assert isinstance(results, list)
-        for item in results:
-            assert isinstance(item, tuple)
-            assert len(item) == 2
-            idx, size = item
-            assert isinstance(idx, int)
-            assert isinstance(size, int)
-            assert size >= 0
+        indices = smsd.screen_targets(query, corpus, 0.0)
+        results = smsd.MCS.find(query).match_many([corpus[index] for index in indices])
+        scores = [(index, result.best.atom_count if result.found else 0) for index, result in zip(indices, results)]
+        assert scores
+        assert all(isinstance(index, int) and isinstance(size, int) and size >= 0 for index, size in scores)
 
     def test_batch_similarity_basic(self):
         """batch_similarity should return sorted (index, score) tuples."""
@@ -501,18 +424,13 @@ class TestBatchOps:
             assert isinstance(score, float)
             assert 0.0 <= score <= 1.0
 
-    def test_batch_mcs_constrained_basic(self):
-        """batch_mcs_constrained with two queries against one target."""
-        # Two small reactants mapping onto a larger product
-        queries = [smsd.parse_smiles(BENZENE),
-                   smsd.parse_smiles(ETHANOL)]
-        targets = [smsd.parse_smiles(ASPIRIN)]
-        results = smsd.batch_mcs_constrained(queries, targets)
-        assert isinstance(results, list)
+    def test_constrained_queries_do_not_reuse_target_atoms(self):
+        queries = [smsd.parse_smiles(BENZENE), smsd.parse_smiles(ETHANOL)]
+        results = smsd.MCS.match_constrained(queries, smsd.parse_smiles(ASPIRIN))
         assert len(results) == 2
-        # Each result should be a dict
-        for r in results:
-            assert isinstance(r, dict)
+        mappings = [result.best.atom_mapping if result.found else {} for result in results]
+        assert mappings[0] and mappings[1]
+        assert not set(mappings[0].values()) & set(mappings[1].values())
 
 
 # ===========================================================================
@@ -555,36 +473,25 @@ class TestTargetCorpus:
         assert corpus.is_prewarmed
 
     def test_substructure(self):
-        """substructure query should return list of bools."""
         corpus = smsd.TargetCorpus.from_smiles([PHENOL, ETHANOL, TOLUENE])
         corpus.prewarm()
-        results = corpus.substructure(BENZENE)
-        assert isinstance(results, list)
-        assert len(results) == 3
-        assert results[0] is True   # phenol contains benzene
-        assert results[1] is False  # ethanol does not
-        assert results[2] is True   # toluene contains benzene
+        results = smsd.Substructure.find(BENZENE).match_many(corpus)
+        assert [result.found for result in results] == [True, False, True]
 
-    def test_find_substructure(self):
-        """find_substructure should return mappings per target."""
+    def test_substructure_mappings(self):
         corpus = smsd.TargetCorpus.from_smiles([PHENOL, ETHANOL])
         corpus.prewarm()
-        results = corpus.find_substructure(BENZENE)
-        assert isinstance(results, list)
+        results = smsd.Substructure.find(BENZENE).match_many(corpus)
         assert len(results) == 2
-        assert len(results[0]) > 0  # phenol has a match
-        assert len(results[1]) == 0  # ethanol does not
+        assert results[0].best.atom_mapping and not results[1].found
 
-    def test_mcs_size(self):
-        """mcs_size should return list of ints."""
+    def test_corpus_mcs_sizes(self):
         corpus = smsd.TargetCorpus.from_smiles([PHENOL, ETHANOL, BENZENE])
         corpus.prewarm()
-        results = corpus.mcs_size(BENZENE)
-        assert isinstance(results, list)
+        results = smsd.MCS.find(BENZENE).match_many(corpus)
         assert len(results) == 3
-        assert all(isinstance(r, int) for r in results)
-        assert results[0] >= 6  # phenol shares benzene ring
-        assert results[2] >= 6  # benzene vs benzene
+        assert results[0].best.atom_count >= 6 and results[2].best.atom_count >= 6
+        assert all(result.optimal for result in results)
 
     def test_screen(self):
         """screen should return list of target indices above threshold."""
@@ -593,7 +500,7 @@ class TestTargetCorpus:
         results = corpus.screen(BENZENE, threshold=0.0)
         assert isinstance(results, list)
         # With threshold=0.0, should return all indices
-        assert len(results) <= len(BATCH_CORPUS)
+        assert sorted(results) == list(range(len(BATCH_CORPUS)))
         for idx in results:
             assert isinstance(idx, int)
             assert 0 <= idx < len(BATCH_CORPUS)
@@ -612,11 +519,9 @@ class TestTargetCorpus:
         assert not corpus.is_prewarmed
 
     def test_substructure_without_prewarm(self):
-        """substructure should work even without prewarm (just slower)."""
         corpus = smsd.TargetCorpus.from_smiles([PHENOL, ETHANOL])
-        results = corpus.substructure(BENZENE)
-        assert isinstance(results, list)
-        assert len(results) == 2
+        results = smsd.Substructure.find(BENZENE).match_many(corpus)
+        assert len(results) == 2 and results[0].found and not results[1].found
 
 
 # ===========================================================================
@@ -708,37 +613,28 @@ class TestScaffoldGraph:
         # These represent the same molecule (benzene)
         assert smsd.same_canonical_graph(m1, m2) is True
 
-    def test_find_nmcs_basic(self):
-        """find_nmcs should find common substructure across multiple molecules."""
-        mols = [smsd.parse_smiles(s) for s in [PHENOL, TOLUENE, ANILINE]]
-        result = smsd.find_nmcs(mols, threshold=1.0, timeout_ms=10000)
-        # All share benzene-derived substructure
-        assert len(result) >= 5
+    def test_consensus_basic(self):
+        molecules = [smsd.parse_smiles(smiles) for smiles in [PHENOL, TOLUENE, ANILINE]]
+        options = smsd.MCS.Options()
+        options.timeout_ms = 10000
+        result = smsd.MCS.consensus(molecules, options=options, threshold=1.0)
+        assert result.found and result.graph.n >= 5
+        assert result.support_count == 3
+        assert all(len(match.atom_mapping) == result.graph.n for match in result.mappings.values())
 
-    def test_find_scaffold_mcs(self):
-        """find_scaffold_mcs should find shared scaffold between two molecules."""
-        m1 = smsd.parse_smiles(NAPHTHALENE)
-        m2 = smsd.parse_smiles(BENZENE)
-        result = smsd.find_scaffold_mcs(m1, m2)
-        assert len(result) >= 6  # benzene is shared
+    def test_scaffold_mcs(self):
+        query = smsd.murcko_scaffold(smsd.parse_smiles(NAPHTHALENE))
+        target = smsd.murcko_scaffold(smsd.parse_smiles(BENZENE))
+        result = smsd.MCS.find(query).match(target)
+        assert result.best.atom_count >= 6
 
     def test_validate_mapping_valid(self):
-        """validate_mapping on a correct MCS mapping should return no errors."""
-        m1 = smsd.parse_smiles(BENZENE)
-        m2 = smsd.parse_smiles(PHENOL)
-        mapping = smsd.find_mcs(m1, m2)
-        errors = smsd.validate_mapping(m1, m2, mapping)
-        assert isinstance(errors, list)
-        assert len(errors) == 0
+        result = smsd.MCS.find(BENZENE).match(PHENOL)
+        assert smsd.MCS.validate_mapping(BENZENE, PHENOL, result.best) == []
 
     def test_validate_mapping_invalid(self):
-        """validate_mapping on a bad mapping should return error strings."""
-        m1 = smsd.parse_smiles(BENZENE)
-        m2 = smsd.parse_smiles(ETHANOL)
-        # Intentionally bad mapping: carbon in benzene -> oxygen in ethanol
-        bad_mapping = {0: 2}  # C -> O
-        errors = smsd.validate_mapping(m1, m2, bad_mapping)
-        assert isinstance(errors, list)
+        errors = smsd.MCS.validate_mapping(BENZENE, ETHANOL, {0: 2})
+        assert isinstance(errors, list) and errors
         # May or may not find errors depending on strictness, but shouldn't crash
 
     def test_canonical_hash_deterministic(self):
@@ -847,7 +743,7 @@ class TestChemUtils:
     def test_prewarm_can_still_use_molecule(self):
         """After prewarm, molecule should work for MCS."""
         mol = smsd.prewarm(smsd.parse_smiles(BENZENE))
-        mapping = smsd.find_mcs(mol, PHENOL)
+        mapping = _atom_mapping(smsd.MCS.find(mol).match(PHENOL))
         assert len(mapping) >= 6
 
     def test_prewarm_with_smiles(self):
@@ -1006,8 +902,10 @@ class TestCoordinateTransforms:
         mol, coords = benzene_coords
         result = smsd.normalise_bond_length(mol, coords, target=1.5)
         assert len(result) == len(coords)
-        # Check that bonds are approximately 1.5 units
-        # (some variance is expected for ring systems)
+        for first in range(mol.n):
+            for second in range(first + 1, mol.n):
+                if mol.has_bond(first, second):
+                    assert math.dist(result[first], result[second]) == pytest.approx(1.5, abs=1e-6)
 
     def test_canonical_orientation(self, benzene_coords):
         """canonical_orientation should return reoriented coordinates."""
@@ -1069,14 +967,14 @@ class TestDepiction:
         """depict_pair should render two molecules side-by-side."""
         m1 = smsd.parse_smiles(BENZENE)
         m2 = smsd.parse_smiles(PHENOL)
-        mapping = smsd.find_mcs(m1, m2)
+        mapping = _atom_mapping(smsd.MCS.find(m1).match(m2))
         svg = smsd.depict_pair(m1, m2, mapping)
         assert isinstance(svg, str)
         assert len(svg) > 100
 
     def test_depict_pair_from_smiles(self):
         """depict_pair should accept SMILES strings."""
-        mapping = smsd.find_mcs(BENZENE, PHENOL)
+        mapping = _atom_mapping(smsd.MCS.find(BENZENE).match(PHENOL))
         svg = smsd.depict_pair(BENZENE, PHENOL, mapping)
         assert isinstance(svg, str)
 
@@ -1182,7 +1080,7 @@ class TestRDKitInterop:
         m2 = Chem.MolFromSmiles(PHENOL)
         g1 = smsd.from_rdkit(m1)
         g2 = smsd.from_rdkit(m2)
-        smsd_mapping = smsd.find_mcs(g1, g2)
+        smsd_mapping = _atom_mapping(smsd.MCS.find(g1).match(g2))
         translated = smsd.translate_mapping(smsd_mapping, g1, g2)
         assert isinstance(translated, dict)
         # All translated indices should be valid for the RDKit molecules
@@ -1195,12 +1093,12 @@ class TestRDKitInterop:
         result = smsd.translate_mapping({})
         assert result == {}
 
-    def test_mcs_rdkit_native_basic(self):
+    def test_mcs_rdkit_graph_inputs(self):
         """mcs_rdkit_native should find MCS with element-correct RDKit indices."""
         from rdkit import Chem
         m1 = Chem.MolFromSmiles(BENZENE)
         m2 = Chem.MolFromSmiles(PHENOL)
-        mapping = smsd.mcs_rdkit_native(m1, m2)
+        mapping = _atom_mapping(smsd.MCS.find(m1).match(m2))
         assert isinstance(mapping, dict)
         assert len(mapping) >= 6
         # Verify element correctness
@@ -1208,30 +1106,30 @@ class TestRDKitInterop:
             assert m1.GetAtomWithIdx(q).GetAtomicNum() == \
                    m2.GetAtomWithIdx(t).GetAtomicNum()
 
-    def test_mcs_rdkit_convenience(self):
+    def test_mcs_rdkit_molecule_inputs(self):
         """mcs_rdkit should work as convenience wrapper."""
         from rdkit import Chem
         m1 = Chem.MolFromSmiles(BENZENE)
         m2 = Chem.MolFromSmiles(PHENOL)
-        mapping = smsd.mcs_rdkit(m1, m2)
+        mapping = _atom_mapping(smsd.MCS.find(m1).match(m2))
         assert isinstance(mapping, dict)
         assert len(mapping) >= 6
 
-    def test_substructure_rdkit_basic(self):
-        """substructure_rdkit should find benzene in phenol."""
+    def test_substructure_rdkit_molecule_inputs(self):
+        """Substructure.find should find benzene in phenol."""
         from rdkit import Chem
         benzene = Chem.MolFromSmiles(BENZENE)
         phenol = Chem.MolFromSmiles(PHENOL)
-        result = smsd.substructure_rdkit(benzene, phenol)
+        result = _atom_mapping(smsd.Substructure.find(benzene).match(phenol))
         assert isinstance(result, dict)
         assert len(result) > 0
 
-    def test_batch_mcs_rdkit_basic(self):
-        """batch_mcs_rdkit should process multiple targets."""
+    def test_mcs_rdkit_many_targets(self):
+        """Prepared MCS should process multiple targets."""
         from rdkit import Chem
         query = Chem.MolFromSmiles(BENZENE)
         targets = [Chem.MolFromSmiles(s) for s in [PHENOL, ETHANOL]]
-        results = smsd.batch_mcs_rdkit(query, targets)
+        results = [_atom_mapping(result) for result in smsd.MCS.find(query).match_many(targets)]
         assert isinstance(results, list)
         assert len(results) == 2
         # Phenol should have MCS >= 6
@@ -1253,15 +1151,12 @@ class TestRDKitInterop:
 # ===========================================================================
 
 class TestEnums:
-    """Tests for MatcherEngine, Solvent, BondOrderMode, and RingFusionMode."""
+    """Tests for search objectives, Solvent, BondOrderMode and RingFusionMode."""
 
-    def test_matcher_engine_has_members(self):
-        """MatcherEngine enum should exist and have known members."""
-        assert hasattr(smsd, 'MatcherEngine')
-        # Check it has at least some expected values
-        engine = smsd.MatcherEngine
-        # Should be able to iterate or access members
-        assert engine is not None
+    def test_public_objectives_replace_engine_selectors(self):
+        assert not hasattr(smsd, "MatcherEngine")
+        assert smsd.MCS.Objective.MCIS != smsd.MCS.Objective.MCES
+        assert smsd.MCS.Connectivity.CONNECTED != smsd.MCS.Connectivity.FRAGMENTS
 
     def test_solvent_has_members(self):
         """Solvent enum should exist."""
@@ -1308,112 +1203,63 @@ class TestEnums:
 # ===========================================================================
 
 class TestSMARTSAdvanced:
-    """Tests for SMARTS-based matching: find_mcs_smarts, compile_smarts,
-    and SmartsQuery."""
+    """SMARTS predicate preparation, first match and complete enumeration."""
 
     @pytest.fixture(autouse=True)
     def _check_smarts(self):
-        """Skip all SMARTS tests if SMARTS support is not compiled."""
-        if not smsd._HAS_SMARTS:
-            pytest.skip("SMARTS support not available in this build")
+        assert callable(smsd.Substructure.smarts)
 
-    def test_find_mcs_smarts_basic(self):
-        """find_mcs_smarts should match amide pattern in target."""
-        target = smsd.parse_smiles("CC(=O)Nc1ccc(O)cc1")
-        mapping = smsd.find_mcs_smarts("[CX3](=O)[NX3]", target)
-        assert isinstance(mapping, dict)
-        assert len(mapping) >= 3  # C, =O, N
+    def test_smarts_amide_predicate(self):
+        result = smsd.Substructure.smarts("[CX3](=O)[NX3]").match("CC(=O)Nc1ccc(O)cc1")
+        assert result.best.atom_count == 3 and result.complete
 
-    def test_find_mcs_smarts_no_match(self):
-        """find_mcs_smarts with non-matching pattern returns empty dict."""
-        target = smsd.parse_smiles(ETHANOL)
-        mapping = smsd.find_mcs_smarts("[#16]", target)  # sulfur
-        assert mapping == {}
+    def test_smarts_completed_absence(self):
+        result = smsd.Substructure.smarts("[#16]").match(ETHANOL)
+        assert not result.found and result.complete
 
-    def test_find_mcs_smarts_carbon_pattern(self):
-        """find_mcs_smarts with simple carbon pattern."""
-        target = smsd.parse_smiles(PROPANE)
-        mapping = smsd.find_mcs_smarts("[#6]", target)
-        assert len(mapping) >= 1
+    def test_smarts_carbon_pattern(self):
+        assert smsd.Substructure.smarts("[#6]").match(PROPANE).best.atom_count == 1
 
-    def test_compile_smarts_basic(self):
-        """compile_smarts should return a SmartsQuery object."""
-        if smsd.SmartsQuery is None:
-            pytest.skip("SmartsQuery not available")
-        query = smsd.compile_smarts("[#6]~[#7]")
-        assert query is not None
+    def test_prepare_smarts(self):
+        assert isinstance(smsd.Substructure.smarts("[#6]~[#7]"), smsd.Substructure)
 
-    def test_compile_smarts_invalid_type(self):
-        """compile_smarts with non-string should raise TypeError."""
-        with pytest.raises(TypeError):
-            smsd.compile_smarts(42)
+    def test_smarts_invalid_type(self):
+        with pytest.raises((TypeError, ValueError)):
+            smsd.Substructure.smarts(42)
 
     def test_smarts_query_matches(self):
-        """SmartsQuery.matches should detect pattern in molecule."""
-        if smsd.SmartsQuery is None:
-            pytest.skip("SmartsQuery not available")
-        query = smsd.compile_smarts("[#6]~[#7]")
-        mol = smsd.parse_smiles(ANILINE)
-        assert query.matches(mol) is True
+        assert smsd.Substructure.smarts("[#6]~[#7]").match(ANILINE).found
 
     def test_smarts_query_no_match(self):
-        """SmartsQuery.matches should return False for non-matching mol."""
-        if smsd.SmartsQuery is None:
-            pytest.skip("SmartsQuery not available")
-        query = smsd.compile_smarts("[#6]~[#16]")  # C-S
-        mol = smsd.parse_smiles(BENZENE)
-        assert query.matches(mol) is False
+        assert not smsd.Substructure.smarts("[#6]~[#16]").match(BENZENE).found
 
-    def test_smarts_query_find_all(self):
-        """SmartsQuery.find_all should return list of mappings."""
-        if smsd.SmartsQuery is None:
-            pytest.skip("SmartsQuery not available")
-        query = smsd.compile_smarts("[#6]")
-        mol = smsd.parse_smiles(PROPANE)
-        matches = query.find_all(mol)
-        assert isinstance(matches, list)
-        assert len(matches) == 3  # 3 carbons
+    def test_smarts_query_all(self):
+        result = smsd.Substructure.smarts("[#6]").match_all(PROPANE)
+        assert len(result.matches) == 3 and result.complete
+        assert {next(iter(match.atom_mapping.values())) for match in result.matches} == {0, 1, 2}
 
-    def test_smarts_query_matches_many(self):
-        """SmartsQuery.matches_many should check pattern in multiple mols."""
-        if smsd.SmartsQuery is None:
-            pytest.skip("SmartsQuery not available")
-        if not hasattr(smsd.SmartsQuery, 'matches_many'):
-            # Fallback: test via individual matches calls
-            query = smsd.compile_smarts("[#6]~[#7]")
-            mols = [smsd.parse_smiles(s) for s in [ANILINE, BENZENE, ETHANOL]]
-            results = [query.matches(m) for m in mols]
-            assert results[0] is True   # aniline has C-N
-            assert results[1] is False  # benzene has no N
-            assert results[2] is False  # ethanol has no N
-            return
-        query = smsd.compile_smarts("[#6]~[#7]")
-        mols = [smsd.parse_smiles(s) for s in [ANILINE, BENZENE, ETHANOL]]
-        results = query.matches_many(mols)
+    def test_smarts_query_many(self):
+        query = smsd.Substructure.smarts("[#6]~[#7]")
+        results = query.match_many([ANILINE, BENZENE, ETHANOL])
         assert isinstance(results, list)
-        assert len(results) == 3
-        assert results[0] is True   # aniline has C-N
-        assert results[1] is False  # benzene has no N
+        assert [result.found for result in results] == [True, False, False]
 
-    def test_smarts_match_convenience(self):
-        """smsd.smarts_match convenience function should work."""
-        assert smsd.smarts_match("[#6]~[#7]", ANILINE) is True
-        assert smsd.smarts_match("[#6]~[#7]", BENZENE) is False
+    def test_smarts_first(self):
+        query = smsd.Substructure.smarts("[#6]~[#7]")
+        assert query.match(ANILINE).found
+        assert not query.match(BENZENE).found
 
-    def test_smarts_find_all_convenience(self):
-        """smsd.smarts_find_all convenience function should work."""
-        matches = smsd.smarts_find_all("[#6]", PROPANE)
-        assert isinstance(matches, list)
-        assert len(matches) == 3
+    def test_smarts_all_limit(self):
+        result = smsd.Substructure.smarts("[#6]").match_all(PROPANE, 2)
+        assert len(result.matches) == 2
+        assert result.status == smsd.SearchStatus.LIMIT_REACHED and not result.complete
+        assert result.optimal
 
-    def test_compile_smarts_reusable(self):
-        """Compiled SMARTS query should be reusable across molecules."""
-        if smsd.SmartsQuery is None:
-            pytest.skip("SmartsQuery not available")
-        query = smsd.compile_smarts("[OH]")
-        assert query.matches(smsd.parse_smiles(PHENOL)) is True
-        assert query.matches(smsd.parse_smiles(BENZENE)) is False
-        assert query.matches(smsd.parse_smiles(ETHANOL)) is True
+    def test_smarts_reusable(self):
+        query = smsd.Substructure.smarts("[OH]")
+        assert query.match(PHENOL).found
+        assert not query.match(BENZENE).found
+        assert query.match(ETHANOL).found
 
 
 # ===========================================================================
@@ -1423,30 +1269,18 @@ class TestSMARTSAdvanced:
 class TestV711BugFixes:
     """Regression guards for the three bug fixes shipped in v7.1.1."""
 
-    def test_match_result_overlap_is_simpson(self):
-        """MatchResult.overlap must return Szymkiewicz-Simpson overlap
-        `size / min(|A|, |B|)`, NOT the Tanimoto / Jaccard index.
+    def test_match_counts_support_distinct_similarity_metrics(self):
+        size = smsd.MCS.find(PHENOL).match(BENZENE).best.atom_count
+        assert size == 6
+        assert size / min(7, 6) == pytest.approx(1.0, abs=1e-6)
+        assert size / (7 + 6 - size) == pytest.approx(6.0 / 7.0, abs=1e-6)
 
-        v7.1.1 fix: the historical `overlapCoefficient` attribute was
-        documented as Simpson overlap but silently computed Tanimoto.
-        """
-        # Phenol (7 atoms) vs benzene (6 atoms).  MCS is benzene (6 atoms).
-        # Simpson  = 6 / min(7, 6)     = 6/6 = 1.000
-        # Tanimoto = 6 / (7 + 6 - 6)   = 6/7 ≈ 0.857
-        r = smsd.mcs_result(PHENOL, BENZENE)
-        assert r.size == 6
-        assert r.overlap == pytest.approx(1.0, abs=1e-6)
-        assert r.overlapCoefficient == pytest.approx(1.0, abs=1e-6)
-        assert r.tanimoto == pytest.approx(6.0 / 7.0, abs=1e-6)
-
-    def test_match_result_repr_exposes_both_metrics(self):
-        """MatchResult.__repr__ must show both `overlap=` and `tanimoto=`
-        so the semantic distinction is visible at a glance."""
-        r = smsd.mcs_result(BENZENE, PHENOL)
-        s = repr(r)
-        assert "MatchResult" in s
-        assert "overlap=" in s
-        assert "tanimoto=" in s
+    def test_search_result_repr_exposes_proof_and_completion(self):
+        result = smsd.MCS.find(BENZENE).match_all(PHENOL, 1)
+        rendered = repr(result)
+        assert "SearchResult" in rendered
+        assert "optimal=" in rendered and "complete=" in rendered
+        assert result.optimal and not result.complete
 
     def test_canonical_smiles_accepts_string(self):
         """v7.1.1 fix: `smsd.canonical_smiles(smi_str)` and
@@ -1515,7 +1349,7 @@ class TestV711BugFixes:
         for smi_in in [
             "c1cc[nH]c1",          # pyrrole
             "c1ccc2[nH]ccc2c1",    # indole
-            "c1ccc2cc[nH]c2c1",    # isoindole
+            "c1ccc2cc[nH]c2c1",    # indole
             "c1ccc2c(c1)[nH]c3ccccc23",  # carbazole
         ]:
             m = smsd.parse_smiles(smi_in)

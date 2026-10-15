@@ -149,7 +149,9 @@ static PairResult benchmarkPair(Mol& a, Mol& b) {
     auto t0 = std::chrono::high_resolution_clock::now();
     std::map<int,int> tautMCS;
     try {
-        tautMCS = findMCS(a.graph, b.graph, tautOpts, mcsOpts);
+        mcsOpts.chemistry = tautOpts;
+        const auto result = MCS::find(a.graph).withOptions(mcsOpts).match(b.graph);
+        if (!result.matches.empty()) tautMCS = result.matches.front().atomMapping;
     } catch (...) {}
     auto t1 = std::chrono::high_resolution_clock::now();
     double tautTimeMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
@@ -158,7 +160,9 @@ static PairResult benchmarkPair(Mol& a, Mol& b) {
     t0 = std::chrono::high_resolution_clock::now();
     std::map<int,int> defMCS;
     try {
-        defMCS = findMCS(a.graph, b.graph, defOpts, mcsOpts);
+        mcsOpts.chemistry = defOpts;
+        const auto result = MCS::find(a.graph).withOptions(mcsOpts).match(b.graph);
+        if (!result.matches.empty()) defMCS = result.matches.front().atomMapping;
     } catch (...) {}
     t1 = std::chrono::high_resolution_clock::now();
     double defTimeMs = std::chrono::duration<double, std::milli>(t1 - t0).count();

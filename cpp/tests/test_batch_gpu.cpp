@@ -1,3 +1,4 @@
+#include "search_test_helpers.hpp"
 /*
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
@@ -227,7 +228,7 @@ TEST(batchSubstructure_basic) {
     opts.aromaticityMode = smsd::ChemOptions::AromaticityMode::FLEXIBLE;
     opts.ringMatchesRingOnly = false;
     std::vector<smsd::MolGraph> targets = {phenol, chain3};
-    auto results = smsd::batch::batchSubstructure(benzene, targets, opts);
+    auto results = smsd_test::substructureBatch(benzene, targets, opts);
     ASSERT_EQ(results.size(), 2u);
     ASSERT_TRUE(results[0]);
     ASSERT_TRUE(!results[1]);
@@ -242,7 +243,7 @@ TEST(batchSubstructure_100_molecules) {
     targets.reserve(100);
     for (int i = 0; i < 100; ++i)
         targets.push_back(makeChain(i + 2));
-    auto results = smsd::batch::batchSubstructure(query, targets, opts);
+    auto results = smsd_test::substructureBatch(query, targets, opts);
     ASSERT_EQ(results.size(), 100u);
     ASSERT_TRUE(!results[0]);
     for (int i = 1; i < 100; ++i)
@@ -253,7 +254,7 @@ TEST(batchSubstructure_empty) {
     auto query = makeBenzene();
     smsd::ChemOptions opts;
     std::vector<smsd::MolGraph> empty;
-    auto results = smsd::batch::batchSubstructure(query, empty, opts);
+    auto results = smsd_test::substructureBatch(query, empty, opts);
     ASSERT_EQ(results.size(), 0u);
 }
 
@@ -267,7 +268,7 @@ TEST(batchMCS_basic) {
     smsd::MCSOptions mcsOpts;
     mcsOpts.timeoutMs = 5000;
     std::vector<smsd::MolGraph> targets = {phenol};
-    auto results = smsd::batch::batchMCS(benzene, targets, chem, mcsOpts);
+    auto results = smsd_test::commonBatch(benzene, targets, chem, mcsOpts);
     ASSERT_EQ(results.size(), 1u);
     ASSERT_TRUE(results[0].size() >= 6u);
 }
@@ -283,7 +284,7 @@ TEST(batchMCS_50_pairs) {
     targets.reserve(50);
     for (int i = 0; i < 50; ++i)
         targets.push_back(makeChain(i + 3));
-    auto results = smsd::batch::batchMCS(query, targets, chem, mcsOpts);
+    auto results = smsd_test::commonBatch(query, targets, chem, mcsOpts);
     ASSERT_EQ(results.size(), 50u);
     for (int i = 0; i < 50; ++i) {
         int targetN = i + 3;
@@ -305,7 +306,7 @@ TEST(screenAndMatch_pipeline) {
     targets.push_back(makeNaphthalene());
     targets.push_back(makeChain(3));
     targets.push_back(makeChain(5));
-    auto results = smsd::batch::screenAndMatch(query, targets, chem, mcsOpts, 0.1);
+    auto results = smsd_test::screenedCommon(query, targets, chem, mcsOpts, 0.1);
     bool foundPhenol = false, foundNaph = false;
     for (auto& [idx, mapping] : results) {
         if (idx == 0) foundPhenol = true;
@@ -375,8 +376,8 @@ TEST(openmp_sequential_consistency) {
     std::vector<smsd::MolGraph> targets;
     for (int i = 0; i < 30; ++i)
         targets.push_back(makeChain(i + 2));
-    auto seq = smsd::batch::batchSubstructure(query, targets, opts, 1);
-    auto par = smsd::batch::batchSubstructure(query, targets, opts, 0);
+    auto seq = smsd_test::substructureBatch(query, targets, opts, 1);
+    auto par = smsd_test::substructureBatch(query, targets, opts, 0);
     ASSERT_EQ(seq.size(), par.size());
     for (size_t i = 0; i < seq.size(); ++i)
         ASSERT_EQ(seq[i], par[i]);
@@ -392,7 +393,7 @@ TEST(performance_batch_1000) {
     for (int i = 0; i < 1000; ++i)
         targets.push_back(makeChain((i % 10) + 3));
     auto t0 = std::chrono::high_resolution_clock::now();
-    auto results = smsd::batch::batchSubstructure(query, targets, opts);
+    auto results = smsd_test::substructureBatch(query, targets, opts);
     auto t1 = std::chrono::high_resolution_clock::now();
     double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
     std::cout << "    batch substruct 1000 molecules: " << ms << " ms\n";
@@ -426,11 +427,11 @@ TEST(batchMCS_empty_inputs) {
     smsd::ChemOptions chem;
     smsd::MCSOptions mcsOpts;
     std::vector<smsd::MolGraph> targets = {makeBenzene()};
-    auto r1 = smsd::batch::batchMCS(empty, targets, chem, mcsOpts);
+    auto r1 = smsd_test::commonBatch(empty, targets, chem, mcsOpts);
     ASSERT_EQ(r1.size(), 1u);
     ASSERT_TRUE(r1[0].empty());
     std::vector<smsd::MolGraph> noTargets;
-    auto r2 = smsd::batch::batchMCS(makeBenzene(), noTargets, chem, mcsOpts);
+    auto r2 = smsd_test::commonBatch(makeBenzene(), noTargets, chem, mcsOpts);
     ASSERT_EQ(r2.size(), 0u);
 }
 
@@ -443,7 +444,7 @@ TEST(screenAndMatch_high_threshold) {
     std::vector<smsd::MolGraph> targets;
     targets.push_back(makeChain(3));
     targets.push_back(makeChain(5));
-    auto results = smsd::batch::screenAndMatch(query, targets, chem, mcsOpts, 0.99);
+    auto results = smsd_test::screenedCommon(query, targets, chem, mcsOpts, 0.99);
     ASSERT_TRUE(results.empty());
 }
 
