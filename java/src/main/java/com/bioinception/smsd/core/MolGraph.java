@@ -22,6 +22,7 @@ import org.openscience.cdk.interfaces.ITetrahedralChirality;
  */
 public final class MolGraph {
   final IAtomContainer mol;
+  private final int[] hydrogenCounts;
   final int n;
   public final int[] atomicNum, formalCharge, label, massNumber;
   int[] morganRank, orbit, canonicalLabel;
@@ -52,11 +53,9 @@ public final class MolGraph {
   final int[][] dbStereoConf;
   public int[]   tautomerClass;
   /**
-   * Per-atom pKa-informed relevance weight for tautomeric matches, in [0,1].
-   * 1.0 = atom not in any tautomeric system (no confidence penalty).
-   * Values below 1.0 express how likely this atom's current resonance form
-   * is at physiological pH 7.4, based on empirical pKa data (Sitzmann 2010).
-   * Used by SearchEngine.computeTautomerConfidence() after MCS.
+   * Baseline per-atom relevance weight for heuristic tautomer confidence, in [0,1].
+   * A value of 1.0 gives no penalty. The explicit MCS.computeTautomerConfidence
+   * helper applies solvent and pH context when reading these weights.
    */
   public float[] tautomerWeight;
   /**
@@ -70,8 +69,6 @@ public final class MolGraph {
   public final String programLine;
   public final String comment;
   public final Map<String, String> properties;
-  ChemOptions.Solvent solvent = ChemOptions.Solvent.AQUEOUS;
-  double pH = 7.4;
   int[][] sssrRings;
   int[][] rcbRings; // Relevant Cycle Basis (union of all MCBs)
   private volatile int[] ringSystemId;
@@ -146,15 +143,20 @@ public final class MolGraph {
   int[] tetrahedralLigands(int atom) {
     if (tetraLigands != null && tetraLigands[atom] != null) return tetraLigands[atom];
     int hydrogen = hydrogenCount(atom);
-    if (neighbors[atom].length + hydrogen != 4 || hydrogen > 1) return null;
+    boolean lonePair = tetraChirality != null && tetraChirality[atom] != 0 && neighbors[atom].length == 3 && hydrogen == 0
+        && (atomicNum[atom] == 7 || atomicNum[atom] == 15 || atomicNum[atom] == 16
+            || atomicNum[atom] == 33 || atomicNum[atom] == 34 || atomicNum[atom] == 51 || atomicNum[atom] == 52);
+    if (!lonePair && (neighbors[atom].length + hydrogen != 4 || hydrogen > 1)) return null;
     int[] order = new int[4];
-    int offset = hydrogen == 1 ? 1 : 0;
+    int offset = hydrogen == 1 || lonePair ? 1 : 0;
     if (offset == 1) order[0] = -1;
     System.arraycopy(neighbors[atom], 0, order, offset, neighbors[atom].length);
     return order;
   }
 
   public int atomCount() { return n; }
+
+  boolean hasHydrogenCounts() { return mol != null || hydrogenCounts != null; }
 
   /**
    * Implicit hydrogen count for atom {@code idx}.
@@ -166,11 +168,10 @@ public final class MolGraph {
    * writer to emit the stereo H count inside bracket atoms.
    *
    * <p>For CDK-backed graphs this reads
-   * {@code IAtom.getImplicitHydrogenCount()} directly, which is always
-   * accurate regardless of how bond orders are encoded. For graphs built via
-   * {@link Builder} (no CDK backing), it falls back to {@link
-   * FingerprintEngine#implicitH} using a Kekulé-equivalent bond-order sum
-   * (aromatic bonds counted as 1) so that pyrrole-like detection still works.
+   * {@code IAtom.getImplicitHydrogenCount()} when supplied, with a real-bond-valence fallback
+   * for programmatically built atoms regardless of how bond orders are encoded. For graphs built via
+   * {@link Builder}, supplied hydrogen counts are used directly. Otherwise
+   * the ordinary SMILES valence model supplies the count.
    *
    * <p>Why this method exists: SMSD internally encodes aromatic bonds as bond
    * order 4 (for bond-order matching semantics), so callers cannot compute
@@ -179,20 +180,50 @@ public final class MolGraph {
    * aromatic atom.
    */
   public int hydrogenCount(int idx) {
+    if (hydrogenCounts != null) return hydrogenCounts[idx];
     if (mol != null) {
       Integer h = mol.getAtom(idx).getImplicitHydrogenCount();
-      return h != null ? h : 0;
+      if(h!=null)return h;
+      int bondOrderSum=0;
+      for(IBond bond:mol.getConnectedBondsList(mol.getAtom(idx))) {
+        IBond.Order order=bond.getOrder();
+        bondOrderSum+=order==null||order==IBond.Order.UNSET?1:order.numeric();
+      }
+      return defaultHydrogenCount(atomicNum[idx],false,bondOrderSum,formalCharge[idx]);
     }
-    // Builder path: no CDK backing. Reconstruct a Kekulé-equivalent bond
-    // order sum by counting aromatic bonds as order 1 (single) for implicit-H
-    // arithmetic. This matches the openSMILES model used by the C++ engine
-    // when it populates its own hydrogenCount[] field.
+    return defaultHydrogenCount(idx);
+  }
+
+  /** Implicit hydrogens plus explicitly represented hydrogen neighbours. */
+  long attachedHydrogenCount(int atom) {
+    long count=hydrogenCount(atom);
+    for(int neighbor:neighbors[atom])if(atomicNum[neighbor]==1)count++;
+    return count;
+  }
+
+  /** Hydrogen count implied by an unbracketed atom's valence. */
+  private int defaultHydrogenCount(int idx) {
+    if (atomicNum[idx] <= 1) return 0;
     int bondOrdSum = 0;
     for (int nb : neighbors[idx]) {
       int bo = bondOrder(idx, nb);
       bondOrdSum += (bo == 4) ? 1 : bo;
     }
-    return FingerprintEngine.implicitH(atomicNum[idx], bondOrdSum, formalCharge[idx]);
+    return defaultHydrogenCount(atomicNum[idx], aromatic[idx], bondOrdSum, formalCharge[idx]);
+  }
+
+  /** Hydrogen count implied by the ordinary SMILES valence model. */
+  static int defaultHydrogenCount(int atomicNumber, boolean aromatic, int bondOrdSum, int charge) {
+    if (atomicNumber <= 1) return 0;
+    if (aromatic) {
+      if (charge == 0 && (atomicNumber == 7 || atomicNumber == 15) && bondOrdSum >= 3) return 0;
+      bondOrdSum++;
+    }
+    if ((charge > 0 && (atomicNumber == 7 || atomicNumber == 8 || atomicNumber == 15
+        || atomicNumber == 16 || atomicNumber == 33 || atomicNumber == 34))
+        || (charge < 0 && (atomicNumber == 5 || atomicNumber == 13)))
+      bondOrdSum -= 2 * Math.abs(charge);
+    return FingerprintEngine.implicitH(atomicNumber, bondOrdSum, charge);
   }
 
   /**
@@ -315,7 +346,7 @@ public final class MolGraph {
         if (!seenMasks.add(maskStr)) continue;
 
         int ringSize = path1.size() + path2.size() - 1;
-        if (ringSize < 3 || ringSize > 20) continue;
+        if (ringSize < 3) continue;
 
         candidateMasks.add(mask);
         candidateSizes.add(ringSize);
@@ -657,7 +688,7 @@ public final class MolGraph {
   }
 
   /**
-   * Return SSSR rings optimized for 2D coordinate generation:
+   * Return SSSR rings optimised for 2D coordinate generation:
    * <ul>
    *   <li>Largest ring system first</li>
    *   <li>Fused rings ordered by shared-edge adjacency within each system</li>
@@ -820,7 +851,7 @@ public final class MolGraph {
    * @param g        the molecular graph
    * @param coords   input/output 2D coordinates (coords[atomIdx])
    * @param maxIter  maximum total SA iterations across both phases
-   * @return number of bond crossings remaining after optimization
+   * @return number of bond crossings remaining after optimisation
    * @since 6.5.1
    */
   public static int reduceCrossings(MolGraph g, Point2D[] coords, int maxIter) {
@@ -881,11 +912,17 @@ public final class MolGraph {
       if (T < Tmin) T = Tmin;
     }
 
-    if (current == 0) return 0;
+    if (current == 0) {
+      copyCoords(work, coords);
+      return 0;
+    }
 
     // ---- Phase 2: individual ring flipping within multi-ring systems ----
     int[][] sssr = g.computeRings();
-    if (sssr.length < 2) return current; // need ≥2 rings for individual flipping
+    if (sssr.length < 2) {
+      copyCoords(work, coords);
+      return current;
+    }
 
     // Build flippable rings: for each ring in a multi-ring system,
     // exclusive = atoms only in this ring, shared = atoms in ≥2 rings.
@@ -1282,14 +1319,61 @@ public final class MolGraph {
       int[] tSizes = Arrays.copyOf(t.ringSizes(), t.ringSizes().length);
       Arrays.sort(tSizes);
       if (!Arrays.equals(sizes, tSizes)) continue;
-      // Match found
+      int[] mapping = templateMapping(g, t.coords());
+      if (mapping == null) continue;
       Point2D[] result = new Point2D[t.atomCount()];
       for (int i = 0; i < t.atomCount(); i++)
-        result[i] = new Point2D(t.coords()[i][0] * targetBondLength,
+        result[mapping[i]] = new Point2D(t.coords()[i][0] * targetBondLength,
                                 t.coords()[i][1] * targetBondLength);
       return result;
     }
     return null;
+  }
+
+  /** Map the template's unit-length edges to the molecule before assigning coordinates. */
+  private static int[] templateMapping(MolGraph graph, double[][] coordinates) {
+    int atoms = coordinates.length;
+    boolean[][] edges = new boolean[atoms][atoms];
+    int[] degree = new int[atoms];
+    for (int first = 0; first < atoms; first++)
+      for (int second = first + 1; second < atoms; second++) {
+        double distance = Math.hypot(coordinates[first][0] - coordinates[second][0],
+            coordinates[first][1] - coordinates[second][1]);
+        if (Math.abs(distance - 1.0) < 1e-8) {
+          edges[first][second] = edges[second][first] = true;
+          degree[first]++;
+          degree[second]++;
+        }
+      }
+    Integer[] order = new Integer[atoms];
+    for (int atom = 0; atom < atoms; atom++) order[atom] = atom;
+    Arrays.sort(order, (first, second) -> Integer.compare(degree[second], degree[first]));
+    int[] mapping = new int[atoms];
+    Arrays.fill(mapping, -1);
+    return matchTemplateAtoms(graph, edges, degree, order, mapping, new boolean[atoms], 0) ? mapping : null;
+  }
+
+  private static boolean matchTemplateAtoms(MolGraph graph, boolean[][] edges, int[] degree,
+                                            Integer[] order, int[] mapping, boolean[] used, int depth) {
+    if (depth == order.length) return true;
+    int templateAtom = order[depth];
+    for (int graphAtom = 0; graphAtom < graph.n; graphAtom++) {
+      if (used[graphAtom] || degree[templateAtom] != graph.neighbors[graphAtom].length) continue;
+      boolean compatible = true;
+      for (int previous = 0; previous < depth; previous++) {
+        int other = order[previous];
+        if (edges[templateAtom][other] != graph.hasBond(graphAtom, mapping[other])) {
+          compatible = false;
+          break;
+        }
+      }
+      if (!compatible) continue;
+      mapping[templateAtom] = graphAtom;
+      used[graphAtom] = true;
+      if (matchTemplateAtoms(graph, edges, degree, order, mapping, used, depth + 1)) return true;
+      used[graphAtom] = false;
+    }
+    return false;
   }
 
   /** Convenience overload: default targetBondLength = 1.5. */
@@ -1390,72 +1474,59 @@ public final class MolGraph {
   }
 
   private static double[][] buildFused66Coords() {
-    double[][] hex = regularPolygonCoords(6);
-    double[][] coords = new double[10][2];
-    System.arraycopy(hex, 0, coords, 0, 6);
-    // Fuse second ring sharing edge (1,2)
-    double mx = (hex[1][0] + hex[2][0]) * 0.5;
-    double my = (hex[1][1] + hex[2][1]) * 0.5;
-    double edx = hex[2][0] - hex[1][0], edy = hex[2][1] - hex[1][1];
-    double nx = -edy, ny = edx;
-    // Normalise
-    double nlen = Math.sqrt(nx * nx + ny * ny);
-    nx /= nlen; ny /= nlen;
-    // Centre of ring A
-    double cax = 0, cay = 0;
-    for (double[] c : hex) { cax += c[0]; cay += c[1]; }
-    cax /= 6; cay /= 6;
-    if (nx * (cax - mx) + ny * (cay - my) > 0) { nx = -nx; ny = -ny; }
-    double rB = 0.5 / Math.sin(Math.PI / 6.0);
-    double cd = rB * Math.cos(Math.PI / 6.0);
-    double cx = mx + cd * nx, cy = my + cd * ny;
-    double theta = Math.atan2(edy, edx);
-    for (int k = 0; k < 4; k++) {
-      double angle = theta + Math.PI + (2.0 * Math.PI * (k + 1)) / 6.0;
-      coords[6 + k][0] = cx + rB * Math.cos(angle);
-      coords[6 + k][1] = cy + rB * Math.sin(angle);
-    }
-    return coords;
+    return buildFusedCoords(6, 1, 2);
   }
 
   private static double[][] buildFused56Coords() {
-    double[][] hex = regularPolygonCoords(6);
-    double[][] coords = new double[9][2];
-    System.arraycopy(hex, 0, coords, 0, 6);
-    double mx = (hex[2][0] + hex[3][0]) * 0.5;
-    double my = (hex[2][1] + hex[3][1]) * 0.5;
-    double edx = hex[3][0] - hex[2][0], edy = hex[3][1] - hex[2][1];
-    double nx = -edy, ny = edx;
-    double nlen = Math.sqrt(nx * nx + ny * ny);
-    nx /= nlen; ny /= nlen;
-    double cax = 0, cay = 0;
-    for (double[] c : hex) { cax += c[0]; cay += c[1]; }
-    cax /= 6; cay /= 6;
-    if (nx * (cax - mx) + ny * (cay - my) > 0) { nx = -nx; ny = -ny; }
-    double rB = 0.5 / Math.sin(Math.PI / 5.0);
-    double cd = rB * Math.cos(Math.PI / 5.0);
-    double cx = mx + cd * nx, cy = my + cd * ny;
-    double theta = Math.atan2(edy, edx);
-    for (int k = 0; k < 3; k++) {
-      double angle = theta + Math.PI + (2.0 * Math.PI * (k + 1)) / 5.0;
-      coords[6 + k][0] = cx + rB * Math.cos(angle);
-      coords[6 + k][1] = cy + rB * Math.sin(angle);
+    return buildFusedCoords(5, 2, 3);
+  }
+
+  /** Place the new ring on the opposite side of its shared edge. */
+  private static double[][] buildFusedCoords(int ringSize, int firstFusion, int secondFusion) {
+    double[][] hexagon = regularPolygonCoords(6);
+    double[][] coordinates = new double[6 + ringSize - 2][2];
+    System.arraycopy(hexagon, 0, coordinates, 0, 6);
+    double midpointX = (hexagon[firstFusion][0] + hexagon[secondFusion][0]) * 0.5;
+    double midpointY = (hexagon[firstFusion][1] + hexagon[secondFusion][1]) * 0.5;
+    double edgeX = hexagon[secondFusion][0] - hexagon[firstFusion][0];
+    double edgeY = hexagon[secondFusion][1] - hexagon[firstFusion][1];
+    double length = Math.hypot(edgeX, edgeY);
+    double normalX = -edgeY / length, normalY = edgeX / length;
+    if (normalX * -midpointX + normalY * -midpointY > 0) {
+      normalX = -normalX;
+      normalY = -normalY;
     }
-    return coords;
+    double radius = 0.5 / Math.sin(Math.PI / ringSize);
+    double apothem = radius * Math.cos(Math.PI / ringSize);
+    double centreX = midpointX + apothem * normalX;
+    double centreY = midpointY + apothem * normalY;
+    double firstX = hexagon[firstFusion][0] - centreX;
+    double firstY = hexagon[firstFusion][1] - centreY;
+    double secondX = hexagon[secondFusion][0] - centreX;
+    double secondY = hexagon[secondFusion][1] - centreY;
+    double step = Math.copySign(2.0 * Math.PI / ringSize, firstX * secondY - firstY * secondX);
+    double start = Math.atan2(secondY, secondX);
+    for (int vertex = 0; vertex < ringSize - 2; vertex++) {
+      double angle = start + step * (vertex + 1);
+      coordinates[6 + vertex][0] = centreX + radius * Math.cos(angle);
+      coordinates[6 + vertex][1] = centreY + radius * Math.sin(angle);
+    }
+    return coordinates;
   }
 
   private static double[][] buildBiphenylCoords() {
-    double[][] hex = regularPolygonCoords(6);
-    double[][] coords = new double[12][2];
-    System.arraycopy(hex, 0, coords, 0, 6);
-    double rB = 0.5 / Math.sin(Math.PI / 6.0);
-    double offset = hex[0][0] - hex[3][0] + 1.0 + 1.5;
-    for (int i = 0; i < 6; i++) {
-      double angle = 2.0 * Math.PI * i / 6 - Math.PI / 2.0;
-      coords[6 + i][0] = rB * Math.cos(angle) + offset;
-      coords[6 + i][1] = rB * Math.sin(angle);
+    double[][] hexagon = regularPolygonCoords(6);
+    double[][] coordinates = new double[12][2];
+    double cosine = Math.cos(Math.PI / 6), sine = Math.sin(Math.PI / 6);
+    for (int vertex = 0; vertex < 6; vertex++) {
+      double x = hexagon[vertex][0] * cosine - hexagon[vertex][1] * sine;
+      double y = hexagon[vertex][0] * sine + hexagon[vertex][1] * cosine;
+      coordinates[vertex][0] = x;
+      coordinates[vertex][1] = y;
+      coordinates[6 + vertex][0] = x + 3.0;
+      coordinates[6 + vertex][1] = y;
     }
-    return coords;
+    return coordinates;
   }
 
   private static int[][] buildBondList(MolGraph g) {
@@ -1598,7 +1669,7 @@ public final class MolGraph {
   }
 
   /**
-   * Cached neighbors sorted by descending degree for VF2++ query ordering.
+   * Cached neighbours sorted by descending degree for molecule query ordering.
    * Computed once per MolGraph, reused across all matcher constructions.
    * @since 6.5.3
    */
@@ -1647,7 +1718,15 @@ public final class MolGraph {
   }
 
   int dbStereo(int i, int j) {
-    return dbStereoConf != null ? dbStereoConf[i][j] : 0;
+    if (dbStereoConf != null) return dbStereoConf[i][j];
+    int[] properties = sparseBondProps != null ? sparseBondProps.get(bondKey(i, j)) : null;
+    return properties != null ? properties[3] : 0;
+  }
+
+  /** The stored double-bond relation uses the first explicit ligand at each end. */
+  int doubleBondReference(int atom, int otherEnd) {
+    for (int neighbor : neighbors[atom]) if (neighbor != otherEnd) return neighbor;
+    return -1;
   }
 
   /** BFS shortest path from start to target, avoiding the edge (avoidU, avoidV). */
@@ -1733,6 +1812,7 @@ public final class MolGraph {
 
   public MolGraph(IAtomContainer mol) {
     this.mol = mol;
+    this.hydrogenCounts = null;
     this.n = mol.getAtomCount();
     this.words = (n + 63) >>> 6;
     Object title = mol.getProperty("cdk:Title");
@@ -1776,7 +1856,7 @@ public final class MolGraph {
       label[i] = (atomicNum[i] << 2) | (aromatic[i] ? 2 : 0) | (ring[i] ? 1 : 0);
     }
 
-    // Build neighbors and bond properties in a single bond-iteration pass.
+    // Build neighbours and bond properties in a single bond-iteration pass.
     // Avoids per-atom getConnectedAtomsList() calls (each allocates an ArrayList).
     int[] degreeCount = new int[n];
     for (IBond b : mol.bonds()) {
@@ -1811,7 +1891,7 @@ public final class MolGraph {
         neighbors[a][degree[a]++] = c;
         neighbors[c][degree[c]++] = a;
         sparseBondProps.put(bondKey(a, c),
-            new int[] {encodeBondOrder(b), b.isInRing() ? 1 : 0, b.isAromatic() ? 1 : 0});
+            new int[] {encodeBondOrder(b), b.isInRing() ? 1 : 0, b.isAromatic() ? 1 : 0, 0});
       }
     }
 
@@ -1839,10 +1919,23 @@ public final class MolGraph {
           IDoubleBondStereochemistry dbs = (IDoubleBondStereochemistry) se;
           IBond stereoBond = dbs.getStereoBond();
           Integer a = idxMap.get(stereoBond.getAtom(0)), c = idxMap.get(stereoBond.getAtom(1));
-          if (a != null && c != null && dbStereoConf != null) {
+          if (a != null && c != null) {
             int conf = dbs.getStereo() == IDoubleBondStereochemistry.Conformation.TOGETHER ? 1 : 2;
-            dbStereoConf[a][c] = conf;
-            dbStereoConf[c][a] = conf;
+            for (IBond reference : dbs.getBonds()) {
+              if (reference.contains(mol.getAtom(a))) {
+                int ligand = idxMap.get(reference.getOther(mol.getAtom(a)));
+                if (ligand != doubleBondReference(a, c)) conf = 3 - conf;
+              } else if (reference.contains(mol.getAtom(c))) {
+                int ligand = idxMap.get(reference.getOther(mol.getAtom(c)));
+                if (ligand != doubleBondReference(c, a)) conf = 3 - conf;
+              }
+            }
+            if (dbStereoConf != null) {
+              dbStereoConf[a][c] = conf;
+              dbStereoConf[c][a] = conf;
+            } else {
+              sparseBondProps.get(bondKey(a, c))[3] = conf;
+            }
           }
         }
       }
@@ -1854,6 +1947,7 @@ public final class MolGraph {
 
   MolGraph(Builder b) {
     this.mol = null;
+    this.hydrogenCounts = b.hydrogenCounts != null ? b.hydrogenCounts.clone() : null;
     this.n = b.n;
     this.words = (n + 63) >>> 6;
     this.name = b.name != null ? b.name : "";
@@ -1915,7 +2009,8 @@ public final class MolGraph {
             sparseBondProps.put(bondKey(i, j), new int[] {
                 ords != null ? (denseOrd ? ords[j] : ords[k]) : 1,
                 rings != null && (denseRing ? rings[j] : rings[k]) ? 1 : 0,
-                aroms != null && (denseArom ? aroms[j] : aroms[k]) ? 1 : 0});
+                aroms != null && (denseArom ? aroms[j] : aroms[k]) ? 1 : 0,
+                b.dbStereoConf != null && b.dbStereoConf[i] != null ? b.dbStereoConf[i][j] : 0});
           }
         }
       }
@@ -1938,6 +2033,69 @@ public final class MolGraph {
     initDerivedFields();
   }
 
+  /** Copy matching properties without changing perception or stereo references. */
+  static MolGraph copyForSearch(MolGraph source) {
+    Objects.requireNonNull(source, "query");
+    synchronized (source) {
+      return new MolGraph(source);
+    }
+  }
+
+  private MolGraph(MolGraph source) {
+    try {
+      mol = source.mol == null ? null : source.mol.clone();
+    } catch (CloneNotSupportedException failure) {
+      throw new IllegalArgumentException("Cannot copy query molecule", failure);
+    }
+    hydrogenCounts = source.hydrogenCounts == null ? null : source.hydrogenCounts.clone();
+    n = source.n;
+    words = source.words;
+    atomicNum = source.atomicNum.clone();
+    formalCharge = source.formalCharge.clone();
+    massNumber = source.massNumber.clone();
+    label = source.label.clone();
+    ring = source.ring.clone();
+    aromatic = source.aromatic.clone();
+    degree = source.degree.clone();
+    ringCount = source.ringCount.clone();
+    ringCountsComputed = source.ringCountsComputed;
+    neighbors = copyRows(source.neighbors);
+    bondOrdMatrix = copyRows(source.bondOrdMatrix);
+    bondRingMatrix = copyRows(source.bondRingMatrix);
+    bondAromMatrix = copyRows(source.bondAromMatrix);
+    sparseBondProps = source.sparseBondProps == null ? null : new HashMap<>();
+    if (sparseBondProps != null)
+      for (Map.Entry<Long, int[]> entry : source.sparseBondProps.entrySet())
+        sparseBondProps.put(entry.getKey(), entry.getValue().clone());
+    tetraChirality = source.tetraChirality == null ? null : source.tetraChirality.clone();
+    tetraLigands = copyRows(source.tetraLigands);
+    dbStereoConf = copyRows(source.dbStereoConf);
+    atomId = source.atomId == null ? null : source.atomId.clone();
+    tautomerClass = source.tautomerClass == null ? null : source.tautomerClass.clone();
+    tautomerWeight = source.tautomerWeight == null ? null : source.tautomerWeight.clone();
+    tautomerClassesComputed = source.tautomerClassesComputed;
+    adjLong = new long[source.adjLong.length][];
+    for (int row = 0; row < adjLong.length; row++) adjLong[row] = source.adjLong[row].clone();
+    name = source.name;
+    programLine = source.programLine;
+    comment = source.comment;
+    properties = new LinkedHashMap<>(source.properties);
+  }
+
+  private static int[][] copyRows(int[][] rows) {
+    if (rows == null) return null;
+    int[][] result = new int[rows.length][];
+    for (int row = 0; row < rows.length; row++) result[row] = rows[row] == null ? null : rows[row].clone();
+    return result;
+  }
+
+  private static boolean[][] copyRows(boolean[][] rows) {
+    if (rows == null) return null;
+    boolean[][] result = new boolean[rows.length][];
+    for (int row = 0; row < rows.length; row++) result[row] = rows[row] == null ? null : rows[row].clone();
+    return result;
+  }
+
   private void initDerivedFields() {
     // adj (BitSet[]) is lazy — built on first getAdj() call.
     // Only adjLong is eagerly built (used by substructure/MCS hot paths).
@@ -1946,10 +2104,8 @@ public final class MolGraph {
       for (int k : neighbors[i]) adjLong[i][k >>> 6] |= 1L << (k & 63);
     // Tautomer classes are O(n), cheap, and accessed as public fields — always compute eagerly.
     computeTautomerClasses();
-    applySolventCorrection(solvent);
-    adjustWeightsForPH(pH);
     tautomerClassesComputed = true;
-    // Canonical labeling and ring counts are lazy (ensureCanonical / ensureRingCounts).
+    // Canonical labelling and ring counts are lazy (ensureCanonical / ensureRingCounts).
   }
 
   /** Lazily build BitSet[] adjacency (used by MCS refinement and NLF2/NLF3 builders). */
@@ -1965,19 +2121,19 @@ public final class MolGraph {
     return adj;
   }
 
-  /** Lazily compute Morgan ranks, canonical labeling, orbit partition, and canonical hash. */
+  /** Lazily compute Morgan ranks, canonical labelling, orbit partition, and canonical hash. */
   void ensureCanonical() {
     if (canonicalComputed) return;
     synchronized (this) {
       if (canonicalComputed) return;
       this.morganRank = computeMorganRanks(n, label, neighbors);
-      CanonResult clResult = computeCanonicalLabeling(n, label, degree, neighbors);
+      int[] hydrogens = new int[n];
+      for (int atom = 0; atom < n; atom++) hydrogens[atom] = hydrogenCount(atom);
+      CanonResult clResult = computeCanonicalLabeling(n, canonicalAtomLabels(hydrogens), degree, neighbors, this);
       this.canonicalLabel = clResult.canonLabel();
       this.autGeneratorsTruncated = clResult.generatorsTruncated();
-      int[] hydrogens = new int[n];
       boolean[] stereoFixed = new boolean[n];
       for (int atom = 0; atom < n; atom++) {
-        hydrogens[atom] = hydrogenCount(atom);
         if (tetraChirality != null && tetraChirality[atom] != 0) {
           stereoFixed[atom] = true;
           for (int ligand : neighbors[atom]) stereoFixed[ligand] = true;
@@ -2206,7 +2362,7 @@ public final class MolGraph {
                 for (int m : neighbors[bridge]) {
                   if (m != j && m != i && atomicNum[m] == 6) {
                     // Verify true 1,3-separation: m must NOT be a direct
-                    // neighbor of j (which would mean j and m are 1,2 not 1,3).
+                    // neighbour of j (which would mean j and m are 1,2 not 1,3).
                     boolean directlyBonded = false;
                     for (int nb : neighbors[j]) {
                       if (nb == m) { directlyBonded = true; break; }
@@ -2487,7 +2643,7 @@ public final class MolGraph {
 
       // -----------------------------------------------------------------------
       // T19: Nitro/aci-nitro  C-N(=O)=O ↔ C=N(=O)-OH  (weight 0.95)
-      //      N with two O neighbors (one double, one single/double) bonded to C
+      //      N with two O neighbours (one double, one single/double) bonded to C
       // -----------------------------------------------------------------------
       if (atomicNum[i] == 7 && !aromatic[i] && tautomerClass[i] == -1) {
         List<Integer> oNbrs = new ArrayList<>();
@@ -2537,7 +2693,7 @@ public final class MolGraph {
 
       // -----------------------------------------------------------------------
       // T22: Ring-chain: furanose/pyranose  open-chain ↔ cyclic hemiacetal  (weight 0.60)
-      //      O in ring bonded to C with OH neighbor (hemiacetal pattern)
+      //      O in ring bonded to C with OH neighbour (hemiacetal pattern)
       // -----------------------------------------------------------------------
       if (atomicNum[i] == 8 && ring[i] && !aromatic[i] && tautomerClass[i] == -1) {
         for (int j : neighbors[i]) {
@@ -2617,7 +2773,7 @@ public final class MolGraph {
         }
         if (adjNring.size() == 1) {
           int j = adjNring.get(0);
-          // Check if the N-N bond partner also has another ring-N neighbor (triazole pattern)
+          // Check if the N-N bond partner also has another ring-N neighbour (triazole pattern)
           for (int k : neighbors[j]) {
             if (k != i && atomicNum[k] == 7 && aromatic[k] && ring[k] && tautomerClass[k] == -1) {
               int cls = classId++;
@@ -2756,97 +2912,6 @@ public final class MolGraph {
     }
   }
 
-  // =========================================================================
-  // Tier 2: Solvent-dependent tautomer weight corrections
-  //
-  // Aprotic/non-aqueous solvents shift keto-enol and related equilibria.
-  // Literature pKa shifts (Bordwell 1988; Olmstead 1977):
-  //   DMSO:       keto-enol +5 pKa units  -> enol more prevalent (shift -0.15)
-  //               amide/lactam +3          -> imidic slightly more prevalent
-  //   Methanol:   keto-enol +2             -> small shift (-0.05)
-  //   Chloroform: keto-enol +8 (aprotic)   -> much more enol (-0.25)
-  // =========================================================================
-
-  /** Adjust tautomer weights for solvent effects. Call after computeTautomerClasses(). */
-  void applySolventCorrection(ChemOptions.Solvent solvent) {
-    if (solvent == null || solvent == ChemOptions.Solvent.AQUEOUS) return;
-    if (tautomerWeight == null) return;
-
-    float ketoShift, amideShift, generalShift;
-    switch (solvent) {
-      case DMSO:
-        ketoShift = -0.15f;
-        amideShift = -0.08f;
-        generalShift = -0.05f;
-        break;
-      case CHLOROFORM:
-        ketoShift = -0.25f;
-        amideShift = -0.12f;
-        generalShift = -0.08f;
-        break;
-      case METHANOL:
-        ketoShift = -0.05f;
-        amideShift = -0.02f;
-        generalShift = -0.01f;
-        break;
-      case ACETONITRILE:
-        ketoShift = -0.10f;
-        amideShift = -0.05f;
-        generalShift = -0.03f;
-        break;
-      case DIETHYL_ETHER:
-        ketoShift = -0.20f;
-        amideShift = -0.10f;
-        generalShift = -0.06f;
-        break;
-      default:
-        return;
-    }
-
-    for (int i = 0; i < n; i++) {
-      if (tautomerClass[i] == -1) continue;
-      float w = tautomerWeight[i];
-      if (w >= 1.0f) continue;
-
-      float shift;
-      if (w >= 0.96f) {
-        shift = (w >= 0.97f) ? amideShift : ketoShift;
-        if (Math.abs(w - TW_KETO_ENOL) < 0.005f) shift = ketoShift;
-      } else if (w >= 0.93f) {
-        shift = amideShift;
-      } else if (w >= 0.84f) {
-        shift = generalShift;
-      } else {
-        shift = generalShift;
-      }
-
-      tautomerWeight[i] = Math.max(0.05f, Math.min(0.99f, w + shift));
-    }
-  }
-
-  /**
-   * Adjust tautomer weights based on pH deviation from reference (7.4).
-   * Uses simplified Henderson-Hasselbalch scaling: as pH moves away from
-   * physiological, weights shift toward 0.5 (equal tautomer population).
-   */
-  void adjustWeightsForPH(double pH) {
-    if (Math.abs(pH - 7.4) < 0.01) return; // no adjustment at reference pH
-    // Dampen weights toward 0.5 as pH deviates from 7.4
-    float dampen = (float) (0.1 * Math.abs(pH - 7.4));
-    for (int i = 0; i < n; i++) {
-      if (tautomerClass[i] == -1) continue;
-      float w = tautomerWeight[i];
-      if (w == 1.0f) continue; // non-tautomeric atom
-      // Move weight toward 0.5 but NEVER cross it (prevents preference inversion)
-      float shift = (w > 0.5f) ? -dampen : dampen;
-      float adjusted = w + shift;
-      // Clamp: never cross 0.5, never go below 0.1 or above 0.99
-      if (w > 0.5f) adjusted = Math.max(0.5f, adjusted);
-      else           adjusted = Math.min(0.5f, adjusted);
-      tautomerWeight[i] = Math.max(0.1f, Math.min(0.99f, adjusted));
-    }
-  }
-
   private static int[] computeMorganRanks(int n, int[] initLabel, int[][] neighbors) {
     int[] rank = new int[n];
     System.arraycopy(initLabel, 0, rank, 0, n);
@@ -2930,23 +2995,97 @@ public final class MolGraph {
     }
   }
 
+  private int[] canonicalAtomLabels(int[] hydrogens) {
+    int[][] properties = new int[n][];
+    Integer[] atoms = new Integer[n];
+    for (int atom = 0; atom < n; atom++) {
+      properties[atom] = new int[] {label[atom], formalCharge[atom], massNumber[atom], hydrogens[atom],
+          tetraChirality != null && tetraChirality[atom] != 0 ? 1 : 0};
+      atoms[atom] = atom;
+    }
+    Arrays.sort(atoms, (first, second) -> compareIntArrays(properties[first], properties[second]));
+    int[] labels = new int[n];
+    int rank = 0;
+    for (int position = 0; position < n; position++) {
+      if (position > 0 && !Arrays.equals(properties[atoms[position]], properties[atoms[position - 1]])) rank++;
+      labels[atoms[position]] = rank;
+    }
+    return labels;
+  }
+
+  private static int compareIntArrays(int[] first, int[] second) {
+    for (int index = 0; index < Math.min(first.length, second.length); index++) {
+      int comparison = Integer.compare(first[index], second[index]);
+      if (comparison != 0) return comparison;
+    }
+    return Integer.compare(first.length, second.length);
+  }
+
+  private static int canonicalBondLabel(MolGraph graph, int first, int second) {
+    if (graph == null) return 1;
+    return (graph.bondOrder(first, second) << 3) | (graph.bondInRing(first, second) ? 4 : 0)
+        | (graph.bondAromatic(first, second) ? 2 : 0) | (graph.dbStereo(first, second) != 0 ? 1 : 0);
+  }
+
+  private static int canonicalTetrahedralTag(MolGraph graph, int atom, int[] ranking) {
+    int tag = graph.tetraChirality != null ? graph.tetraChirality[atom] : 0;
+    if (tag == 0) return 0;
+    if(graph.mol==null)tag=3-tag;
+    int[] ligands = graph.tetrahedralLigands(atom);
+    if (ligands == null) return tag;
+    boolean odd = false;
+    for (int first = 0; first < ligands.length; first++) {
+      int firstRank = ligands[first] < 0 ? -1 : ranking[ligands[first]];
+      for (int second = first + 1; second < ligands.length; second++) {
+        int secondRank = ligands[second] < 0 ? -1 : ranking[ligands[second]];
+        if (firstRank > secondRank) odd = !odd;
+      }
+    }
+    return odd ? 3 - tag : tag;
+  }
+
+  private static int canonicalDoubleBondTag(MolGraph graph, int first, int second, int[] ranking) {
+    int configuration = graph.dbStereo(first, second);
+    if (configuration == 0) return 0;
+    for (int side = 0; side < 2; side++) {
+      int atom = side == 0 ? first : second, other = side == 0 ? second : first;
+      int reference = -1, canonicalReference = -1;
+      for (int neighbor : graph.neighbors[atom]) {
+        if (neighbor == other) continue;
+        if (reference < 0) reference = neighbor;
+        if (canonicalReference < 0 || ranking[neighbor] < ranking[canonicalReference]) canonicalReference = neighbor;
+      }
+      if (reference != canonicalReference) configuration = 3 - configuration;
+    }
+    return configuration;
+  }
+
   private static CanonResult computeCanonicalLabeling(int n, int[] label, int[] degree, int[][] neighbors) {
+    return computeCanonicalLabeling(n, label, degree, neighbors, null);
+  }
+
+  private static CanonResult computeCanonicalLabeling(int n, int[] label, int[] degree,
+                                                       int[][] neighbors, MolGraph graph) {
     if (n == 0) return new CanonResult(new int[0], new int[0], new int[0][], false);
     int[] mRank = new int[n];
     System.arraycopy(label, 0, mRank, 0, n);
     int[] mNew = new int[n];
-    int[] scratch = new int[16];
+    long[] scratch = new long[16];
     for (int iter = 0; iter < 8; iter++) {
       int prevDistinct;
       { HashSet<Integer> s = new HashSet<>(); for (int v = 0; v < n; v++) s.add(mRank[v]); prevDistinct = s.size(); }
       for (int v = 0; v < n; v++) {
         int[] nbs = neighbors[v];
         int d = nbs.length;
-        if (d > scratch.length) scratch = new int[d];
-        for (int k = 0; k < d; k++) scratch[k] = mRank[nbs[k]];
+        if (d > scratch.length) scratch = new long[d];
+        for (int k = 0; k < d; k++)
+          scratch[k] = ((long) mRank[nbs[k]] << 32) | canonicalBondLabel(graph, v, nbs[k]);
         Arrays.sort(scratch, 0, d);
         int h = mRank[v] * HASH_PRIME;
-        for (int k = 0; k < d; k++) h = h * 31 + scratch[k];
+        for (int k = 0; k < d; k++) {
+          h = h * 31 + (int) (scratch[k] >> 32);
+          h = h * 31 + (int) scratch[k];
+        }
         mNew[v] = h;
       }
       System.arraycopy(mNew, 0, mRank, 0, n);
@@ -2985,7 +3124,7 @@ public final class MolGraph {
       for (int pos = 0; pos < n; pos++) canonLabel[initPerm[pos]] = pos;
       return new CanonResult(canonLabel, buildOrbits(uf, n), new int[0][], true);
     }
-    refinePartition(n, initPerm, initCellEnd, neighbors, label, -1);
+    refinePartition(n, initPerm, initCellEnd, neighbors, label, -1, graph);
     int[] bestPerm = null;
     List<int[]> generators = new ArrayList<>();
     boolean generatorsTruncated = false;
@@ -3011,7 +3150,7 @@ public final class MolGraph {
           p[cellStart] = tmp;
         }
         ce[cellStart] = true;
-        refinePartition(n, p, ce, neighbors, label, cellStart);
+        refinePartition(n, p, ce, neighbors, label, cellStart, graph);
         permStack.push(p);
         cellEndStack.push(ce);
         nodeCount++;
@@ -3022,9 +3161,9 @@ public final class MolGraph {
       boolean[] cellEnd = cellEndStack.pop();
       int nc = findSmallestNonSingleton(n, cellEnd);
       if (nc < 0) {
-        if (bestPerm == null || comparePerm(perm, bestPerm, n, label, neighbors) < 0) {
+        if (bestPerm == null || comparePerm(perm, bestPerm, n, label, neighbors, graph) < 0) {
           bestPerm = perm.clone();
-        } else if (comparePerm(perm, bestPerm, n, label, neighbors) == 0) {
+        } else if (comparePerm(perm, bestPerm, n, label, neighbors, graph) == 0) {
           for (int i = 0; i < n; i++) ufUnion(uf, perm[i], bestPerm[i]);
           if (generators.size() < MAX_GENERATORS) {
             int[] gen = new int[n];
@@ -3053,7 +3192,7 @@ public final class MolGraph {
           p[cellStart] = tmp;
         }
         ce[cellStart] = true;
-        refinePartition(n, p, ce, neighbors, label, cellStart);
+        refinePartition(n, p, ce, neighbors, label, cellStart, graph);
         permStack.push(p);
         cellEndStack.push(ce);
         nodeCount++;
@@ -3107,6 +3246,11 @@ public final class MolGraph {
 
   private static void refinePartition(
       int n, int[] perm, boolean[] cellEnd, int[][] neighbors, int[] label, int targetPos) {
+    refinePartition(n, perm, cellEnd, neighbors, label, targetPos, null);
+  }
+
+  private static void refinePartition(
+      int n, int[] perm, boolean[] cellEnd, int[][] neighbors, int[] label, int targetPos, MolGraph graph) {
     int[] inv = new int[n];
     for (int i = 0; i < n; i++) inv[perm[i]] = i;
     boolean changed = true;
@@ -3121,24 +3265,28 @@ public final class MolGraph {
           if (!cellEnd[cEnd]) continue;
           int cSize = cEnd - cStart + 1;
           if (cSize <= 1) { cStart = cEnd + 1; continue; }
-          int[] count = new int[cSize];
+          int[][] count = new int[cSize][];
           for (int ci = 0; ci < cSize; ci++) {
-            int v = perm[cStart + ci], cnt = 0;
-            for (int nb : neighbors[v]) {
-              int nbPos = inv[nb];
-              if (nbPos >= sStart && nbPos <= sEnd) cnt++;
+            int atom = perm[cStart + ci], edgeCount = 0;
+            int[] edges = new int[neighbors[atom].length];
+            for (int neighbor : neighbors[atom]) {
+              int position = inv[neighbor];
+              if (position >= sStart && position <= sEnd)
+                edges[edgeCount++] = canonicalBondLabel(graph, atom, neighbor);
             }
-            count[ci] = cnt;
+            Arrays.sort(edges, 0, edgeCount);
+            count[ci] = Arrays.copyOf(edges, edgeCount);
           }
           boolean allSame = true;
-          for (int ci = 1; ci < cSize; ci++) if (count[ci] != count[0]) { allSame = false; break; }
+          for (int ci = 1; ci < cSize; ci++) if (!Arrays.equals(count[ci], count[0])) { allSame = false; break; }
           if (allSame) { cStart = cEnd + 1; continue; }
           Integer[] idx = new Integer[cSize];
           for (int ci = 0; ci < cSize; ci++) idx[ci] = ci;
           final int fcs = cStart;
-          final int[] cnt = count, prm = perm;
+          final int[][] cnt = count;
+          final int[] prm = perm;
           Arrays.sort(idx, (a, bx) -> {
-            int c = Integer.compare(cnt[a], cnt[bx]);
+            int c = compareIntArrays(cnt[a], cnt[bx]);
             if (c != 0) return c;
             c = Integer.compare(label[prm[fcs + a]], label[prm[fcs + bx]]);
             return c != 0 ? c : Integer.compare(prm[fcs + a], prm[fcs + bx]);
@@ -3149,7 +3297,7 @@ public final class MolGraph {
           for (int ci = 0; ci < cSize; ci++) inv[perm[cStart + ci]] = cStart + ci;
           for (int ci = 0; ci < cSize - 1; ci++) {
             boolean wasBoundary = (cStart + ci == cEnd);
-            boolean newBoundary = (cnt[idx[ci]] != cnt[idx[ci + 1]]);
+            boolean newBoundary = !Arrays.equals(cnt[idx[ci]], cnt[idx[ci + 1]]);
             cellEnd[cStart + ci] = newBoundary || wasBoundary;
             if (newBoundary && !wasBoundary) changed = true;
           }
@@ -3161,23 +3309,45 @@ public final class MolGraph {
     }
   }
 
-  private static int comparePerm(int[] perm1, int[] perm2, int n, int[] label, int[][] neighbors) {
-    int[] inv1 = new int[n], inv2 = new int[n];
-    for (int i = 0; i < n; i++) { inv1[perm1[i]] = i; inv2[perm2[i]] = i; }
-    for (int pos = 0; pos < n; pos++) {
-      int v1 = perm1[pos], v2 = perm2[pos];
-      int c = Integer.compare(label[v1], label[v2]);
-      if (c != 0) return c;
-      int[] nb1 = neighbors[v1], nb2 = neighbors[v2];
-      c = Integer.compare(nb1.length, nb2.length);
-      if (c != 0) return c;
-      int[] cn1 = new int[nb1.length], cn2 = new int[nb2.length];
-      for (int k = 0; k < nb1.length; k++) cn1[k] = inv1[nb1[k]];
-      for (int k = 0; k < nb2.length; k++) cn2[k] = inv2[nb2[k]];
-      Arrays.sort(cn1); Arrays.sort(cn2);
-      for (int k = 0; k < nb1.length; k++) {
-        c = Integer.compare(cn1[k], cn2[k]);
-        if (c != 0) return c;
+  private static int comparePerm(int[] firstPermutation, int[] secondPermutation, int atomCount,
+                                 int[] labels, int[][] neighbors) {
+    return comparePerm(firstPermutation, secondPermutation, atomCount, labels, neighbors, null);
+  }
+
+  private static int comparePerm(int[] firstPermutation, int[] secondPermutation, int atomCount,
+                                 int[] labels, int[][] neighbors, MolGraph graph) {
+    int[] firstRanking = new int[atomCount], secondRanking = new int[atomCount];
+    for (int position = 0; position < atomCount; position++) {
+      firstRanking[firstPermutation[position]] = position;
+      secondRanking[secondPermutation[position]] = position;
+    }
+    for (int position = 0; position < atomCount; position++) {
+      int firstAtom = firstPermutation[position], secondAtom = secondPermutation[position];
+      int comparison = Integer.compare(labels[firstAtom], labels[secondAtom]);
+      if (comparison != 0) return comparison;
+      if (graph != null) {
+        comparison = Integer.compare(canonicalTetrahedralTag(graph, firstAtom, firstRanking),
+            canonicalTetrahedralTag(graph, secondAtom, secondRanking));
+        if (comparison != 0) return comparison;
+      }
+      comparison = Integer.compare(neighbors[firstAtom].length, neighbors[secondAtom].length);
+      if (comparison != 0) return comparison;
+      long[][] signatures = new long[2][];
+      for (int side = 0; side < 2; side++) {
+        int atom = side == 0 ? firstAtom : secondAtom;
+        int[] ranking = side == 0 ? firstRanking : secondRanking;
+        signatures[side] = new long[neighbors[atom].length];
+        for (int bondIndex = 0; bondIndex < neighbors[atom].length; bondIndex++) {
+          int neighbor = neighbors[atom][bondIndex];
+          signatures[side][bondIndex] = ((long) ranking[neighbor] << 16)
+              | ((long) canonicalBondLabel(graph, atom, neighbor) << 2)
+              | (graph != null ? canonicalDoubleBondTag(graph, atom, neighbor, ranking) : 0);
+        }
+        Arrays.sort(signatures[side]);
+      }
+      for (int bondIndex = 0; bondIndex < signatures[0].length; bondIndex++) {
+        comparison = Long.compare(signatures[0][bondIndex], signatures[1][bondIndex]);
+        if (comparison != 0) return comparison;
       }
     }
     return 0;
@@ -3208,8 +3378,8 @@ public final class MolGraph {
       hash = hash * HASH_PRIME + g.label[v];
       hash = hash * HASH_PRIME + (long) g.formalCharge[v] + 512L;
       hash = hash * HASH_PRIME + g.massNumber[v];
-      // include tetrahedral chirality in hash so enantiomers get different hashes
-      hash = hash * HASH_PRIME + (g.tetraChirality != null ? g.tetraChirality[v] : 0);
+      hash = hash * HASH_PRIME + g.hydrogenCount(v);
+      hash = hash * HASH_PRIME + canonicalTetrahedralTag(g, v, canonLabel);
     }
     for (int cp = 0; cp < n; cp++) {
       int v = inv[cp];
@@ -3224,7 +3394,7 @@ public final class MolGraph {
         sig = sig * 2L + (g.bondAromatic(v, nbs[k]) ? 1L : 0L);
         // include E/Z double-bond stereo in hash (symmetric: use min canonical position)
         if (cp < cn) {
-          int dbConf = g.dbStereo(v, nbs[k]);
+          int dbConf = canonicalDoubleBondTag(g, v, nbs[k], canonLabel);
           sig = sig * HASH_PRIME + dbConf;
         }
         edgeSigs[k] = sig;
@@ -3240,7 +3410,7 @@ public final class MolGraph {
   public long getCanonicalHash() { ensureCanonical(); return canonicalHash; }
 
   /**
-   * Return automorphism generators discovered during canonical labeling.
+   * Return automorphism generators discovered during canonical labelling.
    * Each generator is a permutation array of length n where gen[i] is the
    * image of atom i. Their closure is the full chemical automorphism group only
    * when {@link #automorphismGeneratorsTruncated()} is false. Otherwise they
@@ -3290,13 +3460,14 @@ public final class MolGraph {
       int start = inv[ci];
       if (color[start] == 0) preScanDfs(start, -1, color, ringClosures, ringEdges, nextRing);
     }
+    Map<Long, Integer> bondDirections = smilesBondDirections();
     boolean[] visited = new boolean[n];
     StringBuilder sb = new StringBuilder();
     for (int ci = 0; ci < n; ci++) {
       int start = inv[ci];
       if (visited[start]) continue;
       if (sb.length() > 0) sb.append('.');
-      emitSmiles(start, -1, visited, sb, ringClosures, ringEdges);
+      emitSmiles(start, -1, visited, sb, ringClosures, ringEdges, bondDirections);
     }
     return sb.toString();
   }
@@ -3321,14 +3492,15 @@ public final class MolGraph {
     color[atom] = 2;
   }
 
-  private void emitSmiles(int atom, int parent, boolean[] visited, StringBuilder sb, List<int[]>[] rc, Set<Long> ringEdges) {
+  private void emitSmiles(int atom, int parent, boolean[] visited, StringBuilder sb,
+                          List<int[]>[] rc, Set<Long> ringEdges, Map<Long, Integer> bondDirections) {
     visited[atom] = true;
     // Collect traversal neighbours in canonical order for tetrahedral parity
     int[] sorted = sortedNeighborsByCanonical(atom);
     writeAtom(atom, parent, sorted, rc, ringEdges, sb);
     if (rc[atom] != null) {
       for (int[] entry : rc[atom]) {
-        if (!visited[entry[1]]) writeBondSymbol(atom, entry[1], sb);
+        if (!visited[entry[1]]) writeBondSymbol(atom, entry[1], sb, bondDirections);
         writeRingDigit(entry[0], sb);
       }
     }
@@ -3340,8 +3512,8 @@ public final class MolGraph {
       childIdx++;
       boolean needParen = childCount > 1 && childIdx < childCount;
       if (needParen) sb.append('(');
-      writeBondSymbol(atom, nb, sb);
-      emitSmiles(nb, atom, visited, sb, rc, ringEdges);
+      writeBondSymbol(atom, nb, sb, bondDirections);
+      emitSmiles(nb, atom, visited, sb, rc, ringEdges, bondDirections);
       if (needParen) sb.append(')');
     }
   }
@@ -3360,23 +3532,24 @@ public final class MolGraph {
    * Write an atom token, including tetrahedral stereo (@/@@) when present.
    * The token is always bracket-form when stereo is present.
    *
-   * Traversal order for parity: [parent, sorted-children...] — this is the
-   * sequence of neighbours as seen when walking from parent. If parent == -1
-   * (root atom), the implicit H or first neighbour fills the first position.
+   * Compare the emitted ligand order with the stored winding reference.
    */
   private void writeAtom(int atom, int parent, int[] sortedChildren,
                          List<int[]>[] rc, Set<Long> ringEdges, StringBuilder sb) {
     int z = atomicNum[atom], charge = formalCharge[atom];
     boolean arom = aromatic[atom];
     int chiral = (tetraChirality != null) ? tetraChirality[atom] : 0;
+    if(chiral!=0&&mol==null)chiral=3-chiral;
     int mass = (massNumber != null) ? massNumber[atom] : 0;
     // Only emit @/@@  when stereo is defined (1=CW, 2=CCW in our encoding)
     boolean hasStereo = chiral != 0;
     boolean hasIsotope = mass != 0;
+    int hCount = hydrogenCount(atom);
     String sym = ORGANIC_SYMBOLS.get(z);
     // Bare organic-subset form is legal only when there is no stereo, no
     // charge, and no isotope label — otherwise we must open brackets.
-    if (sym != null && charge == 0 && !hasStereo && !hasIsotope) {
+    if (sym != null && charge == 0 && !hasStereo && !hasIsotope
+        && hCount == defaultHydrogenCount(atom) && !(arom && hCount > 0 && (z == 7 || z == 15))) {
       sb.append(arom ? Character.toLowerCase(sym.charAt(0)) : sym);
     } else {
       sb.append('[');
@@ -3387,26 +3560,29 @@ public final class MolGraph {
         if (elemSym.length() > 1) sb.append(elemSym.substring(1));
       } else { sb.append(elemSym); }
       if (hasStereo) {
-        // Build the neighbour sequence in traversal order:
-        // [from (parent or implicit-H), ring-closure partners (by ring-id order), tree children]
-        // then determine parity relative to canonical-label-sorted sequence.
+        int[] storedLigands = tetrahedralLigands(atom);
         List<Integer> traversalSeq = new ArrayList<>();
         if (parent >= 0) traversalSeq.add(parent);
-        // ring closure partners (already emitted, so they come before tree children)
+        if (storedLigands != null)
+          for (int ligand : storedLigands) if (ligand == -1) traversalSeq.add(-1);
         if (rc[atom] != null) {
           for (int[] entry : rc[atom]) traversalSeq.add(entry[1]);
         }
         for (int nb : sortedChildren) {
           if (!traversalSeq.contains(nb)) traversalSeq.add(nb);
         }
-        // chiral==1 → CW (@@), chiral==2 → CCW (@) in our storage convention
-        // emit @@ for CLOCKWISE, @ for ANTICLOCKWISE
-        sb.append(chiral == 1 ? "@@" : "@");
+        boolean oddPermutation = false;
+        if (storedLigands != null && traversalSeq.size() == storedLigands.length) {
+          for (int first = 0; first < storedLigands.length; first++)
+            for (int second = first + 1; second < storedLigands.length; second++)
+              if (traversalSeq.indexOf(storedLigands[first]) > traversalSeq.indexOf(storedLigands[second]))
+                oddPermutation = !oddPermutation;
+        }
+        sb.append((chiral == 1) ^ oddPermutation ? "@@" : "@");
       }
       // Emit implicit hydrogen count inside brackets. This is required for
       // stereo centres (e.g. [C@@H]) and is standard practice for all bracket
       // atoms — the reader cannot infer H count once brackets are in play.
-      int hCount = computeImplicitHForWrite(atom);
       if (hCount > 0) {
         sb.append('H');
         if (hCount > 1) sb.append(hCount);
@@ -3417,40 +3593,88 @@ public final class MolGraph {
     }
   }
 
-  /**
-   * Compute implicit H count for an atom for use in canonical SMILES output.
-   * Uses the OpenSMILES multi-valence model via
-   * {@link FingerprintEngine#implicitH}. This reuses the same calculation
-   * used in fingerprint invariants so canonical SMILES stays consistent
-   * with the rest of the stack.
-   *
-   * <p>Note: Java {@link #bondOrder} returns Kekulised orders (1 or 2)
-   * rather than a dedicated aromatic token like C++ uses (4), so no extra
-   * "+1 for aromatic π" adjustment is required here — the Kekule sum already
-   * captures the aromatic atom's contribution. We still clamp any order-4
-   * tokens down to 1 defensively for molecules built directly via
-   * {@code MolGraph.Builder}.
-   */
-  private int computeImplicitHForWrite(int atom) {
-    int z = atomicNum[atom];
-    int charge = formalCharge[atom];
-    int boSum = 0;
-    int[] nbs = neighbors[atom];
-    for (int k = 0; k < nbs.length; k++) {
-      int bo = bondOrder(atom, nbs[k]);
-      if (bo == 4) bo = 1;
-      boSum += bo;
+  /** Assign consistent single-bond directions across conjugated stereo elements. */
+  private Map<Long, Integer> smilesBondDirections() {
+    Map<Long, List<long[]>> constraints = new HashMap<>();
+    if (mol != null) {
+      for (IStereoElement<?, ?> stereo : mol.stereoElements()) {
+        if (!(stereo instanceof IDoubleBondStereochemistry)) continue;
+        IDoubleBondStereochemistry doubleBond = (IDoubleBondStereochemistry) stereo;
+        IBond focus = doubleBond.getStereoBond();
+        IAtom firstAtom = focus.getAtom(0), secondAtom = focus.getAtom(1);
+        int firstReference = -1, secondReference = -1;
+        for (IBond reference : doubleBond.getBonds()) {
+          if (reference.contains(firstAtom)) firstReference = mol.indexOf(reference.getOther(firstAtom));
+          if (reference.contains(secondAtom)) secondReference = mol.indexOf(reference.getOther(secondAtom));
+        }
+        if (firstReference >= 0 && secondReference >= 0)
+          addSmilesDirectionConstraint(constraints, mol.indexOf(firstAtom), firstReference,
+              mol.indexOf(secondAtom), secondReference,
+              doubleBond.getStereo() == IDoubleBondStereochemistry.Conformation.TOGETHER ? 1 : 2);
+      }
+    } else {
+      for (int firstAtom = 0; firstAtom < n; firstAtom++) {
+        for (int secondAtom : neighbors[firstAtom]) {
+          if (firstAtom >= secondAtom || bondOrder(firstAtom, secondAtom) != 2
+              || dbStereo(firstAtom, secondAtom) == 0) continue;
+          int firstReference = -1, secondReference = -1;
+          for (int neighbor : neighbors[firstAtom]) if (neighbor != secondAtom) { firstReference = neighbor; break; }
+          for (int neighbor : neighbors[secondAtom]) if (neighbor != firstAtom) { secondReference = neighbor; break; }
+          if (firstReference >= 0 && secondReference >= 0)
+            addSmilesDirectionConstraint(constraints, firstAtom, firstReference,
+                secondAtom, secondReference, dbStereo(firstAtom, secondAtom));
+        }
+      }
     }
-    return FingerprintEngine.implicitH(z, boSum, charge);
+    for (int atom = 0; atom < n; atom++) {
+      boolean doubleBondEnd = false;
+      for (int neighbor : neighbors[atom]) if (bondOrder(atom, neighbor) == 2) doubleBondEnd = true;
+      if (!doubleBondEnd) continue;
+      int firstReference = -1;
+      for (int neighbor : neighbors[atom]) {
+        if (!constraints.containsKey(bondKey(atom, neighbor))) continue;
+        if (firstReference < 0) firstReference = neighbor;
+        else addSmilesDirectionConstraint(constraints, atom, firstReference, atom, neighbor, 2);
+      }
+    }
+    List<Long> bonds = new ArrayList<>(constraints.keySet());
+    bonds.sort(Comparator.comparingInt((Long key) -> Math.min(canonicalLabel[(int) (key >>> 32)], canonicalLabel[(int) (long) key]))
+        .thenComparingInt(key -> Math.max(canonicalLabel[(int) (key >>> 32)], canonicalLabel[(int) (long) key])));
+    Map<Long, Integer> directions = new HashMap<>();
+    ArrayDeque<Long> pending = new ArrayDeque<>();
+    for (long bond : bonds) {
+      if (directions.containsKey(bond)) continue;
+      directions.put(bond, canonicalLabel[(int) (bond >>> 32)] < canonicalLabel[(int) bond] ? 1 : -1);
+      pending.add(bond);
+      while (!pending.isEmpty()) {
+        long current = pending.removeFirst();
+        for (long[] constraint : constraints.get(current)) {
+          int direction = directions.get(current) * (int) constraint[1];
+          Integer previous = directions.putIfAbsent(constraint[0], direction);
+          if (previous == null) pending.addLast(constraint[0]);
+          else if (previous != direction) throw new IllegalArgumentException("Inconsistent double-bond stereochemistry");
+        }
+      }
+    }
+    return directions;
+  }
+
+  /** Relate directions away from the two ends of one stereo double bond. */
+  private static void addSmilesDirectionConstraint(Map<Long, List<long[]>> constraints,
+      int firstAtom, int firstReference, int secondAtom, int secondReference, int conformation) {
+    long firstBond = bondKey(firstAtom, firstReference), secondBond = bondKey(secondAtom, secondReference);
+    int relation = (conformation == 1 ? 1 : -1)
+        * (firstAtom < firstReference ? 1 : -1) * (secondAtom < secondReference ? 1 : -1);
+    constraints.computeIfAbsent(firstBond, key -> new ArrayList<>()).add(new long[] {secondBond, relation});
+    constraints.computeIfAbsent(secondBond, key -> new ArrayList<>()).add(new long[] {firstBond, relation});
   }
 
   /**
    * Write the bond token between from→to.
    * For single bonds adjacent to a stereo double bond we emit '/' or '\'.
-   * E/Z assignment: conf==1 → TOGETHER (Z, cis) → '/', conf==2 → OPPOSITE (E, trans) → '\'.
    * Direction is relative to the from→to traversal direction.
    */
-  private void writeBondSymbol(int from, int to, StringBuilder sb) {
+  private void writeBondSymbol(int from, int to, StringBuilder sb, Map<Long, Integer> bondDirections) {
     int order = bondOrder(from, to);
     boolean fromArom = aromatic[from], toArom = aromatic[to];
     // Order 4 = aromatic bond inside an aromatic ring → implicit (no symbol).
@@ -3458,18 +3682,15 @@ public final class MolGraph {
     if (order == 2) { sb.append('='); return; }
     if (order == 3) { sb.append('#'); return; }
     if (order == 1) {
+      Integer direction = bondDirections.get(bondKey(from, to));
+      if (direction != null) {
+        sb.append(direction * (from < to ? 1 : -1) > 0 ? '/' : '\\');
+        return;
+      }
       // Single bond between TWO aromatic atoms must be emitted explicitly
       // as '-' so that biphenyl c1ccc(-c2ccccc2)cc1 is distinguished from an
       // aromatic ring fusion. Otherwise single bonds are implicit.
       if (fromArom && toArom) { sb.append('-'); return; }
-      // Single bond may carry E/Z direction when adjacent to a stereo double bond.
-      if (dbStereoConf != null) {
-        int dbConf = dbStereo(from, to);
-        if (dbConf != 0) {
-          // dbConf==1 → TOGETHER → '/', dbConf==2 → OPPOSITE → '\'
-          sb.append(dbConf == 1 ? '/' : '\\');
-        }
-      }
     }
   }
 
@@ -3486,7 +3707,7 @@ public final class MolGraph {
     private static final int ROW_DENSE = 2;
 
     private int n;
-    private int[] atomicNum, formalCharge, massNumber;
+    private int[] atomicNum, formalCharge, massNumber, hydrogenCounts;
     private boolean[] ring, aromatic;
     private int[][] neighbors, bondOrders;
     private boolean[][] bondRings, bondAroms;
@@ -3506,6 +3727,8 @@ public final class MolGraph {
     public Builder atomicNumbers(int[] atomicNum) { this.atomicNum = atomicNum; return this; }
     public Builder formalCharges(int[] formalCharge) { this.formalCharge = formalCharge; return this; }
     public Builder massNumbers(int[] massNumber) { this.massNumber = massNumber; return this; }
+    /** Optional per-atom hydrogen counts; omitted counts follow the valence model. */
+    public Builder hydrogenCounts(int[] hydrogenCounts) { this.hydrogenCounts = hydrogenCounts; return this; }
     public Builder ringFlags(boolean[] ring) { this.ring = ring; return this; }
     public Builder aromaticFlags(boolean[] aromatic) { this.aromatic = aromatic; return this; }
     public Builder neighbors(int[][] neighbors) { this.neighbors = neighbors; return this; }
@@ -3567,6 +3790,8 @@ public final class MolGraph {
         throw new IllegalArgumentException("formalCharges length (" + formalCharge.length + ") != atomCount (" + n + ")");
       if (massNumber != null && massNumber.length != n)
         throw new IllegalArgumentException("massNumbers length (" + massNumber.length + ") != atomCount (" + n + ")");
+      if (hydrogenCounts != null && hydrogenCounts.length != n)
+        throw new IllegalArgumentException("hydrogenCounts length must equal atomCount");
       if (ring != null && ring.length != n)
         throw new IllegalArgumentException("ringFlags length (" + ring.length + ") != atomCount (" + n + ")");
       if (aromatic != null && aromatic.length != n)
@@ -3589,6 +3814,8 @@ public final class MolGraph {
           throw new IllegalArgumentException("atomicNumbers must be in [0, 118]");
         if (massNumber != null && massNumber[i] < 0)
           throw new IllegalArgumentException("massNumbers must be >= 0");
+        if (hydrogenCounts != null && hydrogenCounts[i] < 0)
+          throw new IllegalArgumentException("hydrogenCounts must be >= 0");
         if (tetraChirality != null && tetraChirality[i] != 0 && tetraChirality[i] != 1 && tetraChirality[i] != 2)
           throw new IllegalArgumentException("tetrahedralChirality entries must be 0, 1, or 2");
       }
@@ -3740,7 +3967,7 @@ public final class MolGraph {
     int[] nbs = g.neighbors[idx];
     int deg = nbs.length;
     if (deg == 0) return EMPTY_NLF;
-    // Fast path: avoid HashMap for small neighborhoods (common case: degree 1-6).
+    // Fast path: avoid HashMap for small neighbourhoods (common case: degree 1-6).
     // Collect labels, sort, then run-length encode.
     int[] labels = new int[deg];
     for (int i = 0; i < deg; i++) labels[i] = nlfLabel(g, nbs[i]);
@@ -3957,10 +4184,6 @@ public final class MolGraph {
       // Strict aromaticity: aromatic bonds must match aromatic bonds (no ring guard needed)
       if (C.aromaticityMode == ChemOptions.AromaticityMode.STRICT
           && g1.bondAromatic(qi, qk) != g2.bondAromatic(tj, tk)) return false;
-      if (C.useBondStereo) {
-        int qConf = g1.dbStereo(qi, qk), tConf = g2.dbStereo(tj, tk);
-        if (qConf != 0 && tConf != 0 && qConf != tConf) return false;
-      }
       if (C.ringMatchesRingOnly && g1.bondInRing(qi, qk) != g2.bondInRing(tj, tk)) return false;
       if (tautBondRelax) return true;  // bond order relaxed for tautomeric bonds
       if (C.matchBondOrder == ChemOptions.BondOrderMode.ANY) return true;

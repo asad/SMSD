@@ -12,10 +12,10 @@ wheels have passed strict collection against the same source archive.
 ## Source and layout
 
 Java sources and launchers are in `java/src/`, its Maven module is
-`java/pom.xml`, and generated Java artifacts are in `java/target/`. The root
+`java/pom.xml`, and generated Java artefacts are in `java/target/`. The root
 Maven aggregator supports `mvn verify`. C++ sources remain in `cpp/`, Python
 sources/tests remain in `python/`, and shared scripts, documentation and
-licenses stay at the root. The root `pyproject.toml` is the single Python
+licences stay at the root. The root `pyproject.toml` is the single Python
 manifest because it builds the extension from the C++ tree.
 
 The frozen build source is commit
@@ -37,7 +37,7 @@ recorded in the release directory's `SHA256SUMS`.
 | Linux x86_64 CPU/OpenMP | Passed locally under emulation | Same frozen archive; 12 native Debug suites, 691 Python passes and 8 skips on Python 3.14.5/RDKit 2026.03.6 |
 | Windows cross-compilation | Passed locally; no execution | All 12 native targets compile/link with MinGW GCC 16.2.0 and have AMD64 PE headers; sequential fallback |
 | Windows x86_64 CPU/OpenMP | Passed on Windows Server 2022 | Same frozen archive; 12 MSVC Debug suites, 691 Python passes and 8 skips on Python 3.14.7/RDKit 2026.03.6; repaired DLLs checked |
-| Three-wheel collection | Passed | Source/version agreement, binary architecture, runtime libraries, wrappers/headers, licenses and all RECORD hashes |
+| Three-wheel collection | Passed | Source/version agreement, binary architecture, runtime libraries, wrappers/headers, licences and all RECORD hashes |
 | Source and release assets | Passed locally | Complete source inputs, no private files, strict metadata checks, CLI/header packages and verified checksums |
 | GitHub release | 7.2.1 | Complete validated asset set with SHA256SUMS |
 | PyPI and Maven Central | Pending | Publication followed by clean download/install checks |
@@ -96,7 +96,7 @@ installed-wheel pytest passed 691 tests with 8 skips in 32.89 seconds.
 The runtime was Python 3.14.5, RDKit 2026.03.6 and pytest 9.1.1, with active
 OpenMP. Auditwheel repair and strict Twine metadata checks passed; collection
 verified AMD64 ELF architecture, all RECORD hashes, exact source headers and
-wrappers, and license copies. The bundled libgomp 8.5.0 runtime comes from the
+wrappers, and licence copies. The bundled libgomp 8.5.0 runtime comes from the
 AlmaLinux image; its executable section matches the original library, and the
 extension's relative RPATH resolves the repaired copy. Auditwheel added both manylinux 2.27 and 2.28
 tags; execution was tested on glibc 2.28 only. The repaired wheel SHA-256 is
@@ -122,7 +122,7 @@ Both bundled Microsoft runtimes (`msvcp140.dll` and `vcomp140.dll`) are AMD64
 release DLLs at version 14.44.35211.0, matching the extension's 14.44 linker
 family. Their hashes match the explicitly selected Visual Studio
 redistributables. Independent PE inspection resolved all 78 imports from those
-DLLs and found no delay imports. Exact Microsoft license copies and the
+DLLs and found no delay imports. Exact Microsoft licence copies and the
 supported delvewheel 1.13.1 loader passed inspection. Native execution also
 checked UTF-8 file paths and the installed OpenMP backend. The workflow used
 the updated checkout/upload/download actions and skipped publication.
@@ -135,7 +135,7 @@ release packages. PyPI and Maven clean download/install checks remain pending
 until those registries are updated.
 
 The Docker allowlist excludes generated Java API pages, test reports and
-build artifacts. Inspection of the actual builder COPY layer found only the
+build artefacts. Inspection of the actual builder COPY layer found only the
 35 required manifests, source/resource/launcher and legal files.
 
 The production fingerprint covers 40 files: ten Java source files, 27 C++
@@ -182,8 +182,8 @@ python -m twine check --strict \
   dist/release-7.2.1/smsd-7.2.1-*.whl
 ```
 
-Artifact inspection complements execution on the target operating system;
-it cannot prove Windows runtime behavior from a macOS inspection alone.
+Artefact inspection complements execution on the target operating system;
+it cannot prove Windows runtime behaviour from a macOS inspection alone.
 
 ## Historical search and benchmark evidence
 

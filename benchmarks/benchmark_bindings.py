@@ -4,8 +4,8 @@
 
 These are microbenchmarks, not whole-application speed claims. The serial and
 single-thread batch MCS measurements use the same already-parsed graphs and
-native search options; their checksums must agree. Public auto/native dispatch
-are reported separately because they use different search strategies.
+search options; their checksums must agree. Prepared and fresh query setup
+are measured separately.
 """
 import argparse
 import json
@@ -55,9 +55,12 @@ def main(argv=None):
     large_target = smsd.parse_smiles(".".join([target_smiles]*64))
     large_target.prewarm()
     large_targets = [large_target]*32
-    compiled_query = native.compile_smarts("c1ccccc1")
-    chem, opts = smsd.ChemOptions(), smsd.MCSOptions()
-    opts.timeout_ms = 1000; opts.connected_only = True; opts.maximize_bonds = False
+    compiled_query = smsd.Substructure.smarts("c1ccccc1")
+    opts = smsd.MCS.Options()
+    opts.timeout_ms = 1000
+    prepared = smsd.MCS.find(query).with_options(opts)
+    native_query = native.MCS.find(query).with_options(opts)
+    substructure = smsd.Substructure.find(query)
     operations = {
         "parse_smiles": lambda: smsd.parse_smiles(target_smiles).n,
         "from_rdkit_uncached": lambda: smsd.from_rdkit(rdkit_target, use_cache=False).n,
@@ -66,22 +69,22 @@ def main(argv=None):
         "atomic_numbers_copy": lambda: len(target.atomic_num),
         "neighbors_copy": lambda: len(target.neighbors),
         "bonds_copy": lambda: len(target.bonds()),
-        "native_mcs_graphs": lambda: len(native.find_mcs(query, target, chem, opts)),
-        "public_native_graphs": lambda: len(smsd.find_mcs(query, target, strategy="native", timeout_ms=1000)),
-        "public_auto_graphs": lambda: len(smsd.find_mcs(query, target, timeout_ms=1000)),
-        "serial_32_mcs_sizes": lambda: sum(len(native.find_mcs(query, t, chem, opts)) for t in targets),
-        "batch_32_mcs_sizes_one_thread": lambda: sum(native.batch_mcs_size(query, targets, chem, opts, 1)),
-        "batch_32_mcs_mappings_one_thread": lambda: sum(len(m) for m in native.batch_mcs(query, targets, chem, opts, 1)),
-        "serial_32_large_mcs_sizes": lambda: sum(len(native.find_mcs(query, t, chem, opts)) for t in large_targets),
-        "batch_32_large_mcs_sizes_one_thread": lambda: sum(native.batch_mcs_size(query, large_targets, chem, opts, 1)),
-        "serial_32_substructure": lambda: sum(native.is_substructure(query, t, chem) for t in targets),
-        "batch_32_substructure_one_thread": lambda: sum(native.batch_substructure(query, targets, chem, 1)),
-        "serial_32_large_substructure": lambda: sum(native.is_substructure(query, t, chem) for t in large_targets),
-        "batch_32_large_substructure_one_thread": lambda: sum(native.batch_substructure(query, large_targets, chem, 1)),
-        "serial_32_compiled_smarts": lambda: sum(compiled_query.matches(t) for t in targets),
-        "batch_32_compiled_smarts": lambda: sum(compiled_query.matches_many(targets)),
-        "serial_32_large_compiled_smarts": lambda: sum(compiled_query.matches(t) for t in large_targets),
-        "batch_32_large_compiled_smarts": lambda: sum(compiled_query.matches_many(large_targets)),
+        "native_mcs_graphs": lambda: len(native_query.match(target).matches[0].atom_mapping),
+        "public_prepared_graphs": lambda: prepared.match(target).best.atom_count,
+        "public_fresh_graphs": lambda: smsd.MCS.find(query).with_timeout(1000).match(target).best.atom_count,
+        "serial_32_mcs_sizes": lambda: sum(prepared.match(t).best.atom_count for t in targets),
+        "batch_32_mcs_sizes_one_thread": lambda: sum(result.best.atom_count for result in prepared.match_many(targets, num_threads=1)),
+        "batch_32_mcs_mappings_one_thread": lambda: sum(len(result.best.atom_mapping) for result in prepared.match_many(targets, num_threads=1)),
+        "serial_32_large_mcs_sizes": lambda: sum(prepared.match(t).best.atom_count for t in large_targets),
+        "batch_32_large_mcs_sizes_one_thread": lambda: sum(result.best.atom_count for result in prepared.match_many(large_targets, num_threads=1)),
+        "serial_32_substructure": lambda: sum(substructure.match(t).found for t in targets),
+        "batch_32_substructure_one_thread": lambda: sum(result.found for result in substructure.match_many(targets, num_threads=1)),
+        "serial_32_large_substructure": lambda: sum(substructure.match(t).found for t in large_targets),
+        "batch_32_large_substructure_one_thread": lambda: sum(result.found for result in substructure.match_many(large_targets, num_threads=1)),
+        "serial_32_compiled_smarts": lambda: sum(compiled_query.match(t).found for t in targets),
+        "batch_32_compiled_smarts": lambda: sum(result.found for result in compiled_query.match_many(targets)),
+        "serial_32_large_compiled_smarts": lambda: sum(compiled_query.match(t).found for t in large_targets),
+        "batch_32_large_compiled_smarts": lambda: sum(result.found for result in compiled_query.match_many(large_targets)),
     }
     results = {}
     for name, call in operations.items():

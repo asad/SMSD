@@ -2,10 +2,9 @@
 # Copyright (c) 2018-2026 BioInception PVT LTD
 """Independent checks of mixed input indices and callback ownership."""
 
-from types import SimpleNamespace
-
 import pytest
 import smsd
+from .search_helpers import configured_mcs, atom_map
 
 
 def _mixed_pair(graph_side):
@@ -52,32 +51,26 @@ def _assert_witness(query, target, mapping):
 @pytest.mark.parametrize("graph_side", ["query", "target"])
 @pytest.mark.parametrize("entrypoint", ["single", "multiple", "substructure",
                                          "all_substructures", "batch",
-                                         "batch_substructure", "progressive",
-                                         "constrained"])
+                                         "batch_substructure", "corpus",
+                                         "corpus_substructure"])
 def test_mixed_inputs_keep_graph_atom_indices(graph_side, entrypoint):
     query, target = _mixed_pair(graph_side)
     if entrypoint == "single":
-        mappings = [smsd.find_mcs(query, target, strategy="native")]
+        mappings = [atom_map(configured_mcs(query).match(target))]
     elif entrypoint == "multiple":
-        mappings = smsd.find_mcs(query, target, max_results=4)
+        mappings = [dict(match.atom_mapping) for match in configured_mcs(query).match_all(target, 4).matches]
     elif entrypoint == "substructure":
-        mappings = [smsd.find_substructure(query, target)]
+        mappings = [atom_map(smsd.Substructure.find(query).match(target))]
     elif entrypoint == "all_substructures":
-        mappings = smsd.find_substructure(query, target, max_results=4)
+        mappings = [dict(match.atom_mapping) for match in smsd.Substructure.find(query).match_all(target, 4).matches]
     elif entrypoint == "batch":
-        mappings = smsd.batch_mcs(query, [target])
+        mappings = [atom_map(result) for result in smsd.MCS.find(query).match_many([target])]
     elif entrypoint == "batch_substructure":
-        mappings = [dict(pairs) for pairs in smsd.batch_find_substructure(query, [target])]
-    elif entrypoint == "progressive":
-        callbacks = []
-        result = smsd.find_mcs_progressive(
-            query, target, on_progress=lambda mapping, size, elapsed: callbacks.append(mapping))
-        mappings = [result, *callbacks]
-        assert callbacks
+        mappings = [atom_map(result) for result in smsd.Substructure.find(query).match_many([target])]
     else:
-        selected = smsd.batch_mcs_constrained([query], [target], return_target_indices=True)
-        assert selected[0][0] == 0
-        mappings = [selected[0][1]]
+        corpus = smsd.TargetCorpus.from_smiles([target])
+        search = smsd.MCS.find(query) if entrypoint == "corpus" else smsd.Substructure.find(query)
+        mappings = [atom_map(result) for result in search.match_many(corpus)]
     assert mappings
     for mapping in mappings:
         _assert_witness(query, target, mapping)
@@ -103,22 +96,20 @@ def test_rdkit_weight_translation_preserves_the_caller_list():
     molecule = chem.RenumberAtoms(chem.MolFromSmiles("NCCO"), [3, 1, 0, 2])
     graph = smsd.from_rdkit(molecule)
     weights = [10.0, 20.0, 30.0, 40.0]
-    options = SimpleNamespace(atom_weights=weights)
-    smsd._remap_query_weights(options, graph, molecule)
-    assert options.atom_weights == [weights[index] for index in smsd.get_index_map(graph)]
+    query = smsd.MCS.find(molecule).with_atom_weights(weights)
+    result = query.with_timeout(1000).match("N")
+    nitrogen = next(atom.GetIdx() for atom in molecule.GetAtoms() if atom.GetAtomicNum() == 7)
+    assert dict(result.best.atom_mapping) == {nitrogen: 0}
+    assert result.score == weights[nitrogen]
     assert weights == [10.0, 20.0, 30.0, 40.0]
 
 
-def test_progress_callback_mapping_is_independent_of_returned_mapping():
-    calls = []
-
-    def mutate_callback(mapping, size, elapsed):
-        calls.append((size, elapsed))
-        assert size == len(mapping)
-        mapping.clear()
-        mapping[99] = 99
-
-    result = smsd.find_mcs_progressive("NCCO", "NCCO", on_progress=mutate_callback)
-    assert len(calls) == 1
-    assert calls[0][0] == 4 and calls[0][1] >= 0
-    assert result == {0: 0, 1: 1, 2: 2, 3: 3}
+def test_returned_mapping_cannot_mutate_a_reused_query():
+    query = smsd.MCS.find("NCCO")
+    result = query.match("NCCO")
+    with pytest.raises(TypeError):
+        result.best.atom_mapping[99] = 99
+    copied = dict(result.best.atom_mapping)
+    copied.clear()
+    assert dict(query.match("NCCO").best.atom_mapping) == {0: 0, 1: 1, 2: 2, 3: 3}
+    assert result.elapsed_ms >= 0 and result.optimal

@@ -5,7 +5,7 @@
  *
  * RDKit adapter: converts RDKit ROMol to SMSD MolGraph.
  * This is the ONLY file that depends on RDKit.
- * The core algorithms (mol_graph.hpp, vf2pp.hpp, mcs.hpp) are RDKit-free.
+ * The core algorithms (mol_graph.hpp, search.hpp, mcs.hpp) are RDKit-free.
  */
 
 #ifdef SMSD_WITH_RDKIT
@@ -50,7 +50,7 @@ MolGraph fromRDKit(const RDKit::ROMol& mol, bool removeHs) {
         ringFlag[i]     = ri->numAtomRings(i) > 0 ? 1 : 0;
     }
 
-    // Build adjacency + per-neighbor bond properties
+    // Build adjacency + per-neighbour bond properties
     std::vector<std::vector<int>> neighbors(n);
     std::vector<std::vector<int>> bondOrders(n);
     std::vector<std::vector<bool>> bondRingFlags(n);
@@ -84,13 +84,16 @@ MolGraph fromRDKit(const RDKit::ROMol& mol, bool removeHs) {
         bondAromFlags[b].push_back(arom);
     }
 
-    // Tetrahedral chirality (CW = +1, CCW = -1, none = 0)
+    // The source uses a trailing virtual ligand; the graph can put it first.
     std::vector<int> tetraChir(n, 0);
     for (int i = 0; i < n; ++i) {
         const auto* atom = m->getAtomWithIdx(i);
         auto chi = atom->getChiralTag();
-        if (chi == RDKit::Atom::CHI_TETRAHEDRAL_CW)  tetraChir[i] = +1;
-        if (chi == RDKit::Atom::CHI_TETRAHEDRAL_CCW) tetraChir[i] = -1;
+        if (chi == RDKit::Atom::CHI_TETRAHEDRAL_CW)  tetraChir[i] = 2;
+        if (chi == RDKit::Atom::CHI_TETRAHEDRAL_CCW) tetraChir[i] = 1;
+        if (tetraChir[i] && neighbors[i].size() == 3
+            && !(i > 0 && neighbors[i][0] < i))
+            tetraChir[i] = 3 - tetraChir[i];
     }
 
     // Build MolGraph via the Builder (handles dense/sparse bond storage,

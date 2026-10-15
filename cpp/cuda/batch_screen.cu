@@ -34,7 +34,7 @@ namespace cuda {
 // ============================================================================
 
 static constexpr int MAX_ATOMS        = 200;
-static constexpr int LABEL_BINS       = 256;
+static constexpr int LABEL_BINS       = 512;
 static constexpr int FP_WORDS         = 16;    // 16 * 64 = 1024-bit fingerprint
 static constexpr int BLOCK_SIZE       = 256;
 static constexpr int CHUNK_SIZE       = 100000; // stream 100K targets per chunk
@@ -61,7 +61,7 @@ static constexpr int CHUNK_SIZE       = 100000; // stream 100K targets per chunk
 /// Compact molecule representation for RASCAL screening.
 struct alignas(16) GpuMolecule {
     int n;                        // atom count
-    int labelCounts[LABEL_BINS];  // histogram of atom labels (label & 0xFF)
+    int labelCounts[LABEL_BINS];  // histogram of encoded atom labels
 };
 
 /// Compact fingerprint for substructure pre-screening.
@@ -93,9 +93,8 @@ __global__ void rascalScreenKernel(
 
     // Cooperatively load query histogram into shared memory (L1 cache speed)
     __shared__ int sharedQueryLabels[LABEL_BINS];
-    if (threadIdx.x < LABEL_BINS) {
-        sharedQueryLabels[threadIdx.x] = query->labelCounts[threadIdx.x];
-    }
+    for (int labelIndex = threadIdx.x; labelIndex < LABEL_BINS; labelIndex += blockDim.x)
+        sharedQueryLabels[labelIndex] = query->labelCounts[labelIndex];
     __syncthreads();
 
     if (tid >= numTargets) return;
@@ -113,7 +112,7 @@ __global__ void rascalScreenKernel(
     }
 
     int total = qn + tn;
-    double sim = (total == 0) ? 1.0 : static_cast<double>(overlap) /
+    double sim = (total == 0) ? 0.0 : static_cast<double>(overlap) /
                                        static_cast<double>(total - overlap);
     scores[tid]  = sim;
     results[tid] = (sim >= threshold) ? 1 : 0;
@@ -221,7 +220,7 @@ struct DeviceBuffer {
 /// Screen query against all targets on GPU using RASCAL upper bound.
 /// Returns vector of (index, score) for targets passing the threshold.
 /// For large N (> CHUNK_SIZE), streams targets in chunks to limit GPU memory.
-inline std::vector<ScreenResult> batchRascalScreen(
+std::vector<ScreenResult> batchRascalScreen(
     const GpuMolecule& query,
     const std::vector<GpuMolecule>& targets,
     double threshold
@@ -296,7 +295,7 @@ inline std::vector<int> batchScreen(
 /// Screen query fingerprint against all target fingerprints on GPU.
 /// Returns vector of (index, tanimotoSimilarity) for targets where
 /// the query fingerprint is a subset of the target fingerprint.
-inline std::vector<ScreenResult> batchFingerprintScreen(
+std::vector<ScreenResult> batchFingerprintScreen(
     const GpuFingerprint& query,
     const std::vector<GpuFingerprint>& targets
 ) {
@@ -347,19 +346,19 @@ inline std::vector<ScreenResult> batchFingerprintScreen(
 
 /// Convert label vector to GpuMolecule histogram.
 /// Designed to work with MolGraph::label vector.
-inline GpuMolecule toGpuMolecule(int atomCount, const int* labels) {
+GpuMolecule toGpuMolecule(int atomCount, const int* labels) {
     GpuMolecule gm;
     gm.n = atomCount;
     std::memset(gm.labelCounts, 0, sizeof(gm.labelCounts));
     for (int i = 0; i < atomCount; ++i) {
-        int bin = labels[i] & 0xFF;
+        int bin = static_cast<unsigned>(labels[i]) & (LABEL_BINS - 1);
         gm.labelCounts[bin]++;
     }
     return gm;
 }
 
 /// Convert a 1024-bit fingerprint (as vector<uint64_t>) to GpuFingerprint.
-inline GpuFingerprint toGpuFingerprint(const uint64_t* fp, int numWords) {
+GpuFingerprint toGpuFingerprint(const uint64_t* fp, int numWords) {
     GpuFingerprint gf;
     std::memset(gf.bits, 0, sizeof(gf.bits));
     int copyN = std::min(numWords, FP_WORDS);
@@ -372,7 +371,7 @@ inline GpuFingerprint toGpuFingerprint(const uint64_t* fp, int numWords) {
 // ============================================================================
 
 /// Returns true if at least one CUDA device is available.
-inline bool cudaAvailable() {
+bool cudaAvailable() {
     int deviceCount = 0;
     cudaError_t err = cudaGetDeviceCount(&deviceCount);
     if (err != cudaSuccess) return false;
@@ -380,7 +379,7 @@ inline bool cudaAvailable() {
 }
 
 /// Returns the name and compute capability of the current CUDA device.
-inline std::string cudaDeviceInfo() {
+std::string cudaDeviceInfo() {
     int device = 0;
     cudaError_t err = cudaGetDevice(&device);
     if (err != cudaSuccess) return "No CUDA device";

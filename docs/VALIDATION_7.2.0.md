@@ -7,7 +7,7 @@ commands below retain the 7.2.0 checkout layout; current module paths are
 explained in [the installation guide](HOWTO-INSTALL.md).
 
 This is an unreleased-source validation record, dated 2026-10-05. The baseline
-is the 7.1.2 source snapshot `6807f31`. Earlier release artifacts are distinct
+is the 7.1.2 source snapshot `6807f31`. Earlier release artefacts are distinct
 from the candidate tested here.
 
 ## Environment and scope
@@ -29,7 +29,7 @@ from the candidate tested here.
 | Check | Result |
 |---|---|
 | Clean Java verification | 1,242 passed; 15 opt-in cases skipped; no failures/errors |
-| Java artifacts | All four JARs and both CLI launchers report 7.2.0; JARs include exact SMSD LICENSE/NOTICE copies |
+| Java artefacts | All four JARs and both CLI launchers report 7.2.0; JARs include exact SMSD LICENSE/NOTICE copies |
 | Native Debug CPU | All 12 CTest suites passed; assertions enabled; includes platform portability checks |
 | Installed Python comparison wheel | 691 passed; 8 optional/opt-in cases skipped; Python 3.13.14/RDKit 2026.09.1 |
 | Repaired Python release wheel | 691 passed; 8 optional/opt-in cases skipped; Python 3.14.8/RDKit 2026.03.6; built from the source distribution |
@@ -104,15 +104,15 @@ A GPU test skipped for unavailable hardware is not a hardware pass. Resource
 budgets are cooperative; preparation and work units can overshoot. Public MCS
 mappings carry no optimality certificate or cancellation flag. Native weighted
 scores truncate to integer millipoints; Java uses double scores. Exact mapping
-canonicalization explicitly rejects incomplete generators or resource limits.
+canonicalisation explicitly rejects incomplete generators or resource limits.
 
 ## Release preparation
 
-`scripts/prepare-release.sh` assembles locally validated artifacts and checksum
+`scripts/prepare-release.sh` assembles locally validated artefacts and checksum
 files. It does not tag, publish or run hosted jobs. The four README files link
 to the measured report and remove unsupported historical speed and quality
 claims. Local instruction/configuration files and private review logs are
-excluded from public sources and artifacts.
+excluded from public sources and artefacts.
 
 The compact Python release targets CPython 3.14 wheels for Linux x86_64,
 macOS arm64 and Windows x86_64, plus a source distribution. A platform target
@@ -149,7 +149,7 @@ x86_64 emulation on the arm64 Mac: glibc 2.28, GCC 14.2.1, CPython 3.14.5,
 pybind11 3.1.0 and RDKit 2026.03.6. Auditwheel repair bundles `libgomp` and
 emits both manylinux 2.27 and 2.28 compatibility tags; execution was checked
 on the glibc 2.28 container. Twine checks, installed-module origin, CPU/OpenMP
-functionality, full Python tests and artifact hashes pass. Timings from
+functionality, full Python tests and artefact hashes pass. Timings from
 emulation do not extend the macOS benchmark comparisons.
 The original tested Linux wheel SHA-256 is
 `9ec857dd14969eb05316428f4836b2604c87a3ad512a612a770f2a818ae22672`.
@@ -201,14 +201,14 @@ The corrected wheel SHA-256 is
 This is a 7.2.0 runtime-packaging result before the 7.2.1 module relocation.
 
 All three release wheels must match the source distribution's Python wrappers,
-C++ headers and license copies. `scripts/collect-release-wheels.py` also checks
+C++ headers and licence copies. `scripts/collect-release-wheels.py` also checks
 wheel RECORD hashes and requires all three platforms by default. The Linux
-repair includes the GCC OpenMP runtime license and runtime-library exception;
-macOS includes the LLVM OpenMP license.
-Windows runtime license documents and attribution are included under
-`licenses/msvc` and copied into wheel license metadata.
+repair includes the GCC OpenMP runtime licence and runtime-library exception;
+macOS includes the LLVM OpenMP licence.
+Windows runtime licence documents and attribution are included under
+`licenses/msvc` and copied into wheel licence metadata.
 
 Release staging refreshes the Linux and macOS wheels' README metadata and
-runtime license copies. Their native libraries, Python application code and
+runtime licence copies. Their native libraries, Python application code and
 C++ headers remain byte-identical to the tested wheels. Final distribution
 hashes are recorded in the release's `SHA256SUMS` file.

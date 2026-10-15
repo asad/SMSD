@@ -1,7 +1,8 @@
+#include "search_test_helpers.hpp"
 /* SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  */
-#include "smsd/vf2pp.hpp"
+#include "smsd/substructure.hpp"
 #include "smsd/smiles_parser.hpp"
 #include <functional>
 #include <iostream>
@@ -54,8 +55,12 @@ static MappingSet oracle(const smsd::MolGraph& q, const smsd::MolGraph& t, bool 
 }
 
 static MappingSet mappings(const smsd::MolGraph& q, const smsd::MolGraph& t,
-                           const smsd::ChemOptions& c) {
-    const auto all = smsd::findAllSubstructures(q, t, c);
+                           const smsd::ChemOptions& c, bool induced = false) {
+    auto options = smsd_test::substructureOptions(c);
+    options.induced = induced;
+    const auto result = smsd::Substructure::find(q).withOptions(options).matchAll(t);
+    std::vector<std::vector<std::pair<int, int>>> all;
+    for (const auto& match : result.matches) all.emplace_back(match.atomMapping.begin(), match.atomMapping.end());
     MappingSet out;
     for (const auto& pairs : all) {
         std::vector<int> map(q.n, -1);
@@ -73,9 +78,8 @@ static MappingSet mappings(const smsd::MolGraph& q, const smsd::MolGraph& t,
 
 static void selfEnumeration() {
     smsd::ChemOptions c;
-    for (const auto engine : {smsd::ChemOptions::MatcherEngine::VF2,
-                              smsd::ChemOptions::MatcherEngine::VF2PP}) {
-        c.matcherEngine = engine;
+    {
+
         auto chain = smsd::parseSMILES("CCC");
         auto copy = chain;
         require(mappings(chain, chain, c).size() == 2, "self chain needs both orientations");
@@ -89,10 +93,10 @@ static void selfEnumeration() {
 static void disconnectedPath() {
     auto mixed = smsd::parseSMILES("C1CC1.CC");
     auto copy = smsd::parseSMILES("C1CC1.CC");
-    require(!smsd::detail::isSimplePathGraph(mixed), "cycle plus edge is not a path");
+    require(mixed.neighbors[0].size() == 2 && mixed.neighbors[3].size() == 1, "cycle plus edge fixture");
     smsd::ChemOptions c;
-    require(smsd::isSubstructure(mixed, copy, c), "disconnected self match");
-    require(smsd::findSubstructure(mixed, copy, c).size() == 5, "complete disconnected mapping");
+    require(smsd_test::substructureExists(mixed, copy, c), "disconnected self match");
+    require(smsd_test::substructureAtoms(mixed, copy, c).size() == 5, "complete disconnected mapping");
     require(mappings(mixed, copy, c) == oracle(mixed, copy, false), "disconnected automorphisms");
 }
 
@@ -114,24 +118,21 @@ static void strictAromaticBonds() {
     smsd::ChemOptions c;
     c.matchBondOrder = smsd::ChemOptions::BondOrderMode::ANY;
     c.aromaticityMode = smsd::ChemOptions::AromaticityMode::STRICT;
-    for (const auto engine : {smsd::ChemOptions::MatcherEngine::VF2,
-                              smsd::ChemOptions::MatcherEngine::VF2PP}) {
-        c.matcherEngine = engine;
-        require(!smsd::isSubstructure(q, t, c), "ANY bond order must respect strict aromatic bonds");
-        require(smsd::findSubstructure(q, t, c).empty(), "strict aromaticity mapping consistency");
+    {
+
+        require(!smsd_test::substructureExists(q, t, c), "ANY bond order must respect strict aromatic bonds");
+        require(smsd_test::substructureAtoms(q, t, c).empty(), "strict aromaticity mapping consistency");
     }
 }
 
 static void stickyDeadline() {
-    smsd::detail::TimeBudget budget(10000);
-    budget.deadline = smsd::detail::TimeBudget::Clock::now() - std::chrono::milliseconds(1);
-    require(budget.expired(), "the first budget check must detect an expired deadline");
+    smsd::SearchOptions options;
+    options.timeoutMs = 0;
+    smsd::search_detail::Budget budget(options, 1, 1, false);
+    require(budget.stopped(), "the first budget check must detect an expired deadline");
     for (int i = 0; i < 1024; ++i)
-        require(budget.expired(), "expired throttled checks must never resume search");
-    smsd::detail::TimeBudget direct(10000);
-    direct.deadline = budget.deadline;
-    require(direct.expiredNow(), "direct budget check detects expiry");
-    require(direct.expired(), "direct expiry must latch throttled checks");
+        require(budget.stopped(), "expired checks must never resume search");
+    require(budget.status() == smsd::SearchStatus::TimedOut, "expiry records its reason");
 }
 
 static void exhaustiveGraphs() {
@@ -143,19 +144,19 @@ static void exhaustiveGraphs() {
                     auto q = graph(qn, qm), t = graph(tn, tm);
                     for (bool induced : {false, true}) {
                         const auto expected = oracle(q, t, induced);
-                        for (const auto engine : {smsd::ChemOptions::MatcherEngine::VF2,
-                                                  smsd::ChemOptions::MatcherEngine::VF2PP}) {
+                        {
                             smsd::ChemOptions c;
-                            c.induced = induced; c.matcherEngine = engine;
                             const auto context = "oracle q=" + std::to_string(qn) + "/" + std::to_string(qm)
                                 + " t=" + std::to_string(tn) + "/" + std::to_string(tm);
-                            require(mappings(q, t, c) == expected, context);
-                            require(smsd::isSubstructure(q, t, c) == !expected.empty(), context + " exists");
+                            require(mappings(q, t, c, induced) == expected, context);
+                            auto options = smsd_test::substructureOptions(c);
+                            options.induced = induced;
+                            require(!smsd::Substructure::find(q).withOptions(options).match(t).matches.empty() == !expected.empty(), context + " exists");
                             ++cases;
                         }
                     }
                 }
-    std::cout << cases << " exhaustive topology/engine/policy cases passed\n";
+    std::cout << cases << " exhaustive topology/policy cases passed\n";
 }
 
 int main(int argc, char** argv) {

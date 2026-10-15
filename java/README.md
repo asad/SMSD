@@ -3,6 +3,9 @@
 The Java library and CLI use CDK 2.13. Version 7.2.2 supports Java 8 or later;
 Java 25 LTS is preferred. The same JAR runs on both.
 
+The prepared-query API below is an unreleased breaking change. Build it from
+this source checkout; the released 7.2.2 JAR retains the previous API.
+
 ## Installation
 
 Download the [7.2.2 release](https://github.com/asad/SMSD/releases/tag/v7.2.2):
@@ -38,15 +41,15 @@ mvn -f java/pom.xml install
 
 The Maven dependency includes the required CDK modules, including SMARTS support.
 
-## CDK example
+## CDK example from a source build
 
 Save this as `CDKExample.java`. The mapping refers to atom indices in the
 original CDK containers:
 
 ```java
-import com.bioinception.smsd.core.ChemOptions;
-import com.bioinception.smsd.core.MolGraph;
-import com.bioinception.smsd.core.SearchEngine;
+import com.bioinception.smsd.core.MCS;
+import com.bioinception.smsd.core.SearchResult;
+import com.bioinception.smsd.core.Substructure;
 import java.util.Map;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.silent.SilentChemObjectBuilder;
@@ -57,36 +60,32 @@ public class CDKExample {
         SmilesParser parser = new SmilesParser(SilentChemObjectBuilder.getInstance());
         IAtomContainer query = parser.parseSmiles("c1ccccc1");
         IAtomContainer target = parser.parseSmiles("c1ccc(O)cc1");
-        ChemOptions chemistry = new ChemOptions();
-        MolGraph queryGraph = new MolGraph(query);
-        MolGraph targetGraph = new MolGraph(target);
-        SearchEngine.MCSOptions options = new SearchEngine.MCSOptions();
-        options.timeoutMs = 1000;
-        options.connectedOnly = true;
-        Map<Integer, Integer> mapping =
-                SearchEngine.findMCS(queryGraph, targetGraph, chemistry, options);
-        if (mapping.size() != 6 || !SearchEngine.validateMapping(
-                queryGraph, targetGraph, mapping, chemistry).isEmpty()) {
-            throw new IllegalStateException("Expected a valid six-atom benzene match");
+        SearchResult result = MCS.find(query).withTimeout(1000).match(target);
+        if (!result.optimal() || !result.found()
+                || result.matches().get(0).atomCount() != 6
+                || !Substructure.find(query).match(target).found()) {
+            throw new IllegalStateException("Expected a proven six-atom benzene match");
         }
-        for (Map.Entry<Integer, Integer> pair : mapping.entrySet()) {
+        SearchResult.Match match = result.matches().get(0);
+        for (Map.Entry<Integer, Integer> pair : match.atomMapping().entrySet()) {
             System.out.println(query.getAtom(pair.getKey()).getSymbol() + " -> "
                     + target.getAtom(pair.getValue()).getSymbol());
         }
+        System.out.println("Common fragment: " + match.toSmiles(query));
     }
 }
 ```
 
-With the downloaded dependency JAR in the current directory, compile using
-Java 25 and run using Java 8 or later:
+Build the current source API, then compile using Java 25 and run on Java 8 or later:
 
 ```bash
-javac --release 8 -cp smsd-7.2.2-jar-with-dependencies.jar CDKExample.java
-java -cp "smsd-7.2.2-jar-with-dependencies.jar:." CDKExample
+mvn -f java/pom.xml package -DskipTests
+javac --release 8 -cp java/target/smsd-7.2.2-jar-with-dependencies.jar CDKExample.java
+java -cp "java/target/smsd-7.2.2-jar-with-dependencies.jar:." CDKExample
 ```
 
 When compiling with Java 8, omit `--release 8`. On Windows, use
-`"smsd-7.2.2-jar-with-dependencies.jar;."` as the classpath.
+`"java/target/smsd-7.2.2-jar-with-dependencies.jar;."` as the classpath.
 
 ## CLI
 
@@ -132,6 +131,7 @@ Use `java/pom.xml` to publish the library; the root POM aggregates local builds.
 - [Complete API reference](https://github.com/asad/SMSD/releases/download/v7.2.2/smsd-7.2.2-javadoc.jar).
 - [Validation](../docs/VALIDATION_7.2.2.md): Java 8 and 25 test results.
 - [Changelog](../CHANGELOG.md): API and behaviour changes.
+- [Benchmarks](../benchmarks/README.md): prepared-query workloads and mapping validation.
 
 Distributed under the [Apache License 2.0](../LICENSE); see [NOTICE](../NOTICE)
 for attribution and bundled dependency notices.

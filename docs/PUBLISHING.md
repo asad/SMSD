@@ -61,6 +61,11 @@ python -m twine check --strict \
   dist/release-7.2.2/smsd-7.2.2-*.whl
 ```
 
+Source preparation requires a clean checkout and records the resolved commit
+in `SOURCE_MANIFEST.json`. `SMSD_RELEASE_REF` defaults to `HEAD` and can select
+the expected release commit or tag. The script rejects an existing output
+directory; choose a new `SMSD_RELEASE_OUTPUT_DIR` for another preparation.
+
 The [benchmark guide](../benchmarks/README.md) gives reproduction commands.
 The [7.2.0 report](../benchmarks/RESULTS_7.2.0.md) remains unchanged; do not
 relabel its timings or quality cohorts as new 7.2.2 measurements. Record fresh
@@ -96,7 +101,8 @@ py -3.14 -m venv .venv-release
 ```
 
 The helper runs dependency repair, all native Debug suites and installed-wheel
-tests. Keep its source and wheel provenance JSON alongside the build logs.
+tests. Keep `SOURCE_MANIFEST.json` beside the source distribution and retain
+`wheel-build-provenance.json` beside each tested wheel.
 These native Windows commands are an alternative to the manual hosted workflow.
 Windows repair uses `scripts/repair_windows_wheel.py` to select AMD64 Microsoft
 release runtimes from Visual Studio redistributables or Windows System32.
@@ -109,19 +115,25 @@ and tests the Windows MSI and Python wheel together from the existing draft
 release inputs. The `python-publish.yml` workflow remains available for
 Python-only builds and explicit PyPI publication.
 
-After downloading the tested Windows artifact, collect all three wheels and
-check them against the prepared source distribution:
+After downloading the tested Windows artefact, collect all three wheels and
+check them against the prepared source distribution. A recorded partial
+collection is immutable. Assemble the complete wheel set in a new directory,
+using the unchanged source archive and its manifest:
 
 ```bash
+mkdir dist/release-7.2.2-complete
+cp dist/release-7.2.2/smsd-7.2.2.tar.gz \
+  dist/release-7.2.2/SOURCE_MANIFEST.json dist/release-7.2.2-complete/
 python scripts/collect-release-wheels.py \
-  --release-dir dist/release-7.2.2 \
+  --release-dir dist/release-7.2.2-complete \
+  --wheel-dir dist/release-7.2.2 \
   --wheel-dir build/platform-release/linux \
   --wheel-dir build/platform-release/windows
 python scripts/collect-release-wheels.py \
-  --release-dir dist/release-7.2.2 --check-only
+  --release-dir dist/release-7.2.2-complete --check-only
 python -m twine check --strict \
-  dist/release-7.2.2/smsd-7.2.2.tar.gz \
-  dist/release-7.2.2/smsd-7.2.2-*.whl
+  dist/release-7.2.2-complete/smsd-7.2.2.tar.gz \
+  dist/release-7.2.2-complete/smsd-7.2.2-*.whl
 ```
 
 Collection verifies package versions, CPython/ABI/platform tags, native binary
@@ -130,6 +142,9 @@ C++ headers and licence copies against the release checkout and source distribut
 For Windows, the supported delvewheel loader is checked separately; the
 application code must still match the source exactly. Collection
 requires all three target wheels by default and rejects inconsistent builds.
+`WHEEL_MANIFEST.json` contains the checked build receipts and identifies any
+missing platforms in an incomplete collection. `--check-only` reads the final
+manifests without requiring separate build receipts or changing the files.
 This package check complements target-platform tests; it cannot establish
 that a Windows wheel executes by inspecting it on macOS. Use
 `--allow-incomplete` only during preparation, then run the strict check above
@@ -180,10 +195,10 @@ Upload only the Python source distribution and the three tested wheels:
 ```bash
 source .venv-release/bin/activate
 python scripts/collect-release-wheels.py \
-  --release-dir dist/release-7.2.2 --check-only
+  --release-dir dist/release-7.2.2-complete --check-only
 python -m twine upload --username __token__ \
-  dist/release-7.2.2/smsd-7.2.2.tar.gz \
-  dist/release-7.2.2/smsd-7.2.2-*.whl
+  dist/release-7.2.2-complete/smsd-7.2.2.tar.gz \
+  dist/release-7.2.2-complete/smsd-7.2.2-*.whl
 ```
 
 Confirm [the PyPI release](https://pypi.org/project/smsd/7.2.2/), then install

@@ -34,7 +34,7 @@ def random_pair_indices(count, pairs, rng):
 
 def nearest_neighbor_index(query, similarities):
     candidates = (i for i in range(len(similarities)) if i != query)
-    # Break ties by index, rather than assuming the query sorts before its neighbors.
+    # Break ties by index, rather than assuming the query sorts before its neighbours.
     return max(candidates, key=lambda i: (similarities[i], -i))
 
 

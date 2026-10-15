@@ -6,6 +6,14 @@
  */
 package com.bioinception.smsd;
 
+import com.bioinception.smsd.core.MCS;
+
+import com.bioinception.smsd.core.FingerprintEngine;
+
+import com.bioinception.smsd.TestSupport;
+
+import com.bioinception.smsd.TestSupport.MoleculePair;
+
 import static com.bioinception.smsd.TestSupport.mapping;
 import static com.bioinception.smsd.TestSupport.repeat;
 
@@ -62,65 +70,65 @@ public class StressTest extends TestBase {
 
     @Test @Timeout(10) @DisplayName("1.01 C vs C self-match")
     void carbonSelfMatch() throws Exception {
-      SMSD smsd = new SMSD(mol("C"), mol("C"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("C"), mol("C"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("1.02 C vs N no match under strict atom type")
     void carbonVsNitrogen() throws Exception {
-      SMSD smsd = new SMSD(mol("C"), mol("N"), defaultOpts());
-      assertFalse(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("C"), mol("N"), defaultOpts());
+      assertFalse(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("1.03 O vs O self-match")
     void oxygenSelfMatch() throws Exception {
-      SMSD smsd = new SMSD(mol("O"), mol("O"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("O"), mol("O"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("1.04 Single atom MCS C vs C returns size 1")
     void singleAtomMCS() throws Exception {
-      SMSD smsd = new SMSD(mol("C"), mol("C"), defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("C"), mol("C"), defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(1, mcs.size());
     }
 
     @Test @Timeout(10) @DisplayName("1.05 Single C in ethane")
     void singleCarbonInEthane() throws Exception {
-      SMSD smsd = new SMSD(mol("C"), mol("CC"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("C"), mol("CC"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("1.06 Single N in methylamine")
     void singleNInMethylamine() throws Exception {
-      SMSD smsd = new SMSD(mol("N"), mol("CN"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("N"), mol("CN"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("1.07 Single O in methanol")
     void singleOInMethanol() throws Exception {
-      SMSD smsd = new SMSD(mol("O"), mol("CO"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("O"), mol("CO"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("1.08 Single S in methanethiol")
     void singleSInMethanethiol() throws Exception {
-      SMSD smsd = new SMSD(mol("S"), mol("CS"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("S"), mol("CS"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("1.09 Single C in benzene")
     void singleCInBenzene() throws Exception {
       ChemOptions opts = looseOpts();
-      SMSD smsd = new SMSD(mol("C"), mol("c1ccccc1"), opts);
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("C"), mol("c1ccccc1"), opts);
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("1.10 S vs O no match strict")
     void sulfurVsOxygen() throws Exception {
-      SMSD smsd = new SMSD(mol("S"), mol("O"), defaultOpts());
-      assertFalse(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("S"), mol("O"), defaultOpts());
+      assertFalse(smsd.contains());
     }
   }
 
@@ -137,65 +145,65 @@ public class StressTest extends TestBase {
       IAtomContainer empty = mol("[H][H]");
       IAtomContainer target = mol("CCO");
       // Hydrogen molecule vs ethanol - no heavy atom overlap
-      SMSD smsd = new SMSD(empty, target, defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(empty, target, defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertTrue(mcs == null || mcs.isEmpty());
     }
 
     @Test @Timeout(10) @DisplayName("2.02 Single bond molecule CC")
     void singleBondMolecule() throws Exception {
-      SMSD smsd = new SMSD(mol("CC"), mol("CC"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("CC"), mol("CC"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("2.03 Single bond molecule MCS size is 2")
     void singleBondMCSSize() throws Exception {
-      SMSD smsd = new SMSD(mol("CC"), mol("CC"), defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CC"), mol("CC"), defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(2, mcs.size());
     }
 
     @Test @Timeout(10) @DisplayName("2.04 Methane self match")
     void methaneSelfMatch() throws Exception {
-      SMSD smsd = new SMSD(mol("C"), mol("C"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("C"), mol("C"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("2.05 Double bond molecule")
     void doubleBondMolecule() throws Exception {
-      SMSD smsd = new SMSD(mol("C=C"), mol("C=C"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("C=C"), mol("C=C"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("2.06 Triple bond molecule")
     void tripleBondMolecule() throws Exception {
-      SMSD smsd = new SMSD(mol("C#C"), mol("C#C"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("C#C"), mol("C#C"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("2.07 Ethylene in propylene")
     void ethyleneInPropylene() throws Exception {
-      SMSD smsd = new SMSD(mol("C=C"), mol("CC=C"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("C=C"), mol("CC=C"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("2.08 Acetylene in propyne")
     void acetyleneInPropyne() throws Exception {
-      SMSD smsd = new SMSD(mol("C#C"), mol("CC#C"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("C#C"), mol("CC#C"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("2.09 Water self-match")
     void waterSelfMatch() throws Exception {
-      SMSD smsd = new SMSD(mol("O"), mol("O"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("O"), mol("O"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("2.10 Ammonia self-match")
     void ammoniaSelfMatch() throws Exception {
-      SMSD smsd = new SMSD(mol("N"), mol("N"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("N"), mol("N"), defaultOpts());
+      assertTrue(smsd.contains());
     }
   }
 
@@ -209,156 +217,156 @@ public class StressTest extends TestBase {
 
     @Test @Timeout(10) @DisplayName("3.01 Butane vs isobutane MCS >= 3")
     void butaneVsIsobutane() throws Exception {
-      SMSD smsd = new SMSD(mol("CCCC"), mol("CC(C)C"), defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CCCC"), mol("CC(C)C"), defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 3, "Butane vs isobutane share at least 3 atoms");
     }
 
     @Test @Timeout(10) @DisplayName("3.02 Butane substructure of isobutane (loose)")
     void butaneSubIsobutane() throws Exception {
-      SMSD smsd = new SMSD(mol("CCC"), mol("CC(C)C"), looseOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("CCC"), mol("CC(C)C"), looseOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("3.03 Pentane vs neopentane MCS >= 3")
     void pentaneVsNeopentane() throws Exception {
-      SMSD smsd = new SMSD(mol("CCCCC"), mol("CC(C)(C)C"), defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CCCCC"), mol("CC(C)(C)C"), defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 3);
     }
 
     @Test @Timeout(10) @DisplayName("3.04 Pentane vs isopentane MCS >= 4")
     void pentaneVsIsopentane() throws Exception {
-      SMSD smsd = new SMSD(mol("CCCCC"), mol("CCCC(C)C"), defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CCCCC"), mol("CCCC(C)C"), defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 4);
     }
 
     @Test @Timeout(10) @DisplayName("3.05 Ethanol vs dimethyl ether MCS")
     void ethanolVsDimethylEther() throws Exception {
-      SMSD smsd = new SMSD(mol("CCO"), mol("COC"), defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CCO"), mol("COC"), defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 2, "Share at least C-O");
     }
 
     @Test @Timeout(10) @DisplayName("3.06 Ortho-xylene vs meta-xylene MCS >= 8")
     void orthoVsMetaXylene() throws Exception {
-      SMSD smsd = new SMSD(mol("Cc1ccccc1C"), mol("Cc1cccc(C)c1"), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("Cc1ccccc1C"), mol("Cc1cccc(C)c1"), looseOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 7, "Xylenes share toluene core");
     }
 
     @Test @Timeout(10) @DisplayName("3.07 Meta-xylene vs para-xylene MCS >= 8")
     void metaVsParaXylene() throws Exception {
-      SMSD smsd = new SMSD(mol("Cc1cccc(C)c1"), mol("Cc1ccc(C)cc1"), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("Cc1cccc(C)c1"), mol("Cc1ccc(C)cc1"), looseOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 7);
     }
 
     @Test @Timeout(10) @DisplayName("3.08 Ortho-xylene vs para-xylene MCS >= 7")
     void orthoVsParaXylene() throws Exception {
-      SMSD smsd = new SMSD(mol("Cc1ccccc1C"), mol("Cc1ccc(C)cc1"), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("Cc1ccccc1C"), mol("Cc1ccc(C)cc1"), looseOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 7);
     }
 
     @Test @Timeout(10) @DisplayName("3.09 1-propanol vs 2-propanol MCS >= 3")
     void propanolIsomers() throws Exception {
-      SMSD smsd = new SMSD(mol("CCCO"), mol("CC(O)C"), defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CCCO"), mol("CC(O)C"), defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 3);
     }
 
     @Test @Timeout(10) @DisplayName("3.10 Propanal vs acetone MCS >= 3")
     void propanalVsAcetone() throws Exception {
-      SMSD smsd = new SMSD(mol("CCC=O"), mol("CC(=O)C"), defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CCC=O"), mol("CC(=O)C"), defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 3);
     }
 
     @Test @Timeout(10) @DisplayName("3.11 Hexane self-match MCS == 6")
     void hexaneSelfMatch() throws Exception {
-      SMSD smsd = new SMSD(mol("CCCCCC"), mol("CCCCCC"), defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CCCCCC"), mol("CCCCCC"), defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(6, mcs.size());
     }
 
     @Test @Timeout(10) @DisplayName("3.12 Cyclohexane vs hexane: ring vs chain")
     void cyclohexaneVsHexane() throws Exception {
-      SMSD smsd = new SMSD(mol("C1CCCCC1"), mol("CCCCCC"), defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("C1CCCCC1"), mol("CCCCCC"), defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       // Ring-to-ring-only blocks ring mapping to chain
       assertNotNull(mcs);
     }
 
     @Test @Timeout(10) @DisplayName("3.13 Diethyl ether vs methyl propyl ether")
     void diethylVsMethylPropylEther() throws Exception {
-      SMSD smsd = new SMSD(mol("CCOCC"), mol("COCCC"), defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CCOCC"), mol("COCCC"), defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 3, "Diethyl/methyl propyl ether MCS >= 3, got " + mcs.size());
     }
 
     @Test @Timeout(10) @DisplayName("3.14 Acetic acid vs methyl formate")
     void aceticAcidVsMethylFormate() throws Exception {
-      SMSD smsd = new SMSD(mol("CC(=O)O"), mol("COC=O"), defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CC(=O)O"), mol("COC=O"), defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 2);
     }
 
     @Test @Timeout(10) @DisplayName("3.15 Propylamine vs trimethylamine")
     void propylVsTrimethylamine() throws Exception {
-      SMSD smsd = new SMSD(mol("CCCN"), mol("CN(C)C"), defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CCCN"), mol("CN(C)C"), defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 2);
     }
 
     @Test @Timeout(10) @DisplayName("3.16 Toluene substructure of xylene")
     void tolueneInXylene() throws Exception {
-      SMSD smsd = new SMSD(mol("Cc1ccccc1"), mol("Cc1ccccc1C"), looseOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("Cc1ccccc1"), mol("Cc1ccccc1C"), looseOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("3.17 Benzene in all xylenes")
     void benzeneInXylenes() throws Exception {
       IAtomContainer bz = mol("c1ccccc1");
-      assertTrue(new SMSD(bz, mol("Cc1ccccc1C"), looseOpts()).isSubstructure());
-      assertTrue(new SMSD(bz, mol("Cc1cccc(C)c1"), looseOpts()).isSubstructure());
-      assertTrue(new SMSD(bz, mol("Cc1ccc(C)cc1"), looseOpts()).isSubstructure());
+      assertTrue(new MoleculePair(bz, mol("Cc1ccccc1C"), looseOpts()).contains());
+      assertTrue(new MoleculePair(bz, mol("Cc1cccc(C)c1"), looseOpts()).contains());
+      assertTrue(new MoleculePair(bz, mol("Cc1ccc(C)cc1"), looseOpts()).contains());
     }
 
     @Test @Timeout(10) @DisplayName("3.18 Cyclopentane vs cyclopentene MCS")
     void cyclopentaneVsCyclopentene() throws Exception {
-      SMSD smsd = new SMSD(mol("C1CCCC1"), mol("C1=CCCC1"), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("C1CCCC1"), mol("C1=CCCC1"), looseOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 4);
     }
 
     @Test @Timeout(10) @DisplayName("3.19 Neopentane self MCS == 5")
     void neopentaneSelfMCS() throws Exception {
-      SMSD smsd = new SMSD(mol("CC(C)(C)C"), mol("CC(C)(C)C"), defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CC(C)(C)C"), mol("CC(C)(C)C"), defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(5, mcs.size());
     }
 
     @Test @Timeout(10) @DisplayName("3.20 Isopentane self MCS == 5")
     void isopentaneSelfMCS() throws Exception {
-      SMSD smsd = new SMSD(mol("CCC(C)C"), mol("CCC(C)C"), defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CCC(C)C"), mol("CCC(C)C"), defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(5, mcs.size());
     }
@@ -374,131 +382,131 @@ public class StressTest extends TestBase {
 
     @Test @Timeout(10) @DisplayName("4.01 E-stilbene vs Z-stilbene no stereo -> match")
     void stilbeneNoStereo() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("C(/c1ccccc1)=C\\c1ccccc1"),
           mol("C(/c1ccccc1)=C/c1ccccc1"),
           defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("4.02 E-stilbene self-match with stereo")
     void eStilbeneSelfStereo() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("C(/c1ccccc1)=C/c1ccccc1"),
           mol("C(/c1ccccc1)=C/c1ccccc1"),
           stereoOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("4.03 R-alanine vs S-alanine no chirality -> match")
     void alanineNoChirality() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("[C@@H](N)(C)C(=O)O"),
           mol("[C@H](N)(C)C(=O)O"),
           defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("4.04 R-alanine self-match with chirality")
     void rAlanineSelfChirality() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("[C@@H](N)(C)C(=O)O"),
           mol("[C@@H](N)(C)C(=O)O"),
           stereoOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("4.05 Cis-2-butene vs trans-2-butene no stereo")
     void cisTransButeneNoStereo() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("C/C=C\\C"), mol("C/C=C/C"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("4.06 Cis-2-butene self-match with bond stereo")
     void cisButeneSelfStereo() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("C/C=C\\C"), mol("C/C=C\\C"), stereoOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("4.07 Cis-1,2-dimethylcyclohexane self")
     void cisDimethylCyclohexaneSelf() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("C[C@H]1CCCC[C@@H]1C"),
           mol("C[C@H]1CCCC[C@@H]1C"),
           defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("4.08 Meso-tartaric acid self-match")
     void mesoTartaricSelf() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("O[C@@H]([C@H](O)C(=O)O)C(=O)O"),
           mol("O[C@@H]([C@H](O)C(=O)O)C(=O)O"),
           defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("4.09 Stilbene MCS without stereo >= 14")
     void stilbeneMCSNoStereo() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("C(/c1ccccc1)=C\\c1ccccc1"),
           mol("C(/c1ccccc1)=C/c1ccccc1"),
           looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 10, "Stilbene isomers share most atoms");
     }
 
     @Test @Timeout(10) @DisplayName("4.10 Alanine MCS without chirality >= 5")
     void alanineMCSNoChirality() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("[C@@H](N)(C)C(=O)O"),
           mol("[C@H](N)(C)C(=O)O"),
           looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 5);
     }
 
     @Test @Timeout(10) @DisplayName("4.11 E-2-pentene vs Z-2-pentene no stereo")
     void penteneIsomersNoStereo() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("C/C=C/CC"), mol("C/C=C\\CC"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("4.12 R-glyceraldehyde self")
     void rGlyceraldehydeSelf() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("OC[C@@H](O)C=O"),
           mol("OC[C@@H](O)C=O"),
           stereoOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("4.13 D-glucose vs L-glucose no chirality")
     void glucoseNoChirality() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("OC[C@H]1OC(O)[C@H](O)[C@@H](O)[C@@H]1O"),
           mol("OC[C@@H]1OC(O)[C@@H](O)[C@H](O)[C@H]1O"),
           defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("4.14 Trans-2-butene self with stereo")
     void transButeneSelfStereo() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("C/C=C/C"), mol("C/C=C/C"), stereoOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("4.15 E/Z but-2-enol MCS >= 4")
     void butenolMCS() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("C/C=C/CO"), mol("C/C=C\\CO"), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 4);
     }
@@ -516,8 +524,8 @@ public class StressTest extends TestBase {
     void carboxylateVsAcidCharge() throws Exception {
       ChemOptions opts = defaultOpts();
       opts.matchFormalCharge = true;
-      SMSD smsd = new SMSD(mol("CC([O-])=O"), mol("CC(O)=O"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CC([O-])=O"), mol("CC(O)=O"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       // With charge matching, the charged O should not match neutral O
       assertNotNull(mcs);
     }
@@ -526,8 +534,8 @@ public class StressTest extends TestBase {
     void carboxylateVsAcidNoCharge() throws Exception {
       ChemOptions opts = looseOpts();
       opts.matchFormalCharge = false;
-      SMSD smsd = new SMSD(mol("CC([O-])=O"), mol("CC(O)=O"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CC([O-])=O"), mol("CC(O)=O"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 3);
     }
@@ -536,8 +544,8 @@ public class StressTest extends TestBase {
     void ammoniumVsAmine() throws Exception {
       ChemOptions opts = defaultOpts();
       opts.matchFormalCharge = true;
-      SMSD smsd = new SMSD(mol("[NH4+]"), mol("N"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("[NH4+]"), mol("N"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       // Charged ammonium vs neutral amine with charge matching
       assertNotNull(mcs);
     }
@@ -546,19 +554,19 @@ public class StressTest extends TestBase {
     void ammoniumVsAmineNoCharge() throws Exception {
       ChemOptions opts = looseOpts();
       opts.matchFormalCharge = false;
-      SMSD smsd = new SMSD(mol("[NH4+]"), mol("N"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("[NH4+]"), mol("N"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 1);
     }
 
     @Test @Timeout(10) @DisplayName("5.05 Glycine zwitterion MCS with itself")
     void glycineZwitterionSelf() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("[NH3+]CC([O-])=O"),
           mol("[NH3+]CC([O-])=O"),
           defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 4);
     }
@@ -567,11 +575,11 @@ public class StressTest extends TestBase {
     void glycineZwitterionVsNeutral() throws Exception {
       ChemOptions opts = looseOpts();
       opts.matchFormalCharge = false;
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("[NH3+]CC([O-])=O"),
           mol("NCC(O)=O"),
           opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 4);
     }
@@ -580,8 +588,8 @@ public class StressTest extends TestBase {
     void sodiumAcetateVsAceticAcid() throws Exception {
       ChemOptions opts = looseOpts();
       opts.matchFormalCharge = false;
-      SMSD smsd = new SMSD(mol("CC([O-])=O"), mol("CC(O)=O"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CC([O-])=O"), mol("CC(O)=O"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 3);
     }
@@ -590,25 +598,25 @@ public class StressTest extends TestBase {
     void phenoxideVsPhenol() throws Exception {
       ChemOptions opts = looseOpts();
       opts.matchFormalCharge = false;
-      SMSD smsd = new SMSD(mol("[O-]c1ccccc1"), mol("Oc1ccccc1"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("[O-]c1ccccc1"), mol("Oc1ccccc1"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 6);
     }
 
     @Test @Timeout(10) @DisplayName("5.09 Trimethylammonium self-match")
     void trimethylammoniumSelf() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("C[NH+](C)C"), mol("C[NH+](C)C"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("5.10 Phosphate vs phosphoric acid no charge")
     void phosphateVsPhosphoricAcid() throws Exception {
       ChemOptions opts = looseOpts();
       opts.matchFormalCharge = false;
-      SMSD smsd = new SMSD(mol("[O-]P([O-])([O-])=O"), mol("OP(O)(O)=O"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("[O-]P([O-])([O-])=O"), mol("OP(O)(O)=O"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 3);
     }
@@ -617,8 +625,8 @@ public class StressTest extends TestBase {
     void sulfonateVsSulfonicAcid() throws Exception {
       ChemOptions opts = looseOpts();
       opts.matchFormalCharge = false;
-      SMSD smsd = new SMSD(mol("CS([O-])(=O)=O"), mol("CS(O)(=O)=O"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CS([O-])(=O)=O"), mol("CS(O)(=O)=O"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 3);
     }
@@ -627,30 +635,30 @@ public class StressTest extends TestBase {
     void pyridiniumVsPyridine() throws Exception {
       ChemOptions opts = looseOpts();
       opts.matchFormalCharge = false;
-      SMSD smsd = new SMSD(mol("c1cc[nH+]cc1"), mol("c1ccncc1"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("c1cc[nH+]cc1"), mol("c1ccncc1"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 5);
     }
 
     @Test @Timeout(10) @DisplayName("5.13 Betaine self-match")
     void betaineSelf() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("C[N+](C)(C)CC([O-])=O"),
           mol("C[N+](C)(C)CC([O-])=O"),
           defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("5.14 Histidine protonated vs neutral")
     void histidineProtonatedVsNeutral() throws Exception {
       ChemOptions opts = looseOpts();
       opts.matchFormalCharge = false;
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("NC(Cc1c[nH+]c[nH]1)C(=O)O"),
           mol("NC(Cc1cnc[nH]1)C(=O)O"),
           opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 7);
     }
@@ -659,8 +667,8 @@ public class StressTest extends TestBase {
     void lithiumCarboxylate() throws Exception {
       ChemOptions opts = looseOpts();
       opts.matchFormalCharge = false;
-      SMSD smsd = new SMSD(mol("CC([O-])=O"), mol("CC(=O)[O-].[Li+]"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CC([O-])=O"), mol("CC(=O)[O-].[Li+]"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 3);
     }
@@ -678,8 +686,8 @@ public class StressTest extends TestBase {
     void deuteriumWaterNoIsotope() throws Exception {
       ChemOptions opts = defaultOpts();
       opts.matchIsotope = false;
-      SMSD smsd = new SMSD(mol("[2H]O[2H]"), mol("O"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("[2H]O[2H]"), mol("O"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 1);
     }
@@ -688,16 +696,16 @@ public class StressTest extends TestBase {
     void deuteriumWaterSelfIsotope() throws Exception {
       ChemOptions opts = defaultOpts();
       opts.matchIsotope = true;
-      SMSD smsd = new SMSD(mol("[2H]O[2H]"), mol("[2H]O[2H]"), opts);
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("[2H]O[2H]"), mol("[2H]O[2H]"), opts);
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("6.03 13C-methane vs methane no isotope")
     void c13MethaneNoIsotope() throws Exception {
       ChemOptions opts = defaultOpts();
       opts.matchIsotope = false;
-      SMSD smsd = new SMSD(mol("[13CH4]"), mol("C"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("[13CH4]"), mol("C"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 1);
     }
@@ -706,16 +714,16 @@ public class StressTest extends TestBase {
     void c13MethaneSelfIsotope() throws Exception {
       ChemOptions opts = defaultOpts();
       opts.matchIsotope = true;
-      SMSD smsd = new SMSD(mol("[13CH4]"), mol("[13CH4]"), opts);
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("[13CH4]"), mol("[13CH4]"), opts);
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("6.05 18F-fluoride vs fluoride no isotope")
     void f18NoIsotope() throws Exception {
       ChemOptions opts = defaultOpts();
       opts.matchIsotope = false;
-      SMSD smsd = new SMSD(mol("[18F]"), mol("[F]"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("[18F]"), mol("[F]"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
     }
 
@@ -723,16 +731,16 @@ public class StressTest extends TestBase {
     void tritiumMethanol() throws Exception {
       ChemOptions opts = defaultOpts();
       opts.matchIsotope = true;
-      SMSD smsd = new SMSD(mol("[3H]CO"), mol("[3H]CO"), opts);
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("[3H]CO"), mol("[3H]CO"), opts);
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("6.07 14C-ethanol vs ethanol no isotope")
     void c14EthanolNoIsotope() throws Exception {
       ChemOptions opts = defaultOpts();
       opts.matchIsotope = false;
-      SMSD smsd = new SMSD(mol("[14C]CO"), mol("CCO"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("[14C]CO"), mol("CCO"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 2);
     }
@@ -741,11 +749,11 @@ public class StressTest extends TestBase {
     void deuteratedBenzeneNoIsotope() throws Exception {
       ChemOptions opts = looseOpts();
       opts.matchIsotope = false;
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("[2H]c1c([2H])c([2H])c([2H])c([2H])c1[2H]"),
           mol("c1ccccc1"),
           opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 6,
           "Deuterated vs regular benzene should share >= 6 atoms (the ring), got " + mcs.size());
@@ -755,8 +763,8 @@ public class StressTest extends TestBase {
     void n15GlycineNoIsotope() throws Exception {
       ChemOptions opts = defaultOpts();
       opts.matchIsotope = false;
-      SMSD smsd = new SMSD(mol("[15NH2]CC(=O)O"), mol("NCC(=O)O"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("[15NH2]CC(=O)O"), mol("NCC(=O)O"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 4);
     }
@@ -765,8 +773,8 @@ public class StressTest extends TestBase {
     void mixedIsotopeEthaneSelf() throws Exception {
       ChemOptions opts = defaultOpts();
       opts.matchIsotope = true;
-      SMSD smsd = new SMSD(mol("[13C][12C]"), mol("[13C][12C]"), opts);
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("[13C][12C]"), mol("[13C][12C]"), opts);
+      assertTrue(smsd.contains());
     }
   }
 
@@ -780,148 +788,148 @@ public class StressTest extends TestBase {
 
     @Test @Timeout(10) @DisplayName("7.01 Pyridine self-match")
     void pyridineSelf() throws Exception {
-      SMSD smsd = new SMSD(mol("c1ccncc1"), mol("c1ccncc1"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("c1ccncc1"), mol("c1ccncc1"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("7.02 Pyrrole self-match")
     void pyrroleSelf() throws Exception {
-      SMSD smsd = new SMSD(mol("c1cc[nH]c1"), mol("c1cc[nH]c1"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("c1cc[nH]c1"), mol("c1cc[nH]c1"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("7.03 Furan self-match")
     void furanSelf() throws Exception {
-      SMSD smsd = new SMSD(mol("c1ccoc1"), mol("c1ccoc1"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("c1ccoc1"), mol("c1ccoc1"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("7.04 Thiophene self-match")
     void thiopheneSelf() throws Exception {
-      SMSD smsd = new SMSD(mol("c1ccsc1"), mol("c1ccsc1"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("c1ccsc1"), mol("c1ccsc1"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("7.05 Imidazole self-match")
     void imidazoleSelf() throws Exception {
-      SMSD smsd = new SMSD(mol("c1cnc[nH]1"), mol("c1cnc[nH]1"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("c1cnc[nH]1"), mol("c1cnc[nH]1"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("7.06 Pyrimidine self-match")
     void pyrimidineSelf() throws Exception {
-      SMSD smsd = new SMSD(mol("c1ccncn1"), mol("c1ccncn1"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("c1ccncn1"), mol("c1ccncn1"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("7.07 Purine self-match")
     void purineSelf() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("C1=CN=C2N1C=NC=N2"), mol("C1=CN=C2N1C=NC=N2"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("7.08 Indole self-match")
     void indoleSelf() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("c1ccc2[nH]ccc2c1"), mol("c1ccc2[nH]ccc2c1"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("7.09 Quinoline self-match")
     void quinolineSelf() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("c1ccc2ncccc2c1"), mol("c1ccc2ncccc2c1"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("7.10 Isoquinoline self-match")
     void isoquinolineSelf() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("c1ccc2cnccc2c1"), mol("c1ccc2cnccc2c1"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("7.11 Pyridine in nicotinic acid")
     void pyridineInNicotinicAcid() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("c1ccncc1"), mol("OC(=O)c1cccnc1"), looseOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("7.12 Pyrrole in tryptophan")
     void pyrroleInTryptophan() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("c1cc[nH]c1"),
           mol("NC(Cc1c[nH]c2ccccc12)C(=O)O"),
           looseOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("7.13 Furan in furfural")
     void furanInFurfural() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("c1ccoc1"), mol("O=Cc1ccco1"), looseOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("7.14 Thiophene in thienyl acetic acid")
     void thiopheneInDrug() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("c1ccsc1"), mol("OC(=O)Cc1cccs1"), looseOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("7.15 Imidazole in histamine")
     void imidazoleInHistamine() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("c1cnc[nH]1"), mol("NCCc1cnc[nH]1"), looseOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("7.16 Pyridine vs pyrimidine MCS >= 4")
     void pyridineVsPyrimidine() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("c1ccncc1"), mol("c1ccncn1"), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 4);
     }
 
     @Test @Timeout(10) @DisplayName("7.17 Quinoline vs isoquinoline MCS >= 8")
     void quinolineVsIsoquinoline() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("c1ccc2ncccc2c1"), mol("c1ccc2cnccc2c1"), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 8);
     }
 
     @Test @Timeout(10) @DisplayName("7.18 Indole vs benzofuran MCS >= 7")
     void indoleVsBenzofuran() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("c1ccc2[nH]ccc2c1"), mol("c1ccc2occc2c1"), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 7);
     }
 
     @Test @Timeout(10) @DisplayName("7.19 Purine in adenine")
     void purineInAdenine() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("C1=CN=C2N1C=NC=N2"),
           mol("Nc1ncnc2[nH]cnc12"),
           looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 7);
     }
 
     @Test @Timeout(10) @DisplayName("7.20 Oxazole vs thiazole MCS >= 3")
     void oxazoleVsThiazole() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("c1cocn1"), mol("c1cscn1"), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 3);
     }
@@ -937,130 +945,130 @@ public class StressTest extends TestBase {
 
     @Test @Timeout(10) @DisplayName("8.01 Alcohol: methanol self")
     void methanolSelf() throws Exception {
-      SMSD smsd = new SMSD(mol("CO"), mol("CO"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("CO"), mol("CO"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("8.02 Aldehyde: formaldehyde in acetaldehyde")
     void formaldehydeInAcetaldehyde() throws Exception {
-      SMSD smsd = new SMSD(mol("C=O"), mol("CC=O"), looseOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("C=O"), mol("CC=O"), looseOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("8.03 Ketone: acetone self")
     void acetoneSelf() throws Exception {
-      SMSD smsd = new SMSD(mol("CC(=O)C"), mol("CC(=O)C"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("CC(=O)C"), mol("CC(=O)C"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("8.04 Carboxylic acid: acetic acid self")
     void aceticAcidSelf() throws Exception {
-      SMSD smsd = new SMSD(mol("CC(=O)O"), mol("CC(=O)O"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("CC(=O)O"), mol("CC(=O)O"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("8.05 Ester: methyl acetate self")
     void methylAcetateSelf() throws Exception {
-      SMSD smsd = new SMSD(mol("CC(=O)OC"), mol("CC(=O)OC"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("CC(=O)OC"), mol("CC(=O)OC"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("8.06 Amide: acetamide self")
     void acetamideSelf() throws Exception {
-      SMSD smsd = new SMSD(mol("CC(=O)N"), mol("CC(=O)N"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("CC(=O)N"), mol("CC(=O)N"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("8.07 Amine: ethylamine in diethylamine")
     void ethylamineInDiethylamine() throws Exception {
-      SMSD smsd = new SMSD(mol("CCN"), mol("CCNCC"), looseOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("CCN"), mol("CCNCC"), looseOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("8.08 Nitrile: acetonitrile self")
     void acetonitrileSelf() throws Exception {
-      SMSD smsd = new SMSD(mol("CC#N"), mol("CC#N"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("CC#N"), mol("CC#N"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("8.09 Nitro: nitromethane self")
     void nitromethaneSelf() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("C[N+](=O)[O-]"), mol("C[N+](=O)[O-]"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("8.10 Aldehyde vs ketone MCS >= 2")
     void aldehydeVsKetone() throws Exception {
-      SMSD smsd = new SMSD(mol("CC=O"), mol("CC(=O)C"), defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CC=O"), mol("CC(=O)C"), defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 2);
     }
 
     @Test @Timeout(10) @DisplayName("8.11 Ester vs amide MCS >= 2")
     void esterVsAmide() throws Exception {
-      SMSD smsd = new SMSD(mol("CC(=O)OC"), mol("CC(=O)NC"), defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CC(=O)OC"), mol("CC(=O)NC"), defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 3);
     }
 
     @Test @Timeout(10) @DisplayName("8.12 Alcohol in phenol")
     void alcoholInPhenol() throws Exception {
-      SMSD smsd = new SMSD(mol("CO"), mol("Oc1ccccc1"), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CO"), mol("Oc1ccccc1"), looseOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 1);
     }
 
     @Test @Timeout(10) @DisplayName("8.13 Thiol: methanethiol self")
     void methanethiolSelf() throws Exception {
-      SMSD smsd = new SMSD(mol("CS"), mol("CS"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("CS"), mol("CS"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("8.14 Sulfoxide: DMSO self")
     void dmsoSelf() throws Exception {
-      SMSD smsd = new SMSD(mol("CS(=O)C"), mol("CS(=O)C"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("CS(=O)C"), mol("CS(=O)C"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("8.15 Sulfone: dimethyl sulfone self")
     void dimethylSulfoneSelf() throws Exception {
-      SMSD smsd = new SMSD(mol("CS(=O)(=O)C"), mol("CS(=O)(=O)C"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("CS(=O)(=O)C"), mol("CS(=O)(=O)C"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("8.16 Ether: diethyl ether self")
     void diethylEtherSelf() throws Exception {
-      SMSD smsd = new SMSD(mol("CCOCC"), mol("CCOCC"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("CCOCC"), mol("CCOCC"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("8.17 Epoxide self-match")
     void epoxideSelf() throws Exception {
-      SMSD smsd = new SMSD(mol("C1CO1"), mol("C1CO1"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("C1CO1"), mol("C1CO1"), defaultOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("8.18 Acid anhydride self")
     void anhydrideSelf() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("CC(=O)OC(=O)C"), mol("CC(=O)OC(=O)C"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("8.19 Carboxylic acid in amino acid")
     void carboxylicInAminoAcid() throws Exception {
-      SMSD smsd = new SMSD(mol("CC(=O)O"), mol("NCC(=O)O"), looseOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("CC(=O)O"), mol("NCC(=O)O"), looseOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("8.20 Nitrile vs isonitrile MCS >= 1")
     void nitrileVsIsonitrile() throws Exception {
-      SMSD smsd = new SMSD(mol("CC#N"), mol("C[N+]#[C-]"), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CC#N"), mol("C[N+]#[C-]"), looseOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 1);
     }
@@ -1076,25 +1084,25 @@ public class StressTest extends TestBase {
 
     @Test @Timeout(10) @DisplayName("9.01 12-crown-4 self-match")
     void crown4Self() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("C1COCCOCCOCCO1"), mol("C1COCCOCCOCCO1"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("9.02 15-crown-5 self-match")
     void crown5Self() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("C1COCCOCCOCCOCCOC1"), mol("C1COCCOCCOCCOCCOC1"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("9.03 12-crown-4 vs 15-crown-5 MCS >= 8")
     void crown4VsCrown5() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("C1COCCOCCOCCO1"),
           mol("C1COCCOCCOCCOCCOC1"),
           looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 6, "Crown ethers share polyether fragment");
     }
@@ -1102,66 +1110,66 @@ public class StressTest extends TestBase {
     @Test @Timeout(10) @DisplayName("9.04 Porphyrin core: pyrrole substructure")
     void pyrroleInPorphyrin() throws Exception {
       // Simplified porphine fragment
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("c1cc[nH]c1"),
           mol("C1=CC2=CC3=CC(=CC4=CC(=CC(=C1)N2)[NH]4)N3"),  // simplified porphyrin Kekule
           looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 4);
     }
 
     @Test @Timeout(10) @DisplayName("9.05 Cyclodextrin fragment: glucose ring self")
     void glucoseRingSelf() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("OC1CCOC(O)C1O"), mol("OC1CCOC(O)C1O"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("9.06 18-crown-6 self-match")
     void crown6Self() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("C1COCCOCCOCCOCCOCCO1"),
           mol("C1COCCOCCOCCOCCOCCO1"),
           defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("9.07 Macrolactone 12-membered ring self")
     void macrolactoneSelf() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("O=C1CCCCCCCCCCCO1"),
           mol("O=C1CCCCCCCCCCCO1"),
           defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("9.08 Large ring vs linear chain")
     void largeRingVsChain() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("C1CCCCCCCCCCC1"), mol("CCCCCCCCCCCC"), defaultOpts());
       // With ringMatchesRingOnly=true, ring shouldn't fully map to chain
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
     }
 
     @Test @Timeout(10) @DisplayName("9.09 Macrolactam self")
     void macrolactamSelf() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("O=C1CCCCCCCCCCCN1"),
           mol("O=C1CCCCCCCCCCCN1"),
           defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("9.10 Crown ether fragment MCS with 18-crown-6")
     void crownFragmentInCrown6() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("COCCOC"),
           mol("C1COCCOCCOCCOCCOCCO1"),
           looseOpts());
       // MCS should find the shared -C-O-C-C-O-C- fragment
-      Map<Integer, Integer> mcs = smsd.findMCS(false, false, 5000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( false, 5000L);
       assertTrue(mcs.size() >= 5, "Crown fragment MCS should be >= 5, got " + mcs.size());
     }
   }
@@ -1176,82 +1184,82 @@ public class StressTest extends TestBase {
 
     @Test @Timeout(10) @DisplayName("10.01 PEG dimer in PEG trimer")
     void pegDimerInTrimer() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("OCCOCCO"), mol("OCCOCCOCCOC"), looseOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("10.02 PEG monomer in PEG dimer")
     void pegMonomerInDimer() throws Exception {
-      SMSD smsd = new SMSD(mol("OCCO"), mol("OCCOCCO"), looseOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("OCCO"), mol("OCCOCCO"), looseOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("10.03 PEG trimer self-match")
     void pegTrimerSelf() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("OCCOCCOCCOC"), mol("OCCOCCOCCOC"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("10.04 Lactic acid dimer self-match")
     void lacticAcidDimerSelf() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("CC(O)C(=O)OC(C)C(=O)O"),
           mol("CC(O)C(=O)OC(C)C(=O)O"),
           defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("10.05 Lactic acid monomer in dimer")
     void lacticMonomerInDimer() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("CC(O)C(=O)O"),
           mol("CC(O)C(=O)OC(C)C(=O)O"),
           looseOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("10.06 Nylon-6 monomer: caprolactam self")
     void caprolactamSelf() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("O=C1CCCCCN1"), mol("O=C1CCCCCN1"), defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("10.07 Nylon-6,6 monomer MCS >= 4")
     void nylon66Monomer() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("NCCCCCCN"), mol("OC(=O)CCCCC(=O)O"), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 4, "Share hexyl chain");
     }
 
     @Test @Timeout(10) @DisplayName("10.08 Styrene monomer in polystyrene dimer")
     void styreneInDimer() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("C=Cc1ccccc1"),
           mol("CC(c1ccccc1)CC(c1ccccc1)C"),
           looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 6);
     }
 
     @Test @Timeout(10) @DisplayName("10.09 Ethylene glycol in PEG")
     void ethyleneGlycolInPEG() throws Exception {
-      SMSD smsd = new SMSD(mol("OCCO"), mol("OCCOCCOCCOCCOC"), looseOpts());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("OCCO"), mol("OCCOCCOCCOCCOC"), looseOpts());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("10.10 Adipic acid self-match")
     void adipicAcidSelf() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("OC(=O)CCCCC(=O)O"),
           mol("OC(=O)CCCCC(=O)O"),
           defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
   }
 
@@ -1279,190 +1287,190 @@ public class StressTest extends TestBase {
 
     @Test @Timeout(10) @DisplayName("11.01 Aspirin self-substructure")
     void aspirinSelf() throws Exception {
-      assertTrue(new SMSD(mol(ASPIRIN), mol(ASPIRIN), defaultOpts()).isSubstructure());
+      assertTrue(new MoleculePair(mol(ASPIRIN), mol(ASPIRIN), defaultOpts()).contains());
     }
 
     @Test @Timeout(10) @DisplayName("11.02 Aspirin vs ibuprofen MCS >= 3")
     void aspirinVsIbuprofen() throws Exception {
-      SMSD smsd = new SMSD(mol(ASPIRIN), mol(IBUPROFEN), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol(ASPIRIN), mol(IBUPROFEN), looseOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 3);
     }
 
     @Test @Timeout(10) @DisplayName("11.03 Aspirin vs caffeine MCS >= 2")
     void aspirinVsCaffeine() throws Exception {
-      SMSD smsd = new SMSD(mol(ASPIRIN), mol(CAFFEINE), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol(ASPIRIN), mol(CAFFEINE), looseOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 2);
     }
 
     @Test @Timeout(10) @DisplayName("11.04 Aspirin vs diazepam MCS >= 6")
     void aspirinVsDiazepam() throws Exception {
-      SMSD smsd = new SMSD(mol(ASPIRIN), mol(DIAZEPAM), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol(ASPIRIN), mol(DIAZEPAM), looseOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 6, "Share benzene ring");
     }
 
     @Test @Timeout(10) @DisplayName("11.05 Aspirin vs metformin MCS >= 1")
     void aspirinVsMetformin() throws Exception {
-      SMSD smsd = new SMSD(mol(ASPIRIN), mol(METFORMIN), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol(ASPIRIN), mol(METFORMIN), looseOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
     }
 
     @Test @Timeout(10) @DisplayName("11.06 Ibuprofen self-substructure")
     void ibuprofenSelf() throws Exception {
-      assertTrue(new SMSD(mol(IBUPROFEN), mol(IBUPROFEN), defaultOpts()).isSubstructure());
+      assertTrue(new MoleculePair(mol(IBUPROFEN), mol(IBUPROFEN), defaultOpts()).contains());
     }
 
     @Test @Timeout(10) @DisplayName("11.07 Ibuprofen vs caffeine MCS >= 2")
     void ibuprofenVsCaffeine() throws Exception {
-      SMSD smsd = new SMSD(mol(IBUPROFEN), mol(CAFFEINE), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol(IBUPROFEN), mol(CAFFEINE), looseOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 2);
     }
 
     @Test @Timeout(10) @DisplayName("11.08 Ibuprofen vs diazepam MCS >= 6")
     void ibuprofenVsDiazepam() throws Exception {
-      SMSD smsd = new SMSD(mol(IBUPROFEN), mol(DIAZEPAM), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol(IBUPROFEN), mol(DIAZEPAM), looseOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 6, "Both have benzene ring");
     }
 
     @Test @Timeout(10) @DisplayName("11.09 Ibuprofen vs metformin MCS >= 1")
     void ibuprofenVsMetformin() throws Exception {
-      SMSD smsd = new SMSD(mol(IBUPROFEN), mol(METFORMIN), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol(IBUPROFEN), mol(METFORMIN), looseOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
     }
 
     @Test @Timeout(10) @DisplayName("11.10 Ibuprofen vs paracetamol MCS >= 6")
     void ibuprofenVsParacetamol() throws Exception {
-      SMSD smsd = new SMSD(mol(IBUPROFEN), mol(PARACETAMOL), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol(IBUPROFEN), mol(PARACETAMOL), looseOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 6, "Share phenyl core");
     }
 
     @Test @Timeout(10) @DisplayName("11.11 Caffeine self-substructure")
     void caffeineSelf() throws Exception {
-      assertTrue(new SMSD(mol(CAFFEINE), mol(CAFFEINE), defaultOpts()).isSubstructure());
+      assertTrue(new MoleculePair(mol(CAFFEINE), mol(CAFFEINE), defaultOpts()).contains());
     }
 
     @Test @Timeout(10) @DisplayName("11.12 Caffeine vs diazepam MCS >= 3")
     void caffeineVsDiazepam() throws Exception {
-      SMSD smsd = new SMSD(mol(CAFFEINE), mol(DIAZEPAM), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol(CAFFEINE), mol(DIAZEPAM), looseOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 3);
     }
 
     @Test @Timeout(10) @DisplayName("11.13 Caffeine vs metformin MCS >= 2")
     void caffeineVsMetformin() throws Exception {
-      SMSD smsd = new SMSD(mol(CAFFEINE), mol(METFORMIN), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol(CAFFEINE), mol(METFORMIN), looseOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 2);
     }
 
     @Test @Timeout(10) @DisplayName("11.14 Caffeine vs paracetamol MCS >= 2")
     void caffeineVsParacetamol() throws Exception {
-      SMSD smsd = new SMSD(mol(CAFFEINE), mol(PARACETAMOL), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol(CAFFEINE), mol(PARACETAMOL), looseOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 2);
     }
 
     @Test @Timeout(10) @DisplayName("11.15 Diazepam self-substructure")
     void diazepamSelf() throws Exception {
-      assertTrue(new SMSD(mol(DIAZEPAM), mol(DIAZEPAM), defaultOpts()).isSubstructure());
+      assertTrue(new MoleculePair(mol(DIAZEPAM), mol(DIAZEPAM), defaultOpts()).contains());
     }
 
     @Test @Timeout(10) @DisplayName("11.16 Diazepam vs metformin MCS >= 1")
     void diazepamVsMetformin() throws Exception {
-      SMSD smsd = new SMSD(mol(DIAZEPAM), mol(METFORMIN), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol(DIAZEPAM), mol(METFORMIN), looseOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
     }
 
     @Test @Timeout(10) @DisplayName("11.17 Diazepam vs paracetamol MCS >= 6")
     void diazepamVsParacetamol() throws Exception {
-      SMSD smsd = new SMSD(mol(DIAZEPAM), mol(PARACETAMOL), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol(DIAZEPAM), mol(PARACETAMOL), looseOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 6, "Share aromatic ring");
     }
 
     @Test @Timeout(10) @DisplayName("11.18 Metformin self-substructure")
     void metforminSelf() throws Exception {
-      assertTrue(new SMSD(mol(METFORMIN), mol(METFORMIN), defaultOpts()).isSubstructure());
+      assertTrue(new MoleculePair(mol(METFORMIN), mol(METFORMIN), defaultOpts()).contains());
     }
 
     @Test @Timeout(10) @DisplayName("11.19 Metformin vs paracetamol MCS >= 1")
     void metforminVsParacetamol() throws Exception {
-      SMSD smsd = new SMSD(mol(METFORMIN), mol(PARACETAMOL), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol(METFORMIN), mol(PARACETAMOL), looseOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
     }
 
     @Test @Timeout(10) @DisplayName("11.20 Paracetamol self-substructure")
     void paracetamolSelf() throws Exception {
-      assertTrue(new SMSD(mol(PARACETAMOL), mol(PARACETAMOL), defaultOpts()).isSubstructure());
+      assertTrue(new MoleculePair(mol(PARACETAMOL), mol(PARACETAMOL), defaultOpts()).contains());
     }
 
     @Test @Timeout(10) @DisplayName("11.21 Benzene in aspirin")
     void benzeneInAspirin() throws Exception {
-      assertTrue(new SMSD(mol("c1ccccc1"), mol(ASPIRIN), looseOpts()).isSubstructure());
+      assertTrue(new MoleculePair(mol("c1ccccc1"), mol(ASPIRIN), looseOpts()).contains());
     }
 
     @Test @Timeout(10) @DisplayName("11.22 Benzene in ibuprofen")
     void benzeneInIbuprofen() throws Exception {
-      assertTrue(new SMSD(mol("c1ccccc1"), mol(IBUPROFEN), looseOpts()).isSubstructure());
+      assertTrue(new MoleculePair(mol("c1ccccc1"), mol(IBUPROFEN), looseOpts()).contains());
     }
 
     @Test @Timeout(10) @DisplayName("11.23 Benzene in diazepam")
     void benzeneInDiazepam() throws Exception {
-      assertTrue(new SMSD(mol("c1ccccc1"), mol(DIAZEPAM), looseOpts()).isSubstructure());
+      assertTrue(new MoleculePair(mol("c1ccccc1"), mol(DIAZEPAM), looseOpts()).contains());
     }
 
     @Test @Timeout(10) @DisplayName("11.24 Benzene in paracetamol")
     void benzeneInParacetamol() throws Exception {
-      assertTrue(new SMSD(mol("c1ccccc1"), mol(PARACETAMOL), looseOpts()).isSubstructure());
+      assertTrue(new MoleculePair(mol("c1ccccc1"), mol(PARACETAMOL), looseOpts()).contains());
     }
 
     @Test @Timeout(10) @DisplayName("11.25 Carboxylic acid group in aspirin")
     void carboxylicInAspirin() throws Exception {
-      assertTrue(new SMSD(mol("CC(=O)O"), mol(ASPIRIN), looseOpts()).isSubstructure());
+      assertTrue(new MoleculePair(mol("CC(=O)O"), mol(ASPIRIN), looseOpts()).contains());
     }
 
     @Test @Timeout(10) @DisplayName("11.26 Carboxylic acid group in ibuprofen")
     void carboxylicInIbuprofen() throws Exception {
-      assertTrue(new SMSD(mol("CC(=O)O"), mol(IBUPROFEN), looseOpts()).isSubstructure());
+      assertTrue(new MoleculePair(mol("CC(=O)O"), mol(IBUPROFEN), looseOpts()).contains());
     }
 
     @Test @Timeout(10) @DisplayName("11.27 Aspirin vs paracetamol MCS >= 6")
     void aspirinVsParacetamol() throws Exception {
-      SMSD smsd = new SMSD(mol(ASPIRIN), mol(PARACETAMOL), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol(ASPIRIN), mol(PARACETAMOL), looseOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 6, "Both have substituted benzene");
     }
 
     @Test @Timeout(10) @DisplayName("11.28 Caffeine similarity upper bound > 0")
     void caffeineSimilarity() throws Exception {
-      SMSD smsd = new SMSD(mol(CAFFEINE), mol(DIAZEPAM), looseOpts());
+      MoleculePair smsd = new MoleculePair(mol(CAFFEINE), mol(DIAZEPAM), looseOpts());
       double ub = smsd.similarityUpperBound();
       assertTrue(ub > 0, "Non-zero similarity bound");
     }
 
     @Test @Timeout(10) @DisplayName("11.29 Aspirin similarity upper bound with self == 1.0")
     void aspirinSelfSimilarity() throws Exception {
-      SMSD smsd = new SMSD(mol(ASPIRIN), mol(ASPIRIN), defaultOpts());
+      MoleculePair smsd = new MoleculePair(mol(ASPIRIN), mol(ASPIRIN), defaultOpts());
       double ub = smsd.similarityUpperBound();
       assertTrue(ub >= 0.99, "Self-similarity should be ~1.0");
     }
@@ -1470,8 +1478,8 @@ public class StressTest extends TestBase {
     @Test @Timeout(10) @DisplayName("11.30 Metformin MCS with itself full size")
     void metforminSelfMCS() throws Exception {
       IAtomContainer met = mol(METFORMIN);
-      SMSD smsd = new SMSD(met, met, defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(met, met, defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(met.getAtomCount(), mcs.size(), "Self MCS should be full molecule");
     }
@@ -1487,36 +1495,36 @@ public class StressTest extends TestBase {
 
     @Test @Timeout(10) @DisplayName("12.01 Adamantane self-match")
     void adamantaneSelf() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("C1C2CC3CC1CC(C2)C3"),
           mol("C1C2CC3CC1CC(C2)C3"),
           defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("12.02 Adamantane self MCS == 10")
     void adamantaneSelfMCS() throws Exception {
       IAtomContainer ada = mol("C1C2CC3CC1CC(C2)C3");
-      SMSD smsd = new SMSD(ada, ada, defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(ada, ada, defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(ada.getAtomCount(), mcs.size());
     }
 
     @Test @Timeout(10) @DisplayName("12.03 Cubane self-match")
     void cubaneSelf() throws Exception {
-      SMSD smsd = new SMSD(
-          mol("C12C3C4C1C5C3C4C25"),
-          mol("C12C3C4C1C5C3C4C25"),
+      MoleculePair smsd = new MoleculePair(
+          mol("C12C3C4C1C5C2C3C45"),
+          mol("C12C3C4C1C5C2C3C45"),
           defaultOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("12.04 Cubane self MCS == 8")
     void cubaneSelfMCS() throws Exception {
-      IAtomContainer cub = mol("C12C3C4C1C5C3C4C25");
-      SMSD smsd = new SMSD(cub, cub, defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      IAtomContainer cub = mol("C12C3C4C1C5C2C3C45");
+      MoleculePair smsd = new MoleculePair(cub, cub, defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(cub.getAtomCount(), mcs.size());
     }
@@ -1524,8 +1532,8 @@ public class StressTest extends TestBase {
     @Test @Timeout(10) @DisplayName("12.05 Benzene multiple equivalent mappings")
     void benzeneMultipleMappings() throws Exception {
       IAtomContainer bz = mol("c1ccccc1");
-      SMSD smsd = new SMSD(bz, bz, looseOpts());
-      List<Map<Integer, Integer>> all = smsd.findAllSubstructures(20, 5000L);
+      MoleculePair smsd = new MoleculePair(bz, bz, looseOpts());
+      List<Map<Integer, Integer>> all = smsd.substructureMappings(20, 5000L);
       assertNotNull(all);
       assertTrue(all.size() >= 2, "Benzene has at least 2 automorphisms");
     }
@@ -1533,8 +1541,8 @@ public class StressTest extends TestBase {
     @Test @Timeout(10) @DisplayName("12.06 Naphthalene self-match full size")
     void naphthaleneSelfMCS() throws Exception {
       IAtomContainer naph = mol("c1ccc2ccccc2c1");
-      SMSD smsd = new SMSD(naph, naph, looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(naph, naph, looseOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(naph.getAtomCount(), mcs.size());
     }
@@ -1542,80 +1550,80 @@ public class StressTest extends TestBase {
     @Test @Timeout(10) @DisplayName("12.07 Cyclohexane self-match full size")
     void cyclohexaneSelfMCS() throws Exception {
       IAtomContainer cyc = mol("C1CCCCC1");
-      SMSD smsd = new SMSD(cyc, cyc, defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(cyc, cyc, defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(cyc.getAtomCount(), mcs.size());
     }
 
     @Test @Timeout(10) @DisplayName("12.08 Anthracene self-match")
     void anthraceneSelf() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("c1ccc2cc3ccccc3cc2c1"),
           mol("c1ccc2cc3ccccc3cc2c1"),
           looseOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("12.09 Biphenyl self-match full size")
     void biphenylSelfMCS() throws Exception {
       IAtomContainer biph = mol("c1ccc(-c2ccccc2)cc1");
-      SMSD smsd = new SMSD(biph, biph, looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(biph, biph, looseOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(biph.getAtomCount(), mcs.size());
     }
 
     @Test @Timeout(10) @DisplayName("12.10 Triphenylene self-match")
     void triphenyleneSelf() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("c1ccc2c(c1)c1ccccc1c1ccccc12"),
           mol("c1ccc2c(c1)c1ccccc1c1ccccc12"),
           looseOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("12.11 Coronene self MCS (with timeout guard)")
     void coroneneSelf() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("c1cc2ccc3cc4ccc5cc6ccc1c7c2c3c4c5c67"),
           mol("c1cc2ccc3cc4ccc5cc6ccc1c7c2c3c4c5c67"),
           looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 8000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 8000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 15, "Coronene self MCS should be large");
     }
 
     @Test @Timeout(10) @DisplayName("12.12 Pyrene self-match")
     void pyreneSelf() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("c1cc2ccc3cccc4ccc(c1)c2c34"),
           mol("c1cc2ccc3cccc4ccc(c1)c2c34"),
           looseOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("12.13 Decalin self MCS full size")
     void decalinSelfMCS() throws Exception {
       IAtomContainer dec = mol("C1CCC2CCCCC2C1");
-      SMSD smsd = new SMSD(dec, dec, defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(dec, dec, defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(dec.getAtomCount(), mcs.size());
     }
 
     @Test @Timeout(10) @DisplayName("12.14 Benzene in biphenyl")
     void benzeneInBiphenyl() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("c1ccccc1"), mol("c1ccc(-c2ccccc2)cc1"), looseOpts());
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("12.15 Cyclopropane self multiple mappings")
     void cyclopropaneMultipleMappings() throws Exception {
       IAtomContainer cp = mol("C1CC1");
-      SMSD smsd = new SMSD(cp, cp, defaultOpts());
-      List<Map<Integer, Integer>> all = smsd.findAllSubstructures(10, 5000L);
+      MoleculePair smsd = new MoleculePair(cp, cp, defaultOpts());
+      List<Map<Integer, Integer>> all = smsd.substructureMappings(10, 5000L);
       assertNotNull(all);
       assertTrue(all.size() >= 2, "Cyclopropane has rotational symmetry");
     }
@@ -1631,84 +1639,84 @@ public class StressTest extends TestBase {
 
     @Test @Timeout(10) @DisplayName("13.01 Very short timeout on medium molecule pair")
     void veryShortTimeout() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("c1ccc2cc3ccccc3cc2c1"),
           mol("c1ccc2c(c1)c1ccccc1c1ccccc12"),
           looseOpts());
       // 1ms timeout - may or may not find result, but should not throw
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 1L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 1L);
       // Result can be null or valid, just verify no exception
     }
 
     @Test @Timeout(10) @DisplayName("13.02 Short timeout on drug pair")
     void shortTimeoutDrugPair() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("CC(=O)Oc1ccccc1C(=O)O"),
           mol("CN1C(=O)CN=C(c2ccccc2)c2cc(Cl)ccc21"),
           looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5L);
       // Should not throw
     }
 
     @Test @Timeout(10) @DisplayName("13.03 100ms timeout on small pair gets result")
     void mediumTimeoutSmallPair() throws Exception {
-      SMSD smsd = new SMSD(mol("CCO"), mol("CCCO"), defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 100L);
+      MoleculePair smsd = new MoleculePair(mol("CCO"), mol("CCCO"), defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 100L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 2, "Small pair should resolve in 100ms");
     }
 
     @Test @Timeout(10) @DisplayName("13.04 Substructure with 1ms timeout on large pair")
     void substruct1msLarge() throws Exception {
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("c1ccc2cc3ccccc3cc2c1"),
           mol("c1ccc2c(c1)c1ccccc1c1ccccc12"),
           looseOpts());
       // Should not throw, result may be true or false
-      smsd.isSubstructure(1L);
+      smsd.contains(1L);
     }
 
     @Test @Timeout(10) @DisplayName("13.05 setSubstructureTimeoutMs works")
     void setSubstructureTimeout() throws Exception {
-      SMSD smsd = new SMSD(mol("CCO"), mol("CCNCCO"), defaultOpts());
+      MoleculePair smsd = new MoleculePair(mol("CCO"), mol("CCNCCO"), defaultOpts());
       smsd.setSubstructureTimeoutMs(50L);
       // Should still work for small molecules
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("13.06 setMCSTimeoutMs works")
     void setMCSTimeout() throws Exception {
-      SMSD smsd = new SMSD(mol("CCO"), mol("CCCO"), defaultOpts());
+      MoleculePair smsd = new MoleculePair(mol("CCO"), mol("CCCO"), defaultOpts());
       smsd.setMCSTimeoutMs(100L);
-      Map<Integer, Integer> mcs = smsd.findMCS();
+      Map<Integer, Integer> mcs = smsd.mcsMapping();
       assertNotNull(mcs);
     }
 
     @Test @Timeout(10) @DisplayName("13.07 Zero timeout does not throw")
     void zeroTimeout() throws Exception {
-      SMSD smsd = new SMSD(mol("c1ccccc1"), mol("c1ccc2ccccc2c1"), looseOpts());
+      MoleculePair smsd = new MoleculePair(mol("c1ccccc1"), mol("c1ccc2ccccc2c1"), looseOpts());
       // 0ms - implementation should handle gracefully
-      assertDoesNotThrow(() -> smsd.findMCS(false, true, 0L));
+      assertDoesNotThrow(() -> smsd.mcsMapping( true, 0L));
     }
 
     @Test @Timeout(10) @DisplayName("13.08 Short timeout substructure ethane in propane")
     void shortTimeoutEthaneInPropane() throws Exception {
-      SMSD smsd = new SMSD(mol("CC"), mol("CCC"), defaultOpts());
-      assertTrue(smsd.isSubstructure(10L));
+      MoleculePair smsd = new MoleculePair(mol("CC"), mol("CCC"), defaultOpts());
+      assertTrue(smsd.contains(10L));
     }
 
     @Test @Timeout(10) @DisplayName("13.09 1ms MCS on identical small molecule")
     void shortTimeoutSelfMCS() throws Exception {
-      SMSD smsd = new SMSD(mol("CC"), mol("CC"), defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 1L);
+      MoleculePair smsd = new MoleculePair(mol("CC"), mol("CC"), defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 1L);
       // Self-match shortcut should work even with tiny timeout
       assertNotNull(mcs);
     }
 
     @Test @Timeout(10) @DisplayName("13.10 Large timeout on simple pair succeeds")
     void largeTimeoutSimplePair() throws Exception {
-      SMSD smsd = new SMSD(mol("c1ccccc1"), mol("c1ccc2ccccc2c1"), looseOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 10000L);
+      MoleculePair smsd = new MoleculePair(mol("c1ccccc1"), mol("c1ccc2ccccc2c1"), looseOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 10000L);
       assertNotNull(mcs);
       assertEquals(6, mcs.size());
     }
@@ -1730,8 +1738,8 @@ public class StressTest extends TestBase {
     void matchAtomTypeTrue() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.matchAtomType = true;
-      SMSD smsd = new SMSD(mol(QUERY), mol(TARGET), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol(QUERY), mol(TARGET), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       // With atom type matching, O cannot match C
       assertTrue(mcs.size() <= 6);
@@ -1742,8 +1750,8 @@ public class StressTest extends TestBase {
       ChemOptions opts = new ChemOptions();
       opts.matchAtomType = false;
       opts.ringMatchesRingOnly = false;
-      SMSD smsd = new SMSD(mol(QUERY), mol(TARGET), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol(QUERY), mol(TARGET), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 6, "Without atom type restriction, all atoms can map");
     }
@@ -1752,8 +1760,8 @@ public class StressTest extends TestBase {
     void bondOrderStrict() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.matchBondOrder = ChemOptions.BondOrderMode.STRICT;
-      SMSD smsd = new SMSD(mol("C=C"), mol("CC"), opts);
-      assertFalse(smsd.isSubstructure(), "Double bond shouldn't match single under STRICT");
+      MoleculePair smsd = new MoleculePair(mol("C=C"), mol("CC"), opts);
+      assertFalse(smsd.contains(), "Double bond shouldn't match single under STRICT");
     }
 
     @Test @Timeout(10) @DisplayName("14.04 matchBondOrder=LOOSE")
@@ -1761,8 +1769,8 @@ public class StressTest extends TestBase {
       ChemOptions opts = new ChemOptions();
       opts.matchBondOrder = ChemOptions.BondOrderMode.LOOSE;
       opts.ringMatchesRingOnly = false;
-      SMSD smsd = new SMSD(mol("C=C"), mol("CC"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("C=C"), mol("CC"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 2, "LOOSE bond order allows C=C to match CC");
     }
@@ -1772,8 +1780,8 @@ public class StressTest extends TestBase {
       ChemOptions opts = new ChemOptions();
       opts.matchBondOrder = ChemOptions.BondOrderMode.ANY;
       opts.ringMatchesRingOnly = false;
-      SMSD smsd = new SMSD(mol("C#C"), mol("CC"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("C#C"), mol("CC"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 2, "ANY bond order allows triple to match single");
     }
@@ -1782,8 +1790,8 @@ public class StressTest extends TestBase {
     void ringMatchesRingTrue() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.ringMatchesRingOnly = true;
-      SMSD smsd = new SMSD(mol("C1CCCCC1"), mol("CCCCCC"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("C1CCCCC1"), mol("CCCCCC"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       // Ring atoms should not map to chain
       assertTrue(mcs == null || mcs.size() < 6,
           "Ring-to-ring should prevent full ring mapping to chain");
@@ -1793,8 +1801,8 @@ public class StressTest extends TestBase {
     void ringMatchesRingFalse() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.ringMatchesRingOnly = false;
-      SMSD smsd = new SMSD(mol("C1CCCCC1"), mol("CCCCCC"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("C1CCCCC1"), mol("CCCCCC"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 5, "Without ring restriction, ring can map to chain");
     }
@@ -1803,11 +1811,11 @@ public class StressTest extends TestBase {
     void useChiralityFalse() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.useChirality = false;
-      SMSD smsd = new SMSD(
+      MoleculePair smsd = new MoleculePair(
           mol("[C@@H](N)(C)C(=O)O"),
           mol("[C@H](N)(C)C(=O)O"),
           opts);
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("14.09 matchFormalCharge=true on charged pair")
@@ -1815,8 +1823,8 @@ public class StressTest extends TestBase {
       ChemOptions opts = new ChemOptions();
       opts.matchFormalCharge = true;
       opts.ringMatchesRingOnly = false;
-      SMSD smsd = new SMSD(mol("[NH4+]"), mol("N"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("[NH4+]"), mol("N"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       // With charge matching, charged N may not match neutral N
       assertNotNull(mcs);
     }
@@ -1826,8 +1834,8 @@ public class StressTest extends TestBase {
       ChemOptions opts = new ChemOptions();
       opts.matchFormalCharge = false;
       opts.ringMatchesRingOnly = false;
-      SMSD smsd = new SMSD(mol("[NH4+]"), mol("N"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("[NH4+]"), mol("N"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 1);
     }
@@ -1836,8 +1844,8 @@ public class StressTest extends TestBase {
     void completeRingsTrue() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.completeRingsOnly = true;
-      SMSD smsd = new SMSD(mol("c1ccccc1"), mol("c1ccc2ccccc2c1"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("c1ccccc1"), mol("c1ccc2ccccc2c1"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       // Should find complete benzene ring
       assertTrue(mcs.size() >= 6);
@@ -1849,9 +1857,9 @@ public class StressTest extends TestBase {
       optsOn.matchIsotope = true;
       ChemOptions optsOff = new ChemOptions();
       optsOff.matchIsotope = false;
-      SMSD smsdOn = new SMSD(mol("[13CH4]"), mol("C"), optsOn);
-      SMSD smsdOff = new SMSD(mol("[13CH4]"), mol("C"), optsOff);
-      Map<Integer, Integer> mcsOff = smsdOff.findMCS(false, true, 5000L);
+      MoleculePair smsdOn = new MoleculePair(mol("[13CH4]"), mol("C"), optsOn);
+      MoleculePair smsdOff = new MoleculePair(mol("[13CH4]"), mol("C"), optsOff);
+      Map<Integer, Integer> mcsOff = smsdOff.mcsMapping( true, 5000L);
       assertNotNull(mcsOff);
       assertTrue(mcsOff.size() >= 1, "Without isotope match, should overlap");
     }
@@ -1860,16 +1868,16 @@ public class StressTest extends TestBase {
     void aromaticityStrict() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.aromaticityMode = ChemOptions.AromaticityMode.STRICT;
-      SMSD smsd = new SMSD(mol("c1ccccc1"), mol("c1ccccc1"), opts);
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("c1ccccc1"), mol("c1ccccc1"), opts);
+      assertTrue(smsd.contains());
     }
 
     @Test @Timeout(10) @DisplayName("14.14 aromaticityMode=FLEXIBLE")
     void aromaticityFlexible() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.aromaticityMode = ChemOptions.AromaticityMode.FLEXIBLE;
-      SMSD smsd = new SMSD(mol("c1ccccc1"), mol("C1=CC=CC=C1"), opts);
-      assertTrue(smsd.isSubstructure(), "FLEXIBLE should match aromatic with Kekule");
+      MoleculePair smsd = new MoleculePair(mol("c1ccccc1"), mol("C1=CC=CC=C1"), opts);
+      assertTrue(smsd.contains(), "FLEXIBLE should match aromatic with Kekule");
     }
 
     @Test @Timeout(10) @DisplayName("14.15 profile strict vs compat-fmcs differ on sensitive pair")
@@ -1877,10 +1885,10 @@ public class StressTest extends TestBase {
       ChemOptions strict = ChemOptions.profile("strict");
       ChemOptions compat = ChemOptions.profile("compat-fmcs");
       // Cyclohexane vs hexane
-      SMSD smsdStrict = new SMSD(mol("C1CCCCC1"), mol("CCCCCC"), strict);
-      SMSD smsdCompat = new SMSD(mol("C1CCCCC1"), mol("CCCCCC"), compat);
-      Map<Integer, Integer> mcsStrict = smsdStrict.findMCS(false, true, 5000L);
-      Map<Integer, Integer> mcsCompat = smsdCompat.findMCS(false, true, 5000L);
+      MoleculePair smsdStrict = new MoleculePair(mol("C1CCCCC1"), mol("CCCCCC"), strict);
+      MoleculePair smsdCompat = new MoleculePair(mol("C1CCCCC1"), mol("CCCCCC"), compat);
+      Map<Integer, Integer> mcsStrict = smsdStrict.mcsMapping( true, 5000L);
+      Map<Integer, Integer> mcsCompat = smsdCompat.mcsMapping( true, 5000L);
       int sizeStrict = (mcsStrict == null) ? 0 : mcsStrict.size();
       int sizeCompat = (mcsCompat == null) ? 0 : mcsCompat.size();
       assertTrue(sizeCompat >= sizeStrict,
@@ -1903,9 +1911,9 @@ public class StressTest extends TestBase {
     @Test @Timeout(10) @DisplayName("15.01 Cyclopropane (3-ring) self-match MCS=3")
     void cyclopropaneSelfMatch() throws Exception {
       IAtomContainer cp = mol("C1CC1");
-      SMSD smsd = new SMSD(cp, cp, defaultOpts());
-      assertTrue(smsd.isSubstructure());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(cp, cp, defaultOpts());
+      assertTrue(smsd.contains());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(3, mcs.size(), "Cyclopropane self-match MCS should be 3 atoms");
     }
@@ -1913,9 +1921,9 @@ public class StressTest extends TestBase {
     @Test @Timeout(10) @DisplayName("15.02 Cyclobutane (4-ring) self-match MCS=4")
     void cyclobutaneSelfMatch() throws Exception {
       IAtomContainer cb = mol("C1CCC1");
-      SMSD smsd = new SMSD(cb, cb, defaultOpts());
-      assertTrue(smsd.isSubstructure());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(cb, cb, defaultOpts());
+      assertTrue(smsd.contains());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(4, mcs.size(), "Cyclobutane self-match MCS should be 4 atoms");
     }
@@ -1925,8 +1933,8 @@ public class StressTest extends TestBase {
       // Cyclopentadiene: C1=CC=CC1 (5 carbons, some double bonds)
       // With loose bond order, cyclopentadiene ring should still match
       ChemOptions loose = looseOpts();
-      SMSD smsd = new SMSD(mol("C1=CC=CC1"), mol("C1CCCC1"), loose);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("C1=CC=CC1"), mol("C1CCCC1"), loose);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 5,
           "Cyclopentadiene vs cyclopentane under loose bond order should map 5 atoms");
@@ -1935,9 +1943,9 @@ public class StressTest extends TestBase {
     @Test @Timeout(10) @DisplayName("15.04 Cyclohexane (6-ring) self-match MCS=6")
     void cyclohexaneSelfMatch() throws Exception {
       IAtomContainer ch = mol("C1CCCCC1");
-      SMSD smsd = new SMSD(ch, ch, defaultOpts());
-      assertTrue(smsd.isSubstructure());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(ch, ch, defaultOpts());
+      assertTrue(smsd.contains());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(6, mcs.size(), "Cyclohexane self-match MCS should be 6 atoms");
     }
@@ -1946,8 +1954,8 @@ public class StressTest extends TestBase {
     void benzeneVsCyclohexaneStrictArom() throws Exception {
       ChemOptions strict = new ChemOptions();
       strict.aromaticityMode = ChemOptions.AromaticityMode.STRICT;
-      SMSD smsd = new SMSD(mol("c1ccccc1"), mol("C1CCCCC1"), strict);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("c1ccccc1"), mol("C1CCCCC1"), strict);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       int sz = (mcs == null) ? 0 : mcs.size();
       assertTrue(sz < 6,
           "STRICT aromaticity: benzene vs cyclohexane should NOT fully match (got " + sz + ")");
@@ -1960,9 +1968,9 @@ public class StressTest extends TestBase {
     @Test @Timeout(10) @DisplayName("15.06 Cycloheptane (7-ring) self-match MCS=7")
     void cycloheptaneSelfMatch() throws Exception {
       IAtomContainer ch7 = mol("C1CCCCCC1");
-      SMSD smsd = new SMSD(ch7, ch7, defaultOpts());
-      assertTrue(smsd.isSubstructure());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(ch7, ch7, defaultOpts());
+      assertTrue(smsd.contains());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(7, mcs.size(), "Cycloheptane self-match MCS should be 7 atoms");
     }
@@ -1974,9 +1982,9 @@ public class StressTest extends TestBase {
       assertArrayEquals(new int[] {5, 7},
           Arrays.stream(new MolGraph(az).computeRings()).mapToInt(ring -> ring.length).sorted().toArray(),
           "Azulene must contain fused five- and seven-membered rings");
-      SMSD smsd = new SMSD(az, az, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "Azulene should self-match");
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(az, az, defaultOpts());
+      assertTrue(smsd.contains(), "Azulene should self-match");
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(10, mcs.size(), "Azulene self-match MCS should be 10 atoms");
     }
@@ -1985,9 +1993,9 @@ public class StressTest extends TestBase {
     void cyclooctatetraeneSelfMatch() throws Exception {
       // COT: tub-shaped, non-aromatic
       IAtomContainer cot = mol("C1=CC=CC=CC=C1");
-      SMSD smsd = new SMSD(cot, cot, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "Cyclooctatetraene should self-match");
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(cot, cot, defaultOpts());
+      assertTrue(smsd.contains(), "Cyclooctatetraene should self-match");
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(8, mcs.size(), "COT self-match MCS should be 8 atoms");
     }
@@ -1996,9 +2004,9 @@ public class StressTest extends TestBase {
     void crown4SelfMatch() throws Exception {
       // 12-crown-4: -CH2-O-CH2-CH2-O-CH2-CH2-O-CH2-CH2-O-CH2-
       IAtomContainer crown = mol("C1COCCOCCOCCO1");
-      SMSD smsd = new SMSD(crown, crown, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "12-crown-4 should self-match");
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(crown, crown, defaultOpts());
+      assertTrue(smsd.contains(), "12-crown-4 should self-match");
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 12,
           "12-crown-4 self-match MCS should have at least 12 atoms");
@@ -2012,9 +2020,9 @@ public class StressTest extends TestBase {
     void fourteenMemberedLactone() throws Exception {
       // Simple 14-membered lactone (erythromycin-like ring)
       IAtomContainer lac = mol("O=C1CCCCCCCCCCCCO1");
-      SMSD smsd = new SMSD(lac, lac, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "14-membered lactone should self-match");
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(lac, lac, defaultOpts());
+      assertTrue(smsd.contains(), "14-membered lactone should self-match");
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 14,
           "14-membered lactone self-match should map >= 14 atoms");
@@ -2024,9 +2032,9 @@ public class StressTest extends TestBase {
     void crown6SelfMatch() throws Exception {
       // 18-crown-6: 6 oxygens alternating with ethylene bridges
       IAtomContainer crown6 = mol("C1COCCOCCOCCOCCOCCO1");
-      SMSD smsd = new SMSD(crown6, crown6, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "18-crown-6 should self-match");
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(crown6, crown6, defaultOpts());
+      assertTrue(smsd.contains(), "18-crown-6 should self-match");
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 18,
           "18-crown-6 self-match MCS should have at least 18 atoms");
@@ -2036,9 +2044,9 @@ public class StressTest extends TestBase {
     void porphyrinCoreSelfMatch() throws Exception {
       // Porphine: simplest porphyrin
       IAtomContainer porph = mol("c1cc2cc3ccc(cc4ccc(cc5ccc(cc1n2)[nH]5)n4)[nH]3");
-      SMSD smsd = new SMSD(porph, porph, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "Porphyrin core should self-match");
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(porph, porph, defaultOpts());
+      assertTrue(smsd.contains(), "Porphyrin core should self-match");
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 20,
           "Porphyrin core self-match MCS should map >= 20 atoms");
@@ -2054,15 +2062,15 @@ public class StressTest extends TestBase {
       // STRICT fusion
       ChemOptions strictFusion = new ChemOptions();
       strictFusion.ringFusionMode = ChemOptions.RingFusionMode.STRICT;
-      SMSD smsdStrict = new SMSD(naph, naph, strictFusion);
-      Map<Integer, Integer> mcsStrict = smsdStrict.findMCS(false, true, 5000L);
+      MoleculePair smsdStrict = new MoleculePair(naph, naph, strictFusion);
+      Map<Integer, Integer> mcsStrict = smsdStrict.mcsMapping( true, 5000L);
       assertNotNull(mcsStrict);
       assertEquals(10, mcsStrict.size(), "Naphthalene STRICT fusion self-match should be 10");
       // IGNORE fusion
       ChemOptions ignoreFusion = new ChemOptions();
       ignoreFusion.ringFusionMode = ChemOptions.RingFusionMode.IGNORE;
-      SMSD smsdIgnore = new SMSD(naph, naph, ignoreFusion);
-      Map<Integer, Integer> mcsIgnore = smsdIgnore.findMCS(false, true, 5000L);
+      MoleculePair smsdIgnore = new MoleculePair(naph, naph, ignoreFusion);
+      Map<Integer, Integer> mcsIgnore = smsdIgnore.mcsMapping( true, 5000L);
       assertNotNull(mcsIgnore);
       assertEquals(10, mcsIgnore.size(), "Naphthalene IGNORE fusion self-match should be 10");
     }
@@ -2071,8 +2079,8 @@ public class StressTest extends TestBase {
     void anthraceneVsPhenanthrene() throws Exception {
       IAtomContainer anthra = mol("c1ccc2cc3ccccc3cc2c1");
       IAtomContainer phenan = mol("c1ccc2c(c1)cc1ccccc1c2");
-      SMSD smsd = new SMSD(anthra, phenan, defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(anthra, phenan, defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       // Both are C14H10, same number of atoms, MCS should be large (>= 10)
       assertTrue(mcs.size() >= 10,
@@ -2082,9 +2090,9 @@ public class StressTest extends TestBase {
     @Test @Timeout(10) @DisplayName("15.15 Pyrene (4 fused rings) self-match")
     void pyreneSelfMatch() throws Exception {
       IAtomContainer pyrene = mol("c1cc2ccc3cccc4ccc(c1)c2c34");
-      SMSD smsd = new SMSD(pyrene, pyrene, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "Pyrene should self-match");
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(pyrene, pyrene, defaultOpts());
+      assertTrue(smsd.contains(), "Pyrene should self-match");
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(16, mcs.size(), "Pyrene self-match MCS should be 16 atoms");
     }
@@ -2092,9 +2100,9 @@ public class StressTest extends TestBase {
     @Test @Timeout(10) @DisplayName("15.16 Coronene (7 fused rings) self-match with timeout")
     void coroneneSelfMatch() throws Exception {
       IAtomContainer cor = mol("c1cc2ccc3ccc4ccc5ccc6ccc1c7c2c3c4c5c67");
-      SMSD smsd = new SMSD(cor, cor, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "Coronene should self-match");
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(cor, cor, defaultOpts());
+      assertTrue(smsd.contains(), "Coronene should self-match");
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 20,
           "Coronene self-match MCS should be >= 20 atoms (got " + mcs.size() + ")");
@@ -2106,8 +2114,8 @@ public class StressTest extends TestBase {
       IAtomContainer indene = mol("C1=Cc2ccccc2C1");
       // Indane: benzene fused with cyclopentane
       IAtomContainer indane = mol("C1Cc2ccccc2C1");
-      SMSD smsd = new SMSD(indene, indane, defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(indene, indane, defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       // Should share most of the framework (9 atoms)
       assertTrue(mcs.size() >= 8,
@@ -2121,9 +2129,9 @@ public class StressTest extends TestBase {
     @Test @Timeout(10) @DisplayName("15.18 Norbornane (bridged bicyclic C7H12) self-match")
     void norbornaneSelfMatch() throws Exception {
       IAtomContainer norb = mol("C1CC2CC1CC2");
-      SMSD smsd = new SMSD(norb, norb, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "Norbornane should self-match");
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(norb, norb, defaultOpts());
+      assertTrue(smsd.contains(), "Norbornane should self-match");
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(7, mcs.size(), "Norbornane self-match MCS should be 7 atoms");
     }
@@ -2131,9 +2139,9 @@ public class StressTest extends TestBase {
     @Test @Timeout(10) @DisplayName("15.19 Adamantane (cage structure) self-match MCS=10")
     void adamantaneSelfMatch() throws Exception {
       IAtomContainer adam = mol("C1C2CC3CC1CC(C2)C3");
-      SMSD smsd = new SMSD(adam, adam, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "Adamantane should self-match");
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(adam, adam, defaultOpts());
+      assertTrue(smsd.contains(), "Adamantane should self-match");
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(10, mcs.size(), "Adamantane self-match MCS should be 10 atoms");
     }
@@ -2142,9 +2150,9 @@ public class StressTest extends TestBase {
     void camphorSelfMatch() throws Exception {
       // Camphor: bridged bicyclic monoterpene ketone
       IAtomContainer camphor = mol("CC1(C)C2CCC1(C)C(=O)C2");
-      SMSD smsd = new SMSD(camphor, camphor, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "Camphor should self-match");
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(camphor, camphor, defaultOpts());
+      assertTrue(smsd.contains(), "Camphor should self-match");
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 10,
           "Camphor self-match MCS should map >= 10 atoms (got " + mcs.size() + ")");
@@ -2158,9 +2166,9 @@ public class StressTest extends TestBase {
     void spiro44nonaneSelfMatch() throws Exception {
       // Two cyclopentane rings sharing one atom
       IAtomContainer spiro = mol("C1CCC2(C1)CCCC2");
-      SMSD smsd = new SMSD(spiro, spiro, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "Spiro[4.4]nonane should self-match");
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(spiro, spiro, defaultOpts());
+      assertTrue(smsd.contains(), "Spiro[4.4]nonane should self-match");
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(9, mcs.size(), "Spiro[4.4]nonane self-match MCS should be 9 atoms");
     }
@@ -2169,9 +2177,9 @@ public class StressTest extends TestBase {
     void spiro55undecaneSelfMatch() throws Exception {
       // Two cyclohexane rings sharing one atom
       IAtomContainer spiro = mol("C1CCCC2(C1)CCCCC2");
-      SMSD smsd = new SMSD(spiro, spiro, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "Spiro[5.5]undecane should self-match");
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(spiro, spiro, defaultOpts());
+      assertTrue(smsd.contains(), "Spiro[5.5]undecane should self-match");
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(11, mcs.size(), "Spiro[5.5]undecane self-match MCS should be 11 atoms");
     }
@@ -2184,8 +2192,8 @@ public class StressTest extends TestBase {
     void strictNaphthaleneVsBiphenyl() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.ringFusionMode = ChemOptions.RingFusionMode.STRICT;
-      SMSD smsd = new SMSD(mol("c1ccc2ccccc2c1"), mol("c1ccc(-c2ccccc2)cc1"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("c1ccc2ccccc2c1"), mol("c1ccc(-c2ccccc2)cc1"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       int sz = (mcs == null) ? 0 : mcs.size();
       assertTrue(sz < 10,
           "STRICT fusion: naphthalene vs biphenyl MCS should be < 10 (got " + sz + ")");
@@ -2197,8 +2205,8 @@ public class StressTest extends TestBase {
       opts.ringFusionMode = ChemOptions.RingFusionMode.STRICT;
       IAtomContainer anthra = mol("c1ccc2cc3ccccc3cc2c1");
       IAtomContainer triph = mol("c1ccc2c(c1)c1ccccc1c1ccccc21");
-      SMSD smsd = new SMSD(anthra, triph, opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(anthra, triph, opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       int sz = (mcs == null) ? 0 : mcs.size();
       // Strict fusion should find less than full match due to different topology
       assertTrue(sz >= 6,
@@ -2209,8 +2217,8 @@ public class StressTest extends TestBase {
     void permissiveNaphthaleneVsBiphenyl() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.ringFusionMode = ChemOptions.RingFusionMode.PERMISSIVE;
-      SMSD smsd = new SMSD(mol("c1ccc2ccccc2c1"), mol("c1ccc(-c2ccccc2)cc1"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("c1ccc2ccccc2c1"), mol("c1ccc(-c2ccccc2)cc1"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 6,
           "PERMISSIVE fusion: naphthalene vs biphenyl should match >= 6 atoms");
@@ -2220,8 +2228,8 @@ public class StressTest extends TestBase {
     void ignoreRingFusion() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.ringFusionMode = ChemOptions.RingFusionMode.IGNORE;
-      SMSD smsd = new SMSD(mol("c1ccc2ccccc2c1"), mol("c1ccc(-c2ccccc2)cc1"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("c1ccc2ccccc2c1"), mol("c1ccc(-c2ccccc2)cc1"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 6,
           "IGNORE fusion: naphthalene vs biphenyl should match >= 6 atoms");
@@ -2234,9 +2242,9 @@ public class StressTest extends TestBase {
     @Test @Timeout(10) @DisplayName("15.27 Toluene (ring + methyl chain) self-match MCS=7")
     void tolueneSelfMatch() throws Exception {
       IAtomContainer tol = mol("Cc1ccccc1");
-      SMSD smsd = new SMSD(tol, tol, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "Toluene should self-match");
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(tol, tol, defaultOpts());
+      assertTrue(smsd.contains(), "Toluene should self-match");
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(7, mcs.size(), "Toluene self-match MCS should be 7 atoms");
     }
@@ -2245,9 +2253,9 @@ public class StressTest extends TestBase {
     void ethylbenzeneVsPropylbenzene() throws Exception {
       IAtomContainer ethb = mol("CCc1ccccc1");
       IAtomContainer propb = mol("CCCc1ccccc1");
-      SMSD smsd = new SMSD(ethb, propb, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "Ethylbenzene should be substructure of propylbenzene");
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(ethb, propb, defaultOpts());
+      assertTrue(smsd.contains(), "Ethylbenzene should be substructure of propylbenzene");
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertEquals(8, mcs.size(),
           "Ethylbenzene (8 atoms) should map fully into propylbenzene");
@@ -2257,8 +2265,8 @@ public class StressTest extends TestBase {
     void biphenylVsDiphenylmethane() throws Exception {
       IAtomContainer biph = mol("c1ccc(-c2ccccc2)cc1");
       IAtomContainer dpm = mol("c1ccc(Cc2ccccc2)cc1");
-      SMSD smsd = new SMSD(biph, dpm, defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(biph, dpm, defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       // Both have 2 phenyl rings; biphenyl=12 atoms, diphenylmethane=13
       // MCS should capture at least one ring + connection
@@ -2277,14 +2285,12 @@ public class StressTest extends TestBase {
       opts.aromaticityMode = ChemOptions.AromaticityMode.FLEXIBLE;
       opts.matchBondOrder = ChemOptions.BondOrderMode.LOOSE;
       // Naphthalene (fused 6+6) vs phenylcyclohexane (6+6 not fused)
-      SMSD smsd = new SMSD(mol("c1ccc2ccccc2c1"), mol("C1CCCCC1c1ccccc1"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("c1ccc2ccccc2c1"), mol("C1CCCCC1c1ccccc1"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
-      // Completing either overlapping query ring forces all 10 naphthalene
-      // atoms. Two target rings joined by a bridge cannot contain this fused
-      // system, even when aromaticity and bond orders are flexible.
-      assertFalse(smsd.isSubstructure(), "The target has no fused naphthalene embedding");
-      assertTrue(mcs.isEmpty(), "Both overlapping query rings must be complete");
+      // One complete query ring may survive through the shared fusion atoms.
+      assertFalse(smsd.contains(), "The target has no fused naphthalene embedding");
+      assertEquals(6,mcs.size(),"A retained whole ring covers its fusion atoms");
     }
 
     @Test @Timeout(10) @DisplayName("15.31 completeRingsOnly excludes partial ring mapping")
@@ -2296,10 +2302,10 @@ public class StressTest extends TestBase {
       // Benzene vs cyclohexene — ring sizes match but bond types differ
       IAtomContainer benzene = mol("c1ccccc1");
       IAtomContainer hexene = mol("C1CC=CCC1");
-      SMSD smsdWith = new SMSD(benzene, hexene, withComplete);
-      SMSD smsdWithout = new SMSD(benzene, hexene, withoutComplete);
-      Map<Integer, Integer> mcsW = smsdWith.findMCS(false, true, 5000L);
-      Map<Integer, Integer> mcsWO = smsdWithout.findMCS(false, true, 5000L);
+      MoleculePair smsdWith = new MoleculePair(benzene, hexene, withComplete);
+      MoleculePair smsdWithout = new MoleculePair(benzene, hexene, withoutComplete);
+      Map<Integer, Integer> mcsW = smsdWith.mcsMapping( true, 5000L);
+      Map<Integer, Integer> mcsWO = smsdWithout.mcsMapping( true, 5000L);
       int szWith = (mcsW == null) ? 0 : mcsW.size();
       int szWithout = (mcsWO == null) ? 0 : mcsWO.size();
       assertTrue(szWithout >= szWith,
@@ -2313,15 +2319,15 @@ public class StressTest extends TestBase {
     @Test @Timeout(1) @DisplayName("15.32 Speed: coronene self-match < 1 second")
     void speedCoroneneSelfMatch() throws Exception {
       IAtomContainer cor = mol("c1cc2ccc3ccc4ccc5ccc6ccc1c7c2c3c4c5c67");
-      SMSD smsd = new SMSD(cor, cor, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "Coronene should self-match within 1s");
+      MoleculePair smsd = new MoleculePair(cor, cor, defaultOpts());
+      assertTrue(smsd.contains(), "Coronene should self-match within 1s");
     }
 
     @Test @Timeout(2) @DisplayName("15.33 Speed: porphyrin self-match < 2 seconds")
     void speedPorphyrinSelfMatch() throws Exception {
       IAtomContainer porph = mol("c1cc2cc3ccc(cc4ccc(cc5ccc(cc1n2)[nH]5)n4)[nH]3");
-      SMSD smsd = new SMSD(porph, porph, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "Porphyrin should self-match within 2s");
+      MoleculePair smsd = new MoleculePair(porph, porph, defaultOpts());
+      assertTrue(smsd.contains(), "Porphyrin should self-match within 2s");
     }
 
     @Test @Timeout(5) @DisplayName("15.34 Speed: C60 fullerene self-match < 5 seconds")
@@ -2330,8 +2336,8 @@ public class StressTest extends TestBase {
       // is rejected by the parser; use corannulene (C20H10, bowl-shaped fragment of C60)
       IAtomContainer c60 = mol(
           "c1cc2ccc3ccc4ccc5ccc1c1c2c3c4c51");
-      SMSD smsd = new SMSD(c60, c60, defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(c60, c60, defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       // At minimum should get a result (may be partial due to complexity)
       assertNotNull(mcs, "C60 self-match should return a result within 5s");
       assertTrue(mcs.size() >= 20,
@@ -2365,16 +2371,16 @@ public class StressTest extends TestBase {
     @DisplayName("16.01 Cubane (Oh symmetry, SSSR=5, 6 equivalent faces — classic non-unique SSSR)")
     void cubaneSelfSubstructure() throws Exception {
       IAtomContainer m = safeMol("C12C3C4C1C5C4C3C25");
-      SMSD smsd = new SMSD(m, m, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "Cubane should be a substructure of itself");
+      MoleculePair smsd = new MoleculePair(m, m, defaultOpts());
+      assertTrue(smsd.contains(), "Cubane should be a substructure of itself");
     }
 
     @Test @Timeout(10)
     @DisplayName("16.02 Cubane self-MCS = 8 atoms")
     void cubaneSelfMCS() throws Exception {
       IAtomContainer m = safeMol("C12C3C4C1C5C4C3C25");
-      SMSD smsd = new SMSD(m, m, defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(m, m, defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs, "Cubane self-MCS should not be null");
       assertTrue(mcs.size() >= 7,
           "Cubane self-MCS should map >= 7 atoms (got " + mcs.size() + ")");
@@ -2386,16 +2392,16 @@ public class StressTest extends TestBase {
     @DisplayName("16.03 Prismane (D3h symmetry, SSSR=4 — must omit one face)")
     void prismaneSelfSubstructure() throws Exception {
       IAtomContainer m = safeMol("C12C3C1C4C2C34");
-      SMSD smsd = new SMSD(m, m, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "Prismane should be a substructure of itself");
+      MoleculePair smsd = new MoleculePair(m, m, defaultOpts());
+      assertTrue(smsd.contains(), "Prismane should be a substructure of itself");
     }
 
     @Test @Timeout(10)
     @DisplayName("16.04 Prismane self-MCS = 6 atoms")
     void prismaneSelfMCS() throws Exception {
       IAtomContainer m = safeMol("C12C3C1C4C2C34");
-      SMSD smsd = new SMSD(m, m, defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(m, m, defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs, "Prismane self-MCS should not be null");
       assertTrue(mcs.size() >= 5,
           "Prismane self-MCS should map >= 5 atoms (got " + mcs.size() + ")");
@@ -2407,16 +2413,16 @@ public class StressTest extends TestBase {
     @DisplayName("16.05 Adamantane (Td symmetry, SSSR=3 — 4 equivalent rings but only 3 independent)")
     void adamantaneSelfSubstructure() throws Exception {
       IAtomContainer m = safeMol("C1C2CC3CC1CC(C2)C3");
-      SMSD smsd = new SMSD(m, m, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "Adamantane should be a substructure of itself");
+      MoleculePair smsd = new MoleculePair(m, m, defaultOpts());
+      assertTrue(smsd.contains(), "Adamantane should be a substructure of itself");
     }
 
     @Test @Timeout(10)
     @DisplayName("16.06 Adamantane self-MCS = 10 atoms")
     void adamantaneSelfMCS() throws Exception {
       IAtomContainer m = safeMol("C1C2CC3CC1CC(C2)C3");
-      SMSD smsd = new SMSD(m, m, defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(m, m, defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs, "Adamantane self-MCS should not be null");
       assertTrue(mcs.size() >= 9,
           "Adamantane self-MCS should map >= 9 atoms (got " + mcs.size() + ")");
@@ -2428,16 +2434,16 @@ public class StressTest extends TestBase {
     @DisplayName("16.07 Dodecahedrane (Ih symmetry, SSSR=11, 12 pentagonal faces — non-unique SSSR)")
     void dodecahedraneSelfSubstructure() throws Exception {
       IAtomContainer m = safeMol("C12C3C4C5C1C6C7C2C8C3C9C4C1C5C6C2C7C8C9C12");
-      SMSD smsd = new SMSD(m, m, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "Dodecahedrane should be a substructure of itself");
+      MoleculePair smsd = new MoleculePair(m, m, defaultOpts());
+      assertTrue(smsd.contains(), "Dodecahedrane should be a substructure of itself");
     }
 
     @Test @Timeout(10)
     @DisplayName("16.08 Dodecahedrane self-MCS = 20 atoms")
     void dodecahedraneSelfMCS() throws Exception {
       IAtomContainer m = safeMol("C12C3C4C5C1C6C7C2C8C3C9C4C1C5C6C2C7C8C9C12");
-      SMSD smsd = new SMSD(m, m, defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(m, m, defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs, "Dodecahedrane self-MCS should not be null");
       assertTrue(mcs.size() >= 18,
           "Dodecahedrane self-MCS should map >= 18 atoms (got " + mcs.size() + ")");
@@ -2452,8 +2458,8 @@ public class StressTest extends TestBase {
           "C1N2C3C4N(C2=O)CN5C6C7N(C5=O)CN8C9C2N(C8=O)CN5C8C%10N(C5=O)"
           + "CN5C%11C%12N(C5=O)CN5C%13C(N1C5=O)N1CN3C(=O)N4CN6C(=O)N7CN9C(=O)"
           + "N2CN8C(=O)N%10CN%11C(=O)N%12CN%13C1=O");
-      SMSD smsd = new SMSD(m, m, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "Cucurbit[6]uril should be a substructure of itself");
+      MoleculePair smsd = new MoleculePair(m, m, defaultOpts());
+      assertTrue(smsd.contains(), "Cucurbit[6]uril should be a substructure of itself");
     }
 
     @Test @Timeout(10)
@@ -2463,8 +2469,8 @@ public class StressTest extends TestBase {
           "C1N2C3C4N(C2=O)CN5C6C7N(C5=O)CN8C9C2N(C8=O)CN5C8C%10N(C5=O)"
           + "CN5C%11C%12N(C5=O)CN5C%13C(N1C5=O)N1CN3C(=O)N4CN6C(=O)N7CN9C(=O)"
           + "N2CN8C(=O)N%10CN%11C(=O)N%12CN%13C1=O");
-      SMSD smsd = new SMSD(m, m, defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 8000L);
+      MoleculePair smsd = new MoleculePair(m, m, defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 8000L);
       assertNotNull(mcs, "Cucurbit[6]uril self-MCS should not be null");
       assertTrue(mcs.size() >= 72,
           "Cucurbit[6]uril self-MCS should map >= 72 atoms (got " + mcs.size() + ")");
@@ -2477,8 +2483,8 @@ public class StressTest extends TestBase {
     void hardCase4266SelfSubstructure() throws Exception {
       IAtomContainer m = mol("c1ccccc1.C12C3C1C4C2C34");
       assertEquals(12, m.getAtomCount(), "Benzene plus prismane should have 12 heavy atoms");
-      SMSD smsd = new SMSD(m, m, defaultOpts());
-      assertTrue(smsd.isSubstructure(),
+      MoleculePair smsd = new MoleculePair(m, m, defaultOpts());
+      assertTrue(smsd.contains(),
           "Multi-fragment benzene+prismane should be a substructure of itself");
     }
 
@@ -2487,13 +2493,13 @@ public class StressTest extends TestBase {
     void hardCase4266SelfMCS() throws Exception {
       IAtomContainer m = mol("c1ccccc1.C12C3C1C4C2C34");
       assertEquals(12, m.getAtomCount(), "Benzene plus prismane should have 12 heavy atoms");
-      SMSD smsd = new SMSD(m, m, defaultOpts());
+      MoleculePair smsd = new MoleculePair(m, m, defaultOpts());
       // Mapping both disconnected fragments requires connectedOnly=false.
-      Map<Integer, Integer> mcs = smsd.findMCS(false, false, 5000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( false, 5000L);
       assertNotNull(mcs, "Multi-fragment self-MCS should not be null");
       assertTrue(mcs.size() >= 10,
           "Multi-fragment self-MCS should map >= 10 atoms (got " + mcs.size() + ")");
-      assertEquals(6, smsd.findMCS(false, true, 5000L).size(),
+      assertEquals(6, smsd.mcsMapping( true, 5000L).size(),
           "Connected self-MCS should select one six-atom fragment");
     }
 
@@ -2505,8 +2511,8 @@ public class StressTest extends TestBase {
       IAtomContainer m = safeMol(
           "C1=CC2=CC3=C4C=C2C5=CC6=C(C=CC7=CC8=C(C=C76)C9=CC2=C(C=CC6=C2C=C2C(=C6)"
           + "C=CC6=C2C=C4C(=C6)C=C3)C=C9C=C8)C=C51");
-      SMSD smsd = new SMSD(m, m, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "Kekulene should be a substructure of itself");
+      MoleculePair smsd = new MoleculePair(m, m, defaultOpts());
+      assertTrue(smsd.contains(), "Kekulene should be a substructure of itself");
     }
 
     @Test @Timeout(10)
@@ -2515,8 +2521,8 @@ public class StressTest extends TestBase {
       IAtomContainer m = safeMol(
           "C1=CC2=CC3=C4C=C2C5=CC6=C(C=CC7=CC8=C(C=C76)C9=CC2=C(C=CC6=C2C=C2C(=C6)"
           + "C=CC6=C2C=C4C(=C6)C=C3)C=C9C=C8)C=C51");
-      SMSD smsd = new SMSD(m, m, defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 8000L);
+      MoleculePair smsd = new MoleculePair(m, m, defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 8000L);
       assertNotNull(mcs, "Kekulene self-MCS should not be null");
       assertTrue(mcs.size() >= 42,
           "Kekulene self-MCS should map >= 42 atoms (got " + mcs.size() + ")");
@@ -2528,16 +2534,16 @@ public class StressTest extends TestBase {
     @DisplayName("16.15 Corannulene (20 atoms, bowl-shaped [5]circulene — non-planar curved pi-system)")
     void corannuleneSelfSubstructure() throws Exception {
       IAtomContainer m = safeMol("C1=CC2=C3C4=C1C=CC5=C4C6=C(C=C5)C=CC(=C36)C=C2");
-      SMSD smsd = new SMSD(m, m, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "Corannulene should be a substructure of itself");
+      MoleculePair smsd = new MoleculePair(m, m, defaultOpts());
+      assertTrue(smsd.contains(), "Corannulene should be a substructure of itself");
     }
 
     @Test @Timeout(10)
     @DisplayName("16.16 Corannulene self-MCS = 20 atoms")
     void corannuleneSelfMCS() throws Exception {
       IAtomContainer m = safeMol("C1=CC2=C3C4=C1C=CC5=C4C6=C(C=C5)C=CC(=C36)C=C2");
-      SMSD smsd = new SMSD(m, m, defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(m, m, defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs, "Corannulene self-MCS should not be null");
       assertTrue(mcs.size() >= 18,
           "Corannulene self-MCS should map >= 18 atoms (got " + mcs.size() + ")");
@@ -2549,16 +2555,16 @@ public class StressTest extends TestBase {
     @DisplayName("16.17 Strychnine (25 heavy atoms, 7 fused heterogeneous rings — classic benchmark)")
     void strychnineSelfSubstructure() throws Exception {
       IAtomContainer m = safeMol("C1CN2CC3=CCOC4CC(=O)N5C6C4C3CC2C61C7=CC=CC=C75");
-      SMSD smsd = new SMSD(m, m, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "Strychnine should be a substructure of itself");
+      MoleculePair smsd = new MoleculePair(m, m, defaultOpts());
+      assertTrue(smsd.contains(), "Strychnine should be a substructure of itself");
     }
 
     @Test @Timeout(10)
     @DisplayName("16.18 Strychnine self-MCS >= 22 atoms (24 heavy)")
     void strychnineSelfMCS() throws Exception {
       IAtomContainer m = safeMol("C1CN2CC3=CCOC4CC(=O)N5C6C4C3CC2C61C7=CC=CC=C75");
-      SMSD smsd = new SMSD(m, m, defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(m, m, defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs, "Strychnine self-MCS should not be null");
       assertTrue(mcs.size() >= 22,
           "Strychnine self-MCS should map >= 22 atoms (got " + mcs.size() + ")");
@@ -2573,8 +2579,8 @@ public class StressTest extends TestBase {
           "CC1C(C(CC(O1)OC2C(C(C(OC2OC3=C4C=C5C=C3OC6=C(C=C(C=C6)C(C(C(=O)NC(C(=O)"
           + "NC5C(=O)NC7C8=CC(=C(C=C8)O)C9=C(C=C(C=C9O)O)C(NC(=O)C(C(C1=CC(=C(O4)C=C1)Cl)"
           + "O)NC7=O)C(=O)O)CC(=O)N)NC(=O)C(CC(C)C)NC)O)Cl)CO)O)O)(C)N)O");
-      SMSD smsd = new SMSD(m, m, defaultOpts());
-      assertTrue(smsd.isSubstructure(), "Vancomycin should be a substructure of itself");
+      MoleculePair smsd = new MoleculePair(m, m, defaultOpts());
+      assertTrue(smsd.contains(), "Vancomycin should be a substructure of itself");
     }
 
     @Test @Timeout(30)
@@ -2584,8 +2590,8 @@ public class StressTest extends TestBase {
           "CC1C(C(CC(O1)OC2C(C(C(OC2OC3=C4C=C5C=C3OC6=C(C=C(C=C6)C(C(C(=O)NC(C(=O)"
           + "NC5C(=O)NC7C8=CC(=C(C=C8)O)C9=C(C=C(C=C9O)O)C(NC(=O)C(C(C1=CC(=C(O4)C=C1)Cl)"
           + "O)NC7=O)C(=O)O)CC(=O)N)NC(=O)C(CC(C)C)NC)O)Cl)CO)O)O)(C)N)O");
-      SMSD smsd = new SMSD(m, m, defaultOpts());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 25000L);
+      MoleculePair smsd = new MoleculePair(m, m, defaultOpts());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 25000L);
       assertNotNull(mcs, "Vancomycin self-MCS should not be null");
       assertTrue(mcs.size() >= 90,
           "Vancomycin self-MCS should map >= 90 atoms (got " + mcs.size() + ")");
@@ -2601,9 +2607,9 @@ public class StressTest extends TestBase {
   // Helper: compute MCS size between two SMILES
   // ======================================================================
   private static int mcsSize(String smi1, String smi2, ChemOptions opts, long timeoutMs) throws Exception {
-    SMSD smsd = new SMSD(mol(smi1), mol(smi2), opts);
+    MoleculePair smsd = new MoleculePair(mol(smi1), mol(smi2), opts);
     smsd.setMCSTimeoutMs(timeoutMs);
-    Map<Integer, Integer> mcs = smsd.findMCS(false, true, timeoutMs);
+    Map<Integer, Integer> mcs = smsd.mcsMapping( true, timeoutMs);
     return mcs.size();
   }
 
@@ -2612,15 +2618,15 @@ public class StressTest extends TestBase {
   }
 
   private static Map<Integer, Integer> mcs(String smi1, String smi2, ChemOptions opts, long timeoutMs) throws Exception {
-    SMSD smsd = new SMSD(mol(smi1), mol(smi2), opts);
+    MoleculePair smsd = new MoleculePair(mol(smi1), mol(smi2), opts);
     smsd.setMCSTimeoutMs(timeoutMs);
-    return smsd.findMCS(false, true, timeoutMs);
+    return smsd.mcsMapping( true, timeoutMs);
   }
 
   private static List<String> validate(String smi1, String smi2, Map<Integer, Integer> mapping, ChemOptions opts) throws Exception {
     MolGraph g1 = new MolGraph(mol(smi1));
     MolGraph g2 = new MolGraph(mol(smi2));
-    return SearchEngine.validateMapping(g1, g2, mapping, opts);
+    return MCS.validateMapping(g1, g2, mapping, opts);
   }
 
   // ======================================================================
@@ -2633,27 +2639,27 @@ public class StressTest extends TestBase {
 
     @Test @DisplayName("Single C-C bond substructure")
     void singleCC() throws Exception {
-      assertTrue(new SMSD(mol("CC"), mol("CCC"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("CC"), mol("CCC"), new ChemOptions()).contains());
     }
 
     @Test @DisplayName("Double C=C bond substructure")
     void doubleCC() throws Exception {
-      assertTrue(new SMSD(mol("C=C"), mol("C=CC"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("C=C"), mol("C=CC"), new ChemOptions()).contains());
     }
 
     @Test @DisplayName("Triple C#C bond substructure")
     void tripleCC() throws Exception {
-      assertTrue(new SMSD(mol("C#C"), mol("C#CC"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("C#C"), mol("C#CC"), new ChemOptions()).contains());
     }
 
     @Test @DisplayName("Aromatic c:c bond in benzene")
     void aromaticCC() throws Exception {
-      assertTrue(new SMSD(mol("c1ccccc1"), mol("c1ccc(C)cc1"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("c1ccccc1"), mol("c1ccc(C)cc1"), new ChemOptions()).contains());
     }
 
     @Test @DisplayName("Mixed bond orders: C=C-C#N")
     void mixedBondOrders() throws Exception {
-      assertTrue(new SMSD(mol("C=CC#N"), mol("C=CC#N"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("C=CC#N"), mol("C=CC#N"), new ChemOptions()).contains());
     }
 
     @Test @DisplayName("Delocalized: benzene MCS with itself")
@@ -2675,21 +2681,21 @@ public class StressTest extends TestBase {
     void looseModeDoubleMatchesSingle() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.matchBondOrder = ChemOptions.BondOrderMode.LOOSE;
-      assertTrue(new SMSD(mol("C=C"), mol("CC"), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol("C=C"), mol("CC"), opts).contains());
     }
 
     @Test @DisplayName("STRICT mode: C=C does NOT match C-C")
     void strictModeDoubleMismatchSingle() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.matchBondOrder = ChemOptions.BondOrderMode.STRICT;
-      assertFalse(new SMSD(mol("C=C"), mol("CC"), opts).isSubstructure());
+      assertFalse(new MoleculePair(mol("C=C"), mol("CC"), opts).contains());
     }
 
     @Test @DisplayName("ANY mode: everything matches")
     void anyModeTripleMatchesSingle() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.matchBondOrder = ChemOptions.BondOrderMode.ANY;
-      assertTrue(new SMSD(mol("C#C"), mol("CC"), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol("C#C"), mol("CC"), opts).contains());
     }
 
     @Test @DisplayName("Bond order MCS: aspirin STRICT mode")
@@ -2727,7 +2733,7 @@ public class StressTest extends TestBase {
     void strictDoubleNotTriple() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.matchBondOrder = ChemOptions.BondOrderMode.STRICT;
-      assertFalse(new SMSD(mol("C=C"), mol("C#C"), opts).isSubstructure());
+      assertFalse(new MoleculePair(mol("C=C"), mol("C#C"), opts).contains());
     }
   }
 
@@ -2741,62 +2747,62 @@ public class StressTest extends TestBase {
 
     @Test @DisplayName("Carbon in ethane")
     void carbon() throws Exception {
-      assertTrue(new SMSD(mol("C"), mol("CC"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("C"), mol("CC"), new ChemOptions()).contains());
     }
 
     @Test @DisplayName("Nitrogen in methylamine")
     void nitrogen() throws Exception {
-      assertTrue(new SMSD(mol("N"), mol("CN"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("N"), mol("CN"), new ChemOptions()).contains());
     }
 
     @Test @DisplayName("Oxygen in methanol")
     void oxygen() throws Exception {
-      assertTrue(new SMSD(mol("O"), mol("CO"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("O"), mol("CO"), new ChemOptions()).contains());
     }
 
     @Test @DisplayName("Sulfur in methanethiol")
     void sulfur() throws Exception {
-      assertTrue(new SMSD(mol("S"), mol("CS"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("S"), mol("CS"), new ChemOptions()).contains());
     }
 
     @Test @DisplayName("Phosphorus in phosphine")
     void phosphorus() throws Exception {
-      assertTrue(new SMSD(mol("P"), mol("CP"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("P"), mol("CP"), new ChemOptions()).contains());
     }
 
     @Test @DisplayName("Fluorine in fluoromethane")
     void fluorine() throws Exception {
-      assertTrue(new SMSD(mol("F"), mol("CF"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("F"), mol("CF"), new ChemOptions()).contains());
     }
 
     @Test @DisplayName("Chlorine in chloromethane")
     void chlorine() throws Exception {
-      assertTrue(new SMSD(mol("Cl"), mol("CCl"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("Cl"), mol("CCl"), new ChemOptions()).contains());
     }
 
     @Test @DisplayName("Bromine in bromomethane")
     void bromine() throws Exception {
-      assertTrue(new SMSD(mol("Br"), mol("CBr"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("Br"), mol("CBr"), new ChemOptions()).contains());
     }
 
     @Test @DisplayName("Iodine in iodomethane")
     void iodine() throws Exception {
-      assertTrue(new SMSD(mol("I"), mol("CI"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("I"), mol("CI"), new ChemOptions()).contains());
     }
 
     @Test @DisplayName("Boron in borane")
     void boron() throws Exception {
-      assertTrue(new SMSD(mol("[B]"), mol("[B]C"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("[B]"), mol("[B]C"), new ChemOptions()).contains());
     }
 
     @Test @DisplayName("Silicon in silane")
     void silicon() throws Exception {
-      assertTrue(new SMSD(mol("[Si]"), mol("[Si](C)(C)C"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("[Si]"), mol("[Si](C)(C)C"), new ChemOptions()).contains());
     }
 
     @Test @DisplayName("Selenium in dimethylselenide")
     void selenium() throws Exception {
-      assertTrue(new SMSD(mol("[Se]"), mol("C[Se]C"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("[Se]"), mol("C[Se]C"), new ChemOptions()).contains());
     }
 
     @Test @DisplayName("Iron: ferrocene SMILES parses gracefully")
@@ -2804,7 +2810,7 @@ public class StressTest extends TestBase {
       // Ferrocene may not fully parse or match, but should not crash
       assertDoesNotThrow(() -> {
         IAtomContainer fc = mol("[Fe+2]");
-        new SMSD(fc, fc, new ChemOptions()).isSubstructure();
+        new MoleculePair(fc, fc, new ChemOptions()).contains();
       });
     }
 
@@ -2812,14 +2818,14 @@ public class StressTest extends TestBase {
     void cisplatin() throws Exception {
       assertDoesNotThrow(() -> {
         IAtomContainer pt = mol("[Pt]");
-        new SMSD(pt, mol("[Pt](Cl)(Cl)(N)N"), new ChemOptions()).isSubstructure();
+        new MoleculePair(pt, mol("[Pt](Cl)(Cl)(N)N"), new ChemOptions()).contains();
       });
     }
 
     @Test @DisplayName("Wildcard * atom in SMARTS matching")
     void wildcardAtom() throws Exception {
-      SMSD smsd = new SMSD("[#6]~[#7]", mol("CN"), new ChemOptions());
-      assertTrue(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair("[#6]~[#7]", mol("CN"), new ChemOptions());
+      assertTrue(smsd.contains());
     }
 
     @Test @DisplayName("Deuterium [2H] vs protium [H]")
@@ -2829,8 +2835,8 @@ public class StressTest extends TestBase {
       opts.matchIsotope = false;
       IAtomContainer deuterated = mol("[2H]C([2H])([2H])[2H]");
       IAtomContainer normal = mol("C");
-      SMSD smsd = new SMSD(normal, deuterated, opts);
-      assertTrue(smsd.isSubstructure(), "Without isotope matching, C should match [2H]C");
+      MoleculePair smsd = new MoleculePair(normal, deuterated, opts);
+      assertTrue(smsd.contains(), "Without isotope matching, C should match [2H]C");
     }
 
     @Test @DisplayName("Deuterium with matchIsotope ON")
@@ -2840,8 +2846,8 @@ public class StressTest extends TestBase {
       // 13C vs 12C: with isotope matching ON, should not match
       IAtomContainer c13 = mol("[13CH4]");
       IAtomContainer c12 = mol("[12CH4]");
-      SMSD smsd = new SMSD(c13, c12, opts);
-      assertFalse(smsd.isSubstructure(), "13C should not match 12C with isotope matching ON");
+      MoleculePair smsd = new MoleculePair(c13, c12, opts);
+      assertFalse(smsd.contains(), "13C should not match 12C with isotope matching ON");
     }
 
     @Test @DisplayName("13C isotope matching OFF: 13C matches regular C")
@@ -2850,13 +2856,13 @@ public class StressTest extends TestBase {
       opts.matchIsotope = false;
       IAtomContainer c13 = mol("[13CH4]");
       IAtomContainer regular = mol("C");
-      SMSD smsd = new SMSD(regular, c13, opts);
-      assertTrue(smsd.isSubstructure(), "Without isotope matching, regular C matches 13C");
+      MoleculePair smsd = new MoleculePair(regular, c13, opts);
+      assertTrue(smsd.contains(), "Without isotope matching, regular C matches 13C");
     }
 
     @Test @DisplayName("Mixed heteroatoms: thiazole substructure")
     void thiazole() throws Exception {
-      assertTrue(new SMSD(mol("c1cscn1"), mol("c1csc(C)n1"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("c1cscn1"), mol("c1csc(C)n1"), new ChemOptions()).contains());
     }
   }
 
@@ -2872,14 +2878,14 @@ public class StressTest extends TestBase {
     void amineVsAmmoniumChargeOn() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.matchFormalCharge = true;
-      assertFalse(new SMSD(mol("[NH4+]"), mol("N"), opts).isSubstructure());
+      assertFalse(new MoleculePair(mol("[NH4+]"), mol("N"), opts).contains());
     }
 
     @Test @DisplayName("Neutral amine vs ammonium: charge OFF, match")
     void amineVsAmmoniumChargeOff() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.matchFormalCharge = false;
-      assertTrue(new SMSD(mol("[NH4+]"), mol("N"), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol("[NH4+]"), mol("N"), opts).contains());
     }
 
     @Test @DisplayName("Carboxylic acid vs carboxylate: charge ON")
@@ -2887,14 +2893,14 @@ public class StressTest extends TestBase {
       ChemOptions opts = new ChemOptions();
       opts.matchFormalCharge = true;
       // [O-] should NOT match O in carboxylic acid
-      assertFalse(new SMSD(mol("[O-]C=O"), mol("OC(=O)C"), opts).isSubstructure());
+      assertFalse(new MoleculePair(mol("[O-]C=O"), mol("OC(=O)C"), opts).contains());
     }
 
     @Test @DisplayName("Carboxylic acid vs carboxylate: charge OFF")
     void acidVsCarboxylateChargeOff() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.matchFormalCharge = false;
-      assertTrue(new SMSD(mol("[O-]C=O"), mol("OC(=O)C"), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol("[O-]C=O"), mol("OC(=O)C"), opts).contains());
     }
 
     @Test @DisplayName("Zwitterion glycine self-match")
@@ -2902,51 +2908,51 @@ public class StressTest extends TestBase {
       ChemOptions opts = new ChemOptions();
       opts.matchFormalCharge = true;
       String glycine = "[NH3+]CC([O-])=O";
-      assertTrue(new SMSD(mol(glycine), mol(glycine), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol(glycine), mol(glycine), opts).contains());
     }
 
     @Test @DisplayName("Zwitterion glycine vs neutral glycine: charge ON")
     void zwitterionVsNeutralChargeOn() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.matchFormalCharge = true;
-      SMSD smsd = new SMSD(mol("[NH3+]CC([O-])=O"), mol("NCC(=O)O"), opts);
-      assertFalse(smsd.isSubstructure(), "Charged vs neutral should not match with charge ON");
+      MoleculePair smsd = new MoleculePair(mol("[NH3+]CC([O-])=O"), mol("NCC(=O)O"), opts);
+      assertFalse(smsd.contains(), "Charged vs neutral should not match with charge ON");
     }
 
     @Test @DisplayName("Zwitterion glycine vs neutral glycine: charge OFF")
     void zwitterionVsNeutralChargeOff() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.matchFormalCharge = false;
-      SMSD smsd = new SMSD(mol("[NH3+]CC([O-])=O"), mol("NCC(=O)O"), opts);
-      assertTrue(smsd.isSubstructure(), "Charged vs neutral should match with charge OFF");
+      MoleculePair smsd = new MoleculePair(mol("[NH3+]CC([O-])=O"), mol("NCC(=O)O"), opts);
+      assertTrue(smsd.contains(), "Charged vs neutral should match with charge OFF");
     }
 
     @Test @DisplayName("Dication Mg2+ self-match")
     void magnesiumDication() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.matchFormalCharge = true;
-      assertTrue(new SMSD(mol("[Mg+2]"), mol("[Mg+2]"), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol("[Mg+2]"), mol("[Mg+2]"), opts).contains());
     }
 
     @Test @DisplayName("Dication Ca2+ self-match")
     void calciumDication() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.matchFormalCharge = true;
-      assertTrue(new SMSD(mol("[Ca+2]"), mol("[Ca+2]"), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol("[Ca+2]"), mol("[Ca+2]"), opts).contains());
     }
 
     @Test @DisplayName("Mg2+ does not match Mg0 with charge ON")
     void mgChargedVsNeutral() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.matchFormalCharge = true;
-      assertFalse(new SMSD(mol("[Mg+2]"), mol("[Mg]"), opts).isSubstructure());
+      assertFalse(new MoleculePair(mol("[Mg+2]"), mol("[Mg]"), opts).contains());
     }
 
     @Test @DisplayName("Mg2+ matches Mg0 with charge OFF")
     void mgChargedMatchesNeutralOff() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.matchFormalCharge = false;
-      assertTrue(new SMSD(mol("[Mg+2]"), mol("[Mg]"), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol("[Mg+2]"), mol("[Mg]"), opts).contains());
     }
 
     @Test @DisplayName("Phosphate anion self-match")
@@ -2954,7 +2960,7 @@ public class StressTest extends TestBase {
       ChemOptions opts = new ChemOptions();
       opts.matchFormalCharge = true;
       String phosphate = "[O-]P([O-])(=O)[O-]";
-      assertTrue(new SMSD(mol(phosphate), mol(phosphate), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol(phosphate), mol(phosphate), opts).contains());
     }
 
     @Test @DisplayName("Sulfonate anion MCS")
@@ -2969,7 +2975,7 @@ public class StressTest extends TestBase {
       ChemOptions opts = new ChemOptions();
       opts.matchFormalCharge = true;
       String quat = "C[N+](C)(C)C";
-      assertTrue(new SMSD(mol(quat), mol(quat), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol(quat), mol(quat), opts).contains());
     }
 
     @Test @DisplayName("Betaine: internal salt self-match")
@@ -2994,7 +3000,7 @@ public class StressTest extends TestBase {
       opts.useChirality = false;
       String rAla = "N[C@@H](C)C(=O)O";
       String sAla = "N[C@H](C)C(=O)O";
-      assertTrue(new SMSD(mol(rAla), mol(sAla), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol(rAla), mol(sAla), opts).contains());
     }
 
     @Test @DisplayName("R-alanine vs S-alanine: chirality ON, no match")
@@ -3003,7 +3009,7 @@ public class StressTest extends TestBase {
       opts.useChirality = true;
       String rAla = "N[C@@H](C)C(=O)O";
       String sAla = "N[C@H](C)C(=O)O";
-      assertFalse(new SMSD(mol(rAla), mol(sAla), opts).isSubstructure());
+      assertFalse(new MoleculePair(mol(rAla), mol(sAla), opts).contains());
     }
 
     @Test @DisplayName("R-alanine self-match: chirality ON")
@@ -3011,7 +3017,7 @@ public class StressTest extends TestBase {
       ChemOptions opts = new ChemOptions();
       opts.useChirality = true;
       String rAla = "N[C@@H](C)C(=O)O";
-      assertTrue(new SMSD(mol(rAla), mol(rAla), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol(rAla), mol(rAla), opts).contains());
     }
 
     @Test @DisplayName("E-stilbene vs Z-stilbene: bond stereo OFF, match MCS")
@@ -3030,8 +3036,8 @@ public class StressTest extends TestBase {
       opts.useBondStereo = true;
       String eStilbene = "C(=C/c1ccccc1)\\c1ccccc1";
       String zStilbene = "C(=C\\c1ccccc1)\\c1ccccc1";
-      SMSD smsd = new SMSD(mol(eStilbene), mol(zStilbene), opts);
-      assertFalse(smsd.isSubstructure(), "E/Z should differ with bond stereo ON");
+      MoleculePair smsd = new MoleculePair(mol(eStilbene), mol(zStilbene), opts);
+      assertFalse(smsd.contains(), "E/Z should differ with bond stereo ON");
     }
 
     @Test @DisplayName("Meso tartaric acid self-match")
@@ -3057,22 +3063,22 @@ public class StressTest extends TestBase {
       opts.useChirality = true;
       String rr = "C[C@@H](O)[C@@H](O)C";
       String rs = "C[C@@H](O)[C@H](O)C";
-      SMSD smsd = new SMSD(mol(rr), mol(rs), opts);
-      assertFalse(smsd.isSubstructure(), "Different stereo should not be substructure with chirality ON");
+      MoleculePair smsd = new MoleculePair(mol(rr), mol(rs), opts);
+      assertFalse(smsd.contains(), "Different stereo should not be substructure with chirality ON");
     }
 
     @Test @DisplayName("No stereo centers: methane self-match unaffected by chirality")
     void methaneNoStereo() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.useChirality = true;
-      assertTrue(new SMSD(mol("C"), mol("C"), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol("C"), mol("C"), opts).contains());
     }
 
     @Test @DisplayName("No stereo centers: ethane self-match unaffected by chirality")
     void ethaneNoStereo() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.useChirality = true;
-      assertTrue(new SMSD(mol("CC"), mol("CC"), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol("CC"), mol("CC"), opts).contains());
     }
 
     @Test @DisplayName("Chirality OFF: L-glucose matches D-glucose")
@@ -3081,7 +3087,7 @@ public class StressTest extends TestBase {
       opts.useChirality = false;
       String dGlucose = "OC[C@H]1OC(O)[C@H](O)[C@@H](O)[C@@H]1O";
       String lGlucose = "OC[C@@H]1OC(O)[C@@H](O)[C@H](O)[C@H]1O";
-      assertTrue(new SMSD(mol(dGlucose), mol(lGlucose), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol(dGlucose), mol(lGlucose), opts).contains());
     }
 
     @Test @DisplayName("Chirality ON: L-glucose does not match D-glucose")
@@ -3090,7 +3096,7 @@ public class StressTest extends TestBase {
       opts.useChirality = true;
       String dGlucose = "OC[C@H]1OC(O)[C@H](O)[C@@H](O)[C@@H]1O";
       String lGlucose = "OC[C@@H]1OC(O)[C@@H](O)[C@H](O)[C@H]1O";
-      assertFalse(new SMSD(mol(dGlucose), mol(lGlucose), opts).isSubstructure());
+      assertFalse(new MoleculePair(mol(dGlucose), mol(lGlucose), opts).contains());
     }
 
     @Test @DisplayName("Cis vs trans 2-butene: bond stereo OFF, full MCS")
@@ -3109,8 +3115,8 @@ public class StressTest extends TestBase {
       opts.useBondStereo = true;
       String cis = "C/C=C\\C";
       String trans = "C/C=C/C";
-      SMSD smsd = new SMSD(mol(cis), mol(trans), opts);
-      assertFalse(smsd.isSubstructure(), "Cis and trans should differ with stereo ON");
+      MoleculePair smsd = new MoleculePair(mol(cis), mol(trans), opts);
+      assertFalse(smsd.contains(), "Cis and trans should differ with stereo ON");
     }
 
     @Test @DisplayName("Prochiral center: no stereo, matches with chirality ON")
@@ -3118,7 +3124,7 @@ public class StressTest extends TestBase {
       ChemOptions opts = new ChemOptions();
       opts.useChirality = true;
       // Acetone has no stereo center
-      assertTrue(new SMSD(mol("CC(=O)C"), mol("CC(=O)C"), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol("CC(=O)C"), mol("CC(=O)C"), opts).contains());
     }
 
     @Test @DisplayName("Axial chirality: biaryls - no crash")
@@ -3126,7 +3132,7 @@ public class StressTest extends TestBase {
       // BINAP-like fragment - just test no crash
       assertDoesNotThrow(() -> {
         IAtomContainer m = mol("c1ccc(-c2ccccc2)cc1");
-        new SMSD(m, m, new ChemOptions()).findMCS();
+        new MoleculePair(m, m, new ChemOptions()).mcsMapping();
       });
     }
 
@@ -3136,7 +3142,7 @@ public class StressTest extends TestBase {
       opts.useChirality = true;
       assertDoesNotThrow(() -> {
         IAtomContainer allene = mol("C=C=C");
-        new SMSD(allene, allene, opts).isSubstructure();
+        new MoleculePair(allene, allene, opts).contains();
       });
     }
 
@@ -3261,8 +3267,8 @@ public class StressTest extends TestBase {
       ChemOptions opts = new ChemOptions();
       opts.completeRingsOnly = true;
       // benzene (6) vs cyclopentane (5): different ring sizes
-      SMSD smsd = new SMSD(mol("c1ccccc1"), mol("C1CCCC1"), opts);
-      Map<Integer, Integer> m = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("c1ccccc1"), mol("C1CCCC1"), opts);
+      Map<Integer, Integer> m = smsd.mcsMapping( true, 5000L);
       // Different ring sizes — MCS may be partial; assert it completes without hanging
       assertNotNull(m, "CompleteRingsOnly should return a result (possibly empty)");
     }
@@ -3271,8 +3277,8 @@ public class StressTest extends TestBase {
     void ringMatchesRingOnly() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.ringMatchesRingOnly = true;
-      SMSD smsd = new SMSD(mol("c1ccccc1"), mol("CCCCCC"), opts);
-      Map<Integer, Integer> m = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("c1ccccc1"), mol("CCCCCC"), opts);
+      Map<Integer, Integer> m = smsd.mcsMapping( true, 5000L);
       assertTrue(m.isEmpty(), "Ring atoms cannot map to chain atoms");
     }
 
@@ -3430,39 +3436,39 @@ public class StressTest extends TestBase {
 
     @Test @DisplayName("MCIS (induced=true)")
     void mcis() throws Exception {
-      SMSD smsd = new SMSD(mol("CCCC"), mol("CC=CC"), new ChemOptions());
-      Map<Integer, Integer> m = smsd.findMCS(true, true, 10_000L);
+      MoleculePair smsd = new MoleculePair(mol("CCCC"), mol("CC=CC"), new ChemOptions());
+      Map<Integer, Integer> m = smsd.mcsMapping( true, 10_000L);
       assertNotNull(m);
       assertTrue(m.size() >= 2, "Induced MCS should find common subgraph");
     }
 
     @Test @DisplayName("MCCS (connected=true)")
     void mccs() throws Exception {
-      SMSD smsd = new SMSD(mol("CCCC"), mol("CC=CC"), new ChemOptions());
-      Map<Integer, Integer> m = smsd.findMCS(false, true, 10_000L);
+      MoleculePair smsd = new MoleculePair(mol("CCCC"), mol("CC=CC"), new ChemOptions());
+      Map<Integer, Integer> m = smsd.mcsMapping( true, 10_000L);
       assertTrue(m.size() >= 2);
     }
 
     @Test @DisplayName("MCES (maximizeBonds=true)")
     void mces() throws Exception {
-      SearchEngine.MCSOptions opts = new SearchEngine.MCSOptions();
-      opts.maximizeBonds = true;
-      opts.timeoutMs = 10_000L;
+      MCS.Options opts = new MCS.Options();
+      opts.objective = (true) ? MCS.Objective.MCES : MCS.Objective.MCIS;
+      opts.timeoutMillis = 10_000L;
       MolGraph g1 = new MolGraph(mol("c1ccccc1"));
       MolGraph g2 = new MolGraph(mol("c1ccc(O)cc1"));
-      Map<Integer, Integer> m = SearchEngine.findMCS(g1, g2, new ChemOptions(), opts);
+      Map<Integer, Integer> m = TestSupport.mcsMapping(g1, g2, new ChemOptions(), opts);
       assertFalse(m.isEmpty(), "Bond-maximizing MCS should find result");
     }
 
     @Test @DisplayName("dMCS (disconnectedMCS=true)")
     void dmcs() throws Exception {
-      SearchEngine.MCSOptions opts = new SearchEngine.MCSOptions();
-      opts.disconnectedMCS = true;
-      opts.connectedOnly = false;
-      opts.timeoutMs = 10_000L;
+      MCS.Options opts = new MCS.Options();
+      opts.connectivity = (true) ? MCS.Connectivity.Fragments : MCS.Connectivity.Connected;
+      opts.connectivity = (false) ? MCS.Connectivity.Connected : MCS.Connectivity.Fragments;
+      opts.timeoutMillis = 10_000L;
       MolGraph g1 = new MolGraph(mol("c1ccccc1.CCCC"));
       MolGraph g2 = new MolGraph(mol("c1ccc(C)cc1.CCCCC"));
-      Map<Integer, Integer> m = SearchEngine.findMCS(g1, g2, new ChemOptions(), opts);
+      Map<Integer, Integer> m = TestSupport.mcsMapping(g1, g2, new ChemOptions(), opts);
       assertFalse(m.isEmpty());
     }
 
@@ -3470,19 +3476,19 @@ public class StressTest extends TestBase {
     void nmcs() throws Exception {
       List<IAtomContainer> mols = Arrays.asList(
           mol("c1ccc(O)cc1"), mol("c1ccc(N)cc1"), mol("c1ccc(Cl)cc1"));
-      Map<Integer, Integer> nm = SMSD.findNMCS(mols, new ChemOptions(), 1.0, 10_000L);
+      Map<Integer, Integer> nm = TestSupport.consensusMapping(mols, new ChemOptions(), 1.0, 10_000L);
       assertNotNull(nm);
       assertTrue(nm.size() >= 6, "All three share benzene ring");
     }
 
     @Test @DisplayName("Weighted MCS (atomWeights)")
     void weightedMCS() throws Exception {
-      SearchEngine.MCSOptions opts = new SearchEngine.MCSOptions();
+      MCS.Options opts = new MCS.Options();
       opts.atomWeights = new double[]{1.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0};
-      opts.timeoutMs = 10_000L;
+      opts.timeoutMillis = 10_000L;
       MolGraph g1 = new MolGraph(mol("c1ccccc1"));
       MolGraph g2 = new MolGraph(mol("c1ccc(O)cc1"));
-      Map<Integer, Integer> m = SearchEngine.findMCS(g1, g2, new ChemOptions(), opts);
+      Map<Integer, Integer> m = TestSupport.mcsMapping(g1, g2, new ChemOptions(), opts);
       assertFalse(m.isEmpty());
     }
 
@@ -3490,44 +3496,44 @@ public class StressTest extends TestBase {
     void scaffoldMCS() throws Exception {
       IAtomContainer m1 = mol("CC(=O)Oc1ccccc1C(=O)O"); // aspirin
       IAtomContainer m2 = mol("CC(C)Cc1ccc(C(C)C(=O)O)cc1"); // ibuprofen
-      SearchEngine.MCSOptions mcsOpts = new SearchEngine.MCSOptions();
-      mcsOpts.timeoutMs = 10_000L;
-      Map<Integer, Integer> sm = SMSD.findScaffoldMCS(m1, m2, new ChemOptions(), mcsOpts);
+      MCS.Options mcsOpts = new MCS.Options();
+      mcsOpts.timeoutMillis = 10_000L;
+      Map<Integer, Integer> sm = TestSupport.scaffoldMapping(m1, m2, new ChemOptions(), mcsOpts);
       assertNotNull(sm);
       assertTrue(sm.size() >= 4, "Scaffold MCS should share aromatic ring");
     }
 
     @Test @DisplayName("Fragment constraints: minFragmentSize")
     void fragmentMinSize() throws Exception {
-      SearchEngine.MCSOptions opts = new SearchEngine.MCSOptions();
-      opts.disconnectedMCS = true;
-      opts.connectedOnly = false;
-      opts.minFragmentSize = 3;
-      opts.timeoutMs = 10_000L;
+      MCS.Options opts = new MCS.Options();
+      opts.connectivity = (true) ? MCS.Connectivity.Fragments : MCS.Connectivity.Connected;
+      opts.connectivity = (false) ? MCS.Connectivity.Connected : MCS.Connectivity.Fragments;
+      opts.minFragmentAtoms = 3;
+      opts.timeoutMillis = 10_000L;
       MolGraph g1 = new MolGraph(mol("CCCC"));
       MolGraph g2 = new MolGraph(mol("CCCC"));
-      Map<Integer, Integer> m = SearchEngine.findMCS(g1, g2, new ChemOptions(), opts);
+      Map<Integer, Integer> m = TestSupport.mcsMapping(g1, g2, new ChemOptions(), opts);
       assertFalse(m.isEmpty());
     }
 
     @Test @DisplayName("Fragment constraints: maxFragments")
     void fragmentMaxCount() throws Exception {
-      SearchEngine.MCSOptions opts = new SearchEngine.MCSOptions();
-      opts.disconnectedMCS = true;
-      opts.connectedOnly = false;
+      MCS.Options opts = new MCS.Options();
+      opts.connectivity = (true) ? MCS.Connectivity.Fragments : MCS.Connectivity.Connected;
+      opts.connectivity = (false) ? MCS.Connectivity.Connected : MCS.Connectivity.Fragments;
       opts.maxFragments = 1;
-      opts.timeoutMs = 10_000L;
+      opts.timeoutMillis = 10_000L;
       MolGraph g1 = new MolGraph(mol("CCCC"));
       MolGraph g2 = new MolGraph(mol("CCCC"));
-      Map<Integer, Integer> m = SearchEngine.findMCS(g1, g2, new ChemOptions(), opts);
+      Map<Integer, Integer> m = TestSupport.mcsMapping(g1, g2, new ChemOptions(), opts);
       assertFalse(m.isEmpty());
     }
 
     @Test @DisplayName("MCCS >= MCIS always holds")
     void mccsGteMcis() throws Exception {
-      SMSD smsd = new SMSD(mol("c1ccccc1C"), mol("c1ccccc1O"), new ChemOptions());
-      Map<Integer, Integer> mccs = smsd.findMCS(false, true, 10_000L);
-      Map<Integer, Integer> mcis = smsd.findMCS(true, true, 10_000L);
+      MoleculePair smsd = new MoleculePair(mol("c1ccccc1C"), mol("c1ccccc1O"), new ChemOptions());
+      Map<Integer, Integer> mccs = smsd.mcsMapping( true, 10_000L);
+      Map<Integer, Integer> mcis = smsd.mcsMapping( true, 10_000L);
       assertTrue(mccs.size() >= mcis.size(), "MCCS size >= MCIS size");
     }
 
@@ -3535,30 +3541,30 @@ public class StressTest extends TestBase {
     void nmcsMolecule() throws Exception {
       List<IAtomContainer> mols = Arrays.asList(
           mol("c1ccc(O)cc1"), mol("c1ccc(N)cc1"));
-      IAtomContainer core = SMSD.findNMCSMolecule(mols, new ChemOptions(), 1.0, 10_000L);
+      IAtomContainer core = TestSupport.consensusMolecule(mols, new ChemOptions(), 1.0, 10_000L);
       assertNotNull(core, "N-MCS molecule should not be null");
       assertTrue(core.getAtomCount() >= 6, "Core should be at least benzene");
     }
 
     @Test @DisplayName("MCS non-induced disconnected allows more atoms")
     void disconnectedMoreAtoms() throws Exception {
-      SMSD smsd = new SMSD(mol("CC.OO"), mol("CCOCC"), new ChemOptions());
-      Map<Integer, Integer> connected = smsd.findMCS(false, true, 5000L);
-      Map<Integer, Integer> disconnected = smsd.findMCS(false, false, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CC.OO"), mol("CCOCC"), new ChemOptions());
+      Map<Integer, Integer> connected = smsd.mcsMapping( true, 5000L);
+      Map<Integer, Integer> disconnected = smsd.mcsMapping( false, 5000L);
       assertTrue(disconnected.size() >= connected.size(), "Disconnected >= connected MCS");
     }
 
     @Test @DisplayName("Induced MCS: benzene in toluene preserves all 6 ring atoms")
     void inducedBenzeneToluene() throws Exception {
-      SMSD smsd = new SMSD(mol("c1ccccc1"), mol("Cc1ccccc1"), new ChemOptions());
-      Map<Integer, Integer> m = smsd.findMCS(true, true, 10_000L);
+      MoleculePair smsd = new MoleculePair(mol("c1ccccc1"), mol("Cc1ccccc1"), new ChemOptions());
+      Map<Integer, Integer> m = smsd.mcsMapping( true, 10_000L);
       assertEquals(6, m.size(), "Induced MCS of benzene in toluene = 6");
     }
 
     @Test @DisplayName("Non-induced MCS: benzene in toluene >= 6")
     void nonInducedBenzeneToluene() throws Exception {
-      SMSD smsd = new SMSD(mol("c1ccccc1"), mol("Cc1ccccc1"), new ChemOptions());
-      Map<Integer, Integer> m = smsd.findMCS(false, true, 10_000L);
+      MoleculePair smsd = new MoleculePair(mol("c1ccccc1"), mol("Cc1ccccc1"), new ChemOptions());
+      Map<Integer, Integer> m = smsd.mcsMapping( true, 10_000L);
       assertTrue(m.size() >= 6, "Non-induced MCS >= 6");
     }
   }
@@ -3585,7 +3591,7 @@ public class StressTest extends TestBase {
       assertFalse(opts.matchIsotope);
       assertFalse(opts.tautomerAware);
       assertEquals(ChemOptions.RingFusionMode.IGNORE, opts.ringFusionMode);
-      assertEquals(ChemOptions.MatcherEngine.VF2PP, opts.matcherEngine);
+      assertTrue(Substructure.find(mol("CC")).match(mol("CCC")).found());
     }
 
     @Test @DisplayName("profile(strict)")
@@ -3593,7 +3599,7 @@ public class StressTest extends TestBase {
       ChemOptions opts = ChemOptions.profile("strict");
       assertEquals(ChemOptions.BondOrderMode.STRICT, opts.matchBondOrder);
       assertEquals(ChemOptions.AromaticityMode.STRICT, opts.aromaticityMode);
-      assertTrue(new SMSD(mol("c1ccccc1"), mol("c1ccc(O)cc1"), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol("c1ccccc1"), mol("c1ccc(O)cc1"), opts).contains());
     }
 
     @Test @DisplayName("profile(compat-substruct)")
@@ -3602,7 +3608,7 @@ public class StressTest extends TestBase {
       assertEquals(ChemOptions.BondOrderMode.LOOSE, opts.matchBondOrder);
       assertEquals(ChemOptions.AromaticityMode.FLEXIBLE, opts.aromaticityMode);
       assertFalse(opts.ringMatchesRingOnly);
-      assertTrue(new SMSD(mol("c1ccccc1"), mol("c1ccc(O)cc1"), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol("c1ccccc1"), mol("c1ccc(O)cc1"), opts).contains());
     }
 
     @Test @DisplayName("tautomerProfile()")
@@ -3628,13 +3634,12 @@ public class StressTest extends TestBase {
       opts.matchIsotope = true;
       opts.tautomerAware = true;
       opts.ringFusionMode = ChemOptions.RingFusionMode.STRICT;
-      opts.matcherEngine = ChemOptions.MatcherEngine.VF3;
       opts.useTwoHopNLF = false;
       opts.useThreeHopNLF = true;
       opts.useBitParallelFeasibility = false;
       // Just verify it runs without crashing
-      SMSD smsd = new SMSD(mol("c1ccccc1"), mol("c1ccccc1"), opts);
-      smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("c1ccccc1"), mol("c1ccccc1"), opts);
+      smsd.mcsMapping( true, 5000L);
     }
 
     @Test @DisplayName("Fluent API chaining returns same instance")
@@ -3654,26 +3659,27 @@ public class StressTest extends TestBase {
       assertTrue(opts.completeRingsOnly);
     }
 
-    @Test @DisplayName("VF2 engine produces same result as VF2PP")
-    void vf2VsVf2pp() throws Exception {
-      ChemOptions vf2 = new ChemOptions();
-      vf2.matcherEngine = ChemOptions.MatcherEngine.VF2;
-      ChemOptions vf2pp = new ChemOptions();
-      vf2pp.matcherEngine = ChemOptions.MatcherEngine.VF2PP;
-      boolean r1 = new SMSD(mol("c1ccccc1"), mol("c1ccc(O)cc1"), vf2).isSubstructure();
-      boolean r2 = new SMSD(mol("c1ccccc1"), mol("c1ccc(O)cc1"), vf2pp).isSubstructure();
-      assertEquals(r1, r2, "VF2 and VF2PP should agree");
+    @Test @DisplayName("Single and batch substructure calls agree")
+    void singleAndBatchSubstructureAgree() throws Exception {
+      Substructure query = Substructure.find(mol("c1ccccc1"));
+      MolGraph target = new MolGraph(mol("c1ccc(O)cc1"));
+      SearchResult first = query.match(target);
+      SearchResult batch = query.matchMany(Collections.singletonList(target)).get(0);
+      assertTrue(first.found());
+      assertEquals(first.matches(), batch.matches());
+      assertEquals(first.status(), batch.status());
+      assertEquals(first.complete(), batch.complete());
     }
 
-    @Test @DisplayName("VF3 engine produces same result as VF2PP")
-    void vf3VsVf2pp() throws Exception {
-      ChemOptions vf3 = new ChemOptions();
-      vf3.matcherEngine = ChemOptions.MatcherEngine.VF3;
-      ChemOptions vf2pp = new ChemOptions();
-      vf2pp.matcherEngine = ChemOptions.MatcherEngine.VF2PP;
-      boolean r1 = new SMSD(mol("c1ccccc1"), mol("c1ccc(O)cc1"), vf3).isSubstructure();
-      boolean r2 = new SMSD(mol("c1ccccc1"), mol("c1ccc(O)cc1"), vf2pp).isSubstructure();
-      assertEquals(r1, r2, "VF3 and VF2PP should agree");
+    @Test @DisplayName("First and enumerated substructure calls agree")
+    void firstAndEnumeratedSubstructureAgree() throws Exception {
+      Substructure query = Substructure.find(mol("c1ccccc1"));
+      MolGraph target = new MolGraph(mol("c1ccc(O)cc1"));
+      SearchResult first = query.match(target);
+      SearchResult all = query.matchAll(target, 100);
+      assertTrue(first.found());
+      assertTrue(all.complete());
+      assertTrue(all.matches().contains(first.matches().get(0)));
     }
 
     @Test @DisplayName("Null bond order mode defaults to STRICT")
@@ -3713,8 +3719,8 @@ public class StressTest extends TestBase {
       assertTrue(sz >= 10, "Caffeine/theophylline MCS >= 10");
     }
 
-    @Test @DisplayName("BK clique: symmetric adamantane")
-    void bkAdamantane() throws Exception {
+    @Test @DisplayName("MCS of symmetric adamantane")
+    void symmetricAdamantaneMCS() throws Exception {
       String adamantane = "C1C2CC3CC1CC(C2)C3";
       assertEquals(10, mcsSize(adamantane, adamantane));
     }
@@ -3742,10 +3748,10 @@ public class StressTest extends TestBase {
     void timeoutPaclitaxel() throws Exception {
       String paclitaxel = "CC1=C2C(C(=O)C3(C(CC4C(C3C(C(C2(C)C)(CC1OC(=O)C(C(C5=CC=CC=C5)NC(=O)C6=CC=CC=C6)O)O)OC(=O)C7=CC=CC=C7)(CO4)OC(=O)C)O)C)OC(=O)C";
       String docetaxel = "CC1=C2C(C(=O)C3(C(CC4C(C3C(C(C2(C)C)(CC1O)O)OC(=O)C5=CC=CC=C5)(CO4)OC(=O)C)O)C)OC(=O)C";
-      SMSD smsd = new SMSD(mol(paclitaxel), mol(docetaxel), new ChemOptions());
+      MoleculePair smsd = new MoleculePair(mol(paclitaxel), mol(docetaxel), new ChemOptions());
       smsd.setMCSTimeoutMs(1L);
       // Should not crash; result may be empty or partial
-      assertDoesNotThrow(() -> smsd.findMCS(false, true, 1L));
+      assertDoesNotThrow(() -> smsd.mcsMapping( true, 1L));
     }
 
     @Test @DisplayName("Timeout 100ms on drug pair: returns valid result")
@@ -3753,28 +3759,28 @@ public class StressTest extends TestBase {
     void timeout100msDrugPair() throws Exception {
       String aspirin = "CC(=O)Oc1ccccc1C(=O)O";
       String salicylicAcid = "OC(=O)c1ccccc1O";
-      SMSD smsd = new SMSD(mol(aspirin), mol(salicylicAcid), new ChemOptions());
+      MoleculePair smsd = new MoleculePair(mol(aspirin), mol(salicylicAcid), new ChemOptions());
       smsd.setMCSTimeoutMs(100L);
-      Map<Integer, Integer> m = smsd.findMCS(false, true, 100L);
+      Map<Integer, Integer> m = smsd.mcsMapping( true, 100L);
       // Should return a valid (possibly partial) result
       assertNotNull(m);
     }
 
     @Test @DisplayName("Multiple mappings: enumerate up to 10 for benzene self-match")
     void multipleMappings() throws Exception {
-      SMSD smsd = new SMSD(mol("c1ccccc1"), mol("c1ccccc1"), new ChemOptions());
-      List<Map<Integer, Integer>> maps = smsd.findAllSubstructures(10, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("c1ccccc1"), mol("c1ccccc1"), new ChemOptions());
+      List<Map<Integer, Integer>> maps = smsd.substructureMappings(10, 5000L);
       assertTrue(maps.size() >= 1, "Benzene self-match should have at least 1 mapping");
     }
 
     @Test @DisplayName("Substructure false: query larger than target")
     void queryLargerThanTarget() throws Exception {
-      assertFalse(new SMSD(mol("c1ccc2ccccc2c1"), mol("c1ccccc1"), new ChemOptions()).isSubstructure());
+      assertFalse(new MoleculePair(mol("c1ccc2ccccc2c1"), mol("c1ccccc1"), new ChemOptions()).contains());
     }
 
     @Test @DisplayName("Substructure true: benzene in phenol")
     void benzeneInPhenol() throws Exception {
-      assertTrue(new SMSD(mol("c1ccccc1"), mol("c1ccc(O)cc1"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("c1ccccc1"), mol("c1ccc(O)cc1"), new ChemOptions()).contains());
     }
 
     @Test @DisplayName("MCS empty: methane vs water")
@@ -3794,9 +3800,9 @@ public class StressTest extends TestBase {
     void rascalUpperBound() throws Exception {
       IAtomContainer q = mol("c1ccccc1");
       IAtomContainer t = mol("c1ccc(O)cc1");
-      SMSD smsd = new SMSD(q, t, new ChemOptions());
+      MoleculePair smsd = new MoleculePair(q, t, new ChemOptions());
       double ub = smsd.similarityUpperBound();
-      Map<Integer, Integer> m = smsd.findMCS();
+      Map<Integer, Integer> m = smsd.mcsMapping();
       double actual = (double) m.size() / Math.max(q.getAtomCount(), t.getAtomCount());
       assertTrue(ub >= actual - 0.01, "Upper bound should be >= actual similarity");
     }
@@ -3805,18 +3811,18 @@ public class StressTest extends TestBase {
     void fingerprintSubset() throws Exception {
       IAtomContainer q = mol("c1ccccc1");
       IAtomContainer t = mol("c1ccc(O)cc1");
-      long[] qFp = SMSD.pathFingerprint(q, 7, 1024);
-      long[] tFp = SMSD.pathFingerprint(t, 7, 1024);
-      assertTrue(SMSD.fingerprintSubset(qFp, tFp), "Benzene FP should be subset of phenol FP");
+      long[] qFp = FingerprintEngine.pathFingerprint(q, 7, 1024);
+      long[] tFp = FingerprintEngine.pathFingerprint(t, 7, 1024);
+      assertTrue(FingerprintEngine.fingerprintSubset(qFp, tFp), "Benzene FP should be subset of phenol FP");
     }
 
     @Test @DisplayName("Fingerprint non-subset: non-substructure pairs")
     void fingerprintNonSubset() throws Exception {
       IAtomContainer q = mol("c1ccc(O)cc1"); // phenol
       IAtomContainer t = mol("CCCC"); // butane
-      long[] qFp = SMSD.pathFingerprint(q, 7, 1024);
-      long[] tFp = SMSD.pathFingerprint(t, 7, 1024);
-      assertFalse(SMSD.fingerprintSubset(qFp, tFp), "Phenol FP should NOT be subset of butane FP");
+      long[] qFp = FingerprintEngine.pathFingerprint(q, 7, 1024);
+      long[] tFp = FingerprintEngine.pathFingerprint(t, 7, 1024);
+      assertFalse(FingerprintEngine.fingerprintSubset(qFp, tFp), "Phenol FP should NOT be subset of butane FP");
     }
 
     @Test @DisplayName("validateMapping: every mapping is chemically valid")
@@ -3827,7 +3833,7 @@ public class StressTest extends TestBase {
       Map<Integer, Integer> m = mcs(benzene, phenol, opts, 10_000L);
       MolGraph g1 = new MolGraph(mol(benzene));
       MolGraph g2 = new MolGraph(mol(phenol));
-      List<String> errors = SearchEngine.validateMapping(g1, g2, m, opts);
+      List<String> errors = MCS.validateMapping(g1, g2, m, opts);
       assertTrue(errors.isEmpty(), "Mapping should be valid, errors: " + errors);
     }
 
@@ -3839,7 +3845,7 @@ public class StressTest extends TestBase {
       Map<Integer, Integer> m = mcs(benzene, toluene, opts, 10_000L);
       MolGraph g1 = new MolGraph(mol(benzene));
       MolGraph g2 = new MolGraph(mol(toluene));
-      assertTrue(SearchEngine.isMappingMaximal(g1, g2, m, opts), "MCS should be maximal");
+      assertTrue(MCS.isMappingMaximal(g1, g2, m, opts), "MCS should be maximal");
     }
   }
 
@@ -3864,6 +3870,7 @@ public class StressTest extends TestBase {
       long elapsed = System.currentTimeMillis() - start;
       assertEquals(50, sz);
       System.out.println("INFO: 50-atom self-match completed in " + elapsed + "ms");
+      assertTrue(elapsed < 1000, "50-atom self-match exceeded 1000ms: " + elapsed);
     }
 
     @Test @DisplayName("100-atom self-match < 2s")
@@ -3875,6 +3882,7 @@ public class StressTest extends TestBase {
       long elapsed = System.currentTimeMillis() - start;
       assertEquals(100, sz);
       System.out.println("INFO: 100-atom self-match completed in " + elapsed + "ms");
+      assertTrue(elapsed < 2000, "100-atom self-match exceeded 2000ms: " + elapsed);
     }
 
     @Test @DisplayName("200-atom self-match < 5s")
@@ -3886,6 +3894,7 @@ public class StressTest extends TestBase {
       long elapsed = System.currentTimeMillis() - start;
       assertEquals(200, sz);
       System.out.println("INFO: 200-atom self-match completed in " + elapsed + "ms");
+      assertTrue(elapsed < 5000, "200-atom self-match exceeded 5000ms: " + elapsed);
     }
 
     @Test @DisplayName("400-atom substructure < 5s")
@@ -3894,10 +3903,11 @@ public class StressTest extends TestBase {
       IAtomContainer q = mol(linearAlkane(100));
       IAtomContainer t = mol(linearAlkane(400));
       long start = System.currentTimeMillis();
-      boolean result = new SMSD(q, t, new ChemOptions()).isSubstructure();
+      boolean result = new MoleculePair(q, t, new ChemOptions()).contains();
       long elapsed = System.currentTimeMillis() - start;
       assertTrue(result);
       System.out.println("INFO: 400-atom substructure completed in " + elapsed + "ms");
+      assertTrue(elapsed < 5000, "400-atom substructure exceeded 5000ms: " + elapsed);
     }
 
     @Test @DisplayName("1000 sequential substructure checks < 10s")
@@ -3908,10 +3918,11 @@ public class StressTest extends TestBase {
       ChemOptions opts = new ChemOptions();
       long start = System.currentTimeMillis();
       for (int i = 0; i < 1000; i++) {
-        new SMSD(q, t, opts, false).isSubstructure();
+        assertTrue(new MoleculePair(q, t, opts, false).contains());
       }
       long elapsed = System.currentTimeMillis() - start;
       System.out.println("INFO: 1000 substructure checks completed in " + elapsed + "ms");
+      assertTrue(elapsed < 10000, "1000 substructure checks exceeded 10000ms: " + elapsed);
     }
 
     @Test @DisplayName("100 sequential MCS computations < 30s")
@@ -3922,10 +3933,11 @@ public class StressTest extends TestBase {
       ChemOptions opts = new ChemOptions();
       long start = System.currentTimeMillis();
       for (int i = 0; i < 100; i++) {
-        new SMSD(q, t, opts, false).findMCS(false, true, 5000L);
+        assertEquals(6, new MoleculePair(q, t, opts, false).mcsMapping( true, 5000L).size());
       }
       long elapsed = System.currentTimeMillis() - start;
       System.out.println("INFO: 100 MCS computations completed in " + elapsed + "ms");
+      assertTrue(elapsed < 30000, "100 MCS computations exceeded 30000ms: " + elapsed);
     }
 
     @Test @DisplayName("Batch MCS with threshold: 10 molecules < 5s")
@@ -3938,10 +3950,11 @@ public class StressTest extends TestBase {
       List<IAtomContainer> mols = new ArrayList<>();
       for (String s : smiles) mols.add(mol(s));
       long start = System.currentTimeMillis();
-      Map<Integer, Integer> nm = SMSD.findNMCS(mols, new ChemOptions(), 0.8, 5000L);
+      Map<Integer, Integer> nm = TestSupport.consensusMapping(mols, new ChemOptions(), 0.8, 5000L);
       long elapsed = System.currentTimeMillis() - start;
       assertNotNull(nm);
       System.out.println("INFO: Batch MCS completed in " + elapsed + "ms");
+      assertTrue(elapsed < 5000, "Batch MCS exceeded 5000ms: " + elapsed);
     }
 
     @Test @DisplayName("R-group decomposition: benzene core on 5 derivatives < 2s")
@@ -3952,11 +3965,12 @@ public class StressTest extends TestBase {
           mol("c1ccc(O)cc1"), mol("c1ccc(N)cc1"), mol("c1ccc(F)cc1"),
           mol("c1ccc(Cl)cc1"), mol("c1ccc(C)cc1"));
       long start = System.currentTimeMillis();
-      List<Map<String, IAtomContainer>> decomp = SMSD.decomposeRGroups(core, derivatives, new ChemOptions(), 5000L);
+      List<Map<String, IAtomContainer>> decomp = TestSupport.decompositions(core, derivatives, new ChemOptions(), 5000L);
       long elapsed = System.currentTimeMillis() - start;
       assertNotNull(decomp);
       assertFalse(decomp.isEmpty());
       System.out.println("INFO: R-group decomposition completed in " + elapsed + "ms");
+      assertTrue(elapsed < 2000, "R-group decomposition exceeded 2000ms: " + elapsed);
     }
 
     @Test @DisplayName("N-MCS: 5 molecules < 10s")
@@ -3966,10 +3980,11 @@ public class StressTest extends TestBase {
           mol("c1ccc(O)cc1"), mol("c1ccc(N)cc1"), mol("c1ccc(Cl)cc1"),
           mol("c1ccc(F)cc1"), mol("c1ccc(C)cc1"));
       long start = System.currentTimeMillis();
-      Map<Integer, Integer> nm = SMSD.findNMCS(mols, new ChemOptions(), 1.0, 10_000L);
+      Map<Integer, Integer> nm = TestSupport.consensusMapping(mols, new ChemOptions(), 1.0, 10_000L);
       long elapsed = System.currentTimeMillis() - start;
       assertTrue(nm.size() >= 6, "All 5 share benzene ring");
       System.out.println("INFO: N-MCS 5 molecules completed in " + elapsed + "ms");
+      assertTrue(elapsed < 10000, "N-MCS 5 molecules exceeded 10000ms: " + elapsed);
     }
 
     @Test @DisplayName("Fingerprint: 100 molecules < 1s")
@@ -3981,10 +3996,11 @@ public class StressTest extends TestBase {
       }
       long start = System.currentTimeMillis();
       for (String s : smiles) {
-        SMSD.pathFingerprint(mol(s), 7, 1024);
+        assertFalse(FingerprintEngine.toBitSet(FingerprintEngine.pathFingerprint(mol(s), 7, 1024)).isEmpty());
       }
       long elapsed = System.currentTimeMillis() - start;
       System.out.println("INFO: 100 fingerprints completed in " + elapsed + "ms");
+      assertTrue(elapsed < 1000, "100 fingerprints exceeded 1000ms: " + elapsed);
     }
   }
 
@@ -4000,7 +4016,7 @@ public class StressTest extends TestBase {
 
     private void assertDrugPairMCS(String name1, String smi1, String name2, String smi2,
                                     int minMCS) throws Exception {
-      SearchEngine.clearMolGraphCache();
+      TestSupport.clearCaches();
       ChemOptions opts = new ChemOptions();
       Map<Integer, Integer> m = mcs(smi1, smi2, opts, 30_000L);
       assertTrue(m.size() >= minMCS,
@@ -4008,7 +4024,7 @@ public class StressTest extends TestBase {
       // Validate mapping
       MolGraph g1 = new MolGraph(mol(smi1));
       MolGraph g2 = new MolGraph(mol(smi2));
-      List<String> errors = SearchEngine.validateMapping(g1, g2, m, opts);
+      List<String> errors = MCS.validateMapping(g1, g2, m, opts);
       assertTrue(errors.isEmpty(),
           name1 + "/" + name2 + " mapping invalid: " + errors);
     }
@@ -4254,6 +4270,7 @@ public class StressTest extends TestBase {
 
   void assertFast(long elapsedMs, String label) {
     System.out.println("INFO: " + label + " completed in " + elapsedMs + "ms");
+    assertTrue(elapsedMs < 500, label + " must finish within 500ms, took " + elapsedMs + "ms");
   }
 
   // =======================================================
@@ -4269,8 +4286,8 @@ public class StressTest extends TestBase {
     void benzeneInPaclitaxel() throws Exception {
       IAtomContainer q = mol("c1ccccc1"), t = mol(PACLITAXEL);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, t, new ChemOptions());
-      assertTrue(s.isSubstructure(TIME_LIMIT_MS));
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
+      assertTrue(s.contains(TIME_LIMIT_MS));
       assertFast((System.nanoTime() - t0) / 1_000_000, "benzene-in-paclitaxel");
     }
 
@@ -4279,8 +4296,8 @@ public class StressTest extends TestBase {
     void adenineInAtp() throws Exception {
       IAtomContainer q = mol("c1ncnc2[nH]cnc12"), t = mol(ATP);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, t, new ChemOptions());
-      assertTrue(s.isSubstructure(TIME_LIMIT_MS));
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
+      assertTrue(s.contains(TIME_LIMIT_MS));
       assertFast((System.nanoTime() - t0) / 1_000_000, "adenine-in-ATP");
     }
 
@@ -4289,8 +4306,8 @@ public class StressTest extends TestBase {
     void adenineInNad() throws Exception {
       IAtomContainer q = mol("c1ncnc2[nH]cnc12"), t = mol(NAD_PLUS);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, t, new ChemOptions());
-      assertTrue(s.isSubstructure(TIME_LIMIT_MS));
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
+      assertTrue(s.contains(TIME_LIMIT_MS));
       assertFast((System.nanoTime() - t0) / 1_000_000, "adenine-in-NAD+");
     }
 
@@ -4298,11 +4315,13 @@ public class StressTest extends TestBase {
     @DisplayName("Steroid core in dexamethasone")
     void steroidCore() throws Exception {
       // Cyclopentanoperhydrophenanthrene — steroid ABCD ring skeleton
-      IAtomContainer q = mol("C1CCC2C(C1)CCC3C2CCC4CCCCC34");
+      IAtomContainer q = mol("C1CCC2C(C1)CCC3C2CCC4CCCC34");
       IAtomContainer t = mol(DEXAMETHASONE);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, t, new ChemOptions());
-      boolean result = s.isSubstructure(TIME_LIMIT_MS);
+      ChemOptions options = new ChemOptions();
+      options.matchBondOrder = ChemOptions.BondOrderMode.ANY;
+      MoleculePair s = new MoleculePair(q, t, options);
+      assertTrue(s.contains(TIME_LIMIT_MS), "Gonane must be a substructure of dexamethasone");
       assertFast((System.nanoTime() - t0) / 1_000_000, "steroid-core-in-dexa");
     }
 
@@ -4311,8 +4330,8 @@ public class StressTest extends TestBase {
     void ampInAtp() throws Exception {
       IAtomContainer q = mol(AMP), t = mol(ATP);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, t, new ChemOptions());
-      assertTrue(s.isSubstructure(TIME_LIMIT_MS));
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
+      assertTrue(s.contains(TIME_LIMIT_MS));
       assertFast((System.nanoTime() - t0) / 1_000_000, "AMP-in-ATP");
     }
 
@@ -4321,8 +4340,8 @@ public class StressTest extends TestBase {
     void paclitaxelSelf() throws Exception {
       IAtomContainer t = mol(PACLITAXEL);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(t, t, new ChemOptions());
-      assertTrue(s.isSubstructure(2000));
+      MoleculePair s = new MoleculePair(t, t, new ChemOptions());
+      assertTrue(s.contains(2000));
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       System.out.println("INFO: paclitaxel-self completed in " + elapsed + "ms");
     }
@@ -4332,8 +4351,8 @@ public class StressTest extends TestBase {
     void rapamycinSelf() throws Exception {
       IAtomContainer t = mol(RAPAMYCIN);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(t, t, new ChemOptions());
-      assertTrue(s.isSubstructure(2000));
+      MoleculePair s = new MoleculePair(t, t, new ChemOptions());
+      assertTrue(s.contains(2000));
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       System.out.println("INFO: rapamycin-self completed in " + elapsed + "ms");
     }
@@ -4343,8 +4362,8 @@ public class StressTest extends TestBase {
     void acetylCoaSelf() throws Exception {
       IAtomContainer t = mol(ACETYL_COA);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(t, t, new ChemOptions());
-      assertTrue(s.isSubstructure(2000));
+      MoleculePair s = new MoleculePair(t, t, new ChemOptions());
+      assertTrue(s.contains(2000));
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       System.out.println("INFO: acetylCoA-self completed in " + elapsed + "ms");
     }
@@ -4354,8 +4373,8 @@ public class StressTest extends TestBase {
     void vincristineSelf() throws Exception {
       IAtomContainer t = mol(VINCRISTINE);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(t, t, new ChemOptions());
-      assertTrue(s.isSubstructure(2000));
+      MoleculePair s = new MoleculePair(t, t, new ChemOptions());
+      assertTrue(s.contains(2000));
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       System.out.println("INFO: vincristine-self completed in " + elapsed + "ms");
     }
@@ -4365,8 +4384,8 @@ public class StressTest extends TestBase {
     void fadSelf() throws Exception {
       IAtomContainer t = mol(FAD);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(t, t, new ChemOptions());
-      assertTrue(s.isSubstructure(2000));
+      MoleculePair s = new MoleculePair(t, t, new ChemOptions());
+      assertTrue(s.contains(2000));
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       System.out.println("INFO: FAD-self completed in " + elapsed + "ms");
     }
@@ -4376,8 +4395,8 @@ public class StressTest extends TestBase {
     void erythromycinSelf() throws Exception {
       IAtomContainer t = mol(ERYTHROMYCIN);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(t, t, new ChemOptions());
-      assertTrue(s.isSubstructure(1000));
+      MoleculePair s = new MoleculePair(t, t, new ChemOptions());
+      assertTrue(s.contains(1000));
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       System.out.println("INFO: erythromycin-self completed in " + elapsed + "ms");
     }
@@ -4396,8 +4415,8 @@ public class StressTest extends TestBase {
     void atpAdpMCS() throws Exception {
       IAtomContainer q = mol(ATP), t = mol(ADP);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, t, new ChemOptions());
-      Map<Integer, Integer> mcs = s.findMCS(false, true, TIME_LIMIT_MS);
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
+      Map<Integer, Integer> mcs = s.mcsMapping( true, TIME_LIMIT_MS);
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       assertTrue(mcs.size() >= 27, "ATP/ADP MCS ≥ 27, got " + mcs.size());
       assertFast(elapsed, "ATP-ADP-MCS");
@@ -4408,8 +4427,8 @@ public class StressTest extends TestBase {
     void atpAmpMCS() throws Exception {
       IAtomContainer q = mol(ATP), t = mol(AMP);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, t, new ChemOptions());
-      Map<Integer, Integer> mcs = s.findMCS(false, true, TIME_LIMIT_MS);
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
+      Map<Integer, Integer> mcs = s.mcsMapping( true, TIME_LIMIT_MS);
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       assertTrue(mcs.size() >= 15, "ATP/AMP MCS ≥ 15, got " + mcs.size());
       assertFast(elapsed, "ATP-AMP-MCS");
@@ -4420,8 +4439,8 @@ public class StressTest extends TestBase {
     void statinMCS() throws Exception {
       IAtomContainer q = mol(ATORVASTATIN), t = mol(ROSUVASTATIN);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, t, new ChemOptions());
-      Map<Integer, Integer> mcs = s.findMCS(false, true, TIME_LIMIT_MS);
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
+      Map<Integer, Integer> mcs = s.mcsMapping( true, TIME_LIMIT_MS);
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       assertTrue(mcs.size() >= 10, "Statin MCS ≥ 10, got " + mcs.size());
       assertFast(elapsed, "statin-MCS");
@@ -4432,8 +4451,8 @@ public class StressTest extends TestBase {
     void udpSugarMCS() throws Exception {
       IAtomContainer q = mol(UDP_GLUCOSE), t = mol(UDP_GALACTOSE);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, t, new ChemOptions());
-      Map<Integer, Integer> mcs = s.findMCS(false, true, TIME_LIMIT_MS);
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
+      Map<Integer, Integer> mcs = s.mcsMapping( true, TIME_LIMIT_MS);
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       assertTrue(mcs.size() >= 30, "UDP sugar MCS ≥ 30, got " + mcs.size());
       assertFast(elapsed, "UDP-sugar-MCS");
@@ -4444,8 +4463,8 @@ public class StressTest extends TestBase {
     void nadSelfMCS() throws Exception {
       IAtomContainer q = mol(NAD_PLUS);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, q, new ChemOptions());
-      Map<Integer, Integer> mcs = s.findMCS(false, true, TIME_LIMIT_MS);
+      MoleculePair s = new MoleculePair(q, q, new ChemOptions());
+      Map<Integer, Integer> mcs = s.mcsMapping( true, TIME_LIMIT_MS);
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       assertEquals(q.getAtomCount(), mcs.size(), "Self-MCS should be full molecule");
       assertFast(elapsed, "NAD-self-MCS");
@@ -4456,8 +4475,8 @@ public class StressTest extends TestBase {
     void steroidMCS() throws Exception {
       IAtomContainer q = mol(DEXAMETHASONE), t = mol(VITAMIN_D3);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, t, new ChemOptions());
-      Map<Integer, Integer> mcs = s.findMCS(false, true, TIME_LIMIT_MS);
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
+      Map<Integer, Integer> mcs = s.mcsMapping( true, TIME_LIMIT_MS);
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       assertTrue(mcs.size() >= 5, "Steroid MCS ≥ 5, got " + mcs.size());
       assertFast(elapsed, "steroid-MCS");
@@ -4468,8 +4487,8 @@ public class StressTest extends TestBase {
     void taxaneMCS() throws Exception {
       IAtomContainer q = mol(PACLITAXEL), t = mol(DOCETAXEL);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, t, new ChemOptions());
-      Map<Integer, Integer> mcs = s.findMCS(false, true, TIME_LIMIT_MS);
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
+      Map<Integer, Integer> mcs = s.mcsMapping( true, TIME_LIMIT_MS);
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       assertTrue(mcs.size() >= 29, "Taxane MCS ≥ 29, got " + mcs.size());
       assertFast(elapsed, "taxane-MCS");
@@ -4480,8 +4499,8 @@ public class StressTest extends TestBase {
     void coaMCS() throws Exception {
       IAtomContainer q = mol(COA), t = mol(ACETYL_COA);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, t, new ChemOptions());
-      Map<Integer, Integer> mcs = s.findMCS(false, true, TIME_LIMIT_MS);
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
+      Map<Integer, Integer> mcs = s.mcsMapping( true, TIME_LIMIT_MS);
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       assertTrue(mcs.size() >= 30, "CoA/AcCoA MCS ≥ 30, got " + mcs.size());
       assertFast(elapsed, "CoA-MCS");
@@ -4492,8 +4511,8 @@ public class StressTest extends TestBase {
     void fadSelfMCS() throws Exception {
       IAtomContainer q = mol(FAD);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, q, new ChemOptions());
-      Map<Integer, Integer> mcs = s.findMCS(false, true, TIME_LIMIT_MS);
+      MoleculePair s = new MoleculePair(q, q, new ChemOptions());
+      Map<Integer, Integer> mcs = s.mcsMapping( true, TIME_LIMIT_MS);
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       assertEquals(q.getAtomCount(), mcs.size(), "Self-MCS = full molecule");
       assertFast(elapsed, "FAD-self-MCS");
@@ -4504,8 +4523,8 @@ public class StressTest extends TestBase {
     void vincristineSelfMCS() throws Exception {
       IAtomContainer q = mol(VINCRISTINE);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, q, new ChemOptions());
-      Map<Integer, Integer> mcs = s.findMCS(false, true, TIME_LIMIT_MS);
+      MoleculePair s = new MoleculePair(q, q, new ChemOptions());
+      Map<Integer, Integer> mcs = s.mcsMapping( true, TIME_LIMIT_MS);
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       assertEquals(q.getAtomCount(), mcs.size(), "Self-MCS = full molecule");
       assertFast(elapsed, "vincristine-self-MCS");
@@ -4516,8 +4535,8 @@ public class StressTest extends TestBase {
     void samSelfMCS() throws Exception {
       IAtomContainer q = mol(SAM);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, q, new ChemOptions());
-      Map<Integer, Integer> mcs = s.findMCS(false, true, TIME_LIMIT_MS);
+      MoleculePair s = new MoleculePair(q, q, new ChemOptions());
+      Map<Integer, Integer> mcs = s.mcsMapping( true, TIME_LIMIT_MS);
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       assertEquals(q.getAtomCount(), mcs.size(), "Self-MCS = full molecule");
       assertFast(elapsed, "SAM-self-MCS");
@@ -4540,8 +4559,8 @@ public class StressTest extends TestBase {
           t.getAtomCount() >= 90,
           "Vancomycin should have 90+ heavy atoms, got " + t.getAtomCount());
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(t, t, new ChemOptions());
-      assertTrue(s.isSubstructure(5000));
+      MoleculePair s = new MoleculePair(t, t, new ChemOptions());
+      assertTrue(s.contains(5000));
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       System.out.println("INFO: Vancomycin self-match completed in " + elapsed + "ms");
     }
@@ -4551,8 +4570,8 @@ public class StressTest extends TestBase {
     void vancomycinSelfMCS() throws Exception {
       IAtomContainer t = mol(VANCOMYCIN);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(t, t, new ChemOptions());
-      Map<Integer, Integer> mcs = s.findMCS(false, true, 2000);
+      MoleculePair s = new MoleculePair(t, t, new ChemOptions());
+      Map<Integer, Integer> mcs = s.mcsMapping( true, 2000);
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       assertEquals(t.getAtomCount(), mcs.size(), "Self-MCS must equal atom count");
       System.out.println("INFO: Vancomycin self-MCS completed in " + elapsed + "ms");
@@ -4564,8 +4583,8 @@ public class StressTest extends TestBase {
       IAtomContainer t = mol(CYCLOSPORIN);
       assertTrue(t.getAtomCount() >= 70, "Cyclosporin should have 70+ heavy atoms");
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(t, t, new ChemOptions());
-      assertTrue(s.isSubstructure(5000));
+      MoleculePair s = new MoleculePair(t, t, new ChemOptions());
+      assertTrue(s.contains(5000));
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       System.out.println("INFO: Cyclosporin self-match completed in " + elapsed + "ms");
     }
@@ -4576,8 +4595,8 @@ public class StressTest extends TestBase {
       // Vancomycin contains multiple aromatic rings
       IAtomContainer q = mol("c1ccccc1"), t = mol(VANCOMYCIN);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, t, new ChemOptions());
-      assertTrue(s.isSubstructure(2000), "Benzene should be in vancomycin");
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
+      assertTrue(s.contains(2000), "Benzene should be in vancomycin");
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       System.out.println("INFO: Benzene in vancomycin completed in " + elapsed + "ms");
     }
@@ -4589,8 +4608,8 @@ public class StressTest extends TestBase {
       IAtomContainer q = mol(repeat("C", 200));
       IAtomContainer t = mol(repeat("C", 300));
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, t, new ChemOptions());
-      assertTrue(s.isSubstructure(2000), "C200 must be substructure of C300");
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
+      assertTrue(s.contains(2000), "C200 must be substructure of C300");
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       System.out.println("INFO: C200 in C300 completed in " + elapsed + "ms");
     }
@@ -4600,8 +4619,8 @@ public class StressTest extends TestBase {
     void longChainSelfMCS() throws Exception {
       IAtomContainer q = mol(repeat("C", 200));
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, q, new ChemOptions());
-      Map<Integer, Integer> mcs = s.findMCS(false, true, 2000);
+      MoleculePair s = new MoleculePair(q, q, new ChemOptions());
+      Map<Integer, Integer> mcs = s.mcsMapping( true, 2000);
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       assertEquals(q.getAtomCount(), mcs.size(), "Self-MCS must = atom count");
       System.out.println("INFO: C200 self-MCS completed in " + elapsed + "ms");
@@ -4625,15 +4644,15 @@ public class StressTest extends TestBase {
     }
 
     @Test
-    @DisplayName("Adenine in insulin (contains His/adenine-like rings)")
-    void adenineInInsulin() throws Exception {
+    @DisplayName("Imidazole in insulin histidine residues")
+    void imidazoleInInsulin() throws Exception {
       // Insulin contains histidine residues with imidazole rings
       IAtomContainer q = mol("c1c[nH]cn1"); // imidazole
       IAtomContainer t = mol(INSULIN);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, t, new ChemOptions());
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
       // Insulin has histidine residues → imidazole should match
-      s.isSubstructure(5000); // no crash, result is defined
+      assertTrue(s.contains(5000), "Histidine imidazole must be a substructure of insulin");
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       System.out.println("INFO: Imidazole in insulin completed in " + elapsed + "ms");
     }
@@ -4645,8 +4664,8 @@ public class StressTest extends TestBase {
       IAtomContainer q = mol("c1ccccc1"); // benzene
       IAtomContainer t = mol(INSULIN);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, t, new ChemOptions());
-      assertTrue(s.isSubstructure(5000), "Benzene (Phe sidechain) should be in insulin");
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
+      assertTrue(s.contains(5000), "Benzene (Phe sidechain) should be in insulin");
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       System.out.println("INFO: Benzene in insulin completed in " + elapsed + "ms");
     }
@@ -4657,8 +4676,8 @@ public class StressTest extends TestBase {
       IAtomContainer t = mol(repeat("C", 500));
       assertTrue(t.getAtomCount() >= 400, "C500 should have 400+ heavy atoms");
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(t, t, new ChemOptions());
-      assertTrue(s.isSubstructure(5000));
+      MoleculePair s = new MoleculePair(t, t, new ChemOptions());
+      assertTrue(s.contains(5000));
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       System.out.println("INFO: C500 self-match completed in " + elapsed + "ms");
     }
@@ -4669,8 +4688,8 @@ public class StressTest extends TestBase {
       IAtomContainer t = mol(repeat("C", 1000));
       assertTrue(t.getAtomCount() >= 800, "C1000 should have 800+ heavy atoms");
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(t, t, new ChemOptions());
-      assertTrue(s.isSubstructure(10000));
+      MoleculePair s = new MoleculePair(t, t, new ChemOptions());
+      assertTrue(s.contains(10000));
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       System.out.println("INFO: C1000 self-match completed in " + elapsed + "ms");
     }
@@ -4681,8 +4700,8 @@ public class StressTest extends TestBase {
       IAtomContainer q = mol(repeat("C", 100));
       IAtomContainer t = mol(repeat("C", 1000));
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, t, new ChemOptions());
-      assertTrue(s.isSubstructure(10000), "C100 must be substructure of C1000");
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
+      assertTrue(s.contains(10000), "C100 must be substructure of C1000");
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       System.out.println("INFO: C100 in C1000 completed in " + elapsed + "ms");
     }
@@ -4710,7 +4729,7 @@ public class StressTest extends TestBase {
       int pairs = 0;
       for (int i = 0; i < mols.length; i++) {
         for (int j = i + 1; j < mols.length; j++) {
-          double ub = SearchEngine.similarityUpperBound(mols[i], mols[j], opts);
+          double ub = MCS.similarityUpperBound(mols[i], mols[j], opts);
           assertTrue(ub >= 0 && ub <= 1.0, "RASCAL UB in [0,1]");
           pairs++;
         }
@@ -4748,8 +4767,8 @@ public class StressTest extends TestBase {
     void erythromycinAzithromycinMCS() throws Exception {
       IAtomContainer q = mol(ERYTHROMYCIN), t = mol(AZITHROMYCIN);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, t, new ChemOptions());
-      Map<Integer, Integer> mcs = s.findMCS(false, true, 1000);
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
+      Map<Integer, Integer> mcs = s.mcsMapping( true, 1000);
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
       assertTrue(
           mcs.size() >= 25,
@@ -4781,8 +4800,8 @@ public class StressTest extends TestBase {
       assertValidConnectedMapping(q, t, witness, opts, "NAD+/NADH common-core witness");
 
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, t, opts);
-      Map<Integer, Integer> mcs = s.findMCS(false, true, 5000);
+      MoleculePair s = new MoleculePair(q, t, opts);
+      Map<Integer, Integer> mcs = s.mcsMapping( true, 5000);
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
 
       // A bounded search returns its best incumbent; the deadline guarantees no minimum size.
@@ -4798,7 +4817,7 @@ public class StressTest extends TestBase {
       assertFalse(mapping.isEmpty(), label + " must be nonempty");
       assertEquals(mapping.size(), new HashSet<>(mapping.values()).size(),
           label + " must be injective");
-      List<String> errors = SearchEngine.validateMapping(
+      List<String> errors = MCS.validateMapping(
           new MolGraph(query), new MolGraph(target), mapping, opts);
       assertTrue(errors.isEmpty(), () -> label + " has incompatible atoms or bonds: " + errors);
 
@@ -4824,9 +4843,9 @@ public class StressTest extends TestBase {
     void salicylicAcidInAspirin() throws Exception {
       IAtomContainer q = mol(SALICYLIC_ACID), t = mol(ASPIRIN);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, t, new ChemOptions());
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
       assertTrue(
-          s.isSubstructure(TIME_LIMIT_MS),
+          s.contains(TIME_LIMIT_MS),
           "Salicylic acid MUST be a substructure of aspirin (aspirin = acetyl-salicylic acid)");
       assertFast((System.nanoTime() - t0) / 1_000_000, "salicylic-in-aspirin");
     }
@@ -4838,9 +4857,9 @@ public class StressTest extends TestBase {
     void xanthineInCaffeine() throws Exception {
       IAtomContainer q = mol(XANTHINE), t = mol(CAFFEINE);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, t, new ChemOptions());
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
       assertTrue(
-          s.isSubstructure(TIME_LIMIT_MS),
+          s.contains(TIME_LIMIT_MS),
           "Xanthine MUST be a substructure of caffeine (caffeine = 1,3,7-trimethylxanthine)");
       assertFast((System.nanoTime() - t0) / 1_000_000, "xanthine-in-caffeine");
     }
@@ -4852,9 +4871,9 @@ public class StressTest extends TestBase {
     void dopamineInAdrenaline() throws Exception {
       IAtomContainer q = mol(DOPAMINE), t = mol(ADRENALINE);
       long t0 = System.nanoTime();
-      SMSD s = new SMSD(q, t, new ChemOptions());
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
       assertTrue(
-          s.isSubstructure(TIME_LIMIT_MS),
+          s.contains(TIME_LIMIT_MS),
           "Dopamine MUST be a substructure of adrenaline (adrenaline = N-methyl-hydroxylated"
               + " dopamine)");
       assertFast((System.nanoTime() - t0) / 1_000_000, "dopamine-in-adrenaline");
@@ -4865,56 +4884,56 @@ public class StressTest extends TestBase {
     @DisplayName("Adenine is substructure of ATP")
     void adenineInAtp() throws Exception {
       IAtomContainer q = mol(ADENINE), t = mol(ATP);
-      SMSD s = new SMSD(q, t, new ChemOptions());
-      assertTrue(s.isSubstructure(TIME_LIMIT_MS), "Adenine MUST be in ATP");
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
+      assertTrue(s.contains(TIME_LIMIT_MS), "Adenine MUST be in ATP");
     }
 
     @Test
     @DisplayName("Adenine is substructure of ADP")
     void adenineInAdp() throws Exception {
       IAtomContainer q = mol(ADENINE), t = mol(ADP);
-      SMSD s = new SMSD(q, t, new ChemOptions());
-      assertTrue(s.isSubstructure(TIME_LIMIT_MS), "Adenine MUST be in ADP");
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
+      assertTrue(s.contains(TIME_LIMIT_MS), "Adenine MUST be in ADP");
     }
 
     @Test
     @DisplayName("Adenine is substructure of AMP")
     void adenineInAmp() throws Exception {
       IAtomContainer q = mol(ADENINE), t = mol(AMP);
-      SMSD s = new SMSD(q, t, new ChemOptions());
-      assertTrue(s.isSubstructure(TIME_LIMIT_MS), "Adenine MUST be in AMP");
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
+      assertTrue(s.contains(TIME_LIMIT_MS), "Adenine MUST be in AMP");
     }
 
     @Test
     @DisplayName("Adenine is substructure of NAD+")
     void adenineInNadPlus() throws Exception {
       IAtomContainer q = mol(ADENINE), t = mol(NAD_PLUS);
-      SMSD s = new SMSD(q, t, new ChemOptions());
-      assertTrue(s.isSubstructure(TIME_LIMIT_MS), "Adenine MUST be in NAD+");
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
+      assertTrue(s.contains(TIME_LIMIT_MS), "Adenine MUST be in NAD+");
     }
 
     @Test
     @DisplayName("Adenine is substructure of FAD")
     void adenineInFad() throws Exception {
       IAtomContainer q = mol(ADENINE), t = mol(FAD);
-      SMSD s = new SMSD(q, t, new ChemOptions());
-      assertTrue(s.isSubstructure(TIME_LIMIT_MS), "Adenine MUST be in FAD");
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
+      assertTrue(s.contains(TIME_LIMIT_MS), "Adenine MUST be in FAD");
     }
 
     @Test
     @DisplayName("Adenine is substructure of Acetyl-CoA")
     void adenineInAcetylCoa() throws Exception {
       IAtomContainer q = mol(ADENINE), t = mol(ACETYL_COA);
-      SMSD s = new SMSD(q, t, new ChemOptions());
-      assertTrue(s.isSubstructure(TIME_LIMIT_MS), "Adenine MUST be in Acetyl-CoA");
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
+      assertTrue(s.contains(TIME_LIMIT_MS), "Adenine MUST be in Acetyl-CoA");
     }
 
     @Test
     @DisplayName("Adenine is substructure of SAM")
     void adenineInSam() throws Exception {
       IAtomContainer q = mol(ADENINE), t = mol(SAM);
-      SMSD s = new SMSD(q, t, new ChemOptions());
-      assertTrue(s.isSubstructure(TIME_LIMIT_MS), "Adenine MUST be in SAM (S-adenosyl methionine)");
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
+      assertTrue(s.contains(TIME_LIMIT_MS), "Adenine MUST be in SAM (S-adenosyl methionine)");
     }
 
     // --- 7. Uracil in UDP-glucose ---
@@ -4922,9 +4941,9 @@ public class StressTest extends TestBase {
     @DisplayName("Uracil is substructure of UDP-glucose")
     void uracilInUdpGlucose() throws Exception {
       IAtomContainer q = mol(URACIL), t = mol(UDP_GLUCOSE);
-      SMSD s = new SMSD(q, t, new ChemOptions());
+      MoleculePair s = new MoleculePair(q, t, new ChemOptions());
       assertTrue(
-          s.isSubstructure(TIME_LIMIT_MS),
+          s.contains(TIME_LIMIT_MS),
           "Uracil MUST be in UDP-glucose (uridine diphosphate glucose)");
     }
   }
@@ -4935,9 +4954,9 @@ public class StressTest extends TestBase {
 
 
   private static int hc_mcsSize(String smi1, String smi2, ChemOptions opts, long timeoutMs) throws Exception {
-    SMSD smsd = new SMSD(mol(smi1), mol(smi2), opts);
+    MoleculePair smsd = new MoleculePair(mol(smi1), mol(smi2), opts);
     smsd.setMCSTimeoutMs(timeoutMs);
-    Map<Integer, Integer> mcs = smsd.findMCS(false, true, timeoutMs);
+    Map<Integer, Integer> mcs = smsd.mcsMapping( true, timeoutMs);
     return mcs.size();
   }
 
@@ -4964,14 +4983,14 @@ public class StressTest extends TestBase {
 
     /** Helper: assert SMARTS matches target SMILES */
     private void assertSmartsMatch(String smarts, String targetSmi, String msg) throws Exception {
-      SMSD smsd = new SMSD(smarts, mol(targetSmi), new ChemOptions());
-      assertTrue(smsd.isSubstructure(5000), msg);
+      MoleculePair smsd = new MoleculePair(smarts, mol(targetSmi), new ChemOptions());
+      assertTrue(smsd.contains(5000), msg);
     }
 
     /** Helper: assert SMARTS does NOT match */
     private void assertSmartsNoMatch(String smarts, String targetSmi, String msg) throws Exception {
-      SMSD smsd = new SMSD(smarts, mol(targetSmi), new ChemOptions());
-      assertFalse(smsd.isSubstructure(5000), msg);
+      MoleculePair smsd = new MoleculePair(smarts, mol(targetSmi), new ChemOptions());
+      assertFalse(smsd.contains(5000), msg);
     }
 
     @Test @Timeout(10) @DisplayName("1.01 4-carbon chain in butanol")
@@ -5203,20 +5222,24 @@ public class StressTest extends TestBase {
       IAtomContainer queryMol = mol("N[C@@H](C)C(=O)O");
       IAtomContainer targetMol = mol("N[C@H](C)C(=O)O");
       MolGraph query = new MolGraph(queryMol), target = new MolGraph(targetMol);
-      SMSD smsd = new SMSD(queryMol, targetMol, opts);
-      // Excluding the incompatible stereocenter splits the query into N, C,
-      // and C(=O)O. The largest connected component is the three-atom carboxyl.
-      Map<Integer, Integer> witness = mapping(3, 3, 4, 4, 5, 5);
-      assertTrue(SearchEngine.validateMapping(query, target, witness, opts).isEmpty());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000);
-      assertEquals(3, mcs.size(), "Connected matching retains the carboxyl component");
-      assertTrue(SearchEngine.validateMapping(query, target, mcs, opts).isEmpty());
-      SearchEngine.MCSOptions disconnected = new SearchEngine.MCSOptions();
-      disconnected.connectedOnly = false;
-      disconnected.timeoutMs = 5_000;
-      Map<Integer, Integer> fragments = SearchEngine.findMCS(query, target, opts, disconnected);
-      assertEquals(5, fragments.size(), "Disconnected matching retains all noncenter atoms");
-      assertTrue(SearchEngine.validateMapping(query, target, fragments, opts).isEmpty());
+      MoleculePair smsd = new MoleculePair(queryMol, targetMol, opts);
+      // Omitting one explicit ligand leaves the retained centre's stereo undetermined.
+      Map<Integer, Integer> witness = mapping(0, 0, 1, 1, 3, 3, 4, 4, 5, 5);
+      assertTrue(MCS.validateMapping(query, target, witness, opts).isEmpty());
+      Substructure.Options substructureOptions = new Substructure.Options();
+      substructureOptions.chemistry = opts;
+      SearchResult full = Substructure.find(query).withOptions(substructureOptions).match(target);
+      assertTrue(full.complete());
+      assertFalse(full.found(), "Opposite fully determined tetrahedral orientations must not match");
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000);
+      assertEquals(5, mcs.size(), "Connected matching retains an undetermined partial centre");
+      assertTrue(MCS.validateMapping(query, target, mcs, opts).isEmpty());
+      MCS.Options disconnected = new MCS.Options();
+      disconnected.connectivity = (false) ? MCS.Connectivity.Connected : MCS.Connectivity.Fragments;
+      disconnected.timeoutMillis = 5_000;
+      Map<Integer, Integer> fragments = TestSupport.mcsMapping(query, target, opts, disconnected);
+      assertEquals(5, fragments.size(), "Allowing fragments cannot restore incompatible full stereo");
+      assertTrue(MCS.validateMapping(query, target, fragments, opts).isEmpty());
     }
 
     @Test @Timeout(10) @DisplayName("3.03 R-thalidomide vs S-thalidomide no chirality")
@@ -5515,8 +5538,8 @@ public class StressTest extends TestBase {
 
     @Test @Timeout(12) @DisplayName("6.08 Morphine vs codeine MCS")
     void morphineVsCodeine() throws Exception {
-      String morphine = "CN1CCC23C4C1CC5=C(C2C(C=C4)O3)C=C(C=C5)O";
-      String codeine = "CN1CCC23C4C1CC5=C(C2C(C=C4)OC3)C=C(C=C5)O";
+      String morphine = "CN1CC[C@]23[C@@H]4[C@H]1CC5=C2C(=C(C=C5)O)O[C@H]3[C@H](C=C4)O";
+      String codeine = "CN1CC[C@]23[C@@H]4[C@H]1CC5=C2C(=C(C=C5)OC)O[C@H]3[C@H](C=C4)O";
       // Differ by one O vs OC — share most of the skeleton
       int sz = hc_mcsSize(morphine, codeine);
       assertTrue(sz >= 18, "Morphine and codeine differ by one methyl, large MCS");

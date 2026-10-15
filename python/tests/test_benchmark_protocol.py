@@ -90,7 +90,8 @@ def test_objective_is_explicitly_atoms_and_timeouts_cannot_be_speed_wins():
     rows = [{"engine": e, "elapsed_us": 10.0, "atoms": 3, "valid": True,
              "timeout": e == "rdkit", "budget_reached": False} for e in ("smsd", "rdkit")]
     result = summarize(rows, "any")
-    assert result["smsd_timeouts"] is None
+    assert result["smsd_timeouts"] == 0
+    assert not result["objective_equivalent"]
     assert not result["speed_comparable"] and result["rdkit_over_smsd_ratio"] is None
     rows[1]["timeout"] = False
     rows[0]["valid"] = False

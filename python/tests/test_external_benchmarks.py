@@ -49,7 +49,7 @@ def timed_pairs(pairs, *, tautomer_aware=False):
         try:
             q, t = smsd.parse_smiles(smi1), smsd.parse_smiles(smi2)
             start = time.perf_counter_ns()
-            result = smsd.find_mcs(q, t, timeout_ms=TIMEOUT_MS, tautomer_aware=tautomer_aware)
+            result = atom_map(configured_mcs(q, timeout_ms=TIMEOUT_MS, tautomer_aware=tautomer_aware).match(t))
             times.append((time.perf_counter_ns()-start)/1000)
             sizes.append(len(result))
         except Exception as exc:
@@ -73,8 +73,8 @@ class TestTautobase:
         for name, smi1, smi2 in pairs:
             try:
                 q, t = smsd.parse_smiles(smi1), smsd.parse_smiles(smi2)
-                strict = smsd.find_mcs(q, t, timeout_ms=TIMEOUT_MS)
-                tautomer = smsd.find_mcs(q, t, timeout_ms=TIMEOUT_MS, tautomer_aware=True)
+                strict = atom_map(configured_mcs(q, timeout_ms=TIMEOUT_MS).match(t))
+                tautomer = atom_map(configured_mcs(q, timeout_ms=TIMEOUT_MS, tautomer_aware=True).match(t))
                 gains.append(len(tautomer)-len(strict))
             except Exception as exc:
                 failures.append((name, str(exc)))
@@ -115,7 +115,7 @@ class TestStressPairs:
             if len(row) < 3 or "self" not in row[2]:
                 continue
             q, t = smsd.parse_smiles(row[0]), smsd.parse_smiles(row[1])
-            result = smsd.find_mcs(q, t, timeout_ms=TIMEOUT_MS)
+            result = atom_map(configured_mcs(q, timeout_ms=TIMEOUT_MS).match(t))
             assert len(result) == q.n, f"{row[2]}: MCS={len(result)}, expected {q.n}"
 
 
@@ -128,7 +128,7 @@ class TestEhrlichRarey:
         for row in patterns:
             try:
                 start = time.perf_counter_ns()
-                hit = smsd.smarts_match(row[0], target)
+                hit = smsd.Substructure.smarts(row[0]).match(target).found
                 times.append((time.perf_counter_ns()-start)/1000)
                 hits += bool(hit)
             except Exception as exc:

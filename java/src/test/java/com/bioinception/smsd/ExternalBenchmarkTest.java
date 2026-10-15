@@ -6,6 +6,10 @@
  */
 package com.bioinception.smsd;
 
+import com.bioinception.smsd.TestSupport;
+
+import com.bioinception.smsd.TestSupport.MoleculePair;
+
 import static com.bioinception.smsd.TestSupport.isBlank;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -53,7 +57,7 @@ public class ExternalBenchmarkTest extends TestBase {
             BenchmarkRunSettings.checkInterrupted();
             long start = System.nanoTime();
             try {
-                result = new SMSD(query, target, chemistry).findMCS(false, false, MCS_TIMEOUT_MS);
+                result = new MoleculePair(query, target, chemistry).mcsMapping( false, MCS_TIMEOUT_MS);
             } catch (Exception exception) {
                 BenchmarkRunSettings.checkpoint(suite, row, "ERROR", 0, System.nanoTime() - start,
                     exception.toString());
@@ -126,12 +130,12 @@ public class ExternalBenchmarkTest extends TestBase {
                     int maxAtoms = Math.min(m1.getAtomCount(), m2.getAtomCount());
 
                     // Tautomer-aware MCS
-                    SMSD smsdTaut = new SMSD(m1, m2, tautOpts);
+                    MoleculePair smsdTaut = new MoleculePair(m1, m2, tautOpts);
                     Map<Integer,Integer> tautMap = benchmarkMCS(m1, m2, tautOpts, "tautobase-tautomer", parts[0]);
                     int tautMCS = tautMap.size();
 
                     // Strict MCS (for comparison)
-                    SMSD smsdStrict = new SMSD(m1, m2, strictOpts);
+                    MoleculePair smsdStrict = new MoleculePair(m1, m2, strictOpts);
                     Map<Integer,Integer> strictMap = benchmarkMCS(m1, m2, strictOpts, "tautobase-strict", parts[0]);
                     int strictMCS = strictMap.size();
 
@@ -183,7 +187,7 @@ public class ExternalBenchmarkTest extends TestBase {
                     if (m1 == null || m2 == null) continue;
 
                     long t0 = System.nanoTime();
-                    SMSD smsd = new SMSD(m1, m2, new ChemOptions());
+                    MoleculePair smsd = new MoleculePair(m1, m2, new ChemOptions());
                     benchmarkMCS(m1, m2, new ChemOptions(), "tautobase-timing", parts[0]);
                     long elapsed = (System.nanoTime() - t0) / 1000;
                     totalTimeUs += elapsed;
@@ -227,7 +231,7 @@ public class ExternalBenchmarkTest extends TestBase {
 
                     ChemOptions opts = new ChemOptions();
                     long t0 = System.nanoTime();
-                    SMSD smsd = new SMSD(m1, m2, opts);
+                    MoleculePair smsd = new MoleculePair(m1, m2, opts);
                     Map<Integer, Integer> mcsMap = benchmarkMCS(m1, m2, opts, "random", Integer.toString(total));
                     long elapsed = (System.nanoTime() - t0) / 1000;
                     totalTimeUs += elapsed;
@@ -237,7 +241,7 @@ public class ExternalBenchmarkTest extends TestBase {
                     // Compute LFUB via static method
                     MolGraph g1 = new MolGraph(m1);
                     MolGraph g2 = new MolGraph(m2);
-                    int lfub = SMSD.labelFrequencyUpperBound(g1, g2, opts);
+                    int lfub = TestSupport.atomBound(g1, g2, opts);
                     if (mcsSize == lfub) lfubHit++;
                     if (elapsed > MCS_TIMEOUT_MS * 1000) timeouts++;
                 } catch (Exception e) {
@@ -270,7 +274,7 @@ public class ExternalBenchmarkTest extends TestBase {
                     if (m1 == null || m2 == null) continue;
 
                     long t0 = System.nanoTime();
-                    SMSD smsd = new SMSD(m1, m2, new ChemOptions());
+                    MoleculePair smsd = new MoleculePair(m1, m2, new ChemOptions());
                     Map<Integer, Integer> nnMap = benchmarkMCS(m1, m2, new ChemOptions(), "neighbor", Integer.toString(total));
                     long elapsed = (System.nanoTime() - t0) / 1000;
                     totalTimeUs += elapsed;
@@ -315,7 +319,7 @@ public class ExternalBenchmarkTest extends TestBase {
                     if (m1 == null || m2 == null) continue;
 
                     long t0 = System.nanoTime();
-                    SMSD smsd = new SMSD(m1, m2, new ChemOptions());
+                    MoleculePair smsd = new MoleculePair(m1, m2, new ChemOptions());
                     Map<Integer, Integer> stressMap = benchmarkMCS(m1, m2, new ChemOptions(), "stress", name);
                     long elapsedMs = (System.nanoTime() - t0) / 1_000_000;
                     int mcs = stressMap.size();
@@ -355,7 +359,7 @@ public class ExternalBenchmarkTest extends TestBase {
                     IAtomContainer m2 = mol(parts[1]);
                     if (m1 == null || m2 == null) continue;
 
-                    SMSD smsd = new SMSD(m1, m2, new ChemOptions());
+                    MoleculePair smsd = new MoleculePair(m1, m2, new ChemOptions());
                     Map<Integer, Integer> selfMap = benchmarkMCS(m1, m2, new ChemOptions(), "stress-self", name);
                     int mcs = selfMap.size();
                     int expected = m1.getAtomCount();
@@ -409,7 +413,7 @@ public class ExternalBenchmarkTest extends TestBase {
                     for (int trial = 0; trial < BenchmarkRunSettings.WARMUP + BenchmarkRunSettings.ROUNDS; trial++) {
                         BenchmarkRunSettings.checkInterrupted();
                         long trialStart = System.nanoTime();
-                        hit = new SMSD(sma, target, smOpts).isSubstructure(SUB_TIMEOUT_MS);
+                        hit = new MoleculePair(sma, target, smOpts).contains(SUB_TIMEOUT_MS);
                         if (trial >= BenchmarkRunSettings.WARMUP)
                             BenchmarkRunSettings.checkpoint("smarts", sma + "/" + trial, "OK", 0,
                                 System.nanoTime() - trialStart, "matched=" + hit);

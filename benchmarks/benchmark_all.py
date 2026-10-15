@@ -392,8 +392,7 @@ def benchmark_cpp_if_available(existing_results: List[BenchResult]) -> List[Benc
 def benchmark_smsd_python(pairs, existing_results: List[BenchResult]) -> List[BenchResult]:
     """Benchmark the smsd Python package (C++ bindings via pybind11)."""
     try:
-        from smsd import parse_smiles, ChemOptions, MCSOptions
-        from smsd._smsd import find_mcs
+        from smsd import parse_smiles, ChemOptions, MCS
     except ImportError:
         print("[WARN] smsd Python package not found -- pip install smsd", file=sys.stderr)
         return existing_results
@@ -408,12 +407,14 @@ def benchmark_smsd_python(pairs, existing_results: List[BenchResult]) -> List[Be
             continue
 
         chem = ChemOptions()
-        opts = MCSOptions()
+        opts = MCS.Options()
         opts.timeout_ms = TIMEOUT_MS
+        opts.chemistry = chem
+        prepared = MCS.find(g1).with_options(opts)
 
         # Warmup
         try:
-            find_mcs(g1, g2, chem, opts)
+            prepared.match(g2)
         except Exception:
             pass
 
@@ -422,8 +423,8 @@ def benchmark_smsd_python(pairs, existing_results: List[BenchResult]) -> List[Be
         for _ in range(NUM_RUNS):
             t0 = time.perf_counter()
             try:
-                mapping = find_mcs(g1, g2, chem, opts)
-                mcs_size = len(mapping)
+                mapping = prepared.match(g2)
+                mcs_size = mapping.best.atom_count if mapping.found else 0
             except Exception:
                 mcs_size = -1
             times.append((time.perf_counter() - t0) * 1000.0)

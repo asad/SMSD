@@ -19,7 +19,7 @@ Output:
     - stdout: formatted comparison table
 
 Sections:
-    Section 1: MCS benchmark  — SMSD find_mcs vs RDKit FindMCS (20 pairs)
+    Section 1: MCS benchmark  — SMSD MCS vs RDKit FindMCS (20 pairs)
     Section 2: Substructure   — SMSD is_substructure vs RDKit HasSubstructMatch (20 pairs)
 
 Reference datasets (molecule pairs):
@@ -183,22 +183,24 @@ def bench_smsd(smi1: str, smi2: str) -> Tuple[List[float], int]:
     g1 = smsd.parse_smiles(smi1)
     g2 = smsd.parse_smiles(smi2)
     opts = make_smsd_chem_options()
-    mcs_opts = smsd.MCSOptions()
+    mcs_opts = smsd.MCS.Options()
     mcs_opts.timeout_ms = TIMEOUT_SEC * 1000
+    mcs_opts.chemistry = opts
+    prepared = smsd.MCS.find(g1).with_options(mcs_opts)
 
     # Warmup
     for _ in range(WARMUP):
-        smsd_native.find_mcs(g1, g2, opts, mcs_opts)
+        prepared.match(g2)
 
     # Timed
     times = []
     mcs_size = 0
     for _ in range(ITERS):
         t0 = time.perf_counter_ns()
-        mapping = smsd_native.find_mcs(g1, g2, opts, mcs_opts)
+        mapping = prepared.match(g2)
         dt = (time.perf_counter_ns() - t0) / 1000.0  # ns -> us
         times.append(dt)
-        mcs_size = len(mapping)
+        mcs_size = mapping.best.atom_count if mapping.found else 0
 
     return times, mcs_size
 
@@ -245,16 +247,19 @@ def bench_smsd_sub(query_smi: str, target_smi: str) -> Tuple[List[float], bool]:
     """
     g_query = smsd.parse_smiles(query_smi)
     g_target = smsd.parse_smiles(target_smi)
-    opts = make_smsd_chem_options()
+    opts = smsd.Substructure.Options()
+    opts.chemistry = make_smsd_chem_options()
+    opts.timeout_ms = TIMEOUT_SEC * 1000
+    prepared = smsd.Substructure.find(g_query).with_options(opts)
 
     for _ in range(WARMUP):
-        smsd_native.is_substructure(g_query, g_target, opts, TIMEOUT_SEC * 1000)
+        prepared.match(g_target).found
 
     times = []
     match = False
     for _ in range(ITERS):
         t0 = time.perf_counter_ns()
-        match = smsd_native.is_substructure(g_query, g_target, opts, TIMEOUT_SEC * 1000)
+        match = prepared.match(g_target).found
         dt = (time.perf_counter_ns() - t0) / 1000.0
         times.append(dt)
 

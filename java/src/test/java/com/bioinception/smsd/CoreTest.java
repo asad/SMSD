@@ -6,12 +6,16 @@
  */
 package com.bioinception.smsd;
 
+import com.bioinception.smsd.core.MCS;
+
+import com.bioinception.smsd.TestSupport;
+
 import static com.bioinception.smsd.TestSupport.mapping;
 import static com.bioinception.smsd.TestSupport.repeat;
 
 import com.bioinception.smsd.core.*;
 import com.bioinception.smsd.core.ChemOptions;
-import com.bioinception.smsd.core.SMSD;
+import com.bioinception.smsd.TestSupport.MoleculePair;
 import com.bioinception.smsd.core.Standardiser;
 import java.util.*;
 import java.util.ArrayList;
@@ -183,22 +187,22 @@ public class CoreTest {
   @Test
   @DisplayName("A.1  Ethanol is a substructure (quick sanity)")
   void a1_substructure_exists() {
-    SMSD smsd = new SMSD(mol("CCO"), mol("CCNCCO"), new ChemOptions());
-    assertTrue(smsd.isSubstructure(1200L));
+    MoleculePair smsd = new MoleculePair(mol("CCO"), mol("CCNCCO"), new ChemOptions());
+    assertTrue(smsd.contains(1200L));
   }
 
   @Test
   @DisplayName("A.2  Benzene is not a substructure of hexane")
   void a2_substructure_not_exists() {
-    SMSD smsd = new SMSD(mol("c1ccccc1"), mol("CCCCCC"), opts(true, true, false, false));
-    assertFalse(smsd.isSubstructure(1200L));
+    MoleculePair smsd = new MoleculePair(mol("c1ccccc1"), mol("CCCCCC"), opts(true, true, false, false));
+    assertFalse(smsd.contains(1200L));
   }
 
   @Test
   @DisplayName("A.3  MCS(bz, naph) has 6 atoms")
   void a3_mcs_size_benzene_naphthalene() {
-    SMSD smsd = new SMSD(mol("c1ccccc1"), mol("c1ccc2ccccc2c1"), opts(true, false, false, false));
-    Map<Integer, Integer> m = smsd.findMCS(false, true, 2000L);
+    MoleculePair smsd = new MoleculePair(mol("c1ccccc1"), mol("c1ccc2ccccc2c1"), opts(true, false, false, false));
+    Map<Integer, Integer> m = smsd.mcsMapping( true, 2000L);
     assertNonEmpty(m, "benzene vs naphthalene");
     assertEquals(6, m.size(), "MCS(bz, naph) should be 6");
   }
@@ -284,8 +288,8 @@ public class CoreTest {
   void b1_benzene_vs_toluene() {
     IAtomContainer a = mol("c1ccccc1"); // benzene
     IAtomContainer b = mol("Cc1ccccc1"); // toluene
-    SMSD smsd = new SMSD(a, b, opts(true, true, false, false));
-    Map<Integer, Integer> m = smsd.findMCS(false, true, 2000L);
+    MoleculePair smsd = new MoleculePair(a, b, opts(true, true, false, false));
+    Map<Integer, Integer> m = smsd.mcsMapping( true, 2000L);
     assertNonEmpty(m, "Phenyl core expected");
     assertTrue(m.size() >= 6, "At least the 6 aromatic carbons should match");
     assertTrue(countComponentsOnQuery(a, m.keySet()) <= 1, "Phenyl core should be connected");
@@ -294,8 +298,8 @@ public class CoreTest {
   @Test
   @DisplayName("B.2  Water vs benzene: empty under strict atom typing")
   void b2_water_vs_benzene_strict_atoms() {
-    SMSD smsd = new SMSD(mol("O"), mol("c1ccccc1"), opts(true, true, false, false));
-    Map<Integer, Integer> m = smsd.findMCS(false, true, 1500L);
+    MoleculePair smsd = new MoleculePair(mol("O"), mol("c1ccccc1"), opts(true, true, false, false));
+    Map<Integer, Integer> m = smsd.mcsMapping( true, 1500L);
     assertTrue(
         m == null || m.isEmpty(), "O vs benzene should yield empty core under strict typing");
   }
@@ -305,8 +309,8 @@ public class CoreTest {
   void b3_ring_vs_ring_collapses_chain() {
     IAtomContainer a = mol("C1CCCC=C1CC"); // cyclohexene–ethyl
     IAtomContainer b = mol("CCc1ccccc1"); // ethylbenzene
-    SMSD smsd = new SMSD(a, b, opts(true, true, false, false));
-    Map<Integer, Integer> m = smsd.findMCS(false, true, 2500L);
+    MoleculePair smsd = new MoleculePair(a, b, opts(true, true, false, false));
+    Map<Integer, Integer> m = smsd.mcsMapping( true, 2500L);
     assertNonEmpty(m, "Expect some common acyclic chain");
     assertTrue(
         mappedRingBonds(a, b, m) == 0 || m.size() >= 4,
@@ -318,8 +322,8 @@ public class CoreTest {
   void b4_ring_to_ring_blocks_chain() {
     IAtomContainer ring6 = mol("C1CCCCC1");
     IAtomContainer chain = mol("CCCCCC");
-    SMSD smsd = new SMSD(ring6, chain, opts(true, true, true, false)); // ringOnly=true
-    Map<Integer, Integer> m = smsd.findMCS(false, true, 1500L);
+    MoleculePair smsd = new MoleculePair(ring6, chain, opts(true, true, true, false)); // ringOnly=true
+    Map<Integer, Integer> m = smsd.mcsMapping( true, 1500L);
     assertTrue(
         m == null || m.isEmpty(), "Ring→ring policy should prevent mapping a ring to a chain");
   }
@@ -329,10 +333,10 @@ public class CoreTest {
   void b5_strict_vs_relaxed_bond_order() {
     IAtomContainer acn = mol("CC#N");
     IAtomContainer imi = mol("CC=N");
-    SMSD sStrict = new SMSD(acn, imi, opts(true, true, false, false));
-    SMSD sRelax = new SMSD(acn, imi, opts(true, false, false, false));
-    Map<Integer, Integer> mStrict = sStrict.findMCS(false, true, 2000L);
-    Map<Integer, Integer> mRelax = sRelax.findMCS(true, true, 2000L); // MCIS-like
+    MoleculePair sStrict = new MoleculePair(acn, imi, opts(true, true, false, false));
+    MoleculePair sRelax = new MoleculePair(acn, imi, opts(true, false, false, false));
+    Map<Integer, Integer> mStrict = sStrict.mcsMapping( true, 2000L);
+    Map<Integer, Integer> mRelax = sRelax.mcsMapping( true, 2000L); // MCIS-like
     assertNonEmpty(mStrict, "Strict should find a non-empty core");
     assertNonEmpty(mRelax, "Relaxed should match at least the strict core");
     assertTrue(
@@ -345,8 +349,8 @@ public class CoreTest {
   void b6_reaction_backbone_conserved() {
     IAtomContainer rx = mol("c1ccc(cc1)CBr");
     IAtomContainer pr = mol("c1ccc(cc1)CO");
-    SMSD smsd = new SMSD(rx, pr, opts(true, true, false, false));
-    Map<Integer, Integer> m = smsd.findMCS(false, true, 2000L);
+    MoleculePair smsd = new MoleculePair(rx, pr, opts(true, true, false, false));
+    Map<Integer, Integer> m = smsd.mcsMapping( true, 2000L);
     assertNonEmpty(m, "Backbone conserved across reaction");
     assertTrue(m.size() >= 6, "Expect ring (6) mapped");
   }
@@ -356,8 +360,8 @@ public class CoreTest {
   void b7_aromatic_ether_seed() {
     IAtomContainer a = mol("COc1ccccc1O");
     IAtomContainer b = mol("COc1ccc(OC)cc1");
-    SMSD smsd = new SMSD(a, b, opts(true, true, false, false));
-    Map<Integer, Integer> m = smsd.findMCS(false, true, 2000L);
+    MoleculePair smsd = new MoleculePair(a, b, opts(true, true, false, false));
+    Map<Integer, Integer> m = smsd.mcsMapping( true, 2000L);
     assertNonEmpty(m, "Aromatic ether MCS should exist");
     assertTrue(m.size() >= 7, "Seed large enough for 3D overlay");
   }
@@ -378,8 +382,8 @@ public class CoreTest {
         IAtomContainer x = mol(all[i]), y = mol(all[j]);
         ChemOptions chemOpts = opts(true, false, true, false);
         chemOpts.aromaticityMode = ChemOptions.AromaticityMode.STRICT;
-        SMSD smsd = new SMSD(x, y, chemOpts);
-        Map<Integer, Integer> m = smsd.findMCS(false, true, 1500L);
+        MoleculePair smsd = new MoleculePair(x, y, chemOpts);
+        Map<Integer, Integer> m = smsd.mcsMapping( true, 1500L);
         boolean ok = (m != null && !m.isEmpty());
         double sim =
             ok ? ((double) m.size() / Math.min(nAtoms.get(all[i]), nAtoms.get(all[j]))) : 0.0;
@@ -409,10 +413,10 @@ public class CoreTest {
   void c1_induced_vs_mccs() {
     IAtomContainer a = mol("CCCC"); // butane
     IAtomContainer b = mol("CC=CC"); // but-2-ene
-    SMSD mccs = new SMSD(a, b, opts(true, true, false, false));
-    SMSD mcis = new SMSD(a, b, opts(true, false, false, false)); // relaxed order for MCIS-like
-    Map<Integer, Integer> m1 = mccs.findMCS(false, true, 1500L); // MCCS
-    Map<Integer, Integer> m2 = mcis.findMCS(true, true, 1500L); // MCIS
+    MoleculePair mccs = new MoleculePair(a, b, opts(true, true, false, false));
+    MoleculePair mcis = new MoleculePair(a, b, opts(true, false, false, false)); // relaxed order for MCIS-like
+    Map<Integer, Integer> m1 = mccs.mcsMapping( true, 1500L); // MCCS
+    Map<Integer, Integer> m2 = mcis.mcsMapping( true, 1500L); // MCIS
     int s1 = (m1 == null ? 0 : m1.size());
     int s2 = (m2 == null ? 0 : m2.size());
     assertTrue(s2 >= s1, "MCIS should not be smaller than MCCS on simple pairs");
@@ -423,18 +427,18 @@ public class CoreTest {
   void c2_ring_to_ring_allows_ring_to_ring() {
     IAtomContainer ringA = mol("c1ccccc1");
     IAtomContainer ringB = mol("C1=CC=CC=C1");
-    SMSD smsd = new SMSD(ringA, ringB, opts(true, true, true, false)); // ringOnly=true
-    Map<Integer, Integer> m = smsd.findMCS(false, true, 1500L);
+    MoleculePair smsd = new MoleculePair(ringA, ringB, opts(true, true, true, false)); // ringOnly=true
+    Map<Integer, Integer> m = smsd.mcsMapping( true, 1500L);
     assertTrue(m != null && !m.isEmpty(), "Ring→ring policy should allow ring↔ring matching");
   }
 
   @Test
   @DisplayName("C.3  Timeout budget is honoured (tiny budget)")
   void c3_timeout_honoured() {
-    SMSD smsd =
-        new SMSD(
+    MoleculePair smsd =
+        new MoleculePair(
             mol("c1ccc2ccccc2c1"), mol("c1cccc2ccc3cccc3c2c1"), opts(true, true, false, false));
-    Map<Integer, Integer> m = smsd.findMCS(false, true, 1L); // 1 ms
+    Map<Integer, Integer> m = smsd.mcsMapping( true, 1L); // 1 ms
     assertNotNull(m, "Should return (possibly empty) mapping without hanging");
   }
 
@@ -453,10 +457,10 @@ public class CoreTest {
     chem.ringMatchesRingOnly = false;
     chem.ringFusionMode = ChemOptions.RingFusionMode.IGNORE;
 
-    SMSD smsd = new SMSD(educt, product, chem);
+    MoleculePair smsd = new MoleculePair(educt, product, chem);
 
     long start = System.nanoTime();
-    Map<Integer, Integer> mapping = smsd.findMCS(false, true, 10_000L);
+    Map<Integer, Integer> mapping = smsd.mcsMapping( true, 10_000L);
     long elapsedMs = (System.nanoTime() - start) / 1_000_000L;
 
     assertNotNull(mapping, "GOLDEN_843 should return a mapping instead of hanging");
@@ -484,13 +488,12 @@ public class CoreTest {
     chem.ringMatchesRingOnly = false;
     chem.ringFusionMode = ChemOptions.RingFusionMode.IGNORE;
 
-    SearchEngine.MCSOptions baselineOpts = new SearchEngine.MCSOptions();
-    baselineOpts.induced = false;
-    baselineOpts.connectedOnly = true;
-    baselineOpts.timeoutMs = 15_000L;
+    MCS.Options baselineOpts = new MCS.Options();
+    baselineOpts.connectivity = (true) ? MCS.Connectivity.Connected : MCS.Connectivity.Fragments;
+    baselineOpts.timeoutMillis = 15_000L;
 
-    SearchEngine.clearMolGraphCache();
-    Map<Integer, Integer> baseline = SearchEngine.findMCS(educt, product, chem, baselineOpts);
+    TestSupport.clearCaches();
+    Map<Integer, Integer> baseline = TestSupport.mcsMapping(educt, product, chem, baselineOpts);
     assertNotNull(baseline, "Baseline GOLDEN_843 call should return a mapping");
     assertTrue(
         baseline.size() >= 12,
@@ -502,7 +505,7 @@ public class CoreTest {
     final int threads = 8;
     final int rounds = 4;
     for (int round = 0; round < rounds; round++) {
-      SearchEngine.clearMolGraphCache();
+      TestSupport.clearCaches();
 
       CyclicBarrier barrier = new CyclicBarrier(threads);
       ExecutorService pool = Executors.newFixedThreadPool(threads);
@@ -512,11 +515,10 @@ public class CoreTest {
           tasks.add(
               () -> {
                 barrier.await();
-                SearchEngine.MCSOptions opts = new SearchEngine.MCSOptions();
-                opts.induced = false;
-                opts.connectedOnly = true;
-                opts.timeoutMs = 15_000L;
-                return SearchEngine.findMCS(educt, product, chem, opts);
+                MCS.Options opts = new MCS.Options();
+                opts.connectivity = (true) ? MCS.Connectivity.Connected : MCS.Connectivity.Fragments;
+                opts.timeoutMillis = 15_000L;
+                return TestSupport.mcsMapping(educt, product, chem, opts);
               });
         }
 
@@ -548,12 +550,12 @@ public class CoreTest {
   @Test
   @DisplayName("C.4  Stereo sensitivity: trans vs cis reduces match when stereo is ON")
   void c4_stereo_sensitivity_trans_vs_cis() {
-    IAtomContainer trans = mol("C/C=C\\C");
-    IAtomContainer cis = mol("C/C=C/C");
-    SMSD sOn = new SMSD(trans, cis, opts(true, true, false, true)); // stereo ON
-    SMSD sOff = new SMSD(trans, cis, opts(true, true, false, false)); // stereo OFF
-    Map<Integer, Integer> mOn = sOn.findMCS(false, true, 2000L);
-    Map<Integer, Integer> mOff = sOff.findMCS(false, true, 2000L);
+    IAtomContainer trans = mol("C/C=C/C");
+    IAtomContainer cis = mol("C/C=C\\C");
+    MoleculePair sOn = new MoleculePair(trans, cis, opts(true, true, false, true)); // stereo ON
+    MoleculePair sOff = new MoleculePair(trans, cis, opts(true, true, false, false)); // stereo OFF
+    Map<Integer, Integer> mOn = sOn.mcsMapping( true, 2000L);
+    Map<Integer, Integer> mOff = sOff.mcsMapping( true, 2000L);
     int aOn = (mOn == null ? 0 : mOn.size());
     int aOff = (mOff == null ? 0 : mOff.size());
     assertTrue(aOff >= aOn, "With stereo OFF, mapping should be ≥ stereo ON");
@@ -564,10 +566,10 @@ public class CoreTest {
   void c5_connected_vs_disconnected() {
     IAtomContainer a = mol("CCOC(C)=O");
     IAtomContainer b = mol("CCOC(C)C=O");
-    SMSD cMCS = new SMSD(a, b, opts(true, true, false, false));
-    SMSD dMCS = new SMSD(a, b, opts(true, true, false, false));
-    Map<Integer, Integer> mc = cMCS.findMCS(false, true, 2000L); // connectedOnly
-    Map<Integer, Integer> md = dMCS.findMCS(false, false, 2000L); // disconnected
+    MoleculePair cMCS = new MoleculePair(a, b, opts(true, true, false, false));
+    MoleculePair dMCS = new MoleculePair(a, b, opts(true, true, false, false));
+    Map<Integer, Integer> mc = cMCS.mcsMapping( true, 2000L); // connectedOnly
+    Map<Integer, Integer> md = dMCS.mcsMapping( false, 2000L); // disconnected
     int fc = countComponentsOnQuery(a, (mc == null ? Collections.emptySet() : mc.keySet()));
     int fd = countComponentsOnQuery(a, (md == null ? Collections.emptySet() : md.keySet()));
     assertNotNull(md, "dMCS returns a mapping");
@@ -581,16 +583,16 @@ public class CoreTest {
     IAtomContainer kekul = mol("C1=CC=CC=C1");
     ChemOptions flex = opts(true, true, false, false);
     flex.aromaticityMode = ChemOptions.AromaticityMode.FLEXIBLE;
-    SMSD smsd = new SMSD(arom, kekul, flex);
-    Map<Integer, Integer> m = smsd.findMCS(false, true, 1500L);
+    MoleculePair smsd = new MoleculePair(arom, kekul, flex);
+    Map<Integer, Integer> m = smsd.mcsMapping( true, 1500L);
     assertTrue(m != null && m.size() >= 6, "Flexible mode should match the full benzene core");
   }
 
   @Test
   @DisplayName("C.7  Mapping integrity: values are unique")
   void c7_mapping_integrity() {
-    SMSD smsd = new SMSD(mol("c1ccccc1"), mol("c1ccc2ccccc2c1"), opts(true, false, false, false));
-    Map<Integer, Integer> m = smsd.findMCS(false, true, 2000L);
+    MoleculePair smsd = new MoleculePair(mol("c1ccccc1"), mol("c1ccc2ccccc2c1"), opts(true, false, false, false));
+    Map<Integer, Integer> m = smsd.mcsMapping( true, 2000L);
     assertNotNull(m);
     assertEquals(m.size(), new HashSet<>(m.values()).size(), "Target indices must be unique");
   }
@@ -600,10 +602,10 @@ public class CoreTest {
   void c8_bond_count_monotonicity_recap() {
     IAtomContainer a = mol("CC=CC"); // 2-butene
     IAtomContainer b = mol("CCCC"); // butane
-    SMSD strict = new SMSD(a, b, opts(true, true, false, false));
-    SMSD relax = new SMSD(a, b, opts(true, false, false, false));
-    Map<Integer, Integer> ms = strict.findMCS(false, true, 2000L);
-    Map<Integer, Integer> mr = relax.findMCS(true, true, 2000L);
+    MoleculePair strict = new MoleculePair(a, b, opts(true, true, false, false));
+    MoleculePair relax = new MoleculePair(a, b, opts(true, false, false, false));
+    Map<Integer, Integer> ms = strict.mcsMapping( true, 2000L);
+    Map<Integer, Integer> mr = relax.mcsMapping( true, 2000L);
     int bs = mappedBonds(a, b, (ms == null ? Collections.emptyMap() : ms));
     int br = mappedBonds(a, b, (mr == null ? Collections.emptyMap() : mr));
     assertTrue(br >= bs, "Relaxed (MCIS-like) should not reduce matched bonds vs strict");
@@ -728,8 +730,8 @@ public class CoreTest {
     SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
     IAtomContainer queryMol = sp.parseSmiles(q);
     IAtomContainer targetMol = sp.parseSmiles(t);
-    SMSD smsd = new SMSD(queryMol, targetMol, new ChemOptions());
-    boolean ok = smsd.isSubstructure();
+    MoleculePair smsd = new MoleculePair(queryMol, targetMol, new ChemOptions());
+    boolean ok = smsd.contains();
     assertEquals(expected, ok, name + ": '" + q + "' vs '" + t + "' expected " + expected);
   }
 
@@ -746,8 +748,8 @@ public class CoreTest {
     // Expand named predicates (e.g., $isAmideN) before matching
     Standardiser.PredicateRegistry reg = new Standardiser.PredicateRegistry();
     String expanded = Standardiser.expandNamedPredicates(smarts, reg);
-    SMSD smsd = new SMSD(expanded, targetMol, new ChemOptions());
-    boolean ok = smsd.isSubstructure();
+    MoleculePair smsd = new MoleculePair(expanded, targetMol, new ChemOptions());
+    boolean ok = smsd.contains();
     assertEquals(
         expected,
         ok,
@@ -770,8 +772,8 @@ public class CoreTest {
     SmilesParser sp = new SmilesParser(DefaultChemObjectBuilder.getInstance());
     IAtomContainer queryMol = sp.parseSmiles(q);
     IAtomContainer targetMol = sp.parseSmiles(t);
-    SMSD smsd = new SMSD(queryMol, targetMol, new ChemOptions());
-    Map<Integer, Integer> mr = smsd.findMCS(true, true, 2500L);
+    MoleculePair smsd = new MoleculePair(queryMol, targetMol, new ChemOptions());
+    Map<Integer, Integer> mr = smsd.mcsMapping( true, 2500L);
     assertNotNull(mr, name + ": MCS should not be null");
     // Query and target always share at least some atoms
     // For cases where both molecules share atom types, MCS should be non-empty
@@ -799,12 +801,12 @@ public class CoreTest {
     void findSimpleAlkane() throws Exception {
       IAtomContainer q = sp.parseSmiles("CCC"); // Propane
       IAtomContainer t = sp.parseSmiles("CCCCCC"); // Hexane
-      SMSD smsd =
-          new SMSD(
+      MoleculePair smsd =
+          new MoleculePair(
               Standardiser.standardise(q, Standardiser.TautomerMode.NONE),
               Standardiser.standardise(t, Standardiser.TautomerMode.NONE),
               ChemOptions.profile("compat-substruct"));
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test
@@ -812,12 +814,12 @@ public class CoreTest {
     void notFindLongerChain() throws Exception {
       IAtomContainer q = sp.parseSmiles("CCCCCCCC"); // Octane
       IAtomContainer t = sp.parseSmiles("CCCCCC"); // Hexane
-      SMSD smsd =
-          new SMSD(
+      MoleculePair smsd =
+          new MoleculePair(
               Standardiser.standardise(q, Standardiser.TautomerMode.NONE),
               Standardiser.standardise(t, Standardiser.TautomerMode.NONE),
               ChemOptions.profile("compat-substruct"));
-      assertFalse(smsd.isSubstructure());
+      assertFalse(smsd.contains());
     }
 
     @Test
@@ -825,12 +827,12 @@ public class CoreTest {
     void findHeterocycle() throws Exception {
       IAtomContainer q = sp.parseSmiles("c1ncccc1"); // Pyridine
       IAtomContainer t = sp.parseSmiles("Clc1ncccc1"); // 2-Chloropyridine
-      SMSD smsd =
-          new SMSD(
+      MoleculePair smsd =
+          new MoleculePair(
               Standardiser.standardise(q, Standardiser.TautomerMode.NONE),
               Standardiser.standardise(t, Standardiser.TautomerMode.NONE),
               ChemOptions.profile("compat-substruct"));
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test
@@ -840,12 +842,12 @@ public class CoreTest {
       IAtomContainer t = sp.parseSmiles("CC(=O)[O-]"); // Acetate
       ChemOptions options = ChemOptions.profile("compat-substruct");
       options.matchFormalCharge = true;
-      SMSD smsd =
-          new SMSD(
+      MoleculePair smsd =
+          new MoleculePair(
               Standardiser.standardise(q, Standardiser.TautomerMode.NONE),
               Standardiser.standardise(t, Standardiser.TautomerMode.NONE),
               options);
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test
@@ -855,12 +857,12 @@ public class CoreTest {
       IAtomContainer t = sp.parseSmiles("CC(=O)[O-]"); // Acetate
       ChemOptions options = ChemOptions.profile("compat-substruct");
       options.matchFormalCharge = false;
-      SMSD smsd =
-          new SMSD(
+      MoleculePair smsd =
+          new MoleculePair(
               Standardiser.standardise(q, Standardiser.TautomerMode.NONE),
               Standardiser.standardise(t, Standardiser.TautomerMode.NONE),
               options);
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
   }
 
@@ -874,12 +876,12 @@ public class CoreTest {
 
       String qSmarts = "[C;$(C(=O)O)]";
       IAtomContainer t = sp.parseSmiles("CC(=O)O");
-      SMSD smsd =
-          new SMSD(
+      MoleculePair smsd =
+          new MoleculePair(
               qSmarts,
               Standardiser.standardise(t, Standardiser.TautomerMode.NONE),
               ChemOptions.profile("compat-substruct"));
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test
@@ -888,12 +890,12 @@ public class CoreTest {
 
       String qSmarts = "[N;$(NC=O)]";
       IAtomContainer t = sp.parseSmiles("CC(=O)NCC");
-      SMSD smsd =
-          new SMSD(
+      MoleculePair smsd =
+          new MoleculePair(
               qSmarts,
               Standardiser.standardise(t, Standardiser.TautomerMode.NONE),
               ChemOptions.profile("compat-substruct"));
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test
@@ -901,12 +903,12 @@ public class CoreTest {
     void disconnectedFragments() throws Exception {
       IAtomContainer q = sp.parseSmiles("C.C");
       IAtomContainer t = sp.parseSmiles("CCC");
-      SMSD smsd =
-          new SMSD(
+      MoleculePair smsd =
+          new MoleculePair(
               Standardiser.standardise(q, Standardiser.TautomerMode.NONE),
               Standardiser.standardise(t, Standardiser.TautomerMode.NONE),
               ChemOptions.profile("compat-substruct"));
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
   }
 
@@ -921,12 +923,12 @@ public class CoreTest {
       IAtomContainer t = sp.parseSmiles("C/C=C\\C");
       ChemOptions options = ChemOptions.profile("strict");
       options.useBondStereo = false; // Disabling stereo check to allow topological pass
-      SMSD smsd =
-          new SMSD(
+      MoleculePair smsd =
+          new MoleculePair(
               Standardiser.standardise(q, Standardiser.TautomerMode.NONE),
               Standardiser.standardise(t, Standardiser.TautomerMode.NONE),
               options);
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test
@@ -936,12 +938,12 @@ public class CoreTest {
       IAtomContainer t = sp.parseSmiles("C/C=C/C");
       ChemOptions options = ChemOptions.profile("strict");
       options.useBondStereo = true;
-      SMSD smsd =
-          new SMSD(
+      MoleculePair smsd =
+          new MoleculePair(
               Standardiser.standardise(q, Standardiser.TautomerMode.NONE),
               Standardiser.standardise(t, Standardiser.TautomerMode.NONE),
               options);
-      assertFalse(smsd.isSubstructure());
+      assertFalse(smsd.contains());
     }
 
     @Test
@@ -949,12 +951,12 @@ public class CoreTest {
     void aromaticFlexibleMatch() throws Exception {
       IAtomContainer q = sp.parseSmiles("c1ccccc1");
       IAtomContainer t = sp.parseSmiles("C1=CC=CC=C1");
-      SMSD smsd =
-          new SMSD(
+      MoleculePair smsd =
+          new MoleculePair(
               Standardiser.standardise(q, Standardiser.TautomerMode.NONE),
               Standardiser.standardise(t, Standardiser.TautomerMode.NONE),
               ChemOptions.profile("compat-substruct"));
-      assertTrue(smsd.isSubstructure());
+      assertTrue(smsd.contains());
     }
 
     @Test
@@ -962,12 +964,12 @@ public class CoreTest {
     void aromaticStrictMismatch() throws Exception {
       IAtomContainer q = sp.parseSmiles("c1ccccc1");
       IAtomContainer t = sp.parseSmiles("C1CCCCC1"); // Cyclohexane
-      SMSD smsd =
-          new SMSD(
+      MoleculePair smsd =
+          new MoleculePair(
               Standardiser.standardise(q, Standardiser.TautomerMode.NONE),
               Standardiser.standardise(t, Standardiser.TautomerMode.NONE),
               ChemOptions.profile("strict"));
-      assertFalse(smsd.isSubstructure());
+      assertFalse(smsd.contains());
     }
   }
 
@@ -980,12 +982,12 @@ public class CoreTest {
     void mcsBenzeneNaphthalene() throws Exception {
       IAtomContainer a = sp.parseSmiles("c1ccccc1");
       IAtomContainer b = sp.parseSmiles("c1ccc2ccccc2c1");
-      SMSD smsd =
-          new SMSD(
+      MoleculePair smsd =
+          new MoleculePair(
               Standardiser.standardise(a, Standardiser.TautomerMode.NONE),
               Standardiser.standardise(b, Standardiser.TautomerMode.NONE),
               ChemOptions.profile("compat-fmcs"));
-      Map<Integer, Integer> m = smsd.findMCS(true, true, 2500L);
+      Map<Integer, Integer> m = smsd.mcsMapping( true, 2500L);
       assertNotNull(m);
       assertEquals(6, m.size());
     }
@@ -995,12 +997,12 @@ public class CoreTest {
     void mcsCommonCore() throws Exception {
       IAtomContainer a = sp.parseSmiles("CC(C)c1ccc(C(=O)O)cc1"); // Ibuprofen core
       IAtomContainer b = sp.parseSmiles("CC(C(=O)O)c1ccc2ccccc2c1"); // Naproxen core
-      SMSD smsd =
-          new SMSD(
+      MoleculePair smsd =
+          new MoleculePair(
               Standardiser.standardise(a, Standardiser.TautomerMode.NONE),
               Standardiser.standardise(b, Standardiser.TautomerMode.NONE),
               ChemOptions.profile("compat-fmcs"));
-      Map<Integer, Integer> m = smsd.findMCS(true, true, 2500L);
+      Map<Integer, Integer> m = smsd.mcsMapping( true, 2500L);
       assertNotNull(m);
       assertTrue(m.size() >= 4);
     }
@@ -1015,12 +1017,12 @@ public class CoreTest {
     void testSalicylicAcidInAspirin() throws Exception {
       IAtomContainer query = sp.parseSmiles("c1(C(=O)O)ccccc1O"); // Salicylic acid
       IAtomContainer target = sp.parseSmiles("CC(=O)Oc1ccccc1C(=O)O"); // Aspirin
-      SMSD smsd =
-          new SMSD(
+      MoleculePair smsd =
+          new MoleculePair(
               Standardiser.standardise(query, Standardiser.TautomerMode.NONE),
               Standardiser.standardise(target, Standardiser.TautomerMode.NONE),
               ChemOptions.profile("compat-substruct"));
-      assertTrue(smsd.isSubstructure(), "Salicylic acid is a substructure of Aspirin");
+      assertTrue(smsd.contains(), "Salicylic acid is a substructure of Aspirin");
     }
 
     @Test
@@ -1028,12 +1030,12 @@ public class CoreTest {
     void testCatecholInDopamine() throws Exception {
       IAtomContainer query = sp.parseSmiles("c1ccc(O)c(O)c1"); // Catechol
       IAtomContainer target = sp.parseSmiles("C1=CC(=C(C=C1CCN)O)O"); // Dopamine
-      SMSD smsd =
-          new SMSD(
+      MoleculePair smsd =
+          new MoleculePair(
               Standardiser.standardise(query, Standardiser.TautomerMode.NONE),
               Standardiser.standardise(target, Standardiser.TautomerMode.NONE),
               ChemOptions.profile("compat-substruct"));
-      assertTrue(smsd.isSubstructure(), "Catechol is a substructure of Dopamine");
+      assertTrue(smsd.contains(), "Catechol is a substructure of Dopamine");
     }
 
     @Test
@@ -1041,36 +1043,38 @@ public class CoreTest {
     void testIndoleNotInAspirin() throws Exception {
       IAtomContainer query = sp.parseSmiles("c1ccc2[nH]ccc2c1"); // Indole
       IAtomContainer target = sp.parseSmiles("CC(=O)Oc1ccccc1C(=O)O"); // Aspirin
-      SMSD smsd =
-          new SMSD(
+      MoleculePair smsd =
+          new MoleculePair(
               Standardiser.standardise(query, Standardiser.TautomerMode.NONE),
               Standardiser.standardise(target, Standardiser.TautomerMode.NONE),
               ChemOptions.profile("compat-substruct"));
-      assertFalse(smsd.isSubstructure(), "Indole is not a substructure of Aspirin");
+      assertFalse(smsd.contains(), "Indole is not a substructure of Aspirin");
     }
 
     @Test
     @DisplayName("should find a large MCS between Morphine and Codeine")
     void testMCSMorphineVsCodeine() throws Exception {
-      // Morphine (21 atoms) and Codeine (22 atoms) differ at the ether bridge:
-      // Morphine has a direct C-O bridge; Codeine has C-O-CH3.
-      // Induced MCS = 19 (bridge topology mismatch), non-induced = 20.
-      IAtomContainer morphine = sp.parseSmiles("CN1CCC23C4C1CC5=C(C2C(C=C4)O3)C=C(C=C5)O");
-      IAtomContainer codeine = sp.parseSmiles("CN1CCC23C4C1CC5=C(C2C(C=C4)OC3)C=C(C=C5)O");
+      // Morphine and codeine differ by methylation of the phenolic oxygen.
+      IAtomContainer morphine = sp.parseSmiles("CN1CC[C@]23[C@@H]4[C@H]1CC5=C2C(=C(C=C5)O)O[C@H]3[C@H](C=C4)O");
+      IAtomContainer codeine = sp.parseSmiles("CN1CC[C@]23[C@@H]4[C@H]1CC5=C2C(=C(C=C5)OC)O[C@H]3[C@H](C=C4)O");
 
-      SMSD smsd =
-          new SMSD(
+      assertEquals(21, morphine.getAtomCount());
+      assertEquals(22, codeine.getAtomCount());
+      assertEquals(3, java.util.stream.StreamSupport.stream(morphine.atoms().spliterator(), false)
+          .filter(atom -> atom.getAtomicNumber() == 8).count());
+      MoleculePair smsd =
+          new MoleculePair(
               Standardiser.standardise(morphine, Standardiser.TautomerMode.NONE),
               Standardiser.standardise(codeine, Standardiser.TautomerMode.NONE),
               new ChemOptions());
 
-      Map<Integer, Integer> mcsInduced = smsd.findMCS(true, true, 30000L);
+      Map<Integer, Integer> mcsInduced = smsd.mcsMapping( true, 30000L);
       assertNotNull(mcsInduced);
       assertTrue(
           mcsInduced.size() >= 19,
           "Induced MCS of Morphine/Codeine should be >= 19 (got " + mcsInduced.size() + ")");
 
-      Map<Integer, Integer> mcsNonInduced = smsd.findMCS(false, true, 30000L);
+      Map<Integer, Integer> mcsNonInduced = smsd.mcsMapping( true, 30000L);
       assertNotNull(mcsNonInduced);
       assertTrue(
           mcsNonInduced.size() >= 19,
@@ -1093,36 +1097,36 @@ public class CoreTest {
     @Test
     void furanInBenzofuran() throws Exception {
       assertTrue(
-          new SMSD(mol("c1ccoc1"), mol("c1ccc2occc2c1"), new ChemOptions()).isSubstructure());
+          new MoleculePair(mol("c1ccoc1"), mol("c1ccc2occc2c1"), new ChemOptions()).contains());
     }
 
     @Test
     void thiopheneInBenzothiophene() throws Exception {
       assertTrue(
-          new SMSD(mol("c1ccsc1"), mol("c1ccc2sccc2c1"), new ChemOptions()).isSubstructure());
+          new MoleculePair(mol("c1ccsc1"), mol("c1ccc2sccc2c1"), new ChemOptions()).contains());
     }
 
     @Test
     void imidazoleInHistidine() throws Exception {
       // Imidazole ring in histidine side chain
       assertTrue(
-          new SMSD(mol("c1cnc[nH]1"), mol("NC(Cc1cnc[nH]1)C(=O)O"), new ChemOptions())
-              .isSubstructure());
+          new MoleculePair(mol("c1cnc[nH]1"), mol("NC(Cc1cnc[nH]1)C(=O)O"), new ChemOptions())
+              .contains());
     }
 
     @Test
     void pyrimidineRingInCytosine() throws Exception {
       // Cytosine contains a pyrimidine ring — use the 1,3-diazine core
-      SMSD smsd = new SMSD(mol("C=1C=NC=NC1"), mol("Nc1ccnc(=O)[nH]1"), new ChemOptions());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("C=1C=NC=NC1"), mol("Nc1ccnc(=O)[nH]1"), new ChemOptions());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertTrue(mcs.size() >= 4, "Should share pyrimidine atoms");
     }
 
     @Test
     void morpholineInDrug() throws Exception {
       assertTrue(
-          new SMSD(mol("C1COCCN1"), mol("O=C(N1CCOCC1)c1ccccc1"), new ChemOptions())
-              .isSubstructure());
+          new MoleculePair(mol("C1COCCN1"), mol("O=C(N1CCOCC1)c1ccccc1"), new ChemOptions())
+              .contains());
     }
   }
 
@@ -1136,9 +1140,9 @@ public class CoreTest {
     @Test
     void norbornaneSubstructure() throws Exception {
       // Bicyclo[2.2.1]heptane — bridged ring
-      SMSD smsd = new SMSD(mol("C1CC2CC1C2"), mol("C1CC2CC1CC2C"), new ChemOptions());
+      MoleculePair smsd = new MoleculePair(mol("C1CC2CC1C2"), mol("C1CC2CC1CC2C"), new ChemOptions());
       // Both are bridged, should find common subgraph
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 4, "Bridged ring MCS should find common atoms");
     }
@@ -1146,8 +1150,8 @@ public class CoreTest {
     @Test
     void spiroCompoundMCS() throws Exception {
       // Spiro[4.4]nonane
-      SMSD smsd = new SMSD(mol("C1CCC2(C1)CCCC2"), mol("C1CCC2(C1)CCCCC2"), new ChemOptions());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("C1CCC2(C1)CCCC2"), mol("C1CCC2(C1)CCCCC2"), new ChemOptions());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertTrue(mcs.size() >= 5, "Spiro MCS should share at least one ring");
     }
     // Removed: adamantaneSelfMatch — duplicated by AdversarialTest.adamantaneSelfMatch.
@@ -1162,46 +1166,46 @@ public class CoreTest {
   class FunctionalGroupTests {
     @Test
     void primaryAmineInAlanine() throws Exception {
-      assertTrue(new SMSD(mol("CN"), mol("CC(N)C(=O)O"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("CN"), mol("CC(N)C(=O)O"), new ChemOptions()).contains());
     }
 
     @Test
     void aldehydeInBenzaldehyde() throws Exception {
-      assertTrue(new SMSD(mol("C=O"), mol("O=Cc1ccccc1"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("C=O"), mol("O=Cc1ccccc1"), new ChemOptions()).contains());
     }
 
     @Test
     void nitrileInAcetonitrile() throws Exception {
-      assertTrue(new SMSD(mol("C#N"), mol("CC#N"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("C#N"), mol("CC#N"), new ChemOptions()).contains());
     }
 
     @Test
     void nitroInNitrobenzene() throws Exception {
       assertTrue(
-          new SMSD(mol("[N+](=O)[O-]"), mol("c1ccc([N+](=O)[O-])cc1"), new ChemOptions())
-              .isSubstructure());
+          new MoleculePair(mol("[N+](=O)[O-]"), mol("c1ccc([N+](=O)[O-])cc1"), new ChemOptions())
+              .contains());
     }
 
     @Test
     void sulfonylInDMSO() throws Exception {
-      assertTrue(new SMSD(mol("S=O"), mol("CS(=O)C"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("S=O"), mol("CS(=O)C"), new ChemOptions()).contains());
     }
 
     @Test
     void thioetherInMethionine() throws Exception {
-      assertTrue(new SMSD(mol("CSC"), mol("CSCCC(N)C(=O)O"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("CSC"), mol("CSCCC(N)C(=O)O"), new ChemOptions()).contains());
     }
 
     @Test
     void phenolNotInCyclohexanol() throws Exception {
       // Aromatic OH should not match aliphatic OH with strict aromaticity
-      SMSD smsd = new SMSD(mol("Oc1ccccc1"), mol("OC1CCCCC1"), ChemOptions.profile("strict"));
-      assertFalse(smsd.isSubstructure());
+      MoleculePair smsd = new MoleculePair(mol("Oc1ccccc1"), mol("OC1CCCCC1"), ChemOptions.profile("strict"));
+      assertFalse(smsd.contains());
     }
 
     @Test
     void epoxideSubstructure() throws Exception {
-      assertTrue(new SMSD(mol("C1OC1"), mol("C1OC1CC"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("C1OC1"), mol("C1OC1CC"), new ChemOptions()).contains());
     }
   }
 
@@ -1215,36 +1219,36 @@ public class CoreTest {
     @Test
     void alcoholToAldehyde() throws Exception {
       // Oxidation: ethanol → acetaldehyde — share C-C backbone
-      SMSD smsd = new SMSD(mol("CCO"), mol("CC=O"), new ChemOptions());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CCO"), mol("CC=O"), new ChemOptions());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertTrue(mcs.size() >= 2, "Oxidation preserves C-C backbone");
     }
 
     @Test
     void acidToAmide() throws Exception {
       // Amide bond formation: acetic acid → acetamide
-      SMSD smsd = new SMSD(mol("CC(=O)O"), mol("CC(=O)N"), new ChemOptions());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CC(=O)O"), mol("CC(=O)N"), new ChemOptions());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertTrue(mcs.size() >= 3, "Acid→amide preserves acyl group");
     }
 
     @Test
     void halogenationMCS() throws Exception {
       // Chlorination: benzene → chlorobenzene
-      SMSD smsd = new SMSD(mol("c1ccccc1"), mol("Clc1ccccc1"), new ChemOptions());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("c1ccccc1"), mol("Clc1ccccc1"), new ChemOptions());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertEquals(6, mcs.size(), "Benzene ring preserved in chlorination");
     }
 
     @Test
     void demethylation() throws Exception {
       // Codeine → morphine (loss of methyl from ether)
-      SMSD smsd =
-          new SMSD(
-              mol("CN1CCC23C4C1CC5=C(C2C(C=C4)OC3)C=C(C=C5)O"),
-              mol("CN1CCC23C4C1CC5=C(C2C(C=C4)O3)C=C(C=C5)O"),
+      MoleculePair smsd =
+          new MoleculePair(
+              mol("CN1CC[C@]23[C@@H]4[C@H]1CC5=C2C(=C(C=C5)OC)O[C@H]3[C@H](C=C4)O"),
+              mol("CN1CC[C@]23[C@@H]4[C@H]1CC5=C2C(=C(C=C5)O)O[C@H]3[C@H](C=C4)O"),
               new ChemOptions());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 30000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 30000L);
       assertTrue(mcs.size() >= 19, "Demethylation preserves core scaffold");
     }
 
@@ -1254,19 +1258,19 @@ public class CoreTest {
       MolGraph keto = new MolGraph(mol("CC(=O)C"));
       MolGraph enol = new MolGraph(mol("CC(O)=C"));
       ChemOptions strict = new ChemOptions();
-      SearchEngine.MCSOptions options = new SearchEngine.MCSOptions();
-      options.timeoutMs = 5_000L;
+      MCS.Options options = new MCS.Options();
+      options.timeoutMillis = 5_000L;
       Map<Integer, Integer> witness = mapping(0, 0, 1, 1);
-      assertTrue(SearchEngine.validateMapping(keto, enol, witness, strict).isEmpty());
+      assertTrue(MCS.validateMapping(keto, enol, witness, strict).isEmpty());
       // Each connected three-atom subset would need either C=O to match C-O,
       // or both query C-C bonds to match the target's C-C and C=C bonds.
-      assertEquals(2, SearchEngine.findMCS(keto, enol, strict, options).size(),
+      assertEquals(2, TestSupport.mcsMapping(keto, enol, strict, options).size(),
           "Strict bond orders retain only the two-atom C-C backbone");
 
       ChemOptions tautomer = ChemOptions.tautomerProfile();
-      Map<Integer, Integer> relaxed = SearchEngine.findMCS(keto, enol, tautomer, options);
+      Map<Integer, Integer> relaxed = TestSupport.mcsMapping(keto, enol, tautomer, options);
       assertEquals(4, relaxed.size(), "Tautomer-aware matching preserves the full backbone");
-      assertTrue(SearchEngine.validateMapping(keto, enol, relaxed, tautomer).isEmpty());
+      assertTrue(MCS.validateMapping(keto, enol, relaxed, tautomer).isEmpty());
     }
 
     @Test
@@ -1274,16 +1278,16 @@ public class CoreTest {
       // Ring opening: cyclopropane vs propane — need ring constraint OFF
       ChemOptions opts = new ChemOptions();
       opts.ringMatchesRingOnly = false;
-      SMSD smsd = new SMSD(mol("C1CC1"), mol("CCC"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("C1CC1"), mol("CCC"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertTrue(mcs.size() >= 2, "Ring opening preserves C-C bonds when ring constraint off");
     }
 
     @Test
     void esterHydrolysis() throws Exception {
       // Ethyl acetate → acetic acid + ethanol (shared acyl)
-      SMSD smsd = new SMSD(mol("CC(=O)OCC"), mol("CC(=O)O"), new ChemOptions());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CC(=O)OCC"), mol("CC(=O)O"), new ChemOptions());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertTrue(mcs.size() >= 3, "Ester hydrolysis preserves acyl group");
     }
   }
@@ -1300,14 +1304,14 @@ public class CoreTest {
       // [NH4+] should NOT match NH3 with charge matching ON
       ChemOptions opts = new ChemOptions();
       opts.matchFormalCharge = true;
-      assertFalse(new SMSD(mol("[NH4+]"), mol("N"), opts).isSubstructure());
+      assertFalse(new MoleculePair(mol("[NH4+]"), mol("N"), opts).contains());
     }
 
     @Test
     void ammoniumMatchesAmineChargeOff() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.matchFormalCharge = false;
-      assertTrue(new SMSD(mol("[NH4+]"), mol("N"), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol("[NH4+]"), mol("N"), opts).contains());
     }
 
     @Test
@@ -1315,7 +1319,7 @@ public class CoreTest {
       // Glycine zwitterion
       ChemOptions opts = new ChemOptions();
       opts.matchFormalCharge = true;
-      assertTrue(new SMSD(mol("[NH3+]CC([O-])=O"), mol("[NH3+]CC([O-])=O"), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol("[NH3+]CC([O-])=O"), mol("[NH3+]CC([O-])=O"), opts).contains());
     }
   }
 
@@ -1327,24 +1331,24 @@ public class CoreTest {
   @DisplayName("ChemOptions Configuration Tests")
   class ChemOptionsTests {
     @Test
-    void vf2MatcherEngine() throws Exception {
+    void defaultSubstructureQuery() throws Exception {
       ChemOptions opts = new ChemOptions();
-      opts.matcherEngine = ChemOptions.MatcherEngine.VF2;
-      assertTrue(new SMSD(mol("c1ccccc1"), mol("c1ccc(O)cc1"), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol("c1ccccc1"), mol("c1ccc(O)cc1"), opts).contains());
     }
 
     @Test
-    void vf2ppMatcherEngine() throws Exception {
-      ChemOptions opts = new ChemOptions();
-      opts.matcherEngine = ChemOptions.MatcherEngine.VF2PP;
-      assertTrue(new SMSD(mol("c1ccccc1"), mol("c1ccc(O)cc1"), opts).isSubstructure());
+    void preparedSubstructureQueryCanBeReused() throws Exception {
+      Substructure query = Substructure.find(mol("c1ccccc1"));
+      assertTrue(query.match(mol("c1ccc(O)cc1")).found());
+      assertTrue(query.match(mol("Cc1ccccc1")).found());
     }
 
     @Test
-    void vf3MatcherEngine() throws Exception {
-      ChemOptions opts = new ChemOptions();
-      opts.matcherEngine = ChemOptions.MatcherEngine.VF3;
-      assertTrue(new SMSD(mol("c1ccccc1"), mol("c1ccc(O)cc1"), opts).isSubstructure());
+    void graphAndContainerSubstructureQueriesAgree() throws Exception {
+      IAtomContainer query = mol("c1ccccc1");
+      IAtomContainer target = mol("c1ccc(O)cc1");
+      assertTrue(Substructure.find(query).match(target).found());
+      assertTrue(Substructure.find(new MolGraph(query)).match(new MolGraph(target)).found());
     }
 
     @Test
@@ -1352,28 +1356,28 @@ public class CoreTest {
       ChemOptions opts = new ChemOptions();
       opts.matchBondOrder = ChemOptions.BondOrderMode.ANY;
       // Single bond query should match double bond target
-      assertTrue(new SMSD(mol("CC"), mol("C=C"), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol("CC"), mol("C=C"), opts).contains());
     }
 
     @Test
     void pruningTogglesTwoHop() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.useTwoHopNLF = false;
-      assertTrue(new SMSD(mol("c1ccccc1"), mol("c1ccc(O)cc1"), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol("c1ccccc1"), mol("c1ccc(O)cc1"), opts).contains());
     }
 
     @Test
     void pruningTogglesThreeHop() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.useThreeHopNLF = false;
-      assertTrue(new SMSD(mol("c1ccccc1"), mol("c1ccc(O)cc1"), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol("c1ccccc1"), mol("c1ccc(O)cc1"), opts).contains());
     }
 
     @Test
     void pruningTogglesBitParallel() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.useBitParallelFeasibility = false;
-      assertTrue(new SMSD(mol("c1ccccc1"), mol("c1ccc(O)cc1"), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol("c1ccccc1"), mol("c1ccc(O)cc1"), opts).contains());
     }
 
     @Test
@@ -1382,8 +1386,8 @@ public class CoreTest {
       opts.ringMatchesRingOnly = false;
       // With ring constraint OFF, cyclopentane (5) should map into cyclohexane (6)
       // because ring atoms are allowed to match non-ring atoms
-      SMSD smsd = new SMSD(mol("C1CCCC1"), mol("CCCCCC"), opts);
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("C1CCCC1"), mol("CCCCCC"), opts);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertTrue(mcs.size() >= 4, "Ring match disabled allows ring-to-chain mapping in MCS");
     }
 
@@ -1396,7 +1400,7 @@ public class CoreTest {
               .withTwoHopNLF(true)
               .withThreeHopNLF(false)
               .withBitParallelFeasibility(true);
-      assertTrue(new SMSD(mol("c1ccccc1"), mol("c1ccc(O)cc1"), opts).isSubstructure());
+      assertTrue(new MoleculePair(mol("c1ccccc1"), mol("c1ccc(O)cc1"), opts).contains());
     }
   }
 
@@ -1409,53 +1413,53 @@ public class CoreTest {
   class EdgeCaseTests {
     @Test
     void singleAtomQuery() throws Exception {
-      assertTrue(new SMSD(mol("C"), mol("CCCC"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("C"), mol("CCCC"), new ChemOptions()).contains());
     }
 
     @Test
     void singleAtomNoMatch() throws Exception {
       // Nitrogen not in all-carbon chain
-      assertFalse(new SMSD(mol("N"), mol("CCCC"), new ChemOptions()).isSubstructure());
+      assertFalse(new MoleculePair(mol("N"), mol("CCCC"), new ChemOptions()).contains());
     }
 
     @Test
     void selfMatchSubstructure() throws Exception {
       IAtomContainer m = mol("c1ccc(O)cc1");
-      assertTrue(new SMSD(m, m, new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(m, m, new ChemOptions()).contains());
     }
 
     @Test
     void selfMatchMCS() throws Exception {
       IAtomContainer m = mol("c1ccc(O)cc1");
-      Map<Integer, Integer> mcs = new SMSD(m, m, new ChemOptions()).findMCS(true, true, 5000L);
+      Map<Integer, Integer> mcs = new MoleculePair(m, m, new ChemOptions()).mcsMapping( true, 5000L);
       assertEquals(m.getAtomCount(), mcs.size(), "Self-MCS should match all atoms");
     }
 
     @Test
     void noCommonAtomsMCS() throws Exception {
       // Methane (C) vs water (O) — no shared atoms with strict typing
-      SMSD smsd = new SMSD(mol("C"), mol("O"), new ChemOptions());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 2000L);
+      MoleculePair smsd = new MoleculePair(mol("C"), mol("O"), new ChemOptions());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 2000L);
       assertTrue(mcs.isEmpty(), "No common atoms between methane and water");
     }
 
     @Test
     void disconnectedQuery() throws Exception {
-      assertTrue(new SMSD(mol("C.N"), mol("CCN"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("C.N"), mol("CCN"), new ChemOptions()).contains());
     }
 
     @Test
     void disconnectedMCSInduced() throws Exception {
-      SMSD smsd = new SMSD(mol("CC.OO"), mol("CCOCC"), new ChemOptions());
-      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CC.OO"), mol("CCOCC"), new ChemOptions());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( false, 5000L);
       assertNotNull(mcs);
     }
 
     @Test
     void veryShortTimeout() throws Exception {
-      SMSD smsd = new SMSD(mol("c1ccccc1"), mol("c1ccc2ccccc2c1"), new ChemOptions());
+      MoleculePair smsd = new MoleculePair(mol("c1ccccc1"), mol("c1ccc2ccccc2c1"), new ChemOptions());
       // Should not hang; may or may not find result
-      smsd.findMCS(true, true, 1L);
+      smsd.mcsMapping( true, 1L);
     }
   }
 
@@ -1468,67 +1472,67 @@ public class CoreTest {
   class ApiTests {
     @Test
     void findAllSubstructuresCount() throws Exception {
-      SMSD smsd = new SMSD(mol("C"), mol("CCCCCC"), new ChemOptions());
-      List<Map<Integer, Integer>> maps = smsd.findAllSubstructures(100, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("C"), mol("CCCCCC"), new ChemOptions());
+      List<Map<Integer, Integer>> maps = smsd.substructureMappings(100, 5000L);
       assertEquals(6, maps.size(), "Single C should match all 6 positions in hexane");
     }
 
     @Test
     void findAllSubstructuresMaxLimit() throws Exception {
-      SMSD smsd = new SMSD(mol("C"), mol("CCCCCC"), new ChemOptions());
-      List<Map<Integer, Integer>> maps = smsd.findAllSubstructures(3, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("C"), mol("CCCCCC"), new ChemOptions());
+      List<Map<Integer, Integer>> maps = smsd.substructureMappings(3, 5000L);
       assertEquals(3, maps.size(), "Should respect maxSolutions limit");
     }
 
     @Test
     void isSubstructureWithStatsReturnsData() throws Exception {
-      SMSD smsd = new SMSD(mol("c1ccccc1"), mol("c1ccc2ccccc2c1"), new ChemOptions());
-      SearchEngine.SubstructureResult res = smsd.isSubstructureWithStats(5000L);
-      assertTrue(res.exists());
-      assertTrue(res.stats().nodesVisited() > 0, "Should report nodes visited");
-      assertTrue(res.stats().timeMillis() >= 0, "Should report elapsed time");
+      MoleculePair smsd = new MoleculePair(mol("c1ccccc1"), mol("c1ccc2ccccc2c1"), new ChemOptions());
+      SearchResult res = smsd.substructureResult(5000L);
+      assertTrue(res.found());
+      assertTrue(res.nodesVisited() > 0, "Should report nodes visited");
+      assertTrue(res.elapsedMillis() >= 0, "Should report elapsed time");
     }
 
     @Test
     void findAllSubstructuresWithStatsReturnsData() throws Exception {
-      SMSD smsd = new SMSD(mol("c1ccccc1"), mol("c1ccc(O)cc1"), new ChemOptions());
-      SearchEngine.SubstructureResult res = smsd.findAllSubstructuresWithStats(100, 5000L);
-      assertTrue(res.exists());
-      assertFalse(res.mappings().isEmpty());
-      assertTrue(res.stats().solutions() > 0);
+      MoleculePair smsd = new MoleculePair(mol("c1ccccc1"), mol("c1ccc(O)cc1"), new ChemOptions());
+      SearchResult res = smsd.substructureResults(100, 5000L);
+      assertTrue(res.found());
+      assertFalse(res.matches().isEmpty());
+      assertTrue(res.matches().size() > 0);
     }
 
     @Test
     void timeoutSetters() throws Exception {
-      SMSD smsd = new SMSD(mol("c1ccccc1"), mol("c1ccc2ccccc2c1"), new ChemOptions());
+      MoleculePair smsd = new MoleculePair(mol("c1ccccc1"), mol("c1ccc2ccccc2c1"), new ChemOptions());
       smsd.setSubstructureTimeoutMs(100L);
       smsd.setMCSTimeoutMs(100L);
       // Should work with custom timeouts
-      assertTrue(smsd.isSubstructure());
-      assertNotNull(smsd.findMCS());
+      assertTrue(smsd.contains());
+      assertNotNull(smsd.mcsMapping());
     }
 
     @Test
     void smartsConstructor() throws Exception {
       IAtomContainer target = mol("c1ccc(O)cc1");
-      SMSD smsd = new SMSD("[OH]", target, new ChemOptions());
-      assertTrue(smsd.isSubstructure(), "SMARTS [OH] should match phenol");
-      assertThrows(UnsupportedOperationException.class, smsd::getQuery, "SMARTS query should throw on getQuery()");
+      MoleculePair smsd = new MoleculePair("[OH]", target, new ChemOptions());
+      assertTrue(smsd.contains(), "SMARTS [OH] should match phenol");
+      assertThrows(UnsupportedOperationException.class, smsd::query, "SMARTS query should throw on getQuery()");
     }
 
     @Test
-    void smartsUnsupportedForEnumeration() throws Exception {
+    void smartsSupportsEnumeration() throws Exception {
       IAtomContainer target = mol("CCO");
-      SMSD smsd = new SMSD("[OH]", target, new ChemOptions());
-      assertThrows(UnsupportedOperationException.class, () -> smsd.findAllSubstructures(10, 1000L));
+      MoleculePair smsd = new MoleculePair("[OH]", target, new ChemOptions());
+      assertEquals(1,smsd.substructureMappings(10,1000L).size());
     }
 
     @Test
     void smilesConvenienceConstructor() throws Exception {
-      SMSD smsd = new SMSD("c1ccccc1", "c1ccc(O)cc1", new ChemOptions());
-      assertTrue(smsd.isSubstructure());
-      assertNotNull(smsd.getQuery());
-      assertNotNull(smsd.getTarget());
+      MoleculePair smsd = new MoleculePair("c1ccccc1", "c1ccc(O)cc1", new ChemOptions());
+      assertTrue(smsd.contains());
+      assertNotNull(smsd.query());
+      assertNotNull(smsd.target());
     }
   }
 
@@ -1586,8 +1590,8 @@ public class CoreTest {
   class MCSScenarioTests {
     @Test
     void inducedDisconnected() throws Exception {
-      SMSD smsd = new SMSD(mol("CC.CC"), mol("CCCCCC"), new ChemOptions());
-      Map<Integer, Integer> mcs = smsd.findMCS(true, false, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CC.CC"), mol("CCCCCC"), new ChemOptions());
+      Map<Integer, Integer> mcs = smsd.mcsMapping( false, 5000L);
       assertNotNull(mcs);
       assertTrue(mcs.size() >= 2);
     }
@@ -1595,9 +1599,9 @@ public class CoreTest {
     @Test
     void mccsVsMcis() throws Exception {
       // MCCS (non-induced) should be >= MCIS (induced)
-      SMSD smsd = new SMSD(mol("CCCC"), mol("CC=CC"), new ChemOptions());
-      Map<Integer, Integer> mccs = smsd.findMCS(false, true, 5000L);
-      Map<Integer, Integer> mcis = smsd.findMCS(true, true, 5000L);
+      MoleculePair smsd = new MoleculePair(mol("CCCC"), mol("CC=CC"), new ChemOptions());
+      Map<Integer, Integer> mccs = smsd.mcsMapping( true, 5000L);
+      Map<Integer, Integer> mcis = smsd.mcsMapping( true, 5000L);
       assertTrue(mccs.size() >= mcis.size(), "MCCS >= MCIS");
     }
 
@@ -1608,15 +1612,15 @@ public class CoreTest {
 
       ChemOptions strict = new ChemOptions();
       strict.ringMatchesRingOnly = true;
-      Map<Integer, Integer> strictRingToChain = new SMSD(ring, chain, strict).findMCS(false, true, 5000L);
-      Map<Integer, Integer> strictChainToRing = new SMSD(chain, ring, strict).findMCS(false, true, 5000L);
+      Map<Integer, Integer> strictRingToChain = new MoleculePair(ring, chain, strict).mcsMapping( true, 5000L);
+      Map<Integer, Integer> strictChainToRing = new MoleculePair(chain, ring, strict).mcsMapping( true, 5000L);
       assertTrue(strictRingToChain.isEmpty(), "Ring-constrained MCS should reject ring->chain");
       assertTrue(strictChainToRing.isEmpty(), "Ring-constrained MCS should reject chain->ring");
 
       ChemOptions relaxed = new ChemOptions();
       relaxed.ringMatchesRingOnly = false;
-      Map<Integer, Integer> relaxedRingToChain = new SMSD(ring, chain, relaxed).findMCS(false, true, 5000L);
-      Map<Integer, Integer> relaxedChainToRing = new SMSD(chain, ring, relaxed).findMCS(false, true, 5000L);
+      Map<Integer, Integer> relaxedRingToChain = new MoleculePair(ring, chain, relaxed).mcsMapping( true, 5000L);
+      Map<Integer, Integer> relaxedChainToRing = new MoleculePair(chain, ring, relaxed).mcsMapping( true, 5000L);
       assertEquals(5, relaxedRingToChain.size(), "Relaxed ring matching should recover the 5-atom path MCS");
       assertEquals(5, relaxedChainToRing.size(), "Relaxed ring matching should recover the 5-atom path MCS");
     }
@@ -1628,24 +1632,24 @@ public class CoreTest {
 
       ChemOptions strict = new ChemOptions();
       strict.ringMatchesRingOnly = true;
-      assertFalse(new SMSD(chain, ring, strict).isSubstructure(5000L),
+      assertFalse(new MoleculePair(chain, ring, strict).contains(5000L),
           "Ring-constrained substructure should reject chain->ring matches");
 
       ChemOptions relaxed = new ChemOptions();
       relaxed.ringMatchesRingOnly = false;
-      assertTrue(new SMSD(chain, ring, relaxed).isSubstructure(5000L),
+      assertTrue(new MoleculePair(chain, ring, relaxed).contains(5000L),
           "Relaxed ring matching should allow chain->ring substructure matches");
     }
 
     @Test
     void largeMolMCS() throws Exception {
       // Aspirin vs ibuprofen — share aromatic ring
-      SMSD smsd =
-          new SMSD(
+      MoleculePair smsd =
+          new MoleculePair(
               mol("CC(=O)Oc1ccccc1C(=O)O"), // aspirin
               mol("CC(C)Cc1ccc(C(C)C(=O)O)cc1"), // ibuprofen
               new ChemOptions());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 10000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 10000L);
       assertTrue(mcs.size() >= 6, "Should share at least a benzene ring");
     }
   }
@@ -1661,33 +1665,33 @@ public class CoreTest {
     void caffeineContainsPurine() throws Exception {
       // Purine core in caffeine
       assertTrue(
-          new SMSD(
+          new MoleculePair(
                   mol("c1ncnc2[nH]cnc12"), // purine
                   mol("Cn1c(=O)c2c(ncn2C)n(C)c1=O"), // caffeine
                   ChemOptions.profile("compat-substruct"))
-              .isSubstructure());
+              .contains());
     }
 
     @Test
     void diazepamVsClonazepam() throws Exception {
       // Benzodiazepine core shared
-      SMSD smsd =
-          new SMSD(
-              mol("c1ccc2c(c1)C(=NCC(=O)N2)c1ccccc1Cl"), // diazepam
+      MoleculePair smsd =
+          new MoleculePair(
+              mol("CN1C(=O)CN=C(c2ccccc2)c2cc(Cl)ccc21"), // diazepam
               mol("c1cc2c(cc1[N+](=O)[O-])C(=NCC(=O)N2)c1ccccc1Cl"), // clonazepam
               new ChemOptions());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 15000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 15000L);
       assertTrue(mcs.size() >= 15, "Benzodiazepine core should be shared");
     }
 
     @Test
     void ibuprofenVsNaproxen() throws Exception {
-      SMSD smsd =
-          new SMSD(
+      MoleculePair smsd =
+          new MoleculePair(
               mol("CC(C)Cc1ccc(C(C)C(=O)O)cc1"), // ibuprofen
               mol("COc1ccc2cc(C(C)C(=O)O)ccc2c1"), // naproxen
               new ChemOptions());
-      Map<Integer, Integer> mcs = smsd.findMCS(false, true, 10000L);
+      Map<Integer, Integer> mcs = smsd.mcsMapping( true, 10000L);
       assertTrue(mcs.size() >= 8, "Share propionic acid + aromatic");
     }
   }
@@ -1705,7 +1709,7 @@ public class CoreTest {
     void nullQueryMolecule() {
       IAtomContainer target = assertDoesNotThrow(() -> mol("C"));
       ChemOptions opts = new ChemOptions();
-      assertThrows(NullPointerException.class, () -> new SMSD((IAtomContainer) null, target, opts));
+      assertThrows(NullPointerException.class, () -> new MoleculePair((IAtomContainer) null, target, opts));
     }
 
     @Test
@@ -1713,7 +1717,7 @@ public class CoreTest {
     void nullTargetMolecule() {
       IAtomContainer query = assertDoesNotThrow(() -> mol("C"));
       ChemOptions opts = new ChemOptions();
-      assertThrows(NullPointerException.class, () -> new SMSD(query, (IAtomContainer) null, opts));
+      assertThrows(NullPointerException.class, () -> new MoleculePair(query, (IAtomContainer) null, opts));
     }
 
     @Test
@@ -1722,28 +1726,28 @@ public class CoreTest {
       IAtomContainer q = SP.parseSmiles("");
       IAtomContainer t = SP.parseSmiles("");
       ChemOptions opts = new ChemOptions();
-      SMSD smsd = new SMSD(q, t, opts);
+      MoleculePair smsd = new MoleculePair(q, t, opts);
       // Should not throw
-      smsd.isSubstructure();
+      smsd.contains();
     }
 
     @Test
     @DisplayName("Single atom C in single atom C is substructure")
     void singleAtomCinC() throws Exception {
-      assertTrue(new SMSD(mol("C"), mol("C"), new ChemOptions()).isSubstructure());
+      assertTrue(new MoleculePair(mol("C"), mol("C"), new ChemOptions()).contains());
     }
 
     @Test
     @DisplayName("Single atom C in single atom N is not substructure")
     void singleAtomCinN() throws Exception {
-      assertFalse(new SMSD(mol("C"), mol("N"), new ChemOptions()).isSubstructure());
+      assertFalse(new MoleculePair(mol("C"), mol("N"), new ChemOptions()).contains());
     }
 
     @Test
     @DisplayName("Query larger than target: naphthalene not in benzene")
     void queryLargerThanTarget() throws Exception {
       assertFalse(
-          new SMSD(mol("c1ccc2ccccc2c1"), mol("c1ccccc1"), new ChemOptions()).isSubstructure());
+          new MoleculePair(mol("c1ccc2ccccc2c1"), mol("c1ccccc1"), new ChemOptions()).contains());
     }
 
     @Test
@@ -1752,11 +1756,11 @@ public class CoreTest {
       IAtomContainer q = mol("c1ccc2ccccc2c1"); // naphthalene
       IAtomContainer t = mol("c1ccc2cc3ccccc3cc2c1"); // anthracene
       ChemOptions opts = new ChemOptions();
-      SMSD smsd = new SMSD(q, t, opts);
+      MoleculePair smsd = new MoleculePair(q, t, opts);
       smsd.setSubstructureTimeoutMs(1L);
       long start = System.currentTimeMillis();
       // May or may not find the result, but must not hang
-      smsd.isSubstructure();
+      smsd.contains();
       long elapsed = System.currentTimeMillis() - start;
       assertTrue(elapsed < 5000, "Should complete within 5 seconds, took " + elapsed + "ms");
     }
@@ -1767,9 +1771,9 @@ public class CoreTest {
       IAtomContainer water = SP.parseSmiles("[H]O[H]");
       IAtomContainer target = SP.parseSmiles("[H]O[H]");
       ChemOptions opts = new ChemOptions();
-      SMSD smsd = new SMSD(water, target, opts);
+      MoleculePair smsd = new MoleculePair(water, target, opts);
       // Should parse and check without error
-      boolean result = smsd.isSubstructure();
+      boolean result = smsd.contains();
       assertTrue(result, "Water should be substructure of itself");
     }
 
@@ -1779,9 +1783,9 @@ public class CoreTest {
       IAtomContainer q = mol("C.C.C");
       IAtomContainer t = mol("CCCC");
       ChemOptions opts = new ChemOptions();
-      SMSD smsd = new SMSD(q, t, opts);
+      MoleculePair smsd = new MoleculePair(q, t, opts);
       // Should handle gracefully without exception
-      smsd.isSubstructure();
+      smsd.contains();
     }
 
     @Test
@@ -1792,9 +1796,9 @@ public class CoreTest {
       IAtomContainer q = SP.parseSmiles(longChain100);
       IAtomContainer t = SP.parseSmiles(longChain200);
       ChemOptions opts = new ChemOptions();
-      SMSD smsd = new SMSD(q, t, opts);
+      MoleculePair smsd = new MoleculePair(q, t, opts);
       long start = System.currentTimeMillis();
-      boolean result = smsd.isSubstructure();
+      boolean result = smsd.contains();
       long elapsed = System.currentTimeMillis() - start;
       assertTrue(result, "C*100 should be substructure of C*200");
       assertTrue(elapsed < 5000, "Should complete within 5 seconds, took " + elapsed + "ms");
@@ -1867,73 +1871,36 @@ public class CoreTest {
     }
   }
 
-  // ======================================================================
-  // Profiled MCS (Phase 0 Instrumentation)
-  // ======================================================================
-
   @Nested
-  @DisplayName("MCS Stage Profiling")
-  class MCSStageProfilingTest {
-
+  @DisplayName("MCS completion and telemetry")
+  class MCSCompletionTest {
     @Test
-    @DisplayName("findMCSProfiledFromSmiles returns valid timers")
-    void profiledFromSmiles_validTimers() throws Exception {
-      SearchEngine.MCSProfiledResult pr = SearchEngine.findMCSProfiledFromSmiles(
-          "c1ccccc1", "c1ccc(O)cc1", new ChemOptions(), new SearchEngine.MCSOptions());
-
-      assertNotNull(pr, "profiled result must not be null");
-      assertNotNull(pr.result(), "MCSResult must not be null");
-      assertNotNull(pr.timers(), "timers must not be null");
-
-      SearchEngine.MCSStageTimers t = pr.timers();
-      assertTrue(t.totalUs() > 0, "totalUs must be positive");
-      assertTrue(t.orientationUs() >= 0, "orientationUs must be non-negative");
-      assertTrue(t.seedsUs() >= 0, "seedsUs must be non-negative");
-      assertTrue(t.mcSplitUs() >= 0, "mcSplitUs must be non-negative");
-      assertTrue(t.bkUs() >= 0, "bkUs must be non-negative");
-      assertTrue(t.mcGregorUs() >= 0, "mcGregorUs must be non-negative");
-      assertTrue(t.repairUs() >= 0, "repairUs must be non-negative");
-
-      // The mapping should be non-empty for benzene vs phenol
-      assertTrue(pr.result().size() >= 6, "benzene/phenol MCS should be >= 6 atoms");
+    void completedPairReportsMappingAndCounters() throws Exception {
+      SearchResult result=MCS.find(mol("c1ccccc1")).match(mol("c1ccc(O)cc1"));
+      assertNotNull(result);
+      assertTrue(result.optimal());
+      assertTrue(result.complete());
+      assertEquals(SearchResult.Status.Completed,result.status());
+      assertEquals(6,result.matches().get(0).atomCount());
+      assertTrue(result.nodesVisited()>0);
+      assertTrue(result.elapsedMillis()>=0);
     }
-
     @Test
-    @DisplayName("findMCSProfiled (MolGraph API) returns valid timers")
-    void profiledMolGraph_validTimers() throws Exception {
-      SmilesParser sp = new SmilesParser(SilentChemObjectBuilder.getInstance());
-      IAtomContainer mol1 = sp.parseSmiles("c1ccccc1");
-      IAtomContainer mol2 = sp.parseSmiles("c1ccc(O)cc1");
-
-      SearchEngine.MCSProfiledResult pr = SearchEngine.findMCSProfiled(mol1, mol2, new ChemOptions(), new SearchEngine.MCSOptions());
-
-      assertNotNull(pr);
-      SearchEngine.MCSStageTimers t = pr.timers();
-      assertTrue(t.totalUs() > 0, "totalUs must be positive");
-      assertTrue(t.orientationUs() >= 0, "orientationUs must be non-negative");
-      assertTrue(t.seedsUs() >= 0, "seedsUs must be non-negative");
-      assertTrue(t.mcSplitUs() >= 0, "mcSplitUs must be non-negative");
-      assertTrue(t.bkUs() >= 0, "bkUs must be non-negative");
-      assertTrue(t.mcGregorUs() >= 0, "mcGregorUs must be non-negative");
-      assertTrue(t.repairUs() >= 0, "repairUs must be non-negative");
+    void cdkAndGraphEntryPointsReturnTheSameObjective() throws Exception {
+      IAtomContainer query=mol("c1ccccc1"),target=mol("c1ccc(O)cc1");
+      SearchResult cdk=MCS.find(query).match(target);
+      SearchResult graph=MCS.find(new MolGraph(query)).match(new MolGraph(target));
+      assertEquals(cdk.score(),graph.score());
+      assertEquals(cdk.matches(),graph.matches());
+      assertTrue(graph.nodesVisited()>0);
     }
-
     @Test
-    @DisplayName("bestAfter* fields are non-negative and consistent")
-    void profiledBestAfterFields() throws Exception {
-      SearchEngine.MCSProfiledResult pr = SearchEngine.findMCSProfiledFromSmiles(
-          "CC(=O)Oc1ccccc1C(O)=O", "CC(=O)Oc1ccccc1",
-          new ChemOptions(), new SearchEngine.MCSOptions());
-
-      SearchEngine.MCSStageTimers t = pr.timers();
-      assertTrue(t.bestAfterGreedy() >= 0, "bestAfterGreedy must be non-negative");
-      assertTrue(t.bestAfterSeed() >= 0, "bestAfterSeed must be non-negative");
-      assertTrue(t.bestAfterBK() >= 0, "bestAfterBK must be non-negative");
-      assertTrue(t.bestAfterMcGregor() >= 0, "bestAfterMcGregor must be non-negative");
-      // The final result size should be >= the best seen at any intermediate stage
-      int finalSize = pr.result().size();
-      assertTrue(finalSize >= t.bestAfterGreedy(), "final >= bestAfterGreedy");
-      assertTrue(finalSize >= t.bestAfterSeed(), "final >= bestAfterSeed");
+    void stoppedSearchReportsAnUnprovenOutcome() throws Exception {
+      SearchResult result=MCS.find(mol("CC(=O)Oc1ccccc1C(O)=O")).withTimeout(0).match(mol("CC(=O)Oc1ccccc1"));
+      assertEquals(SearchResult.Status.TimedOut,result.status());
+      assertFalse(result.optimal());
+      assertFalse(result.complete());
+      assertTrue(result.elapsedMillis()>=0);
     }
   }
 }

@@ -7,6 +7,8 @@
 // See the NOTICE file for attribution, trademark, and algorithm IP terms.
 #pragma once
 #include "smsd/mol_graph.hpp"
+#include "smsd/mol_reader.hpp"
+#include "smsd/layout.hpp"
 #include <cmath>
 #include <sstream>
 #include <algorithm>
@@ -35,7 +37,7 @@ inline Vec2 norm(Vec2 a) { double l=len(a); return l>1e-9? Vec2{a.x/l,a.y/l}: Ve
 inline Vec2 perp(Vec2 a) { return {-a.y, a.x}; }
 
 // ════════════════════════════════════════════════════════════════════════════
-//  Color
+//  Colour
 // ════════════════════════════════════════════════════════════════════════════
 struct Color { int r, g, b; double a; };
 
@@ -50,7 +52,7 @@ inline std::string rgb(Color c) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-//  Jmol/CPK Element Color Palette (publication standard)
+//  Jmol/CPK Element Colour Palette (publication standard)
 // ════════════════════════════════════════════════════════════════════════════
 namespace jmol {
     constexpr Color H   = {255,255,255, 1.0};
@@ -84,15 +86,15 @@ namespace jmol {
 
 // ── Default publication palette ────────────────────────────────────────────
 namespace palette {
-    // Highlight colors
+    // Highlight colours
     constexpr Color MATCH_FILL   = { 76,175, 80, 0.25};  // translucent green
     constexpr Color MATCH_STROKE = { 46,125, 50, 1.0};   // deep green
-    constexpr Color UNMATCH_FILL = {158,158,158, 0.10};   // very light gray
-    // Structural colors
+    constexpr Color UNMATCH_FILL = {158,158,158, 0.10};   // very light grey
+    // Structural colours
     constexpr Color BOND         = { 33, 33, 33, 1.0};   // near-black
     constexpr Color MAPNUM       = { 21,101,192, 1.0};   // blue
     constexpr Color BACKGROUND   = {255,255,255, 1.0};   // white
-    // Highlight color set for multi-fragment / multi-match
+    // Highlight colour set for multi-fragment / multi-match
     constexpr Color HIGHLIGHT_1  = { 76,175, 80, 0.30};  // green
     constexpr Color HIGHLIGHT_2  = { 33,150,243, 0.30};  // blue
     constexpr Color HIGHLIGHT_3  = {255,152,  0, 0.30};  // orange
@@ -101,7 +103,7 @@ namespace palette {
     constexpr Color HIGHLIGHT_6  = {233, 30, 99, 0.30};  // pink
 }
 
-// Element color by atomic number (Jmol standard, C darkened for skeletal)
+// Element colour by atomic number (Jmol standard, C darkened for skeletal)
 inline Color atomColor(int Z) {
     switch (Z) {
         case  1: return jmol::H;
@@ -122,7 +124,7 @@ inline Color atomColor(int Z) {
         case 26: return jmol::Fe;
         case 29: return jmol::Cu;
         case 30: return jmol::Zn;
-        default: return {96,125,139, 1.0};  // blue-gray
+        default: return {96,125,139, 1.0};  // blue-grey
     }
 }
 
@@ -200,13 +202,13 @@ struct DepictOptions {
     std::string fontFamily = "Arial, Helvetica, sans-serif";
     Color  backgroundColor = palette::BACKGROUND;
 
-    // ── Custom colors (override defaults) ──
+    // ── Custom colours (override defaults) ──
     Color  bondColor       = palette::BOND;
     Color  matchFill       = palette::MATCH_FILL;
     Color  matchStroke     = palette::MATCH_STROKE;
-    std::map<int, Color> atomColorOverrides;   // Z -> Color
-    std::map<int, Color> atomHighlightColors;  // atom index -> Color
-    std::map<std::pair<int,int>, Color> bondHighlightColors; // bond -> Color
+    std::map<int, Color> atomColorOverrides;   // Z -> Colour
+    std::map<int, Color> atomHighlightColors;  // atom index -> Colour
+    std::map<std::pair<int,int>, Color> bondHighlightColors; // bond -> Colour
 
     // ── Computed values (resolved from ACS ratios) ──
     double lineWidth_() const {
@@ -243,238 +245,49 @@ struct DepictOptions {
 //  SSSR Ring Detection (for layout and double-bond offset)
 // ════════════════════════════════════════════════════════════════════════════
 inline std::vector<std::vector<int>> findLayoutRings(const MolGraph& g) {
-    std::vector<std::vector<int>> rings;
-    int n = g.n;
-    if (n == 0) return rings;
-
-    std::vector<int> parent(n, -1);
-    std::vector<int> depth(n, -1);
-    std::vector<bool> visited(n, false);
-
-    for (int start = 0; start < n; start++) {
-        if (visited[start]) continue;
-        std::vector<int> queue = {start};
-        visited[start] = true;
-        depth[start] = 0;
-        for (size_t qi = 0; qi < queue.size(); qi++) {
-            int u = queue[qi];
-            for (int v : g.neighbors[u]) {
-                if (!visited[v]) {
-                    visited[v] = true;
-                    parent[v] = u;
-                    depth[v] = depth[u] + 1;
-                    queue.push_back(v);
-                } else if (v != parent[u] && depth[v] <= depth[u]) {
-                    std::vector<int> ring;
-                    int a = u, b = v;
-                    std::vector<int> pathA, pathB;
-                    while (a != -1) { pathA.push_back(a); a = parent[a]; }
-                    while (b != -1) { pathB.push_back(b); b = parent[b]; }
-                    std::set<int> setA(pathA.begin(), pathA.end());
-                    int lca = -1;
-                    for (int x : pathB) { if (setA.count(x)) { lca = x; break; } }
-                    if (lca == -1) continue;
-                    for (int x : pathA) { ring.push_back(x); if (x == lca) break; }
-                    std::vector<int> tail;
-                    for (int x : pathB) { if (x == lca) break; tail.push_back(x); }
-                    std::reverse(tail.begin(), tail.end());
-                    for (int x : tail) ring.push_back(x);
-                    if (ring.size() >= 3 && ring.size() <= 8) {
-                        rings.push_back(ring);
-                    }
-                }
-            }
-        }
-    }
-
-    // Deduplicate by sorted atom set
-    std::vector<std::vector<int>> unique;
-    std::set<std::vector<int>> seen;
-    for (auto& r : rings) {
-        auto sorted = r;
-        std::sort(sorted.begin(), sorted.end());
-        if (!seen.count(sorted)) {
-            seen.insert(sorted);
-            unique.push_back(r);
-        }
-    }
-    return unique;
+    return computeSSSR(g);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
 //  2D Layout Engine (ring-first + chain zig-zag + force refinement)
 // ════════════════════════════════════════════════════════════════════════════
 inline std::vector<Vec2> layout2D(const MolGraph& g, const DepictOptions& opts = {}) {
-    int n = g.n;
-    std::vector<Vec2> pos(n, {0, 0});
-    if (n == 0) return pos;
-    if (n == 1) return pos;
-
-    double BL = opts.bondLength;
-    std::vector<bool> placed(n, false);
-
-    // Step 1: Place rings
-    auto rings = findLayoutRings(g);
-    std::sort(rings.begin(), rings.end(),
-        [](const auto& a, const auto& b) { return a.size() > b.size(); });
-
-    for (auto& ring : rings) {
-        int sz = (int)ring.size();
-        int anchorIdx = -1;
-        for (int i = 0; i < sz; i++)
-            if (placed[ring[i]]) { anchorIdx = i; break; }
-
-        if (anchorIdx == -1) {
-            double cx = 0, cy = 0;
-            for (int i = 0; i < n; i++)
-                if (placed[i]) { cx = pos[i].x + BL * 2.5; cy = pos[i].y; break; }
-            double R = BL / (2.0 * std::sin(detail_depict::PI / sz));
-            for (int i = 0; i < sz; i++) {
-                double angle = 2.0 * detail_depict::PI * i / sz - detail_depict::PI / 2.0;
-                pos[ring[i]] = {cx + R * std::cos(angle), cy + R * std::sin(angle)};
-                placed[ring[i]] = true;
-            }
-        } else {
-            int a1 = ring[anchorIdx];
-            int a2 = -1;
-            for (int i = 0; i < sz; i++) {
-                int j = ring[i];
-                if (j != a1 && placed[j]) {
-                    int prev = ring[(i - 1 + sz) % sz];
-                    int next = ring[(i + 1) % sz];
-                    if (prev == a1 || next == a1) { a2 = j; break; }
-                }
-            }
-            if (a2 == -1) {
-                double R = BL / (2.0 * std::sin(detail_depict::PI / sz));
-                double cx = pos[a1].x + BL;
-                for (int i = 0; i < sz; i++) {
-                    if (!placed[ring[i]]) {
-                        double angle = 2.0 * detail_depict::PI * i / sz - detail_depict::PI / 2.0;
-                        pos[ring[i]] = {cx + R * std::cos(angle), pos[a1].y + R * std::sin(angle)};
-                        placed[ring[i]] = true;
-                    }
-                }
-            } else {
-                Vec2 mid = (pos[a1] + pos[a2]) * 0.5;
-                Vec2 dir = norm(pos[a2] - pos[a1]);
-                Vec2 outward = perp(dir);
-                double R = BL / (2.0 * std::sin(detail_depict::PI / sz));
-                Vec2 center1 = mid + outward * R * 0.8;
-                Vec2 center2 = mid - outward * R * 0.8;
-                // Pick side farther from average of already-placed ring atoms
-                double score1 = 0, score2 = 0;
-                int cnt = 0;
-                for (int i = 0; i < sz; i++) {
-                    if (placed[ring[i]] && ring[i] != a1 && ring[i] != a2) {
-                        score1 += len(pos[ring[i]] - center1);
-                        score2 += len(pos[ring[i]] - center2);
-                        cnt++;
-                    }
-                }
-                Vec2 center = (cnt == 0 || score1 >= score2) ? center1 : center2;
-                double startAngle = std::atan2(pos[a1].y - center.y, pos[a1].x - center.x);
-                int unplaced = 0;
-                for (int i = 0; i < sz; i++) if (!placed[ring[i]]) unplaced++;
-                int k = 0;
-                for (int i = 0; i < sz; i++) {
-                    if (!placed[ring[i]]) {
-                        double angle = startAngle + 2.0 * detail_depict::PI * (++k) / sz;
-                        pos[ring[i]] = {center.x + R * std::cos(angle), center.y + R * std::sin(angle)};
-                        placed[ring[i]] = true;
-                    }
-                }
-            }
-        }
-    }
-
-    // Step 2: Place chain atoms (DFS with 120-degree zig-zag)
-    std::vector<int> stack;
-    for (int i = 0; i < n; i++) if (placed[i]) stack.push_back(i);
-    if (stack.empty()) {
-        pos[0] = {0, 0};
-        placed[0] = true;
-        stack.push_back(0);
-    }
-
-    while (!stack.empty()) {
-        int u = stack.back(); stack.pop_back();
-        int branchIdx = 0;
-        for (int v : g.neighbors[u]) {
-            if (placed[v]) continue;
-            branchIdx++;
-            double sumSin = 0, sumCos = 0;
-            int usedCount = 0;
-            for (int w : g.neighbors[u]) {
-                if (placed[w]) {
-                    double ang = std::atan2(pos[w].y - pos[u].y, pos[w].x - pos[u].x);
-                    sumSin += std::sin(ang);
-                    sumCos += std::cos(ang);
-                    usedCount++;
-                }
-            }
-            double baseAngle = usedCount > 0 ? std::atan2(sumSin, sumCos) + detail_depict::PI : 0;
-            double spread = 2.0 * detail_depict::PI / 3.0;
-            double angle = baseAngle + (branchIdx - 1) * spread
-                / std::max(1, (int)g.neighbors[u].size() - 1);
-            pos[v] = {pos[u].x + BL * std::cos(angle), pos[u].y + BL * std::sin(angle)};
-            placed[v] = true;
-            stack.push_back(v);
-        }
-    }
-
-    // Step 3: Force-directed refinement (non-bonded repulsion only)
-    for (int iter = 0; iter < 50; iter++) {
-        bool moved = false;
-        for (int i = 0; i < n; i++) {
-            Vec2 force = {0, 0};
-            for (int j = 0; j < n; j++) {
-                if (i == j) continue;
-                bool bonded = false;
-                for (int nb : g.neighbors[i]) if (nb == j) { bonded = true; break; }
-                if (bonded) continue;
-                Vec2 d = pos[i] - pos[j];
-                double dist = len(d);
-                if (dist < BL * 0.8 && dist > 1e-6) {
-                    force = force + norm(d) * ((BL * 0.8 - dist) * 0.3);
-                    moved = true;
-                }
-            }
-            double damp = g.ring[i] ? 0.1 : 0.5;
-            pos[i] = pos[i] + force * damp;
-        }
-        if (!moved) break;
-    }
-
-    // Step 4: Jitter coincident atoms
-    const double overlapThresh = BL * 0.3;
-    for (int iter = 0; iter < 20; iter++) {
-        bool collision = false;
-        for (int i = 0; i < n; i++) {
-            for (int j = i + 1; j < n; j++) {
-                Vec2 d = pos[i] - pos[j];
-                double dist = len(d);
-                if (dist < overlapThresh) {
-                    collision = true;
-                    Vec2 dir;
-                    if (dist > 1e-9) dir = norm(d);
-                    else dir = {std::cos(i * 2.654 + j * 1.337), std::sin(i * 2.654 + j * 1.337)};
-                    double push = (overlapThresh - dist) * 0.5 + 0.01;
-                    pos[i] = pos[i] + dir * push;
-                    pos[j] = pos[j] - dir * push;
-                }
-            }
-        }
-        if (!collision) break;
-    }
-
-    return pos;
+    const auto coordinates = generateCoords2D(g, opts.bondLength);
+    std::vector<Vec2> result;
+    result.reserve(coordinates.size());
+    for (const auto& point : coordinates) result.push_back({point.x, point.y});
+    return result;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
 //  Label Builder (element + implicit H + charge, with text width estimate)
 // ════════════════════════════════════════════════════════════════════════════
 namespace detail_depict {
+
+/** Preserve ordinary font lists without allowing CSS or SVG delimiters. */
+inline std::string fontFamily(const std::string& input) {
+    std::string family;
+    for (unsigned char character : input) {
+        if ((character >= 'A' && character <= 'Z') || (character >= 'a' && character <= 'z')
+                || (character >= '0' && character <= '9') || character >= 0x80
+                || character == ' ' || character == ',' || character == '-' || character == '_'
+                || character == '.' || character == '\'' || character == '"') family += character;
+    }
+    return family.find_first_not_of(" ,.'\"_-") == std::string::npos
+        ? "Arial, Helvetica, sans-serif" : family;
+}
+
+/** Resolve Kekule bond orders on a local copy of an aromatic graph. */
+inline const MolGraph& bondStyle(const MolGraph& graph, const DepictOptions& options, MolGraph& storage) {
+    if (options.aromaticStyle != AromaticStyle::KEKULE
+            || std::none_of(graph.aromatic.begin(), graph.aromatic.end(), [](uint8_t value) { return value != 0; })) return graph;
+    {
+        const std::lock_guard<std::recursive_mutex> cacheLock(graph.lazyCacheMutex());
+        storage = graph;
+    }
+    if (!storage.kekulize()) throw std::invalid_argument("Cannot assign Kekule bonds for depiction");
+    return storage;
+}
 
 struct AtomLabel {
     std::string symbol;         // "N", "O", "S", etc.
@@ -584,13 +397,15 @@ struct DepictResult {
 };
 
 inline DepictResult depictSVG(
-    const MolGraph& g,
+    const MolGraph& input,
     const std::vector<Vec2>& pos,
     const std::map<int,int>& mapping = {},          // atom index -> map number
     const std::set<int>& highlightAtoms = {},
     const std::set<std::pair<int,int>>& highlightBonds = {},
     const DepictOptions& opts = {}
 ) {
+    MolGraph styled;
+    const MolGraph& g = detail_depict::bondStyle(input, opts, styled);
     if (g.n == 0) return {"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1\" height=\"1\"/>", 1, 1};
 
     // Precompute rings for double bond offset
@@ -624,7 +439,7 @@ inline DepictResult depictSVG(
     int W = opts.width  > 0 ? opts.width  : std::max(100, (int)(maxX - minX + 2 * pad));
     int H = opts.height > 0 ? opts.height : std::max(100, (int)(maxY - minY + 2 * pad));
 
-    // If user specifies fixed size, center the drawing
+    // If user specifies fixed size, centre the drawing
     double offsetX = pad - minX, offsetY = pad - minY;
     if (opts.width > 0) offsetX = (opts.width  - (maxX - minX)) * 0.5 - minX;
     if (opts.height > 0) offsetY = (opts.height - (maxY - minY)) * 0.5 - minY;
@@ -632,7 +447,7 @@ inline DepictResult depictSVG(
     auto tx = [&](double x) { return x + offsetX; };
     auto ty = [&](double y) { return y + offsetY; };
 
-    // Get atom color (respecting overrides)
+    // Get atom colour (respecting overrides)
     auto getAtomColor = [&](int idx) -> Color {
         int Z = g.atomicNum[idx];
         auto it = opts.atomColorOverrides.find(Z);
@@ -666,7 +481,7 @@ inline DepictResult depictSVG(
     // Defs: styles and markers
     svg << "<defs>\n";
     svg << "  <style>\n";
-    svg << "    text { font-family: " << opts.fontFamily << "; }\n";
+    svg << "    text { font-family: " << detail_depict::fontFamily(opts.fontFamily) << "; }\n";
     svg << "    .atom { dominant-baseline: central; text-anchor: middle; font-weight: bold; }\n";
     svg << "    .sub  { dominant-baseline: central; font-weight: bold; }\n";
     svg << "    .map  { dominant-baseline: central; text-anchor: start; font-weight: bold; }\n";
@@ -688,6 +503,14 @@ inline DepictResult depictSVG(
     }
 
     // ── Layer 2: Bonds ────────────────────────────────────────────────────
+    std::unordered_map<int64_t, std::pair<int, int>> stereoWedges;
+    if (std::any_of(g.tetraChirality.begin(), g.tetraChirality.end(), [](int winding) { return winding != 0; })) {
+        std::vector<Point2D> coordinates;
+        coordinates.reserve(pos.size());
+        // SVG's vertical axis points down; the winding calculation uses y up.
+        for (const auto& point : pos) coordinates.push_back({point.x, -point.y});
+        stereoWedges = mol_detail::tetrahedralWedges(g, coordinates);
+    }
     std::set<std::pair<int,int>> drawnBonds;
     for (int i = 0; i < g.n; i++) {
         for (int j : g.neighbors[i]) {
@@ -721,24 +544,17 @@ inline DepictResult depictSVG(
 
             // Check for stereo bond type
             BondStereoType stereo = BondStereoType::NONE;
-            if (!g.tetraChirality.empty()) {
-                // Wedge: if atom i is a stereo center and j is a substituent
-                if (g.tetraChirality[i] != 0 && order == 1) {
-                    // Assign wedge direction based on neighbor ordering
-                    int nbIdx = 0;
-                    for (int k = 0; k < (int)g.neighbors[i].size(); k++) {
-                        if (g.neighbors[i][k] == j) { nbIdx = k; break; }
-                    }
-                    if (nbIdx == 0) stereo = BondStereoType::WEDGE_UP;
-                    else if (nbIdx == 1) stereo = BondStereoType::WEDGE_DOWN;
-                }
+            const auto wedge = stereoWedges.find(MolGraph::bondKey(i, j));
+            if (wedge != stereoWedges.end()) {
+                stereo = wedge->second.second == 1 ? BondStereoType::WEDGE_UP : BondStereoType::WEDGE_DOWN;
+                if (wedge->second.first == j) std::swap(cp1, cp2);
             }
 
             Vec2 bondDir = norm(cp2 - cp1);
             Vec2 bondPerp = perp(bondDir);
 
             if (stereo == BondStereoType::WEDGE_UP) {
-                // Solid filled wedge: narrow at stereo center, wide at substituent
+                // Solid filled wedge: narrow at stereo centre, wide at substituent
                 Vec2 w = bondPerp * (BW * 0.5);
                 svg << "<polygon points=\""
                     << cp1.x << "," << cp1.y << " "
@@ -747,7 +563,7 @@ inline DepictResult depictSVG(
                     << "\" fill=\"" << rgb(bondCol) << "\" stroke=\"none\"/>\n";
             }
             else if (stereo == BondStereoType::WEDGE_DOWN) {
-                // Dashed wedge: series of stripes widening from stereo center
+                // Dashed wedge: series of stripes widening from stereo centre
                 int nStripes = std::max(4, (int)(len(cp2 - cp1) / opts.hashSpacing_()));
                 for (int s = 0; s < nStripes; s++) {
                     double t = (s + 0.5) / nStripes;
@@ -773,13 +589,13 @@ inline DepictResult depictSVG(
                 bool inRing = detail_depict::bondInRing(i, j, rings, pos, ringC);
 
                 if (inRing) {
-                    // Full line on bond axis + shorter offset line toward ring center
+                    // Full line on bond axis + shorter offset line toward ring centre
                     svg << "<line x1=\"" << cp1.x << "\" y1=\"" << cp1.y
                         << "\" x2=\"" << cp2.x << "\" y2=\"" << cp2.y
                         << "\" stroke=\"" << rgb(bondCol) << "\" stroke-width=\"" << width
                         << "\" stroke-linecap=\"round\"/>\n";
 
-                    // Offset toward ring center
+                    // Offset toward ring centre
                     Vec2 bondMid = (p1 + p2) * 0.5;
                     Vec2 toCenter = norm(Vec2{tx(ringC.x), ty(ringC.y)} - bondMid);
                     double offsetDist = BS;
@@ -812,7 +628,7 @@ inline DepictResult depictSVG(
                 }
             }
             else if (order == 3) {
-                // Triple bond: center + two offset lines
+                // Triple bond: centre + two offset lines
                 Vec2 off = bondPerp * BS;
                 svg << "<line x1=\"" << cp1.x << "\" y1=\"" << cp1.y
                     << "\" x2=\"" << cp2.x << "\" y2=\"" << cp2.y
@@ -945,19 +761,21 @@ inline DepictResult depictSVG(
             }
         }
 
-        // Atom map number (superscript, top-right, blue)
-        if (opts.showMapNumbers && mapping.count(i)) {
-            svg << "<text x=\"" << (x + lbl.textWidth * 0.5 + 2) << "\" y=\"" << (y - FS * 0.5)
-                << "\" class=\"map\" font-size=\"" << MNS
-                << "\" fill=\"" << rgb(palette::MAPNUM) << "\">" << mapping.at(i) << "</text>\n";
-        }
-
-        // Atom index (subscript, bottom-right, gray)
+        // Atom index (subscript, bottom-right, grey)
         if (opts.showAtomIndices) {
             svg << "<text x=\"" << (x + lbl.textWidth * 0.5 + 2) << "\" y=\"" << (y + FS * 0.5)
                 << "\" class=\"idx\" font-size=\"" << MNS
                 << "\" fill=\"rgba(120,120,120,0.6)\">" << i << "</text>\n";
         }
+    }
+
+    if (opts.showMapNumbers) for (int atom = 0; atom < g.n; ++atom) {
+        const auto number = mapping.find(atom);
+        if (number == mapping.end()) continue;
+        const double offset = labels[atom].visible ? labels[atom].textWidth * 0.5 + 2 : 4;
+        svg << "<text x=\"" << (tx(pos[atom].x) + offset) << "\" y=\"" << (ty(pos[atom].y) - FS * 0.5)
+            << "\" class=\"map\" font-size=\"" << MNS
+            << "\" fill=\"" << rgb(palette::MAPNUM) << "\">" << number->second << "</text>\n";
     }
 
     // Atom indices for carbon atoms (shown without label)
@@ -1013,10 +831,13 @@ inline std::string depictWithMapping(
 
 // Depict a pair side-by-side with MCS/substructure highlighting
 inline std::string depictPair(
-    const MolGraph& g1, const MolGraph& g2,
+    const MolGraph& input1, const MolGraph& input2,
     const std::map<int,int>& mapping,  // g1 atom → g2 atom
     const DepictOptions& opts = {}
 ) {
+    MolGraph styled1, styled2;
+    const MolGraph& g1 = detail_depict::bondStyle(input1, opts, styled1);
+    const MolGraph& g2 = detail_depict::bondStyle(input2, opts, styled2);
     auto pos1 = layout2D(g1, opts);
     auto pos2 = layout2D(g2, opts);
 
@@ -1082,7 +903,7 @@ inline std::string depictPair(
     svg << " viewBox=\"0 0 " << W << " " << H << "\"";
     svg << " shape-rendering=\"geometricPrecision\" text-rendering=\"geometricPrecision\">\n";
     svg << "<defs><style>\n";
-    svg << "  text { font-family: " << opts.fontFamily << "; }\n";
+    svg << "  text { font-family: " << detail_depict::fontFamily(opts.fontFamily) << "; }\n";
     svg << "  .atom { dominant-baseline: central; text-anchor: middle; font-weight: bold; }\n";
     svg << "  .sub  { dominant-baseline: central; font-weight: bold; }\n";
     svg << "  .map  { dominant-baseline: central; text-anchor: start; font-weight: bold; }\n";
@@ -1286,11 +1107,15 @@ inline std::string depictPair(
                     << "\" fill=\"" << rgb(col) << "\">" << chStr << "</text>\n";
             }
 
-            if (opts.showMapNumbers && mapNums.count(gi)) {
-                svg << "<text x=\"" << (x + lbl.textWidth*0.5 + 2) << "\" y=\"" << (y - FS*0.5)
-                    << "\" class=\"map\" font-size=\"" << MNS
-                    << "\" fill=\"" << rgb(palette::MAPNUM) << "\">" << mapNums[gi] << "</text>\n";
-            }
+        }
+        if (opts.showMapNumbers) for (int atom = 0; atom < g.n; ++atom) {
+            const int global = globalOffset + atom;
+            const auto number = mapNums.find(global);
+            if (number == mapNums.end()) continue;
+            const double offset = labels[atom].visible ? labels[atom].textWidth * 0.5 + 2 : 4;
+            svg << "<text x=\"" << (tx(pos[global].x) + offset) << "\" y=\"" << (ty(pos[global].y) - FS * 0.5)
+                << "\" class=\"map\" font-size=\"" << MNS
+                << "\" fill=\"" << rgb(palette::MAPNUM) << "\">" << number->second << "</text>\n";
         }
     };
 

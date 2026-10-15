@@ -31,7 +31,10 @@ class StrictAtoms(rdFMCS.MCSAtomCompare):
 
 def chem_options(policy):
     if policy == "strict":
-        return smsd.ChemOptions.profile("strict")
+        chem = smsd.ChemOptions.profile("strict")
+        chem.match_formal_charge = True
+        chem.ring_matches_ring_only = True
+        return chem
     chem = smsd.ChemOptions()
     chem.aromaticity_mode = smsd.AromaticityMode.FLEXIBLE
     # LOOSE in historical SMSD versions accepts every unequal bond order.
@@ -45,14 +48,9 @@ def chem_options(policy):
 
 
 def mcs_options(timeout_sec):
-    opts = smsd.MCSOptions()
-    opts.timeout_ms = int(timeout_sec * 1000)
-    opts.connected_only = True
-    opts.disconnected_mcs = False
-    opts.maximize_bonds = False
-    opts.induced = False
-    opts.max_stage = 5
-    return opts
+    options = smsd.MCS.Options()
+    options.timeout_ms = int(timeout_sec * 1000)
+    return options
 
 
 def rdkit_parameters(policy, timeout_sec):
@@ -217,27 +215,17 @@ class Observation:
 
 
 def measure_pair(smi1, smi2, policy="strict", timeout_sec=10, warmup=1, repeats=3,
-                 index=0, on_observation=None, strategy="native"):
+                 index=0, on_observation=None):
     mol1, mol2 = Chem.MolFromSmiles(smi1), Chem.MolFromSmiles(smi2)
     if mol1 is None or mol2 is None:
         raise ValueError("RDKit rejected input SMILES; no cross-engine timing")
     g1, g2 = graph_from_rdkit(mol1, policy), graph_from_rdkit(mol2, policy)
     chem, opts = chem_options(policy), mcs_options(timeout_sec)
     params = rdkit_parameters(policy, timeout_sec)
-    calls = {"smsd": lambda: native.find_mcs(g1, g2, chem, opts),
+    opts.chemistry = chem
+    prepared = smsd.MCS.find(g1).with_options(opts)
+    calls = {"smsd": lambda: prepared.match(g2),
              "rdkit": lambda: rdFMCS.FindMCS([mol1, mol2], params)}
-    if strategy == "coverage":
-        if policy == "strict":
-            raise ValueError("raw coverage cannot express the strict aromatic-atom profile")
-        calls["smsd"] = lambda: native.find_mcs_coverage(g1, g2,
-            ring_match=False, bond_any=policy == "any", timeout_ms=int(timeout_sec*1000))
-    elif strategy != "native":
-        if policy == "strict":
-            raise ValueError("strict aromatic-atom profile is not expressible through the public auto/lightweight API")
-        calls["smsd"] = lambda: smsd.find_mcs(g1, g2, strategy=strategy,
-            match_bond_order="any" if policy == "any" else "strict",
-            connected_only=True, maximize_bonds=False,
-            timeout_ms=int(timeout_sec*1000))
     for _ in range(warmup):
         for engine in ("smsd", "rdkit"):
             calls[engine]()
@@ -250,11 +238,12 @@ def measure_pair(smi1, smi2, policy="strict", timeout_sec=10, warmup=1, repeats=
                 result = calls[engine]()
                 elapsed = (time.perf_counter_ns() - start) / 1000
                 if engine == "smsd":
-                    valid, reason = validate_mapping(mol1, mol2, result, policy)
-                    bonds = sum(b.GetBeginAtomIdx() in result and b.GetEndAtomIdx() in result
-                                for b in mol1.GetBonds())
-                    row = Observation(engine, elapsed, len(result), bonds, valid, reason,
-                                      None, elapsed >= timeout_sec * 1e6)
+                    mapping = dict(result.best.atom_mapping) if result.found else {}
+                    valid, reason = validate_mapping(mol1, mol2, mapping, policy)
+                    bonds = result.best.bond_count if result.found else 0
+                    row = Observation(engine, elapsed, len(mapping), bonds, valid, reason,
+                                      result.status == smsd.SearchStatus.TIMED_OUT,
+                                      elapsed >= timeout_sec * 1e6)
                 else:
                     valid, reason, mapping = rdkit_witness(mol1, mol2, result, policy)
                     row = Observation(engine, elapsed, result.numAtoms, result.numBonds,
@@ -269,7 +258,12 @@ def measure_pair(smi1, smi2, policy="strict", timeout_sec=10, warmup=1, repeats=
             # as an uncanceled completion merely because the outer timer is short.
             data["near_budget"] = row.elapsed_us >= timeout_sec*990000
             if not row.error:
-                data["mapping"] = result if engine == "smsd" else mapping
+                data["mapping"] = mapping
+                if engine == "smsd":
+                    data["objective"] = "MCIS"
+                    data["optimal"] = result.optimal
+                    data["complete"] = result.complete
+                    data["status"] = result.status.name
                 if engine == "rdkit":
                     data["smarts"] = result.smartsString
             rows.append(data)
@@ -286,14 +280,15 @@ def summarize(rows, policy):
         result[engine + "_atoms"] = sorted(set(x["atoms"] for x in values))
         result[engine + "_valid"] = all(x["valid"] for x in values)
         result[engine + "_timeouts"] = (sum(x["timeout"] is True for x in values)
-                                         if engine == "rdkit" else None)
+                                         if any(x["timeout"] is not None for x in values) else None)
         result[engine + "_budget_reached"] = sum(x["budget_reached"] for x in values)
         result[engine + "_near_budget"] = sum(x.get("near_budget", False) for x in values)
     # FMCS CompareOrder and historical SMSD flexible aromaticity differ.
     # Strict mode adds a Python atom-comparison callback to RDKit.
     result["rdkit_python_comparator"] = policy == "strict"
     result["chemical_policy_equivalent"] = policy in ("strict", "any")
-    result["speed_comparable"] = (result["chemical_policy_equivalent"]
+    result["objective_equivalent"] = False
+    result["speed_comparable"] = (result["objective_equivalent"] and result["chemical_policy_equivalent"]
         and result["smsd_valid"] and result["rdkit_valid"]
         and result["smsd_atoms"] == result["rdkit_atoms"]
         and len(result["smsd_atoms"]) == 1 and result["rdkit_timeouts"] == 0

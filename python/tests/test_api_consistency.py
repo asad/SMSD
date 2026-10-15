@@ -15,19 +15,13 @@ from smsd import (
     AromaticityModel,
     MolGraphBuilder,
     assign_rs,
-    batch_mcs_size,
-    compile_smarts,
     export_sdf,
     from_hex,
     fingerprint,
-    find_mcs,
     parse_smiles,
     perceive_aromaticity,
     prewarm,
     read_molfile,
-    smarts_match,
-    smarts_find_all,
-    find_substructure,
     to_hex,
     to_smiles,
     write_molfile,
@@ -63,40 +57,31 @@ SUBSTRUCTURE_CASES = [
 
 
 @pytest.mark.parametrize("query,target,expected", SUBSTRUCTURE_CASES)
-def test_substructure_wrappers_stay_in_sync(query, target, expected):
-    """SMILES and MolGraph wrappers should agree on substructure behavior."""
-    gq = parse_smiles(query)
-    gt = parse_smiles(target)
-
-    assert smsd.is_substructure(gq, gt) is expected
-    assert find_substructure(query, target) == find_substructure(gq, gt)
-
-    mapping = find_substructure(gq, gt)
-    assert bool(mapping) is expected
+def test_substructure_input_types_stay_in_sync(query, target, expected):
+    graph_query, graph_target = parse_smiles(query), parse_smiles(target)
+    text_result = smsd.Substructure.find(query).match(target)
+    graph_result = smsd.Substructure.find(graph_query).match(graph_target)
+    assert text_result.found is expected and graph_result.found is expected
+    assert text_result.complete and graph_result.complete
     if expected:
-        assert len(mapping) == len(gq)
+        assert text_result.best.atom_mapping == graph_result.best.atom_mapping
+        assert graph_result.best.atom_count == len(graph_query)
 
 
 @pytest.mark.parametrize("query,target,min_size", MCS_CASES)
-def test_mcs_wrappers_stay_in_sync(query, target, min_size):
-    """SMILES and MolGraph wrappers should return the same MCS size."""
-    gq = parse_smiles(query)
-    gt = parse_smiles(target)
-
-    mapping_smiles = smsd.find_mcs(query, target)
-    mapping_graph = smsd.find_mcs(gq, gt)
-
-    assert len(mapping_smiles) >= min_size
-    assert len(mapping_graph) == len(mapping_smiles)
-
+def test_mcs_input_types_stay_in_sync(query, target, min_size):
+    graph_query, graph_target = parse_smiles(query), parse_smiles(target)
+    text_result = smsd.MCS.find(query).match(target)
+    graph_result = smsd.MCS.find(graph_query).match(graph_target)
+    assert text_result.best.atom_count >= min_size
+    assert graph_result.best.atom_count == text_result.best.atom_count
+    assert text_result.optimal and graph_result.optimal
     if Chem is not None:
-        rdkit_q = Chem.MolFromSmiles(query)
-        rdkit_t = Chem.MolFromSmiles(target)
-        native = smsd.mcs_rdkit_native(rdkit_q, rdkit_t)
-        assert len(native) >= min_size
-        for q_idx, t_idx in native.items():
-            assert rdkit_q.GetAtomWithIdx(q_idx).GetAtomicNum() == \
-                rdkit_t.GetAtomWithIdx(t_idx).GetAtomicNum()
+        molecule_query, molecule_target = Chem.MolFromSmiles(query), Chem.MolFromSmiles(target)
+        result = smsd.MCS.find(molecule_query).match(molecule_target)
+        assert result.best.atom_count >= min_size
+        for query_atom, target_atom in result.best.atom_mapping.items():
+            assert molecule_query.GetAtomWithIdx(query_atom).GetAtomicNum() == molecule_target.GetAtomWithIdx(target_atom).GetAtomicNum()
 
 
 @pytest.mark.parametrize("smiles", [
@@ -200,21 +185,18 @@ def test_rgroup_fragment_smarts_mcs_and_fingerprint_pipeline():
     target = parse_smiles("[R2]c1ccc(O)cc1")
 
     assert to_smiles(core).startswith("[R1]")
-    assert smarts_match("[*]c1ccccc1", target) is True
+    assert smsd.Substructure.smarts("[*]c1ccccc1").match(target).found
     assert len(fingerprint(core, kind="path")) > 0
-    assert len(find_mcs(core, target)) >= 6
+    assert smsd.MCS.find(core).match(target).best.atom_count >= 6
 
 
 def test_compiled_smarts_queries_can_be_reused_across_targets():
-    """Compiled SMARTS objects should avoid reparsing while matching repeatedly."""
-    compiled = compile_smarts("[#6]~[#7]")
+    compiled = smsd.Substructure.smarts("[#6]~[#7]")
     targets = [parse_smiles("CCN"), parse_smiles("CCC"), parse_smiles("NCCN")]
-
-    assert compiled.matches(targets[0]) is True
-    assert compiled.matches(targets[1]) is False
-    assert compiled.matches_many(targets) == [True, False, True]
-    assert smarts_match(compiled, targets[0]) is True
-    assert smarts_find_all(compiled, "CCN") == [{0: 1, 1: 2}]
+    assert compiled.match(targets[0]).found
+    assert not compiled.match(targets[1]).found
+    assert [result.found for result in compiled.match_many(targets)] == [True, False, True]
+    assert [dict(match.atom_mapping) for match in compiled.match_all("CCN").matches] == [{0: 1, 1: 2}]
 
 
 def test_prewarm_helper_populates_lazy_graph_fields():
@@ -256,18 +238,18 @@ def test_explicit_aromaticity_perception_normalizes_raw_kekule_builder_graph():
     assert to_smiles(mol) == "c1ccccc1"
 
 
-def test_size_first_batch_helpers_keep_hit_order_and_sizes():
-    """Size-oriented batch helpers should expose screening-friendly results."""
+def test_prepared_multi_target_search_keeps_hit_order_and_sizes():
     query = parse_smiles("c1ccccc1")
     targets = [parse_smiles("c1ccccc1"), parse_smiles("c1ccc(O)cc1")]
-
-    assert batch_mcs_size(query, targets, timeout_ms=1000) == [6, 6]
-
-    mapping_hits = smsd.screen_and_match(query, targets, 0.95, timeout_ms=1000)
-    size_hits = smsd.screen_and_mcs_size(query, targets, 0.95, timeout_ms=1000)
-
-    assert len(mapping_hits) == 1
-    assert mapping_hits[0][0] == 0
+    prepared = smsd.MCS.find(query).with_timeout(1000)
+    results = prepared.match_many(targets)
+    assert [result.best.atom_count for result in results] == [6, 6]
+    corpus = smsd.TargetCorpus.from_smiles(["c1ccccc1", "c1ccc(O)cc1"])
+    corpus.prewarm()
+    hit_indices = corpus.screen(query, threshold=0.95)
+    mapping_hits = [(index, results[index].best.atom_mapping) for index in hit_indices]
+    size_hits = [(index, results[index].best.atom_count) for index in hit_indices]
+    assert len(mapping_hits) == 1 and mapping_hits[0][0] == 0
     assert len(mapping_hits[0][1]) == 6
     assert size_hits == [(0, 6)]
 
@@ -277,7 +259,7 @@ def test_stereo_smarts_substructure_and_mcs_pipeline():
     query = parse_smiles("N[C@@H](C)C(=O)O")
     target = parse_smiles("CC(N)C(=O)O")
 
-    assert smarts_match("[NX3][CH]([#6])C(=O)O", query) is True
-    assert find_substructure("NC(C)C(=O)O", target)
-    assert len(find_mcs(query, target)) >= 5
+    assert smsd.Substructure.smarts("[NX3][CH]([#6])C(=O)O").match(query).found
+    assert smsd.Substructure.find("NC(C)C(=O)O").match(target).found
+    assert smsd.MCS.find(query).match(target).best.atom_count >= 5
     assert assign_rs(query)

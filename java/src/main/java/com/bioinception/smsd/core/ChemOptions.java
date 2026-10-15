@@ -6,7 +6,7 @@
 package com.bioinception.smsd.core;
 
 /**
- * Configuration for chemical matching constraints and engine selection.
+ * Chemical matching constraints for substructure and MCS searches.
  *
  * <p>Controls how atoms and bonds are compared during substructure and MCS searches.
  * Pre-built profiles: {@code "strict"} (strict bond order + aromaticity),
@@ -26,7 +26,8 @@ package com.bioinception.smsd.core;
  * }</pre>
  *
  * @author Syed Asad Rahman
- * @see SMSD
+ * @see MCS
+ * @see Substructure
  */
 public final class ChemOptions {
 
@@ -35,7 +36,7 @@ public final class ChemOptions {
    *
    * <ul>
    *   <li>{@link #STRICT} - bond orders must match exactly</li>
-   *   <li>{@link #LOOSE} - single/double/aromatic bonds are considered compatible</li>
+   *   <li>{@link #LOOSE} - bond orders are compatible, subject to aromaticity and ring constraints</li>
    *   <li>{@link #ANY} - all bond orders are compatible</li>
    * </ul>
    */
@@ -51,16 +52,6 @@ public final class ChemOptions {
    */
   public enum AromaticityMode { STRICT, FLEXIBLE }
 
-  /**
-   * Subgraph isomorphism engine selection.
-   *
-   * <ul>
-   *   <li>{@link #VF2} - classic VF2 algorithm</li>
-   *   <li>{@link #VF2PP} - VF2++ with improved pruning (default, recommended)</li>
-   *   <li>{@link #VF3} - VF3 with lightweight pruning</li>
-   * </ul>
-   */
-  public enum MatcherEngine { VF2, VF2PP, VF3 }
 
   /**
    * Ring fusion matching mode.
@@ -118,13 +109,11 @@ public final class ChemOptions {
 
   /**
    * Whether to require complete ring matching. Default: {@code false}.
-   * <p>When enabled, if any atom in a ring is mapped, all atoms in that ring must be mapped.
+   * <p>MCS retains ring atoms and bonds only when each is covered by a wholly selected
+   * relevant ring in both inputs. Shared fusion atoms may belong to one retained whole ring.
    */
   public boolean completeRingsOnly = false;
 
-  // Per-call MCS exclusions are carried only in a private options copy.
-  MolGraph mcsExcludedTargetGraph, mcsOriginalQueryGraph;
-  java.util.Set<Integer> mcsExcludedTargetAtoms;
 
   // --- Isotope matching ---
 
@@ -145,26 +134,26 @@ public final class ChemOptions {
   public boolean tautomerAware = false;
 
   /**
-   * pH used for pKa-informed tautomer relevance scoring. Default: {@code 7.4} (physiological).
-   * <p>Only used when {@code tautomerAware=true}. Affects which tautomeric form is considered
-   * dominant; the reported {@code tautomerConfidence} reflects match quality at this pH.
-   * Range: 0–14.
+   * pH context for the explicit four-argument MCS.computeTautomerConfidence helper.
+   * Default 7.4; range 0–14. This heuristic does not alter the MCIS or MCES objective.
    */
   public double pH = 7.4;
 
-  /** Set the simulation pH for tautomer relevance scoring (fluent). Default 7.4. */
+  /** Set the pH context for explicit tautomer confidence scoring. Default 7.4. */
   public ChemOptions withPH(double pH) {
+    if (!Double.isFinite(pH))
+      throw new IllegalArgumentException("pH must be finite");
     this.pH = Math.max(0, Math.min(14, pH));
     return this;
   }
 
   /**
-   * Solvent environment for Tier 2 pKa tautomer weight corrections. Default: {@link
-   * Solvent#AQUEOUS} (no correction applied).
+   * Solvent context for the explicit four-argument MCS.computeTautomerConfidence helper.
+   * Default: {@link Solvent#AQUEOUS}. This heuristic does not alter the MCIS or MCES objective.
    */
   public Solvent solvent = Solvent.AQUEOUS;
 
-  /** Set the solvent for tautomer weight corrections (fluent). */
+  /** Set the solvent context for explicit tautomer confidence scoring. */
   public ChemOptions withSolvent(Solvent s) {
     this.solvent = s != null ? s : Solvent.AQUEOUS;
     return this;
@@ -178,11 +167,6 @@ public final class ChemOptions {
   /** Aromaticity matching mode. Default: {@link AromaticityMode#FLEXIBLE}. */
   public AromaticityMode aromaticityMode = AromaticityMode.FLEXIBLE;
 
-  // --- Engine ---
-
-  /** Subgraph isomorphism engine. Default: {@link MatcherEngine#VF2PP}. */
-  public MatcherEngine matcherEngine = MatcherEngine.VF2PP;
-
   // --- Pruning ---
 
   /** Enable two-hop neighbourhood label frequency pruning. Default: {@code true}. */
@@ -190,25 +174,19 @@ public final class ChemOptions {
 
   /** Enable three-hop neighbourhood label frequency pruning. Default: {@code false}.
    *  Can be enabled for very large molecules where extra pruning helps.
-   *  Auto-disabled for small molecules (n &lt; 20) in VF2++. */
+   *  Disabled for small molecules (n &lt; 20). */
   public boolean useThreeHopNLF = false;
 
   /** Enable bit-parallel feasibility checks for faster pruning. Default: {@code true}. */
   public boolean useBitParallelFeasibility = true;
 
-  /**
-   * When {@code true}, SMILES strings passed to the SMSD(String, String, ChemOptions) constructor
-   * are pre-sanitised before CDK parsing: unbalanced parentheses are corrected, and unclosed
-   * ring-digit openings are removed. Default: {@code false} (strict parsing).
-   */
-  public boolean lenientSmiles = false;
 
   /**
    * Create a {@code ChemOptions} instance with all default settings.
    *
    * <pre>{@code
    * ChemOptions opts = new ChemOptions();
-   * // defaults: strict bond order, flexible aromaticity, VF2PP engine
+   * // defaults: strict bond order and flexible aromaticity
    * }</pre>
    */
   public ChemOptions() {}
@@ -239,14 +217,9 @@ public final class ChemOptions {
     c.solvent                  = src.solvent;
     c.matchBondOrder           = src.matchBondOrder;
     c.aromaticityMode          = src.aromaticityMode;
-    c.matcherEngine            = src.matcherEngine;
     c.useTwoHopNLF             = src.useTwoHopNLF;
     c.useThreeHopNLF           = src.useThreeHopNLF;
     c.useBitParallelFeasibility = src.useBitParallelFeasibility;
-    c.lenientSmiles            = src.lenientSmiles;
-    c.mcsExcludedTargetGraph   = src.mcsExcludedTargetGraph;
-    c.mcsOriginalQueryGraph    = src.mcsOriginalQueryGraph;
-    c.mcsExcludedTargetAtoms   = src.mcsExcludedTargetAtoms;
     return c;
   }
 
@@ -270,7 +243,9 @@ public final class ChemOptions {
   public static ChemOptions profile(String name) {
     if (name == null) throw new NullPointerException("profile name must not be null");
     ChemOptions opts = new ChemOptions();
-    switch (name.toLowerCase()) {
+    switch (name.toLowerCase(java.util.Locale.ROOT)) {
+      case "default":
+        break;
       case "strict":
         opts.matchBondOrder = BondOrderMode.STRICT;
         opts.aromaticityMode = AromaticityMode.STRICT;
@@ -280,6 +255,14 @@ public final class ChemOptions {
         opts.matchBondOrder = BondOrderMode.LOOSE;
         opts.aromaticityMode = AromaticityMode.FLEXIBLE;
         opts.ringMatchesRingOnly = false;
+        break;
+      case "pharma":
+        opts.matchFormalCharge = true;
+        opts.ringMatchesRingOnly = true;
+        opts.completeRingsOnly = true;
+        break;
+      case "reaction":
+        opts.matchBondOrder = BondOrderMode.LOOSE;
         break;
       default:
         throw new IllegalArgumentException("Unknown ChemOptions profile: " + name);
@@ -388,23 +371,15 @@ public final class ChemOptions {
     return this;
   }
 
-  /**
-   * Enable or disable lenient SMILES pre-sanitisation (fluent).
-   *
-   * @param on {@code true} to pre-sanitise SMILES before CDK parsing
-   * @return this instance for chaining
-   */
-  public ChemOptions withLenientSmiles(boolean on) {
-    this.lenientSmiles = on;
-    return this;
-  }
 
   /**
    * Pre-configured profile for tautomer-aware MCS: loose bond orders, flexible aromaticity.
    *
    * <pre>{@code
    * ChemOptions tOpts = ChemOptions.tautomerProfile();
-   * Map<Integer, Integer> mcs = smsd.findMCS(false, true, 10000);
+   * MCS.Options options=new MCS.Options();
+   * options.chemistry=tOpts;
+   * SearchResult result=MCS.find(query).withOptions(options).withTimeout(10000).match(target);
    * }</pre>
    *
    * @return a new {@code ChemOptions} configured for tautomer-aware matching
@@ -422,16 +397,13 @@ public final class ChemOptions {
   /**
    * Pre-configured profile that relaxes topological constraints for loose FMCS-style matching.
    *
-   * <p>SMSD's default mode enforces chemical rigour: ring atoms must match ring atoms, partial
-   * rings are rejected, and bond orders are checked strictly. This profile lifts those constraints
-   * so that SMSD will map ring atoms to chain atoms and accept partial ring fragments — the same
-   * loose behaviour as standard FMCS implementations. The result may be numerically larger but is
-   * less chemically meaningful. Use this profile for interoperability benchmarks or when the
-   * application explicitly needs loose topology matching.
+   * <p>Uses loose bond orders, flexible aromaticity and permits ring-to-chain and partial-ring matches.
    *
    * <pre>{@code
    * ChemOptions loose = ChemOptions.fmcsProfile();
-   * Map<Integer, Integer> mcs = new SMSD(mol1, mol2, loose).findMCS();
+   * MCS.Options options=new MCS.Options();
+   * options.chemistry=loose;
+   * SearchResult result=MCS.find(mol1).withOptions(options).match(mol2);
    * }</pre>
    *
    * @return a new {@code ChemOptions} configured for loose FMCS-style matching

@@ -39,16 +39,16 @@ def main():
     query = smsd.parse_smiles("c1ccccc1")
     targets = [smsd.parse_smiles(value) for value in ("Oc1ccccc1", "CCO")]
     assert len(query) == 6
-    assert len(smsd.find_mcs(query, targets[0], strategy="native", timeout_ms=1000)) == 6
-    assert [len(value) for value in smsd.batch_find_substructure(query, targets)] == [6, 0]
-    assert smsd.smarts_match("[#8]", targets[0])
+    assert smsd.MCS.find(query).with_timeout(1000).match(targets[0]).best.atom_count == 6
+    assert [result.best.atom_count if result.found else 0 for result in smsd.Substructure.find(query).match_many(targets)] == [6, 0]
+    assert smsd.Substructure.smarts("[#8]").match(targets[0]).found
     dependencies = {"pytest": importlib.metadata.version("pytest")}
     if args.require_rdkit:
         from rdkit import Chem, rdBase
         dependencies["rdkit"] = rdBase.rdkitVersion
         rdkit_query = Chem.MolFromSmiles("c1ccccc1")
         rdkit_target = Chem.MolFromSmiles("Oc1ccccc1")
-        assert len(smsd.find_mcs(rdkit_query, rdkit_target, strategy="native", timeout_ms=1000)) == 6
+        assert smsd.MCS.find(rdkit_query).with_timeout(1000).match(rdkit_target).best.atom_count == 6
     print(json.dumps({"version": expected, "python": platform.python_version(),
                       "system": platform.system(), "architecture": platform.machine(),
                       "backend": backend, "dependencies": dependencies,

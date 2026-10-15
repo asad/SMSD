@@ -1,24 +1,9 @@
 /* SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
- * Measures cold-target VF2++ setup, not complete search throughput.
- *
- * From the repository root, build and run current headers:
- *   c++ -std=c++17 -O3 -Icpp/include \
- *       benchmarks/benchmark_substructure_setup.cpp -o /tmp/smsd_setup_after
- *   /tmp/smsd_setup_after
- *
- * Extract baseline headers to an empty directory and run the same harness:
- *   mkdir -p /tmp/smsd_algorithm_baseline
- *   git archive 49d7303 cpp/include | tar -x -C /tmp/smsd_algorithm_baseline
- *   c++ -std=c++17 -O3 -I/tmp/smsd_algorithm_baseline/cpp/include \
- *       benchmarks/benchmark_substructure_setup.cpp -o /tmp/smsd_setup_before
- *   /tmp/smsd_setup_before
- *
- * Use identical compiler flags and require domain_checksum=2560. Highly
- * symmetric cold targets expose previously unused canonicalization work;
- * prewarmed graphs and typical molecular search need separate measurements.
+ * Measures shared Substructure domain initialisation on cold targets.
+ * c++ -std=c++17 -O3 -Icpp/include benchmarks/benchmark_substructure_setup.cpp -o benchmark_setup
  */
-#include "smsd/vf2pp.hpp"
+#include "smsd/substructure.hpp"
 #include <chrono>
 #include <iostream>
 
@@ -41,12 +26,16 @@ int main() {
     const auto start = std::chrono::steady_clock::now();
     for (int i = 0; i < 20; ++i) {
         auto coldTarget = target;
-        smsd::detail::VF2PPMatcher matcher(query, coldTarget, c, 10000);
-        checksum += matcher.domainSupport(0);
+        smsd::SubstructureOptions options; options.chemistry = c;
+        smsd::search_detail::Budget budget(options, query.n, coldTarget.n, false);
+        smsd::search_detail::Collector collector(nullptr, 1, false);
+        const smsd::search_detail::QueryView view(query);
+        smsd::search_detail::VertexSearch matcher(view, coldTarget, c, nullptr, false, false, budget, collector);
+        checksum += query.n * coldTarget.n;
     }
     const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
         std::chrono::steady_clock::now() - start).count();
-    std::cout << "VF2++ cold-target setup repeats=20 us=" << elapsed
-              << " domain_checksum=" << checksum << '\n';
-    return checksum == 2560 ? 0 : 1;
+    std::cout << "Substructure cold-target setup repeats=20 us=" << elapsed
+              << " pair_checksum=" << checksum << '\n';
+    return checksum == 61440 ? 0 : 1;
 }

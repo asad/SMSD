@@ -108,9 +108,10 @@ public class benchmark_substructure_java {
         Path output = Paths.get(args.length > 1 ? args[1] : "build/local-benchmarks/results_substructure.tsv");
         if (output.getParent() != null) Files.createDirectories(output.getParent());
         PrintWriter tsv = new PrintWriter(new FileWriter(output.toFile()));
-        tsv.println("Pair\tSMSD_us\tSMSD_cached_us\tCDK_us\tSpeedup\tCached_Speedup\tSMSD_match\tCDK_match");
+        tsv.println("Pair\tSMSD_us\tSMSD_cached_us\tCDK_us\tSpeedup\tCached_Speedup\tSMSD_match\tCDK_match\tSMSD_statuses\tcached_statuses");
 
         ChemOptions opts = new ChemOptions();
+        Substructure.Options options=new Substructure.Options();options.chemistry=opts;options.timeoutMillis=TIMEOUT_MS;
 
         for (int i = 0; i < pairs.size(); i++) {
             if (mols[i] == null) continue; // skipped due to parse error
@@ -124,25 +125,28 @@ public class benchmark_substructure_java {
 
             // --- SMSD (IAtomContainer API, rebuilds MolGraph each call) ---
             for (int w = 0; w < WARMUP; w++)
-                SearchEngine.isSubstructure(query, target, opts, TIMEOUT_MS);
+                Substructure.find(query).withOptions(options).match(target).found();
             long[] smsdTimes = new long[ITERS];
             boolean smsdMatch = false;
+            Set<SearchResult.Status> smsdStatuses=new LinkedHashSet<>(),cachedStatuses=new LinkedHashSet<>();
             for (int it = 0; it < ITERS; it++) {
                 long t0 = System.nanoTime();
-                smsdMatch = SearchEngine.isSubstructure(query, target, opts, TIMEOUT_MS);
+                SearchResult search=Substructure.find(query).withOptions(options).match(target);
                 smsdTimes[it] = System.nanoTime() - t0;
+                smsdMatch=search.found();smsdStatuses.add(search.status());
             }
             Arrays.sort(smsdTimes);
             double smsdMedianUs = smsdTimes[ITERS / 2] / 1000.0;
 
             // --- SMSD (MolGraph API, cached graphs — pure search time) ---
             for (int w = 0; w < WARMUP; w++)
-                SearchEngine.isSubstructure(qGraph, tGraph, opts, TIMEOUT_MS);
+                Substructure.find(qGraph).withOptions(options).match(tGraph).found();
             long[] cachedTimes = new long[ITERS];
             for (int it = 0; it < ITERS; it++) {
                 long t0 = System.nanoTime();
-                SearchEngine.isSubstructure(qGraph, tGraph, opts, TIMEOUT_MS);
+                SearchResult search=Substructure.find(qGraph).withOptions(options).match(tGraph);
                 cachedTimes[it] = System.nanoTime() - t0;
+                cachedStatuses.add(search.status());
             }
             Arrays.sort(cachedTimes);
             double cachedMedianUs = cachedTimes[ITERS / 2] / 1000.0;
@@ -170,9 +174,9 @@ public class benchmark_substructure_java {
                 label, smsdMedianUs, cachedMedianUs, cdkMedianUs, speedup, cachedSpeedup,
                 smsdMatch ? "Y" : "N", cdkMatch ? "Y" : "N");
 
-            tsv.printf("%s\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%s\t%s%n",
+            tsv.printf("%s\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%s\t%s\t%s\t%s%n",
                 label, smsdMedianUs, cachedMedianUs, cdkMedianUs, speedup, cachedSpeedup,
-                smsdMatch ? "Y" : "N", cdkMatch ? "Y" : "N");
+                smsdMatch ? "Y" : "N", cdkMatch ? "Y" : "N",smsdStatuses,cachedStatuses);
         }
 
         tsv.close();

@@ -6,7 +6,7 @@
 The Dalke-style pair files were derived from MoleculeNet, not ChEMBL-13.
 Search-only timings exclude parsing, conversion, warmup and witness validation.
 Results checkpoint after each engine call; --resume skips completed pairs.
-SMSD does not expose cancellation, so its timeout count is reported as unknown.
+SMSD records stopping status and optimality for each pair.
 """
 import argparse
 import csv
@@ -58,14 +58,14 @@ def run_smarts(pattern, warmup, repeats, index):
     graph = smsd.parse_smiles(target)
     # Compiled-query searches for both engines; compile cost is recorded separately.
     start = time.perf_counter_ns()
-    query = native.compile_smarts(pattern)
+    query = smsd.Substructure.smarts(pattern)
     smsd_compile_us = (time.perf_counter_ns()-start)/1000
     start = time.perf_counter_ns()
     rdkit_query = Chem.MolFromSmarts(pattern)
     rdkit_compile_us = (time.perf_counter_ns()-start)/1000
     if rdkit_query is None:
         raise ValueError("RDKit rejected SMARTS")
-    calls = {"smsd": lambda: query.matches(graph),
+    calls = {"smsd": lambda: query.match(graph).found,
              "rdkit": lambda: rdkit_target.HasSubstructMatch(rdkit_query)}
     for _ in range(warmup):
         for call in calls.values():
@@ -124,13 +124,10 @@ def main(argv=None):
     parser.add_argument("--limit", type=int, default=0, help="0 means complete corpus")
     parser.add_argument("--output-dir", type=Path, default=Path("build/local-benchmarks"))
     parser.add_argument("--source-label", default="unspecified")
-    parser.add_argument("--smsd-strategy", choices=("native", "auto", "lightweight", "coverage"), default="native")
     parser.add_argument("--resume", action="store_true")
     args = parser.parse_args(argv)
     if args.timeout_sec < 1 or args.warmup < 0 or args.repeats < 1 or args.limit < 0:
         parser.error("timeout/repeats must be positive; warmup/limit nonnegative")
-    if args.smsd_strategy != "native" and "strict" in args.policies:
-        parser.error("auto/lightweight/coverage cannot express the strict aromatic-atom profile; use fmcs or any")
     args.output_dir.mkdir(parents=True, exist_ok=True)
     metadata = {"smsd_version": smsd.__version__, "smsd_package": smsd.__file__,
         "smsd_extension": native.__file__, "smsd_backend": native.gpu_device_info(),
@@ -140,7 +137,7 @@ def main(argv=None):
         "warmup": args.warmup, "repeats": args.repeats, "objective": "atoms",
         "connected_only": True, "induced": False, "parsing_timed": False,
         "protocol": "alternating engine order; independent post-timing witness validation",
-        "policies": args.policies, "smsd_strategy": args.smsd_strategy,
+        "policies": args.policies, "smsd_objective": "MCIS",
         "dataset_sha256": {key: hashlib.sha256((DATA/DATASETS[key]).read_bytes()).hexdigest()
             for key in args.datasets}}
     meta_path = args.output_dir / "metadata.json"
@@ -178,7 +175,7 @@ def main(argv=None):
                                 with checkpoint.open("a") as partial:
                                     partial.write(json.dumps({"index": index, **observation})+"\n")
                             observations = measure_pair(smi1, smi2, policy, args.timeout_sec,
-                                args.warmup, args.repeats, index, save_observation, args.smsd_strategy)
+                                args.warmup, args.repeats, index, save_observation)
                             row.update(summarize(observations, policy)); row["observations"] = observations
                     except Exception as exc:
                         row["error"] = str(exc)

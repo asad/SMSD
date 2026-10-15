@@ -4,10 +4,13 @@
   </a>
 </p>
 
-# SMSD 7.2.2 for Python
+# SMSD for Python
+
+The examples use the current source API. Release 7.2.2 predates the
+`MCS`/`Substructure` API change; build from source for these examples.
 
 [![PyPI](https://img.shields.io/pypi/v/smsd)](https://pypi.org/project/smsd/)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/asad/SMSD/blob/master/LICENSE)
+[![Licence](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/asad/SMSD/blob/master/LICENSE)
 
 Substructure search, maximum common substructure (MCS), fingerprints and
 similarity screening. Core matching does not require RDKit, CDK or Java.
@@ -23,7 +26,7 @@ The 7.2.2 wheels use CPython 3.14 and include CPU/OpenMP support:
 | Linux | x86_64 | glibc 2.28+ |
 | macOS | arm64 / Apple Silicon | macOS 26+ |
 
-Install 7.2.2 from [PyPI](https://pypi.org/project/smsd/) when listed:
+Install 7.2.2 from [PyPI](https://pypi.org/project/smsd/):
 
 ```bash
 python -m pip install smsd==7.2.2
@@ -41,13 +44,14 @@ import smsd
 query = "c1ccccc1"       # benzene
 target = "c1ccc(O)cc1"   # phenol
 
-assert smsd.is_substructure(query, target)
-mapping = smsd.find_mcs(query, target, timeout_ms=1000)
-print(f"MCS: {len(mapping)} atoms")  # MCS: 6 atoms
+assert smsd.Substructure.find(query).match(target).found
+result = smsd.MCS.find(query).with_timeout(1000).match(target)
+print(f"MCS: {result.best.atom_count} atoms")  # MCS: 6 atoms
 ```
 
-Mappings link query atom indices to target atom indices. An empty mapping means
-no match was found. A search timeout can leave a smaller MCS.
+Matches link query atom indices to target atom indices and retain selected
+bonds and fragments. Check `result.optimal`, `result.complete` and
+`result.status` before treating an answer as a completed search.
 
 ## Fingerprints
 
@@ -77,14 +81,16 @@ import smsd
 
 query = smsd.parse_smiles("c1ccccc1")
 targets = [smsd.parse_smiles(s) for s in ["c1ccc(O)cc1", "CCO"]]
-assert smsd.batch_substructure(query, targets, num_threads=2) == [True, False]
-assert [len(m) for m in smsd.batch_find_substructure(query, targets)] == [6, 0]
-sizes = smsd.batch_mcs_size(query, targets, timeout_ms=1000)
-assert sizes == [6, 2]
+results = smsd.Substructure.find(query).match_many(targets, num_threads=2)
+assert [result.found for result in results] == [True, False]
+assert [result.best.atom_count if result.found else 0 for result in results] == [6, 0]
+results = smsd.MCS.find(query).with_timeout(1000).match_many(targets)
+assert [result.best.atom_count for result in results] == [6, 2]
 ```
 
-Use `batch_mcs()` for mappings and `batch_mcs_size()` for atom counts.
-`TargetCorpus` supports repeated queries against one collection.
+Both queries expose `match`, `match_all` and `match_many`. `MCS` supports
+MCIS and MCES objectives and disconnected fragment mapping. `TargetCorpus`
+supports repeated queries against one collection.
 
 ## Using RDKit
 
@@ -97,8 +103,8 @@ import smsd
 
 query = Chem.MolFromSmiles("c1ccccc1")
 target = Chem.MolFromSmiles("c1ccc(O)cc1")
-mapping = smsd.find_mcs(query, target, timeout_ms=1000)
-assert len(mapping) == 6
+result = smsd.MCS.find(query).with_timeout(1000).match(target)
+assert result.best.atom_count == 6
 ```
 
 ## More examples
@@ -129,6 +135,8 @@ Version 7.2.2 passes 691 Python tests with 8 optional skips per platform; see th
 [test report](https://github.com/asad/SMSD/blob/master/docs/VALIDATION_7.2.2.md).
 The [7.2.0 benchmark report](https://github.com/asad/SMSD/blob/master/benchmarks/RESULTS_7.2.0.md)
 contains measured comparisons for its recorded versions and molecules.
+For the current prepared-query API, use the shared workloads and mapping
+validation in the [benchmark guide](https://github.com/asad/SMSD/blob/master/benchmarks/README.md).
 
 ## Other languages
 

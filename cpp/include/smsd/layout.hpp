@@ -229,9 +229,9 @@ inline std::vector<RingSystem> findRingSystems(const MolGraph& g) {
  *
  * @param g        The molecular graph.
  * @param coords   Input/output 2D coordinates (coords[atomIdx] = {x, y}).
- *                 Modified in-place with optimized positions.
+ *                 Modified in-place with optimised positions.
  * @param maxIter  Maximum total SA iterations across both phases (default 1000).
- * @return         Number of bond crossings remaining after optimization.
+ * @return         Number of bond crossings remaining after optimisation.
  * @since 6.5.1
  */
 inline int reduceCrossings(const MolGraph& g, std::vector<Point2D>& coords,
@@ -779,8 +779,7 @@ inline std::vector<int> ringSizeSignature(const MolGraph& g) {
 
 // --------------------------------------------------------------------------
 // The 10 most common scaffolds with pre-computed regular-polygon coordinates.
-// Coordinates are for a canonical atom ordering; real matching requires
-// subgraph isomorphism which is handled via the existing VF2PP engine.
+// Coordinates use a canonical atom ordering; template matching checks topology.
 // --------------------------------------------------------------------------
 
 /// Regular polygon coordinates centred at origin with unit edge length.
@@ -796,11 +795,8 @@ inline void regularPolygon(int n, Point2D* out) {
 // Pre-compute the 10 scaffold templates.
 // Each entry stores normalised coordinates for the scaffold atoms.
 
-inline const std::vector<ScaffoldTemplate>& getTemplates() {
-    static std::vector<ScaffoldTemplate> templates;
-    static bool initialised = false;
-    if (initialised) return templates;
-    initialised = true;
+inline std::vector<ScaffoldTemplate> buildTemplates() {
+    std::vector<ScaffoldTemplate> templates;
 
     // Helper: fused-ring system builder.
     // Place ring A as a regular polygon, then ring B sharing an edge.
@@ -833,10 +829,11 @@ inline const std::vector<ScaffoldTemplate>& getTemplates() {
         double cx = mx + centreDistFromMidpoint * nx / std::sqrt(nx * nx + ny * ny);
         double cy = my + centreDistFromMidpoint * ny / std::sqrt(nx * nx + ny * ny);
         (void)edgeLen;
-        // Place remaining sizeB - 2 atoms of ring B
+        const double startAngle = std::atan2(pB.y - cy, pB.x - cx);
+        const double direction = ((pA.x - cx) * (pB.y - cy)
+                                - (pA.y - cy) * (pB.x - cx)) > 0 ? 1.0 : -1.0;
         for (int k = 0; k < sizeB - 2; k++) {
-            // Angle offset: start from just past the shared edge
-            double angle = theta + M_PI + (2.0 * M_PI * (k + 1)) / sizeB;
+            double angle = startAngle + direction * 2.0 * M_PI * (k + 1) / sizeB;
             coords[atomIdx].x = cx + rB * std::cos(angle);
             coords[atomIdx].y = cy + rB * std::sin(angle);
             atomIdx++;
@@ -948,14 +945,8 @@ inline const std::vector<ScaffoldTemplate>& getTemplates() {
         t.ringSizes[0] = 6; t.ringSizes[1] = 6; t.ringSizes[2] = 0;
         // First ring
         regularPolygon(6, t.coords);
-        // Second ring offset by bond length
-        double offsetX = t.coords[0].x - t.coords[3].x + 1.0;
-        for (int i = 0; i < 6; i++) {
-            double angle = 2.0 * M_PI * i / 6 - M_PI / 2.0;
-            double r = 0.5 / std::sin(M_PI / 6.0);
-            t.coords[6 + i].x = r * std::cos(angle) + offsetX + 1.5;
-            t.coords[6 + i].y = r * std::sin(angle);
-        }
+        regularPolygon(6, t.coords + 6);
+        for (int i = 6; i < 12; ++i) t.coords[i].y += 3.0;
         templates.push_back(t);
     }
 
@@ -982,6 +973,11 @@ inline const std::vector<ScaffoldTemplate>& getTemplates() {
     return templates;
 }
 
+inline const std::vector<ScaffoldTemplate>& getTemplates() {
+    static const std::vector<ScaffoldTemplate> templates = buildTemplates();
+    return templates;
+}
+
 } // namespace detail_layout
 
 
@@ -994,9 +990,8 @@ inline const std::vector<ScaffoldTemplate>& getTemplates() {
  * Returns pre-computed coordinates scaled to targetBondLength if a match
  * is found, empty vector otherwise.
  *
- * Matching is based on ring-size signature (sorted list of SSSR ring sizes)
- * and atom count. For molecules with matching topology, the template
- * coordinates provide optimal crossing-free layout.
+ * Ring-size signatures select candidates; a topology mapping assigns each
+ * template atom to the corresponding graph atom before coordinates are copied.
  *
  * @param g                The molecular graph.
  * @param targetBondLength Desired bond length for scaling (default 1.5).
@@ -1004,24 +999,57 @@ inline const std::vector<ScaffoldTemplate>& getTemplates() {
  */
 inline std::vector<Point2D> matchTemplate(const MolGraph& g,
                                            double targetBondLength = 1.5) {
-    auto sig = detail_layout::ringSizeSignature(g);
-    auto& templates = detail_layout::getTemplates();
-
-    for (auto& t : templates) {
-        // Compare ring-size signature
-        std::vector<int> tSig;
-        for (int k = 0; k < 8 && t.ringSizes[k] != 0; k++)
-            tSig.push_back(t.ringSizes[k]);
-        std::sort(tSig.begin(), tSig.end());
-        if (tSig != sig) continue;
-        if (t.atomCount != g.n) continue;
-
-        // Match found — return scaled coordinates
-        std::vector<Point2D> result(t.atomCount);
-        for (int i = 0; i < t.atomCount; i++) {
-            result[i].x = t.coords[i].x * targetBondLength;
-            result[i].y = t.coords[i].y * targetBondLength;
-        }
+    const auto signature = detail_layout::ringSizeSignature(g);
+    for (const auto& scaffold : detail_layout::getTemplates()) {
+        if (scaffold.atomCount != g.n) continue;
+        std::vector<int> scaffoldSignature;
+        for (int ringIndex = 0; ringIndex < 8 && scaffold.ringSizes[ringIndex]; ++ringIndex)
+            scaffoldSignature.push_back(scaffold.ringSizes[ringIndex]);
+        std::sort(scaffoldSignature.begin(), scaffoldSignature.end());
+        if (scaffoldSignature != signature) continue;
+        std::vector<std::vector<bool>> edges(g.n, std::vector<bool>(g.n, false));
+        std::vector<int> degrees(g.n, 0);
+        for (int first = 0; first < g.n; ++first)
+            for (int second = first + 1; second < g.n; ++second) {
+                const double distance = std::hypot(scaffold.coords[first].x - scaffold.coords[second].x,
+                                                   scaffold.coords[first].y - scaffold.coords[second].y);
+                if (std::abs(distance - 1.0) < 1e-6) {
+                    edges[first][second] = edges[second][first] = true;
+                    ++degrees[first]; ++degrees[second];
+                }
+            }
+        std::vector<int> atomOrder(g.n), mapping(g.n, -1);
+        std::iota(atomOrder.begin(), atomOrder.end(), 0);
+        std::stable_sort(atomOrder.begin(), atomOrder.end(), [&](int first, int second) {
+            return degrees[first] > degrees[second];
+        });
+        std::vector<bool> used(g.n, false);
+        auto match = [&](auto&& self, int depth) -> bool {
+            if (depth == g.n) return true;
+            const int templateAtom = atomOrder[depth];
+            for (int graphAtom = 0; graphAtom < g.n; ++graphAtom) {
+                if (used[graphAtom] || degrees[templateAtom] != static_cast<int>(g.neighbors[graphAtom].size()))
+                    continue;
+                bool compatible = true;
+                for (int previous = 0; previous < depth; ++previous) {
+                    const int other = atomOrder[previous];
+                    if (edges[templateAtom][other] != (g.bondOrder(graphAtom, mapping[other]) != 0)) {
+                        compatible = false; break;
+                    }
+                }
+                if (!compatible) continue;
+                mapping[templateAtom] = graphAtom;
+                used[graphAtom] = true;
+                if (self(self, depth + 1)) return true;
+                used[graphAtom] = false;
+            }
+            return false;
+        };
+        if (!match(match, 0)) continue;
+        std::vector<Point2D> result(g.n);
+        for (int templateAtom = 0; templateAtom < g.n; ++templateAtom)
+            result[mapping[templateAtom]] = {scaffold.coords[templateAtom].x * targetBondLength,
+                                             scaffold.coords[templateAtom].y * targetBondLength};
         return result;
     }
     return {};
@@ -1166,7 +1194,7 @@ inline void mirrorY(std::vector<Point2D>& coords) {
     for (auto& p : coords) p.x = 2.0 * cx - p.x;
 }
 
-/// Center coordinates at origin.
+/// Centre coordinates at origin.
 inline void center2D(std::vector<Point2D>& coords) {
     if (coords.empty()) return;
     double cx = 0, cy = 0;
@@ -1176,7 +1204,7 @@ inline void center2D(std::vector<Point2D>& coords) {
     for (auto& p : coords) { p.x -= cx; p.y -= cy; }
 }
 
-/// Center 3D coordinates at origin.
+/// Centre 3D coordinates at origin.
 inline void center3D(std::vector<Point3D>& coords) {
     if (coords.empty()) return;
     double cx = 0, cy = 0, cz = 0;
@@ -1189,6 +1217,8 @@ inline void center3D(std::vector<Point3D>& coords) {
 /// Normalise bond lengths to target.
 inline void normaliseBondLength(const MolGraph& g, std::vector<Point2D>& coords,
                                 double target = 1.5) {
+    if (coords.size() < static_cast<size_t>(g.n))
+        throw std::invalid_argument("Coordinates must cover every atom");
     if (g.n < 2) return;
     double sumLen = 0.0;
     int count = 0;
@@ -1234,12 +1264,7 @@ inline void canonicalOrientation(const MolGraph& g, std::vector<Point2D>& coords
     // Rotate so principal axis is horizontal
     rotate2DAbout(coords, -angle, cx, cy);
 
-    // Snap to nearest 30-degree increment (IUPAC: M_PI/6)
-    double snapAngle = std::round(angle / (M_PI / 6.0)) * (M_PI / 6.0);
-    double correction = snapAngle - angle;
-    if (std::abs(correction) > 1e-6) {
-        rotate2DAbout(coords, correction, cx, cy);
-    }
+
 }
 
 /// Align 2D coordinates to a reference via Kabsch-like rotation minimising RMSD.
@@ -1436,11 +1461,8 @@ namespace detail_layout {
 
 /// Extended template library with comprehensive pharmaceutical scaffolds.
 /// Coordinates computed analytically using regular polygon fusion.
-inline const std::vector<ScaffoldTemplate>& getExtendedTemplates() {
-    static std::vector<ScaffoldTemplate> templates;
-    static bool initialised = false;
-    if (initialised) return templates;
-    initialised = true;
+inline std::vector<ScaffoldTemplate> buildExtendedTemplates() {
+    std::vector<ScaffoldTemplate> templates;
 
     // Reuse fusedRings helper
     auto fusedRings = [](int sizeA, int sizeB, int sharedEdgeA0, int sharedEdgeA1,
@@ -1462,8 +1484,11 @@ inline const std::vector<ScaffoldTemplate>& getExtendedTemplates() {
         double centreDistFromMidpoint = rB * std::cos(M_PI / sizeB);
         double cx = mx + centreDistFromMidpoint * nx / nmag;
         double cy = my + centreDistFromMidpoint * ny / nmag;
+        const double startAngle = std::atan2(pB.y - cy, pB.x - cx);
+        const double direction = ((pA.x - cx) * (pB.y - cy)
+                                - (pA.y - cy) * (pB.x - cx)) > 0 ? 1.0 : -1.0;
         for (int k = 0; k < sizeB - 2; k++) {
-            double angle = theta + M_PI + (2.0 * M_PI * (k + 1)) / sizeB;
+            double angle = startAngle + direction * 2.0 * M_PI * (k + 1) / sizeB;
             coords[atomIdx].x = cx + rB * std::cos(angle);
             coords[atomIdx].y = cy + rB * std::sin(angle);
             atomIdx++;
@@ -1741,6 +1766,11 @@ inline const std::vector<ScaffoldTemplate>& getExtendedTemplates() {
     return templates;
 }
 
+inline const std::vector<ScaffoldTemplate>& getExtendedTemplates() {
+    static const std::vector<ScaffoldTemplate> templates = buildExtendedTemplates();
+    return templates;
+}
+
 } // namespace detail_layout
 
 
@@ -1784,9 +1814,12 @@ inline std::vector<Point2D> generateCoords2D(const MolGraph& g,
         for (int i = 0; i < n; i++) placed[i] = true;
     }
 
+    auto systems = detail_layout::findRingSystems(g);
+    std::vector<int> atomSystem(n, -1);
+    for (int systemIndex = 0; systemIndex < static_cast<int>(systems.size()); ++systemIndex)
+        for (int atom : systems[systemIndex].atoms) atomSystem[atom] = systemIndex;
     // --- Phase 2: Ring-first layout ---
     if (!placed[0]) { // not fully placed by template
-        auto systems = detail_layout::findRingSystems(g);
 
         // Place ring systems
         for (auto& sys : systems) {
@@ -1823,11 +1856,11 @@ inline std::vector<Point2D> generateCoords2D(const MolGraph& g,
                     auto& ring = sys.rings[ri];
 
                     // Find shared edge with an already-placed ring
-                    int shA = -1, shB = -1;
+                    int shA = -1, shB = -1, sharedIndex = -1;
                     for (size_t k = 0; k < ring.size(); k++) {
                         int a = ring[k], b = ring[(k + 1) % ring.size()];
                         if (placed[a] && placed[b]) {
-                            shA = a; shB = b;
+                            shA = a; shB = b; sharedIndex = static_cast<int>(k);
                             break;
                         }
                     }
@@ -1841,35 +1874,30 @@ inline std::vector<Point2D> generateCoords2D(const MolGraph& g,
                     double edx = pB.x - pA.x, edy = pB.y - pA.y;
                     double nx = -edy, ny = edx;
 
-                    // Determine outward direction
+                    // Place the new polygon opposite the existing neighbours of the shared edge.
                     double cax = 0, cay = 0;
                     int placedCount = 0;
-                    for (int a : ring) {
-                        if (placed[a]) { cax += coords[a].x; cay += coords[a].y; placedCount++; }
+                    for (int sharedAtom : {shA, shB})
+                        for (int neighbour : g.neighbors[sharedAtom])
+                            if (placed[neighbour] && std::find(ring.begin(), ring.end(), neighbour) == ring.end()) {
+                                cax += coords[neighbour].x; cay += coords[neighbour].y; ++placedCount;
+                            }
+                    if (placedCount && nx * (cax / placedCount - mx) + ny * (cay / placedCount - my) > 0) {
+                        nx = -nx; ny = -ny;
                     }
-                    if (placedCount > 0) {
-                        cax /= placedCount; cay /= placedCount;
-                        double dot = nx * (cax - mx) + ny * (cay - my);
-                        if (dot > 0) { nx = -nx; ny = -ny; }
-                    }
-
-                    double nmag = std::sqrt(nx * nx + ny * ny);
-                    if (nmag < 1e-10) nmag = 1.0;
-                    double centreDistFromMidpoint = rB * std::cos(M_PI / ringSize);
-                    double cx = mx + centreDistFromMidpoint * nx / nmag;
-                    double cy = my + centreDistFromMidpoint * ny / nmag;
-                    double theta = std::atan2(edy, edx);
-
-                    // Place unplaced atoms
-                    int atomSlot = 0;
-                    for (size_t k = 0; k < ring.size(); k++) {
-                        if (!placed[ring[k]]) {
-                            atomSlot++;
-                            double angle = theta + M_PI + (2.0 * M_PI * atomSlot) / ringSize;
-                            coords[ring[k]].x = cx + rB * std::cos(angle);
-                            coords[ring[k]].y = cy + rB * std::sin(angle);
-                            placed[ring[k]] = true;
-                        }
+                    const double nmag = std::hypot(nx, ny);
+                    const double apothem = rB * std::cos(M_PI / ringSize);
+                    const double cx = mx + apothem * nx / nmag;
+                    const double cy = my + apothem * ny / nmag;
+                    const double startAngle = std::atan2(pB.y - cy, pB.x - cx);
+                    const double direction = ((pA.x - cx) * (pB.y - cy)
+                                            - (pA.y - cy) * (pB.x - cx)) > 0 ? 1.0 : -1.0;
+                    for (int offset = 1; offset <= ringSize - 2; ++offset) {
+                        const int atom = ring[(sharedIndex + 1 + offset) % ringSize];
+                        if (placed[atom]) continue;
+                        const double angle = startAngle + direction * 2.0 * M_PI * offset / ringSize;
+                        coords[atom] = {cx + rB * std::cos(angle), cy + rB * std::sin(angle)};
+                        placed[atom] = true;
                     }
 
                     ringPlaced[ri] = true;
@@ -1879,73 +1907,73 @@ inline std::vector<Point2D> generateCoords2D(const MolGraph& g,
         }
     }
 
-    // --- Phase 3: Chain layout (BFS from placed atoms) ---
-    // BFS to place remaining atoms attached to already-placed atoms
+    // --- Phase 3: Attach ring systems and chains along the molecular graph. ---
+    const auto ringCoordinates = coords;
+    std::fill(placed.begin(), placed.end(), false);
     std::deque<int> bfsQ;
-    for (int i = 0; i < n; i++) {
-        if (placed[i]) bfsQ.push_back(i);
-    }
-    // Handle disconnected molecules: ensure at least one atom is placed
-    if (bfsQ.empty() && n > 0) {
-        coords[0] = {0.0, 0.0};
-        placed[0] = true;
-        bfsQ.push_back(0);
-    }
-
-    while (!bfsQ.empty()) {
-        int u = bfsQ.front(); bfsQ.pop_front();
-        for (int v : g.neighbors[u]) {
-            if (placed[v]) continue;
-
-            // Determine bond angle: look at already-placed neighbors of u
-            // and pick an angle that avoids collisions
-            double baseAngle = 0.0;
-            int placedNbCount = 0;
-            double sumAngle = 0.0;
-            for (int w : g.neighbors[u]) {
-                if (w != v && placed[w]) {
-                    double dx = coords[w].x - coords[u].x;
-                    double dy = coords[w].y - coords[u].y;
-                    sumAngle += std::atan2(dy, dx);
-                    placedNbCount++;
-                }
-            }
-
-            if (placedNbCount == 0) {
-                baseAngle = 0.0;
-            } else if (placedNbCount == 1) {
-                // Place at 120 degrees from existing neighbor
-                double existAngle = sumAngle;
-                // Determine bend direction based on hybridisation
-                int bo = g.bondOrder(u, v);
-                double bendAngle = (bo >= 2) ? (2.0 * M_PI / 3.0) : (109.5 * M_PI / 180.0);
-                // Try both directions, pick the one farther from existing atoms
-                double a1 = existAngle + bendAngle;
-                double a2 = existAngle - bendAngle;
-                Point2D p1 = {coords[u].x + std::cos(a1), coords[u].y + std::sin(a1)};
-                Point2D p2 = {coords[u].x + std::cos(a2), coords[u].y + std::sin(a2)};
-                double minDist1 = 1e10, minDist2 = 1e10;
-                for (int w = 0; w < n; w++) {
-                    if (!placed[w] || w == u) continue;
-                    double d1 = (p1.x - coords[w].x) * (p1.x - coords[w].x)
-                              + (p1.y - coords[w].y) * (p1.y - coords[w].y);
-                    double d2 = (p2.x - coords[w].x) * (p2.x - coords[w].x)
-                              + (p2.y - coords[w].y) * (p2.y - coords[w].y);
-                    if (d1 < minDist1) minDist1 = d1;
-                    if (d2 < minDist2) minDist2 = d2;
-                }
-                baseAngle = (minDist1 >= minDist2) ? a1 : a2;
-            } else {
-                // Multiple placed neighbors: place opposite to centroid of neighbors
-                double avgAngle = sumAngle / placedNbCount;
-                baseAngle = avgAngle + M_PI;
-            }
-
-            coords[v].x = coords[u].x + std::cos(baseAngle);
-            coords[v].y = coords[u].y + std::sin(baseAngle);
-            placed[v] = true;
-            bfsQ.push_back(v);
+    auto attach = [&](int atom, Point2D position, double angle) {
+        const int systemIndex = atomSystem[atom];
+        if (systemIndex < 0) {
+            coords[atom] = position;
+            placed[atom] = true;
+            bfsQ.push_back(atom);
+            return;
         }
+        const auto& atoms = systems[systemIndex].atoms;
+        Point2D centre{0, 0};
+        for (int member : atoms) { centre.x += ringCoordinates[member].x; centre.y += ringCoordinates[member].y; }
+        centre.x /= atoms.size(); centre.y /= atoms.size();
+        const double rotation = angle + M_PI - std::atan2(ringCoordinates[atom].y - centre.y,
+                                                          ringCoordinates[atom].x - centre.x);
+        for (int member : atoms) {
+            const double dx = ringCoordinates[member].x - ringCoordinates[atom].x;
+            const double dy = ringCoordinates[member].y - ringCoordinates[atom].y;
+            coords[member] = {position.x + dx * std::cos(rotation) - dy * std::sin(rotation),
+                              position.y + dx * std::sin(rotation) + dy * std::cos(rotation)};
+            placed[member] = true;
+            bfsQ.push_back(member);
+        }
+    };
+    double componentRight = -3.0;
+    for (int seed = 0; seed < n; ++seed) {
+        if (placed[seed]) continue;
+        attach(seed, {componentRight + 3.0, 0}, 0);
+        while (!bfsQ.empty()) {
+            const int atom = bfsQ.front(); bfsQ.pop_front();
+            for (int neighbour : g.neighbors[atom]) {
+                if (placed[neighbour]) continue;
+                double bestAngle = 0, bestScore = -std::numeric_limits<double>::infinity();
+                double reference = 0;
+                for (int existing : g.neighbors[atom])
+                    if (placed[existing]) {
+                        reference = std::atan2(coords[existing].y - coords[atom].y,
+                                                coords[existing].x - coords[atom].x);
+                        break;
+                    }
+                for (int directionIndex = 0; directionIndex < 12; ++directionIndex) {
+                    const double angle = reference + directionIndex * M_PI / 6.0;
+                    const Point2D candidate{coords[atom].x + std::cos(angle), coords[atom].y + std::sin(angle)};
+                    double score = 0;
+                    for (int existing = 0; existing < n; ++existing) {
+                        if (!placed[existing] || existing == atom) continue;
+                        const double distance = std::hypot(candidate.x - coords[existing].x,
+                                                            candidate.y - coords[existing].y);
+                        score -= 1.0 / std::max(0.01, distance * distance);
+                    }
+                    for (int existing : g.neighbors[atom])
+                        if (placed[existing]) {
+                            const double existingAngle = std::atan2(coords[existing].y - coords[atom].y,
+                                                                    coords[existing].x - coords[atom].x);
+                            const double separation = std::abs(std::remainder(angle - existingAngle, 2 * M_PI));
+                            score -= 4.0 * std::abs(separation - 2 * M_PI / 3);
+                        }
+                    if (score > bestScore) { bestScore = score; bestAngle = angle; }
+                }
+                attach(neighbour, {coords[atom].x + std::cos(bestAngle), coords[atom].y + std::sin(bestAngle)}, bestAngle);
+            }
+        }
+        for (int atom = 0; atom < n; ++atom)
+            if (placed[atom]) componentRight = std::max(componentRight, coords[atom].x);
     }
 
     // --- Phase 4: Short force-directed refinement (50 iterations) ---
@@ -1957,11 +1985,30 @@ inline std::vector<Point2D> generateCoords2D(const MolGraph& g,
     // --- Phase 6: Crossing reduction ---
     reduceCrossings(g, coords, 500);
 
+    // Restore bond lengths displaced by overlap and crossing refinement.
+    for (int iteration = 0; iteration < 30; ++iteration)
+        for (int atom = 0; atom < n; ++atom)
+            for (int neighbour : g.neighbors[atom]) {
+                if (neighbour <= atom) continue;
+                const double dx = coords[neighbour].x - coords[atom].x;
+                const double dy = coords[neighbour].y - coords[atom].y;
+                const double distance = std::hypot(dx, dy);
+                if (distance < 1e-10) continue;
+                const double correction = 0.5 * (distance - 1.0) / distance;
+                coords[atom].x += dx * correction;
+                coords[atom].y += dy * correction;
+                coords[neighbour].x -= dx * correction;
+                coords[neighbour].y -= dy * correction;
+            }
+
     // --- Phase 7: Canonical orientation ---
     transform::canonicalOrientation(g, coords);
 
     // --- Phase 8: Bond length normalisation ---
     transform::normaliseBondLength(g, coords, targetBondLength);
+    if (std::all_of(g.neighbors.begin(), g.neighbors.end(),
+                    [](const auto& neighbours) { return neighbours.empty(); }))
+        transform::scale2D(coords, targetBondLength);
 
     return coords;
 }
@@ -2005,7 +2052,7 @@ inline std::vector<Point3D> generateCoords3D(const MolGraph& g,
             D[i][j] = static_cast<double>(graphDist[i][j]) * targetBondLength;
 
     // Classical MDS: embed in 3D from distance matrix
-    // 1. Double centering: B = -0.5 * H * D^2 * H where H = I - (1/n)*11'
+    // 1. Double centring: B = -0.5 * H * D^2 * H where H = I - (1/n)*11'
     std::vector<std::vector<double>> B(n, std::vector<double>(n, 0.0));
     {
         std::vector<double> rowMean(n, 0.0);

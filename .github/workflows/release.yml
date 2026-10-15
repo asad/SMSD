@@ -1,34 +1,34 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2018-2026 BioInception PVT LTD
-name: release
+name: Prepare release artefacts
 
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing release tag to build and upload (e.g. v7.2.1)
+        description: Existing release tag to build and validate
         required: true
         type: string
 
 permissions:
-  contents: write
-  packages: write
+  contents: read
 
 jobs:
-  # ---- Java CLI fat JAR ----
   java-cli:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ inputs.tag }}
+          persist-credentials: false
       - name: Set up JDK 25
         uses: actions/setup-java@v6.0.1
         with:
           distribution: temurin
           java-version: '25'
           cache: maven
-      - name: Build CLI JAR
+      - name: Build and test CLI JAR
         run: mvn -U -B clean verify
       - uses: actions/upload-artifact@v7.0.1
         with:
@@ -38,67 +38,50 @@ jobs:
             !java/target/smsd-*-sources.jar
             !java/target/smsd-*-javadoc.jar
             !java/target/original-*.jar
+          if-no-files-found: error
 
-  # ---- C++ header-only tarball ----
   cpp-headers:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ inputs.tag }}
-      - name: Package C++ headers
+          persist-credentials: false
+      - name: Test and package C++ headers
         env:
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
+          cmake -S cpp -B build/headers -DCMAKE_BUILD_TYPE=Debug \
+            -DSMSD_BUILD_PYTHON=OFF -DSMSD_BUILD_TESTS=ON \
+            -DSMSD_BUILD_METAL=OFF -DSMSD_BUILD_CUDA=OFF
+          cmake --build build/headers --parallel 2
+          ctest --test-dir build/headers --output-on-failure
           VERSION=${RELEASE_TAG#v}
-          tar -czf smsd-cpp-${VERSION}-headers.tar.gz \
+          COPYFILE_DISABLE=1 tar -czf "smsd-cpp-${VERSION}-headers.tar.gz" \
             LICENSE NOTICE -C cpp/include smsd/
       - uses: actions/upload-artifact@v7.0.1
         with:
           name: cpp-headers
           path: smsd-cpp-*-headers.tar.gz
+          if-no-files-found: error
 
-  # ---- Docker CLI → GHCR ----
   docker-cli:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ inputs.tag }}
-      - name: Log in to GHCR
-        uses: docker/login-action@v4.6.0
+          persist-credentials: false
+      - name: Build CLI image
+        run: docker build --tag smsd:release-check .
+      - name: Test CLI image
+        run: docker run --rm smsd:release-check --help
+      - name: Save tested image
+        run: docker save smsd:release-check | gzip > smsd-cli-image.tar.gz
+      - uses: actions/upload-artifact@v7.0.1
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push CLI image
-        uses: docker/build-push-action@v7.4.0
-        with:
-          context: .
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/smsd:${{ inputs.tag }}
-            ghcr.io/${{ github.repository_owner }}/smsd:latest
-
-  # ---- Upload artefacts to existing GitHub Release ----
-  publish:
-    needs: [java-cli, cpp-headers, docker-cli]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v8.0.1
-        with:
-          name: java-jars
-          path: dist
-      - uses: actions/download-artifact@v8.0.1
-        with:
-          name: cpp-headers
-          path: dist
-      - name: List artefacts
-        run: find dist -type f | sort
-      - name: Upload assets to release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: ${{ inputs.tag }}
-        run: |
-          gh release upload "$RELEASE_TAG" dist/smsd-*.jar dist/smsd-cpp-*-headers.tar.gz \
-            --repo "${{ github.repository }}" --clobber
+          name: docker-cli
+          path: smsd-cli-image.tar.gz
+          if-no-files-found: error

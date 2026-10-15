@@ -1,0 +1,132 @@
+"""Independent graph-oracle controls for the cross-language measurement checker."""
+import importlib.util
+import csv
+import json
+from pathlib import Path
+import tempfile
+import unittest
+
+
+SOURCE = Path(__file__).resolve().parents[2] / "benchmarks/search_api_validation.py"
+SPEC = importlib.util.spec_from_file_location("search_api_validation_tested", SOURCE)
+VALIDATION = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(VALIDATION)
+
+
+def graph(count, edges=()):
+    return {"atoms": [{"element": 6, "charge": 0, "isotope": 0, "hydrogens": 0,
+                       "aromatic": False, "ring": False} for _ in range(count)],
+            "bonds": [[first, second, order, False, False] for first, second, order in edges]}
+
+
+def case(**values):
+    return {"operation": "mcs", "objective": "MCIS", "connectivity": "Connected",
+            "profile": "default", "induced": "0", "limit": "0", "weights": "", **values}
+
+
+class SearchValidationTest(unittest.TestCase):
+    def test_parser_permutations_preserve_query_weight_assignments(self):
+        source = graph(3, [(0, 1, 1), (1, 2, 2)])
+        source["atoms"][0]["element"] = 7
+        source["atoms"][2]["element"] = 8
+        permuted = graph(3, [(2, 0, 1), (0, 1, 2)])
+        permuted["atoms"][2]["element"] = 7
+        permuted["atoms"][1]["element"] = 8
+        stopped = {"status": "TimedOut", "optimal": False, "complete": False,
+                   "score": 0, "nodes_visited": 0, "matches": []}
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            results = []
+            for language, query in (("first", source), ("second", permuted)):
+                path = directory / (language + ".jsonl")
+                path.write_text(json.dumps({"case_id": "weighted", "language": language,
+                    "phase": "prepared", "sample": 0, "elapsed_ns": 1,
+                    "results": [stopped], "query_graph": query, "target_graph": source}) + "\n")
+                results.append(path)
+            for weights, comparable in (("1,1,1", True), ("1,2,3", False)):
+                row = case(case_id="weighted", weights=weights, timeout_ms="500")
+                cases = directory / "cases.tsv"
+                with cases.open("w", newline="") as handle:
+                    writer = csv.DictWriter(handle, fieldnames=list(row), delimiter="\t")
+                    writer.writeheader()
+                    writer.writerow(row)
+                report = VALIDATION.compare_jsonl(cases, results)
+                self.assertEqual(report["errors"], [])
+                self.assertEqual(report["valid"], comparable)
+                self.assertEqual(bool(report["graph_differences"]), not comparable)
+
+    def test_parser_permutation_preserves_atom_and_selected_bond_correspondence(self):
+        source = graph(3, [(0, 1, 1), (1, 2, 2)])
+        source["atoms"][0]["element"] = 7
+        reference = graph(3, [(2, 0, 1), (0, 1, 2)])
+        reference["atoms"][2]["element"] = 7
+        indices = VALIDATION.graph_index_map(source, reference)
+        self.assertEqual(indices, {0: 2, 1: 0, 2: 1})
+        match = {"atoms": [[0, 0], [1, 1], [2, 2]], "bonds": [[0, 1, 0, 1]]}
+        transformed = VALIDATION.normalised_matches([match], indices, indices)
+        self.assertEqual(transformed, {(((0, 0), (1, 1), (2, 2)), ((0, 2),))})
+
+    def test_triangle_path_objectives_and_all_mapping_counts(self):
+        triangle = graph(3, [(0, 1, 1), (1, 2, 1), (0, 2, 1)])
+        path = graph(3, [(0, 1, 1), (1, 2, 1)])
+        optimum, matches = VALIDATION.exhaustive_mcs(case(), triangle, path)
+        self.assertEqual(optimum, (2, 2, 1))
+        self.assertEqual(len(matches), 12)
+        optimum, matches = VALIDATION.exhaustive_mcs(case(objective="MCES"), triangle, path)
+        self.assertEqual(optimum, (2, 3, 0))
+        self.assertEqual(len(matches), 6)
+
+    def test_disconnected_no_edge_graphs_have_distinct_objectives(self):
+        query, target = graph(2), graph(3, [(0, 1, 1), (1, 2, 1)])
+        optimum, matches = VALIDATION.exhaustive_mcs(case(connectivity="Fragments"), query, target)
+        self.assertEqual(optimum, (2, 2, 0))
+        self.assertEqual(len(matches), 2)
+        self.assertEqual(VALIDATION.exhaustive_mcs(case(objective="MCES", connectivity="Fragments"), query, target),
+                         ((0, 0, 0), set()))
+
+    def test_signed_and_zero_weights_use_atom_count_tie_breaks(self):
+        query = graph(2, [(0, 1, 1)])
+        optimum, matches = VALIDATION.exhaustive_mcs(case(weights="-0.25,0"), query, query)
+        self.assertEqual(optimum, (0, 1, 0))
+        self.assertEqual(len(matches), 2)
+        optimum, matches = VALIDATION.exhaustive_mcs(case(weights="0,0"), query, query)
+        self.assertEqual(optimum, (0, 2, 1))
+        self.assertEqual(len(matches), 2)
+
+    def test_observed_loose_and_any_orders_are_permissive_after_guards(self):
+        triple = VALIDATION.Graph(graph(2, [(0, 1, 3)]))
+        single = VALIDATION.Graph(graph(2, [(0, 1, 1)]))
+        self.assertTrue(VALIDATION._bond_matches(triple, 0, 1, single, 0, 1, "tautomer"))
+        self.assertTrue(VALIDATION._bond_matches(triple, 0, 1, single, 0, 1, "any"))
+        self.assertFalse(VALIDATION._bond_matches(triple, 0, 1, single, 0, 1, "strict"))
+        self.assertFalse(VALIDATION._bond_matches(triple, 0, 1, single, 0, 1, "default"))
+
+    def test_checker_rejects_induced_nonedge_and_false_optimum(self):
+        triangle = graph(3, [(0, 1, 1), (1, 2, 1), (0, 2, 1)])
+        path = graph(3, [(0, 1, 1), (1, 2, 1)])
+        result = {"status": "Completed", "optimal": True, "complete": True, "score": 3,
+                  "nodes_visited": 1, "matches": [{"atoms": [[0, 0], [1, 1], [2, 2]],
+                  "bonds": [[0, 1, 0, 1], [1, 2, 1, 2]], "fragments": [[0, 1, 2]]}]}
+        errors = VALIDATION.validate_result(case(), result, triangle, path)
+        self.assertIn("Mapping violates induced adjacency", errors)
+        self.assertIn("Claimed optimum differs from the independent exhaustive oracle", errors)
+
+    def test_stopped_suboptimal_witness_is_not_claimed_as_wrong_answer(self):
+        query = graph(2, [(0, 1, 1)])
+        result = {"status": "TimedOut", "optimal": False, "complete": False, "score": 1,
+                  "nodes_visited": 1, "matches": [{"atoms": [[0, 0]], "bonds": [], "fragments": [[0]]}]}
+        self.assertEqual(VALIDATION.validate_result(case(), result, query, query), [])
+
+    def test_boolean_hydrogen_and_recursive_smarts_are_independent_predicates(self):
+        target = graph(5, [(0, 1, 1), (1, 2, 2), (1, 3, 1), (3, 4, 1)])
+        target["atoms"][2]["element"] = 8
+        target["atoms"][3].update(element=7, hydrogens=1)
+        target["atoms"][0]["hydrogens"] = 3
+        methyl = VALIDATION.Pattern("[C;H3]")
+        self.assertEqual(VALIDATION._embeddings(methyl, VALIDATION.Graph(target), False), {((0, 0),)})
+        amide = VALIDATION.Pattern("[$([N;H1,H2]-C=O)]")
+        self.assertEqual(VALIDATION._embeddings(amide, VALIDATION.Graph(target), False), {((0, 3),)})
+
+
+if __name__ == "__main__":
+    unittest.main()

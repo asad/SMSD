@@ -37,6 +37,7 @@ jobs:
         with:
           ref: ${{ inputs.release_tag }}
           fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-python@v7.0.0
         with:
           python-version: '3.14'
@@ -73,7 +74,8 @@ jobs:
         env:
           RELEASE_REF: ${{ inputs.release_tag }}
         run: |
-          python -m pip install build twine
+          python -m pip install build twine pytest pytest-timeout
+          python -m pytest scripts/tests -q
           python scripts/build_python_wheels.py prepare --output-dir dist --release-ref "$RELEASE_REF"
           python -m twine check --strict dist/*.tar.gz
       - uses: actions/upload-artifact@v7.0.1
@@ -95,6 +97,7 @@ jobs:
       - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ inputs.release_tag }}
+          persist-credentials: false
       - uses: actions/setup-python@v7.0.0
         with:
           python-version: '3.14'
@@ -110,7 +113,7 @@ jobs:
         run: |
           python -m pip install cibuildwheel==4.2.1
           python scripts/build_python_wheels.py build \
-            --sdist release-source/smsd-*.tar.gz --source-manifest release-source/source-manifest.json \
+            --sdist release-source/smsd-*.tar.gz --source-manifest release-source/SOURCE_MANIFEST.json \
             --platform "$WHEEL_PLATFORM" --arch "$WHEEL_ARCH" --output-dir wheelhouse
       - uses: actions/upload-artifact@v7.0.1
         with:
@@ -164,4 +167,4 @@ jobs:
           python scripts/check_pypi_release.py verify-staged \
             --dist-dir dist --receipt-file upload-receipt.json
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1, 2026-07-28

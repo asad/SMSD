@@ -61,7 +61,9 @@ public final class Standardiser {
       // Unmatched atoms retain their original properties — hydrogen adder
       // will simply skip them, which is safer than the shortcut's silent failure.
     }
-    CDKHydrogenAdder.getInstance(SilentChemObjectBuilder.getInstance()).addImplicitHydrogens(m);
+    CDKHydrogenAdder hydrogens=CDKHydrogenAdder.getInstance(SilentChemObjectBuilder.getInstance());
+    for(IAtom atom:m.atoms())
+      if(atom.getImplicitHydrogenCount()==null&&atom.getAtomTypeName()!=null)hydrogens.addImplicitHydrogens(m,atom);
     Cycles.markRingAtomsAndBonds(m);
     Aromaticity arom =
         new Aromaticity(Aromaticity.Model.Daylight, Cycles.all());

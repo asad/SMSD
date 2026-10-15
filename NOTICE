@@ -44,8 +44,8 @@ If you use SMSD Pro in academic research, please cite both papers:
   Rahman SA.
   SMSD Pro: Coverage-Driven, Tautomer-Aware Maximum Common
   Substructure Search.
-  ChemRxiv, 2025.
-  DOI: 10.26434/chemrxiv.15001534
+  ChemRxiv, 2026.
+  DOI: 10.26434/chemrxiv.15001534/v1
 
   Rahman SA, Bashton M, Holliday GL, Schrader R, Thornton JM.
   Small Molecule Subgraph Detector (SMSD) toolkit.
@@ -118,4 +118,3 @@ AVAILABLE PLATFORMS
   Java:   com.bioinceptionlabs:smsd on Maven Central
   Python: pip install smsd (PyPI)
   C++:    Header-only library (cpp/include/smsd/)
-  Docker: ghcr.io/asad/smsd

@@ -6,12 +6,14 @@
  */
 package com.bioinception.smsd;
 
+import com.bioinception.smsd.TestSupport;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.bioinception.smsd.cli.SMSDcli.MolIO;
 import com.bioinception.smsd.cli.SMSDcli.OutputUtil;
 import com.bioinception.smsd.core.ChemOptions;
-import com.bioinception.smsd.core.SMSD;
+import com.bioinception.smsd.TestSupport.MoleculePair;
 import com.bioinception.smsd.core.Standardiser;
 import java.io.ByteArrayOutputStream;
 import java.util.*;
@@ -43,9 +45,9 @@ class IOTest extends TestBase {
     void jsonKeys() throws Exception {
       IAtomContainer q = parse("c1ccccc1");
       IAtomContainer t = parse("c1ccc(C)cc1");
-      SMSD smsd = new SMSD(q, t, new ChemOptions());
-      smsd.isSubstructure();
-      List<Map<Integer, Integer>> mappings = smsd.findAllSubstructures(10, 5000);
+      MoleculePair smsd = new MoleculePair(q, t, new ChemOptions());
+      smsd.contains();
+      List<Map<Integer, Integer>> mappings = smsd.substructureMappings(10, 5000);
 
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       OutputUtil.writeMappings(q, t, mappings, OutputUtil.OutType.JSON, baos, false);
@@ -64,9 +66,9 @@ class IOTest extends TestBase {
     void prettyJson() throws Exception {
       IAtomContainer q = parse("c1ccccc1");
       IAtomContainer t = parse("c1ccc(C)cc1");
-      SMSD smsd = new SMSD(q, t, new ChemOptions());
-      smsd.isSubstructure();
-      List<Map<Integer, Integer>> mappings = smsd.findAllSubstructures(10, 5000);
+      MoleculePair smsd = new MoleculePair(q, t, new ChemOptions());
+      smsd.contains();
+      List<Map<Integer, Integer>> mappings = smsd.substructureMappings(10, 5000);
 
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       OutputUtil.writeMappings(q, t, mappings, OutputUtil.OutType.JSON, baos, true);
@@ -123,9 +125,9 @@ class IOTest extends TestBase {
     void smiOutput() throws Exception {
       IAtomContainer q = parse("c1ccccc1");
       IAtomContainer t = parse("c1ccc(C)cc1");
-      SMSD smsd = new SMSD(q, t, new ChemOptions());
-      smsd.isSubstructure();
-      List<Map<Integer, Integer>> mappings = smsd.findAllSubstructures(1, 5000);
+      MoleculePair smsd = new MoleculePair(q, t, new ChemOptions());
+      smsd.contains();
+      List<Map<Integer, Integer>> mappings = smsd.substructureMappings(1, 5000);
 
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       OutputUtil.writeMappings(q, t, mappings, OutputUtil.OutType.SMI, baos, false);
@@ -319,8 +321,8 @@ class IOTest extends TestBase {
       IAtomContainer target = MolIO.loadTarget("SMI", "c1ccc(C)cc1");
       IAtomContainer qStd = Standardiser.standardise(q.container(), Standardiser.TautomerMode.NONE);
       IAtomContainer tStd = Standardiser.standardise(target, Standardiser.TautomerMode.NONE);
-      SMSD smsd = new SMSD(qStd, tStd, new ChemOptions());
-      assertTrue(smsd.isSubstructure(), "Benzene should be substructure of toluene");
+      MoleculePair smsd = new MoleculePair(qStd, tStd, new ChemOptions());
+      assertTrue(smsd.contains(), "Benzene should be substructure of toluene");
     }
 
     @Test
@@ -329,8 +331,8 @@ class IOTest extends TestBase {
       MolIO.Query q = MolIO.loadQuery("SIG", "[#6]~[#6]");
       IAtomContainer target = MolIO.loadTarget("SMI", "CC");
       IAtomContainer tStd = Standardiser.standardise(target, Standardiser.TautomerMode.NONE);
-      SMSD smsd = new SMSD(q.text(), tStd, new ChemOptions());
-      assertTrue(smsd.isSubstructure(), "C~C SMARTS should match ethane");
+      MoleculePair smsd = new MoleculePair(q.text(), tStd, new ChemOptions());
+      assertTrue(smsd.contains(), "C~C SMARTS should match ethane");
     }
   }
 }

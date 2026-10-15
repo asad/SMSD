@@ -6,6 +6,10 @@
  */
 package com.bioinception.smsd;
 
+import com.bioinception.smsd.TestSupport;
+
+import com.bioinception.smsd.TestSupport.MoleculePair;
+
 import static com.bioinception.smsd.TestSupport.repeat;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -19,7 +23,7 @@ import org.openscience.cdk.isomorphism.DfPattern;
 
 /**
  * Java-to-Java substructure diagnostic:
- * CDK DfPattern (bond-driven VF2) vs SMSD Pro VF2++ (vertex-driven).
+ * CDK DfPattern and SMSD Substructure queries.
  *
  * <p>Both engines operate within the same JVM, same JIT, and receive
  * identical standardised {@link IAtomContainer} objects from CDK 2.13.
@@ -53,7 +57,7 @@ public class JavaCdkVsSmsdBenchmarkTest extends TestBase {
         "OCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCO";
 
     /**
-     * All20 curated molecule pairs; interpretation depends on each engine's chemistry policy.
+     * All 20 curated molecule pairs; interpretation depends on each engine's chemistry policy.
      * Format: { smi1, smi2, pairName, category }
      */
     private static final String[][] PAIRS = {
@@ -69,8 +73,8 @@ public class JavaCdkVsSmsdBenchmarkTest extends TestBase {
         {"Cn1cnc2c1c(=O)n(C)c(=O)n2C", "Cn1cnc2c1c(=O)[nH]c(=O)n2C",
             "caffeine-theophylline", "N-methyl diff"},
         // Alkaloids
-        {"CN1CCC23C4C1CC5=C(C2C(C=C4)O3)C=C(C=C5)O",
-            "CN1CCC23C4C1CC5=C(C2C(C=C4)OC3)C=C(C=C5)O",
+        {"CN1CC[C@]23[C@@H]4[C@H]1CC5=C2C(=C(C=C5)O)O[C@H]3[C@H](C=C4)O",
+            "CN1CC[C@]23[C@@H]4[C@H]1CC5=C2C(=C(C=C5)OC)O[C@H]3[C@H](C=C4)O",
             "morphine-codeine", "Alkaloid"},
         // NSAIDs
         {"CC(C)Cc1ccc(CC(C)C(=O)O)cc1",
@@ -210,11 +214,11 @@ public class JavaCdkVsSmsdBenchmarkTest extends TestBase {
     // -----------------------------------------------------------------------
 
     @Test
-    @DisplayName("CDK DfPattern vs SMSD VF2++ — substructure (all 20 pairs)")
+    @DisplayName("CDK DfPattern vs SMSD Substructure — substructure (all 20 pairs)")
     void cdkVsSmsdSubstructure() throws Exception {
         System.out.println();
         System.out.println(repeat("=", 110));
-        System.out.println("Java CDK DfPattern vs SMSD Pro VF2++ — Substructure Diagnostic");
+        System.out.println("Java CDK DfPattern vs SMSD Substructure — Substructure Diagnostic");
         System.out.printf("Protocol: %d warmup + %d measured, median reported | All %d molecule pairs%n",
                 WARMUP, ITERS, PAIRS.length);
         System.out.println(repeat("=", 110));
@@ -241,25 +245,25 @@ public class JavaCdkVsSmsdBenchmarkTest extends TestBase {
                 continue;
             }
 
-            // --- SMSD Pro VF2++ ---
+            // --- SMSD Substructure ---
             boolean smsdHit = false;
             long[] smsdTimes = new long[ITERS];
             try {
                 for (int i = 0; i < WARMUP; i++) {
                     BenchmarkRunSettings.checkInterrupted();
-                    new SMSD(mol1, mol2, opts).isSubstructure(SUB_TIMEOUT_MS);
+                    new MoleculePair(mol1, mol2, opts).contains(SUB_TIMEOUT_MS);
                 }
                 for (int i = 0; i < ITERS; i++) {
                     BenchmarkRunSettings.checkInterrupted();
                     long t0 = System.nanoTime();
-                    smsdHit = new SMSD(mol1, mol2, opts).isSubstructure(SUB_TIMEOUT_MS);
+                    smsdHit = new MoleculePair(mol1, mol2, opts).contains(SUB_TIMEOUT_MS);
                     smsdTimes[i] = System.nanoTime() - t0;
                 }
             } catch (Exception e) {
                 Arrays.fill(smsdTimes, Long.MAX_VALUE);
             }
 
-            // --- CDK DfPattern (bond-driven VF2) ---
+            // --- CDK DfPattern ---
             boolean cdkHit = false;
             long[] cdkTimes = new long[ITERS];
             try {
@@ -344,7 +348,7 @@ public class JavaCdkVsSmsdBenchmarkTest extends TestBase {
             }
 
             // SMSD self-match
-            boolean smsdSelf = new SMSD(mol, mol, opts).isSubstructure(SUB_TIMEOUT_MS);
+            boolean smsdSelf = new MoleculePair(mol, mol, opts).contains(SUB_TIMEOUT_MS);
             // CDK self-match
             boolean cdkSelf  = DfPattern.findSubstructure(mol).matches(mol);
 

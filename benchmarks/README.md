@@ -5,6 +5,73 @@ options and search budgets when comparing results, and check returned mappings.
 The [7.2.0 report](RESULTS_7.2.0.md) contains the recorded measurements;
 [7.2.2 validation](../docs/VALIDATION_7.2.2.md) covers the current release tests.
 
+## Prepared-query APIs
+
+Build the current source before running these workloads. Release 7.2.2 uses
+the previous search API. The three runners read `search_api_cases.tsv` and
+write JSON Lines containing every measurement, parsed graph, atom and selected
+bond mapping, fragments, stopping status and proof flags.
+
+| Phase | Work inside the timer |
+| --- | --- |
+| `prepare` | Construct a prepared query from a parsed graph, or compile SMARTS |
+| `prepared` | Search a pre-parsed target with a prepared query |
+| `end_to_end` | Parse both inputs, prepare the query and search |
+| `batch` | Search a collection of pre-parsed targets sequentially |
+
+The corpus includes MCIS and MCES, connected and disconnected results,
+weighted MCIS, molecule and SMARTS substructure, capped enumeration and batch
+calls. Chemistry, budgets, limits and batch sizes are explicit in each row.
+The `any` profile compares elements and ignores bond order; other profiles
+exercise strict chemistry, rings, stereo and tautomer matching.
+
+From the repository root, run the Python and native workloads:
+
+```bash
+mkdir -p build/search-benchmarks
+python benchmarks/benchmark_search_api.py \
+  --output build/search-benchmarks/python.jsonl --warmup 2 --repeats 5
+c++ -std=c++17 -O3 -DNDEBUG -Icpp/include \
+  benchmarks/benchmark_search_api.cpp -o build/search-benchmarks/native
+build/search-benchmarks/native --cases benchmarks/search_api_cases.tsv \
+  --output build/search-benchmarks/cpp.jsonl --warmup 2 --repeats 5
+```
+
+For Java, compile the runner against the current source-built dependency JAR:
+
+```bash
+mvn -f java/pom.xml package -DskipTests
+javac --release 8 -cp java/target/smsd-7.2.2-jar-with-dependencies.jar \
+  -d build/search-benchmarks benchmarks/BenchmarkSearchAPI.java
+java -cp "build/search-benchmarks:java/target/smsd-7.2.2-jar-with-dependencies.jar" \
+  BenchmarkSearchAPI --cases benchmarks/search_api_cases.tsv \
+  --output build/search-benchmarks/java.jsonl --warmup 2 --repeats 5
+```
+
+Use a semicolon instead of a colon in the Java classpath on Windows. With
+Java 8, replace `--release 8` with `-source 8 -target 8`. All runners accept
+`--case ID` and `--phase PHASE` to select a workload.
+
+Validate the recorded results before analysing timings:
+
+```bash
+python benchmarks/search_api_validation.py --cases benchmarks/search_api_cases.tsv \
+  --results build/search-benchmarks/cpp.jsonl build/search-benchmarks/java.jsonl \
+    build/search-benchmarks/python.jsonl --output build/search-benchmarks/validation.json
+```
+
+The independent validator checks returned mappings, selected components and
+completed cross-language results. Small eligible graphs also use exhaustive
+objective checks. It reports predicates and graph sizes outside its independent
+oracle scope explicitly; language regression tests cover those contracts.
+Raw embeddings are compared after accounting for parser atom order.
+
+Keep preparation and warm search results separate. Use several fresh processes
+in a balanced order, record compiler, runtime, source and power conditions, and
+retain every observation. Timing ratios require the same objective and matching
+rules with completed proofs. A timeout with a valid incumbent is a separate
+quality outcome. Run coverage and builds outside the timing window.
+
 ## Python
 
 Install SMSD and RDKit in the same environment. These short runs check the
@@ -33,9 +100,8 @@ imported package paths and versions.
 | `run_external_benchmarks.py` | Random and neighbouring pairs, tautomer pairs, stress cases and SMARTS |
 | `benchmark_bindings.py` | Parsing, RDKit conversion, scalar calls and batch overhead |
 
-The external MCS runner checks mappings and records RDKit cancellation. SMSD's
-mapping API does not expose cancellation status. Results near the search budget
-are excluded from speed ratios.
+The external MCS runner checks mappings and records completion and stopping
+status. Stopped searches are excluded from speed ratios.
 
 | Policy | Matching rules |
 |---|---|

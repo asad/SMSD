@@ -38,15 +38,22 @@ int main() {
     for (int i = 0; i < n; ++i)
         for (int j = i + 1; j < n; ++j)
             if (random() % 100 < 55) edges.emplace_back(i, j);
-    smsd::clique::ProductGraph graph;
-    graph.build(std::vector<smsd::clique::ProductVertex>(n), edges);
+    std::vector<std::vector<int>> neighbors(n), completeNeighbors(n);
+    for (const auto& edge : edges) {
+        neighbors[edge.first].push_back(edge.second); neighbors[edge.second].push_back(edge.first);
+    }
+    for (int first = 0; first < n; ++first) for (int second = 0; second < n; ++second)
+        if (first != second) completeNeighbors[first].push_back(second);
+    const auto graph = smsd::MolGraph::Builder().atomCount(n).atomicNumbers(std::vector<int>(n, 6)).setNeighbors(neighbors).build(false);
+    const auto complete = smsd::MolGraph::Builder().atomCount(n).atomicNumbers(std::vector<int>(n, 6)).setNeighbors(completeNeighbors).build(false);
+    const auto query = smsd::MCS::find(complete).withTimeout(10000);
     const auto start = Clock::now();
     int checksum = 0;
     for (int repeat = 0; repeat < 20; ++repeat) {
-        const auto result = smsd::clique::findMaxCliques(graph, 200000, 10000);
-        if (result.timed_out) return 2;
-        checksum += result.max_size;
+        const auto result = query.match(graph);
+        if (!result.optimal) return 2;
+        checksum += static_cast<int>(result.score);
     }
     const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(Clock::now() - start).count();
-    std::cout << "clique n=80 repeats=20 us=" << elapsed << " checksum=" << checksum << '\n';
+    std::cout << "complete-subgraph n=80 repeats=20 us=" << elapsed << " checksum=" << checksum << '\n';
 }

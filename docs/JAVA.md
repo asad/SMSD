@@ -5,6 +5,9 @@ It supports substructure and MCS search, fingerprints, stereo handling,
 standardisation and R-group decomposition. Java 8 is the minimum runtime;
 Java 25 LTS is preferred. Both run the same JAR.
 
+The prepared-query API described here is an unreleased breaking change. Build
+from this source checkout; the released 7.2.2 JAR retains the previous API.
+
 ## Installation
 
 The [GitHub release](https://github.com/asad/SMSD/releases/tag/v7.2.2) includes
@@ -44,10 +47,9 @@ Save this as `SearchExample.java`. It builds CDK containers, searches their
 chemical graphs and checks that the returned mapping is valid:
 
 ```java
-import com.bioinception.smsd.core.ChemOptions;
-import com.bioinception.smsd.core.MolGraph;
-import com.bioinception.smsd.core.SearchEngine;
-import java.util.List;
+import com.bioinception.smsd.core.MCS;
+import com.bioinception.smsd.core.SearchResult;
+import com.bioinception.smsd.core.Substructure;
 import java.util.Map;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.silent.SilentChemObjectBuilder;
@@ -58,51 +60,35 @@ public class SearchExample {
         SmilesParser parser = new SmilesParser(SilentChemObjectBuilder.getInstance());
         IAtomContainer query = parser.parseSmiles("c1ccccc1");
         IAtomContainer target = parser.parseSmiles("c1ccc(O)cc1");
-        MolGraph queryGraph = new MolGraph(query);
-        MolGraph targetGraph = new MolGraph(target);
-        ChemOptions chemistry = new ChemOptions();
-        SearchEngine.MCSOptions options = new SearchEngine.MCSOptions();
-        options.timeoutMs = 1000;
-        options.connectedOnly = true;
-        options.induced = false;
-
-        Map<Integer, Integer> mapping =
-                SearchEngine.findMCS(queryGraph, targetGraph, chemistry, options);
-        if (mapping.size() != 6 || !SearchEngine.validateMapping(
-                queryGraph, targetGraph, mapping, chemistry).isEmpty()) {
-            throw new IllegalStateException("Expected a valid six-atom MCS");
+        SearchResult result = MCS.find(query).withTimeout(1000).match(target);
+        if (!result.optimal() || !result.found()
+                || result.matches().get(0).atomCount() != 6
+                || !Substructure.find(query).match(target).found()) {
+            throw new IllegalStateException("Expected a proven six-atom benzene match");
         }
-        for (Map.Entry<Integer, Integer> pair : mapping.entrySet()) {
-            System.out.printf("query[%d] %s -> target[%d] %s%n",
-                    pair.getKey(), query.getAtom(pair.getKey()).getSymbol(),
-                    pair.getValue(), target.getAtom(pair.getValue()).getSymbol());
+        SearchResult.Match match = result.matches().get(0);
+        for (Map.Entry<Integer, Integer> pair : match.atomMapping().entrySet()) {
+            System.out.println(query.getAtom(pair.getKey()).getSymbol() + " -> "
+                    + target.getAtom(pair.getValue()).getSymbol());
         }
-
-        Map<Integer, Integer> first =
-                SearchEngine.findSubstructure(query, target, chemistry, 1000);
-        List<Map<Integer, Integer>> all =
-                SearchEngine.findAllSubstructures(query, target, chemistry, 100, 1000);
-        boolean hit = SearchEngine.isSubstructure(query, target, chemistry, 1000);
-        if (!hit || first.size() != 6 || all.isEmpty()) {
-            throw new IllegalStateException("Expected a benzene substructure match");
-        }
-        System.out.println("MCS atoms: " + mapping.size());
+        System.out.println("Common fragment: " + match.toSmiles(query));
     }
 }
 ```
 
-Compile with Java 25, then run on Java 8 or later:
+Build the current source API, then compile with Java 25 and run on Java 8 or later:
 
 ```bash
-javac --release 8 -cp smsd-7.2.2-jar-with-dependencies.jar SearchExample.java
-java -cp "smsd-7.2.2-jar-with-dependencies.jar:." SearchExample
+mvn -f java/pom.xml package -DskipTests
+javac --release 8 -cp java/target/smsd-7.2.2-jar-with-dependencies.jar SearchExample.java
+java -cp "java/target/smsd-7.2.2-jar-with-dependencies.jar:." SearchExample
 ```
 
 When compiling with Java 8, omit `--release 8`. On Windows, use a semicolon
 classpath separator:
 
 ```powershell
-java -cp "smsd-7.2.2-jar-with-dependencies.jar;." SearchExample
+java -cp "java/target/smsd-7.2.2-jar-with-dependencies.jar;." SearchExample
 ```
 
 `MolGraph` retains the supplied CDK atom order. Mappings, weights and exclusions
@@ -111,43 +97,122 @@ positions. Prepare aromaticity, hydrogens and stereo consistently when loading
 containers through other CDK readers. If preprocessing changes atom order,
 retain the correspondence to the original molecule.
 
-The `SMSD` facade accepts SMILES or CDK containers and standardises inputs by
-default. See the complete facade example in the [main README](../README.md).
-Its four-argument CDK constructor accepts `standardise=false` for inputs you
-have already prepared.
+`MCS.find(query)` and `Substructure.find(query)` accept either `MolGraph` or
+CDK containers. `Substructure.smarts(expression)` compiles SMARTS, including
+recursive and stereo predicates. Prepare chemistry explicitly with
+`Standardiser` when the input reader has not supplied it. Prepared queries
+own snapshots of their query and options and can be reused concurrently.
+Keep target graphs unchanged while a call uses them.
 
-## Chemistry and search options
+## Chemistry, objectives and completion
 
-`ChemOptions` controls molecular matching; `SearchEngine.MCSOptions` controls
-the objective, connectivity and search budget.
+`MCS.Options` contains `chemistry`, `objective`, `connectivity`, `atomWeights`,
+`minFragmentAtoms`, `maxFragments`, `excludedTargetAtoms`, `timeoutMillis`,
+`nodeLimit` and `cancellation`. `Substructure.Options` contains `chemistry`,
+`induced` and the same resource limits.
 
-| Option | Behaviour |
+| Choice | Meaning |
 | --- | --- |
-| `matchAtomType` | Preserve element identity; enabled by default |
-| `matchFormalCharge`, `matchIsotope` | Require matching charges or isotopes when enabled |
-| `useChirality`, `useBondStereo` | Compare atom or bond stereo when enabled |
-| `matchBondOrder` | `STRICT`, `LOOSE` or `ANY` |
-| `aromaticityMode` | `STRICT` or `FLEXIBLE` |
-| `ringMatchesRingOnly`, `completeRingsOnly` | Restrict ring matching |
-| `timeoutMs` | MCS budget in milliseconds |
-| `connectedOnly` | Require a connected common substructure |
-| `induced` | Also require mapped target edges to exist in the query |
-| `maximizeBonds` | Select the bond objective instead of the atom objective |
-| `atomWeights` | Finite weights, one per query atom |
-| `excludedTargetAtoms` | Target atom indices unavailable for mapping |
+| `MCS.Objective.MCIS` | Preserve mapped edges and non-edges; maximise atoms, then bonds |
+| `MCS.Objective.MCES` | Select compatible common edges; maximise bonds, then incident atoms; exclude isolated padding |
+| `MCS.Connectivity.Connected` | Require one common fragment; the default |
+| `MCS.Connectivity.Fragments` | Permit disconnected common fragments |
+| `atomWeights` | MCIS only; maximise the query-weight sum, then atoms and bonds |
+| `minFragmentAtoms`, `maxFragments` | Constrain selected common-edge components during optimisation |
+| `excludedTargetAtoms` | Exclude original target indices while retaining the target's chemistry |
+| `timeoutMillis` | `-1` chooses an adaptive budget; `0` stops immediately |
+| `nodeLimit` | `0` means unlimited nodes |
+| `cancellation` | A `BooleanSupplier` checked during searching; interruption also cancels |
 
-Use `ChemOptions.tautomerProfile()` explicitly for relaxed tautomer chemistry.
-Changing the objective or weights changes the selected mapping; an atom count
-alone does not describe a weighted or bond-maximising result.
+Java retains supplied finite double-weight precision. Candidate sums use query
+index order and comparisons use `Double.compare`; weights are not quantised.
+C++ and Python retain their bounded millipoint weight contract.
 
-Non-induced MCS preserves query direction: mapped query edges must exist in
-the target, while extra target edges are allowed. Target exclusions retain
-original indices and do not alter the molecule's chemistry.
+`ChemOptions` controls element, charge, isotope, aromaticity, bond order, ring
+and stereo comparisons. `ChemOptions.tautomerProfile()` explicitly relaxes
+tautomer chemistry. The explicit
+`MCS.computeTautomerConfidence(queryGraph, targetGraph, match, chemistry)` helper
+reports a heuristic confidence for selected tautomeric chemistry relaxations.
+`chemistry.pH` and `chemistry.solvent` apply only to this read-time helper; they do
+not change MCIS or MCES optimisation. Identical selected chemistry has confidence
+1, and the helper leaves both graphs unchanged.
 
-Timeouts cover the search stages together. A bounded search may return a valid
-mapping without proving global optimality; its deadline does not guarantee a
-minimum MCS size. Stereo matching checks R/S descriptors and fully mapped
-ligand permutations. Unspecified stereo can act as a wildcard.
+With `completeRingsOnly`, each retained ring atom or bond
+must be covered by a wholly selected relevant ring in both inputs. A shared
+fusion atom may survive through one retained complete ring.
+
+Both `match(target)` and `matchAll(target, limit)` return `SearchResult`.
+`matchAll` defaults to 1000 distinct atom-and-selected-bond embeddings;
+`MCS.canonicalizeMapping` can identify symmetry-equivalent correspondences.
+`Match.atomMapping()` and `bondMapping()` use original input atom indices.
+`fragments()` follows selected common edges. `toMolecule(query)` and
+`toSmiles(query)` cap cut valences; `toGraph(query)` preserves original
+chemical properties for further matching.
+
+Inspect `status()` (`Completed`, `TimedOut`, `Cancelled`, `LimitReached`),
+`optimal()` and `complete()` separately. A budget-stopped incumbent may be
+valid without proving an optimum. A capped MCS enumeration can have
+`optimal() == true` and `complete() == false`. Substructure `match` proves
+existence when found; `matchAll` reports whether its requested enumeration
+finished. Elapsed milliseconds and visited nodes are available on the result.
+
+`MCS.matchMany` and `Substructure.matchMany` search a list of pre-parsed targets
+sequentially and return one result per target in input order, including stopped
+and negative results. Each target receives the configured per-call budget. `MCS.matchConstrained` searches
+successive queries with separate per-pair budgets and excludes claimed atoms
+in the original target graph. `MCS.consensus` uses one whole-call budget and
+requires `ceil(threshold * moleculeCount)` support. Its progressive result
+reports supported mappings and always has `optimal() == false`.
+
+Stereo matching compares retained ligand orientations. Partial common graphs
+constrain stereo once selected ligands determine it; unspecified stereo can
+act as a wildcard.
+
+## Prepared queries and fragments
+
+Save this as `PreparedSearchExample.java`:
+
+```java
+import com.bioinception.smsd.core.MCS;
+import com.bioinception.smsd.core.MolGraph;
+import com.bioinception.smsd.core.SearchResult;
+import com.bioinception.smsd.core.Substructure;
+import java.util.Arrays;
+import org.openscience.cdk.silent.SilentChemObjectBuilder;
+import org.openscience.cdk.smiles.SmilesParser;
+
+public class PreparedSearchExample {
+    public static void main(String[] args) throws Exception {
+        SmilesParser parser = new SmilesParser(SilentChemObjectBuilder.getInstance());
+        MolGraph ring = new MolGraph(parser.parseSmiles("C1CC1"));
+        MolGraph chain = new MolGraph(parser.parseSmiles("CCC"));
+        MCS.Options options = new MCS.Options();
+        options.objective = MCS.Objective.MCES;
+        SearchResult edges = MCS.find(ring).withOptions(options).match(chain);
+        if (!edges.optimal() || edges.matches().get(0).bondCount() != 2) {
+            throw new IllegalStateException("Expected a proven two-bond common path");
+        }
+
+        options.connectivity = MCS.Connectivity.Fragments;
+        options.minFragmentAtoms = 1;
+        MolGraph pieces = new MolGraph(parser.parseSmiles("CO.CN"));
+        SearchResult fragments = MCS.find(pieces).withOptions(options).match(pieces);
+        if (fragments.matches().get(0).fragments().size() != 2) {
+            throw new IllegalStateException("Expected two common fragments");
+        }
+
+        Substructure query = Substructure.find(new MolGraph(parser.parseSmiles("CO")));
+        MolGraph target = new MolGraph(parser.parseSmiles("OCO"));
+        if (query.matchAll(target, 10).matches().size() != 2
+                || query.matchMany(Arrays.asList(target, chain)).get(1).found()) {
+            throw new IllegalStateException("Unexpected enumeration or batch result");
+        }
+    }
+}
+```
+
+Compile and run it with the same source-built JAR and classpath as
+`SearchExample.java` above.
 
 ## Fingerprints, stereo and R-groups
 
@@ -160,7 +225,7 @@ import com.bioinception.smsd.core.ChemOptions;
 import com.bioinception.smsd.core.CIPAssigner;
 import com.bioinception.smsd.core.FingerprintEngine;
 import com.bioinception.smsd.core.MolGraph;
-import com.bioinception.smsd.core.SearchEngine;
+import com.bioinception.smsd.core.Substructure;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -172,11 +237,11 @@ public class FeaturesExample {
     public static void main(String[] args) throws Exception {
         SmilesParser parser = new SmilesParser(SilentChemObjectBuilder.getInstance());
         IAtomContainer phenol = parser.parseSmiles("c1ccc(O)cc1");
-        long[] path = SearchEngine.pathFingerprint(phenol, 7, 2048);
-        long[] common = SearchEngine.mcsFingerprint(phenol, new ChemOptions(), 7, 2048);
+        long[] path = FingerprintEngine.pathFingerprint(phenol, 7, 2048);
+        long[] common = FingerprintEngine.mcsFingerprint(phenol, new ChemOptions(), 7, 2048);
         long[] circular = FingerprintEngine.ecfp(phenol, 2, 2048);
-        if (!SearchEngine.fingerprintSubset(path, path)
-                || SearchEngine.mcsFingerprintSimilarity(common, common) != 1.0
+        if (!FingerprintEngine.fingerprintSubset(path, path)
+                || FingerprintEngine.tanimoto(common, common) != 1.0
                 || FingerprintEngine.tanimoto(circular, circular) != 1.0) {
             throw new IllegalStateException("Expected identical fingerprints to match");
         }
@@ -194,19 +259,24 @@ public class FeaturesExample {
         IAtomContainer core = parser.parseSmiles("c1ccccc1");
         List<IAtomContainer> molecules = Arrays.asList(
                 phenol, parser.parseSmiles("Cc1ccccc1"));
-        List<Map<String, IAtomContainer>> groups =
-                SearchEngine.decomposeRGroups(core, molecules, new ChemOptions(), 1000);
+        List<Substructure.Decomposition> groups =
+                Substructure.decomposeRGroups(core, molecules, new ChemOptions(), 1000);
         if (groups.size() != 2) {
             throw new IllegalStateException("Expected two decomposition rows");
         }
-        System.out.println("R-group rows: " + groups.size());
+        for (Substructure.Decomposition row : groups) {
+            if (!row.search().complete() || row.core() == null) {
+                throw new IllegalStateException("Core search did not complete with a match");
+            }
+            System.out.println("Attached groups: " + row.rgroups().size());
+        }
     }
 }
 ```
 
 ```bash
-javac --release 8 -cp smsd-7.2.2-jar-with-dependencies.jar FeaturesExample.java
-java -cp "smsd-7.2.2-jar-with-dependencies.jar:." FeaturesExample
+javac --release 8 -cp java/target/smsd-7.2.2-jar-with-dependencies.jar FeaturesExample.java
+java -cp "java/target/smsd-7.2.2-jar-with-dependencies.jar:." FeaturesExample
 ```
 
 A fingerprint match is a screening result, not a substitute for graph matching.
@@ -243,7 +313,11 @@ java -jar smsd-7.2.2-jar-with-dependencies.jar \
 
 The first SMARTS search returns `"exists": true` and exit status 0. The second
 returns `"exists": false` and exit status 1; a missing match is a normal search
-result. File types are `MOL`,
+result. Current source also uses 1 for completed MCS and enumeration requests
+without a match, and 2 for invalid input, errors or incomplete searches.
+In an SDF batch, 0 means at least one match and 1 means no matches; any failed
+or incomplete row makes the exit status 2. Unknown modes are rejected.
+File types are `MOL`,
 `ML2` (MOL2), `CML` and `PDB`. Each single-file input must contain exactly one
 molecule or model. Empty and ambiguous inputs are rejected. Use `SDF` for batch
 targets. File paths and JSON output support UTF-8.

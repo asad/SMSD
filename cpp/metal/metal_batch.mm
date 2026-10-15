@@ -36,6 +36,7 @@
 #import <Foundation/Foundation.h>
 
 #include "smsd/metal_gpu.hpp"
+#include "smsd/gpu_kernels.hpp"
 
 #include <mutex>
 #include <stdexcept>
@@ -47,9 +48,9 @@
 // The kernel computes a per-target RASCAL label-histogram upper bound.
 // Layout of MetalMolecule must match the C++ struct in metal_gpu.hpp:
 //   int n;                  // offset 0,  4 bytes
-//   int labelCounts[256];   // offset 4, 1024 bytes
-//   int _padding[3];        // offset 1028, 12 bytes
-//   total: 1040 bytes (16-byte aligned, matches C++ alignas(16) stride)
+//   int labelCounts[512];   // offset 4, 2048 bytes
+//   int _padding[3];        // offset 2052, 12 bytes
+//   total: 2064 bytes (16-byte aligned, matches C++ alignas(16) stride)
 
 static NSString* const kShaderSource = @
 "#include <metal_stdlib>\n"
@@ -57,7 +58,7 @@ static NSString* const kShaderSource = @
 "\n"
 "struct MetalMolecule {\n"
 "    int n;\n"
-"    int labelCounts[256];\n"
+"    int labelCounts[512];\n"
 "    int _padding[3];\n"
 "};\n"
 "\n"
@@ -74,14 +75,14 @@ static NSString* const kShaderSource = @
 "    if (qn == 0 || tn == 0) { results[idx] = 0.0f; return; }\n"
 "\n"
 "    // Label-histogram compatibility bound:\n"
-"    //   score = sum_Z min(q.count[Z], t.count[Z]) / max(qn, tn)\n"
+"    //   score = overlap / (qn + tn - overlap)\n"
 "    int compatible = 0;\n"
-"    for (int l = 0; l < 256; ++l) {\n"
+"    for (int l = 0; l < 512; ++l) {\n"
 "        int a = query[0].labelCounts[l];\n"
 "        int b = targets[idx].labelCounts[l];\n"
 "        compatible += (a < b) ? a : b;\n"
 "    }\n"
-"    int denom = (qn > tn) ? qn : tn;\n"
+"    int denom = qn + tn - compatible;\n"
 "    results[idx] = (denom > 0) ? float(compatible) / float(denom) : 0.0f;\n"
 "}\n";
 
@@ -198,6 +199,7 @@ namespace smsd {
 namespace metal {
 
 bool metalAvailable() noexcept {
+    if (gpu_kern::detail::disabledByEnvironment()) return false;
     // Phase 1 only — no shader compilation.
     return DeviceProbe::instance().found;
 }
@@ -216,9 +218,7 @@ MetalMolecule toMetalMolecule(int atomCount, const int* labels) {
     MetalMolecule m{};
     m.n = atomCount;
     for (int i = 0; i < atomCount; ++i) {
-        int z = labels[i];
-        if (z >= 0 && z < METAL_LABEL_BINS)
-            ++m.labelCounts[z];
+        ++m.labelCounts[static_cast<unsigned>(labels[i]) & (METAL_LABEL_BINS - 1)];
     }
     return m;
 }
@@ -230,12 +230,26 @@ std::vector<MetalScreenResult> batchRascalScreen(
 {
     std::vector<MetalScreenResult> hits;
     if (targets.empty()) return hits;
+    auto cpuScreen = [&] {
+        std::vector<MetalScreenResult> result;
+        for (size_t target = 0; target < targets.size(); ++target) {
+            int64_t overlap = 0;
+            for (int label = 0; label < METAL_LABEL_BINS; ++label)
+                overlap += std::min(query.labelCounts[label], targets[target].labelCounts[label]);
+            const int64_t total = int64_t(query.n) + targets[target].n;
+            const float score = query.n == 0 || targets[target].n == 0 || total <= overlap
+                ? 0.0f : static_cast<float>(overlap) / static_cast<float>(total - overlap);
+            if (score >= threshold) result.push_back({static_cast<int>(target), score});
+        }
+        return result;
+    };
+    if (gpu_kern::detail::disabledByEnvironment()) return cpuScreen();
 
     @autoreleasepool {
         // Phase 2: trigger lazy shader compilation on first real batch call.
         auto& ctx   = MetalContext::instance();
         auto& probe = DeviceProbe::instance();
-        if (!ctx.valid || !probe.found) return hits;
+        if (!ctx.valid || !probe.found) return cpuScreen();
 
         id<MTLDevice> dev = probe.device;
         const NSUInteger N = static_cast<NSUInteger>(targets.size());
@@ -257,11 +271,13 @@ std::vector<MetalScreenResult> batchRascalScreen(
             [dev newBufferWithLength:N * sizeof(float)
                              options:MTLResourceStorageModeShared];
 
-        if (!targBuf || !queryBuf || !resBuf) return hits;
+        if (!targBuf || !queryBuf || !resBuf) return cpuScreen();
 
         // ---- Encode compute pass -------------------------------------------
         id<MTLCommandBuffer>        cmd = [ctx.queue commandBuffer];
+        if (!cmd) return cpuScreen();
         id<MTLComputeCommandEncoder> enc = [cmd computeCommandEncoder];
+        if (!enc) return cpuScreen();
 
         [enc setComputePipelineState:ctx.pipeline];
         [enc setBuffer:targBuf  offset:0 atIndex:0];
@@ -284,9 +300,11 @@ std::vector<MetalScreenResult> batchRascalScreen(
 
         [cmd commit];
         [cmd waitUntilCompleted];
+        if (cmd.status != MTLCommandBufferStatusCompleted) return cpuScreen();
 
         // ---- Collect hits ---------------------------------------------------
         const float* scores = static_cast<const float*>(resBuf.contents);
+        if (!scores) return cpuScreen();
         hits.reserve(N / 4 + 1);
         for (NSUInteger i = 0; i < N; ++i)
             if (scores[i] >= threshold)

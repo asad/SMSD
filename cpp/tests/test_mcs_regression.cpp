@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "smsd/mcs.hpp"
+#include "smsd/substructure.hpp"
+#include "smsd/cip.hpp"
 
 #include <cassert>
 #include <functional>
@@ -67,453 +69,315 @@ bool connectedMapping(const Graph& query, const std::vector<int>& mapping) {
     return static_cast<int>(frontier.size()) == mappedCount;
 }
 
-// Independent oracle: enumerate every partial injective vertex mapping using
-// only these adjacency matrices. No SMSD compatibility, bound, or search helper
-// participates in the expected result or in returned-mapping validation.
-int maximumAtoms(const Graph& query, const Graph& target,
-                 bool induced, bool connected) {
-    std::vector<int> mapping(query.atoms, -1), used(target.atoms);
-    int best = 0;
-    std::function<void(int, int)> visit = [&](int atom, int count) {
-        if (atom == query.atoms) {
-            if (!connected || connectedMapping(query, mapping))
-                best = std::max(best, count);
-            return;
-        }
-        for (int other = 0; other < target.atoms; ++other) {
-            if (used[other]) continue;
-            bool valid = true;
-            for (int previous = 0; previous < atom; ++previous) {
-                if (mapping[previous] < 0) continue;
-                bool qEdge = query.edges[atom][previous] != 0;
-                bool tEdge = target.edges[other][mapping[previous]] != 0;
-                if ((qEdge && !tEdge) || (induced && qEdge != tEdge)) valid = false;
-            }
-            if (!valid) continue;
-            mapping[atom] = other;
-            used[other] = 1;
-            visit(atom + 1, count + 1);
-            used[other] = 0;
-            mapping[atom] = -1;
-        }
-        visit(atom + 1, count);
-    };
-    visit(0, 0);
-    return best;
+
+using Objective = smsd::MCS::Objective;
+using Connectivity = smsd::MCS::Connectivity;
+
+smsd::MCS::Options options(bool induced, bool connected) {
+    smsd::MCS::Options result;
+    result.objective = induced ? Objective::MCIS : Objective::MCES;
+    result.connectivity = connected ? Connectivity::Connected : Connectivity::Fragments;
+    result.timeoutMs = 1000;
+    return result;
 }
 
-int maximumScore(const Graph& query, const Graph& target, const smsd::MCSOptions& opts) {
+/** Enumerate partial injections using only local adjacency matrices.
+ * MCES selects common edges; MCIS also requires equal induced adjacency. */
+double maximumScore(const Graph& query, const Graph& target, const smsd::MCS::Options& opts) {
     std::vector<int> mapping(query.atoms, -1), used(target.atoms);
-    int best = 0;
-    std::function<void(int)> visit = [&](int atom) {
-        if (atom == query.atoms) {
-            if (opts.connectedOnly && !opts.disconnectedMCS && !connectedMapping(query, mapping)) return;
-            std::vector<int> seen(query.atoms);
+    double best = 0;
+    std::function<void(int)> visit = [&](int queryAtom) {
+        if (queryAtom == query.atoms) {
+            std::vector<std::vector<int>> adjacency(query.atoms);
+            int atoms = 0, bonds = 0;
+            double weight = 0;
+            for (int first = 0; first < query.atoms; ++first) if (mapping[first] >= 0) {
+                ++atoms;
+                if (!opts.atomWeights.empty()) weight += opts.atomWeights[first];
+                for (int second = first + 1; second < query.atoms; ++second)
+                    if (mapping[second] >= 0 && query.edges[first][second] && target.edges[mapping[first]][mapping[second]]) {
+                        adjacency[first].push_back(second); adjacency[second].push_back(first); ++bonds;
+                    }
+            }
+            if (opts.objective == Objective::MCES)
+                for (int atom = 0; atom < query.atoms; ++atom)
+                    if (mapping[atom] >= 0 && adjacency[atom].empty()) return;
             int fragments = 0;
-            for (int root = 0; root < query.atoms; ++root) {
-                if (mapping[root] < 0 || seen[root]) continue;
-                std::vector<int> component{root};
-                seen[root] = 1;
+            std::vector<bool> seen(query.atoms);
+            for (int root = 0; root < query.atoms; ++root) if (mapping[root] >= 0 && !seen[root]) {
+                std::vector<int> component{root}; seen[root] = true;
                 for (size_t head = 0; head < component.size(); ++head)
-                    for (int neighbor = 0; neighbor < query.atoms; ++neighbor)
-                        if (mapping[neighbor] >= 0 && !seen[neighbor] && query.edges[component[head]][neighbor]) {
-                            seen[neighbor] = 1;
-                            component.push_back(neighbor);
-                        }
-                if (opts.disconnectedMCS && static_cast<int>(component.size()) < opts.minFragmentSize) return;
+                    for (int neighbor : adjacency[component[head]]) if (!seen[neighbor]) {
+                        seen[neighbor] = true; component.push_back(neighbor);
+                    }
+                if (static_cast<int>(component.size()) < opts.minFragmentAtoms) return;
                 ++fragments;
             }
-            if (opts.disconnectedMCS && fragments > opts.maxFragments) return;
-            int count = 0, bonds = 0;
-            double weight = 0.0;
-            for (int q = 0; q < query.atoms; ++q) {
-                if (mapping[q] < 0) continue;
-                ++count;
-                if (!opts.atomWeights.empty()) weight += opts.atomWeights[q];
-                for (int k = q + 1; k < query.atoms; ++k)
-                    if (mapping[k] >= 0 && query.edges[q][k]) ++bonds;
-            }
-            best = std::max(best, !opts.atomWeights.empty() ? static_cast<int>(weight * 1000.0)
-                : opts.maximizeBonds ? bonds : count);
+            if (fragments > opts.maxFragments || (opts.connectivity == Connectivity::Connected && fragments > 1)) return;
+            best = std::max(best, opts.objective == Objective::MCES ? double(bonds)
+                : opts.atomWeights.empty() ? double(atoms) : weight);
             return;
         }
-        visit(atom + 1);
-        for (int other = 0; other < target.atoms; ++other) {
-            if (used[other]) continue;
+        visit(queryAtom + 1);
+        for (int targetAtom = 0; targetAtom < target.atoms; ++targetAtom) {
+            if (used[targetAtom] || query.molecule.atomicNum[queryAtom] != target.molecule.atomicNum[targetAtom]) continue;
             bool valid = true;
-            for (int previous = 0; previous < atom; ++previous) {
-                if (mapping[previous] < 0) continue;
-                bool qEdge = query.edges[atom][previous], tEdge = target.edges[other][mapping[previous]];
-                if ((qEdge && !tEdge) || (opts.induced && qEdge != tEdge)) { valid = false; break; }
-            }
+            if (opts.objective == Objective::MCIS)
+                for (int previous = 0; previous < queryAtom; ++previous)
+                    if (mapping[previous] >= 0 && query.edges[queryAtom][previous] != target.edges[targetAtom][mapping[previous]]) valid = false;
             if (!valid) continue;
-            mapping[atom] = other; used[other] = 1;
-            visit(atom + 1);
-            mapping[atom] = -1; used[other] = 0;
+            mapping[queryAtom] = targetAtom; used[targetAtom] = 1;
+            visit(queryAtom + 1);
+            mapping[queryAtom] = -1; used[targetAtom] = 0;
         }
     };
     visit(0);
     return best;
 }
 
-void validate(const Graph& query, const Graph& target,
-              const std::map<int, int>& result, bool induced, bool connected) {
-    std::vector<int> mapping(query.atoms, -1), used(target.atoms);
-    for (const auto& [atom, other] : result) {
-        assert(atom >= 0 && atom < query.atoms);
-        assert(other >= 0 && other < target.atoms);
-        assert(!used[other]);
-        used[other] = 1;
-        mapping[atom] = other;
+void validate(const Graph& query, const Graph& target, const smsd::Match& match,
+              const smsd::MCS::Options& opts) {
+    std::set<int> used;
+    std::map<int, std::set<int>> adjacency;
+    for (const auto& atom : match.atomMapping) {
+        assert(atom.first >= 0 && atom.first < query.atoms && atom.second >= 0 && atom.second < target.atoms);
+        assert(used.insert(atom.second).second);
+        assert(query.molecule.atomicNum[atom.first] == target.molecule.atomicNum[atom.second]);
+        adjacency[atom.first];
     }
-    for (const auto& [atom, other] : result) {
-        for (const auto& [previous, mappedPrevious] : result) {
-            bool qEdge = query.edges[atom][previous] != 0;
-            bool tEdge = target.edges[other][mappedPrevious] != 0;
-            assert(!qEdge || tEdge);
-            assert(!induced || qEdge == tEdge);
+    std::set<std::pair<int, int>> selected;
+    for (const auto& bond : match.bondMapping) {
+        assert(match.atomMapping.at(bond[0]) == bond[2] && match.atomMapping.at(bond[1]) == bond[3]);
+        assert(query.edges[bond[0]][bond[1]] && target.edges[bond[2]][bond[3]]);
+        assert(selected.insert(std::minmax(bond[0], bond[1])).second);
+        adjacency[bond[0]].insert(bond[1]); adjacency[bond[1]].insert(bond[0]);
+    }
+    if (opts.objective == Objective::MCES)
+        for (const auto& atom : match.atomMapping) assert(!adjacency[atom.first].empty());
+    if (opts.objective == Objective::MCIS)
+        for (const auto& first : match.atomMapping) for (const auto& second : match.atomMapping) if (first.first < second.first) {
+            assert(query.edges[first.first][second.first] == target.edges[first.second][second.second]);
+            assert(bool(query.edges[first.first][second.first]) == bool(selected.count({first.first, second.first})));
         }
+    std::set<int> seen;
+    std::set<std::set<int>> expected;
+    for (const auto& atom : match.atomMapping) if (seen.insert(atom.first).second) {
+        std::vector<int> component{atom.first};
+        for (size_t head = 0; head < component.size(); ++head)
+            for (int neighbor : adjacency[component[head]]) if (seen.insert(neighbor).second) component.push_back(neighbor);
+        assert(static_cast<int>(component.size()) >= opts.minFragmentAtoms);
+        expected.emplace(component.begin(), component.end());
     }
-    assert(!connected || connectedMapping(query, mapping));
+    std::set<std::set<int>> actual;
+    for (const auto& fragment : match.fragments) actual.emplace(fragment.begin(), fragment.end());
+    assert(actual == expected);
+    assert(static_cast<int>(actual.size()) <= opts.maxFragments);
+    assert(opts.connectivity != Connectivity::Connected || actual.size() <= 1);
 }
 
-smsd::MCSOptions options(bool induced, bool connected) {
-    smsd::MCSOptions result;
-    result.induced = induced;
-    result.connectedOnly = connected;
-    result.disconnectedMCS = !connected;
-    result.timeoutMs = 1000;
+smsd::SearchResult search(const Graph& query, const Graph& target, const smsd::MCS::Options& opts) {
+    auto result = smsd::MCS::find(query.molecule).withOptions(opts).match(target.molecule);
+    for (const auto& match : result.matches) validate(query, target, match, opts);
     return result;
 }
 
 void testOptionRegressions() {
     auto fragments = makeGraph(5, {{0, 1}, {2, 3}, {3, 4}});
-    auto connected = smsd::findMCS(
-        fragments.molecule, fragments.molecule, {}, options(false, true));
-    assert(connected.size() == 3); // Identity still obeys connectedOnly.
-    validate(fragments, fragments, connected, false, true);
-
-    auto dOpts = options(false, false);
-    dOpts.connectedOnly = true; // Explicit dMCS takes precedence.
-    assert(smsd::findMCS(fragments.molecule, fragments.molecule, {}, dOpts).size() == 5);
-    dOpts.minFragmentSize = 3;
-    dOpts.maxFragments = 1;
-    auto fragment = smsd::findMCS(fragments.molecule, fragments.molecule, {}, dOpts);
-    assert(fragment.size() == 3);
-    validate(fragments, fragments, fragment, false, true);
-
+    auto result = search(fragments, fragments, options(true, true));
+    assert(result.matches.front().atomMapping.size() == 3);
+    auto disconnected = options(true, false);
+    assert(search(fragments, fragments, disconnected).matches.front().atomMapping.size() == 5);
+    disconnected.minFragmentAtoms = 3; disconnected.maxFragments = 1;
+    assert(search(fragments, fragments, disconnected).matches.front().atomMapping.size() == 3);
     auto path = graphFromMask(3, 5), triangle = graphFromMask(3, 7);
-    auto induced = smsd::findMCS(path.molecule, triangle.molecule, {}, options(true, true));
-    assert(induced.size() == 2); // A cycle is not a linear-path shortcut.
-    validate(path, triangle, induced, true, true);
-
+    assert(search(path, triangle, options(true, true)).matches.front().atomMapping.size() == 2);
+    auto edgeResult = search(path, triangle, options(false, true));
+    assert(edgeResult.matches.front().atomMapping.size() == 3 && edgeResult.score == 2);
     auto isolates = graphFromMask(3, 0), edge = graphFromMask(3, 1);
-    auto forward = smsd::findMCS(isolates.molecule, edge.molecule, {}, options(false, false));
-    auto reverse = smsd::findMCS(edge.molecule, isolates.molecule, {}, options(false, false));
-    assert(forward.size() == 3 && reverse.size() == 2);
-    validate(isolates, edge, forward, false, false);
-    validate(edge, isolates, reverse, false, false);
-
-    auto partialInduced = smsd::findMCS(
-        edge.molecule, isolates.molecule, {}, options(true, false));
-    assert(partialInduced.size() == 2); // Omitted neighbors do not impose degrees.
-    validate(edge, isolates, partialInduced, true, false);
-
-    auto star = graphFromMask(4, 7), edgeAndIsolates = graphFromMask(4, 1);
-    auto commonEdge = smsd::findMCS(
-        edgeAndIsolates.molecule, star.molecule, {}, options(false, true));
-    assert(commonEdge.size() == 2); // The largest raw seed can have a worse component.
-    validate(edgeAndIsolates, star, commonEdge, false, true);
-
-    auto path4 = graphFromMask(4, 13);
-    auto inducedPartial = smsd::findMCS(
-        edgeAndIsolates.molecule, path4.molecule, {}, options(true, false));
-    assert(inducedPartial.size() == 3); // Invalid augmented seeds must not stop exact search.
-    validate(edgeAndIsolates, path4, inducedPartial, true, false);
-
+    for (const auto& pair : {std::pair<const Graph*, const Graph*>{&isolates, &edge}, {&edge, &isolates}})
+        assert(search(*pair.first, *pair.second, options(true, false)).matches.front().atomMapping.size() == 2);
+    auto star = graphFromMask(4, 7), edgeAndIsolates = graphFromMask(4, 1), path4 = graphFromMask(4, 13);
+    assert(search(edgeAndIsolates, star, options(true, true)).matches.front().atomMapping.size() == 2);
+    assert(search(edgeAndIsolates, path4, options(true, false)).matches.front().atomMapping.size() == 3);
     auto twoIsolates = graphFromMask(2, 0);
-    auto unequal = smsd::findMCS(
-        edge.molecule, twoIsolates.molecule, {}, options(false, false));
-    assert(unequal.size() == 2); // Reverse containment is not a caller-direction proof.
-    validate(edge, twoIsolates, unequal, false, false);
-
-    // Padding bypasses the tiny exact solver and checks heuristic promotions.
-    auto paddedEdge = makeGraph(9, {{0, 1}});
-    auto paddedStar = makeGraph(9, {{0, 1}, {0, 2}, {0, 3}});
-    auto padded = smsd::findMCS(
-        paddedEdge.molecule, paddedStar.molecule, {}, options(false, true));
-    assert(padded.size() == 2);
-    validate(paddedEdge, paddedStar, padded, false, true);
+    assert(search(edge, twoIsolates, options(true, false)).matches.front().atomMapping.size() == 2);
+    auto paddedEdge = makeGraph(9, {{0, 1}}), paddedStar = makeGraph(9, {{0, 1}, {0, 2}, {0, 3}});
+    assert(search(paddedEdge, paddedStar, options(true, true)).matches.front().atomMapping.size() == 2);
 }
 
 void testWeightRegressions() {
-    auto clique = graphFromMask(4, 63);
-    auto path = makeGraph(5, {{0, 1}, {1, 2}, {2, 3}, {3, 4}});
-    auto weighted = options(false, true);
-    weighted.atomWeights = {1, 1, 1, 10};
-    auto result = smsd::findMCS(clique.molecule, path.molecule, {}, weighted);
-    assert(result.size() == 2 && result.count(3) == 1);
-    validate(clique, path, result, false, true);
-
+    auto clique = graphFromMask(4, 63), path = makeGraph(5, {{0, 1}, {1, 2}, {2, 3}, {3, 4}});
+    auto weighted = options(true, true); weighted.atomWeights = {1, 1, 1, 10};
+    auto result = search(clique, path, weighted);
+    assert(result.matches.front().atomMapping.size() == 2 && result.matches.front().atomMapping.count(3));
     auto fragments = makeGraph(6, {{0, 1}, {1, 2}, {2, 3}, {4, 5}});
     weighted.atomWeights = {1, 1, 1, 1, 5, 5};
-    auto heavy = smsd::findMCS(fragments.molecule, fragments.molecule, {}, weighted);
-    assert(heavy.size() == 2 && heavy.count(4) && heavy.count(5));
-    validate(fragments, fragments, heavy, false, true);
-
-    auto bonded = makeGraph(9, {
-        {0, 1}, {1, 2}, {2, 3}, {3, 4},
-        {5, 6}, {5, 7}, {5, 8}, {6, 7}, {6, 8}, {7, 8}});
-    auto bondOptions = options(false, true);
-    bondOptions.maximizeBonds = true;
-    auto dense = smsd::findMCS(bonded.molecule, bonded.molecule, {}, bondOptions);
-    assert(dense.size() == 4 && dense.count(5) && dense.count(8));
-    validate(bonded, bonded, dense, false, true);
-
-    weighted.atomWeights = {1};
-    bool threw = false;
-    try {
-        (void)smsd::findMCS(clique.molecule, clique.molecule, {}, weighted);
-    } catch (const std::invalid_argument&) {
-        threw = true;
-    }
-    assert(threw); // Identity must validate per-query options too.
-
+    auto heavy = search(fragments, fragments, weighted);
+    assert(heavy.score == 10 && heavy.matches.front().atomMapping.count(4) && heavy.matches.front().atomMapping.count(5));
+    auto bonded = makeGraph(9, {{0, 1}, {1, 2}, {2, 3}, {3, 4}, {5, 6}, {5, 7}, {5, 8}, {6, 7}, {6, 8}, {7, 8}});
+    auto bonds = options(false, true);
+    auto dense = search(bonded, bonded, bonds);
+    assert(dense.score == 6 && dense.matches.front().atomMapping.size() == 4);
     auto reject = [&](std::vector<double> weights) {
-        auto invalid = options(false, true);
-        invalid.atomWeights = std::move(weights);
-        bool rejected = false;
-        try {
-            (void)smsd::findMCS(clique.molecule, clique.molecule, {}, invalid);
-        } catch (const std::invalid_argument&) {
-            rejected = true;
+        auto invalid = options(true, true); invalid.atomWeights = std::move(weights);
+        for (bool all : {false, true}) {
+            bool rejected = false;
+            try {
+                const auto prepared = smsd::MCS::find(clique.molecule).withOptions(invalid);
+                if (all) (void)prepared.matchAll(clique.molecule); else (void)prepared.match(clique.molecule);
+            } catch (const std::invalid_argument&) { rejected = true; }
+            assert(rejected);
         }
-        assert(rejected);
     };
+    reject({1});
     reject({std::numeric_limits<double>::quiet_NaN(), 0, 0, 0});
     reject({std::numeric_limits<double>::infinity(), 0, 0, 0});
     reject({-std::numeric_limits<double>::infinity(), 0, 0, 0});
     reject({std::numeric_limits<double>::max(), 0, 0, 0});
-    reject({1.2e6, 1.2e6, -1.2e6, -1.2e6}); // Full score cancels, partial score overflows.
+    reject({1.2e6, 1.2e6, -1.2e6, -1.2e6});
     reject({0, 0, -1.2e6, -1.2e6});
-
     auto atom = graphFromMask(1, 0);
-    auto boundary = options(false, true);
-    boundary.atomWeights = {(static_cast<double>(INT_MAX) + 0.5) / 1000.0};
-    auto full = smsd::findMCS(atom.molecule, atom.molecule, {}, boundary);
-    assert(smsd::detail::mcsScore(atom.molecule, full, boundary) == INT_MAX);
-    boundary.atomWeights = {(static_cast<double>(INT_MIN) - 0.5) / 1000.0};
-    assert(smsd::detail::mcsScore(atom.molecule, full, boundary) == INT_MIN);
-    int q2t[] = {0};
-    assert(smsd::detail::mcsScoreFlat(atom.molecule, q2t, 1, 1, boundary) == INT_MIN);
-
-    // Score helpers also protect direct/internal callers that bypass API validation.
-    boundary.atomWeights = {std::numeric_limits<double>::max()};
-    for (bool flat : {false, true}) {
-        bool rejected = false;
-        try {
-            if (flat) (void)smsd::detail::mcsScoreFlat(atom.molecule, q2t, 1, 1, boundary);
-            else (void)smsd::detail::mcsScore(atom.molecule, full, boundary);
-        } catch (const std::invalid_argument&) {
-            rejected = true;
-        }
-        assert(rejected);
-    }
-
+    auto boundary = options(true, true); boundary.atomWeights = {(double(INT_MAX) + 0.5) / 1000.0};
+    assert(search(atom, atom, boundary).score == double(INT_MAX) / 1000.0);
+    boundary.atomWeights = {(double(INT_MIN) - 0.5) / 1000.0};
+    assert(search(atom, atom, boundary).score == 0);
     auto signedPath = makeGraph(3, {{0, 1}, {1, 2}});
-    auto signedOptions = options(false, true);
-    signedOptions.atomWeights = {1, -5, 1};
-    auto signedResult = smsd::findMCS(signedPath.molecule, signedPath.molecule, {}, signedOptions);
-    assert(smsd::detail::mcsScore(signedPath.molecule, signedResult, signedOptions) == 1000);
-    auto signedMappings = smsd::findAllMCS(signedPath.molecule, signedPath.molecule, {}, signedOptions, 10);
-    assert(signedMappings.size() == 6);
-    for (const auto& mapping : signedMappings) {
-        assert(mapping.size() == 1);
-        assert(smsd::detail::mcsScore(signedPath.molecule, mapping, signedOptions) == 1000);
-    }
+    auto signedOptions = options(true, true); signedOptions.atomWeights = {1, -5, 1};
+    assert(search(signedPath, signedPath, signedOptions).score == 1);
+    auto all = smsd::MCS::find(signedPath.molecule).withOptions(signedOptions).matchAll(signedPath.molecule, 10);
+    assert(all.matches.size() == 6 && all.complete);
+    for (const auto& match : all.matches) { assert(match.atomMapping.size() == 1); validate(signedPath, signedPath, match, signedOptions); }
     signedOptions.atomWeights = {-1, -2, -3};
-    assert(smsd::findMCS(signedPath.molecule, signedPath.molecule, {}, signedOptions).empty());
-
-    auto limited = options(false, false);
-    limited.maxFragments = 1;
-    limited.atomWeights = {1, 1, 1, 1, 5, 5};
-    auto limitedResult = smsd::findMCS(fragments.molecule, fragments.molecule, {}, limited);
-    assert(smsd::detail::mcsScore(fragments.molecule, limitedResult, limited) == 10000);
-    bondOptions.disconnectedMCS = true;
-    bondOptions.maxFragments = 1;
-    auto bondFragment = smsd::findMCS(bonded.molecule, bonded.molecule, {}, bondOptions);
-    assert(smsd::detail::mcsScore(bonded.molecule, bondFragment, bondOptions) == 6);
-
+    assert(search(signedPath, signedPath, signedOptions).matches.empty());
+    weighted.connectivity = Connectivity::Fragments; weighted.maxFragments = 1;
+    assert(search(fragments, fragments, weighted).score == 10);
+    bonds.connectivity = Connectivity::Fragments; bonds.maxFragments = 1;
+    assert(search(bonded, bonded, bonds).score == 6);
     auto large = makeGraph(41, {{0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}, {2, 3}});
     auto triangle = graphFromMask(3, 7);
-    auto heavySingleton = options(false, true);
-    heavySingleton.atomWeights.assign(41, 1);
-    heavySingleton.atomWeights[40] = 10;
-    auto singleton = smsd::findMCS(large.molecule, triangle.molecule, {}, heavySingleton);
-    assert(singleton.size() == 1 && singleton.count(40));
-    validate(large, triangle, singleton, false, true);
+    auto singleton = options(true, true); singleton.atomWeights.assign(41, 1); singleton.atomWeights[40] = 10;
+    auto selected = search(large, triangle, singleton);
+    assert(selected.matches.front().atomMapping.size() == 1 && selected.matches.front().atomMapping.count(40));
 }
 
 void testObjectiveOracle() {
     size_t cases = 0;
-    for (int qMask = 0; qMask < 64; ++qMask) {
-        auto query = graphFromMask(4, qMask);
-        for (int tMask = 0; tMask < 64; ++tMask) {
-            auto target = graphFromMask(4, tMask);
-            for (bool induced : {false, true}) for (bool connected : {false, true}) {
-                for (int objective = 0; objective < 3; ++objective) {
-                    auto opts = options(induced, connected);
-                    if (objective == 0) opts.atomWeights = {1, 2, 5, 10};
-                    if (objective == 1) opts.atomWeights = {2, -5, 3, -1};
-                    if (objective == 2) opts.maximizeBonds = true;
-                    auto result = smsd::findMCS(query.molecule, target.molecule, {}, opts);
-                    validate(query, target, result, induced, connected);
-                    assert(smsd::detail::mcsScore(query.molecule, result, opts) == maximumScore(query, target, opts));
-                    ++cases;
-                }
-            }
+    for (int queryMask = 0; queryMask < 64; ++queryMask) for (int targetMask = 0; targetMask < 64; ++targetMask) {
+        auto query = graphFromMask(4, queryMask), target = graphFromMask(4, targetMask);
+        for (bool connected : {false, true}) for (int objective = 0; objective < 4; ++objective) {
+            auto opts = options(objective != 3, connected);
+            if (objective == 0) opts.atomWeights = {1, 2, 5, 10};
+            if (objective == 1) opts.atomWeights = {2, -5, 3, -1};
+            auto result = search(query, target, opts);
+            assert(result.optimal && result.score == maximumScore(query, target, opts)); ++cases;
         }
     }
-    std::cout << "Validated " << cases << " objective oracle cases\n";
-
+    assert(cases == 32768);
     std::mt19937 random(9123);
     size_t fragmentCases = 0;
     for (int sample = 0; sample < 128; ++sample) {
         auto query = graphFromMask(4, random() % 64), target = graphFromMask(4, random() % 64);
-        for (bool induced : {false, true}) for (int objective = 0; objective < 3; ++objective)
-            for (int minimum : {1, 2}) for (int maximum : {1, 2}) {
-                auto opts = options(induced, false);
-                opts.minFragmentSize = minimum; opts.maxFragments = maximum;
-                if (objective == 0) opts.atomWeights = {1, 2, 5, 10};
-                if (objective == 1) opts.atomWeights = {2, -5, 3, -1};
-                if (objective == 2) opts.maximizeBonds = true;
-                auto result = smsd::findMCS(query.molecule, target.molecule, {}, opts);
-                validate(query, target, result, induced, false);
-                assert(smsd::detail::mcsScore(query.molecule, result, opts) == maximumScore(query, target, opts));
-                ++fragmentCases;
-            }
+        for (int objective = 0; objective < 4; ++objective) for (int minimum : {1, 2}) for (int maximum : {1, 2}) {
+            auto opts = options(objective != 3, false); opts.minFragmentAtoms = minimum; opts.maxFragments = maximum;
+            if (objective == 0) opts.atomWeights = {1, 2, 5, 10};
+            if (objective == 1) opts.atomWeights = {2, -5, 3, -1};
+            auto result = search(query, target, opts);
+            assert(result.optimal && result.score == maximumScore(query, target, opts)); ++fragmentCases;
+        }
     }
-    std::cout << "Validated " << fragmentCases << " constrained-fragment oracle cases\n";
+    assert(fragmentCases == 2048);
+    std::cout << "Validated " << cases << " objective and " << fragmentCases << " constrained-fragment cases\n";
 }
 
 void testConstrainedBatchObjectives() {
     auto query = makeGraph(4, {{0, 1}, {1, 2}}, {6, 6, 6, 7});
-    auto carbon = makeGraph(3, {{0, 1}, {1, 2}});
-    auto nitrogen = makeGraph(1, {}, {7});
-    auto weighted = options(false, true);
-    weighted.atomWeights = {1, 1, 1, 10};
-    std::vector<int> selected;
-    auto mappings = smsd::batchMCSConstrained({query.molecule, query.molecule},
-        {carbon.molecule, nitrogen.molecule}, {}, weighted, &selected);
-    assert(selected == std::vector<int>({1, 0}));
-    assert((mappings[0] == std::map<int, int>({{3, 0}})));
-    assert(mappings[1].size() == 3);
-
-    auto bondQuery = makeGraph(9, {{0, 1}, {1, 2}, {2, 3}, {3, 4},
-        {5, 6}, {5, 7}, {5, 8}, {6, 7}, {6, 8}, {7, 8}});
-    auto path = makeGraph(5, {{0, 1}, {1, 2}, {2, 3}, {3, 4}});
+    auto target = makeGraph(4, {{0, 1}, {1, 2}}, {6, 6, 6, 7});
+    auto weighted = options(true, true); weighted.atomWeights = {1, 1, 1, 10};
+    auto results = smsd::MCS::matchConstrained({query.molecule, query.molecule}, target.molecule, weighted);
+    assert(results.size() == 2 && results[0].score == 10 && results[1].score == 3);
+    assert((results[0].matches.front().atomMapping == std::map<int, int>{{3, 3}}));
+    std::set<int> used;
+    for (const auto& result : results) for (const auto& atom : result.matches.front().atomMapping) assert(used.insert(atom.second).second);
+    auto bondQuery = makeGraph(9, {{0, 1}, {1, 2}, {2, 3}, {3, 4}, {5, 6}, {5, 7}, {5, 8}, {6, 7}, {6, 8}, {7, 8}});
     auto clique = graphFromMask(4, 63);
     auto bonds = options(false, true);
-    bonds.maximizeBonds = true;
-    mappings = smsd::batchMCSConstrained({bondQuery.molecule}, {path.molecule, clique.molecule}, {}, bonds, &selected);
-    assert(selected == std::vector<int>({1}));
-    assert(smsd::detail::mcsScore(bondQuery.molecule, mappings[0], bonds) == 6);
-    mappings = smsd::batchMCSConstrained({nitrogen.molecule}, {carbon.molecule}, {}, {}, &selected);
-    assert(mappings[0].empty() && selected == std::vector<int>({-1}));
+    assert(smsd::MCS::matchConstrained({bondQuery.molecule}, clique.molecule, bonds).front().score == 6);
+    auto nitrogen = makeGraph(1, {}, {7}), carbon = makeGraph(3, {{0, 1}, {1, 2}});
+    assert(smsd::MCS::matchConstrained({nitrogen.molecule}, carbon.molecule).front().matches.empty());
 }
 
 void testCoverageMappingValidity() {
-    auto q = smsd::parseSMILES("O=C([O-])Cc1ccccc1");
-    auto t = smsd::parseSMILES("O=C([O-])CCCc1ccccc1");
+    auto query = smsd::parseSMILES("O=C([O-])Cc1ccccc1"), target = smsd::parseSMILES("O=C([O-])CCCc1ccccc1");
     for (bool any : {false, true}) {
-        auto result = smsd::findMCSCoverage(q, t, false, any, 1000);
-        smsd::ChemOptions chemistry;
-        chemistry.matchBondOrder = any ? smsd::ChemOptions::BondOrderMode::ANY : smsd::ChemOptions::BondOrderMode::STRICT;
-        assert(smsd::validateMapping(q, t, result, chemistry).empty());
-        assert(!result.empty());
+        auto opts = options(true, true);
+        opts.chemistry.matchBondOrder = any ? smsd::ChemOptions::BondOrderMode::ANY : smsd::ChemOptions::BondOrderMode::STRICT;
+        auto result = smsd::MCS::find(query).withOptions(opts).match(target);
+        assert(!result.matches.empty() && smsd::MCS::validateMapping(query, target, result.matches.front(), opts).empty());
     }
-    auto flexQuery = smsd::parseSMILES("O=C(Cc1ccccc1)c1ccncc1");
-    auto flexTarget = smsd::parseSMILES("O/C(/c1ccncc1)=C\\c1ccccc1");
-    const std::map<int,int> witness{{1,11}, {2,10}, {3,9}, {4,8}, {5,1},
-                                  {6,2}, {7,3}, {9,12}, {10,13}, {11,14}};
-    smsd::ChemOptions flexible;
-    flexible.matchBondOrder = smsd::ChemOptions::BondOrderMode::STRICT;
-    flexible.aromaticityMode = smsd::ChemOptions::AromaticityMode::FLEXIBLE;
+    auto flexibleQuery = smsd::parseSMILES("O=C(Cc1ccccc1)c1ccncc1");
+    auto flexibleTarget = smsd::parseSMILES("O/C(/c1ccncc1)=C\\c1ccccc1");
+    const std::map<int, int> witness{{1,11}, {2,10}, {3,9}, {4,8}, {5,1},
+                                    {6,2}, {7,3}, {9,12}, {10,13}, {11,14}};
     for (int aromaticOrder : {1, 4}) {
-        for (auto* graph : {&flexQuery, &flexTarget})
-            for (int atom = 0; atom < graph->n; ++atom)
-                for (int other : graph->neighbors[atom])
-                    if (other > atom && graph->bondAromatic(atom, other))
-                        graph->setBondOrder(atom, other, aromaticOrder);
-        assert(smsd::isValidMCSMapping(flexQuery, flexTarget, witness, flexible));
-        auto result = smsd::findMCSCoverage(flexQuery, flexTarget, false, false, 1000);
-        assert(result.size() >= witness.size());
-        assert(smsd::isValidMCSMapping(flexQuery, flexTarget, result, flexible));
-        assert(smsd::detail::largestConnected(flexQuery, result, &flexTarget).size() == result.size());
+        for (auto* graph : {&flexibleQuery, &flexibleTarget}) for (int atom = 0; atom < graph->n; ++atom)
+            for (int other : graph->neighbors[atom]) if (other > atom && graph->bondAromatic(atom, other)) graph->setBondOrder(atom, other, aromaticOrder);
+        auto opts = options(false, true);
+        opts.chemistry.aromaticityMode = smsd::ChemOptions::AromaticityMode::FLEXIBLE;
+        assert(smsd::MCS::validateMapping(flexibleQuery, flexibleTarget, witness, opts).empty());
+        auto result = smsd::MCS::find(flexibleQuery).withOptions(opts).match(flexibleTarget);
+        assert(result.matches.front().atomMapping.size() >= witness.size());
+        assert(smsd::MCS::validateMapping(flexibleQuery, flexibleTarget, result.matches.front(), opts).empty());
     }
-    auto single = smsd::parseSMILES("CO");
-    auto doubled = smsd::parseSMILES("C=O");
-    assert(smsd::findMCSCoverage(single, doubled, false, false, 1000).size() == 1);
-    assert(smsd::findMCSCoverage(single, doubled, false, true, 1000).size() == 2);
+    auto single = smsd::parseSMILES("CO"), doubled = smsd::parseSMILES("C=O");
+    auto opts = options(true, true);
+    assert(smsd::MCS::find(single).withOptions(opts).match(doubled).matches.front().atomMapping.size() == 1);
+    opts.chemistry.matchBondOrder = smsd::ChemOptions::BondOrderMode::ANY;
+    assert(smsd::MCS::find(single).withOptions(opts).match(doubled).matches.front().atomMapping.size() == 2);
     std::vector<Graph> graphs;
-    for (int atoms = 0; atoms <= 3; ++atoms)
-        for (int mask = 0; mask < (1 << (atoms * (atoms - 1) / 2)); ++mask) graphs.push_back(graphFromMask(atoms, mask));
-    for (const auto& query : graphs) for (const auto& target : graphs)
-        for (bool any : {false, true}) for (bool ring : {false, true}) {
-            auto result = smsd::findMCSCoverage(query.molecule, target.molecule, ring, any, 100);
-            validate(query, target, result, false, true);
-        }
+    for (int atoms = 0; atoms <= 3; ++atoms) for (int mask = 0; mask < (1 << (atoms * (atoms - 1) / 2)); ++mask) graphs.push_back(graphFromMask(atoms, mask));
+    for (const auto& first : graphs) for (const auto& second : graphs) for (bool any : {false, true}) for (bool ring : {false, true}) {
+        auto opts = options(true, true); opts.chemistry.ringMatchesRingOnly = ring;
+        opts.chemistry.matchBondOrder = any ? smsd::ChemOptions::BondOrderMode::ANY : smsd::ChemOptions::BondOrderMode::STRICT;
+        auto result = search(first, second, opts);
+        for (const auto& match : result.matches) assert(smsd::MCS::validateMapping(first.molecule, second.molecule, match, opts).empty());
+    }
 }
 
 void testNativeStages() {
     size_t cases = 0;
-    for (int qMask = 0; qMask < 64; ++qMask) {
-        auto query = graphFromMask(4, qMask);
-        for (int tMask = 0; tMask < 64; ++tMask) {
-            auto target = graphFromMask(4, tMask);
-            for (bool induced : {false, true}) {
-                smsd::detail::GraphBuilder builder(query.molecule, target.molecule, {}, induced);
-                smsd::detail::TimeBudget splitBudget(1000), cliqueBudget(1000);
-                int64_t nodes = 0;
-                auto split = builder.mcSplitSeed(splitBudget, nodes);
-                auto clique = builder.maximumCliqueSeed(cliqueBudget);
-                int expected = maximumAtoms(query, target, induced, false);
-                validate(query, target, split, induced, false);
-                validate(query, target, clique, induced, false);
-                assert(static_cast<int>(split.size()) == expected);
-                assert(static_cast<int>(clique.size()) == expected);
-                ++cases;
-            }
+    for (int queryMask = 0; queryMask < 64; ++queryMask) for (int targetMask = 0; targetMask < 64; ++targetMask) {
+        auto query = graphFromMask(4, queryMask), target = graphFromMask(4, targetMask);
+        for (bool induced : {false, true}) {
+            auto opts = options(induced, false);
+            const auto prepared = smsd::MCS::find(query.molecule).withOptions(opts);
+            auto first = prepared.match(target.molecule), repeated = prepared.match(target.molecule);
+            assert(first.optimal && repeated.optimal && first.score == maximumScore(query, target, opts) && repeated.score == first.score);
+            for (const auto& match : first.matches) validate(query, target, match, opts);
+            ++cases;
         }
     }
-    std::cout << "Validated " << cases << " native seed oracle cases\n";
+    assert(cases == 8192);
 }
 
 void testSymmetryCanonicalization() {
     auto cycle = makeGraph(4, {{0, 1}, {1, 2}, {2, 3}, {3, 0}});
     std::map<int, int> mapping{{0, 1}, {1, 0}, {2, 3}}, expected{{0, 0}, {1, 1}, {2, 2}};
-    assert(smsd::canonicalizeMapping(cycle.molecule, cycle.molecule, mapping) == expected);
-    for (int qSign : {-1, 1}) for (int qShift = 0; qShift < 4; ++qShift)
-        for (int tSign : {-1, 1}) for (int tShift = 0; tShift < 4; ++tShift) {
+    assert(smsd::MCS::canonicalizeMapping(cycle.molecule, cycle.molecule, mapping) == expected);
+    for (int querySign : {-1, 1}) for (int queryShift = 0; queryShift < 4; ++queryShift)
+        for (int targetSign : {-1, 1}) for (int targetShift = 0; targetShift < 4; ++targetShift) {
             std::map<int, int> transformed;
-            for (const auto& [q, t] : mapping)
-                transformed[(qSign * q + qShift + 4) % 4] = (tSign * t + tShift + 4) % 4;
-            assert(smsd::canonicalizeMapping(cycle.molecule, cycle.molecule, transformed) == expected);
-            assert(smsd::areMappingsEquivalent(cycle.molecule, cycle.molecule, transformed, expected));
+            for (const auto& atom : mapping) transformed[(querySign * atom.first + queryShift + 4) % 4] = (targetSign * atom.second + targetShift + 4) % 4;
+            assert(smsd::MCS::canonicalizeMapping(cycle.molecule, cycle.molecule, transformed) == expected);
         }
 }
 
 void testMolecularAutomorphismProperties() {
     for (const char* smiles : {"[C+].C", "[12C].[13C]", "C=CC", "C[C@H](F)[C@H](F)C"}) {
-        auto graph = smsd::parseSMILES(smiles);
-        graph.ensureCanonical();
-        assert(graph.automorphismGeneratorsTruncated());
+        auto graph = smsd::parseSMILES(smiles); graph.ensureCanonical();
+        assert(!graph.automorphismGeneratorsTruncated());
         std::map<int, int> mapping{{0, 0}};
-        bool rejected = false;
-        try { (void)smsd::canonicalizeMapping(graph, graph, mapping); }
-        catch (const std::length_error&) { rejected = true; }
-        assert(rejected);
-        assert(smsd::detail::enumerationMappingKey(graph, graph, mapping) == mapping);
+        auto canonical = smsd::MCS::canonicalizeMapping(graph, graph, mapping);
+        assert(smsd::MCS::canonicalizeMapping(graph, graph, canonical) == canonical);
     }
     auto capped = makeGraph(8, {});
     assert(capped.molecule.automorphismGeneratorsTruncated());
@@ -523,194 +387,125 @@ void testSharedDeadline() {
     std::mt19937 random(781);
     for (int atoms : {24, 32}) {
         std::vector<std::pair<int, int>> queryEdges, targetEdges;
-        for (int a = 0; a < atoms; ++a) for (int b = a + 1; b < atoms; ++b) {
-            if (random() % 100 < 22) queryEdges.emplace_back(a, b);
-            if (random() % 100 < 22) targetEdges.emplace_back(a, b);
+        for (int first = 0; first < atoms; ++first) for (int second = first + 1; second < atoms; ++second) {
+            if (random() % 100 < 22) queryEdges.emplace_back(first, second);
+            if (random() % 100 < 22) targetEdges.emplace_back(first, second);
         }
         auto query = makeGraph(atoms, queryEdges), target = makeGraph(atoms, targetEdges);
-        query.molecule.ensureCanonical(); target.molecule.ensureCanonical();
-        auto opts = options(false, true);
-        opts.timeoutMs = 5;
+        auto opts = options(true, true); opts.timeoutMs = 5;
         auto started = std::chrono::steady_clock::now();
-        auto result = smsd::findMCS(query.molecule, target.molecule, {}, opts);
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - started).count();
-        assert(elapsed < 100);
-        validate(query, target, result, false, true);
-        assert(!smsd::detail::global_deadline::active);
+        auto result = search(query, target, opts);
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count();
+        assert(elapsed < 100 && result.status == smsd::SearchStatus::TimedOut && !result.complete);
+        auto atom = graphFromMask(1, 0);
+        assert(search(atom, atom, options(true, true)).complete);
     }
-    smsd::detail::global_deadline::set(1000);
-    auto previous = smsd::detail::global_deadline::deadline;
-    auto atom = graphFromMask(1, 0);
-    auto invalid = options(false, true);
+    auto atom = graphFromMask(1, 0); auto invalid = options(true, true);
     invalid.atomWeights = {std::numeric_limits<double>::quiet_NaN()};
     bool rejected = false;
-    try { (void)smsd::findMCS(atom.molecule, atom.molecule, {}, invalid); }
-    catch (const std::invalid_argument&) { rejected = true; }
-    assert(rejected && smsd::detail::global_deadline::active);
-    assert(smsd::detail::global_deadline::deadline == previous);
-    smsd::detail::global_deadline::clear();
+    try { (void)search(atom, atom, invalid); } catch (const std::invalid_argument&) { rejected = true; }
+    assert(rejected && search(atom, atom, options(true, true)).complete);
 }
 
 void testMappingValidation() {
     auto edge = graphFromMask(2, 1), isolates = graphFromMask(2, 0);
     for (int invalid : {-1, 2, INT_MAX}) {
         std::map<int, int> mapping{{0, 0}, {1, invalid}};
-        assert(!smsd::isValidMCSMapping(edge.molecule, edge.molecule, mapping, {}));
-        assert(!smsd::validateMapping(edge.molecule, edge.molecule, mapping, {}).empty());
+        assert(!smsd::MCS::validateMapping(edge.molecule, edge.molecule, mapping).empty());
     }
     std::map<int, int> full{{0, 0}, {1, 1}};
-    smsd::ChemOptions chemistry;
-    assert(smsd::isValidMCSMapping(isolates.molecule, edge.molecule, full, chemistry));
-    chemistry.induced = true;
-    assert(!smsd::isValidMCSMapping(isolates.molecule, edge.molecule, full, chemistry));
-    assert(!smsd::validateMapping(isolates.molecule, edge.molecule, full, chemistry).empty());
-
-    int q2t[] = {0, -1}, t2q[] = {0, -1};
-    std::vector<uint64_t> mapped{1};
-    assert(!smsd::detail::mappedBondCompatQuery(edge.molecule, isolates.molecule, {}, false, 1, 1, q2t, mapped));
-    assert(!smsd::detail::mappedBondCompatTarget(edge.molecule, isolates.molecule, {}, false, 1, 1, t2q, mapped));
-    assert(smsd::detail::mappedBondCompatQuery(isolates.molecule, edge.molecule, {}, false, 1, 1, q2t, mapped));
-    assert(!smsd::detail::mappedBondCompatQuery(isolates.molecule, edge.molecule, {}, true, 1, 1, q2t, mapped));
-    assert(!smsd::isMappingMaximal(isolates.molecule, edge.molecule, {{0, 0}}, {}));
-    assert(smsd::isMappingMaximal(isolates.molecule, edge.molecule, {{0, 0}}, chemistry));
-    assert(!smsd::isMappingMaximal(edge.molecule, edge.molecule, {{0, INT_MAX}}, {}));
-
+    auto edgeOptions = options(false, false), induced = options(true, false);
+    assert(!smsd::MCS::validateMapping(isolates.molecule, edge.molecule, full, edgeOptions).empty());
+    assert(smsd::MCS::validateMapping(edge.molecule, edge.molecule, full, edgeOptions).empty());
+    assert(!smsd::MCS::validateMapping(isolates.molecule, edge.molecule, full, induced).empty());
+    assert(!smsd::MCS::isMappingMaximal(isolates.molecule, edge.molecule, std::map<int, int>{{0, 0}}, edgeOptions));
+    assert(smsd::MCS::isMappingMaximal(isolates.molecule, edge.molecule, std::map<int, int>{{0, 0}}, induced));
+    assert(!smsd::MCS::isMappingMaximal(edge.molecule, edge.molecule, std::map<int, int>{{0, INT_MAX}}, induced));
     auto legacy = makeGraph(3, {{0, 1}}).molecule;
-    legacy.formalCharge.clear();
-    legacy.massNumber.clear();
-    legacy.tetraChirality.clear();
-    smsd::ChemOptions optionalProperties;
-    optionalProperties.matchFormalCharge = true;
-    optionalProperties.matchIsotope = true;
-    optionalProperties.useChirality = true;
-    assert(smsd::isSubstructure(legacy, legacy, optionalProperties, 1000));
-    assert(smsd::findSubstructure(legacy, legacy, optionalProperties, 1000).size() == 3);
-    for (int atom = 0; atom < legacy.n; ++atom)
-        assert(smsd::cip::assignRS(legacy, atom) == smsd::cip::RSLabel::NONE);
-    auto components = smsd::detail::splitComponents(legacy);
-    assert(components.size() == 2);
-    for (const auto& component : components)
-        for (int atom = 0; atom < component.n; ++atom) {
-            assert(component.formalCharge[atom] == 0);
-            assert(component.massNumber[atom] == 0);
-            assert(component.tetraChirality[atom] == 0);
-        }
+    legacy.formalCharge.clear(); legacy.massNumber.clear(); legacy.tetraChirality.clear();
+    smsd::Substructure::Options optional; optional.chemistry.matchFormalCharge = true;
+    optional.chemistry.matchIsotope = true; optional.chemistry.useChirality = true;
+    auto result = smsd::Substructure::find(legacy).withOptions(optional).withTimeout(1000).match(legacy);
+    assert(result.complete && result.matches.front().atomMapping.size() == 3);
+    for (int atom = 0; atom < legacy.n; ++atom) assert(smsd::cip::assignRS(legacy, atom) == smsd::cip::RSLabel::NONE);
+    const auto split = smsd::Substructure::smarts("C").match(legacy);
+    assert(!split.matches.empty());
+    const auto fragments = smsd::MCS::find(legacy).withOptions(options(true, false)).match(legacy);
+    assert(fragments.matches.front().fragments.size() == 2);
+    const auto graph = fragments.matches.front().toGraph(legacy);
+    for (int atom = 0; atom < graph.n; ++atom) {
+        assert(graph.formalCharge[atom] == 0 && graph.massNumber[atom] == 0 && graph.tetraChirality[atom] == 0);
+    }
 }
 
 void testTautomerBound() {
     auto query = graphFromMask(4, 7), target = graphFromMask(4, 7);
-    query.molecule.atomicNum.assign(4, 7);
-    target.molecule.atomicNum.assign(4, 8);
-    query.molecule.tautomerClass.assign(4, 0);
-    target.molecule.tautomerClass.assign(4, 0);
-    query.molecule.refreshAtomLabels();
-    target.molecule.refreshAtomLabels();
-    smsd::ChemOptions chemistry;
-    chemistry.tautomerAware = true;
-    // Tautomer relaxation preserves element identity; the frequency bound may stay loose.
-    for (int atom = 0; atom < 4; ++atom)
-        assert(!smsd::detail::atomsCompatFast(query.molecule, atom, target.molecule, atom, chemistry));
-    assert(smsd::detail::labelFrequencyUpperBound(query.molecule, target.molecule, chemistry) == 4);
-    assert(smsd::detail::labelFrequencyUpperBoundDirected(query.molecule, target.molecule, chemistry) == 4);
-    assert(smsd::findMCS(query.molecule, target.molecule, chemistry, options(false, true)).empty());
+    query.molecule.atomicNum.assign(4, 7); target.molecule.atomicNum.assign(4, 8);
+    query.molecule.tautomerClass.assign(4, 0); target.molecule.tautomerClass.assign(4, 0);
+    query.molecule.refreshAtomLabels(); target.molecule.refreshAtomLabels();
+    auto opts = options(true, true); opts.chemistry.tautomerAware = true;
+    assert(search(query, target, opts).matches.empty());
+    smsd::Substructure::Options sub; sub.chemistry = opts.chemistry;
+    assert(smsd::Substructure::find(query.molecule).withOptions(sub).match(target.molecule).matches.empty());
 }
 
 void testSparseConnectedSelection() {
     auto query = makeGraph(2048, {{1500, 1501}, {1700, 1701}, {1701, 1702}});
-    std::map<int, int> mapping{{1500, 1500}, {1501, 1501},
-                              {1700, 1700}, {1701, 1701}, {1702, 1702}};
-    auto result = smsd::detail::largestConnected(query.molecule, mapping, &query.molecule);
-    assert(result.size() == 3 && result.count(1702));
-    validate(query, query, result, false, true);
-
     auto target = makeGraph(2048, {{1500, 1501}, {1700, 1701}});
-    auto common = smsd::detail::largestConnected(query.molecule, mapping, &target.molecule);
-    assert(common.size() == 2 && common.count(1500));
-    validate(query, target, common, false, true);
+    // The uniquely labelled sparse component is checked without a dense product search.
+    for (auto* graph : {&query.molecule, &target.molecule}) {
+        graph->atomicNum[1500] = 7; graph->atomicNum[1501] = 8;
+        graph->refreshAtomLabels();
+    }
+    auto small = makeGraph(2, {{0, 1}}, {7, 8});
+    auto result = search(small, target, options(true, true));
+    assert(result.matches.front().atomMapping.at(0) == 1500 && result.matches.front().atomMapping.at(1) == 1501);
+    assert(result.matches.front().fragments.size() == 1);
+    assert(smsd::Substructure::find(small.molecule).match(query.molecule).matches.front().atomMapping.size() == 2);
 }
 
 void testFlexibleAromaticExtension() {
-    auto queryMolecule = smsd::parseSMILES("c1ccc(-c2ccccc2)cc1");
-    auto targetMolecule = smsd::parseSMILES("c1ccc(Cc2ccccc2)cc1");
-    auto toGraph = [](smsd::MolGraph molecule) {
-        int atoms = molecule.n;
-        std::vector<std::vector<int>> edges(atoms, std::vector<int>(atoms));
-        for (int a = 0; a < atoms; ++a)
-            for (int b = 0; b < atoms; ++b)
-                edges[a][b] = molecule.bondOrder(a, b) != 0;
-        return Graph{atoms, std::move(edges), std::move(molecule)};
-    };
-    auto query = toGraph(std::move(queryMolecule));
-    auto target = toGraph(std::move(targetMolecule));
-    auto checkChemistry = [&](const std::map<int, int>& mapping) {
-        validate(query, target, mapping, false, true);
-        for (const auto& [a, b] : mapping) {
-            assert(query.molecule.atomicNum[a] == target.molecule.atomicNum[b]);
-            assert(query.molecule.formalCharge[a] == target.molecule.formalCharge[b]);
-            for (const auto& [k, l] : mapping) {
-                int qOrder = query.molecule.bondOrder(a, k);
-                if (!qOrder) continue;
-                int tOrder = target.molecule.bondOrder(b, l);
-                bool flexible = (query.molecule.bondAromatic(a, k) && (tOrder == 1 || tOrder == 2))
-                    || (target.molecule.bondAromatic(b, l) && (qOrder == 1 || qOrder == 2));
-                assert(qOrder == tOrder || flexible);
-            }
-        }
-    };
-    // A complete phenyl ring plus its attached query ring atom maps onto a
-    // phenyl ring plus target methylene. FLEXIBLE atom aromaticity permits it.
-    std::map<int, int> seven{{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}, {10, 11}, {11, 12}};
-    checkChemistry(seven);
-    auto result = smsd::findMCS(query.molecule, target.molecule, {}, options(false, true));
-    assert(result.size() >= seven.size());
-    checkChemistry(result);
+    auto query = smsd::parseSMILES("c1ccc(-c2ccccc2)cc1"), target = smsd::parseSMILES("c1ccc(Cc2ccccc2)cc1");
+    const std::map<int, int> witness{{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}, {10, 11}, {11, 12}};
+    auto opts = options(true, true);
+    assert(smsd::MCS::validateMapping(query, target, witness, opts).empty());
+    auto result = smsd::MCS::find(query).withOptions(opts).match(target);
+    assert(result.matches.front().atomMapping.size() >= witness.size());
+    assert(smsd::MCS::validateMapping(query, target, result.matches.front(), opts).empty());
 }
 
 void testConnectedStatinSeedRecovery() {
     auto query = smsd::parseSMILES("CC(C)C1=C(C(=C(N1CCC(CC(CC(=O)O)O)O)C2=CC=C(C=C2)F)C3=CC=CC=C3)C(=O)NC4=CC=CC=C4");
     auto target = smsd::parseSMILES("CC(C)C1=NC(=NC(=C1C=CC(CC(CC(=O)O)O)O)C2=CC=C(C=C2)F)N(C)S(=O)(=O)C");
-    smsd::ChemOptions chemistry;
-    chemistry.matchBondOrder = smsd::ChemOptions::BondOrderMode::ANY;
-    chemistry.aromaticityMode = smsd::ChemOptions::AromaticityMode::FLEXIBLE;
-    const std::map<int, int> witness{{4, 3}, {5, 8}, {6, 7}, {7, 6}, {8, 5},
-        {19, 20}, {20, 21}, {21, 22}, {22, 23}, {23, 24}, {24, 25}, {25, 26},
-        {26, 9}, {27, 10}, {28, 11}, {29, 12}, {30, 13}, {32, 1}};
-    assert(smsd::isValidMCSMapping(query, target, witness, chemistry));
-    auto opts = options(false, true);
-    opts.timeoutMs = 1000;
-    for (int stage : {1, 5}) {
-        opts.maxStage = stage;
-        auto result = smsd::findMCS(query, target, chemistry, opts);
-        assert(result.size() >= witness.size());
-        assert(smsd::isValidMCSMapping(query, target, result, chemistry));
-        assert(smsd::detail::largestConnected(query, result, &target).size() == result.size());
+    const std::map<int, int> witness{{4, 3}, {5, 8}, {6, 7}, {7, 6}, {8, 5}, {19, 20}, {20, 21}, {21, 22}, {22, 23}, {23, 24}, {24, 25}, {25, 26}, {26, 9}, {27, 10}, {28, 11}, {29, 12}, {30, 13}, {32, 1}};
+    auto opts = options(false, true); opts.chemistry.matchBondOrder = smsd::ChemOptions::BondOrderMode::ANY;
+    assert(smsd::MCS::validateMapping(query, target, witness, opts).empty());
+    const auto prepared = smsd::MCS::find(query).withOptions(opts);
+    for (int repeat = 0; repeat < 2; ++repeat) {
+        auto result = prepared.match(target);
+        assert(result.matches.front().atomMapping.size() >= witness.size());
+        assert(smsd::MCS::validateMapping(query, target, result.matches.front(), opts).empty());
+        assert(result.matches.front().fragments.size() == 1);
     }
 }
 
 void testMcGregorStateIsolation() {
     size_t cases = 0;
-    for (int queryMask = 0; queryMask < 64; ++queryMask) {
-        auto query = graphFromMask(4, queryMask);
-        for (int targetMask : {0, 7, 18, 23, 32, 41, 56, 63}) {
-            auto core = graphFromMask(4, targetMask);
-            std::vector<std::pair<int, int>> bonds;
-            for (int a = 0; a < 4; ++a)
-                for (int b = a + 1; b < 4; ++b)
-                    if (core.edges[a][b]) bonds.emplace_back(a, b);
-            auto target = makeGraph(20, bonds);
-            smsd::ChemOptions chemistry;
-            chemistry.induced = true;
-            for (bool connected : {false, true}) {
-                smsd::detail::TimeBudget budget(100);
-                auto result = smsd::detail::mcGregorExtend(query.molecule, target.molecule,
-                    {{0, 0}}, chemistry, budget, 100, false, false, connected);
-                validate(query, target, result, true, connected);
-                assert(!result.empty());
-                if (connected)
-                    assert(static_cast<int>(result.size()) <= maximumAtoms(query, core, true, true));
-                ++cases;
-            }
+    for (int queryMask = 0; queryMask < 64; ++queryMask) for (int targetMask : {0, 7, 18, 23, 32, 41, 56, 63}) {
+        auto query = graphFromMask(4, queryMask), core = graphFromMask(4, targetMask);
+        std::vector<std::pair<int, int>> bonds;
+        for (int first = 0; first < 4; ++first) for (int second = first + 1; second < 4; ++second)
+            if (core.edges[first][second]) bonds.emplace_back(first, second);
+        auto target = makeGraph(20, bonds);
+        for (bool connected : {false, true}) {
+            auto opts = options(true, connected); opts.timeoutMs = 100;
+            const auto prepared = smsd::MCS::find(query.molecule).withOptions(opts);
+            auto result = prepared.match(target.molecule);
+            for (const auto& match : result.matches) validate(query, target, match, opts);
+            if (connected) assert(result.score <= maximumScore(query, core, opts));
+            assert(!result.matches.empty());
+            assert(prepared.match(query.molecule).score >= result.score);
+            ++cases;
         }
     }
     assert(cases == 1024);
@@ -720,95 +515,59 @@ void testLargeConnectedCoverageSeed() {
     auto query = smsd::parseSMILES("CC1=C2C(C(=O)C3(C(CC4C(C3C(C(C2(C)C)(CC1OC(=O)C(C(C5=CC=CC=C5)NC(=O)C6=CC=CC=C6)O)O)OC(=O)C7=CC=CC=C7)(CO4)OC(=O)C)O)C)OC(=O)C");
     auto target = smsd::parseSMILES("CC1=C2C(C(=O)C3(C(CC4C(C3C(C(C2(C)C)(CC1OC(=O)C(C(C5=CC=CC=C5)NC(=O)OC(C)(C)C)O)O)OC(=O)C6=CC=CC=C6)(CO4)OC(=O)C)O)C)O");
     assert(std::min(query.n, target.n) > 50);
-    smsd::ChemOptions chemistry;
-    chemistry.matchBondOrder = smsd::ChemOptions::BondOrderMode::ANY;
-    chemistry.aromaticityMode = smsd::ChemOptions::AromaticityMode::FLEXIBLE;
-    auto opts = options(false, true);
-    opts.timeoutMs = 2000;
-    opts.maxStage = 1;
-    auto result = smsd::findMCS(query, target, chemistry, opts);
-    assert(result.size() >= 50);
-    assert(smsd::isValidMCSMapping(query, target, result, chemistry));
-    assert(smsd::detail::largestConnected(query, result, &target).size() == result.size());
+    auto opts = options(false, true); opts.timeoutMs = 2000;
+    opts.chemistry.matchBondOrder = smsd::ChemOptions::BondOrderMode::ANY;
+    auto result = smsd::MCS::find(query).withOptions(opts).match(target);
+    assert(result.matches.front().atomMapping.size() >= 50);
+    assert(smsd::MCS::validateMapping(query, target, result.matches.front(), opts).empty());
+    assert(result.matches.front().fragments.size() == 1);
 }
 
 void testReverseCompleteRingFilter() {
-    std::vector<int> queryElements(12, 6), targetElements(8, 6);
-    queryElements[10] = queryElements[11] = 7;
-    targetElements[6] = targetElements[7] = 7;
-    auto query = makeGraph(12, {
-        {0, 1}, {1, 2}, {2, 3}, {3, 8}, {8, 9}, {9, 0},
-        {3, 4}, {4, 5}, {5, 6}, {6, 7}, {7, 8}, {0, 10}, {10, 11}}, queryElements);
-    auto target = makeGraph(8, {
-        {0, 1}, {1, 2}, {2, 3}, {3, 4}, {4, 5}, {5, 0}, {0, 6}, {6, 7}}, targetElements);
-    smsd::ChemOptions chemistry;
-    chemistry.completeRingsOnly = true;
-    auto result = smsd::findMCS(query.molecule, target.molecule, chemistry, options(false, true));
-    // The shared atoms of the fused query rings require all ten ring carbons.
-    // The target has only six carbons, so the two pendant nitrogens are optimal.
-    assert(result.size() == 2 && result.count(10) && result.count(11));
-    assert(result.at(10) >= 6 && result.at(11) >= 6);
-    validate(query, target, result, false, true);
+    auto first = smsd::parseSMILES("NNc1ccc2ccccc2c1"), second = smsd::parseSMILES("NNc1ccccc1");
+    for (bool induced : {false, true}) for (bool reverse : {false, true}) {
+        const auto& query = reverse ? second : first;
+        const auto& target = reverse ? first : second;
+        auto opts = options(induced, true); opts.chemistry.completeRingsOnly = true;
+        auto result = smsd::MCS::find(query).withOptions(opts).match(target);
+        assert(result.matches.front().atomMapping.size() == 8 && result.matches.front().bondMapping.size() == 8);
+        assert(smsd::MCS::validateMapping(query, target, result.matches.front(), opts).empty());
+        const auto graph = result.matches.front().toGraph(query);
+        assert(graph.computeRelevantCycles().size() == 1 && graph.computeRelevantCycles().front().size() == 6);
+    }
 }
 
 void testExhaustiveSmallGraphs() {
     std::vector<Graph> graphs;
-    for (int atoms = 0; atoms <= 4; ++atoms)
-        for (int mask = 0; mask < (1 << (atoms * (atoms - 1) / 2)); ++mask)
-            graphs.push_back(graphFromMask(atoms, mask));
+    for (int atoms = 0; atoms <= 4; ++atoms) for (int mask = 0; mask < (1 << (atoms * (atoms - 1) / 2)); ++mask) graphs.push_back(graphFromMask(atoms, mask));
     size_t cases = 0;
-    for (const auto& query : graphs) {
-        for (const auto& target : graphs) {
-            for (bool induced : {false, true}) {
-                for (bool connected : {false, true}) {
-                    auto result = smsd::findMCS(
-                        query.molecule, target.molecule, {}, options(induced, connected));
-                    validate(query, target, result, induced, connected);
-                    assert(static_cast<int>(result.size()) == maximumAtoms(query, target, induced, connected));
-                    ++cases;
-                }
-            }
+    for (const auto& query : graphs) for (const auto& target : graphs)
+        for (bool induced : {false, true}) for (bool connected : {false, true}) {
+            auto opts = options(induced, connected); auto result = search(query, target, opts);
+            assert(result.optimal && result.score == maximumScore(query, target, opts)); ++cases;
         }
-    }
     assert(cases == 23104);
     std::cout << "Validated " << cases << " exhaustive small-graph MCS cases\n";
 }
 
 void testEnumeratedMappings() {
-    auto isolates = graphFromMask(2, 0);
-    auto path = graphFromMask(3, 5);
-    auto result = smsd::findAllMCS(
-        isolates.molecule, path.molecule, {}, options(true, false), 10);
-    assert(!result.empty());
-    for (const auto& mapping : result) {
-        assert(mapping.size() == 2);
-        validate(isolates, path, mapping, true, false);
-    }
-
+    auto isolates = graphFromMask(2, 0), path = graphFromMask(3, 5);
+    auto result = smsd::MCS::find(isolates.molecule).withOptions(options(true, false)).matchAll(path.molecule, 10);
+    assert(!result.matches.empty());
+    for (const auto& match : result.matches) { assert(match.atomMapping.size() == 2); validate(isolates, path, match, options(true, false)); }
     std::vector<Graph> graphs;
-    for (int atoms = 0; atoms <= 3; ++atoms)
-        for (int mask = 0; mask < (1 << (atoms * (atoms - 1) / 2)); ++mask)
-            graphs.push_back(graphFromMask(atoms, mask));
+    for (int atoms = 0; atoms <= 3; ++atoms) for (int mask = 0; mask < (1 << (atoms * (atoms - 1) / 2)); ++mask) graphs.push_back(graphFromMask(atoms, mask));
     size_t cases = 0;
-    for (const auto& query : graphs) {
-        for (const auto& target : graphs) {
-            for (bool induced : {false, true}) {
-                for (bool connected : {false, true}) {
-                    auto mappings = smsd::findAllMCS(
-                        query.molecule, target.molecule, {}, options(induced, connected), 3);
-                    int expected = maximumAtoms(query, target, induced, connected);
-                    assert(expected == 0 || !mappings.empty());
-                    for (const auto& mapping : mappings) {
-                        assert(static_cast<int>(mapping.size()) == expected);
-                        validate(query, target, mapping, induced, connected);
-                    }
-                    ++cases;
-                }
-            }
+    for (const auto& query : graphs) for (const auto& target : graphs)
+        for (bool induced : {false, true}) for (bool connected : {false, true}) {
+            auto opts = options(induced, connected);
+            auto all = smsd::MCS::find(query.molecule).withOptions(opts).matchAll(target.molecule, 3);
+            double expected = maximumScore(query, target, opts);
+            assert(all.optimal && all.score == expected && (expected == 0 || !all.matches.empty()));
+            for (const auto& match : all.matches) validate(query, target, match, opts);
+            ++cases;
         }
-    }
     assert(cases == 576);
-    std::cout << "Validated " << cases << " exhaustive enumeration cases\n";
 }
 
 } // namespace
@@ -834,5 +593,4 @@ int main() {
     testExhaustiveSmallGraphs();
     testEnumeratedMappings();
     std::cout << "MCS regressions passed\n";
-    return 0;
 }

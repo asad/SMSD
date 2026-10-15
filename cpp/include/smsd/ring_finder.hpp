@@ -284,7 +284,7 @@ inline RingResult runHortonPipeline(const MolGraph& g) {
             if (!disjoint) continue;
 
             int ringSize = static_cast<int>(path1.size() + path2.size()) - 1;
-            if (ringSize < 3 || ringSize > 20) continue;
+            if (ringSize < 3) continue;
 
             std::vector<int> atoms;
             atoms.reserve(ringSize);
@@ -441,116 +441,9 @@ inline std::vector<std::vector<int>> computeRelevantCycles(const MolGraph& g) {
 // computeURFs — Unique Ring Families (Kolodzik et al. 2012)
 // ==========================================================================
 
-/**
- * Computes Unique Ring Families. Two relevant cycles belong to the same URF
- * if they share the same orbit signature (lexmin rotation of orbit labels
- * in both directions) and all atoms are vertex-transitive (same orbit).
- *
- * @param g   The molecular graph.
- * @return    URFs, each URF is a vector of cycles (each cycle is an atom vector).
- */
+/** Compute Unique Ring Families using shared edges and strictly shorter cycle spans. */
 inline std::vector<std::vector<std::vector<int>>> computeURFs(const MolGraph& g) {
-    g.ensureCanonical();   // orbit[] is lazy-computed
-    auto rc = computeRelevantCycles(g);
-    if (rc.empty()) return {};
-
-    // Build edge index + reverse lookup
-    auto edgeIndex = detail_rf::buildEdgeIndex(g);
-    int numEdges = static_cast<int>(edgeIndex.size());
-    int longWords = (numEdges + 63) >> 6;
-
-    std::vector<std::pair<int,int>> edgeByIndex(numEdges);
-    for (auto& [key, idx] : edgeIndex) {
-        edgeByIndex[idx] = { static_cast<int>(key >> 32),
-                             static_cast<int>(key & 0xFFFFFFFF) };
-    }
-
-    // Build edge-incidence vectors for each relevant cycle
-    int nrc = static_cast<int>(rc.size());
-    std::vector<std::vector<uint64_t>> vectors(nrc, std::vector<uint64_t>(longWords, 0));
-    for (int ci = 0; ci < nrc; ci++) {
-        auto& c = rc[ci];
-        for (size_t i = 0; i < c.size(); i++) {
-            int a = c[i], b = c[(i + 1) % c.size()];
-            auto it = edgeIndex.find(detail_rf::edgeKey(a, b));
-            if (it != edgeIndex.end())
-                vectors[ci][it->second >> 6] ^= 1ULL << (it->second & 63);
-        }
-    }
-
-    // Union-Find
-    std::vector<int> family(nrc);
-    std::iota(family.begin(), family.end(), 0);
-
-    // Generate orbit-based signatures for each cycle
-    // Orbit signature = lexmin sequence of orbit[atom] values considering both directions
-    auto getCycleOrbitSig = [&](const std::vector<int>& c) -> std::vector<int> {
-        int len = static_cast<int>(c.size());
-        std::vector<int> best;
-        for (int dir = 0; dir <= 1; dir++) {
-            for (int start = 0; start < len; start++) {
-                std::vector<int> seq(len);
-                for (int i = 0; i < len; i++) {
-                    int idx = dir == 0 ? (start + i) % len : (start - i + len) % len;
-                    seq[i] = g.orbit[c[idx]];
-                }
-                if (best.empty() || seq < best) best = seq;
-            }
-        }
-        return best;
-    };
-
-    std::vector<std::vector<int>> sigs(nrc);
-    for (int i = 0; i < nrc; i++) sigs[i] = getCycleOrbitSig(rc[i]);
-
-    // Group cycles into URFs using two criteria (in order):
-    //   1. Orbit-signature match: only valid when every atom in both cycles
-    //      shares the same orbit value (vertex-transitive ring systems, e.g.
-    //      cubane where all 8 atoms have orbit=0). A matching sequence produced
-    //      by cycles whose atoms span multiple orbit classes just means the
-    //      cycles look the same locally — not that they are interchangeable in
-    //      the molecule, so the guard prevents incorrect merges in fused systems
-    //      like naphthalene.
-    //   2. Kolodzik single-edge exchange: symmetric difference has exactly 2
-    //      edges that share a common vertex.
-    for (int i = 0; i < nrc; i++) {
-        for (int j = i + 1; j < nrc; j++) {
-            if (rc[i].size() != rc[j].size()) continue;
-
-            // 1. Orbit-signature match — guarded: apply only when all atoms
-            //    in both cycles belong to the same orbit (vertex-transitive).
-            if (sigs[i] == sigs[j]) {
-                int orb0 = g.orbit[rc[i][0]];
-                bool allSame = true;
-                for (int a : rc[i]) { if (g.orbit[a] != orb0) { allSame = false; break; } }
-                if (allSame) {
-                    for (int a : rc[j]) { if (g.orbit[a] != orb0) { allSame = false; break; } }
-                }
-                if (allSame) {
-                    detail_rf::ufUnion(family, i, j);
-                    continue;
-                }
-            }
-
-            // Note: Kolodzik's single-edge-exchange rule (XOR popcount == 2)
-            // is mathematically impossible on simple chemical graphs — the
-            // symmetric difference of two cycles is always Eulerian, and an
-            // Eulerian subgraph with exactly 2 edges requires parallel edges.
-            // The orbit-signature check above already handles URF deduplication.
-        }
-    }
-
-    // Group by family
-    std::unordered_map<int, std::vector<int>> groups;
-    for (int i = 0; i < nrc; i++) groups[detail_rf::ufFind(family, i)].push_back(i);
-
-    std::vector<std::vector<std::vector<int>>> result;
-    for (auto& [rep, members] : groups) {
-        std::vector<std::vector<int>> fam;
-        for (int m : members) fam.push_back(rc[m]);
-        result.push_back(std::move(fam));
-    }
-    return result;
+    return MolGraph::groupUniqueRingFamilies(computeRelevantCycles(g), detail_rf::buildEdgeIndex(g));
 }
 
 // ==========================================================================
@@ -581,11 +474,11 @@ inline std::vector<std::vector<int>> computeSSSR(const MolGraph& g) {
 
 
 // ==========================================================================
-// layoutSSSR — layout-optimized ring ordering
+// layoutSSSR — layout-optimised ring ordering
 // ==========================================================================
 
 /**
- * Return SSSR rings optimized for 2D coordinate generation:
+ * Return SSSR rings optimised for 2D coordinate generation:
  *   - Largest ring system first
  *   - Fused rings ordered by shared-edge adjacency within each system
  *   - Within each system, rings sorted by size (smallest first for placement)
@@ -687,7 +580,7 @@ inline std::vector<std::vector<int>> layoutSSSR(const MolGraph& g) {
         while (!bfs.empty()) {
             int u = bfs.front(); bfs.pop_front();
             ordered.push_back(u);
-            // Sort neighbors by size before enqueuing (smallest first)
+            // Sort neighbours by size before enqueuing (smallest first)
             std::vector<int> nbrs;
             for (int v : ringAdj[u]) {
                 if (!visited[v] && comp[v] == ci) nbrs.push_back(v);

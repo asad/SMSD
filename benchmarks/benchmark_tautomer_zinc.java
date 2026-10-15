@@ -14,7 +14,7 @@
  * For each consecutive pair of tautomers:
  *   1. Run MCS with ChemOptions.tautomerProfile() (tautomer-aware)
  *   2. Run MCS with default ChemOptions()          (strict)
- *   3. Call SearchEngine.validateTautomerConsistency() on the tautomer result
+ *   3. Call MCS.validateTautomerConsistency() on the tautomer result
  *   4. Compute a TautConf score = avg(tautomerWeight) for mapped tautomeric atoms
  *
  * Compile and run:
@@ -231,9 +231,9 @@ public class benchmark_tautomer_zinc {
     // ======================================================================
     static double computeTautConfScore(MolGraph g1, MolGraph g2, Map<Integer,Integer> mcs) {
         if (mcs == null || mcs.isEmpty()) return 1.0;
-        // The public confidence API initializes the exported tautomer annotations.
+        // The public confidence API initialises the exported tautomer annotations.
         // Keep this benchmark's arithmetic mean below rather than its geometric mean.
-        SearchEngine.computeTautomerConfidence(g1, g2, mcs);
+        MCS.computeTautomerConfidence(g1, g2, mcs);
         if (g1.tautomerClass == null || g2.tautomerClass == null) return 1.0;
 
         double weightSum = 0.0;
@@ -260,30 +260,38 @@ public class benchmark_tautomer_zinc {
     static PairResult benchmarkPair(Molecule a, Molecule b) {
         ChemOptions tautOpts    = ChemOptions.tautomerProfile();
         ChemOptions defaultOpts = new ChemOptions();
-        SearchEngine.MCSOptions mcsOpts = new SearchEngine.MCSOptions();
-        mcsOpts.timeoutMs = TIMEOUT_MS;
+        MCS.Options mcsOpts = new MCS.Options();
+        mcsOpts.timeoutMillis = TIMEOUT_MS;
+        mcsOpts.chemistry=tautOpts;
+        MCS.Options defaultMCSOpts=new MCS.Options();defaultMCSOpts.timeoutMillis=TIMEOUT_MS;defaultMCSOpts.chemistry=defaultOpts;
 
         // Tautomer-aware MCS
         Map<Integer,Integer> tautMCS = null;
+        SearchResult tautSearch=null;
         long t0 = System.nanoTime();
         try {
-            tautMCS = SearchEngine.findMCS(a.mol(), b.mol(), tautOpts, mcsOpts);
+            tautSearch=MCS.find(a.mol()).withOptions(mcsOpts).match(b.mol());
+            tautMCS=tautSearch.found()?tautSearch.matches().get(0).atomMapping():Collections.emptyMap();
         } catch (Exception e) {
             System.err.printf("  TAUT MCS error: %s vs %s -> %s%n",
                 a.name(), b.name(), e.getMessage());
         }
         double tautTimeMs = (System.nanoTime() - t0) / 1_000_000.0;
+        if(tautSearch!=null)System.err.printf("  TAUT outcome: %s optimal=%s%n",tautSearch.status(),tautSearch.optimal());
 
         // Default MCS
         Map<Integer,Integer> defMCS = null;
+        SearchResult defaultSearch=null;
         t0 = System.nanoTime();
         try {
-            defMCS = SearchEngine.findMCS(a.mol(), b.mol(), defaultOpts, mcsOpts);
+            defaultSearch=MCS.find(a.mol()).withOptions(defaultMCSOpts).match(b.mol());
+            defMCS=defaultSearch.found()?defaultSearch.matches().get(0).atomMapping():Collections.emptyMap();
         } catch (Exception e) {
             System.err.printf("  DEF MCS error: %s vs %s -> %s%n",
                 a.name(), b.name(), e.getMessage());
         }
         double defTimeMs = (System.nanoTime() - t0) / 1_000_000.0;
+        if(defaultSearch!=null)System.err.printf("  DEFAULT outcome: %s optimal=%s%n",defaultSearch.status(),defaultSearch.optimal());
 
         int tautSize = tautMCS != null ? tautMCS.size() : 0;
         int defSize  = defMCS  != null ? defMCS.size()  : 0;
@@ -292,7 +300,7 @@ public class benchmark_tautomer_zinc {
         // Validate proton consistency
         boolean consistent = true;
         if (tautMCS != null && !tautMCS.isEmpty()) {
-            consistent = SearchEngine.validateTautomerConsistency(a.mol(), b.mol(), tautMCS);
+            consistent = MCS.validateTautomerConsistency(a.mol(), b.mol(), tautMCS);
         }
 
         // TautConf score
@@ -333,12 +341,13 @@ public class benchmark_tautomer_zinc {
         System.err.println("JVM warmup ...");
         if (!pairIndices.isEmpty()) {
             ChemOptions warmOpts = ChemOptions.tautomerProfile();
-            SearchEngine.MCSOptions warmMCS = new SearchEngine.MCSOptions();
-            warmMCS.timeoutMs = 2000;
+            MCS.Options warmMCS = new MCS.Options();
+            warmMCS.timeoutMillis = 2000;
+            warmMCS.chemistry=warmOpts;
             for (int w = 0; w < 5; w++) {
                 try {
                     int[] first = pairIndices.get(0);
-                    SearchEngine.findMCS(mols.get(first[0]).mol(), mols.get(first[1]).mol(), warmOpts, warmMCS);
+                    MCS.find(mols.get(first[0]).mol()).withOptions(warmMCS).match(mols.get(first[1]).mol());
                 } catch (Exception ignored) {}
             }
         }

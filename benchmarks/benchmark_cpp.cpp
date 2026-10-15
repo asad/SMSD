@@ -4,7 +4,7 @@
 // c++ -std=c++17 -O3 -Icpp/include benchmarks/benchmark_cpp.cpp -o benchmark_cpp
 // ./benchmark_cpp [pairs.tsv] [timeout_ms=10000] [repeats=3] [warmup=1]
 // TSV fields: SMILES1, SMILES2, optional name. Comments start with '#'.
-// SMSD mapping API does not expose cancellation; report budget crossings only.
+// Search status and objective proof are reported separately from elapsed time.
 #include "smsd/smsd.hpp"
 #include "smsd/smiles_parser.hpp"
 #include <algorithm>
@@ -69,20 +69,21 @@ int main(int argc, char** argv) {
         }
         smsd::ChemOptions chem; chem.matchBondOrder=smsd::ChemOptions::BondOrderMode::ANY;
         chem.aromaticityMode=smsd::ChemOptions::AromaticityMode::FLEXIBLE;
-        smsd::MCSOptions options; options.timeoutMs=timeout; options.maxStage=5;
-        options.connectedOnly=true; options.maximizeBonds=false; options.induced=false;
-        std::cout << "# engine=SMSD native; policy=bond-any; objective=atoms; connected=true; timeout_status=unknown\n"
-                  << "pair\ttrial\telapsed_us\tatoms\tvalid\tbudget_reached\n";
+        smsd::MCSOptions options; options.timeoutMs=timeout;
+        options.chemistry = chem;
+        std::cout << "# engine=SMSD native; policy=bond-any; objective=MCIS; connected=true\n"
+                  << "pair\ttrial\telapsed_us\tatoms\tvalid\tstatus\toptimal\n";
         for (const auto& pair : pairs) {
             auto a=smsd::parseSMILES(pair.first), b=smsd::parseSMILES(pair.second);
             if (a.n == 0 || b.n == 0) throw std::runtime_error("empty input graph: "+pair.name);
-            for (int i=0;i<warmup;++i) smsd::findMCS(a,b,chem,options);
+            for (int i=0;i<warmup;++i) smsd::MCS::find(a).withOptions(options).match(b);
             for (int trial=0;trial<repeats;++trial) {
                 auto start=std::chrono::steady_clock::now();
-                auto mapping=smsd::findMCS(a,b,chem,options);
+                auto result=smsd::MCS::find(a).withOptions(options).match(b);
+                auto mapping=result.matches.empty() ? std::map<int,int>{} : result.matches.front().atomMapping;
                 double us=std::chrono::duration<double,std::micro>(std::chrono::steady_clock::now()-start).count();
                 std::cout << pair.name << '\t' << trial << '\t' << us << '\t' << mapping.size()
-                          << '\t' << validMapping(a,b,mapping) << '\t' << (us >= timeout*1000.0) << std::endl;
+                          << '\t' << validMapping(a,b,mapping) << '\t' << static_cast<int>(result.status) << '\t' << result.optimal << std::endl;
             }
         }
         return 0;
