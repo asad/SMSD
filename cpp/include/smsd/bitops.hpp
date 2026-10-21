@@ -2,14 +2,18 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
- * See the NOTICE file for attribution, trademark, and algorithm IP terms. *
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ *
  * Portable 64-bit bit-operation wrappers with fused multi-word operations.
  * Works on GCC, Clang, and MSVC without any external dependency.
  * ARM NEON optimised paths when available.
  */
 #pragma once
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <limits>
+#include <vector>
 
 #if defined(_MSC_VER)
 #  include <intrin.h>
@@ -157,6 +161,9 @@ inline int popcountAndNot_neon(const uint64_t* a, const uint64_t* b, int nWords)
 // Dispatch wrappers -- pick NEON when available, else scalar
 // =========================================================================
 
+/// @deprecated Nothing in the library uses the fused operations; they go with their
+/// _scalar and _neon variants.
+[[deprecated("The fused bitset operations are unused.")]]
 inline int popcountAnd(const uint64_t* a, const uint64_t* b, int nWords) noexcept {
 #if defined(__ARM_NEON)
     return popcountAnd_neon(a, b, nWords);
@@ -165,6 +172,7 @@ inline int popcountAnd(const uint64_t* a, const uint64_t* b, int nWords) noexcep
 #endif
 }
 
+[[deprecated("The fused bitset operations are unused.")]]
 inline int popcountN(const uint64_t* a, int nWords) noexcept {
 #if defined(__ARM_NEON)
     return popcountN_neon(a, nWords);
@@ -173,6 +181,7 @@ inline int popcountN(const uint64_t* a, int nWords) noexcept {
 #endif
 }
 
+[[deprecated("The fused bitset operations are unused.")]]
 inline bool anyBitAnd(const uint64_t* a, const uint64_t* b, int nWords) noexcept {
 #if defined(__ARM_NEON)
     return anyBitAnd_neon(a, b, nWords);
@@ -181,12 +190,44 @@ inline bool anyBitAnd(const uint64_t* a, const uint64_t* b, int nWords) noexcept
 #endif
 }
 
+[[deprecated("The fused bitset operations are unused.")]]
 inline int popcountAndNot(const uint64_t* a, const uint64_t* b, int nWords) noexcept {
 #if defined(__ARM_NEON)
     return popcountAndNot_neon(a, b, nWords);
 #else
     return popcountAndNot_scalar(a, b, nWords);
 #endif
+}
+
+// =========================================================================
+// Bit positions
+// =========================================================================
+
+/// Calls visit(position) for each set bit below `limit`, in ascending order.
+template<class Visit>
+inline void forEachSetBit(const std::vector<uint64_t>& words, int64_t limit, Visit&& visit) {
+    for (size_t w = 0; w < words.size(); ++w)
+        for (uint64_t word = words[w]; word != 0; word &= word - 1) {
+            const int64_t position = int64_t(w) * 64 + ctz64(word);
+            if (position >= limit) return;
+            visit(static_cast<int>(position));
+        }
+}
+
+/// Ascending positions of the set bits below `limit`.
+inline std::vector<int> bitPositions(const std::vector<uint64_t>& words,
+                                     int64_t limit = std::numeric_limits<int>::max()) {
+    std::vector<int> positions;
+    forEachSetBit(words, limit, [&](int position) { positions.push_back(position); });
+    return positions;
+}
+
+/// Words of a `size`-bit set holding the given positions; positions outside [0, size) are ignored.
+inline std::vector<uint64_t> bitWords(const std::vector<int>& positions, int size) {
+    std::vector<uint64_t> words(size > 0 ? (size_t(size) - 1) / 64 + 1 : 0, 0);
+    for (int position : positions)
+        if (position >= 0 && position < size) words[size_t(position) >> 6] |= uint64_t(1) << (position & 63);
+    return words;
 }
 
 } // namespace smsd

@@ -92,7 +92,8 @@ def test_dearomatize_alias_matches_kekulize(entry):
     dearomatized_graph = parse_smiles(entry["kekule"])
 
     kekulize(kekule_graph)
-    dearomatize(dearomatized_graph)
+    with pytest.deprecated_call():
+        dearomatize(dearomatized_graph)
 
     assert list(kekule_graph.aromatic) == list(dearomatized_graph.aromatic)
     assert bond_signature(kekule_graph) == bond_signature(dearomatized_graph)

@@ -2,10 +2,12 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  *
  * Independent graph oracles for complete common subgraphs, result limits
  * and molecular substructure/MCS mappings.
  */
+#include "test_support.hpp"
 #include "smsd/mcs.hpp"
 #include "smsd/substructure.hpp"
 #include <set>
@@ -20,9 +22,7 @@
 using Mapping = std::vector<std::pair<int, int>>;
 using Bonds = std::map<std::pair<int, int>, int>;
 
-static void require(bool condition, const char* message) {
-    if (!condition) throw std::runtime_error(message);
-}
+using smsd_test::require;
 
 struct Graph {
     int n;
@@ -245,20 +245,12 @@ static void testRandomMolecularValidity() {
     std::cout << "Molecular validity passed: 128 seeded graph pairs across orders/caps.\n";
 }
 
+static void testMolecular() {
+    testMolecularValidity();
+    testRandomMolecularValidity();
+}
+
 int main(int argc, char** argv) {
-    try {
-        const std::string category = argc > 1 ? argv[1] : "all";
-        if (category == "all" || category == "complete") testCompleteSubgraphs();
-        if (category == "all" || category == "substructure") {
-            testSubstructureOracle();
-        }
-        if (category == "all" || category == "molecular") {
-            testMolecularValidity();
-            testRandomMolecularValidity();
-        }
-        return 0;
-    } catch (const std::exception& error) {
-        std::cerr << "Search enumeration regression failed: " << error.what() << '\n';
-        return 1;
-    }
+    return smsd_test::runGroups(argc, argv, {
+        {"complete", testCompleteSubgraphs}, {"substructure", testSubstructureOracle}, {"molecular", testMolecular}});
 }

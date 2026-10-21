@@ -1,9 +1,10 @@
-#include "search_test_helpers.hpp"
 /*
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  */
+#include "test_support.hpp"
 #include "smsd/smsd.hpp"
 #include "smsd/smarts_parser.hpp"
 #include "smsd/smiles_parser.hpp"
@@ -11,9 +12,7 @@
 #include <iostream>
 #include <stdexcept>
 
-static void require(bool condition, const char* message) {
-    if (!condition) throw std::runtime_error(message);
-}
+using smsd_test::require;
 
 static void checkMolecule(const char* queryText, const char* targetText, bool expected,
                           bool chirality, bool bondStereo) {
@@ -118,7 +117,19 @@ int main() {
         checkSmarts("[C@@H,N](F)(Cl)Br", "N(F)(Cl)Br", true);
         checkSmarts("F/,-C=C/F", "FC=CF", true);
         checkSmarts("F!/C=C/F", "FC=CF", false);
-        checkMolecule("C[C@H](O)CC", "CC(O)CC", true, true, false);
+    });
+    run("molecule embeddings need specified stereo, as SMARTS does", [] {
+        checkMolecule("C[C@H](O)CC", "CC(O)CC", false, true, false);
+        checkMolecule("CC(O)CC", "C[C@H](O)CC", true, true, false);
+        checkMolecule("C[C@H](O)CC", "CC(O)CC", true, false, false);
+        checkMolecule("F/C=C/F", "FC=CF", false, false, true);
+        checkMolecule("FC=CF", "F/C=C/F", true, false, true);
+        checkMolecule("F/C=C/F", "FC=CF", true, false, false);
+        // A common-subgraph search keeps an unspecified target as a wildcard.
+        smsd::ChemOptions chemistry;
+        chemistry.useChirality = true;
+        require(smsd_test::commonAtoms(smsd::parseSMILES("C[C@H](O)CC"), smsd::parseSMILES("CC(O)CC"), chemistry, {}).size() == 5,
+                "MCS must map a tagged centre onto an untagged atom");
     });
     run("SMARTS conjugated directional carriers", [] {
         checkSmarts("C/C=C(/F)\\C(Cl)=C/C", "C\\C=C(\\F)/C(Cl)=C\\C", true);

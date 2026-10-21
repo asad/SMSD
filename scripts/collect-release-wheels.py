@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Check and collect matching CPython 3.14 wheels without publishing."""
 
 import argparse
@@ -8,7 +12,6 @@ import csv
 import hashlib
 import importlib.util
 import io
-import json
 from pathlib import Path, PurePosixPath
 import re
 import shutil
@@ -22,30 +25,6 @@ _BUILD_SPEC = importlib.util.spec_from_file_location(
     "smsd_release_build", Path(__file__).resolve().with_name("build_python_wheels.py"))
 BUILD = importlib.util.module_from_spec(_BUILD_SPEC)
 _BUILD_SPEC.loader.exec_module(BUILD)
-
-
-def digest(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def source_files(path):
-    with tarfile.open(path, "r:gz") as archive:
-        files = {}
-        roots = set()
-        for member in archive.getmembers():
-            parts = PurePosixPath(member.name).parts
-            if (not parts or member.issym() or member.islnk()
-                    or ".." in parts or member.name.startswith("/")):
-                raise ValueError(f"Unsafe source member: {member.name}")
-            roots.add(parts[0])
-            if member.isfile():
-                name = "/".join(parts[1:])
-                if name in files:
-                    raise ValueError(f"Duplicate source member: {member.name}")
-                files[name] = archive.extractfile(member).read()
-        if len(roots) != 1:
-            raise ValueError("Expected one source archive root")
-        return files
 
 
 def matches_windows_repaired_init(wheel, prefix, original, repaired):
@@ -188,7 +167,7 @@ def check_wheel(path, version, sources):
                         if name in sources)
         for name in licenses:
             if wheel.read(prefix + "licenses/" + name) != sources[name]:
-                raise ValueError(f"Wrong license copy: {path.name}: {name}")
+                raise ValueError(f"Wrong licence copy: {path.name}: {name}")
     return family
 
 
@@ -210,7 +189,7 @@ def main():
         raise ValueError("Expected one Python source distribution in the release directory")
     version = archives[0].name[len("smsd-"):-len(".tar.gz")]
     source = BUILD.checked_source(archives[0], args.source_manifest)
-    sources = source_files(archives[0])
+    sources = BUILD.read_source_archive(archives[0])
     project = tomllib.loads(sources["pyproject.toml"].decode("utf-8"))["project"]
     if project["name"] != "smsd" or project["version"] != version:
         raise ValueError("Source filename and package metadata disagree")
@@ -231,7 +210,7 @@ def main():
     for wheel in sorted({p.resolve() for p in candidates}):
         family = check_wheel(wheel, version, sources)
         previous = selected.get(family)
-        if previous and digest(previous) != digest(wheel):
+        if previous and BUILD.sha256(previous) != BUILD.sha256(wheel):
             raise ValueError(f"Multiple different {family} wheels; select one validated build")
         selected[family] = wheel
     missing = {"linux", "macos", "windows"} - set(selected)
@@ -281,7 +260,7 @@ def main():
         BUILD.write_manifest(manifest_path, manifest)
         files = sorted(p for p in directory.iterdir() if p.is_file() and p.name != "SHA256SUMS")
         (directory / "SHA256SUMS").write_text(
-            "".join(f"{digest(p)}  {p.name}\n" for p in files), encoding="utf-8")
+            "".join(f"{BUILD.sha256(p)}  {p.name}\n" for p in files), encoding="utf-8")
     print("Checked release wheels:", ", ".join(sorted(selected)) or "none")
     if missing:
         print("Still required before publication:", ", ".join(sorted(missing)))

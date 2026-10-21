@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 # Build, test, and assemble release assets locally. Does not publish or tag.
 set -euo pipefail
 
@@ -13,6 +17,7 @@ if [[ -e "$SMSD_RELEASE_FINAL_DIR" ]]; then
   echo 'Release output already exists; set SMSD_RELEASE_OUTPUT_DIR to a new directory.' >&2
   exit 1
 fi
+"$SMSD_RELEASE_PYTHON" -c 'import sys; assert sys.version_info[:2] == (3, 14), "Use CPython 3.14 for release preparation"'
 SMSD_RELEASE_JOBS="${SMSD_RELEASE_JOBS:-4}"
 SMSD_RELEASE_JAVA8_HOME="${SMSD_RELEASE_JAVA8_HOME:-}"
 [[ -x "$SMSD_RELEASE_JAVA8_HOME/bin/java" ]] || {
@@ -30,17 +35,20 @@ SMSD_RELEASE_DIR="$(mktemp -d "$SMSD_RELEASE_ROOT/build/release-assets.XXXXXX")"
 SMSD_RELEASE_SOURCE="$(mktemp -d "$SMSD_RELEASE_ROOT/build/release-source.XXXXXX")"
 trap 'rm -rf "$SMSD_RELEASE_SOURCE" "$SMSD_RELEASE_DIR"' EXIT
 
-# Include the slow chemistry suites and generate library documentation.
+# Include the slow chemistry suites and build the sources and Javadoc JARs of the
+# library (java/core) and CLI (java/cli) modules. The source and Javadoc plugin
+# versions come from the parent POM's plugin management.
 "$SMSD_RELEASE_PYTHON" -m pytest scripts/tests -q
 mvn -f java/pom.xml -B -Dslow.tests.exclude=nothing clean verify \
-  org.apache.maven.plugins:maven-source-plugin:3.3.1:jar-no-fork \
-  org.apache.maven.plugins:maven-javadoc-plugin:3.6.3:jar
+  source:jar-no-fork javadoc:jar
+# The test phase finds the library classes for the CLI tests in the reactor;
+# nothing is recompiled, so Java 8 runs the classes built above.
 mvn -f java/pom.xml -B -Dslow.tests.exclude=nothing \
-  "-Djvm=$SMSD_RELEASE_JAVA8_HOME/bin/java" surefire:test
+  "-Djvm=$SMSD_RELEASE_JAVA8_HOME/bin/java" test
 "$SMSD_RELEASE_JAVA8_HOME/bin/java" -jar \
-  "java/target/smsd-$SMSD_RELEASE_VERSION-jar-with-dependencies.jar" --version
-java/src/scripts/smsd --version
-java/target/appassembler/bin/smsd --version
+  "java/cli/target/smsd-cli-$SMSD_RELEASE_VERSION-jar-with-dependencies.jar" --version
+java/cli/src/scripts/smsd --version
+java/cli/target/appassembler/bin/smsd --version
 
 # Build from the source distribution to verify that it contains all build inputs.
 "$SMSD_RELEASE_PYTHON" scripts/build_python_wheels.py prepare \
@@ -81,20 +89,21 @@ assert Path(smsd.__file__).resolve().is_relative_to(Path(sys.prefix).resolve())
 assert len(smsd.parse_smiles("c1ccccc1")) == 6
 print("Verified installed wheel:", smsd.__file__)
 PY
-cp "java/target/smsd-$SMSD_RELEASE_VERSION.jar" \
-  "java/target/smsd-$SMSD_RELEASE_VERSION-jar-with-dependencies.jar" \
-  "java/target/smsd-$SMSD_RELEASE_VERSION-sources.jar" \
-  "java/target/smsd-$SMSD_RELEASE_VERSION-javadoc.jar" "$SMSD_RELEASE_DIR/"
+cp "java/core/target/smsd-$SMSD_RELEASE_VERSION.jar" \
+  "java/core/target/smsd-$SMSD_RELEASE_VERSION-sources.jar" \
+  "java/core/target/smsd-$SMSD_RELEASE_VERSION-javadoc.jar" \
+  "java/cli/target/smsd-cli-$SMSD_RELEASE_VERSION-jar-with-dependencies.jar" "$SMSD_RELEASE_DIR/"
 COPYFILE_DISABLE=1 tar -czf "$SMSD_RELEASE_DIR/smsd-cpp-$SMSD_RELEASE_VERSION-headers.tar.gz" \
   LICENSE NOTICE -C cpp/include smsd
 COPYFILE_DISABLE=1 tar -czf "$SMSD_RELEASE_DIR/smsd-$SMSD_RELEASE_VERSION-cli.tar.gz" \
-  LICENSE NOTICE -C java/target/appassembler bin repo
+  LICENSE NOTICE licenses/cdk -C java/cli/target/appassembler bin repo
 cp docs/RELEASE_NOTES.md "$SMSD_RELEASE_DIR/RELEASE_NOTES.md"
 if [[ -f "docs/VALIDATION_$SMSD_RELEASE_VERSION.md" ]]; then
   cp "docs/VALIDATION_$SMSD_RELEASE_VERSION.md" "$SMSD_RELEASE_DIR/VALIDATION.md"
 fi
-SMSD_BENCHMARK_REPORT="${SMSD_BENCHMARK_REPORT:-benchmarks/RESULTS_7.2.0.md}"
-if [[ -f "$SMSD_BENCHMARK_REPORT" ]]; then
+SMSD_BENCHMARK_REPORT="${SMSD_BENCHMARK_REPORT:-}"
+if [[ -n "$SMSD_BENCHMARK_REPORT" ]]; then
+  [[ -f "$SMSD_BENCHMARK_REPORT" ]] || { echo "Benchmark report not found" >&2; exit 1; }
   cp "$SMSD_BENCHMARK_REPORT" "$SMSD_RELEASE_DIR/BENCHMARK_RESULTS.md"
 fi
 if [[ -n "${SMSD_BENCHMARK_ARCHIVE:-}" ]]; then

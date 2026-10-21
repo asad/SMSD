@@ -138,7 +138,7 @@ class FragmentOutputRegressionTest {
     return count;
   }
   private static String fragmentSmiles(MolGraph graph, Map<Integer, Integer> mapping) {
-    Map<SearchResult.Bond, SearchResult.Bond> bonds = MCS.allBonds(graph, mapping);
-    return new SearchResult.Match(mapping, bonds, MCS.fragments(mapping, bonds.keySet()), mapping.size()).toSmiles(graph);
+    Map<SearchResult.Bond, SearchResult.Bond> bonds = MatchGraph.allBonds(graph, mapping);
+    return new SearchResult.Match(mapping, bonds, MatchGraph.fragments(mapping, bonds.keySet()), mapping.size()).toSmiles(graph);
   }
 }

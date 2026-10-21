@@ -1,4 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Opt-in feature diagnostics over the checked-in external corpora.
 
 These inputs include MoleculeNet-derived Dalke-style pairs, a Tautobase subset,
@@ -18,6 +21,8 @@ import statistics
 import time
 
 import pytest
+
+from .search_helpers import atom_map, configured_mcs
 
 smsd = pytest.importorskip("smsd")
 DATA_DIR = Path(__file__).resolve().parents[2] / "benchmarks/data"

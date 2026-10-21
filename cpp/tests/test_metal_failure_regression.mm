@@ -1,4 +1,9 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2018-2026 BioInception PVT LTD
+ * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ */
 #import <Foundation/Foundation.h>
 #import <Metal/Metal.h>
 #define SMSD_ENABLE_METAL
@@ -86,7 +91,7 @@ int main(int argc, char** argv) {
     if (failure == "disabled" && smsd::metal::metalAvailable()) {
         std::cerr << "GPU disable flag was ignored\n"; return 1;
     }
-    const auto hits = smsd::metal::batchRascalScreen(query, targets, 0.0f);
+    const auto hits = smsd::metal::batchSimilarityScreen(query, targets, 0.0f);
     if (hits.size() != 2 || hits[0].index != 0 || hits[0].score != 1.0f || hits[1].score != 0.0f) {
         std::cerr << "Failed Metal screen did not return the CPU result\n"; return 1;
     }

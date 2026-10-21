@@ -1,7 +1,8 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
- * See the NOTICE file for attribution.
+ * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  */
 package com.bioinception.smsd.core;
 
@@ -9,36 +10,32 @@ import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.openscience.cdk.silent.SilentChemObjectBuilder;
-import org.openscience.cdk.smiles.SmilesParser;
+import static com.bioinception.smsd.TestSupport.rawGraph;
 import static org.junit.jupiter.api.Assertions.*;
 
 class FingerprintFeatureRegressionTest {
-  private static MolGraph graph(String smiles)throws Exception {
-    return new MolGraph(new SmilesParser(SilentChemObjectBuilder.getInstance()).parseSmiles(smiles));
-  }
   @ParameterizedTest @CsvSource({"C=O,1,2","C#N,1,2","C=N,1,3","N,0,7","[NH4+],0,5","CN(C)C,1,6",
       "c1ccncc1,3,18","c1cc[nH]c1,3,17","[O-],0,10","CO,1,3","[H]O[H],1,3","[H]N([H])[H],1,7"})
   void functionalBitsUseActualAttachedHydrogensAndBondOrders(String smiles,int atom,int expected)throws Exception {
-    MolGraph molecule=graph(smiles);
+    MolGraph molecule=rawGraph(smiles);
     assertEquals(expected,FingerprintEngine.classifyPharmacophore(molecule,atom),smiles);
     assertEquals(expected,molecule.getPharmacophoreFeatures()[atom],smiles);
   }
   @ParameterizedTest @CsvSource({"[CH3],1650","C,1307","[C],1991","[NH4+],1931","[SiH2],1573","[SiH4],1571"})
   void initialCircularInvariantUsesTheSuppliedHydrogenCount(String smiles,int bit)throws Exception {
-    MolGraph molecule=graph(smiles);
+    MolGraph molecule=rawGraph(smiles);
     int[] expected=new int[2048];expected[bit]=1;
     assertArrayEquals(expected,FingerprintEngine.ecfpCounts(molecule,0,2048),smiles);
     assertEquals(bitSet(bit),FingerprintEngine.toBitSet(FingerprintEngine.ecfp(molecule,0,2048)),smiles);
   }
   @Test void explicitHydrogenNeighboursContributeToTheAttachedCount()throws Exception {
-    MolGraph ammonia=graph("[H]N([H])[H]");int[] expected=new int[2048];
+    MolGraph ammonia=rawGraph("[H]N([H])[H]");int[] expected=new int[2048];
     expected[514]=3;expected[1945]=1;
     assertArrayEquals(expected,FingerprintEngine.ecfpCounts(ammonia,0,2048));
     assertEquals(7,FingerprintEngine.classifyPharmacophore(ammonia,1));
   }
   @Test void storedRadicalHydrogensRemainDistinctFromTheOrdinaryValence()throws Exception {
-    assertFalse(Arrays.equals(FingerprintEngine.ecfp(graph("[CH3]"),2,2048),FingerprintEngine.ecfp(graph("C"),2,2048)));
+    assertFalse(Arrays.equals(FingerprintEngine.ecfp(rawGraph("[CH3]"),2,2048),FingerprintEngine.ecfp(rawGraph("C"),2,2048)));
   }
   @ParameterizedTest @CsvSource(delimiter='|',value={
       "CC(=O)C|32,0,2,32|44,446,1548|44,416,417,446,549,585,659,1548,1658|484,1596,1838|484,1009,1057,1134,1343,1375,1596,1780,1838",
@@ -55,7 +52,7 @@ class FingerprintFeatureRegressionTest {
       "C|32|1307|1307|599|599"})
   void circularAndFunctionalBitsMatchTheSharedDefinitions(String smiles,String features,
       String ecfp0,String ecfp2,String fcfp0,String fcfp2)throws Exception {
-    MolGraph molecule=graph(smiles);
+    MolGraph molecule=rawGraph(smiles);
     assertArrayEquals(numbers(features),molecule.getPharmacophoreFeatures(),smiles);
     assertArrayEquals(numbers(ecfp0),FingerprintEngine.toBitSet(FingerprintEngine.ecfp(molecule,0,2048)).stream().toArray(),smiles);
     assertArrayEquals(numbers(ecfp2),FingerprintEngine.toBitSet(FingerprintEngine.ecfp(molecule,2,2048)).stream().toArray(),smiles);

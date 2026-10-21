@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 name: Prepare release artefacts
 
 on:
@@ -28,16 +30,17 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
-      - name: Build and test CLI JAR
+      - name: Build and test the library and CLI JARs
         run: mvn -U -B clean verify
       - uses: actions/upload-artifact@v7.0.1
         with:
           name: java-jars
           path: |
-            java/target/smsd-*.jar
-            !java/target/smsd-*-sources.jar
-            !java/target/smsd-*-javadoc.jar
-            !java/target/original-*.jar
+            java/core/target/smsd-*.jar
+            !java/core/target/smsd-*-sources.jar
+            !java/core/target/smsd-*-javadoc.jar
+            !java/core/target/smsd-*-tests.jar
+            java/cli/target/smsd-cli-*-jar-with-dependencies.jar
           if-no-files-found: error
 
   cpp-headers:

@@ -2,7 +2,8 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
- * See the NOTICE file for attribution, trademark, and algorithm IP terms. *
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ *
  * Header-only C++17 2D layout post-processing utilities.
  * Provides:
  *   - Bond crossing reduction via simulated annealing on ring orientations.
@@ -153,54 +154,11 @@ inline std::vector<RingSystem> findRingSystems(const MolGraph& g) {
     auto sssr = computeSSSR(g);
     if (sssr.empty()) return {};
 
-    int nr = static_cast<int>(sssr.size());
-
-    // Build edge sets per ring
-    std::vector<std::set<int64_t>> edgeSets(nr);
-    for (int i = 0; i < nr; i++) {
-        auto& r = sssr[i];
-        for (size_t j = 0; j < r.size(); j++) {
-            int a = r[j], b = r[(j + 1) % r.size()];
-            int lo = std::min(a, b), hi = std::max(a, b);
-            edgeSets[i].insert((static_cast<int64_t>(lo) << 32) |
-                               static_cast<int64_t>(static_cast<uint32_t>(hi)));
-        }
-    }
-
-    // Ring adjacency
-    std::vector<std::vector<int>> adj(nr);
-    for (int i = 0; i < nr; i++) {
-        for (int j = i + 1; j < nr; j++) {
-            for (auto& e : edgeSets[i]) {
-                if (edgeSets[j].count(e)) {
-                    adj[i].push_back(j);
-                    adj[j].push_back(i);
-                    break;
-                }
-            }
-        }
-    }
-
-    // Connected components
-    std::vector<int> comp(nr, -1);
-    int nComp = 0;
-    for (int i = 0; i < nr; i++) {
-        if (comp[i] >= 0) continue;
-        int c = nComp++;
-        comp[i] = c;
-        std::vector<int> stk = {i};
-        while (!stk.empty()) {
-            int u = stk.back(); stk.pop_back();
-            for (int v : adj[u]) {
-                if (comp[v] < 0) { comp[v] = c; stk.push_back(v); }
-            }
-        }
-    }
-
-    std::vector<RingSystem> systems(nComp);
-    for (int i = 0; i < nr; i++) {
-        systems[comp[i]].rings.push_back(sssr[i]);
-        for (int a : sssr[i]) systems[comp[i]].atoms.insert(a);
+    const auto groups = detail_rf::groupRingsBySharedBond(sssr);
+    std::vector<RingSystem> systems(groups.systemCount);
+    for (size_t i = 0; i < sssr.size(); i++) {
+        systems[groups.system[i]].rings.push_back(sssr[i]);
+        for (int a : sssr[i]) systems[groups.system[i]].atoms.insert(a);
     }
     return systems;
 }
@@ -232,7 +190,6 @@ inline std::vector<RingSystem> findRingSystems(const MolGraph& g) {
  *                 Modified in-place with optimised positions.
  * @param maxIter  Maximum total SA iterations across both phases (default 1000).
  * @return         Number of bond crossings remaining after optimisation.
- * @since 6.5.1
  */
 inline int reduceCrossings(const MolGraph& g, std::vector<Point2D>& coords,
                            int maxIter = 1000) {
@@ -441,7 +398,6 @@ inline bool segmentIntersectionPoint(const Point2D& p1, const Point2D& p2,
  * @param maxIter          Maximum number of iterations (default 500).
  * @param targetBondLength Desired bond length in coordinate units (default 1.5).
  * @return                 Final stress energy.
- * @since 6.3.3
  */
 inline double forceDirectedLayout(const MolGraph& g, std::vector<Point2D>& coords,
                                    int maxIter = 500, double targetBondLength = 1.5) {
@@ -556,8 +512,6 @@ inline double forceDirectedLayout(const MolGraph& g, std::vector<Point2D>& coord
         // Limit each atom's displacement to avoid introducing NEW crossings.
         // If moving atom i by (dx,dy) would cause any of its bonds to cross
         // a non-crossing bond, halve the displacement iteratively.
-        // Update positions with PrEd-style clamping (Bertault 2000):
-        // Limit displacement to avoid introducing NEW crossings.
         int crossingsBefore = detail_layout::countCrossings(g, coords);
         double maxDisp = 0.0;
         for (int i = 0; i < n; i++) {
@@ -618,7 +572,6 @@ inline double forceDirectedLayout(const MolGraph& g, std::vector<Point2D>& coord
  * @param maxIter          Maximum iterations (default 300).
  * @param targetBondLength Desired bond length (default 1.5).
  * @return                 Final normalised stress value.
- * @since 6.4.0
  */
 inline double stressMajorisation(const MolGraph& g, std::vector<Point2D>& coords,
                                   int maxIter = 300, double targetBondLength = 1.5,
@@ -650,21 +603,6 @@ inline double stressMajorisation(const MolGraph& g, std::vector<Point2D>& coords
     for (int i = 0; i < n; i++)
         for (int j = 0; j < n; j++)
             Wsum[i] += W[i][j];
-
-    // Compute stress
-    auto computeStress = [&]() -> double {
-        double s = 0.0;
-        for (int i = 0; i < n; i++) {
-            for (int j = i + 1; j < n; j++) {
-                double dx = coords[i].x - coords[j].x;
-                double dy = coords[i].y - coords[j].y;
-                double dij = std::sqrt(dx * dx + dy * dy);
-                double delta = dij - D[i][j];
-                s += W[i][j] * delta * delta;
-            }
-        }
-        return s;
-    };
 
     // Multiple random initialisations (SMACOF best practice, de Leeuw 1977).
     // Keep the result with lowest final stress.
@@ -800,7 +738,7 @@ inline std::vector<ScaffoldTemplate> buildTemplates() {
 
     // Helper: fused-ring system builder.
     // Place ring A as a regular polygon, then ring B sharing an edge.
-    auto fusedRings = [](int sizeA, int sizeB, int sharedEdgeA0, int sharedEdgeA1,
+    auto fusedRings = [](int /*sizeA*/, int sizeB, int sharedEdgeA0, int sharedEdgeA1,
                          Point2D* coords, int& atomIdx) {
         // Ring A is already placed. Ring B shares edge (sharedEdgeA0, sharedEdgeA1).
         // Place ring B vertices on the opposite side of that edge.
@@ -816,14 +754,12 @@ inline std::vector<ScaffoldTemplate> buildTemplates() {
         double cax = 0, cay = 0;
         for (int i = 0; i < atomIdx; i++) { cax += coords[i].x; cay += coords[i].y; }
         cax /= atomIdx; cay /= atomIdx;
-        // If normal points toward ring A centre, flip it
+        // If normal points towards ring A centre, flip it
         double dot = nx * (cax - mx) + ny * (cay - my);
         if (dot > 0) { nx = -nx; ny = -ny; }
         // Place ring B as regular polygon, then transform
         double rB = 0.5 / std::sin(M_PI / sizeB);
         double edgeLen = std::sqrt(edx * edx + edy * edy);
-        // Rotation angle of shared edge
-        double theta = std::atan2(edy, edx);
         // Centre of ring B
         double centreDistFromMidpoint = rB * std::cos(M_PI / sizeB);
         double cx = mx + centreDistFromMidpoint * nx / std::sqrt(nx * nx + ny * ny);
@@ -1076,6 +1012,7 @@ inline void translate2D(std::vector<Point2D>& coords, double dx, double dy) {
 }
 
 /// Translate all 3D coordinates by (dx, dy, dz).
+[[deprecated("Unused; the 3-D transforms and rmsd2D are withdrawn.")]]
 inline void translate3D(std::vector<Point3D>& coords, double dx, double dy, double dz) {
     for (auto& p : coords) { p.x += dx; p.y += dy; p.z += dz; }
 }
@@ -1107,6 +1044,7 @@ inline void rotate2DAbout(std::vector<Point2D>& coords, double angle,
 }
 
 /// Rotate 3D coordinates about Z-axis by angle (radians) around centroid.
+[[deprecated("Unused; the 3-D transforms and rmsd2D are withdrawn.")]]
 inline void rotate3DZ(std::vector<Point3D>& coords, double angle) {
     if (coords.empty()) return;
     double cx = 0, cy = 0;
@@ -1122,6 +1060,7 @@ inline void rotate3DZ(std::vector<Point3D>& coords, double angle) {
 }
 
 /// Rotate 3D coordinates about X-axis by angle (radians) around centroid.
+[[deprecated("Unused; the 3-D transforms and rmsd2D are withdrawn.")]]
 inline void rotate3DX(std::vector<Point3D>& coords, double angle) {
     if (coords.empty()) return;
     double cy = 0, cz = 0;
@@ -1137,6 +1076,7 @@ inline void rotate3DX(std::vector<Point3D>& coords, double angle) {
 }
 
 /// Rotate 3D coordinates about Y-axis by angle (radians) around centroid.
+[[deprecated("Unused; the 3-D transforms and rmsd2D are withdrawn.")]]
 inline void rotate3DY(std::vector<Point3D>& coords, double angle) {
     if (coords.empty()) return;
     double cx = 0, cz = 0;
@@ -1165,6 +1105,7 @@ inline void scale2D(std::vector<Point2D>& coords, double factor) {
 }
 
 /// Uniform 3D scale about centroid.
+[[deprecated("Unused; the 3-D transforms and rmsd2D are withdrawn.")]]
 inline void scale3D(std::vector<Point3D>& coords, double factor) {
     if (coords.empty()) return;
     double cx = 0, cy = 0, cz = 0;
@@ -1205,6 +1146,7 @@ inline void center2D(std::vector<Point2D>& coords) {
 }
 
 /// Centre 3D coordinates at origin.
+[[deprecated("Unused; the 3-D transforms and rmsd2D are withdrawn.")]]
 inline void center3D(std::vector<Point3D>& coords) {
     if (coords.empty()) return;
     double cx = 0, cy = 0, cz = 0;
@@ -1241,7 +1183,7 @@ inline void normaliseBondLength(const MolGraph& g, std::vector<Point2D>& coords,
 
 /// Canonical orientation: rotate to align longest axis with horizontal,
 /// then snap to nearest 30-degree increment (IUPAC convention).
-inline void canonicalOrientation(const MolGraph& g, std::vector<Point2D>& coords) {
+inline void canonicalOrientation(const MolGraph& /*g*/, std::vector<Point2D>& coords) {
     if (coords.size() < 2) return;
 
     // Find principal axis via PCA (covariance matrix eigenvectors)
@@ -1336,6 +1278,7 @@ inline std::array<double, 4> boundingBox2D(const std::vector<Point2D>& coords) {
 }
 
 /// Compute RMSD between two coordinate sets.
+[[deprecated("Unused; the 3-D transforms and rmsd2D are withdrawn.")]]
 inline double rmsd2D(const std::vector<Point2D>& a, const std::vector<Point2D>& b) {
     size_t n = std::min(a.size(), b.size());
     if (n == 0) return 0.0;
@@ -1411,49 +1354,6 @@ inline int resolveOverlaps(std::vector<Point2D>& coords,
 
 
 // ==========================================================================
-// Chain layout — zig-zag convention for acyclic chains
-// ==========================================================================
-
-namespace detail_layout {
-
-/// Place acyclic chain atoms in zig-zag pattern.
-/// sp3 bonds use 109.5 angle, sp2 bonds use 120 angle, sp use 180.
-/// Direction alternates up/down for each bond.
-inline void zigzagChain(const MolGraph& g, const std::vector<int>& chain,
-                        std::vector<Point2D>& coords, double bondLen,
-                        double startAngle = 0.0) {
-    if (chain.empty()) return;
-    if (chain.size() == 1) return;
-
-    double angle = startAngle;
-    int direction = 1; // +1 or -1 for zig-zag
-
-    for (size_t k = 1; k < chain.size(); k++) {
-        int prev = chain[k - 1];
-        int cur  = chain[k];
-
-        // Determine bond angle based on hybridisation
-        int bo = g.bondOrder(prev, cur);
-        double bendAngle;
-        if (bo == 3) {
-            bendAngle = 0.0;  // sp: linear 180
-        } else if (bo == 2 || g.aromatic[prev]) {
-            bendAngle = M_PI / 6.0;  // sp2: 120 = pi - pi/3 -> bend pi/6 from straight
-        } else {
-            bendAngle = (M_PI - 109.5 * M_PI / 180.0) / 2.0; // sp3: 109.5 zig-zag
-        }
-
-        angle += direction * bendAngle;
-        coords[cur].x = coords[prev].x + bondLen * std::cos(angle);
-        coords[cur].y = coords[prev].y + bondLen * std::sin(angle);
-        direction = -direction;
-    }
-}
-
-} // namespace detail_layout
-
-
-// ==========================================================================
 // Expanded scaffold template library — 40+ pharmaceutical scaffolds
 // ==========================================================================
 
@@ -1465,7 +1365,7 @@ inline std::vector<ScaffoldTemplate> buildExtendedTemplates() {
     std::vector<ScaffoldTemplate> templates;
 
     // Reuse fusedRings helper
-    auto fusedRings = [](int sizeA, int sizeB, int sharedEdgeA0, int sharedEdgeA1,
+    auto fusedRings = [](int /*sizeA*/, int sizeB, int sharedEdgeA0, int sharedEdgeA1,
                          Point2D* coords, int& atomIdx) {
         Point2D pA = coords[sharedEdgeA0];
         Point2D pB = coords[sharedEdgeA1];
@@ -1479,7 +1379,6 @@ inline std::vector<ScaffoldTemplate> buildExtendedTemplates() {
         double dot = nx * (cax - mx) + ny * (cay - my);
         if (dot > 0) { nx = -nx; ny = -ny; }
         double rB = 0.5 / std::sin(M_PI / sizeB);
-        double theta = std::atan2(edy, edx);
         double nmag = std::sqrt(nx * nx + ny * ny);
         double centreDistFromMidpoint = rB * std::cos(M_PI / sizeB);
         double cx = mx + centreDistFromMidpoint * nx / nmag;
@@ -1796,7 +1695,6 @@ inline const std::vector<ScaffoldTemplate>& getExtendedTemplates() {
  * @param g                The molecular graph.
  * @param targetBondLength Desired bond length in coordinate units (default 1.5).
  * @return                 2D coordinates for each atom, crossing-free where possible.
- * @since 6.11.0
  */
 inline std::vector<Point2D> generateCoords2D(const MolGraph& g,
                                               double targetBondLength = 1.5) {
@@ -2034,7 +1932,6 @@ inline std::vector<Point2D> generateCoords2D(const MolGraph& g,
  * @param g                The molecular graph.
  * @param targetBondLength Desired bond length (default 1.5 Angstroms).
  * @return                 3D coordinates for each atom.
- * @since 6.11.0
  */
 inline std::vector<Point3D> generateCoords3D(const MolGraph& g,
                                               double targetBondLength = 1.5) {

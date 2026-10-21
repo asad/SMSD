@@ -1,7 +1,15 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2018-2026 BioInception PVT LTD
+ * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ */
 #include "smsd/substructure.hpp"
 #include <cassert>
+#include <functional>
 #include <iostream>
+#include <map>
+#include <set>
 
 namespace smsd_smarts_test {
 
@@ -151,6 +159,33 @@ inline void testAromatic() {
     std::cout << "  [PASS] testAromatic\n";
 }
 
+// An uppercase element in brackets is aliphatic and a lowercase one aromatic, as outside
+// brackets; an atomic number matches either form.
+inline void testBracketElementAromaticity() {
+    auto mappings = [](const std::string& smarts, const std::string& smiles) {
+        std::set<std::map<int, int>> found;
+        for (const auto& match : smsd::Substructure::smarts(smarts).matchAll(smiles).matches) found.insert(match.atomMapping);
+        return found;
+    };
+    const std::string toluene = "Cc1ccccc1";
+    assert(mappings("[C]", toluene) == (std::set<std::map<int, int>>{{{0, 0}}}));
+    assert(mappings("[c]", toluene).size() == 6 && !mappings("[c]", toluene).count({{0, 0}}));
+    assert(mappings("[#6]", toluene).size() == 7);
+    assert(mappings("[C,c]", toluene).size() == 7);
+    assert(mappings("[C;a]", toluene).empty());
+    for (const char* smiles : {"Cc1ccccc1", "C1CCCCC1", "c1ccc2[nH]ccc2c1", "CC(=O)Nc1ccc(O)cc1", "c1cc[se]c1CC[Se]C"}) {
+        assert(mappings("[C]", smiles) == mappings("C", smiles));
+        assert(mappings("[c]", smiles) == mappings("c", smiles));
+        assert(mappings("[$([C])]", smiles) == mappings("C", smiles));
+    }
+    assert(smsd::Substructure::smarts("[NX3]").match("c1cc[nH]c1").matches.empty());
+    assert(!smsd::Substructure::smarts("[nX3]").match("c1cc[nH]c1").matches.empty());
+    assert(!smsd::Substructure::smarts("[#7X3]").match("c1cc[nH]c1").matches.empty());
+    assert(mappings("[Se]", "c1cc[se]c1CC[Se]C") == (std::set<std::map<int, int>>{{{0, 7}}}));
+    assert(mappings("[se]", "c1cc[se]c1CC[Se]C") == (std::set<std::map<int, int>>{{{0, 3}}}));
+    std::cout << "  [PASS] testBracketElementAromaticity\n";
+}
+
 inline void testRingBond() {
     auto q = smsd::parseSMARTS("[#6]@[#6]");
     auto mol = smsd::parseSMILES("C1CCC1");  // cyclobutane: ring bond
@@ -293,6 +328,65 @@ inline void testRangeQuery() {
     std::cout << "  [PASS] testRangeQuery\n";
 }
 
+inline std::set<std::map<int, int>> mappingSet(const smsd::SearchResult& result) {
+    std::set<std::map<int, int>> mappings;
+    for (const auto& match : result.matches) mappings.insert(match.atomMapping);
+    return mappings;
+}
+
+/** Compiled-pattern screening, shared domains and recursive caches keep search results. */
+inline void testPreparedPatternParity() {
+    // Element and aromaticity counts reject only targets without an embedding.
+    assert(smsd::Substructure::smarts("N~*~N").match("CCN").matches.empty());
+    assert(!smsd::Substructure::smarts("N~*~N").match("NCN").matches.empty());
+    assert(smsd::Substructure::smarts("[#7].[#7]").match("CN").matches.empty());
+    assert(!smsd::Substructure::smarts("[#7].[#7]").match("NCCN").matches.empty());
+    assert(smsd::Substructure::smarts("c1ccccc1").match("C1CCCCC1").matches.empty());
+    assert(smsd::Substructure::smarts("c1ccccc1").matchAll("Cc1ccccc1").matches.size() == 12);
+
+    // Atom classes never restrict matching, so numbered and plain atoms share domains.
+    const auto toluene = smsd::parseSMILES("Cc1ccccc1");
+    assert(mappingSet(smsd::Substructure::smarts("[cH:1][cH:2]").matchAll(toluene))
+           == mappingSet(smsd::Substructure::smarts("[cH][cH]").matchAll(toluene)));
+
+    // A recursive predicate parsed for each evaluation agrees with the compiled one.
+    auto compiled = smsd::parseSMARTS("[C;$(C(=O)O)]~[$([#8;$(O[H]),$(O=*)])]");
+    auto transient = compiled;
+    std::function<void(smsd::smarts_detail::AtomExpr&)> clear = [&](smsd::smarts_detail::AtomExpr& expression) {
+        expression.cachedRecursive.reset();
+        for (auto& child : expression.children) clear(child);
+    };
+    for (auto& atom : transient.atoms) clear(atom.expr);
+    for (const char* smiles : {"CC(=O)O", "CC(=O)N", "OC(=O)CC(=O)O", "C(=O)OC=O"}) {
+        const auto target = smsd::parseSMILES(smiles);
+        assert(mappingSet(smsd::Substructure::smarts(compiled).matchAll(target))
+               == mappingSet(smsd::Substructure::smarts(transient).matchAll(target)));
+    }
+
+    // Separately compiled copies of one subpattern are each evaluated correctly.
+    assert(!smsd::Substructure::smarts("[$(C=O)]~[$(C=O)]").match("O=CC=O").matches.empty());
+    assert(smsd::Substructure::smarts("[$(C=O)]~[$(C=O)]").match("O=CCC=O").matches.empty());
+
+    // A truncated enumeration still reports sorted, valid embeddings.
+    const auto naphthalene = smsd::parseSMILES("c1ccc2ccccc2c1");
+    const auto ring = smsd::Substructure::smarts("*1*****1");
+    const auto limited = ring.matchAll(naphthalene, 5);
+    const auto all = mappingSet(ring.matchAll(naphthalene));
+    assert(limited.status == smsd::SearchStatus::LimitReached && limited.matches.size() == 5 && !limited.complete);
+    for (size_t index = 0; index < limited.matches.size(); ++index) {
+        assert(all.count(limited.matches[index].atomMapping));
+        assert(index == 0 || limited.matches[index - 1].atomMapping < limited.matches[index].atomMapping);
+        assert(limited.matches[index].fragments.size() == 1 && limited.matches[index].bondMapping.size() == 6);
+    }
+
+    // Induced embeddings exclude extra target bonds.
+    smsd::SubstructureOptions induced;
+    induced.induced = true;
+    assert(!smsd::Substructure::smarts("C~C~C").match("C1CC1").matches.empty());
+    assert(smsd::Substructure::smarts("C~C~C").withOptions(induced).match("C1CC1").matches.empty());
+    std::cout << "  [PASS] testPreparedPatternParity\n";
+}
+
 inline void runAllTests() {
     std::cout << "smarts_parser tests:\n";
     testWildcard();
@@ -311,6 +405,7 @@ inline void runAllTests() {
     testTwoLetterElement();
     testPattern_CC();
     testAromatic();
+    testBracketElementAromaticity();
     testRingBond();
     testBranches();
     testNotOperator();
@@ -324,6 +419,7 @@ inline void runAllTests() {
     testHeavyDegree();
     testHybridization();
     testRangeQuery();
+    testPreparedPatternParity();
     std::cout << "All smarts_parser tests passed.\n";
 }
 

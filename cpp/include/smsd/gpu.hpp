@@ -2,7 +2,8 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
- * See the NOTICE file for attribution, trademark, and algorithm IP terms. *
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ *
  * GPU runtime query and auto-dispatch helpers for SMSD batch operations.
  *
  * Usage:
@@ -10,7 +11,7 @@
  *
  *   if (smsd::gpu::isAvailable()) {
  *       std::cout << smsd::gpu::deviceInfo() << "\n";
- *       // batchRascalScreenGpu is available
+ *       // batchSimilarityScreenGpu is available
  *   }
  *
  * When SMSD is built with SMSD_BUILD_CUDA=ON/AUTO and nvcc is found,
@@ -34,7 +35,7 @@
 #define SMSD_GPU_HPP
 
 #include "smsd/batch.hpp"
-#include "smsd/rascal.hpp"
+#include "smsd/similarity_screen.hpp"
 #include "smsd/gpu_kernels.hpp"
 
 #include <cstdint>
@@ -76,7 +77,7 @@ std::string cudaDeviceInfo();
 GpuMolecule   toGpuMolecule(int atomCount, const int* labels);
 GpuFingerprint toGpuFingerprint(const uint64_t* fp, int numWords);
 
-std::vector<ScreenResult> batchRascalScreen(
+std::vector<ScreenResult> batchSimilarityScreen(
     const GpuMolecule& query,
     const std::vector<GpuMolecule>& targets,
     double threshold);
@@ -168,7 +169,7 @@ inline std::string deviceInfo() {
 }
 
 // ============================================================================
-// Batch RASCAL screening — auto-dispatch GPU → CPU
+// Batch similarity-bound screening — auto-dispatch GPU → CPU
 // ============================================================================
 
 /// Result of a single screen hit: molecule index + similarity score.
@@ -178,7 +179,7 @@ struct ScreenHit {
 };
 
 /**
- * Screen one query molecule against a target library using RASCAL upper-bound.
+ * Screen one query molecule against a target library using similarity upper bound.
  *
  * Automatically dispatches to:
  *   - GPU (CUDA)   when compiled with CUDA and a device is present
@@ -192,7 +193,7 @@ struct ScreenHit {
  * @param numThreads CPU thread count when falling back (0 = auto)
  * @return           Sorted vector of {index, score} above threshold
  */
-inline std::vector<ScreenHit> batchRascalScreenAuto(
+inline std::vector<ScreenHit> batchSimilarityScreenAuto(
     const MolGraph& query,
     const std::vector<MolGraph>& targets,
     const ChemOptions& chemistry,
@@ -211,7 +212,7 @@ inline std::vector<ScreenHit> batchRascalScreenAuto(
         for (auto& t : targets)
             gt.push_back(detail::screeningDescriptor<cuda::GpuMolecule>(t, chemistry));
         // Run GPU screen
-        auto raw = cuda::batchRascalScreen(gq, gt, threshold);
+        auto raw = cuda::batchSimilarityScreen(gq, gt, threshold);
         hits.reserve(raw.size());
         for (auto& r : raw)
             hits.push_back({r.index, r.score});
@@ -227,7 +228,7 @@ inline std::vector<ScreenHit> batchRascalScreenAuto(
         for (auto& t : targets)
             mt.push_back(detail::screeningDescriptor<metal::MetalMolecule>(t, chemistry));
         // Run Metal GPU screen
-        auto raw = metal::batchRascalScreen(mq, mt,
+        auto raw = metal::batchSimilarityScreen(mq, mt,
                                             static_cast<float>(threshold));
         hits.reserve(raw.size());
         for (auto& r : raw)
@@ -235,35 +236,42 @@ inline std::vector<ScreenHit> batchRascalScreenAuto(
         return hits;
     }
 #endif
-    // CPU fallback: sequential or OpenMP via similarityUpperBound
+    // CPU fallback: the query label counts are built once, and each worker reuses one scratch
+    // table, so no target allocates. Scores land in index order and hits are collected after.
     const int N = static_cast<int>(targets.size());
     hits.reserve(N / 4);
+    const screening_detail::QueryLabelCounts queryCounts(query, chemistry);
+    std::vector<double> scores(N, 0.0);
 
 #ifdef _OPENMP
-    // Parallel score computation; collect under lock
-    std::vector<double> scores(N, 0.0);
-    #pragma omp parallel for schedule(dynamic, 64) num_threads( \
-        numThreads > 0 ? numThreads : omp_get_max_threads())
-    for (int i = 0; i < N; ++i)
-        if (targets[i].n > 0)
-            scores[i] = similarityUpperBound(query, targets[i], chemistry);
+    // Each worker takes at least minimumTargets, so small libraries stay on the calling thread.
+    constexpr int minimumTargets = 256;
+    // A request beyond the OpenMP thread limit is capped there, as in batch.hpp.
+    const int requested = numThreads > 0 ? std::min(numThreads, omp_get_max_threads()) : omp_get_max_threads();
+    const int workers = std::max(1, std::min(requested, N / minimumTargets));
+    #pragma omp parallel num_threads(workers) if(workers > 1)
+    {
+        std::vector<int> scratch(screening_detail::QueryLabelCounts::denseLimit, 0);
+        #pragma omp for schedule(dynamic, 128)
+        for (int i = 0; i < N; ++i)
+            scores[i] = queryCounts.similarity(targets[i], scratch);
+    }
+#else
+    (void)numThreads;
+    std::vector<int> scratch(screening_detail::QueryLabelCounts::denseLimit, 0);
+    for (int i = 0; i < N; ++i) scores[i] = queryCounts.similarity(targets[i], scratch);
+#endif
     for (int i = 0; i < N; ++i)
         if (scores[i] >= threshold)
             hits.push_back({i, scores[i]});
-#else
-    for (int i = 0; i < N; ++i) {
-        const double score = similarityUpperBound(query, targets[i], chemistry);
-        if (score >= threshold) hits.push_back({i, score});
-    }
-#endif
     return hits;
 }
 
-inline std::vector<ScreenHit> batchRascalScreenAuto(
+inline std::vector<ScreenHit> batchSimilarityScreenAuto(
     const MolGraph& query, const std::vector<MolGraph>& targets,
     double threshold = 0.0, int numThreads = 0)
 {
-    return batchRascalScreenAuto(query, targets, ChemOptions(), threshold, numThreads);
+    return batchSimilarityScreenAuto(query, targets, ChemOptions(), threshold, numThreads);
 }
 
 } // namespace gpu

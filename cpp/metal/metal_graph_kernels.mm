@@ -2,7 +2,8 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
- * See the NOTICE file for attribution, trademark, and algorithm IP terms. *
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ *
  * Metal compute kernels for graph matching acceleration on Apple Silicon.
  * Mirrors the CUDA kernels in cuda/graph_kernels.cu.
  */
@@ -197,8 +198,8 @@ bool domainInit(
 #endif
 }
 
-// NLF and feasibility batch: delegate to CPU for now (Metal implementation
-// follows the same pattern as domainInit but with additional shader sources)
+// The neighbour-label and feasibility batches are not implemented on Metal; both
+// return false so that callers use the CPU path.
 bool nlfBatchBuild(int, int, const int*, const int*, const int*, const int*,
                    int*, int*, int) { return false; }
 bool feasibilityBatch(int, const int*, const int*, int, int, int,

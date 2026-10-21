@@ -2,7 +2,8 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
- * See the NOTICE file for attribution, trademark, and algorithm IP terms. *
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ *
  * Header-only OpenMP batch processing for SMSD.
  *
  * Provides parallel fingerprint operations and reusable target storage.
@@ -19,6 +20,7 @@
 #ifndef SMSD_BATCH_HPP
 #define SMSD_BATCH_HPP
 
+#include "smsd/bitops.hpp"
 #include "smsd/mol_graph.hpp"
 #include "smsd/smiles_parser.hpp"
 
@@ -86,183 +88,180 @@ inline void prewarmGraph(const MolGraph& g) {
     g.prewarm();
 }
 
-/// Simple path-based fingerprint generation for a single molecule.
-/// Enumerates all paths up to pathLength and hashes them into fpSize bits.
-/// Returns a vector of uint64_t words representing the fingerprint.
+// ============================================================================
+// Path fingerprints: one adjacency builder and one path walk
+// ============================================================================
+
+namespace path_fp_detail {
+
+inline uint64_t mixTerm(uint64_t hash, uint32_t term) {
+    hash ^= static_cast<uint64_t>(term);
+    return hash * FNV1A_PRIME;
+}
+
+/// Atoms kept for a path fingerprint, their neighbours in graph order and one term per bond,
+/// stored contiguously.  Atoms that are not kept have no neighbours.
+struct PathAdjacency {
+    std::vector<int> offset, atom;
+    std::vector<uint32_t> bondTerm;
+    std::vector<uint8_t> kept;
+};
+
+/// Builds the adjacency of the atoms for which `keep(atom)` holds, with `bondTerm(from, to)` per bond.
+template<class Keep, class BondTerm>
+inline PathAdjacency pathAdjacency(const MolGraph& mol, Keep keep, BondTerm bondTerm) {
+    PathAdjacency adjacency;
+    adjacency.kept.assign(mol.n, 0);
+    for (int i = 0; i < mol.n; ++i) adjacency.kept[i] = keep(i) ? 1 : 0;
+    adjacency.offset.assign(mol.n + 1, 0);
+    for (int i = 0; i < mol.n; ++i) {
+        adjacency.offset[i] = static_cast<int>(adjacency.atom.size());
+        if (!adjacency.kept[i]) continue;
+        for (int nb : mol.neighbors[i]) {
+            if (!adjacency.kept[nb]) continue;
+            adjacency.atom.push_back(nb);
+            adjacency.bondTerm.push_back(bondTerm(i, nb));
+        }
+    }
+    adjacency.offset[mol.n] = static_cast<int>(adjacency.atom.size());
+    return adjacency;
+}
+
+/// Rolling form of the direction-independent path hash.  The forward hash folds the
+/// interleaved atom and bond terms from the first atom (h = 31h + term); the reverse
+/// hash folds the same terms from the last atom, so appending a term adds term * 31^k.
+/// Both are exact in 32-bit modular arithmetic, so a path costs O(1) instead of O(length).
+struct RollingPathHash {
+    uint32_t forward = 17, reverseSum = 0, power = 1;   // reverse = 17 * power + reverseSum
+
+    RollingPathHash append(uint32_t term) const {
+        return {forward * 31u + term, reverseSum + term * power, power * 31u};
+    }
+    int value() const {
+        const uint32_t reverse = 17u * power + reverseSum;
+        return static_cast<int>(std::min(forward & 0x7FFFFFFFu, reverse & 0x7FFFFFFFu));
+    }
+};
+
+/// Rolling hash of the atom terms alone; bond terms are not hashed.
+struct AtomPathHash {
+    RollingPathHash hash;
+    static AtomPathHash start(uint32_t atom, uint32_t*) { return {RollingPathHash{}.append(atom)}; }
+    AtomPathHash extend(uint32_t, uint32_t atom) const { return {hash.append(atom)}; }
+    int bit(int fpSize) const { return hash.value() % fpSize; }
+};
+
+/// Rolling hash of the interleaved atom and bond terms.
+struct LabelledPathHash {
+    RollingPathHash hash;
+    static LabelledPathHash start(uint32_t atom, uint32_t*) { return {RollingPathHash{}.append(atom)}; }
+    LabelledPathHash extend(uint32_t bond, uint32_t atom) const { return {hash.append(bond).append(atom)}; }
+    int bit(int fpSize) const { return hash.value() % fpSize; }
+};
+
+/// FNV-1a hash of the interleaved atom and bond terms [atom0, bond01, atom1, ...] in the
+/// canonical direction.  The forward hash is carried down the walk; the reverse hash is
+/// folded from the end of the shared term buffer when a bit is set.
+struct FoldedPathHash {
+    uint32_t* terms;
+    int length;
+    uint64_t forward;
+
+    static FoldedPathHash start(uint32_t atom, uint32_t* terms) {
+        terms[0] = atom;
+        return {terms, 1, mixTerm(FNV1A_SEED, atom)};
+    }
+    FoldedPathHash extend(uint32_t bond, uint32_t atom) const {
+        terms[length] = bond;
+        terms[length + 1] = atom;
+        return {terms, length + 2, mixTerm(mixTerm(forward, bond), atom)};
+    }
+    int bit(int fpSize) const {
+        uint64_t reverse = FNV1A_SEED;
+        for (int k = length - 1; k >= 0; --k) reverse = mixTerm(reverse, terms[k]);
+        return static_cast<int>(std::min(forward, reverse) % static_cast<uint64_t>(fpSize));
+    }
+};
+
+inline void setBit(std::vector<uint64_t>& fp, int bit) {
+    fp[bit >> 6] |= uint64_t(1) << (bit & 63);
+}
+
+/// Sets a bit for every simple path extending the current one.  Each path of two or more
+/// atoms is reached from both ends with the same canonical hash, so only the copy ending
+/// above its start atom sets a bit.
+template<class Hash>
+inline void extendPaths(const PathAdjacency& adjacency, const std::vector<uint32_t>& atomTerm,
+                        std::vector<uint64_t>& fp, int fpSize, std::vector<uint8_t>& visited,
+                        int start, int current, const Hash& hash, int bonds, int maxBonds) {
+    for (int k = adjacency.offset[current]; k < adjacency.offset[current + 1]; ++k) {
+        const int next = adjacency.atom[k];
+        if (visited[next]) continue;
+        const Hash extended = hash.extend(adjacency.bondTerm[k], atomTerm[next]);
+        if (next > start) setBit(fp, extended.bit(fpSize));
+        if (bonds + 1 < maxBonds) {
+            visited[next] = 1;
+            extendPaths(adjacency, atomTerm, fp, fpSize, visited, start, next, extended, bonds + 1, maxBonds);
+            visited[next] = 0;
+        }
+    }
+}
+
+/// Folds every simple path of up to `maxBonds` bonds between kept atoms into `fpSize` bits.
+template<class Hash>
+inline std::vector<uint64_t> pathFingerprint(const PathAdjacency& adjacency,
+                                             const std::vector<uint32_t>& atomTerm,
+                                             int maxBonds, int fpSize) {
+    std::vector<uint64_t> fp((fpSize - 1) / 64 + 1, 0ULL);
+    const int n = static_cast<int>(adjacency.kept.size());
+    std::vector<uint8_t> visited(n, 0);
+    std::vector<uint32_t> terms(2 * static_cast<size_t>(std::min(maxBonds, n)) + 1);
+    for (int start = 0; start < n; ++start) {
+        if (!adjacency.kept[start]) continue;
+        const Hash hash = Hash::start(atomTerm[start], terms.data());
+        setBit(fp, hash.bit(fpSize));
+        visited[start] = 1;
+        extendPaths(adjacency, atomTerm, fp, fpSize, visited, start, start, hash, 0, maxBonds);
+        visited[start] = 0;
+    }
+    return fp;
+}
+
+} // namespace path_fp_detail
+
+/// Path fingerprint over all atoms, including explicit hydrogens.  Enumerates all paths of
+/// up to pathLength bonds (at most 7), hashes each path's interleaved atom labels and bond
+/// orders in canonical direction, and folds the hashes into fpSize bits.  Used by
+/// batchFingerprint.  Returns a vector of uint64_t words.
 inline std::vector<uint64_t> computePathFingerprint(
     const MolGraph& mol, int pathLength, int fpSize)
 {
     if (fpSize <= 0) throw std::invalid_argument("fpSize must be positive");
     if (pathLength <= 0) throw std::invalid_argument("pathLength must be positive");
-    int numWords = (fpSize - 1) / 64 + 1;
-    std::vector<uint64_t> fp(numWords, 0ULL);
-
-    if (mol.n == 0) return fp;
-    pathLength = std::min(pathLength, 7); // clamp to path[8] buffer size
-
-    // Hash helper: FNV-1a 64-bit
-    auto fnv1a = [](const int* data, int len) -> uint64_t {
-        uint64_t h = FNV1A_SEED;
-        for (int i = 0; i < len; ++i) {
-            h ^= static_cast<uint64_t>(static_cast<uint32_t>(data[i]));
-            h *= FNV1A_PRIME;
-        }
-        return h;
-    };
-
-    // DFS-based path enumeration from each atom
-    // Stack-based to avoid recursion overhead
-    struct Frame {
-        int atom;
-        int depth;
-        int nbIdx;   // neighbour iteration index — resume after backtrack
-        int path[8]; // atom labels, max path length + 1
-        int bonds[7]; // bond orders between consecutive path atoms
-    };
-
-    std::vector<uint8_t> visited(mol.n, 0);
-    Frame stack[16]; // max DFS depth = pathLength (clamped to 7) + 1
-
-    for (int start = 0; start < mol.n; ++start) {
-        // Single atom path
-        {
-            int p[1] = { mol.label[start] };
-            uint64_t h = fnv1a(p, 1);
-            int bit = static_cast<int>(h % static_cast<uint64_t>(fpSize));
-            fp[bit / 64] |= (1ULL << (bit % 64));
-        }
-
-        // Multi-atom paths via iterative DFS
-        int top = 0;
-        stack[0].atom = start;
-        stack[0].depth = 0;
-        stack[0].nbIdx = 0;
-        stack[0].path[0] = mol.label[start];
-        visited[start] = true;
-
-        while (top >= 0) {
-            Frame& f = stack[top];
-            bool expanded = false;
-
-            if (f.depth < pathLength) {
-                const auto& nbs = mol.neighbors[f.atom];
-                int nbCount = static_cast<int>(nbs.size());
-                for (; f.nbIdx < nbCount; ++f.nbIdx) {
-                    int nb = nbs[f.nbIdx];
-                    if (visited[nb]) continue;
-
-                    // Build path including all bond orders interleaved
-                    int newDepth = f.depth + 1;
-                    int bondOrd = mol.bondOrder(f.atom, nb);
-
-                    // path = [label0, bond01, label1, bond12, label2, ...]
-                    int pathData[16]; // max 2*pathLength + 1
-                    int pathLen = 0;
-                    for (int d = 0; d <= f.depth; ++d) {
-                        pathData[pathLen++] = f.path[d];
-                        if (d < f.depth) {
-                            pathData[pathLen++] = f.bonds[d] + 1000;
-                        }
-                    }
-                    pathData[pathLen++] = bondOrd + 1000;
-                    pathData[pathLen++] = mol.label[nb];
-
-                    uint64_t hFwd = fnv1a(pathData, pathLen);
-
-                    // Canonical hash: use min(fwd, rev) so A→B and B→A set the
-                    // same single bit, preserving correct bit density.
-                    int revData[16];
-                    for (int r = 0; r < pathLen; ++r)
-                        revData[r] = pathData[pathLen - 1 - r];
-                    uint64_t hRev = fnv1a(revData, pathLen);
-
-                    uint64_t h = std::min(hFwd, hRev);
-                    int bit = static_cast<int>(h % static_cast<uint64_t>(fpSize));
-                    fp[bit / 64] |= (1ULL << (bit % 64));
-
-                    // Push to stack if we can go deeper
-                    if (newDepth < pathLength && top + 1 < 15) {
-                        visited[nb] = true;
-                        f.nbIdx++; // advance BEFORE push so we resume at next neighbour on return
-                        top++;
-                        stack[top].atom = nb;
-                        stack[top].depth = newDepth;
-                        stack[top].nbIdx = 0; // fresh start for new depth
-                        for (int d = 0; d <= stack[top-1].depth; ++d)
-                            stack[top].path[d] = stack[top-1].path[d];
-                        for (int d = 0; d < stack[top-1].depth; ++d)
-                            stack[top].bonds[d] = stack[top-1].bonds[d];
-                        stack[top].bonds[stack[top-1].depth] = bondOrd;
-                        stack[top].path[newDepth] = mol.label[nb];
-                        expanded = true;
-                        break; // DFS: go deeper first
-                    }
-                }
-            }
-
-            if (!expanded) {
-                visited[stack[top].atom] = false;
-                top--;
-            }
-        }
-
-        visited[start] = false;
-    }
-
-    return fp;
+    pathLength = std::min(pathLength, 7); // paths have at most seven bonds
+    const auto adjacency = path_fp_detail::pathAdjacency(mol, [](int) { return true; },
+        [&](int from, int to) { return static_cast<uint32_t>(mol.bondOrder(from, to) + 1000); });
+    std::vector<uint32_t> atomTerm(mol.n);
+    for (int i = 0; i < mol.n; ++i) atomTerm[i] = static_cast<uint32_t>(mol.label[i]);
+    return path_fp_detail::pathFingerprint<path_fp_detail::FoldedPathHash>(adjacency, atomTerm,
+                                                                           pathLength, fpSize);
 }
 
-/// Returns the list of allowed valences for common organic-subset elements,
-/// following the OpenSMILES / Daylight convention.  Multi-valent elements
-/// (N, P, S, As, Se, Sb, Te, I) list every standard valence in ascending
-/// order so that implicitH() can pick the smallest fitting one.
-/// Returns an empty span for elements with no known default valence.
-inline std::pair<const int*, int> defaultValences(int z) {
-    // Static tables -- one per element, ascending order
-    static const int v_H[]  = {1};
-    static const int v_B[]  = {3};
-    static const int v_C[]  = {4};
-    static const int v_N[]  = {3, 5};
-    static const int v_O[]  = {2};
-    static const int v_F[]  = {1};
-    static const int v_Al[] = {3};
-    static const int v_Si[] = {4};
-    static const int v_P[]  = {3, 5};
-    static const int v_S[]  = {2, 4, 6};
-    static const int v_Cl[] = {1};
-    static const int v_As[] = {3, 5};
-    static const int v_Se[] = {2, 4, 6};
-    static const int v_Br[] = {1};
-    static const int v_Sb[] = {3, 5};
-    static const int v_Te[] = {2, 4, 6};
-    static const int v_I[]  = {1, 3, 5, 7};
-    #define VSPAN(arr) {arr, sizeof(arr)/sizeof(arr[0])}
-    switch (z) {
-        case 1:  return VSPAN(v_H);
-        case 5:  return VSPAN(v_B);
-        case 6:  return VSPAN(v_C);
-        case 7:  return VSPAN(v_N);
-        case 8:  return VSPAN(v_O);
-        case 9:  return VSPAN(v_F);
-        case 13: return VSPAN(v_Al);
-        case 14: return VSPAN(v_Si);
-        case 15: return VSPAN(v_P);
-        case 16: return VSPAN(v_S);
-        case 17: return VSPAN(v_Cl);
-        case 33: return VSPAN(v_As);
-        case 34: return VSPAN(v_Se);
-        case 35: return VSPAN(v_Br);
-        case 51: return VSPAN(v_Sb);
-        case 52: return VSPAN(v_Te);
-        case 53: return VSPAN(v_I);
-        default: return {nullptr, 0};
-    }
-    #undef VSPAN
-}
-
-/** Valence fallback for omitted H counts, including charged group 13/15/16 atoms. */
-inline int implicitH(int atomicNum, int bondOrderSum, int formalCharge) {
-    return smsd::detail::computeImplicitH(atomicNum, false, bondOrderSum, formalCharge);
+/// Element path fingerprint over heavy atoms (the Python path_fingerprint): each path of up to
+/// pathLength bonds is hashed by its atomic-number sequence in canonical direction.  Bonds
+/// are not hashed.  Matches the Java FingerprintEngine.pathFingerprint bits.
+inline std::vector<uint64_t> computeElementPathFingerprint(
+    const MolGraph& mol, int pathLength, int fpSize)
+{
+    if (pathLength <= 0 || pathLength == std::numeric_limits<int>::max())
+        throw std::invalid_argument("pathLength must be positive and representable");
+    if (fpSize <= 0) throw std::invalid_argument("fpSize must be positive");
+    const auto adjacency = path_fp_detail::pathAdjacency(mol,
+        [&](int atom) { return mol.atomicNum[atom] != 1; }, [](int, int) { return 0u; });
+    std::vector<uint32_t> atomTerm(mol.n);
+    for (int i = 0; i < mol.n; ++i) atomTerm[i] = static_cast<uint32_t>(mol.atomicNum[i]);
+    return path_fp_detail::pathFingerprint<path_fp_detail::AtomPathHash>(adjacency, atomTerm,
+                                                                         pathLength, fpSize);
 }
 
 /** Largest shortest-path distance within any connected component. */
@@ -287,6 +286,111 @@ inline int maximumComponentExtent(const MolGraph& graph) {
     return extent;
 }
 
+// ============================================================================
+// Circular (Morgan) fingerprints: one iteration, two atom invariants, two sinks
+// ============================================================================
+
+inline uint64_t fnvMix(uint64_t hash, uint64_t value) {
+    hash ^= value;
+    return hash * FNV1A_PRIME;
+}
+
+/// Initial ECFP atom invariant (Rogers and Hahn 2010, Table 1, with the Daylight aromaticity
+/// extension and the tautomer class when one is assigned).
+inline uint64_t rogersHahnInvariant(const MolGraph& mol, int i) {
+    uint64_t h = FNV1A_SEED;
+    h = fnvMix(h, mol.atomicNum[i]);                                  // R&H #1: atomic number
+    h = fnvMix(h, mol.degree[i]);                                     // R&H #2: heavy atom degree
+    int bondOrdSum = 0;
+    for (int nb : mol.neighbors[i]) bondOrdSum += mol.bondOrder(i, nb);
+    h = fnvMix(h, static_cast<uint64_t>(bondOrdSum));                 // R&H #3: bond order sum (valence)
+    int massNum = (static_cast<int>(mol.massNumber.size()) > i)
+                  ? mol.massNumber[i] : 0;
+    h = fnvMix(h, static_cast<uint64_t>(massNum));                    // R&H #4: atomic mass number
+    h = fnvMix(h, static_cast<uint64_t>(int64_t(mol.formalCharge[i]) + 4)); // R&H #5: formal charge
+    const int64_t hCount = mol.attachedHydrogenCount(i);
+    h = fnvMix(h, static_cast<uint64_t>(hCount));                     // R&H #6: attached H count
+    h = fnvMix(h, mol.ring[i] ? 1 : 0);                              // R&H #7: ring membership
+    h = fnvMix(h, mol.aromatic[i] ? 1 : 0);                          // Daylight extension: aromaticity
+    if (!mol.tautomerClass.empty() && mol.tautomerClass[i] >= 0)
+        h = fnvMix(h, 0xCAFE00ULL + static_cast<uint64_t>(mol.tautomerClass[i]));
+    return h;
+}
+
+/// Initial FCFP atom invariant: the pharmacophore feature class, degree and ring membership.
+inline uint64_t pharmacophoreInvariant(const MolGraph& mol, const std::vector<int>& features, int i) {
+    uint64_t h = FNV1A_SEED;
+    h = fnvMix(h, static_cast<uint64_t>(features[i]));
+    h = fnvMix(h, static_cast<uint64_t>(mol.degree[i]));
+    h = fnvMix(h, mol.ring[i] ? 1ULL : 0ULL);
+    return h;
+}
+
+/**
+ * The Morgan iteration: every atom starts from invariant(atom), and at each radius takes the
+ * hash of its radius, its previous hash and the sorted neighbour hashes (each mixed with its
+ * bond order), so the result is invariant under atom renumbering. Every hash produced, at
+ * radius 0 and beyond, is handed to sink.
+ *
+ * @param radius  Maximum radius; -1 iterates to the largest component extent.
+ */
+template <class Invariant, class Sink>
+inline void morganHashes(const MolGraph& mol, int radius, Invariant&& invariant, Sink&& sink) {
+    const int n = mol.n;
+    std::vector<uint64_t> prevHash(n);
+    for (int i = 0; i < n; ++i) {
+        prevHash[i] = invariant(i);
+        sink(prevHash[i]);
+    }
+    const int maxRadius = radius < 0 ? maximumComponentExtent(mol) : radius;
+    std::vector<uint64_t> nextHash(n);
+    std::vector<uint64_t> nbHashes;
+    for (int r = 1; r <= maxRadius; ++r) {
+        for (int i = 0; i < n; ++i) {
+            const int deg = static_cast<int>(mol.neighbors[i].size());
+            if (deg == 0) { nextHash[i] = prevHash[i]; continue; } // isolated atom: no expansion
+            nbHashes.resize(deg);
+            for (int k = 0; k < deg; ++k) {
+                const int nb = mol.neighbors[i][k];
+                nbHashes[k] = prevHash[nb] ^ (static_cast<uint64_t>(mol.bondOrder(i, nb)) * 31ULL);
+            }
+            std::sort(nbHashes.begin(), nbHashes.end());
+
+            uint64_t h = FNV1A_SEED;
+            h = fnvMix(h, static_cast<uint64_t>(r));
+            h = fnvMix(h, prevHash[i]);
+            for (uint64_t nh : nbHashes) h = fnvMix(h, nh);
+            nextHash[i] = h;
+            sink(h);
+        }
+        std::swap(prevHash, nextHash);
+    }
+}
+
+/// Folds every Morgan hash into a bit of an fpSize-bit fingerprint.
+template <class Invariant>
+inline std::vector<uint64_t> morganBits(const MolGraph& mol, int radius, int fpSize, Invariant&& invariant) {
+    if (fpSize <= 0) throw std::invalid_argument("fpSize must be positive");
+    std::vector<uint64_t> fp((fpSize - 1) / 64 + 1, 0ULL);
+    if (mol.n == 0) return fp;
+    morganHashes(mol, radius, invariant, [&](uint64_t h) {
+        path_fp_detail::setBit(fp, static_cast<int>(h % static_cast<uint64_t>(fpSize)));
+    });
+    return fp;
+}
+
+/// Counts the Morgan hashes falling into each of fpSize bins.
+template <class Invariant>
+inline std::vector<int> morganCounts(const MolGraph& mol, int radius, int fpSize, Invariant&& invariant) {
+    if (fpSize <= 0) throw std::invalid_argument("fpSize must be positive");
+    std::vector<int> counts(fpSize, 0);
+    if (mol.n == 0) return counts;
+    morganHashes(mol, radius, invariant, [&](uint64_t h) {
+        counts[static_cast<int>(h % static_cast<uint64_t>(fpSize))]++;
+    });
+    return counts;
+}
+
 /// Circular (Morgan/ECFP-style) fingerprint for a single molecule.
 /// Each atom's environment is hashed at increasing radii using canonical
 /// invariants (atomicNum, degree, implicitH, ring, aromatic, charge, tautomerClass).
@@ -297,69 +401,7 @@ inline int maximumComponentExtent(const MolGraph& graph) {
 inline std::vector<uint64_t> computeCircularFingerprintECFP(
     const MolGraph& mol, int radius, int fpSize)
 {
-    if (fpSize <= 0) throw std::invalid_argument("fpSize must be positive");
-    int numWords = (fpSize - 1) / 64 + 1;
-    std::vector<uint64_t> fp(numWords, 0ULL);
-    if (mol.n == 0) return fp;
-
-    auto fnvMix = [](uint64_t h, uint64_t val) -> uint64_t {
-        h ^= val; h *= FNV1A_PRIME; return h;
-    };
-
-    int n = mol.n;
-    // Initial atom invariants (Rogers & Hahn 2010, Table 1)
-    std::vector<uint64_t> atomHash(n);
-    for (int i = 0; i < n; ++i) {
-        uint64_t h = FNV1A_SEED;
-        h = fnvMix(h, mol.atomicNum[i]);                                  // R&H #1: atomic number
-        h = fnvMix(h, mol.degree[i]);                                     // R&H #2: heavy atom degree
-        int bondOrdSum = 0;
-        for (int nb : mol.neighbors[i]) bondOrdSum += mol.bondOrder(i, nb);
-        h = fnvMix(h, static_cast<uint64_t>(bondOrdSum));                 // R&H #3: bond order sum (valence)
-        int massNum = (static_cast<int>(mol.massNumber.size()) > i)
-                      ? mol.massNumber[i] : 0;
-        h = fnvMix(h, static_cast<uint64_t>(massNum));                    // R&H #4: atomic mass number
-        h = fnvMix(h, static_cast<uint64_t>(int64_t(mol.formalCharge[i]) + 4)); // R&H #5: formal charge
-        const int64_t hCount = mol.attachedHydrogenCount(i);
-        h = fnvMix(h, static_cast<uint64_t>(hCount));                     // R&H #6: attached H count
-        h = fnvMix(h, mol.ring[i] ? 1 : 0);                              // R&H #7: ring membership
-        h = fnvMix(h, mol.aromatic[i] ? 1 : 0);                          // Daylight extension: aromaticity
-        if (!mol.tautomerClass.empty() && mol.tautomerClass[i] >= 0)
-            h = fnvMix(h, 0xCAFE00ULL + static_cast<uint64_t>(mol.tautomerClass[i]));
-        atomHash[i] = h;
-        int bit = static_cast<int>(h % static_cast<uint64_t>(fpSize));
-        fp[bit / 64] |= (1ULL << (bit % 64));
-    }
-
-    const int maxRadius = radius < 0 ? maximumComponentExtent(mol) : radius;
-    std::vector<uint64_t> prevHash = atomHash;
-    std::vector<uint64_t> nextHash(n);
-    std::vector<uint64_t> nbHashes;
-
-    for (int r = 1; r <= maxRadius; ++r) {
-        for (int i = 0; i < n; ++i) {
-            int deg = static_cast<int>(mol.neighbors[i].size());
-            if (deg == 0) { nextHash[i] = prevHash[i]; continue; } // isolated atom — no expansion
-            nbHashes.resize(deg);
-            for (int k = 0; k < deg; ++k) {
-                int nb = mol.neighbors[i][k];
-                nbHashes[k] = prevHash[nb] ^ (static_cast<uint64_t>(mol.bondOrder(i, nb)) * 31ULL);
-            }
-            std::sort(nbHashes.begin(), nbHashes.end());
-
-            uint64_t h = FNV1A_SEED;
-            h = fnvMix(h, static_cast<uint64_t>(r));
-            h = fnvMix(h, prevHash[i]);
-            for (uint64_t nh : nbHashes) h = fnvMix(h, nh);
-            nextHash[i] = h;
-
-            int bit = static_cast<int>(h % static_cast<uint64_t>(fpSize));
-            uint64_t mask = 1ULL << (bit % 64);
-            fp[bit / 64] |= mask;
-        }
-        std::swap(prevHash, nextHash);
-    }
-    return fp;
+    return morganBits(mol, radius, fpSize, [&](int atom) { return rogersHahnInvariant(mol, atom); });
 }
 
 /// Fingerprint invariant mode.
@@ -376,51 +418,9 @@ inline std::vector<uint64_t> computeCircularFingerprintFCFP(
     const MolGraph& mol, int radius, int fpSize)
 {
     if (fpSize <= 0) throw std::invalid_argument("fpSize must be positive");
-    int numWords = (fpSize - 1) / 64 + 1;
-    std::vector<uint64_t> fp(numWords, 0ULL);
-    if (mol.n == 0) return fp;
-    auto fnvMix = [](uint64_t h, uint64_t val) -> uint64_t {
-        h ^= val; h *= FNV1A_PRIME; return h;
-    };
-    int n = mol.n;
-    // Use cached pharmacophore features (v6.5.3 perf fix — parity with Java)
-    const auto& pharmFeatures = mol.getPharmacophoreFeatures();
-    std::vector<uint64_t> atomHash(n);
-    for (int i = 0; i < n; ++i) {
-        uint64_t h = FNV1A_SEED;
-        h = fnvMix(h, static_cast<uint64_t>(pharmFeatures[i]));
-        h = fnvMix(h, static_cast<uint64_t>(mol.degree[i]));
-        h = fnvMix(h, mol.ring[i] ? 1ULL : 0ULL);
-        atomHash[i] = h;
-        int bit = static_cast<int>(h % static_cast<uint64_t>(fpSize));
-        fp[bit / 64] |= (1ULL << (bit % 64));
-    }
-    const int maxRadius = radius < 0 ? maximumComponentExtent(mol) : radius;
-    std::vector<uint64_t> prevHash = atomHash;
-    std::vector<uint64_t> nextHash(n);
-    std::vector<uint64_t> nbHashes;
-    for (int r = 1; r <= maxRadius; ++r) {
-        for (int i = 0; i < n; ++i) {
-            int deg = static_cast<int>(mol.neighbors[i].size());
-            if (deg == 0) { nextHash[i] = prevHash[i]; continue; }
-            nbHashes.resize(deg);
-            for (int k = 0; k < deg; ++k) {
-                int nb = mol.neighbors[i][k];
-                nbHashes[k] = prevHash[nb] ^ (static_cast<uint64_t>(mol.bondOrder(i, nb)) * 31ULL);
-            }
-            std::sort(nbHashes.begin(), nbHashes.end());
-            uint64_t h = FNV1A_SEED;
-            h = fnvMix(h, static_cast<uint64_t>(r));
-            h = fnvMix(h, prevHash[i]);
-            for (uint64_t nh : nbHashes) h = fnvMix(h, nh);
-            nextHash[i] = h;
-            int bit = static_cast<int>(h % static_cast<uint64_t>(fpSize));
-            uint64_t mask = 1ULL << (bit % 64);
-            fp[bit / 64] |= mask;
-        }
-        std::swap(prevHash, nextHash);
-    }
-    return fp;
+    if (mol.n == 0) return std::vector<uint64_t>((fpSize - 1) / 64 + 1, 0ULL);
+    const auto& features = mol.getPharmacophoreFeatures();
+    return morganBits(mol, radius, fpSize, [&](int atom) { return pharmacophoreInvariant(mol, features, atom); });
 }
 
 // ============================================================================
@@ -433,70 +433,10 @@ inline std::vector<uint64_t> computeCircularFingerprintFCFP(
 ///
 /// @param radius  Maximum radius (-1 = unlimited, 2 = ECFP4, 3 = ECFP6)
 /// @param fpSize  Number of counter bins (default 2048)
-/// @since 6.0.1
 inline std::vector<int> computeCircularFingerprintECFPCounts(
     const MolGraph& mol, int radius, int fpSize)
 {
-    if (fpSize <= 0) throw std::invalid_argument("fpSize must be positive");
-    std::vector<int> counts(fpSize, 0);
-    if (mol.n == 0) return counts;
-
-    auto fnvMix = [](uint64_t h, uint64_t val) -> uint64_t {
-        h ^= val; h *= FNV1A_PRIME; return h;
-    };
-
-    int n = mol.n;
-    std::vector<uint64_t> atomHash(n);
-    for (int i = 0; i < n; ++i) {
-        uint64_t h = FNV1A_SEED;
-        h = fnvMix(h, mol.atomicNum[i]);                                  // R&H #1
-        h = fnvMix(h, mol.degree[i]);                                     // R&H #2
-        int bondOrdSum = 0;
-        for (int nb : mol.neighbors[i]) bondOrdSum += mol.bondOrder(i, nb);
-        h = fnvMix(h, static_cast<uint64_t>(bondOrdSum));                 // R&H #3
-        int massNum = (static_cast<int>(mol.massNumber.size()) > i)
-                      ? mol.massNumber[i] : 0;
-        h = fnvMix(h, static_cast<uint64_t>(massNum));                    // R&H #4
-        h = fnvMix(h, static_cast<uint64_t>(int64_t(mol.formalCharge[i]) + 4)); // R&H #5
-        const int64_t hCount = mol.attachedHydrogenCount(i);
-        h = fnvMix(h, static_cast<uint64_t>(hCount));                     // R&H #6
-        h = fnvMix(h, mol.ring[i] ? 1 : 0);                              // R&H #7
-        h = fnvMix(h, mol.aromatic[i] ? 1 : 0);                          // Daylight extension
-        if (!mol.tautomerClass.empty() && mol.tautomerClass[i] >= 0)
-            h = fnvMix(h, 0xCAFE00ULL + static_cast<uint64_t>(mol.tautomerClass[i]));
-        atomHash[i] = h;
-        int idx = static_cast<int>(h % static_cast<uint64_t>(fpSize));
-        counts[idx]++;
-    }
-
-    const int maxRadius = radius < 0 ? maximumComponentExtent(mol) : radius;
-    std::vector<uint64_t> prevHash = atomHash;
-    std::vector<uint64_t> nextHash(n);
-    std::vector<uint64_t> nbHashes;
-
-    for (int r = 1; r <= maxRadius; ++r) {
-        for (int i = 0; i < n; ++i) {
-            int deg = static_cast<int>(mol.neighbors[i].size());
-            if (deg == 0) { nextHash[i] = prevHash[i]; continue; }
-            nbHashes.resize(deg);
-            for (int k = 0; k < deg; ++k) {
-                int nb = mol.neighbors[i][k];
-                nbHashes[k] = prevHash[nb] ^ (static_cast<uint64_t>(mol.bondOrder(i, nb)) * 31ULL);
-            }
-            std::sort(nbHashes.begin(), nbHashes.end());
-
-            uint64_t h = FNV1A_SEED;
-            h = fnvMix(h, static_cast<uint64_t>(r));
-            h = fnvMix(h, prevHash[i]);
-            for (uint64_t nh : nbHashes) h = fnvMix(h, nh);
-            nextHash[i] = h;
-
-            int idx = static_cast<int>(h % static_cast<uint64_t>(fpSize));
-            counts[idx]++;
-        }
-        std::swap(prevHash, nextHash);
-    }
-    return counts;
+    return morganCounts(mol, radius, fpSize, [&](int atom) { return rogersHahnInvariant(mol, atom); });
 }
 
 /// FCFP count fingerprint using pharmacophoric feature classes. Each element of
@@ -505,59 +445,13 @@ inline std::vector<int> computeCircularFingerprintECFPCounts(
 ///
 /// @param radius  Maximum radius (-1 = unlimited, 2 = FCFP4, 3 = FCFP6)
 /// @param fpSize  Number of counter bins (default 2048)
-/// @since 6.0.1
 inline std::vector<int> computeCircularFingerprintFCFPCounts(
     const MolGraph& mol, int radius, int fpSize)
 {
     if (fpSize <= 0) throw std::invalid_argument("fpSize must be positive");
-    std::vector<int> counts(fpSize, 0);
-    if (mol.n == 0) return counts;
-
-    auto fnvMix = [](uint64_t h, uint64_t val) -> uint64_t {
-        h ^= val; h *= FNV1A_PRIME; return h;
-    };
-
-    int n = mol.n;
-    const auto& pharmFeatures = mol.getPharmacophoreFeatures();
-    std::vector<uint64_t> atomHash(n);
-    for (int i = 0; i < n; ++i) {
-        uint64_t h = FNV1A_SEED;
-        h = fnvMix(h, static_cast<uint64_t>(pharmFeatures[i]));
-        h = fnvMix(h, static_cast<uint64_t>(mol.degree[i]));
-        h = fnvMix(h, mol.ring[i] ? 1ULL : 0ULL);
-        atomHash[i] = h;
-        int idx = static_cast<int>(h % static_cast<uint64_t>(fpSize));
-        counts[idx]++;
-    }
-
-    const int maxRadius = radius < 0 ? maximumComponentExtent(mol) : radius;
-    std::vector<uint64_t> prevHash = atomHash;
-    std::vector<uint64_t> nextHash(n);
-    std::vector<uint64_t> nbHashes;
-
-    for (int r = 1; r <= maxRadius; ++r) {
-        for (int i = 0; i < n; ++i) {
-            int deg = static_cast<int>(mol.neighbors[i].size());
-            if (deg == 0) { nextHash[i] = prevHash[i]; continue; }
-            nbHashes.resize(deg);
-            for (int k = 0; k < deg; ++k) {
-                int nb = mol.neighbors[i][k];
-                nbHashes[k] = prevHash[nb] ^ (static_cast<uint64_t>(mol.bondOrder(i, nb)) * 31ULL);
-            }
-            std::sort(nbHashes.begin(), nbHashes.end());
-
-            uint64_t h = FNV1A_SEED;
-            h = fnvMix(h, static_cast<uint64_t>(r));
-            h = fnvMix(h, prevHash[i]);
-            for (uint64_t nh : nbHashes) h = fnvMix(h, nh);
-            nextHash[i] = h;
-
-            int idx = static_cast<int>(h % static_cast<uint64_t>(fpSize));
-            counts[idx]++;
-        }
-        std::swap(prevHash, nextHash);
-    }
-    return counts;
+    if (mol.n == 0) return std::vector<int>(fpSize, 0);
+    const auto& features = mol.getPharmacophoreFeatures();
+    return morganCounts(mol, radius, fpSize, [&](int atom) { return pharmacophoreInvariant(mol, features, atom); });
 }
 
 // ============================================================================
@@ -588,43 +482,6 @@ inline uint32_t bondHash(const MolGraph& g, int from, int to) {
     return h;
 }
 
-inline int hashPath(const MolGraph& g, bool tautAware,
-                    const int* path, int len) {
-    uint32_t fwd = 17, rev = 17;
-    for (int i = 0; i < len; ++i) {
-        fwd = fwd * 31 + atomHash(g, tautAware, path[i]);
-        rev = rev * 31 + atomHash(g, tautAware, path[len - 1 - i]);
-        if (i < len - 1) {
-            fwd = fwd * 31 + bondHash(g, path[i], path[i + 1]);
-            rev = rev * 31 + bondHash(g, path[len - 1 - i], path[len - 2 - i]);
-        }
-    }
-    return static_cast<int>(std::min(fwd & 0x7FFFFFFFu, rev & 0x7FFFFFFFu));
-}
-
-inline void setBit(std::vector<uint64_t>& fp, int hash, int fpSize) {
-    int bit = hash % fpSize;
-    fp[bit / 64] |= 1ULL << (bit % 64);
-}
-
-inline void enumeratePaths(const MolGraph& g, bool tautAware,
-                           const std::vector<uint8_t>& isHeavy,
-                           std::vector<uint64_t>& fp, int fpSize,
-                           std::vector<uint8_t>& visited, int* path,
-                           int depth, int maxDepth) {
-    int cur = path[depth - 1];
-    for (int nb : g.neighbors[cur]) {
-        if (visited[nb] || !isHeavy[nb]) continue;
-        path[depth] = nb;
-        visited[nb] = true;
-        setBit(fp, hashPath(g, tautAware, path, depth + 1), fpSize);
-        if (depth < maxDepth)
-            enumeratePaths(g, tautAware, isHeavy, fp, fpSize, visited,
-                           path, depth + 1, maxDepth);
-        visited[nb] = false;
-    }
-}
-
 } // namespace mcs_fp_detail
 
 /// MCS-aware path fingerprint: encodes element, ring, aromatic, tautomer class,
@@ -639,32 +496,16 @@ inline std::vector<uint64_t> computeMCSFingerprintForChemistry(
     if (fpSize <= 0) throw std::invalid_argument("fpSize must be positive");
     if (pathLength <= 0 || pathLength == std::numeric_limits<int>::max())
         throw std::invalid_argument("pathLength must be positive and representable");
-    int numWords = (fpSize - 1) / 64 + 1;
-    std::vector<uint64_t> fp(numWords, 0ULL);
-    int n = mol.n;
-    if (n == 0) return fp;
-
-    std::vector<uint8_t> isHeavy(n);
-    int heavyCount = 0;
-    for (int i = 0; i < n; ++i) {
-        isHeavy[i] = (mol.atomicNum[i] != 1) ? 1 : 0;
-        if (isHeavy[i]) ++heavyCount;
-    }
-    if (heavyCount == 0) return fp;
-
-    bool tautAware = chemistry.tautomerAware;
-    std::vector<int> pathBuf(pathLength + 1);
-    std::vector<uint8_t> visited(n, 0);
-    for (int start = 0; start < n; ++start) {
-        if (!isHeavy[start]) continue;
-        pathBuf[0] = start;
-        visited[start] = true;
-        mcs_fp_detail::setBit(fp, mcs_fp_detail::hashPath(mol, tautAware, pathBuf.data(), 1), fpSize);
-        mcs_fp_detail::enumeratePaths(mol, tautAware, isHeavy, fp, fpSize, visited,
-                                      pathBuf.data(), 1, pathLength);
-        visited[start] = false;
-    }
-    return fp;
+    const bool tautAware = chemistry.tautomerAware;
+    // Atom and bond terms depend only on the graph, so compute each once.
+    const auto adjacency = path_fp_detail::pathAdjacency(mol,
+        [&](int atom) { return mol.atomicNum[atom] != 1; },
+        [&](int from, int to) { return mcs_fp_detail::bondHash(mol, from, to); });
+    std::vector<uint32_t> atomTerm(mol.n, 0);
+    for (int i = 0; i < mol.n; ++i)
+        if (adjacency.kept[i]) atomTerm[i] = mcs_fp_detail::atomHash(mol, tautAware, i);
+    return path_fp_detail::pathFingerprint<path_fp_detail::LabelledPathHash>(adjacency, atomTerm,
+                                                                             pathLength, fpSize);
 }
 
 inline std::vector<uint64_t> computeMCSFingerprint(
@@ -693,6 +534,43 @@ inline int ttAtomType(const MolGraph& g, int idx) {
     return (z << 16) | (heavyDeg << 8) | (nPi << 4) | inRing;
 }
 
+/**
+ * Enumerates every 4-atom linear path A-B-C-D once and hands its canonical hash (the
+ * lesser of the forward and reverse FNV-1a hashes of the atom types) to sink.
+ */
+template <class Sink>
+inline void torsionHashes(const MolGraph& mol, Sink&& sink) {
+    const int n = mol.n;
+    if (n < 4) return;
+    std::vector<int> atomType(n);
+    for (int i = 0; i < n; ++i)
+        atomType[i] = ttAtomType(mol, i);
+
+    // The canonical hash is the same in both directions, so each path is hashed once,
+    // from its lower end atom.
+    for (int a = 0; a < n; ++a) {
+        for (int b : mol.neighbors[a]) {
+            for (int c : mol.neighbors[b]) {
+                if (c == a) continue;
+                for (int d : mol.neighbors[c]) {
+                    if (d == b || d <= a) continue;
+                    uint64_t fwd = FNV1A_SEED;
+                    fwd = fnvMix(fwd, static_cast<uint64_t>(atomType[a]));
+                    fwd = fnvMix(fwd, static_cast<uint64_t>(atomType[b]));
+                    fwd = fnvMix(fwd, static_cast<uint64_t>(atomType[c]));
+                    fwd = fnvMix(fwd, static_cast<uint64_t>(atomType[d]));
+                    uint64_t rev = FNV1A_SEED;
+                    rev = fnvMix(rev, static_cast<uint64_t>(atomType[d]));
+                    rev = fnvMix(rev, static_cast<uint64_t>(atomType[c]));
+                    rev = fnvMix(rev, static_cast<uint64_t>(atomType[b]));
+                    rev = fnvMix(rev, static_cast<uint64_t>(atomType[a]));
+                    sink(fwd <= rev ? fwd : rev);
+                }
+            }
+        }
+    }
+}
+
 /// Topological torsion fingerprint (binary). Enumerates all 4-atom linear paths
 /// A-B-C-D, hashes the atom types using FNV-1a with canonical ordering
 /// (min of forward and reverse hash), and folds into fpSize bits.
@@ -700,52 +578,14 @@ inline int ttAtomType(const MolGraph& g, int idx) {
 /// Reference: Nilakantan et al., J. Chem. Inf. Comput. Sci. 1987, 27, 82-85.
 ///
 /// @param fpSize  Fingerprint size in bits
-/// @since 6.0.1
 inline std::vector<uint64_t> computeTopologicalTorsion(
     const MolGraph& mol, int fpSize)
 {
     if (fpSize <= 0) throw std::invalid_argument("fpSize must be positive");
-    int numWords = (fpSize - 1) / 64 + 1;
-    std::vector<uint64_t> fp(numWords, 0ULL);
-    int n = mol.n;
-    if (n < 4) return fp;
-
-    auto fnvMix = [](uint64_t h, uint64_t val) -> uint64_t {
-        h ^= val; h *= FNV1A_PRIME; return h;
-    };
-
-    // Precompute atom types
-    std::vector<int> atomType(n);
-    for (int i = 0; i < n; ++i)
-        atomType[i] = ttAtomType(mol, i);
-
-    // Enumerate all 4-atom linear paths: A -> B -> C -> D
-    for (int a = 0; a < n; ++a) {
-        for (int b : mol.neighbors[a]) {
-            for (int c : mol.neighbors[b]) {
-                if (c == a) continue;
-                for (int d : mol.neighbors[c]) {
-                    if (d == b || d == a) continue;
-                    // Hash forward: A-B-C-D
-                    uint64_t fwd = FNV1A_SEED;
-                    fwd = fnvMix(fwd, static_cast<uint64_t>(atomType[a]));
-                    fwd = fnvMix(fwd, static_cast<uint64_t>(atomType[b]));
-                    fwd = fnvMix(fwd, static_cast<uint64_t>(atomType[c]));
-                    fwd = fnvMix(fwd, static_cast<uint64_t>(atomType[d]));
-                    // Hash reverse: D-C-B-A
-                    uint64_t rev = FNV1A_SEED;
-                    rev = fnvMix(rev, static_cast<uint64_t>(atomType[d]));
-                    rev = fnvMix(rev, static_cast<uint64_t>(atomType[c]));
-                    rev = fnvMix(rev, static_cast<uint64_t>(atomType[b]));
-                    rev = fnvMix(rev, static_cast<uint64_t>(atomType[a]));
-                    // Canonical: take minimum
-                    uint64_t h = (fwd <= rev) ? fwd : rev;
-                    int bit = static_cast<int>(h % static_cast<uint64_t>(fpSize));
-                    fp[bit / 64] |= (1ULL << (bit % 64));
-                }
-            }
-        }
-    }
+    std::vector<uint64_t> fp((fpSize - 1) / 64 + 1, 0ULL);
+    torsionHashes(mol, [&](uint64_t h) {
+        path_fp_detail::setBit(fp, static_cast<int>(h % static_cast<uint64_t>(fpSize)));
+    });
     return fp;
 }
 
@@ -753,48 +593,14 @@ inline std::vector<uint64_t> computeTopologicalTorsion(
 /// holds the number of distinct 4-atom torsion paths that hash to that bin.
 ///
 /// @param fpSize  Number of counter bins
-/// @since 6.0.1
 inline std::vector<int> computeTopologicalTorsionCounts(
     const MolGraph& mol, int fpSize)
 {
     if (fpSize <= 0) throw std::invalid_argument("fpSize must be positive");
     std::vector<int> counts(fpSize, 0);
-    int n = mol.n;
-    if (n < 4) return counts;
-
-    auto fnvMix = [](uint64_t h, uint64_t val) -> uint64_t {
-        h ^= val; h *= FNV1A_PRIME; return h;
-    };
-
-    std::vector<int> atomType(n);
-    for (int i = 0; i < n; ++i)
-        atomType[i] = ttAtomType(mol, i);
-
-    // Enumerate canonical paths only (a < d) to avoid double-counting
-    for (int a = 0; a < n; ++a) {
-        for (int b : mol.neighbors[a]) {
-            for (int c : mol.neighbors[b]) {
-                if (c == a) continue;
-                for (int d : mol.neighbors[c]) {
-                    if (d == b || d == a) continue;
-                    if (a > d) continue; // canonical: count each path once
-                    uint64_t fwd = FNV1A_SEED;
-                    fwd = fnvMix(fwd, static_cast<uint64_t>(atomType[a]));
-                    fwd = fnvMix(fwd, static_cast<uint64_t>(atomType[b]));
-                    fwd = fnvMix(fwd, static_cast<uint64_t>(atomType[c]));
-                    fwd = fnvMix(fwd, static_cast<uint64_t>(atomType[d]));
-                    uint64_t rev = FNV1A_SEED;
-                    rev = fnvMix(rev, static_cast<uint64_t>(atomType[d]));
-                    rev = fnvMix(rev, static_cast<uint64_t>(atomType[c]));
-                    rev = fnvMix(rev, static_cast<uint64_t>(atomType[b]));
-                    rev = fnvMix(rev, static_cast<uint64_t>(atomType[a]));
-                    uint64_t h = (fwd <= rev) ? fwd : rev;
-                    int idx = static_cast<int>(h % static_cast<uint64_t>(fpSize));
-                    counts[idx]++;
-                }
-            }
-        }
-    }
+    torsionHashes(mol, [&](uint64_t h) {
+        counts[static_cast<int>(h % static_cast<uint64_t>(fpSize))]++;
+    });
     return counts;
 }
 
@@ -803,6 +609,14 @@ inline std::vector<int> computeTopologicalTorsionCounts(
 // ============================================================================
 // Batch Fingerprint Generation
 // ============================================================================
+
+namespace detail {
+/// Workers for a loop of count items when each worker should receive at least minimumPerWorker
+/// of them; small loops then run on the calling thread instead of waking a team.
+inline int workersFor(int count, int numThreads, int minimumPerWorker) {
+    return std::max(1, std::min(resolveThreads(numThreads), count / std::max(1, minimumPerWorker)));
+}
+} // namespace detail
 
 /// Generate path-based fingerprints for all molecules in parallel.
 /// Each fingerprint is a vector of uint64_t words (fpSize / 64 words).
@@ -828,11 +642,11 @@ inline std::vector<std::vector<uint64_t>> batchFingerprint(
     // Ensure fpSize is a multiple of 64
     fpSize = ((fpSize + 63) / 64) * 64;
 
-    int nThreads = detail::resolveThreads(numThreads);
+    const int nThreads = detail::workersFor(N, numThreads, 1);
     (void)nThreads;
 
 #ifdef _OPENMP
-    #pragma omp parallel for schedule(dynamic, 8) num_threads(nThreads)
+    #pragma omp parallel for schedule(dynamic, 8) num_threads(nThreads) if(nThreads > 1)
 #endif
     for (int i = 0; i < N; ++i) {
         results[i] = detail::computePathFingerprint(mols[i], pathLength, fpSize);
@@ -842,35 +656,89 @@ inline std::vector<std::vector<uint64_t>> batchFingerprint(
 }
 
 // ============================================================================
-// Utility: Tanimoto similarity between two fingerprints
+// Fingerprint similarity: the one home of each metric and its empty-set rule
 // ============================================================================
 
-/// Compute Tanimoto coefficient between two fingerprints.
+/// Set-bit counts of two fingerprints: bits in both, bits in the first and bits in the second.
+struct BitCounts {
+    int64_t common = 0, first = 0, second = 0;
+};
+
+/// Counts the set bits of two word fingerprints; words missing from the shorter one are empty.
+inline BitCounts bitCounts(const std::vector<uint64_t>& a, const std::vector<uint64_t>& b) {
+    BitCounts counts;
+    const size_t shared = std::min(a.size(), b.size());
+    for (size_t i = 0; i < shared; ++i) {
+        counts.common += popcount64(a[i] & b[i]);
+        counts.first  += popcount64(a[i]);
+        counts.second += popcount64(b[i]);
+    }
+    for (size_t i = shared; i < a.size(); ++i) counts.first += popcount64(a[i]);
+    for (size_t i = shared; i < b.size(); ++i) counts.second += popcount64(b[i]);
+    return counts;
+}
+
+/// Counts two sets of bit positions; a repeated position counts once.
+inline BitCounts bitCounts(std::vector<int> a, std::vector<int> b) {
+    std::sort(a.begin(), a.end());
+    a.erase(std::unique(a.begin(), a.end()), a.end());
+    std::sort(b.begin(), b.end());
+    b.erase(std::unique(b.begin(), b.end()), b.end());
+    BitCounts counts;
+    counts.first = static_cast<int64_t>(a.size());
+    counts.second = static_cast<int64_t>(b.size());
+    for (size_t i = 0, j = 0; i < a.size() && j < b.size();) {
+        if (a[i] < b[j]) ++i;
+        else if (b[j] < a[i]) ++j;
+        else { ++counts.common; ++i; ++j; }
+    }
+    return counts;
+}
+
+/// Tanimoto |A & B| / |A | B|.  Two empty fingerprints are identical sets and score 1.
+inline double tanimoto(const BitCounts& counts) {
+    const int64_t either = counts.first + counts.second - counts.common;
+    return either == 0 ? 1.0 : static_cast<double>(counts.common) / static_cast<double>(either);
+}
+
+/// Overlap |A & B| / min(|A|, |B|).  Two empty fingerprints score 1; one empty fingerprint scores 0.
+inline double overlap(const BitCounts& counts) {
+    if (counts.first == 0 && counts.second == 0) return 1.0;
+    const int64_t smaller = std::min(counts.first, counts.second);
+    return smaller == 0 ? 0.0 : static_cast<double>(counts.common) / static_cast<double>(smaller);
+}
+
+/// Dice 2|A & B| / (|A| + |B|).  Two empty fingerprints share no feature to weight and score 0.
+inline double dice(const BitCounts& counts) {
+    const int64_t sum = counts.first + counts.second;
+    return sum == 0 ? 0.0 : (2.0 * static_cast<double>(counts.common)) / static_cast<double>(sum);
+}
+
+/// Cosine |A & B| / sqrt(|A| |B|).  An empty fingerprint has no direction and scores 0.
+inline double cosine(const BitCounts& counts) {
+    const double denominator = std::sqrt(static_cast<double>(counts.first) * static_cast<double>(counts.second));
+    return denominator == 0.0 ? 0.0 : static_cast<double>(counts.common) / denominator;
+}
+
+/// Soergel distance 1 - Tanimoto, so two empty fingerprints are at distance 0.
+inline double soergel(const BitCounts& counts) {
+    return 1.0 - tanimoto(counts);
+}
+
+/// Tanimoto coefficient between two fingerprints; see tanimoto(const BitCounts&).
 inline double fingerprintTanimoto(
     const std::vector<uint64_t>& a,
     const std::vector<uint64_t>& b)
 {
-    if (a.empty() || b.empty()) return 0.0;
+    return tanimoto(bitCounts(a, b));
+}
 
-    int minWords = static_cast<int>(std::min(a.size(), b.size()));
-    int maxWords = static_cast<int>(std::max(a.size(), b.size()));
-
-    int andBits = 0, orBits = 0;
-
-    // Use the portable popcount64 from bitops.hpp (no need for inline lambda)
-    for (int i = 0; i < minWords; ++i) {
-        andBits += popcount64(a[i] & b[i]);
-        orBits  += popcount64(a[i] | b[i]);
-    }
-
-    // Extra words in the longer fingerprint contribute only to OR
-    const auto& longer = (a.size() > b.size()) ? a : b;
-    for (int i = minWords; i < maxWords; ++i) {
-        orBits += popcount64(longer[i]);
-    }
-
-    return (orBits == 0) ? 1.0 : static_cast<double>(andBits) /
-                                  static_cast<double>(orBits);
+/// Overlap coefficient between two fingerprints; see overlap(const BitCounts&).
+inline double fingerprintOverlap(
+    const std::vector<uint64_t>& a,
+    const std::vector<uint64_t>& b)
+{
+    return overlap(bitCounts(a, b));
 }
 
 /// Compute Dice coefficient between two fingerprints: 2*|A&B| / (|A| + |B|).
@@ -880,27 +748,7 @@ inline double fingerprintDice(
     const std::vector<uint64_t>& a,
     const std::vector<uint64_t>& b)
 {
-    if (a.empty() || b.empty()) return 0.0;
-
-    int minWords = static_cast<int>(std::min(a.size(), b.size()));
-    int maxWords = static_cast<int>(std::max(a.size(), b.size()));
-
-    int andBits = 0, aBits = 0, bBits = 0;
-
-    for (int i = 0; i < minWords; ++i) {
-        andBits += popcount64(a[i] & b[i]);
-        aBits   += popcount64(a[i]);
-        bBits   += popcount64(b[i]);
-    }
-
-    const auto& longer = (a.size() > b.size()) ? a : b;
-    for (int i = minWords; i < maxWords; ++i) {
-        if (&longer == &a) aBits += popcount64(longer[i]);
-        else               bBits += popcount64(longer[i]);
-    }
-
-    int sum = aBits + bBits;
-    return (sum == 0) ? 0.0 : (2.0 * andBits) / sum;
+    return dice(bitCounts(a, b));
 }
 
 /// Compute Cosine similarity between two fingerprints: |A&B| / sqrt(|A| * |B|).
@@ -909,27 +757,7 @@ inline double fingerprintCosine(
     const std::vector<uint64_t>& a,
     const std::vector<uint64_t>& b)
 {
-    if (a.empty() || b.empty()) return 0.0;
-
-    int minWords = static_cast<int>(std::min(a.size(), b.size()));
-    int maxWords = static_cast<int>(std::max(a.size(), b.size()));
-
-    int andBits = 0, aBits = 0, bBits = 0;
-
-    for (int i = 0; i < minWords; ++i) {
-        andBits += popcount64(a[i] & b[i]);
-        aBits   += popcount64(a[i]);
-        bBits   += popcount64(b[i]);
-    }
-
-    const auto& longer = (a.size() > b.size()) ? a : b;
-    for (int i = minWords; i < maxWords; ++i) {
-        if (&longer == &a) aBits += popcount64(longer[i]);
-        else               bBits += popcount64(longer[i]);
-    }
-
-    double denom = std::sqrt(static_cast<double>(aBits) * bBits);
-    return (denom == 0.0) ? 0.0 : static_cast<double>(andBits) / denom;
+    return cosine(bitCounts(a, b));
 }
 
 /// Compute Soergel distance between two fingerprints: 1 - Tanimoto.
@@ -938,8 +766,7 @@ inline double fingerprintSoergel(
     const std::vector<uint64_t>& a,
     const std::vector<uint64_t>& b)
 {
-    if (a.empty() || b.empty()) return 1.0; // max distance for empty inputs
-    return 1.0 - fingerprintTanimoto(a, b);
+    return soergel(bitCounts(a, b));
 }
 
 // ---- Count-vector similarity metrics ----
@@ -1026,11 +853,12 @@ inline std::vector<int> batchFingerprintScreen(
     if (N == 0 || queryFP.empty()) return {};
 
     std::vector<int> mask(N, 0);
-    int nThreads = detail::resolveThreads(numThreads);
+    // A subset test takes nanoseconds, so claims are large and short screens stay serial.
+    const int nThreads = detail::workersFor(N, numThreads, 2048);
     (void)nThreads;
 
 #ifdef _OPENMP
-    #pragma omp parallel for schedule(dynamic, 64) num_threads(nThreads)
+    #pragma omp parallel for schedule(dynamic, 1024) num_threads(nThreads) if(nThreads > 1)
 #endif
     for (int i = 0; i < N; ++i) {
         mask[i] = fingerprintSubset(queryFP, targetFPs[i]) ? 1 : 0;
@@ -1093,7 +921,6 @@ inline std::string toBinaryString(const std::vector<uint64_t>& fp, int fpSize) {
  * @param radius  ECFP radius (2 = ECFP4, 3 = ECFP6; -1 = unlimited)
  * @param fpSize  fingerprint size in bits (default 2048)
  * @return bit-packed fingerprint vector
- * @since 6.3.0
  */
 inline std::vector<uint64_t> fingerprintFromSmiles(const std::string& smi,
                                                     int radius = 2,
@@ -1116,7 +943,6 @@ inline std::vector<uint64_t> fingerprintFromSmiles(const std::string& smi,
  * @param counts  sparse count map (bitPosition to count)
  * @param fpSize  target array length
  * @return dense count vector of length fpSize
- * @since 6.3.0
  */
 inline std::vector<int> countsToArray(const std::map<int,int>& counts, int fpSize) {
     if (fpSize <= 0) throw std::invalid_argument("fpSize must be positive");
@@ -1141,10 +967,8 @@ inline std::vector<int> countsToArray(const std::map<int,int>& counts, int fpSiz
 ///   TargetCorpus corpus;
 ///   corpus.addTargets(targets);
 ///   corpus.prewarm();  // one-time cost
-///   auto hits = corpus.substructure(query, opts);       // reuse many times
-///   auto matches = Substructure::find(query).matchMany(corpus.targets());
-///   auto sizes = corpus.mcsSize(query, chem, mcsOpts);
-///   auto idxs  = corpus.screen(query, 0.7);
+///   auto matches = Substructure::find(query).matchMany(corpus.targets());  // reuse many times
+///   auto idxs = corpus.screen(query, 0.7);
 class TargetCorpus {
     std::vector<MolGraph> targets_;
     std::vector<std::vector<uint64_t>> fingerprints_;
@@ -1180,12 +1004,12 @@ public:
         const int N = static_cast<int>(targets_.size());
         if (N == 0) { prewarmed_ = true; return; }
 
-        int nThreads = detail::resolveThreads(numThreads);
+        const int nThreads = detail::workersFor(N, numThreads, 1);
         (void)nThreads;
 
         // Prewarm graph invariants in parallel
 #ifdef _OPENMP
-        #pragma omp parallel for schedule(dynamic, 1) num_threads(nThreads)
+        #pragma omp parallel for schedule(dynamic, 1) num_threads(nThreads) if(nThreads > 1)
 #endif
         for (int i = 0; i < N; ++i) {
             detail::prewarmGraph(targets_[i]);
@@ -1194,7 +1018,7 @@ public:
         // Compute ECFP fingerprints in parallel
         fingerprints_.resize(N);
 #ifdef _OPENMP
-        #pragma omp parallel for schedule(dynamic, 8) num_threads(nThreads)
+        #pragma omp parallel for schedule(dynamic, 8) num_threads(nThreads) if(nThreads > 1)
 #endif
         for (int i = 0; i < N; ++i) {
             fingerprints_[i] = detail::computeCircularFingerprintECFP(
@@ -1248,11 +1072,12 @@ public:
         }
 
         std::vector<uint8_t> mask(N, 0);
-        int nt = detail::resolveThreads(nThreads);
+        // Each comparison is short, so claims are large and small corpora stay serial.
+        const int nt = detail::workersFor(N, nThreads, 1024);
         (void)nt;
 
 #ifdef _OPENMP
-        #pragma omp parallel for schedule(dynamic, 64) num_threads(nt)
+        #pragma omp parallel for schedule(dynamic, 512) num_threads(nt) if(nt > 1)
 #endif
         for (int i = 0; i < N; ++i) {
             if (fingerprintTanimoto(queryFP, fingerprints_[i]) >= threshold) {

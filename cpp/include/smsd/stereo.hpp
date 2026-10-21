@@ -2,19 +2,45 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  */
 #pragma once
 #ifndef SMSD_STEREO_HPP
 #define SMSD_STEREO_HPP
 
-#include "mol_graph.hpp"
+#include "smsd/mol_graph.hpp"
 #include <algorithm>
 #include <array>
 
 namespace smsd {
 namespace stereo_detail {
 
-/** Ligand order used by graph tetrahedral tags, with -1 for the implicit ligand. */
+/**
+ * Whether an atom of this element with three neighbours and no hydrogen is a tetrahedral centre
+ * whose lone pair is the fourth ligand: N, P, S, As, Se, Sb and Te.
+ */
+inline bool lonePairCentre(int atomicNumber) {
+    return atomicNumber == 7 || atomicNumber == 15 || atomicNumber == 16 || atomicNumber == 33
+        || atomicNumber == 34 || atomicNumber == 51 || atomicNumber == 52;
+}
+
+/**
+ * Whether an atom with `degree` neighbours and `hydrogens` implicit hydrogens is a tetrahedral
+ * centre: four neighbours and no hydrogen, or three neighbours and either one hydrogen or, for
+ * an element of lonePairCentre(), none.
+ */
+inline bool tetrahedralCentre(size_t degree, int hydrogens, int atomicNumber) {
+    return degree == 4 ? hydrogens == 0
+         : degree == 3 && (hydrogens == 1 || (hydrogens == 0 && lonePairCentre(atomicNumber)));
+}
+
+/**
+ * Ligand order of a tetrahedral tag over `neighbors`, the neighbours of `atom` in order, with -1
+ * for the implicit ligand of three neighbours (a hydrogen or a lone pair). The implicit ligand
+ * comes second when the first neighbour precedes the atom, as after the atom it was written from
+ * in SMILES, and first otherwise. False unless there are three or four neighbours; a SMARTS atom,
+ * which has no hydrogen count of its own, takes this order as it is.
+ */
 inline bool tetrahedralLigands(const std::vector<int>& neighbors, int atom,
                                std::array<int, 4>& ligands) {
     if (neighbors.size() != 3 && neighbors.size() != 4) return false;
@@ -23,6 +49,18 @@ inline bool tetrahedralLigands(const std::vector<int>& neighbors, int atom,
     for (int slot = 0; slot < 4; ++slot)
         ligands[slot] = neighbors.size() == 3 && slot == hydrogenPosition ? -1 : neighbors[position++];
     return true;
+}
+
+/**
+ * Ligand order of the tetrahedral tag of `atom` in `graph`, as above, when the atom is a
+ * tetrahedralCentre() by its implicit hydrogens. Java's MolGraph.tetrahedralLigands() applies the
+ * same rule.
+ */
+inline bool tetrahedralLigands(const MolGraph& graph, int atom, std::array<int, 4>& ligands) {
+    const size_t degree = graph.neighbors[atom].size();
+    if (degree != 3 && degree != 4) return false;
+    return tetrahedralCentre(degree, graph.implicitHydrogenCount(atom), graph.atomicNum[atom])
+        && tetrahedralLigands(graph.neighbors[atom], atom, ligands);
 }
 
 /** Compare winding once three explicit ligands determine the mapped permutation. */
@@ -67,15 +105,21 @@ inline int doubleBondReference(const MolGraph& graph, int atom, int otherEnd) {
     return -1;
 }
 
-/** Compare E/Z relative to mapped ligands, rather than either graph's own references. */
+/**
+ * Compare E/Z relative to mapped ligands, rather than either graph's own references. A query
+ * bond without a configuration matches any target bond. With `embedding`, as in a substructure
+ * search, a configured query bond needs a configured target bond, as a SMARTS pair of
+ * directional bonds does; otherwise a target bond without a configuration matches as well.
+ */
 template <typename Mapping>
 inline bool doubleBondParityMatches(const MolGraph& query, int first, int second,
-                                     const MolGraph& target, const Mapping& mapping) {
+                                     const MolGraph& target, const Mapping& mapping, bool embedding = false) {
     const int mappedFirst = mapping[first], mappedSecond = mapping[second];
     if (mappedFirst < 0 || mappedSecond < 0) return true;
     int queryConfiguration = query.dbStereo(first, second);
+    if (queryConfiguration == 0) return true;
     const int targetConfiguration = target.dbStereo(mappedFirst, mappedSecond);
-    if (queryConfiguration == 0 || targetConfiguration == 0) return true;
+    if (targetConfiguration == 0) return !embedding;
     for (int end = 0; end < 2; ++end) {
         const int queryEnd = end == 0 ? first : second;
         const int otherQueryEnd = end == 0 ? second : first;

@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Prepare an sdist or build repaired CPython 3.14 CPU wheels from one sdist.
 
 Install build/twine for preparation and cibuildwheel==4.2.1 for wheel builds.
@@ -27,10 +31,37 @@ SOURCE_FIELDS = ("version", "sdist", "sdist_sha256", "source_file_count",
                  "source_commit", "release_ref", "working_tree_clean")
 BUILD_IDENTIFIERS = {"linux": "cp314-manylinux_x86_64", "macos": "cp314-macosx_arm64",
                      "windows": "cp314-win_amd64"}
+# CPU-only configurations register 35 native suites on Linux and Windows;
+# macOS adds six Metal failure cases, and RDKit or CUDA builds add their own.
+NATIVE_TEST_FLOOR = 35
+NATIVE_CMAKE_OPTIONS = ("-DCMAKE_BUILD_TYPE=Debug", "-DSMSD_BUILD_TESTS=ON", "-DSMSD_BUILD_PYTHON=OFF",
+                        "-DSMSD_BUILD_OPENMP=ON", "-DSMSD_BUILD_METAL=OFF", "-DSMSD_BUILD_CUDA=OFF",
+                        "-DSMSD_WITH_RDKIT=OFF")
 
 
 def sha256(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def git_blob_id(data):
+    """Return the Git blob identity of file contents."""
+    return hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + b"\0" + data).hexdigest()
+
+
+def tree_blobs(listing):
+    """Map each regular file in `git ls-tree -r -z --full-tree` output to its blob identity."""
+    blobs = {}
+    for entry in listing.split(b"\0"):
+        if entry:
+            metadata, name = entry.split(b"\t", 1)
+            mode, kind, identity = metadata.split()
+            if kind == b"blob" and mode in (b"100644", b"100755"):
+                blobs[name.decode("utf-8")] = identity.decode("ascii")
+    return blobs
 
 
 def read_manifest(path):
@@ -47,23 +78,29 @@ def read_manifest(path):
     return manifest
 
 
-def inspect_source(path):
+def read_source_archive(path):
+    """Return the files of a one-root source archive, keyed by their relative POSIX path."""
+    files, roots = {}, set()
     with tarfile.open(path, "r:gz") as archive:
-        files = {}
-        roots = set()
         for member in archive.getmembers():
             name = PurePosixPath(member.name)
+            relative = "/".join(name.parts[1:])
             if (not name.parts or name.is_absolute() or ".." in name.parts or "\\" in member.name
-                    or ":" in member.name or not (member.isdir() or member.isfile())):
+                    or ":" in member.name or not (member.isdir() or member.isfile())
+                    or (member.isfile() and not relative)):
                 raise ValueError("Unsafe source archive member: " + member.name)
             roots.add(name.parts[0])
             if member.isfile():
-                relative = str(PurePosixPath(*name.parts[1:]))
                 if relative in files:
                     raise ValueError("Duplicate source archive member: " + relative)
                 files[relative] = archive.extractfile(member).read()
-        if len(roots) != 1:
-            raise ValueError("Expected one source archive root")
+    if len(roots) != 1:
+        raise ValueError("Expected one source archive root")
+    return files
+
+
+def inspect_source(path):
+    files = read_source_archive(path)
     required = {"pyproject.toml", "pom.xml", "java/pom.xml", "PKG-INFO", "python/README.md",
                 "python/smsd/__init__.py", "cpp/CMakeLists.txt",
                 "cpp/include/smsd/mcs.hpp", "cpp/bindings/pybind11/smsd_bindings.cpp",
@@ -127,25 +164,29 @@ def checked_source(path, manifest_path=None):
 
 def verify_source_tree(path, commit):
     """Require every packaged source file to belong to the frozen Git tree."""
-    tree = subprocess.check_output(["git", "ls-tree", "-r", "-z", "--full-tree", commit])
-    blobs = {}
-    for entry in tree.split(b"\0"):
-        if entry:
-            metadata, name = entry.split(b"\t", 1)
-            mode, kind, identity = metadata.split()
-            if kind == b"blob" and mode in (b"100644", b"100755"):
-                blobs[name.decode("utf-8")] = identity.decode("ascii")
-    with tarfile.open(path, "r:gz") as archive:
-        for member in archive.getmembers():
-            if not member.isfile():
-                continue
-            relative = PurePosixPath(*PurePosixPath(member.name).parts[1:]).as_posix()
-            if relative == "PKG-INFO":
-                continue
-            data = archive.extractfile(member).read()
-            identity = hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + b"\0" + data).hexdigest()
-            if blobs.get(relative) != identity:
-                raise ValueError("Source archive differs from frozen Git tree: " + relative)
+    blobs = tree_blobs(subprocess.check_output(["git", "ls-tree", "-r", "-z", "--full-tree", commit]))
+    for relative, data in read_source_archive(path).items():
+        if relative != "PKG-INFO" and blobs.get(relative) != git_blob_id(data):
+            raise ValueError("Source archive differs from frozen Git tree: " + relative)
+
+
+def run_native_debug_tests(source_dir, build_dir, jobs, environment=None, cwd=None):
+    """Build every native Debug test suite from an SDK checkout and run them all."""
+    def run(command):
+        subprocess.run(command, env=environment, cwd=cwd, check=True)
+    run(["cmake", "-S", str(source_dir / "cpp"), "-B", str(build_dir), *NATIVE_CMAKE_OPTIONS])
+    run(["cmake", "--build", str(build_dir), "--config", "Debug", "--parallel", str(jobs)])
+    listing = subprocess.check_output(["ctest", "--test-dir", str(build_dir), "--build-config", "Debug",
+                                       "--show-only=json-v1"], env=environment, cwd=cwd, text=True)
+    tests = json.loads(listing).get("tests", [])
+    if len(tests) < NATIVE_TEST_FLOOR:
+        raise ValueError("Expected at least " + str(NATIVE_TEST_FLOOR) + " native Debug test suites; found "
+                         + str(len(tests)))
+    if any(prop.get("name") == "DISABLED" and prop.get("value")
+           for test in tests for prop in test.get("properties", [])):
+        raise ValueError("Native Debug test suites must not be disabled")
+    run(["ctest", "--test-dir", str(build_dir), "--build-config", "Debug", "--output-on-failure"])
+    return len(tests)
 
 
 def proof_digest(proof):
@@ -237,13 +278,10 @@ def verify_local(args):
     if platform.system() != host or platform.machine().lower() not in architectures:
         raise ValueError("Local wheel checks require the wheel's native host architecture")
     source_dir = args.source_dir.resolve()
-    with tarfile.open(args.sdist, "r:gz") as archive:
-        for member in archive.getmembers():
-            if member.isfile():
-                relative = Path(*PurePosixPath(member.name).parts[1:])
-                path = source_dir / relative
-                if not path.is_file() or path.read_bytes() != archive.extractfile(member).read():
-                    raise ValueError("Extracted SDK differs from the source distribution: " + relative.as_posix())
+    for relative, data in read_source_archive(args.sdist).items():
+        path = source_dir / relative
+        if not path.is_file() or path.read_bytes() != data:
+            raise ValueError("Extracted SDK differs from the source distribution: " + relative)
     native_dir = args.native_test_dir.resolve()
     if native_dir.exists() and any(native_dir.iterdir()):
         raise ValueError("Native release checks require a new or empty build directory")
@@ -254,21 +292,8 @@ def verify_local(args):
     for name in ("PYTHONPATH", "PYTHONHOME", "SMSD_DISABLE_GPU"):
         environment.pop(name, None)
     with tempfile.TemporaryDirectory(prefix="smsd-wheel-check-") as temporary:
-        subprocess.run(["cmake", "-S", str(source_dir / "cpp"), "-B", str(native_dir),
-                        "-DCMAKE_BUILD_TYPE=Debug", "-DSMSD_BUILD_TESTS=ON", "-DSMSD_BUILD_PYTHON=OFF",
-                        "-DSMSD_BUILD_OPENMP=ON", "-DSMSD_BUILD_METAL=OFF", "-DSMSD_BUILD_CUDA=OFF",
-                        "-DSMSD_WITH_RDKIT=OFF"], env=environment, cwd=temporary, check=True)
-        subprocess.run(["cmake", "--build", str(native_dir), "--config", "Debug", "--parallel", jobs],
-                       env=environment, cwd=temporary, check=True)
-        listing = subprocess.check_output(["ctest", "--test-dir", str(native_dir), "--build-config", "Debug",
-                                          "--show-only=json-v1"], env=environment, cwd=temporary, text=True)
-        tests = json.loads(listing).get("tests", [])
-        if len(tests) < 12 or any(prop.get("name") == "DISABLED" and prop.get("value")
-                                 for test in tests for prop in test.get("properties", [])):
-            raise ValueError("Expected all native Debug test suites")
-        checks = (["ctest", "--test-dir", str(args.native_test_dir.resolve()), "--build-config", "Debug",
-                   "--output-on-failure"],
-                  [sys.executable, str(source_dir / "scripts/check_python_wheel.py"),
+        run_native_debug_tests(source_dir, native_dir, jobs, environment, temporary)
+        checks = ([sys.executable, str(source_dir / "scripts/check_python_wheel.py"),
                    "--source", str(source_dir), "--require-rdkit", "--require-openmp"],
                   [sys.executable, "-m", "pytest", str(source_dir / "python/tests"), "-q",
                    "--import-mode=importlib"])
@@ -365,7 +390,7 @@ def build(args):
         if args.platform == "linux":
             for license_name in ("COPYING3", "COPYING.RUNTIME"):
                 if not any(name.endswith("/" + license_name) for name in archive.namelist()):
-                    raise ValueError("Linux wheel is missing libgomp license notice " + license_name)
+                    raise ValueError("Linux wheel is missing libgomp licence notice " + license_name)
     record_build(source, wheel, args.output_dir, "cibuildwheel", identifier)
 
 

@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Validate published SMSD distributions before uploading the unchanged files."""
 
 import argparse
 from email.parser import BytesParser
-import hashlib
 import importlib.util
 import json
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 import re
 import shutil
 import subprocess
@@ -26,20 +29,6 @@ _BUILD_SPEC.loader.exec_module(BUILD)
 def require(condition, message):
     if not condition:
         raise ValueError(message)
-
-
-def sha256(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def read_json(path):
-    def unique_pairs(pairs):
-        value = {}
-        for key, item in pairs:
-            require(key not in value, "Duplicate JSON key: " + key)
-            value[key] = item
-        return value
-    return json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique_pairs)
 
 
 def release_version(tag):
@@ -115,7 +104,7 @@ def download(args):
                                    f"repos/{args.repository}/releases/tags/{args.tag}"])
     args.metadata_file.parent.mkdir(parents=True, exist_ok=True)
     args.metadata_file.write_bytes(raw)
-    _, assets, _ = selected_assets(read_json(args.metadata_file), args.tag)
+    _, assets, _ = selected_assets(BUILD.read_manifest(args.metadata_file), args.tag)
     args.release_dir.mkdir(parents=True, exist_ok=True)
     command = ["gh", "release", "download", args.tag, "--repo", args.repository,
                "--dir", str(args.release_dir)]
@@ -125,30 +114,12 @@ def download(args):
     print("Downloaded one published SDK and three release wheels with their manifests")
 
 
-def source_files(path):
-    files, roots = {}, set()
-    with tarfile.open(path, "r:gz") as archive:
-        for member in archive.getmembers():
-            parts = PurePosixPath(member.name).parts
-            require(parts and not member.name.startswith("/") and ".." not in parts
-                    and "\\" not in member.name and ":" not in member.name
-                    and (member.isfile() or member.isdir()),
-                    "Unsafe SDK member: " + member.name)
-            roots.add(parts[0])
-            if member.isfile():
-                relative = PurePosixPath(*parts[1:]).as_posix()
-                require(relative and relative not in files, "Duplicate SDK member: " + relative)
-                files[relative] = archive.extractfile(member).read()
-    require(len(roots) == 1, "Expected one SDK archive root")
-    return files
-
-
 def check_source(directory, version, manifest):
     name = f"smsd-{version}.tar.gz"
-    files = source_files(directory / name)
+    files = BUILD.read_source_archive(directory / name)
     require(manifest.get("version") == version and manifest.get("sdist") == name,
             "Source manifest version or filename differs")
-    require(manifest.get("sdist_sha256") == sha256(directory / name),
+    require(manifest.get("sdist_sha256") == BUILD.sha256(directory / name),
             "Source manifest SHA256 differs")
     require(type(manifest.get("source_file_count")) is int
             and manifest["source_file_count"] == len(files), "Source manifest file count differs")
@@ -197,26 +168,18 @@ def check_git(checkout, tag, manifest, files):
     require(all(not name or Path(name.decode()).suffix in (".md", ".rst")
                 or name == b"CITATION.cff" for name in changed),
             "Tagged production files differ from the frozen SDK")
-    tree = git(checkout, "ls-tree", "-r", "-z", "--full-tree", frozen)
-    blobs = {}
-    for entry in tree.split(b"\0"):
-        if entry:
-            metadata, name = entry.split(b"\t", 1)
-            mode, kind, identity = metadata.split()
-            if kind == b"blob" and mode in (b"100644", b"100755"):
-                blobs[name.decode("utf-8")] = identity.decode("ascii")
+    blobs = BUILD.tree_blobs(git(checkout, "ls-tree", "-r", "-z", "--full-tree", frozen))
     for name, content in files.items():
         if name == "PKG-INFO":
             continue
-        identity = hashlib.sha1(b"blob " + str(len(content)).encode("ascii") + b"\0" + content).hexdigest()
-        require(blobs.get(name) == identity, "SDK file differs from frozen source: " + name)
+        require(blobs.get(name) == BUILD.git_blob_id(content), "SDK file differs from frozen source: " + name)
     collector = "scripts/collect-release-wheels.py"
     require((checkout / collector).read_bytes() == files[collector], "Tagged collector differs from SDK")
     return checkout / collector
 
 
 def check_wheel_manifest(directory, version, source, families, package_metadata):
-    manifest = read_json(directory / "WHEEL_MANIFEST.json")
+    manifest = BUILD.read_manifest(directory / "WHEEL_MANIFEST.json")
     BUILD.checked_wheel_manifest(directory, source,
                                  {family: directory / name for family, name in families.items()}, manifest)
     require(manifest.get("schema_version") == 1, "Unexpected wheel manifest schema")
@@ -229,7 +192,7 @@ def check_wheel_manifest(directory, version, source, families, package_metadata)
         family = entry.get("platform")
         require(family in families and family not in recorded, "Duplicate or unknown manifest platform")
         require(entry.get("wheel") == families[family], "Wheel manifest filename differs")
-        require(entry.get("wheel_sha256") == sha256(directory / families[family]),
+        require(entry.get("wheel_sha256") == BUILD.sha256(directory / families[family]),
                 "Wheel manifest SHA256 differs")
         with zipfile.ZipFile(directory / families[family]) as wheel:
             require(wheel.read(f"smsd-{version}.dist-info/METADATA") == package_metadata,
@@ -253,7 +216,7 @@ def check_hashes(directory, assets):
     for name, asset in assets.items():
         path = directory / name
         require(path.is_file() and not path.is_symlink(), "Expected a regular release file")
-        actual = sha256(path)
+        actual = BUILD.sha256(path)
         require(path.stat().st_size == asset["size"] and asset["digest"] == "sha256:" + actual,
                 "GitHub asset digest or size differs: " + name)
         if name != "SHA256SUMS":
@@ -261,9 +224,9 @@ def check_hashes(directory, assets):
 
 
 def validate(args):
-    version, assets, families = selected_assets(read_json(args.metadata_file), args.tag)
+    version, assets, families = selected_assets(BUILD.read_manifest(args.metadata_file), args.tag)
     check_hashes(args.release_dir, assets)
-    source = read_json(args.release_dir / "SOURCE_MANIFEST.json")
+    source = BUILD.read_manifest(args.release_dir / "SOURCE_MANIFEST.json")
     files = check_source(args.release_dir, version, source)
     collector = check_git(args.source_checkout, args.tag, source, files)
     check_wheel_manifest(args.release_dir, version, source, families, files["PKG-INFO"])
@@ -275,13 +238,13 @@ def validate(args):
     for name in distributions:
         shutil.copyfile(args.release_dir / name, args.dist_dir / name)
     receipt = {"version": version, "source_commit": source["source_commit"],
-               "files": {name: sha256(args.release_dir / name) for name in distributions}}
+               "files": {name: BUILD.sha256(args.release_dir / name) for name in distributions}}
     args.receipt_file.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
     print("Validated unchanged SDK and all three release wheels")
 
 
 def verify_staged(args):
-    receipt = read_json(args.receipt_file)
+    receipt = BUILD.read_manifest(args.receipt_file)
     version = release_version("v" + receipt["version"])
     files = receipt.get("files", {})
     require(isinstance(files, dict) and len(files) == 4
@@ -291,7 +254,7 @@ def verify_staged(args):
     for name, expected in files.items():
         require(safe_name(name) and re.fullmatch(r"[0-9a-f]{64}", expected)
                 and (args.dist_dir / name).is_file() and not (args.dist_dir / name).is_symlink()
-                and sha256(args.dist_dir / name) == expected, "Staged distribution hash differs")
+                and BUILD.sha256(args.dist_dir / name) == expected, "Staged distribution hash differs")
         if name.endswith(".whl"):
             families.add(wheel_platform(name, version))
     require(families == {"linux", "macos", "windows"}, "Staged platforms differ")

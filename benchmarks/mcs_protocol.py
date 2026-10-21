@@ -1,19 +1,23 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Shared, explicit protocol for local SMSD and RDKit FMCS measurements.
 
 FMCS can omit an edge between selected query atoms, whereas SMSD returns a
 query-vertex mapping. Such a result is retained but excluded from speed claims.
-Parsing, graph conversion, validation and warmup are outside the search timer.
+Parsing, graph conversion, validation and warm-up are outside the search timer.
 """
 from dataclasses import asdict, dataclass
 import statistics
 import time
 
 import smsd
-import smsd._smsd as native
 from rdkit import Chem
 from rdkit.Chem import rdFMCS
+
+from mcs_pairs import MCS_PAIRS_FILE, load_mcs_pairs  # noqa: F401  (shared with benchmark_python.py)
 
 
 class StrictAtoms(rdFMCS.MCSAtomCompare):
@@ -37,8 +41,8 @@ def chem_options(policy):
         return chem
     chem = smsd.ChemOptions()
     chem.aromaticity_mode = smsd.AromaticityMode.FLEXIBLE
-    # LOOSE in historical SMSD versions accepts every unequal bond order.
-    # Never present it as RDKit CompareOrder compatibility.
+    # LOOSE accepts every unequal bond order, so it never stands in for
+    # RDKit CompareOrder.
     chem.match_bond_order = (smsd.BondOrderMode.ANY if policy == "any"
                              else smsd.BondOrderMode.STRICT)
     chem.ring_matches_ring_only = False
@@ -97,8 +101,8 @@ def graph_from_rdkit(mol, policy=None):
     if hasattr(builder, "bond_ring_flags") and hasattr(builder, "bond_aromatic_flags"):
         graph = builder.bond_ring_flags(ring_bonds).bond_aromatic_flags(aromatic_bonds).build(False)
     else:
-        # Historical bindings could not import bond flags. Re-perceive and
-        # verify every property before accepting this graph for comparison.
+        # Bindings without bond-flag setters re-perceive the flags; every
+        # property is verified before this graph is accepted for comparison.
         graph = builder.build(True)
     assert_graph_parity(mol, graph, policy)
     return graph
@@ -147,7 +151,7 @@ def bond_matches(a, b, policy):
         return True
     if a.GetBondType() == b.GetBondType():
         return True
-    # Exact historical SMSD STRICT + FLEXIBLE semantics, not LOOSE.
+    # Exactly SMSD's STRICT bond order with FLEXIBLE aromaticity, not LOOSE.
     return ((a.GetIsAromatic() and b.GetBondTypeAsDouble() in (1, 2))
             or (b.GetIsAromatic() and a.GetBondTypeAsDouble() in (1, 2))
             or (a.GetBondTypeAsDouble() in (1, 2) and b.GetBondTypeAsDouble() in (1, 2)
@@ -255,7 +259,7 @@ def measure_pair(smi1, smi2, policy="strict", timeout_sec=10, warmup=1, repeats=
             data = asdict(row); data["trial"] = trial
             # A mapping-only call that ends just below its deadline may have
             # exhausted a millisecond-granularity budget. Do not rank its speed
-            # as an uncanceled completion merely because the outer timer is short.
+            # as an uncancelled completion merely because the outer timer is short.
             data["near_budget"] = row.elapsed_us >= timeout_sec*990000
             if not row.error:
                 data["mapping"] = mapping
@@ -283,7 +287,7 @@ def summarize(rows, policy):
                                          if any(x["timeout"] is not None for x in values) else None)
         result[engine + "_budget_reached"] = sum(x["budget_reached"] for x in values)
         result[engine + "_near_budget"] = sum(x.get("near_budget", False) for x in values)
-    # FMCS CompareOrder and historical SMSD flexible aromaticity differ.
+    # FMCS CompareOrder and SMSD flexible aromaticity differ.
     # Strict mode adds a Python atom-comparison callback to RDKit.
     result["rdkit_python_comparator"] = policy == "strict"
     result["chemical_policy_equivalent"] = policy in ("strict", "any")

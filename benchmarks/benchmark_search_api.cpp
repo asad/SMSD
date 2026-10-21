@@ -1,6 +1,12 @@
-/* SPDX-License-Identifier: Apache-2.0
+/*
+ * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
+ * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ *
  * Public search API measurements; validation and JSON formatting are outside timers.
+ * --threads N runs batch rows on N threads (0 for all hardware threads); --batch-targets FILE
+ * fills each batch with distinct molecules read from FILE instead of copies of the case target.
  */
 #include "smsd/mcs.hpp"
 #include "smsd/substructure.hpp"
@@ -14,6 +20,19 @@
 
 namespace {
 using Clock = std::chrono::steady_clock;
+
+/** A call shorter than one clock tick reads 0 ns: record 1 ns and flag it; it is never a speed result. */
+struct Elapsed { int64_t ns; bool belowTimerResolution; };
+
+Elapsed elapsedSince(Clock::time_point started) {
+    const int64_t ns = std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - started).count();
+    return ns == 0 ? Elapsed{1, true} : Elapsed{ns, false};
+}
+
+void elapsedJson(std::ostream& output, const Elapsed& elapsed) {
+    output << ",\"elapsed_ns\":" << elapsed.ns;
+    if (elapsed.belowTimerResolution) output << ",\"below_timer_resolution\":true";
+}
 using Prepared = std::variant<smsd::MCS, smsd::Substructure>;
 struct Case {
     std::string id, operation, queryText, targetText;
@@ -255,28 +274,57 @@ void validate(const Case& item, const smsd::MolGraph& query, const smsd::MolGrap
     if (budget.stopped()) throw std::runtime_error("Validation budget expired");
 }
 
-void run(const Case& item, const std::vector<std::string>& phases, int warmup, int repeats, std::ostream& output) {
+/** One SMILES per line, optionally after an identifier and a tab; blank lines and # comments are skipped. */
+std::vector<std::string> readBatchTargets(const std::string& filename) {
+    std::ifstream input(filename);
+    if (!input) throw std::runtime_error("Cannot read batch targets file");
+    std::vector<std::string> targets;
+    std::string line;
+    while (std::getline(input, line)) {
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (line.empty() || line.front() == '#') continue;
+        targets.push_back(split(line, '\t').back());
+    }
+    if (targets.empty()) throw std::invalid_argument("No batch targets");
+    return targets;
+}
+
+/** How batch rows run: the thread count and, when given, the distinct targets that fill a batch in turn. */
+struct BatchSettings {
+    int threads = 1;
+    std::vector<std::string> distinctTargets;
+};
+
+void run(const Case& item, const std::vector<std::string>& phases, int warmup, int repeats, const BatchSettings& batch,
+         std::ostream& output) {
     const auto query = item.operation == "smarts" ? smsd::MolGraph{} : smsd::parseSMILES(item.queryText);
     const auto target = smsd::parseSMILES(item.targetText);
+    const bool distinct = !batch.distinctTargets.empty();
     const auto pattern = item.operation == "smarts" ? std::optional<smsd::SmartsQuery>(smsd::parseSMARTS(item.queryText)) : std::nullopt;
     const std::string graphPhase = std::find(phases.begin(), phases.end(), "prepared") != phases.end() ? "prepared" : phases.front();
     for (const auto& phase : phases) {
         std::optional<Prepared> prepared;
         if (phase == "prepared" || phase == "batch") prepared = prepare(item, query);
         std::vector<smsd::MolGraph> targets;
-        if (phase == "batch") targets.assign(item.batchSize, target);
+        if (phase == "batch") {
+            if (!distinct) targets.assign(item.batchSize, target);
+            else for (size_t index = 0; index < item.batchSize; ++index)
+                targets.push_back(smsd::parseSMILES(batch.distinctTargets[index % batch.distinctTargets.size()]));
+        }
         for (int sample = -warmup; sample < repeats; ++sample) {
             std::vector<smsd::SearchResult> results;
             smsd::SearchResult scalar;
             const auto started = Clock::now();
             if (phase == "prepare") {
                 auto constructed = prepare(item, query);
-                const auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - started).count();
+                const auto elapsed = elapsedSince(started);
                 prepared = std::move(constructed);
                 if (sample < 0) continue;
                 output << "{\"case_id\":"; quoted(output, item.id);
                 output << ",\"language\":\"cpp\",\"phase\":\"prepare\",\"sample\":" << sample
-                    << ",\"elapsed_ns\":" << elapsed << ",\"results\":[]";
+                    << ",\"threads\":1";
+                elapsedJson(output, elapsed);
+                output << ",\"results\":[]";
             } else {
                 if (phase == "end_to_end") {
                     const auto parsedQuery = item.operation == "smarts" ? smsd::MolGraph{} : smsd::parseSMILES(item.queryText);
@@ -284,20 +332,33 @@ void run(const Case& item, const std::vector<std::string>& phases, int warmup, i
                     const auto constructed = prepare(item, parsedQuery);
                     scalar = match(item, constructed, parsedTarget);
                 } else if (phase == "batch") {
-                    results = std::visit([&](const auto& constructed) { return constructed.matchMany(targets, 1); }, *prepared);
+                    results = std::visit([&](const auto& constructed) { return constructed.matchMany(targets, batch.threads); },
+                                         *prepared);
                 } else scalar = match(item, *prepared, target);
-                const auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - started).count();
+                const auto elapsed = elapsedSince(started);
                 if (phase != "batch") results.push_back(std::move(scalar));
-                for (const auto& result : results) validate(item, query, target, result, pattern);
+                for (size_t index = 0; index < results.size(); ++index)
+                    validate(item, query, phase == "batch" ? targets[index] : target, results[index], pattern);
                 if (sample < 0) continue;
                 output << "{\"case_id\":"; quoted(output, item.id);
                 output << ",\"language\":\"cpp\",\"phase\":"; quoted(output, phase);
-                output << ",\"sample\":" << sample << ",\"elapsed_ns\":" << elapsed << ",\"results\":[";
+                output << ",\"sample\":" << sample << ",\"threads\":" << (phase == "batch" ? batch.threads : 1);
+                if (phase == "batch") output << ",\"batch_targets\":\"" << (distinct ? "distinct" : "copies") << '"';
+                elapsedJson(output, elapsed);
+                output << ",\"results\":[";
                 for (size_t index = 0; index < results.size(); ++index) {
                     if (index != 0) output << ',';
                     resultJson(output, results[index]);
                 }
                 output << ']';
+                if (phase == "batch" && distinct && sample == 0) {
+                    output << ",\"batch_target_graphs\":[";
+                    for (size_t index = 0; index < targets.size(); ++index) {
+                        if (index != 0) output << ',';
+                        graphJson(output, targets[index]);
+                    }
+                    output << ']';
+                }
             }
             output << ",\"query_graph\":";
             if (sample == 0 && phase == graphPhase && item.operation != "smarts") graphJson(output, query); else output << "null";
@@ -312,8 +373,9 @@ void run(const Case& item, const std::vector<std::string>& phases, int warmup, i
 
 int main(int argc, char** argv) {
     try {
-        std::string casesFile, outputFile, selectedPhase, selectedCase;
+        std::string casesFile, outputFile, selectedPhase, selectedCase, batchTargetsFile;
         int warmup = 0, repeats = 1;
+        BatchSettings batch;
         for (int index = 1; index < argc; index += 2) {
             if (index + 1 >= argc) throw std::invalid_argument("Expected option value");
             const std::string option = argv[index], value = argv[index + 1];
@@ -321,6 +383,12 @@ int main(int argc, char** argv) {
             else if (option == "--output") outputFile = value;
             else if (option == "--phase") selectedPhase = value;
             else if (option == "--case") selectedCase = value;
+            else if (option == "--batch-targets") batchTargetsFile = value;
+            else if (option == "--threads") {
+                const auto count = integer(value);
+                if (count < 0 || count > 4096) throw std::invalid_argument("Invalid thread count");
+                batch.threads = static_cast<int>(count);
+            }
             else if (option == "--warmup" || option == "--repeats") {
                 const auto count = integer(value);
                 if (count < 0 || count > INT_MAX || (option == "--repeats" && count == 0)) throw std::invalid_argument("Invalid sample count");
@@ -329,6 +397,7 @@ int main(int argc, char** argv) {
         }
         if (casesFile.empty() || outputFile.empty()) throw std::invalid_argument("--cases and --output are required");
         const auto cases = readCases(casesFile);
+        if (!batchTargetsFile.empty()) batch.distinctTargets = readBatchTargets(batchTargetsFile);
         std::ofstream output(outputFile);
         if (!output) throw std::runtime_error("Cannot write output file");
         output << std::boolalpha << std::setprecision(17);
@@ -339,7 +408,7 @@ int main(int argc, char** argv) {
             for (const auto& phase : item.phases) if (selectedPhase.empty() || phase == selectedPhase) phases.push_back(phase);
             if (phases.empty()) continue;
             found = true;
-            try { run(item, phases, warmup, repeats, output); }
+            try { run(item, phases, warmup, repeats, batch, output); }
             catch (const std::exception& error) { throw std::runtime_error(item.id + ": " + error.what()); }
         }
         if (!found) throw std::invalid_argument("No cases selected");

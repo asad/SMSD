@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 # CPU-only native MCS benchmark; passes arguments through to benchmark_cpp.
 set -euo pipefail
 script_dir="$(cd "$(dirname "$0")" && pwd)"

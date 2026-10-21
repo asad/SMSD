@@ -1,14 +1,19 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2018-2026 BioInception PVT LTD
+ * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ */
+#include "test_support.hpp"
 #include "smsd/mcs.hpp"
+#include "smsd/substructure.hpp"
 #include <functional>
 #include <iostream>
 #include <set>
 #include <stdexcept>
 #include <tuple>
 
-static void require(bool condition, const char* message) {
-    if (!condition) throw std::runtime_error(message);
-}
+using smsd_test::require;
 
 static smsd::MolGraph graph(int mask) {
     std::vector<std::vector<int>> adjacent(3);
@@ -143,6 +148,19 @@ static void candidatesAcrossWordBoundaries() {
     result = smsd::MCS::find(query).withOptions(options).matchAll(target, 1000);
     require(result.optimal && result.complete && result.score == 2 && result.matches.size() == 2,
             "Fragment search must retain both separated available atoms");
+
+    smsd::SubstructureOptions substructureOptions; substructureOptions.timeoutMs = 10000;
+    result = smsd::Substructure::find(query).withOptions(substructureOptions).matchAll(target, 1000);
+    std::set<Mapping> embeddings;
+    for (const auto& match : result.matches) embeddings.insert(match.atomMapping);
+    const std::set<Mapping> expected{{{0, 63}, {1, 64}, {2, 65}}, {{0, 65}, {1, 64}, {2, 63}}};
+    require(result.optimal && result.complete && result.matches.size() == 2 && embeddings == expected,
+            "Substructure enumeration must retain both full orientations across target-word boundaries");
+    elements[64] = 6;
+    const auto interrupted = smsd::MolGraph::Builder().atomCount(130).atomicNumbers(elements).setNeighbors(adjacent).build(false);
+    result = smsd::Substructure::find(query).withOptions(substructureOptions).matchAll(interrupted, 1000);
+    require(result.optimal && result.complete && result.matches.empty(),
+            "A carbon between the nitrogen atoms must prevent a full substructure embedding");
 }
 
 using SelectedKey = std::pair<Mapping, std::vector<std::pair<int, int>>>;
@@ -243,16 +261,55 @@ static void oneFragmentIsConnected() {
             "Two disconnected common edges must retain all eight incident-atom embeddings");
 }
 
-int main(int argc, char** argv) {
-    const std::string selected = argc > 1 ? argv[1] : "all";
-    int failures = 0;
-    for (const auto& group : {std::pair<const char*, void(*)()>{"oracle", exhaustiveSmallGraphs},
-                              {"proof", connectedNaturalProductProof}, {"adjacency", optionalAdjacencyWords},
-                              {"word-boundaries", candidatesAcrossWordBoundaries}, {"edge-oracle", exhaustiveCommonEdges},
-                              {"one-fragment", oneFragmentIsConnected}}) {
-        if (selected != "all" && selected != group.first) continue;
-        try { group.second(); std::cout << "PASS " << group.first << '\n'; }
-        catch (const std::exception& error) { std::cerr << "FAIL " << group.first << ": " << error.what() << '\n'; ++failures; }
+static void exhaustedFullQueryProof() {
+    const auto query = smsd::parseSMILES("C1CCCCCCCCCCC1");
+    const auto target = smsd::parseSMILES("C1CCCCCCCCCCCCCC1");
+    for (auto connectivity : {smsd::MCSConnectivity::Connected, smsd::MCSConnectivity::Fragments}) {
+        smsd::MCSOptions options;
+        options.connectivity = connectivity; options.nodeLimit = 600; options.timeoutMs = 10000;
+        const auto result = smsd::MCS::find(query).withOptions(options).match(target);
+        require(result.optimal && result.complete && result.status == smsd::SearchStatus::Completed,
+                "An exhausted full-query search must retain its near-complete optimum proof");
+        require(result.score == 11 && result.matches.front().bondMapping.size() == 10,
+                "Unequal cycles must retain the eleven-atom common path");
+        require(smsd::MCS::validateMapping(query, target, result.matches.front(), options).empty(),
+                "Invalid near-complete cycle mapping");
     }
-    return failures == 0 ? 0 : 1;
+    for (const auto& pair : {std::pair<const char*, const char*>{"CCCC", "C1CCC1"}, {"CC.C", "CCC"}}) {
+        const auto source = smsd::parseSMILES(pair.first), destination = smsd::parseSMILES(pair.second);
+        const auto all = smsd::MCS::find(source).withTimeout(10000).matchAll(destination, 1000);
+        const size_t expected = source.n == 4 ? 16 : 4;
+        require(all.optimal && all.complete && all.matches.size() == expected,
+                "A near-complete proof must preserve every tied embedding");
+        for (const auto& match : all.matches)
+            require(smsd::MCS::validateMapping(source, destination, match).empty(),
+                    "Invalid near-complete tied mapping");
+    }
+}
+
+static void heterocycleCommonEdgeProof() {
+    const auto query = smsd::parseSMILES("C1CCCNC1");
+    const auto target = smsd::parseSMILES("C1CCCCCCCC1");
+    for (auto connectivity : {smsd::MCSConnectivity::Connected, smsd::MCSConnectivity::Fragments}) {
+        smsd::MCSOptions options;
+        options.objective = smsd::MCSObjective::MCES;
+        options.connectivity = connectivity;
+        options.nodeLimit = 128;
+        options.timeoutMs = 10000;
+        const auto result = smsd::MCS::find(query).withOptions(options).match(target);
+        require(result.optimal && result.complete && result.status == smsd::SearchStatus::Completed,
+                "The heterocycle common-edge optimum must be proved within the node budget");
+        require(result.score == 4 && result.matches.front().atomMapping.size() == 5,
+                "The common-edge result must retain the five-carbon path");
+        require(smsd::MCS::validateMapping(query, target, result.matches.front(), options).empty(),
+                "Invalid common-edge heterocycle mapping");
+    }
+}
+
+int main(int argc, char** argv) {
+    return smsd_test::runGroups(argc, argv, {
+        {"oracle", exhaustiveSmallGraphs}, {"proof", connectedNaturalProductProof},
+        {"adjacency", optionalAdjacencyWords}, {"word-boundaries", candidatesAcrossWordBoundaries},
+        {"edge-oracle", exhaustiveCommonEdges}, {"one-fragment", oneFragmentIsConnected},
+        {"full-query-proof", exhaustedFullQueryProof}, {"edge-proof", heterocycleCommonEdgeProof}});
 }

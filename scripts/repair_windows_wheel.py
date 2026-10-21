@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Repair an AMD64 wheel using validated Microsoft release runtimes.
 
 Run on native 64-bit Windows with delvewheel==1.13.1 installed. Runtime files

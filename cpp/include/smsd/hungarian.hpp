@@ -2,7 +2,8 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
- * See the NOTICE file for attribution, trademark, and algorithm IP terms. */
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ */
 #pragma once
 
 #include <algorithm>
@@ -38,7 +39,7 @@ struct AssignmentResult {
  * @param cost     m x n cost matrix (may be rectangular)
  * @param penalty  cost for unmatched rows/columns in rectangular problems (default 1.0)
  * @return         Optimal (row, col) pairs and the sum of their real costs;
- *                 totalCost excludes unmatched penalties, as in earlier releases
+ *                 totalCost excludes unmatched penalties
  * @throws         std::invalid_argument for ragged matrices or nonfinite costs/penalty
  * @throws         std::overflow_error if reduced-cost arithmetic overflows
  */
@@ -141,8 +142,11 @@ inline AssignmentResult optimalAssign(
     return result;
 }
 
-// Backward-compatible aliases
-using HungarianResult = AssignmentResult;
+/// @deprecated Use AssignmentResult.
+using HungarianResult [[deprecated("Use AssignmentResult.")]] = AssignmentResult;
+
+/// @deprecated Use optimalAssign().
+[[deprecated("Use optimalAssign().")]]
 inline AssignmentResult hungarianSolve(
         const std::vector<std::vector<double>>& cost,
         double penalty = 1.0) {

@@ -2,15 +2,16 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  */
+#include "test_support.hpp"
 #include "smsd/mol_graph.hpp"
+#include "smsd/smiles_parser.hpp"
 
 #include <iostream>
 #include <stdexcept>
 
-static void require(bool condition, const char* message) {
-    if (!condition) throw std::runtime_error(message);
-}
+using smsd_test::require;
 
 static smsd::MolGraph atom(int number, int isotope, int charge, int hydrogens, int atomClass = 0) {
     return smsd::MolGraph::Builder().atomCount(1).atomicNumbers({number})
@@ -46,19 +47,21 @@ static void testDoubleBondStereo() {
             "member writer lost alkene configuration");
 }
 
-int main(int argc, char** argv) {
-    int failures = 0;
-    const std::pair<const char*, void (*)()> tests[] = {
-        {"atom-properties", testAtomProperties}, {"tetrahedral", testTetrahedralStereo},
-        {"double-bond", testDoubleBondStereo}
-    };
-    for (const auto& test : tests) {
-        if (argc > 1 && argv[1] != std::string(test.first)) continue;
-        try { test.second(); std::cout << "PASS " << test.first << '\n'; }
-        catch (const std::exception& error) {
-            ++failures;
-            std::cerr << "FAIL " << test.first << ": " << error.what() << '\n';
-        }
+static void testParserWriterParity() {
+    for (const char* text : {"[13CH4]", "[NH4+]", "[C]", "[CH2]", "[CH3:7]",
+            "C[C@H](N)C(=O)O", "N[C@@H](C)C(=O)O", "C/C=C/C", "C/C=C\\C",
+            "C/C=C(/F)\\C(Cl)=C/C", "C1[C@H](F)CCC[C@@H]1F",
+            "C[N@](CC)CCC", "c1ccc(-c2ccccc2)cc1", "[nH]1cccc1", "CCO.[Na+]"}) {
+        const auto graph = smsd::parseSMILES(text);
+        const auto member = graph.toCanonicalSmiles();
+        require(member == smsd::toSMILES(graph), std::string("member and free writer differ: ") + text);
+        require(smsd::parseSMILES(member).getCanonicalHash() == graph.getCanonicalHash(),
+                std::string("member writer changed molecule: ") + text);
     }
-    return failures == 0 ? 0 : 1;
+}
+
+int main(int argc, char** argv) {
+    return smsd_test::runGroups(argc, argv, {
+        {"atom-properties", testAtomProperties}, {"tetrahedral", testTetrahedralStereo},
+        {"double-bond", testDoubleBondStereo}, {"parity", testParserWriterParity}});
 }

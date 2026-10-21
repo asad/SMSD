@@ -34,6 +34,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.openscience.cdk.DefaultChemObjectBuilder;
 import org.openscience.cdk.aromaticity.Aromaticity;
@@ -50,7 +51,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 /**
- * Core SMSD Tests: consolidated from SMSDTest.java, SMSDRobustTest.java, SMSDCasesTest.java, SMSDComprehensiveTest.java.
+ * Core tests: the search API and its options, robustness to awkward input, reference substructure
+ * and MCS cases, and chemistry coverage from heterocycles to charged species.
  *
  * @author Syed Asad Rahman
  */
@@ -58,7 +60,7 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 public class CoreTest {
 
   // ======================================================================
-  // From: SMSDTest.java
+  // Search API and options
   // ======================================================================
 
 
@@ -100,7 +102,7 @@ public class CoreTest {
       AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms(m);
       Cycles.markRingAtomsAndBonds(m);
       @SuppressWarnings(
-          "deprecation") // CDK 2.11 transitional; use Aromaticity.Model.Daylight in 2.12+
+          "deprecation") // ElectronDonation.daylight() is deprecated in CDK
       boolean applied = new Aromaticity(ElectronDonation.daylight(), Cycles.all()).apply(m);
       return m;
     } catch (Exception e) {
@@ -108,7 +110,7 @@ public class CoreTest {
     }
   }
 
-  // Java 11: materialise the bonds iterable (no Iterable#toList())
+  // Materialise the bonds iterable, which has no toList() of its own.
   private static List<IBond> bonds(IAtomContainer m) {
     List<IBond> out = new ArrayList<>();
     for (IBond b : m.bonds()) out.add(b);
@@ -624,7 +626,7 @@ public class CoreTest {
   }
 
   // ======================================================================
-  // From: SMSDRobustTest.java
+  // Robustness to awkward input
   // ======================================================================
 
 
@@ -716,8 +718,6 @@ public class CoreTest {
     return allSmilesCases().limit(30);
   }
 
-  // Removed: extraCasesRepeated() was running 90 duplicate tests (9 copies of 10 cases).
-
   // -----------------------------
   // Tests
   // -----------------------------
@@ -734,8 +734,6 @@ public class CoreTest {
     boolean ok = smsd.contains();
     assertEquals(expected, ok, name + ": '" + q + "' vs '" + t + "' expected " + expected);
   }
-
-  // Removed: test_substructure_extra_repeated ran 90 duplicate tests identical to extraCases.
 
   @ParameterizedTest(name = "{0}")
   @MethodSource("smartsCases")
@@ -782,14 +780,12 @@ public class CoreTest {
     assertNotNull(mr, name + ": MCS result should not be null");
   }
 
-  // Removed: test_cli_json_shape_comment was a trivially-passing placeholder (assertTrue(true)).
-
   // ======================================================================
-  // From: SMSDCasesTest.java
+  // Reference substructure and MCS cases
   // ======================================================================
 
 
-  // Alias for local use (original code used instance field 'sp')
+  // The shared parser, as an instance field for the nested tests.
   private final org.openscience.cdk.smiles.SmilesParser sp = SP;
 
   @Nested
@@ -1083,7 +1079,7 @@ public class CoreTest {
   }
 
   // ======================================================================
-  // From: SMSDComprehensiveTest.java
+  // Chemistry coverage: heterocycles, ring systems, functional groups, charges and options
   // ======================================================================
 
 
@@ -1154,7 +1150,6 @@ public class CoreTest {
       Map<Integer, Integer> mcs = smsd.mcsMapping( true, 5000L);
       assertTrue(mcs.size() >= 5, "Spiro MCS should share at least one ring");
     }
-    // Removed: adamantaneSelfMatch — duplicated by AdversarialTest.adamantaneSelfMatch.
   }
 
   // ======================================================================
@@ -1901,6 +1896,586 @@ public class CoreTest {
       assertFalse(result.optimal());
       assertFalse(result.complete());
       assertTrue(result.elapsedMillis()>=0);
+    }
+    @Test
+    void fragmentSearchProvesAWholeQueryEmbeddingImmediately() throws Exception {
+      // ChEMBL nearest-neighbour pair 604: the query is an induced subgraph of the target.
+      IAtomContainer query=mol("CC1OC(OC2C(O)C(O)C(CO)OC2Oc2cc(O)cc(C=Cc3ccc(O)cc3)c2)C(O)C(O)C1O");
+      MCS.Options options=new MCS.Options();
+      options.connectivity=MCS.Connectivity.Fragments;
+      options.timeoutMillis=30000;
+      SearchResult result=MCS.find(query).withOptions(options).match(
+          mol("Oc1ccc(C=Cc2cc(O)cc(OC3C(OC4OC(C)C(O)C(O)C4O)C(O)C(O)C(COC4OC(C)C(O)C(O)C4O)O3)c2)cc1"));
+      assertTrue(result.optimal());
+      assertEquals(query.getAtomCount(),result.matches().get(0).atomCount());
+      assertTrue(result.nodesVisited()<10_000,"nodes "+result.nodesVisited());
+    }
+    @ParameterizedTest
+    @CsvSource({"C1CC1CCCC,C1CC1CCC1CCCCC1,rings", "C[C@H](N)O,C[C@@H](N)OC,chirality"})
+    void rejectedWholeQueryEmbeddingStillFindsTheOptimum(String query,String target,String rule)
+        throws Exception {
+      MCS.Options options=new MCS.Options();
+      options.connectivity=MCS.Connectivity.Fragments;
+      options.timeoutMillis=30000;
+      options.chemistry.completeRingsOnly=rule.equals("rings");
+      options.chemistry.useChirality=rule.equals("chirality");
+      SearchResult result=MCS.find(mol(query)).withOptions(options).match(mol(target));
+      // Any node limit selects the dynamic search order and skips the whole-query probe.
+      options.nodeLimit=Long.MAX_VALUE;
+      SearchResult previous=MCS.find(mol(query)).withOptions(options).match(mol(target));
+      assertTrue(result.optimal());
+      assertTrue(previous.optimal());
+      assertEquals(previous.score(),result.score());
+      assertEquals(previous.matches().get(0).bondCount(),result.matches().get(0).bondCount());
+    }
+    @Test
+    void fragmentSearchGrowsMappedPiecesFirst() throws Exception {
+      // ChEMBL random pair 4051: growing mapped pieces first proves its 23-atom optimum in time.
+      MCS.Options options=new MCS.Options();
+      options.connectivity=MCS.Connectivity.Fragments;
+      options.timeoutMillis=30000;
+      SearchResult result=MCS.find(mol("CC(=O)NC(C)C#Cc1cnc(Oc2c([N+]([O-])=O)cc(OCC(C)C)cc2)s1"))
+          .withOptions(options).match(mol("Cc1ccccc1NC(NCCCCC(NC(C(Cc1c[nH]c2ccccc12)NC(OC(C)(C)C)=O)=O)"
+              +"C(=O)NC(CC(O)=O)C(N(C)C(Cc1ccccc1)C(N)=O)=O)=O"));
+      assertTrue(result.optimal());
+      assertEquals(23,result.matches().get(0).atomCount());
+      assertTrue(result.nodesVisited()<200_000,"nodes "+result.nodesVisited());
+    }
+  }
+
+  @Nested
+  @DisplayName("Common-bond MCES search")
+  class CommonBondSearchTests {
+
+    private MolGraph graph(String smiles) throws Exception {
+      return new MolGraph(SP.parseSmiles(smiles));
+    }
+
+    private MCS.Options mces(MCS.Connectivity connectivity, ChemOptions.BondOrderMode bondOrder) {
+      MCS.Options options = new MCS.Options();
+      options.objective = MCS.Objective.MCES;
+      options.connectivity = connectivity;
+      options.chemistry.matchBondOrder = bondOrder;
+      options.timeoutMillis = 30_000;
+      return options;
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        // ChEMBL random pairs 3471, 7381 and 3168 with their optimal common bond counts.
+        "N#Cc1ccc(C(Nc2ccc3cc4ccc(NC(c5ccc(C#N)cc5)=O)cc4nc3c2)=O)cc1"
+            + "|OCCCNP(O)(=O)OC1CC(n2cnc3c(N)ncnc23)OC1COP(O)(=O)OC1CC(n2ccc(N)nc2=O)OC1COP(O)(O)=O|24",
+        "COc1c(Cl)cc(Nc2nc3ccc(C(=O)c4ccccc4)cc3n3c(C)nnc32)c(OC)c1"
+            + "|CCCCc1n(Cc2ccc(-c3ccccc3-c3nn[nH]n3)cc2)c(SCc2ccccc2-c2nn[nH]n2)nn1|27",
+        "CCCCCCCCCCCCCCCNC(OCCOCCOC(CCCCC[n+]1ccsc1)=O)=O"
+            + "|OP(O)(=O)C(F)(F)c1ccc(CC(n2nnc3ccccc23)(c2scc(-c3ccccc3)n2)Cc2ccc(C(F)(F)P(O)(O)=O)cc2)cc1|27"})
+    void fragmentMcesProofFitsItsNodeBudget(
+        String querySmiles, String targetSmiles, int bonds) throws Exception {
+      MolGraph query = graph(querySmiles), target = graph(targetSmiles);
+      MCS.Options options = mces(MCS.Connectivity.Fragments, ChemOptions.BondOrderMode.ANY);
+      SearchResult result = MCS.find(query).withOptions(options).match(target);
+      assertEquals(SearchResult.Status.Completed, result.status());
+      assertTrue(result.optimal());
+      assertEquals(bonds, result.matches().get(0).bondCount());
+      assertEquals(bonds, result.score());
+      assertTrue(result.nodesVisited() < 20_000, "nodes " + result.nodesVisited());
+      assertTrue(MCS.validateMapping(query, target, result.matches().get(0), options).isEmpty());
+      // The node limit caps the pairs the search maps: with as many as the proof took, the search
+      // proves the same optimum; with fewer, it stops with a valid mapping and no proof.
+      options.nodeLimit = result.nodesVisited();
+      SearchResult enough = MCS.find(query).withOptions(options).match(target);
+      assertEquals(SearchResult.Status.Completed, enough.status());
+      assertTrue(enough.optimal());
+      assertEquals(bonds, enough.matches().get(0).bondCount());
+      options.nodeLimit = Math.max(1, result.nodesVisited() / 2);
+      SearchResult capped = MCS.find(query).withOptions(options).match(target);
+      assertEquals(SearchResult.Status.LimitReached, capped.status());
+      assertFalse(capped.optimal());
+      assertTrue(capped.nodesVisited() <= options.nodeLimit);
+      assertTrue(capped.matches().get(0).bondCount() <= bonds);
+      assertTrue(MCS.validateMapping(query, target, capped.matches().get(0), options).isEmpty());
+    }
+
+    @Test
+    void stoppedSearchesKeepAValidIncumbentWithoutClaimingOptimality() throws Exception {
+      // ChEMBL random pair 8031, which takes far longer than these limits to prove.
+      MolGraph query = graph("Cn1nnnc1Sc1ncnc2scc(-c3c(Cl)cccc3)c21");
+      MolGraph target = graph("NCCCCC(N)C(=O)NC(CCCCN)C(NC(CCCCN)C(NC(C(NC(C(NC(C(NC(C(NC(C=O)CCCCN)=O)"
+          + "CCCCN)=O)CCCCN)=O)CCCCN)=O)CCCCN)=O)=O");
+      MCS.Options options = mces(MCS.Connectivity.Fragments, ChemOptions.BondOrderMode.STRICT);
+      options.timeoutMillis = 200;
+      SearchResult timedOut = MCS.find(query).withOptions(options).match(target);
+      java.util.concurrent.atomic.AtomicInteger checks = new java.util.concurrent.atomic.AtomicInteger();
+      options.timeoutMillis = 30_000;
+      options.cancellation = () -> checks.incrementAndGet() > 200;
+      SearchResult cancelled = MCS.find(query).withOptions(options).match(target);
+      assertEquals(SearchResult.Status.TimedOut, timedOut.status());
+      assertEquals(SearchResult.Status.Cancelled, cancelled.status());
+      for (SearchResult result : Arrays.asList(timedOut, cancelled)) {
+        assertFalse(result.optimal());
+        assertFalse(result.complete());
+        assertTrue(result.found());
+        assertEquals(result.matches().get(0).bondCount(), result.score());
+        assertTrue(MCS.validateMapping(query, target, result.matches().get(0), options).isEmpty());
+      }
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "CC(=O)Oc1ccccc1C(=O)O, CC(=O)Nc1ccc(O)cc1",
+        "CC(C)Cc1ccc(C(C)C(=O)O)cc1, COc1ccc2cc(C(C)C(=O)O)ccc2c1",
+        "Cn1cnc2c1c(=O)n(C)c(=O)n2C, Cn1c(=O)c2[nH]cnc2n(C)c1=O",
+        "c1ccc2ccccc2c1, c1ccccc1CC",
+        "C1CCC2CCCCC2C1, C12C3C4C1C5C2C3C45",
+        "NCC(=O)O.CCO, OCC(N)=O"})
+    void scoresIgnoreAnUnreachableNodeLimit(String querySmiles, String targetSmiles)
+        throws Exception {
+      MolGraph query = graph(querySmiles), target = graph(targetSmiles);
+      for (MCS.Connectivity connectivity : MCS.Connectivity.values())
+        for (ChemOptions.BondOrderMode bondOrder : new ChemOptions.BondOrderMode[] {
+                 ChemOptions.BondOrderMode.STRICT, ChemOptions.BondOrderMode.ANY}) {
+          MCS.Options options = mces(connectivity, bondOrder);
+          SearchResult result = MCS.find(query).withOptions(options).match(target);
+          // An unreachable node limit leaves the search and its objective unchanged.
+          options.nodeLimit = Long.MAX_VALUE;
+          SearchResult general = MCS.find(query).withOptions(options).match(target);
+          String label = connectivity + " " + bondOrder;
+          assertTrue(result.optimal(), label);
+          assertTrue(general.optimal(), label);
+          assertEquals(general.score(), result.score(), label);
+          assertEquals(general.matches().get(0).bondCount(), result.matches().get(0).bondCount(), label);
+          assertEquals(general.matches().get(0).atomCount(), result.matches().get(0).atomCount(), label);
+          assertTrue(MCS.validateMapping(query, target, result.matches().get(0), options).isEmpty(),
+              label);
+        }
+    }
+
+    // Every MCES option goes to the common-bond search, which gives the same tied mapping as C++.
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "all|Connected|7|2|{3=8, 4=7, 5=6, 6=5, 7=4, 8=10, 9=9}",
+        "all|Fragments|9|2|{0=0, 1=1, 2=2, 3=8, 4=7, 5=6, 6=5, 7=4, 8=10, 9=9}",
+        "chirality|Connected|2|1|{3=1, 4=2, 5=3}",
+        "chirality|Fragments|2|1|{3=1, 4=2, 5=3}",
+        "bondStereo|Connected|3|1|{0=5, 1=4, 2=3, 3=2}",
+        "bondStereo|Fragments|4|1|{0=0, 1=1, 2=2, 3=3, 4=4, 5=5}",
+        "rings|Connected|6|1|{3=0, 4=1, 5=2, 6=3, 7=4, 8=5}",
+        "rings|Fragments|6|1|{3=0, 4=1, 5=2, 6=3, 7=4, 8=5}",
+        "weights|Connected|9|1|{3=1, 4=2}",
+        "weights|Fragments|14|1|{1=3, 2=4, 3=1, 4=2}",
+        "minAtoms|Connected|3|1|{0=0, 1=1, 2=2, 3=3}",
+        "minAtoms|Fragments|5|1|{0=0, 1=1, 2=2, 3=3, 4=5, 5=6, 6=7}"})
+    void commonBondOptionsKeepTheirResults(String mode, MCS.Connectivity connectivity,
+        double score, int matches, String firstMapping) throws Exception {
+      String querySmiles = mode.equals("all")          ? "CC(=O)Oc1ccccc1C(=O)O"
+                           : mode.equals("chirality")  ? "CCC[C@H](F)Cl"
+                           : mode.equals("bondStereo") ? "CC/C=C/CC"
+                           : mode.equals("rings")      ? "c1ccc2ccccc2c1"
+                           : mode.equals("weights")    ? "CCO.CN"
+                                                       : "CCCC.OCCO";
+      String targetSmiles = mode.equals("all")          ? "CC(=O)Nc1ccc(O)cc1"
+                            : mode.equals("chirality")  ? "C[C@@H](F)Cl"
+                            : mode.equals("bondStereo") ? "CC/C=C\\CC"
+                            : mode.equals("rings")      ? "c1ccccc1CC"
+                            : mode.equals("weights")    ? "CCN.CO"
+                                                        : "CCCCC.OCCCO";
+      MolGraph query = graph(querySmiles), target = graph(targetSmiles);
+      MCS.Options options = mces(connectivity, ChemOptions.BondOrderMode.STRICT);
+      options.chemistry.useChirality = mode.equals("chirality");
+      options.chemistry.useBondStereo = mode.equals("bondStereo");
+      options.chemistry.completeRingsOnly = mode.equals("rings");
+      if (mode.equals("weights")) {
+        options.objective = MCS.Objective.MCIS;
+        options.atomWeights = new double[] {1, 2, 3, 4, 5};
+      }
+      if (mode.equals("minAtoms"))
+        options.minFragmentAtoms = 3;
+      MCS prepared = MCS.find(query).withOptions(options);
+      SearchResult result = mode.equals("all") ? prepared.matchAll(target, 1000) : prepared.match(target);
+      assertEquals(SearchResult.Status.Completed, result.status());
+      assertTrue(result.optimal());
+      assertEquals(score, result.score());
+      assertEquals(matches, result.matches().size());
+      assertEquals(firstMapping, result.matches().get(0).atomMapping().toString());
+      assertTrue(MCS.validateMapping(query, target, result.matches().get(0), options).isEmpty());
+    }
+
+    /** The state of a fixed 64-bit linear congruential sequence, the same as in the C++ tests. */
+    private long drawState;
+
+    /** The next draw of the sequence, from 0 up to {@code bound}. */
+    private int draw(int bound) {
+      drawState = drawState * 6364136223846793005L + 1442695040888963407L;
+      return (int) ((drawState >>> 33) % bound);
+    }
+
+    @Test
+    void seededOptionsIgnoreAnUnreachableNodeLimit() throws Exception {
+      // The same pairs and draws are in the C++ MCS regression tests.
+      String[][] pairs = {
+          {"Oc1ccccc1", "Oc1ccncc1"}, {"CC(=O)[O-]", "CC(=O)OC"}, {"[13CH3]C(=O)O", "CC(=O)O"},
+          {"c1ccc2ccccc2c1", "C1CCC2CCCCC2C1"}, {"O=c1cc[nH]cc1", "Oc1ccncc1"},
+          {"C1CC2CCC1C2", "CC1CCCCC1"}, {"C[N+](C)(C)CC(=O)O", "CN(C)CC(N)=O"},
+          {"NCC(=O)O.CCO", "OCC(N)=O"}, {"c1ccc(cc1)-c1ccccn1", "C=Cc1ccccc1"},
+          {"[15NH2]c1ccccc1", "Nc1ccc(O)cc1"}};
+      ChemOptions.BondOrderMode[] bondOrders = {
+          ChemOptions.BondOrderMode.LOOSE, ChemOptions.BondOrderMode.ANY};
+      ChemOptions.AromaticityMode[] aromaticities = {
+          ChemOptions.AromaticityMode.STRICT, ChemOptions.AromaticityMode.FLEXIBLE};
+      ChemOptions.RingFusionMode[] fusions = {ChemOptions.RingFusionMode.IGNORE,
+          ChemOptions.RingFusionMode.PERMISSIVE, ChemOptions.RingFusionMode.STRICT};
+      drawState = 20261019L;
+      int cases = 0;
+      for (String[] pair : pairs) {
+        for (int round = 0; round < 8; round++, cases++) {
+          // Fresh graphs, so that validation prepares what the options compare by itself.
+          MolGraph query = graph(pair[0]), target = graph(pair[1]);
+          MCS.Connectivity connectivity =
+              draw(2) == 0 ? MCS.Connectivity.Connected : MCS.Connectivity.Fragments;
+          MCS.Options options = mces(connectivity, bondOrders[draw(2)]);
+          options.chemistry.aromaticityMode = aromaticities[draw(2)];
+          options.chemistry.matchIsotope = draw(2) == 1;
+          options.chemistry.matchFormalCharge = draw(2) == 1;
+          options.chemistry.ringFusionMode = fusions[draw(3)];
+          options.chemistry.matchAtomType = draw(4) != 0;
+          for (int excluded = draw(3); excluded > 0; excluded--)
+            options.excludedTargetAtoms.add(draw(target.atomCount()));
+          String label = pair[0] + " " + pair[1] + " " + connectivity + " "
+              + options.chemistry.matchBondOrder + " " + options.chemistry.aromaticityMode
+              + " isotope " + options.chemistry.matchIsotope + " charge "
+              + options.chemistry.matchFormalCharge + " " + options.chemistry.ringFusionMode
+              + " type " + options.chemistry.matchAtomType + " excluded "
+              + options.excludedTargetAtoms;
+          SearchResult result = MCS.find(query).withOptions(options).match(target);
+          // An unreachable node limit leaves the search and its objective unchanged.
+          options.nodeLimit = Long.MAX_VALUE;
+          SearchResult general = MCS.find(query).withOptions(options).match(target);
+          assertTrue(result.optimal() && general.optimal(), label);
+          assertEquals(general.found(), result.found(), label);
+          assertEquals(general.score(), result.score(), label);
+          if (!result.found())
+            continue;
+          for (SearchResult found : Arrays.asList(result, general)) {
+            SearchResult.Match match = found.matches().get(0);
+            assertTrue(MCS.validateMapping(query, target, match, options).isEmpty(), label);
+            for (int targetAtom : match.atomMapping().values())
+              assertFalse(options.excludedTargetAtoms.contains(targetAtom), label);
+          }
+          assertEquals(general.matches().get(0).bondCount(), result.matches().get(0).bondCount(), label);
+          assertEquals(general.matches().get(0).atomCount(), result.matches().get(0).atomCount(), label);
+        }
+      }
+      assertEquals(80, cases);
+    }
+
+    /** Three aromatic carbons joined by bonds of the given orders that are not aromatic. */
+    private MolGraph aromaticChain(int firstOrder, int secondOrder) {
+      return new MolGraph.Builder().atomCount(3).atomicNumbers(new int[] {6, 6, 6})
+          .aromaticFlags(new boolean[] {true, true, true})
+          .neighbors(new int[][] {{1}, {0, 2}, {1}})
+          .bondOrders(new int[][] {{firstOrder}, {firstOrder, secondOrder}, {secondOrder}})
+          .build();
+    }
+
+    @Test
+    void flexibleAromaticityInterchangesSingleAndDoubleBondsBetweenAromaticAtoms() {
+      // The same graphs and expectations are in the C++ MCS regression tests.
+      MolGraph query = aromaticChain(1, 1), target = aromaticChain(2, 1);
+      for (ChemOptions.AromaticityMode mode : ChemOptions.AromaticityMode.values()) {
+        boolean flexible = mode == ChemOptions.AromaticityMode.FLEXIBLE;
+        Substructure.Options substructure = new Substructure.Options();
+        substructure.chemistry.aromaticityMode = mode;
+        assertEquals(flexible,
+            Substructure.find(query).withOptions(substructure).match(target).found(), mode.name());
+        for (long nodeLimit : new long[] {0, Long.MAX_VALUE}) {
+          MCS.Options options = mces(MCS.Connectivity.Fragments, ChemOptions.BondOrderMode.STRICT);
+          options.chemistry.aromaticityMode = mode;
+          options.nodeLimit = nodeLimit;
+          SearchResult result = MCS.find(query).withOptions(options).match(target);
+          String label = mode + " node limit " + nodeLimit;
+          assertTrue(result.optimal(), label);
+          assertEquals(flexible ? 2 : 1, result.matches().get(0).bondCount(), label);
+          assertEquals(flexible ? 3 : 2, result.matches().get(0).atomCount(), label);
+          assertTrue(MCS.validateMapping(query, target, result.matches().get(0), options).isEmpty(),
+              label);
+        }
+      }
+    }
+
+    @Test
+    void strictRingFusionValidatesAQueryThatNoSearchPrepared() throws Exception {
+      MCS.Options options = mces(MCS.Connectivity.Connected, ChemOptions.BondOrderMode.STRICT);
+      options.chemistry.ringFusionMode = ChemOptions.RingFusionMode.STRICT;
+      MolGraph target = graph("C1CCC2CCCCC2C1");
+      SearchResult result = MCS.find(graph("C1CCC2CCCCC2C1")).withOptions(options).match(target);
+      assertTrue(result.optimal());
+      assertEquals(11, result.matches().get(0).bondCount());
+      // The search worked out the ring counts of the target only; validation works out the query's.
+      assertTrue(MCS.validateMapping(graph("C1CCC2CCCCC2C1"), target, result.matches().get(0), options)
+          .isEmpty());
+    }
+  }
+
+  @Nested
+  @DisplayName("Common-atom MCIS search")
+  class CommonAtomSearchTests {
+
+    private MolGraph graph(String smiles) throws Exception {
+      return new MolGraph(SP.parseSmiles(smiles));
+    }
+
+    private MCS.Options mcis(MCS.Connectivity connectivity, ChemOptions.BondOrderMode bondOrder) {
+      MCS.Options options = new MCS.Options();
+      options.objective = MCS.Objective.MCIS;
+      options.connectivity = connectivity;
+      options.chemistry.matchBondOrder = bondOrder;
+      options.timeoutMillis = 30_000;
+      return options;
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        // ChEMBL random pairs 5776, 7041 and 8361 with their optimal atoms and bonds. The same
+        // mappings are in the C++ MCS regression tests.
+        "CC(OC1C(=O)C2(C)C(O)CC3OCC3(OC(C)=O)C2C(OC(c2cc(N=[N+]=[N-])ccc2)=O)C2(O)CC(OC(C(O)C(NC(OC(C)(C)C)=O)C(F)F)=O)C(C)=C1C2(C)C)=O"
+            + "|CC1N(C(=O)c2ccc(C(F)(F)F)cc2)CC(=O)OC1(Cn1cncn1)c1c(F)cc(F)cc1|26|23"
+            + "|{0=15, 1=16, 2=18, 3=19, 4=1, 6=0, 22=3, 23=5, 24=14, 25=13, 29=8, 30=7, 31=6, 32=4, 33=32, "
+            + "35=30, 36=29, 41=22, 42=23, 43=24, 51=11, 52=10, 54=27, 56=26, 57=33, 60=17}",
+        "COc1ccc(CCNC(=O)Cn2cc(S(Cc3ccc(F)cc3)(=O)=O)c3ccccc23)cc1OC"
+            + "|CC(OC1OC2OC3(C)CCC4C(C)CCC(C1C)C24OO3)c1ccc(C(=O)O)cc1|25|20"
+            + "|{0=5, 1=6, 2=7, 3=9, 4=10, 5=11, 6=12, 7=13, 10=27, 13=0, 14=1, 16=3, 17=17, 18=18, 22=15, "
+            + "23=16, 24=28, 25=20, 26=22, 27=23, 28=24, 29=25, 30=29, 31=30, 33=8}",
+        "C=CCNC(=O)C(C#N)=Cc1c(=O)n2cccc(C)c2nc1N1CCN(c2ccc(OC)cc2)CC1"
+            + "|CS(=O)c1c(-c2nc(C(=O)Nc3ccccc3)c(N)nc2)cccc1|21|18"
+            + "|{5=2, 10=7, 11=8, 12=9, 13=10, 14=11, 15=12, 16=13, 17=14, 18=15, 20=18, 21=17, 22=19, "
+            + "24=0, 26=4, 27=21, 28=22, 29=23, 32=24, 33=3, 35=20}"})
+    void fragmentMcisProofFitsANodeBudgetTheGeneralSearchExceeds(String querySmiles,
+        String targetSmiles, int atoms, int bonds, String mapping) throws Exception {
+      MolGraph query = graph(querySmiles), target = graph(targetSmiles);
+      MCS.Options options = mcis(MCS.Connectivity.Fragments, ChemOptions.BondOrderMode.ANY);
+      SearchResult result = MCS.find(query).withOptions(options).match(target);
+      assertEquals(SearchResult.Status.Completed, result.status());
+      assertTrue(result.optimal());
+      assertEquals(atoms, result.matches().get(0).atomCount());
+      assertEquals(bonds, result.matches().get(0).bondCount());
+      assertEquals(atoms, result.score());
+      assertEquals(mapping, result.matches().get(0).atomMapping().toString());
+      assertTrue(result.nodesVisited() < 20_000, "nodes " + result.nodesVisited());
+      assertTrue(MCS.validateMapping(query, target, result.matches().get(0), options).isEmpty());
+      // A node limit keeps the general search, which does not prove the optimum within it.
+      options.nodeLimit = 20_000;
+      SearchResult general = MCS.find(query).withOptions(options).match(target);
+      assertEquals(SearchResult.Status.LimitReached, general.status());
+      assertFalse(general.optimal());
+      assertTrue(general.matches().get(0).atomCount() <= atoms);
+    }
+
+    @Test
+    void stoppedSearchesKeepAValidIncumbentWithoutClaimingOptimality() throws Exception {
+      // ChEMBL random pair 7175, which takes far longer than these limits to prove.
+      MolGraph query = graph("COc1cc2c(c(OC)c1OC)-c1c(cc(=O)c(SC)cc1)C(NC(=O)c1ccc([N+]([O-])=O)"
+          + "c(CO[N+]([O-])=O)c1)CC2");
+      MolGraph target = graph("CC(C)=CCc1cc(C2CC(=O)c3c(c(CC=C(C)C)c(O)c(CC=C(C)C)c3O)O2)cc(O)c1O");
+      MCS.Options options = mcis(MCS.Connectivity.Fragments, ChemOptions.BondOrderMode.STRICT);
+      options.timeoutMillis = 200;
+      SearchResult timedOut = MCS.find(query).withOptions(options).match(target);
+      java.util.concurrent.atomic.AtomicInteger checks = new java.util.concurrent.atomic.AtomicInteger();
+      options.timeoutMillis = 30_000;
+      options.cancellation = () -> checks.incrementAndGet() > 200;
+      SearchResult cancelled = MCS.find(query).withOptions(options).match(target);
+      assertEquals(SearchResult.Status.TimedOut, timedOut.status());
+      assertEquals(SearchResult.Status.Cancelled, cancelled.status());
+      for (SearchResult result : Arrays.asList(timedOut, cancelled)) {
+        assertFalse(result.optimal());
+        assertFalse(result.complete());
+        assertTrue(result.found());
+        assertEquals(result.matches().get(0).atomCount(), result.score());
+        assertTrue(MCS.validateMapping(query, target, result.matches().get(0), options).isEmpty());
+      }
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "CC(=O)Oc1ccccc1C(=O)O, CC(=O)Nc1ccc(O)cc1",
+        "CC(C)Cc1ccc(C)cc1, COc1ccc(C(C)C=O)cc1",
+        "Cn1cnc2c1c(=O)n(C)c(=O)n2C, Cn1c(=O)c2[nH]cnc2n(C)c1=O",
+        "c1ccc2ccccc2c1, c1ccccc1CC",
+        "C1CCC2CCCCC2C1, C12C3C4C1C5C2C3C45",
+        "NCC(=O)O.CCO, OCC(N)=O",
+        "CC(C)(C)c1ccccc1.O.N, O.Nc1ccccc1",
+        "C1CC1C1CC1.C, CC.C1CC1"})
+    void scoresAgreeWithTheGeneralSearch(String querySmiles, String targetSmiles)
+        throws Exception {
+      MolGraph query = graph(querySmiles), target = graph(targetSmiles);
+      for (int minAtoms = 1; minAtoms <= 2; minAtoms++)
+        for (ChemOptions.BondOrderMode bondOrder : new ChemOptions.BondOrderMode[] {
+                 ChemOptions.BondOrderMode.STRICT, ChemOptions.BondOrderMode.ANY})
+          for (boolean exclude : new boolean[] {false, true}) {
+            MCS.Options options = mcis(MCS.Connectivity.Fragments, bondOrder);
+            options.minFragmentAtoms = minAtoms;
+            if (exclude)
+              options.excludedTargetAtoms.addAll(Arrays.asList(0, target.atomCount() - 1));
+            SearchResult result = MCS.find(query).withOptions(options).match(target);
+            // An unreachable node limit keeps the general search without changing the objective.
+            options.nodeLimit = Long.MAX_VALUE;
+            SearchResult general = MCS.find(query).withOptions(options).match(target);
+            String label = "minimum " + minAtoms + " " + bondOrder + " excluded " + exclude;
+            assertTrue(result.optimal(), label);
+            assertTrue(general.optimal(), label);
+            assertEquals(general.found(), result.found(), label);
+            assertEquals(general.score(), result.score(), label);
+            if (!result.found())
+              continue;
+            SearchResult.Match match = result.matches().get(0);
+            assertEquals(general.matches().get(0).atomCount(), match.atomCount(), label);
+            assertEquals(general.matches().get(0).bondCount(), match.bondCount(), label);
+            assertTrue(MCS.validateMapping(query, target, match, options).isEmpty(), label);
+            for (int targetAtom : match.atomMapping().values())
+              assertFalse(options.excludedTargetAtoms.contains(targetAtom), label);
+          }
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        "all|Fragments|9|12|{0=0, 1=1, 2=2, 4=4, 5=5, 6=6, 7=7, 8=9, 9=10}",
+        "chirality|Fragments|3|1|{3=1, 4=2, 5=3}",
+        "bondStereo|Fragments|5|1|{0=0, 1=1, 2=2, 3=3, 5=5}",
+        "rings|Fragments|6|1|{0=2, 1=3, 2=4, 3=5, 8=0, 9=1}",
+        "weights|Fragments|14|1|{1=3, 2=4, 3=1, 4=2}",
+        "minAtoms|Fragments|7|1|{0=0, 1=1, 2=2, 3=3, 4=5, 5=6, 6=7}",
+        "maxFragments|Fragments|7|1|{0=0, 1=1, 2=2, 3=3, 4=5, 5=6, 6=7}",
+        "plain|Connected|7|1|{3=8, 4=7, 5=6, 6=5, 7=4, 8=10, 9=9}"})
+    void ineligibleOptionsKeepThePreviousResults(String mode, MCS.Connectivity connectivity,
+        double score, int matches, String firstMapping) throws Exception {
+      boolean drugs = mode.equals("all") || mode.equals("plain");
+      String querySmiles = drugs                       ? "CC(=O)Oc1ccccc1C(=O)O"
+                           : mode.equals("chirality")  ? "CCC[C@H](F)Cl"
+                           : mode.equals("bondStereo") ? "CC/C=C/CC"
+                           : mode.equals("rings")      ? "c1ccc2ccccc2c1"
+                           : mode.equals("weights")    ? "CCO.CN"
+                                                       : "CCCC.OCCO";
+      String targetSmiles = drugs                       ? "CC(=O)Nc1ccc(O)cc1"
+                            : mode.equals("chirality")  ? "C[C@@H](F)Cl"
+                            : mode.equals("bondStereo") ? "CC/C=C\\CC"
+                            : mode.equals("rings")      ? "c1ccccc1CC"
+                            : mode.equals("weights")    ? "CCN.CO"
+                                                        : "CCCCC.OCCCO";
+      MolGraph query = graph(querySmiles), target = graph(targetSmiles);
+      MCS.Options options = mcis(connectivity, ChemOptions.BondOrderMode.STRICT);
+      options.chemistry.useChirality = mode.equals("chirality");
+      options.chemistry.useBondStereo = mode.equals("bondStereo");
+      options.chemistry.completeRingsOnly = mode.equals("rings");
+      if (mode.equals("weights"))
+        options.atomWeights = new double[] {1, 2, 3, 4, 5};
+      if (mode.equals("minAtoms"))
+        options.minFragmentAtoms = 3;
+      if (mode.equals("maxFragments"))
+        options.maxFragments = 2;
+      MCS prepared = MCS.find(query).withOptions(options);
+      SearchResult result = mode.equals("all") ? prepared.matchAll(target, 1000) : prepared.match(target);
+      assertEquals(SearchResult.Status.Completed, result.status());
+      assertTrue(result.optimal());
+      assertEquals(score, result.score());
+      assertEquals(matches, result.matches().size());
+      assertEquals(firstMapping, result.matches().get(0).atomMapping().toString());
+      assertTrue(MCS.validateMapping(query, target, result.matches().get(0), options).isEmpty());
+    }
+
+    /** The state of a fixed 64-bit linear congruential sequence, the same as in the C++ tests. */
+    private long drawState;
+
+    /** The next draw of the sequence, from 0 up to {@code bound}. */
+    private int draw(int bound) {
+      drawState = drawState * 6364136223846793005L + 1442695040888963407L;
+      return (int) ((drawState >>> 33) % bound);
+    }
+
+    @Test
+    void seededOptionsAgreeWithTheGeneralSearch() throws Exception {
+      // The same pairs and draws are in the C++ MCS regression tests.
+      String[][] pairs = {
+          {"Oc1ccccc1", "Oc1ccncc1"}, {"CC(=O)[O-]", "CC(=O)OC"}, {"[13CH3]C(=O)O", "CC(=O)O"},
+          {"c1ccc2ccccc2c1", "C1CCC2CCCCC2C1"}, {"O=c1cc[nH]cc1", "Oc1ccncc1"},
+          {"C1CC2CCC1C2", "CC1CCCCC1"}, {"C[N+](C)(C)CC(=O)O", "CN(C)CC(N)=O"},
+          {"NCC(=O)O.CCO", "OCC(N)=O"}, {"c1ccc(cc1)-c1ccccn1", "C=Cc1ccccc1"},
+          {"[15NH2]c1ccccc1", "Nc1ccc(O)cc1"}};
+      ChemOptions.BondOrderMode[] bondOrders = {ChemOptions.BondOrderMode.STRICT,
+          ChemOptions.BondOrderMode.LOOSE, ChemOptions.BondOrderMode.ANY};
+      ChemOptions.AromaticityMode[] aromaticities = {
+          ChemOptions.AromaticityMode.STRICT, ChemOptions.AromaticityMode.FLEXIBLE};
+      ChemOptions.RingFusionMode[] fusions = {ChemOptions.RingFusionMode.IGNORE,
+          ChemOptions.RingFusionMode.PERMISSIVE, ChemOptions.RingFusionMode.STRICT};
+      drawState = 20261020L;
+      int cases = 0;
+      for (String[] pair : pairs) {
+        for (int round = 0; round < 8; round++, cases++) {
+          // Fresh graphs, so that validation prepares what the options compare by itself.
+          MolGraph query = graph(pair[0]), target = graph(pair[1]);
+          MCS.Options options = mcis(MCS.Connectivity.Fragments, bondOrders[draw(3)]);
+          options.minFragmentAtoms = 1 + draw(2);
+          options.chemistry.aromaticityMode = aromaticities[draw(2)];
+          options.chemistry.matchIsotope = draw(2) == 1;
+          options.chemistry.matchFormalCharge = draw(2) == 1;
+          options.chemistry.ringFusionMode = fusions[draw(3)];
+          options.chemistry.matchAtomType = draw(4) != 0;
+          for (int excluded = draw(3); excluded > 0; excluded--)
+            options.excludedTargetAtoms.add(draw(target.atomCount()));
+          String label = pair[0] + " " + pair[1] + " minimum " + options.minFragmentAtoms + " "
+              + options.chemistry.matchBondOrder + " " + options.chemistry.aromaticityMode
+              + " isotope " + options.chemistry.matchIsotope + " charge "
+              + options.chemistry.matchFormalCharge + " " + options.chemistry.ringFusionMode
+              + " type " + options.chemistry.matchAtomType + " excluded "
+              + options.excludedTargetAtoms;
+          SearchResult result = MCS.find(query).withOptions(options).match(target);
+          // An unreachable node limit keeps the general search without changing the objective.
+          options.nodeLimit = Long.MAX_VALUE;
+          SearchResult general = MCS.find(query).withOptions(options).match(target);
+          assertTrue(result.optimal() && general.optimal(), label);
+          assertEquals(general.found(), result.found(), label);
+          assertEquals(general.score(), result.score(), label);
+          if (!result.found())
+            continue;
+          for (SearchResult found : Arrays.asList(result, general)) {
+            SearchResult.Match match = found.matches().get(0);
+            assertTrue(MCS.validateMapping(query, target, match, options).isEmpty(), label);
+            for (int targetAtom : match.atomMapping().values())
+              assertFalse(options.excludedTargetAtoms.contains(targetAtom), label);
+          }
+          assertEquals(general.matches().get(0).atomCount(), result.matches().get(0).atomCount(), label);
+          assertEquals(general.matches().get(0).bondCount(), result.matches().get(0).bondCount(), label);
+        }
+      }
+      assertEquals(80, cases);
+    }
+
+    /** Three aromatic carbons joined by bonds of the given orders that are not aromatic. */
+    private MolGraph aromaticChain(int firstOrder, int secondOrder) {
+      return new MolGraph.Builder().atomCount(3).atomicNumbers(new int[] {6, 6, 6})
+          .aromaticFlags(new boolean[] {true, true, true})
+          .neighbors(new int[][] {{1}, {0, 2}, {1}})
+          .bondOrders(new int[][] {{firstOrder}, {firstOrder, secondOrder}, {secondOrder}})
+          .build();
+    }
+
+    @Test
+    void flexibleAromaticityKeepsResonanceBondsInducedBetweenAromaticAtoms() {
+      // The same graphs and expectations are in the C++ MCS regression tests.
+      MolGraph query = aromaticChain(1, 1), target = aromaticChain(2, 1);
+      for (ChemOptions.AromaticityMode mode : ChemOptions.AromaticityMode.values()) {
+        boolean flexible = mode == ChemOptions.AromaticityMode.FLEXIBLE;
+        for (long nodeLimit : new long[] {0, Long.MAX_VALUE}) {
+          MCS.Options options = mcis(MCS.Connectivity.Fragments, ChemOptions.BondOrderMode.STRICT);
+          options.chemistry.aromaticityMode = mode;
+          options.nodeLimit = nodeLimit;
+          SearchResult result = MCS.find(query).withOptions(options).match(target);
+          String label = mode + " node limit " + nodeLimit;
+          assertTrue(result.optimal(), label);
+          assertEquals(flexible ? 3 : 2, result.matches().get(0).atomCount(), label);
+          assertEquals(flexible ? 2 : 1, result.matches().get(0).bondCount(), label);
+          assertTrue(MCS.validateMapping(query, target, result.matches().get(0), options).isEmpty(),
+              label);
+        }
+      }
     }
   }
 }

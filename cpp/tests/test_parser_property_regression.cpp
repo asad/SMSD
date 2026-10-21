@@ -1,9 +1,10 @@
-#include "search_test_helpers.hpp"
 /*
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  */
+#include "test_support.hpp"
 #include "smsd/smiles_parser.hpp"
 #include "smsd/smarts_parser.hpp"
 #include "smsd/mol_reader.hpp"
@@ -14,9 +15,7 @@
 #include <string>
 #include <vector>
 
-static void require(bool condition, const std::string& message) {
-    if (!condition) throw std::runtime_error(message);
-}
+using smsd_test::require;
 
 static void testOrganicAtomTokens() {
     const std::vector<std::pair<std::string, std::string>> examples = {
@@ -92,22 +91,9 @@ static void testLazyCanonicalProperties() {
             "fresh equivalent atoms should share an orbit");
 }
 
-int main() {
-    int failures = 0;
-    const std::pair<const char*, void (*)()> tests[] = {
-        {"organic atom tokens", testOrganicAtomTokens},
-        {"aromatic hydrogens", testAromaticHydrogens},
-        {"hydrogen and valence primitives", testHydrogenAndValencePrimitives},
-        {"lazy canonical properties", testLazyCanonicalProperties}
-    };
-    for (const auto& test : tests) {
-        try {
-            test.second();
-            std::cout << "PASS: " << test.first << '\n';
-        } catch (const std::exception& error) {
-            ++failures;
-            std::cerr << "FAIL: " << test.first << ": " << error.what() << '\n';
-        }
-    }
-    return failures == 0 ? 0 : 1;
+int main(int argc, char** argv) {
+    return smsd_test::runGroups(argc, argv, {
+        {"organic-atom-tokens", testOrganicAtomTokens}, {"aromatic-hydrogens", testAromaticHydrogens},
+        {"hydrogen-and-valence-primitives", testHydrogenAndValencePrimitives},
+        {"lazy-canonical-properties", testLazyCanonicalProperties}});
 }

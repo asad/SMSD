@@ -19,17 +19,24 @@ import org.openscience.cdk.silent.SilentChemObjectBuilder;
  * Assigns R/S descriptors to tetrahedral stereocentres and E/Z descriptors
  * to double bonds using BFS digraph traversal with CIP sequence rules:
  *   Rule 1: higher atomic number gets higher priority
- *   Rule 2: higher mass number breaks ties (isotopes)
+ *   Rule 2: higher mass number breaks ties (isotopes); an unlabelled atom
+ *   counts at its standard atomic weight, a duplicate at none
  *   Rule 3: Z double-bond configuration gets higher priority than E
+ *   Rules 4 and 5: auxiliary descriptors, like and unlike descriptor pairs,
+ *   r before s and R before S, for the centres Rules 1 to 3 leave unresolved
+ *   ({@link SequenceRules}); a centre resolved by Rule 5 is pseudoasymmetric
  *
  * Implements the digraph (extended connectivity tree) approach with phantom
- * (duplicate) nodes for ring closures and multiple bonds. Aromatic ligands use
- * a Kekule representation; fractional mancude averaging and the complete
- * Rule 4/5 machinery are not implemented.
+ * (duplicate) nodes for ring closures and multiple bonds. The duplicate atom of
+ * a double bond in a mancude ring system takes the mean atomic number of the
+ * ring neighbours it may be double bonded to (P-92.1.4.4), so labels do not
+ * depend on the Kekule structure.
  *
  * References:
  *   Prelog and Helmchen, Angew. Chem. Int. Ed. Engl. 21, 567 (1982)
  *   IUPAC Recommendations 2013 (P-92)
+ *   Hanson et al., JCIM 58, 1755 (2018), the auxiliary descriptor method the
+ *   reference implementations follow
  *
  * @author Syed Asad Rahman
  */
@@ -42,69 +49,10 @@ public final class CIPAssigner {
   /** Maximum number of nodes in the digraph to prevent runaway on large molecules. */
   private static final int MAX_NODES = 5000;
 
+  /** Scale of DigraphNode.scaledAtomicNum, so the mean of up to four atomic numbers is exact. */
+  private static final int ATOMIC_NUMBER_SCALE = 12;
+
   private CIPAssigner() {} // utility class
-
-  // ==========================================================================
-  // Default valence table (mirrors FingerprintEngine / smiles_parser.hpp)
-  // ==========================================================================
-  private static final int[][] DEFAULT_VALENCES = new int[54][];
-  static {
-    DEFAULT_VALENCES[1]  = new int[]{1};           // H
-    DEFAULT_VALENCES[5]  = new int[]{3};           // B
-    DEFAULT_VALENCES[6]  = new int[]{4};           // C
-    DEFAULT_VALENCES[7]  = new int[]{3, 5};        // N
-    DEFAULT_VALENCES[8]  = new int[]{2};           // O
-    DEFAULT_VALENCES[9]  = new int[]{1};           // F
-    DEFAULT_VALENCES[13] = new int[]{3};           // Al
-    DEFAULT_VALENCES[14] = new int[]{4};           // Si
-    DEFAULT_VALENCES[15] = new int[]{3, 5};        // P
-    DEFAULT_VALENCES[16] = new int[]{2, 4, 6};     // S
-    DEFAULT_VALENCES[17] = new int[]{1};           // Cl
-    DEFAULT_VALENCES[33] = new int[]{3, 5};        // As
-    DEFAULT_VALENCES[34] = new int[]{2, 4, 6};     // Se
-    DEFAULT_VALENCES[35] = new int[]{1};           // Br
-    DEFAULT_VALENCES[51] = new int[]{3, 5};        // Sb
-    DEFAULT_VALENCES[52] = new int[]{2, 4, 6};     // Te
-    DEFAULT_VALENCES[53] = new int[]{1, 3, 5, 7};  // I
-  }
-
-  /**
-   * Compute implicit hydrogen count for an atom in the graph using the
-   * OpenSMILES multi-valence model.
-   */
-  static int implicitH(MolGraph g, int idx) {
-    if (g.hasHydrogenCounts()) return g.hydrogenCount(idx);
-    if (g.aromatic[idx]) {
-      int element = g.atomicNum[idx];
-      if (element == 8 || element == 16 || element == 34 || element == 52
-          || ((element == 7 || element == 15) && g.neighbors[idx].length >= 3)) return 0;
-    }
-    int bondOrdSum = 0;
-    for (int nb : g.neighbors[idx]) {
-      int bo = g.bondOrder(idx, nb);
-      if (bo == 4) bo = 1; // aromatic bond -> single for valence calc
-      bondOrdSum += bo;
-    }
-    // Aromatic atoms contribute 1 pi electron to the bond order sum
-    if (g.aromatic[idx]) bondOrdSum += 1;
-    int z = g.atomicNum[idx];
-    int[] valences = (z >= 0 && z < DEFAULT_VALENCES.length) ? DEFAULT_VALENCES[z] : null;
-    if (valences == null) return 0;
-    int charge = g.formalCharge[idx];
-    // Charge-aware valence expansion per OpenSMILES:
-    // Group 15/16 cations (N+, P+, O+, S+): valence increases by 1
-    // Group 13 anions (B-): valence increases by 1
-    boolean cationExpand = charge > 0 && (z == 7 || z == 15 || z == 8 || z == 16 || z == 34);
-    boolean anionExpand = charge < 0 && (z == 5 || z == 13);
-    for (int v : valences) {
-      int target = v;
-      if (cationExpand) target = v + charge;
-      else if (anionExpand) target = v - charge; // charge is negative, so subtracting adds
-      else target = v - Math.abs(charge);
-      if (target >= bondOrdSum) return Math.max(0, target - bondOrdSum);
-    }
-    return 0;
-  }
 
   // ==========================================================================
   // Digraph node for CIP priority determination
@@ -116,15 +64,16 @@ public final class CIPAssigner {
     boolean isDuplicate;
     int parent;        // index in node list (-1 for root)
     int depth;
+    int scaledAtomicNum; // Rule 1 key: atomicNum * ATOMIC_NUMBER_SCALE, a mean for mancude duplicates
+    boolean isRingDuplicate; // a duplicate closing a ring, rather than one of a multiple bond
+    int distance;      // Rule 1b: root 1, each sphere one more; a duplicate takes its original's
     final List<Integer> children = new ArrayList<>(4);
   }
 
+  /** Whether a tagged centre has a lone pair as its fourth ligand, see {@link MolGraph#tetrahedralLigands}. */
   private static boolean hasLonePairLigand(MolGraph graph, int atom, int hydrogens) {
-    if (hydrogens != 0 || graph.neighbors[atom].length != 3 || graph.tetraChirality == null
-        || graph.tetraChirality[atom] == 0) return false;
-    int element = graph.atomicNum[atom];
-    return element == 7 || element == 15 || element == 16 || element == 33
-        || element == 34 || element == 51 || element == 52;
+    return hydrogens == 0 && graph.neighbors[atom].length == 3 && graph.tetraChirality != null
+        && graph.tetraChirality[atom] != 0 && MolGraph.lonePairCentre(graph.atomicNum[atom]);
   }
 
   /** Prepare aromatic bond orders without changing the caller's molecule. */
@@ -139,7 +88,7 @@ public final class CIPAssigner {
           IAtom value = SilentChemObjectBuilder.getInstance().newAtom();
           value.setAtomicNumber(graph.atomicNum[atom]);
           value.setFormalCharge(graph.formalCharge[atom]);
-          value.setImplicitHydrogenCount(implicitH(graph, atom));
+          value.setImplicitHydrogenCount(graph.hydrogenCount(atom));
           value.setIsAromatic(graph.aromatic[atom]);
           copy.addAtom(value);
         }
@@ -160,6 +109,27 @@ public final class CIPAssigner {
     }
   }
 
+  /**
+   * Sequence Rule 2 between two nodes Rule 1a has paired, either of which may be absent (null). Two
+   * atoms without a mass number tie whatever their weights; otherwise a labelled atom counts its
+   * mass number, an unlabelled atom its standard atomic weight and a duplicate nothing, as the
+   * reference CIP implementations read the rule (Hanson et al., JCIM 58, 1755 (2018)). Both passes
+   * use it.
+   */
+  private static double rule2Mass(DigraphNode node) {
+    if (node.isDuplicate || node.atomicNum <= 0) return 0.0;
+    return node.massNumber != 0 ? node.massNumber : atomicWeight(node.atomicNum);
+  }
+
+  private static int compareMassNumbers(DigraphNode first, DigraphNode second) {
+    int firstLabel = first == null ? 0 : first.massNumber;
+    int secondLabel = second == null ? 0 : second.massNumber;
+    if (firstLabel == 0 && secondLabel == 0) return 0;
+    double firstMass = first == null ? 0.0 : rule2Mass(first);
+    double secondMass = second == null ? 0.0 : rule2Mass(second);
+    return Double.compare(firstMass, secondMass);
+  }
+
   /** Compare spheres in parent order, padding absent phantom children with zero. */
   private static int compareOrderedBranches(List<DigraphNode> firstNodes, int firstRoot,
                                             List<DigraphNode> secondNodes, int secondRoot,
@@ -168,10 +138,14 @@ public final class CIPAssigner {
     frontier.add(new int[] {firstRoot, secondRoot});
     while (!frontier.isEmpty()) {
       for (int[] pair : frontier) {
-        int firstValue = pair[0] < 0 ? 0 : (compareMass
-            ? firstNodes.get(pair[0]).massNumber : firstNodes.get(pair[0]).atomicNum);
-        int secondValue = pair[1] < 0 ? 0 : (compareMass
-            ? secondNodes.get(pair[1]).massNumber : secondNodes.get(pair[1]).atomicNum);
+        if (compareMass) {
+          int massComparison = compareMassNumbers(pair[0] < 0 ? null : firstNodes.get(pair[0]),
+                                                  pair[1] < 0 ? null : secondNodes.get(pair[1]));
+          if (massComparison != 0) return massComparison;
+          continue;
+        }
+        int firstValue = pair[0] < 0 ? 0 : firstNodes.get(pair[0]).scaledAtomicNum;
+        int secondValue = pair[1] < 0 ? 0 : secondNodes.get(pair[1]).scaledAtomicNum;
         if (firstValue != secondValue) return Integer.compare(firstValue, secondValue);
       }
       List<int[]> next = new ArrayList<>();
@@ -198,6 +172,77 @@ public final class CIPAssigner {
     }
   }
 
+  /** Whether the bond is a ring bond, or an aromatic bond as Kekulization reads it. */
+  private static boolean ringBond(MolGraph g, int atom, int neighbor) {
+    return g.bondInRing(atom, neighbor) || (g.aromatic[atom] && g.aromatic[neighbor]
+        && (g.bondOrder(atom, neighbor) == 4 || g.bondAromatic(atom, neighbor)));
+  }
+
+  /** Bond order with aromatic bonds read from the Kekule copy; 4 when that copy has none. */
+  private static int kekuleOrder(MolGraph g, IAtomContainer kekule, int atom, int neighbor) {
+    int order = g.bondOrder(atom, neighbor);
+    if (order != 4 || kekule == null) return order;
+    IBond bond = kekule.getBond(kekule.getAtom(atom), kekule.getAtom(neighbor));
+    return bond == null || bond.getOrder() == null ? 4 : bond.getOrder().numeric();
+  }
+
+  /**
+   * The duplicate a ring atom with exactly one double bond, partners[atom] in the Kekule bond
+   * orders, carries for that bond (-1 for other atoms). A mancude ring system is what remains of
+   * those atoms after repeatedly removing the ones with fewer than two others as ring neighbours.
+   * There the duplicate takes the mean atomic number of the atom's ring neighbours in the system
+   * when it is fractional (IUPAC 2013 P-92.1.4.4, as the reference CIP implementations apply it),
+   * so labels do not depend on the Kekule structure; otherwise it is the partner. numbers[atom] is
+   * that atomic number times ATOMIC_NUMBER_SCALE. The native core applies the same rule.
+   */
+  private static void mancudeDuplicates(MolGraph g, IAtomContainer kekule, int[] numbers, int[] partners) {
+    Arrays.fill(partners, -1);
+    for (int atom = 0; atom < g.n; atom++) {
+      int partner = -1, doubles = 0, triples = 0;
+      for (int neighbor : g.neighbors[atom]) {
+        int order = kekuleOrder(g, kekule, atom, neighbor);
+        if (order == 2) {
+          partner = neighbor;
+          doubles++;
+        } else if (order == 3) {
+          triples++;
+        }
+      }
+      if ((g.ring[atom] || g.aromatic[atom]) && doubles == 1 && triples == 0) partners[atom] = partner;
+    }
+    boolean[] mancude = new boolean[g.n];
+    int[] degree = new int[g.n];
+    Deque<Integer> pending = new ArrayDeque<>();
+    for (int atom = 0; atom < g.n; atom++) {
+      if (partners[atom] < 0) continue;
+      mancude[atom] = true;
+      for (int neighbor : g.neighbors[atom])
+        if (partners[neighbor] >= 0 && ringBond(g, atom, neighbor)) degree[atom]++;
+      if (degree[atom] < 2) pending.push(atom);
+    }
+    while (!pending.isEmpty()) {
+      int atom = pending.pop();
+      if (!mancude[atom]) continue;
+      mancude[atom] = false;
+      for (int neighbor : g.neighbors[atom])
+        if (mancude[neighbor] && ringBond(g, atom, neighbor) && --degree[neighbor] < 2)
+          pending.push(neighbor);
+    }
+    for (int atom = 0; atom < g.n; atom++) {
+      if (partners[atom] < 0) continue;
+      int sum = 0, count = 0;
+      if (mancude[atom]) {
+        for (int neighbor : g.neighbors[atom]) {
+          if (!mancude[neighbor] || !ringBond(g, atom, neighbor)) continue;
+          sum += g.atomicNum[neighbor];
+          count++;
+        }
+      }
+      numbers[atom] = count == 0 || sum % count == 0 ? g.atomicNum[partners[atom]] * ATOMIC_NUMBER_SCALE
+                                                     : sum * ATOMIC_NUMBER_SCALE / count;
+    }
+  }
+
   /**
    * Build the CIP digraph (extended connectivity tree) rooted at the
    * specified atom. Ring closures produce duplicate (phantom) nodes.
@@ -208,15 +253,19 @@ public final class CIPAssigner {
     for (boolean flag : g.aromatic) aromatic |= flag;
     IAtomContainer kekule = aromatic ? kekuleCopy(g) : null;
     if (aromatic && kekule == null) return Collections.emptyList();
+    int[] duplicateNumbers = new int[g.n], duplicatePartners = new int[g.n];
+    mancudeDuplicates(g, kekule, duplicateNumbers, duplicatePartners);
     List<DigraphNode> nodes = new ArrayList<>(128);
 
     DigraphNode rootNode = new DigraphNode();
     rootNode.atomIdx = root;
     rootNode.atomicNum = g.atomicNum[root];
+    rootNode.scaledAtomicNum = g.atomicNum[root] * ATOMIC_NUMBER_SCALE;
     rootNode.massNumber = g.massNumber[root];
     rootNode.isDuplicate = false;
     rootNode.parent = -1;
     rootNode.depth = 0;
+    rootNode.distance = 1;
     nodes.add(rootNode);
 
     List<Integer> frontier = new ArrayList<>();
@@ -232,56 +281,62 @@ public final class CIPAssigner {
         int parentAtom = (parentNodeIdx >= 0) ? nodes.get(parentNodeIdx).atomIdx : -1;
 
         // Collect expansions: real children + phantoms for multiple bonds
-        List<int[]> expansions = new ArrayList<>(); // {neighborAtom, isDuplicate}
+        List<int[]> expansions = new ArrayList<>(); // neighborAtom, isDuplicate, scaledAtomicNum
 
         for (int nbr : g.neighbors[atom]) {
           if (nbr == parentAtom && !nodes.get(ni).isDuplicate) continue;
 
-          int bo = g.bondOrder(atom, nbr);
-          if (bo == 4) bo = kekule.getBond(kekule.getAtom(atom), kekule.getAtom(nbr)).getOrder().numeric();
+          // The partner's double bond is the mancude duplicate below.
+          int bo = nbr == duplicatePartners[atom] ? 1 : kekuleOrder(g, kekule, atom, nbr);
+          if (bo == 4) bo = 1;
+          int scaled = g.atomicNum[nbr] * ATOMIC_NUMBER_SCALE;
 
-          expansions.add(new int[]{nbr, 0}); // real child
+          expansions.add(new int[]{nbr, 0, scaled}); // real child
           for (int extra = 1; extra < bo; ++extra) {
-            expansions.add(new int[]{nbr, 1}); // phantom for bond order
+            expansions.add(new int[]{nbr, 1, scaled}); // phantom for bond order
           }
         }
 
         // Phantoms for bond back to parent (higher-order bonds)
         if (parentAtom >= 0 && !nodes.get(ni).isDuplicate) {
-          int bo = g.bondOrder(atom, parentAtom);
-          if (bo == 4) bo = kekule.getBond(kekule.getAtom(atom), kekule.getAtom(parentAtom)).getOrder().numeric();
+          int bo = parentAtom == duplicatePartners[atom] ? 1 : kekuleOrder(g, kekule, atom, parentAtom);
+          if (bo == 4) bo = 1;
           for (int extra = 1; extra < bo; ++extra) {
-            expansions.add(new int[]{parentAtom, 1});
+            expansions.add(new int[]{parentAtom, 1, g.atomicNum[parentAtom] * ATOMIC_NUMBER_SCALE});
           }
         }
+        if (duplicatePartners[atom] >= 0)
+          expansions.add(new int[]{duplicatePartners[atom], 1, duplicateNumbers[atom]});
 
         for (int[] exp : expansions) {
           if (nodes.size() >= MAX_NODES) break;
           int nbrAtom = exp[0];
           boolean forceDuplicate = (exp[1] == 1);
 
-          // Check if this atom is on the path from root to current node
-          boolean onPath = false;
-          if (!forceDuplicate) {
-            int walk = ni;
-            while (walk >= 0) {
-              if (nodes.get(walk).atomIdx == nbrAtom) {
-                onPath = true;
-                break;
-              }
-              walk = nodes.get(walk).parent;
+          // Check if this atom is on the path from root to current node. A duplicate
+          // of an atom on the path takes that node's distance; one of an atom not
+          // yet reached has none.
+          int pathNode = -1;
+          for (int walk = ni; walk >= 0; walk = nodes.get(walk).parent) {
+            if (nodes.get(walk).atomIdx == nbrAtom) {
+              pathNode = walk;
+              break;
             }
           }
+          boolean onPath = !forceDuplicate && pathNode >= 0;
 
           boolean makeDuplicate = forceDuplicate || onPath;
 
           DigraphNode child = new DigraphNode();
           child.atomIdx = nbrAtom;
           child.atomicNum = g.atomicNum[nbrAtom];
+          child.scaledAtomicNum = exp[2];
           child.massNumber = makeDuplicate ? 0 : g.massNumber[nbrAtom];
           child.isDuplicate = makeDuplicate;
+          child.isRingDuplicate = onPath;
           child.parent = ni;
           child.depth = depth + 1;
+          child.distance = makeDuplicate ? (pathNode >= 0 ? nodes.get(pathNode).distance : 0) : depth + 2;
 
           int childIdx = nodes.size();
           nodes.add(child);
@@ -291,13 +346,15 @@ public final class CIPAssigner {
             nextFrontier.add(childIdx);
           }
         }
-        for (int hydrogen = 0; hydrogen < implicitH(g, atom) && nodes.size() < MAX_NODES; hydrogen++) {
+        for (int hydrogen = 0; hydrogen < g.hydrogenCount(atom) && nodes.size() < MAX_NODES; hydrogen++) {
           DigraphNode child = new DigraphNode();
           child.atomIdx = -1;
           child.atomicNum = 1;
+          child.scaledAtomicNum = ATOMIC_NUMBER_SCALE;
           child.massNumber = 0;
           child.parent = ni;
           child.depth = depth + 1;
+          child.distance = depth + 2;
           nodes.get(ni).children.add(nodes.size());
           nodes.add(child);
         }
@@ -317,20 +374,17 @@ public final class CIPAssigner {
    */
   private static int compareBranches(List<DigraphNode> nodesA, int rootA,
                                      List<DigraphNode> nodesB, int rootB) {
-    return compareBranches(nodesA, rootA, nodesB, rootB, null, null);
+    return compareBranches(nodesA, rootA, nodesB, rootB, null);
   }
 
   /**
-   * Compare two digraph sub-trees by CIP Rules 1-2, with optional Rule 3 (Z > E),
-   * Rule 4b-c (like/unlike descriptor pairing) and Rule 5 (R > S tiebreak).
+   * Compare two digraph sub-trees by CIP Rules 1-2, with optional Rule 3 (Z > E).
+   * Rules 4 and 5 are the business of {@link SequenceRules}.
    *
-   * @param descriptorMap  atom index → descriptor (1=R, 2=S); null for Rules 1-2 only
    * @param molGraph       molecular graph for Rule 3 E/Z lookup; null to skip Rule 3
-   * @since 6.5.2
    */
   private static int compareBranches(List<DigraphNode> nodesA, int rootA,
                                      List<DigraphNode> nodesB, int rootB,
-                                     Map<Integer, Integer> descriptorMap,
                                      MolGraph molGraph) {
     int atomicComparison = compareOrderedBranches(nodesA, rootA, nodesB, rootB, false);
     if (atomicComparison != 0) return atomicComparison;
@@ -355,80 +409,7 @@ public final class CIPAssigner {
         frontB = nextB;
       }
     }
-
-    // Rules 1-3 exhausted. Try Rule 4b-c if descriptor map is available.
-    if (descriptorMap != null && !descriptorMap.isEmpty()) {
-      return compareBranches_Rule4bc(nodesA, rootA, nodesB, rootB, descriptorMap);
-    }
     return 0;
-  }
-
-  /**
-   * CIP Rule 4b-c: compare branches by like/unlike descriptor pairing.
-   * Collects R/S descriptors along each branch in BFS order and compares.
-   * R(1) > S(2) > NONE(0) per Rule 5.
-   * @since 6.5.2
-   */
-  private static int compareBranches_Rule4bc(
-      List<DigraphNode> nodesA, int rootA,
-      List<DigraphNode> nodesB, int rootB,
-      Map<Integer, Integer> descriptorMap) {
-
-    List<Integer> descA = collectDescriptors(nodesA, rootA, descriptorMap);
-    List<Integer> descB = collectDescriptors(nodesB, rootB, descriptorMap);
-
-    Collections.sort(descA);
-    Collections.sort(descB);
-
-    int len = Math.max(descA.size(), descB.size());
-    for (int k = 0; k < len; k++) {
-      int a = k < descA.size() ? descA.get(k) : 0;
-      int b = k < descB.size() ? descB.get(k) : 0;
-      if (a != b) {
-        if (a == 0) return -1;
-        if (b == 0) return 1;
-        return (a < b) ? 1 : -1; // R(1) > S(2)
-      }
-    }
-    return 0;
-  }
-
-  /** Collect CIP descriptors along a digraph branch in BFS order. */
-  private static List<Integer> collectDescriptors(
-      List<DigraphNode> nodes, int root,
-      Map<Integer, Integer> descriptorMap) {
-    List<Integer> result = new ArrayList<>();
-    List<Integer> frontier = new ArrayList<>();
-    frontier.add(root);
-    while (!frontier.isEmpty()) {
-      List<Integer> next = new ArrayList<>();
-      for (int ni : frontier) {
-        DigraphNode nd = nodes.get(ni);
-        if (!nd.isDuplicate && nd.atomIdx >= 0) {
-          Integer desc = descriptorMap.get(nd.atomIdx);
-          if (desc != null && desc != 0) result.add(desc);
-        }
-        next.addAll(nd.children);
-      }
-      frontier = next;
-    }
-    return result;
-  }
-
-  /** Extract sorted (descending) array of atomic numbers or mass numbers from a frontier. */
-  private static int[] toSortedDescArray(List<Integer> frontier, List<DigraphNode> nodes,
-                                         boolean useAtomicNum) {
-    int[] arr = new int[frontier.size()];
-    for (int i = 0; i < arr.length; i++) {
-      DigraphNode nd = nodes.get(frontier.get(i));
-      arr[i] = useAtomicNum ? nd.atomicNum : nd.massNumber;
-    }
-    Arrays.sort(arr);
-    // Reverse to get descending
-    for (int i = 0, j = arr.length - 1; i < j; i++, j--) {
-      int tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
-    }
-    return arr;
   }
 
   /**
@@ -468,20 +449,11 @@ public final class CIPAssigner {
    * implicit H and rank is 1-based (1 = lowest priority).
    */
   private static int[][] computePriorities(MolGraph g, int centre) {
-    return computePriorities(g, centre, null);
+    return computePriorities(g, centre, true);
   }
 
-  /**
-   * Compute CIP priorities with optional Rule 4b-c/5 descriptor map.
-   * @since 6.5.2
-   */
-  private static int[][] computePriorities(MolGraph g, int centre,
-                                            Map<Integer, Integer> descriptorMap) {
-    return computePriorities(g, centre, descriptorMap, true);
-  }
-
-  private static int[][] computePriorities(MolGraph g, int centre,
-                                            Map<Integer, Integer> descriptorMap, boolean includeStereo) {
+  /** Compute CIP priorities by Rules 1-2, and Rule 3 when `includeStereo` is set. */
+  private static int[][] computePriorities(MolGraph g, int centre, boolean includeStereo) {
     int[] nbrs = g.neighbors[centre];
     int nExplicit = nbrs.length;
 
@@ -491,7 +463,7 @@ public final class CIPAssigner {
       if (bo == 4) bo = 1;
       boSum += bo;
     }
-    int hCount = implicitH(g, centre);
+    int hCount = g.hydrogenCount(centre);
     boolean lonePair = hasLonePairLigand(g, centre, hCount);
     int total = nExplicit + hCount + (lonePair ? 1 : 0);
 
@@ -530,6 +502,7 @@ public final class CIPAssigner {
       DigraphNode node = new DigraphNode();
       node.atomIdx = phantom ? -2 : -1;
       node.atomicNum = phantom ? 0 : 1;
+      node.scaledAtomicNum = node.atomicNum * ATOMIC_NUMBER_SCALE;
       node.parent = -1;
       result[nExplicit + implicit][0] = node.atomIdx;
       ligandRoots[nExplicit + implicit] = digraph.size();
@@ -539,10 +512,7 @@ public final class CIPAssigner {
     // Sort ligand indices by CIP priority
     Integer[] order = new Integer[total];
     for (int i = 0; i < total; i++) order[i] = i;
-    // Capture descriptorMap for use in lambda
-    final Map<Integer, Integer> dMap = descriptorMap;
 
-    // Comparison helper that uses full rules when descriptor map is available
     java.util.function.BiFunction<Integer, Integer, Integer> cmpLigands = (a, b) -> {
       int zA = result[a][0] >= 0 ? g.atomicNum[result[a][0]] : result[a][0] == -2 ? 0 : 1;
       int zB = result[b][0] >= 0 ? g.atomicNum[result[b][0]] : result[b][0] == -2 ? 0 : 1;
@@ -551,7 +521,7 @@ public final class CIPAssigner {
       int rootA = ligandRoots[a];
       int rootB = ligandRoots[b];
       if (rootA >= 0 && rootB >= 0)
-        return compareBranches(digraph, rootA, digraph, rootB, dMap, includeStereo ? g : null);
+        return compareBranches(digraph, rootA, digraph, rootB, includeStereo ? g : null);
       return 0;
     };
 
@@ -578,94 +548,72 @@ public final class CIPAssigner {
    * Assign CIP R/S descriptors to all tetrahedral stereocentres in the molecule.
    *
    * Uses a two-pass approach per IUPAC 2013 P-92.1.4:
-   *   Pass 1: Rules 1-2 (atomic number, mass number)
-   *   Pass 2: Rules 4b-c (like/unlike descriptor pairing) + Rule 5 (R > S)
+   *   Pass 1: Rules 1-3 (atomic number, mass number, Z before E)
+   *   Pass 2: Rules 4 and 5 with auxiliary descriptors ({@link SequenceRules}),
+   *           for the centres pass 1 leaves unresolved
    *
-   * Centres resolved only in pass 2 are pseudoasymmetric and receive
-   * lowercase 'r' or 's'.
+   * Centres resolved only by Rule 5 (or Rule 6) are pseudoasymmetric and
+   * receive lowercase 'r' or 's'.
    *
    * @param g the molecular graph
    * @return map from atom index to 'R', 'S', 'r', or 's'; atoms that are not valid
    *         stereocentres or where priorities cannot be resolved are omitted
-   * @since 6.5.2
    */
   public static Map<Integer, Character> assignRS(MolGraph g) {
     Map<Integer, Character> result = new LinkedHashMap<>();
     if (g.tetraChirality == null) return result;
 
-    // Pass 1: Rules 1-2 only
+    // Pass 1: Rules 1-3 only
     for (int idx = 0; idx < g.n; idx++) {
-      Character c = assignRSAtom(g, idx, null);
+      Character c = assignRSAtom(g, idx);
       if (c != null) result.put(idx, c);
     }
 
-    // Build descriptor map from pass 1 for Rule 4b-c
-    Map<Integer, Integer> descriptorMap = new HashMap<>();
-    for (Map.Entry<Integer, Character> e : result.entrySet()) {
-      char ch = e.getValue();
-      descriptorMap.put(e.getKey(), (ch == 'R' || ch == 'r') ? 1 : 2);
-    }
-
-    // Pass 2: retry NONE centres with Rules 4b-c + 5
-    if (!descriptorMap.isEmpty()) {
-      for (int idx = 0; idx < g.n; idx++) {
-        if (g.tetraChirality[idx] == 0) continue;
-        if (result.containsKey(idx)) continue; // already assigned in pass 1
-        Character c = assignRSAtom(g, idx, descriptorMap);
-        if (c != null) {
-          // Pseudoasymmetric: resolved only by Rule 4b-c/5 → lowercase
-          result.put(idx, Character.toLowerCase(c));
-        }
-      }
+    // Pass 2: Rules 4 and 5 for the centres still unresolved
+    for (int idx = 0; idx < g.n; idx++) {
+      if (g.tetraChirality[idx] == 0 || result.containsKey(idx)) continue;
+      Character c = new SequenceRules(g, idx).label();
+      if (c != null) result.put(idx, c);
     }
 
     return result;
   }
 
   /**
-   * Assign R/S to a single atom with optional descriptor map for Rule 4b-c/5.
-   * @return 'R' or 'S', or null if not a valid stereocentre.
+   * Assign R/S to a single atom by Rules 1-3.
+   * @return 'R' or 'S', or null if not a valid stereocentre or the rules leave it unresolved.
    */
-  private static Character assignRSAtom(MolGraph g, int idx,
-                                         Map<Integer, Integer> descriptorMap) {
+  private static Character assignRSAtom(MolGraph g, int idx) {
     if (g.tetraChirality[idx] == 0) return null;
 
     int deg = g.neighbors[idx].length;
-    int hc = implicitH(g, idx);
+    int hc = g.hydrogenCount(idx);
     boolean lonePair = hasLonePairLigand(g, idx, hc);
     int totalSubs = deg + hc + (lonePair ? 1 : 0);
     if (totalSubs != 4) return null;
 
-    int[][] priorities = computePriorities(g, idx, descriptorMap);
+    int[][] priorities = computePriorities(g, idx);
     if (priorities.length != 4) return null;
 
     Set<Integer> ranks = new HashSet<>();
     for (int[] p : priorities) ranks.add(p[1]);
     if (ranks.size() != 4) return null;
 
+    // The ligand order is the one the stereo checks of the searches read.
     int[] cipRanks = new int[4];
-    boolean cdkOrder = g.tetraLigands != null && g.tetraLigands[idx] != null;
-    if (cdkOrder) {
-      int[] ligandOrder = g.tetraLigands[idx];
-      if (ligandOrder.length != 4) return null;
-      for (int k = 0; k < 4; k++) {
-        boolean found = false;
-        for (int[] priority : priorities) {
-          int ligand = lonePair && ligandOrder[k] < 0 ? -2 : ligandOrder[k];
-          if (priority[0] == ligand) {
-            cipRanks[k] = priority[1];
-            found = true;
-            break;
-          }
+    int[] ligandOrder = g.tetrahedralLigands(idx);
+    if (ligandOrder == null || ligandOrder.length != 4) return null;
+    for (int k = 0; k < 4; k++) {
+      boolean found = false;
+      for (int[] priority : priorities) {
+        int ligand = lonePair && ligandOrder[k] < 0 ? -2 : ligandOrder[k];
+        if (priority[0] == ligand) {
+          cipRanks[k] = priority[1];
+          found = true;
+          break;
         }
-        if (!found) return null;
       }
-    } else {
-      // Builder annotations retain the original implicit-H-first convention.
-      for (int k = 0; k < 4; k++) {
-        int ligand = hc > 0 || lonePair ? (k == 0 ? deg : k - 1) : k;
-        cipRanks[k] = priorities[ligand][1];
-      }
+      if (!found) return null;
     }
 
     int inversions = 0;
@@ -675,7 +623,7 @@ public final class CIPAssigner {
       }
     }
     boolean evenPerm = (inversions % 2 == 0);
-    boolean smilesIsACW = (g.tetraChirality[idx] == 1) != cdkOrder;
+    boolean smilesIsACW = g.tetraChirality[idx] == 1;
 
     if (evenPerm) {
       return smilesIsACW ? 'S' : 'R';
@@ -712,8 +660,8 @@ public final class CIPAssigner {
         if (highI == Integer.MIN_VALUE || highJ == Integer.MIN_VALUE) continue;
 
         // The stored relation uses the first non-double-bond neighbour at each end.
-        int refI = firstNonDBNeighbor(g, i, j);
-        int refJ = firstNonDBNeighbor(g, j, i);
+        int refI = g.doubleBondReference(i, j);
+        int refJ = g.doubleBondReference(j, i);
 
         int flips = 0;
         if (highI != refI && refI >= 0) flips++;
@@ -722,7 +670,7 @@ public final class CIPAssigner {
         int effectiveConf = conf;
         if (flips == 1) effectiveConf = (conf == 1) ? 2 : 1;
 
-        long bk = bondKey(i, j);
+        long bk = MolGraph.bondKey(i, j);
         result.put(bk, (effectiveConf == 1) ? 'Z' : 'E');
       }
     }
@@ -736,7 +684,7 @@ public final class CIPAssigner {
   }
 
   private static int higherPrioritySub(MolGraph g, int thisEnd, int otherEnd, boolean includeStereo) {
-    int[][] prios = computePriorities(g, thisEnd, null, includeStereo);
+    int[][] prios = computePriorities(g, thisEnd, includeStereo);
     int bestRank = -1, bestAtom = Integer.MIN_VALUE;
     int secondRank = -1;
     int subCount = 0;
@@ -765,22 +713,710 @@ public final class CIPAssigner {
     int highFirst = higherPrioritySub(graph, first, second, false);
     int highSecond = higherPrioritySub(graph, second, first, false);
     if (highFirst == Integer.MIN_VALUE || highSecond == Integer.MIN_VALUE) return 0;
-    if (highFirst != firstNonDBNeighbor(graph, first, second)) configuration = 3 - configuration;
-    if (highSecond != firstNonDBNeighbor(graph, second, first)) configuration = 3 - configuration;
+    if (highFirst != graph.doubleBondReference(first, second)) configuration = 3 - configuration;
+    if (highSecond != graph.doubleBondReference(second, first)) configuration = 3 - configuration;
     return configuration;
   }
 
-  /** Get the first neighbour of thisEnd that is not the double-bond partner. */
-  private static int firstNonDBNeighbor(MolGraph g, int thisEnd, int otherEnd) {
-    for (int nb : g.neighbors[thisEnd]) {
-      if (nb != otherEnd) return nb;
-    }
-    return -1;
+  // ==========================================================================
+  // Rules 4 and 5 with auxiliary descriptors
+  // ==========================================================================
+
+  /** Standard atomic weights by atomic number (IUPAC 2021), as the native periodic table holds them. */
+  private static final double[] STANDARD_ATOMIC_WEIGHT = {
+      0.0, 1.008, 4.0026, 6.94, 9.0122, 10.81, 12.011, 14.007,
+      15.999, 18.998, 20.180, 22.990, 24.305, 26.982, 28.086, 30.974,
+      32.06, 35.45, 39.95, 39.098, 40.078, 44.956, 47.867, 50.942,
+      51.996, 54.938, 55.845, 58.933, 58.693, 63.546, 65.38, 69.723,
+      72.630, 74.922, 78.971, 79.904, 83.798, 85.468, 87.62, 88.906,
+      91.224, 92.906, 95.95, 97.0, 101.07, 102.91, 106.42, 107.87,
+      112.41, 114.82, 118.71, 121.76, 127.60, 126.904, 131.29, 132.91,
+      137.33, 138.91, 140.12, 140.91, 144.24, 145.0, 150.36, 151.96,
+      157.25, 158.93, 162.50, 164.93, 167.26, 168.93, 173.05, 174.97,
+      178.49, 180.95, 183.84, 186.21, 190.23, 192.22, 195.08, 196.97,
+      200.59, 204.38, 207.2, 208.98, 209.0, 210.0, 222.0, 223.0,
+      226.0, 227.0, 232.04, 231.04, 238.03, 237.0, 244.0, 243.0,
+      247.0, 247.0, 251.0, 252.0, 257.0, 258.0, 259.0, 266.0,
+      267.0, 268.0, 269.0, 270.0, 277.0, 278.0, 281.0, 282.0,
+      285.0, 286.0, 289.0, 290.0, 293.0, 294.0, 294.0,
+  };
+
+  /** Standard atomic weight for Rule 2, zero outside the table. */
+  static double atomicWeight(int atomicNumber) {
+    return atomicNumber >= 0 && atomicNumber < STANDARD_ATOMIC_WEIGHT.length ? STANDARD_ATOMIC_WEIGHT[atomicNumber] : 0.0;
   }
 
-  /** Pack two atom indices into a canonical bond key (same as MolGraph). */
-  private static long bondKey(int i, int j) {
-    int lo = Math.min(i, j), hi = Math.max(i, j);
-    return ((long) lo << 32) | (hi & 0xFFFFFFFFL);
+  /**
+   * Sequence Rules 1 to 6 (IUPAC 2013 P-92.1.3) over the hierarchical digraph of one tetrahedral
+   * centre, for the centres Rules 1 to 3 leave unresolved. The method is the one the reference CIP
+   * implementations follow (Hanson et al., JCIM 58, 1755 (2018)):
+   *
+   *   - Every stereogenic unit in the digraph (a tagged tetrahedral centre or a stereogenic double
+   *     bond, other than the centre itself) receives an auxiliary descriptor at each of its nodes,
+   *     found by ranking its ligands with the digraph re-rooted at that node: the edge towards the
+   *     root is reversed and the subtree beyond it explored in that direction. Nodes are labelled
+   *     from the deepest sphere inwards, so each sees the descriptors of the units beyond it.
+   *   - The root's ligands are then ranked by Rule 1a (atomic number), Rule 1b (a ring-closure
+   *     duplicate before any other node, and between two the one whose original is nearer the
+   *     root), Rule 2 (the mass number of a labelled atom, against the standard atomic weight of an
+   *     unlabelled one), Rule 3 (Z before E), Rule 4a (R, S, seqCis and seqTrans before r, s, E and
+   *     Z before none), Rule 4b (like descriptor pairs before unlike, each branch read against its
+   *     reference descriptor, the majority descriptor of the first sphere that has one), Rule 4c
+   *     (r before s), Rule 5 (R before S and seqCis before seqTrans, read with both R and S as the
+   *     reference) and Rule 6 (an undifferentiated reference ligand first).
+   *   - Each rule is exhausted sphere by sphere before the next is consulted, and within a rule a
+   *     node's branches are ordered by the rules up to and including it.
+   *   - A centre whose ligands are told apart only by Rule 5 or Rule 6 is pseudoasymmetric and
+   *     takes a lower-case descriptor; a double bond told apart that way at one end only is seqCis
+   *     or seqTrans rather than Z or E.
+   *
+   * The native core applies the same rules node for node.
+   */
+  static final class SequenceRules {
+    /** Descriptors of the units in the digraph; E and Z are constitutional, seqCis and seqTrans are not. */
+    private static final int NONE = 0, UNKNOWN = 1, NS = 2, R = 3, S = 4, LOWER_R = 5, LOWER_S = 6,
+        SEQ_TRANS = 7, SEQ_CIS = 8, E = 9, Z = 10;
+    private static final int RULE_1A = 0, RULE_1B = 1, RULE_2 = 2, RULE_3 = 3, RULE_4A = 4, RULE_4B = 5,
+        RULE_4C = 6, RULE_5 = 7, RULE_6 = 8, RULE_COUNT = 9;
+
+    /** Recursive comparisons allowed for one centre; beyond it the centre is left unresolved. */
+    private static final long COMPARISON_BUDGET = 5000000L;
+
+    /** A rule; Rules 4b and 5 read descriptor pairs against `reference` (R or S) in their replacement form. */
+    private static final class Rule {
+      final int kind, reference;
+      Rule(int kind, int reference) { this.kind = kind; this.reference = reference; }
+    }
+
+    /** A directed edge of the re-rooted digraph: `beg` is the node nearer the current root. */
+    private static final class Edge {
+      final int beg, end;
+      Edge(int beg, int end) { this.beg = beg; this.end = end; }
+    }
+
+    private static final class Priority {
+      final boolean unique, pseudoasymmetric;
+      Priority(boolean unique, boolean pseudoasymmetric) { this.unique = unique; this.pseudoasymmetric = pseudoasymmetric; }
+    }
+
+    /** A stereogenic unit: a tagged tetrahedral centre, or a stereogenic double bond. */
+    private static final class Unit {
+      boolean bond;
+      int first = -1, second = -1;             // the atom, or both bond atoms
+      int[] ligands;                           // centre: the tag's ligand order, -1 for the implicit ligand
+      int tag;                                 // centre: 1 anticlockwise, 2 clockwise
+      int carrierFirst = -1, carrierSecond = -1; // bond: the reference neighbour at each end
+      int configuration;                       // bond: 1 cis and 2 trans, relative to the carriers
+    }
+
+    /** Descriptor pairs of a branch, read against the reference descriptor at its head. */
+    private static final class PairList {
+      private final List<Integer> descriptors = new ArrayList<>();
+
+      PairList(int reference) { add(reference); }
+
+      void add(int descriptor) {
+        int reference = pairReference(descriptor);
+        if (reference != NONE) descriptors.add(reference);
+      }
+
+      /** The first pair that is like in one list and unlike in the other decides. */
+      int compareTo(PairList that) {
+        int count = Math.min(descriptors.size(), that.descriptors.size());
+        for (int i = 1; i < count; i++) {
+          boolean thisLike = descriptors.get(i).equals(descriptors.get(0));
+          boolean thatLike = that.descriptors.get(i).equals(that.descriptors.get(0));
+          if (thisLike && !thatLike) return 1;
+          if (!thisLike && thatLike) return -1;
+        }
+        return 0;
+      }
+    }
+
+    private final MolGraph g;
+    private final int centre;
+    private List<DigraphNode> nodes;
+    private int[] aux;                   // auxiliary descriptor by node
+    private int[] up;                    // the neighbour of each node towards the current root, -1 for the root
+    private final List<Unit> units = new ArrayList<>();
+    private int centreUnit = -1;
+    private int root = 0;                // the current root
+    private int rule6Reference = -1;     // the Rule 6 reference atom, -1 for none
+    private long budget = COMPARISON_BUDGET;
+    private boolean exhausted = false;
+
+    SequenceRules(MolGraph graph, int centre) {
+      this.g = graph;
+      this.centre = centre;
+    }
+
+    /** The descriptor of the centre, or null when the rules do not resolve it. */
+    Character label() {
+      if (centre < 0 || centre >= g.n || g.tetraChirality == null || g.tetraChirality[centre] == 0
+          || g.tetrahedralLigands(centre) == null) return null;
+      nodes = buildDigraph(g, centre);
+      if (nodes.isEmpty()) return null;
+      aux = new int[nodes.size()];
+      up = new int[nodes.size()];
+      collectUnits();
+      if (centreUnit < 0) return null;
+      labelAuxiliaryDescriptors();
+      changeRoot(0);
+      int descriptor = labelTetrahedral(0, units.get(centreUnit));
+      if (exhausted) return null;
+      switch (descriptor) {
+        case R: return 'R';
+        case S: return 'S';
+        case LOWER_R: return 'r';
+        case LOWER_S: return 's';
+        default: return null;
+      }
+    }
+
+    private static int threeWay(double first, double second) { return first < second ? -1 : first > second ? 1 : 0; }
+
+    private static int pairReference(int descriptor) {
+      return descriptor == R || descriptor == SEQ_CIS ? R : descriptor == S || descriptor == SEQ_TRANS ? S : NONE;
+    }
+
+    private static int rule3Order(int descriptor) { return descriptor == E ? 1 : descriptor == Z ? 2 : 0; }
+
+    private static int rule4aOrder(int descriptor) {
+      switch (descriptor) {
+        case R: case S: case SEQ_CIS: case SEQ_TRANS: return 2;
+        case LOWER_R: case LOWER_S: case E: case Z: return 1;
+        default: return 0;
+      }
+    }
+
+    private static int rule4cOrder(int descriptor) { return descriptor == LOWER_R ? 2 : descriptor == LOWER_S ? 1 : 0; }
+
+    /** Whether the node ends its branch: a duplicate, an implicit hydrogen, or an atom with no other neighbour. */
+    private boolean terminal(int node) {
+      DigraphNode n = nodes.get(node);
+      return n.isDuplicate || n.atomIdx < 0 || (n.parent >= 0 ? 1 : 0) + n.children.size() == 1;
+    }
+
+    /** Make `node` the root: the path from it to the original root is read in reverse. */
+    private void changeRoot(int node) {
+      for (int i = 0; i < nodes.size(); i++) up[i] = nodes.get(i).parent;
+      up[node] = -1;
+      for (int child = node, parent = nodes.get(node).parent; parent >= 0;
+           child = parent, parent = nodes.get(parent).parent)
+        up[parent] = child;
+      root = node;
+    }
+
+    /** The edges of a node under the current root: the one towards the root first, then the rest. */
+    private List<Edge> edgesOf(int node) {
+      List<Edge> edges = new ArrayList<>();
+      DigraphNode n = nodes.get(node);
+      if (up[node] >= 0) edges.add(new Edge(up[node], node));
+      if (n.parent >= 0 && n.parent != up[node]) edges.add(new Edge(node, n.parent));
+      for (int child : n.children) {
+        if (child == up[node]) continue;
+        // The original root's multiple bonds have no duplicates in the reference digraph.
+        if (node == 0 && nodes.get(child).isDuplicate && !nodes.get(child).isRingDuplicate) continue;
+        edges.add(new Edge(node, child));
+      }
+      return edges;
+    }
+
+    private List<Edge> nonTerminalOutEdges(int node) {
+      List<Edge> out = new ArrayList<>();
+      for (Edge edge : edgesOf(node))
+        if (edge.beg == node && !terminal(edge.end)) out.add(edge);
+      return out;
+    }
+
+    /** The rules a rule orders branches with: those up to and including it; a replacement rule, itself. */
+    private static List<Rule> sorterOf(Rule rule) {
+      List<Rule> rules = new ArrayList<>();
+      if (rule.reference != NONE) {
+        rules.add(rule);
+        return rules;
+      }
+      for (int kind = 0; kind <= rule.kind; kind++) rules.add(new Rule(kind, NONE));
+      return rules;
+    }
+
+    private static List<Rule> allRules() {
+      List<Rule> rules = new ArrayList<>();
+      for (int kind = 0; kind < RULE_COUNT; kind++) rules.add(new Rule(kind, NONE));
+      return rules;
+    }
+
+    /** All rules with `replacement` in place of its kind, read last. */
+    private static List<Rule> referenceSorter(Rule replacement) {
+      List<Rule> rules = new ArrayList<>();
+      for (int kind = 0; kind < RULE_COUNT; kind++)
+        if (kind != replacement.kind) rules.add(new Rule(kind, NONE));
+      rules.add(replacement);
+      return rules;
+    }
+
+    // ------------------------------------------------------------------
+    // Ordering
+    // ------------------------------------------------------------------
+
+    /** Order the edges of `node` by `rules`, highest first; `top` reads every rule exhaustively. */
+    private Priority prioritise(List<Rule> rules, boolean top, int node, List<Edge> edges, boolean deep) {
+      boolean unique = true;
+      int pseudoasymmetric = 0;
+      for (int i = 0; i < edges.size(); i++) {
+        for (int j = i; j > 0; j--) {
+          int cmp = compareSubstituents(rules, top, node, edges.get(j - 1), edges.get(j), deep);
+          if (cmp < -1 || cmp > 1) pseudoasymmetric++;
+          if (cmp < 0) {
+            Collections.swap(edges, j, j - 1);
+          } else {
+            if (cmp == 0) unique = false;
+            break;
+          }
+        }
+      }
+      return new Priority(unique, pseudoasymmetric == 1);
+    }
+
+    private int compareSubstituents(List<Rule> rules, boolean top, int node, Edge first, Edge second, boolean deep) {
+      boolean firstUp = first.end == node, secondUp = second.end == node;
+      if (firstUp && !secondUp) return 1;
+      if (!firstUp && secondUp) return -1;
+      for (Rule rule : rules) {
+        int cmp = top || deep ? recursiveCompare(rule, first, second) : compare(rule, first, second);
+        if (cmp != 0) return cmp;
+      }
+      return 0;
+    }
+
+    /** Consecutive edges of a sorted list that the rules do not tell apart. */
+    private List<List<Edge>> groups(List<Rule> rules, boolean top, List<Edge> sorted) {
+      List<List<Edge>> result = new ArrayList<>();
+      for (int i = 0; i < sorted.size(); i++) {
+        if (i == 0 || compareSubstituents(rules, top, sorted.get(i - 1).beg, sorted.get(i - 1), sorted.get(i), true) != 0)
+          result.add(new ArrayList<>());
+        result.get(result.size() - 1).add(sorted.get(i));
+      }
+      return result;
+    }
+
+    /** Compare two edges by one rule at their ends only. */
+    private int compare(Rule rule, Edge first, Edge second) {
+      DigraphNode a = nodes.get(first.end);
+      DigraphNode b = nodes.get(second.end);
+      switch (rule.kind) {
+        case RULE_1A:
+          return threeWay(a.scaledAtomicNum, b.scaledAtomicNum);
+        case RULE_1B:
+          if (a.isRingDuplicate && b.isRingDuplicate) return -threeWay(a.distance, b.distance);
+          if (a.isRingDuplicate) return 1;
+          if (b.isRingDuplicate) return -1;
+          return 0;
+        case RULE_2:
+          if (a.atomicNum == 0 && b.atomicNum == 0) return 0;
+          if (a.atomicNum == 0 || b.atomicNum == 0) return threeWay(a.atomicNum, b.atomicNum);
+          return compareMassNumbers(a, b);
+        case RULE_3:
+          return threeWay(rule3Order(aux[first.end]), rule3Order(aux[second.end]));
+        case RULE_4A:
+          return threeWay(rule4aOrder(aux[first.end]), rule4aOrder(aux[second.end]));
+        case RULE_4B:
+          return compareRule4b(rule, first, second);
+        case RULE_4C:
+          return threeWay(rule4cOrder(aux[first.end]), rule4cOrder(aux[second.end]));
+        case RULE_5:
+          return compareRule5(rule, first, second);
+        case RULE_6:
+          if (rule6Reference < 0) return 0;
+          if (rule6Reference == a.atomIdx && rule6Reference != b.atomIdx) return 2;
+          if (rule6Reference != a.atomIdx && rule6Reference == b.atomIdx) return -2;
+          return 0;
+        default:
+          return 0;
+      }
+    }
+
+    /** Compare two edges by one rule sphere by sphere, ordering each sphere by the rules up to it. */
+    private int recursiveCompare(Rule rule, Edge first, Edge second) {
+      if (exhausted || budget-- <= 0) {
+        exhausted = true;
+        return 0;
+      }
+      int cmp = compare(rule, first, second);
+      if (cmp != 0) return cmp;
+      List<Rule> sorter = sorterOf(rule);
+      List<Edge> firstQueue = new ArrayList<>(), secondQueue = new ArrayList<>();
+      firstQueue.add(first);
+      secondQueue.add(second);
+      for (int pos = 0; pos < firstQueue.size() && pos < secondQueue.size(); pos++) {
+        first = firstQueue.get(pos);
+        second = secondQueue.get(pos);
+        List<Edge> firstEdges = edgesOf(first.end), secondEdges = edgesOf(second.end);
+        prioritise(sorter, false, first.end, firstEdges, false);
+        prioritise(sorter, false, second.end, secondEdges, false);
+        int sizeDifference = threeWay(firstEdges.size(), secondEdges.size());
+        for (int i = 0; i < firstEdges.size() && i < secondEdges.size(); i++) {
+          if (firstEdges.get(i).end == first.end) continue; // the edges towards the root
+          cmp = compare(rule, firstEdges.get(i), secondEdges.get(i));
+          if (cmp != 0) return cmp;
+        }
+        if (sizeDifference != 0) return sizeDifference;
+        prioritise(sorter, false, first.end, firstEdges, true);
+        prioritise(sorter, false, second.end, secondEdges, true);
+        for (int i = 0; i < firstEdges.size() && i < secondEdges.size(); i++) {
+          if (firstEdges.get(i).end == first.end) continue;
+          cmp = compare(rule, firstEdges.get(i), secondEdges.get(i));
+          if (cmp != 0) return cmp;
+          firstQueue.add(firstEdges.get(i));
+          secondQueue.add(secondEdges.get(i));
+        }
+      }
+      return 0;
+    }
+
+    // ------------------------------------------------------------------
+    // Rule 4b: like descriptor pairs before unlike
+    // ------------------------------------------------------------------
+
+    /** Away from the root, a replacement rule reads the ends against its reference descriptor. */
+    private int compareAgainstReference(Rule rule, Edge first, Edge second) {
+      if (rule.reference == NONE) return 0;
+      int a = aux[first.end], b = aux[second.end];
+      if (a != NONE && b != NONE && a != NS && b != NS) {
+        boolean firstLike = pairReference(rule.reference) == pairReference(a);
+        boolean secondLike = pairReference(rule.reference) == pairReference(b);
+        if (firstLike && !secondLike) return 1;
+        if (secondLike && !firstLike) return -1;
+      }
+      return 0;
+    }
+
+    private int compareRule4b(Rule rule, Edge first, Edge second) {
+      if (first.beg != root || second.beg != root) return compareAgainstReference(rule, first, second);
+      List<Integer> firstReferences = referenceDescriptors(first.end);
+      List<Integer> secondReferences = referenceDescriptors(second.end);
+      if (firstReferences.isEmpty() || secondReferences.isEmpty()) return 0;
+      if (firstReferences.size() == 1)
+        return comparePairs(first.end, second.end, firstReferences.get(0), secondReferences.get(0));
+      List<PairList> firstLists = new ArrayList<>(), secondLists = new ArrayList<>();
+      for (int reference : firstReferences) {
+        PairList pairs = new PairList(reference);
+        fillPairs(new Rule(RULE_4B, reference), first.end, pairs);
+        firstLists.add(pairs);
+      }
+      for (int reference : secondReferences) {
+        PairList pairs = new PairList(reference);
+        fillPairs(new Rule(RULE_4B, reference), second.end, pairs);
+        secondLists.add(pairs);
+      }
+      firstLists.sort((a, b) -> b.compareTo(a));
+      secondLists.sort((a, b) -> b.compareTo(a));
+      for (int i = 0; i < firstLists.size() && i < secondLists.size(); i++) {
+        int cmp = firstLists.get(i).compareTo(secondLists.get(i));
+        if (cmp != 0) return cmp;
+      }
+      return 0;
+    }
+
+    /** The reference descriptor(s) of a branch: the majority of the first sphere with any, both on a tie. */
+    private List<Integer> referenceDescriptors(int node) {
+      List<Integer> result = new ArrayList<>();
+      List<List<Integer>> level = new ArrayList<>();
+      level.add(new ArrayList<>(Collections.singletonList(node)));
+      while (!level.isEmpty()) {
+        for (List<Integer> group : level)
+          if (referenceOf(group, result)) return result;
+        level = nextLevel(level);
+      }
+      return new ArrayList<>();
+    }
+
+    private boolean referenceOf(List<Integer> group, List<Integer> result) {
+      int right = 0, left = 0;
+      for (int node : group) {
+        int descriptor = aux[node];
+        if (descriptor == R || descriptor == SEQ_CIS) right++;
+        else if (descriptor == S || descriptor == SEQ_TRANS) left++;
+      }
+      if (right + left == 0) return false;
+      if (right > left) {
+        result.add(R);
+      } else if (right < left) {
+        result.add(S);
+      } else {
+        result.add(R);
+        result.add(S);
+      }
+      return true;
+    }
+
+    /** The next sphere, grouped by the rules up to Rule 4b so that equivalent nodes are read together. */
+    private List<List<Integer>> nextLevel(List<List<Integer>> previous) {
+      List<Rule> sorter = sorterOf(new Rule(RULE_4B, NONE));
+      List<List<Integer>> next = new ArrayList<>();
+      for (List<Integer> group : previous) {
+        List<List<List<Edge>>> grouped = new ArrayList<>();
+        for (int node : group) {
+          List<Edge> edges = nonTerminalOutEdges(node);
+          prioritise(sorter, false, node, edges, true);
+          grouped.add(groups(sorter, false, edges));
+        }
+        int count = grouped.isEmpty() ? 0 : grouped.get(0).size();
+        for (List<List<Edge>> g : grouped) count = Math.min(count, g.size());
+        for (int i = 0; i < count; i++) {
+          List<Integer> equivalent = new ArrayList<>();
+          for (List<List<Edge>> g : grouped)
+            for (Edge edge : g.get(i)) equivalent.add(edge.end);
+          if (!equivalent.isEmpty()) next.add(equivalent);
+        }
+      }
+      return next;
+    }
+
+    /** Read the descriptors of a branch outwards, each sphere ordered with the replacement rule. */
+    private void fillPairs(Rule replacement, int beg, PairList pairs) {
+      List<Rule> sorter = referenceSorter(replacement);
+      List<Integer> queue = new ArrayList<>();
+      queue.add(beg);
+      for (int i = 0; i < queue.size(); i++) {
+        int node = queue.get(i);
+        pairs.add(aux[node]);
+        List<Edge> edges = edgesOf(node);
+        prioritise(sorter, false, node, edges, true);
+        for (Edge edge : edges)
+          if (edge.beg == node && !terminal(edge.end)) queue.add(edge.end);
+      }
+    }
+
+    /** Compare two branches pair by pair, each read against its own reference descriptor. */
+    private int comparePairs(int firstNode, int secondNode, int firstReference, int secondReference) {
+      List<Rule> firstSorter = referenceSorter(new Rule(RULE_4B, firstReference));
+      List<Rule> secondSorter = referenceSorter(new Rule(RULE_4B, secondReference));
+      List<Integer> firstQueue = new ArrayList<>(), secondQueue = new ArrayList<>();
+      firstQueue.add(firstNode);
+      secondQueue.add(secondNode);
+      for (int pos = 0; pos < firstQueue.size() && pos < secondQueue.size(); pos++) {
+        int a = firstQueue.get(pos), b = secondQueue.get(pos);
+        boolean firstLike = pairReference(aux[a]) == firstReference;
+        boolean secondLike = pairReference(aux[b]) == secondReference;
+        if (firstLike && !secondLike) return 1;
+        if (!firstLike && secondLike) return -1;
+        List<Edge> edges = edgesOf(a);
+        prioritise(firstSorter, false, a, edges, true);
+        for (Edge edge : edges)
+          if (edge.beg == a && !terminal(edge.end)) firstQueue.add(edge.end);
+        edges = edgesOf(b);
+        prioritise(secondSorter, false, b, edges, true);
+        for (Edge edge : edges)
+          if (edge.beg == b && !terminal(edge.end)) secondQueue.add(edge.end);
+      }
+      return 0;
+    }
+
+    // ------------------------------------------------------------------
+    // Rule 5: R before S, read with both references
+    // ------------------------------------------------------------------
+
+    private int compareRule5(Rule rule, Edge first, Edge second) {
+      if (first.beg != root || second.beg != root) return compareAgainstReference(rule, first, second);
+      PairList firstR = new PairList(R), secondR = new PairList(R), firstS = new PairList(S), secondS = new PairList(S);
+      fillPairs(new Rule(RULE_5, R), first.end, firstR);
+      fillPairs(new Rule(RULE_5, S), first.end, firstS);
+      fillPairs(new Rule(RULE_5, R), second.end, secondR);
+      fillPairs(new Rule(RULE_5, S), second.end, secondS);
+      int cmpR = firstR.compareTo(secondR);
+      int cmpS = firstS.compareTo(secondS);
+      // Two when the references disagree, the mark of a pseudoasymmetric distinction.
+      if (cmpR < 0) return cmpS < 0 ? -1 : -2;
+      if (cmpR > 0) return cmpS > 0 ? 1 : 2;
+      return 0;
+    }
+
+    // ------------------------------------------------------------------
+    // Labelling
+    // ------------------------------------------------------------------
+
+    private void collectUnits() {
+      for (int atom = 0; atom < g.n; atom++) {
+        if (g.tetraChirality[atom] == 0) continue;
+        int[] ligands = g.tetrahedralLigands(atom);
+        if (ligands == null) continue;
+        Unit unit = new Unit();
+        unit.first = atom;
+        unit.ligands = ligands;
+        unit.tag = g.tetraChirality[atom];
+        if (atom == centre) centreUnit = units.size();
+        units.add(unit);
+      }
+      for (int atom = 0; atom < g.n; atom++) {
+        for (int other : g.neighbors[atom]) {
+          if (other <= atom || g.bondOrder(atom, other) != 2) continue;
+          int configuration = g.dbStereo(atom, other);
+          if (configuration == 0) continue;
+          Unit unit = new Unit();
+          unit.bond = true;
+          unit.first = atom;
+          unit.second = other;
+          unit.carrierFirst = g.doubleBondReference(atom, other);
+          unit.carrierSecond = g.doubleBondReference(other, atom);
+          unit.configuration = configuration;
+          if (unit.carrierFirst >= 0 && unit.carrierSecond >= 0) units.add(unit);
+        }
+      }
+    }
+
+    /** Label every node of every other unit, deepest first; a sphere sees only the spheres beyond it. */
+    private void labelAuxiliaryDescriptors() {
+      List<int[]> pending = new ArrayList<>(); // node, unit
+      for (int u = 0; u < units.size(); u++) {
+        Unit unit = units.get(u);
+        if (!unit.bond && unit.first == centre) continue;
+        for (int node = 0; node < nodes.size(); node++) {
+          if (nodes.get(node).isDuplicate || nodes.get(node).atomIdx != unit.first) continue;
+          int low = node;
+          // A bond is labelled at its end nearer the root.
+          int parent = nodes.get(node).parent;
+          if (unit.bond && parent >= 0 && nodes.get(parent).atomIdx == unit.second) low = parent;
+          pending.add(new int[] {low, u});
+        }
+      }
+      pending.sort((a, b) -> Integer.compare(nodes.get(b[0]).depth, nodes.get(a[0]).depth));
+      List<int[]> sphere = new ArrayList<>(); // node, descriptor
+      int previous = Integer.MAX_VALUE;
+      for (int[] entry : pending) {
+        int depth = nodes.get(entry[0]).depth;
+        if (depth < previous) {
+          for (int[] labelled : sphere) aux[labelled[0]] = labelled[1];
+          sphere.clear();
+          previous = depth;
+        }
+        Unit unit = units.get(entry[1]);
+        int descriptor;
+        if (unit.bond) {
+          descriptor = labelDoubleBond(entry[0], unit);
+        } else {
+          changeRoot(entry[0]);
+          descriptor = labelTetrahedral(entry[0], unit);
+        }
+        boolean replaced = false;
+        for (int[] labelled : sphere) {
+          if (labelled[0] == entry[0]) {
+            labelled[1] = descriptor;
+            replaced = true;
+          }
+        }
+        if (!replaced) sphere.add(new int[] {entry[0], descriptor});
+      }
+      for (int[] labelled : sphere) aux[labelled[0]] = labelled[1];
+    }
+
+    /** Whether reordering `first` into `second` is an odd permutation of the same four edges. */
+    private static boolean oddPermutation(List<Edge> first, List<Edge> second) {
+      List<Integer> positions = new ArrayList<>();
+      for (Edge edge : second)
+        for (int i = 0; i < first.size(); i++)
+          if (first.get(i).beg == edge.beg && first.get(i).end == edge.end) positions.add(i);
+      int inversions = 0;
+      for (int i = 0; i < positions.size(); i++)
+        for (int j = i + 1; j < positions.size(); j++)
+          if (positions.get(i) > positions.get(j)) inversions++;
+      return inversions % 2 == 1;
+    }
+
+    /** The descriptor of a tetrahedral unit at `node`, the current root. */
+    private int labelTetrahedral(int node, Unit unit) {
+      List<Edge> edges = edgesOf(node);
+      if (edges.size() < 3) return NS;
+      List<Rule> rules = allRules();
+      Priority priority = prioritise(rules, true, node, edges, true);
+      if (!priority.unique && edges.size() == 4) {
+        List<List<Edge>> partition = groups(rules, true, edges);
+        if (partition.size() == 2) {
+          rule6Reference = nodes.get(edges.get(1).end).atomIdx;
+          priority = prioritise(rules, true, node, edges, true);
+          rule6Reference = -1;
+        } else if (partition.size() == 1) {
+          rule6Reference = nodes.get(edges.get(0).end).atomIdx;
+          prioritise(rules, true, node, edges, true);
+          List<Edge> first = new ArrayList<>(edges);
+          rule6Reference = nodes.get(edges.get(1).end).atomIdx;
+          priority = prioritise(rules, true, node, edges, true);
+          rule6Reference = -1;
+          if (oddPermutation(first, edges)) return UNKNOWN;
+        }
+        if (!priority.unique) return UNKNOWN;
+      } else if (!priority.unique) {
+        return UNKNOWN;
+      }
+      // The carriers in rank order: every ligand atom once, and the implicit hydrogen.
+      List<Integer> carriers = new ArrayList<>();
+      for (Edge edge : edges) {
+        DigraphNode end = nodes.get(edge.end);
+        if (end.isDuplicate && !end.isRingDuplicate) continue;
+        carriers.add(end.atomIdx);
+      }
+      int[] ranks = new int[4];
+      for (int slot = 0; slot < 4; slot++) {
+        int ligand = unit.ligands[slot];
+        int rank = 0; // a lone pair ranks below every carrier
+        for (int i = 0; i < carriers.size(); i++) {
+          if (carriers.get(i) == ligand) {
+            rank = carriers.size() - i;
+            break;
+          }
+        }
+        if (ligand >= 0 && rank == 0) return UNKNOWN;
+        ranks[slot] = rank;
+      }
+      int inversions = 0;
+      for (int i = 0; i < 4; i++)
+        for (int j = i + 1; j < 4; j++)
+          if (ranks[i] > ranks[j]) inversions++;
+      boolean anticlockwise = unit.tag == 1;
+      boolean rectus = (inversions % 2 == 0) != anticlockwise;
+      if (priority.pseudoasymmetric) return rectus ? LOWER_R : LOWER_S;
+      return rectus ? R : S;
+    }
+
+    /** The descriptor of a double bond unit whose end nearer the root is `root1`. */
+    private int labelDoubleBond(int root1, Unit unit) {
+      int atom1 = nodes.get(root1).atomIdx;
+      int atom2 = atom1 == unit.first ? unit.second : unit.first;
+      int root2 = -1;
+      for (int child : nodes.get(root1).children)
+        if (!nodes.get(child).isDuplicate && nodes.get(child).atomIdx == atom2) root2 = child;
+      if (root2 < 0) return UNKNOWN;
+      changeRoot(root1);
+      List<Edge> edges1 = withoutInternal(root1, atom2);
+      changeRoot(root2);
+      List<Edge> edges2 = withoutInternal(root2, atom1);
+      if (edges1.isEmpty() || edges2.isEmpty()) return NS;
+      int carrier1 = unit.carrierFirst, carrier2 = unit.carrierSecond;
+      if (atom1 == unit.second) {
+        carrier1 = unit.carrierSecond;
+        carrier2 = unit.carrierFirst;
+      }
+      int configuration = unit.configuration;
+      List<Rule> rules = allRules();
+      changeRoot(root1);
+      Priority priority1 = prioritise(rules, true, root1, edges1, true);
+      if (!priority1.unique) return UNKNOWN;
+      if (edges1.size() > 1 && nodes.get(edges1.get(0).end).atomIdx != carrier1) configuration = 3 - configuration;
+      changeRoot(root2);
+      Priority priority2 = prioritise(rules, true, root2, edges2, true);
+      if (!priority2.unique) return UNKNOWN;
+      if (edges2.size() > 1 && nodes.get(edges2.get(0).end).atomIdx != carrier2) configuration = 3 - configuration;
+      boolean pseudoasymmetric = priority1.pseudoasymmetric != priority2.pseudoasymmetric;
+      if (configuration == 1) return pseudoasymmetric ? SEQ_CIS : Z;
+      return pseudoasymmetric ? SEQ_TRANS : E;
+    }
+
+    /** The edges of a bond end other than those to the bond's other atom. */
+    private List<Edge> withoutInternal(int node, int otherAtom) {
+      List<Edge> edges = new ArrayList<>();
+      for (Edge edge : edgesOf(node))
+        if (nodes.get(edge.end).atomIdx != otherAtom && nodes.get(edge.beg).atomIdx != otherAtom) edges.add(edge);
+      return edges;
+    }
   }
 }

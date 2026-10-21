@@ -2,7 +2,8 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
- * See the NOTICE file for attribution, trademark, and algorithm IP terms. *
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ *
  * Header-only MDL MOL V2000 / SDF file reader and writer for smsd::MolGraph.
  * Zero external dependencies -- pure C++17 standard library.
  * File paths use UTF-8 on every platform.
@@ -11,12 +12,11 @@
 #ifndef SMSD_MOL_READER_HPP
 #define SMSD_MOL_READER_HPP
 
-#include "mol_graph.hpp"
-#include "layout.hpp"
-#include "smiles_parser.hpp"
+#include "smsd/mol_graph.hpp"
+#include "smsd/layout.hpp"
+#include "smsd/smiles_parser.hpp"
 
 #include <algorithm>
-#include <cassert>
 #include <cctype>
 #include <cmath>
 #include <cstdint>
@@ -40,56 +40,13 @@ namespace smsd {
 namespace mol_detail {
 
 // --------------------------------------------------------------------------
-// Element table: symbol -> atomic number (shared with smiles_parser)
+// Element symbols: the table of smiles_utils.hpp. MOL files also write D and T
+// for the hydrogen isotopes and never the aromatic lower-case SMILES forms.
 // --------------------------------------------------------------------------
 inline int elementToAtomicNum(const std::string& sym) {
-    static const std::unordered_map<std::string, int> table = {
-        {"*",0},
-        {"H",1},{"He",2},
-        {"Li",3},{"Be",4},{"B",5},{"C",6},{"N",7},{"O",8},{"F",9},{"Ne",10},
-        {"Na",11},{"Mg",12},{"Al",13},{"Si",14},{"P",15},{"S",16},{"Cl",17},{"Ar",18},
-        {"K",19},{"Ca",20},
-        {"Sc",21},{"Ti",22},{"V",23},{"Cr",24},{"Mn",25},{"Fe",26},{"Co",27},{"Ni",28},
-        {"Cu",29},{"Zn",30},{"Ga",31},{"Ge",32},{"As",33},{"Se",34},{"Br",35},{"Kr",36},
-        {"Rb",37},{"Sr",38},
-        {"Y",39},{"Zr",40},{"Nb",41},{"Mo",42},{"Tc",43},{"Ru",44},{"Rh",45},{"Pd",46},
-        {"Ag",47},{"Cd",48},{"In",49},{"Sn",50},{"Sb",51},{"Te",52},{"I",53},{"Xe",54},
-        {"Cs",55},{"Ba",56},
-        {"La",57},{"Ce",58},{"Pr",59},{"Nd",60},{"Pm",61},{"Sm",62},{"Eu",63},{"Gd",64},
-        {"Tb",65},{"Dy",66},{"Ho",67},{"Er",68},{"Tm",69},{"Yb",70},{"Lu",71},
-        {"Hf",72},{"Ta",73},{"W",74},{"Re",75},{"Os",76},{"Ir",77},{"Pt",78},
-        {"Au",79},{"Hg",80},{"Tl",81},{"Pb",82},{"Bi",83},{"Po",84},{"At",85},{"Rn",86},
-        {"Fr",87},{"Ra",88},
-        {"Ac",89},{"Th",90},{"Pa",91},{"U",92},{"Np",93},{"Pu",94},{"Am",95},{"Cm",96},
-        {"Bk",97},{"Cf",98},{"Es",99},{"Fm",100},{"Md",101},{"No",102},{"Lr",103},
-        {"Rf",104},{"Db",105},{"Sg",106},{"Bh",107},{"Hs",108},{"Mt",109},{"Ds",110},
-        {"Rg",111},{"Cn",112},{"Nh",113},{"Fl",114},{"Mc",115},{"Lv",116},{"Ts",117},{"Og",118},
-        // Common aliases
-        {"D",1},{"T",1},
-    };
-    auto it = table.find(sym);
-    return it != table.end() ? it->second : -1;
-}
-
-inline const char* atomicNumToSymbol(int z) {
-    static const char* const syms[] = {
-        "*","H","He",
-        "Li","Be","B","C","N","O","F","Ne",
-        "Na","Mg","Al","Si","P","S","Cl","Ar",
-        "K","Ca",
-        "Sc","Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn",
-        "Ga","Ge","As","Se","Br","Kr",
-        "Rb","Sr","Y","Zr","Nb","Mo","Tc","Ru","Rh","Pd",
-        "Ag","Cd","In","Sn","Sb","Te","I","Xe",
-        "Cs","Ba",
-        "La","Ce","Pr","Nd","Pm","Sm","Eu","Gd","Tb","Dy","Ho","Er","Tm","Yb","Lu",
-        "Hf","Ta","W","Re","Os","Ir","Pt","Au","Hg","Tl","Pb","Bi","Po","At","Rn",
-        "Fr","Ra",
-        "Ac","Th","Pa","U","Np","Pu","Am","Cm","Bk","Cf","Es","Fm","Md","No","Lr",
-        "Rf","Db","Sg","Bh","Hs","Mt","Ds","Rg","Cn","Nh","Fl","Mc","Lv","Ts","Og"
-    };
-    if (z < 0 || z > 118) return "?";
-    return syms[z];
+    if (sym == "D" || sym == "T") return 1;
+    if (!sym.empty() && sym[0] >= 'a' && sym[0] <= 'z') return -1;
+    return detail::elementToAtomicNum(sym);
 }
 
 // --------------------------------------------------------------------------
@@ -149,76 +106,7 @@ inline std::vector<std::string> splitWhitespace(const std::string& s) {
 }
 
 // --------------------------------------------------------------------------
-// Ring detection (same algorithm as smiles_parser)
-// --------------------------------------------------------------------------
-inline void detectRings(int n,
-                        const std::vector<std::vector<int>>& adj,
-                        std::vector<bool>& atomInRing,
-                        std::vector<std::set<int>>& bondInRing) {
-    atomInRing.assign(n, false);
-    bondInRing.resize(n);
-    for (auto& s : bondInRing) s.clear();
-
-    if (n == 0) return;
-
-    std::vector<int> parent(n, -1);
-    std::vector<int> depth(n, -1);
-    std::vector<bool> visited(n, false);
-
-    for (int start = 0; start < n; start++) {
-        if (visited[start]) continue;
-
-        struct Frame {
-            int node;
-            int parentNode;
-            int neighborIdx;
-        };
-        std::vector<Frame> stack;
-        stack.push_back({start, -1, 0});
-        visited[start] = true;
-        depth[start] = 0;
-        parent[start] = -1;
-
-        while (!stack.empty()) {
-            auto& f = stack.back();
-            if (f.neighborIdx >= static_cast<int>(adj[f.node].size())) {
-                stack.pop_back();
-                continue;
-            }
-
-            int nb = adj[f.node][f.neighborIdx];
-            f.neighborIdx++;
-
-            if (nb == f.parentNode) continue;
-
-            if (visited[nb]) {
-                if (depth[nb] < depth[f.node]) {
-                    int cur = f.node;
-                    while (cur != nb) {
-                        atomInRing[cur] = true;
-                        int p = parent[cur];
-                        if (p >= 0) {
-                            bondInRing[cur].insert(p);
-                            bondInRing[p].insert(cur);
-                        }
-                        cur = p;
-                    }
-                    atomInRing[nb] = true;
-                    bondInRing[f.node].insert(nb);
-                    bondInRing[nb].insert(f.node);
-                }
-            } else {
-                visited[nb] = true;
-                depth[nb] = depth[f.node] + 1;
-                parent[nb] = f.node;
-                stack.push_back({nb, f.node, 0});
-            }
-        }
-    }
-}
-
-// --------------------------------------------------------------------------
-// V2000 charge mapping from the counts-line ccc field
+// V2000 charge mapping from the atom-block ccc field
 // --------------------------------------------------------------------------
 inline int v2000ChargeFromField(int ccc) {
     // V2000 spec: 0=uncharged, 1=+3, 2=+2, 3=+1, 4=doublet radical, 5=-1, 6=-2, 7=-3
@@ -262,6 +150,7 @@ struct MolAtom {
     int massNumber = 0;
     int hCount = -1;
     int valence = -1;
+    int radical = 0;
     int atomClass = 0;
     int tetraCfg = 0;
 };
@@ -282,26 +171,22 @@ inline MolGraph moleculeForWrite(const MolGraph& graph) {
     }
     if (std::any_of(encoded.aromatic.begin(), encoded.aromatic.end(), [](uint8_t value) { return value != 0; })
         && !encoded.kekulize()) {
+        for (int atom = 0; atom < graph.n; ++atom)
+            for (int neighbor : graph.neighbors[atom])
+                if (neighbor > atom && graph.bondOrder(atom, neighbor) == 4 && graph.dbStereo(atom, neighbor) != 0)
+                    throw std::invalid_argument("Cannot preserve aromatic double-bond stereo in a Kekule form");
         const std::lock_guard<std::recursive_mutex> cacheLock(graph.lazyCacheMutex());
         return graph;
     }
     return encoded;
 }
 
-/** Explicit valence, with aromatic bonds counted once for the valence model. */
-inline int explicitValence(const MolGraph& graph, int atom) {
-    int valence = 0;
-    for (int neighbor : graph.neighbors[atom]) {
-        const int order = graph.bondOrder(atom, neighbor);
-        valence += order == 4 ? 1 : order;
-    }
-    return valence;
-}
-
 /** Preserve non-default hydrogen counts using the ordinary atom valence field. */
 inline int valenceForWrite(const MolGraph& graph, int atom) {
-    const int valence = explicitValence(graph, atom);
-    const int inferredHydrogens = graph.atomicNum[atom] <= 1 ? 0
+    const int valence = detail::explicitValence(graph, atom);
+    const int inferredHydrogens = graph.atomicNum[atom] == 1
+        ? (graph.formalCharge[atom] == 0 ? std::max(0, 1 - valence) : 0)
+        : graph.atomicNum[atom] == 0 ? 0
         : detail::computeImplicitH(graph.atomicNum[atom], graph.aromatic[atom], valence, graph.formalCharge[atom]);
     return inferredHydrogens == graph.hydrogenCount[atom] ? -1 : valence + graph.hydrogenCount[atom];
 }
@@ -438,8 +323,10 @@ inline std::unordered_map<int64_t, std::pair<int, int>> tetrahedralWedges(
     return wedges;
 }
 
+enum class CoordinateFormat { FullPrecision, V2000, V3000 };
+
 /** MOL E/Z is conveyed by coordinates, never by the bond stereo field. */
-inline std::vector<Point2D> stereoCoordinates(const MolGraph& graph) {
+inline std::vector<Point2D> stereoCoordinates(const MolGraph& graph, CoordinateFormat format) {
     std::vector<std::pair<int, int>> stereoBonds;
     for (int atom = 0; atom < graph.n; ++atom) {
         for (int other : graph.neighbors[atom])
@@ -478,13 +365,13 @@ inline std::vector<Point2D> stereoCoordinates(const MolGraph& graph) {
             }
         }
         if (component[first]) {
-            // A ring cannot be separated at the double bond. Move one reference
-            // ligand instead, then verify all stereo relations before writing.
-            int reference = -1;
-            for (int neighbor : graph.neighbors[first]) if (neighbor != second) { reference = neighbor; break; }
-            if (reference < 0)
+            // Reflect all ligands at the endpoint together so their opposite
+            // sides are retained when the cyclic double-bond relation changes.
+            pending.clear();
+            for (int neighbor : graph.neighbors[first])
+                if (neighbor != second) pending.push_back(neighbor);
+            if (pending.empty())
                 throw std::invalid_argument("Double-bond stereo has no reference ligand");
-            pending.assign(1, reference);
         }
         const double axisX = coordinates[second].x - coordinates[first].x;
         const double axisY = coordinates[second].y - coordinates[first].y;
@@ -499,10 +386,70 @@ inline std::vector<Point2D> stereoCoordinates(const MolGraph& graph) {
             coordinates[atom].y = coordinates[first].y + 2 * projection * axisY - relativeY;
         }
     }
-    for (const auto& bond : stereoBonds)
+    auto ligandSide = [&](int first, int second, int ligand) {
+        return (coordinates[second].x - coordinates[first].x) * (coordinates[ligand].y - coordinates[first].y)
+             - (coordinates[second].y - coordinates[first].y) * (coordinates[ligand].x - coordinates[first].x);
+    };
+    for (const auto& bond : stereoBonds) {
+        for (const auto& end : {bond, std::make_pair(bond.second, bond.first)}) {
+            int reference = -1;
+            for (int neighbor : graph.neighbors[end.first]) {
+                if (neighbor == end.second) continue;
+                if (reference < 0) { reference = neighbor; continue; }
+                if (ligandSide(end.first, end.second, reference) * ligandSide(end.first, end.second, neighbor) < 0) continue;
+                const double axisX = coordinates[end.second].x - coordinates[end.first].x;
+                const double axisY = coordinates[end.second].y - coordinates[end.first].y;
+                const double lengthSquared = axisX * axisX + axisY * axisY;
+                if (lengthSquared < 1e-10)
+                    throw std::invalid_argument("Cannot represent double-bond stereo with degenerate MOL coordinates");
+                const double relativeX = coordinates[neighbor].x - coordinates[end.first].x;
+                const double relativeY = coordinates[neighbor].y - coordinates[end.first].y;
+                const double projection = (relativeX * axisX + relativeY * axisY) / lengthSquared;
+                coordinates[neighbor].x = coordinates[end.first].x + 2 * projection * axisX - relativeX;
+                coordinates[neighbor].y = coordinates[end.first].y + 2 * projection * axisY - relativeY;
+            }
+        }
+    }
+    if (format != CoordinateFormat::FullPrecision) {
+        auto serialisedCoordinate = [&](double value) {
+            if (!std::isfinite(value)) throw std::invalid_argument("MOL coordinates must be finite");
+            double rounded = 0;
+            if (format == CoordinateFormat::V2000) {
+                char text[128];
+                const int size = std::snprintf(text, sizeof(text), "%.4f", value);
+                if (size < 0 || size >= static_cast<int>(sizeof(text)) || std::sscanf(text, "%lf", &rounded) != 1)
+                    throw std::invalid_argument("Cannot represent a MOL coordinate");
+            } else {
+                std::ostringstream text;
+                text << value;
+                std::istringstream input(text.str());
+                if (!(input >> rounded)) throw std::invalid_argument("Cannot represent a MOL coordinate");
+            }
+            return rounded;
+        };
+        for (auto& point : coordinates) {
+            point.x = serialisedCoordinate(point.x);
+            point.y = serialisedCoordinate(point.y);
+        }
+    }
+    for (const auto& bond : stereoBonds) {
         if (geometry(bond.first, bond.second) != graph.dbStereo(bond.first, bond.second))
             throw std::invalid_argument("Cannot preserve double-bond stereo in MOL coordinates");
+        for (const auto& end : {bond, std::make_pair(bond.second, bond.first)}) {
+            int reference = -1;
+            for (int neighbor : graph.neighbors[end.first]) {
+                if (neighbor == end.second) continue;
+                if (reference < 0) { reference = neighbor; continue; }
+                if (ligandSide(end.first, end.second, reference) * ligandSide(end.first, end.second, neighbor) >= -1e-10)
+                    throw std::invalid_argument("Cannot preserve opposite double-bond ligands in MOL coordinates");
+            }
+        }
+    }
     return coordinates;
+}
+
+inline std::vector<Point2D> stereoCoordinates(const MolGraph& graph) {
+    return stereoCoordinates(graph, CoordinateFormat::FullPrecision);
 }
 
 inline std::string stripV30Prefix(const std::string& line) {
@@ -566,7 +513,7 @@ inline MolGraph buildMolGraphFromParsedMol(
 
     std::vector<bool> atomInRing;
     std::vector<std::set<int>> bondInRingSet;
-    mol_detail::detectRings(n, simpleAdj, atomInRing, bondInRingSet);
+    detail::detectRings(n, simpleAdj, atomInRing, bondInRingSet);
 
     std::vector<std::vector<bool>> bondRingFlags(n);
     std::vector<std::vector<bool>> bondAromFlags(n);
@@ -598,6 +545,8 @@ inline MolGraph buildMolGraphFromParsedMol(
         }
         if (atoms[i].hCount >= 0) hydrogenCounts[i] = std::max(0, atoms[i].hCount - explicitHydrogens);
         else if (atoms[i].valence >= 0) hydrogenCounts[i] = std::max(0, atoms[i].valence - explicitValence);
+        else if (atomicNums[i] == 1 && charges[i] == 0 && atoms[i].radical == 0)
+            hydrogenCounts[i] = std::max(0, 1 - explicitValence);
         else if (atomicNums[i] > 1)
             hydrogenCounts[i] = detail::computeImplicitH(atomicNums[i], aromaticAtom, explicitValence, charges[i]);
         atomClasses[i] = atoms[i].atomClass;
@@ -623,19 +572,6 @@ inline MolGraph buildMolGraphFromParsedMol(
         tetraChirality[atom] = mol_detail::coordinateChirality(atom, neighbors[atom], positions);
     }
 
-    std::vector<std::vector<int>> dbStereoMat;
-    for (const auto& bond : bonds) {
-        if (bond.order != 2 || bond.stereo == 3) continue;
-        int firstLigand = -1, secondLigand = -1;
-        for (int neighbor : neighbors[bond.from]) if (neighbor != bond.to) { firstLigand = neighbor; break; }
-        for (int neighbor : neighbors[bond.to]) if (neighbor != bond.from) { secondLigand = neighbor; break; }
-        if (firstLigand < 0 || secondLigand < 0) continue;
-        const int configuration = mol_detail::doubleBondGeometry(atoms, bond.from, bond.to, firstLigand, secondLigand);
-        if (configuration == 0) continue;
-        if (dbStereoMat.empty()) dbStereoMat.assign(n, std::vector<int>(n, 0));
-        dbStereoMat[bond.from][bond.to] = dbStereoMat[bond.to][bond.from] = configuration;
-    }
-
     MolGraph::Builder builder;
     builder.atomCount(n)
            .atomicNumbers(std::move(atomicNums))
@@ -655,8 +591,44 @@ inline MolGraph buildMolGraphFromParsedMol(
            .comment(comment)
            .properties(std::move(properties));
 
-    if (!dbStereoMat.empty()) builder.doubleBondStereo(std::move(dbStereoMat));
-    return builder.build();
+    auto graph = builder.build();
+    std::vector<int> ringDistance, ringQueue;
+    auto hasSmallRing = [&](int first, int second) {
+        if (bondInRingSet[first].count(second) == 0) return false;
+        ringDistance.assign(n, -1);
+        ringQueue.clear();
+        ringDistance[first] = 0;
+        ringQueue.push_back(first);
+        for (size_t position = 0; position < ringQueue.size(); ++position) {
+            const int atom = ringQueue[position];
+            if (ringDistance[atom] >= 6) continue;
+            for (int neighbor : graph.neighbors[atom]) {
+                if ((atom == first && neighbor == second) || (atom == second && neighbor == first)) continue;
+                if (ringDistance[neighbor] >= 0) continue;
+                ringDistance[neighbor] = ringDistance[atom] + 1;
+                if (neighbor == second) return true;
+                ringQueue.push_back(neighbor);
+            }
+        }
+        return false;
+    };
+    for (const auto& bond : bonds) {
+        if (bond.order != 2 || bond.stereo == 3) continue;
+        int firstLigand = -1, secondLigand = -1;
+        for (int neighbor : graph.neighbors[bond.from]) if (neighbor != bond.to) { firstLigand = neighbor; break; }
+        for (int neighbor : graph.neighbors[bond.to]) if (neighbor != bond.from) { secondLigand = neighbor; break; }
+        if (firstLigand < 0 || secondLigand < 0) continue;
+        // Small aromatic rings do not acquire E/Z tags from their drawing.
+        if (graph.bondAromatic(bond.from, bond.to) && hasSmallRing(bond.from, bond.to)) continue;
+        const int configuration = mol_detail::doubleBondGeometry(atoms, bond.from, bond.to, firstLigand, secondLigand);
+        if (configuration == 0) continue;
+        graph.hasDbStereo = true;
+        if (graph.useDense) graph.dbStereoConf[bond.from][bond.to] = graph.dbStereoConf[bond.to][bond.from] = configuration;
+        else graph.sparseDbStereo[MolGraph::bondKey(bond.from, bond.to)] = configuration;
+    }
+
+    graph.invalidateBondDerivedState();
+    return graph;
 }
 
 inline MolGraph readMolBlockV3000(const std::vector<std::string>& lines) {
@@ -712,6 +684,7 @@ inline MolGraph readMolBlockV3000(const std::vector<std::string>& lines) {
             auto attrs = mol_detail::parseV30Attributes(toks, 6);
             if (attrs.count("CHG")) a.formalCharge = std::stoi(attrs["CHG"]);
             if (attrs.count("MASS")) a.massNumber = std::stoi(attrs["MASS"]);
+            if (attrs.count("RAD")) a.radical = std::stoi(attrs["RAD"]);
             if (attrs.count("HCOUNT")) {
                 const int count = std::stoi(attrs["HCOUNT"]);
                 if (count != 0) a.hCount = std::max(0, count);
@@ -892,9 +865,10 @@ inline MolGraph readMolBlock(const std::string& molBlock) {
             }
         }
 
-        // Charge from counts-line field (cols 36-38)
+        // Charge from the atom-block ccc field (cols 36-38)
         int ccc = mol_detail::safeInt(line, 36, 3);
         atoms[i].formalCharge = mol_detail::v2000ChargeFromField(ccc);
+        atoms[i].radical = ccc == 4 ? 2 : 0;
         int parity = mol_detail::safeInt(line, 39, 3);
         atoms[i].tetraCfg = (parity == 1 || parity == 2) ? parity : 0;
         const int hydrogenCount = mol_detail::safeInt(line, 42, 3);
@@ -944,6 +918,7 @@ inline MolGraph readMolBlock(const std::string& molBlock) {
     // --- Parse M-lines (M CHG, M ISO, etc.) ---
     int propStart = 4 + atomCount + bondCount;
     int mEndLine = propStart;
+    bool radicalProperties = false;
     std::map<std::string, std::string> properties;
     for (int lineIdx = propStart; lineIdx < static_cast<int>(lines.size()); lineIdx++) {
         const std::string& line = lines[lineIdx];
@@ -975,6 +950,11 @@ inline MolGraph readMolBlock(const std::string& molBlock) {
         }
 
         // M  CHGnn8 aaa vvv aaa vvv ...  (I4 fields start at column 9)
+        if (!radicalProperties && line.size() >= 6
+            && (line.substr(0, 6) == "M  CHG" || line.substr(0, 6) == "M  RAD")) {
+            for (auto& atom : atoms) atom.radical = 0;
+            radicalProperties = true;
+        }
         if (line.size() >= 6 && line.substr(0, 6) == "M  CHG") {
             int count = mol_detail::safeInt(line, 6, 3);
             for (int j = 0; j < count; j++) {
@@ -984,6 +964,16 @@ inline MolGraph readMolBlock(const std::string& molBlock) {
                 if (atomIdx >= 0 && atomIdx < atomCount) {
                     atoms[atomIdx].formalCharge = charge;
                 }
+            }
+        }
+
+        if (line.size() >= 6 && line.substr(0, 6) == "M  RAD") {
+            const int count = mol_detail::safeInt(line, 6, 3);
+            for (int entry = 0; entry < count; ++entry) {
+                const int position = 9 + entry * 8;
+                const int atomIndex = mol_detail::safeInt(line, position, 4) - 1;
+                if (atomIndex >= 0 && atomIndex < atomCount)
+                    atoms[atomIndex].radical = mol_detail::safeInt(line, position + 4, 4);
             }
         }
 
@@ -1123,14 +1113,18 @@ inline std::string writeMolBlock(const MolGraph& g) {
     char buf[256];
 
     int n = g.n;
+    size_t bondCount = 0;
+    for (const auto& neighbors : g.neighbors) bondCount += neighbors.size();
+    bondCount /= 2;
+    if (n > 999 || bondCount > 999) return writeMolBlockV3000(g);
     const auto encoded = mol_detail::moleculeForWrite(g);
-    const auto coordinates = mol_detail::stereoCoordinates(g);
+    const auto coordinates = mol_detail::stereoCoordinates(encoded, mol_detail::CoordinateFormat::V2000);
     const auto wedges = mol_detail::tetrahedralWedges(g, coordinates);
 
-    // Count bonds (each edge stored once)
-    int bondCount = 0;
+    // Each edge is stored once in the output.
     struct BondInfo { int from, to, order, stereo; };
     std::vector<BondInfo> bondList;
+    bondList.reserve(bondCount);
     for (int i = 0; i < n; i++) {
         for (int j : g.neighbors[i]) {
             if (j > i) {
@@ -1143,11 +1137,9 @@ inline std::string writeMolBlock(const MolGraph& g) {
                     const bool unspecified = ord == 2 && g.dbStereo(i, j) == 0;
                     bondList.push_back({i, j, ord, unspecified ? 3 : 0});
                 }
-                bondCount++;
             }
         }
     }
-    if (n > 999 || bondCount > 999) return writeMolBlockV3000(g);
 
     // Header lines
     out << g.name << "\n";
@@ -1156,13 +1148,13 @@ inline std::string writeMolBlock(const MolGraph& g) {
 
     // Counts line: aaabbblllfffcccsssxxxrrrpppiiimmmvvvvvv
     std::snprintf(buf, sizeof(buf), "%3d%3d  0  0  0  0  0  0  0  0999 V2000\n",
-                  n, bondCount);
+                  n, static_cast<int>(bondCount));
     out << buf;
 
     // Atom block
     for (int i = 0; i < n; i++) {
         const char* sym = (g.atomicNum[i] == 0 && i < static_cast<int>(g.atomClass.size()) && g.atomClass[i] > 0)
-            ? "R#" : mol_detail::atomicNumToSymbol(g.atomicNum[i]);
+            ? "R#" : detail::atomicNumToSymbol(g.atomicNum[i]);
         int ccc = mol_detail::v2000ChargeToField(g.formalCharge[i]);
         int parity = mol_detail::tetrahedralParity(g.tetraChirality[i], i, g.neighbors[i], g.atomicNum);
         const int valence = mol_detail::valenceForWrite(encoded, i);
@@ -1180,9 +1172,8 @@ inline std::string writeMolBlock(const MolGraph& g) {
         out << buf;
     }
 
-    // M CHG lines: always export all non-zero charges for modern compatibility.
-    // Many modern mol-file parsers ignore the legacy ccc field
-    // and rely exclusively on M CHG lines.
+    // M CHG lines carry every non-zero charge, as many MOL readers ignore the
+    // atom-block ccc field and read charges from M CHG lines alone.
     {
         std::vector<std::pair<int, int>> chargeEntries;
         for (int i = 0; i < n; i++) {
@@ -1262,7 +1253,7 @@ inline std::string writeMolBlock(const MolGraph& g) {
 
 inline std::string writeMolBlockV3000(const MolGraph& g) {
     const auto encoded = mol_detail::moleculeForWrite(g);
-    const auto coordinates = mol_detail::stereoCoordinates(g);
+    const auto coordinates = mol_detail::stereoCoordinates(encoded, mol_detail::CoordinateFormat::V3000);
     const auto wedges = mol_detail::tetrahedralWedges(g, coordinates);
     std::ostringstream out;
     out << g.name << "\n";
@@ -1295,7 +1286,7 @@ inline std::string writeMolBlockV3000(const MolGraph& g) {
     out << "M  V30 BEGIN ATOM\n";
     for (int i = 0; i < g.n; ++i) {
         const char* sym = (g.atomicNum[i] == 0 && i < static_cast<int>(g.atomClass.size()) && g.atomClass[i] > 0)
-            ? "R#" : mol_detail::atomicNumToSymbol(g.atomicNum[i]);
+            ? "R#" : detail::atomicNumToSymbol(g.atomicNum[i]);
         out << "M  V30 " << (i + 1) << " " << sym
             << " " << coordinates[i].x << " " << coordinates[i].y << " 0 0";
         if (i < static_cast<int>(g.formalCharge.size()) && g.formalCharge[i] != 0)
@@ -1345,268 +1336,5 @@ inline void writeSDF(const std::vector<MolGraph>& molecules, const std::string& 
 }
 
 } // namespace smsd
-
-// ============================================================================
-// Basic tests (compile with -DSMSD_TEST_MOL_READER)
-// ============================================================================
-#ifdef SMSD_TEST_MOL_READER
-
-#include <cassert>
-#include <iostream>
-
-namespace smsd_mol_test {
-
-inline void testBasicMolBlock() {
-    // Methane: 1 carbon, no bonds
-    std::string molBlock =
-        "methane\n"
-        "  test\n"
-        "\n"
-        "  1  0  0  0  0  0  0  0  0  0999 V2000\n"
-        "    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "M  END\n";
-
-    auto g = smsd::readMolBlock(molBlock);
-    assert(g.n == 1);
-    assert(g.atomicNum[0] == 6);
-    assert(g.formalCharge[0] == 0);
-    std::cout << "  [PASS] testBasicMolBlock (methane)\n";
-}
-
-inline void testEthanolMolBlock() {
-    // Ethanol: C-C-O
-    std::string molBlock =
-        "ethanol\n"
-        "  test\n"
-        "\n"
-        "  3  2  0  0  0  0  0  0  0  0999 V2000\n"
-        "    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "    1.5000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "    3.0000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "  1  2  1  0  0  0  0\n"
-        "  2  3  1  0  0  0  0\n"
-        "M  END\n";
-
-    auto g = smsd::readMolBlock(molBlock);
-    assert(g.n == 3);
-    assert(g.atomicNum[0] == 6);
-    assert(g.atomicNum[1] == 6);
-    assert(g.atomicNum[2] == 8);
-    assert(g.bondOrder(0, 1) == 1);
-    assert(g.bondOrder(1, 2) == 1);
-    assert(g.degree[1] == 2);
-    std::cout << "  [PASS] testEthanolMolBlock\n";
-}
-
-inline void testBenzeneMolBlock() {
-    // Benzene with aromatic bonds (type 4)
-    std::string molBlock =
-        "benzene\n"
-        "  test\n"
-        "\n"
-        "  6  6  0  0  0  0  0  0  0  0999 V2000\n"
-        "    0.0000    1.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "    0.8660    0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "    0.8660   -0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "    0.0000   -1.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "   -0.8660   -0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "   -0.8660    0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "  1  2  4  0  0  0  0\n"
-        "  2  3  4  0  0  0  0\n"
-        "  3  4  4  0  0  0  0\n"
-        "  4  5  4  0  0  0  0\n"
-        "  5  6  4  0  0  0  0\n"
-        "  6  1  4  0  0  0  0\n"
-        "M  END\n";
-
-    auto g = smsd::readMolBlock(molBlock);
-    assert(g.n == 6);
-    for (int i = 0; i < 6; i++) {
-        assert(g.atomicNum[i] == 6);
-        assert(g.ring[i] == true);
-        assert(g.aromatic[i] == true);
-        assert(g.degree[i] == 2);
-    }
-    assert(g.bondAromatic(0, 1) == true);
-    assert(g.bondInRing(0, 1) == true);
-    std::cout << "  [PASS] testBenzeneMolBlock (aromatic)\n";
-}
-
-inline void testChargesAndIsotopes() {
-    // Ammonium ion with M CHG, heavy water with M ISO
-    std::string molBlock =
-        "charged\n"
-        "  test\n"
-        "\n"
-        "  2  1  0  0  0  0  0  0  0  0999 V2000\n"
-        "    0.0000    0.0000    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "    1.5000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "  1  2  1  0  0  0  0\n"
-        "M  CHG  1   1   1\n"
-        "M  ISO  1   2  18\n"
-        "M  END\n";
-
-    auto g = smsd::readMolBlock(molBlock);
-    assert(g.n == 2);
-    assert(g.formalCharge[0] == 1);   // N+
-    assert(g.massNumber[1] == 18);    // O-18
-    std::cout << "  [PASS] testChargesAndIsotopes\n";
-}
-
-inline void testCountsLineCharge() {
-    // Test charge from counts-line ccc field
-    std::string molBlock =
-        "ccc charge\n"
-        "  test\n"
-        "\n"
-        "  1  0  0  0  0  0  0  0  0  0999 V2000\n"
-        "    0.0000    0.0000    0.0000 N   0  3  0  0  0  0  0  0  0  0  0  0\n"
-        "M  END\n";
-
-    auto g = smsd::readMolBlock(molBlock);
-    assert(g.formalCharge[0] == 1);  // ccc=3 means +1
-    std::cout << "  [PASS] testCountsLineCharge\n";
-}
-
-inline void testDoubleBonds() {
-    // Formaldehyde: C=O
-    std::string molBlock =
-        "formaldehyde\n"
-        "  test\n"
-        "\n"
-        "  2  1  0  0  0  0  0  0  0  0999 V2000\n"
-        "    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "    1.5000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "  1  2  2  0  0  0  0\n"
-        "M  END\n";
-
-    auto g = smsd::readMolBlock(molBlock);
-    assert(g.bondOrder(0, 1) == 2);
-    std::cout << "  [PASS] testDoubleBonds (formaldehyde)\n";
-}
-
-inline void testTwoLetterElements() {
-    // ClBr molecule
-    std::string molBlock =
-        "ClBr\n"
-        "  test\n"
-        "\n"
-        "  2  1  0  0  0  0  0  0  0  0999 V2000\n"
-        "    0.0000    0.0000    0.0000 Cl  0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "    1.5000    0.0000    0.0000 Br  0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "  1  2  1  0  0  0  0\n"
-        "M  END\n";
-
-    auto g = smsd::readMolBlock(molBlock);
-    assert(g.atomicNum[0] == 17);  // Cl
-    assert(g.atomicNum[1] == 35);  // Br
-    std::cout << "  [PASS] testTwoLetterElements (Cl, Br)\n";
-}
-
-inline void testRoundTrip() {
-    // Build a simple molecule, write it, read it back
-    std::string molBlock =
-        "acetic acid\n"
-        "  test\n"
-        "\n"
-        "  4  3  0  0  0  0  0  0  0  0999 V2000\n"
-        "    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "    1.5000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "    3.0000    0.5000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "    3.0000   -0.5000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "  1  2  1  0  0  0  0\n"
-        "  2  3  2  0  0  0  0\n"
-        "  2  4  1  0  0  0  0\n"
-        "M  END\n";
-
-    auto g1 = smsd::readMolBlock(molBlock);
-    std::string written = smsd::writeMolBlock(g1);
-    auto g2 = smsd::readMolBlock(written);
-
-    assert(g1.n == g2.n);
-    for (int i = 0; i < g1.n; i++) {
-        assert(g1.atomicNum[i] == g2.atomicNum[i]);
-        assert(g1.formalCharge[i] == g2.formalCharge[i]);
-        assert(g1.degree[i] == g2.degree[i]);
-    }
-    assert(g1.bondOrder(1, 2) == g2.bondOrder(1, 2));
-    std::cout << "  [PASS] testRoundTrip (acetic acid)\n";
-}
-
-inline void testEmptyMolBlock() {
-    std::string molBlock =
-        "empty\n"
-        "  test\n"
-        "\n"
-        "  0  0  0  0  0  0  0  0  0  0999 V2000\n"
-        "M  END\n";
-
-    auto g = smsd::readMolBlock(molBlock);
-    assert(g.n == 0);
-    std::cout << "  [PASS] testEmptyMolBlock\n";
-}
-
-inline void testMalformedBlock() {
-    bool threw = false;
-    try {
-        smsd::readMolBlock("too short");
-    } catch (const std::invalid_argument&) {
-        threw = true;
-    }
-    assert(threw);
-    std::cout << "  [PASS] testMalformedBlock\n";
-}
-
-inline void testCyclohexane() {
-    // Cyclohexane: 6 C in a ring with single bonds
-    std::string molBlock =
-        "cyclohexane\n"
-        "  test\n"
-        "\n"
-        "  6  6  0  0  0  0  0  0  0  0999 V2000\n"
-        "    0.0000    1.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "    0.8660    0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "    0.8660   -0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "    0.0000   -1.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "   -0.8660   -0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "   -0.8660    0.5000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
-        "  1  2  1  0  0  0  0\n"
-        "  2  3  1  0  0  0  0\n"
-        "  3  4  1  0  0  0  0\n"
-        "  4  5  1  0  0  0  0\n"
-        "  5  6  1  0  0  0  0\n"
-        "  6  1  1  0  0  0  0\n"
-        "M  END\n";
-
-    auto g = smsd::readMolBlock(molBlock);
-    assert(g.n == 6);
-    for (int i = 0; i < 6; i++) {
-        assert(g.ring[i] == true);
-        assert(g.aromatic[i] == false);
-        assert(g.degree[i] == 2);
-    }
-    assert(g.bondInRing(0, 1) == true);
-    std::cout << "  [PASS] testCyclohexane (ring perception)\n";
-}
-
-inline void runAllTests() {
-    std::cout << "mol_reader tests:\n";
-    testBasicMolBlock();
-    testEthanolMolBlock();
-    testBenzeneMolBlock();
-    testChargesAndIsotopes();
-    testCountsLineCharge();
-    testDoubleBonds();
-    testTwoLetterElements();
-    testRoundTrip();
-    testEmptyMolBlock();
-    testMalformedBlock();
-    testCyclohexane();
-    std::cout << "All mol_reader tests passed.\n";
-}
-
-} // namespace smsd_mol_test
-
-#endif // SMSD_TEST_MOL_READER
 
 #endif // SMSD_MOL_READER_HPP

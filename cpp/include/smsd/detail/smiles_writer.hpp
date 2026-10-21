@@ -2,10 +2,15 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ *
+ * Canonical SMILES writer and MolGraph::toCanonicalSmiles(). Part of mol_graph.hpp,
+ * which includes this header; including it first includes the whole of mol_graph.hpp.
  */
 #pragma once
 
-#include "../smiles_utils.hpp"
+#include "smsd/mol_graph.hpp"
+#include "smsd/smiles_utils.hpp"
 
 #include <algorithm>
 #include <deque>
@@ -50,6 +55,8 @@ inline bool needsBrackets(const MolGraph& g, int idx) {
     if (g.massNumber[idx] != 0) return true;
     if (!g.atomClass.empty() && g.atomClass[idx] != 0) return true;
     if (g.tetraChirality[idx] != 0) return true;
+    for (int neighbor : g.neighbors[idx])
+        if (g.bondOrder(idx, neighbor) == 4 && g.dbStereo(idx, neighbor) != 0) return true;
     // If aromatic, check if it's one of the standard aromatic atoms
     if (g.aromatic[idx]) {
         std::string asym = aromaticSymbol(z);
@@ -67,12 +74,7 @@ inline int hydrogenCountForWrite(const MolGraph& graph, int atom) {
     if (graph.hydrogenCountsKnown && atom < static_cast<int>(graph.hydrogenCount.size()))
         return graph.hydrogenCount[atom];
     if (atomicNumber <= 1) return 0;
-    int bondOrderSum = 0;
-    for (int neighbor : graph.neighbors[atom]) {
-        const int order = graph.bondOrder(atom, neighbor);
-        bondOrderSum += order == 4 ? 1 : order;
-    }
-    int hydrogens = computeImplicitH(atomicNumber, graph.aromatic[atom], bondOrderSum, graph.formalCharge[atom]);
+    int hydrogens = computeImplicitH(atomicNumber, graph.aromatic[atom], explicitValence(graph, atom), graph.formalCharge[atom]);
     if (aromaticDonor && graph.neighbors[atom].size() == 2 && hydrogens == 0) {
         for (const auto& ring : graph.computeRings()) {
             if (ring.size() != 5 || std::find(ring.begin(), ring.end(), atom) == ring.end()) continue;
@@ -90,13 +92,8 @@ inline std::string writeAtom(const MolGraph& g, int idx, int implicitH, int chir
     if (chirality < 0) chirality = g.tetraChirality[idx];
     bool brackets = needsBrackets(g, idx);
     if (!brackets) {
-        int bondOrderSum = 0;
-        for (int neighbor : g.neighbors[idx]) {
-            const int order = g.bondOrder(idx, neighbor);
-            bondOrderSum += order == 4 ? 1 : order;
-        }
         const int defaultHydrogens = computeImplicitH(
-            g.atomicNum[idx], g.aromatic[idx], bondOrderSum, g.formalCharge[idx]);
+            g.atomicNum[idx], g.aromatic[idx], explicitValence(g, idx), g.formalCharge[idx]);
         brackets = implicitH != defaultHydrogens
             || (implicitH > 0 && g.aromatic[idx] && (g.atomicNum[idx] == 7 || g.atomicNum[idx] == 15));
     }
@@ -168,6 +165,117 @@ inline std::string bondSymbol(int order, bool fromAromatic, bool toAromatic) {
     return "";
 }
 
+// --------------------------------------------------------------------------
+// Canonical depth-first traversal shared by the SMILES and SMARTS writers
+// --------------------------------------------------------------------------
+
+/** A ring-closure digit at an atom: its number, the bond order and the partner atom. */
+struct RingDigit { int rn; int bo; int partner; };
+
+/** Connected components of the graph, each in breadth-first discovery order. */
+inline std::vector<std::vector<int>> connectedComponents(const MolGraph& g) {
+    std::vector<bool> seen(g.n, false);
+    std::vector<std::vector<int>> components;
+    for (int i = 0; i < g.n; i++) {
+        if (seen[i]) continue;
+        std::vector<int> component;
+        std::deque<int> queue;
+        queue.push_back(i);
+        seen[i] = true;
+        while (!queue.empty()) {
+            int u = queue.front(); queue.pop_front();
+            component.push_back(u);
+            for (int v : g.neighbors[u])
+                if (!seen[v]) { seen[v] = true; queue.push_back(v); }
+        }
+        components.push_back(std::move(component));
+    }
+    return components;
+}
+
+/**
+ * Writes one connected component depth first from its lowest canonical label, visiting
+ * neighbours in canonical order. A first pass assigns ring-closure numbers to the back
+ * edges; the second pass emits, for every atom, atomToken(atom, parent, children, ringDigits),
+ * then each ring digit preceded by ringBond(atom, digit, opening), then the children,
+ * each preceded by bond(atom, child) and all but the last wrapped in a branch.
+ */
+template <class AtomToken, class RingBond, class Bond>
+inline std::string writeCanonicalComponent(const MolGraph& g, const std::vector<int>& canon,
+                                           const std::vector<int>& component,
+                                           AtomToken&& atomToken, RingBond&& ringBond, Bond&& bond) {
+    const int n = g.n;
+    auto sortedNeighbors = [&](int atom) {
+        std::vector<int> nbs = g.neighbors[atom];
+        std::sort(nbs.begin(), nbs.end(), [&](int a, int b) { return canon[a] < canon[b]; });
+        return nbs;
+    };
+
+    int root = component[0];
+    for (int a : component)
+        if (canon[a] < canon[root]) root = a;
+
+    // Pass 1: the depth-first tree, and one ring-closure number for each back edge,
+    // recorded at both of its atoms.
+    std::vector<bool> vis(n, false);
+    std::set<int64_t> treeEdges;
+    std::set<int64_t> assignedRings;
+    std::vector<std::vector<RingDigit>> ringDigits(n);
+    int ringCounter = 1;
+    std::function<void(int, int)> dfs1 = [&](int atom, int parent) {
+        vis[atom] = true;
+        bool parentSkipped = false;
+        for (int nb : sortedNeighbors(atom)) {
+            if (nb == parent && !parentSkipped) { parentSkipped = true; continue; }
+            if (vis[nb]) {
+                if (assignedRings.insert(MolGraph::bondKey(atom, nb)).second) {
+                    const int rn = ringCounter++;
+                    const int bo = g.bondOrder(atom, nb);
+                    ringDigits[atom].push_back({rn, bo, nb});
+                    ringDigits[nb].push_back({rn, bo, atom});
+                }
+            } else {
+                treeEdges.insert(MolGraph::bondKey(atom, nb));
+                dfs1(nb, atom);
+            }
+        }
+    };
+    dfs1(root, -1);
+
+    // Pass 2: emit the tokens.
+    vis.assign(n, false);
+    std::string text;
+    std::unordered_set<int> emittedRings;
+    std::function<void(int, int)> dfs2 = [&](int atom, int parent) {
+        vis[atom] = true;
+        std::vector<int> children;
+        for (int nb : sortedNeighbors(atom))
+            if (!vis[nb] && treeEdges.count(MolGraph::bondKey(atom, nb))) children.push_back(nb);
+        text += atomToken(atom, parent, children, ringDigits[atom]);
+        for (const auto& digit : ringDigits[atom]) {
+            const bool opening = emittedRings.insert(digit.rn).second;
+            text += ringBond(atom, digit, opening);
+            if (digit.rn < 10) text += std::to_string(digit.rn);
+            else text += "%" + std::to_string(digit.rn);
+        }
+        for (size_t i = 0; i < children.size(); i++) {
+            const int nb = children[i];
+            if (vis[nb]) continue;
+            const std::string symbol = bond(atom, nb);
+            if (i < children.size() - 1) {
+                text += "(" + symbol;
+                dfs2(nb, atom);
+                text += ")";
+            } else {
+                text += symbol;
+                dfs2(nb, atom);
+            }
+        }
+    };
+    dfs2(root, -1);
+    return text;
+}
+
 // Canonical SMILES writer using DFS with canonical ordering.
 //
 // Strategy:
@@ -187,8 +295,8 @@ inline std::string writeCanonicalSMILES(const MolGraph& g) {
     for (int atom = 0; atom < n; ++atom)
         implicitH[atom] = hydrogenCountForWrite(g, atom);
 
-    // Directional single bonds form a small parity-constraint graph. A shared
-    // single bond between conjugated double bonds must keep one direction.
+    // Directional bonds form a small parity-constraint graph. A shared
+    // single or aromatic carrier must keep one direction.
     struct DirectionConstraint { int first, second, relation; };
     std::vector<DirectionConstraint> constraints;
     std::unordered_map<int64_t, int> directionIndex;
@@ -197,17 +305,22 @@ inline std::string writeCanonicalSMILES(const MolGraph& g) {
         const auto inserted = directionIndex.emplace(key, static_cast<int>(directionIndex.size()));
         return inserted.first->second;
     };
+    auto isDirectionalCarrier = [&](int first, int second) {
+        const int order = g.bondOrder(first, second);
+        return order == 1 || (order == 4 && g.dbStereo(first, second) == 0);
+    };
     for (int atom = 0; atom < n; ++atom) {
         for (int other : g.neighbors[atom]) {
-            if (other <= atom || g.bondOrder(atom, other) != 2 || g.dbStereo(atom, other) == 0) continue;
+            const int order = g.bondOrder(atom, other);
+            if (other <= atom || (order != 2 && order != 4) || g.dbStereo(atom, other) == 0) continue;
             int firstLigand = -1, secondLigand = -1;
             for (int neighbor : g.neighbors[atom])
                 if (neighbor != other && (firstLigand < 0 || canon[neighbor] < canon[firstLigand])) firstLigand = neighbor;
             for (int neighbor : g.neighbors[other])
                 if (neighbor != atom && (secondLigand < 0 || canon[neighbor] < canon[secondLigand])) secondLigand = neighbor;
             if (firstLigand < 0 || secondLigand < 0 ||
-                g.bondOrder(atom, firstLigand) != 1 || g.bondOrder(other, secondLigand) != 1)
-                throw std::invalid_argument("Double-bond stereo requires a single reference bond at each end");
+                !isDirectionalCarrier(atom, firstLigand) || !isDirectionalCarrier(other, secondLigand))
+                throw std::invalid_argument("Double-bond stereo requires a single or aromatic reference bond at each end");
             const int firstOrientation = atom < firstLigand ? 1 : -1;
             const int secondOrientation = other < secondLigand ? 1 : -1;
             const int configuration = MolGraph::canonicalDoubleBondTag(g, atom, other, canon);
@@ -220,7 +333,8 @@ inline std::string writeCanonicalSMILES(const MolGraph& g) {
         std::vector<int> markedLigands;
         bool doubleBondEnd = false;
         for (int neighbor : g.neighbors[atom]) {
-            if (g.bondOrder(atom, neighbor) == 2) doubleBondEnd = true;
+            const int order = g.bondOrder(atom, neighbor);
+            if (order == 2 || (order == 4 && g.dbStereo(atom, neighbor) != 0)) doubleBondEnd = true;
             if (directionIndex.count(MolGraph::bondKey(atom, neighbor))) markedLigands.push_back(neighbor);
         }
         if (!doubleBondEnd || markedLigands.size() != 2) continue;
@@ -264,6 +378,7 @@ inline std::string writeCanonicalSMILES(const MolGraph& g) {
         }
     }
     auto writeBond = [&](int first, int second) {
+        if (g.bondOrder(first, second) == 4 && g.dbStereo(first, second) != 0) return std::string("=");
         const auto found = directionIndex.find(MolGraph::bondKey(first, second));
         if (found != directionIndex.end()) {
             const int direction = directions[found->second] * (first < second ? 1 : -1);
@@ -272,156 +387,43 @@ inline std::string writeCanonicalSMILES(const MolGraph& g) {
         return bondSymbol(g.bondOrder(first, second), g.aromatic[first], g.aromatic[second]);
     };
 
-    // Find connected components
-    std::vector<bool> compVis(n, false);
-    std::vector<std::vector<int>> components;
-    for (int i = 0; i < n; i++) {
-        if (compVis[i]) continue;
-        std::vector<int> comp;
-        std::deque<int> q;
-        q.push_back(i);
-        compVis[i] = true;
-        while (!q.empty()) {
-            int u = q.front(); q.pop_front();
-            comp.push_back(u);
-            for (int v : g.neighbors[u]) {
-                if (!compVis[v]) { compVis[v] = true; q.push_back(v); }
-            }
-        }
-        components.push_back(std::move(comp));
-    }
-
-    // Per-atom ring-digit annotations:
-    // {ringNumber, bondOrder, partner}
-    struct RingDigit { int rn; int bo; int partner; };
-    std::vector<std::vector<RingDigit>> ringDigits(n);
-
-    // DFS parent map for tree identification
-    std::vector<int> dfsParent(n, -1);
-
+    // Each component is written from its lowest canonical label; the SMILES of a
+    // tetrahedral centre carries the parity of the emitted ligand order against the
+    // stored one.
     std::vector<std::string> componentSmiles;
-
-    auto sortedNeighbors = [&](int atom) {
-        std::vector<int> nbs = g.neighbors[atom];
-        std::sort(nbs.begin(), nbs.end(), [&](int a, int b) {
-            return canon[a] < canon[b];
-        });
-        return nbs;
-    };
-
-    for (size_t ci = 0; ci < components.size(); ci++) {
-        auto& comp = components[ci];
-
-        int root = comp[0];
-        for (int a : comp) {
-            if (canon[a] < canon[root]) root = a;
-        }
-
-        // --- Phase 1: DFS to find tree and assign ring numbers ---
-        std::vector<bool> vis(n, false);
-        std::set<int64_t> treeEdges; // set of bondKey for tree edges
-        std::set<int64_t> assignedRings; // prevent double-counting same bond
-        int ringCounter = 1;
-
-        std::function<void(int, int)> dfs1 = [&](int atom, int parent) {
-            vis[atom] = true;
-            dfsParent[atom] = parent;
-            auto nbs = sortedNeighbors(atom);
-            bool parentSkipped = false;
-            for (int nb : nbs) {
-                if (nb == parent && !parentSkipped) { parentSkipped = true; continue; }
-                if (vis[nb]) {
-                    // Back-edge: each bond gets exactly one ring-closure number.
-                    // Guard with a bond-key set to avoid assigning from both ends.
-                    int64_t bk = MolGraph::bondKey(atom, nb);
-                    if (assignedRings.insert(bk).second) {
-                        int rn = ringCounter++;
-                        int bo = g.bondOrder(atom, nb);
-                        ringDigits[atom].push_back({rn, bo, nb});
-                        ringDigits[nb].push_back({rn, bo, atom});
+    for (const auto& component : connectedComponents(g)) {
+        componentSmiles.push_back(writeCanonicalComponent(g, canon, component,
+            [&](int atom, int parent, const std::vector<int>& children, const std::vector<RingDigit>& digits) {
+                int chirality = g.tetraChirality[atom];
+                if (chirality != 0) {
+                    std::vector<int> storedOrder = g.neighbors[atom];
+                    std::vector<int> emittedOrder;
+                    if (parent >= 0) emittedOrder.push_back(parent);
+                    if (storedOrder.size() == 3) {
+                        const size_t hydrogenPosition = atom > 0 && storedOrder[0] < atom ? 1 : 0;
+                        storedOrder.insert(storedOrder.begin() + hydrogenPosition, -1);
+                        emittedOrder.push_back(-1);
                     }
-                } else {
-                    treeEdges.insert(MolGraph::bondKey(atom, nb));
-                    dfs1(nb, atom);
-                }
-            }
-        };
-        dfs1(root, -1);
-
-        // --- Phase 2: DFS to emit SMILES ---
-        vis.assign(n, false);
-        std::string smiStr;
-        // Track which ring digits have been emitted (first occurrence opens,
-        // second occurrence closes).
-        std::unordered_set<int> emittedRings;
-
-        std::function<void(int, int)> dfs2 = [&](int atom, int parent) {
-            vis[atom] = true;
-            auto nbs = sortedNeighbors(atom);
-            std::vector<int> children;
-            for (int neighbor : nbs) {
-                if (!vis[neighbor] && treeEdges.count(MolGraph::bondKey(atom, neighbor)))
-                    children.push_back(neighbor);
-            }
-            int chirality = g.tetraChirality[atom];
-            if (chirality != 0) {
-                std::vector<int> storedOrder = g.neighbors[atom];
-                std::vector<int> emittedOrder;
-                if (parent >= 0) emittedOrder.push_back(parent);
-                if (storedOrder.size() == 3) {
-                    const size_t hydrogenPosition = atom > 0 && storedOrder[0] < atom ? 1 : 0;
-                    storedOrder.insert(storedOrder.begin() + hydrogenPosition, -1);
-                    emittedOrder.push_back(-1);
-                }
-                for (const auto& ring : ringDigits[atom]) emittedOrder.push_back(ring.partner);
-                emittedOrder.insert(emittedOrder.end(), children.begin(), children.end());
-                int inversions = 0;
-                if (storedOrder.size() == emittedOrder.size()) {
-                    for (size_t first = 0; first < emittedOrder.size(); ++first) {
-                        const auto firstPosition = std::find(storedOrder.begin(), storedOrder.end(), emittedOrder[first]);
-                        for (size_t second = first + 1; second < emittedOrder.size(); ++second) {
-                            const auto secondPosition = std::find(storedOrder.begin(), storedOrder.end(), emittedOrder[second]);
-                            if (firstPosition > secondPosition) ++inversions;
+                    for (const auto& ring : digits) emittedOrder.push_back(ring.partner);
+                    emittedOrder.insert(emittedOrder.end(), children.begin(), children.end());
+                    int inversions = 0;
+                    if (storedOrder.size() == emittedOrder.size()) {
+                        for (size_t first = 0; first < emittedOrder.size(); ++first) {
+                            const auto firstPosition = std::find(storedOrder.begin(), storedOrder.end(), emittedOrder[first]);
+                            for (size_t second = first + 1; second < emittedOrder.size(); ++second) {
+                                const auto secondPosition = std::find(storedOrder.begin(), storedOrder.end(), emittedOrder[second]);
+                                if (firstPosition > secondPosition) ++inversions;
+                            }
                         }
                     }
+                    if (inversions % 2 != 0) chirality = 3 - chirality;
                 }
-                if (inversions % 2 != 0) chirality = 3 - chirality;
-            }
-            smiStr += writeAtom(g, atom, implicitH[atom], chirality);
-
-            // Emit ring digits for this atom
-            for (auto& rd : ringDigits[atom]) {
-                bool isOpen = (emittedRings.find(rd.rn) == emittedRings.end());
-                if (isOpen) {
-                    emittedRings.insert(rd.rn);
-                }
-                // Write bond symbol if needed
-                std::string bs = isOpen ? writeBond(atom, rd.partner) : std::string();
-                smiStr += bs;
-                if (rd.rn < 10) smiStr += std::to_string(rd.rn);
-                else smiStr += "%" + std::to_string(rd.rn);
-            }
-
-            for (size_t i = 0; i < children.size(); i++) {
-                int nb = children[i];
-                if (vis[nb]) continue;
-
-                int bo = g.bondOrder(atom, nb);
-                std::string bs = writeBond(atom, nb);
-
-                if (i < children.size() - 1) {
-                    smiStr += "(" + bs;
-                    dfs2(nb, atom);
-                    smiStr += ")";
-                } else {
-                    smiStr += bs;
-                    dfs2(nb, atom);
-                }
-            }
-        };
-
-        dfs2(root, -1);
-        componentSmiles.push_back(std::move(smiStr));
+                return writeAtom(g, atom, implicitH[atom], chirality);
+            },
+            [&](int atom, const RingDigit& digit, bool opening) {
+                return opening ? writeBond(atom, digit.partner) : std::string();
+            },
+            [&](int atom, int nb) { return writeBond(atom, nb); }));
     }
 
     std::sort(componentSmiles.begin(), componentSmiles.end());

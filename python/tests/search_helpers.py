@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Small search configurations shared by chemistry regression cases."""
 import smsd
 
@@ -27,6 +29,37 @@ def configured_mcs(query, *, timeout_ms=-1, chemistry=None, fragments=False,
 
 def atom_map(result):
     return dict(result.best.atom_mapping) if result.found else {}
+
+
+def _atomic_numbers(molecule):
+    if isinstance(molecule, smsd.MolGraph):
+        return list(molecule.atomic_num)
+    return [atom.GetAtomicNum() for atom in molecule.GetAtoms()]
+
+
+def _bond_orders(molecule):
+    if isinstance(molecule, smsd.MolGraph):
+        return {(first, second): order for first, second, order in molecule.bonds()}
+    return {(min(bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()), max(bond.GetBeginAtomIdx(), bond.GetEndAtomIdx())):
+            int(bond.GetBondTypeAsDouble()) for bond in molecule.GetBonds()}
+
+
+def assert_witness(query, target, mapping, *, size=None):
+    """Check that a mapping pairs equal elements injectively and keeps every bond between mapped query atoms.
+
+    ``query`` and ``target`` may each be a MolGraph or an RDKit molecule; ``size`` fixes the expected
+    number of mapped atoms.
+    """
+    query_atoms, target_atoms = _atomic_numbers(query), _atomic_numbers(target)
+    if size is not None:
+        assert len(mapping) == size
+    assert len(set(mapping.values())) == len(mapping)
+    for first, second in mapping.items():
+        assert query_atoms[first] == target_atoms[second]
+    target_bonds = _bond_orders(target)
+    for (first, second), order in _bond_orders(query).items():
+        if first in mapping and second in mapping:
+            assert target_bonds.get(tuple(sorted((mapping[first], mapping[second])))) == order
 
 
 def selected_atoms(graph, atoms):

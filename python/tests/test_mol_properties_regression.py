@@ -1,13 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2018-2026 BioInception PVT LTD
 # Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """MOL interchange preserves atom properties without adding query constraints."""
 import pytest
 import smsd
 
 
 @pytest.mark.parametrize("writer", [smsd.write_mol_block, smsd.write_mol_block_v3000])
-@pytest.mark.parametrize("text", ["CCO", "OCC(=O)O", "c1ccccc1", "[nH]1cccc1", "[NH4+]", "[H]OC", "[CH3]"])
+@pytest.mark.parametrize("text", ["CCO", "OCC(=O)O", "c1ccccc1", "[nH]1cccc1", "[NH4+]", "[H]OC", "[CH3]", "[H]", "[HH]", "[H][H]"])
 def test_mol_hydrogens_round_trip(writer, text):
     original = smsd.parse_smiles(text)
     block = writer(original)
@@ -15,6 +16,38 @@ def test_mol_hydrogens_round_trip(writer, text):
     restored = smsd.read_mol_block(block)
     assert restored.hydrogen_count == original.hydrogen_count
     assert restored.atomic_num == original.atomic_num
+
+
+@pytest.mark.parametrize("v3000", [False, True])
+@pytest.mark.parametrize("constraint,expected", [
+    ("default", 1), ("zero-valence", 0), ("zero-hydrogens", 0),
+    ("doublet-field", 0), ("singlet", 0), ("doublet", 0), ("triplet", 0),
+    ("positive", 0), ("negative", 0),
+])
+def test_isolated_mol_hydrogen_respects_valence_and_radicals(v3000, constraint, expected):
+    attributes = {"zero-valence": " VAL=-1", "zero-hydrogens": " HCOUNT=-1",
+                  "singlet": " RAD=1", "doublet": " RAD=2", "triplet": " RAD=3",
+                  "doublet-field": " RAD=2", "positive": " CHG=1", "negative": " CHG=-1"}
+    if v3000:
+        block = ("Hydrogen\n\n\n  0  0  0  0  0  0            999 V3000\n"
+                 "M  V30 BEGIN CTAB\nM  V30 COUNTS 1 0 0 0 0\nM  V30 BEGIN ATOM\n"
+                 "M  V30 1 H 0 0 0 0" + attributes.get(constraint, "") +
+                 "\nM  V30 END ATOM\nM  V30 BEGIN BOND\nM  V30 END BOND\n"
+                 "M  V30 END CTAB\nM  END\n")
+    else:
+        atom = "    0.0000    0.0000    0.0000 H   0  0  0  0  0  0  0  0  0  0  0  0"
+        if constraint == "zero-valence":
+            atom = atom[:48] + " 15" + atom[51:]
+        elif constraint == "zero-hydrogens":
+            atom = atom[:42] + "  1" + atom[45:]
+        elif constraint == "doublet-field":
+            atom = atom[:36] + "  4" + atom[39:]
+        properties = {"singlet": "M  RAD  1   1   1\n", "doublet": "M  RAD  1   1   2\n",
+                      "triplet": "M  RAD  1   1   3\n", "positive": "M  CHG  1   1   1\n",
+                      "negative": "M  CHG  1   1  -1\n"}
+        block = ("Hydrogen\n\n\n  1  0  0  0  0  0            999 V2000\n" + atom + "\n" +
+                 properties.get(constraint, "") + "M  END\n")
+    assert smsd.read_mol_block(block).hydrogen_count == [expected]
 
 
 def test_mol_acid_hydrogens_match_smarts():

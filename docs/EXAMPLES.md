@@ -1,109 +1,13 @@
-# SMSD Python examples
+# SMSD Pro Python examples
 
-These standalone examples use the current source API. Release 7.2.2 predates
-this API; see [building from source](PYTHON.md#build-from-source).
+These runnable examples cover the `smsd` Python package beyond molecule search:
+fingerprints, drawing, layout, stereo, MOL and SDF files, R-groups, scaffolds,
+graph utilities and atom maps. Each block is self-contained; blocks that write
+files create them in the current directory. Substructure search, maximum common
+substructure (MCS) search, chemistry options, timeouts and the full API
+reference are in the [Python guide](PYTHON.md).
 
-## 1. Quick start
-
-```python
-import smsd
-
-query, target = "c1ccccc1", "c1ccc(O)cc1"
-assert smsd.Substructure.find(query).match(target).found
-result = smsd.MCS.find(query).with_timeout(1000).match(target)
-assert result.optimal and result.best.atom_count == 6
-print(result.best.atom_mapping)
-```
-
-## 2. Substructure search
-
-```python
-import smsd
-
-query = smsd.Substructure.find("CO")
-assert query.match("CCO").found
-embeddings = query.match_all("OCO", limit=10)
-assert len(embeddings.matches) == 2 and embeddings.complete
-assert not smsd.Substructure.find("CCC").with_induced().match("C1CC1").found
-```
-
-`match` and `match_all` return a `SearchResult`. Empty results prove absence
-only when the search completed. Molecule queries use SMILES or graph inputs;
-SMARTS predicate queries use `Substructure.smarts`.
-
-## 3. Maximum common substructure
-
-```python
-import smsd
-
-query, target = "c1ccc(O)cc1", "c1ccc(N)cc1"
-result = smsd.MCS.find(query).match(target)
-assert result.best.atom_count == 6
-assert result.best.bond_count == 6
-assert smsd.MCS.validate_mapping(query, target, result.best) == []
-fragment = result.best.to_smiles(query)
-assert smsd.parse_smiles(fragment).n == 6
-```
-
-Results retain selected bonds, fragment membership, completion status and an
-optimality flag. A stopped search may return a valid incumbent without a proof.
-Mappings use each input's original atom order.
-
-## 4. MCIS, MCES and fragments
-
-```python
-import smsd
-
-query, target = "C1CC1", "CCC"
-induced = smsd.MCS.find(query).match(target)
-edges = smsd.MCS.find(query).with_objective(smsd.MCS.Objective.MCES).match(target)
-assert (induced.best.atom_count, induced.best.bond_count) == (2, 1)
-assert (edges.best.atom_count, edges.best.bond_count) == (3, 2)
-assert len(smsd.parse_smiles(edges.best.to_smiles(query)).bonds()) == 2
-fragments = smsd.MCS.find("CO.CN").with_fragments().match("CO.CN")
-assert fragments.best.atom_count == 4 and len(fragments.best.fragments) == 2
-all_matches = smsd.MCS.find(query).match_all(target, limit=100)
-assert all_matches.optimal and all_matches.complete
-```
-
-MCIS maximises atoms and preserves edges and nonedges. MCES maximises selected
-common edges and then incident atoms, allowing input edges to be omitted.
-Connectivity and fragment limits apply to selected common edges.
-
-```python
-import smsd
-
-result = smsd.MCS.consensus(["CCO", "CCN", "CCCl"], threshold=1.0)
-assert result.found and result.support_count == 3
-assert result.graph.n == 2 and not result.optimal
-```
-
-Consensus uses progressive reduction and verifies support across the inputs.
-It does not prove the global multi-molecule optimum.
-
-## 5. Chemistry and budgets
-
-```python
-import smsd
-
-options = smsd.MCS.Options()
-options.chemistry.tautomer_aware = True
-options.chemistry.match_bond_order = smsd.BondOrderMode.ANY
-options.timeout_ms = 1000
-result = smsd.MCS.find("CC(=O)C").with_options(options).match("CC(O)=C")
-assert result.best.atom_count == 4
-options.chemistry.match_bond_order = smsd.BondOrderMode.STRICT
-strict = smsd.MCS.find("CC(=O)C").with_options(options).match("CC(O)=C")
-assert strict.best.atom_count == 2
-```
-
-Chemistry includes atom type, charge, isotope, aromaticity, rings, stereo and
-tautomer settings. Complete-ring matching checks both inputs. A timeout of
-`-1` selects an adaptive budget, zero requests an immediate stop and positive
-values apply per pair. Node limits and a shared `CancellationToken` also stop
-cooperatively. Check `status`, `optimal` and `complete`.
-
-## 6. Fingerprints and similarity
+## Fingerprints and similarity
 
 ### Circular and torsion fingerprints
 
@@ -118,11 +22,11 @@ torsion = smsd.topological_torsion(mol, fp_size=2048)
 assert fp and counts and fcfp and torsion
 ```
 
-ECFP describes structural environments; FCFP describes functional classes
-(Rogers and Hahn, 2010). Binary fingerprints contain set bit positions; count
-fingerprints contain `(position, count)` pairs. Validate the representation and
-thresholds on your own task; no fingerprint is universally best for similarity
-or machine learning.
+ECFP describes structural environments and FCFP describes functional classes
+([Rogers and Hahn, 2010](https://doi.org/10.1021/ci100050t)). Binary
+fingerprints contain set bit positions; count fingerprints contain
+`(position, count)` pairs. No fingerprint suits every similarity or
+machine-learning task, so validate the representation and thresholds on your own data.
 
 ### Binary and count metrics
 
@@ -150,15 +54,17 @@ hex_string = smsd.to_hex(fp1, fp_size=2048)
 assert set(smsd.from_hex(hex_string)) == set(fp1)
 ```
 
-`count_dice()` and `count_cosine()` require dense vectors. The sparse count
-helpers are `count_overlap_coefficient()` and `count_tanimoto_coefficient()`.
-Binary `tanimoto_coefficient()` compares set positions, even for sparse input;
-it does not retain feature multiplicities.
+`count_dice()` and `count_cosine()` require dense vectors; the sparse count
+helpers are `count_tanimoto_coefficient()` and `count_overlap_coefficient()`.
+Binary `tanimoto_coefficient()` compares set positions, even for count input,
+and does not retain feature multiplicities. Two empty fingerprints score 1.0
+with `tanimoto_coefficient()` and `overlap_coefficient()`, as identical empty
+sets, in C++, Java and Python.
 
-## 7. SVG drawing
+## SVG drawing
 
-The native SVG renderer works without RDKit. Check the drawing before using it
-in a report; layout and font rendering depend on the molecule and viewer.
+The native SVG renderer does not need RDKit. Check each drawing before using it
+in a report, as layout and font rendering depend on the molecule and the viewer.
 
 ```python
 import xml.etree.ElementTree as ET
@@ -196,17 +102,20 @@ svg = smsd.depict_svg("c1ccc2c(c1)cc1ccccc1c2", bond_length=50,
 smsd.save_svg(svg, "large.svg")
 ```
 
-### Optional SVG conversion
+Keyword arguments such as `bond_length=50` override `DepictOptions`
+attributes; when `opts` is also passed, they are set on that object.
 
-After creating `aspirin.svg` above, choose an external converter. These commands
-require Inkscape or CairoSVG to be installed separately:
+### Optional conversion to PNG
+
+After creating `aspirin.svg` as above, use an external converter. Inkscape and
+CairoSVG are installed separately:
 
 ```bash
 inkscape aspirin.svg --export-type=png --export-filename=aspirin.png --export-dpi=600
 python -c "import cairosvg; cairosvg.svg2png(url='aspirin.svg', write_to='aspirin.png', dpi=600)"
 ```
 
-## 8. Coordinates and layout
+## Coordinates and layout
 
 ### Two and three dimensions
 
@@ -222,8 +131,9 @@ coords_3d = smsd.generate_coords_3d(mol, target_bond_length=1.5)
 assert len(coords_3d) == len(mol) and all(len(point) == 3 for point in coords_3d)
 ```
 
-Three-dimensional coordinates provide a starting geometry, not a validated
-conformer ensemble or energy minimum.
+A `layout_quality()` score of 0.0 is ideal; lower is better. Three-dimensional
+coordinates provide a starting geometry, not a validated conformer ensemble or
+energy minimum.
 
 ### Refinement
 
@@ -238,10 +148,10 @@ crossings, coords = smsd.reduce_crossings(mol, coords, max_iter=100)
 assert len(coords) == len(mol)
 ```
 
-Compare layouts with `layout_quality()` and inspect the drawing. Refinement
-does not guarantee a better result for every molecule.
+Refinement does not improve every layout. Compare the results with
+`layout_quality()` and inspect the drawing.
 
-### Transform coordinates
+### Transforms
 
 ```python
 import math
@@ -263,10 +173,11 @@ box = smsd.bounding_box_2d(aligned)
 assert len(aligned) == len(mol) and len(box) == 4 and rmsd >= 0.0
 ```
 
-Rotation angles are in radians. Coordinate generation and refinement can change
-with algorithms or settings; save coordinates when exact reproducibility matters.
+Rotation angles are in radians. Generated and refined coordinates can change
+with the algorithm or its settings, so save them when exact reproducibility
+matters.
 
-## 9. Stereo assignment
+## Stereo assignment
 
 ```python
 import smsd
@@ -275,15 +186,16 @@ alanine = smsd.parse_smiles("N[C@@H](C)C(=O)O")
 assert smsd.assign_rs(alanine) == {1: "S"}
 butene = smsd.parse_smiles("C/C=C/C")
 assert smsd.assign_ez(butene) == {(1, 2): "E"}
-result = smsd.assign_cip(alanine)
+descriptors = smsd.assign_cip(alanine)
+assert descriptors.rs_labels[1] == smsd.RSLabel.S
 ```
 
-Include explicit SMILES stereo markers when the assignment should reflect
-input stereochemistry. Unspecified stereo is not a resolved configuration.
+Write explicit stereo markers in the SMILES when the assignment should reflect
+the input stereochemistry. Unspecified stereo is not a resolved configuration.
 
-## 10. MOL and SDF files
+## MOL and SDF files
 
-These examples create their own input files:
+Each example creates its own input files.
 
 ```python
 import smsd
@@ -305,14 +217,16 @@ molecules = [smsd.parse_smiles(s) for s in ["CCO", "c1ccccc1"]]
 smsd.write_sdf(molecules, "compounds.sdf")
 loaded = smsd.read_sdf("compounds.sdf")
 assert [len(mol) for mol in loaded] == [3, 6]
-smsd.export_sdf(loaded, "output.sdf")
+smsd.write_sdf(loaded, "output.sdf")
 ```
 
-`read_sdf()` loads the whole file; malformed records may produce empty graphs.
-Check each record before use. For large files, iterate records and pass each to
-`read_mol_block()`. V2000 supports at most 999 atoms; use V3000 for larger graphs.
+`read_sdf()` loads the whole file, and malformed records become empty graphs,
+so check each record before use. For large files, split the records and pass
+each to `read_mol_block()`. The V2000 format holds at most 999 atoms and 999
+bonds, so `write_mol_block()` and the SDF writers switch to V3000 for larger
+graphs.
 
-## 11. R-group decomposition
+## R-group decomposition
 
 ```python
 import smsd
@@ -324,54 +238,10 @@ assert [result["search"].found for result in results] == [True, True, False]
 assert results[0]["core"].n == 6 and results[0]["rgroups"]["R1"].n == 1
 ```
 
-The decomposition returns core/substituent graphs and its search result,
-including whether a missing core was proved absent.
+Each entry holds the core graph, the substituent graphs and the search result
+for the core, which shows whether a missing core was proved absent.
 
-## 12. Constrained mapping
-
-```python
-import smsd
-
-results = smsd.MCS.match_constrained(["CO", "CN"], "OCCN")
-assert all(result.found for result in results)
-first, second = [set(result.best.atom_mapping.values()) for result in results]
-assert not first.intersection(second)
-```
-
-Queries claim atoms in the original target without re-perceiving a residual
-molecule. Results retain query order and use independent per-pair budgets.
-The sequential assignment does not prove a globally optimal joint mapping.
-
-## 13. Batch operations
-
-```python
-import smsd
-
-query = smsd.Substructure.find("c1ccccc1")
-targets = ["c1ccc(O)cc1", "Cc1ccccc1", "CCO"]
-results = query.match_many(targets, num_threads=2)
-assert [result.found for result in results] == [True, True, False]
-```
-
-Both query classes expose `match_many`, preserving target order and per-pair
-status. Prepared queries can be reused concurrently.
-
-## 14. SMARTS
-
-```python
-import smsd
-
-pattern = smsd.Substructure.smarts("[#6]-[#8]")
-assert pattern.match("CCO").found
-assert not pattern.match("CCN").found
-assert smsd.Substructure.smarts("[OH]").match("Oc1ccccc1").found
-assert smsd.Substructure.smarts("[#6]~[#6]").match_all("c1ccccc1", limit=50).matches
-```
-
-SMARTS searches complete predicate-query embeddings. Compile a prepared
-query once for repeated targets.
-
-## 15. Scaffolds
+## Scaffolds
 
 ```python
 import smsd
@@ -384,10 +254,12 @@ result = smsd.MCS.find(scaffold).match("Oc1ccccc1")
 assert result.best.atom_count == 6
 ```
 
-Scaffold extraction retains rings and connecting paths. Acyclic inputs are
-returned unchanged.
+The scaffold retains ring systems, the paths that connect them and every atom
+joined to either by a double or triple bond, so that carbonyl groups stay as in
+the Bemis and Murcko scaffold. An acyclic input is returned unchanged rather
+than as an empty scaffold.
 
-## 16. Graph utilities
+## Graph utilities
 
 ```python
 import smsd
@@ -400,25 +272,11 @@ assert smsd.same_canonical_graph(smsd.parse_smiles("c1ccccc1"),
                                  smsd.parse_smiles("C1=CC=CC=C1"))
 ```
 
-Canonical graph comparison concerns structure. Use the requested chemistry and
-stereo settings when matching stereoisomers.
+Canonical graph comparison is a structural check. To compare stereoisomers in a
+search, enable the stereo options described in the
+[Python guide](PYTHON.md#chemistry-options).
 
-## 17. Repeated searches
-
-```python
-import smsd
-
-corpus = smsd.TargetCorpus.from_smiles(["Oc1ccccc1", "CCO"])
-corpus.prewarm(num_threads=1)
-results = smsd.Substructure.find("c1ccccc1").match_many(corpus, num_threads=2)
-assert [result.found for result in results] == [True, False]
-```
-
-The corpus captures input graphs and atom correspondence when added. It can
-precompute ECFP fingerprints for `screen(query, threshold)`. Fingerprint
-screening and graph-search completion are separate results.
-
-## 18. Atom maps
+## Atom maps
 
 ```python
 import smsd
@@ -429,9 +287,12 @@ assert clean == "[CH3][C](=[O])[OH]"
 assert len(smsd.parse_smiles(clean)) == 4
 ```
 
-Use `strip_atom_maps()` rather than a regular expression. Colons can also belong
-to aromatic ring closures, so a text-only replacement can alter the structure.
+Use `strip_atom_maps()` rather than a regular expression. Outside brackets, a
+colon is an aromatic bond and can precede a ring-closure digit, so a text-only
+replacement can alter the structure. `parse_mapped_smiles()` strips the maps and
+parses in one call.
 
 ## Further reading
 
-See the [Python guide](PYTHON.md), [C++ guide](CPP.md) and [Java guide](JAVA.md).
+See the [Python guide](PYTHON.md), the [installation guide](HOWTO-INSTALL.md),
+the [C++ guide](CPP.md) and the [Java guide](JAVA.md).

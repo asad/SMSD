@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Benchmark validity and corpus-generation regressions, independent of timings."""
 from pathlib import Path
 import random
@@ -24,7 +28,7 @@ def test_seed_applies_before_pool_subsampling(tmp_path):
         assert (tmp_path / "first" / name).read_bytes() == (tmp_path / "second" / name).read_bytes()
 
 
-def test_nearest_neighbor_explicitly_excludes_query_under_fingerprint_ties():
+def test_nearest_neighbour_explicitly_excludes_query_under_fingerprint_ties():
     assert nearest_neighbor_index(1, [1.0, 1.0, 0.5]) == 0
     assert nearest_neighbor_index(0, [1.0, 1.0, 1.0]) == 1
 

@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Stereo matching follows mapped ligand order rather than whole-molecule labels."""
 
 import pytest
@@ -17,6 +19,12 @@ from .search_helpers import configured_mcs, atom_map
     ("C/C=C\\C", "Cl/C(C)=C/C", False, True),
     ("C/C(Cl)=C/C", "Cl/C(C)=C\\C", False, True),
     ("F/C=C/Cl", "F/C=C\\Cl", False, False),
+    # An embedding needs specified target stereo for specified query stereo, as SMARTS does.
+    ("C[C@H](O)CC", "CC(O)CC", True, False),
+    ("CC(O)CC", "C[C@H](O)CC", True, True),
+    ("N[C@@H](C)C(=O)O", "NC(C)C(=O)O", True, False),
+    ("F/C=C/F", "FC=CF", False, False),
+    ("FC=CF", "F/C=C/F", False, True),
 ])
 def test_molecular_stereo_entry_points(query_text, target_text, chirality, expected):
     query, target = smsd.parse_smiles(query_text), smsd.parse_smiles(target_text)
@@ -30,6 +38,8 @@ def test_molecular_stereo_entry_points(query_text, target_text, chirality, expec
 
 def test_mcs_uses_mapped_stereochemistry():
     assert len(atom_map(configured_mcs('C[C@H](O)CC', use_chirality=True).match('ClC[C@H](O)CC'))) == 5
+    # A common-subgraph search keeps an unspecified target as a wildcard.
+    assert len(atom_map(configured_mcs('C[C@H](O)CC', use_chirality=True).match('CC(O)CC'))) == 5
     assert len(atom_map(configured_mcs('C/C=C/C', use_bond_stereo=True).match('Cl/C(C)=C/C'))) < 4
     assert len(atom_map(configured_mcs('C/C=C\\C', use_bond_stereo=True).match('Cl/C(C)=C/C'))) == 4
 

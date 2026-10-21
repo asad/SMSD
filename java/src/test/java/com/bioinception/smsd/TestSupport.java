@@ -1,7 +1,8 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
- * See the NOTICE file for attribution.
+ * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  */
 package com.bioinception.smsd;
 
@@ -63,7 +64,7 @@ public final class TestSupport {
     return text.codePoints().allMatch(Character::isWhitespace);
   }
 
-  /** Use the public search facade while older molecular fixtures retain concise assertions. */
+  /** The first atom mapping of a result, so that molecular fixtures keep concise assertions. */
   public static Map<Integer, Integer> firstMapping(SearchResult result) {
     return result.found() ? result.matches().get(0).atomMapping() : Collections.emptyMap();
   }
@@ -81,6 +82,14 @@ public final class TestSupport {
   }
   public static MolGraph graph(IAtomContainer molecule) {
     return new MolGraph(molecule);
+  }
+  /** A molecule parsed from SMILES as CDK reads it, without standardisation. */
+  public static IAtomContainer rawMolecule(String smiles) throws Exception {
+    return new SmilesParser(SilentChemObjectBuilder.getInstance()).parseSmiles(smiles);
+  }
+  /** The graph of {@link #rawMolecule}. */
+  public static MolGraph rawGraph(String smiles) throws Exception {
+    return new MolGraph(rawMolecule(smiles));
   }
   public static void clearCaches() {
     FingerprintEngine.clearFPCache();
@@ -241,8 +250,7 @@ public final class TestSupport {
     return mcsSmiles(graph(query), graph(target), chemistry, options);
   }
   public static long[] fingerprintFromSmiles(String smiles, int radius, int size) throws Exception {
-    return FingerprintEngine.ecfp(
-        new SmilesParser(SilentChemObjectBuilder.getInstance()).parseSmiles(smiles), radius, size);
+    return FingerprintEngine.ecfp(rawMolecule(smiles), radius, size);
   }
 
   /** A standardised pair fixture; all searching is delegated to the public prepared queries. */
@@ -284,8 +292,7 @@ public final class TestSupport {
       this.smarts = smarts;
     }
     public MoleculePair(String query, String target, ChemOptions chemistry) throws Exception {
-      this(new SmilesParser(SilentChemObjectBuilder.getInstance()).parseSmiles(query),
-          new SmilesParser(SilentChemObjectBuilder.getInstance()).parseSmiles(target), chemistry);
+      this(rawMolecule(query), rawMolecule(target), chemistry);
     }
     private Substructure prepared(long timeout) {
       Substructure.Options options = new Substructure.Options();

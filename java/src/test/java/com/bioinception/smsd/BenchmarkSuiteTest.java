@@ -24,8 +24,8 @@ import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.openscience.cdk.interfaces.IAtomContainer;
 
 /**
- * Benchmark suite: consolidated from BenchmarkTest, BenchmarkComparison,
- * HeadToHeadBenchmark.
+ * Benchmark suite: performance regression checks, internal comparisons of the search paths and
+ * head-to-head timings against CDK.
  *
  * @author Syed Asad Rahman
  */
@@ -34,7 +34,7 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 public class BenchmarkSuiteTest extends TestBase {
 
   // ======================================================================
-  // From: BenchmarkTest.java
+  // Performance regression checks
   // ======================================================================
 
   @Nested
@@ -68,8 +68,8 @@ public class BenchmarkSuiteTest extends TestBase {
     }
 
     @Test
-    @DisplayName("RASCAL upper bound >= actual MCS Tanimoto")
-    void rascalCorrectnessInvariant() throws Exception {
+    @DisplayName("similarity upper bound >= actual MCS Tanimoto")
+    void similarityBoundCorrectnessInvariant() throws Exception {
       String[][] pairs = {
         {"c1ccccc1", "c1ccc(C)cc1"},
         {"CC(=O)O", "CC(=O)Nc1ccc(O)cc1"},
@@ -89,7 +89,7 @@ public class BenchmarkSuiteTest extends TestBase {
         assertTrue(
             ub >= actual - 0.01,
             String.format(
-                "RASCAL UB (%.3f) should be >= actual Tanimoto (%.3f) for %s vs %s",
+                "Similarity UB (%.3f) should be >= actual Tanimoto (%.3f) for %s vs %s",
                 ub, actual, p[0], p[1]));
       }
     }
@@ -143,7 +143,7 @@ public class BenchmarkSuiteTest extends TestBase {
   }
 
   // ======================================================================
-  // From: BenchmarkComparison.java
+  // Internal comparisons
   // ======================================================================
 
   @Nested
@@ -324,9 +324,9 @@ public class BenchmarkSuiteTest extends TestBase {
     }
 
     @Test
-    @DisplayName("RASCAL screening benchmark")
-    void rascalScreeningBenchmark() throws Exception {
-      System.out.println("\n=== RASCAL Screening Benchmark (internal use only) ===");
+    @DisplayName("similarity-bound screening benchmark")
+    void similarityScreeningBenchmark() throws Exception {
+      System.out.println("\n=== Similarity Screening Benchmark (internal use only) ===");
       System.out.printf("%-30s %8s %8s %6s%n", "Pair", "Best(us)", "Med(us)", "UB");
       System.out.println(repeat("-", 60));
 
@@ -351,7 +351,7 @@ public class BenchmarkSuiteTest extends TestBase {
           long t0 = System.nanoTime();
           ub = new MoleculePair(q, t, opts, false).similarityUpperBound();
           times[i] = System.nanoTime() - t0;
-          BenchmarkRunSettings.checkpoint("internal-rascal", pair[0] + "/" + i, "OK", 0,
+          BenchmarkRunSettings.checkpoint("internal-similarity-screen", pair[0] + "/" + i, "OK", 0,
               times[i], "upper_bound=" + ub);
         }
 
@@ -364,7 +364,7 @@ public class BenchmarkSuiteTest extends TestBase {
   }
 
   // ======================================================================
-  // From: HeadToHeadBenchmark.java
+  // Head-to-head timings
   // ======================================================================
 
   @Nested
@@ -494,9 +494,9 @@ public class BenchmarkSuiteTest extends TestBase {
     }
 
     @Test
-    @DisplayName("RASCAL screening benchmark")
-    void h2hRascalBenchmark() throws Exception {
-      System.out.println("\n=== RASCAL SCREENING BENCHMARK ===");
+    @DisplayName("similarity-bound screening benchmark")
+    void h2hSimilarityScreeningBenchmark() throws Exception {
+      System.out.println("\n=== SIMILARITY SCREENING BENCHMARK ===");
       System.out.printf("%-30s %10s %10s %8s%n", "Pair", "Best(us)", "Med(us)", "UB");
       System.out.println(repeat("-", 60));
 
@@ -515,7 +515,7 @@ public class BenchmarkSuiteTest extends TestBase {
           long t0 = System.nanoTime();
           ub = MCS.similarityUpperBound(q, t, opts);
           times[i] = System.nanoTime() - t0;
-          BenchmarkRunSettings.checkpoint("h2h-rascal", p[2] + "/" + i, "OK", 0,
+          BenchmarkRunSettings.checkpoint("h2h-similarity-screen", p[2] + "/" + i, "OK", 0,
               times[i], "upper_bound=" + ub);
         }
         Arrays.sort(times);

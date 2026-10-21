@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Release-wheel integrity tests; run with python -m unittest discover -s scripts/tests."""
 
 import base64
@@ -172,7 +176,7 @@ class CollectReleaseWheelsTest(unittest.TestCase):
 
     def test_license_metadata_tags_and_architecture_checks_remain(self):
         cases = (
-            ({PREFIX + "licenses/LICENSE": b"modified license\n"}, "Wrong license copy"),
+            ({PREFIX + "licenses/LICENSE": b"modified license\n"}, "Wrong licence copy"),
             ({PREFIX + "METADATA": b"Name: smsd\nVersion: 9.0.0\n"}, "Wrong wheel metadata"),
             ({PREFIX + "WHEEL": b"Tag: cp314-cp314-win32\n"}, "Filename and wheel tags disagree"),
             ({"smsd/_smsd.cp314-win_amd64.pyd": b"wrong architecture"}, "Native extension does not match"),
@@ -196,7 +200,7 @@ class CollectReleaseWheelsTest(unittest.TestCase):
                 with self.assertRaises(KeyError):
                     self.check(sources=sources, changes={entry: None})
             with self.subTest(name=name, mutation="altered"):
-                with self.assertRaisesRegex(ValueError, "Wrong license copy"):
+                with self.assertRaisesRegex(ValueError, "Wrong licence copy"):
                     self.check(sources=sources, changes={entry: b"modified license contents"})
 
     def test_record_hash_stays_strict(self):

@@ -2,13 +2,19 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
- * See the NOTICE file for attribution, trademark, and algorithm IP terms. */
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ */
 package com.bioinception.smsd.core;
 
+import java.lang.ref.SoftReference;
 import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 import org.openscience.cdk.AtomRef;
 import org.openscience.cdk.BondRef;
+import org.openscience.cdk.aromaticity.Aromaticity;
+import org.openscience.cdk.graph.Cycles;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
@@ -20,9 +26,6 @@ import org.openscience.cdk.isomorphism.matchers.Expr;
 import org.openscience.cdk.isomorphism.matchers.QueryAtom;
 import org.openscience.cdk.isomorphism.matchers.QueryAtomContainer;
 import org.openscience.cdk.isomorphism.matchers.QueryBond;
-import org.openscience.cdk.smarts.Smarts;
-import org.openscience.cdk.smarts.SmartsPattern;
-import org.openscience.cdk.smarts.SmartsResult;
 import org.openscience.cdk.silent.SilentChemObjectBuilder;
 
 /** Molecule and SMARTS substructure queries with bounded first and all-match searches. */
@@ -39,34 +42,180 @@ public final class Substructure {
 
   private final MolGraph moleculeQuery;
   private final IAtomContainer smartsQuery;
+  /** The compiled searches of the SMARTS query, shared by the queries that differ only in options. */
+  private final SmartsSearches smartsSearches;
+  /** Pairs of atomic number and the number of SMARTS atoms that require it. */
+  private final int[] requiredElements;
+  /** The neighbours of each SMARTS atom in bond order, as CDK lists connected atoms. */
+  private final int[][] smartsNeighbors;
   private final Options options;
+  private final QueryTables queryTables;
+  /** The query bonds as matches report them, by first atom and then in neighbour order. */
+  private final SearchResult.QueryBonds queryBonds;
+  /** The work counted for building one match: one, and one per query atom and listed query bond. */
+  private final int matchWork;
+  /** The connected fragment of each query atom, numbered by first appearance in atom order. */
+  private final int[] fragmentOf;
+  /** The fragments as unmodifiable sorted sets, in fragment order. */
+  private final List<Set<Integer>> fragments;
 
-  private Substructure(MolGraph moleculeQuery, IAtomContainer smartsQuery, Options options) {
+  private Substructure(MolGraph moleculeQuery, IAtomContainer smartsQuery, SmartsSearches smartsSearches,
+                       Options options) {
     this.moleculeQuery = moleculeQuery;
     this.smartsQuery = smartsQuery;
+    this.smartsSearches = smartsSearches;
+    this.requiredElements = smartsQuery == null ? null : requiredElements(smartsQuery);
+    this.smartsNeighbors = smartsQuery == null ? null : neighbors(smartsQuery);
     this.options = copyOptions(options);
+    // Query-only search data is prepared once here rather than in every call.
+    this.queryTables = moleculeQuery == null ? null : new QueryTables(moleculeQuery, this.options.chemistry);
+    int[][] neighbors = moleculeQuery != null ? moleculeQuery.neighbors : smartsNeighbors;
+    int queryAtoms = neighbors.length, listed = 0;
+    // Every embedding retains the complete query topology.
+    Set<SearchResult.Bond> bonds = new LinkedHashSet<>();
+    for (int atom = 0; atom < queryAtoms; atom++)
+      for (int neighbor : neighbors[atom]) if (neighbor > atom) {
+        bonds.add(new SearchResult.Bond(atom, neighbor));
+        listed++;
+      }
+    this.queryBonds = new SearchResult.QueryBonds(new ArrayList<>(bonds));
+    this.matchWork = 1 + queryAtoms + listed;
+    List<Set<Integer>> sets = new ArrayList<>();
+    int[] component = new int[queryAtoms], pending = new int[queryAtoms];
+    Arrays.fill(component, -1);
+    for (int atom = 0; atom < queryAtoms; atom++) if (component[atom] < 0) {
+      Set<Integer> fragment = new TreeSet<>();
+      int first = 0, end = 0;
+      component[atom] = sets.size();
+      pending[end++] = atom;
+      while (first < end) {
+        int current = pending[first++];
+        fragment.add(current);
+        for (int neighbor : neighbors[current]) if (component[neighbor] < 0) {
+          component[neighbor] = sets.size();
+          pending[end++] = neighbor;
+        }
+      }
+      sets.add(Collections.unmodifiableSet(fragment));
+    }
+    this.fragmentOf = component;
+    this.fragments = Collections.unmodifiableList(sets);
+  }
+
+  private static int[] requiredElements(IAtomContainer query) {
+    Map<Integer, Integer> counts = new TreeMap<>();
+    for (IAtom atom : query.atoms()) {
+      IAtom source = AtomRef.deref(atom);
+      if (!(source instanceof QueryAtom)) continue;
+      int element = requiredElement(((QueryAtom) source).getExpression());
+      if (element >= 0) counts.merge(element, 1, Integer::sum);
+    }
+    int[] pairs = new int[counts.size() * 2];
+    int index = 0;
+    for (Map.Entry<Integer, Integer> entry : counts.entrySet()) {
+      pairs[index++] = entry.getKey();
+      pairs[index++] = entry.getValue();
+    }
+    return pairs;
+  }
+
+  /** The atomic number every matching atom has, or -1 when the expression does not fix one. */
+  private static int requiredElement(Expr expression) {
+    if (expression == null) return -1;
+    switch (expression.type()) {
+      case ELEMENT:
+      case ALIPHATIC_ELEMENT:
+      case AROMATIC_ELEMENT:
+        return expression.value();
+      case AND: {
+        int left = requiredElement(expression.left()), right = requiredElement(expression.right());
+        if (left >= 0 && right >= 0 && left != right) return -1;
+        return Math.max(left, right);
+      }
+      case OR: {
+        int left = requiredElement(expression.left());
+        return left >= 0 && left == requiredElement(expression.right()) ? left : -1;
+      }
+      default:
+        return -1;
+    }
+  }
+
+  /** Neighbour lists from one pass over the bonds; a container's own lookups scan every bond. */
+  private static int[][] neighbors(IAtomContainer query) {
+    int atoms = query.getAtomCount();
+    Map<IAtom, Integer> index = new IdentityHashMap<>();
+    for (int atom = 0; atom < atoms; atom++) index.put(AtomRef.deref(query.getAtom(atom)), atom);
+    int[][] ends = new int[query.getBondCount()][];
+    int[] degree = new int[atoms];
+    int bond = 0;
+    for (IBond edge : query.bonds()) {
+      int first = index.get(AtomRef.deref(edge.getBegin())), second = index.get(AtomRef.deref(edge.getEnd()));
+      ends[bond++] = new int[] {first, second};
+      degree[first]++;
+      if (second != first) degree[second]++;
+    }
+    int[][] neighbors = new int[atoms][];
+    for (int atom = 0; atom < atoms; atom++) neighbors[atom] = new int[degree[atom]];
+    Arrays.fill(degree, 0);
+    for (int[] end : ends) {
+      neighbors[end[0]][degree[end[0]]++] = end[1];
+      if (end[1] != end[0]) neighbors[end[1]][degree[end[1]]++] = end[0];
+    }
+    return neighbors;
+  }
+
+  /** An injective embedding needs at least as many target atoms of each required element. */
+  private boolean elementsAvailable(MolGraph target) {
+    for (int index = 0; index < requiredElements.length; index += 2) {
+      int element = requiredElements[index], available = 0;
+      for (int atom = 0; atom < target.n && available < requiredElements[index + 1]; atom++)
+        if (target.atomicNum[atom] == element) available++;
+      if (available < requiredElements[index + 1]) return false;
+    }
+    return true;
   }
 
   /** Prepare an independent query snapshot, retaining its atom indices. */
   public static Substructure find(MolGraph query) {
-    return new Substructure(MolGraph.copyForSearch(query), null, new Options());
+    return new Substructure(MolGraph.copyForSearch(query), null, null, new Options());
   }
 
   public static Substructure find(IAtomContainer query) {
-    return new Substructure(toGraph(query), null, new Options());
+    return new Substructure(MolGraph.copyOf(query), null, null, new Options());
   }
 
-  /** Compile the complete SMARTS expression, including recursive and stereo predicates. */
+  /** Longest SMARTS accepted, in characters; the same limit as in the native core. */
+  public static final int MAX_SMARTS_LENGTH = 100_000;
+  /** Most atoms in a SMARTS, counting those of its recursive SMARTS; the native SMILES and SMARTS atom limit. */
+  public static final int MAX_SMARTS_ATOMS = 10_000;
+  /**
+   * Most atom and bond expression nodes in a SMARTS, counting those of its recursive SMARTS:
+   * each primitive test and each logical operator joining two operands counts once.
+   */
+  public static final int MAX_SMARTS_EXPRESSION_NODES = 100_000;
+  /** Most nodes in one atom or bond expression of a SMARTS; a recursive SMARTS counts one node there. */
+  public static final int MAX_SMARTS_NODES_PER_EXPRESSION = 10_000;
+  /** Deepest nesting of recursive SMARTS; the native parser's default. */
+  public static final int MAX_SMARTS_RECURSION_DEPTH = 20;
+
+  /**
+   * Compile the complete SMARTS expression, including recursive and stereo predicates.
+   *
+   * @throws IllegalArgumentException for invalid SMARTS, or SMARTS beyond {@link #MAX_SMARTS_LENGTH},
+   *     {@link #MAX_SMARTS_ATOMS}, {@link #MAX_SMARTS_EXPRESSION_NODES},
+   *     {@link #MAX_SMARTS_NODES_PER_EXPRESSION} or {@link #MAX_SMARTS_RECURSION_DEPTH}, counted
+   *     as the native parser counts them
+   */
   public static Substructure smarts(String expression) {
     Objects.requireNonNull(expression, "expression");
-    IAtomContainer query = new QueryAtomContainer(SilentChemObjectBuilder.getInstance());
-    SmartsResult parsed = Smarts.parseToResult(query, expression);
-    if (!parsed.ok()) throw new IllegalArgumentException("Invalid SMARTS: " + parsed.getMessage());
-    return new Substructure(null, query, new Options());
+    IAtomContainer query = SmartsInput.parse(expression);
+    return new Substructure(null, query, new SmartsSearches(query), new Options());
   }
 
   public Substructure withOptions(Options options) {
-    return new Substructure(moleculeQuery, smartsQuery, Objects.requireNonNull(options, "options"));
+    return new Substructure(moleculeQuery, smartsQuery, smartsSearches,
+        Objects.requireNonNull(options, "options"));
   }
 
   public Substructure withTimeout(long timeoutMillis) {
@@ -75,54 +224,71 @@ public final class Substructure {
     return withOptions(changed);
   }
 
-  public SearchResult match(IAtomContainer target) { return run(toGraph(target), 1, false); }
+  public SearchResult match(IAtomContainer target) { return run(MolGraph.copyOf(target), 1, false); }
   public SearchResult match(MolGraph target) { return run(target, 1, false); }
   public SearchResult matchAll(IAtomContainer target) { return matchAll(target, 1000); }
   public SearchResult matchAll(MolGraph target) { return matchAll(target, 1000); }
-  public SearchResult matchAll(IAtomContainer target, int limit) { return run(toGraph(target), limit, true); }
+  public SearchResult matchAll(IAtomContainer target, int limit) { return run(MolGraph.copyOf(target), limit, true); }
   public SearchResult matchAll(MolGraph target, int limit) { return run(target, limit, true); }
 
   /** Search independent targets in input order with this immutable prepared query. */
   public List<SearchResult> matchMany(List<MolGraph> targets) {
-    Objects.requireNonNull(targets, "targets");
-    List<SearchResult> results = new ArrayList<>();
-    for (MolGraph target : targets) results.add(match(target));
-    return Collections.unmodifiableList(results);
+    return matchMany(targets, 1);
+  }
+
+  /**
+   * Search independent targets on up to {@code numThreads} threads, as the native core and
+   * Python do: zero uses one thread per available processor and one searches them in turn, as
+   * {@link #matchMany(List)} does. Each target receives the configured per-call budget, and the
+   * results keep the order of the targets.
+   *
+   * @throws IllegalArgumentException if {@code numThreads} is negative
+   */
+  public List<SearchResult> matchMany(List<MolGraph> targets, int numThreads) {
+    return SearchResult.searchEach(targets, numThreads, this::match);
   }
 
   /** A retained core, attached groups and the outcome of the substructure search. */
   public static final class Decomposition {
     private final IAtomContainer core;
-    private final Map<String,IAtomContainer> rgroups;
+    private final Map<String, IAtomContainer> rgroups;
     private final SearchResult search;
-    private Decomposition(IAtomContainer core,Map<String,IAtomContainer> rgroups,SearchResult search) {
-      this.core=core;this.rgroups=Collections.unmodifiableMap(new LinkedHashMap<>(rgroups));this.search=search;
+    private Decomposition(IAtomContainer core, Map<String, IAtomContainer> rgroups, SearchResult search) {
+      this.core = core;
+      this.rgroups = Collections.unmodifiableMap(new LinkedHashMap<>(rgroups));
+      this.search = search;
     }
-    public IAtomContainer core(){return core;}
-    public Map<String,IAtomContainer> rgroups(){return rgroups;}
-    public SearchResult search(){return search;}
+    public IAtomContainer core() { return core; }
+    public Map<String, IAtomContainer> rgroups() { return rgroups; }
+    public SearchResult search() { return search; }
   }
 
-  /** Split each molecule while preserving no-match, timeout and cancellation outcomes. */
+  /**
+   * Split each molecule around the first embedding of {@code core}, preserving no-match, timeout
+   * and cancellation outcomes in {@code search()}. {@code core()} is the matched target atoms
+   * with the images of the query bonds only, as in the native core, so a chain core matched in a
+   * ring gives a chain; it is {@code null} without a match. The attached groups are the connected
+   * components of the remaining atoms, numbered from the lowest core atom outwards.
+   */
   public static List<Decomposition> decomposeRGroups(
-      IAtomContainer core,List<IAtomContainer> molecules,ChemOptions chemistry,long timeoutMillis) {
-    Objects.requireNonNull(core,"core");Objects.requireNonNull(molecules,"molecules");
-    List<Decomposition> decompositions=new ArrayList<>();
-    Options options = new Options();
-    options.chemistry = chemistry == null ? new ChemOptions() : chemistry;
-    options.timeoutMillis = timeoutMillis;
-    Substructure query = find(core).withOptions(options);
+      IAtomContainer core, List<IAtomContainer> molecules, Options options) {
+    Objects.requireNonNull(core, "core");
+    Objects.requireNonNull(molecules, "molecules");
+    List<Decomposition> decompositions = new ArrayList<>();
+    Substructure query = find(core).withOptions(Objects.requireNonNull(options, "options"));
     for (IAtomContainer molecule : molecules) {
-      MolGraph target = toGraph(molecule);
+      MolGraph target = MolGraph.copyOf(molecule);
       SearchResult result = query.match(target);
-      Map<String,IAtomContainer> groups=new LinkedHashMap<>();
-      IAtomContainer retainedCore=null;
+      Map<String, IAtomContainer> groups = new LinkedHashMap<>();
+      IAtomContainer retainedCore = null;
       if (result.found()) {
-        Set<Integer> coreAtoms = new HashSet<>(result.matches().get(0).atomMapping().values());
-        retainedCore=component(target,coreAtoms);
-        Set<Integer> visited = new HashSet<>(coreAtoms);
+        SearchResult.Match match = result.matches().get(0);
+        Map<Integer, Integer> coreAtoms = new TreeMap<>();
+        for (int atom : match.atomMapping().values()) coreAtoms.put(atom, atom);
+        retainedCore = MatchGraph.toMolecule(target, coreAtoms, new HashSet<>(match.bondMapping().values()));
+        Set<Integer> visited = new HashSet<>(coreAtoms.keySet());
         int group = 1;
-        for (int coreAtom : new TreeSet<>(coreAtoms)) {
+        for (int coreAtom : coreAtoms.keySet()) {
           for (int neighbor : target.neighbors[coreAtom]) {
             if (!visited.add(neighbor)) continue;
             Set<Integer> atoms = new LinkedHashSet<>();
@@ -133,25 +299,31 @@ public final class Substructure {
               atoms.add(atom);
               for (int adjacent : target.neighbors[atom]) if (visited.add(adjacent)) pending.add(adjacent);
             }
-            groups.put("R"+group++,component(target,atoms));
+            groups.put("R" + group++, component(target, atoms));
           }
         }
       }
-      decompositions.add(new Decomposition(retainedCore,groups,result));
+      decompositions.add(new Decomposition(retainedCore, groups, result));
     }
     return Collections.unmodifiableList(decompositions);
+  }
+
+  /**
+   * As {@link #decomposeRGroups(IAtomContainer, List, Options)} with the given chemistry, or the
+   * defaults for {@code null}, and time limit.
+   */
+  public static List<Decomposition> decomposeRGroups(
+      IAtomContainer core, List<IAtomContainer> molecules, ChemOptions chemistry, long timeoutMillis) {
+    Options options = new Options();
+    options.chemistry = chemistry == null ? new ChemOptions() : chemistry;
+    options.timeoutMillis = timeoutMillis;
+    return decomposeRGroups(core, molecules, options);
   }
 
   private static IAtomContainer component(MolGraph graph, Set<Integer> atoms) {
     Map<Integer, Integer> identity = new TreeMap<>();
     for (int atom : atoms) identity.put(atom, atom);
-    return MCS.toMolecule(graph, identity, MCS.allBonds(graph, identity).keySet());
-  }
-
-  private static MolGraph toGraph(IAtomContainer molecule) {
-    Objects.requireNonNull(molecule, "molecule");
-    try { return new MolGraph(molecule.clone()); }
-    catch (CloneNotSupportedException failure) { throw new IllegalArgumentException("Cannot copy molecule", failure); }
+    return MatchGraph.toMolecule(graph, identity, MatchGraph.allBonds(graph, identity).keySet());
   }
 
   private static Options copyOptions(Options source) {
@@ -161,8 +333,7 @@ public final class Substructure {
     copy.timeoutMillis = source.timeoutMillis;
     copy.nodeLimit = source.nodeLimit;
     copy.cancellation = source.cancellation;
-    if (copy.timeoutMillis < -1 || copy.nodeLimit < 0)
-      throw new IllegalArgumentException("Timeout must be -1 or non-negative and node limit non-negative");
+    SearchResult.Control.checkLimits(copy.timeoutMillis, copy.nodeLimit);
     return copy;
   }
 
@@ -171,115 +342,435 @@ public final class Substructure {
     if (limit < 1) throw new IllegalArgumentException("Match limit must be positive");
     int queryAtoms = moleculeQuery != null ? moleculeQuery.n : smartsQuery.getAtomCount();
     SearchResult.Control control = new SearchResult.Control(
-        SearchResult.Control.resolveTimeout(options.timeoutMillis, queryAtoms, target.n), options.cancellation);
+        SearchResult.Control.resolveTimeout(options.timeoutMillis, queryAtoms, target.n, false),
+        options.cancellation);
+    return search(target, limit, all, control);
+  }
+
+  /**
+   * The search of {@link #match} and {@link #matchAll} under a control the caller owns, so that
+   * one budget can cover several searches, as it does in {@link MCS#consensus}; the node limit of
+   * the options bounds this search alone.
+   */
+  SearchResult search(MolGraph target, int limit, boolean all, SearchResult.Control control) {
+    int queryAtoms = moleculeQuery != null ? moleculeQuery.n : smartsQuery.getAtomCount();
     List<Map<Integer, Integer>> mappings = new ArrayList<>();
     long nodes = 0;
     int searchLimit = all && limit < Integer.MAX_VALUE ? limit + 1 : limit;
     if (!control.stopped() && queryAtoms <= target.n) {
       if (moleculeQuery != null) {
-        FrontierMatcher matcher = new FrontierMatcher(moleculeQuery, target, options.chemistry, control);
-        matcher.induced = options.induced;
-        matcher.nodeLimit = options.nodeLimit;
-        if (all) matcher.enumerate(searchLimit, mappings);
-        else if (matcher.exists()) {
-          Map<Integer, Integer> mapping = new LinkedHashMap<>();
-          for (int atom = 0; atom < queryAtoms; atom++) mapping.put(atom, matcher.q2t[atom]);
-          mappings.add(mapping);
-        }
-        nodes = matcher.nodesVisited;
-      } else {
-        IAtomContainer molecule = MCS.toMolecule(target);
-        SmartsPattern.prepare(molecule);
-        SmartsCall call = new SmartsCall(control, options.nodeLimit);
+        // Pairs the element and degree counts rule out end without a search node.
+        if (queryTables.admits(target)) return searchMolecule(target, limit, all, control);
+      } else if (elementsAvailable(target)) {
+        SmartsTarget view = SmartsTarget.lend(target);
+        SmartsCall call = smartsSearches.lend();
+        call.start(control, options.nodeLimit, view);
+        InducedCheck induced = options.induced ? new InducedCheck(smartsNeighbors, target, control) : null;
         try {
           check(control);
-          Pattern pattern = VentoFoggia.findSubstructure(call.query(smartsQuery));
-          for (int[] embedding : pattern.matchAll(molecule)) {
+          for (int[] embedding : call.pattern.matchAll(view.molecule)) {
             check(control);
-            if (options.induced && !induced(smartsQuery, molecule, embedding)) continue;
-            Map<Integer, Integer> mapping = new LinkedHashMap<>();
-            for (int atom = 0; atom < embedding.length; atom++) mapping.put(atom, embedding[atom]);
-            mappings.add(mapping);
+            if (induced != null && !induced.holds(embedding)) continue;
+            mappings.add(new Embedding(embedding));
             if (!all || mappings.size() >= searchLimit) break;
           }
-        } catch (StoppedSearch stopped) {
+        } catch (CommonBondGraphs.Stop stopped) {
           // The shared control retains the reason the search stopped.
         }
         nodes = call.nodes;
+        // Returned only after an ordinary end or a stop, so that neither holds the state of a failure.
+        smartsSearches.giveBack(call.finish());
+        view.giveBack();
       }
     }
     boolean truncated = all && mappings.size() > limit;
     if (truncated) mappings.remove(mappings.size() - 1);
-    SearchResult.Status status = truncated ? SearchResult.Status.LimitReached : control.status();
-    List<SearchResult.Match> matches = new ArrayList<>();
-    for (Map<Integer, Integer> mapping : mappings) matches.add(describe(mapping));
+    List<int[]> embeddings = new ArrayList<>(mappings.size());
+    for (Map<Integer, Integer> mapping : mappings) {
+      // Each mapping holds every query atom, in ascending order, so fragments keep their order.
+      int[] targets = new int[mapping.size()];
+      for (Map.Entry<Integer, Integer> atom : mapping.entrySet()) targets[atom.getKey()] = atom.getValue();
+      embeddings.add(targets);
+    }
+    return finish(describe(embeddings, null, control), mappings.size(), truncated, queryAtoms, nodes, control);
+  }
+
+  /** The molecule search of a target that the atom counts admit. */
+  private SearchResult searchMolecule(MolGraph target, int limit, boolean all, SearchResult.Control control) {
+    SubgraphSearch matcher = new SubgraphSearch(moleculeQuery, queryTables, target, options.chemistry, control);
+    matcher.induced = options.induced;
+    matcher.nodeLimit = options.nodeLimit;
+    List<int[]> embeddings = new ArrayList<>();
+    // With several fragments, each embedding lists them in the order the search first reached them.
+    List<int[]> fragmentOrders = all && fragments.size() > 1 ? new ArrayList<>() : null;
+    if (all) {
+      matcher.enumerate(limit < Integer.MAX_VALUE ? limit + 1 : limit, embeddings, fragmentOf, fragmentOrders);
+    } else if (matcher.exists()) {
+      embeddings.add(matcher.q2t.clone());
+    }
+    boolean truncated = all && embeddings.size() > limit;
+    if (truncated) {
+      embeddings.remove(embeddings.size() - 1);
+      if (fragmentOrders != null) fragmentOrders.remove(fragmentOrders.size() - 1);
+    }
+    return finish(describe(embeddings, fragmentOrders, control), embeddings.size(), truncated, moleculeQuery.n,
+        matcher.nodesVisited, control);
+  }
+
+  /** The result of a search that kept {@code kept} embeddings, and found one more when truncated. */
+  private static SearchResult finish(List<SearchResult.Match> matches, int kept, boolean truncated, int queryAtoms,
+                                     long nodes, SearchResult.Control control) {
+    // Matches left unbuilt past the results deadline make the result a timed-out one.
+    SearchResult.Status status = truncated && matches.size() == kept
+        ? SearchResult.Status.LimitReached : control.status();
     boolean complete = status == SearchResult.Status.Completed;
     return new SearchResult(matches, status, complete || !matches.isEmpty(), complete,
         matches.isEmpty() ? 0 : queryAtoms, nodes, control.elapsedMillis());
   }
 
-  private SearchResult.Match describe(Map<Integer, Integer> mapping) {
-    Map<SearchResult.Bond, SearchResult.Bond> bonds = new LinkedHashMap<>();
-    Map<Integer, Set<Integer>> adjacency = new LinkedHashMap<>();
-    for (int atom : mapping.keySet()) adjacency.put(atom, new LinkedHashSet<>());
-    for (int atom : mapping.keySet()) {
-      Iterable<Integer> neighbors;
-      if (moleculeQuery != null) {
-        List<Integer> values = new ArrayList<>();
-        for (int neighbor : moleculeQuery.neighbors[atom]) values.add(neighbor);
-        neighbors = values;
-      } else {
-        List<Integer> values = new ArrayList<>();
-        for (IAtom neighbor : smartsQuery.getConnectedAtomsList(smartsQuery.getAtom(atom)))
-          values.add(smartsQuery.indexOf(neighbor));
-        neighbors = values;
+  /**
+   * Matches of complete embeddings, built while the control allows: the clock is read after about
+   * 4096 atoms and bonds, and past the results deadline the matches built so far are returned.
+   * The fragments of each match follow its entry of {@code fragmentOrders}, or fragment order
+   * when that is null.
+   */
+  private List<SearchResult.Match> describe(List<int[]> embeddings, List<int[]> fragmentOrders,
+                                            SearchResult.Control control) {
+    List<SearchResult.Match> matches = new ArrayList<>(embeddings.size());
+    long work = 0;
+    for (int index = 0; index < embeddings.size(); index++) {
+      if ((work += matchWork) >= 4096) {
+        work = 0;
+        if (control.resultsStopped()) break;
       }
-      for (int neighbor : neighbors) if (neighbor > atom) {
-        bonds.put(new SearchResult.Bond(atom, neighbor),
-            new SearchResult.Bond(mapping.get(atom), mapping.get(neighbor)));
-        adjacency.get(atom).add(neighbor);
-        adjacency.get(neighbor).add(atom);
+      List<Set<Integer>> ordered = fragments;
+      if (fragmentOrders != null) {
+        List<Set<Integer>> listed = new ArrayList<>(fragments.size());
+        for (int fragment : fragmentOrders.get(index)) listed.add(fragments.get(fragment));
+        ordered = Collections.unmodifiableList(listed);
       }
+      int[] targets = embeddings.get(index);
+      matches.add(SearchResult.Match.of(targets, queryBonds, ordered, targets.length));
     }
-    List<Set<Integer>> fragments = new ArrayList<>();
-    Set<Integer> visited = new HashSet<>();
-    for (int atom : mapping.keySet()) if (visited.add(atom)) {
-      Set<Integer> fragment = new LinkedHashSet<>();
-      Deque<Integer> pending = new ArrayDeque<>();
-      pending.add(atom);
-      while (!pending.isEmpty()) {
-        int current = pending.remove();
-        fragment.add(current);
-        for (int neighbor : adjacency.get(current)) if (visited.add(neighbor)) pending.add(neighbor);
-      }
-      fragments.add(fragment);
-    }
-    return new SearchResult.Match(mapping, bonds, fragments, mapping.size());
+    return matches;
   }
 
-  private static boolean induced(IAtomContainer query, IAtomContainer target, int[] mapping) {
-    for (int first = 0; first < mapping.length; first++)
-      for (int second = first + 1; second < mapping.length; second++)
-        if ((query.getBond(query.getAtom(first), query.getAtom(second)) != null)
-            != (target.getBond(target.getAtom(mapping[first]), target.getAtom(mapping[second])) != null)) return false;
-    return true;
-  }
+  /**
+   * Whether an embedding is induced: the target atoms bonded to each image are, among the
+   * images, exactly the images of its pattern neighbours. Each pattern atom reads its own
+   * neighbours and those of its image, and the control is polled as the reads add up.
+   */
+  private static final class InducedCheck {
+    private final int[][] queryNeighbors;
+    private final MolGraph target;
+    private final SearchResult.Control control;
+    /** The pattern atom mapped to each target atom, or -1; reset after every test. */
+    private final int[] owner;
+    /** Holds atom + 1 at the pattern neighbours of the atom being tested; only that atom writes the value. */
+    private final int[] marks;
+    /** The distinct pattern neighbours of each atom other than itself. */
+    private final int[] distinct;
 
-  private static final class StoppedSearch extends RuntimeException {}
+    InducedCheck(int[][] queryNeighbors, MolGraph target, SearchResult.Control control) {
+      this.queryNeighbors = queryNeighbors;
+      this.target = target;
+      this.control = control;
+      owner = new int[target.n];
+      Arrays.fill(owner, -1);
+      marks = new int[queryNeighbors.length];
+      distinct = new int[queryNeighbors.length];
+      for (int atom = 0; atom < queryNeighbors.length; atom++)
+        for (int neighbor : queryNeighbors[atom])
+          if (neighbor != atom && marks[neighbor] != atom + 1) {
+            marks[neighbor] = atom + 1;
+            distinct[atom]++;
+          }
+    }
+
+    boolean holds(int[] mapping) {
+      for (int atom = 0; atom < mapping.length; atom++) owner[mapping[atom]] = atom;
+      try {
+        long work = 0;
+        for (int atom = 0; atom < mapping.length; atom++) {
+          for (int neighbor : queryNeighbors[atom]) marks[neighbor] = atom + 1;
+          int[] adjacent = target.neighbors[mapping[atom]];
+          if ((work += 1 + queryNeighbors[atom].length + adjacent.length) >= 4096) {
+            work = 0;
+            check(control);
+          }
+          int mapped = 0;
+          for (int neighbor : adjacent) {
+            int other = owner[neighbor];
+            if (other < 0) continue;
+            if (marks[other] != atom + 1) return false;
+            mapped++;
+          }
+          if (mapped != distinct[atom]) return false;
+        }
+        return true;
+      } finally {
+        for (int image : mapping) owner[image] = -1;
+      }
+    }
+  }
 
   private static void check(SearchResult.Control control) {
-    if (control.stopped()) throw new StoppedSearch();
+    if (control.stopped()) throw new CommonBondGraphs.Stop();
   }
 
-  /** Per-call query predicates retain CDK recursion, stereo and component semantics. */
-  private static final class SmartsCall {
-    final SearchResult.Control control;
-    final long nodeLimit;
-    long nodes;
+  /**
+   * The compiled searches of one SMARTS query, built once rather than in every call. A call takes
+   * one, or compiles another when every one is in use, and returns it when it ends, so that each
+   * is used by one call at a time.
+   */
+  private static final class SmartsSearches {
+    private final IAtomContainer query;
+    /** A free search, which calls made in turn take and return without allocating. */
+    private final AtomicReference<SmartsCall> free;
+    /** Further free searches, left by calls that ran at the same time. */
+    private final Queue<SmartsCall> spare = new ConcurrentLinkedQueue<>();
 
-    SmartsCall(SearchResult.Control control, long nodeLimit) {
+    SmartsSearches(IAtomContainer query) {
+      this.query = query;
+      free = new AtomicReference<>(new SmartsCall(query));
+    }
+
+    SmartsCall lend() {
+      SmartsCall call = free.getAndSet(null);
+      if (call == null) call = spare.poll();
+      return call != null ? call : new SmartsCall(query);
+    }
+
+    void giveBack(SmartsCall call) {
+      if (!free.compareAndSet(null, call)) spare.offer(call);
+    }
+  }
+
+  /**
+   * A target as SMARTS searches read it: a CDK copy with ring flags and the aromaticity model that
+   * SmartsPattern applies, and ring data of its atoms worked out on first use. Matching writes to
+   * the copy, as CDK caches its adjacency there, so one search at a time reads it. A graph keeps
+   * its copy, held softly, from the second SMARTS search that reads it.
+   */
+  private static final class SmartsTarget {
+    /** What a graph holds once a SMARTS search has read it, while it keeps no copy or lends it. */
+    private static final Object READ = new Object();
+    final MolGraph graph;
+    final IAtomContainer molecule;
+    /** The reference the graph keeps to this copy, or null when it keeps none. */
+    private SoftReference<SmartsTarget> kept;
+    /** The smallest ring size of each atom, 0 outside rings and -1 until worked out. */
+    private int[] smallestRing;
+    /** The distances and the queue of the ring searches of {@link #smallestRing}, made on first use. */
+    private int[] distance, queue;
+    /** The number of rings through each atom, once counted. */
+    private int[] ringCounts;
+
+    private SmartsTarget(MolGraph graph) {
+      this.graph = graph;
+      molecule = MatchGraph.toMolecule(graph);
+      // As SmartsPattern.prepare(): ring flags, marked here without one call per atom of a
+      // path, then the aromaticity model that SmartsPattern applies.
+      RingPerception.markRingAtomsAndBonds(molecule);
+      Aromaticity.apply(Aromaticity.Model.Daylight, molecule);
+    }
+
+    /** The copy the graph keeps, when no other search reads it, or else a new copy. */
+    static SmartsTarget lend(MolGraph graph) {
+      Object state = graph.exchangeSmartsView(READ);
+      SmartsTarget view = state instanceof SoftReference ? (SmartsTarget) ((SoftReference<?>) state).get() : null;
+      if (view != null) return view;
+      view = new SmartsTarget(graph);
+      // Most graphs are read once, so a copy is kept from the second read on.
+      if (state != null) view.kept = new SoftReference<>(view);
+      return view;
+    }
+
+    /** Keep the copy for later searches, unless another search has returned one first. */
+    void giveBack() {
+      if (kept != null) graph.replaceSmartsView(READ, kept);
+    }
+
+    /**
+     * The size of the smallest ring through {@code atom}, 0 when it is in none: the shortest path
+     * back to it over ring bonds from each of its ring neighbours, as the native core reads SMARTS
+     * r. CDK's own test can take a ring nearby for one through the atom.
+     */
+    int smallestRing(int atom) {
+      if (smallestRing == null) {
+        smallestRing = new int[graph.n];
+        Arrays.fill(smallestRing, -1);
+      }
+      if (smallestRing[atom] >= 0) return smallestRing[atom];
+      int best = 0;
+      if (graph.ring[atom]) {
+        if (distance == null) {
+          distance = new int[graph.n];
+          queue = new int[graph.n];
+        }
+        for (int neighbor : graph.neighbors[atom]) {
+          if (!graph.bondInRing(atom, neighbor)) continue;
+          Arrays.fill(distance, -1);
+          int head = 0, tail = 0;
+          distance[neighbor] = 1;
+          queue[tail++] = neighbor;
+          search:
+          while (head < tail) {
+            int current = queue[head++];
+            for (int next : graph.neighbors[current]) {
+              if (!graph.bondInRing(current, next) || current == neighbor && next == atom) continue;
+              if (next == atom) {
+                if (best == 0 || distance[current] + 1 < best) best = distance[current] + 1;
+                break search;
+              }
+              if (distance[next] < 0) {
+                distance[next] = distance[current] + 1;
+                queue[tail++] = next;
+              }
+            }
+          }
+        }
+      }
+      return smallestRing[atom] = best;
+    }
+
+    /**
+     * The number of rings through {@code atom} in the minimum cycle basis that CDK counts for
+     * SMARTS R, worked out once for the target rather than at every atom test.
+     */
+    int ringCount(int atom) {
+      if (ringCounts == null) {
+        int[] counts = new int[molecule.getAtomCount()];
+        // Each path repeats its first atom last, so every atom of the ring is counted once.
+        for (int[] path : Cycles.mcb(molecule).paths())
+          for (int at = 1; at < path.length; at++) counts[path[at]]++;
+        ringCounts = counts;
+      }
+      return ringCounts[atom];
+    }
+  }
+
+  /** The atom mapping of an embedding, in query atom order, read from it without copying. */
+  private static final class Embedding extends AbstractMap<Integer, Integer> {
+    private final int[] images;
+
+    Embedding(int[] images) {
+      this.images = images;
+    }
+
+    @Override public int size() {
+      return images.length;
+    }
+
+    @Override public boolean containsKey(Object key) {
+      return key instanceof Integer && (Integer) key >= 0 && (Integer) key < images.length;
+    }
+
+    @Override public Integer get(Object key) {
+      if (!containsKey(key)) return null;
+      return images[(Integer) key];
+    }
+
+    @Override public Set<Entry<Integer, Integer>> entrySet() {
+      return new AbstractSet<Entry<Integer, Integer>>() {
+        @Override public int size() {
+          return images.length;
+        }
+
+        @Override public Iterator<Entry<Integer, Integer>> iterator() {
+          return new Iterator<Entry<Integer, Integer>>() {
+            private int atom;
+
+            @Override public boolean hasNext() {
+              return atom < images.length;
+            }
+
+            @Override public Entry<Integer, Integer> next() {
+              if (atom >= images.length) throw new NoSuchElementException();
+              int query = atom++;
+              return new SimpleImmutableEntry<>(query, images[query]);
+            }
+          };
+        }
+      };
+    }
+  }
+
+  /**
+   * A compiled SMARTS search: a copy of the query whose atom tests count nodes and poll the
+   * control of the current call, and its pattern. The query predicates retain CDK recursion,
+   * stereo and component semantics. One call at a time uses it, see {@link SmartsSearches}.
+   */
+  private static final class SmartsCall {
+    final Pattern pattern;
+    /** The control, node limit, counts and target of the current call. */
+    SearchResult.Control control;
+    long nodeLimit;
+    long nodes;
+    int polls;
+    SmartsTarget view;
+
+    SmartsCall(IAtomContainer query) {
+      pattern = VentoFoggia.findSubstructure(query(query));
+    }
+
+    void start(SearchResult.Control control, long nodeLimit, SmartsTarget view) {
       this.control = control;
       this.nodeLimit = nodeLimit;
+      this.view = view;
+      nodes = 0;
+      polls = 0;
+    }
+
+    /** End the current call, releasing its control and target. */
+    SmartsCall finish() {
+      control = null;
+      view = null;
+      return this;
+    }
+
+    /** Whether the expression, outside its recursive SMARTS, has a test of the type. */
+    static boolean reads(Expr expression, Expr.Type type) {
+      switch (expression.type()) {
+        case AND:
+        case OR:
+          return reads(expression.left(), type) || reads(expression.right(), type);
+        case NOT:
+          return reads(expression.left(), type);
+        default:
+          return expression.type() == type;
+      }
+    }
+
+    /**
+     * The expression at {@code atom}, with the smallest ring size and the ring count read from the
+     * target's caches. With {@code plainNegation} a negation holds where its operand fails;
+     * otherwise, as in CDK, it also holds where the operand is a stereo test, or a disjunction led
+     * by one, which is checked once the embedding is complete.
+     */
+    boolean evaluate(Expr expression, IAtom atom, boolean plainNegation) {
+      switch (expression.type()) {
+        case AND:
+          return evaluate(expression.left(), atom, plainNegation)
+              && evaluate(expression.right(), atom, plainNegation);
+        case OR:
+          return evaluate(expression.left(), atom, plainNegation)
+              || evaluate(expression.right(), atom, plainNegation);
+        case NOT:
+          return !evaluate(expression.left(), atom, plainNegation)
+              || !plainNegation && stereoTest(expression.left());
+        case RING_SMALLEST:
+          return view.smallestRing(atom.getIndex()) == expression.value();
+        case RING_COUNT:
+          return atom.isInRing() && view.ringCount(atom.getIndex()) == expression.value();
+        default:
+          return expression.matches(atom);
+      }
+    }
+
+    private static boolean stereoTest(Expr expression) {
+      return expression.type() == Expr.Type.STEREOCHEMISTRY
+          || expression.type() == Expr.Type.OR && expression.left().type() == Expr.Type.STEREOCHEMISTRY;
     }
 
     IAtomContainer query(IAtomContainer original) {
@@ -287,14 +778,19 @@ public final class Substructure {
       copy.setProperties(new HashMap<>(original.getProperties()));
       Map<IChemObject, IChemObject> objects = new IdentityHashMap<>();
       for (IAtom atom : original.atoms()) {
-        check(control);
         QueryAtom source = (QueryAtom) AtomRef.deref(atom);
-        QueryAtom bounded = new QueryAtom(expression(source.getExpression())) {
+        Expr expression = expression(source.getExpression());
+        // Ring sizes and ring counts are read from the caches of the target. An atom that reads
+        // ring sizes negates plainly, and the others as CDK does.
+        boolean ringSizes = reads(expression, Expr.Type.RING_SMALLEST);
+        boolean cached = ringSizes || reads(expression, Expr.Type.RING_COUNT);
+        QueryAtom bounded = new QueryAtom(expression) {
           @Override public boolean matches(IAtom target) {
-            check(control);
-            if (nodeLimit > 0 && nodes >= nodeLimit) { control.limitReached(); throw new StoppedSearch(); }
+            // Atom tests are short, so the clock and cancellation are read on every sixteenth.
+            if ((++polls & 15) == 0) check(control);
+            if (nodeLimit > 0 && nodes >= nodeLimit) { control.limitReached(); throw new CommonBondGraphs.Stop(); }
             nodes++;
-            return super.matches(target);
+            return cached ? evaluate(getExpression(), target, ringSizes) : super.matches(target);
           }
         };
         bounded.setProperties(new HashMap<>(atom.getProperties()));
@@ -304,7 +800,6 @@ public final class Substructure {
         objects.put(source, copy.getAtom(copy.getAtomCount() - 1));
       }
       for (IBond bond : original.bonds()) {
-        check(control);
         QueryBond source = (QueryBond) BondRef.deref(bond);
         QueryBond bounded = new QueryBond((IAtom) objects.get(bond.getBegin()),
             (IAtom) objects.get(bond.getEnd()), expression(source.getExpression()));
@@ -325,30 +820,51 @@ public final class Substructure {
         case AND:
         case OR:
         case NOT:
+          // A negation has one operand; a retained right operand is not part of it.
           return new Expr(original.type(), expression(original.left()),
-              original.right() == null ? null : expression(original.right()));
+              original.type() == Expr.Type.NOT || original.right() == null ? null : expression(original.right()));
         default:
           return original;
       }
     }
   }
 
-  static Matcher makeMatcher(MolGraph gq, MolGraph gt, ChemOptions C, SearchResult.Control tb) {
-    return new FrontierMatcher(gq, gt, C, tb);
-  }
-
-  /** Return a mapped atom whose tetrahedral or double-bond ligand relation is incompatible. */
+  /**
+   * Return a mapped atom whose tetrahedral or double-bond ligand relation is incompatible. An
+   * unspecified query centre or bond matches any target; an unspecified target centre or bond
+   * matches a specified query one as well, as in a common-subgraph search.
+   */
   static int stereoMismatchAtom(MolGraph query, MolGraph target, int[] mapping, ChemOptions chemistry) {
-    return stereoMismatchAtom(query,target,mapping,chemistry,null);
+    return stereoMismatchAtom(query, target, mapping, chemistry, null, false);
   }
 
-  static int stereoMismatchAtom(MolGraph query,MolGraph target,int[] mapping,ChemOptions chemistry,
+  /** The same test over the selected bonds alone, or over every bond when {@code selectedBonds} is null. */
+  static int stereoMismatchAtom(MolGraph query, MolGraph target, int[] mapping, ChemOptions chemistry,
                                 Set<SearchResult.Bond> selectedBonds) {
-    if (chemistry.useChirality && query.tetraChirality != null && target.tetraChirality != null) {
+    return stereoMismatchAtom(query, target, mapping, chemistry, selectedBonds, false);
+  }
+
+  /**
+   * The test of an embedding, as a substructure search makes it: a specified query centre or
+   * double-bond configuration needs a specified, matching one in the target, as a SMARTS
+   * chirality primitive or pair of directional bonds does. The native core applies the same rule.
+   */
+  static int stereoMismatchAtom(MolGraph query, MolGraph target, int[] mapping, ChemOptions chemistry,
+                                boolean embedding) {
+    return stereoMismatchAtom(query, target, mapping, chemistry, null, embedding);
+  }
+
+  private static int stereoMismatchAtom(MolGraph query, MolGraph target, int[] mapping, ChemOptions chemistry,
+                                        Set<SearchResult.Bond> selectedBonds, boolean embedding) {
+    if (chemistry.useChirality && query.tetraChirality != null) {
       for (int atom = 0; atom < query.n; atom++) {
         int mapped = mapping[atom];
-        if (mapped < 0 || mapped >= target.n || query.tetraChirality[atom] == 0
-            || target.tetraChirality[mapped] == 0) continue;
+        if (mapped < 0 || mapped >= target.n || query.tetraChirality[atom] == 0) continue;
+        int targetTag = target.tetraChirality == null ? 0 : target.tetraChirality[mapped];
+        if (targetTag == 0) {
+          if (embedding) return atom;
+          continue;
+        }
         int[] queryOrder = query.tetrahedralLigands(atom), targetOrder = target.tetrahedralLigands(mapped);
         if (queryOrder == null || targetOrder == null || queryOrder.length != 4 || targetOrder.length != 4) continue;
         int[] permutation = new int[4];
@@ -358,7 +874,7 @@ public final class Substructure {
         for (int slot = 0; slot < 4; slot++) {
           int ligand = queryOrder[slot];
           if (ligand < 0 || mapping[ligand] < 0
-              || (selectedBonds!=null&&!selectedBonds.contains(new SearchResult.Bond(atom,ligand)))) continue;
+              || (selectedBonds != null && !selectedBonds.contains(new SearchResult.Bond(atom, ligand)))) continue;
           int mappedLigand = mapping[ligand];
           for (int targetSlot = 0; targetSlot < 4; targetSlot++) {
             if (targetOrder[targetSlot] == mappedLigand) {
@@ -385,9 +901,7 @@ public final class Substructure {
         for (int first = 0; first < 4; first++)
           for (int second = first + 1; second < 4; second++)
             if (permutation[first] > permutation[second]) inversions++;
-        // Builder tags use SMILES winding; CDK tags use its ligand order.
-        int queryTag = query.mol == null ? 3 - query.tetraChirality[atom] : query.tetraChirality[atom];
-        int targetTag = target.mol == null ? 3 - target.tetraChirality[mapped] : target.tetraChirality[mapped];
+        int queryTag = query.tetraChirality[atom];
         if ((queryTag == targetTag) != ((inversions & 1) == 0)) return atom;
       }
     }
@@ -395,26 +909,26 @@ public final class Substructure {
       for (int atom = 0; atom < query.n; atom++) {
         if (mapping[atom] < 0) continue;
         for (int other : query.neighbors[atom])
-          if (other > atom && (selectedBonds==null||selectedBonds.contains(new SearchResult.Bond(atom,other)))
-              && !doubleBondParityCompatible(query,atom,other,target,mapping,selectedBonds)) return atom;
+          if (other > atom && (selectedBonds == null || selectedBonds.contains(new SearchResult.Bond(atom, other)))
+              && !doubleBondParityCompatible(query, atom, other, target, mapping, selectedBonds, embedding)) return atom;
       }
     }
     return -1;
   }
 
-  /** Compare the stored double-bond relation against whichever query ligands are mapped. */
-  private static boolean doubleBondParityCompatible(MolGraph query, int first, int second,
-                                                    MolGraph target, int[] mapping) {
-    return doubleBondParityCompatible(query,first,second,target,mapping,null);
-  }
-
-  private static boolean doubleBondParityCompatible(MolGraph query,int first,int second,MolGraph target,
-                                                    int[] mapping,Set<SearchResult.Bond> selectedBonds) {
+  /**
+   * Compare the stored double-bond relation against whichever query ligands are mapped. With
+   * {@code embedding}, a configured query bond needs a configured target bond.
+   */
+  private static boolean doubleBondParityCompatible(MolGraph query, int first, int second, MolGraph target,
+                                                    int[] mapping, Set<SearchResult.Bond> selectedBonds,
+                                                    boolean embedding) {
     int mappedFirst = mapping[first], mappedSecond = mapping[second];
     if (mappedFirst < 0 || mappedSecond < 0) return true;
     int queryConfiguration = query.dbStereo(first, second);
+    if (queryConfiguration == 0) return true;
     int targetConfiguration = target.dbStereo(mappedFirst, mappedSecond);
-    if (queryConfiguration == 0 || targetConfiguration == 0) return true;
+    if (targetConfiguration == 0) return !embedding;
     for (int end = 0; end < 2; end++) {
       int queryEnd = end == 0 ? first : second, otherQueryEnd = end == 0 ? second : first;
       int targetEnd = mapping[queryEnd], otherTargetEnd = mapping[otherQueryEnd];
@@ -423,8 +937,9 @@ public final class Substructure {
       int queryLigand = -1;
       for (int neighbor : query.neighbors[queryEnd])
         if (neighbor != otherQueryEnd && mapping[neighbor] >= 0
-            && (selectedBonds==null||selectedBonds.contains(new SearchResult.Bond(queryEnd,neighbor)))) {
-          queryLigand = neighbor; break;
+            && (selectedBonds == null || selectedBonds.contains(new SearchResult.Bond(queryEnd, neighbor)))) {
+          queryLigand = neighbor;
+          break;
         }
       if (queryLigand < 0 || queryReference < 0 || targetReference < 0) return true;
       if (!target.hasBond(targetEnd, mapping[queryLigand])) return false;
@@ -434,13 +949,147 @@ public final class Substructure {
     return queryConfiguration == targetConfiguration;
   }
 
-  interface Matcher {
-    boolean exists();
-    void enumerate(int maxSolutions, List<Map<Integer, Integer>> out);
+  /**
+   * Query-side search data for one prepared query and chemistry. It is immutable once built, so
+   * concurrent searches with the same prepared query share it safely.
+   */
+  static final class QueryTables {
+    final int[][] neighborsByDegree, labels1, labels2, labels3;
+    /**
+     * The lowest-indexed atom that also has the same degree, ring membership and neighbourhood
+     * labels, so that both pass the mapping-independent tests against the same targets.
+     */
+    final int[] rootClass;
+    /**
+     * The lowest-indexed atom of each class of query atoms with equal atom constraints, and the
+     * class of each query atom. Atoms of one class have equal domains.
+     */
+    final int[] representatives, classIndex;
+    /**
+     * Constraint class by atomic number when the element is the only atom constraint, so a
+     * single pass over the target builds every domain; otherwise null.
+     */
+    final int[] elementClass;
+    /**
+     * The slot of each atomic number in the atom count screen, or null when the query is not
+     * screened: without the element test, with an atomic number outside 0 to 127, or with more
+     * than 16 elements, the limits of the native core.
+     */
+    private final byte[] elementSlot;
+    /** The query atoms of each slot by degree, degrees of 7 and more counted at 7. */
+    private final int[] degreeCounts;
+
+    @SuppressWarnings("deprecation")
+    QueryTables(MolGraph query, ChemOptions chemistry) {
+      byte[] slots = null;
+      int[] counts = null;
+      int used = 0;
+      if (chemistry.matchAtomType) {
+        slots = new byte[128];
+        Arrays.fill(slots, (byte) -1);
+        counts = new int[16 * 8];
+        for (int atom = 0; atom < query.n; atom++) {
+          int element = query.atomicNum[atom];
+          if (element < 0 || element >= slots.length || (slots[element] < 0 && used == 16)) {
+            slots = null;
+            break;
+          }
+          if (slots[element] < 0) slots[element] = (byte) used++;
+          counts[slots[element] * 8 + Math.min(query.degree[atom], 7)]++;
+        }
+      }
+      elementSlot = slots;
+      degreeCounts = slots == null ? null : Arrays.copyOf(counts, used * 8);
+      boolean labels = chemistry.matchAtomType && !chemistry.tautomerAware;
+      neighborsByDegree = query.getNeighborsByDegDesc();
+      labels1 = labels ? matchingNLF(query.getNLF1(), chemistry) : null;
+      labels2 = labels && chemistry.useTwoHopNLF && query.n > 12
+          ? matchingNLF(query.getNLF2(), chemistry) : null;
+      labels3 = labels && chemistry.useThreeHopNLF && query.n > 20
+          ? matchingNLF(query.getNLF3(), chemistry) : null;
+      // Ring counts take part in the atom constraints compared below.
+      if (chemistry.ringFusionMode != ChemOptions.RingFusionMode.IGNORE) query.ensureRingCounts();
+      classIndex = new int[query.n];
+      rootClass = new int[query.n];
+      int[] classAtoms = new int[query.n], rootRepresentatives = new int[query.n];
+      int classes = 0, rootClasses = 0, maxElement = 0;
+      for (int atom = 0; atom < query.n; atom++) {
+        int match = classes;
+        for (int index = 0; index < classes; index++)
+          if (MolGraph.ChemOps.sameAtomConstraints(query, classAtoms[index], atom, chemistry)) {
+            match = index;
+            break;
+          }
+        if (match == classes) classAtoms[classes++] = atom;
+        classIndex[atom] = match;
+        maxElement = Math.max(maxElement, query.atomicNum[atom]);
+        int rootMatch = atom;
+        for (int index = 0; index < rootClasses; index++)
+          if (sameRootTests(query, rootRepresentatives[index], atom)) {
+            rootMatch = rootRepresentatives[index];
+            break;
+          }
+        if (rootMatch == atom) rootRepresentatives[rootClasses++] = atom;
+        rootClass[atom] = rootMatch;
+      }
+      representatives = Arrays.copyOf(classAtoms, classes);
+      boolean elementOnly = chemistry.matchAtomType && !chemistry.matchFormalCharge
+          && chemistry.aromaticityMode != ChemOptions.AromaticityMode.STRICT && !chemistry.ringMatchesRingOnly
+          && !chemistry.matchIsotope && !chemistry.useChirality
+          && chemistry.ringFusionMode == ChemOptions.RingFusionMode.IGNORE;
+      for (int atom = 0; atom < query.n && elementOnly; atom++) elementOnly = query.atomicNum[atom] >= 0;
+      if (elementOnly) {
+        // Here atomsCompatFast compares only atomic numbers, and each class is one element.
+        elementClass = new int[maxElement + 1];
+        Arrays.fill(elementClass, -1);
+        for (int index = 0; index < classes; index++) elementClass[query.atomicNum[representatives[index]]] = index;
+      } else {
+        elementClass = null;
+      }
+    }
+
+    /**
+     * Whether the target has, for each element and each minimum degree, at least as many atoms
+     * as the query. Under the element test an embedding maps query atoms one to one onto target
+     * atoms of their element and of at least their degree, as atomsCompatFast and rootFeasible
+     * require, so a shortfall proves that none exists. Keep the three in step.
+     */
+    boolean admits(MolGraph target) {
+      if (elementSlot == null) return true;
+      int[] available = new int[degreeCounts.length];
+      for (int atom = 0; atom < target.n; atom++) {
+        int element = target.atomicNum[atom];
+        int slot = element >= 0 && element < elementSlot.length ? elementSlot[element] : -1;
+        if (slot >= 0) available[slot * 8 + Math.min(target.degree[atom], 7)]++;
+      }
+      // Atoms of a degree also serve every lower one, so counts accumulate from the highest.
+      for (int slot = 0; slot < degreeCounts.length; slot += 8) {
+        int queryAtoms = 0, targetAtoms = 0;
+        for (int degree = 7; degree >= 0; degree--) {
+          queryAtoms += degreeCounts[slot + degree];
+          targetAtoms += available[slot + degree];
+          if (queryAtoms > targetAtoms) return false;
+        }
+      }
+      return true;
+    }
+
+    private boolean sameRootTests(MolGraph query, int first, int second) {
+      return classIndex[first] == classIndex[second]
+          && query.degree[first] == query.degree[second] && query.ring[first] == query.ring[second]
+          && (labels1 == null || Arrays.equals(labels1[first], labels1[second]))
+          && (labels2 == null || Arrays.equals(labels2[first], labels2[second]))
+          && (labels3 == null || Arrays.equals(labels3[first], labels3[second]));
+    }
+
+    private static int[][] matchingNLF(int[][] tables, ChemOptions chemistry) {
+      int[][] result = new int[tables.length][];
+      for (int atom = 0; atom < tables.length; atom++) result[atom] = SubgraphSearch.matchingNLF(tables[atom], chemistry);
+      return result;
+    }
   }
 
-  @SuppressWarnings("unchecked")
-  abstract static class MoleculeMatcher implements Matcher {
+  static final class SubgraphSearch {
     final MolGraph gq, gt;
     final ChemOptions C;
     final SearchResult.Control tb;
@@ -450,29 +1099,39 @@ public final class Substructure {
     final boolean useNLF, useTwoHop, useThreeHop, useBitParallel, useRingOnly, useStereo;
     final boolean bitParallelSufficient;
     final long[][] domain;
+    /** Lazily built domain rows restricted by the tests that do not depend on the mapping. */
+    final long[][] rootRows;
+    final int[] rootClass;
+    /** A query atom with no compatible target, or -1. */
+    final int emptyDomainAtom;
     final long[] usedMask;
     final int tWords;
     final boolean singleWord;
-    long nodesVisited = 0, backtracks = 0, candidatesTried = 0;
-    long prunesAtom = 0, prunesBond = 0, prunesDegree = 0, prunesNLF = 0;
+    long nodesVisited = 0;
     boolean timedOut = false, found = false;
     boolean induced;
     long nodeLimit;
-    boolean pivotEnabled = false; // Mapped-neighbour pivot: only enabled during exists()
     int[] qdeg, tdeg;
     final int[][] qNeighborsByDegDesc;
-    // Pre-allocated buffers to avoid per-call allocations in selectCandidates/iterateBits
+    // Pre-allocated buffers to avoid per-call allocations in availableCandidates/iterateBitsInto
     final long[] availBuf;
     final int[] candBuf;
-    // Per-depth candidate buffer stack: avoids Arrays.copyOf on every selectCandidates call
+    // Per-depth candidate buffer stack: avoids Arrays.copyOf on every availableCandidates call
     final int[][] candBufByDepth;
+    /** The work arrays of target neighbourhood labels: atoms seen by the current build hold its stamp. */
+    private int[] labelSeen, labelReached;
+    private int labelStamp;
+    /** The fragment of each query atom while enumerating, and the number of fragments. */
+    private int[] fragmentOf;
+    private int fragmentCount;
 
-    MoleculeMatcher(MolGraph gq, MolGraph gt, ChemOptions C, SearchResult.Control tb) {
+    @SuppressWarnings("deprecation")
+    SubgraphSearch(MolGraph gq, QueryTables query, MolGraph gt, ChemOptions C, SearchResult.Control tb) {
       this.gq = gq; this.gt = gt;
       this.qdeg = gq.degree; this.tdeg = gt.degree;
       this.C = C; this.tb = tb;
       this.Nq = gq.n; this.Nt = gt.n;
-      this.tWords = (Nt + 63) >>> 6;
+      this.tWords = CommonBondGraphs.words(Nt);
       this.singleWord = (tWords <= 1);
       this.q2t = new int[Nq]; this.t2q = new int[Nt];
       Arrays.fill(q2t, -1); Arrays.fill(t2q, -1);
@@ -484,129 +1143,106 @@ public final class Substructure {
       this.bitParallelSufficient = useBitParallel
           && C.matchBondOrder == ChemOptions.BondOrderMode.ANY && !useStereo && !useRingOnly
           && C.aromaticityMode != ChemOptions.AromaticityMode.STRICT;
-      // Reuse the graph's cached neighbours sorted by degree.
-      this.qNeighborsByDegDesc = gq.getNeighborsByDegDesc();
-      // Use cached NLF tables from MolGraph (lazy-built, reused across calls on the same graph).
-      this.qNLF1 = useNLF ? matchingNLF(gq.getNLF1(), C) : null;
-      this.tNLF1 = useNLF ? matchingNLF(gt.getNLF1(), C) : null;
-      this.qNLF2 = useTwoHop ? matchingNLF(gq.getNLF2(), C) : null;
-      this.tNLF2 = useTwoHop ? matchingNLF(gt.getNLF2(), C) : null;
-      this.qNLF3 = useThreeHop ? matchingNLF(gq.getNLF3(), C) : null;
-      this.tNLF3 = useThreeHop ? matchingNLF(gt.getNLF3(), C) : null;
-      // Ensure expensive lazy fields are computed only when the options actually need them.
-      if (C.tautomerAware) { gq.ensureTautomerClasses(); gt.ensureTautomerClasses(); }
+      this.qNeighborsByDegDesc = query.neighborsByDegree;
+      this.qNLF1 = useNLF ? query.labels1 : null;
+      this.qNLF2 = useTwoHop ? query.labels2 : null;
+      this.qNLF3 = useThreeHop ? query.labels3 : null;
+      // Target labels are built per atom when a feasibility test first needs them.
+      this.tNLF1 = useNLF ? new int[Nt][] : null;
+      this.tNLF2 = useTwoHop ? new int[Nt][] : null;
+      this.tNLF3 = useThreeHop ? new int[Nt][] : null;
+      // Ring counts are worked out only when the options need them.
       if (C.ringFusionMode != ChemOptions.RingFusionMode.IGNORE) { gq.ensureRingCounts(); gt.ensureRingCounts(); }
-      this.domain = new long[Nq][tWords];
-      if (Nq > 0 && Nt > 50) {
-        // Group target atoms by label before constructing the domains.
-        // Pass 1: compute label keys and find max key for sizing
-        int[] tLabelKeys = new int[Nt];
-        int maxKey = 0;
-        for (int j = 0; j < Nt; j++) {
-          int key2 = C.matchAtomType ? gt.atomicNum[j] : 0;
-          int ringBit = C.ringMatchesRingOnly ? (gt.ring[j] ? 1 : 0) : 0;
-          key2 = (key2 << 2) | (gt.aromatic[j] ? 2 : 0) | ringBit;
-          tLabelKeys[j] = key2;
-          if (key2 > maxKey) maxKey = key2;
-        }
-        // Count entries per label key
-        int[] bucketCount = new int[maxKey + 1];
-        for (int j = 0; j < Nt; j++) bucketCount[tLabelKeys[j]]++;
-        // Prefix-sum to get bucket start offsets
-        int[] bucketStart = new int[maxKey + 2]; // +2 so bucketStart[maxKey+1] = Nt
-        bucketStart[0] = 0;
-        for (int k = 0; k <= maxKey; k++) bucketStart[k + 1] = bucketStart[k] + bucketCount[k];
-        // Pass 2: fill flat data array (scatter using running offsets)
-        int[] flatBucket = new int[Nt];
-        int[] writePos = new int[maxKey + 1];
-        System.arraycopy(bucketStart, 0, writePos, 0, maxKey + 1);
-        for (int j = 0; j < Nt; j++) {
-          int k = tLabelKeys[j];
-          flatBucket[writePos[k]++] = j;
-        }
-        // Iterate buckets for domain init
-        for (int i = 0; i < Nq; i++) {
-          if (tb.stopped()) break;
-          for (int k = 0; k <= maxKey; k++) {
-            int bStart = bucketStart[k], bEnd = bucketStart[k + 1];
-            if (bStart == bEnd) continue; // empty bucket
-            if (C.matchAtomType && !C.tautomerAware
-                && gq.atomicNum[i] != gt.atomicNum[flatBucket[bStart]]) { prunesAtom += (bEnd - bStart); continue; }
-            for (int b = bStart; b < bEnd; b++) {
-              int j = flatBucket[b];
-              if (atomsCompatFast(gq, i, gt, j, C)) domain[i][j >>> 6] |= 1L << (j & 63);
-              else prunesAtom++;
-            }
-          }
-        }
-      } else {
-        for (int i = 0; i < Nq && !tb.stopped(); i++)
-          for (int j = 0; j < Nt; j++) {
-            if (atomsCompatFast(gq, i, gt, j, C)) domain[i][j >>> 6] |= 1L << (j & 63);
-            else prunesAtom++;
-          }
+      // Query atoms with equal atom constraints have equal domains, so each distinct row is built
+      // once and shared; domain rows are never modified after construction.
+      this.domain = new long[Nq][];
+      int classes = query.representatives.length;
+      long[][] classRows = query.elementClass != null ? elementRows(query.elementClass, classes) : new long[classes][];
+      int empty = -1;
+      for (int k = 0; k < classes; k++) {
+        if (classRows[k] == null) classRows[k] = tb.stopped() ? new long[tWords] : domainRow(query.representatives[k]);
+        if (empty < 0 && bitCount(classRows[k]) == 0) empty = query.representatives[k];
       }
+      for (int i = 0; i < Nq; i++) domain[i] = classRows[query.classIndex[i]];
+      this.emptyDomainAtom = empty;
       this.usedMask = new long[tWords];
       this.availBuf = new long[tWords];
       this.candBuf = new int[Nt];
       this.candBufByDepth = new int[Nq][];
+      this.rootRows = new long[Nq][];
+      this.rootClass = query.rootClass;
+    }
+
+    /** Domains of every element class in one pass over the target. */
+    long[][] elementRows(int[] elementClass, int classes) {
+      long[][] rows = new long[classes][tWords];
+      for (int tj = 0; tj < Nt; tj++) {
+        int element = gt.atomicNum[tj];
+        int k = element >= 0 && element < elementClass.length ? elementClass[element] : -1;
+        if (k >= 0) rows[k][tj >>> 6] |= 1L << (tj & 63);
+      }
+      return rows;
+    }
+
+    /** Target atoms compatible with one query atom before any mapping is made. */
+    long[] domainRow(int qi) {
+      long[] row = new long[tWords];
+      // The element test repeats the first test of atomsCompatFast to skip most calls.
+      boolean element = C.matchAtomType;
+      int atomicNumber = gq.atomicNum[qi];
+      for (int tj = 0; tj < Nt; tj++)
+        if ((!element || gt.atomicNum[tj] == atomicNumber) && MolGraph.ChemOps.atomsCompatFast(gq, qi, gt, tj, C))
+          row[tj >>> 6] |= 1L << (tj & 63);
+      return row;
     }
 
     /** Project cached labels onto the constraints enforced by this search. */
-    static int[][] matchingNLF(int[][] tables, ChemOptions C) {
-      if (C.aromaticityMode == ChemOptions.AromaticityMode.STRICT) return tables;
-      int[][] result = new int[tables.length][];
-      for (int i = 0; i < tables.length; i++) {
-        int[] source = tables[i], merged = new int[source.length];
-        int size = 0;
-        for (int j = 0; j < source.length; j += 2) {
-          int element = source[j] >>> 1;
-          if (size > 0 && merged[size - 2] == element) merged[size - 1] += source[j + 1];
-          else { merged[size++] = element; merged[size++] = source[j + 1]; }
-        }
-        result[i] = Arrays.copyOf(merged, size);
+    static int[] matchingNLF(int[] source, ChemOptions C) {
+      if (C.aromaticityMode == ChemOptions.AromaticityMode.STRICT) return source;
+      int[] merged = new int[source.length];
+      int size = 0;
+      for (int j = 0; j < source.length; j += 2) {
+        int element = source[j] >>> 1;
+        if (size > 0 && merged[size - 2] == element) merged[size - 1] += source[j + 1];
+        else { merged[size++] = element; merged[size++] = source[j + 1]; }
       }
-      return result;
+      return Arrays.copyOf(merged, size);
+    }
+
+    int[] targetNLF1(int tj) {
+      int[] labels = tNLF1[tj];
+      if (labels == null) tNLF1[tj] = labels = matchingNLF(MolGraph.buildNLF1(gt, tj), C);
+      return labels;
+    }
+
+    int[] targetNLF2(int tj) {
+      int[] labels = tNLF2[tj];
+      if (labels == null) tNLF2[tj] = labels = matchingNLF(neighbourhoodLabels(tj, 2), C);
+      return labels;
+    }
+
+    int[] targetNLF3(int tj) {
+      int[] labels = tNLF3[tj];
+      if (labels == null) tNLF3[tj] = labels = matchingNLF(neighbourhoodLabels(tj, 3), C);
+      return labels;
+    }
+
+    /** The labels within {@code radius} bonds of a target atom, built in this search's work arrays. */
+    int[] neighbourhoodLabels(int tj, int radius) {
+      if (labelSeen == null) {
+        labelSeen = new int[Nt];
+        labelReached = new int[Nt];
+      }
+      if (++labelStamp == 0) {
+        Arrays.fill(labelSeen, 0);
+        labelStamp = 1;
+      }
+      return MolGraph.buildNeighborhoodNLF(gt, tj, radius, labelSeen, labelStamp, labelReached);
     }
 
     int[] candidateBuffer(int depth) {
       if (candBufByDepth[depth] == null) candBufByDepth[depth] = new int[Nt];
       return candBufByDepth[depth];
-    }
-
-    static boolean atomsCompatFast(MolGraph gq, int qi, MolGraph gt, int tj, ChemOptions C) {
-      // Tautomerism changes hydrogen placement and bond order, not elemental identity.
-      if (C.matchAtomType && gq.atomicNum[qi] != gt.atomicNum[tj]) return false;
-      if (C.matchFormalCharge && gq.formalCharge[qi] != gt.formalCharge[tj]) return false;
-      if (C.aromaticityMode == ChemOptions.AromaticityMode.STRICT && gq.aromatic[qi] != gt.aromatic[tj]) return false;
-      if (C.ringMatchesRingOnly && gq.ring[qi] != gt.ring[tj]) return false;
-      if (C.matchIsotope) {
-        int qm = gq.massNumber[qi], tm = gt.massNumber[tj];
-        if (qm != 0 && tm != 0 && qm != tm) return false;
-      }
-      if (C.useChirality && gq.tetraChirality != null && gt.tetraChirality != null) {
-        int qs = gq.tetraChirality[qi], ts = gt.tetraChirality[tj];
-        if (qs != 0 && ts != 0) {
-          // Preserve the comparison of explicitly supplied invalid builder annotations.
-          if ((gq.tetrahedralLigands(qi) == null || gt.tetrahedralLigands(tj) == null) && qs != ts) return false;
-        }
-      }
-      if (C.ringFusionMode != ChemOptions.RingFusionMode.IGNORE && gq.ring[qi] && gt.ring[tj]) {
-        if (C.ringFusionMode == ChemOptions.RingFusionMode.STRICT) {
-          if (gq.ringCount[qi] != gt.ringCount[tj]) return false;
-        }
-      }
-      return true;
-    }
-
-    static int[] iterateBits(long[] words, int maxBits) {
-      int count = 0; for (long w : words) count += Long.bitCount(w);
-      int[] result = new int[count]; int idx = 0;
-      for (int w = 0; w < words.length; w++) {
-        long bits = words[w];
-        while (bits != 0) { result[idx++] = (w << 6) | Long.numberOfTrailingZeros(bits); bits &= bits - 1; }
-      }
-      return result;
     }
 
     /** Write set bits into pre-allocated buffer, return count. Zero-allocation hot path. */
@@ -619,10 +1255,22 @@ public final class Substructure {
       return idx;
     }
 
-    int[] domainCandidates(int qi) {
-      for (int w = 0; w < tWords; w++) availBuf[w] = domain[qi][w] & ~usedMask[w];
-      int len = iterateBitsInto(availBuf, candBuf);
-      return Arrays.copyOf(candBuf, len);
+    /** Write the unused targets of qi that pass the tests independent of the mapping; return their count. */
+    int domainCandidates(int qi, int[] buf) {
+      long[] row = rootRow(qi);
+      for (int w = 0; w < tWords; w++) availBuf[w] = row[w] & ~usedMask[w];
+      return iterateBitsInto(availBuf, buf);
+    }
+
+    /** The first feasible unused target of qi closest in degree, or -1. */
+    int greedyTarget(int qi) {
+      int bestTj = -1, bestDist = Integer.MAX_VALUE;
+      for (int candidate = 0, candidates = domainCandidates(qi, candBuf); candidate < candidates; candidate++) {
+        int tj = candBuf[candidate];
+        int dist = Math.abs(tdeg[tj] - qdeg[qi]);
+        if (dist < bestDist && mappedFeasible(qi, tj)) { bestTj = tj; bestDist = dist; if (dist == 0) break; }
+      }
+      return bestTj;
     }
 
     boolean greedyProbe(int[] order) {
@@ -630,12 +1278,8 @@ public final class Substructure {
       for (int qi : order) {
         if (stopped()) return false;
         nodesVisited++;
-        int bestTj = -1, bestDist = Integer.MAX_VALUE; boolean found2 = false;
-        for (int tj : domainCandidates(qi)) {
-          int dist = Math.abs(tdeg[tj] - qdeg[qi]);
-          if (dist < bestDist && feasible(qi, tj)) { bestTj = tj; bestDist = dist; found2 = true; if (dist == 0) break; }
-        }
-        if (!found2) {
+        int bestTj = greedyTarget(qi);
+        if (bestTj < 0) {
           for (int k = matched - 1; k >= 0; k--) {
             int qk = order[k], tk = q2t[qk]; q2t[qk] = -1; t2q[tk] = -1;
             usedMask[tk >>> 6] &= ~(1L << (tk & 63));
@@ -644,7 +1288,7 @@ public final class Substructure {
         }
         q2t[qi] = bestTj; t2q[bestTj] = qi; usedMask[bestTj >>> 6] |= 1L << (bestTj & 63); matched++;
       }
-      if (stereoMismatchAtom(gq, gt, q2t, C) < 0) return true;
+      if (stereoMismatchAtom(gq, gt, q2t, C, true) < 0) return true;
       for (int qi : order) {
         int tj = q2t[qi];
         q2t[qi] = -1;
@@ -654,47 +1298,86 @@ public final class Substructure {
       return false;
     }
 
-    int[] fastisoOrder() {
-      int[] order = new int[Nq]; boolean[] picked = new boolean[Nq];
-      long[][] workDomain = new long[Nq][tWords];
-      for (int i = 0; i < Nq; i++) System.arraycopy(domain[i], 0, workDomain[i], 0, tWords);
+    /**
+     * Order query atoms by fewest remaining targets, then highest degree, then lowest index,
+     * narrowing each unpicked neighbour of a picked atom to targets adjacent to its candidates.
+     */
+    int[] orderQueryAtoms() {
+      if (emptyDomainAtom >= 0 && !tb.stopped()) {
+        // Every search stops at a first atom without targets, before reading the rest of the order.
+        int[] order = new int[Nq];
+        order[0] = emptyDomainAtom;
+        for (int i = 0, next = 1; i < Nq; i++) if (i != emptyDomainAtom) order[next++] = i;
+        return order;
+      }
+      int[] order = new int[Nq], size = new int[Nq];
+      boolean[] picked = new boolean[Nq], narrowed = new boolean[Nq];
+      // Rows are shared with the domain until they are first narrowed.
+      long[][] workDomain = new long[Nq][];
+      for (int i = 0; i < Nq; i++) { workDomain[i] = domain[i]; size[i] = bitCount(domain[i]); }
       long[] reachable = new long[tWords];
       for (int pos = 0; pos < Nq; pos++) {
         if (tb.stopped()) return order;
-        int bestQ = -1, bestSize = Integer.MAX_VALUE, bestDeg = -1;
-        for (int i = 0; i < Nq; i++) {
-          if (picked[i]) continue;
-          int size = 0; for (int w = 0; w < tWords; w++) size += Long.bitCount(workDomain[i][w]);
-          if (size < bestSize || (size == bestSize && gq.degree[i] > bestDeg)) { bestQ = i; bestSize = size; bestDeg = gq.degree[i]; }
-        }
+        int bestQ = nextQueryAtom(picked, size);
         order[pos] = bestQ; picked[bestQ] = true;
-        for (int qk : gq.neighbors[bestQ]) {
-          if (picked[qk]) continue;
-          // Skip neighbours whose domain is already empty.
-          boolean hasAny = false;
-          for (int w = 0; w < tWords && !hasAny; w++) if (workDomain[qk][w] != 0) hasAny = true;
-          if (!hasAny) continue;
-          Arrays.fill(reachable, 0, tWords, 0L);
-          for (int w = 0; w < tWords; w++) {
-            long bits = workDomain[bestQ][w];
-            while (bits != 0) {
-              int bit = Long.numberOfTrailingZeros(bits); int tj = (w << 6) | bit;
-              if (tj < Nt) for (int rw = 0; rw < tWords; rw++) reachable[rw] |= gt.adjLong[tj][rw];
-              bits &= bits - 1;
-            }
-          }
-          for (int rw = 0; rw < tWords; rw++) workDomain[qk][rw] &= reachable[rw];
+        if (pos == 0 && !hasRootCandidate(bestQ)) {
+          // Every search stops at this first atom without reading the rest of the order.
+          for (int i = 0, next = 1; i < Nq; i++) if (!picked[i]) order[next++] = i;
+          return order;
         }
+        narrowNeighbours(bestQ, picked, size, workDomain, narrowed, reachable);
       }
       return order;
     }
 
-    void sortByDegreeProximity(int[] cands, int qi) {
-      for (int i = 1; i < cands.length; i++) {
-        int key = cands[i], keyDist = Math.abs(tdeg[key] - qdeg[qi]); int j = i - 1;
-        while (j >= 0 && Math.abs(tdeg[cands[j]] - qdeg[qi]) > keyDist) { cands[j + 1] = cands[j]; j--; }
-        cands[j + 1] = key;
+    /** Narrow the unpicked neighbours of a picked atom to targets adjacent to its candidates. */
+    void narrowNeighbours(int bestQ, boolean[] picked, int[] size, long[][] workDomain, boolean[] narrowed,
+                          long[] reachable) {
+      boolean reachableReady = false;
+      for (int qk : gq.neighbors[bestQ]) {
+        // Skip picked neighbours and those whose domain is already empty.
+        if (picked[qk] || size[qk] == 0) continue;
+        if (!reachableReady) { reachableFrom(workDomain[bestQ], reachable); reachableReady = true; }
+        if (!narrowed[qk]) { workDomain[qk] = workDomain[qk].clone(); narrowed[qk] = true; }
+        long[] row = workDomain[qk];
+        for (int rw = 0; rw < tWords; rw++) row[rw] &= reachable[rw];
+        size[qk] = bitCount(row);
       }
+    }
+
+    /** Whether any domain target of a query atom is feasible while nothing is mapped. */
+    boolean hasRootCandidate(int qi) {
+      for (long word : rootRow(qi)) if (word != 0) return true;
+      return false;
+    }
+
+    /** The unpicked query atom with the fewest targets, then the highest degree, then the lowest index. */
+    int nextQueryAtom(boolean[] picked, int[] size) {
+      int bestQ = -1, bestSize = Integer.MAX_VALUE, bestDeg = -1;
+      for (int i = 0; i < Nq; i++) {
+        if (picked[i]) continue;
+        if (size[i] < bestSize || (size[i] == bestSize && qdeg[i] > bestDeg)) { bestQ = i; bestSize = size[i]; bestDeg = qdeg[i]; }
+      }
+      return bestQ;
+    }
+
+    /** Write the union of the target neighbourhoods of every atom in {@code row}. */
+    void reachableFrom(long[] row, long[] reachable) {
+      Arrays.fill(reachable, 0L);
+      for (int w = 0; w < tWords; w++) {
+        long bits = row[w];
+        while (bits != 0) {
+          int tj = (w << 6) | Long.numberOfTrailingZeros(bits);
+          if (tj < Nt) for (int rw = 0; rw < tWords; rw++) reachable[rw] |= gt.adjLong[tj][rw];
+          bits &= bits - 1;
+        }
+      }
+    }
+
+    static int bitCount(long[] row) {
+      int count = 0;
+      for (long word : row) count += Long.bitCount(word);
+      return count;
     }
 
     /** Sort first {@code len} entries of {@code buf} by degree proximity to query atom qi. */
@@ -706,75 +1389,60 @@ public final class Substructure {
       }
     }
 
-    /** Mapped-neighbour pivot: prefer the candidate with most mapped-neighbour overlap. */
-    void applyPivotHeuristic(int[] buf, int len, int qi) {
-      if (len <= 1) return;
-      // A pivot is useful with at least two mapped neighbours.
-      int mappedNbrs = 0;
-      for (int qk : gq.neighbors[qi]) if (q2t[qk] != -1) mappedNbrs++;
-      if (mappedNbrs < 2) return;
-      // Find the candidate with most adjacency overlap to mapped neighbours.
-      int bestPivot = 0, bestOverlap = 0;
-      for (int c = 0; c < len; c++) {
-        int tj = buf[c]; int overlap = 0;
-        for (int qk : gq.neighbors[qi]) {
-          int tk = q2t[qk];
-          if (tk != -1 && (gt.adjLong[tj][tk >>> 6] & (1L << (tk & 63))) != 0)
-            overlap++;
+    /**
+     * Domain targets of qi that pass the degree, ring and neighbourhood label tests. These tests
+     * do not depend on the mapping, so each row is built once, when the search first needs it.
+     */
+    long[] rootRow(int qi) {
+      long[] row = rootRows[qi];
+      if (row != null) return row;
+      // Atoms with equal mapping-independent tests share one read-only row.
+      if (rootClass[qi] != qi) return rootRows[qi] = rootRow(rootClass[qi]);
+      row = new long[tWords];
+      long[] candidates = domain[qi];
+      for (int w = 0; w < tWords; w++) {
+        long bits = candidates[w];
+        while (bits != 0) {
+          int tj = (w << 6) | Long.numberOfTrailingZeros(bits);
+          if (rootFeasible(qi, tj)) row[w] |= 1L << (tj & 63);
+          bits &= bits - 1;
         }
-        if (overlap > bestOverlap) { bestOverlap = overlap; bestPivot = c; }
       }
-      if (bestPivot != 0) { int tmp = buf[0]; buf[0] = buf[bestPivot]; buf[bestPivot] = tmp; }
+      return rootRows[qi] = row;
     }
 
-    boolean feasible(int qi, int tj) {
-      if (gt.degree[tj] < gq.degree[qi]) { prunesDegree++; return false; }
-      // Ring-only check (cheapest boolean test — run early for fast exit)
-      if (useRingOnly && gq.ring[qi] != gt.ring[tj]) { prunesAtom++; return false; }
-      if (useNLF && !MolGraph.nlfOk(qNLF1[qi], tNLF1[tj])) { prunesNLF++; return false; }
-      if (useTwoHop && !MolGraph.nlfOk(qNLF2[qi], tNLF2[tj])) { prunesNLF++; return false; }
-      if (useThreeHop && !MolGraph.nlfOk(qNLF3[qi], tNLF3[tj])) { prunesNLF++; return false; }
+    boolean rootFeasible(int qi, int tj) {
+      if (gt.degree[tj] < gq.degree[qi]) return false;
+      // The ring test is the cheapest, so it runs first.
+      if (useRingOnly && gq.ring[qi] != gt.ring[tj]) return false;
+      if (useNLF && !MolGraph.nlfOk(qNLF1[qi], targetNLF1(tj))) return false;
+      if (useTwoHop && !MolGraph.nlfOk(qNLF2[qi], targetNLF2(tj))) return false;
+      if (useThreeHop && !MolGraph.nlfOk(qNLF3[qi], targetNLF3(tj))) return false;
+      return true;
+    }
+
+    /** The feasibility tests that depend on the atoms already mapped. */
+    boolean mappedFeasible(int qi, int tj) {
       if (induced) {
         for (int mappedQuery = 0; mappedQuery < Nq; mappedQuery++)
           if (q2t[mappedQuery] >= 0 && !gq.hasBond(qi, mappedQuery)
-              && gt.hasBond(tj, q2t[mappedQuery])) { prunesBond++; return false; }
+              && gt.hasBond(tj, q2t[mappedQuery])) return false;
       }
       int[] nbSorted = qNeighborsByDegDesc[qi];
       if (useBitParallel) {
         long[] tAdj = gt.adjLong[tj];
         for (int qk : nbSorted) {
           int tk = q2t[qk];
-          if (tk != -1 && (tAdj[tk >>> 6] & (1L << (tk & 63))) == 0) { prunesBond++; return false; }
+          if (tk != -1 && (tAdj[tk >>> 6] & (1L << (tk & 63))) == 0) return false;
         }
         if (bitParallelSufficient) return true;
       }
       for (int qk : nbSorted) {
         int tk = q2t[qk];
-        if (tk != -1 && !MolGraph.ChemOps.bondsCompatible(gq, qi, qk, gt, tj, tk, C)) { prunesBond++; return false; }
+        if (tk != -1 && !MolGraph.ChemOps.bondsCompatible(gq, qi, qk, gt, tj, tk, C)) return false;
       }
       return true;
     }
-
-    int[] vf3LightOrder() {
-      Map<Integer, Integer> labelFreq = new HashMap<>();
-      for (int i = 0; i < Nq; i++) labelFreq.merge(gq.label[i], 1, Integer::sum);
-      Integer[] order = new Integer[Nq];
-      for (int i = 0; i < Nq; i++) order[i] = i;
-      Arrays.sort(order, (a, b) -> {
-        int freqA = labelFreq.getOrDefault(gq.label[a], 0), freqB = labelFreq.getOrDefault(gq.label[b], 0);
-        if (freqA != freqB) return Integer.compare(freqA, freqB);
-        if (gq.degree[a] != gq.degree[b]) return Integer.compare(gq.degree[b], gq.degree[a]);
-        int domA = 0, domB = 0;
-        for (int w = 0; w < tWords; w++) { domA += Long.bitCount(domain[a][w]); domB += Long.bitCount(domain[b][w]); }
-        return Integer.compare(domA, domB);
-      });
-      int[] result = new int[Nq]; for (int i = 0; i < Nq; i++) result[i] = order[i]; return result;
-    }
-
-    /** Write candidates for query atom qi into candBufByDepth[pos] and return the count. */
-    abstract int selectCandidates(int qi, int pos);
-    void onMatch(int pos, int tj) {}
-    void onUnmatch(int pos, int tj) {}
 
     boolean stopped() {
       if (nodeLimit > 0 && nodesVisited >= nodeLimit) tb.limitReached();
@@ -782,26 +1450,25 @@ public final class Substructure {
       return false;
     }
 
-    /** Choose the fewest feasible targets after enforcing the current mapped neighbours. */
+    /**
+     * Choose the fewest feasible targets after enforcing the current mapped neighbours, the first
+     * in order among equals, and keep them in this depth's buffer ordered by degree proximity.
+     */
     int selectNext(int[] order, int position) {
+      if (tb.stopped()) { timedOut = true; return 0; }
+      // Atoms are mapped in order positions, so nothing is mapped at the first position.
+      if (position == 0) return selectRoot(order);
       boolean hasFrontier = false;
-      for (int index = position; index < order.length && !hasFrontier; index++) {
-        if (tb.stopped()) { timedOut = true; return 0; }
+      for (int index = position; index < order.length && !hasFrontier; index++)
         hasFrontier = hasMappedNeighbor(order[index]);
-      }
+      int[] buffer = candidateBuffer(position);
       int bestIndex = position, bestCount = Integer.MAX_VALUE;
       for (int index = position; index < order.length; index++) {
-        if (tb.stopped()) { timedOut = true; return 0; }
+        if (tb.stoppedSampled()) { timedOut = true; return 0; }
         int queryAtom = order[index];
         if (hasFrontier && !hasMappedNeighbor(queryAtom)) continue;
-        int candidates = selectCandidates(queryAtom, position);
-        int[] buffer = candBufByDepth[position];
-        int compatible = 0;
-        for (int candidate = 0; candidate < candidates; candidate++) {
-          if (tb.stopped()) { timedOut = true; return 0; }
-          int targetAtom = buffer[candidate];
-          if (feasible(queryAtom, targetAtom)) buffer[compatible++] = targetAtom;
-        }
+        int compatible = feasibleCandidates(queryAtom, buffer, bestCount);
+        if (compatible < 0) return 0;
         if (compatible < bestCount) {
           bestIndex = index;
           bestCount = compatible;
@@ -810,8 +1477,53 @@ public final class Substructure {
         }
       }
       int swap = order[position]; order[position] = order[bestIndex]; order[bestIndex] = swap;
-      System.arraycopy(candBuf, 0, candidateBuffer(position), 0, bestCount);
+      System.arraycopy(candBuf, 0, buffer, 0, bestCount);
+      // Filtering before the stable sort keeps the order of sorting every candidate first.
+      sortByDegreeProximityBuf(buffer, bestCount, order[position]);
       return bestCount;
+    }
+
+    /**
+     * The first atom: nothing is mapped, so its candidates are the targets of its root row. Atoms
+     * of one root class share that row and their degree, so after the first of a class in order
+     * none can have fewer targets, and only the first can be chosen.
+     */
+    int selectRoot(int[] order) {
+      boolean[] counted = new boolean[Nq];
+      int bestIndex = 0, bestCount = Integer.MAX_VALUE;
+      for (int index = 0; index < order.length; index++) {
+        if (tb.stoppedSampled()) { timedOut = true; return 0; }
+        int queryAtom = order[index];
+        if (counted[rootClass[queryAtom]]) continue;
+        counted[rootClass[queryAtom]] = true;
+        int count = bitCount(rootRow(queryAtom));
+        if (count < bestCount) {
+          bestIndex = index;
+          bestCount = count;
+          if (count == 0) break;
+        }
+      }
+      int swap = order[0]; order[0] = order[bestIndex]; order[bestIndex] = swap;
+      int[] buffer = candidateBuffer(0);
+      int candidates = availableCandidates(rootRow(order[0]), order[0], buffer);
+      sortByDegreeProximityBuf(buffer, candidates, order[0]);
+      return candidates;
+    }
+
+    /**
+     * Write the feasible candidates of one query atom to {@code buffer} in target order, up to
+     * {@code bound} of them, since an atom with as many cannot have the fewest; -1 when stopped.
+     */
+    int feasibleCandidates(int queryAtom, int[] buffer, int bound) {
+      // The candidate row already applies the tests that do not depend on the mapping.
+      int candidates = availableCandidates(rootRow(queryAtom), queryAtom, buffer);
+      int compatible = 0;
+      for (int candidate = 0; candidate < candidates && compatible < bound; candidate++) {
+        if (tb.stoppedSampled()) { timedOut = true; return -1; }
+        int targetAtom = buffer[candidate];
+        if (mappedFeasible(queryAtom, targetAtom)) buffer[compatible++] = targetAtom;
+      }
+      return compatible;
     }
 
     boolean hasMappedNeighbor(int queryAtom) {
@@ -822,71 +1534,84 @@ public final class Substructure {
     void backtrack(int[] order, int pos) {
       if (stopped()) return;
       nodesVisited++; if (found) return;
-      if (pos == order.length) { found = stereoMismatchAtom(gq, gt, q2t, C) < 0; return; }
+      if (pos == order.length) { found = stereoMismatchAtom(gq, gt, q2t, C, true) < 0; return; }
       int candCount = selectNext(order, pos);
       int qi = order[pos];
       for (int k = 0; k < candCount; k++) {
         int tj = candBufByDepth[pos][k];
-        if (tb.stopped()) { timedOut = true; return; }
-        candidatesTried++;
-        q2t[qi] = tj; t2q[tj] = qi; usedMask[tj >>> 6] |= 1L << (tj & 63); onMatch(pos, tj);
+        if (tb.stoppedSampled()) { timedOut = true; return; }
+        q2t[qi] = tj; t2q[tj] = qi; usedMask[tj >>> 6] |= 1L << (tj & 63);
         backtrack(order, pos + 1);
         if (found || timedOut) return;
-        q2t[qi] = -1; t2q[tj] = -1; usedMask[tj >>> 6] &= ~(1L << (tj & 63)); onUnmatch(pos, tj); backtracks++;
+        q2t[qi] = -1; t2q[tj] = -1; usedMask[tj >>> 6] &= ~(1L << (tj & 63));
       }
     }
 
-    void enumerateRec(int[] order, int pos, List<Map<Integer, Integer>> out, int maxSolutions) {
+    void enumerateRec(int[] order, int pos, List<int[]> out, List<int[]> fragmentOrders, int maxSolutions) {
       if (stopped()) return;
       nodesVisited++; if (out.size() >= maxSolutions) return;
       if (pos == order.length) {
-        if (stereoMismatchAtom(gq, gt, q2t, C) >= 0) return;
-        Map<Integer, Integer> map = new LinkedHashMap<>(); for (int k : order) map.put(k, q2t[k]); out.add(map); return;
+        if (stereoMismatchAtom(gq, gt, q2t, C, true) >= 0) return;
+        out.add(q2t.clone());
+        if (fragmentOrders != null) fragmentOrders.add(fragmentOrder(order));
+        return;
       }
       int candCount = selectNext(order, pos);
       int qi = order[pos];
       for (int k = 0; k < candCount; k++) {
         int tj = candBufByDepth[pos][k];
-        if (tb.stopped()) { timedOut = true; return; }
-        candidatesTried++;
-        q2t[qi] = tj; t2q[tj] = qi; usedMask[tj >>> 6] |= 1L << (tj & 63); onMatch(pos, tj);
-        enumerateRec(order, pos + 1, out, maxSolutions);
-        q2t[qi] = -1; t2q[tj] = -1; usedMask[tj >>> 6] &= ~(1L << (tj & 63)); onUnmatch(pos, tj); backtracks++;
+        if (tb.stoppedSampled()) { timedOut = true; return; }
+        q2t[qi] = tj; t2q[tj] = qi; usedMask[tj >>> 6] |= 1L << (tj & 63);
+        enumerateRec(order, pos + 1, out, fragmentOrders, maxSolutions);
+        q2t[qi] = -1; t2q[tj] = -1; usedMask[tj >>> 6] &= ~(1L << (tj & 63));
         if (out.size() >= maxSolutions || timedOut) return;
       }
     }
-  }
 
-  static final class FrontierMatcher extends MoleculeMatcher {
-    FrontierMatcher(MolGraph gq, MolGraph gt, ChemOptions C, SearchResult.Control tb) {
-      super(gq, gt, C, tb);
+    /** The query fragments in the order their atoms first appear in the mapping order. */
+    int[] fragmentOrder(int[] order) {
+      int[] listed = new int[fragmentCount];
+      boolean[] seen = new boolean[fragmentCount];
+      for (int index = 0, count = 0; index < order.length && count < fragmentCount; index++) {
+        int fragment = fragmentOf[order[index]];
+        if (!seen[fragment]) {
+          seen[fragment] = true;
+          listed[count++] = fragment;
+        }
+      }
+      return listed;
     }
+
     public boolean exists() {
       if (tb.stopped()) return false;
       if (Nq == 0) return true;
-      pivotEnabled = true;
-      int[] order = fastisoOrder();
+      int[] order = orderQueryAtoms();
       if (tb.stopped()) return false;
-      if (Nq <= 50 && greedyProbe(order)) { found = true; pivotEnabled = false; return true; }
-      backtrack(order, 0); pivotEnabled = false; return found;
+      if (Nq <= 50 && greedyProbe(order)) { found = true; return true; }
+      backtrack(order, 0); return found;
     }
-    public void enumerate(int maxSolutions, List<Map<Integer, Integer>> out) {
+
+    /**
+     * Collect up to {@code maxSolutions} complete embeddings, each a copy of q2t. When
+     * {@code fragmentOrders} is given, it receives for each embedding the fragments, numbered by
+     * {@code fragmentOf}, in the order the search reached their first atoms.
+     */
+    void enumerate(int maxSolutions, List<int[]> out, int[] fragmentOf, List<int[]> fragmentOrders) {
       if (tb.stopped()) return;
-      if (Nq == 0) { out.add(new LinkedHashMap<>()); return; }
-      enumerateRec(fastisoOrder(), 0, out, maxSolutions);
+      if (Nq == 0) { out.add(new int[0]); return; }
+      this.fragmentOf = fragmentOf;
+      for (int fragment : fragmentOf) fragmentCount = Math.max(fragmentCount, fragment + 1);
+      enumerateRec(orderQueryAtoms(), 0, out, fragmentOrders, maxSolutions);
     }
-    int selectCandidates(int qi, int pos) {
-      int[] buf = candidateBuffer(pos);
-      for (int w = 0; w < tWords; w++) availBuf[w] = domain[qi][w] & ~usedMask[w];
+    /** Write unused targets of {@code row} adjacent to every mapped neighbour of qi, in index order. */
+    int availableCandidates(long[] row, int qi, int[] buf) {
+      for (int w = 0; w < tWords; w++) availBuf[w] = row[w] & ~usedMask[w];
       for (int queryNeighbor : gq.neighbors[qi]) {
         int mappedTarget = q2t[queryNeighbor];
         if (mappedTarget < 0) continue;
         for (int word = 0; word < tWords; word++) availBuf[word] &= gt.adjLong[mappedTarget][word];
       }
-      int len = iterateBitsInto(availBuf, buf);
-      sortByDegreeProximityBuf(buf, len, qi);
-      if (pivotEnabled) applyPivotHeuristic(buf, len, qi);
-      return len;
+      return iterateBitsInto(availBuf, buf);
     }
 
   }

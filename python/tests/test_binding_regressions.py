@@ -1,11 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Python lifetime, option and atom-order regression checks."""
 import gc
 import weakref
 
 import pytest
 import smsd
+from .search_helpers import assert_witness
 
 
 def test_match_many_timeout_and_worker_count_are_separate():
@@ -93,18 +96,6 @@ def _reordered_pair():
     return chem.RenumberAtoms(q, [3, 1, 0, 2]), chem.RenumberAtoms(t, [4, 1, 3, 0, 2])
 
 
-def _assert_witness(q, t, mapping):
-    assert len(set(mapping.values())) == len(mapping)
-    for a, b in mapping.items():
-        assert q.GetAtomWithIdx(a).GetAtomicNum() == t.GetAtomWithIdx(b).GetAtomicNum()
-    for bond in q.GetBonds():
-        a, b = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
-        if a in mapping and b in mapping:
-            matched = t.GetBondBetweenAtoms(mapping[a], mapping[b])
-            assert matched is not None
-            assert matched.GetBondType() == bond.GetBondType()
-
-
 @pytest.mark.parametrize("input_kind", ["molecule", "graph", "repeated"])
 def test_reordered_rdkit_indices_for_each_input_kind(input_kind):
     query, target = _reordered_pair()
@@ -118,7 +109,7 @@ def test_reordered_rdkit_indices_for_each_input_kind(input_kind):
         result = prepared.match_many([target])[0] if input_kind == "repeated" else prepared.match(target)
         mapping = result.best.atom_mapping
     assert len(mapping) == 4
-    _assert_witness(query, target, mapping)
+    assert_witness(query, target, mapping)
 
 
 def test_rdkit_first_all_and_many_indices():
@@ -132,7 +123,7 @@ def test_rdkit_first_all_and_many_indices():
         assert result.found
         for match in result.matches:
             assert match.atom_count == 4
-            _assert_witness(query, target, match.atom_mapping)
+            assert_witness(query, target, match.atom_mapping)
     chem = _rdkit()
     options = smsd.MCS.Options()
     options.chemistry.match_atom_type = False
@@ -171,7 +162,7 @@ def test_target_selection_translates_original_atom_indices():
     results = smsd.MCS.find(query).match_many(targets)
     target_index, result = max(enumerate(results), key=lambda item: item[1].score)
     assert target_index == 1 and result.best.atom_count == 2
-    _assert_witness(query, targets[target_index], result.best.atom_mapping)
+    assert_witness(query, targets[target_index], result.best.atom_mapping)
 
 
 @pytest.mark.parametrize("smiles", ["N[C@@H](C)C(=O)O", "N[C@H]1CCCCO1", "F[C@]1(Cl)CCCCO1", "CC1.[C@H]1(N)O"])
@@ -212,7 +203,7 @@ def test_rdkit_explicit_hydrogen_indices_are_retained():
     assert sorted(smsd.get_index_map(graph)) == list(range(molecule.GetNumAtoms()))
     mapping = smsd.MCS.find(molecule).match(molecule).best.atom_mapping
     assert len(mapping) == molecule.GetNumAtoms()
-    _assert_witness(molecule, molecule, mapping)
+    assert_witness(molecule, molecule, mapping)
 
 
 @pytest.mark.parametrize("function", ["path_fingerprint", "mcs_fingerprint"])
@@ -226,3 +217,47 @@ def test_raw_fingerprint_parameters_reject_invalid_storage(function, option):
 def test_batch_fingerprint_validates_before_workers(option):
     with pytest.raises(ValueError):
         smsd._smsd.batch_fingerprint([smsd.parse_smiles("CC")] * 4, num_threads=2, **option)
+
+
+@pytest.mark.parametrize("timeout", [0, 1, 2 ** 62, 2 ** 63 - 1])
+def test_result_conversion_deadline_accepts_every_time_limit(timeout):
+    # Converting matches counts toward the time limit; the largest limits leave it unbounded.
+    query = smsd.Substructure.find("CO").with_timeout(timeout)
+    result = query.match_all(smsd.parse_smiles("OCO"), 10)
+    if timeout > 1:
+        assert result.status == smsd.SearchStatus.COMPLETED and result.complete
+        assert len(result.matches) == 2
+    else:
+        assert len(result.matches) <= 2
+    mcs = smsd.MCS.find("CCO").with_timeout(timeout).match("OCCO")
+    assert mcs.status in (smsd.SearchStatus.COMPLETED, smsd.SearchStatus.TIMED_OUT)
+
+
+def test_result_conversion_stops_at_cancellation_and_at_the_deadline():
+    # Conversion reads the token and the clock after about 4096 atoms and bonds, as native
+    # matchAll() does while building its matches, and keeps the matches converted by then.
+    native = smsd._smsd.Substructure.find(smsd.parse_smiles("CC")).match_all(smsd.parse_smiles("C" * 3000), 10000)
+    assert native.status == smsd.SearchStatus.COMPLETED and native.complete
+    total = len(native.matches)
+    assert total == 2 * 2999
+    whole = smsd._smsd._search_result(native, None, None)
+    assert len(whole.matches) == total and whole.complete
+    token = smsd.CancellationToken()
+    assert len(smsd._smsd._search_result(native, None, None, token).matches) == total
+    token.cancel()
+    cancelled = smsd._smsd._search_result(native, None, None, token)
+    assert 0 < len(cancelled.matches) < total
+    assert cancelled.status == smsd.SearchStatus.CANCELLED and not cancelled.complete and cancelled.optimal
+    timed_out = smsd._smsd._search_result(native, None, None, time_limit_ms=0)
+    assert 0 < len(timed_out.matches) < total
+    assert timed_out.status == smsd.SearchStatus.TIMED_OUT and not timed_out.complete
+    # Cancellation is read before the clock.
+    both = smsd._smsd._search_result(native, None, None, token, 0)
+    assert both.status == smsd.SearchStatus.CANCELLED
+    assert [match.atom_mapping for match in cancelled.matches] == [
+        match.atom_mapping for match in whole.matches[:len(cancelled.matches)]]
+    # A prepared query reads the token of its options.
+    options = smsd.Substructure.Options()
+    options.cancellation = token
+    stopped = smsd.Substructure.find("CC").with_options(options).match_all("C" * 300, 1000)
+    assert stopped.status == smsd.SearchStatus.CANCELLED and not stopped.complete

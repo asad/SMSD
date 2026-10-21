@@ -5,7 +5,7 @@
 """
 Tests for the SMSD Python bindings.
 
-Run with:  pytest tests/test_smsd.py -v
+Run with:  pytest python/tests/test_smsd.py -v
 """
 import pytest
 import smsd
@@ -25,17 +25,13 @@ from smsd import (
     mcs_fingerprint,
     fingerprint_subset,
     analyze_fp_quality,
-    ChemOptions,
     MolGraph,
     MolGraphBuilder,
     BondOrderMode,
     AromaticityMode,
     RingFusionMode,
 )
-
-
-def _atom_mapping(result):
-    return dict(result.best.atom_mapping) if result.found else {}
+from .search_helpers import atom_map
 
 
 def _mcs_options(chemistry=None, options=None):
@@ -289,21 +285,21 @@ class TestMCS:
     def test_benzene_toluene(self):
         benzene = parse_smiles("c1ccccc1")
         toluene = parse_smiles("Cc1ccccc1")
-        mapping = _atom_mapping(smsd.MCS.find(benzene).match(toluene))
+        mapping = atom_map(smsd.MCS.find(benzene).match(toluene))
         assert len(mapping) == 6  # benzene ring is the MCS
 
     def test_aspirin_acetaminophen(self):
         aspirin = parse_smiles("CC(=O)Oc1ccccc1C(=O)O")
         acetaminophen = parse_smiles("CC(=O)Nc1ccc(O)cc1")
-        mapping = _atom_mapping(smsd.MCS.find(aspirin).match(acetaminophen))
+        mapping = atom_map(smsd.MCS.find(aspirin).match(acetaminophen))
         assert len(mapping) >= 7  # at least the ring + some shared atoms
 
     def test_identical_molecules(self):
         mol = parse_smiles("c1ccccc1")
-        mapping = _atom_mapping(smsd.MCS.find(mol).match(mol))
+        mapping = atom_map(smsd.MCS.find(mol).match(mol))
         assert len(mapping) == 6
 
-    def test_mcs_returns_atom_mapping(self):
+    def test_mcs_returns_atom_map(self):
         from collections.abc import Mapping
         result = smsd.MCS.find(parse_smiles("CCO")).match(parse_smiles("CCCO"))
         assert isinstance(result.best.atom_mapping, Mapping)
@@ -315,7 +311,7 @@ class TestMCS:
         g2 = parse_smiles("c1ccc(O)cc1")
         opts = smsd.MCS.Options()
         opts.timeout_ms = 5000
-        mapping = _atom_mapping(smsd.MCS.find(g1).with_options(_mcs_options(ChemOptions(), opts)).match(g2))
+        mapping = atom_map(smsd.MCS.find(g1).with_options(_mcs_options(ChemOptions(), opts)).match(g2))
         assert len(mapping) == 6
 
     def test_ring_matches_ring_only_requires_ring_parity(self):
@@ -324,14 +320,14 @@ class TestMCS:
 
         strict = ChemOptions()
         strict.ring_matches_ring_only = True
-        assert len(_atom_mapping(smsd.MCS.find(ring).with_options(_mcs_options(strict, None)).match(chain))) == 0
-        assert len(_atom_mapping(smsd.MCS.find(chain).with_options(_mcs_options(strict, None)).match(ring))) == 0
+        assert len(atom_map(smsd.MCS.find(ring).with_options(_mcs_options(strict, None)).match(chain))) == 0
+        assert len(atom_map(smsd.MCS.find(chain).with_options(_mcs_options(strict, None)).match(ring))) == 0
         assert smsd.Substructure.find(chain).with_options(_sub_options(strict)).match(ring).found is False
 
         relaxed = ChemOptions()
         relaxed.ring_matches_ring_only = False
-        assert len(_atom_mapping(smsd.MCS.find(ring).with_options(_mcs_options(relaxed, None)).match(chain))) == 5
-        assert len(_atom_mapping(smsd.MCS.find(chain).with_options(_mcs_options(relaxed, None)).match(ring))) == 5
+        assert len(atom_map(smsd.MCS.find(ring).with_options(_mcs_options(relaxed, None)).match(chain))) == 5
+        assert len(atom_map(smsd.MCS.find(chain).with_options(_mcs_options(relaxed, None)).match(ring))) == 5
         assert smsd.Substructure.find(chain).with_options(_sub_options(relaxed)).match(ring).found is True
 
     def test_strict_aromatic_mcs_accepts_kekule_fused_ring(self):
@@ -340,16 +336,16 @@ class TestMCS:
         opts = ChemOptions()
         opts.aromaticity_mode = AromaticityMode.STRICT
         opts.ring_matches_ring_only = True
-        mapping = _atom_mapping(smsd.MCS.find(aromatic).with_options(_mcs_options(opts, None)).match(kekule))
+        mapping = atom_map(smsd.MCS.find(aromatic).with_options(_mcs_options(opts, None)).match(kekule))
         assert len(mapping) == 10
 
 
 # ===========================================================================
-# RASCAL (similarity upper bound)
+# Similarity upper bound
 # ===========================================================================
 
-class TestRASCAL:
-    """Test RASCAL similarity screening."""
+class TestSimilarityBound:
+    """Test similarity-bound screening."""
 
     def test_similar_molecules(self):
         benzene = parse_smiles("c1ccccc1")
@@ -458,10 +454,10 @@ class TestFingerprint:
     def test_overlapCoefficient(self):
         fp1 = smsd.fingerprint("c1ccccc1")
         fp2 = smsd.fingerprint("Cc1ccccc1")
-        sim = smsd.overlapCoefficient(fp1, fp2)
+        sim = smsd.overlap_coefficient(fp1, fp2)
         assert 0.0 <= sim <= 1.0
         # Same molecule should give 1.0
-        assert smsd.overlapCoefficient(fp1, fp1) == pytest.approx(1.0)
+        assert smsd.overlap_coefficient(fp1, fp1) == pytest.approx(1.0)
 
 
 # ===========================================================================
@@ -477,10 +473,10 @@ class TestTautomer:
         enol = parse_smiles("Oc1ccccn1")
         keto = parse_smiles("O=C1C=CC=CN1")
         # Standard MCS
-        mapping_strict = _atom_mapping(smsd.MCS.find(enol).match(keto))
+        mapping_strict = atom_map(smsd.MCS.find(enol).match(keto))
         # Tautomer-aware MCS
         taut_opts = ChemOptions.tautomer_profile()
-        mapping_taut = _atom_mapping(smsd.MCS.find(enol).with_options(_mcs_options(taut_opts, None)).match(keto))
+        mapping_taut = atom_map(smsd.MCS.find(enol).with_options(_mcs_options(taut_opts, None)).match(keto))
         # Tautomer-aware should find at least as many atoms
         assert len(mapping_taut) >= len(mapping_strict)
 
@@ -493,7 +489,7 @@ class TestTautomer:
         """Test the convenience mcs() with tautomer_aware flag."""
         options = smsd.MCS.Options()
         options.chemistry.tautomer_aware = True
-        mapping = _atom_mapping(smsd.MCS.find("Oc1ccccn1").with_options(options).match("O=C1C=CC=CN1"))
+        mapping = atom_map(smsd.MCS.find("Oc1ccccn1").with_options(options).match("O=C1C=CC=CN1"))
         assert isinstance(mapping, dict)
         assert len(mapping) > 0
 
@@ -503,7 +499,7 @@ class TestTautomer:
 # ===========================================================================
 
 class TestBatchScreening:
-    """Test batch RASCAL screening."""
+    """Test batch similarity-bound screening."""
 
     # 20 diverse SMILES for building a screening library
     LIBRARY_SMILES = [
@@ -699,7 +695,7 @@ class TestMolGraph:
         builder.atomic_numbers([6, 6])
         builder.neighbors([[1, 1], [0]])
 
-        with pytest.raises(ValueError, match="duplicate neighbor"):
+        with pytest.raises(ValueError, match="duplicate neighbour"):
             builder.build()
 
     def test_builder_rejects_inconsistent_bond_orders(self):
@@ -745,14 +741,14 @@ class TestMolGraph:
     ],
 )
 def test_molgraph_category_coverage(name, smiles):
-    """Representative chemistry classes should parse, canonicalize, and self-match."""
+    """Representative chemistry classes should parse, canonicalise and self-match."""
     mol = parse_smiles(smiles)
     assert mol.n > 0, f"{name}: parse_smiles should produce atoms"
     can = to_smiles(mol)
     assert isinstance(can, str) and can, f"{name}: canonical SMILES should not be empty"
     reparsed = parse_smiles(can)
     assert reparsed.n == mol.n, f"{name}: canonical round-trip should preserve atom count"
-    mapping = _atom_mapping(smsd.MCS.find(mol).match(reparsed))
+    mapping = atom_map(smsd.MCS.find(mol).match(reparsed))
     assert len(mapping) == mol.n, f"{name}: self-equivalent canonical round-trip should preserve full MCS"
 
 
@@ -779,21 +775,21 @@ class TestMCSChemicalValidity:
         """Ethanol (CCO) self-MCS must be exactly 3 heavy atoms."""
         eth = parse_smiles("CCO")
         assert len(eth) == 3, f"Ethanol has 3 heavy atoms, got {len(eth)}"
-        mcs = _atom_mapping(smsd.MCS.find(eth).match(eth))
+        mcs = atom_map(smsd.MCS.find(eth).match(eth))
         assert len(mcs) == 3, f"Ethanol self-MCS must be 3, got {len(mcs)}"
 
     def test_piperazine_self_mcs(self):
         """Piperazine (C1CNCCN1) self-MCS must be exactly 6 heavy atoms."""
         pip = parse_smiles("C1CNCCN1")
         assert len(pip) == 6, f"Piperazine has 6 heavy atoms, got {len(pip)}"
-        mcs = _atom_mapping(smsd.MCS.find(pip).match(pip))
+        mcs = atom_map(smsd.MCS.find(pip).match(pip))
         assert len(mcs) == 6, f"Piperazine self-MCS must be 6, not 17. Got {len(mcs)}"
 
     def test_benzene_toluene_mcs(self):
         """Benzene / toluene MCS = 6 (the benzene ring)."""
         benz = parse_smiles("c1ccccc1")
         tol = parse_smiles("Cc1ccccc1")
-        mcs = _atom_mapping(smsd.MCS.find(benz).match(tol))
+        mcs = atom_map(smsd.MCS.find(benz).match(tol))
         assert len(mcs) == 6, f"Benzene/toluene MCS must be 6, got {len(mcs)}"
 
     def test_strychnine_quinine_mcs_is_direction_stable(self):
@@ -806,8 +802,8 @@ class TestMCSChemicalValidity:
         opts = smsd.MCS.Options()
         opts.timeout_ms = 10000
         opts.objective = smsd.MCS.Objective.MCIS
-        forward = _atom_mapping(smsd.MCS.find(strychnine).with_options(_mcs_options(chem, opts)).match(quinine))
-        reverse = _atom_mapping(smsd.MCS.find(quinine).with_options(_mcs_options(chem, opts)).match(strychnine))
+        forward = atom_map(smsd.MCS.find(strychnine).with_options(_mcs_options(chem, opts)).match(quinine))
+        reverse = atom_map(smsd.MCS.find(quinine).with_options(_mcs_options(chem, opts)).match(strychnine))
 
         assert len(forward) >= 7
         assert len(reverse) >= 7
@@ -825,7 +821,7 @@ class TestMCSChemicalValidity:
         ]
         for smi1, smi2 in pairs:
             g1, g2 = parse_smiles(smi1), parse_smiles(smi2)
-            mcs = _atom_mapping(smsd.MCS.find(g1).match(g2))
+            mcs = atom_map(smsd.MCS.find(g1).match(g2))
             min_size = min(len(g1), len(g2))
             assert len(mcs) <= min_size, (
                 f"MCS({smi1}, {smi2}) = {len(mcs)} exceeds min(n1,n2) = {min_size}"
@@ -837,7 +833,7 @@ class TestMCSChemicalValidity:
         opts = ChemOptions()
         opts.use_chirality = True
 
-        mapping = _atom_mapping(smsd.MCS.find(query).with_options(_mcs_options(opts, None)).match(target))
+        mapping = atom_map(smsd.MCS.find(query).with_options(_mcs_options(opts, None)).match(target))
         assert mapping
         assert len(mapping) < len(query)
         assert self._mapping_preserves_query_bonds(query, target, mapping)
@@ -848,32 +844,29 @@ class TestMCSChemicalValidity:
         opts = ChemOptions()
         opts.use_bond_stereo = True
 
-        mapping = _atom_mapping(smsd.MCS.find(query).with_options(_mcs_options(opts, None)).match(target))
+        mapping = atom_map(smsd.MCS.find(query).with_options(_mcs_options(opts, None)).match(target))
         assert mapping
         assert len(mapping) < len(query)
         assert self._mapping_preserves_query_bonds(query, target, mapping)
 
 
 class TestRdkitIndexTranslation:
-    """Regression tests for mcs_rdkit_native() atom index translation.
+    """RDKit atom indices of MCS searches over RDKit molecules.
 
-    These reproduce the v6.1.0 bug where small molecules returned
-    element-mismatched mappings (C mapped to O) and out-of-bounds indices.
+    Small molecules must pair atoms of equal elements (never C with O), and
+    every index must lie within its molecule.
     """
 
     @staticmethod
     def _check_mapping(smi1, smi2, min_mcs=1):
         """Verify molecule inputs retain element-correct original atom indices."""
-        try:
-            from rdkit import Chem
-        except ImportError:
-            pytest.skip("RDKit not installed")
+        Chem = pytest.importorskip("rdkit.Chem")
 
         mol1 = Chem.MolFromSmiles(smi1)
         mol2 = Chem.MolFromSmiles(smi2)
         n1, n2 = mol1.GetNumAtoms(), mol2.GetNumAtoms()
 
-        mapping = _atom_mapping(smsd.MCS.find(mol1).match(mol2))
+        mapping = atom_map(smsd.MCS.find(mol1).match(mol2))
 
         # Size check
         assert len(mapping) >= min_mcs, (
@@ -897,11 +890,11 @@ class TestRdkitIndexTranslation:
             )
 
     def test_ester_hydrolysis_small(self):
-        """v6.1.0 bug: CC(=O)OC vs CC(=O)O returned {1:3,2:1,3:0,4:2} — all wrong."""
+        """CC(=O)OC vs CC(=O)O: every mapped pair shares an element."""
         self._check_mapping("CC(=O)OC", "CC(=O)O", min_mcs=4)
 
     def test_amide_vs_acid_small(self):
-        """v6.1.0 bug: CC(=O)N vs CC(=O)O returned index 4 (out of bounds)."""
+        """CC(=O)N vs CC(=O)O: every index lies within its molecule."""
         self._check_mapping("CC(=O)N", "CC(=O)O", min_mcs=3)
 
     def test_ethanol_self(self):
@@ -940,12 +933,6 @@ class TestRdkitIndexTranslation:
 class TestEdgeCases:
     """Boundary-condition tests for SMSD Python bindings."""
 
-    # 1. parse_smiles("") -> should handle gracefully (empty MolGraph)
-    def test_parse_smiles_empty_string(self):
-        """Parsing an empty SMILES string should return an empty MolGraph."""
-        mol = parse_smiles("")
-        assert mol.n == 0
-
     # 2. parse_smiles("[H]") -> single H atom
     def test_parse_smiles_single_hydrogen(self):
         """Parsing explicit hydrogen should yield a single-atom molecule."""
@@ -954,7 +941,7 @@ class TestEdgeCases:
 
 
 class TestRGroupDecomposition:
-    """Python R-group decomposition should work without direct neighbor-array access."""
+    """Python R-group decomposition should work without direct neighbour-array access."""
 
     def test_toluene_on_benzene_core_finds_methyl(self):
         results = smsd.Substructure.decompose_r_groups("c1ccccc1", ["Cc1ccccc1"])
@@ -973,6 +960,13 @@ class TestRGroupDecomposition:
         assert len(results) == 1 and results[0]["search"].complete
         assert set(results[0]["rgroups"]) == {"R1", "R2"}
         assert sorted(group.atomic_num for group in results[0]["rgroups"].values()) == [[7], [8]]
+
+    def test_chain_core_matched_in_a_ring_keeps_only_the_query_bonds(self):
+        results = smsd.Substructure.decompose_r_groups("CCCCCC", ["C1CCCCC1C"])
+        core = results[0]["core"]
+        assert results[0]["search"].found and core.n == 6
+        assert sum(len(neighbors) for neighbors in core.neighbors) == 10
+        assert list(results[0]["rgroups"]) == ["R1"]
 
     def test_attachment_point_atom_map_roundtrip(self):
         mol = parse_smiles("[*:1]CC[*:2]")
@@ -1090,7 +1084,7 @@ class TestRGroupDecomposition:
     def test_find_mcs_empty_molecules(self):
         """MCS of two empty MolGraphs should be an empty mapping."""
         empty = MolGraph()
-        mapping = _atom_mapping(smsd.MCS.find(empty).match(empty))
+        mapping = atom_map(smsd.MCS.find(empty).match(empty))
         assert isinstance(mapping, dict)
         assert len(mapping) == 0
 
@@ -1098,7 +1092,7 @@ class TestRGroupDecomposition:
         """MCS of an empty MolGraph vs a real molecule should be empty."""
         empty = MolGraph()
         benzene = parse_smiles("c1ccccc1")
-        mapping = _atom_mapping(smsd.MCS.find(empty).match(benzene))
+        mapping = atom_map(smsd.MCS.find(empty).match(benzene))
         assert isinstance(mapping, dict)
         assert len(mapping) == 0
 
@@ -1120,7 +1114,7 @@ class TestRGroupDecomposition:
     # 5. overlapCoefficient([], []) -> 1.0 (trivially identical empty sets)
     def test_overlapCoefficient_empty_fingerprints(self):
         """overlapCoefficient of two empty fingerprints should be 1.0 (identical empty sets)."""
-        sim = smsd.overlapCoefficient([], [])
+        sim = smsd.overlap_coefficient([], [])
         assert sim == pytest.approx(1.0), (
             f"overlapCoefficient([], []) should be 1.0, got {sim}"
         )
@@ -1128,7 +1122,7 @@ class TestRGroupDecomposition:
     def test_overlapCoefficient_one_empty(self):
         """overlapCoefficient where one fingerprint is empty should be 0.0."""
         fp = smsd.fingerprint("c1ccccc1")
-        sim = smsd.overlapCoefficient(fp, [])
+        sim = smsd.overlap_coefficient(fp, [])
         assert sim == pytest.approx(0.0), (
             f"overlapCoefficient(fp, []) should be 0.0, got {sim}"
         )
@@ -1136,7 +1130,7 @@ class TestRGroupDecomposition:
     def test_overlapCoefficient_identical(self):
         """overlapCoefficient of identical non-empty fingerprints should be 1.0."""
         fp = smsd.fingerprint("c1ccccc1")
-        sim = smsd.overlapCoefficient(fp, fp)
+        sim = smsd.overlap_coefficient(fp, fp)
         assert sim == pytest.approx(1.0)
 
     # 6. from_rdkit(None) -> should raise TypeError
@@ -1149,14 +1143,11 @@ class TestRGroupDecomposition:
     # 7. Identical molecule inputs retain every original atom index.
     def test_mcs_molecule_identical(self):
         """Identical molecule inputs should return a complete atom mapping."""
-        try:
-            from rdkit import Chem
-        except ImportError:
-            pytest.skip("RDKit not installed")
+        Chem = pytest.importorskip("rdkit.Chem")
 
         mol = Chem.MolFromSmiles("CCO")
         n = mol.GetNumAtoms()
-        mapping = _atom_mapping(smsd.MCS.find(mol).match(mol))
+        mapping = atom_map(smsd.MCS.find(mol).match(mol))
         assert len(mapping) == n, (
             f"Identical ethanol MCS should map all {n} atoms, got {len(mapping)}"
         )
@@ -1170,21 +1161,11 @@ class TestRGroupDecomposition:
                 f"Element mismatch at {q_idx}->{t_idx}: {q_elem} vs {t_elem}"
             )
 
-    # 8. translate_mapping with empty dict -> empty dict
-    def test_translate_mapping_empty(self):
-        """translate_mapping with an empty mapping should return an empty dict."""
-        from smsd import translate_mapping
-        result = translate_mapping({})
-        assert isinstance(result, dict)
-        assert len(result) == 0
-
+    # 8. translate_mapping with an empty mapping -> empty dict
     def test_translate_mapping_empty_with_graphs(self):
         """translate_mapping with empty mapping and real MolGraphs should be empty."""
-        try:
-            from rdkit import Chem
-            from smsd import from_rdkit, translate_mapping
-        except ImportError:
-            pytest.skip("RDKit not installed")
+        Chem = pytest.importorskip("rdkit.Chem")
+        from smsd import from_rdkit, translate_mapping
 
         mol1 = Chem.MolFromSmiles("CCO")
         mol2 = Chem.MolFromSmiles("CCCO")
@@ -1193,6 +1174,30 @@ class TestRGroupDecomposition:
         result = translate_mapping({}, g1, g2)
         assert isinstance(result, dict)
         assert len(result) == 0
+
+    def test_translate_mapping_rejects_out_of_range_indices(self):
+        """translate_mapping raises IndexError, as search results do, for indices outside a molecule."""
+        from smsd import translate_mapping
+        g1, g2 = parse_smiles("CCO"), parse_smiles("CCCO")
+        assert translate_mapping({0: 1, 2: 3}, g1, g2) == {0: 1, 2: 3}
+        for mapping in ({3: 0}, {0: 4}, {-1: 0}, {0: -1}):
+            with pytest.raises(IndexError):
+                translate_mapping(mapping, g1, g2)
+        with pytest.raises(IndexError):
+            translate_mapping({-1: 0})
+
+    def test_translate_mapping_rejects_indices_outside_rdkit_numbering(self):
+        """Indices beyond an RDKit index map raise IndexError instead of being dropped."""
+        Chem = pytest.importorskip("rdkit.Chem")
+        from smsd import from_rdkit, translate_mapping
+        g1 = from_rdkit(Chem.MolFromSmiles("CCO"))
+        g2 = from_rdkit(Chem.MolFromSmiles("CCCO"))
+        assert sorted(translate_mapping({0: 0, 1: 1}, g1, g2)) == sorted(
+            smsd.get_index_map(g1)[index] for index in (0, 1))
+        with pytest.raises(IndexError, match="Query atom index"):
+            translate_mapping({3: 0}, g1, g2)
+        with pytest.raises(IndexError, match="Target atom index"):
+            translate_mapping({0: 4}, g1, g2)
 
     # 9. Batch operations with empty target list -> empty result
     def test_mcs_empty_targets(self):
@@ -1215,14 +1220,14 @@ class TestRGroupDecomposition:
     def test_find_mcs_single_atom_self(self):
         """MCS of a single atom with itself should be size 1."""
         mol = parse_smiles("C")
-        mapping = _atom_mapping(smsd.MCS.find(mol).match(mol))
+        mapping = atom_map(smsd.MCS.find(mol).match(mol))
         assert len(mapping) == 1
 
     def test_find_mcs_disjoint_elements(self):
         """MCS of all-C vs all-N disconnected atoms should be empty."""
         all_c = parse_smiles("C.C.C")
         all_n = parse_smiles("[NH3].[NH3].[NH3]")
-        mapping = _atom_mapping(smsd.MCS.find(all_c).match(all_n))
+        mapping = atom_map(smsd.MCS.find(all_c).match(all_n))
         assert len(mapping) == 0, (
             f"Disjoint elements should give empty MCS, got {len(mapping)}"
         )
@@ -1237,7 +1242,7 @@ class TestRGroupDecomposition:
         for smi1, smi2 in pairs:
             g1 = parse_smiles(smi1)
             g2 = parse_smiles(smi2)
-            mapping = _atom_mapping(smsd.MCS.find(g1).match(g2))
+            mapping = atom_map(smsd.MCS.find(g1).match(g2))
             min_size = min(g1.n, g2.n)
             assert len(mapping) <= min_size, (
                 f"MCS({smi1}, {smi2}) = {len(mapping)} exceeds min size {min_size}"
@@ -1245,20 +1250,17 @@ class TestRGroupDecomposition:
 
 
 # ===========================================================================
-# User-Feedback Tests (v6.2.0)
+# Toolkit round trips, empty input and hypervalent atoms
 # ===========================================================================
 
-class TestUserFeedbackV620:
-    """Tests from user feedback requiring coverage in v6.2.0."""
+class TestRoundTripAndHypervalentAtoms:
+    """RDKit round trips, empty SMILES and fingerprints of hypervalent S and P."""
 
     def test_from_rdkit_round_trip_ethanol(self):
         """from_rdkit(MolFromSmiles('OCC')) and from_rdkit(MolFromSmiles('CCO'))
         should both produce MolGraphs with 3 atoms (both are ethanol)."""
-        try:
-            from rdkit import Chem
-            from smsd import from_rdkit
-        except ImportError:
-            pytest.skip("RDKit not installed")
+        Chem = pytest.importorskip("rdkit.Chem")
+        from smsd import from_rdkit
 
         g1 = from_rdkit(Chem.MolFromSmiles("OCC"))
         g2 = from_rdkit(Chem.MolFromSmiles("CCO"))
@@ -1435,7 +1437,7 @@ class TestTimeoutEnforcement:
         import time
         coa = parse_smiles(self.COA_SMILES)
         t0 = time.monotonic()
-        mapping = _atom_mapping(smsd.MCS.find(coa).with_options(_mcs_options(ChemOptions(), smsd.MCS.Options())).with_timeout(2000).match(coa))
+        mapping = atom_map(smsd.MCS.find(coa).with_options(_mcs_options(ChemOptions(), smsd.MCS.Options())).with_timeout(2000).match(coa))
         elapsed = time.monotonic() - t0
         assert elapsed < 4.0, (
             f"CoA self-match took {elapsed:.1f}s, expected < 4.0s (timeout_ms=2000)"
@@ -1449,7 +1451,7 @@ class TestTimeoutEnforcement:
         atp = parse_smiles(self.ATP_SMILES)
         coa = parse_smiles(self.COA_SMILES)
         t0 = time.monotonic()
-        mapping = _atom_mapping(smsd.MCS.find(atp).with_options(_mcs_options(ChemOptions(), smsd.MCS.Options())).with_timeout(2000).match(coa))
+        mapping = atom_map(smsd.MCS.find(atp).with_options(_mcs_options(ChemOptions(), smsd.MCS.Options())).with_timeout(2000).match(coa))
         elapsed = time.monotonic() - t0
         assert elapsed < 4.0, (
             f"ATP vs CoA MCS took {elapsed:.1f}s, expected < 4.0s (timeout_ms=2000)"
@@ -1461,7 +1463,7 @@ class TestTimeoutEnforcement:
         import time
         taxol = parse_smiles(self.TAXOL_SMILES)
         t0 = time.monotonic()
-        mapping = _atom_mapping(smsd.MCS.find(taxol).with_options(_mcs_options(ChemOptions(), smsd.MCS.Options())).with_timeout(2000).match(taxol))
+        mapping = atom_map(smsd.MCS.find(taxol).with_options(_mcs_options(ChemOptions(), smsd.MCS.Options())).with_timeout(2000).match(taxol))
         elapsed = time.monotonic() - t0
         assert elapsed < 4.0, (
             f"Taxol self-match took {elapsed:.1f}s, expected < 4.0s (timeout_ms=2000)"
@@ -1474,7 +1476,7 @@ class TestTimeoutEnforcement:
         taxol = parse_smiles(self.TAXOL_SMILES)
         coa = parse_smiles(self.COA_SMILES)
         t0 = time.monotonic()
-        mapping = _atom_mapping(smsd.MCS.find(taxol).with_options(_mcs_options(ChemOptions(), smsd.MCS.Options())).with_timeout(2000).match(coa))
+        mapping = atom_map(smsd.MCS.find(taxol).with_options(_mcs_options(ChemOptions(), smsd.MCS.Options())).with_timeout(2000).match(coa))
         elapsed = time.monotonic() - t0
         assert elapsed < 4.0, (
             f"Taxol vs CoA MCS took {elapsed:.1f}s, expected < 4.0s (timeout_ms=2000)"
@@ -1484,7 +1486,7 @@ class TestTimeoutEnforcement:
         """The prepared Python search must respect timeout_ms."""
         import time
         t0 = time.monotonic()
-        mapping = _atom_mapping(smsd.MCS.find(self.COA_SMILES).with_timeout(1000).match(self.TAXOL_SMILES))
+        mapping = atom_map(smsd.MCS.find(self.COA_SMILES).with_timeout(1000).match(self.TAXOL_SMILES))
         elapsed = time.monotonic() - t0
         assert elapsed < 3.0, (
             f"Prepared CoA vs Taxol search took {elapsed:.1f}s, expected < 3.0s"
@@ -1492,7 +1494,7 @@ class TestTimeoutEnforcement:
 
 
 # ===========================================================================
-# GOLDEN regressions -- medium-sized benchmark pairs that previously stuck
+# GOLDEN regressions -- medium-sized benchmark pairs that must finish in time
 # ===========================================================================
 
 class TestGoldenPairRegressions:
@@ -1520,7 +1522,7 @@ class TestGoldenPairRegressions:
         mcs_opts.timeout_ms = 10_000
 
         t0 = time.monotonic()
-        mapping = _atom_mapping(smsd.MCS.find(educt).with_options(_mcs_options(chem, mcs_opts)).match(product))
+        mapping = atom_map(smsd.MCS.find(educt).with_options(_mcs_options(chem, mcs_opts)).match(product))
         elapsed = time.monotonic() - t0
 
         assert elapsed < 12.0, (
@@ -1532,11 +1534,11 @@ class TestGoldenPairRegressions:
 
 
 # ===========================================================================
-# API Completeness Tests (v6.4.0 QA sweep)
+# API completeness: fingerprint encodings and ring perception
 # ===========================================================================
 
 class TestAPICompleteness:
-    """Tests for previously untested public APIs."""
+    """Fingerprint encodings, count arrays and ring perception helpers."""
 
     def test_to_hex_from_hex_roundtrip(self):
         """to_hex -> from_hex round-trip must preserve fingerprint bits."""

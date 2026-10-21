@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 # Build and check the x86_64 DEB locally, including on an arm64 Docker host.
 set -euo pipefail
 
@@ -26,8 +30,8 @@ SMSD_INSTALLER_RELEASE="$(cd "$SMSD_INSTALLER_RELEASE" && pwd)"
 SMSD_INSTALLER_OUTPUT="$(cd "$SMSD_INSTALLER_OUTPUT" && pwd)"
 SMSD_INSTALLER_RUNTIME_CACHE="$(cd "$SMSD_INSTALLER_RUNTIME_CACHE" && pwd)"
 
-# Pin the amd64 manifest: some legacy Docker builders ignore --platform when
-# the base is a multi-platform index.
+# Pin the amd64 manifest: Docker builders without BuildKit can ignore
+# --platform when the base is a multi-platform index.
 SMSD_INSTALLER_BASE="maven@sha256:f109669454c37f3ce5e5c92897873abf6115f9f9c7dabc912fe37a9d8194c674"
 SMSD_INSTALLER_IMAGE="smsd-java-installer-linux:25"
 SMSD_INSTALLER_JDK_NAME="OpenJDK25U-jdk_x64_linux_hotspot_25.0.4.1_1.tar.gz"
@@ -78,7 +82,7 @@ SMSD_INSTALLER_PACKAGE_DIR="$(mktemp -d /tmp/smsd-installer-package.XXXXXX)"
 tar -xzf "/runtime-cache/$SMSD_INSTALLER_JDK_NAME" -C "$SMSD_INSTALLER_RUNTIME_DIR"
 export JAVA_HOME="$SMSD_INSTALLER_RUNTIME_DIR/jdk-25.0.4.1+1"
 export PATH="$JAVA_HOME/bin:$PATH"
-# XZ remains compatible with older dpkg versions; level 1 keeps local
+# XZ is compatible with older dpkg versions; level 1 keeps local
 # emulated packaging practical without changing the installed payload.
 export DPKG_DEB_COMPRESSOR_TYPE=xz
 export DPKG_DEB_COMPRESSOR_LEVEL=1

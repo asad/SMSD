@@ -2,13 +2,13 @@
 
 Run these tools from the repository root. Use the same molecules, chemistry
 options and search budgets when comparing results, and check returned mappings.
-The [7.2.0 report](RESULTS_7.2.0.md) contains the recorded measurements;
-[7.2.2 validation](../docs/VALIDATION_7.2.2.md) covers the current release tests.
+The [8.0.0 validation record](../docs/VALIDATION_8.0.0.md) covers the release
+checks; the measurement protocol below governs every reported result.
 
 ## Prepared-query APIs
 
-Build the current source before running these workloads. Release 7.2.2 uses
-the previous search API. The three runners read `search_api_cases.tsv` and
+Build the source before running these workloads. The three runners read
+`search_api_cases.tsv` and
 write JSON Lines containing every measurement, parsed graph, atom and selected
 bond mapping, fragments, stopping status and proof flags.
 
@@ -41,9 +41,9 @@ For Java, compile the runner against the current source-built dependency JAR:
 
 ```bash
 mvn -f java/pom.xml package -DskipTests
-javac --release 8 -cp java/target/smsd-7.2.2-jar-with-dependencies.jar \
+javac --release 8 -cp java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar \
   -d build/search-benchmarks benchmarks/BenchmarkSearchAPI.java
-java -cp "build/search-benchmarks:java/target/smsd-7.2.2-jar-with-dependencies.jar" \
+java -cp "build/search-benchmarks:java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar" \
   BenchmarkSearchAPI --cases benchmarks/search_api_cases.tsv \
   --output build/search-benchmarks/java.jsonl --warmup 2 --repeats 5
 ```
@@ -96,7 +96,7 @@ imported package paths and versions.
 
 | Tool | Measures |
 |---|---|
-| `benchmark_python.py` | 20 curated MCS pairs and 20 substructure cases |
+| `benchmark_python.py` | The 20 curated MCS pairs in `data/mcs_pairs.tsv` and 20 substructure cases |
 | `run_external_benchmarks.py` | Random and neighbouring pairs, tautomer pairs, stress cases and SMARTS |
 | `benchmark_bindings.py` | Parsing, RDKit conversion, scalar calls and batch overhead |
 
@@ -110,26 +110,35 @@ status. Stopped searches are excluded from speed ratios.
 | `fmcs` | SMSD strict bond order with flexible aromaticity; RDKit uses `CompareOrder` |
 
 Different MCS edge and aromaticity rules can produce different results. The
-[report](RESULTS_7.2.0.md) explains the validity checks and comparison limits.
+mapping checks of the external MCS runner, above, are in `mcs_protocol.py`, and
+the comparison limits under [Prepared-query APIs](#prepared-query-apis) apply.
 The [data guide](data/README.md) records corpus sources and counts. The derived
 Dalke-style pairs are separate from the original Dalke benchmark.
 
 ## Java and C++
 
-Build the Java CLI with Maven and a JDK. Java 25 LTS is preferred; the 7.2.2 JAR
-runs on Java 8 or later. C++ benchmarks require a C++17 compiler.
+Build the Java CLI with Maven and a JDK. Java 25 LTS is preferred for the
+build, and the JAR runs on Java 8 or later. C++ benchmarks require a C++17
+compiler.
 
 ```bash
 mvn -f java/pom.xml package -DskipTests
-SMSD_JAR=java/target/smsd-7.2.2-jar-with-dependencies.jar \
-  NUM_RUNS=1 TIMEOUT_MS=1000 bash benchmarks/benchmark_java.sh
+python benchmarks/benchmark_leaderboard.py --mode integration
 bash benchmarks/benchmark_cpp.sh benchmarks/data/stress_pairs.tsv 1000 1 0
+mkdir -p build/local-benchmarks
+c++ -std=c++17 -O3 -Icpp/include benchmarks/benchmark_primitives.cpp \
+  -o build/local-benchmarks/primitives
+build/local-benchmarks/primitives assignment
 ```
 
-The Java shell benchmark includes CLI startup. The C++ shell benchmark compiles
-the SMSD headers and measures the supplied stress pairs. These timings have different
-setup costs from the Python benchmarks.
+The integration driver measures the Java CLI, including its start-up time,
+against RDKit on the curated MCS pairs, and Java substructure matching against
+RDKit and CDK on `substructure_pairs.tsv`. The C++ shell benchmark compiles
+the SMSD headers and measures the supplied stress pairs. The primitive
+benchmark times native assignment and general matching (`assignment`, with an
+optional repeat multiplier), NLF3 construction and a complete-subgraph MCS
+(`primitives`) and cold-target matcher set-up (`setup`); each selector prints
+checksums that must agree between builds. These timings have different
+set-up costs from the Python benchmarks.
 
 For opt-in Java corpus tests, see the [build guide](../docs/HOWTO-INSTALL.md).
-Other `benchmark_*.py`, Java and C++ files provide feature diagnostics or
-historical workloads. Existing `results_*` files retain their original scope.

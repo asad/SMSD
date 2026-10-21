@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Measure prepared search APIs using the shared search_api_cases.tsv corpus.
 
 Each JSONL row retains a measured call and its complete returned mappings.
 Parsing and query preparation are included only in their declared phases.
-Validate the output with search_api_validation.py before comparing timings.
+--threads runs batch rows on that many threads (0 for all), and --batch-targets
+fills each batch with distinct molecules from a file instead of copies of the
+case target. Validate the output with search_api_validation.py before
+comparing timings.
 """
 import argparse
 import csv
@@ -103,11 +108,24 @@ def result_data(result):
                               fragments=match.fragments) for match in result.matches])
 
 
-def measure_case(case, arguments, output):
+def read_batch_targets(path):
+    """One SMILES per line, optionally after an identifier and a tab; blank lines and # comments are skipped."""
+    with path.open(encoding="utf-8") as source:
+        targets = [line.rstrip("\r\n").split("\t")[-1] for line in source
+                   if line.strip() and not line.startswith("#")]
+    if not targets:
+        raise ValueError("No batch targets")
+    return targets
+
+
+def measure_case(case, arguments, output, batch_targets=None):
     query_graph = None if case["operation"] == "smarts" else smsd.parse_smiles(case["query"])
     target_graph = smsd.parse_smiles(case["target"])
     options = options_for(case)
-    targets = [target_graph] * case["batch_size"]
+    if batch_targets:
+        targets = [smsd.parse_smiles(batch_targets[index % len(batch_targets)]) for index in range(case["batch_size"])]
+    else:
+        targets = [target_graph] * case["batch_size"]
     for phase in case["phases"].split(","):
         if arguments.phase and arguments.phase != phase:
             continue
@@ -124,7 +142,7 @@ def measure_case(case, arguments, output):
         elif phase == "batch":
             if case["limit"]:
                 raise ValueError("Batch cases require first-match searches")
-            call = lambda: prepared.match_many(targets, num_threads=1)
+            call = lambda: prepared.match_many(targets, num_threads=arguments.threads)
         else:
             raise ValueError("Unknown phase: " + phase)
         for _ in range(arguments.warmup):
@@ -134,11 +152,23 @@ def measure_case(case, arguments, output):
             started = time.perf_counter_ns()
             result = call()
             elapsed = time.perf_counter_ns() - started
+            # A call shorter than one clock tick reads 0: record 1 ns and flag it; never a speed result.
+            below_timer_resolution = elapsed == 0
+            if below_timer_resolution:
+                elapsed = 1
             results = [] if phase == "prepare" else result if phase == "batch" else [result]
             row = dict(case_id=case["case_id"], language="python", phase=phase, sample=sample,
-                       elapsed_ns=elapsed, results=[result_data(value) for value in results])
+                       threads=arguments.threads if phase == "batch" else 1)
+            if phase == "batch":
+                row["batch_targets"] = "distinct" if batch_targets else "copies"
+            row["elapsed_ns"] = elapsed
+            if below_timer_resolution:
+                row["below_timer_resolution"] = True
+            row["results"] = [result_data(value) for value in results]
             if sample == 0:
                 row.update(query_graph=graph_data(query_graph), target_graph=graph_data(target_graph))
+                if phase == "batch" and batch_targets:
+                    row["batch_target_graphs"] = [graph_data(graph) for graph in targets]
             output.write(json.dumps(row, separators=(",", ":")) + "\n")
         output.flush()
 
@@ -151,9 +181,16 @@ def main(argv=None):
     parser.add_argument("--repeats", type=int, default=5)
     parser.add_argument("--phase", choices=("prepare", "prepared", "end_to_end", "batch"))
     parser.add_argument("--case")
+    parser.add_argument("--threads", type=int, default=1,
+                        help="threads for batch rows; 0 uses every available thread")
+    parser.add_argument("--batch-targets", type=Path,
+                        help="distinct batch targets, one SMILES per line, instead of copies of each case target")
     args = parser.parse_args(argv)
     if args.warmup < 0 or args.repeats < 1:
         parser.error("Warmups must be non-negative and repeats positive")
+    if args.threads < 0:
+        parser.error("Threads must be non-negative")
+    batch_targets = read_batch_targets(args.batch_targets) if args.batch_targets else None
     with args.cases.open(newline="") as source:
         cases = list(csv.DictReader(source, delimiter="\t"))
     if args.case:
@@ -166,7 +203,7 @@ def main(argv=None):
             for name in ("induced", "timeout_ms", "limit", "batch_size"):
                 case[name] = int(case[name])
             try:
-                measure_case(case, args, output)
+                measure_case(case, args, output, batch_targets)
             except Exception as failure:
                 raise RuntimeError("Benchmark failed: " + case["case_id"]) from failure
 

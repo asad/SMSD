@@ -28,7 +28,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
 /**
- * Stress Tests: consolidated from EdgeCaseTest.java, ChemistryStressTest.java, LargeMoleculeTest.java, HardCasesTest.java.
+ * Stress tests: edge cases, every bond order, atom type, charge and stereo configuration, large
+ * molecules and hard search cases.
  *
  * @author Syed Asad Rahman
  */
@@ -37,7 +38,7 @@ import static org.junit.jupiter.api.Assumptions.*;
 public class StressTest extends TestBase {
 
   // ======================================================================
-  // From: EdgeCaseTest.java
+  // Edge cases
   // ======================================================================
 
 
@@ -675,7 +676,7 @@ public class StressTest extends TestBase {
   }
 
   // ======================================================================
-  // 6. ISOTOPE LABELED
+  // 6. ISOTOPE LABELLED
   // ======================================================================
 
   @Nested
@@ -727,7 +728,7 @@ public class StressTest extends TestBase {
       assertNotNull(mcs);
     }
 
-    @Test @Timeout(10) @DisplayName("6.06 Tritium-labeled methanol self")
+    @Test @Timeout(10) @DisplayName("6.06 Tritium-labelled methanol self")
     void tritiumMethanol() throws Exception {
       ChemOptions opts = defaultOpts();
       opts.matchIsotope = true;
@@ -1630,7 +1631,7 @@ public class StressTest extends TestBase {
   }
 
   // ======================================================================
-  // 13. TIMEOUT BEHAVIOR
+  // 13. TIMEOUT BEHAVIOUR
   // ======================================================================
 
   @Nested
@@ -2599,7 +2600,7 @@ public class StressTest extends TestBase {
   }
 
   // ======================================================================
-  // From: ChemistryStressTest.java
+  // Chemistry coverage
   // ======================================================================
 
 
@@ -2662,17 +2663,17 @@ public class StressTest extends TestBase {
       assertTrue(new MoleculePair(mol("C=CC#N"), mol("C=CC#N"), new ChemOptions()).contains());
     }
 
-    @Test @DisplayName("Delocalized: benzene MCS with itself")
+    @Test @DisplayName("Delocalised: benzene MCS with itself")
     void delocalizedBenzene() throws Exception {
       assertEquals(6, mcsSize("c1ccccc1", "c1ccccc1"));
     }
 
-    @Test @DisplayName("Delocalized: naphthalene MCS with itself")
+    @Test @DisplayName("Delocalised: naphthalene MCS with itself")
     void delocalizedNaphthalene() throws Exception {
       assertEquals(10, mcsSize("c1ccc2ccccc2c1", "c1ccc2ccccc2c1"));
     }
 
-    @Test @DisplayName("Delocalized: pyridine MCS with itself")
+    @Test @DisplayName("Delocalised: pyridine MCS with itself")
     void delocalizedPyridine() throws Exception {
       assertEquals(6, mcsSize("c1ccncc1", "c1ccncc1"));
     }
@@ -3067,14 +3068,14 @@ public class StressTest extends TestBase {
       assertFalse(smsd.contains(), "Different stereo should not be substructure with chirality ON");
     }
 
-    @Test @DisplayName("No stereo centers: methane self-match unaffected by chirality")
+    @Test @DisplayName("No stereocentres: methane self-match unaffected by chirality")
     void methaneNoStereo() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.useChirality = true;
       assertTrue(new MoleculePair(mol("C"), mol("C"), opts).contains());
     }
 
-    @Test @DisplayName("No stereo centers: ethane self-match unaffected by chirality")
+    @Test @DisplayName("No stereocentres: ethane self-match unaffected by chirality")
     void ethaneNoStereo() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.useChirality = true;
@@ -3119,11 +3120,11 @@ public class StressTest extends TestBase {
       assertFalse(smsd.contains(), "Cis and trans should differ with stereo ON");
     }
 
-    @Test @DisplayName("Prochiral center: no stereo, matches with chirality ON")
+    @Test @DisplayName("Prochiral centre: no stereo, matches with chirality ON")
     void prochiral() throws Exception {
       ChemOptions opts = new ChemOptions();
       opts.useChirality = true;
-      // Acetone has no stereo center
+      // Acetone has no stereocentre
       assertTrue(new MoleculePair(mol("CC(=O)C"), mol("CC(=O)C"), opts).contains());
     }
 
@@ -3361,7 +3362,7 @@ public class StressTest extends TestBase {
       assertTrue(sz >= 4, "Phenol/quinone share ring carbons");
     }
 
-    @Test @DisplayName("1,3-diketone enolization")
+    @Test @DisplayName("1,3-diketone enolisation")
     void diketoneEnol() throws Exception {
       int sz = mcsSize("CC(=O)CC(=O)C", "CC(=O)/C=C(\\O)C");
       assertTrue(sz >= 4, "1,3-diketone enol share backbone");
@@ -3457,7 +3458,7 @@ public class StressTest extends TestBase {
       MolGraph g1 = new MolGraph(mol("c1ccccc1"));
       MolGraph g2 = new MolGraph(mol("c1ccc(O)cc1"));
       Map<Integer, Integer> m = TestSupport.mcsMapping(g1, g2, new ChemOptions(), opts);
-      assertFalse(m.isEmpty(), "Bond-maximizing MCS should find result");
+      assertFalse(m.isEmpty(), "Bond-maximising MCS should find result");
     }
 
     @Test @DisplayName("dMCS (disconnectedMCS=true)")
@@ -3711,8 +3712,8 @@ public class StressTest extends TestBase {
       assertTrue(sz >= 18, "Morphine/codeine MCS >= 18");
     }
 
-    @Test @DisplayName("McSplit: medium molecules (caffeine/theophylline)")
-    void mcsplitMedium() throws Exception {
+    @Test @DisplayName("Medium pair: caffeine and theophylline")
+    void mediumPairCaffeineTheophylline() throws Exception {
       String caffeine = "Cn1c(=O)c2c(ncn2C)n(C)c1=O";
       String theophylline = "Cn1c(=O)c2[nH]cnc2n(C)c1=O";
       int sz = mcsSize(caffeine, theophylline);
@@ -3725,8 +3726,8 @@ public class StressTest extends TestBase {
       assertEquals(10, mcsSize(adamantane, adamantane));
     }
 
-    @Test @DisplayName("McGregor: large molecule pair (atorvastatin/rosuvastatin)")
-    void mcgregorLarge() throws Exception {
+    @Test @DisplayName("Large pair: atorvastatin and rosuvastatin")
+    void largePairStatins() throws Exception {
       String atorvastatin = "CC(C)c1c(C(=O)Nc2ccccc2)c(-c2ccccc2)c(-c2ccc(F)cc2)n1CC[C@H](O)C[C@H](O)CC(=O)O";
       String rosuvastatin = "CC(C)c1nc(N(C)S(C)(=O)=O)nc(-c2ccc(F)cc2)c1/C=C/[C@H](O)C[C@H](O)CC(=O)O";
       int sz = mcsSize(atorvastatin, rosuvastatin, new ChemOptions(), 30_000L);
@@ -3796,8 +3797,8 @@ public class StressTest extends TestBase {
       assertEquals(mol(mol).getAtomCount(), sz, "Self-MCS should return all atoms");
     }
 
-    @Test @DisplayName("RASCAL screening: upper bound >= actual MCS")
-    void rascalUpperBound() throws Exception {
+    @Test @DisplayName("similarity-bound screening: upper bound >= actual MCS")
+    void similarityUpperBoundCoversMcs() throws Exception {
       IAtomContainer q = mol("c1ccccc1");
       IAtomContainer t = mol("c1ccc(O)cc1");
       MoleculePair smsd = new MoleculePair(q, t, new ChemOptions());
@@ -4189,7 +4190,7 @@ public class StressTest extends TestBase {
   }
 
   // ======================================================================
-  // From: LargeMoleculeTest.java
+  // Large molecules
   // ======================================================================
 
 
@@ -4708,16 +4709,16 @@ public class StressTest extends TestBase {
   }
 
   // =======================================================
-  // RASCAL SCREENING — must be < 10ms per pair
+  // similarity-bound screening — must be < 10ms per pair
   // =======================================================
 
   @Nested
-  @DisplayName("RASCAL Large Molecule Screening")
-  class RascalTests {
+  @DisplayName("Similarity Bound Large Molecule Screening")
+  class SimilarityBoundTests {
 
     @Test
-    @DisplayName("RASCAL on 8 large molecules < 500ms total")
-    void rascalBatch() throws Exception {
+    @DisplayName("Similarity bound on 8 large molecules, with the time reported")
+    void similarityBoundBatch() throws Exception {
       String[] smiles = {
         ATP, ADP, AMP, NAD_PLUS, ATORVASTATIN, ROSUVASTATIN, DEXAMETHASONE, VITAMIN_D3
       };
@@ -4730,14 +4731,13 @@ public class StressTest extends TestBase {
       for (int i = 0; i < mols.length; i++) {
         for (int j = i + 1; j < mols.length; j++) {
           double ub = MCS.similarityUpperBound(mols[i], mols[j], opts);
-          assertTrue(ub >= 0 && ub <= 1.0, "RASCAL UB in [0,1]");
+          assertTrue(ub >= 0 && ub <= 1.0, "Similarity UB in [0,1]");
           pairs++;
         }
       }
       long elapsed = (System.nanoTime() - t0) / 1_000_000;
-      // 500ms is generous on any CI runner; locally this completes in ~15ms.
-      // 100ms was too tight for shared GitHub Actions hosts under load.
-      System.out.println("INFO: RASCAL " + pairs + " pairs completed in " + elapsed + "ms");
+      // The time is reported rather than asserted, as shared hosts under load vary widely.
+      System.out.println("INFO: similarity bound " + pairs + " pairs completed in " + elapsed + "ms");
     }
   }
 
@@ -4949,7 +4949,7 @@ public class StressTest extends TestBase {
   }
 
   // ======================================================================
-  // From: HardCasesTest.java
+  // Hard search cases
   // ======================================================================
 
 
@@ -5302,7 +5302,7 @@ public class StressTest extends TestBase {
       String eStilb = "C(/c1ccccc1)=C/c1ccccc1";
       String zStilb = "C(/c1ccccc1)=C\\c1ccccc1";
       int sz = hc_mcsSize(eStilb, zStilb, opts, 5000L);
-      // With bond stereo, the double bond center may not match, but rings still do
+      // With bond stereo, the double-bond centre may not match, but rings still do
       assertTrue(sz >= 6, "Even with bond stereo, phenyl rings should overlap");
     }
 

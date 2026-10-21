@@ -1,10 +1,17 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2018-2026 BioInception PVT LTD
 # Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Molecule and SMARTS searches with explicit completion results."""
-from . import _smsd
 from dataclasses import dataclass
 from types import MappingProxyType
+
+from . import _smsd
+from ._interop import _index_tuple
+from ._molecule import _checked_int, _ensure_mol_ex
+from ._screening import TargetCorpus
+
+__all__ = ["ConsensusResult", "MCS", "Match", "SearchResult", "Substructure"]
 
 
 @dataclass(frozen=True)
@@ -16,10 +23,12 @@ class Match:
 
     @property
     def atom_count(self):
+        """The number of matched atoms."""
         return len(self.atom_mapping)
 
     @property
     def bond_count(self):
+        """The number of matched bonds."""
         return len(self.bond_mapping)
 
     def to_smiles(self, query):
@@ -46,11 +55,18 @@ class SearchResult:
 
     @property
     def found(self):
+        """Whether the search found at least one match."""
         return bool(self.matches)
 
     @property
     def best(self):
+        """The first match, or None when nothing was found."""
         return self.matches[0] if self.matches else None
+
+
+# Prepared searches build these immutable instances natively, in one call.
+_smsd._register_search_types(Match, SearchResult)
+_MolGraph = _smsd.MolGraph
 
 
 @dataclass(frozen=True)
@@ -70,18 +86,33 @@ class ConsensusResult:
     _smiles: str
 
     def to_smiles(self):
+        """The common graph as SMILES."""
         return self._smiles
 
 
 class _Query:
+    @classmethod
+    def _prepared(cls, graph, indices, native):
+        """A query over ``graph`` with default options; ``indices`` number its atoms, None keeps native indices."""
+        query = object.__new__(cls)
+        query._query_graph, query._query_indices = graph, indices
+        return query._prepare(native, cls.Options())
+
+    def _prepare(self, native, options):
+        """Hold the native query, its options and its numbered form; return self."""
+        self._native = native
+        self._options = options
+        # Searches of graphs that need no renumbering take only their targets.
+        self._search = native._with_numbering(self._query_indices)
+        return self
+
     def _replace(self, native, options):
         result = object.__new__(type(self))
         result.__dict__ = dict(self.__dict__)
-        result._native = native
-        result._options = options
-        return result
+        return result._prepare(native, options)
 
     def with_options(self, options):
+        """This query with a copy of ``options``."""
         copied = self.Options(options)
         return self._replace(self._native.with_options(self._native_options(copied)), copied)
 
@@ -92,82 +123,78 @@ class _Query:
         return self._native
 
     def with_timeout(self, milliseconds):
+        """This query with a time limit per target, in milliseconds; a negative value selects the default limit and zero stops at once."""
         options = self.Options(self._options)
         options.timeout_ms = milliseconds
         return self.with_options(options)
 
-    def _result(self, result, target_indices):
-        query_indices = self._query_indices
-        matches = tuple(_translate_match(match, query_indices, target_indices) for match in result.matches)
-        return SearchResult(matches, result.status, result.optimal, result.complete,
-                            result.score, result.nodes_visited, result.elapsed_ms)
-
     def match(self, target):
         """Return one best match, with its proof and stopping status."""
+        if type(target) is _MolGraph:
+            return self._search._match(target)
         graph, indices = _convert(target)
-        return self._result(self._target_native(indices).match(graph), indices)
+        if indices is None:
+            return self._search._match(graph)
+        return self._target_native(indices)._match(graph, self._query_indices, indices)
 
     def match_all(self, target, limit=1000):
         """Return optimal matches up to the limit, with enumeration status."""
-        if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1:
-            raise ValueError("limit must be a positive integer")
+        _checked_int(limit, "Match limit", 1)
+        if type(target) is _MolGraph:
+            return self._search._match_all(target, limit)
         graph, indices = _convert(target)
-        return self._result(self._target_native(indices).match_all(graph, limit), indices)
+        if indices is None:
+            return self._search._match_all(graph, limit)
+        return self._target_native(indices)._match_all(graph, limit, self._query_indices, indices)
 
     def match_many(self, targets, *, num_threads=0):
         """Search targets independently and preserve each target's atom indices."""
-        if not isinstance(num_threads, int) or isinstance(num_threads, bool) or num_threads < 0:
-            raise ValueError("num_threads must be a nonnegative integer")
-        from . import TargetCorpus
-        converted = targets._snapshot() if isinstance(targets, TargetCorpus) else [_convert(target) for target in targets]
+        _checked_int(num_threads, "Thread count", 0)
+        if isinstance(targets, TargetCorpus):
+            converted = targets._snapshot()
+        else:
+            converted = [(target, None) if type(target) is _MolGraph else _convert(target) for target in targets]
         if isinstance(self, MCS) and self._options.excluded_target_atoms:
             groups = {}
             for index, (graph, indices) in enumerate(converted):
                 native = self._target_native(indices)
                 key = tuple(indices) if indices is not None else None
-                groups.setdefault(key, (native, []))[1].append((index, graph))
+                groups.setdefault(key, (native, []))[1].append(index)
             results = [None] * len(converted)
             for native, members in groups.values():
-                batch = native.match_many([graph for _, graph in members], num_threads)
-                for result, (index, _) in zip(batch, members):
-                    results[index] = self._result(result, converted[index][1])
+                batch = native._match_many([converted[index] for index in members], num_threads,
+                                           self._query_indices)
+                for result, index in zip(batch, members):
+                    results[index] = result
             return results
-        results = self._native.match_many([graph for graph, _ in converted], num_threads)
-        return [self._result(result, indices)
-                for result, (_, indices) in zip(results, converted)]
+        return self._search._match_many(converted, num_threads)
 
 
 def _convert(molecule):
-    from . import _ensure_mol_ex, get_index_map
+    """A molecule's graph and the caller's numbering of its atoms, or None when native indices apply."""
+    if type(molecule) is _MolGraph:
+        return molecule, None
     graph, source = _ensure_mol_ex(molecule)
-    indices = tuple(get_index_map(graph)) if source is not None else None
-    return graph, indices
+    return graph, _index_tuple(graph) if source is not None else None
 
 
-def _translate_match(match, query_indices=None, target_indices=None):
-    def query_index(index):
-        return query_indices[index] if query_indices is not None else index
-    def target_index(index):
-        return target_indices[index] if target_indices is not None else index
-    atom_mapping = MappingProxyType({query_index(first): target_index(second)
-                                     for first, second in match.atom_mapping.items()})
-    bonds = tuple((query_index(first), query_index(second), target_index(target_first), target_index(target_second))
-                  for first, second, target_first, target_second in match.bond_mapping)
-    fragments = tuple(tuple(query_index(index) for index in fragment) for fragment in match.fragments)
-    return Match(atom_mapping, bonds, fragments)
+def _native_numbering(indices, role):
+    """A function from the caller's atom numbers to native indices; the identity when ``indices`` is None."""
+    if indices is None:
+        return lambda index: index
+    reverse = {original: native for native, original in enumerate(indices)}
+
+    def native_index(index):
+        if index not in reverse:
+            raise IndexError(f"{role} atom index out of range")
+        return reverse[index]
+    return native_index
 
 
 def _native_correspondence(match, query_indices=None, target_indices=None):
-    query_reverse = {original: native for native, original in enumerate(query_indices)} if query_indices is not None else None
-    target_reverse = {original: native for native, original in enumerate(target_indices)} if target_indices is not None else None
-    def query_index(index):
-        if query_reverse is not None and index not in query_reverse:
-            raise IndexError("Query atom index is outside the input molecule")
-        return query_reverse[index] if query_reverse is not None else index
-    def target_index(index):
-        if target_reverse is not None and index not in target_reverse:
-            raise IndexError("Target atom index is outside the input molecule")
-        return target_reverse[index] if target_reverse is not None else index
+    """``match`` in native indices: a dict for an atom mapping, a native Match for a :class:`Match`."""
+    query_index = _native_numbering(query_indices, "Query")
+    target_index = _native_numbering(target_indices, "Target")
     if not isinstance(match, Match):
         return {query_index(first): target_index(second) for first, second in match.items()}
     native = _smsd.Match()
@@ -187,19 +214,19 @@ class MCS(_Query):
     @classmethod
     def find(cls, query):
         """Prepare a molecule query for repeated and concurrent searches."""
-        result = object.__new__(cls)
-        result._query_graph, result._query_indices = _convert(query)
-        result._source_atom_count = query.GetNumAtoms() if result._query_indices is not None else result._query_graph.n
-        result._options = cls.Options()
-        result._native = _smsd.MCS.find(result._query_graph)
-        return result
+        graph, indices = _convert(query)
+        prepared = cls._prepared(graph, indices, _smsd.MCS.find(graph))
+        prepared._source_atom_count = query.GetNumAtoms() if indices is not None else graph.n
+        return prepared
 
     def with_objective(self, objective):
+        """This query maximising ``objective``: common atoms (MCIS) or common bonds (MCES)."""
         options = self.Options(self._options)
         options.objective = objective
         return self.with_options(options)
 
     def with_fragments(self, *, min_atoms=1, max_fragments=2147483647):
+        """This query allowing disconnected common fragments of at least ``min_atoms`` atoms each."""
         options = self.Options(self._options)
         options.connectivity = self.Connectivity.FRAGMENTS
         options.min_fragment_atoms = min_atoms
@@ -207,6 +234,7 @@ class MCS(_Query):
         return self.with_options(options)
 
     def with_atom_weights(self, weights):
+        """This query scoring matched query atoms by ``weights``, one per input atom."""
         options = self.Options(self._options)
         options.atom_weights = list(weights)
         return self.with_options(options)
@@ -215,20 +243,21 @@ class MCS(_Query):
         native = self.Options(options)
         if self._query_indices is not None and native.atom_weights:
             if len(native.atom_weights) != self._source_atom_count:
-                raise ValueError("Weights must cover every source query atom")
+                raise ValueError("Atom weights must cover every query atom")
             weights = native.atom_weights
             native.atom_weights = [weights[index] for index in self._query_indices]
         return native
 
+    def _excluded(self, target_indices):
+        """The excluded target atoms of the options in native indices."""
+        native_index = _native_numbering(target_indices, "Excluded target")
+        return [native_index(index) for index in self._options.excluded_target_atoms]
+
     def _target_native(self, target_indices):
         if target_indices is None or not self._options.excluded_target_atoms:
             return self._native
-        reverse = {original: native for native, original in enumerate(target_indices)}
-        excluded = self._options.excluded_target_atoms
-        if any(index not in reverse for index in excluded):
-            raise IndexError("Excluded target atom index is outside the input molecule")
         options = self._native_options(self._options)
-        options.excluded_target_atoms = [reverse[index] for index in excluded]
+        options.excluded_target_atoms = self._excluded(target_indices)
         return self._native.with_options(options)
 
     @staticmethod
@@ -241,11 +270,20 @@ class MCS(_Query):
 
     @staticmethod
     def is_mapping_maximal(query, target, match, options=None):
-        """Check whether a valid common graph admits a one-step extension."""
+        """Check whether a valid common graph admits a compatible extension."""
         query_graph, query_indices = _convert(query)
         target_graph, target_indices = _convert(target)
         native = _native_correspondence(match, query_indices, target_indices)
         return _smsd.MCS.is_mapping_maximal(query_graph, target_graph, native, options or MCS.Options())
+
+    @staticmethod
+    def validate_tautomer_consistency(query, target, match):
+        """Whether a mapping conserves mobile protons across tautomeric groups."""
+        query_graph, query_indices = _convert(query)
+        target_graph, target_indices = _convert(target)
+        mapping = match.atom_mapping if isinstance(match, Match) else match
+        native = _native_correspondence(mapping, query_indices, target_indices)
+        return _smsd.validate_tautomer_consistency(query_graph, target_graph, native)
 
     @staticmethod
     def canonicalize_mapping(query, target, atom_mapping):
@@ -274,19 +312,16 @@ class MCS(_Query):
         target_graph, target_indices = _convert(target)
         configured = MCS.Options(options) if options is not None else MCS.Options()
         excluded = set(configured.excluded_target_atoms)
-        reverse = {original: native for native, original in enumerate(target_indices)} if target_indices is not None else None
+        native_index = _native_numbering(target_indices, "Excluded target")
         results = []
         for query in queries:
-            prepared = MCS.find(query)
             current = MCS.Options(configured)
-            if reverse is not None:
-                if any(index not in reverse for index in excluded):
-                    raise IndexError("Excluded target atom index is outside the input molecule")
-                current.excluded_target_atoms = [reverse[index] for index in excluded]
+            if target_indices is not None:
+                current.excluded_target_atoms = [native_index(index) for index in excluded]
             else:
                 current.excluded_target_atoms = sorted(excluded)
-            prepared = prepared.with_options(current)
-            result = prepared._result(prepared._native.match(target_graph), target_indices)
+            prepared = MCS.find(query).with_options(current)
+            result = prepared._native._match(target_graph, prepared._query_indices, target_indices)
             if result.found:
                 excluded.update(result.best.atom_mapping.values())
             results.append(result)
@@ -298,8 +333,8 @@ class MCS(_Query):
         converted = [_convert(molecule) for molecule in molecules]
         native = _smsd.MCS.consensus([graph for graph, _ in converted], options or MCS.Options(), threshold)
         source_indices = converted[native.source_index][1] if native.found else None
-        fragment = _translate_match(native.fragment, source_indices, source_indices) if native.found else None
-        mappings = MappingProxyType({index: _translate_match(match, None, converted[index][1])
+        fragment = _smsd._python_match(native.fragment, source_indices, source_indices) if native.found else None
+        mappings = MappingProxyType({index: _smsd._python_match(match, None, converted[index][1])
                                      for index, match in native.mappings.items()})
         return ConsensusResult(fragment, native.source_index, native.graph, mappings, native.support_count,
                                native.found, native.status, native.optimal, native.complete,
@@ -313,24 +348,18 @@ class Substructure(_Query):
     @classmethod
     def find(cls, query):
         """Prepare a molecule query; SMILES strings are parsed as molecules."""
-        result = object.__new__(cls)
-        result._query_graph, result._query_indices = _convert(query)
-        result._options = cls.Options()
-        result._native = _smsd.Substructure.find(result._query_graph)
-        return result
+        graph, indices = _convert(query)
+        return cls._prepared(graph, indices, _smsd.Substructure.find(graph))
 
     @classmethod
     def smarts(cls, query):
         """Compile a SMARTS predicate query once for repeated searches."""
         if not isinstance(query, str) or not query:
             raise ValueError("SMARTS must be a non-empty string")
-        result = object.__new__(cls)
-        result._query_graph = result._query_indices = None
-        result._options = cls.Options()
-        result._native = _smsd.Substructure.smarts(query)
-        return result
+        return cls._prepared(None, None, _smsd.Substructure.smarts(query))
 
     def with_induced(self, enabled=True):
+        """This query requiring an induced embedding, so query non-bonds are kept apart too."""
         options = self.Options(self._options)
         options.induced = enabled
         return self.with_options(options)
@@ -340,9 +369,8 @@ class Substructure(_Query):
         """Return core and substituent graphs alongside each search result."""
         core_graph, core_indices = _convert(core)
         converted = [_convert(target) for target in targets]
-        native = _smsd.Substructure.decompose_r_groups(core_graph, [graph for graph, _ in converted],
-                                                      options or Substructure.Options())
-        query = Substructure.find(core)
+        options = options or Substructure.Options()
+        native = _smsd.Substructure.decompose_r_groups(core_graph, [graph for graph, _ in converted], options)
         return [dict(core=result["core"], rgroups=result["rgroups"],
-                     search=query._result(result["search"], indices))
+                     search=_smsd._search_result(result["search"], core_indices, indices, options.cancellation))
                 for result, (_, indices) in zip(native, converted)]

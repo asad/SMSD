@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Independent graph-oracle controls for the cross-language measurement checker."""
 import importlib.util
 import csv
@@ -54,6 +58,55 @@ class SearchValidationTest(unittest.TestCase):
                 self.assertEqual(report["errors"], [])
                 self.assertEqual(report["valid"], comparable)
                 self.assertEqual(bool(report["graph_differences"]), not comparable)
+
+    def test_distinct_batch_targets_are_checked_against_their_own_graphs(self):
+        query, short, long = graph(2, [(0, 1, 1)]), graph(2, [(0, 1, 1)]), graph(3, [(0, 1, 1), (1, 2, 1)])
+        found = {"status": "Completed", "optimal": True, "complete": True, "score": 2, "nodes_visited": 1,
+                 "matches": [{"atoms": [[0, 0], [1, 1]], "bonds": [[0, 1, 0, 1]], "fragments": [[0, 1]]}]}
+        outside = {**found, "matches": [{"atoms": [[0, 1], [1, 2]], "bonds": [[0, 1, 1, 2]], "fragments": [[0, 1]]}]}
+        row = case(case_id="batch", batch_size="2", timeout_ms="500")
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            cases = directory / "cases.tsv"
+            with cases.open("w", newline="") as handle:
+                writer = csv.DictWriter(handle, fieldnames=list(row), delimiter="\t")
+                writer.writeheader()
+                writer.writerow(row)
+            for second, valid in ((outside, False), (found, True)):
+                path = directory / "batch.jsonl"
+                path.write_text(json.dumps({"case_id": "batch", "language": "first", "phase": "batch", "sample": 0,
+                    "threads": 2, "batch_targets": "distinct", "elapsed_ns": 1, "results": [found, second],
+                    "query_graph": query, "target_graph": short, "batch_target_graphs": [long, short]}) + "\n")
+                report = VALIDATION.compare_jsonl(cases, [path])
+                self.assertEqual(report["valid"], valid)
+                if not valid:
+                    self.assertEqual({error["result"] for error in report["errors"]}, {1})
+
+    def test_batch_rows_without_their_targets_pair_with_copies(self):
+        # A batch row that names no targets repeats the case target, so it pairs with rows
+        # marked as copies, and differing proved objectives are reported.
+        query = graph(2, [(0, 1, 1)])
+        found = {"status": "Completed", "optimal": True, "complete": True, "score": 2, "nodes_visited": 1,
+                 "matches": [{"atoms": [[0, 0], [1, 1]], "bonds": [[0, 1, 0, 1]], "fragments": [[0, 1]]}]}
+        single = {**found, "score": 1, "matches": [{"atoms": [[0, 0]], "bonds": [], "fragments": [[0]]}]}
+        row = case(case_id="batch", batch_size="1", timeout_ms="500")
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            cases = directory / "cases.tsv"
+            with cases.open("w", newline="") as handle:
+                writer = csv.DictWriter(handle, fieldnames=list(row), delimiter="\t")
+                writer.writeheader()
+                writer.writerow(row)
+            paths = []
+            for language, result, extra in (("old", found, {}), ("new", single, {"batch_targets": "copies"})):
+                path = directory / (language + ".jsonl")
+                path.write_text(json.dumps({"case_id": "batch", "language": language, "phase": "batch", "sample": 0,
+                    "threads": 1, **extra, "elapsed_ns": 1, "results": [result],
+                    "query_graph": query, "target_graph": query}) + "\n")
+                paths.append(path)
+            report = VALIDATION.compare_jsonl(cases, paths)
+            self.assertIn("Proven cross-language objectives or completed enumeration counts differ",
+                          [error["error"] for error in report["errors"]])
 
     def test_parser_permutation_preserves_atom_and_selected_bond_correspondence(self):
         source = graph(3, [(0, 1, 1), (1, 2, 2)])

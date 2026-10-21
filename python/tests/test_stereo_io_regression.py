@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Stereochemistry must survive SMILES and MOL interchange."""
 
 import pytest
@@ -31,6 +35,19 @@ def test_tetrahedral_classes():
 @pytest.mark.parametrize("text", [r"C(\F)=C/F", r"C(=C/Cl)\Cl"])
 def test_branch_directional_stereo(text):
     assert _ez_labels(text) == ["E"]
+
+
+@pytest.mark.parametrize("closing,opening,expected", [
+    (r"C1CCCCC/C=C\1", "C/1CCCCC/C=C1", "Z"),
+    ("C1CCCCC/C=C/1", r"C\1CCCCC/C=C1", "E"),
+])
+def test_ring_closure_directional_orientation(closing, opening, expected):
+    molecule = smsd.parse_smiles(closing)
+    equivalent = smsd.parse_smiles(opening)
+    assert smsd.assign_ez(molecule) == {(6, 7): expected}
+    assert molecule.get_canonical_hash() == equivalent.get_canonical_hash()
+    restored = smsd.parse_smiles(smsd.to_smiles(molecule))
+    assert molecule.get_canonical_hash() == restored.get_canonical_hash()
 
 
 @pytest.mark.parametrize("text", [

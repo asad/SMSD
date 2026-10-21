@@ -1,4 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 foreach(value IN ITEMS OFF off 0 FALSE false NO no)
     execute_process(COMMAND "${CMAKE_COMMAND}" -S "${SOURCE_DIR}" -B "${BINARY_DIR}/false-${value}"
         -DSMSD_BUILD_TESTS=OFF -DSMSD_BUILD_PYTHON=OFF -DSMSD_BUILD_OPENMP=OFF

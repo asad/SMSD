@@ -2,15 +2,31 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
- * See the NOTICE file for attribution, trademark, and algorithm IP terms. *
- * Header-only C++17 port of MolGraph / ChemOptions / ChemOps.
- * Zero external dependencies -- pure C++17 standard library.
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ *
+ * MolGraph, the header-only C++17 molecular graph that the searches, parsers and
+ * fingerprints share. Zero external dependencies -- pure C++17 standard library.
+ *
+ * This header declares MolGraph and keeps its data and short accessors. Member
+ * definitions live in purpose headers under detail/, included at the end:
+ *   chem_options.hpp               ChemOptions and the aromaticity model
+ *   detail/aromaticity.hpp         aromaticity perception and Kekule assignment
+ *   detail/ring_perception.hpp     ring sets, relevant cycles, ring families and systems
+ *   detail/tautomers.hpp           tautomer classes, weights and confidence
+ *   detail/canonical_labelling.hpp canonical ranks, labels, orbits and hash
+ *   detail/atom_invariants.hpp     neighbour labels, features, hydrogens and prewarm()
+ *   detail/mol_graph_builder.hpp   MolGraph::Builder::build()
+ *   detail/graph_operations.hpp    subgraphs, scaffolds and atom ID translation
+ *   detail/smiles_writer.hpp       canonical SMILES
+ * Each of them includes this header, so any one of them may be included first.
  */
 #pragma once
 #ifndef SMSD_MOL_GRAPH_HPP
 #define SMSD_MOL_GRAPH_HPP
 
 #include "smsd/bitops.hpp"
+#include "smsd/chem_options.hpp"
+#include "smsd/detail/union_find.hpp"
 #include "smsd/general_matching.hpp"
 #include "smsd/smiles_utils.hpp"
 
@@ -24,6 +40,7 @@
 #include <cstring>
 #include <deque>
 #include <functional>
+#include <limits>
 #include <map>
 #include <mutex>
 #include <numeric>
@@ -45,127 +62,6 @@
 #endif
 
 namespace smsd {
-
-enum class AromaticityModel { DAYLIGHT_LIKE };
-
-// ============================================================================
-// ChemOptions -- configuration for chemical matching constraints
-// ============================================================================
-
-struct ChemOptions {
-    enum class BondOrderMode   { STRICT, LOOSE, ANY };
-    enum class AromaticityMode { STRICT, FLEXIBLE };
-    enum class RingFusionMode  { IGNORE, PERMISSIVE, STRICT };
-    enum class Solvent         { AQUEOUS, DMSO, METHANOL, CHLOROFORM, ACETONITRILE, DIETHYL_ETHER };
-
-    // Atom matching — defaults match RDKit FindMCS for apples-to-apples comparison
-    bool matchAtomType            = true;
-    bool matchFormalCharge        = false;  // RDKit matchValences=False
-    bool useChirality             = false;
-    bool useBondStereo            = false;
-    bool ringMatchesRingOnly      = false;  // RDKit ringMatchesRingOnly=False
-
-    // Ring completeness
-    bool completeRingsOnly        = false;
-
-    // Isotope matching
-    bool matchIsotope             = false;
-
-    // Ring fusion
-    RingFusionMode ringFusionMode = RingFusionMode::IGNORE;
-
-    // Tautomer matching
-    bool   tautomerAware = false;
-    /** pH context for MCS::computeTautomerConfidence; does not change the search objective. */
-    double pH            = 7.4;
-
-    /** Set simulation pH, clamped to [0, 14]. */
-    ChemOptions& withPH(double v) {
-        if (!std::isfinite(v)) throw std::invalid_argument("pH must be finite");
-        pH = std::max(0.0, std::min(14.0, v)); return *this;
-    }
-
-    /** Solvent context for MCS::computeTautomerConfidence. */
-    Solvent solvent = Solvent::AQUEOUS;
-
-    /** Set solvent for tautomer weight corrections (fluent). */
-    ChemOptions& withSolvent(Solvent s) { solvent = s; return *this; }
-
-    // Bond matching
-    BondOrderMode  matchBondOrder  = BondOrderMode::STRICT;
-    AromaticityMode aromaticityMode = AromaticityMode::FLEXIBLE;
-
-    // Aromaticity perception model — controls which model is used when
-    // the matching pipeline needs to re-perceive aromaticity.
-    AromaticityModel aromaticityModel = AromaticityModel::DAYLIGHT_LIKE;
-
-    // Fluent setters
-    ChemOptions& withAromaticityMode(AromaticityMode m) { aromaticityMode = m; return *this; }
-    ChemOptions& withBondOrderMode(BondOrderMode m)     { matchBondOrder = m; return *this; }
-    ChemOptions& withCompleteRingsOnly(bool on)          { completeRingsOnly = on; return *this; }
-    ChemOptions& withMatchIsotope(bool on)               { matchIsotope = on; return *this; }
-    ChemOptions& withRingFusionMode(RingFusionMode m)    { ringFusionMode = m; return *this; }
-    ChemOptions& withTautomerAware(bool on)              { tautomerAware = on; return *this; }
-
-    // Named profiles — pre-configured for common use cases
-    static ChemOptions profile(const std::string& profileName) {
-        std::string name = profileName;
-        std::transform(name.begin(), name.end(), name.begin(),
-                       [](unsigned char character) { return static_cast<char>(std::tolower(character)); });
-        ChemOptions opts;
-        if (name == "default") {
-            // Matches RDKit FindMCS defaults for fair comparison
-            return opts;  // constructor defaults already RDKit-compatible
-        } else if (name == "strict") {
-            // Strict pharmaceutical matching
-            opts.matchBondOrder      = BondOrderMode::STRICT;
-            opts.aromaticityMode     = AromaticityMode::STRICT;
-        } else if (name == "pharma") {
-            // Drug discovery screening — ring and charge aware
-            opts.matchBondOrder      = BondOrderMode::STRICT;
-            opts.matchFormalCharge   = true;
-            opts.ringMatchesRingOnly = true;
-            opts.completeRingsOnly   = true;
-        } else if (name == "compat-fmcs" || name == "compat-substruct") {
-            // Explicit RDKit FMCS compatibility
-            opts.matchBondOrder      = BondOrderMode::LOOSE;
-            opts.aromaticityMode     = AromaticityMode::FLEXIBLE;
-            opts.ringMatchesRingOnly = false;
-            opts.matchFormalCharge   = false;
-        } else if (name == "reaction") {
-            // Reaction mapping — relaxed for charge/bond changes
-            opts.matchBondOrder      = BondOrderMode::LOOSE;
-            opts.matchFormalCharge   = false;
-            opts.ringMatchesRingOnly = false;
-        } else {
-            throw std::invalid_argument("Unknown ChemOptions profile: " + profileName);
-        }
-        return opts;
-    }
-
-    static ChemOptions tautomerProfile() {
-        ChemOptions c;
-        c.tautomerAware      = true;
-        c.matchBondOrder      = BondOrderMode::LOOSE;
-        c.aromaticityMode     = AromaticityMode::FLEXIBLE;
-        c.matchFormalCharge   = false;
-        c.ringMatchesRingOnly = false;
-        return c;
-    }
-
-    /** Relaxed profile for loose FMCS-style matching — ring atoms may map to chain atoms,
-     *  partial rings are accepted, bond orders and charges are not enforced.
-     *  Produces numerically larger but topologically looser MCS than the strict default.
-     *  Use for interoperability benchmarks or when loose topology matching is required. */
-    static ChemOptions fmcsProfile() {
-        ChemOptions c;
-        c.matchBondOrder      = BondOrderMode::LOOSE;
-        c.ringMatchesRingOnly = false;
-        c.completeRingsOnly   = false;
-        c.matchFormalCharge   = false;
-        return c;
-    }
-};
 
 // ============================================================================
 // MolGraph -- immutable molecular graph representation
@@ -233,93 +129,62 @@ struct MolGraph {
     mutable uint64_t          canonicalHash = 0;  // uint64_t: wrapping is defined (no UB)
     mutable bool              canonicalComputed_ = false;
 
-    // --- Pattern fingerprint for O(1) substructure pre-screening (v6.8.0) ---
-    // 256-bit structural bitset encoding local atom-pair and path features.
-    // Computed lazily. Substructure screening selects policy-compatible words;
-    // the exact degree/ring word is not monotone under query embeddings.
+    // --- Deprecated pattern fingerprint; nothing reads it ---
     static constexpr int FP_WORDS = 4;  // 4 × 64 = 256 bits
     mutable uint64_t patternFP_[FP_WORDS] = {};
     mutable bool     patternFPComputed_ = false;
 
-    void ensurePatternFP() const {
-        const std::lock_guard<std::recursive_mutex> cacheLock(lazyCacheMutex());
-        if (patternFPComputed_) return;
-        for (int w = 0; w < FP_WORDS; ++w) patternFP_[w] = 0;
-        // Encode atom features: element + aromaticity → 1 bit per type
-        for (int i = 0; i < n; ++i) {
-            uint32_t h = static_cast<uint32_t>(atomicNum[i]) * 31 + (aromatic[i] ? 1 : 0);
-            patternFP_[0] |= uint64_t(1) << (h & 63);
-        }
-        // Encode bond-pair features: (Z1, bondOrder, Z2) for each edge
-        for (int i = 0; i < n; ++i) {
-            for (int j : neighbors[i]) {
-                if (j <= i) continue;  // each edge once
-                int bo = bondOrder(i, j);
-                uint32_t h = static_cast<uint32_t>(atomicNum[i]) * 997
-                           + static_cast<uint32_t>(atomicNum[j]) * 31
-                           + static_cast<uint32_t>(bo) * 7;
-                patternFP_[1] |= uint64_t(1) << (h & 63);
-                // Also encode reverse pair for asymmetric element pairs
-                uint32_t h2 = static_cast<uint32_t>(atomicNum[j]) * 997
-                            + static_cast<uint32_t>(atomicNum[i]) * 31
-                            + static_cast<uint32_t>(bo) * 7;
-                patternFP_[1] |= uint64_t(1) << (h2 & 63);
-            }
-        }
-        // Encode 2-hop path features: (Z1, Z2, Z3) for paths of length 2
-        for (int i = 0; i < n; ++i) {
-            for (int j : neighbors[i]) {
-                for (int k : neighbors[j]) {
-                    if (k == i) continue;
-                    uint32_t h = static_cast<uint32_t>(atomicNum[i]) * 997
-                               + static_cast<uint32_t>(atomicNum[j]) * 31
-                               + static_cast<uint32_t>(atomicNum[k]);
-                    patternFP_[2] |= uint64_t(1) << (h & 63);
-                }
-            }
-        }
-        // Encode ring membership + degree features
-        for (int i = 0; i < n; ++i) {
-            uint32_t h = static_cast<uint32_t>(atomicNum[i]) * 31
-                       + static_cast<uint32_t>(degree[i]) * 7
-                       + (ring[i] ? 3u : 0u);
-            patternFP_[3] |= uint64_t(1) << (h & 63);
-        }
-        patternFPComputed_ = true;
-    }
+    [[deprecated("Nothing reads this fingerprint, and prewarm() does not compute it.")]]
+    void ensurePatternFP() const;
 
     // --- Tautomer classes and per-atom pKa-informed relevance weights ---
-    std::vector<int>   tautomerClass;   // -1 = not tautomeric
-    std::vector<float> tautomerWeight;  // 1.0 = non-tautomeric; <1.0 = relevance at pH 7.4
+    /**
+     * The tautomer class of each atom, -1 outside every class. The atoms of one motif match share a
+     * class and matches that share an atom join their classes, so the partition does not depend on
+     * the atom order; the numbers, from 0, depend on it only for classes that Weisfeiler-Leman
+     * refinement cannot tell apart (in practice those a symmetry of the graph exchanges).
+     */
+    std::vector<int>   tautomerClass;
+    std::vector<float> tautomerWeight;  // 1.0 = non-tautomeric; <1.0 = relevance in the graph's solvent and pH
+    /**
+     * The ionisable site of each atom's tautomer motif, which adjustWeightsForPH() reads:
+     * TAUTOMER_SITE_ACID when the neutral acid HA tautomerises, TAUTOMER_SITE_BASE when the
+     * neutral base B does, and TAUTOMER_SITE_NONE when the library assigns the motif no pKa or
+     * no match of the motif that covers the atom holds a hydrogen the site would release. The
+     * motif of an atom in a class is the first, in a fixed priority order, whose pattern covers
+     * the atom, so the weight, site and pKa do not depend on the order of the atoms. No motif
+     * carries a base site.
+     */
+    std::vector<int8_t> tautomerSite;
+    /** The aqueous pKa of that site (of the conjugate acid BH+ for a base); 0 when there is none. */
+    std::vector<float>  tautomerPKa;
     ChemOptions::Solvent solvent_ = ChemOptions::Solvent::AQUEOUS;
     double pH_ = 7.4;
 
-    /** Adjust tautomer weights for pH deviation from 7.4 (Henderson-Hasselbalch scaling). */
-    void adjustWeightsForPH(double pH) {
-        if (std::abs(pH - 7.4) < 0.01) return;
-        // Dampen weights toward 0.5 as pH deviates from 7.4 (never cross 0.5)
-        float dampen = static_cast<float>(0.1 * std::abs(pH - 7.4));
-        for (int i = 0; i < n; ++i) {
-            if (tautomerClass[i] == -1 || tautomerWeight[i] == 1.0f) continue;
-            float w = tautomerWeight[i];
-            float shift = (w > 0.5f) ? -dampen : dampen;
-            float adjusted = w + shift;
-            if (w > 0.5f) adjusted = std::max(0.5f, adjusted);
-            else           adjusted = std::min(0.5f, adjusted);
-            tautomerWeight[i] = std::max(0.1f, std::min(0.99f, adjusted));
-        }
-    }
+    /**
+     * Scale the weight of every atom with an ionisable site by the neutral fraction of its class,
+     * clamped to [0.1, 0.99]. With pKa_a the lowest acid pKa and pKa_b the highest base pKa among
+     * the sites of the class, the fraction is 1 / (1 + 10^(pH - pKa_a) + 10^(pKa_b - pH)), and a
+     * class with sites of one kind drops the other term. Atoms without a site keep their weight
+     * at every pH. Call after applySolventCorrection().
+     */
+    void adjustWeightsForPH(double pH);
 
-    // pKa-informed relevance weights at pH 7.4 (Sitzmann 2010)
+    static constexpr int8_t TAUTOMER_SITE_NONE = 0;
+    static constexpr int8_t TAUTOMER_SITE_ACID = 1;
+    static constexpr int8_t TAUTOMER_SITE_BASE = -1;
+
+    // Relevance weights of the dominant neutral tautomer (Sitzmann 2010); pH enters only through
+    // the neutral fraction that adjustWeightsForPH() applies.
     static constexpr float TW_KETO_ENOL          = 0.98f; // keto form dominant (pKa ~20)
-    static constexpr float TW_AMIDE_IMIDIC        = 0.97f; // amide dominant (pKa ~25)
+    static constexpr float TW_AMIDE_IMIDIC        = 0.97f; // amide dominant (pKa ~15-17)
     static constexpr float TW_LACTAM_LACTIM       = 0.97f; // lactam dominant
     static constexpr float TW_UREA                = 0.96f; // urea dominant (pKa ~14)
-    static constexpr float TW_PYRIDINONE          = 0.95f; // lactam form dominant (pKa ~1)
+    static constexpr float TW_PYRIDINONE          = 0.95f; // lactam form dominant (N-H pKa ~11.7)
     static constexpr float TW_THIOAMIDE           = 0.94f; // thioamide dominant
     static constexpr float TW_THIONE_THIOL        = 0.94f; // thione dominant (pKa ~10-11)
     static constexpr float TW_ENAMINONE           = 0.85f; // vinylogous amide
-    static constexpr float TW_HYDROXAMIC          = 0.85f; // hydroxamic acid (pKa ~8)
+    static constexpr float TW_HYDROXAMIC          = 0.85f; // hydroxamic acid (pKa ~9)
     static constexpr float TW_PHENOL_QUINONE      = 0.88f; // phenol dominant (pKa ~10)
     static constexpr float TW_HYDROXYPYRIMIDINE   = 0.90f; // hydroxy form dominant
     static constexpr float TW_PURINE_NH           = 0.78f; // purine N-H
@@ -337,12 +202,14 @@ struct MolGraph {
     // Tier 1b: additional transforms (T16-T30), Dhaked & Nicklaus 2024
     static constexpr float TW_THIOAMIDE_IMINOTHIOL = 0.95f; // thioamide form dominant (pKa ~13)
     static constexpr float TW_PHOSPHONATE          = 0.50f; // symmetric P(=O)(OH) ↔ P(OH)(=O)
-    // T18 DISABLED: sulfoxide S=O is a true covalent bond, not tautomerism
-    static constexpr float TW_SULFOXIDE            = 0.0f;  // DISABLED
+    /// @deprecated Sulfoxide S=O is a covalent bond rather than a tautomeric form; no class uses this weight.
+    [[deprecated("No tautomer class uses this weight.")]]
+    static constexpr float TW_SULFOXIDE            = 0.0f;
     [[deprecated("Use TW_NITRO_ACI instead — unified nitro/aci-nitro weight.")]]
     static constexpr float TW_NITRO_ACI_NITRO      = TW_NITRO_ACI;
-    // T20 DISABLED: nitrile/isonitrile is isomerism, not tautomerism (no proton shift)
-    static constexpr float TW_NITRILE_ISONITRILE   = 0.0f;  // DISABLED
+    /// @deprecated Nitrile and isonitrile are isomers rather than tautomers; no class uses this weight.
+    [[deprecated("No tautomer class uses this weight.")]]
+    static constexpr float TW_NITRILE_ISONITRILE   = 0.0f;
     static constexpr float TW_15_KETO_ENOL         = 0.75f; // 1,5-shift through conjugation
     static constexpr float TW_FURANOSE_PYRANOSE    = 0.60f; // ring-chain: furanose/pyranose
     static constexpr float TW_LACTOL               = 0.65f; // ring-chain: lactol
@@ -353,6 +220,24 @@ struct MolGraph {
     static constexpr float TW_BARBITURIC           = 0.80f; // tri-keto <-> enol forms
     static constexpr float TW_ALLYL_SHIFT          = 0.70f; // X-C=C-C <-> C=C-C-X (X=OH,SH,NH)
     static constexpr float TW_SELENOL_SELENOKETONE = 0.94f; // C=Se <-> C(-SeH)
+
+    // Aqueous pKa of the ionisable site of each motif that has one, from the ranges above
+    // (midpoints where a range is given), applied in every solvent. Every site is an acid, which a
+    // match of its motif carries only when the atom that would release the proton bears a hydrogen.
+    // The pKa ~3.5 of the nitro/aci-nitro motif belongs to the minor aci-nitro tautomer, not to the
+    // dominant nitro form from which the motif arises, so that motif has no site.
+    static constexpr float TPKA_KETO_ENOL            = 20.0f; // ketone alpha C-H
+    static constexpr float TPKA_AMIDE_IMIDIC         = 16.0f; // amide N-H
+    static constexpr float TPKA_UREA                 = 14.0f; // urea N-H
+    static constexpr float TPKA_PYRIDINONE           = 11.7f; // 2-pyridone N-H (8.6 for pyrimidin-4(3H)-one)
+    static constexpr float TPKA_PYRIDONE_HYDROXYPYRIDINE = TPKA_PYRIDINONE; // same equilibrium
+    static constexpr float TPKA_THIOAMIDE            = 13.0f; // thioamide N-H
+    static constexpr float TPKA_THIONE_THIOL         = 10.5f; // thione/thiol
+    static constexpr float TPKA_HYDROXAMIC           = 9.0f;  // hydroxamic acid O-H
+    static constexpr float TPKA_PHENOL_QUINONE       = 10.0f; // phenol O-H
+    static constexpr float TPKA_DIKETONE_ENOL        = 9.5f;  // 1,3-diketone C-H
+    static constexpr float TPKA_IMIDE                = 9.5f;  // imide N-H
+    static constexpr float TPKA_THIOAMIDE_IMINOTHIOL = 13.0f; // thioamide N-H
 
     // --- Bit-parallel adjacency (n x words) ---
     std::vector<std::vector<uint64_t>> adjLong;
@@ -388,7 +273,7 @@ struct MolGraph {
     // --- NLF caches (lazy, mutable for const-correct access) ---
     mutable std::vector<std::vector<int>> cachedNLF1, cachedNLF2, cachedNLF3;
 
-    // --- Performance caches (v6.5.3 parity with Java) ---
+    // --- Lazily computed per-atom caches ---
     mutable std::vector<std::vector<int>> cachedNeighborsByDegDesc;
     mutable std::vector<int> cachedPharmacophoreFeatures;
     mutable bool pharmComputed_ = false;
@@ -449,6 +334,8 @@ struct MolGraph {
         cachedNLF3.clear();
         tautomerClass.clear();
         tautomerWeight.clear();
+        tautomerSite.clear();
+        tautomerPKa.clear();
         if (static_cast<int>(formalCharge.size()) == n
             && static_cast<int>(ring.size()) == n
             && static_cast<int>(aromatic.size()) == n) {
@@ -458,6 +345,8 @@ struct MolGraph {
         } else {
             tautomerClass.assign(n, -1);
             tautomerWeight.assign(n, 1.0f);
+            tautomerSite.assign(n, TAUTOMER_SITE_NONE);
+            tautomerPKa.assign(n, 0.0f);
         }
     }
 
@@ -517,131 +406,33 @@ struct MolGraph {
     }
 
     // ========================================================================
-    // Ring-count per atom
+    // Ring counts per atom (defined in detail/ring_perception.hpp)
     // ========================================================================
 
     /** Compute ring counts from a given ring set (SSSR or RCB). */
-    void computeRingCounts(const std::vector<std::vector<int>>& rings) const {
-        const std::lock_guard<std::recursive_mutex> cacheLock(lazyCacheMutex());
-        std::fill(ringCount.begin(), ringCount.end(), 0);
-        for (const auto& ring : rings) {
-            for (int atom : ring) ringCount[atom]++;
-        }
-    }
+    void computeRingCounts(const std::vector<std::vector<int>>& rings) const;
 
-    /** Default: compute ring counts from internal SSSR.
-     *  For deterministic results on symmetric molecules, call
-     *  computeRingCounts(smsd::computeRelevantCycles(*this)) after including ring_finder.hpp. */
-    void computeRingCounts() const {
-        computeRingCounts(computeRings());
-    }
+    /** Default: compute ring counts from the relevant cycles of the ring candidate search over
+     *  each atom's neighbours in index order, as the Java library counts them, so that the counts
+     *  of cages such as adamantane and cubane do not depend on atom order. */
+    void computeRingCounts() const;
 
-    static bool isAromaticDonorElement(int z) {
-        return z == 7 || z == 8 || z == 15 || z == 16 || z == 33 || z == 34
-            || z == 51 || z == 52;
-    }
+    // ========================================================================
+    // Aromaticity perception and Kekule assignment (detail/aromaticity.hpp)
+    // ========================================================================
+
+    static bool isAromaticDonorElement(int z);
 
     std::pair<bool, bool> exocyclicMultipleBondInfo(
         int atom,
         int prev = -1,
-        int next = -1) const {
-        bool hasExocyclicMultipleBond = false;
-        bool hasExocyclicMultipleBondToHetero = false;
-        for (int nb : neighbors[atom]) {
-            if (nb == prev || nb == next) continue;
-            int ord = bondOrder(atom, nb);
-            if (ord < 2 || ord == 4) continue;
-            hasExocyclicMultipleBond = true;
-            if (atomicNum[nb] != 6) hasExocyclicMultipleBondToHetero = true;
-        }
-        return {hasExocyclicMultipleBond, hasExocyclicMultipleBondToHetero};
-    }
+        int next = -1) const;
 
-    static bool isSimpleCycle(const std::vector<int>& cycle) {
-        if (cycle.size() < 3) return false;
-        std::unordered_set<int> seen;
-        seen.reserve(cycle.size());
-        for (int atom : cycle) {
-            if (!seen.insert(atom).second) return false;
-        }
-        return true;
-    }
+    static bool isSimpleCycle(const std::vector<int>& cycle);
 
-    int aromaticPiContribution(const std::vector<int>& cycle, int pos) const {
-        const int len = static_cast<int>(cycle.size());
-        const int atom = cycle[pos];
-        const int prev = cycle[(pos + len - 1) % len];
-        const int next = cycle[(pos + 1) % len];
+    int aromaticPiContribution(const std::vector<int>& cycle, int pos) const;
 
-        int cyclePiBonds = 0;
-        bool hasExplicitAromaticBond = false;
-        for (int nb : {prev, next}) {
-            int ord = bondOrder(atom, nb);
-            if (ord == 3) return -1;
-            if (ord == 4) {
-                hasExplicitAromaticBond = true;
-            } else if (ord == 2) {
-                ++cyclePiBonds;
-            }
-        }
-
-        if (hasExplicitAromaticBond) return 1;
-        if (cyclePiBonds == 1) return 1;
-        if (cyclePiBonds > 1) return -1;
-
-        auto [hasExocyclicMultipleBond, hasExocyclicMultipleBondToHetero]
-            = exocyclicMultipleBondInfo(atom, prev, next);
-
-        const int z = atomicNum[atom];
-        const int q = formalCharge.empty() ? 0 : formalCharge[atom];
-
-        if (z == 6) {
-            if (q < 0 && !hasExocyclicMultipleBond) return 2;
-            if (q == 0 && hasExocyclicMultipleBondToHetero) return 0;
-            if (q > 0) return 0;
-            if (q == 0)
-                for (int neighbor : neighbors[atom]) {
-                    if (neighbor != prev && neighbor != next && atomicNum[neighbor] == 6
-                        && bondOrder(atom, neighbor) == 2 && bondInRing(atom, neighbor)) return 1;
-                }
-            return -1;
-        }
-
-        if (z == 5 || z == 13) {
-            if (q < 0 && !hasExocyclicMultipleBond) return 2;
-            return -1;
-        }
-
-        if (isAromaticDonorElement(z)) {
-            if (q > 0) {
-                if (hasExocyclicMultipleBond) return 0;
-                const int hydrogens = hydrogenCount.empty() ? 0 : hydrogenCount[atom];
-                const int64_t sigmaBonds = int64_t(neighbors[atom].size()) + hydrogens;
-                return sigmaBonds <= 2 ? 0 : -1;
-            }
-            if (hasExocyclicMultipleBond) return -1;
-            return 2;
-        }
-
-        return -1;
-    }
-
-    bool cycleLooksAromatic(const std::vector<int>& cycle) const {
-        const int len = static_cast<int>(cycle.size());
-        if (len < 3) return false;
-
-        int piElectrons = 0;
-        bool sawCyclePi = false;
-        for (int pos = 0; pos < len; ++pos) {
-            int contrib = aromaticPiContribution(cycle, pos);
-            if (contrib < 0) return false;
-            if (contrib == 1 || contrib == 2) sawCyclePi = true;
-            piElectrons += contrib;
-        }
-
-        if (!sawCyclePi || piElectrons < 2) return false;
-        return ((piElectrons - 2) % 4) == 0;
-    }
+    bool cycleLooksAromatic(const std::vector<int>& cycle) const;
 
     void enumerateRingCyclesDfs(
         int root,
@@ -652,550 +443,72 @@ struct MolGraph {
         std::vector<int>& path,
         std::set<std::vector<int64_t>>& seenCycles,
         std::vector<std::vector<int>>& cycles,
-        size_t maxCycles) const {
-        if (cycles.size() >= maxCycles) return;
-        struct Frame { int atom; size_t nextNeighbor; };
-        std::vector<Frame> pending{{current, 0}};
-        const size_t initialPathSize = path.size();
-        while (!pending.empty() && cycles.size() < maxCycles) {
-            auto& frame = pending.back();
-            if (frame.nextNeighbor == ringAdj[frame.atom].size()) {
-                pending.pop_back();
-                if (path.size() > initialPathSize) {
-                    inPath[path.back()] = 0;
-                    path.pop_back();
-                }
-                continue;
-            }
-            const int nb = ringAdj[frame.atom][frame.nextNeighbor++];
-            if (!inComponent[nb] || nb < root) continue;
-            if (nb == root) {
-                if (path.size() >= 3) {
-                    auto key = canonicalCycleKey(path);
-                    if (seenCycles.insert(key).second) cycles.push_back(path);
-                }
-                continue;
-            }
-            if (inPath[nb]) continue;
+        size_t maxCycles,
+        uint64_t& steps) const;
 
-            inPath[nb] = 1;
-            path.push_back(nb);
-            pending.push_back({nb, 0});
-        }
-        while (path.size() > initialPathSize) {
-            inPath[path.back()] = 0;
-            path.pop_back();
-        }
-    }
+    /**
+     * Steps allowed to the simple-cycle walk that adds aromatic candidates beyond the relevant
+     * cycles, counted in neighbour reads and candidate atoms. The walk also stops at 4096
+     * cycles; in long fused ladders such as acenes it can otherwise branch exponentially before
+     * reaching that count. Ordinary polycyclic molecules use a small fraction of it.
+     */
+    static constexpr uint64_t AROMATIC_CYCLE_STEP_LIMIT = uint64_t(1) << 24;
 
-    std::vector<std::vector<int>> collectAromaticCandidateCycles() const {
-        std::vector<std::vector<int>> cycles;
-        std::set<std::vector<int64_t>> seenCycles;
+    std::vector<std::vector<int>> collectAromaticCandidateCycles() const;
 
-        auto addCycle = [&](const std::vector<int>& cycle) {
-            if (!isSimpleCycle(cycle)) return;
-            if (cycle.size() < 3) return;
-            auto key = canonicalCycleKey(cycle);
-            if (seenCycles.insert(key).second) cycles.push_back(cycle);
-        };
+    void clearRingFlagsFromTopology();
 
-        for (const auto& cycle : computeRelevantCycles()) addCycle(cycle);
+    void markRingEdge(int i, int j);
 
-        std::vector<std::vector<int>> ringAdj(n);
-        for (int i = 0; i < n; ++i) {
-            if (!ring[i]) continue;
-            for (int nb : neighbors[i]) {
-                if (i < nb && bondInRing(i, nb)) {
-                    ringAdj[i].push_back(nb);
-                    ringAdj[nb].push_back(i);
-                }
-            }
-        }
+    void markAromaticEdge(int i, int j);
 
-        std::vector<uint8_t> visited(n, uint8_t(0));
-        std::vector<uint8_t> inComponent(n, uint8_t(0));
-        std::vector<uint8_t> inPath(n, uint8_t(0));
-        for (int start = 0; start < n; ++start) {
-            if (!ring[start] || visited[start] || ringAdj[start].empty()) continue;
+    void markKekuleEdge(int i, int j, int order);
 
-            std::vector<int> component;
-            std::deque<int> queue;
-            queue.push_back(start);
-            visited[start] = 1;
-            while (!queue.empty()) {
-                int atom = queue.front();
-                queue.pop_front();
-                component.push_back(atom);
-                for (int nb : ringAdj[atom]) {
-                    if (visited[nb]) continue;
-                    visited[nb] = 1;
-                    queue.push_back(nb);
-                }
-            }
-
-            int edgeCount = 0;
-            for (int atom : component) edgeCount += static_cast<int>(ringAdj[atom].size());
-            edgeCount /= 2;
-            const int cycleRank = edgeCount - static_cast<int>(component.size()) + 1;
-            if (cycleRank <= 1) continue;
-
-            std::fill(inComponent.begin(), inComponent.end(), uint8_t(0));
-            for (int atom : component) inComponent[atom] = 1;
-
-            std::sort(component.begin(), component.end());
-            for (int root : component) {
-                if (ringAdj[root].size() < 2) continue;
-                std::fill(inPath.begin(), inPath.end(), uint8_t(0));
-                std::vector<int> path = { root };
-                inPath[root] = 1;
-
-                for (int nb : ringAdj[root]) {
-                    if (!inComponent[nb] || nb <= root) continue;
-                    inPath[nb] = 1;
-                    path.push_back(nb);
-                    enumerateRingCyclesDfs(
-                        root, nb, ringAdj, inComponent, inPath, path,
-                        seenCycles, cycles, 4096);
-                    path.pop_back();
-                    inPath[nb] = 0;
-                    if (cycles.size() >= 4096) break;
-                }
-                inPath[root] = 0;
-                if (cycles.size() >= 4096) break;
-            }
-            if (cycles.size() >= 4096) break;
-        }
-
-        return cycles;
-    }
-
-    void clearRingFlagsFromTopology() {
-        std::fill(ring.begin(), ring.end(), uint8_t(0));
-        if (useDense) {
-            for (auto& row : bondPacked) {
-                for (auto& b : row) b &= ~BOND_RING_BIT;
-            }
-        } else {
-            for (auto& kv : sparseBondProps) {
-                kv.second[1] = 0;
-            }
-        }
-    }
-
-    void markRingEdge(int i, int j) {
-        ring[i] = 1;
-        ring[j] = 1;
-        if (useDense) {
-            bondPacked[i][j] |= BOND_RING_BIT;
-            bondPacked[j][i] |= BOND_RING_BIT;
-        } else {
-            auto it = sparseBondProps.find(bondKey(i, j));
-            if (it != sparseBondProps.end()) it->second[1] = 1;
-        }
-    }
-
-    void markAromaticEdge(int i, int j) {
-        if (useDense) {
-            bondPacked[i][j] = (bondPacked[i][j] & BOND_RING_BIT) | 4 | BOND_AROM_BIT;
-            bondPacked[j][i] = bondPacked[i][j];
-        } else {
-            auto it = sparseBondProps.find(bondKey(i, j));
-            if (it != sparseBondProps.end()) {
-                it->second[0] = 4;
-                it->second[2] = 1;
-            }
-        }
-    }
-
-    void markKekuleEdge(int i, int j, int order) {
-        if (useDense) {
-            bondPacked[i][j] = (bondPacked[i][j] & BOND_RING_BIT) | static_cast<uint8_t>(order & 0x07);
-            bondPacked[j][i] = bondPacked[i][j];
-        } else {
-            auto it = sparseBondProps.find(bondKey(i, j));
-            if (it != sparseBondProps.end()) {
-                it->second[0] = order;
-                it->second[2] = 0;
-            }
-        }
-    }
-
-    void refreshAtomLabels() {
-        label.resize(n);
-        for (int i = 0; i < n; ++i) {
-            label[i] = (atomicNum[i] << 2)
-                     | (aromatic[i] ? 2 : 0)
-                     | (ring[i] ? 1 : 0);
-        }
-    }
+    void refreshAtomLabels();
 
     void normalizeRingAndAromaticity(
-        AromaticityModel model = AromaticityModel::DAYLIGHT_LIKE) {
-        if (n == 0) return;
-        (void) model;
-
-        clearRingFlagsFromTopology();
-        const auto& sssr = computeRings();
-        for (const auto& cycle : sssr) {
-            for (size_t i = 0; i < cycle.size(); ++i) {
-                int a = cycle[i];
-                int b = cycle[(i + 1) % cycle.size()];
-                markRingEdge(a, b);
-            }
-        }
-
-        std::vector<uint8_t> perceivedAromatic = aromatic;
-        std::vector<std::pair<int, int>> aromaticEdges;
-        for (int i = 0; i < n; ++i) {
-            if (!ring[i]) continue;
-            for (int nb : neighbors[i]) {
-                if (i < nb && bondInRing(i, nb) && bondAromatic(i, nb)) {
-                    aromaticEdges.emplace_back(i, nb);
-                }
-            }
-        }
-
-        auto candidateCycles = collectAromaticCandidateCycles();
-        for (const auto& cycle : candidateCycles) {
-            if (!cycleLooksAromatic(cycle)) continue;
-            for (int atom : cycle) perceivedAromatic[atom] = 1;
-            for (size_t i = 0; i < cycle.size(); ++i) {
-                int a = cycle[i];
-                int b = cycle[(i + 1) % cycle.size()];
-                aromaticEdges.emplace_back(std::min(a, b), std::max(a, b));
-            }
-        }
-
-        for (int i = 0; i < n; ++i) {
-            if (perceivedAromatic[i]) aromatic[i] = 1;
-        }
-
-        std::sort(aromaticEdges.begin(), aromaticEdges.end());
-        aromaticEdges.erase(std::unique(aromaticEdges.begin(), aromaticEdges.end()), aromaticEdges.end());
-        for (const auto& edge : aromaticEdges) {
-            markAromaticEdge(edge.first, edge.second);
-        }
-    }
+        AromaticityModel model = AromaticityModel::DAYLIGHT_LIKE);
 
     void perceiveAromaticity(
-        AromaticityModel model = AromaticityModel::DAYLIGHT_LIKE) {
-        normalizeRingAndAromaticity(model);
-        refreshAtomLabels();
-        ringCount.assign(n, 0);
-        ringCountsComputed_ = false;
-        invalidateBondDerivedState();
-    }
+        AromaticityModel model = AromaticityModel::DAYLIGHT_LIKE);
 
-    int aromaticKekuleDemand(int atom) const {
-        if (!aromatic[atom]) return 0;
-        const int z = atomicNum[atom];
-        const int q = formalCharge.empty() ? 0 : formalCharge[atom];
-        const int h = hydrogenCount.empty() ? 0 : hydrogenCount[atom];
-        auto [hasExocyclicMultipleBond, hasExocyclicMultipleBondToHetero]
-            = exocyclicMultipleBondInfo(atom);
-        (void) hasExocyclicMultipleBond;
-
-        if (z == 6) {
-            if (q == 0 && hasExocyclicMultipleBondToHetero) return 0;
-            return q == 0 ? 1 : 0;
-        }
-        if (z == 5 || z == 13) return q >= 0 ? 1 : 0;
-        if (z == 7 || z == 15) {
-            if (h > 0 && q <= 0) return 0;
-            if (q == 0 && neighbors[atom].size() >= 3) return 0;
-            if (q < 0) return 0;
-            return 1;
-        }
-        if (z == 8 || z == 16 || z == 34 || z == 52)
-            return q == 1 && int64_t(neighbors[atom].size()) + h == 2 ? 1 : 0;
-        return 1;
-    }
+    int aromaticKekuleDemand(int atom) const;
 
     /** Determine bond assignments without changing the graph on failure. */
     bool findKekuleAssignment(const std::vector<int>& component,
                              std::vector<std::pair<int, int>>& singleBonds,
-                             std::vector<std::pair<int, int>>& doubleBonds) const {
-        if (component.empty()) return true;
+                             std::vector<std::pair<int, int>>& doubleBonds) const;
 
-        std::unordered_set<int> inComponent(component.begin(), component.end());
-        std::vector<std::pair<int, int>> aromaticEdges;
-        aromaticEdges.reserve(component.size() * 2);
-        for (int atom : component) {
-            for (int nb : neighbors[atom]) {
-                if (atom < nb && inComponent.count(nb)
-                    && (bondAromatic(atom, nb) || bondOrder(atom, nb) == 4)) {
-                    aromaticEdges.emplace_back(atom, nb);
-                }
-            }
-        }
-        if (aromaticEdges.empty()) {
-            return true;
-        }
+    bool kekulizeAromaticComponent(const std::vector<int>& component);
 
-        std::vector<int> demandAtoms;
-        demandAtoms.reserve(component.size());
-        std::unordered_map<int, int> localIndex;
-        for (int atom : component) {
-            if (aromaticKekuleDemand(atom) > 0) {
-                localIndex[atom] = static_cast<int>(demandAtoms.size());
-                demandAtoms.push_back(atom);
-            }
-        }
+    bool kekulize();
 
-        if (!demandAtoms.empty()) {
-            if (demandAtoms.size() % 2 != 0) return false;
-            std::vector<std::vector<int>> demandAdj(demandAtoms.size());
-            for (const auto& edge : aromaticEdges) {
-                auto ita = localIndex.find(edge.first);
-                auto itb = localIndex.find(edge.second);
-                if (ita == localIndex.end() || itb == localIndex.end()) continue;
-                demandAdj[ita->second].push_back(itb->second);
-                demandAdj[itb->second].push_back(ita->second);
-            }
-
-            std::vector<int> color(demandAtoms.size(), -1);
-            bool bipartite = true;
-            std::deque<int> queue;
-            for (int start = 0; start < static_cast<int>(demandAtoms.size()); ++start) {
-                if (color[start] != -1) continue;
-                color[start] = 0;
-                queue.push_back(start);
-                while (!queue.empty()) {
-                    int u = queue.front();
-                    queue.pop_front();
-                    for (int v : demandAdj[u]) {
-                        if (color[v] == -1) {
-                            color[v] = color[u] ^ 1;
-                            queue.push_back(v);
-                        } else if (color[v] == color[u]) {
-                            bipartite = false;
-                        }
-                    }
-                }
-            }
-
-            // Non-alternant aromatic systems such as azulene contain odd
-            // cycles. They can still have a perfect matching of double-bond
-            // demands; use blossom matching rather than rejecting the system.
-            if (!bipartite) {
-                const auto mate = detail::maximumMatching(demandAdj);
-                if (std::any_of(mate.begin(), mate.end(), [](int v) { return v < 0; }))
-                    return false;
-                singleBonds.insert(singleBonds.end(), aromaticEdges.begin(), aromaticEdges.end());
-                for (int i = 0; i < static_cast<int>(mate.size()); ++i) {
-                    if (i < mate[i]) doubleBonds.emplace_back(demandAtoms[i], demandAtoms[mate[i]]);
-                }
-                return true;
-            }
-
-            std::vector<int> leftNodes, rightNodes;
-            leftNodes.reserve(demandAtoms.size());
-            rightNodes.reserve(demandAtoms.size());
-            for (int i = 0; i < static_cast<int>(demandAtoms.size()); ++i) {
-                if (color[i] == 0) leftNodes.push_back(i);
-                else rightNodes.push_back(i);
-            }
-            if (leftNodes.size() != rightNodes.size()) return false;
-
-            std::unordered_map<int, int> rightPos;
-            rightPos.reserve(rightNodes.size());
-            for (int i = 0; i < static_cast<int>(rightNodes.size()); ++i) {
-                rightPos[rightNodes[i]] = i;
-            }
-
-            std::vector<std::vector<int>> matchAdj(leftNodes.size());
-            for (int li = 0; li < static_cast<int>(leftNodes.size()); ++li) {
-                int u = leftNodes[li];
-                for (int v : demandAdj[u]) {
-                    auto it = rightPos.find(v);
-                    if (it != rightPos.end()) matchAdj[li].push_back(it->second);
-                }
-                if (matchAdj[li].empty()) return false;
-            }
-
-            std::vector<int> matchRight(rightNodes.size(), -1);
-            std::function<bool(int, std::vector<uint8_t>&)> augment =
-                [&](int li, std::vector<uint8_t>& seen) {
-                    for (int ri : matchAdj[li]) {
-                        if (seen[ri]) continue;
-                        seen[ri] = 1;
-                        if (matchRight[ri] == -1 || augment(matchRight[ri], seen)) {
-                            matchRight[ri] = li;
-                            return true;
-                        }
-                    }
-                    return false;
-                };
-
-            for (int li = 0; li < static_cast<int>(leftNodes.size()); ++li) {
-                std::vector<uint8_t> seen(rightNodes.size(), uint8_t(0));
-                if (!augment(li, seen)) return false;
-            }
-
-            singleBonds.insert(singleBonds.end(), aromaticEdges.begin(), aromaticEdges.end());
-
-            for (int ri = 0; ri < static_cast<int>(matchRight.size()); ++ri) {
-                int li = matchRight[ri];
-                if (li < 0) return false;
-                int a = demandAtoms[leftNodes[li]];
-                int b = demandAtoms[rightNodes[ri]];
-                doubleBonds.emplace_back(a, b);
-            }
-            return true;
-        }
-
-        singleBonds.insert(singleBonds.end(), aromaticEdges.begin(), aromaticEdges.end());
-        return true;
-    }
-
-    bool kekulizeAromaticComponent(const std::vector<int>& component) {
-        std::vector<std::pair<int, int>> singleBonds, doubleBonds;
-        if (!findKekuleAssignment(component, singleBonds, doubleBonds)) return false;
-        for (const auto& edge : singleBonds) markKekuleEdge(edge.first, edge.second, 1);
-        for (const auto& edge : doubleBonds) markKekuleEdge(edge.first, edge.second, 2);
-        for (int atom : component) aromatic[atom] = 0;
-        return true;
-    }
-
-    bool kekulize() {
-        std::vector<uint8_t> visited(n, uint8_t(0));
-        std::vector<std::pair<int, int>> singleBonds, doubleBonds;
-        for (int start = 0; start < n; ++start) {
-            if (!aromatic[start] || visited[start]) continue;
-
-            std::vector<int> component;
-            std::deque<int> queue;
-            queue.push_back(start);
-            visited[start] = 1;
-            while (!queue.empty()) {
-                int atom = queue.front();
-                queue.pop_front();
-                component.push_back(atom);
-                for (int nb : neighbors[atom]) {
-                    if (visited[nb] || !aromatic[nb]) continue;
-                    if (!(bondAromatic(atom, nb) || bondOrder(atom, nb) == 4)) continue;
-                    visited[nb] = 1;
-                    queue.push_back(nb);
-                }
-            }
-
-            if (!findKekuleAssignment(component, singleBonds, doubleBonds)) return false;
-        }
-
-        for (const auto& edge : singleBonds) markKekuleEdge(edge.first, edge.second, 1);
-        for (const auto& edge : doubleBonds) markKekuleEdge(edge.first, edge.second, 2);
-        for (int atom = 0; atom < n; ++atom)
-            if (visited[atom]) aromatic[atom] = 0;
-        refreshAtomLabels();
-        invalidateBondDerivedState();
-        return true;
-    }
-
-    bool dearomatize() {
-        return kekulize();
-    }
+    bool dearomatize();
 
     // ========================================================================
-    // SSSR ring computation (Horton-style shortest-path basis)
+    // Ring perception (detail/ring_perception.hpp)
     // ========================================================================
 
-    const std::vector<std::vector<int>>& computeRings() const {
-        const std::lock_guard<std::recursive_mutex> cacheLock(lazyCacheMutex());
-        if (sssrComputed) return sssrRings;
-        sssrComputed = true;
-        if (n == 0) return sssrRings;
+    /**
+     * Ring systems found from the bridges in linear time. Atoms joined by bonds that lie on a
+     * cycle share a system; an atom whose bonds are all bridges has none (-1). Every cycle lies
+     * inside one system, a bond is a bridge exactly when its atoms are not in the same system,
+     * and a system with as many bonds as atoms is one simple ring. Both lists are empty when an
+     * atom lists itself or a neighbour twice, and ring searches then read the whole graph.
+     */
+    struct CycleSystems {
+        std::vector<int> ofAtom;
+        std::vector<int> atoms;
+        std::vector<uint8_t> simpleRing;
+    };
 
-        // Edge count
-        int edgeCount = 0;
-        for (int i = 0; i < n; i++)
-            edgeCount += static_cast<int>(neighbors[i].size());
-        edgeCount /= 2;
+    CycleSystems cycleSystems() const;
 
-        // Connected components via BFS
-        std::vector<bool> visited(n, false);
-        int components = 0;
-        for (int i = 0; i < n; i++) {
-            if (visited[i]) continue;
-            components++;
-            std::deque<int> bfsQ;
-            bfsQ.push_back(i);
-            visited[i] = true;
-            while (!bfsQ.empty()) {
-                int u = bfsQ.front(); bfsQ.pop_front();
-                for (int v : neighbors[u])
-                    if (!visited[v]) { visited[v] = true; bfsQ.push_back(v); }
-            }
-        }
+    // ========================================================================
+    // Smallest set of smallest rings (shortest-path cycle basis)
+    // ========================================================================
 
-        int cycleRank = edgeCount - n + components;
-        if (cycleRank <= 0) return sssrRings;
-
-        // For each edge (start, nb) with nb > start, find shortest path
-        // from start to nb that avoids that direct edge.
-        std::vector<std::vector<int>> candidates;
-        for (int start = 0; start < n; start++) {
-            for (int nb : neighbors[start]) {
-                if (nb <= start) continue;
-                std::vector<int> parent(n, -2);
-                parent[start] = -1;
-                std::deque<int> queue;
-                queue.push_back(start);
-                bool found = false;
-                while (!queue.empty() && !found) {
-                    int u = queue.front(); queue.pop_front();
-                    for (int v : neighbors[u]) {
-                        if (u == start && v == nb) continue;
-                        if (v == start && u == nb) continue;
-                        if (parent[v] != -2) continue;
-                        parent[v] = u;
-                        if (v == nb) { found = true; break; }
-                        queue.push_back(v);
-                    }
-                }
-                if (found) {
-                    std::vector<int> path;
-                    int cur = nb;
-                    while (cur != start && cur != -1) { path.push_back(cur); cur = parent[cur]; }
-                    if (cur == start) {
-                        path.push_back(start);
-                        if (path.size() >= 3)
-                            candidates.push_back(std::move(path));
-                    }
-                }
-            }
-        }
-
-        std::sort(candidates.begin(), candidates.end(),
-            [](const std::vector<int>& a, const std::vector<int>& b) {
-                return a.size() < b.size();
-            });
-
-        // Greedy basis: pick cycles that contribute at least one new edge
-        std::vector<std::vector<int>> basis;
-        std::vector<std::unordered_set<int64_t>> basisEdges;
-
-        for (auto& cycle : candidates) {
-            if (static_cast<int>(basis.size()) >= cycleRank) break;
-            std::unordered_set<int64_t> edges;
-            for (size_t i = 0; i < cycle.size(); i++) {
-                int a = cycle[i], b = cycle[(i + 1) % cycle.size()];
-                edges.insert(bondKey(std::min(a, b), std::max(a, b)));
-            }
-            std::unordered_set<int64_t> allBasis;
-            for (auto& be : basisEdges) allBasis.insert(be.begin(), be.end());
-            bool hasNewEdge = false;
-            for (int64_t e : edges) {
-                if (allBasis.find(e) == allBasis.end()) { hasNewEdge = true; break; }
-            }
-            if (hasNewEdge || basis.empty()) {
-                basis.push_back(cycle);
-                basisEdges.push_back(std::move(edges));
-            }
-        }
-
-        sssrRings = std::move(basis);
-        return sssrRings;
-    }
+    const std::vector<std::vector<int>>& computeRings() const;
 
     // ========================================================================
     // Relevant cycles (union of all minimum cycle bases)
@@ -1208,1187 +521,90 @@ private:
     /** Group equal-length cycles whose shared-edge difference spans shorter cycles. */
     static std::vector<std::vector<std::vector<int>>> groupUniqueRingFamilies(
             const std::vector<std::vector<int>>& cycles,
-            const std::unordered_map<int64_t, int>& edgeIndex) {
-        const int edgeCount = static_cast<int>(edgeIndex.size());
-        const int wordCount = (edgeCount + 63) >> 6;
-        std::vector<std::vector<uint64_t>> vectors(cycles.size(), std::vector<uint64_t>(wordCount, 0));
-        for (size_t cycleIndex = 0; cycleIndex < cycles.size(); ++cycleIndex) {
-            const auto& cycle = cycles[cycleIndex];
-            for (size_t atom = 0; atom < cycle.size(); ++atom) {
-                const int edge = edgeIndex.at(bondKey(cycle[atom], cycle[(atom + 1) % cycle.size()]));
-                vectors[cycleIndex][edge >> 6] ^= uint64_t(1) << (edge & 63);
-            }
-        }
-
-        std::vector<int> order(cycles.size()), family(cycles.size());
-        std::iota(order.begin(), order.end(), 0);
-        std::iota(family.begin(), family.end(), 0);
-        std::stable_sort(order.begin(), order.end(), [&](int first, int second) {
-            return cycles[first].size() < cycles[second].size();
-        });
-        std::vector<std::vector<uint64_t>> shorterBasis;
-        int basisSize = 0;
-        size_t begin = 0;
-        while (begin < order.size()) {
-            size_t end = begin + 1;
-            while (end < order.size() && cycles[order[end]].size() == cycles[order[begin]].size()) ++end;
-            for (size_t first = begin; first < end; ++first) {
-                for (size_t second = first + 1; second < end; ++second) {
-                    const int firstCycle = order[first], secondCycle = order[second];
-                    bool sharedEdge = false;
-                    std::vector<uint64_t> difference(wordCount);
-                    for (int word = 0; word < wordCount; ++word) {
-                        sharedEdge = sharedEdge || ((vectors[firstCycle][word] & vectors[secondCycle][word]) != 0);
-                        difference[word] = vectors[firstCycle][word] ^ vectors[secondCycle][word];
-                    }
-                    if (sharedEdge && reduceVectorGF2(difference, shorterBasis, basisSize))
-                        ufUnion(family, firstCycle, secondCycle);
-                }
-            }
-            for (size_t cycle = begin; cycle < end; ++cycle) {
-                auto reduced = vectors[order[cycle]];
-                basisSize = addToBasisGF2(reduced, shorterBasis, basisSize);
-            }
-            begin = end;
-        }
-
-        std::map<int, std::vector<std::vector<int>>> grouped;
-        for (size_t cycle = 0; cycle < cycles.size(); ++cycle)
-            grouped[ufFind(family, static_cast<int>(cycle))].push_back(cycles[cycle]);
-        std::vector<std::vector<std::vector<int>>> result;
-        for (auto& entry : grouped) result.push_back(std::move(entry.second));
-        return result;
-    }
+            const std::unordered_map<int64_t, int>& edgeIndex);
 
     /** Find the lowest set bit position in a GF(2) vector. */
-    static int findPivotBit(const std::vector<uint64_t>& vec) {
-        for (size_t w = 0; w < vec.size(); w++) {
-            if (vec[w] != 0) return static_cast<int>((w << 6) + smsd::ctz64(vec[w]));
-        }
-        return -1;
-    }
+    static int findPivotBit(const std::vector<uint64_t>& vec);
 
     /** Reduce a GF(2) vector against a row echelon basis. Returns true if zero. */
     static bool reduceVectorGF2(std::vector<uint64_t>& vec,
                                 const std::vector<std::vector<uint64_t>>& basis,
-                                int basisSize) {
-        for (int i = 0; i < basisSize; i++) {
-            int pivot = findPivotBit(basis[i]);
-            if (pivot >= 0 && ((vec[pivot >> 6] >> (pivot & 63)) & 1ULL) != 0) {
-                for (size_t w = 0; w < vec.size(); w++) vec[w] ^= basis[i][w];
-            }
-        }
-        for (auto w : vec) if (w != 0) return false;
-        return true;
-    }
+                                int basisSize);
 
     /** Add a GF(2) vector to row echelon basis if linearly independent. */
     static int addToBasisGF2(std::vector<uint64_t>& vec,
                              std::vector<std::vector<uint64_t>>& basis,
-                             int basisSize) {
-        for (int i = 0; i < basisSize; i++) {
-            int pivot = findPivotBit(basis[i]);
-            if (pivot >= 0 && ((vec[pivot >> 6] >> (pivot & 63)) & 1ULL) != 0) {
-                for (size_t w = 0; w < vec.size(); w++) vec[w] ^= basis[i][w];
-            }
-        }
-        bool nonZero = false;
-        for (auto w : vec) if (w != 0) { nonZero = true; break; }
-        if (nonZero) {
-            if (basisSize >= static_cast<int>(basis.size())) basis.push_back(vec);
-            else basis[basisSize] = vec;
-            return basisSize + 1;
-        }
-        return basisSize;
-    }
+                             int basisSize);
+
+    /** Canonical edge-set key for cycle deduplication, written into a reusable buffer. */
+    static void canonicalCycleKeyInto(const std::vector<int>& cycle, std::vector<int64_t>& keys);
 
     /** Canonical edge-set key for cycle deduplication. */
-    static std::vector<int64_t> canonicalCycleKey(const std::vector<int>& cycle) {
-        std::vector<int64_t> keys;
-        keys.reserve(cycle.size());
-        for (size_t i = 0; i < cycle.size(); i++) {
-            int a = cycle[i], b = cycle[(i + 1) % cycle.size()];
-            int lo = std::min(a, b), hi = std::max(a, b);
-            keys.push_back((static_cast<int64_t>(lo) << 32) | static_cast<int64_t>(hi));
-        }
-        std::sort(keys.begin(), keys.end());
-        return keys;
-    }
+    static std::vector<int64_t> canonicalCycleKey(const std::vector<int>& cycle);
 
-    /** Enumerate all shortest paths from root to target in a BFS tree. */
-    static void buildPathsHelper(int root, int node, const std::vector<int>& dist,
-                                 const std::vector<std::vector<int>>& parents,
-                                 std::vector<int>& current,
-                                 std::vector<std::vector<int>>& result, int limit) {
-        if (static_cast<int>(result.size()) >= limit) return;
-        if (node == root) {
-            std::vector<int> path(current.rbegin(), current.rend());
-            result.push_back(std::move(path));
-            return;
-        }
-        for (int p : parents[node]) {
-            if (dist[p] != dist[node] - 1) continue;
-            current.push_back(p);
-            buildPathsHelper(root, p, dist, parents, current, result, limit);
-            current.pop_back();
-        }
-    }
+    /** A parent list position on the explicit stack of shortest-path enumeration. */
+    struct PathFrame { int node; size_t nextParent; };
 
-    static std::vector<std::vector<int>> allShortestPathsCpp(int root, int target,
-            const std::vector<int>& dist,
-            const std::vector<std::vector<int>>& parents) {
-        std::vector<std::vector<int>> result;
-        std::vector<int> current = { target };
-        buildPathsHelper(root, target, dist, parents, current, result, 50);
-        return result;
-    }
-
-    // Union-Find helpers
-    static int ufFind(std::vector<int>& parent, int i) {
-        while (parent[i] != i) { parent[i] = parent[parent[i]]; i = parent[i]; }
-        return i;
-    }
-    static void ufUnion(std::vector<int>& parent, int a, int b) {
-        a = ufFind(parent, a); b = ufFind(parent, b);
-        if (a != b) parent[a] = b;
-    }
+    /**
+     * All shortest paths from root to target in a BFS tree (at most 50), into reusable storage:
+     * paths[0, count) receive them, and spare entries keep their capacity. Parents are followed
+     * depth first in list order on an explicit stack, so a path as long as the molecule needs no
+     * call stack; current holds the path from the target to the deepest node. Returns how many
+     * paths were written.
+     */
+    static size_t allShortestPathsCpp(int root, int target, const std::vector<int>& dist,
+                                      const std::vector<std::vector<int>>& parents, std::vector<int>& current,
+                                      std::vector<PathFrame>& stack, std::vector<std::vector<int>>& paths);
 
 public:
 
     /**
+     * Work allowance of one relevant-cycle enumeration, counted in atoms read: breadth-first
+     * visits, shortest-path atoms, overlap tests and candidate cycle atoms. Ordinary molecules,
+     * macrocycles of a few thousand atoms included, use a small fraction of it. When an
+     * enumeration exhausts it, which takes a fraction of a second, the remaining roots are not
+     * searched and the result is the relevant cycles among the minimum cycle basis and the
+     * candidates found so far, so ring perception stays bounded for very large ring systems.
+     */
+    static constexpr uint64_t RELEVANT_CYCLE_WORK_LIMIT = uint64_t(1) << 26;
+
+    /**
      * Computes the set of relevant cycles (union of all minimum cycle bases).
      * A cycle is relevant if it cannot be expressed as the XOR (symmetric
-     * difference) of strictly shorter cycles.
+     * difference) of strictly shorter cycles. The enumeration is bounded by
+     * RELEVANT_CYCLE_WORK_LIMIT.
      */
-    std::vector<std::vector<int>> computeRelevantCycles() const {
-        auto& mcb = computeRings();
-        if (mcb.empty()) return {};
-
-        // Build edge index
-        std::unordered_map<int64_t, int> edgeIndex;
-        for (int i = 0; i < n; i++) {
-            for (int j : neighbors[i]) {
-                if (j > i) {
-                    int64_t key = bondKey(std::min(i, j), std::max(i, j));
-                    if (edgeIndex.find(key) == edgeIndex.end()) {
-                        int idx = static_cast<int>(edgeIndex.size());
-                        edgeIndex[key] = idx;
-                    }
-                }
-            }
-        }
-        int numEdges = static_cast<int>(edgeIndex.size());
-        int longWords = (numEdges + 63) >> 6;
-
-        // Find max cycle length in MCB
-        int maxLen = 0;
-        for (auto& c : mcb) if (static_cast<int>(c.size()) > maxLen) maxLen = static_cast<int>(c.size());
-
-        // Collect all short cycles
-        std::set<std::vector<int64_t>> uniqueCycleSet;
-        std::vector<std::vector<int>> allCycles;
-
-        // Add MCB cycles
-        for (auto& c : mcb) {
-            auto key = canonicalCycleKey(c);
-            if (uniqueCycleSet.insert(key).second) allCycles.push_back(c);
-        }
-
-        // Enumerate short cycles via BFS from each vertex
-        for (int root = 0; root < n; root++) {
-            std::vector<int> dist(n, -1);
-            dist[root] = 0;
-            std::vector<std::vector<int>> parents(n);
-            std::deque<int> queue;
-            queue.push_back(root);
-            while (!queue.empty()) {
-                int u = queue.front(); queue.pop_front();
-                if (dist[u] >= maxLen / 2) continue;
-                for (int v : neighbors[u]) {
-                    if (dist[v] == -1) {
-                        dist[v] = dist[u] + 1;
-                        parents[v].push_back(u);
-                        queue.push_back(v);
-                    } else if (dist[v] == dist[u] + 1) {
-                        parents[v].push_back(u);
-                    }
-                }
-            }
-
-            // Odd-length cycles from edges
-            for (int u = 0; u < n; u++) {
-                if (dist[u] == -1) continue;
-                for (int v : neighbors[u]) {
-                    if (v <= u || dist[v] == -1) continue;
-                    int cycleLen = dist[u] + dist[v] + 1;
-                    if (cycleLen < 3 || cycleLen > maxLen) continue;
-
-                    auto pathsU = allShortestPathsCpp(root, u, dist, parents);
-                    auto pathsV = allShortestPathsCpp(root, v, dist, parents);
-
-                    for (auto& pu : pathsU) {
-                        for (auto& pv : pathsV) {
-                            std::unordered_set<int> puSet(pu.begin(), pu.end());
-                            bool overlap = false;
-                            for (size_t k = 1; k < pv.size(); k++) {
-                                if (puSet.count(pv[k])) { overlap = true; break; }
-                            }
-                            if (overlap) continue;
-
-                            std::vector<int> cycle;
-                            cycle.reserve(pu.size() + pv.size() - 1);
-                            for (int x : pu) cycle.push_back(x);
-                            for (int k = static_cast<int>(pv.size()) - 1; k >= 1; k--)
-                                cycle.push_back(pv[k]);
-
-                            if (static_cast<int>(cycle.size()) >= 3 &&
-                                static_cast<int>(cycle.size()) <= maxLen) {
-                                auto key = canonicalCycleKey(cycle);
-                                if (uniqueCycleSet.insert(key).second)
-                                    allCycles.push_back(std::move(cycle));
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Even-length cycles from two disjoint paths to same vertex
-            for (int u = 0; u < n; u++) {
-                if (dist[u] == -1 || static_cast<int>(parents[u].size()) < 2) continue;
-                int cycleLen = 2 * dist[u];
-                if (cycleLen < 3 || cycleLen > maxLen) continue;
-
-                auto paths = allShortestPathsCpp(root, u, dist, parents);
-                for (size_t pi = 0; pi < paths.size(); pi++) {
-                    for (size_t pj = pi + 1; pj < paths.size(); pj++) {
-                        auto& p1 = paths[pi]; auto& p2 = paths[pj];
-                        std::unordered_set<int> p1Int;
-                        for (size_t k = 1; k + 1 < p1.size(); k++) p1Int.insert(p1[k]);
-                        bool disjoint = true;
-                        for (size_t k = 1; k + 1 < p2.size(); k++) {
-                            if (p1Int.count(p2[k])) { disjoint = false; break; }
-                        }
-                        if (!disjoint) continue;
-
-                        std::vector<int> cycle;
-                        cycle.reserve(cycleLen);
-                        for (size_t k = 0; k < p1.size(); k++) cycle.push_back(p1[k]);
-                        for (int k = static_cast<int>(p2.size()) - 2; k >= 1; k--)
-                            cycle.push_back(p2[k]);
-
-                        if (static_cast<int>(cycle.size()) >= 3 &&
-                            static_cast<int>(cycle.size()) <= maxLen) {
-                            auto key = canonicalCycleKey(cycle);
-                            if (uniqueCycleSet.insert(key).second)
-                                allCycles.push_back(std::move(cycle));
-                        }
-                    }
-                }
-            }
-        }
-
-        // Sort by length
-        std::sort(allCycles.begin(), allCycles.end(),
-            [](const std::vector<int>& a, const std::vector<int>& b) {
-                return a.size() < b.size();
-            });
-
-        // Build GF(2) edge-incidence vectors
-        std::vector<std::vector<uint64_t>> vectors(allCycles.size(),
-            std::vector<uint64_t>(longWords, 0));
-        for (size_t ci = 0; ci < allCycles.size(); ci++) {
-            auto& c = allCycles[ci];
-            for (size_t i = 0; i < c.size(); i++) {
-                int a = c[i], b = c[(i + 1) % c.size()];
-                int64_t key = bondKey(std::min(a, b), std::max(a, b));
-                int idx = edgeIndex.at(key);
-                vectors[ci][idx >> 6] ^= 1ULL << (idx & 63);
-            }
-        }
-
-        // Filter relevant cycles via Gaussian elimination on GF(2)
-        std::vector<std::vector<int>> relevant;
-        std::vector<std::vector<uint64_t>> reducedBasis(numEdges,
-            std::vector<uint64_t>(longWords, 0));
-        int basisSize = 0;
-
-        size_t ci = 0;
-        while (ci < allCycles.size()) {
-            int len = static_cast<int>(allCycles[ci].size());
-            size_t cj = ci;
-            while (cj < allCycles.size() && static_cast<int>(allCycles[cj].size()) == len) cj++;
-
-            // Test each cycle against basis of strictly shorter cycles
-            for (size_t k = ci; k < cj; k++) {
-                auto vec = vectors[k];
-                bool inSpan = reduceVectorGF2(vec, reducedBasis, basisSize);
-                if (!inSpan) relevant.push_back(allCycles[k]);
-            }
-
-            // Add all cycles of this length to basis
-            for (size_t k = ci; k < cj; k++) {
-                auto vec = vectors[k];
-                basisSize = addToBasisGF2(vec, reducedBasis, basisSize);
-            }
-
-            ci = cj;
-        }
-
-        return relevant;
-    }
+    std::vector<std::vector<int>> computeRelevantCycles() const;
 
     /** Compute Unique Ring Families from relevant cycles and strictly shorter cycle spans. */
-    std::vector<std::vector<std::vector<int>>> computeURFs() {
-        std::unordered_map<int64_t, int> edgeIndex;
-        for (int atom = 0; atom < n; ++atom) {
-            for (int neighbor : neighbors[atom]) {
-                if (atom < neighbor) {
-                    const int index = static_cast<int>(edgeIndex.size());
-                    edgeIndex.emplace(bondKey(atom, neighbor), index);
-                }
-            }
-        }
-        return groupUniqueRingFamilies(computeRelevantCycles(), edgeIndex);
-    }
+    std::vector<std::vector<std::vector<int>>> computeURFs();
 
     // ========================================================================
-    // Tautomer class detection — 15 pKa-informed transforms (Tier 1)
+    // Tautomer class detection: pKa-informed transforms, Tier 1 (detail/tautomers.hpp)
     // ========================================================================
 
-    void computeTautomerClasses() {
-        tautomerClass.assign(n, -1);
-        tautomerWeight.assign(n, 1.0f);
-        int classId = 0;
-
-        // Helper: assign cls + weight to a set of atoms.
-        // If any atom already belongs to an existing class, merge by reusing
-        // that class for all atoms in the group (prevents class fracture when
-        // tautomeric motifs overlap on shared atoms).
-        auto tc = [&](std::initializer_list<int> atoms, int cls, float w) {
-            // Check if any atom already has a class — if so, merge into it
-            for (int a : atoms)
-                if (tautomerClass[a] != -1) { cls = tautomerClass[a]; break; }
-            for (int a : atoms) {
-                tautomerClass[a] = cls;
-                if (tautomerWeight[a] == 1.0f) tautomerWeight[a] = w;
-            }
-        };
-
-        for (int i = 0; i < n; i++) {
-            if (tautomerClass[i] != -1) continue;
-
-            // ------------------------------------------------------------------
-            // T1: Keto/enol  C=O ↔ C-OH
-            //     Amide carbonyl (N on C) → TW_AMIDE_IMIDIC; else TW_KETO_ENOL
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 8 && !aromatic[i]) {
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 6 && bondOrder(i, j) == 2) {
-                        bool hasN = false;
-                        for (int k : neighbors[j]) {
-                            if (k != i && atomicNum[k] == 7) { hasN = true; break; }
-                        }
-                        float w = hasN ? TW_AMIDE_IMIDIC : TW_KETO_ENOL;
-                        int cls = -1;
-                        for (int k : neighbors[j]) {
-                            if (k != i && atomicNum[k] == 6 && !aromatic[k]) {
-                                if (cls == -1) { cls = classId++; tautomerClass[i] = cls; tautomerWeight[i] = w; }
-                                if (tautomerClass[k] == -1) { tautomerClass[k] = cls; if (tautomerWeight[k] == 1.0f) tautomerWeight[k] = w; }
-                            }
-                        }
-                        for (int k : neighbors[j]) {
-                            if (k != i && atomicNum[k] == 7) {
-                                if (cls == -1) { cls = classId++; tautomerClass[i] = cls; tautomerWeight[i] = w; }
-                                if (tautomerClass[k] == -1) { tautomerClass[k] = cls; if (tautomerWeight[k] == 1.0f) tautomerWeight[k] = w; }
-                            }
-                        }
-                        if (cls != -1) break;
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T2: Thione/thiol  C=S ↔ C-SH
-            //     Thioamide N-C(=S) → TW_THIOAMIDE; else TW_THIONE_THIOL
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 16 && !aromatic[i] && tautomerClass[i] == -1) {
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 6 && bondOrder(i, j) == 2) {
-                        bool hasN = false;
-                        for (int k : neighbors[j]) { if (k != i && atomicNum[k] == 7) { hasN = true; break; } }
-                        float w = hasN ? TW_THIOAMIDE : TW_THIONE_THIOL;
-                        int cls = -1;
-                        for (int k : neighbors[j]) {
-                            if (k != i && (atomicNum[k] == 6 || atomicNum[k] == 7)) {
-                                if (cls == -1) { cls = classId++; tautomerClass[i] = cls; tautomerWeight[i] = w; }
-                                if (tautomerClass[k] == -1) { tautomerClass[k] = cls; if (tautomerWeight[k] == 1.0f) tautomerWeight[k] = w; }
-                            }
-                        }
-                        if (cls != -1) break;
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T3: Nitroso/oxime  C=N-OH ↔ C(=O)-NH
-            //     Requires N=C double bond to avoid matching simple amide N-C=O
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 7 && !ring[i] && tautomerClass[i] == -1) {
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 6 && bondOrder(i, j) == 2) {
-                        for (int k : neighbors[j]) {
-                            if (k != i && atomicNum[k] == 8) {
-                                int cls = classId++;
-                                tc({i, k}, cls, TW_NITROSO_OXIME);
-                                break;
-                            }
-                        }
-                        if (tautomerClass[i] != -1) break;
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T4: Phenol/quinone  arom-C-OH ↔ para-C=O
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 8 && !aromatic[i] && tautomerClass[i] == -1) {
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 6 && aromatic[j] && ring[j]) {
-                        for (int a : neighbors[j]) {
-                            if (a != i && atomicNum[a] == 6 && aromatic[a] && ring[a]) {
-                                for (int b : neighbors[a]) {
-                                    if (b != j && atomicNum[b] == 6 && aromatic[b] && ring[b]) {
-                                        for (int c : neighbors[b]) {
-                                            if (c != a && c != j && atomicNum[c] == 6 && aromatic[c] && ring[c]) {
-                                                int cls = classId++;
-                                                tc({i, j, c}, cls, TW_PHENOL_QUINONE);
-                                                for (int d : neighbors[c]) {
-                                                    if (atomicNum[d] == 8 && !aromatic[d] && tautomerClass[d] == -1) {
-                                                        tautomerClass[d] = cls; tautomerWeight[d] = TW_PHENOL_QUINONE;
-                                                    }
-                                                }
-                                                break;
-                                            }
-                                        }
-                                        if (tautomerClass[i] != -1) break;
-                                    }
-                                }
-                                if (tautomerClass[i] != -1) break;
-                            }
-                        }
-                        if (tautomerClass[i] != -1) break;
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T5: 1,3-diketone  C(=O)-C-C(=O)  enolisation  (pKa ~8-11)
-            //     Requires exactly one carbon bridge between the two carbonyls
-            //     (true 1,3-pattern: O=C-CH-C=O, not fused/directly bonded carbonyls)
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 8 && !aromatic[i] && tautomerClass[i] == -1) {
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 6 && bondOrder(i, j) == 2) {
-                        for (int bridge : neighbors[j]) {
-                            if (bridge != i && atomicNum[bridge] == 6 && !aromatic[bridge]) {
-                                for (int m : neighbors[bridge]) {
-                                    if (m != j && m != i && atomicNum[m] == 6) {
-                                        // Verify true 1,3-separation: m must NOT be
-                                        // a direct neighbour of j (which would mean
-                                        // j and m are 1,2 not 1,3).
-                                        bool directlyBonded = false;
-                                        for (int nb : neighbors[j]) {
-                                            if (nb == m) { directlyBonded = true; break; }
-                                        }
-                                        if (directlyBonded) continue;
-                                        for (int o2 : neighbors[m]) {
-                                            if (o2 != bridge && atomicNum[o2] == 8 && !aromatic[o2]
-                                                && bondOrder(m, o2) == 2) {
-                                                int cls = (tautomerClass[o2] != -1) ? tautomerClass[o2] : classId++;
-                                                float w = TW_DIKETONE_ENOL;
-                                                if (tautomerClass[i]      == -1) { tautomerClass[i]      = cls; tautomerWeight[i]      = w; }
-                                                if (tautomerClass[bridge] == -1) { tautomerClass[bridge] = cls; tautomerWeight[bridge] = w; }
-                                                if (tautomerClass[o2]     == -1) { tautomerClass[o2]     = cls; tautomerWeight[o2]     = w; }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T6: Pyridinone / lactam  aromatic N adjacent to exocyclic C=O
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 7 && aromatic[i] && ring[i] && tautomerClass[i] == -1) {
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 6 && aromatic[j]) {
-                        for (int k : neighbors[j]) {
-                            if (k != i && atomicNum[k] == 8 && !aromatic[k] && tautomerClass[k] == -1) {
-                                int cls = classId++;
-                                tc({i, k}, cls, TW_PYRIDINONE);
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T7: Imidazole / pyrazole  aromatic N-C-N or direct N-N in ring
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 7 && aromatic[i] && ring[i] && tautomerClass[i] == -1) {
-                // Direct N-N bond (pyrazole / indazole)
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 7 && aromatic[j] && ring[j] && tautomerClass[j] == -1) {
-                        int cls = classId++;
-                        tc({i, j}, cls, TW_IMIDAZOLE_NH);
-                        break;
-                    }
-                }
-                // N-C-N through aromatic C (imidazole / benzimidazole)
-                // Only match when both N atoms share a 5-membered ring (skip pyrimidine)
-                if (tautomerClass[i] == -1) {
-                    const auto& rings = computeRings();
-                    for (int j : neighbors[i]) {
-                        if (atomicNum[j] == 6 && aromatic[j] && ring[j]) {
-                            for (int k : neighbors[j]) {
-                                if (k != i && atomicNum[k] == 7 && aromatic[k] && ring[k] && tautomerClass[k] == -1) {
-                                    // Verify both N atoms share a 5-membered ring
-                                    bool in5 = false;
-                                    for (const auto& r : rings) {
-                                        if (r.size() != 5) continue;
-                                        bool hasI = false, hasK = false;
-                                        for (int a : r) { if (a == i) hasI = true; if (a == k) hasK = true; }
-                                        if (hasI && hasK) { in5 = true; break; }
-                                    }
-                                    if (!in5) continue;
-                                    int cls = classId++;
-                                    tc({i, k}, cls, TW_IMIDAZOLE_NH);
-                                    break;
-                                }
-                            }
-                            if (tautomerClass[i] != -1) break;
-                        }
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T8: Amidine  N=C-N ↔ N-C=N  (non-aromatic, symmetric, weight 0.50)
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 7 && !aromatic[i] && tautomerClass[i] == -1) {
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 6 && bondOrder(i, j) == 2) {
-                        for (int k : neighbors[j]) {
-                            if (k != i && atomicNum[k] == 7 && !aromatic[k]) {
-                                int cls = classId++;
-                                tc({i, j, k}, cls, TW_AMIDINE);
-                                break;
-                            }
-                        }
-                        if (tautomerClass[i] != -1) break;
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T9: Guanidine  C connected to ≥3 N  (symmetric, weight 0.50)
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 6 && tautomerClass[i] == -1) {
-                std::vector<int> nNbrs;
-                for (int j : neighbors[i]) { if (atomicNum[j] == 7 && !aromatic[j]) nNbrs.push_back(j); }
-                if (nNbrs.size() >= 3) {
-                    int cls = classId++;
-                    tautomerClass[i] = cls; tautomerWeight[i] = TW_GUANIDINE;
-                    for (int ni : nNbrs) {
-                        if (tautomerClass[ni] == -1) { tautomerClass[ni] = cls; tautomerWeight[ni] = TW_GUANIDINE; }
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T10: Urea  O=C(-N)(-N)  — two N on same carbonyl C
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 8 && !aromatic[i] && tautomerClass[i] == -1) {
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 6 && bondOrder(i, j) == 2) {
-                        std::vector<int> nn;
-                        for (int k : neighbors[j]) { if (k != i && atomicNum[k] == 7) nn.push_back(k); }
-                        if (nn.size() >= 2) {
-                            int cls = classId++;
-                            tautomerClass[i] = cls; tautomerWeight[i] = TW_UREA;
-                            tautomerClass[j] = cls; tautomerWeight[j] = TW_UREA;
-                            for (int ni : nn) {
-                                if (tautomerClass[ni] == -1) { tautomerClass[ni] = cls; tautomerWeight[ni] = TW_UREA; }
-                            }
-                        }
-                        break;
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T11: β-Enaminone  N-C=C-C=O  (vinylogous amide, weight 0.85)
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 7 && !aromatic[i] && tautomerClass[i] == -1) {
-                bool found11 = false;
-                for (int j : neighbors[i]) {
-                    if (found11) break;
-                    if (atomicNum[j] == 6 && bondOrder(i, j) == 1) {
-                        for (int k : neighbors[j]) {
-                            if (found11) break;
-                            if (k != i && atomicNum[k] == 6 && bondOrder(j, k) == 2) {
-                                for (int m : neighbors[k]) {
-                                    if (found11) break;
-                                    if (m != j && atomicNum[m] == 6) {
-                                        for (int o : neighbors[m]) {
-                                            if (o != k && atomicNum[o] == 8 && bondOrder(m, o) == 2) {
-                                                int cls = classId++;
-                                                tc({i, j, k, m, o}, cls, TW_ENAMINONE);
-                                                found11 = true; break;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T12: Imide  C(=O)-N-C(=O)  — N flanked by two carbonyls (pKa ~9-10)
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 7 && tautomerClass[i] == -1) {
-                std::vector<int> carbonyls;
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 6) {
-                        for (int k : neighbors[j]) {
-                            if (k != i && atomicNum[k] == 8 && bondOrder(j, k) == 2) {
-                                carbonyls.push_back(j); break;
-                            }
-                        }
-                    }
-                }
-                if (carbonyls.size() >= 2) {
-                    int cls = classId++;
-                    tautomerClass[i] = cls; tautomerWeight[i] = TW_IMIDE;
-                    for (int c : carbonyls) {
-                        if (tautomerClass[c] == -1) { tautomerClass[c] = cls; tautomerWeight[c] = TW_IMIDE; }
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T13: Hydroxamic acid  N(-OH)-C=O ↔ NH-C(=O)-OH  (pKa ~8)
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 7 && tautomerClass[i] == -1) {
-                int oh = -1;
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 8 && !aromatic[j] && bondOrder(i, j) == 1) { oh = j; break; }
-                }
-                if (oh != -1) {
-                    for (int j : neighbors[i]) {
-                        if (atomicNum[j] == 6) {
-                            for (int k : neighbors[j]) {
-                                if (k != i && atomicNum[k] == 8 && bondOrder(j, k) == 2) {
-                                    int cls = classId++;
-                                    tc({i, oh, j, k}, cls, TW_HYDROXAMIC);
-                                    break;
-                                }
-                            }
-                            if (tautomerClass[i] != -1) break;
-                        }
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T14: Hydroxypyrimidine / purine  exocyclic OH on arom-C with ring-N
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 8 && !aromatic[i] && tautomerClass[i] == -1) {
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 6 && aromatic[j] && ring[j] && bondOrder(i, j) == 1) {
-                        for (int k : neighbors[j]) {
-                            if (k != i && atomicNum[k] == 7 && aromatic[k] && ring[k]) {
-                                int cls = classId++;
-                                tc({i, j, k}, cls, TW_HYDROXYPYRIMIDINE);
-                                break;
-                            }
-                        }
-                        if (tautomerClass[i] != -1) break;
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T15: Tetrazole / triazole N-H  (aromatic ring with ≥2 adjacent N)
-            //      1H/2H symmetric, weight 0.50
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 7 && aromatic[i] && ring[i] && tautomerClass[i] == -1) {
-                std::vector<int> adjN;
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 7 && aromatic[j] && ring[j]) adjN.push_back(j);
-                }
-                if (adjN.size() >= 2) {
-                    for (int j : adjN) {
-                        if (tautomerClass[j] == -1) {
-                            int cls = classId++;
-                            tc({i, j}, cls, TW_TETRAZOLE_NH);
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T16: Thioamide/iminothiol  RC(=S)NR <-> RC(SH)=NR  (weight 0.95)
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 16 && !aromatic[i] && tautomerClass[i] == -1) {
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 6 && bondOrder(i, j) == 2) {
-                        for (int k : neighbors[j]) {
-                            if (k != i && atomicNum[k] == 7) {
-                                int cls = classId++;
-                                tc({i, j, k}, cls, TW_THIOAMIDE_IMINOTHIOL);
-                                break;
-                            }
-                        }
-                        if (tautomerClass[i] != -1) break;
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T17: Phosphonate ester  P(=O)(OH) <-> P(OH)(=O)  (symmetric, 0.50)
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 15 && tautomerClass[i] == -1) {
-                std::vector<int> oxygens;
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 8) oxygens.push_back(j);
-                }
-                if (oxygens.size() >= 2) {
-                    int cls = classId++;
-                    tautomerClass[i] = cls; tautomerWeight[i] = TW_PHOSPHONATE;
-                    for (int o : oxygens) {
-                        if (tautomerClass[o] == -1) { tautomerClass[o] = cls; tautomerWeight[o] = TW_PHOSPHONATE; }
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T18: DISABLED — sulfoxide S=O is a true covalent bond, not tautomerism
-            // ------------------------------------------------------------------
-            if (false && atomicNum[i] == 16 && !aromatic[i] && tautomerClass[i] == -1) {
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 8 && bondOrder(i, j) == 2) {
-                        int cls = classId++;
-                        tc({i, j}, cls, TW_SULFOXIDE);
-                        break;
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T19: Nitro/aci-nitro  C-N(=O)=O <-> C=N(=O)-OH  (weight 0.95)
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 7 && !aromatic[i] && tautomerClass[i] == -1) {
-                std::vector<int> oNbrs;
-                int cNbr = -1;
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 8) oNbrs.push_back(j);
-                    else if (atomicNum[j] == 6) cNbr = j;
-                }
-                if (oNbrs.size() >= 2 && cNbr != -1) {
-                    int cls = classId++;
-                    tautomerClass[i] = cls; tautomerWeight[i] = TW_NITRO_ACI;
-                    tautomerClass[cNbr] = cls; tautomerWeight[cNbr] = TW_NITRO_ACI;
-                    for (int o : oNbrs) {
-                        if (tautomerClass[o] == -1) { tautomerClass[o] = cls; tautomerWeight[o] = TW_NITRO_ACI; }
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T20: DISABLED — nitrile/isonitrile is isomerism, not tautomerism
-            // ------------------------------------------------------------------
-            if (false && atomicNum[i] == 7 && !aromatic[i] && tautomerClass[i] == -1) {
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 6 && bondOrder(i, j) == 3) {
-                        int cls = classId++;
-                        tc({i, j}, cls, TW_NITRILE_ISONITRILE);
-                        break;
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T21: 1,5-keto-enol  C(=O)-C=C-C=C  (weight 0.75)
-            //      5-atom keto-enol shift through conjugation
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 8 && !aromatic[i] && tautomerClass[i] == -1) {
-                bool found21 = false;
-                for (int j : neighbors[i]) {
-                    if (found21) break;
-                    if (atomicNum[j] == 6 && bondOrder(i, j) == 2) {
-                        for (int k : neighbors[j]) {
-                            if (found21) break;
-                            if (k != i && atomicNum[k] == 6 && bondOrder(j, k) == 1) {
-                                for (int m : neighbors[k]) {
-                                    if (found21) break;
-                                    if (m != j && atomicNum[m] == 6 && bondOrder(k, m) == 2) {
-                                        for (int p : neighbors[m]) {
-                                            if (p != k && atomicNum[p] == 6 && !aromatic[p]) {
-                                                int cls = classId++;
-                                                tc({i, j, k, m, p}, cls, TW_15_KETO_ENOL);
-                                                found21 = true; break;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T22: Ring-chain: furanose/pyranose  (weight 0.60)
-            //      O in ring bonded to C with OH neighbour (hemiacetal)
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 8 && ring[i] && !aromatic[i] && tautomerClass[i] == -1) {
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 6 && ring[j]) {
-                        for (int k : neighbors[j]) {
-                            if (k != i && atomicNum[k] == 8 && !ring[k] && bondOrder(j, k) == 1) {
-                                int cls = classId++;
-                                tc({i, j, k}, cls, TW_FURANOSE_PYRANOSE);
-                                break;
-                            }
-                        }
-                        if (tautomerClass[i] != -1) break;
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T23: Ring-chain: lactol  (weight 0.65)
-            //      C in ring bonded to both ring-O and exocyclic OH
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 6 && ring[i] && tautomerClass[i] == -1) {
-                int ringO = -1, exoOH = -1;
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 8 && ring[j] && !aromatic[j]) ringO = j;
-                    else if (atomicNum[j] == 8 && !ring[j] && !aromatic[j] && bondOrder(i, j) == 1) exoOH = j;
-                }
-                if (ringO != -1 && exoOH != -1) {
-                    int cls = classId++;
-                    tc({ringO, i, exoOH}, cls, TW_LACTOL);
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T24: Phenol/quinone methide  (weight 0.92)
-            //      Aromatic C-OH where para-C has exocyclic =CH2
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 8 && !aromatic[i] && tautomerClass[i] == -1) {
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 6 && aromatic[j] && ring[j] && bondOrder(i, j) == 1) {
-                        bool found24 = false;
-                        for (int a : neighbors[j]) {
-                            if (found24) break;
-                            if (a != i && atomicNum[a] == 6 && aromatic[a] && ring[a]) {
-                                for (int b : neighbors[a]) {
-                                    if (found24) break;
-                                    if (b != j && atomicNum[b] == 6 && aromatic[b] && ring[b]) {
-                                        for (int c : neighbors[b]) {
-                                            if (c != a && c != j && atomicNum[c] == 6 && aromatic[c] && ring[c]) {
-                                                for (int d : neighbors[c]) {
-                                                    if (atomicNum[d] == 6 && !ring[d] && bondOrder(c, d) == 2) {
-                                                        int cls = classId++;
-                                                        tc({i, j, c, d}, cls, TW_PHENOL_QUINONE_METHIDE);
-                                                        found24 = true; break;
-                                                    }
-                                                }
-                                                if (found24) break;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        if (tautomerClass[i] != -1) break;
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T25: Triazole NH shift  1,2,3-triazole NH  (symmetric, 0.50)
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 7 && aromatic[i] && ring[i] && tautomerClass[i] == -1) {
-                std::vector<int> adjNring;
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 7 && aromatic[j] && ring[j]) adjNring.push_back(j);
-                }
-                if (adjNring.size() == 1) {
-                    int j = adjNring[0];
-                    for (int k : neighbors[j]) {
-                        if (k != i && atomicNum[k] == 7 && aromatic[k] && ring[k] && tautomerClass[k] == -1) {
-                            int cls = classId++;
-                            tc({i, j, k}, cls, TW_TRIAZOLE_NH_SHIFT);
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T26: Benzimidazole NH shift  NH-1 <-> NH-3  (symmetric, 0.50)
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 7 && aromatic[i] && ring[i] && tautomerClass[i] == -1) {
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 6 && aromatic[j] && ring[j]) {
-                        int ringNbCount = 0;
-                        for (int k : neighbors[j]) { if (ring[k] && aromatic[k]) ringNbCount++; }
-                        if (ringNbCount >= 3) {
-                            for (int k : neighbors[j]) {
-                                if (k != i && atomicNum[k] == 7 && aromatic[k] && ring[k] && tautomerClass[k] == -1) {
-                                    int cls = classId++;
-                                    tc({i, j, k}, cls, TW_BENZIMIDAZOLE_NH);
-                                    break;
-                                }
-                            }
-                            if (tautomerClass[i] != -1) break;
-                        }
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T27: Pyridone/hydroxypyridine  2-pyridinol <-> 2-pyridone  (0.85)
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 7 && aromatic[i] && ring[i] && tautomerClass[i] == -1) {
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 6 && aromatic[j] && ring[j]) {
-                        for (int k : neighbors[j]) {
-                            if (k != i && atomicNum[k] == 8 && !aromatic[k] && bondOrder(j, k) == 1) {
-                                int cls = classId++;
-                                tc({i, j, k}, cls, TW_PYRIDONE_HYDROXYPYRIDINE);
-                                break;
-                            }
-                        }
-                        if (tautomerClass[i] != -1) break;
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T28: Barbituric acid  tri-keto <-> enol  (weight 0.80)
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 7 && ring[i] && tautomerClass[i] == -1) {
-                std::vector<int> carbonylC;
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 6 && ring[j]) {
-                        for (int k : neighbors[j]) {
-                            if (k != i && atomicNum[k] == 8 && bondOrder(j, k) == 2) {
-                                carbonylC.push_back(j);
-                                break;
-                            }
-                        }
-                    }
-                }
-                if (carbonylC.size() >= 2) {
-                    int cls = classId++;
-                    tautomerClass[i] = cls; tautomerWeight[i] = TW_BARBITURIC;
-                    for (int c : carbonylC) {
-                        if (tautomerClass[c] == -1) { tautomerClass[c] = cls; tautomerWeight[c] = TW_BARBITURIC; }
-                        for (int k : neighbors[c]) {
-                            if (atomicNum[k] == 8 && bondOrder(c, k) == 2 && tautomerClass[k] == -1) {
-                                tautomerClass[k] = cls; tautomerWeight[k] = TW_BARBITURIC;
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T29: Allyl shift  X-C=C-C <-> C=C-C-X (X=OH,SH,NH)  (0.70)
-            //      Validates contiguous bond path: X(-H)--C==C--C(sp3)
-            //      X must carry at least one H (checked via valence/degree)
-            //      and k-m must be a single bond (not another double bond system)
-            // ------------------------------------------------------------------
-            if ((atomicNum[i] == 8 || atomicNum[i] == 16 || atomicNum[i] == 7)
-                && !aromatic[i] && !ring[i] && tautomerClass[i] == -1) {
-                // X must bear at least one H for the proton shift to occur.
-                // Infer from degree: O(valence 2) with 1 heavy-atom bond has 1H,
-                // S(valence 2) with 1 heavy-atom bond has 1H,
-                // N(valence 3) with 1-2 heavy-atom bonds has H.
-                int sumBO = 0;
-                for (int nb : neighbors[i]) sumBO += bondOrder(i, nb);
-                int maxValence = (atomicNum[i] == 7) ? 3 : 2; // N=3, O=2, S=2
-                const int64_t charge = formalCharge[i];
-                bool xHasH = sumBO < int64_t(maxValence) + (charge < 0 ? -charge : charge);
-                if (!xHasH) continue;  // no H on heteroatom, shift not possible
-                bool found29 = false;
-                for (int j : neighbors[i]) {
-                    if (found29) break;
-                    if (atomicNum[j] == 6 && !aromatic[j] && bondOrder(i, j) == 1) {
-                        for (int k : neighbors[j]) {
-                            if (found29) break;
-                            if (k != i && atomicNum[k] == 6 && bondOrder(j, k) == 2) {
-                                for (int m : neighbors[k]) {
-                                    // Require single bond k-m (sp3 terminal carbon)
-                                    if (m != j && atomicNum[m] == 6 && !aromatic[m]
-                                        && bondOrder(k, m) == 1) {
-                                        int cls = classId++;
-                                        tc({i, j, k, m}, cls, TW_ALLYL_SHIFT);
-                                        found29 = true; break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ------------------------------------------------------------------
-            // T30: Selenol/selenoketone  C=Se <-> C(-SeH)  (weight 0.94)
-            // ------------------------------------------------------------------
-            if (atomicNum[i] == 34 && !aromatic[i] && tautomerClass[i] == -1) {
-                for (int j : neighbors[i]) {
-                    if (atomicNum[j] == 6 && bondOrder(i, j) == 2) {
-                        int cls = classId++;
-                        tc({i, j}, cls, TW_SELENOL_SELENOKETONE);
-                        for (int k : neighbors[j]) {
-                            if (k != i && (atomicNum[k] == 6 || atomicNum[k] == 7) && tautomerClass[k] == -1) {
-                                tautomerClass[k] = cls;
-                                if (tautomerWeight[k] == 1.0f) tautomerWeight[k] = TW_SELENOL_SELENOKETONE;
-                            }
-                        }
-                        break;
-                    }
-                }
-            }
-        }
-    }
+    void computeTautomerClasses();
 
     // ========================================================================
-    // Tier 2: Solvent-dependent tautomer weight corrections
-    //
-    // Aprotic/non-aqueous solvents shift keto-enol and related equilibria.
-    // Literature pKa shifts (Bordwell 1988; Olmstead 1977):
-    //   DMSO:       keto-enol +5 pKa units  -> enol more prevalent (shift -0.15)
-    //               amide/lactam +3          -> imidic slightly more prevalent
-    //   Methanol:   keto-enol +2             -> small shift (-0.05)
-    //   Chloroform: keto-enol +8 (aprotic)   -> much more enol (-0.25)
+    // Tier 2: solvent-dependent tautomer weight corrections
     // ========================================================================
 
     /** Adjust tautomer weights for solvent effects. Call after computeTautomerClasses(). */
-    void applySolventCorrection(ChemOptions::Solvent solvent) {
-        if (solvent == ChemOptions::Solvent::AQUEOUS) return;
-
-        float ketoShift  = 0.0f;
-        float amideShift = 0.0f;
-        float generalShift = 0.0f;
-
-        if (solvent == ChemOptions::Solvent::DMSO) {
-            ketoShift    = -0.15f;
-            amideShift   = -0.08f;
-            generalShift = -0.05f;
-        } else if (solvent == ChemOptions::Solvent::CHLOROFORM) {
-            ketoShift    = -0.25f;
-            amideShift   = -0.12f;
-            generalShift = -0.08f;
-        } else if (solvent == ChemOptions::Solvent::METHANOL) {
-            ketoShift    = -0.05f;
-            amideShift   = -0.02f;
-            generalShift = -0.01f;
-        } else if (solvent == ChemOptions::Solvent::ACETONITRILE) {
-            ketoShift    = -0.10f;
-            amideShift   = -0.05f;
-            generalShift = -0.03f;
-        } else if (solvent == ChemOptions::Solvent::DIETHYL_ETHER) {
-            ketoShift    = -0.20f;
-            amideShift   = -0.10f;
-            generalShift = -0.06f;
-        }
-
-        for (int i = 0; i < n; i++) {
-            if (tautomerClass[i] == -1) continue;
-            float w = tautomerWeight[i];
-            if (w >= 1.0f) continue;
-
-            float shift;
-            if (w >= 0.96f) {
-                shift = (w >= 0.97f) ? amideShift : ketoShift;
-                if (std::abs(w - TW_KETO_ENOL) < 0.005f) shift = ketoShift;
-            } else if (w >= 0.93f) {
-                shift = amideShift;
-            } else if (w >= 0.84f) {
-                shift = generalShift;
-            } else {
-                shift = generalShift;
-            }
-
-            tautomerWeight[i] = std::max(0.05f, std::min(0.99f, w + shift));
-        }
-    }
+    void applySolventCorrection(ChemOptions::Solvent solvent);
 
     // ========================================================================
-    // Morgan rank computation
+    // Neighbourhood rank computation (detail/canonical_labelling.hpp)
     // ========================================================================
 
     static std::vector<int> computeMorganRanks(
             int n, const std::vector<int>& initLabel,
-            const std::vector<std::vector<int>>& neighbors) {
-        std::vector<int> rank(initLabel.begin(), initLabel.end());
-        std::vector<int> rankNew(n);
-        std::vector<int> nbSorted;
-
-        for (int iter = 0; iter < 8; iter++) {
-            std::unordered_set<int> prevSet(rank.begin(), rank.end());
-            int prevDistinct = static_cast<int>(prevSet.size());
-
-            for (int v = 0; v < n; v++) {
-                const auto& nbs = neighbors[v];
-                int deg = static_cast<int>(nbs.size());
-                nbSorted.resize(deg);
-                for (int k = 0; k < deg; k++) nbSorted[k] = rank[nbs[k]];
-                std::sort(nbSorted.begin(), nbSorted.end());
-                // Hash modulo 2^32 explicitly; preserve the signed rank ordering
-                // without relying on undefined signed-overflow behaviour.
-                uint32_t h = static_cast<uint32_t>(rank[v]) * static_cast<uint32_t>(HASH_PRIME);
-                for (int k = 0; k < deg; k++)
-                    h = h * 31u + static_cast<uint32_t>(nbSorted[k]);
-                int32_t signedHash;
-                std::memcpy(&signedHash, &h, sizeof(h));
-                rankNew[v] = signedHash;
-            }
-            rank = rankNew;
-
-            std::unordered_set<int> newSet(rank.begin(), rank.end());
-            if (static_cast<int>(newSet.size()) <= prevDistinct) break;
-        }
-        return rank;
-    }
+            const std::vector<std::vector<int>>& neighbors);
 
     // ========================================================================
-    // Union-Find helpers (reuse ufFind/ufUnion defined above)
+    // Orbits from the union-find of automorphic atoms
     // ========================================================================
 
-    static std::vector<int> buildOrbits(std::vector<int>& uf, int n) {
-        std::vector<int> orb(n);
-        for (int i = 0; i < n; i++) orb[i] = ufFind(uf, i);
-        std::vector<int> orbitMin(n, n);
-        for (int i = 0; i < n; i++) {
-            int r = orb[i];
-            if (i < orbitMin[r]) orbitMin[r] = i;
-        }
-        for (int i = 0; i < n; i++) orb[i] = orbitMin[orb[i]];
-        return orb;
-    }
+    static std::vector<int> buildOrbits(std::vector<int>& uf, int n);
 
     // ========================================================================
     // 2-hop neighbourhood signature for orbit disambiguation
@@ -2408,33 +624,7 @@ public:
     static uint64_t twoHopSignature(
             int v, const std::vector<int>& label,
             const std::vector<int>& degree,
-            const std::vector<std::vector<int>>& neighbors) {
-        // 1-hop: sorted (label, degree) of direct neighbours
-        std::vector<uint64_t> sig1;
-        sig1.reserve(neighbors[v].size());
-        for (int u : neighbors[v]) {
-            sig1.push_back(static_cast<uint64_t>(label[u]) * 1000003LL + degree[u]);
-        }
-        std::sort(sig1.begin(), sig1.end());
-
-        // 2-hop: for each direct neighbour, the sorted (label, degree) of THEIR neighbours
-        std::vector<uint64_t> sig2;
-        for (int u : neighbors[v]) {
-            for (int w : neighbors[u]) {
-                if (w == v) continue;  // skip back-link to v itself
-                sig2.push_back(static_cast<uint64_t>(label[w]) * 1000003LL + degree[w]);
-            }
-        }
-        std::sort(sig2.begin(), sig2.end());
-
-        // Combine modulo 2^64; orbit refinement only compares signatures.
-        uint64_t h = static_cast<uint64_t>(label[v]) * HASH_PRIME + degree[v];
-        h = h * HASH_PRIME + static_cast<uint64_t>(sig1.size());
-        for (uint64_t x : sig1) h = h * 31 + x;
-        h = h * HASH_PRIME + static_cast<uint64_t>(sig2.size());
-        for (uint64_t x : sig2) h = h * 31 + x;
-        return h;
-    }
+            const std::vector<std::vector<int>>& neighbors);
 
     /**
      * Refine an orbit partition using 2-hop neighbourhood signatures.
@@ -2448,262 +638,53 @@ public:
             const std::vector<int>& orb, int n,
             const std::vector<int>& label,
             const std::vector<int>& degree,
-            const std::vector<std::vector<int>>& neighbors) {
-        // Group atoms by current orbit
-        std::unordered_map<int, std::vector<int>> groups;
-        for (int i = 0; i < n; i++) groups[orb[i]].push_back(i);
-
-        std::vector<int> refined(n);
-        for (auto& [orbitId, members] : groups) {
-            if (members.size() <= 1) {
-                refined[members[0]] = members[0];
-                continue;
-            }
-            // Compute 2-hop signature for each member
-            std::unordered_map<uint64_t, int> sigToRep;
-            for (int v : members) {
-                uint64_t sig = twoHopSignature(v, label, degree, neighbors);
-                auto it = sigToRep.find(sig);
-                if (it == sigToRep.end()) {
-                    sigToRep[sig] = v;
-                    refined[v] = v;
-                } else {
-                    refined[v] = it->second;
-                }
-            }
-        }
-        // Normalise to minimum representative in each refined orbit
-        std::unordered_map<int, int> repMin;
-        for (int i = 0; i < n; i++) {
-            int r = refined[i];
-            auto it = repMin.find(r);
-            if (it == repMin.end() || i < it->second) repMin[r] = i;
-        }
-        for (int i = 0; i < n; i++) refined[i] = repMin[refined[i]];
-        return refined;
-    }
+            const std::vector<std::vector<int>>& neighbors);
 
     // ========================================================================
-    // Canonical labelling (Bliss-style partition refinement + individualization)
+    // Canonical labelling (partition refinement and individualisation)
     // ========================================================================
 
-    static int canonicalBondLabel(const MolGraph* graph, int first, int second) {
-        if (!graph) return 1;
-        return (graph->bondOrder(first, second) << 3)
-            | (graph->bondInRing(first, second) ? 4 : 0)
-            | (graph->bondAromatic(first, second) ? 2 : 0)
-            | (graph->dbStereo(first, second) != 0 ? 1 : 0);
-    }
+    static int canonicalBondLabel(const MolGraph* graph, int first, int second);
 
     static int canonicalTetrahedralTag(const MolGraph& graph, int atom,
-                                        const std::vector<int>& ranking) {
-        const int tag = atom < static_cast<int>(graph.tetraChirality.size()) ? graph.tetraChirality[atom] : 0;
-        if (tag == 0) return 0;
-        const auto& neighbors = graph.neighbors[atom];
-        if (neighbors.size() != 3 && neighbors.size() != 4) return tag;
-        std::array<int, 4> ligandOrder{};
-        const size_t hydrogenPosition = atom > 0 && neighbors[0] < atom ? 1 : 0;
-        size_t neighborPosition = 0;
-        for (size_t position = 0; position < ligandOrder.size(); ++position)
-            ligandOrder[position] = neighbors.size() == 3 && position == hydrogenPosition
-                ? -1 : neighbors[neighborPosition++];
-        auto rank = [&](int ligand) { return ligand < 0 || ranking.empty() ? ligand : ranking[ligand]; };
-        int inversions = 0;
-        for (size_t first = 0; first < ligandOrder.size(); ++first)
-            for (size_t second = first + 1; second < ligandOrder.size(); ++second)
-                inversions += rank(ligandOrder[first]) > rank(ligandOrder[second]);
-        return inversions % 2 == 0 ? tag : 3 - tag;
-    }
+                                        const std::vector<int>& ranking);
 
     static int canonicalDoubleBondTag(const MolGraph& graph, int first, int second,
-                                       const std::vector<int>& ranking) {
-        int configuration = graph.dbStereo(first, second);
-        if (configuration == 0) return 0;
-        for (const auto& end : {std::make_pair(first, second), std::make_pair(second, first)}) {
-            int reference = -1, canonicalReference = -1;
-            for (int neighbor : graph.neighbors[end.first]) {
-                if (neighbor == end.second) continue;
-                if (reference < 0) reference = neighbor;
-                if (canonicalReference < 0 || (ranking.empty() ? neighbor < canonicalReference
-                        : ranking[neighbor] < ranking[canonicalReference])) canonicalReference = neighbor;
-            }
-            if (reference != canonicalReference) configuration = 3 - configuration;
-        }
-        return configuration;
-    }
+                                       const std::vector<int>& ranking);
 
-    std::vector<int> canonicalAtomLabels() const {
-        auto valueAt = [](const std::vector<int>& values, int atom) {
-            return atom < static_cast<int>(values.size()) ? values[atom] : 0;
-        };
-        std::vector<std::array<int, 6>> invariants(n);
-        for (int atom = 0; atom < n; ++atom)
-            invariants[atom] = {{label[atom], valueAt(formalCharge, atom), valueAt(massNumber, atom),
-                valueAt(hydrogenCount, atom), valueAt(atomClass, atom), valueAt(tetraChirality, atom) != 0 ? 1 : 0}};
-        std::vector<int> order(n), labels(n);
-        std::iota(order.begin(), order.end(), 0);
-        std::sort(order.begin(), order.end(), [&](int first, int second) { return invariants[first] < invariants[second]; });
-        int rank = 0;
-        for (int position = 0; position < n; ++position) {
-            if (position > 0 && invariants[order[position]] != invariants[order[position - 1]]) ++rank;
-            labels[order[position]] = rank;
-        }
-        return labels;
-    }
+    std::vector<int> canonicalAtomLabels() const;
 
-    static int findSmallestNonSingleton(int n, const std::vector<bool>& cellEnd) {
-        int bestSize = n + 1, bestEnd = -1, cellStart = 0;
-        for (int i = 0; i < n; i++) {
-            if (cellEnd[i]) {
-                int size = i - cellStart + 1;
-                if (size > 1 && size < bestSize) { bestSize = size; bestEnd = i; }
-                cellStart = i + 1;
-            }
-        }
-        return bestEnd;
-    }
+    static int findSmallestNonSingleton(int n, const std::vector<bool>& cellEnd);
 
     static void refinePartitionImpl(
             int n, std::vector<int>& perm, std::vector<bool>& cellEnd,
             const std::vector<std::vector<int>>& neighbors,
             const std::vector<int>& label,
-            const std::vector<int>& degree, int /*targetPos*/, const MolGraph* graph) {
-        std::vector<int> inv(n);
-        for (int i = 0; i < n; i++) inv[perm[i]] = i;
+            const std::vector<int>& degree, int /*targetPos*/, const MolGraph* graph);
 
-        bool changed = true;
-        int maxIter = n * 2 + 10;
-        while (changed && maxIter-- > 0) {
-            changed = false;
-            int sStart = 0;
-            for (int sEnd = 0; sEnd < n; sEnd++) {
-                if (!cellEnd[sEnd]) continue;
-                int cStart = 0;
-                for (int cEnd = 0; cEnd < n; cEnd++) {
-                    if (!cellEnd[cEnd]) continue;
-                    int cSize = cEnd - cStart + 1;
-                    if (cSize <= 1) { cStart = cEnd + 1; continue; }
-
-                    std::vector<std::vector<int>> count(cSize);
-                    for (int ci = 0; ci < cSize; ci++) {
-                        int v = perm[cStart + ci];
-                        for (int nb : neighbors[v]) {
-                            int nbPos = inv[nb];
-                            if (nbPos >= sStart && nbPos <= sEnd)
-                                count[ci].push_back(canonicalBondLabel(graph, v, nb));
-                        }
-                        std::sort(count[ci].begin(), count[ci].end());
-                    }
-
-                    bool allSame = true;
-                    for (int ci = 1; ci < cSize; ci++) {
-                        if (count[ci] != count[0]) { allSame = false; break; }
-                    }
-                    if (allSame) { cStart = cEnd + 1; continue; }
-
-                    // Sort indices within the cell
-                    std::vector<int> idx(cSize);
-                    std::iota(idx.begin(), idx.end(), 0);
-                    const int fcs = cStart;
-                    std::sort(idx.begin(), idx.end(), [&](int a, int b) {
-                        if (count[a] != count[b]) return count[a] < count[b];
-                        int va = perm[fcs + a], vb = perm[fcs + b];
-                        if (label[va] != label[vb]) return label[va] < label[vb];
-                        // Use robust 2-hop signature for topological tie-breaking
-                        // instead of raw node index — ensures deterministic canonical
-                        // hashes regardless of input atom ordering.  (v6.8.0)
-                        uint64_t sigA = twoHopSignature(va, label, degree, neighbors);
-                        uint64_t sigB = twoHopSignature(vb, label, degree, neighbors);
-                        // Preserve the historical signed signature order while
-                        // computing its hash with defined unsigned arithmetic.
-                        if (sigA != sigB)
-                            return (sigA ^ (uint64_t(1) << 63)) < (sigB ^ (uint64_t(1) << 63));
-                        return va < vb;
-                    });
-
-                    std::vector<int> tmp(cSize);
-                    for (int ci = 0; ci < cSize; ci++) tmp[ci] = perm[cStart + idx[ci]];
-                    std::copy(tmp.begin(), tmp.end(), perm.begin() + cStart);
-                    for (int ci = 0; ci < cSize; ci++) inv[perm[cStart + ci]] = cStart + ci;
-
-                    for (int ci = 0; ci < cSize - 1; ci++) {
-                        bool wasBoundary = (cStart + ci == cEnd);
-                        bool newBoundary = (count[idx[ci]] != count[idx[ci + 1]]);
-                        cellEnd[cStart + ci] = newBoundary || wasBoundary;
-                        if (newBoundary && !wasBoundary) changed = true;
-                    }
-                    cellEnd[cEnd] = true;
-                    cStart = cEnd + 1;
-                }
-                sStart = sEnd + 1;
-            }
-        }
-    }
-
+    /// @deprecated Use getCanonicalLabeling() on the graph.
+    [[deprecated("Use getCanonicalLabeling() on the graph.")]]
     static void refinePartition(
             int n, std::vector<int>& perm, std::vector<bool>& cellEnd,
             const std::vector<std::vector<int>>& neighbors,
-            const std::vector<int>& label, const std::vector<int>& degree, int targetPos) {
-        refinePartitionImpl(n, perm, cellEnd, neighbors, label, degree, targetPos, nullptr);
-    }
+            const std::vector<int>& label, const std::vector<int>& degree, int targetPos);
 
     static int comparePermImpl(
             const std::vector<int>& perm1, const std::vector<int>& perm2,
             int n, const std::vector<int>& label,
-            const std::vector<std::vector<int>>& neighbors, const MolGraph* graph) {
-        std::vector<int> inv1(n), inv2(n);
-        for (int i = 0; i < n; i++) { inv1[perm1[i]] = i; inv2[perm2[i]] = i; }
-        for (int pos = 0; pos < n; pos++) {
-            int v1 = perm1[pos], v2 = perm2[pos];
-            int c = label[v1] - label[v2];
-            if (c != 0) return c;
-            if (graph) {
-                c = canonicalTetrahedralTag(*graph, v1, inv1) - canonicalTetrahedralTag(*graph, v2, inv2);
-                if (c != 0) return c;
-            }
-            const auto& nb1 = neighbors[v1];
-            const auto& nb2 = neighbors[v2];
-            c = static_cast<int>(nb1.size()) - static_cast<int>(nb2.size());
-            if (c != 0) return c;
-            std::vector<std::array<int, 3>> cn1(nb1.size()), cn2(nb2.size());
-            for (size_t k = 0; k < nb1.size(); k++)
-                cn1[k] = {{inv1[nb1[k]], canonicalBondLabel(graph, v1, nb1[k]),
-                    graph ? canonicalDoubleBondTag(*graph, v1, nb1[k], inv1) : 0}};
-            for (size_t k = 0; k < nb2.size(); k++)
-                cn2[k] = {{inv2[nb2[k]], canonicalBondLabel(graph, v2, nb2[k]),
-                    graph ? canonicalDoubleBondTag(*graph, v2, nb2[k], inv2) : 0}};
-            std::sort(cn1.begin(), cn1.end());
-            std::sort(cn2.begin(), cn2.end());
-            for (size_t k = 0; k < cn1.size(); k++) {
-                if (cn1[k] != cn2[k]) return cn1[k] < cn2[k] ? -1 : 1;
-            }
-        }
-        return 0;
-    }
+            const std::vector<std::vector<int>>& neighbors, const MolGraph* graph);
 
+    /// @deprecated Use getCanonicalLabeling() on the graph.
+    [[deprecated("Use getCanonicalLabeling() on the graph.")]]
     static int comparePerm(
             const std::vector<int>& perm1, const std::vector<int>& perm2,
-            int n, const std::vector<int>& label, const std::vector<std::vector<int>>& neighbors) {
-        return comparePermImpl(perm1, perm2, n, label, neighbors, nullptr);
-    }
+            int n, const std::vector<int>& label, const std::vector<std::vector<int>>& neighbors);
 
     static int partialCompare(
             const std::vector<int>& perm, const std::vector<int>& bestPerm,
             int n, const std::vector<bool>& cellEnd,
             const std::vector<int>& label,
-            const std::vector<std::vector<int>>& /*neighbours*/) {
-        int cellStart = 0;
-        for (int pos = 0; pos < n; pos++) {
-            if (cellEnd[pos]) {
-                if (pos == cellStart) {
-                    int c = label[perm[pos]] - label[bestPerm[pos]];
-                    if (c != 0) return c;
-                }
-                cellStart = pos + 1;
-            }
-        }
-        return 0;
-    }
+            const std::vector<std::vector<int>>& /*neighbours*/);
 
     struct CanonResult {
         std::vector<int> canonLabel;
@@ -2715,518 +696,72 @@ public:
     static CanonResult computeCanonicalLabelingImpl(
             int n, const std::vector<int>& label,
             const std::vector<int>& degree,
-            const std::vector<std::vector<int>>& neighbors, const MolGraph* graph) {
-        if (n == 0) return {{}, {}};
+            const std::vector<std::vector<int>>& neighbors, const MolGraph* graph);
 
-        // Morgan-like refinement for initial ordering
-        std::vector<int> mRank(label.begin(), label.end());
-        std::vector<int> mNew(n);
-        std::vector<std::pair<int, int>> scratch;
-
-        for (int iter = 0; iter < 8; iter++) {
-            std::unordered_set<int> s(mRank.begin(), mRank.end());
-            int prevDistinct = static_cast<int>(s.size());
-            for (int v = 0; v < n; v++) {
-                const auto& nbs = neighbors[v];
-                int d = static_cast<int>(nbs.size());
-                scratch.resize(d);
-                for (int k = 0; k < d; k++)
-                    scratch[k] = {mRank[nbs[k]], canonicalBondLabel(graph, v, nbs[k])};
-                std::sort(scratch.begin(), scratch.end());
-                // Keep wrapping arithmetic defined, as in computeMorganRanks.
-                uint32_t h = static_cast<uint32_t>(mRank[v]) * static_cast<uint32_t>(HASH_PRIME);
-                for (int k = 0; k < d; k++) {
-                    h = h * 31u + static_cast<uint32_t>(scratch[k].first);
-                    if (graph) h = h * 31u + static_cast<uint32_t>(scratch[k].second);
-                }
-                int32_t signedHash;
-                std::memcpy(&signedHash, &h, sizeof(h));
-                mNew[v] = signedHash;
-            }
-            mRank = mNew;
-            std::unordered_set<int> ns(mRank.begin(), mRank.end());
-            if (static_cast<int>(ns.size()) <= prevDistinct) break;
-        }
-
-        // Union-find for orbit computation
-        std::vector<int> uf(n);
-        std::iota(uf.begin(), uf.end(), 0);
-
-        // Initial partition: sort atoms by (label, degree, mRank)
-        std::vector<int> sorted(n);
-        std::iota(sorted.begin(), sorted.end(), 0);
-        std::sort(sorted.begin(), sorted.end(), [&](int a, int b) {
-            if (label[a] != label[b]) return label[a] < label[b];
-            if (degree[a] != degree[b]) return degree[a] < degree[b];
-            return mRank[a] < mRank[b];
-        });
-
-        std::vector<int> initPerm(sorted);
-        std::vector<bool> initCellEnd(n, false);
-        for (int i = 0; i < n - 1; i++) {
-            int vi = sorted[i], vj = sorted[i + 1];
-            initCellEnd[i] = (label[vi] != label[vj]
-                           || degree[vi] != degree[vj]
-                           || mRank[vi] != mRank[vj]);
-        }
-        initCellEnd[n - 1] = true;
-
-        // For large molecules, skip individualization search
-        if (n > CANON_SEARCH_LIMIT) {
-            std::vector<int> cl(n);
-            for (int pos = 0; pos < n; pos++) cl[initPerm[pos]] = pos;
-            auto orb = buildOrbits(uf, n);
-            // Refine orbits using 2-hop neighbourhood signatures
-            orb = refineOrbitsBy2Hop(orb, n, label, degree, neighbors);
-            return { cl, orb, {}, true };
-        }
-
-        refinePartitionImpl(n, initPerm, initCellEnd, neighbors, label, degree, -1, graph);
-
-        std::vector<int> bestPerm;
-        std::vector<std::vector<int>> generators;
-        static constexpr int MAX_GENERATORS = 500;
-        bool generatorsTruncated = false;
-        int nodeCount = 0;
-        bool budgetExceeded = false;
-
-        std::deque<std::vector<int>>  permStack;
-        std::deque<std::vector<bool>> cellEndStack;
-
-        int targetCell = findSmallestNonSingleton(n, initCellEnd);
-        if (targetCell < 0) {
-            bestPerm = initPerm;
-        } else {
-            int cellStart = 0;
-            for (int i = 0; i < n; i++) {
-                if (i > 0 && initCellEnd[i - 1]) cellStart = i;
-                if (i == targetCell) break;
-            }
-            for (int i = targetCell; i >= cellStart; i--) {
-                auto p = initPerm;
-                auto ce = initCellEnd;
-                if (i != cellStart) {
-                    int tmp = p[i];
-                    std::copy_backward(p.begin() + cellStart,
-                                       p.begin() + i,
-                                       p.begin() + i + 1);
-                    p[cellStart] = tmp;
-                }
-                ce[cellStart] = true;
-                refinePartitionImpl(n, p, ce, neighbors, label, degree, cellStart, graph);
-                permStack.push_front(std::move(p));
-                cellEndStack.push_front(std::move(ce));
-                nodeCount++;
-            }
-        }
-
-        while (!permStack.empty() && !budgetExceeded) {
-            auto perm = std::move(permStack.front()); permStack.pop_front();
-            auto cellEnd = std::move(cellEndStack.front()); cellEndStack.pop_front();
-
-            int nc = findSmallestNonSingleton(n, cellEnd);
-            if (nc < 0) {
-                if (bestPerm.empty()
-                    || comparePermImpl(perm, bestPerm, n, label, neighbors, graph) < 0) {
-                    bestPerm = perm;
-                } else if (comparePermImpl(perm, bestPerm, n, label, neighbors, graph) == 0) {
-                    // Capture the automorphism generator: sigma maps
-                    // bestPerm[i] -> perm[i] for each position i.
-                    if (static_cast<int>(generators.size()) < MAX_GENERATORS) {
-                        std::vector<int> gen(n);
-                        for (int i = 0; i < n; i++) {
-                            gen[bestPerm[i]] = perm[i];
-                            ufUnion(uf, perm[i], bestPerm[i]);
-                        }
-                        generators.push_back(std::move(gen));
-                    } else {
-                        generatorsTruncated = true;
-                    }
-                }
-                continue;
-            }
-            if (!bestPerm.empty()
-                && partialCompare(perm, bestPerm, n, cellEnd, label, neighbors) > 0)
-                continue;
-
-            int cellStart = 0;
-            for (int i = 0; i < n; i++) {
-                if (i > 0 && cellEnd[i - 1]) cellStart = i;
-                if (i == nc) break;
-            }
-            int cellSize = nc - cellStart + 1;
-            if (nodeCount + cellSize > MAX_SEARCH_NODES) {
-                budgetExceeded = true; break;
-            }
-
-            for (int i = nc; i >= cellStart; i--) {
-                auto p = perm;
-                auto ce = cellEnd;
-                if (i != cellStart) {
-                    int tmp = p[i];
-                    std::copy_backward(p.begin() + cellStart,
-                                       p.begin() + i,
-                                       p.begin() + i + 1);
-                    p[cellStart] = tmp;
-                }
-                ce[cellStart] = true;
-                refinePartitionImpl(n, p, ce, neighbors, label, degree, cellStart, graph);
-                permStack.push_front(std::move(p));
-                cellEndStack.push_front(std::move(ce));
-                nodeCount++;
-            }
-        }
-
-        if (bestPerm.empty()) bestPerm = initPerm;
-
-        std::vector<int> cl(n);
-        for (int pos = 0; pos < n; pos++) cl[bestPerm[pos]] = pos;
-
-        auto orb = buildOrbits(uf, n);
-        // Refine orbits using 2-hop neighbourhood signatures
-        orb = refineOrbitsBy2Hop(orb, n, label, degree, neighbors);
-        return { cl, orb, std::move(generators), generatorsTruncated || budgetExceeded };
-    }
-
+    /// @deprecated Use getCanonicalLabeling() on the graph.
+    [[deprecated("Use getCanonicalLabeling() on the graph.")]]
     static CanonResult computeCanonicalLabeling(
             int n, const std::vector<int>& label, const std::vector<int>& degree,
-            const std::vector<std::vector<int>>& neighbors) {
-        return computeCanonicalLabelingImpl(n, label, degree, neighbors, nullptr);
-    }
+            const std::vector<std::vector<int>>& neighbors);
 
     // ========================================================================
     // Canonical hash
     // ========================================================================
 
     static uint64_t computeCanonicalHash(
-            const MolGraph& g, const std::vector<int>& canonLabel) {
-        int n = g.n;
-        auto vecAt = [](const auto& vec, int idx) -> int {
-            return idx < static_cast<int>(vec.size()) ? vec[idx] : 0;
-        };
-        std::vector<int> inv(n);
-        for (int i = 0; i < n; i++) inv[canonLabel[i]] = i;
-        // Use uint64_t throughout: wrapping arithmetic is defined behaviour
-        // (unlike signed int64_t overflow, which is technically UB).
-        uint64_t hash = 0;
-        for (int cp = 0; cp < n; cp++) {
-            int v = inv[cp];
-            hash = hash * static_cast<uint64_t>(HASH_PRIME)
-                 + static_cast<uint64_t>(g.label[v]);
-            hash = hash * static_cast<uint64_t>(HASH_PRIME)
-                 + static_cast<uint64_t>(static_cast<int64_t>(vecAt(g.formalCharge, v)) + 512);
-            hash = hash * static_cast<uint64_t>(HASH_PRIME)
-                 + static_cast<uint64_t>(vecAt(g.massNumber, v));
-            hash = hash * static_cast<uint64_t>(HASH_PRIME)
-                 + static_cast<uint64_t>(vecAt(g.hydrogenCount, v));
-            hash = hash * static_cast<uint64_t>(HASH_PRIME)
-                 + static_cast<uint64_t>(vecAt(g.atomClass, v));
-            // include tetrahedral chirality — enantiomers must hash differently
-            hash = hash * static_cast<uint64_t>(HASH_PRIME)
-                 + static_cast<uint64_t>(canonicalTetrahedralTag(g, v, canonLabel));
-        }
-        for (int cp = 0; cp < n; cp++) {
-            int v = inv[cp];
-            const auto& nbs = g.neighbors[v];
-            std::vector<uint64_t> edgeSigs;
-            edgeSigs.reserve(nbs.size());
-            for (int nb : nbs) {
-                int cn = canonLabel[nb];
-                uint64_t edgeKey = static_cast<uint64_t>(std::min(cp, cn)) * static_cast<uint64_t>(n)
-                                 + static_cast<uint64_t>(std::max(cp, cn));
-                uint64_t sig = edgeKey;
-                sig = sig * static_cast<uint64_t>(HASH_PRIME)
-                    + static_cast<uint64_t>(g.bondOrder(v, nb));
-                sig = sig * 2ULL + static_cast<uint64_t>(g.bondInRing(v, nb) ? 1 : 0);
-                sig = sig * 2ULL + static_cast<uint64_t>(g.bondAromatic(v, nb) ? 1 : 0);
-                // include E/Z double-bond stereo (use canonical-position guard to avoid double-counting)
-                if (cp < cn) {
-                    sig = sig * static_cast<uint64_t>(HASH_PRIME)
-                        + static_cast<uint64_t>(canonicalDoubleBondTag(g, v, nb, canonLabel));
-                }
-                edgeSigs.push_back(sig);
-            }
-            std::sort(edgeSigs.begin(), edgeSigs.end());
-            for (uint64_t sig : edgeSigs) {
-                hash = hash * static_cast<uint64_t>(HASH_PRIME)
-                     + sig;
-            }
-        }
-        return hash;
-    }
+            const MolGraph& g, const std::vector<int>& canonLabel);
 
     // ========================================================================
-    // Canonical SMILES generation
+    // Canonical SMILES generation (detail/smiles_writer.hpp)
     // ========================================================================
-
-    static const std::unordered_map<int, std::string>& organicSymbols() {
-        static const std::unordered_map<int, std::string> m = {
-            {5,"B"},{6,"C"},{7,"N"},{8,"O"},{15,"P"},{16,"S"},
-            {9,"F"},{17,"Cl"},{35,"Br"},{53,"I"}
-        };
-        return m;
-    }
-
-    static const char* elementSymbol(int z) {
-        static const char* const syms[] = {
-            "?","H","He","Li","Be","B","C","N","O","F","Ne",
-            "Na","Mg","Al","Si","P","S","Cl","Ar","K","Ca",
-            "Sc","Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn",
-            "Ga","Ge","As","Se","Br","Kr","Rb","Sr","Y","Zr",
-            "Nb","Mo","Tc","Ru","Rh","Pd","Ag","Cd","In","Sn",
-            "Sb","Te","I","Xe","Cs","Ba","La","Ce","Pr","Nd",
-            "Pm","Sm","Eu","Gd","Tb","Dy","Ho","Er","Tm","Yb",
-            "Lu","Hf","Ta","W","Re","Os","Ir","Pt","Au","Hg",
-            "Tl","Pb","Bi","Po","At","Rn","Fr","Ra","Ac","Th",
-            "Pa","U","Np","Pu","Am","Cm","Bk","Cf","Es","Fm",
-            "Md","No","Lr","Rf","Db","Sg","Bh","Hs","Mt","Ds",
-            "Rg","Cn","Nh","Fl","Mc","Lv","Ts","Og"
-        };
-        constexpr int count = static_cast<int>(sizeof(syms) / sizeof(syms[0]));
-        return (z >= 0 && z < count) ? syms[z] : "?";
-    }
-
-    std::vector<int> sortedNeighborsByCanonical(int atom) const {
-        auto sorted = neighbors[atom];
-        std::sort(sorted.begin(), sorted.end(), [this](int a, int b) {
-            return canonicalLabel[a] < canonicalLabel[b];
-        });
-        return sorted;
-    }
-
-    // Stereo-aware atom writer. Emits @/@@  inside bracket when tetraChirality is set.
-    // parent and sortedChildren are reserved for future parity-aware @ ordering.
-    void writeAtom(int atom, int /*parent*/,
-                   const std::vector<int>& /*sortedChildren*/,
-                   std::string& sb) const {
-        int z = atomicNum[atom];
-        int charge = !formalCharge.empty() ? formalCharge[atom] : 0;
-        bool arom = !aromatic.empty() && aromatic[atom];
-        int chiral = !tetraChirality.empty() ? tetraChirality[atom] : 0;
-        bool hasStereo = (chiral != 0);
-        auto& org = organicSymbols();
-        auto it = org.find(z);
-        if (it != org.end() && charge == 0 && !hasStereo) {
-            const std::string& sym = it->second;
-            if (arom)
-                sb += static_cast<char>(
-                    std::tolower(static_cast<unsigned char>(sym[0])));
-            else
-                sb += sym;
-        } else {
-            sb += '[';
-            const char* elemSym = elementSymbol(z);
-            if (arom) {
-                sb += static_cast<char>(
-                    std::tolower(static_cast<unsigned char>(elemSym[0])));
-                if (elemSym[1] != '\0') sb += &elemSym[1];
-            } else {
-                sb += elemSym;
-            }
-            if (hasStereo) {
-                // chiral==1 → CLOCKWISE → @@, chiral==2 → ANTICLOCKWISE → @
-                sb += (chiral == 1 ? "@@" : "@");
-            }
-            if (charge > 0) {
-                sb += '+';
-                if (charge > 1) sb += std::to_string(charge);
-            } else if (charge < 0) {
-                sb += '-';
-                if (charge < -1) sb += std::to_string(-charge);
-            }
-            sb += ']';
-        }
-    }
-
-    // Stereo-aware bond writer. Emits /\ for single bonds adjacent to stereo double bonds.
-    void writeBondSymbol(int from, int to, std::string& sb) const {
-        int order = bondOrder(from, to);
-        bool fromArom = !aromatic.empty() && aromatic[from];
-        bool toArom   = !aromatic.empty() && aromatic[to];
-        if (order == 4 || (fromArom && toArom)) return;
-        if (order == 2) { sb += '='; return; }
-        if (order == 3) { sb += '#'; return; }
-        if (order == 1 && (fromArom != toArom)) { sb += '-'; return; }
-        // single bond: check E/Z stereo annotation
-        if (order == 1 && !dbStereoConf.empty()) {
-            int conf = dbStereo(from, to);
-            if (conf != 0) {
-                sb += (conf == 1 ? '/' : '\\');
-            }
-        }
-    }
-
-    static void writeRingDigit(int rid, std::string& sb) {
-        if (rid < 10) {
-            sb += static_cast<char>('0' + rid);
-        } else {
-            sb += '%';
-            sb += std::to_string(rid);
-        }
-    }
-
-    // Ring closure info: {ringId, otherAtom}
-    using RingClosureList = std::vector<std::vector<std::array<int,2>>>;
-
-    void preScanDfs(int atom, int parent, std::vector<int>& color,
-                     RingClosureList& rc,
-                     std::unordered_set<int64_t>& ringEdges,
-                     int& nextRing) const {
-        color[atom] = 1;
-        auto sorted = sortedNeighborsByCanonical(atom);
-        int skippedParent = 0;
-        for (int nb : sorted) {
-            if (nb == parent && skippedParent == 0) {
-                skippedParent = 1; continue;
-            }
-            if (color[nb] == 0) {
-                preScanDfs(nb, atom, color, rc, ringEdges, nextRing);
-            } else if (color[nb] == 1) {
-                int rid = nextRing++;
-                rc[nb].push_back({rid, atom});
-                rc[atom].push_back({rid, nb});
-                ringEdges.insert(bondKey(atom, nb));
-            }
-        }
-        color[atom] = 2;
-    }
-
-    void emitSmiles(int atom, int parent, std::vector<bool>& visited,
-                     std::string& sb, const RingClosureList& rc,
-                     const std::unordered_set<int64_t>& ringEdges) const {
-        visited[atom] = true;
-        auto sorted = sortedNeighborsByCanonical(atom);
-        writeAtom(atom, parent, sorted, sb);
-        for (const auto& entry : rc[atom]) {
-            if (!visited[entry[1]]) writeBondSymbol(atom, entry[1], sb);
-            writeRingDigit(entry[0], sb);
-        }
-        int childCount = 0;
-        for (int nb : sorted) {
-            if (!visited[nb]
-                && ringEdges.find(bondKey(atom, nb)) == ringEdges.end())
-                childCount++;
-        }
-        int childIdx = 0;
-        for (int nb : sorted) {
-            if (visited[nb]
-                || ringEdges.find(bondKey(atom, nb)) != ringEdges.end())
-                continue;
-            childIdx++;
-            bool needParen = childCount > 1 && childIdx < childCount;
-            if (needParen) sb += '(';
-            writeBondSymbol(atom, nb, sb);
-            emitSmiles(nb, atom, visited, sb, rc, ringEdges);
-            if (needParen) sb += ')';
-        }
-    }
 
     /** Write canonical SMILES, retaining atom properties and stereochemistry. */
     std::string toCanonicalSmiles() const;
 
     // ========================================================================
-    // NLF (Neighbour Label Frequency) helpers
+    // NLF (Neighbour Label Frequency) helpers (detail/atom_invariants.hpp)
     // ========================================================================
 
     static std::vector<int> freqMapToSortedArray(
-            const std::unordered_map<int,int>& freq) {
-        if (freq.empty()) return {};
-        std::vector<std::pair<int,int>> pairs(freq.begin(), freq.end());
-        std::sort(pairs.begin(), pairs.end());
-        std::vector<int> arr(pairs.size() * 2);
-        for (size_t i = 0; i < pairs.size(); i++) {
-            arr[i * 2]     = pairs[i].first;
-            arr[i * 2 + 1] = pairs[i].second;
-        }
-        return arr;
-    }
+            const std::unordered_map<int,int>& freq);
 
     // NLF labels use atomicNum + aromaticity but NOT ring membership.
     // Ring compatibility is enforced separately in atom/bond checks so the
     // cached NLF tables remain reusable across option profiles.
-    static int nlfLabel(const MolGraph& g, int idx) {
-        return (g.atomicNum[idx] << 1) | (g.aromatic[idx] ? 1 : 0);
-    }
+    static int nlfLabel(const MolGraph& g, int idx);
 
-    static std::vector<int> buildNLF1(const MolGraph& g, int idx) {
-        std::unordered_map<int,int> freq;
-        for (int nb : g.neighbors[idx]) freq[nlfLabel(g, nb)]++;
-        return freqMapToSortedArray(freq);
-    }
+    static std::vector<int> buildNLF1(const MolGraph& g, int idx);
 
     // Count distinct atoms within the radius, excluding the root. Exact
     // distance shells are unsafe for substructure pruning: additional target
     // bonds can shorten distances without invalidating a query embedding.
-    static std::vector<int> buildRadiusNLF(const MolGraph& g, int idx, int radius) {
-        std::unordered_map<int,int> freq;
-        std::vector<uint8_t> seen(g.n, 0);
-        std::vector<int> queue{idx};
-        seen[idx] = 1;
-        size_t begin = 0;
-        for (int depth = 0; depth < radius && begin < queue.size(); ++depth) {
-            const size_t end = queue.size();
-            for (; begin < end; ++begin) {
-                for (int nb : g.neighbors[queue[begin]]) {
-                    if (seen[nb]) continue;
-                    seen[nb] = 1;
-                    queue.push_back(nb);
-                    ++freq[nlfLabel(g, nb)];
-                }
-            }
-        }
-        return freqMapToSortedArray(freq);
-    }
+    static std::vector<int> buildRadiusNLF(const MolGraph& g, int idx, int radius);
 
-    static std::vector<int> buildNLF2(const MolGraph& g, int idx) {
-        return buildRadiusNLF(g, idx, 2);
-    }
+    static std::vector<int> buildNLF2(const MolGraph& g, int idx);
 
-    static std::vector<int> buildNLF3(const MolGraph& g, int idx) {
-        return buildRadiusNLF(g, idx, 3);
-    }
+    static std::vector<int> buildNLF3(const MolGraph& g, int idx);
 
     using NLFBuilder = std::vector<int>(*)(const MolGraph&, int);
 
     static std::vector<std::vector<int>> buildAllNLF(
-            const MolGraph& g, NLFBuilder builder) {
-        std::vector<std::vector<int>> nlf(g.n);
-        for (int i = 0; i < g.n; i++) nlf[i] = builder(g, i);
-        return nlf;
-    }
+            const MolGraph& g, NLFBuilder builder);
 
-    const std::vector<std::vector<int>>& getNLF1() const {
-        const std::lock_guard<std::recursive_mutex> cacheLock(lazyCacheMutex());
-        if (cachedNLF1.empty() && n > 0)
-            cachedNLF1 = buildAllNLF(*this, buildNLF1);
-        return cachedNLF1;
-    }
+    /// @deprecated The searches do not read the neighbour-label tables.
+    [[deprecated("The searches do not read the neighbour-label tables.")]]
+    const std::vector<std::vector<int>>& getNLF1() const;
 
-    const std::vector<std::vector<int>>& getNLF2() const {
-        const std::lock_guard<std::recursive_mutex> cacheLock(lazyCacheMutex());
-        if (cachedNLF2.empty() && n > 0)
-            cachedNLF2 = buildAllNLF(*this, buildNLF2);
-        return cachedNLF2;
-    }
+    /// @deprecated The searches do not read the neighbour-label tables.
+    [[deprecated("The searches do not read the neighbour-label tables.")]]
+    const std::vector<std::vector<int>>& getNLF2() const;
 
-    const std::vector<std::vector<int>>& getNLF3() const {
-        const std::lock_guard<std::recursive_mutex> cacheLock(lazyCacheMutex());
-        if (cachedNLF3.empty() && n > 0)
-            cachedNLF3 = buildAllNLF(*this, buildNLF3);
-        return cachedNLF3;
-    }
+    /// @deprecated The searches do not read the neighbour-label tables.
+    [[deprecated("The searches do not read the neighbour-label tables.")]]
+    const std::vector<std::vector<int>>& getNLF3() const;
 
-    static bool nlfOk(const std::vector<int>& fq, const std::vector<int>& ft) {
-        size_t fi = 0, ti = 0;
-        while (fi < fq.size()) {
-            int fLabel = fq[fi], fFreq = fq[fi + 1];
-            while (ti < ft.size() && ft[ti] < fLabel) ti += 2;
-            if (ti >= ft.size() || ft[ti] != fLabel || ft[ti + 1] < fFreq)
-                return false;
-            fi += 2;
-        }
-        return true;
-    }
+    static bool nlfOk(const std::vector<int>& fq, const std::vector<int>& ft);
 
+    /// @deprecated The searches do not read the neighbour-label tables.
+    [[deprecated("The searches do not read the neighbour-label tables.")]]
     static bool nlfCheckOk(
             int qi, int tj,
             const std::vector<std::vector<int>>& qNLF1,
@@ -3235,91 +770,20 @@ public:
             const std::vector<std::vector<int>>& tNLF2,
             const std::vector<std::vector<int>>& qNLF3,
             const std::vector<std::vector<int>>& tNLF3,
-            bool useTwoHop, bool useThreeHop) {
-        if (!nlfOk(qNLF1[qi], tNLF1[tj])) return false;
-        if (useTwoHop && !nlfOk(qNLF2[qi], tNLF2[tj])) return false;
-        return !useThreeHop || nlfOk(qNLF3[qi], tNLF3[tj]);
-    }
+            bool useTwoHop, bool useThreeHop);
 
     // ========================================================================
-    // initDerivedFields -- called after construction to compute all
-    // derived data (adjLong, morgan, canonical label, orbits, tautomers, etc.)
+    // Derived data and lazy caches: initDerivedFields() is defined in
+    // detail/mol_graph_builder.hpp, each lazy getter with the property it fills
     // ========================================================================
 
-    void initDerivedFields() {
-        words = (n + 63) >> 6;
-        adjLong.assign(n, std::vector<uint64_t>(words, 0));
-        for (int i = 0; i < n; i++) {
-            for (int k : neighbors[i])
-                adjLong[i][k >> 6] |= uint64_t(1) << (k & 63);
-        }
-        computeTautomerClasses();
-        applySolventCorrection(solvent_);
-        adjustWeightsForPH(pH_);
-        // Canonical labelling and ring counts are deferred; call
-        // ensureCanonical() / ensureRingCounts() before accessing those fields.
-    }
+    void initDerivedFields();
 
     /** Lazily compute Morgan ranks, canonical labelling, orbit, and canonical hash. */
-    void ensureCanonical() const {
-        const std::lock_guard<std::recursive_mutex> cacheLock(lazyCacheMutex());
-        if (canonicalComputed_) return;
-        morganRank = computeMorganRanks(n, label, neighbors);
-        const auto invariantLabels = canonicalAtomLabels();
-        auto clResult = computeCanonicalLabelingImpl(n, invariantLabels, degree, neighbors, this);
-        canonicalLabel = std::move(clResult.canonLabel);
-        orbit = std::move(clResult.orbit);
-        autGenerators_ = std::move(clResult.autGenerators);
-        autGeneratorsTruncated_ = clResult.generatorsTruncated;
-        auto preservesProperties = [&](const std::vector<int>& permutation) {
-            if (permutation.size() != static_cast<size_t>(n)) return false;
-            std::vector<uint8_t> used(n, 0);
-            auto equal = [](const auto& values, int a, int b) {
-                return (a < static_cast<int>(values.size()) ? static_cast<int>(values[a]) : 0)
-                    == (b < static_cast<int>(values.size()) ? static_cast<int>(values[b]) : 0);
-            };
-            for (int atom = 0; atom < n; ++atom) {
-                int image = permutation[atom];
-                if (image < 0 || image >= n || used[image]++) return false;
-                if (!equal(atomicNum, atom, image) || !equal(formalCharge, atom, image)
-                    || !equal(massNumber, atom, image) || !equal(hydrogenCount, atom, image)
-                    || !equal(atomClass, atom, image) || !equal(ring, atom, image)
-                    || !equal(aromatic, atom, image)
-                    || canonicalTetrahedralTag(*this, atom, permutation) != canonicalTetrahedralTag(*this, image, {})) return false;
-                for (int neighbor : neighbors[atom]) {
-                    if (neighbor <= atom) continue;
-                    int other = permutation[neighbor];
-                    if (other < 0 || other >= n
-                        || bondOrder(atom, neighbor) != bondOrder(image, other)
-                        || bondInRing(atom, neighbor) != bondInRing(image, other)
-                        || bondAromatic(atom, neighbor) != bondAromatic(image, other)
-                        || canonicalDoubleBondTag(*this, atom, neighbor, permutation)
-                            != canonicalDoubleBondTag(*this, image, other, {})) return false;
-                }
-            }
-            return true;
-        };
-        autGenerators_.erase(std::remove_if(autGenerators_.begin(), autGenerators_.end(), [&](const auto& generator) {
-            if (preservesProperties(generator)) return false;
-            autGeneratorsTruncated_ = true;
-            return true;
-        }), autGenerators_.end());
-        std::vector<int> verifiedOrbits(n);
-        std::iota(verifiedOrbits.begin(), verifiedOrbits.end(), 0);
-        for (const auto& generator : autGenerators_)
-            for (int atom = 0; atom < n; ++atom) ufUnion(verifiedOrbits, atom, generator[atom]);
-        orbit = buildOrbits(verifiedOrbits, n);
-        canonicalHash = computeCanonicalHash(*this, canonicalLabel);
-        canonicalComputed_ = true;
-    }
+    void ensureCanonical() const;
 
     /** Lazily compute per-atom ring counts. */
-    void ensureRingCounts() const {
-        const std::lock_guard<std::recursive_mutex> cacheLock(lazyCacheMutex());
-        if (ringCountsComputed_) return;
-        computeRingCounts();
-        ringCountsComputed_ = true;
-    }
+    void ensureRingCounts() const;
 
     /** Lazily compute ring-system decomposition via union-find on ring atoms.
      *  Two ring atoms belong to the same ring system if they share an edge where
@@ -3327,251 +791,42 @@ public:
      *  ring atoms in fused/spiro systems).
      *  Each ring system gets a canonical hash signature based on its member
      *  element types, bond orders, size, and aromatic atom count. */
-    void ensureRingSystems() const {
-        const std::lock_guard<std::recursive_mutex> cacheLock(lazyCacheMutex());
-        if (ringSysComputed_) return;
-        ringSystemId_.assign(n, -1);
-
-        // Union-find parent array (only for ring atoms)
-        std::vector<int> parent(n, -1);
-        auto findRoot = [&](int x) -> int {
-            while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; }
-            return x;
-        };
-        auto unite = [&](int a, int b) {
-            a = findRoot(a); b = findRoot(b);
-            if (a != b) parent[a] = b;
-        };
-
-        // Initialise ring atoms as their own parent
-        for (int i = 0; i < n; ++i) {
-            if (ring[i]) parent[i] = i;
-        }
-
-        // Union ring atoms connected by edges where both endpoints are ring atoms
-        for (int i = 0; i < n; ++i) {
-            if (!ring[i]) continue;
-            for (int nb : neighbors[i]) {
-                if (nb > i && ring[nb]) unite(i, nb);
-            }
-        }
-
-        // Assign contiguous ring system IDs
-        std::unordered_map<int, int> root2id;
-        ringSysCount_ = 0;
-        for (int i = 0; i < n; ++i) {
-            if (!ring[i]) continue;
-            int root = findRoot(i);
-            auto it = root2id.find(root);
-            if (it == root2id.end()) {
-                root2id[root] = ringSysCount_;
-                ringSystemId_[i] = ringSysCount_++;
-            } else {
-                ringSystemId_[i] = it->second;
-            }
-        }
-
-        // Compute signature per ring system
-        ringSysSignature_.assign(ringSysCount_, 0);
-        if (ringSysCount_ > 0) {
-            // Collect per-system: sorted atomic numbers, bond orders, size, aromatic count
-            std::vector<std::vector<int>> sysAtomicNums(ringSysCount_);
-            std::vector<std::vector<int>> sysBondOrders(ringSysCount_);
-            std::vector<int> sysSize(ringSysCount_, 0);
-            std::vector<int> sysAromCount(ringSysCount_, 0);
-
-            for (int i = 0; i < n; ++i) {
-                int rsid = ringSystemId_[i];
-                if (rsid < 0) continue;
-                sysAtomicNums[rsid].push_back(atomicNum[i]);
-                sysSize[rsid]++;
-                if (aromatic[i]) sysAromCount[rsid]++;
-
-                // Collect bond orders for edges within this ring system (each edge once)
-                for (int nb : neighbors[i]) {
-                    if (nb > i && ringSystemId_[nb] == rsid) {
-                        sysBondOrders[rsid].push_back(bondOrder(i, nb));
-                    }
-                }
-            }
-
-            for (int rs = 0; rs < ringSysCount_; ++rs) {
-                std::sort(sysAtomicNums[rs].begin(), sysAtomicNums[rs].end());
-                std::sort(sysBondOrders[rs].begin(), sysBondOrders[rs].end());
-
-                // FNV-1a style hash
-                uint64_t h = 14695981039346656037ULL;
-                auto mix = [&](uint64_t val) {
-                    h ^= val;
-                    h *= 1099511628211ULL;
-                };
-                mix(static_cast<uint64_t>(sysSize[rs]));
-                mix(static_cast<uint64_t>(sysAromCount[rs]));
-                for (int z : sysAtomicNums[rs]) mix(static_cast<uint64_t>(z));
-                for (int bo : sysBondOrders[rs]) mix(static_cast<uint64_t>(bo));
-                ringSysSignature_[rs] = h;
-            }
-        }
-
-        ringSysComputed_ = true;
-    }
+    void ensureRingSystems() const;
 
     /** Ring system ID for an atom (-1 if acyclic). */
-    int ringSystemOf(int atom) const {
-        if (atom < 0 || atom >= n) throw std::out_of_range("Atom index out of range");
-        ensureRingSystems();
-        return ringSystemId_[atom];
-    }
+    int ringSystemOf(int atom) const;
 
     /** Hash signature for a ring system (by ID). Returns 0 for invalid IDs. */
-    uint64_t ringSystemSig(int rsId) const {
-        ensureRingSystems();
-        if (rsId < 0 || rsId >= ringSysCount_) return 0;
-        return ringSysSignature_[rsId];
-    }
+    uint64_t ringSystemSig(int rsId) const;
 
     /** Number of distinct ring systems in this molecule. */
     int ringSystemCount() const { ensureRingSystems(); return ringSysCount_; }
 
     /**
-     * Cached neighbours sorted by descending degree for candidate ordering.
-     * Computed once, reused across all matcher constructions.
-     * @since 6.5.3
+     * The neighbours of each atom sorted by descending degree, computed on the first call and
+     * cached with the graph.
      */
-    const std::vector<std::vector<int>>& getNeighborsByDegDesc() const {
-        const std::lock_guard<std::recursive_mutex> cacheLock(lazyCacheMutex());
-        if (cachedNeighborsByDegDesc.empty() && n > 0) {
-            cachedNeighborsByDegDesc.resize(n);
-            for (int i = 0; i < n; ++i) {
-                auto nb = neighbors[i]; // copy
-                std::sort(nb.begin(), nb.end(), [this](int a, int b) {
-                    return degree[a] > degree[b]; // descending
-                });
-                cachedNeighborsByDegDesc[i] = std::move(nb);
-            }
-        }
-        return cachedNeighborsByDegDesc;
-    }
+    [[deprecated("Nothing reads this cache, and prewarm() does not compute it.")]]
+    const std::vector<std::vector<int>>& getNeighborsByDegDesc() const;
+
+    /** Stored implicit H, or the SMILES valence model's count when hydrogen counts were not supplied. */
+    int implicitHydrogenCount(int atom) const;
 
     /** Stored implicit H plus explicit hydrogen neighbours, with valence fallback when omitted. */
-    int64_t attachedHydrogenCount(int atom) const {
-        if (atom < 0 || atom >= n) throw std::out_of_range("Atom index out of range");
-        int64_t explicitHydrogens = 0, bondOrderSum = 0;
-        for (int neighbor : neighbors[atom]) {
-            explicitHydrogens += atomicNum[neighbor] == 1;
-            const int order = bondOrder(atom, neighbor);
-            bondOrderSum += order == 4 ? 1 : order;
-        }
-        if (hydrogenCountsKnown && atom < static_cast<int>(hydrogenCount.size()))
-            return hydrogenCount[atom] + explicitHydrogens;
-        const int charge = atom < static_cast<int>(formalCharge.size()) ? formalCharge[atom] : 0;
-        return detail::computeImplicitH(atomicNum[atom], aromatic[atom] != 0,
-            static_cast<int>(std::min(bondOrderSum, int64_t(std::numeric_limits<int>::max()) - 1)), charge) + explicitHydrogens;
-    }
+    int64_t attachedHydrogenCount(int atom) const;
 
     /**
      * Cached pharmacophore feature classification per atom for FCFP.
-     * Computed once per MolGraph, eliminates O(n×degree²) recomputation.
-     * @since 6.5.3
+     * Computed once per MolGraph, so that FCFP does not repeat the O(n×degree²) classification.
      */
-    const std::vector<int>& getPharmacophoreFeatures() const {
-        const std::lock_guard<std::recursive_mutex> cacheLock(lazyCacheMutex());
-        if (!pharmComputed_) {
-            cachedPharmacophoreFeatures.resize(n);
-            for (int i = 0; i < n; ++i) {
-                int z = atomicNum[i];
-                int charge = formalCharge[i];
-                bool arom = (aromatic[i] != 0);
-                int deg = degree[i];
-                int features = 0;
-                const int64_t hydrogens = attachedHydrogenCount(i);
-
-                // H-bond donor: N-H, O-H, S-H
-                if (z == 7 || z == 8 || z == 16) {
-                    if (hydrogens > 0) features |= 1;
-                }
-
-                // H-bond acceptor: N (not pyrrole), O, F, S (not thiophene)
-                // Pyrrole N: aromatic + has H (lone pair donated to pi) — NOT acceptor
-                // Pyridine N: aromatic + no H (lone pair in plane) — IS acceptor
-                bool isPyrroleN = false;
-                if (z == 7 && arom) {
-                    isPyrroleN = (hydrogens > 0);
-                }
-                if ((z == 7 && charge <= 0 && !isPyrroleN) || z == 8 || z == 9 ||
-                    (z == 16 && !arom))
-                    features |= 2;
-
-                // Positive ionisable: basic amines (not amide, not aniline)
-                if (z == 7 && charge > 0) features |= 4;
-                if (z == 7 && !arom && deg <= 3 && charge == 0) {
-                    bool isAmide = false, isAniline = false, hasMultipleBond = false;
-                    for (int nb : neighbors[i]) {
-                        if (bondOrder(i, nb) != 1) hasMultipleBond = true;
-                        if (atomicNum[nb] == 6) {
-                            if (aromatic[nb]) { isAniline = true; break; }
-                            for (int nb2 : neighbors[nb]) {
-                                if (nb2 != i && atomicNum[nb2] == 8 && bondOrder(nb, nb2) == 2) {
-                                    isAmide = true; break;
-                                }
-                            }
-                        }
-                        if (isAmide) break;
-                    }
-                    if (!isAmide && !isAniline && !hasMultipleBond) features |= 4;
-                }
-
-                // Negative ionisable: carboxylic, phosphoric, sulfonic
-                if (z == 8 && charge < 0) features |= 8;
-                if (z == 8 && charge == 0 && deg == 1) {
-                    for (int nb : neighbors[i]) {
-                        int nbZ = atomicNum[nb];
-                        if (nbZ == 6 && bondOrder(i, nb) == 1) {
-                            for (int nb2 : neighbors[nb]) {
-                                if (nb2 != i && atomicNum[nb2] == 8 && bondOrder(nb, nb2) == 2)
-                                    features |= 8;
-                            }
-                        }
-                        if (nbZ == 15 || nbZ == 16) features |= 8;
-                    }
-                }
-
-                // Aromatic
-                if (arom) features |= 16;
-
-                // Hydrophobic: non-aromatic C (no hetero neighbours), or halogens
-                if (z == 6 && !arom) {
-                    bool hasHetero = false;
-                    for (int nb : neighbors[i]) {
-                        int nbZ = atomicNum[nb];
-                        if (nbZ != 6 && nbZ != 1) { hasHetero = true; break; }
-                    }
-                    if (!hasHetero) features |= 32;
-                }
-                if (z == 17 || z == 35 || z == 53) features |= 32;
-
-                cachedPharmacophoreFeatures[i] = features;
-            }
-            pharmComputed_ = true;
-        }
-        return cachedPharmacophoreFeatures;
-    }
+    const std::vector<int>& getPharmacophoreFeatures() const;
 
     /** Initialise the lazy properties used by matching before copying a shared graph. */
-    void prewarm() const {
-        ensureCanonical();
-        ensureRingCounts();
-        ensureRingSystems();
-        ensurePatternFP();
-        getPharmacophoreFeatures();
-        getNLF1();
-        getNLF2();
-        getNLF3();
-        getNeighborsByDegDesc();
-    }
+    void prewarm() const;
 
     // ========================================================================
-    // Builder -- CDK-free molecule construction via fluent API
+    // Builder -- molecule construction via fluent API (build() is in
+    // detail/mol_graph_builder.hpp)
     // ========================================================================
 
     class Builder {
@@ -3613,6 +868,12 @@ public:
         Builder& setBondOrders(std::vector<std::vector<int>> v)           { bondOrders_ = std::move(v); return *this; }
         Builder& bondRingFlags(std::vector<std::vector<bool>> v)          { bondRings_ = std::move(v); return *this; }
         Builder& bondAromaticFlags(std::vector<std::vector<bool>> v)      { bondAroms_ = std::move(v); return *this; }
+        /**
+         * Tetrahedral tags: 0 for none, 1 for anticlockwise (@) and 2 for clockwise (@@). A tag
+         * winds the neighbours in their order, with an implicit hydrogen or lone pair second when
+         * the first neighbour has a lower index than the atom and first otherwise, see
+         * stereo_detail::tetrahedralLigands().
+         */
         Builder& tetrahedralChirality(std::vector<int> v)                 { tetraChirality_ = std::move(v); return *this; }
         Builder& doubleBondStereo(std::vector<std::vector<int>> v)        { dbStereoConf_ = std::move(v); sparseDbStereoConf_.clear(); return *this; }
         /** Supply (atom, atom, configuration) tuples; configuration is 1 (Z) or 2 (E). */
@@ -3628,649 +889,28 @@ public:
         Builder& comment(std::string v)                                     { comment_ = std::move(v); return *this; }
         Builder& properties(std::map<std::string, std::string> v)           { properties_ = std::move(v); return *this; }
         Builder& solvent(ChemOptions::Solvent s)                            { solvent_ = s; return *this; }
-        Builder& pH(double v)                                                { pH_ = v; return *this; }
+        /** pH context for the built graph's baseline tautomer weights, clamped to [0, 14]. */
+        Builder& pH(double v) {
+            if (!std::isfinite(v)) throw std::invalid_argument("pH must be finite");
+            pH_ = std::max(0.0, std::min(14.0, v));
+            return *this;
+        }
 
         MolGraph build(
             bool perceiveAromaticity = true,
-            AromaticityModel model = AromaticityModel::DAYLIGHT_LIKE) const {
-            if (n_ < 0)
-                throw std::invalid_argument("atomCount must be >= 0");
-            if (static_cast<int>(atomicNum_.size()) != n_)
-                throw std::invalid_argument("atomicNumbers must have length == atomCount");
-            if (static_cast<int>(neighbors_.size()) != n_)
-                throw std::invalid_argument("neighbors must have length == atomCount");
-            if (!formalCharge_.empty() && static_cast<int>(formalCharge_.size()) != n_)
-                throw std::invalid_argument("formalCharges must have length == atomCount");
-            if (!massNumber_.empty() && static_cast<int>(massNumber_.size()) != n_)
-                throw std::invalid_argument("massNumbers must have length == atomCount");
-            if (!hydrogenCount_.empty() && static_cast<int>(hydrogenCount_.size()) != n_)
-                throw std::invalid_argument("hydrogenCounts must have length == atomCount");
-            if (!atomClass_.empty() && static_cast<int>(atomClass_.size()) != n_)
-                throw std::invalid_argument("atomClasses must have length == atomCount");
-            if (!ring_.empty() && static_cast<int>(ring_.size()) != n_)
-                throw std::invalid_argument("ringFlags must have length == atomCount");
-            if (!aromatic_.empty() && static_cast<int>(aromatic_.size()) != n_)
-                throw std::invalid_argument("aromaticFlags must have length == atomCount");
-            if (!tetraChirality_.empty() && static_cast<int>(tetraChirality_.size()) != n_)
-                throw std::invalid_argument("tetrahedralChirality must have length == atomCount");
-            if (!bondOrders_.empty() && static_cast<int>(bondOrders_.size()) != n_)
-                throw std::invalid_argument("bondOrders must have length == atomCount");
-            if (!bondRings_.empty() && static_cast<int>(bondRings_.size()) != n_)
-                throw std::invalid_argument("bondRingFlags must have length == atomCount");
-            if (!bondAroms_.empty() && static_cast<int>(bondAroms_.size()) != n_)
-                throw std::invalid_argument("bondAromaticFlags must have length == atomCount");
-            if (!dbStereoConf_.empty() && static_cast<int>(dbStereoConf_.size()) != n_)
-                throw std::invalid_argument("doubleBondStereo must have length == atomCount");
-
-            for (int i = 0; i < n_; ++i) {
-                if (atomicNum_[i] < 0 || atomicNum_[i] > 118)
-                    throw std::invalid_argument("atomicNumbers must be in [0, 118]");
-                if (!massNumber_.empty() && massNumber_[i] < 0)
-                    throw std::invalid_argument("massNumbers must be >= 0");
-                if (!hydrogenCount_.empty() && hydrogenCount_[i] < 0)
-                    throw std::invalid_argument("hydrogenCounts must be >= 0");
-                if (!atomClass_.empty() && atomClass_[i] < 0)
-                    throw std::invalid_argument("atomClasses must be >= 0");
-                if (!ring_.empty() && ring_[i] > 1)
-                    throw std::invalid_argument("ringFlags entries must be 0 or 1");
-                if (!aromatic_.empty() && aromatic_[i] > 1)
-                    throw std::invalid_argument("aromaticFlags entries must be 0 or 1");
-                if (!tetraChirality_.empty()
-                    && tetraChirality_[i] != 0
-                    && tetraChirality_[i] != 1
-                    && tetraChirality_[i] != 2)
-                    throw std::invalid_argument("tetrahedralChirality entries must be 0, 1, or 2");
-            }
-
-            std::vector<std::unordered_map<int, int>> neighborIndex(n_);
-            for (int i = 0; i < n_; ++i) {
-                neighborIndex[i].reserve(neighbors_[i].size());
-                for (int k = 0; k < static_cast<int>(neighbors_[i].size()); ++k) {
-                    int nb = neighbors_[i][k];
-                    if (nb < 0 || nb >= n_)
-                        throw std::invalid_argument("neighbor index out of range");
-                    if (nb == i)
-                        throw std::invalid_argument("self-loop detected in neighbors");
-                    if (!neighborIndex[i].emplace(nb, k).second)
-                        throw std::invalid_argument("duplicate neighbor detected in adjacency list");
-                }
-            }
-
-            auto classifyIntRows = [&](const std::vector<std::vector<int>>& rows,
-                                       const char* name) {
-                std::vector<RowEncoding> enc(n_, RowEncoding::ABSENT);
-                if (rows.empty()) return enc;
-                for (int i = 0; i < n_; ++i) {
-                    const auto& row = rows[i];
-                    const auto deg = neighbors_[i].size();
-                    if (row.size() == deg) enc[i] = RowEncoding::PARALLEL;
-                    else if (row.size() == static_cast<size_t>(n_)) enc[i] = RowEncoding::DENSE;
-                    else
-                        throw std::invalid_argument(std::string(name)
-                            + " rows must have length == neighbor count or atomCount");
-                }
-                return enc;
-            };
-
-            auto classifyBoolRows = [&](const std::vector<std::vector<bool>>& rows,
-                                        const char* name) {
-                std::vector<RowEncoding> enc(n_, RowEncoding::ABSENT);
-                if (rows.empty()) return enc;
-                for (int i = 0; i < n_; ++i) {
-                    const auto& row = rows[i];
-                    const auto deg = neighbors_[i].size();
-                    if (row.size() == deg) enc[i] = RowEncoding::PARALLEL;
-                    else if (row.size() == static_cast<size_t>(n_)) enc[i] = RowEncoding::DENSE;
-                    else
-                        throw std::invalid_argument(std::string(name)
-                            + " rows must have length == neighbor count or atomCount");
-                }
-                return enc;
-            };
-
-            auto bondOrderEnc = classifyIntRows(bondOrders_, "bondOrders");
-            auto bondRingEnc = classifyBoolRows(bondRings_, "bondRingFlags");
-            auto bondAromEnc = classifyBoolRows(bondAroms_, "bondAromaticFlags");
-
-            auto intPropAt = [&](const std::vector<std::vector<int>>& rows,
-                                 const std::vector<RowEncoding>& enc,
-                                 int i, int k, int j, int fallback) {
-                if (rows.empty()) return fallback;
-                return enc[i] == RowEncoding::DENSE ? rows[i][j] : rows[i][k];
-            };
-            auto boolPropAt = [&](const std::vector<std::vector<bool>>& rows,
-                                  const std::vector<RowEncoding>& enc,
-                                  int i, int k, int j, bool fallback) -> bool {
-                if (rows.empty()) return fallback;
-                return enc[i] == RowEncoding::DENSE ? rows[i][j] : rows[i][k];
-            };
-
-            for (int i = 0; i < n_; ++i) {
-                for (const auto& [nb, k] : neighborIndex[i]) {
-                    auto rev = neighborIndex[nb].find(i);
-                    if (rev == neighborIndex[nb].end())
-                        throw std::invalid_argument("adjacency must be symmetric");
-                    if (i > nb) continue;
-                    int rk = rev->second;
-                    if (!bondOrders_.empty()) {
-                        int forward = intPropAt(bondOrders_, bondOrderEnc, i, k, nb, 1);
-                        int backward = intPropAt(bondOrders_, bondOrderEnc, nb, rk, i, 1);
-                        if (forward <= 0 || backward <= 0)
-                            throw std::invalid_argument("bondOrders for present edges must be > 0");
-                        if (forward != backward)
-                            throw std::invalid_argument("bondOrders must be symmetric");
-                    }
-                    if (!bondRings_.empty()) {
-                        bool forward = boolPropAt(bondRings_, bondRingEnc, i, k, nb, false);
-                        bool backward = boolPropAt(bondRings_, bondRingEnc, nb, rk, i, false);
-                        if (forward != backward)
-                            throw std::invalid_argument("bondRingFlags must be symmetric");
-                    }
-                    if (!bondAroms_.empty()) {
-                        bool forward = boolPropAt(bondAroms_, bondAromEnc, i, k, nb, false);
-                        bool backward = boolPropAt(bondAroms_, bondAromEnc, nb, rk, i, false);
-                        if (forward != backward)
-                            throw std::invalid_argument("bondAromaticFlags must be symmetric");
-                    }
-                }
-            }
-
-            if (!dbStereoConf_.empty()) {
-                for (int i = 0; i < n_; ++i) {
-                    if (static_cast<int>(dbStereoConf_[i].size()) != n_)
-                        throw std::invalid_argument("doubleBondStereo rows must have length == atomCount");
-                }
-                for (int i = 0; i < n_; ++i) {
-                    for (int j = 0; j < n_; ++j) {
-                        int conf = dbStereoConf_[i][j];
-                        if (conf < 0 || conf > 2)
-                            throw std::invalid_argument("doubleBondStereo entries must be 0, 1, or 2");
-                        if (i == j && conf != 0)
-                            throw std::invalid_argument("doubleBondStereo diagonal must be zero");
-                        if (j <= i) continue;
-                        if (conf != dbStereoConf_[j][i])
-                            throw std::invalid_argument("doubleBondStereo must be symmetric");
-                        if (conf != 0) {
-                            auto it = neighborIndex[i].find(j);
-                            if (it == neighborIndex[i].end())
-                                throw std::invalid_argument("doubleBondStereo requires a bond");
-                            int ord = intPropAt(bondOrders_, bondOrderEnc, i, it->second, j, 1);
-                            if (ord != 2)
-                                throw std::invalid_argument("doubleBondStereo requires bond order 2");
-                        }
-                    }
-                }
-            }
-
-            std::unordered_map<long long, int> sparseConfigurations;
-            for (const auto& entry : sparseDbStereoConf_) {
-                const auto [first, second, configuration] = entry;
-                if (first < 0 || first >= n_ || second < 0 || second >= n_ || first == second)
-                    throw std::invalid_argument("doubleBondStereoSparse requires distinct atom indices in range");
-                if (configuration != 1 && configuration != 2)
-                    throw std::invalid_argument("doubleBondStereoSparse configurations must be 1 or 2");
-                const auto neighbor = neighborIndex[first].find(second);
-                if (neighbor == neighborIndex[first].end()
-                    || intPropAt(bondOrders_, bondOrderEnc, first, neighbor->second, second, 1) != 2)
-                    throw std::invalid_argument("doubleBondStereoSparse requires bond order 2");
-                const auto inserted = sparseConfigurations.emplace(bondKey(first, second), configuration);
-                if (!inserted.second && inserted.first->second != configuration)
-                    throw std::invalid_argument("doubleBondStereoSparse has conflicting configurations");
-            }
-
-            if (!atomIds_.empty()) {
-                if (static_cast<int>(atomIds_.size()) != n_)
-                    throw std::invalid_argument("atomIds must have length == atomCount");
-                std::unordered_set<int> seenIds;
-                seenIds.reserve(atomIds_.size());
-                for (int id : atomIds_) {
-                    if (id <= 0)
-                        throw std::invalid_argument("atomIds must be positive");
-                    if (!seenIds.insert(id).second)
-                        throw std::invalid_argument("atomIds must be unique");
-                }
-            }
-
-            MolGraph g;
-            g.n = n_;
-            g.words = (n_ + 63) >> 6;
-
-            // Copy atom arrays
-            g.atomicNum    = atomicNum_;
-            g.formalCharge = formalCharge_.empty()
-                             ? std::vector<int>(n_, 0) : formalCharge_;
-            g.massNumber   = massNumber_.empty()
-                             ? std::vector<int>(n_, 0) : massNumber_;
-            g.hydrogenCount = hydrogenCount_.empty()
-                             ? std::vector<int>(n_, 0) : hydrogenCount_;
-            g.hydrogenCountsKnown = !hydrogenCount_.empty();
-            g.atomClass    = atomClass_.empty()
-                             ? std::vector<int>(n_, 0) : atomClass_;
-
-            if (ring_.empty())     g.ring.assign(n_, uint8_t(0));     else g.ring = ring_;
-            if (aromatic_.empty()) g.aromatic.assign(n_, uint8_t(0)); else g.aromatic = aromatic_;
-
-            // Neighbours + degree
-            g.neighbors = neighbors_;
-            g.degree.resize(n_);
-            for (int i = 0; i < n_; i++)
-                g.degree[i] = static_cast<int>(g.neighbors[i].size());
-
-            // Bond storage -- dense or sparse
-            if (n_ <= SPARSE_THRESHOLD) {
-                g.useDense = true;
-                g.bondPacked.assign(n_, std::vector<uint8_t>(n_, 0));
-                for (int i = 0; i < n_; i++) {
-                    const auto& nbs = g.neighbors[i];
-                    for (int k = 0; k < static_cast<int>(nbs.size()); k++) {
-                        int j = nbs[k];
-                        int ord = intPropAt(bondOrders_, bondOrderEnc, i, k, j, 1);
-                        bool inRing = boolPropAt(bondRings_, bondRingEnc, i, k, j, false);
-                        bool arom = boolPropAt(bondAroms_, bondAromEnc, i, k, j, false);
-                        g.bondPacked[i][j] = static_cast<uint8_t>((ord & 0x07)
-                            | (inRing ? BOND_RING_BIT : 0)
-                            | (arom ? BOND_AROM_BIT : 0));
-                    }
-                }
-            } else {
-                g.useDense = false;
-                for (int i = 0; i < n_; i++) {
-                    const auto& nbs = g.neighbors[i];
-                    for (int k = 0; k < static_cast<int>(nbs.size()); k++) {
-                        int j = nbs[k];
-                        if (i >= j) continue;   // store each edge once
-                        int ord = intPropAt(bondOrders_, bondOrderEnc, i, k, j, 1);
-                        int inRing = boolPropAt(bondRings_, bondRingEnc, i, k, j, false) ? 1 : 0;
-                        int arom = boolPropAt(bondAroms_, bondAromEnc, i, k, j, false) ? 1 : 0;
-                        g.sparseBondProps[bondKey(i, j)] = {ord, inRing, arom};
-                    }
-                }
-            }
-
-            // Stereochemistry
-            g.tetraChirality = tetraChirality_.empty()
-                               ? std::vector<int>(n_, 0) : tetraChirality_;
-            if (n_ <= SPARSE_THRESHOLD) {
-                g.hasDbStereo = true;
-                g.dbStereoConf.assign(n_, std::vector<int>(n_, 0));
-                if (!dbStereoConf_.empty()) {
-                    for (int i = 0; i < n_
-                         && i < static_cast<int>(dbStereoConf_.size()); i++) {
-                        for (int j = 0; j < n_
-                             && j < static_cast<int>(dbStereoConf_[i].size()); j++) {
-                            g.dbStereoConf[i][j] = dbStereoConf_[i][j];
-                        }
-                    }
-                }
-            } else if (!dbStereoConf_.empty()) {
-                g.hasDbStereo = true;
-                for (int i = 0; i < n_; ++i) {
-                    for (int j = i + 1; j < n_; ++j) {
-                        int conf = dbStereoConf_[i][j];
-                        if (conf != 0)
-                            g.sparseDbStereo[bondKey(i, j)] = conf;
-                    }
-                }
-            }
-            if (!sparseConfigurations.empty()) {
-                g.hasDbStereo = true;
-                if (g.useDense) {
-                    for (const auto& entry : sparseDbStereoConf_) {
-                        const auto [first, second, configuration] = entry;
-                        g.dbStereoConf[first][second] = g.dbStereoConf[second][first] = configuration;
-                    }
-                } else {
-                    g.sparseDbStereo = std::move(sparseConfigurations);
-                }
-            }
-
-            // External atom IDs (optional)
-            if (!atomIds_.empty()) g.atomId = atomIds_;
-
-            g.name = name_;
-            g.programLine = programLine_;
-            g.comment = comment_;
-            g.properties = properties_;
-
-            if (perceiveAromaticity) g.normalizeRingAndAromaticity(model);
-            g.refreshAtomLabels();
-
-            g.ringCount.assign(n_, 0);
-            g.solvent_ = solvent_;
-            g.initDerivedFields();
-            return g;
-        }
+            AromaticityModel model = AromaticityModel::DAYLIGHT_LIKE) const;
     };
 };
 
-// ============================================================================
-// ChemOps -- atom and bond compatibility checks (static utility)
-// ============================================================================
-
-struct ChemOps {
-
-    /// Atom compatibility check for substructure / MCS matching.
-    static bool atomsCompatible(
-            const MolGraph& gq, int qi,
-            const MolGraph& gt, int tj,
-            const ChemOptions& C) {
-        if (C.matchAtomType && gq.atomicNum[qi] != gt.atomicNum[tj])
-            return false;
-        if (C.matchFormalCharge && gq.formalCharge[qi] != gt.formalCharge[tj])
-            return false;
-        if (C.aromaticityMode == ChemOptions::AromaticityMode::STRICT
-            && gq.aromatic[qi] != gt.aromatic[tj])
-            return false;
-        if (C.ringMatchesRingOnly && gq.ring[qi] != gt.ring[tj])
-            return false;
-        if (C.matchIsotope) {
-            int qm = gq.massNumber[qi], tm = gt.massNumber[tj];
-            if (qm != 0 && tm != 0 && qm != tm) return false;
-        }
-        // Relative tetrahedral tags require ligand-order checks by the matcher.
-        if (C.ringFusionMode == ChemOptions::RingFusionMode::STRICT
-            && gq.ring[qi] && gt.ring[tj]) {
-            if (gq.ringCount[qi] != gt.ringCount[tj]) return false;
-        }
-        return true;
-    }
-
-    /// Bond compatibility check for substructure / MCS matching.
-    static bool bondsCompatible(
-            const MolGraph& g1, int qi, int qk,
-            const MolGraph& g2, int tj, int tk,
-            const ChemOptions& C) {
-        int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tk);
-        if (qOrd == 0 || tOrd == 0) return false;
-
-        // Tautomer-aware relaxation affects bond order only.
-        bool tautomerBond = false;
-        if (C.tautomerAware
-            && !g1.tautomerClass.empty() && !g2.tautomerClass.empty()) {
-            bool qBothTaut = g1.tautomerClass[qi] != -1
-                          && g1.tautomerClass[qk] != -1;
-            bool tBothTaut = g2.tautomerClass[tj] != -1
-                          && g2.tautomerClass[tk] != -1;
-            tautomerBond = qBothTaut && tBothTaut;
-        }
-
-        // Strict aromaticity: check bond aromaticity directly (no ring guard)
-        if (C.aromaticityMode == ChemOptions::AromaticityMode::STRICT
-            && g1.bondAromatic(qi, qk) != g2.bondAromatic(tj, tk))
-            return false;
-
-
-
-        if (C.ringMatchesRingOnly
-            && g1.bondInRing(qi, qk) != g2.bondInRing(tj, tk))
-            return false;
-
-        if (tautomerBond || C.matchBondOrder == ChemOptions::BondOrderMode::ANY)
-            return true;
-        if (qOrd == tOrd) return true;
-        if (C.matchBondOrder == ChemOptions::BondOrderMode::LOOSE)
-            return true;
-
-        if (C.aromaticityMode == ChemOptions::AromaticityMode::FLEXIBLE) {
-            bool qa = g1.bondAromatic(qi, qk), ta = g2.bondAromatic(tj, tk);
-            if ((qa && ta)
-                || (qa && (tOrd == 1 || tOrd == 2))
-                || (ta && (qOrd == 1 || qOrd == 2)))
-                return true;
-        }
-        return false;
-    }
-};
-
-// ===========================================================================
-// computeTautomerConfidence -- post-MCS tautomer match quality score ∈ (0,1].
-//
-// For each atom pair (qi→ti) in the MCS that is a cross-element tautomeric
-// match (atomicNum differs but both atoms are in a tautomeric class), the
-// confidence is multiplied by min(w_query, w_target).  Non-tautomeric pairs
-// contribute 1.0 (no penalty).  Returns 1.0 for an empty mapping or when
-// neither graph has tautomeric atoms.
-// ===========================================================================
-
-inline double computeTautomerConfidence(
-        const MolGraph& gq,
-        const MolGraph& gt,
-        const std::unordered_map<int,int>& mcs) {
-    if (mcs.empty()) return 1.0;
-    double conf = 1.0;
-    for (const auto& kv : mcs) {
-        int qi = kv.first, ti = kv.second;
-        if (qi < 0 || qi >= gq.n || ti < 0 || ti >= gt.n)
-            throw std::out_of_range("Tautomer confidence atom index out of range");
-        if (!gq.tautomerClass.empty() && !gt.tautomerClass.empty()
-            && gq.tautomerClass[qi] >= 0 && gt.tautomerClass[ti] >= 0
-            && gq.atomicNum[qi] != gt.atomicNum[ti]) {
-            float wq = gq.tautomerWeight.empty() ? 1.0f : gq.tautomerWeight[qi];
-            float wt = gt.tautomerWeight.empty() ? 1.0f : gt.tautomerWeight[ti];
-            conf *= static_cast<double>(std::min(wq, wt));
-        }
-    }
-    return conf;
-}
-
-// ===========================================================================
-// extractSubgraph -- extract a subgraph containing only the specified atom indices.
-// Extract an induced graph in the supplied atom order.
-// ===========================================================================
-
-inline MolGraph extractSubgraph(const MolGraph& mol, const std::vector<int>& atomIndices) {
-    for (int atom : atomIndices)
-        if (atom < 0 || atom >= mol.n)
-            throw std::out_of_range("Subgraph atom index out of range");
-    int subN = static_cast<int>(atomIndices.size());
-    if (subN == 0) return MolGraph();
-
-    // Build old-to-new index mapping
-    std::unordered_map<int, int> oldToNew;
-    oldToNew.reserve(subN);
-    for (int k = 0; k < subN; ++k)
-        oldToNew[atomIndices[k]] = k;
-
-    std::vector<int> atomicNum(subN), formalCharge(subN, 0), massNumber(subN, 0), hydrogenCount(subN, 0), atomClass(subN, 0);
-    std::vector<int> atomIds;
-    if (!mol.atomId.empty()) atomIds.resize(subN, 0);
-    std::vector<uint8_t> ring(subN, uint8_t(0)), aromatic(subN, uint8_t(0));
-    std::vector<std::vector<int>> neighbors(subN);
-    std::vector<std::vector<int>> bondOrders(subN);
-    std::vector<std::vector<bool>> bondRings(subN);
-    std::vector<std::vector<bool>> bondAroms(subN);
-
-    for (int k = 0; k < subN; ++k) {
-        int oldIdx = atomIndices[k];
-        atomicNum[k]    = mol.atomicNum[oldIdx];
-        formalCharge[k]  = mol.formalCharge[oldIdx];
-        massNumber[k]    = mol.massNumber[oldIdx];
-        if (oldIdx < static_cast<int>(mol.hydrogenCount.size()))
-            hydrogenCount[k] = mol.hydrogenCount[oldIdx];
-        if (oldIdx < static_cast<int>(mol.atomClass.size()))
-            atomClass[k] = mol.atomClass[oldIdx];
-        if (!atomIds.empty() && oldIdx < static_cast<int>(mol.atomId.size()))
-            atomIds[k] = mol.atomId[oldIdx];
-        // Do NOT copy ring/aromatic flags from parent — they may be invalid
-        // for the subgraph (e.g., partial ring extraction). These will be
-        // re-perceived below after bond connectivity is established.
-        ring[k]      = 0;
-        aromatic[k]  = 0;
-    }
-
-    // Copy bonds where both endpoints are in the subgraph
-    for (int k = 0; k < subN; ++k) {
-        int oldI = atomIndices[k];
-        for (int oldJ : mol.neighbors[oldI]) {
-            auto it = oldToNew.find(oldJ);
-            if (it == oldToNew.end()) continue;
-            int newJ = it->second;
-            neighbors[k].push_back(newJ);
-            bondOrders[k].push_back(mol.bondOrder(oldI, oldJ));
-            bondRings[k].push_back(mol.bondInRing(oldI, oldJ));
-            bondAroms[k].push_back(mol.bondAromatic(oldI, oldJ));
-        }
-    }
-
-    // Build the subgraph WITHOUT ring/aromatic flags first
-    auto builder = MolGraph::Builder()
-        .atomCount(subN)
-        .atomicNumbers(std::move(atomicNum))
-        .formalCharges(std::move(formalCharge))
-        .massNumbers(std::move(massNumber))
-        .hydrogenCounts(std::move(hydrogenCount))
-        .atomClasses(std::move(atomClass))
-        .ringFlags(std::move(ring))        // all zeros — re-perceived below
-        .aromaticFlags(std::move(aromatic)) // all zeros — re-perceived below
-        .setNeighbors(std::move(neighbors))
-        .setBondOrders(std::move(bondOrders))
-        .bondRingFlags(std::move(bondRings))
-        .bondAromaticFlags(std::move(bondAroms))
-        .name(mol.name)
-        .programLine(mol.programLine)
-        .comment(mol.comment)
-        .properties(mol.properties);
-    if (!atomIds.empty()) builder.atomIds(std::move(atomIds));
-    auto sub = builder.build();
-    sub.hydrogenCountsKnown = mol.hydrogenCountsKnown;
-
-    // Re-perceive ring membership and aromaticity on the actual subgraph topology.
-    // This prevents aromatic flag leakage from partial ring extraction (e.g., 4 atoms
-    // of a 6-membered ring are NOT aromatic as a standalone fragment).
-    sub.ensureRingCounts();
-    for (int i = 0; i < sub.n; ++i) {
-        sub.ring[i] = (!sub.ringCount.empty() && sub.ringCount[i] > 0) ? 1 : 0;
-        // Simple aromaticity: atom is aromatic only if it is in a ring AND was
-        // aromatic in the parent AND all its ring neighbours in the subgraph are present
-        if (sub.ring[i]) {
-            int oldIdx = atomIndices[i];
-            bool allRingNbPresent = true;
-            for (int oldNb : mol.neighbors[oldIdx]) {
-                if (mol.ring[oldNb] && mol.bondInRing(oldIdx, oldNb)) {
-                    if (oldToNew.find(oldNb) == oldToNew.end()) {
-                        allRingNbPresent = false;
-                        break;
-                    }
-                }
-            }
-            sub.aromatic[i] = (mol.aromatic[oldIdx] && allRingNbPresent) ? 1 : 0;
-        }
-    }
-
-    // Kekulisation fallback: for atoms that were aromatic in the parent but are
-    // NOT aromatic in the subgraph (broken ring, e.g. partial naphthalene
-    // Kekule fallback: atoms that lost aromaticity in the subgraph (broken ring)
-    // get their bonds downgraded to single (order 1) and aromatic flag cleared.
-    // This prevents invalid aromatic SMILES output for partial ring fragments.
-    for (int i = 0; i < sub.n; ++i) {
-        int oldIdx = atomIndices[i];
-        if (mol.aromatic[oldIdx] && !sub.aromatic[i]) {
-            for (int nb : sub.neighbors[i]) {
-                int oldNb = atomIndices[nb];
-                if (mol.aromatic[oldNb] && !sub.aromatic[nb]) {
-                    sub.setBondOrder(i, nb, 1);
-                    sub.setBondAromatic(i, nb, false);
-                }
-            }
-        }
-    }
-
-    return sub;
-}
-
-// ===========================================================================
-// murckoScaffold -- extract Murcko scaffold (ring systems + linkers).
-// Retain ring systems and connecting paths.
-// Strips all atoms not in rings and not on shortest paths between rings.
-// ===========================================================================
-
-inline MolGraph murckoScaffold(const MolGraph& mol) {
-    if (mol.n == 0) return mol;
-
-    // Identify ring atoms
-    bool hasRing = false;
-    for (int i = 0; i < mol.n; ++i) {
-        if (mol.ring[i]) { hasRing = true; break; }
-    }
-    if (!hasRing) return mol;
-
-    // Mark atoms to keep: all ring atoms + atoms on shortest paths between ring atoms
-    std::vector<bool> keep(mol.n, false);
-    std::vector<int> ringAtoms;
-    for (int i = 0; i < mol.n; ++i) {
-        if (mol.ring[i]) {
-            keep[i] = true;
-            ringAtoms.push_back(i);
-        }
-    }
-
-    // BFS from each ring atom to find shortest paths to other ring atoms
-    // through non-ring atoms (linkers)
-    for (int src : ringAtoms) {
-        std::vector<int> prev(mol.n, -1);
-        std::vector<bool> seen(mol.n, false);
-        std::deque<int> queue;
-        queue.push_back(src);
-        seen[src] = true;
-
-        while (!queue.empty()) {
-            int u = queue.front(); queue.pop_front();
-            for (int v : mol.neighbors[u]) {
-                if (seen[v]) continue;
-                seen[v] = true;
-                prev[v] = u;
-                if (mol.ring[v] && v != src) {
-                    // Trace back the path and mark all atoms on it
-                    int cur = v;
-                    while (cur != src && cur != -1) {
-                        keep[cur] = true;
-                        cur = prev[cur];
-                    }
-                }
-                // Only continue BFS through non-ring atoms (looking for linkers)
-                if (!mol.ring[v]) queue.push_back(v);
-            }
-        }
-    }
-
-    // Collect kept atom indices
-    std::vector<int> keptIndices;
-    for (int i = 0; i < mol.n; ++i) {
-        if (keep[i]) keptIndices.push_back(i);
-    }
-
-    if (static_cast<int>(keptIndices.size()) == mol.n) return mol;
-
-    return extractSubgraph(mol, keptIndices);
-}
-
-// ===========================================================================
-// translateToAtomIds -- convert MCS mapping from internal indices to external IDs
-//
-// If either graph has a non-empty atomId vector, the corresponding keys or
-// values in the returned map are translated. If neither graph has external
-// IDs, the input mapping is returned unchanged.
-// ===========================================================================
-
-inline std::map<int,int> translateToAtomIds(
-        const std::map<int,int>& mapping,
-        const MolGraph& g1,
-        const MolGraph& g2) {
-    if (mapping.empty()) return mapping;
-    if (g1.atomId.empty() && g2.atomId.empty()) return mapping;
-    std::map<int,int> translated;
-    for (const auto& [k, v] : mapping) {
-        if (!g1.atomId.empty() && (k < 0 || k >= static_cast<int>(g1.atomId.size()))) continue;
-        if (!g2.atomId.empty() && (v < 0 || v >= static_cast<int>(g2.atomId.size()))) continue;
-        int key = g1.atomId.empty() ? k : g1.atomId[k];
-        int val = g2.atomId.empty() ? v : g2.atomId[v];
-        translated[key] = val;
-    }
-    return translated;
-}
-
 } // namespace smsd
 
-#include "detail/smiles_writer.hpp"
+#include "smsd/detail/aromaticity.hpp"
+#include "smsd/detail/ring_perception.hpp"
+#include "smsd/detail/tautomers.hpp"
+#include "smsd/detail/canonical_labelling.hpp"
+#include "smsd/detail/atom_invariants.hpp"
+#include "smsd/detail/mol_graph_builder.hpp"
+#include "smsd/detail/graph_operations.hpp"
+#include "smsd/detail/smiles_writer.hpp"
 
 #endif // SMSD_MOL_GRAPH_HPP

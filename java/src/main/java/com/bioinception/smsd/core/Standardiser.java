@@ -2,7 +2,8 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
- * See the NOTICE file for attribution, trademark, and algorithm IP terms. */
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ */
 package com.bioinception.smsd.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -61,10 +62,11 @@ public final class Standardiser {
       // Unmatched atoms retain their original properties — hydrogen adder
       // will simply skip them, which is safer than the shortcut's silent failure.
     }
-    CDKHydrogenAdder hydrogens=CDKHydrogenAdder.getInstance(SilentChemObjectBuilder.getInstance());
-    for(IAtom atom:m.atoms())
-      if(atom.getImplicitHydrogenCount()==null&&atom.getAtomTypeName()!=null)hydrogens.addImplicitHydrogens(m,atom);
-    Cycles.markRingAtomsAndBonds(m);
+    CDKHydrogenAdder hydrogens = CDKHydrogenAdder.getInstance(SilentChemObjectBuilder.getInstance());
+    for (IAtom atom : m.atoms())
+      if (atom.getImplicitHydrogenCount() == null && atom.getAtomTypeName() != null)
+        hydrogens.addImplicitHydrogens(m, atom);
+    RingPerception.markRingAtomsAndBonds(m);
     Aromaticity arom =
         new Aromaticity(Aromaticity.Model.Daylight, Cycles.all());
     arom.apply(m);
@@ -74,7 +76,13 @@ public final class Standardiser {
 
   // ========== SMARTS matching ==========
 
-  /** Match a SMARTS pattern against a target molecule, returning unique atom mappings. */
+  /**
+   * Match a SMARTS pattern against a target molecule, returning unique atom mappings.
+   *
+   * @deprecated Use {@code Substructure.smarts(smarts).matchAll(target)}, which applies the SMARTS
+   *     limits and the Daylight semantics of the native core and reports a {@link SearchResult}.
+   */
+  @Deprecated
   public static List<int[]> matchAll(String smarts, IAtomContainer target) {
     return new ArrayList<>(Arrays.asList(
         SmartsPattern.create(smarts).matchAll(target).uniqueAtoms().toArray()));
@@ -139,10 +147,21 @@ public final class Standardiser {
 
   // ========== Predicate registry ==========
 
-  /** Named SMARTS predicate registry: $name -> SMARTS. Supports loading from JSON files. */
+  /**
+   * Named SMARTS predicate registry: $name -> SMARTS. Supports loading from JSON files with
+   * {@link #loadJsonFile}, which needs the optional dependency
+   * {@code com.fasterxml.jackson.core:jackson-databind}.
+   */
   public static class PredicateRegistry {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    /**
+     * Holds the JSON reader, so Jackson is loaded only when {@link #loadJsonFile} is first called
+     * and the registry otherwise works without it on the class path.
+     */
+    private static final class Json {
+      static final ObjectMapper MAPPER = new ObjectMapper();
+    }
+
     private final Map<String, String> map = new LinkedHashMap<>();
 
     public PredicateRegistry() {
@@ -162,10 +181,23 @@ public final class Standardiser {
     public boolean contains(String name) { return map.containsKey(name); }
     public String get(String name) { return map.get(name); }
 
-    /** Load predicates from a JSON file: {"name": "SMARTS", ...}. Non-String values are skipped. */
+    /**
+     * Load predicates from a JSON file: {"name": "SMARTS", ...}. Non-String values are skipped.
+     *
+     * <p>Requires {@code com.fasterxml.jackson.core:jackson-databind}, an optional dependency of
+     * SMSD that applications using this method add themselves.
+     *
+     * @throws IllegalStateException if jackson-databind is not on the class path
+     */
     @SuppressWarnings("unchecked")
     public void loadJsonFile(String path) throws Exception {
-      Map<String, Object> raw = MAPPER.readValue(new File(path), Map.class);
+      Map<String, Object> raw;
+      try {
+        raw = Json.MAPPER.readValue(new File(path), Map.class);
+      } catch (NoClassDefFoundError missing) {
+        throw new IllegalStateException("loadJsonFile requires "
+            + "com.fasterxml.jackson.core:jackson-databind on the class path", missing);
+      }
       for (Map.Entry<String, Object> entry : raw.entrySet()) {
         if (entry.getValue() instanceof String) {
           map.put(entry.getKey(), (String) entry.getValue());

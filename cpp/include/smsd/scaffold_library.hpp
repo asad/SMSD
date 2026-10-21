@@ -2,7 +2,8 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
- * See the NOTICE file for attribution, trademark, and algorithm IP terms. */
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ */
 #pragma once
 #ifndef SMSD_SCAFFOLD_LIBRARY_HPP
 #define SMSD_SCAFFOLD_LIBRARY_HPP
@@ -293,7 +294,7 @@ inline constexpr std::array<NaturalProductScaffold, 23> NATURAL_PRODUCT_SCAFFOLD
 //
 //  Privileged scaffolds recur across diverse target classes (GPCRs, kinases,
 //  nuclear receptors, ion channels).  They provide starting points that are
-//  biased toward bioactivity while retaining drug-like ADME properties.
+//  biased towards bioactivity while retaining drug-like ADME properties.
 // ============================================================================
 
 struct PrivilegedStructure {

@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.bioinceptionlabs</groupId>
+    <artifactId>smsd-parent</artifactId>
+    <version>8.0.0</version>
+  </parent>
+
+  <!-- The command-line tool. Besides smsd-cli-<version>.jar it builds the
+       self-contained smsd-cli-<version>-jar-with-dependencies.jar and the
+       portable launchers in target/appassembler. -->
+  <artifactId>smsd-cli</artifactId>
+  <packaging>jar</packaging>
+  <name>SMSD CLI</name>
+  <description>Command-line substructure and MCS search for chemical files and SMILES</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.bioinceptionlabs</groupId><artifactId>smsd</artifactId>
+    </dependency>
+
+    <!-- ===== Command line and JSON output ===== -->
+    <dependency>
+      <groupId>info.picocli</groupId><artifactId>picocli</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-databind</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-annotations</artifactId>
+    </dependency>
+
+    <!-- ===== CDK ===== -->
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-interfaces</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-silent</artifactId>
+    </dependency>
+    <!-- DefaultChemObjectBuilder for CML and PDB input -->
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-data</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-standard</artifactId>
+    </dependency>
+    <!-- File input: CML and Mol2 readers, MDL V2000/V3000 and SDF, and PDB -->
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-io</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-ctab</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-pdb</artifactId>
+    </dependency>
+    <!-- SMILES input, including the aromatic stereo carriers read through Beam -->
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-smiles</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>uk.ac.ebi.beam</groupId><artifactId>beam-core</artifactId>
+    </dependency>
+    <!-- 2D coordinates for MOL output -->
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-sdg</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>javax.vecmath</groupId><artifactId>vecmath</artifactId>
+    </dependency>
+
+    <!-- ===== Test ===== -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+      <resource>
+        <directory>${smsd.root}</directory>
+        <targetPath>META-INF/smsd</targetPath>
+        <filtering>false</filtering>
+        <includes>
+          <include>LICENSE</include>
+          <include>NOTICE</include>
+          <include>licenses/cdk/LICENSE</include>
+          <include>licenses/cdk/README.md</include>
+        </includes>
+      </resource>
+    </resources>
+
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+      </plugin>
+
+      <!-- A stable JPMS name for module-path users, as the library has. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default-jar</id>
+            <configuration>
+              <archive>
+                <manifestEntries>
+                  <Automatic-Module-Name>com.bioinception.smsd.cli</Automatic-Module-Name>
+                </manifestEntries>
+              </archive>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Copy project legal files into the Javadoc, as the library does. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-javadoc-legal</id>
+            <phase>generate-resources</phase>
+            <goals><goal>copy-resources</goal></goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}/javadoc-resources/doc-files/smsd</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${smsd.root}</directory>
+                  <filtering>false</filtering>
+                  <includes>
+                    <include>LICENSE</include>
+                    <include>NOTICE</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- The library Javadoc is generated into docs/api, not target/apidocs,
+           so do not look for it there to link to. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <configuration>
+          <javadocDirectory>${project.build.directory}/javadoc-resources</javadocDirectory>
+          <docfilessubdirs>true</docfilessubdirs>
+          <detectOfflineLinks>false</detectOfflineLinks>
+        </configuration>
+      </plugin>
+
+      <!-- Self-contained JAR: the CLI, the library and every dependency -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals><goal>shade</goal></goals>
+            <configuration>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <shadedArtifactAttached>true</shadedArtifactAttached>
+              <shadedClassifierName>jar-with-dependencies</shadedClassifierName>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>com.bioinception.smsd.cli.SMSDcli</mainClass>
+                </transformer>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+              </transformers>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+                <!-- The CLI JAR carries the same legal files under META-INF/smsd. -->
+                <filter>
+                  <artifact>com.bioinceptionlabs:smsd</artifact>
+                  <excludes>
+                    <exclude>META-INF/smsd/**</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Generate an isolated launcher distribution without overwriting source scripts. -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>appassembler-maven-plugin</artifactId>
+        <configuration>
+          <assembleDirectory>${project.build.directory}/appassembler</assembleDirectory>
+          <binFolder>bin</binFolder>
+          <!-- Shorter, portable classpath (wildcard) -->
+          <repositoryLayout>flat</repositoryLayout>
+          <useWildcardClassPath>true</useWildcardClassPath>
+          <programs>
+            <program>
+              <mainClass>com.bioinception.smsd.cli.SMSDcli</mainClass>
+              <id>smsd</id>
+            </program>
+          </programs>
+        </configuration>
+        <executions>
+          <execution>
+            <id>make-launchers</id>
+            <phase>package</phase>
+            <goals>
+              <goal>assemble</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <!-- Shared test helpers (TestBase, TestSupport) of the library. The library
+         builds no test JAR under -Dmaven.test.skip=true, and the CLI then
+         compiles no tests, so the dependency is left out in that case. -->
+    <profile>
+      <id>library-test-helpers</id>
+      <activation>
+        <property>
+          <name>maven.test.skip</name>
+          <value>!true</value>
+        </property>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>com.bioinceptionlabs</groupId><artifactId>smsd</artifactId>
+          <type>test-jar</type>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
+</project>

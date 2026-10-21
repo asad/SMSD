@@ -1,50 +1,123 @@
-# SMSD Java
+# SMSD Pro for Java
 
-The Java library and CLI use CDK 2.13. Version 7.2.2 supports Java 8 or later;
-Java 25 LTS is preferred. The same JAR runs on both.
+SMSD Pro for Java searches CDK 2.13 molecules for substructures and maximum
+common substructures (MCS). It is built as two Maven modules, so that an
+application takes only what it uses:
 
-The prepared-query API below is an unreleased breaking change. Build it from
-this source checkout; the released 7.2.2 JAR retains the previous API.
+| Module | Artefact | Contents |
+| --- | --- | --- |
+| `java/core` | `com.bioinceptionlabs:smsd` | The library: substructure, MCS and SMARTS search, fingerprints, stereo descriptors and standardisation |
+| `java/cli` | `com.bioinceptionlabs:smsd-cli` | The command-line interface (CLI), its file readers and JSON output, and the self-contained JAR |
+
+Both are compiled for Java 8 (class-file version 52), so the same JARs run on
+Java 8 and later; Java 25 LTS is recommended.
 
 ## Installation
 
-Download the [7.2.2 release](https://github.com/asad/SMSD/releases/tag/v7.2.2):
+### Library
 
-| Package | Use |
-| --- | --- |
-| `smsd-7.2.2-jar-with-dependencies.jar` | Standalone CLI or complete example classpath |
-| `smsd-7.2.2.jar` | Library with dependencies resolved by Maven |
-| `smsd-7.2.2-cli.tar.gz` | Portable CLI and shell launchers |
-| `smsd-7.2.2-sources.jar` | Java source |
-| `smsd-7.2.2-javadoc.jar` | Complete API reference |
-
-Windows AMD64 MSI, macOS arm64 DMG and Linux AMD64 DEB packages install the
-terminal CLI with Java 25 LTS included. See [native installers](../docs/INSTALLERS.md)
-for installation and platform requirements.
-
-Use these Maven coordinates for 7.2.2:
+Maven:
 
 ```xml
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>7.2.2</version>
+  <version>8.0.0</version>
 </dependency>
 ```
 
-Until 7.2.2 is published to Maven Central, install it from a source checkout
-using Java 25:
+Gradle (Kotlin DSL; in the Groovy DSL, write
+`implementation 'com.bioinceptionlabs:smsd:8.0.0'`):
+
+```kotlin
+dependencies {
+    implementation("com.bioinceptionlabs:smsd:8.0.0")
+}
+```
+
+The library brings only the CDK modules that it uses: `cdk-interfaces`,
+`cdk-core`, `cdk-silent`, `cdk-standard`, `cdk-isomorphism`, `cdk-smarts`,
+`cdk-valencycheck` and `cdk-atomtype`, whose atom type definitions the
+standardiser loads at run time, with `vecmath` and the small
+`jackson-annotations` artefact: 10 artefacts in all. Add what your application
+needs besides:
+
+| To | Add |
+| --- | --- |
+| Parse SMILES, as the quick start below does | `org.openscience.cdk:cdk-smiles:2.13` |
+| Read MOL and SDF files | `org.openscience.cdk:cdk-ctab:2.13` |
+| Read CML or Mol2 files | `org.openscience.cdk:cdk-io:2.13` |
+| Read PDB files | `org.openscience.cdk:cdk-pdb:2.13` |
+| Call `Standardiser.PredicateRegistry.loadJsonFile`, or read and write `SearchResult` as JSON | `com.fasterxml.jackson.core:jackson-databind:2.21.7` |
+
+`jackson-databind` is optional: without it, everything except `loadJsonFile`
+works, and that method throws `IllegalStateException`. On the module path, the
+library is the automatic module `com.bioinception.smsd`.
+
+### Command-line tool
+
+The self-contained `smsd-cli-8.0.0-jar-with-dependencies.jar` runs with
+`java -jar`, as shown under [Command-line interface](#command-line-interface).
+Download it from the [GitHub releases page](https://github.com/asad/SMSD/releases),
+or copy it from Maven Central:
+
+```bash
+mvn dependency:copy \
+  -Dartifact=com.bioinceptionlabs:smsd-cli:8.0.0:jar:jar-with-dependencies \
+  -DoutputDirectory=.
+```
+
+To call the CLI classes, such as `com.bioinception.smsd.cli.SMSDcli`, from an
+application, depend on the CLI module, which brings the library, picocli,
+Jackson and the CDK file readers. Maven:
+
+```xml
+<dependency>
+  <groupId>com.bioinceptionlabs</groupId>
+  <artifactId>smsd-cli</artifactId>
+  <version>8.0.0</version>
+</dependency>
+```
+
+Gradle (Kotlin DSL):
+
+```kotlin
+dependencies {
+    implementation("com.bioinceptionlabs:smsd-cli:8.0.0")
+}
+```
+
+On the module path, the CLI JAR is the automatic module
+`com.bioinception.smsd.cli`.
+
+Packaged CLI installers for Windows, macOS and Linux are described under
+[Java CLI installers](../docs/HOWTO-INSTALL.md#java-cli-installers).
+
+### Build from source
+
+From the repository root, build both modules and install them into your local
+Maven repository:
 
 ```bash
 mvn -f java/pom.xml install
 ```
 
-The Maven dependency includes the required CDK modules, including SMARTS support.
+`java/pom.xml` is the parent of both modules (`com.bioinceptionlabs:smsd-parent`).
+The build installs the parent, `smsd` and `smsd-cli`, and writes:
 
-## CDK example from a source build
+| File | Use |
+| --- | --- |
+| `java/core/target/smsd-8.0.0.jar` | Library; Maven resolves its dependencies |
+| `java/cli/target/smsd-cli-8.0.0.jar` | CLI classes; Maven resolves their dependencies |
+| `java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar` | Standalone CLI, and a self-contained class path for the examples |
+| `java/cli/target/appassembler/` | Portable `bin/smsd` launchers and the JARs they use, in `repo/` |
 
-Save this as `CDKExample.java`. The mapping refers to atom indices in the
-original CDK containers:
+## Quick start
+
+Save this as `CDKExample.java`. It checks that benzene is a substructure of
+phenol, confirms that the MCS search proved a six-atom optimum, and prints the
+atom mapping in the original CDK atom indices. It parses SMILES with CDK, so a
+Maven or Gradle project needs `cdk-smiles` beside `smsd`:
 
 ```java
 import com.bioinception.smsd.core.MCS;
@@ -64,7 +137,7 @@ public class CDKExample {
         if (!result.optimal() || !result.found()
                 || result.matches().get(0).atomCount() != 6
                 || !Substructure.find(query).match(target).found()) {
-            throw new IllegalStateException("Expected a proven six-atom benzene match");
+            throw new IllegalStateException("Expected a proved six-atom benzene match");
         }
         SearchResult.Match match = result.matches().get(0);
         for (Map.Entry<Integer, Integer> pair : match.atomMapping().entrySet()) {
@@ -76,62 +149,87 @@ public class CDKExample {
 }
 ```
 
-Build the current source API, then compile using Java 25 and run on Java 8 or later:
+After the build above, compile and run it from the repository root against the
+self-contained JAR, which includes the library, CDK and `cdk-smiles`:
 
 ```bash
-mvn -f java/pom.xml package -DskipTests
-javac --release 8 -cp java/target/smsd-7.2.2-jar-with-dependencies.jar CDKExample.java
-java -cp "java/target/smsd-7.2.2-jar-with-dependencies.jar:." CDKExample
+javac --release 8 -cp java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar CDKExample.java
+java -cp "java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar:." CDKExample
 ```
 
-When compiling with Java 8, omit `--release 8`. On Windows, use
-`"java/target/smsd-7.2.2-jar-with-dependencies.jar;."` as the classpath.
+With a Java 8 compiler, omit `--release 8`. On Windows, separate the classpath
+entries with a semicolon: `"java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar;."`.
 
-## CLI
+By default, `MCS` searches for a connected maximum common induced subgraph
+(MCIS), maximising atoms and then bonds, and `Substructure` searches for a
+non-induced embedding of the whole query. Both provide `match`, `matchAll` and
+`matchMany`. Check `status()`, `optimal()` and `complete()` before relying on a
+result: a search stopped by its timeout can still return a valid match without
+proving it optimal. The [Java guide](../docs/JAVA.md) covers the maximum common
+edge subgraph (MCES) objective, disconnected fragments, atom weights, timeouts
+and the full result contract.
+
+## Command-line interface
+
+From the repository root:
 
 ```bash
-java -jar smsd-7.2.2-jar-with-dependencies.jar --version
-java -jar smsd-7.2.2-jar-with-dependencies.jar --help
-java -jar smsd-7.2.2-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar --version
+java -jar java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
-java -jar smsd-7.2.2-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --mode mcs --json -
 ```
 
-File input supports MOL, MOL2 (`ML2`), CML and PDB. A single-molecule/model
-input is required; use SDF for batch targets. JSON output uses UTF-8.
+The first search tests whether benzene is a substructure of phenol; the second
+finds their MCS. `--help` lists every option, and the
+[Java guide](../docs/JAVA.md#command-line-interface) describes input formats,
+JSON output and exit status.
 
 ## Build and test
 
-From the repository root, using Java 25:
+From the repository root, with JDK 25:
 
 ```bash
 mvn -f java/pom.xml clean verify
-java -jar java/target/smsd-7.2.2-jar-with-dependencies.jar --version
 ```
 
-The root `pom.xml` also runs this module with `mvn clean verify`. Include the
-algorithm and stress suites with `-Dslow.tests.exclude=nothing`; benchmarks
-remain opt-in. To test the same compiled classes on Java 8 while Maven uses
-Java 25, set `SMSD_JAVA8_HOME` to an installed Java 8 JDK, then run:
+This builds and tests the library and then the CLI. The root `pom.xml`
+aggregates `java/pom.xml`, so `mvn clean verify` from the repository root runs
+the same build. Add `-pl core` to build the library alone, or `-pl cli -am` for
+the CLI and the library it needs. The library build also checks that its
+declared dependencies match what its code uses. The algorithm and stress suites
+are excluded by default; add
+`-Dslow.tests.exclude=nothing` to include them. Benchmark tests are skipped
+unless `-Dbenchmark=true` or `-Dsmsd.benchmark=true` is set.
+
+To run the tests on a Java 8 runtime while Maven runs on Java 25, set
+`SMSD_JAVA8_HOME` to a Java 8 JDK and run:
 
 ```bash
 mvn -f java/pom.xml -Dslow.tests.exclude=nothing \
-  "-Djvm=$SMSD_JAVA8_HOME/bin/java" surefire:test
+  "-Djvm=$SMSD_JAVA8_HOME/bin/java" test
 ```
 
-Sources and shell launchers are under `java/src/`; build output is under
-`java/target/`. Keep the root `LICENSE` and `NOTICE` when building from a checkout.
-Use `java/pom.xml` to publish the library; the root POM aggregates local builds.
+The library sources are in `java/src/main/java` and its tests in
+`java/src/test/java`, built by `java/core/pom.xml`. The CLI is in
+`java/cli/src/main/java`, its tests in `java/cli/src/test/java` and the launcher
+scripts in `java/cli/src/scripts`; the CLI tests reuse the library's test
+helpers through its test JAR. The library and CLI JARs carry the repository's
+`LICENSE` and `NOTICE` files under `META-INF/smsd/`, and the CDK licence under
+`META-INF/smsd/licenses/cdk/`.
 
-## Reference
+## Documentation
 
-- [Java API guide](../docs/JAVA.md): search options, fingerprints, stereo and R-groups.
-- [Examples](../docs/EXAMPLES.md): feature examples and matching contracts.
-- [Complete API reference](https://github.com/asad/SMSD/releases/download/v7.2.2/smsd-7.2.2-javadoc.jar).
-- [Validation](../docs/VALIDATION_7.2.2.md): Java 8 and 25 test results.
-- [Changelog](../CHANGELOG.md): API and behaviour changes.
-- [Benchmarks](../benchmarks/README.md): prepared-query workloads and mapping validation.
+- [Java guide](../docs/JAVA.md): API reference, options, results, fingerprints,
+  stereo, R-groups and the CLI.
+- [Installation guide](../docs/HOWTO-INSTALL.md): platform requirements and
+  source builds.
+- [Validation record](../docs/VALIDATION_8.0.0.md): release checks for 8.0.0.
+- [Benchmark guide](../benchmarks/README.md): workloads and mapping validation.
+- [Changelog](../CHANGELOG.md): what the release provides.
 
-Distributed under the [Apache License 2.0](../LICENSE); see [NOTICE](../NOTICE)
+## Licence
+
+Distributed under the [Apache License 2.0](../LICENSE). See [NOTICE](../NOTICE)
 for attribution and bundled dependency notices.

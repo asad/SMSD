@@ -6,24 +6,19 @@
  */
 package com.bioinception.smsd.core;
 
+import static com.bioinception.smsd.TestSupport.rawGraph;
 import static org.junit.jupiter.api.Assertions.*;
 import java.util.Random;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.Test;
-import org.openscience.cdk.silent.SilentChemObjectBuilder;
-import org.openscience.cdk.smiles.SmilesParser;
 
 class GraphLayoutRegressionTest {
-  private static MolGraph molecule(String smiles) throws Exception {
-    return new MolGraph(new SmilesParser(SilentChemObjectBuilder.getInstance()).parseSmiles(smiles));
-  }
-
   @ParameterizedTest
   @ValueSource(strings = {"c1ccccc1", "C1CCCCC1", "c1ccc2ccccc2c1", "c1cccc2ccccc12",
       "c1ccc2[nH]ccc2c1", "c1ccc2ncccc2c1", "c1ccccc1-c2ccccc2"})
   void mapsScaffoldCoordinatesToBondTopology(String smiles) throws Exception {
-    MolGraph graph = molecule(smiles);
+    MolGraph graph = rawGraph(smiles);
     MolGraph.Point2D[] coordinates = MolGraph.matchTemplate(graph);
     assertNotNull(coordinates);
     assertOrdinaryBondGeometry(graph, coordinates);
@@ -31,12 +26,12 @@ class GraphLayoutRegressionTest {
 
   @Test
   void rejectsDifferentTopologyWithTheSameRingSizes() throws Exception {
-    assertNull(MolGraph.matchTemplate(molecule("CC1CC2CCCC(C1)C2")));
+    assertNull(MolGraph.matchTemplate(rawGraph("CC1CC2CCCC(C1)C2")));
   }
 
   @Test
   void seedsDegenerateFusedCoordinatesWithMappedTemplate() throws Exception {
-    MolGraph graph = molecule("c1ccc2ccccc2c1");
+    MolGraph graph = rawGraph("c1ccc2ccccc2c1");
     MolGraph.Point2D[] coordinates = new MolGraph.Point2D[graph.n];
     for (int atom = 0; atom < graph.n; atom++) coordinates[atom] = new MolGraph.Point2D(0, 0);
     MolGraph.forceDirectedLayout(graph, coordinates, 0, 1.5);
@@ -46,7 +41,7 @@ class GraphLayoutRegressionTest {
   @ParameterizedTest
   @ValueSource(strings = {"CCCCC1CCCCC1", "c1ccccc1Cc1ccccc1"})
   void writesOptimisedCoordinatesBeforeReturningCrossingCount(String smiles) throws Exception {
-    MolGraph graph = molecule(smiles);
+    MolGraph graph = rawGraph(smiles);
     for (int seed = 0; seed < 8; seed++) {
       Random random = new Random(seed);
       MolGraph.Point2D[] coordinates = new MolGraph.Point2D[graph.n];
@@ -63,7 +58,7 @@ class GraphLayoutRegressionTest {
     StringBuilder smiles = new StringBuilder("C1");
     for (int atom = 1; atom < atoms; atom++) smiles.append('C');
     smiles.append('1');
-    MolGraph graph = molecule(smiles.toString());
+    MolGraph graph = rawGraph(smiles.toString());
     assertEquals(1, graph.computeRings().length);
     assertEquals(atoms, graph.computeRings()[0].length);
     assertEquals(1, MolGraph.computeSSSR(graph).size());

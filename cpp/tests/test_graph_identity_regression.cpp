@@ -2,7 +2,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  */
+#include "test_support.hpp"
 #include "smsd/smiles_parser.hpp"
 #include "smsd/ring_finder.hpp"
 #include "smsd/search.hpp"
@@ -15,9 +17,7 @@
 #include <set>
 #include <stdexcept>
 
-static void require(bool condition, const std::string& message) {
-    if (!condition) throw std::runtime_error(message);
-}
+using smsd_test::require;
 
 static void testEquivalentSmiles() {
     const std::pair<const char*, const char*> examples[] = {
@@ -149,15 +149,8 @@ static void testMacrocycles() {
             "fused benzene and macrocycle must retain every ring atom");
 }
 
-int main() {
-    int failures = 0;
-    const std::pair<const char*, void (*)()> tests[] = {
-        {"equivalent SMILES", testEquivalentSmiles}, {"atom and bond order", testAtomAndBondOrder},
-        {"verified orbits", testVerifiedOrbits}, {"macrocycles", testMacrocycles}
-    };
-    for (const auto& test : tests) {
-        try { test.second(); std::cout << "PASS " << test.first << '\n'; }
-        catch (const std::exception& error) { ++failures; std::cerr << "FAIL " << test.first << ": " << error.what() << '\n'; }
-    }
-    return failures == 0 ? 0 : 1;
+int main(int argc, char** argv) {
+    return smsd_test::runGroups(argc, argv, {
+        {"equivalent-smiles", testEquivalentSmiles}, {"atom-and-bond-order", testAtomAndBondOrder},
+        {"verified-orbits", testVerifiedOrbits}, {"macrocycles", testMacrocycles}});
 }

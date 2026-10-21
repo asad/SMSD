@@ -1,7 +1,8 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
- * See the NOTICE file for attribution.
+ * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  */
 
 import com.bioinception.smsd.core.ChemOptions;
@@ -30,7 +31,11 @@ import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.silent.SilentChemObjectBuilder;
 import org.openscience.cdk.smiles.SmilesParser;
 
-/** Shared-corpus diagnostics for the public prepared search APIs, on Java 8 or later. */
+/**
+ * Shared-corpus diagnostics for the public prepared search APIs, on Java 8 or later. --threads N
+ * runs batch rows on N threads (0 for all processors); --batch-targets FILE fills each batch with
+ * distinct molecules from FILE instead of copies of the case target.
+ */
 public final class BenchmarkSearchAPI {
   private static final ObjectMapper JSON = new ObjectMapper();
   private static final SmilesParser PARSER = new SmilesParser(SilentChemObjectBuilder.getInstance());
@@ -140,11 +145,39 @@ public final class BenchmarkSearchAPI {
   private static final class Inputs {
     final Molecule query, target;
     final List<MolGraph> batch;
-    Inputs(Case row) throws Exception {
+    /** The distinct batch targets, or null when the batch repeats the case target. */
+    final List<Molecule> distinct;
+    Inputs(Case row, List<String> batchTargets) throws Exception {
       query = row.operation.equals("smarts") ? null : new Molecule(row.query);
       target = new Molecule(row.target);
-      batch = Collections.nCopies(row.batchSize, target.graph);
+      if (batchTargets == null) {
+        distinct = null;
+        batch = Collections.nCopies(row.batchSize, target.graph);
+      } else {
+        distinct = new ArrayList<>();
+        batch = new ArrayList<>();
+        for (int index = 0; index < row.batchSize; index++) {
+          Molecule molecule = new Molecule(batchTargets.get(index % batchTargets.size()));
+          distinct.add(molecule);
+          batch.add(molecule.graph);
+        }
+      }
     }
+    Molecule batchTarget(int index) {
+      return distinct == null ? target : distinct.get(index);
+    }
+  }
+
+  /** One SMILES per line, optionally after an identifier and a tab; blank lines and # comments are skipped. */
+  private static List<String> batchTargets(Path input) throws Exception {
+    List<String> targets = new ArrayList<>();
+    for (String line : Files.readAllLines(input, StandardCharsets.UTF_8)) {
+      if (line.trim().isEmpty() || line.startsWith("#")) continue;
+      String[] columns = line.split("\t");
+      targets.add(columns[columns.length - 1].trim());
+    }
+    if (targets.isEmpty()) throw new IllegalArgumentException("No batch targets");
+    return targets;
   }
 
   private static final class Prepared {
@@ -166,24 +199,27 @@ public final class BenchmarkSearchAPI {
           : (row.limit == 0 ? substructure.match(target)
                             : substructure.matchAll(target, row.limit));
     }
-    List<SearchResult> batch(List<MolGraph> targets) {
-      return maximum != null ? maximum.matchMany(targets) : substructure.matchMany(targets);
+    List<SearchResult> batch(List<MolGraph> targets, int threads) {
+      return maximum != null ? maximum.matchMany(targets, threads) : substructure.matchMany(targets, threads);
     }
   }
 
   private static final class Measurement {
     final long elapsed;
+    /** A call shorter than one nanoTime tick reads 0: it is recorded as 1 ns, flagged, never a speed result. */
+    final boolean belowTimerResolution;
     final List<SearchResult> results;
     final Object prepared;
     Measurement(long elapsed, List<SearchResult> results, Object prepared) {
-      this.elapsed = elapsed;
+      this.belowTimerResolution = elapsed == 0;
+      this.elapsed = belowTimerResolution ? 1 : elapsed;
       this.results = results;
       this.prepared = prepared;
     }
   }
 
-  private static Measurement measure(Case row, String phase, Inputs inputs, Prepared query)
-      throws Exception {
+  private static Measurement measure(Case row, String phase, Inputs inputs, Prepared query,
+      int threads) throws Exception {
     long started = System.nanoTime();
     if (phase.equals("prepare")) {
       Prepared prepared = new Prepared(row, inputs);
@@ -191,12 +227,12 @@ public final class BenchmarkSearchAPI {
       return new Measurement(elapsed, Collections.emptyList(), prepared);
     }
     if (phase.equals("batch")) {
-      List<SearchResult> results = query.batch(inputs.batch);
+      List<SearchResult> results = query.batch(inputs.batch, threads);
       long elapsed = System.nanoTime() - started;
       return new Measurement(elapsed, results, query);
     }
     if (phase.equals("end_to_end")) {
-      Inputs parsed = new Inputs(row);
+      Inputs parsed = new Inputs(row, null);
       Prepared prepared = new Prepared(row, parsed);
       SearchResult result = prepared.match(parsed.target.graph);
       long elapsed = System.nanoTime() - started;
@@ -267,21 +303,22 @@ public final class BenchmarkSearchAPI {
     return result;
   }
 
-  private static void validate(Case row, Inputs inputs, List<SearchResult> results) {
-    for (SearchResult search : results)
-      for (SearchResult.Match match : search.matches()) {
+  private static void validate(Case row, Inputs inputs, String phase, List<SearchResult> results) {
+    for (int index = 0; index < results.size(); index++) {
+      MolGraph target = phase.equals("batch") ? inputs.batchTarget(index).graph : inputs.target.graph;
+      for (SearchResult.Match match : results.get(index).matches()) {
         if (new HashSet<>(match.atomMapping().values()).size() != match.atomCount())
           throw new IllegalStateException("Non-injective result");
         for (int targetAtom : match.atomMapping().values())
-          if (targetAtom < 0 || targetAtom >= inputs.target.graph.atomCount())
+          if (targetAtom < 0 || targetAtom >= target.atomCount())
             throw new IllegalStateException("Target index outside molecule");
         if (inputs.query == null) continue;
         List<String> errors = row.operation.equals("mcs")
-            ? MCS.validateMapping(inputs.query.graph, inputs.target.graph, match, row.maximum)
-            : MCS.validateMapping(inputs.query.graph, inputs.target.graph,
-                  match.atomMapping(), row.chemistry);
+            ? MCS.validateMapping(inputs.query.graph, target, match, row.maximum)
+            : MCS.validateMapping(inputs.query.graph, target, match.atomMapping(), row.chemistry);
         if (!errors.isEmpty()) throw new IllegalStateException("Invalid mapping: " + errors);
       }
+    }
   }
 
   private static List<Case> load(Path input) throws Exception {
@@ -312,18 +349,23 @@ public final class BenchmarkSearchAPI {
 
   public static void main(String[] arguments) throws Exception {
     Map<String, String> flags = new LinkedHashMap<>();
-    Set<String> accepted = new HashSet<>(
-        Arrays.asList("--cases", "--output", "--warmup", "--repeats", "--phase", "--case"));
+    Set<String> accepted = new HashSet<>(Arrays.asList(
+        "--cases", "--output", "--warmup", "--repeats", "--phase", "--case", "--threads", "--batch-targets"));
     for (int argument = 0; argument < arguments.length; argument += 2) {
       if (argument + 1 >= arguments.length || !accepted.contains(arguments[argument])
           || flags.put(arguments[argument], arguments[argument + 1]) != null)
-        throw new IllegalArgumentException("Expected --cases FILE --output FILE --warmup N --repeats N [--phase PHASE] [--case ID]");
+        throw new IllegalArgumentException("Expected --cases FILE --output FILE --warmup N --repeats N"
+            + " [--phase PHASE] [--case ID] [--threads N] [--batch-targets FILE]");
     }
     if (!flags.keySet().containsAll(Arrays.asList("--cases", "--output", "--warmup", "--repeats")))
       throw new IllegalArgumentException("Missing required arguments");
     int warmup = Integer.parseInt(flags.get("--warmup"));
     int repeats = Integer.parseInt(flags.get("--repeats"));
     if (warmup < 0 || repeats < 1) throw new IllegalArgumentException("Invalid warmup/repeat count");
+    int threads = flags.containsKey("--threads") ? Integer.parseInt(flags.get("--threads")) : 1;
+    if (threads < 0) throw new IllegalArgumentException("Invalid thread count");
+    List<String> batchTargets = flags.containsKey("--batch-targets")
+        ? batchTargets(Paths.get(flags.get("--batch-targets"))) : null;
     if (flags.containsKey("--phase") && !PHASES.contains(flags.get("--phase")))
       throw new IllegalArgumentException("Unknown phase " + flags.get("--phase"));
     Path output = Paths.get(flags.get("--output"));
@@ -338,30 +380,38 @@ public final class BenchmarkSearchAPI {
         if (phases.isEmpty()) continue;
         selected++;
         try {
-          Inputs inputs = new Inputs(row);
+          Inputs inputs = new Inputs(row, row.phases.contains("batch") ? batchTargets : null);
           String graphPhase = phases.contains("prepared") ? "prepared" : phases.get(0);
           for (String phase : phases) {
             Prepared query = phase.equals("prepare") || phase.equals("end_to_end")
                 ? null : new Prepared(row, inputs);
             for (int iteration = 0; iteration < warmup; iteration++) {
-              Measurement ignored = measure(row, phase, inputs, query);
+              Measurement ignored = measure(row, phase, inputs, query, threads);
               retained = ignored;
             }
             for (int sample = 0; sample < repeats; sample++) {
-              Measurement measured = measure(row, phase, inputs, query);
+              Measurement measured = measure(row, phase, inputs, query, threads);
               retained = measured;
-              validate(row, inputs, measured.results);
+              validate(row, inputs, phase, measured.results);
               Map<String, Object> line = new LinkedHashMap<>();
               line.put("case_id", row.id);
               line.put("language", "java");
               line.put("phase", phase);
               line.put("sample", sample);
+              line.put("threads", phase.equals("batch") ? threads : 1);
+              if (phase.equals("batch")) line.put("batch_targets", batchTargets != null ? "distinct" : "copies");
               line.put("elapsed_ns", measured.elapsed);
+              if (measured.belowTimerResolution) line.put("below_timer_resolution", true);
               List<Map<String, Object>> results = new ArrayList<>();
               for (SearchResult result : measured.results) results.add(result(result));
               line.put("results", results);
               line.put("query_graph", sample == 0 && phase.equals(graphPhase) ? graph(inputs.query) : null);
               line.put("target_graph", sample == 0 && phase.equals(graphPhase) ? graph(inputs.target) : null);
+              if (sample == 0 && phase.equals("batch") && inputs.distinct != null) {
+                List<Map<String, Object>> graphs = new ArrayList<>();
+                for (Molecule molecule : inputs.distinct) graphs.add(graph(molecule));
+                line.put("batch_target_graphs", graphs);
+              }
               writer.write(JSON.writeValueAsString(line));
               writer.newLine();
             }

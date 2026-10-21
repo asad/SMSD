@@ -1,19 +1,20 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
+ * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  */
 #include <cmath>
 #undef M_PI
 #include "smsd/depict.hpp"
 #include "smsd/mol_reader.hpp"
+#include "test_support.hpp"
 
 #include <chrono>
 #include <iostream>
 #include <stdexcept>
 
-static void require(bool condition, const char* message) {
-    if (!condition) throw std::runtime_error(message);
-}
+using smsd_test::require;
 
 static void requireSameGraph(const smsd::MolGraph& found, const smsd::MolGraph& expected) {
     require(found.n == expected.n && found.atomicNum == expected.atomicNum,

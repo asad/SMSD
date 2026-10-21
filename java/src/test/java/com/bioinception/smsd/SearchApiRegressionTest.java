@@ -1,7 +1,8 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
- * See the NOTICE file for attribution.
+ * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  */
 package com.bioinception.smsd;
 
@@ -59,8 +60,22 @@ class SearchApiRegressionTest {
           assertDoesNotThrow(() -> MCS.validateMapping(query, target, mapping, new ChemOptions()));
       assertTrue(errors.stream().anyMatch(error -> error.contains("out of range")));
     }
-    assertTrue(MCS.validateMapping(query, target, mapping(0, 0, 1, 1), null).isEmpty());
+    assertTrue(MCS.validateMapping(query, target, mapping(0, 0, 1, 1), (ChemOptions) null).isEmpty());
   }
+  @Test
+  void anyNegativeTimeoutSelectsTheAdaptiveBudget() {
+    MolGraph query = ethane(), target = ethane();
+    for (long timeout : new long[] {-1L, -5L, Long.MIN_VALUE}) {
+      SearchResult mcs = MCS.find(query).withTimeout(timeout).match(target);
+      assertTrue(mcs.found() && mcs.optimal(), "timeout " + timeout);
+      SearchResult embedding = Substructure.find(query).withTimeout(timeout).match(target);
+      assertEquals(SearchResult.Status.Completed, embedding.status(), "timeout " + timeout);
+      MCS.Options options = new MCS.Options();
+      options.timeoutMillis = timeout;
+      assertTrue(MCS.find(query).withOptions(options).match(target).found(), "timeout " + timeout);
+    }
+  }
+
   @Test
   void hugeTimeoutsDoNotOverflowIntoExpiredBudgets() {
     SearchResult result = Substructure.find(ethane()).withTimeout(Long.MAX_VALUE).match(ethane());

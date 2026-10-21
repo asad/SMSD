@@ -1,14 +1,18 @@
-// SMSD Pro — Publication-Quality Molecular Depiction Engine
-// Zero-dependency SVG renderer: ACS 1996, Nature, Springer journal standard
-// Accepts MolGraph, SMILES, substructure/MCS mappings; auto-layout when needed
-// SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2018-2026 BioInception PVT LTD
-// Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
-// See the NOTICE file for attribution, trademark, and algorithm IP terms.
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2018-2026 BioInception PVT LTD
+ * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ *
+ * SMSD Pro — Publication-Quality Molecular Depiction Engine
+ * Zero-dependency SVG renderer: ACS 1996, Nature, Springer journal standard
+ * Accepts MolGraph, SMILES, substructure/MCS mappings; auto-layout when needed
+ */
 #pragma once
 #include "smsd/mol_graph.hpp"
 #include "smsd/mol_reader.hpp"
 #include "smsd/layout.hpp"
+#include "smsd/smiles_parser.hpp"
 #include <cmath>
 #include <sstream>
 #include <algorithm>
@@ -128,19 +132,9 @@ inline Color atomColor(int Z) {
     }
 }
 
+/** Label symbol of an element from hydrogen to radon, from the table of smiles_utils.hpp; "?" otherwise. */
 inline const char* elementSymbol(int Z) {
-    static const char* SYM[] = {
-        "?","H","He","Li","Be","B","C","N","O","F","Ne",
-        "Na","Mg","Al","Si","P","S","Cl","Ar","K","Ca",
-        "Sc","Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn",
-        "Ga","Ge","As","Se","Br","Kr","Rb","Sr","Y","Zr",
-        "Nb","Mo","Tc","Ru","Rh","Pd","Ag","Cd","In","Sn",
-        "Sb","Te","I","Xe","Cs","Ba","La","Ce","Pr","Nd",
-        "Pm","Sm","Eu","Gd","Tb","Dy","Ho","Er","Tm","Yb",
-        "Lu","Hf","Ta","W","Re","Os","Ir","Pt","Au","Hg",
-        "Tl","Pb","Bi","Po","At","Rn"
-    };
-    return (Z >= 0 && Z <= 86) ? SYM[Z] : "?";
+    return (Z >= 1 && Z <= 86) ? detail::atomicNumToSymbol(Z) : "?";
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -161,7 +155,7 @@ namespace acs {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-//  Depiction Options (everything customizable)
+//  Depiction Options (everything customisable)
 // ════════════════════════════════════════════════════════════════════════════
 
 enum class BondStereoType { NONE = 0, WEDGE_UP = 1, WEDGE_DOWN = 2, WAVY = 3 };
@@ -460,7 +454,7 @@ inline DepictResult depictSVG(
         if (!labels[atomIdx].visible) return to;
         double halfW = labels[atomIdx].textWidth * 0.5 + 2;
         double halfH = FS * 0.55;
-        Vec2 d = from - to;  // direction from endpoint toward other atom
+        Vec2 d = from - to;  // direction from endpoint towards other atom
         double dl = len(d);
         if (dl < 1e-9) return to;
         // Move endpoint outward by the label half-extent along bond direction
@@ -584,22 +578,22 @@ inline DepictResult depictSVG(
                     << "\" stroke-linecap=\"round\"/>\n";
             }
             else if (order == 2) {
-                // Double bond — asymmetric toward ring interior, symmetric otherwise
+                // Double bond: asymmetric towards ring interior, symmetric otherwise
                 Vec2 ringC;
                 bool inRing = detail_depict::bondInRing(i, j, rings, pos, ringC);
 
                 if (inRing) {
-                    // Full line on bond axis + shorter offset line toward ring centre
+                    // Full line on bond axis + shorter offset line towards ring centre
                     svg << "<line x1=\"" << cp1.x << "\" y1=\"" << cp1.y
                         << "\" x2=\"" << cp2.x << "\" y2=\"" << cp2.y
                         << "\" stroke=\"" << rgb(bondCol) << "\" stroke-width=\"" << width
                         << "\" stroke-linecap=\"round\"/>\n";
 
-                    // Offset toward ring centre
+                    // Offset towards ring centre
                     Vec2 bondMid = (p1 + p2) * 0.5;
                     Vec2 toCenter = norm(Vec2{tx(ringC.x), ty(ringC.y)} - bondMid);
                     double offsetDist = BS;
-                    // Ensure offset is toward the ring (positive dot with toCenter)
+                    // Ensure offset is towards the ring (positive dot with toCenter)
                     if (dot(bondPerp, toCenter) < 0) offsetDist = -offsetDist;
                     Vec2 off = bondPerp * offsetDist;
 
@@ -890,7 +884,6 @@ inline std::string depictPair(
     const double HR  = opts.highlightRadius_();
     const double MW  = opts.matchWidth_();
     const double MNS = opts.mapNumSize_();
-    const double BW  = opts.boldWidth_();
     const double SUB = opts.subscriptScale;
 
     auto rings1 = findLayoutRings(g1);
@@ -1153,7 +1146,6 @@ inline std::string depictPair(
 }
 
 // ── Convenience: SMILES → SVG ─────────────────────────────────────────────
-#ifdef SMSD_SMILES_PARSER_HPP
 
 inline std::string depictSMILES(const std::string& smiles, const DepictOptions& opts = {}) {
     auto mol = parseSMILES(smiles);
@@ -1167,7 +1159,5 @@ inline std::string depictMCS(
 ) {
     return depictPair(parseSMILES(smiles1), parseSMILES(smiles2), mapping, opts);
 }
-
-#endif // SMSD_SMILES_PARSER_HPP
 
 } // namespace smsd

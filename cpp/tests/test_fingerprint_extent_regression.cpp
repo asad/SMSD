@@ -1,13 +1,17 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2018-2026 BioInception PVT LTD
+ * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ */
+#include "test_support.hpp"
 #include "smsd/batch.hpp"
 #include <iostream>
 #include <limits>
 #include <numeric>
 #include <stdexcept>
 
-static void require(bool condition, const char* message) {
-    if (!condition) throw std::runtime_error(message);
-}
+using smsd_test::require;
 
 static void finiteExtent() {
     for (const auto& fixture : {std::pair<const char*, int>{"CCO", 2}, {"c1ccccc1", 3},
@@ -78,26 +82,46 @@ static std::vector<int> bitPositions(const std::vector<uint64_t>& fingerprint) {
 static void fixedRadiusGoldens() {
     const auto graph = smsd::parseSMILES("CCO");
     require(bitPositions(smsd::batch::detail::computeCircularFingerprintECFP(graph, 0, 2048))
-            == std::vector<int>{452, 1828, 1861}, "Radius-zero ECFP hashes must stay unchanged");
+            == std::vector<int>{452, 1828, 1861}, "Radius-zero ECFP hashes must match the golden bits");
     require(bitPositions(smsd::batch::detail::computeCircularFingerprintECFP(graph, 2, 2048))
             == std::vector<int>{273, 452, 501, 1237, 1670, 1702, 1746, 1828, 1861},
-            "Fixed-radius ECFP hashes must stay unchanged");
+            "Fixed-radius ECFP hashes must match the golden bits");
     require(bitPositions(smsd::batch::detail::computeCircularFingerprintFCFP(graph, 2, 2048))
             == std::vector<int>{357, 395, 814, 1172, 1716, 1838, 1933, 1942, 2027},
-            "Fixed-radius FCFP hashes must stay unchanged");
+            "Fixed-radius FCFP hashes must match the golden bits");
     require(bitPositions(smsd::batch::detail::computeTopologicalTorsion(smsd::parseSMILES("C1CCCCC1"), 2048))
-            == std::vector<int>{1177}, "Saturated torsion hashes must stay unchanged");
+            == std::vector<int>{1177}, "Saturated torsion hashes must match the golden bits");
+}
+
+static void pathGoldens() {
+    const auto acid = smsd::parseSMILES("OC(=O)c1ccncc1");
+    smsd::ChemOptions tautomeric;
+    tautomeric.tautomerAware = true;
+    require(bitPositions(smsd::batch::detail::computeMCSFingerprint(acid, 3, 2048))
+            == std::vector<int>{51, 91, 152, 251, 287, 408, 564, 565, 593, 674, 749, 750, 805,
+                                835, 837, 948, 956, 990, 1068, 1132, 1730, 1748, 1755, 1916, 1976},
+            "MCS path hashes must match the golden bits");
+    require(bitPositions(smsd::batch::detail::computeMCSFingerprintForChemistry(acid, 3, 2048, tautomeric))
+            == std::vector<int>{43, 327, 367, 445, 460, 786, 787, 819, 950, 1012, 1027, 1029, 1111,
+                                1131, 1224, 1243, 1307, 1342, 1343, 1371, 1583, 1923, 1930, 2013},
+            "Tautomer-aware MCS path hashes must match the golden bits");
+    require(bitPositions(smsd::batch::detail::computePathFingerprint(acid, 3, 1024))
+            == std::vector<int>{67, 92, 167, 181, 199, 383, 522, 602, 627, 640, 663, 666, 689, 727,
+                                766, 779, 827, 906, 910, 958, 990, 1019},
+            "Labelled path hashes must match the golden bits");
+    require(bitPositions(smsd::batch::detail::computeTopologicalTorsion(acid, 2048))
+            == std::vector<int>{569, 735, 1337, 1551, 1593, 1728}, "Torsion hashes must match the golden bits");
+    // A path read from either end sets the same bit, so a chain and its reversal agree.
+    require(smsd::batch::detail::computeMCSFingerprint(smsd::parseSMILES("NCCO"), 7, 2048)
+            == smsd::batch::detail::computeMCSFingerprint(smsd::parseSMILES("OCCN"), 7, 2048),
+            "MCS path hashes must not depend on atom order");
+    require(smsd::batch::detail::computePathFingerprint(smsd::parseSMILES("NCC=O"), 7, 1024)
+            == smsd::batch::detail::computePathFingerprint(smsd::parseSMILES("O=CCN"), 7, 1024),
+            "Labelled path hashes must not depend on atom order");
 }
 
 int main(int argc, char** argv) {
-    const std::string selected = argc > 1 ? argv[1] : "all";
-    int failures = 0;
-    for (const auto& group : {std::pair<const char*, void(*)()>{"extent", finiteExtent},
-                              {"torsions", aromaticTorsions}, {"sizes", validSizes},
-                              {"goldens", fixedRadiusGoldens}}) {
-        if (selected != "all" && selected != group.first) continue;
-        try { group.second(); std::cout << "PASS " << group.first << '\n'; }
-        catch (const std::exception& error) { std::cerr << "FAIL " << group.first << ": " << error.what() << '\n'; ++failures; }
-    }
-    return failures == 0 ? 0 : 1;
+    return smsd_test::runGroups(argc, argv, {
+        {"extent", finiteExtent}, {"torsions", aromaticTorsions}, {"sizes", validSizes},
+        {"goldens", fixedRadiusGoldens}, {"path-goldens", pathGoldens}});
 }

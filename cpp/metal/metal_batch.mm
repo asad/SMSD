@@ -2,8 +2,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
- * See the NOTICE file for attribution, trademark, and algorithm IP terms. *
- * Metal compute backend for SMSD batch RASCAL screening.
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ *
+ * Metal compute backend for SMSD batch similarity-bound screening.
  *
  * Compiled as Objective-C++ (.mm) with ARC enabled (-fobjc-arc).
  * Only compiled when SMSD_BUILD_METAL is AUTO (macOS, Metal.framework found)
@@ -13,12 +14,12 @@
  * ------------
  * A lazy singleton (MetalContext) initialises once per process:
  *   1. Obtain the system default MTLDevice.
- *   2. Compile the rascal_screen kernel from an embedded source string
+ *   2. Compile the similarity_screen kernel from an embedded source string
  *      using [MTLDevice newLibraryWithSource:options:error:].
  *      (No separate .metallib file needed; the Metal compiler ships with macOS.)
  *   3. Create an MTLComputePipelineState and MTLCommandQueue.
  *
- * Per call to batchRascalScreen():
+ * Per call to batchSimilarityScreen():
  *   1. Copy query + targets into shared MTLBuffers.
  *   2. Encode a single compute pass: one thread per target molecule.
  *   3. Commit, wait for completion, read float results back.
@@ -45,7 +46,7 @@
 // Embedded Metal shader source
 // ---------------------------------------------------------------------------
 
-// The kernel computes a per-target RASCAL label-histogram upper bound.
+// The kernel computes a per-target label-histogram similarity upper bound.
 // Layout of MetalMolecule must match the C++ struct in metal_gpu.hpp:
 //   int n;                  // offset 0,  4 bytes
 //   int labelCounts[512];   // offset 4, 2048 bytes
@@ -62,7 +63,7 @@ static NSString* const kShaderSource = @
 "    int _padding[3];\n"
 "};\n"
 "\n"
-"kernel void rascal_screen(\n"
+"kernel void similarity_screen(\n"
 "    device const MetalMolecule* targets [[buffer(0)]],\n"
 "    device const MetalMolecule* query   [[buffer(1)]],\n"
 "    device       float*         results [[buffer(2)]],\n"
@@ -98,7 +99,7 @@ static NSString* const kShaderSource = @
 //   and metalDeviceInfo() so those functions never trigger shader compilation.
 //
 // Phase 2 — MetalContext (slow: compiles Metal shader via newLibraryWithSource:)
-//   Lazy-initialised only when batchRascalScreen() is first called.
+//   Lazy-initialised only when batchSimilarityScreen() is first called.
 //   newLibraryWithSource: invokes the Metal shader compiler and can take
 //   100ms–several seconds on first call, or hang indefinitely in headless
 //   CI environments.  Keeping it out of the availability probe means
@@ -167,9 +168,9 @@ struct MetalContext {
                 return;
             }
 
-            id<MTLFunction> fn = [lib newFunctionWithName:@"rascal_screen"];
+            id<MTLFunction> fn = [lib newFunctionWithName:@"similarity_screen"];
             if (!fn) {
-                NSLog(@"SMSD Metal: function 'rascal_screen' not found");
+                NSLog(@"SMSD Metal: function 'similarity_screen' not found");
                 return;
             }
 
@@ -223,7 +224,7 @@ MetalMolecule toMetalMolecule(int atomCount, const int* labels) {
     return m;
 }
 
-std::vector<MetalScreenResult> batchRascalScreen(
+std::vector<MetalScreenResult> batchSimilarityScreen(
     const MetalMolecule&              query,
     const std::vector<MetalMolecule>& targets,
     float                             threshold)

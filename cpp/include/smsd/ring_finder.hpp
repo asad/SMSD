@@ -2,7 +2,8 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
- * See the NOTICE file for attribution, trademark, and algorithm IP terms. *
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ *
  * Header-only C++17 URF ring finder.
  * Implements:
  *   - Horton candidate generation
@@ -11,12 +12,13 @@
  *   - Relevant Cycle Basis (union of all MCBs)
  *   - Unique Ring Families (Kolodzik et al. 2012)
  *
- * Zero external dependencies -- only requires smsd/mol_graph.hpp.
+ * Zero external dependencies -- only requires smsd/mol_graph.hpp and smsd/bitops.hpp.
  */
 #pragma once
 #ifndef SMSD_RING_FINDER_HPP
 #define SMSD_RING_FINDER_HPP
 
+#include "smsd/bitops.hpp"
 #include "smsd/mol_graph.hpp"
 
 #include <algorithm>
@@ -27,51 +29,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-
-// --------------------------------------------------------------------------
-// Portable bit intrinsics
-// --------------------------------------------------------------------------
-namespace smsd { namespace detail_rf {
-
-// MSVC intrinsics header (included at top level for portability)
-#if defined(_MSC_VER)
-#include <intrin.h>
-#endif
-
-inline int popcount64(uint64_t x) {
-#if defined(__GNUC__) || defined(__clang__)
-    return __builtin_popcountll(x);
-#elif defined(_MSC_VER)
-    return static_cast<int>(__popcnt64(x));
-#else
-    // Fallback: Hamming weight
-    x = x - ((x >> 1) & 0x5555555555555555ULL);
-    x = (x & 0x3333333333333333ULL) + ((x >> 2) & 0x3333333333333333ULL);
-    return static_cast<int>((((x + (x >> 4)) & 0x0F0F0F0F0F0F0F0FULL) * 0x0101010101010101ULL) >> 56);
-#endif
-}
-
-inline int ctz64(uint64_t x) {
-#if defined(__GNUC__) || defined(__clang__)
-    return __builtin_ctzll(x);
-#elif defined(_MSC_VER)
-    unsigned long idx;
-    _BitScanForward64(&idx, x);
-    return static_cast<int>(idx);
-#else
-    // Fallback: De Bruijn
-    static const int debruijn[64] = {
-        0,1,2,7,3,13,8,19,4,25,14,28,9,34,20,40,
-        5,17,26,38,15,46,29,48,10,31,35,54,21,50,41,57,
-        63,6,12,18,24,27,33,39,16,37,45,47,30,53,49,56,
-        62,11,23,32,36,44,52,55,61,22,43,51,60,42,59,58
-    };
-    return debruijn[((x & (~x + 1)) * 0x0218A392CD3D5DBFULL) >> 58];
-#endif
-}
-
-}} // namespace smsd::detail_rf
-
 
 namespace smsd {
 
@@ -128,40 +85,12 @@ inline int64_t edgeKey(int i, int j) {
     return (static_cast<int64_t>(lo) << 32) | static_cast<int64_t>(static_cast<uint32_t>(hi));
 }
 
-// Find the lowest set bit position in a GF(2) vector of uint64_t words
-inline int findPivot(const std::vector<uint64_t>& vec) {
-    for (size_t w = 0; w < vec.size(); w++) {
-        if (vec[w] != 0) return static_cast<int>((w << 6) + ctz64(vec[w]));
-    }
-    return -1;
-}
-
-// Build edge-incidence vector (GF(2)) for a cycle
-inline std::vector<uint64_t> cycleToEdgeVec(
-        const std::vector<int>& cycle,
-        const std::unordered_map<int64_t, int>& edgeIndex,
-        int longWords) {
-    std::vector<uint64_t> vec(longWords, 0);
-    for (size_t i = 0; i < cycle.size(); i++) {
-        int a = cycle[i], b = cycle[(i + 1) % cycle.size()];
-        auto it = edgeIndex.find(edgeKey(a, b));
-        if (it != edgeIndex.end()) {
-            int idx = it->second;
-            vec[idx >> 6] ^= 1ULL << (idx & 63);
-        }
-    }
-    return vec;
-}
-
 // Canonical edge-set key for cycle deduplication
 inline std::vector<int64_t> canonicalCycleKey(const std::vector<int>& cycle) {
     std::vector<int64_t> keys;
     keys.reserve(cycle.size());
-    for (size_t i = 0; i < cycle.size(); i++) {
-        int a = cycle[i], b = cycle[(i + 1) % cycle.size()];
-        int lo = std::min(a, b), hi = std::max(a, b);
-        keys.push_back(static_cast<int64_t>(lo) * 100000 + hi);
-    }
+    for (size_t i = 0; i < cycle.size(); i++)
+        keys.push_back(edgeKey(cycle[i], cycle[(i + 1) % cycle.size()]));
     std::sort(keys.begin(), keys.end());
     return keys;
 }
@@ -194,48 +123,50 @@ inline std::vector<std::pair<int,int>> buildEdgeList(const MolGraph& g) {
     return edges;
 }
 
-// Count connected components
-inline int countComponents(const MolGraph& g) {
-    int n = g.n;
-    std::vector<bool> visited(n, false);
-    int components = 0;
-    for (int i = 0; i < n; i++) {
-        if (visited[i]) continue;
-        components++;
-        std::deque<int> bfsQ;
-        bfsQ.push_back(i);
-        visited[i] = true;
-        while (!bfsQ.empty()) {
-            int u = bfsQ.front(); bfsQ.pop_front();
-            for (int v : g.neighbors[u]) {
-                if (!visited[v]) { visited[v] = true; bfsQ.push_back(v); }
+/**
+ * Rings grouped into ring systems: two rings are adjacent when they share a bond, and
+ * each system is a connected component of that adjacency, numbered in ring order.
+ */
+struct RingSystemGroups {
+    std::vector<std::vector<int>> adjacency;  // rings sharing a bond with each ring
+    std::vector<int> system;                  // system of each ring
+    int systemCount = 0;
+};
+
+inline RingSystemGroups groupRingsBySharedBond(const std::vector<std::vector<int>>& rings) {
+    const int count = static_cast<int>(rings.size());
+    std::vector<std::set<int64_t>> edgeSets(count);
+    for (int i = 0; i < count; i++) {
+        const auto& ring = rings[i];
+        for (size_t j = 0; j < ring.size(); j++)
+            edgeSets[i].insert(edgeKey(ring[j], ring[(j + 1) % ring.size()]));
+    }
+    RingSystemGroups groups;
+    groups.adjacency.resize(count);
+    for (int i = 0; i < count; i++) {
+        for (int j = i + 1; j < count; j++) {
+            for (const auto& edge : edgeSets[i]) {
+                if (edgeSets[j].count(edge)) {
+                    groups.adjacency[i].push_back(j);
+                    groups.adjacency[j].push_back(i);
+                    break;
+                }
             }
         }
     }
-    return components;
-}
-
-// Count edges
-inline int countEdges(const MolGraph& g) {
-    int edgeCount = 0;
-    for (int i = 0; i < g.n; i++)
-        edgeCount += static_cast<int>(g.neighbors[i].size());
-    return edgeCount / 2;
-}
-
-// Compute cycle rank = |E| - |V| + components
-inline int cycleRank(const MolGraph& g) {
-    return countEdges(g) - g.n + countComponents(g);
-}
-
-// Union-Find
-inline int ufFind(std::vector<int>& parent, int i) {
-    while (parent[i] != i) { parent[i] = parent[parent[i]]; i = parent[i]; }
-    return i;
-}
-inline void ufUnion(std::vector<int>& parent, int a, int b) {
-    a = ufFind(parent, a); b = ufFind(parent, b);
-    if (a != b) parent[a] = b;
+    groups.system.assign(count, -1);
+    for (int i = 0; i < count; i++) {
+        if (groups.system[i] >= 0) continue;
+        const int system = groups.systemCount++;
+        groups.system[i] = system;
+        std::vector<int> pending = {i};
+        while (!pending.empty()) {
+            const int ring = pending.back(); pending.pop_back();
+            for (int other : groups.adjacency[ring])
+                if (groups.system[other] < 0) { groups.system[other] = system; pending.push_back(other); }
+        }
+    }
+    return groups;
 }
 
 } // namespace detail_rf
@@ -250,12 +181,95 @@ struct RingResult {
     std::vector<std::vector<int>> rcb;   // Relevant Cycle Basis
 };
 
-inline RingResult runHortonPipeline(const MolGraph& g) {
+/**
+ * Work bound of the exhaustive ring candidate search below, counted as the Java implementation
+ * counts it, in atoms and neighbours read, path atoms and the bonds of each candidate, so that
+ * both implementations give the search up at the same point: it pairs atoms with the bonds of their ring
+ * systems through two breadth-first searches, which grows with the cube of the ring system
+ * size. Ordinary molecules, including those of several hundred atoms, finish well within it.
+ * A search that exhausts it, which takes a fraction of a second, is abandoned; the graph,
+ * such as a very large ring system, then takes its candidates from
+ * MolGraph::computeRelevantCycles() and MolGraph::computeRings(), whose work is bounded, and
+ * the same selection rules apply.
+ */
+constexpr uint64_t RING_CANDIDATE_WORK_LIMIT = uint64_t(1) << 26;
+
+namespace detail_rf {
+
+/**
+ * The two-phase selection of the ring candidate search, over given candidates in ascending
+ * size: a candidate independent of strictly shorter selected cycles is relevant, and a
+ * relevant one independent of every selected cycle joins the basis until it has cycleRank
+ * cycles. Each basis row keeps its lowest bond as pivot, so a reduction reads only the rows
+ * its own lowest bonds select.
+ */
+inline RingResult selectRings(const MolGraph& g, std::vector<std::vector<int>> candidates, int cycleRank) {
+    RingResult result;
+    const auto edgeIndex = buildEdgeIndex(g);
+    const int totalEdges = static_cast<int>(edgeIndex.size());
+    const int longWords = (totalEdges + 63) >> 6;
+    std::stable_sort(candidates.begin(), candidates.end(),
+        [](const std::vector<int>& a, const std::vector<int>& b) { return a.size() < b.size(); });
+    std::vector<std::vector<uint64_t>> rows;
+    std::vector<size_t> rowSizes;
+    std::vector<int> rowByPivot(totalEdges, -1);
+    std::vector<uint64_t> bits(longWords);
+    // Reduces bits by the rows shorter than size (all rows when size is 0); returns the
+    // lowest bond left without a row, or -1 when the bits are in their span.
+    auto reduce = [&](size_t size) {
+        for (int word = 0; word < longWords; ++word) {
+            while (bits[word] != 0) {
+                const int pivot = (word << 6) + ctz64(bits[word]);
+                const int row = rowByPivot[pivot];
+                if (row < 0 || (size != 0 && rowSizes[row] >= size)) return pivot;
+                for (int other = word; other < longWords; ++other) bits[other] ^= rows[row][other];
+            }
+        }
+        return -1;
+    };
+    for (auto& cycle : candidates) {
+        std::fill(bits.begin(), bits.end(), 0);
+        for (size_t i = 0; i < cycle.size(); i++) {
+            const auto it = edgeIndex.find(edgeKey(cycle[i], cycle[(i + 1) % cycle.size()]));
+            if (it != edgeIndex.end()) bits[it->second >> 6] ^= 1ULL << (it->second & 63);
+        }
+        if (reduce(cycle.size()) < 0) continue;
+        const int pivot = reduce(0);
+        const bool independent = pivot >= 0 && static_cast<int>(result.sssr.size()) < cycleRank;
+        if (independent) {
+            rowByPivot[pivot] = static_cast<int>(rows.size());
+            rows.push_back(bits);
+            rowSizes.push_back(cycle.size());
+            result.sssr.push_back(cycle);
+        }
+        result.rcb.push_back(std::move(cycle));
+    }
+    return result;
+}
+
+/**
+ * The exhaustive ring perception: Horton candidate cycles from every atom and bond of a
+ * ring system, selected into the relevant cycles and a minimum cycle basis by the GF(2)
+ * rules above. Beyond RING_CANDIDATE_WORK_LIMIT the candidates come from the graph's own
+ * bounded ring perception instead.
+ */
+inline RingResult perceiveRingSets(const MolGraph& g) {
     RingResult result;
     if (g.n == 0) return result;
 
-    int cRank = detail_rf::cycleRank(g);
+    int cRank = detail::cycleRank(g);
     if (cRank <= 0) return result;
+
+    // Relevant cycles first, then any basis ring they omit, each cycle once.
+    auto boundedPipeline = [&] {
+        std::vector<std::vector<int>> candidates = g.computeRelevantCycles();
+        std::set<std::vector<int64_t>> seen;
+        for (const auto& cycle : candidates) seen.insert(detail_rf::canonicalCycleKey(cycle));
+        for (const auto& cycle : g.computeRings())
+            if (seen.insert(detail_rf::canonicalCycleKey(cycle)).second) candidates.push_back(cycle);
+        return detail_rf::selectRings(g, std::move(candidates), cRank);
+    };
+    uint64_t work = 0;
 
     auto edgeIndex = detail_rf::buildEdgeIndex(g);
     auto edgeList  = detail_rf::buildEdgeList(g);
@@ -268,17 +282,88 @@ inline RingResult runHortonPipeline(const MolGraph& g) {
     std::vector<std::vector<int>>      candidateAtoms;
     std::vector<int>                   candidateSizes;
 
-    for (int v = 0; v < g.n; v++) {
-        for (auto& [eU, eV] : edgeList) {
-            auto path1 = bfsPath(g, v, eU, eU, eV);
-            if (path1.empty()) continue;
-            auto path2 = bfsPath(g, v, eV, eU, eV);
-            if (path2.empty()) continue;
+    // Only pairs of an atom and a bond that can add a candidate are searched, in the same
+    // order, as in the Java implementation. A bridge leaves one of its atoms unreachable. From outside
+    // the ring system of a bond, both paths enter the system through the same atom, so they
+    // overlap and close no ring. In a system that is one simple ring, every pair inside it
+    // repeats the ring that its lowest atom and first bond give.
+    const auto systems = g.cycleSystems();
+    const bool bySystem = !systems.ofAtom.empty();
+    std::vector<std::vector<int>> systemEdges;
+    std::vector<int> lowestAtom;
+    if (bySystem) {
+        systemEdges.resize(systems.atoms.size());
+        lowestAtom.assign(systems.atoms.size(), -1);
+        for (size_t edge = 0; edge < edgeList.size(); ++edge) {
+            const auto [first, second] = edgeList[edge];
+            const int system = systems.ofAtom[first];
+            if (system < 0 || systems.ofAtom[second] != system) continue;
+            systemEdges[system].push_back(static_cast<int>(edge));
+        }
+        for (int atom = g.n - 1; atom >= 0; --atom)
+            if (systems.ofAtom[atom] >= 0) lowestAtom[systems.ofAtom[atom]] = atom;
+    }
+    std::vector<int> pairs;
+    // bfsPath() with reused buffers. With ring systems known, both targets lie in the system of
+    // the bond and the search enters no other system; atoms of that system are reached in the
+    // same order and with the same parents, so the path is the one bfsPath() finds.
+    std::vector<int> parent(g.n, -1), queue;
+    std::vector<uint32_t> visited(g.n, 0);
+    uint32_t stamp = 0;
+    auto shortestPath = [&](int start, int target, int avoidU, int avoidV) {
+        std::vector<int> path;
+        if (start == target) { path.push_back(start); return path; }
+        if (++stamp == 0) { std::fill(visited.begin(), visited.end(), 0u); stamp = 1; }
+        const int system = bySystem ? systems.ofAtom[target] : -1;
+        visited[start] = stamp;
+        parent[start] = -1;
+        queue.assign(1, start);
+        for (size_t head = 0; head < queue.size(); ++head) {
+            const int u = queue[head];
+            work += 1 + g.neighbors[u].size();
+            for (int next : g.neighbors[u]) {
+                if ((u == avoidU && next == avoidV) || (u == avoidV && next == avoidU)) continue;
+                if (visited[next] == stamp || (bySystem && systems.ofAtom[next] != system)) continue;
+                visited[next] = stamp;
+                parent[next] = u;
+                if (next == target) {
+                    for (int c = target; c != -1; c = parent[c]) path.push_back(c);
+                    std::reverse(path.begin(), path.end());
+                    return path;
+                }
+                queue.push_back(next);
+            }
+        }
+        return path;
+    };
 
+    for (int v = 0; v < g.n; v++) {
+        pairs.clear();
+        if (!bySystem) {
+            for (size_t edge = 0; edge < edgeList.size(); ++edge) pairs.push_back(static_cast<int>(edge));
+        } else {
+            const int system = systems.ofAtom[v];
+            if (system >= 0) {
+                const auto& edges = systemEdges[system];
+                if (!systems.simpleRing[system]) pairs.insert(pairs.end(), edges.begin(), edges.end());
+                else if (v == lowestAtom[system] && !edges.empty()) pairs.push_back(edges.front());
+            }
+        }
+        for (int edge : pairs) {
+            const int eU = edgeList[edge].first, eV = edgeList[edge].second;
+            if (work > RING_CANDIDATE_WORK_LIMIT) return boundedPipeline();
+            auto path1 = shortestPath(v, eU, eU, eV);
+            if (path1.empty()) continue;
+            auto path2 = shortestPath(v, eV, eU, eV);
+            if (path2.empty()) continue;
+            work += path1.size() + path2.size();
+
+            // The paths share only v. A first path through the far end of the bond walks
+            // that end twice and closes no simple ring.
             std::unordered_set<int> p1Interior;
             for (size_t i = 1; i < path1.size(); i++) p1Interior.insert(path1[i]);
             bool disjoint = true;
-            for (size_t i = 1; i < path2.size() - 1; i++) {
+            for (size_t i = 1; i < path2.size(); i++) {
                 if (p1Interior.count(path2[i])) { disjoint = false; break; }
             }
             if (!disjoint) continue;
@@ -309,6 +394,8 @@ inline RingResult runHortonPipeline(const MolGraph& g) {
                 else vec[it->second >> 6] ^= 1ULL << (it->second & 63);
             }
             if (!valid) continue;
+            // The bonds of the candidate, read as the Java implementation reads its bond mask.
+            work += static_cast<uint64_t>(totalEdges);
 
             auto maskKey = detail_rf::canonicalCycleKey(atoms);
             if (!seenMasks.insert(maskKey).second) continue;
@@ -319,10 +406,11 @@ inline RingResult runHortonPipeline(const MolGraph& g) {
         }
     }
 
-    // Sort candidates by size (smallest first)
+    // Sort candidates by size (smallest first). Equal sizes keep the order in which they were
+    // found, as in the Java implementation, so every standard library selects the same rings.
     std::vector<int> order(candidateVecs.size());
     std::iota(order.begin(), order.end(), 0);
-    std::sort(order.begin(), order.end(),
+    std::stable_sort(order.begin(), order.end(),
         [&](int a, int b) { return candidateSizes[a] < candidateSizes[b]; });
 
     // --- 2-phase GF(2) interleaved pipeline ---
@@ -388,12 +476,25 @@ inline RingResult runHortonPipeline(const MolGraph& g) {
     return result;
 }
 
+} // namespace detail_rf
+
+/// @deprecated Use detail_rf::perceiveRingSets(), or the public computeRings() and
+/// computeRelevantCycles() functions below.
+[[deprecated("Use detail_rf::perceiveRingSets(), computeRings() or computeRelevantCycles().")]]
+inline RingResult runHortonPipeline(const MolGraph& g) {
+    return detail_rf::perceiveRingSets(g);
+}
+
 // ==========================================================================
 // computeRings — SSSR (thin wrapper over shared pipeline)
 // ==========================================================================
 
 /**
  * Computes the Smallest Set of Smallest Rings (SSSR / MCB).
+ *
+ * This free form is the canonical ring perception. MolGraph::computeRings() is the
+ * graph's bounded shortest-path basis: it finds the same relevant cycles and the same
+ * ring sizes, but may choose differently among equal-size rings of a symmetric system.
  *
  * Algorithm:
  *   1. Horton candidate generation: for every vertex v and every edge (eU,eV),
@@ -410,11 +511,26 @@ inline RingResult runHortonPipeline(const MolGraph& g) {
  * @return    SSSR rings, each ring as an ordered vector of atom indices.
  */
 inline std::vector<std::vector<int>> computeRings(const MolGraph& g) {
-    return runHortonPipeline(g).sssr;
+    return detail_rf::perceiveRingSets(g).sssr;
 }
 
-// (Old duplicated computeRings body removed — now uses shared runHortonPipeline)
+namespace detail_rf {
 
+/**
+ * A smallest set of smallest rings with as many rings as the cycle rank: the graph's bounded
+ * basis, MolGraph::computeRings(), when it is complete, else the rings of the candidate search,
+ * which the Java implementation reads. The bounded basis keeps one shortest ring through each bond, so it
+ * can omit a ring whose every bond lies in an equally small ring, as the central ring of
+ * coronene.
+ */
+inline std::vector<std::vector<int>> completeBasis(const MolGraph& g) {
+    const auto& bounded = g.computeRings();
+    if (static_cast<int>(bounded.size()) >= detail::cycleRank(g)) return bounded;
+    auto rings = computeRings(g);
+    return rings.size() > bounded.size() ? rings : bounded;
+}
+
+} // namespace detail_rf
 
 // ==========================================================================
 // computeRelevantCycles — Relevant Cycle Basis (Vismara's 2-phase rule)
@@ -433,7 +549,44 @@ inline std::vector<std::vector<int>> computeRings(const MolGraph& g) {
  * @return    Relevant cycles, each as an ordered vector of atom indices.
  */
 inline std::vector<std::vector<int>> computeRelevantCycles(const MolGraph& g) {
-    return runHortonPipeline(g).rcb;
+    return detail_rf::perceiveRingSets(g).rcb;
+}
+
+/**
+ * Per-atom ring counts by default: the relevant cycles through each atom, as the Java
+ * implementation counts them, found over each atom's neighbours in index order. The relevant cycles do not
+ * depend on which minimum cycle basis is chosen, so cages such as adamantane and cubane count
+ * every equivalent ring whatever the atom order. Of several equally short paths the candidate
+ * search keeps the first it reaches; reading the neighbours in index order makes that choice
+ * follow the atom order alone, in both implementations, and not the order in which a parser listed the
+ * bonds. Where a ring system has more relevant cycles of one size than the search reaches,
+ * as the macrocycle of a cyclodextrin, each of whose glucose units offers two equally short
+ * paths, the counts still depend on the atom order.
+ */
+inline void MolGraph::computeRingCounts() const {
+    const std::lock_guard<std::recursive_mutex> cacheLock(lazyCacheMutex());
+    bool indexOrder = true;
+    for (int atom = 0; atom < n && indexOrder; ++atom)
+        indexOrder = std::is_sorted(neighbors[atom].begin(), neighbors[atom].end());
+    if (indexOrder) {
+        computeRingCounts(detail_rf::perceiveRingSets(*this).rcb);
+        return;
+    }
+    std::vector<std::vector<int>> ordered(neighbors);
+    for (int atom = 0; atom < n; ++atom) {
+        auto& row = ordered[atom];
+        std::sort(row.begin(), row.end());
+        // A graph that lists an atom as its own neighbour, or a neighbour twice, has no ring
+        // systems and no valid copy; it is read as given.
+        if (std::adjacent_find(row.begin(), row.end()) != row.end()
+            || std::binary_search(row.begin(), row.end(), atom)) {
+            computeRingCounts(detail_rf::perceiveRingSets(*this).rcb);
+            return;
+        }
+    }
+    const MolGraph topology = MolGraph::Builder().atomCount(n).atomicNumbers(atomicNum)
+        .setNeighbors(std::move(ordered)).build(false);
+    computeRingCounts(detail_rf::perceiveRingSets(topology).rcb);
 }
 
 
@@ -464,8 +617,9 @@ inline std::vector<std::vector<std::vector<int>>> computeURFs(const MolGraph& g)
 inline std::vector<std::vector<int>> computeSSSR(const MolGraph& g) {
     auto rings = computeRings(g);
     // computeRings already returns rings in roughly ascending order from the
-    // Horton pipeline, but sort explicitly to guarantee the contract.
-    std::sort(rings.begin(), rings.end(),
+    // Horton pipeline, but sort explicitly to guarantee the contract; rings of one
+    // size keep their order.
+    std::stable_sort(rings.begin(), rings.end(),
         [](const std::vector<int>& a, const std::vector<int>& b) {
             return a.size() < b.size();
         });
@@ -495,47 +649,11 @@ inline std::vector<std::vector<int>> layoutSSSR(const MolGraph& g) {
 
     int nr = static_cast<int>(rings.size());
 
-    // Build edge sets for each ring
-    std::vector<std::set<int64_t>> ringEdgeSets(nr);
-    for (int i = 0; i < nr; i++) {
-        auto& r = rings[i];
-        for (size_t j = 0; j < r.size(); j++) {
-            int a = r[j], b = r[(j + 1) % r.size()];
-            ringEdgeSets[i].insert(detail_rf::edgeKey(a, b));
-        }
-    }
-
-    // Build ring adjacency graph (shared-edge adjacency)
-    std::vector<std::vector<int>> ringAdj(nr);
-    for (int i = 0; i < nr; i++) {
-        for (int j = i + 1; j < nr; j++) {
-            bool shared = false;
-            for (auto& e : ringEdgeSets[i]) {
-                if (ringEdgeSets[j].count(e)) { shared = true; break; }
-            }
-            if (shared) {
-                ringAdj[i].push_back(j);
-                ringAdj[j].push_back(i);
-            }
-        }
-    }
-
-    // Find connected components (ring systems)
-    std::vector<int> comp(nr, -1);
-    int nComp = 0;
-    for (int i = 0; i < nr; i++) {
-        if (comp[i] >= 0) continue;
-        int c = nComp++;
-        comp[i] = c;
-        std::deque<int> bfs;
-        bfs.push_back(i);
-        while (!bfs.empty()) {
-            int u = bfs.front(); bfs.pop_front();
-            for (int v : ringAdj[u]) {
-                if (comp[v] < 0) { comp[v] = c; bfs.push_back(v); }
-            }
-        }
-    }
+    // Ring systems: components of the shared-bond adjacency between rings
+    const auto groups = detail_rf::groupRingsBySharedBond(rings);
+    const auto& ringAdj = groups.adjacency;
+    const auto& comp = groups.system;
+    const int nComp = groups.systemCount;
 
     // Group rings by component and compute total atom count per system
     std::vector<std::vector<int>> systems(nComp);
@@ -550,10 +668,10 @@ inline std::vector<std::vector<int>> layoutSSSR(const MolGraph& g) {
         systemSize[c] = static_cast<int>(atoms.size());
     }
 
-    // Sort systems: largest first
+    // Sort systems: largest first, systems of one size in ring order
     std::vector<int> sysOrder(nComp);
     std::iota(sysOrder.begin(), sysOrder.end(), 0);
-    std::sort(sysOrder.begin(), sysOrder.end(),
+    std::stable_sort(sysOrder.begin(), sysOrder.end(),
         [&](int a, int b) { return systemSize[a] > systemSize[b]; });
 
     // Within each system, BFS from the smallest ring to order by adjacency
@@ -568,7 +686,7 @@ inline std::vector<std::vector<int>> layoutSSSR(const MolGraph& g) {
         }
 
         // Sort by size to find the smallest ring as seed
-        std::sort(sysRings.begin(), sysRings.end(),
+        std::stable_sort(sysRings.begin(), sysRings.end(),
             [&](int a, int b) { return rings[a].size() < rings[b].size(); });
 
         // BFS from smallest ring through ring adjacency
@@ -585,7 +703,7 @@ inline std::vector<std::vector<int>> layoutSSSR(const MolGraph& g) {
             for (int v : ringAdj[u]) {
                 if (!visited[v] && comp[v] == ci) nbrs.push_back(v);
             }
-            std::sort(nbrs.begin(), nbrs.end(),
+            std::stable_sort(nbrs.begin(), nbrs.end(),
                 [&](int a, int b) { return rings[a].size() < rings[b].size(); });
             for (int v : nbrs) {
                 if (!visited[v]) { visited[v] = true; bfs.push_back(v); }

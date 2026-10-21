@@ -1,4 +1,4 @@
-SMSD Pro — Small Molecule Subgraph Detector
+SMSD Pro™ — Small Molecule Subgraph Detector
 Copyright (c) 2018-2026 BioInception PVT LTD
 Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
 
@@ -9,7 +9,7 @@ LICENSING AND COMMERCIAL USE
 ============================
 SMSD Pro is released under the Apache License, Version 2.0.
 You are free to use, modify, and distribute this software for any
-purpose, including commercial use, subject to the license terms.
+purpose, including commercial use, subject to the licence terms.
 
   PERMITTED (no fee, no registration, no approval needed):
     * Use SMSD Pro in commercial products and services
@@ -77,44 +77,71 @@ BioInception PVT LTD. You may not use these marks to endorse or
 promote products derived from this software without prior written
 permission from the copyright holder.
 
-NOVEL ALGORITHMS
-================
-The following algorithms implemented in this software are original
-works by Syed Asad Rahman:
+ORIGINAL CONTRIBUTIONS
+======================
+The methods below were developed by Syed Asad Rahman for SMSD Pro.
+Where they build on published work, that work is cited and the original
+contribution is the extension described.
 
-  1. Tautomer-aware circular fingerprint with pKa-informed atom
-     invariants (ECFP/FCFP with tautomer class integration)
-  2. 11-level MCS funnel with chain/tree DP fast-paths
-  3. Henderson-Hasselbalch pH-dependent tautomer relevance weighting
-  4. Tier 2 solvent-dependent pKa corrections for tautomer matching
-  5. VF2++ with 3-level NLF pruning and GPU-accelerated domain
-     initialisation (CUDA + Apple Metal)
-  6. Cache-optimal McGregor DFS with pre-indexed candidate lookup
-     and uint8_t hot-path data structures (v6.11.0)
- 10. CIP Rule 3 (Z > E) digraph-based stereodescriptor comparison
-     for complete IUPAC 2013 Rules 1-5 implementation (v6.12.1)
- 11. Multi-word greedy coloring bound for BK clique search,
-     eliminating the 64-color ceiling on product graphs (v6.12.1)
-  7. 8-phase 2D molecular layout pipeline with simulated annealing
-     crossing reduction and 40+ scaffold templates (v6.11.0)
-  8. Distance geometry 3D embedding with power iteration
-     eigendecomposition and force-field refinement (v6.11.0)
-  9. Publication-quality SVG depiction engine conforming to
-     ACS 1996 standard with Jmol/CPK colors, asymmetric double
-     bonds, wedge/dash stereo, and bond-to-label clipping (v6.11.0)
+  1. Tautomer-aware fingerprints: ECFP-style circular atom invariants
+     (Rogers and Hahn, 2010) extended with the tautomer class of each
+     atom, and path fingerprints in which tautomeric atoms share a label.
+  2. pH-dependent weighting of tautomer relevance: each tautomer class
+     is weighted by the neutral fraction, given by the
+     Henderson-Hasselbalch relation, of the ionisable sites assigned to
+     its motifs, with motifs chosen by a fixed priority.
+  3. Solvent-dependent corrections of the same tautomer weights. These
+     weights and the pH weighting feed the tautomer confidence of a
+     mapping; they do not change search results.
+  4. Substructure search over precomputed candidate domains that extends
+     the mapping from already mapped neighbours first, as in VF2++
+     (Jüttner and Madarasi, 2018), combined with pruning of
+     interchangeable atoms related to the equivalent-vertex pruning of
+     Han et al. (2013) and Ren and Wang (2015), and with element and
+     degree count screening of each pair before the search.
+  5. A branch-and-bound common-bond (MCES) search whose upper bounds come
+     from classes of compatible atoms and bonds, in the manner of the
+     label-class bounds of McSplit (McCreesh et al., 2017) and the label
+     and degree bounds of RASCAL (Raymond et al., 2002), extended with a
+     maximum b-matching where compatibility is not an equivalence
+     relation.
+  6. A multi-stage two-dimensional layout pipeline with template
+     placement, force-directed refinement and annealed crossing
+     reduction.
+  7. An SVG depiction engine following the ACS 1996 drawing conventions,
+     with conventional element colouring, asymmetric double bonds, wedge
+     and hash stereo marks and bond-to-label clipping.
+  8. A digraph-based implementation of the CIP sequence rules following
+     the IUPAC 2013 Recommendations, including Rule 3 (Z before E) and,
+     for R/S descriptors, Rules 4 and 5 with the auxiliary descriptors of
+     Hanson et al. (2018).
 
 THIRD-PARTY NOTICES
 ===================
-This software uses the Chemistry Development Kit (CDK) licensed
-under LGPL 2.1. CDK is Copyright (c) The CDK Project.
-See https://cdk.github.io/ for details.
+The Java library uses the Chemistry Development Kit (CDK) 2.13, licensed
+under the GNU Lesser General Public License, version 2.1 or later. CDK
+is Copyright (c) The CDK Project; see https://cdk.github.io/. The Java
+CLI JAR with dependencies, the CLI installers and Docker image built
+from it, and the portable CLI archive bundle CDK unmodified. The Java
+library uses CDK for its molecule model, SMARTS input and matching,
+aromaticity, atom typing and hydrogen handling, and the CLI uses it for
+SMILES and file input; the MCS, MCES and molecule-query substructure
+searches are SMSD Pro's own code. The licence text is provided in
+licenses/cdk/LICENSE, and licenses/cdk/README.md states where the CDK
+source is published and how the bundled copy can be replaced.
 
 Python wheels built with OpenMP may bundle the LLVM OpenMP runtime,
-licensed under Apache License 2.0 with LLVM Exceptions. Its license
-is provided in licenses/libomp/LICENSE.TXT and in wheel license metadata.
+licensed under Apache License 2.0 with LLVM Exceptions. Its licence
+is provided in licenses/libomp/LICENSE.TXT and in wheel licence metadata.
+
+Linux wheels built with GCC may bundle the GNU OpenMP runtime (libgomp),
+licensed under GPL-3.0 with the GCC Runtime Library Exception; see
+licenses/libgomp/. Windows wheels may bundle Microsoft Visual C++ runtime
+components under Microsoft's redistribution terms; see licenses/msvc/.
 
 AVAILABLE PLATFORMS
 ===================
   Java:   com.bioinceptionlabs:smsd on Maven Central
+          com.bioinceptionlabs:smsd-cli on Maven Central (command line)
   Python: pip install smsd (PyPI)
   C++:    Header-only library (cpp/include/smsd/)

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Run the standalone Python, Java and C++ examples in the current guides."""
 
 import argparse
@@ -61,8 +63,8 @@ def examples(languages):
 def default_jar():
     metadata = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     version = re.search(r'^version = "([^"]+)"', metadata, re.M).group(1)
-    filename = f"smsd-{version}-jar-with-dependencies.jar"
-    for directory in (ROOT / "java/target", ROOT / "dist" / f"release-{version}"):
+    filename = f"smsd-cli-{version}-jar-with-dependencies.jar"
+    for directory in (ROOT / "java/cli/target", ROOT / "dist" / f"release-{version}"):
         candidate = directory / filename
         if candidate.is_file():
             return candidate

@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Collect one tested MSI, DMG and DEB for the same Java CLI release."""
 
 import argparse
@@ -7,7 +11,6 @@ from pathlib import Path
 from pathlib import PurePosixPath
 import re
 import shutil
-import sys
 
 from build_java_installer import JAVA_BUILD, JAVA_VERSION, digest, release_inputs, require
 

@@ -1,10 +1,15 @@
-// SPDX-License-Identifier: Apache-2.0
-// Copyright (c) 2018-2026 BioInception PVT LTD
-// Real SMSD native MCS benchmark. Parsing/warmup/validation are outside timers.
-// c++ -std=c++17 -O3 -Icpp/include benchmarks/benchmark_cpp.cpp -o benchmark_cpp
-// ./benchmark_cpp [pairs.tsv] [timeout_ms=10000] [repeats=3] [warmup=1]
-// TSV fields: SMILES1, SMILES2, optional name. Comments start with '#'.
-// Search status and objective proof are reported separately from elapsed time.
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2018-2026 BioInception PVT LTD
+ * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ *
+ * Real SMSD native MCS benchmark. Parsing/warmup/validation are outside timers.
+ * c++ -std=c++17 -O3 -Icpp/include benchmarks/benchmark_cpp.cpp -o benchmark_cpp
+ * ./benchmark_cpp [pairs.tsv] [timeout_ms=10000] [repeats=3] [warmup=1]
+ * TSV fields: SMILES1, SMILES2, optional name. Comments start with '#'.
+ * Search status and objective proof are reported separately from elapsed time.
+ */
 #include "smsd/smsd.hpp"
 #include "smsd/smiles_parser.hpp"
 #include <algorithm>

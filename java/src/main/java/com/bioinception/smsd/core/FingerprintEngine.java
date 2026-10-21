@@ -2,16 +2,12 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
- * See the NOTICE file for attribution, trademark, and algorithm IP terms. */
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ */
 package com.bioinception.smsd.core;
 
 import java.util.*;
 import org.openscience.cdk.interfaces.IAtom;
-
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 import org.openscience.cdk.interfaces.IAtomContainer;
 
 /**
@@ -24,7 +20,6 @@ import org.openscience.cdk.interfaces.IAtomContainer;
  * to avoid repeated IAtomContainer→MolGraph conversion overhead.
  *
  * @author Syed Asad Rahman
- * @since 6.0
  */
 public final class FingerprintEngine {
 
@@ -35,16 +30,14 @@ public final class FingerprintEngine {
 
   private FingerprintEngine() {} // static utility
 
-  // ---- Fingerprint caches (v6.5.3 perf fix) ----
-  // Avoids recomputation when same MolGraph is fingerprinted 8-10x per reaction.
-  // WeakHashMap: entries auto-evicted when MolGraph is GC'd.
-  private static final Map<MolGraph, long[]> ecfpDefaultCache =
-      Collections.synchronizedMap(new java.util.WeakHashMap<>());
-  private static final Map<MolGraph, long[]> fcfpDefaultCache =
-      Collections.synchronizedMap(new java.util.WeakHashMap<>());
-
-  /** Clear fingerprint caches. */
-  public static void clearFPCache() { ecfpDefaultCache.clear(); fcfpDefaultCache.clear(); }
+  /**
+   * Does nothing: each graph keeps its own default fingerprints, which are released with the
+   * graph.
+   *
+   * @deprecated There is no shared cache to clear; this method does nothing.
+   */
+  @Deprecated
+  public static void clearFPCache() {}
 
   /** Fingerprint invariant mode for circular fingerprints. */
   public enum Mode {
@@ -72,7 +65,6 @@ public final class FingerprintEngine {
    *
    * @param mol the CDK molecule to convert
    * @return a MolGraph suitable for all fingerprint MolGraph overloads
-   * @since 6.3.2
    */
   public static MolGraph toMolGraph(IAtomContainer mol) {
     if (mol == null) throw new NullPointerException("mol");
@@ -127,15 +119,7 @@ public final class FingerprintEngine {
       int k = 0;
       for (IAtom nb : nbAtoms) { Integer nbIdx = idxMap.get(nb); if (nbIdx != null) adj[hi][k++] = nbIdx; }
     }
-    for (int start = 0; start < heavyCount; start++) {
-      boolean[] visited = new boolean[heavyCount];
-      int[] path = new int[maxLength + 1];
-      path[0] = start;
-      visited[start] = true;
-      fpSetBit(fp, fpHashPath(atomicNum, path, 1), fpSize);
-      if (maxLength > 0)
-        fpEnumeratePaths(adj, atomicNum, fp, fpSize, visited, path, 1, maxLength);
-    }
+    walkPaths(adj, null, maxLength, (path, length) -> fpHashPath(atomicNum, path, length), fp, fpSize);
     return fp;
   }
 
@@ -159,19 +143,37 @@ public final class FingerprintEngine {
     return true;
   }
 
+  /**
+   * Set-bit counts of two fingerprints: bits in both, bits in the first and bits in the second.
+   * Words missing from the shorter fingerprint are empty. The metrics below mirror
+   * {@code smsd::batch} in {@code batch.hpp}, including their empty-fingerprint rules.
+   */
+  private static long[] bitCounts(long[] fp1, long[] fp2) {
+    long common = 0, first = 0, second = 0;
+    int shared = Math.min(fp1.length, fp2.length);
+    for (int i = 0; i < shared; i++) {
+      common += Long.bitCount(fp1[i] & fp2[i]);
+      first += Long.bitCount(fp1[i]);
+      second += Long.bitCount(fp2[i]);
+    }
+    for (int i = shared; i < fp1.length; i++) first += Long.bitCount(fp1[i]);
+    for (int i = shared; i < fp2.length; i++) second += Long.bitCount(fp2[i]);
+    return new long[] {common, first, second};
+  }
+
+  /**
+   * Tanimoto coefficient: |A intersection B| / |A union B|.
+   *
+   * @param fp1 first fingerprint (long[] bitset)
+   * @param fp2 second fingerprint (long[] bitset)
+   * @return Tanimoto similarity in [0.0, 1.0]; two empty fingerprints are identical sets and
+   *     score 1.0; returns 0.0 for null inputs
+   */
   public static double tanimoto(long[] fp1, long[] fp2) {
     if (fp1 == null || fp2 == null) return 0.0;
-    if (fp1.length == 0 && fp2.length == 0) return 1.0;
-    int len = Math.max(fp1.length, fp2.length);
-    int andCount = 0, orCount = 0;
-    for (int i = 0; i < len; i++) {
-      long a = i < fp1.length ? fp1[i] : 0L;
-      long b = i < fp2.length ? fp2[i] : 0L;
-      andCount += Long.bitCount(a & b);
-      orCount += Long.bitCount(a | b);
-    }
-    if (orCount == 0) return 1.0; // both empty fingerprints => identical
-    return (double) andCount / orCount;
+    long[] counts = bitCounts(fp1, fp2);
+    long either = counts[1] + counts[2] - counts[0];
+    return either == 0 ? 1.0 : (double) counts[0] / either;
   }
 
   /**
@@ -183,25 +185,14 @@ public final class FingerprintEngine {
    *
    * @param fp1 first fingerprint (long[] bitset)
    * @param fp2 second fingerprint (long[] bitset)
-   * @return Dice similarity in [0.0, 1.0]; returns 0.0 for null or empty inputs
+   * @return Dice similarity in [0.0, 1.0]; returns 0.0 for null inputs and when both
+   *     fingerprints are empty
    */
   public static double dice(long[] fp1, long[] fp2) {
-    if (fp1 == null || fp2 == null || fp1.length == 0 || fp2.length == 0) return 0.0;
-    int minLen = Math.min(fp1.length, fp2.length);
-    int maxLen = Math.max(fp1.length, fp2.length);
-    int andBits = 0, aBits = 0, bBits = 0;
-    for (int i = 0; i < minLen; i++) {
-      andBits += Long.bitCount(fp1[i] & fp2[i]);
-      aBits   += Long.bitCount(fp1[i]);
-      bBits   += Long.bitCount(fp2[i]);
-    }
-    long[] longer = (fp1.length > fp2.length) ? fp1 : fp2;
-    for (int i = minLen; i < maxLen; i++) {
-      if (longer == fp1) aBits += Long.bitCount(longer[i]);
-      else               bBits += Long.bitCount(longer[i]);
-    }
-    int sum = aBits + bBits;
-    return (sum == 0) ? 0.0 : (2.0 * andBits) / sum;
+    if (fp1 == null || fp2 == null) return 0.0;
+    long[] counts = bitCounts(fp1, fp2);
+    long sum = counts[1] + counts[2];
+    return sum == 0 ? 0.0 : (2.0 * counts[0]) / sum;
   }
 
   /**
@@ -213,25 +204,14 @@ public final class FingerprintEngine {
    *
    * @param fp1 first fingerprint (long[] bitset)
    * @param fp2 second fingerprint (long[] bitset)
-   * @return cosine similarity in [0.0, 1.0]; returns 0.0 for null or empty inputs
+   * @return cosine similarity in [0.0, 1.0]; returns 0.0 for null inputs and when either
+   *     fingerprint is empty
    */
   public static double cosine(long[] fp1, long[] fp2) {
-    if (fp1 == null || fp2 == null || fp1.length == 0 || fp2.length == 0) return 0.0;
-    int minLen = Math.min(fp1.length, fp2.length);
-    int maxLen = Math.max(fp1.length, fp2.length);
-    int andBits = 0, aBits = 0, bBits = 0;
-    for (int i = 0; i < minLen; i++) {
-      andBits += Long.bitCount(fp1[i] & fp2[i]);
-      aBits   += Long.bitCount(fp1[i]);
-      bBits   += Long.bitCount(fp2[i]);
-    }
-    long[] longer = (fp1.length > fp2.length) ? fp1 : fp2;
-    for (int i = minLen; i < maxLen; i++) {
-      if (longer == fp1) aBits += Long.bitCount(longer[i]);
-      else               bBits += Long.bitCount(longer[i]);
-    }
-    double denom = Math.sqrt((double) aBits * bBits);
-    return (denom == 0.0) ? 0.0 : andBits / denom;
+    if (fp1 == null || fp2 == null) return 0.0;
+    long[] counts = bitCounts(fp1, fp2);
+    double denom = Math.sqrt((double) counts[1] * counts[2]);
+    return (denom == 0.0) ? 0.0 : counts[0] / denom;
   }
 
   /**
@@ -243,10 +223,10 @@ public final class FingerprintEngine {
    *
    * @param fp1 first fingerprint (long[] bitset)
    * @param fp2 second fingerprint (long[] bitset)
-   * @return Soergel distance in [0.0, 1.0]; returns 0.0 for null or empty inputs
+   * @return Soergel distance in [0.0, 1.0]; two empty fingerprints are at distance 0.0;
+   *     returns 1.0 for null inputs
    */
   public static double soergel(long[] fp1, long[] fp2) {
-    if (fp1 == null || fp2 == null || fp1.length == 0 || fp2.length == 0) return 1.0; // max distance
     return 1.0 - tanimoto(fp1, fp2);
   }
 
@@ -259,20 +239,14 @@ public final class FingerprintEngine {
    *
    * @param fp1 first fingerprint (long[] bitset)
    * @param fp2 second fingerprint (long[] bitset)
-   * @return overlap coefficient in [0.0, 1.0]; returns 0.0 when either fingerprint is empty
+   * @return overlap coefficient in [0.0, 1.0]; two empty fingerprints score 1.0 and one
+   *     empty fingerprint scores 0.0
    */
   public static double overlapCoefficient(long[] fp1, long[] fp2) {
-    int intersection = 0, pop1 = 0, pop2 = 0;
-    int len = Math.min(fp1.length, fp2.length);
-    for (int w = 0; w < len; w++) {
-      intersection += Long.bitCount(fp1[w] & fp2[w]);
-      pop1 += Long.bitCount(fp1[w]);
-      pop2 += Long.bitCount(fp2[w]);
-    }
-    for (int w = len; w < fp1.length; w++) pop1 += Long.bitCount(fp1[w]);
-    for (int w = len; w < fp2.length; w++) pop2 += Long.bitCount(fp2[w]);
-    int minPop = Math.min(pop1, pop2);
-    return minPop == 0 ? 0.0 : (double) intersection / minPop;
+    long[] counts = bitCounts(fp1, fp2);
+    if (counts[1] == 0 && counts[2] == 0) return 1.0;
+    long smaller = Math.min(counts[1], counts[2]);
+    return smaller == 0 ? 0.0 : (double) counts[0] / smaller;
   }
 
   /**
@@ -358,68 +332,15 @@ public final class FingerprintEngine {
     return (denom == 0.0) ? 0.0 : dot / denom;
   }
 
-  // ---- Default valence helper (Rogers & Hahn invariant #3: implicit H count) ----
-
-  /**
-   * Returns the list of allowed valences for common organic-subset elements,
-   * following the OpenSMILES / Daylight convention.  Multi-valent elements
-   * (N, P, S, As, Se, Sb, Te, I) list every standard valence in ascending
-   * order so that {@link #implicitH} can pick the smallest fitting one.
-   */
-  private static final int[][] DEFAULT_VALENCES = new int[54][];
-  static {
-    DEFAULT_VALENCES[1]  = new int[]{1};           // H
-    DEFAULT_VALENCES[5]  = new int[]{3};           // B
-    DEFAULT_VALENCES[6]  = new int[]{4};           // C
-    DEFAULT_VALENCES[7]  = new int[]{3, 5};        // N
-    DEFAULT_VALENCES[8]  = new int[]{2};           // O
-    DEFAULT_VALENCES[9]  = new int[]{1};           // F
-    DEFAULT_VALENCES[13] = new int[]{3};           // Al
-    DEFAULT_VALENCES[14] = new int[]{4};           // Si
-    DEFAULT_VALENCES[15] = new int[]{3, 5};        // P
-    DEFAULT_VALENCES[16] = new int[]{2, 4, 6};     // S
-    DEFAULT_VALENCES[17] = new int[]{1};           // Cl
-    DEFAULT_VALENCES[33] = new int[]{3, 5};        // As
-    DEFAULT_VALENCES[34] = new int[]{2, 4, 6};     // Se
-    DEFAULT_VALENCES[35] = new int[]{1};           // Br
-    DEFAULT_VALENCES[51] = new int[]{3, 5};        // Sb
-    DEFAULT_VALENCES[52] = new int[]{2, 4, 6};     // Te
-    DEFAULT_VALENCES[53] = new int[]{1, 3, 5, 7};  // I
-  }
-
-  /**
-   * Computes implicit hydrogen count for an atom using the OpenSMILES
-   * multi-valence model: pick the smallest allowed valence {@code v} such
-   * that {@code v - |charge| >= bondOrderSum}, then
-   * {@code implicitH = (v - |charge|) - bondOrderSum}.
-   * Returns 0 for elements with no known default valence or when no
-   * valence can accommodate the observed bond order sum.
-   */
-  static int implicitH(int atomicNum, int bondOrderSum, int formalCharge) {
-    int[] valences = (atomicNum >= 0 && atomicNum < DEFAULT_VALENCES.length)
-                     ? DEFAULT_VALENCES[atomicNum] : null;
-    if (valences == null) return 0;
-    int absCharge = Math.abs(formalCharge);
-    for (int v : valences) {
-      int capacity = v - absCharge;
-      if (capacity >= bondOrderSum) return capacity - bondOrderSum;
-    }
-    return 0;
-  }
-
   // ---- Circular ECFP ----
 
   /**
    * Compute an ECFP circular fingerprint from a CDK molecule.
    *
-   * <p>For batch workloads, pre-convert with {@link #toMolGraph(IAtomContainer)} once
-   * and call {@link #ecfp(MolGraph, int, int)} to avoid repeated conversion overhead.
-   *
-   * @param mol    the CDK molecule
-   * @param radius maximum expansion radius (2 = ECFP4, 3 = ECFP6; -1 = unlimited)
-   * @param fpSize fingerprint size in bits
-   * @return binary fingerprint as long[] bitset
+   * @deprecated Use {@link #ecfp(IAtomContainer, int, int)}, which this method calls, or
+   *     {@link #circularFingerprint(IAtomContainer, int, int, Mode)} to choose the invariants.
    */
+  @Deprecated
   public static long[] circularFingerprint(IAtomContainer mol, int radius, int fpSize) {
     return ecfp(mol, radius, fpSize);
   }
@@ -442,45 +363,68 @@ public final class FingerprintEngine {
   }
 
   public static long[] ecfp(MolGraph g, int radius, int fpSize) {
+    checkCircular(g, radius, fpSize);
+    // The default fingerprint is asked for repeatedly, so the graph keeps it.
+    boolean defaults = radius == 2 && fpSize == 2048;
+    long[] cached = defaults ? g.cachedEcfpDefault : null;
+    if (cached != null) return cached.clone();
+    long[] fp = new long[(fpSize + 63) / 64];
+    if (g.n > 0) circular(g, ecfpAtomHashes(g), radius, fpSize, binaryStrategy(fp));
+    if (defaults) g.cachedEcfpDefault = fp.clone();
+    return fp;
+  }
+
+  private static void checkCircular(MolGraph g, int radius, int fpSize) {
     if (g == null) throw new NullPointerException("MolGraph must not be null");
     if (fpSize <= 0) throw new IllegalArgumentException("fpSize must be > 0");
     if (radius < -1) throw new IllegalArgumentException("radius must be >= -1 (use -1 for unlimited)");
-    // Cache lookup for default params (v6.5.3 perf fix: 8-10x ECFP/reaction)
-    if (radius == 2 && fpSize == 2048) {
-      long[] cached = ecfpDefaultCache.get(g);
-      if (cached != null) return cached.clone();
-    }
-    int n = g.n;
-    int numWords = (fpSize + 63) / 64;
-    long[] fp = new long[numWords];
-    if (n == 0) return fp;
+  }
 
-    long[] atomHash = new long[n];
-    for (int i = 0; i < n; i++) {
+  /** Record the atom hashes, then the hashes of every radius up to {@code radius}. */
+  private static void circular(MolGraph g, long[] atomHash, int radius, int fpSize, BitStrategy strategy) {
+    for (long h : atomHash) strategy.record(h, fpSize);
+    expandRadiiImpl(g, atomHash, radius, fpSize, g.n, strategy);
+  }
+
+  /**
+   * The ECFP invariant of each atom: the Rogers and Hahn properties (element, heavy degree, bond
+   * order sum, mass number, charge, attached hydrogens and ring membership), aromaticity and the
+   * tautomer class, hashed with FNV-1a.
+   */
+  private static long[] ecfpAtomHashes(MolGraph g) {
+    long[] atomHash = new long[g.n];
+    for (int i = 0; i < g.n; i++) {
       long h = FNV1A_SEED;
-      h ^= g.atomicNum[i];       h *= FNV1A_PRIME;  // R&H #1: atomic number
-      h ^= g.degree[i];          h *= FNV1A_PRIME;  // R&H #2: heavy atom degree
+      h ^= g.atomicNum[i];       h *= FNV1A_PRIME;
+      h ^= g.degree[i];          h *= FNV1A_PRIME;
       int bondOrdSum = 0;
       for (int nb : g.neighbors[i]) bondOrdSum += g.bondOrder(i, nb);
-      h ^= bondOrdSum;            h *= FNV1A_PRIME;  // R&H #3: bond order sum (valence)
-      h ^= g.massNumber[i];       h *= FNV1A_PRIME;  // R&H #4: atomic mass number
-      h ^= (long)g.formalCharge[i] + 4L; h *= FNV1A_PRIME;  // R&H #5: formal charge
-      long hCount = g.attachedHydrogenCount(i);
-      h ^= hCount;                h *= FNV1A_PRIME;  // R&H #6: attached H count
-      h ^= g.ring[i] ? 1 : 0;   h *= FNV1A_PRIME;  // R&H #7: ring membership
-      h ^= g.aromatic[i] ? 1 : 0; h *= FNV1A_PRIME; // Daylight extension: aromaticity
+      h ^= bondOrdSum;            h *= FNV1A_PRIME;
+      h ^= g.massNumber[i];       h *= FNV1A_PRIME;
+      h ^= (long) g.formalCharge[i] + 4L; h *= FNV1A_PRIME;
+      h ^= g.attachedHydrogenCount(i); h *= FNV1A_PRIME;
+      h ^= g.ring[i] ? 1 : 0;     h *= FNV1A_PRIME;
+      h ^= g.aromatic[i] ? 1 : 0; h *= FNV1A_PRIME;
       if (g.tautomerClass != null && g.tautomerClass[i] >= 0) {
         h ^= 0xCAFE00L + g.tautomerClass[i]; h *= FNV1A_PRIME;
       }
       atomHash[i] = h;
-      int bit = (int) (Long.remainderUnsigned(h, fpSize));
-      fp[bit >> 6] |= 1L << (bit & 63);
     }
+    return atomHash;
+  }
 
-    long[] result = expandRadii(g, fp, atomHash, radius, fpSize, n);
-    // Store in cache for default params
-    if (radius == 2 && fpSize == 2048) ecfpDefaultCache.put(g, result.clone());
-    return result;
+  /** The FCFP invariant of each atom: its pharmacophore features, degree and ring membership. */
+  private static long[] fcfpAtomHashes(MolGraph g) {
+    int[] pharmFeatures = g.getPharmacophoreFeatures();
+    long[] atomHash = new long[g.n];
+    for (int i = 0; i < g.n; i++) {
+      long h = FNV1A_SEED;
+      h ^= pharmFeatures[i];  h *= FNV1A_PRIME;
+      h ^= g.degree[i];       h *= FNV1A_PRIME;
+      h ^= g.ring[i] ? 1 : 0; h *= FNV1A_PRIME;
+      atomHash[i] = h;
+    }
+    return atomHash;
   }
 
   // ---- Circular FCFP ----
@@ -503,35 +447,14 @@ public final class FingerprintEngine {
   }
 
   public static long[] fcfp(MolGraph g, int radius, int fpSize) {
-    if (g == null) throw new NullPointerException("MolGraph must not be null");
-    if (fpSize <= 0) throw new IllegalArgumentException("fpSize must be > 0");
-    if (radius < -1) throw new IllegalArgumentException("radius must be >= -1 (use -1 for unlimited)");
-    // Cache lookup for default params (v6.5.3 perf fix)
-    if (radius == 2 && fpSize == 2048) {
-      long[] cached = fcfpDefaultCache.get(g);
-      if (cached != null) return cached.clone();
-    }
-    int n = g.n;
-    int numWords = (fpSize + 63) / 64;
-    long[] fp = new long[numWords];
-    if (n == 0) return fp;
-
-    // Use cached pharmacophore features (v6.5.3 perf fix)
-    int[] pharmFeatures = g.getPharmacophoreFeatures();
-    long[] atomHash = new long[n];
-    for (int i = 0; i < n; i++) {
-      long h = FNV1A_SEED;
-      h ^= pharmFeatures[i];  h *= FNV1A_PRIME;
-      h ^= g.degree[i];       h *= FNV1A_PRIME;
-      h ^= g.ring[i] ? 1 : 0; h *= FNV1A_PRIME;
-      atomHash[i] = h;
-      int bit = (int) (Long.remainderUnsigned(h, fpSize));
-      fp[bit >> 6] |= 1L << (bit & 63);
-    }
-
-    long[] result = expandRadii(g, fp, atomHash, radius, fpSize, n);
-    if (radius == 2 && fpSize == 2048) fcfpDefaultCache.put(g, result.clone());
-    return result;
+    checkCircular(g, radius, fpSize);
+    boolean defaults = radius == 2 && fpSize == 2048;
+    long[] cached = defaults ? g.cachedFcfpDefault : null;
+    if (cached != null) return cached.clone();
+    long[] fp = new long[(fpSize + 63) / 64];
+    if (g.n > 0) circular(g, fcfpAtomHashes(g), radius, fpSize, binaryStrategy(fp));
+    if (defaults) g.cachedFcfpDefault = fp.clone();
+    return fp;
   }
 
   // ---- Mode dispatch ----
@@ -573,7 +496,6 @@ public final class FingerprintEngine {
    * @param radius maximum expansion radius (2 = ECFP4, 3 = ECFP6; -1 = unlimited)
    * @param fpSize fingerprint length (number of counter bins)
    * @return count array of length {@code fpSize}
-   * @since 6.0.1
    */
   public static int[] ecfpCounts(IAtomContainer mol, int radius, int fpSize) {
     if (mol == null) throw new NullPointerException("mol");
@@ -588,39 +510,11 @@ public final class FingerprintEngine {
    * @param radius maximum expansion radius (2 = ECFP4, 3 = ECFP6; -1 = unlimited)
    * @param fpSize fingerprint length (number of counter bins)
    * @return count array of length {@code fpSize}
-   * @since 6.0.1
    */
   public static int[] ecfpCounts(MolGraph g, int radius, int fpSize) {
-    if (g == null) throw new NullPointerException("MolGraph must not be null");
-    if (fpSize <= 0) throw new IllegalArgumentException("fpSize must be > 0");
-    if (radius < -1) throw new IllegalArgumentException("radius must be >= -1 (use -1 for unlimited)");
-    int n = g.n;
+    checkCircular(g, radius, fpSize);
     int[] counts = new int[fpSize];
-    if (n == 0) return counts;
-
-    long[] atomHash = new long[n];
-    for (int i = 0; i < n; i++) {
-      long h = FNV1A_SEED;
-      h ^= g.atomicNum[i];       h *= FNV1A_PRIME;  // R&H #1
-      h ^= g.degree[i];          h *= FNV1A_PRIME;  // R&H #2
-      int bondOrdSum = 0;
-      for (int nb : g.neighbors[i]) bondOrdSum += g.bondOrder(i, nb);
-      h ^= bondOrdSum;            h *= FNV1A_PRIME;  // R&H #3
-      h ^= g.massNumber[i];       h *= FNV1A_PRIME;  // R&H #4
-      h ^= (long)g.formalCharge[i] + 4L; h *= FNV1A_PRIME;  // R&H #5
-      long hCount = g.attachedHydrogenCount(i);
-      h ^= hCount;                h *= FNV1A_PRIME;  // R&H #6
-      h ^= g.ring[i] ? 1 : 0;   h *= FNV1A_PRIME;  // R&H #7
-      h ^= g.aromatic[i] ? 1 : 0; h *= FNV1A_PRIME; // Daylight extension
-      if (g.tautomerClass != null && g.tautomerClass[i] >= 0) {
-        h ^= 0xCAFE00L + g.tautomerClass[i]; h *= FNV1A_PRIME;
-      }
-      atomHash[i] = h;
-      int idx = (int) (Long.remainderUnsigned(h, fpSize));
-      counts[idx]++;
-    }
-
-    expandRadiiImpl(g, atomHash, radius, fpSize, n, countStrategy(counts));
+    if (g.n > 0) circular(g, ecfpAtomHashes(g), radius, fpSize, countStrategy(counts));
     return counts;
   }
 
@@ -638,7 +532,6 @@ public final class FingerprintEngine {
    * @param radius maximum expansion radius (2 = FCFP4, 3 = FCFP6; -1 = unlimited)
    * @param fpSize fingerprint length (number of counter bins)
    * @return count array of length {@code fpSize}
-   * @since 6.0.1
    */
   public static int[] fcfpCounts(IAtomContainer mol, int radius, int fpSize) {
     if (mol == null) throw new NullPointerException("mol");
@@ -653,30 +546,11 @@ public final class FingerprintEngine {
    * @param radius maximum expansion radius (2 = FCFP4, 3 = FCFP6; -1 = unlimited)
    * @param fpSize fingerprint length (number of counter bins)
    * @return count array of length {@code fpSize}
-   * @since 6.0.1
    */
   public static int[] fcfpCounts(MolGraph g, int radius, int fpSize) {
-    if (g == null) throw new NullPointerException("MolGraph must not be null");
-    if (fpSize <= 0) throw new IllegalArgumentException("fpSize must be > 0");
-    if (radius < -1) throw new IllegalArgumentException("radius must be >= -1 (use -1 for unlimited)");
-    int n = g.n;
+    checkCircular(g, radius, fpSize);
     int[] counts = new int[fpSize];
-    if (n == 0) return counts;
-
-    // Use cached pharmacophore features (v6.5.3 perf fix)
-    int[] pharmFeatures = g.getPharmacophoreFeatures();
-    long[] atomHash = new long[n];
-    for (int i = 0; i < n; i++) {
-      long h = FNV1A_SEED;
-      h ^= pharmFeatures[i];  h *= FNV1A_PRIME;
-      h ^= g.degree[i];       h *= FNV1A_PRIME;
-      h ^= g.ring[i] ? 1 : 0; h *= FNV1A_PRIME;
-      atomHash[i] = h;
-      int idx = (int) (Long.remainderUnsigned(h, fpSize));
-      counts[idx]++;
-    }
-
-    expandRadiiImpl(g, atomHash, radius, fpSize, n, countStrategy(counts));
+    if (g.n > 0) circular(g, fcfpAtomHashes(g), radius, fpSize, countStrategy(counts));
     return counts;
   }
 
@@ -690,7 +564,6 @@ public final class FingerprintEngine {
    * @param fpSize fingerprint length (number of counter bins)
    * @param mode   {@link Mode#ECFP} or {@link Mode#FCFP}
    * @return count array of length {@code fpSize}
-   * @since 6.0.1
    */
   public static int[] circularFingerprintCounts(IAtomContainer mol, int radius, int fpSize, Mode mode) {
     if (mol == null) throw new NullPointerException("mol");
@@ -706,7 +579,6 @@ public final class FingerprintEngine {
    * @param fpSize fingerprint length (number of counter bins)
    * @param mode   {@link Mode#ECFP} or {@link Mode#FCFP}
    * @return count array of length {@code fpSize}
-   * @since 6.0.1
    */
   public static int[] circularFingerprintCounts(MolGraph g, int radius, int fpSize, Mode mode) {
     return (mode == Mode.FCFP) ? fcfpCounts(g, radius, fpSize) : ecfpCounts(g, radius, fpSize);
@@ -716,13 +588,12 @@ public final class FingerprintEngine {
 
   /**
    * Compute the topological torsion atom type for atom {@code idx}:
-   * encodes (atomicNumber, numHeavyNeighbors, numPiElectrons, isRing)
-   * as a single 32-bit integer.
+   * encodes the atomic number, the number of heavy neighbours, the number of pi electrons and
+   * ring membership as a single 32-bit integer.
    */
   private static int ttAtomType(MolGraph g, int idx) {
     int z = g.atomicNum[idx];
-    // Heavy-atom degree (exclude implicit/explicit H — degree[] counts all explicit neighbours,
-    // but MolGraph only stores heavy atoms so degree == numHeavyNeighbors)
+    // The degree counts the explicit neighbours, which are the heavy atoms of a prepared graph.
     int heavyDeg = g.degree[idx];
     // Pi electrons: count from bond orders (double bond contributes 1 pi, triple contributes 2)
     int nPi = 0;
@@ -746,7 +617,6 @@ public final class FingerprintEngine {
    * @param g      the molecular graph
    * @param fpSize fingerprint size in bits
    * @return binary fingerprint as long[] bitset
-   * @since 6.0.1
    */
   public static long[] topologicalTorsion(MolGraph g, int fpSize) {
     if (g == null) throw new NullPointerException("MolGraph must not be null");
@@ -797,7 +667,6 @@ public final class FingerprintEngine {
    * @param g      the molecular graph
    * @param fpSize fingerprint length (number of counter bins)
    * @return count array of length {@code fpSize}
-   * @since 6.0.1
    */
   public static int[] topologicalTorsionCounts(MolGraph g, int fpSize) {
     if (g == null) throw new NullPointerException("MolGraph must not be null");
@@ -839,14 +708,6 @@ public final class FingerprintEngine {
   }
 
   /**
-   * Convenience overload: compute topological torsion fingerprint from a CDK IAtomContainer.
-   *
-   * @param mol    the CDK molecule
-   * @param fpSize fingerprint size in bits
-   * @return binary fingerprint as long[] bitset
-   * @since 6.0.1
-   */
-  /**
    * Compute a topological torsion fingerprint from a CDK molecule.
    *
    * <p>For batch workloads, pre-convert with {@link #toMolGraph(IAtomContainer)} once
@@ -855,11 +716,57 @@ public final class FingerprintEngine {
    * @param mol    the CDK molecule
    * @param fpSize fingerprint size in bits
    * @return binary fingerprint as long[] bitset
-   * @since 6.0.1
    */
   public static long[] topologicalTorsion(IAtomContainer mol, int fpSize) {
     if (mol == null) throw new NullPointerException("mol");
     return topologicalTorsion(toMolGraph(mol), fpSize);
+  }
+
+  // ---- Configurable fingerprints ----
+
+  /**
+   * The bit fingerprint of a graph under a {@link FingerprintOptions} specification. The classic
+   * configuration of each family, {@link FingerprintOptions#ecfp()}, {@link FingerprintOptions#fcfp()},
+   * {@link FingerprintOptions#path()} and {@link FingerprintOptions#torsion()}, gives the bits of
+   * {@link #ecfp(MolGraph, int, int)}, {@link #fcfp(MolGraph, int, int)},
+   * {@link #pathFingerprint(IAtomContainer, int, int)} and {@link #topologicalTorsion(MolGraph, int)};
+   * {@link FingerprintOptions#maccs()} gives the 166 MACCS keys. The same options give the same bits
+   * in C++ and Python.
+   *
+   * @param g       the molecular graph
+   * @param options the fingerprint specification
+   * @return binary fingerprint as long[] bitset, of {@code options.size} bits or one bit per key
+   * @throws IllegalArgumentException if the options are inconsistent or a SMARTS key does not parse
+   */
+  public static long[] fingerprint(MolGraph g, FingerprintOptions options) {
+    return OptionFingerprints.bits(g, options);
+  }
+
+  /**
+   * The count fingerprint of a graph under a {@link FingerprintOptions} specification: one bin per
+   * bit position of {@link #fingerprint(MolGraph, FingerprintOptions)}, or the number of distinct
+   * matches of each key.
+   */
+  public static int[] fingerprintCounts(MolGraph g, FingerprintOptions options) {
+    return OptionFingerprints.counts(g, options);
+  }
+
+  /**
+   * The bit fingerprint of a CDK molecule under a {@link FingerprintOptions} specification; the
+   * molecule is standardised first, as by {@link #toMolGraph(IAtomContainer)}.
+   */
+  public static long[] fingerprint(IAtomContainer mol, FingerprintOptions options) {
+    if (mol == null) throw new NullPointerException("mol");
+    return fingerprint(toMolGraph(mol), options);
+  }
+
+  /**
+   * The count fingerprint of a CDK molecule under a {@link FingerprintOptions} specification; the
+   * molecule is standardised first, as by {@link #toMolGraph(IAtomContainer)}.
+   */
+  public static int[] fingerprintCounts(IAtomContainer mol, FingerprintOptions options) {
+    if (mol == null) throw new NullPointerException("mol");
+    return fingerprintCounts(toMolGraph(mol), options);
   }
 
   // ---- Shared radius expansion ----
@@ -910,27 +817,26 @@ public final class FingerprintEngine {
     int maxRadius = (radius < 0) ? maxComponentExtent(g) : radius;
     long[] prevHash = atomHash.clone();
     long[] nextHash = new long[n];
+    int maxDegree = 0;
+    for (int[] row : g.neighbors) maxDegree = Math.max(maxDegree, row.length);
+    long[] nbHashes = new long[maxDegree];
 
     for (int r = 1; r <= maxRadius; r++) {
       for (int i = 0; i < n; i++) {
         int deg = g.neighbors[i].length;
         if (deg == 0) { nextHash[i] = prevHash[i]; continue; }
-        long[] nbHashes = new long[deg];
+        // The neighbour hashes sort as unsigned, as the native core sorts uint64_t: the sign bit
+        // is flipped for the signed sort and flipped back when the hash is read.
         for (int k = 0; k < deg; k++) {
           int nb = g.neighbors[i][k];
-          nbHashes[k] = prevHash[nb] ^ (g.bondOrder(i, nb) * 31L);
+          nbHashes[k] = (prevHash[nb] ^ (g.bondOrder(i, nb) * 31L)) ^ Long.MIN_VALUE;
         }
-        // Sort as unsigned (matches C++/Python std::sort on uint64_t).
-        // Java's Arrays.sort is signed; XOR with Long.MIN_VALUE flips the sign bit so
-        // that signed ordering reproduces unsigned ordering, then XOR back to restore.
-        for (int k = 0; k < deg; k++) nbHashes[k] ^= Long.MIN_VALUE;
-        java.util.Arrays.sort(nbHashes);
-        for (int k = 0; k < deg; k++) nbHashes[k] ^= Long.MIN_VALUE;
+        Arrays.sort(nbHashes, 0, deg);
 
         long h = FNV1A_SEED;
         h ^= r;            h *= FNV1A_PRIME;
         h ^= prevHash[i];  h *= FNV1A_PRIME;
-        for (long nh : nbHashes) { h ^= nh; h *= FNV1A_PRIME; }
+        for (int k = 0; k < deg; k++) { h ^= nbHashes[k] ^ Long.MIN_VALUE; h *= FNV1A_PRIME; }
         nextHash[i] = h;
 
         strategy.record(h, fpSize);
@@ -956,12 +862,6 @@ public final class FingerprintEngine {
     };
   }
 
-  private static long[] expandRadii(MolGraph g, long[] fp, long[] atomHash,
-                                     int radius, int fpSize, int n) {
-    expandRadiiImpl(g, atomHash, radius, fpSize, n, binaryStrategy(fp));
-    return fp;
-  }
-
   // ---- Pharmacophore Classification (FCFP) ----
 
   /**
@@ -975,9 +875,9 @@ public final class FingerprintEngine {
     int deg = g.degree[idx];
     int features = 0;
 
-    long attachedHydrogens=g.attachedHydrogenCount(idx);
-    if((z==7||z==8||z==16)&&attachedHydrogens>0)features|=1;
-    boolean isPyrroleTypeN=z==7&&arom&&attachedHydrogens>0;
+    long attachedHydrogens = g.attachedHydrogenCount(idx);
+    if ((z == 7 || z == 8 || z == 16) && attachedHydrogens > 0) features |= 1;
+    boolean isPyrroleTypeN = z == 7 && arom && attachedHydrogens > 0;
     boolean isAcceptorN = (z == 7 && charge <= 0 && !isPyrroleTypeN);
     boolean isAcceptorS = (z == 16 && !arom);
     if (isAcceptorN || z == 8 || z == 9 || isAcceptorS) features |= 2;
@@ -988,9 +888,9 @@ public final class FingerprintEngine {
     if (z == 7 && !arom && deg <= 3 && charge == 0) {
       boolean isAmide = false;
       boolean isAniline = false;
-      boolean singleBonds=true;
+      boolean singleBonds = true;
       for (int nb : g.neighbors[idx]) {
-        if(g.bondOrder(idx,nb)!=1){singleBonds=false;break;}
+        if (g.bondOrder(idx, nb) != 1) { singleBonds = false; break; }
         if (g.atomicNum[nb] == 6) {
           if (g.aromatic[nb]) { isAniline = true; break; } // aniline: N bonded to aromatic C
           for (int nb2 : g.neighbors[nb]) {
@@ -1001,7 +901,7 @@ public final class FingerprintEngine {
         }
         if (isAmide) break;
       }
-      if (singleBonds&&!isAmide && !isAniline) features |= 4;
+      if (singleBonds && !isAmide && !isAniline) features |= 4;
     }
 
     // Negative ionisable: carboxylic, phosphoric, sulfonic acid
@@ -1066,7 +966,6 @@ public final class FingerprintEngine {
    * @param fpSize target array length
    * @return dense count array of length {@code fpSize}
    * @throws IllegalArgumentException if fpSize is not positive
-   * @since 6.3.0
    */
   public static int[] countsToArray(java.util.Map<Integer, Integer> counts, int fpSize) {
     if (fpSize <= 0) throw new IllegalArgumentException("fpSize must be > 0");
@@ -1083,7 +982,11 @@ public final class FingerprintEngine {
 
   public static String toHex(long[] fp) {
     StringBuilder sb = new StringBuilder(fp.length * 16);
-    for (long w : fp) sb.append(String.format("%016x", w));
+    for (long word : fp) {
+      String hex = Long.toHexString(word);
+      for (int pad = hex.length(); pad < 16; pad++) sb.append('0');
+      sb.append(hex);
+    }
     return sb.toString();
   }
 
@@ -1117,16 +1020,37 @@ public final class FingerprintEngine {
     catch (Exception e) { return mol; }
   }
 
-  static void fpEnumeratePaths(int[][] adj, int[] atomicNum, long[] fp, int fpSize,
-      boolean[] visited, int[] path, int depth, int maxDepth) {
-    int cur = path[depth - 1];
-    for (int nb : adj[cur]) {
-      if (visited[nb]) continue;
+  /** The hash of the first {@code length} atoms of a path. */
+  @FunctionalInterface
+  private interface PathHash {
+    int of(int[] path, int length);
+  }
+
+  /**
+   * Set the bit of every simple path of up to {@code maxLength} bonds over the atoms of
+   * {@code adj} that {@code heavy} admits (every atom when it is null), starting from each atom.
+   */
+  private static void walkPaths(int[][] adj, boolean[] heavy, int maxLength, PathHash hash, long[] fp, int fpSize) {
+    boolean[] visited = new boolean[adj.length];
+    int[] path = new int[maxLength + 1];
+    for (int start = 0; start < adj.length; start++) {
+      if (heavy != null && !heavy[start]) continue;
+      path[0] = start;
+      visited[start] = true;
+      fpSetBit(fp, hash.of(path, 1), fpSize);
+      if (maxLength > 0) extendPath(adj, heavy, visited, path, 1, maxLength, hash, fp, fpSize);
+      visited[start] = false;
+    }
+  }
+
+  private static void extendPath(int[][] adj, boolean[] heavy, boolean[] visited, int[] path, int depth,
+      int maxDepth, PathHash hash, long[] fp, int fpSize) {
+    for (int nb : adj[path[depth - 1]]) {
+      if (visited[nb] || (heavy != null && !heavy[nb])) continue;
       path[depth] = nb;
       visited[nb] = true;
-      fpSetBit(fp, fpHashPath(atomicNum, path, depth + 1), fpSize);
-      if (depth < maxDepth)
-        fpEnumeratePaths(adj, atomicNum, fp, fpSize, visited, path, depth + 1, maxDepth);
+      fpSetBit(fp, hash.of(path, depth + 1), fpSize);
+      if (depth < maxDepth) extendPath(adj, heavy, visited, path, depth + 1, maxDepth, hash, fp, fpSize);
       visited[nb] = false;
     }
   }
@@ -1163,34 +1087,9 @@ public final class FingerprintEngine {
     for (int i = 0; i < n; i++) { isHeavy[i] = g.atomicNum[i] != 1; if (isHeavy[i]) heavyCount++; }
     if (heavyCount == 0) return fp;
     int maxLength = Math.min(pathLength, heavyCount - 1);
-    for (int start = 0; start < n; start++) {
-      if (!isHeavy[start]) continue;
-      boolean[] visited = new boolean[n];
-      int[] path = new int[maxLength + 1];
-      path[0] = start;
-      visited[start] = true;
-      fpSetBit(fp, mcsFpHashPath(g, tautClass, tautomerAware, path, 1), fpSize);
-      if (maxLength > 0)
-        mcsFpEnumeratePaths(g, tautClass, tautomerAware, isHeavy, fp, fpSize,
-            visited, path, 1, maxLength);
-    }
+    walkPaths(g.neighbors, isHeavy, maxLength,
+        (path, length) -> mcsFpHashPath(g, tautClass, tautomerAware, path, length), fp, fpSize);
     return fp;
-  }
-
-  static void mcsFpEnumeratePaths(MolGraph g, int[] tautClass, boolean tautAware,
-      boolean[] isHeavy, long[] fp, int fpSize, boolean[] visited, int[] path,
-      int depth, int maxDepth) {
-    int cur = path[depth - 1];
-    for (int nb : g.neighbors[cur]) {
-      if (visited[nb] || !isHeavy[nb]) continue; // skip visited and H atoms
-      path[depth] = nb;
-      visited[nb] = true;
-      fpSetBit(fp, mcsFpHashPath(g, tautClass, tautAware, path, depth + 1), fpSize);
-      if (depth < maxDepth)
-        mcsFpEnumeratePaths(g, tautClass, tautAware, isHeavy, fp, fpSize,
-            visited, path, depth + 1, maxDepth);
-      visited[nb] = false;
-    }
   }
 
   static int mcsFpHashPath(MolGraph g, int[] tautClass, boolean tautAware,
@@ -1233,6 +1132,14 @@ public final class FingerprintEngine {
     return h;
   }
 
+  /**
+   * Fill rate, chi-squared uniformity over sixteen buckets and a suggested size for a 1 % false
+   * positive rate.
+   *
+   * @deprecated Use {@link #analyzeFpQuality(long[], int)}, which the Python API shares, for the
+   *     set bits, density, expected collision rate and saturation of a fingerprint.
+   */
+  @Deprecated
   public static Map<String, Double> analyzeFingerprintQuality(long[] fp, int fpSize) {
     int filled = nominalBitCount(fp, fpSize);
     double fillRate = (double) filled / fpSize;

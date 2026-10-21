@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Run checked-in external corpora with explicit local comparison settings.
 
 The Dalke-style pair files were derived from MoleculeNet, not ChEMBL-13.
-Search-only timings exclude parsing, conversion, warmup and witness validation.
+Search-only timings exclude parsing, conversion, warm-up and witness validation.
 Results checkpoint after each engine call; --resume skips completed pairs.
 SMSD records stopping status and optimality for each pair.
 """
@@ -93,7 +95,7 @@ def aggregate(records):
     result = {"cases": len(records), "input_or_search_errors": len(records)-len(valid),
               "speed_comparable_cases": sum(r.get("speed_comparable", False) for r in valid),
               "smsd_timeout_count": None,
-              "smsd_timeout_note": "not exposed by native mapping API; wall-clock budget crossings are separate",
+              "smsd_timeout_note": "aggregate not computed; MCS observations retain stopping status and proof; SMARTS rows retain hits only",
               "total_measured_search_seconds": sum(o["elapsed_us"] for r in valid
                   for o in r.get("observations", []))/1e6}
     for e in ("smsd", "rdkit"):
@@ -134,10 +136,11 @@ def main(argv=None):
         "rdkit_version": Chem.rdBase.rdkitVersion, "rdkit_package": Chem.__file__,
         "python": platform.python_version(), "platform": platform.platform(),
         "source_label": args.source_label, "timeout_sec": args.timeout_sec,
-        "warmup": args.warmup, "repeats": args.repeats, "objective": "atoms",
-        "connected_only": True, "induced": False, "parsing_timed": False,
+        "warmup": args.warmup, "repeats": args.repeats,
+        "connected_only": True, "smsd_induced": True, "rdkit_induced": False,
+        "parsing_timed": False,
         "protocol": "alternating engine order; independent post-timing witness validation",
-        "policies": args.policies, "smsd_objective": "MCIS",
+        "policies": args.policies, "smsd_objective": "MCIS", "rdkit_objective": "connected FMCS",
         "dataset_sha256": {key: hashlib.sha256((DATA/DATASETS[key]).read_bytes()).hexdigest()
             for key in args.datasets}}
     meta_path = args.output_dir / "metadata.json"

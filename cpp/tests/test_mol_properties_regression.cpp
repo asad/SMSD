@@ -1,9 +1,10 @@
-#include "search_test_helpers.hpp"
 /*
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  */
+#include "test_support.hpp"
 #include "smsd/mol_reader.hpp"
 #include "smsd/smarts_parser.hpp"
 #include <iostream>
@@ -11,8 +12,42 @@
 #include <filesystem>
 #include <fstream>
 
+static std::string hydrogenBlock(bool v3000, const std::string& attributes = "", const std::string& property = "") {
+    if (v3000)
+        return "Hydrogen\n\n\n  0  0  0  0  0  0            999 V3000\n"
+            "M  V30 BEGIN CTAB\nM  V30 COUNTS 1 0 0 0 0\nM  V30 BEGIN ATOM\n"
+            "M  V30 1 H 0 0 0 0" + attributes + "\nM  V30 END ATOM\n"
+            "M  V30 BEGIN BOND\nM  V30 END BOND\nM  V30 END CTAB\nM  END\n";
+    std::string atom = "    0.0000    0.0000    0.0000 H   0  0  0  0  0  0  0  0  0  0  0  0";
+    if (attributes == "zero-valence") atom.replace(48, 3, " 15");
+    if (attributes == "zero-hydrogens") atom.replace(42, 3, "  1");
+    if (attributes == "doublet") atom.replace(36, 3, "  4");
+    return "Hydrogen\n\n\n  1  0  0  0  0  0            999 V2000\n" + atom + "\n" + property + "M  END\n";
+}
+
 int main() {
-    for (const char* text : {"CCO", "OCC(=O)O", "c1ccccc1", "[nH]1cccc1", "[NH4+]", "[H]OC", "[CH3]"}) {
+    for (bool v3000 : {false, true}) {
+        if (smsd::readMolBlock(hydrogenBlock(v3000)).hydrogenCount != std::vector<int>{1})
+            throw std::runtime_error("An isolated neutral MOL hydrogen must use valence one");
+        for (const auto& attributes : {v3000 ? " VAL=-1" : "zero-valence",
+                                       v3000 ? " HCOUNT=-1" : "zero-hydrogens",
+                                       v3000 ? " RAD=2" : "doublet"})
+            if (smsd::readMolBlock(hydrogenBlock(v3000, attributes)).hydrogenCount != std::vector<int>{0})
+                throw std::runtime_error("Explicit hydrogen and radical constraints must be retained");
+        for (int radical : {1, 2, 3}) {
+            const auto block = v3000 ? hydrogenBlock(true, " RAD=" + std::to_string(radical))
+                : hydrogenBlock(false, "", "M  RAD  1   1   " + std::to_string(radical) + "\n");
+            if (smsd::readMolBlock(block).hydrogenCount != std::vector<int>{0})
+                throw std::runtime_error("A radical MOL hydrogen must not gain an implicit hydrogen");
+        }
+        for (int charge : {-1, 1}) {
+            const auto block = v3000 ? hydrogenBlock(true, " CHG=" + std::to_string(charge))
+                : hydrogenBlock(false, "", "M  CHG  1   1  " + std::to_string(charge) + "\n");
+            if (smsd::readMolBlock(block).hydrogenCount != std::vector<int>{0})
+                throw std::runtime_error("A charged MOL hydrogen must not gain an implicit hydrogen");
+        }
+    }
+    for (const char* text : {"CCO", "OCC(=O)O", "c1ccccc1", "[nH]1cccc1", "[NH4+]", "[H]OC", "[CH3]", "[H]", "[HH]", "[H][H]"}) {
         const auto original = smsd::parseSMILES(text);
         for (const auto& block : {smsd::writeMolBlock(original), smsd::writeMolBlockV3000(original)}) {
             const auto restored = smsd::readMolBlock(block);
@@ -66,9 +101,12 @@ int main() {
         if (restored.bondOrder(0, 1) != (bondType == 10 ? 0 : 1))
             throw std::runtime_error("V3000 extended bond type must not be truncated");
     }
-    const auto largeBlock = smsd::writeMolBlock(smsd::parseSMILES(std::string(1000, 'C')));
+    const auto largeGraph = smsd::parseSMILES(std::string(1000, 'C'));
+    const auto largeBlock = smsd::writeMolBlock(largeGraph);
     if (largeBlock.find("V3000") == std::string::npos || smsd::readMolBlock(largeBlock).n != 1000)
         throw std::runtime_error("Large MOL output must use V3000");
+    if (largeBlock != smsd::writeMolBlockV3000(largeGraph))
+        throw std::runtime_error("Automatic V3000 output must match the explicit writer");
     const auto sdfPath = std::filesystem::temp_directory_path() / "smsd-mol-properties-regression.sdf";
     {
         std::ofstream output(sdfPath);

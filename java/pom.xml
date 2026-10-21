@@ -1,15 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+         child.project.url.inherit.append.path="false">
   <modelVersion>4.0.0</modelVersion>
 
+  <!-- Parent and aggregator of the Java modules:
+         core/  com.bioinceptionlabs:smsd      the library (sources in java/src)
+         cli/   com.bioinceptionlabs:smsd-cli  the command-line tool and its JAR with dependencies
+       `mvn -f java/pom.xml verify` builds and tests both. -->
   <groupId>com.bioinceptionlabs</groupId>
-  <artifactId>smsd</artifactId>
-  <version>7.2.2</version>
-  <packaging>jar</packaging>
-  <name>SMSD</name>
-  <description>High-performance substructure and MCS search for chemical graphs</description>
+  <artifactId>smsd-parent</artifactId>
+  <version>8.0.0</version>
+  <packaging>pom</packaging>
+  <name>SMSD Parent</name>
+  <description>Shared build configuration for the SMSD library and command-line tool</description>
   <url>https://github.com/asad/SMSD</url>
 
   <organization>
@@ -33,7 +38,10 @@
     </license>
   </licenses>
 
-  <scm>
+  <!-- The modules share the repository URLs rather than appending their artifactId. -->
+  <scm child.scm.connection.inherit.append.path="false"
+       child.scm.developerConnection.inherit.append.path="false"
+       child.scm.url.inherit.append.path="false">
     <connection>scm:git:git://github.com/asad/SMSD.git</connection>
     <developerConnection>scm:git:ssh://github.com:asad/SMSD.git</developerConnection>
     <url>https://github.com/asad/SMSD</url>
@@ -50,14 +58,24 @@
     </repository>
   </distributionManagement>
 
+  <modules>
+    <module>core</module>
+    <module>cli</module>
+  </modules>
+
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>8</maven.compiler.release>
+    <!-- Repository root, as seen from each module (java/<module>). -->
+    <smsd.root>${project.basedir}/../..</smsd.root>
 
     <!-- Libraries -->
     <cdk.version>2.13</cdk.version>
+    <beam.version>1.3.10</beam.version>
+    <vecmath.version>1.5.2</vecmath.version>
     <picocli.version>4.7.7</picocli.version>
     <jackson.version>2.21.7</jackson.version>
+    <jackson.annotations.version>2.21</jackson.annotations.version>
 
     <!-- Test -->
     <junit.version>5.13.4</junit.version>
@@ -66,230 +84,162 @@
          Override with -Dslow.tests.exclude=nothing to run everything. -->
     <slow.tests.exclude>**/BenchmarkSuiteTest.java,**/ExternalBenchmarkTest.java,**/JavaCdkVsSmsdBenchmarkTest.java,**/AlgorithmTest.java,**/StressTest.java</slow.tests.exclude>
 
-
     <!-- Plugins -->
-    <exec.plugin.version>3.5.1</exec.plugin.version>
     <appassembler.version>2.1.0</appassembler.version>
   </properties>
 
-  <dependencies>
-    <!-- ===== CDK: include only what we use (no cdk-bundle) ===== -->
-    <!-- Core API + interfaces + builders -->
-    <dependency>
-      <groupId>org.openscience.cdk</groupId><artifactId>cdk-core</artifactId><version>${cdk.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.openscience.cdk</groupId><artifactId>cdk-interfaces</artifactId><version>${cdk.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.openscience.cdk</groupId><artifactId>cdk-silent</artifactId><version>${cdk.version}</version>
-    </dependency>
-    <!-- DefaultChemObjectBuilder lives here -->
-    <dependency>
-      <groupId>org.openscience.cdk</groupId><artifactId>cdk-data</artifactId><version>${cdk.version}</version>
-    </dependency>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.bioinceptionlabs</groupId><artifactId>smsd</artifactId><version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.bioinceptionlabs</groupId><artifactId>smsd</artifactId><version>${project.version}</version>
+        <type>test-jar</type>
+      </dependency>
 
-    <!-- IO (MDL/CML/Mol2/PDB) -->
-    <dependency>
-      <groupId>org.openscience.cdk</groupId><artifactId>cdk-io</artifactId><version>${cdk.version}</version>
-    </dependency>
-    <!-- MDL V2000/V3000 readers & writers -->
-    <dependency>
-      <groupId>org.openscience.cdk</groupId><artifactId>cdk-ctab</artifactId><version>${cdk.version}</version>
-    </dependency>
-    <!-- PDB reader -->
-    <dependency>
-      <groupId>org.openscience.cdk</groupId><artifactId>cdk-pdb</artifactId><version>${cdk.version}</version>
-    </dependency>
+      <!-- CDK: individual modules only, never cdk-bundle -->
+      <dependency>
+        <groupId>org.openscience.cdk</groupId><artifactId>cdk-interfaces</artifactId><version>${cdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openscience.cdk</groupId><artifactId>cdk-core</artifactId><version>${cdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openscience.cdk</groupId><artifactId>cdk-silent</artifactId><version>${cdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openscience.cdk</groupId><artifactId>cdk-data</artifactId><version>${cdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openscience.cdk</groupId><artifactId>cdk-standard</artifactId><version>${cdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openscience.cdk</groupId><artifactId>cdk-atomtype</artifactId><version>${cdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openscience.cdk</groupId><artifactId>cdk-valencycheck</artifactId><version>${cdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openscience.cdk</groupId><artifactId>cdk-isomorphism</artifactId><version>${cdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openscience.cdk</groupId><artifactId>cdk-smarts</artifactId><version>${cdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openscience.cdk</groupId><artifactId>cdk-smiles</artifactId><version>${cdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openscience.cdk</groupId><artifactId>cdk-io</artifactId><version>${cdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openscience.cdk</groupId><artifactId>cdk-ctab</artifactId><version>${cdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openscience.cdk</groupId><artifactId>cdk-pdb</artifactId><version>${cdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openscience.cdk</groupId><artifactId>cdk-sdg</artifactId><version>${cdk.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>uk.ac.ebi.beam</groupId><artifactId>beam-core</artifactId><version>${beam.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>javax.vecmath</groupId><artifactId>vecmath</artifactId><version>${vecmath.version}</version>
+      </dependency>
 
-    <!-- SMILES/SMARTS -->
-    <dependency>
-      <groupId>org.openscience.cdk</groupId><artifactId>cdk-smiles</artifactId><version>${cdk.version}</version>
-    </dependency>
-    <!-- SMARTS matching is part of the public search API. -->
-    <dependency>
-      <groupId>org.openscience.cdk</groupId><artifactId>cdk-smarts</artifactId><version>${cdk.version}</version>
-    </dependency>
-    <!-- CDK DfPattern / Mappings / Pattern — needed by Standardiser and benchmark -->
-    <dependency>
-      <groupId>org.openscience.cdk</groupId><artifactId>cdk-isomorphism</artifactId><version>${cdk.version}</version>
-    </dependency>
+      <dependency>
+        <groupId>info.picocli</groupId><artifactId>picocli</artifactId><version>${picocli.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-databind</artifactId><version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-core</artifactId><version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-annotations</artifactId><version>${jackson.annotations.version}</version>
+      </dependency>
 
-    <!-- Aromaticity, AtomContainerManipulator, HydrogenAdder, etc. -->
-    <dependency>
-      <groupId>org.openscience.cdk</groupId><artifactId>cdk-standard</artifactId><version>${cdk.version}</version>
-    </dependency>
-
-    <!-- ===== CLI & JSON used by SMSDcli ===== -->
-    <dependency>
-      <groupId>info.picocli</groupId><artifactId>picocli</artifactId><version>${picocli.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-databind</artifactId><version>${jackson.version}</version>
-    </dependency>
-
-    <!-- ===== Test: JUnit 5 Jupiter (API + Params + Engine) ===== -->
-    <dependency>
-      <groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>${junit.version}</version>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
+      <dependency>
+        <groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>${junit.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <build>
-    <resources>
-      <resource>
-        <directory>src/main/resources</directory>
-      </resource>
-      <resource>
-        <directory>${project.basedir}/..</directory>
-        <targetPath>META-INF/smsd</targetPath>
-        <filtering>false</filtering>
-        <includes>
-          <include>LICENSE</include>
-          <include>NOTICE</include>
-        </includes>
-      </resource>
-    </resources>
-    <plugins>
-      <!-- Compile -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.14.1</version>
-        <configuration>
-          <release>${maven.compiler.release}</release>
-        </configuration>
-      </plugin>
-
-      <!-- Copy project legal files without replacing dependency notices. -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-resources-plugin</artifactId>
-        <version>3.4.0</version>
-        <executions>
-          <execution>
-            <id>copy-javadoc-legal</id>
-            <phase>generate-resources</phase>
-            <goals><goal>copy-resources</goal></goals>
-            <configuration>
-              <outputDirectory>${project.build.directory}/javadoc-resources/doc-files/smsd</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${project.basedir}/..</directory>
-                  <filtering>false</filtering>
-                  <includes>
-                    <include>LICENSE</include>
-                    <include>NOTICE</include>
-                  </includes>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-      <!-- Javadoc generation -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <version>3.6.3</version>
-        <configuration>
-          <source>${maven.compiler.release}</source>
-          <doclint>none</doclint>
-          <quiet>true</quiet>
-          <javadocDirectory>${project.build.directory}/javadoc-resources</javadocDirectory>
-          <docfilessubdirs>true</docfilessubdirs>
-          <reportOutputDirectory>${project.basedir}/../docs</reportOutputDirectory>
-          <destDir>api</destDir>
-        </configuration>
-      </plugin>
-
-      <!-- Tests on JUnit 5 -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>${maven.surefire.version}</version>
-        <configuration>
-          <useModulePath>false</useModulePath>
-          <workingDirectory>${project.basedir}/..</workingDirectory>
-          <!-- Exclude heavy benchmark/stress suites from the default CI run.
-               Run them explicitly with -Dslow.tests.exclude=nothing when needed. -->
-          <excludes>
-            <exclude>${slow.tests.exclude}</exclude>
-          </excludes>
-        </configuration>
-      </plugin>
-
-      <!-- Run via mvn exec:java if desired -->
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <version>${exec.plugin.version}</version>
-      </plugin>
-
-      <!-- Fat JAR with all dependencies -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>3.6.0</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals><goal>shade</goal></goals>
-            <configuration>
-              <createDependencyReducedPom>false</createDependencyReducedPom>
-              <shadedArtifactAttached>true</shadedArtifactAttached>
-              <shadedClassifierName>jar-with-dependencies</shadedClassifierName>
-              <transformers>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  <mainClass>com.bioinception.smsd.cli.SMSDcli</mainClass>
-                </transformer>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
-              </transformers>
-              <filters>
-                <filter>
-                  <artifact>*:*</artifact>
-                  <excludes>
-                    <exclude>META-INF/*.SF</exclude>
-                    <exclude>META-INF/*.DSA</exclude>
-                    <exclude>META-INF/*.RSA</exclude>
-                  </excludes>
-                </filter>
-              </filters>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-      <!-- Generate an isolated launcher distribution without overwriting source scripts. -->
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>appassembler-maven-plugin</artifactId>
-        <version>${appassembler.version}</version>
-        <configuration>
-          <assembleDirectory>${project.build.directory}/appassembler</assembleDirectory>
-          <binFolder>bin</binFolder>
-          <!-- Shorter, portable classpath (wildcard) -->
-          <repositoryLayout>flat</repositoryLayout>
-          <useWildcardClassPath>true</useWildcardClassPath>
-          <programs>
-            <program>
-              <mainClass>com.bioinception.smsd.cli.SMSDcli</mainClass>
-              <id>smsd</id>
-            </program>
-          </programs>
-        </configuration>
-        <executions>
-          <execution>
-            <id>make-launchers</id>
-            <phase>package</phase>
-            <goals>
-              <goal>assemble</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
+    <pluginManagement>
+      <!-- Versions and shared configuration for every module and the release profile. -->
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.14.1</version>
+          <configuration>
+            <release>${maven.compiler.release}</release>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-resources-plugin</artifactId>
+          <version>3.4.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>3.5.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>${maven.surefire.version}</version>
+          <configuration>
+            <useModulePath>false</useModulePath>
+            <workingDirectory>${smsd.root}</workingDirectory>
+            <!-- Exclude heavy benchmark/stress suites from the default CI run.
+                 Run them explicitly with -Dslow.tests.exclude=nothing when needed. -->
+            <excludes>
+              <exclude>${slow.tests.exclude}</exclude>
+            </excludes>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <version>3.7.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-shade-plugin</artifactId>
+          <version>3.6.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>appassembler-maven-plugin</artifactId>
+          <version>${appassembler.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-source-plugin</artifactId>
+          <version>3.3.1</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <version>3.6.3</version>
+          <configuration>
+            <doclint>none</doclint>
+            <source>${maven.compiler.release}</source>
+            <quiet>true</quiet>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-gpg-plugin</artifactId>
+          <version>3.2.7</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
   </build>
 
   <profiles>
@@ -301,7 +251,6 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-source-plugin</artifactId>
-            <version>3.3.1</version>
             <executions>
               <execution>
                 <id>attach-sources</id>
@@ -313,10 +262,6 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
-            <version>3.6.3</version>
-            <configuration>
-              <doclint>none</doclint>
-            </configuration>
             <executions>
               <execution>
                 <id>attach-javadocs</id>
@@ -328,7 +273,6 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-gpg-plugin</artifactId>
-            <version>3.2.7</version>
             <executions>
               <execution>
                 <id>sign-artifacts</id>
@@ -337,7 +281,10 @@
               </execution>
             </executions>
           </plugin>
-          <!-- Central publishing -->
+          <!-- Central publishing of this parent, the library and the CLI. The
+               deployment is uploaded and validated, then waits in the Central
+               Portal until it is published there by hand, so nothing becomes
+               public without a manual confirmation. -->
           <plugin>
             <groupId>org.sonatype.central</groupId>
             <artifactId>central-publishing-maven-plugin</artifactId>
@@ -345,8 +292,8 @@
             <extensions>true</extensions>
             <configuration>
               <publishingServerId>central</publishingServerId>
-              <autoPublish>true</autoPublish>
-              <waitUntil>published</waitUntil>
+              <autoPublish>false</autoPublish>
+              <waitUntil>validated</waitUntil>
             </configuration>
           </plugin>
         </plugins>

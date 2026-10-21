@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 name: Native Windows release packages
 
 on:
@@ -46,12 +48,12 @@ jobs:
         shell: pwsh
         run: |
           if ($env:RELEASE_TAG -notmatch '^v([0-9]+\.[0-9]+\.[0-9]+)$') {
-            throw 'Expected an existing stable release tag, such as v7.2.2'
+            throw 'Expected an existing stable release tag, such as v8.0.0'
           }
           $version = $Matches[1]
           New-Item -ItemType Directory -Path release-input -Force | Out-Null
           gh release download $env:RELEASE_TAG --repo $env:RELEASE_REPOSITORY --dir release-input `
-            --pattern "smsd-$version-jar-with-dependencies.jar" --pattern "smsd-$version.tar.gz" `
+            --pattern "smsd-cli-$version-jar-with-dependencies.jar" --pattern "smsd-$version.tar.gz" `
             --pattern SOURCE_MANIFEST.json --pattern SHA256SUMS
           if ($LASTEXITCODE -ne 0) { throw 'Release input download failed' }
           $check = @'
@@ -72,7 +74,7 @@ jobs:
 
           version, tag = sys.argv[1:]
           directory = Path('release-input')
-          names = {f'smsd-{version}-jar-with-dependencies.jar', f'smsd-{version}.tar.gz', 'SOURCE_MANIFEST.json'}
+          names = {f'smsd-cli-{version}-jar-with-dependencies.jar', f'smsd-{version}.tar.gz', 'SOURCE_MANIFEST.json'}
           require({path.name for path in directory.iterdir()} == names | {'SHA256SUMS'},
                   'Release input filenames differ from the selected version')
           sums = {}

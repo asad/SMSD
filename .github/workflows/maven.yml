@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 name: maven
 
 on:
@@ -37,8 +39,9 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
+      # Installing the library lets the Java 8 step below resolve it for the CLI tests.
       - name: Build Java 8-compatible packages and test on Java 25
-        run: mvn -U -B -Dslow.tests.exclude=nothing -Dsurefire.reportNameSuffix=java25 clean verify
+        run: mvn -U -B -Dslow.tests.exclude=nothing -Dsurefire.reportNameSuffix=java25 clean install
       - name: Set up Java 8 compatibility runtime
         uses: actions/setup-java@v6.0.1
         with:
@@ -52,5 +55,5 @@ jobs:
         with:
           name: smsd-jar-and-launchers
           path: |
-            java/target/*-jar-with-dependencies.jar
-            java/target/appassembler/
+            java/cli/target/*-jar-with-dependencies.jar
+            java/cli/target/appassembler/

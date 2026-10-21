@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Generate reproducible Dalke-style pairs from a specified molecule collection.
 
 These are derived corpora, not the original ChEMBL-13 FMCS benchmark. A nearest
-neighbor is the highest Morgan-radius-2/1024-bit Tanimoto match after explicitly
+neighbour is the highest Morgan-radius-2/1024-bit Tanimoto match after explicitly
 excluding the query index; no similarity cutoff is applied. Existing checked-in
 corpora are not overwritten by default.
 """
@@ -73,13 +75,13 @@ def main(argv=None):
     fingerprints = [generator.GetFingerprint(item[0]) for item in items]
     queries = rng.sample(range(len(items)), min(args.pairs, len(items)))
     with (args.output_dir / "dalke_nn_pairs.tsv").open("w") as handle:
-        handle.write(metadata+"# One nearest neighbor per query; query index excluded; no similarity cutoff\n")
+        handle.write(metadata+"# One nearest neighbour per query; query index excluded; no similarity cutoff\n")
         handle.write("# SMILES1\tSMILES2\tName1\tName2\tTanimoto\n")
         for query in queries:
             similarities = DataStructs.BulkTanimotoSimilarity(fingerprints[query], fingerprints)
             neighbor = nearest_neighbor_index(query, similarities)
             handle.write(f"{items[query][1]}\t{items[neighbor][1]}\t{items[query][2]}\t{items[neighbor][2]}\t{similarities[neighbor]:.4f}\n")
-    print(f"Wrote {len(pairs)} random and {len(queries)} nearest-neighbor pairs to {args.output_dir}")
+    print(f"Wrote {len(pairs)} random and {len(queries)} nearest-neighbour pairs to {args.output_dir}")
 
 
 if __name__ == "__main__":

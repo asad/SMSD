@@ -2,12 +2,12 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
- * See the NOTICE file for attribution, trademark, and algorithm IP terms. */
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ */
 package com.bioinception.smsd.core;
 
 import java.util.*;
-import java.util.Random;
-import org.openscience.cdk.graph.Cycles;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
@@ -16,41 +16,59 @@ import org.openscience.cdk.interfaces.IStereoElement;
 import org.openscience.cdk.interfaces.ITetrahedralChirality;
 
 /**
- * Immutable, CDK-free molecular graph representation for fast substructure
- * and MCS computation. Can be built from a CDK {@link IAtomContainer} or
- * programmatically via {@link Builder}.
+ * A molecular graph prepared for substructure and MCS searches: the atom and bond properties,
+ * ring and aromaticity flags and stereo descriptors, read once from a CDK
+ * {@link IAtomContainer} or supplied through a {@link Builder}, with the labels that searches
+ * derive from them on first use.
  */
 public final class MolGraph {
   final IAtomContainer mol;
+  /** The implicit hydrogen counts, or null for a built graph that left them to the valence model. */
   private final int[] hydrogenCounts;
   final int n;
   public final int[] atomicNum, formalCharge, label, massNumber;
-  int[] morganRank, orbit, canonicalLabel;
+  int[] orbit, canonicalLabel;
   int[][] autGenerators;
   boolean autGeneratorsTruncated;
   long canonicalHash;
   private volatile boolean canonicalComputed = false;
-  private volatile boolean tautomerClassesComputed = false;
   private volatile boolean ringCountsComputed = false;
   final boolean[] ring, aromatic;
   final int[] degree;
   public final int[] ringCount;
   final int[][] neighbors;
-  private volatile BitSet[] adj;          // lazy — built on first access via getAdj()
   long[][] adjLong;
   final int words;
   private volatile int[][] cachedNLF1, cachedNLF2, cachedNLF3;
   private volatile int[][] cachedNeighborsByDegDesc;
   private volatile int[] cachedPharmacophoreFeatures;
+  /** The ECFP4 and FCFP4 fingerprints of 2048 bits, once computed, see {@link FingerprintEngine}. */
+  volatile long[] cachedEcfpDefault, cachedFcfpDefault;
   private static final int SPARSE_THRESHOLD = 200;
+  /** The bond properties of a graph up to the dense threshold, by both atoms. */
   final int[][] bondOrdMatrix;
   final boolean[][] bondRingMatrix, bondAromMatrix;
-  final HashMap<Long, int[]> sparseBondProps;
+  /**
+   * The bond properties of a larger graph: the order, ring flag and aromatic flag of the bond to
+   * each neighbour, parallel to {@link #neighbors}.
+   */
+  final int[][] neighbourBondOrder;
+  final boolean[][] neighbourBondRing, neighbourBondAromatic;
+  /** The tetrahedral tags, or null when the graph has none. */
   final int[] tetraChirality;
   // CDK winding is relative to this exact ligand order; -1 is the implicit ligand.
   final int[][] tetraLigands;
-  private volatile int[] tetraConfigurations;
-  final int[][] dbStereoConf;
+  /**
+   * The double-bond configurations by both atoms for a dense graph, or by neighbour as the bond
+   * properties for a larger one; both null when the graph has none.
+   */
+  final int[][] dbStereoConf, neighbourDbStereo;
+  /**
+   * The tautomer class of each atom, -1 outside every class. The atoms of one motif match share a
+   * class and matches that share an atom join their classes, so the partition does not depend on
+   * the atom order; the numbers, from 0, depend on it only for classes that Weisfeiler-Leman
+   * refinement cannot tell apart (in practice those a symmetry of the graph exchanges).
+   */
   public int[]   tautomerClass;
   /**
    * Baseline per-atom relevance weight for heuristic tautomer confidence, in [0,1].
@@ -58,6 +76,16 @@ public final class MolGraph {
    * helper applies solvent and pH context when reading these weights.
    */
   public float[] tautomerWeight;
+  /**
+   * The ionisable site of each atom's tautomer motif, which the pH context of
+   * MCS.computeTautomerConfidence reads: {@link #TAUTOMER_SITE_ACID} when the neutral acid HA
+   * tautomerises, {@link #TAUTOMER_SITE_BASE} when the neutral base B does, and
+   * {@link #TAUTOMER_SITE_NONE} when the motif has no ionisable site or no match of the motif that
+   * covers the atom holds a hydrogen the site would release. No motif carries a base site.
+   */
+  public byte[] tautomerSite;
+  /** The aqueous pKa of that site (of the conjugate acid BH+ for a base); 0 when there is none. */
+  public float[] tautomerPKa;
   /**
    * Optional external atom IDs for translating between SmsdGraph 0-based
    * contiguous indices and non-contiguous IDs used by editors (e.g. BIME).
@@ -69,26 +97,39 @@ public final class MolGraph {
   public final String programLine;
   public final String comment;
   public final Map<String, String> properties;
-  int[][] sssrRings;
-  int[][] rcbRings; // Relevant Cycle Basis (union of all MCBs)
-  private volatile int[] ringSystemId;
-  private volatile long[] ringSysSignature;
-  private volatile int ringSysCount;
-  private volatile boolean ringSysComputed = false;
+  /** The rings, once perceived, see {@link #rings()}. */
+  private volatile RingPerception.Rings rings;
+  /** The ring systems of the ring atoms, once found, see {@link #ringSystems()}. */
+  private volatile RingPerception.AtomSystems ringSystems;
+  /**
+   * What SMARTS searches keep for this graph, see {@link Substructure}: null until one reads it.
+   * Searches exchange it atomically, so that a kept copy they take out is read by one at a time.
+   */
+  private volatile Object smartsView;
+  private static final AtomicReferenceFieldUpdater<MolGraph, Object> SMARTS_VIEW =
+      AtomicReferenceFieldUpdater.newUpdater(MolGraph.class, Object.class, "smartsView");
+
+  /** {@link #tautomerSite}: the motif has no ionisable site. */
+  public static final byte TAUTOMER_SITE_NONE = 0;
+  /** {@link #tautomerSite}: the neutral acid HA of the motif tautomerises. */
+  public static final byte TAUTOMER_SITE_ACID = 1;
+  /** {@link #tautomerSite}: the neutral base B of the motif tautomerises. */
+  public static final byte TAUTOMER_SITE_BASE = -1;
 
   // ---------------------------------------------------------------------------
-  // Empirical pKa-derived tautomer relevance weights at pH 7.4
+  // Empirical pKa-derived relevance weights of the dominant neutral tautomer; pH
+  // enters only through the neutral fraction of the ionisable site below.
   // References: Sitzmann et al. JCIM 2010; Karabina et al. 2014; ChEMBL pKa db
   // ---------------------------------------------------------------------------
   public static final float TW_KETO_ENOL         = 0.98f; // pKa ~20  — keto overwhelmingly dominant
   public static final float TW_AMIDE_IMIDIC      = 0.97f; // pKa ~15-17 — amide form dominant
   public static final float TW_LACTAM_LACTIM     = 0.97f; // cyclic amide — lactam dominant
   public static final float TW_UREA              = 0.96f; // pKa ~14 — urea form dominant
-  public static final float TW_PYRIDINONE        = 0.95f; // pKa ~1  — lactam dominant
+  public static final float TW_PYRIDINONE        = 0.95f; // N-H pKa ~11.7 — lactam dominant
   public static final float TW_THIOAMIDE         = 0.94f; // pKa ~13 — thioamide dominant
   public static final float TW_THIONE_THIOL      = 0.94f; // pKa ~10-11 — thione dominant
   public static final float TW_ENAMINONE         = 0.85f; // vinylogous amide — amine form dominant
-  public static final float TW_HYDROXAMIC        = 0.85f; // pKa ~8  — neutral hydroxamic dominant
+  public static final float TW_HYDROXAMIC        = 0.85f; // pKa ~9  — neutral hydroxamic dominant
   public static final float TW_PHENOL_QUINONE    = 0.88f; // pKa ~10 — phenol dominant
   public static final float TW_HYDROXYPYRIMIDINE = 0.90f; // lactam tautomer dominant in N-heterocycles
   public static final float TW_PURINE_NH         = 0.78f; // N9-H dominant in purines (adenine, guanine)
@@ -119,90 +160,107 @@ public final class MolGraph {
   public static final float TW_ALLYL_SHIFT      = 0.70f;  // X-C=C-C ↔ C=C-C-X (X=OH,SH,NH)
   public static final float TW_SELENOL_SELENOKETONE = 0.94f; // C=Se ↔ C(-SeH)
 
-  static final int HASH_PRIME = 1000003;
+  // ---------------------------------------------------------------------------
+  // Aqueous pKa of the ionisable site of each motif that has one, from the ranges
+  // above (midpoints where a range is given), applied in every solvent. Every site is
+  // an acid, which a match of its motif carries only when the atom that would release
+  // the proton bears a hydrogen. The pKa ~3.5 of the nitro/aci-nitro motif belongs to
+  // the minor aci-nitro tautomer, not to the dominant nitro form from which the motif
+  // arises, so that motif has no site.
+  // ---------------------------------------------------------------------------
+  public static final float TPKA_KETO_ENOL            = 20.0f; // ketone alpha C-H
+  public static final float TPKA_AMIDE_IMIDIC         = 16.0f; // amide N-H
+  public static final float TPKA_UREA                 = 14.0f; // urea N-H
+  public static final float TPKA_PYRIDINONE           = 11.7f; // 2-pyridone N-H (8.6 for pyrimidin-4(3H)-one)
+  public static final float TPKA_PYRIDONE_HYDROXYPYRIDINE = TPKA_PYRIDINONE; // same equilibrium
+  public static final float TPKA_THIOAMIDE            = 13.0f; // thioamide N-H
+  public static final float TPKA_THIONE_THIOL         = 10.5f; // thione/thiol
+  public static final float TPKA_HYDROXAMIC           = 9.0f;  // hydroxamic acid O-H
+  public static final float TPKA_PHENOL_QUINONE       = 10.0f; // phenol O-H
+  public static final float TPKA_DIKETONE_ENOL        = 9.5f;  // 1,3-diketone C-H
+  public static final float TPKA_IMIDE                = 9.5f;  // imide N-H
+  public static final float TPKA_THIOAMIDE_IMINOTHIOL = 13.0f; // thioamide N-H
 
-  public boolean hasBond(int i, int j) { return bondOrder(i, j) != 0; }
+  /** Whether atoms {@code i} and {@code j} are bonded; every present bond has an order of at least one. */
+  public boolean hasBond(int i, int j) { return (adjLong[i][j >>> 6] & 1L << (j & 63)) != 0; }
 
-  int tetrahedralConfiguration(int atom) {
-    if (tetraChirality == null || tetraChirality[atom] == 0) return 0;
-    int[] configurations = tetraConfigurations;
-    if (configurations == null) {
-      synchronized (this) {
-        configurations = tetraConfigurations;
-        if (configurations == null) {
-          configurations = new int[n];
-          for (Map.Entry<Integer, Character> descriptor : CIPAssigner.assignRS(this).entrySet())
-            configurations[descriptor.getKey()] = descriptor.getValue();
-          tetraConfigurations = configurations;
-        }
-      }
-    }
-    return configurations[atom];
+  /**
+   * Whether an atom of this element with three neighbours and no hydrogen is a tetrahedral centre
+   * whose lone pair is the fourth ligand: N, P, S, As, Se, Sb and Te.
+   */
+  static boolean lonePairCentre(int atomicNumber) {
+    return atomicNumber == 7 || atomicNumber == 15 || atomicNumber == 16 || atomicNumber == 33
+        || atomicNumber == 34 || atomicNumber == 51 || atomicNumber == 52;
   }
 
+  /**
+   * The ligand order of the tetrahedral tag of {@code atom}, with -1 for the implicit ligand of
+   * three neighbours (a hydrogen or a lone pair), or null when the atom is not a tetrahedral
+   * centre. It is a centre when it has four neighbours and no implicit hydrogen, or three
+   * neighbours and either one implicit hydrogen or, for an element of {@link #lonePairCentre},
+   * none. The order is the one of the CDK stereo element the graph was built from; otherwise it
+   * is the neighbours in order, with the implicit ligand second when the first neighbour precedes
+   * the atom, as after the atom it was written from in SMILES, and first otherwise. The native
+   * core applies the same rule.
+   */
   int[] tetrahedralLigands(int atom) {
+    int degree = neighbors[atom].length;
+    if (degree != 3 && degree != 4) return null;
+    int hydrogens = hydrogenCount(atom);
+    boolean centre = degree == 4 ? hydrogens == 0
+        : hydrogens == 1 || hydrogens == 0 && lonePairCentre(atomicNum[atom]);
+    if (!centre) return null;
     if (tetraLigands != null && tetraLigands[atom] != null) return tetraLigands[atom];
-    int hydrogen = hydrogenCount(atom);
-    boolean lonePair = tetraChirality != null && tetraChirality[atom] != 0 && neighbors[atom].length == 3 && hydrogen == 0
-        && (atomicNum[atom] == 7 || atomicNum[atom] == 15 || atomicNum[atom] == 16
-            || atomicNum[atom] == 33 || atomicNum[atom] == 34 || atomicNum[atom] == 51 || atomicNum[atom] == 52);
-    if (!lonePair && (neighbors[atom].length + hydrogen != 4 || hydrogen > 1)) return null;
     int[] order = new int[4];
-    int offset = hydrogen == 1 || lonePair ? 1 : 0;
-    if (offset == 1) order[0] = -1;
-    System.arraycopy(neighbors[atom], 0, order, offset, neighbors[atom].length);
+    int implicit = degree == 4 ? -1 : neighbors[atom][0] < atom ? 1 : 0;
+    for (int slot = 0, position = 0; slot < 4; slot++)
+      order[slot] = slot == implicit ? -1 : neighbors[atom][position++];
     return order;
   }
 
   public int atomCount() { return n; }
 
-  boolean hasHydrogenCounts() { return mol != null || hydrogenCounts != null; }
+  /** The number of bonds: half the sum of the degrees. */
+  long bondCount() {
+    long ends = 0;
+    for (int d : degree) ends += d;
+    return ends / 2;
+  }
 
   /**
-   * Implicit hydrogen count for atom {@code idx}.
-   *
-   * <p>Mirrors the C++ {@code MolGraph::hydrogenCount[]} field byte-for-byte.
-   * Used by {@link FingerprintEngine#classifyPharmacophore} to distinguish
-   * pyrrole-type aromatic N (has H, not an H-bond acceptor) from pyridine-type
-   * aromatic N (no H, is an H-bond acceptor), and by the canonical SMILES
-   * writer to emit the stereo H count inside bracket atoms.
-   *
-   * <p>For CDK-backed graphs this reads
-   * {@code IAtom.getImplicitHydrogenCount()} when supplied, with a real-bond-valence fallback
-   * for programmatically built atoms regardless of how bond orders are encoded. For graphs built via
-   * {@link Builder}, supplied hydrogen counts are used directly. Otherwise
-   * the ordinary SMILES valence model supplies the count.
-   *
-   * <p>Why this method exists: SMSD internally encodes aromatic bonds as bond
-   * order 4 (for bond-order matching semantics), so callers cannot compute
-   * implicit H from {@code bondOrder()} summation alone — the aromatic-4
-   * encoding would blow past the valence table and return 0 for every
-   * aromatic atom.
+   * The implicit hydrogen count of atom {@code idx}, as the native core stores it: the count the
+   * CDK atom supplied when the graph was built, or else its valence or the valence model less its
+   * bonds; for a graph from the {@link Builder}, the supplied count, or else the SMILES valence
+   * model. Aromatic bonds are stored as order 4, so the count cannot be read off bond order sums.
    */
   public int hydrogenCount(int idx) {
-    if (hydrogenCounts != null) return hydrogenCounts[idx];
-    if (mol != null) {
-      Integer h = mol.getAtom(idx).getImplicitHydrogenCount();
-      if(h!=null)return h;
-      int bondOrderSum=0;
-      for(IBond bond:mol.getConnectedBondsList(mol.getAtom(idx))) {
-        IBond.Order order=bond.getOrder();
-        bondOrderSum+=order==null||order==IBond.Order.UNSET?1:order.numeric();
-      }
-      return defaultHydrogenCount(atomicNum[idx],false,bondOrderSum,formalCharge[idx]);
+    return hydrogenCounts != null ? hydrogenCounts[idx] : defaultHydrogenCount(idx);
+  }
+
+  /** The hydrogen count of a CDK atom: the supplied count, or its valence or the valence model less its bonds. */
+  private static int cdkHydrogenCount(IAtomContainer mol, IAtom atom, int atomicNumber, int charge) {
+    Integer supplied = atom.getImplicitHydrogenCount();
+    if (supplied != null) return supplied;
+    int bondOrderSum = 0;
+    for (IBond bond : mol.getConnectedBondsList(atom)) {
+      IBond.Order order = bond.getOrder();
+      bondOrderSum += order == null || order == IBond.Order.UNSET ? 1 : order.numeric();
     }
-    return defaultHydrogenCount(idx);
+    Integer valence = atom.getValency();
+    if (valence != null) return Math.max(0, valence - bondOrderSum);
+    int unpaired = mol.getConnectedSingleElectronsCount(atom);
+    return atomicNumber <= 1 ? 0 : defaultHydrogenCount(atomicNumber, false, bondOrderSum + unpaired, charge);
   }
 
   /** Implicit hydrogens plus explicitly represented hydrogen neighbours. */
   long attachedHydrogenCount(int atom) {
-    long count=hydrogenCount(atom);
-    for(int neighbor:neighbors[atom])if(atomicNum[neighbor]==1)count++;
+    long count = hydrogenCount(atom);
+    for (int neighbor : neighbors[atom]) if (atomicNum[neighbor] == 1) count++;
     return count;
   }
 
   /** Hydrogen count implied by an unbracketed atom's valence. */
-  private int defaultHydrogenCount(int idx) {
+  int defaultHydrogenCount(int idx) {
     if (atomicNum[idx] <= 1) return 0;
     int bondOrdSum = 0;
     for (int nb : neighbors[idx]) {
@@ -212,18 +270,55 @@ public final class MolGraph {
     return defaultHydrogenCount(atomicNum[idx], aromatic[idx], bondOrdSum, formalCharge[idx]);
   }
 
-  /** Hydrogen count implied by the ordinary SMILES valence model. */
+  /**
+   * Default SMILES valences per element, in ascending order: the one Java valence table, mirroring
+   * {@code defaultValences} in {@code smiles_utils.hpp}. Elements without an entry take no
+   * implicit hydrogens.
+   */
+  private static final int[][] DEFAULT_VALENCES = new int[54][];
+  static {
+    DEFAULT_VALENCES[1]  = new int[]{1};           // H
+    DEFAULT_VALENCES[5]  = new int[]{3};           // B
+    DEFAULT_VALENCES[6]  = new int[]{4};           // C
+    DEFAULT_VALENCES[7]  = new int[]{3, 5};        // N
+    DEFAULT_VALENCES[8]  = new int[]{2};           // O
+    DEFAULT_VALENCES[9]  = new int[]{1};           // F
+    DEFAULT_VALENCES[13] = new int[]{3};           // Al
+    DEFAULT_VALENCES[14] = new int[]{4};           // Si
+    DEFAULT_VALENCES[15] = new int[]{3, 5};        // P
+    DEFAULT_VALENCES[16] = new int[]{2, 4, 6};     // S
+    DEFAULT_VALENCES[17] = new int[]{1};           // Cl
+    DEFAULT_VALENCES[33] = new int[]{3, 5};        // As
+    DEFAULT_VALENCES[34] = new int[]{2, 4, 6};     // Se
+    DEFAULT_VALENCES[35] = new int[]{1};           // Br
+    DEFAULT_VALENCES[51] = new int[]{3, 5};        // Sb
+    DEFAULT_VALENCES[52] = new int[]{2, 4, 6};     // Te
+    DEFAULT_VALENCES[53] = new int[]{1, 3, 5, 7};  // I
+  }
+
+  /**
+   * Hydrogen count implied by the ordinary SMILES valence model, the one Java form of
+   * {@code computeImplicitH} in {@code smiles_utils.hpp}. Aromatic bonds count once in
+   * {@code bondOrdSum} and an aromatic atom counts one more; a neutral aromatic atom already at
+   * its lowest valence takes no hydrogens. The smallest default valence that fits, adjusted for
+   * charge (cations of N, P, O, S, As and Se and anions of B and Al gain |charge|, other charged
+   * atoms lose it), sets the count.
+   */
   static int defaultHydrogenCount(int atomicNumber, boolean aromatic, int bondOrdSum, int charge) {
-    if (atomicNumber <= 1) return 0;
-    if (aromatic) {
-      if (charge == 0 && (atomicNumber == 7 || atomicNumber == 15) && bondOrdSum >= 3) return 0;
-      bondOrdSum++;
-    }
-    if ((charge > 0 && (atomicNumber == 7 || atomicNumber == 8 || atomicNumber == 15
+    int[] valences = atomicNumber >= 0 && atomicNumber < DEFAULT_VALENCES.length
+        ? DEFAULT_VALENCES[atomicNumber] : null;
+    if (valences == null) return 0;
+    if (aromatic && charge == 0 && bondOrdSum >= valences[0]) return 0;
+    long effective = (long) bondOrdSum + (aromatic ? 1 : 0);
+    long absoluteCharge = Math.abs((long) charge);
+    boolean expands = (charge > 0 && (atomicNumber == 7 || atomicNumber == 8 || atomicNumber == 15
         || atomicNumber == 16 || atomicNumber == 33 || atomicNumber == 34))
-        || (charge < 0 && (atomicNumber == 5 || atomicNumber == 13)))
-      bondOrdSum -= 2 * Math.abs(charge);
-    return FingerprintEngine.implicitH(atomicNumber, bondOrdSum, charge);
+        || (charge < 0 && (atomicNumber == 5 || atomicNumber == 13));
+    for (int valence : valences) {
+      long hydrogens = (expands ? valence + absoluteCharge : valence - absoluteCharge) - effective;
+      if (hydrogens >= 0) return (int) Math.min(hydrogens, Integer.MAX_VALUE);
+    }
+    return 0;
   }
 
   /**
@@ -253,272 +348,54 @@ public final class MolGraph {
     return translated;
   }
 
-  public int[] getOrbit() { ensureCanonical(); return orbit; }
+  /** The orbit of each atom under the chemical automorphism group, as a copy. */
+  public int[] getOrbit() { ensureCanonical(); return orbit.clone(); }
 
-  public int[][] computeRings() {
-    if (sssrRings != null) return sssrRings;
-    if (n == 0) { sssrRings = new int[0][]; return sssrRings; }
+  public int[][] computeRings() { return rings().smallest; }
 
-    int edgeCount = 0;
-    for (int i = 0; i < n; i++) edgeCount += neighbors[i].length;
-    edgeCount /= 2;
-
-    boolean[] visited = new boolean[n];
-    int components = 0;
-    for (int i = 0; i < n; i++) {
-      if (visited[i]) continue;
-      components++;
-      Deque<Integer> bfsQ = new ArrayDeque<>();
-      bfsQ.add(i);
-      visited[i] = true;
-      while (!bfsQ.isEmpty()) {
-        int u = bfsQ.poll();
-        for (int v : neighbors[u]) if (!visited[v]) { visited[v] = true; bfsQ.add(v); }
-      }
+  /**
+   * The rings, perceived on first use. Searches on several threads may share a graph, so both
+   * sets are published together, once, through a volatile field: a thread sees them whole or
+   * waits for the thread that perceives them.
+   */
+  private RingPerception.Rings rings() {
+    RingPerception.Rings perceived = rings;
+    if (perceived != null) return perceived;
+    synchronized (this) {
+      if (rings == null) rings = RingPerception.perceive(n, neighbors);
+      return rings;
     }
-    int cycleRank = edgeCount - n + components;
-    if (cycleRank <= 0) { sssrRings = new int[0][]; return sssrRings; }
-
-    // Horton candidate generation: for every vertex v and every edge (eU, eV),
-    // find shortest path from v to eU and from v to eV (excluding edge eU-eV),
-    // form cycle from both paths + the edge. This is O(V*E*V) but guaranteed
-    // to find all cycles needed for both SSSR and relevant cycles.
-
-    // Build edge index
-    Map<Long, Integer> edgeIdx = new HashMap<>();
-    List<int[]> edgeList = new ArrayList<>();
-    for (int i = 0; i < n; i++)
-      for (int j : neighbors[i])
-        if (j > i) {
-          edgeIdx.put(bondKey(i, j), edgeList.size());
-          edgeList.add(new int[]{i, j});
-        }
-    int totalEdges = edgeList.size();
-
-    // Helper: BFS shortest path from start to target, avoiding edge (avoidU, avoidV)
-    // Returns atom path, or empty list if unreachable
-    List<boolean[]> candidateMasks = new ArrayList<>();
-    List<int[]> candidateAtoms = new ArrayList<>();
-    List<Integer> candidateSizes = new ArrayList<>();
-    Set<String> seenMasks = new HashSet<>();
-
-    for (int v = 0; v < n; v++) {
-      for (int[] edge : edgeList) {
-        int eU = edge[0], eV = edge[1];
-
-        // Find shortest path from v to eU, avoiding edge (eU, eV)
-        List<Integer> path1 = bfsPath(v, eU, eU, eV);
-        if (path1.isEmpty()) continue;
-
-        // Find shortest path from v to eV, avoiding edge (eU, eV)
-        List<Integer> path2 = bfsPath(v, eV, eU, eV);
-        if (path2.isEmpty()) continue;
-
-        // Check paths are vertex-disjoint (only share vertex v)
-        Set<Integer> p1Interior = new HashSet<>();
-        for (int i = 1; i < path1.size(); i++) p1Interior.add(path1.get(i));
-        boolean disjoint = true;
-        for (int i = 1; i < path2.size(); i++) {
-          if (p1Interior.contains(path2.get(i))) { disjoint = false; break; }
-        }
-        if (!disjoint) continue;
-
-        // Build edge mask for this cycle
-        boolean[] mask = new boolean[totalEdges];
-        int edgeId = edgeIdx.get(bondKey(eU, eV));
-        mask[edgeId] = true;
-
-        boolean valid = true;
-        for (int i = 0; i < path1.size() - 1 && valid; i++) {
-          Integer idx = edgeIdx.get(bondKey(Math.min(path1.get(i), path1.get(i+1)),
-                                            Math.max(path1.get(i), path1.get(i+1))));
-          if (idx == null) valid = false; else mask[idx] = true;
-        }
-        for (int i = 0; i < path2.size() - 1 && valid; i++) {
-          Integer idx = edgeIdx.get(bondKey(Math.min(path2.get(i), path2.get(i+1)),
-                                            Math.max(path2.get(i), path2.get(i+1))));
-          if (idx == null) valid = false; else mask[idx] = true;
-        }
-        if (!valid) continue;
-
-        // Deduplicate by edge mask
-        String maskStr = Arrays.toString(mask);
-        if (!seenMasks.add(maskStr)) continue;
-
-        int ringSize = path1.size() + path2.size() - 1;
-        if (ringSize < 3) continue;
-
-        candidateMasks.add(mask);
-        candidateSizes.add(ringSize);
-
-        // Build atom list: path1(v→eU) + eV + reverse(path2 interior, eV→...→v excluded)
-        // path1 = [v, ..., eU], path2 = [v, ..., eV]
-        // Cycle: v → ... → eU → eV → ... → v (backwards through path2)
-        List<Integer> atoms = new ArrayList<>(path1); // [v, ..., eU]
-        // Append path2 in reverse, skipping the first element (v) since path1 starts at v
-        for (int i = path2.size() - 1; i >= 1; i--) atoms.add(path2.get(i));
-        candidateAtoms.add(atoms.stream().mapToInt(Integer::intValue).toArray());
-      }
-    }
-
-    // Sort candidates by size (smallest first)
-    Integer[] order = new Integer[candidateMasks.size()];
-    for (int i = 0; i < order.length; i++) order[i] = i;
-    Arrays.sort(order, Comparator.comparingInt(candidateSizes::get));
-
-    // Interleaved SSSR + RCB pipeline (Vismara's rule, 2-phase reduction):
-    // Phase 1: Check relevance (independence from STRICTLY SHORTER cycles only)
-    // Phase 2: Check SSSR inclusion (independence from ALL basis cycles)
-    List<int[]> sssr = new ArrayList<>();
-    List<int[]> rcb = new ArrayList<>();
-    List<boolean[]> rcbMasks = new ArrayList<>();
-    List<boolean[]> basisMatrix = new ArrayList<>();
-    List<Integer> basisSizes = new ArrayList<>();
-
-    // O(E) leading-bit lookup for row-echelon reduction
-    int[] basisByLeadingBit = new int[totalEdges];
-    Arrays.fill(basisByLeadingBit, -1);
-
-    for (int idx : order) {
-      boolean[] mask = candidateMasks.get(idx);
-      int cSize = candidateSizes.get(idx);
-
-      // Phase 1: Check relevance — reduce only against STRICTLY SHORTER basis cycles
-      boolean[] phase1Mask = mask.clone();
-      for (int b = 0; b < totalEdges; b++) {
-        if (phase1Mask[b]) {
-          int basisIdx = basisByLeadingBit[b];
-          if (basisIdx != -1 && basisSizes.get(basisIdx) < cSize) {
-            for (int k = b; k < totalEdges; k++) {
-              phase1Mask[k] ^= basisMatrix.get(basisIdx)[k];
-            }
-          }
-        }
-      }
-
-      boolean relevant = false;
-      for (boolean bit : phase1Mask) if (bit) { relevant = true; break; }
-
-      if (relevant) {
-        // Deduplicate for RCB by edge mask
-        boolean dup = false;
-        for (boolean[] existingMask : rcbMasks) {
-          if (Arrays.equals(mask, existingMask)) { dup = true; break; }
-        }
-        if (!dup) {
-          rcb.add(candidateAtoms.get(idx));
-          rcbMasks.add(mask);
-        }
-
-        // Phase 2: Check SSSR inclusion — reduce against ALL basis cycles
-        boolean[] phase2Mask = phase1Mask.clone();
-        for (int b = 0; b < totalEdges; b++) {
-          if (phase2Mask[b]) {
-            int basisIdx = basisByLeadingBit[b];
-            if (basisIdx != -1) {
-              for (int k = b; k < totalEdges; k++) {
-                phase2Mask[k] ^= basisMatrix.get(basisIdx)[k];
-              }
-            }
-          }
-        }
-
-        boolean independent = false;
-        int newLeadingBit = -1;
-        for (int b = 0; b < totalEdges; b++) {
-          if (phase2Mask[b]) { independent = true; newLeadingBit = b; break; }
-        }
-
-        if (independent && sssr.size() < cycleRank) {
-          sssr.add(candidateAtoms.get(idx));
-          basisMatrix.add(phase2Mask); // Add the FULLY REDUCED mask
-          basisSizes.add(cSize);
-          basisByLeadingBit[newLeadingBit] = basisMatrix.size() - 1;
-        }
-      }
-    }
-
-    sssrRings = sssr.toArray(new int[0][]);
-    rcbRings = rcb.toArray(new int[0][]);
-    return sssrRings;
   }
 
   public int numRings() { return computeRings().length; }
 
-  // ---- Ring-system decomposition (lazy, thread-safe) ----
-
-  private void ensureRingSystems() {
-    if (ringSysComputed) return;
+  /**
+   * The ring systems of the ring atoms, found on first use and published once, as the rings
+   * are.
+   */
+  private RingPerception.AtomSystems ringSystems() {
+    RingPerception.AtomSystems found = ringSystems;
+    if (found != null) return found;
     synchronized (this) {
-      if (ringSysComputed) return;
-      int[] uf = new int[n];
-      for (int i = 0; i < n; i++) uf[i] = i;
-      // Unite ring atoms connected by bonds where both endpoints are ring atoms
-      for (int i = 0; i < n; i++) {
-        if (!ring[i]) continue;
-        for (int j : neighbors[i]) {
-          if (j > i && ring[j]) ufUnion(uf, i, j);
-        }
-      }
-      // Assign contiguous IDs
-      int[] idMap = new int[n];
-      Arrays.fill(idMap, -1);
-      int count = 0;
-      int[] sysId = new int[n];
-      Arrays.fill(sysId, -1);
-      for (int i = 0; i < n; i++) {
-        if (!ring[i]) continue;
-        int root = ufFind(uf, i);
-        if (idMap[root] < 0) idMap[root] = count++;
-        sysId[i] = idMap[root];
-      }
-      // Compute FNV-1a hash per ring system
-      long FNV_OFFSET = -3750763034362895579L;
-      long FNV_PRIME  = 1099511628211L;
-      long[] sig = new long[count];
-      // Gather per-system data: size, aromCount, atomicNums, bondOrders
-      int[] sysSize = new int[count];
-      int[] sysArom = new int[count];
-      @SuppressWarnings("unchecked")
-      List<Integer>[] sysAtomicNums = new List[count];
-      @SuppressWarnings("unchecked")
-      List<Integer>[] sysBondOrds = new List[count];
-      for (int s = 0; s < count; s++) {
-        sysAtomicNums[s] = new ArrayList<>();
-        sysBondOrds[s] = new ArrayList<>();
-      }
-      for (int i = 0; i < n; i++) {
-        if (sysId[i] < 0) continue;
-        int s = sysId[i];
-        sysSize[s]++;
-        if (aromatic[i]) sysArom[s]++;
-        sysAtomicNums[s].add(atomicNum[i]);
-        for (int j : neighbors[i]) {
-          if (j > i && ring[j] && sysId[j] == s) {
-            sysBondOrds[s].add(bondOrder(i, j));
-          }
-        }
-      }
-      for (int s = 0; s < count; s++) {
-        long h = FNV_OFFSET;
-        h ^= sysSize[s]; h *= FNV_PRIME;
-        h ^= sysArom[s]; h *= FNV_PRIME;
-        Collections.sort(sysAtomicNums[s]);
-        for (int v : sysAtomicNums[s]) { h ^= v; h *= FNV_PRIME; }
-        Collections.sort(sysBondOrds[s]);
-        for (int v : sysBondOrds[s]) { h ^= v; h *= FNV_PRIME; }
-        sig[s] = h;
-      }
-      ringSystemId = sysId;
-      ringSysSignature = sig;
-      ringSysCount = count;
-      ringSysComputed = true;
+      if (ringSystems == null) ringSystems = RingPerception.atomSystems(this);
+      return ringSystems;
     }
   }
 
-  public int ringSystemOf(int atom) { ensureRingSystems(); return ringSystemId[atom]; }
-  public long ringSystemSig(int rsId) { ensureRingSystems(); return rsId >= 0 && rsId < ringSysCount ? ringSysSignature[rsId] : 0; }
-  public int ringSystemCount() { ensureRingSystems(); return ringSysCount; }
+  /** Store {@code value} as what SMARTS searches keep for this graph, and return the previous value. */
+  Object exchangeSmartsView(Object value) { return SMARTS_VIEW.getAndSet(this, value); }
+
+  /** Store {@code value} as what SMARTS searches keep for this graph if that is still {@code expected}. */
+  boolean replaceSmartsView(Object expected, Object value) {
+    return SMARTS_VIEW.compareAndSet(this, expected, value);
+  }
+
+  public int ringSystemOf(int atom) { return ringSystems().ofAtom[atom]; }
+  public long ringSystemSig(int rsId) {
+    long[] signature = ringSystems().signature;
+    return rsId >= 0 && rsId < signature.length ? signature[rsId] : 0;
+  }
+  public int ringSystemCount() { return ringSystems().signature.length; }
 
   /**
    * Computes the set of relevant cycles (union of all minimum cycle bases).
@@ -537,9 +414,7 @@ public final class MolGraph {
    * @return array of relevant cycles, each cycle given as an array of atom indices
    */
   public int[][] computeRelevantCycles() {
-    computeRings(); // ensures rcbRings is populated
-    if (rcbRings != null) return rcbRings;
-    return new int[0][];
+    return rings().relevant;
   }
 
 
@@ -553,116 +428,7 @@ public final class MolGraph {
    * @return list of URFs, each URF is a list of cycles (each cycle is an array of atom indices)
    */
   public int[][][] computeURFs() {
-    ensureCanonical();
-    int[][] rc = computeRelevantCycles();
-    if (rc.length == 0) return new int[0][][];
-
-    // Build edge index + O(1) inverse lookup
-    Map<Long, Integer> edgeIndex = new HashMap<>();
-    for (int i = 0; i < n; i++) {
-      for (int j : neighbors[i]) {
-        if (j > i) edgeIndex.computeIfAbsent(bondKey(i, j), k -> edgeIndex.size());
-      }
-    }
-    int numEdges = edgeIndex.size();
-    int longWords = (numEdges + 63) >>> 6;
-
-    // O(1) inverse lookup: edge index → (u, v) pair
-    int[][] indexToEdge = new int[numEdges][2];
-    for (Map.Entry<Long, Integer> e : edgeIndex.entrySet()) {
-      long k = e.getKey();
-      int idx = e.getValue();
-      indexToEdge[idx] = new int[] { (int)(k >>> 32), (int)(k & 0xFFFFFFFFL) };
-    }
-
-    // Build edge-incidence vectors for each relevant cycle
-    long[][] vectors = new long[rc.length][longWords];
-    for (int ci = 0; ci < rc.length; ci++) {
-      int[] c = rc[ci];
-      for (int i = 0; i < c.length; i++) {
-        int a = c[i], b = c[(i + 1) % c.length];
-        long key = bondKey(Math.min(a, b), Math.max(a, b));
-        Integer idx = edgeIndex.get(key);
-        if (idx != null) vectors[ci][idx >>> 6] ^= 1L << (idx & 63);
-      }
-    }
-
-    int nrc = rc.length;
-    int[] family = new int[nrc];
-    for (int i = 0; i < nrc; i++) family[i] = i;
-
-    // Generate orbit-based signatures for each cycle (lexicographically minimal)
-    String[] sigs = new String[nrc];
-    for (int i = 0; i < nrc; i++) sigs[i] = getCycleOrbitSignature(rc[i]);
-
-    // Group cycles into URFs using two criteria (in order):
-    //   1. Orbit-signature match: only when every atom in both cycles shares the
-    //      same orbit value (vertex-transitive ring systems, e.g. cubane where
-    //      all atoms have orbit=0). Without this guard, fused systems like
-    //      naphthalene are incorrectly merged because both 6-rings happen to
-    //      produce the same orbit sequence after rotation/reflection.
-    //   2. Kolodzik single-edge exchange: symmetric difference == 2 edges
-    //      sharing a common vertex.
-    for (int i = 0; i < nrc; i++) {
-      for (int j = i + 1; j < nrc; j++) {
-        if (rc[i].length != rc[j].length) continue;
-
-        // 1. Orbit-signature match — guarded: only apply when all atoms in
-        //    both cycles belong to the same orbit (vertex-transitive).
-        if (sigs[i].equals(sigs[j])) {
-          int orb0 = orbit[rc[i][0]];
-          boolean allSame = true;
-          for (int a : rc[i]) { if (orbit[a] != orb0) { allSame = false; break; } }
-          if (allSame) for (int a : rc[j]) { if (orbit[a] != orb0) { allSame = false; break; } }
-          if (allSame) {
-            union(family, i, j);
-            continue;
-          }
-        }
-
-        // 2. Kolodzik single edge exchange (handles non-symmetric but interchangeable rings)
-        long[] xor = new long[longWords];
-        int popcount = 0;
-        for (int w = 0; w < longWords; w++) {
-          xor[w] = vectors[i][w] ^ vectors[j][w];
-          popcount += Long.bitCount(xor[w]);
-        }
-        if (popcount == 2) {
-          int[] diffEdges = new int[2];
-          int di = 0;
-          for (int w = 0; w < longWords && di < 2; w++) {
-            long bits = xor[w];
-            while (bits != 0 && di < 2) {
-              int bit = Long.numberOfTrailingZeros(bits);
-              diffEdges[di++] = (w << 6) + bit;
-              bits &= bits - 1;
-            }
-          }
-          int[] e1 = indexToEdge[diffEdges[0]]; // O(1) instead of O(E)
-          int[] e2 = indexToEdge[diffEdges[1]];
-          if (e1 != null && e2 != null && sharesVertex(e1, e2)) {
-            union(family, i, j);
-          }
-        }
-      }
-    }
-
-    // Group by family
-    Map<Integer, List<Integer>> groups = new HashMap<>();
-    for (int i = 0; i < nrc; i++) {
-      groups.computeIfAbsent(find(family, i), k -> new ArrayList<>()).add(i);
-    }
-
-    int[][][] result = new int[groups.size()][][];
-    int gi = 0;
-    for (List<Integer> members : groups.values()) {
-      result[gi] = new int[members.size()][];
-      for (int m = 0; m < members.size(); m++) {
-        result[gi][m] = rc[members.get(m)];
-      }
-      gi++;
-    }
-    return result;
+    return RingPerception.uniqueRingFamilies(this);
   }
 
   /**
@@ -676,15 +442,7 @@ public final class MolGraph {
    * @return SSSR rings sorted ascending by size
    */
   public static List<List<Integer>> computeSSSR(MolGraph g) {
-    int[][] raw = g.computeRings();
-    List<List<Integer>> rings = new ArrayList<>(raw.length);
-    for (int[] r : raw) {
-      List<Integer> ring = new ArrayList<>(r.length);
-      for (int a : r) ring.add(a);
-      rings.add(ring);
-    }
-    rings.sort(Comparator.comparingInt(List::size));
-    return rings;
+    return RingPerception.smallestRingsBySize(g);
   }
 
   /**
@@ -699,99 +457,7 @@ public final class MolGraph {
    * @return layout-ordered SSSR rings
    */
   public static List<List<Integer>> layoutSSSR(MolGraph g) {
-    List<List<Integer>> rings = computeSSSR(g);
-    if (rings.size() <= 1) return rings;
-
-    int nr = rings.size();
-
-    // Build edge sets per ring
-    List<Set<Long>> edgeSets = new ArrayList<>(nr);
-    for (List<Integer> r : rings) {
-      Set<Long> es = new HashSet<>();
-      for (int j = 0; j < r.size(); j++) {
-        int a = r.get(j), b = r.get((j + 1) % r.size());
-        es.add(bondKey(Math.min(a, b), Math.max(a, b)));
-      }
-      edgeSets.add(es);
-    }
-
-    // Build ring adjacency
-    List<List<Integer>> adj = new ArrayList<>(nr);
-    for (int i = 0; i < nr; i++) adj.add(new ArrayList<>());
-    for (int i = 0; i < nr; i++) {
-      for (int j = i + 1; j < nr; j++) {
-        boolean shared = false;
-        for (Long e : edgeSets.get(i)) {
-          if (edgeSets.get(j).contains(e)) { shared = true; break; }
-        }
-        if (shared) { adj.get(i).add(j); adj.get(j).add(i); }
-      }
-    }
-
-    // Connected components
-    int[] comp = new int[nr];
-    Arrays.fill(comp, -1);
-    int nComp = 0;
-    for (int i = 0; i < nr; i++) {
-      if (comp[i] >= 0) continue;
-      int c = nComp++;
-      comp[i] = c;
-      Deque<Integer> bfs = new ArrayDeque<>();
-      bfs.add(i);
-      while (!bfs.isEmpty()) {
-        int u = bfs.poll();
-        for (int v : adj.get(u)) {
-          if (comp[v] < 0) { comp[v] = c; bfs.add(v); }
-        }
-      }
-    }
-
-    // Group by component, compute system size (unique atom count)
-    List<List<Integer>> systems = new ArrayList<>(nComp);
-    for (int i = 0; i < nComp; i++) systems.add(new ArrayList<>());
-    for (int i = 0; i < nr; i++) systems.get(comp[i]).add(i);
-
-    int[] sysSize = new int[nComp];
-    for (int c = 0; c < nComp; c++) {
-      Set<Integer> atoms = new HashSet<>();
-      for (int ri : systems.get(c))
-        atoms.addAll(rings.get(ri));
-      sysSize[c] = atoms.size();
-    }
-
-    // Sort systems: largest first
-    Integer[] sysOrder = new Integer[nComp];
-    for (int i = 0; i < nComp; i++) sysOrder[i] = i;
-    Arrays.sort(sysOrder, (a, b) -> Integer.compare(sysSize[b], sysSize[a]));
-
-    List<List<Integer>> result = new ArrayList<>(nr);
-    for (int ci : sysOrder) {
-      List<Integer> sysRings = systems.get(ci);
-      if (sysRings.size() == 1) {
-        result.add(rings.get(sysRings.get(0)));
-        continue;
-      }
-
-      sysRings.sort(Comparator.comparingInt(a -> rings.get(a).size()));
-
-      boolean[] visited = new boolean[nr];
-      Deque<Integer> bfs = new ArrayDeque<>();
-      bfs.add(sysRings.get(0));
-      visited[sysRings.get(0)] = true;
-      while (!bfs.isEmpty()) {
-        int u = bfs.poll();
-        result.add(rings.get(u));
-        List<Integer> nbrs = new ArrayList<>();
-        for (int v : adj.get(u)) {
-          if (!visited[v] && comp[v] == ci) nbrs.add(v);
-        }
-        nbrs.sort(Comparator.comparingInt(a -> rings.get(a).size()));
-        for (int v : nbrs) {
-          if (!visited[v]) { visited[v] = true; bfs.add(v); }
-        }
-      }
-    }
-    return result;
+    return RingPerception.layoutOrder(g);
   }
 
   /**
@@ -800,41 +466,6 @@ public final class MolGraph {
   public static final class Point2D {
     public double x, y;
     public Point2D(double x, double y) { this.x = x; this.y = y; }
-  }
-
-  private static Point2D[] normalizeCoords(MolGraph g, Point2D[] coords, double spacing) {
-    Point2D[] out = new Point2D[g.n];
-    int copy = Math.min(coords == null ? 0 : coords.length, g.n);
-    for (int i = 0; i < copy; i++) {
-      Point2D p = coords[i];
-      out[i] = p != null ? new Point2D(p.x, p.y) : new Point2D(i * spacing, 0.0);
-    }
-    for (int i = copy; i < g.n; i++) out[i] = new Point2D(i * spacing, 0.0);
-    return out;
-  }
-
-  private static void copyCoords(Point2D[] src, Point2D[] dst) {
-    int copy = Math.min(src.length, dst.length);
-    for (int i = 0; i < copy; i++) {
-      if (dst[i] == null) dst[i] = new Point2D(src[i].x, src[i].y);
-      else {
-        dst[i].x = src[i].x;
-        dst[i].y = src[i].y;
-      }
-    }
-  }
-
-  private static boolean isDegenerateLayout(Point2D[] coords) {
-    if (coords.length < 3) return true;
-    double minX = coords[0].x, maxX = coords[0].x;
-    double minY = coords[0].y, maxY = coords[0].y;
-    for (Point2D p : coords) {
-      minX = Math.min(minX, p.x);
-      maxX = Math.max(maxX, p.x);
-      minY = Math.min(minY, p.y);
-      maxY = Math.max(maxY, p.y);
-    }
-    return (maxX - minX < 1e-6) || (maxY - minY < 1e-6);
   }
 
   /**
@@ -852,173 +483,9 @@ public final class MolGraph {
    * @param coords   input/output 2D coordinates (coords[atomIdx])
    * @param maxIter  maximum total SA iterations across both phases
    * @return number of bond crossings remaining after optimisation
-   * @since 6.5.1
    */
   public static int reduceCrossings(MolGraph g, Point2D[] coords, int maxIter) {
-    Point2D[] work = normalizeCoords(g, coords, 1.5);
-    if (g.n < 4) return 0;
-
-    int[][] bonds = buildBondList(g);
-    List<Set<Integer>> ringSystems = findRingSystemSets(g);
-    if (ringSystems.isEmpty()) {
-      int result = countCrossingsImpl(bonds, work);
-      copyCoords(work, coords);
-      return result;
-    }
-
-    int nSys = ringSystems.size();
-    int current = countCrossingsImpl(bonds, work);
-    if (current == 0) {
-      copyCoords(work, coords);
-      return 0;
-    }
-
-    double T0 = 2.0, Tmin = 0.01, alpha = 0.995;
-    Random rng = new Random(42);
-    double T = T0;
-
-    // ---- Phase 1: system-level flipping ----
-    int phase1Iters = maxIter / 2;
-    for (int iter = 0; iter < phase1Iters && current > 0; iter++) {
-      int si = rng.nextInt(nSys);
-      Set<Integer> sys = ringSystems.get(si);
-      if (sys.size() < 3) continue;
-
-      double cx = 0, cy = 0;
-      for (int a : sys) { cx += work[a].x; cy += work[a].y; }
-      cx /= sys.size(); cy /= sys.size();
-
-      Map<Integer, double[]> saved = new HashMap<>();
-      for (int a : sys) saved.put(a, new double[]{work[a].x, work[a].y});
-
-      int axis = rng.nextInt(2);
-      for (int a : sys) {
-        if (axis == 0) work[a].x = 2.0 * cx - work[a].x;
-        else           work[a].y = 2.0 * cy - work[a].y;
-      }
-
-      int newCr = countCrossingsImpl(bonds, work);
-      int delta = newCr - current;
-      boolean accept = (delta <= 0);
-      if (!accept && T > Tmin) {
-        accept = rng.nextDouble() < Math.exp(-(double) delta / T);
-      }
-      if (accept) { current = newCr; }
-      else { for (Map.Entry<Integer, double[]> e : saved.entrySet()) {
-        work[e.getKey()].x = e.getValue()[0];
-        work[e.getKey()].y = e.getValue()[1];
-      }}
-      T *= alpha;
-      if (T < Tmin) T = Tmin;
-    }
-
-    if (current == 0) {
-      copyCoords(work, coords);
-      return 0;
-    }
-
-    // ---- Phase 2: individual ring flipping within multi-ring systems ----
-    int[][] sssr = g.computeRings();
-    if (sssr.length < 2) {
-      copyCoords(work, coords);
-      return current;
-    }
-
-    // Build flippable rings: for each ring in a multi-ring system,
-    // exclusive = atoms only in this ring, shared = atoms in ≥2 rings.
-    // Shared atoms act as fixed pivots during the flip.
-    List<int[]> exclusiveList = new ArrayList<>();
-    List<int[]> sharedList = new ArrayList<>();
-
-    // Group rings by system membership (which system does each SSSR ring belong to?)
-    // and count per-system ring counts
-    Map<Integer, List<Integer>> sysToRings = new HashMap<>();
-    for (int ri = 0; ri < sssr.length; ri++) {
-      for (int si = 0; si < nSys; si++) {
-        Set<Integer> sys = ringSystems.get(si);
-        boolean belongs = true;
-        for (int a : sssr[ri]) {
-          if (!sys.contains(a)) { belongs = false; break; }
-        }
-        if (belongs) {
-          sysToRings.computeIfAbsent(si, k -> new ArrayList<>()).add(ri);
-          break;
-        }
-      }
-    }
-
-    for (Map.Entry<Integer, List<Integer>> entry : sysToRings.entrySet()) {
-      List<Integer> ringIndices = entry.getValue();
-      if (ringIndices.size() < 2) continue; // single ring — handled in phase 1
-
-      // Count how many rings each atom belongs to within this system
-      Map<Integer, Integer> atomRingCount = new HashMap<>();
-      for (int ri : ringIndices) {
-        for (int a : sssr[ri]) atomRingCount.merge(a, 1, Integer::sum);
-      }
-
-      for (int ri : ringIndices) {
-        List<Integer> excl = new ArrayList<>(), shar = new ArrayList<>();
-        for (int a : sssr[ri]) {
-          if (atomRingCount.getOrDefault(a, 0) >= 2) shar.add(a);
-          else excl.add(a);
-        }
-        if (!excl.isEmpty() && !shar.isEmpty()) {
-          exclusiveList.add(excl.stream().mapToInt(Integer::intValue).toArray());
-          sharedList.add(shar.stream().mapToInt(Integer::intValue).toArray());
-        }
-      }
-    }
-
-    if (!exclusiveList.isEmpty()) {
-      int nFlip = exclusiveList.size();
-      T = T0; // reset temperature for phase 2
-      int phase2Iters = maxIter - phase1Iters;
-
-      for (int iter = 0; iter < phase2Iters && current > 0; iter++) {
-        int fi = rng.nextInt(nFlip);
-        int[] excl = exclusiveList.get(fi);
-        int[] shar = sharedList.get(fi);
-
-        // Pivot = centroid of shared (fusion) atoms
-        double cx = 0, cy = 0;
-        for (int a : shar) { cx += work[a].x; cy += work[a].y; }
-        cx /= shar.length; cy /= shar.length;
-
-        // Save exclusive atom coordinates
-        double[][] saved = new double[excl.length][2];
-        for (int i = 0; i < excl.length; i++) {
-          saved[i][0] = work[excl[i]].x;
-          saved[i][1] = work[excl[i]].y;
-        }
-
-        // Mirror exclusive atoms about the shared-atom centroid
-        int axis = rng.nextInt(2);
-        for (int a : excl) {
-          if (axis == 0) work[a].x = 2.0 * cx - work[a].x;
-          else           work[a].y = 2.0 * cy - work[a].y;
-        }
-
-        int newCr = countCrossingsImpl(bonds, work);
-        int delta = newCr - current;
-        boolean accept = (delta <= 0);
-        if (!accept && T > Tmin) {
-          accept = rng.nextDouble() < Math.exp(-(double) delta / T);
-        }
-        if (accept) { current = newCr; }
-        else {
-          for (int i = 0; i < excl.length; i++) {
-            work[excl[i]].x = saved[i][0];
-            work[excl[i]].y = saved[i][1];
-          }
-        }
-        T *= alpha;
-        if (T < Tmin) T = Tmin;
-      }
-    }
-
-    copyCoords(work, coords);
-    return current;
+    return GraphLayout.reduceCrossings(g, coords, maxIter);
   }
 
   /** Convenience overload: default maxIter = 1000. */
@@ -1040,114 +507,10 @@ public final class MolGraph {
    * @param maxIter          maximum iterations (default 500)
    * @param targetBondLength desired bond length (default 1.5)
    * @return final stress energy
-   * @since 6.3.3
    */
   public static double forceDirectedLayout(MolGraph g, Point2D[] coords,
                                             int maxIter, double targetBondLength) {
-    int n = g.n;
-    if (n < 2) return 0.0;
-    Point2D[] work = normalizeCoords(g, coords, targetBondLength);
-    if (isDegenerateLayout(work)) {
-      Point2D[] templ = matchTemplate(g, targetBondLength);
-      if (templ != null && templ.length == n) work = templ;
-    }
-
-    final double kAttract  = 1.0;
-    final double kRepel    = 0.5;
-    final double kCrossing = 2.0;
-    double step = 0.1;
-    final double cooling = 0.98;
-    final double convergence = 0.01;
-
-    // Adjacency for O(1) bonded check
-    boolean[][] bonded = new boolean[n][n];
-    for (int i = 0; i < n; i++)
-      for (int j : g.neighbors[i])
-        bonded[i][j] = true;
-
-    // Bond list
-    int[][] bonds = buildBondList(g);
-    int nb = bonds.length;
-
-    for (int iter = 0; iter < maxIter; iter++) {
-      double[] fx = new double[n], fy = new double[n];
-
-      // 1. Attractive forces (bonded pairs)
-      for (int[] bond : bonds) {
-        int a = bond[0], b = bond[1];
-        double dx = work[b].x - work[a].x;
-        double dy = work[b].y - work[a].y;
-        double dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 1e-10) dist = 1e-10;
-        double force = kAttract * (dist - targetBondLength);
-        double ux = dx / dist, uy = dy / dist;
-        fx[a] += force * ux; fy[a] += force * uy;
-        fx[b] -= force * ux; fy[b] -= force * uy;
-      }
-
-      // 2. Repulsive forces (non-bonded pairs)
-      for (int i = 0; i < n; i++) {
-        for (int j = i + 1; j < n; j++) {
-          if (bonded[i][j]) continue;
-          double dx = work[j].x - work[i].x;
-          double dy = work[j].y - work[i].y;
-          double distSq = dx * dx + dy * dy;
-          if (distSq < 1e-6) distSq = 1e-6;
-          double force = -kRepel / distSq;
-          double dist = Math.sqrt(distSq);
-          double ux = dx / dist, uy = dy / dist;
-          fx[i] += force * ux; fy[i] += force * uy;
-          fx[j] -= force * ux; fy[j] -= force * uy;
-        }
-      }
-
-      // 3. Crossing penalty forces
-      for (int bi = 0; bi < nb; bi++) {
-        for (int bj = bi + 1; bj < nb; bj++) {
-          int a1 = bonds[bi][0], a2 = bonds[bi][1];
-          int b1 = bonds[bj][0], b2 = bonds[bj][1];
-          if (a1 == b1 || a1 == b2 || a2 == b1 || a2 == b2) continue;
-          if (!segmentsCross(work[a1], work[a2], work[b1], work[b2])) continue;
-          double m1x = (work[a1].x + work[a2].x) * 0.5;
-          double m1y = (work[a1].y + work[a2].y) * 0.5;
-          double m2x = (work[b1].x + work[b2].x) * 0.5;
-          double m2y = (work[b1].y + work[b2].y) * 0.5;
-          double dx = m2x - m1x, dy = m2y - m1y;
-          double dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 1e-8) { dx = 0.1; dy = 0.1; dist = Math.sqrt(0.02); }
-          double force = -kCrossing / (dist + 0.1);
-          double ux = dx / dist, uy = dy / dist;
-          fx[a1] += 0.5 * force * ux; fy[a1] += 0.5 * force * uy;
-          fx[a2] += 0.5 * force * ux; fy[a2] += 0.5 * force * uy;
-          fx[b1] -= 0.5 * force * ux; fy[b1] -= 0.5 * force * uy;
-          fx[b2] -= 0.5 * force * ux; fy[b2] -= 0.5 * force * uy;
-        }
-      }
-
-      // Update positions
-      double maxDisp = 0.0;
-      for (int i = 0; i < n; i++) {
-        double dx = step * fx[i], dy = step * fy[i];
-        double disp = Math.sqrt(dx * dx + dy * dy);
-        if (disp > maxDisp) maxDisp = disp;
-        work[i].x += dx;
-        work[i].y += dy;
-      }
-      step *= cooling;
-      if (maxDisp < convergence) break;
-    }
-
-    // Compute final stress
-    double stress = 0.0;
-    for (int[] bond : bonds) {
-      double dx = work[bond[1]].x - work[bond[0]].x;
-      double dy = work[bond[1]].y - work[bond[0]].y;
-      double dist = Math.sqrt(dx * dx + dy * dy);
-      double delta = dist - targetBondLength;
-      stress += delta * delta;
-    }
-    copyCoords(work, coords);
-    return stress;
+    return GraphLayout.forceDirectedLayout(g, coords, maxIter, targetBondLength);
   }
 
   /** Convenience overload with defaults: maxIter=500, targetBondLength=1.5. */
@@ -1169,119 +532,10 @@ public final class MolGraph {
    * @param maxIter          maximum iterations (default 300)
    * @param targetBondLength desired bond length (default 1.5)
    * @return final normalised stress value
-   * @since 6.4.0
    */
   public static double stressMajorisation(MolGraph g, Point2D[] coords,
                                            int maxIter, double targetBondLength) {
-    int n = g.n;
-    if (n < 2) return 0.0;
-    Point2D[] seedCoords = normalizeCoords(g, coords, targetBondLength);
-    if (isDegenerateLayout(seedCoords)) {
-      Point2D[] templ = matchTemplate(g, targetBondLength);
-      if (templ != null && templ.length == n) seedCoords = templ;
-    }
-
-    // BFS all-pairs shortest path
-    int[][] graphDist = new int[n][n];
-    for (int src = 0; src < n; src++) {
-      Arrays.fill(graphDist[src], n + 1);
-      graphDist[src][src] = 0;
-      Deque<Integer> q = new ArrayDeque<>();
-      q.add(src);
-      while (!q.isEmpty()) {
-        int u = q.poll();
-        for (int v : g.neighbors[u]) {
-          if (graphDist[src][v] > graphDist[src][u] + 1) {
-            graphDist[src][v] = graphDist[src][u] + 1;
-            q.add(v);
-          }
-        }
-      }
-    }
-
-    // Target distances and weights
-    double[][] D = new double[n][n];
-    double[][] W = new double[n][n];
-    double[] Wsum = new double[n];
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        D[i][j] = graphDist[i][j] * targetBondLength;
-        if (i != j && D[i][j] > 1e-10) {
-          W[i][j] = 1.0 / (D[i][j] * D[i][j]);
-        }
-        Wsum[i] += W[i][j];
-      }
-    }
-
-    final double eps = 1e-6;
-    Random rng = new Random(42);
-    double bestStress = Double.POSITIVE_INFINITY;
-    Point2D[] bestCoords = seedCoords;
-    int nInit = 3;
-    for (int init = 0; init < Math.max(1, nInit); init++) {
-      Point2D[] runCoords = normalizeCoords(g, seedCoords, targetBondLength);
-      if (init > 0) {
-        for (int i = 0; i < n; i++) {
-          runCoords[i].x += (rng.nextDouble() - 0.5) * targetBondLength;
-          runCoords[i].y += (rng.nextDouble() - 0.5) * targetBondLength;
-        }
-      }
-
-      double prevStress = 0.0;
-      for (int i = 0; i < n; i++) {
-        for (int j = i + 1; j < n; j++) {
-          double dx = runCoords[i].x - runCoords[j].x;
-          double dy = runCoords[i].y - runCoords[j].y;
-          double dij = Math.sqrt(dx * dx + dy * dy);
-          double delta = dij - D[i][j];
-          prevStress += W[i][j] * delta * delta;
-        }
-      }
-
-      for (int iter = 0; iter < maxIter; iter++) {
-        Point2D[] nc = new Point2D[n];
-        for (int i = 0; i < n; i++) {
-          double sx = 0, sy = 0;
-          for (int j = 0; j < n; j++) {
-            if (i == j || W[i][j] < 1e-15) continue;
-            double dx = runCoords[i].x - runCoords[j].x;
-            double dy = runCoords[i].y - runCoords[j].y;
-            double dij = Math.sqrt(dx * dx + dy * dy);
-            if (dij < 1e-10) dij = 1e-10;
-            double ratio = D[i][j] / dij;
-            sx += W[i][j] * (runCoords[j].x + ratio * (runCoords[i].x - runCoords[j].x));
-            sy += W[i][j] * (runCoords[j].y + ratio * (runCoords[i].y - runCoords[j].y));
-          }
-          nc[i] = Wsum[i] > 1e-15
-              ? new Point2D(sx / Wsum[i], sy / Wsum[i])
-              : new Point2D(runCoords[i].x, runCoords[i].y);
-        }
-        runCoords = nc;
-
-        double stress = 0.0;
-        for (int i = 0; i < n; i++) {
-          for (int j = i + 1; j < n; j++) {
-            double dx = runCoords[i].x - runCoords[j].x;
-            double dy = runCoords[i].y - runCoords[j].y;
-            double dij = Math.sqrt(dx * dx + dy * dy);
-            double delta = dij - D[i][j];
-            stress += W[i][j] * delta * delta;
-          }
-        }
-        if (prevStress > 1e-10 && (prevStress - stress) / prevStress < eps) {
-          prevStress = stress;
-          break;
-        }
-        prevStress = stress;
-      }
-
-      if (prevStress < bestStress) {
-        bestStress = prevStress;
-        bestCoords = runCoords;
-      }
-    }
-    copyCoords(bestCoords, coords);
-    return bestStress;
+    return GraphLayout.stressMajorisation(g, coords, maxIter, targetBondLength);
   }
 
   /** Convenience overload with defaults: maxIter=300, targetBondLength=1.5. */
@@ -1303,364 +557,14 @@ public final class MolGraph {
    * @param g                the molecular graph
    * @param targetBondLength desired bond length for coordinate scaling (default 1.5)
    * @return array of Point2D coordinates if matched, null otherwise
-   * @since 6.3.3
    */
   public static Point2D[] matchTemplate(MolGraph g, double targetBondLength) {
-    int[][] rings = g.computeRings();
-    if (rings.length == 0 && g.n != 6) return null;
-
-    int[] sizes = new int[rings.length];
-    for (int i = 0; i < rings.length; i++) sizes[i] = rings[i].length;
-    Arrays.sort(sizes);
-
-    // Try each template
-    for (TemplateEntry t : SCAFFOLD_TEMPLATES) {
-      if (t.atomCount() != g.n) continue;
-      int[] tSizes = Arrays.copyOf(t.ringSizes(), t.ringSizes().length);
-      Arrays.sort(tSizes);
-      if (!Arrays.equals(sizes, tSizes)) continue;
-      int[] mapping = templateMapping(g, t.coords());
-      if (mapping == null) continue;
-      Point2D[] result = new Point2D[t.atomCount()];
-      for (int i = 0; i < t.atomCount(); i++)
-        result[mapping[i]] = new Point2D(t.coords()[i][0] * targetBondLength,
-                                t.coords()[i][1] * targetBondLength);
-      return result;
-    }
-    return null;
-  }
-
-  /** Map the template's unit-length edges to the molecule before assigning coordinates. */
-  private static int[] templateMapping(MolGraph graph, double[][] coordinates) {
-    int atoms = coordinates.length;
-    boolean[][] edges = new boolean[atoms][atoms];
-    int[] degree = new int[atoms];
-    for (int first = 0; first < atoms; first++)
-      for (int second = first + 1; second < atoms; second++) {
-        double distance = Math.hypot(coordinates[first][0] - coordinates[second][0],
-            coordinates[first][1] - coordinates[second][1]);
-        if (Math.abs(distance - 1.0) < 1e-8) {
-          edges[first][second] = edges[second][first] = true;
-          degree[first]++;
-          degree[second]++;
-        }
-      }
-    Integer[] order = new Integer[atoms];
-    for (int atom = 0; atom < atoms; atom++) order[atom] = atom;
-    Arrays.sort(order, (first, second) -> Integer.compare(degree[second], degree[first]));
-    int[] mapping = new int[atoms];
-    Arrays.fill(mapping, -1);
-    return matchTemplateAtoms(graph, edges, degree, order, mapping, new boolean[atoms], 0) ? mapping : null;
-  }
-
-  private static boolean matchTemplateAtoms(MolGraph graph, boolean[][] edges, int[] degree,
-                                            Integer[] order, int[] mapping, boolean[] used, int depth) {
-    if (depth == order.length) return true;
-    int templateAtom = order[depth];
-    for (int graphAtom = 0; graphAtom < graph.n; graphAtom++) {
-      if (used[graphAtom] || degree[templateAtom] != graph.neighbors[graphAtom].length) continue;
-      boolean compatible = true;
-      for (int previous = 0; previous < depth; previous++) {
-        int other = order[previous];
-        if (edges[templateAtom][other] != graph.hasBond(graphAtom, mapping[other])) {
-          compatible = false;
-          break;
-        }
-      }
-      if (!compatible) continue;
-      mapping[templateAtom] = graphAtom;
-      used[graphAtom] = true;
-      if (matchTemplateAtoms(graph, edges, degree, order, mapping, used, depth + 1)) return true;
-      used[graphAtom] = false;
-    }
-    return false;
+    return GraphLayout.matchTemplate(g, targetBondLength);
   }
 
   /** Convenience overload: default targetBondLength = 1.5. */
   public static Point2D[] matchTemplate(MolGraph g) {
     return matchTemplate(g, 1.5);
-  }
-
-  // Scaffold template storage
-  private static final class TemplateEntry {
-    private final String name;
-    private final int atomCount;
-    private final int[] ringSizes;
-    private final double[][] coords;
-
-    private TemplateEntry(
-        String name,
-        int atomCount,
-        int[] ringSizes,
-        double[][] coords) {
-      this.name = name;
-      this.atomCount = atomCount;
-      this.ringSizes = ringSizes;
-      this.coords = coords;
-    }
-
-    public String name() { return name; }
-    public int atomCount() { return atomCount; }
-    public int[] ringSizes() { return ringSizes; }
-    public double[][] coords() { return coords; }
-
-    @Override
-    public final boolean equals(Object other) {
-      if (this == other) return true;
-      if (!(other instanceof TemplateEntry)) return false;
-      TemplateEntry that = (TemplateEntry) other;
-      return Objects.equals(name, that.name)
-          && atomCount == that.atomCount
-          && Objects.equals(ringSizes, that.ringSizes)
-          && Objects.equals(coords, that.coords);
-    }
-
-    @Override
-    public final int hashCode() {
-      int hash = 0;
-      hash = 31 * hash + Objects.hashCode(name);
-      hash = 31 * hash + Integer.hashCode(atomCount);
-      hash = 31 * hash + Objects.hashCode(ringSizes);
-      hash = 31 * hash + Objects.hashCode(coords);
-      return hash;
-    }
-
-    @Override
-    public final String toString() {
-      return "TemplateEntry[name=" + name
-          + ", atomCount=" + atomCount
-          + ", ringSizes=" + ringSizes
-          + ", coords=" + coords + "]";
-    }
-  }
-
-  private static double[][] regularPolygonCoords(int n) {
-    double r = 0.5 / Math.sin(Math.PI / n);
-    double[][] coords = new double[n][2];
-    for (int i = 0; i < n; i++) {
-      double angle = 2.0 * Math.PI * i / n - Math.PI / 2.0;
-      coords[i][0] = r * Math.cos(angle);
-      coords[i][1] = r * Math.sin(angle);
-    }
-    return coords;
-  }
-
-  private static final TemplateEntry[] SCAFFOLD_TEMPLATES;
-  static {
-    double[][] hex = regularPolygonCoords(6);
-    SCAFFOLD_TEMPLATES = new TemplateEntry[] {
-      // Benzene
-      new TemplateEntry("Benzene", 6, new int[]{6}, hex),
-      // Cyclohexane
-      new TemplateEntry("Cyclohexane", 6, new int[]{6}, hex),
-      // Piperidine
-      new TemplateEntry("Piperidine", 6, new int[]{6}, hex),
-      // Naphthalene (10 atoms, two 6-rings fused)
-      new TemplateEntry("Naphthalene", 10, new int[]{6, 6},
-          buildFused66Coords()),
-      // Quinoline (10 atoms, two 6-rings fused)
-      new TemplateEntry("Quinoline", 10, new int[]{6, 6},
-          buildFused66Coords()),
-      // Biphenyl (12 atoms, two 6-rings single-bonded)
-      new TemplateEntry("Biphenyl", 12, new int[]{6, 6},
-          buildBiphenylCoords()),
-      // Indole (9 atoms, fused 5-6)
-      new TemplateEntry("Indole", 9, new int[]{5, 6},
-          buildFused56Coords()),
-      // Purine (9 atoms, fused 5-6)
-      new TemplateEntry("Purine", 9, new int[]{5, 6},
-          buildFused56Coords()),
-    };
-  }
-
-  private static double[][] buildFused66Coords() {
-    return buildFusedCoords(6, 1, 2);
-  }
-
-  private static double[][] buildFused56Coords() {
-    return buildFusedCoords(5, 2, 3);
-  }
-
-  /** Place the new ring on the opposite side of its shared edge. */
-  private static double[][] buildFusedCoords(int ringSize, int firstFusion, int secondFusion) {
-    double[][] hexagon = regularPolygonCoords(6);
-    double[][] coordinates = new double[6 + ringSize - 2][2];
-    System.arraycopy(hexagon, 0, coordinates, 0, 6);
-    double midpointX = (hexagon[firstFusion][0] + hexagon[secondFusion][0]) * 0.5;
-    double midpointY = (hexagon[firstFusion][1] + hexagon[secondFusion][1]) * 0.5;
-    double edgeX = hexagon[secondFusion][0] - hexagon[firstFusion][0];
-    double edgeY = hexagon[secondFusion][1] - hexagon[firstFusion][1];
-    double length = Math.hypot(edgeX, edgeY);
-    double normalX = -edgeY / length, normalY = edgeX / length;
-    if (normalX * -midpointX + normalY * -midpointY > 0) {
-      normalX = -normalX;
-      normalY = -normalY;
-    }
-    double radius = 0.5 / Math.sin(Math.PI / ringSize);
-    double apothem = radius * Math.cos(Math.PI / ringSize);
-    double centreX = midpointX + apothem * normalX;
-    double centreY = midpointY + apothem * normalY;
-    double firstX = hexagon[firstFusion][0] - centreX;
-    double firstY = hexagon[firstFusion][1] - centreY;
-    double secondX = hexagon[secondFusion][0] - centreX;
-    double secondY = hexagon[secondFusion][1] - centreY;
-    double step = Math.copySign(2.0 * Math.PI / ringSize, firstX * secondY - firstY * secondX);
-    double start = Math.atan2(secondY, secondX);
-    for (int vertex = 0; vertex < ringSize - 2; vertex++) {
-      double angle = start + step * (vertex + 1);
-      coordinates[6 + vertex][0] = centreX + radius * Math.cos(angle);
-      coordinates[6 + vertex][1] = centreY + radius * Math.sin(angle);
-    }
-    return coordinates;
-  }
-
-  private static double[][] buildBiphenylCoords() {
-    double[][] hexagon = regularPolygonCoords(6);
-    double[][] coordinates = new double[12][2];
-    double cosine = Math.cos(Math.PI / 6), sine = Math.sin(Math.PI / 6);
-    for (int vertex = 0; vertex < 6; vertex++) {
-      double x = hexagon[vertex][0] * cosine - hexagon[vertex][1] * sine;
-      double y = hexagon[vertex][0] * sine + hexagon[vertex][1] * cosine;
-      coordinates[vertex][0] = x;
-      coordinates[vertex][1] = y;
-      coordinates[6 + vertex][0] = x + 3.0;
-      coordinates[6 + vertex][1] = y;
-    }
-    return coordinates;
-  }
-
-  private static int[][] buildBondList(MolGraph g) {
-    List<int[]> bonds = new ArrayList<>();
-    for (int i = 0; i < g.n; i++)
-      for (int j : g.neighbors[i])
-        if (j > i) bonds.add(new int[]{i, j});
-    return bonds.toArray(new int[0][]);
-  }
-
-  private static boolean segmentsCross(Point2D p1, Point2D p2, Point2D p3, Point2D p4) {
-    double d1x = p2.x - p1.x, d1y = p2.y - p1.y;
-    double d2x = p4.x - p3.x, d2y = p4.y - p3.y;
-    double denom = d1x * d2y - d1y * d2x;
-    if (Math.abs(denom) < 1e-12) return false;
-    double dx = p3.x - p1.x, dy = p3.y - p1.y;
-    double t = (dx * d2y - dy * d2x) / denom;
-    double u = (dx * d1y - dy * d1x) / denom;
-    double eps = 1e-9;
-    return (t > eps && t < 1.0 - eps && u > eps && u < 1.0 - eps);
-  }
-
-  private static int countCrossingsImpl(int[][] bonds, Point2D[] coords) {
-    int crossings = 0, nb = bonds.length;
-    for (int i = 0; i < nb; i++) {
-      for (int j = i + 1; j < nb; j++) {
-        int a1 = bonds[i][0], a2 = bonds[i][1];
-        int b1 = bonds[j][0], b2 = bonds[j][1];
-        if (a1 == b1 || a1 == b2 || a2 == b1 || a2 == b2) continue;
-        if (segmentsCross(coords[a1], coords[a2], coords[b1], coords[b2]))
-          crossings++;
-      }
-    }
-    return crossings;
-  }
-
-  private static List<Set<Integer>> findRingSystemSets(MolGraph g) {
-    int[][] raw = g.computeRings();
-    if (raw.length == 0) return Collections.emptyList();
-
-    int nr = raw.length;
-    List<Set<Long>> edgeSets = new ArrayList<>(nr);
-    for (int[] r : raw) {
-      Set<Long> es = new HashSet<>();
-      for (int j = 0; j < r.length; j++) {
-        int a = r[j], b = r[(j + 1) % r.length];
-        es.add(bondKey(Math.min(a, b), Math.max(a, b)));
-      }
-      edgeSets.add(es);
-    }
-
-    List<List<Integer>> adj = new ArrayList<>(nr);
-    for (int i = 0; i < nr; i++) adj.add(new ArrayList<>());
-    for (int i = 0; i < nr; i++) {
-      for (int j = i + 1; j < nr; j++) {
-        for (Long e : edgeSets.get(i)) {
-          if (edgeSets.get(j).contains(e)) {
-            adj.get(i).add(j); adj.get(j).add(i); break;
-          }
-        }
-      }
-    }
-
-    int[] comp = new int[nr];
-    Arrays.fill(comp, -1);
-    int nComp = 0;
-    for (int i = 0; i < nr; i++) {
-      if (comp[i] >= 0) continue;
-      comp[i] = nComp;
-      Deque<Integer> q = new ArrayDeque<>();
-      q.add(i);
-      while (!q.isEmpty()) {
-        int u = q.poll();
-        for (int v : adj.get(u)) {
-          if (comp[v] < 0) { comp[v] = nComp; q.add(v); }
-        }
-      }
-      nComp++;
-    }
-
-    List<Set<Integer>> systems = new ArrayList<>(nComp);
-    for (int i = 0; i < nComp; i++) systems.add(new HashSet<>());
-    for (int i = 0; i < nr; i++)
-      for (int a : raw[i]) systems.get(comp[i]).add(a);
-    return systems;
-  }
-
-  /** Reverse-lookup: given an edge index, find the (u,v) pair. */
-  private static int[] edgeFromIndex(int idx, Map<Long, Integer> edgeIndex) {
-    for (Map.Entry<Long, Integer> e : edgeIndex.entrySet()) {
-      if (e.getValue() == idx) {
-        long key = e.getKey();
-        return new int[] { (int)(key >>> 32), (int)(key & 0xFFFFFFFFL) };
-      }
-    }
-    return null;
-  }
-
-  private static boolean sharesVertex(int[] e1, int[] e2) {
-    return e1[0] == e2[0] || e1[0] == e2[1] || e1[1] == e2[0] || e1[1] == e2[1];
-  }
-
-  private static int find(int[] parent, int i) {
-    while (parent[i] != i) { parent[i] = parent[parent[i]]; i = parent[i]; }
-    return i;
-  }
-
-  private static void union(int[] parent, int a, int b) {
-    a = find(parent, a); b = find(parent, b);
-    if (a != b) parent[a] = b;
-  }
-
-  /** Generates a lexicographically minimal orbit signature for a cycle. */
-  private String getCycleOrbitSignature(int[] c) {
-    int len = c.length;
-    int[] bestSeq = null;
-    for (int dir = 0; dir <= 1; dir++) {
-      for (int start = 0; start < len; start++) {
-        int[] seq = new int[len];
-        for (int i = 0; i < len; i++) {
-          int idx = dir == 0 ? (start + i) % len : (start - i + len) % len;
-          seq[i] = orbit[c[idx]];
-        }
-        if (bestSeq == null || compareSeq(seq, bestSeq) < 0) bestSeq = seq;
-      }
-    }
-    return Arrays.toString(bestSeq);
-  }
-
-  private static int compareSeq(int[] a, int[] b) {
-    for (int i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) return Integer.compare(a[i], b[i]);
-    }
-    return 0;
   }
 
   int[][] getNLF1() {
@@ -1671,7 +575,6 @@ public final class MolGraph {
   /**
    * Cached neighbours sorted by descending degree for molecule query ordering.
    * Computed once per MolGraph, reused across all matcher constructions.
-   * @since 6.5.3
    */
   int[][] getNeighborsByDegDesc() {
     if (cachedNeighborsByDegDesc == null) {
@@ -1705,7 +608,6 @@ public final class MolGraph {
    * Cached pharmacophore feature classification per atom for FCFP fingerprints.
    * Computed once per MolGraph, eliminating O(n×degree²) recomputation
    * on every FCFP call.
-   * @since 6.5.3
    */
   int[] getPharmacophoreFeatures() {
     if (cachedPharmacophoreFeatures == null) {
@@ -1717,48 +619,24 @@ public final class MolGraph {
     return cachedPharmacophoreFeatures;
   }
 
+  /** The position of {@code j} among the neighbours of {@code i}, or -1 when they are not bonded. */
+  private int slot(int i, int j) {
+    int[] row = neighbors[i];
+    for (int k = 0; k < row.length; k++) if (row[k] == j) return k;
+    return -1;
+  }
+
   int dbStereo(int i, int j) {
     if (dbStereoConf != null) return dbStereoConf[i][j];
-    int[] properties = sparseBondProps != null ? sparseBondProps.get(bondKey(i, j)) : null;
-    return properties != null ? properties[3] : 0;
+    if (neighbourDbStereo == null) return 0;
+    int k = slot(i, j);
+    return k < 0 ? 0 : neighbourDbStereo[i][k];
   }
 
   /** The stored double-bond relation uses the first explicit ligand at each end. */
   int doubleBondReference(int atom, int otherEnd) {
     for (int neighbor : neighbors[atom]) if (neighbor != otherEnd) return neighbor;
     return -1;
-  }
-
-  /** BFS shortest path from start to target, avoiding the edge (avoidU, avoidV). */
-  private List<Integer> bfsPath(int start, int target, int avoidU, int avoidV) {
-    if (start == target) {
-      List<Integer> single = new ArrayList<>();
-      single.add(start);
-      return single;
-    }
-    int[] parent = new int[n];
-    Arrays.fill(parent, -1);
-    boolean[] vis = new boolean[n];
-    vis[start] = true;
-    Deque<Integer> q = new ArrayDeque<>();
-    q.add(start);
-    while (!q.isEmpty()) {
-      int u = q.poll();
-      for (int v : neighbors[u]) {
-        if ((u == avoidU && v == avoidV) || (u == avoidV && v == avoidU)) continue;
-        if (vis[v]) continue;
-        vis[v] = true;
-        parent[v] = u;
-        if (v == target) {
-          List<Integer> path = new ArrayList<>();
-          for (int c = target; c != -1; c = parent[c]) path.add(c);
-          java.util.Collections.reverse(path);
-          return path;
-        }
-        q.add(v);
-      }
-    }
-    return java.util.Collections.emptyList();
   }
 
   /** Check if the molecule already has ring membership flags set (e.g. by Cycles.markRingAtomsAndBonds). */
@@ -1794,27 +672,26 @@ public final class MolGraph {
 
   int bondOrder(int i, int j) {
     if (bondOrdMatrix != null) return bondOrdMatrix[i][j];
-    int[] props = sparseBondProps.get(bondKey(i, j));
-    return props != null ? props[0] : 0;
+    int k = slot(i, j);
+    return k < 0 ? 0 : neighbourBondOrder[i][k];
   }
 
   boolean bondInRing(int i, int j) {
     if (bondRingMatrix != null) return bondRingMatrix[i][j];
-    int[] props = sparseBondProps.get(bondKey(i, j));
-    return props != null && props[1] != 0;
+    int k = slot(i, j);
+    return k >= 0 && neighbourBondRing[i][k];
   }
 
   boolean bondAromatic(int i, int j) {
     if (bondAromMatrix != null) return bondAromMatrix[i][j];
-    int[] props = sparseBondProps.get(bondKey(i, j));
-    return props != null && props[2] != 0;
+    int k = slot(i, j);
+    return k >= 0 && neighbourBondAromatic[i][k];
   }
 
   public MolGraph(IAtomContainer mol) {
     this.mol = mol;
-    this.hydrogenCounts = null;
     this.n = mol.getAtomCount();
-    this.words = (n + 63) >>> 6;
+    this.words = CommonBondGraphs.words(n);
     Object title = mol.getProperty("cdk:Title");
     this.name = title != null ? String.valueOf(title) : "";
     this.programLine = "";
@@ -1829,7 +706,7 @@ public final class MolGraph {
     // Skip the expensive CDK ring perception if the molecule already has ring flags
     // (e.g., from AtomContainerManipulator.percieveAtomTypesAndConfigureAtoms + Aromaticity.apply).
     if (!hasRingFlags(mol)) {
-      try { Cycles.markRingAtomsAndBonds(mol); } catch (Exception ignored) {}
+      try { RingPerception.markRingAtomsAndBonds(mol); } catch (Exception ignored) {}
     }
 
     IdentityHashMap<IAtom, Integer> idxMap = new IdentityHashMap<>(n);
@@ -1855,9 +732,12 @@ public final class MolGraph {
       aromatic[i] = a.isAromatic();
       label[i] = (atomicNum[i] << 2) | (aromatic[i] ? 2 : 0) | (ring[i] ? 1 : 0);
     }
+    this.hydrogenCounts = new int[n];
+    for (int i = 0; i < n; i++)
+      hydrogenCounts[i] = cdkHydrogenCount(mol, mol.getAtom(i), atomicNum[i], formalCharge[i]);
 
-    // Build neighbours and bond properties in a single bond-iteration pass.
-    // Avoids per-atom getConnectedAtomsList() calls (each allocates an ArrayList).
+    // The neighbours and bond properties come from one pass over the bonds, without the list a
+    // container allocates for each atom.
     int[] degreeCount = new int[n];
     for (IBond b : mol.bonds()) {
       degreeCount[idxMap.get(b.getAtom(0))]++;
@@ -1865,50 +745,54 @@ public final class MolGraph {
     }
     this.neighbors = new int[n][];
     for (int i = 0; i < n; i++) { neighbors[i] = new int[degreeCount[i]]; degree[i] = 0; }
-
-    if (n <= SPARSE_THRESHOLD) {
-      this.bondOrdMatrix = new int[n][n];
-      this.bondRingMatrix = new boolean[n][n];
-      this.bondAromMatrix = new boolean[n][n];
-      this.sparseBondProps = null;
-      for (IBond b : mol.bonds()) {
-        int a = idxMap.get(b.getAtom(0)), c = idxMap.get(b.getAtom(1));
-        neighbors[a][degree[a]++] = c;
-        neighbors[c][degree[c]++] = a;
-        int ord = encodeBondOrder(b);
-        boolean inRing = b.isInRing(), arom = b.isAromatic();
+    boolean dense = n <= SPARSE_THRESHOLD;
+    this.bondOrdMatrix = dense ? new int[n][n] : null;
+    this.bondRingMatrix = dense ? new boolean[n][n] : null;
+    this.bondAromMatrix = dense ? new boolean[n][n] : null;
+    this.neighbourBondOrder = dense ? null : new int[n][];
+    this.neighbourBondRing = dense ? null : new boolean[n][];
+    this.neighbourBondAromatic = dense ? null : new boolean[n][];
+    if (!dense)
+      for (int i = 0; i < n; i++) {
+        neighbourBondOrder[i] = new int[degreeCount[i]];
+        neighbourBondRing[i] = new boolean[degreeCount[i]];
+        neighbourBondAromatic[i] = new boolean[degreeCount[i]];
+      }
+    for (IBond b : mol.bonds()) {
+      int a = idxMap.get(b.getAtom(0)), c = idxMap.get(b.getAtom(1));
+      int ord = encodeBondOrder(b);
+      boolean inRing = b.isInRing(), arom = b.isAromatic();
+      if (dense) {
         bondOrdMatrix[a][c] = ord; bondOrdMatrix[c][a] = ord;
         bondRingMatrix[a][c] = inRing; bondRingMatrix[c][a] = inRing;
         bondAromMatrix[a][c] = arom; bondAromMatrix[c][a] = arom;
+      } else {
+        neighbourBondOrder[a][degree[a]] = ord; neighbourBondOrder[c][degree[c]] = ord;
+        neighbourBondRing[a][degree[a]] = inRing; neighbourBondRing[c][degree[c]] = inRing;
+        neighbourBondAromatic[a][degree[a]] = arom; neighbourBondAromatic[c][degree[c]] = arom;
       }
-    } else {
-      this.bondOrdMatrix = null;
-      this.bondRingMatrix = null;
-      this.bondAromMatrix = null;
-      this.sparseBondProps = new HashMap<>(mol.getBondCount() * 3);
-      for (IBond b : mol.bonds()) {
-        int a = idxMap.get(b.getAtom(0)), c = idxMap.get(b.getAtom(1));
-        neighbors[a][degree[a]++] = c;
-        neighbors[c][degree[c]++] = a;
-        sparseBondProps.put(bondKey(a, c),
-            new int[] {encodeBondOrder(b), b.isInRing() ? 1 : 0, b.isAromatic() ? 1 : 0, 0});
-      }
+      neighbors[a][degree[a]++] = c;
+      neighbors[c][degree[c]++] = a;
     }
 
-    // Stereo: only allocate if the molecule actually has stereo elements
+    // Stereo is stored only when the molecule has stereo elements.
     @SuppressWarnings("unchecked")
     Iterable<IStereoElement<?, ?>> stereoElements = (Iterable) mol.stereoElements();
     boolean hasStereo = stereoElements.iterator().hasNext();
     this.tetraChirality = hasStereo ? new int[n] : null;
     this.tetraLigands = hasStereo ? new int[n][] : null;
-    this.dbStereoConf = (hasStereo && n <= SPARSE_THRESHOLD) ? new int[n][n] : null;
+    this.dbStereoConf = hasStereo && dense ? new int[n][n] : null;
+    this.neighbourDbStereo = hasStereo && !dense ? new int[n][] : null;
+    if (neighbourDbStereo != null)
+      for (int i = 0; i < n; i++) neighbourDbStereo[i] = new int[degreeCount[i]];
     if (hasStereo) {
       for (IStereoElement<?, ?> se : stereoElements) {
         if (se instanceof ITetrahedralChirality) {
           ITetrahedralChirality tc = (ITetrahedralChirality) se;
           Integer idx = idxMap.get(tc.getChiralAtom());
           if (idx != null) {
-            tetraChirality[idx] = tc.getStereo() == ITetrahedralChirality.Stereo.CLOCKWISE ? 1 : 2;
+            // As SMILES and the native core: 1 is anticlockwise (@) and 2 clockwise (@@).
+            tetraChirality[idx] = tc.getStereo() == ITetrahedralChirality.Stereo.CLOCKWISE ? 2 : 1;
             IAtom[] ligands = tc.getLigands();
             int[] order = new int[ligands.length];
             for (int k = 0; k < ligands.length; k++)
@@ -1934,7 +818,8 @@ public final class MolGraph {
               dbStereoConf[a][c] = conf;
               dbStereoConf[c][a] = conf;
             } else {
-              sparseBondProps.get(bondKey(a, c))[3] = conf;
+              neighbourDbStereo[a][slot(a, c)] = conf;
+              neighbourDbStereo[c][slot(c, a)] = conf;
             }
           }
         }
@@ -1949,7 +834,7 @@ public final class MolGraph {
     this.mol = null;
     this.hydrogenCounts = b.hydrogenCounts != null ? b.hydrogenCounts.clone() : null;
     this.n = b.n;
-    this.words = (n + 63) >>> 6;
+    this.words = CommonBondGraphs.words(n);
     this.name = b.name != null ? b.name : "";
     this.programLine = b.programLine != null ? b.programLine : "";
     this.comment = b.comment != null ? b.comment : "";
@@ -1970,67 +855,67 @@ public final class MolGraph {
       degree[i] = neighbors[i].length;
     }
 
-    if (n <= SPARSE_THRESHOLD) {
-      this.bondOrdMatrix = new int[n][n];
-      this.bondRingMatrix = new boolean[n][n];
-      this.bondAromMatrix = new boolean[n][n];
-      this.sparseBondProps = null;
-      for (int i = 0; i < n; i++) {
-        int[] nbs = neighbors[i];
-        int[] ords = b.bondOrders != null && b.bondOrders[i] != null ? b.bondOrders[i] : null;
-        boolean[] rings = b.bondRings != null && b.bondRings[i] != null ? b.bondRings[i] : null;
-        boolean[] aroms = b.bondAroms != null && b.bondAroms[i] != null ? b.bondAroms[i] : null;
-        boolean denseOrd = ords != null && ords.length == n;
-        boolean denseRing = rings != null && rings.length == n;
-        boolean denseArom = aroms != null && aroms.length == n;
-        for (int k = 0; k < nbs.length; k++) {
-          int j = nbs[k];
-          bondOrdMatrix[i][j] = ords != null ? (denseOrd ? ords[j] : ords[k]) : 1;
-          bondRingMatrix[i][j] = rings != null && (denseRing ? rings[j] : rings[k]);
-          bondAromMatrix[i][j] = aroms != null && (denseArom ? aroms[j] : aroms[k]);
-        }
+    // Each row is read from its own atom; the builder has checked that both ends agree.
+    boolean dense = n <= SPARSE_THRESHOLD;
+    this.bondOrdMatrix = dense ? new int[n][n] : null;
+    this.bondRingMatrix = dense ? new boolean[n][n] : null;
+    this.bondAromMatrix = dense ? new boolean[n][n] : null;
+    this.neighbourBondOrder = dense ? null : new int[n][];
+    this.neighbourBondRing = dense ? null : new boolean[n][];
+    this.neighbourBondAromatic = dense ? null : new boolean[n][];
+    this.dbStereoConf = dense && b.dbStereoConf != null ? new int[n][n] : null;
+    this.neighbourDbStereo = !dense && b.dbStereoConf != null ? new int[n][] : null;
+    for (int i = 0; i < n; i++) {
+      int[] nbs = neighbors[i];
+      int[] ords = b.bondOrders != null && b.bondOrders[i] != null ? b.bondOrders[i] : null;
+      boolean[] rings = b.bondRings != null && b.bondRings[i] != null ? b.bondRings[i] : null;
+      boolean[] aroms = b.bondAroms != null && b.bondAroms[i] != null ? b.bondAroms[i] : null;
+      int[] stereo = b.dbStereoConf != null ? b.dbStereoConf[i] : null;
+      boolean denseOrd = ords != null && ords.length == n;
+      boolean denseRing = rings != null && rings.length == n;
+      boolean denseArom = aroms != null && aroms.length == n;
+      if (!dense) {
+        neighbourBondOrder[i] = new int[nbs.length];
+        neighbourBondRing[i] = new boolean[nbs.length];
+        neighbourBondAromatic[i] = new boolean[nbs.length];
+        if (neighbourDbStereo != null) neighbourDbStereo[i] = new int[nbs.length];
+      } else if (dbStereoConf != null && stereo != null) {
+        System.arraycopy(stereo, 0, dbStereoConf[i], 0, n);
       }
-    } else {
-      this.bondOrdMatrix = null;
-      this.bondRingMatrix = null;
-      this.bondAromMatrix = null;
-      this.sparseBondProps = new HashMap<>();
-      for (int i = 0; i < n; i++) {
-        int[] nbs = neighbors[i];
-        int[] ords = b.bondOrders != null && b.bondOrders[i] != null ? b.bondOrders[i] : null;
-        boolean[] rings = b.bondRings != null && b.bondRings[i] != null ? b.bondRings[i] : null;
-        boolean[] aroms = b.bondAroms != null && b.bondAroms[i] != null ? b.bondAroms[i] : null;
-        boolean denseOrd = ords != null && ords.length == n;
-        boolean denseRing = rings != null && rings.length == n;
-        boolean denseArom = aroms != null && aroms.length == n;
-        for (int k = 0; k < nbs.length; k++) {
-          int j = nbs[k];
-          if (i < j) {
-            sparseBondProps.put(bondKey(i, j), new int[] {
-                ords != null ? (denseOrd ? ords[j] : ords[k]) : 1,
-                rings != null && (denseRing ? rings[j] : rings[k]) ? 1 : 0,
-                aroms != null && (denseArom ? aroms[j] : aroms[k]) ? 1 : 0,
-                b.dbStereoConf != null && b.dbStereoConf[i] != null ? b.dbStereoConf[i][j] : 0});
-          }
+      for (int k = 0; k < nbs.length; k++) {
+        int j = nbs[k];
+        int order = ords != null ? (denseOrd ? ords[j] : ords[k]) : 1;
+        boolean inRing = rings != null && (denseRing ? rings[j] : rings[k]);
+        boolean arom = aroms != null && (denseArom ? aroms[j] : aroms[k]);
+        if (dense) {
+          bondOrdMatrix[i][j] = order;
+          bondRingMatrix[i][j] = inRing;
+          bondAromMatrix[i][j] = arom;
+        } else {
+          neighbourBondOrder[i][k] = order;
+          neighbourBondRing[i][k] = inRing;
+          neighbourBondAromatic[i][k] = arom;
+          if (neighbourDbStereo != null) neighbourDbStereo[i][k] = stereo != null ? stereo[j] : 0;
         }
       }
     }
 
-    this.tetraChirality = b.tetraChirality != null ? b.tetraChirality.clone() : new int[n];
+    this.tetraChirality = b.tetraChirality != null ? b.tetraChirality.clone() : null;
     this.tetraLigands = null;
     this.atomId = b.atomIds != null ? b.atomIds.clone() : null;
-    if (n <= SPARSE_THRESHOLD) {
-      this.dbStereoConf = new int[n][n];
-      if (b.dbStereoConf != null)
-        for (int i = 0; i < n; i++)
-          if (b.dbStereoConf[i] != null)
-            System.arraycopy(b.dbStereoConf[i], 0, dbStereoConf[i], 0, n);
-    } else {
-      this.dbStereoConf = null;
-    }
 
     this.ringCount = new int[n];
     initDerivedFields();
+  }
+
+  /** The graph of a copy of the molecule, so that later changes to the molecule do not reach it. */
+  static MolGraph copyOf(IAtomContainer molecule) {
+    Objects.requireNonNull(molecule, "molecule");
+    try {
+      return new MolGraph(molecule.clone());
+    } catch (CloneNotSupportedException failure) {
+      throw new IllegalArgumentException("Cannot copy molecule", failure);
+    }
   }
 
   /** Copy matching properties without changing perception or stereo references. */
@@ -2063,17 +948,18 @@ public final class MolGraph {
     bondOrdMatrix = copyRows(source.bondOrdMatrix);
     bondRingMatrix = copyRows(source.bondRingMatrix);
     bondAromMatrix = copyRows(source.bondAromMatrix);
-    sparseBondProps = source.sparseBondProps == null ? null : new HashMap<>();
-    if (sparseBondProps != null)
-      for (Map.Entry<Long, int[]> entry : source.sparseBondProps.entrySet())
-        sparseBondProps.put(entry.getKey(), entry.getValue().clone());
+    neighbourBondOrder = copyRows(source.neighbourBondOrder);
+    neighbourBondRing = copyRows(source.neighbourBondRing);
+    neighbourBondAromatic = copyRows(source.neighbourBondAromatic);
+    neighbourDbStereo = copyRows(source.neighbourDbStereo);
     tetraChirality = source.tetraChirality == null ? null : source.tetraChirality.clone();
     tetraLigands = copyRows(source.tetraLigands);
     dbStereoConf = copyRows(source.dbStereoConf);
     atomId = source.atomId == null ? null : source.atomId.clone();
     tautomerClass = source.tautomerClass == null ? null : source.tautomerClass.clone();
     tautomerWeight = source.tautomerWeight == null ? null : source.tautomerWeight.clone();
-    tautomerClassesComputed = source.tautomerClassesComputed;
+    tautomerSite = source.tautomerSite == null ? null : source.tautomerSite.clone();
+    tautomerPKa = source.tautomerPKa == null ? null : source.tautomerPKa.clone();
     adjLong = new long[source.adjLong.length][];
     for (int row = 0; row < adjLong.length; row++) adjLong[row] = source.adjLong[row].clone();
     name = source.name;
@@ -2097,100 +983,27 @@ public final class MolGraph {
   }
 
   private void initDerivedFields() {
-    // adj (BitSet[]) is lazy — built on first getAdj() call.
-    // Only adjLong is eagerly built (used by substructure/MCS hot paths).
+    // Only adjLong is built eagerly (used by substructure/MCS hot paths).
     this.adjLong = new long[n][words];
     for (int i = 0; i < n; i++)
       for (int k : neighbors[i]) adjLong[i][k >>> 6] |= 1L << (k & 63);
-    // Tautomer classes are O(n), cheap, and accessed as public fields — always compute eagerly.
-    computeTautomerClasses();
-    tautomerClassesComputed = true;
+    // Tautomer classes are O(n), cheap, and read as public fields, so they are assigned at once.
+    TautomerClasses.assign(this);
     // Canonical labelling and ring counts are lazy (ensureCanonical / ensureRingCounts).
   }
 
-  /** Lazily build BitSet[] adjacency (used by MCS refinement and NLF2/NLF3 builders). */
-  BitSet[] getAdj() {
-    if (adj == null) {
-      BitSet[] a = new BitSet[n];
-      for (int i = 0; i < n; i++) {
-        a[i] = new BitSet(n);
-        for (int k : neighbors[i]) a[i].set(k);
-      }
-      this.adj = a;
-    }
-    return adj;
-  }
-
-  /** Lazily compute Morgan ranks, canonical labelling, orbit partition, and canonical hash. */
+  /** Lazily compute the canonical labelling, orbit partition, automorphisms and canonical hash. */
   void ensureCanonical() {
     if (canonicalComputed) return;
     synchronized (this) {
       if (canonicalComputed) return;
-      this.morganRank = computeMorganRanks(n, label, neighbors);
-      int[] hydrogens = new int[n];
-      for (int atom = 0; atom < n; atom++) hydrogens[atom] = hydrogenCount(atom);
-      CanonResult clResult = computeCanonicalLabeling(n, canonicalAtomLabels(hydrogens), degree, neighbors, this);
-      this.canonicalLabel = clResult.canonLabel();
-      this.autGeneratorsTruncated = clResult.generatorsTruncated();
-      boolean[] stereoFixed = new boolean[n];
-      for (int atom = 0; atom < n; atom++) {
-        if (tetraChirality != null && tetraChirality[atom] != 0) {
-          stereoFixed[atom] = true;
-          for (int ligand : neighbors[atom]) stereoFixed[ligand] = true;
-        }
-        for (int neighbor : neighbors[atom]) {
-          if (neighbor <= atom || dbStereo(atom, neighbor) == 0) continue;
-          stereoFixed[atom] = stereoFixed[neighbor] = true;
-          for (int ligand : neighbors[atom]) stereoFixed[ligand] = true;
-          for (int ligand : neighbors[neighbor]) stereoFixed[ligand] = true;
-        }
-      }
-      List<int[]> chemicalGenerators = new ArrayList<>();
-      int[] provenOrbits = new int[n];
-      for (int atom = 0; atom < n; atom++) provenOrbits[atom] = atom;
-      for (int[] generator : clResult.autGenerators()) {
-        if (!preservesChemicalProperties(generator, hydrogens, stereoFixed)) {
-          // Valid subgroup generators can require products of rejected topology
-          // generators, so filtering does not prove completeness of the subgroup.
-          this.autGeneratorsTruncated = true;
-          continue;
-        }
-        chemicalGenerators.add(generator);
-        for (int atom = 0; atom < n; atom++) ufUnion(provenOrbits, atom, generator[atom]);
-      }
-      this.autGenerators = chemicalGenerators.toArray(new int[0][]);
-      // Unproved refinement-cell equivalence cannot justify chemical orbit pruning.
-      this.orbit = buildOrbits(provenOrbits, n);
-      this.canonicalHash = computeCanonicalHash(this, canonicalLabel);
+      CanonicalLabels.Labelling labelling = CanonicalLabels.of(this);
+      this.canonicalLabel = labelling.labels;
+      this.autGeneratorsTruncated = labelling.generatorsTruncated;
+      this.autGenerators = labelling.generators;
+      this.orbit = labelling.orbits;
+      this.canonicalHash = labelling.hash;
       canonicalComputed = true;
-    }
-  }
-
-  private boolean preservesChemicalProperties(int[] generator, int[] hydrogens, boolean[] stereoFixed) {
-    for (int atom = 0; atom < n; atom++) {
-      int image = generator[atom];
-      if (label[atom] != label[image] || formalCharge[atom] != formalCharge[image]
-          || massNumber[atom] != massNumber[image] || hydrogens[atom] != hydrogens[image]
-          || ring[atom] != ring[image] || aromatic[atom] != aromatic[image]
-          || (stereoFixed[atom] && image != atom)) return false;
-      for (int neighbor : neighbors[atom]) {
-        int mappedNeighbor = generator[neighbor];
-        if (bondOrder(atom, neighbor) != bondOrder(image, mappedNeighbor)
-            || bondInRing(atom, neighbor) != bondInRing(image, mappedNeighbor)
-            || bondAromatic(atom, neighbor) != bondAromatic(image, mappedNeighbor)
-            || dbStereo(atom, neighbor) != dbStereo(image, mappedNeighbor)) return false;
-      }
-    }
-    return true;
-  }
-
-  /** Lazily compute tautomer class assignments and pKa-based relevance weights. */
-  void ensureTautomerClasses() {
-    if (tautomerClassesComputed) return;
-    synchronized (this) {
-      if (tautomerClassesComputed) return;
-      computeTautomerClasses();
-      tautomerClassesComputed = true;
     }
   }
 
@@ -2210,1202 +1023,41 @@ public final class MolGraph {
     return ringCount;
   }
 
+  /**
+   * The relevant cycles through each atom, found over each atom's neighbours in index order,
+   * as the native core finds them. Unlike one smallest set of smallest rings they do not depend
+   * on which equivalent ring a basis keeps, so cages such as cubane count every equivalent ring.
+   * Of several equally short paths the candidate search keeps the first it reaches; reading the
+   * neighbours in index order makes that choice follow the atom order alone, and not the order
+   * in which the bonds were listed. Where a ring system has more relevant cycles of one size
+   * than the search reaches, as the macrocycle of a cyclodextrin, the counts still depend on
+   * the atom order.
+   */
   private void computeRingCounts() {
-    // Use Relevant Cycle Basis (unique/deterministic) instead of SSSR (non-deterministic).
-    // This ensures ringCount is consistent across runs for symmetric molecules like cubane.
     java.util.Arrays.fill(ringCount, 0);
-    int[][] relevant = computeRelevantCycles();
+    boolean indexOrder = true;
+    for (int atom = 0; atom < n && indexOrder; atom++)
+      for (int k = 1; k < neighbors[atom].length && indexOrder; k++)
+        indexOrder = neighbors[atom][k - 1] < neighbors[atom][k];
+    int[][] relevant;
+    if (indexOrder) {
+      relevant = computeRelevantCycles();
+    } else {
+      int[][] ordered = new int[n][];
+      for (int atom = 0; atom < n; atom++) {
+        ordered[atom] = neighbors[atom].clone();
+        java.util.Arrays.sort(ordered[atom]);
+      }
+      relevant = RingPerception.perceive(n, ordered).relevant;
+    }
     for (int[] r : relevant) {
       for (int atom : r) ringCount[atom]++;
     }
   }
 
-  /**
-   * Assign a tautomer class to a set of atoms with a shared relevance weight.
-   * If any atom already belongs to an existing class, merge by reusing that
-   * class for all atoms in the group (prevents class fracture when
-   * tautomeric motifs overlap on shared atoms).
-   */
-  private void tc(int[] atoms, int cls, float w, float[] wArr) {
-    // Merge: if any atom already has a class, reuse it
-    for (int a : atoms) if (tautomerClass[a] != -1) { cls = tautomerClass[a]; break; }
-    for (int a : atoms) {
-      tautomerClass[a] = cls;
-      if (wArr[a] == 1.0f) wArr[a] = w;
-    }
-  }
-
-  void computeTautomerClasses() {
-    tautomerClass  = new int[n];
-    tautomerWeight = new float[n];
-    Arrays.fill(tautomerClass,  -1);
-    Arrays.fill(tautomerWeight, 1.0f);
-    int classId = 0;
-
-    for (int i = 0; i < n; i++) {
-      if (tautomerClass[i] != -1) continue;
-
-      // -----------------------------------------------------------------------
-      // T1: Keto/enol  C=O ↔ C-OH  (aliphatic, non-amide)
-      //     Detects O of a carbonyl; groups O + adjacent C neighbours.
-      //     Weight TW_KETO_ENOL: keto overwhelmingly dominant (pKa ~20).
-      //     Amide carbonyls (N on C) handled separately in T3/T4 with lower weight.
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 8 && !aromatic[i]) {
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 6 && bondOrder(i, j) == 2) {
-            boolean hasN = false;
-            for (int k : neighbors[j]) { if (k != i && atomicNum[k] == 7) { hasN = true; break; } }
-            float w = hasN ? TW_AMIDE_IMIDIC : TW_KETO_ENOL;
-            int cls = -1;
-            for (int k : neighbors[j]) {
-              if (k != i && atomicNum[k] == 6 && !aromatic[k]) {
-                if (cls == -1) { cls = classId++; tautomerClass[i] = cls; tautomerWeight[i] = w; }
-                if (tautomerClass[k] == -1) { tautomerClass[k] = cls; if (tautomerWeight[k]==1.0f) tautomerWeight[k]=w; }
-              }
-            }
-            for (int k : neighbors[j]) {
-              if (k != i && atomicNum[k] == 7) {
-                if (cls == -1) { cls = classId++; tautomerClass[i] = cls; tautomerWeight[i] = w; }
-                if (tautomerClass[k] == -1) { tautomerClass[k] = cls; if (tautomerWeight[k]==1.0f) tautomerWeight[k]=w; }
-              }
-            }
-            if (cls != -1) break;
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T2: Thione/thiol  C=S ↔ C-SH  (thione dominant, pKa ~10-11)
-      //     Thioamide N-C(=S) ↔ N=C-SH gets higher weight (pKa ~13)
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 16 && !aromatic[i] && tautomerClass[i] == -1) {
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 6 && bondOrder(i, j) == 2) {
-            boolean hasN = false;
-            for (int k : neighbors[j]) { if (k != i && atomicNum[k] == 7) { hasN = true; break; } }
-            float w = hasN ? TW_THIOAMIDE : TW_THIONE_THIOL;
-            int cls = -1;
-            for (int k : neighbors[j]) {
-              if (k != i && (atomicNum[k] == 6 || atomicNum[k] == 7)) {
-                if (cls == -1) { cls = classId++; tautomerClass[i] = cls; tautomerWeight[i] = w; }
-                if (tautomerClass[k] == -1) { tautomerClass[k] = cls; if (tautomerWeight[k]==1.0f) tautomerWeight[k]=w; }
-              }
-            }
-            if (cls != -1) break;
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T3: Nitroso/oxime  C=N-OH ↔ C(=O)-NH  (oxime slightly more stable)
-      //     Requires N=C double bond to avoid matching simple amide N-C=O
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 7 && !ring[i] && tautomerClass[i] == -1) {
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 6 && bondOrder(i, j) == 2) {
-            for (int k : neighbors[j]) {
-              if (k != i && atomicNum[k] == 8) {
-                int cls = classId++;
-                tc(new int[]{i, k}, cls, TW_NITROSO_OXIME, tautomerWeight);
-                break;
-              }
-            }
-            if (tautomerClass[i] != -1) break;
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T4: Phenol/quinone  arom-C-OH ↔ para-C=O  (phenol dominant, pKa ~10)
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 8 && !aromatic[i] && tautomerClass[i] == -1) {
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 6 && aromatic[j] && ring[j]) {
-            for (int a : neighbors[j]) {
-              if (a != i && atomicNum[a] == 6 && aromatic[a] && ring[a]) {
-                for (int b : neighbors[a]) {
-                  if (b != j && atomicNum[b] == 6 && aromatic[b] && ring[b]) {
-                    for (int c : neighbors[b]) {
-                      if (c != a && c != j && atomicNum[c] == 6 && aromatic[c] && ring[c]) {
-                        int cls = classId++;
-                        tc(new int[]{i, j, c}, cls, TW_PHENOL_QUINONE, tautomerWeight);
-                        for (int d : neighbors[c]) {
-                          if (atomicNum[d] == 8 && !aromatic[d] && tautomerClass[d] == -1) {
-                            tautomerClass[d] = cls; tautomerWeight[d] = TW_PHENOL_QUINONE;
-                          }
-                        }
-                        break;
-                      }
-                    }
-                    if (tautomerClass[i] != -1) break;
-                  }
-                }
-                if (tautomerClass[i] != -1) break;
-              }
-            }
-            if (tautomerClass[i] != -1) break;
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T5: 1,3-diketone enolisation  C(=O)-C-C(=O)  (pKa ~8-11, pH-sensitive)
-      //     Requires exactly one carbon bridge between the two carbonyls
-      //     (true 1,3-pattern: O=C-CH-C=O, not fused/directly bonded carbonyls)
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 8 && !aromatic[i] && tautomerClass[i] == -1) {
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 6 && bondOrder(i, j) == 2) {
-            for (int bridge : neighbors[j]) {
-              if (bridge != i && atomicNum[bridge] == 6 && !aromatic[bridge]) {
-                for (int m : neighbors[bridge]) {
-                  if (m != j && m != i && atomicNum[m] == 6) {
-                    // Verify true 1,3-separation: m must NOT be a direct
-                    // neighbour of j (which would mean j and m are 1,2 not 1,3).
-                    boolean directlyBonded = false;
-                    for (int nb : neighbors[j]) {
-                      if (nb == m) { directlyBonded = true; break; }
-                    }
-                    if (directlyBonded) continue;
-                    for (int o2 : neighbors[m]) {
-                      if (o2 != bridge && atomicNum[o2] == 8 && !aromatic[o2]
-                          && bondOrder(m, o2) == 2) {
-                        int cls = (tautomerClass[o2] != -1) ? tautomerClass[o2] : classId++;
-                        float w = TW_DIKETONE_ENOL;
-                        if (tautomerClass[i]      == -1) { tautomerClass[i]      = cls; tautomerWeight[i]      = w; }
-                        if (tautomerClass[bridge] == -1) { tautomerClass[bridge] = cls; tautomerWeight[bridge] = w; }
-                        if (tautomerClass[o2]     == -1) { tautomerClass[o2]     = cls; tautomerWeight[o2]     = w; }
-                        break;
-                      }
-                    }
-                    if (tautomerClass[i] != -1) break;
-                  }
-                }
-                if (tautomerClass[i] != -1) break;
-              }
-            }
-            if (tautomerClass[i] != -1) break;
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T6: Aromatic N adjacent to exocyclic C=O  (lactam/2-pyridinone/uracil)
-      //     Lactam form dominant at pH 7.4 (pKa ~1 for 2-pyridinone)
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 7 && aromatic[i] && ring[i] && tautomerClass[i] == -1) {
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 6 && aromatic[j]) {
-            for (int k : neighbors[j]) {
-              if (k != i && atomicNum[k] == 8 && !aromatic[k] && tautomerClass[k] == -1) {
-                int cls = classId++;
-                tc(new int[]{i, k}, cls, TW_PYRIDINONE, tautomerWeight);
-              }
-            }
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T7: Aromatic N–N or N–C–N  (imidazole, pyrazole, benzimidazole, indazole)
-      //     N1H/N3H symmetric tautomers — weight 0.50
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 7 && aromatic[i] && ring[i] && tautomerClass[i] == -1) {
-        // Direct N–N bond (pyrazole/indazole)
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 7 && aromatic[j] && ring[j] && tautomerClass[j] == -1) {
-            int cls = classId++;
-            tc(new int[]{i, j}, cls, TW_IMIDAZOLE_NH, tautomerWeight);
-            break;
-          }
-        }
-        // N–C–N through aromatic C (imidazole/benzimidazole)
-        // Only match when both N atoms share a 5-membered ring (skip pyrimidine)
-        if (tautomerClass[i] == -1) {
-          int[][] rings = computeRings();
-          for (int j : neighbors[i]) {
-            if (atomicNum[j] == 6 && aromatic[j] && ring[j]) {
-              for (int k : neighbors[j]) {
-                if (k != i && atomicNum[k] == 7 && aromatic[k] && ring[k] && tautomerClass[k] == -1) {
-                  // Verify both N atoms share a 5-membered ring
-                  boolean in5 = false;
-                  for (int[] r : rings) {
-                    if (r.length != 5) continue;
-                    boolean hasI = false, hasK = false;
-                    for (int a : r) { if (a == i) hasI = true; if (a == k) hasK = true; }
-                    if (hasI && hasK) { in5 = true; break; }
-                  }
-                  if (!in5) continue;
-                  int cls = classId++;
-                  tc(new int[]{i, k}, cls, TW_IMIDAZOLE_NH, tautomerWeight);
-                  break;
-                }
-              }
-              if (tautomerClass[i] != -1) break;
-            }
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T8: Amidine  N=C-N ↔ N-C=N  (non-aromatic, symmetric, weight 0.50)
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 7 && !aromatic[i] && tautomerClass[i] == -1) {
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 6 && bondOrder(i, j) == 2) {
-            for (int k : neighbors[j]) {
-              if (k != i && atomicNum[k] == 7 && !aromatic[k]) {
-                int cls = classId++;
-                tc(new int[]{i, j, k}, cls, TW_AMIDINE, tautomerWeight);
-                break;
-              }
-            }
-            if (tautomerClass[i] != -1) break;
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T9: Guanidine  C connected to ≥3 N (symmetric, weight 0.50)
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 6 && tautomerClass[i] == -1) {
-        List<Integer> nNbrs = new ArrayList<>();
-        for (int j : neighbors[i]) { if (atomicNum[j] == 7 && !aromatic[j]) nNbrs.add(j); }
-        if (nNbrs.size() >= 3) {
-          int cls = classId++;
-          tautomerClass[i] = cls; tautomerWeight[i] = TW_GUANIDINE;
-          for (int ni : nNbrs) { if (tautomerClass[ni]==-1) { tautomerClass[ni]=cls; tautomerWeight[ni]=TW_GUANIDINE; } }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T10: Urea  O=C(-N)(-N)  — two N on same carbonyl C (dominant, pKa ~14)
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 8 && !aromatic[i] && tautomerClass[i] == -1) {
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 6 && bondOrder(i, j) == 2) {
-            List<Integer> nn = new ArrayList<>();
-            for (int k : neighbors[j]) { if (k != i && atomicNum[k] == 7) nn.add(k); }
-            if (nn.size() >= 2) {
-              int cls = classId++;
-              tautomerClass[i] = cls; tautomerWeight[i] = TW_UREA;
-              tautomerClass[j] = cls; tautomerWeight[j] = TW_UREA;
-              for (int ni : nn) { if (tautomerClass[ni]==-1) { tautomerClass[ni]=cls; tautomerWeight[ni]=TW_UREA; } }
-            }
-            break;
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T11: β-Enaminone  N-C=C-C=O  (vinylogous amide, weight 0.85)
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 7 && !aromatic[i] && tautomerClass[i] == -1) {
-        outer11:
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 6 && bondOrder(i, j) == 1) {
-            for (int k : neighbors[j]) {
-              if (k != i && atomicNum[k] == 6 && bondOrder(j, k) == 2) {
-                for (int m : neighbors[k]) {
-                  if (m != j && atomicNum[m] == 6) {
-                    for (int o : neighbors[m]) {
-                      if (o != k && atomicNum[o] == 8 && bondOrder(m, o) == 2) {
-                        int cls = classId++;
-                        tc(new int[]{i, j, k, m, o}, cls, TW_ENAMINONE, tautomerWeight);
-                        break outer11;
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T12: Imide  C(=O)-N-C(=O)  (N flanked by two carbonyls, pKa ~9-10)
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 7 && tautomerClass[i] == -1) {
-        List<Integer> carbonyls = new ArrayList<>();
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 6) {
-            for (int k : neighbors[j]) {
-              if (k != i && atomicNum[k] == 8 && bondOrder(j, k) == 2) { carbonyls.add(j); break; }
-            }
-          }
-        }
-        if (carbonyls.size() >= 2) {
-          int cls = classId++;
-          tautomerClass[i] = cls; tautomerWeight[i] = TW_IMIDE;
-          for (int c : carbonyls) { if (tautomerClass[c]==-1) { tautomerClass[c]=cls; tautomerWeight[c]=TW_IMIDE; } }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T13: Hydroxamic acid  N(-OH)-C=O ↔ NH-C(=O)-OH  (pKa ~8, weight 0.85)
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 7 && tautomerClass[i] == -1) {
-        int oh = -1;
-        for (int j : neighbors[i]) { if (atomicNum[j] == 8 && !aromatic[j] && bondOrder(i,j)==1) { oh = j; break; } }
-        if (oh != -1) {
-          for (int j : neighbors[i]) {
-            if (atomicNum[j] == 6) {
-              for (int k : neighbors[j]) {
-                if (k != i && atomicNum[k] == 8 && bondOrder(j, k) == 2) {
-                  int cls = classId++;
-                  tc(new int[]{i, oh, j, k}, cls, TW_HYDROXAMIC, tautomerWeight);
-                  break;
-                }
-              }
-              if (tautomerClass[i] != -1) break;
-            }
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T14: Hydroxypyrimidine/purine  exocyclic OH on arom-C with ring-N neighbour
-      //      Covers adenine/guanine amino-imino, hydroxypyrimidine, cytosine
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 8 && !aromatic[i] && tautomerClass[i] == -1) {
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 6 && aromatic[j] && ring[j] && bondOrder(i, j) == 1) {
-            for (int k : neighbors[j]) {
-              if (k != i && atomicNum[k] == 7 && aromatic[k] && ring[k]) {
-                int cls = classId++;
-                tc(new int[]{i, j, k}, cls, TW_HYDROXYPYRIMIDINE, tautomerWeight);
-                break;
-              }
-            }
-            if (tautomerClass[i] != -1) break;
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T15: Tetrazole / triazole  N-H tautomers in aromatic rings with ≥2 N-N bonds
-      //      (1H/2H symmetric, weight 0.50)
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 7 && aromatic[i] && ring[i] && tautomerClass[i] == -1) {
-        List<Integer> adjN = new ArrayList<>();
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 7 && aromatic[j] && ring[j]) adjN.add(j);
-        }
-        if (adjN.size() >= 2) { // tetrazole (≥3N in ring); also covers 1,2,3-triazole
-          for (int j : adjN) {
-            if (tautomerClass[j] == -1) {
-              int cls = classId++;
-              tc(new int[]{i, j}, cls, TW_TETRAZOLE_NH, tautomerWeight);
-              break;
-            }
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T16: Thioamide/iminothiol  RC(=S)NR ↔ RC(SH)=NR  (weight 0.95)
-      //      S on C with double bond to S and single bond to N
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 16 && !aromatic[i] && tautomerClass[i] == -1) {
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 6 && bondOrder(i, j) == 2) {
-            for (int k : neighbors[j]) {
-              if (k != i && atomicNum[k] == 7) {
-                int cls = classId++;
-                tc(new int[]{i, j, k}, cls, TW_THIOAMIDE_IMINOTHIOL, tautomerWeight);
-                break;
-              }
-            }
-            if (tautomerClass[i] != -1) break;
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T17: Phosphonate ester  P(=O)(OH) ↔ P(OH)(=O)  (symmetric, weight 0.50)
-      //      P with both =O and -OH
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 15 && tautomerClass[i] == -1) {
-        List<Integer> oxygens = new ArrayList<>();
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 8) oxygens.add(j);
-        }
-        if (oxygens.size() >= 2) {
-          int cls = classId++;
-          tautomerClass[i] = cls; tautomerWeight[i] = TW_PHOSPHONATE;
-          for (int o : oxygens) {
-            if (tautomerClass[o] == -1) { tautomerClass[o] = cls; tautomerWeight[o] = TW_PHOSPHONATE; }
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T19: Nitro/aci-nitro  C-N(=O)=O ↔ C=N(=O)-OH  (weight 0.95)
-      //      N with two O neighbours (one double, one single/double) bonded to C
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 7 && !aromatic[i] && tautomerClass[i] == -1) {
-        List<Integer> oNbrs = new ArrayList<>();
-        int cNbr = -1;
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 8) oNbrs.add(j);
-          else if (atomicNum[j] == 6) cNbr = j;
-        }
-        if (oNbrs.size() >= 2 && cNbr != -1) {
-          int cls = classId++;
-          tautomerClass[i] = cls; tautomerWeight[i] = TW_NITRO_ACI_NITRO;
-          tautomerClass[cNbr] = cls; tautomerWeight[cNbr] = TW_NITRO_ACI_NITRO;
-          for (int o : oNbrs) {
-            if (tautomerClass[o] == -1) { tautomerClass[o] = cls; tautomerWeight[o] = TW_NITRO_ACI_NITRO; }
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T21: 1,5-keto-enol  C(=O)-C=C-C=C <-> C(-OH)-C=C-C=C  (weight 0.75)
-      //      5-atom keto-enol shift through conjugation
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 8 && !aromatic[i] && tautomerClass[i] == -1) {
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 6 && bondOrder(i, j) == 2) {
-            for (int k : neighbors[j]) {
-              if (k != i && atomicNum[k] == 6 && bondOrder(j, k) == 1) {
-                for (int m : neighbors[k]) {
-                  if (m != j && atomicNum[m] == 6 && bondOrder(k, m) == 2) {
-                    for (int p : neighbors[m]) {
-                      if (p != k && atomicNum[p] == 6 && !aromatic[p]) {
-                        int cls = classId++;
-                        tc(new int[]{i, j, k, m, p}, cls, TW_15_KETO_ENOL, tautomerWeight);
-                        break;
-                      }
-                    }
-                    if (tautomerClass[i] != -1) break;
-                  }
-                }
-                if (tautomerClass[i] != -1) break;
-              }
-            }
-            if (tautomerClass[i] != -1) break;
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T22: Ring-chain: furanose/pyranose  open-chain ↔ cyclic hemiacetal  (weight 0.60)
-      //      O in ring bonded to C with OH neighbour (hemiacetal pattern)
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 8 && ring[i] && !aromatic[i] && tautomerClass[i] == -1) {
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 6 && ring[j]) {
-            for (int k : neighbors[j]) {
-              if (k != i && atomicNum[k] == 8 && !ring[k] && bondOrder(j, k) == 1) {
-                int cls = classId++;
-                tc(new int[]{i, j, k}, cls, TW_FURANOSE_PYRANOSE, tautomerWeight);
-                break;
-              }
-            }
-            if (tautomerClass[i] != -1) break;
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T23: Ring-chain: lactol  open-chain hydroxy-aldehyde ↔ cyclic lactol  (weight 0.65)
-      //      C in ring bonded to both ring-O and exocyclic OH
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 6 && ring[i] && tautomerClass[i] == -1) {
-        int ringO = -1, exoOH = -1;
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 8 && ring[j] && !aromatic[j]) ringO = j;
-          else if (atomicNum[j] == 8 && !ring[j] && !aromatic[j] && bondOrder(i, j) == 1) exoOH = j;
-        }
-        if (ringO != -1 && exoOH != -1) {
-          int cls = classId++;
-          tc(new int[]{ringO, i, exoOH}, cls, TW_LACTOL, tautomerWeight);
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T24: Phenol/quinone methide  phenol → para-quinone methide  (weight 0.92)
-      //      Aromatic C-OH where para-C has exocyclic =CH2
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 8 && !aromatic[i] && tautomerClass[i] == -1) {
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 6 && aromatic[j] && ring[j] && bondOrder(i, j) == 1) {
-            // Walk 3 aromatic carbons to find para position
-            for (int a : neighbors[j]) {
-              if (a != i && atomicNum[a] == 6 && aromatic[a] && ring[a]) {
-                for (int b : neighbors[a]) {
-                  if (b != j && atomicNum[b] == 6 && aromatic[b] && ring[b]) {
-                    for (int c : neighbors[b]) {
-                      if (c != a && c != j && atomicNum[c] == 6 && aromatic[c] && ring[c]) {
-                        // Check if para-C has an exocyclic C=C (methide)
-                        for (int d : neighbors[c]) {
-                          if (atomicNum[d] == 6 && !ring[d] && bondOrder(c, d) == 2) {
-                            int cls = classId++;
-                            tc(new int[]{i, j, c, d}, cls, TW_PHENOL_QUINONE_METHIDE, tautomerWeight);
-                            break;
-                          }
-                        }
-                        if (tautomerClass[i] != -1) break;
-                      }
-                    }
-                    if (tautomerClass[i] != -1) break;
-                  }
-                }
-                if (tautomerClass[i] != -1) break;
-              }
-            }
-            if (tautomerClass[i] != -1) break;
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T25: Triazole NH shift  1,2,3-triazole NH shift  (symmetric, weight 0.50)
-      //      Aromatic N in ring with exactly one adjacent aromatic N (not covered by T15 tetrazole)
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 7 && aromatic[i] && ring[i] && tautomerClass[i] == -1) {
-        List<Integer> adjNring = new ArrayList<>();
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 7 && aromatic[j] && ring[j]) adjNring.add(j);
-        }
-        if (adjNring.size() == 1) {
-          int j = adjNring.get(0);
-          // Check if the N-N bond partner also has another ring-N neighbour (triazole pattern)
-          for (int k : neighbors[j]) {
-            if (k != i && atomicNum[k] == 7 && aromatic[k] && ring[k] && tautomerClass[k] == -1) {
-              int cls = classId++;
-              tc(new int[]{i, j, k}, cls, TW_TRIAZOLE_NH_SHIFT, tautomerWeight);
-              break;
-            }
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T26: Benzimidazole NH shift  NH-1 ↔ NH-3 shift  (symmetric, weight 0.50)
-      //      Two aromatic N bridged by aromatic C in a fused ring system (distinct from T7 by ring count)
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 7 && aromatic[i] && ring[i] && tautomerClass[i] == -1) {
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 6 && aromatic[j] && ring[j]) {
-            // Check if this C is in a fused ring (degree >= 3 among ring atoms)
-            int ringNbCount = 0;
-            for (int k : neighbors[j]) { if (ring[k] && aromatic[k]) ringNbCount++; }
-            if (ringNbCount >= 3) {
-              for (int k : neighbors[j]) {
-                if (k != i && atomicNum[k] == 7 && aromatic[k] && ring[k] && tautomerClass[k] == -1) {
-                  int cls = classId++;
-                  tc(new int[]{i, j, k}, cls, TW_BENZIMIDAZOLE_NH, tautomerWeight);
-                  break;
-                }
-              }
-              if (tautomerClass[i] != -1) break;
-            }
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T27: Pyridone/hydroxypyridine  2-pyridinol ↔ 2-pyridone  (weight 0.85)
-      //      Aromatic N in 6-membered ring with C-OH at position 2
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 7 && aromatic[i] && ring[i] && tautomerClass[i] == -1) {
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 6 && aromatic[j] && ring[j]) {
-            for (int k : neighbors[j]) {
-              if (k != i && atomicNum[k] == 8 && !aromatic[k] && bondOrder(j, k) == 1) {
-                int cls = classId++;
-                tc(new int[]{i, j, k}, cls, TW_PYRIDONE_HYDROXYPYRIDINE, tautomerWeight);
-                break;
-              }
-            }
-            if (tautomerClass[i] != -1) break;
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T28: Barbituric acid  tri-keto ↔ enol forms  (weight 0.80)
-      //      N in ring flanked by two carbonyl C (each C=O), forming barbiturate pattern
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 7 && ring[i] && tautomerClass[i] == -1) {
-        List<Integer> carbonylC = new ArrayList<>();
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 6 && ring[j]) {
-            for (int k : neighbors[j]) {
-              if (k != i && atomicNum[k] == 8 && bondOrder(j, k) == 2) {
-                carbonylC.add(j);
-                break;
-              }
-            }
-          }
-        }
-        if (carbonylC.size() >= 2) {
-          int cls = classId++;
-          tautomerClass[i] = cls; tautomerWeight[i] = TW_BARBITURIC;
-          for (int c : carbonylC) {
-            if (tautomerClass[c] == -1) { tautomerClass[c] = cls; tautomerWeight[c] = TW_BARBITURIC; }
-            for (int k : neighbors[c]) {
-              if (atomicNum[k] == 8 && bondOrder(c, k) == 2 && tautomerClass[k] == -1) {
-                tautomerClass[k] = cls; tautomerWeight[k] = TW_BARBITURIC;
-              }
-            }
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T29: Allyl shift  X-C=C-C ↔ C=C-C-X  where X is OH, SH, NH  (weight 0.70)
-      //      Validates contiguous bond path: X(-H)--C==C--C(sp3)
-      //      X must carry at least one H (checked via valence/degree)
-      //      and k-m must be a single bond (not another double bond system)
-      // -----------------------------------------------------------------------
-      if ((atomicNum[i] == 8 || atomicNum[i] == 16 || atomicNum[i] == 7)
-           && !aromatic[i] && !ring[i] && tautomerClass[i] == -1) {
-        // X must bear at least one H for the proton shift to occur.
-        int sumBO = 0;
-        for (int nb : neighbors[i]) sumBO += bondOrder(i, nb);
-        int maxValence = (atomicNum[i] == 7) ? 3 : 2; // N=3, O=2, S=2
-        boolean xHasH = (sumBO < maxValence + Math.abs(formalCharge[i]));
-        if (!xHasH) continue; // no H on heteroatom, shift not possible
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 6 && !aromatic[j] && bondOrder(i, j) == 1) {
-            for (int k : neighbors[j]) {
-              if (k != i && atomicNum[k] == 6 && bondOrder(j, k) == 2) {
-                for (int m : neighbors[k]) {
-                  // Require single bond k-m (sp3 terminal carbon)
-                  if (m != j && atomicNum[m] == 6 && !aromatic[m] && bondOrder(k, m) == 1) {
-                    int cls = classId++;
-                    tc(new int[]{i, j, k, m}, cls, TW_ALLYL_SHIFT, tautomerWeight);
-                    break;
-                  }
-                }
-                if (tautomerClass[i] != -1) break;
-              }
-            }
-            if (tautomerClass[i] != -1) break;
-          }
-        }
-      }
-
-      // -----------------------------------------------------------------------
-      // T30: Selenol/selenoketone  C=Se ↔ C(-SeH)  (weight 0.94)
-      //      Se double-bonded to C
-      // -----------------------------------------------------------------------
-      if (atomicNum[i] == 34 && !aromatic[i] && tautomerClass[i] == -1) {
-        for (int j : neighbors[i]) {
-          if (atomicNum[j] == 6 && bondOrder(i, j) == 2) {
-            int cls = classId++;
-            tc(new int[]{i, j}, cls, TW_SELENOL_SELENOKETONE, tautomerWeight);
-            for (int k : neighbors[j]) {
-              if (k != i && (atomicNum[k] == 6 || atomicNum[k] == 7) && tautomerClass[k] == -1) {
-                tautomerClass[k] = cls; if (tautomerWeight[k] == 1.0f) tautomerWeight[k] = TW_SELENOL_SELENOKETONE;
-              }
-            }
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  private static int[] computeMorganRanks(int n, int[] initLabel, int[][] neighbors) {
-    int[] rank = new int[n];
-    System.arraycopy(initLabel, 0, rank, 0, n);
-    int[] rankNew = new int[n];
-    int[] nbSorted = new int[16];
-    for (int iter = 0; iter < 8; iter++) {
-      HashSet<Integer> prevSet = new HashSet<>();
-      for (int v = 0; v < n; v++) prevSet.add(rank[v]);
-      int prevDistinct = prevSet.size();
-      for (int v = 0; v < n; v++) {
-        int[] nbs = neighbors[v];
-        int deg = nbs.length;
-        if (deg > nbSorted.length) nbSorted = new int[deg];
-        for (int k = 0; k < deg; k++) nbSorted[k] = rank[nbs[k]];
-        java.util.Arrays.sort(nbSorted, 0, deg);
-        int h = rank[v] * HASH_PRIME;
-        for (int k = 0; k < deg; k++) h = h * 31 + nbSorted[k];
-        rankNew[v] = h;
-      }
-      System.arraycopy(rankNew, 0, rank, 0, n);
-      HashSet<Integer> newSet = new HashSet<>();
-      for (int v = 0; v < n; v++) newSet.add(rank[v]);
-      if (newSet.size() <= prevDistinct) break;
-    }
-    return rank;
-  }
-
-  private static final int MAX_SEARCH_NODES = 50000;
-  private static final int CANON_SEARCH_LIMIT = 200;
-  private static final int MAX_GENERATORS = 500;
-
-  private static final class CanonResult {
-    private final int[] canonLabel;
-    private final int[] orbit;
-    private final int[][] autGenerators;
-    private final boolean generatorsTruncated;
-
-    private CanonResult(
-        int[] canonLabel,
-        int[] orbit,
-        int[][] autGenerators,
-        boolean generatorsTruncated) {
-      this.canonLabel = canonLabel;
-      this.orbit = orbit;
-      this.autGenerators = autGenerators;
-      this.generatorsTruncated = generatorsTruncated;
-    }
-
-    public int[] canonLabel() { return canonLabel; }
-    public int[] orbit() { return orbit; }
-    public int[][] autGenerators() { return autGenerators; }
-    public boolean generatorsTruncated() { return generatorsTruncated; }
-
-    @Override
-    public final boolean equals(Object other) {
-      if (this == other) return true;
-      if (!(other instanceof CanonResult)) return false;
-      CanonResult that = (CanonResult) other;
-      return Objects.equals(canonLabel, that.canonLabel)
-          && Objects.equals(orbit, that.orbit)
-          && Objects.equals(autGenerators, that.autGenerators)
-          && generatorsTruncated == that.generatorsTruncated;
-    }
-
-    @Override
-    public final int hashCode() {
-      int hash = 0;
-      hash = 31 * hash + Objects.hashCode(canonLabel);
-      hash = 31 * hash + Objects.hashCode(orbit);
-      hash = 31 * hash + Objects.hashCode(autGenerators);
-      hash = 31 * hash + Boolean.hashCode(generatorsTruncated);
-      return hash;
-    }
-
-    @Override
-    public final String toString() {
-      return "CanonResult[canonLabel=" + canonLabel
-          + ", orbit=" + orbit
-          + ", autGenerators=" + autGenerators
-          + ", generatorsTruncated=" + generatorsTruncated + "]";
-    }
-  }
-
-  private int[] canonicalAtomLabels(int[] hydrogens) {
-    int[][] properties = new int[n][];
-    Integer[] atoms = new Integer[n];
-    for (int atom = 0; atom < n; atom++) {
-      properties[atom] = new int[] {label[atom], formalCharge[atom], massNumber[atom], hydrogens[atom],
-          tetraChirality != null && tetraChirality[atom] != 0 ? 1 : 0};
-      atoms[atom] = atom;
-    }
-    Arrays.sort(atoms, (first, second) -> compareIntArrays(properties[first], properties[second]));
-    int[] labels = new int[n];
-    int rank = 0;
-    for (int position = 0; position < n; position++) {
-      if (position > 0 && !Arrays.equals(properties[atoms[position]], properties[atoms[position - 1]])) rank++;
-      labels[atoms[position]] = rank;
-    }
-    return labels;
-  }
-
-  private static int compareIntArrays(int[] first, int[] second) {
-    for (int index = 0; index < Math.min(first.length, second.length); index++) {
-      int comparison = Integer.compare(first[index], second[index]);
-      if (comparison != 0) return comparison;
-    }
-    return Integer.compare(first.length, second.length);
-  }
-
-  private static int canonicalBondLabel(MolGraph graph, int first, int second) {
-    if (graph == null) return 1;
-    return (graph.bondOrder(first, second) << 3) | (graph.bondInRing(first, second) ? 4 : 0)
-        | (graph.bondAromatic(first, second) ? 2 : 0) | (graph.dbStereo(first, second) != 0 ? 1 : 0);
-  }
-
-  private static int canonicalTetrahedralTag(MolGraph graph, int atom, int[] ranking) {
-    int tag = graph.tetraChirality != null ? graph.tetraChirality[atom] : 0;
-    if (tag == 0) return 0;
-    if(graph.mol==null)tag=3-tag;
-    int[] ligands = graph.tetrahedralLigands(atom);
-    if (ligands == null) return tag;
-    boolean odd = false;
-    for (int first = 0; first < ligands.length; first++) {
-      int firstRank = ligands[first] < 0 ? -1 : ranking[ligands[first]];
-      for (int second = first + 1; second < ligands.length; second++) {
-        int secondRank = ligands[second] < 0 ? -1 : ranking[ligands[second]];
-        if (firstRank > secondRank) odd = !odd;
-      }
-    }
-    return odd ? 3 - tag : tag;
-  }
-
-  private static int canonicalDoubleBondTag(MolGraph graph, int first, int second, int[] ranking) {
-    int configuration = graph.dbStereo(first, second);
-    if (configuration == 0) return 0;
-    for (int side = 0; side < 2; side++) {
-      int atom = side == 0 ? first : second, other = side == 0 ? second : first;
-      int reference = -1, canonicalReference = -1;
-      for (int neighbor : graph.neighbors[atom]) {
-        if (neighbor == other) continue;
-        if (reference < 0) reference = neighbor;
-        if (canonicalReference < 0 || ranking[neighbor] < ranking[canonicalReference]) canonicalReference = neighbor;
-      }
-      if (reference != canonicalReference) configuration = 3 - configuration;
-    }
-    return configuration;
-  }
-
-  private static CanonResult computeCanonicalLabeling(int n, int[] label, int[] degree, int[][] neighbors) {
-    return computeCanonicalLabeling(n, label, degree, neighbors, null);
-  }
-
-  private static CanonResult computeCanonicalLabeling(int n, int[] label, int[] degree,
-                                                       int[][] neighbors, MolGraph graph) {
-    if (n == 0) return new CanonResult(new int[0], new int[0], new int[0][], false);
-    int[] mRank = new int[n];
-    System.arraycopy(label, 0, mRank, 0, n);
-    int[] mNew = new int[n];
-    long[] scratch = new long[16];
-    for (int iter = 0; iter < 8; iter++) {
-      int prevDistinct;
-      { HashSet<Integer> s = new HashSet<>(); for (int v = 0; v < n; v++) s.add(mRank[v]); prevDistinct = s.size(); }
-      for (int v = 0; v < n; v++) {
-        int[] nbs = neighbors[v];
-        int d = nbs.length;
-        if (d > scratch.length) scratch = new long[d];
-        for (int k = 0; k < d; k++)
-          scratch[k] = ((long) mRank[nbs[k]] << 32) | canonicalBondLabel(graph, v, nbs[k]);
-        Arrays.sort(scratch, 0, d);
-        int h = mRank[v] * HASH_PRIME;
-        for (int k = 0; k < d; k++) {
-          h = h * 31 + (int) (scratch[k] >> 32);
-          h = h * 31 + (int) scratch[k];
-        }
-        mNew[v] = h;
-      }
-      System.arraycopy(mNew, 0, mRank, 0, n);
-      int newDistinct;
-      { HashSet<Integer> s = new HashSet<>(); for (int v = 0; v < n; v++) s.add(mRank[v]); newDistinct = s.size(); }
-      if (newDistinct <= prevDistinct) break;
-    }
-    int[] uf = new int[n];
-    for (int i = 0; i < n; i++) uf[i] = i;
-    Integer[] sorted = new Integer[n];
-    for (int i = 0; i < n; i++) sorted[i] = i;
-    final int[] mr = mRank;
-    Arrays.sort(sorted, (a, b) -> {
-      int c = Integer.compare(label[a], label[b]);
-      if (c != 0) return c;
-      c = Integer.compare(degree[a], degree[b]);
-      return c != 0 ? c : Integer.compare(mr[a], mr[b]);
-    });
-    int[] initPerm = new int[n];
-    boolean[] initCellEnd = new boolean[n];
-    for (int i = 0; i < n; i++) initPerm[i] = sorted[i];
-    for (int i = 0; i < n - 1; i++) {
-      int vi = sorted[i], vj = sorted[i + 1];
-      initCellEnd[i] = (label[vi] != label[vj] || degree[vi] != degree[vj] || mr[vi] != mr[vj]);
-    }
-    initCellEnd[n - 1] = true;
-    if (n > CANON_SEARCH_LIMIT) {
-      int cs = 0;
-      for (int i = 0; i < n; i++) {
-        if (initCellEnd[i]) {
-          for (int j = cs + 1; j <= i; j++) ufUnion(uf, initPerm[cs], initPerm[j]);
-          cs = i + 1;
-        }
-      }
-      int[] canonLabel = new int[n];
-      for (int pos = 0; pos < n; pos++) canonLabel[initPerm[pos]] = pos;
-      return new CanonResult(canonLabel, buildOrbits(uf, n), new int[0][], true);
-    }
-    refinePartition(n, initPerm, initCellEnd, neighbors, label, -1, graph);
-    int[] bestPerm = null;
-    List<int[]> generators = new ArrayList<>();
-    boolean generatorsTruncated = false;
-    int nodeCount = 0;
-    boolean budgetExceeded = false;
-    ArrayDeque<int[]> permStack = new ArrayDeque<>();
-    ArrayDeque<boolean[]> cellEndStack = new ArrayDeque<>();
-    int targetCell = findSmallestNonSingleton(n, initCellEnd);
-    if (targetCell < 0) {
-      bestPerm = initPerm.clone();
-    } else {
-      int cellStart = 0;
-      for (int i = 0; i < n; i++) {
-        if (i > 0 && initCellEnd[i - 1]) cellStart = i;
-        if (i == targetCell) break;
-      }
-      for (int i = targetCell; i >= cellStart; i--) {
-        int[] p = initPerm.clone();
-        boolean[] ce = initCellEnd.clone();
-        if (i != cellStart) {
-          int tmp = p[i];
-          System.arraycopy(p, cellStart, p, cellStart + 1, i - cellStart);
-          p[cellStart] = tmp;
-        }
-        ce[cellStart] = true;
-        refinePartition(n, p, ce, neighbors, label, cellStart, graph);
-        permStack.push(p);
-        cellEndStack.push(ce);
-        nodeCount++;
-      }
-    }
-    while (!permStack.isEmpty() && !budgetExceeded) {
-      int[] perm = permStack.pop();
-      boolean[] cellEnd = cellEndStack.pop();
-      int nc = findSmallestNonSingleton(n, cellEnd);
-      if (nc < 0) {
-        if (bestPerm == null || comparePerm(perm, bestPerm, n, label, neighbors, graph) < 0) {
-          bestPerm = perm.clone();
-        } else if (comparePerm(perm, bestPerm, n, label, neighbors, graph) == 0) {
-          for (int i = 0; i < n; i++) ufUnion(uf, perm[i], bestPerm[i]);
-          if (generators.size() < MAX_GENERATORS) {
-            int[] gen = new int[n];
-            for (int i = 0; i < n; i++) gen[bestPerm[i]] = perm[i];
-            generators.add(gen);
-          } else {
-            generatorsTruncated = true;
-          }
-        }
-        continue;
-      }
-      if (bestPerm != null && partialCompare(perm, bestPerm, n, cellEnd, label, neighbors) > 0) continue;
-      int cellStart = 0;
-      for (int i = 0; i < n; i++) {
-        if (i > 0 && cellEnd[i - 1]) cellStart = i;
-        if (i == nc) break;
-      }
-      int cellSize = nc - cellStart + 1;
-      if (nodeCount + cellSize > MAX_SEARCH_NODES) { budgetExceeded = true; break; }
-      for (int i = nc; i >= cellStart; i--) {
-        int[] p = perm.clone();
-        boolean[] ce = cellEnd.clone();
-        if (i != cellStart) {
-          int tmp = p[i];
-          System.arraycopy(p, cellStart, p, cellStart + 1, i - cellStart);
-          p[cellStart] = tmp;
-        }
-        ce[cellStart] = true;
-        refinePartition(n, p, ce, neighbors, label, cellStart, graph);
-        permStack.push(p);
-        cellEndStack.push(ce);
-        nodeCount++;
-      }
-    }
-    if (bestPerm == null) bestPerm = initPerm.clone();
-    int[] canonLabel = new int[n];
-    for (int pos = 0; pos < n; pos++) canonLabel[bestPerm[pos]] = pos;
-    int cs = 0;
-    for (int i = 0; i < n; i++) {
-      if (initCellEnd[i]) {
-        for (int j = cs + 1; j <= i; j++) ufUnion(uf, initPerm[cs], initPerm[j]);
-        cs = i + 1;
-      }
-    }
-    return new CanonResult(canonLabel, buildOrbits(uf, n),
-        generators.toArray(new int[0][]), generatorsTruncated || budgetExceeded);
-  }
-
-  private static int[] buildOrbits(int[] uf, int n) {
-    int[] orbit = new int[n];
-    for (int i = 0; i < n; i++) orbit[i] = ufFind(uf, i);
-    int[] orbitMin = new int[n];
-    Arrays.fill(orbitMin, n);
-    for (int i = 0; i < n; i++) { int r = orbit[i]; if (i < orbitMin[r]) orbitMin[r] = i; }
-    for (int i = 0; i < n; i++) orbit[i] = orbitMin[orbit[i]];
-    return orbit;
-  }
-
-  private static int ufFind(int[] uf, int x) {
-    while (uf[x] != x) { uf[x] = uf[uf[x]]; x = uf[x]; }
-    return x;
-  }
-
-  private static void ufUnion(int[] uf, int a, int b) {
-    a = ufFind(uf, a); b = ufFind(uf, b);
-    if (a != b) { if (a < b) uf[b] = a; else uf[a] = b; }
-  }
-
-  private static int findSmallestNonSingleton(int n, boolean[] cellEnd) {
-    int bestSize = n + 1, bestEnd = -1, cellStart = 0;
-    for (int i = 0; i < n; i++) {
-      if (cellEnd[i]) {
-        int size = i - cellStart + 1;
-        if (size > 1 && size < bestSize) { bestSize = size; bestEnd = i; }
-        cellStart = i + 1;
-      }
-    }
-    return bestEnd;
-  }
-
-  private static void refinePartition(
-      int n, int[] perm, boolean[] cellEnd, int[][] neighbors, int[] label, int targetPos) {
-    refinePartition(n, perm, cellEnd, neighbors, label, targetPos, null);
-  }
-
-  private static void refinePartition(
-      int n, int[] perm, boolean[] cellEnd, int[][] neighbors, int[] label, int targetPos, MolGraph graph) {
-    int[] inv = new int[n];
-    for (int i = 0; i < n; i++) inv[perm[i]] = i;
-    boolean changed = true;
-    int maxIter = n * 2 + 10;
-    while (changed && maxIter-- > 0) {
-      changed = false;
-      int sStart = 0;
-      for (int sEnd = 0; sEnd < n; sEnd++) {
-        if (!cellEnd[sEnd]) continue;
-        int cStart = 0;
-        for (int cEnd = 0; cEnd < n; cEnd++) {
-          if (!cellEnd[cEnd]) continue;
-          int cSize = cEnd - cStart + 1;
-          if (cSize <= 1) { cStart = cEnd + 1; continue; }
-          int[][] count = new int[cSize][];
-          for (int ci = 0; ci < cSize; ci++) {
-            int atom = perm[cStart + ci], edgeCount = 0;
-            int[] edges = new int[neighbors[atom].length];
-            for (int neighbor : neighbors[atom]) {
-              int position = inv[neighbor];
-              if (position >= sStart && position <= sEnd)
-                edges[edgeCount++] = canonicalBondLabel(graph, atom, neighbor);
-            }
-            Arrays.sort(edges, 0, edgeCount);
-            count[ci] = Arrays.copyOf(edges, edgeCount);
-          }
-          boolean allSame = true;
-          for (int ci = 1; ci < cSize; ci++) if (!Arrays.equals(count[ci], count[0])) { allSame = false; break; }
-          if (allSame) { cStart = cEnd + 1; continue; }
-          Integer[] idx = new Integer[cSize];
-          for (int ci = 0; ci < cSize; ci++) idx[ci] = ci;
-          final int fcs = cStart;
-          final int[][] cnt = count;
-          final int[] prm = perm;
-          Arrays.sort(idx, (a, bx) -> {
-            int c = compareIntArrays(cnt[a], cnt[bx]);
-            if (c != 0) return c;
-            c = Integer.compare(label[prm[fcs + a]], label[prm[fcs + bx]]);
-            return c != 0 ? c : Integer.compare(prm[fcs + a], prm[fcs + bx]);
-          });
-          int[] tmp = new int[cSize];
-          for (int ci = 0; ci < cSize; ci++) tmp[ci] = perm[cStart + idx[ci]];
-          System.arraycopy(tmp, 0, perm, cStart, cSize);
-          for (int ci = 0; ci < cSize; ci++) inv[perm[cStart + ci]] = cStart + ci;
-          for (int ci = 0; ci < cSize - 1; ci++) {
-            boolean wasBoundary = (cStart + ci == cEnd);
-            boolean newBoundary = !Arrays.equals(cnt[idx[ci]], cnt[idx[ci + 1]]);
-            cellEnd[cStart + ci] = newBoundary || wasBoundary;
-            if (newBoundary && !wasBoundary) changed = true;
-          }
-          cellEnd[cEnd] = true;
-          cStart = cEnd + 1;
-        }
-        sStart = sEnd + 1;
-      }
-    }
-  }
-
-  private static int comparePerm(int[] firstPermutation, int[] secondPermutation, int atomCount,
-                                 int[] labels, int[][] neighbors) {
-    return comparePerm(firstPermutation, secondPermutation, atomCount, labels, neighbors, null);
-  }
-
-  private static int comparePerm(int[] firstPermutation, int[] secondPermutation, int atomCount,
-                                 int[] labels, int[][] neighbors, MolGraph graph) {
-    int[] firstRanking = new int[atomCount], secondRanking = new int[atomCount];
-    for (int position = 0; position < atomCount; position++) {
-      firstRanking[firstPermutation[position]] = position;
-      secondRanking[secondPermutation[position]] = position;
-    }
-    for (int position = 0; position < atomCount; position++) {
-      int firstAtom = firstPermutation[position], secondAtom = secondPermutation[position];
-      int comparison = Integer.compare(labels[firstAtom], labels[secondAtom]);
-      if (comparison != 0) return comparison;
-      if (graph != null) {
-        comparison = Integer.compare(canonicalTetrahedralTag(graph, firstAtom, firstRanking),
-            canonicalTetrahedralTag(graph, secondAtom, secondRanking));
-        if (comparison != 0) return comparison;
-      }
-      comparison = Integer.compare(neighbors[firstAtom].length, neighbors[secondAtom].length);
-      if (comparison != 0) return comparison;
-      long[][] signatures = new long[2][];
-      for (int side = 0; side < 2; side++) {
-        int atom = side == 0 ? firstAtom : secondAtom;
-        int[] ranking = side == 0 ? firstRanking : secondRanking;
-        signatures[side] = new long[neighbors[atom].length];
-        for (int bondIndex = 0; bondIndex < neighbors[atom].length; bondIndex++) {
-          int neighbor = neighbors[atom][bondIndex];
-          signatures[side][bondIndex] = ((long) ranking[neighbor] << 16)
-              | ((long) canonicalBondLabel(graph, atom, neighbor) << 2)
-              | (graph != null ? canonicalDoubleBondTag(graph, atom, neighbor, ranking) : 0);
-        }
-        Arrays.sort(signatures[side]);
-      }
-      for (int bondIndex = 0; bondIndex < signatures[0].length; bondIndex++) {
-        comparison = Long.compare(signatures[0][bondIndex], signatures[1][bondIndex]);
-        if (comparison != 0) return comparison;
-      }
-    }
-    return 0;
-  }
-
-  private static int partialCompare(
-      int[] perm, int[] bestPerm, int n, boolean[] cellEnd, int[] label, int[][] neighbors) {
-    int cellStart = 0;
-    for (int pos = 0; pos < n; pos++) {
-      if (cellEnd[pos]) {
-        if (pos == cellStart) {
-          int c = Integer.compare(label[perm[pos]], label[bestPerm[pos]]);
-          if (c != 0) return c;
-        }
-        cellStart = pos + 1;
-      }
-    }
-    return 0;
-  }
-
-  private static long computeCanonicalHash(MolGraph g, int[] canonLabel) {
-    int n = g.n;
-    int[] inv = new int[n];
-    for (int i = 0; i < n; i++) inv[canonLabel[i]] = i;
-    long hash = 0;
-    for (int cp = 0; cp < n; cp++) {
-      int v = inv[cp];
-      hash = hash * HASH_PRIME + g.label[v];
-      hash = hash * HASH_PRIME + (long) g.formalCharge[v] + 512L;
-      hash = hash * HASH_PRIME + g.massNumber[v];
-      hash = hash * HASH_PRIME + g.hydrogenCount(v);
-      hash = hash * HASH_PRIME + canonicalTetrahedralTag(g, v, canonLabel);
-    }
-    for (int cp = 0; cp < n; cp++) {
-      int v = inv[cp];
-      int[] nbs = g.neighbors[v];
-      long[] edgeSigs = new long[nbs.length];
-      for (int k = 0; k < nbs.length; k++) {
-        int cn = canonLabel[nbs[k]];
-        long edgeKey = (long) Math.min(cp, cn) * n + Math.max(cp, cn);
-        long sig = edgeKey;
-        sig = sig * HASH_PRIME + g.bondOrder(v, nbs[k]);
-        sig = sig * 2L + (g.bondInRing(v, nbs[k]) ? 1L : 0L);
-        sig = sig * 2L + (g.bondAromatic(v, nbs[k]) ? 1L : 0L);
-        // include E/Z double-bond stereo in hash (symmetric: use min canonical position)
-        if (cp < cn) {
-          int dbConf = canonicalDoubleBondTag(g, v, nbs[k], canonLabel);
-          sig = sig * HASH_PRIME + dbConf;
-        }
-        edgeSigs[k] = sig;
-      }
-      Arrays.sort(edgeSigs);
-      for (long sig : edgeSigs) hash = hash * HASH_PRIME + sig;
-    }
-    return hash;
-  }
-
-  public int[] getOrbits() { ensureCanonical(); return orbit.clone(); }
+  /** @deprecated Use {@link #getOrbit()}, the name the native core uses. */
+  @Deprecated
+  public int[] getOrbits() { return getOrbit(); }
   public int[] getCanonicalLabeling() { ensureCanonical(); return canonicalLabel.clone(); }
   public long getCanonicalHash() { ensureCanonical(); return canonicalHash; }
 
@@ -3421,282 +1073,16 @@ public final class MolGraph {
   /** True when generator capture was skipped/capped or chemical-property filtering was incomplete. */
   public boolean automorphismGeneratorsTruncated() { ensureCanonical(); return autGeneratorsTruncated; }
 
-  // ---- Canonical SMILES generation ----
-
-  private static final Map<Integer, String> ORGANIC_SYMBOLS = new HashMap<>();
-  static {
-    ORGANIC_SYMBOLS.put(5, "B"); ORGANIC_SYMBOLS.put(6, "C"); ORGANIC_SYMBOLS.put(7, "N");
-    ORGANIC_SYMBOLS.put(8, "O"); ORGANIC_SYMBOLS.put(15, "P"); ORGANIC_SYMBOLS.put(16, "S");
-    ORGANIC_SYMBOLS.put(9, "F"); ORGANIC_SYMBOLS.put(17, "Cl"); ORGANIC_SYMBOLS.put(35, "Br");
-    ORGANIC_SYMBOLS.put(53, "I");
-  }
-
-  private static final String[] ELEMENT_SYMBOL = new String[119];
-  static {
-    String[] syms = {
-      "?","H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si","P","S",
-      "Cl","Ar","K","Ca","Sc","Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn","Ga",
-      "Ge","As","Se","Br","Kr","Rb","Sr","Y","Zr","Nb","Mo","Tc","Ru","Rh","Pd",
-      "Ag","Cd","In","Sn","Sb","Te","I","Xe","Cs","Ba","La","Ce","Pr","Nd","Pm",
-      "Sm","Eu","Gd","Tb","Dy","Ho","Er","Tm","Yb","Lu","Hf","Ta","W","Re","Os",
-      "Ir","Pt","Au","Hg","Tl","Pb","Bi","Po","At","Rn","Fr","Ra","Ac","Th","Pa",
-      "U","Np","Pu","Am","Cm","Bk","Cf","Es","Fm","Md","No","Lr","Rf","Db","Sg",
-      "Bh","Hs","Mt","Ds","Rg","Cn","Nh","Fl","Mc","Lv","Ts","Og"
-    };
-    System.arraycopy(syms, 0, ELEMENT_SYMBOL, 0, Math.min(syms.length, ELEMENT_SYMBOL.length));
-  }
-
   public String toCanonicalSmiles() {
-    if (n == 0) return "";
-    ensureCanonical();
-    int[] inv = new int[n];
-    for (int i = 0; i < n; i++) inv[canonicalLabel[i]] = i;
-    int[] color = new int[n];
-    @SuppressWarnings("unchecked")
-    List<int[]>[] ringClosures = new List[n];
-    Set<Long> ringEdges = new HashSet<>();
-    int[] nextRing = {1};
-    for (int ci = 0; ci < n; ci++) {
-      int start = inv[ci];
-      if (color[start] == 0) preScanDfs(start, -1, color, ringClosures, ringEdges, nextRing);
-    }
-    Map<Long, Integer> bondDirections = smilesBondDirections();
-    boolean[] visited = new boolean[n];
-    StringBuilder sb = new StringBuilder();
-    for (int ci = 0; ci < n; ci++) {
-      int start = inv[ci];
-      if (visited[start]) continue;
-      if (sb.length() > 0) sb.append('.');
-      emitSmiles(start, -1, visited, sb, ringClosures, ringEdges, bondDirections);
-    }
-    return sb.toString();
-  }
-
-  private void preScanDfs(int atom, int parent, int[] color, List<int[]>[] rc, Set<Long> ringEdges, int[] nextRing) {
-    color[atom] = 1;
-    int[] sorted = sortedNeighborsByCanonical(atom);
-    int skippedParent = 0;
-    for (int nb : sorted) {
-      if (nb == parent && skippedParent == 0) { skippedParent = 1; continue; }
-      if (color[nb] == 0) {
-        preScanDfs(nb, atom, color, rc, ringEdges, nextRing);
-      } else if (color[nb] == 1) {
-        int rid = nextRing[0]++;
-        if (rc[nb] == null) rc[nb] = new ArrayList<>();
-        if (rc[atom] == null) rc[atom] = new ArrayList<>();
-        rc[nb].add(new int[] {rid, atom});
-        rc[atom].add(new int[] {rid, nb});
-        ringEdges.add(bondKey(atom, nb));
-      }
-    }
-    color[atom] = 2;
-  }
-
-  private void emitSmiles(int atom, int parent, boolean[] visited, StringBuilder sb,
-                          List<int[]>[] rc, Set<Long> ringEdges, Map<Long, Integer> bondDirections) {
-    visited[atom] = true;
-    // Collect traversal neighbours in canonical order for tetrahedral parity
-    int[] sorted = sortedNeighborsByCanonical(atom);
-    writeAtom(atom, parent, sorted, rc, ringEdges, sb);
-    if (rc[atom] != null) {
-      for (int[] entry : rc[atom]) {
-        if (!visited[entry[1]]) writeBondSymbol(atom, entry[1], sb, bondDirections);
-        writeRingDigit(entry[0], sb);
-      }
-    }
-    int childCount = 0;
-    for (int nb : sorted) if (!visited[nb] && !ringEdges.contains(bondKey(atom, nb))) childCount++;
-    int childIdx = 0;
-    for (int nb : sorted) {
-      if (visited[nb] || ringEdges.contains(bondKey(atom, nb))) continue;
-      childIdx++;
-      boolean needParen = childCount > 1 && childIdx < childCount;
-      if (needParen) sb.append('(');
-      writeBondSymbol(atom, nb, sb, bondDirections);
-      emitSmiles(nb, atom, visited, sb, rc, ringEdges, bondDirections);
-      if (needParen) sb.append(')');
-    }
-  }
-
-  private int[] sortedNeighborsByCanonical(int atom) {
-    int[] sorted = neighbors[atom].clone();
-    for (int a = 0; a < sorted.length - 1; a++)
-      for (int b2 = a + 1; b2 < sorted.length; b2++)
-        if (canonicalLabel[sorted[a]] > canonicalLabel[sorted[b2]]) {
-          int tmp = sorted[a]; sorted[a] = sorted[b2]; sorted[b2] = tmp;
-        }
-    return sorted;
+    return toCanonicalSmiles(Collections.emptyMap());
   }
 
   /**
-   * Write an atom token, including tetrahedral stereo (@/@@) when present.
-   * The token is always bracket-form when stereo is present.
-   *
-   * Compare the emitted ligand order with the stored winding reference.
+   * Write canonical SMILES with positive map labels keyed by original atom indices.
+   * Labels affect the output only; canonical ranking and graph identity are unchanged.
    */
-  private void writeAtom(int atom, int parent, int[] sortedChildren,
-                         List<int[]>[] rc, Set<Long> ringEdges, StringBuilder sb) {
-    int z = atomicNum[atom], charge = formalCharge[atom];
-    boolean arom = aromatic[atom];
-    int chiral = (tetraChirality != null) ? tetraChirality[atom] : 0;
-    if(chiral!=0&&mol==null)chiral=3-chiral;
-    int mass = (massNumber != null) ? massNumber[atom] : 0;
-    // Only emit @/@@  when stereo is defined (1=CW, 2=CCW in our encoding)
-    boolean hasStereo = chiral != 0;
-    boolean hasIsotope = mass != 0;
-    int hCount = hydrogenCount(atom);
-    String sym = ORGANIC_SYMBOLS.get(z);
-    // Bare organic-subset form is legal only when there is no stereo, no
-    // charge, and no isotope label — otherwise we must open brackets.
-    if (sym != null && charge == 0 && !hasStereo && !hasIsotope
-        && hCount == defaultHydrogenCount(atom) && !(arom && hCount > 0 && (z == 7 || z == 15))) {
-      sb.append(arom ? Character.toLowerCase(sym.charAt(0)) : sym);
-    } else {
-      sb.append('[');
-      if (hasIsotope) sb.append(mass);
-      String elemSym = (z >= 0 && z < ELEMENT_SYMBOL.length && ELEMENT_SYMBOL[z] != null) ? ELEMENT_SYMBOL[z] : "?";
-      if (arom) {
-        sb.append(Character.toLowerCase(elemSym.charAt(0)));
-        if (elemSym.length() > 1) sb.append(elemSym.substring(1));
-      } else { sb.append(elemSym); }
-      if (hasStereo) {
-        int[] storedLigands = tetrahedralLigands(atom);
-        List<Integer> traversalSeq = new ArrayList<>();
-        if (parent >= 0) traversalSeq.add(parent);
-        if (storedLigands != null)
-          for (int ligand : storedLigands) if (ligand == -1) traversalSeq.add(-1);
-        if (rc[atom] != null) {
-          for (int[] entry : rc[atom]) traversalSeq.add(entry[1]);
-        }
-        for (int nb : sortedChildren) {
-          if (!traversalSeq.contains(nb)) traversalSeq.add(nb);
-        }
-        boolean oddPermutation = false;
-        if (storedLigands != null && traversalSeq.size() == storedLigands.length) {
-          for (int first = 0; first < storedLigands.length; first++)
-            for (int second = first + 1; second < storedLigands.length; second++)
-              if (traversalSeq.indexOf(storedLigands[first]) > traversalSeq.indexOf(storedLigands[second]))
-                oddPermutation = !oddPermutation;
-        }
-        sb.append((chiral == 1) ^ oddPermutation ? "@@" : "@");
-      }
-      // Emit implicit hydrogen count inside brackets. This is required for
-      // stereo centres (e.g. [C@@H]) and is standard practice for all bracket
-      // atoms — the reader cannot infer H count once brackets are in play.
-      if (hCount > 0) {
-        sb.append('H');
-        if (hCount > 1) sb.append(hCount);
-      }
-      if (charge > 0) { sb.append('+'); if (charge > 1) sb.append(charge); }
-      else if (charge < 0) { sb.append('-'); if (charge < -1) sb.append(-charge); }
-      sb.append(']');
-    }
-  }
-
-  /** Assign consistent single-bond directions across conjugated stereo elements. */
-  private Map<Long, Integer> smilesBondDirections() {
-    Map<Long, List<long[]>> constraints = new HashMap<>();
-    if (mol != null) {
-      for (IStereoElement<?, ?> stereo : mol.stereoElements()) {
-        if (!(stereo instanceof IDoubleBondStereochemistry)) continue;
-        IDoubleBondStereochemistry doubleBond = (IDoubleBondStereochemistry) stereo;
-        IBond focus = doubleBond.getStereoBond();
-        IAtom firstAtom = focus.getAtom(0), secondAtom = focus.getAtom(1);
-        int firstReference = -1, secondReference = -1;
-        for (IBond reference : doubleBond.getBonds()) {
-          if (reference.contains(firstAtom)) firstReference = mol.indexOf(reference.getOther(firstAtom));
-          if (reference.contains(secondAtom)) secondReference = mol.indexOf(reference.getOther(secondAtom));
-        }
-        if (firstReference >= 0 && secondReference >= 0)
-          addSmilesDirectionConstraint(constraints, mol.indexOf(firstAtom), firstReference,
-              mol.indexOf(secondAtom), secondReference,
-              doubleBond.getStereo() == IDoubleBondStereochemistry.Conformation.TOGETHER ? 1 : 2);
-      }
-    } else {
-      for (int firstAtom = 0; firstAtom < n; firstAtom++) {
-        for (int secondAtom : neighbors[firstAtom]) {
-          if (firstAtom >= secondAtom || bondOrder(firstAtom, secondAtom) != 2
-              || dbStereo(firstAtom, secondAtom) == 0) continue;
-          int firstReference = -1, secondReference = -1;
-          for (int neighbor : neighbors[firstAtom]) if (neighbor != secondAtom) { firstReference = neighbor; break; }
-          for (int neighbor : neighbors[secondAtom]) if (neighbor != firstAtom) { secondReference = neighbor; break; }
-          if (firstReference >= 0 && secondReference >= 0)
-            addSmilesDirectionConstraint(constraints, firstAtom, firstReference,
-                secondAtom, secondReference, dbStereo(firstAtom, secondAtom));
-        }
-      }
-    }
-    for (int atom = 0; atom < n; atom++) {
-      boolean doubleBondEnd = false;
-      for (int neighbor : neighbors[atom]) if (bondOrder(atom, neighbor) == 2) doubleBondEnd = true;
-      if (!doubleBondEnd) continue;
-      int firstReference = -1;
-      for (int neighbor : neighbors[atom]) {
-        if (!constraints.containsKey(bondKey(atom, neighbor))) continue;
-        if (firstReference < 0) firstReference = neighbor;
-        else addSmilesDirectionConstraint(constraints, atom, firstReference, atom, neighbor, 2);
-      }
-    }
-    List<Long> bonds = new ArrayList<>(constraints.keySet());
-    bonds.sort(Comparator.comparingInt((Long key) -> Math.min(canonicalLabel[(int) (key >>> 32)], canonicalLabel[(int) (long) key]))
-        .thenComparingInt(key -> Math.max(canonicalLabel[(int) (key >>> 32)], canonicalLabel[(int) (long) key])));
-    Map<Long, Integer> directions = new HashMap<>();
-    ArrayDeque<Long> pending = new ArrayDeque<>();
-    for (long bond : bonds) {
-      if (directions.containsKey(bond)) continue;
-      directions.put(bond, canonicalLabel[(int) (bond >>> 32)] < canonicalLabel[(int) bond] ? 1 : -1);
-      pending.add(bond);
-      while (!pending.isEmpty()) {
-        long current = pending.removeFirst();
-        for (long[] constraint : constraints.get(current)) {
-          int direction = directions.get(current) * (int) constraint[1];
-          Integer previous = directions.putIfAbsent(constraint[0], direction);
-          if (previous == null) pending.addLast(constraint[0]);
-          else if (previous != direction) throw new IllegalArgumentException("Inconsistent double-bond stereochemistry");
-        }
-      }
-    }
-    return directions;
-  }
-
-  /** Relate directions away from the two ends of one stereo double bond. */
-  private static void addSmilesDirectionConstraint(Map<Long, List<long[]>> constraints,
-      int firstAtom, int firstReference, int secondAtom, int secondReference, int conformation) {
-    long firstBond = bondKey(firstAtom, firstReference), secondBond = bondKey(secondAtom, secondReference);
-    int relation = (conformation == 1 ? 1 : -1)
-        * (firstAtom < firstReference ? 1 : -1) * (secondAtom < secondReference ? 1 : -1);
-    constraints.computeIfAbsent(firstBond, key -> new ArrayList<>()).add(new long[] {secondBond, relation});
-    constraints.computeIfAbsent(secondBond, key -> new ArrayList<>()).add(new long[] {firstBond, relation});
-  }
-
-  /**
-   * Write the bond token between from→to.
-   * For single bonds adjacent to a stereo double bond we emit '/' or '\'.
-   * Direction is relative to the from→to traversal direction.
-   */
-  private void writeBondSymbol(int from, int to, StringBuilder sb, Map<Long, Integer> bondDirections) {
-    int order = bondOrder(from, to);
-    boolean fromArom = aromatic[from], toArom = aromatic[to];
-    // Order 4 = aromatic bond inside an aromatic ring → implicit (no symbol).
-    if (order == 4) return;
-    if (order == 2) { sb.append('='); return; }
-    if (order == 3) { sb.append('#'); return; }
-    if (order == 1) {
-      Integer direction = bondDirections.get(bondKey(from, to));
-      if (direction != null) {
-        sb.append(direction * (from < to ? 1 : -1) > 0 ? '/' : '\\');
-        return;
-      }
-      // Single bond between TWO aromatic atoms must be emitted explicitly
-      // as '-' so that biphenyl c1ccc(-c2ccccc2)cc1 is distinguished from an
-      // aromatic ring fusion. Otherwise single bonds are implicit.
-      if (fromArom && toArom) { sb.append('-'); return; }
-    }
-  }
-
-  private void writeRingDigit(int rid, StringBuilder sb) {
-    if (rid < 10) sb.append(rid);
-    else { sb.append('%'); sb.append(rid); }
+  public String toCanonicalSmiles(Map<Integer, Integer> atomMaps) {
+    return SmilesWriter.write(this, atomMaps);
   }
 
   // ---- Builder ----
@@ -3735,6 +1121,12 @@ public final class MolGraph {
     public Builder bondOrders(int[][] bondOrders) { this.bondOrders = bondOrders; return this; }
     public Builder bondRingFlags(boolean[][] bondRings) { this.bondRings = bondRings; return this; }
     public Builder bondAromaticFlags(boolean[][] bondAroms) { this.bondAroms = bondAroms; return this; }
+    /**
+     * Optional tetrahedral tags: 0 for none, 1 for anticlockwise (@) and 2 for clockwise (@@), as
+     * in SMILES and the native core. A tag winds the neighbours in their order, with an implicit
+     * hydrogen or lone pair second when the first neighbour has a lower index than the atom and
+     * first otherwise.
+     */
     public Builder tetrahedralChirality(int[] tetraChirality) { this.tetraChirality = tetraChirality; return this; }
     public Builder doubleBondStereo(int[][] dbStereoConf) { this.dbStereoConf = dbStereoConf; return this; }
     /** Optional external atom IDs (1-based, gaps allowed). Length must equal atomCount if provided. */
@@ -3744,24 +1136,28 @@ public final class MolGraph {
     public Builder comment(String comment) { this.comment = comment; return this; }
     public Builder properties(Map<String, String> properties) { this.properties = properties; return this; }
 
-    private static int classifyRow(int[] row, int deg, int atomCount, String name) {
-      if (row == null) {
-        if (deg == 0) return ROW_PARALLEL;
-        throw new IllegalArgumentException(name + " rows must have length == neighbor count or atomCount");
-      }
-      if (row.length == deg) return ROW_PARALLEL;
-      if (row.length == atomCount) return ROW_DENSE;
-      throw new IllegalArgumentException(name + " rows must have length == neighbor count or atomCount");
+    /** Reject an array whose length (-1 when it is missing) is not the atom count. */
+    private void requireLength(String name, int length) {
+      if (length != n)
+        throw new IllegalArgumentException(name + " must have length == atomCount");
     }
 
-    private static int classifyRow(boolean[] row, int deg, int atomCount, String name) {
-      if (row == null) {
-        if (deg == 0) return ROW_PARALLEL;
-        throw new IllegalArgumentException(name + " rows must have length == neighbor count or atomCount");
+    /**
+     * The layout of each bond property row: parallel to the neighbour list, or dense over every
+     * atom. A missing row is parallel to an empty neighbour list.
+     */
+    private int[] rowLayouts(Object[] rows, String name) {
+      int[] layout = new int[n];
+      if (rows == null) return layout;
+      for (int i = 0; i < n; i++) {
+        Object row = rows[i];
+        int length = row == null ? -1 : row instanceof int[] ? ((int[]) row).length : ((boolean[]) row).length;
+        int deg = neighbors[i] != null ? neighbors[i].length : 0;
+        if (length == deg || (length < 0 && deg == 0)) layout[i] = ROW_PARALLEL;
+        else if (length == n) layout[i] = ROW_DENSE;
+        else throw new IllegalArgumentException(name + " rows must have length == neighbour count or atomCount");
       }
-      if (row.length == deg) return ROW_PARALLEL;
-      if (row.length == atomCount) return ROW_DENSE;
-      throw new IllegalArgumentException(name + " rows must have length == neighbor count or atomCount");
+      return layout;
     }
 
     private static int intPropAt(int[][] rows, int[] enc, int i, int k, int j, int fallback) {
@@ -3779,35 +1175,20 @@ public final class MolGraph {
     }
 
     public MolGraph build() {
-      if (n < 0)
-        throw new IllegalArgumentException("atomCount must be >= 0");
-      if (atomicNum == null || atomicNum.length != n)
-        throw new IllegalArgumentException("atomicNumbers must have length == atomCount (" + n + ")");
-      if (neighbors == null || neighbors.length != n)
-        throw new IllegalArgumentException("neighbors must have length == atomCount (" + n + ")");
-      // Validate optional arrays: if provided, size must match atomCount
-      if (formalCharge != null && formalCharge.length != n)
-        throw new IllegalArgumentException("formalCharges length (" + formalCharge.length + ") != atomCount (" + n + ")");
-      if (massNumber != null && massNumber.length != n)
-        throw new IllegalArgumentException("massNumbers length (" + massNumber.length + ") != atomCount (" + n + ")");
-      if (hydrogenCounts != null && hydrogenCounts.length != n)
-        throw new IllegalArgumentException("hydrogenCounts length must equal atomCount");
-      if (ring != null && ring.length != n)
-        throw new IllegalArgumentException("ringFlags length (" + ring.length + ") != atomCount (" + n + ")");
-      if (aromatic != null && aromatic.length != n)
-        throw new IllegalArgumentException("aromaticFlags length (" + aromatic.length + ") != atomCount (" + n + ")");
-      if (tetraChirality != null && tetraChirality.length != n)
-        throw new IllegalArgumentException("tetrahedralChirality length (" + tetraChirality.length + ") != atomCount (" + n + ")");
-      if (atomIds != null && atomIds.length != n)
-        throw new IllegalArgumentException("atomIds length (" + atomIds.length + ") != atomCount (" + n + ")");
-      if (bondOrders != null && bondOrders.length != n)
-        throw new IllegalArgumentException("bondOrders length (" + bondOrders.length + ") != atomCount (" + n + ")");
-      if (bondRings != null && bondRings.length != n)
-        throw new IllegalArgumentException("bondRingFlags length (" + bondRings.length + ") != atomCount (" + n + ")");
-      if (bondAroms != null && bondAroms.length != n)
-        throw new IllegalArgumentException("bondAromaticFlags length (" + bondAroms.length + ") != atomCount (" + n + ")");
-      if (dbStereoConf != null && dbStereoConf.length != n)
-        throw new IllegalArgumentException("doubleBondStereo length (" + dbStereoConf.length + ") != atomCount (" + n + ")");
+      requireLength("atomicNumbers", atomicNum != null ? atomicNum.length : -1);
+      requireLength("neighbors", neighbors != null ? neighbors.length : -1);
+      // The optional arrays, when supplied, cover every atom.
+      if (formalCharge != null) requireLength("formalCharges", formalCharge.length);
+      if (massNumber != null) requireLength("massNumbers", massNumber.length);
+      if (hydrogenCounts != null) requireLength("hydrogenCounts", hydrogenCounts.length);
+      if (ring != null) requireLength("ringFlags", ring.length);
+      if (aromatic != null) requireLength("aromaticFlags", aromatic.length);
+      if (tetraChirality != null) requireLength("tetrahedralChirality", tetraChirality.length);
+      if (atomIds != null) requireLength("atomIds", atomIds.length);
+      if (bondOrders != null) requireLength("bondOrders", bondOrders.length);
+      if (bondRings != null) requireLength("bondRingFlags", bondRings.length);
+      if (bondAroms != null) requireLength("bondAromaticFlags", bondAroms.length);
+      if (dbStereoConf != null) requireLength("doubleBondStereo", dbStereoConf.length);
 
       for (int i = 0; i < n; i++) {
         if (atomicNum[i] < 0 || atomicNum[i] > 118)
@@ -3828,35 +1209,17 @@ public final class MolGraph {
         for (int k = 0; k < neighbors[i].length; k++) {
           int nb = neighbors[i][k];
           if (nb < 0 || nb >= n)
-            throw new IllegalArgumentException("neighbor index " + nb + " out of range [0, " + n + ") at atom " + i);
+            throw new IllegalArgumentException("neighbour index " + nb + " out of range [0, " + n + ") at atom " + i);
           if (nb == i)
-            throw new IllegalArgumentException("self-loop detected in neighbors at atom " + i);
+            throw new IllegalArgumentException("self-loop detected in neighbours at atom " + i);
           if (neighborIndex[i].put(nb, k) != null)
-            throw new IllegalArgumentException("duplicate neighbor " + nb + " detected at atom " + i);
+            throw new IllegalArgumentException("duplicate neighbour " + nb + " detected at atom " + i);
         }
       }
 
-      int[] bondOrderEnc = new int[n];
-      int[] bondRingEnc = new int[n];
-      int[] bondAromEnc = new int[n];
-      if (bondOrders != null) {
-        for (int i = 0; i < n; i++) {
-          int deg = neighbors[i] != null ? neighbors[i].length : 0;
-          bondOrderEnc[i] = classifyRow(bondOrders[i], deg, n, "bondOrders");
-        }
-      }
-      if (bondRings != null) {
-        for (int i = 0; i < n; i++) {
-          int deg = neighbors[i] != null ? neighbors[i].length : 0;
-          bondRingEnc[i] = classifyRow(bondRings[i], deg, n, "bondRingFlags");
-        }
-      }
-      if (bondAroms != null) {
-        for (int i = 0; i < n; i++) {
-          int deg = neighbors[i] != null ? neighbors[i].length : 0;
-          bondAromEnc[i] = classifyRow(bondAroms[i], deg, n, "bondAromaticFlags");
-        }
-      }
+      int[] bondOrderEnc = rowLayouts(bondOrders, "bondOrders");
+      int[] bondRingEnc = rowLayouts(bondRings, "bondRingFlags");
+      int[] bondAromEnc = rowLayouts(bondAroms, "bondAromaticFlags");
 
       for (int i = 0; i < n; i++) {
         if (neighbors[i] == null) continue;
@@ -3910,8 +1273,8 @@ public final class MolGraph {
               if (k == null)
                 throw new IllegalArgumentException("doubleBondStereo requires a bond");
               int ord = intPropAt(bondOrders, bondOrderEnc, i, k, j, 1);
-              if (ord != 2)
-                throw new IllegalArgumentException("doubleBondStereo requires bond order 2");
+              if (ord != 2 && ord != 4)
+                throw new IllegalArgumentException("doubleBondStereo requires bond order 2 or 4");
             }
           }
         }
@@ -3934,26 +1297,6 @@ public final class MolGraph {
 
   static final int[] EMPTY_NLF = new int[0];
 
-  static int[] freqMapToSortedArray(Map<Integer, Integer> freq) {
-    if (freq.isEmpty()) return EMPTY_NLF;
-    int[] arr = new int[freq.size() * 2];
-    int k = 0;
-    for (Map.Entry<Integer, Integer> e : freq.entrySet()) { arr[k++] = e.getKey(); arr[k++] = e.getValue(); }
-    int pairs = freq.size();
-    for (int i = 1; i < pairs; i++) {
-      int keyLabel = arr[i * 2], keyFreq = arr[i * 2 + 1];
-      int j = i - 1;
-      while (j >= 0 && arr[j * 2] > keyLabel) {
-        arr[(j + 1) * 2] = arr[j * 2];
-        arr[(j + 1) * 2 + 1] = arr[j * 2 + 1];
-        j--;
-      }
-      arr[(j + 1) * 2] = keyLabel;
-      arr[(j + 1) * 2 + 1] = keyFreq;
-    }
-    return arr;
-  }
-
   /**
    * NLF label: atomicNum + aromaticity, WITHOUT ring bit.
    * Ring compatibility is enforced separately in atom/bond checks so the
@@ -3967,18 +1310,21 @@ public final class MolGraph {
     int[] nbs = g.neighbors[idx];
     int deg = nbs.length;
     if (deg == 0) return EMPTY_NLF;
-    // Fast path: avoid HashMap for small neighbourhoods (common case: degree 1-6).
-    // Collect labels, sort, then run-length encode.
     int[] labels = new int[deg];
     for (int i = 0; i < deg; i++) labels[i] = nlfLabel(g, nbs[i]);
-    Arrays.sort(labels);
-    // Count distinct labels
+    return labelCounts(labels, deg);
+  }
+
+  /** Sort the first {@code count} labels and return ascending (label, frequency) pairs. */
+  private static int[] labelCounts(int[] labels, int count) {
+    if (count == 0) return EMPTY_NLF;
+    Arrays.sort(labels, 0, count);
     int distinct = 1;
-    for (int i = 1; i < deg; i++) if (labels[i] != labels[i - 1]) distinct++;
+    for (int i = 1; i < count; i++) if (labels[i] != labels[i - 1]) distinct++;
     int[] arr = new int[distinct * 2];
     int k = 0;
     arr[0] = labels[0]; arr[1] = 1;
-    for (int i = 1; i < deg; i++) {
+    for (int i = 1; i < count; i++) {
       if (labels[i] == labels[i - 1]) { arr[k + 1]++; }
       else { k += 2; arr[k] = labels[i]; arr[k + 1] = 1; }
     }
@@ -3999,23 +1345,27 @@ public final class MolGraph {
    * mapped atom's distance without invalidating the query embedding.
    */
   private static int[] buildNeighborhoodNLF(MolGraph g, int idx, int radius) {
-    Map<Integer, Integer> freq = new HashMap<>();
-    BitSet seen = new BitSet(g.n);
-    seen.set(idx);
-    BitSet frontier = new BitSet(g.n);
-    frontier.set(idx);
-    for (int distance = 0; distance < radius && !frontier.isEmpty(); distance++) {
-      BitSet next = new BitSet(g.n);
-      for (int v = frontier.nextSetBit(0); v >= 0; v = frontier.nextSetBit(v + 1))
-        for (int j : g.neighbors[v]) {
-          if (seen.get(j)) continue;
-          seen.set(j);
-          next.set(j);
-          freq.merge(nlfLabel(g, j), 1, Integer::sum);
-        }
-      frontier = next;
+    return buildNeighborhoodNLF(g, idx, radius, new int[g.n], 1, new int[g.n]);
+  }
+
+  /**
+   * The same labels with the caller's work arrays of at least {@code g.n} entries each: an atom
+   * counts as seen when its {@code seen} entry equals {@code stamp}, which no entry holds before.
+   */
+  static int[] buildNeighborhoodNLF(MolGraph g, int idx, int radius, int[] seen, int stamp, int[] reached) {
+    seen[idx] = stamp;
+    reached[0] = idx;
+    int levelStart = 0, end = 1;
+    for (int distance = 0; distance < radius && levelStart < end; distance++) {
+      int levelEnd = end;
+      for (int k = levelStart; k < levelEnd; k++)
+        for (int j : g.neighbors[reached[k]])
+          if (seen[j] != stamp) { seen[j] = stamp; reached[end++] = j; }
+      levelStart = levelEnd;
     }
-    return freqMapToSortedArray(freq);
+    // Reuse the visit list for the labels of every reached atom except the root.
+    for (int k = 1; k < end; k++) reached[k - 1] = nlfLabel(g, reached[k]);
+    return labelCounts(reached, end - 1);
   }
 
   // ---------------------------------------------------------------------------
@@ -4151,14 +1501,6 @@ public final class MolGraph {
     return true;
   }
 
-  static boolean nlfCheckOk(
-      int qi, int tj, int[][] qNLF1, int[][] tNLF1, int[][] qNLF2, int[][] tNLF2,
-      int[][] qNLF3, int[][] tNLF3, boolean useTwoHop, boolean useThreeHop) {
-    if (!nlfOk(qNLF1[qi], tNLF1[tj])) return false;
-    if (useTwoHop && !nlfOk(qNLF2[qi], tNLF2[tj])) return false;
-    return !useThreeHop || nlfOk(qNLF3[qi], tNLF3[tj]);
-  }
-
   @FunctionalInterface
   interface NLFBuilder {
     int[] build(MolGraph g, int idx);
@@ -4170,9 +1512,56 @@ public final class MolGraph {
     return nlf;
   }
 
-  // ---- Bond compatibility (ChemOps) ----
+  // ---- Atom and bond compatibility (ChemOps) ----
 
+  /** The atom and bond matching rules that every search applies. */
   static final class ChemOps {
+    /**
+     * Whether two query atoms are indistinguishable to {@link #atomsCompatFast}. This reads every
+     * query property that method reads under the same options, so equal atoms have equal domains.
+     */
+    static boolean sameAtomConstraints(MolGraph gq, int first, int second, ChemOptions C) {
+      if (C.matchAtomType && gq.atomicNum[first] != gq.atomicNum[second]) return false;
+      if (C.matchFormalCharge && gq.formalCharge[first] != gq.formalCharge[second]) return false;
+      if (C.aromaticityMode == ChemOptions.AromaticityMode.STRICT && gq.aromatic[first] != gq.aromatic[second])
+        return false;
+      if ((C.ringMatchesRingOnly || C.ringFusionMode != ChemOptions.RingFusionMode.IGNORE)
+          && gq.ring[first] != gq.ring[second]) return false;
+      if (C.matchIsotope && gq.massNumber[first] != gq.massNumber[second]) return false;
+      if (C.useChirality && gq.tetraChirality != null) {
+        int stereo = gq.tetraChirality[first];
+        if (stereo != gq.tetraChirality[second]) return false;
+        if (stereo != 0 && (gq.tetrahedralLigands(first) == null) != (gq.tetrahedralLigands(second) == null))
+          return false;
+      }
+      return C.ringFusionMode != ChemOptions.RingFusionMode.STRICT || gq.ringCount[first] == gq.ringCount[second];
+    }
+
+    static boolean atomsCompatFast(MolGraph gq, int qi, MolGraph gt, int tj, ChemOptions C) {
+      // Tautomerism changes hydrogen placement and bond order, not elemental identity.
+      if (C.matchAtomType && gq.atomicNum[qi] != gt.atomicNum[tj]) return false;
+      if (C.matchFormalCharge && gq.formalCharge[qi] != gt.formalCharge[tj]) return false;
+      if (C.aromaticityMode == ChemOptions.AromaticityMode.STRICT && gq.aromatic[qi] != gt.aromatic[tj]) return false;
+      if (C.ringMatchesRingOnly && gq.ring[qi] != gt.ring[tj]) return false;
+      if (C.matchIsotope) {
+        int qm = gq.massNumber[qi], tm = gt.massNumber[tj];
+        if (qm != 0 && tm != 0 && qm != tm) return false;
+      }
+      if (C.useChirality && gq.tetraChirality != null && gt.tetraChirality != null) {
+        int qs = gq.tetraChirality[qi], ts = gt.tetraChirality[tj];
+        if (qs != 0 && ts != 0) {
+          // Preserve the comparison of explicitly supplied invalid builder annotations.
+          if ((gq.tetrahedralLigands(qi) == null || gt.tetrahedralLigands(tj) == null) && qs != ts) return false;
+        }
+      }
+      if (C.ringFusionMode != ChemOptions.RingFusionMode.IGNORE && gq.ring[qi] && gt.ring[tj]) {
+        if (C.ringFusionMode == ChemOptions.RingFusionMode.STRICT) {
+          if (gq.ringCount[qi] != gt.ringCount[tj]) return false;
+        }
+      }
+      return true;
+    }
+
     static boolean bondsCompatible(MolGraph g1, int qi, int qk, MolGraph g2, int tj, int tk, ChemOptions C) {
       int qOrd = g1.bondOrder(qi, qk), tOrd = g2.bondOrder(tj, tk);
       if (qOrd == 0 || tOrd == 0) return false;
@@ -4192,6 +1581,11 @@ public final class MolGraph {
       if (C.aromaticityMode == ChemOptions.AromaticityMode.FLEXIBLE) {
         boolean qa = g1.bondAromatic(qi, qk), ta = g2.bondAromatic(tj, tk);
         if ((qa && ta) || (qa && (tOrd == 1 || tOrd == 2)) || (ta && (qOrd == 1 || qOrd == 2))) return true;
+        // Resonance: a single and a double bond are interchangeable when both ends of each are
+        // aromatic, which covers Kekule forms drawn differently (such as a pyridone drawn as C=O
+        // or as C-O) without tautomer classes.
+        if (g1.aromatic[qi] && g1.aromatic[qk] && g2.aromatic[tj] && g2.aromatic[tk]
+            && (qOrd == 1 || qOrd == 2) && (tOrd == 1 || tOrd == 2)) return true;
       }
       return false;
     }

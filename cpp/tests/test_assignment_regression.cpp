@@ -2,9 +2,11 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  *
  * Rectangular assignment regressions with an exhaustive injection oracle.
  */
+#include "test_support.hpp"
 #include "smsd/hungarian.hpp"
 
 #include <functional>
@@ -16,9 +18,7 @@
 
 using Costs = std::vector<std::vector<double>>;
 
-static void require(bool condition, const char* message) {
-    if (!condition) throw std::runtime_error(message);
-}
+using smsd_test::require;
 
 static double assignmentOracle(const Costs& cost) {
     const int rows = static_cast<int>(cost.size());
@@ -113,13 +113,5 @@ static void testInvalidInputs() {
 }
 
 int main(int argc, char** argv) {
-    try {
-        const std::string category = argc > 1 ? argv[1] : "all";
-        if (category == "all" || category == "finite") testFiniteCosts();
-        if (category == "all" || category == "invalid") testInvalidInputs();
-        return 0;
-    } catch (const std::exception& error) {
-        std::cerr << "Assignment regression failed: " << error.what() << '\n';
-        return 1;
-    }
+    return smsd_test::runGroups(argc, argv, {{"finite", testFiniteCosts}, {"invalid", testInvalidInputs}});
 }

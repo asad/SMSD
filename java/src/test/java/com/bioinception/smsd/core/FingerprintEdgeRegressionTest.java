@@ -1,4 +1,9 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2018-2026 BioInception PVT LTD
+ * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ */
 package com.bioinception.smsd.core;
 
 import java.util.Arrays;
@@ -8,17 +13,13 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.silent.SilentChemObjectBuilder;
-import org.openscience.cdk.smiles.SmilesParser;
+import static com.bioinception.smsd.TestSupport.rawMolecule;
 import static org.junit.jupiter.api.Assertions.*;
 
 class FingerprintEdgeRegressionTest {
-  private static IAtomContainer molecule(String smiles) throws Exception {
-    return new SmilesParser(SilentChemObjectBuilder.getInstance()).parseSmiles(smiles);
-  }
-
+  /** The standardised graph that the fingerprints of a molecule are computed on. */
   private static MolGraph graph(String smiles) throws Exception {
-    return FingerprintEngine.toMolGraph(molecule(smiles));
+    return FingerprintEngine.toMolGraph(rawMolecule(smiles));
   }
 
   @Test void aromaticTorsionsDistinguishBenzeneFromCyclohexane() throws Exception {
@@ -30,11 +31,11 @@ class FingerprintEdgeRegressionTest {
     assertArrayEquals(new int[]{1337}, FingerprintEngine.toBitSet(FingerprintEngine.topologicalTorsion(benzene, 2048)).stream().toArray());
     assertArrayEquals(new int[]{1177}, FingerprintEngine.toBitSet(FingerprintEngine.topologicalTorsion(cyclohexane, 2048)).stream().toArray());
     assertArrayEquals(FingerprintEngine.topologicalTorsion(benzene, 2048),
-        FingerprintEngine.topologicalTorsion(molecule("C1=CC=CC=C1"), 2048));
+        FingerprintEngine.topologicalTorsion(rawMolecule("C1=CC=CC=C1"), 2048));
   }
 
   @Test void pathLimitsBeyondTheMoleculeDoNotAllocateUnreachableDepths() throws Exception {
-    IAtomContainer ethanol = molecule("CCO");
+    IAtomContainer ethanol = rawMolecule("CCO");
     assertArrayEquals(FingerprintEngine.pathFingerprint(ethanol, 2, 1024),
         FingerprintEngine.pathFingerprint(ethanol, Integer.MAX_VALUE, 1024));
     MolGraph graph = graph("CCO");
@@ -56,7 +57,7 @@ class FingerprintEdgeRegressionTest {
   }
 
   @Test void zeroLengthPathsContainOnlyTheSelectedAtomTypes() throws Exception {
-    IAtomContainer ethanol = molecule("CCO"), atoms = molecule("C.C.O");
+    IAtomContainer ethanol = rawMolecule("CCO"), atoms = rawMolecule("C.C.O");
     assertArrayEquals(FingerprintEngine.pathFingerprint(atoms, 0, 1024),
         FingerprintEngine.pathFingerprint(ethanol, 0, 1024));
     assertFalse(Arrays.equals(FingerprintEngine.pathFingerprint(ethanol, 0, 1024),
@@ -85,7 +86,7 @@ class FingerprintEdgeRegressionTest {
   }
 
   @Test void invalidDimensionsHaveExplicitArgumentErrors() throws Exception {
-    IAtomContainer molecule = molecule("CC");
+    IAtomContainer molecule = rawMolecule("CC");
     MolGraph graph = graph("CC");
     assertThrows(IllegalArgumentException.class, () -> FingerprintEngine.mcsFingerprint(graph, -1, 1024));
     assertThrows(IllegalArgumentException.class, () -> FingerprintEngine.mcsFingerprint(graph, 1, 0));

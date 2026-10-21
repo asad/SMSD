@@ -2,7 +2,8 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
- * See the NOTICE file for attribution, trademark, and algorithm IP terms. *
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ *
  * Header-only OpenSMILES parser and writer for smsd::MolGraph.
  * Zero external dependencies -- pure C++17 standard library.
  */
@@ -10,9 +11,10 @@
 #ifndef SMSD_SMILES_PARSER_HPP
 #define SMSD_SMILES_PARSER_HPP
 
-#include "mol_graph.hpp"
-#include "parser_utils.hpp"
-#include "smiles_utils.hpp"
+#include "smsd/mol_graph.hpp"
+#include "smsd/parser_utils.hpp"
+#include "smsd/smiles_utils.hpp"
+#include "smsd/stereo.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -93,7 +95,7 @@ public:
                     if (pos_ < smi_.size() && smi_[pos_] != ')')
                         parseChain(atoms_.empty() ? -1 : static_cast<int>(atoms_.size()) - 1, 0, 0);
                 } else {
-                    pos_++; // skip truly unrecognized characters
+                    pos_++; // skip truly unrecognised characters
                 }
             }
         }
@@ -220,6 +222,19 @@ private:
         }
     }
 
+    /**
+     * Reads a numeric field of a bracket atom of at most `digits` digits, or returns -1 when no
+     * digit follows. OpenSMILES allows three digits for an isotope, one for a hydrogen count and
+     * two for a charge; a longer field is rejected, in lenient mode as well.
+     */
+    int readBracketField(size_t digits, const char* field, const char* limit) {
+        const size_t start = pos_;
+        const int value = parser_detail::readDecimal(smi_, pos_);
+        if (pos_ - start > digits)
+            throw std::invalid_argument(std::string(field) + " in bracket atom exceeds " + limit);
+        return value;
+    }
+
     int parseBracketAtom() {
         if (pos_ >= smi_.size() || smi_[pos_] != '[') return -1;
         pos_++; // skip '['
@@ -227,8 +242,8 @@ private:
         ParsedAtom a;
         a.isBracket = true;
 
-        // Isotope (optional digits)
-        const int isotope = parser_detail::readDecimal(smi_, pos_);
+        // Isotope (optional digits, at most three)
+        const int isotope = readBracketField(3, "Isotope", "three digits");
         if (isotope >= 0) a.isotope = isotope;
 
         // Element symbol
@@ -340,25 +355,25 @@ private:
             }
         }
 
-        // Hydrogen count (optional)
+        // Hydrogen count (optional): H alone is one hydrogen, and a single digit gives the count.
         if (pos_ < smi_.size() && smi_[pos_] == 'H') {
             pos_++;
             int hc = 1;
             if (pos_ < smi_.size() && std::isdigit(smi_[pos_])) {
-                hc = parser_detail::readDecimal(smi_, pos_);
+                hc = readBracketField(1, "Hydrogen count", "one digit");
             }
             a.hcount = hc;
         } else {
             a.hcount = 0;  // bracket atom with no H specified means 0
         }
 
-        // Charge (optional)
+        // Charge (optional): a sign with up to two digits, or repeated signs, within -15 to +15.
         if (pos_ < smi_.size() && (smi_[pos_] == '+' || smi_[pos_] == '-')) {
             char sign = smi_[pos_];
             pos_++;
             int chg = 1;
             if (pos_ < smi_.size() && std::isdigit(smi_[pos_])) {
-                chg = parser_detail::readDecimal(smi_, pos_);
+                chg = readBracketField(2, "Charge", "two digits");
             } else {
                 // Count repeated signs: ++ = +2, +++ = +3
                 while (pos_ < smi_.size() && smi_[pos_] == sign) {
@@ -366,6 +381,8 @@ private:
                     pos_++;
                 }
             }
+            if (chg > 15)
+                throw std::invalid_argument("Charge in bracket atom exceeds the OpenSMILES range of -15 to +15");
             a.charge = (sign == '+') ? chg : -chg;
         }
 
@@ -494,8 +511,8 @@ private:
                     bo = openBo;
                 }
 
-                // Reconcile stereo
-                if (ringBondStereo != 0) st = ringBondStereo;
+                // Closing directions point back towards the opening atom.
+                if (ringBondStereo != 0) st = 3 - ringBondStereo;
                 else if (openStereo != 0) st = openStereo;
 
                 if (bo == 0) {
@@ -624,10 +641,8 @@ inline MolGraph buildMolGraph(const std::vector<ParsedAtom>& atoms,
     // Track bond order sums for implicit H calculation
     std::vector<int> bondOrderSum(n, 0);
 
-    // Double bond stereo tracking
-    // We'll store stereo info on bonds: dbStereo[i][j] = 1 (/) or 2 (\)
-    // Actually dbStereoConf in MolGraph stores config per atom pair for
-    // the C=C bond endpoints. We need to track / and \ on single bonds.
+    // Double bond stereo tracking: / and \ are read from the single bonds, and
+    // dbStereoConf in MolGraph holds the configuration by the atom pair of each C=C bond.
 
     for (auto& b : bonds) {
         int i = b.from, j = b.to;
@@ -705,15 +720,16 @@ inline MolGraph buildMolGraph(const std::vector<ParsedAtom>& atoms,
 
         // Implicit H: bracket atoms have explicit hcount, organic atoms compute from valence
         if (a.hcount == -1) {
-            // Organic subset atom: compute implicit H
-            // Bond order sum: for aromatic bonds count 1, for others count the order
-            // Actually we already have bondOrderSum computed correctly
-            // No need to adjust -- computeImplicitH handles aromatic flag
+            // Organic subset atom: implicit H from bondOrderSum, which counts an aromatic
+            // bond once; computeImplicitH adds the pi contribution of an aromatic atom.
             hydrogenCounts[i] = computeImplicitH(
                 a.atomicNum, a.isAromatic, bondOrderSum[i], a.charge);
         } else {
             hydrogenCounts[i] = a.hcount;
         }
+        // A tag on an atom that is not a tetrahedral centre is dropped, as Java parsing does.
+        if (chirality[i] != 0 && !stereo_detail::tetrahedralCentre(neighbors[i].size(), hydrogenCounts[i], a.atomicNum))
+            chirality[i] = 0;
         // Target properties use int counts, including explicit bonds and H atoms.
         const int64_t totalValence = int64_t(hydrogenCounts[i]) + bondOrderSum[i];
         const int64_t connectivity = int64_t(hydrogenCounts[i]) + neighbors[i].size();
@@ -885,116 +901,16 @@ inline std::string writeCanonicalSMARTS(const MolGraph& g,
     for (int atom = 0; atom < n; ++atom)
         implicitH[atom] = hydrogenCountForWrite(g, atom);
 
-    // Connected components
-    std::vector<bool> compVis(n, false);
-    std::vector<std::vector<int>> components;
-    for (int i = 0; i < n; i++) {
-        if (compVis[i]) continue;
-        std::vector<int> comp;
-        std::deque<int> bfsQ;
-        bfsQ.push_back(i); compVis[i] = true;
-        while (!bfsQ.empty()) {
-            int u = bfsQ.front(); bfsQ.pop_front();
-            comp.push_back(u);
-            for (int v : g.neighbors[u])
-                if (!compVis[v]) { compVis[v] = true; bfsQ.push_back(v); }
-        }
-        components.push_back(std::move(comp));
-    }
-
-    // Neighbour iterator in canonical order
-    auto sortedNbs = [&](int atom) {
-        std::vector<int> nbs = g.neighbors[atom];
-        std::sort(nbs.begin(), nbs.end(),
-                  [&](int a, int b){ return canon[a] < canon[b]; });
-        return nbs;
-    };
-
-    struct RingDigit { int rn; int bo; };
-    std::vector<std::vector<RingDigit>> ringDigits(n);
     std::ostringstream result;
-
+    const auto components = connectedComponents(g);
     for (size_t ci = 0; ci < components.size(); ci++) {
         if (ci > 0) result << '.';
-        auto& comp = components[ci];
-
-        // Root = atom with lowest canonical label in this component
-        int root = comp[0];
-        for (int a : comp)
-            if (canon[a] < canon[root]) root = a;
-
-        // Phase 1: DFS to discover tree/back edges and assign ring-closure numbers.
-        // Each bond gets exactly one ring-closure number; guard with assignedRings
-        // to avoid recording the same back-edge from both its endpoints.
-        std::vector<bool> vis(n, false);
-        std::set<int64_t> treeEdges;
-        std::set<int64_t> assignedRings;
-        int ringCounter = 1;
-
-        std::function<void(int, int)> dfs1 = [&](int atom, int parent) {
-            vis[atom] = true;
-            auto nbs = sortedNbs(atom);
-            bool parentSkipped = false;
-            for (int nb : nbs) {
-                if (nb == parent && !parentSkipped) { parentSkipped = true; continue; }
-                if (vis[nb]) {
-                    int64_t bk = MolGraph::bondKey(atom, nb);
-                    if (assignedRings.insert(bk).second) {
-                        int rn = ringCounter++;
-                        int bo = g.bondOrder(atom, nb);
-                        ringDigits[atom].push_back({rn, bo});
-                        ringDigits[nb].push_back({rn, bo});
-                    }
-                } else {
-                    treeEdges.insert(MolGraph::bondKey(atom, nb));
-                    dfs1(nb, atom);
-                }
-            }
-        };
-        dfs1(root, -1);
-
-        // Phase 2: DFS to emit SMARTS tokens
-        vis.assign(n, false);
-        std::string smStr;
-        std::unordered_set<int> emittedRings;
-
-        std::function<void(int, int)> dfs2 = [&](int atom, int parent) {
-            vis[atom] = true;
-            smStr += writeAtomSMARTS(g, atom, implicitH[atom],
-                                     inclArom, inclCharge, inclRing,
-                                     inclHCount, inclIsotope);
-
-            for (auto& rd : ringDigits[atom]) {
-                if (emittedRings.find(rd.rn) == emittedRings.end())
-                    emittedRings.insert(rd.rn);
-                smStr += bondSymbolSMARTS(rd.bo);
-                if (rd.rn < 10) smStr += std::to_string(rd.rn);
-                else            smStr += "%" + std::to_string(rd.rn);
-            }
-
-            auto nbs = sortedNbs(atom);
-            std::vector<int> children;
-            for (int nb : nbs) {
-                if (!vis[nb] && treeEdges.count(MolGraph::bondKey(atom, nb)))
-                    children.push_back(nb);
-            }
-
-            for (size_t i = 0; i < children.size(); i++) {
-                int nb = children[i];
-                if (vis[nb]) continue;
-                std::string bs = bondSymbolSMARTS(g.bondOrder(atom, nb));
-                if (i < children.size() - 1) {
-                    smStr += "(" + bs;
-                    dfs2(nb, atom);
-                    smStr += ")";
-                } else {
-                    smStr += bs;
-                    dfs2(nb, atom);
-                }
-            }
-        };
-        dfs2(root, -1);
-        result << smStr;
+        result << writeCanonicalComponent(g, canon, components[ci],
+            [&](int atom, int, const std::vector<int>&, const std::vector<RingDigit>&) {
+                return writeAtomSMARTS(g, atom, implicitH[atom], inclArom, inclCharge, inclRing, inclHCount, inclIsotope);
+            },
+            [&](int, const RingDigit& digit, bool) { return bondSymbolSMARTS(digit.bo); },
+            [&](int atom, int nb) { return bondSymbolSMARTS(g.bondOrder(atom, nb)); });
     }
 
     return result.str();
@@ -1044,11 +960,9 @@ struct SmartsWriteOptions {
  * @param smiles  The SMILES string to parse.
  * @return        A fully initialised MolGraph with Morgan ranks,
  *                canonical labels, bit-parallel adjacency, etc.
- * @throws std::invalid_argument on malformed SMILES.
+ * @throws std::invalid_argument on malformed SMILES, or when the molecule has more
+ *         than MAX_ATOMS atoms (parser_utils.hpp).
  */
-/// Maximum allowed atom count to prevent memory exhaustion from crafted input.
-constexpr int MAX_ATOMS = 10000;
-
 inline MolGraph parseSMILES(const std::string& smiles) {
     detail::SmilesParser parser(smiles);
     parser.parse();
@@ -1106,12 +1020,12 @@ inline std::string toSMILES(const MolGraph& g) {
  * primitives controlled by SmartsWriteOptions. Bond symbols are always
  * written explicitly (-, =, #, :, ~) so there is no ambiguity.
  *
- * Typical use — write the scaffold of an MCS result:
+ * Typical use, writing the scaffold of an MCS result:
  * @code
  * auto common = smsd::MCS::find(query).match(target);
  * std::vector<int> atoms;
- * for (auto& [qi, ti] : mcs) atoms.push_back(qi);
- * auto sub = smsd::extractSubgraph(mol1, atoms);
+ * for (const auto& [qi, ti] : common.matches.front().atomMapping) atoms.push_back(qi);
+ * auto sub = smsd::extractSubgraph(query, atoms);
  * std::string scaffold = smsd::toSMARTS(sub);   // e.g. [#6;a]:[#6;a]...
  * @endcode
  *
@@ -1130,533 +1044,5 @@ inline std::string toSMARTS(const MolGraph& g,
 }
 
 } // namespace smsd
-
-// ============================================================================
-// Tests (compile with -DSMSD_TEST_SMILES)
-// ============================================================================
-#ifdef SMSD_TEST_SMILES
-
-#include <iostream>
-
-namespace smsd_test {
-
-static int testsPassed = 0;
-static int testsFailed = 0;
-
-#define SMSD_ASSERT(cond, msg) \
-    do { \
-        if (!(cond)) { \
-            std::cerr << "FAIL: " << msg << " [" << __FILE__ << ":" << __LINE__ << "]" << std::endl; \
-            testsFailed++; \
-        } else { \
-            testsPassed++; \
-        } \
-    } while(0)
-
-#define SMSD_ASSERT_EQ(actual, expected, msg) \
-    do { \
-        if ((actual) != (expected)) { \
-            std::cerr << "FAIL: " << msg << " (expected " << (expected) \
-                      << ", got " << (actual) << ") [" << __FILE__ << ":" \
-                      << __LINE__ << "]" << std::endl; \
-            testsFailed++; \
-        } else { \
-            testsPassed++; \
-        } \
-    } while(0)
-
-#define SMSD_ASSERT_THROWS(expr, msg) \
-    do { \
-        bool threw = false; \
-        try { expr; } catch (const std::invalid_argument&) { threw = true; } \
-        if (!threw) { \
-            std::cerr << "FAIL: " << msg << " (expected exception) [" \
-                      << __FILE__ << ":" << __LINE__ << "]" << std::endl; \
-            testsFailed++; \
-        } else { \
-            testsPassed++; \
-        } \
-    } while(0)
-
-inline int countBonds(const smsd::MolGraph& g) {
-    int count = 0;
-    for (int i = 0; i < g.n; i++) {
-        for (int j : g.neighbors[i]) {
-            if (j > i) count++;
-        }
-    }
-    return count;
-}
-
-inline void testMethane() {
-    auto g = smsd::parseSMILES("C");
-    SMSD_ASSERT_EQ(g.n, 1, "C: 1 atom");
-    SMSD_ASSERT_EQ(g.atomicNum[0], 6, "C: carbon");
-    SMSD_ASSERT_EQ(g.degree[0], 0, "C: degree 0");
-    SMSD_ASSERT_EQ(countBonds(g), 0, "C: 0 bonds");
-}
-
-inline void testEthane() {
-    auto g = smsd::parseSMILES("CC");
-    SMSD_ASSERT_EQ(g.n, 2, "CC: 2 atoms");
-    SMSD_ASSERT_EQ(g.atomicNum[0], 6, "CC: C0");
-    SMSD_ASSERT_EQ(g.atomicNum[1], 6, "CC: C1");
-    SMSD_ASSERT_EQ(countBonds(g), 1, "CC: 1 bond");
-    SMSD_ASSERT_EQ(g.bondOrder(0, 1), 1, "CC: single bond");
-}
-
-inline void testDoubleBond() {
-    auto g = smsd::parseSMILES("C=C");
-    SMSD_ASSERT_EQ(g.n, 2, "C=C: 2 atoms");
-    SMSD_ASSERT_EQ(countBonds(g), 1, "C=C: 1 bond");
-    SMSD_ASSERT_EQ(g.bondOrder(0, 1), 2, "C=C: double bond");
-}
-
-inline void testTripleBond() {
-    auto g = smsd::parseSMILES("C#N");
-    SMSD_ASSERT_EQ(g.n, 2, "C#N: 2 atoms");
-    SMSD_ASSERT_EQ(g.bondOrder(0, 1), 3, "C#N: triple bond");
-    SMSD_ASSERT_EQ(g.atomicNum[1], 7, "C#N: nitrogen");
-}
-
-inline void testBenzene() {
-    auto g = smsd::parseSMILES("c1ccccc1");
-    SMSD_ASSERT_EQ(g.n, 6, "benzene: 6 atoms");
-    SMSD_ASSERT_EQ(countBonds(g), 6, "benzene: 6 bonds");
-    for (int i = 0; i < 6; i++) {
-        SMSD_ASSERT(g.aromatic[i], "benzene: atom " + std::to_string(i) + " aromatic");
-        SMSD_ASSERT_EQ(g.atomicNum[i], 6, "benzene: atom " + std::to_string(i) + " is carbon");
-        SMSD_ASSERT(g.ring[i], "benzene: atom " + std::to_string(i) + " in ring");
-    }
-}
-
-inline void testPhenol() {
-    auto g = smsd::parseSMILES("c1ccc(O)cc1");
-    SMSD_ASSERT_EQ(g.n, 7, "phenol: 7 atoms");
-    // 6 ring bonds + 1 C-O bond = 7 bonds
-    SMSD_ASSERT_EQ(countBonds(g), 7, "phenol: 7 bonds");
-    // Find the oxygen
-    int oIdx = -1;
-    for (int i = 0; i < g.n; i++) {
-        if (g.atomicNum[i] == 8) oIdx = i;
-    }
-    SMSD_ASSERT(oIdx >= 0, "phenol: has oxygen");
-    SMSD_ASSERT(!g.aromatic[oIdx], "phenol: O not aromatic");
-}
-
-inline void testAmmonium() {
-    auto g = smsd::parseSMILES("[NH4+]");
-    SMSD_ASSERT_EQ(g.n, 1, "[NH4+]: 1 atom");
-    SMSD_ASSERT_EQ(g.atomicNum[0], 7, "[NH4+]: nitrogen");
-    SMSD_ASSERT_EQ(g.formalCharge[0], 1, "[NH4+]: charge +1");
-}
-
-inline void testIsotope() {
-    auto g = smsd::parseSMILES("[13CH4]");
-    SMSD_ASSERT_EQ(g.n, 1, "[13CH4]: 1 atom");
-    SMSD_ASSERT_EQ(g.atomicNum[0], 6, "[13CH4]: carbon");
-    SMSD_ASSERT_EQ(g.massNumber[0], 13, "[13CH4]: isotope 13");
-}
-
-inline void testAceticAcid() {
-    auto g = smsd::parseSMILES("CC(=O)O");
-    SMSD_ASSERT_EQ(g.n, 4, "acetic acid: 4 atoms");
-    SMSD_ASSERT_EQ(countBonds(g), 3, "acetic acid: 3 bonds");
-    // Atom 0: C, Atom 1: C, Atom 2: O (=O), Atom 3: O
-    SMSD_ASSERT_EQ(g.atomicNum[0], 6, "acetic acid: C0");
-    SMSD_ASSERT_EQ(g.atomicNum[1], 6, "acetic acid: C1");
-    SMSD_ASSERT_EQ(g.atomicNum[2], 8, "acetic acid: O2");
-    SMSD_ASSERT_EQ(g.atomicNum[3], 8, "acetic acid: O3");
-    SMSD_ASSERT_EQ(g.bondOrder(1, 2), 2, "acetic acid: C=O double bond");
-    SMSD_ASSERT_EQ(g.bondOrder(1, 3), 1, "acetic acid: C-O single bond");
-}
-
-inline void testCyclopropane() {
-    auto g = smsd::parseSMILES("C1CC1");
-    SMSD_ASSERT_EQ(g.n, 3, "cyclopropane: 3 atoms");
-    SMSD_ASSERT_EQ(countBonds(g), 3, "cyclopropane: 3 bonds");
-    for (int i = 0; i < 3; i++) {
-        SMSD_ASSERT(g.ring[i], "cyclopropane: atom " + std::to_string(i) + " in ring");
-    }
-}
-
-inline void testDotDisconnection() {
-    auto g = smsd::parseSMILES("C.C");
-    SMSD_ASSERT_EQ(g.n, 2, "C.C: 2 atoms");
-    SMSD_ASSERT_EQ(countBonds(g), 0, "C.C: 0 bonds (disconnected)");
-}
-
-inline void testEButene() {
-    auto g = smsd::parseSMILES("C/C=C/C");
-    SMSD_ASSERT_EQ(g.n, 4, "E-butene: 4 atoms");
-    SMSD_ASSERT_EQ(countBonds(g), 3, "E-butene: 3 bonds");
-    SMSD_ASSERT_EQ(g.bondOrder(1, 2), 2, "E-butene: C=C double bond");
-}
-
-inline void testNaphthalene() {
-    auto g = smsd::parseSMILES("c1ccc2ccccc2c1");
-    SMSD_ASSERT_EQ(g.n, 10, "naphthalene: 10 atoms");
-    SMSD_ASSERT_EQ(countBonds(g), 11, "naphthalene: 11 bonds");
-    for (int i = 0; i < 10; i++) {
-        SMSD_ASSERT(g.aromatic[i], "naphthalene: atom " + std::to_string(i) + " aromatic");
-        SMSD_ASSERT(g.ring[i], "naphthalene: atom " + std::to_string(i) + " in ring");
-    }
-}
-
-inline void testAspirin() {
-    auto g = smsd::parseSMILES("CC(=O)Oc1ccccc1C(=O)O");
-    SMSD_ASSERT_EQ(g.n, 13, "aspirin: 13 atoms");
-    // Count carbons, oxygens
-    int nC = 0, nO = 0;
-    for (int i = 0; i < g.n; i++) {
-        if (g.atomicNum[i] == 6) nC++;
-        if (g.atomicNum[i] == 8) nO++;
-    }
-    SMSD_ASSERT_EQ(nC, 9, "aspirin: 9 carbons");
-    SMSD_ASSERT_EQ(nO, 4, "aspirin: 4 oxygens");
-}
-
-inline void testIronBracket() {
-    auto g = smsd::parseSMILES("[Fe+2]");
-    SMSD_ASSERT_EQ(g.n, 1, "[Fe+2]: 1 atom");
-    SMSD_ASSERT_EQ(g.atomicNum[0], 26, "[Fe+2]: iron");
-    SMSD_ASSERT_EQ(g.formalCharge[0], 2, "[Fe+2]: charge +2");
-}
-
-inline void testAromaticNH() {
-    auto g = smsd::parseSMILES("[nH]1cccc1");
-    SMSD_ASSERT_EQ(g.n, 5, "pyrrole: 5 atoms");
-    SMSD_ASSERT_EQ(g.atomicNum[0], 7, "pyrrole: nitrogen");
-    SMSD_ASSERT(g.aromatic[0], "pyrrole: N aromatic");
-}
-
-inline void testChirality() {
-    auto g = smsd::parseSMILES("[C@@H](F)(Cl)Br");
-    SMSD_ASSERT_EQ(g.n, 4, "chiral: 4 atoms");
-    SMSD_ASSERT_EQ(g.tetraChirality[0], 2, "chiral: @@ = 2");
-}
-
-inline void testPercentRingClosure() {
-    // Ring closure %10
-    auto g = smsd::parseSMILES("C%10CCCCCCCCC%10");
-    SMSD_ASSERT_EQ(g.n, 10, "%10 ring: 10 atoms");
-    SMSD_ASSERT_EQ(countBonds(g), 10, "%10 ring: 10 bonds (ring)");
-}
-
-inline void testBranching() {
-    // Isobutane: C(C)(C)C
-    auto g = smsd::parseSMILES("C(C)(C)C");
-    SMSD_ASSERT_EQ(g.n, 4, "isobutane: 4 atoms");
-    SMSD_ASSERT_EQ(countBonds(g), 3, "isobutane: 3 bonds");
-    SMSD_ASSERT_EQ(g.degree[0], 3, "isobutane: central C degree 3");
-}
-
-inline void testHalogens() {
-    auto g = smsd::parseSMILES("ClBrFI");
-    SMSD_ASSERT_EQ(g.n, 4, "ClBrFI: 4 atoms");
-    SMSD_ASSERT_EQ(g.atomicNum[0], 17, "Cl");
-    SMSD_ASSERT_EQ(g.atomicNum[1], 35, "Br");
-    SMSD_ASSERT_EQ(g.atomicNum[2], 9, "F");
-    SMSD_ASSERT_EQ(g.atomicNum[3], 53, "I");
-}
-
-inline void testChloromethane() {
-    auto g = smsd::parseSMILES("CCl");
-    SMSD_ASSERT_EQ(g.n, 2, "CCl: 2 atoms");
-    SMSD_ASSERT_EQ(g.atomicNum[0], 6, "CCl: carbon");
-    SMSD_ASSERT_EQ(g.atomicNum[1], 17, "CCl: chlorine");
-}
-
-inline void testNegativeCharge() {
-    auto g = smsd::parseSMILES("[O-]");
-    SMSD_ASSERT_EQ(g.n, 1, "[O-]: 1 atom");
-    SMSD_ASSERT_EQ(g.formalCharge[0], -1, "[O-]: charge -1");
-}
-
-inline void testDoubleNegCharge() {
-    auto g = smsd::parseSMILES("[O-2]");
-    SMSD_ASSERT_EQ(g.n, 1, "[O-2]: 1 atom");
-    SMSD_ASSERT_EQ(g.formalCharge[0], -2, "[O-2]: charge -2");
-}
-
-inline void testRepeatedCharge() {
-    auto g = smsd::parseSMILES("[Fe++]");
-    SMSD_ASSERT_EQ(g.formalCharge[0], 2, "[Fe++]: charge +2 (repeated)");
-}
-
-inline void testBoron() {
-    auto g = smsd::parseSMILES("B");
-    SMSD_ASSERT_EQ(g.n, 1, "B: 1 atom");
-    SMSD_ASSERT_EQ(g.atomicNum[0], 5, "B: boron");
-}
-
-inline void testPhosphorus() {
-    auto g = smsd::parseSMILES("P");
-    SMSD_ASSERT_EQ(g.n, 1, "P: 1 atom");
-    SMSD_ASSERT_EQ(g.atomicNum[0], 15, "P: phosphorus");
-}
-
-inline void testSulfur() {
-    auto g = smsd::parseSMILES("S");
-    SMSD_ASSERT_EQ(g.n, 1, "S: 1 atom");
-    SMSD_ASSERT_EQ(g.atomicNum[0], 16, "S: sulfur");
-}
-
-inline void testWildcard() {
-    auto g = smsd::parseSMILES("[*]");
-    SMSD_ASSERT_EQ(g.n, 1, "[*]: 1 atom");
-    SMSD_ASSERT_EQ(g.atomicNum[0], 0, "[*]: wildcard Z=0");
-}
-
-inline void testMultipleRings() {
-    // Cubane: C12C3C4C1C5C4C3C25
-    auto g = smsd::parseSMILES("C12C3C4C1C5C4C3C25");
-    SMSD_ASSERT_EQ(g.n, 8, "cubane: 8 atoms");
-    SMSD_ASSERT_EQ(countBonds(g), 12, "cubane: 12 bonds");
-}
-
-inline void testLongChain() {
-    auto g = smsd::parseSMILES("CCCCCCCCCC");
-    SMSD_ASSERT_EQ(g.n, 10, "decane: 10 atoms");
-    SMSD_ASSERT_EQ(countBonds(g), 9, "decane: 9 bonds");
-}
-
-inline void testThiophene() {
-    auto g = smsd::parseSMILES("c1ccsc1");
-    SMSD_ASSERT_EQ(g.n, 5, "thiophene: 5 atoms");
-    int sIdx = -1;
-    for (int i = 0; i < g.n; i++) {
-        if (g.atomicNum[i] == 16) sIdx = i;
-    }
-    SMSD_ASSERT(sIdx >= 0, "thiophene: has sulfur");
-    SMSD_ASSERT(g.aromatic[sIdx], "thiophene: S aromatic");
-}
-
-inline void testPyridine() {
-    auto g = smsd::parseSMILES("c1ccncc1");
-    SMSD_ASSERT_EQ(g.n, 6, "pyridine: 6 atoms");
-    int nIdx = -1;
-    for (int i = 0; i < g.n; i++) {
-        if (g.atomicNum[i] == 7) nIdx = i;
-    }
-    SMSD_ASSERT(nIdx >= 0, "pyridine: has nitrogen");
-    SMSD_ASSERT(g.aromatic[nIdx], "pyridine: N aromatic");
-}
-
-inline void testInvalidSMILES() {
-    SMSD_ASSERT_THROWS(smsd::parseSMILES(""), "empty SMILES");
-    SMSD_ASSERT_THROWS(smsd::parseSMILES("C1CC"), "unclosed ring");
-    SMSD_ASSERT_THROWS(smsd::parseSMILES("C(C"), "unclosed branch");
-    SMSD_ASSERT_THROWS(smsd::parseSMILES("["), "unclosed bracket");
-    SMSD_ASSERT_THROWS(smsd::parseSMILES("[Zq]"), "unknown element");
-}
-
-inline void testMorganRanks() {
-    auto g = smsd::parseSMILES("c1ccccc1");
-    g.ensureCanonical();   // morganRank is lazy
-    // All atoms in benzene should have same morgan rank (by symmetry)
-    SMSD_ASSERT(!g.morganRank.empty(), "benzene: morgan ranks computed");
-    // They should all be equal for benzene
-    for (int i = 1; i < g.n; i++) {
-        SMSD_ASSERT_EQ(g.morganRank[i], g.morganRank[0],
-                        "benzene: all morgan ranks equal");
-    }
-}
-
-inline void testCanonicalLabels() {
-    auto g = smsd::parseSMILES("c1ccccc1");
-    g.ensureCanonical();   // canonicalLabel is lazy
-    SMSD_ASSERT(!g.canonicalLabel.empty(), "benzene: canonical labels computed");
-    SMSD_ASSERT_EQ(static_cast<int>(g.canonicalLabel.size()), 6,
-                    "benzene: 6 canonical labels");
-}
-
-inline void testBitParallelAdjacency() {
-    auto g = smsd::parseSMILES("CC");
-    SMSD_ASSERT(!g.adjLong.empty(), "CC: adjLong computed");
-    SMSD_ASSERT(g.adjLong[0][0] & (uint64_t(1) << 1), "CC: adj[0] has bit 1");
-    SMSD_ASSERT(g.adjLong[1][0] & (uint64_t(1) << 0), "CC: adj[1] has bit 0");
-}
-
-inline void testSMILESWriter() {
-    // Round-trip: parse then write, then re-parse and verify same structure
-    auto g1 = smsd::parseSMILES("CC");
-    std::string s1 = smsd::toSMILES(g1);
-    auto g2 = smsd::parseSMILES(s1);
-    SMSD_ASSERT_EQ(g2.n, 2, "writer round-trip CC: 2 atoms");
-    SMSD_ASSERT_EQ(countBonds(g2), 1, "writer round-trip CC: 1 bond");
-
-    // Benzene round-trip
-    auto gb = smsd::parseSMILES("c1ccccc1");
-    std::string sb = smsd::toSMILES(gb);
-    auto gb2 = smsd::parseSMILES(sb);
-    SMSD_ASSERT_EQ(gb2.n, 6, "writer round-trip benzene: 6 atoms");
-    SMSD_ASSERT_EQ(countBonds(gb2), 6, "writer round-trip benzene: 6 bonds");
-}
-
-inline void testAtomClass() {
-    auto g = smsd::parseSMILES("[CH3:1]C");
-    SMSD_ASSERT_EQ(g.n, 2, "atom class: 2 atoms");
-    SMSD_ASSERT_EQ(g.atomClass[0], 1, "atom class preserved on first atom");
-    SMSD_ASSERT(smsd::toSMILES(g).find(":1") != std::string::npos,
-                "atom class writes back with attachment label");
-}
-
-inline void testPatentRGroupPlaceholder() {
-    auto g = smsd::parseSMILES("[R1]c1ccccc1");
-    SMSD_ASSERT_EQ(g.n, 7, "R-group placeholder: 7 atoms");
-    SMSD_ASSERT_EQ(g.atomicNum[0], 0, "R-group placeholder stored as wildcard");
-    SMSD_ASSERT_EQ(g.atomClass[0], 1, "R-group placeholder stored as class 1");
-    SMSD_ASSERT_EQ(smsd::toSMILES(g), "[R1]c1ccccc1", "R-group placeholder round-trip");
-}
-
-inline void testCyclohexane() {
-    auto g = smsd::parseSMILES("C1CCCCC1");
-    SMSD_ASSERT_EQ(g.n, 6, "cyclohexane: 6 atoms");
-    SMSD_ASSERT_EQ(countBonds(g), 6, "cyclohexane: 6 bonds");
-    for (int i = 0; i < 6; i++) {
-        SMSD_ASSERT(g.ring[i], "cyclohexane: atom in ring");
-    }
-}
-
-inline void testDMSO() {
-    // CS(=O)C  dimethyl sulfoxide
-    auto g = smsd::parseSMILES("CS(=O)C");
-    SMSD_ASSERT_EQ(g.n, 4, "DMSO: 4 atoms");
-    SMSD_ASSERT_EQ(g.atomicNum[1], 16, "DMSO: sulfur");
-}
-
-inline void testCaffeine() {
-    auto g = smsd::parseSMILES("Cn1cnc2c1c(=O)n(c(=O)n2C)C");
-    SMSD_ASSERT(g.n > 0, "caffeine: parsed OK");
-    SMSD_ASSERT_EQ(g.n, 14, "caffeine: 14 heavy atoms");
-}
-
-// Benchmark suite molecules
-inline void testBenchmarkMolecules() {
-    // Methane
-    auto g1 = smsd::parseSMILES("C");
-    SMSD_ASSERT_EQ(g1.n, 1, "benchmark methane");
-
-    // Water
-    auto g2 = smsd::parseSMILES("O");
-    SMSD_ASSERT_EQ(g2.n, 1, "benchmark water");
-
-    // Ethanol
-    auto g3 = smsd::parseSMILES("CCO");
-    SMSD_ASSERT_EQ(g3.n, 3, "benchmark ethanol");
-
-    // Benzene
-    auto g4 = smsd::parseSMILES("c1ccccc1");
-    SMSD_ASSERT_EQ(g4.n, 6, "benchmark benzene");
-
-    // Naphthalene
-    auto g5 = smsd::parseSMILES("c1ccc2ccccc2c1");
-    SMSD_ASSERT_EQ(g5.n, 10, "benchmark naphthalene");
-
-    // Aspirin
-    auto g6 = smsd::parseSMILES("CC(=O)Oc1ccccc1C(=O)O");
-    SMSD_ASSERT_EQ(g6.n, 13, "benchmark aspirin");
-
-    // Caffeine
-    auto g7 = smsd::parseSMILES("Cn1cnc2c1c(=O)n(c(=O)n2C)C");
-    SMSD_ASSERT_EQ(g7.n, 14, "benchmark caffeine");
-
-    // Ibuprofen
-    auto g8 = smsd::parseSMILES("CC(C)Cc1ccc(cc1)C(C)C(=O)O");
-    SMSD_ASSERT_EQ(g8.n, 15, "benchmark ibuprofen");
-
-    // Glucose (open chain)
-    auto g9 = smsd::parseSMILES("OCC(O)C(O)C(O)C(O)C=O");
-    SMSD_ASSERT_EQ(g9.n, 12, "benchmark glucose");
-
-    // Cholesterol
-    auto g10 = smsd::parseSMILES("CC(CCCC(C)C)C1CCC2C1(CCC3C2CC=C4C3(CCC(C4)O)C)C");
-    SMSD_ASSERT(g10.n > 20, "benchmark cholesterol parsed");
-
-    // Strychnine
-    auto g11 = smsd::parseSMILES("O=C1CC2OCC=C3CN4CCC5=CC=CC1C5C4CC23");
-    SMSD_ASSERT(g11.n > 15, "benchmark strychnine parsed");
-
-    // ATP (simplified)
-    auto g12 = smsd::parseSMILES("c1nc(c2c(n1)n(cn2)C3C(C(C(O3)COP(=O)(O)OP(=O)(O)OP(=O)(O)O)O)O)N");
-    SMSD_ASSERT(g12.n > 20, "benchmark ATP parsed");
-
-    // Paclitaxel (taxol)
-    auto g13 = smsd::parseSMILES("CC1=C2C(C(=O)C3(C(CC4C(C3C(C(C2(C)C)(CC1OC(=O)C(C(c5ccccc5)NC(=O)c6ccccc6)O)O)OC(=O)C7CCCCC7)(CO4)OC(=O)C)O)C)OC(=O)C");
-    SMSD_ASSERT(g13.n > 40, "benchmark paclitaxel parsed");
-
-    // Vancomycin (large drug)
-    auto g14 = smsd::parseSMILES("CC1C(C(CC(O1)OC2C(C(C(OC2OC3=CC=C4C(=C3Cl)OC5=C(C=C(C(=C5C(=O)NC(CC(=O)N)C(=O)NC4C(=O)NC6C7=CC(=C(C(=C7)OC8=CC=C(C(=C8)Cl)C9C(C(=O)NC(C(=O)N1CCCC1C(=O)NC(C(=O)NC6CO)CC(=O)N)CC(C)C)NC(=O)C(CC(C)C)NC9=O)O)O)O)C(=O)O)O)O)CO)O)O)(C)N)O");
-    SMSD_ASSERT(g14.n > 80, "benchmark vancomycin parsed");
-}
-
-inline void runAllTests() {
-    std::cout << "Running SMILES parser tests..." << std::endl;
-
-    testMethane();
-    testEthane();
-    testDoubleBond();
-    testTripleBond();
-    testBenzene();
-    testPhenol();
-    testAmmonium();
-    testIsotope();
-    testAceticAcid();
-    testCyclopropane();
-    testDotDisconnection();
-    testEButene();
-    testNaphthalene();
-    testAspirin();
-    testIronBracket();
-    testAromaticNH();
-    testChirality();
-    testPercentRingClosure();
-    testBranching();
-    testHalogens();
-    testChloromethane();
-    testNegativeCharge();
-    testDoubleNegCharge();
-    testRepeatedCharge();
-    testBoron();
-    testPhosphorus();
-    testSulfur();
-    testWildcard();
-    testMultipleRings();
-    testLongChain();
-    testThiophene();
-    testPyridine();
-    testInvalidSMILES();
-    testMorganRanks();
-    testCanonicalLabels();
-    testBitParallelAdjacency();
-    testSMILESWriter();
-    testAtomClass();
-    testPatentRGroupPlaceholder();
-    testCyclohexane();
-    testDMSO();
-    testCaffeine();
-    testBenchmarkMolecules();
-
-    std::cout << std::endl;
-    std::cout << "Passed: " << testsPassed << std::endl;
-    std::cout << "Failed: " << testsFailed << std::endl;
-    std::cout << "Total:  " << testsPassed + testsFailed << std::endl;
-
-    if (testsFailed > 0) {
-        std::cout << "\n*** SOME TESTS FAILED ***" << std::endl;
-    } else {
-        std::cout << "\nAll tests passed." << std::endl;
-    }
-}
-
-} // namespace smsd_test
-
-int main() {
-    smsd_test::runAllTests();
-    return smsd_test::testsFailed > 0 ? 1 : 0;
-}
-
-#endif // SMSD_TEST_SMILES
 
 #endif // SMSD_SMILES_PARSER_HPP

@@ -2,11 +2,12 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
- * See the NOTICE file for attribution, trademark, and algorithm IP terms. *
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ *
  * GPU-accelerated batch screening for SMSD.
  *
  * Two kernels:
- *   1. RASCAL screening  -- label-histogram Tanimoto upper bound
+ *   1. similarity-bound screening  -- label-histogram Tanimoto upper bound
  *   2. Fingerprint subset -- path-fingerprint subset check for substructure
  *
  * Design:
@@ -58,7 +59,7 @@ static constexpr int CHUNK_SIZE       = 100000; // stream 100K targets per chunk
 // GPU data structures -- compact, fixed-size for GPU transfer
 // ============================================================================
 
-/// Compact molecule representation for RASCAL screening.
+/// Compact molecule representation for similarity-bound screening.
 struct alignas(16) GpuMolecule {
     int n;                        // atom count
     int labelCounts[LABEL_BINS];  // histogram of encoded atom labels
@@ -76,12 +77,12 @@ struct ScreenResult {
 };
 
 // ============================================================================
-// RASCAL Screening Kernel
+// Similarity-Bound Screening Kernel
 // ============================================================================
 
-/// CUDA kernel: compute RASCAL upper bound (Tanimoto-like) for each target.
+/// CUDA kernel: compute similarity upper bound (Tanimoto-like) for each target.
 /// Each thread handles one target molecule.
-__global__ void rascalScreenKernel(
+__global__ void similarityScreenKernel(
     const GpuMolecule* __restrict__ query,
     const GpuMolecule* __restrict__ targets,
     int numTargets,
@@ -214,13 +215,13 @@ struct DeviceBuffer {
 };
 
 // ============================================================================
-// Host API: Batch RASCAL Screening
+// Host API: Batch Similarity-Bound Screening
 // ============================================================================
 
-/// Screen query against all targets on GPU using RASCAL upper bound.
+/// Screen query against all targets on GPU using similarity upper bound.
 /// Returns vector of (index, score) for targets passing the threshold.
 /// For large N (> CHUNK_SIZE), streams targets in chunks to limit GPU memory.
-std::vector<ScreenResult> batchRascalScreen(
+std::vector<ScreenResult> batchSimilarityScreen(
     const GpuMolecule& query,
     const std::vector<GpuMolecule>& targets,
     double threshold
@@ -250,7 +251,7 @@ std::vector<ScreenResult> batchRascalScreen(
 
         // Launch kernel
         int numBlocks = (chunkN + BLOCK_SIZE - 1) / BLOCK_SIZE;
-        rascalScreenKernel<<<numBlocks, BLOCK_SIZE>>>(
+        similarityScreenKernel<<<numBlocks, BLOCK_SIZE>>>(
             d_query.ptr, d_targets.ptr, chunkN, threshold,
             d_results.ptr, d_scores.ptr);
 
@@ -275,13 +276,13 @@ std::vector<ScreenResult> batchRascalScreen(
     return allHits;
 }
 
-/// Convenience: returns just the indices (backward compatible).
+/// Convenience: returns only the indices.
 inline std::vector<int> batchScreen(
     const GpuMolecule& query,
     const std::vector<GpuMolecule>& targets,
     double threshold
 ) {
-    auto hits = batchRascalScreen(query, targets, threshold);
+    auto hits = batchSimilarityScreen(query, targets, threshold);
     std::vector<int> indices;
     indices.reserve(hits.size());
     for (auto& h : hits) indices.push_back(h.index);

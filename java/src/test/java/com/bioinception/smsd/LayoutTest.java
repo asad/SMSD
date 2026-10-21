@@ -20,10 +20,6 @@ import org.openscience.cdk.interfaces.IAtomContainer;
 @DisplayName("Layout Engine Tests")
 public class LayoutTest extends TestBase {
 
-  private static MolGraph graph(String smi) throws Exception {
-    return new MolGraph(mol(smi));
-  }
-
   private static MolGraph.Point2D[] linearLayout(int n) {
     MolGraph.Point2D[] coords = new MolGraph.Point2D[n];
     for (int i = 0; i < n; i++)

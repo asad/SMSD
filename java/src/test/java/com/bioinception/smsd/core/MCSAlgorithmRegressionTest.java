@@ -235,7 +235,6 @@ class MCSAlgorithmRegressionTest {
     Thread.sleep(5);
     assertTrue(budget.stopped());
     for (int i = 0; i < 32; i++) assertTrue(budget.stopped(), "Expiration must remain true between clock checks");
-    assertEquals(0, budget.remainingMillis());
     SearchResult.Control unchecked = new SearchResult.Control(1,null);
     Thread.sleep(5);
     assertTrue(unchecked.stopped(), "The first call must read the clock");

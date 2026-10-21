@@ -1,13 +1,17 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2018-2026 BioInception PVT LTD
+ * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ */
+#include "test_support.hpp"
 #include "smsd/batch.hpp"
 #include "smsd/gpu.hpp"
 #include <iostream>
 #include <stdexcept>
 #include <string>
 
-static void require(bool condition, const char* message) {
-    if (!condition) throw std::runtime_error(message);
-}
+using smsd_test::require;
 
 static void pharmacophores() {
     for (const auto& item : {std::pair<const char*, int>{"CC(=O)C", 2}, {"c1ccncc1", 3}, {"CC#N", 2}}) {
@@ -37,16 +41,16 @@ static void attachedHydrogens() {
         require(smsd::batch::detail::computeCircularFingerprintECFPCounts(first, 2, 2048)
                 != smsd::batch::detail::computeCircularFingerprintECFPCounts(second, 2, 2048), "Count ECFP must retain stored H counts");
     }
-    require(smsd::batch::detail::implicitH(7, 0, 1) == 4, "Ammonium fallback must have four hydrogens");
-    require(smsd::batch::detail::implicitH(5, 0, -1) == 4, "Borohydride fallback must have four hydrogens");
+    require(smsd::detail::computeImplicitH(7, false, 0, 1) == 4, "Ammonium fallback must have four hydrogens");
+    require(smsd::detail::computeImplicitH(5, false, 0, -1) == 4, "Borohydride fallback must have four hydrogens");
 }
 
 static void zeroAtomScreen() {
     const auto query = smsd::parseSMILES("CCO");
     const std::vector<smsd::MolGraph> targets{smsd::parseSMILES("CCN"), {}, smsd::parseSMILES("c1ccccc1")};
-    const auto hits = smsd::gpu::batchRascalScreenAuto(query, targets, 0.0);
+    const auto hits = smsd::gpu::batchSimilarityScreenAuto(query, targets, 0.0);
     require(hits.size() == 3 && hits[1].index == 1 && hits[1].score == 0.0, "Zero threshold must include zero-atom targets");
-    const auto positive = smsd::gpu::batchRascalScreenAuto(query, targets, 0.01);
+    const auto positive = smsd::gpu::batchSimilarityScreenAuto(query, targets, 0.01);
     for (const auto& hit : positive) require(hit.index != 1, "Positive thresholds must exclude zero-overlap targets");
 }
 
@@ -61,12 +65,7 @@ static void backendVersions() {
 }
 
 int main(int argc, char** argv) {
-    const std::string selected = argc > 1 ? argv[1] : "all";
-    int failures = 0;
-    for (const auto& group : {std::pair<const char*, void(*)()>{"pharmacophores", pharmacophores}, {"hydrogens", attachedHydrogens}, {"zero-atoms", zeroAtomScreen}, {"versions", backendVersions}}) {
-        if (selected != "all" && selected != group.first) continue;
-        try { group.second(); std::cout << "PASS " << group.first << '\n'; }
-        catch (const std::exception& error) { std::cerr << "FAIL " << group.first << ": " << error.what() << '\n'; ++failures; }
-    }
-    return failures == 0 ? 0 : 1;
+    return smsd_test::runGroups(argc, argv, {
+        {"pharmacophores", pharmacophores}, {"hydrogens", attachedHydrogens},
+        {"zero-atoms", zeroAtomScreen}, {"versions", backendVersions}});
 }

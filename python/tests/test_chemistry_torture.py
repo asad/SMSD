@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """
 High-signal chemistry torture tests for representative hard classes.
 
@@ -7,7 +9,7 @@ These are intentionally compact and non-redundant:
 - round-trip and self-MCS on representative chemistry families
 - pairwise substructure/MCS on extension and charge-sensitive cases
 - SMARTS motifs on biochemically relevant functionality
-- one explicit expected-failure for aromatic [nH] coverage
+- aromatic [nH] SMARTS matching in a fused, porphyrin-like system
 """
 
 from __future__ import annotations

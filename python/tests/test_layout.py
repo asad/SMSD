@@ -5,7 +5,7 @@
 """
 Tests for force-directed layout, stress majorisation, and template matching.
 
-Run with:  pytest tests/test_layout.py -v
+Run with:  pytest python/tests/test_layout.py -v
 """
 import math
 import pytest

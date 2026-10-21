@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Package the validated Java CLI with a target-platform Java 25 runtime.
 
 Build on the target operating system. Installers contain the published CLI
@@ -29,6 +33,9 @@ JAVA_VERSION = "25.0.4.1"
 JAVA_BUILD = "25.0.4.1+1"
 CLI_JAVA_TARGET = 8
 CLI_CLASSFILE_MAJOR = 52
+# The legal files that the CLI JAR carries under META-INF/smsd and the
+# application image ships beside its JAR, at the paths NOTICE names.
+LEGAL_FILES = ("LICENSE", "NOTICE", "licenses/cdk/LICENSE", "licenses/cdk/README.md")
 
 
 def require(condition, message):
@@ -51,10 +58,10 @@ def run(command, **kwargs):
 
 def release_inputs(directory):
     directory = directory.resolve()
-    jars = sorted(directory.glob("smsd-*-jar-with-dependencies.jar"))
+    jars = sorted(directory.glob("smsd-cli-*-jar-with-dependencies.jar"))
     require(len(jars) == 1, "Expected exactly one published CLI JAR")
     jar = jars[0]
-    match = re.fullmatch(r"smsd-(\d+\.\d+\.\d+)-jar-with-dependencies\.jar", jar.name)
+    match = re.fullmatch(r"smsd-cli-(\d+\.\d+\.\d+)-jar-with-dependencies\.jar", jar.name)
     require(match is not None, "Expected a three-part release version")
     checksums = {}
     for line in (directory / "SHA256SUMS").read_text(encoding="utf-8").splitlines():
@@ -85,7 +92,7 @@ def release_inputs(directory):
                 require(major == CLI_CLASSFILE_MAJOR, "SMSD class must target Java 8: " + entry.filename)
                 application_classes += 1
         require(application_classes > 0, "CLI JAR contains no SMSD classes")
-        legal = {name: archive.read("META-INF/smsd/" + name) for name in ("LICENSE", "NOTICE")}
+        legal = {name: archive.read("META-INF/smsd/" + name) for name in LEGAL_FILES}
     root = Path(__file__).resolve().parents[1]
     for name, data in legal.items():
         require((root / name).read_bytes() == data, "Published JAR and root " + name + " differ")
@@ -163,15 +170,12 @@ def terminal_readme(version, target):
     launcher = {"macos": '"/Applications/SMSD.app/Contents/MacOS/SMSD"',
                 "linux": "/opt/smsd/bin/smsd",
                 "windows": '& "$env:LOCALAPPDATA\\SMSD\\SMSD.exe"'}[target]
-    cml_note = ("The published 7.2.1 CLI has a known CML/PDB reader limitation. Use SMILES, MOL or SDF input.\n"
-                if version == "7.2.1" else "")
     return (f"SMSD {version}: Java command-line application\n\n"
             "This installer includes Java 25. Run SMSD from a terminal; it has no graphical interface.\n"
             "Python packages are installed separately with pip.\n\n"
             f"{launcher} --help\n{launcher} --version\n"
             f'{launcher} --Q SMI --q CC --T SMI --t CCC --mode sub --json -\n\n'
             "The Windows per-user installation directory can be selected during installation.\n"
-            + cml_note +
             "Runtime licences are retained in the bundled runtime legal directory.\n"
             f"Matching OpenJDK source: https://github.com/asad/SMSD/releases/download/v{version}/"
             "OpenJDK25U-jdk-sources_25.0.4.1_1.tar.gz\n"
@@ -268,45 +272,25 @@ def smoke_cli(launcher, runtime, version):
                        '<atom id="a2" elementType="C" hydrogenCount="3"/></atomArray>'
                        '<bondArray><bond atomRefs2="a1 a2" order="1"/></bondArray></molecule></cml>',
                        encoding="utf-8")
-        response = subprocess.run([str(launcher), "--Q", "SMI", "--q", "CC", "--T", "CML", "--t", str(cml),
-                                   "--json", "-"], cwd=work, env=environment, capture_output=True,
-                                  text=True, encoding="utf-8", timeout=40)
-        if response.returncode == 0:
-            require(json.loads(response.stdout).get("exists") is True, "CML result is wrong")
-            require(search("N", str(cml), target_type="CML", expected=1).get("exists") is False,
-                    "Negative CML substructure result is wrong")
-            results.append({"case": "CML input", "status": "passed", "positive": True, "negative": False})
-        else:
-            require(version == "7.2.1" and response.returncode == 1
-                    and "Only supported is reading of ChemFile objects." in response.stderr,
-                    "Unexpected CML failure: " + response.stderr[:3000])
-            results.append({"case": "CML input", "status": "known limitation",
-                            "reason": "Published CLI passes an atom container to the ChemFile-only CML reader."})
+        require(search("CC", str(cml), target_type="CML").get("exists") is True, "CML result is wrong")
+        require(search("N", str(cml), target_type="CML", expected=1).get("exists") is False,
+                "Negative CML substructure result is wrong")
+        results.append({"case": "CML input", "status": "passed", "positive": True, "negative": False})
         pdb = work / "Ethane é.pdb"
         pdb.write_text("HETATM    1  C1  ETH A   1       0.000   0.000   0.000  1.00  0.00           C  \n"
                        "HETATM    2  C2  ETH A   1       1.540   0.000   0.000  1.00  0.00           C  \n"
                        "CONECT    1    2\nCONECT    2    1\nEND\n", encoding="utf-8")
-        response = subprocess.run([str(launcher), "--Q", "SMI", "--q", "CC", "--T", "PDB", "--t", str(pdb),
-                                   "--json", "-"], cwd=work, env=environment, capture_output=True,
-                                  text=True, encoding="utf-8", timeout=40)
-        if response.returncode == 0:
-            require(json.loads(response.stdout).get("exists") is True, "PDB result is wrong")
-            require(search("N", str(pdb), target_type="PDB", expected=1).get("exists") is False,
-                    "Negative PDB substructure result is wrong")
-            results.append({"case": "PDB input", "status": "passed", "positive": True, "negative": False})
-        else:
-            require(version == "7.2.1" and response.returncode == 1
-                    and "Only supported is reading of ChemFile objects." in response.stderr,
-                    "Unexpected PDB failure: " + response.stderr[:3000])
-            results.append({"case": "PDB input", "status": "known limitation",
-                            "reason": "Published CLI passes an atom container to the ChemFile-only PDB reader."})
+        require(search("CC", str(pdb), target_type="PDB").get("exists") is True, "PDB result is wrong")
+        require(search("N", str(pdb), target_type="PDB", expected=1).get("exists") is False,
+                "Negative PDB substructure result is wrong")
+        results.append({"case": "PDB input", "status": "passed", "positive": True, "negative": False})
         java = runtime / "bin" / ("java.exe" if sys.platform == "win32" else "java")
         modules = run([java, "--list-modules"], cwd=work, env=environment, capture_output=True).stdout
         module_names = sorted(line.split("@")[0] for line in modules.splitlines())
         require({"java.base", "java.xml", "java.desktop", "jdk.charsets"}.issubset(module_names),
                 "Bundled runtime is missing CLI or service provider modules")
-    return {"checks": results, "passed_cases": sum(item["status"] == "passed" for item in results),
-            "known_limitations": sum(item["status"] == "known limitation" for item in results),
+    # Every CLI case must pass; the collector requires a zero count here.
+    return {"checks": results, "passed_cases": len(results), "known_limitations": 0,
             "external_java_required": False, "runtime_modules": module_names}
 
 
@@ -326,9 +310,17 @@ def verify_image(image, release_dir):
     readme = app / "README.txt"
     require(readme.read_text(encoding="utf-8") == terminal_readme(inputs["version"], target),
             "Image terminal instructions differ from the expected content")
-    expected = {inputs["jar"].name, "LICENSE", "NOTICE", "README.txt", name + ".cfg", ".jpackage.xml", ".package"}
+    expected = {inputs["jar"].name, "LICENSE", "NOTICE", "licenses", "README.txt", name + ".cfg", ".jpackage.xml",
+                ".package"}
     require(set(path.name for path in app.iterdir()).issubset(expected), "Unexpected application payload")
-    require(all(path.is_file() for path in app.iterdir()), "Unexpected application payload directory")
+    require(all(path.is_file() for path in app.iterdir() if path.name != "licenses"),
+            "Unexpected application payload directory")
+    licences = app / "licenses"
+    require(licences.is_dir() and not licences.is_symlink(), "Third-party licence directory is missing")
+    shipped = sorted(str(path.relative_to(app)).replace(os.sep, "/") for path in licences.rglob("*")
+                     if path.is_symlink() or not path.is_dir())
+    require(shipped == sorted(name for name in LEGAL_FILES if name.startswith("licenses/")),
+            "Unexpected third-party licence files")
     if (app / ".package").exists():
         require((app / ".package").read_bytes() == name.encode("utf-8"), "Unexpected installed-package marker")
     cfg = (app / (name + ".cfg")).read_text(encoding="utf-8")
@@ -401,6 +393,7 @@ def build(args):
         directory.mkdir(exist_ok=True)
     shutil.copyfile(inputs["jar"], stage / inputs["jar"].name)
     for legal_name, data in inputs["legal"].items():
+        (stage / legal_name).parent.mkdir(parents=True, exist_ok=True)
         (stage / legal_name).write_bytes(data)
     (stage / "README.txt").write_text(terminal_readme(inputs["version"], target), encoding="utf-8")
     command = [jpackage, "--type", "app-image", "--input", stage, "--dest", images, "--name", name,

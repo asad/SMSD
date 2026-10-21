@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Check search mappings and compare benchmark JSONL without toolkit dependencies.
 
 Small MCIS/MCES proofs use exhaustive partial injections and selected-edge subsets.
@@ -586,6 +590,8 @@ def compare_jsonl(cases_path, result_paths):
         cases = {row["case_id"]: row for row in csv.DictReader(source, delimiter="\t")}
     rows, graphs, errors, warnings = [], {}, [], []
     references, index_maps, graph_differences = {}, {}, []
+    # Batches of distinct targets record the graph of each target once, on their first sample.
+    batch_graphs = {}
     for input_index, path in enumerate(result_paths):
         with open(path, encoding="utf-8") as source:
             for line in source:
@@ -595,6 +601,8 @@ def compare_jsonl(cases_path, result_paths):
                     key = row["case_id"], row["language"], input_index
                     graphs[key] = row.get("query_graph"), row["target_graph"]
                     references.setdefault(row["case_id"], graphs[key])
+                if row.get("batch_target_graphs") is not None:
+                    batch_graphs[row["case_id"], row["language"], input_index] = row["batch_target_graphs"]
     for key, (query, target) in graphs.items():
         reference_query, reference_target = references[key[0]]
         try:
@@ -621,15 +629,24 @@ def compare_jsonl(cases_path, result_paths):
         expected_count = int(case["batch_size"]) if row["phase"] == "batch" else 1
         if len(row["results"]) != expected_count:
             errors.append({**identity, "error": "Result cardinality differs from requested calls"})
+        distinct = row.get("batch_targets") == "distinct"
+        targets = batch_graphs.get(graph_key) if distinct else None
+        if distinct and (targets is None or len(targets) < len(row["results"])):
+            errors.append({**identity, "error": "Missing batch target graph metadata"})
+            continue
         for index, result in enumerate(row["results"]):
-            errors.extend({**identity, "result": index, "error": error} for error in validate_result(case, result, query, target))
-            warnings.extend({**identity, "result": index, "warning": warning} for warning in validation_warnings(case, query, target))
+            # A distinct target is checked against its own graph; mappings are compared across
+            # languages only for the case target, whose parser numbering is known.
+            searched = targets[index] if distinct else target
+            errors.extend({**identity, "result": index, "error": error} for error in validate_result(case, result, query, searched))
+            warnings.extend({**identity, "result": index, "warning": warning} for warning in validation_warnings(case, query, searched))
             if result["optimal"]:
                 matches = result["matches"]
                 objective = _score(case, dict(matches[0]["atoms"]), matches[0]["bonds"]) if matches else (0, 0, 0)
-                indices = index_maps.get(graph_key)
+                indices = None if distinct else index_maps.get(graph_key)
                 normalised = normalised_matches(matches, *indices) if indices else None
-                paired[row["case_id"], row["phase"], row["sample"], index].append(
+                # A batch row that names no targets repeats the case target.
+                paired[row["case_id"], row["phase"], row["sample"], index, row.get("batch_targets", "copies")].append(
                     (row["language"], objective, len(matches), result["complete"], normalised))
     for key, values in paired.items():
         completed = [value for value in values if value[3]]

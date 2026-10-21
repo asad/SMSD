@@ -1,4 +1,9 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2018-2026 BioInception PVT LTD
+ * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ */
 package com.bioinception.smsd.core;
 
 import java.util.Arrays;
@@ -6,17 +11,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.silent.SilentChemObjectBuilder;
-import org.openscience.cdk.smiles.SmilesParser;
+import static com.bioinception.smsd.TestSupport.rawMolecule;
 import static org.junit.jupiter.api.Assertions.*;
 
 class PreparedQuerySnapshotRegressionTest {
   private static MolGraph carbon() {
     return new MolGraph.Builder().atomCount(1).atomicNumbers(new int[]{6}).neighbors(new int[][]{{}}).build();
-  }
-
-  private static IAtomContainer molecule(String smiles) throws Exception {
-    return new SmilesParser(SilentChemObjectBuilder.getInstance()).parseSmiles(smiles);
   }
 
   @Test void preparedGraphQueriesRetainTheOriginalElement() {
@@ -52,7 +52,7 @@ class PreparedQuerySnapshotRegressionTest {
 
   @ParameterizedTest @ValueSource(strings = {"[C@H](F)(Cl)Br", "Cl/C=C(/F)Br"})
   void preparedQueriesRetainStereoAndReferenceLigands(String smiles) throws Exception {
-    MolGraph query = new MolGraph(molecule(smiles)), target = new MolGraph(molecule(smiles));
+    MolGraph query = new MolGraph(rawMolecule(smiles)), target = new MolGraph(rawMolecule(smiles));
     MCS.Options maximumOptions = new MCS.Options();
     maximumOptions.chemistry.useChirality = true;
     maximumOptions.chemistry.useBondStereo = true;
@@ -79,7 +79,7 @@ class PreparedQuerySnapshotRegressionTest {
     char[] prefix = new char[201];
     Arrays.fill(prefix, 'C');
     String smiles = new String(prefix) + "/C=C/Cl";
-    MolGraph query = new MolGraph(molecule(smiles)), target = new MolGraph(molecule(smiles));
+    MolGraph query = new MolGraph(rawMolecule(smiles)), target = new MolGraph(rawMolecule(smiles));
     assertTrue(query.n > 200);
     MCS.Options maximumOptions = new MCS.Options();
     maximumOptions.chemistry.useBondStereo = true;
@@ -87,15 +87,16 @@ class PreparedQuerySnapshotRegressionTest {
     substructureOptions.chemistry = maximumOptions.chemistry;
     MCS maximum = MCS.find(query).withOptions(maximumOptions);
     Substructure substructure = Substructure.find(query).withOptions(substructureOptions);
-    for (int[] properties : query.sparseBondProps.values())
-      if (properties[3] != 0) properties[3] = 3 - properties[3];
+    for (int[] row : query.neighbourDbStereo)
+      for (int k = 0; k < row.length; k++)
+        if (row[k] != 0) row[k] = 3 - row[k];
     assertEquals(query.n, maximum.match(target).matches().get(0).atomCount());
     assertTrue(substructure.match(target).found());
     assertFalse(Substructure.find(query).withOptions(substructureOptions).match(target).found());
   }
 
   @Test void containerInputsAlreadyHaveIndependentPreparedState() throws Exception {
-    IAtomContainer query = molecule("C");
+    IAtomContainer query = rawMolecule("C");
     MolGraph target = carbon();
     MCS maximum = MCS.find(query);
     Substructure substructure = Substructure.find(query);

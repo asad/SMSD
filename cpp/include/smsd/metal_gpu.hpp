@@ -2,7 +2,8 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
- * See the NOTICE file for attribution, trademark, and algorithm IP terms. *
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ *
  * Metal/MPS batch screening backend — macOS 10.14+ / Apple Silicon.
  *
  * This header is PURE C++ — no Objective-C types, no #import.
@@ -56,7 +57,7 @@ struct alignas(16) MetalMolecule {
 static_assert(sizeof(MetalMolecule) == 2064, "Metal molecule layout must match the shader");
 
 /**
- * Single screening result: target index + RASCAL upper-bound score.
+ * Single screening result: target index + similarity upper-bound score.
  */
 struct MetalScreenResult {
     int   index = 0;
@@ -89,7 +90,7 @@ std::string metalDeviceInfo();
 MetalMolecule toMetalMolecule(int atomCount, const int* labels);
 
 /**
- * Batch RASCAL upper-bound screen on the Metal GPU.
+ * Batch similarity upper-bound screen on the Metal GPU.
  *
  * Dispatches a parallel Metal compute kernel; each GPU thread evaluates one
  * (query, target[i]) pair using the label-histogram bound:
@@ -97,7 +98,7 @@ MetalMolecule toMetalMolecule(int atomCount, const int* labels);
  *   overlap = sum_Z min(q.labelCounts[Z], t.labelCounts[Z])
  *   score[i] = overlap / (q.n + t.n - overlap)
  *
- * This is a conservative upper bound — any pair whose true RASCAL similarity
+ * This is a conservative upper bound — any pair whose true similarity
  * exceeds `threshold` is guaranteed to appear in the output.
  *
  * @param query      Packed query molecule.
@@ -105,7 +106,7 @@ MetalMolecule toMetalMolecule(int atomCount, const int* labels);
  * @param threshold  Minimum score to include in results (default 0 = all).
  * @return           Unsorted list of hits above threshold.
  */
-std::vector<MetalScreenResult> batchRascalScreen(
+std::vector<MetalScreenResult> batchSimilarityScreen(
     const MetalMolecule&              query,
     const std::vector<MetalMolecule>& targets,
     float                             threshold = 0.f);

@@ -6,10 +6,7 @@
  */
 package com.bioinception.smsd;
 
-import com.bioinception.smsd.TestSupport;
-
-import com.bioinception.smsd.TestSupport.MoleculePair;
-
+import com.bioinception.smsd.core.MolGraph;
 import com.bioinception.smsd.core.Standardiser;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.silent.SilentChemObjectBuilder;
@@ -26,5 +23,10 @@ public class TestBase {
   /** Parse SMILES and standardise (no tautomer normalisation). */
   protected static IAtomContainer mol(String smi) throws Exception {
     return Standardiser.standardise(SP.parseSmiles(smi), Standardiser.TautomerMode.NONE);
+  }
+
+  /** The graph of a standardised molecule, see {@link #mol}. */
+  protected static MolGraph graph(String smi) throws Exception {
+    return new MolGraph(mol(smi));
   }
 }

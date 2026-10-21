@@ -2,15 +2,16 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
- * See the NOTICE file for attribution, trademark, and algorithm IP terms. */
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ */
 package com.bioinception.smsd.core;
 
 /**
  * Chemical matching constraints for substructure and MCS searches.
  *
- * <p>Controls how atoms and bonds are compared during substructure and MCS searches.
- * Pre-built profiles: {@code "strict"} (strict bond order + aromaticity),
- * {@code "compat-substruct"} / {@code "compat-fmcs"} (loose, flexible).
+ * <p>Controls how atoms and bonds are compared during substructure and MCS searches. The named
+ * profiles of {@link #profile(String)} are {@code "default"}, {@code "strict"},
+ * {@code "compat-fmcs"}, {@code "compat-substruct"}, {@code "pharma"} and {@code "reaction"}.
  *
  * <pre>{@code
  * // Default options (strict bond order, flexible aromaticity)
@@ -169,15 +170,33 @@ public final class ChemOptions {
 
   // --- Pruning ---
 
-  /** Enable two-hop neighbourhood label frequency pruning. Default: {@code true}. */
+  /**
+   * Enable two-hop neighbourhood label frequency pruning for molecules of more than 12 atoms.
+   * Default: {@code true}.
+   *
+   * @deprecated A switch of the Java substructure search alone, absent from the native core and
+   *     the Python API; it never changes a result. It will be removed in a later major release.
+   */
+  @Deprecated
   public boolean useTwoHopNLF = true;
 
-  /** Enable three-hop neighbourhood label frequency pruning. Default: {@code false}.
-   *  Can be enabled for very large molecules where extra pruning helps.
-   *  Disabled for small molecules (n &lt; 20). */
+  /**
+   * Enable three-hop neighbourhood label frequency pruning for molecules of more than 20 atoms.
+   * Default: {@code false}.
+   *
+   * @deprecated A switch of the Java substructure search alone, absent from the native core and
+   *     the Python API; it never changes a result. It will be removed in a later major release.
+   */
+  @Deprecated
   public boolean useThreeHopNLF = false;
 
-  /** Enable bit-parallel feasibility checks for faster pruning. Default: {@code true}. */
+  /**
+   * Enable bit-parallel feasibility checks for faster pruning. Default: {@code true}.
+   *
+   * @deprecated A switch of the Java substructure search alone, absent from the native core and
+   *     the Python API; it never changes a result. It will be removed in a later major release.
+   */
+  @Deprecated
   public boolean useBitParallelFeasibility = true;
 
 
@@ -199,7 +218,6 @@ public final class ChemOptions {
    *
    * @param src the source options to copy
    * @return a new independent copy with all fields duplicated
-   * @since 6.5.0
    */
   public static ChemOptions copyOf(ChemOptions src) {
     if (src == null) throw new NullPointerException("src must not be null");
@@ -228,9 +246,11 @@ public final class ChemOptions {
    *
    * <p>Available profiles:
    * <ul>
+   *   <li>{@code "default"} - the defaults: strict bond order and flexible aromaticity</li>
    *   <li>{@code "strict"} - strict bond order and aromaticity</li>
-   *   <li>{@code "compat-fmcs"} / {@code "compat-substruct"} - loose bond order,
-   *       flexible aromaticity, no ring-only constraint</li>
+   *   <li>{@code "compat-fmcs"} / {@code "compat-substruct"} / {@code "reaction"} - loose bond
+   *       order, otherwise the defaults</li>
+   *   <li>{@code "pharma"} - formal charges, ring atoms to ring atoms and complete rings</li>
    * </ul>
    *
    * <pre>{@code
@@ -252,17 +272,13 @@ public final class ChemOptions {
         break;
       case "compat-fmcs":
       case "compat-substruct":
+      case "reaction":
         opts.matchBondOrder = BondOrderMode.LOOSE;
-        opts.aromaticityMode = AromaticityMode.FLEXIBLE;
-        opts.ringMatchesRingOnly = false;
         break;
       case "pharma":
         opts.matchFormalCharge = true;
         opts.ringMatchesRingOnly = true;
         opts.completeRingsOnly = true;
-        break;
-      case "reaction":
-        opts.matchBondOrder = BondOrderMode.LOOSE;
         break;
       default:
         throw new IllegalArgumentException("Unknown ChemOptions profile: " + name);
@@ -297,7 +313,9 @@ public final class ChemOptions {
    *
    * @param on {@code true} to enable
    * @return this instance for chaining
+   * @deprecated Sets {@link #useTwoHopNLF}, which is deprecated.
    */
+  @Deprecated
   public ChemOptions withTwoHopNLF(boolean on) {
     this.useTwoHopNLF = on;
     return this;
@@ -308,7 +326,9 @@ public final class ChemOptions {
    *
    * @param on {@code true} to enable
    * @return this instance for chaining
+   * @deprecated Sets {@link #useThreeHopNLF}, which is deprecated.
    */
+  @Deprecated
   public ChemOptions withThreeHopNLF(boolean on) {
     this.useThreeHopNLF = on;
     return this;
@@ -319,7 +339,9 @@ public final class ChemOptions {
    *
    * @param on {@code true} to enable
    * @return this instance for chaining
+   * @deprecated Sets {@link #useBitParallelFeasibility}, which is deprecated.
    */
+  @Deprecated
   public ChemOptions withBitParallelFeasibility(boolean on) {
     this.useBitParallelFeasibility = on;
     return this;
@@ -328,7 +350,7 @@ public final class ChemOptions {
   /**
    * Enable or disable complete ring matching (fluent).
    *
-   * <p>When enabled, if any atom in a ring is part of the MCS, all ring atoms must be included.
+   * <p>Each retained ring atom or bond must belong to a fully selected relevant ring in its input.
    *
    * @param on {@code true} to require complete ring matching
    * @return this instance for chaining
@@ -373,7 +395,7 @@ public final class ChemOptions {
 
 
   /**
-   * Pre-configured profile for tautomer-aware MCS: loose bond orders, flexible aromaticity.
+   * Pre-configured profile for tautomer-aware MCS: loose bond orders, otherwise the defaults.
    *
    * <pre>{@code
    * ChemOptions tOpts = ChemOptions.tautomerProfile();
@@ -388,32 +410,17 @@ public final class ChemOptions {
     ChemOptions c = new ChemOptions();
     c.tautomerAware = true;
     c.matchBondOrder = BondOrderMode.LOOSE;
-    c.aromaticityMode = AromaticityMode.FLEXIBLE;
-    c.matchFormalCharge = false;
-    c.ringMatchesRingOnly = false;
     return c;
   }
 
   /**
-   * Pre-configured profile that relaxes topological constraints for loose FMCS-style matching.
+   * The {@code "compat-fmcs"} profile: loose bond orders, otherwise the defaults.
    *
-   * <p>Uses loose bond orders, flexible aromaticity and permits ring-to-chain and partial-ring matches.
-   *
-   * <pre>{@code
-   * ChemOptions loose = ChemOptions.fmcsProfile();
-   * MCS.Options options=new MCS.Options();
-   * options.chemistry=loose;
-   * SearchResult result=MCS.find(mol1).withOptions(options).match(mol2);
-   * }</pre>
-   *
-   * @return a new {@code ChemOptions} configured for loose FMCS-style matching
+   * @return a new {@code ChemOptions} with loose bond orders
+   * @deprecated Use {@code ChemOptions.profile("compat-fmcs")}, which returns the same options.
    */
+  @Deprecated
   public static ChemOptions fmcsProfile() {
-    ChemOptions c = new ChemOptions();
-    c.matchBondOrder      = BondOrderMode.LOOSE;
-    c.ringMatchesRingOnly = false;
-    c.completeRingsOnly   = false;
-    c.matchFormalCharge   = false;
-    return c;
+    return profile("compat-fmcs");
   }
 }

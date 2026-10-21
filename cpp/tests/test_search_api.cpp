@@ -2,6 +2,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  */
 #include "smsd/mcs.hpp"
 #include "smsd/substructure.hpp"
@@ -244,6 +245,13 @@ static void testGraphAndWorkflows() {
     assert(!consensus.toSmiles().empty());
     for (const auto& mapping : consensus.mappings)
         assert(smsd::MCS::validateMapping(consensus.graph, molecules[mapping.first], mapping.second).empty());
+    const auto none = smsd::MCS::consensus({}, {}, 1.0);
+    assert(!none.found && none.sourceIndex == -1 && none.graph.n == 0 && none.toSmiles().empty() && none.mappings.empty());
+    smsd::MCS::Options excluded;
+    excluded.excludedTargetAtoms = {0};
+    rejected = false;
+    try { smsd::MCS::consensus(molecules, excluded); } catch (const std::invalid_argument&) { rejected = true; }
+    assert(rejected);
     const auto decomposition = smsd::Substructure::decomposeRGroups(smsd::parseSMILES("c1ccccc1"), {smsd::parseSMILES("Cc1ccccc1")});
     assert(decomposition.size() == 1 && decomposition.front().core.n == 6 && decomposition.front().rgroups.size() == 1);
     const auto batch = smsd::Substructure::find("CC").matchMany(queries, 2);
@@ -303,6 +311,30 @@ static void testReviewChemistryWorkflows() {
     const auto maximum = smsd::MCS::find(source).withOptions(strict).match(target);
     assert(maximum.optimal && maximum.matches.front().atomMapping.size() == 6);
     assert(smsd::MCS::isMappingMaximal(source, target, maximum.matches.front(), strict));
+    // An invalid mapping is reported and is not maximal; an atom outside either graph is rejected.
+    const std::map<int, int> incompatible{{0, 0}, {1, 1}, {2, 2}};
+    const auto ethanol = smsd::parseSMILES("CCO"), ethylamine = smsd::parseSMILES("CCN");
+    assert(smsd::MCS::validateMapping(ethanol, ethylamine, incompatible) == std::vector<std::string>{"Mapped atoms are incompatible"});
+    assert(!smsd::MCS::isMappingMaximal(ethanol, ethylamine, incompatible));
+    assert(!smsd::MCS::isMappingMaximal(ethanol, ethylamine, smsd::MCS::mappingMatch(ethanol, ethylamine, incompatible)));
+    const std::map<int, int> backbone{{0, 0}, {1, 1}};
+    assert(smsd::MCS::mappingMatch(ethanol, ethylamine, backbone).bondMapping.size() == 1);
+    assert(smsd::MCS::validateMapping(ethanol, ethylamine, backbone).empty() && smsd::MCS::isMappingMaximal(ethanol, ethylamine, backbone));
+    bool rejected = false;
+    try { smsd::MCS::canonicalizeMapping(ethanol, ethylamine, std::map<int, int>{{0, 3}}); } catch (const std::out_of_range&) { rejected = true; }
+    assert(rejected);
+    // A constrained search keeps one result per query after a cancellation.
+    smsd::MCSOptions cancelled;
+    cancelled.cancellation = std::make_shared<smsd::CancellationToken>();
+    cancelled.cancellation->cancel();
+    const auto stopped = smsd::MCS::matchConstrained({ethanol, ethanol}, ethylamine, cancelled);
+    assert(stopped.size() == 2 && stopped[0].status == smsd::SearchStatus::Cancelled
+           && stopped[1].status == smsd::SearchStatus::Cancelled);
+    // A chain core matched in a ring keeps only the images of the query bonds, so it stays a chain.
+    const auto chain = smsd::Substructure::decomposeRGroups(smsd::parseSMILES("CCCCCC"), {smsd::parseSMILES("C1CCCCC1C")});
+    size_t coreBondEnds = 0;
+    for (const auto& neighbors : chain.front().core.neighbors) coreBondEnds += neighbors.size();
+    assert(chain.front().core.n == 6 && coreBondEnds == 10 && chain.front().rgroups.size() == 1);
 }
 
 int main() {

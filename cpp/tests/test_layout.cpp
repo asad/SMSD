@@ -2,6 +2,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  *
  * Test suite for force-directed layout, stress majorisation, and template
  * matching (layout.hpp).
@@ -238,7 +239,7 @@ static void test_reduce_crossings_short_coords_resized() {
 }
 
 // ============================================================================
-// v6.11.0 — generateCoords2D comprehensive pipeline tests
+// generateCoords2D comprehensive pipeline tests
 // ============================================================================
 
 static void test_generate2d_benzene() {
@@ -313,7 +314,7 @@ static void test_generate2d_salt() {
 }
 
 // ============================================================================
-// v6.11.0 — 3D coordinate generation tests
+// 3D coordinate generation tests
 // ============================================================================
 
 static void test_generate3d_benzene() {
@@ -340,7 +341,7 @@ static void test_generate3d_ethane() {
 }
 
 // ============================================================================
-// v6.11.0 — Coordinate transform tests
+// Coordinate transform tests
 // ============================================================================
 
 static void test_translate2d() {
@@ -384,8 +385,8 @@ static void test_center2d() {
     smsd::transform::center2D(coords);
     double cx = (coords[0].x + coords[1].x) / 2.0;
     double cy = (coords[0].y + coords[1].y) / 2.0;
-    TEST_ASSERT(std::abs(cx) < 1e-10, "Centered X");
-    TEST_ASSERT(std::abs(cy) < 1e-10, "Centered Y");
+    TEST_ASSERT(std::abs(cx) < 1e-10, "Centred X");
+    TEST_ASSERT(std::abs(cy) < 1e-10, "Centred Y");
 }
 
 static void test_align2d() {
@@ -430,7 +431,7 @@ static void test_project_lift_roundtrip() {
 }
 
 // ============================================================================
-// v6.11.0 — Overlap resolution tests
+// Overlap resolution tests
 // ============================================================================
 
 static void test_resolve_overlaps_separate() {
@@ -450,7 +451,7 @@ static void test_resolve_overlaps_touching() {
 }
 
 // ============================================================================
-// v6.11.0 — Layout quality metric tests
+// Layout quality metric tests
 // ============================================================================
 
 static void test_layout_quality_perfect() {
@@ -470,7 +471,7 @@ static void test_layout_quality_bad() {
 }
 
 // ============================================================================
-// v6.11.0 — Extended template library tests
+// Extended template library tests
 // ============================================================================
 
 static void test_extended_templates_exist() {
@@ -508,7 +509,7 @@ int main() {
     RUN_TEST(pipeline_morphine_like);
     RUN_TEST(reduce_crossings_short_coords_resized);
 
-    std::cout << "\ngenerate_coords_2d pipeline (v6.11.0):\n";
+    std::cout << "\ngenerate_coords_2d pipeline:\n";
     RUN_TEST(generate2d_benzene);
     RUN_TEST(generate2d_naphthalene);
     RUN_TEST(generate2d_aspirin);
@@ -519,11 +520,11 @@ int main() {
     RUN_TEST(generate2d_peg_chain);
     RUN_TEST(generate2d_salt);
 
-    std::cout << "\ngenerate_coords_3d (v6.11.0):\n";
+    std::cout << "\ngenerate_coords_3d:\n";
     RUN_TEST(generate3d_benzene);
     RUN_TEST(generate3d_ethane);
 
-    std::cout << "\nCoordinate transforms (v6.11.0):\n";
+    std::cout << "\nCoordinate transforms:\n";
     RUN_TEST(translate2d);
     RUN_TEST(rotate2d);
     RUN_TEST(scale2d);
@@ -536,15 +537,15 @@ int main() {
     RUN_TEST(bounding_box);
     RUN_TEST(project_lift_roundtrip);
 
-    std::cout << "\nOverlap resolution (v6.11.0):\n";
+    std::cout << "\nOverlap resolution:\n";
     RUN_TEST(resolve_overlaps_separate);
     RUN_TEST(resolve_overlaps_touching);
 
-    std::cout << "\nLayout quality (v6.11.0):\n";
+    std::cout << "\nLayout quality:\n";
     RUN_TEST(layout_quality_perfect);
     RUN_TEST(layout_quality_bad);
 
-    std::cout << "\nExtended templates (v6.11.0):\n";
+    std::cout << "\nExtended templates:\n";
     RUN_TEST(extended_templates_exist);
 
     std::cout << "\n=== Results: " << g_pass << " passed, " << g_fail << " failed ===\n\n";

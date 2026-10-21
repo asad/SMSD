@@ -1,40 +1,43 @@
 <p align="center">
-  <a href="https://github.com/asad/SMSD" aria-label="SMSD">
-    <img src="https://raw.githubusercontent.com/asad/SMSD/master/icons/icon.svg" alt="SMSD" width="140"/>
+  <a href="https://github.com/asad/SMSD" aria-label="SMSD Pro">
+    <img src="https://raw.githubusercontent.com/asad/SMSD/master/icons/icon.svg" alt="SMSD Pro" width="140"/>
   </a>
 </p>
 
-# SMSD for Python
-
-The examples use the current source API. Release 7.2.2 predates the
-`MCS`/`Substructure` API change; build from source for these examples.
+# SMSD Pro for Python
 
 [![PyPI](https://img.shields.io/pypi/v/smsd)](https://pypi.org/project/smsd/)
 [![Licence](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/asad/SMSD/blob/master/LICENSE)
 
-Substructure search, maximum common substructure (MCS), fingerprints and
-similarity screening. Core matching does not require RDKit, CDK or Java.
-RDKit is optional for molecule conversion and drawing.
+SMSD Pro provides substructure search, maximum common substructure (MCS)
+search, fingerprints and similarity screening for chemical graphs. Core matching
+needs no RDKit, CDK or Java. RDKit is optional and is used only for RDKit
+molecule conversion and the RDKit image helpers.
 
-## Install
-
-The 7.2.2 wheels use CPython 3.14 and include CPU/OpenMP support:
-
-| Platform | Architecture | Requirement |
-|---|---|---|
-| Windows | x86_64 / AMD64 | Windows 10 or later |
-| Linux | x86_64 | glibc 2.28+ |
-| macOS | arm64 / Apple Silicon | macOS 26+ |
-
-Install 7.2.2 from [PyPI](https://pypi.org/project/smsd/):
+## Installation
 
 ```bash
-python -m pip install smsd==7.2.2
+python -m pip install "smsd==8.0.0"
 ```
 
-You can also download and install the matching wheel from the
-[GitHub release](https://github.com/asad/SMSD/releases/tag/v7.2.2).
-Intel macOS, Linux arm64 and other Python versions require a source build.
+To include RDKit, install the `rdkit` extra:
+
+```bash
+python -m pip install "smsd[rdkit]==8.0.0"
+```
+
+Wheels are published on PyPI and with each
+[GitHub release](https://github.com/asad/SMSD/releases). They target CPython
+3.14 and use CPU/OpenMP:
+
+| Platform | Architecture | Minimum version |
+|---|---|---|
+| Windows | x86_64 (AMD64) | Windows 10 |
+| Linux | x86_64 (AMD64) | glibc 2.28 |
+| macOS | arm64 (Apple silicon) | macOS 26 |
+
+Other Python versions, the free-threaded CPython build, Intel macOS and Linux
+arm64 need a source build, as described below.
 
 ## Quick start
 
@@ -49,32 +52,23 @@ result = smsd.MCS.find(query).with_timeout(1000).match(target)
 print(f"MCS: {result.best.atom_count} atoms")  # MCS: 6 atoms
 ```
 
-Matches link query atom indices to target atom indices and retain selected
-bonds and fragments. Check `result.optimal`, `result.complete` and
-`result.status` before treating an answer as a completed search.
+`Substructure` and `MCS` prepare a query once and expose `match`, `match_all`
+and `match_many`. Each match maps query atom indices to target atom indices and
+records the selected bonds and fragments. A search that stops early may return
+a valid partial answer, so check `result.optimal`, `result.complete` and
+`result.status` before treating it as a proved optimum. An empty incomplete
+result does not prove absence.
 
-## Fingerprints
-
-Radius 2 gives ECFP4; use `mode="fcfp"` for functional-class fingerprints
-(Rogers and Hahn, 2010).
-`similarity()` is a screening upper bound. Use fingerprint metrics for fingerprint
-similarity:
-
-```python
-import smsd
-
-query_fp = smsd.fingerprint_from_smiles("c1ccccc1", radius=2, fp_size=2048)
-target_fp = smsd.fingerprint_from_smiles("c1ccc(O)cc1", radius=2, fp_size=2048)
-score = smsd.tanimoto_coefficient(query_fp, target_fp)
-assert 0.0 <= score <= 1.0
-```
-
-For count fingerprints and other metrics, see the
-[fingerprint examples](https://github.com/asad/SMSD/blob/master/docs/EXAMPLES.md#6-fingerprints-and-similarity).
+`MCS` defaults to a connected maximum common induced subgraph (MCIS), ranked by
+atoms and then bonds. `MCS.Objective.MCES` selects the maximum common edge
+subgraph (MCES), which maximises common bonds and then their incident atoms and
+never adds isolated atoms. `with_fragments()` permits disconnected common
+graphs.
 
 ## Batch search
 
-Parse molecules once when reusing them. Batch results follow target order:
+Parse molecules once when you reuse them. Results follow the target order, and
+each target has its own search budget:
 
 ```python
 import smsd
@@ -88,14 +82,34 @@ results = smsd.MCS.find(query).with_timeout(1000).match_many(targets)
 assert [result.best.atom_count for result in results] == [6, 2]
 ```
 
-Both queries expose `match`, `match_all` and `match_many`. `MCS` supports
-MCIS and MCES objectives and disconnected fragment mapping. `TargetCorpus`
-supports repeated queries against one collection.
+`match_all` returns up to 1,000 matches by default, including symmetry-related
+mappings; check `complete` before treating an enumeration as exhaustive.
+`TargetCorpus` holds a collection for repeated queries. Batch calls use OpenMP
+and run sequentially when it is unavailable.
 
-## Using RDKit
+## Fingerprints
 
-Install RDKit separately to pass its molecules directly to SMSD. Returned
-mappings use the original RDKit atom indices:
+Radius 2 gives ECFP4; `mode="fcfp"` gives functional-class fingerprints
+([Rogers and Hahn, 2010](https://doi.org/10.1021/ci100050t)). `similarity()` is
+an upper bound for screening, not a fingerprint metric; use the fingerprint
+coefficients for fingerprint similarity:
+
+```python
+import smsd
+
+query_fp = smsd.fingerprint_from_smiles("c1ccccc1", radius=2, fp_size=2048)
+target_fp = smsd.fingerprint_from_smiles("c1ccc(O)cc1", radius=2, fp_size=2048)
+score = smsd.tanimoto_coefficient(query_fp, target_fp)
+assert 0.0 <= score <= 1.0
+```
+
+The [Python examples](https://github.com/asad/SMSD/blob/master/docs/EXAMPLES.md#fingerprints-and-similarity)
+cover count fingerprints and the other coefficients.
+
+## RDKit molecules
+
+With RDKit installed, pass its molecules directly. Mappings use the original
+RDKit atom indices:
 
 ```python
 from rdkit import Chem
@@ -107,17 +121,31 @@ result = smsd.MCS.find(query).with_timeout(1000).match(target)
 assert result.best.atom_count == 6
 ```
 
-## More examples
+Conversion passes through SMILES, so coordinates, data fields and query
+predicates are not transferred. `from_openbabel` and `to_openbabel` provide the
+same bridge for Open Babel, without its original atom numbering. See
+[input atom numbering](https://github.com/asad/SMSD/blob/master/docs/PYTHON.md#input-atom-numbering).
 
-The [Python guide](https://github.com/asad/SMSD/blob/master/docs/PYTHON.md) covers
-chemistry options, SMARTS, stereo, tautomer matching, fingerprints, MOL/SDF I/O,
-drawing and batch operations. See the
-[examples](https://github.com/asad/SMSD/blob/master/docs/EXAMPLES.md) for complete workflows.
+## Documentation
+
+- [Python guide](https://github.com/asad/SMSD/blob/master/docs/PYTHON.md):
+  search model, chemistry options, timeouts and the full API reference.
+- [Python examples](https://github.com/asad/SMSD/blob/master/docs/EXAMPLES.md):
+  fingerprints, drawing, layout, stereo, MOL and SDF files, R-groups and
+  scaffolds.
+- [Installation guide](https://github.com/asad/SMSD/blob/master/docs/HOWTO-INSTALL.md):
+  platform requirements and source builds.
+- [Validation record](https://github.com/asad/SMSD/blob/master/docs/VALIDATION_8.0.0.md):
+  release checks for 8.0.0.
+- [Benchmark guide](https://github.com/asad/SMSD/blob/master/benchmarks/README.md):
+  workloads and mapping validation.
+- [Changelog](https://github.com/asad/SMSD/blob/master/CHANGELOG.md): what the
+  release provides.
 
 ## Build from source
 
-Run these commands at the repository root with a C++17 compiler and CMake
-3.18 or later. Source metadata allows Python 3.9 or later:
+From the repository root, with Python 3.9 or later, a C++17 compiler and CMake
+3.18 or later:
 
 ```bash
 python -m pip install build
@@ -125,25 +153,17 @@ python -m pip install -e ".[dev]"
 python -m build
 ```
 
-Release wheels use CPU/OpenMP. Metal and CUDA are optional source-build features
-that need compatible tools and hardware. `gpu_device_info()` reports the active
-backend; batch matching uses the CPU.
-
-## Tests and benchmarks
-
-Version 7.2.2 passes 691 Python tests with 8 optional skips per platform; see the
-[test report](https://github.com/asad/SMSD/blob/master/docs/VALIDATION_7.2.2.md).
-The [7.2.0 benchmark report](https://github.com/asad/SMSD/blob/master/benchmarks/RESULTS_7.2.0.md)
-contains measured comparisons for its recorded versions and molecules.
-For the current prepared-query API, use the shared workloads and mapping
-validation in the [benchmark guide](https://github.com/asad/SMSD/blob/master/benchmarks/README.md).
+Metal and CUDA are optional source-build backends that need compatible tools
+and hardware. They can compute the initial atom-compatibility filter; search
+and proof run on the CPU. `gpu_device_info()` reports the backend available at
+run time, not the backend a particular call used.
 
 ## Other languages
 
-[Java](https://github.com/asad/SMSD/tree/master/java) and
-[C++](https://github.com/asad/SMSD/tree/master/cpp) are also available.
-Java 7.2.2 is on GitHub; Maven Central remains at `com.bioinceptionlabs:smsd:7.1.1`
-until 7.2.2 is published there.
+SMSD Pro is also available for
+[Java](https://github.com/asad/SMSD/blob/master/docs/JAVA.md), with CDK
+integration, and as a header-only
+[C++17 library](https://github.com/asad/SMSD/blob/master/docs/CPP.md).
 
 ## Citation
 
@@ -161,9 +181,12 @@ For the original SMSD toolkit, please also cite:
 > Journal of Cheminformatics, 1:12, 2009.
 > DOI: [10.1186/1758-2946-1-12](https://doi.org/10.1186/1758-2946-1-12)
 
-A machine-readable [CITATION.cff](https://github.com/asad/SMSD/blob/master/CITATION.cff) is available for automated citation tools.
+A machine-readable [CITATION.cff](https://github.com/asad/SMSD/blob/master/CITATION.cff)
+is provided for citation tools.
 
 ## Licence
 
-Apache 2.0 — Copyright (c) 2018-2026 Syed Asad Rahman, BioInception PVT LTD.
-See [LICENSE](https://github.com/asad/SMSD/blob/master/LICENSE) and [NOTICE](https://github.com/asad/SMSD/blob/master/NOTICE) for licensing and attribution.
+Apache License 2.0. Copyright (c) 2018-2026 BioInception PVT LTD. Algorithm
+Copyright (c) 2009-2026 Syed Asad Rahman. See
+[LICENSE](https://github.com/asad/SMSD/blob/master/LICENSE) and
+[NOTICE](https://github.com/asad/SMSD/blob/master/NOTICE).

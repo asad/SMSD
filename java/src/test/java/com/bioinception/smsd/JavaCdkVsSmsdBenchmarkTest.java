@@ -30,7 +30,7 @@ import org.openscience.cdk.isomorphism.DfPattern;
  * Protocol is configured with smsd.benchmark.warmup, rounds and timeoutMs;
  * defaults are no warmup, one measured trial and a one-second SMSD budget.
  *
- * <p>Run with: {@code mvn test -Dtest=JavaCdkVsSmsdBenchmarkTest -Dbenchmark=true}
+ * <p>Run with: {@code mvn -f java/pom.xml -pl core test -Dtest=JavaCdkVsSmsdBenchmarkTest -Dbenchmark=true}
  *
  * @author Syed Asad Rahman
  */

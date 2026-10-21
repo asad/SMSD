@@ -2,7 +2,10 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
- *
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ */
+
+/*
  * Substructure Search Benchmark: SMSD vs CDK (Java-to-Java)
  * ==========================================================
  *
@@ -11,11 +14,11 @@
  *
  * Compile and run:
  *   cd <project-root>
- *   mvn package -DskipTests
+ *   mvn -f java/pom.xml package -DskipTests
  *   mkdir -p build/local-benchmarks/java-classes
- *   javac -cp java/target/smsd-7.2.2-jar-with-dependencies.jar \
+ *   javac -cp java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar \
  *         benchmarks/benchmark_substructure_java.java -d build/local-benchmarks/java-classes
- *   java -cp java/target/smsd-7.2.2-jar-with-dependencies.jar:build/local-benchmarks/java-classes \
+ *   java -cp java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar:build/local-benchmarks/java-classes \
  *         benchmark_substructure_java benchmarks/substructure_pairs.tsv \
  *         build/local-benchmarks/results_substructure.tsv
  *

@@ -2,19 +2,19 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  *
- * Consolidated core test suite -- substructure, MCS, ring perception,
- * chemistry, advanced features, and 5.7.0 feature tests.
- *
- * Merges: test_main.cpp, test_advanced.cpp, test_chemistry.cpp, test_rings.cpp
+ * Core test suite: substructure, MCS, ring perception,
+ * chemistry, search bounds, parser options and the graph builder.
  */
 
 #include "smsd/smsd.hpp"
-#include "search_test_helpers.hpp"
+#include "test_support.hpp"
 #include "smsd/smiles_parser.hpp"
 #include "smsd/ring_finder.hpp"
 #include <cassert>
 #include <chrono>
+#include <cstdlib>
 #include <cmath>
 #include <cstdio>
 #include <functional>
@@ -22,6 +22,13 @@
 #include <limits>
 #include <random>
 #include <string>
+
+// Timing bounds are opt-in (SMSD_TEST_TIMING=1), so a loaded machine cannot fail the suite
+// while an unloaded one still guards against performance regressions.
+static bool timingBoundsEnabled() {
+    const char* value = std::getenv("SMSD_TEST_TIMING");
+    return value != nullptr && *value != '\0' && *value != '0';
+}
 
 
 static smsd::MCS::Options chemistryOptions(const smsd::ChemOptions& chemistry) {
@@ -194,7 +201,7 @@ static smsd::MolGraph makeToluene() {
 }
 
 // ============================================================================
-// SECTION 1: Basic substructure tests (from test_main.cpp)
+// SECTION 1: Basic substructure tests
 // ============================================================================
 
 void test_benzene_self_sub() {
@@ -227,7 +234,7 @@ void test_benzene_phenol_mcs() {
     std::cout << "MCS=" << mcs.size() << " ";
 }
 
-void test_rascal() {
+void test_similarity_bound() {
     auto benz = makeBenzene();
     auto phen = makePhenol();
     double sim = smsd::similarityUpperBound(benz, phen);
@@ -246,11 +253,11 @@ void test_performance() {
     auto t1 = std::chrono::high_resolution_clock::now();
     double us = std::chrono::duration<double, std::micro>(t1 - t0).count() / 10000;
     std::cout << us << "us/call ";
-    assert(us < 100);
+    if (timingBoundsEnabled()) assert(us < 100);
 }
 
 // ============================================================================
-// SECTION 2: Advanced feature tests (from test_advanced.cpp)
+// SECTION 2: Advanced feature tests
 // ============================================================================
 
 void test_findNMCS() {
@@ -331,6 +338,18 @@ void test_murckoScaffold_toluene() {
     auto scaffold = smsd::murckoScaffold(tol);
     std::cout << "scaffold_atoms=" << scaffold.n << " ";
     assert(scaffold.n == 6);
+    // A stripped substituent is replaced by hydrogen, so the scaffold is closed-shell benzene.
+    const auto parsed = smsd::murckoScaffold(smsd::parseSMILES("Cc1ccccc1"));
+    assert(parsed.hydrogenCount == std::vector<int>(6, 1) && parsed.toCanonicalSmiles() == "c1ccccc1");
+    // The carbonyl oxygen is joined to the ring by a double bond and stays, as in Bemis-Murcko.
+    const auto quaternary = smsd::murckoScaffold(smsd::parseSMILES("CC1(C)CCC(=O)CC1"));
+    assert(quaternary.n == 7 && quaternary.hydrogenCount == std::vector<int>({2, 2, 2, 0, 0, 2, 2})
+           && quaternary.toCanonicalSmiles() == "C1(CCCCC1)=O");
+    // The spiro atom keeps its four ring neighbours; the gem-dimethyl atom becomes a CH2.
+    const auto spiro = smsd::murckoScaffold(smsd::parseSMILES("CC1(C)CCC2(CC1)CCCC2"));
+    int hydrogens = 0;
+    for (int count : spiro.hydrogenCount) hydrogens += count;
+    assert(spiro.n == 10 && hydrogens == 18 && spiro.toCanonicalSmiles().find('[') == std::string::npos);
 }
 
 void test_murckoScaffold_benzene() {
@@ -381,8 +400,6 @@ void test_decomposeRGroups_phenol() {
     assert(it->second.atomicNum[0] == 8);
 }
 
-// test_mapReaction: removed (proprietary reaction mapping IP)
-
 void test_extractSubgraph() {
     auto phen = makePhenol();
     std::vector<int> indices = {0, 1, 2, 3, 4, 5};
@@ -395,7 +412,7 @@ void test_extractSubgraph() {
 }
 
 // ============================================================================
-// SECTION 3: Chemistry tests (from test_chemistry.cpp)
+// SECTION 3: Chemistry tests
 // ============================================================================
 
 void test_ring_fusion_strict_naphthalene_biphenyl() {
@@ -666,9 +683,9 @@ void test_mcs_strict_chirality_returns_valid_mapping() {
 }
 
 void test_mcs_directional_validity_diverse_pairs() {
-    // RDKit 2026.03.3, MaximizeBonds=false, CompareAny and no ring restrictions
-    // completed with 7 atoms for this pair. The historical minimum 8 exceeded
-    // that permissive upper bound; phenol explicitly witnesses the feasible 7.
+    // RDKit FindMCS with MaximizeBonds=false, CompareAny and no ring restrictions
+    // completes with 7 atoms for this pair, which bounds the searches here from
+    // above; phenol witnesses the feasible 7.
     assert_directional_mcs(
         "CC(=O)Oc1ccccc1C(=O)O",
         "CC(=O)Nc1ccc(O)cc1",
@@ -677,9 +694,9 @@ void test_mcs_directional_validity_diverse_pairs() {
         "c1nc(c2c(n1)n(cn2)C3C(C(C(O3)COP(=O)(O)OP(=O)(O)OP(=O)(O)O)O)O)N",
         "c1nc(c2c(n1)n(cn2)C3C(C(C(O3)COP(=O)(O)OP(=O)(O)O)O)O)N",
         27, 27);
-    // The same permissive, atom-maximising oracle completed at 20 atoms, so
-    // the historical minimum 25 was impossible. Preserve the established
-    // 10-atom guarantee and verify its conserved-tail witness in both graphs.
+    // The same permissive, atom-maximising oracle completes at 20 atoms, which
+    // bounds this pair from above. The 10-atom guarantee holds, and its
+    // conserved-tail witness is verified in both graphs.
     assert_directional_mcs(
         "CC(C)c1c(C(=O)Nc2ccccc2)c(-c2ccccc2)c(-c2ccc(F)cc2)n1CC[C@H](O)C[C@H](O)CC(=O)O",
         "CC(C)c1nc(N(C)S(C)(=O)=O)nc(-c2ccc(F)cc2)c1/C=C/[C@H](O)C[C@H](O)CC(=O)O",
@@ -691,7 +708,7 @@ void test_mcs_directional_validity_diverse_pairs() {
 }
 
 // ============================================================================
-// SECTION 4: Ring finder tests (from test_rings.cpp)
+// SECTION 4: Ring finder tests
 // ============================================================================
 
 static void runRingTests() {
@@ -830,10 +847,10 @@ static void runRingTests() {
 }
 
 // ============================================================================
-// SECTION 5: v5.7.0 feature tests
+// SECTION 5: Search bounds, parser options and graph builder tests
 // ============================================================================
 
-// Tree-DP: branched molecule MCS (isobutane vs neopentane)
+// Branched acyclic MCS: isobutane against neopentane.
 // Isobutane CC(C)C has 4 atoms; neopentane CC(C)(C)C has 5 atoms.
 // Both are acyclic (trees). The MCS should be the isobutane skeleton (4 atoms)
 // since isobutane is a subgraph of neopentane.
@@ -853,12 +870,10 @@ void test_tree_dp_branched_mcs() {
     assert(mcsSize == 4);
 }
 
-// LFUB degree-aware: induced MCS uses tighter bound.
-// When opts.induced=true, the MCS must be an induced subgraph.
-// For neopentane (degree-4 centre) vs isobutane (degree-3 centre),
-// the induced MCS should be smaller than the non-induced MCS because
-// the degree-4 centre in neopentane has no degree-3 equivalent in an
-// induced mapping.
+// Induced MCS: under the MCIS objective the common subgraph must be induced.
+// For neopentane (degree-4 centre) against isobutane (degree-3 centre), the
+// induced common subgraph is no larger than the MCES one, as the degree-4
+// centre of neopentane has no degree-3 equivalent in an induced mapping.
 void test_lfub_induced_tighter_bound() {
     auto isobutane  = smsd::parseSMILES("CC(C)C");
     auto neopentane = smsd::parseSMILES("CC(C)(C)C");
@@ -888,7 +903,7 @@ void test_lfub_induced_tighter_bound() {
 }
 
 // Tier 2 pKa: DMSO solvent changes tautomer weights.
-// In DMSO, keto-enol equilibrium shifts toward enol, lowering the tautomer
+// In DMSO, keto-enol equilibrium shifts towards enol, lowering the tautomer
 // weight. We verify that the tautomerWeight values differ between AQUEOUS
 // and DMSO solvents for an acetone/enol pair.
 void test_tier2_pka_dmso_solvent() {
@@ -918,9 +933,8 @@ void test_tier2_pka_dmso_solvent() {
     assert(foundDifference);
 }
 
-// Chain fast-path: PEG-12 vs PEG-16 should complete in <100ms.
+// Chains: PEG-12 maps whole onto PEG-16, within 100 ms when timing bounds are on.
 void test_chain_fastpath_peg() {
-    // Use simple, shorter PEG strings instead
     std::string peg12 = "OCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCO";    // ~12 EG units
     std::string peg16 = "OCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCO"; // ~16 EG units
 
@@ -941,8 +955,7 @@ void test_chain_fastpath_peg() {
 
     // PEG-12 should map fully into PEG-16 (all atoms of the shorter chain)
     assert(mcsSize == g1.n);
-    // Chain fast-path should complete well under 100ms
-    assert(ms < 100.0);
+    if (timingBoundsEnabled()) assert(ms < 100.0);
 }
 
 // Lenient parser: ParseOptions{.lenient=true} on malformed SMILES.
@@ -1215,7 +1228,7 @@ void test_molgraph_extract_subgraph_preserves_atom_ids_and_metadata() {
 }
 
 // ---------------------------------------------------------------------------
-// User-feedback tests (v6.2.0)
+// Strict parsing and canonical round-trip tests
 // ---------------------------------------------------------------------------
 
 void test_strict_parser_rejects_empty_smiles() {
@@ -1236,11 +1249,9 @@ void test_canonical_roundtrip_ethanol() {
         "OCC and CCO are both ethanol — canonical SMILES must match");
 }
 
-// Reaction-aware MCS tests removed (proprietary reaction mapping IP).
-
 // ============================================================================
-// Substructure benchmark diagnostic (v6.8.0) — single-iteration correctness
-// + timing for key benchmark pairs.  Runs with ctest for fast diagnosis.
+// Substructure benchmark diagnostic: single-iteration correctness and timing
+// for key benchmark pairs. Runs with ctest for fast diagnosis.
 // ============================================================================
 
 void test_sub_benchmark_diagnostic() {
@@ -1289,22 +1300,21 @@ void test_sub_benchmark_diagnostic() {
         if (!ok) std::cout << " (got=" << result << " exp=" << pairs[i].expected << ")";
         std::cout << "\n    ";
         if (ok) nOk++;
-        // Timeout guard: no pair should exceed 100ms
-        assert(us < 100000 && "Substructure exceeded 100ms timeout");
+        if (timingBoundsEnabled()) assert(us < 100000 && "Substructure exceeded 100ms bound");
     }
     std::cout << nOk << "/" << nPairs << " correct ";
     assert(nOk == nPairs);
 }
 
 // ============================================================================
-// Precision chemistry — Kekulization, implicit H, stereo, charged aromatics
+// Precision chemistry: Kekulisation, implicit H, stereo, charged aromatics
 // ============================================================================
 
 void test_kekulize_azulene() {
     // Azulene: non-alternant fused 5-7 system, 10 pi electrons
     auto g = smsd::parseSMILES("c1ccc2cccc2cc1");  // azulene SMILES
     assert(g.n == 10 && "azulene: 10 atoms");
-    assert(g.kekulize() && "azulene: kekulization must succeed");
+    assert(g.kekulize() && "azulene: kekulisation must succeed");
     int doubleBonds = 0;
     for (int i = 0; i < g.n; ++i) {
         ASSERT_TRUE(!g.aromatic[i]);
@@ -1327,21 +1337,21 @@ void test_kekulize_pyrene() {
     // Pyrene: fused PAH with 16 atoms, 16 pi electrons
     auto g = smsd::parseSMILES("c1cc2ccc3cccc4ccc(c1)c2c34");
     assert(g.n == 16 && "pyrene: 16 atoms");
-    assert(g.kekulize() && "pyrene: kekulization must succeed");
+    assert(g.kekulize() && "pyrene: kekulisation must succeed");
 }
 
 void test_kekulize_pyridinium() {
     // Charged aromatic N: pyridinium cation
     auto g = smsd::parseSMILES("[nH+]1ccccc1");
     assert(g.n == 6 && "pyridinium: 6 atoms");
-    assert(g.kekulize() && "pyridinium: kekulization must succeed");
+    assert(g.kekulize() && "pyridinium: kekulisation must succeed");
 }
 
 void test_kekulize_cyclopentadienyl() {
     // Cyclopentadienyl anion: 6 pi electrons in 5-ring
     auto g = smsd::parseSMILES("[c-]1cccc1");
     assert(g.n == 5 && "Cp-: 5 atoms");
-    assert(g.kekulize() && "Cp-: kekulization must succeed");
+    assert(g.kekulize() && "Cp-: kekulisation must succeed");
 }
 
 void test_implicit_h_neutral_boron() {
@@ -1391,7 +1401,8 @@ void test_mcs_stereo_preserved() {
     assert(mcs.size() == 4 && "E/Z butene: full MCS regardless of stereo");
 }
 
-// Regression coverage for policy-aware pruning and capped clique search.
+// Option-aware pruning, and result limits for complete query graphs against the cliques
+// of a target.
 static smsd::MolGraph makePruningGraph(
     int n, const std::vector<std::pair<int, int>>& edges,
     std::vector<int> elements = {}, std::vector<uint8_t> aromatic = {}) {
@@ -1466,6 +1477,14 @@ void test_disconnected_substructure_requires_distinct_target_atoms() {
     ASSERT_TRUE(smsd_test::substructureExists(query, validTarget, smsd::ChemOptions{}));
 }
 
+// The deprecated neighbour-label tables stay under test, so their warnings are silenced here alone.
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 void test_multihop_nlf_preserves_target_shortcuts() {
     smsd::ChemOptions opts;
     opts.aromaticityMode = smsd::ChemOptions::AromaticityMode::STRICT;
@@ -1494,6 +1513,11 @@ void test_multihop_nlf_preserves_target_shortcuts() {
     ASSERT_TRUE(!distant.matches.empty());
     ASSERT_TRUE(smsd::MolGraph::nlfOk(query.getNLF3()[0], target.getNLF3()[0]));
 }
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#else
+#pragma GCC diagnostic pop
+#endif
 
 void test_mcs_preserves_larger_valid_direction() {
     auto query = makePruningGraph(12, chainEdges(12));
@@ -1515,8 +1539,8 @@ void test_mcs_preserves_larger_valid_direction() {
     ASSERT_TRUE(smsd::MCS::validateMapping(query, target, witness, opts).empty());
     const auto result = smsd_test::commonAtoms(query, target, chem, opts);
     ASSERT_TRUE(smsd::MCS::validateMapping(query, target, result, opts).empty());
-    // Eight is achievable and is the largest target component. The historical
-    // final selector downgraded this valid mapping to the four-atom reverse hit.
+    // Eight is achievable and is the largest target component; the final selection
+    // keeps this valid mapping rather than the four-atom reverse hit.
     ASSERT_EQ(static_cast<int>(result.size()), 8);
 }
 
@@ -1627,7 +1651,7 @@ int main() {
     RUN_TEST(benzene_in_phenol);
     RUN_TEST(phenol_not_in_benzene);
     RUN_TEST(benzene_phenol_mcs);
-    RUN_TEST(rascal);
+    RUN_TEST(similarity_bound);
     RUN_TEST(substructure_fingerprint_preserves_relaxed_policies);
     RUN_TEST(disconnected_substructure_requires_distinct_target_atoms);
     RUN_TEST(tautomer_prescreens_preserve_element_identity);
@@ -1674,7 +1698,7 @@ int main() {
     std::cout << "\n-- Ring perception --\n";
     runRingTests();
 
-    std::cout << "\n-- v5.7.0 features --\n";
+    std::cout << "\n-- Search bounds, parser options and graph builder --\n";
     RUN_TEST(tree_dp_branched_mcs);
     RUN_TEST(lfub_induced_tighter_bound);
     RUN_TEST(tier2_pka_dmso_solvent);
@@ -1692,14 +1716,14 @@ int main() {
     RUN_TEST(molgraph_ring_counts_fused_ring_bridgeheads);
     RUN_TEST(molgraph_extract_subgraph_preserves_atom_ids_and_metadata);
 
-    std::cout << "\n-- User-feedback (v6.2.0) --\n";
+    std::cout << "\n-- Strict parsing and canonical round trips --\n";
     RUN_TEST(strict_parser_rejects_empty_smiles);
     RUN_TEST(canonical_roundtrip_ethanol);
 
-    std::cout << "\n-- Substructure benchmark diagnostic (v6.8.0) --\n";
+    std::cout << "\n-- Substructure benchmark diagnostic --\n";
     RUN_TEST(sub_benchmark_diagnostic);
 
-    std::cout << "\n-- Precision chemistry (v6.11.0) --\n";
+    std::cout << "\n-- Precision chemistry --\n";
     RUN_TEST(kekulize_azulene);
     RUN_TEST(kekulize_pyrene);
     RUN_TEST(kekulize_pyridinium);

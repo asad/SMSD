@@ -1,9 +1,10 @@
-#include "search_test_helpers.hpp"
 /*
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  */
+#include "test_support.hpp"
 #include "smsd/batch.hpp"
 #include "smsd/layout.hpp"
 #include "smsd/smiles_parser.hpp"

@@ -1,12 +1,13 @@
-#include "search_test_helpers.hpp"
 /*
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  *
  * CIP stereo descriptor test suite.
  * Tests R/S assignment for tetrahedral centres and E/Z for double bonds.
  */
+#include "test_support.hpp"
 
 #include "smsd/smsd.hpp"
 #include "smsd/cip.hpp"
@@ -238,6 +239,108 @@ void test_to_string() {
     CIP_ASSERT(to_string(EZLabel::NONE) == "", "NONE EZ to_string");
 }
 
+// Sequence-rule cases shared with the Java and Python suites: duplicated
+// substituents, isotopes, mancude rings, sulfoxides and double-bond ligands.
+void test_cip_priority_sequence() {
+    struct Example { const char* smiles; int centre; RSLabel expected; };
+    const Example examples[] = {
+        {"F[C@H](C(OC)C)C(O)CO", 1, RSLabel::S},
+        {"[2H]C([2H])([C@H](O)CCF)C", 3, RSLabel::S},
+        {"O[C@H](C[13CH2]C)CCCF", 1, RSLabel::R},
+        {"F[C@H](C(CO)C(CBr)(CBr)CBr)C(C(O)C)C(C)C", 1, RSLabel::R},
+        {"O[C@@H](c1ccccc1)C(C)(C)C", 1, RSLabel::R},
+        {"O[C@@H](C1=CC=CC=C1)C(C)(C)C", 1, RSLabel::R},
+        {"O=C1Nc2ccc(Cl)cc2[C@@](C#CC2CC2)(C(F)(F)F)O1", 10, RSLabel::S},
+        {"C[S@](=O)c1ccccc1", 1, RSLabel::S},
+        {"COc1ccc2[nH]c([S@@](=O)Cc3ncc(C)c(OC)c3C)nc2c1", 8, RSLabel::S},
+        {"C/C=C/[C@@H](F)/C=C\\C", 3, RSLabel::R},
+        {"C/C([C@H](F)/C(C)=C/C)=C/C", 2, RSLabel::R},
+        {"C/C=C(C)/[C@@H](F)/C(C)=C\\C", 4, RSLabel::R},
+        {"C/C(Cl)=C(C)/[C@@H](F)/C(C)=C(Cl)\\C", 5, RSLabel::S},
+        {"N[C@@H](C)C(=O)O", 1, RSLabel::S},
+        {"N[C@H](C)C(=O)O", 1, RSLabel::R}
+    };
+    for (const auto& example : examples) {
+        const auto graph = parseSMILES(example.smiles);
+        const std::string message = std::string("sequence rules for ") + example.smiles
+            + " expected " + to_string(example.expected);
+        CIP_ASSERT(assignRS(graph, example.centre) == example.expected, message.c_str());
+        CIP_ASSERT(assignAll(graph).rsLabels[example.centre] == example.expected, message.c_str());
+    }
+}
+
+// ============================================================================
+// Rules 4 and 5: auxiliary descriptors and pseudoasymmetric centres
+// ============================================================================
+
+void test_pseudoasymmetric_1_4_disubstituted_cyclohexane() {
+    // Both ring carbons of a 1,4-disubstituted cyclohexane are told apart only by
+    // Rule 5, so they are pseudoasymmetric; Rules 1-3 alone leave them unresolved.
+    auto g = parseSMILES("C[C@H]1CC[C@H](O)CC1");
+    CIP_ASSERT(assignRS(g, 1) == RSLabel::NONE, "Rules 1-3 leave C1 of 4-methylcyclohexanol unresolved");
+    auto all = assignAll(g);
+    CIP_ASSERT(all.rsLabels[1] == RSLabel::r, "(1r,4r)-4-methylcyclohexanol C1 should be r");
+    CIP_ASSERT(all.rsLabels[4] == RSLabel::r, "(1r,4r)-4-methylcyclohexanol C4 should be r");
+    auto other = assignAll(parseSMILES("C[C@H]1CC[C@@H](O)CC1"));
+    CIP_ASSERT(other.rsLabels[1] == RSLabel::s && other.rsLabels[4] == RSLabel::s,
+               "the other diastereomer of 4-methylcyclohexanol should be (1s,4s)");
+}
+
+void test_pseudoasymmetric_acyclic_centre() {
+    // 2,4-dichloropentan-3-ol: C3 carries an R and an S ligand of the same constitution.
+    auto s = assignAll(parseSMILES("C[C@H](Cl)[C@H](O)[C@@H](C)Cl"));
+    CIP_ASSERT(s.rsLabels[1] == RSLabel::S && s.rsLabels[5] == RSLabel::R, "the flanking centres keep R and S");
+    CIP_ASSERT(s.rsLabels[3] == RSLabel::s, "2,4-dichloropentan-3-ol C3 should be s");
+    auto r = assignAll(parseSMILES("C[C@H](Cl)[C@@H](O)[C@@H](C)Cl"));
+    CIP_ASSERT(r.rsLabels[3] == RSLabel::r, "the epimer at C3 should be r");
+}
+
+void test_rule_4b_like_pairs_give_a_true_centre() {
+    // Nateglinide: the ring carbon bearing the isopropyl group is resolved by Rule 4b
+    // (like against unlike descriptor pairs), so it is a true centre, while the carbon
+    // bearing the amide is pseudoasymmetric.
+    auto all = assignAll(parseSMILES("CC(C)[C@H]1CC[C@H](C(=O)N[C@H](Cc2ccccc2)C(=O)[O-])CC1"));
+    CIP_ASSERT(all.rsLabels[3] == RSLabel::R, "nateglinide C4 (isopropyl) should be R by Rule 4b");
+    CIP_ASSERT(all.rsLabels[6] == RSLabel::r, "nateglinide C1 (amide) should be r");
+    CIP_ASSERT(all.rsLabels[10] == RSLabel::R, "nateglinide phenylalanine centre should be R");
+}
+
+void test_tropane_c3_reads_the_bridgehead_descriptors() {
+    auto ester = assignAll(parseSMILES("C[NH+]1[C@@H]2CC[C@H]1C[C@@H](OC(=O)C(CO)c1ccccc1)C2"));
+    CIP_ASSERT(ester.rsLabels[2] == RSLabel::R && ester.rsLabels[5] == RSLabel::S, "tropane bridgeheads are R and S");
+    CIP_ASSERT(ester.rsLabels[7] == RSLabel::r, "tropane C3 should be r");
+    auto epimer = assignAll(parseSMILES("CN1[C@@H]2CC[C@H]1C[C@H](OC(=O)C(CO)c1ccccc1)C2"));
+    CIP_ASSERT(epimer.rsLabels[7] == RSLabel::s, "the C3 epimer should be s");
+}
+
+void test_hexachlorocyclohexane_mixes_true_and_pseudoasymmetric_centres() {
+    auto all = assignAll(parseSMILES("Cl[C@H]1[C@H](Cl)[C@@H](Cl)[C@@H](Cl)[C@H](Cl)[C@H]1Cl"));
+    const RSLabel expected[] = {RSLabel::S, RSLabel::r, RSLabel::R, RSLabel::S, RSLabel::r, RSLabel::R};
+    const int atoms[] = {1, 2, 4, 6, 8, 10};
+    for (int i = 0; i < 6; ++i)
+        CIP_ASSERT(all.rsLabels[atoms[i]] == expected[i], "hexachlorocyclohexane ring carbon label");
+}
+
+void test_symmetric_centre_stays_unlabelled() {
+    // Two identical ligands: no rule tells them apart, and the tag is left unlabelled.
+    auto all = assignAll(parseSMILES("C[C@H](C)O"));
+    CIP_ASSERT(all.rsLabels[1] == RSLabel::NONE, "propan-2-ol carries no descriptor");
+    CIP_ASSERT(assignRS(parseSMILES("C[C@H](C)O"), 1, {{0, 1}}) == RSLabel::NONE,
+               "the full rules leave propan-2-ol unlabelled as well");
+}
+
+void test_rule_2_unlabelled_atom_counts_its_standard_atomic_weight() {
+    // Sequence Rule 2 reads an unlabelled atom at its standard atomic weight, so an isotope
+    // lighter than that weight ranks below the unlabelled element: 18F (18) below F (18.998).
+    CIP_ASSERT(assignRS(parseSMILES("C[C@H](F)[C@H](Cl)[C@H](C)[18F]"), 3) == RSLabel::R,
+               "the 18F branch ranks below the F branch at C3");
+    // Both passes read the rule the same way, so the pseudoasymmetric centre between an
+    // 18F-bearing and an F-bearing ligand agrees with the descriptors of those ligands.
+    auto all = assignAll(parseSMILES("[18F][C@H](F)[C@H](O)[C@H](F)[18F]"));
+    CIP_ASSERT(all.rsLabels[1] == RSLabel::R && all.rsLabels[5] == RSLabel::S, "the flanking centres are R and S");
+    CIP_ASSERT(all.rsLabels[3] == RSLabel::r, "the centre between them is r");
+}
+
 // ============================================================================
 // Main
 // ============================================================================
@@ -248,6 +351,7 @@ int main() {
     std::cout << "\n--- R/S assignment ---\n";
     RUN_TEST(L_alanine);
     RUN_TEST(component_root_ring_stereo);
+    RUN_TEST(cip_priority_sequence);
     RUN_TEST(D_alanine);
     RUN_TEST(bromochlorofluoromethane);
     RUN_TEST(bromochlorofluoromethane_R);
@@ -256,6 +360,15 @@ int main() {
     RUN_TEST(no_stereocentre_methane);
     RUN_TEST(no_stereocentre_symmetric);
     RUN_TEST(citric_acid_no_stereocentre);
+
+    std::cout << "\n--- Rules 4 and 5 ---\n";
+    RUN_TEST(pseudoasymmetric_1_4_disubstituted_cyclohexane);
+    RUN_TEST(pseudoasymmetric_acyclic_centre);
+    RUN_TEST(rule_4b_like_pairs_give_a_true_centre);
+    RUN_TEST(tropane_c3_reads_the_bridgehead_descriptors);
+    RUN_TEST(hexachlorocyclohexane_mixes_true_and_pseudoasymmetric_centres);
+    RUN_TEST(symmetric_centre_stays_unlabelled);
+    RUN_TEST(rule_2_unlabelled_atom_counts_its_standard_atomic_weight);
 
     std::cout << "\n--- E/Z assignment ---\n";
     RUN_TEST(E_2_butene);

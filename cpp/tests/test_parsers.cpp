@@ -1,25 +1,18 @@
-#include "search_test_helpers.hpp"
 /*
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  *
- * Consolidated parser test suite -- SMARTS matching, hydrogen handling,
- * and comprehensive SMILES parser tests (441 tests, gated by ifdef).
- *
- * Merges: test_smarts.cpp, test_hydrogen.cpp, test_smiles_comprehensive.cpp
- *
- * Compile:
- *   clang++ -std=c++17 -O2 -I include tests/test_parsers.cpp -o test_parsers
- *   clang++ -std=c++17 -O2 -I include -DSMSD_TEST_SMILES_COMPREHENSIVE \
- *           tests/test_parsers.cpp -o test_parsers_full
+ * Parser test suite: SMARTS matching, hydrogen handling, MOL and
+ * SDF metadata, and the comprehensive SMILES parser cases compiled from
+ * test_smiles_comprehensive.cpp.
  */
+#include "test_support.hpp"
 
 #include "smsd/smsd.hpp"
 #include "smsd/mol_reader.hpp"
 #include "smsd/smiles_parser.hpp"
-
-// Only include SMARTS parser when the guard is defined (always for this suite)
 #include "smsd/smarts_parser.hpp"
 
 #include <cassert>
@@ -274,6 +267,23 @@ void test_mol_block_preserves_headers_and_properties() {
     assert(written.find("sample-name\n") == 0);
     assert(written.find("> <ID>\ncmpd-001\n\n") != std::string::npos);
     assert(written.find("> <NOTE>\nfirst line\nsecond line\n\n") != std::string::npos);
+}
+
+void test_v2000_counts_line_charge_and_malformed_block() {
+    // The atom-block ccc field encodes +1 as 3.
+    const std::string charged =
+        "ccc charge\n"
+        "  test\n"
+        "\n"
+        "  1  0  0  0  0  0  0  0  0  0999 V2000\n"
+        "    0.0000    0.0000    0.0000 N   0  3  0  0  0  0  0  0  0  0  0  0\n"
+        "M  END\n";
+    assert(smsd::readMolBlock(charged).formalCharge[0] == 1);
+
+    bool rejected = false;
+    try { smsd::readMolBlock("too short"); }
+    catch (const std::invalid_argument&) { rejected = true; }
+    assert(rejected);
 }
 
 void test_v3000_roundtrip_metadata_and_atom_class() {
@@ -749,16 +759,13 @@ void test_h_carboxylate_vs_acid_no_charge() {
 }
 
 // ============================================================================
-// SECTION 3: Comprehensive SMILES parser tests (441 tests, gated by ifdef)
+// SECTION 3: Comprehensive SMILES parser cases
 //
-// When -DSMSD_TEST_SMILES_COMPREHENSIVE is set, the test_smiles_comprehensive.cpp
-// translation unit is compiled alongside this file. It exports
-// smiles_comprehensive_run(int& pass, int& fail).
+// test_smiles_comprehensive.cpp is compiled alongside this file and exports
+// smiles_comprehensive_run(int& passed, int& failed).
 // ============================================================================
 
-#ifdef SMSD_TEST_SMILES_COMPREHENSIVE
 extern void smiles_comprehensive_run(int& outPassed, int& outFailed);
-#endif
 
 // ============================================================================
 // main
@@ -899,16 +906,15 @@ int main() {
     RUN_TEST(v3000_stereo_roundtrip);
     RUN_TEST(v3000_double_bond_ez_roundtrip);
     RUN_TEST(v3000_multiple_stereocentres_roundtrip);
+    RUN_TEST(v2000_counts_line_charge_and_malformed_block);
 
-#ifdef SMSD_TEST_SMILES_COMPREHENSIVE
     {
-        std::cout << "\n-- Comprehensive SMILES parser tests (441) --\n";
+        std::cout << "\n-- Comprehensive SMILES parser cases --\n";
         int cp = 0, cf = 0;
         smiles_comprehensive_run(cp, cf);
         g_passed += cp;
         g_failed += cf;
     }
-#endif
 
     std::cout << "\n================================================\n";
     std::cout << g_passed << " passed, " << g_failed << " failed\n";

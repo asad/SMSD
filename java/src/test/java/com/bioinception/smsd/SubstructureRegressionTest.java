@@ -125,7 +125,7 @@ class SubstructureRegressionTest {
   @ParameterizedTest
   @ValueSource(ints = {0, 1, 2})
   void extraTargetEdgesCannotInvalidateMultiHopPruning(int pruning) {
-    // In a clique all mapped path neighbors are distance 1. Exact distance
+    // In a clique all mapped path neighbours are distance 1. Exact distance
     // shells at hops 2 and 3 therefore cannot be used as rejection tests.
     int count = 22;
     int[] elements = new int[count];

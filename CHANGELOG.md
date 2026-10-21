@@ -1,473 +1,79 @@
 # Changelog
 
-All notable changes to SMSD Pro are documented in this file.
+All notable changes to SMSD Pro are documented in this file. The format is
+based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Unreleased
+## [8.0.0] - 2026-10-21
 
-- Preserve supplied hydrogen counts, cap scaffold fragments and leave caller-owned output streams open.
-- Use attached hydrogen counts for circular fingerprints and donor classification, and exclude multiple-bond nitrogen from neutral basic-amine features.
-- Add the explicit Match-based tautomer confidence helper with read-time pH and solvent context; search objectives are unchanged.
-- Distinguish CLI no-match outcomes from errors and incomplete searches, and reject unknown modes.
-- Correct SMARTS element, hydrogen and valence predicates, and initialise canonical hashes lazily.
-- Preserve tetrahedral and double-bond stereochemistry through MOL and SMILES round trips and mapped matching.
-- Replace search facades and algorithm selectors with `MCS` and `Substructure` prepared queries; update callers and bindings. This is a breaking API change.
-- Retire near-MCS, post-filter and progress-callback options; SMARTS queries use `Substructure`.
-- Add explicit MCIS and MCES objectives, selected bond mappings and disconnected fragments.
-- Return search completion, stopping status and optimality separately from matches.
-- Move multi-target, constrained, consensus and R-group searches under the query APIs.
-- Add Java `Substructure.matchMany` with ordered per-target outcomes, matching the MCS batch contract.
-- Snapshot prepared Java query graphs so later changes to caller-owned arrays do not change searches.
-- Tighten MCS bounds and prioritise mapped neighbours in Java substructure searches.
-- Add shared cross-language benchmark workloads and independent mapping checks.
-- Apply strict bond defaults consistently across Python search helpers and align named chemistry profiles.
-- Make tautomer-aware MCS fingerprints explicit and use circular fingerprints for batch similarity.
-- Add `path_length` to `fingerprint_from_smiles` for path and MCS fingerprints.
-- Preserve supplied hydrogen counts in SMILES and SMARTS, and write valid MCS fragments.
-- Add optional `MolGraph.Builder.hydrogenCounts(int[])` for Java graphs with explicit hydrogen counts.
+SMSD Pro 8.0.0 provides substructure and maximum common substructure (MCS)
+search for C++, Java and Python through prepared `MCS` and `Substructure`
+queries, with one search model, one set of chemistry rules and the same
+fingerprints in the three languages.
 
-## [7.2.2] - 2026-10-07
+### Added
 
-- Include CDK SMARTS transitively for Maven library users.
+- Prepared `MCS` and `Substructure` queries in C++, Java and Python. A query snapshots its graph and options when it is prepared; `match(target)`, `matchAll(target, limit)` and `matchMany(targets, numThreads)` (Python `match`, `match_all` and `match_many`) search one target, enumerate the optimal mappings or embeddings up to a limit, or search a collection with one result per target in input order. `withOptions` and `withTimeout` (Python `with_options` and `with_timeout`) return new queries, and `Substructure.smarts` prepares a SMARTS query.
+- MCS objectives for connected and disconnected maximum common induced subgraphs (MCIS), maximum common edge subgraphs (MCES) and MCIS weighted by query atom weights, with selected bond mappings, fragment results, minimum fragment sizes and fragment limits.
+- Constrained, consensus and R-group searches within the query APIs: `MCS.matchConstrained` assigns several queries to one target without reusing a target atom, `MCS.consensus` finds the common graph of a set of molecules with its supporting embeddings, and `Substructure.decomposeRGroups` splits molecules around a core.
+- Results that carry each match with its atom and bond mappings and report, separately from the matches, the status (`Completed`, `TimedOut`, `Cancelled` or `LimitReached`), whether the optimum is proved, whether an enumeration is complete, the nodes visited and the elapsed time.
+- Search budgets: timeouts, where any negative value selects an adaptive timeout from the graph sizes; node limits; and cancellation through a shared `CancellationToken` in C++ and Python (C++ `cancellation()` returns a search's token) or a `BooleanSupplier` and thread interruption in Java.
+- Mapping tools: `MCS.validateMapping` and `MCS.isMappingMaximal` (Python `validate_mapping` and `is_mapping_maximal`), which take an atom mapping or a match with the search options; `MCS.mappingMatch` in C++ and Java, which builds the match of an atom mapping; and `MCS.canonicalizeMapping`, which chooses a representative mapping under the symmetries of the two molecules.
+- `MCS.computeTautomerConfidence(query, target, match, chemistry)` (Python `MCS.compute_tautomer_confidence`), which scores the selected bonds of a match in the solvent and pH of the chemistry options, and `MolGraph.tautomerSite` and `MolGraph.tautomerPKa` in C++ and Java, the ionisable site and aqueous pKa of each atom's tautomer motif, with the `TAUTOMER_SITE_*` and `TPKA_*` constants.
+- `FingerprintOptions`, a configurable fingerprint specification shared by C++, Java and Python, described under Fingerprints.
+- Java `MolGraph.toCanonicalSmiles(Map<Integer, Integer>)` for canonical SMILES with atom-map labels, and `MolGraph.Builder.hydrogenCounts(int[])` for graphs with explicit hydrogen counts.
+- Python `parse_smiles(smiles, lenient=True)`, `MCS.validate_tautomer_consistency`, and the `ChemOptions` setters `with_aromaticity_mode`, `with_bond_order_mode`, `with_complete_rings_only`, `with_match_isotope`, `with_ring_fusion_mode`, `with_tautomer_aware`, `with_solvent` and `with_ph`, each of which returns the options it is called on. `ChemOptions` has a copy constructor, supports `copy.copy` and `copy.deepcopy`, and has a `repr` that lists every field, as in C++ and Java.
+- Python functions that take a molecule accept a `MolGraph`, a SMILES string or an RDKit molecule; coordinates may be any sequence of (x, y) pairs, and the file functions accept path objects.
+- Shared C++, Java and Python benchmark workloads with independent mapping checks, and `--threads` and `--batch-targets` options for the search API benchmarks.
 
-### Java compatibility
-- Target Java 8 bytecode and APIs; prefer Java 25 LTS for builds and bundled installers.
-- Replace public result records with final value classes. Constructors, accessors,
-  equality, hash codes and JSON properties retain their existing contracts;
-  `java.lang.Record` inheritance and record reflection are no longer available.
-- Validate the same compiled code on Java 8 and Java 25.
+### Search behaviour
 
-### Fixed
-- Fixed Java CLI CML and PDB input using the correct CDK reader object.
-- Write CLI JSON to standard output in UTF-8, preserving Unicode file paths on Windows.
-- Reject empty files and ambiguous multi-molecule/model input. Use SDF for batch targets.
-- Validate the NAD redox pair against an explicit shared-core witness, with bounded-search validity checked separately.
+- Substructure search maps query atoms to target atoms one at a time over candidate domains filtered by element, charge, isotope, ring, aromaticity, tautomer policy and degree; induced matching also forbids extra target bonds between mapped atoms. Molecule pairs that element and degree counts rule out report `Completed` with no nodes visited, also under tight node or time limits, and C++, Java and Python share one default search budget.
+- A `Substructure` search with `useChirality` or `useBondStereo` embeds the query as SMARTS does: a tagged query centre needs a tagged target centre of the same winding, and a configured query double bond a configured target bond of the same relation. MCS searches treat an unspecified centre or bond as a wildcard.
+- Every MCES search in Java and C++, including `matchAll`, `isMappingMaximal`, node limits, stereochemistry, complete rings, tautomers, minimum fragment sizes and fragment limits, runs through one bounded search. A connected MCES search that completes returns the same mapping on every run for a given input; under stereochemistry or complete rings, a mapping may leave out a compatible bond. MCES `matchAll` results are sorted by atom mapping and then by bond mapping, and when there are more best mappings than the limit, the search keeps the first ones it finds.
+- A search is reported optimal only when it runs to completion. An MCES node limit counts mapped atom pairs, which `nodesVisited` reports; a search that reaches it returns the best valid mapping found within it, with status `LimitReached`. MCES graphs that the search cannot accept (malformed neighbour lists, or more bond pairs than its size limit) return no match with status `LimitReached`.
+- Java and C++ find a single best disconnected MCIS by the same method when the search has no atom weights, node limit, fragment limit, stereochemistry, complete-ring or tautomer matching, and a minimum fragment size of at most two atoms. Other Java disconnected MCIS searches, apart from `matchAll` and node-limited ones, follow the native search order for unweighted objectives and an adjusted order for weighted ones. Proved optimum values agree in both languages.
+- Building results counts towards the timeout in C++ and Java SMARTS searches and in Python result conversion: matches found in time are built until the timeout plus an eighth of it has elapsed, or until the search's cancellation token is cancelled, and the matches built by then are returned as an incomplete, timed-out or cancelled result. Native SMARTS searches on large patterns or long expressions, and Java induced SMARTS embeddings, keep to the timeout and the cancellation token.
+- `MCS.consensus` builds its results with the same search as `match`. Each input seeds a candidate in turn, reduced by its common subgraph with each other input in input order; each candidate is embedded in every input to count its support, and the best supported candidate by the objective is kept. Excluded target atoms are rejected (`Consensus has no single target for exclusions`), an empty input list gives a result that is not found, and `sourceIndex()` is -1 when nothing is found.
+- `Substructure.decomposeRGroups` builds the core from the images of the query bonds, so a chain core matched in a ring gives a chain; the Java form `decomposeRGroups(core, molecules, options)` takes the induced, node-limit and cancellation options, and the `(chemistry, timeoutMillis)` form delegates to it.
+- `MCS.matchConstrained` returns one result per query, in query order, each with its own budget; once the cancellation token is cancelled, each remaining result reports `Cancelled`.
+- `MCS.isMappingMaximal` returns `false` for an invalid match or mapping, and reports an empty match as maximal only when no extension exists. `MCS.validateMapping` lists the rules that a mapping breaks with the messages of the native core, in its order, and stops after the atom checks or the bond checks when they fail; an empty list means that the mapping is valid. `MCS.canonicalizeMapping` rejects a mapped atom outside either graph and reports `Mapping canonicalisation exceeded its time limit`, `... its orbit state limit` or `... needs complete automorphism generators` when it cannot complete.
+- Java and Python reject invalid match limits, thread counts, atom weights, fragment limits, consensus arguments and out-of-range atom indices with the messages of the native core; Python `translate_mapping` raises `IndexError` for a negative or out-of-range atom index, as search results do.
+- `similarityUpperBound(query, target, chemistry)` and `screenTargets` (Python `similarity_upper_bound` and `screen_targets`) bound the atom-count Tanimoto similarity of the MCS from the atom labels of the native core: element, aromaticity under strict aromaticity, and ring membership when ring atoms match ring atoms only. Under tautomer-aware matching the bound keeps elements apart, as the searches do; the Java CLI reports the same bound.
+- Batch searches balance targets across threads and reuse per-thread search buffers, ring data and SMARTS target properties. Results keep input order and, unless a search reaches its time limit, do not depend on the thread count; Java `matchMany(targets)` searches the targets in turn.
+- Prepared Java queries snapshot their graphs, so later changes to caller-owned arrays do not affect searches. A Java `MolGraph` reads the implicit hydrogen counts of a CDK molecule when it is built, like every other atom property, and publishes its rings complete once perceived, so threads that share a graph read complete ring data. Java SMARTS queries are compiled once and lent to one search at a time.
+- Python search results are built natively, with `SearchStatus` members as their status values. A Python `TargetCorpus` computes the invariants of its targets once in `prewarm()`, or on first use, and reuses its snapshot between searches until targets are added; `MolGraph.canonical_label` and `orbit` compute the canonical labelling on first access.
+- The Java CLI exits with status 0 for a match, 1 for no match, and 2 for invalid input, an error or an incomplete search, and rejects unknown modes.
 
-### Documentation
-- Refresh language guides and working examples; align Python package descriptions.
+### Chemistry
+
+- SMARTS follows Daylight SMARTS in C++ and Java alike. Bracket atoms with an uppercase element symbol, such as `[C]`, `[NX3]` or `[Se]`, match aliphatic atoms only, lowercase symbols aromatic atoms only, and atomic numbers such as `[#6]` both; `[H]`, `[2H]`, `[H+]` and `[H:1]` are hydrogen atoms; top-level component groups such as `(C).(C)` and `(C.C)` are matched; `/?` and `\?` are accepted; the directional bonds `/` and `\` match single, non-aromatic bonds only, and `/,\` and an aromatic bond between directional bonds require a configuration; `r<n>` is the smallest ring through the atom, and `R<n>` counts the rings of the smallest set of smallest rings. Element, hydrogen and valence predicates, and patterns containing `!$([...])`, match as written.
+- SMARTS input is limited to 100,000 characters, 10,000 atoms (the SMILES atom limit), 100,000 atom and bond expression nodes including those of recursive SMARTS, 10,000 nodes in one atom or bond expression, and recursion 20 levels deep. C++ raises `std::invalid_argument`, Python `ValueError` and Java `IllegalArgumentException`; the limits are `MAX_SMARTS_LENGTH`, `MAX_ATOMS`, `MAX_SMARTS_EXPRESSION_NODES` and `MAX_SMARTS_NODES_PER_EXPRESSION` in `smsd/parser_utils.hpp`, and `Substructure.MAX_SMARTS_*` in Java, which counts nodes as the native parser does. Oversized molecular `Substructure` queries are rejected before matcher state is allocated.
+- SMILES bracket atoms follow the OpenSMILES limits in C++ and Python: a hydrogen count has one digit, a charge two digits or repeated signs within -15 to +15, and an isotope three digits, so `[CH10]`, `[C+16]` and `[1000C]` raise `std::invalid_argument` and `ValueError`. Supplied hydrogen counts are kept in SMILES and SMARTS, directional bonds at ring closures keep their orientation, and drawings of small aromatic rings give no stereo tags.
+- MOL and SDF input handles isolated hydrogens and radical valences. Tetrahedral and double-bond stereochemistry is kept through MOL and SMILES round trips, mapped matching and Java CLI molecule and mapping exports, and MOL output keeps alkene geometry.
+- C++ and Java share one implicit-hydrogen valence table, which SMARTS `H`, `X` and `v` follow on graphs built without hydrogen counts; C++ `smsd::implicitHydrogens` assigns no hydrogens to elements outside the table, and Python `implicit_h` accepts `aromatic`.
+- C++ and Java share one tetrahedral-centre rule for stereo matching and CIP labels: four neighbours and no implicit hydrogen, or three neighbours and either one implicit hydrogen or, for N, P, S, As, Se, Sb and Te, a lone pair. A tag winds the neighbours in order, with the implicit hydrogen or lone pair second when a neighbour precedes the centre and first otherwise, in `MolGraph.Builder` tags, graphs from CDK and SMILES alike; SMILES parsing drops tags from atoms that are not centres.
+- CIP descriptors follow the IUPAC 2013 Recommendations in C++, Java and Python (`smsd::cip::assignAll`, `CIPAssigner.assignRS`). R/S descriptors apply the Sequence Rules over the hierarchical digraph with auxiliary descriptors, as P-92.1.3 and the reference implementations prescribe: Rules 1 to 3, Rule 4a, Rule 4b (like before unlike descriptor pairs), Rule 4c, Rule 5 and Rule 6, with the lower-case r and s reserved for centres told apart only by Rule 5 or Rule 6; E/Z descriptors apply Rules 1 to 3. The duplicate atom of a double bond in a mancude ring system ranks by the mean atomic number of the ring neighbours it may be double bonded to (P-92.1.4.4), so labels do not depend on the Kekulé structure, atom order or aromatic flags, and Rule 2 reads an unlabelled atom at its standard atomic weight. The Python `RSLabel` enum includes `r` and `s`, which `assign_cip` reports; `assign_rs` reports R and S centres only.
+- Ring perception runs without deep recursion and with bounded work in C++, Java and Python, so a 9,999-atom macrocycle SMILES fits a 512 KB thread stack; very large ring systems take their ring candidates from a bounded enumeration that counts its work in the same way in C++ and Java. Each atom's ring count is taken over its relevant cycles, found over its neighbours in index order (three rings at each bridgehead of adamantane and at each atom of cubane), so strict ring fusion compares the same counts in every language. Sorting keeps the input order of equal-size rings and of atoms with equal canonical invariants, so ring perception, 2D layout and canonical labelling do not depend on the standard library. Where the bounded C++ ring basis holds fewer rings than the cycle rank, as for coronene, SMARTS `R<n>`, the ring-size fingerprint term and the aromatic ring count of the MACCS keys read the rings of the ring candidate search. Fused aromatic systems are perceived consistently across resonance forms, and specified macrocycle stereochemistry is kept.
+- Tautomer classes do not depend on the atom order in C++, Java and Python. Every motif is evaluated over all of its matches; the atoms of one match share a class, and matches that share an atom join their classes, so the classes hold exactly the atoms that some motif covers. The classes are numbered in increasing order of the sorted Weisfeiler–Leman colours of their atoms, and of classes that the refinement cannot tell apart, the one with the lowest atom index takes the lower number. Tautomer-aware searches read only whether an atom has a class.
+- Each atom of a tautomer class takes the weight of the most specific motif that covers it, in a fixed order (hydroxamic acid, imide and urea before amide; 1,3-diketone before keto/enol; the aromatic lactam motifs before amide and phenol). A match carries the acid site of its motif only when the atom that would release the proton bears a hydrogen. After the solvent shift, the weight of an atom with an ionisable site is scaled by the neutral fraction of its class from the Henderson–Hasselbalch relation, 1 / (1 + 10^(pH − pKa_a) + 10^(pKa_b − pH)), within the [0.1, 0.99] clamp, with aqueous pKa values in every solvent. C++ `MolGraph::tautomerWeight` holds the weight in the graph's solvent and pH, water at pH 7.4 unless the builder sets another, and Java `MolGraph.tautomerWeight` the motif weight, to which `MCS.computeTautomerConfidence` applies the context; confidences agree within 1e-12 across the languages. No search reads the weights or sites.
+- Tautomer consistency checks (C++ `validateTautomerConsistency` and `mobilisableProtons`, Python `validate_tautomer_consistency`) count the stored hydrogens of N, O and S atoms, as Java does.
+- The Bemis–Murcko scaffold keeps the ring systems, the linkers between them, and every atom joined to either by a double or triple bond together with that bond, so exocyclic C=O, C=N and C=S groups stay, as in Bemis and Murcko (1996) and RDKit. Each stripped substituent is replaced with hydrogen, the scaffold keeps the ring and aromaticity perception of the input, a stereocentre keeps its configuration when all its neighbours stay, and a double bond when each end keeps a ligand, in C++, Java and Python alike.
+
+### Fingerprints
+
+- `FingerprintOptions` is one configurable fingerprint specification in C++ (`smsd/fingerprint_options.hpp`, with `computeFingerprint`, `computeFingerprintCounts` and overloads of `fingerprintFromSmiles` and `batchFingerprint`), Java (`FingerprintEngine.fingerprint` and `fingerprintCounts`) and Python (the `options` keyword of `fingerprint` and `fingerprint_from_smiles`). It names the family (circular ECFP or FCFP, path, topological torsion, or substructure keys), the radius or path length, the size and the count form, and switches the hashed terms: element, degree, valence, formal charge, isotope, hydrogen count, tautomer class and aromaticity of atoms; bond order, aromatic and ring bonds; ring membership and the smallest-ring-size class of each atom, capped at 8 by default; CIP R/S of centres and E/Z of double bonds outside rings of fewer than eight atoms, folded into the circular hashes after the first iteration so that stereoisomers differ only where a centre lies; whole-molecule, largest-fragment or per-fragment hashing, with ties between equal fragments broken independently of the atom order; and reduction to the Bemis–Murcko framework before hashing, which keeps the atoms double or triple bonded to ring and linker atoms and carries stereochemistry through the hydrogen capping.
+- The classic configuration of each family reproduces the published bits of the fixed functions exactly. The key family takes SMARTS patterns with a minimum count of distinct matches, and `FingerprintOptions.maccs()` provides the 166 MACCS structural keys. The shared golden fixture covers every switch, enantiomer and E/Z pairs, ring sizes, fragments, scaffolds and keys.
+- Two empty fingerprints are identical sets in every language: Tanimoto and overlap are 1.0, and Soergel distance (1 − Tanimoto) is 0.0. C++ provides `fingerprintOverlap`; Python `tanimoto_coefficient` and `overlap_coefficient` use the native metrics, and `count_dice` and `count_cosine` accept `(position, count)` pairs and dictionaries.
+- Circular fingerprints and donor classification use attached hydrogen counts, and neutral basic-amine features exclude multiply bonded nitrogen. The tautomer class term of the ECFP atom invariant, of `FingerprintOptions` with `tautomerClass` on (the default) and of the MCS path fingerprint does not depend on the atom order.
+- MCS fingerprints take tautomer awareness as an explicit setting, and batch similarity ranks targets on circular fingerprints. Python `path_fingerprint`, C++ `smsd::batch::batchFingerprint` and MCS fingerprints share one path walk.
+- Python `fingerprint` takes a `radius`, and `fingerprint_from_smiles` the `circular` and `torsion` modes and a `path_length` for path and MCS fingerprints. `circular_fingerprint` and `circular_fingerprint_counts` accept the modes `ecfp` and `fcfp` and raise `ValueError` for any other; `from_hex` rejects characters that are not hexadecimal, such as a `0x` prefix or spaces; and fingerprint sizes, path lengths, match limits and thread counts reject booleans.
 
 ### Packaging
-- Add Windows MSI, macOS DMG and Linux DEB packages with bundled Java 25.
-- Check installation, chemical searches, licences, architecture and removal.
-- Build the Windows installer and Python wheel together from verified release inputs.
-- Retain the existing manual PyPI publishing workflow.
 
-## [7.2.1] - 2026-10-06
-
-Released on GitHub. PyPI and Maven Central publication remain pending.
-
-### Fixed
-- Native MCS seed searches check the shared deadline before each candidate
-  extension. Already-expired seeds and orientation probes return before setup.
-  This fixes a Linux regression without relaxing its timeout assertion.
-
-### Repository and release packaging
-- Moved Java sources, resources and launchers into `java/src/`, with its Maven
-  module at `java/pom.xml` and build artifacts under `java/target/`. The root
-  Maven aggregator supports `mvn verify`; publishing uses the Java module.
-- Kept C++ under `cpp/` and Python under `python/`, with shared release scripts,
-  documentation and licenses at the root. The root `pyproject.toml` remains
-  the single manifest for the Python package and C++ extension.
-- Restricted the Docker build context to Maven manifests, Java sources and
-  legal files, excluding generated API pages, test reports and build artifacts.
-- Updated current version examples and release artifacts to 7.2.1. The compact
-  release targets portable Java 25 packages and CPython 3.14 CPU/OpenMP wheels
-  for Linux x86_64, macOS arm64 and Windows x86_64, plus a source distribution.
-- Frozen-source local macOS and emulated Linux wheels each pass all 12 native
-  Debug suites and 691 Python tests with 8 optional skips. Native Windows
-  Server 2022 validation passed the same counts; strict collection of all
-  three wheels passed against one source archive. PyPI and Maven publication
-  remain pending. Track
-  results in `docs/VALIDATION_7.2.1.md`.
-- Adjusted Java test wall-clock guards to 35 seconds around a 30-second drug
-  pair search and 12 seconds around a 10-second pharmacophore search. Search
-  budgets and result assertions are unchanged.
-- Carried forward the reviewed 7.2.0 search and chemistry fixes. The benchmark
-  report, fingerprints, archive names and measured numbers remain 7.2.0
-  evidence. The deadline regression check is separate from those benchmarks;
-  no new cross-solver performance ranking is claimed.
-
-## [7.2.0] - 2026-10-05
-
-Published on GitHub. Maven Central and PyPI remain at 7.1.1. The historical
-validation and benchmark report retain their 7.2.0 source scope; native Windows
-builds were checked separately after publication.
-
-### Fixed
-- Tautomer matching preserves element identity and other requested chemistry
-  constraints. Relative tetrahedral tags are compared using R/S and mapped
-  ligand parity, including SMILES ring-opening neighbor order.
-- Signed and bond objectives drive bounds, fragment selection, enumeration and
-  constrained target choice. Native non-induced domain refinement preserves
-  valid partial mappings and shared search deadlines.
-- Native recursive extensions keep undo lists and candidate buffers local to
-  each call, preventing inconsistent assignments and invalid bond indices.
-- Coverage repair applies the requested bond policy consistently, preserving
-  valid aromatic/Kekule matches under flexible aromaticity.
-- The optional C++ RDKit adapter now exposes a public header and an installed
-  CMake target. Its build enables the implementation and propagates C++20 for
-  the current RDKit headers.
-- Java library, CLI, source and Javadoc JARs include SMSD's LICENSE and NOTICE
-  in project-specific directories, alongside dependency notices.
-- Exact symmetry canonicalization uses molecular automorphism generators;
-  incomplete generators, orbit caps or expiry now raise explicit errors.
-  Enumeration retains raw keys when symmetry proof is unavailable.
-- Python RDKit wrappers, multi-result searches and batches preserve original
-  atom indices and caller options. Conversion caches detect molecule edits,
-  use weak keys and retain metadata for live converted graphs.
-- Python batch substructure passes its timeout independently of thread count.
-  Invalid weighted batch options raise before OpenMP workers start.
-- Python progress reporting performs one native search and forwards the final
-  result. It does not currently report intermediate stages.
-- The standalone C++ depiction header uses a portable C++17 pi constant rather
-  than depending on a platform-specific `M_PI` macro.
-- Native MOL/SDF file APIs interpret filenames as UTF-8 on Windows. MSVC
-  builds use UTF-8 source and executable character sets.
-- Release wheel collection validates the Windows DLL loader added by repair,
-  while retaining exact source checks for the application code.
-- Windows wheel repair selects compatible Microsoft runtimes explicitly,
-  avoiding older DLLs from unrelated applications in the build host's PATH.
-  Wheels include the Microsoft runtime license documents.
-
-### Optimised
-- Core Python batch and compiled SMARTS multi-target bindings retain graph
-  references and their Python owners instead of copying graph caches.
-- Batch prewarming includes ring systems before parallel workers start.
-- Bounded connected seeds and clique-stage allocation reserve time for native
-  recovery, including valid statin and taxane lower-bound fixtures.
-- Source build options can override Metal/CUDA auto-detection without duplicate
-  CMake arguments. Local release comparisons build CPU-only wheels explicitly.
-
-### Validation and documentation
-- Added independent small-graph objective/enumeration oracles, molecular
-  symmetry checks, lifetime/index tests and randomized stereo traversals.
-- Reworked benchmark protocols around explicit chemistry, objective, budget
-  and witness validation. The current comparison uses RDKit 2026.09.1.
-- Removed unsupported README speed, quality and dataset provenance claims.
-  See `benchmarks/RESULTS_7.2.0.md` for measurements and limits.
-- Limited Python wheel builds to CPython 3.14 across Linux x86_64, macOS arm64
-  and Windows x86_64, plus a source distribution. Added installed-wheel checks
-  and local PyPI and Maven Central publishing commands.
-- All 12 native Debug suites and 691 installed-wheel Python tests pass on
-  macOS, emulated Linux and native Windows Server 2022, with 8 Python skips
-  for optional Open Babel bindings and opt-in external benchmarks.
-
-### Earlier source fixes included in this release
-- Standardized `MCS` capitalization in Java/C++ APIs, classes, helper names,
-  benchmarks and tests. Java callers should use `setMCSTimeoutMs`,
-  `findMCSSmiles`, `findMCSSmarts` and `batchMCSConstrained`; tuning fields use
-  `nearMCSDelta` and `nearMCSCandidates`. Python snake_case APIs are unchanged.
-- Java benchmark sources use the current timeout field and public graph APIs,
-  restoring compilation while retaining their scoring calculations.
-- Python bindings use CMake's modern `FindPython` module discovery, removing
-  pybind11's CMP0148 deprecation warnings and unnecessary embedding-library
-  discovery on Unix.
-- MCS fast paths enforce induced, connectivity and fragment constraints;
-  weighted searches preserve query atom indices. Full-graph degree sequences
-  no longer undercut bounds for partial induced matches.
-- Reversed Java and C++ MCS results reapply the original query's complete-ring
-  and fragment filters before being compared with the incumbent.
-- Java McSplit and product-graph pruning preserve valid partial mappings;
-  recursive extensions retain their candidate buffers. MCS enumeration
-  applies defaults and validity filters, and similarity bounds honor options.
-- Java and C++ connected MCS components respect weighted/bond objectives;
-  candidates are postfiltered before promoting incumbents. C++ MCS enumeration
-  preserves induced constraints on containment candidates.
-- Expired search budgets stay expired during recursive unwinding. Java clique
-  search checks deadlines around coloring and pivot work; orientation probes,
-  recovery and retries share the caller's total budget.
-- Python automatic MCS selection routes unsupported lightweight constraints
-  to the native solver; explicit lightweight requests reject unsupported
-  options instead of silently ignoring them.
-- C++ substructure enumeration retains symmetric self mappings; disconnected
-  cycles plus paths cannot enter the linear-path shortcut.
-- C++ unrestricted bond order preserves strict aromaticity. CPU/GPU candidate
-  domains consistently enforce isotope, chirality, ring and tautomer options.
-- Native clique helper seeds and extensions preserve query bonds, select the
-  largest connected component and honor result caps and expired deadlines.
-- Rectangular assignment rejects ragged and nonfinite inputs instead of
-  reading outside rows or failing to terminate.
-- C++ weighted MCS rejects nonfinite and out-of-range millipoint scores,
-  including partial-score overflow hidden by cancellation.
-
-### Earlier source optimisations included in this release
-- C++ matcher setup reuses sorted query neighbors and skips unused target
-  canonicalization. Connected-component postprocessing traverses adjacency.
-- Rectangular assignment avoids square padding, using
-  `O(min(m,n)² max(m,n))` time and `O(m+n)` auxiliary space.
-- General matching seeds a valid maximal matching before blossom augmentation,
-  preserving maximum cardinality while reducing augmenting-search work.
-- Valid connected MCS seeds can extend despite different full neighborhoods;
-  Java adds a bounded anchor stage for medium graphs before expensive search.
-
-## [7.1.2] - 2026-10-04
-
-### Updated
-- Java dependency: CDK 2.12 to the latest stable CDK 2.13; standardisation
-  now uses `Aromaticity.Model.Daylight`.
-- Jackson databind 2.20.0 to 2.21.7, covering the patched-version requirements
-  of all 11 current repository dependency advisories.
-- Version metadata aligned across Java, C++, Python, CLI, and citation.
-
-### Fixed
-- Java domain cache isolation across mutable chemical matching options,
-  permissive/tautomer pruning, strict aromatic bond matching, and enumeration
-  of targets with more than 4,096 candidates.
-- Java telemetry defaults, mapping validation bounds, and timeout overflow.
-- Java and C++ multi-hop substructure pruning under extra target edges.
-- C++ maximum-clique result cap and incumbent tie handling, disconnected-query
-  target reuse, policy-incompatible fingerprint pruning, and small-matcher budgets.
-- C++ MCS discarding a larger validated directional result.
-- C++ non-bipartite aromatic kekulization (including azulene) and undefined
-  signed overflow in graph hashing; existing canonical output is preserved.
-- Broken Java cage test fixtures and impossible historical C++ MCS thresholds;
-  replacement lower bounds have explicit conserved-substructure witnesses.
-- CMake package discovery, C++17/OpenMP propagation, and license installation.
-- Incomplete nested Python source packaging, PowerShell launcher path, GPU
-  build script portability, and skipped CPU batch validation.
-- Source launchers and isolated generated distributions; C++ assertions
-  remain active in every test build configuration.
-
-### Optimised
-- C++ clique pivot scanning removes temporary allocations and adds a safe
-  branch bound. Neighborhood construction traverses only the local frontier.
-
-### Release preparation
-- Added a local build/test/packaging script with source-distribution builds,
-  installed-wheel validation, macOS library repair, and SHA-256 checksums.
-- Hosted workflows now require manual dispatch; release artifacts are built
-  locally before preparing the GitHub draft.
-
-## [7.1.1] - 2026-04-14
-
-Bug-fix patch on top of v7.1.0.  No new features, no public API breakage.
-
-### Fixed
-- Cross-language ECFP / FCFP fingerprint parity between Java, C++, and
-  Python.  Two long-standing Java drifts at radius ≥ 1 (signed vs
-  unsigned neighbour-hash sort, and pharmacophore implicit-H count
-  for pyrrole-type nitrogen) now produce bits byte-identical to the
-  C++ / Python reference.
-- Java canonical SMILES writer: bond symbol for aromatic-adjacent
-  single bonds, and implicit H count inside stereo brackets.
-- Python `smsd.canonical_smiles(smi)` / `smsd.to_smiles(smi)` raised
-  `TypeError` on string input.  Both now accept `str` or `MolGraph`.
-- `MatchResult.overlapCoefficient` returned the wrong similarity metric.
-  Both `MatchResult.overlap` and `MatchResult.overlapCoefficient` now
-  return Szymkiewicz-Simpson overlap as documented; the new
-  `MatchResult.tanimoto` attribute exposes the Jaccard value.
-  `__repr__` shows both.
-- Canonical SMILES writer now emits `[nH]` for pyrrole-type aromatic
-  nitrogen, so SMSD output kekulizes cleanly in downstream readers
-  (pyrrole, indole, carbazole, fused benzo-pyrrole).
-- FP-level `smsd.overlapCoefficient` and `smsd.count_overlapCoefficient`
-  camelCase aliases now return Simpson overlap as documented;
-  `smsd.tanimoto_coefficient` / `smsd.count_tanimoto_coefficient`
-  expose Jaccard.  Empty-vs-empty convention aligned at 1.0 (trivially
-  identical) for all similarity helpers.
-
-### Removed
-- Dead C++ fingerprint shim headers under `cpp/include/fp/`.  The
-  canonical C++ fingerprint API is `smsd::batch::detail::*` in
-  `cpp/include/smsd/batch.hpp`, documented in `docs/CPP.md`.
-
-### Verified
-- Python pytest: 603 passed, 6 skipped, 0 failed.
-- Java JUnit: 581 tests, 0 failures, 0 errors.
-- Canonical SMILES reference set matches character-for-character
-  across Java, C++, and Python.
-
-## [7.1.0] - 2026-04-14
-
-### Added
-- Comprehensive test suite: 597 tests across 9 test files
-  - `test_api_coverage.py` (160 tests): MCS utils, batch ops, TargetCorpus,
-    file I/O, scaffolds, coordinate transforms, depiction, SMARTS, enums
-  - `test_fingerprints.py` (128 tests): all FP types, similarity metrics,
-    edge cases (single-atom, disjoint, empty), challenging molecules (taxol,
-    C60, cubane, morphine/codeine, enantiomers), mathematical properties
-  - Dalke, stress, Ehrlich-Rarey, and Tautobase benchmark tests retained
-
-### Fixed
-- `tanimoto_coefficient` / `overlap_coefficient` crashed with sparse count
-  input from `circular_fingerprint_counts()` — now auto-detects format
-- `counts_to_array()` only accepted `dict` — now accepts `list[tuple]` too
-- `fingerprint()` raised ValueError for `kind='ecfp'/'fcfp'/'torsion'`
-- Doc crashes: `result.tanimoto` → `result.overlap` (AttributeError),
-  `r['rgroups']` → R-group dict keys (KeyError)
-- Doc silent bugs: `bond_order_mode=` → `match_bond_order=`,
-  removed invalid `solvent=/pH=/chem=` kwargs from `find_mcs` examples
-- `decompose_rgroups` → `decompose_r_groups` in PYTHON.md and EXAMPLES.md
-- All 196 `smsd.xxx()` references across docs verified against actual exports
-- Replaced all stale API names (ecfp_counts, dice_similarity, smarts_search, etc.)
-
-## [7.0.0] - 2026-04-13
-
-### Summary
-Major release: unified API, clean break from legacy aliases, full Java parity.
-
-### Breaking Changes
-- Removed `smsd.mcs()` — use `smsd.find_mcs()`
-- Removed `smsd.substructure_search()` — use `smsd.find_substructure()`
-- Removed `smsd.all_mcs()` — use `smsd.find_mcs(mol1, mol2, max_results=N)`
-- Removed camelCase aliases: `overlapCoefficient`, `tanimoto`, `count_overlap_coefficient`, `count_tanimoto`
-
-### Added
-- Unified Python API: `find_mcs(mol1, mol2, max_results=1)` and `find_substructure(query, target, max_results=1)`
-- Java convenience methods: `SearchEngine.findMCS(g1, g2)` and `SearchEngine.findSubstructure(query, target)` with MolGraph and IAtomContainer overloads
-- Raw C++ bindings renamed to `_native_*` prefix (clearly internal)
-
-### Changed
-- All internal calls updated to unified API names
-- `mcs_from_smiles()`, `mcs_rdkit()`, `substructure_rdkit()`, `depict_mcs()`, `depict_substructure()` use new API
-- `__all__` cleaned of all deprecated entries
-- `overlapCoefficient([], [])` returns 1.0 (trivially identical empty sets)
-
-### Platforms
-- macOS (arm64 Apple Silicon, x86_64), Linux (x86_64, aarch64), Windows (AMD64)
-- GPU: Metal (Apple Silicon), CUDA (Volta+)
-- Java 25+, C++17, Python 3.10-3.13
-
-## [6.12.0] - 2026-04-07
-
-### Summary
-Correctness, performance, and API cleanup release.
-
-### Included
-- Fixed memory leak in SearchEngine cache
-- Fixed overflow in graph-bound computation for large molecular graphs
-- Added missing CIP Rule 3 (Z > E) per IUPAC 2013 in Java and C++
-- Thread-safety: `volatile` on lazy-init fields in MolGraph
-- Updated tautomer weights: nitroso-oxime 0.95, nitro-aci 0.95, pyridone 0.95
-- Added selenium to tautomer compatibility, iodine to scoring
-- Corrected SAH test SMILES (thioether, not ester connectivity)
-- Relaxed formal charge matching in the default MCS profile
-- Standardized maximum common substructure types as `MCS*`, and renamed `tanimoto` to `overlapCoefficient`
-- Improved MCS construction throughput via faster compatibility graph traversal
-- Reduced allocation pressure throughout the MCS pipeline
-- Faster convergence on symmetric ring systems
-- Faster substructure search domain initialisation
-- Improved throughput on Apple Silicon with native vector operations
-- Stage-aware pipeline routing to skip unnecessary MCS stages
-- `MCSStageTimers` profiling API for pipeline diagnostics
-- `TargetCorpus` and `batch_find_substructure()` Python APIs
-- Reduced allocations per query; thread-local SMILES parsing
-- SDF batch cap at 100K molecules
-
-## [6.11.1] - 2026-04-04
-
-### Bug Fixes
-- **ECFP initial invariants**: corrected circular fingerprint atom invariants to
-  include bond-order and mass contributions in both binary and count ECFP variants
-  (C++ and Java)
-- **Path fingerprint canonical hash**: corrected path fingerprint to use a single
-  canonical hash direction, fixing bit density inflation
-- **FCFP pyrrole-N misclassification**: aromatic nitrogen acceptor classification
-  now uses direct hydrogen count, fixing incorrect non-acceptor assignment for
-  pyridine-N (pyridine N has a free lone pair; pyrrole N does not)
-- **Thread safety**: `prewarmGraph()` now initialises the pattern fingerprint before
-  entering parallel regions, preventing data races on lazy-init fields
-- **Dead code removal**: removed unused internal accumulator from binary ECFP path
-
-## [6.11.0] - 2026-04-04
-
-### Summary
-Performance, precision, and depiction release: faster MCS engine, publication-quality
-SVG renderer (ACS 1996 standard), comprehensive layout engine, 35+ new Python bindings.
-
-### Included
-- Core engine: cache-performance improvements on hot MCS computation paths (15-25%)
-- Pre-indexed candidate sets in the MCS solver — eliminates repeated linear scans per
-  frontier atom
-- Publication-quality SVG depiction engine (ACS 1996 standard):
-  - Jmol/CPK element colors, asymmetric double bonds, wedge/dash stereo bonds
-  - Bond-to-label clipping, H-count subscripts, charge superscripts
-  - Full customization via DepictOptions (bond_length, colors, fonts, sizes)
-  - Side-by-side MCS pair rendering with atom-atom mapping numbers
-- Multi-phase 2D layout pipeline: template match, ring-first, chain zig-zag, force
-  refinement, overlap resolution, crossing reduction, canonical orientation,
-  bond-length normalisation
-- Distance-geometry 3D coordinate generation with iterative coordinate refinement
-- 40+ ring scaffold templates (pharmaceutical scaffolds, PAH, spiro, bridged)
-- Full 2D/3D coordinate transform suite (translate, rotate, scale, mirror,
-  center, align, project, lift)
-- 35+ new Python bindings with GIL release for thread safety
-- Java: explicit per-atom type matching for robust handling of exotic valence states
-- 9 precision chemistry tests (azulene, pyrene, pyridinium, cyclopentadienyl,
-  boron, sulfoxide, phosphate, E/Z stereo)
-- 27 new layout engine tests (2D/3D generation, transforms, overlaps)
-- Comprehensive Python documentation with examples and cautions
-
-## [6.10.2] - 2026-04-03
-
-### Summary
-Correctness release: fixed MCS connectivity filter for non-induced mode,
-added regression tests for challenging molecule pairs.
-
-### Included
-- Corrected connected-component filter to enforce common-bond reachability
-  in both query and target molecules (non-induced MCS mode)
-- Added GOLDEN_843 regression tests in Python and Java (timeout and size)
-- Version bump to 6.10.2
-
-## [6.10.1] - 2026-04-03
-
-### Summary
-Stability and correctness release: hardened MCS repair pipeline, deterministic
-tests, CI/CD fixes.
-
-### Included
-- Rewrote MCS mapping repair to iterative bounded loop — eliminates unbounded
-  recursion on large molecules (vancomycin, CoA, paclitaxel)
-- Correct duplicate-target handling in mapping repair
-- Removed all timing-dependent test assertions — algorithmic correctness is
-  now fully deterministic and machine-speed independent
-- Removed `forkedProcessTimeoutInSeconds` from Surefire (was killing fork JVM)
-- Switched Python publish to manual dispatch only (no auto-publish on release)
-- Fixed GitHub Actions artifact version references and Node.js 24 opt-in
-- Fixed `atomWeights` array length for benzene queries
-- Adjusted MCS thresholds and completeRingsOnly tests for edge cases
-
-## [6.9.0] - 2026-04-02
-
-### Summary
-Core chemistry correctness, native I/O hardening, and benchmark alignment release.
-
-### Included
-- Direction-stable native/public MCS handling for hard asymmetric pairs
-- Symmetric `ringMatchesRingOnly` semantics across C++, Python, and Java
-- Mode-matched benchmark leaderboards with explicit `defaults`, `strict`, and `ring-only` comparison modes
-- Release-documentation cleanup and benchmark/report alignment
-- Native MDL MOL V2000 metadata preservation for molecule name, program line, comment, and SDF properties
-- Native MDL MOL V3000 reader and writer for core graph round-trip
-- Native patent-style R-group molfile support via `R#` pseudo-atoms and `M  RGP`
-- Stronger SMILES and SMARTS attachment-point handling, including labeled placeholders such as `[R1]`
-- Additional stereo and CIP round-trip coverage across SMILES and molfile paths
-- Python bindings for native mol block read/write APIs
-- Java MolGraph metadata parity fields for release alignment
-
-## [6.8.1] - 2026-04-02
-
-### Summary
-Release alignment and parity cleanup.
-
-### Included
-- Repo-wide version bump
-- Python packaging alignment
-- Java and C++ release metadata alignment
-- Benchmark and documentation refresh
-
-## [6.8.0] - 2026-04-01
-
-### Summary
-Open-source release of the SMSD Pro cheminformatics toolkit.
-
-### Included
-- Substructure search engine
-- Maximum common subgraph (MCS) computation
-- Circular fingerprints (ECFP/FCFP) with tautomer awareness
-- SMARTS pattern matching
-- Molecular similarity and screening
-- CIP R/S and E/Z stereodescriptor assignment
-- Batch processing with optional GPU acceleration
-- Java 21+ / C++17 / Python 3.8+ support
-- CLI, SDF batch, and JSON export
+- The Java build is the parent `com.bioinceptionlabs:smsd-parent` at `java/pom.xml`, which builds and tests the library `com.bioinceptionlabs:smsd` (module `java/core`, with its sources in `java/src`) and the command-line tool `com.bioinceptionlabs:smsd-cli` (module `java/cli`, package `com.bioinception.smsd.cli`). The library depends only on the CDK modules it uses (`cdk-interfaces`, `cdk-core`, `cdk-silent`, `cdk-standard`, `cdk-isomorphism`, `cdk-smarts`, `cdk-valencycheck` and, for its atom type definitions, `cdk-atomtype`), `vecmath` and `jackson-annotations`: 10 artefacts at run time. Applications that parse SMILES or read files declare the CDK modules for them, such as `cdk-smiles`. `jackson-databind` is optional: `Standardiser.PredicateRegistry.loadJsonFile` loads it on first use and throws `IllegalStateException` when it is absent.
+- The library JAR, `java/core/target/smsd-8.0.0.jar`, declares the automatic module name `com.bioinception.smsd`. The self-contained CLI JAR, `smsd-cli-8.0.0-jar-with-dependencies.jar`, is built with portable launchers in `java/cli/target`.
+- The C++ library is header-only C++17, with its headers organised by purpose: similarity-bound screening (`similarityUpperBound` and `screenTargets`) is in `smsd/similarity_screen.hpp`, and its GPU form, `gpu::batchSimilarityScreenAuto` with the CUDA and Metal `batchSimilarityScreen` functions, in `smsd/gpu.hpp`. Every public header under `include/smsd` compiles on its own as C++17 without warnings under `-Wall -Wextra`, so a program can include only the headers it uses; the CTest check `smsd_header_self_containment_tests`, built with `SMSD_BUILD_TESTS=ON`, verifies this, and `SMSD_HEADER_CHECK_WERROR=ON` makes its warnings errors.
+- The Python package calls the native library. `import smsd` loads `pathlib`, `glob` and `fnmatch` only when a function reads or writes a file, and RDKit, NumPy and Open Babel only in the functions that need them. The source distribution holds the C++ and Python tests, with the two shared golden fixtures and the three benchmark modules that the Python tests read, and leaves out the benchmark corpora and the Java and script test suites; built from it, the C++ atom-order test of the tautomer classes reports a skip.
+- The CDK licence (LGPL-2.1) and a note on the bundled CDK, its source and its replacement are in `licenses/cdk/`, and are packaged in the Java JARs under `META-INF/smsd/licenses/cdk/`, in the portable CLI archive, beside `LICENSE` and `NOTICE` in the CLI installers, and with them in `/usr/share/doc/smsd` of the Docker image.
+- The benchmark pool `benchmarks/data/chembl_mcs_benchmark.smi` holds 4,687 structures from the MoleculeNet BBBP, BACE and ClinTox collections, and `dalke_random_pairs.tsv` and `dalke_nn_pairs.tsv` are generated from it with `generate_dalke_pairs.py`.
+- The Java, C++ and Python guides document the prepared-query API, and `scripts/check_examples.py` runs every code block in them.

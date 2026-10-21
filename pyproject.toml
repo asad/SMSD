@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "smsd"
-version = "7.2.2"
+version = "8.0.0"
 description = "Molecular substructure and MCS search, fingerprints and similarity with optional tautomer matching and GPU screening"
 readme = "python/README.md"
 license = {text = "Apache-2.0"}
@@ -48,6 +48,18 @@ cmake.source-dir = "cpp"
 cmake.build-type = "Release"
 wheel.packages = ["python/smsd"]
 wheel.license-files = ["LICENSE", "NOTICE", "licenses/libomp/LICENSE.TXT", "licenses/libgomp/COPYING3", "licenses/libgomp/COPYING.RUNTIME", "licenses/msvc/README.md", "licenses/msvc/LICENSE-2022.docx", "licenses/msvc/LICENSE-2026.docx"]
+# Benchmark corpora and the Java and script test suites are left out of the sdist. The native
+# release checks build cpp/tests from it; the tautomer atom-order test, which reads the
+# benchmark corpus benchmarks/data/chembl_mcs_benchmark.smi, is skipped there. The Python
+# tests in the sdist read the two shared golden fixtures and three benchmark modules.
+sdist.exclude = ["benchmarks/**", "java/src/test/**", "java/cli/src/test/**", "scripts/tests/**"]
+sdist.include = [
+    "benchmarks/generate_dalke_pairs.py",
+    "benchmarks/mcs_pairs.py",
+    "benchmarks/mcs_protocol.py",
+    "java/src/test/resources/com/bioinception/smsd/aromaticity_parity.json",
+    "java/src/test/resources/com/bioinception/smsd/chemistry_rules.json",
+]
 minimum-version = "0.5"
 
 [tool.scikit-build.cmake.define]

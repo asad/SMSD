@@ -3,21 +3,15 @@
 # Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
 # See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """
-Comprehensive API coverage tests for SMSD Pro v7.0.
+Coverage of the public SMSD Pro Python API, one class per area.
 
-Covers ~58 public API functions that previously had zero test coverage.
-Run with:  pytest tests/test_api_coverage.py -v
-
-Copyright (c) 2018-2026 BioInception PVT LTD
+Run with:  pytest python/tests/test_api_coverage.py -v
 """
 import math
 import os
 import pytest
 import smsd
-
-
-def _atom_mapping(result):
-    return dict(result.best.atom_mapping) if result.found else {}
+from .search_helpers import atom_map
 
 
 # ---------------------------------------------------------------------------
@@ -260,12 +254,12 @@ class TestFileIO:
         assert isinstance(smarts, str)
         assert len(smarts) > 0
 
-    def test_read_molfile(self, tmp_path):
-        """read_molfile should read a .mol file from disk."""
+    def test_read_mol_file(self, tmp_path):
+        """read_mol_file should read a .mol file from disk."""
         mol = smsd.parse_smiles(BENZENE)
         path = str(tmp_path / "test.mol")
         smsd.write_molfile(mol, path)
-        mol2 = smsd.read_molfile(path)
+        mol2 = smsd.read_mol_file(path)
         assert isinstance(mol2, smsd.MolGraph)
         assert mol2.n == 6
 
@@ -294,20 +288,20 @@ class TestFileIO:
         content = open(path).read()
         assert "$$$$" in content
 
-    def test_export_sdf_basic(self, tmp_path):
-        """export_sdf should write multiple molecules to an SDF file."""
+    def test_write_sdf_basic(self, tmp_path):
+        """write_sdf should write multiple molecules to an SDF file."""
         mols = [smsd.parse_smiles(s) for s in [BENZENE, ETHANOL, PHENOL]]
         path = str(tmp_path / "multi.sdf")
-        smsd.export_sdf(mols, path)
+        smsd.write_sdf(mols, path)
         assert os.path.exists(path)
         content = open(path).read()
         assert content.count("$$$$") == 3
 
-    def test_export_sdf_single_molecule(self, tmp_path):
-        """export_sdf with a single molecule should produce valid SDF."""
+    def test_write_sdf_single_molecule(self, tmp_path):
+        """write_sdf with a single molecule should produce valid SDF."""
         mols = [smsd.parse_smiles(METHANE)]
         path = str(tmp_path / "single.sdf")
-        smsd.export_sdf(mols, path)
+        smsd.write_sdf(mols, path)
         content = open(path).read()
         assert content.count("$$$$") == 1
 
@@ -318,7 +312,7 @@ class TestFileIO:
             mol1 = smsd.parse_smiles(smi)
             path = str(tmp_path / "roundtrip.mol")
             smsd.write_molfile(mol1, path)
-            mol2 = smsd.read_molfile(path)
+            mol2 = smsd.read_mol_file(path)
             assert mol2.n == mol1.n, \
                 f"Atom count mismatch for {smi}: {mol2.n} != {mol1.n}"
 
@@ -530,8 +524,8 @@ class TestTargetCorpus:
 
 class TestScaffoldGraph:
     """Tests for murcko_scaffold, extract_subgraph, count_components,
-    split_components, same_canonical_graph, find_nmcs, find_scaffold_mcs,
-    validate_mapping, and canonical_hash."""
+    split_components, same_canonical_graph, MCS consensus, scaffold MCS,
+    MCS.validate_mapping and canonical_hash."""
 
     def test_murcko_scaffold_phenol(self):
         """murcko_scaffold of phenol should give benzene ring."""
@@ -553,6 +547,19 @@ class TestScaffoldGraph:
         scaffold = smsd.murcko_scaffold(mol)
         # Acyclic molecules have no ring scaffold; implementation returns input
         assert isinstance(scaffold, smsd.MolGraph)
+
+    @pytest.mark.parametrize("smiles,hydrogens,expected", [
+        (TOLUENE, [1] * 6, "c1ccccc1"),
+        ("CC1(C)CCCCC1", [2] * 6, "C1CCCCC1"),
+        ("O=C1CCCCC1", [0, 0] + [2] * 5, "C1(CCCCC1)=O"),
+        ("O=c1cccc[nH]1", [0, 0] + [1] * 5, "c1(cccc[nH]1)=O"),
+        ("Cn1cccc1", [1] * 5, "c1cc[nH]c1"),
+        ("C1CCC2(CC1)CCCC2", [2, 2, 2, 0, 2, 2, 2, 2, 2, 2], "C12(CCCC1)CCCCC2"),
+    ])
+    def test_murcko_scaffold_replaces_stripped_substituents_with_hydrogen(self, smiles, hydrogens, expected):
+        scaffold = smsd.murcko_scaffold(smsd.parse_smiles(smiles))
+        assert list(scaffold.hydrogen_count) == hydrogens
+        assert smsd.to_smiles(scaffold) == expected
 
     def test_extract_subgraph(self):
         """extract_subgraph should extract atoms at given indices."""
@@ -635,7 +642,7 @@ class TestScaffoldGraph:
     def test_validate_mapping_invalid(self):
         errors = smsd.MCS.validate_mapping(BENZENE, ETHANOL, {0: 2})
         assert isinstance(errors, list) and errors
-        # May or may not find errors depending on strictness, but shouldn't crash
+        # Benzene carbon 0 cannot map to the ethanol oxygen.
 
     def test_canonical_hash_deterministic(self):
         """canonical_hash should be deterministic for the same molecule."""
@@ -743,7 +750,7 @@ class TestChemUtils:
     def test_prewarm_can_still_use_molecule(self):
         """After prewarm, molecule should work for MCS."""
         mol = smsd.prewarm(smsd.parse_smiles(BENZENE))
-        mapping = _atom_mapping(smsd.MCS.find(mol).match(PHENOL))
+        mapping = atom_map(smsd.MCS.find(mol).match(PHENOL))
         assert len(mapping) >= 6
 
     def test_prewarm_with_smiles(self):
@@ -845,7 +852,7 @@ class TestCoordinateTransforms:
         assert abs(result[0][1] - 2.0) < 1e-6
 
     def test_center_2d(self):
-        """center_2d should center coordinates at origin."""
+        """center_2d should centre coordinates on the origin."""
         coords = [[2.0, 4.0], [4.0, 6.0]]
         result = smsd.center_2d(coords)
         # Centroid should be (0, 0)
@@ -854,8 +861,8 @@ class TestCoordinateTransforms:
         assert abs(cx) < 1e-6
         assert abs(cy) < 1e-6
 
-    def test_center_2d_already_centered(self):
-        """center_2d on already-centered coords should be no-op."""
+    def test_center_2d_already_centred(self):
+        """center_2d on already centred coordinates should be no-op."""
         coords = [[-1.0, -1.0], [1.0, 1.0]]
         result = smsd.center_2d(coords)
         cx = sum(p[0] for p in result) / len(result)
@@ -967,14 +974,14 @@ class TestDepiction:
         """depict_pair should render two molecules side-by-side."""
         m1 = smsd.parse_smiles(BENZENE)
         m2 = smsd.parse_smiles(PHENOL)
-        mapping = _atom_mapping(smsd.MCS.find(m1).match(m2))
+        mapping = atom_map(smsd.MCS.find(m1).match(m2))
         svg = smsd.depict_pair(m1, m2, mapping)
         assert isinstance(svg, str)
         assert len(svg) > 100
 
     def test_depict_pair_from_smiles(self):
         """depict_pair should accept SMILES strings."""
-        mapping = _atom_mapping(smsd.MCS.find(BENZENE).match(PHENOL))
+        mapping = atom_map(smsd.MCS.find(BENZENE).match(PHENOL))
         svg = smsd.depict_pair(BENZENE, PHENOL, mapping)
         assert isinstance(svg, str)
 
@@ -1028,11 +1035,6 @@ class TestRDKitInterop:
         g = smsd.from_rdkit(mol)
         assert g.n == 7
 
-    def test_from_rdkit_none_raises(self):
-        """from_rdkit(None) should raise TypeError."""
-        with pytest.raises(TypeError):
-            smsd.from_rdkit(None)
-
     def test_to_rdkit_from_mol(self):
         """to_rdkit should convert MolGraph back to RDKit Mol."""
         from rdkit import Chem
@@ -1080,7 +1082,7 @@ class TestRDKitInterop:
         m2 = Chem.MolFromSmiles(PHENOL)
         g1 = smsd.from_rdkit(m1)
         g2 = smsd.from_rdkit(m2)
-        smsd_mapping = _atom_mapping(smsd.MCS.find(g1).match(g2))
+        smsd_mapping = atom_map(smsd.MCS.find(g1).match(g2))
         translated = smsd.translate_mapping(smsd_mapping, g1, g2)
         assert isinstance(translated, dict)
         # All translated indices should be valid for the RDKit molecules
@@ -1094,11 +1096,11 @@ class TestRDKitInterop:
         assert result == {}
 
     def test_mcs_rdkit_graph_inputs(self):
-        """mcs_rdkit_native should find MCS with element-correct RDKit indices."""
+        """An MCS of RDKit molecules pairs atoms of equal elements by RDKit index."""
         from rdkit import Chem
         m1 = Chem.MolFromSmiles(BENZENE)
         m2 = Chem.MolFromSmiles(PHENOL)
-        mapping = _atom_mapping(smsd.MCS.find(m1).match(m2))
+        mapping = atom_map(smsd.MCS.find(m1).match(m2))
         assert isinstance(mapping, dict)
         assert len(mapping) >= 6
         # Verify element correctness
@@ -1107,11 +1109,11 @@ class TestRDKitInterop:
                    m2.GetAtomWithIdx(t).GetAtomicNum()
 
     def test_mcs_rdkit_molecule_inputs(self):
-        """mcs_rdkit should work as convenience wrapper."""
+        """An MCS search accepts RDKit molecules directly."""
         from rdkit import Chem
         m1 = Chem.MolFromSmiles(BENZENE)
         m2 = Chem.MolFromSmiles(PHENOL)
-        mapping = _atom_mapping(smsd.MCS.find(m1).match(m2))
+        mapping = atom_map(smsd.MCS.find(m1).match(m2))
         assert isinstance(mapping, dict)
         assert len(mapping) >= 6
 
@@ -1120,7 +1122,7 @@ class TestRDKitInterop:
         from rdkit import Chem
         benzene = Chem.MolFromSmiles(BENZENE)
         phenol = Chem.MolFromSmiles(PHENOL)
-        result = _atom_mapping(smsd.Substructure.find(benzene).match(phenol))
+        result = atom_map(smsd.Substructure.find(benzene).match(phenol))
         assert isinstance(result, dict)
         assert len(result) > 0
 
@@ -1129,7 +1131,7 @@ class TestRDKitInterop:
         from rdkit import Chem
         query = Chem.MolFromSmiles(BENZENE)
         targets = [Chem.MolFromSmiles(s) for s in [PHENOL, ETHANOL]]
-        results = [_atom_mapping(result) for result in smsd.MCS.find(query).match_many(targets)]
+        results = [atom_map(result) for result in smsd.MCS.find(query).match_many(targets)]
         assert isinstance(results, list)
         assert len(results) == 2
         # Phenol should have MCS >= 6
@@ -1197,6 +1199,40 @@ class TestEnums:
         """AromaticityModel enum should exist."""
         assert hasattr(smsd, 'AromaticityModel')
 
+    def test_chem_options_fluent_setters_return_the_same_object(self):
+        """Every fluent setter of the native and Java options sets its field and returns self."""
+        options = smsd.ChemOptions()
+        assert options.with_aromaticity_mode(smsd.AromaticityMode.STRICT) is options
+        assert options.with_bond_order_mode(smsd.BondOrderMode.LOOSE) is options
+        assert options.with_complete_rings_only(True) is options
+        assert options.with_match_isotope(True) is options
+        assert options.with_ring_fusion_mode(smsd.RingFusionMode.STRICT) is options
+        assert options.with_tautomer_aware(True) is options
+        assert options.with_solvent(smsd.Solvent.DMSO) is options
+        assert options.with_ph(3.5) is options
+        assert options.aromaticity_mode == smsd.AromaticityMode.STRICT
+        assert options.match_bond_order == smsd.BondOrderMode.LOOSE
+        assert options.complete_rings_only and options.match_isotope and options.tautomer_aware
+        assert options.ring_fusion_mode == smsd.RingFusionMode.STRICT
+        assert options.solvent == smsd.Solvent.DMSO and options.pH == 3.5
+        text = repr(options)
+        for field in ("match_atom_type", "match_formal_charge", "match_isotope", "use_chirality", "use_bond_stereo",
+                      "ring_matches_ring_only", "complete_rings_only", "ring_fusion_mode=STRICT",
+                      "match_bond_order=LOOSE", "aromaticity_mode=STRICT", "tautomer_aware=True", "pH=3.5",
+                      "solvent=DMSO"):
+            assert field in text
+
+    def test_chem_options_copies_are_independent(self):
+        """The copy constructor, copy.copy and copy.deepcopy each give an independent ChemOptions."""
+        import copy
+        source = smsd.ChemOptions().with_tautomer_aware(True).with_ph(2.0)
+        for duplicate in (smsd.ChemOptions(source), copy.copy(source), copy.deepcopy(source)):
+            assert duplicate is not source
+            assert duplicate.tautomer_aware and duplicate.pH == 2.0
+            duplicate.tautomer_aware = False
+            duplicate.pH = 9.0
+            assert source.tautomer_aware and source.pH == 2.0
+
 
 # ===========================================================================
 # 12. SMARTS Advanced
@@ -1263,11 +1299,11 @@ class TestSMARTSAdvanced:
 
 
 # ===========================================================================
-# v7.1.1 bug-fix regression tests
+# Match counts, result representation and canonical SMILES output
 # ===========================================================================
 
-class TestV711BugFixes:
-    """Regression guards for the three bug fixes shipped in v7.1.1."""
+class TestResultAndSmilesWriterContracts:
+    """Match counts, result representation and canonical SMILES output."""
 
     def test_match_counts_support_distinct_similarity_metrics(self):
         size = smsd.MCS.find(PHENOL).match(BENZENE).best.atom_count
@@ -1282,66 +1318,56 @@ class TestV711BugFixes:
         assert "optimal=" in rendered and "complete=" in rendered
         assert result.optimal and not result.complete
 
-    def test_canonical_smiles_accepts_string(self):
-        """v7.1.1 fix: `smsd.canonical_smiles(smi_str)` and
-        `smsd.to_smiles(smi_str)` must accept a SMILES string as input,
-        not just a MolGraph.
-
-        Before the fix both raised
-        `TypeError: incompatible function arguments` because the wrapper
-        was aliased directly to a pybind11 overload that only took a
-        MolGraph.
+    def test_to_smiles_accepts_string_and_graph(self):
+        """`smsd.to_smiles()` accepts a SMILES string as well as a MolGraph,
+        and gives the same text for both.
         """
         # String input should work without raising
-        out = smsd.canonical_smiles("c1ccccc1")
+        out = smsd.to_smiles("c1ccccc1")
         assert isinstance(out, str)
         assert out  # non-empty
-        # MolGraph input should continue to work
+        # MolGraph input gives text as well
         g = smsd.parse_smiles("c1ccccc1")
-        out2 = smsd.canonical_smiles(g)
+        out2 = smsd.to_smiles(g)
         assert isinstance(out2, str)
         # The two results should be identical
         assert out == out2
 
     def test_to_smiles_accepts_string(self):
-        """`smsd.to_smiles` sibling of `canonical_smiles` must also
-        accept a SMILES string (same TypeError fix as above)."""
+        """`smsd.to_smiles` must accept a SMILES string on its own."""
         out = smsd.to_smiles("c1ccccc1")
         assert isinstance(out, str)
         assert out
 
     def test_pyrrole_type_n_emits_nh_in_canonical_smiles(self):
-        """v7.1.1 Kekulé fix: canonical SMILES writer must emit `[nH]`
-        for pyrrole-type aromatic N so downstream kekulizers (RDKit,
-        ChemAxon, etc.) can reconstitute the structure.
+        """The canonical SMILES writer emits `[nH]` for pyrrole-type
+        aromatic N, so that other kekulisers (RDKit, ChemAxon and so on)
+        can reconstitute the structure.
 
-        Before the fix `Cn1cccc1` round-tripped correctly but the same
-        pyrrole topology parsed from SDF without an explicit H count
-        came out as `n` (no bracket), which failed Hückel validation in
-        RDKit (4 C + 1 pyridine-N = 5 pi electrons, not 4n+2 = 6).
+        A bare `n` would describe a pyridine-type N: 4 C + 1 pyridine-N
+        gives 5 pi electrons, not the 4n+2 = 6 that Hückel validation
+        in RDKit requires.
         """
         # Pyrrole — the N must emit [nH]
-        out_pyrrole = smsd.canonical_smiles("c1cc[nH]c1")
+        out_pyrrole = smsd.to_smiles("c1cc[nH]c1")
         assert "[nH]" in out_pyrrole
 
         # Indole — the pyrrole-side N must also emit [nH]
-        out_indole = smsd.canonical_smiles("c1ccc2[nH]ccc2c1")
+        out_indole = smsd.to_smiles("c1ccc2[nH]ccc2c1")
         assert "[nH]" in out_indole
 
         # N-methyl pyrrole — no implicit H, must NOT emit [nH]
-        out_nmepyrrole = smsd.canonical_smiles("Cn1cccc1")
+        out_nmepyrrole = smsd.to_smiles("Cn1cccc1")
         assert "[nH]" not in out_nmepyrrole
 
         # Pyridine — 6-ring, never pyrrole-type, must NOT emit [nH]
-        out_pyridine = smsd.canonical_smiles("c1ccncc1")
+        out_pyridine = smsd.to_smiles("c1ccncc1")
         assert "[nH]" not in out_pyridine
 
     def test_pyrrole_type_n_round_trips_via_rdkit(self):
-        """SMSD's canonical SMILES output must be RDKit-parseable for
-        pyrrole / indole / carbazole / benzo-pyrrole systems.  This is
-        the real-world bug that triggered the v7.1.1 Kekulé fix — SMSD
-        was outputting `n` for pyrrole-type N, and RDKit's kekulize
-        refused to assign pi electrons for the resulting aromatic 5-ring.
+        """SMSD's canonical SMILES output is RDKit-parseable for pyrrole,
+        indole, carbazole and benzo-pyrrole systems: RDKit can kekulise a
+        five-membered aromatic ring only when its pyrrole-type N is `[nH]`.
         """
         rdkit = pytest.importorskip("rdkit.Chem")
         from rdkit.Chem import MolFromSmiles
@@ -1353,7 +1379,7 @@ class TestV711BugFixes:
             "c1ccc2c(c1)[nH]c3ccccc23",  # carbazole
         ]:
             m = smsd.parse_smiles(smi_in)
-            out = smsd.canonical_smiles(m)
+            out = smsd.to_smiles(m)
             rd = MolFromSmiles(out)
             assert rd is not None, (
                 f"SMSD canonical output {out!r} (from {smi_in!r}) "

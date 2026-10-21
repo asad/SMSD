@@ -2,10 +2,11 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
- * See the NOTICE file for attribution, trademark, and algorithm IP terms. *
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ *
  * CUDA kernels for graph matching acceleration:
- *   1. Domain initialization (Nq × Nt atom compatibility)
- *   2. NLF batch compute (per-atom neighbor label histograms)
+ *   1. Domain initialisation (Nq × Nt atom compatibility)
+ *   2. NLF batch compute (per-atom neighbour label histograms)
  *   3. Batch feasibility checks (degree + adjacency)
  */
 

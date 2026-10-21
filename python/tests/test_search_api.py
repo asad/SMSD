@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Public search contracts are independent of solver implementation names."""
 from concurrent.futures import ThreadPoolExecutor
 
@@ -38,8 +40,31 @@ def test_disconnected_fragment_mapping(objective):
 
 def test_mces_does_not_add_isolated_atoms():
     result = smsd.MCS.find("CC.O").with_objective(smsd.MCS.Objective.MCES).with_fragments().match("CC.O")
+    assert result.optimal and result.complete and result.status == smsd.SearchStatus.COMPLETED
     assert (result.best.atom_count, result.best.bond_count) == (2, 1)
     assert not smsd.MCS.find("O").with_objective(smsd.MCS.Objective.MCES).match("O").found
+
+
+@pytest.mark.parametrize("query,target,atoms,bonds", [
+    ("C12C3C4C1C5C2C3C45", "C1CCC2CCCCC2C1", 8, 8),
+    ("C1C2CC12", "CCCCC", 4, 3),
+])
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("fragments", [False, True])
+def test_connected_mces_in_both_input_orders(query, target, atoms, bonds, reverse, fragments):
+    if reverse:
+        query, target = target, query
+    options = smsd.MCS.Options()
+    options.objective = smsd.MCS.Objective.MCES
+    options.timeout_ms = 10000
+    if fragments:
+        options.connectivity = smsd.MCS.Connectivity.FRAGMENTS
+        options.max_fragments = 1
+    result = smsd.MCS.find(query).with_options(options).match(target)
+    assert result.optimal and result.complete and result.status == smsd.SearchStatus.COMPLETED
+    assert (result.best.atom_count, result.best.bond_count) == (atoms, bonds)
+    assert len(result.best.fragments) == 1
+    assert smsd.MCS.validate_mapping(query, target, result.best, options) == []
 
 
 @pytest.mark.parametrize("query", [smsd.MCS.find("CC"), smsd.Substructure.find("CC"),
@@ -117,6 +142,23 @@ def test_consensus_verifies_support_and_caps_output():
     assert output.n == 2 and sum(output.hydrogen_count) == 6
 
 
+def test_consensus_argument_checks():
+    none = smsd.MCS.consensus([])
+    assert not none.found and none.source_index == -1 and none.fragment is None
+    assert none.graph.n == 0 and none.support_count == 0 and none.to_smiles() == ""
+    excluded = smsd.MCS.Options()
+    excluded.excluded_target_atoms = [0]
+    with pytest.raises(ValueError):
+        smsd.MCS.consensus(["CCO", "CCN"], excluded)
+    weighted = smsd.MCS.Options()
+    weighted.atom_weights = [1.0, 1.0, 1.0]
+    with pytest.raises(ValueError):
+        smsd.MCS.consensus(["CCO", "CCN"], weighted)
+    for threshold in (0.0, 1.5, float("nan")):
+        with pytest.raises(ValueError):
+            smsd.MCS.consensus(["CCO", "CCN"], threshold=threshold)
+
+
 def test_selected_graph_retains_context_while_smiles_caps_the_cut():
     match = smsd.MCS.find("CCO").match("CCN").best
     context = match.to_graph("CCO")
@@ -127,7 +169,30 @@ def test_selected_graph_retains_context_while_smiles_caps_the_cut():
     assert smsd.Substructure.smarts("[CH2]").match(context).found
 
 
+def test_constrained_search_returns_one_result_per_query_after_cancellation():
+    options = smsd.MCS.Options()
+    token = smsd.CancellationToken()
+    options.cancellation = token
+    token.cancel()
+    results = smsd.MCS.match_constrained(["CC", "CC"], "CCCC", options)
+    assert len(results) == 2
+    assert all(result.status == smsd.SearchStatus.CANCELLED for result in results)
+
+
+def test_invalid_mappings_are_reported_and_not_maximal():
+    incompatible = {0: 0, 1: 1, 2: 2}
+    assert smsd.MCS.validate_mapping("CCO", "CCN", incompatible) == ["Mapped atoms are incompatible"]
+    assert smsd.MCS.is_mapping_maximal("CCO", "CCN", incompatible) is False
+    assert smsd.MCS.validate_mapping("CCO", "CCN", {0: 0, 1: 1}) == []
+    assert smsd.MCS.is_mapping_maximal("CCO", "CCN", {0: 0, 1: 1}) is True
+    with pytest.raises(IndexError):
+        smsd.MCS.canonicalize_mapping("CCO", "CCN", {0: 3})
+
+
 def test_retired_search_exports_are_absent():
     for module in (smsd, smsd._smsd):
         for name in ("find_mcs", "find_mcs_clique", "find_mcs_coverage", "MCSOptions", "MatcherEngine"):
             assert not hasattr(module, name)
+    for name in ("depict_mcs_svg", "depict_smiles", "batch_fingerprint_screen", "overlapCoefficient",
+                 "count_overlapCoefficient", "prewarm_graph"):
+        assert not hasattr(smsd._smsd, name)

@@ -1,10 +1,11 @@
-"""Comprehensive fingerprint tests for SMSD Pro v7.1.1.
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
+"""Comprehensive fingerprint tests for SMSD Pro.
 
 Tests every fingerprint type, similarity metric, edge case, and known
-challenging molecules from chemoinformatics literature.
-
-Copyright (c) 2018-2026 BioInception PVT LTD — Syed Asad Rahman
-SPDX-License-Identifier: Apache-2.0
+challenging molecules from the chemoinformatics literature.
 """
 
 import math
@@ -245,7 +246,7 @@ class TestTopologicalTorsion:
         assert len(hexane) > len(benzene_t)
 
     def test_peptide_backbone(self):
-        """Topological torsion is SOTA on peptide benchmarks (known from lit)."""
+        """Topological torsions perform strongly on peptide benchmarks in the literature."""
         ala_ala = smsd.topological_torsion("CC(N)C(=O)NC(C)C(=O)O")
         assert isinstance(ala_ala, list)
         assert len(ala_ala) > 0
@@ -423,7 +424,7 @@ class TestCountSimilarity:
 
     def test_count_overlap_range(self, dense_fps):
         d1, d2 = dense_fps
-        v = smsd.count_overlapCoefficient(d1, d2)
+        v = smsd.count_overlap_coefficient(d1, d2)
         assert 0.0 <= v <= 1.0
 
     def test_count_self_similarity(self, benzene):
@@ -468,6 +469,29 @@ class TestFormatConversions:
         set_bits = [i for i, c in enumerate(bits) if c == '1']
         assert set_bits == fp
 
+    def test_encoders_ignore_positions_outside_the_fingerprint(self):
+        assert smsd.to_hex([-1, 3, 70, 4096], 128) == "0000000000000008" "0000000000000040"
+        assert smsd.to_binary_string({1, 5, 99}, 8) == "01000100"
+        assert smsd.to_hex(None, 64) == "0" * 16
+        assert smsd.to_binary_string(None, 4) == "0000"
+
+    def test_sizes_that_are_not_whole_words_round_trip(self):
+        fp = [0, 63, 64, 999]
+        hex_str = smsd.to_hex(fp, 1000)
+        assert len(hex_str) == 16 * 16
+        assert smsd.from_hex(hex_str) == fp
+
+    def test_from_hex_reads_short_and_upper_case_words(self):
+        assert smsd.from_hex("F") == [0, 1, 2, 3]
+        assert smsd.from_hex("0" * 16 + "1") == [64]
+        assert smsd.from_hex(None) == []
+        assert smsd.from_hex("") == []
+
+    @pytest.mark.parametrize("text", ["00ff zz", " ff", "0x00ff", "-1"])
+    def test_from_hex_rejects_other_characters(self, text):
+        with pytest.raises(ValueError):
+            smsd.from_hex(text)
+
     def test_fingerprint_subset(self, benzene, naphthalene):
         """Benzene fingerprint should be a subset of naphthalene's (structurally contained)."""
         fp_benz = set(smsd.circular_fingerprint(benzene, radius=0, fp_size=2048))
@@ -508,11 +532,10 @@ class TestEdgeCases:
     def test_empty_fingerprint_similarity(self):
         """Similarity of two empty fingerprints.
 
-        v7.1.1: aligned on the convention that two empty sets are
-        trivially identical (similarity = 1.0), matching the behaviour
-        of the camelCase `smsd.overlapCoefficient` alias in v7.1.0 and
-        the mathematical convention for Jaccard on the empty set.  If
-        exactly one fingerprint is empty, the similarity is 0.0.
+        Two empty sets are trivially identical (similarity = 1.0), the
+        mathematical convention for Jaccard on the empty set, which the
+        camelCase `smsd.overlapCoefficient` alias shares. If exactly one
+        fingerprint is empty, the similarity is 0.0.
         """
         assert smsd.tanimoto_coefficient([], []) == 1.0
         assert smsd.overlap_coefficient([], []) == 1.0

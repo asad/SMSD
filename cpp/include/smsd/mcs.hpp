@@ -2,11 +2,12 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  */
 #pragma once
 
-#include "search.hpp"
-#include "smiles_parser.hpp"
+#include "smsd/search.hpp"
+#include "smsd/smiles_parser.hpp"
 
 namespace smsd {
 
@@ -49,67 +50,27 @@ public:
         result.options_.timeoutMs = milliseconds;
         return result;
     }
+    /**
+     * Milliseconds from the start of a search of `target` until which the mappings it found in
+     * time are built: its time limit and an eighth of it, as Substructure::resultsTimeMillis().
+     */
+    int64_t resultsTimeMillis(const MolGraph& target) const {
+        return search_detail::resultsTimeMillis(search_detail::searchTimeLimitMillis(options_, query_->n, target.n, true));
+    }
+    /** The cancellation token of the options, or null; once it is cancelled, building mappings stops as well. */
+    std::shared_ptr<const CancellationToken> cancellation() const { return options_.cancellation; }
     /** Heuristic confidence for selected tautomeric relaxations, separate from the MCS score. */
     static double computeTautomerConfidence(const MolGraph& query, const MolGraph& target,
                                             const Match& match, const ChemOptions& chemistry) {
-        if (!std::isfinite(chemistry.pH) || chemistry.pH < 0 || chemistry.pH > 14)
-            throw std::invalid_argument("pH must be finite and between 0 and 14");
-        switch (chemistry.solvent) {
-            case ChemOptions::Solvent::AQUEOUS: case ChemOptions::Solvent::DMSO:
-            case ChemOptions::Solvent::METHANOL: case ChemOptions::Solvent::CHLOROFORM:
-            case ChemOptions::Solvent::ACETONITRILE: case ChemOptions::Solvent::DIETHYL_ETHER: break;
-            default: throw std::invalid_argument("Unknown solvent");
-        }
-        if (!chemistry.tautomerAware) return 1.0;
-        std::vector<bool> relaxed(query.n, false);
-        for (const auto& atom : match.atomMapping) {
-            if (atom.first < 0 || atom.first >= query.n || atom.second < 0 || atom.second >= target.n)
-                throw std::out_of_range("Tautomer confidence atom index out of range");
-            relaxed[atom.first] = query.atomicNum[atom.first] != target.atomicNum[atom.second]
-                || query.aromatic[atom.first] != target.aromatic[atom.second];
-        }
-        for (const auto& bond : match.bondMapping) {
-            if (bond[0] < 0 || bond[1] < 0 || bond[0] >= query.n || bond[1] >= query.n
-                || bond[2] < 0 || bond[3] < 0 || bond[2] >= target.n || bond[3] >= target.n)
-                throw std::out_of_range("Tautomer confidence bond atom index out of range");
-            const auto first = match.atomMapping.find(bond[0]), second = match.atomMapping.find(bond[1]);
-            if (first == match.atomMapping.end() || second == match.atomMapping.end()
-                || first->second != bond[2] || second->second != bond[3]
-                || !query.hasBond(bond[0], bond[1]) || !target.hasBond(bond[2], bond[3]))
-                throw std::invalid_argument("Tautomer confidence bond is outside the selected mapping");
-            if (query.bondOrder(bond[0], bond[1]) != target.bondOrder(bond[2], bond[3])
-                || query.bondAromatic(bond[0], bond[1]) != target.bondAromatic(bond[2], bond[3]))
-                relaxed[bond[0]] = relaxed[bond[1]] = true;
-        }
-        if (std::none_of(relaxed.begin(), relaxed.end(), [](bool value) { return value; })) return 1.0;
-        auto baseline = [](const MolGraph& source) {
-            MolGraph copy;
-            {
-                const std::lock_guard<std::recursive_mutex> cacheLock(source.lazyCacheMutex());
-                copy = source;
-            }
-            copy.computeTautomerClasses();
-            return copy;
-        };
-        // Recompute local baseline weights because Builder graphs may carry a solvent context.
-        MolGraph queryBaseline = baseline(query), targetBaseline = baseline(target);
-        queryBaseline.applySolventCorrection(chemistry.solvent);
-        targetBaseline.applySolventCorrection(chemistry.solvent);
-        queryBaseline.adjustWeightsForPH(chemistry.pH);
-        targetBaseline.adjustWeightsForPH(chemistry.pH);
-        double logSum = 0.0;
-        size_t count = 0;
-        for (const auto& atom : match.atomMapping) {
-            if (relaxed[atom.first] && (queryBaseline.tautomerClass[atom.first] >= 0
-                                       || targetBaseline.tautomerClass[atom.second] >= 0)) {
-                const double weight = std::min(queryBaseline.tautomerWeight[atom.first],
-                                               targetBaseline.tautomerWeight[atom.second]);
-                logSum += std::log(std::max(weight, 1e-10));
-                ++count;
-            }
-        }
-        return count == 0 ? 1.0 : std::exp(logSum / static_cast<double>(count));
+        return detail::selectedTautomerConfidence(query, target, match.atomMapping, match.bondMapping,
+                                                  chemistry);
     }
+    /**
+     * The lexicographically smallest mapping equivalent to `mapping` under the automorphisms of
+     * both graphs. Out-of-range atoms throw std::out_of_range; incomplete generators and the time
+     * and orbit limits throw std::length_error and std::runtime_error, as the Java form throws
+     * IllegalArgumentException and IllegalStateException with the same messages.
+     */
     static std::map<int,int> canonicalizeMapping(
         const MolGraph& g1, const MolGraph& g2,
         const std::map<int,int>& mapping) {
@@ -121,14 +82,14 @@ public:
 
     for (const auto& [query, target] : mapping)
         if (query < 0 || query >= g1.n || target < 0 || target >= g2.n)
-            throw std::out_of_range("canonicalizeMapping: atom index out of range");
+            throw std::out_of_range("Mapped atom index out of range");
     if (expired())
-        throw std::runtime_error("canonicalizeMapping: deadline expired");
+        throw std::runtime_error("Mapping canonicalisation exceeded its time limit");
     const auto& gens1 = g1.getAutomorphismGenerators();
     const auto& gens2 = g2.getAutomorphismGenerators();
-    if (expired()) throw std::runtime_error("canonicalizeMapping: deadline expired");
+    if (expired()) throw std::runtime_error("Mapping canonicalisation exceeded its time limit");
     if (g1.automorphismGeneratorsTruncated() || g2.automorphismGeneratorsTruncated())
-        throw std::length_error("canonicalizeMapping: incomplete automorphism generators");
+        throw std::length_error("Mapping canonicalisation needs complete automorphism generators");
     if (gens1.empty() && gens2.empty()) return mapping;
 
     using PairVec = std::vector<std::pair<int,int>>;
@@ -139,16 +100,16 @@ public:
         std::sort(candidate.begin(), candidate.end());
         if (!seen.insert(candidate).second) return;
         if (seen.size() > maximumStates)
-            throw std::length_error("canonicalizeMapping: automorphism orbit exceeds state limit");
+            throw std::length_error("Mapping canonicalisation exceeded its orbit state limit");
         frontier.push_back(std::move(candidate));
     };
     for (size_t head = 0; head < frontier.size(); ++head) {
         if (expired())
-            throw std::runtime_error("canonicalizeMapping: deadline expired");
+            throw std::runtime_error("Mapping canonicalisation exceeded its time limit");
         // Copy because appending to the frontier may reallocate its storage.
         PairVec current = frontier[head];
         for (const auto& generator : gens1) {
-            if (expired()) throw std::runtime_error("canonicalizeMapping: deadline expired");
+            if (expired()) throw std::runtime_error("Mapping canonicalisation exceeded its time limit");
             PairVec candidate;
             candidate.reserve(current.size());
             for (const auto& [query, target] : current)
@@ -156,7 +117,7 @@ public:
             remember(std::move(candidate));
         }
         for (const auto& generator : gens2) {
-            if (expired()) throw std::runtime_error("canonicalizeMapping: deadline expired");
+            if (expired()) throw std::runtime_error("Mapping canonicalisation exceeded its time limit");
             PairVec candidate;
             candidate.reserve(current.size());
             for (const auto& [query, target] : current)

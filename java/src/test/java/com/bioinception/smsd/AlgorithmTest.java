@@ -26,7 +26,8 @@ import org.openscience.cdk.silent.SilentChemObjectBuilder;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Algorithm Tests: consolidated from AdversarialTest.java, OptimizationTest.java, NewFeaturesTest.java.
+ * Algorithm tests: adversarial inputs, the pruning and ordering of the searches, and the graph
+ * builder, automorphism and canonical labelling features.
  *
  * @author Syed Asad Rahman
  */
@@ -35,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class AlgorithmTest extends TestBase {
 
   // ======================================================================
-  // From: AdversarialTest.java
+  // Adversarial inputs
   // ======================================================================
 
 
@@ -71,7 +72,7 @@ public class AlgorithmTest extends TestBase {
     ChemOptions opts = new ChemOptions();
     opts.aromaticityMode = ChemOptions.AromaticityMode.FLEXIBLE;
     MoleculePair s = new MoleculePair(kek, arom, opts);
-    assertTrue(s.contains(5000), "Kekulized should match aromatic in FLEXIBLE mode");
+    assertTrue(s.contains(5000), "Kekulised should match aromatic in FLEXIBLE mode");
   }
 
   @Test
@@ -922,7 +923,7 @@ public class AlgorithmTest extends TestBase {
   }
 
   // ======================================================================
-  // From: OptimizationTest.java
+  // Search pruning and ordering
   // ======================================================================
 
 
@@ -1017,12 +1018,12 @@ public class AlgorithmTest extends TestBase {
   }
 
   // ======================================================================
-  // 2. BRON-KERBOSCH + RRSPLIT MCS
+  // 2. MCS ON SYMMETRIC AND FUSED SYSTEMS
   // ======================================================================
 
   @Nested
-  @DisplayName("Bron-Kerbosch + RRSplit MCS")
-  class BronKerboschTests {
+  @DisplayName("MCS on symmetric and fused systems")
+  class McsSymmetryTests {
 
     @Test
     @DisplayName("Symmetric: naphthalene vs anthracene (equiv class pruning)")
@@ -1103,12 +1104,12 @@ public class AlgorithmTest extends TestBase {
   }
 
   // ======================================================================
-  // 3. RASCAL SIMILARITY UPPER BOUND SCREENING
+  // 3. SIMILARITY UPPER BOUND SCREENING
   // ======================================================================
 
   @Nested
-  @DisplayName("RASCAL Similarity Upper Bound")
-  class RascalTests {
+  @DisplayName("Similarity Upper Bound")
+  class SimilarityBoundTests {
 
     @Test
     @DisplayName("Upper bound returns value in [0,1]")
@@ -1231,17 +1232,17 @@ public class AlgorithmTest extends TestBase {
   }
 
   // ======================================================================
-  // 4. FASTISO-STYLE ALIGNED ORDERING WITH FORWARD CHECKING
+  // 4. QUERY ATOM ORDERING WITH FORWARD CHECKING
   // ======================================================================
 
   @Nested
-  @DisplayName("FASTiso Ordering and Forward Checking")
-  class FastisoTests {
+  @DisplayName("Query Atom Ordering and Forward Checking")
+  class QueryAtomOrderingTests {
 
     @Test
     @DisplayName("Heterogeneous drug molecule match (heteroatoms aid ordering)")
     void heterogeneousDrugMatch() throws Exception {
-      // Aspirin has O, N absent; acetaminophen has N, O -- distinct labels help FASTiso
+      // Distinct atom labels guide query atom ordering.
       IAtomContainer aspirin = mol("CC(=O)Oc1ccccc1C(=O)O");
       IAtomContainer phenol = mol("Oc1ccccc1");
       assertTrue(
@@ -1280,9 +1281,6 @@ public class AlgorithmTest extends TestBase {
           new MoleculePair(neopentane, target, new ChemOptions()).contains(),
           "Neopentane should be substructure of di-tert-butyl");
     }
-
-    // Removed: forwardCheckingMixedHeteroatoms — duplicated by
-    // SMSDComprehensiveTest.HeterocycleTests.morpholineInDrug (same SMILES pair).
 
     @Test
     @DisplayName("All NLF pruning modes give consistent results")
@@ -1970,12 +1968,12 @@ public class AlgorithmTest extends TestBase {
   }
 
   // ======================================================================
-  // 18. RASCAL BATCH EDGE CASES
+  // 18. SIMILARITY BOUND BATCH EDGE CASES
   // ======================================================================
 
   @Nested
-  @DisplayName("RASCAL Batch Edge Cases")
-  class RascalBatchEdgeCaseTests {
+  @DisplayName("Similarity Bound Batch Edge Cases")
+  class SimilarityBoundBatchEdgeCaseTests {
 
     @Test
     @DisplayName("batchMCS with empty list returns empty results")
@@ -2063,14 +2061,10 @@ public class AlgorithmTest extends TestBase {
       assertTrue(smsd.contains(), "Benzene should be substructure of biphenyl");
     }
 
-    // Removed: chiralityInsensitive — duplicated by StereochemistryTests.rsAlanineChiralityOff
-    // above.
-    // Removed: quinolineIsoquinolineMCS — duplicated by FusedRingTests.quinolineVsIsoquinoline
-    // above.
   }
 
   // ======================================================================
-  // From: NewFeaturesTest.java
+  // Graph builder, automorphisms and canonical labelling
   // ======================================================================
 
 
@@ -2190,12 +2184,12 @@ public class AlgorithmTest extends TestBase {
     }
 
     @Test
-    @DisplayName("Builder RASCAL similarity upper bound")
-    void builderRascal() {
+    @DisplayName("Builder similarity upper bound")
+    void builderSimilarityBound() {
       MolGraph benzene = buildBenzene();
       MolGraph phenol = buildPhenol();
       double ub = MCS.similarityUpperBound(benzene, phenol, new ChemOptions());
-      assertTrue(ub > 0.5 && ub <= 1.0, "RASCAL upper bound should be between 0.5 and 1.0, got " + ub);
+      assertTrue(ub > 0.5 && ub <= 1.0, "similarity upper bound should be between 0.5 and 1.0, got " + ub);
     }
 
     @Test
@@ -2253,23 +2247,23 @@ public class AlgorithmTest extends TestBase {
   }
 
   // ======================================================================
-  // VF3-LIGHT ORDERING
+  // LARGE-MOLECULE SUBGRAPH SEARCH
   // ======================================================================
 
   @Test
-  @DisplayName("Large molecule substructure: VF3-Light ordering gives correct result (>30 atoms)")
-  void largeMoleculeVF3LightCorrectness() throws Exception {
-    // Imatinib (41 heavy atoms) - triggers VF3-Light ordering (>30)
+  @DisplayName("Large molecule subgraph search and MCS preserve the expected matches")
+  void largeMoleculeSubgraphSearchAndMCSCorrectness() throws Exception {
+    // Imatinib (41 heavy atoms).
     IAtomContainer imatinib = mol("Cc1ccc(cc1Nc1nccc(-c2cccnc2)n1)NC(=O)c1ccc(cn1)CN1CCN(CC1)C");
     // Nilotinib (42 heavy atoms) - structurally similar kinase inhibitor
     IAtomContainer nilotinib =
         mol("Cc1cn(-c2cc(NC(=O)c3ccc(C)c(Nc4nccc(-c5cccnc5)n4)c3)cc(c2)C(F)(F)F)cn1");
     ChemOptions opts = new ChemOptions();
 
-    // Self-substructure with VF3-Light ordering
+    // Self-substructure for a large molecule.
     assertTrue(
         TestSupport.contains(imatinib, imatinib, opts, 10_000),
-        "Imatinib should be substructure of itself with VF3-Light ordering");
+        "Imatinib should be a substructure of itself");
 
     // MCS between imatinib and nilotinib should be substantial
     MCS.Options mcsOpts = new MCS.Options();
@@ -2281,7 +2275,7 @@ public class AlgorithmTest extends TestBase {
   }
 
   @Test
-  @DisplayName("Small molecule still uses FASTiso ordering (< 30 atoms)")
+  @DisplayName("Small molecule subgraph search preserves the expected match")
   void smallMoleculeStillCorrect() throws Exception {
     IAtomContainer benzene = mol("c1ccccc1");
     IAtomContainer toluene = mol("Cc1ccccc1");
@@ -2445,11 +2439,11 @@ public class AlgorithmTest extends TestBase {
   }
 
   // ======================================================================
-  // CANONICAL LABELING (Bliss-style)
+  // CANONICAL LABELLING
   // ======================================================================
 
   @Nested
-  @DisplayName("Canonical labeling (Bliss-style)")
+  @DisplayName("Canonical labelling")
   class CanonicalLabelingTests {
 
     @Test
@@ -2487,7 +2481,7 @@ public class AlgorithmTest extends TestBase {
     }
 
     @Test
-    @DisplayName("Canonical labeling produces valid permutation")
+    @DisplayName("Canonical labelling produces valid permutation")
     void canonicalLabelingValidPermutation() throws Exception {
       IAtomContainer naphthalene = mol("c1ccc2ccccc2c1");
       MolGraph g = new MolGraph(naphthalene);
@@ -2547,7 +2541,7 @@ public class AlgorithmTest extends TestBase {
       int[] secondLabels = g.getCanonicalLabeling();
       assertEquals(first, second, "Canonical hash should be stable across repeated access");
       assertArrayEquals(firstLabels, secondLabels,
-          "Canonical labeling should remain stable across repeated access");
+          "Canonical labelling should remain stable across repeated access");
     }
 
     @Test
@@ -2608,7 +2602,7 @@ public class AlgorithmTest extends TestBase {
 
       String smi1 = g1.toCanonicalSmiles();
       String smi2 = g2.toCanonicalSmiles();
-      assertEquals(smi1, smi2, "Different SMILES for ethanol should canonicalize identically");
+      assertEquals(smi1, smi2, "Different SMILES for ethanol should canonicalise identically");
     }
 
     @Test
@@ -2935,7 +2929,7 @@ public class AlgorithmTest extends TestBase {
       assertTrue(mcs.size() >= 4, "Hydroquinone/benzoquinone should share >= 4 atoms with tautomer mode, got " + mcs.size());
     }
 
-    // ---- 1,3-diketone enolization ----
+    // ---- 1,3-diketone enolisation ----
 
     @Test
     @DisplayName("1,3-diketone: acetylacetone keto vs enol form")
@@ -3082,9 +3076,9 @@ public class AlgorithmTest extends TestBase {
   class MCESTests {
 
     @Test
-    @DisplayName("Bond-maximized MCS may differ from atom-maximized MCS")
+    @DisplayName("Bond-maximised MCS may differ from atom-maximised MCS")
     void bondMaximizedVsAtomMaximized() throws Exception {
-      // Use molecules where bond-maximized and atom-maximized MCS can differ
+      // Use molecules where bond-maximised and atom-maximised MCS can differ
       // Cyclopropane (3 atoms, 3 bonds) vs propane (3 atoms, 2 bonds)
       // Atom MCS = 3 atoms for both; Bond MCS prefers cyclopropane ring (3 bonds)
       IAtomContainer cyclohexane = mol("C1CCCCC1");   // 6 atoms, 6 bonds
@@ -3093,7 +3087,7 @@ public class AlgorithmTest extends TestBase {
       ChemOptions opts = new ChemOptions();
       opts.ringMatchesRingOnly = false;
 
-      // Atom-maximized MCS
+      // Atom-maximised MCS
       MCS.Options atomOpts = new MCS.Options();
       atomOpts.timeoutMillis = 10_000;
       atomOpts.objective = (false) ? MCS.Objective.MCES : MCS.Objective.MCIS;
@@ -3101,7 +3095,7 @@ public class AlgorithmTest extends TestBase {
       int atomBonds = TestSupport.mappedBondCount(
           new MolGraph(cyclohexane), atomMCS);
 
-      // Bond-maximized MCS
+      // Bond-maximised MCS
       MCS.Options bondOpts = new MCS.Options();
       bondOpts.timeoutMillis = 10_000;
       bondOpts.objective = (true) ? MCS.Objective.MCES : MCS.Objective.MCIS;
@@ -3109,11 +3103,11 @@ public class AlgorithmTest extends TestBase {
       int bondBonds = TestSupport.mappedBondCount(
           new MolGraph(cyclohexane), bondMCS);
 
-      // Bond-maximized should have >= as many bonds as atom-maximized
+      // Bond-maximised should have >= as many bonds as atom-maximised
       assertTrue(bondBonds >= atomBonds,
-          "Bond-maximized MCS should have >= bonds than atom-maximized: "
+          "Bond-maximised MCS should have >= bonds than atom-maximised: "
               + bondBonds + " vs " + atomBonds);
-      assertTrue(bondMCS.size() > 0, "Bond-maximized MCS should not be empty");
+      assertTrue(bondMCS.size() > 0, "Bond-maximised MCS should not be empty");
     }
 
     @Test
@@ -3554,17 +3548,16 @@ public class AlgorithmTest extends TestBase {
     }
 
     @Test
-    @DisplayName("Charged vs neutral: benzoate vs benzoic acid FP differ")
+    @DisplayName("Charged vs neutral: benzoate and benzoic acid path FPs coincide")
     void chargedVsNeutral() throws Exception {
       long[] fpCharged = FingerprintEngine.pathFingerprint(mol("[O-]C(=O)c1ccccc1"), 5, 2048);
       long[] fpNeutral = FingerprintEngine.pathFingerprint(mol("OC(=O)c1ccccc1"), 5, 2048);
-      // They share the phenyl+carbonyl paths but differ at O vs O-
+      // The two molecules differ only in the charge of one oxygen.
       boolean identical = true;
       for (int i = 0; i < fpCharged.length; i++) {
         if (fpCharged[i] != fpNeutral[i]) { identical = false; break; }
       }
-      // Note: pathFingerprint uses atomicNum only (not charge), so they'll be identical.
-      // This is expected — charge awareness is in mcsFingerprint, not pathFingerprint.
+      // The path fingerprint hashes atomic numbers, not charges, so the two are identical.
       assertTrue(true, "Charged species FP computed without error");
     }
 
@@ -3596,12 +3589,11 @@ public class AlgorithmTest extends TestBase {
     }
 
     @Test
-    @DisplayName("MCS FP: charged carboxylate differs from neutral (charge in hash)")
+    @DisplayName("MCS FP: charged and neutral carboxylates coincide (no charge in hash)")
     void mcsFpChargeAware() throws Exception {
       long[] fpCharged = FingerprintEngine.mcsFingerprint(new MolGraph(mol("[O-]C(=O)c1ccccc1")), 5, 2048);
       long[] fpNeutral = FingerprintEngine.mcsFingerprint(new MolGraph(mol("OC(=O)c1ccccc1")), 5, 2048);
-      // MCS FP doesn't include charge in atomHash currently, so they'll be same.
-      // This documents current behavior — charge awareness could be added later.
+      // The MCS fingerprint hashes no charge, so the two fingerprints are identical.
       assertNotNull(fpCharged);
       assertNotNull(fpNeutral);
     }
@@ -3716,7 +3708,7 @@ public class AlgorithmTest extends TestBase {
   class WeightedMCSTests {
 
     @Test
-    @DisplayName("atomWeights influence MCS optimization target")
+    @DisplayName("atomWeights influence MCS optimisation target")
     void atomWeightsInfluenceResult() throws Exception {
       IAtomContainer m1 = mol("c1ccccc1");
       IAtomContainer m2 = mol("c1ccccc1");
@@ -4078,12 +4070,12 @@ public class AlgorithmTest extends TestBase {
       }
     }
 
-    @Test @DisplayName("Ester hydrolysis: CC(=O)OC vs CC(=O)O — v6.1.0 regression")
+    @Test @DisplayName("Ester hydrolysis: CC(=O)OC vs CC(=O)O")
     void esterHydrolysis() throws Exception {
       assertElementCorrect("CC(=O)OC", "CC(=O)O", 4);
     }
 
-    @Test @DisplayName("Amide vs acid: CC(=O)N vs CC(=O)O — v6.1.0 OOB regression")
+    @Test @DisplayName("Amide vs acid: CC(=O)N vs CC(=O)O, every mapped index in range")
     void amideVsAcid() throws Exception {
       assertElementCorrect("CC(=O)N", "CC(=O)O", 3);
     }
@@ -4115,11 +4107,11 @@ public class AlgorithmTest extends TestBase {
   }
 
   // ==========================================================================
-  // User-Feedback Tests: Multi-Valence, Canonical Round-Trip, Empty SMILES
+  // Multi-valence fingerprints, canonical round trips and empty SMILES
   // ==========================================================================
   @Nested
-  @DisplayName("User-Feedback Edge Cases")
-  class UserFeedbackEdgeCases {
+  @DisplayName("Multi-valence, round-trip and empty-input edge cases")
+  class MultiValenceAndRoundTripEdgeCases {
 
     @Test
     @DisplayName("H3PO4: ECFP on multi-valent P does not crash and is deterministic")
@@ -4298,7 +4290,7 @@ public class AlgorithmTest extends TestBase {
       assertNotNull(fp);
       int setBits = 0;
       for (long w : fp) setBits += Long.bitCount(w);
-      // Single atom with radius=-1 (unlimited) still has only 1 atom center
+      // Single atom with radius=-1 (unlimited) still has only 1 atom centre
       assertTrue(setBits >= 1,
           "radius=-1 on single atom should set at least 1 bit, got " + setBits);
     }
@@ -4313,18 +4305,17 @@ public class AlgorithmTest extends TestBase {
       assertEquals(1.0, sim, 1e-9, "Tanimoto of identical FPs should be 1.0");
     }
 
-    // 11. Tanimoto of empty FPs -> 0.0
+    // 11. Tanimoto of empty FPs -> 1.0
     @Test
-    @DisplayName("Tanimoto of empty fingerprints")
+    @DisplayName("Tanimoto of empty fingerprints equals 1.0")
     void tanimotoEmpty() {
       long[] empty = new long[0];
-      double sim = FingerprintEngine.tanimoto(empty, empty);
       // Convention: two identical empty sets → 1.0 (identical, not dissimilar)
-      assertTrue(sim == 0.0 || sim == 1.0,
-          "Tanimoto of empty FPs should be 0.0 or 1.0, got " + sim);
+      assertEquals(1.0, FingerprintEngine.tanimoto(empty, empty), 0.0);
+      assertEquals(1.0, FingerprintEngine.tanimoto(empty, new long[32]), 0.0);
     }
 
-    // 12. Dice of empty -> 0.0, Soergel of empty -> 1.0
+    // 12. Dice of empty -> 0.0, Soergel of empty -> 0.0
     @Test
     @DisplayName("Dice of empty fingerprints equals 0.0")
     void diceEmpty() {
@@ -4334,11 +4325,11 @@ public class AlgorithmTest extends TestBase {
     }
 
     @Test
-    @DisplayName("Soergel of empty fingerprints equals 1.0 (max distance)")
+    @DisplayName("Soergel of empty fingerprints equals 0.0 (1 - Tanimoto)")
     void soergelEmpty() {
       long[] empty = new long[0];
       double dist = FingerprintEngine.soergel(empty, empty);
-      assertEquals(1.0, dist, 1e-9, "Soergel of empty FPs should be 1.0 (max distance)");
+      assertEquals(0.0, dist, 1e-9, "Soergel of empty FPs should be 1 - Tanimoto = 0.0");
     }
 
     // 13. Enumeration requires a positive result limit.
@@ -4596,7 +4587,7 @@ public class AlgorithmTest extends TestBase {
   }
 
   // ==========================================================================
-  // Reaction-Aware MCS Post-Filter Tests (v6.4.0)
+  // Reaction-aware MCS post-filter tests
   // ==========================================================================
 
 }

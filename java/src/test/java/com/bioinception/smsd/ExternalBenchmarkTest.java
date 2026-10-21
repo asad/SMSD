@@ -31,12 +31,12 @@ import org.openscience.cdk.interfaces.IAtomContainer;
  * <ul>
  *   <li>Tautobase — 468 tautomer pairs (Chodera/Wahl-Sander)</li>
  *   <li>Derived MoleculeNet random pairs — 1000 checked-in rows</li>
- *   <li>Legacy derived neighbor pairs — 1000 rows, variable similarity and repeated source IDs</li>
+ *   <li>Derived MoleculeNet nearest-neighbour pairs — 1000 checked-in rows, variable similarity and repeated source IDs</li>
  *   <li>Stress pairs — 12 adversarial graph-theory hard cases</li>
  *   <li>Ehrlich-Rarey SMARTS — 1400 substructure patterns</li>
  * </ul>
  *
- * Run with: mvn test -Dtest=ExternalBenchmarkTest -Dbenchmark=true
+ * Run with: mvn -f java/pom.xml -pl core test -Dtest=ExternalBenchmarkTest -Dbenchmark=true
  *
  * @author Syed Asad Rahman
  */
@@ -206,7 +206,7 @@ public class ExternalBenchmarkTest extends TestBase {
     }
 
     // ======================================================================
-    // 2. Dalke-style MCS Benchmark (Random + Nearest-Neighbor)
+    // 2. Dalke-style MCS Benchmark (Random + Nearest-Neighbour)
     // ======================================================================
     @Nested
     @DisplayName("Dalke-style MCS Benchmark (2000 pairs)")
@@ -257,7 +257,7 @@ public class ExternalBenchmarkTest extends TestBase {
         }
 
         @Test
-        @DisplayName("Neighbor pairs: measure validated MCS sizes")
+        @DisplayName("Neighbour pairs: measure validated MCS sizes")
         @EnabledIfSystemProperty(named = "benchmark", matches = "true")
         void nnPairsMCSQuality() throws Exception {
             List<String[]> pairs = loadTsvPairs("dalke_nn_pairs.tsv");

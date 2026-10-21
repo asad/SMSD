@@ -4,7 +4,7 @@
 # See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Consistency tests for the public Python API.
 
-These tests focus on wrapper parity and stable behavior across input types
+These tests focus on wrapper parity and stable behaviour across input types
 instead of single-path implementation details.
 """
 
@@ -15,13 +15,13 @@ from smsd import (
     AromaticityModel,
     MolGraphBuilder,
     assign_rs,
-    export_sdf,
+    write_sdf,
     from_hex,
     fingerprint,
     parse_smiles,
     perceive_aromaticity,
     prewarm,
-    read_molfile,
+    read_mol_file,
     to_hex,
     to_smiles,
     write_molfile,
@@ -54,6 +54,24 @@ SUBSTRUCTURE_CASES = [
     ("CC(=O)O", "CCC(=O)O", True),
     ("c1ccc(O)cc1", "c1ccccc1", False),
 ]
+
+
+def test_every_exported_name_is_a_package_attribute():
+    """The purpose modules stay private; the package exports every listed name."""
+    assert [name for name in smsd.__all__ if not hasattr(smsd, name)] == []
+    assert len(set(smsd.__all__)) == len(smsd.__all__)
+    assert not any(name.startswith("_") for name in smsd.__all__)
+
+
+@pytest.mark.parametrize("alias,replacement,arguments", [
+    ("overlapCoefficient", "overlap_coefficient", ([1, 2, 3], [2, 3, 4])),
+    ("count_overlapCoefficient", "count_overlap_coefficient", ([(1, 2), (2, 1)], [(2, 3)])),
+    ("canonical_smiles", "to_smiles", ("OCC",)),
+])
+def test_deprecated_aliases_warn_and_agree_with_their_replacements(alias, replacement, arguments):
+    with pytest.deprecated_call():
+        deprecated = getattr(smsd, alias)(*arguments)
+    assert deprecated == getattr(smsd, replacement)(*arguments)
 
 
 @pytest.mark.parametrize("query,target,expected", SUBSTRUCTURE_CASES)
@@ -93,13 +111,28 @@ def test_lazy_canonical_fields_are_populated_by_smiles_rendering(smiles):
     """`to_smiles()` should populate the lazy ranking fields consistently."""
     mol = parse_smiles(smiles)
     assert mol.morgan_rank == []
-    assert mol.canonical_label == []
 
     rendered = to_smiles(mol)
     assert isinstance(rendered, str)
     assert len(rendered) > 0
     assert len(mol.morgan_rank) == mol.n
     assert len(mol.canonical_label) == mol.n
+
+
+@pytest.mark.parametrize("name", ["canonical_label", "orbit"])
+def test_canonical_label_and_orbit_compute_on_first_access(name):
+    """The lazy getters compute the canonical labelling as the C++ getters do."""
+    mol = parse_smiles("c1ccc(O)cc1")
+    assert mol.morgan_rank == []
+    values = getattr(mol, name)
+    assert len(values) == mol.n
+    assert len(mol.morgan_rank) == mol.n
+    assert sorted(mol.canonical_label) == list(range(mol.n))
+    # Equivalent atoms share an orbit (O, ipso, ortho, meta and para), and the labelling is unchanged once computed.
+    assert len(set(mol.orbit)) == 5
+    assert getattr(mol, name) == values
+    prewarm(mol)
+    assert getattr(mol, name) == values
 
 
 def test_fingerprint_serialisation_round_trip():
@@ -140,8 +173,12 @@ def test_openbabel_interop_round_trip():
     g = smsd.from_openbabel(obmol)
     back = smsd.to_openbabel(g)
 
-    assert to_smiles(g) == "Oc1ccccc1" or to_smiles(g) == "c1ccc(O)cc1"
-    assert back.write("smi").strip()
+    assert to_smiles(g) == to_smiles(parse_smiles("c1ccc(O)cc1"))
+    assert g.n == 7
+    assert sorted(g.atomic_num) == [6] * 6 + [8]
+    assert sum(g.degree) == 14
+    assert sum(g.aromatic) == 6
+    assert back.write("can").strip().split()[0] == obmol.write("can").strip().split()[0]
 
 
 @pytest.mark.parametrize("v3000", [False, True])
@@ -154,7 +191,7 @@ def test_native_molfile_helpers_round_trip(tmp_path, v3000):
 
     path = tmp_path / ("alanine_v3000.mol" if v3000 else "alanine.mol")
     write_molfile(mol, path, v3000=v3000)
-    reread = read_molfile(path)
+    reread = read_mol_file(path)
 
     assert reread.n == mol.n
     assert reread.name == "alanine"
@@ -164,14 +201,14 @@ def test_native_molfile_helpers_round_trip(tmp_path, v3000):
 
 
 def test_native_sdf_export_has_no_rdkit_dependency(tmp_path):
-    """export_sdf() should use the native writer for ordinary MolGraph inputs."""
+    """write_sdf() needs no RDKit and keeps names and properties."""
     out = tmp_path / "library.sdf"
     mols = [parse_smiles("CCO"), parse_smiles("c1ccccc1"), parse_smiles("[R1]c1ccccc1")]
     for idx, mol in enumerate(mols, start=1):
         mol.name = f"mol-{idx}"
         mol.properties = {"ID": str(idx)}
 
-    export_sdf(mols, out)
+    write_sdf(mols, out)
     text = out.read_text(encoding="utf-8")
 
     assert text.count("$$$$") == 3
@@ -203,8 +240,6 @@ def test_prewarm_helper_populates_lazy_graph_fields():
     """Explicit prewarm should fill canonical/orbit caches ahead of batch use."""
     mol = parse_smiles("c1ccccc1")
     assert mol.morgan_rank == []
-    assert mol.canonical_label == []
-    assert mol.orbit == []
 
     prepared = prewarm(mol)
     assert prepared is mol
@@ -213,7 +248,7 @@ def test_prewarm_helper_populates_lazy_graph_fields():
     assert len(mol.orbit) == mol.n
 
 
-def test_explicit_aromaticity_perception_normalizes_raw_kekule_builder_graph():
+def test_explicit_aromaticity_perception_normalises_raw_kekule_builder_graph():
     """Python should expose aromaticity perception as an explicit MolGraph operation."""
     builder = MolGraphBuilder()
     builder.atom_count(6)
@@ -263,3 +298,14 @@ def test_stereo_smarts_substructure_and_mcs_pipeline():
     assert smsd.Substructure.find("NC(C)C(=O)O").match(target).found
     assert smsd.MCS.find(query).match(target).best.atom_count >= 5
     assert assign_rs(query)
+
+
+def test_chem_options_aromaticity_model_is_deprecated():
+    """The field is unread by every search; reading or writing it warns and keeps its value."""
+    options = smsd.ChemOptions()
+    with pytest.warns(DeprecationWarning):
+        assert options.aromaticity_model == smsd.AromaticityModel.DAYLIGHT_LIKE
+    with pytest.warns(DeprecationWarning):
+        options.aromaticity_model = smsd.AromaticityModel.DAYLIGHT_LIKE
+    for name in ("default", "strict", "pharma", "compat-fmcs", "compat-substruct", "reaction"):
+        assert isinstance(smsd.ChemOptions.profile(name), smsd.ChemOptions)

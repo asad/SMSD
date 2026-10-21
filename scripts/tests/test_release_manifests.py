@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Source and wheel provenance producer/consumer regression tests."""
 import hashlib
 import importlib.util
@@ -288,7 +292,7 @@ class ReleaseManifestsTest(unittest.TestCase):
 
     def test_local_receipt_requires_all_three_checked_test_commands(self):
         args = self.local_args()
-        listing = json.dumps({"tests": [{"name": str(index)} for index in range(12)]})
+        listing = json.dumps({"tests": [{"name": str(index)} for index in range(BUILD.NATIVE_TEST_FLOOR)]})
         calls = []
         def checked(command, **kwargs):
             self.assertTrue(kwargs["check"])
@@ -319,7 +323,7 @@ class ReleaseManifestsTest(unittest.TestCase):
 
     def test_failed_local_gate_never_records_passed(self):
         args = self.local_args()
-        listing = json.dumps({"tests": [{}] * 12})
+        listing = json.dumps({"tests": [{}] * BUILD.NATIVE_TEST_FLOOR})
         for failing_gate in range(5):
             with self.subTest(failing_gate=failing_gate):
                 calls = []
@@ -349,7 +353,7 @@ class ReleaseManifestsTest(unittest.TestCase):
 
     def test_local_checks_reject_empty_or_disabled_native_suites(self):
         args = self.local_args()
-        for tests in ([], [{"properties": [{"name": "DISABLED", "value": True}]}] * 12):
+        for tests in ([], [{"properties": [{"name": "DISABLED", "value": True}]}] * BUILD.NATIVE_TEST_FLOOR):
             with self.subTest(tests=tests):
                 with mock.patch.object(BUILD.platform, "system", return_value="Darwin"), mock.patch.object(BUILD.platform, "machine", return_value="arm64"), mock.patch.object(BUILD.subprocess, "check_output", return_value=json.dumps({"tests": tests})), mock.patch.object(BUILD.subprocess, "run") as run:
                     with self.assertRaises(ValueError):

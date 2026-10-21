@@ -6,6 +6,7 @@
  */
 package com.bioinception.smsd.core;
 
+import static com.bioinception.smsd.TestSupport.rawMolecule;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Arrays;
@@ -17,14 +18,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
 import org.openscience.cdk.isomorphism.Pattern;
-import org.openscience.cdk.silent.SilentChemObjectBuilder;
-import org.openscience.cdk.smiles.SmilesParser;
 
 class StereoMatchingRegressionTest {
-  private static IAtomContainer molecule(String smiles) throws Exception {
-    return new SmilesParser(SilentChemObjectBuilder.getInstance()).parseSmiles(smiles);
-  }
-
   @ParameterizedTest
   @CsvSource({
       "C[C@H](O)CC, ClC[C@H](O)CC, true",
@@ -55,7 +50,7 @@ class StereoMatchingRegressionTest {
 
   private static void assertEntryPoints(String queryText, String targetText, ChemOptions chemistry,
                                        boolean expected) throws Exception {
-    IAtomContainer queryMolecule = molecule(queryText), targetMolecule = molecule(targetText);
+    IAtomContainer queryMolecule = rawMolecule(queryText), targetMolecule = rawMolecule(targetText);
     assertEquals(expected, Pattern.findSubstructure(queryMolecule).matches(targetMolecule));
     MolGraph query = new MolGraph(queryMolecule), target = new MolGraph(targetMolecule);
     for (boolean bitParallel : new boolean[] {false, true}) {
@@ -71,7 +66,7 @@ class StereoMatchingRegressionTest {
   @ParameterizedTest
   @CsvSource({"F/C=C(Cl)/C, Z", "F/C=C(C)/Cl, E", "OC(=O)/C=C(C)/C(=O)O, E"})
   void ezAssignmentUsesTheStoredReferenceConvention(String text, char expected) throws Exception {
-    IAtomContainer original = molecule(text);
+    IAtomContainer original = rawMolecule(text);
     for (int pass = 0; pass < 2; pass++) {
       Map<Long, Character> labels = CIPAssigner.assignEZ(new MolGraph(original));
       assertEquals(1, labels.size());
@@ -87,11 +82,11 @@ class StereoMatchingRegressionTest {
   void largeGraphsRetainDoubleBondStereo(int extraAtoms) throws Exception {
     StringBuilder targetText = new StringBuilder("C/C=C/C");
     for (int atom = 0; atom < extraAtoms; atom++) targetText.append('C');
-    MolGraph target = new MolGraph(molecule(targetText.toString()));
+    MolGraph target = new MolGraph(rawMolecule(targetText.toString()));
     ChemOptions chemistry = new ChemOptions();
     chemistry.useBondStereo = true;
-    assertTrue(Substructure.find(new MolGraph(molecule("C/C=C/C"))).withOptions(substructureOptions(chemistry)).withTimeout(2_000).match(target).found());
-    assertFalse(Substructure.find(new MolGraph(molecule("C/C=C\\C"))).withOptions(substructureOptions(chemistry)).withTimeout(2_000).match(target).found());
+    assertTrue(Substructure.find(new MolGraph(rawMolecule("C/C=C/C"))).withOptions(substructureOptions(chemistry)).withTimeout(2_000).match(target).found());
+    assertFalse(Substructure.find(new MolGraph(rawMolecule("C/C=C\\C"))).withOptions(substructureOptions(chemistry)).withTimeout(2_000).match(target).found());
     assertEquals('E', CIPAssigner.assignEZ(target).get(MolGraph.bondKey(1, 2)));
   }
 
@@ -113,29 +108,37 @@ class StereoMatchingRegressionTest {
         .neighbors(neighbors).bondOrders(bondOrders).doubleBondStereo(stereo).build();
     ChemOptions chemistry = new ChemOptions();
     chemistry.useBondStereo = true;
-    assertFalse(Substructure.find(new MolGraph(molecule("C/C=C\\C"))).withOptions(substructureOptions(chemistry)).withTimeout(2_000).match(target).found());
+    assertFalse(Substructure.find(new MolGraph(rawMolecule("C/C=C\\C"))).withOptions(substructureOptions(chemistry)).withTimeout(2_000).match(target).found());
     assertEquals('E', CIPAssigner.assignEZ(target).get(MolGraph.bondKey(1, 2)));
-    assertEquals('E', CIPAssigner.assignEZ(new MolGraph(molecule(target.toCanonicalSmiles()))).values().iterator().next());
+    assertEquals('E', CIPAssigner.assignEZ(new MolGraph(rawMolecule(target.toCanonicalSmiles()))).values().iterator().next());
+  }
+
+  @ParameterizedTest
+  @CsvSource({"C/C, CC, 2", "C/C, C=C, 0", "[#6]/[#6], c1ccccc1, 0", "[#6]\\[#6], C1CCCCC1, 12",
+      "C/C, C/C=C\\C, 4", "F/C=C/F, F/C=C/F, 2", "F/C=C/F, F/C=C\\F, 0", "F/C=C/F, FC=CF, 0"})
+  void directionalBondsAreSingleAliphaticBonds(String smarts, String smiles, int embeddings) throws Exception {
+    // A directional bond is a single, non-aromatic bond, as in Daylight SMARTS and the native core.
+    assertEquals(embeddings, Substructure.smarts(smarts).matchAll(new MolGraph(rawMolecule(smiles))).matches().size());
   }
 
   @Test
   void mcsValidationUsesMappedStereo() throws Exception {
     ChemOptions chemistry = new ChemOptions();
     chemistry.useChirality = true;
-    MolGraph query = new MolGraph(molecule("C[C@H](O)CC"));
-    MolGraph target = new MolGraph(molecule("ClC[C@H](O)CC"));
+    MolGraph query = new MolGraph(rawMolecule("C[C@H](O)CC"));
+    MolGraph target = new MolGraph(rawMolecule("ClC[C@H](O)CC"));
     assertEquals(5, firstMapping(MCS.find(query).withOptions(mcsOptions(chemistry)).match(target)).size());
     chemistry.useChirality = false;
     chemistry.useBondStereo = true;
-    query = new MolGraph(molecule("C/C=C/C"));
-    target = new MolGraph(molecule("Cl/C(C)=C/C"));
+    query = new MolGraph(rawMolecule("C/C=C/C"));
+    target = new MolGraph(rawMolecule("Cl/C(C)=C/C"));
     Map<Integer, Integer> mapping = firstMapping(MCS.find(query).withOptions(mcsOptions(chemistry)).match(target));
     assertTrue(mapping.size() < 4);
     int[] indexed = new int[query.n];
     Arrays.fill(indexed, -1);
     for (Map.Entry<Integer, Integer> atom : mapping.entrySet()) indexed[atom.getKey()] = atom.getValue();
     assertEquals(-1, Substructure.stereoMismatchAtom(query, target, indexed, chemistry));
-    query = new MolGraph(molecule("C/C=C\\C"));
+    query = new MolGraph(rawMolecule("C/C=C\\C"));
     assertEquals(4, firstMapping(MCS.find(query).withOptions(mcsOptions(chemistry)).match(target)).size());
   }
   private static Substructure.Options substructureOptions(ChemOptions chemistry) {

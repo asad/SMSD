@@ -42,6 +42,48 @@ class CIPPriorityRegressionTest {
     assertEquals(expected, CIPAssigner.assignRS(molecule).get(centre));
   }
 
+  @ParameterizedTest
+  @CsvSource({
+      // Rule 5 alone tells the ligands apart: pseudoasymmetric r and s
+      "C[C@H]1CC[C@H](O)CC1, 1, r",
+      "C[C@H]1CC[C@H](O)CC1, 4, r",
+      "C[C@H]1CC[C@@H](O)CC1, 1, s",
+      "C[C@H](Cl)[C@H](O)[C@@H](C)Cl, 3, s",
+      "C[C@H](Cl)[C@@H](O)[C@@H](C)Cl, 3, r",
+      "C[NH+]1[C@@H]2CC[C@H]1C[C@@H](OC(=O)C(CO)c1ccccc1)C2, 7, r",
+      "CN1[C@@H]2CC[C@H]1C[C@H](OC(=O)C(CO)c1ccccc1)C2, 7, s",
+      "Cl[C@H]1[C@H](Cl)[C@@H](Cl)[C@@H](Cl)[C@H](Cl)[C@H]1Cl, 2, r",
+      // Rule 4b (like against unlike descriptor pairs) resolves a true centre
+      "CC(C)[C@H]1CC[C@H](C(=O)N[C@H](Cc2ccccc2)C(=O)[O-])CC1, 3, R",
+      "CC(C)[C@H]1CC[C@H](C(=O)N[C@H](Cc2ccccc2)C(=O)[O-])CC1, 6, r",
+      "Cl[C@H]1[C@H](Cl)[C@@H](Cl)[C@@H](Cl)[C@H](Cl)[C@H]1Cl, 1, S",
+      "Cl[C@H]1[C@H](Cl)[C@@H](Cl)[C@@H](Cl)[C@H](Cl)[C@H]1Cl, 4, R"
+  })
+  void appliesSequenceRules4And5WithAuxiliaryDescriptors(String smiles, int centre, char expected) throws Exception {
+    MolGraph molecule = new MolGraph(new SmilesParser(SilentChemObjectBuilder.getInstance()).parseSmiles(smiles));
+    assertEquals(expected, CIPAssigner.assignRS(molecule).get(centre));
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+      // Rule 2 reads an unlabelled atom at its standard atomic weight: 18F (18) ranks below F (18.998)
+      "C[C@H](F)[C@H](Cl)[C@H](C)[18F], 3, R",
+      // and both passes read it so: the pseudoasymmetric centre agrees with its ligands' descriptors
+      "[18F][C@H](F)[C@H](O)[C@H](F)[18F], 1, R",
+      "[18F][C@H](F)[C@H](O)[C@H](F)[18F], 3, r",
+      "[18F][C@H](F)[C@H](O)[C@H](F)[18F], 5, S"
+  })
+  void rule2ReadsUnlabelledAtomsAtTheirStandardAtomicWeight(String smiles, int centre, char expected) throws Exception {
+    MolGraph molecule = new MolGraph(new SmilesParser(SilentChemObjectBuilder.getInstance()).parseSmiles(smiles));
+    assertEquals(expected, CIPAssigner.assignRS(molecule).get(centre));
+  }
+
+  @Test
+  void symmetricCentreStaysUnlabelled() throws Exception {
+    MolGraph molecule = new MolGraph(new SmilesParser(SilentChemObjectBuilder.getInstance()).parseSmiles("C[C@H](C)O"));
+    assertNull(CIPAssigner.assignRS(molecule).get(1));
+  }
+
   @Test
   void lonePairDescriptorUsesTheSpecifiedLigandOrder() throws Exception {
     IAtomContainer molecule = new SmilesParser(SilentChemObjectBuilder.getInstance())

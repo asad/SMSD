@@ -1,10 +1,8 @@
-"""
-SPDX-License-Identifier: Apache-2.0
-Copyright (c) 2018-2026 BioInception PVT LTD
-Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
-
-CIP stereo descriptor tests for Python bindings.
-"""
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
+"""CIP stereo descriptor tests for the Python bindings."""
 
 import pytest
 import smsd
@@ -81,6 +79,42 @@ class TestAssignCIP:
         mol = smsd.parse_smiles("N[C@@H](C)C(=O)O")
         desc = smsd.assign_cip(mol)
         assert desc.rs_labels[1] == smsd.RSLabel.S
+
+
+class TestCIPSequenceRules4And5:
+    """Auxiliary descriptors, like and unlike pairs, and pseudoasymmetric centres."""
+
+    @staticmethod
+    def labels(smiles):
+        return {atom: label.name for atom, label in enumerate(smsd.assign_cip(smiles).rs_labels)
+                if label != smsd.RSLabel.NONE}
+
+    def test_1_4_disubstituted_cyclohexane_is_pseudoasymmetric(self):
+        assert self.labels("C[C@H]1CC[C@H](O)CC1") == {1: 'r', 4: 'r'}
+        assert self.labels("C[C@H]1CC[C@@H](O)CC1") == {1: 's', 4: 's'}
+
+    def test_acyclic_pseudoasymmetric_centre(self):
+        assert self.labels("C[C@H](Cl)[C@H](O)[C@@H](C)Cl") == {1: 'S', 3: 's', 5: 'R'}
+        assert self.labels("C[C@H](Cl)[C@@H](O)[C@@H](C)Cl") == {1: 'S', 3: 'r', 5: 'R'}
+
+    def test_rule_4b_like_pairs_give_a_true_centre(self):
+        labels = self.labels("CC(C)[C@H]1CC[C@H](C(=O)N[C@H](Cc2ccccc2)C(=O)[O-])CC1")
+        assert labels == {3: 'R', 6: 'r', 10: 'R'}
+
+    def test_tropane_c3_reads_the_bridgehead_descriptors(self):
+        assert self.labels("C[NH+]1[C@@H]2CC[C@H]1C[C@@H](OC(=O)C(CO)c1ccccc1)C2") == {2: 'R', 5: 'S', 7: 'r'}
+        assert self.labels("CN1[C@@H]2CC[C@H]1C[C@H](OC(=O)C(CO)c1ccccc1)C2") == {2: 'R', 5: 'S', 7: 's'}
+
+    def test_assign_rs_reports_true_centres_only(self):
+        assert smsd.assign_rs("C[C@H](Cl)[C@H](O)[C@@H](C)Cl") == {1: 'S', 5: 'R'}
+
+    def test_symmetric_centre_stays_unlabelled(self):
+        assert self.labels("C[C@H](C)O") == {}
+
+    def test_unlabelled_atom_counts_its_standard_atomic_weight(self):
+        # Rule 2: 18F (18) ranks below unlabelled F (18.998) in both passes
+        assert self.labels("C[C@H](F)[C@H](Cl)[C@H](C)[18F]") == {1: 'S', 3: 'R', 5: 'S'}
+        assert self.labels("[18F][C@H](F)[C@H](O)[C@H](F)[18F]") == {1: 'R', 3: 'r', 5: 'S'}
 
 
 class TestRawBindings:

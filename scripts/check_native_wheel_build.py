@@ -1,33 +1,32 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2018-2026 BioInception PVT LTD
+# Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+# See the NOTICE file for attribution, trademark, and algorithm IP terms.
 """Run all native CTest suites with Debug assertions before building a wheel."""
 
 import argparse
-import json
+import importlib.util
 from pathlib import Path
-import subprocess
 import tempfile
+
+
+_BUILD_SPEC = importlib.util.spec_from_file_location(
+    "smsd_release_build", Path(__file__).resolve().with_name("build_python_wheels.py"))
+BUILD = importlib.util.module_from_spec(_BUILD_SPEC)
+_BUILD_SPEC.loader.exec_module(BUILD)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", required=True, type=Path)
     args = parser.parse_args()
-    with tempfile.TemporaryDirectory(prefix="smsd-native-tests-") as temporary:
-        build = Path(temporary) / "build"
-        subprocess.run(["cmake", "-S", str(args.source.resolve() / "cpp"), "-B", str(build),
-                        "-DCMAKE_BUILD_TYPE=Debug", "-DSMSD_BUILD_TESTS=ON",
-                        "-DSMSD_BUILD_PYTHON=OFF", "-DSMSD_BUILD_OPENMP=ON",
-                        "-DSMSD_BUILD_METAL=OFF", "-DSMSD_BUILD_CUDA=OFF",
-                        "-DSMSD_WITH_RDKIT=OFF"], check=True)
-        subprocess.run(["cmake", "--build", str(build), "--config", "Debug", "--parallel", "2"], check=True)
-        listing = subprocess.check_output(["ctest", "--test-dir", str(build),
-                                           "--build-config", "Debug", "--show-only=json-v1"], text=True)
-        count = len(json.loads(listing)["tests"])
-        if count < 12:
-            raise SystemExit("Expected all 12 native suites; found " + str(count))
-        subprocess.run(["ctest", "--test-dir", str(build), "--build-config", "Debug",
-                        "--output-on-failure"], check=True)
-        print("Native Debug suites passed:", count)
+    try:
+        with tempfile.TemporaryDirectory(prefix="smsd-native-tests-") as temporary:
+            count = BUILD.run_native_debug_tests(args.source.resolve(), Path(temporary) / "build", 2)
+    except ValueError as error:
+        raise SystemExit(str(error)) from error
+    print("Native Debug suites passed:", count)
 
 
 if __name__ == "__main__":

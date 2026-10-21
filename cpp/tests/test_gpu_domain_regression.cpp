@@ -1,11 +1,16 @@
-/* SPDX-License-Identifier: Apache-2.0
+/*
+ * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
- * A deterministic kernel double exercises accelerator domains on every platform.
+ * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ *
+ * Searches find candidate domains on the CPU whether or not accelerated kernels are present;
+ * a deterministic kernel double stands in for them on every platform.
  */
 #ifndef SMSD_TEST_NATIVE_GPU
 #define SMSD_ENABLE_METAL
 #endif
-#include "search_test_helpers.hpp"
+#include "test_support.hpp"
 #include "smsd/substructure.hpp"
 #include <iostream>
 #include <stdexcept>
@@ -67,16 +72,18 @@ static void verifyNativeKernel(const smsd::MolGraph& q, const smsd::MolGraph& t,
 #endif
 
 static void check(const smsd::MolGraph& q, const smsd::MolGraph& t,
-                  smsd::ChemOptions c, bool expected, const char* name, bool requireKernel = true) {
+                  smsd::ChemOptions c, bool expected, const char* name) {
     {
 
 #ifndef SMSD_TEST_NATIVE_GPU
         smsd::gpu_kern::available = false;
         const bool cpu = smsd_test::substructureExists(q, t, c);
+        const auto cpuCommon = smsd_test::commonAtoms(q, t, c);
         smsd::gpu_kern::available = true;
         const int before = smsd::gpu_kern::calls;
         const bool gpu = smsd_test::substructureExists(q, t, c);
-        if (cpu != expected || gpu != cpu || (requireKernel && smsd::gpu_kern::calls == before))
+        const auto gpuCommon = smsd_test::commonAtoms(q, t, c);
+        if (cpu != expected || gpu != cpu || cpuCommon != gpuCommon || smsd::gpu_kern::calls != before)
             throw std::runtime_error(name);
 #else
         verifyNativeKernel(q, t, c);
@@ -115,10 +122,10 @@ int main() {
         q = atoms(33, 6); t = atoms(65, 7); c = {};
         q.tautomerClass.assign(q.n, 0); t.tautomerClass.assign(t.n, 0);
         c.tautomerAware = true;
-        check(q, t, c, false, "accelerator must preserve tautomer element identity", false);
+        check(q, t, c, false, "accelerator must preserve tautomer element identity");
         t = atoms(65, 6); t.tautomerClass.assign(t.n, 0);
         check(q, t, c, true, "accelerator must retain same-element tautomer candidates");
-        std::cout << "CPU/accelerator domain policy parity passed\n";
+        std::cout << "CPU domains with and without accelerated kernels passed\n";
         return 0;
     } catch (const std::exception& e) {
         std::cerr << e.what() << '\n';

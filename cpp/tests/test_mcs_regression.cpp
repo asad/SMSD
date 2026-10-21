@@ -1,15 +1,28 @@
-/* SPDX-License-Identifier: Apache-2.0 */
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright (c) 2018-2026 BioInception PVT LTD
+ * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ */
 #include "smsd/mcs.hpp"
 #include "smsd/substructure.hpp"
 #include "smsd/cip.hpp"
 
+#include <algorithm>
+#include <array>
 #include <cassert>
+#include <chrono>
+#include <cstdint>
 #include <functional>
 #include <iostream>
 #include <limits>
 #include <map>
+#include <memory>
 #include <random>
 #include <stdexcept>
+#include <string>
+#include <thread>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -570,6 +583,620 @@ void testEnumeratedMappings() {
     assert(cases == 576);
 }
 
+smsd::MCSOptions commonBondOptions(smsd::MCSConnectivity connectivity, smsd::ChemOptions::BondOrderMode bondOrder) {
+    smsd::MCSOptions result;
+    result.objective = smsd::MCSObjective::MCES;
+    result.connectivity = connectivity;
+    result.chemistry.matchBondOrder = bondOrder;
+    result.timeoutMs = 30000;
+    return result;
+}
+
+std::string mappingText(const smsd::Match& match) {
+    std::string text = "{";
+    for (const auto& atom : match.atomMapping)
+        text += (text.size() > 1 ? ", " : "") + std::to_string(atom.first) + "=" + std::to_string(atom.second);
+    return text + "}";
+}
+
+void testCommonBondHardFragmentProofs() {
+    // ChEMBL random pairs 3471, 7381 and 3168 with their optimal common bond counts.
+    const std::vector<std::tuple<const char*, const char*, int>> pairs{
+        {"N#Cc1ccc(C(Nc2ccc3cc4ccc(NC(c5ccc(C#N)cc5)=O)cc4nc3c2)=O)cc1",
+         "OCCCNP(O)(=O)OC1CC(n2cnc3c(N)ncnc23)OC1COP(O)(=O)OC1CC(n2ccc(N)nc2=O)OC1COP(O)(O)=O", 24},
+        {"COc1c(Cl)cc(Nc2nc3ccc(C(=O)c4ccccc4)cc3n3c(C)nnc32)c(OC)c1",
+         "CCCCc1n(Cc2ccc(-c3ccccc3-c3nn[nH]n3)cc2)c(SCc2ccccc2-c2nn[nH]n2)nn1", 27},
+        {"CCCCCCCCCCCCCCCNC(OCCOCCOC(CCCCC[n+]1ccsc1)=O)=O",
+         "OP(O)(=O)C(F)(F)c1ccc(CC(n2nnc3ccccc23)(c2scc(-c3ccccc3)n2)Cc2ccc(C(F)(F)P(O)(O)=O)cc2)cc1", 27}};
+    for (const auto& [querySmiles, targetSmiles, bonds] : pairs) {
+        const auto query = smsd::parseSMILES(querySmiles), target = smsd::parseSMILES(targetSmiles);
+        auto opts = commonBondOptions(smsd::MCSConnectivity::Fragments, smsd::ChemOptions::BondOrderMode::ANY);
+        const auto result = smsd::MCS::find(query).withOptions(opts).match(target);
+        assert(result.status == smsd::SearchStatus::Completed && result.optimal && result.complete);
+        assert(result.score == bonds && result.matches.front().bondMapping.size() == static_cast<size_t>(bonds));
+        assert(result.nodesVisited < 20000);
+        assert(smsd::MCS::validateMapping(query, target, result.matches.front(), opts).empty());
+        // The node limit caps the pairs the search maps: with as many as the proof took, the
+        // search proves the same optimum; with fewer, it stops with a valid mapping and no proof.
+        opts.nodeLimit = result.nodesVisited;
+        const auto enough = smsd::MCS::find(query).withOptions(opts).match(target);
+        assert(enough.status == smsd::SearchStatus::Completed && enough.optimal);
+        assert(enough.matches.front().bondMapping.size() == static_cast<size_t>(bonds));
+        opts.nodeLimit = std::max<uint64_t>(1, result.nodesVisited / 2);
+        const auto capped = smsd::MCS::find(query).withOptions(opts).match(target);
+        assert(capped.status == smsd::SearchStatus::LimitReached && !capped.optimal);
+        assert(capped.nodesVisited <= opts.nodeLimit);
+        assert(capped.matches.front().bondMapping.size() <= static_cast<size_t>(bonds));
+        assert(smsd::MCS::validateMapping(query, target, capped.matches.front(), opts).empty());
+    }
+}
+
+void testCommonBondStoppedSearches() {
+    // ChEMBL random pair 8031, which takes far longer than these limits to prove.
+    const auto query = smsd::parseSMILES("Cn1nnnc1Sc1ncnc2scc(-c3c(Cl)cccc3)c21");
+    const auto target = smsd::parseSMILES("NCCCCC(N)C(=O)NC(CCCCN)C(NC(CCCCN)C(NC(C(NC(C(NC(C(NC(C(NC(C=O)CCCCN)=O)"
+                                          "CCCCN)=O)CCCCN)=O)CCCCN)=O)CCCCN)=O)=O");
+    auto opts = commonBondOptions(smsd::MCSConnectivity::Fragments, smsd::ChemOptions::BondOrderMode::STRICT);
+    opts.timeoutMs = 200;
+    const auto timedOut = smsd::MCS::find(query).withOptions(opts).match(target);
+    opts.timeoutMs = 30000;
+    opts.cancellation = std::make_shared<smsd::CancellationToken>();
+    std::thread canceller([token = opts.cancellation] {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        token->cancel();
+    });
+    const auto cancelled = smsd::MCS::find(query).withOptions(opts).match(target);
+    canceller.join();
+    assert(timedOut.status == smsd::SearchStatus::TimedOut && cancelled.status == smsd::SearchStatus::Cancelled);
+    assert(cancelled.elapsedMillis < 10000);
+    for (const auto* result : {&timedOut, &cancelled}) {
+        assert(!result->optimal && !result->complete && !result->matches.empty());
+        assert(result->score == static_cast<double>(result->matches.front().bondMapping.size()));
+        assert(smsd::MCS::validateMapping(query, target, result->matches.front(), opts).empty());
+    }
+}
+
+void testCommonBondScoresIgnoreUnreachableNodeLimits() {
+    const std::vector<std::pair<const char*, const char*>> pairs{
+        {"CC(=O)Oc1ccccc1C(=O)O", "CC(=O)Nc1ccc(O)cc1"},
+        {"CC(C)Cc1ccc(C(C)C(=O)O)cc1", "COc1ccc2cc(C(C)C(=O)O)ccc2c1"},
+        {"Cn1cnc2c1c(=O)n(C)c(=O)n2C", "Cn1c(=O)c2[nH]cnc2n(C)c1=O"},
+        {"c1ccc2ccccc2c1", "c1ccccc1CC"},
+        {"C1CCC2CCCCC2C1", "C12C3C4C1C5C2C3C45"},
+        {"NCC(=O)O.CCO", "OCC(N)=O"}};
+    for (const auto& [querySmiles, targetSmiles] : pairs) {
+        const auto query = smsd::parseSMILES(querySmiles), target = smsd::parseSMILES(targetSmiles);
+        for (auto connectivity : {smsd::MCSConnectivity::Connected, smsd::MCSConnectivity::Fragments})
+            for (auto bondOrder : {smsd::ChemOptions::BondOrderMode::STRICT, smsd::ChemOptions::BondOrderMode::ANY})
+                for (bool exclude : {false, true}) {
+                    auto opts = commonBondOptions(connectivity, bondOrder);
+                    if (exclude) opts.excludedTargetAtoms = {0, target.n - 1};
+                    const auto result = smsd::MCS::find(query).withOptions(opts).match(target);
+                    // An unreachable node limit leaves the search and its objective unchanged.
+                    auto generalOptions = opts;
+                    generalOptions.nodeLimit = std::numeric_limits<uint64_t>::max();
+                    const auto general = smsd::MCS::find(query).withOptions(generalOptions).match(target);
+                    assert(result.optimal && general.optimal && result.score == general.score);
+                    assert(result.matches.empty() == general.matches.empty());
+                    if (result.matches.empty()) continue;
+                    const auto& match = result.matches.front();
+                    assert(match.bondMapping.size() == general.matches.front().bondMapping.size());
+                    assert(match.atomMapping.size() == general.matches.front().atomMapping.size());
+                    assert(smsd::MCS::validateMapping(query, target, match, opts).empty());
+                    for (const auto& atom : match.atomMapping)
+                        assert(!exclude || (atom.second != 0 && atom.second != target.n - 1));
+                }
+    }
+}
+
+// Every MCES option goes to the common-bond search, which gives the same tied mapping as Java.
+void testCommonBondOptionsKeepResults() {
+    struct Case {
+        const char* mode;
+        smsd::MCSConnectivity connectivity;
+        double score;
+        size_t matches;
+        const char* firstMapping;
+    };
+    const auto connected = smsd::MCSConnectivity::Connected, fragments = smsd::MCSConnectivity::Fragments;
+    const std::vector<Case> cases{
+        {"all", connected, 7, 2, "{3=8, 4=7, 5=6, 6=5, 7=4, 8=10, 9=9}"},
+        {"all", fragments, 9, 2, "{0=0, 1=1, 2=2, 3=8, 4=7, 5=6, 6=5, 7=4, 8=10, 9=9}"},
+        {"chirality", connected, 2, 1, "{3=1, 4=2, 5=3}"},
+        {"chirality", fragments, 2, 1, "{3=1, 4=2, 5=3}"},
+        {"bondStereo", connected, 3, 1, "{0=5, 1=4, 2=3, 3=2}"},
+        {"bondStereo", fragments, 4, 1, "{0=0, 1=1, 2=2, 3=3, 4=4, 5=5}"},
+        {"rings", connected, 6, 1, "{3=0, 4=1, 5=2, 6=3, 7=4, 8=5}"},
+        {"rings", fragments, 6, 1, "{3=0, 4=1, 5=2, 6=3, 7=4, 8=5}"},
+        {"weights", connected, 9, 1, "{3=1, 4=2}"},
+        {"weights", fragments, 14, 1, "{1=3, 2=4, 3=1, 4=2}"},
+        {"minAtoms", connected, 3, 1, "{0=0, 1=1, 2=2, 3=3}"},
+        {"minAtoms", fragments, 5, 1, "{0=0, 1=1, 2=2, 3=3, 4=5, 5=6, 6=7}"}};
+    for (const auto& test : cases) {
+        const std::string mode = test.mode;
+        const char* querySmiles = mode == "all" ? "CC(=O)Oc1ccccc1C(=O)O" : mode == "chirality" ? "CCC[C@H](F)Cl"
+            : mode == "bondStereo" ? "CC/C=C/CC" : mode == "rings" ? "c1ccc2ccccc2c1" : mode == "weights" ? "CCO.CN" : "CCCC.OCCO";
+        const char* targetSmiles = mode == "all" ? "CC(=O)Nc1ccc(O)cc1" : mode == "chirality" ? "C[C@@H](F)Cl"
+            : mode == "bondStereo" ? "CC/C=C\\CC" : mode == "rings" ? "c1ccccc1CC" : mode == "weights" ? "CCN.CO" : "CCCCC.OCCCO";
+        const auto query = smsd::parseSMILES(querySmiles), target = smsd::parseSMILES(targetSmiles);
+        auto opts = commonBondOptions(test.connectivity, smsd::ChemOptions::BondOrderMode::STRICT);
+        opts.chemistry.useChirality = mode == "chirality";
+        opts.chemistry.useBondStereo = mode == "bondStereo";
+        opts.chemistry.completeRingsOnly = mode == "rings";
+        if (mode == "weights") {
+            opts.objective = smsd::MCSObjective::MCIS;
+            opts.atomWeights = {1, 2, 3, 4, 5};
+        }
+        if (mode == "minAtoms") opts.minFragmentAtoms = 3;
+        const auto prepared = smsd::MCS::find(query).withOptions(opts);
+        const auto result = mode == "all" ? prepared.matchAll(target, 1000) : prepared.match(target);
+        assert(result.status == smsd::SearchStatus::Completed && result.optimal);
+        assert(result.score == test.score && result.matches.size() == test.matches);
+        assert(mappingText(result.matches.front()) == test.firstMapping);
+        assert(smsd::MCS::validateMapping(query, target, result.matches.front(), opts).empty());
+    }
+}
+
+/** Draws from a fixed 64-bit linear congruential sequence, the same as in the Java tests. */
+struct Draws {
+    uint64_t state;
+    int next(int bound) {
+        state = state * 6364136223846793005ULL + 1442695040888963407ULL;
+        return static_cast<int>((state >> 33) % static_cast<uint64_t>(bound));
+    }
+};
+
+void testCommonBondSeededOptionsIgnoreUnreachableNodeLimits() {
+    // The same pairs and draws are in the Java tests.
+    const std::vector<std::pair<const char*, const char*>> pairs{
+        {"Oc1ccccc1", "Oc1ccncc1"}, {"CC(=O)[O-]", "CC(=O)OC"}, {"[13CH3]C(=O)O", "CC(=O)O"},
+        {"c1ccc2ccccc2c1", "C1CCC2CCCCC2C1"}, {"O=c1cc[nH]cc1", "Oc1ccncc1"},
+        {"C1CC2CCC1C2", "CC1CCCCC1"}, {"C[N+](C)(C)CC(=O)O", "CN(C)CC(N)=O"},
+        {"NCC(=O)O.CCO", "OCC(N)=O"}, {"c1ccc(cc1)-c1ccccn1", "C=Cc1ccccc1"},
+        {"[15NH2]c1ccccc1", "Nc1ccc(O)cc1"}};
+    using Chem = smsd::ChemOptions;
+    const Chem::BondOrderMode bondOrders[] = {Chem::BondOrderMode::LOOSE, Chem::BondOrderMode::ANY};
+    const Chem::AromaticityMode aromaticities[] = {Chem::AromaticityMode::STRICT, Chem::AromaticityMode::FLEXIBLE};
+    const Chem::RingFusionMode fusions[] = {Chem::RingFusionMode::IGNORE, Chem::RingFusionMode::PERMISSIVE,
+                                            Chem::RingFusionMode::STRICT};
+    Draws draws{20261019U};
+    int cases = 0;
+    for (const auto& [querySmiles, targetSmiles] : pairs)
+        for (int round = 0; round < 8; ++round, ++cases) {
+            // Fresh graphs, so that validation prepares what the options compare by itself.
+            const auto query = smsd::parseSMILES(querySmiles), target = smsd::parseSMILES(targetSmiles);
+            const auto connectivity = draws.next(2) == 0 ? smsd::MCSConnectivity::Connected
+                                                         : smsd::MCSConnectivity::Fragments;
+            auto opts = commonBondOptions(connectivity, bondOrders[draws.next(2)]);
+            opts.chemistry.aromaticityMode = aromaticities[draws.next(2)];
+            opts.chemistry.matchIsotope = draws.next(2) == 1;
+            opts.chemistry.matchFormalCharge = draws.next(2) == 1;
+            opts.chemistry.ringFusionMode = fusions[draws.next(3)];
+            opts.chemistry.matchAtomType = draws.next(4) != 0;
+            for (int excluded = draws.next(3); excluded > 0; --excluded) {
+                const int atom = draws.next(target.n);
+                if (std::find(opts.excludedTargetAtoms.begin(), opts.excludedTargetAtoms.end(), atom)
+                    == opts.excludedTargetAtoms.end())
+                    opts.excludedTargetAtoms.push_back(atom);
+            }
+            const auto result = smsd::MCS::find(query).withOptions(opts).match(target);
+            // An unreachable node limit leaves the search and its objective unchanged.
+            auto generalOptions = opts;
+            generalOptions.nodeLimit = std::numeric_limits<uint64_t>::max();
+            const auto general = smsd::MCS::find(query).withOptions(generalOptions).match(target);
+            assert(result.optimal && general.optimal && result.score == general.score);
+            assert(result.matches.empty() == general.matches.empty());
+            if (result.matches.empty()) continue;
+            for (const auto* found : {&result, &general}) {
+                const auto& match = found->matches.front();
+                assert(smsd::MCS::validateMapping(query, target, match, opts).empty());
+                for (const auto& atom : match.atomMapping)
+                    assert(std::find(opts.excludedTargetAtoms.begin(), opts.excludedTargetAtoms.end(), atom.second)
+                           == opts.excludedTargetAtoms.end());
+            }
+            assert(result.matches.front().bondMapping.size() == general.matches.front().bondMapping.size());
+            assert(result.matches.front().atomMapping.size() == general.matches.front().atomMapping.size());
+        }
+    assert(cases == 80);
+}
+
+/** Three aromatic carbons joined by bonds of the given orders that are not aromatic. */
+smsd::MolGraph aromaticChain(int firstOrder, int secondOrder) {
+    return smsd::MolGraph::Builder().atomCount(3).atomicNumbers({6, 6, 6}).aromaticFlags({1, 1, 1})
+        .setNeighbors({{1}, {0, 2}, {1}}).setBondOrders({{firstOrder}, {firstOrder, secondOrder}, {secondOrder}})
+        .build(false);
+}
+
+void testFlexibleAromaticityResonanceBonds() {
+    // The same graphs and expectations are in the Java tests.
+    const auto query = aromaticChain(1, 1), target = aromaticChain(2, 1);
+    for (auto mode : {smsd::ChemOptions::AromaticityMode::STRICT, smsd::ChemOptions::AromaticityMode::FLEXIBLE}) {
+        const bool flexible = mode == smsd::ChemOptions::AromaticityMode::FLEXIBLE;
+        smsd::Substructure::Options substructure;
+        substructure.chemistry.aromaticityMode = mode;
+        assert(smsd::Substructure::find(query).withOptions(substructure).match(target).matches.empty() != flexible);
+        for (uint64_t nodeLimit : {uint64_t(0), std::numeric_limits<uint64_t>::max()}) {
+            auto opts = commonBondOptions(smsd::MCSConnectivity::Fragments, smsd::ChemOptions::BondOrderMode::STRICT);
+            opts.chemistry.aromaticityMode = mode;
+            opts.nodeLimit = nodeLimit;
+            const auto result = smsd::MCS::find(query).withOptions(opts).match(target);
+            assert(result.optimal && !result.matches.empty());
+            assert(result.matches.front().bondMapping.size() == (flexible ? 2U : 1U));
+            assert(result.matches.front().atomMapping.size() == (flexible ? 3U : 2U));
+            assert(smsd::MCS::validateMapping(query, target, result.matches.front(), opts).empty());
+        }
+    }
+}
+
+smsd::MCSOptions commonAtomOptions(smsd::MCSConnectivity connectivity, smsd::ChemOptions::BondOrderMode bondOrder) {
+    smsd::MCSOptions result;
+    result.objective = smsd::MCSObjective::MCIS;
+    result.connectivity = connectivity;
+    result.chemistry.matchBondOrder = bondOrder;
+    result.timeoutMs = 30000;
+    return result;
+}
+
+void testCommonAtomHardFragmentProofs() {
+    // ChEMBL random pairs 5776, 7041 and 8361 with their optimal atoms and bonds. The same
+    // mappings are in the Java tests.
+    const std::vector<std::tuple<const char*, const char*, int, int, const char*>> pairs{
+        {"CC(OC1C(=O)C2(C)C(O)CC3OCC3(OC(C)=O)C2C(OC(c2cc(N=[N+]=[N-])ccc2)=O)C2(O)CC(OC(C(O)C(NC(OC(C)(C)C)=O)C(F)F)=O)C(C)=C1C2(C)C)=O",
+         "CC1N(C(=O)c2ccc(C(F)(F)F)cc2)CC(=O)OC1(Cn1cncn1)c1c(F)cc(F)cc1", 26, 23,
+         "{0=15, 1=16, 2=18, 3=19, 4=1, 6=0, 22=3, 23=5, 24=14, 25=13, 29=8, 30=7, 31=6, 32=4, 33=32, "
+         "35=30, 36=29, 41=22, 42=23, 43=24, 51=11, 52=10, 54=27, 56=26, 57=33, 60=17}"},
+        {"COc1ccc(CCNC(=O)Cn2cc(S(Cc3ccc(F)cc3)(=O)=O)c3ccccc23)cc1OC",
+         "CC(OC1OC2OC3(C)CCC4C(C)CCC(C1C)C24OO3)c1ccc(C(=O)O)cc1", 25, 20,
+         "{0=5, 1=6, 2=7, 3=9, 4=10, 5=11, 6=12, 7=13, 10=27, 13=0, 14=1, 16=3, 17=17, 18=18, 22=15, "
+         "23=16, 24=28, 25=20, 26=22, 27=23, 28=24, 29=25, 30=29, 31=30, 33=8}"},
+        {"C=CCNC(=O)C(C#N)=Cc1c(=O)n2cccc(C)c2nc1N1CCN(c2ccc(OC)cc2)CC1",
+         "CS(=O)c1c(-c2nc(C(=O)Nc3ccccc3)c(N)nc2)cccc1", 21, 18,
+         "{5=2, 10=7, 11=8, 12=9, 13=10, 14=11, 15=12, 16=13, 17=14, 18=15, 20=18, 21=17, 22=19, "
+         "24=0, 26=4, 27=21, 28=22, 29=23, 32=24, 33=3, 35=20}"}};
+    for (const auto& [querySmiles, targetSmiles, atoms, bonds, mapping] : pairs) {
+        const auto query = smsd::parseSMILES(querySmiles), target = smsd::parseSMILES(targetSmiles);
+        auto opts = commonAtomOptions(smsd::MCSConnectivity::Fragments, smsd::ChemOptions::BondOrderMode::ANY);
+        const auto result = smsd::MCS::find(query).withOptions(opts).match(target);
+        assert(result.status == smsd::SearchStatus::Completed && result.optimal && result.complete);
+        assert(result.matches.front().atomMapping.size() == static_cast<size_t>(atoms));
+        assert(result.matches.front().bondMapping.size() == static_cast<size_t>(bonds));
+        assert(result.score == atoms && mappingText(result.matches.front()) == mapping);
+        assert(result.nodesVisited < 20000);
+        assert(smsd::MCS::validateMapping(query, target, result.matches.front(), opts).empty());
+        // A node limit keeps the general search, which does not prove the optimum within it.
+        opts.nodeLimit = 20000;
+        const auto general = smsd::MCS::find(query).withOptions(opts).match(target);
+        assert(general.status == smsd::SearchStatus::LimitReached && !general.optimal);
+        assert(general.matches.front().atomMapping.size() <= static_cast<size_t>(atoms));
+    }
+}
+
+void testCommonAtomStoppedSearches() {
+    // ChEMBL random pair 7175, which takes far longer than these limits to prove.
+    const auto query = smsd::parseSMILES("COc1cc2c(c(OC)c1OC)-c1c(cc(=O)c(SC)cc1)C(NC(=O)c1ccc([N+]([O-])=O)"
+                                         "c(CO[N+]([O-])=O)c1)CC2");
+    const auto target = smsd::parseSMILES("CC(C)=CCc1cc(C2CC(=O)c3c(c(CC=C(C)C)c(O)c(CC=C(C)C)c3O)O2)cc(O)c1O");
+    auto opts = commonAtomOptions(smsd::MCSConnectivity::Fragments, smsd::ChemOptions::BondOrderMode::STRICT);
+    opts.timeoutMs = 200;
+    const auto timedOut = smsd::MCS::find(query).withOptions(opts).match(target);
+    opts.timeoutMs = 30000;
+    opts.cancellation = std::make_shared<smsd::CancellationToken>();
+    std::thread canceller([token = opts.cancellation] {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        token->cancel();
+    });
+    const auto cancelled = smsd::MCS::find(query).withOptions(opts).match(target);
+    canceller.join();
+    assert(timedOut.status == smsd::SearchStatus::TimedOut && cancelled.status == smsd::SearchStatus::Cancelled);
+    assert(cancelled.elapsedMillis < 10000);
+    for (const auto* result : {&timedOut, &cancelled}) {
+        assert(!result->optimal && !result->complete && !result->matches.empty());
+        assert(result->score == static_cast<double>(result->matches.front().atomMapping.size()));
+        assert(smsd::MCS::validateMapping(query, target, result->matches.front(), opts).empty());
+    }
+}
+
+void testCommonAtomScoresAgreeWithGeneralSearch() {
+    const std::vector<std::pair<const char*, const char*>> pairs{
+        {"CC(=O)Oc1ccccc1C(=O)O", "CC(=O)Nc1ccc(O)cc1"},
+        {"CC(C)Cc1ccc(C)cc1", "COc1ccc(C(C)C=O)cc1"},
+        {"Cn1cnc2c1c(=O)n(C)c(=O)n2C", "Cn1c(=O)c2[nH]cnc2n(C)c1=O"},
+        {"c1ccc2ccccc2c1", "c1ccccc1CC"},
+        {"C1CCC2CCCCC2C1", "C12C3C4C1C5C2C3C45"},
+        {"NCC(=O)O.CCO", "OCC(N)=O"},
+        {"CC(C)(C)c1ccccc1.O.N", "O.Nc1ccccc1"},
+        {"C1CC1C1CC1.C", "CC.C1CC1"}};
+    for (const auto& [querySmiles, targetSmiles] : pairs) {
+        const auto query = smsd::parseSMILES(querySmiles), target = smsd::parseSMILES(targetSmiles);
+        for (int minAtoms = 1; minAtoms <= 2; ++minAtoms)
+            for (auto bondOrder : {smsd::ChemOptions::BondOrderMode::STRICT, smsd::ChemOptions::BondOrderMode::ANY})
+                for (bool exclude : {false, true}) {
+                    auto opts = commonAtomOptions(smsd::MCSConnectivity::Fragments, bondOrder);
+                    opts.minFragmentAtoms = minAtoms;
+                    if (exclude) opts.excludedTargetAtoms = {0, target.n - 1};
+                    const auto result = smsd::MCS::find(query).withOptions(opts).match(target);
+                    // An unreachable node limit keeps the general search without changing the objective.
+                    auto generalOptions = opts;
+                    generalOptions.nodeLimit = std::numeric_limits<uint64_t>::max();
+                    const auto general = smsd::MCS::find(query).withOptions(generalOptions).match(target);
+                    assert(result.optimal && general.optimal && result.score == general.score);
+                    assert(result.matches.empty() == general.matches.empty());
+                    if (result.matches.empty()) continue;
+                    const auto& match = result.matches.front();
+                    assert(match.atomMapping.size() == general.matches.front().atomMapping.size());
+                    assert(match.bondMapping.size() == general.matches.front().bondMapping.size());
+                    assert(smsd::MCS::validateMapping(query, target, match, opts).empty());
+                    for (const auto& atom : match.atomMapping)
+                        assert(!exclude || (atom.second != 0 && atom.second != target.n - 1));
+                }
+    }
+}
+
+void testCommonAtomIneligibleOptionsKeepResults() {
+    struct Case {
+        const char* mode;
+        smsd::MCSConnectivity connectivity;
+        double score;
+        size_t matches;
+        const char* firstMapping;
+    };
+    const auto connected = smsd::MCSConnectivity::Connected, fragments = smsd::MCSConnectivity::Fragments;
+    const std::vector<Case> cases{
+        {"all", fragments, 9, 12, "{0=0, 1=1, 2=2, 4=4, 5=5, 6=6, 7=7, 8=9, 9=10}"},
+        {"chirality", fragments, 3, 1, "{3=1, 4=2, 5=3}"},
+        {"bondStereo", fragments, 5, 1, "{0=0, 1=1, 2=2, 3=3, 5=5}"},
+        {"rings", fragments, 6, 1, "{0=2, 1=1, 2=0, 3=5, 8=4, 9=3}"},
+        {"weights", fragments, 14, 1, "{1=3, 2=4, 3=1, 4=2}"},
+        {"minAtoms", fragments, 7, 1, "{0=0, 1=1, 2=2, 3=3, 4=5, 5=6, 6=7}"},
+        {"maxFragments", fragments, 7, 1, "{0=0, 1=1, 2=2, 3=3, 4=5, 5=6, 6=7}"},
+        {"plain", connected, 7, 1, "{3=8, 4=7, 5=9, 6=10, 7=4, 8=5, 9=6}"}};
+    for (const auto& test : cases) {
+        const std::string mode = test.mode;
+        const bool drugs = mode == "all" || mode == "plain";
+        const char* querySmiles = drugs ? "CC(=O)Oc1ccccc1C(=O)O" : mode == "chirality" ? "CCC[C@H](F)Cl"
+            : mode == "bondStereo" ? "CC/C=C/CC" : mode == "rings" ? "c1ccc2ccccc2c1" : mode == "weights" ? "CCO.CN" : "CCCC.OCCO";
+        const char* targetSmiles = drugs ? "CC(=O)Nc1ccc(O)cc1" : mode == "chirality" ? "C[C@@H](F)Cl"
+            : mode == "bondStereo" ? "CC/C=C\\CC" : mode == "rings" ? "c1ccccc1CC" : mode == "weights" ? "CCN.CO" : "CCCCC.OCCCO";
+        const auto query = smsd::parseSMILES(querySmiles), target = smsd::parseSMILES(targetSmiles);
+        auto opts = commonAtomOptions(test.connectivity, smsd::ChemOptions::BondOrderMode::STRICT);
+        opts.chemistry.useChirality = mode == "chirality";
+        opts.chemistry.useBondStereo = mode == "bondStereo";
+        opts.chemistry.completeRingsOnly = mode == "rings";
+        if (mode == "weights") opts.atomWeights = {1, 2, 3, 4, 5};
+        if (mode == "minAtoms") opts.minFragmentAtoms = 3;
+        if (mode == "maxFragments") opts.maxFragments = 2;
+        const auto prepared = smsd::MCS::find(query).withOptions(opts);
+        const auto result = mode == "all" ? prepared.matchAll(target, 1000) : prepared.match(target);
+        assert(result.status == smsd::SearchStatus::Completed && result.optimal);
+        assert(result.score == test.score && result.matches.size() == test.matches);
+        assert(mappingText(result.matches.front()) == test.firstMapping);
+        assert(smsd::MCS::validateMapping(query, target, result.matches.front(), opts).empty());
+    }
+}
+
+void testCommonAtomSeededOptionsAgreeWithGeneralSearch() {
+    // The same pairs and draws are in the Java tests.
+    const std::vector<std::pair<const char*, const char*>> pairs{
+        {"Oc1ccccc1", "Oc1ccncc1"}, {"CC(=O)[O-]", "CC(=O)OC"}, {"[13CH3]C(=O)O", "CC(=O)O"},
+        {"c1ccc2ccccc2c1", "C1CCC2CCCCC2C1"}, {"O=c1cc[nH]cc1", "Oc1ccncc1"},
+        {"C1CC2CCC1C2", "CC1CCCCC1"}, {"C[N+](C)(C)CC(=O)O", "CN(C)CC(N)=O"},
+        {"NCC(=O)O.CCO", "OCC(N)=O"}, {"c1ccc(cc1)-c1ccccn1", "C=Cc1ccccc1"},
+        {"[15NH2]c1ccccc1", "Nc1ccc(O)cc1"}};
+    using Chem = smsd::ChemOptions;
+    const Chem::BondOrderMode bondOrders[] = {Chem::BondOrderMode::STRICT, Chem::BondOrderMode::LOOSE,
+                                              Chem::BondOrderMode::ANY};
+    const Chem::AromaticityMode aromaticities[] = {Chem::AromaticityMode::STRICT, Chem::AromaticityMode::FLEXIBLE};
+    const Chem::RingFusionMode fusions[] = {Chem::RingFusionMode::IGNORE, Chem::RingFusionMode::PERMISSIVE,
+                                            Chem::RingFusionMode::STRICT};
+    Draws draws{20261020U};
+    int cases = 0;
+    for (const auto& [querySmiles, targetSmiles] : pairs)
+        for (int round = 0; round < 8; ++round, ++cases) {
+            // Fresh graphs, so that validation prepares what the options compare by itself.
+            const auto query = smsd::parseSMILES(querySmiles), target = smsd::parseSMILES(targetSmiles);
+            auto opts = commonAtomOptions(smsd::MCSConnectivity::Fragments, bondOrders[draws.next(3)]);
+            opts.minFragmentAtoms = 1 + draws.next(2);
+            opts.chemistry.aromaticityMode = aromaticities[draws.next(2)];
+            opts.chemistry.matchIsotope = draws.next(2) == 1;
+            opts.chemistry.matchFormalCharge = draws.next(2) == 1;
+            opts.chemistry.ringFusionMode = fusions[draws.next(3)];
+            opts.chemistry.matchAtomType = draws.next(4) != 0;
+            for (int excluded = draws.next(3); excluded > 0; --excluded) {
+                const int atom = draws.next(target.n);
+                if (std::find(opts.excludedTargetAtoms.begin(), opts.excludedTargetAtoms.end(), atom)
+                    == opts.excludedTargetAtoms.end())
+                    opts.excludedTargetAtoms.push_back(atom);
+            }
+            const auto result = smsd::MCS::find(query).withOptions(opts).match(target);
+            // An unreachable node limit keeps the general search without changing the objective.
+            auto generalOptions = opts;
+            generalOptions.nodeLimit = std::numeric_limits<uint64_t>::max();
+            const auto general = smsd::MCS::find(query).withOptions(generalOptions).match(target);
+            assert(result.optimal && general.optimal && result.score == general.score);
+            assert(result.matches.empty() == general.matches.empty());
+            if (result.matches.empty()) continue;
+            for (const auto* found : {&result, &general}) {
+                const auto& match = found->matches.front();
+                assert(smsd::MCS::validateMapping(query, target, match, opts).empty());
+                for (const auto& atom : match.atomMapping)
+                    assert(std::find(opts.excludedTargetAtoms.begin(), opts.excludedTargetAtoms.end(), atom.second)
+                           == opts.excludedTargetAtoms.end());
+            }
+            assert(result.matches.front().atomMapping.size() == general.matches.front().atomMapping.size());
+            assert(result.matches.front().bondMapping.size() == general.matches.front().bondMapping.size());
+        }
+    assert(cases == 80);
+}
+
+void testCommonAtomResonanceBonds() {
+    // The same graphs and expectations are in the Java tests.
+    const auto query = aromaticChain(1, 1), target = aromaticChain(2, 1);
+    for (auto mode : {smsd::ChemOptions::AromaticityMode::STRICT, smsd::ChemOptions::AromaticityMode::FLEXIBLE}) {
+        const bool flexible = mode == smsd::ChemOptions::AromaticityMode::FLEXIBLE;
+        for (uint64_t nodeLimit : {uint64_t(0), std::numeric_limits<uint64_t>::max()}) {
+            auto opts = commonAtomOptions(smsd::MCSConnectivity::Fragments, smsd::ChemOptions::BondOrderMode::STRICT);
+            opts.chemistry.aromaticityMode = mode;
+            opts.nodeLimit = nodeLimit;
+            const auto result = smsd::MCS::find(query).withOptions(opts).match(target);
+            assert(result.optimal && !result.matches.empty());
+            assert(result.matches.front().atomMapping.size() == (flexible ? 3U : 2U));
+            assert(result.matches.front().bondMapping.size() == (flexible ? 2U : 1U));
+            assert(smsd::MCS::validateMapping(query, target, result.matches.front(), opts).empty());
+        }
+    }
+}
+
+
+smsd::MolGraph isolatedAtoms(int count, int element) {
+    return smsd::MolGraph::Builder().atomCount(count).atomicNumbers(std::vector<int>(count, element))
+        .setNeighbors(std::vector<std::vector<int>>(count)).setBondOrders(std::vector<std::vector<int>>(count)).build(false);
+}
+
+/** A graph of carbons in a cycle, each bonded to the next `step` atoms around it. */
+smsd::MolGraph circulant(int atoms, int step) {
+    std::vector<std::vector<int>> neighbors(atoms), orders(atoms);
+    for (int atom = 0; atom < atoms; ++atom)
+        for (int offset = 1; offset <= step; ++offset) {
+            const int other = (atom + offset) % atoms;
+            neighbors[atom].push_back(other);
+            neighbors[other].push_back(atom);
+            orders[atom].push_back(1);
+            orders[other].push_back(1);
+        }
+    return smsd::MolGraph::Builder().atomCount(atoms).atomicNumbers(std::vector<int>(atoms, 6))
+        .setNeighbors(neighbors).setBondOrders(orders).build(false);
+}
+
+/** A carbon bonded to `leaves` atoms: an oxygen first when `oxygen`, and carbons otherwise. */
+smsd::MolGraph star(int leaves, bool oxygen) {
+    std::string smiles = oxygen ? "C(O)" : "C(C)";
+    for (int leaf = 2; leaf < leaves; ++leaf) smiles += "(C)";
+    return smsd::parseSMILES(smiles + "C");
+}
+
+void testVertexSearchHonoursTimeoutsOnSparseGraphs() {
+    // The first query atom of a connected MCIS of isolated atoms has every target atom as a
+    // candidate. Each candidate is compared with the mapped atoms only, and the clock is read
+    // while the candidates are listed, so the time limit holds.
+    const auto graph = isolatedAtoms(32000, 8);
+    smsd::MCSOptions opts;
+    opts.timeoutMs = 300;
+    const auto result = smsd::MCS::find(graph).withOptions(opts).match(graph);
+    assert(result.status == smsd::SearchStatus::TimedOut && !result.optimal && !result.complete);
+    // Comparing each candidate with every query atom would take about 800 ms here.
+    assert(result.elapsedMillis < 550);
+}
+
+void testCommonBondPairLimit() {
+    namespace detail = smsd::common_bond_detail;
+    // 8192 target bonds take 128 words a query bond, so 32768 query bonds fill the limit exactly.
+    const auto target = circulant(8192, 1), fits = circulant(32768, 1), over = circulant(32769, 1);
+    assert(int64_t(32768) * 128 == detail::MAX_BOND_PAIR_WORDS);
+    assert(detail::CommonBondGraphs::supports(fits, target) && !detail::CommonBondGraphs::supports(over, target));
+    assert(detail::CommonBondGraphs::supports(target, fits));
+    // A dense pair beyond the limit is declined at once: no match, with the limit reached.
+    const auto query = circulant(600, 40), dense = circulant(640, 40);
+    assert(!detail::CommonBondGraphs::supports(query, dense));
+    for (auto connectivity : {smsd::MCSConnectivity::Connected, smsd::MCSConnectivity::Fragments}) {
+        auto opts = commonBondOptions(connectivity, smsd::ChemOptions::BondOrderMode::STRICT);
+        opts.timeoutMs = 200;
+        const auto result = smsd::MCS::find(query).withOptions(opts).match(dense);
+        assert(result.status == smsd::SearchStatus::LimitReached && !result.optimal && result.matches.empty());
+        assert(result.elapsedMillis < 5000);
+    }
+}
+
+/** A common-atom or common-bond search of two molecules that the clock stops after `polls` polls; -1 runs it to its end. */
+struct PolledSearch {
+    bool finished = false;
+    int64_t polls = 0;
+    smsd::Match match;
+};
+
+PolledSearch polledSearch(const smsd::MolGraph& query, const smsd::MolGraph& target, const smsd::MCSOptions& opts,
+                          int64_t polls) {
+    const auto& chemistry = opts.chemistry;
+    auto atoms = [&](int queryAtom, int targetAtom) {
+        return smsd::search_detail::atomCompatible(query, queryAtom, target, targetAtom, chemistry);
+    };
+    auto bonds = [&](int queryFirst, int querySecond, int targetFirst, int targetSecond) {
+        return smsd::search_detail::bondCompatible(query, queryFirst, querySecond, target, targetFirst, targetSecond, chemistry);
+    };
+    auto key = [](const smsd::MolGraph& graph, int first, int second) {
+        return smsd::search_detail::bondCompatibilityKey(graph, first, second);
+    };
+    PolledSearch result;
+    auto stopped = [&] { return ++result.polls > polls && polls >= 0; };
+    std::vector<int> mapping;
+    std::vector<std::array<int, 4>> found;
+    if (opts.objective == smsd::MCSObjective::MCIS) {
+        auto outcome = smsd::common_atom_detail::searchCommonAtoms(query, target, atoms, bonds, key, {}, opts.minFragmentAtoms, stopped);
+        result.finished = outcome.finished;
+        mapping = std::move(outcome.mapping);
+        found = std::move(outcome.bonds);
+    } else {
+        auto outcome = smsd::common_bond_detail::searchCommonBonds(query, target, atoms, bonds, key, {},
+                                                                    opts.connectivity == smsd::MCSConnectivity::Connected, stopped);
+        result.finished = outcome.finished;
+        mapping = std::move(outcome.mapping);
+        found = std::move(outcome.bonds);
+    }
+    if (!mapping.empty()) result.match = smsd::search_detail::makeMatch(mapping, std::move(found));
+    return result;
+}
+
+void testStarSeedsGrowQuickly() {
+    // A seed passes the taken targets next to a hub once, and looks for pairs only at the
+    // frontier atoms that might beat the best pair so far, so seeding a star is not cubic in its
+    // leaves. Two thousand leaves would take about two million polls if each frontier atom of
+    // each step scanned the taken targets again.
+    for (auto objective : {smsd::MCSObjective::MCIS, smsd::MCSObjective::MCES}) {
+        const bool bonds = objective == smsd::MCSObjective::MCES;
+        const auto query = star(2000, bonds), target = star(2000, false);
+        auto opts = bonds ? commonBondOptions(smsd::MCSConnectivity::Fragments, smsd::ChemOptions::BondOrderMode::STRICT)
+                          : commonAtomOptions(smsd::MCSConnectivity::Fragments, smsd::ChemOptions::BondOrderMode::STRICT);
+        const auto result = polledSearch(query, target, opts, -1);
+        assert(result.finished && result.polls < 100000);
+        assert(result.match.atomMapping.size() == (bonds ? 2000U : 2001U));
+        assert(result.match.bondMapping.size() == (bonds ? 1999U : 2000U));
+        assert(smsd::MCS::validateMapping(query, target, result.match, opts).empty());
+    }
+}
+
+void testIsolatedAtomSeedsGrowIncrementally() {
+    // Each seed round of isolated atoms keeps one more atom. A round takes its roots from runs of
+    // target cells and passes each target that cannot root a seed only once, so seeding four
+    // thousand atoms takes about forty thousand polls, where scanning every pair of atoms in each
+    // round would take about fifty million.
+    const auto graph = isolatedAtoms(4000, 8);
+    const auto opts = commonAtomOptions(smsd::MCSConnectivity::Fragments, smsd::ChemOptions::BondOrderMode::STRICT);
+    const auto whole = polledSearch(graph, graph, opts, -1);
+    assert(whole.finished && whole.polls < 200000 && whole.match.atomMapping.size() == 4000U);
+    assert(smsd::MCS::validateMapping(graph, graph, whole.match, opts).empty());
+    // Stopped part way through seeding, the search returns the atoms kept so far.
+    const auto stopped = polledSearch(graph, graph, opts, 36000);
+    assert(!stopped.finished && stopped.match.atomMapping.size() >= 2000U);
+    assert(smsd::MCS::validateMapping(graph, graph, stopped.match, opts).empty());
+}
+
+void testSearchesStoppedWhileSeedingKeepTheirSeed() {
+    // Stopped a few polls into seeding, which takes most of these searches, each search returns
+    // the seed it was growing, which is a valid mapping.
+    const auto leaves = star(400, false), oxygen = star(400, true);
+    for (auto connectivity : {smsd::MCSConnectivity::Fragments, smsd::MCSConnectivity::Connected})
+        for (auto objective : {smsd::MCSObjective::MCIS, smsd::MCSObjective::MCES}) {
+            const bool bonds = objective == smsd::MCSObjective::MCES;
+            if (!bonds && connectivity == smsd::MCSConnectivity::Connected) continue;
+            const auto& query = bonds ? oxygen : leaves;
+            auto opts = bonds ? commonBondOptions(connectivity, smsd::ChemOptions::BondOrderMode::STRICT)
+                              : commonAtomOptions(connectivity, smsd::ChemOptions::BondOrderMode::STRICT);
+            const auto whole = polledSearch(query, leaves, opts, -1);
+            assert(whole.finished && whole.polls > 800);
+            const auto stopped = polledSearch(query, leaves, opts, 800);
+            assert(!stopped.finished && !stopped.match.atomMapping.empty() && !stopped.match.bondMapping.empty());
+            assert(smsd::MCS::validateMapping(query, leaves, stopped.match, opts).empty());
+        }
+}
 } // namespace
 
 int main() {
@@ -592,5 +1219,22 @@ int main() {
     testReverseCompleteRingFilter();
     testExhaustiveSmallGraphs();
     testEnumeratedMappings();
+    testCommonBondHardFragmentProofs();
+    testCommonBondStoppedSearches();
+    testCommonBondScoresIgnoreUnreachableNodeLimits();
+    testCommonBondOptionsKeepResults();
+    testCommonBondSeededOptionsIgnoreUnreachableNodeLimits();
+    testFlexibleAromaticityResonanceBonds();
+    testCommonAtomHardFragmentProofs();
+    testCommonAtomStoppedSearches();
+    testCommonAtomScoresAgreeWithGeneralSearch();
+    testCommonAtomIneligibleOptionsKeepResults();
+    testCommonAtomSeededOptionsAgreeWithGeneralSearch();
+    testCommonAtomResonanceBonds();
+    testVertexSearchHonoursTimeoutsOnSparseGraphs();
+    testCommonBondPairLimit();
+    testStarSeedsGrowQuickly();
+    testSearchesStoppedWhileSeedingKeepTheirSeed();
+    testIsolatedAtomSeedsGrowIncrementally();
     std::cout << "MCS regressions passed\n";
 }

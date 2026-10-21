@@ -2,18 +2,14 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  *
- * Comprehensive SMILES parser test suite — 200+ tests covering:
- *   single atoms, simple molecules, aromatics, fused rings, drugs,
- *   charged/isotope, stereochemistry, large molecules, edge cases,
- *   and round-trip (parse -> toSMILES -> reparse) tests.
- *
- * Compile:
- *   g++ -std=c++17 -DSMSD_TEST_SMILES_COMPREHENSIVE \
- *       -I../include tests/test_smiles_comprehensive.cpp -o test_smiles_comp
+ * Comprehensive SMILES parser cases: single atoms, simple molecules,
+ * aromatics, fused rings, drugs, charged and isotopic atoms, stereochemistry,
+ * large molecules, edge cases and round trips (parse, toSMILES, reparse).
+ * The cases are compiled into smsd_parser_tests, which calls
+ * smiles_comprehensive_run().
  */
-
-#ifdef SMSD_TEST_SMILES_COMPREHENSIVE
 
 #include "smsd/smiles_parser.hpp"
 #include <iostream>
@@ -422,8 +418,8 @@ static void testAromaticMolecules() {
 
     // 10. Pyrimidine
     { auto g = smsd::parseSMILES("c1ccnc(n1)");
-      // c1ccnc(n1) actually parses the same as c1ccncn1 since () around last n is trivial
-      // Actually it should be c1ccncn1 or c1ncccn1, let's use correct form
+      // c1ccnc(n1) parses as c1ccncn1, the branch around the last n being trivial;
+      // the counts are checked on c1ccncn1.
       auto g2 = smsd::parseSMILES("c1ccncn1");
       TEST_ASSERT_EQ(g2.n, 6, "pyrimidine: 6 atoms");
       TEST_ASSERT_EQ(countElement(g2, 7), 2, "pyrimidine: 2 N"); }
@@ -830,7 +826,7 @@ static void testStereochemistry() {
       for (int i = 0; i < g.n; i++) {
           if (g.tetraChirality[i] != 0) found = true;
       }
-      TEST_ASSERT(found, "L-alanine: has chiral center"); }
+      TEST_ASSERT(found, "L-alanine: has chiral centre"); }
 
     // 6. D-alanine (opposite chirality)
     { auto g = smsd::parseSMILES("N[C@H](C)C(=O)O");
@@ -881,7 +877,7 @@ static void testStereochemistry() {
       for (int i = 0; i < g.n; i++) {
           if (g.tetraChirality[i] != 0) sc++;
       }
-      TEST_ASSERT_EQ(sc, 2, "L-threonine: 2 stereo centers"); }
+      TEST_ASSERT_EQ(sc, 2, "L-threonine: 2 stereo centres"); }
 
     // 14. Allene-like: C=C=C with stereo markers
     { auto g = smsd::parseSMILES("C=C=C");
@@ -907,7 +903,7 @@ static void testStereochemistry() {
       int sc = 0;
       for (int i = 0; i < g.n; i++)
           if (g.tetraChirality[i] != 0) sc++;
-      TEST_ASSERT_EQ(sc, 4, "glucose: 4 stereo centers"); }
+      TEST_ASSERT_EQ(sc, 4, "glucose: 4 stereo centres"); }
 
     // 19. Menthol with stereo
     { auto g = smsd::parseSMILES("[C@H]1(CC[C@@H](C(C1)C)C(C)C)O");
@@ -1149,6 +1145,7 @@ static void testRoundTrip() {
         {"CC(=O)O", "acetic acid", 4},
         {"C(C)(C)C", "isobutane", 4},
         {"C1CCCCCCCC1", "cyclononane", 9},
+        {"CS(=O)C", "dimethyl sulfoxide", 4},
     };
 
     for (auto& tc : cases) {
@@ -1284,13 +1281,13 @@ static void testToSMARTS() {
 }
 
 // ============================================================================
-// Callable entry point (for consolidated test_parsers suite)
+// Entry point called by the parser suite
 // ============================================================================
 void smiles_comprehensive_run(int& outPassed, int& outFailed) {
     g_passed = 0;
     g_failed = 0;
 
-    std::cout << "  [Comprehensive SMILES] Running 441 tests..." << std::endl;
+    std::cout << "  [Comprehensive SMILES] Running the parser cases..." << std::endl;
 
     testSingleAtoms();
     testSimpleMolecules();
@@ -1307,28 +1304,3 @@ void smiles_comprehensive_run(int& outPassed, int& outFailed) {
     outPassed = g_passed;
     outFailed = g_failed;
 }
-
-// ============================================================================
-// Standalone main (only when not linked into test_parsers)
-// ============================================================================
-#ifndef SMSD_PARSERS_SUITE
-int main() {
-    std::cout << "========================================" << std::endl;
-    std::cout << "SMILES Comprehensive Test Suite (200+)" << std::endl;
-    std::cout << "========================================" << std::endl;
-
-    int p = 0, f = 0;
-    smiles_comprehensive_run(p, f);
-
-    std::cout << std::endl;
-    std::cout << "========================================" << std::endl;
-    std::cout << "Passed: " << p << std::endl;
-    std::cout << "Failed: " << f << std::endl;
-    std::cout << "Total:  " << (p + f) << std::endl;
-    std::cout << "========================================" << std::endl;
-
-    return f > 0 ? 1 : 0;
-}
-#endif // !SMSD_PARSERS_SUITE
-
-#endif // SMSD_TEST_SMILES_COMPREHENSIVE

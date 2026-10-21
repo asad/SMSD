@@ -1,14 +1,13 @@
-#include "search_test_helpers.hpp"
 /*
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  *
- * Consolidated batch processing and GPU test suite.
- * OpenMP parallel batch, fingerprints, screen-and-match, and GPU/Metal tests.
- *
- * Merges: test_batch.cpp, test_gpu.cpp
+ * Batch processing and GPU test suite: OpenMP parallel batches, fingerprints,
+ * screen-and-match, and GPU/Metal tests.
  */
+#include "test_support.hpp"
 
 #include "smsd/smsd.hpp"
 #include "smsd/batch.hpp"
@@ -216,7 +215,7 @@ static smsd::MolGraph parse(const char* smi) {
 }
 
 // ============================================================================
-// SECTION 1: Batch processing tests (from test_batch.cpp)
+// SECTION 1: Batch processing tests
 // ============================================================================
 
 TEST(batchSubstructure_basic) {
@@ -462,7 +461,7 @@ TEST(fingerprint_different_sizes) {
 }
 
 // ============================================================================
-// SECTION 2: GPU / Metal tests (from test_gpu.cpp)
+// SECTION 2: GPU / Metal tests
 // Compiled only when SMSD_ENABLE_CUDA or SMSD_ENABLE_METAL is defined.
 // ============================================================================
 
@@ -473,7 +472,7 @@ static std::vector<smsd::gpu::ScreenHit> gpuScreen(
     const std::vector<smsd::MolGraph>& ts,
     double                             threshold = 0.0)
 {
-    auto hits = smsd::gpu::batchRascalScreenAuto(q, ts, threshold);
+    auto hits = smsd::gpu::batchSimilarityScreenAuto(q, ts, threshold);
     std::sort(hits.begin(), hits.end(),
               [](const smsd::gpu::ScreenHit& a, const smsd::gpu::ScreenHit& b) {
                   return a.index < b.index;

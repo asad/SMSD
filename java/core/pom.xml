@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.bioinceptionlabs</groupId>
+    <artifactId>smsd-parent</artifactId>
+    <version>8.0.0</version>
+  </parent>
+
+  <!-- The library: substructure and MCS search on CDK molecules. It depends only
+       on the CDK modules it uses; file formats, SMILES parsing, JSON and the CLI
+       are left to the application (see java/README.md). -->
+  <artifactId>smsd</artifactId>
+  <packaging>jar</packaging>
+  <name>SMSD</name>
+  <description>Substructure and MCS search for chemical graphs</description>
+
+  <dependencies>
+    <!-- ===== CDK: the modules the library compiles against ===== -->
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-interfaces</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-silent</artifactId>
+    </dependency>
+    <!-- Aromaticity, Kekulisation and AtomContainerManipulator -->
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-standard</artifactId>
+    </dependency>
+    <!-- Pattern, VentoFoggia and the query atom and bond model -->
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-isomorphism</artifactId>
+    </dependency>
+    <!-- SMARTS parsing is part of the public search API. CDK declares cdk-ctab
+         (MDL file formats) for cdk-smarts, whose classes do not use it. -->
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-smarts</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.openscience.cdk</groupId><artifactId>cdk-ctab</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <!-- CDKHydrogenAdder, used by Standardiser -->
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-valencycheck</artifactId>
+    </dependency>
+    <!-- No classes are used, but CDKAtomTypeMatcher and CDKHydrogenAdder load the
+         atom type definitions (cdk-atom-types.owl) from this module at run time. -->
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-atomtype</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <!-- 2D and 3D coordinates in the CDK atom API -->
+    <dependency>
+      <groupId>javax.vecmath</groupId><artifactId>vecmath</artifactId>
+    </dependency>
+
+    <!-- ===== Optional: JSON ===== -->
+    <!-- Standardiser.PredicateRegistry.loadJsonFile reads JSON with Jackson.
+         Applications that call it add jackson-databind; nothing else needs it. -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-databind</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <!-- Property names that let Jackson read and write SearchResult values; a
+         small artefact with no dependencies, declared so that strict compiler
+         warnings stay quiet for every consumer. -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-annotations</artifactId>
+    </dependency>
+
+    <!-- ===== Test ===== -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-smiles</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-data</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.openscience.cdk</groupId><artifactId>cdk-ctab</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <!-- The library sources are in java/src, beside this module. -->
+    <sourceDirectory>${project.basedir}/../src/main/java</sourceDirectory>
+    <testSourceDirectory>${project.basedir}/../src/test/java</testSourceDirectory>
+    <resources>
+      <resource>
+        <directory>${project.basedir}/../src/main/resources</directory>
+      </resource>
+      <resource>
+        <directory>${smsd.root}</directory>
+        <targetPath>META-INF/smsd</targetPath>
+        <filtering>false</filtering>
+        <includes>
+          <include>LICENSE</include>
+          <include>NOTICE</include>
+          <include>licenses/cdk/LICENSE</include>
+          <include>licenses/cdk/README.md</include>
+        </includes>
+      </resource>
+    </resources>
+    <testResources>
+      <testResource>
+        <directory>${project.basedir}/../src/test/resources</directory>
+      </testResource>
+      <!-- The test JAR is published too, so it carries the same legal files. -->
+      <testResource>
+        <directory>${smsd.root}</directory>
+        <targetPath>META-INF/smsd</targetPath>
+        <filtering>false</filtering>
+        <includes>
+          <include>LICENSE</include>
+          <include>NOTICE</include>
+          <include>licenses/cdk/LICENSE</include>
+          <include>licenses/cdk/README.md</include>
+        </includes>
+      </testResource>
+    </testResources>
+
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+      </plugin>
+
+      <!-- Copy project legal files without replacing dependency notices. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-javadoc-legal</id>
+            <phase>generate-resources</phase>
+            <goals><goal>copy-resources</goal></goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}/javadoc-resources/doc-files/smsd</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${smsd.root}</directory>
+                  <filtering>false</filtering>
+                  <includes>
+                    <include>LICENSE</include>
+                    <include>NOTICE</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <!-- A stable JPMS name for module-path users. -->
+          <execution>
+            <id>default-jar</id>
+            <configuration>
+              <archive>
+                <manifestEntries>
+                  <Automatic-Module-Name>com.bioinception.smsd</Automatic-Module-Name>
+                </manifestEntries>
+              </archive>
+            </configuration>
+          </execution>
+          <!-- Shared test helpers for the CLI module's tests. -->
+          <execution>
+            <id>test-jar</id>
+            <goals><goal>test-jar</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Javadoc generation -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <configuration>
+          <javadocDirectory>${project.build.directory}/javadoc-resources</javadocDirectory>
+          <docfilessubdirs>true</docfilessubdirs>
+          <reportOutputDirectory>${smsd.root}/docs</reportOutputDirectory>
+          <destDir>api</destDir>
+        </configuration>
+      </plugin>
+
+      <!-- Tests on JUnit 5; shared configuration in the parent. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+      </plugin>
+
+      <!-- Keep the dependency list equal to what the library uses: fail the build
+           on an undeclared dependency used by the code or an unused one declared. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>analyze-dependencies</id>
+            <goals><goal>analyze-only</goal></goals>
+            <configuration>
+              <failOnWarning>true</failOnWarning>
+              <!-- Runtime and test dependencies are not visible in the bytecode. -->
+              <ignoreNonCompile>true</ignoreNonCompile>
+              <ignoredUsedUndeclaredDependencies>
+                <!-- JUnit API and parameters come with the junit-jupiter aggregate. -->
+                <ignoredUsedUndeclaredDependency>org.junit.jupiter:*</ignoredUsedUndeclaredDependency>
+                <!-- Test-only use of TypeReference, from jackson-databind. -->
+                <ignoredUsedUndeclaredDependency>com.fasterxml.jackson.core:jackson-core</ignoredUsedUndeclaredDependency>
+              </ignoredUsedUndeclaredDependencies>
+              <ignoredNonTestScopedDependencies>
+                <!-- Comes with the optional jackson-databind, which needs it. -->
+                <ignoredNonTestScopedDependency>com.fasterxml.jackson.core:jackson-core</ignoredNonTestScopedDependency>
+              </ignoredNonTestScopedDependencies>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

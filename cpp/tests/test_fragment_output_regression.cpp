@@ -1,10 +1,10 @@
-#include "search_test_helpers.hpp"
 /*
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
  * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  */
+#include "test_support.hpp"
 #include "smsd/mcs.hpp"
 #include "smsd/smarts_parser.hpp"
 #include <iostream>
@@ -15,6 +15,11 @@ int main() {
     const auto require = [&](bool condition, const std::string& message) {
         if (!condition) { std::cerr << message << '\n'; ++failures; }
     };
+    const auto disconnected = smsd::parseSMILES("CC.O.CC");
+    const auto matched = smsd::Substructure::find(disconnected).match(disconnected);
+    require(matched.status == smsd::SearchStatus::Completed && matched.matches.size() == 1
+            && matched.matches.front().fragments == std::vector<std::vector<int>>{{0, 1}, {2}, {3, 4}},
+            "Matched fragments must retain ordered query atoms and isolated atoms");
     for (const auto& text : {"[SiH4]", "C[SiH2]C", "[n-]1cccc1", "[2H]", "[CH3]",
                             "[nH]1cccc1", "c1ncc[nH]1", "[NH4+]", "[nH+]1ccccc1"}) {
         const auto original = smsd::parseSMILES(text);

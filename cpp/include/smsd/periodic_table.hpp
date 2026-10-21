@@ -2,7 +2,8 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
- * See the NOTICE file for attribution, trademark, and algorithm IP terms. */
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
+ */
 #pragma once
 #ifndef SMSD_PERIODIC_TABLE_HPP
 #define SMSD_PERIODIC_TABLE_HPP
@@ -20,10 +21,11 @@
 // Header-only, constexpr where possible, C++17.
 // ============================================================================
 
+#include "smsd/smiles_utils.hpp"
+
 #include <array>
 #include <cmath>
 #include <string>
-#include <unordered_map>
 
 namespace smsd {
 
@@ -218,23 +220,11 @@ inline const char* symbolFromAtomicNum(int z) {
     return getElement(z).symbol;
 }
 
+/// Atomic number of an element symbol, an aromatic lower-case SMILES form, or
+/// the deuterium and tritium aliases D and T; -1 for an unknown symbol.
 inline int atomicNumFromSymbol(const std::string& symbol) {
-    // Static lookup table built on first call (includes aromatic lowercase forms)
-    static const std::unordered_map<std::string, int> table = []() {
-        std::unordered_map<std::string, int> m;
-        m.reserve(256);
-        for (int z = 0; z <= 118; ++z) {
-            m[PERIODIC_TABLE[z].symbol] = z;
-        }
-        // Aromatic lowercase forms used in SMILES notation
-        m["b"]  =  5;  m["c"]  =  6;  m["n"]  =  7;  m["o"]  =  8;
-        m["p"]  = 15;  m["s"]  = 16;  m["se"] = 34;  m["te"] = 52;
-        // Deuterium / Tritium aliases (both map to hydrogen, Z=1)
-        m["D"] = 1;  m["T"] = 1;
-        return m;
-    }();
-    auto it = table.find(symbol);
-    return (it != table.end()) ? it->second : -1;
+    if (symbol == "D" || symbol == "T") return 1;
+    return detail::elementToAtomicNum(symbol);
 }
 
 // ============================================================================
@@ -270,45 +260,15 @@ inline const int* allowedValences(int z) {
     return getElement(z).defaultValences;
 }
 
-/// Compute number of implicit hydrogens using the OpenSMILES valence model.
+/// Number of implicit hydrogens using the SMILES valence model shared by the parsers.
 ///
-/// For organic-subset atoms at charge 0:
-///   implicitH = smallestFittingValence - bondOrderSum
-///
-/// For charged atoms, the target valence is adjusted:
-///   - Cations of N, P, O, S, As, Se: target = v + charge  (valence expansion)
-///   - Anions of B, Al: target = v + |charge|  (isoelectronic with Group 14)
-///   - All others: target = v - |charge|
+/// @deprecated Use MolGraph::implicitHydrogenCount(), which applies the same model to a
+/// graph atom; allowedValences() still gives the per-element data.  Elements without a
+/// default SMILES valence (metals, noble gases and the heavier p-block elements outside
+/// that table) have no implicit hydrogens.
+[[deprecated("Use MolGraph::implicitHydrogenCount(); allowedValences() gives the per-element data.")]]
 inline int implicitHydrogens(int z, int bondOrderSum, int charge) {
-    const int* vals = allowedValences(z);
-    if (vals[0] == -1) return 0;  // no default valences known
-
-    for (int i = 0; i < 4 && vals[i] != -1; ++i) {
-        int v = vals[i];
-        int target = v;
-
-        if (charge != 0) {
-            // Cations of Group 15/16 elements expand into next valence shell
-            if (charge > 0 && (z == 7 || z == 15 || z == 8 || z == 16 ||
-                               z == 33 || z == 34)) {
-                target = v + charge;
-            }
-            // Group 13 anions gain valence (isoelectronic with Group 14)
-            else if (charge < 0 && (z == 5 || z == 13)) {
-                target = v + (-charge);
-            }
-            // General case: charge reduces available valence
-            else {
-                target = v - std::abs(charge);
-            }
-        }
-
-        if (target >= bondOrderSum) {
-            int h = target - bondOrderSum;
-            return (h >= 0) ? h : 0;
-        }
-    }
-    return 0;
+    return detail::computeImplicitH(z, false, bondOrderSum, charge);
 }
 
 // ============================================================================
@@ -398,7 +358,7 @@ inline int coreElectrons(int z) {
 }
 
 // ============================================================================
-// Hybridization
+// Hybridisation
 // ============================================================================
 
 enum class Hybridization {
@@ -411,7 +371,7 @@ enum class Hybridization {
     UNKNOWN
 };
 
-/// Compute hybridization from atom connectivity.
+/// Compute hybridisation from atom connectivity.
 ///
 /// Uses the steric number model (VSEPR):
 ///   effectiveElectrons = valenceElectrons(Z) - charge
@@ -513,8 +473,7 @@ inline bool isActinide(int z) {
 /// True for the organic subset: B, C, N, O, P, S, F, Cl, Br, I.
 /// These atoms can appear without brackets in SMILES notation.
 inline bool isOrganicSubset(int z) {
-    return z == 5 || z == 6 || z == 7 || z == 8 || z == 15 || z == 16 ||
-           z == 9 || z == 17 || z == 35 || z == 53;
+    return detail::isOrganicSubset(z);
 }
 
 } // namespace smsd

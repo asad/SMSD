@@ -10,6 +10,7 @@ import com.bioinception.smsd.core.MCS;
 
 import com.bioinception.smsd.TestSupport;
 
+import static com.bioinception.smsd.TestSupport.rawGraph;
 import static com.bioinception.smsd.TestSupport.list;
 import static com.bioinception.smsd.TestSupport.mapping;
 import static com.bioinception.smsd.TestSupport.set;
@@ -23,10 +24,6 @@ import org.openscience.cdk.smiles.SmilesParser;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ObjectiveChemistryRegressionTest {
-  private static MolGraph parse(String smiles) throws Exception {
-    return new MolGraph(new SmilesParser(SilentChemObjectBuilder.getInstance()).parseSmiles(smiles));
-  }
-
   private static MolGraph graph(int n, int[][] edges) {
     int[] elements = new int[n];
     Arrays.fill(elements, 6);
@@ -55,24 +52,24 @@ class ObjectiveChemistryRegressionTest {
   @Test
   void tautomerMatchingPreservesElements() throws Exception {
     ChemOptions chemistry = ChemOptions.tautomerProfile();
-    MolGraph ketone = parse("CC(=O)C");
+    MolGraph ketone = rawGraph("CC(=O)C");
     for (String other : list("CC(=S)C", "CC(=O)N")) {
-      MolGraph target = parse(other);
+      MolGraph target = rawGraph(other);
       Map<Integer, Integer> mapping = TestSupport.mcsMapping(ketone, target, chemistry, new MCS.Options());
       assertTrue(mapping.size() <= 3, "Only three atoms of each element can be shared with " + other);
       for (Map.Entry<Integer, Integer> pair : mapping.entrySet())
         assertEquals(ketone.atomicNum[pair.getKey()], target.atomicNum[pair.getValue()]);
       assertFalse(TestSupport.contains(ketone, target, chemistry, 1_000));
     }
-    assertEquals(4, TestSupport.mcsMapping(ketone, parse("CC(O)=C"), chemistry,
+    assertEquals(4, TestSupport.mcsMapping(ketone, rawGraph("CC(O)=C"), chemistry,
         new MCS.Options()).size());
   }
 
   @Test
   void tetrahedralMatchingUsesConfigurationRatherThanTraversalTag() throws Exception {
-    MolGraph query = parse("N[C@@H](C)C(=O)O");
-    MolGraph equivalent = parse("C[C@H](N)C(=O)O");
-    MolGraph opposite = parse("C[C@@H](N)C(=O)O");
+    MolGraph query = rawGraph("N[C@@H](C)C(=O)O");
+    MolGraph equivalent = rawGraph("C[C@H](N)C(=O)O");
+    MolGraph opposite = rawGraph("C[C@@H](N)C(=O)O");
     ChemOptions chemistry = new ChemOptions();
     chemistry.useChirality = true;
     Map<Integer, Integer> witness = mapping(0, 2, 1, 1, 2, 0, 3, 3, 4, 4, 5, 5);
@@ -106,7 +103,7 @@ class ObjectiveChemistryRegressionTest {
 
   @Test
   void tetrahedralPermutationIsCheckedAfterNeighborsAreMapped() throws Exception {
-    MolGraph molecule = parse("F[C@](Cl)(Br)I");
+    MolGraph molecule = rawGraph("F[C@](Cl)(Br)I");
     ChemOptions chemistry = new ChemOptions();
     chemistry.useChirality = true;
     chemistry.matchAtomType = false;
@@ -123,12 +120,18 @@ class ObjectiveChemistryRegressionTest {
   }
 
   @Test
-  void unspecifiedStereoRetainsItsExistingWildcardBehavior() throws Exception {
-    MolGraph specified = parse("N[C@@H](C)C(=O)O"), unspecified = parse("NC(C)C(=O)O");
+  void specifiedQueryCentresNeedSpecifiedTargetCentres() throws Exception {
+    // An embedding follows the SMARTS rule; a common-subgraph search keeps the unspecified wildcard.
+    MolGraph specified = rawGraph("N[C@@H](C)C(=O)O"), unspecified = rawGraph("NC(C)C(=O)O");
     ChemOptions chemistry = new ChemOptions();
     chemistry.useChirality = true;
-    assertTrue(TestSupport.contains(specified, unspecified, chemistry, 1_000));
+    assertFalse(TestSupport.contains(specified, unspecified, chemistry, 1_000));
     assertTrue(TestSupport.contains(unspecified, specified, chemistry, 1_000));
+    MCS.Options options = new MCS.Options();
+    options.chemistry = chemistry;
+    assertEquals(6, MCS.find(specified).withOptions(options).match(unspecified).matches().get(0).atomCount());
+    chemistry.useChirality = false;
+    assertTrue(TestSupport.contains(specified, unspecified, chemistry, 1_000));
   }
 
   @Test
@@ -148,7 +151,7 @@ class ObjectiveChemistryRegressionTest {
 
   @Test
   void negativeBridgeDoesNotMakeAnIdentityMappingOptimal() throws Exception {
-    MolGraph chain = parse("CCC");
+    MolGraph chain = rawGraph("CCC");
     MCS.Options options = weighted(1, -5, 1);
     Map<Integer, Integer> mapping = TestSupport.mcsMapping(chain, chain, new ChemOptions(), options);
     assertEquals(1.0, score(mapping, options.atomWeights));
@@ -175,7 +178,7 @@ class ObjectiveChemistryRegressionTest {
 
   @Test
   void fragmentLimitsUseTheSelectedObjective() throws Exception {
-    MolGraph components = parse("CCCC.CC");
+    MolGraph components = rawGraph("CCCC.CC");
     MCS.Options options = weighted(1, 1, 1, 1, 5, 5);
     options.connectivity = (true) ? MCS.Connectivity.Fragments : MCS.Connectivity.Connected;
     options.maxFragments = 1;
@@ -194,19 +197,40 @@ class ObjectiveChemistryRegressionTest {
   }
 
   @Test
+  void singleFragmentEdgeSearchKeepsTheDenserComponent() {
+    MolGraph components = graph(9, new int[][] {
+        {0,1},{1,2},{2,3},{3,4},{5,6},{5,7},{5,8},{6,7},{6,8},{7,8}});
+    MCS.Options options = new MCS.Options();
+    options.objective = MCS.Objective.MCES;
+    options.connectivity = MCS.Connectivity.Fragments;
+    options.maxFragments = 1;
+    options.nodeLimit = 10_000;
+    options.timeoutMillis = 60_000;
+    SearchResult result = MCS.find(components).withOptions(options).match(components);
+    assertEquals(SearchResult.Status.Completed, result.status());
+    assertTrue(result.optimal());
+    assertTrue(result.complete());
+    SearchResult.Match match = result.matches().get(0);
+    assertEquals(6, match.bondCount());
+    assertEquals(set(5, 6, 7, 8), match.atomMapping().keySet());
+    assertEquals(1, match.fragments().size());
+    assertTrue(MCS.validateMapping(components, components, match, options).isEmpty());
+  }
+
+  @Test
   void smallWeightsKeepTheirPrecision() throws Exception {
-    MolGraph components = parse("C.C");
+    MolGraph components = rawGraph("C.C");
     MCS.Options options = weighted(0.0001, 0.0002);
     assertEquals(set(1), TestSupport.mcsMapping(components, components, new ChemOptions(), options).keySet());
   }
 
   @Test
   void preparedGraphSupportsConcurrentReuseWithoutAGlobalCache() throws Exception {
-    MolGraph query=parse("CCO");MCS prepared=MCS.find(query);
+    MolGraph query=rawGraph("CCO");MCS prepared=MCS.find(query);
     java.util.concurrent.ExecutorService executor=java.util.concurrent.Executors.newFixedThreadPool(2);
     try {
-      java.util.concurrent.Future<SearchResult> first=executor.submit(()->prepared.match(parse("CCCO")));
-      java.util.concurrent.Future<SearchResult> second=executor.submit(()->prepared.match(parse("OCCC")));
+      java.util.concurrent.Future<SearchResult> first=executor.submit(()->prepared.match(rawGraph("CCCO")));
+      java.util.concurrent.Future<SearchResult> second=executor.submit(()->prepared.match(rawGraph("OCCC")));
       assertEquals(3,first.get().matches().get(0).atomCount());
       assertEquals(3,second.get().matches().get(0).atomCount());
       assertEquals(3,query.n);
@@ -263,7 +287,7 @@ class ObjectiveChemistryRegressionTest {
 
   @Test
   void cancellationAndLargeOppositeWeightsRetainValidDeterministicScores() throws Exception {
-    MolGraph chain=parse("CCC(C)CCC"),ring=parse("C1CCCCCC1");
+    MolGraph chain=rawGraph("CCC(C)CCC"),ring=rawGraph("C1CCCCCC1");
     java.util.concurrent.atomic.AtomicInteger checks=new java.util.concurrent.atomic.AtomicInteger();
     MCS.Options limited=new MCS.Options();limited.cancellation=()->checks.incrementAndGet()>50;
     SearchResult stopped=MCS.find(chain).withOptions(limited).match(ring);
@@ -311,7 +335,7 @@ class ObjectiveChemistryRegressionTest {
         .neighbors(new int[][] {{1},{0}}).massNumbers(new int[] {12,13}).build();
     MolGraph charge = new MolGraph.Builder().atomCount(2).atomicNumbers(new int[] {6,6})
         .neighbors(new int[][] {{},{}}).formalCharges(new int[] {1,-1}).build();
-    MolGraph alternatingBonds = parse("C1=CC=C1");
+    MolGraph alternatingBonds = rawGraph("C1=CC=C1");
     for (MolGraph molecule : list(isotope,charge,alternatingBonds)) {
       for (int[] generator : molecule.getAutomorphismGenerators()) {
         for (int atom = 0; atom < molecule.n; atom++) {
@@ -334,7 +358,7 @@ class ObjectiveChemistryRegressionTest {
 
   @Test
   void annotatedCentersCannotBeMergedByOppositeStereoComponentExchange() throws Exception {
-    MolGraph molecule = parse("F[C@](Cl)(Br)I.F[C@@](Cl)(Br)I");
+    MolGraph molecule = rawGraph("F[C@](Cl)(Br)I.F[C@@](Cl)(Br)I");
     assertFalse(molecule.automorphismGeneratorsTruncated());
     for (int[] generator : molecule.getAutomorphismGenerators()) {
       assertEquals(1, generator[1]);
@@ -345,14 +369,14 @@ class ObjectiveChemistryRegressionTest {
 
   @Test
   void safeSymmetryAwayFromAnAnnotatedCenterRemainsAvailable() throws Exception {
-    MolGraph molecule = parse("CC(C)[C@H](F)Cl");
+    MolGraph molecule = rawGraph("CC(C)[C@H](F)Cl");
     assertFalse(molecule.automorphismGeneratorsTruncated());
     assertEquals(mapping(0,0), MCS.canonicalizeMapping(molecule,molecule,mapping(2,2)));
   }
 
   @Test
   void nonfiniteWeightsAreRejected() throws Exception {
-    MolGraph query = parse("CC");
+    MolGraph query = rawGraph("CC");
     for (double invalid : new double[] {Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY}) {
       MCS.Options options = weighted(1, invalid);
       assertThrows(IllegalArgumentException.class,
@@ -362,7 +386,7 @@ class ObjectiveChemistryRegressionTest {
 
   @Test
   void targetExclusionsApplyToIdentityAndDoNotLeakIntoLaterDomains() throws Exception {
-    MolGraph molecule = parse("CCC");
+    MolGraph molecule = rawGraph("CCC");
     ChemOptions chemistry = new ChemOptions();
     MCS.Options options = weighted(100, 1, 1);
     options.excludedTargetAtoms = set(0);
@@ -383,7 +407,7 @@ class ObjectiveChemistryRegressionTest {
 
   @Test
   void excludedIndicesAreValidatedBeforeSearch() throws Exception {
-    MolGraph molecule = parse("CC");
+    MolGraph molecule = rawGraph("CC");
     MCS.Options options = new MCS.Options();
     for (int invalid : new int[] {-1, 2}) {
       options.excludedTargetAtoms = set(invalid);
@@ -394,7 +418,7 @@ class ObjectiveChemistryRegressionTest {
 
   @Test
   void nullTargetExclusionsAreRejectedBeforeSearch() throws Exception {
-    MolGraph molecule = parse("CC");
+    MolGraph molecule = rawGraph("CC");
     MCS.Options options = new MCS.Options();
     options.excludedTargetAtoms = new HashSet<>();
     options.excludedTargetAtoms.add(null);
@@ -439,8 +463,8 @@ class ObjectiveChemistryRegressionTest {
 
   @Test
   void constrainedBatchUsesItsPerPairTimeoutWithoutMutatingOptions() throws Exception {
-    MolGraph query = parse("c1cc(c(c(c1)Cl)N2c3cc(cc(c3CNC2=O)c4ccc(cc4F)F)N5CCNCC5)Cl");
-    MolGraph target = parse("CCNc1cc(c2c(c1)N(C(=O)NC2)c3ccc(cc3)n4ccc-5ncnc5c4)c6ccnnc6");
+    MolGraph query = rawGraph("c1cc(c(c(c1)Cl)N2c3cc(cc(c3CNC2=O)c4ccc(cc4F)F)N5CCNCC5)Cl");
+    MolGraph target = rawGraph("CCNc1cc(c2c(c1)N(C(=O)NC2)c3ccc(cc3)n4ccc-5ncnc5c4)c6ccnnc6");
     query.ensureCanonical();
     target.ensureCanonical();
     MCS.Options options = new MCS.Options();
@@ -456,7 +480,7 @@ class ObjectiveChemistryRegressionTest {
 
   @Test
   void multipleMCSMappingsRetainTheIncumbentObjective() throws Exception {
-    MolGraph query = parse("CCCC"), target = parse("CC");
+    MolGraph query = rawGraph("CCCC"), target = rawGraph("CC");
     MCS.Options options = weighted(100,1,1,1);
     List<Map<Integer, Integer>> mappings = TestSupport.mcsMappings(query, target, new ChemOptions(), options, 20);
     assertFalse(mappings.isEmpty());

@@ -32,7 +32,9 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from statistics import median
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
+
+from mcs_pairs import load_mcs_pairs
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -59,11 +61,11 @@ PY_TIMEOUT_SEC = None
 
 
 def find_smsd_jar() -> Optional[Path]:
-    """Locate the latest SMSD jar in java/target/."""
-    for base in [PROJECT_DIR / "java" / "target", PROJECT_DIR / "java" / "src" / "scripts" / "repo"]:
+    """Locate the latest SMSD CLI jar in java/cli/target/."""
+    for base in [PROJECT_DIR / "java" / "cli" / "target", PROJECT_DIR / "java" / "cli" / "src" / "scripts" / "repo"]:
         if not base.exists():
             continue
-        jars = list(base.glob("smsd-*-jar-with-dependencies.jar"))
+        jars = list(base.glob("smsd-cli-*-jar-with-dependencies.jar"))
         if jars:
             return max(jars, key=lambda p: (p.stat().st_mtime, p.name))
     return None
@@ -151,47 +153,7 @@ class SubRow:
     cdk_hit: bool = False
 
 
-MCS_PAIRS: List[Tuple[str, str, str, str]] = [
-    ("C", "CC", "methane-ethane", "Trivial"),
-    ("c1ccccc1", "Cc1ccccc1", "benzene-toluene", "Small aromatic"),
-    ("c1ccccc1", "Oc1ccccc1", "benzene-phenol", "Heteroatom"),
-    ("CC(=O)Oc1ccccc1C(=O)O", "CC(=O)Nc1ccc(O)cc1", "aspirin-acetaminophen", "Drug pair"),
-    ("Cn1cnc2c1c(=O)n(C)c(=O)n2C", "Cn1cnc2c1c(=O)[nH]c(=O)n2C", "caffeine-theophylline", "N-methyl diff"),
-    ("CN1CCC23C4C1CC5=C(C2C(C=C4)O3)C=C(C=C5)O",
-     "CN1CCC23C4C1CC5=C(C2C(C=C4)OC3)C=C(C=C5)O", "morphine-codeine", "Alkaloid"),
-    ("CC(C)Cc1ccc(CC(C)C(=O)O)cc1", "COc1ccc2cc(CC(C)C(=O)O)ccc2c1", "ibuprofen-naproxen", "NSAID"),
-    ("C1=NC(=C2C(=N1)N(C=N2)C3C(C(C(O3)COP(=O)(O)OP(=O)(O)OP(=O)(O)O)O)O)N",
-     "C1=NC(=C2C(=N1)N(C=N2)C3C(C(C(O3)COP(=O)(O)OP(=O)(O)O)O)O)N", "ATP-ADP", "Nucleotide"),
-    ("C1=CC(=C[N+](=C1)C2C(C(C(O2)COP(=O)([O-])OP(=O)(O)OCC3C(C(C(O3)N4C=NC5=C(N=CN=C54)N)O)O)O)O)C(=O)N",
-     "C1C=CN(C=C1C(=O)N)C2C(C(C(O2)COP(=O)(O)OP(=O)(O)OCC3C(C(C(O3)N4C=NC5=C4N=CN=C5N)O)O)O)O",
-     "NAD-NADH", "Cofactor"),
-    ("CC(C)C1=C(C(=C(N1CCC(CC(CC(=O)O)O)O)C2=CC=C(C=C2)F)C3=CC=CC=C3)C(=O)NC4=CC=CC=C4",
-     "CC(C)C1=NC(=NC(=C1C=CC(CC(CC(=O)O)O)O)C2=CC=C(C=C2)F)N(C)S(=O)(=O)C",
-     "atorvastatin-rosuvastatin", "Statin"),
-    ("CC1=C2C(C(=O)C3(C(CC4C(C3C(C(C2(C)C)(CC1OC(=O)C(C(C5=CC=CC=C5)NC(=O)C6=CC=CC=C6)O)O)OC(=O)C7=CC=CC=C7)(CO4)OC(=O)C)O)C)OC(=O)C",
-     "CC1=C2C(C(=O)C3(C(CC4C(C3C(C(C2(C)C)(CC1OC(=O)C(C(C5=CC=CC=C5)NC(=O)OC(C)(C)C)O)O)OC(=O)C6=CC=CC=C6)(CO4)OC(=O)C)O)C)O",
-     "paclitaxel-docetaxel", "Taxane"),
-    ("CCC1C(C(C(C(=O)C(CC(C(C(C(C(C(=O)O1)C)OC2CC(C(C(O2)C)O)(C)OC)C)OC3C(C(CC(O3)C)N(C)C)O)(C)O)C)C)O)(C)O",
-     "CCC1C(C(C(N(CC(CC(C(C(C(C(C(=O)O1)C)OC2CC(C(C(O2)C)O)(C)OC)C)OC3C(C(CC(O3)C)N(C)C)O)(C)O)C)C)C)O)(C)O",
-     "erythromycin-azithromycin", "Macrolide"),
-    ("C1CN2CC3=CCOC4CC(=O)N5C6C4C3CC2C61C7=CC=CC=C75",
-     "COC1=CC2=C(C=CN=C2C=C1)C(C3CC4CCN3CC4C=C)O", "strychnine-quinine", "Alkaloid scaffold"),
-    ("CC1C(C(CC(O1)OC2C(C(C(OC2OC3=C4C=C5C=C3OC6=C(C=C(C=C6)C(C(C(=O)"
-     "NC(C(=O)NC5C(=O)NC7C8=CC(=C(C=C8)O)C9=C(C=C(C=C9O)O)C(NC(=O)C("
-     "C(C1=CC(=C(O4)C=C1)Cl)O)NC7=O)C(=O)O)CC(=O)N)NC(=O)C(CC(C)C)NC)"
-     "O)Cl)CO)O)O)(C)N)O", "CC1C(C(CC(O1)OC2C(C(C(OC2OC3=C4C=C5C=C3OC6=C(C=C(C=C6)C(C(C(=O)"
-     "NC(C(=O)NC5C(=O)NC7C8=CC(=C(C=C8)O)C9=C(C=C(C=C9O)O)C(NC(=O)C("
-     "C(C1=CC(=C(O4)C=C1)Cl)O)NC7=O)C(=O)O)CC(=O)N)NC(=O)C(CC(C)C)NC)"
-     "O)Cl)CO)O)O)(C)N)O", "vancomycin-self", "Self-match large"),
-    ("C1C2CC3CC1CC(C2)C3", "C1C2CC3CC1CC(C2)C3", "adamantane-self", "Symmetric"),
-    ("C12C3C4C1C5C4C3C25", "C12C3C4C1C5C4C3C25", "cubane-self", "Cage"),
-    ("OCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCO",
-     "OCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCO", "PEG12-PEG16", "Polymer"),
-    ("c1cc2ccc3ccc4ccc5ccc6ccc1c7c2c3c4c5c67", "c1cc2ccc3ccc4ccc5ccc6ccc1c7c2c3c4c5c67", "coronene-self", "PAH"),
-    ("O=c1[nH]c(N)nc2[nH]cnc12", "Oc1nc(N)nc2[nH]cnc12", "guanine-keto-enol", "Tautomer"),
-    ("c1cc(c(c(c1)Cl)N2c3cc(cc(c3CNC2=O)c4ccc(cc4F)F)N5CCNCC5)Cl",
-     "CCNc1cc(c2c(c1)N(C(=O)NC2)c3ccc(cc3)n4ccc-5ncnc5c4)c6ccnnc6", "rdkit-1585-pair", "Known failure"),
-]
+MCS_PAIRS: List[Tuple[str, str, str, str]] = load_mcs_pairs()
 
 
 def benchmark_rdkit_mcs(smi1: str, smi2: str) -> Tuple[float, float, int, bool]:
@@ -283,7 +245,7 @@ def benchmark_smsd_java_mcs(jar: Path, smi1: str, smi2: str) -> Tuple[float, flo
 def run_mcs_benchmark(jar=None) -> List[MCSRow]:
     jar = jar if jar is not None else find_smsd_jar()
     if jar is None:
-        raise RuntimeError("SMSD jar not found in java/target/")
+        raise RuntimeError("SMSD CLI jar not found in java/cli/target/")
 
     rows: List[MCSRow] = []
     for smi1, smi2, pair, category in MCS_PAIRS:
@@ -615,7 +577,7 @@ def write_core_summary(mcs_rows: List[MCSRow], py_sub_rows: List[SubRow], java_r
 
     lines.append("Substructure (Python core vs RDKit)")
     lines.append(f"  Pairs: {len(py_sub_rows)}")
-    lines.append(f"  Hotspots:")
+    lines.append("  Hotspots:")
     for row in sorted(py_sub_rows, key=lambda r: r.smsd_median_us - r.rdkit_median_us, reverse=True)[:5]:
         lines.append(
             f"    {row.pair}: SMSD {fmt_time_us(row.smsd_median_us)} us vs RDKit {fmt_time_us(row.rdkit_median_us)} us"
@@ -651,11 +613,11 @@ def main() -> int:
     parser.add_argument("--mcs-runs", type=int,
                         help="Override the number of MCS runs for integration-mode RDKit/SMSD-Java timing")
     parser.add_argument("--sub-warmup", type=int,
-                        help="Override the number of substructure warmup runs")
+                        help="Override the number of substructure warm-up runs")
     parser.add_argument("--sub-iters", type=int,
                         help="Override the number of measured substructure runs")
     parser.add_argument("--py-warmup", type=int,
-                        help="Override the warmup count for benchmark_python.py in core mode")
+                        help="Override the warm-up count for benchmark_python.py in core mode")
     parser.add_argument("--py-iters", type=int,
                         help="Override the measured-run count for benchmark_python.py in core mode")
     parser.add_argument("--py-timeout-sec", type=int,
@@ -692,7 +654,7 @@ def main() -> int:
     if args.mode == "integration":
         jar = args.jar if args.jar is not None else find_smsd_jar()
         if jar is None:
-            print("ERROR: SMSD jar not found in java/target/", file=sys.stderr)
+            print("ERROR: SMSD CLI jar not found in java/cli/target/", file=sys.stderr)
             return 1
 
         print(f"[1/3] Running MCS benchmark with {jar.name}...", file=sys.stderr)
@@ -705,7 +667,7 @@ def main() -> int:
         write_sub_tsv(sub_rows, SUB_RESULTS_TSV)
 
         print("[3/3] Writing summary...", file=sys.stderr)
-        write_summary(mcs_rows, sub_rows, SUMMARY_TXT, "SMSD Integration Leaderboard Benchmark")
+        write_summary(mcs_rows, sub_rows, SUMMARY_TXT, "SMSD Integration Comparison")
 
         print(f"Results written to {MCS_RESULTS_TSV}")
         print(f"Results written to {SUB_RESULTS_TSV}")
@@ -723,7 +685,7 @@ def main() -> int:
         print("[2/2] Running Java cached substructure benchmark...", file=sys.stderr)
         jar = args.jar if args.jar is not None else find_smsd_jar()
         if jar is None:
-            print("ERROR: SMSD jar not found in java/target/", file=sys.stderr)
+            print("ERROR: SMSD CLI jar not found in java/cli/target/", file=sys.stderr)
             return 1
         java_rows = run_java_substructure_benchmark(jar)
         sub_rows = build_substructure_rows(java_rows)

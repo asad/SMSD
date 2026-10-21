@@ -2,7 +2,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+ * See the NOTICE file for attribution, trademark, and algorithm IP terms.
  */
+#include "test_support.hpp"
 #include "smsd/cip.hpp"
 #include "smsd/mol_reader.hpp"
 #include "smsd/smiles_parser.hpp"
@@ -15,9 +17,7 @@
 using smsd::cip::EZLabel;
 using smsd::cip::RSLabel;
 
-static void require(bool condition, const char* message) {
-    if (!condition) throw std::runtime_error(message);
-}
+using smsd_test::require;
 
 static std::vector<RSLabel> labels(const smsd::MolGraph& graph) {
     auto result = smsd::cip::assignAll(graph).rsLabels;
@@ -95,6 +95,21 @@ int main() {
         }
         const auto graph = smsd::parseSMILES("F/C=C(Cl)/C");
         require(std::get<2>(smsd::cip::assignAll(graph).ezBonds[0]) == EZLabel::Z, "stereo reference must follow the annotated ligand");
+    });
+    run("ring closure directional orientation", [] {
+        for (const auto& input : {
+                std::make_tuple("C1CCCCC/C=C\\1", "C/1CCCCC/C=C1", EZLabel::Z),
+                std::make_tuple("C1CCCCC/C=C/1", "C\\1CCCCC/C=C1", EZLabel::E)}) {
+            const auto graph = smsd::parseSMILES(std::get<0>(input));
+            const auto equivalent = smsd::parseSMILES(std::get<1>(input));
+            require(smsd::cip::assignEZ(graph, 6, 7) == std::get<2>(input),
+                    "A closing ring direction must follow the closing atom's orientation");
+            require(graph.getCanonicalHash() == equivalent.getCanonicalHash(),
+                    "Equivalent opening and closing directions must retain one identity");
+            const auto restored = smsd::parseSMILES(smsd::toSMILES(graph));
+            require(graph.getCanonicalHash() == restored.getCanonicalHash(),
+                    "A ring closure direction must survive canonical output");
+        }
     });
     run("double-bond SMILES round-trip", [] {
         for (const char* text : {"C/C=C/C", "C/C=C\\C", "C(=C/Cl)\\Cl", "F/C=C(Cl)/C", "C/C=C/C=C\\C", "C/C=C(/F)\\C(Cl)=C/C", "C/C=C(\\F)/C(Cl)=C/C", "C1/C=C\\CCCC1"}) {

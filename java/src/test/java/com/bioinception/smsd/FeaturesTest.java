@@ -12,44 +12,29 @@ import com.bioinception.smsd.TestSupport;
 
 import com.bioinception.smsd.TestSupport.MoleculePair;
 
+import static com.bioinception.smsd.TestSupport.rawMolecule;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.bioinception.smsd.core.*;
 import java.util.*;
 import org.junit.jupiter.api.*;
 import org.openscience.cdk.interfaces.IAtomContainer;
-import org.openscience.cdk.silent.SilentChemObjectBuilder;
-import org.openscience.cdk.smiles.SmilesParser;
 
 /**
- * Feature tests: consolidated from FastPathTest, TautomerWeightTest,
- * HydrogenHandlingTest, RingFinderTest.
+ * Feature tests: the fast paths of the searches, tautomer relevance weights, hydrogen handling
+ * and ring perception.
  *
  * @author Syed Asad Rahman
  */
 @DisplayName("Feature Tests")
 public class FeaturesTest extends TestBase {
 
-  /** SmilesParser without Standardiser (for TautomerWeight and FastPath tests). */
-  private static final SmilesParser RAW_SP =
-      new SmilesParser(SilentChemObjectBuilder.getInstance());
-
-  /** Parse SMILES without standardisation (raw CDK parse). */
-  private static IAtomContainer rawMol(String smi) throws Exception {
-    return RAW_SP.parseSmiles(smi);
-  }
-
-  /** Build a MolGraph from a SMILES string (for RingFinder tests). */
-  private static MolGraph graph(String smi) throws Exception {
-    return new MolGraph(mol(smi));
-  }
-
   // ======================================================================
-  // From: FastPathTest.java
+  // Fast paths
   // ======================================================================
 
   @Nested
-  @DisplayName("Fast Path Tests (5.7.0)")
+  @DisplayName("Fast path tests")
   class FastPath {
 
     // --- Tree Fast-Path ---
@@ -57,21 +42,21 @@ public class FeaturesTest extends TestBase {
     @Test
     @DisplayName("Tree: single atom self-MCS")
     void testTreeFastPathSingleAtom() throws Exception {
-      MoleculePair s = new MoleculePair(rawMol("C"), rawMol("C"), new ChemOptions());
+      MoleculePair s = new MoleculePair(rawMolecule("C"), rawMolecule("C"), new ChemOptions());
       assertEquals(1, s.mcsMapping().size());
     }
 
     @Test
     @DisplayName("Tree: two atoms self-MCS")
     void testTreeFastPathTwoAtoms() throws Exception {
-      MoleculePair s = new MoleculePair(rawMol("CC"), rawMol("CC"), new ChemOptions());
+      MoleculePair s = new MoleculePair(rawMolecule("CC"), rawMolecule("CC"), new ChemOptions());
       assertEquals(2, s.mcsMapping().size());
     }
 
     @Test
     @DisplayName("Tree: branched vs linear (isobutane vs butane)")
     void testTreeFastPathBranched() throws Exception {
-      MoleculePair s = new MoleculePair(rawMol("CC(C)C"), rawMol("CCCC"), new ChemOptions());
+      MoleculePair s = new MoleculePair(rawMolecule("CC(C)C"), rawMolecule("CCCC"), new ChemOptions());
       Map<Integer, Integer> mcs = s.mcsMapping();
       assertTrue(mcs.size() >= 3, "Isobutane/butane MCS >= 3, got " + mcs.size());
     }
@@ -79,7 +64,7 @@ public class FeaturesTest extends TestBase {
     @Test
     @DisplayName("Tree: dendrimer-like branching")
     void testTreeFastPathDendrimer() throws Exception {
-      MoleculePair s = new MoleculePair(rawMol("CC(CC)(CC)CC"), rawMol("CC(CCC)(CCC)CCC"), new ChemOptions());
+      MoleculePair s = new MoleculePair(rawMolecule("CC(CC)(CC)CC"), rawMolecule("CC(CCC)(CCC)CCC"), new ChemOptions());
       Map<Integer, Integer> mcs = s.mcsMapping();
       assertTrue(mcs.size() >= 5, "Dendrimer MCS >= 5, got " + mcs.size());
     }
@@ -89,7 +74,7 @@ public class FeaturesTest extends TestBase {
     @Test
     @DisplayName("Chain: single atom in chain")
     void testChainFastPathSingleAtom() throws Exception {
-      MoleculePair s = new MoleculePair(rawMol("C"), rawMol("CCCCCC"), new ChemOptions());
+      MoleculePair s = new MoleculePair(rawMolecule("C"), rawMolecule("CCCCCC"), new ChemOptions());
       assertTrue(s.contains(), "Single C should be in hexane");
     }
 
@@ -99,8 +84,8 @@ public class FeaturesTest extends TestBase {
       long t0 = System.nanoTime();
       MoleculePair s =
           new MoleculePair(
-              rawMol("OCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCO"),
-              rawMol("OCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCO"),
+              rawMolecule("OCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCO"),
+              rawMolecule("OCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCOCCO"),
               new ChemOptions());
       Map<Integer, Integer> mcs = s.mcsMapping( true, 10000);
       long ms = (System.nanoTime() - t0) / 1_000_000;
@@ -114,7 +99,7 @@ public class FeaturesTest extends TestBase {
     @DisplayName("Solvent: DMSO shifts tautomer weights")
     void testSolventCorrectionDMSO() throws Exception {
       ChemOptions opts = ChemOptions.tautomerProfile().withSolvent(ChemOptions.Solvent.DMSO);
-      MoleculePair s = new MoleculePair(rawMol("CC(=O)C"), rawMol("CC(O)=C"), opts);
+      MoleculePair s = new MoleculePair(rawMolecule("CC(=O)C"), rawMolecule("CC(O)=C"), opts);
       Map<Integer, Integer> mcs = s.mcsMapping();
       assertTrue(mcs.size() >= 3, "Keto/enol MCS in DMSO >= 3, got " + mcs.size());
     }
@@ -123,7 +108,7 @@ public class FeaturesTest extends TestBase {
     @DisplayName("Solvent: Chloroform shifts tautomer weights")
     void testSolventCorrectionCHCl3() throws Exception {
       ChemOptions opts = ChemOptions.tautomerProfile().withSolvent(ChemOptions.Solvent.CHLOROFORM);
-      MoleculePair s = new MoleculePair(rawMol("CC(=O)C"), rawMol("CC(O)=C"), opts);
+      MoleculePair s = new MoleculePair(rawMolecule("CC(=O)C"), rawMolecule("CC(O)=C"), opts);
       Map<Integer, Integer> mcs = s.mcsMapping();
       assertTrue(mcs.size() >= 3, "Keto/enol MCS in CHCl3 >= 3, got " + mcs.size());
     }
@@ -132,7 +117,7 @@ public class FeaturesTest extends TestBase {
     @DisplayName("Solvent: Aqueous (default) unchanged")
     void testSolventCorrectionAqueous() throws Exception {
       ChemOptions opts = ChemOptions.tautomerProfile().withSolvent(ChemOptions.Solvent.AQUEOUS);
-      MoleculePair s = new MoleculePair(rawMol("CC(=O)C"), rawMol("CC(O)=C"), opts);
+      MoleculePair s = new MoleculePair(rawMolecule("CC(=O)C"), rawMolecule("CC(O)=C"), opts);
       Map<Integer, Integer> mcs = s.mcsMapping();
       assertTrue(mcs.size() >= 3, "Keto/enol MCS in water >= 3, got " + mcs.size());
     }
@@ -140,18 +125,18 @@ public class FeaturesTest extends TestBase {
     // --- Lenient SMILES ---
 
     @Test
-    @DisplayName("Lenient: unbalanced parentheses sanitized")
+    @DisplayName("Lenient: unbalanced parentheses sanitised")
     void testLenientSmiles() throws Exception {
       String bad = "CC(CC(=O)O";
       String fixed = MolGraph.sanitizeSmiles(bad);
       assertNotNull(fixed);
-      IAtomContainer m = rawMol(fixed);
-      assertTrue(m.getAtomCount() >= 4, "Sanitized SMILES should produce valid molecule");
+      IAtomContainer m = rawMolecule(fixed);
+      assertTrue(m.getAtomCount() >= 4, "Sanitised SMILES should produce valid molecule");
     }
   }
 
   // ======================================================================
-  // From: TautomerWeightTest.java
+  // Tautomer relevance weights
   // ======================================================================
 
   @Nested
@@ -200,7 +185,7 @@ public class FeaturesTest extends TestBase {
 
       @Test @DisplayName("Acetone C=O oxygen gets tautomer class + keto weight")
       void acetoneKetoOxygen() throws Exception {
-        MolGraph g = new MolGraph(rawMol("CC(=O)C"));
+        MolGraph g = new MolGraph(rawMolecule("CC(=O)C"));
         int oIdx = -1;
         for (int i = 0; i < g.atomCount(); i++) {
           if (g.atomicNum[i] == 8) { oIdx = i; break; }
@@ -213,7 +198,7 @@ public class FeaturesTest extends TestBase {
 
       @Test @DisplayName("Formamide N gets amide tautomer weight")
       void formamideN() throws Exception {
-        MolGraph g = new MolGraph(rawMol("NC=O"));
+        MolGraph g = new MolGraph(rawMolecule("NC=O"));
         int nIdx = -1, oIdx = -1;
         for (int i = 0; i < g.atomCount(); i++) {
           if (g.atomicNum[i] == 7) nIdx = i;
@@ -228,7 +213,7 @@ public class FeaturesTest extends TestBase {
 
       @Test @DisplayName("Imidazole N atoms get symmetric weight 0.50")
       void imidazoleNWeight() throws Exception {
-        MolGraph g = new MolGraph(rawMol("c1cnc[nH]1"));
+        MolGraph g = new MolGraph(rawMolecule("c1cnc[nH]1"));
         int tautN = 0;
         for (int i = 0; i < g.atomCount(); i++) {
           if (g.atomicNum[i] == 7 && g.tautomerClass[i] >= 0) tautN++;
@@ -244,7 +229,7 @@ public class FeaturesTest extends TestBase {
 
       @Test @DisplayName("Non-tautomeric atoms default to weight 1.0")
       void nonTautomericDefault() throws Exception {
-        MolGraph g = new MolGraph(rawMol("c1ccccc1"));
+        MolGraph g = new MolGraph(rawMolecule("c1ccccc1"));
         for (int i = 0; i < g.atomCount(); i++) {
           assertEquals(1.0f, g.tautomerWeight[i], 1e-6f,
               "Benzene atoms should have default weight 1.0");
@@ -254,7 +239,7 @@ public class FeaturesTest extends TestBase {
 
       @Test @DisplayName("2-Pyridinone N and exo-O get pyridinone weight")
       void pyridinone() throws Exception {
-        MolGraph g = new MolGraph(rawMol("O=c1cccc[nH]1"));
+        MolGraph g = new MolGraph(rawMolecule("O=c1cccc[nH]1"));
         int nIdx = -1;
         for (int i = 0; i < g.atomCount(); i++) {
           if (g.atomicNum[i] == 7) { nIdx = i; break; }
@@ -271,7 +256,7 @@ public class FeaturesTest extends TestBase {
 
       @Test @DisplayName("Benzene self-MCS -> confidence 1.0 (no tautomers)")
       void benzeneConfidence() throws Exception {
-        IAtomContainer benz = rawMol("c1ccccc1");
+        IAtomContainer benz = rawMolecule("c1ccccc1");
         ChemOptions c = ChemOptions.tautomerProfile();
         MoleculePair smsd = new MoleculePair(benz, benz, c);
         Map<Integer,Integer> mcs = smsd.mcsMapping();
@@ -282,8 +267,8 @@ public class FeaturesTest extends TestBase {
 
       @Test @DisplayName("Non-tautomeric MCS -> confidence always 1.0")
       void nonTautomericMode() throws Exception {
-        IAtomContainer a = rawMol("c1ccccc1");
-        IAtomContainer b = rawMol("c1ccc(F)cc1");
+        IAtomContainer a = rawMolecule("c1ccccc1");
+        IAtomContainer b = rawMolecule("c1ccc(F)cc1");
         ChemOptions c = new ChemOptions();
         MoleculePair smsd = new MoleculePair(a, b, c);
         smsd.mcsMapping();
@@ -293,8 +278,8 @@ public class FeaturesTest extends TestBase {
 
       @Test @DisplayName("Keto/enol MCS -> confidence < 1.0 (cross-element match)")
       void ketoEnolConfidence() throws Exception {
-        IAtomContainer keto = rawMol("CC(=O)CC");
-        IAtomContainer enol = rawMol("CC(O)=CC");
+        IAtomContainer keto = rawMolecule("CC(=O)CC");
+        IAtomContainer enol = rawMolecule("CC(O)=CC");
         ChemOptions c = ChemOptions.tautomerProfile();
         MoleculePair smsd = new MoleculePair(keto, enol, c);
         Map<Integer,Integer> mcs = smsd.mcsMapping();
@@ -305,8 +290,8 @@ public class FeaturesTest extends TestBase {
 
       @Test @DisplayName("computeTautomerConfidence() static method returns 1.0 for identical elements")
       void staticConfidenceAllSameElement() throws Exception {
-        IAtomContainer a = rawMol("CC(=O)C");
-        IAtomContainer b = rawMol("CC(=O)CC");
+        IAtomContainer a = rawMolecule("CC(=O)C");
+        IAtomContainer b = rawMolecule("CC(=O)CC");
         ChemOptions c = new ChemOptions();
         MCS.Options m = new MCS.Options();
         Map<Integer,Integer> mcs = TestSupport.mcsMapping(a, b, c, m);
@@ -344,7 +329,7 @@ public class FeaturesTest extends TestBase {
   }
 
   // ======================================================================
-  // From: HydrogenHandlingTest.java
+  // Hydrogen handling
   // ======================================================================
 
   @Nested
@@ -522,7 +507,7 @@ public class FeaturesTest extends TestBase {
   }
 
   // ======================================================================
-  // From: RingFinderTest.java
+  // Ring perception
   // ======================================================================
 
   @Nested
