@@ -44,7 +44,7 @@ changes in full.
 | Portable CLI with Unix and Windows launchers: `smsd-8.0.0-cli.tar.gz` | Java 8 or later |
 | Python source distribution: `smsd-8.0.0.tar.gz` | Python 3.9 or later, a C++17 compiler and CMake 3.18 or later |
 | Python wheel for macOS arm64 | macOS 26 or later and CPython 3.14 |
-| Python wheels for Linux x86_64 and Windows x86_64, added when their builds complete | glibc 2.28 or later, or Windows 10 or later, and CPython 3.14 |
+| Python wheels for Linux x86_64 and Windows x86_64 | glibc 2.28 or later, or Windows 10 or later, and CPython 3.14 |
 | `SHA256SUMS` | Lists the SHA-256 checksum of each file |
 
 The wheels run batch operations on the CPU with OpenMP; the optional Metal and
