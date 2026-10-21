@@ -13,38 +13,23 @@ stages, the meaning of a result and the differences between the languages.
 
 ## Search stages
 
-Preparing a query snapshots its graph, resolves the chemistry options and
-builds the atom labels, degree summaries and neighbourhood label frequency
-(NLF) filters that later candidate tests use. SMARTS queries are compiled once
-and reused.
+Preparing a query snapshots its graph and resolves its chemistry options
+once; SMARTS queries are compiled once and reused for every target.
 
-Substructure search maps query atoms to target atoms one at a time. Candidate
-targets are filtered by element, charge, isotope, ring, aromaticity and
-tautomer policy, by degree and NLF bounds, and by the mapped neighbours
-already fixed; Java additionally keeps bit-parallel feasibility sets.
-Non-induced matching requires every query bond in the target; induced matching
-also forbids extra target bonds between mapped atoms. Enumeration returns
-every optimal embedding up to the requested limit, including symmetric
-self-mappings.
+Substructure search finds embeddings of the query in the target. Non-induced
+matching requires every query bond in the target; induced matching also
+forbids extra target bonds between mapped atoms. Enumeration returns every
+embedding up to the requested limit, including symmetric self-mappings.
 
-MCIS search extends the same vertex mapping with an objective bound: atoms
-first, then bonds, or the supplied query atom weights. MCES search selects
-compatible common edges instead, maximising bonds and then the atoms they
-touch. Candidates are validated and filtered before they become incumbents or
-trigger an upper-bound exit, connected components are chosen by the requested
-objective, and the fragment limits constrain the selected common-edge
-components. Weighted and bond objectives never promote an identity mapping
-over a better proper subset.
+MCIS search maximises the mapped atoms, then bonds, or the supplied query atom
+weights; MCES search maximises the common bonds, then the atoms they touch.
+Every candidate is checked against the chemistry options before it is
+reported, connected components are chosen by the requested objective, and
+fragment limits constrain the reported components.
 
-Canonical mapping selection explores the closure of the molecule's
-automorphism generators; incomplete generators or exceeded state bounds raise
-an explicit error rather than returning an arbitrary representative.
-Rectangular assignment runs in `O(min(m,n)² max(m,n))` time with `O(m+n)`
-auxiliary space, general matching augments a maximal matching with blossoms,
-and connected-component filtering traverses adjacency instead of scanning
-every pair of mapped atoms. The
-[primitive benchmark](../benchmarks/benchmark_primitives.cpp) times these
-helpers in isolation.
+Canonical mapping selection chooses a representative mapping under the
+symmetries of both molecules, and raises an explicit error when it cannot do
+so within its limits.
 
 ## Results and budgets
 
@@ -80,7 +65,7 @@ language.
 | Fluent option helpers | `withOptions`, `withTimeout` | `withOptions`, `withTimeout` | `with_options`, `with_timeout`, `with_objective`, `with_fragments`, `with_atom_weights`, `with_induced` |
 | SMILES convenience | `MCS::find(std::string)` and `Substructure::find(std::string)` parse SMILES | Graphs and CDK containers only | `find(str)` parses SMILES; RDKit molecules are accepted |
 | Batch searches | `matchMany(targets, numThreads = 0)`; zero uses every processor | `matchMany(List)` runs sequentially; `matchMany(List, numThreads)` uses up to `numThreads` threads, zero for one per processor | `match_many(targets, num_threads=0)` |
-| Tuning switches | None | `ChemOptions.useTwoHopNLF`, `useThreeHopNLF`, `useBitParallelFeasibility`, all deprecated; they never change a result | None |
+| Tuning switches | None | Deprecated `ChemOptions` tuning switches that never change a result | None |
 | Cancellation | Shared `CancellationToken` | `BooleanSupplier`; thread interruption also cancels | Shared `CancellationToken` |
 
 Batch results are identical whichever thread count is used, provided no
