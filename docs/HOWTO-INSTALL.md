@@ -1,32 +1,26 @@
 # Installation and source builds
 
-This guide covers the SMSD Pro 8.0.0 packages, their platform requirements and
-source builds of the Java, C++ and Python modules. Release files are published
-on the [GitHub releases page](https://github.com/asad/SMSD/releases); the
-[README](../README.md) lists where each package is distributed.
+This guide covers installing SMSD Pro 8.0.0 and building it from source.
+Release files are on the [GitHub releases page](https://github.com/asad/SMSD/releases);
+the [README](../README.md) lists the Python and Maven packages.
 
 ## Platform requirements
 
 | Package | Platform | Requirements |
 |---|---|---|
 | Java library, CLI JAR and portable CLI | Windows, macOS or Linux | Java 8 or later; Java 25 LTS preferred |
-| Windows installer (MSI) | Windows, x86_64 (AMD64) | Includes Java 25.0.4.1+1 |
-| macOS installer (DMG) | macOS 11.0 or later, arm64 | Includes Java 25.0.4.1+1 |
-| Linux installer (DEB) | Debian or Ubuntu, x86_64 (AMD64) | Includes Java 25.0.4.1+1 |
 | Python wheel | Windows 10 or later, x86_64 (AMD64) | CPython 3.14 |
 | Python wheel | Linux with glibc 2.28 or later, x86_64 (AMD64) | CPython 3.14 |
 | Python wheel | macOS 26 or later, arm64 | CPython 3.14 |
 | Python source build | Any platform with a C++17 compiler | Python 3.9 or later; CMake 3.18 or later |
-| C++ headers | Any platform | C++17 compiler; core matching needs neither RDKit nor CDK |
+| C++ headers | Any platform | C++17 compiler; neither RDKit nor CDK is needed |
 
-Minimum operating-system versions are build targets. The versions on which a
-release was tested are recorded in its validation record; see the
-[8.0.0 validation record](VALIDATION_8.0.0.md).
+Minimum operating-system versions are build targets.
 
 ## Verify downloads
 
 Each GitHub release includes a `SHA256SUMS` file. Download it into the same
-directory as the release files, then check each file you intend to use.
+directory as the release files, then check each file you use.
 
 macOS or Linux:
 
@@ -34,35 +28,34 @@ macOS or Linux:
 grep ' smsd-cli-8.0.0-jar-with-dependencies.jar$' SHA256SUMS | shasum -a 256 -c
 ```
 
-Windows PowerShell (the result is `True` when the checksum matches):
+Windows PowerShell (prints `True` when the checksum matches):
 
 ```powershell
-$entry = Select-String -Path SHA256SUMS -SimpleMatch ' smsd-8.0.0-windows-amd64.msi'
-(Get-FileHash .\smsd-8.0.0-windows-amd64.msi -Algorithm SHA256).Hash -eq $entry.Line.Split(' ')[0]
+$entry = Select-String -Path SHA256SUMS -SimpleMatch ' smsd-cli-8.0.0-jar-with-dependencies.jar'
+(Get-FileHash .\smsd-cli-8.0.0-jar-with-dependencies.jar -Algorithm SHA256).Hash -eq $entry.Line.Split(' ')[0]
 ```
 
 Replace the file name to check another download.
 
+<a id="java-cli-installers"></a>
+
 ## Portable Java CLI
 
-The shaded JAR `smsd-cli-8.0.0-jar-with-dependencies.jar` includes the SMSD
-library, CDK 2.13 and the other dependencies of the CLI, and runs on Java 8 or
-later. From the directory that contains it:
+`smsd-cli-8.0.0-jar-with-dependencies.jar` contains the SMSD library, CDK 2.13
+and the other CLI dependencies, and runs on Java 8 or later. From its directory:
 
 ```bash
-java -version
 java -jar smsd-cli-8.0.0-jar-with-dependencies.jar --version
 java -jar smsd-cli-8.0.0-jar-with-dependencies.jar \
   --Q SMI --q "CCN" --T SMI --t "CCCNC" -m --json -
 ```
 
-The last command runs a substructure search and writes every mapping as JSON
-to standard output. In Windows PowerShell, use `.\smsd-cli-8.0.0-jar-with-dependencies.jar`
-as the JAR path. The same JAR is published on Maven Central as
+The second command runs a substructure search and writes every mapping as JSON
+to standard output. The same JAR is on Maven Central as
 `com.bioinceptionlabs:smsd-cli:8.0.0` with the classifier `jar-with-dependencies`.
 
-The archive `smsd-8.0.0-cli.tar.gz` contains Unix and Windows launchers. Extract
-it into one directory so that `bin` and `repo` remain together:
+`smsd-8.0.0-cli.tar.gz` holds Unix and Windows launchers. Extract it into one
+directory so that `bin` and `repo` stay together:
 
 ```bash
 mkdir smsd-cli
@@ -70,47 +63,7 @@ tar -xzf smsd-8.0.0-cli.tar.gz -C smsd-cli
 ./smsd-cli/bin/smsd --version
 ```
 
-On Windows, run `smsd-cli\bin\smsd.bat`. The portable packages do not include a
-Java runtime.
-
-## Java CLI installers
-
-The MSI, DMG and DEB packages install the command-line application with a
-bundled Eclipse Temurin Java 25.0.4.1+1 runtime. They have no graphical
-interface, and Python packages are installed separately. The packaging scripts
-produce unsigned installer packages; the macOS application carries an ad hoc
-signature and is not notarised.
-
-Windows (`smsd-8.0.0-windows-amd64.msi`): open the MSI and choose the per-user
-installation directory. With the default directory, from PowerShell:
-
-```powershell
-& "$env:LOCALAPPDATA\SMSD\SMSD.exe" --version
-& "$env:LOCALAPPDATA\SMSD\SMSD.exe" --Q SMI --q CC --T SMI --t CCC --json -
-```
-
-macOS (`smsd-8.0.0-macos-arm64.dmg`): open the DMG and copy `SMSD.app` to
-Applications. From Terminal:
-
-```bash
-"/Applications/SMSD.app/Contents/MacOS/SMSD" --version
-"/Applications/SMSD.app/Contents/MacOS/SMSD" --Q SMI --q CC --T SMI --t CCC --json -
-```
-
-If Gatekeeper blocks a download whose checksum you have verified, follow
-Apple's guidance on [opening apps safely](https://support.apple.com/en-gb/102445).
-
-Debian or Ubuntu (`smsd-8.0.0-linux-amd64.deb`), from the download directory:
-
-```bash
-sudo apt install ./smsd-8.0.0-linux-amd64.deb
-/opt/smsd/bin/smsd --version
-/opt/smsd/bin/smsd --Q SMI --q CC --T SMI --t CCC --json -
-```
-
-To uninstall, remove SMSD under Settings > Apps on Windows, delete `SMSD.app`
-on macOS, or run `sudo apt remove smsd` on Linux. On other Linux distributions,
-use the portable Java CLI.
+On Windows, run `smsd-cli\bin\smsd.bat`. Neither package includes a Java runtime.
 
 ## Java source build
 
@@ -122,18 +75,14 @@ mvn -f java/pom.xml clean package
 java -jar java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar --version
 ```
 
-`java/pom.xml` is the parent of the library module, `java/core`, and the CLI
-module, `java/cli`. The build runs the default test suites of both, writes the
-library JAR to `java/core/target`, and writes the CLI JAR, the shaded CLI JAR
-and the portable launchers to `java/cli/target`. To use the library as a Maven
-dependency, run `mvn -f java/pom.xml install`, which installs
-`com.bioinceptionlabs:smsd:8.0.0` and `com.bioinceptionlabs:smsd-cli:8.0.0` in
-the local Maven repository. The [Java module README](../java/README.md#installation)
-gives the Maven and Gradle dependencies of both. The root `pom.xml` also builds
-the Java modules.
+The build runs the default tests, writes the library JAR to `java/core/target`,
+and writes the CLI JARs and the portable launchers to `java/cli/target`.
+`mvn -f java/pom.xml install` also installs `com.bioinceptionlabs:smsd:8.0.0`
+and `com.bioinceptionlabs:smsd-cli:8.0.0` in the local Maven repository; the
+[Java module README](../java/README.md#installation) gives their Maven and
+Gradle dependencies.
 
-The algorithm, stress and benchmark suites are excluded by default. To include
-the algorithm and stress suites:
+To run the slower test suites as well:
 
 ```bash
 mvn -f java/pom.xml -Dslow.tests.exclude=nothing clean verify
@@ -147,44 +96,15 @@ mvn -f java/pom.xml -Dslow.tests.exclude=nothing \
   "-Djvm=$SMSD_JAVA8_HOME/bin/java" test
 ```
 
-The corpus benchmarks are opt-in and separate from the correctness tests:
-
-```bash
-mvn -f java/pom.xml -pl core test -Dslow.tests.exclude=nothing \
-  '-Dtest=BenchmarkSuiteTest*,ExternalBenchmarkTest*,JavaCdkVsSmsdBenchmarkTest' \
-  -Dbenchmark=true -Dsmsd.benchmark=true
-```
-
-The system properties `smsd.benchmark.timeoutMillis` (default `1000`),
-`smsd.benchmark.rounds` (default `1`) and `smsd.benchmark.warmup` (default `0`)
-set the protocol. Results are written to `build/local-benchmarks/java` unless
-`smsd.benchmark.outputDir` names another directory. See the
-[Java guide](JAVA.md) for the API and CLI reference.
-
-### Maven Central deployment
-
-The `release` profile of `java/pom.xml` signs the parent, library and CLI
-artefacts and uploads them to the Central Portal as one deployment:
-
-```bash
-mvn -f java/pom.xml -P release clean deploy
-```
-
-Automatic publication is switched off. The command returns once Central has
-validated the deployment, which then stays unpublished until a maintainer
-publishes it by hand under Deployments at <https://central.sonatype.com>, or
-drops it there. A release therefore reaches Maven Central only after that
-manual confirmation.
+See the [Java guide](JAVA.md) for the API and CLI reference.
 
 ## C++ source build
 
-The C++ library is header-only. Release downloads provide the headers as
-`smsd-cpp-8.0.0-headers.tar.gz`; in the source tree they are in `cpp/include`.
-
-The library requires CMake 3.18 or later; the test commands below use
-`ctest --test-dir`, which requires CMake 3.20 or later. On Windows, use
-Developer PowerShell for Visual Studio with the Desktop development with C++
-workload. From the repository root:
+The C++ library is header-only: use `cpp/include`, or the release archive
+`smsd-cpp-8.0.0-headers.tar.gz`. The CMake build needs CMake 3.18 or later, and
+`ctest --test-dir` needs CMake 3.20 or later. On Windows, use Developer
+PowerShell for Visual Studio with the Desktop development with C++ workload.
+From the repository root:
 
 ```text
 cmake -S cpp -B build/cpu -DCMAKE_BUILD_TYPE=Debug -DSMSD_BUILD_TESTS=ON -DSMSD_BUILD_PYTHON=OFF -DSMSD_BUILD_METAL=OFF -DSMSD_BUILD_CUDA=OFF
@@ -192,13 +112,13 @@ cmake --build build/cpu --config Debug --parallel 4
 ctest --test-dir build/cpu --build-config Debug --output-on-failure
 ```
 
-Batch operations use OpenMP when CMake finds it and otherwise run
-sequentially. On macOS, install `libomp` (for example with Homebrew) and add
-its prefix to `CMAKE_PREFIX_PATH` to enable OpenMP. `-DSMSD_WITH_RDKIT=ON`
-builds the optional RDKit adapter, which requires the RDKit development files
-and C++20. The [C++ module README](../cpp/README.md#install-and-use-with-cmake)
-shows how to install the package and use it from CMake, and the
-[C++ guide](CPP.md) is the API reference.
+Batch operations use OpenMP when CMake finds it; on macOS, install `libomp`
+(for example with Homebrew) and add its prefix to `CMAKE_PREFIX_PATH`.
+`-DSMSD_WITH_RDKIT=ON` builds the optional RDKit adapter, which needs the RDKit
+development files and C++20. The
+[C++ module README](../cpp/README.md#install-and-use-with-cmake) shows how to
+install the package and use it from CMake; the [C++ guide](CPP.md) is the API
+reference.
 
 ## Python
 
@@ -209,12 +129,10 @@ python -m pip install "smsd==8.0.0"
 python -c "import smsd; print(smsd.__version__); assert smsd.parse_smiles('CC').n == 2"
 ```
 
-Release wheels are built for the standard CPython 3.14 interpreter (`cp314`),
-not the free-threaded build (`cp314t`), and run batch operations on the CPU
-with OpenMP. Other interpreters and architectures require a source build,
-which supports Python 3.9 or later and needs a C++17 compiler, CMake and the
-Python development headers. The root `pyproject.toml` builds the native extension and the
-`python/smsd` package.
+Wheels are built for the standard CPython 3.14 interpreter (`cp314`), not the
+free-threaded build (`cp314t`). Other interpreters and platforms need a source
+build, with Python 3.9 or later, a C++17 compiler, CMake and the Python
+development headers.
 
 Linux or macOS, from the repository root:
 
@@ -232,8 +150,8 @@ py -3 -m venv .venv
 .\.venv\Scripts\python.exe -m build --wheel -Ccmake.define.SMSD_BUILD_METAL=OFF -Ccmake.define.SMSD_BUILD_CUDA=OFF
 ```
 
-The wheel is written to `dist/`; install it with the same environment's
-Python. For development, install the checkout in editable mode with the test
+The wheel is written to `dist/`; install it with the same environment's Python.
+For development, install the checkout in editable mode with the test
 dependencies, then run the tests:
 
 ```bash
@@ -242,25 +160,34 @@ python -c "import smsd; assert smsd.Substructure.find('CC').match('CCC').found"
 python -m pytest python/tests -q
 ```
 
-Metal (macOS) and CUDA are optional batch-screening backends. Source builds
-enable each one when its toolkit is found; set `SMSD_BUILD_METAL` and
-`SMSD_BUILD_CUDA` to `OFF`, as above, for a CPU-only build. RDKit is optional
-and is needed only for RDKit molecule conversion and RDKit image depiction
-(`python -m pip install "smsd[rdkit]==8.0.0"`). See the [Python guide](PYTHON.md) for
-examples and build options.
+Metal (macOS) and CUDA batch screening are optional: a source build enables
+each one when its toolkit is found, and setting `SMSD_BUILD_METAL` and
+`SMSD_BUILD_CUDA` to `OFF`, as above, gives a CPU-only build. RDKit is needed
+only for RDKit molecule conversion and RDKit depiction
+(`python -m pip install "smsd[rdkit]==8.0.0"`). See the
+[Python guide](PYTHON.md) for examples and build options.
 
 ## Docker
 
-The repository `Dockerfile` builds an image that runs the Java CLI. From the
-repository root:
+The repository `Dockerfile` builds an image that runs the Java CLI:
 
 ```bash
 docker build -t smsd .
 docker run --rm smsd --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 ```
 
-The image holds `LICENSE`, `NOTICE` and the CDK licence files
-(`licenses/cdk/`) in `/usr/share/doc/smsd`.
+The image holds `LICENSE`, `NOTICE` and the CDK licence files in
+`/usr/share/doc/smsd`.
 
-A manually dispatched release build can also attach the Java CLI image as a
-compressed archive (`smsd-cli-image.tar.gz`), which `docker load` imports.
+## Check the documented examples
+
+After a source build, this runs every Python, Java and C++ code block in the
+guides; examples that need RDKit are skipped when it is absent:
+
+```bash
+python scripts/check_examples.py \
+  --jar java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar \
+  --report build/example-check.json
+```
+
+Add `--languages python` (or `java`, `cpp`) to check one language.

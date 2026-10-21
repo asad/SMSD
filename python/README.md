@@ -4,15 +4,15 @@
   </a>
 </p>
 
-# SMSD Pro for Python
+# SMSD Pro™ for Python
 
 [![PyPI](https://img.shields.io/pypi/v/smsd)](https://pypi.org/project/smsd/)
 [![Licence](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/asad/SMSD/blob/master/LICENSE)
 
 SMSD Pro provides substructure search, maximum common substructure (MCS)
 search, fingerprints and similarity screening for chemical graphs. Core matching
-needs no RDKit, CDK or Java. RDKit is optional and is used only for RDKit
-molecule conversion and the RDKit image helpers.
+needs no RDKit, CDK or Java; RDKit is optional, for RDKit molecules and the
+RDKit image helpers.
 
 ## Installation
 
@@ -52,18 +52,16 @@ result = smsd.MCS.find(query).with_timeout(1000).match(target)
 print(f"MCS: {result.best.atom_count} atoms")  # MCS: 6 atoms
 ```
 
-`Substructure` and `MCS` prepare a query once and expose `match`, `match_all`
-and `match_many`. Each match maps query atom indices to target atom indices and
-records the selected bonds and fragments. A search that stops early may return
-a valid partial answer, so check `result.optimal`, `result.complete` and
-`result.status` before treating it as a proved optimum. An empty incomplete
-result does not prove absence.
+`Substructure` and `MCS` prepare a query once and provide `match`,
+`match_all` and `match_many`. Each match maps query to target atom indices and
+records the selected bonds and fragments. A search that stops early can return
+a valid but unproved answer, so check `result.optimal`, `result.complete` and
+`result.status`; an empty incomplete result does not prove absence.
 
 `MCS` defaults to a connected maximum common induced subgraph (MCIS), ranked by
 atoms and then bonds. `MCS.Objective.MCES` selects the maximum common edge
-subgraph (MCES), which maximises common bonds and then their incident atoms and
-never adds isolated atoms. `with_fragments()` permits disconnected common
-graphs.
+subgraph (MCES), which maximises common bonds, then their atoms, and adds no
+isolated atoms. `with_fragments()` allows disconnected common graphs.
 
 ## Batch search
 
@@ -82,17 +80,17 @@ results = smsd.MCS.find(query).with_timeout(1000).match_many(targets)
 assert [result.best.atom_count for result in results] == [6, 2]
 ```
 
-`match_all` returns up to 1,000 matches by default, including symmetry-related
-mappings; check `complete` before treating an enumeration as exhaustive.
-`TargetCorpus` holds a collection for repeated queries. Batch calls use OpenMP
-and run sequentially when it is unavailable.
+`match_all` returns up to 1,000 matches by default, symmetry-related mappings
+included; check `complete` before treating an enumeration as exhaustive.
+`TargetCorpus` holds targets for repeated queries. Batch calls use OpenMP, or
+run sequentially without it.
 
 ## Fingerprints
 
 Radius 2 gives ECFP4; `mode="fcfp"` gives functional-class fingerprints
 ([Rogers and Hahn, 2010](https://doi.org/10.1021/ci100050t)). `similarity()` is
-an upper bound for screening, not a fingerprint metric; use the fingerprint
-coefficients for fingerprint similarity:
+a screening bound, not a fingerprint metric; use the coefficients below for
+fingerprint similarity:
 
 ```python
 import smsd
@@ -122,14 +120,14 @@ assert result.best.atom_count == 6
 ```
 
 Conversion passes through SMILES, so coordinates, data fields and query
-predicates are not transferred. `from_openbabel` and `to_openbabel` provide the
-same bridge for Open Babel, without its original atom numbering. See
+predicates are not transferred. `from_openbabel` and `to_openbabel` do the same
+for Open Babel, without its atom numbering. See
 [input atom numbering](https://github.com/asad/SMSD/blob/master/docs/PYTHON.md#input-atom-numbering).
 
 ## Documentation
 
 - [Python guide](https://github.com/asad/SMSD/blob/master/docs/PYTHON.md):
-  search model, chemistry options, timeouts and the full API reference.
+  searches, chemistry options, timeouts and the full API reference.
 - [Python examples](https://github.com/asad/SMSD/blob/master/docs/EXAMPLES.md):
   fingerprints, drawing, layout, stereo, MOL and SDF files, R-groups and
   scaffolds.
@@ -153,10 +151,9 @@ python -m pip install -e ".[dev]"
 python -m build
 ```
 
-Metal and CUDA are optional source-build backends that need compatible tools
-and hardware. They can compute the initial atom-compatibility filter; search
-and proof run on the CPU. `gpu_device_info()` reports the backend available at
-run time, not the backend a particular call used.
+Metal and CUDA backends are optional in source builds and need a compatible
+toolchain and hardware. `gpu_device_info()` reports the backend available at
+run time, not the one a particular call used.
 
 ## Other languages
 
@@ -182,7 +179,7 @@ For the original SMSD toolkit, please also cite:
 > DOI: [10.1186/1758-2946-1-12](https://doi.org/10.1186/1758-2946-1-12)
 
 A machine-readable [CITATION.cff](https://github.com/asad/SMSD/blob/master/CITATION.cff)
-is provided for citation tools.
+is provided for citation software.
 
 ## Licence
 

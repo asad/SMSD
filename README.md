@@ -26,21 +26,15 @@ at its timeout, and maps atoms by their zero-based indices in the input molecule
 
 ## Installation
 
-This page describes version 8.0.0. It is distributed as `smsd` on
-[PyPI](https://pypi.org/project/smsd/), as `com.bioinceptionlabs:smsd`
-(library) and `com.bioinceptionlabs:smsd-cli` (command-line tool) on
-[Maven Central](https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd)
-and as release files on the
-[GitHub releases page](https://github.com/asad/SMSD/releases), and it can be
-built from this repository. The [release notes](docs/RELEASE_NOTES.md) list the
-release files and their platform requirements.
+| Language | Package | Requirements |
+| --- | --- | --- |
+| Python | `smsd` on [PyPI](https://pypi.org/project/smsd/) | Python 3.9 or later (wheels for CPython 3.14); RDKit optional |
+| Java | `com.bioinceptionlabs:smsd` (library) and `com.bioinceptionlabs:smsd-cli` (command-line tool) on [Maven Central](https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd) | Java 8 or later; CDK 2.13 |
+| C++ | Header-only library in `cpp/include` | A C++17 compiler |
 
-The C++ and Python builds need a C++17 compiler, and the Python package supports
-Python 3.9 or later. The Java build uses Maven and a JDK, with Java 25 LTS
-preferred. The [installation guide](docs/HOWTO-INSTALL.md) covers platform
-requirements, Python wheels,
-[Java CLI installers](docs/HOWTO-INSTALL.md#java-cli-installers), Docker and
-test commands.
+Release files are on the [GitHub releases page](https://github.com/asad/SMSD/releases).
+The [installation guide](docs/HOWTO-INSTALL.md) covers platform requirements,
+downloads and source builds.
 
 ## Quick start
 
@@ -159,6 +153,25 @@ print("MCS atoms:", result.best.atom_count)
 See the [Python package](python/README.md), the [Python guide](docs/PYTHON.md)
 and the [Python examples](docs/EXAMPLES.md).
 
+### Screening
+
+Rank a library by ECFP4 similarity, then search it by substructure as a
+prepared corpus; the search can use every core:
+
+```python
+import smsd
+
+library = ["CC(=O)Oc1ccccc1", "OC(=O)c1ccccc1O", "CC(=O)Nc1ccc(O)cc1", "c1ccccc1"]
+ranked = smsd.batch_similarity("CC(=O)Oc1ccccc1C(=O)O", library)  # aspirin
+corpus = smsd.TargetCorpus.from_smiles(library)
+corpus.prewarm()
+acids = smsd.Substructure.smarts("C(=O)[OX2H1]").match_many(corpus, num_threads=0)
+print([library[i] for i, _ in ranked][:2], sum(r.found for r in acids))
+```
+
+The [Python examples](docs/EXAMPLES.md#screening) screen a library of 2,744
+molecules and filter by MCS similarity before computing the MCS.
+
 ### Command line
 
 The Java build also produces the command-line tool, as a self-contained JAR:
@@ -183,10 +196,13 @@ and SDF files as batch targets.
   ring membership, stereo and tautomers.
 - **Prepared queries** that can be searched against many targets, in turn or on
   several threads.
-- **Fingerprints** and similarity metrics for screening. The native library
-  screens batches with OpenMP where available and, in source builds, can use optional CUDA and
-  Apple Metal backends (`SMSD_BUILD_CUDA`, `SMSD_BUILD_METAL`).
-- **Further tools**, including R-group decomposition, MOL and SDF input,
+- **Fingerprints for screening:** circular (ECFP and FCFP), path,
+  topological-torsion and structural-key fingerprints, including the 166 MACCS
+  keys, configured once with `FingerprintOptions` (rings, ring sizes, R/S and
+  E/Z, fragments, Murcko framework) and giving the same bits in C++, Java and
+  Python. Batch searches can use every processor core, and C++ source builds
+  can screen by MCS similarity on CUDA or Apple Metal.
+- **Utilities**, including R-group decomposition, MOL and SDF input,
   SVG depiction (C++ and Python) and molecular standardisation (Java).
 
 ### Search calls
@@ -199,50 +215,28 @@ and SDF files as batch targets.
 | All optimal MCS mappings, or all substructure embeddings, up to a limit (default 1,000) | `matchAll(target, limit)` | `match_all(target, limit)` |
 | Independent searches over a collection of targets | `matchMany(targets)` | `match_many(targets)` |
 
-`MCS` defaults to a connected MCIS. Without atom weights, MCIS preserves both
-edges and non-edges between the mapped atoms and maximises atoms, then bonds.
-MCES selects compatible common edges and maximises bonds, then their incident
-atoms. A search that reaches its timeout can still return a valid mapping;
-check the optimality and completion flags before treating it as a proved optimum.
-
-## Performance
-
-No performance figures are published for 8.0.0 on this page. The
-[benchmark guide](benchmarks/README.md) defines how they are produced: shared
-prepared-query workloads for C++, Java and Python; independent validation of
-every returned mapping before any timing is analysed; and separate reporting of
-completed, stopped and timed-out searches. Release checks for 8.0.0 are recorded
-in the [validation record](docs/VALIDATION_8.0.0.md) as they complete.
+`MCS` defaults to a connected MCIS. Without atom weights, MCIS maximises mapped
+atoms, then bonds; MCES maximises common bonds, then their atoms. A search that
+reaches its timeout can still return a valid mapping, so check the completion
+and optimality flags before treating it as a proved optimum.
 
 ## Documentation
 
 | Guide | Contents |
 | --- | --- |
-| [Installation](docs/HOWTO-INSTALL.md) | Platform requirements, installers and source builds |
+| [Installation](docs/HOWTO-INSTALL.md) | Platform requirements, downloads and source builds |
 | [C++ guide](docs/CPP.md) | Header-only library, chemistry options and file input |
 | [Java guide](docs/JAVA.md) | CDK molecules, search, fingerprints, R-groups and the command-line tool |
 | [Python guide](docs/PYTHON.md) | Search, results, chemistry options and RDKit integration |
-| [Python examples](docs/EXAMPLES.md) | Fingerprints, depiction, layout, stereo, files and R-groups |
-| [Search algorithms](docs/ALGORITHMS.md) | Search stages, result semantics and differences between the languages |
-| [Benchmarks](benchmarks/README.md) | Workloads, mapping validation and measurement protocol |
+| [Python examples](docs/EXAMPLES.md) | Fingerprints, screening, depiction, layout, stereo, files and R-groups |
+| [Search algorithms](docs/ALGORITHMS.md) | Search guarantees, result semantics and differences between the languages |
+| [Benchmarks](benchmarks/README.md) | How to run the benchmarks and report results |
 | [Validation record](docs/VALIDATION_8.0.0.md) | Release checks for 8.0.0 |
-| [Release notes](docs/RELEASE_NOTES.md) | Highlights, downloads, platform requirements and upgrade notes for 8.0.0 |
-| [Changelog](CHANGELOG.md) | What 8.0.0 provides: API, search behaviour, chemistry, fingerprints and packaging |
+| [Release notes](docs/RELEASE_NOTES.md) | Highlights, downloads and upgrade notes for 8.0.0 |
+| [Changelog](CHANGELOG.md) | Changes in 8.0.0 |
 
-The [Java guide](docs/JAVA.md#api-reference) explains how to
-generate the Javadoc reference from this checkout.
-
-To run every Python, Java and C++ code block in these guides, build the
-current source, then run:
-
-```bash
-python scripts/check_examples.py \
-  --jar java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar \
-  --report build/example-check.json
-```
-
-Use `--languages python` to check one language. Examples that need RDKit are
-skipped when it is not installed, and the report lists every failure.
+The [Java guide](docs/JAVA.md#api-reference) explains how to generate the
+Javadoc reference.
 
 ## Licence
 
@@ -251,9 +245,9 @@ apply to academic and commercial use, with no fee or registration. Redistributio
 must include the [LICENSE](LICENSE) and [NOTICE](NOTICE) files and retain the
 copyright notices; the NOTICE file also sets out the trademark terms. Bundled
 dependencies carry their own licence notices. The Java CLI JAR with
-dependencies, the portable CLI archive, the CLI installers and the Docker image
-bundle CDK under the [LGPL-2.1](licenses/cdk/README.md); for the runtimes that Python
-wheels can bundle, see the [LLVM OpenMP](licenses/libomp/LICENSE.TXT),
+dependencies, the portable CLI archive and the Docker image bundle CDK under
+the [LGPL-2.1](licenses/cdk/README.md); for the runtimes that Python wheels can
+bundle, see the [LLVM OpenMP](licenses/libomp/LICENSE.TXT),
 [GCC OpenMP](licenses/libgomp/README.md) and
 [Microsoft C++ and OpenMP](licenses/msvc/README.md) notices.
 

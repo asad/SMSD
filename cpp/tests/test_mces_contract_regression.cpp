@@ -470,7 +470,9 @@ static void kindsAddNoPairTable() {
     const detail::Kinds kinds(rows, atoms, atoms, clock);
     trackAllocations = false;
     require(kinds.queryKinds == atoms && kinds.targetKinds == atoms && kinds.classes == atoms, "one kind and class for each atom");
-    require(largestAllocation <= rows.size() * sizeof(uint64_t), "the kinds allocated a table of every pair of kinds");
+    // The transposed rows are as large as the rows themselves; the allowance covers allocator
+    // bookkeeping, such as the alignment padding MSVC adds to large blocks.
+    require(largestAllocation <= rows.size() * sizeof(uint64_t) + 4096, "the kinds allocated a table of every pair of kinds");
     for (int atom = 0; atom < atoms; atom += 37) {
         require(kinds.matches(kinds.queryKind[atom], kinds.targetKind[image(atom)]), "a pair of the rows must match");
         require(!kinds.matches(kinds.queryKind[atom], kinds.targetKind[image(atom + 1)]), "a pair not in the rows must not match");

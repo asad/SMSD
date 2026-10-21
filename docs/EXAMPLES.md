@@ -1,11 +1,9 @@
 # SMSD Pro Python examples
 
-These runnable examples cover the `smsd` Python package beyond molecule search:
-fingerprints, drawing, layout, stereo, MOL and SDF files, R-groups, scaffolds,
-graph utilities and atom maps. Each block is self-contained; blocks that write
-files create them in the current directory. Substructure search, maximum common
-substructure (MCS) search, chemistry options, timeouts and the full API
-reference are in the [Python guide](PYTHON.md).
+Runnable examples for the `smsd` Python package beyond molecule search. Each
+block is self-contained, and blocks that write files create them in the current
+directory. Searches, options and the full API reference are in the
+[Python guide](PYTHON.md).
 
 ## Fingerprints and similarity
 
@@ -22,11 +20,11 @@ torsion = smsd.topological_torsion(mol, fp_size=2048)
 assert fp and counts and fcfp and torsion
 ```
 
-ECFP describes structural environments and FCFP describes functional classes
+ECFP describes structural environments and FCFP functional classes
 ([Rogers and Hahn, 2010](https://doi.org/10.1021/ci100050t)). Binary
-fingerprints contain set bit positions; count fingerprints contain
-`(position, count)` pairs. No fingerprint suits every similarity or
-machine-learning task, so validate the representation and thresholds on your own data.
+fingerprints hold set bit positions; count fingerprints hold
+`(position, count)` pairs. Choose the fingerprint and threshold on your own
+data.
 
 ### Binary and count metrics
 
@@ -54,17 +52,92 @@ hex_string = smsd.to_hex(fp1, fp_size=2048)
 assert set(smsd.from_hex(hex_string)) == set(fp1)
 ```
 
-`count_dice()` and `count_cosine()` require dense vectors; the sparse count
-helpers are `count_tanimoto_coefficient()` and `count_overlap_coefficient()`.
-Binary `tanimoto_coefficient()` compares set positions, even for count input,
-and does not retain feature multiplicities. Two empty fingerprints score 1.0
-with `tanimoto_coefficient()` and `overlap_coefficient()`, as identical empty
-sets, in C++, Java and Python.
+`count_dice()` and `count_cosine()` accept dense vectors, `(position, count)`
+pairs or dictionaries; `count_tanimoto_coefficient()` and
+`count_overlap_coefficient()` take pairs. Binary `tanimoto_coefficient()`
+compares set positions only, even for count input. Two empty fingerprints
+score 1.0 with `tanimoto_coefficient()` and `overlap_coefficient()`.
+
+### Configurable fingerprints
+
+```python
+import smsd
+
+aspirin = "CC(=O)Oc1ccccc1C(=O)O"
+# ECFP4 with ring-size and stereo terms; the default ECFP options give the
+# same bits as circular_fingerprint().
+options = smsd.FingerprintOptions(family="ecfp", ring_size=True, cip_atoms=True, cip_bonds=True)
+fp = smsd.fingerprint(aspirin, options=options)
+keys = smsd.fingerprint(aspirin, options=smsd.FingerprintOptions.maccs())  # 166 MACCS keys
+assert fp and keys
+```
+
+The same `FingerprintOptions` give the same bits in C++ and Java.
+
+## Screening
+
+### Rank a small set by similarity
+
+```python
+import smsd
+
+query = "CC(=O)Oc1ccccc1C(=O)O"                    # aspirin
+library = ["OC(=O)c1ccccc1O", "CC(=O)Nc1ccc(O)cc1", "c1ccccc1", "CC(=O)Oc1ccccc1"]
+ranked = smsd.batch_similarity(query, library)    # (index, Tanimoto), most similar first
+assert library[ranked[0][0]] == "CC(=O)Oc1ccccc1"
+for index, score in ranked:
+    print(f"{score:.2f}  {library[index]}")
+```
+
+### Screen a large library, then confirm by substructure
+
+```python
+import itertools
+import smsd
+
+groups = ["C", "CC", "OC", "N", "O", "F", "Cl", "Br", "C#N", "C(F)(F)F",
+          "C(=O)O", "C(=O)N", "S(=O)(=O)N", "OCC"]
+library = [f"c1c({a})cc({b})cc1{c}" for a, b, c in itertools.product(groups, repeat=3)]
+assert len(library) == 2744
+
+corpus = smsd.TargetCorpus.from_smiles(library)   # parse once, search many times
+corpus.prewarm()
+
+query = "c1c(C)cc(O)cc1C(=O)O"
+nearest = smsd.batch_similarity(query, library)[:10]
+
+acid = smsd.Substructure.smarts("C(=O)[OX2H1]")
+results = acid.match_many(corpus, num_threads=0)  # every processor core
+hits = [library[i] for i, result in enumerate(results) if result.found]
+assert library[nearest[0][0]] == query and query in hits
+```
+
+With OpenMP, as in the published wheels, `num_threads=0` uses every core unless
+`OMP_NUM_THREADS` sets fewer; results keep the order of the targets.
+
+### Screen by MCS similarity, then compute the MCS
+
+```python
+import itertools
+import smsd
+
+groups = ["C", "CC", "OC", "N", "O", "F", "Cl", "C(=O)O"]
+library = [f"c1c({a})cc({b})cc1{c}" for a, b, c in itertools.product(groups, repeat=3)]
+
+query = "c1c(C)cc(O)cc1C(=O)O"
+candidates = smsd.screen_targets(query, library, 0.8)   # targets that can reach 0.8
+results = smsd.MCS.find(query).with_timeout(1000).match_many([library[i] for i in candidates])
+assert candidates and all(result.found for result in results)
+```
+
+`screen_targets` bounds the atom-count Tanimoto similarity of the MCS from
+above, so under the same chemistry options it never rejects a target able to
+reach the threshold, and the MCS runs only where it can matter.
 
 ## SVG drawing
 
-The native SVG renderer does not need RDKit. Check each drawing before using it
-in a report, as layout and font rendering depend on the molecule and the viewer.
+The native SVG renderer needs no RDKit. Check each drawing before publishing
+it, as fonts depend on the viewer.
 
 ```python
 import xml.etree.ElementTree as ET
@@ -102,13 +175,13 @@ svg = smsd.depict_svg("c1ccc2c(c1)cc1ccccc1c2", bond_length=50,
 smsd.save_svg(svg, "large.svg")
 ```
 
-Keyword arguments such as `bond_length=50` override `DepictOptions`
-attributes; when `opts` is also passed, they are set on that object.
+Keyword arguments such as `bond_length=50` set `DepictOptions` attributes, on
+`opts` when it is passed.
 
 ### Optional conversion to PNG
 
-After creating `aspirin.svg` as above, use an external converter. Inkscape and
-CairoSVG are installed separately:
+Convert `aspirin.svg` from above with Inkscape or CairoSVG, installed
+separately:
 
 ```bash
 inkscape aspirin.svg --export-type=png --export-filename=aspirin.png --export-dpi=600
@@ -131,9 +204,8 @@ coords_3d = smsd.generate_coords_3d(mol, target_bond_length=1.5)
 assert len(coords_3d) == len(mol) and all(len(point) == 3 for point in coords_3d)
 ```
 
-A `layout_quality()` score of 0.0 is ideal; lower is better. Three-dimensional
-coordinates provide a starting geometry, not a validated conformer ensemble or
-energy minimum.
+A `layout_quality()` score of 0.0 is ideal. Three-dimensional coordinates are
+a starting geometry, not a validated conformer or energy minimum.
 
 ### Refinement
 
@@ -148,8 +220,8 @@ crossings, coords = smsd.reduce_crossings(mol, coords, max_iter=100)
 assert len(coords) == len(mol)
 ```
 
-Refinement does not improve every layout. Compare the results with
-`layout_quality()` and inspect the drawing.
+Refinement does not improve every layout; compare `layout_quality()` and
+inspect the drawing.
 
 ### Transforms
 
@@ -173,9 +245,7 @@ box = smsd.bounding_box_2d(aligned)
 assert len(aligned) == len(mol) and len(box) == 4 and rmsd >= 0.0
 ```
 
-Rotation angles are in radians. Generated and refined coordinates can change
-with the algorithm or its settings, so save them when exact reproducibility
-matters.
+Angles are in radians. Save coordinates when exact reproducibility matters.
 
 ## Stereo assignment
 
@@ -190,8 +260,8 @@ descriptors = smsd.assign_cip(alanine)
 assert descriptors.rs_labels[1] == smsd.RSLabel.S
 ```
 
-Write explicit stereo markers in the SMILES when the assignment should reflect
-the input stereochemistry. Unspecified stereo is not a resolved configuration.
+Write explicit stereo markers in the SMILES; unspecified stereo is not
+assigned.
 
 ## MOL and SDF files
 
@@ -220,11 +290,10 @@ assert [len(mol) for mol in loaded] == [3, 6]
 smsd.write_sdf(loaded, "output.sdf")
 ```
 
-`read_sdf()` loads the whole file, and malformed records become empty graphs,
-so check each record before use. For large files, split the records and pass
-each to `read_mol_block()`. The V2000 format holds at most 999 atoms and 999
-bonds, so `write_mol_block()` and the SDF writers switch to V3000 for larger
-graphs.
+`read_sdf()` loads the whole file and turns malformed records into empty
+graphs, so check each record. For large files, pass records one at a time to
+`read_mol_block()`. `write_mol_block()` and the SDF writers switch to V3000
+above 999 atoms or bonds.
 
 ## R-group decomposition
 
@@ -238,8 +307,8 @@ assert [result["search"].found for result in results] == [True, True, False]
 assert results[0]["core"].n == 6 and results[0]["rgroups"]["R1"].n == 1
 ```
 
-Each entry holds the core graph, the substituent graphs and the search result
-for the core, which shows whether a missing core was proved absent.
+Each entry holds the core graph, the substituent graphs and the core's search
+result, which shows whether a missing core was proved absent.
 
 ## Scaffolds
 
@@ -254,10 +323,9 @@ result = smsd.MCS.find(scaffold).match("Oc1ccccc1")
 assert result.best.atom_count == 6
 ```
 
-The scaffold retains ring systems, the paths that connect them and every atom
-joined to either by a double or triple bond, so that carbonyl groups stay as in
-the Bemis and Murcko scaffold. An acyclic input is returned unchanged rather
-than as an empty scaffold.
+The Bemis–Murcko scaffold keeps ring systems, their linkers and atoms double-
+or triple-bonded to them, such as carbonyl oxygens. An acyclic input is
+returned unchanged.
 
 ## Graph utilities
 
@@ -272,9 +340,8 @@ assert smsd.same_canonical_graph(smsd.parse_smiles("c1ccccc1"),
                                  smsd.parse_smiles("C1=CC=CC=C1"))
 ```
 
-Canonical graph comparison is a structural check. To compare stereoisomers in a
-search, enable the stereo options described in the
-[Python guide](PYTHON.md#chemistry-options).
+To compare stereoisomers in a search, enable the stereo
+[chemistry options](PYTHON.md#chemistry-options).
 
 ## Atom maps
 
@@ -287,10 +354,9 @@ assert clean == "[CH3][C](=[O])[OH]"
 assert len(smsd.parse_smiles(clean)) == 4
 ```
 
-Use `strip_atom_maps()` rather than a regular expression. Outside brackets, a
-colon is an aromatic bond and can precede a ring-closure digit, so a text-only
-replacement can alter the structure. `parse_mapped_smiles()` strips the maps and
-parses in one call.
+Use `strip_atom_maps()` rather than a regular expression: outside brackets, a
+colon is an aromatic bond, so text replacement can alter the structure.
+`parse_mapped_smiles()` strips and parses in one call.
 
 ## Further reading
 

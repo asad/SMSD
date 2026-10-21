@@ -13,9 +13,8 @@ implementation; it does not need Java or RDKit.
 | `bindings/pybind11/` | Python extension bindings |
 | `src/rdkit_adapter.cpp` | Optional RDKit adapter |
 
-This page covers building and integration. The [C++ guide](../docs/CPP.md) is
-the API reference, and the [changelog](../CHANGELOG.md) describes what the
-release provides.
+This page covers building and integration; the [C++ guide](../docs/CPP.md) is
+the API reference.
 
 ## Quick start
 
@@ -50,27 +49,23 @@ zero-based query-to-target atom indices.
 
 `Substructure` finds full-query embeddings of a molecule or SMARTS query. `MCS`
 defaults to the connected maximum common induced subgraph (MCIS), which
-maximises mapped atoms and then bonds while preserving both edges and non-edges
-between mapped atoms; the maximum common edge subgraph (MCES) objective
-maximises common bonds instead. Both classes provide `match`, `matchAll` and
-`matchMany`, and every result reports its stopping status and whether it is
-optimal and complete. Check these fields before treating a bounded result as a
-proved optimum or a complete enumeration.
+maximises mapped atoms, then bonds, preserving edges and non-edges between
+mapped atoms; the maximum common edge subgraph (MCES) objective maximises
+common bonds instead. Both provide `match`, `matchAll` and `matchMany`, and
+every result reports its stopping status and whether it is optimal and
+complete; check these before treating a bounded result as proved.
 
 ## Build and test
 
-Use a C++17 compiler and CMake 3.20 or later for these commands, which run from
-the repository root (`ctest --test-dir` needs CMake 3.20); the library itself
-supports CMake 3.18 or later. They work with single-configuration and Visual
-Studio generators:
+These commands run from the repository root with a C++17 compiler and CMake
+3.20 or later (for `ctest --test-dir`); the library itself needs CMake 3.18 or
+later. They work with single-configuration and Visual Studio generators:
 
 ```text
 cmake -S cpp -B build/cpp -DCMAKE_BUILD_TYPE=Debug -DSMSD_BUILD_METAL=OFF -DSMSD_BUILD_CUDA=OFF
 cmake --build build/cpp --config Debug --parallel 4
 ctest --test-dir build/cpp --build-config Debug --output-on-failure
 ```
-
-Assertions stay enabled in the test targets, including Release builds.
 
 | CMake option | Default | Effect |
 | --- | --- | --- |
@@ -84,11 +79,11 @@ Assertions stay enabled in the test targets, including Release builds.
 
 Python packages are built from the repository root with its `pyproject.toml`;
 see the [Python module](../python/README.md). The RDKit adapter's conversion
-rules are described under
-[Optional native adapter](../docs/CPP.md#optional-native-adapter). The Metal
-and CUDA libraries are not part of the installed package, so GPU screening is
-available only to programs built in the same CMake project. The release Python
-wheels are built without Metal or CUDA.
+rules are under [Optional native
+adapter](../docs/CPP.md#optional-native-adapter). The Metal and CUDA libraries
+are not part of the installed package, so GPU screening is available only to
+programs built in the same CMake project; the Python wheels are built without
+Metal or CUDA.
 
 ## Install and use with CMake
 
@@ -99,9 +94,9 @@ cmake --install build/cpp --config Debug --prefix build/cpp-install
 ```
 
 No compiled library is needed for the core. The imported target supplies C++17,
-threads and, when configured, OpenMP; with `SMSD_WITH_RDKIT=ON` the package also
-exports `smsd::smsd_rdkit`. To use the package, save the quick-start program as
-`example/main.cpp` and this file as `example/CMakeLists.txt`:
+threads and, when configured, OpenMP; with `SMSD_WITH_RDKIT=ON` the package
+also exports `smsd::smsd_rdkit`. To use the package, save the quick-start
+program as `example/main.cpp` and this file as `example/CMakeLists.txt`:
 
 ```cmake
 cmake_minimum_required(VERSION 3.18)
@@ -126,13 +121,11 @@ accepts any later 8.x installation.
 
 ## Documentation
 
-- [C++ guide](../docs/CPP.md): API reference, search and chemistry options,
-  fingerprints, file input and depiction.
+- [C++ guide](../docs/CPP.md): API reference.
 - [Installation guide](../docs/HOWTO-INSTALL.md): platform requirements and
   source builds.
-- [Validation record](../docs/VALIDATION_8.0.0.md): release checks for 8.0.0.
 - [Benchmark guide](../benchmarks/README.md): workloads shared by C++, Java and
-  Python, and mapping validation.
+  Python.
 - [Changelog](../CHANGELOG.md): what the release provides.
 
 ## Licence
