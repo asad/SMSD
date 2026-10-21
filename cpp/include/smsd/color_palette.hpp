@@ -11,6 +11,7 @@
 #define SMSD_COLOR_PALETTE_HPP
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 
 namespace smsd {

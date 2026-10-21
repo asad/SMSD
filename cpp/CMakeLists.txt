@@ -178,8 +178,9 @@ if(SMSD_BUILD_TESTS)
     function(smsd_add_test name)
         add_executable(${name} ${ARGN})
         target_link_libraries(${name} PRIVATE smsd)
+        # Large test translation units exceed MSVC's default object-file section count.
         target_compile_options(${name} PRIVATE
-            $<$<CXX_COMPILER_ID:MSVC>:/UNDEBUG>
+            $<$<CXX_COMPILER_ID:MSVC>:/UNDEBUG /bigobj>
             $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-UNDEBUG>)
         add_test(NAME ${name} COMMAND ${name})
     endfunction()
