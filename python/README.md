@@ -101,8 +101,41 @@ score = smsd.tanimoto_coefficient(query_fp, target_fp)
 assert 0.0 <= score <= 1.0
 ```
 
-The [Python examples](https://github.com/asad/SMSD/blob/master/docs/EXAMPLES.md#fingerprints-and-similarity)
-cover count fingerprints and the other coefficients.
+`FingerprintOptions` configures circular, path, torsion and structural-key
+fingerprints, including the 166 MACCS keys, with the same bits as in C++ and
+Java:
+
+```python
+import smsd
+
+options = smsd.FingerprintOptions(family="ecfp", ring_size=True, cip_atoms=True)
+fp = smsd.fingerprint("CC(=O)Oc1ccccc1C(=O)O", options=options)
+keys = smsd.fingerprint("CC(=O)Oc1ccccc1C(=O)O", options=smsd.FingerprintOptions.maccs())
+assert fp and keys
+```
+
+### Screening
+
+Rank a library by ECFP4 similarity, then search it by substructure as a
+prepared corpus:
+
+```python
+import smsd
+
+library = ["CC(=O)Oc1ccccc1", "OC(=O)c1ccccc1O", "CC(=O)Nc1ccc(O)cc1", "c1ccccc1"]
+ranked = smsd.batch_similarity("CC(=O)Oc1ccccc1C(=O)O", library)  # (index, Tanimoto), most similar first
+corpus = smsd.TargetCorpus.from_smiles(library)
+corpus.prewarm()
+acids = smsd.Substructure.smarts("C(=O)[OX2H1]").match_many(corpus, num_threads=0)
+assert library[ranked[0][0]] == "CC(=O)Oc1ccccc1" and sum(r.found for r in acids) == 1
+```
+
+With OpenMP, as in the published wheels, `num_threads=0` uses every core
+unless `OMP_NUM_THREADS` sets fewer. The
+[Python examples](https://github.com/asad/SMSD/blob/master/docs/EXAMPLES.md#screening)
+screen a library of 2,744 molecules and set aside targets that cannot reach an
+MCS similarity threshold before computing the MCS; they also cover count
+fingerprints and the other coefficients.
 
 ## RDKit molecules
 

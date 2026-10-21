@@ -5,7 +5,7 @@ build-backend = "scikit_build_core.build"
 [project]
 name = "smsd"
 version = "8.0.0"
-description = "Molecular substructure and MCS search, fingerprints and similarity with optional tautomer matching and GPU screening"
+description = "Substructure and MCS search, fingerprints and similarity screening for chemical graphs, with optional tautomer-aware matching"
 readme = "python/README.md"
 license = {text = "Apache-2.0"}
 requires-python = ">=3.9"
@@ -29,18 +29,17 @@ classifiers = [
     "Operating System :: OS Independent",
     "Natural Language :: English",
 ]
-keywords = ["cheminformatics", "mcs", "substructure", "graph-matching", "chemistry", "smiles", "fingerprint", "ecfp", "tautomer", "gpu"]
+keywords = ["cheminformatics", "mcs", "maximum-common-substructure", "substructure", "graph-matching", "chemistry", "smiles", "smarts", "fingerprint", "ecfp", "maccs", "similarity", "screening", "tautomer"]
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0", "pytest-timeout>=2.0"]
 rdkit = ["rdkit"]
-gpu = ["nvidia-cuda-runtime-cu12>=12.0; platform_system!='Darwin'"]
 
 [project.urls]
 Homepage = "https://github.com/asad/SMSD"
 Repository = "https://github.com/asad/SMSD"
 Documentation = "https://github.com/asad/SMSD/blob/master/python/README.md"
-Changelog = "https://github.com/asad/SMSD/releases"
+Changelog = "https://github.com/asad/SMSD/blob/master/CHANGELOG.md"
 "Bug Tracker" = "https://github.com/asad/SMSD/issues"
 
 [tool.scikit-build]
