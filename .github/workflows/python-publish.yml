@@ -42,6 +42,15 @@ jobs:
           ref: ${{ inputs.release_tag }}
           fetch-depth: 0
           persist-credentials: false
+      - name: Restore the release files exactly as stored
+        # The source distribution must equal the frozen Git tree byte for byte, so no
+        # checkout line-ending conversion may apply to it.
+        shell: bash
+        run: |
+          printf '* -text -eol\n' > .git/info/attributes
+          git rm -r -q --cached .
+          git reset -q --hard
+          test -z "$(git status --porcelain)"
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.14'
