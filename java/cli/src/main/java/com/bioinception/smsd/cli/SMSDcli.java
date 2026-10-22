@@ -78,13 +78,29 @@ import picocli.CommandLine.Option;
     mixinStandardHelpOptions = true,
     exitCodeOnExecutionException = 2,
     footer = "Exit status: 0 = match, 1 = no match, 2 = invalid input, error or incomplete search.",
-    version = "SMSD Pro 8.0.0 — com.bioinceptionlabs",
+    versionProvider = SMSDcli.ManifestVersion.class,
     description =
         "SMSD — Substructure & MCS search engine by BioInception PVT LTD"
             + " (com.bioinceptionlabs).%nSupports substructure matching, MCS computation, SMARTS"
             + " queries, SDF batch processing,%nTanimoto similarity, and JSON/SMILES/MDL mapping"
             + " export.")
 public class SMSDcli implements Callable<Integer> {
+
+  /** The {@code --version} text, with the release version read from the JAR manifest. */
+  public static final class ManifestVersion implements CommandLine.IVersionProvider {
+    @Override
+    public String[] getVersion() {
+      Package cli = SMSDcli.class.getPackage();
+      return new String[] {versionLine(cli == null ? null : cli.getImplementationVersion())};
+    }
+  }
+
+  /** The version line for a manifest Implementation-Version, which is absent outside a JAR. */
+  static String versionLine(String implementationVersion) {
+    String version = implementationVersion == null || implementationVersion.trim().isEmpty()
+        ? "(development build)" : implementationVersion.trim();
+    return "SMSD Pro " + version + " — com.bioinceptionlabs";
+  }
 
   @Option(names = {"--Q"}, required = true,
       description = "Query type: SMI, SIG (SMARTS), MOL, ML2, PDB, CML.")
@@ -633,8 +649,73 @@ public class SMSDcli implements Callable<Integer> {
       }
     }
 
+    /**
+     * The SMILES with each atom written in capitals on a ring bond written ':' written aromatic, as
+     * the native reader reads it, so that CDK gives it the hydrogens and Kekulé structure of an
+     * aromatic atom while an atom in brackets keeps the hydrogens written for it. An atom with a
+     * double or triple ring bond as well keeps its symbol. The text is unchanged when CDK cannot
+     * read it, or its aromatic form.
+     */
+    static String aromaticBondAtoms(String value) {
+      if (value.indexOf(':') < 0) return value;
+      IAtomContainer raw;
+      try {
+        raw = SP.get().parseSmiles(value);
+        new MolGraph(raw);  // marks the ring atoms and bonds of raw
+      } catch (CDKException | RuntimeException unreadable) {
+        return value;
+      }
+      boolean[] aromaticRing = new boolean[raw.getAtomCount()], multipleRing = new boolean[raw.getAtomCount()];
+      for (IBond bond : raw.bonds()) {
+        if (!bond.isInRing()) continue;
+        boolean[] marks = bond.isAromatic() ? aromaticRing
+            : bond.getOrder() != null && bond.getOrder().numeric() > 1 ? multipleRing : null;
+        if (marks != null) marks[raw.indexOf(bond.getBegin())] = marks[raw.indexOf(bond.getEnd())] = true;
+      }
+      StringBuilder text = new StringBuilder(value);
+      boolean changed = false;
+      int atom = 0;
+      for (int at = 0; at < text.length() && !Character.isWhitespace(text.charAt(at)); at++) {
+        char c = text.charAt(at);
+        boolean rewrite = atom < aromaticRing.length && aromaticRing[atom] && !multipleRing[atom];
+        if (c == '[') {
+          int close = text.indexOf("]", at);
+          if (close < 0) return value;
+          int symbol = at + 1;
+          while (symbol < close && Character.isDigit(text.charAt(symbol))) symbol++;
+          int end = symbol < close && Character.isUpperCase(text.charAt(symbol)) ? symbol + 1 : symbol;
+          if (end < close && Character.isLowerCase(text.charAt(end))) end++;
+          if (rewrite && Arrays.asList("B", "C", "N", "O", "P", "S", "Se", "As").contains(text.substring(symbol, end))) {
+            text.setCharAt(symbol, Character.toLowerCase(text.charAt(symbol)));
+            changed = true;
+          }
+          atom++;
+          at = close;
+        } else if (c == '%') {
+          at = at + 1 < text.length() && text.charAt(at + 1) == '(' ? text.indexOf(")", at) : at + 2;
+          if (at < 0) return value;
+        } else if (Character.isLetter(c) || c == '*') {
+          boolean halogen = at + 1 < text.length() && (c == 'C' && text.charAt(at + 1) == 'l' || c == 'B' && text.charAt(at + 1) == 'r');
+          if (rewrite && !halogen && "BCNOPS".indexOf(c) >= 0) {
+            text.setCharAt(at, Character.toLowerCase(c));
+            changed = true;
+          }
+          if (halogen) at++;
+          atom++;
+        }
+      }
+      if (!changed || atom != raw.getAtomCount()) return value;
+      try {
+        SP.get().parseSmiles(text.toString());
+        return text.toString();
+      } catch (CDKException noKekuleStructure) {
+        return value;
+      }
+    }
+
     /** Retain aromatic directional carriers omitted by the CDK conversion. */
     private static IAtomContainer readSmiles(String value) throws Exception {
+      value = aromaticBondAtoms(value);
       IAtomContainer molecule;
       Graph graph = null;
       try {

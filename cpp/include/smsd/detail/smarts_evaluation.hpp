@@ -104,9 +104,8 @@ inline bool evalAtomPrim(const AtomExpr& expr, const MolGraph& g, int idx) {
             return computeHybridization(g, idx) == expr.intVal;
 
         case AtomPrimType::CHIRALITY:
-            // 0=unspecified/@? (match any), 1=CW/@, 2=CCW/@@
-            if (expr.intVal == 0) return true; // @? matches any chirality
-            if (g.tetraChirality.empty() || g.tetraChirality[idx] == 0) return false;
+            // 1 = @ (anticlockwise), 2 = @@ (clockwise); @? and @@? also accept no configuration
+            if (g.tetraChirality.empty() || g.tetraChirality[idx] == 0) return expr.orUnspecified;
             return g.tetraChirality[idx] == expr.intVal;
 
         case AtomPrimType::ATOM_CLASS:
@@ -243,7 +242,12 @@ template <typename ChiralityEvaluator>
 inline StereoTruth evalAtomExprWithStereo(const AtomExpr& expression, const MolGraph& graph,
                                           int atom, const ChiralityEvaluator& evaluateChirality) {
     if (expression.op == ExprOp::PRIM) {
-        if (expression.primType == AtomPrimType::CHIRALITY) return evaluateChirality(expression.intVal);
+        if (expression.primType == AtomPrimType::CHIRALITY) {
+            // @? and @@? accept an atom without a configuration whatever the mapping.
+            if (expression.orUnspecified && (graph.tetraChirality.empty() || graph.tetraChirality[atom] == 0))
+                return StereoTruth::TRUE_VALUE;
+            return evaluateChirality(expression);
+        }
         return evalAtomPrim(expression, graph, atom) ? StereoTruth::TRUE_VALUE : StereoTruth::FALSE_VALUE;
     }
     if (expression.op == ExprOp::NOT) {

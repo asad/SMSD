@@ -19,9 +19,25 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.openscience.cdk.interfaces.IAtomContainer;
 
-/** MOL and SDF valence and radical information supplies missing hydrogen counts. */
+/**
+ * MOL and SDF valence and radical information supplies missing hydrogen counts, and SMILES
+ * aromatic ring bonds give the hydrogen counts the native reader gives.
+ */
 class MolReaderHydrogenRegressionTest {
   @TempDir Path temporary;
+
+  @ParameterizedTest
+  @CsvSource(delimiter = '|', value = {"C1:C:C:C:C:C:1|1,1,1,1,1,1", "C1:N:C:[NH]:C:1|1,0,1,1,1",
+      "C1:[NH]:C:N:C:1|1,1,1,0,1", "C:C|3,3"})
+  void smilesAromaticRingBondsGiveAromaticHydrogens(String smiles, String hydrogens) throws Exception {
+    // A ':' ring bond is aromatic whatever case its atoms are written in, and an atom in brackets
+    // keeps the hydrogens written for it, as the native reader reads them.
+    MolGraph graph = new MolGraph(MolIO.loadTarget("SMI", smiles));
+    StringBuilder counts = new StringBuilder();
+    for (int atom = 0; atom < graph.atomCount(); atom++)
+      counts.append(atom == 0 ? "" : ",").append(graph.hydrogenCount(atom));
+    assertEquals(hydrogens, counts.toString(), smiles);
+  }
 
   private static String methylcarbene(int valence, int radical) {
     String atom = "    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0";

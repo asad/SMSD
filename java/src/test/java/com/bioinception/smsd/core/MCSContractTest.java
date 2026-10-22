@@ -132,6 +132,38 @@ class MCSContractTest {
       assertTrue(empty.optimal());
     }
   }
+  /**
+   * An atom or bond on a relevant ring is on a ring whatever its flags say, so a molecule built
+   * without ring flags still keeps its rings whole under complete rings, in both searches and in
+   * validateMapping, as in the native core.
+   */
+  @Test
+  void ringsWithoutFlagsStayWhole() throws Exception {
+    MolGraph parsed = rawGraph("CC1CCCCC1");
+    int[][] orders = new int[parsed.n][];
+    for (int atom = 0; atom < parsed.n; atom++) {
+      orders[atom] = new int[parsed.neighbors[atom].length];
+      for (int k = 0; k < orders[atom].length; k++) orders[atom][k] = parsed.bondOrder(atom, parsed.neighbors[atom][k]);
+    }
+    MolGraph unflagged = new MolGraph.Builder().atomCount(parsed.n).atomicNumbers(parsed.atomicNum)
+        .neighbors(parsed.neighbors).bondOrders(orders).build();
+    MolGraph chain = rawGraph("CCCCCCC");
+    for (MCS.Objective objective : MCS.Objective.values())
+      for (MCS.Connectivity connectivity : MCS.Connectivity.values()) {
+        MCS.Options options = new MCS.Options();
+        options.objective = objective;
+        options.connectivity = connectivity;
+        options.chemistry.completeRingsOnly = true;
+        SearchResult result = MCS.find(unflagged).withOptions(options).match(chain);
+        assertTrue(result.optimal(), objective + " " + connectivity);
+        assertEquals(0, result.found() ? result.matches().get(0).bondCount() : 0, objective + " " + connectivity);
+        Map<Integer, Integer> methylAndRingAtom = new TreeMap<>();
+        methylAndRingAtom.put(0, 0);
+        methylAndRingAtom.put(1, 1);
+        assertEquals(Collections.singletonList("Selected ring is incomplete"),
+            MCS.validateMapping(unflagged, chain, methylAndRingAtom, options), objective + " " + connectivity);
+      }
+  }
   @Test
   void ringConstraintsDoNotEraseAnAcyclicOptimum() throws Exception {
     MCS.Options options = new MCS.Options();
@@ -605,6 +637,34 @@ class MCSContractTest {
       assertTrue(result.optimal() && !result.matches().isEmpty(), label);
       assertEquals(26, result.matches().get(0).bondCount(), label);
       assertEquals(30, result.matches().get(0).atomCount(), label);
+    }
+  }
+
+  /**
+   * The last fragment search of this pair runs from the smaller molecule and needs more than
+   * three million nodes to prove its optimum. Raced against it after its first 2^19 nodes, the
+   * search the other way round raises its best mapping, and together they prove 29 common bonds
+   * on 31 atoms within a node limit of one million, whichever molecule is given as the query.
+   */
+  @Test
+  void racingTheOtherOrientationProvesTheFusedPair() throws Exception {
+    MolGraph query = rawGraph("CCC1(O)N2CCC3c4c(cccc4)NC3C(c3c(OC)cc4c(c3)C35CCN6CC=CC(CC)"
+        + "(C(OC(CC7CCCN7)=O)C(O)(C(OC)=O)C3N4C)C56)C(C(OC)=O)C(CC1)C2");
+    MolGraph target = rawGraph("Oc1nc(NCc2cc3[nH]ccc3cc2)nc(Nc2cc(Oc3ccccc3)ccc2)n1");
+    MCS.Options options = new MCS.Options();
+    options.objective = MCS.Objective.MCES;
+    options.connectivity = MCS.Connectivity.Fragments;
+    options.chemistry.matchBondOrder = ChemOptions.BondOrderMode.ANY;
+    options.chemistry.aromaticityMode = ChemOptions.AromaticityMode.FLEXIBLE;
+    options.timeoutMillis = 600_000;
+    options.nodeLimit = 1_000_000;
+    for (int turn = 0; turn < 2; turn++) {
+      SearchResult result = turn == 0 ? MCS.find(query).withOptions(options).match(target)
+                                      : MCS.find(target).withOptions(options).match(query);
+      String label = "turn " + turn + " nodes " + result.nodesVisited();
+      assertTrue(result.optimal() && !result.matches().isEmpty(), label);
+      assertEquals(29, result.matches().get(0).bondCount(), label);
+      assertEquals(31, result.matches().get(0).atomCount(), label);
     }
   }
 

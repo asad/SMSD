@@ -7,7 +7,7 @@
   <parent>
     <groupId>com.bioinceptionlabs</groupId>
     <artifactId>smsd-parent</artifactId>
-    <version>8.0.0</version>
+    <version>8.0.1</version>
   </parent>
 
   <!-- The command-line tool. Besides smsd-cli-<version>.jar it builds the
@@ -97,6 +97,9 @@
           <include>NOTICE</include>
           <include>licenses/cdk/LICENSE</include>
           <include>licenses/cdk/README.md</include>
+          <include>licenses/beam/LICENSE</include>
+          <include>licenses/vecmath/LICENSE</include>
+          <include>licenses/vecmath/README.md</include>
         </includes>
       </resource>
     </resources>
@@ -112,7 +115,8 @@
         <artifactId>maven-surefire-plugin</artifactId>
       </plugin>
 
-      <!-- A stable JPMS name for module-path users, as the library has. -->
+      <!-- A stable JPMS name for module-path users, as the library has, and the
+           Implementation-Version that the CLI version option reports. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
@@ -121,6 +125,9 @@
             <id>default-jar</id>
             <configuration>
               <archive>
+                <manifest>
+                  <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                </manifest>
                 <manifestEntries>
                   <Automatic-Module-Name>com.bioinception.smsd.cli</Automatic-Module-Name>
                 </manifestEntries>
@@ -183,6 +190,9 @@
               <transformers>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                   <mainClass>com.bioinception.smsd.cli.SMSDcli</mainClass>
+                  <manifestEntries>
+                    <Implementation-Version>${project.version}</Implementation-Version>
+                  </manifestEntries>
                 </transformer>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
               </transformers>

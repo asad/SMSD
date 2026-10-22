@@ -8,6 +8,9 @@ package com.bioinception.smsd.core;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import org.openscience.cdk.aromaticity.Kekulization;
+import org.openscience.cdk.exception.CDKException;
+import org.openscience.cdk.graph.Matching;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
 import org.openscience.cdk.interfaces.IBond;
@@ -134,7 +137,7 @@ public final class MolGraph {
   public static final float TW_HYDROXYPYRIMIDINE = 0.90f; // lactam tautomer dominant in N-heterocycles
   public static final float TW_PURINE_NH         = 0.78f; // N9-H dominant in purines (adenine, guanine)
   public static final float TW_DIKETONE_ENOL     = 0.72f; // 1,3-diketone enolisation: pKa ~8-11, pH-sensitive, ~28% enol at pH 7.4
-  public static final float TW_NITROSO_OXIME     = 0.95f; // oxime strongly dominant over nitroso (Karabina 2014)
+  public static final float TW_NITROSO_OXIME     = 0.95f; // motif T3, the imidic acid N=C-O: amide strongly dominant
   public static final float TW_CYANAMIDE         = 0.80f; // cyanamide dominant over carbodiimide
   public static final float TW_IMIDE             = 0.92f; // imide N-H dominant
   public static final float TW_AMIDINE          = 0.50f;  // symmetric — equal tautomers
@@ -250,6 +253,190 @@ public final class MolGraph {
     if (valence != null) return Math.max(0, valence - bondOrderSum);
     int unpaired = mol.getConnectedSingleElectronsCount(atom);
     return atomicNumber <= 1 ? 0 : defaultHydrogenCount(atomicNumber, false, bondOrderSum + unpaired, charge);
+  }
+
+  /**
+   * CDK reads a ring system written with ':' bonds between atoms written in capitals, such as
+   * C1:C:C:C:C:C:1, as aromatic single bonds without a Kekulé structure and gives its atoms the
+   * hydrogens of single bonds. In {@code hydrogens}, indexed as the atoms of {@code mol}, whose ring
+   * flags must be set and whose atoms {@code index} numbers, those atoms take the hydrogens of
+   * aromatic atoms instead, as the native SMILES reader and RDKit give them, except that a neutral
+   * nitrogen or phosphorus keeps its hydrogen where the system needs it for a Kekulé structure, as
+   * in pyrrole. Returns whether a count changed.
+   */
+  static boolean aromaticBondHydrogens(IAtomContainer mol, Map<IAtom, Integer> index, int[] hydrogens) {
+    int n = mol.getAtomCount();
+    int[] system = null;
+    for (IBond bond : mol.bonds())
+      if (bond.isAromatic() && bond.isInRing()) {
+        if (system == null) system = UnionFind.create(n);
+        UnionFind.join(system, index.get(bond.getBegin()), index.get(bond.getEnd()));
+      }
+    if (system == null) return false;
+    int[] bondOrderSum = new int[n];
+    boolean[] onSystem = new boolean[n], localised = new boolean[n];
+    for (IBond bond : mol.bonds()) {
+      int first = index.get(bond.getBegin()), second = index.get(bond.getEnd());
+      IBond.Order order = bond.getOrder();
+      int value = order == null || order == IBond.Order.UNSET ? 1 : order.numeric();
+      bondOrderSum[first] += value;
+      bondOrderSum[second] += value;
+      if (!bond.isAromatic() || !bond.isInRing()) continue;
+      onSystem[first] = onSystem[second] = true;
+      // A double or triple aromatic bond means CDK gave the system a Kekulé structure.
+      if (value > 1) localised[UnionFind.root(system, first)] = true;
+    }
+    // The nitrogen and phosphorus atoms whose hydrogen count changes, by system.
+    Map<Integer, List<Integer>> heteroatoms = new TreeMap<>();
+    boolean changed = false;
+    for (int atom = 0; atom < n; atom++) {
+      IAtom value = mol.getAtom(atom);
+      if (!onSystem[atom] || localised[UnionFind.root(system, atom)] || !value.isAromatic()
+          || value.getImplicitHydrogenCount() == null || value.getAtomicNumber() == null
+          || (value.getFormalCharge() != null && value.getFormalCharge() != 0)) continue;
+      int single = defaultHydrogenCount(value.getAtomicNumber(), false, bondOrderSum[atom], 0);
+      int aromatic = defaultHydrogenCount(value.getAtomicNumber(), true, bondOrderSum[atom], 0);
+      if (hydrogens[atom] != single || aromatic >= single) continue;
+      hydrogens[atom] = aromatic;
+      changed = true;
+      List<Integer> list = heteroatoms.computeIfAbsent(UnionFind.root(system, atom), root -> new ArrayList<>());
+      if (value.getAtomicNumber() == 7 || value.getAtomicNumber() == 15) list.add(atom);
+    }
+    if (!changed) return false;
+    // A Kekulé structure may place a double bond on any bond between atoms of one system.
+    List<List<Integer>> adjacency = new ArrayList<>(n);
+    for (int atom = 0; atom < n; atom++) adjacency.add(new ArrayList<>());
+    for (IBond bond : mol.bonds()) {
+      int first = index.get(bond.getBegin()), second = index.get(bond.getEnd());
+      if (!onSystem[first] || !onSystem[second] || UnionFind.root(system, first) != UnionFind.root(system, second))
+        continue;
+      adjacency.get(first).add(second);
+      adjacency.get(second).add(first);
+    }
+    int[][] graph = new int[n][];
+    for (int atom = 0; atom < n; atom++)
+      graph[atom] = adjacency.get(atom).stream().mapToInt(Integer::intValue).toArray();
+    long[] invariant = null;
+    for (Map.Entry<Integer, List<Integer>> entry : heteroatoms.entrySet()) {
+      int root = entry.getKey();
+      List<Integer> list = entry.getValue();
+      if (kekulisable(mol, system, root, bondOrderSum, hydrogens, graph)) continue;
+      // Without a Kekulé structure, one heteroatom, else a pair, keeps its single-bond hydrogen
+      // where that gives one; of several, the first by an atom invariant, so that the choice does
+      // not depend on the atom order. With none, the atoms keep the aromatic reading, as natively.
+      if (invariant == null) invariant = atomInvariants(mol, index);
+      final long[] rank = invariant;
+      list.sort((first, second) -> rank[first] != rank[second] ? Long.compare(rank[first], rank[second])
+          : Integer.compare(first, second));
+      boolean kekule = false;
+      for (int first = 0; first < list.size() && !kekule; first++)
+        kekule = keepsHydrogen(mol, system, root, bondOrderSum, hydrogens, graph, list.get(first), -1);
+      for (int first = 0; first < list.size() && !kekule; first++)
+        for (int second = first + 1; second < list.size() && !kekule; second++)
+          kekule = keepsHydrogen(mol, system, root, bondOrderSum, hydrogens, graph, list.get(first), list.get(second));
+    }
+    return true;
+  }
+
+  /**
+   * Atom invariants that do not depend on the atom order: element, charge, degree, hydrogens and
+   * aromaticity, refined by the invariants of the neighbours until the classes stop splitting.
+   */
+  private static long[] atomInvariants(IAtomContainer mol, Map<IAtom, Integer> index) {
+    int n = mol.getAtomCount();
+    int[][] neighbours = new int[n][];
+    for (int atom = 0; atom < n; atom++) {
+      List<IAtom> adjacent = mol.getConnectedAtomsList(mol.getAtom(atom));
+      neighbours[atom] = new int[adjacent.size()];
+      for (int k = 0; k < adjacent.size(); k++) neighbours[atom][k] = index.get(adjacent.get(k));
+    }
+    long[] invariant = new long[n];
+    for (int atom = 0; atom < n; atom++) {
+      IAtom value = mol.getAtom(atom);
+      Integer element = value.getAtomicNumber(), charge = value.getFormalCharge(), hydrogens = value.getImplicitHydrogenCount();
+      invariant[atom] = (((element == null ? 0 : element) * 31L + (charge == null ? 0 : charge)) * 31L
+          + neighbours[atom].length) * 31L + (hydrogens == null ? -1 : hydrogens) * 2L + (value.isAromatic() ? 1 : 0);
+    }
+    for (int classes = new HashSet<>(toList(invariant)).size(); ; ) {
+      long[] refined = new long[n];
+      for (int atom = 0; atom < n; atom++) {
+        long[] adjacent = new long[neighbours[atom].length];
+        for (int k = 0; k < adjacent.length; k++) adjacent[k] = invariant[neighbours[atom][k]];
+        Arrays.sort(adjacent);
+        long hash = invariant[atom];
+        for (long value : adjacent) hash = hash * 1000003L + value;
+        refined[atom] = hash;
+      }
+      int split = new HashSet<>(toList(refined)).size();
+      if (split <= classes) return invariant;
+      invariant = refined;
+      classes = split;
+    }
+  }
+
+  private static List<Long> toList(long[] values) {
+    List<Long> list = new ArrayList<>(values.length);
+    for (long value : values) list.add(value);
+    return list;
+  }
+
+  /**
+   * Gives the ring systems of {@code mol} that CDK read from ':' bonds between atoms written in
+   * capitals the hydrogens {@link #aromaticBondHydrogens} gives them and a Kekulé structure where
+   * one exists; the ring flags of {@code mol} must be set.
+   */
+  static void kekuliseAromaticBondSystems(IAtomContainer mol) {
+    int n = mol.getAtomCount();
+    IdentityHashMap<IAtom, Integer> index = new IdentityHashMap<>(n);
+    int[] hydrogens = new int[n];
+    for (int i = 0; i < n; i++) {
+      IAtom atom = mol.getAtom(i);
+      index.put(atom, i);
+      hydrogens[i] = cdkHydrogenCount(mol, atom, atom.getAtomicNumber() == null ? 0 : atom.getAtomicNumber(),
+          atom.getFormalCharge() == null ? 0 : atom.getFormalCharge());
+    }
+    if (!aromaticBondHydrogens(mol, index, hydrogens)) return;
+    for (int i = 0; i < n; i++) {
+      Integer supplied = mol.getAtom(i).getImplicitHydrogenCount();
+      if (supplied != null && supplied != hydrogens[i]) mol.getAtom(i).setImplicitHydrogenCount(hydrogens[i]);
+    }
+    try {
+      Kekulization.kekulize(mol);
+    } catch (CDKException noKekuleStructure) {
+      // The system keeps its single bonds, as it has no Kekulé structure with these hydrogens.
+    }
+  }
+
+  /**
+   * Gives {@code first} and {@code second} (unless -1) back the hydrogen of their single-bond
+   * reading, one more than the aromatic one, when that gives the system a Kekulé structure.
+   */
+  private static boolean keepsHydrogen(IAtomContainer mol, int[] system, int root, int[] bondOrderSum,
+      int[] hydrogens, int[][] graph, int first, int second) {
+    hydrogens[first]++;
+    if (second >= 0) hydrogens[second]++;
+    if (kekulisable(mol, system, root, bondOrderSum, hydrogens, graph)) return true;
+    hydrogens[first]--;
+    if (second >= 0) hydrogens[second]--;
+    return false;
+  }
+
+  /**
+   * Whether the atoms of one aromatic ring system that need a double bond, those one bond short
+   * of the valence model with their hydrogens, can each take one on a bond of the system.
+   */
+  private static boolean kekulisable(IAtomContainer mol, int[] system, int root, int[] bondOrderSum,
+      int[] hydrogens, int[][] graph) {
+    BitSet needed = new BitSet();
+    for (int atom = 0; atom < graph.length; atom++) {
+      if (graph[atom].length == 0 || UnionFind.root(system, atom) != root) continue;
+      IAtom value = mol.getAtom(atom);
+      if (value.getAtomicNumber() == null) return true;
+      int charge = value.getFormalCharge() == null ? 0 : value.getFormalCharge();
+      if (defaultHydrogenCount(value.getAtomicNumber(), false, bondOrderSum[atom], charge) == hydrogens[atom] + 1)
+        needed.set(atom);
+    }
+    return needed.cardinality() % 2 == 0 && Matching.withCapacity(graph.length).perfect(graph, needed);
   }
 
   /** Implicit hydrogens plus explicitly represented hydrogen neighbours. */
@@ -368,6 +555,17 @@ public final class MolGraph {
   }
 
   public int numRings() { return computeRings().length; }
+
+  /**
+   * Whether the ring perception behind {@link #computeRings()} and
+   * {@link #computeRelevantCycles()} stopped its exhaustive candidate search at its work bound,
+   * as for a very large ring system, so that the rings come from the bounded perception and may
+   * be fewer than the graph holds. The rings themselves are the same whether or not this is
+   * asked. The native core reports the same through {@code smsd::ringsTruncated()}.
+   *
+   * @return true when the exhaustive candidate search stopped at its work bound
+   */
+  public boolean ringsTruncated() { return rings().truncated; }
 
   /**
    * The ring systems of the ring atoms, found on first use and published once, as the rings
@@ -735,6 +933,7 @@ public final class MolGraph {
     this.hydrogenCounts = new int[n];
     for (int i = 0; i < n; i++)
       hydrogenCounts[i] = cdkHydrogenCount(mol, mol.getAtom(i), atomicNum[i], formalCharge[i]);
+    aromaticBondHydrogens(mol, idxMap, hydrogenCounts);
 
     // The neighbours and bond properties come from one pass over the bonds, without the list a
     // container allocates for each atom.

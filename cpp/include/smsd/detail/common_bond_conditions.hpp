@@ -57,7 +57,11 @@ class CommonBondConditions {
         /** The selected bonds to the ligands of a centre, or those giving each end of a double bond a ligand. */
         std::vector<int> ligands, otherLigands;
     };
-    /** The ligands joined to a centre or a double bond by selected bonds, as the stereo checks read them. */
+    /**
+     * The ligands joined to a centre or a double bond by selected bonds, as the stereo checks read
+     * them: an atom joined to either end of a double bond keeps its image, and joined() says
+     * whether it is a ligand of a given end, which a selected bond to that end makes it.
+     */
     struct SelectedLigands {
         const std::vector<int>& mapping;
         const Side& query;
@@ -72,6 +76,10 @@ class CommonBondConditions {
                 if (bond >= 0 && selection[bond]) return mapping[atom];
             }
             return -1;
+        }
+        bool operator()(int end, int neighbour) const {
+            const int bond = query.bondBetween(end, neighbour);
+            return bond >= 0 && selection[bond];
         }
     };
 
@@ -159,10 +167,10 @@ public:
             targetBondCycles_ = through(targetCycles_, target_.bondCount, nullptr);
             queryAtomCycles_ = through(queryCycles_, query_.atomCount, &query_);
             targetAtomCycles_ = through(targetCycles_, target_.atomCount, &target_);
-            queryRingBond_ = ringBonds(query_, queryGraph_);
-            targetRingBond_ = ringBonds(target_, targetGraph_);
-            queryRingAtom_ = ringAtoms(queryGraph_);
-            targetRingAtom_ = ringAtoms(targetGraph_);
+            queryRingBond_ = ringBonds(query_, queryGraph_, queryBondCycles_);
+            targetRingBond_ = ringBonds(target_, targetGraph_, targetBondCycles_);
+            queryRingAtom_ = ringAtoms(queryGraph_, queryAtomCycles_);
+            targetRingAtom_ = ringAtoms(targetGraph_, targetAtomCycles_);
             queryMissing_.assign(queryCycles_.size(), 0);
             targetMissing_.assign(targetCycles_.size(), 0);
         }
@@ -330,16 +338,13 @@ private:
         clock_.tick(query_.atomCount + static_cast<int64_t>(conflicts_.size()));
     }
 
-    /** The selected bonds that give end `end` of the double bond to `other` a ligand: to its other neighbours, or from `other` to them. */
+    /** The selected bonds that give end `end` of the double bond to `other` a ligand: those to its other neighbours, in ascending order. */
     std::vector<int> endLigands(int end, int other) const {
         std::vector<int> bonds;
         for (int neighbour : queryGraph_.neighbors[end]) {
             if (neighbour == other) continue;
-            for (int from : {end, other}) {
-                const int bond = query_.bondBetween(from, neighbour);
-                if (bond >= 0 && selected_[bond] && std::find(bonds.begin(), bonds.end(), bond) == bonds.end())
-                    bonds.push_back(bond);
-            }
+            const int bond = query_.bondBetween(end, neighbour);
+            if (bond >= 0 && selected_[bond]) bonds.push_back(bond);
         }
         std::sort(bonds.begin(), bonds.end());
         return bonds;
@@ -685,8 +690,8 @@ private:
      * search reads them.
      */
     bool doubleBondDisagrees(int first, int second, const std::vector<uint8_t>& selection) const {
-        return !stereo_detail::doubleBondParityMatches(queryGraph_, first, second, targetGraph_,
-                                                       SelectedLigands{mapping(), query_, selection, first, second});
+        const SelectedLigands ligands{mapping(), query_, selection, first, second};
+        return !stereo_detail::doubleBondParityMatches(queryGraph_, first, second, targetGraph_, ligands, false, ligands);
     }
 
     /** The relevant rings of `graph` as bonds of `side`. */
@@ -722,17 +727,18 @@ private:
         return result;
     }
 
-    /** Whether each bond of `side` is on a ring, as the ring check reads it. */
-    static std::vector<uint8_t> ringBonds(const Side& side, const MolGraph& graph) {
+    /** Whether each bond of `side` is on a ring, as the ring check reads it: flagged, or on a relevant ring. */
+    static std::vector<uint8_t> ringBonds(const Side& side, const MolGraph& graph, const std::vector<std::vector<int>>& bondCycles) {
         std::vector<uint8_t> result(static_cast<size_t>(side.bondCount), 0);
-        for (int bond = 0; bond < side.bondCount; ++bond) result[bond] = graph.bondInRing(side.bondFirst[bond], side.bondSecond[bond]);
+        for (int bond = 0; bond < side.bondCount; ++bond)
+            result[bond] = !bondCycles[bond].empty() || graph.bondInRing(side.bondFirst[bond], side.bondSecond[bond]);
         return result;
     }
 
-    /** Whether each atom of `graph` is on a ring, as the ring check reads it. */
-    static std::vector<uint8_t> ringAtoms(const MolGraph& graph) {
+    /** Whether each atom of `graph` is on a ring, as the ring check reads it: flagged, or on a relevant ring. */
+    static std::vector<uint8_t> ringAtoms(const MolGraph& graph, const std::vector<std::vector<int>>& atomCycles) {
         std::vector<uint8_t> result(static_cast<size_t>(graph.n), 0);
-        for (int atom = 0; atom < graph.n; ++atom) result[atom] = graph.ring[atom];
+        for (int atom = 0; atom < graph.n; ++atom) result[atom] = graph.ring[atom] || !atomCycles[atom].empty();
         return result;
     }
 };

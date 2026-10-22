@@ -847,7 +847,8 @@ struct Terms {
             const int mass = atom < static_cast<int>(graph.massNumber.size()) ? graph.massNumber[atom] : 0;
             t = t * 37u + static_cast<uint32_t>(mass);
         }
-        if (options.formalCharge) t = t * 37u + static_cast<uint32_t>(graph.formalCharge[atom] + 4);
+        // Offset in unsigned arithmetic, which gives the same term without overflow for any charge.
+        if (options.formalCharge) t = t * 37u + (static_cast<uint32_t>(graph.formalCharge[atom]) + 4u);
         if (options.hydrogenCount) t = t * 37u + static_cast<uint32_t>(graph.attachedHydrogenCount(atom));
         if (options.ringMembership) t = t * 37u + (graph.ring[atom] ? 1u : 0u);
         if (options.aromaticity) t = t * 37u + (graph.aromatic[atom] ? 1u : 0u);

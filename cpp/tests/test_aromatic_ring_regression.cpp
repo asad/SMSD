@@ -202,6 +202,82 @@ static void testAromaticDonorReperception() {
     }
 }
 
+static void testCarbanionAromaticBonds() {
+    // A carbanion gives two electrons to its ring whether the ring has aromatic or Kekule bonds.
+    std::vector<std::vector<int>> neighbors(5), orders(5);
+    for (int atom = 0; atom < 5; ++atom) {
+        neighbors[atom] = {(atom + 4) % 5, (atom + 1) % 5};
+        orders[atom] = {4, 4};
+    }
+    const auto aromaticBonds = smsd::MolGraph::Builder().atomCount(5).atomicNumbers(std::vector<int>(5, 6))
+        .formalCharges({-1, 0, 0, 0, 0}).hydrogenCounts(std::vector<int>(5, 1))
+        .setNeighbors(neighbors).setBondOrders(orders).build();
+    require(aromaticAtoms(aromaticBonds) == 5, "A cyclopentadienide with aromatic bonds is aromatic");
+    require(aromaticAtoms(smsd::parseSMILES("[CH-]1C=CC=C1")) == 5, "A Kekule cyclopentadienide is aromatic");
+    // A Kekule carbanion with two sigma bonds keeps a ring pi bond, as with aromatic bonds.
+    require(aromaticAtoms(smsd::parseSMILES("[C-]1C=CC=C1")) == 0, "A Kekule carbanion with two sigma bonds is not aromatic");
+    // An aryl anion keeps a ring pi bond, its lone pair lying in the ring plane.
+    std::vector<std::vector<int>> sixNeighbors(6), sixOrders(6);
+    for (int atom = 0; atom < 6; ++atom) {
+        sixNeighbors[atom] = {(atom + 5) % 6, (atom + 1) % 6};
+        sixOrders[atom] = {4, 4};
+    }
+    const auto phenide = smsd::MolGraph::Builder().atomCount(6).atomicNumbers(std::vector<int>(6, 6))
+        .formalCharges({-1, 0, 0, 0, 0, 0}).hydrogenCounts({0, 1, 1, 1, 1, 1})
+        .setNeighbors(sixNeighbors).setBondOrders(sixOrders).build();
+    require(aromaticAtoms(phenide) == 6, "A phenide with aromatic bonds is aromatic");
+}
+
+static void testAromaticBondSymbols() {
+    // A ':' ring bond is aromatic whatever case its atoms are written in, as RDKit reads it, while
+    // an atom in brackets keeps the hydrogens written for it.
+    const std::pair<const char*, const char*> forms[] = {
+        {"C1:C:C:C:C:C:1", "c1ccccc1"}, {"CC1:C:C:C:C:C:1", "Cc1ccccc1"}, {"C1:C:C:N:C:C:1", "c1ccncc1"},
+        {"O[C@@H](C)C1:C:C:C:C:C:1", "O[C@@H](C)c1ccccc1"}, {"C1:C:C:C:1", "C1=CC=C1"},
+        {"C1:N:C:[NH]:C:1", "c1nc[nH]c1"}, {"C1:[NH]:C:N:C:1", "c1[nH]cnc1"}};
+    for (const auto& form : forms)
+        require(smsd::parseSMILES(form.first).getCanonicalHash() == smsd::parseSMILES(form.second).getCanonicalHash(),
+                std::string("Aromatic bond symbols changed the molecule: ") + form.first);
+    require(smsd::parseSMILES("C:C").hydrogenCount == std::vector<int>({3, 3}), "':' outside a ring is a single bond");
+}
+
+static void testLargeSuppliedSystemIsOrderIndependent() {
+    // The candidate cycles of this bowl-shaped polyarene exceed what perception reads, so its
+    // supplied flags are kept whatever order its atoms are written in.
+    const char* orders[] = {
+        "c1c2cc3cc4ccc5cc6cc7cc8cc9cc%10cc1c1c%11c2c2c3c3c4c5c4c6c5c7c6c8c7c9c8c(c(c1c%108)C%11C2)c7c6c5c34",
+        "c12c3c4c5c6c7c4c4cc3cc3cc8c9c%10c%11c%12c%13c(ccc%14cc%15c(c%16c%17c(cc(c4)c7c%17C6C%16)c%15)c(c%12c%10c(c15)c9c23)c%13%14)cc%11c8",
+        "c12c3c4c5c6c7c8c9c%10c%11c%12cc%13cc%14cc(cc3cc3c4c4c5c5c(cc4cc3)cc(cc9c%12)c8c56)c1c1c%14c3c(c(c%107)c%11c3%13)C1C2",
+        "c12c3c4c5c6c7cc8c9c%10c%11c(cc%12c%13c%14c(c(c%13%11)C%10Cc69)c6c9c%14c(cc%10cc%11cc(cc3ccc4c7)c1c1c(c6c(c%111)c9%10)c25)c%12)c8",
+        "c12c3c4c5cc1cc1cc6c7c8c9c%10c%11c%12c%13c(cc%14c%12c%10c%10c9c7c(cc6)cc%10c%14)cc6c7c%13c%11c9c7c(c(c5)c6)c4c9C3Cc2c81",
+    };
+    const auto first = smsd::parseSMILES(orders[0]);
+    for (const char* text : orders) {
+        const auto graph = smsd::parseSMILES(text);
+        require(aromaticAtoms(graph) == 46, std::string("Unexpected polyarene aromaticity: ") + text);
+        require(graph.getCanonicalHash() == first.getCanonicalHash(), std::string("Atom order changed the polyarene: ") + text);
+        require(smsd::parseSMILES(smsd::toSMILES(graph)).getCanonicalHash() == first.getCanonicalHash(),
+                "The polyarene changed in a SMILES round trip");
+    }
+    // A single ring written aromatic beside it is still perceived again, before or after it.
+    for (const char* ring : {"c1ccc1", "O=c1ccc(=O)cc1"}) {
+        const auto before = smsd::parseSMILES(std::string(ring) + "." + orders[0]);
+        const auto after = smsd::parseSMILES(std::string(orders[0]) + "." + ring);
+        require(aromaticAtoms(before) == 46 && aromaticAtoms(after) == 46,
+                std::string("A ring beside the polyarene kept its supplied flags: ") + ring);
+        require(before.getCanonicalHash() == after.getCanonicalHash(), "Component order changed the perception");
+    }
+}
+
+static void testCandidateStepBoundKeepsSuppliedSystems() {
+    // Many azulene units use up the steps of the candidate walk before it reaches its cycle bound;
+    // the units it does not reach keep their supplied flags, as when there are too many cycles.
+    std::string text = "C";
+    for (int unit = 0; unit < 400; ++unit) text += "c1ccc2cccc2cc1C";
+    require(aromaticAtoms(smsd::parseSMILES(text)) == 4000,
+            "Azulene units beyond the candidate walk lost their aromaticity");
+}
+
 static void testAromaticStereoNormalisation() {
     const std::string block = R"mol(Benzene
   SMSD              2D
@@ -353,6 +429,56 @@ static void testRelevantCycles() {
     }
 }
 
+// A row of `units` cyclobutanes joined at opposite corners and closed into a macrocycle by a chain
+// twice as long: every macrocycle picks one of two sides of each cyclobutane, so there are 2^units
+// of them, all relevant, and an atom far along the row has more shortest paths than are listed.
+static smsd::MolGraph cyclobutaneMacrocycle(int units) {
+    const int chain = 2 * units, n = 3 * units + 1 + chain;
+    std::vector<std::vector<int>> neighbours(static_cast<size_t>(n)), orders(static_cast<size_t>(n));
+    auto bond = [&](int first, int second) {
+        neighbours[first].push_back(second);
+        neighbours[second].push_back(first);
+        orders[first].push_back(1);
+        orders[second].push_back(1);
+    };
+    for (int unit = 0; unit < units; ++unit) {
+        const int corner = 3 * unit, opposite = 3 * (unit + 1);
+        bond(corner, corner + 1);
+        bond(corner + 1, opposite);
+        bond(corner, corner + 2);
+        bond(corner + 2, opposite);
+    }
+    int previous = 3 * units;
+    for (int atom = 3 * units + 1; atom < n; ++atom) {
+        bond(previous, atom);
+        previous = atom;
+    }
+    bond(previous, 0);
+    return smsd::MolGraph::Builder().atomCount(n).atomicNumbers(std::vector<int>(static_cast<size_t>(n), 6))
+        .setNeighbors(neighbours).setBondOrders(orders).build();
+}
+
+// The bounded ring searches say when they were cut short, and saying so changes no ring.
+static void testRingSearchBounds() {
+    for (const char* text : {"C1CCCCC1", "c1ccc2ccccc2c1", "C12C3C4C1C5C2C3C45", "C1C2CC3CC1CC(C2)C3"}) {
+        const auto graph = smsd::parseSMILES(text);
+        bool truncated = true;
+        const auto cycles = graph.computeRelevantCyclesReportingTruncation(truncated);
+        require(!truncated && cycles == graph.computeRelevantCycles(), std::string("an ordinary ring search was cut short: ") + text);
+        const auto rings = smsd::detail_rf::perceiveRingSets(graph);
+        require(!rings.truncated && !smsd::ringsTruncated(graph) && rings.rcb == smsd::computeRelevantCycles(graph),
+                std::string("an ordinary candidate search was given up: ") + text);
+    }
+    bool truncated = true;
+    const auto small = cyclobutaneMacrocycle(4);
+    require(small.computeRelevantCyclesReportingTruncation(truncated).size() == 4 + 16 && !truncated,
+            "four cyclobutanes give four rings and sixteen macrocycles, all listed");
+    const auto large = cyclobutaneMacrocycle(12);
+    const auto cycles = large.computeRelevantCyclesReportingTruncation(truncated);
+    require(truncated && cycles == large.computeRelevantCycles() && cycles.size() < 12 + 4096,
+            "a search that lists too few shortest paths must say so");
+}
+
 static void testUniqueRingFamilies() {
     struct Example { const char* text; size_t count; };
     for (const auto& example : {Example{"C1CCCCC1", 1}, {"c1ccc2ccccc2c1", 2},
@@ -406,9 +532,14 @@ int main(int argc, char** argv) {
         {"external-carbonyls", testExternalCarbonyls},
         {"external-carbon-pi", testExternalCarbonPi},
         {"donor-reperception", testAromaticDonorReperception},
+        {"carbanion-aromatic-bonds", testCarbanionAromaticBonds},
+        {"aromatic-bond-symbols", testAromaticBondSymbols},
+        {"large-supplied-system", testLargeSuppliedSystemIsOrderIndependent},
+        {"candidate-step-bound", testCandidateStepBoundKeepsSuppliedSystems},
         {"aromatic-stereo", testAromaticStereoNormalisation},
         {"aromatic-stereo-builder", testAromaticStereoBuilder},
         {"stereo-kekule", testStereoConstrainedKekule},
         {"aromatic-stereo-descriptors", testAromaticStereoDescriptors},
-        {"cycles", testRelevantCycles}, {"families", testUniqueRingFamilies}});
+        {"cycles", testRelevantCycles}, {"cycle-bounds", testRingSearchBounds},
+        {"families", testUniqueRingFamilies}});
 }

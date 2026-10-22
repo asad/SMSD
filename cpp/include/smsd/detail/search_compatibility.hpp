@@ -288,8 +288,9 @@ struct QueryView {
     }
     bool atomMatches(int queryAtom, const MolGraph& target, int targetAtom, const ChemOptions& chemistry) const {
         if (molecule) return atomCompatible(*molecule, queryAtom, target, targetAtom, chemistry);
-        const auto truth = smarts_detail::evalAtomExprWithStereo(pattern->atoms[queryAtom].expr, target, targetAtom, [](int tag) {
-            return tag == 0 ? smarts_detail::StereoTruth::TRUE_VALUE : smarts_detail::StereoTruth::UNKNOWN;
+        const auto truth = smarts_detail::evalAtomExprWithStereo(pattern->atoms[queryAtom].expr, target, targetAtom,
+                                                                 [](const smarts_detail::AtomExpr&) {
+            return smarts_detail::StereoTruth::UNKNOWN;
         });
         return truth != smarts_detail::StereoTruth::FALSE_VALUE;
     }

@@ -22,6 +22,7 @@
 
 #include "smsd/bitops.hpp"
 #include "smsd/mol_graph.hpp"
+#include "smsd/similarity_screen.hpp"
 #include "smsd/smiles_parser.hpp"
 
 #include <algorithm>
@@ -34,6 +35,7 @@
 #include <functional>
 #include <map>
 #include <limits>
+#include <memory>
 #include <mutex>
 #include <shared_mutex>
 #include <string>
@@ -839,6 +841,68 @@ inline bool fingerprintSubset(
 }
 
 // ============================================================================
+// Fingerprint quality
+// ============================================================================
+
+/// Density above which fingerprintQuality reports a fingerprint as saturated.
+constexpr double FINGERPRINT_SATURATION_DENSITY = 0.75;
+
+/// Density and collision estimates of a hashed fingerprint, as fingerprintQuality returns them.
+struct FingerprintQuality {
+    int setBits = 0;                     ///< distinct set positions below fpSize
+    int fpSize = 0;                      ///< nominal size in bits
+    double density = 0.0;                ///< setBits / fpSize
+    double expectedCollisionRate = 0.0;  ///< estimated share of features that fell on a bit already set
+    bool saturated = false;              ///< density above FINGERPRINT_SATURATION_DENSITY
+};
+
+namespace detail {
+
+/// The quality of a fingerprint with `setBits` of `fpSize` bits set. Hashing n features uniformly
+/// into N bits sets N(1 - (1 - 1/N)^n) bits on average, so s set bits suggest
+/// n = ln(1 - s/N) / ln(1 - 1/N) features, of which a share 1 - s/n landed on a bit that an
+/// earlier feature had set. The share is 0 for an empty fingerprint and 1 for a full one.
+inline FingerprintQuality fingerprintQualityOf(int setBits, int fpSize) {
+    FingerprintQuality quality;
+    quality.setBits = setBits;
+    quality.fpSize = fpSize;
+    quality.density = static_cast<double>(setBits) / fpSize;
+    if (setBits == fpSize) {
+        quality.expectedCollisionRate = 1.0;
+    } else if (setBits > 0) {
+        const double features = std::log1p(-quality.density) / std::log1p(-1.0 / fpSize);
+        quality.expectedCollisionRate = std::min(1.0, std::max(0.0, 1.0 - setBits / features));
+    }
+    quality.saturated = quality.density > FINGERPRINT_SATURATION_DENSITY;
+    return quality;
+}
+
+} // namespace detail
+
+/// The quality of a fingerprint given as set positions, which may repeat and need not be
+/// sorted. Throws std::invalid_argument for a size below 1 or a position outside [0, fpSize).
+inline FingerprintQuality fingerprintQuality(const std::vector<int>& positions, int fpSize) {
+    if (fpSize <= 0) throw std::invalid_argument("Fingerprint size must be positive");
+    std::vector<int> distinct(positions);
+    for (int bit : distinct)
+        if (bit < 0 || bit >= fpSize)
+            throw std::invalid_argument("Fingerprint bit is outside the declared size");
+    std::sort(distinct.begin(), distinct.end());
+    const auto setBits = std::unique(distinct.begin(), distinct.end()) - distinct.begin();
+    return detail::fingerprintQualityOf(static_cast<int>(setBits), fpSize);
+}
+
+/// The quality of the first fpSize bits of a packed fingerprint; later bits are ignored.
+/// Throws std::invalid_argument for a size below 1 or beyond the words given.
+inline FingerprintQuality fingerprintQuality(const std::vector<uint64_t>& fingerprint, int fpSize) {
+    if (fpSize <= 0 || static_cast<uint64_t>(fpSize) > fingerprint.size() * uint64_t(64))
+        throw std::invalid_argument("Fingerprint size is outside the fingerprint capacity");
+    int setBits = 0;
+    forEachSetBit(fingerprint, fpSize, [&](int) { ++setBits; });
+    return detail::fingerprintQualityOf(setBits, fpSize);
+}
+
+// ============================================================================
 // Batch Fingerprint Subset Screen (CPU)
 // ============================================================================
 
@@ -974,9 +1038,29 @@ class TargetCorpus {
     std::vector<std::vector<uint64_t>> fingerprints_;
     bool prewarmed_ = false;
 
+    /// The label histograms of the targets for the similarity screen, one table per label rule,
+    /// built by the first screen under that rule and dropped when targets are added. Each rule has
+    /// its own mutex, so building one table does not hold up screens under another rule. A copy or
+    /// move starts empty, so it never reads tables that another thread is building, and the copy
+    /// operations are noexcept so that TargetCorpus stays nothrow movable.
+    struct LabelTables {
+        std::array<std::mutex, screening_detail::labelModes> mutexes;
+        std::array<std::unique_ptr<const screening_detail::TargetLabels>, screening_detail::labelModes> byMode;
+
+        LabelTables() = default;
+        LabelTables(const LabelTables&) noexcept {}
+        LabelTables& operator=(const LabelTables&) noexcept { clear(); return *this; }
+        void clear() noexcept { for (auto& table : byMode) table.reset(); }
+    };
+    mutable LabelTables labelTables_;
+
     std::shared_mutex& corpusMutex() const {
         static std::array<std::shared_mutex, 64> mutexes;
-        return mutexes[(reinterpret_cast<uintptr_t>(this) >> 4) % mutexes.size()];
+        static_assert(std::tuple_size<decltype(mutexes)>::value == 64, "the top six bits pick one of 64 locks");
+        // The whole address picks the lock (Fibonacci hashing, top six bits), as for MolGraph, so
+        // corpora at the same place on different threads' stacks do not share one lock.
+        const auto key = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(this) >> 4);
+        return mutexes[(key * UINT64_C(0x9E3779B97F4A7C15)) >> 58];
     }
 
 public:
@@ -985,6 +1069,7 @@ public:
         const std::unique_lock<std::shared_mutex> corpusLock(corpusMutex());
         targets_.push_back(std::move(g));
         prewarmed_ = false;
+        labelTables_.clear();
     }
 
     /// Add multiple target molecules.
@@ -995,6 +1080,7 @@ public:
             targets_.push_back(std::move(g));
         }
         prewarmed_ = false;
+        labelTables_.clear();
     }
 
     /// Pre-compute lazy graph invariants and ECFP fingerprints for all targets.
@@ -1090,6 +1176,26 @@ public:
             if (mask[i]) hits.push_back(i);
         }
         return hits;
+    }
+
+    /// Similarity-bound screening of the held targets: the indices smsd::screenTargets gives for
+    /// them, computed on up to numThreads threads (0 = all available). Needs no prewarm(). The
+    /// first screen under a label rule records the targets' label histograms, which later screens
+    /// read in place of the graphs.
+    std::vector<int> screenTargets(const MolGraph& query, double threshold,
+                                   const ChemOptions& chemistry, int numThreads = 0) const {
+        const std::shared_lock<std::shared_mutex> corpusLock(corpusMutex());
+        const screening_detail::TargetLabels* labels = nullptr;
+        {
+            // Concurrent first screens build the table once; it is dropped only under the exclusive lock.
+            const int mode = screening_detail::labelMode(chemistry);
+            const std::lock_guard<std::mutex> tableLock(labelTables_.mutexes[mode]);
+            auto& table = labelTables_.byMode[mode];
+            if (!table) table = std::make_unique<const screening_detail::TargetLabels>(targets_, chemistry, numThreads);
+            labels = table.get();
+        }
+        return screening_detail::indicesReaching(
+            screening_detail::similarityScores(query, targets_, *labels, chemistry, numThreads), threshold);
     }
 };
 

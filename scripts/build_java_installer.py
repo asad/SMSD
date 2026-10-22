@@ -35,7 +35,8 @@ CLI_JAVA_TARGET = 8
 CLI_CLASSFILE_MAJOR = 52
 # The legal files that the CLI JAR carries under META-INF/smsd and the
 # application image ships beside its JAR, at the paths NOTICE names.
-LEGAL_FILES = ("LICENSE", "NOTICE", "licenses/cdk/LICENSE", "licenses/cdk/README.md")
+LEGAL_FILES = ("LICENSE", "NOTICE", "licenses/cdk/LICENSE", "licenses/cdk/README.md",
+               "licenses/beam/LICENSE", "licenses/vecmath/LICENSE", "licenses/vecmath/README.md")
 
 
 def require(condition, message):

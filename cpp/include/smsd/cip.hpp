@@ -9,13 +9,17 @@
  * Uses the IUPAC 2013 sequence rules (Blue Book) when assigning
  * R/S descriptors to tetrahedral stereocentres and E/Z descriptors to
  * double bonds using CIP sequence rules:
- *   Rule 1: higher atomic number gets higher priority
+ *   Rule 1a: higher atomic number gets higher priority
+ *   Rule 1b: a ring-closure duplicate nearer the root gets higher priority
  *   Rule 2: higher mass number breaks ties (isotopes); an unlabelled atom
  *   counts at its standard atomic weight, a duplicate at none
  *   Rule 3: Z double-bond configuration gets higher priority than E
  *   Rules 4 and 5: auxiliary descriptors, like and unlike descriptor pairs,
- *   r before s and R before S, for the centres Rules 1 to 3 leave unresolved
- *   (detail::SequenceRules); a centre resolved by Rule 5 is pseudoasymmetric
+ *   r before s and R before S; a centre resolved by Rule 5 is pseudoasymmetric
+ *
+ * A first pass ranks the ligands by Rule 1a alone; ligands it leaves tied are
+ * ranked over the hierarchical digraph by every rule in turn, each read
+ * exhaustively before the next (detail::SequenceRules).
  *
  * Uses the digraph (extended-connectivity tree) approach
  * with phantom/duplicate nodes for ring closures and multiple bonds.
@@ -50,6 +54,7 @@
 #include <optional>
 #include <string>
 #include <tuple>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -191,10 +196,12 @@ inline bool ringBond(const MolGraph& g, int atom, int neighbor) {
  * The duplicate a ring atom with exactly one double bond, partners[atom] in the Kekule bond orders
  * of `kekule`, carries for that bond (-1 for other atoms). A mancude ring system is what remains of
  * those atoms after repeatedly removing the ones with fewer than two others as ring neighbours.
- * There the duplicate takes the mean atomic number of the atom's ring neighbours in the system
- * when it is fractional (IUPAC 2013 P-92.1.4.4, as the reference CIP implementations apply it), so
- * labels do not depend on the Kekule structure; otherwise it is the partner. numbers[atom] is that
- * atomic number times ATOMIC_NUMBER_SCALE. Java's CIPAssigner applies the same rule.
+ * There, when the partner is in the system too, the duplicate takes the mean atomic number of the
+ * atom's ring neighbours in the system whenever their sum differs from the partner's atomic number
+ * times their count (IUPAC 2013 P-92.1.4.4), so labels do not depend on the Kekule structure even
+ * when the mean is a whole number, as for a boron and a nitrogen neighbour; otherwise it is the
+ * partner. numbers[atom] is that atomic number times ATOMIC_NUMBER_SCALE. Java's CIPAssigner
+ * applies the same rule.
  */
 inline void mancudeDuplicates(const MolGraph& g, const MolGraph& kekule,
                               std::vector<int>& numbers, std::vector<int>& partners) {
@@ -238,8 +245,9 @@ inline void mancudeDuplicates(const MolGraph& g, const MolGraph& kekule,
                 ++count;
             }
         }
-        numbers[atom] = count == 0 || sum % count == 0 ? g.atomicNum[partners[atom]] * ATOMIC_NUMBER_SCALE
-                                                       : sum * ATOMIC_NUMBER_SCALE / count;
+        const int partnerNumber = g.atomicNum[partners[atom]];
+        numbers[atom] = count == 0 || !mancude[partners[atom]] || sum == partnerNumber * count
+            ? partnerNumber * ATOMIC_NUMBER_SCALE : sum * ATOMIC_NUMBER_SCALE / count;
     }
 }
 
@@ -405,183 +413,15 @@ inline std::vector<DigraphNode> buildDigraph(
 }
 
 // --------------------------------------------------------------------------
-// Compare two digraph sub-trees by CIP Rules 1-2 (atomic number, mass
-// number, BFS level-by-level).
-//
-// Returns: <0 if tree rooted at a has LOWER priority than b,
-//           0 if equal,
-//          >0 if tree rooted at a has HIGHER priority.
+// The first ranking pass: the ligands of `centre` by Sequence Rule 1a alone, the
+// atomic numbers of their branches compared sphere by sphere in the hierarchical
+// order of the digraph. Every later rule (1b, 2, 3, 4 and 5) is left to the
+// hierarchical comparison of SequenceRules, which reads each rule exhaustively
+// before the next.
+// Returns (neighbour atom index, rank) pairs, rank 1 the lowest; ligands Rule 1a
+// does not tell apart share a rank. The implicit hydrogen is -1, a lone pair -2.
 // --------------------------------------------------------------------------
-inline int compareBranches_Rule1(
-    const std::vector<DigraphNode>& nodesA, int rootA,
-    const std::vector<DigraphNode>& nodesB, int rootB)
-{
-    const int atomicComparison = compareOrderedBranches(nodesA, rootA, nodesB, rootB, false);
-    if (atomicComparison != 0) return atomicComparison;
-    return compareOrderedBranches(nodesA, rootA, nodesB, rootB, true);
-}
-
-inline int atomicPriorityDoubleBondConfiguration(const MolGraph& graph, int first, int second);
-
-// --------------------------------------------------------------------------
-// CIP Rule 3: Z > E tie-break on double-bond stereo configuration.
-//
-// When Rules 1-2 produce a tie, Z-configured double bonds get higher
-// priority than E-configured double bonds.
-// --------------------------------------------------------------------------
-inline int compareBranches_Rule3(
-    const std::vector<DigraphNode>& nodesA, int rootA,
-    const std::vector<DigraphNode>& nodesB, int rootB,
-    const MolGraph& g)
-{
-    std::vector<int> frontA = {rootA};
-    std::vector<int> frontB = {rootB};
-
-    while (!frontA.empty() || !frontB.empty()) {
-        // Collect E/Z descriptors at this level: Z(1)->2, E(2)->1, NONE->0
-        auto ezDescs = [&](const std::vector<int>& front,
-                           const std::vector<DigraphNode>& nodes) {
-            std::vector<int> ez;
-            for (int ni : front) {
-                const auto& nd = nodes[ni];
-                int val = 0;
-                if (nd.parent >= 0 && nd.atomIdx >= 0 && !nd.isDuplicate) {
-                    int parentAtom = nodes[nd.parent].atomIdx;
-                    if (parentAtom >= 0 && g.bondOrder(parentAtom, nd.atomIdx) == 2) {
-                        int conf = atomicPriorityDoubleBondConfiguration(g, parentAtom, nd.atomIdx);
-                        val = (conf == 1) ? 2 : (conf == 2) ? 1 : 0;  // Z->2, E->1
-                    }
-                }
-                ez.push_back(val);
-            }
-            std::sort(ez.begin(), ez.end(), std::greater<int>());
-            return ez;
-        };
-
-        auto ezA = ezDescs(frontA, nodesA);
-        auto ezB = ezDescs(frontB, nodesB);
-        size_t len = std::max(ezA.size(), ezB.size());
-        for (size_t k = 0; k < len; ++k) {
-            int a = (k < ezA.size()) ? ezA[k] : 0;
-            int b = (k < ezB.size()) ? ezB[k] : 0;
-            if (a != b) return a - b;
-        }
-
-        // Expand to next BFS level
-        std::vector<int> nextA, nextB;
-        for (int i : frontA)
-            for (int c : nodesA[i].children) nextA.push_back(c);
-        for (int i : frontB)
-            for (int c : nodesB[i].children) nextB.push_back(c);
-
-        frontA = std::move(nextA);
-        frontB = std::move(nextB);
-    }
-    return 0;
-}
-
-// --------------------------------------------------------------------------
-// CIP Rule 4b-c: like/unlike descriptor pairing.
-//
-// When two branches are equal by Rules 1-2, compare the CIP descriptors
-// (R/S or E/Z) of stereocentres encountered along each branch path.
-// "like" pairs (R,R or S,S) have higher priority than "unlike" pairs
-// (R,S or S,R).  Within "like", R > S.
-//
-// descriptor_map: atom_index -> RSLabel (pre-computed in first pass).
-// Returns: <0, 0, >0 as compareBranches_Rule1.
-// --------------------------------------------------------------------------
-inline int compareBranches_Rule4bc(
-    const std::vector<DigraphNode>& nodesA, int rootA,
-    const std::vector<DigraphNode>& nodesB, int rootB,
-    const std::unordered_map<int, int>& descriptorMap)
-{
-    // Collect descriptor sequences along each branch path (BFS order)
-    auto collectDescriptors = [&](const std::vector<DigraphNode>& nodes,
-                                  int root) -> std::vector<int> {
-        std::vector<int> result;
-        std::vector<int> frontier = {root};
-        while (!frontier.empty()) {
-            std::vector<int> nextFrontier;
-            for (int ni : frontier) {
-                int atom = nodes[ni].atomIdx;
-                if (!nodes[ni].isDuplicate && atom >= 0) {
-                    auto it = descriptorMap.find(atom);
-                    if (it != descriptorMap.end() && it->second != 0) {
-                        result.push_back(it->second);
-                    }
-                }
-                for (int c : nodes[ni].children) nextFrontier.push_back(c);
-            }
-            frontier = std::move(nextFrontier);
-        }
-        return result;
-    };
-
-    auto descA = collectDescriptors(nodesA, rootA);
-    auto descB = collectDescriptors(nodesB, rootB);
-
-    // "like" descriptor = same as the reference centre's descriptor.
-    // We encode: R=1, S=2. like pair = same value, unlike = different.
-    // Per IUPAC 2013 P-92.1.4.2: "like > unlike" and within like, R > S.
-    //
-    // Sort descriptors in each branch: R(1) before S(2)
-    std::sort(descA.begin(), descA.end());
-    std::sort(descB.begin(), descB.end());
-
-    size_t len = std::max(descA.size(), descB.size());
-    for (size_t k = 0; k < len; ++k) {
-        int a = (k < descA.size()) ? descA[k] : 0;
-        int b = (k < descB.size()) ? descB[k] : 0;
-        if (a != b) {
-            // R(1) > S(2) > NONE(0) for Rule 5, but for Rule 4b-c:
-            // A branch with a descriptor ranks higher than one without.
-            // Between R and S: compare as like/unlike relative to reference.
-            // For simplicity (IUPAC 2013 P-92.1.4.2): R > S.
-            if (a == 0) return -1; // A has no descriptor, B does → B higher
-            if (b == 0) return 1;  // A has descriptor, B doesn't → A higher
-            // Both have descriptors: R(1) > S(2) per Rule 5
-            return (a < b) ? 1 : -1; // lower enum value = R = higher priority
-        }
-    }
-
-    return 0;
-}
-
-// --------------------------------------------------------------------------
-// Full CIP comparison: Rules 1-2, then 3 (Z>E), then 4b-c, then Rule 5 (R > S).
-// --------------------------------------------------------------------------
-inline int compareBranches_Full(
-    const std::vector<DigraphNode>& nodesA, int rootA,
-    const std::vector<DigraphNode>& nodesB, int rootB,
-    const std::unordered_map<int, int>& descriptorMap,
-    const MolGraph* molGraph = nullptr)
-{
-    // Rules 1-2: atomic number + mass number
-    int cmp12 = compareBranches_Rule1(nodesA, rootA, nodesB, rootB);
-    if (cmp12 != 0) return cmp12;
-
-    // Rule 3: Z > E double-bond stereo
-    if (molGraph) {
-        int cmp3 = compareBranches_Rule3(nodesA, rootA, nodesB, rootB, *molGraph);
-        if (cmp3 != 0) return cmp3;
-    }
-
-    // Rule 4b-c: like/unlike descriptor pairing
-    int cmp4 = compareBranches_Rule4bc(nodesA, rootA, nodesB, rootB,
-                                       descriptorMap);
-    return cmp4; // Rule 5 is implicit: R(1) > S(2) within Rule 4b-c
-}
-
-// --------------------------------------------------------------------------
-// Compute CIP priorities for the neighbours of a given atom.
-// Returns a vector of (neighbor_atom_index, priority) pairs,
-// where priority 1 is lowest and higher numbers are higher priority.
-// Atoms with the same priority share the same rank.
-// --------------------------------------------------------------------------
-inline std::vector<std::pair<int, int>> computePriorities(
-    const MolGraph& g, int centre,
-    const std::unordered_map<int, int>& descriptorMap = {}, bool includeStereo = true)
+inline std::vector<std::pair<int, int>> computePriorities(const MolGraph& g, int centre)
 {
     const auto& nbrs = g.neighbors[centre];
     int nNbr = static_cast<int>(nbrs.size());
@@ -615,7 +455,6 @@ inline std::vector<std::pair<int, int>> computePriorities(
         ligands.push_back({node.atomIdx, node.atomicNum, root});
     }
 
-    // Sort indices by CIP priority (Rule 1 comparison)
     std::vector<int> order(totalLigands);
     std::iota(order.begin(), order.end(), 0);
 
@@ -625,8 +464,7 @@ inline std::vector<std::pair<int, int>> computePriorities(
         if (firstLigand.atomicNum != secondLigand.atomicNum)
             return firstLigand.atomicNum - secondLigand.atomicNum;
         if (firstLigand.digraphRoot < 0 || secondLigand.digraphRoot < 0) return 0;
-        return compareBranches_Full(digraph, firstLigand.digraphRoot, digraph, secondLigand.digraphRoot,
-                                    descriptorMap, includeStereo ? &g : nullptr);
+        return compareOrderedBranches(digraph, firstLigand.digraphRoot, digraph, secondLigand.digraphRoot, false);
     };
 
     std::sort(order.begin(), order.end(), [&](int a, int b) {
@@ -648,42 +486,17 @@ inline std::vector<std::pair<int, int>> computePriorities(
     return result;
 }
 
-/** Rule 3 descriptors use atomic/isotopic priorities, independent of input carrier order. */
-inline int atomicPriorityDoubleBondConfiguration(const MolGraph& graph, int first, int second) {
-    int configuration = graph.dbStereo(first, second);
-    if (configuration == 0) return 0;
-    for (const auto& ends : {std::pair<int, int>{first, second}, {second, first}}) {
-        const auto priorities = computePriorities(graph, ends.first, {}, false);
-        int bestRank = -1, secondRank = -1, bestAtom = -1;
-        for (const auto& priority : priorities) {
-            if (priority.first == ends.second) continue;
-            if (priority.second > bestRank) {
-                secondRank = bestRank;
-                bestRank = priority.second;
-                bestAtom = priority.first;
-            } else secondRank = std::max(secondRank, priority.second);
-        }
-        if (bestRank < 0 || bestRank == secondRank) return 0;
-        for (int neighbor : graph.neighbors[ends.first]) {
-            if (neighbor == ends.second) continue;
-            if (neighbor != bestAtom) configuration = 3 - configuration;
-            break;
-        }
-    }
-    return configuration;
-}
-
 // ============================================================================
-// Internal: Rules 4 and 5 with auxiliary descriptors
+// Internal: the hierarchical comparison by every rule, with auxiliary descriptors
 // ============================================================================
 
 /**
  * Sequence Rules 1 to 6 (IUPAC 2013 P-92.1.3) over the hierarchical digraph of one tetrahedral
- * centre, for the centres Rules 1 to 3 leave unresolved. The method is the one the reference CIP
- * implementations follow (Hanson et al., JCIM 58, 1755 (2018)):
+ * centre or one double bond, for the ligands Rule 1a alone leaves tied. The method is the one the
+ * reference CIP implementations follow (Hanson et al., JCIM 58, 1755 (2018)):
  *
  *   - Every stereogenic unit in the digraph (a tagged tetrahedral centre or a stereogenic double
- *     bond, other than the centre itself) receives an auxiliary descriptor at each of its nodes,
+ *     bond, other than the one being labelled) receives an auxiliary descriptor at each of its nodes,
  *     found by ranking its ligands with the digraph re-rooted at that node: the edge towards the
  *     root is reversed and the subtree beyond it explored in that direction. Nodes are labelled
  *     from the deepest sphere inwards, so each sees the descriptors of the units beyond it.
@@ -706,6 +519,37 @@ inline int atomicPriorityDoubleBondConfiguration(const MolGraph& graph, int firs
 class SequenceRules {
 public:
     SequenceRules(const MolGraph& graph, int centre) : g_(graph), centre_(centre) {}
+    /** The rules for the double bond first=second, over the digraph rooted at `first`. */
+    SequenceRules(const MolGraph& graph, int first, int second) : g_(graph), centre_(first), partner_(second) {}
+
+    /**
+     * The descriptor of the double bond by Rules 1a to 5, each read exhaustively before the next,
+     * or EZLabel::NONE when they leave the ligands of an end tied or only Rule 5 tells the ligands
+     * of one end apart (seqCis and seqTrans).
+     */
+    EZLabel bondLabel() {
+        if (centre_ < 0 || centre_ >= g_.n || partner_ < 0 || partner_ >= g_.n) return EZLabel::NONE;
+        Unit unit;
+        unit.bond = true;
+        unit.first = centre_;
+        unit.second = partner_;
+        unit.carrierFirst = firstOtherNeighbour(g_, centre_, partner_);
+        unit.carrierSecond = firstOtherNeighbour(g_, partner_, centre_);
+        unit.configuration = g_.dbStereo(centre_, partner_);
+        if (unit.configuration == 0 || unit.carrierFirst < 0 || unit.carrierSecond < 0) return EZLabel::NONE;
+        nodes_ = buildDigraph(g_, centre_);
+        if (nodes_.empty()) return EZLabel::NONE;
+        aux_.assign(nodes_.size(), NONE);
+        up_.assign(nodes_.size(), -1);
+        collectUnits();
+        labelAuxiliaryDescriptors();
+        changeRoot(0);
+        std::vector<Rule> rules;
+        for (int kind = RULE_1A; kind <= RULE_5; ++kind) rules.push_back({kind, NONE});
+        const int descriptor = labelDoubleBond(0, unit, rules);
+        if (exhausted_) return EZLabel::NONE;
+        return descriptor == Z ? EZLabel::Z : descriptor == E ? EZLabel::E : EZLabel::NONE;
+    }
 
     /** The descriptor of the centre, or RSLabel::NONE when the rules do not resolve it. */
     RSLabel label() {
@@ -780,6 +624,7 @@ private:
 
     const MolGraph& g_;
     int centre_;
+    int partner_ = -1;                  // the other atom of a double bond being labelled, -1 for a centre
     std::vector<DigraphNode> nodes_;
     std::vector<int> aux_;              // auxiliary descriptor by node
     std::vector<int> up_;               // the neighbour of each node towards the current root, -1 for the root
@@ -1174,6 +1019,8 @@ private:
         for (size_t u = 0; u < units_.size(); ++u) {
             const Unit& unit = units_[u];
             if (!unit.bond && unit.first == centre_) continue;
+            if (unit.bond && partner_ >= 0 && ((unit.first == centre_ && unit.second == partner_)
+                                               || (unit.first == partner_ && unit.second == centre_))) continue;
             for (size_t node = 0; node < nodes_.size(); ++node) {
                 if (nodes_[node].isDuplicate || nodes_[node].atomIdx != unit.first) continue;
                 int low = static_cast<int>(node);
@@ -1201,7 +1048,7 @@ private:
             const Unit& unit = units_[entry.second];
             int descriptor;
             if (unit.bond) {
-                descriptor = labelDoubleBond(entry.first, unit);
+                descriptor = labelDoubleBond(entry.first, unit, allRules());
             } else {
                 changeRoot(entry.first);
                 descriptor = labelTetrahedral(entry.first, unit);
@@ -1278,8 +1125,8 @@ private:
         return rectus ? R : S;
     }
 
-    /** The descriptor of a double bond unit whose end nearer the root is `root1`. */
-    int labelDoubleBond(int root1, const Unit& unit) {
+    /** The descriptor of a double bond unit whose end nearer the root is `root1`, ranking its ligands by `rules`. */
+    int labelDoubleBond(int root1, const Unit& unit, const std::vector<Rule>& rules) {
         const int atom1 = nodes_[root1].atomIdx;
         const int atom2 = atom1 == unit.first ? unit.second : unit.first;
         int root2 = -1;
@@ -1300,7 +1147,6 @@ private:
         int carrier1 = unit.carrierFirst, carrier2 = unit.carrierSecond;
         if (atom1 == unit.second) std::swap(carrier1, carrier2);
         int configuration = unit.configuration;
-        const std::vector<Rule> rules = allRules();
         changeRoot(root1);
         const Priority priority1 = prioritise(rules, true, root1, edges1, true);
         if (!priority1.unique) return UNKNOWN;
@@ -1325,24 +1171,22 @@ private:
  * Assign CIP R/S descriptor to atom `centre` in MolGraph `g`.
  *
  * Uses a two-pass approach per IUPAC 2013 P-92.1.4:
- *   Pass 1: Rules 1-3 (atomic number, mass number, Z before E)
- *   Pass 2: Rules 4 and 5 with auxiliary descriptors (detail::SequenceRules),
- *           for a centre pass 1 leaves unresolved
+ *   Pass 1: Rule 1a (atomic number), sphere by sphere
+ *   Pass 2: for a centre pass 1 leaves unresolved, Rules 1a to 6 over the
+ *           hierarchical digraph, with auxiliary descriptors for Rules 4 and 5
+ *           (detail::SequenceRules), each rule read exhaustively before the next
  *
  * If ligands are distinguished only by Rule 5 (or Rule 6), the centre is
  * pseudoasymmetric and receives lowercase r/s.
  *
- * @param descriptorMap  Empty for pass 1 only (the default); any entry asks
- *                       for pass 2, whose auxiliary descriptors are derived
- *                       from the digraph rather than read from the map. Only
- *                       whether the map is empty is read.
- * @return RSLabel::NONE if not a valid stereocentre.
+ * @param descriptorMap  Not read; kept for compatibility. Both passes always apply.
+ * @return RSLabel::NONE if not a valid stereocentre, or the rules leave it unresolved.
  */
 inline RSLabel assignRS(const MolGraph& g, int centre,
                         const std::unordered_map<int, int>& descriptorMap = {}) {
+    (void)descriptorMap;
     if (centre < 0 || centre >= g.n) return RSLabel::NONE;
     if (detail::atomPropertyOrZero(g.tetraChirality, centre) == 0) return RSLabel::NONE;
-    if (!descriptorMap.empty()) return detail::SequenceRules(g, centre).label();
 
     auto priorities = detail::computePriorities(g, centre);
 
@@ -1355,9 +1199,8 @@ inline RSLabel assignRS(const MolGraph& g, int centre,
     bool allDistinct = (static_cast<int>(ranks.size()) ==
                         static_cast<int>(priorities.size()));
 
-    // If not all distinct, return NONE: the caller may retry with pass 2,
-    // where Rules 4 and 5 and the auxiliary descriptors apply.
-    if (!allDistinct) return RSLabel::NONE;
+    // Ligands Rule 1a leaves tied go to pass 2, the hierarchical comparison by every rule.
+    if (!allDistinct) return detail::SequenceRules(g, centre).label();
 
     // We need exactly 4 ligands for a tetrahedral centre
     if (priorities.size() != 4) return RSLabel::NONE;
@@ -1497,8 +1340,10 @@ inline EZLabel assignEZ(const MolGraph& g, int a1, int a2) {
     int storedConfig = g.dbStereo(a1, a2);
     if (storedConfig == 0) return EZLabel::NONE;
 
-    // For each end of the double bond, find the higher-priority substituent
-    // (excluding the other end of the double bond)
+    // For each end of the double bond, find the higher-priority substituent by
+    // Rule 1a (excluding the other end of the double bond); kTied when Rule 1a
+    // leaves the two substituents of an end tied.
+    constexpr int kTied = -2;
     auto getPriority = [&](int thisEnd, int otherEnd) -> int {
         // Build priorities for this end
         auto prios = detail::computePriorities(g, thisEnd);
@@ -1527,7 +1372,7 @@ inline EZLabel assignEZ(const MolGraph& g, int a1, int a2) {
         for (auto& [atomIdx, rank] : prios) {
             if (atomIdx != otherEnd) subCount++;
         }
-        if (subCount >= 2 && bestRank == secondRank) return -1; // same priority
+        if (subCount >= 2 && bestRank == secondRank) return kTied; // same priority
 
         return bestAtom;
     };
@@ -1535,6 +1380,8 @@ inline EZLabel assignEZ(const MolGraph& g, int a1, int a2) {
     int highA1 = getPriority(a1, a2);
     int highA2 = getPriority(a2, a1);
 
+    // Substituents Rule 1a leaves tied go to the hierarchical comparison by every rule.
+    if (highA1 == kTied || highA2 == kTied) return detail::SequenceRules(g, a1, a2).bondLabel();
     if (highA1 < 0 || highA2 < 0) return EZLabel::NONE;
 
     // storedConfig:  1 = Z (cis), 2 = E (trans) — as computed by SMILES parser
@@ -1616,27 +1463,19 @@ struct CIPDescriptors {
  * Compute CIP descriptors for all stereocentres and stereogenic
  * double bonds in the molecule.
  *
- * Uses a two-pass approach per IUPAC 2013:
- *   Pass 1: Assign R/S using Rules 1-3 only.
- *   Pass 2: For centres still NONE due to tied priorities, apply Rules 4
- *           to 6 with auxiliary descriptors (detail::SequenceRules).
- *           Centres resolved only by Rule 5 or Rule 6 are pseudoasymmetric (r/s).
+ * Each centre and double bond is ranked first by Rule 1a alone; ligands Rule 1a
+ * leaves tied are ranked by Rules 1a to 6 over the hierarchical digraph
+ * (detail::SequenceRules). Centres resolved only by Rule 5 or Rule 6 are
+ * pseudoasymmetric (r/s); a double bond whose ligands at one end are told apart
+ * only by Rule 5 is left unlabelled.
  */
 inline CIPDescriptors assignAll(const MolGraph& g) {
     CIPDescriptors result;
     result.rsLabels.assign(g.n, RSLabel::NONE);
 
-    // Pass 1: Assign R/S using Rules 1-3 only
     for (int i = 0; i < g.n; ++i) {
         if (detail::atomPropertyOrZero(g.tetraChirality, i) != 0) {
             result.rsLabels[i] = assignRS(g, i);
-        }
-    }
-
-    // Pass 2: Rules 4 to 6 for the centres still unresolved
-    for (int i = 0; i < g.n; ++i) {
-        if (detail::atomPropertyOrZero(g.tetraChirality, i) != 0 && result.rsLabels[i] == RSLabel::NONE) {
-            result.rsLabels[i] = detail::SequenceRules(g, i).label();
         }
     }
 

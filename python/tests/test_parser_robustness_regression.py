@@ -108,15 +108,71 @@ def test_smarts_input_limits():
         smsd.Substructure.smarts(ring_atom * 10 + '.[CR]')
 
 
-def test_large_macrocycle_parses_on_a_small_stack():
-    """Ring perception of a macrocycle at the atom limit needs no deep call stack."""
+@pytest.mark.parametrize("stack_kib", [512, 128])
+@pytest.mark.parametrize("smiles, atoms", [("'C1' + 'C' * 9997 + 'C1'", 9999), ("'c1' + 'c' * 9996 + 'c1'", 9998)])
+def test_large_macrocycle_parses_on_a_small_stack(smiles, atoms, stack_kib):
+    """Ring perception and the Kekule structure of a macrocycle near the atom limit need no deep call stack."""
     body = (
         "import threading, smsd\n"
-        "threading.stack_size(512 * 1024)\n"
+        f"threading.stack_size({stack_kib} * 1024)\n"
         "out = []\n"
-        "t = threading.Thread(target=lambda: out.append(smsd.parse_smiles('C1' + 'C' * 9997 + 'C1').n))\n"
+        f"t = threading.Thread(target=lambda: out.append(smsd.parse_smiles({smiles}).n))\n"
         "t.start(); t.join()\n"
-        "assert out == [9999], out\n"
+        f"assert out == [{atoms}], out\n"
     )
     result = subprocess.run([sys.executable, "-c", body], capture_output=True, text=True, timeout=60)
     assert result.returncode == 0, result.stderr
+
+
+# A message that quotes the byte at fault shows it as an escape, so the error is the parser's
+# ValueError rather than a failure to decode its message.
+@pytest.mark.parametrize("text", ["C" + chr(0xE9), "[CH" + chr(0xC3) + "]", "C%" + chr(0xFF) * 2 + "C"])
+def test_smiles_rejects_characters_outside_ascii(text):
+    with pytest.raises(ValueError) as error:
+        smsd.parse_smiles(text)
+    assert type(error.value) is ValueError
+
+
+@pytest.mark.parametrize("text", ["C" + chr(0xE9), "[" + chr(0xC3) + "]", "[#6]" + chr(0xFF)])
+def test_smarts_rejects_characters_outside_ascii(text):
+    with pytest.raises(ValueError) as error:
+        smsd.Substructure.smarts(text)
+    assert type(error.value) is ValueError
+
+
+def test_parser_messages_show_a_byte_outside_ascii_as_an_escape():
+    with pytest.raises(ValueError, match=r"Unexpected character at position 1: '\\xc3'"):
+        smsd.parse_smiles("C" + chr(0xE9))
+    with pytest.raises(ValueError, match=r"Unexpected character in SMARTS: '\\xc3' at position 1"):
+        smsd.Substructure.smarts("C" + chr(0xE9))
+
+
+def test_screen_targets_rejects_characters_outside_ascii():
+    with pytest.raises(ValueError) as error:
+        smsd.screen_targets(smsd.parse_smiles("CCO"), ["CCO", "C" + chr(0xE9)], 0.0)
+    assert type(error.value) is ValueError
+
+
+V3000 = smsd.write_mol_block_v3000(smsd.parse_smiles("C[NH3+]"))
+
+
+@pytest.mark.parametrize("original, malformed", [
+    ("CHG=1", "CHG=99999999999"), ("CHG=1", "CHG=1x"), ("CHG=1", "MASS=4294967297"),
+    ("M  V30 1 C 0 0 0 0\n", "M  V30 99999999999 C 0 0 0 0\n"),
+    ("M  V30 1 C 0 0 0 0\n", "M  V30 1 C 1e999 0 0 0\n"),
+    ("M  V30 1 C 0 0 0 0\n", "M  V30 1 C nan 0 0 0\n"),
+    ("M  V30 1 1 1 2\n", "M  V30 1 1 1 99999999999\n"),
+])
+def test_v3000_numeric_fields_must_be_whole_numbers_in_range(original, malformed):
+    assert V3000.count(original) == 1
+    with pytest.raises(ValueError, match="Invalid V3000"):
+        smsd.read_mol_block(V3000.replace(original, malformed))
+
+
+def test_v3000_block_holds_at_most_max_atoms():
+    head = V3000[:V3000.index("M  V30 BEGIN ATOM\n") + len("M  V30 BEGIN ATOM\n")]
+    tail = "M  V30 END ATOM\nM  V30 END CTAB\nM  END\n"
+    atoms = "".join(f"M  V30 {index} C 0 0 0 0\n" for index in range(1, 10001))
+    assert smsd.read_mol_block(head + atoms + tail).n == 10000
+    with pytest.raises(ValueError, match="MAX_ATOMS"):
+        smsd.read_mol_block(head + atoms + "M  V30 10001 C 0 0 0 0\n" + tail)

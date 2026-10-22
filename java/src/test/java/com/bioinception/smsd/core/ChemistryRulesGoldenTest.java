@@ -84,6 +84,29 @@ class ChemistryRulesGoldenTest {
   }
 
   @Test
+  void fingerprintQualitySharesItsDefinitions() {
+    JsonNode section = rules.get("fingerprint_quality");
+    double tolerance = section.get("tolerance").asDouble();
+    for (JsonNode item : section.get("cases")) {
+      String name = item.get("name").asText();
+      int size = item.get("fp_size").asInt(), setBits = item.get("set_bits").asInt();
+      // Positions 0 to set_bits - 1, with every padding bit beyond the size set as well.
+      long[] words = new long[(size - 1) / 64 + 1];
+      for (int bit = 0; bit < setBits; bit++) words[bit >>> 6] |= 1L << (bit & 63);
+      if (size % 64 != 0) words[words.length - 1] |= -1L << (size % 64);
+      Map<String, Object> quality = FingerprintEngine.analyzeFpQuality(words, size);
+      assertEquals(Arrays.asList("set_bits", "fp_size", "density", "expected_collision_rate", "is_saturated"),
+          new ArrayList<>(quality.keySet()), name);
+      assertEquals(setBits, quality.get("set_bits"), name);
+      assertEquals(size, quality.get("fp_size"), name);
+      assertEquals(item.get("density").asDouble(), (Double) quality.get("density"), tolerance, name);
+      assertEquals(item.get("expected_collision_rate").asDouble(),
+          (Double) quality.get("expected_collision_rate"), tolerance, name);
+      assertEquals(item.get("is_saturated").asBoolean(), quality.get("is_saturated"), name);
+    }
+  }
+
+  @Test
   void circularSimilarityOfEmptyMolecules() throws Exception {
     for (JsonNode item : rules.get("circular_similarity").get("cases")) {
       long[] query = FingerprintEngine.ecfp(molecule(item.get("query").asText()), 2, 2048);
@@ -346,6 +369,34 @@ class ChemistryRulesGoldenTest {
   }
 
   @Test
+  void aromaticityIsPerceivedFromTheStructure() throws Exception {
+    for (JsonNode item : rules.get("aromatic_input").get("cases")) {
+      MolGraph graph = new MolGraph(Standardiser.standardise(molecule(item.get("smiles").asText()),
+          Standardiser.TautomerMode.NONE));
+      int aromatic = 0;
+      for (int atom = 0; atom < graph.n; atom++) if (graph.aromatic[atom]) aromatic++;
+      assertEquals(item.get("aromatic_atoms").asInt(), aromatic, item.get("name").asText());
+    }
+  }
+
+  @Test
+  void firstPassRanksByRule1aAndLeavesTheRestToTheHierarchicalRules() throws Exception {
+    for (JsonNode item : rules.get("cip_hierarchical_ranking").get("cases")) {
+      String name = item.get("name").asText();
+      assertEquals(expectedLabels(item), allCipLabels(item.get("smiles").asText()), name);
+      MolGraph graph = new MolGraph(molecule(item.get("smiles").asText()));
+      Map<Long, Character> found = CIPAssigner.assignEZ(graph);
+      Map<String, String> bonds = new TreeMap<>(), expected = new TreeMap<>();
+      for (int first = 0; first < graph.n; first++)
+        for (int second : graph.neighbors[first])
+          if (second > first && found.containsKey(MolGraph.bondKey(first, second)))
+            bonds.put(first + "-" + second, String.valueOf(found.get(MolGraph.bondKey(first, second))));
+      item.get("bonds").fields().forEachRemaining(bond -> expected.put(bond.getKey(), bond.getValue().asText()));
+      assertEquals(expected, bonds, name + " E/Z");
+    }
+  }
+
+  @Test
   void smartsFollowsDaylightSemantics() throws Exception {
     for (JsonNode item : rules.get("smarts_daylight").get("cases")) {
       MolGraph target = new MolGraph(molecule(item.get("smiles").asText()));
@@ -353,6 +404,9 @@ class ChemistryRulesGoldenTest {
           Substructure.smarts(item.get("smarts").asText()).matchAll(target).matches().size(),
           item.get("name").asText() + " " + item.get("smarts").asText());
     }
+    for (JsonNode item : rules.get("smarts_daylight").get("rejected"))
+      assertThrows(IllegalArgumentException.class, () -> Substructure.smarts(item.get("smarts").asText()),
+          item.get("name").asText() + " " + item.get("smarts").asText());
   }
 
   /** The options of a fixture case: the classic configuration of its family, then its keyword arguments. */
@@ -548,9 +602,11 @@ class ChemistryRulesGoldenTest {
   @Test
   void strictRingFusionComparesRelevantCycleCounts() throws Exception {
     JsonNode section = rules.get("strict_ring_fusion");
-    for (JsonNode item : section.get("ring_counts"))
-      assertArrayEquals(ints(item.get("counts")), new MolGraph(molecule(item.get("smiles").asText())).getRingCounts(),
-          item.get("name").asText());
+    for (JsonNode item : section.get("ring_counts")) {
+      MolGraph graph = new MolGraph(molecule(item.get("smiles").asText()));
+      assertArrayEquals(ints(item.get("counts")), graph.getRingCounts(), item.get("name").asText());
+      assertEquals(item.get("truncated").asBoolean(), graph.ringsTruncated(), item.get("name").asText());
+    }
     for (JsonNode item : section.get("common_bonds")) {
       String name = item.get("name").asText();
       MCS.Options options = new MCS.Options();
@@ -565,6 +621,25 @@ class ChemistryRulesGoldenTest {
         assertEquals(item.get("bonds").asInt(), result.matches().get(0).bondCount(), name);
         assertEquals(item.get("atoms").asInt(), result.matches().get(0).atomCount(), name);
       }
+    }
+  }
+
+  @Test
+  void doubleBondLigandsAreJoinedToTheirEnd() throws Exception {
+    for (JsonNode item : rules.get("double_bond_ligands").get("cases")) {
+      String name = item.get("name").asText();
+      MCS.Options options = new MCS.Options();
+      options.objective = MCS.Objective.MCES;
+      options.connectivity = "connected".equals(item.get("connectivity").asText())
+          ? MCS.Connectivity.Connected : MCS.Connectivity.Fragments;
+      options.chemistry.useBondStereo = true;
+      MolGraph query = new MolGraph(molecule(item.get("query").asText()));
+      MolGraph target = new MolGraph(molecule(item.get("target").asText()));
+      SearchResult result = MCS.find(query).withOptions(options).match(target);
+      assertTrue(result.optimal() && result.found(), name);
+      assertEquals(item.get("bonds").asInt(), result.matches().get(0).bondCount(), name);
+      assertEquals(item.get("atoms").asInt(), result.matches().get(0).atomCount(), name);
+      assertEquals(Collections.emptyList(), MCS.validateMapping(query, target, result.matches().get(0), options), name);
     }
   }
 

@@ -20,7 +20,7 @@ implementation code.
 | Search | `mcs.hpp` (`MCS`, mapping utilities); `substructure.hpp` (`Substructure`, `RGroupResult`); `search_types.hpp` (`SearchOptions`, `MCSOptions`, `SubstructureOptions`, `Match`, `SearchResult`, `SearchStatus`, `CancellationToken`); `chem_options.hpp` (`ChemOptions`) |
 | Molecules | `mol_graph.hpp` (`MolGraph`, `MolGraph::Builder`); `smiles_parser.hpp` (`parseSMILES`, `toSMILES`, `toSMARTS`); `smarts_parser.hpp` (`parseSMARTS`, `SmartsPredicateRegistry`); `parser_utils.hpp` (input limits); `mol_reader.hpp` (MOL and SDF) |
 | Fingerprints and screening | `batch.hpp` (fingerprints, similarity, `TargetCorpus`) and `fingerprint_options.hpp` (`FingerprintOptions`), in `smsd::batch`; `similarity_screen.hpp` (`similarityUpperBound`, `screenTargets`); `gpu.hpp` (Metal or CUDA screening with a CPU fallback, in `smsd::gpu`) |
-| Rings, stereo and drawing | `ring_finder.hpp` (`computeSSSR`, `computeRelevantCycles`, `computeURFs`, `computeRings`); `cip.hpp` (`smsd::cip`); `layout.hpp` (2D and 3D coordinates, `transform`); `depict.hpp` (SVG); `depictor.hpp` (2D coordinates constrained to fixed atoms or a reference) |
+| Rings, stereo and drawing | `ring_finder.hpp` (`computeSSSR`, `computeRelevantCycles`, `computeURFs`, `computeRings`, and `ringsTruncated`, which says whether the ring search stopped at its work bound); `cip.hpp` (`smsd::cip`); `layout.hpp` (2D and 3D coordinates, `transform`); `depict.hpp` (SVG); `depictor.hpp` (2D coordinates constrained to fixed atoms or a reference) |
 | Data and utilities | `hungarian.hpp` (`optimalAssign`); `periodic_table.hpp` (`getElement`, `atomicWeight`, `paulingElectronegativity` and more); `scaffold_library.hpp` (reference ring systems, scaffolds, pharmacophore and functional-group SMARTS, drug-likeness limits); `bond_energies.hpp` (`bondDissociationEnergy`, `mappingBondChangeCost`, in kJ/mol); `color_palette.hpp` (`mapNumberToPaletteColor`, a fixed 20-colour cycle for atom-map numbers); `rdkit_adapter.hpp` ([optional](#optional-native-adapter)) |
 
 ## Prepared queries
@@ -293,7 +293,11 @@ rounding.
 including bracket atoms beyond the OpenSMILES limits;
 `parseSMILES(text, options)` with `ParseOptions::lenient = true` recovers where
 it can, such as from unclosed rings or unknown elements. `toSMILES(graph)`
-writes canonical SMILES and `toSMARTS(graph, options)` canonical SMARTS;
+writes canonical SMILES, with `/` and `\` on single bonds wherever a configured
+double bond has one at an end; an end with only aromatic ring bonds, as at an
+exocyclic C=N on an aromatic ring, carries them on an aromatic bond, as RDKit
+writes it, which strict OpenSMILES readers take as a single bond.
+`toSMARTS(graph, options)` writes canonical SMARTS;
 `SmartsWriteOptions` writes aromaticity and charge by default, and ring
 membership, hydrogen count and isotope on request.
 
@@ -302,15 +306,25 @@ membership, hydrogen count and isotope on request.
 bonds (`setNeighbors`, `setBondOrders`, `bondRingFlags`, `bondAromaticFlags`),
 stereo (`tetrahedralChirality`, `doubleBondStereo`, `doubleBondStereoSparse`)
 and metadata (`atomIds`, `name`, `programLine`, `comment`, `properties`,
-`solvent`, `pH`). `build()` perceives aromaticity and `build(false)` does not.
+`solvent`, `pH`). `build()` perceives aromaticity, giving supplied aromatic
+systems a Kekulé structure and perceiving them again, and `build(false)` keeps
+the supplied flags. When perception cannot read every candidate cycle of a
+molecule, as with a large bowl-shaped polyarene, the aromatic systems supplied
+on its fused ring systems keep their flags.
 
 - `extractSubgraph(graph, atoms)`: the induced subgraph, in the given order.
 - `murckoScaffold(graph)`: the Bemis–Murcko scaffold (ring atoms, linkers and
   atoms double- or triple-bonded to them), capped with hydrogen, keeping
   surviving stereo; a molecule without rings is unchanged.
 - `translateToAtomIds(mapping, query, target)`: a mapping in external atom IDs.
-- `readMolBlock(text)` and `readMolFile(path)` read V2000 or V3000;
-  `readSDF(path)` reads every record, a malformed one giving an empty graph.
+- `readMolBlock(text)` and `readMolFile(path)` read V2000 or V3000 and throw
+  `std::invalid_argument` for a block they cannot read, such as one with a bond
+  to a missing atom, a V3000 integer field outside its range, a V3000
+  coordinate that is not a decimal number in the range of a double or more than
+  `MAX_ATOMS` atoms; V2000 numeric fields are read leniently. Coordinates are
+  read by one rule whatever the locale or platform, and one below 1e-307 in
+  magnitude reads as zero. `readSDF(path)` reads every record, a
+  malformed one giving an empty graph.
 - `writeMolBlock(graph)` writes V2000, or V3000 above 999 atoms or bonds;
   `writeMolBlockV3000(graph)` writes V3000; `writeSDFRecord(graph)` writes one
   record ending in `$$$$`, and `writeSDF(graphs, path)` a file.
@@ -379,17 +393,26 @@ In `smsd::batch`:
 - `fingerprintSubset(query, target)` tests whether every query bit is set in
   the target; `batchFingerprintScreen(query, targets, numThreads = 0)` returns
   the passing target indices.
+- `fingerprintQuality(fingerprint, fpSize)`, for packed words or set positions,
+  returns a `FingerprintQuality` with `setBits`, `fpSize`, `density`,
+  `expectedCollisionRate` and `saturated` (density over
+  `FINGERPRINT_SATURATION_DENSITY`, 0.75), as Python `analyze_fp_quality` and
+  Java `analyzeFpQuality` report them.
 - `toHex`, `fromHex`, `toBinaryString` and `countsToArray` convert formats.
 - `TargetCorpus` holds reusable targets: `addTarget`, `addTargets`,
-  `prewarm(numThreads = 0)`, `size`, `isPrewarmed`, `targets` and
+  `prewarm(numThreads = 0)`, `size`, `isPrewarmed`, `targets`,
   `screen(query, threshold, numThreads = 0)`, which returns the indices of the
   targets with ECFP4 Tanimoto similarity of at least `threshold`, and none
-  before `prewarm`.
+  before `prewarm`, and `screenTargets(query, threshold, chemistry,
+  numThreads = 0)`, the bound screen below for the held targets, which needs
+  no `prewarm`.
 
 `similarityUpperBound(query, target, chemistry)` bounds the atom-count Tanimoto
 similarity of the MCS from above;
 `screenTargets(query, targets, threshold, chemistry)` returns the indices of
-the targets whose bound reaches `threshold`. `gpu::batchSimilarityScreenAuto`
+the targets whose bound reaches `threshold`, on the calling thread, or with a
+fifth argument on up to `numThreads` threads (0 = the OpenMP thread limit),
+giving the same indices. `gpu::batchSimilarityScreenAuto`
 computes the bound on CUDA or Metal when built with either and a device is
 present, else on the CPU, returning a `ScreenHit{index, score}` per passing
 target.

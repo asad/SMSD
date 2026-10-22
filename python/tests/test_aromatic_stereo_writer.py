@@ -36,6 +36,18 @@ def test_opposite_aromatic_reference_configurations_remain_distinct():
     assert smsd.to_smiles(first) == smsd.to_smiles(equivalent)
 
 
+@pytest.mark.parametrize("text,expected", [(r"F/C1=C(\Cl)C=CC=C1", "[c]1(=[c](cccc1)/F)/Cl"),
+                                           (r"F/C1=C(\Cl)C=CC=CC=CC=C1", "[c]1(=[c](cccccccc1)/F)/Cl"),
+                                           ("F/C1=C(/Cl)C=CC=CC=CC=C1", r"[c]1(=[c](cccccccc1)\F)/Cl")])
+def test_aromatic_focus_stereo_is_written_on_single_bonds(text, expected):
+    # '/' and '\' are single bonds in OpenSMILES, so the substituent bonds carry the configuration.
+    # A ring double bond can be trans only in a ring of eight or more atoms, as in [10]annulene.
+    graph = smsd.parse_smiles(text)
+    output = smsd.to_smiles(graph)
+    assert output == expected
+    assert smsd.canonical_hash(smsd.parse_smiles(output)) == smsd.canonical_hash(graph)
+
+
 @pytest.mark.parametrize("text", ["F/C=C/F", r"F/C=C\F", "F/C=C/C=C/F", r"F/C=C\C=C/F",
                                  "F/C=C/C(=C/F)Cl", r"F/C=C/C(=C\F)Cl"])
 def test_ordinary_conjugated_stereo_still_round_trips(text):

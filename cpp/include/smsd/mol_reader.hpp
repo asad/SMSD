@@ -14,16 +14,18 @@
 
 #include "smsd/mol_graph.hpp"
 #include "smsd/layout.hpp"
+#include "smsd/parser_utils.hpp"
 #include "smsd/smiles_parser.hpp"
 
 #include <algorithm>
-#include <cctype>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <functional>
+#include <limits>
+#include <locale>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -54,9 +56,9 @@ inline int elementToAtomicNum(const std::string& sym) {
 // --------------------------------------------------------------------------
 inline std::string trim(const std::string& s) {
     size_t start = 0;
-    while (start < s.size() && std::isspace(static_cast<unsigned char>(s[start]))) ++start;
+    while (start < s.size() && parser_detail::isAsciiSpace(s[start])) ++start;
     size_t end = s.size();
-    while (end > start && std::isspace(static_cast<unsigned char>(s[end - 1]))) --end;
+    while (end > start && parser_detail::isAsciiSpace(s[end - 1])) --end;
     return s.substr(start, end - start);
 }
 
@@ -72,16 +74,74 @@ inline int safeInt(const std::string& s, int start, int len, int defaultVal = 0)
     }
 }
 
+/**
+ * Reads a decimal number from the start of text, as MOL files write numbers: an optional sign,
+ * digits with an optional decimal point and an optional exponent. The rule is the same in every
+ * locale and on every platform: hexadecimal, infinity and NaN forms are not numbers, a magnitude
+ * below 1e-307 reads as zero, and a magnitude beyond the range of a double is refused. Returns
+ * false when text does not start with such a number; otherwise `whole` says whether the number
+ * takes the whole text.
+ */
+inline bool classicDouble(const std::string& text, double& value, bool& whole) {
+    const auto digit = [&](size_t index) { return index < text.size() && text[index] >= '0' && text[index] <= '9'; };
+    size_t at = 0;
+    const bool negative = at < text.size() && text[at] == '-';
+    if (at < text.size() && (text[at] == '-' || text[at] == '+')) ++at;
+    // The decimal exponent of the first significant digit, as written before any exponent.
+    long long leading = 0;
+    bool significant = false;
+    size_t integerDigits = 0, fractionDigits = 0;
+    for (; digit(at); ++at, ++integerDigits) {
+        if (significant) ++leading;
+        else significant = text[at] != '0';
+    }
+    if (at < text.size() && text[at] == '.') {
+        for (++at; digit(at); ++at, ++fractionDigits) {
+            if (significant || text[at] == '0') continue;
+            significant = true;
+            leading = -static_cast<long long>(fractionDigits + 1);
+        }
+    }
+    if (integerDigits + fractionDigits == 0) return false;
+    size_t end = at;
+    if (at < text.size() && (text[at] == 'e' || text[at] == 'E')) {
+        size_t digits = at + 1;
+        const bool exponentNegative = digits < text.size() && text[digits] == '-';
+        if (digits < text.size() && (text[digits] == '-' || text[digits] == '+')) ++digits;
+        long long exponent = 0;
+        size_t past = digits;
+        for (; digit(past); ++past) exponent = std::min(exponent * 10 + (text[past] - '0'), 1000000000LL);
+        if (past > digits) {
+            end = past;
+            leading += exponentNegative ? -exponent : exponent;
+        }
+    }
+    whole = end == text.size();
+    if (!significant || leading < -307) {
+        value = negative ? -0.0 : 0.0;
+        return true;
+    }
+    if (leading > 308) return false;
+    // Between these bounds every value is a normal double, which the classic locale reads alike
+    // on every platform.
+    thread_local std::istringstream stream;
+    thread_local const bool classic = (stream.imbue(std::locale::classic()), true);
+    (void) classic;
+    stream.clear();
+    stream.str(text.substr(0, end));
+    value = 0.0;
+    stream >> std::noskipws >> value;
+    return !stream.fail() && std::isfinite(value);
+}
+
 inline double safeDouble(const std::string& s, int start, int len, double defaultVal = 0.0) {
     if (start < 0 || start >= static_cast<int>(s.size())) return defaultVal;
     int end = std::min(start + len, static_cast<int>(s.size()));
     std::string sub = trim(s.substr(start, end - start));
     if (sub.empty()) return defaultVal;
-    try {
-        return std::stod(sub);
-    } catch (...) {
-        return defaultVal;
-    }
+    double value = 0.0;
+    bool whole = false;
+    return classicDouble(sub, value, whole) && std::isfinite(value) ? value : defaultVal;
 }
 
 // Split a string into lines
@@ -188,7 +248,11 @@ inline int valenceForWrite(const MolGraph& graph, int atom) {
         ? (graph.formalCharge[atom] == 0 ? std::max(0, 1 - valence) : 0)
         : graph.atomicNum[atom] == 0 ? 0
         : detail::computeImplicitH(graph.atomicNum[atom], graph.aromatic[atom], valence, graph.formalCharge[atom]);
-    return inferredHydrogens == graph.hydrogenCount[atom] ? -1 : valence + graph.hydrogenCount[atom];
+    if (inferredHydrogens == graph.hydrogenCount[atom]) return -1;
+    // The MOL valence field holds 0 to 14 (15 or -1 meaning zero), so a larger total cannot be written.
+    const long long total = static_cast<long long>(valence) + graph.hydrogenCount[atom];
+    if (total < 0 || total > 14) throw std::invalid_argument("Cannot preserve the hydrogen count in the MOL valence field");
+    return static_cast<int>(total);
 }
 
 /** Convert between MDL's ascending ligand order and the graph's winding order. */
@@ -469,6 +533,42 @@ inline std::map<std::string, std::string> parseV30Attributes(const std::vector<s
     return attrs;
 }
 
+// The ranges of the V3000 atom properties: charges and hydrogen counts as SMILES writes them
+// (two digits), mass numbers as SMILES writes them (three digits), and the radical and
+// configuration codes the CTfile format defines.
+constexpr int V3000_MAX_CHARGE = 99, V3000_MAX_MASS = 999, V3000_MAX_HYDROGENS = 99;
+
+/**
+ * A V3000 integer field, which must be written as an integer from lowest to highest (by default
+ * any int); anything else throws std::invalid_argument.
+ */
+inline int v3000Integer(const std::string& text, const char* field,
+                        int lowest = std::numeric_limits<int>::min(), int highest = std::numeric_limits<int>::max()) {
+    size_t used = 0;
+    long long value = 0;
+    try {
+        value = std::stoll(text, &used);
+    } catch (const std::exception&) {
+        used = 0;
+    }
+    if (used == 0 || used != text.size() || value < lowest || value > highest)
+        throw std::invalid_argument(std::string("Invalid V3000 ") + field + ": " + text);
+    return static_cast<int>(value);
+}
+
+/**
+ * A V3000 coordinate: the whole field must be a decimal number in the range of a double, read by
+ * the rule of classicDouble() whatever locale the program has set; anything else throws
+ * std::invalid_argument.
+ */
+inline double v3000Coordinate(const std::string& text) {
+    double value = 0.0;
+    bool whole = false;
+    if (!classicDouble(text, value, whole) || !whole)
+        throw std::invalid_argument("Invalid V3000 coordinate: " + text);
+    return value;
+}
+
 } // namespace mol_detail
 
 inline MolGraph buildMolGraphFromParsedMol(
@@ -662,10 +762,12 @@ inline MolGraph readMolBlockV3000(const std::vector<std::string>& lines) {
         if (inAtom) {
             auto toks = mol_detail::splitWhitespace(body);
             if (toks.size() < 6) continue;
+            if (atoms.size() >= static_cast<size_t>(MAX_ATOMS))
+                throw std::invalid_argument("Molecule exceeds MAX_ATOMS limit (" + std::to_string(MAX_ATOMS) + ")");
             mol_detail::MolAtom a;
-            int atomId = std::stoi(toks[0]);
+            const int atomId = mol_detail::v3000Integer(toks[0], "atom index");
             a.symbol = toks[1];
-            if (a.symbol == "R#" || (a.symbol.size() > 1 && a.symbol[0] == 'R' && std::isdigit(static_cast<unsigned char>(a.symbol[1])))) {
+            if (a.symbol == "R#" || (a.symbol.size() > 1 && a.symbol[0] == 'R' && parser_detail::isAsciiDigit(a.symbol[1]))) {
                 a.atomicNum = 0;
                 if (a.symbol != "R#") {
                     try { a.atomClass = std::stoi(a.symbol.substr(1)); } catch (...) {}
@@ -678,24 +780,26 @@ inline MolGraph readMolBlockV3000(const std::vector<std::string>& lines) {
                     a.symbol = "H";
                 }
             }
-            a.x = std::stod(toks[2]);
-            a.y = std::stod(toks[3]);
-            a.z = std::stod(toks[4]);
+            a.x = mol_detail::v3000Coordinate(toks[2]);
+            a.y = mol_detail::v3000Coordinate(toks[3]);
+            a.z = mol_detail::v3000Coordinate(toks[4]);
             auto attrs = mol_detail::parseV30Attributes(toks, 6);
-            if (attrs.count("CHG")) a.formalCharge = std::stoi(attrs["CHG"]);
-            if (attrs.count("MASS")) a.massNumber = std::stoi(attrs["MASS"]);
-            if (attrs.count("RAD")) a.radical = std::stoi(attrs["RAD"]);
+            if (attrs.count("CHG")) a.formalCharge = mol_detail::v3000Integer(attrs["CHG"], "CHG",
+                -mol_detail::V3000_MAX_CHARGE, mol_detail::V3000_MAX_CHARGE);
+            if (attrs.count("MASS")) a.massNumber = mol_detail::v3000Integer(attrs["MASS"], "MASS", 0, mol_detail::V3000_MAX_MASS);
+            if (attrs.count("RAD")) a.radical = mol_detail::v3000Integer(attrs["RAD"], "RAD", 0, 3);
             if (attrs.count("HCOUNT")) {
-                const int count = std::stoi(attrs["HCOUNT"]);
+                const int count = mol_detail::v3000Integer(attrs["HCOUNT"], "HCOUNT", -1,
+                                                               mol_detail::V3000_MAX_HYDROGENS);
                 if (count != 0) a.hCount = std::max(0, count);
             }
             if (attrs.count("VAL")) {
-                const int valence = std::stoi(attrs["VAL"]);
+                const int valence = mol_detail::v3000Integer(attrs["VAL"], "VAL", -1, 15);
                 if (valence != 0) a.valence = std::max(0, valence);
             }
-            if (attrs.count("CLASS")) a.atomClass = std::stoi(attrs["CLASS"]);
+            if (attrs.count("CLASS")) a.atomClass = mol_detail::v3000Integer(attrs["CLASS"], "CLASS");
             if (attrs.count("CFG")) {
-                int cfg = std::stoi(attrs["CFG"]);
+                int cfg = mol_detail::v3000Integer(attrs["CFG"], "CFG", 0, 3);
                 a.tetraCfg = (cfg == 1 ? 1 : (cfg == 2 ? 2 : 0));
             }
             atomIndexById.emplace(atomId, static_cast<int>(atoms.size()));
@@ -707,11 +811,11 @@ inline MolGraph readMolBlockV3000(const std::vector<std::string>& lines) {
             auto toks = mol_detail::splitWhitespace(body);
             if (toks.size() < 4) continue;
             mol_detail::MolBond b;
-            const int bondType = std::stoi(toks[1]);
+            const int bondType = mol_detail::v3000Integer(toks[1], "bond type");
             if (bondType == 10) continue;
             b.order = bondType >= 1 && bondType <= 4 ? bondType : 1;
-            int a1 = std::stoi(toks[2]);
-            int a2 = std::stoi(toks[3]);
+            const int a1 = mol_detail::v3000Integer(toks[2], "bond atom");
+            const int a2 = mol_detail::v3000Integer(toks[3], "bond atom");
             auto it1 = atomIndexById.find(a1), it2 = atomIndexById.find(a2);
             if (it1 == atomIndexById.end() || it2 == atomIndexById.end()) {
                 throw std::invalid_argument("V3000 bond references unknown atom");
@@ -720,7 +824,7 @@ inline MolGraph readMolBlockV3000(const std::vector<std::string>& lines) {
             b.to = it2->second;
             auto attrs = mol_detail::parseV30Attributes(toks, 4);
             if (attrs.count("CFG")) {
-                const int configuration = std::stoi(attrs["CFG"]);
+                const int configuration = mol_detail::v3000Integer(attrs["CFG"], "CFG", 0, 3);
                 b.stereo = b.order == 2 ? (configuration == 2 ? 3 : 0)
                     : (configuration == 3 ? 6 : configuration);
             }
@@ -849,7 +953,7 @@ inline MolGraph readMolBlock(const std::string& molBlock) {
         }
 
         atoms[i].symbol = sym;
-        if (sym == "R#" || (sym.size() > 1 && sym[0] == 'R' && std::isdigit(static_cast<unsigned char>(sym[1])))) {
+        if (sym == "R#" || (sym.size() > 1 && sym[0] == 'R' && parser_detail::isAsciiDigit(sym[1]))) {
             atoms[i].atomicNum = 0;
             if (sym != "R#") {
                 try { atoms[i].atomClass = std::stoi(sym.substr(1)); } catch (...) {}
@@ -937,7 +1041,7 @@ inline MolGraph readMolBlock(const std::string& molBlock) {
             if (atomIdx >= 0 && atomIdx < atomCount && lineIdx + 1 < static_cast<int>(lines.size())) {
                 std::string alias = mol_detail::trim(lines[++lineIdx]);
                 if (alias == "R#" || (alias.size() > 1 && alias[0] == 'R'
-                        && std::all_of(alias.begin() + 1, alias.end(), [](unsigned char c) { return std::isdigit(c); }))) {
+                        && std::all_of(alias.begin() + 1, alias.end(), parser_detail::isAsciiDigit))) {
                     atoms[atomIdx].atomicNum = 0;
                     if (alias != "R#") {
                         try { atoms[atomIdx].atomClass = std::stoi(alias.substr(1)); } catch (...) {}

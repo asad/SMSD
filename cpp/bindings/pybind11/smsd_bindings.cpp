@@ -10,8 +10,6 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <pybind11/stl_bind.h>
-#include <pybind11/functional.h>
 #include "smsd/smsd.hpp"
 #include "smsd/similarity_screen.hpp"
 #include "smsd/smiles_parser.hpp"
@@ -23,17 +21,21 @@
 
 #include <algorithm>
 #include <chrono>
-#include <cmath>
 #include <cstdint>
-#include <functional>
+#include <cstring>
 #include <map>
+#include <optional>
 #include <limits>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
 namespace py = pybind11;
+
+// The build defines the package version; without it the package rejects the extension on import.
+#ifndef SMSD_VERSION_INFO
+#define SMSD_VERSION_INFO "unknown"
+#endif
 
 // ============================================================================
 // Binding helpers
@@ -71,7 +73,7 @@ std::vector<std::pair<int, int>> nonZeroBins(const std::vector<int>& counts) {
 /** A lower-case copy of a Python string, for option names given as text. */
 std::string lowered(const py::object& value) {
     std::string text = py::cast<std::string>(value);
-    for (char& c : text) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    for (char& c : text) c = smsd::parser_detail::asciiLower(c);
     return text;
 }
 
@@ -268,6 +270,145 @@ PythonGraphView graphView(const py::sequence& targets) {
 }
 
 /**
+ * The targets of a similarity-bound screen, read from a Python iterable while the GIL is held.
+ * MolGraph items are referenced rather than copied, and SMILES strings are parsed by the screen's
+ * workers with the parser parse_smiles uses; a parsed graph is dropped once it is scored. Any
+ * other item goes through convert, the package's molecule conversion, in input order. Reading
+ * stops at the first item that conversion or iteration rejects, and that error is raised unless
+ * a string before it fails to parse, so the error raised is that of the first item that fails,
+ * as when the items are converted one by one.
+ */
+class ScreenTargets {
+    struct Item {
+        const smsd::MolGraph* graph;   // null for a SMILES string
+        const char* text;              // the string's UTF-8 text, held by its Python object
+        size_t length;
+    };
+
+    std::vector<Item> items_;
+    std::vector<py::object> owners_;
+    std::optional<py::error_already_set> stopped_;
+
+    /** Hold the graph convert gives for an item; false when it raises, which stops reading. */
+    bool convertItem(const py::object& convert, const py::object& item) {
+        if (convert.is_none()) {
+            if (!PyUnicode_Check(item.ptr()))
+                PyErr_Format(PyExc_TypeError, "Expected MolGraph or SMILES string, got %s", Py_TYPE(item.ptr())->tp_name);
+            else if (PyUnicode_GetLength(item.ptr()) == 0)
+                PyErr_SetString(PyExc_ValueError, "SMILES string must not be empty");
+            else
+                PyErr_SetString(PyExc_TypeError, "SMILES string must be valid UTF-8");
+            stopped_.emplace();
+            return false;
+        }
+        try {
+            py::object graph = convert(item);
+            items_.push_back({&graph.cast<const smsd::MolGraph&>(), nullptr, 0});
+            owners_.push_back(std::move(graph));
+            return true;
+        } catch (py::error_already_set& error) {
+            stopped_.emplace(std::move(error));
+            return false;
+        } catch (const py::cast_error&) {
+            PyErr_SetString(PyExc_TypeError, "convert must return a MolGraph");
+            stopped_.emplace();
+            return false;
+        }
+    }
+
+public:
+    /** A target as the screen reads it: a held graph, or one parsed for this read. */
+    struct Target {
+        const smsd::MolGraph* held;
+        std::optional<smsd::MolGraph> parsed;
+        operator const smsd::MolGraph&() const { return parsed ? *parsed : *held; }
+    };
+
+    ScreenTargets(const py::handle& targets, const py::object& convert) {
+        auto* graphType = reinterpret_cast<PyTypeObject*>(py::type::of<smsd::MolGraph>().ptr());
+        if (PyList_Check(targets.ptr()) || PyTuple_Check(targets.ptr())) {
+            const auto count = static_cast<size_t>(Py_SIZE(targets.ptr()));
+            items_.reserve(count);
+            owners_.reserve(count);
+        }
+        const auto iterator = py::reinterpret_steal<py::object>(PyObject_GetIter(targets.ptr()));
+        if (!iterator) throw py::error_already_set();
+        while (PyObject* next = PyIter_Next(iterator.ptr())) {
+            py::object item = py::reinterpret_steal<py::object>(next);
+            Py_ssize_t length = 0;
+            const char* text = nullptr;
+            if (PyObject_TypeCheck(next, graphType)) {
+                items_.push_back({&item.cast<const smsd::MolGraph&>(), nullptr, 0});
+            } else if (PyUnicode_Check(next) && (text = PyUnicode_AsUTF8AndSize(next, &length)) != nullptr
+                       && length > 0) {
+                items_.push_back({nullptr, text, static_cast<size_t>(length)});
+            } else {
+                // An empty string, or one that is not valid UTF-8, is left to the conversion, which rejects it.
+                if (PyErr_Occurred()) PyErr_Clear();
+                if (!convertItem(convert, item)) return;
+            }
+            owners_.push_back(std::move(item));
+        }
+        if (PyErr_Occurred()) stopped_.emplace();
+    }
+
+    size_t size() const { return items_.size(); }
+
+    /** The target at index; a SMILES string that fails to parse throws as parse_smiles does. */
+    Target operator[](size_t index) const {
+        const Item& item = items_[index];
+        if (item.graph != nullptr) return {item.graph, std::nullopt};
+        return {nullptr, smsd::parseSMILES(std::string(item.text, item.length))};
+    }
+
+    /** Raise the error that stopped reading, if any; needs the GIL. */
+    void raiseStop() {
+        if (!stopped_) return;
+        py::error_already_set error = std::move(*stopped_);
+        stopped_.reset();
+        throw error;
+    }
+};
+
+/** TypeError for a screen argument the binding cannot take, raised after the targets' errors. */
+[[noreturn]] void rejectScreenArgument(const char* name, const char* expected, const py::handle& value) {
+    throw py::type_error(std::string("screen_targets(): incompatible function arguments; ") + name
+                         + " must be " + expected + ", not " + Py_TYPE(value.ptr())->tp_name);
+}
+
+/**
+ * Screen Python targets by the similarity bound on up to numThreads threads (0 = the OpenMP thread limit),
+ * with the GIL released while the targets are parsed and scored. The threshold and chemistry are
+ * taken after the targets, as when the targets were converted before the native call, and the
+ * chemistry is copied before the GIL is released.
+ */
+std::vector<int> screenPythonTargets(const smsd::MolGraph& query, const py::object& targets,
+                                     const py::object& thresholdValue, const py::object& chemistryValue,
+                                     int numThreads, const py::object& convert) {
+    if (numThreads < 0) throw std::invalid_argument("Thread count must be non-negative");
+    ScreenTargets view(targets, convert);
+    std::optional<double> threshold;
+    try {
+        threshold = thresholdValue.cast<double>();
+    } catch (const py::cast_error&) {
+        // Raised after the targets' errors, as below.
+    }
+    const bool chemistryTaken = py::isinstance<smsd::ChemOptions>(chemistryValue);
+    const smsd::ChemOptions chemistry = chemistryTaken ? chemistryValue.cast<const smsd::ChemOptions&>()
+                                                       : smsd::ChemOptions();
+    std::vector<double> scores;
+    {
+        // A SMILES string that fails to parse propagates from here, before any later error.
+        py::gil_scoped_release release;
+        scores = smsd::screening_detail::similarityScores(query, view, chemistry, numThreads);
+    }
+    view.raiseStop();
+    if (!threshold) rejectScreenArgument("threshold", "a float", thresholdValue);
+    if (!chemistryTaken) rejectScreenArgument("chem", "a ChemOptions", chemistryValue);
+    return smsd::screening_detail::indicesReaching(scores, *threshold);
+}
+
+/**
  * The threads a Python batch asks for: num_threads, or the OpenMP worker count (which follows
  * OMP_NUM_THREADS) when it is 0. A build without OpenMP searches on the calling thread.
  */
@@ -419,18 +560,8 @@ py::object tupleOf(std::vector<py::object>& items) {
     return tuple;
 }
 
-/** An empty dict with room for `size` items, so filling it never resizes it. */
-py::object dictFor(size_t size) {
-#if PY_VERSION_HEX < 0x030F0000 && !defined(PYPY_VERSION) && !defined(GRAALVM_PYTHON)
-    return owned(_PyDict_NewPresized(static_cast<Py_ssize_t>(size)));
-#else
-    (void)size;
-    return owned(PyDict_New());
-#endif
-}
-
 py::object pythonMatch(const smsd::Match& match, const AtomNumbering& query, const AtomNumbering& target) {
-    py::object atoms = dictFor(match.atomMapping.size());
+    py::object atoms = owned(PyDict_New());
     for (const auto& pair : match.atomMapping) {
         py::object first = py::reinterpret_steal<py::object>(query.number(pair.first));
         py::object second = py::reinterpret_steal<py::object>(target.number(pair.second));
@@ -730,26 +861,15 @@ static void setDeprecatedAromaticityModel(smsd::ChemOptions& options, smsd::Arom
     options.aromaticityModel = model;
 }
 
-// Analyse fingerprint quality: density, number of set bits, expected
-// collision rate.
+// smsd::batch::fingerprintQuality under the keys of the Java analyzeFpQuality.
 static py::dict analyzeFpQuality(const std::vector<int>& fp, int fpSize = 2048) {
-    if (fpSize <= 0) throw std::invalid_argument("Fingerprint size must be positive");
-    std::set<int> uniqueBits;
-    for (int bit : fp) {
-        if (bit < 0 || bit >= fpSize)
-            throw std::invalid_argument("Fingerprint bit is outside the declared size");
-        uniqueBits.insert(bit);
-    }
-    int setBits = static_cast<int>(uniqueBits.size());
-    double density = static_cast<double>(setBits) / fpSize;
-    // Expected collision probability for random hashing
-    double expectedCollisions = 1.0 - std::exp(-static_cast<double>(setBits) / fpSize);
+    const auto quality = smsd::batch::fingerprintQuality(fp, fpSize);
     py::dict result;
-    result["set_bits"] = setBits;
-    result["fp_size"] = fpSize;
-    result["density"] = density;
-    result["expected_collision_rate"] = expectedCollisions;
-    result["is_saturated"] = density > 0.75;
+    result["set_bits"] = quality.setBits;
+    result["fp_size"] = quality.fpSize;
+    result["density"] = quality.density;
+    result["expected_collision_rate"] = quality.expectedCollisionRate;
+    result["is_saturated"] = quality.saturated;
     return result;
 }
 
@@ -759,6 +879,22 @@ static py::dict analyzeFpQuality(const std::vector<int>& fp, int fpSize = 2048) 
 
 PYBIND11_MODULE(_smsd, m) {
     m.doc() = "SMSD -- Substructure & MCS search for chemical graphs";
+    // The package compares this with its own version when it is imported.
+    m.attr("__version__") = SMSD_VERSION_INFO;
+
+    // Parser messages quote the input byte at fault, which need not be whole UTF-8; such bytes are
+    // shown as escapes, so the error stays a ValueError with the parser's message.
+    py::register_local_exception_translator([](std::exception_ptr pointer) {
+        try {
+            if (pointer) std::rethrow_exception(pointer);
+        } catch (const std::invalid_argument& error) {
+            const char* text = error.what();
+            PyObject* message = PyUnicode_DecodeUTF8(text, static_cast<Py_ssize_t>(std::strlen(text)), "backslashreplace");
+            if (message == nullptr) return;
+            PyErr_SetObject(PyExc_ValueError, message);
+            Py_DECREF(message);
+        }
+    });
 
     py::enum_<smsd::ChemOptions::BondOrderMode>(m, "BondOrderMode")
         .value("STRICT", smsd::ChemOptions::BondOrderMode::STRICT)
@@ -1318,14 +1454,12 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("g1"), py::arg("g2"), py::arg("chem") = smsd::ChemOptions(),
           "Linear-time similarity upper bound");
 
-    m.def("screen_targets",
-          [](const smsd::MolGraph& query, const std::vector<smsd::MolGraph>& targets,
-             double threshold, const smsd::ChemOptions& chemistry) {
-              return smsd::screenTargets(query, targets, threshold, chemistry);
-          },
+    m.def("screen_targets", &screenPythonTargets,
           py::arg("query"), py::arg("targets"), py::arg("threshold"), py::arg("chem") = smsd::ChemOptions(),
-          py::call_guard<py::gil_scoped_release>(),
-          "Batch similarity-bound screening: returns indices of targets above threshold");
+          py::arg("num_threads") = 0, py::arg("convert") = py::none(),
+          "Batch similarity-bound screening: the indices of the targets whose bound reaches the "
+          "threshold, in order. Targets are MolGraph objects, SMILES strings parsed natively, or "
+          "items that convert(item) turns into a MolGraph; num_threads=0 uses all available processors.");
 
     m.def("path_fingerprint",
           [](const smsd::MolGraph& mol, int pathLength, int fpSize) {
@@ -1440,7 +1574,20 @@ PYBIND11_MODULE(_smsd, m) {
              py::arg("num_threads") = 0,
              py::call_guard<py::gil_scoped_release>(),
              "Tanimoto fingerprint screening. Returns indices of targets above threshold. "
-             "Requires prewarm() to have been called.");
+             "Requires prewarm() to have been called.")
+        .def("screen_targets",
+             [](const smsd::batch::TargetCorpus& self, const smsd::MolGraph& query, double threshold,
+                const smsd::ChemOptions& given, int numThreads) {
+                 if (numThreads < 0) throw std::invalid_argument("Thread count must be non-negative");
+                 // The options are copied while the GIL is held, as for the searches.
+                 const smsd::ChemOptions chemistry = given;
+                 py::gil_scoped_release release;
+                 return self.screenTargets(query, threshold, chemistry, numThreads);
+             },
+             py::arg("query"), py::arg("threshold"), py::arg("chem") = smsd::ChemOptions(),
+             py::arg("num_threads") = 0,
+             "Similarity-bound screening of the targets, as screen_targets gives for them; needs no "
+             "prewarm(). num_threads=0 uses all available processors.");
 
     m.def("circular_fingerprint",
           [](const smsd::MolGraph& mol, int radius, int fpSize,
@@ -1606,10 +1753,18 @@ PYBIND11_MODULE(_smsd, m) {
         .def("__repr__", &describeFingerprintOptions);
 
     m.def("fingerprint_options",
-          [](const smsd::MolGraph& mol, const FingerprintOptions& options) -> py::object {
-              if (options.counts)
-                  return py::cast(nonZeroBins(smsd::batch::computeFingerprintCounts(mol, options)));
-              const auto fp = smsd::batch::computeFingerprint(mol, options);
+          [](const smsd::MolGraph& mol, const FingerprintOptions& given) -> py::object {
+              // The options are copied while the GIL is held, as for the searches.
+              const FingerprintOptions options = given;
+              if (options.counts) {
+                  std::vector<int> counts;
+                  { py::gil_scoped_release release;
+                    counts = smsd::batch::computeFingerprintCounts(mol, options); }
+                  return py::cast(nonZeroBins(counts));
+              }
+              std::vector<uint64_t> fp;
+              { py::gil_scoped_release release;
+                fp = smsd::batch::computeFingerprint(mol, options); }
               const int size = options.family == FingerprintFamily::KEYS
                              ? static_cast<int>(options.keys.size()) : options.size;
               return py::cast(smsd::bitPositions(fp, size));
@@ -1753,7 +1908,7 @@ PYBIND11_MODULE(_smsd, m) {
           },
           py::arg("mol"), py::arg("centre"),
           "Assign CIP R/S descriptor to a tetrahedral stereocentre.\n"
-          "Uses two-pass approach: Rules 1-2, then 4b-c + Rule 5.\n"
+          "Ranks the ligands by Rule 1a, then those it leaves tied by every sequence rule.\n"
           "Returns RSLabel (NONE, R, S, r, s).");
 
     m.def("assign_ez", &smsd::cip::assignEZ,
@@ -1779,6 +1934,13 @@ PYBIND11_MODULE(_smsd, m) {
           "Return the Smallest Set of Smallest Rings (minimum cycle basis) as lists of\n"
           "atom indices, sorted by ring size.\n"
           "Example: compute_sssr('c1ccc2ccccc2c1')  # [[0, 1, 2, 3, 8, 9], [3, 4, 5, 6, 7, 8]]");
+
+    m.def("rings_truncated", &smsd::ringsTruncated,
+          py::arg("mol"),
+          "Whether the ring perception behind compute_sssr stopped its exhaustive candidate search\n"
+          "at its work bound, as for a very large ring system, so that the rings may be fewer than\n"
+          "the graph holds. The rings are the same whether or not this is asked.\n"
+          "Example: rings_truncated('c1ccc2ccccc2c1')  # False");
 
     m.def("layout_sssr",
           [](const smsd::MolGraph& g) {
@@ -1873,17 +2035,42 @@ PYBIND11_MODULE(_smsd, m) {
           "quinoline, biphenyl, cyclohexane, piperidine.\n"
           "Example: match_template('c1ccccc1')  # six coordinate pairs");
 
+    // The mapping checks run bounded searches, so they release the GIL as the searches do; the
+    // match and options are copied while it is held, so Python threads that change them cannot
+    // race with the check.
     mcs.def_static("validate_mapping",
-          py::overload_cast<const smsd::MolGraph&, const smsd::MolGraph&, const smsd::Match&, const smsd::MCS::Options&>(&smsd::MCS::validateMapping),
+          [](const smsd::MolGraph& query, const smsd::MolGraph& target, const smsd::Match& match,
+             const smsd::MCS::Options& options) {
+              const smsd::Match copiedMatch = match;
+              const smsd::MCS::Options copied = options;
+              py::gil_scoped_release release;
+              return smsd::MCS::validateMapping(query, target, copiedMatch, copied);
+          },
           py::arg("query"), py::arg("target"), py::arg("match"), py::arg("options") = smsd::MCS::Options());
     mcs.def_static("validate_mapping",
-          py::overload_cast<const smsd::MolGraph&, const smsd::MolGraph&, const std::map<int,int>&, const smsd::MCS::Options&>(&smsd::MCS::validateMapping),
+          [](const smsd::MolGraph& query, const smsd::MolGraph& target, const std::map<int, int>& mapping,
+             const smsd::MCS::Options& options) {
+              const smsd::MCS::Options copied = options;
+              py::gil_scoped_release release;
+              return smsd::MCS::validateMapping(query, target, mapping, copied);
+          },
           py::arg("query"), py::arg("target"), py::arg("match"), py::arg("options") = smsd::MCS::Options());
     mcs.def_static("is_mapping_maximal",
-          py::overload_cast<const smsd::MolGraph&, const smsd::MolGraph&, const smsd::Match&, const smsd::MCS::Options&>(&smsd::MCS::isMappingMaximal),
+          [](const smsd::MolGraph& query, const smsd::MolGraph& target, const smsd::Match& match,
+             const smsd::MCS::Options& options) {
+              const smsd::Match copiedMatch = match;
+              const smsd::MCS::Options copied = options;
+              py::gil_scoped_release release;
+              return smsd::MCS::isMappingMaximal(query, target, copiedMatch, copied);
+          },
           py::arg("query"), py::arg("target"), py::arg("match"), py::arg("options") = smsd::MCS::Options());
     mcs.def_static("is_mapping_maximal",
-          py::overload_cast<const smsd::MolGraph&, const smsd::MolGraph&, const std::map<int,int>&, const smsd::MCS::Options&>(&smsd::MCS::isMappingMaximal),
+          [](const smsd::MolGraph& query, const smsd::MolGraph& target, const std::map<int, int>& mapping,
+             const smsd::MCS::Options& options) {
+              const smsd::MCS::Options copied = options;
+              py::gil_scoped_release release;
+              return smsd::MCS::isMappingMaximal(query, target, mapping, copied);
+          },
           py::arg("query"), py::arg("target"), py::arg("match"), py::arg("options") = smsd::MCS::Options());
 
     substructure.def_static("decompose_r_groups",
@@ -1945,13 +2132,15 @@ PYBIND11_MODULE(_smsd, m) {
     m.def("read_mol_file",
           &smsd::readMolFile,
           py::arg("filename"),
+          py::call_guard<py::gil_scoped_release>(),
           "Read a MOL file from disk into a MolGraph.\n"
           "Supports V2000 and V3000 formats.\n"
-          "Raises ValueError if file cannot be opened.");
+          "Raises ValueError if the file cannot be opened or read.");
 
     m.def("read_sdf",
           &smsd::readSDF,
           py::arg("filename"),
+          py::call_guard<py::gil_scoped_release>(),
           "Read all molecules from an SDF file.\n"
           "Returns a list of MolGraphs. Malformed entries become empty graphs.\n"
           "The whole file is loaded into memory; for very large files, read the\n"
@@ -1960,6 +2149,7 @@ PYBIND11_MODULE(_smsd, m) {
     m.def("write_sdf",
           &smsd::writeSDF,
           py::arg("molecules"), py::arg("filename"),
+          py::call_guard<py::gil_scoped_release>(),
           "Write a list of MolGraphs to an SDF file.\n"
           "Each molecule is written as a V2000 MOL block followed by $$$$.");
 

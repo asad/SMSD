@@ -124,15 +124,20 @@ import smsd
 groups = ["C", "CC", "OC", "N", "O", "F", "Cl", "C(=O)O"]
 library = [f"c1c({a})cc({b})cc1{c}" for a, b, c in itertools.product(groups, repeat=3)]
 
+corpus = smsd.TargetCorpus.from_smiles(library)   # prepared once for repeated screens
+
 query = "c1c(C)cc(O)cc1C(=O)O"
-candidates = smsd.screen_targets(query, library, 0.8)   # targets that can reach 0.8
+candidates = smsd.screen_targets(query, corpus, 0.8)   # targets that can reach 0.8
 results = smsd.MCS.find(query).with_timeout(1000).match_many([library[i] for i in candidates])
 assert candidates and all(result.found for result in results)
 ```
 
 `screen_targets` bounds the atom-count Tanimoto similarity of the MCS from
 above, so under the same chemistry options it never rejects a target able to
-reach the threshold, and the MCS runs only where it can matter.
+reach the threshold, and the MCS runs only where it can matter. For repeated
+screens of the same library, a prepared `TargetCorpus` such as this one saves
+converting the targets on every call; a list of molecules or SMILES gives the
+same indices.
 
 ## SVG drawing
 

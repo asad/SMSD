@@ -281,15 +281,24 @@ final class SmilesWriter {
     return directions;
   }
 
+  /**
+   * The carrier of a configured double bond at one end. '/' and '\' are single bonds in
+   * OpenSMILES, so it is the single, non-aromatic bond to the neighbour of lowest canonical label;
+   * only an end with no such bond, such as an aromatic ring atom carrying an exocyclic double bond,
+   * takes its lowest aromatic ring bond instead, as RDKit writes it, so that the configuration is
+   * kept. -1 when the end has neither.
+   */
   private int smilesStereoReference(int atom, int otherEnd) {
-    int reference = -1;
+    int single = -1, any = -1;
     for (int neighbor : neighbors[atom]) {
       int order = graph.bondOrder(atom, neighbor);
-      if (neighbor != otherEnd && (order == 1 || order == 4)
-          && (reference < 0 || canonicalLabel[neighbor] < canonicalLabel[reference]))
-        reference = neighbor;
+      if (neighbor == otherEnd || (order != 1 && order != 4)) continue;
+      if (any < 0 || canonicalLabel[neighbor] < canonicalLabel[any]) any = neighbor;
+      if (order == 1 && !graph.bondAromatic(atom, neighbor)
+          && (single < 0 || canonicalLabel[neighbor] < canonicalLabel[single]))
+        single = neighbor;
     }
-    return reference;
+    return single >= 0 ? single : any;
   }
 
   /** Relate directions away from the two ends of one stereo double bond. */

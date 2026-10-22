@@ -272,15 +272,21 @@ class CommonBondSearchInternalsTest {
    * Fragment pairs searched with the default limits, with the bonds, atoms and nodes of their
    * optimum pinned to the counts of the native search, so both searches walk the same tree. The
    * chain pair starts its last search from the seed grown the other way round, which holds the
-   * optimum, whichever molecule is the query.
+   * optimum, whichever molecule is the query. The fused pair is proved once the search the other
+   * way round is raced against its last search.
    */
   @Test
   void defaultLimitsMatchTheOtherLanguage() throws Exception {
     String chain = "CCCCCCCCCCCCCCSCC(COP(O)(OP(O)(OCC1OC(n2ccc(N)nc2=O)C(O)C1O)=O)=O)OC(=O)CCCCCCCCCCC";
     String amine = "CN(CCOC(c1ccccc1)c1ccccc1)CCN(C)CCc1ccc(F)cc1";
+    String fused = "CCC1(O)N2CCC3c4c(cccc4)NC3C(c3c(OC)cc4c(c3)C35CCN6CC=CC(CC)"
+        + "(C(OC(CC7CCCN7)=O)C(O)(C(OC)=O)C3N4C)C56)C(C(OC)=O)C(CC1)C2";
+    String triazine = "Oc1nc(NCc2cc3[nH]ccc3cc2)nc(Nc2cc(Oc3ccccc3)ccc2)n1";
     String[][] pinned = {
         {chain, amine, "26", "30", "27734"},
-        {amine, chain, "26", "30", "27734"}};
+        {amine, chain, "26", "30", "27734"},
+        {fused, triazine, "29", "31", "677291"},
+        {triazine, fused, "29", "31", "677291"}};
     MCS.Options options = options(MCS.Objective.MCES, MCS.Connectivity.Fragments);
     // Elements and any bond order, with flexible aromaticity.
     options.chemistry.matchAtomType = true;
@@ -298,6 +304,76 @@ class CommonBondSearchInternalsTest {
       assertEquals(Integer.parseInt(pair[2]), result.matches().get(0).bondCount(), pair[0]);
       assertEquals(Integer.parseInt(pair[3]), result.matches().get(0).atomCount(), pair[0]);
       assertEquals(Long.parseLong(pair[4]), result.nodesVisited(), pair[0]);
+    }
+  }
+
+  /**
+   * The fused pair stopped by node limits before the race, within the first nodes of the search
+   * the other way round, within its longer run and one node before it proves the optimum, with
+   * the bonds and atoms of the best mapping held there pinned to the native search; both searches
+   * together map exactly the limit, whichever molecule is the query.
+   */
+  @Test
+  void nodeLimitsInsideTheRaceMatchTheOtherLanguage() throws Exception {
+    String fused = "CCC1(O)N2CCC3c4c(cccc4)NC3C(c3c(OC)cc4c(c3)C35CCN6CC=CC(CC)"
+        + "(C(OC(CC7CCCN7)=O)C(O)(C(OC)=O)C3N4C)C56)C(C(OC)=O)C(CC1)C2";
+    String triazine = "Oc1nc(NCc2cc3[nH]ccc3cc2)nc(Nc2cc(Oc3ccccc3)ccc2)n1";
+    long[][] capped = {{530000, 27, 31}, {545000, 28, 30}, {600000, 29, 30}, {677290, 29, 31}};
+    MCS.Options options = options(MCS.Objective.MCES, MCS.Connectivity.Fragments);
+    options.chemistry.matchAtomType = true;
+    options.chemistry.matchBondOrder = ChemOptions.BondOrderMode.ANY;
+    options.chemistry.aromaticityMode = ChemOptions.AromaticityMode.FLEXIBLE;
+    options.chemistry.matchFormalCharge = options.chemistry.matchIsotope = false;
+    options.chemistry.useChirality = options.chemistry.useBondStereo = false;
+    options.chemistry.ringMatchesRingOnly = options.chemistry.completeRingsOnly = false;
+    options.chemistry.tautomerAware = false;
+    options.chemistry.ringFusionMode = ChemOptions.RingFusionMode.IGNORE;
+    for (long[] cap : capped) {
+      options.nodeLimit = cap[0];
+      for (String[] pair : new String[][] {{fused, triazine}, {triazine, fused}}) {
+        SearchResult result =
+            MCS.find(standardised(pair[0])).withOptions(options).match(standardised(pair[1]));
+        String label = cap[0] + " " + pair[0];
+        assertEquals(SearchResult.Status.LimitReached, result.status(), label);
+        assertEquals(cap[0], result.nodesVisited(), label);
+        assertEquals(cap[1], result.matches().get(0).bondCount(), label);
+        assertEquals(cap[2], result.matches().get(0).atomCount(), label);
+      }
+    }
+  }
+
+  /**
+   * With the search the other way round raced against the last fragment search after 64 nodes,
+   * for 16 nodes and up to 64 while it beats it, fragment searches prove the optimum they prove
+   * without a race, in the nodes that the native search counts for them.
+   */
+  @Test
+  void racesAfterAFewNodesKeepTheOptimum() throws Exception {
+    String[][] pairs = {
+        {"COc1ccc(C(c2n(CC3OCCC3)nnn2)N2CCN(c3ccccc3)CC2)cc1", "COC(=O)C1=CC23C4N(CCC44c5ccccc5NC14CC2)CCC3", "6830", "7115"},
+        {"C=CCN1CCC23CC(=O)CCC2C1Cc1cccc(OC(C)=O)c13", "CN1CCN(C(=O)C2=CC(c3ccc(C(F)(F)F)cc3)CC(OCCCCO)O2)CC1", "47001", "22312"},
+        {"Nc1ncnc2n(C3OC(CO)C(F)C3O)cnc12", "Cc1ccccc1Cn1c2c(scc2)c(=O)n(CCCC(NCc2occc2)=O)c1=O", "1179", "39195"},
+        {"COc1cc2c(cc1)C(=O)CC(c1ccc(C)cc1)O2", "NS(c1cc(NC(COC(C=Cc2nc3ccccc3s2)=O)=O)ccc1)(=O)=O", "5185", "15555"}};
+    CommonBondSearch.ScoutLimits raced = new CommonBondSearch.ScoutLimits(1L << 15, 4, 1L << 15, 1L << 10, 64, 16, 64);
+    CommonBondSearch.ScoutLimits never =
+        new CommonBondSearch.ScoutLimits(1L << 15, 4, 1L << 15, 1L << 10, Long.MAX_VALUE, 1L << 14, 1L << 19);
+    for (String[] pair : pairs) {
+      MolGraph query = standardised(pair[0]), target = standardised(pair[1]);
+      for (ChemOptions.BondOrderMode order : new ChemOptions.BondOrderMode[] {
+               ChemOptions.BondOrderMode.STRICT, ChemOptions.BondOrderMode.ANY}) {
+        MCS.Options options = options(MCS.Objective.MCES, MCS.Connectivity.Fragments);
+        options.chemistry.matchBondOrder = order;
+        SearchResult race = CommonBondSearch.search(query, target, options, 1, false, null,
+            new SearchResult.Control(60_000, null), raced);
+        SearchResult plain = CommonBondSearch.search(query, target, options, 1, false, null,
+            new SearchResult.Control(60_000, null), never);
+        String label = pair[0] + " " + order;
+        assertTrue(race.optimal() && plain.optimal(), label);
+        assertEquals(plain.matches().get(0).bondCount(), race.matches().get(0).bondCount(), label);
+        assertEquals(plain.matches().get(0).atomCount(), race.matches().get(0).atomCount(), label);
+        assertEquals(Long.parseLong(order == ChemOptions.BondOrderMode.STRICT ? pair[2] : pair[3]),
+            race.nodesVisited(), label);
+      }
     }
   }
 

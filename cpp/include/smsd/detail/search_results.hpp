@@ -295,10 +295,24 @@ inline std::shared_ptr<const CycleList> recentRelevantCycles(const MolGraph& gra
 class RingConstraint {
     const MolGraph& graph_;
     std::shared_ptr<const CycleList> cycles_;
+    /** The atoms and bonds on a relevant ring, which are on a ring whether flagged so or not, as in Java. */
+    std::vector<uint8_t> cycleAtom_;
+    std::set<int64_t> cycleBond_;
 public:
     RingConstraint(const MolGraph& graph, bool enabled) : graph_(graph) {
-        if (enabled) cycles_ = recentRelevantCycles(graph);
+        if (!enabled) return;
+        cycles_ = recentRelevantCycles(graph);
+        cycleAtom_.assign(static_cast<size_t>(graph.n), 0);
+        for (const auto& cycle : *cycles_)
+            for (size_t atom = 0; atom < cycle.size(); ++atom) {
+                cycleAtom_[static_cast<size_t>(cycle[atom])] = 1;
+                cycleBond_.insert(MolGraph::bondKey(cycle[atom], cycle[(atom + 1) % cycle.size()]));
+            }
     }
+    /**
+     * Whether every selected atom and bond on a ring lies on a wholly selected relevant ring; an
+     * atom or bond is on a ring when it is flagged so or lies on a relevant ring.
+     */
     bool accepts(const std::set<int>& atoms, const std::set<int64_t>& bonds) const {
         std::set<int> coveredAtoms;
         std::set<int64_t> coveredBonds;
@@ -313,11 +327,13 @@ public:
             for (size_t atom = 0; atom < cycle.size(); ++atom)
                 coveredBonds.insert(MolGraph::bondKey(cycle[atom], cycle[(atom + 1) % cycle.size()]));
         }
-        for (int atom : atoms)
-            if (graph_.ring[atom] && coveredAtoms.count(atom) == 0) return false;
+        for (int atom : atoms) {
+            const bool onCycle = !cycleAtom_.empty() && atom >= 0 && atom < graph_.n && cycleAtom_[static_cast<size_t>(atom)];
+            if ((graph_.ring[atom] || onCycle) && coveredAtoms.count(atom) == 0) return false;
+        }
         for (int64_t bond : bonds) {
             const int first = static_cast<int>(bond >> 32), second = static_cast<int>(uint32_t(bond));
-            if (graph_.bondInRing(first, second) && coveredBonds.count(bond) == 0) return false;
+            if ((graph_.bondInRing(first, second) || cycleBond_.count(bond) != 0) && coveredBonds.count(bond) == 0) return false;
         }
         return true;
     }
@@ -342,6 +358,8 @@ inline bool selectedStereoCompatible(const MolGraph& query, const MolGraph& targ
             return atom == first || atom == second || selected.count(MolGraph::bondKey(first, atom))
                 || (second >= 0 && selected.count(MolGraph::bondKey(second, atom))) ? mapping[atom] : -1;
         }
+        // A neighbour of an end of a double bond is its ligand when the bond between them is selected.
+        bool operator()(int end, int neighbour) const { return selected.count(MolGraph::bondKey(end, neighbour)) != 0; }
     };
     if (chemistry.useChirality)
         for (const auto& atom : match.atomMapping)
@@ -350,7 +368,8 @@ inline bool selectedStereoCompatible(const MolGraph& query, const MolGraph& targ
     if (chemistry.useBondStereo)
         for (const auto& bond : match.bondMapping)
             if (!stereo_detail::doubleBondParityMatches(query, bond[0], bond[1], target,
-                    LocalMapping{mapping, selected, bond[0], bond[1]}, embedding)) return false;
+                    LocalMapping{mapping, selected, bond[0], bond[1]}, embedding,
+                    LocalMapping{mapping, selected, bond[0], bond[1]})) return false;
     return true;
 }
 

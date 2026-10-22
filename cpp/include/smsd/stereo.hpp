@@ -105,15 +105,23 @@ inline int doubleBondReference(const MolGraph& graph, int atom, int otherEnd) {
     return -1;
 }
 
+/** The ligand test of doubleBondParityMatches() that takes every mapped neighbour of an end. */
+struct AnyLigand {
+    bool operator()(int, int) const { return true; }
+};
+
 /**
  * Compare E/Z relative to mapped ligands, rather than either graph's own references. A query
  * bond without a configuration matches any target bond. With `embedding`, as in a substructure
  * search, a configured query bond needs a configured target bond, as a SMARTS pair of
- * directional bonds does; otherwise a target bond without a configuration matches as well.
+ * directional bonds does; otherwise a target bond without a configuration matches as well. A
+ * mapped neighbour of an end is its ligand when `joined(end, neighbour)` holds, as when the bond
+ * between them is selected; Java's Substructure applies the same rule.
  */
-template <typename Mapping>
+template <typename Mapping, typename Joined = AnyLigand>
 inline bool doubleBondParityMatches(const MolGraph& query, int first, int second,
-                                     const MolGraph& target, const Mapping& mapping, bool embedding = false) {
+                                     const MolGraph& target, const Mapping& mapping, bool embedding = false,
+                                     const Joined& joined = Joined{}) {
     const int mappedFirst = mapping[first], mappedSecond = mapping[second];
     if (mappedFirst < 0 || mappedSecond < 0) return true;
     int queryConfiguration = query.dbStereo(first, second);
@@ -128,7 +136,10 @@ inline bool doubleBondParityMatches(const MolGraph& query, int first, int second
         const int targetReference = doubleBondReference(target, targetEnd, otherTargetEnd);
         int mappedLigand = -1;
         for (int neighbor : query.neighbors[queryEnd]) {
-            if (neighbor != otherQueryEnd && mapping[neighbor] >= 0) { mappedLigand = neighbor; break; }
+            if (neighbor != otherQueryEnd && mapping[neighbor] >= 0 && joined(queryEnd, neighbor)) {
+                mappedLigand = neighbor;
+                break;
+            }
         }
         if (mappedLigand < 0 || queryReference < 0 || targetReference < 0) return true;
         if (!target.hasBond(targetEnd, mapping[mappedLigand])) return false;

@@ -1,3 +1,43 @@
+# SMSD Pro 8.0.1
+
+SMSD Pro 8.0.1 corrects parsing, aromaticity, CIP descriptors and
+stereochemistry, gives fingerprint quality one definition in C++, Java and
+Python, and screens targets on every core in Python. The prepared-query API is
+unchanged. The [changelog](https://github.com/asad/SMSD/blob/master/CHANGELOG.md)
+lists the changes in full.
+
+## Highlights
+
+- SMILES, SMARTS and V3000 MOL input outside the supported characters or
+  ranges is rejected with the same error on every platform, and SMILES atoms
+  joined by `:` ring bonds are aromatic, as RDKit reads them.
+- CIP R/S and E/Z labels that only the later sequence rules decide, and C++
+  SMARTS chirality, ring closures and MCES stereochemistry that match Java.
+- Python `screen_targets` takes `num_threads` and a prepared `TargetCorpus`,
+  and `rings_truncated` reports when a bounded ring search is cut short.
+
+## Downloads
+
+| File | Requirements |
+| --- | --- |
+| C++ headers: `smsd-cpp-8.0.1-headers.tar.gz` | A C++17 compiler |
+| Java library: `smsd-8.0.1.jar`, with `smsd-8.0.1-sources.jar` and `smsd-8.0.1-javadoc.jar` | Java 8 or later and CDK 2.13 |
+| Command-line tool: `smsd-cli-8.0.1-jar-with-dependencies.jar` and `smsd-8.0.1-cli.tar.gz` | Java 8 or later |
+| Python source distribution: `smsd-8.0.1.tar.gz` | Python 3.9 or later, a C++17 compiler and CMake 3.18 or later |
+| Python wheels for macOS arm64, Linux x86_64 and Windows x86_64 | CPython 3.14, as for 8.0.0 |
+| `SHA256SUMS` | Lists the SHA-256 checksum of each file |
+
+## Upgrading from 8.0.0
+
+- `expected_collision_rate` (Python `analyze_fp_quality`, Java
+  `analyzeFpQuality`) is now the estimated share of hashed features that fell
+  on a bit already set, and Java `suggestFingerprintSize` returns larger
+  sizes; review thresholds based on either.
+- In C++ and Python, rings written aromatic that are not, such as
+  cyclobutadiene, are no longer aromatic.
+- A long fragment MCES search for one best mapping can return a different
+  mapping of the same size.
+
 # SMSD Pro 8.0.0
 
 SMSD Pro 8.0.0 provides substructure and maximum common substructure (MCS)

@@ -18,13 +18,17 @@ import org.openscience.cdk.silent.SilentChemObjectBuilder;
  *
  * Assigns R/S descriptors to tetrahedral stereocentres and E/Z descriptors
  * to double bonds using BFS digraph traversal with CIP sequence rules:
- *   Rule 1: higher atomic number gets higher priority
+ *   Rule 1a: higher atomic number gets higher priority
+ *   Rule 1b: a ring-closure duplicate nearer the root gets higher priority
  *   Rule 2: higher mass number breaks ties (isotopes); an unlabelled atom
  *   counts at its standard atomic weight, a duplicate at none
  *   Rule 3: Z double-bond configuration gets higher priority than E
  *   Rules 4 and 5: auxiliary descriptors, like and unlike descriptor pairs,
- *   r before s and R before S, for the centres Rules 1 to 3 leave unresolved
- *   ({@link SequenceRules}); a centre resolved by Rule 5 is pseudoasymmetric
+ *   r before s and R before S; a centre resolved by Rule 5 is pseudoasymmetric
+ *
+ * A first pass ranks the ligands by Rule 1a alone; ligands it leaves tied are
+ * ranked over the hierarchical digraph by every rule in turn, each read
+ * exhaustively before the next ({@link SequenceRules}).
  *
  * Implements the digraph (extended connectivity tree) approach with phantom
  * (duplicate) nodes for ring closures and multiple bonds. The duplicate atom of
@@ -82,6 +86,12 @@ public final class CIPAssigner {
       IAtomContainer copy;
       if (graph.mol != null) {
         copy = graph.mol.clone();
+        // The graph's hydrogens, which differ for a ring system CDK read from ':' bonds.
+        for (int atom = 0; atom < graph.n; atom++) {
+          Integer supplied = copy.getAtom(atom).getImplicitHydrogenCount();
+          if (supplied != null && supplied != graph.hydrogenCount(atom))
+            copy.getAtom(atom).setImplicitHydrogenCount(graph.hydrogenCount(atom));
+        }
       } else {
         copy = SilentChemObjectBuilder.getInstance().newAtomContainer();
         for (int atom = 0; atom < graph.n; atom++) {
@@ -190,10 +200,12 @@ public final class CIPAssigner {
    * The duplicate a ring atom with exactly one double bond, partners[atom] in the Kekule bond
    * orders, carries for that bond (-1 for other atoms). A mancude ring system is what remains of
    * those atoms after repeatedly removing the ones with fewer than two others as ring neighbours.
-   * There the duplicate takes the mean atomic number of the atom's ring neighbours in the system
-   * when it is fractional (IUPAC 2013 P-92.1.4.4, as the reference CIP implementations apply it),
-   * so labels do not depend on the Kekule structure; otherwise it is the partner. numbers[atom] is
-   * that atomic number times ATOMIC_NUMBER_SCALE. The native core applies the same rule.
+   * There, when the partner is in the system too, the duplicate takes the mean atomic number of
+   * the atom's ring neighbours in the system whenever their sum differs from the partner's atomic
+   * number times their count (IUPAC 2013 P-92.1.4.4), so labels do not depend on the Kekule
+   * structure even when the mean is a whole number, as for a boron and a nitrogen neighbour;
+   * otherwise it is the partner. numbers[atom] is that atomic number times ATOMIC_NUMBER_SCALE.
+   * The native core applies the same rule.
    */
   private static void mancudeDuplicates(MolGraph g, IAtomContainer kekule, int[] numbers, int[] partners) {
     Arrays.fill(partners, -1);
@@ -238,8 +250,9 @@ public final class CIPAssigner {
           count++;
         }
       }
-      numbers[atom] = count == 0 || sum % count == 0 ? g.atomicNum[partners[atom]] * ATOMIC_NUMBER_SCALE
-                                                     : sum * ATOMIC_NUMBER_SCALE / count;
+      int partnerNumber = g.atomicNum[partners[atom]];
+      numbers[atom] = count == 0 || !mancude[partners[atom]] || sum == partnerNumber * count
+          ? partnerNumber * ATOMIC_NUMBER_SCALE : sum * ATOMIC_NUMBER_SCALE / count;
     }
   }
 
@@ -366,94 +379,19 @@ public final class CIPAssigner {
     return nodes;
   }
 
-  /**
-   * Compare two digraph sub-trees by CIP Rules 1 (atomic number) and
-   * 2 (mass number) using BFS level-by-level comparison.
-   *
-   * @return negative if rootA has lower priority, positive if higher, 0 if equal
-   */
-  private static int compareBranches(List<DigraphNode> nodesA, int rootA,
-                                     List<DigraphNode> nodesB, int rootB) {
-    return compareBranches(nodesA, rootA, nodesB, rootB, null);
-  }
-
-  /**
-   * Compare two digraph sub-trees by CIP Rules 1-2, with optional Rule 3 (Z > E).
-   * Rules 4 and 5 are the business of {@link SequenceRules}.
-   *
-   * @param molGraph       molecular graph for Rule 3 E/Z lookup; null to skip Rule 3
-   */
-  private static int compareBranches(List<DigraphNode> nodesA, int rootA,
-                                     List<DigraphNode> nodesB, int rootB,
-                                     MolGraph molGraph) {
-    int atomicComparison = compareOrderedBranches(nodesA, rootA, nodesB, rootB, false);
-    if (atomicComparison != 0) return atomicComparison;
-    int isotopeComparison = compareOrderedBranches(nodesA, rootA, nodesB, rootB, true);
-    if (isotopeComparison != 0) return isotopeComparison;
-    if (molGraph != null) {
-      List<Integer> frontA = new ArrayList<>(), frontB = new ArrayList<>();
-      frontA.add(rootA);
-      frontB.add(rootB);
-      while (!frontA.isEmpty() || !frontB.isEmpty()) {
-        int[] firstDescriptors = ezDescriptors(frontA, nodesA, molGraph);
-        int[] secondDescriptors = ezDescriptors(frontB, nodesB, molGraph);
-        for (int position = 0; position < Math.max(firstDescriptors.length, secondDescriptors.length); position++) {
-          int first = position < firstDescriptors.length ? firstDescriptors[position] : 0;
-          int second = position < secondDescriptors.length ? secondDescriptors[position] : 0;
-          if (first != second) return Integer.compare(first, second);
-        }
-        List<Integer> nextA = new ArrayList<>(), nextB = new ArrayList<>();
-        for (int node : frontA) nextA.addAll(nodesA.get(node).children);
-        for (int node : frontB) nextB.addAll(nodesB.get(node).children);
-        frontA = nextA;
-        frontB = nextB;
-      }
-    }
-    return 0;
-  }
-
-  /**
-   * Collect E/Z descriptors for atoms at a BFS frontier, sorted descending.
-   * Maps dbStereo values so that Z gets higher priority: Z(1)→2, E(2)→1, NONE→0.
-   */
-  private static int[] ezDescriptors(List<Integer> frontier, List<DigraphNode> nodes,
-                                     MolGraph g) {
-    int[] arr = new int[frontier.size()];
-    for (int i = 0; i < arr.length; i++) {
-      DigraphNode nd = nodes.get(frontier.get(i));
-      int parentIdx = nd.parent;
-      int ez = 0;
-      if (parentIdx >= 0 && nd.atomIdx >= 0 && !nd.isDuplicate) {
-        int parentAtom = nodes.get(parentIdx).atomIdx;
-        if (parentAtom >= 0 && g.bondOrder(parentAtom, nd.atomIdx) == 2) {
-          int conf = atomicPriorityDoubleBondConfiguration(g, parentAtom, nd.atomIdx);
-          ez = (conf == 1) ? 2 : (conf == 2) ? 1 : 0;   // Z→2, E→1, NONE→0
-        }
-      }
-      arr[i] = ez;
-    }
-    Arrays.sort(arr);
-    for (int i = 0, j = arr.length - 1; i < j; i++, j--) {
-      int tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
-    }
-    return arr;
-  }
-
   // ==========================================================================
   // Priority computation
   // ==========================================================================
 
   /**
-   * Compute CIP priorities for all ligands around a centre atom.
-   * Returns an array of {atomIdx, rank} pairs where atomIdx is -1 for
-   * implicit H and rank is 1-based (1 = lowest priority).
+   * The first ranking pass: the ligands of a centre by Sequence Rule 1a alone, the atomic numbers
+   * of their branches compared sphere by sphere in the hierarchical order of the digraph. Every
+   * later rule (1b, 2, 3, 4 and 5) is left to the hierarchical comparison of {@link SequenceRules},
+   * which reads each rule exhaustively before the next.
+   * Returns an array of {atomIdx, rank} pairs where atomIdx is -1 for implicit H and -2 for a lone
+   * pair, and rank is 1-based (1 = lowest priority); ligands Rule 1a does not tell apart share a rank.
    */
   private static int[][] computePriorities(MolGraph g, int centre) {
-    return computePriorities(g, centre, true);
-  }
-
-  /** Compute CIP priorities by Rules 1-2, and Rule 3 when `includeStereo` is set. */
-  private static int[][] computePriorities(MolGraph g, int centre, boolean includeStereo) {
     int[] nbrs = g.neighbors[centre];
     int nExplicit = nbrs.length;
 
@@ -521,7 +459,7 @@ public final class CIPAssigner {
       int rootA = ligandRoots[a];
       int rootB = ligandRoots[b];
       if (rootA >= 0 && rootB >= 0)
-        return compareBranches(digraph, rootA, digraph, rootB, includeStereo ? g : null);
+        return compareOrderedBranches(digraph, rootA, digraph, rootB, false);
       return 0;
     };
 
@@ -548,9 +486,10 @@ public final class CIPAssigner {
    * Assign CIP R/S descriptors to all tetrahedral stereocentres in the molecule.
    *
    * Uses a two-pass approach per IUPAC 2013 P-92.1.4:
-   *   Pass 1: Rules 1-3 (atomic number, mass number, Z before E)
-   *   Pass 2: Rules 4 and 5 with auxiliary descriptors ({@link SequenceRules}),
-   *           for the centres pass 1 leaves unresolved
+   *   Pass 1: Rule 1a (atomic number), sphere by sphere
+   *   Pass 2: for the centres pass 1 leaves unresolved, Rules 1a to 6 over the hierarchical
+   *           digraph, with auxiliary descriptors for Rules 4 and 5 ({@link SequenceRules}),
+   *           each rule read exhaustively before the next
    *
    * Centres resolved only by Rule 5 (or Rule 6) are pseudoasymmetric and
    * receive lowercase 'r' or 's'.
@@ -563,13 +502,13 @@ public final class CIPAssigner {
     Map<Integer, Character> result = new LinkedHashMap<>();
     if (g.tetraChirality == null) return result;
 
-    // Pass 1: Rules 1-3 only
+    // Pass 1: Rule 1a only
     for (int idx = 0; idx < g.n; idx++) {
       Character c = assignRSAtom(g, idx);
       if (c != null) result.put(idx, c);
     }
 
-    // Pass 2: Rules 4 and 5 for the centres still unresolved
+    // Pass 2: every rule, hierarchically, for the centres still unresolved
     for (int idx = 0; idx < g.n; idx++) {
       if (g.tetraChirality[idx] == 0 || result.containsKey(idx)) continue;
       Character c = new SequenceRules(g, idx).label();
@@ -580,7 +519,7 @@ public final class CIPAssigner {
   }
 
   /**
-   * Assign R/S to a single atom by Rules 1-3.
+   * Assign R/S to a single atom by Rule 1a.
    * @return 'R' or 'S', or null if not a valid stereocentre or the rules leave it unresolved.
    */
   private static Character assignRSAtom(MolGraph g, int idx) {
@@ -654,9 +593,15 @@ public final class CIPAssigner {
         int conf = g.dbStereo(i, j); // 1=Z, 2=E
         if (conf == 0) continue;
 
-        // Determine higher-priority substituent on each side
+        // Determine higher-priority substituent on each side by Rule 1a; substituents it leaves
+        // tied go to the hierarchical comparison by Rules 1a to 3.
         int highI = higherPrioritySub(g, i, j);
         int highJ = higherPrioritySub(g, j, i);
+        if (highI == TIED || highJ == TIED) {
+          Character label = new SequenceRules(g, i, j).bondLabel();
+          if (label != null) result.put(MolGraph.bondKey(i, j), label);
+          continue;
+        }
         if (highI == Integer.MIN_VALUE || highJ == Integer.MIN_VALUE) continue;
 
         // The stored relation uses the first non-double-bond neighbour at each end.
@@ -678,13 +623,12 @@ public final class CIPAssigner {
     return result;
   }
 
-  /** Find the higher-priority substituent on one end of a double bond. */
-  private static int higherPrioritySub(MolGraph g, int thisEnd, int otherEnd) {
-    return higherPrioritySub(g, thisEnd, otherEnd, true);
-  }
+  /** The value of {@link #higherPrioritySub} when Rule 1a leaves the two substituents of an end tied. */
+  private static final int TIED = Integer.MIN_VALUE + 1;
 
-  private static int higherPrioritySub(MolGraph g, int thisEnd, int otherEnd, boolean includeStereo) {
-    int[][] prios = computePriorities(g, thisEnd, includeStereo);
+  /** Find the higher-priority substituent on one end of a double bond by Rule 1a. */
+  private static int higherPrioritySub(MolGraph g, int thisEnd, int otherEnd) {
+    int[][] prios = computePriorities(g, thisEnd);
     int bestRank = -1, bestAtom = Integer.MIN_VALUE;
     int secondRank = -1;
     int subCount = 0;
@@ -701,21 +645,9 @@ public final class CIPAssigner {
       }
     }
 
-    // If two substituents have the same highest priority, E/Z is undefined
-    if (subCount >= 2 && bestRank == secondRank) return Integer.MIN_VALUE;
+    // If two substituents have the same highest priority, Rule 1a leaves the end tied
+    if (subCount >= 2 && bestRank == secondRank) return TIED;
     return bestAtom;
-  }
-
-  /** Rule 3 descriptors use atomic/isotopic priorities, independent of input carrier order. */
-  private static int atomicPriorityDoubleBondConfiguration(MolGraph graph, int first, int second) {
-    int configuration = graph.dbStereo(first, second);
-    if (configuration == 0) return 0;
-    int highFirst = higherPrioritySub(graph, first, second, false);
-    int highSecond = higherPrioritySub(graph, second, first, false);
-    if (highFirst == Integer.MIN_VALUE || highSecond == Integer.MIN_VALUE) return 0;
-    if (highFirst != graph.doubleBondReference(first, second)) configuration = 3 - configuration;
-    if (highSecond != graph.doubleBondReference(second, first)) configuration = 3 - configuration;
-    return configuration;
   }
 
   // ==========================================================================
@@ -748,11 +680,11 @@ public final class CIPAssigner {
 
   /**
    * Sequence Rules 1 to 6 (IUPAC 2013 P-92.1.3) over the hierarchical digraph of one tetrahedral
-   * centre, for the centres Rules 1 to 3 leave unresolved. The method is the one the reference CIP
-   * implementations follow (Hanson et al., JCIM 58, 1755 (2018)):
+   * centre or one double bond, for the ligands Rule 1a alone leaves tied. The method is the one the
+   * reference CIP implementations follow (Hanson et al., JCIM 58, 1755 (2018)):
    *
    *   - Every stereogenic unit in the digraph (a tagged tetrahedral centre or a stereogenic double
-   *     bond, other than the centre itself) receives an auxiliary descriptor at each of its nodes,
+   *     bond, other than the one being labelled) receives an auxiliary descriptor at each of its nodes,
    *     found by ranking its ligands with the digraph re-rooted at that node: the edge towards the
    *     root is reversed and the subtree beyond it explored in that direction. Nodes are labelled
    *     from the deepest sphere inwards, so each sees the descriptors of the units beyond it.
@@ -835,6 +767,7 @@ public final class CIPAssigner {
 
     private final MolGraph g;
     private final int centre;
+    private final int partner;           // the other atom of a double bond being labelled, -1 for a centre
     private List<DigraphNode> nodes;
     private int[] aux;                   // auxiliary descriptor by node
     private int[] up;                    // the neighbour of each node towards the current root, -1 for the root
@@ -848,6 +781,43 @@ public final class CIPAssigner {
     SequenceRules(MolGraph graph, int centre) {
       this.g = graph;
       this.centre = centre;
+      this.partner = -1;
+    }
+
+    /** The rules for the double bond first=second, over the digraph rooted at `first`. */
+    SequenceRules(MolGraph graph, int first, int second) {
+      this.g = graph;
+      this.centre = first;
+      this.partner = second;
+    }
+
+    /**
+     * The descriptor of the double bond by Rules 1a to 5, each read exhaustively before the next,
+     * or null when they leave the ligands of an end tied or only Rule 5 tells the ligands of one
+     * end apart (seqCis and seqTrans).
+     */
+    Character bondLabel() {
+      if (centre < 0 || centre >= g.n || partner < 0 || partner >= g.n) return null;
+      Unit unit = new Unit();
+      unit.bond = true;
+      unit.first = centre;
+      unit.second = partner;
+      unit.carrierFirst = g.doubleBondReference(centre, partner);
+      unit.carrierSecond = g.doubleBondReference(partner, centre);
+      unit.configuration = g.dbStereo(centre, partner);
+      if (unit.configuration == 0 || unit.carrierFirst < 0 || unit.carrierSecond < 0) return null;
+      nodes = buildDigraph(g, centre);
+      if (nodes.isEmpty()) return null;
+      aux = new int[nodes.size()];
+      up = new int[nodes.size()];
+      collectUnits();
+      labelAuxiliaryDescriptors();
+      changeRoot(0);
+      List<Rule> rules = new ArrayList<>();
+      for (int kind = RULE_1A; kind <= RULE_5; kind++) rules.add(new Rule(kind, NONE));
+      int descriptor = labelDoubleBond(0, unit, rules);
+      if (exhausted) return null;
+      return descriptor == Z ? Character.valueOf('Z') : descriptor == E ? Character.valueOf('E') : null;
     }
 
     /** The descriptor of the centre, or null when the rules do not resolve it. */
@@ -1271,6 +1241,8 @@ public final class CIPAssigner {
       for (int u = 0; u < units.size(); u++) {
         Unit unit = units.get(u);
         if (!unit.bond && unit.first == centre) continue;
+        if (unit.bond && partner >= 0 && ((unit.first == centre && unit.second == partner)
+                                          || (unit.first == partner && unit.second == centre))) continue;
         for (int node = 0; node < nodes.size(); node++) {
           if (nodes.get(node).isDuplicate || nodes.get(node).atomIdx != unit.first) continue;
           int low = node;
@@ -1293,7 +1265,7 @@ public final class CIPAssigner {
         Unit unit = units.get(entry[1]);
         int descriptor;
         if (unit.bond) {
-          descriptor = labelDoubleBond(entry[0], unit);
+          descriptor = labelDoubleBond(entry[0], unit, allRules());
         } else {
           changeRoot(entry[0]);
           descriptor = labelTetrahedral(entry[0], unit);
@@ -1378,8 +1350,8 @@ public final class CIPAssigner {
       return rectus ? R : S;
     }
 
-    /** The descriptor of a double bond unit whose end nearer the root is `root1`. */
-    private int labelDoubleBond(int root1, Unit unit) {
+    /** The descriptor of a double bond unit whose end nearer the root is `root1`, ranking its ligands by `rules`. */
+    private int labelDoubleBond(int root1, Unit unit, List<Rule> rules) {
       int atom1 = nodes.get(root1).atomIdx;
       int atom2 = atom1 == unit.first ? unit.second : unit.first;
       int root2 = -1;
@@ -1397,7 +1369,6 @@ public final class CIPAssigner {
         carrier2 = unit.carrierFirst;
       }
       int configuration = unit.configuration;
-      List<Rule> rules = allRules();
       changeRoot(root1);
       Priority priority1 = prioritise(rules, true, root1, edges1, true);
       if (!priority1.unique) return UNKNOWN;

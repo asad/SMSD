@@ -130,6 +130,16 @@ searches are SMSD Pro's own code. The licence text is provided in
 licenses/cdk/LICENSE, and licenses/cdk/README.md states where the CDK
 source is published and how the bundled copy can be replaced.
 
+The same CLI artefacts also bundle, unmodified, Beam 1.3.10, licensed
+under the BSD 2-Clause License, and vecmath 1.5.2, licensed under the
+GNU General Public License, version 2, with the Classpath exception.
+Their licence texts are provided in licenses/beam/LICENSE and
+licenses/vecmath/LICENSE, and licenses/vecmath/README.md states where
+the vecmath source is published. They also bundle picocli and Jackson,
+licensed under the Apache License, Version 2.0; the notices for Jackson
+and the code it incorporates under the MIT, BSD 2-Clause and Boost
+Software licences are kept in the META-INF directory of the CLI JAR.
+
 Python wheels built with OpenMP may bundle the LLVM OpenMP runtime,
 licensed under Apache License 2.0 with LLVM Exceptions. Its licence
 is provided in licenses/libomp/LICENSE.TXT and in wheel licence metadata.

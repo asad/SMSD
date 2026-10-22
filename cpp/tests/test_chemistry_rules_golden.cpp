@@ -219,6 +219,30 @@ void similarity(const Json& section) {
     }
 }
 
+void fingerprintQuality(const Json& section) {
+    const double tolerance = section["tolerance"].number;
+    for (const auto& item : section["cases"].items) {
+        const std::string name = "fingerprint quality " + item["name"].text;
+        const int size = item["fp_size"].integer(), setBits = item["set_bits"].integer();
+        std::vector<int> positions(static_cast<size_t>(setBits));
+        for (int bit = 0; bit < setBits; ++bit) positions[static_cast<size_t>(bit)] = bit;
+        // Repeated positions and bits beyond the size do not change the quality.
+        std::vector<int> repeated(positions);
+        repeated.insert(repeated.end(), positions.rbegin(), positions.rend());
+        auto words = smsd::bitWords(positions, size);
+        if (size % 64 != 0) words.back() |= ~uint64_t(0) << (size % 64);
+        for (const auto& quality : {smsd::batch::fingerprintQuality(positions, size),
+                                    smsd::batch::fingerprintQuality(repeated, size),
+                                    smsd::batch::fingerprintQuality(words, size)}) {
+            check(quality.setBits == setBits && quality.fpSize == size, name + " set bits");
+            near(quality.density, item["density"].number, tolerance, name + " density");
+            near(quality.expectedCollisionRate, item["expected_collision_rate"].number, tolerance,
+                 name + " expected collision rate");
+            check(quality.saturated == item["is_saturated"].boolean, name + " saturation");
+        }
+    }
+}
+
 void circularSimilarity(const Json& section) {
     for (const auto& item : section["cases"].items) {
         const auto query = smsd::batch::detail::computeCircularFingerprintECFP(molecule(item["query"].text), 2, 2048);
@@ -402,6 +426,28 @@ void auxiliaryDescriptors(const Json& section) {
               "Rule 4 and 5 CIP labels of " + item["name"].text);
 }
 
+void aromaticInput(const Json& section) {
+    for (const auto& item : section["cases"].items) {
+        const auto graph = molecule(item["smiles"].text);
+        int aromatic = 0;
+        for (int atom = 0; atom < graph.n; ++atom) aromatic += graph.aromatic[atom] ? 1 : 0;
+        check(aromatic == item["aromatic_atoms"].integer(), "aromatic atoms of " + item["name"].text);
+    }
+}
+
+void hierarchicalRanking(const Json& section) {
+    for (const auto& item : section["cases"].items) {
+        const auto graph = molecule(item["smiles"].text);
+        check(allCipLabels(graph) == expectedLabels(item), "first-pass CIP labels of " + item["name"].text);
+        std::map<std::string, std::string> bonds, expectedBonds;
+        for (const auto& [first, second, label] : smsd::cip::assignAll(graph).ezBonds)
+            bonds[std::to_string(std::min(first, second)) + "-" + std::to_string(std::max(first, second))] =
+                smsd::cip::to_string(label);
+        for (const auto& bond : item["bonds"].members) expectedBonds[bond.first] = bond.second.text;
+        check(bonds == expectedBonds, "first-pass E/Z labels of " + item["name"].text);
+    }
+}
+
 std::vector<std::pair<int, int>> nonZero(const std::vector<int>& counts) {
     std::vector<std::pair<int, int>> pairs;
     for (size_t i = 0; i < counts.size(); ++i)
@@ -511,6 +557,15 @@ void daylightSmarts(const Json& section) {
         const auto found = smsd::Substructure::smarts(item["smarts"].text).matchAll(target).matches.size();
         check(static_cast<int>(found) == item["embeddings"].integer(),
               "Daylight SMARTS " + item["name"].text + " " + item["smarts"].text + ": got " + std::to_string(found));
+    }
+    for (const auto& item : section["rejected"].items) {
+        bool rejected = false;
+        try {
+            smsd::Substructure::smarts(item["smarts"].text);
+        } catch (const std::invalid_argument&) {
+            rejected = true;
+        }
+        check(rejected, "Daylight SMARTS " + item["name"].text + " " + item["smarts"].text + " is rejected");
     }
 }
 
@@ -719,6 +774,9 @@ void strictRingFusion(const Json& section) {
         graph.ensureRingCounts();
         check(graph.ringCount == item["counts"].integers(),
               "ring counts of " + item["name"].text + ": got " + describe(graph.ringCount));
+        const auto rings = smsd::detail_rf::perceiveRingSets(graph);
+        check(rings.truncated == item["truncated"].boolean && smsd::ringsTruncated(graph) == item["truncated"].boolean,
+              "ring search bound of " + item["name"].text);
     }
     for (const auto& item : section["common_bonds"].items) {
         smsd::MCSOptions options;
@@ -737,6 +795,25 @@ void strictRingFusion(const Json& section) {
     }
 }
 
+void doubleBondLigands(const Json& section) {
+    for (const auto& item : section["cases"].items) {
+        smsd::MCSOptions options;
+        options.objective = smsd::MCSObjective::MCES;
+        options.connectivity = item["connectivity"].text == "connected" ? smsd::MCSConnectivity::Connected
+                                                                         : smsd::MCSConnectivity::Fragments;
+        options.chemistry.useBondStereo = true;
+        const auto query = molecule(item["query"].text), target = molecule(item["target"].text);
+        const auto result = smsd::MCS::find(query).withOptions(options).match(target);
+        const int bonds = result.matches.empty() ? 0 : static_cast<int>(result.matches.front().bondMapping.size());
+        const int atoms = result.matches.empty() ? 0 : static_cast<int>(result.matches.front().atomMapping.size());
+        check(result.optimal && bonds == item["bonds"].integer() && atoms == item["atoms"].integer(),
+              "double-bond ligands " + item["name"].text + ": got " + std::to_string(bonds) + " bonds on "
+                  + std::to_string(atoms) + " atoms");
+        check(!result.matches.empty() && smsd::MCS::validateMapping(query, target, result.matches.front(), options).empty(),
+              "double-bond ligands " + item["name"].text + ": the mapping does not validate");
+    }
+}
+
 } // namespace
 
 int main() {
@@ -751,6 +828,7 @@ int main() {
     try {
         const Json rules = JsonReader(source).value();
         similarity(rules["similarity"]);
+        fingerprintQuality(rules["fingerprint_quality"]);
         circularSimilarity(rules["circular_similarity"]);
         implicitHydrogens(rules["implicit_hydrogens"]);
         smarts(rules["smarts"], false);
@@ -770,8 +848,11 @@ int main() {
         consensusNativeOrder(rules["consensus_native_order"]);
         consensus(rules["consensus"]);
         auxiliaryDescriptors(rules["cip_auxiliary_descriptors"]);
+        hierarchicalRanking(rules["cip_hierarchical_ranking"]);
+        aromaticInput(rules["aromatic_input"]);
         fingerprintOptions(rules["fingerprint_options"]);
         strictRingFusion(rules["strict_ring_fusion"]);
+        doubleBondLigands(rules["double_bond_ligands"]);
     } catch (const std::exception& error) {
         std::cerr << "FAIL " << error.what() << '\n';
         return 1;

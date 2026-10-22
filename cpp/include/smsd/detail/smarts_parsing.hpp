@@ -16,7 +16,6 @@
 
 #include <algorithm>
 #include <array>
-#include <cctype>
 #include <cstddef>
 #include <functional>
 #include <stdexcept>
@@ -113,7 +112,7 @@ class SmartsParser {
     bool isTwoLetterElement(char upper) const {
         if (pos_ + 1 >= static_cast<int>(smarts_.size())) return false;
         char next = smarts_[pos_ + 1];
-        if (!std::islower(next)) return false;
+        if (!parser_detail::isAsciiLower(next)) return false;
         std::string twoChar{upper, next};
         return elementToAtomicNum(twoChar) >= 0;
     }
@@ -122,10 +121,10 @@ class SmartsParser {
     // uppercase symbol is aliphatic and a lowercase one aromatic; only #n matches either form.
     AtomExpr parseElementSymbol() {
         char c = peek();
-        if (std::isupper(c)) {
+        if (parser_detail::isAsciiUpper(c)) {
             advance();
             std::string sym(1, c);
-            if (pos_ < static_cast<int>(smarts_.size()) && std::islower(peek())) {
+            if (pos_ < static_cast<int>(smarts_.size()) && parser_detail::isAsciiLower(peek())) {
                 std::string twoChar = sym + peek();
                 if (elementToAtomicNum(twoChar) >= 0) {
                     sym = twoChar;
@@ -136,10 +135,10 @@ class SmartsParser {
             if (z < 0) throw std::invalid_argument("Unknown element in SMARTS: " + sym);
             return AtomExpr::makeElement(z, false);
         }
-        if (std::islower(c)) {
+        if (parser_detail::isAsciiLower(c)) {
             advance();
             std::string sym(1, c);
-            if (pos_ < static_cast<int>(smarts_.size()) && std::islower(peek())) {
+            if (pos_ < static_cast<int>(smarts_.size()) && parser_detail::isAsciiLower(peek())) {
                 std::string twoChar = sym + peek();
                 if (elementToAtomicNum(twoChar) >= 0) {
                     sym = twoChar;
@@ -353,18 +352,21 @@ class SmartsParser {
             return expr;
         }
 
-        // @ = chirality (CW), @@ = chirality (CCW), @? = unspecified/either
+        // @ = anticlockwise, @@ = clockwise (tags 1 and 2, as SMILES stores them); a trailing ?
+        // (@? or @@?) means that configuration or none, as Daylight SMARTS defines it
         if (c == '@') {
             advance();
+            int tag = 1; // @, anticlockwise
             if (pos_ < static_cast<int>(smarts_.size()) && peek() == '@') {
-                advance(); // @@
-                return AtomExpr::makePrim(AtomPrimType::CHIRALITY, 2, true); // CCW
+                advance(); // @@, clockwise
+                tag = 2;
             }
+            auto expr = AtomExpr::makePrim(AtomPrimType::CHIRALITY, tag, true);
             if (pos_ < static_cast<int>(smarts_.size()) && peek() == '?') {
-                advance(); // @?
-                return AtomExpr::makePrim(AtomPrimType::CHIRALITY, 0, true); // unspecified
+                advance(); // @? or @@?
+                expr.orUnspecified = true;
             }
-            return AtomExpr::makePrim(AtomPrimType::CHIRALITY, 1, true); // CW
+            return expr;
         }
 
         // :n = atom class / map number
@@ -399,12 +401,12 @@ class SmartsParser {
         }
 
         // Element symbol (uppercase or lowercase)
-        if (std::isalpha(c)) {
+        if (parser_detail::isAsciiLetter(c)) {
             return parseElementSymbol();
         }
 
         // Isotope: digits at the start of a bracket atom
-        if (std::isdigit(c)) {
+        if (parser_detail::isAsciiDigit(c)) {
             int num = parseDigits();
             return AtomExpr::makePrim(AtomPrimType::MASS, num, true);
         }
@@ -481,9 +483,9 @@ class SmartsParser {
     bool parseHydrogenAtom(AtomExpr& expression) {
         const int size = static_cast<int>(smarts_.size());
         int at = pos_, isotope = -1, charge = 0;
-        if (at < size && std::isdigit(static_cast<unsigned char>(smarts_[at]))) {
+        if (at < size && parser_detail::isAsciiDigit(smarts_[at])) {
             isotope = 0;
-            while (at < size && std::isdigit(static_cast<unsigned char>(smarts_[at]))) {
+            while (at < size && parser_detail::isAsciiDigit(smarts_[at])) {
                 if (isotope > 100000) return false;
                 isotope = isotope * 10 + (smarts_[at++] - '0');
             }
@@ -494,9 +496,9 @@ class SmartsParser {
             const char sign = smarts_[at];
             int magnitude = 0;
             while (at < size && smarts_[at] == sign) { ++magnitude; ++at; }
-            if (magnitude == 1 && at < size && std::isdigit(static_cast<unsigned char>(smarts_[at]))) {
+            if (magnitude == 1 && at < size && parser_detail::isAsciiDigit(smarts_[at])) {
                 magnitude = 0;
-                while (at < size && std::isdigit(static_cast<unsigned char>(smarts_[at]))) {
+                while (at < size && parser_detail::isAsciiDigit(smarts_[at])) {
                     if (magnitude > 100000) return false;
                     magnitude = magnitude * 10 + (smarts_[at++] - '0');
                 }
@@ -506,9 +508,9 @@ class SmartsParser {
         int atomClass = -1;
         if (at < size && smarts_[at] == ':') {
             ++at;
-            if (at >= size || !std::isdigit(static_cast<unsigned char>(smarts_[at]))) return false;
+            if (at >= size || !parser_detail::isAsciiDigit(smarts_[at])) return false;
             atomClass = 0;
-            while (at < size && std::isdigit(static_cast<unsigned char>(smarts_[at]))) {
+            while (at < size && parser_detail::isAsciiDigit(smarts_[at])) {
                 if (atomClass > 100000) return false;
                 atomClass = atomClass * 10 + (smarts_[at++] - '0');
             }
@@ -603,7 +605,7 @@ class SmartsParser {
     }
 
     bool isAtomStart(char c) const {
-        return c == '[' || c == '*' || std::isalpha(c);
+        return c == '[' || c == '*' || parser_detail::isAsciiLetter(c);
     }
 
 public:
@@ -689,7 +691,7 @@ public:
             }
 
             // Ring closure digit or %nn
-            if (std::isdigit(c) || c == '%') {
+            if (parser_detail::isAsciiDigit(c) || c == '%') {
                 int ringNum;
                 if (c == '%') {
                     advance();
@@ -712,12 +714,23 @@ public:
                     bond.to = hasPendingBond ? openAtom : currentAtom;
                     neighborOrder_[openAtom][it->second.neighborSlot] = currentAtom;
                     neighborOrder_[currentAtom].push_back(openAtom);
-                    // Use the bond from open if it had one, or the current pending bond
+                    // Use the bond from open if it had one, or the current pending bond; a bond
+                    // written at both ends must be the same expression at each, as Java reads it.
+                    // A direction at the closing digit is read from the closing atom, so one
+                    // written at both ends is rejected, as Java rejects it.
+                    const bool openWritten = it->second.expression.primType != BondPrimType::DEFAULT_
+                        || it->second.expression.op != ExprOp::PRIM;
+                    if (hasPendingBond && openWritten
+                        && (bondExprHasDirection(pendingBond) || bondExprHasDirection(it->second.expression)))
+                        throw std::invalid_argument("Ring closure " + std::to_string(ringNum)
+                                                    + " has a bond direction written at both ends");
+                    if (hasPendingBond && openWritten && !sameBondExpr(pendingBond, it->second.expression))
+                        throw std::invalid_argument("Ring closure " + std::to_string(ringNum)
+                                                    + " has different bond expressions at its two ends");
                     if (hasPendingBond) {
                         bond.expr = std::move(pendingBond);
                         hasPendingBond = false;
-                    } else if (it->second.expression.primType != BondPrimType::DEFAULT_
-                               || it->second.expression.op != ExprOp::PRIM) {
+                    } else if (openWritten) {
                         bond.expr = std::move(it->second.expression);
                     } else {
                         bond.expr = BondExpr::makePrim(BondPrimType::DEFAULT_);
@@ -791,7 +804,7 @@ public:
                 continue;
             }
 
-            if (std::isalpha(c)) {
+            if (parser_detail::isAsciiLetter(c)) {
                 // Outside brackets, a and A are always atom wildcards.
                 if (c == 'a' || c == 'A') {
                     advance();
@@ -813,7 +826,7 @@ public:
                     currentAtom = newIdx;
                     continue;
                 }
-                bool aromatic = std::islower(c);
+                bool aromatic = parser_detail::isAsciiLower(c);
                 std::string sym(1, c);
                 advance();
 
@@ -849,7 +862,7 @@ public:
             }
 
             // Skip whitespace
-            if (std::isspace(static_cast<unsigned char>(c))) {
+            if (parser_detail::isAsciiSpace(c)) {
                 advance();
                 continue;
             }

@@ -90,6 +90,12 @@ struct ScoutLimits {
     int64_t after = int64_t(1) << 15, growth = 4;
     /** The most pairs mapped in one scouting, and below one root pair. */
     int64_t budget = int64_t(1) << 15, root = int64_t(1) << 10;
+    /**
+     * The pairs the last search of a fragment search for one mapping maps before the search the
+     * other way round is raced against it, the pairs that search maps first, and the most it
+     * maps while it beats the first; see searchCommonBonds().
+     */
+    int64_t race = int64_t(1) << 19, raceTrial = int64_t(1) << 14, raceLonger = int64_t(1) << 19;
 };
 
 /** The MCES search on the int graphs of a CommonBondGraphs; see the description at the top of this file. */
@@ -309,7 +315,7 @@ class CommonBondSearch {
     size_t wanted_ = 1;
     /** The most pairs mapped and embedding atoms placed before the search stops, see countNode(). */
     int64_t nodeCap_ = INT64_MAX;
-    /** Whether the search stopped at nodeCap_. */
+    /** Whether the search stopped at nodeCap_, see capNodesAt(). */
     bool capReached_ = false;
     /** The lowest rank of a first root: with a required mapping, only that of its highest ranked atom. */
     int lowestRoot_ = 0;
@@ -321,6 +327,13 @@ class CommonBondSearch {
     int fragments_ = 0;
     /** Grows a seed of the same molecules the other way round, turned round, or null; see seedAlsoFrom(). */
     std::function<std::vector<int>()> otherSeed_;
+    /** Whether the atoms are ranked and the seed is grown; each is done once. */
+    bool ranked_ = false, seeded_ = false;
+    /** Runs the race of raceAfter(), the pairs the last search maps first, and the number of nodes at which it runs. */
+    std::function<void()> race_;
+    int64_t raceAfter_ = INT64_MAX, raceAt_ = INT64_MAX;
+    /** Asked for a higher node cap once nodeCap_ is reached, see capNodesAt(). */
+    std::function<int64_t()> extendCap_;
 
 public:
     /**
@@ -410,10 +423,65 @@ public:
     std::vector<int> greedySeed() {
         clock_.poll();
         if (!anyCompatible() || std::min(query_.bondCount, target_.bondCount) < MIN_BONDS) return {};
-        rank();
-        fallbackScore_ = belowEveryMapping();
-        seed(bestPossible());
+        rankOnce();
+        seedOnce(bestPossible());
         return hasFallback_ ? fallback_ : std::vector<int>();
+    }
+
+    /**
+     * Makes the last search call `race` once it has mapped `nodes` pairs, see searchCommonBonds():
+     * the search the other way round may then give it a better mapping or a lower bound through
+     * offer(), and the last search goes on from where it was.
+     */
+    void raceAfter(int64_t nodes, std::function<void()> race) {
+        raceAfter_ = nodes;
+        race_ = std::move(race);
+    }
+
+    /** The best score held by the search under way, which a mapping must beat to be kept. */
+    int64_t bestScore() const { return bestScore_; }
+    /** A score that no mapping beats, as the search under way knows it; it holds the other way round too. */
+    int64_t upperBound() const { return upperBound_; }
+    /** The score of the best mapping found so far, see found(), or 0 when there is none. */
+    int64_t bestFound() const { return !mappings_.empty() ? scoreOf(mappings_.front()) : hasFallback_ ? fallbackScore_ : 0; }
+    /** The score of `mapping`, a mapping of this search. */
+    int64_t scoreOfMapping(const std::vector<int>& mapping) const { return scoreOf(mapping); }
+
+    /**
+     * Gives the search under way `mapping`, a mapping of it or empty, which it keeps as its best
+     * if it beats the best score, and `bound`, which it takes as its upper bound if lower. A
+     * search that then holds a mapping of its upper bound ends; one that does not goes on and
+     * prunes more. For a search for one mapping without conditions.
+     */
+    void offer(const std::vector<int>& mapping, int64_t bound) {
+        if (!mapping.empty()) {
+            const int64_t value = scoreOf(mapping);
+            if (value > bestScore_) keep(value, mapping);
+        }
+        if (bound < upperBound_) upperBound_ = bound;
+    }
+
+    /** Stops the search with Stop once it has mapped `cap` pairs in all, unless `extend`, asked then, gives a higher cap. */
+    void capNodesAt(int64_t cap, std::function<int64_t()> extend = {}) {
+        nodeCap_ = cap;
+        capReached_ = false;
+        extendCap_ = std::move(extend);
+    }
+
+    /**
+     * The search raced against another of the same molecules the other way round: ranks the
+     * atoms and grows the seed unless done, takes `best`, a mapping of this search or empty, as
+     * the fallback if it beats the seed, and seeks a maximum mapping below `bound` level by level
+     * of common bonds and then by the last search. It maps pairs up to its node cap, see
+     * capNodesAt(); a search stopped there has its best mapping in found().
+     */
+    std::vector<std::vector<int>> raceFrom(const std::vector<int>& best, int64_t bound) {
+        clock_.poll();
+        if (!anyCompatible() || std::min(query_.bondCount, target_.bondCount) < MIN_BONDS) return {};
+        rankOnce();
+        seedOnce(bound);
+        if (!best.empty()) offerFallback(best, scoreOf(best));
+        return collectByBonds(bound);
     }
 
     /**
@@ -516,6 +584,21 @@ private:
         atomCap = std::min(atomCap, atomsOf(label));
         // A mapping with at most so many bonds has at most so many atoms.
         return score(std::min(atomCap, mostAtoms(bondCap)), bondCap);
+    }
+
+    /** Ranks the atoms, see rank(), unless they are ranked already. */
+    void rankOnce() {
+        if (ranked_) return;
+        ranked_ = true;
+        rank();
+    }
+
+    /** Grows the seed, see seed(), from below every mapping, unless it is grown already. */
+    void seedOnce(int64_t bound) {
+        if (seeded_) return;
+        seeded_ = true;
+        fallbackScore_ = belowEveryMapping();
+        seed(bound);
     }
 
     /**
@@ -972,6 +1055,7 @@ private:
             bound = score(std::min(atomsOf(bound), mostAtoms(triedBonds - 1)), triedBonds - 1);
         }
         scoutAt_ = nodes_ + scoutLimits_.after;
+        raceAt_ = race_ && raceAfter_ < INT64_MAX - nodes_ ? nodes_ + raceAfter_ : INT64_MAX;
         return collect(hasFallback_ ? &fallback_ : nullptr, fallbackScore_, bound, wanted_);
     }
 
@@ -985,6 +1069,10 @@ private:
         while (depth_ > 0) {
             clock_.tick();
             if (nodes_ >= scoutAt_) scout();
+            if (nodes_ >= raceAt_) {
+                raceAt_ = INT64_MAX;
+                race_();
+            }
             Level& level = levels_[depth_ - 1];
             if (done() || !canImprove(level.bound)) {
                 pop();
@@ -1098,7 +1186,7 @@ private:
      * once nodeCap_ are counted.
      */
     void countNode() {
-        if (nodes_ >= nodeCap_) {
+        if (nodes_ >= nodeCap_ && !(extendCap_ && (nodeCap_ = extendCap_()) > nodes_)) {
             capReached_ = true;
             throw Stop{};
         }

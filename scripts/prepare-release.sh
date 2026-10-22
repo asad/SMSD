@@ -45,10 +45,16 @@ mvn -f java/pom.xml -B -Dslow.tests.exclude=nothing clean verify \
 # nothing is recompiled, so Java 8 runs the classes built above.
 mvn -f java/pom.xml -B -Dslow.tests.exclude=nothing \
   "-Djvm=$SMSD_RELEASE_JAVA8_HOME/bin/java" test
-"$SMSD_RELEASE_JAVA8_HOME/bin/java" -jar \
-  "java/cli/target/smsd-cli-$SMSD_RELEASE_VERSION-jar-with-dependencies.jar" --version
-java/cli/src/scripts/smsd --version
-java/cli/target/appassembler/bin/smsd --version
+# The CLI reads its version from the JAR manifest, so each launcher must report the release.
+for SMSD_VERSION_LINE in \
+  "$("$SMSD_RELEASE_JAVA8_HOME/bin/java" -jar "java/cli/target/smsd-cli-$SMSD_RELEASE_VERSION-jar-with-dependencies.jar" --version)" \
+  "$(java/cli/src/scripts/smsd --version)" \
+  "$(java/cli/target/appassembler/bin/smsd --version)"; do
+  [[ "$SMSD_VERSION_LINE" == "SMSD Pro $SMSD_RELEASE_VERSION "* ]] || {
+    echo "CLI reports '$SMSD_VERSION_LINE' rather than $SMSD_RELEASE_VERSION" >&2
+    exit 1
+  }
+done
 
 # Build from the source distribution to verify that it contains all build inputs.
 "$SMSD_RELEASE_PYTHON" scripts/build_python_wheels.py prepare \
@@ -96,7 +102,7 @@ cp "java/core/target/smsd-$SMSD_RELEASE_VERSION.jar" \
 COPYFILE_DISABLE=1 tar -czf "$SMSD_RELEASE_DIR/smsd-cpp-$SMSD_RELEASE_VERSION-headers.tar.gz" \
   LICENSE NOTICE -C cpp/include smsd
 COPYFILE_DISABLE=1 tar -czf "$SMSD_RELEASE_DIR/smsd-$SMSD_RELEASE_VERSION-cli.tar.gz" \
-  LICENSE NOTICE licenses/cdk -C java/cli/target/appassembler bin repo
+  LICENSE NOTICE licenses/cdk licenses/beam licenses/vecmath -C java/cli/target/appassembler bin repo
 cp docs/RELEASE_NOTES.md "$SMSD_RELEASE_DIR/RELEASE_NOTES.md"
 if [[ -f "docs/VALIDATION_$SMSD_RELEASE_VERSION.md" ]]; then
   cp "docs/VALIDATION_$SMSD_RELEASE_VERSION.md" "$SMSD_RELEASE_DIR/VALIDATION.md"

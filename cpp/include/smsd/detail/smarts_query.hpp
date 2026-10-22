@@ -118,13 +118,16 @@ inline bool SmartsQuery::stereoCompatible(const MolGraph& target, const std::vec
         const bool validLigands = stereo_detail::tetrahedralLigands(neighbors[atom], atom, queryLigands)
             && stereo_detail::tetrahedralLigands(target, targetAtom, targetLigands);
         const int targetTag = target.tetraChirality.empty() ? 0 : target.tetraChirality[targetAtom];
-        const auto matched = smarts_detail::evalAtomExprWithStereo(atoms[atom].expr, target, targetAtom, [&](int queryTag) {
-            if (queryTag == 0) return StereoTruth::TRUE_VALUE;
+        const auto matched = smarts_detail::evalAtomExprWithStereo(atoms[atom].expr, target, targetAtom,
+                                                                   [&](const smarts_detail::AtomExpr& chirality) {
+            const int queryTag = chirality.intVal;
             if (targetTag == 0) return StereoTruth::FALSE_VALUE;
-            const bool compatible = validLigands
-                ? stereo_detail::tetrahedralParityMatches(queryTag, queryLigands, targetTag, targetLigands, mapping)
-                : queryTag == targetTag;
-            return compatible ? StereoTruth::TRUE_VALUE : StereoTruth::FALSE_VALUE;
+            // A query atom whose neighbours do not define a configuration cannot tell one tag from
+            // the other, so either matches a configured atom, as RDKit and CDK read it; the stored
+            // tags alone depend on the order the target was written in.
+            if (!validLigands) return StereoTruth::TRUE_VALUE;
+            return stereo_detail::tetrahedralParityMatches(queryTag, queryLigands, targetTag, targetLigands, mapping)
+                ? StereoTruth::TRUE_VALUE : StereoTruth::FALSE_VALUE;
         });
         if (matched != StereoTruth::TRUE_VALUE) return false;
     }

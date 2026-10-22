@@ -64,7 +64,7 @@ enum class AtomPrimType {
     TOTAL_CONNECTIVITY,        // X<n> — total connections (degree + implicit H)
     HEAVY_DEGREE,              // d<n> — non-hydrogen degree (heavy atom connections)
     HYBRIDIZATION,             // ^<n> — hybridisation (0=S,1=SP,2=SP2,3=SP3,4=SP3D,5=SP3D2)
-    CHIRALITY,                 // @ (CW), @@ (CCW), @? (either/unspecified)
+    CHIRALITY,                 // @ (anticlockwise), @@ (clockwise); @? and @@? also accept no configuration
     ATOM_CLASS,                // :n — atom map number / reaction class
 };
 
@@ -89,6 +89,8 @@ struct AtomExpr {
     // For ELEMENT: the required aromaticity (0 aliphatic, 1 aromatic, -1 either), tested
     // with the element as one primitive rather than as a separate AND operand.
     int aromaticity = -1;
+    // For CHIRALITY: written @? or @@?, so that an atom without a configuration matches too.
+    bool orUnspecified = false;
     // For RECURSIVE:
     std::string recursiveSmarts;
     std::shared_ptr<const SmartsQuery> cachedRecursive;
@@ -190,6 +192,26 @@ struct BondExpr {
         return e;
     }
 };
+
+/** Whether a bond expression holds a direction primitive (/, \, /? or \?) anywhere. */
+inline bool bondExprHasDirection(const BondExpr& expression) {
+    if (expression.op == ExprOp::PRIM)
+        return expression.primType == BondPrimType::WEDGE || expression.primType == BondPrimType::DASH
+            || expression.primType == BondPrimType::WEDGE_OR_UNSPECIFIED
+            || expression.primType == BondPrimType::DASH_OR_UNSPECIFIED;
+    for (const auto& child : expression.children)
+        if (bondExprHasDirection(child)) return true;
+    return false;
+}
+
+/** Structural equality of bond expressions, operands in the order written. */
+inline bool sameBondExpr(const BondExpr& first, const BondExpr& second) {
+    if (first.op != second.op || first.children.size() != second.children.size()) return false;
+    if (first.op == ExprOp::PRIM && first.primType != second.primType) return false;
+    for (size_t child = 0; child < first.children.size(); ++child)
+        if (!sameBondExpr(first.children[child], second.children[child])) return false;
+    return true;
+}
 
 // ============================================================================
 // SMARTS query atom and bond

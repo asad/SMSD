@@ -461,7 +461,7 @@ inline TautomerMotifs tautomerMotifs(const MolGraph& g) {
                 }
         }
     });
-    // T3 nitroso/oxime N=C-O
+    // T3 imidic acid N=C-O, the iminol form of an amide, and imidates
     motif(G::TW_NITROSO_OXIME, [&](int i) {
         if (atomicNum[i] != 7 || ring[i]) return;
         for (int j : neighbors[i]) {

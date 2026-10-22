@@ -16,6 +16,8 @@ venv/
 .pyuser/
 dist/
 build/
+wheelhouse/
+.pytest_cache/
 *.so
 *.pyd
 

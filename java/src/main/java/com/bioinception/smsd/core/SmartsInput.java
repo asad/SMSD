@@ -65,12 +65,13 @@ final class SmartsInput {
       // Outside the native grammar, a bracket atom of more characters may hold more nodes.
       throw tooLargeExpression();
     }
+    final String read = directionsAtOpenings(expression);
     final boolean counted = count != null;
-    if (expression.length() <= INLINE_LENGTH) return compile(expression, counted);
+    if (read.length() <= INLINE_LENGTH) return compile(read, counted);
     Object[] outcome = new Object[1];
     Thread parser = new Thread(null, () -> {
       try {
-        outcome[0] = compile(expression, counted);
+        outcome[0] = compile(read, counted);
       } catch (Throwable failure) {
         outcome[0] = failure;
       }
@@ -223,6 +224,117 @@ final class SmartsInput {
       }
     }
     return atoms;
+  }
+
+  /**
+   * The expression with the bond of each ring closure written with a direction (/ or \) at its
+   * closing digit alone moved to its opening digit and reversed, since a direction at the closing
+   * digit is read from the closing atom, which the CDK parser does not do: F/C=C1.Cl/1 is read as
+   * F/C=C\1.Cl1. A ring closure, at any depth of recursive SMARTS, written with a bond at both ends
+   * and a direction at either is rejected, as the native parser rejects it.
+   */
+  static String directionsAtOpenings(String expression) {
+    // Per open recursive SMARTS: its branch depth and its open ring closures, each the bond written
+    // at its opening digit and where that digit starts.
+    Deque<Object[]> levels = new ArrayDeque<>();
+    Map<Integer, Object[]> open = new HashMap<>();
+    StringBuilder bond = new StringBuilder();
+    // Each move: where the reversed bond goes, and where the closing bond starts and ends.
+    List<int[]> moves = new ArrayList<>();
+    int branches = 0;
+    boolean inBracket = false;
+    for (int at = 0; at < expression.length(); at++) {
+      char c = expression.charAt(at);
+      if (inBracket) {
+        if (c == '$' && at + 1 < expression.length() && expression.charAt(at + 1) == '(') {
+          levels.push(new Object[] {branches, open});
+          branches = 0;
+          open = new HashMap<>();
+          bond.setLength(0);
+          inBracket = false;
+          at++;
+        } else if (c == ']') {
+          inBracket = false;
+        }
+        continue;
+      }
+      int ring = -1, digit = at;
+      if (c >= '0' && c <= '9') {
+        ring = c - '0';
+      } else if (c == '%') {
+        int end = at + 1;
+        if (end < expression.length() && expression.charAt(end) == '(') {
+          int close = expression.indexOf(')', end);
+          if (close < 0) return expression;
+          String digits = expression.substring(end + 1, close);
+          if (digits.isEmpty() || digits.length() > 9 || !digits.chars().allMatch(Character::isDigit)) return expression;
+          ring = Integer.parseInt(digits);
+          at = close;
+        } else if (end + 1 < expression.length() && Character.isDigit(expression.charAt(end))
+            && Character.isDigit(expression.charAt(end + 1))) {
+          ring = Integer.parseInt(expression.substring(end, end + 2));
+          at = end + 1;
+        } else {
+          return expression;  // the parser rejects it
+        }
+      }
+      if (ring >= 0) {
+        String written = bond.toString();
+        bond.setLength(0);
+        Object[] opening = open.remove(ring);
+        String first = opening == null ? null : (String) opening[0];
+        if (first == null) {
+          open.put(ring, new Object[] {written, digit});
+        } else if (!first.isEmpty() && !written.isEmpty() && (directed(first) || directed(written))) {
+          throw new IllegalArgumentException("Ring closure " + ring + " has a bond direction written at both ends");
+        } else if (first.isEmpty() && directed(written)) {
+          moves.add(new int[] {(Integer) opening[1], digit - written.length(), digit});
+        }
+      } else if ("-=#:~@!/\\?,;&".indexOf(c) >= 0) {
+        bond.append(c);
+      } else if (c == ')' && branches == 0 && !levels.isEmpty()) {
+        Object[] level = levels.pop();
+        branches = (Integer) level[0];
+        @SuppressWarnings("unchecked")
+        Map<Integer, Object[]> outer = (Map<Integer, Object[]>) level[1];
+        open = outer;
+        bond.setLength(0);
+        inBracket = true;
+      } else {
+        if (c == '[') inBracket = true;
+        else if (c == '(') branches++;
+        else if (c == ')' && branches > 0) branches--;
+        bond.setLength(0);
+      }
+    }
+    if (moves.isEmpty()) return expression;
+    Map<Integer, String> insertions = new HashMap<>();
+    Map<Integer, Integer> deletions = new HashMap<>();
+    for (int[] move : moves) {
+      StringBuilder reversed = new StringBuilder(expression.substring(move[1], move[2]));
+      for (int at = 0; at < reversed.length(); at++) {
+        char c = reversed.charAt(at);
+        reversed.setCharAt(at, c == '/' ? '\\' : c == '\\' ? '/' : c);
+      }
+      insertions.put(move[0], reversed.toString());
+      deletions.put(move[1], move[2]);
+    }
+    StringBuilder text = new StringBuilder(expression.length());
+    for (int at = 0; at < expression.length(); ) {
+      String inserted = insertions.get(at);
+      if (inserted != null) text.append(inserted);
+      Integer end = deletions.get(at);
+      if (end != null) {
+        at = end;
+      } else {
+        text.append(expression.charAt(at++));
+      }
+    }
+    return text.toString();
+  }
+
+  private static boolean directed(String bond) {
+    return bond.indexOf('/') >= 0 || bond.indexOf('\\') >= 0;
   }
 
   /**

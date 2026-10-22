@@ -275,9 +275,9 @@ void test_cip_priority_sequence() {
 
 void test_pseudoasymmetric_1_4_disubstituted_cyclohexane() {
     // Both ring carbons of a 1,4-disubstituted cyclohexane are told apart only by
-    // Rule 5, so they are pseudoasymmetric; Rules 1-3 alone leave them unresolved.
+    // Rule 5, so they are pseudoasymmetric; assignRS() reads every rule, as assignAll() does.
     auto g = parseSMILES("C[C@H]1CC[C@H](O)CC1");
-    CIP_ASSERT(assignRS(g, 1) == RSLabel::NONE, "Rules 1-3 leave C1 of 4-methylcyclohexanol unresolved");
+    CIP_ASSERT(assignRS(g, 1) == RSLabel::r, "assignRS gives C1 of 4-methylcyclohexanol its Rule 5 descriptor");
     auto all = assignAll(g);
     CIP_ASSERT(all.rsLabels[1] == RSLabel::r, "(1r,4r)-4-methylcyclohexanol C1 should be r");
     CIP_ASSERT(all.rsLabels[4] == RSLabel::r, "(1r,4r)-4-methylcyclohexanol C4 should be r");
@@ -341,6 +341,18 @@ void test_rule_2_unlabelled_atom_counts_its_standard_atomic_weight() {
     CIP_ASSERT(all.rsLabels[3] == RSLabel::r, "the centre between them is r");
 }
 
+void test_assign_rs_applies_every_rule() {
+    // The first pass ranks by Rule 1a alone; a ring-closure duplicate (Rule 1b) outranks the 13C
+    // label (Rule 2) further out, so the bicyclic centre is R, as the hierarchical rules read it.
+    CIP_ASSERT(assignRS(parseSMILES("C1=[13CH]C[C@@H]2C[C@H]12"), 3) == RSLabel::R,
+               "Rule 1b decides before the isotope");
+    // assignRS() gives the descriptor assignAll() does, pseudoasymmetric centres included.
+    const auto graph = parseSMILES("Cl[C@H]1[C@H](Cl)[C@@H](Cl)[C@@H](Cl)[C@H](Cl)[C@H]1Cl");
+    const auto all = assignAll(graph);
+    for (int atom = 0; atom < graph.n; ++atom)
+        CIP_ASSERT(assignRS(graph, atom) == all.rsLabels[atom], "assignRS agrees with assignAll");
+}
+
 // ============================================================================
 // Main
 // ============================================================================
@@ -369,6 +381,7 @@ int main() {
     RUN_TEST(hexachlorocyclohexane_mixes_true_and_pseudoasymmetric_centres);
     RUN_TEST(symmetric_centre_stays_unlabelled);
     RUN_TEST(rule_2_unlabelled_atom_counts_its_standard_atomic_weight);
+    RUN_TEST(assign_rs_applies_every_rule);
 
     std::cout << "\n--- E/Z assignment ---\n";
     RUN_TEST(E_2_butene);

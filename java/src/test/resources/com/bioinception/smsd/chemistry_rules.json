@@ -41,6 +41,22 @@
    }
   ]
  },
+ "fingerprint_quality": {
+  "rule": "A fingerprint of fp_size bits N with s distinct bits set, here positions 0 to s - 1, has density s/N. Hashing n features into N bits sets N(1 - (1 - 1/N)^n) bits on average, so s set bits suggest n = ln(1 - s/N) / ln(1 - 1/N) features; expected_collision_rate is the share 1 - s/n of them that fell on a bit already set, 0 when no bit and 1 when every bit is set. is_saturated is a density above 0.75.",
+  "tolerance": 1e-12,
+  "cases": [
+   {"name": "empty", "fp_size": 2048, "set_bits": 0, "density": 0.0, "expected_collision_rate": 0.0, "is_saturated": false},
+   {"name": "one_bit", "fp_size": 2048, "set_bits": 1, "density": 0.00048828125, "expected_collision_rate": 0.0, "is_saturated": false},
+   {"name": "ecfp4_like", "fp_size": 2048, "set_bits": 100, "density": 0.048828125, "expected_collision_rate": 0.02437954271974463, "is_saturated": false},
+   {"name": "half", "fp_size": 2048, "set_bits": 1024, "density": 0.5, "expected_collision_rate": 0.27847631197248224, "is_saturated": false},
+   {"name": "three_quarters", "fp_size": 2048, "set_bits": 1536, "density": 0.75, "expected_collision_rate": 0.45885723397936173, "is_saturated": false},
+   {"name": "above_three_quarters", "fp_size": 2048, "set_bits": 1537, "density": 0.75048828125, "expected_collision_rate": 0.4592675006520963, "is_saturated": true},
+   {"name": "full", "fp_size": 2048, "set_bits": 2048, "density": 1.0, "expected_collision_rate": 1.0, "is_saturated": true},
+   {"name": "single_bit_size", "fp_size": 1, "set_bits": 1, "density": 1.0, "expected_collision_rate": 1.0, "is_saturated": true},
+   {"name": "single_bit_size_empty", "fp_size": 1, "set_bits": 0, "density": 0.0, "expected_collision_rate": 0.0, "is_saturated": false},
+   {"name": "odd_size", "fp_size": 65, "set_bits": 33, "density": 0.5076923076923077, "expected_collision_rate": 0.2780114744100859, "is_saturated": false}
+  ]
+ },
  "circular_similarity": {
   "rule": "Batch similarity is the Tanimoto coefficient of ECFP fingerprints (radius 2, 2048 bits); an empty molecule has an empty fingerprint.",
   "cases": [
@@ -585,7 +601,7 @@
   ]
  },
  "smarts_daylight": {
-  "rule": "Daylight SMARTS. A bracket atom of an optional isotope, H, an optional charge and an optional atom class, and nothing else, is a hydrogen atom ([H], [2H], [H+], [H:1]); elsewhere H is a hydrogen count ([CH], [H1], [H,C]). r<n> is the size of the smallest ring through the atom. R<n> counts the rings through the atom of a smallest set of smallest rings that holds as many rings as the cycle rank, so the six central atoms of coronene are R3. A pair of directional bonds constrains the bond between their atoms: a double bond must have the configuration they give, and an aromatic bond or a double bond without a configuration matches only when either is written with ? (/? or \\?); /,\\ accepts either configuration but not none. A directional bond is a single, non-aromatic bond; without a configured double bond beside it, it matches in either direction. Atoms within one top-level ( ) group match atoms of one target component, and atoms of different groups atoms of different components. embeddings is the number of mappings matchAll returns.",
+  "rule": "Daylight SMARTS. A bracket atom of an optional isotope, H, an optional charge and an optional atom class, and nothing else, is a hydrogen atom ([H], [2H], [H+], [H:1]); elsewhere H is a hydrogen count ([CH], [H1], [H,C]). r<n> is the size of the smallest ring through the atom. R<n> counts the rings through the atom of a smallest set of smallest rings that holds as many rings as the cycle rank, so the six central atoms of coronene are R3. A pair of directional bonds constrains the bond between their atoms: a double bond must have the configuration they give, and an aromatic bond or a double bond without a configuration matches only when either is written with ? (/? or \\?); /,\\ accepts either configuration but not none. A directional bond is a single, non-aromatic bond; without a configured double bond beside it, it matches in either direction. Atoms within one top-level ( ) group match atoms of one target component, and atoms of different groups atoms of different components. @ and @@ match an atom with that configuration of its mapped neighbours; @? and @@? also match an atom without a configuration, and a query atom whose pattern neighbours do not define a configuration matches either configuration of a configured atom. A ring closure written with a bond at both ends must give the same bond expression at each, and no direction (/ or \\) at either, since a direction at the closing digit is read from the closing atom, as it is when written at the closing digit alone, so F/C=C1.Cl/1 is the cis isomer; rejected lists the patterns that are therefore invalid. embeddings is the number of mappings matchAll returns.",
   "cases": [
    {"name": "hydrogen_atom", "smarts": "[H]", "smiles": "[H]C", "embeddings": 1},
    {"name": "hydrogen_atom_not_implicit", "smarts": "[H]", "smiles": "C", "embeddings": 0},
@@ -642,11 +658,50 @@
    {"name": "trans_with_substituted_end_against_cis", "smarts": "C/C(F)=C/C", "smiles": "F/C(C)=C/C", "embeddings": 0},
    {"name": "cis_with_substituted_end_against_cis", "smarts": "C/C(F)=C\\C", "smiles": "F/C(C)=C/C", "embeddings": 1},
    {"name": "trans_diene_against_trans", "smarts": "C/C=C/C=C/C", "smiles": "C/C=C/C=C/C", "embeddings": 2},
-   {"name": "trans_diene_against_mixed", "smarts": "C/C=C/C=C/C", "smiles": "C/C=C\\C=C/C", "embeddings": 0}
+   {"name": "trans_diene_against_mixed", "smarts": "C/C=C/C=C/C", "smiles": "C/C=C\\C=C/C", "embeddings": 0},
+   {"name": "anticlockwise_against_anticlockwise", "smarts": "F[C@H](Cl)Br", "smiles": "F[C@H](Cl)Br", "embeddings": 1},
+   {"name": "anticlockwise_against_clockwise", "smarts": "F[C@H](Cl)Br", "smiles": "F[C@@H](Cl)Br", "embeddings": 0},
+   {"name": "anticlockwise_against_unspecified", "smarts": "F[C@H](Cl)Br", "smiles": "FC(Cl)Br", "embeddings": 0},
+   {"name": "anticlockwise_or_unspecified_against_anticlockwise", "smarts": "F[C@?H](Cl)Br", "smiles": "F[C@H](Cl)Br", "embeddings": 1},
+   {"name": "anticlockwise_or_unspecified_against_clockwise", "smarts": "F[C@?H](Cl)Br", "smiles": "F[C@@H](Cl)Br", "embeddings": 0},
+   {"name": "anticlockwise_or_unspecified_against_unspecified", "smarts": "F[C@?H](Cl)Br", "smiles": "FC(Cl)Br", "embeddings": 1},
+   {"name": "clockwise_or_unspecified_against_anticlockwise", "smarts": "F[C@@?H](Cl)Br", "smiles": "F[C@H](Cl)Br", "embeddings": 0},
+   {"name": "clockwise_or_unspecified_against_clockwise", "smarts": "F[C@@?H](Cl)Br", "smiles": "F[C@@H](Cl)Br", "embeddings": 1},
+   {"name": "clockwise_or_unspecified_against_unspecified", "smarts": "F[C@@?H](Cl)Br", "smiles": "FC(Cl)Br", "embeddings": 1},
+   {"name": "clockwise_or_unspecified_read_from_the_hydrogen", "smarts": "[C@@?H](F)(Cl)Br", "smiles": "F[C@H](Cl)Br", "embeddings": 1},
+   {"name": "or_unspecified_l_alanine", "smarts": "C[C@?H](N)C=O", "smiles": "C[C@H](N)C(=O)O", "embeddings": 1},
+   {"name": "or_unspecified_d_alanine", "smarts": "C[C@?H](N)C=O", "smiles": "C[C@@H](N)C(=O)O", "embeddings": 0},
+   {"name": "or_unspecified_alanine", "smarts": "C[C@?H](N)C=O", "smiles": "CC(N)C(=O)O", "embeddings": 1},
+   {"name": "or_unspecified_four_neighbours", "smarts": "[C@@?](F)(Cl)(Br)I", "smiles": "F[C@](Cl)(Br)I", "embeddings": 0},
+   {"name": "or_unspecified_without_defining_neighbours", "smarts": "[C@?]", "smiles": "F[C@@H](Cl)Br", "embeddings": 1},
+   {"name": "anticlockwise_without_defining_neighbours", "smarts": "[C@]", "smiles": "F[C@@H](Cl)Br", "embeddings": 1},
+   {"name": "anticlockwise_without_defining_neighbours_reordered", "smarts": "[C@]", "smiles": "Br[C@@H](Cl)F", "embeddings": 1},
+   {"name": "clockwise_without_defining_neighbours", "smarts": "[C@@H]", "smiles": "F[C@H](Cl)Br", "embeddings": 1},
+   {"name": "two_neighbours_do_not_define_a_configuration", "smarts": "F[C@H]Cl", "smiles": "F[C@@H](Cl)Br", "embeddings": 1},
+   {"name": "ring_closure_bond_written_at_both_ends", "smarts": "C=1CCCCC=1", "smiles": "C1=CCCCC1", "embeddings": 2},
+   {"name": "ring_closure_bond_written_at_the_closing_end", "smarts": "C1CCCCC=1", "smiles": "C1=CCCCC1", "embeddings": 2},
+   {"name": "ring_closure_bond_written_at_the_opening_end", "smarts": "C=1CCCCC1", "smiles": "C1=CCCCC1", "embeddings": 2},
+   {"name": "ring_closure_direction_at_the_opening_end", "smarts": "C/1CCCCC1", "smiles": "C1CCCCC1", "embeddings": 12},
+   {"name": "ring_closure_direction_at_the_closing_end_against_cis", "smarts": "F/C=C1.Cl/1", "smiles": "F/C=C\\Cl", "embeddings": 1},
+   {"name": "ring_closure_direction_at_the_closing_end_against_trans", "smarts": "F/C=C1.Cl/1", "smiles": "F/C=C/Cl", "embeddings": 0},
+   {"name": "ring_closure_direction_or_unspecified_at_the_closing_end", "smarts": "F/C=C1.Cl/?1", "smiles": "F/C=C/Cl", "embeddings": 0}
+  ],
+  "rejected": [
+   {"name": "ring_closure_double_and_single", "smarts": "C=1CCCCC-1"},
+   {"name": "ring_closure_single_and_double", "smarts": "C-1CCCCC=1"},
+   {"name": "ring_closure_any_and_single", "smarts": "C~1CCCCC-1"},
+   {"name": "ring_closure_aromatic_and_single", "smarts": "c:1ccccc-1"},
+   {"name": "ring_closure_ring_and_not_ring", "smarts": "C@1CCCCC!@1"},
+   {"name": "ring_closure_up_and_down", "smarts": "C/1CCCCC\\1"},
+   {"name": "ring_closure_up_at_both_ends", "smarts": "C/1CCCCC/1"},
+   {"name": "ring_closure_up_and_single", "smarts": "C/1CCCCC-1"},
+   {"name": "ring_closure_up_at_both_ends_in_recursive_smarts", "smarts": "[$(C/1CCCCC/1)]"},
+   {"name": "ring_closure_operands_in_another_order", "smarts": "C=,#1CCCCC#,=1"},
+   {"name": "ring_closure_two_digit", "smarts": "C=%10CCCCC-%10"}
   ]
  },
  "cip_mancude": {
-  "rule": "CIP digraphs give a ring atom with exactly one double bond one duplicate atom for that bond. In a mancude ring system, those atoms left after repeatedly removing the ones with fewer than two of them as ring neighbours, the duplicate takes the mean atomic number of the atom's ring neighbours in the system when that mean is fractional, and the double bond partner otherwise (IUPAC 2013 P-92.1.4.4). Labels therefore do not depend on the Kekule structure, the atom order or whether the input is written aromatic. labels are the R/S descriptors by atom; a molecule whose ligands are equal under this rule has none. Expected labels were checked against an independent CIP implementation.",
+  "rule": "CIP digraphs give a ring atom with exactly one double bond one duplicate atom for that bond. In a mancude ring system, those atoms left after repeatedly removing the ones with fewer than two of them as ring neighbours, the duplicate of a double bond within the system takes the mean atomic number of the atom's ring neighbours in the system whenever their sum differs from the double bond partner's atomic number times their count, even when that mean is a whole number, and the double bond partner otherwise (IUPAC 2013 P-92.1.4.4). Labels therefore do not depend on the Kekule structure, the atom order or whether the input is written aromatic. labels are the R/S descriptors by atom; a molecule whose ligands are equal under this rule has none. Expected labels were checked against an independent CIP implementation.",
   "cases": [
    {"name": "quinolin_5_yl_against_quinolin_4_yl", "smiles": "O[C@H](c1cccc2ncccc12)c1ccnc2ccccc12", "labels": {"1": "R"}},
    {"name": "quinolin_5_yl_against_quinolin_4_yl_reordered", "smiles": "O[C@@H](c1ccnc2ccccc12)c1cccc2ncccc12", "labels": {"1": "R"}},
@@ -659,7 +714,46 @@
    {"name": "pyridinium", "smiles": "C[n+]1ccc([C@@H](O)c2ccc3nonc3c2)cc1", "labels": {"5": "R"}},
    {"name": "biaryl_bond_is_not_a_ring_bond", "smiles": "O[C@@H](c1ccc(-c2ccccn2)nc1)c1cncc(-c2cccnc2)c1", "labels": {"1": "S"}},
    {"name": "non_aromatic_mancude_ring", "smiles": "O[C@@H](C1=CC=NC=CC=C1)C1=CC2=NC=CC2=C1", "labels": {"1": "R"}},
-   {"name": "one_ligand_in_two_kekule_structures", "smiles": "O[C@H](C1=CC=CC=NC=C1)C1=CC=NC=CC=C1", "labels": {}}
+   {"name": "one_ligand_in_two_kekule_structures", "smiles": "O[C@H](C1=CC=CC=NC=C1)C1=CC=NC=CC=C1", "labels": {}},
+   {"name": "carbon_between_boron_and_nitrogen_takes_their_whole_number_mean", "smiles": "O[C@@H](c1ccbcn1)c1ccccn1", "labels": {"1": "S"}},
+   {"name": "carbon_between_boron_and_nitrogen_takes_their_whole_number_mean_kekule", "smiles": "O[C@@H](C1=CC=BC=N1)C1=CC=CC=N1", "labels": {"1": "S"}},
+   {"name": "carbon_between_boron_and_nitrogen_takes_their_whole_number_mean_reordered", "smiles": "N1=CC=CC=C1[C@@H](O)C1=CC=BC=N1", "labels": {"6": "S"}}
+  ]
+ },
+ "aromatic_input": {
+  "rule": "Aromaticity is perceived from the structure whether the input writes a ring aromatic or with Kekule bonds, as RDKit and CDK read it: atoms written aromatic and joined by aromatic bonds first take a Kekule structure and are then perceived again, so a ring written aromatic that the model does not find aromatic loses its flags. Atoms written in capitals but joined by : ring bonds are read as aromatic atoms, as aromatic_bond_hydrogens states. A carbanion with three sigma bonds contributes two electrons, whether written with aromatic or Kekule bonds; one with two sigma bonds, such as phenide, contributes only a ring pi bond, and a carbocation none. aromatic_atoms is the number of aromatic atoms of the parsed graph, in the Java library after Standardiser.standardise.",
+  "cases": [
+   {"name": "benzene_written_aromatic", "smiles": "c1ccccc1", "aromatic_atoms": 6},
+   {"name": "benzene_kekule", "smiles": "C1=CC=CC=C1", "aromatic_atoms": 6},
+   {"name": "benzene_with_aromatic_bonds", "smiles": "C1:C:C:C:C:C:1", "aromatic_atoms": 6},
+   {"name": "pyrrole_with_aromatic_bonds", "smiles": "C1:C:C:[NH]:C:1", "aromatic_atoms": 5},
+   {"name": "naphthalene_with_aromatic_bonds", "smiles": "C1:C:C2:C:C:C:C:C:2:C:C:1", "aromatic_atoms": 10},
+   {"name": "cyclobutadiene_with_aromatic_bonds", "smiles": "C1:C:C:C:1", "aromatic_atoms": 0},
+   {"name": "naphthalene_written_aromatic", "smiles": "c1ccc2ccccc2c1", "aromatic_atoms": 10},
+   {"name": "cyclobutadiene_written_aromatic", "smiles": "c1ccc1", "aromatic_atoms": 0},
+   {"name": "cyclooctatetraene_written_aromatic", "smiles": "c1ccccccc1", "aromatic_atoms": 0},
+   {"name": "p_benzoquinone_written_aromatic", "smiles": "O=c1ccc(=O)cc1", "aromatic_atoms": 0},
+   {"name": "cyclopentadienide_written_aromatic", "smiles": "[cH-]1cccc1", "aromatic_atoms": 5},
+   {"name": "cyclopentadienide_kekule", "smiles": "[CH-]1C=CC=C1", "aromatic_atoms": 5},
+   {"name": "phenide_written_aromatic", "smiles": "[c-]1ccccc1", "aromatic_atoms": 6},
+   {"name": "phenide_kekule", "smiles": "[C-]1=CC=CC=C1", "aromatic_atoms": 6},
+   {"name": "carbanion_with_two_sigma_bonds_kekule", "smiles": "[C-]1C=CC=C1", "aromatic_atoms": 0},
+   {"name": "tropylium_written_aromatic", "smiles": "[cH+]1cccccc1", "aromatic_atoms": 7},
+   {"name": "pyridin_2_one_written_aromatic", "smiles": "O=c1cccc[nH]1", "aromatic_atoms": 6}
+  ]
+ },
+ "cip_hierarchical_ranking": {
+  "rule": "A first pass ranks the ligands of a tetrahedral centre, and the two ligands at each end of a double bond, by Rule 1a alone (IUPAC 2013 P-92.1.3). Ligands it leaves tied are ranked over the hierarchical digraph by Rule 1b (a ring-closure duplicate whose original is nearer the root first), then Rule 2, then Rule 3 and, for a centre, Rules 4 to 6, each rule read sphere by sphere over the whole digraph before the next is consulted. A ring-closure duplicate therefore outranks an isotope or a double-bond configuration further out, and a double bond whose ends are told apart only by another double bond is labelled by Rule 3. Double bonds are labelled by Rules 1 to 5, so like descriptor pairs outrank unlike ones at an end (Rule 4b); a double bond whose ligands at one end are told apart only by Rule 5 is unlabelled. labels are the R/S descriptors by atom and bonds the E/Z descriptors by atom pair; every other tagged atom and annotated double bond is unlabelled. Expected labels were checked against an independent CIP implementation.",
+  "cases": [
+   {"name": "ring_closure_before_isotope", "smiles": "C1=[13CH]C[C@@H]2C[C@H]12", "labels": {"3": "R", "5": "S"}, "bonds": {}},
+   {"name": "ring_closure_before_isotope_at_a_bridgehead_amine", "smiles": "N[C@]12C[C@H]1C=C[13CH2]2", "labels": {"1": "R", "3": "S"}, "bonds": {}},
+   {"name": "ring_closure_before_double_bond_configuration", "smiles": "C/C=C1\\C(C)=C2[C@@H](C)[C@@H]21", "labels": {"6": "S", "8": "R"}, "bonds": {"1-2": "Z"}},
+   {"name": "dialkylidene_cyclobutane_cis", "smiles": "C/C=C1\\C/C(=C\\C)C1", "labels": {}, "bonds": {"1-2": "Z", "4-5": "Z"}},
+   {"name": "dialkylidene_cyclobutane_trans", "smiles": "C/C=C1/C/C(=C\\C)C1", "labels": {}, "bonds": {"1-2": "E", "4-5": "E"}},
+   {"name": "dialkylidene_cyclobutane_with_an_isotope", "smiles": "OC/C=[13C]1/C/C(=C/F)C1", "labels": {}, "bonds": {"2-3": "Z", "5-6": "Z"}},
+   {"name": "dialkylidene_cyclobutane_with_centres", "smiles": "C/C(N)=C1\\[C@H](C)/C(=C\\O)[C@@H]1C", "labels": {"4": "S", "9": "R"}, "bonds": {"1-3": "E", "6-7": "E"}},
+   {"name": "like_pair_before_unlike_pair_at_a_double_bond_end", "smiles": "C/C=C(\\[C@H](C)[C@H](C)O)[C@@H](C)[C@H](C)O", "labels": {"3": "S", "5": "S", "8": "R", "10": "S"}, "bonds": {"1-2": "Z"}},
+   {"name": "enantiomorphic_ligands_at_a_double_bond_end", "smiles": "C/C=C(\\[C@H](C)O)[C@@H](C)O", "labels": {"3": "S", "6": "R"}, "bonds": {}}
   ]
  },
  "chemistry_profiles": {
@@ -702,14 +796,22 @@
   ]
  },
  "aromatic_bond_hydrogens": {
-  "rule": "An explicit aromatic bond (:) counts once in the bond order sum whether or not its atoms are aromatic, and an aromatic atom counts one more, as the valence model above: aliphatic atoms joined by : take the hydrogens of a single bond, and aromatic atoms the hydrogens of their ring. hydrogens are the implicit hydrogen counts by atom; C++ and Java agree on every input.",
+  "rule": "An explicit aromatic bond (:) in a ring is aromatic, so both its atoms are aromatic whatever case their symbols are written in, as RDKit reads them: an atom written in capitals but joined to its ring by : takes the hydrogens of an aromatic atom, so C1:C:C:C:C:C:1 is benzene and C1:C:C:N:C:C:1 pyridine, while an atom in brackets keeps the hydrogens written for it. Outside a ring, : is read as a single bond. An aromatic bond counts once in the bond order sum and an aromatic atom one more, as the valence model above. hydrogens are the implicit hydrogen counts by atom; C++ and Java agree on every input.",
   "cases": [
    {"smiles": "C:C", "hydrogens": [3, 3]},
    {"smiles": "N:C", "hydrogens": [2, 3]},
    {"smiles": "O:C", "hydrogens": [1, 3]},
    {"smiles": "C:N:C", "hydrogens": [3, 1, 3]},
-   {"smiles": "C1:C:C:C:C:C1", "hydrogens": [2, 2, 2, 2, 2, 2]},
-   {"smiles": "C1:C:C:[NH]:C1", "hydrogens": [2, 2, 2, 1, 2]},
+   {"smiles": "C1:C:C:C:C:C:1", "hydrogens": [1, 1, 1, 1, 1, 1]},
+   {"smiles": "C1:C:C:C:C:C1", "hydrogens": [1, 1, 1, 1, 1, 1]},
+   {"smiles": "CC1:C:C:C:C:C:1", "hydrogens": [3, 0, 1, 1, 1, 1, 1]},
+   {"smiles": "C1:C:C:N:C:C:1", "hydrogens": [1, 1, 1, 0, 1, 1]},
+   {"smiles": "C1:C:C:[NH]:C:1", "hydrogens": [1, 1, 1, 1, 1]},
+   {"smiles": "C1:C:C:[NH]:C1", "hydrogens": [1, 1, 1, 1, 1]},
+   {"smiles": "O=C1:[NH]:C:C:C:C:1", "hydrogens": [0, 0, 1, 1, 1, 1, 1]},
+   {"smiles": "O[C@@H](C)C1:C:C:C:C:C:1", "hydrogens": [1, 1, 3, 0, 1, 1, 1, 1, 1]},
+   {"smiles": "C1:C:C:C:1", "hydrogens": [1, 1, 1, 1]},
+   {"smiles": "C1CC:C1", "hydrogens": [2, 2, 1, 1]},
    {"smiles": "c:c", "hydrogens": [2, 2]},
    {"smiles": "c1:c:c:c:c:c1", "hydrogens": [1, 1, 1, 1, 1, 1]},
    {"smiles": "c1ccccc1", "hydrogens": [1, 1, 1, 1, 1, 1]},
@@ -952,20 +1054,29 @@
   ]
  },
  "strict_ring_fusion": {
-  "rule": "Under strict ring fusion a mapped ring atom needs the same ring count, the number of relevant cycles through it: the cycles that are not the sum of shorter cycles, the union of every minimum cycle basis. The count does not depend on which equivalent ring a basis keeps, so every bridgehead of adamantane counts three rings, every atom of cubane three and the central atoms of coronene three, whatever the atom order. Both languages find the cycles over each atom's neighbours in index order and give up the exhaustive ring search after the same work, so they count alike however the bonds are listed: a cyclodextrin, whose macrocycle has two equally short paths through every glucose unit, counts only the macrocycles that the search reaches, and the stack of 32 six-membered rings, beyond the work bound of the exhaustive search, counts the four-membered rings of the bounded search only. counts are the ring counts by atom; common_bonds are common-bond searches under strict ring fusion of a molecule against the same molecule written in another atom order, with bonds and atoms of the optimum, whichever molecule is the query.",
+  "rule": "Under strict ring fusion a mapped ring atom needs the same ring count, the number of relevant cycles through it: the cycles that are not the sum of shorter cycles, the union of every minimum cycle basis. The count does not depend on which equivalent ring a basis keeps, so every bridgehead of adamantane counts three rings, every atom of cubane three and the central atoms of coronene three, whatever the atom order. Both languages find the cycles over each atom's neighbours in index order and give up the exhaustive ring search after the same work, so they count alike however the bonds are listed: a cyclodextrin, whose macrocycle has two equally short paths through every glucose unit, counts only the macrocycles that the search reaches, and the stack of 32 six-membered rings, beyond the work bound of the exhaustive search, counts the four-membered rings of the bounded search only. counts are the ring counts by atom, and truncated whether the exhaustive ring search gives up at its work bound, as both languages report it; common_bonds are common-bond searches under strict ring fusion of a molecule against the same molecule written in another atom order, with bonds and atoms of the optimum, whichever molecule is the query.",
   "ring_counts": [
-   {"name": "adamantane", "smiles": "C1C2CC3CC1CC(C2)C3", "counts": [2, 3, 2, 3, 2, 3, 2, 3, 2, 2]},
-   {"name": "cubane", "smiles": "C12C3C4C1C5C2C3C45", "counts": [3, 3, 3, 3, 3, 3, 3, 3]},
-   {"name": "bicyclo_2_2_2_octane", "smiles": "C1CC2CCC1CC2", "counts": [2, 2, 3, 2, 2, 3, 2, 2]},
-   {"name": "norbornane", "smiles": "C1CC2CCC1C2", "counts": [1, 1, 2, 1, 1, 2, 2]},
-   {"name": "coronene", "smiles": "c1cc2ccc3ccc4ccc5ccc6ccc1c7c2c3c4c5c67", "counts": [1, 1, 2, 1, 1, 2, 1, 1, 2, 1, 1, 2, 1, 1, 2, 1, 1, 2, 3, 3, 3, 3, 3, 3]},
-   {"name": "alpha_cyclodextrin", "smiles": "OCC1OC2C(C(C1OC1C(C(C(OC3OC(C(C(O)C3O)OC3OC(CO)C(OC4OC(C(C(C4O)O)OC4C(C(C(C(CO)O4)O2)O)O)CO)C(O)C3O)CO)C(CO)O1)O)O)O)O", "counts": [0, 0, 9, 9, 11, 3, 3, 11, 10, 11, 9, 9, 11, 10, 11, 9, 9, 11, 3, 0, 3, 0, 10, 11, 9, 9, 0, 0, 11, 10, 11, 9, 9, 11, 3, 3, 0, 0, 10, 11, 9, 9, 11, 3, 0, 0, 3, 10, 0, 0, 0, 0, 3, 0, 3, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0]},
-   {"name": "gamma_cyclodextrin", "smiles": "OC[C@H]1O[C@@H]2O[C@@H]3[C@@H](CO)O[C@H](O[C@@H]4[C@@H](CO)O[C@H](O[C@@H]5[C@@H](CO)O[C@H](O[C@@H]6[C@@H](CO)O[C@H](O[C@@H]7[C@@H](CO)O[C@H](O[C@@H]8[C@@H](CO)O[C@H](O[C@@H]9[C@@H](CO)O[C@H](O[C@H]1[C@H](O)[C@H]2O)[C@H](O)[C@H]9O)[C@H](O)[C@H]8O)[C@H](O)[C@H]7O)[C@H](O)[C@H]6O)[C@H](O)[C@H]5O)[C@H](O)[C@H]4O)[C@H](O)[C@H]3O", "counts": [0, 0, 12, 12, 14, 13, 14, 12, 0, 0, 12, 14, 13, 14, 12, 0, 0, 12, 14, 13, 14, 12, 0, 0, 12, 14, 13, 14, 12, 0, 0, 12, 14, 13, 14, 12, 0, 0, 12, 14, 13, 14, 12, 0, 0, 12, 14, 13, 14, 12, 0, 0, 12, 14, 13, 14, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0]},
-   {"name": "hexagonal_prism_stack_32", "smiles": "C12C3C4C5C6C1C17C28C32C43C54C61C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C1C2C3C4C6C51", "counts": [2, 2, 2, 2, 2, 2, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 2, 2, 2, 2, 2]}
+   {"name": "adamantane", "smiles": "C1C2CC3CC1CC(C2)C3", "counts": [2, 3, 2, 3, 2, 3, 2, 3, 2, 2], "truncated": false},
+   {"name": "cubane", "smiles": "C12C3C4C1C5C2C3C45", "counts": [3, 3, 3, 3, 3, 3, 3, 3], "truncated": false},
+   {"name": "bicyclo_2_2_2_octane", "smiles": "C1CC2CCC1CC2", "counts": [2, 2, 3, 2, 2, 3, 2, 2], "truncated": false},
+   {"name": "norbornane", "smiles": "C1CC2CCC1C2", "counts": [1, 1, 2, 1, 1, 2, 2], "truncated": false},
+   {"name": "coronene", "smiles": "c1cc2ccc3ccc4ccc5ccc6ccc1c7c2c3c4c5c67", "counts": [1, 1, 2, 1, 1, 2, 1, 1, 2, 1, 1, 2, 1, 1, 2, 1, 1, 2, 3, 3, 3, 3, 3, 3], "truncated": false},
+   {"name": "alpha_cyclodextrin", "smiles": "OCC1OC2C(C(C1OC1C(C(C(OC3OC(C(C(O)C3O)OC3OC(CO)C(OC4OC(C(C(C4O)O)OC4C(C(C(C(CO)O4)O2)O)O)CO)C(O)C3O)CO)C(CO)O1)O)O)O)O", "counts": [0, 0, 9, 9, 11, 3, 3, 11, 10, 11, 9, 9, 11, 10, 11, 9, 9, 11, 3, 0, 3, 0, 10, 11, 9, 9, 0, 0, 11, 10, 11, 9, 9, 11, 3, 3, 0, 0, 10, 11, 9, 9, 11, 3, 0, 0, 3, 10, 0, 0, 0, 0, 3, 0, 3, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0], "truncated": false},
+   {"name": "gamma_cyclodextrin", "smiles": "OC[C@H]1O[C@@H]2O[C@@H]3[C@@H](CO)O[C@H](O[C@@H]4[C@@H](CO)O[C@H](O[C@@H]5[C@@H](CO)O[C@H](O[C@@H]6[C@@H](CO)O[C@H](O[C@@H]7[C@@H](CO)O[C@H](O[C@@H]8[C@@H](CO)O[C@H](O[C@@H]9[C@@H](CO)O[C@H](O[C@H]1[C@H](O)[C@H]2O)[C@H](O)[C@H]9O)[C@H](O)[C@H]8O)[C@H](O)[C@H]7O)[C@H](O)[C@H]6O)[C@H](O)[C@H]5O)[C@H](O)[C@H]4O)[C@H](O)[C@H]3O", "counts": [0, 0, 12, 12, 14, 13, 14, 12, 0, 0, 12, 14, 13, 14, 12, 0, 0, 12, 14, 13, 14, 12, 0, 0, 12, 14, 13, 14, 12, 0, 0, 12, 14, 13, 14, 12, 0, 0, 12, 14, 13, 14, 12, 0, 0, 12, 14, 13, 14, 12, 0, 0, 12, 14, 13, 14, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0, 3, 0], "truncated": false},
+   {"name": "hexagonal_prism_stack_32", "smiles": "C12C3C4C5C6C1C17C28C32C43C54C61C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C17C28C32C43C64C51C15C46C34C23C82C71C1C2C3C4C6C51", "counts": [2, 2, 2, 2, 2, 2, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 2, 2, 2, 2, 2], "truncated": true}
   ],
   "common_bonds": [
    {"name": "adamantan_2_ol_renumbered", "query": "OC1C2CC3CC(C2)CC1C3", "target": "C1C2CC3C(C(C2)CC1C3)O", "bonds": 13, "atoms": 11},
    {"name": "memantine_renumbered", "query": "CC12CC3CC(C)(C1)CC(N)(C3)C2", "target": "CC12CC3(C)CC(C1)CC(N)(C3)C2", "bonds": 15, "atoms": 13}
+  ]
+ },
+ "double_bond_ligands": {
+  "rule": "With use_bond_stereo, a ligand of an end of a configured double bond is a mapped neighbour joined to that end by a selected bond. In a three-membered ring the third atom neighbours both ends, and is a ligand only of the end whose bond to it is selected, so a mapping that selects one of its two ring bonds compares the configuration at that end alone. A common-bond search, in fragments or connected, finds the bonds and atoms below, and its mapping passes validateMapping.",
+  "cases": [
+   {"name": "cyclopropene_one_ring_bond_fragments", "query": "F/C1=C(\\Cl)C1", "target": "C/C=C(/Cl)C", "connectivity": "fragments", "bonds": 3, "atoms": 4},
+   {"name": "cyclopropene_one_ring_bond_connected", "query": "F/C1=C(\\Cl)C1", "target": "C/C=C(/Cl)C", "connectivity": "connected", "bonds": 3, "atoms": 4},
+   {"name": "cyclopropene_opposite_one_ring_bond_connected", "query": "F/C1=C(\\Cl)C1", "target": "C/C=C(\\Cl)C", "connectivity": "connected", "bonds": 3, "atoms": 4},
+   {"name": "cyclopropene_ring_atom_ligand_fragments", "query": "F/C1=C/C1", "target": "C/C=C/C", "connectivity": "fragments", "bonds": 2, "atoms": 3}
   ]
  }
 }

@@ -67,6 +67,7 @@ public final class Standardiser {
       if (atom.getImplicitHydrogenCount() == null && atom.getAtomTypeName() != null)
         hydrogens.addImplicitHydrogens(m, atom);
     RingPerception.markRingAtomsAndBonds(m);
+    MolGraph.kekuliseAromaticBondSystems(m);
     Aromaticity arom =
         new Aromaticity(Aromaticity.Model.Daylight, Cycles.all());
     arom.apply(m);

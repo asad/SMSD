@@ -11,7 +11,7 @@ from ._molecule import MolGraph, _deprecated, _ensure_mol, _molecule_first
 __all__ = [
     "CIPDescriptors", "EZLabel", "RSLabel", "assign_cip", "assign_ez", "assign_rs",
     "classify_pharmacophore", "compute_sssr", "dearomatize", "implicit_h", "kekulize",
-    "perceive_aromaticity",
+    "perceive_aromaticity", "rings_truncated",
 ]
 
 RSLabel = _smsd.RSLabel
@@ -24,6 +24,7 @@ implicit_h = _smsd.implicit_h
 # Each accepts a MolGraph, SMILES string or RDKit Mol.
 assign_cip = _molecule_first(_smsd.assign_cip)
 compute_sssr = _molecule_first(_smsd.compute_sssr)
+rings_truncated = _molecule_first(_smsd.rings_truncated)
 
 
 def assign_rs(mol):

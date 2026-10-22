@@ -249,11 +249,19 @@ public final class FingerprintEngine {
     return smaller == 0 ? 0.0 : (double) counts[0] / smaller;
   }
 
+  /** Density above which {@link #analyzeFpQuality(long[], int)} reports a fingerprint as saturated. */
+  private static final double SATURATION_DENSITY = 0.75;
+
   /**
-   * Analyse fingerprint quality: density, expected collision rate, saturation.
+   * Analyse fingerprint quality: density, expected collision rate, saturation, as the C++
+   * {@code smsd::batch::fingerprintQuality} and the Python {@code analyze_fp_quality} do.
    *
-   * <p>Useful for diagnosing fingerprint parameters (size, radius) and detecting
-   * saturated fingerprints that have lost discriminative power.
+   * <p>Hashing n features uniformly into N bits sets N(1 - (1 - 1/N)^n) bits on average, so s set
+   * bits suggest n = ln(1 - s/N) / ln(1 - 1/N) features, of which a share 1 - s/n, the
+   * {@code expected_collision_rate}, landed on a bit that an earlier feature had set; it is 0 for
+   * an empty fingerprint and 1 for a full one. Path fingerprints of a power-of-two size collide
+   * more often than uniform hashing predicts, so the rate understates their collisions. A
+   * fingerprint is saturated above a density of 0.75.
    *
    * @param fp   fingerprint (long[] bitset)
    * @param fpSize nominal fingerprint size in bits
@@ -262,12 +270,19 @@ public final class FingerprintEngine {
   public static Map<String, Object> analyzeFpQuality(long[] fp, int fpSize) {
     int setBits = nominalBitCount(fp, fpSize);
     double density = (double) setBits / fpSize;
+    double collisionRate = 0.0;
+    if (setBits == fpSize) {
+      collisionRate = 1.0;
+    } else if (setBits > 0) {
+      double features = Math.log1p(-density) / Math.log1p(-1.0 / fpSize);
+      collisionRate = Math.min(1.0, Math.max(0.0, 1.0 - setBits / features));
+    }
     Map<String, Object> result = new LinkedHashMap<>();
     result.put("set_bits", setBits);
     result.put("fp_size", fpSize);
     result.put("density", density);
-    result.put("expected_collision_rate", 1.0 - Math.pow(1.0 - 1.0/fpSize, setBits));
-    result.put("is_saturated", density > 0.5);
+    result.put("expected_collision_rate", collisionRate);
+    result.put("is_saturated", density > SATURATION_DENSITY);
     return result;
   }
 
@@ -1162,13 +1177,22 @@ public final class FingerprintEngine {
     result.put("fillRate", fillRate);
     result.put("chiSquared", chi2);
 
-    // Suggest optimal size based on Bloom filter math
-    // Target: <1% false positive rate
-    // m = -n*ln(p) / (ln(2))^2 where n=filled bits set, p=0.01
-    double suggestedSize = Math.max(256, -filled * Math.log(0.01) / (Math.log(2) * Math.log(2)));
-    result.put("suggestedSize", Math.ceil(suggestedSize / 64) * 64); // round to 64-bit boundary
+    // The size at which a 1 % false positive rate is expected, counting each set bit as one
+    // feature, and at least 256 bits.
+    result.put("suggestedSize", Math.max(256.0, hashedFingerprintSize(filled, 0.01)));
 
     return result;
+  }
+
+  /**
+   * Bits needed so that a feature absent from a molecule finds its bit set with probability of
+   * about {@code falsePositiveRate}, when each of {@code features} features sets one uniformly
+   * hashed bit: m = -n / ln(1 - p), rounded up to a multiple of 64.
+   */
+  private static double hashedFingerprintSize(double features, double falsePositiveRate) {
+    if (!(falsePositiveRate > 0.0 && falsePositiveRate < 1.0))
+      throw new IllegalArgumentException("targetFPR must lie strictly between 0 and 1");
+    return Math.ceil(-features / Math.log1p(-falsePositiveRate) / 64) * 64;
   }
 
   /** Count only declared bits; unused padding and trailing words are excluded. */
@@ -1182,12 +1206,23 @@ public final class FingerprintEngine {
     return count;
   }
 
+  /**
+   * A path fingerprint size for molecules of {@code avgAtomsPerMol} atoms, at which a path absent
+   * from a molecule finds its bit set with probability of about {@code targetFPR}. The size allows
+   * seven distinct paths per atom, more than most drug-like molecules have at the default path
+   * length, each setting one hashed bit: m = -n / ln(1 - targetFPR) for n = 7 * avgAtomsPerMol,
+   * rounded up to a multiple of 64. {@code librarySize} does not change the result.
+   *
+   * @throws IllegalArgumentException if {@code avgAtomsPerMol} is below 1, {@code targetFPR} is not
+   *     strictly between 0 and 1, or the size needed exceeds the int range
+   */
   public static int suggestFingerprintSize(int avgAtomsPerMol, int librarySize, double targetFPR) {
-    // Average paths per molecule ~ avgAtoms * pathLength (roughly)
-    int avgPaths = avgAtomsPerMol * 7; // default pathLength=7
-    // Bloom filter optimal size: m = -n*ln(p) / (ln2)^2
-    double m = -avgPaths * Math.log(targetFPR) / (Math.log(2) * Math.log(2));
-    // Round up to nearest 64
-    return (int) (Math.ceil(m / 64) * 64);
+    if (avgAtomsPerMol < 1)
+      throw new IllegalArgumentException("avgAtomsPerMol must be at least 1");
+    double size = hashedFingerprintSize(7.0 * avgAtomsPerMol, targetFPR);
+    if (size > Integer.MAX_VALUE)
+      throw new IllegalArgumentException(avgAtomsPerMol + " atoms at targetFPR " + targetFPR
+          + " need more bits than an int holds");
+    return (int) size;
   }
 }

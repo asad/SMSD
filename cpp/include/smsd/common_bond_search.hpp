@@ -67,6 +67,15 @@
  * best mapping known then finishes the work, now and then scouting the root pairs ahead for a
  * better mapping. Every loop ticks a Clock, which throws Stop when the time limit is reached or
  * the search is cancelled; the best mapping found by then is kept.
+ *
+ * A fragment search for one mapping without conditions runs from the molecule with fewer bond
+ * incidences, and on some hard pairs the search the other way round is far shorter. Once its
+ * last search has mapped ScoutLimits::race pairs, the search the other way round is raced
+ * against it from the best mapping and the bound so far, which hold either way round: it maps
+ * ScoutLimits::raceTrial pairs, and up to ScoutLimits::raceLonger while it holds a better
+ * mapping or a lower bound than the last search had. A race that proves its mapping ends the
+ * search; otherwise its best mapping and bound go to the last search, which goes on from where
+ * it was. Searches that finish sooner are as before; the nodes are those of both.
  */
 namespace smsd {
 namespace common_bond_detail {
@@ -132,7 +141,17 @@ inline CommonBondOutcome searchCommonBonds(const MolGraph& query, const MolGraph
     std::unique_ptr<CommonBondGraphs> graph;
     std::unique_ptr<CommonBondConditions> conditions;
     std::unique_ptr<CommonBondSearch> search;
+    // The graphs and the search the other way round, built when first needed.
+    std::unique_ptr<CommonBondGraphs> reversedGraph;
+    std::unique_ptr<CommonBondSearch> reversedSearch;
     std::vector<std::vector<int>> found;
+    // A mapping of `from` atoms, turned round into one of `to` atoms.
+    auto turn = [](const std::vector<int>& mapping, int from, int to) {
+        std::vector<int> turned(size_t(to), -1);
+        for (int atom = 0; atom < from && atom < static_cast<int>(mapping.size()); ++atom)
+            if (mapping[atom] >= 0) turned[size_t(mapping[atom])] = atom;
+        return turned;
+    };
     try {
         clock.poll();
         graph = std::make_unique<CommonBondGraphs>(query, target, atomMatches, bondMatches, bondKey, excludedTargetAtoms, clock);
@@ -152,23 +171,61 @@ inline CommonBondOutcome searchCommonBonds(const MolGraph& query, const MolGraph
         search = std::make_unique<CommonBondSearch>(*graph, clock, connected, limits, conditions.get(), request.requiredTarget,
                                                     request.wanted, request.nodeCap);
         // Without a required mapping or excluded atoms, the search the other way round is of the
-        // same mappings, so its seed, turned round, is a mapping of this search. A fragment search
-        // grows it only once its levels run out of budget, see CommonBondSearch::seedAlsoFrom().
-        if (!connected && request.requiredTarget.empty() && excludedTargetAtoms.empty() && CommonBondGraphs::supports(target, query))
-            search->seedAlsoFrom([&] {
+        // same mappings turned round, so its mappings are mappings of this search and a score
+        // that no mapping beats holds for both.
+        const bool symmetric = !connected && request.requiredTarget.empty() && excludedTargetAtoms.empty()
+            && CommonBondGraphs::supports(target, query);
+        auto reversed = [&]() -> CommonBondSearch* {
+            if (!reversedGraph) {
                 auto atomsReversed = [&](int targetAtom, int queryAtom) { return atomMatches(queryAtom, targetAtom); };
                 auto bondsReversed = [&](int targetFirst, int targetSecond, int queryFirst, int querySecond) {
                     return bondMatches(queryFirst, querySecond, targetFirst, targetSecond);
                 };
-                CommonBondGraphs reversed(target, query, atomsReversed, bondsReversed, bondKey, excludedTargetAtoms, clock);
-                std::vector<int> turned;
-                if (!CommonBondSearch::fits(reversed)) return turned;
-                const std::vector<int> seed = CommonBondSearch(reversed, clock, connected).greedySeed();
-                if (seed.empty()) return turned;
-                turned.assign(size_t(query.n), -1);
-                for (int targetAtom = 0; targetAtom < target.n; ++targetAtom)
-                    if (seed[targetAtom] >= 0) turned[seed[targetAtom]] = targetAtom;
-                return turned;
+                reversedGraph = std::make_unique<CommonBondGraphs>(target, query, atomsReversed, bondsReversed, bondKey,
+                                                                   excludedTargetAtoms, clock);
+                if (CommonBondSearch::fits(*reversedGraph))
+                    reversedSearch = std::make_unique<CommonBondSearch>(*reversedGraph, clock, connected, limits);
+            }
+            return reversedSearch.get();
+        };
+        // A fragment search grows the seed the other way round only once its levels run out of
+        // budget, see CommonBondSearch::seedAlsoFrom().
+        if (symmetric)
+            search->seedAlsoFrom([&] {
+                CommonBondSearch* other = reversed();
+                const std::vector<int> seed = other ? other->greedySeed() : std::vector<int>();
+                return seed.empty() ? seed : turn(seed, target.n, query.n);
+            });
+        // The race, see the description at the top of this file.
+        if (symmetric && request.wanted == 1 && !conditions)
+            search->raceAfter(limits.race, [&] {
+                CommonBondSearch* other = reversed();
+                if (!other) return;
+                const std::vector<std::vector<int>> held = search->found();
+                const int64_t best = search->bestScore(), bound = search->upperBound();
+                const int64_t start = other->nodes();
+                const int64_t left = request.nodeCap == INT64_MAX ? INT64_MAX : request.nodeCap - search->nodes() - start;
+                const int64_t end = std::min(left, limits.raceLonger);
+                other->capNodesAt(start + std::min(left, limits.raceTrial), [&, start, end, best, bound] {
+                    return other->bestFound() > best || other->upperBound() < bound ? start + end : other->nodes();
+                });
+                std::vector<std::vector<int>> answer;
+                bool proved = true;
+                try {
+                    answer = other->raceFrom(held.empty() ? std::vector<int>() : turn(held.front(), query.n, target.n), bound);
+                } catch (const Stop&) {
+                    proved = false;
+                    answer = other->found();
+                    // Stopped by the clock rather than its node cap, the race ends the search.
+                    if (!other->capReached()) {
+                        if (!answer.empty()) search->offer(turn(answer.front(), target.n, query.n), INT64_MAX);
+                        throw;
+                    }
+                }
+                const std::vector<int> mapping = answer.empty() ? std::vector<int>() : turn(answer.front(), target.n, query.n);
+                search->offer(mapping, proved ? (answer.empty() ? bound : other->scoreOfMapping(answer.front())) : other->upperBound());
+                other->capNodesAt(INT64_MAX);
+                if (request.nodeCap != INT64_MAX) search->capNodesAt(request.nodeCap - other->nodes());
             });
         found = search->run();
         outcome.finished = true;
@@ -191,6 +248,11 @@ inline CommonBondOutcome searchCommonBonds(const MolGraph& query, const MolGraph
         outcome.scoutings = search->scoutings();
         outcome.refutedRoots = search->refutedRoots();
         outcome.capReached = search->capReached();
+    }
+    if (reversedSearch) {
+        outcome.nodes += static_cast<uint64_t>(reversedSearch->nodes());
+        outcome.scoutings += reversedSearch->scoutings();
+        outcome.refutedRoots += reversedSearch->refutedRoots();
     }
     return outcome;
 }

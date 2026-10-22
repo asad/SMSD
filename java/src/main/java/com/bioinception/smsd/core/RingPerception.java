@@ -607,10 +607,20 @@ final class RingPerception {
    */
   static final class Rings {
     final int[][] smallest, relevant;
+    /**
+     * Whether the candidate search stopped at {@link #RING_SEARCH_WORK_LIMIT}, so that the rings
+     * come from the bounded perception and may be fewer than the graph holds.
+     */
+    final boolean truncated;
 
     Rings(int[][] smallest, int[][] relevant) {
+      this(smallest, relevant, false);
+    }
+
+    Rings(int[][] smallest, int[][] relevant, boolean truncated) {
       this.smallest = smallest;
       this.relevant = relevant != null ? relevant : new int[0][];
+      this.truncated = truncated;
     }
   }
 
@@ -703,7 +713,7 @@ final class RingPerception {
       for (int pair : pairs) {
         if (search.work > RING_SEARCH_WORK_LIMIT) {
           int[][][] bounded = boundedRings(n, neighbors, systems, cycleRank);
-          return new Rings(bounded[0], bounded[1]);
+          return new Rings(bounded[0], bounded[1], true);
         }
         int[] edge = edgeList.get(pair);
         int eU = edge[0], eV = edge[1];

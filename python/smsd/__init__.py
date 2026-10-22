@@ -19,7 +19,7 @@ import importlib.util as _util
 import os as _os
 import sys as _sys
 
-__version__ = "8.0.0"
+__version__ = "8.0.1"
 __author__ = "Syed Asad Rahman"
 
 
@@ -47,6 +47,12 @@ def _load_native_module():
 
 
 _smsd = _load_native_module()
+if getattr(_smsd, "__version__", None) != __version__:
+    # A native extension left over from another build would otherwise fail later and obscurely.
+    _sys.modules.pop("smsd._smsd", None)
+    raise ImportError(
+        f"smsd {__version__} found a native extension built for "
+        f"{getattr(_smsd, '__version__', 'an unknown version')} at {_smsd.__file__}; reinstall smsd")
 
 # Native types and options.
 ChemOptions = _smsd.ChemOptions

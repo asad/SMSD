@@ -1867,7 +1867,7 @@ public class CoreTest {
   }
 
   @Nested
-  @DisplayName("MCS completion and telemetry")
+  @DisplayName("MCS completion and search counters")
   class MCSCompletionTest {
     @Test
     void completedPairReportsMappingAndCounters() throws Exception {

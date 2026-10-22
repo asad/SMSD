@@ -86,11 +86,11 @@ needs:
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>8.0.0</version>
+  <version>8.0.1</version>
 </dependency>
 ```
 
-In Gradle, write `implementation("com.bioinceptionlabs:smsd:8.0.0")`. The
+In Gradle, write `implementation("com.bioinceptionlabs:smsd:8.0.1")`. The
 example below also parses SMILES, which needs `org.openscience.cdk:cdk-smiles:2.13`;
 the [Java module](java/README.md#installation) lists the optional additions and
 the `smsd-cli` artefact. Save this as `QuickStart.java`:
@@ -123,8 +123,8 @@ Compile with Java 25 and run on Java 8 or later, here against the self-contained
 JAR of the build, which includes CDK and `cdk-smiles`:
 
 ```bash
-javac --release 8 -cp java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar QuickStart.java
-java -cp "java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar:." QuickStart
+javac --release 8 -cp java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar QuickStart.java
+java -cp "java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar:." QuickStart
 ```
 
 With a Java 8 compiler, omit `--release 8`. On Windows, separate the classpath
@@ -177,7 +177,7 @@ molecules and filter by MCS similarity before computing the MCS.
 The Java build also produces the command-line tool, as a self-contained JAR:
 
 ```bash
-java -jar java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 ```
 
@@ -232,8 +232,8 @@ and optimality flags before treating it as a proved optimum.
 | [Search algorithms](docs/ALGORITHMS.md) | Search guarantees, result semantics and differences between the languages |
 | [Benchmarks](benchmarks/README.md) | How to run the benchmarks and report results |
 | [Validation record](docs/VALIDATION_8.0.0.md) | Release checks for 8.0.0 |
-| [Release notes](docs/RELEASE_NOTES.md) | Highlights, downloads and upgrade notes for 8.0.0 |
-| [Changelog](CHANGELOG.md) | Changes in 8.0.0 |
+| [Release notes](docs/RELEASE_NOTES.md) | Highlights, downloads and upgrade notes for each release |
+| [Changelog](CHANGELOG.md) | Changes in each release |
 
 The [Java guide](docs/JAVA.md#api-reference) explains how to generate the
 Javadoc reference.
@@ -246,8 +246,11 @@ must include the [LICENSE](LICENSE) and [NOTICE](NOTICE) files and retain the
 copyright notices; the NOTICE file also sets out the trademark terms. Bundled
 dependencies carry their own licence notices. The Java CLI JAR with
 dependencies, the portable CLI archive and the Docker image bundle CDK under
-the [LGPL-2.1](licenses/cdk/README.md); for the runtimes that Python wheels can
-bundle, see the [LLVM OpenMP](licenses/libomp/LICENSE.TXT),
+the [LGPL-2.1](licenses/cdk/README.md), Beam under the
+[BSD 2-Clause License](licenses/beam/LICENSE) and vecmath under the
+[GPL-2.0 with the Classpath exception](licenses/vecmath/README.md); for the
+runtimes that Python wheels can bundle, see the
+[LLVM OpenMP](licenses/libomp/LICENSE.TXT),
 [GCC OpenMP](licenses/libgomp/README.md) and
 [Microsoft C++ and OpenMP](licenses/msvc/README.md) notices.
 

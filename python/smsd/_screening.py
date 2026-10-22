@@ -9,7 +9,7 @@ import warnings
 
 from . import _smsd
 from ._interop import _index_tuple
-from ._molecule import _ensure_mol, _ensure_mol_ex
+from ._molecule import _checked_int, _ensure_mol, _ensure_mol_ex
 
 __all__ = [
     "TargetCorpus", "batch_similarity", "gpu_device_info", "gpu_is_available", "screen_targets",
@@ -49,14 +49,22 @@ def similarity(mol1, mol2):
     return similarity_upper_bound(mol1, mol2)
 
 
-def screen_targets(query, targets, threshold, chemistry=None, *, chem=None):
+def screen_targets(query, targets, threshold, chemistry=None, *, chem=None, num_threads=0):
     """Indices of the targets whose similarity bound to the query reaches ``threshold``.
 
-    Accepts MolGraph objects, SMILES strings or RDKit molecules. ``chem`` is
-    the deprecated spelling of ``chemistry``.
+    Accepts MolGraph objects, SMILES strings or RDKit molecules, or a
+    :class:`TargetCorpus`, whose targets are prepared once and so are not
+    converted again on each call. The screen runs on ``num_threads`` threads
+    (0, the default, uses the OpenMP default, ``OMP_NUM_THREADS``); the
+    indices, in target order, do not depend on the thread count. ``chem`` is the
+    deprecated spelling of ``chemistry``.
     """
+    _checked_int(num_threads, "Thread count", 0)
     options = _chemistry("screen_targets", chemistry, chem)
-    return _smsd.screen_targets(_ensure_mol(query), [_ensure_mol(target) for target in targets], threshold, options)
+    query = _ensure_mol(query)
+    if isinstance(targets, TargetCorpus):
+        return targets._impl.screen_targets(query, threshold, options, num_threads)
+    return _smsd.screen_targets(query, targets, threshold, options, num_threads, _ensure_mol)
 
 
 def batch_similarity(query, targets, fp_size=2048, radius=2):

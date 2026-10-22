@@ -1,6 +1,6 @@
 # Installation and source builds
 
-This guide covers installing SMSD Pro 8.0.0 and building it from source.
+This guide covers installing SMSD Pro 8.0.1 and building it from source.
 Release files are on the [GitHub releases page](https://github.com/asad/SMSD/releases);
 the [README](../README.md) lists the Python and Maven packages.
 
@@ -25,14 +25,14 @@ directory as the release files, then check each file you use.
 macOS or Linux:
 
 ```bash
-grep ' smsd-cli-8.0.0-jar-with-dependencies.jar$' SHA256SUMS | shasum -a 256 -c
+grep ' smsd-cli-8.0.1-jar-with-dependencies.jar$' SHA256SUMS | shasum -a 256 -c
 ```
 
 Windows PowerShell (prints `True` when the checksum matches):
 
 ```powershell
-$entry = Select-String -Path SHA256SUMS -SimpleMatch ' smsd-cli-8.0.0-jar-with-dependencies.jar'
-(Get-FileHash .\smsd-cli-8.0.0-jar-with-dependencies.jar -Algorithm SHA256).Hash -eq $entry.Line.Split(' ')[0]
+$entry = Select-String -Path SHA256SUMS -SimpleMatch ' smsd-cli-8.0.1-jar-with-dependencies.jar'
+(Get-FileHash .\smsd-cli-8.0.1-jar-with-dependencies.jar -Algorithm SHA256).Hash -eq $entry.Line.Split(' ')[0]
 ```
 
 Replace the file name to check another download.
@@ -41,25 +41,25 @@ Replace the file name to check another download.
 
 ## Portable Java CLI
 
-`smsd-cli-8.0.0-jar-with-dependencies.jar` contains the SMSD library, CDK 2.13
+`smsd-cli-8.0.1-jar-with-dependencies.jar` contains the SMSD library, CDK 2.13
 and the other CLI dependencies, and runs on Java 8 or later. From its directory:
 
 ```bash
-java -jar smsd-cli-8.0.0-jar-with-dependencies.jar --version
-java -jar smsd-cli-8.0.0-jar-with-dependencies.jar \
+java -jar smsd-cli-8.0.1-jar-with-dependencies.jar --version
+java -jar smsd-cli-8.0.1-jar-with-dependencies.jar \
   --Q SMI --q "CCN" --T SMI --t "CCCNC" -m --json -
 ```
 
 The second command runs a substructure search and writes every mapping as JSON
 to standard output. The same JAR is on Maven Central as
-`com.bioinceptionlabs:smsd-cli:8.0.0` with the classifier `jar-with-dependencies`.
+`com.bioinceptionlabs:smsd-cli:8.0.1` with the classifier `jar-with-dependencies`.
 
-`smsd-8.0.0-cli.tar.gz` holds Unix and Windows launchers. Extract it into one
+`smsd-8.0.1-cli.tar.gz` holds Unix and Windows launchers. Extract it into one
 directory so that `bin` and `repo` stay together:
 
 ```bash
 mkdir smsd-cli
-tar -xzf smsd-8.0.0-cli.tar.gz -C smsd-cli
+tar -xzf smsd-8.0.1-cli.tar.gz -C smsd-cli
 ./smsd-cli/bin/smsd --version
 ```
 
@@ -72,13 +72,13 @@ root:
 
 ```bash
 mvn -f java/pom.xml clean package
-java -jar java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar --version
+java -jar java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar --version
 ```
 
 The build runs the default tests, writes the library JAR to `java/core/target`,
 and writes the CLI JARs and the portable launchers to `java/cli/target`.
-`mvn -f java/pom.xml install` also installs `com.bioinceptionlabs:smsd:8.0.0`
-and `com.bioinceptionlabs:smsd-cli:8.0.0` in the local Maven repository; the
+`mvn -f java/pom.xml install` also installs `com.bioinceptionlabs:smsd:8.0.1`
+and `com.bioinceptionlabs:smsd-cli:8.0.1` in the local Maven repository; the
 [Java module README](../java/README.md#installation) gives their Maven and
 Gradle dependencies.
 
@@ -101,7 +101,7 @@ See the [Java guide](JAVA.md) for the API and CLI reference.
 ## C++ source build
 
 The C++ library is header-only: use `cpp/include`, or the release archive
-`smsd-cpp-8.0.0-headers.tar.gz`. The CMake build needs CMake 3.18 or later, and
+`smsd-cpp-8.0.1-headers.tar.gz`. The CMake build needs CMake 3.18 or later, and
 `ctest --test-dir` needs CMake 3.20 or later. On Windows, use Developer
 PowerShell for Visual Studio with the Desktop development with C++ workload.
 From the repository root:
@@ -125,7 +125,7 @@ reference.
 Install the release wheel for your platform from PyPI or the GitHub release:
 
 ```bash
-python -m pip install "smsd==8.0.0"
+python -m pip install "smsd==8.0.1"
 python -c "import smsd; print(smsd.__version__); assert smsd.parse_smiles('CC').n == 2"
 ```
 
@@ -164,7 +164,7 @@ Metal (macOS) and CUDA batch screening are optional: a source build enables
 each one when its toolkit is found, and setting `SMSD_BUILD_METAL` and
 `SMSD_BUILD_CUDA` to `OFF`, as above, gives a CPU-only build. RDKit is needed
 only for RDKit molecule conversion and RDKit depiction
-(`python -m pip install "smsd[rdkit]==8.0.0"`). See the
+(`python -m pip install "smsd[rdkit]==8.0.1"`). See the
 [Python guide](PYTHON.md) for examples and build options.
 
 ## Docker
@@ -186,7 +186,7 @@ guides; examples that need RDKit are skipped when it is absent:
 
 ```bash
 python scripts/check_examples.py \
-  --jar java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar \
+  --jar java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar \
   --report build/example-check.json
 ```
 

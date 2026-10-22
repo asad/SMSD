@@ -360,10 +360,9 @@ inline std::vector<std::vector<int>> CommonBondSearch::run() {
         }
         if (!embeddings.empty()) return embeddings;
     }
-    rank();
+    rankOnce();
     const int64_t bound = bestPossible();
-    fallbackScore_ = belowEveryMapping();
-    seed(bound);
+    seedOnce(bound);
     return collectByBonds(bound);
 }
 

@@ -226,7 +226,7 @@ def prewarm_graph(mol):
 
 
 def read_mol_file(filename):
-    """Read a MOL file (V2000 or V3000) into a MolGraph; a file that cannot be opened raises ValueError."""
+    """Read a MOL file (V2000 or V3000) into a MolGraph; one that cannot be opened or read raises ValueError."""
     return _smsd.read_mol_file(os.fspath(filename))
 
 

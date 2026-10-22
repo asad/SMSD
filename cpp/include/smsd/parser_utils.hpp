@@ -37,6 +37,17 @@ constexpr size_t MAX_SMARTS_NODES_PER_EXPRESSION = 10000;
 
 namespace parser_detail {
 
+// ASCII character classes for input text. The <cctype> functions follow the C locale, which
+// classes bytes outside ASCII differently on each platform; these give the same answer on all.
+constexpr bool isAsciiDigit(char c) { return c >= '0' && c <= '9'; }
+constexpr bool isAsciiUpper(char c) { return c >= 'A' && c <= 'Z'; }
+constexpr bool isAsciiLower(char c) { return c >= 'a' && c <= 'z'; }
+constexpr bool isAsciiLetter(char c) { return isAsciiUpper(c) || isAsciiLower(c); }
+constexpr bool isAsciiAlnum(char c) { return isAsciiLetter(c) || isAsciiDigit(c); }
+/** Space, tab, line feed, vertical tab, form feed or carriage return. */
+constexpr bool isAsciiSpace(char c) { return c == ' ' || (c >= '\t' && c <= '\r'); }
+constexpr char asciiLower(char c) { return isAsciiUpper(c) ? static_cast<char>(c - 'A' + 'a') : c; }
+
 /** Read a non-negative int, returning -1 when no digits are present. */
 template<class Position>
 inline int readDecimal(const std::string& text, Position& position) {

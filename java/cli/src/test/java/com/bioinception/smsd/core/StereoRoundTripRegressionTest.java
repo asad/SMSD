@@ -92,6 +92,19 @@ class StereoRoundTripRegressionTest {
     assertEquals(stereoElements, stereoCount(original));
   }
 
+  @ParameterizedTest
+  @CsvSource(delimiter = '|', value = {
+      "F/C1=C(\\Cl)C=CC=C1|[c]1(=[c](cccc1)/F)/Cl",
+      "F/C1=C(\\Cl)C=CC=CC=CC=C1|[c]1(=[c](cccccccc1)/F)/Cl",
+      "F/C1=C(/Cl)C=CC=CC=CC=C1|[c]1(=[c](cccccccc1)\\F)/Cl"})
+  void aromaticFocusStereoIsWrittenOnSingleBonds(String smiles, String expected) throws Exception {
+    // '/' and '\' are single bonds in OpenSMILES, so the substituent bonds carry the configuration.
+    // A ring double bond can be trans only in a ring of eight or more atoms, as in [10]annulene.
+    IAtomContainer original = Standardiser.standardise(
+        MolIO.loadTarget("SMI", smiles), Standardiser.TautomerMode.NONE);
+    assertEquals(expected, assertAromaticStereoRoundTrip(new MolGraph(original), original));
+  }
+
   @Test
   void rawSmilesReaderRetainsAromaticStereoAndOriginalIndices() throws Exception {
     String first = "[Na+].F/C=c1\\cnc2c(n1)N=NNC=2.[13CH3][C@H](F)Cl.F/C=C/F";

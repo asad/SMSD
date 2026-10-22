@@ -10,8 +10,9 @@
 #ifndef SMSD_CHEM_OPTIONS_HPP
 #define SMSD_CHEM_OPTIONS_HPP
 
+#include "smsd/parser_utils.hpp"
+
 #include <algorithm>
-#include <cctype>
 #include <cmath>
 #include <stdexcept>
 #include <string>
@@ -89,8 +90,7 @@ struct ChemOptions {
      */
     static ChemOptions profile(const std::string& profileName) {
         std::string name = profileName;
-        std::transform(name.begin(), name.end(), name.begin(),
-                       [](unsigned char character) { return static_cast<char>(std::tolower(character)); });
+        std::transform(name.begin(), name.end(), name.begin(), parser_detail::asciiLower);
         ChemOptions opts;
         if (name == "default") {
             // The constructor defaults already follow RDKit FindMCS

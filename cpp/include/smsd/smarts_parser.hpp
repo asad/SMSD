@@ -33,7 +33,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <cctype>
 #include <cstdint>
 #include <deque>
 #include <functional>
@@ -86,7 +85,7 @@ public:
                 size_t start = i + 1;
                 size_t end = start;
                 while (end < input.size() &&
-                       (std::isalnum(static_cast<unsigned char>(input[end])) || input[end] == '_')) {
+                       (parser_detail::isAsciiAlnum(input[end]) || input[end] == '_')) {
                     ++end;
                 }
                 std::string name = input.substr(start, end - start);
@@ -213,8 +212,8 @@ inline SmartsQuery smarts_detail::parsePattern(const std::string& smarts, int ma
         if (c == '[') { if (bracketDepth++ == 0) ++atomEstimate; }
         else if (c == ']') { if (bracketDepth > 0) --bracketDepth; }
         else if (bracketDepth == 0) {
-            if (std::isalpha(static_cast<unsigned char>(c)) || c == '*') ++atomEstimate;
-            else if (std::isdigit(static_cast<unsigned char>(c))) ++closureDigits;
+            if (parser_detail::isAsciiLetter(c) || c == '*') ++atomEstimate;
+            else if (parser_detail::isAsciiDigit(c)) ++closureDigits;
         }
     }
     query.atoms.reserve(atomEstimate);

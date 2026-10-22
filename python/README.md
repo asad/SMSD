@@ -17,13 +17,13 @@ RDKit image helpers.
 ## Installation
 
 ```bash
-python -m pip install "smsd==8.0.0"
+python -m pip install "smsd==8.0.1"
 ```
 
 To include RDKit, install the `rdkit` extra:
 
 ```bash
-python -m pip install "smsd[rdkit]==8.0.0"
+python -m pip install "smsd[rdkit]==8.0.1"
 ```
 
 Wheels are published on PyPI and with each

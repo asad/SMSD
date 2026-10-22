@@ -12,27 +12,29 @@ on:
         required: true
         type: string
 
-permissions:
-  contents: read
+# Each job states the token permissions it needs.
+permissions: {}
 
 jobs:
   java-cli:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.tag }}
           persist-credentials: false
       - name: Set up JDK 25
-        uses: actions/setup-java@v6.0.1
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
           java-version: '25'
           cache: maven
       - name: Build and test the library and CLI JARs
         run: mvn -U -B clean verify
-      - uses: actions/upload-artifact@v7.0.1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: java-jars
           path: |
@@ -45,9 +47,11 @@ jobs:
 
   cpp-headers:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.tag }}
           persist-credentials: false
@@ -63,7 +67,7 @@ jobs:
           VERSION=${RELEASE_TAG#v}
           COPYFILE_DISABLE=1 tar -czf "smsd-cpp-${VERSION}-headers.tar.gz" \
             LICENSE NOTICE -C cpp/include smsd/
-      - uses: actions/upload-artifact@v7.0.1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cpp-headers
           path: smsd-cpp-*-headers.tar.gz
@@ -71,9 +75,11 @@ jobs:
 
   docker-cli:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.tag }}
           persist-credentials: false
@@ -83,7 +89,7 @@ jobs:
         run: docker run --rm smsd:release-check --help
       - name: Save tested image
         run: docker save smsd:release-check | gzip > smsd-cli-image.tar.gz
-      - uses: actions/upload-artifact@v7.0.1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: docker-cli
           path: smsd-cli-image.tar.gz

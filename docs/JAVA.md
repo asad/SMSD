@@ -16,7 +16,7 @@ The JARs run on Java 8 and later; Java 25 LTS is recommended. Maven:
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>8.0.0</version>
+  <version>8.0.1</version>
 </dependency>
 ```
 
@@ -24,7 +24,7 @@ Gradle (Kotlin DSL):
 
 ```kotlin
 dependencies {
-    implementation("com.bioinceptionlabs:smsd:8.0.0")
+    implementation("com.bioinceptionlabs:smsd:8.0.1")
 }
 ```
 
@@ -38,8 +38,8 @@ its class name and compile it from the repository root against the
 self-contained JAR of the source build:
 
 ```bash
-javac --release 8 -cp java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar PreparedSearchExample.java
-java -cp "java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar:." PreparedSearchExample
+javac --release 8 -cp java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar PreparedSearchExample.java
+java -cp "java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar:." PreparedSearchExample
 ```
 
 With a Java 8 compiler, omit `--release 8`; on Windows, separate the classpath
@@ -52,7 +52,13 @@ keeps the CDK atom order; mappings, atom weights and exclusions use these
 zero-based indices. Aromaticity, hydrogen counts and stereochemistry are used
 as given; `Standardiser.standardise(container, Standardiser.TautomerMode.NONE)`
 returns a copy with atom types, implicit hydrogens, rings and Daylight
-aromaticity.
+aromaticity. The CDK `SmilesParser` gives atoms written in capitals but joined
+by `:` ring bonds, as in `C1:C:C:C:C:C:1`, the hydrogens of single bonds;
+`MolGraph` and `Standardiser.standardise` read such a ring as aromatic, as the
+native reader does, but the CDK molecule does not record which nitrogen a
+bracket hydrogen was written on, so where several could carry it, one that
+gives a Kekulé structure does, whatever the atom order. The CLI reads such
+SMILES as written.
 
 `MolGraph.Builder` builds a graph without CDK from `atomCount`,
 `atomicNumbers` and `neighbors`, optionally with `formalCharges`,
@@ -391,8 +397,20 @@ a copy first, so for several fingerprints convert once with
 - `fingerprintSubset(query, target)`: every query bit is set in the target; a
   screen, not a substitute for graph matching.
 - `toHex`, `fromHex`, `toBitSet`, `fromBitSet`, `toBinaryString`,
-  `countsToArray`: conversion. `analyzeFpQuality`, `suggestFingerprintSize`:
-  density and size diagnostics (`analyzeFingerprintQuality` is deprecated).
+  `countsToArray`: conversion.
+- `analyzeFpQuality(fp, size)`: `set_bits`, `fp_size`, `density`,
+  `expected_collision_rate` and `is_saturated` (density over 0.75), with the
+  definitions of Python `analyze_fp_quality`: s of N bits set suggest
+  n = ln(1 − s/N) / ln(1 − 1/N) uniformly hashed features, of which the share
+  1 − s/n fell on a bit already set; path fingerprints of a power-of-two size
+  collide more often than uniform hashing predicts.
+  `analyzeFingerprintQuality` is deprecated.
+- `suggestFingerprintSize(atoms, librarySize, rate)`: the path fingerprint size
+  at which a path absent from a molecule finds its bit set with probability of
+  about `rate`, allowing seven distinct paths per atom, more than most
+  drug-like molecules have, and one bit per path: m = −n / ln(1 − rate),
+  rounded up to a multiple of 64; `atoms` must be at least 1, `rate` must lie
+  strictly between 0 and 1, and a size beyond the `int` range is rejected.
 
 ### Configurable fingerprints
 
@@ -485,11 +503,17 @@ bounded by `CIPAssigner.MAX_DEPTH`, so check which centres were assigned.
 
 - `toCanonicalSmiles()`, `toCanonicalSmiles(atomMaps)`: canonical SMILES with
   the supplied stereochemistry; the overload adds positive atom-map labels,
-  keyed by atom index, without changing the ranking or the graph.
+  keyed by atom index, without changing the ranking or the graph. `/` and `\`
+  go on single bonds wherever a configured double bond has one at an end; an
+  end with only aromatic ring bonds carries them on an aromatic bond, as RDKit
+  writes it, which strict OpenSMILES readers take as a single bond; the CDK
+  2.13 `SmilesParser` does not keep that configuration.
 - `computeRings()`, `numRings()`, `MolGraph.computeSSSR(graph)`,
   `MolGraph.layoutSSSR(graph)`: the smallest set of smallest rings, also
   ordered for layout. `computeRelevantCycles()`, `computeURFs()`: relevant
-  cycles and unique ring families. `ensureRingCounts()`, `getRingCounts()`:
+  cycles and unique ring families. `ringsTruncated()`: whether the ring search
+  stopped at its work bound, as for a very large ring system, so that these
+  rings may be incomplete. `ensureRingCounts()`, `getRingCounts()`:
   per-atom ring counts, computed on first use.
 - `ringSystemOf(atom)`, `ringSystemCount()`, `ringSystemSig(id)`: ring systems
   and their signatures.
@@ -509,25 +533,25 @@ bounded by `CIPAssigner.MAX_DEPTH`, so check which centres were assigned.
 ## Command-line interface
 
 The module `com.bioinceptionlabs:smsd-cli` provides the self-contained
-`smsd-cli-8.0.0-jar-with-dependencies.jar`; the
+`smsd-cli-8.0.1-jar-with-dependencies.jar`; the
 [Java module README](../java/README.md#command-line-tool) shows how to obtain
 it or depend on `SMSDcli`. From the repository root, after a source build,
 print the version and help, then test benzene against phenol as a substructure
 and as an MCS:
 
 ```bash
-java -jar java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar --version
-java -jar java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar --help
-java -jar java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar --version
+java -jar java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar --help
+java -jar java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
-java -jar java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --mode mcs --json -
 ```
 
 MCS mode defaults to a connected MCIS; request MCES and fragments explicitly:
 
 ```bash
-java -jar java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar \
   --Q SMI --q "CO.CN" --T SMI --t "CO.CN" \
   --mode mcs --objective MCES --fragments --timeout 1000 --json -
 ```
@@ -536,9 +560,9 @@ SMARTS queries use the type `SIG` in substructure mode; here the first search
 reports `"exists": true` (exit status 0) and the second `"exists": false` (1):
 
 ```bash
-java -jar java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar \
   --Q SIG --q "C=O" --T SMI --t "CC(=O)O" --json -
-java -jar java/cli/target/smsd-cli-8.0.0-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar \
   --Q SIG --q "C=O" --T SMI --t "CCO" --json -
 ```
 

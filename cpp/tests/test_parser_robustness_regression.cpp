@@ -8,15 +8,23 @@
 #include "smsd/smiles_parser.hpp"
 #include "smsd/smarts_parser.hpp"
 #include "smsd/batch.hpp"
+#include "smsd/mol_reader.hpp"
 #include "smsd/ring_finder.hpp"
+#include "smsd/fingerprint_options.hpp"
 
 #include <chrono>
+#include <clocale>
+#include <cmath>
 #include <cstdlib>
+#include <functional>
 #include <iostream>
 #include <limits>
 #include <new>
 #include <stdexcept>
 #include <thread>
+#if defined(__unix__) || defined(__APPLE__)
+#include <pthread.h>
+#endif
 
 #if defined(__has_feature)
 #if __has_feature(address_sanitizer) || __has_feature(undefined_behavior_sanitizer)
@@ -207,6 +215,45 @@ static void testLargeRings() {
     require(elapsed < 5000, "parsing a 40-ring acene took too long");
 }
 
+// The Kekule structure of an aromatic macrocycle near the atom limit, which perception assigns
+// to every supplied aromatic system, needs no deep call stack: it parses on a thread of 256 KB,
+// twice the smallest default thread stack of common platforms.
+static void testAromaticMacrocycleOnASmallStack() {
+    std::string failure;
+    std::function<void()> parse = [&failure] {
+        try {
+            const auto ring = smsd::parseSMILES("c1" + std::string(smsd::MAX_ATOMS - 4, 'c') + "c1");
+            int aromatic = 0;
+            for (int atom = 0; atom < ring.n; ++atom) aromatic += ring.aromatic[atom] != 0;
+            if (ring.n != smsd::MAX_ATOMS - 2 || aromatic != ring.n) failure = "an aromatic macrocycle lost aromaticity";
+        } catch (const std::exception& error) {
+            failure = error.what();
+        }
+    };
+#if defined(__unix__) || defined(__APPLE__)
+#if defined(SMSD_TEST_SANITISED)
+    const size_t stackBytes = 4096 * 1024;  // sanitiser frames are several times larger
+#else
+    const size_t stackBytes = 256 * 1024;
+#endif
+    pthread_attr_t attributes;
+    require(pthread_attr_init(&attributes) == 0 && pthread_attr_setstacksize(&attributes, stackBytes) == 0,
+            "cannot set a thread stack size");
+    pthread_t worker;
+    void* (*run)(void*) = [](void* body) -> void* {
+        (*static_cast<std::function<void()>*>(body))();
+        return nullptr;
+    };
+    const int created = pthread_create(&worker, &attributes, run, &parse);
+    pthread_attr_destroy(&attributes);
+    require(created == 0, "cannot start a thread");
+    pthread_join(worker, nullptr);
+#else
+    std::thread(parse).join();
+#endif
+    if (!failure.empty()) throw std::runtime_error(failure);
+}
+
 static void testBondPrecedence() {
     struct Example { const char* query; const char* target; bool expected; };
     for (const auto& example : {
@@ -236,10 +283,133 @@ static void testSparseStereo() {
     require(smsd::parseSMILES("C/C=C/C").dbStereo(1, 2) == 2, "small graph alkene configuration changed");
 }
 
+// Bytes above 0x7F belong to neither language; every position that classifies a character
+// rejects them, and lenient SMILES recovery either recovers or rejects them as well.
+static void testHighBytes() {
+    smsd::ParseOptions lenient;
+    lenient.lenient = true;
+    for (int byte = 0x80; byte <= 0xFF; ++byte) {
+        const std::string high(1, static_cast<char>(byte));
+        for (const std::string& text : {"C" + high, high + "C", "[CH" + high + "]", "[C+" + high + "]",
+                                        "C%" + high + high + "C", "C1CC" + high, "[" + high + "]"}) {
+            requireInvalid([&] { smsd::parseSMILES(text); });
+            try { smsd::parseSMILES(text, lenient); } catch (const std::invalid_argument&) {}
+        }
+        for (const std::string& text : {"C" + high, high + "C", "[" + high + "]", "[C" + high + "]",
+                                        "[#6]" + high, "[C;" + high + "]", "C%" + high + "C"})
+            requireInvalid([&] { smsd::parseSMARTS(text); });
+    }
+}
+
+/** A copy of text with its one occurrence of `from` replaced by `to`. */
+static std::string replaced(const std::string& text, const std::string& from, const std::string& to) {
+    const auto at = text.find(from);
+    require(at != std::string::npos && text.find(from, at + 1) == std::string::npos, "fixture text not unique");
+    return text.substr(0, at) + to + text.substr(at + from.size());
+}
+
+// V3000 integer fields must be integers in range, coordinates decimal numbers, and a block may hold
+// at most MAX_ATOMS atoms; anything else is a std::invalid_argument, as for the V2000 reader.
+static void testV3000Fields() {
+    const std::string block = smsd::writeMolBlockV3000(smsd::parseSMILES("C[NH3+]"));
+    const auto graph = smsd::readMolBlock(block);
+    require(graph.n == 2 && graph.formalCharge[1] == 1, "V3000 fixture no longer reads");
+    const std::string atom = "M  V30 1 C 0 0 0 0\n", bond = "M  V30 1 1 1 2\n";
+    for (const std::string& charge : {"99999999999", "-99999999999", "1x", "1.5", "", "+"})
+        requireInvalid([&] { smsd::readMolBlock(replaced(block, "CHG=1", "CHG=" + charge)); });
+    for (const std::string& field : {"MASS=", "RAD=", "HCOUNT=", "VAL=", "CLASS=", "CFG="})
+        requireInvalid([&] { smsd::readMolBlock(replaced(block, "CHG=1", field + "4294967297")); });
+    for (const std::string& line : {"M  V30 99999999999 C 0 0 0 0\n", "M  V30 1 C 1e999 0 0 0\n",
+                                    "M  V30 1 C nan 0 0 0\n", "M  V30 1 C 0 inf 0 0\n", "M  V30 1 C 0 0 0x 0\n"})
+        requireInvalid([&] { smsd::readMolBlock(replaced(block, atom, line)); });
+    for (const std::string& line : {"M  V30 1 x 1 2\n", "M  V30 1 1 1 99999999999\n", "M  V30 1 1 -1x 2\n"})
+        requireInvalid([&] { smsd::readMolBlock(replaced(block, bond, line)); });
+    const auto exact = smsd::readMolBlock(replaced(block, atom, "M  V30 1 C 1.25 -2.5E1 +0 0\n"));
+    require(exact.n == 2, "V3000 coordinates in exponent form no longer read");
+    // Coordinates are decimal numbers read by one rule on every platform: a magnitude below 1e-307
+    // reads as zero, and one beyond the range of a double, or a number in another form, is refused.
+    for (const std::string& line : {"M  V30 1 C 1e309 0 0 0\n", "M  V30 1 C -1.8e308 0 0 0\n", "M  V30 1 C 0x10 0 0 0\n",
+                                    "M  V30 1 C infinity 0 0 0\n", "M  V30 1 C . 0 0 0\n", "M  V30 1 C 1e 0 0 0\n"})
+        requireInvalid([&] { smsd::readMolBlock(replaced(block, atom, line)); });
+    require(smsd::readMolBlock(replaced(block, atom, "M  V30 1 C 1e-310 -4.9e-324 .5 0\n")).n == 2,
+            "V3000 coordinates below the normal range no longer read");
+    using smsd::mol_detail::v3000Coordinate;
+    require(v3000Coordinate("1e-310") == 0.0 && std::signbit(v3000Coordinate("-4.9e-324"))
+                && v3000Coordinate("1E-307") == 1e-307 && v3000Coordinate("1.7e308") == 1.7e308
+                && v3000Coordinate("0.00012e3") == 0.12 && v3000Coordinate("-2.5E1") == -25.0 && v3000Coordinate("5.") == 5.0,
+            "V3000 coordinates read differently");
+    // Atom properties must lie in the ranges the writers can give them.
+    for (const std::string& field : {"CHG=2147483647", "CHG=-2147483648", "CHG=100", "CHG=-100", "MASS=1000",
+                                     "MASS=-1", "RAD=4", "HCOUNT=2147483647", "HCOUNT=100", "HCOUNT=-2",
+                                     "VAL=16", "VAL=2147483647", "CFG=4"})
+        requireInvalid([&] { smsd::readMolBlock(replaced(block, "CHG=1", field)); });
+    for (int charge : {-99, 99})
+        require(smsd::readMolBlock(replaced(block, "CHG=1", "CHG=" + std::to_string(charge))).formalCharge[1] == charge,
+                "a V3000 charge within the SMILES range no longer reads");
+    requireInvalid([&] { smsd::readMolBlock(replaced(block, bond, "M  V30 1 1 1 2 CFG=4\n")); });
+
+    std::string atoms;
+    for (int index = 1; index <= smsd::MAX_ATOMS; ++index)
+        atoms += "M  V30 " + std::to_string(index) + " C 0 0 0 0\n";
+    const auto head = block.substr(0, block.find("M  V30 BEGIN ATOM\n") + 18);
+    const std::string tail = "M  V30 END ATOM\nM  V30 END CTAB\nM  END\n";
+    require(smsd::readMolBlock(head + atoms + tail).n == smsd::MAX_ATOMS, "V3000 block at MAX_ATOMS rejected");
+    const std::string extra = "M  V30 " + std::to_string(smsd::MAX_ATOMS + 1) + " C 0 0 0 0\n";
+    requireInvalid([&] { smsd::readMolBlock(head + atoms + extra + tail); });
+}
+
+// Charges and hydrogen counts beyond what the readers accept, as a builder may set them, are
+// written and fingerprinted without overflow, and a MOL valence field that cannot hold the
+// hydrogen count is refused rather than overflowed.
+static void testExtremeAtomProperties() {
+    auto graphOf = [](int charge, int hydrogens) {
+        return smsd::MolGraph::Builder().atomCount(2).atomicNumbers({6, 8}).formalCharges({charge, 0})
+            .hydrogenCounts({hydrogens, 1}).setNeighbors({{1}, {0}}).setBondOrders({{1}, {1}}).build();
+    };
+    for (int charge : {std::numeric_limits<int>::min(), std::numeric_limits<int>::max()}) {
+        const auto graph = graphOf(charge, 0);
+        require(smsd::toSMILES(graph).find(std::to_string(charge < 0 ? -int64_t(charge) : int64_t(charge)))
+                    != std::string::npos, "an extreme charge was not written");
+        smsd::batch::FingerprintOptions path;
+        path.family = smsd::batch::FingerprintFamily::PATH;
+        require(!smsd::batch::computeFingerprint(graph, path).empty(), "an extreme charge has no path fingerprint");
+    }
+    requireInvalid([&] { smsd::writeMolBlock(graphOf(0, std::numeric_limits<int>::max())); });
+}
+
+// Coordinates are read in the classic locale, as the format writes them, whatever locale the
+// program has set; the test is skipped where no decimal-comma locale is installed.
+static void testCoordinatesIgnoreTheLocale() {
+    const std::string previous = std::setlocale(LC_NUMERIC, nullptr);
+    const char* found = nullptr;
+    for (const char* name : {"de_DE.UTF-8", "de_DE.utf8", "fr_FR.UTF-8", "fr_FR.utf8"})
+        if ((found = std::setlocale(LC_NUMERIC, name)) != nullptr) break;
+    if (found == nullptr) return;
+    std::string failure;
+    try {
+        const std::string v3000 = smsd::writeMolBlockV3000(smsd::parseSMILES("CC"));
+        const std::string atom = "M  V30 1 C 0 0 0 0\n";
+        const auto at = v3000.find(atom);
+        if (at == std::string::npos) failure = "V3000 fixture changed";
+        else {
+            const auto fractional = smsd::readMolBlock(v3000.substr(0, at) + "M  V30 1 C 1.5 -2.25 0 0\n"
+                                                       + v3000.substr(at + atom.size()));
+            if (fractional.n != 2) failure = "a fractional V3000 coordinate no longer reads";
+        }
+    } catch (const std::exception& error) {
+        failure = std::string("a fractional V3000 coordinate was rejected: ") + error.what();
+    }
+    std::setlocale(LC_NUMERIC, previous.c_str());
+    if (!failure.empty()) throw std::runtime_error(failure);
+}
+
 int main(int argc, char** argv) {
     return smsd_test::runGroups(argc, argv, {
         {"branches", testDeepBranches}, {"atom-negation", testAtomNegation},
         {"bond-negation", testBondNegation}, {"numbers", testNumericBounds},
         {"bond-precedence", testBondPrecedence}, {"sparse-stereo", testSparseStereo},
-        {"smarts-limits", testSmartsLimits}, {"large-rings", testLargeRings}});
+        {"smarts-limits", testSmartsLimits}, {"large-rings", testLargeRings},
+        {"aromatic-macrocycle-stack", testAromaticMacrocycleOnASmallStack},
+        {"high-bytes", testHighBytes}, {"v3000-fields", testV3000Fields},
+        {"extreme-atom-properties", testExtremeAtomProperties}, {"coordinate-locale", testCoordinatesIgnoreTheLocale}});
 }

@@ -130,7 +130,8 @@ inline std::string writeAtom(const MolGraph& g, int idx, int implicitH, int chir
             if (g.formalCharge[idx] > 1) oss << g.formalCharge[idx];
         } else if (g.formalCharge[idx] < 0) {
             oss << '-';
-            if (g.formalCharge[idx] < -1) oss << -g.formalCharge[idx];
+            // Negated in 64 bits, so that the most negative int is written without overflow.
+            if (g.formalCharge[idx] < -1) oss << -static_cast<long long>(g.formalCharge[idx]);
         }
 
         if (!g.atomClass.empty() && g.atomClass[idx] != 0 && g.atomicNum[idx] != 0) {
@@ -309,21 +310,39 @@ inline std::string writeCanonicalSMILES(const MolGraph& g) {
         const int order = g.bondOrder(first, second);
         return order == 1 || (order == 4 && g.dbStereo(first, second) == 0);
     };
+    // '/' and '\' are single bonds in OpenSMILES, so the carrier at each end is the single,
+    // non-aromatic bond to the neighbour of lowest canonical label. Only an end with no such bond,
+    // such as an aromatic ring atom carrying an exocyclic double bond, takes its lowest aromatic
+    // ring bond instead, as RDKit writes it, so that the configuration is kept.
+    auto carrierAt = [&](int atom, int other) {
+        int single = -1, any = -1;
+        for (int neighbor : g.neighbors[atom]) {
+            if (neighbor == other || !isDirectionalCarrier(atom, neighbor)) continue;
+            if (any < 0 || canon[neighbor] < canon[any]) any = neighbor;
+            if (g.bondOrder(atom, neighbor) == 1 && !g.bondAromatic(atom, neighbor)
+                && (single < 0 || canon[neighbor] < canon[single])) single = neighbor;
+        }
+        return single >= 0 ? single : any;
+    };
     for (int atom = 0; atom < n; ++atom) {
         for (int other : g.neighbors[atom]) {
             const int order = g.bondOrder(atom, other);
             if (other <= atom || (order != 2 && order != 4) || g.dbStereo(atom, other) == 0) continue;
-            int firstLigand = -1, secondLigand = -1;
-            for (int neighbor : g.neighbors[atom])
-                if (neighbor != other && (firstLigand < 0 || canon[neighbor] < canon[firstLigand])) firstLigand = neighbor;
-            for (int neighbor : g.neighbors[other])
-                if (neighbor != atom && (secondLigand < 0 || canon[neighbor] < canon[secondLigand])) secondLigand = neighbor;
-            if (firstLigand < 0 || secondLigand < 0 ||
-                !isDirectionalCarrier(atom, firstLigand) || !isDirectionalCarrier(other, secondLigand))
+            const int firstLigand = carrierAt(atom, other), secondLigand = carrierAt(other, atom);
+            if (firstLigand < 0 || secondLigand < 0)
                 throw std::invalid_argument("Double-bond stereo requires a single or aromatic reference bond at each end");
             const int firstOrientation = atom < firstLigand ? 1 : -1;
             const int secondOrientation = other < secondLigand ? 1 : -1;
-            const int configuration = MolGraph::canonicalDoubleBondTag(g, atom, other, canon);
+            // The stored configuration is relative to the first other neighbour at each end.
+            int configuration = g.dbStereo(atom, other);
+            for (const auto& end : {std::make_pair(atom, firstLigand), std::make_pair(other, secondLigand)}) {
+                const int partner = end.first == atom ? other : atom;
+                for (int neighbor : g.neighbors[end.first]) {
+                    if (neighbor == partner) continue;
+                    if (neighbor != end.second) configuration = 3 - configuration;
+                    break;
+                }
+            }
             const int relation = (configuration == 1 ? 1 : -1)
                                  * firstOrientation * secondOrientation;
             constraints.push_back({directionBond(atom, firstLigand), directionBond(other, secondLigand), relation});

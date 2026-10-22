@@ -70,6 +70,28 @@ static void validSizes() {
     }
 }
 
+// fingerprintQuality rejects a size below 1, a position outside the size and, for packed
+// words, a size beyond the words given; repeated positions and padding bits are not counted.
+static void qualityArguments() {
+    const std::vector<std::pair<std::vector<int>, int>> invalid = {{{}, 0}, {{}, -1}, {{-1}, 8}, {{8}, 8}};
+    for (const auto& example : invalid) {
+        bool rejected = false;
+        try { smsd::batch::fingerprintQuality(example.first, example.second); }
+        catch (const std::invalid_argument&) { rejected = true; }
+        require(rejected, "fingerprint quality accepted an invalid position or size");
+    }
+    for (int size : {0, -1, 65}) {
+        bool rejected = false;
+        try { smsd::batch::fingerprintQuality(std::vector<uint64_t>(1, 0), size); }
+        catch (const std::invalid_argument&) { rejected = true; }
+        require(rejected, "fingerprint quality accepted a size beyond the words given");
+    }
+    require(smsd::batch::fingerprintQuality(std::vector<int>{7, 0, 7}, 8).setBits == 2,
+            "repeated positions were counted twice");
+    require(smsd::batch::fingerprintQuality(std::vector<uint64_t>{~uint64_t(0), ~uint64_t(0)}, 65).setBits == 65,
+            "bits beyond the size were counted");
+}
+
 static std::vector<int> bitPositions(const std::vector<uint64_t>& fingerprint) {
     std::vector<int> result;
     for (size_t word = 0; word < fingerprint.size(); ++word)
@@ -123,5 +145,6 @@ static void pathGoldens() {
 int main(int argc, char** argv) {
     return smsd_test::runGroups(argc, argv, {
         {"extent", finiteExtent}, {"torsions", aromaticTorsions}, {"sizes", validSizes},
+        {"quality-arguments", qualityArguments},
         {"goldens", fixedRadiusGoldens}, {"path-goldens", pathGoldens}});
 }

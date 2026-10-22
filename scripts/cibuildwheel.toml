@@ -10,7 +10,7 @@ build-verbosity = 1
 config-settings = { "cmake.define.SMSD_BUILD_METAL" = "OFF", "cmake.define.SMSD_BUILD_CUDA" = "OFF", "cmake.define.SMSD_BUILD_OPENMP" = "ON", "cmake.define.SMSD_WITH_RDKIT" = "OFF" }
 environment = { OMP_NUM_THREADS = "1", CMAKE_BUILD_PARALLEL_LEVEL = "2" }
 before-build = [
-  "python -m pip install cmake ninja",
+  "python -m pip install cmake==4.4.3 ninja==1.13.2",
   'python "{package}/scripts/check_native_wheel_build.py" --source "{package}"',
 ]
 test-requires = ["pytest>=7", "pytest-timeout>=2", "rdkit==2026.03.6"]

@@ -236,31 +236,10 @@ inline std::vector<ScreenHit> batchSimilarityScreenAuto(
         return hits;
     }
 #endif
-    // CPU fallback: the query label counts are built once, and each worker reuses one scratch
-    // table, so no target allocates. Scores land in index order and hits are collected after.
-    const int N = static_cast<int>(targets.size());
+    // CPU fallback: the screen that smsd::screenTargets runs, on up to numThreads threads.
+    const std::vector<double> scores = screening_detail::similarityScores(query, targets, chemistry, numThreads);
+    const int N = static_cast<int>(scores.size());
     hits.reserve(N / 4);
-    const screening_detail::QueryLabelCounts queryCounts(query, chemistry);
-    std::vector<double> scores(N, 0.0);
-
-#ifdef _OPENMP
-    // Each worker takes at least minimumTargets, so small libraries stay on the calling thread.
-    constexpr int minimumTargets = 256;
-    // A request beyond the OpenMP thread limit is capped there, as in batch.hpp.
-    const int requested = numThreads > 0 ? std::min(numThreads, omp_get_max_threads()) : omp_get_max_threads();
-    const int workers = std::max(1, std::min(requested, N / minimumTargets));
-    #pragma omp parallel num_threads(workers) if(workers > 1)
-    {
-        std::vector<int> scratch(screening_detail::QueryLabelCounts::denseLimit, 0);
-        #pragma omp for schedule(dynamic, 128)
-        for (int i = 0; i < N; ++i)
-            scores[i] = queryCounts.similarity(targets[i], scratch);
-    }
-#else
-    (void)numThreads;
-    std::vector<int> scratch(screening_detail::QueryLabelCounts::denseLimit, 0);
-    for (int i = 0; i < N; ++i) scores[i] = queryCounts.similarity(targets[i], scratch);
-#endif
     for (int i = 0; i < N; ++i)
         if (scores[i] >= threshold)
             hits.push_back({i, scores[i]});

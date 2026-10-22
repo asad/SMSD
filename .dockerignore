@@ -6,6 +6,10 @@
 licenses/*
 !licenses/cdk/
 !licenses/cdk/**
+!licenses/beam/
+!licenses/beam/**
+!licenses/vecmath/
+!licenses/vecmath/**
 !java/
 java/*
 !java/pom.xml

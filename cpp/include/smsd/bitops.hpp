@@ -15,9 +15,24 @@
 #include <limits>
 #include <vector>
 
-#if defined(_MSC_VER)
-#  include <intrin.h>
-#  pragma intrinsic(_BitScanForward64, __popcnt64)
+// The 64-bit popcount and bit-scan intrinsics of MSVC differ by target: x64 has __popcnt64 and
+// _BitScanForward64, ARM64 has _CountOneBits64 and _BitScanForward64, and 32-bit targets have
+// neither. Other targets of MSVC, and compilers without the GCC builtins, take the portable code
+// below; defining SMSD_PORTABLE_BITOPS before the first include forces it everywhere, and as
+// these functions are inline, it is defined in every translation unit of a program or in none.
+#if !defined(SMSD_PORTABLE_BITOPS) && defined(_MSC_VER) && !defined(__clang__)
+#  if defined(_M_X64) && !defined(_M_ARM64EC)
+#    include <intrin.h>
+#    pragma intrinsic(_BitScanForward64, __popcnt64)
+#    define SMSD_BITOPS_MSVC_X64 1
+#  elif defined(_M_ARM64)
+#    include <intrin.h>
+#    define SMSD_BITOPS_MSVC_ARM64 1
+#  endif
+#endif
+#if !defined(SMSD_PORTABLE_BITOPS) && !defined(SMSD_BITOPS_MSVC_X64) && !defined(SMSD_BITOPS_MSVC_ARM64) \
+    && (defined(__GNUC__) || defined(__clang__))
+#  define SMSD_BITOPS_BUILTINS 1
 #endif
 
 #if defined(__ARM_NEON)
@@ -30,12 +45,30 @@ namespace smsd {
 // Scalar primitives
 // =========================================================================
 
+/// Population count of a 64-bit word in portable C++, for targets without an intrinsic.
+inline int popcount64_portable(uint64_t x) noexcept {
+    x = x - ((x >> 1) & 0x5555555555555555ULL);
+    x = (x & 0x3333333333333333ULL) + ((x >> 2) & 0x3333333333333333ULL);
+    x = (x + (x >> 4)) & 0x0F0F0F0F0F0F0F0FULL;
+    return static_cast<int>((x * 0x0101010101010101ULL) >> 56);
+}
+
+/// Index of the least-significant set bit in portable C++; 64 if x == 0.
+inline int ctz64_portable(uint64_t x) noexcept {
+    // The bits below the lowest set bit, counted.
+    return x == 0 ? 64 : popcount64_portable((x & (~x + 1)) - 1);
+}
+
 /// Population count (number of set bits) in a 64-bit word.
 inline int popcount64(uint64_t x) noexcept {
-#if defined(_MSC_VER)
+#if defined(SMSD_BITOPS_MSVC_X64)
     return static_cast<int>(__popcnt64(x));
-#else
+#elif defined(SMSD_BITOPS_MSVC_ARM64)
+    return static_cast<int>(_CountOneBits64(x));
+#elif defined(SMSD_BITOPS_BUILTINS)
     return __builtin_popcountll(x);
+#else
+    return popcount64_portable(x);
 #endif
 }
 
@@ -43,12 +76,14 @@ inline int popcount64(uint64_t x) noexcept {
 /// (safe fallback -- __builtin_ctzll(0) is UB).
 inline int ctz64(uint64_t x) noexcept {
     if (x == 0) return 64;
-#if defined(_MSC_VER)
+#if defined(SMSD_BITOPS_MSVC_X64) || defined(SMSD_BITOPS_MSVC_ARM64)
     unsigned long idx;
     _BitScanForward64(&idx, x);
     return static_cast<int>(idx);
-#else
+#elif defined(SMSD_BITOPS_BUILTINS)
     return __builtin_ctzll(x);
+#else
+    return ctz64_portable(x);
 #endif
 }
 

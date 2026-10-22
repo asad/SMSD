@@ -1,20 +1,20 @@
 # SMSD Pro Python guide
 
-Reference for the `smsd` Python package, version 8.0.0. The
+Reference for the `smsd` Python package, version 8.0.1. The
 [Python examples](EXAMPLES.md) cover fingerprints, drawing, layout, stereo,
 files, R-groups and scaffolds.
 
 ## Installation
 
 ```bash
-python -m pip install "smsd==8.0.0"
+python -m pip install "smsd==8.0.1"
 ```
 
 Wheels are built for CPython 3.14; the [installation guide](HOWTO-INSTALL.md)
 lists the platforms. `smsd.__version__` gives the installed version. Core
 matching needs no other toolkit. RDKit is needed only for RDKit molecules,
 `to_rdkit`, `to_svg`, `depict_mcs` and `depict_substructure`
-(`python -m pip install "smsd[rdkit]==8.0.0"`); Open Babel only for
+(`python -m pip install "smsd[rdkit]==8.0.1"`); Open Babel only for
 `from_openbabel` and `to_openbabel`.
 
 ### Build from source
@@ -29,9 +29,11 @@ python -m pip install -e ".[dev]" \
 ```
 
 This matches the published CPU/OpenMP wheels; without the two settings, CMake
-builds a Metal or CUDA backend when it finds one. Setting `SMSD_DISABLE_GPU` to
-anything but an empty string or `0` disables the GPU at run time. Without
-OpenMP, batch calls run sequentially.
+builds a Metal or CUDA backend when it finds one. Python calls run on the CPU
+in every build; Metal screening is available to C++ in source builds through
+`gpu::batchSimilarityScreenAuto`. Setting `SMSD_DISABLE_GPU` to anything but an
+empty string or `0` disables the GPU at run time. Without OpenMP, batch calls
+run sequentially.
 
 ## Searches
 
@@ -416,7 +418,10 @@ Every name in `smsd.__all__` appears in this guide.
   `strip_atom_maps(smiles)` removes them from the text, keeping ring closures
   and aromatic bonds.
 - `to_smiles(mol)`: canonical SMILES, whose order may differ between
-  languages; `canonical_smiles` is a deprecated alias.
+  languages; `canonical_smiles` is a deprecated alias. `/` and `\` go on single
+  bonds wherever a configured double bond has one at an end; an end with only
+  aromatic ring bonds carries them on an aromatic bond, as RDKit writes it,
+  which strict OpenSMILES readers take as a single bond.
 - `to_smarts(mol, include_aromaticity=True, include_charge=True, include_ring_member=False, include_h_count=False, include_isotope=False)`:
   SMARTS for a molecule with the selected predicates.
 - `canonical_hash(mol)`: a hash of connectivity, bond orders, aromaticity,
@@ -477,6 +482,9 @@ aromaticity_model=AromaticityModel.DAYLIGHT_LIKE)`.
   `(atom, atom, EZLabel)` tuples (`NONE`, `E`, `Z`).
 - `compute_sssr(mol)`: the smallest set of smallest rings, as atom lists by
   ascending size.
+- `rings_truncated(mol)`: whether the ring search behind `compute_sssr` stopped
+  at its work bound, as for a very large ring system, so that the rings may be
+  fewer than the graph holds.
 - `perceive_aromaticity(mol, *, model=AromaticityModel.DAYLIGHT_LIKE)`:
   recompute ring membership and aromaticity.
 - `kekulize(mol)`: replace aromatic bonds with Kekulé bonds, or raise
@@ -515,9 +523,16 @@ Binary fingerprints are sorted set positions; count fingerprints are
   (Nilakantan et al., 1987) of a molecule, or counts for a graph.
 - `fingerprint_subset(fp1, fp2)`: whether every position of `fp1` is in `fp2`;
   both sorted.
-- `analyze_fp_quality(fp, fp_size=2048)`: `set_bits`, `fp_size`, `density`,
-  `expected_collision_rate` and `is_saturated` (density over 0.75); a position
-  beyond `fp_size` raises `ValueError`.
+- `analyze_fp_quality(fp, fp_size=2048)`: `set_bits` (distinct positions),
+  `fp_size`, `density` (set bits over `fp_size`), `expected_collision_rate`
+  and `is_saturated` (density over 0.75); a position beyond `fp_size` raises
+  `ValueError`. With s of N bits set, the fingerprint holds about
+  n = ln(1 − s/N) / ln(1 − 1/N) uniformly hashed features, and the collision
+  rate is the share 1 − s/n of them that fell on a bit already set: 0 for an
+  empty fingerprint and 1 for a full one. Path fingerprints of a power-of-two
+  size collide more often than uniform hashing predicts, so the rate
+  understates their collisions. Java `analyzeFpQuality` uses the same
+  definitions.
 
 ### Configurable fingerprints
 
@@ -615,9 +630,12 @@ or position lists and return 0.0 when both are empty.
 - `similarity(mol1, mol2)`: an upper bound in [0, 1] on MCS similarity, for
   screening; not a fingerprint metric.
 - `similarity_upper_bound(g1, g2, chemistry=None)`: the same bound under
-  `chemistry`; `screen_targets(query, targets, threshold, chemistry=None)`:
-  indices of targets whose bound reaches `threshold`. For both, `chem` is a
-  deprecated keyword.
+  `chemistry`; `screen_targets(query, targets, threshold, chemistry=None, *,
+  num_threads=0)`: indices of targets whose bound reaches `threshold`, in
+  target order; `0` uses the OpenMP default (`OMP_NUM_THREADS`), as in
+  `match_many`. For both, `chem` is a deprecated keyword. To screen the same
+  targets repeatedly, pass a prepared `TargetCorpus` as `targets`, so that
+  they are not converted again on each call.
 - `batch_similarity(query, targets, fp_size=2048, radius=2)`:
   `(index, Tanimoto)` pairs on ECFP, most similar first.
 - `gpu_is_available()`, `gpu_device_info()`: whether a GPU backend is
@@ -627,8 +645,9 @@ or position lists and return 0.0 when both are empty.
 ### MOL and SDF
 
 - `read_mol_block(mol_block)`, `read_mol_file(filename)`: V2000 or V3000 text
-  or file; an unopenable file raises `ValueError`. `read_molfile` is a
-  deprecated alias.
+  or file; an unopenable file or a block that cannot be read, such as a V3000
+  block with more than 10,000 atoms, raises `ValueError`; V2000 numeric fields
+  are read leniently. `read_molfile` is a deprecated alias.
 - `read_sdf(filename)`: every record at once; malformed records become empty
   graphs.
 - `write_mol_block(mol)` (V2000, or V3000 above 999 atoms or bonds),

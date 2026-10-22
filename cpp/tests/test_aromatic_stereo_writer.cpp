@@ -45,6 +45,23 @@ static void aromaticCarriers() {
     require(smsd::toSMILES(first) == smsd::toSMILES(equivalent), "Equivalent directional assignments must have one canonical output");
 }
 
+static void singleCarriersAtAromaticFocus() {
+    // '/' and '\' are single bonds in OpenSMILES, so the configuration of an aromatic-focus double
+    // bond is written on the single bonds to its substituents rather than on the ring bonds. A ring
+    // double bond can be trans only in a ring of eight or more atoms, as in [10]annulene.
+    const std::pair<const char*, const char*> cases[] = {
+        {"F/C1=C(\\Cl)C=CC=C1", "[c]1(=[c](cccc1)/F)/Cl"},
+        {"F/C1=C(\\Cl)C=CC=CC=CC=C1", "[c]1(=[c](cccccccc1)/F)/Cl"},
+        {"F/C1=C(/Cl)C=CC=CC=CC=C1", "[c]1(=[c](cccccccc1)\\F)/Cl"}};
+    for (const auto& item : cases) {
+        const auto graph = smsd::parseSMILES(item.first);
+        const auto text = smsd::toSMILES(graph);
+        require(text == item.second, std::string("Directional bonds must be on single bonds: ") + text);
+        require(smsd::parseSMILES(text).getCanonicalHash() == graph.getCanonicalHash(),
+                "Single-carrier aromatic-focus stereo must round trip");
+    }
+}
+
 static void ordinaryConjugation() {
     for (const char* input : {"F/C=C/F", "F/C=C\\F", "F/C=C/C=C/F", "F/C=C\\C=C/F",
                               "F/C=C/C(=C/F)Cl", "F/C=C/C(=C\\F)Cl"}) {
@@ -291,6 +308,7 @@ int main() {
     try {
         aromaticCarriers();
         ordinaryConjugation();
+        singleCarriersAtAromaticFocus();
         inferredRingStereo();
         aromaticFocus();
         aromaticMolStereo();

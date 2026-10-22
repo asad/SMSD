@@ -75,6 +75,11 @@ inline int MolGraph::aromaticPiContribution(const std::vector<int>& cycle, int p
                 if (bondOrder(atom, neighbor) == 2 && !bondInRing(atom, neighbor))
                     return atomicNum[neighbor] == 6 ? 1 : 0;
             }
+            // A carbanion with three sigma bonds gives its lone pair, two electrons, as it does with
+            // Kekule bonds below; an aryl anion such as phenide, with two, keeps a ring pi bond.
+            if (!formalCharge.empty() && formalCharge[atom] < 0
+                && int64_t(neighbors[atom].size()) + (hydrogenCount.empty() ? 0 : hydrogenCount[atom]) >= 3)
+                return 2;
         }
         return isAromaticDonorElement(atomicNum[atom]) && aromaticKekuleDemand(atom) == 0 ? 2 : 1;
     }
@@ -94,7 +99,8 @@ inline int MolGraph::aromaticPiContribution(const std::vector<int>& cycle, int p
     const int q = formalCharge.empty() ? 0 : formalCharge[atom];
 
     if (z == 6) {
-        if (q < 0 && !hasExocyclicMultipleBond) return 2;
+        if (q < 0 && !hasExocyclicMultipleBond
+            && int64_t(neighbors[atom].size()) + (hydrogenCount.empty() ? 0 : hydrogenCount[atom]) >= 3) return 2;
         if (q == 0 && hasExocyclicMultipleBondToHetero) return 0;
         if (q == 0)
             for (int neighbor : neighbors[atom]) {
@@ -189,9 +195,18 @@ inline void MolGraph::enumerateRingCyclesDfs(
 }
 
 inline std::vector<std::vector<int>> MolGraph::collectAromaticCandidateCycles() const {
+    std::vector<uint8_t> truncated;
+    return collectAromaticCandidateCyclesReportingTruncation(truncated);
+}
+
+inline std::vector<std::vector<int>> MolGraph::collectAromaticCandidateCyclesReportingTruncation(
+    std::vector<uint8_t>& truncated) const {
     std::vector<std::vector<int>> cycles;
     std::set<std::vector<int64_t>> seenCycles;
     uint64_t steps = 0;
+    truncated.assign(static_cast<size_t>(n), uint8_t(0));
+    bool stopped = false;
+    std::vector<int> fused;  // the atoms of ring systems of more than one ring
 
     auto addCycle = [&](const std::vector<int>& cycle) {
         if (!isSimpleCycle(cycle)) return;
@@ -239,6 +254,8 @@ inline std::vector<std::vector<int>> MolGraph::collectAromaticCandidateCycles() 
         edgeCount /= 2;
         const int cycleRank = edgeCount - static_cast<int>(component.size()) + 1;
         if (cycleRank <= 1) continue;
+        fused.insert(fused.end(), component.begin(), component.end());
+        if (stopped) continue;
 
         std::fill(inComponent.begin(), inComponent.end(), uint8_t(0));
         for (int atom : component) inComponent[atom] = 1;
@@ -257,16 +274,20 @@ inline std::vector<std::vector<int>> MolGraph::collectAromaticCandidateCycles() 
                 path.push_back(nb);
                 enumerateRingCyclesDfs(
                     root, nb, ringAdj, inComponent, inPath, path,
-                    seenCycles, cycles, 4096, steps);
+                    seenCycles, cycles, AROMATIC_CANDIDATE_CYCLE_LIMIT, steps);
                 path.pop_back();
                 inPath[nb] = 0;
-                if (cycles.size() >= 4096 || steps >= AROMATIC_CYCLE_STEP_LIMIT) break;
+                if (cycles.size() >= AROMATIC_CANDIDATE_CYCLE_LIMIT || steps >= AROMATIC_CYCLE_STEP_LIMIT) break;
             }
             inPath[root] = 0;
-            if (cycles.size() >= 4096 || steps >= AROMATIC_CYCLE_STEP_LIMIT) break;
+            if (cycles.size() >= AROMATIC_CANDIDATE_CYCLE_LIMIT || steps >= AROMATIC_CYCLE_STEP_LIMIT) break;
         }
-        if (cycles.size() >= 4096 || steps >= AROMATIC_CYCLE_STEP_LIMIT) break;
+        stopped = cycles.size() >= AROMATIC_CANDIDATE_CYCLE_LIMIT || steps >= AROMATIC_CYCLE_STEP_LIMIT;
     }
+    // The cycle of a single ring is among the relevant cycles; once the walk has stopped, which
+    // cycles it read of the other ring systems depends on the atom order.
+    if (stopped)
+        for (int atom : fused) truncated[atom] = 1;
 
     return cycles;
 }
@@ -346,6 +367,45 @@ inline void MolGraph::normalizeRingAndAromaticity(
         }
     }
 
+    // Supplied aromatic systems, aromatic atoms joined by aromatic bonds, are perceived again rather
+    // than kept, as RDKit and CDK read them: they first take a Kekule structure, so that a ring
+    // written aromatic that the model does not find aromatic, such as cyclobutadiene or
+    // p-benzoquinone, is not. A system without a Kekule structure keeps its supplied flags, as do
+    // atoms without an aromatic bond.
+    std::vector<int> system(n, 0);  // 1 + the index of the supplied system of each atom, 0 for none
+    int systems = 0;
+    std::vector<std::pair<int, int>> singleBonds, doubleBonds;
+    {
+        std::vector<uint8_t> visited(n, uint8_t(0));
+        for (int start = 0; start < n; ++start) {
+            if (!aromatic[start] || visited[start]) continue;
+            std::vector<int> component;
+            std::deque<int> queue{start};
+            visited[start] = 1;
+            while (!queue.empty()) {
+                const int atom = queue.front();
+                queue.pop_front();
+                component.push_back(atom);
+                for (int nb : neighbors[atom]) {
+                    if (visited[nb] || !aromatic[nb] || !(bondAromatic(atom, nb) || bondOrder(atom, nb) == 4)) continue;
+                    visited[nb] = 1;
+                    queue.push_back(nb);
+                }
+            }
+            if (component.size() < 2) continue;
+            std::vector<std::pair<int, int>> singles, doubles;
+            if (!findKekuleAssignment(component, singles, doubles)) continue;
+            singleBonds.insert(singleBonds.end(), singles.begin(), singles.end());
+            doubleBonds.insert(doubleBonds.end(), doubles.begin(), doubles.end());
+            ++systems;
+            for (int atom : component) system[atom] = systems;
+        }
+        for (const auto& edge : singleBonds) markKekuleEdge(edge.first, edge.second, 1);
+        for (const auto& edge : doubleBonds) markKekuleEdge(edge.first, edge.second, 2);
+        for (int atom = 0; atom < n; ++atom)
+            if (system[atom]) aromatic[atom] = 0;
+    }
+
     std::vector<uint8_t> perceivedAromatic = aromatic;
     std::vector<std::pair<int, int>> aromaticEdges;
     for (int i = 0; i < n; ++i) {
@@ -357,7 +417,22 @@ inline void MolGraph::normalizeRingAndAromaticity(
         }
     }
 
-    auto candidateCycles = collectAromaticCandidateCycles();
+    std::vector<uint8_t> truncated;
+    auto candidateCycles = collectAromaticCandidateCyclesReportingTruncation(truncated);
+    // The candidate walk stops at a bound on cycles or steps, and which cycles of a fused ring
+    // system it has read by then depends on the atom order. A supplied system on such a ring
+    // system keeps its supplied flags, so that a large fused system such as a bowl-shaped
+    // polyarene does not change with the order its atoms are written in; every other supplied
+    // system is perceived again.
+    std::vector<uint8_t> keep(static_cast<size_t>(systems) + 1, uint8_t(0));
+    for (int atom = 0; atom < n; ++atom)
+        if (system[atom] && truncated[atom]) keep[system[atom]] = 1;
+    for (int atom = 0; atom < n; ++atom)
+        if (keep[system[atom]]) perceivedAromatic[atom] = 1;
+    for (const auto* edges : {&singleBonds, &doubleBonds})
+        for (const auto& edge : *edges)
+            if (keep[system[edge.first]])
+                aromaticEdges.emplace_back(std::min(edge.first, edge.second), std::max(edge.first, edge.second));
     for (const auto& cycle : candidateCycles) {
         if (!cycleLooksAromatic(cycle)) continue;
         for (int atom : cycle) perceivedAromatic[atom] = 1;
@@ -529,23 +604,37 @@ inline bool MolGraph::findKekuleAssignment(const std::vector<int>& component,
         }
 
         std::vector<int> matchRight(rightNodes.size(), -1);
-        std::function<bool(int, std::vector<uint8_t>&)> augment =
-            [&](int li, std::vector<uint8_t>& seen) {
-                for (int ri : matchAdj[li]) {
-                    if (seen[ri]) continue;
-                    seen[ri] = 1;
-                    if (matchRight[ri] == -1 || augment(matchRight[ri], seen)) {
-                        matchRight[ri] = li;
-                        return true;
-                    }
+        // Augmenting paths are followed depth first on an explicit stack, in the order of matchAdj,
+        // so an alternating path as long as a large aromatic ring needs no deep call stack.
+        std::vector<uint8_t> seen(rightNodes.size(), uint8_t(0));
+        std::vector<std::pair<int, size_t>> path;  // left nodes from the start, with the next choice of each
+        std::vector<int> via;                      // via[k], the right node path[k] takes towards path[k + 1]
+        auto augment = [&](int start) {
+            std::fill(seen.begin(), seen.end(), uint8_t(0));
+            path.assign(1, {start, size_t(0)});
+            via.clear();
+            while (!path.empty()) {
+                const int li = path.back().first;
+                if (path.back().second == matchAdj[li].size()) {
+                    path.pop_back();
+                    if (!via.empty()) via.pop_back();
+                    continue;
                 }
-                return false;
-            };
+                const int ri = matchAdj[li][path.back().second++];
+                if (seen[ri]) continue;
+                seen[ri] = 1;
+                via.push_back(ri);
+                if (matchRight[ri] == -1) {
+                    for (size_t k = 0; k < path.size(); ++k) matchRight[via[k]] = path[k].first;
+                    return true;
+                }
+                path.push_back({matchRight[ri], size_t(0)});
+            }
+            return false;
+        };
 
-        for (int li = 0; li < static_cast<int>(leftNodes.size()); ++li) {
-            std::vector<uint8_t> seen(rightNodes.size(), uint8_t(0));
-            if (!augment(li, seen)) return false;
-        }
+        for (int li = 0; li < static_cast<int>(leftNodes.size()); ++li)
+            if (!augment(li)) return false;
 
         singleBonds.insert(singleBonds.end(), aromaticEdges.begin(), aromaticEdges.end());
         doubleBonds.insert(doubleBonds.end(), reservedDoubleBonds.begin(), reservedDoubleBonds.end());

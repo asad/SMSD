@@ -166,7 +166,10 @@ static void validatedSelections() {
     const std::pair<const char*, const char*> pairs[] = {
         {"C[C@H](N)O", "C[C@@H](N)O"}, {"N[C@@H](C)C(=O)O", "N[C@H](C)C(=O)O"}, {"F/C=C/C", "F/C=C\\C"},
         {"F/C=C/C=C/C", "F/C=C\\C=C/C"}, {"C1CC1C", "CCCC"}, {"C1CCC1", "CC1CC1"},
-        {"C[C@@H]1CC1N", "C[C@H]1CC1N"}, {"OC1CC1C", "OCC1CC1"}};
+        {"C[C@@H]1CC1N", "C[C@H]1CC1N"}, {"OC1CC1C", "OCC1CC1"},
+        // The third atom of a three-membered ring is a ligand only of the end whose bond to it is selected.
+        {"F/C1=C(\\Cl)C1", "C/C=C(/Cl)C"}, {"F/C1=C(\\Cl)C1", "C/C=C(\\Cl)C"},
+        {"F/C1=C/C1", "C/C=C/C"}};
     for (const auto& pair : pairs) {
         const auto query = smsd::parseSMILES(pair.first), target = smsd::parseSMILES(pair.second);
         for (auto connectivity : {smsd::MCSConnectivity::Connected, smsd::MCSConnectivity::Fragments})
@@ -450,6 +453,121 @@ static void seedFromTheOtherMoleculeProvesTheChainPair() {
         require(result.optimal && !result.matches.empty(), "The chain pair must be proved within the node limit");
         require(result.matches.front().bondMapping.size() == 26 && result.matches.front().atomMapping.size() == 30,
                 "The chain pair has 26 common bonds on 30 atoms");
+        require(result.nodesVisited == 27734, "The chain pair must map the pairs Java maps");
+    }
+}
+
+// An atom or bond on a relevant ring is on a ring whatever its flags say, so a molecule whose ring
+// flags are clear still keeps its rings whole under complete rings, in both searches and in
+// validateMapping(), as in Java.
+static void ringsWithoutFlagsStayWhole() {
+    auto unflagged = smsd::parseSMILES("CC1CCCCC1");
+    unflagged.clearRingFlagsFromTopology();
+    const auto chain = smsd::parseSMILES("CCCCCCC");
+    for (auto objective : {smsd::MCSObjective::MCES, smsd::MCSObjective::MCIS})
+        for (auto connectivity : {smsd::MCSConnectivity::Connected, smsd::MCSConnectivity::Fragments}) {
+            smsd::MCSOptions options;
+            options.objective = objective;
+            options.connectivity = connectivity;
+            options.timeoutMs = 60000;
+            options.chemistry.completeRingsOnly = true;
+            const auto result = smsd::MCS::find(unflagged).withOptions(options).match(chain);
+            require(result.optimal && (result.matches.empty() || result.matches.front().bondMapping.empty()),
+                    "A ring without flags must stay whole under complete rings");
+            const std::vector<std::string> incomplete{"Selected ring is incomplete"};
+            require(smsd::MCS::validateMapping(unflagged, chain, std::map<int, int>{{0, 0}, {1, 1}}, options) == incomplete,
+                    "validateMapping must read a ring without flags as a ring");
+        }
+}
+
+// With the search the other way round raced against the last fragment search after 64 nodes, for
+// 16 nodes and up to 64 while it beats it, fragment searches prove the optimum they prove without
+// a race, in the nodes that Java counts for them.
+static void racesAfterAFewNodesKeepTheOptimum() {
+    struct Pair { const char* query; const char* target; uint64_t strictNodes, anyNodes; };
+    const Pair pairs[] = {
+        {"COc1ccc(C(c2n(CC3OCCC3)nnn2)N2CCN(c3ccccc3)CC2)cc1", "COC(=O)C1=CC23C4N(CCC44c5ccccc5NC14CC2)CCC3", 6830, 7115},
+        {"C=CCN1CCC23CC(=O)CCC2C1Cc1cccc(OC(C)=O)c13", "CN1CCN(C(=O)C2=CC(c3ccc(C(F)(F)F)cc3)CC(OCCCCO)O2)CC1", 47001, 22312},
+        {"Nc1ncnc2n(C3OC(CO)C(F)C3O)cnc12", "Cc1ccccc1Cn1c2c(scc2)c(=O)n(CCCC(NCc2occc2)=O)c1=O", 1179, 39195},
+        {"COc1cc2c(cc1)C(=O)CC(c1ccc(C)cc1)O2", "NS(c1cc(NC(COC(C=Cc2nc3ccccc3s2)=O)=O)ccc1)(=O)=O", 5185, 15555}};
+    smsd::common_bond_detail::ScoutLimits raced, never;
+    raced.race = 64;
+    raced.raceTrial = 16;
+    raced.raceLonger = 64;
+    never.race = INT64_MAX;
+    for (const auto& pair : pairs) {
+        const auto query = smsd::parseSMILES(pair.query), target = smsd::parseSMILES(pair.target);
+        for (auto order : {smsd::ChemOptions::BondOrderMode::STRICT, smsd::ChemOptions::BondOrderMode::ANY}) {
+            smsd::ChemOptions chemistry;
+            chemistry.matchBondOrder = order;
+            auto search = [&](const smsd::common_bond_detail::ScoutLimits& limits) {
+                return smsd::common_bond_detail::searchCommonBonds(query, target,
+                    [&](int queryAtom, int targetAtom) {
+                        return smsd::search_detail::atomCompatible(query, queryAtom, target, targetAtom, chemistry);
+                    },
+                    [&](int queryFirst, int querySecond, int targetFirst, int targetSecond) {
+                        return smsd::search_detail::bondCompatible(query, queryFirst, querySecond, target, targetFirst,
+                                                                   targetSecond, chemistry);
+                    },
+                    [](const smsd::MolGraph& graph, int first, int second) {
+                        return smsd::search_detail::bondCompatibilityKey(graph, first, second);
+                    },
+                    {}, false, [] { return false; }, limits);
+            };
+            const auto race = search(raced), plain = search(never);
+            auto atoms = [](const std::vector<int>& mapping) {
+                return std::count_if(mapping.begin(), mapping.end(), [](int image) { return image >= 0; });
+            };
+            require(race.finished && plain.finished && race.bonds.size() == plain.bonds.size()
+                        && atoms(race.mapping) == atoms(plain.mapping),
+                    "A race after a few nodes changed the proved optimum");
+            require(race.nodes == (order == smsd::ChemOptions::BondOrderMode::STRICT ? pair.strictNodes : pair.anyNodes),
+                    "A race after a few nodes must map the pairs Java maps");
+        }
+    }
+}
+
+// The last fragment search of this pair runs from the smaller molecule and needs more than three
+// million nodes to prove its optimum. Raced against it after its first 2^19 nodes, the search the
+// other way round raises its best mapping, and together they prove 29 common bonds on 31 atoms in
+// 677,291 nodes, whichever molecule is given as the query; Java counts the same nodes.
+static void racingTheOtherOrientationProvesTheFusedPair() {
+    const auto query = smsd::parseSMILES("CCC1(O)N2CCC3c4c(cccc4)NC3C(c3c(OC)cc4c(c3)C35CCN6CC=CC(CC)(C(OC(CC7CCCN7)=O)"
+                                         "C(O)(C(OC)=O)C3N4C)C56)C(C(OC)=O)C(CC1)C2");
+    const auto target = smsd::parseSMILES("Oc1nc(NCc2cc3[nH]ccc3cc2)nc(Nc2cc(Oc3ccccc3)ccc2)n1");
+    smsd::MCSOptions options;
+    options.objective = smsd::MCSObjective::MCES;
+    options.connectivity = smsd::MCSConnectivity::Fragments;
+    options.chemistry.matchBondOrder = smsd::ChemOptions::BondOrderMode::ANY;
+    options.chemistry.aromaticityMode = smsd::ChemOptions::AromaticityMode::FLEXIBLE;
+    options.timeoutMs = 600000;
+    options.nodeLimit = 1000000;
+    for (int turn = 0; turn < 2; ++turn) {
+        const auto result = turn == 0 ? smsd::MCS::find(query).withOptions(options).match(target)
+                                      : smsd::MCS::find(target).withOptions(options).match(query);
+        require(result.optimal && !result.matches.empty(), "The fused pair must be proved within the node limit");
+        require(result.matches.front().bondMapping.size() == 29 && result.matches.front().atomMapping.size() == 31,
+                "The fused pair has 29 common bonds on 31 atoms");
+        require(result.nodesVisited == 677291, "The race must map the pairs Java maps");
+    }
+    // Node limits that stop the pair before the race, which starts after 532,480 nodes, within the
+    // first 16,384 nodes of the search the other way round, within its longer run, and one node
+    // before it proves the optimum: both searches together map exactly the limit, and the best
+    // mapping held there is the one Java holds.
+    struct Capped { int64_t limit; size_t bonds, atoms; };
+    const Capped capped[] = {{530000, 27, 31}, {545000, 28, 30}, {600000, 29, 30}, {677290, 29, 31}};
+    for (const auto& cap : capped) {
+        options.nodeLimit = cap.limit;
+        for (int turn = 0; turn < 2; ++turn) {
+            const auto result = turn == 0 ? smsd::MCS::find(query).withOptions(options).match(target)
+                                          : smsd::MCS::find(target).withOptions(options).match(query);
+            require(result.status == smsd::SearchStatus::LimitReached && !result.matches.empty()
+                        && result.nodesVisited == static_cast<uint64_t>(cap.limit),
+                    "A race stopped by the node limit must map exactly the limit");
+            require(result.matches.front().bondMapping.size() == cap.bonds
+                        && result.matches.front().atomMapping.size() == cap.atoms,
+                    "A race stopped by the node limit must hold the mapping Java holds");
+        }
     }
 }
 
@@ -484,12 +602,15 @@ int main() {
         kindsAddNoPairTable();
         labelledSelectedEdges();
         validatedSelections();
+        ringsWithoutFlagsStayWhole();
         fixedMappingsAndFragments();
         stopsAndResultLimits();
         symmetricMolecularPredicates();
         connectedCageAndBicyclicMappings();
         scoutingKeepsTheOptimum();
         seedFromTheOtherMoleculeProvesTheChainPair();
+        racingTheOtherOrientationProvesTheFusedPair();
+        racesAfterAFewNodesKeepTheOptimum();
         std::cout << "PASS labelled selected-edge oracles, fixed mappings, fragment limits and stops\n";
     } catch (const std::exception& error) {
         std::cerr << "FAIL " << error.what() << '\n';

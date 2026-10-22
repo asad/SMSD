@@ -86,8 +86,9 @@ public:
 
 /** Chirality is resolved after a complete mapping, as in QueryView::atomMatches(). */
 inline bool patternAtomMatches(const SmartsQuery& pattern, int atom, const MolGraph& target, int targetAtom) {
-    return smarts_detail::evalAtomExprWithStereo(pattern.atoms[atom].expr, target, targetAtom, [](int tag) {
-        return tag == 0 ? smarts_detail::StereoTruth::TRUE_VALUE : smarts_detail::StereoTruth::UNKNOWN;
+    return smarts_detail::evalAtomExprWithStereo(pattern.atoms[atom].expr, target, targetAtom,
+                                                 [](const smarts_detail::AtomExpr&) {
+        return smarts_detail::StereoTruth::UNKNOWN;
     }) != smarts_detail::StereoTruth::FALSE_VALUE;
 }
 
@@ -104,6 +105,7 @@ inline bool sameAtomExpr(const smarts_detail::AtomExpr& first, const smarts_deta
             && (first.intVal != second.intVal || first.hasValue != second.hasValue
                 || first.rangeQuery != second.rangeQuery || first.rangeMin != second.rangeMin
                 || first.rangeMax != second.rangeMax || first.aromaticity != second.aromaticity
+                || first.orUnspecified != second.orUnspecified
                 || first.recursiveSmarts != second.recursiveSmarts)) return false;
     }
     for (size_t child = 0; child < first.children.size(); ++child)
@@ -122,7 +124,8 @@ inline uint64_t atomExprHash(const smarts_detail::AtomExpr& expression) {
         hash = mix(hash, static_cast<uint64_t>(expression.primType));
         if (expression.primType != smarts_detail::AtomPrimType::ATOM_CLASS) {
             hash = mix(hash, static_cast<uint32_t>(expression.intVal));
-            hash = mix(hash, (expression.hasValue ? 1u : 0u) | (expression.rangeQuery ? 2u : 0u));
+            hash = mix(hash, (expression.hasValue ? 1u : 0u) | (expression.rangeQuery ? 2u : 0u)
+                                 | (expression.orUnspecified ? 4u : 0u));
             hash = mix(hash, static_cast<uint32_t>(expression.rangeMin));
             hash = mix(hash, static_cast<uint32_t>(expression.rangeMax));
             hash = mix(hash, static_cast<uint32_t>(expression.aromaticity + 1));

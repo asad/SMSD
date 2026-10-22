@@ -5,6 +5,7 @@
 """Shared chemistry-rule fixture, also read by the C++ and Java tests."""
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -35,6 +36,20 @@ def test_similarity_metrics_share_their_empty_fingerprint_rules(case):
         assert function(*counts) == pytest.approx(case[metric], abs=1e-12)
     for metric in ("dice", "cosine", "soergel"):
         assert getattr(smsd, metric)(first, second, size) == pytest.approx(case[metric], abs=1e-12)
+
+
+@pytest.mark.parametrize("case", cases("fingerprint_quality"))
+def test_fingerprint_quality_shares_its_definitions(case):
+    tolerance = RULES["fingerprint_quality"]["tolerance"]
+    size, positions = case["fp_size"], list(range(case["set_bits"]))
+    # Repeated and unordered positions give the same quality.
+    for bits in (positions, positions[::-1] + positions):
+        quality = smsd.analyze_fp_quality(bits, size)
+        assert list(quality) == ["set_bits", "fp_size", "density", "expected_collision_rate", "is_saturated"]
+        assert quality["set_bits"] == case["set_bits"] and quality["fp_size"] == size
+        assert quality["density"] == pytest.approx(case["density"], abs=tolerance)
+        assert quality["expected_collision_rate"] == pytest.approx(case["expected_collision_rate"], abs=tolerance)
+        assert quality["is_saturated"] is case["is_saturated"]
 
 
 @pytest.mark.parametrize("case", cases("circular_similarity"))
@@ -142,6 +157,23 @@ def test_auxiliary_descriptors_follow_sequence_rules_4_and_5(case):
     labels = smsd.assign_cip(case["smiles"]).rs_labels
     assert {str(atom): label.name for atom, label in enumerate(labels)
             if label != smsd.RSLabel.NONE} == case["labels"]
+
+
+@pytest.mark.parametrize("case", cases("aromatic_input"))
+def test_aromaticity_is_perceived_from_the_structure(case):
+    graph = smsd.parse_smiles(case["smiles"])
+    assert sum(bool(flag) for flag in graph.aromatic) == case["aromatic_atoms"]
+
+
+@pytest.mark.parametrize("case", cases("cip_hierarchical_ranking"))
+def test_first_pass_ranks_by_rule_1a_and_leaves_the_rest_to_the_hierarchical_rules(case):
+    descriptors = smsd.assign_cip(case["smiles"])
+    assert {str(atom): label.name for atom, label in enumerate(descriptors.rs_labels)
+            if label != smsd.RSLabel.NONE} == case["labels"]
+    assert {f"{min(first, second)}-{max(first, second)}": label.name
+            for first, second, label in descriptors.ez_bonds} == case["bonds"]
+
+
 def fingerprint_options_of(spec):
     """The options of a fixture case: the classic configuration of its family, then its keyword arguments."""
     spec = dict(spec)
@@ -183,6 +215,29 @@ def test_fingerprint_options_bits_are_shared_across_languages(case):
 def test_smarts_follows_daylight_semantics(case):
     target = smsd.parse_smiles(case["smiles"])
     assert len(smsd.Substructure.smarts(case["smarts"]).match_all(target).matches) == case["embeddings"]
+
+
+@pytest.mark.parametrize("case", [pytest.param(case, id=case["name"]) for case in RULES["smarts_daylight"]["rejected"]])
+def test_smarts_rejects_conflicting_ring_closure_bonds(case):
+    with pytest.raises(ValueError):
+        smsd.Substructure.smarts(case["smarts"])
+
+
+CHIRAL_SMARTS = re.compile(r"\[[^\]]*@")
+
+
+@pytest.mark.parametrize("case", [pytest.param(case, id=case["name"]) for case in RULES["smarts_daylight"]["cases"]
+                                  if CHIRAL_SMARTS.search(case["smarts"])])
+def test_smarts_chirality_agrees_with_rdkit(case):
+    """@ and @@ as RDKit matches them with chirality; @? and @@? as @ and @@ on a target with
+    configured atoms, and as the pattern without chirality on a target without any."""
+    chem = pytest.importorskip("rdkit.Chem")
+    target = chem.MolFromSmiles(case["smiles"])
+    query = chem.MolFromSmarts(case["smarts"].replace("?", ""))
+    configured = any(atom.GetChiralTag() != chem.ChiralType.CHI_UNSPECIFIED for atom in target.GetAtoms())
+    chirality = "?" not in case["smarts"] or configured
+    expected = len(target.GetSubstructMatches(query, useChirality=chirality, uniquify=False))
+    assert expected == case["embeddings"]
 
 
 def profile_fields(options):
@@ -298,6 +353,12 @@ def test_consensus_follows_the_native_reduction_order(case):
 
 
 @pytest.mark.parametrize("case", [pytest.param(case, id=case["name"])
+                                  for case in RULES["strict_ring_fusion"]["ring_counts"]])
+def test_ring_search_reports_its_bound(case):
+    assert smsd.rings_truncated(case["smiles"]) is case["truncated"]
+
+
+@pytest.mark.parametrize("case", [pytest.param(case, id=case["name"])
                                   for case in RULES["strict_ring_fusion"]["common_bonds"]])
 def test_strict_ring_fusion_does_not_depend_on_atom_order(case):
     options = smsd.MCS.Options()
@@ -307,3 +368,15 @@ def test_strict_ring_fusion_does_not_depend_on_atom_order(case):
         result = smsd.MCS.find(query).with_options(options).match(target)
         assert result.optimal
         assert result.best.bond_count == case["bonds"] and result.best.atom_count == case["atoms"]
+
+
+@pytest.mark.parametrize("case", cases("double_bond_ligands"))
+def test_double_bond_ligands_are_joined_to_their_end(case):
+    options = smsd.MCS.Options()
+    options.objective = smsd.MCS.Objective.MCES
+    options.connectivity = getattr(smsd.MCS.Connectivity, case["connectivity"].upper())
+    options.chemistry.use_bond_stereo = True
+    result = smsd.MCS.find(case["query"]).with_options(options).match(case["target"])
+    assert result.optimal
+    assert result.best.bond_count == case["bonds"] and result.best.atom_count == case["atoms"]
+    assert smsd.MCS.validate_mapping(case["query"], case["target"], result.best, options) == []

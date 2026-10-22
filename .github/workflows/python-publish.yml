@@ -23,8 +23,8 @@ on:
         default: false
         type: boolean
 
-permissions:
-  contents: read
+# Each job states the token permissions it needs.
+permissions: {}
 
 jobs:
   source:
@@ -32,15 +32,17 @@ jobs:
     name: Prepare one source distribution
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    permissions:
+      contents: read
     outputs:
       matrix: ${{ steps.matrix.outputs.value }}
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.release_tag }}
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-python@v7.0.0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.14'
       - name: Validate source ref and select explicit platforms
@@ -76,11 +78,11 @@ jobs:
         env:
           RELEASE_REF: ${{ inputs.release_tag }}
         run: |
-          python -m pip install build twine pytest pytest-timeout
+          python -m pip install build==1.6.1 twine==7.0.0 pytest==9.1.1 pytest-timeout==2.4.0
           python -m pytest scripts/tests -q
           python scripts/build_python_wheels.py prepare --output-dir dist --release-ref "$RELEASE_REF"
           python -m twine check --strict dist/*.tar.gz
-      - uses: actions/upload-artifact@v7.0.1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: python-release-source
           path: dist/*
@@ -92,18 +94,20 @@ jobs:
     needs: source
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.source.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.release_tag }}
           persist-credentials: false
-      - uses: actions/setup-python@v7.0.0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.14'
-      - uses: actions/download-artifact@v8.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: python-release-source
           path: release-source
@@ -117,7 +121,7 @@ jobs:
           python scripts/build_python_wheels.py build \
             --sdist release-source/smsd-*.tar.gz --source-manifest release-source/SOURCE_MANIFEST.json \
             --platform "$WHEEL_PLATFORM" --arch "$WHEEL_ARCH" --output-dir wheelhouse
-      - uses: actions/upload-artifact@v7.0.1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: python-wheel-${{ matrix.platform }}-${{ matrix.arch }}
           path: wheelhouse/*
@@ -133,10 +137,10 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v7.0.0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.14'
       - name: Download only the published release distributions
@@ -149,7 +153,7 @@ jobs:
           python scripts/check_pypi_release.py download \
             --tag "$RELEASE_TAG" --platform "$BUILD_TARGET" --repository "$RELEASE_REPOSITORY" \
             --release-dir release-input --metadata-file release-metadata.json
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.release_tag }}
           fetch-depth: 0
@@ -162,11 +166,9 @@ jobs:
           python scripts/check_pypi_release.py validate \
             --tag "$RELEASE_TAG" --release-dir release-input --metadata-file release-metadata.json \
             --source-checkout release-checkout --dist-dir dist --receipt-file upload-receipt.json
-          python -m pip install twine
-          python -m twine check --strict dist/*
       - name: Verify the exact four files immediately before upload
         run: |
           python scripts/check_pypi_release.py verify-staged \
             --dist-dir dist --receipt-file upload-receipt.json
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2

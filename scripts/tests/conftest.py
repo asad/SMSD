@@ -10,4 +10,4 @@ import sys
 # pyproject.toml with tomllib, which Python provides from 3.11.
 if sys.version_info < (3, 11):
     collect_ignore = ["test_collect_release_wheels.py", "test_release_manifests.py",
-                      "test_repair_windows_wheel.py"]
+                      "test_repair_windows_wheel.py", "test_supply_chain_pins.py"]

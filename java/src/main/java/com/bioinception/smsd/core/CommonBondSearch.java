@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
 /**
@@ -46,6 +47,16 @@ import java.util.function.Supplier;
  * ticks the {@link CommonBondGraphs.Clock}, which throws {@link CommonBondGraphs.Stop} when the
  * time limit is reached or the search is cancelled; the best mapping found by then is kept
  * ({@link #found}).
+ *
+ * <p>A fragment search for one mapping without conditions runs from the molecule with fewer bond
+ * incidences, and on some hard pairs the search the other way round is far shorter. Once its last
+ * search has mapped {@link ScoutLimits#race} pairs, the search the other way round is raced
+ * against it from the best mapping and the bound so far, which hold either way round: it maps
+ * {@link ScoutLimits#raceTrial} pairs, and up to {@link ScoutLimits#raceLonger} while it holds a
+ * better mapping or a lower bound than the last search had. A race that proves its mapping ends
+ * the search; otherwise its best mapping and bound go to the last search, which goes on from
+ * where it was. Searches that finish sooner are as before; the nodes are those of both, as in the
+ * native core.
  */
 final class CommonBondSearch {
 
@@ -149,9 +160,11 @@ final class CommonBondSearch {
   /** The most mappings the search holds, see {@link #run}. */
   private final int wanted;
   /** The most pairs mapped and embedding atoms placed before the search stops, see {@link #map}. */
-  private final long nodeCap;
-  /** Whether the search stopped at {@link #nodeCap}. */
+  private long nodeCap;
+  /** Whether the search stopped at {@link #nodeCap}, see {@link #capNodesAt}. */
   private boolean capReached;
+  /** Asked for a higher node cap once {@link #nodeCap} is reached, see {@link #capNodesAt}. */
+  private LongSupplier extendCap;
   /** The lowest rank of a first root: with a required mapping, only that of its highest ranked atom. */
   private int lowestRoot;
   /** The target that a required mapping fixes for each query atom, -1 for none; null without one. */
@@ -164,6 +177,11 @@ final class CommonBondSearch {
   private int fragments;
   /** Grows a seed of the same molecules the other way round, turned round, or null; see {@link #seedAlsoFrom}. */
   private Supplier<int[]> otherSeed;
+  /** Whether the atoms are ranked and the seed is grown; each is done once. */
+  private boolean ranked, seeded;
+  /** Runs the race of {@link #raceAfter}, the pairs the last search maps first, and the number of nodes at which it runs. */
+  private Runnable race;
+  private long raceAfter = Long.MAX_VALUE, raceAt = Long.MAX_VALUE;
   /** Scratch for sorting candidates and targets, used up before each returns, see {@link #candidates}. */
   private int[] layerScratch = new int[INITIAL_PAIRS];
   private long[] keyScratch = new long[INITIAL_PAIRS];
@@ -180,12 +198,25 @@ final class CommonBondSearch {
     final long after, growth;
     /** The most pairs mapped in one scouting, and below one root pair. */
     final long budget, root;
+    /**
+     * The pairs the last search of a fragment search for one mapping maps before the search the
+     * other way round is raced against it, the pairs that search maps first, and the most it
+     * maps while it beats the first; see {@link CommonBondSearch#search}.
+     */
+    final long race, raceTrial, raceLonger;
 
     ScoutLimits(long after, long growth, long budget, long root) {
+      this(after, growth, budget, root, 1L << 19, 1L << 14, 1L << 19);
+    }
+
+    ScoutLimits(long after, long growth, long budget, long root, long race, long raceTrial, long raceLonger) {
       this.after = after;
       this.growth = growth;
       this.budget = budget;
       this.root = root;
+      this.race = race;
+      this.raceTrial = raceTrial;
+      this.raceLonger = raceLonger;
     }
   }
 
@@ -260,6 +291,12 @@ final class CommonBondSearch {
    */
   static SearchResult search(MolGraph query, MolGraph target, MCS.Options options, int limit,
       boolean all, SearchResult.Match required, SearchResult.Control control) {
+    return search(query, target, options, limit, all, required, control, ScoutLimits.DEFAULT);
+  }
+
+  /** {@link #search} with the scout and race limits {@code limits}; only tests pass other limits than the default. */
+  static SearchResult search(MolGraph query, MolGraph target, MCS.Options options, int limit,
+      boolean all, SearchResult.Match required, SearchResult.Control control, ScoutLimits limits) {
     boolean connected =
         options.connectivity == MCS.Connectivity.Connected || options.maxFragments == 1;
     if (control.stopped())
@@ -268,6 +305,7 @@ final class CommonBondSearch {
     CommonBondGraphs.Clock clock = new CommonBondGraphs.Clock(control::stopped);
     CommonBondGraphs graph = null;
     CommonBondSearch search = null;
+    OtherWay otherWay = null;
     List<int[]> found = Collections.emptyList();
     boolean declined = !CommonBondGraphs.supports(query, target);
     try {
@@ -282,29 +320,28 @@ final class CommonBondSearch {
             CommonBondConditions.of(query, target, graph, options, connected, required, clock);
         int wanted = all ? (limit == Integer.MAX_VALUE ? limit : limit + 1) : 1;
         int[] requiredTarget = requiredTargets(required, query.n);
-        search = new CommonBondSearch(graph, clock, connected, ScoutLimits.DEFAULT, conditions,
-            requiredTarget, wanted, options.nodeLimit == 0 ? Long.MAX_VALUE : options.nodeLimit);
+        long nodeCap = options.nodeLimit == 0 ? Long.MAX_VALUE : options.nodeLimit;
+        search = new CommonBondSearch(graph, clock, connected, limits, conditions, requiredTarget,
+            wanted, nodeCap);
         // Without a required mapping or excluded atoms, the search the other way round is of the
-        // same mappings, so its seed, turned round, is a mapping of this search. A fragment search
-        // grows it only once its levels run out of budget, see seedAlsoFrom().
+        // same mappings turned round, so its mappings are mappings of this search and a score
+        // that no mapping beats holds for both.
         if (!connected && requiredTarget == null && options.excludedTargetAtoms.isEmpty()
             && CommonBondGraphs.supports(target, query)) {
-          ChemOptions chemistry = pairedChemistry(options.chemistry);
+          OtherWay reversed = otherWay = new OtherWay(target, query,
+              pairedChemistry(options.chemistry), options.excludedTargetAtoms, clock, connected, limits);
+          // A fragment search grows the seed the other way round only once its levels run out
+          // of budget, see seedAlsoFrom().
           search.seedAlsoFrom(() -> {
-            CommonBondGraphs reversed = new CommonBondGraphs(target, query, chemistry,
-                options.excludedTargetAtoms, clock);
-            if (!fits(reversed))
-              return null;
-            int[] seed = new CommonBondSearch(reversed, clock, connected).greedySeed();
-            if (seed == null)
-              return null;
-            int[] turned = new int[query.n];
-            Arrays.fill(turned, -1);
-            for (int targetAtom = 0; targetAtom < target.n; targetAtom++)
-              if (seed[targetAtom] >= 0)
-                turned[seed[targetAtom]] = targetAtom;
-            return turned;
+            CommonBondSearch other = reversed.get();
+            int[] seed = other == null ? null : other.greedySeed();
+            return seed == null ? null : turn(seed, target.n, query.n);
           });
+          // The race, see the description of this class.
+          if (wanted == 1 && conditions == null) {
+            CommonBondSearch first = search;
+            search.raceAfter(limits.race, () -> race(first, reversed.get(), query.n, target.n, nodeCap, limits));
+          }
         }
         found = search.run();
       }
@@ -328,8 +365,93 @@ final class CommonBondSearch {
       control.limitReached();
     matches.sort(CANONICAL);
     double score = matches.isEmpty() ? 0.0 : matches.get(0).score();
-    return new SearchResult(matches, control.status(), proved, proved && !overflow, score,
-        search == null ? 0 : search.nodes, control.elapsedMillis());
+    long nodes = (search == null ? 0 : search.nodes)
+        + (otherWay == null || otherWay.search == null ? 0 : otherWay.search.nodes);
+    return new SearchResult(matches, control.status(), proved, proved && !overflow, score, nodes,
+        control.elapsedMillis());
+  }
+
+  /** The search of the same molecules the other way round, built when first needed. */
+  private static final class OtherWay {
+    private final MolGraph query, target;
+    private final ChemOptions chemistry;
+    private final Set<Integer> excludedTargetAtoms;
+    private final CommonBondGraphs.Clock clock;
+    private final boolean connected;
+    private final ScoutLimits limits;
+    private boolean built;
+    /** The search, or null when its graphs are too large for it. */
+    CommonBondSearch search;
+
+    OtherWay(MolGraph query, MolGraph target, ChemOptions chemistry, Set<Integer> excludedTargetAtoms,
+        CommonBondGraphs.Clock clock, boolean connected, ScoutLimits limits) {
+      this.query = query;
+      this.target = target;
+      this.chemistry = chemistry;
+      this.excludedTargetAtoms = excludedTargetAtoms;
+      this.clock = clock;
+      this.connected = connected;
+      this.limits = limits;
+    }
+
+    CommonBondSearch get() {
+      if (!built) {
+        CommonBondGraphs graph = new CommonBondGraphs(query, target, chemistry, excludedTargetAtoms, clock);
+        built = true;
+        if (fits(graph))
+          search = new CommonBondSearch(graph, clock, connected, limits);
+      }
+      return search;
+    }
+  }
+
+  /** A mapping of {@code from} atoms, turned round into one of {@code to} atoms. */
+  private static int[] turn(int[] mapping, int from, int to) {
+    int[] turned = new int[to];
+    Arrays.fill(turned, -1);
+    for (int atom = 0; atom < from && atom < mapping.length; atom++)
+      if (mapping[atom] >= 0)
+        turned[mapping[atom]] = atom;
+    return turned;
+  }
+
+  /**
+   * Races {@code other}, the search of the same molecules the other way round, against the last
+   * search of {@code first}, see the description of this class: {@code first} has {@code queryAtoms}
+   * query atoms and {@code targetAtoms} target atoms, and the two map at most {@code nodeCap}
+   * pairs between them.
+   */
+  private static void race(CommonBondSearch first, CommonBondSearch other, int queryAtoms, int targetAtoms,
+      long nodeCap, ScoutLimits limits) {
+    if (other == null)
+      return;
+    List<int[]> held = first.found();
+    int[] best = held.isEmpty() ? null : turn(held.get(0), queryAtoms, targetAtoms);
+    long bestScore = first.bestScore, bound = first.upperBound;
+    long start = other.nodes;
+    long left = nodeCap == Long.MAX_VALUE ? Long.MAX_VALUE : nodeCap - first.nodes - start;
+    long end = Math.min(left, limits.raceLonger);
+    other.capNodesAt(start + Math.min(left, limits.raceTrial),
+        () -> other.bestFound() > bestScore || other.upperBound < bound ? start + end : other.nodes);
+    List<int[]> answer;
+    boolean proved = true;
+    try {
+      answer = other.raceFrom(best, bound);
+    } catch (CommonBondGraphs.Stop stop) {
+      proved = false;
+      answer = other.found();
+      // Stopped by the clock rather than its node cap, the race ends the search.
+      if (!other.capReached) {
+        if (!answer.isEmpty())
+          first.offer(turn(answer.get(0), targetAtoms, queryAtoms), Long.MAX_VALUE);
+        throw stop;
+      }
+    }
+    int[] mapping = answer.isEmpty() ? null : turn(answer.get(0), targetAtoms, queryAtoms);
+    first.offer(mapping, proved ? (answer.isEmpty() ? bound : other.score(answer.get(0))) : other.upperBound);
+    other.capNodesAt(Long.MAX_VALUE, null);
+    if (nodeCap != Long.MAX_VALUE)
+      first.capNodesAt(nodeCap - other.nodes, null);
   }
 
   /**
@@ -500,10 +622,9 @@ final class CommonBondSearch {
     }
     if (!embeddings.isEmpty())
       return embeddings;
-    rank();
+    rankOnce();
     long bound = bestPossible();
-    fallbackScore = belowEveryMapping();
-    seed(bound);
+    seedOnce(bound);
     return collectByBonds(bound);
   }
 
@@ -539,10 +660,82 @@ final class CommonBondSearch {
     clock.poll();
     if (!anyCompatible() || Math.min(query.bondCount, target.bondCount) < MIN_BONDS)
       return null;
-    rank();
-    fallbackScore = belowEveryMapping();
-    seed(bestPossible());
+    rankOnce();
+    seedOnce(bestPossible());
     return fallback;
+  }
+
+  /** Ranks the atoms, see {@link #rank}, unless they are ranked already. */
+  private void rankOnce() {
+    if (ranked)
+      return;
+    ranked = true;
+    rank();
+  }
+
+  /** Grows the seed, see {@link #seed}, from below every mapping, unless it is grown already. */
+  private void seedOnce(long bound) {
+    if (seeded)
+      return;
+    seeded = true;
+    fallbackScore = belowEveryMapping();
+    seed(bound);
+  }
+
+  /**
+   * Makes the last search run {@code race} once it has mapped {@code nodes} pairs, see
+   * {@link #search}: the search the other way round may then give it a better mapping or a lower
+   * bound through {@link #offer}, and the last search goes on from where it was.
+   */
+  void raceAfter(long nodes, Runnable race) {
+    raceAfter = nodes;
+    this.race = race;
+  }
+
+  /** The score of the best mapping found so far, see {@link #found}, or 0 when there is none. */
+  long bestFound() {
+    return mappings != null && !mappings.isEmpty() ? score(mappings.get(0)) : fallback != null ? fallbackScore : 0;
+  }
+
+  /**
+   * Gives the search under way {@code mapping}, a mapping of it or null, which it keeps as its
+   * best if it beats the best score, and {@code bound}, which it takes as its upper bound if
+   * lower. A search that then holds a mapping of its upper bound ends; one that does not goes on
+   * and prunes more. For a search for one mapping without conditions.
+   */
+  void offer(int[] mapping, long bound) {
+    if (mapping != null) {
+      long value = score(mapping);
+      if (value > bestScore)
+        keep(value, mapping);
+    }
+    if (bound < upperBound)
+      upperBound = bound;
+  }
+
+  /** Stops the search once it has mapped {@code cap} pairs in all, unless {@code extend}, asked then, gives a higher cap. */
+  void capNodesAt(long cap, LongSupplier extend) {
+    nodeCap = cap;
+    capReached = false;
+    extendCap = extend;
+  }
+
+  /**
+   * The search raced against another of the same molecules the other way round: ranks the atoms
+   * and grows the seed unless done, takes {@code best}, a mapping of this search or null, as the
+   * fallback if it beats the seed, and seeks a maximum mapping below {@code bound} level by level
+   * of common bonds and then by the last search. It maps pairs up to its node cap, see
+   * {@link #capNodesAt}; a search stopped there has its best mapping in {@link #found}.
+   */
+  List<int[]> raceFrom(int[] best, long bound) {
+    clock.poll();
+    if (!anyCompatible() || Math.min(query.bondCount, target.bondCount) < MIN_BONDS)
+      return new ArrayList<>();
+    rankOnce();
+    seedOnce(bound);
+    if (best != null)
+      offerFallback(best, score(best));
+    return collectByBonds(bound);
   }
 
   /**
@@ -605,6 +798,7 @@ final class CommonBondSearch {
       bound = CommonBondGraphs.score(Math.min(atoms(bound), mostAtoms(triedBonds - 1)), triedBonds - 1);
     }
     scoutAt = nodes + scoutLimits.after;
+    raceAt = race != null && raceAfter < Long.MAX_VALUE - nodes ? nodes + raceAfter : Long.MAX_VALUE;
     return collect(fallback, fallbackScore, bound, wanted);
   }
 
@@ -1112,6 +1306,10 @@ final class CommonBondSearch {
       clock.tick();
       if (nodes >= scoutAt)
         scout();
+      if (nodes >= raceAt) {
+        raceAt = Long.MAX_VALUE;
+        race.run();
+      }
       Level level = levels[depth - 1];
       if (done() || !canImprove(level.bound)) {
         pop();
@@ -1236,7 +1434,7 @@ final class CommonBondSearch {
    * {@link CommonBondGraphs.Stop} instead once {@link #nodeCap} are counted.
    */
   private void countNode() {
-    if (nodes >= nodeCap) {
+    if (nodes >= nodeCap && !(extendCap != null && (nodeCap = extendCap.getAsLong()) > nodes)) {
       capReached = true;
       throw new CommonBondGraphs.Stop();
     }

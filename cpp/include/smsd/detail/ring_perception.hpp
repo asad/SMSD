@@ -378,8 +378,9 @@ inline std::vector<int64_t> MolGraph::canonicalCycleKey(const std::vector<int>& 
 
 inline size_t MolGraph::allShortestPathsCpp(int root, int target, const std::vector<int>& dist,
                                   const std::vector<std::vector<int>>& parents, std::vector<int>& current,
-                                  std::vector<PathFrame>& stack, std::vector<std::vector<int>>& paths) {
-    constexpr size_t limit = 50;
+                                  std::vector<PathFrame>& stack, std::vector<std::vector<int>>& paths,
+                                  bool& cut) {
+    constexpr size_t limit = RELEVANT_CYCLE_PATHS;
     size_t count = 0;
     auto emit = [&] {
         if (count == paths.size()) paths.emplace_back();
@@ -408,10 +409,22 @@ inline size_t MolGraph::allShortestPathsCpp(int root, int target, const std::vec
         }
         stack.push_back({next, 0});
     }
+    // Every atom but the root has a parent one step nearer it, so a parent not yet followed
+    // starts a path not yet listed.
+    if (count == limit)
+        for (const PathFrame& frame : stack)
+            for (size_t parent = frame.nextParent; parent < parents[frame.node].size() && !cut; ++parent)
+                cut = dist[parents[frame.node][parent]] == dist[frame.node] - 1;
     return count;
 }
 
 inline std::vector<std::vector<int>> MolGraph::computeRelevantCycles() const {
+    bool truncated = false;
+    return computeRelevantCyclesReportingTruncation(truncated);
+}
+
+inline std::vector<std::vector<int>> MolGraph::computeRelevantCyclesReportingTruncation(bool& truncated) const {
+    truncated = false;
     auto& mcb = computeRings();
     if (mcb.empty()) return {};
 
@@ -497,7 +510,8 @@ inline std::vector<std::vector<int>> MolGraph::computeRelevantCycles() const {
         // Paths from root to atom are pathsTo[atom][0, pathCount[atom]).
         auto shortestPaths = [&](int atom) {
             if (!pathsListed[atom]) {
-                pathCount[atom] = allShortestPathsCpp(root, atom, dist, parents, pathScratch, pathStack, pathsTo[atom]);
+                pathCount[atom] = allShortestPathsCpp(root, atom, dist, parents, pathScratch, pathStack, pathsTo[atom],
+                                                      truncated);
                 pathsListed[atom] = 1;
                 work += pathCount[atom] * static_cast<uint64_t>(dist[atom] + 1);
             }
@@ -591,6 +605,9 @@ inline std::vector<std::vector<int>> MolGraph::computeRelevantCycles() const {
             }
         }
     }
+
+    // With the work allowance used up, roots or candidates may have been left unsearched.
+    if (work >= RELEVANT_CYCLE_WORK_LIMIT) truncated = true;
 
     // Sort by length; cycles of one length keep the order in which they were found.
     std::stable_sort(allCycles.begin(), allCycles.end(),

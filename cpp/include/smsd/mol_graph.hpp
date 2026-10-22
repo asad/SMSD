@@ -75,7 +75,12 @@ struct MolGraph {
     /** Synchronise lazy fills and snapshots of the cached public atom arrays. */
     std::recursive_mutex& lazyCacheMutex() const {
         static std::array<std::recursive_mutex, 64> mutexes;
-        return mutexes[(reinterpret_cast<uintptr_t>(this) >> 4) % mutexes.size()];
+        static_assert(std::tuple_size<decltype(mutexes)>::value == 64, "the top six bits pick one of 64 locks");
+        // The whole address picks the lock (Fibonacci hashing, top six bits), so graphs built at
+        // the same place on different threads' stacks, whose low address bits agree, do not
+        // share one lock and wait on each other.
+        const auto key = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(this) >> 4);
+        return mutexes[(key * UINT64_C(0x9E3779B97F4A7C15)) >> 58];
     }
 
     static uint64_t nextInstanceNonce() {
@@ -189,7 +194,7 @@ struct MolGraph {
     static constexpr float TW_HYDROXYPYRIMIDINE   = 0.90f; // hydroxy form dominant
     static constexpr float TW_PURINE_NH           = 0.78f; // purine N-H
     static constexpr float TW_DIKETONE_ENOL       = 0.72f; // 1,3-diketone enolisation: pH-sensitive, ~28% enol at pH 7.4 (pKa ~8-11)
-    static constexpr float TW_NITROSO_OXIME       = 0.95f; // oxime strongly dominant over nitroso (Karabina 2014)
+    static constexpr float TW_NITROSO_OXIME       = 0.95f; // motif T3, the imidic acid N=C-O: amide strongly dominant
     static constexpr float TW_CYANAMIDE           = 0.80f; // cyanamide
     static constexpr float TW_IMIDE               = 0.92f; // imide NH (pKa ~9-10)
     static constexpr float TW_AMIDINE             = 0.50f; // symmetric tautomers
@@ -448,13 +453,29 @@ struct MolGraph {
 
     /**
      * Steps allowed to the simple-cycle walk that adds aromatic candidates beyond the relevant
-     * cycles, counted in neighbour reads and candidate atoms. The walk also stops at 4096
-     * cycles; in long fused ladders such as acenes it can otherwise branch exponentially before
-     * reaching that count. Ordinary polycyclic molecules use a small fraction of it.
+     * cycles, counted in neighbour reads and candidate atoms. The walk also stops at
+     * AROMATIC_CANDIDATE_CYCLE_LIMIT cycles; in long fused ladders such as acenes it can otherwise
+     * branch exponentially before reaching that count. Ordinary polycyclic molecules use a small
+     * fraction of it.
      */
     static constexpr uint64_t AROMATIC_CYCLE_STEP_LIMIT = uint64_t(1) << 24;
 
+    /** The most candidate cycles that aromaticity perception collects. */
+    static constexpr size_t AROMATIC_CANDIDATE_CYCLE_LIMIT = 4096;
+
     std::vector<std::vector<int>> collectAromaticCandidateCycles() const;
+
+private:
+    /**
+     * collectAromaticCandidateCycles(), which also marks in `truncated` (one entry per atom) every
+     * atom of a ring system of more than one ring when the walk stopped at
+     * AROMATIC_CANDIDATE_CYCLE_LIMIT cycles or AROMATIC_CYCLE_STEP_LIMIT steps, since which cycles
+     * it read of those systems then depends on the atom order; every other entry is 0.
+     */
+    std::vector<std::vector<int>> collectAromaticCandidateCyclesReportingTruncation(
+        std::vector<uint8_t>& truncated) const;
+
+public:
 
     void clearRingFlagsFromTopology();
 
@@ -545,16 +566,20 @@ private:
     /** A parent list position on the explicit stack of shortest-path enumeration. */
     struct PathFrame { int node; size_t nextParent; };
 
+    /** The most shortest paths between a root and an atom that the relevant-cycle enumeration lists. */
+    static constexpr size_t RELEVANT_CYCLE_PATHS = 50;
+
     /**
-     * All shortest paths from root to target in a BFS tree (at most 50), into reusable storage:
+     * All shortest paths from root to target in a BFS tree (at most RELEVANT_CYCLE_PATHS), into reusable storage:
      * paths[0, count) receive them, and spare entries keep their capacity. Parents are followed
      * depth first in list order on an explicit stack, so a path as long as the molecule needs no
      * call stack; current holds the path from the target to the deepest node. Returns how many
-     * paths were written.
+     * paths were written; `cut` becomes true when the target has more shortest paths than that.
      */
     static size_t allShortestPathsCpp(int root, int target, const std::vector<int>& dist,
                                       const std::vector<std::vector<int>>& parents, std::vector<int>& current,
-                                      std::vector<PathFrame>& stack, std::vector<std::vector<int>>& paths);
+                                      std::vector<PathFrame>& stack, std::vector<std::vector<int>>& paths,
+                                      bool& cut);
 
 public:
 
@@ -575,6 +600,15 @@ public:
      * RELEVANT_CYCLE_WORK_LIMIT.
      */
     std::vector<std::vector<int>> computeRelevantCycles() const;
+
+    /**
+     * computeRelevantCycles(), which also sets `truncated` to whether the enumeration was cut
+     * short by one of its bounds: it used up RELEVANT_CYCLE_WORK_LIMIT, or a root and an atom
+     * had more shortest paths than the RELEVANT_CYCLE_PATHS (50) it lists. The cycles of a truncated
+     * enumeration may lack relevant cycles of the graph; they are the same as those of
+     * computeRelevantCycles() either way.
+     */
+    std::vector<std::vector<int>> computeRelevantCyclesReportingTruncation(bool& truncated) const;
 
     /** Compute Unique Ring Families from relevant cycles and strictly shorter cycle spans. */
     std::vector<std::vector<std::vector<int>>> computeURFs();

@@ -33,11 +33,14 @@ EXPORTS_8_0_0 = [
     'write_molfile', 'write_sdf', 'write_sdf_record',
 ]
 
+# Names added since 8.0.0; none is removed or renamed.
+ADDED_SINCE_8_0_0 = ['rings_truncated']
+
 BENZENE, PHENOL, ETHANOL = "c1ccccc1", "c1ccc(O)cc1", "CCO"
 
 
-def test_export_list_is_the_frozen_8_0_0_surface():
-    assert smsd.__all__ == sorted(EXPORTS_8_0_0)
+def test_export_list_is_the_8_0_0_surface_and_its_additions():
+    assert smsd.__all__ == sorted(EXPORTS_8_0_0 + ADDED_SINCE_8_0_0)
     assert all(hasattr(smsd, name) for name in smsd.__all__)
     assert not any(hasattr(smsd, name) for name in ("Path", "sys", "importlib"))
 
@@ -114,7 +117,8 @@ def test_save_svg_writes_utf8(tmp_path):
 
 @pytest.mark.parametrize("name", ["to_smarts", "count_components", "split_components", "murcko_scaffold",
                                   "write_mol_block", "write_sdf_record", "compute_sssr", "assign_cip",
-                                  "layout_sssr", "match_template", "generate_coords_2d", "generate_coords_3d"])
+                                  "layout_sssr", "match_template", "generate_coords_2d", "generate_coords_3d",
+                                  "rings_truncated"])
 def test_graph_first_functions_accept_smiles(name):
     function = getattr(smsd, name)
     assert function.__name__ == name

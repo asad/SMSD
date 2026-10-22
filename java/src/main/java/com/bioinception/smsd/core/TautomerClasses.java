@@ -520,7 +520,7 @@ final class TautomerClasses {
             }
         }
       });
-      // T3 nitroso/oxime N=C-O
+      // T3 imidic acid N=C-O, the iminol form of an amide, and imidates
       motif(MolGraph.TW_NITROSO_OXIME, i -> {
         if (atomicNum[i] != 7 || ring[i]) return;
         for (int j : neighbors[i]) {

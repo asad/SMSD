@@ -3805,7 +3805,7 @@ public class AlgorithmTest extends TestBase {
     }
 
     @Test
-    @DisplayName("Suggested size is reasonable (256-8192) for typical drugs")
+    @DisplayName("Suggested size gives each set bit's feature a 1% false positive rate, from 256 bits")
     void suggestedSizeReasonable() throws Exception {
       String[] drugSmiles = {
         "CC(=O)Oc1ccccc1C(=O)O",       // aspirin
@@ -3817,17 +3817,46 @@ public class AlgorithmTest extends TestBase {
         long[] fp = FingerprintEngine.pathFingerprint(m, PATH_LEN, FP_SIZE);
         Map<String, Double> quality = FingerprintEngine.analyzeFingerprintQuality(fp, FP_SIZE);
         double suggested = quality.get("suggestedSize");
-        assertTrue(suggested >= 256 && suggested <= 8192,
-            "Suggested size should be in [256, 8192] for " + smi + ", got " + suggested);
+        double filled = quality.get("bitsFilled");
+        // One hashed bit per feature: m = -n / ln(1 - p), rounded up to whole words.
+        assertEquals(Math.max(256, Math.ceil(-filled / Math.log1p(-0.01) / 64) * 64), suggested, 0.0, smi);
+        assertTrue(1 - Math.exp(-filled / suggested) <= 0.01 + 1e-12, smi);
       }
+    }
+
+    @Test
+    @DisplayName("A hashed fingerprint at the suggested size meets the target false positive rate")
+    void suggestedSizeMeetsTheTargetRate() {
+      for (double rate : new double[] {0.001, 0.01, 0.05, 0.5}) {
+        for (int atoms : new int[] {1, 10, 30, 100}) {
+          int size = FingerprintEngine.suggestFingerprintSize(atoms, 1000, rate);
+          int paths = 7 * atoms;
+          // With one hashed bit per path, a bit is set with probability 1 - exp(-paths / size).
+          assertEquals(0, size % 64);
+          assertTrue(1 - Math.exp(-(double) paths / size) <= rate + 1e-12, atoms + " atoms at " + rate);
+          assertTrue(size == 64 || 1 - Math.exp(-(double) paths / (size - 64)) > rate - 1e-12,
+              "the size is more than a word too large for " + atoms + " atoms at " + rate);
+        }
+      }
+      for (double rate : new double[] {0.0, 1.0, -0.1, 1.5, Double.NaN}) {
+        assertThrows(IllegalArgumentException.class, () -> FingerprintEngine.suggestFingerprintSize(30, 1000, rate));
+      }
+      // An atom count below 1 would give a size of 0 or a negative size.
+      for (int atoms : new int[] {0, -5, Integer.MIN_VALUE}) {
+        assertThrows(IllegalArgumentException.class, () -> FingerprintEngine.suggestFingerprintSize(atoms, 1000, 0.01));
+      }
+      // A rate that needs more bits than an int holds is rejected rather than truncated.
+      assertEquals(2099999936, FingerprintEngine.suggestFingerprintSize(30, 1000, 1e-7));
+      assertThrows(IllegalArgumentException.class, () -> FingerprintEngine.suggestFingerprintSize(30, 1000, 1e-8));
     }
 
     @Test
     @DisplayName("Auto-sizing for library of 1M molecules suggests >= 2048 bits")
     void autoSizingLargeLibrary() {
       // Large drug-like library: avg 30 atoms, 1M molecules, 1% FPR
-      // Formula: m = -(30*7)*ln(0.01)/(ln2)^2 ~ 2015, rounded to 2048
+      // Formula: m = -(30*7)/ln(1 - 0.01) ~ 20,895, rounded up to 20,928
       int suggested = FingerprintEngine.suggestFingerprintSize(30, 1_000_000, 0.01);
+      assertEquals(20928, suggested);
       assertTrue(suggested >= 2048,
           "Suggested FP size for 30-atom avg, 1M library should be >= 2048, got " + suggested);
       // Should be a multiple of 64

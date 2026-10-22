@@ -17,7 +17,6 @@
 #include "smsd/stereo.hpp"
 
 #include <algorithm>
-#include <cctype>
 #include <cmath>
 #include <cstdint>
 #include <deque>
@@ -277,7 +276,7 @@ private:
             }
         } else if (c >= 'A' && c <= 'Z') {
             if (c == 'R' && pos_ + 1 < smi_.size()
-                && std::isdigit(static_cast<unsigned char>(smi_[pos_ + 1]))) {
+                && parser_detail::isAsciiDigit(smi_[pos_ + 1])) {
                 // Patent-style R-group placeholder, e.g. [R1] -> wildcard + class 1.
                 sym = "*";
                 pos_++;
@@ -359,7 +358,7 @@ private:
         if (pos_ < smi_.size() && smi_[pos_] == 'H') {
             pos_++;
             int hc = 1;
-            if (pos_ < smi_.size() && std::isdigit(smi_[pos_])) {
+            if (pos_ < smi_.size() && parser_detail::isAsciiDigit(smi_[pos_])) {
                 hc = readBracketField(1, "Hydrogen count", "one digit");
             }
             a.hcount = hc;
@@ -372,7 +371,7 @@ private:
             char sign = smi_[pos_];
             pos_++;
             int chg = 1;
-            if (pos_ < smi_.size() && std::isdigit(smi_[pos_])) {
+            if (pos_ < smi_.size() && parser_detail::isAsciiDigit(smi_[pos_])) {
                 chg = readBracketField(2, "Charge", "two digits");
             } else {
                 // Count repeated signs: ++ = +2, +++ = +3
@@ -462,8 +461,8 @@ private:
             int ringNum = -1;
             if (pos_ < smi_.size() && smi_[pos_] == '%') {
                 pos_++;
-                if (pos_ + 1 < smi_.size() && std::isdigit(smi_[pos_]) &&
-                    std::isdigit(smi_[pos_ + 1])) {
+                if (pos_ + 1 < smi_.size() && parser_detail::isAsciiDigit(smi_[pos_]) &&
+                    parser_detail::isAsciiDigit(smi_[pos_ + 1])) {
                     ringNum = (smi_[pos_] - '0') * 10 + (smi_[pos_ + 1] - '0');
                     pos_ += 2;
                 } else {
@@ -473,7 +472,7 @@ private:
                     pos_ = savedPos;
                     break;
                 }
-            } else if (pos_ < smi_.size() && std::isdigit(smi_[pos_])) {
+            } else if (pos_ < smi_.size() && parser_detail::isAsciiDigit(smi_[pos_])) {
                 ringNum = smi_[pos_] - '0';
                 pos_++;
             } else {
@@ -710,7 +709,11 @@ inline MolGraph buildMolGraph(const std::vector<ParsedAtom>& atoms,
         charges[i] = a.charge;
         isotopes[i] = a.isotope;
         atomClasses[i] = a.atomClass;
-        aromaticFlags[i] = a.isAromatic;
+        // An atom on an aromatic ring bond is aromatic whatever case its symbol is written in,
+        // as RDKit reads it, so that C1:C:C:C:C:C:1 is benzene rather than six CH2 groups.
+        const bool aromaticAtom = a.isAromatic
+            || std::find(bondAromFlags[i].begin(), bondAromFlags[i].end(), true) != bondAromFlags[i].end();
+        aromaticFlags[i] = aromaticAtom;
         ringFlags[i] = atomInRing[i];
         chirality[i] = a.chirality;
         // A ring closure can connect a new component to an earlier atom.
@@ -723,7 +726,7 @@ inline MolGraph buildMolGraph(const std::vector<ParsedAtom>& atoms,
             // Organic subset atom: implicit H from bondOrderSum, which counts an aromatic
             // bond once; computeImplicitH adds the pi contribution of an aromatic atom.
             hydrogenCounts[i] = computeImplicitH(
-                a.atomicNum, a.isAromatic, bondOrderSum[i], a.charge);
+                a.atomicNum, aromaticAtom, bondOrderSum[i], a.charge);
         } else {
             hydrogenCounts[i] = a.hcount;
         }
@@ -733,7 +736,7 @@ inline MolGraph buildMolGraph(const std::vector<ParsedAtom>& atoms,
         // Target properties use int counts, including explicit bonds and H atoms.
         const int64_t totalValence = int64_t(hydrogenCounts[i]) + bondOrderSum[i];
         const int64_t connectivity = int64_t(hydrogenCounts[i]) + neighbors[i].size();
-        if (totalValence + (a.isAromatic ? 1 : 0) > std::numeric_limits<int>::max()
+        if (totalValence + (aromaticAtom ? 1 : 0) > std::numeric_limits<int>::max()
             || connectivity > std::numeric_limits<int>::max())
             throw std::invalid_argument("Hydrogen count exceeds the supported atom property range");
     }

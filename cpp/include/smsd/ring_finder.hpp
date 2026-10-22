@@ -179,6 +179,12 @@ inline RingSystemGroups groupRingsBySharedBond(const std::vector<std::vector<int
 struct RingResult {
     std::vector<std::vector<int>> sssr;  // Minimum Cycle Basis
     std::vector<std::vector<int>> rcb;   // Relevant Cycle Basis
+    /**
+     * Whether the exhaustive candidate search stopped at RING_CANDIDATE_WORK_LIMIT, so that the
+     * rings come from the bounded perception and may be fewer than the graph holds. Java's
+     * MolGraph.ringsTruncated() reports the same.
+     */
+    bool truncated = false;
 };
 
 /**
@@ -267,7 +273,9 @@ inline RingResult perceiveRingSets(const MolGraph& g) {
         for (const auto& cycle : candidates) seen.insert(detail_rf::canonicalCycleKey(cycle));
         for (const auto& cycle : g.computeRings())
             if (seen.insert(detail_rf::canonicalCycleKey(cycle)).second) candidates.push_back(cycle);
-        return detail_rf::selectRings(g, std::move(candidates), cRank);
+        RingResult bounded = detail_rf::selectRings(g, std::move(candidates), cRank);
+        bounded.truncated = true;
+        return bounded;
     };
     uint64_t work = 0;
 
@@ -550,6 +558,17 @@ inline std::vector<std::vector<int>> completeBasis(const MolGraph& g) {
  */
 inline std::vector<std::vector<int>> computeRelevantCycles(const MolGraph& g) {
     return detail_rf::perceiveRingSets(g).rcb;
+}
+
+/**
+ * Whether the ring perception of computeRings() and computeRelevantCycles() stops its exhaustive
+ * candidate search at RING_CANDIDATE_WORK_LIMIT for `g`, so that their rings come from the bounded
+ * perception and may be fewer than the graph holds; RingResult::truncated holds the same with the
+ * rings. Each call repeats the perception, as computeRelevantCycles() does. Java's
+ * MolGraph.ringsTruncated() answers alike.
+ */
+inline bool ringsTruncated(const MolGraph& g) {
+    return detail_rf::perceiveRingSets(g).truncated;
 }
 
 /**

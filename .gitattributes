@@ -1,2 +1,19 @@
+# Text files are stored and checked out with LF line endings on every platform, except
+# Windows batch files, which cmd.exe reads reliably only with CRLF line endings.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files are never converted.
+*.docx binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.icns binary
+*.jar binary
+*.gz binary
+*.zip binary
+
 # Preserve the upstream third-party license text verbatim.
 licenses/libomp/LICENSE.TXT whitespace=-blank-at-eof
+licenses/beam/LICENSE whitespace=-trailing-space
