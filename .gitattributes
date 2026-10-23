@@ -1,8 +1,9 @@
-# Text files are stored and checked out with LF line endings on every platform, except
-# Windows batch files, which cmd.exe reads reliably only with CRLF line endings.
+# Text files are stored and checked out with LF line endings on every platform.
+# Windows batch files are stored with the CRLF line endings that cmd.exe needs and
+# are never converted, so every checkout and the source archive hold the same bytes.
 * text=auto eol=lf
-*.bat text eol=crlf
-*.cmd text eol=crlf
+*.bat -text
+*.cmd -text
 
 # Binary files are never converted.
 *.docx binary

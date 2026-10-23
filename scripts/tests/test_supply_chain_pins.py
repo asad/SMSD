@@ -114,7 +114,11 @@ class PackagingTest(unittest.TestCase):
         except (OSError, subprocess.CalledProcessError):
             self.skipTest("not a git checkout")
         for line in listing.splitlines():
-            index, _, attribute = line.split(None, 3)[:3]
+            index, _, attribute, path = line.split(None, 3)
+            # Windows batch files are stored with CRLF and never converted.
+            if index == "i/crlf":
+                self.assertTrue(path.endswith((".bat", ".cmd")) and attribute == "attr/-text", line)
+                continue
             self.assertIn(index, ("i/lf", "i/-text", "i/none"), line)
             if index == "i/-text":
                 self.assertEqual(attribute, "attr/-text", line)
