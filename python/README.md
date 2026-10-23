@@ -179,8 +179,6 @@ for Open Babel, without its atom numbering. See
   scaffolds.
 - [Installation guide](https://github.com/asad/SMSD/blob/master/docs/HOWTO-INSTALL.md):
   platform requirements and source builds.
-- [Validation record](https://github.com/asad/SMSD/blob/master/docs/VALIDATION_8.0.0.md):
-  release checks for 8.0.0.
 - [Benchmark guide](https://github.com/asad/SMSD/blob/master/benchmarks/README.md):
   workloads and mapping validation.
 - [Changelog](https://github.com/asad/SMSD/blob/master/CHANGELOG.md): what the

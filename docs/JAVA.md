@@ -624,7 +624,6 @@ mvn -f java/pom.xml -pl core javadoc:javadoc
 - [Installation guide](HOWTO-INSTALL.md), including
   [Java CLI installers](HOWTO-INSTALL.md#java-cli-installers).
 - [Python guide](PYTHON.md), [C++ guide](CPP.md),
-  [8.0.0 validation record](VALIDATION_8.0.0.md),
   [benchmark guide](../benchmarks/README.md) and [changelog](../CHANGELOG.md).
 
 SMSD Pro is distributed under the [Apache License 2.0](../LICENSE). Retain

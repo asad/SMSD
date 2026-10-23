@@ -219,8 +219,7 @@ launcher scripts are in `java/cli/src/main/java`, `java/cli/src/test/java` and
   stereo, R-groups and the CLI.
 - [Installation guide](../docs/HOWTO-INSTALL.md): platform requirements and
   source builds.
-- [8.0.0 validation record](../docs/VALIDATION_8.0.0.md),
-  [benchmark guide](../benchmarks/README.md) and [changelog](../CHANGELOG.md).
+- [Benchmark guide](../benchmarks/README.md) and [changelog](../CHANGELOG.md).
 
 ## Licence
 

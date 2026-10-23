@@ -233,7 +233,6 @@ and optimality flags before treating it as a proved optimum.
 | [Python examples](docs/EXAMPLES.md) | Fingerprints, screening, depiction, layout, stereo, files and R-groups |
 | [Search algorithms](docs/ALGORITHMS.md) | Search guarantees, result semantics and differences between the languages |
 | [Benchmarks](benchmarks/README.md) | How to run the benchmarks and report results |
-| [Validation record](docs/VALIDATION_8.0.0.md) | Release checks for 8.0.0 |
 | [Release notes](docs/RELEASE_NOTES.md) | Highlights, downloads and upgrade notes for each release |
 | [Changelog](CHANGELOG.md) | Changes in each release |
 
