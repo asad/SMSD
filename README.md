@@ -29,6 +29,7 @@ and maps atoms by their zero-based indices in the input molecules.
 | Language | Package | Requirements |
 | --- | --- | --- |
 | Python | `smsd` on [PyPI](https://pypi.org/project/smsd/) | CPython 3.10–3.14; RDKit optional |
+| Python, GPU (optional) | `smsd-cuda` on [PyPI](https://pypi.org/project/smsd-cuda/) | Linux x86_64 with an NVIDIA GPU and a driver for CUDA 12; the same version as `smsd` |
 | Java | `com.bioinceptionlabs:smsd` (library) and `com.bioinceptionlabs:smsd-cli` (command-line tool) on [Maven Central](https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd) | Java 8 or later; CDK 2.13 |
 | C++ | Header-only library in `cpp/include` | A C++17 compiler |
 
@@ -172,6 +173,24 @@ print([library[i] for i, _ in ranked][:2], sum(r.found for r in acids))
 
 The [Python examples](docs/EXAMPLES.md#screening) screen a library of 2,744
 molecules and filter by MCS similarity before computing the MCS.
+
+### GPU screening (optional)
+
+On Linux x86_64 with an NVIDIA GPU, install `smsd-cuda` next to `smsd` of the
+same version. Your code does not change:
+
+```bash
+python -m pip install "smsd==8.0.2" "smsd-cuda==8.0.2"
+```
+
+ECFP4 screens of a prepared `TargetCorpus` then run on the GPU where that has
+been measured to be faster, which today means a Tesla T4 with at least 100,000
+targets; the corpus fingerprints stay on the GPU between screens. Smaller
+corpora, other screens and all matching run on the CPU. Scores and hit order
+are the same as on the CPU, and a GPU error falls back to the CPU. The GPU
+Docker image on the [releases page](https://github.com/asad/SMSD/releases)
+runs with `docker run --gpus all`, also on Windows under WSL2. See
+[CUDA screening](docs/PYTHON.md#optional-cuda-screening) for the details.
 
 ### Command line
 
