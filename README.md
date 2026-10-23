@@ -187,10 +187,22 @@ ECFP4 screens of a prepared `TargetCorpus` then run on the GPU where that has
 been measured to be faster, which today means a Tesla T4 with at least 100,000
 targets; the corpus fingerprints stay on the GPU between screens. Smaller
 corpora, other screens and all matching run on the CPU. Scores and hit order
-are the same as on the CPU, and a GPU error falls back to the CPU. The GPU
-Docker image on the [releases page](https://github.com/asad/SMSD/releases)
-runs with `docker run --gpus all`, also on Windows under WSL2. See
+are the same as on the CPU, and a GPU error falls back to the CPU. See
 [CUDA screening](docs/PYTHON.md#optional-cuda-screening) for the details.
+
+The [8.0.2 release](https://github.com/asad/SMSD/releases/tag/v8.0.2) also has
+the GPU package as a wheel and a GPU Docker image,
+`smsd-8.0.2-cuda-linux-amd64.tar.xz`, with Python, `smsd`, `smsd-cuda` and the
+CUDA runtime. The image needs the NVIDIA Container Toolkit, also under WSL2 on
+Windows:
+
+```bash
+docker load -i smsd-8.0.2-cuda-linux-amd64.tar.xz
+docker run --rm --gpus all smsd:8.0.2-cuda12.8 -c "import smsd; print(smsd.gpu_device_info())"
+```
+
+The [installation guide](docs/HOWTO-INSTALL.md#docker) covers the CPU images
+for amd64 and arm64.
 
 ### Command line
 
