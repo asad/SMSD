@@ -19,7 +19,7 @@ class PrepareReleaseTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary)
             runtime = directory / "runtime"
-            venv.EnvBuilder(with_pip=False).create(runtime)
+            venv.EnvBuilder(with_pip=False, symlinks=True).create(runtime)
             commands = directory / "commands"
             commands.mkdir()
             maven = commands / "mvn"

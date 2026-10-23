@@ -3,7 +3,7 @@
 # Copyright (c) 2018-2026 BioInception PVT LTD
 # Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
 # See the NOTICE file for attribution, trademark, and algorithm IP terms.
-"""Check and collect matching CPython 3.14 wheels without publishing."""
+"""Check and collect matching CPython 3.10–3.14 wheels without publishing."""
 
 import argparse
 import ast
@@ -16,7 +16,6 @@ from pathlib import Path, PurePosixPath
 import re
 import shutil
 import tarfile
-import tomllib
 import zipfile
 from email.parser import BytesParser
 
@@ -25,10 +24,11 @@ _BUILD_SPEC = importlib.util.spec_from_file_location(
     "smsd_release_build", Path(__file__).resolve().with_name("build_python_wheels.py"))
 BUILD = importlib.util.module_from_spec(_BUILD_SPEC)
 _BUILD_SPEC.loader.exec_module(BUILD)
+tomllib = BUILD.tomllib
 
 
 def matches_windows_repaired_init(wheel, prefix, original, repaired):
-    """Accept only delvewheel 1.13.1's known CPython 3.14 DLL bootstrap."""
+    """Accept only delvewheel 1.13.1's known DLL bootstrap."""
     repair_metadata = prefix + "DELVEWHEEL"
     names = wheel.namelist()
     if (repair_metadata not in names
@@ -78,20 +78,13 @@ del _delvewheel_patch_1_13_1
 
 
 def check_wheel(path, version, sources):
+    identifier = BUILD.wheel_target(path.name, version)
+    target = BUILD.BUILD_IDENTIFIERS[identifier]
     fields = path.name[:-4].split("-")
-    if len(fields) != 5 or fields[:4] != ["smsd", version, "cp314", "cp314"]:
-        raise ValueError(f"Unexpected package, version or interpreter: {path.name}")
+    python_tag = fields[2]
+    interpreter = python_tag[2:]
     platform = fields[4]
-    if platform == "win_amd64":
-        family = "windows"
-    elif platform == "macosx_26_0_arm64":
-        family = "macos"
-    elif ("manylinux_2_28_x86_64" in platform.split(".")
-          and all(re.fullmatch(r"manylinux_2_\d+_x86_64", tag)
-                  for tag in platform.split("."))):
-        family = "linux"
-    else:
-        raise ValueError(f"Unexpected release platform: {platform}")
+    family = target["platform"]
     with zipfile.ZipFile(path) as wheel:
         names = wheel.namelist()
         if len(names) != len(set(names)):
@@ -106,17 +99,18 @@ def check_wheel(path, version, sources):
         extension = extensions[0]
         binary = wheel.read(extension)
         if family == "windows":
-            expected_extension = "smsd/_smsd.cp314-win_amd64.pyd"
+            expected_extension = f"smsd/_smsd.{python_tag}-win_amd64.pyd"
             pe_offset = int.from_bytes(binary[60:64], "little")
             valid_binary = (binary[:2] == b"MZ" and pe_offset >= 64
                             and binary[pe_offset:pe_offset + 4] == b"PE\0\0"
                             and binary[pe_offset + 4:pe_offset + 6] == b"\x64\x86")
         elif family == "linux":
-            expected_extension = "smsd/_smsd.cpython-314-x86_64-linux-gnu.so"
+            architecture = target["architecture"]
+            expected_extension = f"smsd/_smsd.cpython-{interpreter}-{architecture}-linux-gnu.so"
             valid_binary = (binary[:6] == b"\x7fELF\x02\x01"
-                            and binary[18:20] == b"\x3e\0")
+                            and binary[18:20] == (b"\x3e\0" if architecture == "x86_64" else b"\xb7\0"))
         else:
-            expected_extension = "smsd/_smsd.cpython-314-darwin.so"
+            expected_extension = f"smsd/_smsd.cpython-{interpreter}-darwin.so"
             valid_binary = (binary[:4] == b"\xcf\xfa\xed\xfe"
                             and binary[4:8] == b"\x0c\0\0\x01")
         if extension != expected_extension or not valid_binary:
@@ -126,7 +120,7 @@ def check_wheel(path, version, sources):
         if metadata["Name"] != "smsd" or metadata["Version"] != version:
             raise ValueError(f"Wrong wheel metadata: {path.name}")
         wheel_metadata = BytesParser().parsebytes(wheel.read(prefix + "WHEEL"))
-        expected_tags = {f"cp314-cp314-{tag}" for tag in platform.split(".")}
+        expected_tags = {f"{python_tag}-{python_tag}-{tag}" for tag in platform.split(".")}
         if set(wheel_metadata.get_all("Tag", [])) != expected_tags:
             raise ValueError(f"Filename and wheel tags disagree: {path.name}")
         record_name = prefix + "RECORD"
@@ -145,7 +139,7 @@ def check_wheel(path, version, sources):
         for name, data in sources.items():
             if name.startswith("python/smsd/") and name.endswith(".py"):
                 suffix = name[len("python/"):]
-            elif name.startswith("cpp/include/smsd/") and name.endswith(".hpp"):
+            elif name.startswith("cpp/include/smsd/") and name.endswith((".h", ".hpp")):
                 suffix = name[len("cpp/"):]
             else:
                 continue
@@ -168,7 +162,7 @@ def check_wheel(path, version, sources):
         for name in licenses:
             if wheel.read(prefix + "licenses/" + name) != sources[name]:
                 raise ValueError(f"Wrong licence copy: {path.name}: {name}")
-    return family
+    return identifier
 
 
 def main():
@@ -179,7 +173,7 @@ def main():
     parser.add_argument("--provenance", type=Path, action="append", default=[],
                         help="Checked build receipt; adjacent wheel-build-provenance.json files are found automatically")
     parser.add_argument("--allow-incomplete", action="store_true",
-                        help="Collect local build results before all three platforms are available")
+                        help="Collect local build results before all 20 interpreter/platform targets are available")
     parser.add_argument("--check-only", action="store_true")
     args = parser.parse_args()
     directory = args.release_dir.resolve()
@@ -197,7 +191,8 @@ def main():
     required = {"python/smsd/__init__.py", "python/smsd/search.py",
                 "cpp/CMakeLists.txt", "cpp/bindings/pybind11/smsd_bindings.cpp"}
     required.update(p.relative_to(checkout).as_posix()
-                    for p in (checkout / "cpp/include/smsd").rglob("*.hpp"))
+                    for p in (checkout / "cpp/include/smsd").rglob("*")
+                    if p.is_file() and p.suffix in (".h", ".hpp"))
     if "cpp/include/smsd/smsd.hpp" not in required:
         raise ValueError("Run collection from a complete SMSD source checkout")
     for name in required:
@@ -208,12 +203,12 @@ def main():
         candidates.extend(wheel_dir.rglob("*.whl"))
     selected = {}
     for wheel in sorted({p.resolve() for p in candidates}):
-        family = check_wheel(wheel, version, sources)
-        previous = selected.get(family)
+        identifier = check_wheel(wheel, version, sources)
+        previous = selected.get(identifier)
         if previous and BUILD.sha256(previous) != BUILD.sha256(wheel):
-            raise ValueError(f"Multiple different {family} wheels; select one validated build")
-        selected[family] = wheel
-    missing = {"linux", "macos", "windows"} - set(selected)
+            raise ValueError(f"Multiple different {identifier} wheels; select one validated build")
+        selected[identifier] = wheel
+    missing = set(BUILD.BUILD_IDENTIFIERS) - set(selected)
     if missing and not args.allow_incomplete:
         raise ValueError("Missing release wheels: " + ", ".join(sorted(missing)))
     manifest_path = directory / "WHEEL_MANIFEST.json"
@@ -228,26 +223,26 @@ def main():
             existing = BUILD.read_manifest(manifest_path)
             recorded_entries = existing.get("wheels")
             if (isinstance(recorded_entries, list)
-                    and {entry.get("platform") for entry in recorded_entries if isinstance(entry, dict)} != set(selected)):
-                raise ValueError("Existing wheel manifest has different platforms; collect the full set in a new release directory")
+                    and {entry.get("build_identifier") for entry in recorded_entries if isinstance(entry, dict)} != set(selected)):
+                raise ValueError("Existing wheel manifest has different targets; collect the full set in a new release directory")
             BUILD.checked_wheel_manifest(directory, source, selected, existing)
             proofs.extend(entry["build_provenance"] for entry in existing["wheels"])
         entries = []
-        for family, wheel in sorted(selected.items()):
+        for identifier, wheel in sorted(selected.items()):
             matching = [proof for proof in proofs if proof.get("wheel") == wheel.name]
             if not matching:
                 raise ValueError("Missing checked-build provenance: " + wheel.name)
-            entry = BUILD.wheel_entry(wheel, family, source, matching[0])
-            if any(BUILD.wheel_entry(wheel, family, source, proof) != entry for proof in matching[1:]):
+            entry = BUILD.wheel_entry(wheel, identifier, source, matching[0])
+            if any(BUILD.wheel_entry(wheel, identifier, source, proof) != entry for proof in matching[1:]):
                 raise ValueError("Conflicting checked-build provenance: " + wheel.name)
             entries.append(entry)
         for path in args.provenance:
             proof = BUILD.read_manifest(path)
             if proof.get("wheel") not in {wheel.name for wheel in selected.values()}:
                 raise ValueError("Explicit provenance does not identify a selected wheel")
-        manifest = {"schema_version": 1,
+        manifest = {"schema_version": 2,
                     **{field: source[field] for field in ("version", "source_commit", "sdist", "sdist_sha256")},
-                    "complete": not missing, "missing_platforms": sorted(missing), "wheels": entries}
+                    "complete": not missing, "missing_targets": sorted(missing), "wheels": entries}
         # Check both destinations before copying any release assets.
         for path, document in ((directory / "SOURCE_MANIFEST.json", source), (manifest_path, manifest)):
             if path.is_symlink() or (path.exists() and BUILD.read_manifest(path) != document):

@@ -6,7 +6,10 @@
 from pathlib import Path
 import re
 import subprocess
-import tomllib
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
 import unittest
 import xml.etree.ElementTree as ET
 
@@ -18,6 +21,7 @@ WORKFLOWS = sorted([*(ROOT / ".github/workflows").glob("*.yml"), *(ROOT / ".gith
 WIDER_ACCESS = {
     ("installers.yml", "windows"): {"contents: write"},  # draft releases are visible only with write access
     ("python-publish.yml", "publish"): {"id-token: write", "contents: read"},  # trusted publishing to PyPI
+    ("release.yml", "docker-cli"): {"contents: read", "actions: read"},  # checked SDK and wheel artifacts from an explicit build run
 }
 
 
@@ -92,11 +96,12 @@ class PackagingTest(unittest.TestCase):
     def test_docker_base_images_are_pinned_and_the_image_is_labelled(self):
         text = (ROOT / "Dockerfile").read_text(encoding="utf-8")
         images = re.findall(r"^FROM (\S+)", text, re.M)
-        self.assertEqual(len(images), 2)
+        self.assertEqual(len(images), 3)
         for image in images:
             self.assertRegex(image, r"^[\w.-]+:[\w.-]+@sha256:[0-9a-f]{64}$")
         version = ET.parse(ROOT / "java/pom.xml").findtext("{http://maven.apache.org/POM/4.0.0}version")
-        self.assertIn("ARG SMSD_VERSION=" + version + "\n", text)
+        self.assertIn('org.opencontainers.image.version="' + version + '"', text)
+        self.assertIn("\nARG SMSD_REVISION\n", text)
         for label in ("title", "description", "version", "source", "licenses", "vendor"):
             self.assertIn("org.opencontainers.image." + label + "=", text)
 

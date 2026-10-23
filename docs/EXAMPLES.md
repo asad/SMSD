@@ -3,7 +3,8 @@
 Runnable examples for the `smsd` Python package beyond molecule search. Each
 block is self-contained, and blocks that write files create them in the current
 directory. Searches, options and the full API reference are in the
-[Python guide](PYTHON.md).
+[Python guide](PYTHON.md). Interpreter and platform requirements are in the
+[supported-platforms table](HOWTO-INSTALL.md#supported-platforms).
 
 ## Fingerprints and similarity
 
@@ -138,6 +139,9 @@ reach the threshold, and the MCS runs only where it can matter. For repeated
 screens of the same library, a prepared `TargetCorpus` such as this one saves
 converting the targets on every call; a list of molecules or SMILES gives the
 same indices.
+
+This threshold applies to atom-count Tanimoto, not bond Tanimoto or weighted MCS scores.
+`MCS.match_many` itself searches every supplied target without a similarity threshold.
 
 ## SVG drawing
 

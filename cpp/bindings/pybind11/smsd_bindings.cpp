@@ -11,6 +11,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include "smsd/smsd.hpp"
+#include "smsd/screen_accelerator.hpp"
 #include "smsd/similarity_screen.hpp"
 #include "smsd/smiles_parser.hpp"
 #include "smsd/smarts_parser.hpp"
@@ -27,6 +28,7 @@
 #include <optional>
 #include <limits>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -426,9 +428,18 @@ int batchThreads(int numThreads) {
  * failure of the lowest failing target propagates once the GIL is held again.
  */
 template<class Query>
-std::vector<smsd::SearchResult> matchView(const Query& query, const PythonGraphView& view, int numThreads) {
+std::vector<smsd::SearchResult> matchView(const Query& query, const PythonGraphView& view, int numThreads,
+                                        const smsd::batch::TargetCorpus* corpus = nullptr) {
     const int threads = batchThreads(numThreads);
     py::gil_scoped_release release;
+    if constexpr (std::is_same<Query, smsd::Substructure>::value) {
+        if (corpus != nullptr) {
+            // An addition after the snapshot changes its size; the captured graphs still use the CPU.
+            if (auto survivors = query.corpusCandidates(*corpus, threads))
+                if (survivors->size() == view.graphs.size())
+                    return query.matchManyScreened(view.graphs, *survivors, threads);
+        }
+    }
     return query.matchMany(view.graphs, threads);
 }
 
@@ -751,7 +762,7 @@ py::object matchAllPython(const Query& query, const AtomNumbering& queryNumberin
 /** Search (graph, atom numbering) pairs and return one Python result per pair. */
 template<class Query>
 py::list matchManyPython(const Query& query, const AtomNumbering& queryNumbering, const py::sequence& targets,
-                         int numThreads) {
+                         int numThreads, const smsd::batch::TargetCorpus* corpus = nullptr) {
     if (numThreads < 0) throw std::invalid_argument("Thread count must be non-negative");
     registeredResultTypes();
     PythonGraphView view;
@@ -768,7 +779,7 @@ py::list matchManyPython(const Query& query, const AtomNumbering& queryNumbering
         numbering.emplace_back(PyTuple_GET_ITEM(target.ptr(), 1));
         view.owners.push_back(std::move(target));
     }
-    const auto results = matchView(query, view, numThreads);
+    const auto results = matchView(query, view, numThreads, corpus);
     std::vector<py::object> built;
     built.reserve(results.size());
     // Each search took its own time, so only cancellation stops turning the results over.
@@ -1417,7 +1428,11 @@ PYBIND11_MODULE(_smsd, m) {
             py::gil_scoped_release release;
             return query.matchAll(target, static_cast<size_t>(limit));
         }, py::arg("target"), py::arg("limit") = 1000)
-        .def("match_many", &matchMany<smsd::Substructure>, py::arg("targets"), py::arg("num_threads") = 0);
+        .def("match_many", &matchMany<smsd::Substructure>, py::arg("targets"), py::arg("num_threads") = 0)
+        .def("_match_corpus", [](const smsd::Substructure& query, const smsd::batch::TargetCorpus& corpus,
+                                const py::sequence& targets, int numThreads, py::handle queryIndices) {
+            return matchManyPython(query, AtomNumbering(queryIndices), targets, numThreads, &corpus);
+        }, py::arg("corpus"), py::arg("targets"), py::arg("num_threads"), py::arg("query_indices"));
     bindPythonSearches(substructure);
 
     mcs.def_static("canonicalize_mapping",
@@ -1524,6 +1539,36 @@ PYBIND11_MODULE(_smsd, m) {
           "  'Metal GPU: Apple M2 Pro  [OpenMP 5.0, 10 threads]'\n"
           "  'CPU: OpenMP 4.5, 16 threads'");
 
+    // The screening accelerator of a separately installed package, such as smsd-cuda, which the
+    // smsd package attaches when it finds one; TargetCorpus screens then compute their label
+    // overlaps there and give the same hits.
+    m.def("_attach_screen_accelerator",
+          [](const py::capsule& capsule) {
+              const char* name = capsule.name();
+              if (name == nullptr || std::strcmp(name, SMSD_SCREEN_ACCELERATOR_CAPSULE) != 0)
+                  throw py::value_error("the capsule does not hold a screening accelerator");
+              const std::string reason = smsd::screen_accelerator::attach(
+                  capsule.get_pointer<const smsd_screen_accelerator_v1>(), SMSD_VERSION_INFO);
+              if (!reason.empty()) throw py::value_error(reason);
+          },
+          py::arg("capsule"),
+          "Attach the screening accelerator the capsule holds; its owner must stay loaded.");
+    m.def("_detach_screen_accelerator", &smsd::screen_accelerator::detach,
+          "Detach the screening accelerator, so that screens run on the CPU.");
+    m.def("_screen_accelerator",
+          []() -> py::object {
+              const smsd_screen_accelerator_v1* table = smsd::screen_accelerator::active();
+              if (table == nullptr) return py::none();
+              return py::make_tuple(std::string(table->name), smsd::screen_accelerator::deviceInfo());
+          },
+          "The active screening accelerator as (name, device), or None.");
+    m.def("_screen_accelerator_failures",
+          []() {
+              return py::make_tuple(smsd::screen_accelerator::failureCount(),
+                                    smsd::screen_accelerator::latestFailure());
+          },
+          "The number of accelerated screens that ran on the CPU instead, and the latest reason.");
+
     m.def("batch_fingerprint",
           [](const std::vector<smsd::MolGraph>& mols,
              int pathLength, int fpSize, int numThreads) {
@@ -1541,12 +1586,14 @@ PYBIND11_MODULE(_smsd, m) {
         "recomputing graph invariants.")
         .def(py::init<>())
         .def("add_target", &smsd::batch::TargetCorpus::addTarget, py::arg("mol"),
+             py::call_guard<py::gil_scoped_release>(),
              "Add a single target molecule.")
         .def("add_targets",
              [](smsd::batch::TargetCorpus& self, const py::iterable& molecules) {
                  std::vector<smsd::MolGraph> gs;
                  for (py::handle molecule : molecules)
                      gs.push_back(py::cast<const smsd::MolGraph&>(molecule));
+                 py::gil_scoped_release release;
                  self.addTargets(std::move(gs));
              },
              py::arg("mols"),
@@ -1560,9 +1607,13 @@ PYBIND11_MODULE(_smsd, m) {
              "Pre-compute graph invariants and ECFP fingerprints for all targets. "
              "num_threads=0 uses all available processors.")
         .def("__len__", &smsd::batch::TargetCorpus::size,
+             py::call_guard<py::gil_scoped_release>(),
              "Number of targets in the corpus.")
-        .def("targets", &smsd::batch::TargetCorpus::targets)
-        .def_property_readonly("is_prewarmed", &smsd::batch::TargetCorpus::isPrewarmed,
+        .def("targets", &smsd::batch::TargetCorpus::targets, py::call_guard<py::gil_scoped_release>())
+        .def_property_readonly("is_prewarmed", [](const smsd::batch::TargetCorpus& self) {
+                 py::gil_scoped_release release;
+                 return self.isPrewarmed();
+             },
              "True if prewarm() has been called since last target addition.")
         .def("screen",
              [](const smsd::batch::TargetCorpus& self,
@@ -1575,6 +1626,22 @@ PYBIND11_MODULE(_smsd, m) {
              py::call_guard<py::gil_scoped_release>(),
              "Tanimoto fingerprint screening. Returns indices of targets above threshold. "
              "Requires prewarm() to have been called.")
+        .def("screen_many",
+             [](const smsd::batch::TargetCorpus& self, const py::iterable& queries,
+                double threshold, int numThreads) {
+                 if (numThreads < 0) throw std::invalid_argument("Thread count must be non-negative");
+                 std::vector<smsd::MolGraph> graphs;
+                 for (py::handle value : queries) {
+                     const auto item = py::reinterpret_borrow<py::object>(value);
+                     const auto& graph = item.cast<const smsd::MolGraph&>();
+                     const std::lock_guard<std::recursive_mutex> graphLock(graph.lazyCacheMutex());
+                     graphs.push_back(graph);
+                 }
+                 py::gil_scoped_release release;
+                 return self.screenMany(graphs, threshold, numThreads);
+             },
+             py::arg("queries"), py::arg("threshold"), py::arg("num_threads") = 0,
+             "ECFP Tanimoto screens in query order. Requires prewarm().")
         .def("screen_targets",
              [](const smsd::batch::TargetCorpus& self, const smsd::MolGraph& query, double threshold,
                 const smsd::ChemOptions& given, int numThreads) {
@@ -1587,7 +1654,25 @@ PYBIND11_MODULE(_smsd, m) {
              py::arg("query"), py::arg("threshold"), py::arg("chem") = smsd::ChemOptions(),
              py::arg("num_threads") = 0,
              "Similarity-bound screening of the targets, as screen_targets gives for them; needs no "
-             "prewarm(). num_threads=0 uses all available processors.");
+             "prewarm(). num_threads=0 uses all available processors.")
+        .def("screen_targets_many",
+             [](const smsd::batch::TargetCorpus& self, const py::iterable& queries,
+                double threshold, const smsd::ChemOptions& given, int numThreads) {
+                 if (numThreads < 0) throw std::invalid_argument("Thread count must be non-negative");
+                 std::vector<smsd::MolGraph> graphs;
+                 for (py::handle value : queries) {
+                     const auto item = py::reinterpret_borrow<py::object>(value);
+                     const auto& graph = item.cast<const smsd::MolGraph&>();
+                     const std::lock_guard<std::recursive_mutex> graphLock(graph.lazyCacheMutex());
+                     graphs.push_back(graph);
+                 }
+                 const smsd::ChemOptions chemistry = given;
+                 py::gil_scoped_release release;
+                 return self.screenTargetsMany(graphs, threshold, chemistry, numThreads);
+             },
+             py::arg("queries"), py::arg("threshold"), py::arg("chem") = smsd::ChemOptions(),
+             py::arg("num_threads") = 0,
+             "Similarity-bound screens in query order; needs no prewarm().");
 
     m.def("circular_fingerprint",
           [](const smsd::MolGraph& mol, int radius, int fpSize,

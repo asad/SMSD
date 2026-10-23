@@ -38,6 +38,7 @@ SOURCES = {
     "python/smsd/__init__.py": ORIGINAL,
     "python/smsd/search.py": b"class MCS:\n    pass\n",
     "cpp/include/smsd/smsd.hpp": b"#pragma once\n",
+    "cpp/include/smsd/screen_accelerator_abi.h": b"#pragma once\n#define SMSD_SCREEN_ACCELERATOR_ABI 1\n",
     "LICENSE": b"package license\n",
     "NOTICE": b"package notice\n",
     "licenses/libomp/LICENSE.TXT": b"libomp license\n",
@@ -46,24 +47,27 @@ SOURCES = {
 }
 
 
-def make_wheel(directory, family="windows", changes=None, repaired=True, sources=None):
+def make_wheel(directory, family="windows", changes=None, repaired=True, sources=None, python_version="3.14", architecture=None):
     sources = SOURCES if sources is None else sources
+    interpreter = python_version.replace(".", "")
+    python_tag = "cp" + interpreter
     if family == "windows":
         tag = "win_amd64"
-        extension = "smsd/_smsd.cp314-win_amd64.pyd"
+        extension = f"smsd/_smsd.{python_tag}-win_amd64.pyd"
         binary = bytearray(70)
         binary[:2] = b"MZ"
         binary[60:64] = (64).to_bytes(4, "little")
         binary[64:70] = b"PE\0\0\x64\x86"
     elif family == "linux":
-        tag = "manylinux_2_28_x86_64"
-        extension = "smsd/_smsd.cpython-314-x86_64-linux-gnu.so"
+        architecture = architecture or "x86_64"
+        tag = "manylinux_2_28_" + architecture
+        extension = f"smsd/_smsd.cpython-{interpreter}-{architecture}-linux-gnu.so"
         binary = bytearray(20)
         binary[:6] = b"\x7fELF\x02\x01"
-        binary[18:20] = b"\x3e\0"
+        binary[18:20] = b"\x3e\0" if architecture == "x86_64" else b"\xb7\0"
     else:
         tag = "macosx_26_0_arm64"
-        extension = "smsd/_smsd.cpython-314-darwin.so"
+        extension = f"smsd/_smsd.cpython-{interpreter}-darwin.so"
         binary = b"\xcf\xfa\xed\xfe\x0c\0\0\x01"
     contents = {
         "smsd/__init__.py": REPAIRED if repaired else ORIGINAL,
@@ -71,10 +75,12 @@ def make_wheel(directory, family="windows", changes=None, repaired=True, sources
         "include/smsd/smsd.hpp": sources["cpp/include/smsd/smsd.hpp"],
         extension: bytes(binary),
         PREFIX + "METADATA": b"Name: smsd\nVersion: 7.2.0\n",
-        PREFIX + "WHEEL": f"Tag: cp314-cp314-{tag}\n".encode(),
+        PREFIX + "WHEEL": f"Tag: {python_tag}-{python_tag}-{tag}\n".encode(),
     }
     for name, data in sources.items():
-        if not name.startswith(("python/", "cpp/")):
+        if name.startswith("cpp/include/smsd/") and name.endswith((".h", ".hpp")):
+            contents[name[len("cpp/"):]] = data
+        elif not name.startswith(("python/", "cpp/")):
             contents[PREFIX + "licenses/" + name] = data
     if repaired:
         contents[PREFIX + "DELVEWHEEL"] = b"Version: 1.13.1\nArguments: ['delvewheel', 'repair']\n"
@@ -94,7 +100,7 @@ def make_wheel(directory, family="windows", changes=None, repaired=True, sources
         writer.writerow((name, "sha256=" + checksum, len(data)))
     writer.writerow((PREFIX + "RECORD", "", ""))
     contents[PREFIX + "RECORD"] = record.getvalue().encode()
-    path = Path(directory) / f"smsd-7.2.0-cp314-cp314-{tag}.whl"
+    path = Path(directory) / f"smsd-7.2.0-{python_tag}-{python_tag}-{tag}.whl"
     with zipfile.ZipFile(path, "w") as archive:
         for name, data in contents.items():
             archive.writestr(name, data)
@@ -108,7 +114,7 @@ class CollectReleaseWheelsTest(unittest.TestCase):
             return COLLECTOR.check_wheel(wheel, "7.2.0", kwargs.get("sources", SOURCES))
 
     def test_supported_windows_repair(self):
-        self.assertEqual(self.check(), "windows")
+        self.assertEqual(self.check(), "cp314-win_amd64")
 
     def test_supported_insertion_preserves_utf8_and_future_imports(self):
         cases = (
@@ -124,9 +130,40 @@ class CollectReleaseWheelsTest(unittest.TestCase):
                         self.assertTrue(COLLECTOR.matches_windows_repaired_init(wheel, PREFIX, original, repaired))
 
     def test_original_source_stays_strict_on_all_platforms(self):
-        for family in ("windows", "linux", "macos"):
+        for family, tag in (("windows", "win_amd64"), ("linux", "manylinux_x86_64"), ("macos", "macosx_arm64")):
             with self.subTest(family=family):
-                self.assertEqual(self.check(family=family, repaired=False), family)
+                self.assertEqual(self.check(family=family, repaired=False), "cp314-" + tag)
+
+    def test_every_release_interpreter_and_architecture_has_matching_native_abi(self):
+        for version in ("3.10", "3.11", "3.12", "3.13", "3.14"):
+            for family, architecture, tag in (("windows", "x86_64", "win_amd64"),
+                                               ("linux", "x86_64", "manylinux_x86_64"),
+                                               ("linux", "aarch64", "manylinux_aarch64"),
+                                               ("macos", "arm64", "macosx_arm64")):
+                with self.subTest(version=version, family=family, architecture=architecture):
+                    self.assertEqual(self.check(family=family, architecture=architecture,
+                                               python_version=version, repaired=family == "windows"),
+                                     "cp" + version.replace(".", "") + "-" + tag)
+
+    def test_aarch64_wheel_rejects_an_x86_64_extension(self):
+        binary = bytearray(20)
+        binary[:6] = b"\x7fELF\x02\x01"
+        binary[18:20] = b"\x3e\0"
+        with self.assertRaisesRegex(ValueError, "Native extension does not match"):
+            self.check(family="linux", architecture="aarch64", repaired=False,
+                       changes={"smsd/_smsd.cpython-314-aarch64-linux-gnu.so": bytes(binary)})
+
+    def test_python310_wheel_rejects_a_python314_extension(self):
+        with self.assertRaisesRegex(ValueError, "Native extension does not match"):
+            self.check(python_version="3.10", changes={"smsd/_smsd.cp310-win_amd64.pyd": None,
+                       "smsd/_smsd.cp314-win_amd64.pyd": b"MZ"})
+
+    def test_missing_or_changed_c_abi_header_is_rejected(self):
+        for contents in (None, b"changed ABI\n"):
+            with self.subTest(contents=contents):
+                with self.assertRaisesRegex(ValueError, "Wheel and source differ"):
+                    self.check(family="linux", repaired=False,
+                               changes={"include/smsd/screen_accelerator_abi.h": contents})
 
     def test_application_changes_rejected_with_valid_record(self):
         for changed in (REPAIRED.replace(b'__version__ = "7.2.0"', b'__version__ = "9.0.0"'),
@@ -193,7 +230,7 @@ class CollectReleaseWheelsTest(unittest.TestCase):
             "licenses/msvc/LICENSE-2026.docx": b"MSVC 2026 license fixture",
         }
         sources = {**SOURCES, **msvc_licenses}
-        self.assertEqual(self.check(sources=sources), "windows")
+        self.assertEqual(self.check(sources=sources), "cp314-win_amd64")
         for name in msvc_licenses:
             entry = PREFIX + "licenses/" + name
             with self.subTest(name=name, mutation="missing"):

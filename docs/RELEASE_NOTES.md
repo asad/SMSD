@@ -1,3 +1,38 @@
+# SMSD Pro 8.0.2
+
+SMSD Pro 8.0.2 adds the optional `smsd-cuda` package and ordered batches of
+corpus screening queries. Matching runs on the CPU. The
+[changelog](../CHANGELOG.md) lists the changes in full.
+
+## Highlights
+
+- `TargetCorpus.screen_many` screens ECFP4 Tanimoto similarity for each query;
+  `screen_targets_many` screens the atom-count MCS similarity bound. Each
+  result keeps query and target order.
+- The optional CUDA backend keeps corpus fingerprints on the device for
+  reuse. Scores use the CPU expressions and hits keep target
+  order.
+- CPU wheels cover CPython 3.10–3.14 on four platforms. CPU Docker images
+  cover Linux amd64 and arm64; the separate GPU image targets Linux amd64.
+
+## Downloads and installation
+
+See the [supported-platforms table](HOWTO-INSTALL.md#supported-platforms) for
+the Python, Java, C++ and Docker requirements, and the
+[GitHub releases page](https://github.com/asad/SMSD/releases) for files and
+`SHA256SUMS`. Install the Python package with `python -m pip install
+"smsd==8.0.2"`; the optional CUDA package must also be version 8.0.2.
+
+The [Python guide](PYTHON.md#optional-cuda-screening) describes CUDA dispatch
+and CPU fallback behaviour. Native Windows CUDA wheels and macOS GPU support
+are not included. Windows GPU use is through the GPU Docker image under WSL2.
+
+## Upgrading from 8.0.1
+
+Python now requires version 3.10 or later. Existing scalar screening calls
+and prepared search calls keep their signatures; the two corpus batch screens
+are additional methods.
+
 # SMSD Pro 8.0.1
 
 SMSD Pro 8.0.1 corrects parsing, aromaticity, CIP descriptors and
@@ -87,8 +122,7 @@ changes in full.
 | Python wheels for Linux x86_64 and Windows x86_64 | glibc 2.28 or later, or Windows 10 or later, and CPython 3.14 |
 | `SHA256SUMS` | Lists the SHA-256 checksum of each file |
 
-The wheels run batch operations on the CPU with OpenMP; the optional Metal and
-CUDA screening backends need a source build. The
+The 8.0.0 wheels run batch operations on the CPU with OpenMP. The current
 [installation guide](https://github.com/asad/SMSD/blob/master/docs/HOWTO-INSTALL.md)
 explains how to verify the downloads and install each package, and the
 [validation record](https://github.com/asad/SMSD/blob/master/docs/VALIDATION_8.0.0.md)

@@ -3,7 +3,7 @@
 # Copyright (c) 2018-2026 BioInception PVT LTD
 # Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
 # See the NOTICE file for attribution, trademark, and algorithm IP terms.
-"""Prepare an sdist or build repaired CPython 3.14 CPU wheels from one sdist.
+"""Prepare one sdist or build repaired CPython 3.10–3.14 CPU wheels from it.
 
 Install build/twine for preparation and cibuildwheel==4.2.1 for wheel builds.
 Linux builds use local Docker or Podman; Windows/macOS require that host OS.
@@ -22,21 +22,57 @@ import subprocess
 import sys
 import tarfile
 import tempfile
-import tomllib
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
 import xml.etree.ElementTree as ET
 import zipfile
 
 
 SOURCE_FIELDS = ("version", "sdist", "sdist_sha256", "source_file_count",
                  "source_commit", "release_ref", "working_tree_clean")
-BUILD_IDENTIFIERS = {"linux": "cp314-manylinux_x86_64", "macos": "cp314-macosx_arm64",
-                     "windows": "cp314-win_amd64"}
+PYTHON_VERSIONS = ("3.10", "3.11", "3.12", "3.13", "3.14")
+ARCHITECTURES = {"linux": ("x86_64", "aarch64"), "macos": ("arm64",), "windows": ("AMD64",)}
+BUILD_IDENTIFIERS = {
+    "cp" + version.replace(".", "") + "-" + tag:
+        {"platform": family, "architecture": architecture, "python_version": version}
+    for version in PYTHON_VERSIONS
+    for family, architecture, tag in (("linux", "x86_64", "manylinux_x86_64"),
+                                      ("linux", "aarch64", "manylinux_aarch64"),
+                                      ("macos", "arm64", "macosx_arm64"),
+                                      ("windows", "x86_64", "win_amd64"))
+}
 # CPU-only configurations register 35 native suites on Linux and Windows;
 # macOS adds six Metal failure cases, and RDKit or CUDA builds add their own.
 NATIVE_TEST_FLOOR = 35
 NATIVE_CMAKE_OPTIONS = ("-DCMAKE_BUILD_TYPE=Debug", "-DSMSD_BUILD_TESTS=ON", "-DSMSD_BUILD_PYTHON=OFF",
                         "-DSMSD_BUILD_OPENMP=ON", "-DSMSD_BUILD_METAL=OFF", "-DSMSD_BUILD_CUDA=OFF",
                         "-DSMSD_WITH_RDKIT=OFF")
+
+
+def wheel_target(name, version):
+    """Return the interpreter/platform target of a supported release wheel."""
+    fields = name[:-4].split("-")
+    if (not name.endswith(".whl") or len(fields) != 5 or fields[:2] != ["smsd", version]
+            or fields[2] != fields[3] or fields[2] not in {"cp" + value.replace(".", "") for value in PYTHON_VERSIONS}):
+        raise ValueError("Unexpected package, version or interpreter: " + name)
+    platform_tag = fields[4]
+    if platform_tag == "win_amd64":
+        target_tag = "win_amd64"
+    elif platform_tag == "macosx_26_0_arm64":
+        target_tag = "macosx_arm64"
+    else:
+        target_tag = None
+        for architecture in ARCHITECTURES["linux"]:
+            tags = platform_tag.split(".")
+            if ("manylinux_2_28_" + architecture in tags
+                    and all(re.fullmatch(r"manylinux_2_\d+_" + architecture, tag) for tag in tags)):
+                target_tag = "manylinux_" + architecture
+                break
+        if target_tag is None:
+            raise ValueError("Unexpected release platform: " + platform_tag)
+    return fields[2] + "-" + target_tag
 
 
 def sha256(path):
@@ -111,7 +147,14 @@ def inspect_source(path):
                 "scripts/collect-release-wheels.py",
                 "scripts/cibuildwheel.toml", "scripts/repair_windows_wheel.py",
                 "licenses/msvc/README.md", "licenses/msvc/LICENSE-2022.docx",
-                "licenses/msvc/LICENSE-2026.docx", "LICENSE", "NOTICE"}
+                "licenses/msvc/LICENSE-2026.docx", "LICENSE", "NOTICE",
+                "Dockerfile", "Dockerfile.cuda", ".dockerignore", "scripts/docker_install.py",
+                "scripts/docker_smoke.py", "scripts/prepare_docker_context.py",
+                "java/core/pom.xml", "java/cli/pom.xml",
+                "java/src/main/java/com/bioinception/smsd/core/MCS.java",
+                "java/src/main/java/com/bioinception/smsd/core/Substructure.java",
+                "java/cli/src/main/java/com/bioinception/smsd/cli/SMSDcli.java",
+                "licenses/cdk/LICENSE", "licenses/beam/LICENSE", "licenses/vecmath/LICENSE"}
     missing = sorted(required - files.keys())
     if missing:
         raise ValueError("Incomplete source distribution: " + ", ".join(missing))
@@ -122,6 +165,8 @@ def inspect_source(path):
     if (project["name"] != "smsd" or metadata["Name"] != "smsd" or metadata["Version"] != version
             or len(description) != 2 or description[1] != files["python/README.md"]):
         raise ValueError("Source package metadata or description differs")
+    if project.get("requires-python") != ">=3.10" or metadata["Requires-Python"] != project["requires-python"]:
+        raise ValueError("Source Python requirement must agree with >=3.10")
     python_version = re.search(rb'^__version__ = "([^"]+)"', files["python/smsd/__init__.py"], re.M)
     cpp_version = re.search(rb'project\(smsd VERSION ([^ ]+)', files["cpp/CMakeLists.txt"])
     if not python_version or not cpp_version or python_version[1].decode() != version or cpp_version[1].decode() != version:
@@ -165,9 +210,37 @@ def checked_source(path, manifest_path=None):
 def verify_source_tree(path, commit):
     """Require every packaged source file to belong to the frozen Git tree."""
     blobs = tree_blobs(subprocess.check_output(["git", "ls-tree", "-r", "-z", "--full-tree", commit]))
-    for relative, data in read_source_archive(path).items():
-        if relative != "PKG-INFO" and blobs.get(relative) != git_blob_id(data):
+    files = read_source_archive(path)
+    docker_java_inputs = {name for name in blobs if name.startswith(("java/src/main/", "java/cli/src/main/",
+        "java/cli/src/scripts/", "licenses/cdk/", "licenses/beam/", "licenses/vecmath/"))}
+    if not docker_java_inputs <= files.keys():
+        raise ValueError("Source archive omits frozen Java/Docker inputs: " + ", ".join(sorted(docker_java_inputs - files.keys())))
+    converted = []
+    for relative, data in files.items():
+        if relative == "PKG-INFO" or blobs.get(relative) == git_blob_id(data):
+            continue
+        normalised = data.replace(b"\r\n", b"\n")
+        if (blobs.get(relative) != git_blob_id(normalised) or b"\r\n" in normalised
+                or data != normalised.replace(b"\n", b"\r\n")):
             raise ValueError("Source archive differs from frozen Git tree: " + relative)
+        converted.append(relative)
+    if converted:
+        info_attributes = Path(subprocess.check_output(
+            ["git", "rev-parse", "--git-path", "info/attributes"], text=True).strip())
+        if info_attributes.is_file() and info_attributes.read_bytes().strip():
+            raise ValueError("Cannot verify CRLF source files with local Git attributes")
+        environment = dict(os.environ, GIT_ATTR_NOSYSTEM="1")
+        output = subprocess.check_output(["git", "-c", "core.attributesFile=" + os.devnull,
+            "check-attr", "--source=" + commit, "-z", "--stdin", "text", "eol", "filter"],
+            input=b"\0".join(name.encode("utf-8") for name in converted) + b"\0", env=environment)
+        fields, attributes = output.rstrip(b"\0").split(b"\0"), {}
+        for name, attribute, value in zip(fields[::3], fields[1::3], fields[2::3]):
+            attributes.setdefault(name.decode("utf-8"), {})[attribute.decode("ascii")] = value.decode("utf-8")
+        for relative in converted:
+            declared = attributes.get(relative, {})
+            if (declared.get("text") != "set" or declared.get("eol") != "crlf"
+                    or declared.get("filter") not in ("unset", "unspecified")):
+                raise ValueError("Source archive differs from frozen Git tree: " + relative)
 
 
 def run_native_debug_tests(source_dir, build_dir, jobs, environment=None, cwd=None):
@@ -194,35 +267,37 @@ def proof_digest(proof):
     return hashlib.sha256(data).hexdigest()
 
 
-def wheel_entry(wheel, family, source, proof):
+def wheel_entry(wheel, identifier, source, proof):
     """Validate a checked build receipt and retain only public release fields."""
     for field in SOURCE_FIELDS:
         if proof.get(field) != source[field]:
             raise ValueError("Wheel provenance source identity differs: " + field)
     if proof.get("wheel") != wheel.name or proof.get("wheel_sha256") != sha256(wheel):
         raise ValueError("Wheel provenance filename or SHA256 differs")
-    if proof.get("build_identifier") != BUILD_IDENTIFIERS[family]:
+    target = BUILD_IDENTIFIERS[identifier]
+    if (proof.get("build_identifier") != identifier or wheel_target(wheel.name, source["version"]) != identifier
+            or any(proof.get(field) != value for field, value in target.items())):
         raise ValueError("Wheel provenance build platform differs")
     if proof.get("build_system") not in ("local", "cibuildwheel"):
         raise ValueError("Expected provenance from a checked wheel build")
     for field in ("native_debug_tests", "installed_wheel_tests"):
         if proof.get(field) != "passed":
             raise ValueError("Wheel provenance lacks successful checks: " + field)
-    fields = (*SOURCE_FIELDS, "wheel", "wheel_sha256", "build_identifier", "build_system",
+    fields = (*SOURCE_FIELDS, "wheel", "wheel_sha256", "build_identifier", "platform", "architecture", "python_version", "build_system",
               "native_debug_tests", "installed_wheel_tests")
     retained = {field: proof[field] for field in fields}
     if proof["build_system"] == "cibuildwheel":
         if proof.get("cibuildwheel") != "4.2.1":
             raise ValueError("Expected cibuildwheel 4.2.1 provenance")
         retained["cibuildwheel"] = proof["cibuildwheel"]
-    return {"platform": family, "wheel": wheel.name, "wheel_sha256": sha256(wheel),
+    return {**target, "build_identifier": identifier, "wheel": wheel.name, "wheel_sha256": sha256(wheel),
             "native_debug_tests": proof["native_debug_tests"],
             "installed_wheel_tests": proof["installed_wheel_tests"],
             "build_provenance": retained, "provenance_sha256": proof_digest(retained)}
 
 
 def checked_wheel_manifest(directory, source, selected, manifest):
-    if manifest.get("schema_version") != 1:
+    if manifest.get("schema_version") != 2:
         raise ValueError("Unexpected wheel manifest schema")
     for field in ("version", "source_commit", "sdist", "sdist_sha256"):
         if manifest.get(field) != source[field]:
@@ -234,16 +309,16 @@ def checked_wheel_manifest(directory, source, selected, manifest):
     for entry in entries:
         if not isinstance(entry, dict):
             raise ValueError("Expected a wheel manifest entry")
-        family = entry.get("platform")
-        if family not in selected or family in recorded:
-            raise ValueError("Duplicate or unknown wheel manifest platform")
+        identifier = entry.get("build_identifier")
+        if identifier not in selected or identifier in recorded:
+            raise ValueError("Duplicate or unknown wheel manifest target")
         proof = entry.get("build_provenance")
-        if not isinstance(proof, dict) or wheel_entry(selected[family], family, source, proof) != entry:
+        if not isinstance(proof, dict) or wheel_entry(selected[identifier], identifier, source, proof) != entry:
             raise ValueError("Wheel manifest lacks matching checked-build provenance")
-        recorded.add(family)
+        recorded.add(identifier)
     missing = sorted(set(BUILD_IDENTIFIERS) - recorded)
-    if manifest.get("complete") is not (not missing) or manifest.get("missing_platforms") != missing:
-        raise ValueError("Wheel manifest completeness differs from recorded platforms")
+    if manifest.get("complete") is not (not missing) or manifest.get("missing_targets") != missing:
+        raise ValueError("Wheel manifest completeness differs from recorded targets")
 
 
 def verify_installed_wheel(wheel):
@@ -261,22 +336,15 @@ def verify_installed_wheel(wheel):
 
 def verify_local(args):
     source = checked_source(args.sdist, args.source_manifest)
-    fields = args.wheel.name[:-4].split("-")
-    if (not args.wheel.name.endswith(".whl") or len(fields) != 5
-            or fields[:4] != ["smsd", source["version"], "cp314", "cp314"]):
-        raise ValueError("Expected one CPython 3.14 release wheel")
-    tag = fields[4]
-    if tag == "macosx_26_0_arm64":
-        family, host, architectures = "macos", "Darwin", ("arm64", "aarch64")
-    elif tag == "win_amd64":
-        family, host, architectures = "windows", "Windows", ("amd64", "x86_64")
-    elif ("manylinux_2_28_x86_64" in tag.split(".")
-            and all(re.fullmatch(r"manylinux_2_\d+_x86_64", item) for item in tag.split("."))):
-        family, host, architectures = "linux", "Linux", ("amd64", "x86_64")
-    else:
-        raise ValueError("Unexpected local release wheel platform")
+    identifier = wheel_target(args.wheel.name, source["version"])
+    target = BUILD_IDENTIFIERS[identifier]
+    family = target["platform"]
+    host = {"macos": "Darwin", "windows": "Windows", "linux": "Linux"}[family]
+    architectures = ("arm64", "aarch64") if target["architecture"] in ("arm64", "aarch64") else ("amd64", "x86_64")
     if platform.system() != host or platform.machine().lower() not in architectures:
         raise ValueError("Local wheel checks require the wheel's native host architecture")
+    if platform.python_implementation() != "CPython" or ".".join(map(str, sys.version_info[:2])) != target["python_version"]:
+        raise ValueError("Local wheel checks require the wheel's CPython version")
     source_dir = args.source_dir.resolve()
     for relative, data in read_source_archive(args.sdist).items():
         path = source_dir / relative
@@ -300,11 +368,11 @@ def verify_local(args):
         for command in checks:
             subprocess.run(command, env=environment, cwd=temporary, check=True)
         verify_installed_wheel(args.wheel)
-    record_build(source, args.wheel, args.wheel.parent, "local", BUILD_IDENTIFIERS[family])
+    record_build(source, args.wheel, args.wheel.parent, "local", identifier)
 
 
 def record_build(source, wheel, output_dir, build_system, identifier):
-    proof = {**source, "build_system": build_system, "build_identifier": identifier,
+    proof = {**source, **BUILD_IDENTIFIERS[identifier], "build_system": build_system, "build_identifier": identifier,
              "wheel": wheel.name, "wheel_sha256": sha256(wheel),
              "native_debug_tests": "passed", "installed_wheel_tests": "passed"}
     if build_system == "cibuildwheel":
@@ -345,16 +413,18 @@ def prepare(args):
 
 def build(args):
     source = checked_source(args.sdist, args.source_manifest)
-    architectures = {"linux": ("x86_64", "aarch64"), "macos": ("arm64", "x86_64"), "windows": ("AMD64",)}
-    arch = args.arch or architectures[args.platform][0]
-    if arch not in architectures[args.platform]:
+    arch = args.arch or ARCHITECTURES[args.platform][0]
+    if arch not in ARCHITECTURES[args.platform]:
         raise ValueError("Unsupported architecture for " + args.platform)
     if not args.dry_run and args.platform in ("windows", "macos"):
         expected_host = "Windows" if args.platform == "windows" else "Darwin"
         if platform.system() != expected_host:
             raise ValueError(args.platform + " builds require a native " + expected_host + " host")
     tag = {"linux": "manylinux_" + arch, "macos": "macosx_" + arch, "windows": "win_amd64"}[args.platform]
-    identifier = "cp314-" + tag
+    python_version = args.python_version
+    if python_version not in PYTHON_VERSIONS:
+        raise ValueError("Unsupported release Python version")
+    identifier = "cp" + python_version.replace(".", "") + "-" + tag
     env = os.environ.copy()
     # Keep caller cache/container settings, but enforce this release's build and test contract.
     for key in list(env):
@@ -383,6 +453,8 @@ def build(args):
     if len(wheels) != 1:
         raise ValueError("Expected exactly one repaired, tested wheel")
     wheel = wheels[0]
+    if wheel_target(wheel.name, source["version"]) != identifier:
+        raise ValueError("Built wheel and requested target differ")
     with zipfile.ZipFile(wheel) as archive:
         metadata = [name for name in archive.namelist() if name.endswith(".dist-info/METADATA")]
         if len(metadata) != 1 or BytesParser().parsebytes(archive.read(metadata[0]))["Version"] != source["version"]:
@@ -407,6 +479,7 @@ def main():
     wheel.add_argument("--source-manifest", type=Path)
     wheel.add_argument("--platform", choices=("linux", "macos", "windows"), required=True)
     wheel.add_argument("--arch")
+    wheel.add_argument("--python-version", choices=PYTHON_VERSIONS, default="3.14")
     wheel.add_argument("--manylinux-image")
     wheel.add_argument("--output-dir", type=Path, required=True)
     wheel.add_argument("--dry-run", action="store_true")

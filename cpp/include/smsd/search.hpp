@@ -333,7 +333,8 @@ inline SearchResult patternSubstructure(const SmartsQuery& pattern, const MolGra
 inline SearchResult substructure(const MolGraph* query, const SmartsQuery* pattern,
                                 const MolGraph& target, const SubstructureOptions& options,
                                 size_t limit, bool all, Budget* sharedBudget = nullptr,
-                                const PatternPlan* plan = nullptr, bool queryPrepared = false) {
+                                const PatternPlan* plan = nullptr, bool queryPrepared = false,
+                                bool screenedOut = false) {
     if (!query) return patternSubstructure(*pattern, target, options, limit, all, sharedBudget, plan);
     const QueryView view(*query);
     Budget localBudget(options, view.size(), target.n, false);
@@ -342,7 +343,8 @@ inline SearchResult substructure(const MolGraph* query, const SmartsQuery* patte
     Collector collector(nullptr, limit, all);
     if (budget.stopped()) return collector.finish(budget, false, false);
     // The atom counts reject a pair before any ring perception, which they do not read.
-    if (query && ((view.size() > target.n && target.n >= 0) || !atomCountsAdmitEmbedding(*query, target, options.chemistry))) {
+    if (screenedOut || (query && ((view.size() > target.n && target.n >= 0)
+        || !atomCountsAdmitEmbedding(*query, target, options.chemistry)))) {
         const bool completed = !budget.stopped();
         return collector.finish(budget, completed, completed);
     }

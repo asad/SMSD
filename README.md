@@ -16,8 +16,8 @@
 
 SMSD Pro provides substructure search and maximum common substructure (MCS)
 search for C++, Java and Python, with the same search model in each language.
-Every result states whether the search completed, proved its optimum or stopped
-at its timeout, and maps atoms by their zero-based indices in the input molecules.
+Every result reports completion, proved optimality and the reason it stopped,
+and maps atoms by their zero-based indices in the input molecules.
 
 - **C++**: a header-only C++17 library.
 - **Java**: a library and command-line tool for CDK 2.13 molecules, running on Java 8 or later.
@@ -28,13 +28,14 @@ at its timeout, and maps atoms by their zero-based indices in the input molecule
 
 | Language | Package | Requirements |
 | --- | --- | --- |
-| Python | `smsd` on [PyPI](https://pypi.org/project/smsd/) | Python 3.9 or later (wheels for CPython 3.14); RDKit optional |
+| Python | `smsd` on [PyPI](https://pypi.org/project/smsd/) | CPython 3.10–3.14; RDKit optional |
 | Java | `com.bioinceptionlabs:smsd` (library) and `com.bioinceptionlabs:smsd-cli` (command-line tool) on [Maven Central](https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd) | Java 8 or later; CDK 2.13 |
 | C++ | Header-only library in `cpp/include` | A C++17 compiler |
 
 Release files are on the [GitHub releases page](https://github.com/asad/SMSD/releases).
-The [installation guide](docs/HOWTO-INSTALL.md) covers platform requirements,
-downloads and source builds.
+The [supported-platforms table](docs/HOWTO-INSTALL.md#supported-platforms)
+covers CPU wheels, the optional CUDA package and Docker images. The
+[installation guide](docs/HOWTO-INSTALL.md) explains downloads and source builds.
 
 ## Quick start
 
@@ -86,11 +87,11 @@ needs:
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>8.0.1</version>
+  <version>8.0.2</version>
 </dependency>
 ```
 
-In Gradle, write `implementation("com.bioinceptionlabs:smsd:8.0.1")`. The
+In Gradle, write `implementation("com.bioinceptionlabs:smsd:8.0.2")`. The
 example below also parses SMILES, which needs `org.openscience.cdk:cdk-smiles:2.13`;
 the [Java module](java/README.md#installation) lists the optional additions and
 the `smsd-cli` artefact. Save this as `QuickStart.java`:
@@ -123,8 +124,8 @@ Compile with Java 25 and run on Java 8 or later, here against the self-contained
 JAR of the build, which includes CDK and `cdk-smiles`:
 
 ```bash
-javac --release 8 -cp java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar QuickStart.java
-java -cp "java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar:." QuickStart
+javac --release 8 -cp java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar QuickStart.java
+java -cp "java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar:." QuickStart
 ```
 
 With a Java 8 compiler, omit `--release 8`. On Windows, separate the classpath
@@ -177,7 +178,7 @@ molecules and filter by MCS similarity before computing the MCS.
 The Java build also produces the command-line tool, as a self-contained JAR:
 
 ```bash
-java -jar java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 ```
 
@@ -200,8 +201,9 @@ and SDF files as batch targets.
   topological-torsion and structural-key fingerprints, including the 166 MACCS
   keys, configured once with `FingerprintOptions` (rings, ring sizes, R/S and
   E/Z, fragments, Murcko framework) and giving the same bits in C++, Java and
-  Python. Batch searches can use every processor core, and C++ source builds
-  can screen by MCS similarity on CUDA or Apple Metal.
+  Python. Batch searches can use every processor core. Optional NVIDIA CUDA
+  screening is provided separately by `smsd-cuda`; matching runs on the CPU.
+  See [CUDA screening](docs/PYTHON.md#optional-cuda-screening) for its scope.
 - **Utilities**, including R-group decomposition, MOL and SDF input,
   SVG depiction (C++ and Python) and molecular standardisation (Java).
 

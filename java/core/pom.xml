@@ -7,7 +7,7 @@
   <parent>
     <groupId>com.bioinceptionlabs</groupId>
     <artifactId>smsd-parent</artifactId>
-    <version>8.0.1</version>
+    <version>8.0.2</version>
   </parent>
 
   <!-- The library: substructure and MCS search on CDK molecules. It depends only

@@ -7,10 +7,14 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
+import shutil
 import subprocess
+import sys
 import tarfile
 import tempfile
+import textwrap
 import types
 import unittest
 from unittest import mock
@@ -52,12 +56,12 @@ class ReleaseManifestsTest(unittest.TestCase):
         self.directory.mkdir()
         self.checkout = self.root / "checkout"
         self.sources = {**WHEELS.SOURCES,
-            "pyproject.toml": b'[project]\nname = "smsd"\nversion = "7.2.0"\n',
+            "pyproject.toml": b'[project]\nname = "smsd"\nversion = "7.2.0"\nrequires-python = ">=3.10"\n',
             "pom.xml": b'<project xmlns="http://maven.apache.org/POM/4.0.0"><version>7.2.0</version></project>',
             "java/pom.xml": b'<project xmlns="http://maven.apache.org/POM/4.0.0"><version>7.2.0</version></project>',
             "cpp/CMakeLists.txt": b'project(smsd VERSION 7.2.0 LANGUAGES CXX)\n',
             "python/README.md": b'Fixture package description\n',
-            "PKG-INFO": b'Name: smsd\nVersion: 7.2.0\n\nFixture package description\n',
+            "PKG-INFO": b'Name: smsd\nVersion: 7.2.0\nRequires-Python: >=3.10\n\nFixture package description\n',
         }
         for name in ("cpp/include/smsd/mcs.hpp", "cpp/bindings/pybind11/smsd_bindings.cpp",
                      "python/tests/test_smsd.py", "python/tests/test_aromaticity_parity.py",
@@ -65,7 +69,14 @@ class ReleaseManifestsTest(unittest.TestCase):
                      "scripts/check_python_wheel.py", "scripts/check_native_wheel_build.py",
                      "scripts/build_python_wheels.py", "scripts/collect-release-wheels.py", "scripts/cibuildwheel.toml",
                      "scripts/repair_windows_wheel.py", "licenses/msvc/README.md",
-                     "licenses/msvc/LICENSE-2022.docx", "licenses/msvc/LICENSE-2026.docx"):
+                     "licenses/msvc/LICENSE-2022.docx", "licenses/msvc/LICENSE-2026.docx",
+                     "Dockerfile", "Dockerfile.cuda", ".dockerignore", "scripts/docker_install.py",
+                     "scripts/docker_smoke.py", "scripts/prepare_docker_context.py",
+                     "java/core/pom.xml", "java/cli/pom.xml",
+                     "java/src/main/java/com/bioinception/smsd/core/MCS.java",
+                     "java/src/main/java/com/bioinception/smsd/core/Substructure.java",
+                     "java/cli/src/main/java/com/bioinception/smsd/cli/SMSDcli.java",
+                     "licenses/cdk/LICENSE", "licenses/beam/LICENSE", "licenses/vecmath/LICENSE"):
             self.sources[name] = b'fixture\n'
         for name, data in self.sources.items():
             path = self.checkout / name
@@ -77,14 +88,28 @@ class ReleaseManifestsTest(unittest.TestCase):
         self.manifest = self.directory / "SOURCE_MANIFEST.json"
         self.manifest.write_text(json.dumps(self.source))
         self.proofs = []
-        self.families = {}
+        self.targets = {}
+        self.attributes = {}
+        self.info_attributes = self.root / "info-attributes"
 
     def git(self, command, **kwargs):
         arguments = command[1:]
         if "status" in arguments:
             return ""
+        if "--git-path" in arguments:
+            return str(self.info_attributes) + "\n"
         if "rev-parse" in arguments:
             return SHA + "\n"
+        if "check-attr" in arguments:
+            self.assertIn("--source=" + SHA, arguments)
+            self.assertIn("core.attributesFile=" + os.devnull, arguments)
+            self.assertEqual(kwargs["env"]["GIT_ATTR_NOSYSTEM"], "1")
+            values = []
+            for name in kwargs["input"].decode().split("\0"):
+                if name:
+                    for attribute in ("text", "eol", "filter"):
+                        values.extend((name, attribute, self.attributes.get(name, {}).get(attribute, "unspecified")))
+            return ("\0".join(values) + "\0").encode()
         if "ls-tree" in arguments:
             entries = []
             for name, data in self.sources.items():
@@ -95,27 +120,34 @@ class ReleaseManifestsTest(unittest.TestCase):
             return b"\0".join(entries) + b"\0"
         raise AssertionError(command)
 
-    def wheel(self, family="macos", **proof_changes):
-        directory = self.root / family
+    def wheel(self, family="macos", python_version="3.14", architecture=None, **proof_changes):
+        architecture = architecture or BUILD.ARCHITECTURES[family][0]
+        tag = {"macos": "macosx_arm64", "linux": "manylinux_" + architecture, "windows": "win_amd64"}[family]
+        identifier = "cp" + python_version.replace(".", "") + "-" + tag
+        directory = self.root / identifier
         directory.mkdir(exist_ok=True)
         wheel = WHEELS.make_wheel(directory, family=family, repaired=False, sources=self.sources,
+                                 python_version=python_version, architecture=architecture,
                                  changes={WHEELS.PREFIX + "METADATA": self.sources["PKG-INFO"],
                                           "include/smsd/mcs.hpp": self.sources["cpp/include/smsd/mcs.hpp"]})
-        identifier = {"macos": "cp314-macosx_arm64", "linux": "cp314-manylinux_x86_64", "windows": "cp314-win_amd64"}[family]
-        proof = {**self.source, "wheel": wheel.name, "wheel_sha256": BUILD.sha256(wheel),
+        proof = {**self.source, **BUILD.BUILD_IDENTIFIERS[identifier], "wheel": wheel.name, "wheel_sha256": BUILD.sha256(wheel),
                  "build_identifier": identifier, "build_system": "cibuildwheel", "cibuildwheel": "4.2.1",
                  "native_debug_tests": "passed", "installed_wheel_tests": "passed"}
         proof.update(proof_changes)
         path = directory / "wheel-build-provenance.json"
         path.write_text(json.dumps(proof))
         self.proofs.append(path)
-        self.families[family] = wheel.name
+        self.targets[identifier] = wheel.name
         return wheel, path
+
+    def all_wheels(self):
+        for target in BUILD.BUILD_IDENTIFIERS.values():
+            self.wheel(target["platform"], target["python_version"], target["architecture"])
 
     def collect(self, *extra):
         arguments = ["collect-release-wheels.py", "--release-dir", str(self.directory)]
-        for family in self.families:
-            arguments += ["--wheel-dir", str(self.root / family)]
+        for identifier in self.targets:
+            arguments += ["--wheel-dir", str(self.root / identifier)]
         arguments += list(extra)
         with mock.patch.object(COLLECTOR, "__file__", str(self.checkout / "scripts/collect-release-wheels.py")), mock.patch("sys.argv", arguments):
             COLLECTOR.main()
@@ -156,6 +188,74 @@ class ReleaseManifestsTest(unittest.TestCase):
                 BUILD.prepare(args)
         self.assertFalse((output / "SOURCE_MANIFEST.json").exists())
 
+    def test_source_tree_accepts_committed_crlf_checkout(self):
+        filename = "java/cli/src/scripts/smsd.bat"
+        self.sources[".gitattributes"] = b"*.bat text eol=crlf\n"
+        self.sources[filename] = b"@echo off\necho ready\n"
+        self.attributes[filename] = {"text": "set", "eol": "crlf"}
+        source = archive(self.directory, {**self.sources, filename: b"@echo off\r\necho ready\r\n"})
+        with mock.patch.object(BUILD.subprocess, "check_output", side_effect=self.git):
+            BUILD.verify_source_tree(source, SHA)
+
+    def test_source_tree_rejects_crlf_without_committed_text_policy(self):
+        filename = "java/cli/src/scripts/smsd.bat"
+        self.sources[filename] = b"@echo off\necho ready\n"
+        for rule, attributes in ((b"", {}), (b"*.bat binary\n", {"text": "unset"}),
+                                 (b"*.bat text eol=lf\n", {"text": "set", "eol": "lf"}),
+                                 (b"*.bat text eol=crlf filter=custom\n", {"text": "set", "eol": "crlf", "filter": "custom"})):
+            with self.subTest(rule=rule):
+                self.sources[".gitattributes"] = rule
+                self.attributes[filename] = attributes
+                source = archive(self.directory, {**self.sources, filename: b"@echo off\r\necho ready\r\n"})
+                with mock.patch.object(BUILD.subprocess, "check_output", side_effect=self.git):
+                    with self.assertRaises(ValueError):
+                        BUILD.verify_source_tree(source, SHA)
+
+    def test_source_tree_rejects_changed_or_mixed_crlf_checkout(self):
+        filename = "java/cli/src/scripts/smsd.bat"
+        self.sources[".gitattributes"] = b"*.bat text eol=crlf\n"
+        self.sources[filename] = b"@echo off\necho ready\n"
+        self.attributes[filename] = {"text": "set", "eol": "crlf"}
+        for data in (b"@echo off\r\necho changed\r\n", b"@echo off\r\necho ready\n"):
+            with self.subTest(data=data):
+                source = archive(self.directory, {**self.sources, filename: data})
+                with mock.patch.object(BUILD.subprocess, "check_output", side_effect=self.git):
+                    with self.assertRaises(ValueError):
+                        BUILD.verify_source_tree(source, SHA)
+
+    def test_source_tree_rejects_local_attribute_override_for_crlf(self):
+        filename = "java/cli/src/scripts/smsd.bat"
+        self.sources[".gitattributes"] = b"*.bat text eol=crlf\n"
+        self.sources[filename] = b"@echo off\necho ready\n"
+        self.attributes[filename] = {"text": "set", "eol": "crlf"}
+        self.info_attributes.write_text("*.bat text eol=crlf\n")
+        with mock.patch.object(BUILD.subprocess, "check_output", side_effect=self.git):
+            BUILD.verify_source_tree(archive(self.directory, self.sources), SHA)
+            source = archive(self.directory, {**self.sources, filename: b"@echo off\r\necho ready\r\n"})
+            with self.assertRaises(ValueError):
+                BUILD.verify_source_tree(source, SHA)
+
+    def test_source_distribution_cannot_drop_another_frozen_java_build_input(self):
+        filename = "java/src/main/java/com/bioinception/smsd/core/Other.java"
+        self.sources[filename] = b"class Other {}\n"
+        output = self.root / "missing-java"
+        args = types.SimpleNamespace(output_dir=output, release_ref="v7.2.0", no_isolation=True)
+        def incomplete_source(command, **kwargs):
+            archive(output, {name: value for name, value in self.sources.items() if name != filename})
+        with mock.patch.object(BUILD.subprocess, "check_output", side_effect=self.git), mock.patch.object(BUILD.subprocess, "run", side_effect=incomplete_source):
+            with self.assertRaisesRegex(ValueError, "omits frozen Java/Docker inputs"):
+                BUILD.prepare(args)
+        self.assertFalse((output / "SOURCE_MANIFEST.json").exists())
+
+    def test_collector_rejects_sdk_missing_the_checkouts_c_abi_header(self):
+        del self.sources["cpp/include/smsd/screen_accelerator_abi.h"]
+        self.sdist = archive(self.directory, self.sources)
+        self.source.update(BUILD.inspect_source(self.sdist))
+        self.manifest.write_text(json.dumps(self.source))
+        self.wheel("macos")
+        with self.assertRaisesRegex(ValueError, "Source distribution and release checkout differ"):
+            self.collect("--allow-incomplete")
+
     def test_collector_rejects_missing_provenance(self):
         _, proof = self.wheel()
         proof.unlink()
@@ -164,13 +264,14 @@ class ReleaseManifestsTest(unittest.TestCase):
         self.assertFalse((self.directory / "WHEEL_MANIFEST.json").exists())
 
     def test_collector_emits_all_platforms_from_valid_receipts(self):
-        for family in ("linux", "macos", "windows"):
-            self.wheel(family)
+        self.all_wheels()
         self.collect()
         result = json.loads((self.directory / "WHEEL_MANIFEST.json").read_text())
         self.assertTrue(result["complete"])
-        self.assertEqual({entry["platform"] for entry in result["wheels"]}, set(self.families))
-        GATE.check_wheel_manifest(self.directory, "7.2.0", self.source, self.families, self.sources["PKG-INFO"])
+        self.assertEqual(len(result["wheels"]), 20)
+        self.assertEqual({entry["build_identifier"] for entry in result["wheels"]}, set(self.targets))
+        self.assertEqual({entry["python_version"] for entry in result["wheels"]}, {"3.10", "3.11", "3.12", "3.13", "3.14"})
+        GATE.check_wheel_manifest(self.directory, "7.2.0", self.source, self.targets, self.sources["PKG-INFO"])
         self.assertNotIn(str(self.root), json.dumps(result))
 
     def test_collector_rejects_mismatched_or_unpassed_receipts(self):
@@ -179,7 +280,8 @@ class ReleaseManifestsTest(unittest.TestCase):
         for field, value in (("wheel_sha256", "0" * 64), ("source_commit", "0" * 40),
                              ("sdist_sha256", "0" * 64), ("release_ref", "v7.2.0"),
                              ("native_debug_tests", "not run"), ("installed_wheel_tests", None),
-                             ("build_identifier", "cp314-win_amd64")):
+                             ("build_identifier", "cp314-win_amd64"), ("python_version", "3.10"),
+                             ("architecture", "aarch64"), ("platform", "linux")):
             with self.subTest(field=field):
                 proof.write_text(json.dumps({**original, field: value}))
                 with self.assertRaises(ValueError):
@@ -191,23 +293,21 @@ class ReleaseManifestsTest(unittest.TestCase):
         self.collect("--allow-incomplete")
         result = json.loads((self.directory / "WHEEL_MANIFEST.json").read_text())
         self.assertFalse(result["complete"])
-        self.assertEqual(result["missing_platforms"], ["linux", "windows"])
+        self.assertEqual(result["missing_targets"], sorted(set(BUILD.BUILD_IDENTIFIERS) - {"cp314-macosx_arm64"}))
         self.assertEqual([entry["platform"] for entry in result["wheels"]], ["macos"])
 
     def test_check_only_accepts_published_manifest_without_sidecars(self):
-        for family in ("linux", "macos", "windows"):
-            self.wheel(family)
+        self.all_wheels()
         self.collect()
         for proof in self.proofs:
             proof.unlink()
         before = {path.name: path.read_bytes() for path in self.directory.iterdir()}
-        self.families.clear()
+        self.targets.clear()
         self.collect("--check-only")
         self.assertEqual(before, {path.name: path.read_bytes() for path in self.directory.iterdir()})
 
     def test_check_only_rejects_hand_assembled_passed_strings(self):
-        for family in ("linux", "macos", "windows"):
-            self.wheel(family)
+        self.all_wheels()
         self.collect()
         path = self.directory / "WHEEL_MANIFEST.json"
         manifest = json.loads(path.read_text())
@@ -217,21 +317,94 @@ class ReleaseManifestsTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.collect("--check-only")
         with self.assertRaises((ValueError, SystemExit)):
-            GATE.check_wheel_manifest(self.directory, "7.2.0", self.source, self.families, self.sources["PKG-INFO"])
+            GATE.check_wheel_manifest(self.directory, "7.2.0", self.source, self.targets, self.sources["PKG-INFO"])
 
     def test_publish_gate_rejects_status_only_test_evidence(self):
         entries = []
-        for family in ("linux", "macos", "windows"):
-            wheel, _ = self.wheel(family)
+        for identifier, target in BUILD.BUILD_IDENTIFIERS.items():
+            wheel, _ = self.wheel(target["platform"], target["python_version"], target["architecture"])
             (self.directory / wheel.name).write_bytes(wheel.read_bytes())
-            entries.append({"platform": family, "wheel": wheel.name,
+            entries.append({**target, "build_identifier": identifier, "wheel": wheel.name,
                             "wheel_sha256": BUILD.sha256(wheel), "native_debug_tests": "passed",
                             "installed_wheel_tests": "passed"})
-        manifest = {"schema_version": 1, "complete": True, "missing_platforms": [], "wheels": entries,
+        manifest = {"schema_version": 2, "complete": True, "missing_targets": [], "wheels": entries,
                     **{field: self.source[field] for field in ("version", "source_commit", "sdist", "sdist_sha256")}}
         (self.directory / "WHEEL_MANIFEST.json").write_text(json.dumps(manifest))
         with self.assertRaises(ValueError):
-            GATE.check_wheel_manifest(self.directory, "7.2.0", self.source, self.families, self.sources["PKG-INFO"])
+            GATE.check_wheel_manifest(self.directory, "7.2.0", self.source, self.targets, self.sources["PKG-INFO"])
+
+    def test_one_missing_interpreter_is_incomplete_even_with_every_platform(self):
+        missing = "cp310-manylinux_aarch64"
+        for identifier, target in BUILD.BUILD_IDENTIFIERS.items():
+            if identifier != missing:
+                self.wheel(target["platform"], target["python_version"], target["architecture"])
+        with self.assertRaisesRegex(ValueError, "Missing release wheels"):
+            self.collect()
+        self.collect("--allow-incomplete")
+        manifest = json.loads((self.directory / "WHEEL_MANIFEST.json").read_text())
+        self.assertFalse(manifest["complete"])
+        self.assertEqual(manifest["missing_targets"], [missing])
+
+    def published_metadata(self):
+        return {"tag_name": "v7.2.0", "draft": False, "prerelease": False, "published_at": "2026-10-23T00:00:00Z",
+                "assets": [{"name": path.name, "state": "uploaded", "size": path.stat().st_size,
+                            "digest": "sha256:" + BUILD.sha256(path)} for path in self.directory.iterdir()]}
+
+    def test_publish_selects_twenty_cpu_wheels_without_uploading_the_separate_cuda_package(self):
+        self.all_wheels()
+        self.collect()
+        metadata = self.published_metadata()
+        cuda = "smsd_cuda-7.2.0-py3-none-manylinux_2_34_x86_64.whl"
+        metadata["assets"].append({"name": cuda, "state": "uploaded", "size": 7, "digest": "sha256:" + "a" * 64})
+        version, selected, targets = GATE.selected_assets(metadata, "v7.2.0")
+        self.assertEqual(version, "7.2.0")
+        self.assertEqual(set(targets), set(BUILD.BUILD_IDENTIFIERS))
+        self.assertEqual(len(selected), 24)
+        self.assertNotIn(cuda, selected)
+        metadata["assets"] = [row for row in metadata["assets"] if row["name"] != targets["cp310-win_amd64"]]
+        with self.assertRaisesRegex(ValueError, "Missing release wheels"):
+            GATE.selected_assets(metadata, "v7.2.0")
+
+    def test_staged_upload_requires_the_twenty_targets_and_original_sdist(self):
+        self.all_wheels()
+        self.collect()
+        directory = self.root / "upload"
+        directory.mkdir()
+        names = [self.sdist.name, *self.targets.values()]
+        for name in names:
+            shutil.copyfile(self.directory / name, directory / name)
+        receipt = self.root / "upload-receipt.json"
+        receipt.write_text(json.dumps({"version": "7.2.0", "source_commit": SHA,
+                                      "files": {name: BUILD.sha256(directory / name) for name in names}}))
+        args = types.SimpleNamespace(receipt_file=receipt, dist_dir=directory)
+        GATE.verify_staged(args)
+        (directory / self.targets["cp310-manylinux_aarch64"]).unlink()
+        with self.assertRaises(ValueError):
+            GATE.verify_staged(args)
+
+    def check_tagged_documentation(self, changed):
+        tagged = "f" * 40
+        def git(checkout, *arguments):
+            if arguments[0] == "rev-parse":
+                return (SHA if arguments[-1] == SHA + "^{commit}" else tagged).encode()
+            if arguments[0] == "diff":
+                return changed.encode() + b"\0"
+            if arguments[0] == "ls-tree":
+                return self.git(["git", "ls-tree"])
+            raise AssertionError(arguments)
+        with mock.patch.object(GATE, "git", side_effect=git), mock.patch.object(GATE.subprocess, "run", return_value=types.SimpleNamespace(returncode=0)):
+            return GATE.check_git(self.checkout, "v7.2.0", self.source, self.sources)
+
+    def test_publish_gate_rejects_changed_package_description_at_tag(self):
+        for content in (b"Changed package description\n", self.sources["python/README.md"]):
+            with self.subTest(checkout_content=content):
+                (self.checkout / "python/README.md").write_bytes(content)
+                with self.assertRaisesRegex(ValueError, "package description"):
+                    self.check_tagged_documentation("python/README.md")
+
+    def test_publish_gate_keeps_other_documentation_updates_allowed(self):
+        collector = self.check_tagged_documentation("docs/EXAMPLES.md")
+        self.assertEqual(collector, self.checkout / "scripts/collect-release-wheels.py")
 
     def test_collector_does_not_replace_a_different_manifest(self):
         self.wheel("macos")
@@ -251,7 +424,7 @@ class ReleaseManifestsTest(unittest.TestCase):
 
     def build_args(self):
         return types.SimpleNamespace(sdist=self.sdist, source_manifest=self.manifest, platform="macos", arch="arm64",
-                                     output_dir=self.root / "built", dry_run=False, manylinux_image=None)
+                                     output_dir=self.root / "built", dry_run=False, manylinux_image=None, python_version="3.14")
 
     def test_build_records_success_only_after_checked_cibuildwheel_exit(self):
         args = self.build_args()
@@ -273,6 +446,75 @@ class ReleaseManifestsTest(unittest.TestCase):
                 BUILD.build(args)
         self.assertFalse((args.output_dir / "wheel-build-provenance.json").exists())
 
+    def test_linux_aarch64_python310_build_keeps_the_requested_target(self):
+        args = self.build_args()
+        args.platform, args.arch, args.python_version = "linux", "aarch64", "3.10"
+        def successful(command, **kwargs):
+            self.assertEqual(command[command.index("--only") + 1], "cp310-manylinux_aarch64")
+            self.assertNotIn("CIBW_TEST_SKIP", kwargs["env"])
+            WHEELS.make_wheel(args.output_dir, family="linux", architecture="aarch64", python_version="3.10",
+                              repaired=False, sources=self.sources)
+        with mock.patch.object(BUILD.importlib.metadata, "version", return_value="4.2.1"), mock.patch.object(BUILD.subprocess, "run", side_effect=successful):
+            BUILD.build(args)
+        proof = json.loads((args.output_dir / "wheel-build-provenance.json").read_text())
+        self.assertEqual((proof["build_identifier"], proof["architecture"], proof["python_version"]),
+                         ("cp310-manylinux_aarch64", "aarch64", "3.10"))
+        self.assertEqual(proof["sdist_sha256"], self.source["sdist_sha256"])
+
+    def test_build_rejects_another_python_output_without_a_success_receipt(self):
+        args = self.build_args()
+        args.python_version = "3.10"
+        def wrong_target(command, **kwargs):
+            WHEELS.make_wheel(args.output_dir, family="macos", python_version="3.14", repaired=False, sources=self.sources)
+        with mock.patch.object(BUILD.importlib.metadata, "version", return_value="4.2.1"), mock.patch.object(BUILD.platform, "system", return_value="Darwin"), mock.patch.object(BUILD.subprocess, "run", side_effect=wrong_target):
+            with self.assertRaisesRegex(ValueError, "requested target"):
+                BUILD.build(args)
+        self.assertFalse((args.output_dir / "wheel-build-provenance.json").exists())
+
+    def test_workflow_builds_all_twenty_targets_from_the_one_source_artifact(self):
+        workflow = (SCRIPTS.parent / ".github/workflows/python-publish.yml").read_text()
+        snippet = workflow.split("          python - <<'PY'\n", 1)[1].split("          PY\n", 1)[0]
+        output = self.root / "matrix-output"
+        with mock.patch.dict(os.environ, {"RELEASE_REF": SHA, "BUILD_TARGET": "all", "PUBLISH": "false", "GITHUB_OUTPUT": str(output)}), mock.patch.object(subprocess, "check_output", return_value=SHA + "\n"):
+            exec(compile(textwrap.dedent(snippet), "workflow-matrix", "exec"), {})
+        matrix = json.loads(output.read_text().removeprefix("value="))["include"]
+        self.assertEqual(len(matrix), 20)
+        self.assertEqual({(row["platform"], row["arch"], row["python"]) for row in matrix},
+                         {(platform, architecture, version) for platform, architecture in
+                          (("windows", "AMD64"), ("linux", "x86_64"), ("linux", "aarch64"), ("macos", "arm64"))
+                          for version in ("3.10", "3.11", "3.12", "3.13", "3.14")})
+        self.assertIn("name: python-release-source", workflow)
+        self.assertIn('--python-version "$WHEEL_PYTHON_VERSION"', workflow)
+
+    def test_docker_workflow_reuses_the_canonical_sdk_and_rejects_another_release_ref(self):
+        workflow = (SCRIPTS.parent / ".github/workflows/release.yml").read_text()
+        self.assertIn("name: python-release-source", workflow)
+        self.assertIn("name: python-wheel-linux-x86_64-3.14", workflow)
+        self.assertEqual(workflow.count("run-id: ${{ inputs.python_build_run_id }}"), 2)
+        self.assertNotIn("build_python_wheels.py prepare", workflow)
+        snippet = workflow.split("          python - <<'PY'\n")[2].split("          PY\n", 1)[0]
+        directory = self.root / "python-source"
+        directory.mkdir()
+        shutil.copyfile(self.sdist, directory / self.sdist.name)
+        shutil.copyfile(self.manifest, directory / self.manifest.name)
+        environment_file = self.root / "github-env"
+        loader = types.SimpleNamespace(loader=types.SimpleNamespace(exec_module=lambda module: None))
+        original_directory = Path.cwd()
+        try:
+            os.chdir(self.root)
+            with mock.patch.dict(os.environ, {"GITHUB_ENV": str(environment_file)}), mock.patch.object(importlib.util, "spec_from_file_location", return_value=loader), mock.patch.object(importlib.util, "module_from_spec", return_value=BUILD), mock.patch.object(BUILD.subprocess, "check_output", side_effect=self.git):
+                exec(compile(textwrap.dedent(snippet), "docker-canonical-source", "exec"), {})
+                self.assertEqual(BUILD.sha256(self.root / "release-input" / self.sdist.name), self.source["sdist_sha256"])
+                self.assertEqual(environment_file.read_text(), "SMSD_REVISION=" + SHA + "\n")
+                shutil.rmtree(self.root / "release-input")
+                changed = {**self.source, "source_commit": "0" * 40, "release_ref": "0" * 40}
+                (directory / "SOURCE_MANIFEST.json").write_text(json.dumps(changed))
+                with self.assertRaisesRegex(SystemExit, "selected release ref differ"):
+                    exec(compile(textwrap.dedent(snippet), "docker-canonical-source", "exec"), {})
+                self.assertFalse((self.root / "release-input").exists())
+        finally:
+            os.chdir(original_directory)
+
     def test_build_checks_every_source_identity_field(self):
         args = self.build_args()
         for field, value in (("source_commit", "wrong"), ("release_ref", "v7.2.0"),
@@ -283,7 +525,7 @@ class ReleaseManifestsTest(unittest.TestCase):
                     BUILD.build(args)
 
     def local_args(self):
-        wheel, proof = self.wheel()
+        wheel, proof = self.wheel(python_version=".".join(map(str, sys.version_info[:2])))
         proof.unlink()
         native = self.root / "native-debug"
         native.mkdir()
@@ -370,7 +612,7 @@ class ReleaseManifestsTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "new release directory"):
             self.collect("--allow-incomplete")
         self.assertEqual(path.read_bytes(), original)
-        self.assertFalse((self.directory / self.families["linux"]).exists())
+        self.assertFalse((self.directory / self.targets["cp314-manylinux_x86_64"]).exists())
 
     def test_installed_package_must_equal_the_selected_wheel(self):
         wheel, _ = self.wheel()

@@ -1,25 +1,26 @@
 # SMSD Pro Python guide
 
-Reference for the `smsd` Python package, version 8.0.1. The
+Reference for the `smsd` Python package, version 8.0.2. The
 [Python examples](EXAMPLES.md) cover fingerprints, drawing, layout, stereo,
 files, R-groups and scaffolds.
 
 ## Installation
 
 ```bash
-python -m pip install "smsd==8.0.1"
+python -m pip install "smsd==8.0.2"
 ```
 
-Wheels are built for CPython 3.14; the [installation guide](HOWTO-INSTALL.md)
-lists the platforms. `smsd.__version__` gives the installed version. Core
+The CPU/OpenMP wheels cover CPython 3.10–3.14; the
+[supported-platforms table](HOWTO-INSTALL.md#supported-platforms) lists the
+operating systems and architectures. `smsd.__version__` gives the installed version. Core
 matching needs no other toolkit. RDKit is needed only for RDKit molecules,
 `to_rdkit`, `to_svg`, `depict_mcs` and `depict_substructure`
-(`python -m pip install "smsd[rdkit]==8.0.1"`); Open Babel only for
+(`python -m pip install "smsd[rdkit]==8.0.2"`); Open Babel only for
 `from_openbabel` and `to_openbabel`.
 
 ### Build from source
 
-With Python 3.9 or later, a C++17 compiler and CMake 3.18 or later, from the
+With Python 3.10 or later, a C++17 compiler and CMake 3.18 or later, from the
 repository root:
 
 ```bash
@@ -28,12 +29,32 @@ python -m pip install -e ".[dev]" \
   -Ccmake.define.SMSD_BUILD_CUDA=OFF
 ```
 
-This matches the published CPU/OpenMP wheels; without the two settings, CMake
-builds a Metal or CUDA backend when it finds one. Python calls run on the CPU
-in every build; Metal screening is available to C++ in source builds through
-`gpu::batchSimilarityScreenAuto`. Setting `SMSD_DISABLE_GPU` to anything but an
-empty string or `0` disables the GPU at run time. Without OpenMP, batch calls
-run sequentially.
+This builds the CPU/OpenMP package. Without OpenMP, batch calls run sequentially.
+
+### Optional CUDA screening
+
+`smsd-cuda` provides optional NVIDIA CUDA screening on Linux x86_64 and needs
+the same version of `smsd`:
+
+```bash
+python -m pip install "smsd==8.0.2" "smsd-cuda==8.0.2"
+```
+
+The GPU computes integer overlaps; scores use the CPU expressions and hits
+keep target order. Matching runs on the CPU. The backend keeps prepared
+corpus fingerprints on the device for reuse. ECFP4 Tanimoto
+screening and the atom-count MCS similarity bound are distinct operations.
+
+Automatic ECFP4 screening uses CUDA on a Tesla T4 with compute capability 7.5
+when the prepared corpus has at least 100,000 targets. Smaller corpora and
+other devices use the CPU. Label-bound and substructure candidate screening
+use the CPU. `gpu_is_available()` and `gpu_device_info()` report backend
+availability, not whether a call used the device. Missing devices, allocation
+failure and device loss use the CPU.
+Setting `SMSD_DISABLE_GPU` to anything but an empty string or `0` disables the
+GPU at run time. macOS uses the CPU; the
+[supported-platforms table](HOWTO-INSTALL.md#supported-platforms) also covers
+the GPU Docker image and Windows through WSL2.
 
 ## Searches
 
@@ -280,7 +301,28 @@ queries. `TargetCorpus` holds targets for repeated queries:
   `is_prewarmed` says whether they cover every target.
 - `screen(query, threshold, *, num_threads=0)`: indices of targets with ECFP4
   Tanimoto of at least `threshold`, empty until `prewarm()` follows the last
-  addition. Screening does not prove absence.
+  addition. ECFP similarity is not a substructure test.
+- `screen_many(queries, threshold, *, num_threads=0)`: the same ECFP4 screen
+  for each query, returning a list of hit-index lists in query order. Each
+  hit list keeps target order and needs the same `prewarm()`.
+- `screen_targets_many(queries, threshold, chemistry=None, *, num_threads=0)`:
+  the atom-count MCS similarity-bound screen for each query, with one chemistry
+  setting for the batch. No `prewarm()` is needed. Each hit list keeps target
+  order, as `screen_targets(query, corpus, threshold, chemistry)` does.
+
+```python
+import smsd
+
+corpus = smsd.TargetCorpus.from_smiles(["CCO", "CCN", "CCC"])
+corpus.prewarm(num_threads=1)
+assert corpus.screen_many(["CCO", "CCN"], 1.0, num_threads=1) == [[0], [1]]
+assert corpus.screen_targets_many(["CCO", "CCN"], 1.0, num_threads=1) == [[0], [1]]
+```
+
+Corpus substructure searches can reject impossible molecule candidates with a
+conservative element-path screen before CPU matching. SMARTS queries, untyped
+queries and finite node limits bypass this screen. Target results keep their
+original slots, atom numbering and search status.
 
 ## Constrained and consensus searches
 

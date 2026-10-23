@@ -16,9 +16,9 @@
  *   cd <project-root>
  *   mvn -f java/pom.xml package -DskipTests
  *   mkdir -p build/local-benchmarks/java-classes
- *   javac -cp java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar \
+ *   javac -cp java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar \
  *         benchmarks/benchmark_substructure_java.java -d build/local-benchmarks/java-classes
- *   java -cp java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar:build/local-benchmarks/java-classes \
+ *   java -cp java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar:build/local-benchmarks/java-classes \
  *         benchmark_substructure_java benchmarks/substructure_pairs.tsv \
  *         build/local-benchmarks/results_substructure.tsv
  *

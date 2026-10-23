@@ -10,13 +10,15 @@ public member.
 
 ## Installation
 
-The JARs run on Java 8 and later; Java 25 LTS is recommended. Maven:
+The JARs run on Java 8 and later; Java 25 LTS is recommended. See the
+[supported-platforms table](HOWTO-INSTALL.md#supported-platforms) for the CLI
+installers and Docker images. Maven:
 
 ```xml
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>8.0.1</version>
+  <version>8.0.2</version>
 </dependency>
 ```
 
@@ -24,7 +26,7 @@ Gradle (Kotlin DSL):
 
 ```kotlin
 dependencies {
-    implementation("com.bioinceptionlabs:smsd:8.0.1")
+    implementation("com.bioinceptionlabs:smsd:8.0.2")
 }
 ```
 
@@ -38,8 +40,8 @@ its class name and compile it from the repository root against the
 self-contained JAR of the source build:
 
 ```bash
-javac --release 8 -cp java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar PreparedSearchExample.java
-java -cp "java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar:." PreparedSearchExample
+javac --release 8 -cp java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar PreparedSearchExample.java
+java -cp "java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar:." PreparedSearchExample
 ```
 
 With a Java 8 compiler, omit `--release 8`; on Windows, separate the classpath
@@ -533,25 +535,25 @@ bounded by `CIPAssigner.MAX_DEPTH`, so check which centres were assigned.
 ## Command-line interface
 
 The module `com.bioinceptionlabs:smsd-cli` provides the self-contained
-`smsd-cli-8.0.1-jar-with-dependencies.jar`; the
+`smsd-cli-8.0.2-jar-with-dependencies.jar`; the
 [Java module README](../java/README.md#command-line-tool) shows how to obtain
 it or depend on `SMSDcli`. From the repository root, after a source build,
 print the version and help, then test benzene against phenol as a substructure
 and as an MCS:
 
 ```bash
-java -jar java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar --version
-java -jar java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar --help
-java -jar java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar --version
+java -jar java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar --help
+java -jar java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
-java -jar java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --mode mcs --json -
 ```
 
 MCS mode defaults to a connected MCIS; request MCES and fragments explicitly:
 
 ```bash
-java -jar java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar \
   --Q SMI --q "CO.CN" --T SMI --t "CO.CN" \
   --mode mcs --objective MCES --fragments --timeout 1000 --json -
 ```
@@ -560,9 +562,9 @@ SMARTS queries use the type `SIG` in substructure mode; here the first search
 reports `"exists": true` (exit status 0) and the second `"exists": false` (1):
 
 ```bash
-java -jar java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar \
   --Q SIG --q "C=O" --T SMI --t "CC(=O)O" --json -
-java -jar java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar \
   --Q SIG --q "C=O" --T SMI --t "CCO" --json -
 ```
 
@@ -622,7 +624,7 @@ mvn -f java/pom.xml -pl core javadoc:javadoc
 - [Installation guide](HOWTO-INSTALL.md), including
   [Java CLI installers](HOWTO-INSTALL.md#java-cli-installers).
 - [Python guide](PYTHON.md), [C++ guide](CPP.md),
-  [validation record](VALIDATION_8.0.0.md),
+  [8.0.0 validation record](VALIDATION_8.0.0.md),
   [benchmark guide](../benchmarks/README.md) and [changelog](../CHANGELOG.md).
 
 SMSD Pro is distributed under the [Apache License 2.0](../LICENSE). Retain

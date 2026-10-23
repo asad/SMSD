@@ -6,6 +6,9 @@ owns a copy of its graph, chemistry and resource options, and each `match`,
 The Python package calls the native search. The [Python](PYTHON.md),
 [C++](CPP.md) and [Java](JAVA.md) guides document the API; this page states
 what each search guarantees, what a result means and how the languages differ.
+The [supported-platforms table](HOWTO-INSTALL.md#supported-platforms) lists the
+release packages. Matching runs on the CPU; optional CUDA screening does not
+perform the MCS search.
 
 ## What each search guarantees
 

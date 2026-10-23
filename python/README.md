@@ -17,27 +17,34 @@ RDKit image helpers.
 ## Installation
 
 ```bash
-python -m pip install "smsd==8.0.1"
+python -m pip install "smsd==8.0.2"
 ```
 
 To include RDKit, install the `rdkit` extra:
 
 ```bash
-python -m pip install "smsd[rdkit]==8.0.1"
+python -m pip install "smsd[rdkit]==8.0.2"
 ```
 
-Wheels are published on PyPI and with each
-[GitHub release](https://github.com/asad/SMSD/releases). They target CPython
-3.14 and use CPU/OpenMP:
+The CPU/OpenMP wheels cover CPython 3.10–3.14 on macOS arm64, Linux x86_64
+and aarch64, and Windows x86_64. See the
+[supported-platforms table](https://github.com/asad/SMSD/blob/master/docs/HOWTO-INSTALL.md#supported-platforms)
+for operating-system requirements and Docker support. Free-threaded CPython
+and Intel macOS need a source build.
 
-| Platform | Architecture | Minimum version |
-|---|---|---|
-| Windows | x86_64 (AMD64) | Windows 10 |
-| Linux | x86_64 (AMD64) | glibc 2.28 |
-| macOS | arm64 (Apple silicon) | macOS 26 |
+### Optional CUDA package
 
-Other Python versions, the free-threaded CPython build, Intel macOS and Linux
-arm64 need a source build, as described below.
+`smsd-cuda` provides optional NVIDIA CUDA screening on Linux x86_64 and needs
+the same version of `smsd`:
+
+```bash
+python -m pip install "smsd==8.0.2" "smsd-cuda==8.0.2"
+```
+
+The GPU computes integer overlaps; scores use the CPU expressions and hits
+keep target order. Matching runs on the CPU. See the
+[CUDA section](https://github.com/asad/SMSD/blob/master/docs/PYTHON.md#optional-cuda-screening)
+for dispatch and CPU fallback behaviour.
 
 ## Quick start
 
@@ -84,6 +91,12 @@ assert [result.best.atom_count for result in results] == [6, 2]
 included; check `complete` before treating an enumeration as exhaustive.
 `TargetCorpus` holds targets for repeated queries. Batch calls use OpenMP, or
 run sequentially without it.
+
+For repeated screening, `TargetCorpus.screen_many` returns ECFP4 Tanimoto hit
+indices for each query, and `screen_targets_many` returns similarity-bound hit
+indices. See the
+[corpus API](https://github.com/asad/SMSD/blob/master/docs/PYTHON.md#smarts-and-target-collections)
+for preparation and return order.
 
 ## Fingerprints
 
@@ -175,7 +188,7 @@ for Open Babel, without its atom numbering. See
 
 ## Build from source
 
-From the repository root, with Python 3.9 or later, a C++17 compiler and CMake
+From the repository root, with Python 3.10 or later, a C++17 compiler and CMake
 3.18 or later:
 
 ```bash
@@ -184,9 +197,9 @@ python -m pip install -e ".[dev]"
 python -m build
 ```
 
-Metal and CUDA backends are optional in source builds and need a compatible
-toolchain and hardware. `gpu_device_info()` reports the backend available at
-run time, not the one a particular call used.
+The standard wheels use CPU/OpenMP. The optional `smsd-cuda` package needs a
+compatible NVIDIA driver; macOS uses the CPU. `gpu_device_info()` reports an
+available backend, not the one a particular call used.
 
 ## Other languages
 

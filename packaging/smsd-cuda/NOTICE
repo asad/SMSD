@@ -1,0 +1,33 @@
+smsd-cuda — CUDA similarity screening for SMSD Pro™
+Copyright (c) 2018-2026 BioInception PVT LTD
+Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
+
+This product includes software developed by Syed Asad Rahman
+at BioInception PVT LTD (https://github.com/asad/SMSD).
+
+LICENSING
+=========
+smsd-cuda is released under the Apache License, Version 2.0, as SMSD Pro
+is. If you redistribute it, include a copy of the LICENSE file and of this
+NOTICE file, and retain all copyright and attribution notices. The NOTICE
+file of the smsd package sets out the citation, trademark and attribution
+terms of SMSD Pro, which apply to this package as well.
+
+TRADEMARK NOTICE
+================
+"SMSD"(TM), "SMSD Pro"(TM), and the BioInception molecular graph
+logo(TM) are unregistered trademarks of Syed Asad Rahman /
+BioInception PVT LTD. You may not use these marks to endorse or
+promote products derived from this software without prior written
+permission from the copyright holder.
+
+THIRD-PARTY NOTICES
+===================
+This package bundles no NVIDIA library. Its library links the NVIDIA
+CUDA runtime, which is installed separately, from NVIDIA's
+nvidia-cuda-runtime-cu12 package or with the CUDA toolkit, under NVIDIA's
+own licence terms, and calls the NVIDIA display driver, which the system
+provides.
+
+Linux builds made with GCC link the GNU C++ runtime (libstdc++), which
+the system provides, under GPL-3.0 with the GCC Runtime Library Exception.

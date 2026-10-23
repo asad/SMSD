@@ -14,7 +14,9 @@ implementation; it does not need Java or RDKit.
 | `src/rdkit_adapter.cpp` | Optional RDKit adapter |
 
 This page covers building and integration; the [C++ guide](../docs/CPP.md) is
-the API reference.
+the API reference. The
+[supported-platforms table](../docs/HOWTO-INSTALL.md#supported-platforms)
+lists the release packages.
 
 ## Quick start
 
@@ -74,16 +76,15 @@ ctest --test-dir build/cpp --build-config Debug --output-on-failure
 | `SMSD_BUILD_OPENMP` | `ON` | Uses OpenMP, when found, for batch fingerprint and screening operations; without it they run sequentially |
 | `SMSD_BUILD_PYTHON` | `OFF` | Builds the Python extension; requires Python development headers and pybind11 |
 | `SMSD_WITH_RDKIT` | `OFF` | Builds the `smsd_rdkit` adapter; requires an RDKit development installation and C++20 |
-| `SMSD_BUILD_METAL` | `AUTO` | Metal screening on macOS; `ON` fails configuration elsewhere |
 | `SMSD_BUILD_CUDA` | `AUTO` | CUDA screening when the CUDA toolkit and compiler are found; `ON` requires them |
 
 Python packages are built from the repository root with its `pyproject.toml`;
 see the [Python module](../python/README.md). The RDKit adapter's conversion
 rules are under [Optional native
-adapter](../docs/CPP.md#optional-native-adapter). The Metal and CUDA libraries
-are not part of the installed package, so GPU screening is available only to
-programs built in the same CMake project; the Python wheels are built without
-Metal or CUDA.
+adapter](../docs/CPP.md#optional-native-adapter). The native CUDA library is
+not part of the installed header package; use it from the same CMake source
+build. Python CPU/OpenMP wheels use the separate optional `smsd-cuda` package
+for NVIDIA CUDA screening. macOS uses the CPU.
 
 ## Install and use with CMake
 
@@ -101,7 +102,7 @@ program as `example/main.cpp` and this file as `example/CMakeLists.txt`:
 ```cmake
 cmake_minimum_required(VERSION 3.18)
 project(smsd_example LANGUAGES CXX)
-find_package(smsd 8.0.0 CONFIG REQUIRED)
+find_package(smsd 8.0.2 CONFIG REQUIRED)
 add_executable(smsd_example main.cpp)
 target_link_libraries(smsd_example PRIVATE smsd::smsd)
 ```
@@ -116,7 +117,7 @@ cmake --build build/example --config Release
 
 Run `build/example/smsd_example` on macOS or Linux, or
 `build/example/Release/smsd_example.exe` with a Visual Studio generator. The
-package uses same-major-version compatibility, so `find_package(smsd 8.0.0)`
+package uses same-major-version compatibility, so `find_package(smsd 8.0.2)`
 accepts any later 8.x installation.
 
 ## Documentation

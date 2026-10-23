@@ -22,6 +22,8 @@
 
 #include "smsd/bitops.hpp"
 #include "smsd/mol_graph.hpp"
+#include "smsd/screen_accelerator.hpp"
+#include "smsd/search_types.hpp"
 #include "smsd/similarity_screen.hpp"
 #include "smsd/smiles_parser.hpp"
 
@@ -1037,6 +1039,20 @@ class TargetCorpus {
     std::vector<MolGraph> targets_;
     std::vector<std::vector<uint64_t>> fingerprints_;
     bool prewarmed_ = false;
+    mutable screen_accelerator::ResidentCache fingerprintDevice_;
+
+    /** Element paths used only for conservative substructure rejection. */
+    struct SubstructureFingerprints {
+        std::mutex mutex;
+        std::unique_ptr<const std::vector<std::vector<uint64_t>>> fingerprints;
+        screen_accelerator::ResidentCache device;
+
+        SubstructureFingerprints() = default;
+        SubstructureFingerprints(const SubstructureFingerprints&) noexcept {}
+        SubstructureFingerprints& operator=(const SubstructureFingerprints&) noexcept { clear(); return *this; }
+        void clear() noexcept { device.clear(); fingerprints.reset(); }
+    };
+    mutable SubstructureFingerprints substructureFingerprints_;
 
     /// The label histograms of the targets for the similarity screen, one table per label rule,
     /// built by the first screen under that rule and dropped when targets are added. Each rule has
@@ -1046,11 +1062,15 @@ class TargetCorpus {
     struct LabelTables {
         std::array<std::mutex, screening_detail::labelModes> mutexes;
         std::array<std::unique_ptr<const screening_detail::TargetLabels>, screening_detail::labelModes> byMode;
+        std::array<screen_accelerator::ResidentCache, screening_detail::labelModes> resident;
 
         LabelTables() = default;
         LabelTables(const LabelTables&) noexcept {}
         LabelTables& operator=(const LabelTables&) noexcept { clear(); return *this; }
-        void clear() noexcept { for (auto& table : byMode) table.reset(); }
+        void clear() noexcept {
+            for (auto& cache : resident) cache.clear();
+            for (auto& table : byMode) table.reset();
+        }
     };
     mutable LabelTables labelTables_;
 
@@ -1063,12 +1083,80 @@ class TargetCorpus {
         return mutexes[(key * UINT64_C(0x9E3779B97F4A7C15)) >> 58];
     }
 
+    /** The caller holds the corpus lock while a table is obtained and used. */
+    const screening_detail::TargetLabels& labelsFor(const ChemOptions& chemistry, int numThreads) const {
+        const int mode = screening_detail::labelMode(chemistry);
+        const std::lock_guard<std::mutex> tableLock(labelTables_.mutexes[mode]);
+        auto& table = labelTables_.byMode[mode];
+        if (!table) table = std::make_unique<const screening_detail::TargetLabels>(targets_, chemistry, numThreads);
+        return *table;
+    }
+
+    std::vector<int> screenFingerprintOnCpu(const std::vector<uint64_t>& queryFingerprint,
+        double threshold, int numThreads) const {
+        const int targetCount = static_cast<int>(targets_.size());
+        const int workers = detail::workersFor(targetCount, numThreads, 1024);
+        (void)workers;
+        std::vector<uint8_t> mask(targetCount, 0);
+#ifdef _OPENMP
+        #pragma omp parallel for schedule(dynamic, 512) num_threads(workers) if(workers > 1)
+#endif
+        for (int target = 0; target < targetCount; ++target)
+            mask[target] = fingerprintTanimoto(queryFingerprint, fingerprints_[target]) >= threshold;
+        std::vector<int> hits;
+        for (int target = 0; target < targetCount; ++target)
+            if (mask[target]) hits.push_back(target);
+        return hits;
+    }
+
+    std::vector<std::vector<int>> screenFingerprints(
+        const std::vector<std::vector<uint64_t>>& queryFingerprints, double threshold, int numThreads) const {
+        if (auto accelerated = screen_accelerator::fingerprintScreens(
+                queryFingerprints, fingerprints_, threshold, fingerprintDevice_,
+                [](int common, int queryCount, int targetCount) {
+                    return tanimoto(BitCounts{common, queryCount, targetCount});
+                })) return std::move(*accelerated);
+        std::vector<std::vector<int>> results;
+        results.reserve(queryFingerprints.size());
+        for (const auto& queryFingerprint : queryFingerprints)
+            results.push_back(screenFingerprintOnCpu(queryFingerprint, threshold, numThreads));
+        return results;
+    }
+
+    std::vector<std::vector<int>> screenLabelQueries(const std::vector<const MolGraph*>& queries,
+        double threshold, const ChemOptions& chemistry, int numThreads) const {
+        if (queries.empty()) return {};
+        const auto& labels = labelsFor(chemistry, numThreads);
+        const bool resident = screen_accelerator::hasResidentLabels(screen_accelerator::active());
+        if (resident) {
+            auto& cache = labelTables_.resident[screening_detail::labelMode(chemistry)];
+            if (auto results = screen_accelerator::residentSimilarityScreens(
+                    queries, targets_, labels, threshold, chemistry, numThreads, cache))
+                return std::move(*results);
+        }
+        std::vector<std::vector<int>> results;
+        results.reserve(queries.size());
+        for (const MolGraph* query : queries) {
+            if (!resident) {
+                if (auto scores = screen_accelerator::similarityScores(*query, targets_, labels, chemistry, numThreads)) {
+                    results.push_back(screening_detail::indicesReaching(*scores, threshold));
+                    continue;
+                }
+            }
+            results.push_back(screening_detail::indicesReaching(
+                screening_detail::similarityScores(*query, targets_, labels, chemistry, numThreads), threshold));
+        }
+        return results;
+    }
+
 public:
     /// Add a single target molecule.
     void addTarget(MolGraph g) {
         const std::unique_lock<std::shared_mutex> corpusLock(corpusMutex());
         targets_.push_back(std::move(g));
         prewarmed_ = false;
+        fingerprintDevice_.clear();
+        substructureFingerprints_.clear();
         labelTables_.clear();
     }
 
@@ -1080,6 +1168,8 @@ public:
             targets_.push_back(std::move(g));
         }
         prewarmed_ = false;
+        fingerprintDevice_.clear();
+        substructureFingerprints_.clear();
         labelTables_.clear();
     }
 
@@ -1087,6 +1177,8 @@ public:
     /// Query methods may run concurrently; additions and prewarming are exclusive.
     void prewarm(int numThreads = 0) {
         const std::unique_lock<std::shared_mutex> corpusLock(corpusMutex());
+        fingerprintDevice_.clear();
+        substructureFingerprints_.clear();
         const int N = static_cast<int>(targets_.size());
         if (N == 0) { prewarmed_ = true; return; }
 
@@ -1157,45 +1249,113 @@ public:
             return {};
         }
 
-        std::vector<uint8_t> mask(N, 0);
-        // Each comparison is short, so claims are large and small corpora stay serial.
-        const int nt = detail::workersFor(N, nThreads, 1024);
-        (void)nt;
-
-#ifdef _OPENMP
-        #pragma omp parallel for schedule(dynamic, 512) num_threads(nt) if(nt > 1)
-#endif
-        for (int i = 0; i < N; ++i) {
-            if (fingerprintTanimoto(queryFP, fingerprints_[i]) >= threshold) {
-                mask[i] = 1;
-            }
+        const auto* provider = screen_accelerator::active();
+        if (screen_accelerator::hasResidentFingerprints(provider)
+            && screen_accelerator::reachesMinimum(provider, 1, targets_.size())) {
+            std::vector<std::vector<uint64_t>> queries;
+            queries.push_back(std::move(queryFP));
+            if (auto results = screen_accelerator::fingerprintScreens(
+                    queries, fingerprints_, threshold, fingerprintDevice_,
+                    [](int common, int queryCount, int targetCount) {
+                        return tanimoto(BitCounts{common, queryCount, targetCount});
+                    }, provider)) return std::move(results->front());
+            queryFP = std::move(queries.front());
         }
+        return screenFingerprintOnCpu(queryFP, threshold, nThreads);
+    }
 
-        std::vector<int> hits;
-        for (int i = 0; i < N; ++i) {
-            if (mask[i]) hits.push_back(i);
-        }
-        return hits;
+    /** Fingerprint screens in query order, sharing the prepared targets and device upload. */
+    std::vector<std::vector<int>> screenMany(const std::vector<MolGraph>& queries, double threshold,
+                                             int numThreads = 0) const {
+        const std::shared_lock<std::shared_mutex> corpusLock(corpusMutex());
+        if (targets_.empty() || fingerprints_.empty() || fingerprints_.size() != targets_.size())
+            return std::vector<std::vector<int>>(queries.size());
+        std::vector<std::vector<uint64_t>> queryFingerprints;
+        queryFingerprints.reserve(queries.size());
+        for (const auto& query : queries)
+            queryFingerprints.push_back(detail::computeCircularFingerprintECFP(query, 2, 2048));
+        return screenFingerprints(queryFingerprints, threshold, numThreads);
     }
 
     /// Similarity-bound screening of the held targets: the indices smsd::screenTargets gives for
     /// them, computed on up to numThreads threads (0 = all available). Needs no prewarm(). The
     /// first screen under a label rule records the targets' label histograms, which later screens
-    /// read in place of the graphs.
+    /// read in place of the graphs. An attached screening accelerator (screen_accelerator.hpp)
+    /// computes the label overlaps from those histograms; the hits are the same.
     std::vector<int> screenTargets(const MolGraph& query, double threshold,
                                    const ChemOptions& chemistry, int numThreads = 0) const {
         const std::shared_lock<std::shared_mutex> corpusLock(corpusMutex());
-        const screening_detail::TargetLabels* labels = nullptr;
-        {
-            // Concurrent first screens build the table once; it is dropped only under the exclusive lock.
-            const int mode = screening_detail::labelMode(chemistry);
-            const std::lock_guard<std::mutex> tableLock(labelTables_.mutexes[mode]);
-            auto& table = labelTables_.byMode[mode];
-            if (!table) table = std::make_unique<const screening_detail::TargetLabels>(targets_, chemistry, numThreads);
-            labels = table.get();
+        const auto& labels = labelsFor(chemistry, numThreads);
+        const auto* provider = screen_accelerator::active();
+        if (screen_accelerator::hasResidentLabels(provider)) {
+            if (!targets_.empty() && screen_accelerator::reachesMinimum(provider, 2, targets_.size())) {
+                auto& cache = labelTables_.resident[screening_detail::labelMode(chemistry)];
+                if (auto results = screen_accelerator::residentSimilarityScreens(
+                        {&query}, targets_, labels, threshold, chemistry, numThreads, cache, provider))
+                    return std::move(results->front());
+            }
+        } else if (auto scores = screen_accelerator::similarityScores(query, targets_, labels, chemistry, numThreads)) {
+            return screening_detail::indicesReaching(*scores, threshold);
         }
         return screening_detail::indicesReaching(
-            screening_detail::similarityScores(query, targets_, *labels, chemistry, numThreads), threshold);
+            screening_detail::similarityScores(query, targets_, labels, chemistry, numThreads), threshold);
+    }
+
+    /** Similarity-bound screens in query order, with one label rule for the batch. */
+    std::vector<std::vector<int>> screenTargetsMany(const std::vector<MolGraph>& queries, double threshold,
+        const ChemOptions& chemistry, int numThreads = 0) const {
+        const std::shared_lock<std::shared_mutex> corpusLock(corpusMutex());
+        std::vector<const MolGraph*> pointers;
+        pointers.reserve(queries.size());
+        for (const auto& query : queries) pointers.push_back(&query);
+        return screenLabelQueries(pointers, threshold, chemistry, numThreads);
+    }
+
+    /**
+     * A conservative molecule-substructure mask, or no mask when no measured accelerator is
+     * available. Targets containing pseudo atoms are always retained. No prewarm is required.
+     */
+    std::optional<std::vector<uint8_t>> substructureCandidates(const MolGraph& query,
+        const ChemOptions& chemistry, int numThreads = 0, const CancellationToken* cancellation = nullptr) const {
+        if (numThreads < 0) throw std::invalid_argument("Thread count must be non-negative");
+        const std::shared_lock<std::shared_mutex> corpusLock(corpusMutex());
+        const auto* provider = screen_accelerator::active();
+        if (!chemistry.matchAtomType || targets_.empty()
+            || targets_.size() > static_cast<std::size_t>(std::numeric_limits<int>::max())
+            || !screen_accelerator::hasResidentFingerprints(provider)
+            || !screen_accelerator::reachesMinimum(provider, 3, targets_.size())) return std::nullopt;
+        auto cancelled = [&] { return cancellation != nullptr && cancellation->isCancelled(); };
+        if (cancelled()) return std::nullopt;
+        for (int element : query.atomicNum) if (element <= 0) return std::nullopt;
+        constexpr int pathLength = 3, fingerprintBits = 2048;
+        auto queryFingerprint = detail::computeElementPathFingerprint(query, pathLength, fingerprintBits);
+        if (std::all_of(queryFingerprint.begin(), queryFingerprint.end(), [](uint64_t word) { return word == 0; }))
+            return std::nullopt;
+        const std::lock_guard<std::mutex> fingerprintLock(substructureFingerprints_.mutex);
+        if (cancelled()) return std::nullopt;
+        if (!substructureFingerprints_.fingerprints) {
+            const int targetCount = static_cast<int>(targets_.size());
+            auto fingerprints = std::make_unique<std::vector<std::vector<uint64_t>>>(targets_.size());
+            screening_detail::forEachTarget(targetCount, numThreads, [&](int target, std::vector<int>&) {
+                if (cancelled()) return;
+                const auto& graph = targets_[target];
+                if (std::any_of(graph.atomicNum.begin(), graph.atomicNum.end(), [](int element) { return element <= 0; }))
+                    (*fingerprints)[target].assign(fingerprintBits / 64, UINT64_MAX);
+                else
+                    (*fingerprints)[target] = detail::computeElementPathFingerprint(graph, pathLength, fingerprintBits);
+            });
+            if (cancelled()) return std::nullopt;
+            substructureFingerprints_.fingerprints = std::move(fingerprints);
+        }
+        std::vector<std::vector<uint64_t>> queries;
+        queries.push_back(std::move(queryFingerprint));
+        auto selected = screen_accelerator::fingerprintScreens(queries, *substructureFingerprints_.fingerprints,
+            1.0, substructureFingerprints_.device,
+            [](int common, int queryCount, int) { return common == queryCount ? 1.0 : 0.0; }, provider);
+        if (!selected || cancelled()) return std::nullopt;
+        std::vector<uint8_t> mask(targets_.size(), 0);
+        for (int target : selected->front()) mask[target] = 1;
+        return mask;
     }
 };
 

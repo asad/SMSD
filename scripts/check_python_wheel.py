@@ -11,7 +11,10 @@ import json
 from pathlib import Path
 import platform
 import sys
-import tomllib
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
 
 
 def main():

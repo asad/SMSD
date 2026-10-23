@@ -3,6 +3,21 @@
 All notable changes to SMSD Pro are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [8.0.2] - 2026-10-23
+
+Optional GPU screening through the separate `smsd-cuda` package, ordered
+batches of corpus screening queries, and CPU wheels for CPython 3.10 to 3.14 on
+four platforms. The [release notes](docs/RELEASE_NOTES.md) list the downloads
+and the upgrade notes.
+
+### Added
+
+- Optional GPU screening with the separate `smsd-cuda` package (Linux x86_64 with an NVIDIA GPU): corpus fingerprints stay on the GPU between screens, scores use the CPU expressions and hits keep target order. MCS and substructure matching stay on the CPU.
+- `TargetCorpus.screen_many` and `TargetCorpus.screen_targets_many` screen ordered batches of queries (C++ `screenMany` and `screenTargetsMany`).
+- Substructure searches over a `TargetCorpus` first skip targets whose element paths rule out a match, then match the rest on the CPU.
+- CPU wheels for CPython 3.10–3.14 on macOS arm64, Linux x86_64 and aarch64, and Windows x86_64; source builds need Python 3.10 or later.
+- CPU Docker images for Linux amd64 and arm64, and a GPU image for Linux amd64.
+
 ## [8.0.1] - 2026-10-22
 
 Corrections to SMILES, SMARTS and MOL parsing, aromaticity, CIP descriptors

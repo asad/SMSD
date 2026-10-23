@@ -11,6 +11,10 @@ on:
         description: Existing release tag to build and validate
         required: true
         type: string
+      python_build_run_id:
+        description: Completed Python build run containing the canonical SDK and checked CPython 3.14 Linux x86_64 wheel
+        required: true
+        type: string
 
 # Each job states the token permissions it needs.
 permissions: {}
@@ -77,20 +81,93 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: read
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.tag }}
+          fetch-depth: 0
           persist-credentials: false
-      - name: Build CLI image
-        run: docker build --tag smsd:release-check .
-      - name: Test CLI image
-        run: docker run --rm smsd:release-check --help
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.14'
+      - name: Check the completed Python build run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PYTHON_BUILD_RUN_ID: ${{ inputs.python_build_run_id }}
+        shell: bash
+        run: |
+          [[ "$PYTHON_BUILD_RUN_ID" =~ ^[1-9][0-9]*$ ]] || { echo 'Expected a numeric Python build run ID' >&2; exit 1; }
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PYTHON_BUILD_RUN_ID" > python-build-run.json
+          python - <<'PY'
+          import json
+          run = json.load(open('python-build-run.json'))
+          if (run.get('status') != 'completed' or run.get('conclusion') != 'success'
+                  or run.get('path') != '.github/workflows/python-publish.yml'):
+              raise SystemExit('Expected a successful completed Python wheel build run')
+          PY
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: python-release-source
+          run-id: ${{ inputs.python_build_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: python-source
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: python-wheel-linux-x86_64-3.14
+          run-id: ${{ inputs.python_build_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: python-wheel
+      - name: Check the canonical SDK and prepare the image inputs
+        shell: bash
+        run: |
+          python - <<'PY'
+          import importlib.util, os, pathlib, shutil, subprocess
+          script = pathlib.Path('scripts/build_python_wheels.py')
+          spec = importlib.util.spec_from_file_location('release_build', script)
+          build = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(build)
+          archives = list(pathlib.Path('python-source').glob('smsd-*.tar.gz'))
+          if len(archives) != 1:
+              raise SystemExit('Expected one canonical SDK')
+          source = build.checked_source(archives[0])
+          commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          if source['source_commit'] != commit:
+              raise SystemExit('Canonical SDK and selected release ref differ')
+          build.verify_source_tree(archives[0], commit)
+          output = pathlib.Path('release-input')
+          output.mkdir()
+          shutil.copyfile(archives[0], output / archives[0].name)
+          shutil.copyfile('python-source/SOURCE_MANIFEST.json', output / 'SOURCE_MANIFEST.json')
+          with open(os.environ['GITHUB_ENV'], 'a') as environment:
+              environment.write('SMSD_REVISION=' + commit + '\n')
+          PY
+          python scripts/collect-release-wheels.py --release-dir release-input --wheel-dir python-wheel --allow-incomplete
+          python scripts/prepare_docker_context.py --release-dir release-input --output docker-context --architecture amd64
+      - name: Build the image from the checked SDK and wheel
+        run: docker build --platform linux/amd64 --build-arg "SMSD_REVISION=$SMSD_REVISION" --tag smsd:release-check docker-context
+      - name: Test the CLI and installed Python image
+        run: |
+          docker run --rm smsd:release-check --help > docker-cli-help.log
+          docker run --rm smsd:release-check --version > docker-cli-version.log
+          docker run --rm --entrypoint python smsd:release-check /usr/local/share/smsd/docker_smoke.py > docker-cpu-smoke.json
       - name: Save tested image
-        run: docker save smsd:release-check | gzip > smsd-cli-image.tar.gz
+        run: |
+          docker inspect smsd:release-check > docker-image.json
+          docker save smsd:release-check | gzip > smsd-cli-image.tar.gz
+          sha256sum smsd-cli-image.tar.gz > docker-image.sha256
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: docker-cli
-          path: smsd-cli-image.tar.gz
+          path: |
+            smsd-cli-image.tar.gz
+            docker-image.sha256
+            docker-image.json
+            docker-cpu-smoke.json
+            docker-cli-help.log
+            docker-cli-version.log
+            release-input/SOURCE_MANIFEST.json
+            release-input/WHEEL_MANIFEST.json
+            docker-context/ARTIFACTS.json
           if-no-files-found: error

@@ -10,6 +10,8 @@ only what it uses:
 | `java/cli` | `com.bioinceptionlabs:smsd-cli` | The command-line interface (CLI), its file readers and JSON output, and the self-contained JAR |
 
 Both run on Java 8 and later; Java 25 LTS is recommended.
+The [supported-platforms table](../docs/HOWTO-INSTALL.md#supported-platforms)
+also covers the CLI installers and Docker images.
 
 ## Installation
 
@@ -21,16 +23,16 @@ Maven:
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>8.0.1</version>
+  <version>8.0.2</version>
 </dependency>
 ```
 
 Gradle (Kotlin DSL; in the Groovy DSL, write
-`implementation 'com.bioinceptionlabs:smsd:8.0.1'`):
+`implementation 'com.bioinceptionlabs:smsd:8.0.2'`):
 
 ```kotlin
 dependencies {
-    implementation("com.bioinceptionlabs:smsd:8.0.1")
+    implementation("com.bioinceptionlabs:smsd:8.0.2")
 }
 ```
 
@@ -53,14 +55,14 @@ automatic module `com.bioinception.smsd`.
 
 ### Command-line tool
 
-The self-contained `smsd-cli-8.0.1-jar-with-dependencies.jar` runs with
+The self-contained `smsd-cli-8.0.2-jar-with-dependencies.jar` runs with
 `java -jar`, as shown under [Command-line interface](#command-line-interface).
 Download it from the [GitHub releases page](https://github.com/asad/SMSD/releases),
 or copy it from Maven Central:
 
 ```bash
 mvn dependency:copy \
-  -Dartifact=com.bioinceptionlabs:smsd-cli:8.0.1:jar:jar-with-dependencies \
+  -Dartifact=com.bioinceptionlabs:smsd-cli:8.0.2:jar:jar-with-dependencies \
   -DoutputDirectory=.
 ```
 
@@ -72,7 +74,7 @@ Jackson and the CDK file readers. Maven:
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd-cli</artifactId>
-  <version>8.0.1</version>
+  <version>8.0.2</version>
 </dependency>
 ```
 
@@ -80,7 +82,7 @@ Gradle (Kotlin DSL):
 
 ```kotlin
 dependencies {
-    implementation("com.bioinceptionlabs:smsd-cli:8.0.1")
+    implementation("com.bioinceptionlabs:smsd-cli:8.0.2")
 }
 ```
 
@@ -103,9 +105,9 @@ The build writes:
 
 | File | Use |
 | --- | --- |
-| `java/core/target/smsd-8.0.1.jar` | Library; Maven resolves its dependencies |
-| `java/cli/target/smsd-cli-8.0.1.jar` | CLI classes; Maven resolves their dependencies |
-| `java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar` | Standalone CLI, and a self-contained class path for the examples |
+| `java/core/target/smsd-8.0.2.jar` | Library; Maven resolves its dependencies |
+| `java/cli/target/smsd-cli-8.0.2.jar` | CLI classes; Maven resolves their dependencies |
+| `java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar` | Standalone CLI, and a self-contained class path for the examples |
 | `java/cli/target/appassembler/` | Portable `bin/smsd` launchers and the JARs they use, in `repo/` |
 
 ## Quick start
@@ -149,12 +151,12 @@ After the build above, compile and run it from the repository root against the
 self-contained JAR, which includes the library, CDK and `cdk-smiles`:
 
 ```bash
-javac --release 8 -cp java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar CDKExample.java
-java -cp "java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar:." CDKExample
+javac --release 8 -cp java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar CDKExample.java
+java -cp "java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar:." CDKExample
 ```
 
 With a Java 8 compiler, omit `--release 8`. On Windows, separate the classpath
-entries with a semicolon: `"java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar;."`.
+entries with a semicolon: `"java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar;."`.
 
 By default, `MCS` finds a connected maximum common induced subgraph (MCIS),
 maximising atoms and then bonds, and `Substructure` finds a non-induced
@@ -170,10 +172,10 @@ timeouts and the full result contract.
 From the repository root:
 
 ```bash
-java -jar java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar --version
-java -jar java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar --version
+java -jar java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
-java -jar java/cli/target/smsd-cli-8.0.1-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --mode mcs --json -
 ```
 
@@ -217,7 +219,7 @@ launcher scripts are in `java/cli/src/main/java`, `java/cli/src/test/java` and
   stereo, R-groups and the CLI.
 - [Installation guide](../docs/HOWTO-INSTALL.md): platform requirements and
   source builds.
-- [Validation record](../docs/VALIDATION_8.0.0.md),
+- [8.0.0 validation record](../docs/VALIDATION_8.0.0.md),
   [benchmark guide](../benchmarks/README.md) and [changelog](../CHANGELOG.md).
 
 ## Licence

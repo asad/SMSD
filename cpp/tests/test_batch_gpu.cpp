@@ -13,6 +13,10 @@
 #include "smsd/batch.hpp"
 #include "smsd/smiles_parser.hpp"
 
+#ifdef SMSD_ENABLE_CUDA
+#include <cuda_runtime_api.h>
+#endif
+
 #if defined(SMSD_ENABLE_CUDA) || defined(SMSD_ENABLE_METAL)
 #include "smsd/gpu.hpp"
 #define HAS_GPU 1
@@ -493,6 +497,33 @@ static std::vector<double> cpuRef(
 
 static void runGpuTests() {
     std::printf("\n  -- GPU / Metal tests --\n");
+
+#ifdef SMSD_ENABLE_CUDA
+    if (!smsd::gpu_kern::detail::disabledByEnvironment()) {
+        int devices = 0;
+        const auto status = cudaGetDeviceCount(&devices);
+        if (status == cudaErrorNoDevice || status == cudaErrorInsufficientDriver
+            || (status == cudaSuccess && devices == 0)) {
+            std::printf("  Native CUDA kernel check skipped: no usable device\n");
+        } else {
+            CHECK(status == cudaSuccess, "CUDA device discovery must succeed before native kernel checks");
+            if (status == cudaSuccess) {
+                const auto query = parse("CO"), target = parse("CCO");
+                const int queryFlags[] = {0, 0}, targetFlags[] = {0, 0, 0};
+                uint64_t domain[] = {0, 0};
+                const bool completed = smsd::gpu_kern::domainInit(2, 3, 1,
+                    query.atomicNum.data(), query.formalCharge.data(), queryFlags, queryFlags,
+                    target.atomicNum.data(), target.formalCharge.data(), targetFlags, targetFlags,
+                    true, false, false, false, domain);
+                CHECK(completed, "native CUDA domain kernel must execute without CPU fallback");
+                CHECK(completed && domain[0] == 3 && domain[1] == 4,
+                      "native CUDA ethanol domains and padding must match exact element compatibility");
+            }
+        }
+    } else {
+        std::printf("  Native CUDA kernel check skipped: GPU disabled\n");
+    }
+#endif
 
     // Device info
     {

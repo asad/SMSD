@@ -7,6 +7,7 @@
 #pragma once
 
 #include "smsd/search.hpp"
+#include "smsd/batch.hpp"
 #include "smsd/smiles_parser.hpp"
 
 namespace smsd {
@@ -26,6 +27,11 @@ class Substructure {
     explicit Substructure(std::shared_ptr<const MolGraph> query) : query_(std::move(query)) {}
     explicit Substructure(std::shared_ptr<const SmartsQuery> pattern)
         : pattern_(std::move(pattern)), plan_(std::make_shared<const search_detail::PatternPlan>(*pattern_)) {}
+
+    SearchResult matchAfterScreen(const MolGraph& target, bool screenedOut) const {
+        return search_detail::substructure(query_.get(), pattern_.get(), target, options_, 1, false,
+                                            nullptr, plan_.get(), true, screenedOut);
+    }
 public:
     using Options = SubstructureOptions;
     static Substructure find(const MolGraph& query) { return Substructure(search_detail::ownQuery(query)); }
@@ -69,6 +75,32 @@ public:
     template<class Targets>
     std::vector<SearchResult> matchMany(const Targets& targets, int numThreads = 0) const {
         return search_detail::matchMany(*this, targets, numThreads);
+    }
+    /** A necessary-condition mask from the captured molecule query; SMARTS stays on the CPU. */
+    std::optional<std::vector<uint8_t>> corpusCandidates(const batch::TargetCorpus& corpus, int numThreads = 0) const {
+        if (!query_ || !options_.chemistry.matchAtomType || options_.nodeLimit != 0 || options_.timeoutMs == 0
+            || (options_.cancellation && options_.cancellation->isCancelled())) return std::nullopt;
+        return corpus.substructureCandidates(*query_, options_.chemistry, numThreads, options_.cancellation.get());
+    }
+    /** Search every original slot, using a corpus mask whose zeroes prove no embedding exists. */
+    template<class Targets>
+    std::vector<SearchResult> matchManyScreened(const Targets& targets, const std::vector<uint8_t>& survivors,
+                                               int numThreads = 0) const {
+        if (survivors.size() != targets.size()) throw std::invalid_argument("Substructure mask size differs from targets");
+        struct IndexedTarget { const MolGraph& graph; size_t index; int n; };
+        struct IndexedTargets {
+            const Targets& targets;
+            size_t size() const { return targets.size(); }
+            IndexedTarget operator[](size_t index) const { return {targets[index], index, targets[index].n}; }
+        };
+        struct ScreenedQuery {
+            const Substructure& query;
+            const std::vector<uint8_t>& survivors;
+            SearchResult match(const IndexedTarget& target) const {
+                return query.matchAfterScreen(target.graph, survivors[target.index] == 0);
+            }
+        };
+        return search_detail::matchMany(ScreenedQuery{*this, survivors}, IndexedTargets{targets}, numThreads);
     }
     SearchResult matchAll(const std::string& target, size_t limit = 1000) const {
         return matchAll(parseSMILES(target), limit);

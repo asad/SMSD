@@ -4,11 +4,11 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "smsd"
-version = "8.0.1"
+version = "8.0.2"
 description = "Substructure and MCS search, fingerprints and similarity screening for chemical graphs, with optional tautomer-aware matching"
 readme = "python/README.md"
 license = {text = "Apache-2.0"}
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
     {name = "Syed Asad Rahman", email = "asad.rahman@bioinceptionlabs.com"}
 ]
@@ -18,7 +18,6 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: C++",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -32,7 +31,7 @@ classifiers = [
 keywords = ["cheminformatics", "mcs", "maximum-common-substructure", "substructure", "graph-matching", "chemistry", "smiles", "smarts", "fingerprint", "ecfp", "maccs", "similarity", "screening", "tautomer"]
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0,<10", "pytest-timeout>=2.0,<3"]
+dev = ["pytest>=7.0,<10", "pytest-timeout>=2.0,<3", "tomli>=2,<3; python_version<'3.11'"]
 rdkit = ["rdkit<2027"]
 
 [project.urls]
@@ -50,8 +49,9 @@ wheel.license-files = ["LICENSE", "NOTICE", "licenses/libomp/LICENSE.TXT", "lice
 # Benchmark corpora and the Java and script test suites are left out of the sdist. The native
 # release checks build cpp/tests from it; the tautomer atom-order test, which reads the
 # benchmark corpus benchmarks/data/chembl_mcs_benchmark.smi, is skipped there. The Python
-# tests in the sdist read the two shared golden fixtures and three benchmark modules.
-sdist.exclude = ["benchmarks/**", "java/src/test/**", "java/cli/src/test/**", "scripts/tests/**"]
+# tests in the sdist read the two shared golden fixtures and three benchmark modules. The
+# separately built smsd-cuda package is left out too.
+sdist.exclude = ["benchmarks/**", "java/src/test/**", "java/cli/src/test/**", "scripts/tests/**", "packaging/**"]
 sdist.include = [
     "benchmarks/generate_dalke_pairs.py",
     "benchmarks/mcs_pairs.py",

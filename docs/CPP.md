@@ -4,7 +4,7 @@ A header-only C++17 library in namespace `smsd` for substructure search,
 maximum common substructure (MCS) search and related chemistry. Atom indices
 are zero-based. Each example is a complete program; build it as in the [C++
 quick start](../cpp/README.md#quick-start). See also the [installation
-guide](HOWTO-INSTALL.md), the [Java](JAVA.md) and [Python](PYTHON.md) guides
+guide](HOWTO-INSTALL.md#supported-platforms), the [Java](JAVA.md) and [Python](PYTHON.md) guides
 and the [changelog](../CHANGELOG.md).
 
 ## Headers
@@ -19,7 +19,7 @@ implementation code.
 | --- | --- |
 | Search | `mcs.hpp` (`MCS`, mapping utilities); `substructure.hpp` (`Substructure`, `RGroupResult`); `search_types.hpp` (`SearchOptions`, `MCSOptions`, `SubstructureOptions`, `Match`, `SearchResult`, `SearchStatus`, `CancellationToken`); `chem_options.hpp` (`ChemOptions`) |
 | Molecules | `mol_graph.hpp` (`MolGraph`, `MolGraph::Builder`); `smiles_parser.hpp` (`parseSMILES`, `toSMILES`, `toSMARTS`); `smarts_parser.hpp` (`parseSMARTS`, `SmartsPredicateRegistry`); `parser_utils.hpp` (input limits); `mol_reader.hpp` (MOL and SDF) |
-| Fingerprints and screening | `batch.hpp` (fingerprints, similarity, `TargetCorpus`) and `fingerprint_options.hpp` (`FingerprintOptions`), in `smsd::batch`; `similarity_screen.hpp` (`similarityUpperBound`, `screenTargets`); `gpu.hpp` (Metal or CUDA screening with a CPU fallback, in `smsd::gpu`) |
+| Fingerprints and screening | `batch.hpp` (fingerprints, similarity, `TargetCorpus`) and `fingerprint_options.hpp` (`FingerprintOptions`), in `smsd::batch`; `similarity_screen.hpp` (`similarityUpperBound`, `screenTargets`); `gpu.hpp` (optional CUDA screening with a CPU fallback, in `smsd::gpu`) |
 | Rings, stereo and drawing | `ring_finder.hpp` (`computeSSSR`, `computeRelevantCycles`, `computeURFs`, `computeRings`, and `ringsTruncated`, which says whether the ring search stopped at its work bound); `cip.hpp` (`smsd::cip`); `layout.hpp` (2D and 3D coordinates, `transform`); `depict.hpp` (SVG); `depictor.hpp` (2D coordinates constrained to fixed atoms or a reference) |
 | Data and utilities | `hungarian.hpp` (`optimalAssign`); `periodic_table.hpp` (`getElement`, `atomicWeight`, `paulingElectronegativity` and more); `scaffold_library.hpp` (reference ring systems, scaffolds, pharmacophore and functional-group SMARTS, drug-likeness limits); `bond_energies.hpp` (`bondDissociationEnergy`, `mappingBondChangeCost`, in kJ/mol); `color_palette.hpp` (`mapNumberToPaletteColor`, a fixed 20-colour cycle for atom-map numbers); `rdkit_adapter.hpp` ([optional](#optional-native-adapter)) |
 
@@ -406,6 +406,11 @@ In `smsd::batch`:
   before `prewarm`, and `screenTargets(query, threshold, chemistry,
   numThreads = 0)`, the bound screen below for the held targets, which needs
   no `prewarm`.
+- `TargetCorpus::screenMany(queries, threshold, numThreads = 0)` and
+  `screenTargetsMany(queries, threshold, chemistry, numThreads = 0)` return
+  one hit-index vector per query, in query order. Each vector keeps target
+  order. `screenMany` needs prewarmed ECFP4 fingerprints; `screenTargetsMany`
+  uses the atom-count MCS similarity bound and needs no `prewarm`.
 
 `similarityUpperBound(query, target, chemistry)` bounds the atom-count Tanimoto
 similarity of the MCS from above;
@@ -413,9 +418,10 @@ similarity of the MCS from above;
 the targets whose bound reaches `threshold`, on the calling thread, or with a
 fifth argument on up to `numThreads` threads (0 = the OpenMP thread limit),
 giving the same indices. `gpu::batchSimilarityScreenAuto`
-computes the bound on CUDA or Metal when built with either and a device is
-present, else on the CPU, returning a `ScreenHit{index, score}` per passing
-target.
+is a separate native CUDA source-build interface with a CPU fallback,
+returning a `ScreenHit{index, score}` per passing target. The optional Python
+`smsd-cuda` package uses the corpus screening interface described in the
+[Python guide](PYTHON.md#optional-cuda-screening).
 `gpu::isAvailable()` and `gpu::deviceInfo()` report the backend; a non-empty
 `SMSD_DISABLE_GPU` other than `0` makes `isAvailable()` false. Batch
 fingerprints, screens and `TargetCorpus` run in parallel when compiled with

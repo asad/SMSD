@@ -14,6 +14,11 @@
 #include "smsd/substructure.hpp"
 #include <iostream>
 #include <stdexcept>
+#include <string>
+
+#if defined(SMSD_TEST_NATIVE_GPU) && defined(SMSD_ENABLE_CUDA)
+#include <cuda_runtime_api.h>
+#endif
 
 #ifndef SMSD_TEST_NATIVE_GPU
 namespace smsd::gpu_kern {
@@ -96,9 +101,28 @@ static void check(const smsd::MolGraph& q, const smsd::MolGraph& t,
 int main() {
     try {
 #ifdef SMSD_TEST_NATIVE_GPU
-        if (!smsd::gpu_kern::graphKernelsAvailable()) {
+#ifdef SMSD_ENABLE_CUDA
+        if (smsd::gpu_kern::detail::disabledByEnvironment()) {
+            std::cout << "Native GPU disabled\n";
+            return 77;
+        }
+        int devices = 0;
+        const auto status = cudaGetDeviceCount(&devices);
+        if (status == cudaErrorNoDevice || status == cudaErrorInsufficientDriver
+            || (status == cudaSuccess && devices == 0)) {
             std::cout << "Native GPU unavailable\n";
             return 77;
+        }
+        if (status != cudaSuccess)
+            throw std::runtime_error(std::string("native CUDA device discovery failed: ") + cudaGetErrorString(status));
+#endif
+        if (!smsd::gpu_kern::graphKernelsAvailable()) {
+#ifdef SMSD_ENABLE_CUDA
+            throw std::runtime_error("native CUDA kernels unavailable after successful device discovery");
+#else
+            std::cout << "Native GPU unavailable\n";
+            return 77;
+#endif
         }
 #endif
         smsd::ChemOptions c;

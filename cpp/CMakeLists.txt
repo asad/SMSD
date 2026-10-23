@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.18)
-project(smsd VERSION 8.0.1 LANGUAGES CXX)
+project(smsd VERSION 8.0.2 LANGUAGES CXX)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
@@ -98,11 +98,19 @@ else()
 endif()
 
 if(_SMSD_CUDA_ENABLED)
+    # Keep compilation and final device links on the same architecture set.
+    if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+        if(NOT "$ENV{CUDAARCHS}" STREQUAL "")
+            set(CMAKE_CUDA_ARCHITECTURES "$ENV{CUDAARCHS}" CACHE STRING "CUDA architectures")
+        else()
+            set(CMAKE_CUDA_ARCHITECTURES "75;80;86;89;90" CACHE STRING "CUDA architectures")
+        endif()
+    endif()
     enable_language(CUDA)
     add_library(smsd_cuda STATIC cuda/batch_screen.cu cuda/graph_kernels.cu)
     target_link_libraries(smsd_cuda PUBLIC smsd CUDA::cudart)
     set_target_properties(smsd_cuda PROPERTIES
-        CUDA_ARCHITECTURES "75;80;86;89;90"   # Turing, Ampere, Ada, Hopper
+        CUDA_ARCHITECTURES "${CMAKE_CUDA_ARCHITECTURES}"
         CUDA_SEPARABLE_COMPILATION ON)
     # Expose SMSD_ENABLE_CUDA so gpu.hpp picks up the right branch
     target_compile_definitions(smsd_cuda PUBLIC SMSD_ENABLE_CUDA)
@@ -329,6 +337,8 @@ if(SMSD_BUILD_TESTS)
     endif()
 
     smsd_add_test(smsd_screening_regression_tests tests/test_screening_regression.cpp)
+    smsd_add_test(smsd_screen_accelerator_tests tests/test_screen_accelerator.cpp)
+    smsd_add_test(smsd_corpus_substructure_screen_tests tests/test_corpus_substructure_screen.cpp)
     smsd_add_test(smsd_fragment_output_regression_tests tests/test_fragment_output_regression.cpp)
     smsd_add_test(smsd_option_fingerprint_regression_tests tests/test_option_fingerprint_regression.cpp)
     if(_SMSD_METAL_ENABLED)

@@ -1,0 +1,47 @@
+FROM python:3.14.9-slim-bookworm@sha256:7e0522950230cad1ec100ada6e3898c22c6bc82851289b4bdf0bf77c1c829cd5 AS artifacts
+ARG TARGETARCH
+ARG SMSD_REVISION
+WORKDIR /artifacts
+COPY source.tar.gz SOURCE_MANIFEST.json ARTIFACTS.json ./
+COPY LICENSE NOTICE ./
+COPY wheels/ ./wheels/
+COPY licenses/NVIDIA-CUDA.txt ./licenses/NVIDIA-CUDA.txt
+COPY scripts/docker_install.py scripts/docker_smoke.py ./scripts/
+RUN python scripts/docker_install.py --verify-only --gpu --root /artifacts --architecture "$TARGETARCH" --revision "$SMSD_REVISION"
+
+FROM nvidia/cuda:12.8.1-runtime-ubuntu24.04@sha256:ebef3c171eeef0298e4eb2e4be843105edf3b8b0ac45e0b43acee358e8046867
+ARG TARGETARCH
+ARG SMSD_REVISION
+LABEL org.opencontainers.image.title="SMSD Pro CUDA" \
+      org.opencontainers.image.description="Python substructure and MCS search with NVIDIA CUDA fingerprint and similarity screening" \
+      org.opencontainers.image.version="8.0.2" \
+      org.opencontainers.image.revision="${SMSD_REVISION}" \
+      org.opencontainers.image.source="https://github.com/asad/SMSD" \
+      org.opencontainers.image.licenses="Apache-2.0 AND PSF-2.0 AND LicenseRef-NVIDIA-CUDA" \
+      org.opencontainers.image.vendor="BioInception PVT LTD" \
+      org.opencontainers.image.authors="Syed Asad Rahman"
+ENV PATH="/usr/local/bin:${PATH}" PYTHONDONTWRITEBYTECODE=1 \
+    LD_LIBRARY_PATH="/usr/local/lib/python3.14/site-packages/nvidia/cuda_runtime/lib:${LD_LIBRARY_PATH}"
+RUN test "$TARGETARCH" = amd64 \
+    && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      ca-certificates netbase tzdata libbz2-1.0 libdb5.3t64 libexpat1 libffi8 \
+      libgdbm6t64 libgdbm-compat4t64 libgomp1 liblzma5 libncursesw6 libreadline8t64 \
+      libsqlite3-0 libssl3t64 libtinfo6 libuuid1 libzstd1 zlib1g \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=artifacts /usr/local/ /usr/local/
+COPY --from=artifacts /artifacts/wheels/amd64/ /tmp/smsd/wheels/amd64/
+COPY --from=artifacts /artifacts/wheels/cuda/ /tmp/smsd/wheels/cuda/
+COPY --from=artifacts /artifacts/ARTIFACTS.json /tmp/smsd/ARTIFACTS.json
+COPY --from=artifacts /artifacts/scripts/ /usr/local/share/smsd/
+COPY --from=artifacts /artifacts/licenses/NVIDIA-CUDA.txt /usr/share/doc/smsd/licenses/NVIDIA-CUDA.txt
+COPY --from=artifacts /artifacts/LICENSE /artifacts/NOTICE /usr/share/doc/smsd/
+RUN ldconfig && python /usr/local/share/smsd/docker_install.py --gpu --root /tmp/smsd \
+      --architecture "$TARGETARCH" --revision "$SMSD_REVISION" \
+    && rm -rf /tmp/smsd \
+    && test ! -e /usr/local/cuda/bin/nvcc \
+    && groupadd -r smsd && useradd -r -g smsd -d /work smsd
+WORKDIR /work
+RUN chown smsd:smsd /work
+USER smsd
+ENTRYPOINT ["python"]
+CMD ["--help"]

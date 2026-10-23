@@ -18,7 +18,7 @@ on:
         type: choice
         options: [windows, linux, macos, all]
       publish:
-        description: Upload the validated published GitHub SDK and three wheels to PyPI (requires platform=all)
+        description: Upload the validated published GitHub SDK and 20 CPU wheels to PyPI (requires platform=all)
         required: true
         default: false
         type: boolean
@@ -77,9 +77,12 @@ jobs:
           entries = [
               {'platform': 'windows', 'os': 'windows-2022', 'arch': 'AMD64'},
               {'platform': 'linux', 'os': 'ubuntu-24.04', 'arch': 'x86_64'},
+              {'platform': 'linux', 'os': 'ubuntu-24.04-arm', 'arch': 'aarch64'},
               {'platform': 'macos', 'os': 'macos-26', 'arch': 'arm64'},
           ]
-          selected = [entry for entry in entries if target == 'all' or entry['platform'] == target]
+          selected = [{**entry, 'python': version} for entry in entries
+                      if target == 'all' or entry['platform'] == target
+                      for version in ('3.10', '3.11', '3.12', '3.13', '3.14')]
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               output.write('value=' + json.dumps({'include': selected}) + '\n')
           PY
@@ -99,7 +102,7 @@ jobs:
 
   build:
     if: ${{ !inputs.publish }}
-    name: CPython 3.14 ${{ matrix.platform }} ${{ matrix.arch }}
+    name: CPython ${{ matrix.python }} ${{ matrix.platform }} ${{ matrix.arch }}
     needs: source
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
@@ -124,15 +127,16 @@ jobs:
         env:
           WHEEL_PLATFORM: ${{ matrix.platform }}
           WHEEL_ARCH: ${{ matrix.arch }}
+          WHEEL_PYTHON_VERSION: ${{ matrix.python }}
         shell: bash
         run: |
           python -m pip install cibuildwheel==4.2.1
           python scripts/build_python_wheels.py build \
             --sdist release-source/smsd-*.tar.gz --source-manifest release-source/SOURCE_MANIFEST.json \
-            --platform "$WHEEL_PLATFORM" --arch "$WHEEL_ARCH" --output-dir wheelhouse
+            --platform "$WHEEL_PLATFORM" --arch "$WHEEL_ARCH" --python-version "$WHEEL_PYTHON_VERSION" --output-dir wheelhouse
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: python-wheel-${{ matrix.platform }}-${{ matrix.arch }}
+          name: python-wheel-${{ matrix.platform }}-${{ matrix.arch }}-${{ matrix.python }}
           path: wheelhouse/*
           if-no-files-found: error
 
@@ -168,14 +172,14 @@ jobs:
           fetch-depth: 0
           path: release-checkout
           persist-credentials: false
-      - name: Check release hashes, frozen source and all three wheels
+      - name: Check release hashes, frozen source and all 20 CPU wheels
         env:
           RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
           python scripts/check_pypi_release.py validate \
             --tag "$RELEASE_TAG" --release-dir release-input --metadata-file release-metadata.json \
             --source-checkout release-checkout --dist-dir dist --receipt-file upload-receipt.json
-      - name: Verify the exact four files immediately before upload
+      - name: Verify the exact 21 files immediately before upload
         run: |
           python scripts/check_pypi_release.py verify-staged \
             --dist-dir dist --receipt-file upload-receipt.json

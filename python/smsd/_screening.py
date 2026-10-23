@@ -7,7 +7,7 @@
 import threading
 import warnings
 
-from . import _smsd
+from . import _accelerator, _smsd
 from ._interop import _index_tuple
 from ._molecule import _checked_int, _ensure_mol, _ensure_mol_ex
 
@@ -16,8 +16,27 @@ __all__ = [
     "similarity", "similarity_upper_bound",
 ]
 
-gpu_is_available = _smsd.gpu_is_available
-gpu_device_info = _smsd.gpu_device_info
+
+def gpu_is_available():
+    """True when a GPU is available at run time: through an installed smsd-cuda package that
+    finds a device, or through a native module built with CUDA or Metal."""
+    return _accelerator.active() is not None or _smsd.gpu_is_available()
+
+
+def gpu_device_info():
+    """Human-readable compute backend string.
+
+    Examples::
+
+        'GPU: Tesla T4 (compute 7.5, 14930 MB)  [OpenMP 4.5, 8 threads]'
+        'Metal GPU: Apple M2 Pro  [OpenMP 5.0, 10 threads]'
+        'CPU: OpenMP 4.5, 16 threads'
+    """
+    native = _smsd.gpu_device_info()
+    accelerator = _accelerator.active()
+    if accelerator is None or not native.startswith("CPU: "):
+        return native
+    return f"GPU: {accelerator[1] or accelerator[0]}  [{native[len('CPU: '):]}]"
 
 
 def _chemistry(function, chemistry, chem):
@@ -63,6 +82,7 @@ def screen_targets(query, targets, threshold, chemistry=None, *, chem=None, num_
     options = _chemistry("screen_targets", chemistry, chem)
     query = _ensure_mol(query)
     if isinstance(targets, TargetCorpus):
+        _accelerator.discover()  # attaches an installed accelerator before the first corpus screen
         return targets._impl.screen_targets(query, threshold, options, num_threads)
     return _smsd.screen_targets(query, targets, threshold, options, num_threads, _ensure_mol)
 
@@ -154,4 +174,20 @@ class TargetCorpus:
 
     def screen(self, query, threshold, *, num_threads=0):
         """Return target indices meeting the ECFP Tanimoto threshold."""
+        _accelerator.discover()
         return self._impl.screen(_ensure_mol(query), threshold, num_threads)
+
+    def screen_many(self, queries, threshold, *, num_threads=0):
+        """Return ECFP Tanimoto hit indices for each query in input order."""
+        _checked_int(num_threads, "Thread count", 0)
+        graphs = [_ensure_mol(query) for query in queries]
+        _accelerator.discover()
+        return self._impl.screen_many(graphs, threshold, num_threads)
+
+    def screen_targets_many(self, queries, threshold, chemistry=None, *, num_threads=0):
+        """Return similarity-bound hit indices for each query in input order."""
+        _checked_int(num_threads, "Thread count", 0)
+        graphs = [_ensure_mol(query) for query in queries]
+        options = _chemistry("screen_targets_many", chemistry, None)
+        _accelerator.discover()
+        return self._impl.screen_targets_many(graphs, threshold, options, num_threads)

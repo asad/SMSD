@@ -6,7 +6,7 @@
 from dataclasses import dataclass
 from types import MappingProxyType
 
-from . import _smsd
+from . import _accelerator, _smsd
 from ._interop import _index_tuple
 from ._molecule import _checked_int, _ensure_mol_ex
 from ._screening import TargetCorpus
@@ -150,6 +150,10 @@ class _Query:
     def match_many(self, targets, *, num_threads=0):
         """Search targets independently and preserve each target's atom indices."""
         _checked_int(num_threads, "Thread count", 0)
+        if isinstance(self, Substructure) and isinstance(targets, TargetCorpus):
+            _accelerator.discover()
+            return self._native._match_corpus(targets._impl, targets._snapshot(), num_threads,
+                                            self._query_indices)
         if isinstance(targets, TargetCorpus):
             converted = targets._snapshot()
         else:

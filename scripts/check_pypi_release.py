@@ -15,7 +15,6 @@ import shutil
 import subprocess
 import sys
 import tarfile
-import tomllib
 import xml.etree.ElementTree as ET
 import zipfile
 
@@ -24,6 +23,7 @@ _BUILD_SPEC = importlib.util.spec_from_file_location(
     "smsd_release_build", Path(__file__).resolve().with_name("build_python_wheels.py"))
 BUILD = importlib.util.module_from_spec(_BUILD_SPEC)
 _BUILD_SPEC.loader.exec_module(BUILD)
+tomllib = BUILD.tomllib
 
 
 def require(condition, message):
@@ -42,22 +42,6 @@ def safe_name(name):
             and not any(char in name for char in "/\\\r\n\0"))
 
 
-def wheel_platform(name, version):
-    prefix = f"smsd-{version}-cp314-cp314-"
-    require(name.startswith(prefix) and name.endswith(".whl"),
-            "Unexpected release wheel: " + name)
-    tag = name[len(prefix):-4]
-    if tag == "win_amd64":
-        return "windows"
-    if tag == "macosx_26_0_arm64":
-        return "macos"
-    if ("manylinux_2_28_x86_64" in tag.split(".")
-            and all(re.fullmatch(r"manylinux_2_\d+_x86_64", item)
-                    for item in tag.split("."))):
-        return "linux"
-    raise ValueError("Unexpected release wheel platform: " + name)
-
-
 def selected_assets(metadata, tag):
     version = release_version(tag)
     require(metadata.get("tag_name") == tag, "GitHub release tag differs")
@@ -72,15 +56,21 @@ def selected_assets(metadata, tag):
         assets[name] = asset
     selected = {f"smsd-{version}.tar.gz", "SOURCE_MANIFEST.json",
                 "WHEEL_MANIFEST.json", "SHA256SUMS"}
-    families = {}
+    targets = {}
     for name in assets:
         if name.endswith(".whl"):
-            family = wheel_platform(name, version)
-            require(family not in families, "Multiple " + family + " release wheels")
-            families[family] = name
-    missing = {"linux", "macos", "windows"} - families.keys()
+            if name.startswith("smsd_cuda-"):
+                fields = name[:-4].split("-")
+                require(len(fields) == 5 and fields[:4] == ["smsd_cuda", version, "py3", "none"]
+                        and all(tag == "linux_x86_64" or re.fullmatch(r"manylinux_2_\d+_x86_64", tag)
+                                for tag in fields[4].split(".")), "Unexpected CUDA release wheel: " + name)
+                continue
+            identifier = BUILD.wheel_target(name, version)
+            require(identifier not in targets, "Multiple " + identifier + " release wheels")
+            targets[identifier] = name
+    missing = BUILD.BUILD_IDENTIFIERS.keys() - targets.keys()
     require(not missing, "Missing release wheels: " + ", ".join(sorted(missing)))
-    selected.update(families.values())
+    selected.update(targets.values())
     require(selected <= assets.keys(), "Published release is missing required metadata or source")
     for name in selected:
         asset = assets[name]
@@ -90,7 +80,7 @@ def selected_assets(metadata, tag):
         require(isinstance(asset.get("digest"), str)
                 and re.fullmatch(r"sha256:[0-9a-f]{64}", asset["digest"]),
                 "Expected GitHub SHA256 digest: " + name)
-    return version, {name: assets[name] for name in selected}, families
+    return version, {name: assets[name] for name in selected}, targets
 
 
 def download(args):
@@ -111,7 +101,7 @@ def download(args):
     for name in sorted(assets):
         command.extend(["--pattern", name])
     subprocess.run(command, check=True)
-    print("Downloaded one published SDK and three release wheels with their manifests")
+    print("Downloaded one published SDK and 20 release wheels with their manifests")
 
 
 def check_source(directory, version, manifest):
@@ -137,6 +127,8 @@ def check_source(directory, version, manifest):
     require(project["name"] == package["Name"] == "smsd"
             and project["version"] == package["Version"] == version,
             "SDK package metadata differs")
+    require(project.get("requires-python") == package["Requires-Python"] == ">=3.10",
+            "SDK Python requirement differs from >=3.10")
     metadata_parts = files["PKG-INFO"].split(b"\n\n", 1)
     require(len(metadata_parts) == 2 and metadata_parts[1] == files["python/README.md"],
             "SDK description differs from its Python README")
@@ -168,6 +160,7 @@ def check_git(checkout, tag, manifest, files):
     require(all(not name or Path(name.decode()).suffix in (".md", ".rst")
                 or name == b"CITATION.cff" for name in changed),
             "Tagged production files differ from the frozen SDK")
+    require(b"python/README.md" not in changed, "Tagged package description differs from SDK")
     blobs = BUILD.tree_blobs(git(checkout, "ls-tree", "-r", "-z", "--full-tree", frozen))
     for name, content in files.items():
         if name == "PKG-INFO":
@@ -178,30 +171,30 @@ def check_git(checkout, tag, manifest, files):
     return checkout / collector
 
 
-def check_wheel_manifest(directory, version, source, families, package_metadata):
+def check_wheel_manifest(directory, version, source, targets, package_metadata):
     manifest = BUILD.read_manifest(directory / "WHEEL_MANIFEST.json")
     BUILD.checked_wheel_manifest(directory, source,
-                                 {family: directory / name for family, name in families.items()}, manifest)
-    require(manifest.get("schema_version") == 1, "Unexpected wheel manifest schema")
+                                 {identifier: directory / name for identifier, name in targets.items()}, manifest)
+    require(manifest.get("schema_version") == 2, "Unexpected wheel manifest schema")
     for field in ("version", "source_commit", "sdist", "sdist_sha256"):
         require(manifest.get(field) == source[field], "Wheel manifest identity differs: " + field)
     entries = manifest.get("wheels")
-    require(isinstance(entries, list) and len(entries) == 3, "Expected three wheel manifest entries")
+    require(isinstance(entries, list) and len(entries) == len(BUILD.BUILD_IDENTIFIERS), "Expected 20 wheel manifest entries")
     recorded = {}
     for entry in entries:
-        family = entry.get("platform")
-        require(family in families and family not in recorded, "Duplicate or unknown manifest platform")
-        require(entry.get("wheel") == families[family], "Wheel manifest filename differs")
-        require(entry.get("wheel_sha256") == BUILD.sha256(directory / families[family]),
+        identifier = entry.get("build_identifier")
+        require(identifier in targets and identifier not in recorded, "Duplicate or unknown manifest target")
+        require(entry.get("wheel") == targets[identifier], "Wheel manifest filename differs")
+        require(entry.get("wheel_sha256") == BUILD.sha256(directory / targets[identifier]),
                 "Wheel manifest SHA256 differs")
-        with zipfile.ZipFile(directory / families[family]) as wheel:
+        with zipfile.ZipFile(directory / targets[identifier]) as wheel:
             require(wheel.read(f"smsd-{version}.dist-info/METADATA") == package_metadata,
                     "Wheel package metadata or long description differs from the final SDK")
         require(entry.get("native_debug_tests") == "passed"
                 and entry.get("installed_wheel_tests") == "passed",
                 "Wheel manifest lacks successful native and installed tests")
-        recorded[family] = entry
-    require(set(recorded) == {"linux", "macos", "windows"}, "Wheel manifest is incomplete")
+        recorded[identifier] = entry
+    require(set(recorded) == set(BUILD.BUILD_IDENTIFIERS), "Wheel manifest is incomplete")
 
 
 def check_hashes(directory, assets):
@@ -224,15 +217,15 @@ def check_hashes(directory, assets):
 
 
 def validate(args):
-    version, assets, families = selected_assets(BUILD.read_manifest(args.metadata_file), args.tag)
+    version, assets, targets = selected_assets(BUILD.read_manifest(args.metadata_file), args.tag)
     check_hashes(args.release_dir, assets)
     source = BUILD.read_manifest(args.release_dir / "SOURCE_MANIFEST.json")
     files = check_source(args.release_dir, version, source)
     collector = check_git(args.source_checkout, args.tag, source, files)
-    check_wheel_manifest(args.release_dir, version, source, families, files["PKG-INFO"])
+    check_wheel_manifest(args.release_dir, version, source, targets, files["PKG-INFO"])
     subprocess.run([sys.executable, str(collector), "--release-dir", str(args.release_dir.resolve()),
                     "--check-only"], check=True)
-    distributions = sorted({f"smsd-{version}.tar.gz", *families.values()})
+    distributions = sorted({f"smsd-{version}.tar.gz", *targets.values()})
     require(not args.dist_dir.exists() or not any(args.dist_dir.iterdir()), "Upload directory must be empty")
     args.dist_dir.mkdir(parents=True, exist_ok=True)
     for name in distributions:
@@ -240,25 +233,25 @@ def validate(args):
     receipt = {"version": version, "source_commit": source["source_commit"],
                "files": {name: BUILD.sha256(args.release_dir / name) for name in distributions}}
     args.receipt_file.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
-    print("Validated unchanged SDK and all three release wheels")
+    print("Validated unchanged SDK and all 20 release wheels")
 
 
 def verify_staged(args):
     receipt = BUILD.read_manifest(args.receipt_file)
     version = release_version("v" + receipt["version"])
     files = receipt.get("files", {})
-    require(isinstance(files, dict) and len(files) == 4
+    require(isinstance(files, dict) and len(files) == len(BUILD.BUILD_IDENTIFIERS) + 1
             and f"smsd-{version}.tar.gz" in files, "Invalid distribution receipt")
     require({path.name for path in args.dist_dir.iterdir()} == set(files), "Upload directory contents differ")
-    families = set()
+    targets = set()
     for name, expected in files.items():
         require(safe_name(name) and re.fullmatch(r"[0-9a-f]{64}", expected)
                 and (args.dist_dir / name).is_file() and not (args.dist_dir / name).is_symlink()
                 and BUILD.sha256(args.dist_dir / name) == expected, "Staged distribution hash differs")
         if name.endswith(".whl"):
-            families.add(wheel_platform(name, version))
-    require(families == {"linux", "macos", "windows"}, "Staged platforms differ")
-    print("Final four-file upload identity check passed")
+            targets.add(BUILD.wheel_target(name, version))
+    require(targets == set(BUILD.BUILD_IDENTIFIERS), "Staged interpreter/platform targets differ")
+    print("Final 21-file upload identity check passed")
 
 
 def main():

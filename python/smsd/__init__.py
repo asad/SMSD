@@ -19,7 +19,7 @@ import importlib.util as _util
 import os as _os
 import sys as _sys
 
-__version__ = "8.0.1"
+__version__ = "8.0.2"
 __author__ = "Syed Asad Rahman"
 
 
