@@ -57,13 +57,10 @@ perform the MCS search.
 
 An MCES search declines a pair, with `LimitReached` and no match, when query
 atoms × target atoms exceed 2³⁰, as for two molecules of more than 32,768
-atoms each; when the bonds of the molecule searched from × (the bonds of the
-other / 64, rounded up) exceed 2²², as for two molecules of more than 16,384
-bonds each; or when 2 × the kinds of bond both molecules share × (largest atom
-degree + 1) exceeds 2²⁴, which needs an atom with at least 512 bonds. Without
-excluded target atoms, the search starts from the target when it has fewer
-atoms than the query, or fewer bonds when more than one fragment is allowed,
-and otherwise from the query. MCIS searches are never declined. The three
+atoms each; when the two molecules are too large in bonds, as for two
+molecules of more than 16,384 bonds each; or, rarely, when a molecule has an
+atom with 512 or more bonds and the two molecules share many kinds of bond.
+MCIS searches are never declined. The three
 libraries share these limits.
 
 ## Stereochemistry

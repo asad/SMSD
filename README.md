@@ -10,6 +10,7 @@
 <p align="center">
   <a href="https://central.sonatype.com/artifact/com.bioinceptionlabs/smsd"><img src="https://img.shields.io/maven-central/v/com.bioinceptionlabs/smsd" alt="Maven Central"/></a>
   <a href="https://pypi.org/project/smsd/"><img src="https://img.shields.io/pypi/v/smsd" alt="PyPI"/></a>
+  <a href="https://doi.org/10.5281/zenodo.23639199"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.23639199.svg" alt="DOI"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="Licence"/></a>
   <a href="https://github.com/asad/SMSD/releases"><img src="https://img.shields.io/github/v/release/asad/SMSD" alt="Release"/></a>
 </p>
@@ -307,7 +308,10 @@ If you use SMSD Pro in research, please cite:
 > Journal of Cheminformatics, 1:12, 2009.
 > DOI: [10.1186/1758-2946-1-12](https://doi.org/10.1186/1758-2946-1-12)
 
-Citation metadata is available in [CITATION.cff](CITATION.cff).
+To cite the software itself, use the DOI for all versions,
+[10.5281/zenodo.23639199](https://doi.org/10.5281/zenodo.23639199), which always
+resolves to the latest release. Citation metadata is available in
+[CITATION.cff](CITATION.cff).
 
 Copyright (c) 2018-2026 BioInception PVT LTD.
 Algorithm Copyright (c) 2009-2026 Syed Asad Rahman.

@@ -1,60 +1,67 @@
 # SMSD Pro 8.0.3
 
-SMSD Pro 8.0.3 corrects complete-ring MCS matching, ring-proof reporting and
-named SMARTS predicates. It adds opt-in Metal fingerprint screening for native
-C++ source builds on macOS. The [changelog](../CHANGELOG.md) lists the changes.
+SMSD Pro 8.0.3 corrects complete-ring MCS matching, the status of MCS results
+that depend on truncated ring perception, and the built-in named SMARTS
+predicates. It adds opt-in Metal fingerprint screening for C++ source builds
+on macOS and a Python call that fingerprints many molecules at once. The
+[changelog](../CHANGELOG.md) lists every change.
 
 ## Changes
 
-- C++ and Java MCIS searches check affected stereochemistry while extending mappings.
-- C++ MCIS symmetry pruning preserves the optimum when neighbours are reordered.
-  It is limited to unrestricted fragment connectivity without ring options or
-  stereo tags; default connected searches do not use it.
-- Eligible single-result C++ and Python MCIS searches start from a complete-graph
-  target. The tied mapping and nodes visited can differ from the query-first search.
-- GPU similarity-bound thresholds and ties use CPU double scores, and large
-  atom-count sums avoid overflow. The direct Metal float API keeps its precision.
-- Complete-ring MCS matching recognises perceived ring topology when a graph
-  was constructed without parser ring flags. Results remain unproved when
-  complete-ring or strict ring-fusion matching relies on truncated perception.
-- Native Metal fingerprint screening uses integer intersections and the CPU
-  score expression. It requires explicit opt-in; automatic selection is
-  disabled. The [C++ guide](CPP.md#optional-metal-fingerprint-screening) states
-  its scope and fallback contract. Python wheels continue to use the CPU on macOS.
-- Built-in named SMARTS predicates have corrected definitions, shared by C++
-  and Java and listed in the [Java guide](JAVA.md#prepared-searches).
+- C++ and Java MCIS searches with stereochemistry find the largest mapping
+  that keeps the configuration of mapped stereocentres and double bonds.
+- C++ MCIS searches return the maximum mapping whatever the atom and bond
+  order of the target.
+- Complete-ring MCS matching recognises rings in graphs built without ring
+  flags.
+- With complete rings or strict ring fusion, MCS keeps its mappings but no
+  longer reports them as proved when it depends on truncated ring perception.
+- GPU similarity-bound screening returns the same hits as the CPU screen,
+  including scores at the threshold and molecules with very large atom
+  counts. The float-valued Metal similarity API is unchanged.
+- Metal fingerprint screening for C++ source builds on macOS returns the same
+  hits, in the same order, as the CPU screen. It runs only when requested
+  explicitly. The [C++ guide](CPP.md#optional-metal-fingerprint-screening)
+  gives its requirements and CPU fallback. The Python wheels use the CPU for
+  screening on macOS.
+- The built-in named SMARTS predicates have corrected definitions, shared by
+  C++ and Java and listed in the [Java guide](JAVA.md#prepared-searches).
   `isKetone` and `isEster` now mark the carbonyl carbon.
-- Python `fingerprints` computes fingerprints for many molecules or SMILES
+- Python `fingerprints` computes the fingerprints of many molecules or SMILES
   strings in one call, each identical to `fingerprint` and in input order.
 
 ## Upgrading from 8.0.2
 
-Patterns using the built-in named predicates can match different atoms. Java
-expands names made of ASCII letters, digits and underscores, including inside
-recursive SMARTS; registered names containing other characters are no longer
-expanded.
+Patterns that use the built-in named predicates can match different atoms.
+Java expands names made of ASCII letters, digits and underscores, including
+inside recursive SMARTS; a registered name containing other characters is no
+longer expanded.
 
-With complete rings or strict ring fusion, an otherwise completed result that
-relies on truncated ring perception reports `LimitReached`, with `optimal` and
-`complete` false.
-`isMappingMaximal` (Python `is_mapping_maximal`) raises its proof-unavailable
-error in that case instead of returning a value. Eligible C++ and Python MCIS
-searches against a complete-graph target can return a different tied mapping.
+With complete rings or strict ring fusion, a search that depends on truncated
+ring perception now reports `LimitReached`, with `optimal` and `complete`
+false, instead of `Completed`. `isMappingMaximal` (Python
+`is_mapping_maximal`) then raises its proof-unavailable error rather than
+returning a value.
+
+In C++ and Python, a single-result connected MCIS search without
+stereochemistry or ring options can return a different mapping of the same
+size when every atom of the target is bonded to every other.
 
 ## Downloads
 
-The [installation guide](HOWTO-INSTALL.md#supported-platforms) lists supported
-platforms and runtime requirements. Python CPU wheels target CPython 3.10–3.14
-on macOS arm64, Linux x86_64 and aarch64, and Windows x86_64. The optional
-`smsd-cuda` package targets Linux x86_64 and must match the `smsd` version.
-The Java CLI is supplied as a portable distribution and as Windows x86_64 MSI,
-macOS arm64 DMG and Linux amd64 DEB installers with Java 25 included.
-CPU Docker image archives target Linux amd64 and arm64; the GPU Docker image
-archive targets Linux amd64 and requires a compatible NVIDIA GPU and driver.
+The [installation guide](HOWTO-INSTALL.md#supported-platforms) lists the
+supported platforms and runtime requirements. Python CPU wheels target CPython
+3.10–3.14 on macOS arm64, Linux x86_64 and aarch64, and Windows x86_64. The
+optional `smsd-cuda` package targets Linux x86_64 and must match the `smsd`
+version. The Java CLI is supplied as a portable distribution and as Windows
+x86_64 MSI, macOS arm64 DMG and Linux amd64 DEB installers that include
+Java 25. CPU Docker image archives target Linux amd64 and arm64; the GPU
+Docker image archive targets Linux amd64 and needs a compatible NVIDIA GPU and
+driver.
 
-See the [GitHub releases page](https://github.com/asad/SMSD/releases) for
-files and `SHA256SUMS`. Install Python with `python -m pip install
-"smsd==8.0.3"`; add `"smsd-cuda==8.0.3"` for supported NVIDIA CUDA screening.
+See the [GitHub releases page](https://github.com/asad/SMSD/releases) for the
+files and `SHA256SUMS`. Install with `python -m pip install "smsd==8.0.3"`,
+and add `"smsd-cuda==8.0.3"` for GPU screening with an NVIDIA GPU.
 
 # SMSD Pro 8.0.2
 

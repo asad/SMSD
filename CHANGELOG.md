@@ -5,39 +5,39 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [8.0.3] - 2026-10-25
 
-Corrections to complete-ring MCS matching, ring-proof reporting and built-in
-named SMARTS predicates, opt-in Metal fingerprint screening for native C++
-builds on macOS, and Python `fingerprints` for many molecules in one call. The
+Corrections to complete-ring MCS matching, to the status of MCS results that
+depend on truncated ring perception and to the built-in named SMARTS
+predicates; opt-in Metal fingerprint screening for C++ source builds on macOS;
+and Python `fingerprints` for many molecules in one call. The
 [release notes](docs/RELEASE_NOTES.md) list the downloads and upgrade notes.
 
 ### Added
 
-- C++: `smsd::metal::fingerprintAccelerator()` provides opt-in resident Metal fingerprint screening on macOS, with automatic selection disabled.
-- Python: `fingerprints` computes the fingerprints of many molecules or SMILES strings in one call on every core, each identical to `fingerprint` and in input order.
+- C++: `smsd::metal::fingerprintAccelerator()` provides Metal fingerprint screening in C++ source builds on macOS. It keeps target fingerprints on the GPU between screens, returns the same hits as the CPU screen and runs only when passed explicitly; it is never selected automatically.
+- Python: `fingerprints` computes the fingerprints of many molecules or SMILES strings in one call, on `num_threads` threads (0 uses the OpenMP default), each identical to `fingerprint` and in input order.
 
 ### Changed
 
-- C++ and Java MCIS searches check affected stereochemistry while extending mappings.
-- Eligible single-result C++ and Python MCIS searches start from a complete-graph target; the tied mapping and nodes visited can differ from the query-first search.
-- C++ symmetry pruning is limited to unrestricted fragment MCIS and eligible substructure searches without ring options or stereo tags; default connected MCIS does not use it.
-- The general MCIS search in Java uses less memory on large molecules; results are unchanged.
-- The guides state what each MCS status means, including that a declined MCES search reports `LimitReached`, the size limits and default time budgets, and that stereo checks compare the parity of mapped neighbours, not CIP labels.
+- C++ and Java MCIS searches with stereochemistry find the largest mapping that keeps the configuration of mapped stereocentres and double bonds.
+- C++ and Python: a single-result connected MCIS search without stereochemistry or ring options can return a different mapping of the same size when every atom of the target is bonded to every other.
+- Java MCIS searches can use less memory on large molecules; results are unchanged.
+- The guides describe each MCS status, the size limits and the default time budgets. They state that an MCES search beyond the size limits reports `LimitReached` without searching, and that stereochemistry is compared by the parity of mapped neighbours, not by CIP labels.
 - MCS examples use N-methylacetamide against propanamide, where neither molecule contains the other.
 
 ### Fixed
 
-- MCS keeps its mappings but reports them as unproved when complete-ring or strict ring-fusion matching relies on truncated ring perception. In that case, `isMappingMaximal` (Python `is_mapping_maximal`) raises its proof-unavailable error instead of returning a value.
-- Complete-ring MCS matching recognises ring topology in graphs built without stored ring flags.
-- C++ MCIS symmetry pruning preserves the optimum when target neighbours are reordered.
-- GPU similarity-bound screening uses the CPU double score for thresholds and ties; the direct Metal float API keeps its existing precision. Large atom-count sums no longer overflow.
-- C++: `batchFingerprint` reads any sequence of graphs and, on several threads, throws the exception of the first molecule that fails, as on one thread.
+- With complete rings or strict ring fusion, an MCS search that depends on truncated ring perception keeps its mappings but reports `LimitReached`, with `optimal` and `complete` false. `isMappingMaximal` (Python `is_mapping_maximal`) then raises its proof-unavailable error rather than returning a value.
+- Complete-ring MCS matching recognises rings in graphs built without ring flags.
+- C++ MCIS searches return the maximum mapping whatever the atom and bond order of the target.
+- GPU similarity-bound screening returns the same hits as the CPU screen, including scores at the threshold and molecules with very large atom counts; the float-valued Metal similarity API is unchanged.
+- C++: `batchFingerprint` accepts any sequence of graphs and, on several threads, throws the exception of the first molecule that fails, as on one thread.
 - Built-in named SMARTS predicates, in C++ and Java:
   - `isHBAcceptor` matches N, O and S with a charge of 0 to −3. It no longer requires a charge, and it excludes positive atoms, amide N, pyrrole-type aromatic N, nitro and N-oxide N, and sulfoxide and sulfone S.
   - `isHBDonor` includes aromatic NH.
   - `isAmideN` no longer matches amines; it matches amide, imide and lactam N, aromatic ones included.
   - `isKetone` and `isEster` mark the carbonyl carbon, not the carbon next to it, and now include carbonyls in aromatic rings such as chromone and coumarin. `isEster` includes formates and excludes anhydrides.
   - `isPositive` and `isNegative` match charges of +1 to +15 and −1 to −15, not only +1 and −1.
-- Java expands named predicates inside recursive SMARTS, as the native core does. As there, a name is ASCII letters, digits and underscores, so a registered name with other characters is no longer expanded.
+- Java expands named predicates inside recursive SMARTS, as C++ does. As in C++, a name consists of ASCII letters, digits and underscores, so a registered name with other characters is no longer expanded.
 
 ## [8.0.2] - 2026-10-23
 

@@ -149,14 +149,10 @@ match, and `optimal` and `complete` both `False`, when:
 
 - query atoms × target atoms exceed 2³⁰ (1,073,741,824), as for two molecules
   of more than 32,768 atoms each;
-- the compatible bond pairs would take more than 32 MiB: the bonds of the
-  molecule searched from × (the bonds of the other / 64, rounded up) exceed
-  2²² (4,194,304). Without excluded target atoms, the search starts from the
-  target when it has fewer atoms than the query, or fewer bonds when more than
-  one fragment is allowed, and otherwise from the query. Two molecules of
-  16,384 bonds each fit exactly, as do 32,768 bonds against 8,192;
-- 2 × the kinds of bond both molecules share × (largest atom degree + 1)
-  exceeds 2²⁴ (16,777,216), which needs an atom with at least 512 bonds.
+- the two molecules are too large in bonds, as for two molecules of more than
+  16,384 bonds each;
+- rarely, a molecule has an atom with 512 or more bonds and the two molecules
+  share many kinds of bond.
 
 MCIS searches are never declined; the time and node limits bound them. C++
 and Java use the same limits.
