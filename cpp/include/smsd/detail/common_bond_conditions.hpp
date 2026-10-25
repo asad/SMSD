@@ -142,7 +142,8 @@ public:
     CommonBondConditions(const MolGraph& queryGraph, const MolGraph& targetGraph, const CommonBondGraphs& graph,
                          bool connected, int minFragmentAtoms, int maxFragments, const std::vector<int>& requiredTarget,
                          const std::vector<std::array<int, 2>>& requiredBonds, bool chirality, bool bondStereo, bool rings,
-                         Clock& clock)
+                         Clock& clock, const std::vector<std::vector<int>>* queryCycles = nullptr,
+                         const std::vector<std::vector<int>>* targetCycles = nullptr)
         : graph_(graph), query_(graph.query), target_(graph.target), queryGraph_(queryGraph), targetGraph_(targetGraph),
           clock_(clock), connected_(connected), minFragmentAtoms_(minFragmentAtoms), maxFragments_(maxFragments),
           requiredTarget_(requiredTarget), chirality_(chirality), bondStereo_(bondStereo), rings_(rings),
@@ -161,8 +162,8 @@ public:
             }
         }
         if (rings_) {
-            queryCycles_ = cycles(query_, queryGraph_);
-            targetCycles_ = cycles(target_, targetGraph_);
+            queryCycles_ = cycles(query_, queryGraph_, queryCycles);
+            targetCycles_ = cycles(target_, targetGraph_, targetCycles);
             queryBondCycles_ = through(queryCycles_, query_.bondCount, nullptr);
             targetBondCycles_ = through(targetCycles_, target_.bondCount, nullptr);
             queryAtomCycles_ = through(queryCycles_, query_.atomCount, &query_);
@@ -190,12 +191,12 @@ public:
         return false;
     }
     /** Whether some atom or bond of `graph` is on a ring. */
-    static bool hasRings(const MolGraph& graph) {
+    static bool hasRings(const MolGraph& graph, const std::vector<std::vector<int>>* cycles = nullptr) {
         for (int atom = 0; atom < graph.n; ++atom) {
             if (graph.ring[atom]) return true;
             for (int other : graph.neighbors[atom]) if (graph.bondInRing(atom, other)) return true;
         }
-        return !graph.computeRelevantCycles().empty();
+        return cycles ? !cycles->empty() : !graph.computeRelevantCycles().empty();
     }
 
     /**
@@ -695,9 +696,12 @@ private:
     }
 
     /** The relevant rings of `graph` as bonds of `side`. */
-    static std::vector<std::vector<int>> cycles(const Side& side, const MolGraph& graph) {
+    static std::vector<std::vector<int>> cycles(const Side& side, const MolGraph& graph,
+                                               const std::vector<std::vector<int>>* prepared = nullptr) {
+        const std::vector<std::vector<int>> found = prepared ? std::vector<std::vector<int>>()
+                                                           : graph.computeRelevantCycles();
         std::vector<std::vector<int>> result;
-        for (const auto& ring : graph.computeRelevantCycles()) {
+        for (const auto& ring : prepared ? *prepared : found) {
             std::vector<int> bonds(ring.size());
             bool whole = true;
             for (size_t index = 0; index < ring.size() && whole; ++index) {

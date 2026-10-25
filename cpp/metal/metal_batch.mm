@@ -22,8 +22,8 @@
  * Per call to batchSimilarityScreen():
  *   1. Copy query + targets into shared MTLBuffers.
  *   2. Encode a single compute pass: one thread per target molecule.
- *   3. Commit, wait for completion, read float results back.
- *   4. Filter results above threshold and return.
+ *   3. Commit, wait for completion, read integer overlaps back.
+ *   4. Score and filter on the host using the precision of the requested API.
  *
  * Compatibility
  * -------------
@@ -37,6 +37,7 @@
 #import <Foundation/Foundation.h>
 
 #include "smsd/metal_gpu.hpp"
+#include "smsd/detail/overlap_similarity.hpp"
 #include "smsd/gpu_kernels.hpp"
 
 #include <mutex>
@@ -66,14 +67,14 @@ static NSString* const kShaderSource = @
 "kernel void similarity_screen(\n"
 "    device const MetalMolecule* targets [[buffer(0)]],\n"
 "    device const MetalMolecule* query   [[buffer(1)]],\n"
-"    device       float*         results [[buffer(2)]],\n"
+"    device       int*           results [[buffer(2)]],\n"
 "    constant     uint&          N       [[buffer(3)]],\n"
 "    uint idx [[thread_position_in_grid]])\n"
 "{\n"
 "    if (idx >= N) return;\n"
 "    int qn = query[0].n;\n"
 "    int tn = targets[idx].n;\n"
-"    if (qn == 0 || tn == 0) { results[idx] = 0.0f; return; }\n"
+"    if (qn == 0 || tn == 0) { results[idx] = 0; return; }\n"
 "\n"
 "    // Label-histogram compatibility bound:\n"
 "    //   score = overlap / (qn + tn - overlap)\n"
@@ -83,8 +84,7 @@ static NSString* const kShaderSource = @
 "        int b = targets[idx].labelCounts[l];\n"
 "        compatible += (a < b) ? a : b;\n"
 "    }\n"
-"    int denom = qn + tn - compatible;\n"
-"    results[idx] = (denom > 0) ? float(compatible) / float(denom) : 0.0f;\n"
+"    results[idx] = min(compatible, min(qn, tn));\n"
 "}\n";
 
 // ---------------------------------------------------------------------------
@@ -159,9 +159,11 @@ struct MetalContext {
             if (!queue) return;
 
             NSError* error = nil;
+            MTLCompileOptions* options = [MTLCompileOptions new];
+            options.fastMathEnabled = NO;
             id<MTLLibrary> lib =
                 [probe.device newLibraryWithSource:kShaderSource
-                                           options:nil
+                                           options:options
                                              error:&error];
             if (!lib) {
                 NSLog(@"SMSD Metal: shader compilation failed: %@", error);
@@ -224,23 +226,19 @@ MetalMolecule toMetalMolecule(int atomCount, const int* labels) {
     return m;
 }
 
-std::vector<MetalScreenResult> batchSimilarityScreen(
-    const MetalMolecule&              query,
-    const std::vector<MetalMolecule>& targets,
-    float                             threshold)
+std::vector<int> detail::batchSimilarityOverlaps(
+    const MetalMolecule& query, const std::vector<MetalMolecule>& targets)
 {
-    std::vector<MetalScreenResult> hits;
-    if (targets.empty()) return hits;
+    std::vector<int> overlaps(targets.size());
+    if (targets.empty()) return overlaps;
     auto cpuScreen = [&] {
-        std::vector<MetalScreenResult> result;
+        std::vector<int> result(targets.size());
         for (size_t target = 0; target < targets.size(); ++target) {
             int64_t overlap = 0;
             for (int label = 0; label < METAL_LABEL_BINS; ++label)
                 overlap += std::min(query.labelCounts[label], targets[target].labelCounts[label]);
-            const int64_t total = int64_t(query.n) + targets[target].n;
-            const float score = query.n == 0 || targets[target].n == 0 || total <= overlap
-                ? 0.0f : static_cast<float>(overlap) / static_cast<float>(total - overlap);
-            if (score >= threshold) result.push_back({static_cast<int>(target), score});
+            result[target] = static_cast<int>(std::min(overlap,
+                int64_t(std::min(query.n, targets[target].n))));
         }
         return result;
     };
@@ -269,7 +267,7 @@ std::vector<MetalScreenResult> batchSimilarityScreen(
                             options:MTLResourceStorageModeShared];
 
         id<MTLBuffer> resBuf =
-            [dev newBufferWithLength:N * sizeof(float)
+            [dev newBufferWithLength:N * sizeof(int)
                              options:MTLResourceStorageModeShared];
 
         if (!targBuf || !queryBuf || !resBuf) return cpuScreen();
@@ -304,12 +302,24 @@ std::vector<MetalScreenResult> batchSimilarityScreen(
         if (cmd.status != MTLCommandBufferStatusCompleted) return cpuScreen();
 
         // ---- Collect hits ---------------------------------------------------
-        const float* scores = static_cast<const float*>(resBuf.contents);
-        if (!scores) return cpuScreen();
-        hits.reserve(N / 4 + 1);
-        for (NSUInteger i = 0; i < N; ++i)
-            if (scores[i] >= threshold)
-                hits.push_back({static_cast<int>(i), scores[i]});
+        const int* counts = static_cast<const int*>(resBuf.contents);
+        if (!counts) return cpuScreen();
+        std::copy(counts, counts + N, overlaps.begin());
+    }
+    return overlaps;
+}
+
+std::vector<MetalScreenResult> batchSimilarityScreen(
+    const MetalMolecule& query, const std::vector<MetalMolecule>& targets, float threshold)
+{
+    const auto overlaps = detail::batchSimilarityOverlaps(query, targets);
+    std::vector<MetalScreenResult> hits;
+    for (size_t target = 0; target < overlaps.size(); ++target) {
+        const int overlap = overlaps[target];
+        const int64_t atomUnion = int64_t(query.n) + targets[target].n - overlap;
+        const float score = query.n == 0 || targets[target].n == 0 || atomUnion <= 0
+            ? 0.0f : static_cast<float>(overlap) / static_cast<float>(atomUnion);
+        if (score >= threshold) hits.push_back({static_cast<int>(target), score});
     }
     return hits;
 }

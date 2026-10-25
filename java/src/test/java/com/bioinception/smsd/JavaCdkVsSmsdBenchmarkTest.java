@@ -35,6 +35,7 @@ import org.openscience.cdk.isomorphism.DfPattern;
  * @author Syed Asad Rahman
  */
 @DisplayName("Java CDK vs SMSD Pro Substructure Benchmark (20 pairs)")
+@Tag("SlowTest")
 @EnabledIfSystemProperty(named = "benchmark", matches = "true")
 public class JavaCdkVsSmsdBenchmarkTest extends TestBase {
 

@@ -180,6 +180,41 @@ class SearchValidationTest(unittest.TestCase):
         amide = VALIDATION.Pattern("[$([N;H1,H2]-C=O)]")
         self.assertEqual(VALIDATION._embeddings(amide, VALIDATION.Graph(target), False), {((0, 3),)})
 
+    def test_bare_hydrogen_keeps_the_whole_boolean_atom_context(self):
+        target = graph(5, [(0, 1, 1), (1, 2, 1)])
+        target["atoms"][0]["hydrogens"] = 3
+        target["atoms"][1].update(element=7, hydrogens=1)
+        target["atoms"][2]["hydrogens"] = 3
+        target["atoms"][3]["element"] = 1
+        target["atoms"][4]["element"] = 17
+        for expression, expected in (
+                ("[N;H;X3]", {1}), ("[H,#1]", {1, 3}),
+                ("[H,Cl]", {1, 4}), ("[C,H]", {0, 1, 2}),
+                ("[N;!H0]", {1}), ("[N;H0;X3]", set()),
+                ("[$([N;H;X3]([CX4])[CX4])]", {1})):
+            with self.subTest(expression=expression):
+                mappings = VALIDATION._embeddings(VALIDATION.Pattern(expression),
+                                                  VALIDATION.Graph(target), False)
+                self.assertEqual(mappings, {((0, atom),) for atom in expected})
+
+    def test_atomic_hydrogen_keeps_isotope_charge_and_class_context(self):
+        target = graph(6)
+        for atom in target["atoms"][:5]:
+            atom["element"] = 1
+        target["atoms"][1]["isotope"] = 2
+        target["atoms"][2]["charge"] = 1
+        target["atoms"][3]["charge"] = -1
+        target["atoms"][4].update(isotope=2, charge=1)
+        target["atoms"][5].update(isotope=2, charge=1, hydrogens=1)
+        for expression, expected in (
+                ("[H]", {0, 1, 2, 3, 4}), ("[H+]", {2, 4}),
+                ("[H-]", {3}), ("[2H]", {1, 4}),
+                ("[H:1]", {0, 1, 2, 3, 4}), ("[2H+]", {4})):
+            with self.subTest(expression=expression):
+                mappings = VALIDATION._embeddings(VALIDATION.Pattern(expression),
+                                                  VALIDATION.Graph(target), False)
+                self.assertEqual(mappings, {((0, atom),) for atom in expected})
+
 
 if __name__ == "__main__":
     unittest.main()

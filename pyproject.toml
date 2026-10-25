@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "smsd"
-version = "8.0.2"
+version = "8.0.3"
 description = "Substructure and MCS search, fingerprints and similarity screening for chemical graphs, with optional tautomer-aware matching"
 readme = "python/README.md"
 license = {text = "Apache-2.0"}

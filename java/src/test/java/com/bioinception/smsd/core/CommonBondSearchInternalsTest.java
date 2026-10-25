@@ -384,7 +384,7 @@ class CommonBondSearchInternalsTest {
     CommonBondGraphs graph = new CommonBondGraphs(
         molecule, molecule, new ChemOptions(), Collections.emptySet(), clock);
     CommonBondSearch.Labels labels = new CommonBondSearch.Labels(
-        graph.query, new int[2 * graph.query.bondCount], 1, 1, 1, 1);
+        graph.query, new int[2 * graph.query.bondCount], 1, 1, 1, 1, new boolean[] {true});
     // After 2^32 - 1 reaches the stamp is -1, as the unsigned C++ stamp is 2^32 - 1.
     labels.stamp = -1;
     Arrays.fill(labels.reached, 1);

@@ -225,7 +225,7 @@ public:
                 return {"Mapped atom index out of range"};
         return validateMapping(query, target, mappingMatch(query, target, mapping, options), options);
     }
-    /** True if no valid strict extension retains the supplied correspondence. */
+    /** True if no valid strict extension retains the correspondence; throws when proof is unavailable. */
     static bool isMappingMaximal(const MolGraph& query, const MolGraph& target, const Match& match,
                                  const Options& options = Options{}) {
         if (!validateMapping(query, target, match, options).empty()) return false;
@@ -316,6 +316,12 @@ public:
             }
         }
         result.status = budget.status();
+        if (result.status == SearchStatus::Completed && search_detail::needsRingProof(options.chemistry))
+            for (const auto& molecule : molecules)
+                if (search_detail::ringProofTruncated(molecule, options.chemistry)) {
+                    result.status = SearchStatus::LimitReached;
+                    break;
+                }
         result.complete = result.status == SearchStatus::Completed;
         result.nodesVisited = budget.nodesVisited(); result.elapsedMillis = budget.elapsedMillis();
         return result;

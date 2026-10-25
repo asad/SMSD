@@ -125,7 +125,7 @@ proof = {
     'platform': 'linux',
     'architecture': platform.machine(),
     'host_architecture': os.environ['SMSD_INSTALLER_HOST_ARCH'],
-    'execution': 'QEMU amd64 on macOS arm64' if os.environ['SMSD_INSTALLER_HOST_OS'] == 'Darwin' and os.environ['SMSD_INSTALLER_HOST_ARCH'] in ('arm64', 'aarch64') else 'local Docker under x86_64 emulation' if os.environ['SMSD_INSTALLER_HOST_ARCH'] in ('arm64', 'aarch64') else 'local Docker on x86_64',
+    'execution': 'local Docker Linux amd64 on macOS arm64 (translation mechanism unverified)' if os.environ['SMSD_INSTALLER_HOST_OS'] == 'Darwin' and os.environ['SMSD_INSTALLER_HOST_ARCH'] in ('arm64', 'aarch64') else 'local Docker under x86_64 emulation (translation mechanism unverified)' if os.environ['SMSD_INSTALLER_HOST_ARCH'] in ('arm64', 'aarch64') else 'local Docker on x86_64',
     'os_release': Path('/etc/os-release').read_text(),
     'build_base': os.environ['SMSD_INSTALLER_BASE'],
     'build_image_id': os.environ['SMSD_INSTALLER_IMAGE_ID'],

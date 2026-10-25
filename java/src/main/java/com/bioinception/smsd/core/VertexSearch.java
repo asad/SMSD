@@ -20,7 +20,7 @@ final class VertexSearch {
   private final boolean all, connected;
   private final int limit;
   private final int[] queryToTarget, targetToQuery;
-  private final int[][] domains;
+  private final int[] domainSize;
   private final long[][] domainBits;
   private final long[] usedTargetBits, availableTargetBits;
   private final boolean[] availableQuery, availableTarget, reachableQuery, reachableTarget;
@@ -40,9 +40,17 @@ final class VertexSearch {
   private int[][] candidateOrder;
   private int[] candidateSupport;
   private int frameDepth;
+  private RingIndex queryRings, targetRings;
+  /** The stamp of the last complete-ring test. Package-private so that tests can check the wrap. */
+  int ringStamp;
   // Unweighted, uncapped single-result fragment searches take the native order; connected,
   // weighted, matchAll and node-capped searches take the dynamic smallest-domain order.
   private final boolean nativeOrder;
+  /** Whether each new pair is tested against the centres and double bonds it touches. */
+  private final boolean centrePairs, doubleBondPairs;
+  /** The tetrahedral ligands of the tagged atoms, or null; see {@link #centreBroken}. */
+  private final int[][] queryLigands, targetLigands;
+  private final int[] permutation = new int[4];
 
   VertexSearch(MolGraph query, MolGraph target, MCS.Options options, int limit, boolean all) {
     this(query, target, options, limit, all, null);
@@ -67,6 +75,7 @@ final class VertexSearch {
     targetToQuery = new int[target.n];
     Arrays.fill(targetToQuery, -1);
     excludedAtoms = new boolean[query.n];
+    domainSize = new int[query.n];
     domainBits = new long[query.n][target.words];
     usedTargetBits = new long[target.words];
     availableQuery = new boolean[query.n];
@@ -79,8 +88,11 @@ final class VertexSearch {
     weights = new double[query.n];
     for (int atom = 0; atom < query.n; atom++)
       weights[atom] = options.atomWeights == null ? 1.0 : options.atomWeights[atom];
+    centrePairs = options.chemistry.useChirality && tagged(query) && tagged(target);
+    queryLigands = centrePairs ? ligands(query) : null;
+    targetLigands = centrePairs ? ligands(target) : null;
+    doubleBondPairs = options.chemistry.useBondStereo && configured(query) && configured(target);
     if (control.stopped()) {
-      domains = new int[query.n][];
       queryEdges = Collections.emptyList();
       targetEdges = Collections.emptyList();
       availableTargetBits = null;
@@ -90,25 +102,55 @@ final class VertexSearch {
       query.ensureRingCounts();
       target.ensureRingCounts();
     }
-    domains = new int[query.n][];
-    Arrays.fill(domains, new int[0]);
+    if (options.chemistry.completeRingsOnly && !query.ringsTruncated() && !target.ringsTruncated()) {
+      queryRings = new RingIndex(query);
+      targetRings = new RingIndex(target);
+    }
+    boolean[] excludedTargets = new boolean[target.n];
+    for (Integer targetAtom : options.excludedTargetAtoms)
+      if (targetAtom != null && targetAtom >= 0 && targetAtom < target.n)
+        excludedTargets[targetAtom] = true;
     for (int queryAtom = 0; queryAtom < query.n && !control.stopped(); queryAtom++) {
-      int[] candidates = new int[target.n];
+      long[] domain = domainBits[queryAtom];
       int count = 0;
       for (int targetAtom = 0; targetAtom < target.n; targetAtom++)
-        if (!options.excludedTargetAtoms.contains(targetAtom)
+        if (!excludedTargets[targetAtom]
+            && (queryRings == null
+                || queryRings.ringAtom(query, queryAtom) == targetRings.ringAtom(target, targetAtom))
             && MolGraph.ChemOps.atomsCompatFast(
-                query, queryAtom, target, targetAtom, options.chemistry))
-          candidates[count++] = targetAtom;
-      for (int index = 0; index < count; index++) {
-        int targetAtom = candidates[index];
-        domainBits[queryAtom][targetAtom >>> 6] |= 1L << (targetAtom & 63);
-      }
-      domains[queryAtom] = Arrays.copyOf(candidates, count);
+                query, queryAtom, target, targetAtom, options.chemistry)) {
+          domain[targetAtom >>> 6] |= 1L << (targetAtom & 63);
+          count++;
+        }
+      domainSize[queryAtom] = count;
     }
     queryEdges = edges(query);
     targetEdges = edges(target);
     availableTargetBits = new long[target.words];
+  }
+
+  private static boolean tagged(MolGraph graph) {
+    if (graph.tetraChirality != null)
+      for (int tag : graph.tetraChirality)
+        if (tag != 0)
+          return true;
+    return false;
+  }
+
+  private static int[][] ligands(MolGraph graph) {
+    int[][] result = new int[graph.n][];
+    for (int atom = 0; atom < graph.n; atom++)
+      if (graph.tetraChirality[atom] != 0)
+        result[atom] = graph.tetrahedralLigands(atom);
+    return result;
+  }
+
+  private static boolean configured(MolGraph graph) {
+    for (int atom = 0; atom < graph.n; atom++)
+      for (int neighbor : graph.neighbors[atom])
+        if (neighbor > atom && graph.dbStereo(atom, neighbor) != 0)
+          return true;
+    return false;
   }
 
   SearchResult search() {
@@ -132,7 +174,14 @@ final class VertexSearch {
         nodes, control.elapsedMillis());
   }
 
+  /** Start the search from the atom mapping of {@code match}, in place of any earlier seed. */
   void seed(SearchResult.Match match) {
+    while (mappedCount > 0) {
+      int queryAtom = mappedQueryAtoms[--mappedCount], targetAtom = queryToTarget[queryAtom];
+      queryToTarget[queryAtom] = -1;
+      targetToQuery[targetAtom] = -1;
+      usedTargetBits[targetAtom >>> 6] &= ~(1L << (targetAtom & 63));
+    }
     match.atomMapping().forEach((queryAtom, targetAtom) -> {
       queryToTarget[queryAtom] = targetAtom;
       targetToQuery[targetAtom] = queryAtom;
@@ -234,8 +283,8 @@ final class VertexSearch {
         boolean frontier = mappedNeighbors > 0, chosenFrontier = mostNeighbors > 0;
         if (chosen < 0 || (frontier && !chosenFrontier)
             || (frontier == chosenFrontier
-                && (domains[queryAtom].length < domains[chosen].length
-                    || (domains[queryAtom].length == domains[chosen].length
+                && (domainSize[queryAtom] < domainSize[chosen]
+                    || (domainSize[queryAtom] == domainSize[chosen]
                         && query.neighbors[queryAtom].length > query.neighbors[chosen].length)))) {
           chosen = queryAtom;
           mostNeighbors = mappedNeighbors;
@@ -309,9 +358,10 @@ final class VertexSearch {
       if (queryToTarget[neighbor] >= 0)
         addedBonds++;
     if (nativeOrder) {
-      int[] order = orderedCandidates(chosen);
+      int depth = frameDepth, size = orderCandidates(chosen);
+      int[] order = candidateOrder[depth];
       boolean stop = false;
-      for (int position = 0; position < order[target.n] && !stop; position++)
+      for (int position = 0; position < size && !stop; position++)
         stop = branch(chosen, order[position], mappedAtoms, mappedBonds + addedBonds);
       frameDepth--;
       if (stop)
@@ -340,7 +390,8 @@ final class VertexSearch {
     targetToQuery[targetAtom] = chosen;
     usedTargetBits[word] |= 1L << (targetAtom & 63);
     mappedQueryAtoms[mappedCount++] = chosen;
-    atoms(mappedAtoms + 1, mappedBonds);
+    if (!stereoBroken(chosen))
+      atoms(mappedAtoms + 1, mappedBonds);
     mappedCount--;
     usedTargetBits[word] &= ~(1L << (targetAtom & 63));
     targetToQuery[targetAtom] = -1;
@@ -350,16 +401,127 @@ final class VertexSearch {
   }
 
   /**
-   * Try first the targets that leave more unmapped query neighbours extendable, then those
-   * whose degree is closest to the query atom's (after the native ordering, which also counts
-   * mapped neighbours). The candidate count is stored in the last slot.
+   * Whether the stereo test of {@link #consider}, {@link Substructure#stereoMismatchAtom}, fails at
+   * a centre or double bond that reads the newly mapped {@code atom}: the atom itself, its mapped
+   * neighbours, and the double bonds at either. Mapped pairs stay in every extension, so such a
+   * failure stays too, and the search backtracks at once.
    */
-  private int[] orderedCandidates(int chosen) {
+  private boolean stereoBroken(int atom) {
+    if (centrePairs) {
+      if (centreBroken(atom))
+        return true;
+      for (int neighbor : query.neighbors[atom])
+        if (queryToTarget[neighbor] >= 0 && centreBroken(neighbor))
+          return true;
+    }
+    if (doubleBondPairs)
+      for (int neighbor : query.neighbors[atom]) {
+        if (queryToTarget[neighbor] < 0)
+          continue;
+        if (doubleBondBroken(atom, neighbor))
+          return true;
+        for (int other : query.neighbors[neighbor])
+          if (other != atom && queryToTarget[other] >= 0 && doubleBondBroken(neighbor, other))
+            return true;
+      }
+    return false;
+  }
+
+  /**
+   * The tetrahedral test at a mapped centre. Once three ligands are mapped the permutation is
+   * fixed, as a fourth can only take the remaining target ligand, and a ligand whose image is not
+   * a target ligand stays so.
+   */
+  private boolean centreBroken(int centre) {
+    int targetAtom = queryToTarget[centre];
+    int queryTag = query.tetraChirality[centre], targetTag = target.tetraChirality[targetAtom];
+    int[] queryOrder = queryLigands[centre], targetOrder = targetLigands[targetAtom];
+    if (queryTag == 0 || targetTag == 0 || queryOrder == null || targetOrder == null
+        || queryOrder.length != 4 || targetOrder.length != 4)
+      return false;
+    int mapped = 0, usedSlots = 0;
+    for (int slot = 0; slot < 4; slot++) {
+      permutation[slot] = -1;
+      int ligand = queryOrder[slot];
+      if (ligand < 0 || queryToTarget[ligand] < 0)
+        continue;
+      int targetSlot = 0;
+      while (targetSlot < 4 && targetOrder[targetSlot] != queryToTarget[ligand])
+        targetSlot++;
+      if (targetSlot == 4)
+        return true;
+      permutation[slot] = targetSlot;
+      usedSlots |= 1 << targetSlot;
+      mapped++;
+    }
+    if (mapped < 3)
+      return false;
+    for (int slot = 0; slot < 4; slot++)
+      if (permutation[slot] < 0)
+        permutation[slot] = Integer.numberOfTrailingZeros(~usedSlots);
+    int inversions = 0;
+    for (int first = 0; first < 4; first++)
+      for (int second = first + 1; second < 4; second++)
+        if (permutation[first] > permutation[second])
+          inversions++;
+    return (queryTag == targetTag) != ((inversions & 1) == 0);
+  }
+
+  /**
+   * The double-bond test between two mapped atoms. It reads the first mapped substituent at each
+   * end; since the mapping is induced, any other gives the same relation when an end has one
+   * substituent in either graph, or at most two in both, and the bond is left to {@link
+   * #consider} otherwise.
+   */
+  private boolean doubleBondBroken(int first, int second) {
+    int queryConfiguration = query.dbStereo(first, second);
+    if (queryConfiguration == 0)
+      return false;
+    int targetConfiguration = target.dbStereo(queryToTarget[first], queryToTarget[second]);
+    if (targetConfiguration == 0)
+      return false;
+    for (int end = 0; end < 2; end++) {
+      int queryEnd = end == 0 ? first : second, otherQueryEnd = end == 0 ? second : first;
+      int targetEnd = queryToTarget[queryEnd], otherTargetEnd = queryToTarget[otherQueryEnd];
+      int querySubstituents = query.neighbors[queryEnd].length - 1;
+      int targetSubstituents = target.neighbors[targetEnd].length - 1;
+      if (Math.min(querySubstituents, targetSubstituents) > 1
+          && Math.max(querySubstituents, targetSubstituents) > 2)
+        return false;
+      int queryReference = query.doubleBondReference(queryEnd, otherQueryEnd);
+      int targetReference = target.doubleBondReference(targetEnd, otherTargetEnd);
+      int queryLigand = -1;
+      for (int neighbor : query.neighbors[queryEnd])
+        if (neighbor != otherQueryEnd && queryToTarget[neighbor] >= 0) {
+          queryLigand = neighbor;
+          break;
+        }
+      if (queryLigand < 0 || queryReference < 0 || targetReference < 0)
+        return false;
+      if ((queryLigand != queryReference) != (queryToTarget[queryLigand] != targetReference))
+        queryConfiguration = 3 - queryConfiguration;
+    }
+    return queryConfiguration != targetConfiguration;
+  }
+
+  /**
+   * Order the feasible targets of {@code chosen} in the row of the current depth: first those
+   * that leave more unmapped query neighbours extendable, then those whose degree is closest to
+   * the query atom's (after the native ordering, which also counts mapped neighbours). A row is
+   * allocated when its depth is first reached and grows to the largest domain ordered there.
+   *
+   * @return the number of candidates
+   */
+  private int orderCandidates(int chosen) {
     if (candidateOrder == null) {
-      candidateOrder = new int[query.n + 1][target.n + 1];
+      candidateOrder = new int[query.n + 1][];
       candidateSupport = new int[target.n];
     }
-    int[] order = candidateOrder[frameDepth++];
+    // The feasible targets are a subset of the domain.
+    int[] order = candidateOrder[frameDepth];
+    if (order == null || order.length < domainSize[chosen])
+      candidateOrder[frameDepth] = order = new int[domainSize[chosen]];
+    frameDepth++;
     int size = 0, degree = query.neighbors[chosen].length;
     for (int word = 0; word < target.words; word++) {
       long candidates = feasibleTargets(chosen, word);
@@ -388,8 +550,7 @@ final class VertexSearch {
         order[position] = candidate;
       }
     }
-    order[target.n] = size;
-    return order;
+    return size;
   }
 
   private boolean before(int first, int second, int degree) {
@@ -457,6 +618,13 @@ final class VertexSearch {
     int objectiveOrder = compare(atomCount, bondCount, weight);
     if (atomCount == 0 || objectiveOrder < 0 || (!all && objectiveOrder == 0 && !best.isEmpty()))
       return;
+    // The stereo and ring rules read the mapping itself, so they reject before the maps are built.
+    if ((options.chemistry.useChirality || options.chemistry.useBondStereo)
+        && Substructure.stereoMismatchAtom(query, target, queryToTarget, options.chemistry)
+            >= 0)
+      return;
+    if (options.chemistry.completeRingsOnly && !ringsComplete())
+      return;
     Map<Integer, Integer> atoms = new TreeMap<>();
     for (int queryAtom = 0; queryAtom < query.n; queryAtom++)
       if (queryToTarget[queryAtom] >= 0)
@@ -468,10 +636,6 @@ final class VertexSearch {
         bonds.put(bond,
             new SearchResult.Bond(queryToTarget[bond.first()], queryToTarget[bond.second()]));
     }
-    if ((options.chemistry.useChirality || options.chemistry.useBondStereo)
-        && Substructure.stereoMismatchAtom(query, target, queryToTarget, options.chemistry)
-            >= 0)
-      return;
     List<Set<Integer>> components = MatchGraph.fragments(atoms, bonds.keySet());
     if (options.connectivity == MCS.Connectivity.Connected && components.size() != 1)
       return;
@@ -480,11 +644,6 @@ final class VertexSearch {
     for (Set<Integer> component : components)
       if (component.size() < options.minFragmentAtoms)
         return;
-    if (options.chemistry.completeRingsOnly
-        && (!completeRings(query, atoms.keySet(), bonds.keySet())
-            || !completeRings(
-                target, new HashSet<>(atoms.values()), new HashSet<>(bonds.values()))))
-      return;
     int comparison = compare(atomCount, bondCount, weight);
     if (comparison > 0) {
       best.clear();
@@ -507,6 +666,169 @@ final class VertexSearch {
     if (!all && options.atomWeights == null && atomCount == Math.min(query.n, target.n)
         && bondCount == Math.min(queryEdges.size(), targetEdges.size()))
       upperBoundReached = true;
+  }
+
+  /**
+   * {@link #completeRings} for both graphs over the current mapping, which selects the mapped
+   * query atoms, every query bond between them, and their images in the target.
+   */
+  boolean ringsComplete() {
+    if (queryRings == null) {
+      queryRings = new RingIndex(query);
+      targetRings = new RingIndex(target);
+    }
+    if (ringStamp == Integer.MAX_VALUE) {
+      queryRings.clearStamps();
+      targetRings.clearStamps();
+      ringStamp = 0;
+    }
+    int stamp = ++ringStamp;
+    // A query ring is selected whole when each of its bonds joins two mapped atoms.
+    for (int ring = 0; ring < queryRings.cycles.length; ring++) {
+      int[] cycle = queryRings.cycles[ring];
+      boolean whole = true;
+      for (int index = 0; index < cycle.length && whole; index++) {
+        int first = cycle[index], second = cycle[(index + 1) % cycle.length];
+        whole = queryToTarget[first] >= 0 && queryToTarget[second] >= 0
+            && bonded(query, first, second);
+      }
+      if (whole)
+        queryRings.cover(ring, stamp);
+    }
+    // A target ring is selected whole when each of its bonds is the image of a selected bond.
+    for (int ring = 0; ring < targetRings.cycles.length; ring++) {
+      int[] cycle = targetRings.cycles[ring];
+      boolean whole = true;
+      for (int index = 0; index < cycle.length && whole; index++) {
+        int first = targetToQuery[cycle[index]];
+        int second = targetToQuery[cycle[(index + 1) % cycle.length]];
+        whole = first >= 0 && second >= 0 && bonded(query, first, second);
+      }
+      if (whole)
+        targetRings.cover(ring, stamp);
+    }
+    for (int index = 0; index < mappedCount; index++) {
+      int queryAtom = mappedQueryAtoms[index], targetAtom = queryToTarget[queryAtom];
+      if (!queryRings.atomCovered(query, queryAtom, stamp)
+          || !targetRings.atomCovered(target, targetAtom, stamp))
+        return false;
+      for (int neighbor : query.neighbors[queryAtom])
+        if (neighbor > queryAtom && queryToTarget[neighbor] >= 0
+            && (!queryRings.bondCovered(query, queryAtom, neighbor, stamp)
+                || !targetRings.bondCovered(
+                    target, targetAtom, queryToTarget[neighbor], stamp)))
+          return false;
+    }
+    return true;
+  }
+
+  /** Whether the bond list of {@code graph} holds the bond between two atoms, as {@link #edges}. */
+  private static boolean bonded(MolGraph graph, int first, int second) {
+    int low = Math.min(first, second), high = Math.max(first, second);
+    for (int neighbor : graph.neighbors[low])
+      if (neighbor == high)
+        return true;
+    return false;
+  }
+
+  /**
+   * The relevant cycles of one graph with their bonds numbered, for {@link #ringsComplete}. The
+   * bonds are numbered by their lower atom, then their higher atom; a stamp marks the atoms and
+   * bonds of the cycles selected whole in the current test.
+   */
+  static final class RingIndex {
+    final int[][] cycles;
+    /** The number of the bond from each cycle position to the next. */
+    private final int[][] cycleBonds;
+    private final boolean[] onCycle;
+    /** The bonds whose lower atom is {@code atom} are numbered from {@code start[atom]}. */
+    private final int[] start, higher;
+    private final int[] atomStamp, bondStamp;
+
+    RingIndex(MolGraph graph) {
+      cycles = graph.computeRelevantCycles();
+      onCycle = new boolean[graph.n];
+      int positions = 0;
+      for (int[] cycle : cycles)
+        positions += cycle.length;
+      long[] pairs = new long[positions];
+      int count = 0;
+      for (int[] cycle : cycles)
+        for (int index = 0; index < cycle.length; index++) {
+          int first = cycle[index], second = cycle[(index + 1) % cycle.length];
+          onCycle[first] = true;
+          pairs[count++] = pair(first, second);
+        }
+      Arrays.sort(pairs);
+      int distinct = 0;
+      for (int index = 0; index < count; index++)
+        if (distinct == 0 || pairs[index] != pairs[distinct - 1])
+          pairs[distinct++] = pairs[index];
+      start = new int[graph.n + 1];
+      higher = new int[distinct];
+      for (int bond = 0; bond < distinct; bond++) {
+        start[(int) (pairs[bond] >>> 32) + 1]++;
+        higher[bond] = (int) pairs[bond];
+      }
+      for (int atom = 0; atom < graph.n; atom++)
+        start[atom + 1] += start[atom];
+      cycleBonds = new int[cycles.length][];
+      for (int ring = 0; ring < cycles.length; ring++) {
+        int[] cycle = cycles[ring];
+        cycleBonds[ring] = new int[cycle.length];
+        for (int index = 0; index < cycle.length; index++)
+          cycleBonds[ring][index] = bond(cycle[index], cycle[(index + 1) % cycle.length]);
+      }
+      atomStamp = new int[graph.n];
+      bondStamp = new int[distinct];
+    }
+
+    private static long pair(int first, int second) {
+      return ((long) Math.min(first, second) << 32) | Math.max(first, second);
+    }
+
+    /** The number of the cycle bond between two atoms, or -1 when no cycle has that bond. */
+    private int bond(int first, int second) {
+      int low = Math.min(first, second), high = Math.max(first, second);
+      for (int bond = start[low]; bond < start[low + 1]; bond++)
+        if (higher[bond] == high)
+          return bond;
+      return -1;
+    }
+
+    void cover(int ring, int stamp) {
+      for (int atom : cycles[ring])
+        atomStamp[atom] = stamp;
+      for (int bond : cycleBonds[ring])
+        bondStamp[bond] = stamp;
+    }
+
+    /** Whether an atom is flagged or lies on a relevant cycle. */
+    boolean ringAtom(MolGraph graph, int atom) {
+      return graph.ring[atom] || onCycle[atom];
+    }
+
+    /** Whether a bond is flagged or lies on a relevant cycle. */
+    boolean ringBond(MolGraph graph, int first, int second) {
+      return graph.bondInRing(first, second) || bond(first, second) >= 0;
+    }
+
+    /** Whether a selected atom is off every ring, or on a ring selected whole. */
+    boolean atomCovered(MolGraph graph, int atom, int stamp) {
+      return !ringAtom(graph, atom) || atomStamp[atom] == stamp;
+    }
+
+    /** Whether a selected bond is off every ring, or on a ring selected whole. */
+    boolean bondCovered(MolGraph graph, int first, int second, int stamp) {
+      int bond = bond(first, second);
+      return !(graph.bondInRing(Math.min(first, second), Math.max(first, second)) || bond >= 0)
+          || (bond >= 0 && bondStamp[bond] == stamp);
+    }
+
+    void clearStamps() {
+      Arrays.fill(atomStamp, 0);
+      Arrays.fill(bondStamp, 0);
+    }
   }
 
   /**

@@ -65,9 +65,9 @@ if [[ ! -x $VENV/bin/python ]]; then
     fi
 fi
 use_python
-python -m pip install -q --upgrade pip > "$RESULTS/pip-setup.log" 2>&1
-python -m pip install -q "scikit-build-core>=0.10,<2" "pybind11>=2.12,<4" "pytest>=7,<10" "pytest-timeout>=2,<3" \
-    auditwheel "cmake>=3.18,<5" "ninja<2" >> "$RESULTS/pip-setup.log" 2>&1
+python -m pip install -q --upgrade pip==26.2.2 > "$RESULTS/pip-setup.log" 2>&1
+python -m pip install -q scikit-build-core==1.1.1 pybind11==3.1.0 pytest==9.1.1 pytest-timeout==2.4.0 \
+    auditwheel==6.8.2 cmake==4.4.3 ninja==1.13.2 >> "$RESULTS/pip-setup.log" 2>&1
 # The tests that use NumPy or RDKit are skipped when these have no build for this Python.
 python -m pip install -q numpy "rdkit<2027" >> "$RESULTS/pip-setup.log" 2>&1 || log "setup: NumPy or RDKit unavailable; their tests will be skipped"
 

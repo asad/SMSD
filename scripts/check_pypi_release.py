@@ -6,8 +6,12 @@
 """Validate published SMSD distributions before uploading the unchanged files."""
 
 import argparse
+import base64
+import csv
 from email.parser import BytesParser
+import hashlib
 import importlib.util
+import io
 import json
 from pathlib import Path
 import re
@@ -42,7 +46,25 @@ def safe_name(name):
             and not any(char in name for char in "/\\\r\n\0"))
 
 
-def selected_assets(metadata, tag):
+def cuda_wheel_name(version):
+    return f"smsd_cuda-{version}-py3-none-manylinux_2_34_x86_64.whl"
+
+
+def dependency(value):
+    match = re.fullmatch(r"([A-Za-z0-9_.-]+)\s*(.*)", value)
+    require(match is not None, "Malformed CUDA dependency")
+    specifier = match[2].strip()
+    if specifier.startswith("(") or specifier.endswith(")"):
+        require(specifier.startswith("(") and specifier.endswith(")"), "Malformed CUDA dependency parentheses")
+        specifier = specifier[1:-1]
+    constraints = specifier.replace(" ", "").split(",")
+    require(all(re.fullmatch(r"(?:===|==|!=|~=|<=|>=|<|>)[^,;()\s]+", item) for item in constraints),
+            "Unsupported CUDA dependency constraint")
+    return re.sub(r"[-_.]+", "-", match[1]).lower(), tuple(sorted(constraints))
+
+
+def selected_assets(metadata, tag, package="smsd"):
+    require(package in ("smsd", "smsd-cuda"), "Unknown release package")
     version = release_version(tag)
     require(metadata.get("tag_name") == tag, "GitHub release tag differs")
     require(metadata.get("draft") is False, "GitHub release is still a draft")
@@ -54,8 +76,8 @@ def selected_assets(metadata, tag):
         name = asset.get("name")
         require(safe_name(name) and name not in assets, "Unsafe or duplicate release asset")
         assets[name] = asset
-    selected = {f"smsd-{version}.tar.gz", "SOURCE_MANIFEST.json",
-                "WHEEL_MANIFEST.json", "SHA256SUMS"}
+    selected = {f"smsd-{version}.tar.gz", "SOURCE_MANIFEST.json", "SHA256SUMS",
+                "WHEEL_MANIFEST.json" if package == "smsd" else "CUDA_WHEEL_MANIFEST.json"}
     targets = {}
     for name in assets:
         if name.endswith(".whl"):
@@ -64,11 +86,18 @@ def selected_assets(metadata, tag):
                 require(len(fields) == 5 and fields[:4] == ["smsd_cuda", version, "py3", "none"]
                         and all(tag == "linux_x86_64" or re.fullmatch(r"manylinux_2_\d+_x86_64", tag)
                                 for tag in fields[4].split(".")), "Unexpected CUDA release wheel: " + name)
+                if package == "smsd-cuda":
+                    require(name == cuda_wheel_name(version) and "cuda" not in targets,
+                            "Expected one repaired Linux glibc2.34 x86_64 CUDA wheel")
+                    targets["cuda"] = name
                 continue
             identifier = BUILD.wheel_target(name, version)
-            require(identifier not in targets, "Multiple " + identifier + " release wheels")
-            targets[identifier] = name
-    missing = BUILD.BUILD_IDENTIFIERS.keys() - targets.keys()
+            if package == "smsd":
+                require(identifier not in targets, "Multiple " + identifier + " release wheels")
+                targets[identifier] = name
+        elif name.startswith(("smsd_cuda-", "smsd-cuda-")) and package == "smsd-cuda":
+            raise ValueError("Unexpected CUDA distribution: " + name)
+    missing = (BUILD.BUILD_IDENTIFIERS.keys() if package == "smsd" else {"cuda"}) - targets.keys()
     require(not missing, "Missing release wheels: " + ", ".join(sorted(missing)))
     selected.update(targets.values())
     require(selected <= assets.keys(), "Published release is missing required metadata or source")
@@ -84,7 +113,10 @@ def selected_assets(metadata, tag):
 
 
 def download(args):
-    require(args.platform == "all", "Publishing requires platform=all")
+    package = getattr(args, "package", "smsd")
+    require(package in ("smsd", "smsd-cuda"), "Unknown release package")
+    require(args.platform == ("all" if package == "smsd" else "linux"),
+            "Publishing requires platform=all for smsd or platform=linux for smsd-cuda")
     release_version(args.tag)
     require(re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", args.repository),
             "Expected owner/repository")
@@ -94,14 +126,15 @@ def download(args):
                                    f"repos/{args.repository}/releases/tags/{args.tag}"])
     args.metadata_file.parent.mkdir(parents=True, exist_ok=True)
     args.metadata_file.write_bytes(raw)
-    _, assets, _ = selected_assets(BUILD.read_manifest(args.metadata_file), args.tag)
+    _, assets, _ = selected_assets(BUILD.read_manifest(args.metadata_file), args.tag, package)
     args.release_dir.mkdir(parents=True, exist_ok=True)
     command = ["gh", "release", "download", args.tag, "--repo", args.repository,
                "--dir", str(args.release_dir)]
     for name in sorted(assets):
         command.extend(["--pattern", name])
     subprocess.run(command, check=True)
-    print("Downloaded one published SDK and 20 release wheels with their manifests")
+    print("Downloaded one published SDK and 20 release wheels with their manifests" if package == "smsd"
+          else "Downloaded the published CUDA wheel with its source and build manifests")
 
 
 def check_source(directory, version, manifest):
@@ -146,7 +179,7 @@ def git(checkout, *arguments):
     return subprocess.check_output(["git", "-C", str(checkout), *arguments]).strip()
 
 
-def check_git(checkout, tag, manifest, files):
+def check_git(checkout, tag, manifest, files, package="smsd"):
     frozen = git(checkout, "rev-parse", "--verify", manifest["release_ref"] + "^{commit}").decode()
     require(frozen == manifest["source_commit"], "Frozen source ref resolves to another commit")
     tagged = git(checkout, "rev-parse", "--verify", f"refs/tags/{tag}" + "^{commit}").decode()
@@ -161,6 +194,8 @@ def check_git(checkout, tag, manifest, files):
                 or name == b"CITATION.cff" for name in changed),
             "Tagged production files differ from the frozen SDK")
     require(b"python/README.md" not in changed, "Tagged package description differs from SDK")
+    if package == "smsd-cuda":
+        require(b"packaging/smsd-cuda/README.md" not in changed, "Tagged CUDA package description differs from SDK")
     blobs = BUILD.tree_blobs(git(checkout, "ls-tree", "-r", "-z", "--full-tree", frozen))
     for name, content in files.items():
         if name == "PKG-INFO":
@@ -216,42 +251,137 @@ def check_hashes(directory, assets):
             require(sums.get(name) == actual, "Release SHA256SUMS differs: " + name)
 
 
+def check_cuda_source(checkout, source):
+    root = "packaging/smsd-cuda/"
+    blobs = BUILD.tree_blobs(git(checkout, "ls-tree", "-r", "-z", "--full-tree", source["source_commit"]))
+    names = {root + name for name in ("pyproject.toml", "README.md", "LICENSE", "NOTICE",
+                                     "python/smsd_cuda/__init__.py")}
+    names.update(name for name in blobs if name.startswith(root + "python/") and name.endswith(".py"))
+    require(names <= blobs.keys(), "Frozen commit is missing CUDA package inputs")
+    files = {}
+    for name in sorted(names):
+        path = checkout / name
+        require(path.is_file() and not path.is_symlink(), "Missing or unsafe CUDA package input: " + name)
+        content = path.read_bytes()
+        require(BUILD.git_blob_id(content) == blobs[name], "CUDA package input differs from frozen source: " + name)
+        files[name] = content
+    return files
+
+
+def check_cuda_wheel(directory, version, source, files):
+    name = cuda_wheel_name(version)
+    expected = {"schema_version": 1, "source_commit": source["source_commit"],
+                "sdist_sha256": source["sdist_sha256"], "smsd_version": version,
+                "wheel": name, "wheel_sha256": BUILD.sha256(directory / name),
+                "installed_wheel_tests": "passed", "native_gpu_tests": "passed"}
+    proof = BUILD.read_manifest(directory / "CUDA_WHEEL_MANIFEST.json")
+    require(set(proof) == set(expected) and all(type(proof[key]) is type(value) and proof[key] == value
+            for key, value in expected.items()), "CUDA wheel proof differs or lacks successful actual checks")
+    root = "packaging/smsd-cuda/"
+    require({root + path for path in ("pyproject.toml", "README.md", "LICENSE", "NOTICE", "python/smsd_cuda/__init__.py")} <= files.keys(),
+            "Frozen source is missing CUDA package inputs")
+    project = tomllib.loads(files[root + "pyproject.toml"].decode())["project"]
+    dependencies = {dependency(value) for value in project["dependencies"]}
+    require(project["name"] == "smsd-cuda" and project["version"] == version
+            and project["requires-python"] == ">=3.10" and ("smsd", (f"=={version}",)) in dependencies,
+            "Frozen CUDA package metadata or paired core version differs")
+    module = files[root + "python/smsd_cuda/__init__.py"]
+    for field in ("__version__", "__smsd_version__"):
+        assigned = re.search(rb'^' + field.encode() + rb' = "([^"]+)"', module, re.M)
+        require(assigned and assigned[1].decode() == version, "Frozen CUDA module version differs")
+    prefix = f"smsd_cuda-{version}.dist-info/"
+    with zipfile.ZipFile(directory / name) as wheel:
+        names = wheel.namelist()
+        require(len(names) == len(set(names)) and all(safe_name(path.replace("/", "")) and ":" not in path
+                and not path.startswith("/") and ".." not in Path(path).parts for path in names),
+                "Unsafe or duplicate CUDA wheel path")
+        metadata_bytes = wheel.read(prefix + "METADATA")
+        metadata = BytesParser().parsebytes(metadata_bytes)
+        require(metadata["Name"] == "smsd-cuda" and metadata["Version"] == version
+                and metadata["Requires-Python"] == ">=3.10"
+                and {dependency(value) for value in metadata.get_all("Requires-Dist", [])} == dependencies,
+                "CUDA wheel package metadata differs from frozen source")
+        description = metadata_bytes.split(b"\n\n", 1)
+        require(len(description) == 2 and description[1] == files[root + "README.md"], "CUDA wheel description differs")
+        tags = BytesParser().parsebytes(wheel.read(prefix + "WHEEL"))
+        require(tags.get_all("Tag") == ["py3-none-manylinux_2_34_x86_64"]
+                and tags["Root-Is-Purelib"] == "false", "CUDA wheel tags differ")
+        for path in names:
+            if path.endswith(".py"):
+                require(root + "python/" + path in files and wheel.read(path) == files[root + "python/" + path],
+                        "CUDA wheel Python source differs from frozen source")
+        require(wheel.read("smsd_cuda/__init__.py") == files[root + "python/smsd_cuda/__init__.py"], "CUDA module missing or changed")
+        for license_name in ("LICENSE", "NOTICE"):
+            require(wheel.read(prefix + "licenses/" + license_name) == files[root + license_name], "CUDA licence copy differs")
+        binary = wheel.read("smsd_cuda/libsmsd_cuda_screen.so")
+        require(binary[:6] == b"\x7fELF\x02\x01" and binary[18:20] == b"\x3e\x00", "CUDA library must be Linux x86_64 ELF")
+        record_name = prefix + "RECORD"
+        records = list(csv.reader(io.StringIO(wheel.read(record_name).decode())))
+        require(all(len(row) == 3 for row in records) and len({row[0] for row in records}) == len(records)
+                and {row[0] for row in records} == {path for path in names if not path.endswith("/")}, "CUDA RECORD inventory differs")
+        for path, checksum, size in records:
+            if path == record_name:
+                require(checksum == size == "", "CUDA RECORD self entry differs")
+                continue
+            content = wheel.read(path)
+            digest = base64.urlsafe_b64encode(hashlib.sha256(content).digest()).rstrip(b"=").decode()
+            require(checksum == "sha256=" + digest and size == str(len(content)), "CUDA RECORD hash or size differs")
+
+
 def validate(args):
-    version, assets, targets = selected_assets(BUILD.read_manifest(args.metadata_file), args.tag)
+    package = getattr(args, "package", "smsd")
+    version, assets, targets = selected_assets(BUILD.read_manifest(args.metadata_file), args.tag, package)
     check_hashes(args.release_dir, assets)
     source = BUILD.read_manifest(args.release_dir / "SOURCE_MANIFEST.json")
     files = check_source(args.release_dir, version, source)
-    collector = check_git(args.source_checkout, args.tag, source, files)
-    check_wheel_manifest(args.release_dir, version, source, targets, files["PKG-INFO"])
-    subprocess.run([sys.executable, str(collector), "--release-dir", str(args.release_dir.resolve()),
-                    "--check-only"], check=True)
-    distributions = sorted({f"smsd-{version}.tar.gz", *targets.values()})
+    collector = check_git(args.source_checkout, args.tag, source, files, package)
+    if package == "smsd":
+        check_wheel_manifest(args.release_dir, version, source, targets, files["PKG-INFO"])
+        subprocess.run([sys.executable, str(collector), "--release-dir", str(args.release_dir.resolve()),
+                        "--check-only"], check=True)
+        distributions = sorted({f"smsd-{version}.tar.gz", *targets.values()})
+    else:
+        cuda_files = check_cuda_source(args.source_checkout, source)
+        check_cuda_wheel(args.release_dir, version, source, cuda_files)
+        distributions = [targets["cuda"]]
     require(not args.dist_dir.exists() or not any(args.dist_dir.iterdir()), "Upload directory must be empty")
     args.dist_dir.mkdir(parents=True, exist_ok=True)
     for name in distributions:
         shutil.copyfile(args.release_dir / name, args.dist_dir / name)
-    receipt = {"version": version, "source_commit": source["source_commit"],
+    receipt = {"package": package, "version": version, "source_commit": source["source_commit"],
                "files": {name: BUILD.sha256(args.release_dir / name) for name in distributions}}
     args.receipt_file.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
-    print("Validated unchanged SDK and all 20 release wheels")
+    print("Validated unchanged SDK and all 20 release wheels" if package == "smsd"
+          else "Validated the unchanged published CUDA wheel")
 
 
 def verify_staged(args):
     receipt = BUILD.read_manifest(args.receipt_file)
     version = release_version("v" + receipt["version"])
     files = receipt.get("files", {})
-    require(isinstance(files, dict) and len(files) == len(BUILD.BUILD_IDENTIFIERS) + 1
-            and f"smsd-{version}.tar.gz" in files, "Invalid distribution receipt")
+    package = getattr(args, "package", "smsd")
+    require(package in ("smsd", "smsd-cuda"), "Unknown upload package")
+    require(receipt.get("package", "smsd") == package, "Upload receipt package differs")
+    if package == "smsd-cuda":
+        require(set(receipt) == {"package", "version", "source_commit", "files"}
+                and isinstance(receipt["source_commit"], str) and re.fullmatch(r"[0-9a-f]{40}", receipt["source_commit"]),
+                "Invalid CUDA source receipt")
+        require(isinstance(files, dict) and set(files) == {cuda_wheel_name(version)}, "Invalid CUDA distribution receipt")
+    else:
+        require(isinstance(files, dict) and len(files) == len(BUILD.BUILD_IDENTIFIERS) + 1
+                and f"smsd-{version}.tar.gz" in files, "Invalid distribution receipt")
     require({path.name for path in args.dist_dir.iterdir()} == set(files), "Upload directory contents differ")
     targets = set()
     for name, expected in files.items():
         require(safe_name(name) and re.fullmatch(r"[0-9a-f]{64}", expected)
                 and (args.dist_dir / name).is_file() and not (args.dist_dir / name).is_symlink()
                 and BUILD.sha256(args.dist_dir / name) == expected, "Staged distribution hash differs")
-        if name.endswith(".whl"):
+        if name.endswith(".whl") and package == "smsd":
             targets.add(BUILD.wheel_target(name, version))
-    require(targets == set(BUILD.BUILD_IDENTIFIERS), "Staged interpreter/platform targets differ")
-    print("Final 21-file upload identity check passed")
+    if package == "smsd":
+        require(targets == set(BUILD.BUILD_IDENTIFIERS), "Staged interpreter/platform targets differ")
+    print("Final 21-file upload identity check passed" if package == "smsd"
+          else "Final one-wheel CUDA upload identity check passed")
 
 
 def main():
@@ -276,6 +406,8 @@ def main():
     staged.add_argument("--dist-dir", type=Path, required=True)
     staged.add_argument("--receipt-file", type=Path, required=True)
     staged.set_defaults(function=verify_staged)
+    for command in (fetch, check, staged):
+        command.add_argument("--package", choices=("smsd", "smsd-cuda"), default="smsd")
     args = parser.parse_args()
     try:
         args.function(args)

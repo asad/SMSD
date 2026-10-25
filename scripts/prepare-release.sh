@@ -17,7 +17,14 @@ if [[ -e "$SMSD_RELEASE_FINAL_DIR" ]]; then
   echo 'Release output already exists; set SMSD_RELEASE_OUTPUT_DIR to a new directory.' >&2
   exit 1
 fi
+SMSD_RELEASE_COMMIT="${SMSD_RELEASE_COMMIT:?Set SMSD_RELEASE_COMMIT to the full frozen commit SHA}"
+SMSD_RELEASE_SDIST="${SMSD_RELEASE_SDIST:?Set SMSD_RELEASE_SDIST to the canonical source archive}"
+SMSD_RELEASE_SOURCE_MANIFEST="${SMSD_RELEASE_SOURCE_MANIFEST:-$(dirname "$SMSD_RELEASE_SDIST")/SOURCE_MANIFEST.json}"
+"$SMSD_RELEASE_PYTHON" scripts/build_python_wheels.py check-source \
+  --sdist "$SMSD_RELEASE_SDIST" --source-manifest "$SMSD_RELEASE_SOURCE_MANIFEST" \
+  --release-commit "$SMSD_RELEASE_COMMIT"
 "$SMSD_RELEASE_PYTHON" -c 'import sys; assert sys.version_info[:2] == (3, 14), "Use CPython 3.14 for release preparation"'
+"$SMSD_RELEASE_PYTHON" -c 'import importlib.metadata as M; required = {"pip": "26.2.2", "build": "1.6.1", "twine": "7.0.0"}; assert all(M.version(name) == version for name, version in required.items()), "Use the pinned release build tools described in docs/RELEASING.md"'
 SMSD_RELEASE_JOBS="${SMSD_RELEASE_JOBS:-4}"
 SMSD_RELEASE_JAVA8_HOME="${SMSD_RELEASE_JAVA8_HOME:-}"
 [[ -x "$SMSD_RELEASE_JAVA8_HOME/bin/java" ]] || {
@@ -33,7 +40,12 @@ fi
 mkdir -p build dist
 SMSD_RELEASE_DIR="$(mktemp -d "$SMSD_RELEASE_ROOT/build/release-assets.XXXXXX")"
 SMSD_RELEASE_SOURCE="$(mktemp -d "$SMSD_RELEASE_ROOT/build/release-source.XXXXXX")"
-trap 'rm -rf "$SMSD_RELEASE_SOURCE" "$SMSD_RELEASE_DIR"' EXIT
+trap 'printf "Retained release build directory: %s\n" "$SMSD_RELEASE_SOURCE" >&2; if [[ -d "$SMSD_RELEASE_DIR" ]]; then printf "Retained release assets: %s\n" "$SMSD_RELEASE_DIR" >&2; fi' EXIT
+cp "$SMSD_RELEASE_SDIST" "$SMSD_RELEASE_DIR/smsd-$SMSD_RELEASE_VERSION.tar.gz"
+cp "$SMSD_RELEASE_SOURCE_MANIFEST" "$SMSD_RELEASE_DIR/SOURCE_MANIFEST.json"
+"$SMSD_RELEASE_PYTHON" scripts/build_python_wheels.py check-source \
+  --sdist "$SMSD_RELEASE_DIR/smsd-$SMSD_RELEASE_VERSION.tar.gz" \
+  --source-manifest "$SMSD_RELEASE_DIR/SOURCE_MANIFEST.json" --release-commit "$SMSD_RELEASE_COMMIT"
 
 # Include the slow chemistry suites and build the sources and Javadoc JARs of the
 # library (java/core) and CLI (java/cli) modules. The source and Javadoc plugin
@@ -57,21 +69,23 @@ for SMSD_VERSION_LINE in \
 done
 
 # Build from the source distribution to verify that it contains all build inputs.
-"$SMSD_RELEASE_PYTHON" scripts/build_python_wheels.py prepare \
-  --output-dir "$SMSD_RELEASE_DIR" --release-ref "${SMSD_RELEASE_REF:-HEAD}" --no-isolation
 tar -xzf "$SMSD_RELEASE_DIR/smsd-$SMSD_RELEASE_VERSION.tar.gz" -C "$SMSD_RELEASE_SOURCE"
 "$SMSD_RELEASE_PYTHON" -m build --wheel --no-isolation \
   -Ccmake.define.SMSD_BUILD_METAL=OFF -Ccmake.define.SMSD_BUILD_CUDA=OFF \
   --outdir "$SMSD_RELEASE_DIR" "$SMSD_RELEASE_SOURCE/smsd-$SMSD_RELEASE_VERSION"
+mkdir "$SMSD_RELEASE_SOURCE/unrepaired-wheels"
 if [[ "$(uname -s)" == "Darwin" ]]; then
   # Bundle external libraries such as OpenMP and validate macOS deployment tags.
+  cp "$SMSD_RELEASE_DIR"/smsd-*.whl "$SMSD_RELEASE_SOURCE/unrepaired-wheels/"
   "$SMSD_RELEASE_PYTHON" -m delocate.cmd.delocate_wheel "$SMSD_RELEASE_DIR"/smsd-*.whl
 elif [[ "$(uname -s)" == "Linux" ]]; then
   SMSD_RELEASE_REPAIRED="$(mktemp -d "$SMSD_RELEASE_SOURCE/repaired.XXXXXX")"
   "$SMSD_RELEASE_PYTHON" -m auditwheel repair --plat manylinux_2_28_x86_64 \
     --wheel-dir "$SMSD_RELEASE_REPAIRED" "$SMSD_RELEASE_DIR"/smsd-*.whl
-  rm "$SMSD_RELEASE_DIR"/smsd-*.whl
+  mv "$SMSD_RELEASE_DIR"/smsd-*.whl "$SMSD_RELEASE_SOURCE/unrepaired-wheels/"
   mv "$SMSD_RELEASE_REPAIRED"/smsd-*.whl "$SMSD_RELEASE_DIR/"
+else
+  cp "$SMSD_RELEASE_DIR"/smsd-*.whl "$SMSD_RELEASE_SOURCE/unrepaired-wheels/"
 fi
 shopt -s nullglob
 SMSD_RELEASE_WHEELS=("$SMSD_RELEASE_DIR"/smsd-*.whl)
@@ -116,7 +130,10 @@ if [[ -n "${SMSD_BENCHMARK_ARCHIVE:-}" ]]; then
   [[ -f "$SMSD_BENCHMARK_ARCHIVE" ]] || { echo "Benchmark archive not found" >&2; exit 1; }
   cp "$SMSD_BENCHMARK_ARCHIVE" "$SMSD_RELEASE_DIR/"
 fi
-SMSD_RELEASE_COLLECT_ARGS=(--release-dir "$SMSD_RELEASE_DIR" --allow-incomplete)
+"$SMSD_RELEASE_PYTHON" scripts/build_python_wheels.py check-source \
+  --sdist "$SMSD_RELEASE_DIR/smsd-$SMSD_RELEASE_VERSION.tar.gz" \
+  --source-manifest "$SMSD_RELEASE_DIR/SOURCE_MANIFEST.json" --release-commit "$SMSD_RELEASE_COMMIT"
+SMSD_RELEASE_COLLECT_ARGS=(--release-dir "$SMSD_RELEASE_DIR")
 if [[ -n "${SMSD_PLATFORM_WHEELS_DIR:-}" ]]; then
   SMSD_RELEASE_COLLECT_ARGS+=(--wheel-dir "$SMSD_PLATFORM_WHEELS_DIR")
 fi
@@ -126,4 +143,4 @@ if [[ -e "$SMSD_RELEASE_FINAL_DIR" ]]; then
   exit 1
 fi
 mv "$SMSD_RELEASE_DIR" "$SMSD_RELEASE_FINAL_DIR"
-echo "Verified local release assets: $SMSD_RELEASE_FINAL_DIR"
+echo "Verified complete release wheel matrix and local assets: $SMSD_RELEASE_FINAL_DIR"

@@ -224,6 +224,7 @@ inline int64_t MolGraph::attachedHydrogenCount(int atom) const {
 }
 
 inline const std::vector<int>& MolGraph::getPharmacophoreFeatures() const {
+    if (lazyCaches_.ready(LazyCaches::Features)) return cachedPharmacophoreFeatures;
     const std::lock_guard<std::recursive_mutex> cacheLock(lazyCacheMutex());
     if (!pharmComputed_) {
         cachedPharmacophoreFeatures.resize(n);
@@ -303,6 +304,7 @@ inline const std::vector<int>& MolGraph::getPharmacophoreFeatures() const {
         }
         pharmComputed_ = true;
     }
+    lazyCaches_.publish(LazyCaches::Features);
     return cachedPharmacophoreFeatures;
 }
 

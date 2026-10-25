@@ -153,13 +153,21 @@ inline int cycleRank(const MolGraph& g) {
 // ============================================================================
 
 inline const std::vector<std::vector<int>>& MolGraph::computeRings() const {
+    if (lazyCaches_.ready(LazyCaches::Rings)) return sssrRings;
     const std::lock_guard<std::recursive_mutex> cacheLock(lazyCacheMutex());
-    if (sssrComputed) return sssrRings;
-    sssrComputed = true;
-    if (n == 0) return sssrRings;
+    if (sssrComputed) { lazyCaches_.publish(LazyCaches::Rings); return sssrRings; }
+    if (n == 0) {
+        sssrComputed = true;
+        lazyCaches_.publish(LazyCaches::Rings);
+        return sssrRings;
+    }
 
     const int cycleRank = detail::cycleRank(*this);
-    if (cycleRank <= 0) return sssrRings;
+    if (cycleRank <= 0) {
+        sssrComputed = true;
+        lazyCaches_.publish(LazyCaches::Rings);
+        return sssrRings;
+    }
 
     // For each edge (start, nb) with nb > start, the shortest path from start to nb that
     // avoids that direct edge closes a candidate ring. A candidate keeps only its size and
@@ -259,6 +267,8 @@ inline const std::vector<std::vector<int>>& MolGraph::computeRings() const {
     }
 
     sssrRings = std::move(basis);
+    sssrComputed = true;
+    lazyCaches_.publish(LazyCaches::Rings);
     return sssrRings;
 }
 
@@ -691,15 +701,19 @@ inline std::vector<std::vector<std::vector<int>>> MolGraph::computeURFs() {
 // ============================================================================
 
 inline void MolGraph::ensureRingCounts() const {
+    if (lazyCaches_.ready(LazyCaches::RingCounts)) return;
     const std::lock_guard<std::recursive_mutex> cacheLock(lazyCacheMutex());
-    if (ringCountsComputed_) return;
-    computeRingCounts();
-    ringCountsComputed_ = true;
+    if (!ringCountsComputed_) {
+        computeRingCounts();
+        ringCountsComputed_ = true;
+    }
+    lazyCaches_.publish(LazyCaches::RingCounts);
 }
 
 inline void MolGraph::ensureRingSystems() const {
+    if (lazyCaches_.ready(LazyCaches::RingSystems)) return;
     const std::lock_guard<std::recursive_mutex> cacheLock(lazyCacheMutex());
-    if (ringSysComputed_) return;
+    if (ringSysComputed_) { lazyCaches_.publish(LazyCaches::RingSystems); return; }
     ringSystemId_.assign(n, -1);
 
     // Union-find parent array (only for ring atoms)
@@ -776,6 +790,7 @@ inline void MolGraph::ensureRingSystems() const {
     }
 
     ringSysComputed_ = true;
+    lazyCaches_.publish(LazyCaches::RingSystems);
 }
 
 inline int MolGraph::ringSystemOf(int atom) const {

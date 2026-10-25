@@ -18,7 +18,7 @@ installers and Docker images. Maven:
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>8.0.2</version>
+  <version>8.0.3</version>
 </dependency>
 ```
 
@@ -26,7 +26,7 @@ Gradle (Kotlin DSL):
 
 ```kotlin
 dependencies {
-    implementation("com.bioinceptionlabs:smsd:8.0.2")
+    implementation("com.bioinceptionlabs:smsd:8.0.3")
 }
 ```
 
@@ -40,8 +40,8 @@ its class name and compile it from the repository root against the
 self-contained JAR of the source build:
 
 ```bash
-javac --release 8 -cp java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar PreparedSearchExample.java
-java -cp "java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar:." PreparedSearchExample
+javac --release 8 -cp java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar PreparedSearchExample.java
+java -cp "java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar:." PreparedSearchExample
 ```
 
 With a Java 8 compiler, omit `--release 8`; on Windows, separate the classpath
@@ -96,12 +96,36 @@ shared between threads; do not modify a target during a search.
 `MAX_SMARTS_EXPRESSION_NODES`, `MAX_SMARTS_NODES_PER_EXPRESSION` or
 `MAX_SMARTS_RECURSION_DEPTH`.
 
-`Standardiser.expandNamedPredicates(smarts, registry)` replaces `$name` tokens
-with SMARTS from a `Standardiser.PredicateRegistry`, which starts with ten
-predicates such as `isHalogen`, `isHBDonor` and `isHBAcceptor` and offers
+`Standardiser.expandNamedPredicates(smarts, registry)` replaces `$name` tokens,
+where a name is ASCII letters, digits and underscores, inside recursive SMARTS
+as well, with SMARTS from a
+`Standardiser.PredicateRegistry`, which offers
 `put(name, smarts)`, `contains(name)`, `get(name)` and `loadJsonFile(path)`
-(a JSON object of names and SMARTS). `Standardiser.matchAll(smarts, target)` is
-deprecated in favour of `Substructure.smarts(smarts).matchAll(target)`.
+(a JSON object of names and SMARTS). A definition is expanded as recursive
+SMARTS, so it describes the atom written first. The registry starts with ten
+predicates, defined as in the native core:
+
+- `isAmideN`: N with three connections bonded to a carbonyl carbon (amides,
+  lactams, imides, ureas and carbamates), aromatic rings such as uracil and
+  2-pyridone included.
+- `isCarboxylC`: carbonyl carbon bearing OH or O⁻ (carboxylic acids and
+  carboxylates, carbamic acids, carbonic acid monoesters and bicarbonate).
+- `isSulfonamideN`: N with three connections bonded to a sulfonyl S.
+- `isEster`: carbonyl carbon of a carboxylic ester, formates and aromatic
+  lactones such as coumarin included; anhydrides are excluded.
+- `isKetone`: carbonyl carbon bonded to two carbons, ring carbonyls such as
+  chromone and 4-pyridone included.
+- `isHalogen`: F, Cl, Br or I.
+- `isPositive`, `isNegative`: a charge of +1 to +15, or −1 to −15.
+- `isHBDonor`: N, O or S bearing hydrogen, aromatic NH included.
+- `isHBAcceptor`: N, O or S of charge 0 to −3 with a free lone pair, aniline,
+  nitrile, thioamide, amidine and sulfonamide N included; amide N, aromatic N
+  with three connections (pyrrole type), N of valence 5 (nitro and N-oxide
+  written without charges) and S of valence 4 or 6 (sulfoxides, sulfones) are
+  excluded.
+
+`Standardiser.matchAll(smarts, target)` is deprecated in favour of
+`Substructure.smarts(smarts).matchAll(target)`.
 
 ## Search options
 
@@ -122,9 +146,11 @@ in brackets.
 - `MCS.Options.excludedTargetAtoms` (empty): target atoms never mapped.
 - `Substructure.Options.induced` (`false`): unbonded query atom pairs must map
   to unbonded target atoms.
-- `timeoutMillis` (`-1`): negative selects the default, which for MCS grows
-  with molecule size up to 30,000 ms and for substructure search is 10,000 ms;
-  0 stops at once; positive is milliseconds.
+- `timeoutMillis` (`-1`): negative selects the default, which for MCS is
+  500 ms plus 2 ms per atom pair (query atoms × target atoms), at most
+  30,000 ms: 1,300 ms for two 20-atom molecules, 5,500 ms for two 50-atom
+  molecules and 30,000 ms from 122 atoms each. For substructure search it is
+  10,000 ms. 0 stops at once; positive is milliseconds.
 - `nodeLimit` (`0`, unlimited): the maximum number of search nodes.
 - `cancellation` (`null`): a `BooleanSupplier`; returning `true` cancels.
 
@@ -151,8 +177,10 @@ instance; `ChemOptions.copyOf(options)` returns an independent copy.
   within rings selected whole in both molecules.
 - `ringFusionMode` (`RingFusionMode.IGNORE`): `IGNORE`, `PERMISSIVE` or
   `STRICT` comparison of fused ring systems.
-- `useChirality`, `useBondStereo` (`false`): compare tetrahedral and
-  double-bond (E/Z) stereochemistry.
+- `useChirality`, `useBondStereo` (`false`): mapped tetrahedral centres and
+  double bonds must agree in configuration, compared by the parity of their
+  mapped neighbours, not by CIP labels (R/S, E/Z); see
+  [stereochemistry](#stereochemistry).
 - `tautomerAware` (`false`): treat tautomeric bonds as equivalent.
 - `pH` (`7.4`), `solvent` (`Solvent.AQUEOUS`; also `DMSO`, `METHANOL`,
   `CHLOROFORM`, `ACETONITRILE`, `DIETHYL_ETHER`): used only by
@@ -183,7 +211,15 @@ lone pair second when the first neighbour's index is below the centre's, and
 first otherwise. A configured query centre or double bond needs the same
 configuration in the target (in MCS, once enough neighbours are mapped to
 define it); unconfigured query atoms and bonds, and in MCS unspecified target
-stereochemistry, match any.
+stereochemistry, match any. The test compares the parity of the mapped
+neighbours, the `@` or `@@` order around a centre and the cis or trans
+placement across a double bond, not CIP labels, whose priorities depend on
+atoms outside the mapping.
+
+In MCS, stereochemistry is a hard constraint. An MCIS is the largest common
+subgraph whose mapped centres and double bonds agree, so it can be smaller
+than the MCIS found without these options; an MCES instead leaves out the
+fewest common bonds that resolve each disagreement.
 
 ### Tautomers
 
@@ -207,12 +243,20 @@ or `TAUTOMER_SITE_NONE`) and `tautomerPKa` its aqueous `MolGraph.TPKA_*` pKa.
 
 A `SearchResult` reports:
 
-- `status()`: `Completed`, `TimedOut`, `Cancelled` or `LimitReached` (an
-  enumeration or node limit was reached).
+- `status()`: `Completed` (the search ran to its end), `TimedOut` (the time
+  limit stopped it), `Cancelled` (cancellation or an interrupt stopped it) or
+  `LimitReached` (the node limit stopped it, an enumeration reached its match
+  limit, or an MCES pair beyond the [size limits](#size-limits) was declined
+  before any search, which returns no match and proves nothing).
 - `optimal()`: the result is proved. `complete()`: the requested search
   finished. `found()`: a match was retained.
 - `matches()`, `score()`: the `SearchResult.Match` objects and the best score.
 - `nodesVisited()`, `elapsedMillis()`: search effort.
+
+With `completeRingsOnly` or `RingFusionMode.STRICT`, truncated ring perception
+in either input leaves the mappings selected using the perceived rings, but
+cannot prove the result. The status is `LimitReached`, with `optimal()` and
+`complete()` both `false`; `TimedOut` and `Cancelled` take precedence.
 
 A `SearchResult.Match` uses the original atom indices; pass it the query that
 prepared the search:
@@ -231,10 +275,32 @@ A completed search proves its result, including absence, and a substructure
 match proves existence; a stopped search may return a valid but unproved
 match. A capped MCS enumeration can be optimal yet incomplete.
 
+### Size limits
+
+An MCES search declines a pair before searching it, with `LimitReached`, no
+match, and `optimal()` and `complete()` both `false`, when:
+
+- query atoms × target atoms exceed 2³⁰ (1,073,741,824), as for two molecules
+  of more than 32,768 atoms each;
+- the compatible bond pairs would take more than 32 MiB: the bonds of the
+  molecule searched from × (the bonds of the other / 64, rounded up) exceed
+  2²² (4,194,304). Without excluded target atoms, the search starts from the
+  target when it has fewer atoms than the query, or fewer bonds when more than
+  one fragment is allowed, and otherwise from the query. Two molecules of
+  16,384 bonds each fit exactly, as do 32,768 bonds against 8,192;
+- 2 × the kinds of bond both molecules share × (largest atom degree + 1)
+  exceeds 2²⁴ (16,777,216), which needs an atom with at least 512 bonds.
+
+MCIS searches are never declined; the time and node limits bound them. The
+C++ and Python libraries use the same limits.
+
 ## Example: prepared queries and fragments
 
-`PreparedSearchExample.java` finds an MCES and common fragments, enumerates
-embeddings with and without a cap, searches a batch and matches SMARTS:
+`PreparedSearchExample.java` compares an MCIS with an MCES, finds common
+fragments, enumerates embeddings with and without a cap, searches a batch and
+matches SMARTS. Cyclopropane and isobutane share two atoms as an MCIS, as any
+three ring atoms form a triangle, but a two-bond path as an MCES; diethyl ether
+and diethylamine share two separate ethyl groups:
 
 ```java
 import com.bioinception.smsd.core.MCS;
@@ -249,29 +315,33 @@ import org.openscience.cdk.smiles.SmilesParser;
 public class PreparedSearchExample {
     public static void main(String[] args) throws Exception {
         SmilesParser parser = new SmilesParser(SilentChemObjectBuilder.getInstance());
-        MolGraph ring = new MolGraph(parser.parseSmiles("C1CC1"));
-        MolGraph chain = new MolGraph(parser.parseSmiles("CCC"));
+        MolGraph ring = new MolGraph(parser.parseSmiles("C1CC1"));       // cyclopropane
+        MolGraph branched = new MolGraph(parser.parseSmiles("CC(C)C"));  // isobutane
+        SearchResult induced = MCS.find(ring).match(branched);
         MCS.Options options = new MCS.Options();
         options.objective = MCS.Objective.MCES;
-        SearchResult edges = MCS.find(ring).withOptions(options).match(chain);
-        if (!edges.optimal() || !edges.found()
+        SearchResult edges = MCS.find(ring).withOptions(options).match(branched);
+        if (!induced.optimal() || !induced.found()
+                || induced.matches().get(0).atomCount() != 2
+                || !edges.optimal() || !edges.found()
                 || edges.matches().get(0).bondCount() != 2) {
-            throw new IllegalStateException("Expected a proved two-bond common path");
+            throw new IllegalStateException("Expected a two-atom MCIS and a two-bond MCES");
         }
 
         options.connectivity = MCS.Connectivity.Fragments;
         options.minFragmentAtoms = 1;
-        MolGraph pieces = new MolGraph(parser.parseSmiles("CO.CN"));
-        SearchResult fragments = MCS.find(pieces).withOptions(options).match(pieces);
+        MolGraph ether = new MolGraph(parser.parseSmiles("CCOCC"));
+        MolGraph amine = new MolGraph(parser.parseSmiles("CCNCC"));
+        SearchResult fragments = MCS.find(ether).withOptions(options).match(amine);
         if (!fragments.optimal() || !fragments.found()
                 || fragments.matches().get(0).fragments().size() != 2) {
-            throw new IllegalStateException("Expected two common fragments");
+            throw new IllegalStateException("Expected two common ethyl fragments");
         }
 
         Substructure query = Substructure.find(new MolGraph(parser.parseSmiles("CO")));
         MolGraph target = new MolGraph(parser.parseSmiles("OCO"));
         SearchResult all = query.matchAll(target, 10);
-        List<SearchResult> batch = query.matchMany(Arrays.asList(target, chain));
+        List<SearchResult> batch = query.matchMany(Arrays.asList(target, branched));
         if (!all.complete() || all.matches().size() != 2
                 || !batch.get(0).found() || batch.get(1).found()) {
             throw new IllegalStateException("Unexpected enumeration or batch result");
@@ -303,7 +373,8 @@ public class PreparedSearchExample {
   match, with every compatible query bond between mapped atoms.
 - `MCS.isMappingMaximal(query, target, match, options)`, also for an atom
   mapping: `true` if no valid extension exists, `false` for an invalid match,
-  `IllegalStateException` if the budget runs out.
+  `IllegalStateException` if the budget runs out or required ring perception
+  was truncated.
 - `MCS.fragment(query, atoms, bonds)`: a `Match` from an atom mapping and query
   bonds.
 - `MCS.canonicalizeMapping(query, target, mapping)`: the canonical form of an
@@ -322,6 +393,10 @@ public class PreparedSearchExample {
 `status()`, `complete()`, `nodesVisited()` and `elapsedMillis()` describe the
 search, and `optimal()` is always `false`. With no result, `sourceIndex()` is
 -1 and the fragment, graph and SMILES are empty.
+With complete rings or strict ring fusion, truncated ring perception in any
+input also makes consensus `LimitReached` and incomplete, unless its status
+is already `TimedOut` or `Cancelled`. Its fragment and supporting mappings are
+retained.
 
 ## Fingerprints, stereo descriptors and R-groups
 
@@ -535,26 +610,27 @@ bounded by `CIPAssigner.MAX_DEPTH`, so check which centres were assigned.
 ## Command-line interface
 
 The module `com.bioinceptionlabs:smsd-cli` provides the self-contained
-`smsd-cli-8.0.2-jar-with-dependencies.jar`; the
+`smsd-cli-8.0.3-jar-with-dependencies.jar`; the
 [Java module README](../java/README.md#command-line-tool) shows how to obtain
 it or depend on `SMSDcli`. From the repository root, after a source build,
-print the version and help, then test benzene against phenol as a substructure
-and as an MCS:
+print the version and help, test whether benzene is a substructure of phenol,
+and find the MCS of N-methylacetamide and propanamide (`mcs_size` is 4):
 
 ```bash
-java -jar java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar --version
-java -jar java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar --help
-java -jar java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar --version
+java -jar java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar --help
+java -jar java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
-java -jar java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar \
-  --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --mode mcs --json -
+java -jar java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar \
+  --Q SMI --q "CC(=O)NC" --T SMI --t "CCC(=O)N" --mode mcs --json -
 ```
 
-MCS mode defaults to a connected MCIS; request MCES and fragments explicitly:
+MCS mode defaults to a connected MCIS; request MCES and fragments explicitly,
+here for the two ethyl groups of diethyl ether and diethylamine:
 
 ```bash
-java -jar java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar \
-  --Q SMI --q "CO.CN" --T SMI --t "CO.CN" \
+java -jar java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar \
+  --Q SMI --q "CCOCC" --T SMI --t "CCNCC" \
   --mode mcs --objective MCES --fragments --timeout 1000 --json -
 ```
 
@@ -562,9 +638,9 @@ SMARTS queries use the type `SIG` in substructure mode; here the first search
 reports `"exists": true` (exit status 0) and the second `"exists": false` (1):
 
 ```bash
-java -jar java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar \
   --Q SIG --q "C=O" --T SMI --t "CC(=O)O" --json -
-java -jar java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar \
   --Q SIG --q "C=O" --T SMI --t "CCO" --json -
 ```
 

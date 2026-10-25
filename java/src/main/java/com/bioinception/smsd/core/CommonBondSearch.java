@@ -311,7 +311,7 @@ final class CommonBondSearch {
     try {
       clock.poll();
       if (!declined) {
-        graph = new CommonBondGraphs(query, target, pairedChemistry(options.chemistry),
+        graph = new CommonBondGraphs(query, target, options.chemistry,
             options.excludedTargetAtoms, clock);
         declined = !fits(graph);
       }
@@ -329,7 +329,7 @@ final class CommonBondSearch {
         if (!connected && requiredTarget == null && options.excludedTargetAtoms.isEmpty()
             && CommonBondGraphs.supports(target, query)) {
           OtherWay reversed = otherWay = new OtherWay(target, query,
-              pairedChemistry(options.chemistry), options.excludedTargetAtoms, clock, connected, limits);
+              options.chemistry, options.excludedTargetAtoms, clock, connected, limits);
           // A fragment search grows the seed the other way round only once its levels run out
           // of budget, see seedAlsoFrom().
           search.seedAlsoFrom(() -> {
@@ -452,19 +452,6 @@ final class CommonBondSearch {
     other.capNodesAt(Long.MAX_VALUE, null);
     if (nodeCap != Long.MAX_VALUE)
       first.capNodesAt(nodeCap - other.nodes, null);
-  }
-
-  /**
-   * The chemistry the atom and bond pairs are compared under. With complete rings a mapped ring
-   * atom lies on a whole ring of both molecules, and so does a selected ring bond, so ring atoms
-   * and bonds pair only with ring atoms and bonds, and chain ones with chain ones.
-   */
-  private static ChemOptions pairedChemistry(ChemOptions chemistry) {
-    if (!chemistry.completeRingsOnly || chemistry.ringMatchesRingOnly)
-      return chemistry;
-    ChemOptions paired = ChemOptions.copyOf(chemistry);
-    paired.ringMatchesRingOnly = true;
-    return paired;
   }
 
   /** The target that {@code required} fixes for each of {@code atoms} query atoms, -1 for none, or null. */
@@ -1837,7 +1824,8 @@ final class CommonBondSearch {
    * terminal atoms with the same neighbour that match the same atoms by the same bonds and,
    * under conditions, carry with that neighbour no stereo tag that the conditions read, see
    * {@link CommonBondConditions#untagged}. Swapping two takes every mapping onto one of the same
-   * score.
+   * score. Without extra conditions, internal atoms with the same compatible neighbourhood
+   * may also be exchanged.
    */
   private int[] twins(CommonBondGraphs.Side side, boolean onQuery) {
     int[] next = new int[side.atomCount];
@@ -1862,7 +1850,45 @@ final class CommonBondSearch {
           next[last] = first;
       }
     }
+    if (conditions == null && requiredTarget == null) {
+      for (int parent = 0; parent < side.atomCount; parent++) {
+        clock.tick(1 + side.degree(parent));
+        for (int place = side.start[parent]; place < side.start[parent + 1]; place++) {
+          int first = side.neighbour[place];
+          if (next[first] >= 0 || side.degree(first) <= 1)
+            continue;
+          int last = first;
+          for (int laterPlace = place + 1; laterPlace < side.start[parent + 1]; laterPlace++) {
+            int other = side.neighbour[laterPlace];
+            clock.tick();
+            if (next[other] < 0 && sameNeighbourhood(side, onQuery, first, other)) {
+              next[last] = other;
+              last = other;
+            }
+          }
+          if (last != first)
+            next[last] = first;
+        }
+      }
+    }
     return next;
+  }
+
+  /** Whether exchanging two internal atoms preserves every compatible atom and bond. */
+  private boolean sameNeighbourhood(CommonBondGraphs.Side side, boolean onQuery,
+                                    int firstAtom, int otherAtom) {
+    if (side.degree(firstAtom) != side.degree(otherAtom))
+      return false;
+    for (int place = side.start[firstAtom]; place < side.start[firstAtom + 1]; place++) {
+      int neighbour = side.neighbour[place];
+      if (neighbour == otherAtom)
+        continue;
+      clock.tick(1 + side.degree(otherAtom));
+      int otherBond = side.bondBetween(otherAtom, neighbour);
+      if (otherBond < 0 || !alike(onQuery, firstAtom, side.neighbourBond[place], otherAtom, otherBond))
+        return false;
+    }
+    return true;
   }
 
   /** Whether {@code atom} of one molecule carries no stereo tag that the conditions read, if there are any. */
@@ -2179,9 +2205,9 @@ final class CommonBondSearch {
       histogramWidth = histogramWidth(graph);
       int histogramSize = slotSymbol.length * histogramWidth, symbols = graph.atomClasses;
       queryLabels = new Labels(query, slots(query), histogramSize, symbols,
-          atomGroups.queryGroup.length, labelGroups.queryGroup.length);
+          atomGroups.queryGroup.length, labelGroups.queryGroup.length, labelGroups.complete);
       targetLabels = new Labels(target, slots(target), histogramSize, symbols,
-          atomGroups.targetGroup.length, labelGroups.targetGroup.length);
+          atomGroups.targetGroup.length, labelGroups.targetGroup.length, labelGroups.complete);
       slotCount = new int[slotSymbol.length];
       slotsAt = new int[histogramWidth];
     }
@@ -2383,24 +2409,43 @@ final class CommonBondSearch {
         int atom = atoms[index] - offset, slots = 0;
         boolean link = false;
         work += side.degree(atom);
-        for (int place = side.start[atom]; place < side.start[atom + 1]; place++) {
-          int slot = labels.slot[place], other = side.neighbour[place];
-          if (slot < 0 || !labels.isOpen[other]) {
-            link |= linkStamp[side.neighbourBond[place]] == reach.stamp;
-            continue;
+        int shared = labels.uniformSlot[atom];
+        if (shared >= 0) {
+          int openBonds = 0;
+          for (int place = side.start[atom]; place < side.start[atom + 1]; place++) {
+            if (labels.isOpen[side.neighbour[place]])
+              openBonds++;
+            else
+              link |= linkStamp[side.neighbourBond[place]] == reach.stamp;
           }
-          if (slotCount[slot]++ == 0)
-            slotsAt[slots++] = slot;
-          if (other > atom && !labelGroups.complete[slot / 2])
-            labels.countFine(side.fineLabel[side.neighbourBond[place]]);
-        }
-        for (int slotIndex = 0; slotIndex < slots; slotIndex++) {
-          int slot = slotsAt[slotIndex];
-          labels.histogram[slot * histogramWidth + slotCount[slot]]++;
-          slotCount[slot] = 0;
-          if (listed && !labelListed[slot / 2]) {
-            labelListed[slot / 2] = true;
-            countedLabels[labelsCounted++] = slot / 2;
+          if (openBonds > 0) {
+            slots = 1;
+            labels.histogram[shared * histogramWidth + openBonds]++;
+            if (listed && !labelListed[shared / 2]) {
+              labelListed[shared / 2] = true;
+              countedLabels[labelsCounted++] = shared / 2;
+            }
+          }
+        } else {
+          for (int place = side.start[atom]; place < side.start[atom + 1]; place++) {
+            int slot = labels.slot[place], other = side.neighbour[place];
+            if (slot < 0 || !labels.isOpen[other]) {
+              link |= linkStamp[side.neighbourBond[place]] == reach.stamp;
+              continue;
+            }
+            if (slotCount[slot]++ == 0)
+              slotsAt[slots++] = slot;
+            if (other > atom && !labelGroups.complete[slot / 2])
+              labels.countFine(side.fineLabel[side.neighbourBond[place]]);
+          }
+          for (int slotIndex = 0; slotIndex < slots; slotIndex++) {
+            int slot = slotsAt[slotIndex];
+            labels.histogram[slot * histogramWidth + slotCount[slot]]++;
+            slotCount[slot] = 0;
+            if (listed && !labelListed[slot / 2]) {
+              labelListed[slot / 2] = true;
+              countedLabels[labelsCounted++] = slot / 2;
+            }
           }
         }
         if (slots > 0 || link) {
@@ -2509,6 +2554,8 @@ final class CommonBondSearch {
 
     /** The class of each atom, and the slot at each place of the neighbour lists, see {@link EdgeBound}. */
     final int[] symbol, slot;
+    /** The shared slot of all incident bonds when its label is complete, or -1. */
+    final int[] uniformSlot;
     /** The open atoms by slot and by the number of open bonds of that slot. */
     final int[] histogram;
     /** The open atoms by class that may get a new bond. */
@@ -2532,9 +2579,22 @@ final class CommonBondSearch {
      * {@code atomKinds} kinds and {@code fineLabels} fine labels.
      */
     Labels(CommonBondGraphs.Side side, int[] slot, int histogramSize, int symbols, int atomKinds,
-        int fineLabels) {
+        int fineLabels, boolean[] completeLabels) {
       symbol = side.atomClass;
       this.slot = slot;
+      uniformSlot = new int[symbol.length];
+      Arrays.fill(uniformSlot, -1);
+      for (int atom = 0; atom < side.atomCount; atom++) {
+        if (side.degree(atom) == 0)
+          continue;
+        int shared = slot[side.start[atom]];
+        if (shared < 0 || !completeLabels[shared / 2])
+          continue;
+        int place = side.start[atom] + 1;
+        while (place < side.start[atom + 1] && slot[place] == shared) place++;
+        if (place == side.start[atom + 1])
+          uniformSlot[atom] = shared;
+      }
       histogram = new int[histogramSize];
       bySymbol = new int[symbols];
       kindCount = new int[atomKinds];

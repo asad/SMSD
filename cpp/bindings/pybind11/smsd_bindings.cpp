@@ -24,11 +24,13 @@
 #include <chrono>
 #include <cstdint>
 #include <cstring>
+#include <functional>
 #include <map>
 #include <optional>
 #include <limits>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -271,14 +273,65 @@ PythonGraphView graphView(const py::sequence& targets) {
     return view;
 }
 
+/** Capture a fixed sequence without copying a repeated molecule at every slot. */
+void addCorpusTargets(smsd::batch::TargetCorpus& corpus, const py::iterable& molecules) {
+    if (PyList_CheckExact(molecules.ptr()) || PyTuple_CheckExact(molecules.ptr())) {
+        smsd::batch::detail::MolGraphView references;
+        references.reserve(py::len(molecules));
+        for (py::handle molecule : molecules) references.push_back(molecule.cast<const smsd::MolGraph&>());
+        auto captured = smsd::batch::detail::TargetStorage::capture(references);
+        py::gil_scoped_release release;
+        smsd::batch::detail::CorpusAccess::addCapturedTargets(corpus, std::move(captured));
+        return;
+    }
+    // Iterators may mutate and yield the same object again: capture each yielded value.
+    std::vector<smsd::MolGraph> graphs;
+    for (py::handle molecule : molecules) {
+        const auto& graph = molecule.cast<const smsd::MolGraph&>();
+        const std::lock_guard<std::recursive_mutex> lock(graph.lazyCacheMutex());
+        graphs.push_back(graph);
+    }
+    py::gil_scoped_release release;
+    corpus.addTargets(std::move(graphs));
+}
+
+/** Private search snapshots own their graphs; repeated slots share only these detached copies. */
+py::list corpusSearchTargets(const smsd::batch::TargetCorpus& corpus) {
+    std::vector<smsd::MolGraph> graphs;
+    std::vector<size_t> slots;
+    {
+        py::gil_scoped_release release;
+        const auto targets = smsd::batch::detail::CorpusAccess::targetView(corpus);
+        graphs.reserve(targets.storedSize());
+        slots.reserve(targets.size());
+        std::unordered_map<const smsd::MolGraph*, size_t> copied;
+        for (size_t index = 0; index < targets.size(); ++index) {
+            const auto& graph = targets[index];
+            auto found = copied.find(&graph);
+            if (found == copied.end()) {
+                const std::lock_guard<std::recursive_mutex> lock(graph.lazyCacheMutex());
+                graphs.push_back(graph);
+                found = copied.emplace(&graph, graphs.size() - 1).first;
+            }
+            slots.push_back(found->second);
+        }
+    }
+    std::vector<py::object> values;
+    values.reserve(graphs.size());
+    for (auto& graph : graphs) values.push_back(py::cast(std::move(graph)));
+    py::list result(slots.size());
+    for (size_t index = 0; index < slots.size(); ++index) result[index] = values[slots[index]];
+    return result;
+}
+
 /**
- * The targets of a similarity-bound screen, read from a Python iterable while the GIL is held.
- * MolGraph items are referenced rather than copied, and SMILES strings are parsed by the screen's
- * workers with the parser parse_smiles uses; a parsed graph is dropped once it is scored. Any
- * other item goes through convert, the package's molecule conversion, in input order. Reading
- * stops at the first item that conversion or iteration rejects, and that error is raised unless
- * a string before it fails to parse, so the error raised is that of the first item that fails,
- * as when the items are converted one by one.
+ * The targets of a similarity-bound screen or a fingerprint batch, read from a Python iterable
+ * while the GIL is held. MolGraph items are referenced rather than copied, and SMILES strings are
+ * parsed by the batch's workers with the parser parse_smiles uses; a parsed graph is dropped once
+ * it is scored or fingerprinted. Any other item goes through convert, the package's molecule
+ * conversion, in input order. Reading stops at the first item that conversion or iteration
+ * rejects, and that error is raised unless a string before it fails to parse, so the error raised
+ * is that of the first item that fails, as when the items are converted one by one.
  */
 class ScreenTargets {
     struct Item {
@@ -447,6 +500,79 @@ template<class Query>
 std::vector<smsd::SearchResult> matchMany(const Query& query, const py::sequence& targets, int numThreads) {
     if (numThreads < 0) throw std::invalid_argument("Thread count must be non-negative");
     return matchView(query, graphView(targets), numThreads);
+}
+
+/** The set positions of fingerprint(mol, kind=kind), computed as its single-molecule binding does. */
+std::function<std::vector<int>(const smsd::MolGraph&)> kindFingerprint(const std::string& kind, int radius,
+                                                                       int pathLength, int fpSize) {
+    namespace fp = smsd::batch::detail;
+    if (kind == "path")
+        return [=](const smsd::MolGraph& mol) {
+            return smsd::bitPositions(fp::computeElementPathFingerprint(mol, pathLength, fpSize), fpSize);
+        };
+    if (kind == "mcs")
+        return [=](const smsd::MolGraph& mol) {
+            return smsd::bitPositions(
+                fp::computeMCSFingerprintForChemistry(mol, pathLength, fpSize, smsd::ChemOptions()), fpSize);
+        };
+    if (kind == "ecfp" || kind == "circular" || kind == "fcfp") {
+        const bool functional = kind == "fcfp";
+        return [=](const smsd::MolGraph& mol) {
+            return smsd::bitPositions(functional ? fp::computeCircularFingerprintFCFP(mol, radius, fpSize)
+                                                 : fp::computeCircularFingerprintECFP(mol, radius, fpSize), fpSize);
+        };
+    }
+    if (kind == "torsion")
+        return [=](const smsd::MolGraph& mol) {
+            return smsd::bitPositions(fp::computeTopologicalTorsion(mol, fpSize), fpSize);
+        };
+    throw std::invalid_argument("Unknown fingerprint kind: '" + kind
+                                + "'. Use 'path', 'mcs', 'ecfp', 'circular', 'fcfp', or 'torsion'.");
+}
+
+/**
+ * The fingerprint of every molecule, in input order, as fingerprint() gives each one under the
+ * FingerprintOptions or the kind that spec holds, on up to numThreads threads (0 = the OpenMP
+ * thread limit) with the GIL released. Molecules are read as screen_targets reads its targets,
+ * so the error raised is that of the first molecule that fails.
+ */
+py::object pythonFingerprints(const py::object& molecules, const py::object& spec, int radius, int pathLength,
+                              int fpSize, int numThreads, const py::object& convert) {
+    using smsd::batch::FingerprintOptions;
+    if (numThreads < 0) throw std::invalid_argument("Thread count must be non-negative");
+    const bool optionsGiven = py::isinstance<FingerprintOptions>(spec);
+    // The options are copied while the GIL is held, as for the searches.
+    const FingerprintOptions options = optionsGiven ? spec.cast<const FingerprintOptions&>() : FingerprintOptions();
+    std::function<std::vector<int>(const smsd::MolGraph&)> bits;
+    if (!optionsGiven) bits = kindFingerprint(spec.cast<std::string>(), radius, pathLength, fpSize);
+    ScreenTargets view(molecules, convert);
+    const int threads = batchThreads(numThreads);
+    py::object fingerprints;
+    if (optionsGiven && options.counts) {
+        std::vector<std::vector<std::pair<int, int>>> counts;
+        {
+            py::gil_scoped_release release;
+            counts = smsd::batch::detail::fingerprintEach(view, threads, [&options](const smsd::MolGraph& mol) {
+                return nonZeroBins(smsd::batch::computeFingerprintCounts(mol, options));
+            });
+        }
+        fingerprints = py::cast(counts);
+    } else {
+        const int size = options.family == smsd::batch::FingerprintFamily::KEYS
+                       ? static_cast<int>(options.keys.size()) : options.size;
+        std::vector<std::vector<int>> positions;
+        {
+            py::gil_scoped_release release;
+            positions = optionsGiven
+                ? smsd::batch::detail::fingerprintEach(view, threads, [&options, size](const smsd::MolGraph& mol) {
+                      return smsd::bitPositions(smsd::batch::computeFingerprint(mol, options), size);
+                  })
+                : smsd::batch::detail::fingerprintEach(view, threads, bits);
+        }
+        fingerprints = py::cast(positions);
+    }
+    view.raiseStop();
+    return fingerprints;
 }
 
 // ----------------------------------------------------------------------------
@@ -1588,14 +1714,7 @@ PYBIND11_MODULE(_smsd, m) {
         .def("add_target", &smsd::batch::TargetCorpus::addTarget, py::arg("mol"),
              py::call_guard<py::gil_scoped_release>(),
              "Add a single target molecule.")
-        .def("add_targets",
-             [](smsd::batch::TargetCorpus& self, const py::iterable& molecules) {
-                 std::vector<smsd::MolGraph> gs;
-                 for (py::handle molecule : molecules)
-                     gs.push_back(py::cast<const smsd::MolGraph&>(molecule));
-                 py::gil_scoped_release release;
-                 self.addTargets(std::move(gs));
-             },
+        .def("add_targets", &addCorpusTargets,
              py::arg("mols"),
              "Add multiple target molecules.")
         .def("prewarm",
@@ -1610,6 +1729,7 @@ PYBIND11_MODULE(_smsd, m) {
              py::call_guard<py::gil_scoped_release>(),
              "Number of targets in the corpus.")
         .def("targets", &smsd::batch::TargetCorpus::targets, py::call_guard<py::gil_scoped_release>())
+        .def("_search_targets", &corpusSearchTargets)
         .def_property_readonly("is_prewarmed", [](const smsd::batch::TargetCorpus& self) {
                  py::gil_scoped_release release;
                  return self.isPrewarmed();
@@ -1857,6 +1977,14 @@ PYBIND11_MODULE(_smsd, m) {
           py::arg("mol"), py::arg("options"),
           "The fingerprint of a graph under FingerprintOptions: the set positions, or the "
           "(position, count) pairs of the non-zero bins when options.counts is set.");
+
+    m.def("fingerprints", &pythonFingerprints,
+          py::arg("mols"), py::arg("spec"), py::arg("radius") = 2, py::arg("path_length") = 7,
+          py::arg("fp_size") = 2048, py::arg("num_threads") = 0, py::arg("convert") = py::none(),
+          "The fingerprint of every molecule, in input order, under the FingerprintOptions or the "
+          "fingerprint() kind that spec gives. Molecules are MolGraph objects, SMILES strings parsed "
+          "natively, or items that convert(item) turns into a MolGraph; num_threads=0 uses all "
+          "available processors.");
 
     // -----------------------------------------------------------------------
     m.def("tanimoto",

@@ -30,6 +30,7 @@ import org.openscience.cdk.interfaces.IAtomContainer;
  * @author Syed Asad Rahman
  */
 @DisplayName("Benchmark Suite Tests")
+@Tag("SlowTest")
 @Timeout(value = 60, unit = TimeUnit.SECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
 public class BenchmarkSuiteTest extends TestBase {
 

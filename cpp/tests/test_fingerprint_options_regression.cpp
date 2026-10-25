@@ -78,6 +78,46 @@ void overloadsAgree() {
     }
 }
 
+/// SMILES parsed as they are read, as the Python batch reads its strings.
+struct ParsedOnRead {
+    std::vector<std::string> smiles;
+    size_t size() const { return smiles.size(); }
+    smsd::MolGraph operator[](size_t index) const { return parse(smiles[index]); }
+};
+
+/// The message of the exception a call throws, or the empty string.
+template<class Call>
+std::string failureOf(const Call& call) {
+    try { call(); } catch (const std::exception& error) { return error.what(); }
+    return "";
+}
+
+void batchesAgreeOnEveryThreadCount() {
+    ParsedOnRead library;
+    for (int copy = 0; copy < 10; ++copy)
+        library.smiles.insert(library.smiles.end(), molecules().begin(), molecules().end());
+    std::vector<smsd::MolGraph> graphs;
+    for (const auto& smiles : library.smiles) graphs.push_back(parse(smiles));
+    for (const auto& options : {FingerprintOptions::ecfp(3, 1024), FingerprintOptions::path(7, 2048), FingerprintOptions::maccs()}) {
+        const auto expected = batchFingerprint(graphs, options, 1);
+        for (size_t i = 0; i < graphs.size(); ++i)
+            require(expected[i] == computeFingerprint(graphs[i], options), "One thread agrees with computeFingerprint");
+        for (int threads : {2, 4, 0}) {
+            require(batchFingerprint(graphs, options, threads) == expected, "The thread count does not change the bits");
+            require(batchFingerprint(library, options, threads) == expected, "A sequence parsed on reading gives the same bits");
+        }
+    }
+    // The first molecule that fails decides the error, however the molecules are shared out.
+    ParsedOnRead failing{std::vector<std::string>(600, "CCO")};
+    failing.smiles[301] = "C1CC";
+    for (size_t i = 302; i < failing.smiles.size(); i += 2) failing.smiles[i] = "C(C";
+    const std::string first = failureOf([] { parse("C1CC"); });
+    require(!first.empty() && first != failureOf([] { parse("C(C"); }), "The two failures are told apart");
+    for (int threads : {1, 2, 4, 0})
+        require(failureOf([&] { batchFingerprint(failing, FingerprintOptions(), threads); }) == first,
+                "The batch throws the exception of the first molecule that fails");
+}
+
 void stereoTermsSeparateIsomers() {
     const auto l = parse("C[C@H](N)C(=O)O"), d = parse("C[C@@H](N)C(=O)O");
     for (FingerprintFamily family : {FingerprintFamily::ECFP, FingerprintFamily::FCFP, FingerprintFamily::PATH, FingerprintFamily::TORSION}) {
@@ -273,6 +313,7 @@ int main() {
     try {
         classicConfigurationsEqualTheFixedFunctions();
         overloadsAgree();
+        batchesAgreeOnEveryThreadCount();
         stereoTermsSeparateIsomers();
         ringSizeClasses();
         fragmentHandling();

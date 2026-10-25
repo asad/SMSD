@@ -17,13 +17,13 @@ RDKit image helpers.
 ## Installation
 
 ```bash
-python -m pip install "smsd==8.0.2"
+python -m pip install "smsd==8.0.3"
 ```
 
 To include RDKit, install the `rdkit` extra:
 
 ```bash
-python -m pip install "smsd[rdkit]==8.0.2"
+python -m pip install "smsd[rdkit]==8.0.3"
 ```
 
 The CPU/OpenMP wheels cover CPython 3.10–3.14 on macOS arm64, Linux x86_64
@@ -38,7 +38,7 @@ and Intel macOS need a source build.
 the same version of `smsd`:
 
 ```bash
-python -m pip install "smsd==8.0.2" "smsd-cuda==8.0.2"
+python -m pip install "smsd==8.0.3" "smsd-cuda==8.0.3"
 ```
 
 The GPU computes integer overlaps; scores use the CPU expressions and hits
@@ -51,12 +51,12 @@ for dispatch and CPU fallback behaviour.
 ```python
 import smsd
 
-query = "c1ccccc1"       # benzene
-target = "c1ccc(O)cc1"   # phenol
+assert smsd.Substructure.find("c1ccccc1").match("c1ccc(O)cc1").found  # benzene in phenol
 
-assert smsd.Substructure.find(query).match(target).found
+query = "CC(=O)NC"    # N-methylacetamide
+target = "CCC(=O)N"   # propanamide
 result = smsd.MCS.find(query).with_timeout(1000).match(target)
-print(f"MCS: {result.best.atom_count} atoms")  # MCS: 6 atoms
+print(f"MCS: {result.best.atom_count} atoms")  # MCS: 4 atoms
 ```
 
 `Substructure` and `MCS` prepare a query once and provide `match`,
@@ -159,10 +159,10 @@ RDKit atom indices:
 from rdkit import Chem
 import smsd
 
-query = Chem.MolFromSmiles("c1ccccc1")
-target = Chem.MolFromSmiles("c1ccc(O)cc1")
+query = Chem.MolFromSmiles("CC(=O)NC")   # N-methylacetamide
+target = Chem.MolFromSmiles("CCC(=O)N")  # propanamide
 result = smsd.MCS.find(query).with_timeout(1000).match(target)
-assert result.best.atom_count == 6
+assert result.best.atom_count == 4
 ```
 
 Conversion passes through SMILES, so coordinates, data fields and query

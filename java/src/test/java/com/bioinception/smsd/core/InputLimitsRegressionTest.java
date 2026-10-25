@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -88,6 +89,7 @@ class InputLimitsRegressionTest {
   }
 
   @Test
+  @Tag("SlowTest")
   void smartsLimitsAreInclusiveAndConsistent() throws Exception {
     assertEquals(100_000, Substructure.MAX_SMARTS_LENGTH);
     assertEquals(10_000, Substructure.MAX_SMARTS_ATOMS);
@@ -141,6 +143,7 @@ class InputLimitsRegressionTest {
 
   /** Ring perception of very large rings needs no deep call stack and bounded work. */
   @Test
+  @Tag("SlowTest")
   void veryLargeRingsArePerceivedOnASmallStack() throws Throwable {
     onSmallStack(() -> {
       long started = System.nanoTime();
@@ -157,6 +160,7 @@ class InputLimitsRegressionTest {
 
   /** Ring flags of a long chain and a macrocycle are marked without deep recursion, as CDK marks them. */
   @Test
+  @Tag("SlowTest")
   void ringFlagsOfLargeMoleculesNeedNoDeepRecursion() throws Throwable {
     IAtomContainer chain = SilentChemObjectBuilder.getInstance().newAtomContainer();
     for (int atom = 0; atom < 9_999; atom++) {

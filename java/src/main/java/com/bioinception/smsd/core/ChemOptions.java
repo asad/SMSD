@@ -94,10 +94,16 @@ public final class ChemOptions {
   /** Whether to match formal charges on atoms. Default: {@code false} (RDKit-compatible). */
   public boolean matchFormalCharge = false;
 
-  /** Whether to use chirality (R/S) in atom matching. Default: {@code false}. */
+  /**
+   * Whether mapped tetrahedral centres must agree in configuration, compared by the parity of
+   * their mapped neighbours, not by CIP (R/S) labels. Default: {@code false}.
+   */
   public boolean useChirality = false;
 
-  /** Whether to use bond stereochemistry (E/Z) in matching. Default: {@code false}. */
+  /**
+   * Whether mapped double bonds must agree in configuration, compared by the parity of their
+   * mapped neighbours, not by CIP (E/Z) labels. Default: {@code false}.
+   */
   public boolean useBondStereo = false;
 
   /**

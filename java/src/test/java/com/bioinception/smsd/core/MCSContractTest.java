@@ -933,6 +933,81 @@ class MCSContractTest {
   }
 
   @Test
+  void mixedAndIncompleteLabelsKeepEverySelection() throws Exception {
+    String[][] pairs = {{"CCOCC", "CCNCC"}, {"CCOCC", "CCCOC"}, {"CCOCC", "CCCCC"},
+        {"[13CH3][13CH2][14CH2][14CH3]", "[13CH3]CC[14CH3]"}};
+    for (String[] pair : pairs) {
+      MolGraph query = rawGraph(pair[0]), target = rawGraph(pair[1]);
+      for (MCS.Connectivity connectivity : MCS.Connectivity.values())
+        for (boolean excludeLast : new boolean[] {false, true}) {
+          MCS.Options options = new MCS.Options();
+          options.objective = MCS.Objective.MCES;
+          options.connectivity = connectivity;
+          options.chemistry.matchIsotope = true;
+          options.timeoutMillis = 10_000;
+          if (excludeLast)
+            options.excludedTargetAtoms = Collections.singleton(target.n - 1);
+          Oracle expected = validatedOracle(query, target, options);
+          SearchResult result = MCS.find(query).withOptions(options).matchAll(target, 1000);
+          String label = pair[0] + " " + pair[1] + " " + connectivity + " " + excludeLast;
+          assertEquals(SearchResult.Status.Completed, result.status(), label);
+          assertTrue(result.optimal() && result.complete(), label);
+          assertEquals(expected.bonds, result.score(), label);
+          Set<String> actual = new TreeSet<>();
+          for (SearchResult.Match match : result.matches()) {
+            assertEquals(expected.atoms, match.atomCount(), label);
+            assertTrue(actual.add(key(match)), label);
+          }
+          assertEquals(expected.keys, actual, label);
+        }
+    }
+  }
+
+  @ParameterizedTest
+  @CsvSource({"C1CC1,CCC", "C1CCC1,CC(C)C", "NC1CC1,NCCN", "C1C=CC1,CC1CC1"})
+  void repeatedNeighbourhoodsKeepEveryOptimalSelection(String first, String second)
+      throws Exception {
+    for (boolean reverse : new boolean[] {false, true}) {
+      MolGraph query = rawGraph(reverse ? second : first);
+      MolGraph target = rawGraph(reverse ? first : second);
+      for (MCS.Connectivity connectivity : MCS.Connectivity.values())
+        for (ChemOptions.BondOrderMode bondOrder :
+            new ChemOptions.BondOrderMode[] {ChemOptions.BondOrderMode.STRICT,
+                ChemOptions.BondOrderMode.ANY})
+          for (boolean excludeLast : new boolean[] {false, true}) {
+            MCS.Options options = new MCS.Options();
+            options.objective = MCS.Objective.MCES;
+            options.connectivity = connectivity;
+            options.chemistry.matchBondOrder = bondOrder;
+            options.timeoutMillis = 10_000;
+            if (excludeLast)
+              options.excludedTargetAtoms = Collections.singleton(target.n - 1);
+            String label = first + " " + second + " " + reverse + " " + connectivity + " "
+                + bondOrder + " " + excludeLast;
+            Oracle expected = validatedOracle(query, target, options);
+            MCS prepared = MCS.find(query).withOptions(options);
+            SearchResult all = prepared.matchAll(target, 1000);
+            assertEquals(SearchResult.Status.Completed, all.status(), label);
+            assertTrue(all.optimal() && all.complete(), label);
+            assertEquals(expected.bonds, all.score(), label);
+            Set<String> actual = new TreeSet<>();
+            for (SearchResult.Match match : all.matches()) {
+              assertEquals(expected.atoms, match.atomCount(), label);
+              assertTrue(actual.add(key(match)), label);
+            }
+            assertEquals(expected.keys, actual, label);
+            SearchResult single = prepared.match(target);
+            assertEquals(SearchResult.Status.Completed, single.status(), label);
+            assertTrue(single.optimal() && single.complete(), label);
+            assertEquals(expected.bonds, single.score(), label);
+            assertEquals(!expected.keys.isEmpty(), single.found(), label);
+            if (single.found())
+              assertTrue(expected.keys.contains(key(single.matches().get(0))), label);
+          }
+    }
+  }
+
+  @Test
   void selectionsUnderStereoRingsAndFragmentLimitsMatchAnExhaustiveOracle() throws Exception {
     // Every best mapping, including those that leave a compatible bond out.
     String[][] pairs = {{"C[C@H](N)O", "C[C@@H](N)O"}, {"N[C@@H](C)C(=O)O", "N[C@H](C)C(=O)O"},

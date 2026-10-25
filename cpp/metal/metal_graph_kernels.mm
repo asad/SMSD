@@ -92,8 +92,10 @@ struct GraphKernelContext {
             if (!queue) return;
 
             NSError* err = nil;
+            MTLCompileOptions* options = [MTLCompileOptions new];
+            options.fastMathEnabled = NO;
             id<MTLLibrary> lib = [device newLibraryWithSource:kDomainInitShader
-                                                      options:nil error:&err];
+                                                      options:options error:&err];
             if (!lib) return;
             id<MTLFunction> fn = [lib newFunctionWithName:@"domain_init"];
             if (!fn) return;

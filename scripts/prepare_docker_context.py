@@ -34,8 +34,8 @@ def checked_inputs(args):
         raise ValueError("Source manifest filename is not a basename")
     sdist = args.release_dir / source_manifest["sdist"]
     source = BUILD.checked_source(sdist)
-    if source["version"] != "8.0.2":
-        raise ValueError("Expected SMSD8.0.2")
+    if source["version"] != "8.0.3":
+        raise ValueError("Expected SMSD 8.0.3")
     manifest = BUILD.read_manifest(args.release_dir / "WHEEL_MANIFEST.json")
     selected = {}
     for entry in manifest["wheels"]:
@@ -72,7 +72,7 @@ def checked_inputs(args):
                     "installed_wheel_tests": "passed"}
         if any(proof.get(name) != value for name, value in expected.items()):
             raise ValueError("CUDA wheel provenance differs or lacks installed checks")
-        if not re.fullmatch(r"smsd_cuda-8\.0\.2-py3-none-(?:manylinux[^-]*x86_64)\.whl", args.cuda_wheel.name):
+        if not re.fullmatch(r"smsd_cuda-8\.0\.3-py3-none-(?:manylinux[^-]*x86_64)\.whl", args.cuda_wheel.name):
             raise ValueError("Expected a repaired Linuxx86_64 CUDA wheel")
         wheel_metadata(args.cuda_wheel, "smsd-cuda", source["version"])
         if args.runtime_wheel.name != RUNTIME_WHEEL or BUILD.sha256(args.runtime_wheel) != RUNTIME_SHA256:

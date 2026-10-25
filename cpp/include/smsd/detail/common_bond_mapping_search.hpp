@@ -163,6 +163,8 @@ class CommonBondSearch {
     struct Labels {
         /** The class of each atom, and the slot at each place of the neighbour lists. */
         std::vector<int> symbol, slot;
+        /** The shared slot of all incident bonds when its label is complete, or -1. */
+        std::vector<int> uniformSlot;
         /** The open atoms by slot and by the number of open bonds of that slot. */
         std::vector<int> histogram;
         /** The open atoms by class that may get a new bond. */
@@ -175,9 +177,19 @@ class CommonBondSearch {
         int openCount = 0, kinds = 0, fines = 0;
         uint32_t stamp = 0;
 
-        void init(const Side& side, std::vector<int> slots, size_t histogramSize, int symbols, int atomKinds, int fineLabels) {
+        void init(const Side& side, std::vector<int> slots, size_t histogramSize, int symbols, int atomKinds, int fineLabels,
+                  const std::vector<uint8_t>& completeLabels) {
             symbol = side.atomClass;
             slot = std::move(slots);
+            uniformSlot.assign(symbol.size(), -1);
+            for (int atom = 0; atom < side.atomCount; ++atom) {
+                if (side.degree(atom) == 0) continue;
+                const int shared = slot[side.start[atom]];
+                if (shared < 0 || !completeLabels[shared / 2]) continue;
+                int place = side.start[atom] + 1;
+                while (place < side.start[atom + 1] && slot[place] == shared) ++place;
+                if (place == side.start[atom + 1]) uniformSlot[atom] = shared;
+            }
             histogram.assign(histogramSize, 0);
             bySymbol.assign(symbols, 0);
             kindCount.assign(atomKinds, 0);
@@ -365,9 +377,11 @@ public:
         histogramWidth_ = histogramWidth(graph);
         const size_t histogramSize = slotSymbol_.size() * size_t(histogramWidth_);
         queryLabels_.init(query_, slots(query_), histogramSize, graph_.atomClasses,
-                          static_cast<int>(graph_.atomGroups.queryGroup.size()), static_cast<int>(graph_.labelGroups.queryGroup.size()));
+                          static_cast<int>(graph_.atomGroups.queryGroup.size()), static_cast<int>(graph_.labelGroups.queryGroup.size()),
+                          graph_.labelGroups.complete);
         targetLabels_.init(target_, slots(target_), histogramSize, graph_.atomClasses,
-                           static_cast<int>(graph_.atomGroups.targetGroup.size()), static_cast<int>(graph_.labelGroups.targetGroup.size()));
+                           static_cast<int>(graph_.atomGroups.targetGroup.size()), static_cast<int>(graph_.labelGroups.targetGroup.size()),
+                           graph_.labelGroups.complete);
         slotCount_.assign(slotSymbol_.size(), 0);
         slotsAt_.assign(size_t(histogramWidth_), 0);
         if (int64_t(queryCount_) * targetCount_ <= MAX_ROOT_BOUNDS)
@@ -1496,7 +1510,8 @@ private:
      * terminal atoms with the same neighbour that match the same atoms by the same bonds and,
      * under conditions, carry with that neighbour no stereo tag that the conditions read, see
      * CommonBondConditions::untagged(). Swapping two takes every mapping onto one of the same
-     * score.
+     * score. Without extra conditions, internal atoms with the same compatible neighbourhood
+     * may also be exchanged.
      */
     std::vector<int> twins(const Side& side, bool onQuery) {
         std::vector<int> next(side.atomCount, -1);
@@ -1517,7 +1532,40 @@ private:
                 if (last != first) next[last] = first;
             }
         }
+        if (!conditions_ && requiredTarget_.empty()) {
+            for (int parent = 0; parent < side.atomCount; ++parent) {
+                clock_.tick(1 + side.degree(parent));
+                for (int place = side.start[parent]; place < side.start[parent + 1]; ++place) {
+                    const int first = side.neighbour[place];
+                    if (next[first] >= 0 || side.degree(first) <= 1) continue;
+                    int last = first;
+                    for (int laterPlace = place + 1; laterPlace < side.start[parent + 1]; ++laterPlace) {
+                        const int other = side.neighbour[laterPlace];
+                        clock_.tick();
+                        if (next[other] < 0 && sameNeighbourhood(side, onQuery, first, other)) {
+                            next[last] = other;
+                            last = other;
+                        }
+                    }
+                    if (last != first) next[last] = first;
+                }
+            }
+        }
         return next;
+    }
+
+    /** Whether exchanging two internal atoms preserves every compatible atom and bond. */
+    bool sameNeighbourhood(const Side& side, bool onQuery, int firstAtom, int otherAtom) {
+        if (side.degree(firstAtom) != side.degree(otherAtom)) return false;
+        for (int place = side.start[firstAtom]; place < side.start[firstAtom + 1]; ++place) {
+            const int neighbour = side.neighbour[place];
+            if (neighbour == otherAtom) continue;
+            clock_.tick(1 + side.degree(otherAtom));
+            const int otherBond = side.bondBetween(otherAtom, neighbour);
+            if (otherBond < 0 || !alike(onQuery, firstAtom, side.neighbourBond[place], otherAtom, otherBond))
+                return false;
+        }
+        return true;
     }
 
     /** Whether `atom` of one molecule carries no stereo tag that the conditions read, if there are any. */
@@ -1834,22 +1882,39 @@ private:
             int slots = 0;
             bool link = false;
             work += side.degree(atom);
-            for (int place = side.start[atom]; place < side.start[atom + 1]; ++place) {
-                const int slot = labels.slot[place], other = side.neighbour[place];
-                if (slot < 0 || !labels.isOpen[other]) {
-                    link = link || linkStamp[side.neighbourBond[place]] == reach_.stamp;
-                    continue;
+            const int shared = labels.uniformSlot[atom];
+            if (shared >= 0) {
+                int openBonds = 0;
+                for (int place = side.start[atom]; place < side.start[atom + 1]; ++place) {
+                    if (labels.isOpen[side.neighbour[place]]) ++openBonds;
+                    else link = link || linkStamp[side.neighbourBond[place]] == reach_.stamp;
                 }
-                if (slotCount_[slot]++ == 0) slotsAt_[slots++] = slot;
-                if (other > atom && !labelGroups.complete[slot / 2]) labels.countFine(side.fineLabel[side.neighbourBond[place]]);
-            }
-            for (int slotIndex = 0; slotIndex < slots; ++slotIndex) {
-                const int slot = slotsAt_[slotIndex];
-                ++labels.histogram[size_t(slot) * histogramWidth_ + slotCount_[slot]];
-                slotCount_[slot] = 0;
-                if (listed && !labelListed_[slot / 2]) {
-                    labelListed_[slot / 2] = 1;
-                    countedLabels_.push_back(slot / 2);
+                if (openBonds > 0) {
+                    slots = 1;
+                    ++labels.histogram[size_t(shared) * histogramWidth_ + openBonds];
+                    if (listed && !labelListed_[shared / 2]) {
+                        labelListed_[shared / 2] = 1;
+                        countedLabels_.push_back(shared / 2);
+                    }
+                }
+            } else {
+                for (int place = side.start[atom]; place < side.start[atom + 1]; ++place) {
+                    const int slot = labels.slot[place], other = side.neighbour[place];
+                    if (slot < 0 || !labels.isOpen[other]) {
+                        link = link || linkStamp[side.neighbourBond[place]] == reach_.stamp;
+                        continue;
+                    }
+                    if (slotCount_[slot]++ == 0) slotsAt_[slots++] = slot;
+                    if (other > atom && !labelGroups.complete[slot / 2]) labels.countFine(side.fineLabel[side.neighbourBond[place]]);
+                }
+                for (int slotIndex = 0; slotIndex < slots; ++slotIndex) {
+                    const int slot = slotsAt_[slotIndex];
+                    ++labels.histogram[size_t(slot) * histogramWidth_ + slotCount_[slot]];
+                    slotCount_[slot] = 0;
+                    if (listed && !labelListed_[slot / 2]) {
+                        labelListed_[slot / 2] = 1;
+                        countedLabels_.push_back(slot / 2);
+                    }
                 }
             }
             if (slots > 0 || link) {

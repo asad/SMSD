@@ -1,3 +1,4 @@
+# Requires BuildKit's bundled Dockerfile frontend 1.2 or later (RUN --mount).
 FROM python:3.14.9-slim-bookworm@sha256:7e0522950230cad1ec100ada6e3898c22c6bc82851289b4bdf0bf77c1c829cd5 AS artifacts
 ARG TARGETARCH
 ARG SMSD_REVISION
@@ -14,7 +15,7 @@ ARG TARGETARCH
 ARG SMSD_REVISION
 LABEL org.opencontainers.image.title="SMSD Pro CUDA" \
       org.opencontainers.image.description="Python substructure and MCS search with NVIDIA CUDA fingerprint and similarity screening" \
-      org.opencontainers.image.version="8.0.2" \
+      org.opencontainers.image.version="8.0.3" \
       org.opencontainers.image.revision="${SMSD_REVISION}" \
       org.opencontainers.image.source="https://github.com/asad/SMSD" \
       org.opencontainers.image.licenses="Apache-2.0 AND PSF-2.0 AND LicenseRef-NVIDIA-CUDA" \
@@ -29,15 +30,12 @@ RUN test "$TARGETARCH" = amd64 \
       libsqlite3-0 libssl3t64 libtinfo6 libuuid1 libzstd1 zlib1g \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=artifacts /usr/local/ /usr/local/
-COPY --from=artifacts /artifacts/wheels/amd64/ /tmp/smsd/wheels/amd64/
-COPY --from=artifacts /artifacts/wheels/cuda/ /tmp/smsd/wheels/cuda/
-COPY --from=artifacts /artifacts/ARTIFACTS.json /tmp/smsd/ARTIFACTS.json
 COPY --from=artifacts /artifacts/scripts/ /usr/local/share/smsd/
 COPY --from=artifacts /artifacts/licenses/NVIDIA-CUDA.txt /usr/share/doc/smsd/licenses/NVIDIA-CUDA.txt
 COPY --from=artifacts /artifacts/LICENSE /artifacts/NOTICE /usr/share/doc/smsd/
-RUN ldconfig && python /usr/local/share/smsd/docker_install.py --gpu --root /tmp/smsd \
+RUN --mount=type=bind,from=artifacts,source=/artifacts,target=/tmp/smsd,rw \
+    ldconfig && python /usr/local/share/smsd/docker_install.py --gpu --root /tmp/smsd \
       --architecture "$TARGETARCH" --revision "$SMSD_REVISION" \
-    && rm -rf /tmp/smsd \
     && test ! -e /usr/local/cuda/bin/nvcc \
     && groupadd -r smsd && useradd -r -g smsd -d /work smsd
 WORKDIR /work

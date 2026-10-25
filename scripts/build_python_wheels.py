@@ -411,6 +411,25 @@ def prepare(args):
     print(json.dumps(manifest, indent=2))
 
 
+def check_frozen_checkout(commit):
+    head = subprocess.check_output(["git", "rev-parse", "--verify", "HEAD"], text=True).strip()
+    if head != commit or subprocess.check_output(["git", "status", "--porcelain"], text=True).strip():
+        raise ValueError("Release builds require a clean checkout of the frozen commit")
+
+
+def check_source(args):
+    """Check the canonical archive against a clean checkout of the frozen commit."""
+    if not re.fullmatch(r"[0-9a-f]{40}", args.release_commit):
+        raise ValueError("Release builds require a full frozen commit SHA")
+    source = checked_source(args.sdist, args.source_manifest)
+    if source["source_commit"] != args.release_commit:
+        raise ValueError("Source distribution differs from the frozen release commit")
+    check_frozen_checkout(args.release_commit)
+    verify_source_tree(args.sdist, args.release_commit)
+    check_frozen_checkout(args.release_commit)
+    print(json.dumps(source, indent=2))
+
+
 def build(args):
     source = checked_source(args.sdist, args.source_manifest)
     arch = args.arch or ARCHITECTURES[args.platform][0]
@@ -474,6 +493,11 @@ def main():
     source.add_argument("--release-ref", required=True)
     source.add_argument("--no-isolation", action="store_true", help="Use already installed local build dependencies")
     source.set_defaults(function=prepare)
+    frozen = commands.add_parser("check-source", help="Check the canonical sdist before release builds")
+    frozen.add_argument("--sdist", type=Path, required=True)
+    frozen.add_argument("--source-manifest", type=Path)
+    frozen.add_argument("--release-commit", required=True)
+    frozen.set_defaults(function=check_source)
     wheel = commands.add_parser("build", help="Repair and test a wheel from an existing sdist")
     wheel.add_argument("--sdist", type=Path, required=True)
     wheel.add_argument("--source-manifest", type=Path)

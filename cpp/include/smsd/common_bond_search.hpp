@@ -117,6 +117,9 @@ struct CommonBondRequest {
     std::vector<std::array<int, 2>> requiredBonds;
     /** Whether mapped chirality, double-bond stereochemistry and whole rings are checked. */
     bool chirality = false, bondStereo = false, rings = false;
+    /** Per-call relevant cycles already held by the caller, or null when none were prepared. */
+    const std::vector<std::vector<int>>* queryCycles = nullptr;
+    const std::vector<std::vector<int>>* targetCycles = nullptr;
 };
 
 /**
@@ -162,12 +165,14 @@ inline CommonBondOutcome searchCommonBonds(const MolGraph& query, const MolGraph
             && CommonBondConditions::hasCentres(target);
         const bool bondStereo = request.bondStereo && CommonBondConditions::hasStereoBonds(query)
             && CommonBondConditions::hasStereoBonds(target);
-        const bool rings = request.rings && (CommonBondConditions::hasRings(query) || CommonBondConditions::hasRings(target));
+        const bool rings = request.rings && (CommonBondConditions::hasRings(query, request.queryCycles)
+            || CommonBondConditions::hasRings(target, request.targetCycles));
         const bool sizes = request.minFragmentAtoms > 2 || (!connected && request.maxFragments < INT_MAX);
         if (chirality || bondStereo || rings || sizes || !request.requiredTarget.empty())
             conditions = std::make_unique<CommonBondConditions>(query, target, *graph, connected, request.minFragmentAtoms,
                                                                 request.maxFragments, request.requiredTarget,
-                                                                request.requiredBonds, chirality, bondStereo, rings, clock);
+                                                                request.requiredBonds, chirality, bondStereo, rings, clock,
+                                                                request.queryCycles, request.targetCycles);
         search = std::make_unique<CommonBondSearch>(*graph, clock, connected, limits, conditions.get(), request.requiredTarget,
                                                     request.wanted, request.nodeCap);
         // Without a required mapping or excluded atoms, the search the other way round is of the

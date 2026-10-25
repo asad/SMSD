@@ -1,3 +1,61 @@
+# SMSD Pro 8.0.3
+
+SMSD Pro 8.0.3 corrects complete-ring MCS matching, ring-proof reporting and
+named SMARTS predicates. It adds opt-in Metal fingerprint screening for native
+C++ source builds on macOS. The [changelog](../CHANGELOG.md) lists the changes.
+
+## Changes
+
+- C++ and Java MCIS searches check affected stereochemistry while extending mappings.
+- C++ MCIS symmetry pruning preserves the optimum when neighbours are reordered.
+  It is limited to unrestricted fragment connectivity without ring options or
+  stereo tags; default connected searches do not use it.
+- Eligible single-result C++ and Python MCIS searches start from a complete-graph
+  target. The tied mapping and nodes visited can differ from the query-first search.
+- GPU similarity-bound thresholds and ties use CPU double scores, and large
+  atom-count sums avoid overflow. The direct Metal float API keeps its precision.
+- Complete-ring MCS matching recognises perceived ring topology when a graph
+  was constructed without parser ring flags. Results remain unproved when
+  complete-ring or strict ring-fusion matching relies on truncated perception.
+- Native Metal fingerprint screening uses integer intersections and the CPU
+  score expression. It requires explicit opt-in; automatic selection is
+  disabled. The [C++ guide](CPP.md#optional-metal-fingerprint-screening) states
+  its scope and fallback contract. Python wheels continue to use the CPU on macOS.
+- Built-in named SMARTS predicates have corrected definitions, shared by C++
+  and Java and listed in the [Java guide](JAVA.md#prepared-searches).
+  `isKetone` and `isEster` now mark the carbonyl carbon.
+- Python `fingerprints` computes fingerprints for many molecules or SMILES
+  strings in one call, each identical to `fingerprint` and in input order.
+
+## Upgrading from 8.0.2
+
+Patterns using the built-in named predicates can match different atoms. Java
+expands names made of ASCII letters, digits and underscores, including inside
+recursive SMARTS; registered names containing other characters are no longer
+expanded.
+
+With complete rings or strict ring fusion, an otherwise completed result that
+relies on truncated ring perception reports `LimitReached`, with `optimal` and
+`complete` false.
+`isMappingMaximal` (Python `is_mapping_maximal`) raises its proof-unavailable
+error in that case instead of returning a value. Eligible C++ and Python MCIS
+searches against a complete-graph target can return a different tied mapping.
+
+## Downloads
+
+The [installation guide](HOWTO-INSTALL.md#supported-platforms) lists supported
+platforms and runtime requirements. Python CPU wheels target CPython 3.10–3.14
+on macOS arm64, Linux x86_64 and aarch64, and Windows x86_64. The optional
+`smsd-cuda` package targets Linux x86_64 and must match the `smsd` version.
+The Java CLI is supplied as a portable distribution and as Windows x86_64 MSI,
+macOS arm64 DMG and Linux amd64 DEB installers with Java 25 included.
+CPU Docker image archives target Linux amd64 and arm64; the GPU Docker image
+archive targets Linux amd64 and requires a compatible NVIDIA GPU and driver.
+
+See the [GitHub releases page](https://github.com/asad/SMSD/releases) for
+files and `SHA256SUMS`. Install Python with `python -m pip install
+"smsd==8.0.3"`; add `"smsd-cuda==8.0.3"` for supported NVIDIA CUDA screening.
+
 # SMSD Pro 8.0.2
 
 SMSD Pro 8.0.2 adds the optional `smsd-cuda` package and ordered batches of

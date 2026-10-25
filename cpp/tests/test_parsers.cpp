@@ -400,10 +400,136 @@ void test_smarts_predicate_no_clobber_recursive() {
     assert(expanded == input);
 }
 
-void test_smarts_predicate_isKetone_expand() {
+// The expansion of [$name] for each built-in predicate, as Java writes it
+// (NamedPredicateRegressionTest).
+void test_smarts_predicate_builtin_expansions() {
+    const std::pair<const char*, const char*> expected[] = {
+        {"isAmideN", "[$([#7X3][#6]=O)]"},
+        {"isCarboxylC", "[$([CX3](=O)[OX2H1,OX1-])]"},
+        {"isSulfonamideN", "[$([NX3;$(NS(=O)=O)])]"},
+        {"isEster", "[$([#6X3;H1,$([#6][#6])](=O)[#8X2][#6;!$([#6]=O)])]"},
+        {"isKetone", "[$([#6X3](=O)([#6])[#6])]"},
+        {"isHalogen", "[$([F,Cl,Br,I])]"},
+        {"isPositive", "[$([+,+2,+3,+4,+5,+6,+7,+8,+9,+10,+11,+12,+13,+14,+15])]"},
+        {"isNegative", "[$([-,-2,-3,-4,-5,-6,-7,-8,-9,-10,-11,-12,-13,-14,-15])]"},
+        {"isHBDonor", "[$([#7,#8,#16;!H0])]"},
+        {"isHBAcceptor", "[$([#7&!X3&!v5,#7&A&!v5&!$(NC=O),#8,#16&!v4&!v6;+0,-,-2,-3])]"},
+    };
     auto reg = smsd::SmartsPredicateRegistry::builtinRegistry();
-    std::string expanded = reg.expandPredicates("[$isKetone]");
-    assert(expanded == "[$([#6][CX3](=O)[#6])]");
+    for (const auto& entry : expected) {
+        std::string expanded = reg.expandPredicates(std::string("[$") + entry.first + "]");
+        if (expanded != entry.second)
+            throw std::runtime_error(std::string(entry.first) + " expands to " + expanded);
+    }
+}
+
+// Names inside recursive SMARTS expand as in Java, and a name ends at the first
+// character that is not an ASCII letter, digit or underscore; other text is kept.
+void test_smarts_predicate_inside_recursive() {
+    auto reg = smsd::SmartsPredicateRegistry::builtinRegistry();
+    std::string expanded = reg.expandPredicates("[$(C[$isHalogen])]");
+    assert(expanded == "[$(C[$([F,Cl,Br,I])])]");
+    auto q = smsd::parseSMARTS(expanded);
+    assert(smsd_test::patternMatches(q, smsd::parseSMILES("CCl")));
+    assert(!smsd_test::patternMatches(q, smsd::parseSMILES("CCO")));
+    assert(reg.expandPredicates("[$isUnknown]") == "[$isUnknown]");
+    assert(reg.expandPredicates("[$isHalogen\xC3\x84]") == "[$([F,Cl,Br,I])\xC3\x84]");
+    reg.registerPredicate("is\xC3\x84", "[#8]");
+    assert(reg.expandPredicates("[$is\xC3\x84]") == "[$is\xC3\x84]");
+}
+
+// Each predicate with a target and the target atoms it matches, none when the
+// list is empty; the same cases as Java (NamedPredicateRegressionTest).
+void test_smarts_predicate_builtin_atoms() {
+    const char* cases[][3] = {
+        {"isHBAcceptor", "CC(=O)C", "2"},
+        {"isHBAcceptor", "c1ccncc1", "3"},
+        {"isHBAcceptor", "CO", "1"},
+        {"isHBAcceptor", "CC[O-]", "2"},
+        {"isHBAcceptor", "Nc1ccccc1", "0"},
+        {"isHBAcceptor", "CC#N", "2"},
+        {"isHBAcceptor", "CC(=O)N", "2"},
+        {"isHBAcceptor", "c1c[nH]cn1", "4"},
+        {"isHBAcceptor", "CSC", "1"},
+        {"isHBAcceptor", "C[S-]", "1"},
+        {"isHBAcceptor", "CS(=O)C", "2"},
+        {"isHBAcceptor", "CS(=O)(=O)C", "2 3"},
+        {"isHBAcceptor", "C[N+](C)(C)C", ""},
+        {"isHBAcceptor", "c1cc[nH+]cc1", ""},
+        {"isHBAcceptor", "Cn1cccc1", ""},
+        {"isHBAcceptor", "CCl", ""},
+        {"isHBAcceptor", "CN(=O)=O", "2 3"},
+        {"isHBAcceptor", "CN(C)(C)=O", "4"},
+        {"isHBAcceptor", "CC(=S)N", "2 3"},
+        {"isAmideN", "CC(=O)N", "3"},
+        {"isAmideN", "NC(=O)N", "0 3"},
+        {"isAmideN", "O=C1CCCN1", "5"},
+        {"isAmideN", "CN", ""},
+        {"isAmideN", "CNC", ""},
+        {"isAmideN", "Nc1ccccc1", ""},
+        {"isAmideN", "CS(=O)(=O)N", ""},
+        {"isAmideN", "NCC(C)=O", ""},
+        {"isAmideN", "O=c1cc[nH]c(=O)[nH]1", "4 7"},
+        {"isAmideN", "O=c1cccc[nH]1", "6"},
+        {"isAmideN", "CC(=O)n1cccc1", "3"},
+        {"isAmideN", "O=c1cc[nH]cc1", ""},
+        {"isPositive", "[NH4+]", "0"},
+        {"isPositive", "[Fe+2]", "0"},
+        {"isPositive", "[Fe+3]", "0"},
+        {"isPositive", "[Fe+10]", "0"},
+        {"isPositive", "[NH3+]CC(=O)[O-]", "0"},
+        {"isPositive", "CCO", ""},
+        {"isPositive", "C[O-]", ""},
+        {"isNegative", "C[O-]", "1"},
+        {"isNegative", "[O-2]", "0"},
+        {"isNegative", "[S-2]", "0"},
+        {"isNegative", "[Fe-15]", "0"},
+        {"isNegative", "[NH3+]CC(=O)[O-]", "4"},
+        {"isNegative", "CCO", ""},
+        {"isNegative", "[NH4+]", ""},
+        {"isKetone", "CC(=O)C", "1"},
+        {"isKetone", "CC(=O)c1ccccc1", "1"},
+        {"isKetone", "O=c1ccoc2ccccc12", "1"},
+        {"isKetone", "O=C1C=COC2=CC=CC=C12", "1"},
+        {"isKetone", "CC=O", ""},
+        {"isKetone", "CC(=O)O", ""},
+        {"isKetone", "CC(=O)OC", ""},
+        {"isEster", "CC(=O)OC", "1"},
+        {"isEster", "O=COC", "1"},
+        {"isEster", "O=C1CCCO1", "1"},
+        {"isEster", "O=c1ccc2ccccc2o1", "1"},
+        {"isEster", "O=C1C=CC2=CC=CC=C2O1", "1"},
+        {"isEster", "CC(=O)O", ""},
+        {"isEster", "COC(=O)OC", ""},
+        {"isEster", "COC(=O)N", ""},
+        {"isEster", "CC(=O)SC", ""},
+        {"isEster", "CC(=O)OC(C)=O", ""},
+        {"isHBDonor", "c1cc[nH]c1", "3"},
+        {"isHBDonor", "CO", "1"},
+        {"isHBDonor", "C[NH3+]", "1"},
+        {"isHBDonor", "CS", "1"},
+        {"isHBDonor", "COC", ""},
+        {"isHBDonor", "c1ccncc1", ""},
+        {"isCarboxylC", "CC(=O)O", "1"},
+        {"isCarboxylC", "CC(=O)[O-]", "1"},
+        {"isCarboxylC", "CNC(=O)O", "2"},
+        {"isCarboxylC", "CC(=O)OC", ""},
+        {"isSulfonamideN", "CS(=O)(=O)NC", "4"},
+        {"isSulfonamideN", "CNC", ""},
+        {"isHalogen", "FC(Cl)(Br)I", "0 2 3 4"},
+        {"isHalogen", "CCO", ""},
+    };
+    auto reg = smsd::SmartsPredicateRegistry::builtinRegistry();
+    for (const auto& entry : cases) {
+        auto query = smsd::parseSMARTS(reg.expandPredicates(std::string("[$") + entry[0] + "]"));
+        std::set<int> matched;
+        for (const auto& mapping : smsd_test::allPatternAtoms(query, smsd::parseSMILES(entry[1])))
+            matched.insert(mapping.at(0));
+        std::string found;
+        for (int atom : matched) found += (found.empty() ? "" : " ") + std::to_string(atom);
+        if (found != entry[2])
+            throw std::runtime_error(std::string(entry[0]) + " " + entry[1] + " matches [" + found + "]");
+    }
 }
 
 void test_smarts_predicate_isHalogen_match() {
@@ -821,7 +947,9 @@ int main() {
     RUN_TEST(smarts_predicate_registry_basic);
     RUN_TEST(smarts_predicate_registry_custom);
     RUN_TEST(smarts_predicate_no_clobber_recursive);
-    RUN_TEST(smarts_predicate_isKetone_expand);
+    RUN_TEST(smarts_predicate_builtin_expansions);
+    RUN_TEST(smarts_predicate_builtin_atoms);
+    RUN_TEST(smarts_predicate_inside_recursive);
     RUN_TEST(smarts_predicate_isHalogen_match);
     RUN_TEST(smarts_predicate_isPositive_match);
     RUN_TEST(smarts_predicate_isNegative_match);

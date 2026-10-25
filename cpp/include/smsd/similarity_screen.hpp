@@ -10,6 +10,7 @@
 #pragma once
 
 #include "smsd/mol_graph.hpp"
+#include "smsd/detail/overlap_similarity.hpp"
 #include <unordered_map>
 #include <algorithm>
 #include <atomic>
@@ -53,17 +54,6 @@ inline int labelMode(const ChemOptions& C) {
     return 1 + (C.aromaticityMode == ChemOptions::AromaticityMode::STRICT ? 2 : 0) + (C.ringMatchesRingOnly ? 1 : 0);
 }
 
-/**
- * The bound for a label overlap, the sum over labels of the smaller of the two counts, between
- * graphs of n1 and n2 atoms: the overlap is capped by the smaller graph and gives the similarity
- * overlap / (n1 + n2 - overlap). Every CPU screen scores through this, so their scores agree bit for bit.
- */
-inline double overlapSimilarity(int overlap, int n1, int n2) {
-    if (n1 == 0 || n2 == 0) return 0.0;
-    const int atomOverlap = std::min(overlap, std::min(n1, n2));
-    if (atomOverlap == 0) return 0.0;
-    return static_cast<double>(atomOverlap) / (n1 + n2 - atomOverlap);
-}
 
 inline int labelFrequencyUpperBound(const MolGraph& g1, const MolGraph& g2,
                                      const ChemOptions& C) {
@@ -196,6 +186,15 @@ public:
     struct LabelCount { std::uint16_t label, count; };
 
     TargetLabels(const std::vector<MolGraph>& targets, const ChemOptions& chemistry, int numThreads)
+        : TargetLabels(targets, chemistry, numThreads, 0) {}
+
+    template<class Targets>
+    TargetLabels(const Targets& targets, const ChemOptions& chemistry, int numThreads)
+        : TargetLabels(targets, chemistry, numThreads, 0) {}
+
+private:
+    template<class Targets>
+    TargetLabels(const Targets& targets, const ChemOptions& chemistry, int numThreads, int)
         : mode_(labelMode(chemistry)), atoms_(targets.size(), -1), offsets_(targets.size() + 1, 0) {
         const int N = static_cast<int>(targets.size());
         // Each target writes its histogram at a slot of its atom count; the slots are then packed.
@@ -227,6 +226,7 @@ public:
             counts_.insert(counts_.end(), staged.begin() + slots[i], staged.begin() + slots[i] + distinct[i]);
     }
 
+public:
     /** The label rule the histograms were built under, as labelMode numbers it. */
     int mode() const { return mode_; }
     std::size_t size() const { return atoms_.size(); }
@@ -274,21 +274,30 @@ inline std::vector<double> similarityScores(const MolGraph& query, const Targets
 }
 
 /**
- * The same scores, read from the label histograms of the targets where they are held. Targets left
- * to their graphs are scored there, as is every target for a query with a label outside the dense
- * table or for histograms built under another label rule or for another number of targets.
+ * Calls record(i, score) with the score of every target, read from the label histograms of the
+ * targets where they are held. Targets left to their graphs are scored there, as is every target
+ * for a query with a label outside the dense table or for histograms built under another label rule
+ * or for another number of targets.
  */
-inline std::vector<double> similarityScores(const MolGraph& query, const std::vector<MolGraph>& targets,
-                                            const TargetLabels& labels, const ChemOptions& chemistry,
-                                            int numThreads) {
-    std::vector<double> scores(targets.size(), 0.0);
+template<class Targets, class Record>
+inline void forEachScoreTargets(const MolGraph& query, const Targets& targets, const TargetLabels& labels,
+                         const ChemOptions& chemistry, int numThreads, const Record& record) {
     const QueryLabelCounts queryCounts(query, chemistry);
     const bool histograms = queryCounts.dense() && labels.mode() == labelMode(chemistry)
                          && labels.size() == targets.size();
-    forEachTarget(static_cast<int>(scores.size()), numThreads, [&](int i, std::vector<int>& scratch) {
-        scores[i] = histograms && labels.held(i) ? queryCounts.similarity(labels, i)
-                                                 : queryCounts.similarity(targets[i], scratch);
+    forEachTarget(static_cast<int>(targets.size()), numThreads, [&](int i, std::vector<int>& scratch) {
+        record(i, histograms && labels.held(i) ? queryCounts.similarity(labels, i)
+                                               : queryCounts.similarity(targets[i], scratch));
     });
+}
+
+/** The same scores, read from the label histograms of the targets where they are held, as forEachScore gives them. */
+template<class Targets>
+inline std::vector<double> similarityScoresForTargets(const MolGraph& query, const Targets& targets,
+                                            const TargetLabels& labels, const ChemOptions& chemistry,
+                                            int numThreads) {
+    std::vector<double> scores(targets.size(), 0.0);
+    forEachScoreTargets(query, targets, labels, chemistry, numThreads, [&](int i, double score) { scores[i] = score; });
     return scores;
 }
 
@@ -298,6 +307,40 @@ inline std::vector<int> indicesReaching(const std::vector<double>& scores, doubl
     for (int i = 0; i < static_cast<int>(scores.size()); ++i)
         if (scores[i] >= threshold) hits.push_back(i);
     return hits;
+}
+
+/**
+ * The indices of the targets whose similarityScores score reaches the threshold, in order. Each
+ * target records one byte rather than its score, so a large corpus screen neither fills nor reads
+ * back an array of scores.
+ */
+template<class Targets>
+inline std::vector<int> indicesReachingTargets(const MolGraph& query, const Targets& targets,
+                                        const TargetLabels& labels, const ChemOptions& chemistry,
+                                        double threshold, int numThreads) {
+    std::vector<std::uint8_t> reached(targets.size(), 0);
+    forEachScoreTargets(query, targets, labels, chemistry, numThreads,
+                 [&](int i, double score) { reached[i] = score >= threshold; });
+    std::vector<int> hits;
+    for (int i = 0; i < static_cast<int>(reached.size()); ++i)
+        if (reached[i]) hits.push_back(i);
+    return hits;
+}
+
+template<class Record>
+inline void forEachScore(const MolGraph& query, const std::vector<MolGraph>& targets, const TargetLabels& labels,
+                         const ChemOptions& chemistry, int numThreads, const Record& record) {
+    forEachScoreTargets<std::vector<MolGraph>, Record>(query, targets, labels, chemistry, numThreads, record);
+}
+
+inline std::vector<double> similarityScores(const MolGraph& query, const std::vector<MolGraph>& targets,
+    const TargetLabels& labels, const ChemOptions& chemistry, int numThreads) {
+    return similarityScoresForTargets<std::vector<MolGraph>>(query, targets, labels, chemistry, numThreads);
+}
+
+inline std::vector<int> indicesReaching(const MolGraph& query, const std::vector<MolGraph>& targets,
+    const TargetLabels& labels, const ChemOptions& chemistry, double threshold, int numThreads) {
+    return indicesReachingTargets<std::vector<MolGraph>>(query, targets, labels, chemistry, threshold, numThreads);
 }
 
 } // namespace screening_detail

@@ -102,6 +102,20 @@ static void exhaustiveSmallGraphs() {
                         require(actual.insert(match.atomMapping).second, "Repeated raw embedding");
                     }
                     require(actual == expected.second, "Raw tied embeddings differ from the independent oracle");
+                    auto singleOptions = options;
+                    singleOptions.nodeLimit = 1000;
+                    const auto single = smsd::MCS::find(query).withOptions(singleOptions).match(target);
+                    require(single.optimal && single.complete && single.score == score,
+                            "Single optimum differs from the independent graph oracle");
+                    require(single.matches.size() == (expected.second.empty() ? 0u : 1u),
+                            "Single search must retain one optimal witness when one exists");
+                    if (!single.matches.empty()) {
+                        const auto& match = single.matches.front();
+                        require(expected.second.count(match.atomMapping) == 1
+                            && match.bondMapping.size() == static_cast<size_t>(std::get<2>(expected.first))
+                            && smsd::MCS::validateMapping(query, target, match, options).empty(),
+                            "Single witness differs from the independent optimum set");
+                    }
                 }
     }
 }
@@ -306,10 +320,86 @@ static void heterocycleCommonEdgeProof() {
     }
 }
 
+static void twinCandidateOrder() {
+    auto nitrogenStar = [](const std::vector<int>& centreNeighbours) {
+        const int atoms = static_cast<int>(centreNeighbours.size()) + 1;
+        std::vector<int> elements(atoms, 6);
+        elements[0] = 7;
+        std::vector<std::vector<int>> neighbours(atoms), orders(atoms);
+        neighbours[0] = centreNeighbours;
+        orders[0].assign(centreNeighbours.size(), 1);
+        for (int atom = 1; atom < atoms; ++atom) {
+            neighbours[atom] = {0};
+            orders[atom] = {1};
+        }
+        return smsd::MolGraph::Builder().atomCount(atoms).atomicNumbers(elements)
+            .setNeighbors(neighbours).setBondOrders(orders).build(false);
+    };
+    const auto query = nitrogenStar({1, 2, 3});
+    std::set<Mapping> expected;
+    for (int firstLeaf = 1; firstLeaf <= 3; ++firstLeaf)
+        for (int secondLeaf = firstLeaf + 1; secondLeaf <= 3; ++secondLeaf) {
+            expected.insert(Mapping{{0, 0}, {firstLeaf, 1}, {secondLeaf, 2}});
+            expected.insert(Mapping{{0, 0}, {firstLeaf, 2}, {secondLeaf, 1}});
+        }
+    for (const auto& centreNeighbours : {std::vector<int>{1, 2}, std::vector<int>{2, 1}}) {
+        const auto target = nitrogenStar(centreNeighbours);
+        for (auto connectivity : {smsd::MCSConnectivity::Connected, smsd::MCSConnectivity::Fragments}) {
+            smsd::MCSOptions options;
+            options.connectivity = connectivity;
+            options.nodeLimit = 1000;
+            options.timeoutMs = 10000;
+            const auto search = smsd::MCS::find(query).withOptions(options);
+            const auto all = search.matchAll(target, 1000);
+            require(all.status == smsd::SearchStatus::Completed && all.optimal && all.complete && all.score == 3,
+                    "Neighbour order must preserve the three-atom optimum");
+            std::set<Mapping> actual;
+            for (const auto& match : all.matches) {
+                require(match.bondMapping.size() == 2 && match.fragments.size() == 1
+                    && smsd::MCS::validateMapping(query, target, match, options).empty(),
+                    "Invalid star optimum mapping");
+                require(actual.insert(match.atomMapping).second, "Repeated star optimum mapping");
+            }
+            require(actual == expected, "Every one of the six labelled star optima must be retained");
+            const auto single = search.match(target);
+            require(single.status == smsd::SearchStatus::Completed && single.optimal && single.complete
+                && single.score == 3 && single.matches.size() == 1
+                && expected.count(single.matches.front().atomMapping) == 1
+                && single.matches.front().bondMapping.size() == 2
+                && smsd::MCS::validateMapping(query, target, single.matches.front(), options).empty(),
+                "A single star optimum must belong to the complete labelled optimum set");
+            options.excludedTargetAtoms = {1};
+            std::set<Mapping> excludedExpected;
+            for (int leaf = 1; leaf <= 3; ++leaf)
+                excludedExpected.insert(Mapping{{0, 0}, {leaf, 2}});
+            const auto excludedSearch = smsd::MCS::find(query).withOptions(options);
+            const auto excludedAll = excludedSearch.matchAll(target, 1000);
+            require(excludedAll.optimal && excludedAll.complete && excludedAll.score == 2,
+                    "Excluded target twins must retain the two-atom optimum");
+            std::set<Mapping> excludedActual;
+            for (const auto& match : excludedAll.matches) {
+                require(smsd::MCS::validateMapping(query, target, match, options).empty(),
+                        "Excluded-twin search returned an invalid mapping");
+                require(excludedActual.insert(match.atomMapping).second,
+                        "Excluded-twin search duplicated a mapping");
+            }
+            require(excludedActual == excludedExpected,
+                    "Excluded-twin search omitted a labelled optimum");
+            const auto excludedSingle = excludedSearch.match(target);
+            require(excludedSingle.optimal && excludedSingle.complete && excludedSingle.score == 2
+                && excludedSingle.matches.size() == 1
+                && excludedExpected.count(excludedSingle.matches.front().atomMapping) == 1
+                && smsd::MCS::validateMapping(query, target, excludedSingle.matches.front(), options).empty(),
+                "An excluded class minimum must not hide a feasible twin");
+        }
+    }
+}
+
 int main(int argc, char** argv) {
     return smsd_test::runGroups(argc, argv, {
         {"oracle", exhaustiveSmallGraphs}, {"proof", connectedNaturalProductProof},
         {"adjacency", optionalAdjacencyWords}, {"word-boundaries", candidatesAcrossWordBoundaries},
         {"edge-oracle", exhaustiveCommonEdges}, {"one-fragment", oneFragmentIsConnected},
-        {"full-query-proof", exhaustedFullQueryProof}, {"edge-proof", heterocycleCommonEdgeProof}});
+        {"full-query-proof", exhaustedFullQueryProof}, {"edge-proof", heterocycleCommonEdgeProof},
+        {"twin-order", twinCandidateOrder}});
 }

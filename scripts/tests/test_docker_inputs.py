@@ -35,9 +35,9 @@ class DockerInputsTest(unittest.TestCase):
         self.addCleanup(fixture.doCleanups)
         self.root = fixture.root
         self.release = fixture.directory
-        sources = {name: data.replace(b"7.2.0", b"8.0.2") for name, data in fixture.sources.items()}
+        sources = {name: data.replace(b"7.2.0", b"8.0.3") for name, data in fixture.sources.items()}
         old = FIXTURES.archive(self.release, sources)
-        self.sdist = old.with_name("smsd-8.0.2.tar.gz")
+        self.sdist = old.with_name("smsd-8.0.3.tar.gz")
         old.rename(self.sdist)
         source = {**PREPARE.BUILD.inspect_source(self.sdist), "source_commit": FIXTURES.SHA,
                   "release_ref": FIXTURES.SHA, "working_tree_clean": True}
@@ -45,9 +45,9 @@ class DockerInputsTest(unittest.TestCase):
         entries = []
         for architecture in ("x86_64", "aarch64"):
             tag = "cp314-manylinux_" + architecture
-            wheel = self.release / ("smsd-8.0.2-cp314-cp314-manylinux_2_28_" + architecture + ".whl")
+            wheel = self.release / ("smsd-8.0.3-cp314-cp314-manylinux_2_28_" + architecture + ".whl")
             with zipfile.ZipFile(wheel, "w") as archive:
-                archive.writestr("smsd-8.0.2.dist-info/METADATA", "Name: smsd\nVersion: 8.0.2\n")
+                archive.writestr("smsd-8.0.3.dist-info/METADATA", "Name: smsd\nVersion: 8.0.3\n")
             proof = {**source, **PREPARE.BUILD.BUILD_IDENTIFIERS[tag], "wheel": wheel.name,
                      "wheel_sha256": PREPARE.BUILD.sha256(wheel), "build_identifier": tag,
                      "build_system": "cibuildwheel", "cibuildwheel": "4.2.1",
@@ -93,7 +93,7 @@ class DockerInputsTest(unittest.TestCase):
                                ("manylinux_2_17_x86_64", False),
                                ("manylinux_2_28_x86_64.manylinux_2_28_aarch64", False)):
             with self.subTest(tags=tags):
-                entry["path"] = str(Path(entry["path"]).with_name("smsd-8.0.2-cp314-cp314-" + tags + ".whl"))
+                entry["path"] = str(Path(entry["path"]).with_name("smsd-8.0.3-cp314-cp314-" + tags + ".whl"))
                 target = self.args.output / entry["path"]
                 target.write_bytes(original.read_bytes())
                 if accepted:
@@ -105,7 +105,7 @@ class DockerInputsTest(unittest.TestCase):
     def test_source_filename_cannot_escape_release_directory(self):
         path = self.release / "SOURCE_MANIFEST.json"
         manifest = json.loads(path.read_text())
-        manifest["sdist"] = "../smsd-8.0.2.tar.gz"
+        manifest["sdist"] = "../smsd-8.0.3.tar.gz"
         path.write_text(json.dumps(manifest))
         with self.assertRaisesRegex(ValueError, "basename"):
             self.prepare()
@@ -128,6 +128,29 @@ class DockerInputsTest(unittest.TestCase):
         self.prepare()
         with self.assertRaises(FileExistsError):
             self.prepare()
+
+    def test_cuda_installation_uses_ephemeral_wheels_and_preserves_runtime_checks(self):
+        dockerfile = (SCRIPTS.parent / "Dockerfile.cuda").read_text()
+        runtime = dockerfile.split("FROM nvidia/cuda:", 1)[1]
+        self.assertNotIn("COPY --from=artifacts /artifacts/wheels/", runtime)
+        self.assertNotIn("COPY --from=artifacts /artifacts/ARTIFACTS.json", runtime)
+        self.assertIn("--mount=type=bind,from=artifacts,source=/artifacts,target=/tmp/smsd,rw", runtime)
+        self.assertIn("python /usr/local/share/smsd/docker_install.py --gpu --root /tmp/smsd", runtime)
+        self.assertIn('--architecture "$TARGETARCH" --revision "$SMSD_REVISION"', runtime)
+        self.assertIn("test ! -e /usr/local/cuda/bin/nvcc", runtime)
+        self.assertIn("/usr/share/doc/smsd/licenses/NVIDIA-CUDA.txt", runtime)
+        self.assertIn("COPY --from=artifacts /artifacts/LICENSE /artifacts/NOTICE", runtime)
+        self.assertIn("USER smsd", runtime)
+
+    def test_release_builder_requires_buildkit_and_retains_failed_archive_evidence(self):
+        workflow = (SCRIPTS.parent / ".github/workflows/release.yml").read_text()
+        self.assertIn("docker buildx build --load", workflow)
+        self.assertIn("docker buildx version > docker-builder.log", workflow)
+        self.assertIn("python scripts/archive_docker_image.py --image smsd:release-check", workflow)
+        self.assertIn("smsd-cli-image.tar.xz*", workflow)
+        upload = workflow.split("          name: docker-cli", 1)[0].rsplit("      - uses: actions/upload-artifact", 1)[1]
+        self.assertIn("if: ${{ always() }}", upload)
+        self.assertIn("          compression-level: 0", workflow)
 
 
 class CallbackObserverTest(unittest.TestCase):

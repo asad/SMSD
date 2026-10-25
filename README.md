@@ -40,8 +40,9 @@ covers CPU wheels, the optional CUDA package and Docker images. The
 
 ## Quick start
 
-Each example finds benzene in phenol, then computes their MCS. Run the commands
-from the repository root.
+Each example finds benzene in phenol, then computes the MCS of
+N-methylacetamide and propanamide. Neither contains the other; they share the
+four atoms of C–C(=O)–N. Run the commands from the repository root.
 
 ### C++
 
@@ -52,12 +53,14 @@ Save this as `example.cpp`:
 #include <iostream>
 
 int main() {
-    const auto query = smsd::parseSMILES("c1ccccc1");      // benzene
-    const auto target = smsd::parseSMILES("c1ccc(O)cc1");  // phenol
-    const bool embedded = !smsd::Substructure::find(query).match(target).matches.empty();
+    const auto benzene = smsd::parseSMILES("c1ccccc1");
+    const auto phenol = smsd::parseSMILES("c1ccc(O)cc1");
+    const bool embedded = !smsd::Substructure::find(benzene).match(phenol).matches.empty();
+    const auto query = smsd::parseSMILES("CC(=O)NC");   // N-methylacetamide
+    const auto target = smsd::parseSMILES("CCC(=O)N");  // propanamide
     const auto result = smsd::MCS::find(query).match(target);
     if (!embedded || !result.optimal || result.matches.empty()
-            || result.matches.front().atomMapping.size() != 6) {
+            || result.matches.front().atomMapping.size() != 4) {
         return 1;
     }
     std::cout << "MCS atoms: " << result.matches.front().atomMapping.size() << '\n';
@@ -88,11 +91,11 @@ needs:
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>8.0.2</version>
+  <version>8.0.3</version>
 </dependency>
 ```
 
-In Gradle, write `implementation("com.bioinceptionlabs:smsd:8.0.2")`. The
+In Gradle, write `implementation("com.bioinceptionlabs:smsd:8.0.3")`. The
 example below also parses SMILES, which needs `org.openscience.cdk:cdk-smiles:2.13`;
 the [Java module](java/README.md#installation) lists the optional additions and
 the `smsd-cli` artefact. Save this as `QuickStart.java`:
@@ -108,13 +111,15 @@ import org.openscience.cdk.smiles.SmilesParser;
 public class QuickStart {
     public static void main(String[] args) throws Exception {
         SmilesParser parser = new SmilesParser(SilentChemObjectBuilder.getInstance());
-        IAtomContainer query = parser.parseSmiles("c1ccccc1");      // benzene
-        IAtomContainer target = parser.parseSmiles("c1ccc(O)cc1");  // phenol
-        boolean embedded = Substructure.find(query).match(target).found();
+        IAtomContainer benzene = parser.parseSmiles("c1ccccc1");
+        IAtomContainer phenol = parser.parseSmiles("c1ccc(O)cc1");
+        boolean embedded = Substructure.find(benzene).match(phenol).found();
+        IAtomContainer query = parser.parseSmiles("CC(=O)NC");   // N-methylacetamide
+        IAtomContainer target = parser.parseSmiles("CCC(=O)N");  // propanamide
         SearchResult result = MCS.find(query).withTimeout(1000).match(target);
         if (!embedded || !result.optimal() || !result.found()
-                || result.matches().get(0).atomCount() != 6) {
-            throw new IllegalStateException("Expected a proved six-atom match");
+                || result.matches().get(0).atomCount() != 4) {
+            throw new IllegalStateException("Expected a proved four-atom MCS");
         }
         System.out.println("MCS atoms: " + result.matches().get(0).atomCount());
     }
@@ -125,8 +130,8 @@ Compile with Java 25 and run on Java 8 or later, here against the self-contained
 JAR of the build, which includes CDK and `cdk-smiles`:
 
 ```bash
-javac --release 8 -cp java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar QuickStart.java
-java -cp "java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar:." QuickStart
+javac --release 8 -cp java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar QuickStart.java
+java -cp "java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar:." QuickStart
 ```
 
 With a Java 8 compiler, omit `--release 8`. On Windows, separate the classpath
@@ -144,11 +149,11 @@ python -m pip install -e .
 ```python
 import smsd
 
-query = "c1ccccc1"       # benzene
-target = "c1ccc(O)cc1"   # phenol
-assert smsd.Substructure.find(query).match(target).found
+assert smsd.Substructure.find("c1ccccc1").match("c1ccc(O)cc1").found  # benzene in phenol
+query = "CC(=O)NC"    # N-methylacetamide
+target = "CCC(=O)N"   # propanamide
 result = smsd.MCS.find(query).match(target)
-assert result.optimal and result.best.atom_count == 6
+assert result.optimal and result.best.atom_count == 4
 print("MCS atoms:", result.best.atom_count)
 ```
 
@@ -180,7 +185,7 @@ On Linux x86_64 with an NVIDIA GPU, install `smsd-cuda` next to `smsd` of the
 same version. Your code does not change:
 
 ```bash
-python -m pip install "smsd==8.0.2" "smsd-cuda==8.0.2"
+python -m pip install "smsd==8.0.3" "smsd-cuda==8.0.3"
 ```
 
 ECFP4 screens of a prepared `TargetCorpus` then run on the GPU where that has
@@ -190,15 +195,15 @@ corpora, other screens and all matching run on the CPU. Scores and hit order
 are the same as on the CPU, and a GPU error falls back to the CPU. See
 [CUDA screening](docs/PYTHON.md#optional-cuda-screening) for the details.
 
-The [8.0.2 release](https://github.com/asad/SMSD/releases/tag/v8.0.2) also has
+The [8.0.3 release](https://github.com/asad/SMSD/releases/tag/v8.0.3) also has
 the GPU package as a wheel and a GPU Docker image,
-`smsd-8.0.2-cuda-linux-amd64.tar.xz`, with Python, `smsd`, `smsd-cuda` and the
+`smsd-8.0.3-cuda-linux-amd64.tar.xz`, with Python, `smsd`, `smsd-cuda` and the
 CUDA runtime. The image needs the NVIDIA Container Toolkit, also under WSL2 on
 Windows:
 
 ```bash
-docker load -i smsd-8.0.2-cuda-linux-amd64.tar.xz
-docker run --rm --gpus all smsd:8.0.2-cuda12.8 -c "import smsd; print(smsd.gpu_device_info())"
+docker load -i smsd-8.0.3-cuda-linux-amd64.tar.xz
+docker run --rm --gpus all smsd:8.0.3-cuda12.8 -c "import smsd; print(smsd.gpu_device_info())"
 ```
 
 The [installation guide](docs/HOWTO-INSTALL.md#docker) covers the CPU images
@@ -209,7 +214,7 @@ for amd64 and arm64.
 The Java build also produces the command-line tool, as a self-contained JAR:
 
 ```bash
-java -jar java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
 ```
 
@@ -235,6 +240,9 @@ and SDF files as batch targets.
   Python. Batch searches can use every processor core. Optional NVIDIA CUDA
   screening is provided separately by `smsd-cuda`; matching runs on the CPU.
   See [CUDA screening](docs/PYTHON.md#optional-cuda-screening) for its scope.
+  Native C++ source builds on macOS also offer [opt-in Metal fingerprint
+  screening](docs/CPP.md#optional-metal-fingerprint-screening), with automatic
+  selection disabled.
 - **Utilities**, including R-group decomposition, MOL and SDF input,
   SVG depiction (C++ and Python) and molecular standardisation (Java).
 

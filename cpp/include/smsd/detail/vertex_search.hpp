@@ -70,6 +70,8 @@ class VertexSearch {
     bool emptyDomain_ = false;
     /** Whether the budget stopped a frame before all its candidates were tested. */
     bool frameStopped_ = false;
+    /** Whether each new MCIS pair is tested against the centres and double bonds it touches. */
+    bool centrePairs_ = false, doubleBondPairs_ = false;
     std::vector<bool> used_;
     std::vector<bool> excluded_;
     int availableTargets_;
@@ -128,6 +130,28 @@ class VertexSearch {
             } else if (induced_ && targetBond) return false;
         }
         return true;
+    }
+    /** Complete-ring domains also agree on topological ring membership. */
+    void restrictCompleteRingDomains() {
+        if (!common_ || common_->objective != MCSObjective::MCIS
+            || !chemistry_.completeRingsOnly || !query_.molecule
+            || queryRings_.truncated() || targetRings_.truncated()) return;
+        for (int queryAtom = 0; queryAtom < query_.size(); ++queryAtom) {
+            const bool queryRing = queryRings_.ringAtom(queryAtom);
+            int count = 0;
+            for (size_t word = 0; word < domainWords(); ++word) {
+                if ((word & 63) == 0 && budget_.stopped()) return;
+                uint64_t& domain = domains_[domainIndex(queryAtom, word)];
+                for (uint64_t remaining = domain; remaining != 0; remaining &= remaining - 1) {
+                    const int offset = smsd::ctz64(remaining);
+                    const int targetAtom = static_cast<int>(word * 64) + offset;
+                    if (queryRing != targetRings_.ringAtom(targetAtom))
+                        domain &= ~(uint64_t(1) << offset);
+                }
+                count += smsd::popcount64(domain);
+            }
+            domainCounts_[queryAtom] = count;
+        }
     }
     /** Current adjacency and bond predicates only remove prospective targets. */
     uint64_t feasibleTargets(int queryAtom, size_t word) const {
@@ -393,6 +417,68 @@ class VertexSearch {
         }
         return collector_.remember(std::move(match));
     }
+    static bool tagged(const MolGraph& graph) {
+        return std::any_of(graph.tetraChirality.begin(), graph.tetraChirality.end(), [](int tag) { return tag != 0; });
+    }
+    static bool configured(const MolGraph& graph) {
+        if (!graph.hasDbStereo) return false;
+        for (int atom = 0; atom < graph.n; ++atom)
+            for (int neighbor : graph.neighbors[atom])
+                if (neighbor > atom && graph.dbStereo(atom, neighbor) != 0) return true;
+        return false;
+    }
+    /**
+     * Whether pairing `atom` with `candidate` fails the stereo test of record() at a centre or
+     * double bond that reads the pair: the atom itself, its mapped neighbours, and the double
+     * bonds at either. Mapped pairs stay in every extension, so such a failure stays too, and the
+     * candidate is passed over before its node, as in Java's VertexSearch.stereoBroken().
+     */
+    bool stereoBroken(int atom, int candidate) {
+        mapping_[atom] = candidate;
+        const bool broken = stereoBroken(atom);
+        mapping_[atom] = -2;
+        return broken;
+    }
+    bool stereoBroken(int atom) const {
+        const auto& neighbors = query_.molecule->neighbors;
+        if (centrePairs_) {
+            if (centreBroken(atom)) return true;
+            for (int neighbor : neighbors[atom])
+                if (mapping_[neighbor] >= 0 && centreBroken(neighbor)) return true;
+        }
+        if (doubleBondPairs_)
+            for (int neighbor : neighbors[atom]) {
+                if (mapping_[neighbor] < 0) continue;
+                if (doubleBondBroken(atom, neighbor)) return true;
+                for (int other : neighbors[neighbor])
+                    if (other != atom && mapping_[other] >= 0 && doubleBondBroken(neighbor, other)) return true;
+            }
+        return false;
+    }
+    /**
+     * The tetrahedral test at a mapped centre. Once three ligands are mapped the permutation is
+     * fixed, as a fourth can only take the remaining target ligand, and a ligand whose image is
+     * not a target ligand stays so.
+     */
+    bool centreBroken(int centre) const {
+        return !tetraParityCompatible(*query_.molecule, centre, target_, mapping_[centre], mapping_);
+    }
+    /**
+     * The double-bond test between two mapped atoms. It reads the first mapped substituent at
+     * each end; since the mapping is induced, any other gives the same relation when an end has
+     * one substituent in either graph, or at most two in both, and the bond is left to record()
+     * otherwise.
+     */
+    bool doubleBondBroken(int first, int second) const {
+        const MolGraph& query = *query_.molecule;
+        for (int end : {first, second}) {
+            const int querySubstituents = static_cast<int>(query.neighbors[end].size()) - 1;
+            const int targetSubstituents = static_cast<int>(target_.neighbors[mapping_[end]].size()) - 1;
+            if (std::min(querySubstituents, targetSubstituents) > 1 && std::max(querySubstituents, targetSubstituents) > 2)
+                return false;
+        }
+        return !stereo_detail::doubleBondParityMatches(query, first, second, target_, mapping_);
+    }
     struct Frame {
         int atom;
         std::vector<int> candidates;
@@ -403,7 +489,7 @@ class VertexSearch {
     /** Whether target transpositions may thin candidates; checked when first needed. */
     bool targetTwinsAvailable() {
         if (targetTwinState_ == 0) {
-            targetTwinState_ = targetTwinsWanted_ && !hasStereoTags(target_) ? 2 : 1;
+            targetTwinState_ = targetTwinsWanted_ ? 2 : 1;
             if (targetTwinState_ == 2) {
                 isolatedTargets_ = SpareVectors<std::pair<TranspositionKey, int>>::take();
                 for (int atom = 0; atom < target_.n; ++atom)
@@ -596,6 +682,45 @@ class VertexSearch {
             });
             for (int candidate : result.candidates) support(candidate) = 0;
             if (!all_ && !required_ && result.candidates.size() > 1 && targetTwinsAvailable()) {
+                if (!queryTwinClass_.empty()) {
+                    // Query inequalities need the smallest feasible value of each target class.
+                    auto clearMinimums = [&]() {
+                        for (int candidate : result.candidates) {
+                            const int twin = targetState_[candidate].twin;
+                            if (twin >= 0) targetState_[twin].support = 0;
+                        }
+                    };
+                    size_t work = 0;
+                    for (int candidate : result.candidates) {
+                        if ((work++ & 255u) == 0 && budget_.stopped()) {
+                            clearMinimums();
+                            return result;
+                        }
+                        const int twin = targetTwin(candidate);
+                        if (twin < 0) {
+                            clearMinimums();
+                            return result;
+                        }
+                        int& minimum = targetState_[twin].support;
+                        if (minimum == 0 || candidate < minimum - 1) minimum = candidate + 1;
+                    }
+                    if (budget_.stopped()) {
+                        clearMinimums();
+                        return result;
+                    }
+                    size_t kept = 0;
+                    work = 0;
+                    // Finish the linear compaction so class scratch is cleared after a stop.
+                    for (int candidate : result.candidates) {
+                        if ((work++ & 255u) == 0) (void)budget_.stopped();
+                        int& minimum = targetState_[targetState_[candidate].twin].support;
+                        if (minimum == 0) continue;
+                        result.candidates[kept++] = minimum - 1;
+                        minimum = 0;
+                    }
+                    result.candidates.resize(kept);
+                    return result;
+                }
                 // Keep the first candidate of each class; the marks are cleared before returning.
                 // Once the budget stops, the remaining candidates are kept as they are, as the
                 // search ends at its next node.
@@ -769,6 +894,10 @@ public:
                 independent = independent && query.neighbors(atom).empty();
             }
             if (complete || independent) uniformAdjacency_ = complete ? 1 : 0;
+            if (induced && query.molecule) {
+                centrePairs_ = chemistry.useChirality && tagged(*query.molecule) && tagged(target);
+                doubleBondPairs_ = chemistry.useBondStereo && configured(*query.molecule) && configured(target);
+            }
         }
         queryState_ = SpareVectors<QueryAtomState>::take(static_cast<size_t>(query.size()), QueryAtomState{});
         frontierAtoms_ = SpareVectors<int>::take();
@@ -776,9 +905,14 @@ public:
         mappedAtoms_ = SpareVectors<int>::take();
         mappedAtoms_.reserve(query.size());
         for (int atom = 0; atom < query.size(); ++atom) queryState_[atom].degree = static_cast<int>(query.neighbors(atom).size());
-        if (query.molecule && !all && !required) {
+        const bool transpositionsAllowed = !chemistry.completeRingsOnly && !chemistry.ringMatchesRingOnly
+            && chemistry.ringFusionMode == ChemOptions::RingFusionMode::IGNORE
+            && (!common || (common->connectivity == MCSConnectivity::Fragments
+                && common->minFragmentAtoms == 1 && common->maxFragments == INT_MAX));
+        if (query.molecule && !all && !required && transpositionsAllowed
+            && !hasStereoTags(*query.molecule) && !hasStereoTags(target)) {
             targetTwinsWanted_ = true;
-            if (common && common->objective == MCSObjective::MCIS)
+            if (common && common->objective == MCSObjective::MCIS && common->atomWeights.empty())
                 queryTwinClass_ = transpositionClasses(*query.molecule, budget, &common->atomWeights);
             if (!queryTwinClass_.empty()) {
                 // Each atom links to the latest earlier atom of its class, which it counts with the rest.
@@ -793,7 +927,10 @@ public:
         }
         if (common) for (int atom = 0; atom < target.n; ++atom)
             for (int neighbor : target.neighbors[atom]) targetEdges_ += neighbor > atom;
-        if (query.molecule && chemistry.matchAtomType && fillElementDomains(anchor, required)) return;
+        if (query.molecule && chemistry.matchAtomType && fillElementDomains(anchor, required)) {
+            restrictCompleteRingDomains();
+            return;
+        }
         for (int atom = 0; atom < query.size() && !budget.stopped(); ++atom) {
             for (int candidate = 0; candidate < target.n; ++candidate) {
                 if ((candidate & 255) == 0 && budget.stopped()) break;
@@ -807,6 +944,7 @@ public:
                 }
             }
         }
+        restrictCompleteRingDomains();
     }
     VertexSearch(const VertexSearch&) = delete;
     VertexSearch& operator=(const VertexSearch&) = delete;
@@ -867,6 +1005,10 @@ private:
                 current.active = -2;
             }
             if (current.next < current.candidates.size()) {
+                if ((centrePairs_ || doubleBondPairs_) && stereoBroken(current.atom, current.candidates[current.next])) {
+                    ++current.next;
+                    continue;
+                }
                 if (!budget_.visit(common_ || (budget_.nodesVisited() & 15) == 0)) break;
                 const int candidate = current.candidates[current.next++];
                 assign(current.atom, candidate);

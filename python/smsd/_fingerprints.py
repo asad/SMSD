@@ -13,9 +13,9 @@ __all__ = [
     "analyze_fp_quality", "circular_fingerprint", "circular_fingerprint_counts", "cosine",
     "count_cosine", "count_dice", "count_overlapCoefficient", "count_overlap_coefficient",
     "count_tanimoto_coefficient", "counts_to_array", "dice", "fingerprint", "fingerprint_from_smiles",
-    "fingerprint_subset", "from_hex", "mcs_fingerprint", "overlapCoefficient", "overlap_coefficient",
-    "path_fingerprint", "soergel", "tanimoto_coefficient", "to_binary_string", "to_hex",
-    "topological_torsion", "topological_torsion_counts",
+    "fingerprint_subset", "fingerprints", "from_hex", "mcs_fingerprint", "overlapCoefficient",
+    "overlap_coefficient", "path_fingerprint", "soergel", "tanimoto_coefficient", "to_binary_string",
+    "to_hex", "topological_torsion", "topological_torsion_counts",
 ]
 
 # The fingerprint natives are bound directly: each runs in well under a microsecond, and a
@@ -126,6 +126,47 @@ def fingerprint(mol, *, kind="mcs", path_length=7, fp_size=2048, radius=2, optio
             f"Use 'path', 'mcs', 'ecfp', 'circular', 'fcfp', or 'torsion'."
         )
     return compute(_ensure_mol(mol), radius, path_length, fp_size)
+
+
+def fingerprints(mols, *, kind="mcs", path_length=7, fp_size=2048, radius=2, options=None, num_threads=0):
+    """Compute the fingerprints of many molecules in one call.
+
+    Each result is the one :func:`fingerprint` gives for that molecule with the
+    same arguments, in input order, whatever the thread count. SMILES strings
+    are parsed natively, and the first molecule that fails raises the error
+    :func:`fingerprint` gives for it.
+
+    Args:
+        mols: Iterable of MolGraph objects, SMILES strings or RDKit molecules.
+        kind, path_length, fp_size, radius, options: As for :func:`fingerprint`.
+        num_threads: Threads to use (default 0, the OpenMP default,
+            ``OMP_NUM_THREADS``).
+
+    Returns:
+        list[list]: One fingerprint per molecule.
+
+    Example::
+
+        import smsd
+
+        library = ["CCO", "c1ccccc1O", "CC(=O)Oc1ccccc1C(=O)O"]
+        ecfp4 = smsd.FingerprintOptions.ecfp(radius=2, size=2048)
+        expected = [smsd.fingerprint(smiles, options=ecfp4) for smiles in library]
+        assert smsd.fingerprints(library, options=ecfp4) == expected
+    """
+    _checked_int(num_threads, "Thread count", 0)
+    if options is not None:
+        if not isinstance(options, _smsd.FingerprintOptions):
+            raise TypeError(f"options must be a FingerprintOptions, not {type(options).__name__}")
+        return _smsd.fingerprints(mols, options, num_threads=num_threads, convert=_ensure_mol)
+    _checked_int(fp_size, "fp_size", 1)
+    _checked_int(path_length, "path_length", 1)
+    if kind not in _KINDS:
+        raise ValueError(
+            f"Unknown fingerprint kind: {kind!r}. "
+            f"Use 'path', 'mcs', 'ecfp', 'circular', 'fcfp', or 'torsion'."
+        )
+    return _smsd.fingerprints(mols, kind, radius, path_length, fp_size, num_threads, _ensure_mol)
 
 
 def fingerprint_from_smiles(smiles, radius=2, fp_size=2048, mode="ecfp", *, path_length=7, options=None):

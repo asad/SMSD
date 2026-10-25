@@ -11,7 +11,7 @@
        `mvn -f java/pom.xml verify` builds and tests both. -->
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd-parent</artifactId>
-  <version>8.0.2</version>
+  <version>8.0.3</version>
   <packaging>pom</packaging>
   <name>SMSD Parent</name>
   <description>Shared build configuration for the SMSD library and command-line tool</description>
@@ -80,9 +80,10 @@
     <!-- Test -->
     <junit.version>5.13.4</junit.version>
     <maven.surefire.version>3.5.4</maven.surefire.version>
-    <!-- Exclude slow benchmark/stress suites by default.
-         Override with -Dslow.tests.exclude=nothing to run everything. -->
-    <slow.tests.exclude>**/BenchmarkSuiteTest.java,**/ExternalBenchmarkTest.java,**/JavaCdkVsSmsdBenchmarkTest.java,**/AlgorithmTest.java,**/StressTest.java</slow.tests.exclude>
+    <!-- JUnit tags left out of the default run: SlowTest marks the slowest tests and the
+         benchmark suites. -Dslow.tests.exclude=nothing names no tag and runs every test.
+         Tests chosen with -Dtest or -Dgroups run whatever their tags (see the profiles). -->
+    <slow.tests.exclude>SlowTest</slow.tests.exclude>
 
     <!-- Plugins -->
     <appassembler.version>2.1.0</appassembler.version>
@@ -196,11 +197,8 @@
           <configuration>
             <useModulePath>false</useModulePath>
             <workingDirectory>${smsd.root}</workingDirectory>
-            <!-- Exclude heavy benchmark/stress suites from the default CI run.
-                 Run them explicitly with -Dslow.tests.exclude=nothing when needed. -->
-            <excludes>
-              <exclude>${slow.tests.exclude}</exclude>
-            </excludes>
+            <!-- Leave out the tests tagged SlowTest; see slow.tests.exclude. -->
+            <excludedGroups>${slow.tests.exclude}</excludedGroups>
           </configuration>
         </plugin>
         <plugin>
@@ -243,6 +241,31 @@
   </build>
 
   <profiles>
+    <!-- Tests chosen by name (-Dtest) or by tag (-Dgroups) run whatever their tags,
+         so a slow test can be run on its own. A -Dslow.tests.exclude given on the
+         command line still applies. -->
+    <profile>
+      <id>named-tests</id>
+      <activation>
+        <property>
+          <name>test</name>
+        </property>
+      </activation>
+      <properties>
+        <slow.tests.exclude>nothing</slow.tests.exclude>
+      </properties>
+    </profile>
+    <profile>
+      <id>tagged-tests</id>
+      <activation>
+        <property>
+          <name>groups</name>
+        </property>
+      </activation>
+      <properties>
+        <slow.tests.exclude>nothing</slow.tests.exclude>
+      </properties>
+    </profile>
     <profile>
       <id>release</id>
       <build>

@@ -21,6 +21,7 @@ WORKFLOWS = sorted([*(ROOT / ".github/workflows").glob("*.yml"), *(ROOT / ".gith
 WIDER_ACCESS = {
     ("installers.yml", "windows"): {"contents: write"},  # draft releases are visible only with write access
     ("python-publish.yml", "publish"): {"id-token: write", "contents: read"},  # trusted publishing to PyPI
+    ("python-publish.yml", "publish-cuda"): {"id-token: write", "contents: read"},
     ("release.yml", "docker-cli"): {"contents: read", "actions: read"},  # checked SDK and wheel artifacts from an explicit build run
 }
 
@@ -40,6 +41,23 @@ def permissions(job):
 
 
 class WorkflowTest(unittest.TestCase):
+    def test_cuda_publishing_uses_a_separate_manual_validated_release_path(self):
+        text = (ROOT / ".github/workflows/python-publish.yml").read_text()
+        workflow_jobs = jobs(text)
+        cuda = workflow_jobs["publish-cuda"]
+        self.assertIn("options: [smsd, smsd-cuda]", text)
+        self.assertIn("inputs.publish && inputs.distribution == 'smsd-cuda'", cuda)
+        self.assertIn("inputs.publish && inputs.distribution == 'smsd'", workflow_jobs["publish"])
+        self.assertIn("environment: pypi", cuda)
+        for command in ("download", "validate", "verify-staged"):
+            self.assertIn("check_pypi_release.py " + command + " --package smsd-cuda", cuda)
+        self.assertIn("--source-checkout release-checkout", cuda)
+        self.assertLess(cuda.index("verify-staged"), cuda.index("uses: pypa/gh-action-pypi-publish@"))
+        self.assertNotIn("pip install", cuda)
+        self.assertNotIn("build_python_wheels.py build", cuda)
+        self.assertNotIn("password:", cuda)
+        self.assertIn("smsd-cuda only publishes an existing validated release wheel", workflow_jobs["source"])
+
     def test_every_workflow_runs_only_on_request(self):
         self.assertEqual(len(WORKFLOWS), 5)
         for workflow in WORKFLOWS:
@@ -89,9 +107,21 @@ class PackagingTest(unittest.TestCase):
 
     def test_wheel_build_tools_are_pinned(self):
         config = tomllib.loads((ROOT / "scripts/cibuildwheel.toml").read_text(encoding="utf-8"))
-        install = config["tool"]["cibuildwheel"]["before-build"][0]
+        commands = config["tool"]["cibuildwheel"]["before-build"]
+        self.assertEqual(commands[0], "python -m pip install --upgrade pip==26.2.2")
+        self.assertEqual(config["tool"]["cibuildwheel"]["before-test"], commands[0])
+        install = commands[1]
         self.assertRegex(install, r"\bcmake==\d+\.\d+\.\d+\b")
         self.assertRegex(install, r"\bninja==\d+\.\d+\.\d+\b")
+
+    def test_cuda_environment_pins_pip_before_installing_build_tools(self):
+        setup = (ROOT / "packaging/smsd-cuda/scripts/setup.sh").read_text()
+        pip = "python -m pip install -q --upgrade pip==26.2.2"
+        tools = "python -m pip install -q scikit-build-core==1.1.1"
+        self.assertLess(setup.index("use_python\n"), setup.index(pip))
+        self.assertLess(setup.index(pip), setup.index(tools))
+        self.assertIn("auditwheel==6.8.2 cmake==4.4.3 ninja==1.13.2", setup)
+        self.assertNotIn("--upgrade pip >", setup)
 
     def test_docker_base_images_are_pinned_and_the_image_is_labelled(self):
         text = (ROOT / "Dockerfile").read_text(encoding="utf-8")

@@ -106,8 +106,8 @@ def main():
     os.environ["OMP_NUM_THREADS"] = "4"
     import smsd
     from smsd import _accelerator, _smsd
-    if smsd.__version__ != "8.0.2" or sys.version_info[:2] != (3, 14):
-        raise RuntimeError("Expected SMSD 8.0.2 on CPython 3.14")
+    if smsd.__version__ != "8.0.3" or sys.version_info[:2] != (3, 14):
+        raise RuntimeError("Expected SMSD 8.0.3 on CPython 3.14")
     artifacts = json.loads(Path("/usr/share/doc/smsd/ARTIFACTS.json").read_text())
     architecture = "amd64" if platform.machine() == "x86_64" else "arm64" if platform.machine() == "aarch64" else None
     if architecture is None:
@@ -121,7 +121,7 @@ def main():
         device = "CPU"
         if args.gpu:
             import smsd_cuda
-            if smsd_cuda.__version__ != "8.0.2" or not smsd_cuda.is_available():
+            if smsd_cuda.__version__ != "8.0.3" or not smsd_cuda.is_available():
                 raise RuntimeError("The CUDA package is unavailable: " + str(smsd_cuda.unavailable_reason()))
             if not smsd.gpu_is_available():
                 raise RuntimeError("SMSD did not attach the CUDA provider")

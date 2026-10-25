@@ -34,7 +34,7 @@ EXPORTS_8_0_0 = [
 ]
 
 # Names added since 8.0.0; none is removed or renamed.
-ADDED_SINCE_8_0_0 = ['rings_truncated']
+ADDED_SINCE_8_0_0 = ['fingerprints', 'rings_truncated']
 
 BENZENE, PHENOL, ETHANOL = "c1ccccc1", "c1ccc(O)cc1", "CCO"
 

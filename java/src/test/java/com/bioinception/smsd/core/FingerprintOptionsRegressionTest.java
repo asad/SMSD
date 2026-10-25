@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.openscience.cdk.interfaces.IAtom;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -64,6 +65,7 @@ class FingerprintOptionsRegressionTest {
   }
 
   @Test
+  @Tag("SlowTest")
   void classicConfigurationsEqualTheFixedMethods() throws Exception {
     int checked = 0;
     for (String smiles : corpus()) {

@@ -10,6 +10,7 @@
 #include "smsd/smarts_parser.hpp"
 #include "smsd/batch.hpp"
 #include "smsd/layout.hpp"
+#include "smsd/fingerprint_options.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -300,6 +301,79 @@ static void testAromaticCacheInvalidation() {
             "aromaticity mutation left stale neighbourhood labels");
 }
 
+struct AtomCaches {
+    std::vector<std::vector<int>> rings;
+    std::vector<int> features, ringCounts, ringSystems, canonical, orbits;
+    uint64_t hash;
+    bool operator==(const AtomCaches& other) const {
+        return rings == other.rings && features == other.features
+            && ringCounts == other.ringCounts && ringSystems == other.ringSystems
+            && canonical == other.canonical && orbits == other.orbits && hash == other.hash;
+    }
+};
+
+static AtomCaches atomCaches(const smsd::MolGraph& graph) {
+    graph.ensureCanonical();
+    graph.ensureRingCounts();
+    graph.ensureRingSystems();
+    return {graph.computeRings(), graph.getPharmacophoreFeatures(), graph.ringCount,
+        graph.ringSystemId_, graph.canonicalLabel, graph.orbit, graph.canonicalHash};
+}
+
+static void testPublishedCaches() {
+    for (const auto& text : {std::string(), std::string("CCN"), std::string("Oc1ccc(CCN)cc1")}) {
+        const auto expectedGraph = text.empty() ? smsd::MolGraph() : smsd::parseSMILES(text);
+        const auto expected = atomCaches(expectedGraph);
+        const auto shared = text.empty() ? smsd::MolGraph() : smsd::parseSMILES(text);
+        parallelCalls(2, [&](int) {
+            for (int iteration = 0; iteration < 8; ++iteration)
+                require(atomCaches(shared) == expected, "concurrent lazy caches must be complete and stable");
+        });
+        auto copied = shared;
+        smsd::MolGraph assigned;
+        assigned = shared;
+        auto moved = std::move(copied);
+        smsd::MolGraph moveAssigned;
+        moveAssigned = std::move(assigned);
+        parallelCalls(2, [&](int worker) {
+            const auto& graph = worker == 0 ? moved : moveAssigned;
+            require(atomCaches(graph) == expected, "copied and moved caches must keep their values");
+        });
+    }
+    auto warm = smsd::parseSMILES("CCN");
+    atomCaches(warm);
+    warm.setBondOrder(1, 2, 2);
+    auto cold = smsd::parseSMILES("CCN");
+    cold.setBondOrder(1, 2, 2);
+    require(atomCaches(warm) == atomCaches(cold), "bond mutation must invalidate published caches");
+    auto aromatic = smsd::parseSMILES("c1ccccc1O");
+    atomCaches(aromatic);
+    require(aromatic.kekulize(), "ordinary aromatic ring must Kekulise");
+    auto unfilled = smsd::parseSMILES("c1ccccc1O");
+    require(unfilled.kekulize(), "ordinary aromatic ring must Kekulise before caching");
+    require(atomCaches(aromatic) == atomCaches(unfilled), "aromatic mutation must invalidate published caches");
+}
+
+static void testPreparedFingerprintKeys() {
+    using namespace smsd::batch;
+    const auto target = smsd::parseSMILES("Nc1ccc(O)cc1");
+    const auto maccs = FingerprintOptions::maccs();
+    const auto custom = FingerprintOptions::withKeys({FingerprintKey("[N;$(N)]"), FingerprintKey("[O;$(O)]")});
+    const auto expected = computeFingerprint(target, maccs);
+    const auto customExpected = computeFingerprint(target, custom);
+    parallelCalls(2, [&](int) {
+        for (int iteration = 0; iteration < 8; ++iteration) {
+            require(computeFingerprint(target, maccs) == expected, "shared MACCS queries must keep every bit");
+            require(computeFingerprint(target, custom) == customExpected, "custom prepared keys must remain independent");
+        }
+        bool rejected = false;
+        try { computeFingerprint(target, FingerprintOptions::withKeys({FingerprintKey("C(")})); }
+        catch (const std::exception&) { rejected = true; }
+        require(rejected, "an invalid custom key must still be rejected");
+        require(computeFingerprint(target, custom) == customExpected, "a failed key must not corrupt prepared queries");
+    });
+}
+
 int main(int argc, char** argv) {
     return smsd_test::runGroups(argc, argv, {
         {"templates", testTemplateFirstUse}, {"recursive", testRecursiveQueryReuse},
@@ -307,5 +381,6 @@ int main(int argc, char** argv) {
         {"batches", testParallelBatches}, {"corpus", testConcurrentCorpusUpdates},
         {"dispatcher", testDispatcherLowestFailure}, {"largest-first", testLargestTargetsFirst},
         {"batch-threads", testBatchThreads}, {"workers", testWorkerCount},
-        {"invalidation", testPropertyCacheInvalidation}, {"aromatic-invalidation", testAromaticCacheInvalidation}});
+        {"invalidation", testPropertyCacheInvalidation}, {"aromatic-invalidation", testAromaticCacheInvalidation},
+        {"published-caches", testPublishedCaches}, {"prepared-keys", testPreparedFingerprintKeys}});
 }

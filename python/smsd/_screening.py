@@ -155,7 +155,7 @@ class TargetCorpus:
         """The captured targets as (graph, indices) pairs, shared by every search of this corpus."""
         with self._lock:
             if self._targets is None:
-                self._targets = list(zip(self._impl.targets(), self._indices))
+                self._targets = list(zip(self._impl._search_targets(), self._indices))
             return self._targets
 
     def prewarm(self, *, num_threads=0):

@@ -482,6 +482,74 @@ void batchesCrossWorkspaceChunksAndReplaceProviders() {
     smsd::screen_accelerator::detach();
 }
 
+void fingerprintBatchesKeepExactThresholdsAndOrder() {
+    auto accelerator = residentTable();
+    residentFailure = 0;
+    for (std::size_t words : {std::size_t(1), std::size_t(32), std::size_t(1025)}) {
+        std::vector<std::vector<uint64_t>> targets(257, std::vector<uint64_t>(words, 0));
+        for (std::size_t target = 0; target < targets.size(); ++target) {
+            if (target % 5 == 0) continue;
+            for (std::size_t word = 0; word < words; ++word)
+                targets[target][word] = target % 5 == 1 ? UINT64_MAX
+                    : (uint64_t(1) << ((target + word) % 64));
+        }
+        std::vector<std::vector<uint64_t>> queries;
+        for (std::size_t query = 0; query < (words > 32 ? 5 : 65); ++query)
+            queries.push_back(targets[query % 5]);
+        smsd::screen_accelerator::ResidentCache cache;
+        const auto score = [](int common, int queryBits, int targetBits) {
+            return smsd::batch::tanimoto(smsd::batch::BitCounts{common, queryBits, targetBits});
+        };
+        for (double threshold : {-1.0, 0.0, std::nextafter(0.5, 0.0), 0.5,
+                                  std::nextafter(0.5, 1.0), 1.0, std::nextafter(1.0, 2.0),
+                                  std::numeric_limits<double>::quiet_NaN()}) {
+            const auto actual = smsd::screen_accelerator::fingerprintScreens(
+                queries, targets, threshold, cache, score, &accelerator);
+            require(actual.has_value() && actual->size() == queries.size(), "prepared batch retains every query");
+            for (std::size_t query = 0; query < queries.size(); ++query) {
+                std::vector<int> expected;
+                for (std::size_t target = 0; target < targets.size(); ++target)
+                    if (smsd::batch::fingerprintTanimoto(queries[query], targets[target]) >= threshold)
+                        expected.push_back(static_cast<int>(target));
+                require((*actual)[query] == expected, "integer thresholds keep CPU boundary hits in target order");
+            }
+        }
+    }
+}
+
+
+/** Decimal boundaries keep the CPU division and equal-score target order. */
+void fingerprintBatchesKeepRoundedDecimalThresholds() {
+    auto accelerator = residentTable();
+    residentFailure = 0;
+    const std::vector<std::vector<uint64_t>> queries{{0x1f}};
+    const std::vector<std::vector<uint64_t>> targets{{0x3e1}, {0x3e1}, {0x1f}, {0}};
+    smsd::screen_accelerator::ResidentCache cache;
+    const auto score = [](int common, int queryBits, int targetBits) {
+        return smsd::batch::tanimoto(smsd::batch::BitCounts{common, queryBits, targetBits});
+    };
+    const double boundary = smsd::batch::fingerprintTanimoto(queries[0], targets[0]);
+    require(boundary == 0.1, "decimal fixture has one common bit out of ten union bits");
+    for (double threshold : {std::nextafter(boundary, 0.0), boundary,
+                              std::nextafter(boundary, 1.0)}) {
+        const auto actual = smsd::screen_accelerator::fingerprintScreens(
+            queries, targets, threshold, cache, score, &accelerator);
+        require(actual.has_value() && actual->size() == 1, "decimal screen is retained");
+        const std::vector<int> expected = threshold <= boundary
+            ? std::vector<int>{0, 1, 2} : std::vector<int>{2};
+        require((*actual)[0] == expected, "decimal boundary and tied target indices follow the CPU");
+    }
+}
+
+/** Large counts must not overflow before forming their union. */
+void labelSimilaritySupportsFullIntCounts() {
+    const int maximum = std::numeric_limits<int>::max();
+    require(smsd::screening_detail::overlapSimilarity(maximum, maximum, maximum) == 1.0,
+            "equal large atom counts have unit similarity");
+    require(smsd::screening_detail::overlapSimilarity(1, maximum, 1) == 1.0 / maximum,
+            "a large atom-count sum retains its denominator");
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -495,5 +563,8 @@ int main(int argc, char** argv) {
         {"resident-lifetime", residentStorageFollowsCorpusLifetime},
         {"old-prefix", oldAndPartialTablesKeepTheOriginalContract},
         {"resident-chunks", batchesCrossWorkspaceChunksAndReplaceProviders},
+        {"fingerprint-batch-thresholds", fingerprintBatchesKeepExactThresholdsAndOrder},
+        {"fingerprint-decimal-thresholds", fingerprintBatchesKeepRoundedDecimalThresholds},
+        {"label-count-overflow", labelSimilaritySupportsFullIntCounts},
     });
 }

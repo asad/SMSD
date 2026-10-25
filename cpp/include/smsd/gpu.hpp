@@ -191,7 +191,7 @@ struct ScreenHit {
  * @param chemistry  Chemical matching options for the atom-label bound
  * @param threshold  Minimum similarity to report (default 0.0 = return all)
  * @param numThreads CPU thread count when falling back (0 = auto)
- * @return           Sorted vector of {index, score} above threshold
+ * @return           Hits in target input order whose scores reach the threshold
  */
 inline std::vector<ScreenHit> batchSimilarityScreenAuto(
     const MolGraph& query,
@@ -227,12 +227,12 @@ inline std::vector<ScreenHit> batchSimilarityScreenAuto(
         mt.reserve(targets.size());
         for (auto& t : targets)
             mt.push_back(detail::screeningDescriptor<metal::MetalMolecule>(t, chemistry));
-        // Run Metal GPU screen
-        auto raw = metal::batchSimilarityScreen(mq, mt,
-                                            static_cast<float>(threshold));
-        hits.reserve(raw.size());
-        for (auto& r : raw)
-            hits.push_back({r.index, static_cast<double>(r.score)});
+        const auto overlaps = metal::detail::batchSimilarityOverlaps(mq, mt);
+        hits.reserve(overlaps.size());
+        for (size_t target = 0; target < overlaps.size(); ++target) {
+            const double score = screening_detail::overlapSimilarity(overlaps[target], mq.n, mt[target].n);
+            if (score >= threshold) hits.push_back({static_cast<int>(target), score});
+        }
         return hits;
     }
 #endif

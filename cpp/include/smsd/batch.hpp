@@ -26,14 +26,17 @@
 #include "smsd/search_types.hpp"
 #include "smsd/similarity_screen.hpp"
 #include "smsd/smiles_parser.hpp"
+#include "smsd/detail/target_storage.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <cinttypes>
 #include <cmath>
 #include <stdexcept>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <exception>
 #include <functional>
 #include <map>
 #include <limits>
@@ -41,6 +44,7 @@
 #include <mutex>
 #include <shared_mutex>
 #include <string>
+#include <type_traits>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -620,6 +624,45 @@ namespace detail {
 inline int workersFor(int count, int numThreads, int minimumPerWorker) {
     return std::max(1, std::min(resolveThreads(numThreads), count / std::max(1, minimumPerWorker)));
 }
+
+/**
+ * fingerprint(molecules[i]) for every molecule, in input order, on up to numThreads threads
+ * (0 = all available). Molecules is any sequence whose items read as const MolGraph&. When
+ * fingerprint throws, the exception of the first molecule that fails propagates, as on one thread.
+ */
+template<class Molecules, class Fingerprint>
+inline auto fingerprintEach(const Molecules& molecules, int numThreads, const Fingerprint& fingerprint)
+    -> std::vector<std::decay_t<decltype(fingerprint(molecules[0]))>> {
+    const int N = static_cast<int>(molecules.size());
+    std::vector<std::decay_t<decltype(fingerprint(molecules[0]))>> results(N);
+#ifdef _OPENMP
+    const int workers = workersFor(N, numThreads, 8);
+    if (workers > 1) {
+        std::atomic<int> firstFailure{N};
+        std::exception_ptr failure;
+        #pragma omp parallel for schedule(dynamic, 8) num_threads(workers)
+        for (int i = 0; i < N; ++i) {
+            // Molecules after a failure are skipped; every molecule before it is still visited.
+            if (i > firstFailure.load(std::memory_order_relaxed)) continue;
+            try {
+                results[i] = fingerprint(molecules[i]);
+            } catch (...) {
+                #pragma omp critical(smsd_fingerprint_each_failure)
+                if (i < firstFailure.load(std::memory_order_relaxed)) {
+                    failure = std::current_exception();
+                    firstFailure.store(i, std::memory_order_relaxed);
+                }
+            }
+        }
+        if (failure) std::rethrow_exception(failure);
+        return results;
+    }
+#else
+    (void)numThreads;
+#endif
+    for (int i = 0; i < N; ++i) results[i] = fingerprint(molecules[i]);
+    return results;
+}
 } // namespace detail
 
 /// Generate path-based fingerprints for all molecules in parallel.
@@ -1025,6 +1068,8 @@ inline std::vector<int> countsToArray(const std::map<int,int>& counts, int fpSiz
 // TargetCorpus: pre-warmed, fingerprinted target collection
 // ============================================================================
 
+namespace detail { struct CorpusAccess; }
+
 /// A reusable collection of target molecules with pre-computed invariants
 /// and fingerprints. Amortises the cost of prewarm + fingerprint computation
 /// across many queries.
@@ -1036,7 +1081,8 @@ inline std::vector<int> countsToArray(const std::map<int,int>& counts, int fpSiz
 ///   auto matches = Substructure::find(query).matchMany(corpus.targets());  // reuse many times
 ///   auto idxs = corpus.screen(query, 0.7);
 class TargetCorpus {
-    std::vector<MolGraph> targets_;
+    friend struct detail::CorpusAccess;
+    detail::TargetStorage targets_;
     std::vector<std::vector<uint64_t>> fingerprints_;
     bool prewarmed_ = false;
     mutable screen_accelerator::ResidentCache fingerprintDevice_;
@@ -1130,7 +1176,7 @@ class TargetCorpus {
         const bool resident = screen_accelerator::hasResidentLabels(screen_accelerator::active());
         if (resident) {
             auto& cache = labelTables_.resident[screening_detail::labelMode(chemistry)];
-            if (auto results = screen_accelerator::residentSimilarityScreens(
+            if (auto results = screen_accelerator::residentSimilarityScreensForTargets(
                     queries, targets_, labels, threshold, chemistry, numThreads, cache))
                 return std::move(*results);
         }
@@ -1138,13 +1184,12 @@ class TargetCorpus {
         results.reserve(queries.size());
         for (const MolGraph* query : queries) {
             if (!resident) {
-                if (auto scores = screen_accelerator::similarityScores(*query, targets_, labels, chemistry, numThreads)) {
+                if (auto scores = screen_accelerator::similarityScoresForTargets(*query, targets_, labels, chemistry, numThreads)) {
                     results.push_back(screening_detail::indicesReaching(*scores, threshold));
                     continue;
                 }
             }
-            results.push_back(screening_detail::indicesReaching(
-                screening_detail::similarityScores(*query, targets_, labels, chemistry, numThreads), threshold));
+            results.push_back(screening_detail::indicesReachingTargets(*query, targets_, labels, chemistry, threshold, numThreads));
         }
         return results;
     }
@@ -1153,7 +1198,7 @@ public:
     /// Add a single target molecule.
     void addTarget(MolGraph g) {
         const std::unique_lock<std::shared_mutex> corpusLock(corpusMutex());
-        targets_.push_back(std::move(g));
+        targets_.add(std::move(g));
         prewarmed_ = false;
         fingerprintDevice_.clear();
         substructureFingerprints_.clear();
@@ -1163,16 +1208,25 @@ public:
     /// Add multiple target molecules.
     void addTargets(std::vector<MolGraph> gs) {
         const std::unique_lock<std::shared_mutex> corpusLock(corpusMutex());
-        targets_.reserve(targets_.size() + gs.size());
-        for (auto& g : gs) {
-            targets_.push_back(std::move(g));
-        }
+        targets_.add(std::move(gs));
         prewarmed_ = false;
         fingerprintDevice_.clear();
         substructureFingerprints_.clear();
         labelTables_.clear();
     }
 
+private:
+    /** Add independently owned snapshots, preserving their original target slots. */
+    void addCapturedTargets(detail::TargetStorage targets) {
+        const std::unique_lock<std::shared_mutex> corpusLock(corpusMutex());
+        targets_.add(std::move(targets));
+        prewarmed_ = false;
+        fingerprintDevice_.clear();
+        substructureFingerprints_.clear();
+        labelTables_.clear();
+    }
+
+public:
     /// Pre-compute lazy graph invariants and ECFP fingerprints for all targets.
     /// Query methods may run concurrently; additions and prewarming are exclusive.
     void prewarm(int numThreads = 0) {
@@ -1181,6 +1235,7 @@ public:
         substructureFingerprints_.clear();
         const int N = static_cast<int>(targets_.size());
         if (N == 0) { prewarmed_ = true; return; }
+        const int stored = static_cast<int>(targets_.storedSize());
 
         const int nThreads = detail::workersFor(N, numThreads, 1);
         (void)nThreads;
@@ -1189,8 +1244,8 @@ public:
 #ifdef _OPENMP
         #pragma omp parallel for schedule(dynamic, 1) num_threads(nThreads) if(nThreads > 1)
 #endif
-        for (int i = 0; i < N; ++i) {
-            detail::prewarmGraph(targets_[i]);
+        for (int i = 0; i < stored; ++i) {
+            detail::prewarmGraph(targets_.storedGraph(i));
         }
 
         // Compute ECFP fingerprints in parallel
@@ -1223,13 +1278,22 @@ public:
         const std::shared_lock<std::shared_mutex> corpusLock(corpusMutex());
         std::vector<MolGraph> result;
         result.reserve(targets_.size());
-        for (const auto& target : targets_) {
+        for (size_t index = 0; index < targets_.size(); ++index) {
+            const auto& target = targets_[index];
             const std::lock_guard<std::recursive_mutex> graphLock(target.lazyCacheMutex());
             result.push_back(target);
         }
         return result;
     }
 
+private:
+    /** An owned read-only view; subsequent additions do not change its targets. */
+    detail::TargetStorage targetView() const {
+        const std::shared_lock<std::shared_mutex> corpusLock(corpusMutex());
+        return targets_;
+    }
+
+public:
     /// Fingerprint-based Tanimoto screening: returns indices of targets
     /// whose Tanimoto similarity to the query exceeds the threshold.
     /// Requires prewarm() to have been called (for fingerprints).
@@ -1290,15 +1354,14 @@ public:
         if (screen_accelerator::hasResidentLabels(provider)) {
             if (!targets_.empty() && screen_accelerator::reachesMinimum(provider, 2, targets_.size())) {
                 auto& cache = labelTables_.resident[screening_detail::labelMode(chemistry)];
-                if (auto results = screen_accelerator::residentSimilarityScreens(
+                if (auto results = screen_accelerator::residentSimilarityScreensForTargets(
                         {&query}, targets_, labels, threshold, chemistry, numThreads, cache, provider))
                     return std::move(results->front());
             }
-        } else if (auto scores = screen_accelerator::similarityScores(query, targets_, labels, chemistry, numThreads)) {
+        } else if (auto scores = screen_accelerator::similarityScoresForTargets(query, targets_, labels, chemistry, numThreads)) {
             return screening_detail::indicesReaching(*scores, threshold);
         }
-        return screening_detail::indicesReaching(
-            screening_detail::similarityScores(query, targets_, labels, chemistry, numThreads), threshold);
+        return screening_detail::indicesReachingTargets(query, targets_, labels, chemistry, threshold, numThreads);
     }
 
     /** Similarity-bound screens in query order, with one label rule for the batch. */
@@ -1358,6 +1421,20 @@ public:
         return mask;
     }
 };
+
+namespace detail {
+
+/** Internal access to captured target storage. */
+struct CorpusAccess {
+    static void addCapturedTargets(TargetCorpus& corpus, TargetStorage targets) {
+        corpus.addCapturedTargets(std::move(targets));
+    }
+    static TargetStorage targetView(const TargetCorpus& corpus) {
+        return corpus.targetView();
+    }
+};
+
+} // namespace detail
 
 } // namespace batch
 } // namespace smsd

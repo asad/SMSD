@@ -98,7 +98,8 @@ public final class MCS {
     if (options.objective != Objective.MCES || !options.excludedTargetAtoms.isEmpty()
         || ((options.connectivity == Connectivity.Connected || options.maxFragments == 1)
                 ? query.n <= target.n : query.bondCount() <= target.bondCount()))
-      return searchOriented(query, target, options, limit, all, control);
+      return qualifyRingProof(searchOriented(query, target, options, limit, all, control),
+          query, target, options.chemistry);
     SearchResult reversed = searchOriented(target, query, options, limit, all, control);
     List<SearchResult.Match> matches = new ArrayList<>();
     for (SearchResult.Match match : reversed.matches()) {
@@ -113,8 +114,27 @@ public final class MCS {
           atoms, bonds, MatchGraph.fragments(atoms, bonds.keySet()), match.score()));
     }
     matches.sort(CommonBondSearch.CANONICAL);
-    return new SearchResult(matches, reversed.status(), reversed.optimal(), reversed.complete(),
-        reversed.score(), reversed.nodesVisited(), control.elapsedMillis());
+    return qualifyRingProof(new SearchResult(matches, reversed.status(), reversed.optimal(), reversed.complete(),
+        reversed.score(), reversed.nodesVisited(), control.elapsedMillis()), query, target, options.chemistry);
+  }
+
+  /** Whether the chemistry relies on an exhaustive set of relevant cycles. */
+  private static boolean needsRingProof(ChemOptions chemistry) {
+    return chemistry.completeRingsOnly || chemistry.ringFusionMode == ChemOptions.RingFusionMode.STRICT;
+  }
+
+  /** Retain the search results without claiming proof from truncated ring perception. */
+  private static SearchResult qualifyRingProof(
+      SearchResult result, MolGraph query, MolGraph target, ChemOptions chemistry) {
+    if (!needsRingProof(chemistry)
+        || (!result.optimal() && !result.complete() && result.status() != SearchResult.Status.Completed)
+        || (!query.ringsTruncated() && !target.ringsTruncated()))
+      return result;
+    SearchResult.Status status = result.status();
+    if (status == SearchResult.Status.Completed || status == SearchResult.Status.LimitReached)
+      status = SearchResult.Status.LimitReached;
+    return new SearchResult(result.matches(), status, false, false, result.score(),
+        result.nodesVisited(), result.elapsedMillis());
   }
 
   /**
@@ -351,7 +371,7 @@ public final class MCS {
    * An invalid match is not maximal, so it gives {@code false} rather than an exception, as in
    * the native core.
    *
-   * @throws IllegalStateException if the search budget stops the proof
+   * @throws IllegalStateException if the search budget or truncated ring perception prevents proof
    */
   public static boolean isMappingMaximal(
       MolGraph query, MolGraph target, SearchResult.Match match, Options options) {
@@ -370,6 +390,7 @@ public final class MCS {
       kernel.seed(match);
       result = kernel.search();
     }
+    result = qualifyRingProof(result, query, target, extension.chemistry);
     if (!result.optimal())
       throw new IllegalStateException("Mapping maximality was not proved: " + result.status());
     if (!result.found())
@@ -382,7 +403,7 @@ public final class MCS {
    * Prove maximality of an atom mapping, selecting its bonds as {@link #mappingMatch} does; an
    * invalid mapping gives {@code false}.
    *
-   * @throws IllegalStateException if the search budget stops the proof
+   * @throws IllegalStateException if the search budget or truncated ring perception prevents proof
    */
   public static boolean isMappingMaximal(
       MolGraph query, MolGraph target, Map<Integer, Integer> mapping, Options options) {
@@ -526,7 +547,14 @@ public final class MCS {
     }
 
     ConsensusResult result() {
-      return new ConsensusResult(bestSource, bestSourceIndex, best, bestMappings, control.status(), nodes,
+      SearchResult.Status status = control.status();
+      if (status == SearchResult.Status.Completed && needsRingProof(options.chemistry))
+        for (MolGraph molecule : molecules)
+          if (molecule.ringsTruncated()) {
+            status = SearchResult.Status.LimitReached;
+            break;
+          }
+      return new ConsensusResult(bestSource, bestSourceIndex, best, bestMappings, status, nodes,
           control.elapsedMillis());
     }
 

@@ -30,15 +30,53 @@ perform the MCS search.
 ## Results and budgets
 
 - Every search reports `status`, `optimal` and `complete` separately from its
-  matches. `Completed` means the search ran to its end; `TimedOut`, `Cancelled`
-  and `LimitReached` say why it stopped early.
+  matches. `Completed` means the search ran to its end. `TimedOut` and
+  `Cancelled` mean the time limit or a cancellation stopped it. `LimitReached`
+  means the node limit stopped it, an enumeration reached its match limit, or
+  an MCES pair beyond the size limits below was declined before any search;
+  a declined pair returns no match and proves nothing.
+- Complete-ring matching and strict ring fusion depend on perceived cycles.
+  If ring perception was truncated in either input, MCS retains its selected
+  mappings but reports `LimitReached`, with `optimal` and `complete` both false.
+  `TimedOut` and `Cancelled` take precedence. Consensus applies the same status
+  rule when any input has truncated ring perception, keeping its fragment and
+  supporting mappings. A valid mapping's maximality cannot be proved in this
+  case, so the check raises its existing proof-unavailable exception.
 - A stopped search may return a valid mapping without proving the optimum, and
   a capped enumeration may prove the objective while leaving the enumeration
   incomplete. An empty incomplete result does not prove absence.
-- A negative timeout selects a default budget from the graph sizes, zero stops
-  immediately, and a node limit of zero leaves the node count unlimited.
+- A negative timeout selects the default budget: 10 s for a substructure search
+  and, for an MCS, 500 ms plus 2 ms per atom pair (query atoms × target
+  atoms), at most 30 s. That is 1.3 s for two 20-atom molecules, 5.5 s for two
+  50-atom molecules and 30 s from 122 atoms each. Zero stops immediately, and a
+  node limit of zero leaves the node count unlimited.
 - Batch results do not depend on the thread count unless a search reaches its
   time limit.
+
+## Size limits
+
+An MCES search declines a pair, with `LimitReached` and no match, when query
+atoms × target atoms exceed 2³⁰, as for two molecules of more than 32,768
+atoms each; when the bonds of the molecule searched from × (the bonds of the
+other / 64, rounded up) exceed 2²², as for two molecules of more than 16,384
+bonds each; or when 2 × the kinds of bond both molecules share × (largest atom
+degree + 1) exceeds 2²⁴, which needs an atom with at least 512 bonds. Without
+excluded target atoms, the search starts from the target when it has fewer
+atoms than the query, or fewer bonds when more than one fragment is allowed,
+and otherwise from the query. MCIS searches are never declined. The three
+libraries share these limits.
+
+## Stereochemistry
+
+With chirality or double-bond stereochemistry enabled, a mapped centre or
+double bond is compared by the parity of its mapped neighbours, not by CIP
+labels, whose priorities depend on atoms outside the mapping. The comparison is
+a hard constraint. MCIS returns the largest common subgraph whose mapped
+stereochemistry agrees, which can be smaller than the MCIS without it: for the
+alanine enantiomers `N[C@@H](C)C(=O)O` and `N[C@H](C)C(=O)O` it keeps five of
+the six atoms. MCES instead leaves out the fewest common bonds that resolve
+each disagreement: for `C[C@@H]1CCCO1` and `C[C@H]1CCCO1` it keeps all six
+atoms and five of the six bonds, where MCIS keeps five atoms.
 
 ## Cross-language differences
 

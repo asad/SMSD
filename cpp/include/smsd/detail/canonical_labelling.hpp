@@ -617,8 +617,9 @@ inline uint64_t MolGraph::computeCanonicalHash(
 // ============================================================================
 
 inline void MolGraph::ensureCanonical() const {
+    if (lazyCaches_.ready(LazyCaches::Canonical)) return;
     const std::lock_guard<std::recursive_mutex> cacheLock(lazyCacheMutex());
-    if (canonicalComputed_) return;
+    if (canonicalComputed_) { lazyCaches_.publish(LazyCaches::Canonical); return; }
     morganRank = computeMorganRanks(n, label, neighbors);
     const auto invariantLabels = canonicalAtomLabels();
     auto clResult = computeCanonicalLabelingImpl(n, invariantLabels, degree, neighbors, this);
@@ -666,6 +667,7 @@ inline void MolGraph::ensureCanonical() const {
     orbit = buildOrbits(verifiedOrbits, n);
     canonicalHash = computeCanonicalHash(*this, canonicalLabel);
     canonicalComputed_ = true;
+    lazyCaches_.publish(LazyCaches::Canonical);
 }
 
 } // namespace smsd

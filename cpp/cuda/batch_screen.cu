@@ -19,6 +19,7 @@
  */
 
 #include <cuda_runtime.h>
+#include "smsd/detail/overlap_similarity.hpp"
 #include <vector>
 #include <cstdint>
 #include <cstring>
@@ -86,9 +87,7 @@ __global__ void similarityScreenKernel(
     const GpuMolecule* __restrict__ query,
     const GpuMolecule* __restrict__ targets,
     int numTargets,
-    double threshold,
-    int*    results,    // 1 = pass, 0 = fail
-    double* scores      // similarity scores
+    int* overlaps
 ) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -112,11 +111,7 @@ __global__ void similarityScreenKernel(
         overlap += min(qc, tc);
     }
 
-    int total = qn + tn;
-    double sim = (total == 0) ? 0.0 : static_cast<double>(overlap) /
-                                       static_cast<double>(total - overlap);
-    scores[tid]  = sim;
-    results[tid] = (sim >= threshold) ? 1 : 0;
+    overlaps[tid] = min(overlap, min(qn, tn));
 }
 
 // ============================================================================
@@ -239,8 +234,7 @@ std::vector<ScreenResult> batchSimilarityScreen(
     // costly cudaMalloc/cudaFree per chunk iteration)
     int maxChunk = std::min(CHUNK_SIZE, N);
     DeviceBuffer<GpuMolecule> d_targets(maxChunk);
-    DeviceBuffer<int>         d_results(maxChunk);
-    DeviceBuffer<double>      d_scores(maxChunk);
+    DeviceBuffer<int>         d_overlaps(maxChunk);
 
     // Process in chunks
     for (int offset = 0; offset < N; offset += CHUNK_SIZE) {
@@ -252,24 +246,20 @@ std::vector<ScreenResult> batchSimilarityScreen(
         // Launch kernel
         int numBlocks = (chunkN + BLOCK_SIZE - 1) / BLOCK_SIZE;
         similarityScreenKernel<<<numBlocks, BLOCK_SIZE>>>(
-            d_query.ptr, d_targets.ptr, chunkN, threshold,
-            d_results.ptr, d_scores.ptr);
+            d_query.ptr, d_targets.ptr, chunkN, d_overlaps.ptr);
 
         // Check for kernel launch errors
         SMSD_CUDA_CHECK(cudaGetLastError());
         SMSD_CUDA_CHECK(cudaDeviceSynchronize());
 
         // Copy results back
-        std::vector<int>    h_results(chunkN);
-        std::vector<double> h_scores(chunkN);
-        d_results.copyToHost(h_results.data(), chunkN);
-        d_scores.copyToHost(h_scores.data(), chunkN);
+        std::vector<int> overlaps(chunkN);
+        d_overlaps.copyToHost(overlaps.data(), chunkN);
 
-        // Collect passing indices (adjusted for chunk offset)
         for (int i = 0; i < chunkN; ++i) {
-            if (h_results[i]) {
-                allHits.push_back({offset + i, h_scores[i]});
-            }
+            const double score = screening_detail::overlapSimilarity(
+                overlaps[i], query.n, targets[offset + i].n);
+            if (score >= threshold) allHits.push_back({offset + i, score});
         }
     }
 

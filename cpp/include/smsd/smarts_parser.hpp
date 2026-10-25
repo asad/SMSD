@@ -71,8 +71,9 @@ public:
         predicates_[name] = smarts;
     }
 
-    /// Expand all `$name` tokens (inside brackets) with `$(definition)`.
-    /// Scans for `$` followed by an identifier (alphanumeric + underscore);
+    /// Expand all `$name` tokens, including those inside recursive SMARTS,
+    /// with `$(definition)`, as Java Standardiser.expandNamedPredicates does.
+    /// Scans for `$` followed by an identifier (ASCII alphanumeric + underscore);
     /// if the identifier is a registered predicate, replaces `$name` with
     /// `$(definition)`.  Tokens already of the form `$(...)` are left alone.
     std::string expandPredicates(const std::string& input) const {
@@ -108,29 +109,43 @@ public:
     }
 
     /// Create a registry pre-loaded with the 10 built-in predicates
-    /// (same set as Java Standardiser).
+    /// (same set as Java Standardiser). A definition is expanded as recursive
+    /// SMARTS, so it describes the atom written first.
     static SmartsPredicateRegistry builtinRegistry() {
         SmartsPredicateRegistry reg;
+        // N bonded to a carbonyl carbon: amides, lactams, imides, ureas and carbamates, those in
+        // aromatic rings included.
         reg.registerPredicate("isAmideN",
-            "[$([NX3;H2,H1;!$(NC=O)]),$([NX3;$(NC=O)])]");
+            "[#7X3][#6]=O");
+        // Carbonyl carbon bearing OH or O-: carboxylic, carbamic and carbonic acids and their
+        // anions.
         reg.registerPredicate("isCarboxylC",
             "[CX3](=O)[OX2H1,OX1-]");
         reg.registerPredicate("isSulfonamideN",
             "[NX3;$(NS(=O)=O)]");
+        // Carbonyl carbon of a carboxylic ester, formates and aromatic lactones included;
+        // anhydrides are excluded.
         reg.registerPredicate("isEster",
-            "[#6][CX3](=O)[OX2][#6]");
+            "[#6X3;H1,$([#6][#6])](=O)[#8X2][#6;!$([#6]=O)]");
+        // Carbonyl carbon bonded to two carbons, carbonyls in aromatic rings included.
         reg.registerPredicate("isKetone",
-            "[#6][CX3](=O)[#6]");
+            "[#6X3](=O)([#6])[#6]");
         reg.registerPredicate("isHalogen",
             "[F,Cl,Br,I]");
+        // Every positive or negative charge in the OpenSMILES range, -15 to +15.
         reg.registerPredicate("isPositive",
-            "[*+]");
+            "[+,+2,+3,+4,+5,+6,+7,+8,+9,+10,+11,+12,+13,+14,+15]");
         reg.registerPredicate("isNegative",
-            "[*-]");
+            "[-,-2,-3,-4,-5,-6,-7,-8,-9,-10,-11,-12,-13,-14,-15]");
+        // N, O or S with hydrogen, aromatic NH included.
         reg.registerPredicate("isHBDonor",
-            "[N!H0,O!H0,S!H0]");
+            "[#7,#8,#16;!H0]");
+        // N, O or S of charge 0 to -3 with a free lone pair. Amide N, aromatic N with three
+        // connections (pyrrole type), N of valence 5 (uncharged nitro and N-oxide) and S of valence
+        // 4 or 6 (sulfoxides, sulfones) are excluded; aniline, nitrile, thioamide, amidine and
+        // sulfonamide N are acceptors.
         reg.registerPredicate("isHBAcceptor",
-            "[N,O,S;H0;!+0]");
+            "[#7&!X3&!v5,#7&A&!v5&!$(NC=O),#8,#16&!v4&!v6;+0,-,-2,-3]");
         return reg;
     }
 };

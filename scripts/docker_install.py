@@ -26,9 +26,9 @@ def selected_files(root, manifest, architecture, gpu):
     entries = [manifest["cpu"][architecture]]
     if gpu:
         entries.extend(manifest["cuda"])
-    expected = {"smsd": "8.0.2"}
+    expected = {"smsd": "8.0.3"}
     if gpu:
-        expected.update({"smsd-cuda": "8.0.2", "nvidia-cuda-runtime-cu12": "12.8.90"})
+        expected.update({"smsd-cuda": "8.0.3", "nvidia-cuda-runtime-cu12": "12.8.90"})
     if (len(entries) != len(expected)
             or {entry["package"]: entry["version"] for entry in entries} != expected):
         raise ValueError("Expected the matching core, accelerator and runtime packages")
@@ -39,7 +39,7 @@ def selected_files(root, manifest, architecture, gpu):
         path = root / relative
         if entry["package"] == "smsd":
             platform = "x86_64" if architecture == "amd64" else "aarch64"
-            prefix = "smsd-8.0.2-cp314-cp314-"
+            prefix = "smsd-8.0.3-cp314-cp314-"
             tags = path.name[len(prefix):-4].split(".")
             if (not path.name.startswith(prefix) or not path.name.endswith(".whl")
                     or "manylinux_2_28_" + platform not in tags
@@ -80,7 +80,7 @@ def main():
     parser.add_argument("--verify-only", action="store_true")
     args = parser.parse_args()
     manifest = json.loads((args.root / "ARTIFACTS.json").read_text())
-    if (manifest["version"] != "8.0.2" or not re.fullmatch(r"[0-9a-f]{40}", args.revision)
+    if (manifest["version"] != "8.0.3" or not re.fullmatch(r"[0-9a-f]{40}", args.revision)
             or manifest["source_commit"] != args.revision):
         raise ValueError("Image version or source revision differs")
     entries = list(selected_files(args.root, manifest, args.architecture, args.gpu))

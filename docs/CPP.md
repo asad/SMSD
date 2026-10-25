@@ -19,7 +19,7 @@ implementation code.
 | --- | --- |
 | Search | `mcs.hpp` (`MCS`, mapping utilities); `substructure.hpp` (`Substructure`, `RGroupResult`); `search_types.hpp` (`SearchOptions`, `MCSOptions`, `SubstructureOptions`, `Match`, `SearchResult`, `SearchStatus`, `CancellationToken`); `chem_options.hpp` (`ChemOptions`) |
 | Molecules | `mol_graph.hpp` (`MolGraph`, `MolGraph::Builder`); `smiles_parser.hpp` (`parseSMILES`, `toSMILES`, `toSMARTS`); `smarts_parser.hpp` (`parseSMARTS`, `SmartsPredicateRegistry`); `parser_utils.hpp` (input limits); `mol_reader.hpp` (MOL and SDF) |
-| Fingerprints and screening | `batch.hpp` (fingerprints, similarity, `TargetCorpus`) and `fingerprint_options.hpp` (`FingerprintOptions`), in `smsd::batch`; `similarity_screen.hpp` (`similarityUpperBound`, `screenTargets`); `gpu.hpp` (optional CUDA screening with a CPU fallback, in `smsd::gpu`) |
+| Fingerprints and screening | `batch.hpp` (fingerprints, similarity, `TargetCorpus`) and `fingerprint_options.hpp` (`FingerprintOptions`), in `smsd::batch`; `similarity_screen.hpp` (`similarityUpperBound`, `screenTargets`); `gpu.hpp` (optional CUDA or Metal screening with a CPU fallback, in `smsd::gpu`) |
 | Rings, stereo and drawing | `ring_finder.hpp` (`computeSSSR`, `computeRelevantCycles`, `computeURFs`, `computeRings`, and `ringsTruncated`, which says whether the ring search stopped at its work bound); `cip.hpp` (`smsd::cip`); `layout.hpp` (2D and 3D coordinates, `transform`); `depict.hpp` (SVG); `depictor.hpp` (2D coordinates constrained to fixed atoms or a reference) |
 | Data and utilities | `hungarian.hpp` (`optimalAssign`); `periodic_table.hpp` (`getElement`, `atomicWeight`, `paulingElectronegativity` and more); `scaffold_library.hpp` (reference ring systems, scaffolds, pharmacophore and functional-group SMARTS, drug-likeness limits); `bond_energies.hpp` (`bondDissociationEnergy`, `mappingBondChangeCost`, in kJ/mol); `color_palette.hpp` (`mapNumberToPaletteColor`, a fixed 20-colour cycle for atom-map numbers); `rdkit_adapter.hpp` ([optional](#optional-native-adapter)) |
 
@@ -51,14 +51,15 @@ which must not change during a search.
 #include "smsd/smsd.hpp"
 
 int main() {
-    const auto query = smsd::parseSMILES("c1ccccc1");
-    const auto target = smsd::parseSMILES("c1ccc(O)cc1");
+    const auto query = smsd::parseSMILES("CC(=O)NC");   // N-methylacetamide
+    const auto target = smsd::parseSMILES("CCC(=O)N");  // propanamide
     const auto result = smsd::MCS::find(query).withTimeout(1000).match(target);
     assert(result.status == smsd::SearchStatus::Completed && result.optimal && result.complete);
-    assert(result.matches.size() == 1 && result.matches.front().atomMapping.size() == 6);
+    assert(result.matches.size() == 1 && result.matches.front().atomMapping.size() == 4);
     assert(smsd::MCS::validateMapping(query, target, result.matches.front()).empty());
-    assert(!smsd::Substructure::find(query).match(target).matches.empty());
-    assert(!smsd::Substructure::smarts("[OH]").match(target).matches.empty());
+    const auto phenol = smsd::parseSMILES("c1ccc(O)cc1");
+    assert(!smsd::Substructure::find("c1ccccc1").match(phenol).matches.empty());
+    assert(!smsd::Substructure::smarts("[OH]").match(phenol).matches.empty());
     const auto all = smsd::Substructure::find("CO").matchAll("OCO", 10);
     assert(all.complete && all.matches.size() == 2);
 }
@@ -78,20 +79,29 @@ malformed SMARTS and for input over the `parser_utils.hpp` limits
 `MAX_SMARTS_LENGTH`, `MAX_ATOMS` (also applied by `parseSMILES`),
 `MAX_SMARTS_EXPRESSION_NODES` and `MAX_SMARTS_NODES_PER_EXPRESSION`.
 A `SmartsPredicateRegistry` expands `$name` tokens into recursive SMARTS with
-`expandPredicates(text)`; the static `builtinRegistry()` supplies ten, such as
-`isHalogen`, `isHBDonor` and `isHBAcceptor`, and
-`registerPredicate(name, smarts)` adds more.
+`expandPredicates(text)`; the static `builtinRegistry()` supplies the ten
+predicates listed in the [Java guide](JAVA.md#prepared-searches), with the same
+definitions, and `registerPredicate(name, smarts)` adds more.
 
 ## Results
 
-`SearchResult` holds `matches`, `status` (`Completed`, `TimedOut`, `Cancelled`,
-or `LimitReached` for a result, node or other limit), `optimal`, `complete`,
-`score`, `nodesVisited` and `elapsedMillis`. A stopped search may return an
+`SearchResult` holds `matches`, `status`, `optimal`, `complete`, `score`,
+`nodesVisited` and `elapsedMillis`. `status` is `Completed` when the search ran
+to its end, `TimedOut` or `Cancelled` when the time limit or the cancellation
+token stopped it, and `LimitReached` when the node limit stopped it, an
+enumeration reached its match limit, or an MCES pair beyond the
+[size limits](#size-limits) was declined before any search; a declined pair
+returns no match and proves nothing. A stopped search may return an
 unproved mapping, and a capped enumeration may be optimal yet incomplete, so
 check both flags, and check `matches` before `front()`. `score` counts mapped
 atoms for the maximum common induced subgraph (MCIS), selected bonds for the
 maximum common edge subgraph (MCES), the summed weight for weighted MCIS, and
 query atoms for a `Substructure` match (zero without one).
+
+With `completeRingsOnly` or `RingFusionMode::STRICT`, truncated ring perception
+in either input leaves the mappings selected using the perceived rings, but
+cannot prove the result. The status is `LimitReached`, with `optimal` and
+`complete` both `false`; `TimedOut` and `Cancelled` take precedence.
 
 A `Match` holds `atomMapping` (a `std::map<int, int>` from query to target
 atom), `bondMapping` (a `std::array<int, 4>` per selected bond: two query
@@ -101,6 +111,25 @@ bonds, as query atoms). Explicit hydrogen atoms are vertices; bracket hydrogen
 counts are not. `Match::toSmiles(query)` writes the selection with valences
 capped at cut bonds; `Match::toGraph(query)` returns it, compactly renumbered,
 with its original chemical context.
+
+### Size limits
+
+An MCES search declines a pair before searching it, with `LimitReached`, no
+match, and `optimal` and `complete` both `false`, when:
+
+- query atoms × target atoms exceed 2³⁰ (1,073,741,824), as for two molecules
+  of more than 32,768 atoms each;
+- the compatible bond pairs would take more than 32 MiB: the bonds of the
+  molecule searched from × (the bonds of the other / 64, rounded up) exceed
+  2²² (4,194,304). Without excluded target atoms, the search starts from the
+  target when it has fewer atoms than the query, or fewer bonds when more than
+  one fragment is allowed, and otherwise from the query. Two molecules of
+  16,384 bonds each fit exactly, as do 32,768 bonds against 8,192;
+- 2 × the kinds of bond both molecules share × (largest atom degree + 1)
+  exceeds 2²⁴ (16,777,216), which needs an atom with at least 512 bonds.
+
+MCIS searches are never declined; the time and node limits bound them. Java
+and Python use the same limits.
 
 ## Objectives and fragments
 
@@ -129,8 +158,8 @@ positive or negative sum in thousandths exceeds the 32-bit range, throw
 #include "smsd/smsd.hpp"
 
 int main() {
-    const auto query = smsd::parseSMILES("C1CC1");
-    const auto target = smsd::parseSMILES("CCC");
+    const auto query = smsd::parseSMILES("C1CC1");    // cyclopropane
+    const auto target = smsd::parseSMILES("CC(C)C");  // isobutane
     const auto induced = smsd::MCS::find(query).match(target);
     assert(induced.matches.front().atomMapping.size() == 2);
 
@@ -147,7 +176,7 @@ int main() {
 
     options.objective = smsd::MCS::Objective::MCIS;
     options.connectivity = smsd::MCS::Connectivity::Fragments;
-    const auto fragments = smsd::MCS::find("CO.CN").withOptions(options).match("CO.CN");
+    const auto fragments = smsd::MCS::find("CCOCC").withOptions(options).match("CCNCC");
     assert(fragments.matches.front().fragments.size() == 2);
 }
 ```
@@ -158,8 +187,9 @@ int main() {
 
 - `chemistry` (`ChemOptions{}`): atom and bond compatibility rules.
 - `timeoutMs` (`-1`): milliseconds; negative selects the default,
-  `min(30000, 500 + 2 × query atoms × target atoms)` for `MCS` and 10,000 for
-  `Substructure`, and zero stops at once.
+  `min(30000, 500 + 2 × query atoms × target atoms)` for `MCS` (1,300 for two
+  20-atom molecules, 5,500 for two 50-atom molecules, 30,000 from 122 atoms
+  each) and 10,000 for `Substructure`, and zero stops at once.
 - `nodeLimit` (`0`): most search nodes; zero is unlimited.
 - `cancellation` (null): a `std::shared_ptr<CancellationToken>`; `cancel()`
   stops the search.
@@ -215,8 +245,9 @@ int main() {
   selected relevant rings of their own input; a fusion atom needs only one.
 - `ringFusionMode` (`RingFusionMode::IGNORE`): `STRICT` requires mapped ring
   atoms to lie in equally many relevant cycles.
-- `useChirality` and `useBondStereo` (`false`): compare tetrahedral and
-  double-bond stereo.
+- `useChirality` and `useBondStereo` (`false`): mapped tetrahedral centres and
+  double bonds must agree in configuration, compared by the parity of their
+  mapped neighbours, not by CIP labels (R/S, E/Z).
 - `tautomerAware` (`false`): relax bond orders where tautomer rules apply.
 - `pH` (`7.4`) and `solvent` (`Solvent::AQUEOUS`): the tautomer confidence
   context.
@@ -241,7 +272,12 @@ implicit hydrogen or lone pair coming second if the first neighbour's index is
 below the atom's and first otherwise, as in Java. `Substructure` requires
 tagged query stereo to recur in the target, and untagged query stereo matches
 anything; `MCS` compares the stereo the mapping fixes, treating unspecified
-target stereo as a wildcard.
+target stereo as a wildcard. The comparison uses the parity of the mapped
+neighbours, not CIP labels, whose priorities depend on atoms outside the
+mapping. In `MCS` it is a hard constraint: an MCIS is the largest common
+subgraph whose mapped stereo agrees, so it can be smaller than the MCIS found
+without these options, and an MCES leaves out the fewest common bonds that
+resolve each disagreement.
 
 ## Mapping utilities
 
@@ -251,7 +287,8 @@ target stereo as a wildcard.
   atom map, with the compatible bonds between mapped atoms.
 - `MCS::isMappingMaximal(query, target, match, options = {})`: whether the
   mapping is valid with no valid strict extension, which is weaker than
-  optimal; throws `std::runtime_error` if it cannot decide.
+  optimal; throws `std::runtime_error` if it cannot decide, including when
+  required ring perception was truncated.
 - `MCS::canonicalizeMapping(query, target, mapping)`: one representative under
   the symmetry of both molecules; throws if the symmetry cannot be resolved.
 - `smsd::validateTautomerConsistency(query, target, atomMapping)`: whether
@@ -282,7 +319,10 @@ rounding.
   `supportCount` and verified `mappings` keyed by input index; `found` is false
   when none qualifies. `threshold` must lie in (0, 1]; atom weights and
   excluded target atoms are rejected. Consensus is heuristic, shares one budget
-  and always reports `optimal == false`.
+  and always reports `optimal == false`. With complete rings or strict ring
+  fusion, truncated ring perception in any input makes it `LimitReached` and
+  incomplete, unless it is already `TimedOut` or `Cancelled`; its fragment and
+  supporting mappings are retained.
 - `Substructure::decomposeRGroups(core, molecules, options = {})` returns an
   `RGroupResult` per molecule: the matched `core`, substituents in `rgroups`
   (`R1`, `R2`, …) and the `search` result.
@@ -418,7 +458,7 @@ similarity of the MCS from above;
 the targets whose bound reaches `threshold`, on the calling thread, or with a
 fifth argument on up to `numThreads` threads (0 = the OpenMP thread limit),
 giving the same indices. `gpu::batchSimilarityScreenAuto`
-is a separate native CUDA source-build interface with a CPU fallback,
+is a separate native CUDA or Metal source-build interface with a CPU fallback,
 returning a `ScreenHit{index, score}` per passing target. The optional Python
 `smsd-cuda` package uses the corpus screening interface described in the
 [Python guide](PYTHON.md#optional-cuda-screening).
@@ -432,13 +472,46 @@ over every row or column of the smaller side, returning the (row, column) pairs
 and `totalCost`, which excludes unmatched penalties; ragged or non-finite input
 throws `std::invalid_argument`.
 
+### Optional Metal fingerprint screening
+
+On macOS, configure the native source build with `-DSMSD_BUILD_METAL=ON`
+and link with `target_link_libraries(my_target PRIVATE smsd smsd_metal)`.
+Use these targets from the same source build; the installed header-only
+package does not include `smsd_metal`. Include `smsd/metal_gpu.hpp` and
+`smsd/screen_accelerator.hpp`.
+
+`metal::fingerprintAccelerator()` supplies a resident packed-fingerprint
+provider. Pass it explicitly as the final argument of
+`screen_accelerator::fingerprintScreens(queries, targets, threshold, cache,
+score, provider)`. Automatic selection is disabled: its `minimum_targets`
+returns `UINT64_MAX`, so attaching the provider alone does not enable it.
+
+Use equal, non-zero word lengths and the same fingerprint settings for all
+queries and targets. Keep target fingerprints unchanged while reusing a
+`screen_accelerator::ResidentCache`. The `score(commonBits, queryBits,
+targetBits)` callback must use the CPU score expression and be non-decreasing
+in `commonBits`. Metal computes integer intersections; the host builds the
+cutoffs and checks hits with that expression. The result keeps query and
+target order; no floating-point similarity score is formed on the device.
+
+A declined screen or reported provider failure returns `std::nullopt`; the
+caller must then run its CPU screen. Provider errors are recorded by
+`screen_accelerator::failureCount()` and `latestFailure()`. A non-empty
+`SMSD_DISABLE_GPU` other than `0` disables GPU use.
+
+This provider supports packed fingerprints only and has no Python export.
+The separate float-valued `metal::batchSimilarityScreen` and graph-kernel
+APIs are outside this integer fingerprint contract. MCS and substructure
+search remain on the CPU.
+
 ### Configurable fingerprints
 
 `FingerprintOptions` gives the same bits in C++, Java and Python for
 `computeFingerprint(graph, options)` (packed bits),
 `computeFingerprintCounts(graph, options)` (count bins),
 `fingerprintFromSmiles` and
-`batchFingerprint(molecules, options, numThreads = 0)`.
+`batchFingerprint(molecules, options, numThreads = 0)`, which reads any
+sequence of graphs and throws the exception of the first molecule that fails.
 `FingerprintOptions::ecfp(radius = 2, size = 2048)`,
 `fcfp(radius = 2, size = 2048)`, `path(pathLength = 7, size = 2048)` and
 `torsion(size = 2048)` reproduce `computeCircularFingerprintECFP`,

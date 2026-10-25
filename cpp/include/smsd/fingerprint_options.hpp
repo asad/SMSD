@@ -1025,17 +1025,28 @@ inline void torsionHashesOf(const Terms& terms, Sink&& sink) {
 inline std::shared_ptr<const Substructure> preparedKey(const std::string& pattern) {
     static std::mutex guard;
     static std::unordered_map<std::string, std::shared_ptr<const Substructure>> prepared;
+    thread_local std::unordered_map<std::string, std::weak_ptr<const Substructure>> local;
+    const auto cached = local.find(pattern);
+    if (cached != local.end()) {
+        if (auto query = cached->second.lock()) return query;
+        local.erase(cached);
+    }
+    auto remember = [&](const std::shared_ptr<const Substructure>& query) {
+        if (local.size() >= 4096) local.clear();
+        local.emplace(pattern, query);
+        return query;
+    };
     {
         const std::lock_guard<std::mutex> lock(guard);
         const auto found = prepared.find(pattern);
-        if (found != prepared.end()) return found->second;
+        if (found != prepared.end()) return remember(found->second);
     }
     SubstructureOptions options;
     options.timeoutMs = KEY_SEARCH_MILLIS;
     auto query = std::make_shared<const Substructure>(Substructure::smarts(pattern).withOptions(options));
     const std::lock_guard<std::mutex> lock(guard);
     if (prepared.size() >= 4096) prepared.clear();
-    return prepared.emplace(pattern, query).first->second;
+    return remember(prepared.emplace(pattern, query).first->second);
 }
 
 /// A key search must run to its end: a search cut short by time would make the bits depend on the machine.
@@ -1190,21 +1201,23 @@ inline std::vector<uint64_t> fingerprintFromSmiles(const std::string& smiles, co
     return computeFingerprint(smsd::parseSMILES(smiles), options);
 }
 
-/// The fingerprints of every molecule under `options`, in input order, on up to numThreads threads.
-inline std::vector<std::vector<uint64_t>> batchFingerprint(const std::vector<MolGraph>& mols,
+/// The fingerprints of every molecule under `options`, in input order, on up to numThreads threads
+/// (0 = all available), for any sequence whose items read as const MolGraph&. When a molecule
+/// throws, the exception of the first that fails propagates, as on one thread.
+template<class Molecules>
+inline std::vector<std::vector<uint64_t>> batchFingerprint(const Molecules& mols,
                                                            const FingerprintOptions& options,
                                                            int numThreads = 0) {
     fingerprint_detail::validate(options);
-    const int N = static_cast<int>(mols.size());
-    std::vector<std::vector<uint64_t>> results(N);
-    if (N == 0) return results;
-    const int nThreads = detail::workersFor(N, numThreads, 1);
-    (void)nThreads;
-#ifdef _OPENMP
-    #pragma omp parallel for schedule(dynamic, 8) num_threads(nThreads) if(nThreads > 1)
-#endif
-    for (int i = 0; i < N; ++i) results[i] = computeFingerprint(mols[i], options);
-    return results;
+    return detail::fingerprintEach(mols, numThreads,
+        [&options](const MolGraph& molecule) { return computeFingerprint(molecule, options); });
+}
+
+/// The same for a vector of graphs, which a braced list of graphs also gives.
+inline std::vector<std::vector<uint64_t>> batchFingerprint(const std::vector<MolGraph>& mols,
+                                                           const FingerprintOptions& options,
+                                                           int numThreads = 0) {
+    return batchFingerprint<std::vector<MolGraph>>(mols, options, numThreads);
 }
 
 } // namespace batch

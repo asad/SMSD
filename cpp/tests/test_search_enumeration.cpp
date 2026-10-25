@@ -16,6 +16,7 @@
 
 #include <iostream>
 #include <random>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 
@@ -74,7 +75,23 @@ static void verifyCompleteSubgraph(const Graph& graph) {
         for (int neighbor = atom + 1; neighbor < graph.n; ++neighbor) complete[{atom, neighbor}] = 1;
     }
     const auto result = smsd::MCS::find(molecule(graph.n, source)).withTimeout(1000).match(molecule(graph.n, complete));
-    require(result.optimal && result.complete, "small complete-subgraph search did not prove its answer");
+    std::string context;
+    if (!result.optimal || !result.complete) {
+        std::uint64_t mask = 0;
+        int bit = 0;
+        for (int first = 0; first < graph.n; ++first)
+            for (int second = first + 1; second < graph.n; ++second, ++bit)
+                if (source.count({first, second})) mask |= std::uint64_t(1) << bit;
+        std::ostringstream details;
+        details << ": n=" << graph.n << " edges={";
+        for (const auto& bond : source)
+            details << '(' << bond.first.first << ',' << bond.first.second << ')';
+        details << "} mask=" << mask << " status=" << static_cast<int>(result.status)
+                << " optimal=" << result.optimal << " complete=" << result.complete
+                << " score=" << result.score << " nodes=" << result.nodesVisited;
+        context = details.str();
+    }
+    require(result.optimal && result.complete, "small complete-subgraph search did not prove its answer" + context);
     require(result.score == completeSubgraphOracle(graph), "MCIS complete-subgraph size differs from exhaustive oracle");
 }
 
@@ -93,6 +110,92 @@ static void testCompleteSubgraphs() {
         verifyCompleteSubgraph(graphFromMask(atoms, mask));
     }
     std::cout << "Complete-subgraph oracle passed: " << count << " exhaustive graphs and 256 seeded graphs.\n";
+}
+
+static void testCompleteInputConnectivity() {
+    const auto path = molecule(3, {{{0, 1}, 1}, {{1, 2}, 1}});
+    const auto triangle = molecule(3, {{{0, 1}, 1}, {{0, 2}, 1}, {{1, 2}, 1}});
+    const auto isolated = molecule(3, {});
+    for (bool reverse : {false, true}) {
+        const auto& query = reverse ? triangle : path;
+        const auto& target = reverse ? path : triangle;
+        std::set<Mapping> expected;
+        for (int queryFirst = 0; queryFirst < 3; ++queryFirst)
+            for (int querySecond = queryFirst + 1; querySecond < 3; ++querySecond) {
+                if (!query.hasBond(queryFirst, querySecond)) continue;
+                for (int targetFirst = 0; targetFirst < 3; ++targetFirst)
+                    for (int targetSecond = 0; targetSecond < 3; ++targetSecond)
+                        if (targetFirst != targetSecond && target.hasBond(targetFirst, targetSecond))
+                            expected.insert({{queryFirst, targetFirst}, {querySecond, targetSecond}});
+            }
+        require(expected.size() == 12, "two-atom clique oracle must have twelve mappings");
+        for (auto connectivity : {smsd::MCSConnectivity::Connected, smsd::MCSConnectivity::Fragments}) {
+            smsd::MCSOptions options;
+            options.connectivity = connectivity;
+            options.timeoutMs = 1000;
+            const auto single = smsd::MCS::find(query).withOptions(options).match(target);
+            require(single.status == smsd::SearchStatus::Completed && single.optimal && single.complete
+                    && single.score == 2.0 && single.matches.size() == 1,
+                    "a complete input must give a proved two-atom clique");
+            require(expected.count(Mapping(single.matches[0].atomMapping.begin(), single.matches[0].atomMapping.end())) == 1,
+                    "single clique witness differs from the injection oracle");
+            require(smsd::MCS::validateMapping(query, target, single.matches[0], options).empty(),
+                    "complete-input search returned an invalid single witness");
+            const auto all = smsd::MCS::find(query).withOptions(options).matchAll(target, 100);
+            require(all.status == smsd::SearchStatus::Completed && all.optimal && all.complete && all.score == 2.0,
+                    "all clique mappings must be proved");
+            std::set<Mapping> found;
+            for (const auto& match : all.matches) {
+                require(smsd::MCS::validateMapping(query, target, match, options).empty(),
+                        "complete-input search returned an invalid witness");
+                require(match.fragments.size() == 1, "a nonempty induced match of a complete graph is connected");
+                require(found.emplace(match.atomMapping.begin(), match.atomMapping.end()).second,
+                        "complete-input search duplicated a mapping");
+            }
+            require(found == expected, "complete-input search omitted tied optimal mappings");
+            options.timeoutMs = 0;
+            const auto timedOut = smsd::MCS::find(query).withOptions(options).match(target);
+            require(timedOut.status == smsd::SearchStatus::TimedOut && !timedOut.optimal && !timedOut.complete
+                    && timedOut.matches.empty(), "expired complete-input searches must do no work");
+            options.timeoutMs = 1000;
+            options.cancellation = std::make_shared<smsd::CancellationToken>();
+            options.cancellation->cancel();
+            const auto cancelled = smsd::MCS::find(query).withOptions(options).match(target);
+            require(cancelled.status == smsd::SearchStatus::Cancelled && !cancelled.optimal && !cancelled.complete
+                    && cancelled.matches.empty(), "complete-input searches must honour cancellation");
+            options.cancellation.reset();
+            options.nodeLimit = 1;
+            const auto capped = smsd::MCS::find(query).withOptions(options).match(target);
+            require(capped.status == smsd::SearchStatus::LimitReached && !capped.optimal && !capped.complete,
+                    "complete-input searches must honour the node cap");
+            options.nodeLimit = 0;
+            options.atomWeights = {1.0, 2.0, 4.0};
+            const auto weighted = smsd::MCS::find(query).withOptions(options).match(target);
+            require(weighted.status == smsd::SearchStatus::Completed && weighted.optimal && weighted.complete
+                    && weighted.score == 6.0, "complete-input search changed the weighted objective");
+            options.atomWeights.clear();
+            options.excludedTargetAtoms = {0, 1};
+            options.minFragmentAtoms = 2;
+            const auto tooSmall = smsd::MCS::find(query).withOptions(options).match(target);
+            require(tooSmall.status == smsd::SearchStatus::Completed && tooSmall.optimal && tooSmall.complete
+                    && tooSmall.score == 0.0 && tooSmall.matches.empty(),
+                    "complete-input search must retain exclusions and minimum fragment size");
+        }
+        const auto& noncompleteQuery = reverse ? isolated : path;
+        const auto& noncompleteTarget = reverse ? path : isolated;
+        for (auto connectivity : {smsd::MCSConnectivity::Connected, smsd::MCSConnectivity::Fragments}) {
+            smsd::MCSOptions options;
+            options.connectivity = connectivity;
+            options.timeoutMs = 1000;
+            const auto result = smsd::MCS::find(noncompleteQuery).withOptions(options).match(noncompleteTarget);
+            require(result.status == smsd::SearchStatus::Completed && result.optimal && result.complete
+                    && result.score == (connectivity == smsd::MCSConnectivity::Connected ? 1.0 : 2.0),
+                    "noncomplete inputs must preserve the connectivity distinction");
+            for (const auto& match : result.matches)
+                require(smsd::MCS::validateMapping(noncompleteQuery, noncompleteTarget, match, options).empty(),
+                        "noncomplete-input search returned an invalid witness");
+        }
+    }
 }
 
 static bool validMapping(const Mapping& mapping, const Bonds& query,
@@ -252,5 +355,6 @@ static void testMolecular() {
 
 int main(int argc, char** argv) {
     return smsd_test::runGroups(argc, argv, {
-        {"complete", testCompleteSubgraphs}, {"substructure", testSubstructureOracle}, {"molecular", testMolecular}});
+        {"complete", testCompleteSubgraphs}, {"complete-input", testCompleteInputConnectivity},
+        {"substructure", testSubstructureOracle}, {"molecular", testMolecular}});
 }

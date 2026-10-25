@@ -283,6 +283,22 @@ struct MolGraph {
     mutable std::vector<int> cachedPharmacophoreFeatures;
     mutable bool pharmComputed_ = false;
 
+    /** Publish completed lazy storage; copies publish their own storage on first access. */
+    class LazyCaches {
+        std::atomic<unsigned> ready_{0};
+    public:
+        enum Cache : unsigned { Canonical = 1, RingCounts = 2, RingSystems = 4, Rings = 8, Features = 16 };
+        LazyCaches() = default;
+        LazyCaches(const LazyCaches&) noexcept {}
+        LazyCaches& operator=(const LazyCaches&) noexcept { clear(); return *this; }
+        LazyCaches(LazyCaches&& other) noexcept { other.clear(); }
+        LazyCaches& operator=(LazyCaches&& other) noexcept { clear(); other.clear(); return *this; }
+        bool ready(Cache cache) const noexcept { return (ready_.load(std::memory_order_acquire) & cache) != 0; }
+        void publish(Cache cache) noexcept { ready_.fetch_or(cache, std::memory_order_release); }
+        void clear() noexcept { ready_.store(0, std::memory_order_relaxed); }
+    };
+    mutable LazyCaches lazyCaches_;
+
     // ========================================================================
     // Bond key: pack two indices into one int64
     // ========================================================================
@@ -318,6 +334,7 @@ struct MolGraph {
     bool hasBond(int i, int j) const { return bondOrder(i, j) != 0; }
 
     void invalidateBondDerivedState() {
+        lazyCaches_.clear();
         cacheNonce = nextInstanceNonce();
         canonicalComputed_ = false;
         canonicalHash = 0;

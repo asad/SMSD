@@ -23,16 +23,16 @@ Maven:
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd</artifactId>
-  <version>8.0.2</version>
+  <version>8.0.3</version>
 </dependency>
 ```
 
 Gradle (Kotlin DSL; in the Groovy DSL, write
-`implementation 'com.bioinceptionlabs:smsd:8.0.2'`):
+`implementation 'com.bioinceptionlabs:smsd:8.0.3'`):
 
 ```kotlin
 dependencies {
-    implementation("com.bioinceptionlabs:smsd:8.0.2")
+    implementation("com.bioinceptionlabs:smsd:8.0.3")
 }
 ```
 
@@ -55,14 +55,14 @@ automatic module `com.bioinception.smsd`.
 
 ### Command-line tool
 
-The self-contained `smsd-cli-8.0.2-jar-with-dependencies.jar` runs with
+The self-contained `smsd-cli-8.0.3-jar-with-dependencies.jar` runs with
 `java -jar`, as shown under [Command-line interface](#command-line-interface).
 Download it from the [GitHub releases page](https://github.com/asad/SMSD/releases),
 or copy it from Maven Central:
 
 ```bash
 mvn dependency:copy \
-  -Dartifact=com.bioinceptionlabs:smsd-cli:8.0.2:jar:jar-with-dependencies \
+  -Dartifact=com.bioinceptionlabs:smsd-cli:8.0.3:jar:jar-with-dependencies \
   -DoutputDirectory=.
 ```
 
@@ -74,7 +74,7 @@ Jackson and the CDK file readers. Maven:
 <dependency>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd-cli</artifactId>
-  <version>8.0.2</version>
+  <version>8.0.3</version>
 </dependency>
 ```
 
@@ -82,7 +82,7 @@ Gradle (Kotlin DSL):
 
 ```kotlin
 dependencies {
-    implementation("com.bioinceptionlabs:smsd-cli:8.0.2")
+    implementation("com.bioinceptionlabs:smsd-cli:8.0.3")
 }
 ```
 
@@ -105,17 +105,19 @@ The build writes:
 
 | File | Use |
 | --- | --- |
-| `java/core/target/smsd-8.0.2.jar` | Library; Maven resolves its dependencies |
-| `java/cli/target/smsd-cli-8.0.2.jar` | CLI classes; Maven resolves their dependencies |
-| `java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar` | Standalone CLI, and a self-contained class path for the examples |
+| `java/core/target/smsd-8.0.3.jar` | Library; Maven resolves its dependencies |
+| `java/cli/target/smsd-cli-8.0.3.jar` | CLI classes; Maven resolves their dependencies |
+| `java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar` | Standalone CLI, and a self-contained class path for the examples |
 | `java/cli/target/appassembler/` | Portable `bin/smsd` launchers and the JARs they use, in `repo/` |
 
 ## Quick start
 
 Save this as `CDKExample.java`. It checks that benzene is a substructure of
-phenol, confirms that the MCS search proved a six-atom optimum, and prints the
-atom mapping in the original CDK atom indices. A Maven or Gradle project needs
-`cdk-smiles` beside `smsd` to run it:
+phenol. It then confirms that the MCS of N-methylacetamide and propanamide,
+neither of which contains the other, is a proved four-atom optimum, and prints
+its only maximum mapping, query atoms 0 to 3 onto target atoms 1 to 4, in the
+original CDK atom indices. A Maven or Gradle project needs `cdk-smiles` beside
+`smsd` to run it:
 
 ```java
 import com.bioinception.smsd.core.MCS;
@@ -129,18 +131,23 @@ import org.openscience.cdk.smiles.SmilesParser;
 public class CDKExample {
     public static void main(String[] args) throws Exception {
         SmilesParser parser = new SmilesParser(SilentChemObjectBuilder.getInstance());
-        IAtomContainer query = parser.parseSmiles("c1ccccc1");
-        IAtomContainer target = parser.parseSmiles("c1ccc(O)cc1");
+        IAtomContainer benzene = parser.parseSmiles("c1ccccc1");
+        IAtomContainer phenol = parser.parseSmiles("c1ccc(O)cc1");
+        if (!Substructure.find(benzene).match(phenol).found()) {
+            throw new IllegalStateException("Expected benzene in phenol");
+        }
+        IAtomContainer query = parser.parseSmiles("CC(=O)NC");   // N-methylacetamide
+        IAtomContainer target = parser.parseSmiles("CCC(=O)N");  // propanamide
         SearchResult result = MCS.find(query).withTimeout(1000).match(target);
         if (!result.optimal() || !result.found()
-                || result.matches().get(0).atomCount() != 6
-                || !Substructure.find(query).match(target).found()) {
-            throw new IllegalStateException("Expected a proved six-atom benzene match");
+                || result.matches().get(0).atomCount() != 4
+                || MCS.find(query).withTimeout(1000).matchAll(target).matches().size() != 1) {
+            throw new IllegalStateException("Expected one proved four-atom MCS");
         }
         SearchResult.Match match = result.matches().get(0);
         for (Map.Entry<Integer, Integer> pair : match.atomMapping().entrySet()) {
-            System.out.println(query.getAtom(pair.getKey()).getSymbol() + " -> "
-                    + target.getAtom(pair.getValue()).getSymbol());
+            System.out.println(query.getAtom(pair.getKey()).getSymbol() + pair.getKey()
+                    + " -> " + target.getAtom(pair.getValue()).getSymbol() + pair.getValue());
         }
         System.out.println("Common fragment: " + match.toSmiles(query));
     }
@@ -151,12 +158,12 @@ After the build above, compile and run it from the repository root against the
 self-contained JAR, which includes the library, CDK and `cdk-smiles`:
 
 ```bash
-javac --release 8 -cp java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar CDKExample.java
-java -cp "java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar:." CDKExample
+javac --release 8 -cp java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar CDKExample.java
+java -cp "java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar:." CDKExample
 ```
 
 With a Java 8 compiler, omit `--release 8`. On Windows, separate the classpath
-entries with a semicolon: `"java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar;."`.
+entries with a semicolon: `"java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar;."`.
 
 By default, `MCS` finds a connected maximum common induced subgraph (MCIS),
 maximising atoms and then bonds, and `Substructure` finds a non-induced
@@ -172,15 +179,16 @@ timeouts and the full result contract.
 From the repository root:
 
 ```bash
-java -jar java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar --version
-java -jar java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar --version
+java -jar java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
-java -jar java/cli/target/smsd-cli-8.0.2-jar-with-dependencies.jar \
-  --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --mode mcs --json -
+java -jar java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar \
+  --Q SMI --q "CC(=O)NC" --T SMI --t "CCC(=O)N" --mode mcs --json -
 ```
 
 The first search tests whether benzene is a substructure of phenol; the second
-finds their MCS. `--help` lists every option, and the
+finds the four-atom MCS of N-methylacetamide and propanamide
+(`mcs_size` is 4). `--help` lists every option, and the
 [Java guide](../docs/JAVA.md#command-line-interface) describes input formats,
 JSON output and exit status.
 
@@ -194,9 +202,14 @@ mvn -f java/pom.xml clean verify
 
 This builds and tests the library, then the CLI; `mvn clean verify` from the
 repository root runs the same build. Add `-pl core` for the library alone, or
-`-pl cli -am` for the CLI and the library it needs. Add
-`-Dslow.tests.exclude=nothing` to include the slow test suites; with it,
+`-pl cli -am` for the CLI and the library it needs. `AlgorithmTest` and
+`StressTest` run by default; only tests tagged `SlowTest` are excluded. Add
+`-Dslow.tests.exclude=nothing` to include the tests tagged `SlowTest`; with it,
 `-Dbenchmark=true` and `-Dsmsd.benchmark=true` also run the benchmark tests.
+Tests named with `-Dtest`, or chosen by tag with `-Dgroups`, run whatever their
+tags. To leave out other tags as well, list them in `-Dslow.tests.exclude`, for
+example `-Dslow.tests.exclude=SlowTest,MyTag`; Surefire's own `-DexcludedGroups`
+is not used.
 
 To run the tests on a Java 8 runtime while Maven runs on Java 25, set
 `SMSD_JAVA8_HOME` to a Java 8 JDK and run:

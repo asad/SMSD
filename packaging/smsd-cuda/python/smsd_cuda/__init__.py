@@ -14,9 +14,9 @@ import importlib.util
 import os
 import sys
 
-__version__ = "8.0.2"
+__version__ = "8.0.3"
 # The smsd version this package serves; smsd attaches it only when the two are equal.
-__smsd_version__ = "8.0.2"
+__smsd_version__ = "8.0.3"
 
 __all__ = ["capsule", "device_info", "is_available", "unavailable_reason"]
 

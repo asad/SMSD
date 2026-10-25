@@ -237,6 +237,74 @@ static void labelledSelectedEdges() {
     }
 }
 
+static void interchangeableRingAtomsKeepEverySelection() {
+    const std::pair<const char*, const char*> pairs[] = {
+        {"C1CC1", "CCC"}, {"C1CCC1", "CC(C)C"},
+        {"NC1CC1", "NCCN"}, {"C1C=CC1", "CC1CC1"}};
+    for (const auto& pair : pairs) {
+        const auto first = smsd::parseSMILES(pair.first), second = smsd::parseSMILES(pair.second);
+        for (bool reverse : {false, true}) {
+            const auto& query = reverse ? second : first;
+            const auto& target = reverse ? first : second;
+            for (auto connectivity : {smsd::MCSConnectivity::Connected, smsd::MCSConnectivity::Fragments})
+                for (auto order : {smsd::ChemOptions::BondOrderMode::STRICT, smsd::ChemOptions::BondOrderMode::ANY})
+                    for (bool excludeLast : {false, true}) {
+                        smsd::MCSOptions options;
+                        options.objective = smsd::MCSObjective::MCES;
+                        options.connectivity = connectivity;
+                        options.chemistry.matchBondOrder = order;
+                        options.timeoutMs = 10000;
+                        if (excludeLast) options.excludedTargetAtoms = {target.n - 1};
+                        const auto expected = selectedEdgeOracle(query, target, options);
+                        const auto result = smsd::MCS::find(query).withOptions(options).matchAll(target, 1000);
+                        std::set<MatchKey> actual;
+                        for (const auto& match : result.matches) actual.emplace(match.atomMapping, match.bondMapping);
+                        require(result.status == smsd::SearchStatus::Completed && result.optimal && result.complete,
+                                "Small ring selections must be proved and enumerated");
+                        require(result.score == expected.first.first && actual == expected.second
+                                    && actual.size() == result.matches.size(),
+                                "Interchangeable ring atoms changed the exhaustive selections");
+                        const auto single = smsd::MCS::find(query).withOptions(options).match(target);
+                        require(single.optimal && single.score == expected.first.first
+                                    && (single.matches.empty() || expected.second.count({single.matches.front().atomMapping,
+                                                                                      single.matches.front().bondMapping})),
+                                "A single ring selection must be one of the exhaustive selections");
+                    }
+        }
+    }
+}
+
+static void mixedAndIncompleteLabelsKeepEverySelection() {
+    const std::pair<const char*, const char*> pairs[] = {
+        {"CCOCC", "CCNCC"}, {"CCOCC", "CCCOC"}, {"CCOCC", "CCCCC"},
+        {"[13CH3][13CH2][14CH2][14CH3]", "[13CH3]CC[14CH3]"}};
+    for (const auto& pair : pairs) {
+        const auto query = smsd::parseSMILES(pair.first), target = smsd::parseSMILES(pair.second);
+        for (auto connectivity : {smsd::MCSConnectivity::Connected, smsd::MCSConnectivity::Fragments})
+            for (bool excludeLast : {false, true}) {
+                smsd::MCSOptions options;
+                options.objective = smsd::MCSObjective::MCES;
+                options.connectivity = connectivity;
+                options.chemistry.matchIsotope = true;
+                options.timeoutMs = 10000;
+                if (excludeLast) options.excludedTargetAtoms = {target.n - 1};
+                const auto expected = validatedOracle(query, target, options);
+                const auto result = smsd::MCS::find(query).withOptions(options).matchAll(target, 1000);
+                require(result.optimal && result.complete && result.status == smsd::SearchStatus::Completed,
+                        "Mixed-label search must prove and enumerate every best selection");
+                require(result.score == expected.first.first, "Mixed-label score differs from exhaustive selections");
+                std::set<MatchKey> actual;
+                for (const auto& match : result.matches) {
+                    require(match.atomMapping.size() == static_cast<size_t>(expected.first.second),
+                            "Mixed-label incident-atom tie differs from exhaustive selections");
+                    require(actual.emplace(match.atomMapping, match.bondMapping).second,
+                            "Repeated mixed-label selected-edge embedding");
+                }
+                require(actual == expected.second, "Mixed-label selections differ from exhaustive enumeration");
+            }
+    }
+}
+
 static void fixedMappingsAndFragments() {
     const auto molecule = smsd::parseSMILES("CCO");
     smsd::MCSOptions options;
@@ -601,6 +669,8 @@ int main() {
     try {
         kindsAddNoPairTable();
         labelledSelectedEdges();
+        interchangeableRingAtomsKeepEverySelection();
+        mixedAndIncompleteLabelsKeepEverySelection();
         validatedSelections();
         ringsWithoutFlagsStayWhole();
         fixedMappingsAndFragments();

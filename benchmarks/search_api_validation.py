@@ -117,11 +117,13 @@ _ELEMENTS = {"H": 1, "B": 5, "C": 6, "N": 7, "O": 8, "F": 9, "Na": 11,
              "Br": 35, "I": 53}
 
 
-def _atom_expression(expression):
+def _atom_expression(expression, atomic_hydrogen=None):
+    if atomic_hydrogen is None:
+        atomic_hydrogen = bool(re.fullmatch(r"[0-9]*H(?:\++|-+|[+-][0-9]+)?(?::[0-9]+)?", expression))
     for delimiter, conjunction in ((";", True), (",", False), ("&", True)):
         parts = _split(expression, delimiter)
         if len(parts) > 1:
-            predicates = [_atom_expression(part) for part in parts]
+            predicates = [_atom_expression(part, atomic_hydrogen) for part in parts]
             return lambda graph, atom: (all if conjunction else any)(test(graph, atom) for test in predicates)
     predicates = []
     offset = 0
@@ -148,7 +150,7 @@ def _atom_expression(expression):
                 raise UnsupportedValidation("Unsupported SMARTS atom primitive: " + remaining)
             text = token.group()
             end = len(text)
-            if text == "H" and expression in ("H", "H+", "H-"):
+            if text == "H" and atomic_hydrogen:
                 test = lambda graph, atom: graph.atoms[atom]["element"] == 1
             elif text.startswith("#"):
                 number = int(text[1:])

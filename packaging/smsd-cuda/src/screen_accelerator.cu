@@ -40,6 +40,8 @@ namespace {
 constexpr int kThreads = 256;
 constexpr int kMaxBlocks = 65535;
 constexpr int32_t kMaxTable = 48 * 1024 / static_cast<int32_t>(sizeof(int32_t));
+constexpr int kFingerprintQueryTile = 4;
+constexpr int kFingerprintSharedBytes = 32 * 1024;
 
 void describe(char* error, size_t size, const char* what, cudaError_t status) {
     if (error != nullptr && size != 0)
@@ -371,6 +373,48 @@ __global__ __launch_bounds__(kThreads) void fingerprintKernel(
     }
 }
 
+/** Reuse each target word across a tile of queries; output remains query-major. */
+__global__ __launch_bounds__(kThreads) void fingerprintTileKernel(
+    int32_t targets, int32_t words, const uint64_t* __restrict__ fingerprints,
+    const int32_t* __restrict__ targetPopcounts, int32_t queries,
+    const uint64_t* __restrict__ queryWords, const int32_t* __restrict__ cutoffs, int32_t cutoffStride,
+    smsd_fingerprint_hit* __restrict__ candidates, unsigned char* __restrict__ selected) {
+    extern __shared__ uint64_t tileWords[];
+    const int64_t targetStride = static_cast<int64_t>(gridDim.x) * blockDim.x;
+    const int64_t queryStride = static_cast<int64_t>(gridDim.y) * kFingerprintQueryTile;
+    for (int64_t queryBegin = static_cast<int64_t>(blockIdx.y) * kFingerprintQueryTile;
+         queryBegin < queries; queryBegin += queryStride) {
+        const int64_t remainingQueries = static_cast<int64_t>(queries) - queryBegin;
+        const int queryCount = remainingQueries < kFingerprintQueryTile
+            ? static_cast<int>(remainingQueries) : kFingerprintQueryTile;
+        for (int64_t word = threadIdx.x; word < static_cast<int64_t>(queryCount) * words; word += blockDim.x)
+            tileWords[word] = queryWords[queryBegin * words + word];
+        __syncthreads();
+        for (int64_t targetIndex = static_cast<int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+             targetIndex < targets; targetIndex += targetStride) {
+            int32_t common[kFingerprintQueryTile] = {};
+            for (int32_t wordIndex = 0; wordIndex < words; ++wordIndex) {
+                const uint64_t targetWord = fingerprints[static_cast<int64_t>(wordIndex) * targets + targetIndex];
+#pragma unroll
+                for (int query = 0; query < kFingerprintQueryTile; ++query)
+                    if (query < queryCount)
+                        common[query] += __popcll(tileWords[static_cast<int64_t>(query) * words + wordIndex] & targetWord);
+            }
+            const int32_t targetBits = targetPopcounts[targetIndex];
+#pragma unroll
+            for (int query = 0; query < kFingerprintQueryTile; ++query) {
+                if (query < queryCount) {
+                    const int64_t queryIndex = queryBegin + query;
+                    const int64_t pair = queryIndex * targets + targetIndex;
+                    candidates[pair] = {static_cast<int32_t>(targetIndex), common[query]};
+                    selected[pair] = common[query] >= cutoffs[queryIndex * cutoffStride + targetBits];
+                }
+            }
+        }
+        __syncthreads();
+    }
+}
+
 /** Integer label overlaps, with one shared query table per block. */
 __global__ __launch_bounds__(kThreads) void labelOverlapKernel(
     const int32_t* __restrict__ queryCounts, int32_t tableSize, int32_t queries,
@@ -484,10 +528,20 @@ int fingerprintScreen(void* handle, int32_t numQueries, const uint64_t* queryWor
         auto* temporary = call.device<unsigned char>(temporaryBytes);
         call.upload(deviceQueries, queryWords, queryWordCount);
         call.upload(deviceCutoffs, minimumCommon, cutoffCount);
-        fingerprintKernel<<<dim3(blocksFor(resident.targets), std::min(numQueries, kMaxBlocks)),
-                            kThreads, 0, call.stream()>>>(resident.targets, resident.words,
-            resident.fingerprints, resident.popcounts, numQueries, deviceQueries, deviceCutoffs,
-            cutoffStride, candidates, flags);
+        const size_t sharedBytes = bytesFor(static_cast<uint64_t>(resident.words) * kFingerprintQueryTile,
+                                            sizeof(uint64_t));
+        if (numQueries > 1 && sharedBytes <= kFingerprintSharedBytes) {
+            const int queryTiles = (numQueries - 1) / kFingerprintQueryTile + 1;
+            fingerprintTileKernel<<<dim3(blocksFor(resident.targets), std::min(queryTiles, kMaxBlocks)),
+                                    kThreads, sharedBytes, call.stream()>>>(resident.targets, resident.words,
+                resident.fingerprints, resident.popcounts, numQueries, deviceQueries, deviceCutoffs,
+                cutoffStride, candidates, flags);
+        } else {
+            fingerprintKernel<<<dim3(blocksFor(resident.targets), std::min(numQueries, kMaxBlocks)),
+                                kThreads, 0, call.stream()>>>(resident.targets, resident.words,
+                resident.fingerprints, resident.popcounts, numQueries, deviceQueries, deviceCutoffs,
+                cutoffStride, candidates, flags);
+        }
         call.launched();
         for (int32_t queryIndex = 0; queryIndex < numQueries; ++queryIndex) {
             const size_t start = static_cast<size_t>(queryIndex) * resident.targets;

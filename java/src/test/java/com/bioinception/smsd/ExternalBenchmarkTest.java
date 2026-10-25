@@ -41,6 +41,7 @@ import org.openscience.cdk.interfaces.IAtomContainer;
  * @author Syed Asad Rahman
  */
 @DisplayName("External Benchmark Tests")
+@Tag("SlowTest")
 @Timeout(value = 30, unit = TimeUnit.MINUTES, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
 public class ExternalBenchmarkTest extends TestBase {
 

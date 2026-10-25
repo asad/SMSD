@@ -13,6 +13,7 @@
 #pragma once
 
 #include "smsd/search_types.hpp"
+#include "smsd/ring_finder.hpp"
 #include "smsd/detail/search_budget.hpp"
 #include "smsd/detail/search_compatibility.hpp"
 
@@ -267,13 +268,14 @@ using CycleList = std::vector<std::vector<int>>;
  * entry also keeps the number of bond ends: a graph whose bonds changed without a new nonce
  * fails an assertion, and without assertions its cycles are found again.
  */
-inline std::shared_ptr<const CycleList> recentRelevantCycles(const MolGraph& graph) {
+inline std::shared_ptr<const CycleList> recentRelevantCycles(const MolGraph& graph, bool* truncated = nullptr) {
     struct Entry {
         const MolGraph* graph = nullptr;
         uint64_t nonce = 0;
         int atoms = -1;
         size_t bondEnds = 0;
         std::shared_ptr<const CycleList> cycles;
+        bool truncated = false;
     };
     thread_local std::array<Entry, 4> recent;
     size_t bondEnds = 0;
@@ -284,30 +286,48 @@ inline std::shared_ptr<const CycleList> recentRelevantCycles(const MolGraph& gra
         if (recent[slot].bondEnds != bondEnds) break;
         // Most recently used first, so the query outlives the targets passing through.
         std::rotate(recent.begin(), recent.begin() + slot, recent.begin() + slot + 1);
+        if (truncated) *truncated = recent.front().truncated;
         return recent.front().cycles;
     }
-    auto cycles = std::make_shared<const CycleList>(graph.computeRelevantCycles());
+    bool stopped = false;
+    auto cycles = std::make_shared<const CycleList>(graph.computeRelevantCyclesReportingTruncation(stopped));
+    stopped = stopped || smsd::ringsTruncated(graph);
     std::rotate(recent.begin(), recent.end() - 1, recent.end());
-    recent.front() = Entry{&graph, graph.cacheNonce, graph.n, bondEnds, cycles};
+    recent.front() = Entry{&graph, graph.cacheNonce, graph.n, bondEnds, cycles, stopped};
+    if (truncated) *truncated = stopped;
     return cycles;
 }
 
 class RingConstraint {
     const MolGraph& graph_;
     std::shared_ptr<const CycleList> cycles_;
+    bool truncated_ = false;
     /** The atoms and bonds on a relevant ring, which are on a ring whether flagged so or not, as in Java. */
     std::vector<uint8_t> cycleAtom_;
     std::set<int64_t> cycleBond_;
 public:
     RingConstraint(const MolGraph& graph, bool enabled) : graph_(graph) {
         if (!enabled) return;
-        cycles_ = recentRelevantCycles(graph);
+        cycles_ = recentRelevantCycles(graph, &truncated_);
         cycleAtom_.assign(static_cast<size_t>(graph.n), 0);
         for (const auto& cycle : *cycles_)
             for (size_t atom = 0; atom < cycle.size(); ++atom) {
                 cycleAtom_[static_cast<size_t>(cycle[atom])] = 1;
                 cycleBond_.insert(MolGraph::bondKey(cycle[atom], cycle[(atom + 1) % cycle.size()]));
             }
+    }
+    bool truncated() const { return truncated_; }
+    /** Whether an atom is flagged or lies on a relevant cycle. */
+    bool ringAtom(int atom) const {
+        return graph_.ring[atom] || (!cycleAtom_.empty() && cycleAtom_[static_cast<size_t>(atom)]);
+    }
+    /** Whether a bond is flagged or lies on a relevant cycle. */
+    bool ringBond(int first, int second) const {
+        return graph_.bondInRing(first, second) || cycleBond_.count(MolGraph::bondKey(first, second)) != 0;
+    }
+    const CycleList& cycles() const {
+        static const CycleList none;
+        return cycles_ ? *cycles_ : none;
     }
     /**
      * Whether every selected atom and bond on a ring lies on a wholly selected relevant ring; an

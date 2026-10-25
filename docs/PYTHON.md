@@ -1,13 +1,13 @@
 # SMSD Pro Python guide
 
-Reference for the `smsd` Python package, version 8.0.2. The
+Reference for the `smsd` Python package, version 8.0.3. The
 [Python examples](EXAMPLES.md) cover fingerprints, drawing, layout, stereo,
 files, R-groups and scaffolds.
 
 ## Installation
 
 ```bash
-python -m pip install "smsd==8.0.2"
+python -m pip install "smsd==8.0.3"
 ```
 
 The CPU/OpenMP wheels cover CPython 3.10–3.14; the
@@ -15,7 +15,7 @@ The CPU/OpenMP wheels cover CPython 3.10–3.14; the
 operating systems and architectures. `smsd.__version__` gives the installed version. Core
 matching needs no other toolkit. RDKit is needed only for RDKit molecules,
 `to_rdkit`, `to_svg`, `depict_mcs` and `depict_substructure`
-(`python -m pip install "smsd[rdkit]==8.0.2"`); Open Babel only for
+(`python -m pip install "smsd[rdkit]==8.0.3"`); Open Babel only for
 `from_openbabel` and `to_openbabel`.
 
 ### Build from source
@@ -37,7 +37,7 @@ This builds the CPU/OpenMP package. Without OpenMP, batch calls run sequentially
 the same version of `smsd`:
 
 ```bash
-python -m pip install "smsd==8.0.2" "smsd-cuda==8.0.2"
+python -m pip install "smsd==8.0.3" "smsd-cuda==8.0.3"
 ```
 
 The GPU computes integer overlaps; scores use the CPU expressions and hits
@@ -107,6 +107,17 @@ print(result.best.atom_mapping)
 | `score` | Objective value, in weight units with atom weights |
 | `nodes_visited`, `elapsed_ms` | Search effort and elapsed milliseconds |
 
+`COMPLETED` means the search ran to its end; `TIMED_OUT` and `CANCELLED` mean
+the time limit or the cancellation token stopped it. `LIMIT_REACHED` means the
+node limit stopped it, an enumeration reached its match limit, or an MCES pair
+beyond the [size limits](#size-limits) was declined before any search; a
+declined pair returns no match and proves nothing.
+
+With `complete_rings_only` or `RingFusionMode.STRICT`, truncated ring perception
+in either input leaves the mappings selected using the perceived rings, but
+cannot prove the result. The status is `LIMIT_REACHED`, with `optimal` and
+`complete` both `False`; `TIMED_OUT` and `CANCELLED` take precedence.
+
 A stopped search can return a valid but unproved match, and an empty
 incomplete result does not prove absence, so check `status`, `optimal` and
 `complete`. An enumeration limit can leave `optimal=True` with
@@ -131,18 +142,37 @@ Each `Match` has:
   valences capped, or as a `MolGraph` with the original chemistry and hydrogen
   counts.
 
+### Size limits
+
+An MCES search declines a pair before searching it, with `LIMIT_REACHED`, no
+match, and `optimal` and `complete` both `False`, when:
+
+- query atoms × target atoms exceed 2³⁰ (1,073,741,824), as for two molecules
+  of more than 32,768 atoms each;
+- the compatible bond pairs would take more than 32 MiB: the bonds of the
+  molecule searched from × (the bonds of the other / 64, rounded up) exceed
+  2²² (4,194,304). Without excluded target atoms, the search starts from the
+  target when it has fewer atoms than the query, or fewer bonds when more than
+  one fragment is allowed, and otherwise from the query. Two molecules of
+  16,384 bonds each fit exactly, as do 32,768 bonds against 8,192;
+- 2 × the kinds of bond both molecules share × (largest atom degree + 1)
+  exceeds 2²⁴ (16,777,216), which needs an atom with at least 512 bonds.
+
+MCIS searches are never declined; the time and node limits bound them. C++
+and Java use the same limits.
+
 ## MCIS, MCES and fragments
 
 ```python
 import smsd
 
-query, target = "C1CC1", "CCC"
+query, target = "C1CC1", "CC(C)C"  # cyclopropane, isobutane
 induced = smsd.MCS.find(query).match(target)
 edges = smsd.MCS.find(query).with_objective(smsd.MCS.Objective.MCES).match(target)
 assert (induced.best.atom_count, induced.best.bond_count) == (2, 1)
 assert (edges.best.atom_count, edges.best.bond_count) == (3, 2)
 assert len(smsd.parse_smiles(edges.best.to_smiles(query)).bonds()) == 2
-fragments = smsd.MCS.find("CO.CN").with_fragments().match("CO.CN")
+fragments = smsd.MCS.find("CCOCC").with_fragments().match("CCNCC")
 assert fragments.best.atom_count == 4 and len(fragments.best.fragments) == 2
 all_matches = smsd.MCS.find(query).match_all(target, limit=100)
 assert all_matches.optimal and all_matches.complete
@@ -187,7 +217,7 @@ assert not smsd.Substructure.find("CCC").with_options(sub_options).match("C1CC1"
 | `aromaticity_model` | `AromaticityModel.DAYLIGHT_LIKE` | Deprecated; no search reads it |
 | `match_formal_charge` | `False` | Same formal charge |
 | `match_isotope` | `False` | Same mass number where both atoms give one |
-| `use_chirality`, `use_bond_stereo` | `False` | Check tetrahedral or double-bond stereo |
+| `use_chirality`, `use_bond_stereo` | `False` | Mapped tetrahedral centres or double bonds agree in configuration, by the parity of their mapped neighbours, not CIP labels |
 | `ring_matches_ring_only` | `False` | Ring atoms and bonds match only ring atoms and bonds |
 | `complete_rings_only` | `False` | Complete rings only, in each input for `MCS` |
 | `ring_fusion_mode` | `RingFusionMode.IGNORE` | `STRICT`: matched ring atoms lie in the same number of rings; `PERMISSIVE` currently equals `IGNORE` |
@@ -197,8 +227,14 @@ assert not smsd.Substructure.find("CCC").with_options(sub_options).match("C1CC1"
 Stereo is checked only where the mapping determines it. In `Substructure`, a
 tagged query centre or double bond needs the same configuration in the target,
 and an untagged one matches any; in `MCS`, an unspecified target atom or bond
-matches either configuration. Tautomer matching usually also needs a relaxed
-bond order:
+matches either configuration. The comparison uses the parity of the mapped
+neighbours, not CIP labels, whose priorities depend on atoms outside the
+mapping. In `MCS` it is a hard constraint: an MCIS is the largest common
+subgraph whose mapped stereo agrees, so it can be smaller than the MCIS found
+without these options, and an MCES leaves out the fewest common bonds that
+resolve each disagreement.
+
+Tautomer matching usually also needs a relaxed bond order:
 
 ```python
 import smsd
@@ -234,8 +270,10 @@ same object; `with_ph` clamps a finite pH to [0, 14].
 ## Timeouts, node limits and cancellation
 
 - `timeout_ms`, default `-1`: a negative value selects 10 s for `Substructure`
-  and 500 + 2 × (query atoms × target atoms) ms, at most 30 s, for `MCS`; `0`
-  stops at once; a positive value applies to each query–target pair.
+  and 500 + 2 × (query atoms × target atoms) ms, at most 30 s, for `MCS`: 1.3 s
+  for two 20-atom molecules, 5.5 s for two 50-atom molecules and 30 s from 122
+  atoms each; `0` stops at once; a positive value applies to each query–target
+  pair.
 - `node_limit`, default `0` (none): reaching it reports `LIMIT_REACHED`.
 - `cancellation`, default `None`: a `CancellationToken`; `cancel()` from any
   thread stops the search with `CANCELLED`. Tokens stay cancelled, so use a new
@@ -349,7 +387,10 @@ assert consensus.to_smiles() == "CC"
 - `MCS.consensus(molecules, options=None, threshold=1.0)`: a common graph in at
   least `ceil(threshold * len(molecules))` inputs, `threshold` in (0, 1], under
   one budget; always `optimal=False`. Atom weights and exclusions raise
-  `ValueError`.
+  `ValueError`. With complete rings or strict ring fusion, truncated ring
+  perception in any input makes it `LIMIT_REACHED` and incomplete, unless it is
+  already `TIMED_OUT` or `CANCELLED`; its fragment and supporting mappings are
+  retained.
 - `ConsensusResult` has `graph`, `to_smiles()`, `support_count`, `mappings`
   (supporting input index to a `Match` from `graph`), `fragment` and
   `source_index` (the graph in its source), `found`, `status`, `optimal`,
@@ -373,8 +414,9 @@ assert smsd.parse_smiles(fragment).n == 6
   empty when valid. A plain atom mapping selects every compatible mapped bond,
   so pass a `Match` for MCES.
 - `MCS.is_mapping_maximal(query, target, match, options=None)`: whether no
-  compatible extension exists, which is weaker than optimality; raises if it
-  cannot finish.
+  compatible extension exists, which is weaker than optimality. An invalid
+  mapping gives `False`; a valid mapping raises `RuntimeError` if the proof
+  cannot finish or required ring perception was truncated.
 - `MCS.canonicalize_mapping(query, target, atom_mapping)`: the
   lexicographically smallest equivalent mapping under both molecules'
   symmetries; raises if it cannot finish.
@@ -553,6 +595,11 @@ Binary fingerprints are sorted set positions; count fingerprints are
   (FCFP4) or `"torsion"`; `options` overrides it.
 - `fingerprint_from_smiles(smiles, radius=2, fp_size=2048, mode="ecfp", *, path_length=7, options=None)`:
   `mode` takes the `kind` values above; `options` overrides it.
+- `fingerprints(mols, *, kind="mcs", path_length=7, fp_size=2048, radius=2, options=None, num_threads=0)`:
+  the fingerprint of every molecule, each as `fingerprint` gives it, in input
+  order. SMILES strings are parsed and the fingerprints computed natively on
+  `num_threads` threads (0 uses the OpenMP default); the first molecule that
+  fails raises the error `fingerprint` gives for it.
 - `circular_fingerprint(mol, radius=2, fp_size=2048, mode="ecfp")`,
   `circular_fingerprint_counts(mol, radius=2, fp_size=2048, mode="ecfp")`: ECFP
   or FCFP of a graph; radius 2 is ECFP4.
@@ -584,7 +631,8 @@ reproduces `circular_fingerprint`, `path_fingerprint` and `topological_torsion`;
 `FingerprintOptions()` is ECFP4. The class methods `ecfp(radius=2, size=2048)`,
 `fcfp(radius=2, size=2048)`, `path(path_length=7, size=2048)`,
 `torsion(size=2048)` and `maccs()` build the same configurations. Pass the
-value as `options` to `fingerprint` or `fingerprint_from_smiles`.
+value as `options` to `fingerprint`, `fingerprints` or
+`fingerprint_from_smiles`.
 
 ```python
 import smsd

@@ -304,8 +304,9 @@ inline std::optional<std::vector<std::vector<int>>> fingerprintScreens(
 }
 
 /** Integer resident label overlaps, in query-major order; no score is formed on the device. */
-inline std::optional<std::vector<std::vector<int>>> residentSimilarityScreens(
-    const std::vector<const MolGraph*>& queries, const std::vector<MolGraph>& targets,
+template<class Targets>
+inline std::optional<std::vector<std::vector<int>>> residentSimilarityScreensForTargets(
+    const std::vector<const MolGraph*>& queries, const Targets& targets,
     const screening_detail::TargetLabels& labels, double threshold, const ChemOptions& chemistry, int numThreads,
     ResidentCache& cache, const smsd_screen_accelerator_v1* provider = nullptr) {
     using screening_detail::QueryLabelCounts;
@@ -403,8 +404,9 @@ inline std::optional<std::vector<std::vector<int>>> residentSimilarityScreens(
  * dense table) or when the accelerator fails; the caller then screens on the CPU. Targets left to
  * their graphs are scored on the CPU, as there.
  */
-inline std::optional<std::vector<double>> similarityScores(const MolGraph& query,
-                                                           const std::vector<MolGraph>& targets,
+template<class Targets>
+inline std::optional<std::vector<double>> similarityScoresForTargets(const MolGraph& query,
+                                                           const Targets& targets,
                                                            const screening_detail::TargetLabels& labels,
                                                            const ChemOptions& chemistry, int numThreads) {
     using screening_detail::QueryLabelCounts;
@@ -460,6 +462,21 @@ inline std::optional<std::vector<double>> similarityScores(const MolGraph& query
             : cpuCounts.similarity(targets[i], scratch);
     });
     return scores;
+}
+
+inline std::optional<std::vector<std::vector<int>>> residentSimilarityScreens(
+    const std::vector<const MolGraph*>& queries, const std::vector<MolGraph>& targets,
+    const screening_detail::TargetLabels& labels, double threshold, const ChemOptions& chemistry, int numThreads,
+    ResidentCache& cache, const smsd_screen_accelerator_v1* provider = nullptr) {
+    return ::smsd::screen_accelerator::residentSimilarityScreensForTargets<std::vector<MolGraph>>(
+        queries, targets, labels, threshold, chemistry, numThreads, cache, provider);
+}
+
+inline std::optional<std::vector<double>> similarityScores(const MolGraph& query,
+    const std::vector<MolGraph>& targets, const screening_detail::TargetLabels& labels,
+    const ChemOptions& chemistry, int numThreads) {
+    return ::smsd::screen_accelerator::similarityScoresForTargets<std::vector<MolGraph>>(
+        query, targets, labels, chemistry, numThreads);
 }
 
 } // namespace screen_accelerator

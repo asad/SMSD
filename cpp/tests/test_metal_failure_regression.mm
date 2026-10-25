@@ -12,6 +12,7 @@
 #include <cstring>
 #include <iostream>
 #include <string>
+#include <stdexcept>
 
 static std::string failure;
 
@@ -50,6 +51,7 @@ static std::string failure;
 }
 - (id<MTLCommandQueue>)newCommandQueue { return (id<MTLCommandQueue>)self; }
 - (id<MTLLibrary>)newLibraryWithSource:(NSString*)source options:(MTLCompileOptions*)options error:(NSError**)error {
+    if (!options || options.fastMathEnabled) throw std::runtime_error("Metal fast math must be disabled");
     return failure == "pipeline" ? nil : (id<MTLLibrary>)self;
 }
 - (id<MTLFunction>)newFunctionWithName:(NSString*)name { return (id<MTLFunction>)self; }
@@ -94,6 +96,22 @@ int main(int argc, char** argv) {
     const auto hits = smsd::metal::batchSimilarityScreen(query, targets, 0.0f);
     if (hits.size() != 2 || hits[0].index != 0 || hits[0].score != 1.0f || hits[1].score != 0.0f) {
         std::cerr << "Failed Metal screen did not return the CPU result\n"; return 1;
+    }
+    smsd::metal::MetalMolecule decimalQuery{}, decimalTarget{};
+    decimalQuery.n = 5; decimalQuery.labelCounts[0] = 1; decimalQuery.labelCounts[1] = 4;
+    decimalTarget.n = 6; decimalTarget.labelCounts[0] = 1; decimalTarget.labelCounts[2] = 5;
+    const auto decimalHits = smsd::metal::batchSimilarityScreen(decimalQuery, {decimalTarget}, 0.1f);
+    if (decimalHits.size() != 1 || decimalHits[0].score != 1.0f / 10.0f) {
+        std::cerr << "The direct float API must compare its rounded float score\n"; return 1;
+    }
+    smsd::metal::MetalMolecule largeQuery{}, largeTarget{};
+    largeQuery.n = (1 << 24) + 1; largeQuery.labelCounts[0] = largeQuery.n;
+    largeTarget.n = (1 << 24) + 3; largeTarget.labelCounts[0] = largeTarget.n;
+    const float expectedFloat = static_cast<float>(largeQuery.n) / static_cast<float>(largeTarget.n);
+    const auto largeHits = smsd::metal::batchSimilarityScreen(largeQuery, {largeTarget}, 0.0f);
+    if (expectedFloat == static_cast<float>(static_cast<double>(largeQuery.n) / largeTarget.n)
+        || largeHits.size() != 1 || largeHits[0].score != expectedFloat) {
+        std::cerr << "The direct float API must preserve float operand division\n"; return 1;
     }
     const int atomicNumber = 6, zero = 0;
     uint64_t domain = 0;

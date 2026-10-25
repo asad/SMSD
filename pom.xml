@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.bioinceptionlabs</groupId>
   <artifactId>smsd-build</artifactId>
-  <version>8.0.2</version>
+  <version>8.0.3</version>
   <packaging>pom</packaging>
   <name>SMSD Build</name>
   <properties>

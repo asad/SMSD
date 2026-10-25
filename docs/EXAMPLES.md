@@ -156,10 +156,11 @@ svg = smsd.depict_svg("CC(=O)Oc1ccccc1C(=O)O")
 assert ET.fromstring(svg).tag.endswith("svg")
 smsd.save_svg(svg, "aspirin.svg")
 
-query = smsd.parse_smiles("c1ccccc1")
-target = smsd.parse_smiles("c1ccc(O)cc1")
+query = smsd.parse_smiles("CC(=O)NC")   # N-methylacetamide
+target = smsd.parse_smiles("CCC(=O)N")  # propanamide
 result = smsd.MCS.find(query).with_timeout(1000).match(target)
 mapping = dict(result.best.atom_mapping)
+assert mapping == {0: 1, 1: 2, 2: 3, 3: 4}
 smsd.save_svg(smsd.depict_pair(query, target, mapping), "mcs_pair.svg")
 
 # Highlight target atoms: keys must be indices in the rendered molecule.

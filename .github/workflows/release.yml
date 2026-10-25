@@ -146,7 +146,9 @@ jobs:
           python scripts/collect-release-wheels.py --release-dir release-input --wheel-dir python-wheel --allow-incomplete
           python scripts/prepare_docker_context.py --release-dir release-input --output docker-context --architecture amd64
       - name: Build the image from the checked SDK and wheel
-        run: docker build --platform linux/amd64 --build-arg "SMSD_REVISION=$SMSD_REVISION" --tag smsd:release-check docker-context
+        run: |
+          docker buildx version > docker-builder.log
+          docker buildx build --load --platform linux/amd64 --build-arg "SMSD_REVISION=$SMSD_REVISION" --tag smsd:release-check docker-context
       - name: Test the CLI and installed Python image
         run: |
           docker run --rm smsd:release-check --help > docker-cli-help.log
@@ -155,15 +157,19 @@ jobs:
       - name: Save tested image
         run: |
           docker inspect smsd:release-check > docker-image.json
-          docker save smsd:release-check | gzip > smsd-cli-image.tar.gz
-          sha256sum smsd-cli-image.tar.gz > docker-image.sha256
+          python scripts/archive_docker_image.py --image smsd:release-check \
+            --revision "$SMSD_REVISION" --architecture amd64 --output smsd-cli-image.tar.xz
+          sha256sum smsd-cli-image.tar.xz > docker-image.sha256
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ always() }}
         with:
           name: docker-cli
+          compression-level: 0
           path: |
-            smsd-cli-image.tar.gz
+            smsd-cli-image.tar.xz*
             docker-image.sha256
             docker-image.json
+            docker-builder.log
             docker-cpu-smoke.json
             docker-cli-help.log
             docker-cli-version.log

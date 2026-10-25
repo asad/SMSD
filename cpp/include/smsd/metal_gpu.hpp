@@ -25,6 +25,8 @@
 #ifndef SMSD_METAL_GPU_HPP
 #define SMSD_METAL_GPU_HPP
 
+#include "smsd/screen_accelerator_abi.h"
+
 #include <string>
 #include <vector>
 
@@ -64,6 +66,12 @@ struct MetalScreenResult {
     float score = 0.f;
 };
 
+namespace detail {
+/** Integer overlaps for the host double-precision screening path. */
+std::vector<int> batchSimilarityOverlaps(
+    const MetalMolecule& query, const std::vector<MetalMolecule>& targets);
+}
+
 // ---------------------------------------------------------------------------
 // Runtime API (implemented in metal/metal_batch.mm)
 // ---------------------------------------------------------------------------
@@ -80,6 +88,9 @@ bool metalAvailable() noexcept;
  *   "Metal: not available"
  */
 std::string metalDeviceInfo();
+
+/** Resident integer fingerprint screens; pass explicitly, as automatic selection is disabled. */
+const smsd_screen_accelerator_v1* fingerprintAccelerator() noexcept;
 
 /**
  * Pack a MolGraph-style atom array into a MetalMolecule descriptor.

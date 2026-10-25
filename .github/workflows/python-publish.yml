@@ -11,6 +11,12 @@ on:
         description: Exact release commit or existing validated tag
         required: true
         type: string
+      distribution:
+        description: Package to publish; smsd-cuda uses an existing validated Linux wheel
+        required: true
+        default: smsd
+        type: choice
+        options: [smsd, smsd-cuda]
       platform:
         description: Platform requiring validation; prefer local Linux/macOS builds
         required: true
@@ -18,7 +24,7 @@ on:
         type: choice
         options: [windows, linux, macos, all]
       publish:
-        description: Upload the validated published GitHub SDK and 20 CPU wheels to PyPI (requires platform=all)
+        description: Upload validated published distributions to PyPI (smsd requires all; smsd-cuda requires linux)
         required: true
         default: false
         type: boolean
@@ -42,15 +48,6 @@ jobs:
           ref: ${{ inputs.release_tag }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Restore the release files exactly as stored
-        # The source distribution must equal the frozen Git tree byte for byte, so no
-        # checkout line-ending conversion may apply to it.
-        shell: bash
-        run: |
-          printf '* -text -eol\n' > .git/info/attributes
-          git rm -r -q --cached .
-          git reset -q --hard
-          test -z "$(git status --porcelain)"
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.14'
@@ -60,10 +57,13 @@ jobs:
           RELEASE_REF: ${{ inputs.release_tag }}
           BUILD_TARGET: ${{ inputs.platform }}
           PUBLISH: ${{ inputs.publish }}
+          DISTRIBUTION: ${{ inputs.distribution }}
         shell: bash
         run: |
           python - <<'PY'
           import json, os, re, subprocess
+          if os.environ.get('DISTRIBUTION', 'smsd') != 'smsd':
+              raise SystemExit('smsd-cuda only publishes an existing validated release wheel; use publish=true and platform=linux')
           ref = os.environ['RELEASE_REF']
           if not re.fullmatch(r'(?:v\d+\.\d+\.\d+|[0-9a-fA-F]{40})', ref):
               raise SystemExit('Expected a stable release tag or exact 40-character commit SHA')
@@ -142,7 +142,7 @@ jobs:
 
   publish:
     name: Publish validated GitHub release files
-    if: ${{ inputs.publish }}
+    if: ${{ inputs.publish && inputs.distribution == 'smsd' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment: pypi
@@ -184,4 +184,50 @@ jobs:
           python scripts/check_pypi_release.py verify-staged \
             --dist-dir dist --receipt-file upload-receipt.json
       - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+
+  publish-cuda:
+    name: Publish validated CUDA release wheel
+    if: ${{ inputs.publish && inputs.distribution == 'smsd-cuda' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: pypi
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.14'
+      - name: Download the published CUDA wheel and source evidence
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          BUILD_TARGET: ${{ inputs.platform }}
+          RELEASE_REPOSITORY: ${{ github.repository }}
+        run: |
+          python scripts/check_pypi_release.py download --package smsd-cuda \
+            --tag "$RELEASE_TAG" --platform "$BUILD_TARGET" --repository "$RELEASE_REPOSITORY" \
+            --release-dir release-input --metadata-file release-metadata.json
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.release_tag }}
+          fetch-depth: 0
+          path: release-checkout
+          persist-credentials: false
+      - name: Check CUDA hashes, frozen source, metadata and actual build proof
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          python scripts/check_pypi_release.py validate --package smsd-cuda \
+            --tag "$RELEASE_TAG" --release-dir release-input --metadata-file release-metadata.json \
+            --source-checkout release-checkout --dist-dir dist --receipt-file upload-receipt.json
+      - name: Verify the exact CUDA wheel immediately before upload
+        run: |
+          python scripts/check_pypi_release.py verify-staged --package smsd-cuda \
+            --dist-dir dist --receipt-file upload-receipt.json
+      - name: Publish smsd-cuda to PyPI
         uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2

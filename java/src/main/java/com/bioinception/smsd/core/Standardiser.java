@@ -91,65 +91,41 @@ public final class Standardiser {
 
   // ========== Named predicate expansion ==========
 
-  /** Expand $name tokens to recursive SMARTS using a registry, leaving existing $() intact. */
+  /**
+   * Replace each $name token of a registered name, including those inside recursive SMARTS, with
+   * $(definition), as the native core does. A name is ASCII letters, digits and underscores;
+   * definitions are inserted as written and $(...) is kept.
+   */
   public static String expandNamedPredicates(String smarts, PredicateRegistry reg) {
-    StringBuilder out = new StringBuilder();
+    StringBuilder out = new StringBuilder(smarts.length());
     int i = 0, n = smarts.length();
     while (i < n) {
-      if (smarts.charAt(i) == '[') {
-        int depth = 1, j = i + 1;
-        while (j < n && depth > 0) {
-          char d = smarts.charAt(j);
-          if (d == '[') depth++;
-          else if (d == ']') depth--;
-          j++;
+      char c = smarts.charAt(i);
+      if (c == '$' && i + 1 < n && smarts.charAt(i + 1) != '(') {
+        int j = i + 1;
+        while (j < n && nameCharacter(smarts.charAt(j))) j++;
+        String name = smarts.substring(i + 1, j);
+        if (reg.contains(name)) {
+          out.append("$(").append(reg.get(name)).append(')');
+          i = j;
+          continue;
         }
-        out.append('[').append(rewriteContent(smarts.substring(i + 1, j - 1), reg)).append(']');
-        i = j;
-      } else {
-        out.append(smarts.charAt(i++));
       }
+      out.append(c);
+      i++;
     }
     return out.toString();
   }
 
-  private static String rewriteContent(String content, PredicateRegistry reg) {
-    StringBuilder sb = new StringBuilder();
-    int i = 0, n = content.length();
-    while (i < n) {
-      char c = content.charAt(i);
-      if (c != '$') { sb.append(c); i++; continue; }
-      if (i + 1 < n && content.charAt(i + 1) == '(') {
-        int depth = 1, j = i + 2;
-        while (j < n && depth > 0) {
-          char d = content.charAt(j);
-          if (d == '(') depth++;
-          else if (d == ')') depth--;
-          j++;
-        }
-        sb.append(content, i, j);
-        i = j;
-      } else {
-        int j = i + 1;
-        while (j < n && (Character.isLetterOrDigit(content.charAt(j)) || content.charAt(j) == '_'))
-          j++;
-        String name = content.substring(i + 1, j);
-        if (!name.isEmpty() && reg.contains(name)) {
-          sb.append("$(").append(reg.get(name)).append(")");
-          i = j;
-        } else {
-          sb.append(c);
-          i++;
-        }
-      }
-    }
-    return sb.toString();
+  private static boolean nameCharacter(char c) {
+    return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_';
   }
 
   // ========== Predicate registry ==========
 
   /**
-   * Named SMARTS predicate registry: $name -> SMARTS. Supports loading from JSON files with
+   * Named SMARTS predicate registry: $name -> SMARTS. A definition is expanded as recursive SMARTS,
+   * so it describes the atom written first. Supports loading from JSON files with
    * {@link #loadJsonFile}, which needs the optional dependency
    * {@code com.fasterxml.jackson.core:jackson-databind}.
    */
@@ -165,17 +141,30 @@ public final class Standardiser {
 
     private final Map<String, String> map = new LinkedHashMap<>();
 
+    /** Starts with the ten built-in predicates, defined as in the native core. */
     public PredicateRegistry() {
-      map.put("isAmideN", "[$([NX3;H2,H1;!$(NC=O)]),$([NX3;$(NC=O)])]");
+      // N bonded to a carbonyl carbon: amides, lactams, imides, ureas and carbamates, those in
+      // aromatic rings included.
+      map.put("isAmideN", "[#7X3][#6]=O");
+      // Carbonyl carbon bearing OH or O-: carboxylic, carbamic and carbonic acids and their anions.
       map.put("isCarboxylC", "[CX3](=O)[OX2H1,OX1-]");
       map.put("isSulfonamideN", "[NX3;$(NS(=O)=O)]");
-      map.put("isEster", "[#6][CX3](=O)[OX2][#6]");
-      map.put("isKetone", "[#6][CX3](=O)[#6]");
+      // Carbonyl carbon of a carboxylic ester, formates and aromatic lactones included; anhydrides
+      // are excluded.
+      map.put("isEster", "[#6X3;H1,$([#6][#6])](=O)[#8X2][#6;!$([#6]=O)]");
+      // Carbonyl carbon bonded to two carbons, carbonyls in aromatic rings included.
+      map.put("isKetone", "[#6X3](=O)([#6])[#6]");
       map.put("isHalogen", "[F,Cl,Br,I]");
-      map.put("isPositive", "[*+]");
-      map.put("isNegative", "[*-]");
-      map.put("isHBDonor", "[N!H0,O!H0,S!H0]");
-      map.put("isHBAcceptor", "[N,O,S;H0;!+0]");
+      // Every positive or negative charge in the OpenSMILES range, -15 to +15.
+      map.put("isPositive", "[+,+2,+3,+4,+5,+6,+7,+8,+9,+10,+11,+12,+13,+14,+15]");
+      map.put("isNegative", "[-,-2,-3,-4,-5,-6,-7,-8,-9,-10,-11,-12,-13,-14,-15]");
+      // N, O or S with hydrogen, aromatic NH included.
+      map.put("isHBDonor", "[#7,#8,#16;!H0]");
+      // N, O or S of charge 0 to -3 with a free lone pair. Amide N, aromatic N with three
+      // connections (pyrrole type), N of valence 5 (uncharged nitro and N-oxide) and S of valence
+      // 4 or 6 (sulfoxides, sulfones) are excluded; aniline, nitrile, thioamide, amidine and
+      // sulfonamide N are acceptors.
+      map.put("isHBAcceptor", "[#7&!X3&!v5,#7&A&!v5&!$(NC=O),#8,#16&!v4&!v6;+0,-,-2,-3]");
     }
 
     public void put(String name, String smarts) { map.put(name, smarts); }

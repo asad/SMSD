@@ -27,10 +27,12 @@ Save this program as `example.cpp` in the repository root:
 #include "smsd/smsd.hpp"
 
 int main() {
-    const auto query = smsd::parseSMILES("c1ccccc1");
-    const auto target = smsd::parseSMILES("c1ccc(O)cc1");
+    const auto benzene = smsd::parseSMILES("c1ccccc1");
+    const auto phenol = smsd::parseSMILES("c1ccc(O)cc1");
+    const auto query = smsd::parseSMILES("CC(=O)NC");   // N-methylacetamide
+    const auto target = smsd::parseSMILES("CCC(=O)N");  // propanamide
 
-    const auto embedding = smsd::Substructure::find(query).withTimeout(1000).match(target);
+    const auto embedding = smsd::Substructure::find(benzene).withTimeout(1000).match(phenol);
     const auto common = smsd::MCS::find(query).withTimeout(1000).match(target);
     if (embedding.matches.empty() || common.matches.empty() || !common.optimal) return 1;
 
@@ -46,8 +48,9 @@ c++ -std=c++17 -O2 -pthread -I cpp/include example.cpp -o example
 ./example
 ```
 
-The program reports six substructure atoms and six MCS atoms. Mappings use
-zero-based query-to-target atom indices.
+The program reports six substructure atoms for benzene in phenol and four MCS
+atoms, C–C(=O)–N, for N-methylacetamide and propanamide, neither of which
+contains the other. Mappings use zero-based query-to-target atom indices.
 
 `Substructure` finds full-query embeddings of a molecule or SMARTS query. `MCS`
 defaults to the connected maximum common induced subgraph (MCIS), which
@@ -77,14 +80,17 @@ ctest --test-dir build/cpp --build-config Debug --output-on-failure
 | `SMSD_BUILD_PYTHON` | `OFF` | Builds the Python extension; requires Python development headers and pybind11 |
 | `SMSD_WITH_RDKIT` | `OFF` | Builds the `smsd_rdkit` adapter; requires an RDKit development installation and C++20 |
 | `SMSD_BUILD_CUDA` | `AUTO` | CUDA screening when the CUDA toolkit and compiler are found; `ON` requires them |
+| `SMSD_BUILD_METAL` | `AUTO` | Builds native Metal screening on macOS when available; `ON` requires it |
 
 Python packages are built from the repository root with its `pyproject.toml`;
 see the [Python module](../python/README.md). The RDKit adapter's conversion
 rules are under [Optional native
-adapter](../docs/CPP.md#optional-native-adapter). The native CUDA library is
-not part of the installed header package; use it from the same CMake source
-build. Python CPU/OpenMP wheels use the separate optional `smsd-cuda` package
-for NVIDIA CUDA screening. macOS uses the CPU.
+adapter](../docs/CPP.md#optional-native-adapter). The native CUDA and Metal
+libraries are not part of the installed header package; use them from the same
+CMake source build. [Metal fingerprint screening](../docs/CPP.md#optional-metal-fingerprint-screening)
+requires explicit opt-in; automatic selection is disabled. Python CPU/OpenMP
+wheels use the separate optional `smsd-cuda` package for NVIDIA CUDA screening;
+macOS Python wheels use the CPU.
 
 ## Install and use with CMake
 
@@ -102,7 +108,7 @@ program as `example/main.cpp` and this file as `example/CMakeLists.txt`:
 ```cmake
 cmake_minimum_required(VERSION 3.18)
 project(smsd_example LANGUAGES CXX)
-find_package(smsd 8.0.2 CONFIG REQUIRED)
+find_package(smsd 8.0.3 CONFIG REQUIRED)
 add_executable(smsd_example main.cpp)
 target_link_libraries(smsd_example PRIVATE smsd::smsd)
 ```
@@ -117,7 +123,7 @@ cmake --build build/example --config Release
 
 Run `build/example/smsd_example` on macOS or Linux, or
 `build/example/Release/smsd_example.exe` with a Visual Studio generator. The
-package uses same-major-version compatibility, so `find_package(smsd 8.0.2)`
+package uses same-major-version compatibility, so `find_package(smsd 8.0.3)`
 accepts any later 8.x installation.
 
 ## Documentation

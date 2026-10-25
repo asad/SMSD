@@ -87,16 +87,22 @@ final class CommonBondGraphs {
     for (int atom : excludedTargetAtoms)
       if (atom >= 0 && atom < excluded.length)
         excluded[atom] = true;
+    clock.poll();
+    boolean pairRings = chemistry.completeRingsOnly && !query.ringsTruncated() && !target.ringsTruncated();
+    VertexSearch.RingIndex queryRings = pairRings ? new VertexSearch.RingIndex(query) : null;
+    VertexSearch.RingIndex targetRings = pairRings ? new VertexSearch.RingIndex(target) : null;
     atomPairs = new long[this.query.atomCount * atomWords];
     for (int queryAtom = 0; queryAtom < this.query.atomCount; queryAtom++) {
       clock.tick(1 + this.target.atomCount);
       for (int targetAtom = 0; targetAtom < this.target.atomCount; targetAtom++)
         if (!excluded[targetAtom]
+            && (queryRings == null
+                || queryRings.ringAtom(query, queryAtom) == targetRings.ringAtom(target, targetAtom))
             && MolGraph.ChemOps.atomsCompatFast(
                 query, queryAtom, target, targetAtom, chemistry))
           atomPairs[queryAtom * atomWords + (targetAtom >>> 6)] |= 1L << targetAtom;
     }
-    bondPairs = bondPairs(query, target, chemistry, clock);
+    bondPairs = bondPairs(query, target, chemistry, queryRings, targetRings, clock);
     Kinds atomKinds = new Kinds(atomPairs, this.query.atomCount, this.target.atomCount, clock);
     Kinds bondKinds = new Kinds(bondPairs, this.query.bondCount, this.target.bondCount, clock);
     atomClasses = atomKinds.classes;
@@ -186,10 +192,18 @@ final class CommonBondGraphs {
    * maps onto which.
    */
   private long[] bondPairs(MolGraph queryGraph, MolGraph targetGraph, ChemOptions chemistry,
-      Clock clock) {
+      VertexSearch.RingIndex queryRings, VertexSearch.RingIndex targetRings, Clock clock) {
     long[] keys = new long[query.bondCount + target.bondCount];
     query.bondKeys(queryGraph, keys, 0, chemistry.tautomerAware);
     target.bondKeys(targetGraph, keys, query.bondCount, chemistry.tautomerAware);
+    if (queryRings != null) {
+      for (int bond = 0; bond < query.bondCount; bond++)
+        keys[bond] = keys[bond] * 2
+            + (queryRings.ringBond(queryGraph, query.bondFirst[bond], query.bondSecond[bond]) ? 1 : 0);
+      for (int bond = 0; bond < target.bondCount; bond++)
+        keys[query.bondCount + bond] = keys[query.bondCount + bond] * 2
+            + (targetRings.ringBond(targetGraph, target.bondFirst[bond], target.bondSecond[bond]) ? 1 : 0);
+    }
     int[] kind = denseRanks(keys);
     int kinds = 0;
     for (int bondKind : kind) kinds = Math.max(kinds, bondKind + 1);
@@ -214,7 +228,9 @@ final class CommonBondGraphs {
         int queryFirst = query.bondFirst[queryBond], querySecond = query.bondSecond[queryBond];
         int targetFirst = target.bondFirst[targetBond], targetSecond = target.bondSecond[targetBond];
         compatible[queryKind * kinds + targetKind] =
-            MolGraph.ChemOps.bondsCompatible(queryGraph, queryFirst, querySecond, targetGraph,
+            (queryRings == null || queryRings.ringBond(queryGraph, queryFirst, querySecond)
+                == targetRings.ringBond(targetGraph, targetFirst, targetSecond))
+            && MolGraph.ChemOps.bondsCompatible(queryGraph, queryFirst, querySecond, targetGraph,
                 targetFirst, targetSecond, chemistry)
             && MolGraph.ChemOps.bondsCompatible(queryGraph, queryFirst, querySecond, targetGraph,
                 targetSecond, targetFirst, chemistry);

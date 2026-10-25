@@ -14,6 +14,7 @@
 #include "smsd/common_atom_search.hpp"
 #include "smsd/common_bond_search.hpp"
 #include "smsd/mol_graph.hpp"
+#include "smsd/ring_finder.hpp"
 #include "smsd/smarts_parser.hpp"
 #include "smsd/smiles_parser.hpp"
 #include "smsd/stereo.hpp"
@@ -83,11 +84,11 @@ inline void prepare(const MolGraph* query, const MolGraph& target, const ChemOpt
 inline SearchResult commonBondSearch(const MolGraph& query, const MolGraph& target, const MCSOptions& options,
                                      size_t limit, bool all, const Match* required, Budget& budget) {
     prepare(&query, target, options.chemistry);
-    // With complete rings a mapped ring atom lies on a whole ring of both molecules, and so does a
-    // selected ring bond, so ring atoms and bonds pair only with ring atoms and bonds, and chain
-    // ones with chain ones.
-    ChemOptions chemistry = options.chemistry;
-    if (chemistry.completeRingsOnly) chemistry.ringMatchesRingOnly = true;
+    const ChemOptions& chemistry = options.chemistry;
+    const bool prepareRings = chemistry.completeRingsOnly && !budget.stopped()
+        && common_bond_detail::CommonBondGraphs::supports(query, target);
+    RingConstraint queryRings(query, prepareRings), targetRings(target, prepareRings);
+    const bool pairRings = prepareRings && !queryRings.truncated() && !targetRings.truncated();
     const bool connected = options.connectivity == MCSConnectivity::Connected || options.maxFragments == 1;
     const bool tautomers = chemistry.tautomerAware;
     common_bond_detail::CommonBondRequest request;
@@ -102,17 +103,30 @@ inline SearchResult commonBondSearch(const MolGraph& query, const MolGraph& targ
     request.chirality = chemistry.useChirality;
     request.bondStereo = chemistry.useBondStereo;
     request.rings = chemistry.completeRingsOnly;
+    if (prepareRings) {
+        request.queryCycles = &queryRings.cycles();
+        request.targetCycles = &targetRings.cycles();
+    }
     if (required && !required->atomMapping.empty()) {
         request.requiredTarget.assign(size_t(query.n), -1);
         for (const auto& atom : required->atomMapping) request.requiredTarget[atom.first] = atom.second;
         for (const auto& bond : required->bondMapping) request.requiredBonds.push_back({bond[0], bond[1]});
     }
     auto outcome = common_bond_detail::searchCommonBonds(query, target,
-        [&](int queryAtom, int targetAtom) { return atomCompatible(query, queryAtom, target, targetAtom, chemistry); },
-        [&](int queryFirst, int querySecond, int targetFirst, int targetSecond) {
-            return bondCompatible(query, queryFirst, querySecond, target, targetFirst, targetSecond, chemistry);
+        [&](int queryAtom, int targetAtom) {
+            return (!pairRings || queryRings.ringAtom(queryAtom) == targetRings.ringAtom(targetAtom))
+                && atomCompatible(query, queryAtom, target, targetAtom, chemistry);
         },
-        [tautomers](const MolGraph& graph, int first, int second) { return bondCompatibilityKey(graph, first, second, tautomers); },
+        [&](int queryFirst, int querySecond, int targetFirst, int targetSecond) {
+            return (!pairRings || queryRings.ringBond(queryFirst, querySecond)
+                                     == targetRings.ringBond(targetFirst, targetSecond))
+                && bondCompatible(query, queryFirst, querySecond, target, targetFirst, targetSecond, chemistry);
+        },
+        [&](const MolGraph& graph, int first, int second) {
+            const int64_t key = bondCompatibilityKey(graph, first, second, tautomers);
+            const RingConstraint& rings = &graph == &query ? queryRings : targetRings;
+            return pairRings ? key * 2 + (rings.ringBond(first, second) ? 1 : 0) : key;
+        },
         options.excludedTargetAtoms, connected, [&budget] { return budget.stopped(); }, request);
     budget.countNodes(outcome.nodes);
     if (!outcome.supported || outcome.capReached) budget.limitReached();
@@ -221,6 +235,51 @@ inline SearchResult commonSubgraphOriented(const MolGraph& query, const MolGraph
     return collector.finish(budget, proof.first, proof.second);
 }
 
+/** Whether the chemistry relies on an exhaustive set of relevant cycles. */
+inline bool needsRingProof(const ChemOptions& chemistry) {
+    return chemistry.completeRingsOnly || chemistry.ringFusionMode == ChemOptions::RingFusionMode::STRICT;
+}
+
+/** Whether the ring set used by the chemistry was truncated. */
+inline bool ringProofTruncated(const MolGraph& graph, const ChemOptions& chemistry) {
+    if (chemistry.completeRingsOnly) {
+        bool truncated = false;
+        (void)recentRelevantCycles(graph, &truncated);
+        return truncated;
+    }
+    return chemistry.ringFusionMode == ChemOptions::RingFusionMode::STRICT && ringsTruncated(graph);
+}
+
+/** Retain the search results without claiming proof from truncated ring perception. */
+inline void qualifyRingProof(SearchResult& result, const MolGraph& query, const MolGraph& target,
+                             const ChemOptions& chemistry) {
+    if (!needsRingProof(chemistry)
+        || (!result.optimal && !result.complete && result.status != SearchStatus::Completed)
+        || (!ringProofTruncated(query, chemistry) && !ringProofTruncated(target, chemistry))) return;
+    if (result.status == SearchStatus::Completed || result.status == SearchStatus::LimitReached)
+        result.status = SearchStatus::LimitReached;
+    result.optimal = result.complete = false;
+}
+
+/** Whether each atom lists every other atom once, with bonds in both directions. */
+inline bool completeAtomTopology(const MolGraph& graph, Budget& budget) {
+    if (graph.n < 0 || graph.neighbors.size() != static_cast<size_t>(graph.n)) return false;
+    for (int atom = 0; atom < graph.n; ++atom) {
+        if ((atom & 255) == 0 && budget.stopped()) return false;
+        if (graph.neighbors[atom].size() != static_cast<size_t>(graph.n - 1)) return false;
+    }
+    std::vector<int> seen(static_cast<size_t>(graph.n), -1);
+    uint64_t work = 0;
+    for (int atom = 0; atom < graph.n; ++atom)
+        for (int neighbor : graph.neighbors[atom]) {
+            if ((work++ & 255) == 0 && budget.stopped()) return false;
+            if (neighbor < 0 || neighbor >= graph.n || neighbor == atom || seen[neighbor] == atom) return false;
+            seen[neighbor] = atom;
+            if (!graph.hasBond(atom, neighbor) || !graph.hasBond(neighbor, atom)) return false;
+        }
+    return true;
+}
+
 inline SearchResult commonSubgraph(const MolGraph& query, const MolGraph& target,
                                   const MCSOptions& options, size_t limit, bool all, const Match* required = nullptr,
                                   Budget* sharedBudget = nullptr) {
@@ -234,32 +293,50 @@ inline SearchResult commonSubgraph(const MolGraph& query, const MolGraph& target
         Collector collector(&options, limit, all);
         return collector.finish(budget, false, false);
     }
+    bool reverse = false;
     if (options.objective == MCSObjective::MCES && !required && options.excludedTargetAtoms.empty()) {
         size_t queryIncidences = 0, targetIncidences = 0;
         for (const auto& neighbors : query.neighbors) queryIncidences += neighbors.size();
         for (const auto& neighbors : target.neighbors) targetIncidences += neighbors.size();
-        if ((options.connectivity == MCSConnectivity::Connected || options.maxFragments == 1)
-                ? query.n > target.n : queryIncidences > targetIncidences) {
-            auto result = commonSubgraphOriented(target, query, options, limit, all, nullptr, budget);
-            for (auto& match : result.matches) {
-                std::vector<int> mapping(query.n, -1);
-                for (const auto& atom : match.atomMapping) mapping[atom.second] = atom.first;
-                std::vector<std::array<int, 4>> bonds;
-                bonds.reserve(match.bondMapping.size());
-                for (const auto& bond : match.bondMapping) {
-                    if (bond[2] < bond[3]) bonds.push_back({bond[2], bond[3], bond[0], bond[1]});
-                    else bonds.push_back({bond[3], bond[2], bond[1], bond[0]});
-                }
-                match = makeMatch(mapping, std::move(bonds));
-            }
-            std::sort(result.matches.begin(), result.matches.end(), [](const Match& first, const Match& second) {
-                return std::tie(first.atomMapping, first.bondMapping) < std::tie(second.atomMapping, second.bondMapping);
-            });
-            result.elapsedMillis = budget.elapsedMillis();
-            return result;
+        reverse = (options.connectivity == MCSConnectivity::Connected || options.maxFragments == 1)
+                ? query.n > target.n : queryIncidences > targetIncidences;
+    } else if (options.objective == MCSObjective::MCIS && !all && limit == 1 && !required
+            && options.excludedTargetAtoms.empty() && options.atomWeights.empty() && options.nodeLimit == 0
+            && options.connectivity == MCSConnectivity::Connected && options.maxFragments == INT_MAX
+            && options.minFragmentAtoms == 1 && !options.chemistry.useChirality
+            && !options.chemistry.useBondStereo && !options.chemistry.completeRingsOnly
+            && !options.chemistry.tautomerAware && !options.chemistry.ringMatchesRingOnly
+            && options.chemistry.ringFusionMode == ChemOptions::RingFusionMode::IGNORE
+            && !hasStereoTags(query) && !hasStereoTags(target)) {
+        reverse = completeAtomTopology(target, budget) && !completeAtomTopology(query, budget);
+        if (budget.stopped()) {
+            Collector collector(&options, limit, all);
+            return collector.finish(budget, false, false);
         }
     }
-    return commonSubgraphOriented(query, target, options, limit, all, required, budget);
+    if (reverse) {
+        auto result = commonSubgraphOriented(target, query, options, limit, all, nullptr, budget);
+        for (auto& match : result.matches) {
+            std::vector<int> mapping(query.n, -1);
+            for (const auto& atom : match.atomMapping) mapping[atom.second] = atom.first;
+            std::vector<std::array<int, 4>> bonds;
+            bonds.reserve(match.bondMapping.size());
+            for (const auto& bond : match.bondMapping) {
+                if (bond[2] < bond[3]) bonds.push_back({bond[2], bond[3], bond[0], bond[1]});
+                else bonds.push_back({bond[3], bond[2], bond[1], bond[0]});
+            }
+            match = makeMatch(mapping, std::move(bonds));
+        }
+        std::sort(result.matches.begin(), result.matches.end(), [](const Match& first, const Match& second) {
+            return std::tie(first.atomMapping, first.bondMapping) < std::tie(second.atomMapping, second.bondMapping);
+        });
+        result.elapsedMillis = budget.elapsedMillis();
+        qualifyRingProof(result, query, target, options.chemistry);
+        return result;
+    }
+    auto result = commonSubgraphOriented(query, target, options, limit, all, required, budget);
+    qualifyRingProof(result, query, target, options.chemistry);
+    return result;
 }
 
 /**
