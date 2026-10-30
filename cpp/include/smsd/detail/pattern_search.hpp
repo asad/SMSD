@@ -51,13 +51,60 @@ public:
     }
 };
 
-/** Bond lookup for a SMARTS pattern; a repeated atom pair keeps its first bond. */
+/** Bond lookup for a SMARTS pattern; parallel predicates constrain one selected edge. */
 class PatternBonds {
     static constexpr int DENSE_ATOMS = 128;
     int atoms_ = 0;
     bool dense_ = false;
     std::vector<int> table_;
     std::unordered_map<int64_t, int> sparse_;
+    bool selfBond_ = false;
+    std::shared_ptr<const SmartsQuery> conjoined_;
+
+    /** A private simple graph with every parallel predicate retained as a conjunction. */
+    static std::shared_ptr<const SmartsQuery> conjoin(const SmartsQuery& pattern) {
+        auto result = std::make_shared<SmartsQuery>(pattern);
+        result->bonds.clear();
+        std::unordered_map<int64_t, size_t> indices;
+        std::function<void(smarts_detail::BondExpr&)> reverse = [&](smarts_detail::BondExpr& expression) {
+            using smarts_detail::BondPrimType;
+            if (expression.op == smarts_detail::ExprOp::PRIM) {
+                if (expression.primType == BondPrimType::WEDGE) expression.primType = BondPrimType::DASH;
+                else if (expression.primType == BondPrimType::DASH) expression.primType = BondPrimType::WEDGE;
+                else if (expression.primType == BondPrimType::WEDGE_OR_UNSPECIFIED)
+                    expression.primType = BondPrimType::DASH_OR_UNSPECIFIED;
+                else if (expression.primType == BondPrimType::DASH_OR_UNSPECIFIED)
+                    expression.primType = BondPrimType::WEDGE_OR_UNSPECIFIED;
+            }
+            for (auto& child : expression.children) reverse(child);
+        };
+        for (const auto& bond : pattern.bonds) {
+            // Supported search targets contain no self bonds; the local query is refused by feasibility.
+            if (bond.from == bond.to) continue;
+            const int64_t key = MolGraph::bondKey(bond.from, bond.to);
+            const auto inserted = indices.emplace(key, result->bonds.size());
+            if (inserted.second) {
+                result->bonds.push_back(bond);
+                continue;
+            }
+            auto expression = bond.expr;
+            auto& combined = result->bonds[inserted.first->second];
+            if (bond.from != combined.from) reverse(expression);
+            if (combined.expr.op == smarts_detail::ExprOp::AND)
+                combined.expr.children.push_back(std::move(expression));
+            else {
+                std::vector<smarts_detail::BondExpr> terms;
+                terms.push_back(std::move(combined.expr));
+                terms.push_back(std::move(expression));
+                combined.expr = smarts_detail::BondExpr::makeAnd(std::move(terms));
+            }
+        }
+        result->bondNodes.clear();
+        for (const auto& bond : result->bonds)
+            result->bondNodes.push_back(static_cast<uint32_t>(smarts_detail::expressionNodes(bond.expr)));
+        result->buildAdjacency();
+        return result;
+    }
 public:
     /** The bytes of the table a pattern of so many atoms would have, or zero when it would have none. */
     static size_t tableBytes(int atoms) {
@@ -67,15 +114,44 @@ public:
     explicit PatternBonds(const SmartsQuery& pattern, bool table = true)
         : atoms_(pattern.atomCount()), dense_(table && pattern.atomCount() <= DENSE_ATOMS) {
         if (dense_) table_.assign(static_cast<size_t>(atoms_) * atoms_, -1);
+        bool aliases = false;
         for (size_t bond = 0; bond < pattern.bonds.size(); ++bond) {
             const int first = pattern.bonds[bond].from, second = pattern.bonds[bond].to;
+            if (first == second) { selfBond_ = true; aliases = true; }
             if (!dense_) {
-                sparse_.emplace(MolGraph::bondKey(first, second), static_cast<int>(bond));
+                if (!sparse_.emplace(MolGraph::bondKey(first, second), static_cast<int>(bond)).second) aliases = true;
                 continue;
             }
             int& entry = table_[static_cast<size_t>(first) * atoms_ + second];
             if (entry < 0) entry = table_[static_cast<size_t>(second) * atoms_ + first] = static_cast<int>(bond);
+            else aliases = true;
         }
+        if (aliases) {
+            conjoined_ = conjoin(pattern);
+            if (dense_) std::fill(table_.begin(), table_.end(), -1);
+            else sparse_.clear();
+            for (size_t bond = 0; bond < conjoined_->bonds.size(); ++bond) {
+                const auto& item = conjoined_->bonds[bond];
+                if (dense_)
+                    table_[static_cast<size_t>(item.from) * atoms_ + item.to]
+                        = table_[static_cast<size_t>(item.to) * atoms_ + item.from] = static_cast<int>(bond);
+                else sparse_.emplace(MolGraph::bondKey(item.from, item.to), static_cast<int>(bond));
+            }
+        }
+    }
+    bool hasAliases() const { return bool(conjoined_); }
+    bool hasSelfBond() const { return selfBond_; }
+    const SmartsQuery& graph(const SmartsQuery& source) const { return conjoined_ ? *conjoined_ : source; }
+    bool compatible(const SmartsQuery& source, int first, int second, const MolGraph& target,
+                    int mappedFirst, int mappedSecond) const {
+        const int bond = find(first, second);
+        return bond >= 0 && graph(source).bondCompat(bond, target, mappedFirst, mappedSecond);
+    }
+    bool mappingCompatible(const SmartsQuery& source, const MolGraph& target, const std::vector<int>& mapping) const {
+        if (!conjoined_) return source.mappingCompatible(target, mapping);
+        // Keep atom chirality's original neighbour context; only bond predicates use the simple graph.
+        return source.componentsCompatible(target, mapping) && source.atomStereoCompatible(target, mapping)
+            && conjoined_->bondStereoCompatible(target, mapping);
     }
     int find(int first, int second) const {
         if (dense_) return table_[static_cast<size_t>(first) * atoms_ + second];
@@ -92,6 +168,31 @@ inline bool patternAtomMatches(const SmartsQuery& pattern, int atom, const MolGr
     }) != smarts_detail::StereoTruth::FALSE_VALUE;
 }
 
+/** Whether compiled or hand-built recursive predicates read a numeric minimum-basis count. */
+inline bool numericRingMembership(const SmartsQuery& pattern) {
+    std::vector<const smarts_detail::AtomExpr*> pending;
+    std::unordered_set<const SmartsQuery*> seen;
+    std::vector<std::shared_ptr<const SmartsQuery>> owned;
+    for (const auto& atom : pattern.atoms) pending.push_back(&atom.expr);
+    while (!pending.empty()) {
+        const auto* expression = pending.back();
+        pending.pop_back();
+        if (expression->op == smarts_detail::ExprOp::PRIM
+            && expression->primType == smarts_detail::AtomPrimType::IN_RING
+            && (expression->rangeQuery || (expression->hasValue && expression->intVal != 0))) return true;
+        for (const auto& child : expression->children) pending.push_back(&child);
+        if (expression->primType != smarts_detail::AtomPrimType::RECURSIVE) continue;
+        const SmartsQuery* nested = expression->cachedRecursive.get();
+        if (!nested && !expression->recursiveSmarts.empty()) {
+            owned.push_back(std::make_shared<const SmartsQuery>(parseSMARTS(expression->recursiveSmarts)));
+            nested = owned.back().get();
+        }
+        if (nested && seen.insert(nested).second)
+            for (const auto& atom : nested->atoms) pending.push_back(&atom.expr);
+    }
+    return false;
+}
+
 /**
  * Structural equality; equal expressions select the same target atoms. Atom
  * classes always match, so their numbers are not compared.
@@ -106,7 +207,9 @@ inline bool sameAtomExpr(const smarts_detail::AtomExpr& first, const smarts_deta
                 || first.rangeQuery != second.rangeQuery || first.rangeMin != second.rangeMin
                 || first.rangeMax != second.rangeMax || first.aromaticity != second.aromaticity
                 || first.orUnspecified != second.orUnspecified
-                || first.recursiveSmarts != second.recursiveSmarts)) return false;
+                || first.recursiveSmarts != second.recursiveSmarts
+                || (first.primType == AtomPrimType::RECURSIVE
+                    && first.cachedRecursive.get() != second.cachedRecursive.get()))) return false;
     }
     for (size_t child = 0; child < first.children.size(); ++child)
         if (!sameAtomExpr(first.children[child], second.children[child])) return false;
@@ -130,6 +233,8 @@ inline uint64_t atomExprHash(const smarts_detail::AtomExpr& expression) {
             hash = mix(hash, static_cast<uint32_t>(expression.rangeMax));
             hash = mix(hash, static_cast<uint32_t>(expression.aromaticity + 1));
             if (!expression.recursiveSmarts.empty()) hash = mix(hash, std::hash<std::string>{}(expression.recursiveSmarts));
+            if (expression.primType == smarts_detail::AtomPrimType::RECURSIVE)
+                hash = mix(hash, std::hash<const SmartsQuery*>{}(expression.cachedRecursive.get()));
         }
     }
     for (const auto& child : expression.children) hash = mix(hash, atomExprHash(child));
@@ -189,6 +294,46 @@ inline AtomRequirement atomRequirement(const smarts_detail::AtomExpr& expression
     return result;
 }
 
+/** A necessary anchor element for the numeric-ring absence screen; no recursive match is evaluated. */
+inline int ringProofElement(const smarts_detail::AtomExpr& expression, size_t& remaining, unsigned depth = 0) {
+    using smarts_detail::AtomPrimType;
+    using smarts_detail::ExprOp;
+    if (depth >= 64 || remaining == 0) return -1;
+    --remaining;
+    switch (expression.op) {
+        case ExprOp::PRIM:
+            if ((expression.primType == AtomPrimType::ELEMENT || expression.primType == AtomPrimType::ATOMIC_NUM)
+                && !expression.rangeQuery && expression.intVal >= 0 && expression.intVal < 256)
+                return expression.intVal;
+            if (expression.primType == AtomPrimType::RECURSIVE && expression.cachedRecursive
+                && !expression.cachedRecursive->atoms.empty())
+                return ringProofElement(expression.cachedRecursive->atoms[0].expr, remaining, depth + 1);
+            return -1;
+        case ExprOp::AND: {
+            int element = -1;
+            for (const auto& child : expression.children) {
+                const int part = ringProofElement(child, remaining, depth + 1);
+                if (part < 0) continue;
+                if (element >= 0 && element != part) return -1;
+                element = part;
+            }
+            return element;
+        }
+        case ExprOp::OR: {
+            int element = -1;
+            for (size_t child = 0; child < expression.children.size(); ++child) {
+                const int part = ringProofElement(expression.children[child], remaining, depth + 1);
+                if (child == 0) element = part;
+                else if (element != part) return -1;
+            }
+            return element;
+        }
+        case ExprOp::NOT:
+            return -1;
+    }
+    return -1;
+}
+
 /** Expression nodes of the bonds of a pattern atom; a bond without a recorded count is one node. */
 inline size_t bondNodesAround(const SmartsQuery& pattern, int atom) {
     if (static_cast<size_t>(atom) >= pattern.bondIndices.size()) return pattern.neighbors[atom].size();
@@ -212,6 +357,7 @@ public:
         explicit Layout(const SmartsQuery& pattern, bool bondTable = true)
             : bonds(pattern, bondTable), parent(pattern.atomCount(), -1), stereo(pattern.checksMapping()) {
             const int count = pattern.atomCount();
+            const auto& adjacency = bonds.graph(pattern).neighbors;
             std::vector<uint8_t> seen(count, 0);
             order.reserve(count);
             for (int root = 0; root < count; ++root) {
@@ -221,7 +367,7 @@ public:
                 order.push_back(root);
                 for (; head < order.size(); ++head) {
                     const int atom = order[head];
-                    for (int neighbor : pattern.neighbors[atom])
+                    for (int neighbor : adjacency[atom])
                         if (!seen[neighbor]) {
                             seen[neighbor] = 1;
                             parent[neighbor] = atom;
@@ -233,13 +379,14 @@ public:
     };
 
     explicit PatternPlan(const SmartsQuery& pattern)
-        : layout_(pattern), shape_(pattern.atomCount(), pattern.neighbors) {
+        : layout_(pattern), shape_(pattern.atomCount(), layout_.bonds.graph(pattern).neighbors) {
         const int count = pattern.atomCount();
+        const auto& adjacency = layout_.bonds.graph(pattern).neighbors;
         // Atoms with equal expressions and degrees share one domain.
         sameAs_.assign(count, -1);
         std::vector<std::pair<uint64_t, int>> keys(count);
         for (int atom = 0; atom < count; ++atom)
-            keys[atom] = {atomExprHash(pattern.atoms[atom].expr) * 31 + pattern.neighbors[atom].size(), atom};
+            keys[atom] = {atomExprHash(pattern.atoms[atom].expr) * 31 + adjacency[atom].size(), atom};
         std::sort(keys.begin(), keys.end());
         for (size_t first = 0; first < keys.size();) {
             size_t last = first;
@@ -249,7 +396,7 @@ public:
                 for (size_t earlier = first; earlier < index; ++earlier) {
                     const int representative = keys[earlier].second;
                     if (sameAs_[representative] < 0
-                        && pattern.neighbors[representative].size() == pattern.neighbors[atom].size()
+                        && adjacency[representative].size() == adjacency[atom].size()
                         && sameAtomExpr(pattern.atoms[representative].expr, pattern.atoms[atom].expr)) {
                         sameAs_[atom] = representative;
                         break;
@@ -277,11 +424,13 @@ public:
         bondWork_.assign(count, 0);
         for (int atom = 0; atom < count; ++atom) {
             atomNodes_[atom] = pattern.atomNodesOf(atom);
-            bondWork_[atom] = bondNodesAround(pattern, atom);
+            bondWork_[atom] = bondNodesAround(layout_.bonds.graph(pattern), atom);
         }
         for (int atom = 0; atom < count; ++atom) {
             const auto requirement = atomRequirement(pattern.atoms[atom].expr);
             elements[atom] = requirement.element;
+            if (requirement.element >= 0 && static_cast<size_t>(requirement.element) < requiredElements_.size())
+                ++requiredElements_[static_cast<size_t>(requirement.element)];
             atomAromatic_[atom] = static_cast<int8_t>(requirement.aromatic);
             if (requirement.element >= 0) {
                 require(requirement.element, -1);
@@ -298,6 +447,13 @@ public:
         });
         for (int atom = 0; atom < count; ++atom) if (sameAs_[atom] >= 0) domainOrder_.push_back(atom);
         addSubpatterns(pattern);
+        if (numericRingMembership_) {
+            size_t remaining = MAX_SMARTS_EXPRESSION_NODES;
+            for (int atom = 0; atom < count; ++atom) if (elements[atom] < 0) {
+                const int element = ringProofElement(pattern.atoms[atom].expr, remaining);
+                if (element >= 0) ++requiredElements_[static_cast<size_t>(element)];
+            }
+        }
     }
     PatternPlan(const PatternPlan&) = delete;
     PatternPlan& operator=(const PatternPlan&) = delete;
@@ -307,9 +463,30 @@ public:
     const std::vector<int>& sameAs() const { return sameAs_; }
     /** Selected bonds of a complete mapping in Match order, and its fragments as makeMatch() lists them. */
     const CompleteMappingShape& shape() const { return shape_; }
-    /** The number of recursive subpatterns compiled into this pattern, at every depth. */
-    size_t subpatternCount() const { return subpatterns_.size(); }
-    /** The index, below subpatternCount(), of a recursive subpattern compiled into this pattern, or -1. */
+    /** Compiled recursive predicate occurrences at every depth, including repeated shared payloads. */
+    size_t subpatternCount() const {
+        if (!finiteSubpatternCount_)
+            throw std::logic_error("Recursive pattern occurrence count is not finite or representable");
+        return subpatternCount_;
+    }
+    /** Distinct compiled payloads, used for the pointer-indexed memo slots. */
+    size_t subpatternSlotCount() const { return subpatterns_.size(); }
+    /** Includes nested predicates under AND, OR and NOT; literal R/R0 remain topology-only. */
+    bool numericRingMembership() const { return numericRingMembership_; }
+    /** A required-element shortfall proves absence without evaluating a ring predicate. */
+    bool elementsAvailable(const MolGraph& target, Budget& budget) const {
+        std::array<int, 256> available{};
+        for (int atom = 0; atom < target.n; ++atom) {
+            if ((atom & 255) == 0 && budget.stopped()) return false;
+            const int element = target.atomicNum[atom];
+            if (element >= 0 && element < static_cast<int>(available.size()))
+                ++available[static_cast<size_t>(element)];
+        }
+        for (size_t element = 0; element < requiredElements_.size(); ++element)
+            if (available[element] < requiredElements_[element]) return false;
+        return true;
+    }
+    /** The index, below subpatternSlotCount(), of a recursive subpattern compiled into this pattern, or -1. */
     int subpatternIndex(const SmartsQuery& pattern) const {
         const auto found = std::lower_bound(subpatterns_.begin(), subpatterns_.end(), &pattern,
             [](const Subpattern& item, const SmartsQuery* key) { return std::less<const SmartsQuery*>()(item.first, key); });
@@ -392,27 +569,63 @@ private:
      * Compiles every distinct recursive subpattern once, then sorts them by address for lookup.
      * Subpatterns of one shape, such as the repeats of one subpattern in a long pattern, share
      * one layout, and the bond tables of all the layouts take at most SUBPATTERN_TABLE_BYTES.
+     * Completion markers count shared descendants once per occurrence without recompiling them.
      */
     void addSubpatterns(const SmartsQuery& pattern) {
-        std::vector<const smarts_detail::AtomExpr*> pending;
+        struct Pending {
+            const smarts_detail::AtomExpr* expression;
+            const SmartsQuery* parent;
+            const SmartsQuery* completed = nullptr;
+        };
+        std::vector<Pending> pending;
         std::unordered_set<const SmartsQuery*> compiled;
+        std::unordered_set<const SmartsQuery*> active{&pattern};
+        std::unordered_map<const SmartsQuery*, size_t> occurrences{{&pattern, 0}};
+        auto addOccurrences = [&](const SmartsQuery* parent, size_t count) {
+            size_t& total = occurrences[parent];
+            if (count > std::numeric_limits<size_t>::max() - total)
+                finiteSubpatternCount_ = false;
+            else
+                total += count;
+        };
         // The first subpattern of each layout, by the hash of its shape.
         std::unordered_multimap<uint64_t, std::pair<const SmartsQuery*, size_t>> shapes;
         size_t tableBytes = 0;
-        for (const auto& atom : pattern.atoms) pending.push_back(&atom.expr);
+        for (const auto& atom : pattern.atoms) pending.push_back({&atom.expr, &pattern});
         while (!pending.empty()) {
-            const auto* expression = pending.back();
+            const auto item = pending.back();
             pending.pop_back();
-            for (const auto& child : expression->children) pending.push_back(&child);
-            const auto* nested = expression->cachedRecursive.get();
-            if (expression->primType != smarts_detail::AtomPrimType::RECURSIVE || !nested || !compiled.insert(nested).second)
+            if (item.completed) {
+                active.erase(item.completed);
+                addOccurrences(item.parent, occurrences[item.completed]);
                 continue;
+            }
+            const auto* expression = item.expression;
+            if (expression->op == smarts_detail::ExprOp::PRIM
+                && expression->primType == smarts_detail::AtomPrimType::IN_RING
+                && (expression->rangeQuery || (expression->hasValue && expression->intVal != 0)))
+                numericRingMembership_ = true;
+            for (const auto& child : expression->children) pending.push_back({&child, item.parent});
+            if (expression->primType == smarts_detail::AtomPrimType::RECURSIVE
+                && !expression->cachedRecursive && !expression->recursiveSmarts.empty())
+                numericRingMembership_ = numericRingMembership_
+                    || search_detail::numericRingMembership(parseSMARTS(expression->recursiveSmarts));
+            const auto* nested = expression->cachedRecursive.get();
+            if (expression->primType != smarts_detail::AtomPrimType::RECURSIVE || !nested)
+                continue;
+            addOccurrences(item.parent, 1);
+            if (!compiled.insert(nested).second) {
+                if (active.count(nested)) finiteSubpatternCount_ = false;
+                else addOccurrences(item.parent, occurrences[nested]);
+                continue;
+            }
             const bool stereo = nested->checksMapping();
             const uint64_t hash = shapeHash(*nested, stereo);
             size_t layout = layouts_.size();
             const auto alike = shapes.equal_range(hash);
             for (auto shape = alike.first; shape != alike.second; ++shape)
-                if (layouts_[shape->second.second]->stereo == stereo && sameShape(*shape->second.first, *nested)) {
+                if (!layouts_[shape->second.second]->bonds.hasAliases()
+                    && layouts_[shape->second.second]->stereo == stereo && sameShape(*shape->second.first, *nested)) {
                     layout = shape->second.second;
                     break;
                 }
@@ -424,16 +637,25 @@ private:
                 shapes.emplace(hash, std::make_pair(nested, layout));
             }
             subpatterns_.emplace_back(nested, layout);
-            for (const auto& atom : nested->atoms) pending.push_back(&atom.expr);
+            if (!active.insert(nested).second) finiteSubpatternCount_ = false;
+            occurrences.emplace(nested, 0);
+            pending.push_back({nullptr, item.parent, nested});
+            for (const auto& atom : nested->atoms) pending.push_back({&atom.expr, nested});
         }
+        subpatternCount_ = occurrences[&pattern];
         std::sort(subpatterns_.begin(), subpatterns_.end(), [](const Subpattern& first, const Subpattern& second) {
             return std::less<const SmartsQuery*>()(first.first, second.first);
         });
     }
+    bool numericRingMembership_ = false;
+    size_t subpatternCount_ = 0;
+    bool finiteSubpatternCount_ = true;
     Layout layout_;
     CompleteMappingShape shape_;
     std::vector<int> sameAs_, domainOrder_;
     std::array<int8_t, 256> elementSlot_{};
+    /** All necessary element counts, independent of the bounded domain-group slots. */
+    std::array<int, 256> requiredElements_{};
     std::vector<int> atomSlot_;
     std::vector<int8_t> atomAromatic_;
     std::vector<size_t> atomNodes_, bondWork_;
@@ -610,7 +832,7 @@ public:
         const int index = plan_ ? plan_->subpatternIndex(pattern) : -1;
         if (index >= 0) {
             if (!slotsReady_) {
-                pool_.slots.assign(plan_->subpatternCount(), -1);
+                pool_.slots.assign(plan_->subpatternSlotCount(), -1);
                 slotsReady_ = true;
             }
             const int slot = pool_.slots[static_cast<size_t>(index)];
@@ -656,22 +878,25 @@ inline bool anchoredPatternExists(RecursiveMemo::Entry& entry, const MolGraph& t
     const auto& layout = *entry.layout;
     const int count = pattern.atomCount(), targetAtoms = entry.targetAtoms;
     if (count == 0) return true;
-    if (count > targetAtoms) return false;
+    if (count > targetAtoms || layout.bonds.hasSelfBond()) return false;
+    const auto& adjacency = layout.bonds.graph(pattern).neighbors;
     auto test = [&](int atom, int targetAtom) {
         int8_t* const known = entry.tests(atom, allowance);
         if (known && known[targetAtom] >= 0) return known[targetAtom] != 0;
-        const bool matched = pattern.neighbors[atom].size() <= target.neighbors[targetAtom].size()
+        const bool matched = adjacency[atom].size() <= target.neighbors[targetAtom].size()
             && patternAtomMatches(pattern, atom, target, targetAtom);
         if (known && budget.status() == SearchStatus::Completed) known[targetAtom] = matched;
         return matched;
     };
     auto feasible = [&](int atom, int targetAtom) {
         if (entry.isUsed(targetAtom) || !test(atom, targetAtom)) return false;
-        for (int neighbor : pattern.neighbors[atom]) {
+        for (int neighbor : adjacency[atom]) {
             const int image = entry.mapping[neighbor];
             if (image < 0) continue;
             if (!target.hasBond(targetAtom, image)
-                || !pattern.bondCompat(layout.bonds.find(atom, neighbor), target, targetAtom, image)) return false;
+                || !layout.bonds.compatible(pattern, atom, neighbor, target,
+                                            atom < neighbor ? targetAtom : image,
+                                            atom < neighbor ? image : targetAtom)) return false;
         }
         return true;
     };
@@ -689,7 +914,7 @@ inline bool anchoredPatternExists(RecursiveMemo::Entry& entry, const MolGraph& t
         const int parent = layout.parent[atom];
         const int available = depth == 0 ? 1
             : parent >= 0 ? static_cast<int>(target.neighbors[entry.mapping[parent]].size()) : targetAtoms;
-        const size_t testWork = 1 + pattern.atomNodesOf(atom) + bondNodesAround(pattern, atom);
+        const size_t testWork = 1 + pattern.atomNodesOf(atom) + bondNodesAround(layout.bonds.graph(pattern), atom);
         int candidate = -1;
         while (entry.cursor[depth] < available) {
             if ((work += testWork) >= 4096) {
@@ -709,7 +934,7 @@ inline bool anchoredPatternExists(RecursiveMemo::Entry& entry, const MolGraph& t
             entry.cursor[++depth] = 0;
             continue;
         }
-        if (!layout.stereo || pattern.mappingCompatible(target, entry.mapping)) { found = true; break; }
+        if (!layout.stereo || layout.bonds.mappingCompatible(pattern, target, entry.mapping)) { found = true; break; }
     }
     for (int atom = 0; atom < count; ++atom)
         if (entry.mapping[atom] >= 0) { entry.mark(entry.mapping[atom], false); entry.mapping[atom] = -1; }
@@ -748,6 +973,7 @@ class PatternSearch {
     bool induced_, all_;
     Budget& budget_;
     const PatternBonds& bonds_;
+    const std::vector<std::vector<int>>& adjacency_;
     RingConstraint targetRings_;
     int queryAtoms_, targetAtoms_;
     size_t words_;
@@ -769,8 +995,8 @@ class PatternSearch {
         return (domains_[static_cast<size_t>(atom) * words_ + (targetAtom >> 6)] & (uint64_t(1) << (targetAtom & 63))) != 0;
     }
     bool bondMatches(int first, int second, int mappedFirst, int mappedSecond) const {
-        const int bond = bonds_.find(first, second);
-        return bond >= 0 && pattern_.bondCompat(bond, target_, mappedFirst, mappedSecond);
+        if (first > second) std::swap(mappedFirst, mappedSecond);
+        return bonds_.compatible(pattern_, first, second, target_, mappedFirst, mappedSecond);
     }
     /**
      * The atoms an induced test reads beyond the pattern neighbours: the mapped atoms or the
@@ -782,7 +1008,7 @@ class PatternSearch {
     bool feasible(int atom, int targetAtom) const {
         if (used_[targetAtom] || !domainHas(atom, targetAtom)) return false;
         // Each mapped pattern neighbour needs a matching target bond.
-        for (int neighbor : pattern_.neighbors[atom]) {
+        for (int neighbor : adjacency_[atom]) {
             const int image = mapping_[neighbor];
             if (image >= 0 && (!target_.hasBond(targetAtom, image) || !bondMatches(atom, neighbor, targetAtom, image)))
                 return false;
@@ -805,7 +1031,7 @@ class PatternSearch {
         std::vector<std::array<int, 4>> bonds;
         for (int atom = 0; atom < queryAtoms_; ++atom) {
             if (mapping[atom] < 0) continue;
-            for (int neighbor : pattern_.neighbors[atom])
+            for (int neighbor : adjacency_[atom])
                 if (atom < neighbor && mapping[neighbor] >= 0
                     && bondMatches(atom, neighbor, mapping[atom], mapping[neighbor]))
                     bonds.push_back({atom, neighbor, mapping[atom], mapping[neighbor]});
@@ -814,7 +1040,7 @@ class PatternSearch {
     }
     bool record() {
         if (mapped_ != queryAtoms_) return false;
-        if (stereo_ && !pattern_.mappingCompatible(target_, mapping_)) return false;
+        if (stereo_ && !bonds_.mappingCompatible(pattern_, target_, mapping_)) return false;
         if (chemistry_.completeRingsOnly) {
             std::set<int> atoms(mapping_.begin(), mapping_.end());
             std::set<int64_t> bonds;
@@ -840,15 +1066,15 @@ class PatternSearch {
         };
         int chosen = -1, bestFrontier = -1;
         for (int atom = 0; atom < queryAtoms_; ++atom) {
-            if (stopAfter(1 + pattern_.neighbors[atom].size())) break;
+            if (stopAfter(1 + adjacency_[atom].size())) break;
             if (mapping_[atom] != -2) continue;
             int frontier = 0;
-            for (int neighbor : pattern_.neighbors[atom]) frontier += mapping_[neighbor] >= 0;
+            for (int neighbor : adjacency_[atom]) frontier += mapping_[neighbor] >= 0;
             if (chosen < 0 || (frontier != 0 && bestFrontier == 0)
                 || ((frontier != 0) == (bestFrontier != 0)
                     && (domainCounts_[atom] < domainCounts_[chosen]
                         || (domainCounts_[atom] == domainCounts_[chosen]
-                            && pattern_.neighbors[atom].size() > pattern_.neighbors[chosen].size())))) {
+                            && adjacency_[atom].size() > adjacency_[chosen].size())))) {
                 chosen = atom;
                 bestFrontier = frontier;
             }
@@ -856,7 +1082,7 @@ class PatternSearch {
         Frame result{chosen, candidates_.size(), candidates_.size(), candidates_.size(), -2};
         if (chosen < 0) return result;
         int neighborAnchor = -1;
-        for (int neighbor : pattern_.neighbors[chosen])
+        for (int neighbor : adjacency_[chosen])
             if (mapping_[neighbor] >= 0 && (neighborAnchor < 0
                 || target_.neighbors[mapping_[neighbor]].size() < target_.neighbors[mapping_[neighborAnchor]].size()))
                 neighborAnchor = neighbor;
@@ -902,7 +1128,8 @@ public:
                   const ChemOptions& chemistry, bool induced, bool all, size_t limit, Budget& budget,
                   PatternWorkspace& workspace)
         : pattern_(pattern), plan_(plan), target_(target), chemistry_(chemistry), induced_(induced), all_(all),
-          budget_(budget), bonds_(plan.layout().bonds), targetRings_(target, chemistry.completeRingsOnly),
+          budget_(budget), bonds_(plan.layout().bonds), adjacency_(bonds_.graph(pattern).neighbors),
+          targetRings_(target, chemistry.completeRingsOnly),
           queryAtoms_(pattern.atomCount()), targetAtoms_(target.n),
           words_((static_cast<size_t>(target.n) + 63) >> 6), stereo_(plan.layout().stereo),
           domains_(workspace.domains), domainCounts_(workspace.domainCounts), mapping_(workspace.mapping),
@@ -912,6 +1139,7 @@ public:
         frames_.clear();
         candidates_.clear();
         if (queryAtoms_ == 0 || queryAtoms_ > targetAtoms_) return;
+        if (bonds_.hasSelfBond()) { emptyDomain_ = true; return; }
         // Too few atoms of a required element or aromaticity leaves no embedding.
         auto& groupStart = workspace.groupStart;
         auto& groupAtoms = workspace.groupAtoms;
@@ -934,7 +1162,7 @@ public:
                 domainCounts_[atom] = domainCounts_[same];
             } else {
                 // An atom with a required element can only match target atoms of that element.
-                const size_t degree = pattern.neighbors[atom].size();
+                const size_t degree = adjacency_[atom].size();
                 const int slot = plan.atomSlot(atom), aromatic = plan.atomAromatic(atom);
                 const int first = slot < 0 ? 0 : groupStart[slot];
                 const int last = slot < 0 ? targetAtoms_ : groupStart[slot + 1];
@@ -960,6 +1188,10 @@ public:
             }
             if (domainCounts_[atom] == 0) { emptyDomain_ = true; break; }
         }
+    }
+    /** Whether the result needs no complete-ring or fusion-count reasoning. */
+    bool ringIndependentProof() const {
+        return queryAtoms_ == 0 || queryAtoms_ > targetAtoms_ || emptyDomain_;
     }
     std::pair<bool, bool> run() {
         if (budget_.stopped()) return {false, false};

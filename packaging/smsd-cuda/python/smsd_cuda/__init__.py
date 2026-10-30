@@ -14,11 +14,11 @@ import importlib.util
 import os
 import sys
 
-__version__ = "8.0.3"
+__version__ = "8.1.0"
 # The smsd version this package serves; smsd attaches it only when the two are equal.
-__smsd_version__ = "8.0.3"
+__smsd_version__ = "8.1.0"
 
-__all__ = ["capsule", "device_info", "is_available", "unavailable_reason"]
+__all__ = ["capsule", "device_info", "is_available", "preload", "unavailable_reason"]
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _LIBRARY = "smsd_cuda_screen.dll" if sys.platform == "win32" else "libsmsd_cuda_screen.so"
@@ -56,15 +56,28 @@ def _load():
             library.smsd_cuda_screen_accelerator.argtypes = []
             library.smsd_cuda_device_count.restype = ctypes.c_int
             library.smsd_cuda_device_count.argtypes = [ctypes.c_char_p, ctypes.c_size_t]
+            library.smsd_cuda_device_supported.restype = ctypes.c_int
+            library.smsd_cuda_device_supported.argtypes = [ctypes.c_char_p, ctypes.c_size_t]
             library.smsd_cuda_device_info.restype = ctypes.c_int
             library.smsd_cuda_device_info.argtypes = [ctypes.c_char_p, ctypes.c_size_t,
                                                       ctypes.c_char_p, ctypes.c_size_t]
+            library.smsd_cuda_preload.restype = ctypes.c_int
+            library.smsd_cuda_preload.argtypes = [ctypes.c_char_p, ctypes.c_size_t]
             _library = library
     return _library
 
 
 def unavailable_reason():
-    """Why no CUDA device can be used, or None when one can."""
+    """Why no CUDA device can be used, or None when one can.
+
+    A device below compute capability 7.5 cannot be used; the reason names it and its capability.
+
+    Example::
+
+        >>> import smsd_cuda
+        >>> reason = smsd_cuda.unavailable_reason()
+        >>> assert reason is None or isinstance(reason, str)
+    """
     library = _load()
     if library is None:
         return _reason
@@ -72,16 +85,37 @@ def unavailable_reason():
     count = library.smsd_cuda_device_count(error, len(error))
     if count < 0:
         return error.value.decode(errors="replace") or "the CUDA runtime gave no device count"
-    return None if count > 0 else "no CUDA device was found"
+    if count == 0:
+        return "no CUDA device was found"
+    error = ctypes.create_string_buffer(256)
+    supported = library.smsd_cuda_device_supported(error, len(error))
+    if supported > 0:
+        return None
+    if supported < 0:
+        return error.value.decode(errors="replace") or "the CUDA runtime gave no compute capability"
+    return error.value.decode(errors="replace") or "the CUDA device needs compute capability 7.5 or later"
 
 
 def is_available():
-    """Whether a CUDA device can be used."""
+    """Whether a CUDA device can be used: one is present and has compute capability 7.5 or later.
+
+    Example::
+
+        >>> import smsd_cuda
+        >>> assert isinstance(smsd_cuda.is_available(), bool)
+    """
     return unavailable_reason() is None
 
 
 def device_info():
-    """A description of the device, such as 'Tesla T4 (compute 7.5, 14930 MB)'."""
+    """A description of the device, such as 'Tesla T4 (compute 7.5, 14930 MB)'.
+
+    Example::
+
+        >>> import smsd_cuda
+        >>> if smsd_cuda.is_available():
+        ...     assert "compute" in smsd_cuda.device_info()
+    """
     reason = unavailable_reason()
     if reason is not None:
         raise RuntimeError(reason)
@@ -92,7 +126,15 @@ def device_info():
 
 
 def capsule():
-    """A capsule holding the accelerator's table, which smsd attaches."""
+    """A capsule holding the accelerator's table, which smsd attaches.
+
+    Example::
+
+        >>> import smsd_cuda
+        >>> if smsd_cuda.is_available():
+        ...     handle = smsd_cuda.capsule()
+        ...     assert type(handle).__name__ == "PyCapsule"
+    """
     library = _load()
     if library is None:
         raise RuntimeError(_reason)
@@ -100,3 +142,22 @@ def capsule():
     new.restype = ctypes.py_object
     new.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_void_p]
     return new(library.smsd_cuda_screen_accelerator(), _CAPSULE_NAME, None)
+
+
+def preload():
+    """Initialise the current CUDA device and load screening kernels without screening data.
+
+    This does not upload a corpus, reserve device scratch or change automatic dispatch.
+
+    Example::
+
+        >>> import smsd_cuda
+        >>> if smsd_cuda.is_available():
+        ...     assert smsd_cuda.preload() is None
+    """
+    library = _load()
+    if library is None:
+        raise RuntimeError(_reason)
+    error = ctypes.create_string_buffer(256)
+    if library.smsd_cuda_preload(error, len(error)) != 0:
+        raise RuntimeError(error.value.decode(errors="replace"))

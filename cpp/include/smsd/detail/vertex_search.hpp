@@ -12,6 +12,7 @@
 #pragma once
 
 #include "smsd/detail/search_results.hpp"
+#include "smsd/detail/bridge_bound.hpp"
 
 #include <algorithm>
 #include <array>
@@ -32,7 +33,150 @@
 namespace smsd {
 namespace search_detail {
 
+/** Local matching work; exhaustion retains the original child. */
+struct ChildBoundWork {
+    size_t remaining;
+    size_t used = 0;
+    bool exhausted = false;
+    explicit ChildBoundWork(size_t units) : remaining(units) {}
+    bool spend(size_t units = 1) {
+        if (exhausted || units > remaining) { exhausted = true; return false; }
+        remaining -= units;
+        used += units;
+        return true;
+    }
+};
+
+/** A structural matching allowance; predicate calls count as units, not elapsed time. */
+inline std::optional<size_t> childBoundAllowance(int queryCount, int targetCount) {
+    if (queryCount < 0 || targetCount < 0) return std::nullopt;
+    const size_t query = static_cast<size_t>(queryCount), target = static_cast<size_t>(targetCount);
+    const size_t words = (target + 63) >> 6, maximum = std::numeric_limits<size_t>::max();
+    if (query > maximum / 2 || target > (maximum - query * 2) / 3) return std::nullopt;
+    const size_t reset = query * 2 + target * 3;
+    if (words > maximum - reset || target > maximum - reset - words) return std::nullopt;
+    const size_t structural = reset + words + target;
+    if (target > maximum - words - 1 || (query != 0 && query > maximum / query)) return std::nullopt;
+    const size_t perRow = words + target + 1, square = query * query;
+    if (square > (maximum - structural) / perRow) return std::nullopt;
+    return structural + square * perRow;
+}
+
+/**
+ * Maximum injective domain cardinality, capped by an existing upper bound. Each row gives
+ * possible target bits; it may include incompatible pairs, but must include every legal pair.
+ * An interrupted augmentation is unknown, never a smaller completed cardinality.
+ */
+template<class DomainWord, class Stopped>
+std::optional<int> injectiveDomainBound(int queryCount, int targetCount, int cap,
+                                      DomainWord domainWord, Stopped stopped,
+                                      ChildBoundWork* allowance = nullptr) {
+    if (cap <= 0) return 0;
+    if (stopped()) return std::nullopt;
+    if (allowance) {
+        if (queryCount < 0 || targetCount < 0) return std::nullopt;
+        const size_t query = static_cast<size_t>(queryCount), target = static_cast<size_t>(targetCount);
+        const size_t maximum = std::numeric_limits<size_t>::max();
+        if (query > maximum / 2 || target > (maximum - query * 2) / 3
+            || !allowance->spend(query * 2 + target * 3)) return std::nullopt;
+    }
+    SpareVectors<int>::Lease queryMatchLease(static_cast<size_t>(queryCount), -1);
+    SpareVectors<int>::Lease targetMatchLease(static_cast<size_t>(targetCount), -1);
+    SpareVectors<int>::Lease parentLease(static_cast<size_t>(targetCount), -1);
+    SpareVectors<int>::Lease seenLease(static_cast<size_t>(targetCount), -1);
+    SpareVectors<int>::Lease queueLease(static_cast<size_t>(queryCount), 0);
+    auto& queryMatch = queryMatchLease.items;
+    auto& targetMatch = targetMatchLease.items;
+    auto& parent = parentLease.items;
+    auto& seen = seenLease.items;
+    auto& queue = queueLease.items;
+    const size_t words = (static_cast<size_t>(targetCount) + 63) >> 6;
+    size_t work = 0;
+    auto interrupted = [&]() {
+        if (allowance && !allowance->spend()) return true;
+        return ((work++ & 255u) == 0) && stopped();
+    };
+    int cardinality = 0;
+    for (int root = 0; root < queryCount; ++root) {
+        if (interrupted()) return std::nullopt;
+        int head = 0, tail = 1, freeTarget = -1;
+        queue[0] = root;
+        while (head < tail && freeTarget < 0) {
+            const int queryAtom = queue[head++];
+            for (size_t word = 0; word < words && freeTarget < 0; ++word) {
+                if (interrupted()) return std::nullopt;
+                uint64_t remaining = domainWord(queryAtom, word);
+                if (allowance && allowance->exhausted) return std::nullopt;
+                if (allowance && word + 1 == words && (targetCount & 63) != 0)
+                    remaining &= (uint64_t(1) << (targetCount & 63)) - 1;
+                while (remaining != 0) {
+                    if (interrupted()) return std::nullopt;
+                    const int targetAtom = static_cast<int>(word * 64) + smsd::ctz64(remaining);
+                    remaining &= remaining - 1;
+                    if (seen[targetAtom] == root) continue;
+                    seen[targetAtom] = root;
+                    parent[targetAtom] = queryAtom;
+                    if (targetMatch[targetAtom] < 0) { freeTarget = targetAtom; break; }
+                    queue[tail++] = targetMatch[targetAtom];
+                }
+            }
+        }
+        if (freeTarget < 0) continue;
+        while (freeTarget >= 0) {
+            if (interrupted()) return std::nullopt;
+            const int queryAtom = parent[freeTarget];
+            const int previousTarget = queryMatch[queryAtom];
+            queryMatch[queryAtom] = freeTarget;
+            targetMatch[freeTarget] = queryAtom;
+            freeTarget = previousTarget;
+        }
+        if (++cardinality == cap) {
+            if (stopped()) return std::nullopt;
+            return cardinality;
+        }
+    }
+    if (stopped()) return std::nullopt;
+    return cardinality;
+}
+
+/** Bond upper for at most addedAtoms live vertices, with scores 2*degreeToMapped+degreeToLive. */
+template<class Stopped>
+std::optional<int64_t> topKIncidentBondUpper(int64_t mappedBonds,
+        const std::vector<int64_t>& liveScores, int addedAtoms, Stopped stopped) {
+    if (mappedBonds < 0 || addedAtoms < 0) return std::nullopt;
+    if (stopped()) return std::nullopt;
+    const size_t selected = std::min(static_cast<size_t>(addedAtoms), liveScores.size());
+    if (selected == 0) return mappedBonds;
+    SpareVectors<int64_t>::Lease largestLease(selected, 0);
+    auto& largest = largestLease.items;
+    const auto greater = [](int64_t first, int64_t second) { return first > second; };
+    const int64_t maximum = std::numeric_limits<int64_t>::max();
+    size_t count = 0;
+    int64_t sum = 0;
+    for (size_t index = 0; index < liveScores.size(); ++index) {
+        if ((index & 255u) == 0 && stopped()) return std::nullopt;
+        const int64_t score = liveScores[index];
+        if (score < 0) return std::nullopt;
+        if (count < selected) {
+            if (score > maximum - sum) return std::nullopt;
+            sum += score;
+            largest[count++] = score;
+            std::push_heap(largest.begin(), largest.begin() + count, greater);
+        } else if (score > largest.front()) {
+            sum -= largest.front();
+            if (score > maximum - sum) return std::nullopt;
+            sum += score;
+            std::pop_heap(largest.begin(), largest.end(), greater);
+            largest.back() = score;
+            std::push_heap(largest.begin(), largest.end(), greater);
+        }
+    }
+    if (mappedBonds > maximum - sum / 2 || stopped()) return std::nullopt;
+    return mappedBonds + sum / 2;
+}
+
 class VertexSearch {
+    static constexpr bool certifiedSymmetryEnabled_ = true;
     const QueryView& query_;
     const MolGraph& target_;
     const ChemOptions& chemistry_;
@@ -41,6 +185,14 @@ class VertexSearch {
     bool induced_;
     bool all_;
     bool allowSkipping_;
+    const bool symmetryGraphCertified_;
+    /** A main-phase cardinality bound for one capped, unweighted fragment result. */
+    const bool injectiveBoundAllowed_;
+    /** Element/topology transpositions and index ties for the bounded fragment policy, in both phases. */
+    const bool fragmentPolicy_;
+    /** Whether true leaf pairs have equivalence-only labels and no fixed future images. */
+    const bool leafExchangeAllowed_;
+    std::unique_ptr<BridgeBound> bridgeBound_;
     uint64_t probeNodeLimit_;
     Budget& budget_;
     Collector& collector_;
@@ -66,6 +218,8 @@ class VertexSearch {
     std::vector<std::pair<TranspositionKey, int>> isolatedTargets_;
     std::vector<std::vector<int>> spareCandidates_;
     bool targetTwinsWanted_ = false;
+    /** The connected MCIS rule exchanges only non-terminal target atoms. */
+    bool connectedTargetTwins_ = false;
     int targetTwinState_ = 0;
     bool emptyDomain_ = false;
     /** Whether the budget stopped a frame before all its candidates were tested. */
@@ -184,6 +338,72 @@ class VertexSearch {
         }
         return candidates;
     }
+    /** A completed strict atom shortfall cannot improve the current atom/bond incumbent. */
+    bool childCannotReach(int queryAtom, int targetAtom) {
+        if (!injectiveBoundAllowed_ || !collector_.hasMatch()) return false;
+        const int selected = targetAtom >= 0 ? 1 : 0;
+        const int needed = collector_.best().atoms - mapped_ - selected;
+        if (needed <= 0) return false;
+        const auto units = childBoundAllowance(query_.size(), target_.n);
+        if (!units) return false;
+        ChildBoundWork allowance(*units);
+        const size_t words = domainWords();
+        if (!allowance.spend(words + static_cast<size_t>(target_.n))) return false;
+        SpareVectors<uint64_t>::Lease liveLease(words, ~uint64_t(0));
+        auto& live = liveLease.items;
+        if (words != 0 && (target_.n & 63) != 0)
+            live.back() &= (uint64_t(1) << (target_.n & 63)) - 1;
+        for (int atom = 0; atom < target_.n; ++atom) {
+            if ((atom & 255) == 0 && budget_.stopped()) return false;
+            if (used_[atom] || excluded_[atom] || atom == targetAtom)
+                live[atom >> 6] &= ~(uint64_t(1) << (atom & 63));
+        }
+        size_t polledWork = allowance.used;
+        auto stoppedHere = [&]() {
+            if (allowance.used - polledWork < 256) return false;
+            polledWork = allowance.used;
+            if (!budget_.stopped()) return false;
+            allowance.exhausted = true;
+            return true;
+        };
+        const auto bound = injectiveDomainBound(query_.size(), target_.n, needed,
+            [&](int otherQuery, size_t word) {
+                if (!allowance.spend() || mapping_[otherQuery] != -2 || otherQuery == queryAtom)
+                    return uint64_t(0);
+                uint64_t candidates = domains_[domainIndex(otherQuery, word)] & live[word];
+                auto restrictPair = [&](int previousQuery, int previousTarget) {
+                    if (!allowance.spend()) return false;
+                    const bool queryBond = query_.adjacent(otherQuery, previousQuery);
+                    uint64_t adjacent = 0;
+                    if (targetBitAdjacencyAvailable_) {
+                        if (!allowance.spend()) return false;
+                        adjacent = target_.adjLong[previousTarget][word];
+                    } else for (int neighbor : target_.neighbors[previousTarget]) {
+                        if (!allowance.spend()) return false;
+                        if (stoppedHere()) return false;
+                        if (static_cast<size_t>(neighbor >> 6) == word)
+                            adjacent |= uint64_t(1) << (neighbor & 63);
+                    }
+                    if (stoppedHere()) return false;
+                    candidates &= queryBond ? adjacent : ~adjacent;
+                    if (queryBond) for (uint64_t remaining = candidates; remaining != 0; remaining &= remaining - 1) {
+                        if (!allowance.spend()) return false;
+                        if (stoppedHere()) return false;
+                        const int candidate = static_cast<int>(word * 64) + smsd::ctz64(remaining);
+                        if (!query_.bondMatches(otherQuery, previousQuery, target_, candidate, previousTarget, chemistry_))
+                            candidates &= ~(uint64_t(1) << (candidate & 63));
+                    }
+                    return true;
+                };
+                for (int previous : mappedAtoms_) {
+                    if (candidates == 0) break;
+                    if (!restrictPair(previous, mapping_[previous])) return uint64_t(0);
+                }
+                if (targetAtom >= 0 && candidates != 0 && !restrictPair(queryAtom, targetAtom)) return uint64_t(0);
+                return candidates;
+            }, [&]() { return budget_.stopped(); }, &allowance);
+        return bound && *bound < needed && !budget_.stopped();
+    }
     /** A connected extension remains in its mapped root's available component. */
     int connectedBound(bool queryGraph, const std::vector<uint8_t>& available,
                        std::vector<uint8_t>& reached, int root) {
@@ -209,6 +429,28 @@ class VertexSearch {
             largest = std::max(largest, tail);
         }
         return largest;
+    }
+    /** A selected ring atom must remain on a relevant cycle whose vertices are all available. */
+    bool restrictRingAvailability(const RingConstraint& rings, std::vector<uint8_t>& available,
+                                  std::vector<uint8_t>& covered) {
+        std::fill(covered.begin(), covered.end(), uint8_t(0));
+        size_t work = 0;
+        for (const auto& cycle : rings.cycles()) {
+            bool viable = true;
+            for (int atom : cycle) {
+                if ((work++ & 255u) == 0 && budget_.stopped()) return false;
+                if (!available[atom]) { viable = false; break; }
+            }
+            if (viable) for (int atom : cycle) {
+                if ((work++ & 255u) == 0 && budget_.stopped()) return false;
+                covered[atom] = 1;
+            }
+        }
+        for (size_t atom = 0; atom < available.size(); ++atom) {
+            if ((atom & 255u) == 0 && budget_.stopped()) return false;
+            if (available[atom] && rings.ringAtom(static_cast<int>(atom)) && !covered[atom]) available[atom] = 0;
+        }
+        return true;
     }
     Score feasibleUpper(const Score& conservative) {
         std::fill(availableQuery_.begin(), availableQuery_.end(), uint8_t(0));
@@ -242,6 +484,17 @@ class VertexSearch {
             targetCount += availableTarget_[atom] != 0;
         }
         int atoms = std::min({conservative.atoms, mapped_ + remaining, targetCount});
+        if (chemistry_.completeRingsOnly && query_.molecule && common_->objective == MCSObjective::MCIS
+            && !queryRings_.truncated() && !targetRings_.truncated()) {
+            if (!restrictRingAvailability(queryRings_, availableQuery_, reachableQuery_)
+                || !restrictRingAvailability(targetRings_, availableTarget_, reachableTarget_)) return conservative;
+            for (int queryAtom : mappedQueryAtoms_)
+                if (!availableQuery_[queryAtom] || !availableTarget_[mapping_[queryAtom]])
+                    return {std::numeric_limits<int64_t>::lowest(), 0, 0};
+            atoms = std::min({atoms,
+                static_cast<int>(std::count(availableQuery_.begin(), availableQuery_.end(), uint8_t(1))),
+                static_cast<int>(std::count(availableTarget_.begin(), availableTarget_.end(), uint8_t(1)))});
+        }
         const bool connected = common_->connectivity == MCSConnectivity::Connected || common_->maxFragments == 1;
         if (connected) {
             const int queryRoot = mappedQueryAtoms_.empty() ? -1 : mappedQueryAtoms_.front();
@@ -251,22 +504,61 @@ class VertexSearch {
             if (queryBound < 0 || targetBound < 0) return conservative;
             atoms = std::min({atoms, queryBound, targetBound});
         }
-        int queryBonds = 0, targetBonds = 0;
+        if (injectiveBoundAllowed_ && atoms > mapped_) {
+            const auto matching = injectiveDomainBound(query_.size(), target_.n, atoms - mapped_,
+                [&](int queryAtom, size_t word) {
+                    return mapping_[queryAtom] == -2 && availableQuery_[queryAtom]
+                        ? feasibleTargets(queryAtom, word) : uint64_t(0);
+                }, [&]() { return budget_.stopped(); });
+            if (!matching) return conservative;
+            atoms = std::min(atoms, mapped_ + *matching);
+        }
+        int64_t queryBonds = 0, targetBonds = 0;
+        int64_t mappedQueryBonds = 0, mappedTargetBonds = 0;
+        SpareVectors<int64_t>::Lease queryScoresLease(injectiveBoundAllowed_ ? static_cast<size_t>(query_.size()) : 0, 0);
+        SpareVectors<int64_t>::Lease targetScoresLease(injectiveBoundAllowed_ ? static_cast<size_t>(target_.n) : 0, 0);
+        auto& queryScores = queryScoresLease.items;
+        auto& targetScores = targetScoresLease.items;
+        size_t bondWork = 0;
         for (int atom = 0; atom < query_.size(); ++atom) {
             if ((atom & 255) == 0 && budget_.stopped()) return conservative;
             if (!availableQuery_[atom] || (connected && !reachableQuery_[atom])) continue;
-            for (int neighbor : query_.neighbors(atom))
-                if (atom < neighbor && availableQuery_[neighbor] && (!connected || reachableQuery_[neighbor])) ++queryBonds;
+            for (int neighbor : query_.neighbors(atom)) {
+                if (injectiveBoundAllowed_ && (bondWork++ & 255u) == 0 && budget_.stopped()) return conservative;
+                if (!availableQuery_[neighbor] || (connected && !reachableQuery_[neighbor])) continue;
+                if (atom < neighbor) ++queryBonds;
+                if (injectiveBoundAllowed_) {
+                    if (mapping_[atom] == -2) queryScores[atom] += mapping_[neighbor] >= 0 ? 2 : 1;
+                    else if (mapping_[atom] >= 0 && mapping_[neighbor] >= 0 && atom < neighbor) ++mappedQueryBonds;
+                }
+            }
         }
         for (int atom = 0; atom < target_.n; ++atom) {
             if ((atom & 255) == 0 && budget_.stopped()) return conservative;
             if (!availableTarget_[atom] || (connected && !reachableTarget_[atom])) continue;
-            for (int neighbor : target_.neighbors[atom])
-                if (atom < neighbor && availableTarget_[neighbor] && (!connected || reachableTarget_[neighbor])) ++targetBonds;
+            for (int neighbor : target_.neighbors[atom]) {
+                if (injectiveBoundAllowed_ && (bondWork++ & 255u) == 0 && budget_.stopped()) return conservative;
+                if (!availableTarget_[neighbor] || (connected && !reachableTarget_[neighbor])) continue;
+                if (atom < neighbor) ++targetBonds;
+                if (injectiveBoundAllowed_) {
+                    if (!used_[atom]) targetScores[atom] += used_[neighbor] ? 2 : 1;
+                    else if (used_[neighbor] && atom < neighbor) ++mappedTargetBonds;
+                }
+            }
         }
-        return {common_->atomWeights.empty() ? atoms : conservative.primary, atoms,
+        const Score base{common_->atomWeights.empty() ? atoms : conservative.primary, atoms,
                 static_cast<int>(std::min<int64_t>({conservative.bonds, queryBonds, targetBonds,
                                                    int64_t(atoms) * (atoms - 1) / 2}))};
+        if (!injectiveBoundAllowed_ || atoms < mapped_) return base;
+        const auto queryUpper = topKIncidentBondUpper(mappedQueryBonds, queryScores,
+            atoms - mapped_, [&]() { return budget_.stopped(); });
+        if (!queryUpper) return budget_.stopped() ? conservative : base;
+        const auto targetUpper = topKIncidentBondUpper(mappedTargetBonds, targetScores,
+            atoms - mapped_, [&]() { return budget_.stopped(); });
+        if (!targetUpper) return budget_.stopped() ? conservative : base;
+        if (budget_.stopped()) return conservative;
+        return {base.primary, base.atoms,
+                static_cast<int>(std::min<int64_t>({base.bonds, *queryUpper, *targetUpper}))};
     }
     Score upper() {
         int remaining = 0;
@@ -313,11 +605,18 @@ class VertexSearch {
             if (!stopped) atoms = std::min(atoms, mapped_ + static_cast<int>(colors.size()));
         }
         int bonds = 0;
+        if (bridgeBound_) {
+            int bridgeAtoms = bridgeBound_->upper();
+            for (int queryAtom : mappedAtoms_)
+                bridgeAtoms = std::min(bridgeAtoms, bridgeBound_->bound(queryAtom, mapping_[queryAtom]));
+            atoms = std::min(atoms, bridgeAtoms);
+        }
         for (int atom = 0; atom < query_.size(); ++atom) {
             if (mapping_[atom] == -1) continue;
             for (int neighbor : query_.neighbors(atom))
                 if (neighbor > atom && mapping_[neighbor] != -1) ++bonds;
         }
+        if (bridgeBound_ && bridgeBound_->acyclic()) bonds = std::min(bonds, std::max(0, atoms - 1));
         const Score conservative{common_ && !common_->atomWeights.empty() ? weightedScore(possibleWeight) : atoms,
             atoms, static_cast<int>(std::min<int64_t>({bonds, targetEdges_, int64_t(atoms) * (atoms - 1) / 2}))};
         if (!collector_.needs(conservative)) return conservative;
@@ -486,6 +785,72 @@ class VertexSearch {
         int active = -2;
         bool skipped = false;
     };
+    /** Omit a skip only when an already searched image extends every skip completion. */
+    bool skipDominated(const Frame& frame) {
+        if (!injectiveBoundAllowed_ || frame.active != -2 || frame.next != frame.candidates.size()
+            || !common_->excludedTargetAtoms.empty() || !chemistry_.matchAtomType
+            || chemistry_.matchFormalCharge || chemistry_.matchIsotope || chemistry_.useChirality
+            || chemistry_.useBondStereo || chemistry_.tautomerAware || chemistry_.ringMatchesRingOnly
+            || chemistry_.completeRingsOnly || chemistry_.ringFusionMode != ChemOptions::RingFusionMode::IGNORE
+            || chemistry_.matchBondOrder != ChemOptions::BondOrderMode::ANY
+            || chemistry_.aromaticityMode != ChemOptions::AromaticityMode::FLEXIBLE) return false;
+        size_t work = 0;
+        auto stopped = [&]() { return ((work++ & 255u) == 0) && budget_.stopped(); };
+        for (int neighbor : query_.neighbors(frame.atom)) {
+            if (stopped()) return false;
+            if (mapping_[neighbor] == -2) return false;
+        }
+        for (int targetAtom : frame.candidates) {
+            if (stopped()) return false;
+            if (!feasible(frame.atom, targetAtom)) continue;
+            bool closed = true;
+            for (int neighbor : target_.neighbors[targetAtom]) {
+                if (stopped()) return false;
+                if (!used_[neighbor] && !excluded_[neighbor]) { closed = false; break; }
+            }
+            if (!closed) continue;
+            bool unique = true;
+            for (int otherQuery = 0; otherQuery < query_.size(); ++otherQuery) {
+                if (stopped()) return false;
+                if (otherQuery == frame.atom || mapping_[otherQuery] != -2
+                    || !domainHas(otherQuery, targetAtom)) continue;
+                // Ignore the earlier-twin inequalities: absence must hold in the relaxed row.
+                bool available = true;
+                for (int previous : mappedAtoms_) {
+                    if (stopped()) return false;
+                    const bool queryBond = query_.adjacent(otherQuery, previous);
+                    const bool targetBond = target_.hasBond(targetAtom, mapping_[previous]);
+                    if (queryBond != targetBond || (queryBond
+                        && !query_.bondMatches(otherQuery, previous, target_, targetAtom, mapping_[previous], chemistry_))) {
+                        available = false;
+                        break;
+                    }
+                }
+                if (available) { unique = false; break; }
+            }
+            if (unique && !budget_.stopped()) return true;
+        }
+        return false;
+    }
+    /** Fix a true leaf pair beside a mapped parent without losing an optimal extension. */
+    bool forcePendantPair(Frame& frame) {
+        if (!leafExchangeAllowed_ || queryState_[frame.atom].degree != 1) return false;
+        const int queryParent = query_.neighbors(frame.atom).front();
+        const int targetParent = mapping_[queryParent];
+        if (targetParent < 0) return false;
+        size_t tested = 0;
+        for (int targetAtom : frame.candidates) {
+            if ((++tested & 255u) == 0 && budget_.stopped()) return false;
+            if (target_.neighbors[targetAtom].size() == 1 && target_.neighbors[targetAtom].front() == targetParent) {
+                // Exchanging the partners preserves all selected edges and the bond tie.
+                frame.candidates.front() = targetAtom;
+                frame.candidates.resize(1);
+                frame.skipped = true;
+                return true;
+            }
+        }
+        return false;
+    }
     /** Whether target transpositions may thin candidates; checked when first needed. */
     bool targetTwinsAvailable() {
         if (targetTwinState_ == 0) {
@@ -493,7 +858,7 @@ class VertexSearch {
             if (targetTwinState_ == 2) {
                 isolatedTargets_ = SpareVectors<std::pair<TranspositionKey, int>>::take();
                 for (int atom = 0; atom < target_.n; ++atom)
-                    if (target_.neighbors[atom].empty()) isolatedTargets_.emplace_back(transpositionKey(target_, atom), atom);
+                    if (target_.neighbors[atom].empty()) isolatedTargets_.emplace_back(transpositionKey(target_, atom, fragmentPolicy_), atom);
                 std::sort(isolatedTargets_.begin(), isolatedTargets_.end());
             }
         }
@@ -508,16 +873,18 @@ class VertexSearch {
      * the budget stops the search first.
      */
     int targetTwin(int atom) {
+        if (connectedTargetTwins_ && target_.neighbors[atom].size() < 2)
+            return targetState_[atom].twin = atom;
         twinChain_.clear();
         int work = 0;
         while (targetState_[atom].twin < 0) {
             int earliest = -1;
             auto consider = [&](int other) {
-                if (other < atom && (earliest < 0 || other < earliest) && transposable(target_, other, atom, nullptr))
+                if (other < atom && (earliest < 0 || other < earliest) && transposable(target_, other, atom, nullptr, fragmentPolicy_))
                     earliest = other;
             };
             if (!isolatedTargets_.empty()) {
-                const auto key = transpositionKey(target_, atom);
+                const auto key = transpositionKey(target_, atom, fragmentPolicy_);
                 const auto isolated = std::lower_bound(isolatedTargets_.begin(), isolatedTargets_.end(), std::make_pair(key, INT_MIN));
                 if (isolated != isolatedTargets_.end() && isolated->first == key) consider(isolated->second);
             }
@@ -625,10 +992,15 @@ class VertexSearch {
             return Frame{-1, {}};
         Frame result{chosen, spareCandidates()};
         int neighborAnchor = -1;
-        for (int neighbor : query_.neighbors(chosen))
-            if (mapping_[neighbor] >= 0 && (neighborAnchor < 0
-                || target_.neighbors[mapping_[neighbor]].size() < target_.neighbors[mapping_[neighborAnchor]].size()))
+        for (int neighbor : query_.neighbors(chosen)) {
+            if (mapping_[neighbor] < 0) continue;
+            const size_t targetDegree = target_.neighbors[mapping_[neighbor]].size();
+            if (neighborAnchor < 0
+                || targetDegree < target_.neighbors[mapping_[neighborAnchor]].size()
+                || (fragmentPolicy_ && targetDegree == target_.neighbors[mapping_[neighborAnchor]].size()
+                    && neighbor < neighborAnchor))
                 neighborAnchor = neighbor;
+        }
         result.candidates.reserve(neighborAnchor >= 0
             ? target_.neighbors[mapping_[neighborAnchor]].size() : static_cast<size_t>(domainCounts_[chosen]));
         // A test compares the candidate with each earlier twin and with each mapped atom or
@@ -659,6 +1031,7 @@ class VertexSearch {
                 }
             }
         }
+        if (forcePendantPair(result)) return result;
         if (query_.molecule) {
             if (targetState_.empty())
                 targetState_ = SpareVectors<TargetAtomState>::take(static_cast<size_t>(target_.n), TargetAtomState{});
@@ -678,7 +1051,10 @@ class VertexSearch {
             std::stable_sort(result.candidates.begin(), result.candidates.end(), [&](int first, int second) {
                 if (support(first) != support(second)) return support(first) > support(second);
                 const auto queryDegree = static_cast<int>(query_.neighbors(chosen).size());
-                return std::abs(target_.degree[first] - queryDegree) < std::abs(target_.degree[second] - queryDegree);
+                const int firstDistance = std::abs(target_.degree[first] - queryDegree);
+                const int secondDistance = std::abs(target_.degree[second] - queryDegree);
+                if (firstDistance != secondDistance) return firstDistance < secondDistance;
+                return fragmentPolicy_ && first < second;
             });
             for (int candidate : result.candidates) support(candidate) = 0;
             if (!all_ && !required_ && result.candidates.size() > 1 && targetTwinsAvailable()) {
@@ -765,7 +1141,7 @@ class VertexSearch {
             const int element = query.atomicNum[atom];
             if (element < 0 || element >= elements) return false;
             if (slot[element] < 0) slot[element] = slots++;
-            maximumDegree = std::max(maximumDegree, static_cast<int>(query.neighbors[atom].size()));
+            maximumDegree = std::max(maximumDegree, queryState_[atom].degree);
         }
         if (allowSkipping_) maximumDegree = 0;
         const size_t words = domainWords();
@@ -780,7 +1156,7 @@ class VertexSearch {
             const int element = target_.atomicNum[atom];
             const uint64_t bit = uint64_t(1) << (atom & 63);
             if (element >= 0 && element < elements && slot[element] >= 0) bits[slot[element] * words + (atom >> 6)] |= bit;
-            const int degree = std::min(static_cast<int>(target_.neighbors[atom].size()), maximumDegree);
+            const int degree = static_cast<int>(std::min(target_.neighbors[atom].size(), static_cast<size_t>(maximumDegree)));
             degreeBits[degree * words + (atom >> 6)] |= bit;
         }
         for (int degree = maximumDegree - 1; degree >= 0; --degree)
@@ -811,10 +1187,12 @@ class VertexSearch {
         auto member = [&](size_t index) { return elementOnly ? static_cast<int>(index) : order[index]; };
         for (size_t begin = 0, end = 0; begin < static_cast<size_t>(query.n); begin = end) {
             const int representative = member(begin);
-            for (end = begin + 1; !elementOnly && end < order.size() && terms[order[end]] == terms[representative]; ++end) {}
+            for (end = begin + 1; !elementOnly && end < order.size()
+                && terms[order[end]] == terms[representative]
+                && queryState_[order[end]].degree == queryState_[representative].degree; ++end) {}
             const uint64_t* elementRow = bits.data() + static_cast<size_t>(slot[query.atomicNum[representative]]) * words;
             const uint64_t* degreeRow = degreeBits
-                + static_cast<size_t>(std::min(static_cast<int>(query.neighbors[representative].size()), maximumDegree)) * words;
+                + static_cast<size_t>(std::min(queryState_[representative].degree, maximumDegree)) * words;
             int count = 0;
             for (size_t word = 0; word < words; ++word) {
                 if (stopped(elementOnly ? 1 : 16)) return true;
@@ -861,9 +1239,38 @@ public:
     VertexSearch(const QueryView& query, const MolGraph& target, const ChemOptions& chemistry,
                  const MCSOptions* common, bool induced, bool all, Budget& budget, Collector& collector, int anchor = -1,
                  const Match* required = nullptr, bool allowSkipping = true, uint64_t probeNodeLimit = 0,
-                 bool rowsAllowed = true)
+                 bool rowsAllowed = true, bool allowInjectiveBound = false, bool allowFragmentPolicy = false)
         : query_(query), target_(target), chemistry_(chemistry), common_(common), required_(required), induced_(induced), all_(all),
-          allowSkipping_(common && allowSkipping), probeNodeLimit_(probeNodeLimit),
+          allowSkipping_(common && allowSkipping),
+          symmetryGraphCertified_(certifiedSymmetryEnabled_ && query.molecule && !all && !required && anchor < 0
+              && symmetryGraphCoherent(*query.molecule, [&budget] { return budget.stoppedSampled(); })
+              && symmetryGraphCoherent(target, [&budget] { return budget.stoppedSampled(); })),
+          injectiveBoundAllowed_(allowInjectiveBound && symmetryGraphCertified_ && allowSkipping_
+              && induced && !all && collector.limit() == 1 && !required && probeNodeLimit == 0
+              && common && common->objective == MCSObjective::MCIS && common->atomWeights.empty()
+              && common->connectivity == MCSConnectivity::Fragments
+              && common->minFragmentAtoms == 1 && common->maxFragments == INT_MAX
+              && common->nodeLimit != 0),
+          fragmentPolicy_(allowFragmentPolicy && symmetryGraphCertified_ && induced && !all
+              && collector.limit() == 1 && !required && anchor < 0 && common
+              && common->objective == MCSObjective::MCIS && common->atomWeights.empty()
+              && common->connectivity == MCSConnectivity::Fragments
+              && common->minFragmentAtoms == 1 && common->maxFragments == INT_MAX
+              && common->nodeLimit != 0 && common->excludedTargetAtoms.empty()
+              && chemistry.matchAtomType && !chemistry.matchFormalCharge && !chemistry.matchIsotope
+              && !chemistry.useChirality && !chemistry.useBondStereo && !chemistry.tautomerAware
+              && !chemistry.ringMatchesRingOnly && !chemistry.completeRingsOnly
+              && chemistry.ringFusionMode == ChemOptions::RingFusionMode::IGNORE
+              && chemistry.matchBondOrder == ChemOptions::BondOrderMode::ANY
+              && chemistry.aromaticityMode == ChemOptions::AromaticityMode::FLEXIBLE),
+          leafExchangeAllowed_(symmetryGraphCertified_ && common && induced
+              && common->objective == MCSObjective::MCIS && common->connectivity == MCSConnectivity::Connected
+              && common->atomWeights.empty() && !chemistry.matchIsotope && !chemistry.useChirality
+              && !chemistry.useBondStereo && !chemistry.tautomerAware && !chemistry.completeRingsOnly
+              && !chemistry.ringMatchesRingOnly && chemistry.ringFusionMode == ChemOptions::RingFusionMode::IGNORE
+              && chemistry.aromaticityMode == ChemOptions::AromaticityMode::STRICT
+              && chemistry.matchBondOrder == ChemOptions::BondOrderMode::STRICT),
+          probeNodeLimit_(probeNodeLimit),
           budget_(budget), collector_(collector),
           queryRings_(query.molecule ? *query.molecule : target, chemistry.completeRingsOnly && query.molecule),
           targetRings_(target, chemistry.completeRingsOnly),
@@ -873,6 +1280,22 @@ public:
           used_(SpareVectors<bool>::take(static_cast<size_t>(target.n), false)),
           excluded_(SpareVectors<bool>::take(static_cast<size_t>(target.n), false)), availableTargets_(target.n),
           rowState_(rowsAllowed && all && !common && !required && query.molecule ? 0 : 2) {
+        queryState_ = SpareVectors<QueryAtomState>::take(static_cast<size_t>(query.size()), QueryAtomState{});
+        {
+            SpareVectors<int>::Lease seenLease(static_cast<size_t>(query.size()), -1);
+            auto& seen = seenLease.items;
+            size_t work = 0;
+            for (int atom = 0; atom < query.size(); ++atom) {
+                if (budget.stopped()) return;
+                for (int neighbor : query.neighbors(atom)) {
+                    if ((work++ & 255u) == 0 && budget.stopped()) return;
+                    if (neighbor != atom && seen[neighbor] != atom) {
+                        seen[neighbor] = atom;
+                        ++queryState_[atom].degree;
+                    }
+                }
+            }
+        }
         if (common) for (int atom : common->excludedTargetAtoms)
             if (!excluded_[atom]) { excluded_[atom] = true; --availableTargets_; }
         if (common && common->objective == MCSObjective::MCIS) {
@@ -887,11 +1310,35 @@ public:
                     && std::all_of(target.adjLong.begin(), target.adjLong.end(), [&](const auto& row) {
                         return row.size() >= availableTargetBits_.size();
                     });
+                if (targetBitAdjacencyAvailable_) {
+                    for (int atom = 0; atom < target.n && targetBitAdjacencyAvailable_; ++atom) {
+                        for (size_t word = 0; word < availableTargetBits_.size(); ++word) {
+                            if (budget.stoppedSampled()) return;
+                            uint64_t remaining = target.adjLong[atom][word];
+                            while (remaining != 0) {
+                                const int neighbour = static_cast<int>(word * 64) + smsd::ctz64(remaining);
+                                remaining &= remaining - 1;
+                                if (neighbour >= target.n || !target.hasBond(atom, neighbour)) {
+                                    targetBitAdjacencyAvailable_ = false;
+                                    break;
+                                }
+                            }
+                        }
+                        for (int neighbour : target.neighbors[atom]) {
+                            if (budget.stoppedSampled()) return;
+                            if (neighbour != atom && (target.adjLong[atom][neighbour >> 6]
+                                & (uint64_t(1) << (neighbour & 63))) == 0) {
+                                targetBitAdjacencyAvailable_ = false;
+                                break;
+                            }
+                        }
+                    }
+                }
             }
             bool complete = true, independent = true;
             for (int atom = 0; atom < query.size(); ++atom) {
-                complete = complete && query.neighbors(atom).size() == static_cast<size_t>(query.size() - 1);
-                independent = independent && query.neighbors(atom).empty();
+                complete = complete && queryState_[atom].degree == query.size() - 1;
+                independent = independent && queryState_[atom].degree == 0;
             }
             if (complete || independent) uniformAdjacency_ = complete ? 1 : 0;
             if (induced && query.molecule) {
@@ -899,21 +1346,24 @@ public:
                 doubleBondPairs_ = chemistry.useBondStereo && configured(*query.molecule) && configured(target);
             }
         }
-        queryState_ = SpareVectors<QueryAtomState>::take(static_cast<size_t>(query.size()), QueryAtomState{});
         frontierAtoms_ = SpareVectors<int>::take();
         frontierAtoms_.reserve(query.size());
         mappedAtoms_ = SpareVectors<int>::take();
         mappedAtoms_.reserve(query.size());
-        for (int atom = 0; atom < query.size(); ++atom) queryState_[atom].degree = static_cast<int>(query.neighbors(atom).size());
-        const bool transpositionsAllowed = !chemistry.completeRingsOnly && !chemistry.ringMatchesRingOnly
-            && chemistry.ringFusionMode == ChemOptions::RingFusionMode::IGNORE
+        const bool transpositionsAllowed = symmetryGraphCertified_ && !chemistry.completeRingsOnly
+            && !chemistry.ringMatchesRingOnly && chemistry.ringFusionMode == ChemOptions::RingFusionMode::IGNORE
             && (!common || (common->connectivity == MCSConnectivity::Fragments
                 && common->minFragmentAtoms == 1 && common->maxFragments == INT_MAX));
-        if (query.molecule && !all && !required && transpositionsAllowed
-            && !hasStereoTags(*query.molecule) && !hasStereoTags(target)) {
+        connectedTargetTwins_ = leafExchangeAllowed_ && chemistry.matchAtomType
+            && common->excludedTargetAtoms.empty() && query.size() <= 512 && target.n <= 512
+            && std::all_of(target.neighbors.begin(), target.neighbors.end(), [](const auto& neighbors) {
+                return neighbors.size() <= 8;
+            });
+        if (query.molecule && !all && !required && (transpositionsAllowed || connectedTargetTwins_)
+            && (fragmentPolicy_ || (!hasStereoTags(*query.molecule) && !hasStereoTags(target)))) {
             targetTwinsWanted_ = true;
-            if (common && common->objective == MCSObjective::MCIS && common->atomWeights.empty())
-                queryTwinClass_ = transpositionClasses(*query.molecule, budget, &common->atomWeights);
+            if (transpositionsAllowed && common && common->objective == MCSObjective::MCIS && common->atomWeights.empty())
+                queryTwinClass_ = transpositionClasses(*query.molecule, budget, &common->atomWeights, fragmentPolicy_);
             if (!queryTwinClass_.empty()) {
                 // Each atom links to the latest earlier atom of its class, which it counts with the rest.
                 std::vector<int> latest(static_cast<size_t>(query.size()), -1), members(static_cast<size_t>(query.size()), 0);
@@ -937,7 +1387,7 @@ public:
                 if (excluded_[candidate]) continue;
                 if (required && required->atomMapping.count(atom) && required->atomMapping.at(atom) != candidate) continue;
                 if (atom == 0 && anchor >= 0 && candidate != anchor) continue;
-                if (!allowSkipping_ && query.neighbors(atom).size() > target.neighbors[candidate].size()) continue;
+                if (!allowSkipping_ && static_cast<size_t>(queryState_[atom].degree) > target.neighbors[candidate].size()) continue;
                 if (query.atomMatches(atom, target, candidate, chemistry)) {
                     domains_[domainIndex(atom, candidate >> 6)] |= uint64_t(1) << (candidate & 63);
                     ++domainCounts_[atom];
@@ -971,11 +1421,284 @@ public:
         return proof;
     }
 private:
+    /**
+     * Offers the collector, before the search visits its first node, a common induced subgraph
+     * found by a bounded local search over the compatible pairs, so that the search starts
+     * from a high incumbent. Each step adds a pair that agrees with every chosen pair or,
+     * failing that, exchanges a chosen pair for one that disagrees only with it, taking the
+     * greatest gain in atoms, then bonds; when no such move is open, the chosen pair that costs
+     * fewest bonds is removed. A pair taken out by an exchange or a removal may not return for
+     * some steps unless returning beats the best set of the round. Ties go to the pair moved
+     * least recently, then to a fixed order, so the result is deterministic. Four rounds of
+     * at most `steps` steps each start from no pair and differ in how long a pair taken out by
+     * an exchange waits and in how they restart; the best set of each round that improves on
+     * the earlier ones is offered. The rounds end once a set reaches `bound`, or once
+     * `workLimit` pairs have been read for moves and their neighbours (checked between steps).
+     * Inputs with more than `pairLimit` compatible pairs, or whose bond rows would take more
+     * than `pairLimit` words, are left to the search alone.
+     *
+     * It charges no node to the budget and leaves the mapping as it found it, so under a node
+     * limit the search differs only in an incumbent that can only be higher. As the search
+     * order never reads the incumbent and pruning only tightens as it rises, the result is
+     * never lower and a proof is never lost. The time spent here still counts against the
+     * deadline, which this guarantee does not cover; if the deadline passes or the search is
+     * cancelled meanwhile, the best set found so far is still offered.
+     */
+    void seedIncumbent(const Score& bound, int64_t steps, uint64_t workLimit, int64_t pairLimit) {
+        const int queryCount = query_.size();
+        const size_t words = domainWords(), queryWords = (static_cast<size_t>(queryCount) + 63) >> 6;
+        int64_t pairCount = 0;
+        for (int atom = 0; atom < queryCount; ++atom)
+            pairCount += smsd::popcountWords(domains_.data() + domainIndex(atom, 0), words);
+        if (pairCount == 0 || pairCount > pairLimit || static_cast<int64_t>(target_.n) * static_cast<int64_t>(words) > pairLimit
+            || static_cast<int64_t>(queryCount) * static_cast<int64_t>(queryWords) > pairLimit || budget_.stopped()) return;
+        std::vector<int> pairQuery, pairTarget;
+        pairQuery.reserve(static_cast<size_t>(pairCount));
+        pairTarget.reserve(static_cast<size_t>(pairCount));
+        for (int atom = 0; atom < queryCount; ++atom)
+            for (size_t word = 0; word < words; ++word)
+                for (uint64_t remaining = domains_[domainIndex(atom, word)]; remaining != 0; remaining &= remaining - 1) {
+                    pairQuery.push_back(atom);
+                    pairTarget.push_back(static_cast<int>(word * 64) + smsd::ctz64(remaining));
+                }
+        const int pairs = static_cast<int>(pairCount);
+        std::vector<uint64_t> queryBits(static_cast<size_t>(queryCount) * queryWords, 0);
+        std::vector<uint64_t> targetBits(static_cast<size_t>(target_.n) * words, 0);
+        int64_t listedBonds = 0;
+        for (int atom = 0; atom < queryCount; ++atom)
+            for (int neighbor : query_.neighbors(atom)) {
+                queryBits[atom * queryWords + (neighbor >> 6)] |= uint64_t(1) << (neighbor & 63);
+                ++listedBonds;
+            }
+        for (int atom = 0; atom < target_.n; ++atom)
+            for (int neighbor : target_.neighbors[atom])
+                targetBits[atom * words + (neighbor >> 6)] |= uint64_t(1) << (neighbor & 63);
+        auto bit = [](const std::vector<uint64_t>& rows, size_t stride, int row, int column) {
+            return ((rows[row * stride + (column >> 6)] >> (column & 63)) & 1) != 0;
+        };
+        // Pairs are numbered in query-atom order, so each query atom's pairs form one range; a
+        // second index lists the pairs of each target atom.
+        std::vector<int> queryStart(static_cast<size_t>(queryCount) + 1, 0), targetStart(static_cast<size_t>(target_.n) + 1, 0);
+        std::vector<int> targetPairs(static_cast<size_t>(pairs));
+        for (int vertex = 0; vertex < pairs; ++vertex) {
+            ++queryStart[pairQuery[vertex] + 1];
+            ++targetStart[pairTarget[vertex] + 1];
+        }
+        std::partial_sum(queryStart.begin(), queryStart.end(), queryStart.begin());
+        std::partial_sum(targetStart.begin(), targetStart.end(), targetStart.begin());
+        {
+            std::vector<int> next(targetStart.begin(), targetStart.end() - 1);
+            for (int vertex = 0; vertex < pairs; ++vertex) targetPairs[next[pairTarget[vertex]]++] = vertex;
+        }
+        uint64_t work = 0;
+        // Passes to `visit` each pair that cannot join a set holding `vertex`: one that shares an
+        // atom with it, one bonded to it in one molecule but not in the other, or one bonded to
+        // it in both by bonds that do not match.
+        auto forConflicts = [&](int vertex, auto&& visit) {
+            const int queryAtom = pairQuery[vertex], targetAtom = pairTarget[vertex];
+            for (int other = queryStart[queryAtom]; other < queryStart[queryAtom + 1]; ++other)
+                if (other != vertex) visit(other);
+            for (int index = targetStart[targetAtom]; index < targetStart[targetAtom + 1]; ++index)
+                if (pairQuery[targetPairs[index]] != queryAtom) visit(targetPairs[index]);
+            for (size_t word = 0; word < queryWords; ++word)
+                for (uint64_t remaining = queryBits[queryAtom * queryWords + word]; remaining != 0; remaining &= remaining - 1) {
+                    const int neighbor = static_cast<int>(word * 64) + smsd::ctz64(remaining);
+                    if (neighbor == queryAtom) continue;
+                    work += static_cast<uint64_t>(queryStart[neighbor + 1] - queryStart[neighbor]);
+                    for (int other = queryStart[neighbor]; other < queryStart[neighbor + 1]; ++other) {
+                        const int image = pairTarget[other];
+                        if (image != targetAtom && (!bit(targetBits, words, targetAtom, image)
+                            || !query_.bondMatches(queryAtom, neighbor, target_, targetAtom, image, chemistry_))) visit(other);
+                    }
+                }
+            for (size_t word = 0; word < words; ++word)
+                for (uint64_t remaining = targetBits[targetAtom * words + word]; remaining != 0; remaining &= remaining - 1) {
+                    const int neighbor = static_cast<int>(word * 64) + smsd::ctz64(remaining);
+                    if (neighbor == targetAtom) continue;
+                    work += static_cast<uint64_t>(targetStart[neighbor + 1] - targetStart[neighbor]);
+                    for (int index = targetStart[neighbor]; index < targetStart[neighbor + 1]; ++index) {
+                        const int other = targetPairs[index];
+                        if (pairQuery[other] != queryAtom && !bit(queryBits, queryWords, queryAtom, pairQuery[other])) visit(other);
+                    }
+                }
+        };
+        // One atom outweighs all the bonds together, so values order sets by atoms, then bonds.
+        // For each pair outside the set: how many chosen pairs it disagrees with, and the sum of
+        // their indices, which identifies the chosen pair when there is only one.
+        const int64_t atomWeight = listedBonds + 1;
+        std::vector<int> missing(static_cast<size_t>(pairs), 0), mappedNeighbors(static_cast<size_t>(queryCount), 0), chosen, best, kept;
+        std::vector<int64_t> conflictSum(static_cast<size_t>(pairs), 0), lastMoved(static_cast<size_t>(pairs), -1),
+            waitUntil(static_cast<size_t>(pairs), 0);
+        std::vector<uint8_t> inside(static_cast<size_t>(pairs), 0);
+        // The pairs outside the set that disagree with at most one chosen pair, and each pair's
+        // position in that list (-1 when absent).
+        std::vector<int> nearPairs(static_cast<size_t>(pairs)), nearPosition(static_cast<size_t>(pairs));
+        std::iota(nearPairs.begin(), nearPairs.end(), 0);
+        std::iota(nearPosition.begin(), nearPosition.end(), 0);
+        auto refresh = [&](int vertex) {
+            const bool wanted = !inside[vertex] && missing[vertex] <= 1;
+            if (wanted == (nearPosition[vertex] >= 0)) return;
+            if (wanted) {
+                nearPosition[vertex] = static_cast<int>(nearPairs.size());
+                nearPairs.push_back(vertex);
+            } else {
+                const int last = nearPairs.back();
+                nearPairs[nearPosition[vertex]] = last;
+                nearPosition[last] = nearPosition[vertex];
+                nearPairs.pop_back();
+                nearPosition[vertex] = -1;
+            }
+        };
+        int64_t value = 0, keptValue = 0;
+        auto toggle = [&](int vertex, int64_t step) {
+            const int sign = inside[vertex] ? -1 : 1;
+            inside[vertex] = !inside[vertex];
+            refresh(vertex);
+            forConflicts(vertex, [&](int other) {
+                missing[other] += sign;
+                conflictSum[other] += sign * vertex;
+                refresh(other);
+            });
+            const int queryAtom = pairQuery[vertex];
+            value += sign * (atomWeight + mappedNeighbors[queryAtom]);
+            for (size_t word = 0; word < queryWords; ++word)
+                for (uint64_t remaining = queryBits[queryAtom * queryWords + word]; remaining != 0; remaining &= remaining - 1)
+                    mappedNeighbors[word * 64 + smsd::ctz64(remaining)] += sign;
+            if (sign > 0) chosen.push_back(vertex);
+            else if (chosen.back() == vertex) chosen.pop_back();
+            else chosen.erase(std::find(chosen.begin(), chosen.end(), vertex));
+            lastMoved[vertex] = step;
+            return !budget_.stopped();
+        };
+        // Put the mapping back however record() ends.
+        struct Restore {
+            VertexSearch& owner;
+            const std::vector<int>& atoms;
+            const int mapped;
+            ~Restore() {
+                for (int atom : atoms) owner.mapping_[atom] = -2;
+                owner.mapped_ = mapped;
+            }
+        };
+        int64_t offeredValue = 0;
+        // Checks the best set against the domains and the induced bond test of feasible(), then
+        // offers it to record() as a leaf, once each time it rises.
+        const auto offer = [&] {
+            if (keptValue <= offeredValue) return;
+            offeredValue = keptValue;
+            for (size_t first = 0; first < kept.size(); ++first) {
+                const int queryFirst = pairQuery[kept[first]], targetFirst = pairTarget[kept[first]];
+                if (mapping_[queryFirst] != -2 || !domainHas(queryFirst, targetFirst)) return;
+                for (size_t second = 0; second < first; ++second) {
+                    const int querySecond = pairQuery[kept[second]], targetSecond = pairTarget[kept[second]];
+                    const bool queryBond = query_.adjacent(queryFirst, querySecond);
+                    if (queryFirst == querySecond || targetFirst == targetSecond
+                        || queryBond != target_.hasBond(targetFirst, targetSecond)
+                        || (queryBond && !query_.bondMatches(queryFirst, querySecond, target_, targetFirst, targetSecond, chemistry_)))
+                        return;
+                }
+            }
+            std::vector<int> seededAtoms;
+            seededAtoms.reserve(kept.size());
+            for (int vertex : kept) seededAtoms.push_back(pairQuery[vertex]);
+            const Restore restore{*this, seededAtoms, mapped_};
+            for (int vertex : kept) mapping_[pairQuery[vertex]] = pairTarget[vertex];
+            mapped_ = static_cast<int>(kept.size());
+            record();
+        };
+        // How long a pair taken out by an exchange waits, per chosen pair, and after how many
+        // steps without a better set a round starts again; the second round restarts from its
+        // best set less one pair.
+        static constexpr int64_t waits[] = {1, 3, 3, 5}, restartAfters[] = {4096, 1024, 256, 512};
+        // A stop ends the rounds; the best set found so far is still checked and offered.
+        const auto rounds = [&] {
+            for (int round = 0; round < 4 && work < workLimit; ++round) {
+                while (!chosen.empty())
+                    if (!toggle(chosen.back(), 0)) return;
+                std::fill(lastMoved.begin(), lastMoved.end(), -1);
+                std::fill(waitUntil.begin(), waitUntil.end(), 0);
+                best.clear();
+                const int64_t tenure = waits[round], restartAfter = restartAfters[round];
+                int64_t bestValue = 0, sinceBest = 0, restarts = 0;
+                for (int64_t step = 1; step <= steps && work < workLimit; ++step) {
+                    int move = -1;
+                    int64_t moveGain = 0;
+                    for (int vertex : nearPairs) {
+                        if ((++work & 255u) == 0 && budget_.stopped()) return;
+                        const int queryAtom = pairQuery[vertex];
+                        int64_t gain = atomWeight + mappedNeighbors[queryAtom];
+                        if (missing[vertex] == 1) {
+                            const int out = pairQuery[conflictSum[vertex]];
+                            gain = mappedNeighbors[queryAtom] - bit(queryBits, queryWords, out, queryAtom) - mappedNeighbors[out];
+                        }
+                        if (waitUntil[vertex] > step && value + gain <= bestValue) continue;
+                        if (move < 0 || gain > moveGain || (gain == moveGain && (lastMoved[vertex] < lastMoved[move]
+                            || (lastMoved[vertex] == lastMoved[move] && vertex < move)))) {
+                            move = vertex;
+                            moveGain = gain;
+                        }
+                    }
+                    if (move >= 0 && missing[move] == 1) {
+                        const int out = static_cast<int>(conflictSum[move]);
+                        if (!toggle(out, step)) return;
+                        waitUntil[out] = step + 1 + tenure * static_cast<int64_t>(chosen.size());
+                    } else if (move < 0) {
+                        if (chosen.empty()) break;
+                        for (int vertex : chosen)
+                            if (move < 0 || mappedNeighbors[pairQuery[vertex]] < mappedNeighbors[pairQuery[move]]
+                                || (mappedNeighbors[pairQuery[vertex]] == mappedNeighbors[pairQuery[move]]
+                                    && lastMoved[vertex] < lastMoved[move]))
+                                move = vertex;
+                        waitUntil[move] = step + 7;
+                    }
+                    const bool running = toggle(move, step);
+                    if (value > bestValue) {
+                        bestValue = value;
+                        best = chosen;
+                        sinceBest = 0;
+                        if (value > keptValue) {
+                            keptValue = value;
+                            kept = chosen;
+                            if (value / atomWeight == bound.atoms && value % atomWeight >= bound.bonds) return;
+                        }
+                    } else if (running && ++sinceBest > restartAfter) {
+                        while (!chosen.empty())
+                            if (!toggle(chosen.back(), step)) return;
+                        sinceBest = 0;
+                        if (round != 1 || best.empty()) continue;
+                        // The second round restarts from its best set less one pair, taken in turn, and
+                        // holds that pair back for some steps.
+                        const int pivot = best[static_cast<size_t>(restarts++) % best.size()];
+                        waitUntil[pivot] = step + 64;
+                        for (int vertex : best)
+                            if (vertex != pivot && !toggle(vertex, step)) return;
+                    }
+                    if (!running) return;
+                }
+                offer();
+            }
+        };
+        rounds();
+        offer();
+    }
     std::pair<bool, bool> search() {
         if (budget_.stopped()) return {false, false};
         if (query_.size() == 0) { if (!common_) record(); return {true, true}; }
         if (!common_ && (query_.size() > target_.n || emptyDomain_)) return {true, true};
-        const Score absoluteUpper = common_ ? upper() : Score{};
+        Score absoluteUpper = common_ ? upper() : Score{};
+        if (query_.molecule && common_ && induced_ && allowSkipping_ && common_->atomWeights.empty()
+            && common_->objective == MCSObjective::MCIS
+            && (common_->connectivity == MCSConnectivity::Connected || common_->maxFragments == 1)
+            && query_.size() >= 64 && target_.n >= 64 && collector_.needs(absoluteUpper)) {
+            bridgeBound_ = BridgeBound::create(*query_.molecule, target_, chemistry_, budget_);
+            if (budget_.stopped()) return {false, false};
+            if (bridgeBound_) absoluteUpper = upper();
+        }
+        // The seed charges no node and has fixed limits of its own: four rounds of at most 1024
+        // steps per query atom, 2^27 pair reads in all, and inputs of at most 2^22 compatible
+        // pairs and 2^22 words of bond rows. Its time still counts against the deadline.
+        if (injectiveBoundAllowed_ && collector_.needs(absoluteUpper))
+            seedIncumbent(absoluteUpper, 1024 * static_cast<int64_t>(query_.size()), uint64_t(1) << 27, int64_t(1) << 22);
         bool optimumProven = false;
         const uint64_t startingNodes = budget_.nodesVisited();
         std::vector<Frame> pending;
@@ -1009,6 +1732,10 @@ private:
                     ++current.next;
                     continue;
                 }
+                if (childCannotReach(current.atom, current.candidates[current.next])) {
+                    ++current.next;
+                    continue;
+                }
                 if (!budget_.visit(common_ || (budget_.nodesVisited() & 15) == 0)) break;
                 const int candidate = current.candidates[current.next++];
                 assign(current.atom, candidate);
@@ -1027,6 +1754,14 @@ private:
                 Frame next = frame();
                 if (next.atom >= 0) pending.push_back(std::move(next));
             } else if (allowSkipping_ && !current.skipped && (!required_ || !required_->atomMapping.count(current.atom))) {
+                if (skipDominated(current)) {
+                    current.skipped = true;
+                    continue;
+                }
+                if (childCannotReach(current.atom, -1)) {
+                    current.skipped = true;
+                    continue;
+                }
                 if (!budget_.visit()) break;
                 current.skipped = true;
                 current.active = -1;

@@ -77,6 +77,37 @@ def active():
     return None if _disabled() else _smsd._screen_accelerator()
 
 
+def warm_start(corpus, query, threshold=0.0, *, num_threads=0):
+    """Prepare and screen a real target corpus before its next query.
+
+    Return the ordinary ECFP Tanimoto hit indices for ``query``. The supplied
+    ``TargetCorpus`` keeps its prepared fingerprints and any resident device
+    allocation. Accelerator discovery, operation-specific size crossovers and
+    CPU fallback are the same as for ``TargetCorpus.screen_many``. This call
+    does not force GPU dispatch or pad the corpus with synthetic targets.
+
+    Example::
+
+        >>> import smsd
+        >>> corpus = smsd.TargetCorpus.from_smiles(["CCO", "CCN"])
+        >>> assert smsd.warm_start(corpus, "CCO", 1.0, num_threads=1) == [0]
+        >>> assert corpus.is_prewarmed
+    """
+    from ._molecule import _checked_int, _ensure_mol
+    from ._screening import TargetCorpus
+    from .corpus import _threshold
+
+    if not isinstance(corpus, TargetCorpus):
+        raise TypeError("corpus must be a TargetCorpus")
+    _checked_int(num_threads, "num_threads", 0)
+    threshold = _threshold(threshold)
+    query = _ensure_mol(query)
+    discover()
+    if not corpus.is_prewarmed:
+        corpus.prewarm(num_threads=num_threads)
+    return corpus.screen_many([query], threshold, num_threads=num_threads)[0]
+
+
 def _reset():
     """Detach any accelerator and search again on next use."""
     global _searched

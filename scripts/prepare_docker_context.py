@@ -34,8 +34,8 @@ def checked_inputs(args):
         raise ValueError("Source manifest filename is not a basename")
     sdist = args.release_dir / source_manifest["sdist"]
     source = BUILD.checked_source(sdist)
-    if source["version"] != "8.0.3":
-        raise ValueError("Expected SMSD 8.0.3")
+    if source["version"] != "8.1.0":
+        raise ValueError("Expected SMSD 8.1.0")
     manifest = BUILD.read_manifest(args.release_dir / "WHEEL_MANIFEST.json")
     selected = {}
     for entry in manifest["wheels"]:
@@ -62,7 +62,7 @@ def checked_inputs(args):
             raise ValueError("Checked CPython3.14 wheel missing: " + identifier)
         cores[architecture] = selected[identifier]
     cuda = []
-    license_text = None
+    license_text = cub_text = cccl_text = None
     if args.cuda_wheel:
         if "amd64" not in cores or not args.cuda_provenance or not args.runtime_wheel:
             raise ValueError("CUDA needs the amd64 core, CUDA provenance and runtime wheel")
@@ -72,9 +72,19 @@ def checked_inputs(args):
                     "installed_wheel_tests": "passed"}
         if any(proof.get(name) != value for name, value in expected.items()):
             raise ValueError("CUDA wheel provenance differs or lacks installed checks")
-        if not re.fullmatch(r"smsd_cuda-8\.0\.3-py3-none-(?:manylinux[^-]*x86_64)\.whl", args.cuda_wheel.name):
+        if not re.fullmatch(r"smsd_cuda-" + re.escape(source["version"])
+                            + r"-py3-none-(?:manylinux[^-]*x86_64)\.whl", args.cuda_wheel.name):
             raise ValueError("Expected a repaired Linuxx86_64 CUDA wheel")
         wheel_metadata(args.cuda_wheel, "smsd-cuda", source["version"])
+        with zipfile.ZipFile(args.cuda_wheel) as archive:
+            cub = sorted(name for name in archive.namelist() if name.endswith("/licenses/cub/LICENSE"))
+            cub_text = archive.read(cub[0]) if cub else b""
+            cccl = sorted(name for name in archive.namelist() if name.endswith("/licenses/cccl/LICENSE"))
+            cccl_text = archive.read(cccl[0]) if cccl else b""
+        if not cub_text:
+            raise ValueError("CUB licence missing from the CUDA wheel")
+        if not cccl_text:
+            raise ValueError("CCCL licence missing from the CUDA wheel")
         if args.runtime_wheel.name != RUNTIME_WHEEL or BUILD.sha256(args.runtime_wheel) != RUNTIME_SHA256:
             raise ValueError("Expected the pinned CUDA12.8.90 runtime wheel")
         wheel_metadata(args.runtime_wheel, "nvidia-cuda-runtime-cu12", RUNTIME_VERSION)
@@ -88,11 +98,11 @@ def checked_inputs(args):
         license_text = b"\n\n".join(name.encode() + b"\n\n" + text for name, text in notices) + b"\n"
     elif args.cuda_provenance or args.runtime_wheel:
         raise ValueError("CUDA inputs must be supplied together")
-    return source, sdist, files, cores, cuda, license_text
+    return source, sdist, files, cores, cuda, license_text, cub_text, cccl_text
 
 
 def prepare(args):
-    source, sdist, files, cores, cuda, license_text = checked_inputs(args)
+    source, sdist, files, cores, cuda, license_text, cub_text, cccl_text = checked_inputs(args)
     args.output.mkdir(parents=True, exist_ok=False)
     shutil.copyfile(sdist, args.output / "source.tar.gz")
     shutil.copyfile(args.release_dir / "SOURCE_MANIFEST.json", args.output / "SOURCE_MANIFEST.json")
@@ -115,7 +125,12 @@ def prepare(args):
         destination = args.output / "licenses/NVIDIA-CUDA.txt"
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(license_text)
-    for name in ("LICENSE", "NOTICE", "licenses/NVIDIA-CUDA.txt"):
+    for name, text in (("licenses/cub/LICENSE", cub_text), ("licenses/cccl/LICENSE", cccl_text)):
+        if text:
+            destination = args.output / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(text)
+    for name in ("LICENSE", "NOTICE", "licenses/NVIDIA-CUDA.txt", "licenses/cub/LICENSE", "licenses/cccl/LICENSE"):
         if (args.output / name).exists():
             manifest["licenses"][name] = BUILD.sha256(args.output / name)
     (args.output / "ARTIFACTS.json").write_text(json.dumps(manifest, indent=2) + "\n")

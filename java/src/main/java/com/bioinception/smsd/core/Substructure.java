@@ -64,7 +64,7 @@ public final class Substructure {
     this.moleculeQuery = moleculeQuery;
     this.smartsQuery = smartsQuery;
     this.smartsSearches = smartsSearches;
-    this.requiredElements = smartsQuery == null ? null : requiredElements(smartsQuery);
+    this.requiredElements = smartsQuery == null ? null : requiredElements(smartsQuery, smartsSearches.numericRingCounts);
     this.smartsNeighbors = smartsQuery == null ? null : neighbors(smartsQuery);
     this.options = copyOptions(options);
     // Query-only search data is prepared once here rather than in every call.
@@ -102,12 +102,15 @@ public final class Substructure {
     this.fragments = Collections.unmodifiableList(sets);
   }
 
-  private static int[] requiredElements(IAtomContainer query) {
+  private static int[] requiredElements(IAtomContainer query, boolean numericRingCounts) {
     Map<Integer, Integer> counts = new TreeMap<>();
+    int[] remaining = numericRingCounts ? new int[] {MAX_SMARTS_EXPRESSION_NODES} : null;
     for (IAtom atom : query.atoms()) {
       IAtom source = AtomRef.deref(atom);
       if (!(source instanceof QueryAtom)) continue;
-      int element = requiredElement(((QueryAtom) source).getExpression());
+      Expr expression = ((QueryAtom) source).getExpression();
+      int element = requiredElement(expression);
+      if (element < 0 && numericRingCounts) element = ringProofElement(expression, remaining, 0);
       if (element >= 0) counts.merge(element, 1, Integer::sum);
     }
     int[] pairs = new int[counts.size() * 2];
@@ -135,6 +138,38 @@ public final class Substructure {
       case OR: {
         int left = requiredElement(expression.left());
         return left >= 0 && left == requiredElement(expression.right()) ? left : -1;
+      }
+      default:
+        return -1;
+    }
+  }
+
+  /** A necessary anchor element for the numeric-ring absence screen; no recursive match is evaluated. */
+  private static int ringProofElement(Expr expression, int[] remaining, int depth) {
+    if (expression == null || depth >= 64 || remaining[0] == 0) return -1;
+    remaining[0]--;
+    switch (expression.type()) {
+      case ELEMENT:
+      case ALIPHATIC_ELEMENT:
+      case AROMATIC_ELEMENT:
+        return expression.value() >= 0 && expression.value() < 256 ? expression.value() : -1;
+      case RECURSIVE: {
+        IAtomContainer nested = expression.subquery();
+        if (nested == null || nested.getAtomCount() == 0) return -1;
+        IAtom anchor = AtomRef.deref(nested.getAtom(0));
+        return anchor instanceof QueryAtom
+            ? ringProofElement(((QueryAtom) anchor).getExpression(), remaining, depth + 1) : -1;
+      }
+      case AND: {
+        int left = ringProofElement(expression.left(), remaining, depth + 1);
+        int right = ringProofElement(expression.right(), remaining, depth + 1);
+        if (left >= 0 && right >= 0 && left != right) return -1;
+        return Math.max(left, right);
+      }
+      case OR: {
+        int left = ringProofElement(expression.left(), remaining, depth + 1);
+        int right = ringProofElement(expression.right(), remaining, depth + 1);
+        return left >= 0 && left == right ? left : -1;
       }
       default:
         return -1;
@@ -356,21 +391,39 @@ public final class Substructure {
     int queryAtoms = moleculeQuery != null ? moleculeQuery.n : smartsQuery.getAtomCount();
     List<Map<Integer, Integer>> mappings = new ArrayList<>();
     long nodes = 0;
+    boolean ringDependent = false;
     int searchLimit = all && limit < Integer.MAX_VALUE ? limit + 1 : limit;
     if (!control.stopped() && queryAtoms <= target.n) {
       if (moleculeQuery != null) {
         // Pairs the element and degree counts rule out end without a search node.
-        if (queryTables.admits(target)) return searchMolecule(target, limit, all, control);
+        if (queryTables.admits(target)) return qualifyRingProof(searchMolecule(target, limit, all, control), target);
       } else if (elementsAvailable(target)) {
+        if (smartsSearches.numericRingCounts) {
+          boolean incomplete = target.ringsTruncated();
+          if (control.stopped())
+            return new SearchResult(Collections.<SearchResult.Match>emptyList(), control.status(), false, false, 0, 0, control.elapsedMillis());
+          if (incomplete)
+            return new SearchResult(Collections.<SearchResult.Match>emptyList(), SearchResult.Status.LimitReached,
+                false, false, 0, 0, control.elapsedMillis());
+        }
+        ringDependent = queryAtoms > 0;
         SmartsTarget view = SmartsTarget.lend(target);
         SmartsCall call = smartsSearches.lend();
-        call.start(control, options.nodeLimit, view);
+        call.start(control, options.nodeLimit, view,
+            options.chemistry.completeRingsOnly || options.chemistry.ringFusionMode == ChemOptions.RingFusionMode.STRICT
+                ? queryAtoms : 0);
         InducedCheck induced = options.induced ? new InducedCheck(smartsNeighbors, target, control) : null;
+        CompleteRingCheck completeRings = null;
         try {
           check(control);
           for (int[] embedding : call.pattern.matchAll(view.molecule)) {
             check(control);
             if (induced != null && !induced.holds(embedding)) continue;
+            if (options.chemistry.completeRingsOnly) {
+              if (completeRings == null)
+                completeRings = new CompleteRingCheck(null, smartsNeighbors, target, control);
+              if (!completeRings.holds(embedding)) continue;
+            }
             mappings.add(new Embedding(embedding));
             if (!all || mappings.size() >= searchLimit) break;
           }
@@ -378,6 +431,7 @@ public final class Substructure {
           // The shared control retains the reason the search stopped.
         }
         nodes = call.nodes;
+        if (call.emptyDomain) ringDependent = false;
         // Returned only after an ordinary end or a stop, so that neither holds the state of a failure.
         smartsSearches.giveBack(call.finish());
         view.giveBack();
@@ -392,7 +446,95 @@ public final class Substructure {
       for (Map.Entry<Integer, Integer> atom : mapping.entrySet()) targets[atom.getKey()] = atom.getValue();
       embeddings.add(targets);
     }
-    return finish(describe(embeddings, null, control), mappings.size(), truncated, queryAtoms, nodes, control);
+    SearchResult result = finish(describe(embeddings, null, control), mappings.size(), truncated, queryAtoms, nodes, control);
+    return ringDependent ? qualifyRingProof(result, target) : result;
+  }
+
+  /** Complete-ring coverage reused within one search of full query embeddings. */
+  static final class CompleteRingCheck {
+    private final int[][] neighbors;
+    private final MolGraph target;
+    private final SearchResult.Control control;
+    private final boolean queryComplete;
+    private final VertexSearch.RingIndex targetRings;
+    private final int[] targetToQuery;
+    private int stamp;
+
+    CompleteRingCheck(MolGraph query, int[][] neighbors, MolGraph target,
+                      SearchResult.Control control) {
+      this.neighbors = neighbors;
+      this.target = target;
+      this.control = control;
+      boolean complete = true;
+      if (query != null) {
+        Set<Integer> atoms = new HashSet<>();
+        Set<SearchResult.Bond> bonds = new HashSet<>();
+        for (int atom = 0; atom < neighbors.length; atom++) {
+          atoms.add(atom);
+          for (int neighbor : neighbors[atom]) if (neighbor > atom)
+            bonds.add(new SearchResult.Bond(atom, neighbor));
+        }
+        complete = VertexSearch.completeRings(query, atoms, bonds);
+      }
+      queryComplete = complete;
+      targetRings = complete && !control.stopped() ? new VertexSearch.RingIndex(target) : null;
+      targetToQuery = new int[target.n];
+      Arrays.fill(targetToQuery, -1);
+    }
+
+    boolean holds(int[] mapping) {
+      if (control.stopped() || !queryComplete) return false;
+      if (stamp == Integer.MAX_VALUE) {
+        targetRings.clearStamps();
+        stamp = 0;
+      }
+      ++stamp;
+      for (int atom = 0; atom < mapping.length; atom++) targetToQuery[mapping[atom]] = atom;
+      try {
+        for (int ring = 0; ring < targetRings.cycles.length; ring++) {
+          if (control.stopped()) return false;
+          int[] cycle = targetRings.cycles[ring];
+          boolean whole = true;
+          for (int index = 0; index < cycle.length && whole; index++) {
+            int first = targetToQuery[cycle[index]];
+            int second = targetToQuery[cycle[(index + 1) % cycle.length]];
+            whole = first >= 0 && second >= 0 && bonded(first, second);
+          }
+          if (whole) targetRings.cover(ring, stamp);
+        }
+        for (int atom = 0; atom < mapping.length; atom++) {
+          if (control.stopped() || !targetRings.atomCovered(target, mapping[atom], stamp))
+            return false;
+          for (int neighbor : neighbors[atom]) if (neighbor > atom
+              && !targetRings.bondCovered(target, mapping[atom], mapping[neighbor], stamp))
+            return false;
+        }
+        return !control.stopped();
+      } finally {
+        for (int targetAtom : mapping) targetToQuery[targetAtom] = -1;
+      }
+    }
+
+    /** Membership of the query bond set, whose bonds are listed by their lower atom. */
+    private boolean bonded(int first, int second) {
+      int low = Math.min(first, second), high = Math.max(first, second);
+      for (int neighbor : neighbors[low]) if (neighbor == high) return true;
+      return false;
+    }
+  }
+
+  /** Retain results without claiming proof from truncated ring perception. */
+  private SearchResult qualifyRingProof(SearchResult result, MolGraph target) {
+    ChemOptions chemistry = options.chemistry;
+    if ((!chemistry.completeRingsOnly && chemistry.ringFusionMode != ChemOptions.RingFusionMode.STRICT)
+        || (!result.optimal() && !result.complete() && result.status() != SearchResult.Status.Completed)
+        || ((moleculeQuery == null || !moleculeQuery.ringProofIncomplete(chemistry)) && !target.ringProofIncomplete(chemistry)))
+      return result;
+    SearchResult.Status status = result.status();
+    if (status == SearchResult.Status.Completed || status == SearchResult.Status.LimitReached)
+      status = SearchResult.Status.LimitReached;
+    return new SearchResult(result.matches(), status, false, false, result.score(),
+        result.nodesVisited(), result.elapsedMillis());
   }
 
   /** The molecule search of a target that the atom counts admit. */
@@ -525,6 +667,7 @@ public final class Substructure {
    */
   private static final class SmartsSearches {
     private final IAtomContainer query;
+    private final boolean numericRingCounts;
     /** A free search, which calls made in turn take and return without allocating. */
     private final AtomicReference<SmartsCall> free;
     /** Further free searches, left by calls that ran at the same time. */
@@ -532,7 +675,37 @@ public final class Substructure {
 
     SmartsSearches(IAtomContainer query) {
       this.query = query;
+      numericRingCounts = numericRingCounts(query);
       free = new AtomicReference<>(new SmartsCall(query));
+    }
+
+    /** Walk all boolean branches and recursive payloads before evaluating a numeric ring count. */
+    private static boolean numericRingCounts(IAtomContainer query) {
+      Deque<Expr> pending = new ArrayDeque<>();
+      Set<Expr> seen = Collections.newSetFromMap(new IdentityHashMap<Expr, Boolean>());
+      for (IAtom atom : query.atoms()) pending.push(((QueryAtom) AtomRef.deref(atom)).getExpression());
+      while (!pending.isEmpty()) {
+        Expr expression = pending.pop();
+        if (!seen.add(expression)) continue;
+        if (expression.type() == Expr.Type.RING_COUNT && expression.value() > 0) return true;
+        switch (expression.type()) {
+          case AND:
+          case OR:
+            pending.push(expression.right());
+            pending.push(expression.left());
+            break;
+          case NOT:
+            pending.push(expression.left());
+            break;
+          case RECURSIVE:
+            for (IAtom atom : expression.subquery().atoms())
+              pending.push(((QueryAtom) AtomRef.deref(atom)).getExpression());
+            break;
+          default:
+            break;
+        }
+      }
+      return false;
     }
 
     SmartsCall lend() {
@@ -635,15 +808,14 @@ public final class Substructure {
     }
 
     /**
-     * The number of rings through {@code atom} in the minimum cycle basis that CDK counts for
-     * SMARTS R, worked out once for the target rather than at every atom test.
+     * Numeric SMARTS ring membership in the deterministic minimum basis shared with the
+     * native core, counted once per target. Search admission requires the basis to be complete.
      */
     int ringCount(int atom) {
       if (ringCounts == null) {
         int[] counts = new int[molecule.getAtomCount()];
-        // Each path repeats its first atom last, so every atom of the ring is counted once.
-        for (int[] path : Cycles.mcb(molecule).paths())
-          for (int at = 1; at < path.length; at++) counts[path[at]]++;
+        for (int[] path : graph.numericRingBasis())
+          for (int ringAtom : path) counts[ringAtom]++;
         ringCounts = counts;
       }
       return ringCounts[atom];
@@ -702,31 +874,68 @@ public final class Substructure {
    * stereo and component semantics. One call at a time uses it, see {@link SmartsSearches}.
    */
   private static final class SmartsCall {
+    /** The per-target-atom memo tables of one call use at most sixteen MiB. */
+    private static final int RECURSIVE_MEMO_BYTES = 1 << 24;
+    private static final int RECURSIVE_MEMO_TABLES = 1024;
     final Pattern pattern;
+    private final IAtomContainer rootQuery;
+    /** Predicate rejections already observed by this call, used only for ring-proof qualification. */
+    private BitSet[] rejectedTargets;
+    private int[] rejectionCounts;
+    private boolean[] nonemptyDomains;
+    private boolean emptyDomain;
     /** The control, node limit, counts and target of the current call. */
     SearchResult.Control control;
     long nodeLimit;
     long nodes;
     int polls;
     SmartsTarget view;
+    IdentityHashMap<Expr, byte[]> recursiveResults;
+    int recursiveBytes;
 
     SmartsCall(IAtomContainer query) {
+      rootQuery = query;
       pattern = VentoFoggia.findSubstructure(query(query));
     }
 
-    void start(SearchResult.Control control, long nodeLimit, SmartsTarget view) {
+    void start(SearchResult.Control control, long nodeLimit, SmartsTarget view, int trackedAtoms) {
       this.control = control;
       this.nodeLimit = nodeLimit;
       this.view = view;
       nodes = 0;
       polls = 0;
+      recursiveBytes = 0;
+      rejectedTargets = trackedAtoms > 0 ? new BitSet[trackedAtoms] : null;
+      rejectionCounts = trackedAtoms > 0 ? new int[trackedAtoms] : null;
+      nonemptyDomains = trackedAtoms > 0 ? new boolean[trackedAtoms] : null;
+      emptyDomain = false;
     }
 
     /** End the current call, releasing its control and target. */
     SmartsCall finish() {
       control = null;
       view = null;
+      recursiveResults = null;
+      rejectedTargets = null;
+      rejectionCounts = null;
+      nonemptyDomains = null;
       return this;
+    }
+
+    /** Record an existing predicate result without evaluating another atom or charging a node. */
+    private void observedDomain(int queryAtom, int targetAtom, boolean matches) {
+      if (rejectedTargets == null || queryAtom < 0 || nonemptyDomains[queryAtom] || emptyDomain) return;
+      if (matches) {
+        nonemptyDomains[queryAtom] = true;
+        rejectedTargets[queryAtom] = null;
+        return;
+      }
+      BitSet rejected = rejectedTargets[queryAtom];
+      if (rejected == null) rejected = rejectedTargets[queryAtom] = new BitSet(view.graph.n);
+      if (!rejected.get(targetAtom)) {
+        rejected.set(targetAtom);
+        if (++rejectionCounts[queryAtom] == view.graph.n) emptyDomain = true;
+      }
     }
 
     /** Whether the expression, outside its recursive SMARTS, has a test of the type. */
@@ -763,9 +972,33 @@ public final class Substructure {
           return view.smallestRing(atom.getIndex()) == expression.value();
         case RING_COUNT:
           return atom.isInRing() && view.ringCount(atom.getIndex()) == expression.value();
+        case RECURSIVE:
+          return recursive(expression, atom);
         default:
           return expression.matches(atom);
       }
+    }
+
+    /** A recursive predicate depends on this target and anchor, independently of the outer mapping. */
+    private boolean recursive(Expr expression, IAtom atom) {
+      check(control);
+      byte[] results = recursiveResults == null ? null : recursiveResults.get(expression);
+      if (results == null) {
+        int atoms = view.molecule.getAtomCount();
+        if (atoms > RECURSIVE_MEMO_BYTES - recursiveBytes
+            || recursiveResults != null && recursiveResults.size() >= RECURSIVE_MEMO_TABLES)
+          return expression.matches(atom);
+        if (recursiveResults == null) recursiveResults = new IdentityHashMap<>();
+        results = new byte[atoms];
+        recursiveResults.put(expression, results);
+        recursiveBytes += atoms;
+      }
+      int anchor = atom.getIndex();
+      if (results[anchor] != 0) return results[anchor] == 2;
+      boolean found = expression.matches(atom);
+      // A stopped nested search throws before a partial answer can enter the memo.
+      results[anchor] = (byte) (found ? 2 : 1);
+      return found;
     }
 
     private static boolean stereoTest(Expr expression) {
@@ -783,14 +1016,18 @@ public final class Substructure {
         // Ring sizes and ring counts are read from the caches of the target. An atom that reads
         // ring sizes negates plainly, and the others as CDK does.
         boolean ringSizes = reads(expression, Expr.Type.RING_SMALLEST);
-        boolean cached = ringSizes || reads(expression, Expr.Type.RING_COUNT);
+        boolean cached = ringSizes || reads(expression, Expr.Type.RING_COUNT)
+            || reads(expression, Expr.Type.RECURSIVE);
+        final int queryAtom = original == rootQuery ? copy.getAtomCount() : -1;
         QueryAtom bounded = new QueryAtom(expression) {
           @Override public boolean matches(IAtom target) {
             // Atom tests are short, so the clock and cancellation are read on every sixteenth.
             if ((++polls & 15) == 0) check(control);
             if (nodeLimit > 0 && nodes >= nodeLimit) { control.limitReached(); throw new CommonBondGraphs.Stop(); }
             nodes++;
-            return cached ? evaluate(getExpression(), target, ringSizes) : super.matches(target);
+            boolean matches = cached ? evaluate(getExpression(), target, ringSizes) : super.matches(target);
+            observedDomain(queryAtom, target.getIndex(), matches);
+            return matches;
           }
         };
         bounded.setProperties(new HashMap<>(atom.getProperties()));
@@ -1124,6 +1361,14 @@ public final class Substructure {
     /** The fragment of each query atom while enumerating, and the number of fragments. */
     private int[] fragmentOf;
     private int fragmentCount;
+    /** Ring coverage belongs to this invocation, never to the prepared query. */
+    private CompleteRingCheck completeRings;
+
+    private boolean completeRingEmbedding() {
+      if (tb.stopped()) return false;
+      if (completeRings == null) completeRings = new CompleteRingCheck(gq, gq.neighbors, gt, tb);
+      return completeRings.holds(q2t);
+    }
 
     @SuppressWarnings("deprecation")
     SubgraphSearch(MolGraph gq, QueryTables query, MolGraph gt, ChemOptions C, SearchResult.Control tb) {
@@ -1288,7 +1533,8 @@ public final class Substructure {
         }
         q2t[qi] = bestTj; t2q[bestTj] = qi; usedMask[bestTj >>> 6] |= 1L << (bestTj & 63); matched++;
       }
-      if (stereoMismatchAtom(gq, gt, q2t, C, true) < 0) return true;
+      if (stereoMismatchAtom(gq, gt, q2t, C, true) < 0
+          && (!C.completeRingsOnly || completeRingEmbedding())) return true;
       for (int qi : order) {
         int tj = q2t[qi];
         q2t[qi] = -1;
@@ -1534,7 +1780,11 @@ public final class Substructure {
     void backtrack(int[] order, int pos) {
       if (stopped()) return;
       nodesVisited++; if (found) return;
-      if (pos == order.length) { found = stereoMismatchAtom(gq, gt, q2t, C, true) < 0; return; }
+      if (pos == order.length) {
+        found = stereoMismatchAtom(gq, gt, q2t, C, true) < 0
+            && (!C.completeRingsOnly || completeRingEmbedding());
+        return;
+      }
       int candCount = selectNext(order, pos);
       int qi = order[pos];
       for (int k = 0; k < candCount; k++) {
@@ -1552,6 +1802,7 @@ public final class Substructure {
       nodesVisited++; if (out.size() >= maxSolutions) return;
       if (pos == order.length) {
         if (stereoMismatchAtom(gq, gt, q2t, C, true) >= 0) return;
+        if (C.completeRingsOnly && !completeRingEmbedding()) return;
         out.add(q2t.clone());
         if (fragmentOrders != null) fragmentOrders.add(fragmentOrder(order));
         return;

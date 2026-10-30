@@ -11,6 +11,7 @@
  */
 
 #include <cuda_runtime.h>
+#include "smsd/cuda_device_policy.hpp"
 #include "smsd/gpu_kernels.hpp"
 #include <cstdint>
 #include <cstdio>
@@ -51,10 +52,15 @@ static inline char* wsAt(size_t offset) {
 // Runtime check
 // ============================================================================
 
+/// True when a CUDA device is present and the current one has compute capability 7.5 or later.
 bool graphKernelsAvailable() noexcept {
     if (detail::disabledByEnvironment()) return false;
-    int count = 0;
-    return cudaGetDeviceCount(&count) == cudaSuccess && count > 0;
+    int count = 0, device = 0, major = 0, minor = 0;
+    return cudaGetDeviceCount(&count) == cudaSuccess && count > 0
+        && cudaGetDevice(&device) == cudaSuccess
+        && cudaDeviceGetAttribute(&major, cudaDevAttrComputeCapabilityMajor, device) == cudaSuccess
+        && cudaDeviceGetAttribute(&minor, cudaDevAttrComputeCapabilityMinor, device) == cudaSuccess
+        && cuda_policy::supportedCapability(major, minor);
 }
 
 // ============================================================================

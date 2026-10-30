@@ -863,11 +863,35 @@ void testCommonAtomHardFragmentProofs() {
         assert(result.score == atoms && mappingText(result.matches.front()) == mapping);
         assert(result.nodesVisited < 20000);
         assert(smsd::MCS::validateMapping(query, target, result.matches.front(), opts).empty());
-        // A node limit keeps the general search, which does not prove the optimum within it.
+        // The finite vertex search may finish before using its node allowance.
         opts.nodeLimit = 20000;
         const auto general = smsd::MCS::find(query).withOptions(opts).match(target);
-        assert(general.status == smsd::SearchStatus::LimitReached && !general.optimal);
+        std::cerr << "Capped common-atom result: expected_atoms=" << atoms
+                  << ", expected_bonds=" << bonds << ", status=" << static_cast<int>(general.status)
+                  << ", score=" << general.score << ", optimal=" << general.optimal
+                  << ", complete=" << general.complete << ", nodes=" << general.nodesVisited
+                  << ", atoms=" << (general.matches.empty() ? 0 : general.matches.front().atomMapping.size())
+                  << ", bonds=" << (general.matches.empty() ? 0 : general.matches.front().bondMapping.size()) << '\n';
+        assert(!general.matches.empty());
+        assert(general.nodesVisited <= opts.nodeLimit);
+        assert(general.status == smsd::SearchStatus::Completed
+               || general.status == smsd::SearchStatus::LimitReached);
+        assert(general.score == static_cast<double>(general.matches.front().atomMapping.size()));
+        assert(smsd::MCS::validateMapping(query, target, general.matches.front(), opts).empty());
         assert(general.matches.front().atomMapping.size() <= static_cast<size_t>(atoms));
+        if (general.matches.front().atomMapping.size() == static_cast<size_t>(atoms))
+            assert(general.matches.front().bondMapping.size() <= static_cast<size_t>(bonds));
+        if (general.status == smsd::SearchStatus::Completed)
+            assert(general.optimal && general.complete);
+        else
+            assert(!general.complete);
+        if (general.optimal) {
+            assert(general.score == atoms);
+            assert(general.matches.front().atomMapping.size() == static_cast<size_t>(atoms));
+            assert(general.matches.front().bondMapping.size() == static_cast<size_t>(bonds));
+        } else {
+            assert(general.status == smsd::SearchStatus::LimitReached);
+        }
     }
 }
 

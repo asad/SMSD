@@ -1,0 +1,6 @@
+*
+!Dockerfile
+!app.py
+!requirements.txt
+!wheelhouse/
+!wheelhouse/*.whl

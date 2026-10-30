@@ -133,7 +133,7 @@ def download(args):
     for name in sorted(assets):
         command.extend(["--pattern", name])
     subprocess.run(command, check=True)
-    print("Downloaded one published SDK and 20 release wheels with their manifests" if package == "smsd"
+    print("Downloaded one published SDK and 16 release wheels with their manifests" if package == "smsd"
           else "Downloaded the published CUDA wheel with its source and build manifests")
 
 
@@ -160,8 +160,8 @@ def check_source(directory, version, manifest):
     require(project["name"] == package["Name"] == "smsd"
             and project["version"] == package["Version"] == version,
             "SDK package metadata differs")
-    require(project.get("requires-python") == package["Requires-Python"] == ">=3.10",
-            "SDK Python requirement differs from >=3.10")
+    require(project.get("requires-python") == package["Requires-Python"] == ">=3.12",
+            "SDK Python requirement differs from >=3.12")
     metadata_parts = files["PKG-INFO"].split(b"\n\n", 1)
     require(len(metadata_parts) == 2 and metadata_parts[1] == files["python/README.md"],
             "SDK description differs from its Python README")
@@ -214,7 +214,7 @@ def check_wheel_manifest(directory, version, source, targets, package_metadata):
     for field in ("version", "source_commit", "sdist", "sdist_sha256"):
         require(manifest.get(field) == source[field], "Wheel manifest identity differs: " + field)
     entries = manifest.get("wheels")
-    require(isinstance(entries, list) and len(entries) == len(BUILD.BUILD_IDENTIFIERS), "Expected 20 wheel manifest entries")
+    require(isinstance(entries, list) and len(entries) == len(BUILD.BUILD_IDENTIFIERS), "Expected 16 wheel manifest entries")
     recorded = {}
     for entry in entries:
         identifier = entry.get("build_identifier")
@@ -283,7 +283,7 @@ def check_cuda_wheel(directory, version, source, files):
     project = tomllib.loads(files[root + "pyproject.toml"].decode())["project"]
     dependencies = {dependency(value) for value in project["dependencies"]}
     require(project["name"] == "smsd-cuda" and project["version"] == version
-            and project["requires-python"] == ">=3.10" and ("smsd", (f"=={version}",)) in dependencies,
+            and project["requires-python"] == ">=3.12" and ("smsd", (f"=={version}",)) in dependencies,
             "Frozen CUDA package metadata or paired core version differs")
     module = files[root + "python/smsd_cuda/__init__.py"]
     for field in ("__version__", "__smsd_version__"):
@@ -298,7 +298,7 @@ def check_cuda_wheel(directory, version, source, files):
         metadata_bytes = wheel.read(prefix + "METADATA")
         metadata = BytesParser().parsebytes(metadata_bytes)
         require(metadata["Name"] == "smsd-cuda" and metadata["Version"] == version
-                and metadata["Requires-Python"] == ">=3.10"
+                and metadata["Requires-Python"] == ">=3.12"
                 and {dependency(value) for value in metadata.get_all("Requires-Dist", [])} == dependencies,
                 "CUDA wheel package metadata differs from frozen source")
         description = metadata_bytes.split(b"\n\n", 1)
@@ -351,7 +351,7 @@ def validate(args):
     receipt = {"package": package, "version": version, "source_commit": source["source_commit"],
                "files": {name: BUILD.sha256(args.release_dir / name) for name in distributions}}
     args.receipt_file.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
-    print("Validated unchanged SDK and all 20 release wheels" if package == "smsd"
+    print("Validated unchanged SDK and all 16 release wheels" if package == "smsd"
           else "Validated the unchanged published CUDA wheel")
 
 

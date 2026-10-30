@@ -19,18 +19,24 @@ __all__ = [
 
 def gpu_is_available():
     """True when a GPU is available at run time: through an installed smsd-cuda package that
-    finds a device, or through a native module built with CUDA or Metal."""
+    finds a device, or through a native module built with CUDA or Metal.
+
+    Example::
+
+        >>> import smsd
+        >>> assert isinstance(smsd.gpu_is_available(), bool)
+    """
     return _accelerator.active() is not None or _smsd.gpu_is_available()
 
 
 def gpu_device_info():
-    """Human-readable compute backend string.
+    """Human-readable compute backend string, including a CPU-only backend.
 
-    Examples::
+    Example::
 
-        'GPU: Tesla T4 (compute 7.5, 14930 MB)  [OpenMP 4.5, 8 threads]'
-        'Metal GPU: Apple M2 Pro  [OpenMP 5.0, 10 threads]'
-        'CPU: OpenMP 4.5, 16 threads'
+        >>> import smsd
+        >>> description = smsd.gpu_device_info()
+        >>> assert isinstance(description, str) and description
     """
     native = _smsd.gpu_device_info()
     accelerator = _accelerator.active()
@@ -54,6 +60,12 @@ def similarity_upper_bound(g1, g2, chemistry=None, *, chem=None):
 
     Accepts MolGraph objects, SMILES strings or RDKit molecules. ``chem`` is
     the deprecated spelling of ``chemistry``.
+
+    Example::
+
+        >>> import smsd
+        >>> assert smsd.similarity_upper_bound("CCO", "CCO") == 1.0
+        >>> assert 0 <= smsd.similarity_upper_bound("CCO", "CCN") <= 1
     """
     options = _chemistry("similarity_upper_bound", chemistry, chem)
     return _smsd.similarity_upper_bound(_ensure_mol(g1), _ensure_mol(g2), options)
@@ -64,6 +76,11 @@ def similarity(mol1, mol2):
 
     Accepts MolGraph objects, SMILES strings or RDKit molecules. The bound is
     the native :func:`similarity_upper_bound`, which cannot exceed 1.0.
+
+    Example::
+
+        >>> import smsd
+        >>> assert smsd.similarity("CCO", "CCO") == 1.0
     """
     return similarity_upper_bound(mol1, mol2)
 
@@ -77,6 +94,11 @@ def screen_targets(query, targets, threshold, chemistry=None, *, chem=None, num_
     (0, the default, uses the OpenMP default, ``OMP_NUM_THREADS``); the
     indices, in target order, do not depend on the thread count. ``chem`` is the
     deprecated spelling of ``chemistry``.
+
+    Example::
+
+        >>> import smsd
+        >>> assert smsd.screen_targets("CCO", ["CCO", "N"], 1.0, num_threads=1) == [0]
     """
     _checked_int(num_threads, "Thread count", 0)
     options = _chemistry("screen_targets", chemistry, chem)
@@ -122,7 +144,18 @@ def batch_similarity(query, targets, fp_size=2048, radius=2):
 
 
 class TargetCorpus:
-    """Targets captured once, with their input atom numbering, for repeated searches and screening."""
+    """Targets captured once, with their input atom numbering, for repeated searches and screening.
+
+    Call :meth:`prewarm` before fingerprint screens, and again after adding
+    targets. Similarity-bound screens do not require prewarming.
+
+    Example::
+
+        >>> import smsd
+        >>> corpus = smsd.TargetCorpus.from_smiles(["CCO", "CCN"])
+        >>> corpus.prewarm(num_threads=1)
+        >>> assert len(corpus) == 2 and corpus.screen("CCO", 1.0, num_threads=1) == [0]
+    """
 
     def __init__(self):
         self._impl = _smsd.TargetCorpus()
@@ -133,17 +166,39 @@ class TargetCorpus:
 
     @classmethod
     def from_smiles(cls, targets):
-        """Create a corpus from molecule objects or SMILES strings."""
+        """Create a corpus from molecule objects or SMILES strings.
+
+        Example::
+
+            >>> import smsd
+            >>> assert len(smsd.TargetCorpus.from_smiles(["CCO", "CCN"])) == 2
+        """
         corpus = cls()
         corpus.add_targets(targets)
         return corpus
 
     def add_target(self, target):
-        """Capture a molecule and its current input atom numbering."""
+        """Capture a molecule and its current input atom numbering.
+
+        Example::
+
+            >>> import smsd
+            >>> corpus = smsd.TargetCorpus()
+            >>> corpus.add_target("CCO")
+            >>> assert len(corpus) == 1
+        """
         self.add_targets([target])
 
     def add_targets(self, targets):
-        """Capture targets together; later input changes do not alter them."""
+        """Capture targets together; later input changes do not alter them.
+
+        Example::
+
+            >>> import smsd
+            >>> corpus = smsd.TargetCorpus()
+            >>> corpus.add_targets(["CCO", "CCN"])
+            >>> assert len(corpus) == 2
+        """
         converted = [_ensure_mol_ex(target) for target in targets]
         indices = [_index_tuple(graph) if source is not None else None for graph, source in converted]
         with self._lock:
@@ -159,7 +214,15 @@ class TargetCorpus:
             return self._targets
 
     def prewarm(self, *, num_threads=0):
-        """Compute graph invariants and ECFP fingerprints once; later searches read the prewarmed graphs."""
+        """Compute graph invariants and ECFP fingerprints once; later searches read the prewarmed graphs.
+
+        Example::
+
+            >>> import smsd
+            >>> corpus = smsd.TargetCorpus.from_smiles(["CCO"])
+            >>> corpus.prewarm(num_threads=1)
+            >>> assert corpus.is_prewarmed
+        """
         with self._lock:
             self._impl.prewarm(num_threads)
             self._targets = None
@@ -169,23 +232,63 @@ class TargetCorpus:
 
     @property
     def is_prewarmed(self):
-        """Whether :meth:`prewarm` has run since the last targets were added."""
+        """Whether :meth:`prewarm` has run since the last targets were added.
+
+        Example::
+
+            >>> import smsd
+            >>> corpus = smsd.TargetCorpus.from_smiles(["CCO"])
+            >>> assert not corpus.is_prewarmed
+            >>> corpus.prewarm(num_threads=1)
+            >>> assert corpus.is_prewarmed
+        """
         return self._impl.is_prewarmed
 
     def screen(self, query, threshold, *, num_threads=0):
-        """Return target indices meeting the ECFP Tanimoto threshold."""
+        """Return target indices meeting the inclusive ECFP Tanimoto threshold.
+
+        Requires :meth:`prewarm` after construction or target additions. Uses
+        binary ECFP radius 2 with 2048 bits, not the molecule-similarity bound.
+        Returned indices follow target input order.
+
+        Example::
+
+            >>> import smsd
+            >>> corpus = smsd.TargetCorpus.from_smiles(["CCO", "CCN"])
+            >>> corpus.prewarm(num_threads=1)
+            >>> assert corpus.screen("CCO", 1.0, num_threads=1) == [0]
+        """
         _accelerator.discover()
         return self._impl.screen(_ensure_mol(query), threshold, num_threads)
 
     def screen_many(self, queries, threshold, *, num_threads=0):
-        """Return ECFP Tanimoto hit indices for each query in input order."""
+        """Return ECFP Tanimoto hit indices for each query in input order.
+
+        Requires :meth:`prewarm` after construction or target additions, with
+        the same fingerprint specification as :meth:`screen`. Thresholds are
+        inclusive, and each query's hit indices follow target input order.
+
+        Example::
+
+            >>> import smsd
+            >>> corpus = smsd.TargetCorpus.from_smiles(["CCO", "CCN"])
+            >>> corpus.prewarm(num_threads=1)
+            >>> assert corpus.screen_many(["CCO", "CCN"], 1.0, num_threads=1) == [[0], [1]]
+        """
         _checked_int(num_threads, "Thread count", 0)
         graphs = [_ensure_mol(query) for query in queries]
         _accelerator.discover()
         return self._impl.screen_many(graphs, threshold, num_threads)
 
     def screen_targets_many(self, queries, threshold, chemistry=None, *, num_threads=0):
-        """Return similarity-bound hit indices for each query in input order."""
+        """Return similarity-bound hit indices for each query in input order.
+
+        Example::
+
+            >>> import smsd
+            >>> corpus = smsd.TargetCorpus.from_smiles(["CCO", "N"])
+            >>> assert corpus.screen_targets_many(["CCO"], 1.0, num_threads=1) == [[0]]
+        """
         _checked_int(num_threads, "Thread count", 0)
         graphs = [_ensure_mol(query) for query in queries]
         options = _chemistry("screen_targets_many", chemistry, None)

@@ -7,7 +7,7 @@
   <parent>
     <groupId>com.bioinceptionlabs</groupId>
     <artifactId>smsd-parent</artifactId>
-    <version>8.0.3</version>
+    <version>8.1.0</version>
   </parent>
 
   <!-- The command-line tool. Besides smsd-cli-<version>.jar it builds the
@@ -97,6 +97,7 @@
           <include>NOTICE</include>
           <include>licenses/cdk/LICENSE</include>
           <include>licenses/cdk/README.md</include>
+          <include>licenses/rdkit/LICENSE</include>
           <include>licenses/beam/LICENSE</include>
           <include>licenses/vecmath/LICENSE</include>
           <include>licenses/vecmath/README.md</include>
@@ -155,6 +156,7 @@
                   <includes>
                     <include>LICENSE</include>
                     <include>NOTICE</include>
+                    <include>licenses/rdkit/LICENSE</include>
                   </includes>
                 </resource>
               </resources>

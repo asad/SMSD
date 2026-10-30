@@ -1,0 +1,43 @@
+# SMSD Pro 8.1.0
+
+> Molecular graph searches, fingerprints, screening and depiction through Python,
+> Java and C++. This is the 8.1.0 source documentation; use a matching wheel or
+> source build.
+
+## Documentation
+
+- [Consolidated API reference](docs/API_REFERENCE.md): interfaces, examples, options,
+  proof/stopping status, I/O, fingerprints, optional data adapters and GPU scope.
+- [Python guide](python/README.md): installation and ordinary Python use.
+- [C++ guide](docs/CPP.md): native graph and search APIs.
+- [Java guide](java/README.md): Java API and command-line distribution.
+- [MCP server and function definitions](docs/MCP_SERVER.md): eight bounded local
+  molecular tools and optional framework adapters; no model request is implicit.
+- [Connecting AI assistants](docs/AI_ASSISTANTS.md): local MCP set-up for
+  assistant clients and tool definitions for your own Python loop.
+- [Algorithm contracts](docs/ALGORITHMS.md): objectives, matching and proof limits.
+- [CUDA scope](docs/PYTHON.md#optional-cuda-screening): supported operation,
+  build and device combinations.
+- [Native Metal scope](docs/CPP.md#optional-metal-fingerprint-screening): the
+  optional macOS library, its similarity-bound screen and explicit
+  packed-fingerprint screening, separate from graph search.
+- [Optional toolkit conversion](python/README.md#rdkit-molecules): molecular
+  conversion and caller-visible atom numbering.
+- [Release notes](docs/RELEASE_NOTES.md): current changes and distribution scope.
+
+## Result interpretation
+
+- MCIS maximises common atoms with induced topology; MCES maximises selected
+  common bonds. Connected and fragmented searches have different feasible sets.
+- Keep `found`, `status`, `optimal` and `complete` separately. Stopped results
+  can retain witnesses without proving an optimum or absence.
+- A portable SMARTS pattern does not encode a search proof or every matching
+  option. Preserve the associated result and explicit chemistry options.
+- Fingerprint similarity, graph-label screening bounds, MCS proof and biological
+  accuracy are different quantities. Do not rank them as one accuracy metric.
+- Exact graph search remains on the CPU. GPU dispatch depends on the operation,
+  package, device and explicit options; availability is not per-call evidence.
+- Optional dependencies are loaded for requested operations. Native default
+  standardisation changes representation, not charge, salt or tautomer policy.
+- Use finite budgets for interactive inputs. Search budgets begin after parsing
+  and do not replace process memory or total-time limits.

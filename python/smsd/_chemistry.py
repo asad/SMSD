@@ -9,14 +9,17 @@ from ._interop import _forget, from_rdkit
 from ._molecule import MolGraph, _deprecated, _ensure_mol, _molecule_first
 
 __all__ = [
-    "CIPDescriptors", "EZLabel", "RSLabel", "assign_cip", "assign_ez", "assign_rs",
-    "classify_pharmacophore", "compute_sssr", "dearomatize", "implicit_h", "kekulize",
-    "perceive_aromaticity", "rings_truncated",
+    "CIPDescriptors", "EZLabel", "RSLabel", "RelevantCycleFamilies", "RelevantCycleFamily",
+    "assign_cip", "assign_ez", "assign_rs", "classify_pharmacophore", "compute_relevant_cycle_families",
+    "compute_sssr", "dearomatize", "implicit_h", "kekulize", "perceive_aromaticity",
+    "relevant_cycle_family_members", "relevant_cycle_family_of", "relevant_cycles_truncated", "rings_truncated",
 ]
 
 RSLabel = _smsd.RSLabel
 EZLabel = _smsd.EZLabel
 CIPDescriptors = _smsd.CIPDescriptors
+RelevantCycleFamily = _smsd.RelevantCycleFamily
+RelevantCycleFamilies = _smsd.RelevantCycleFamilies
 
 classify_pharmacophore = _smsd.classify_pharmacophore
 implicit_h = _smsd.implicit_h
@@ -25,6 +28,10 @@ implicit_h = _smsd.implicit_h
 assign_cip = _molecule_first(_smsd.assign_cip)
 compute_sssr = _molecule_first(_smsd.compute_sssr)
 rings_truncated = _molecule_first(_smsd.rings_truncated)
+relevant_cycles_truncated = _molecule_first(_smsd.relevant_cycles_truncated)
+compute_relevant_cycle_families = _molecule_first(_smsd.compute_relevant_cycle_families)
+relevant_cycle_family_of = _molecule_first(_smsd.relevant_cycle_family_of)
+relevant_cycle_family_members = _molecule_first(_smsd.relevant_cycle_family_members)
 
 
 def assign_rs(mol):
@@ -93,14 +100,29 @@ def _own_graph(mol):
 
 
 def perceive_aromaticity(mol, *, model=_smsd.AromaticityModel.DAYLIGHT_LIKE):
-    """Recompute ring membership and aromaticity on a MolGraph."""
+    """Recompute ring membership and aromaticity on a MolGraph.
+
+    Example::
+
+        >>> import smsd
+        >>> graph = smsd.perceive_aromaticity("C1=CC=CC=C1")
+        >>> assert all(graph.aromatic)
+    """
     g = _own_graph(mol)
     g.perceive_aromaticity(model)
     return g
 
 
 def kekulize(mol):
-    """Convert an aromatic MolGraph into an explicit Kekule form."""
+    """Convert an aromatic MolGraph into an explicit Kekule form.
+
+    Example::
+
+        >>> import smsd
+        >>> graph = smsd.kekulize("c1ccccc1")
+        >>> assert not any(graph.aromatic)
+        >>> assert {graph.bond_order(0, neighbour) for neighbour in graph.neighbors[0]} == {1, 2}
+    """
     g = _own_graph(mol)
     g.kekulize()
     return g
@@ -110,6 +132,14 @@ def dearomatize(mol):
     """Deprecated alias of :func:`kekulize`.
 
     Use :func:`kekulize`, which performs the same conversion.
+
+    Example::
+
+        >>> import smsd, warnings
+        >>> with warnings.catch_warnings():
+        ...     warnings.simplefilter("ignore", DeprecationWarning)
+        ...     graph = smsd.dearomatize("c1ccccc1")
+        >>> assert not any(graph.aromatic)
     """
     _deprecated("dearomatize", "kekulize")
     g = _own_graph(mol)

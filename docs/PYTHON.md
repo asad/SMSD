@@ -1,35 +1,40 @@
 # SMSD Pro Python guide
 
-Reference for the `smsd` Python package, version 8.0.3. The
+Reference for the `smsd` Python package, version 8.1.0. The
 [Python examples](EXAMPLES.md) cover fingerprints, drawing, layout, stereo,
 files, R-groups and scaffolds.
 
 ## Installation
 
 ```bash
-python -m pip install "smsd==8.0.3"
+python -m pip install "smsd==8.1.0"
 ```
 
-The CPU/OpenMP wheels cover CPython 3.10–3.14; the
+The CPU/OpenMP wheels cover CPython 3.12–3.15; the
 [supported-platforms table](HOWTO-INSTALL.md#supported-platforms) lists the
 operating systems and architectures. `smsd.__version__` gives the installed version. Core
 matching needs no other toolkit. RDKit is needed only for RDKit molecules,
 `to_rdkit`, `to_svg`, `depict_mcs` and `depict_substructure`
-(`python -m pip install "smsd[rdkit]==8.0.3"`); Open Babel only for
+(`python -m pip install "rdkit<2027"`); Open Babel only for
 `from_openbabel` and `to_openbabel`.
+
+Deprecated compatibility aliases remain available in 8.1. Prefer their current
+replacement names in new code.
 
 ### Build from source
 
-With Python 3.10 or later, a C++17 compiler and CMake 3.18 or later, from the
+With Python 3.12 or later, a C++17 compiler and CMake 3.18 or later, from the
 repository root:
 
 ```bash
-python -m pip install -e ".[dev]" \
-  -Ccmake.define.SMSD_BUILD_METAL=OFF \
-  -Ccmake.define.SMSD_BUILD_CUDA=OFF
+python -m pip install -e ".[dev]"
 ```
 
-This builds the CPU/OpenMP package. Without OpenMP, batch calls run sequentially.
+This builds the CPU/OpenMP package. Metal and CUDA are left out unless
+`-Ccmake.define.SMSD_BUILD_METAL=ON` or `-Ccmake.define.SMSD_BUILD_CUDA=ON` is
+added (`AUTO` includes each one when it is available); Python screening and
+search do not run on them, so they change only what `gpu_is_available()` and
+`gpu_device_info()` report. Without OpenMP, batch calls run sequentially.
 
 ### Optional CUDA screening
 
@@ -37,7 +42,7 @@ This builds the CPU/OpenMP package. Without OpenMP, batch calls run sequentially
 the same version of `smsd`:
 
 ```bash
-python -m pip install "smsd==8.0.3" "smsd-cuda==8.0.3"
+python -m pip install "smsd==8.1.0" "smsd-cuda==8.1.0"
 ```
 
 The GPU computes integer overlaps; scores use the CPU expressions and hits
@@ -45,16 +50,51 @@ keep target order. Matching runs on the CPU. The backend keeps prepared
 corpus fingerprints on the device for reuse. ECFP4 Tanimoto
 screening and the atom-count MCS similarity bound are distinct operations.
 
-Automatic ECFP4 screening uses CUDA on a Tesla T4 with compute capability 7.5
-when the prepared corpus has at least 100,000 targets. Smaller corpora and
-other devices use the CPU. Label-bound and substructure candidate screening
-use the CPU. `gpu_is_available()` and `gpu_device_info()` report backend
-availability, not whether a call used the device. Missing devices, allocation
-failure and device loss use the CPU.
+Automatic ECFP4 screening of a prepared `TargetCorpus` uses CUDA on a Tesla T4
+with compute capability 7.5 when the corpus has at least 100,000 targets.
+Smaller corpora and other devices use the CPU. Setting `SMSD_CUDA_MIN_TARGETS`
+to a positive integer N makes this automatic screening use any NVIDIA GPU with
+compute capability 7.5 or later for corpora of at least N targets; on a Tesla
+T4, N replaces 100,000. Other values are ignored, and `SMSD_DISABLE_GPU` still
+overrides the setting. These rules do not cover the packed `FingerprintCorpus`
+backend `"auto"`, described under
+[CPU and CUDA backends](PACKED_CORPORA.md#cpu-and-cuda-backends). A device
+below compute capability 7.5 is reported as unavailable, with the reason given
+by `smsd_cuda.unavailable_reason()`; automatic screening and the packed backend
+`"auto"` then use the CPU, and an explicit packed `backend="cuda"` call raises
+an error that gives the reason. Automatic similarity-bound screening
+(`screen_targets`) and substructure pre-screening use the CPU; the explicit
+`match_corpus(..., gpu_prefilter=True)` methods can ask an optional GPU
+provider to run their pre-screen. `gpu_is_available()` and `gpu_device_info()`
+report backend availability, not whether a call used the device. Missing
+devices, allocation failure and device loss use the CPU.
 Setting `SMSD_DISABLE_GPU` to anything but an empty string or `0` disables the
-GPU at run time. macOS uses the CPU; the
-[supported-platforms table](HOWTO-INSTALL.md#supported-platforms) also covers
-the GPU Docker image and Windows through WSL2.
+GPU at run time; an explicit packed `backend="cuda"` call then raises
+`RuntimeError`. macOS uses the CPU; the
+[supported-platforms table](HOWTO-INSTALL.md#supported-platforms) gives the
+CUDA package requirements.
+
+## Additions in 8.1.0
+
+- [Python adapters and MCP](PYTHON_ADAPTERS.md): NumPy/PyTorch arrays,
+  scikit-learn transformers, bounded search tools and MCS SVG highlighting.
+  Known bundled OpenMP conflicts are rejected before the PyTorch adapter runs;
+  use a shared runtime or an OpenMP-free SMSD build.
+- [Packed corpora](PACKED_CORPORA.md): streamed construction, memory-mapped
+  binary fingerprints, chunked threshold/top-k scans, Butina and MaxMin.
+  All-against-all comparisons remain quadratic, without a dense result matrix.
+- [SMARTS export](SMARTS_EXPORT.md): `Match.to_smarts(query, chemistry)` and
+  `MCS.match_with_smarts(target)` retain selected common bonds. The latter uses
+  the prepared chemistry and returns a `SmartsResult` with `result` and `smarts`.
+  Stereo, tautomer-aware, complete-ring and strict ring-fusion export are
+  rejected, together with unsupported conditional resonance cases. The pattern
+  does not encode induced MCIS or establish that a search completed.
+- `stream_screen_smiles` consumes target chunks through the public native corpus
+  screen. `warm_start(corpus, query, threshold=...)` prepares and screens a real
+  retained corpus. Both keep ordinary device crossovers and CPU fallback.
+
+The macOS wheel build targets 14.0 with a compatible OpenMP runtime. A deployment
+target setting alone does not demonstrate that an artefact runs on that OS.
 
 ## Searches
 
@@ -121,7 +161,9 @@ cannot prove the result. The status is `LIMIT_REACHED`, with `optimal` and
 A stopped search can return a valid but unproved match, and an empty
 incomplete result does not prove absence, so check `status`, `optimal` and
 `complete`. An enumeration limit can leave `optimal=True` with
-`complete=False`. Tied matches are not ranked chemically.
+`complete=False`. Tied matches are not ranked chemically. A stopped MCIS search
+can return a result or atom mapping that differs from 8.0.3 or Java; see the
+[upgrade notes](RELEASE_NOTES.md#upgrading-from-803).
 
 ```python
 import smsd
@@ -215,8 +257,8 @@ assert not smsd.Substructure.find("CCC").with_options(sub_options).match("C1CC1"
 | `match_isotope` | `False` | Same mass number where both atoms give one |
 | `use_chirality`, `use_bond_stereo` | `False` | Mapped tetrahedral centres or double bonds agree in configuration, by the parity of their mapped neighbours, not CIP labels |
 | `ring_matches_ring_only` | `False` | Ring atoms and bonds match only ring atoms and bonds |
-| `complete_rings_only` | `False` | Complete rings only, in each input for `MCS` |
-| `ring_fusion_mode` | `RingFusionMode.IGNORE` | `STRICT`: matched ring atoms lie in the same number of rings; `PERMISSIVE` currently equals `IGNORE` |
+| `complete_rings_only` | `False` | Retained ring atoms and bonds lie in fully selected relevant cycles of each input |
+| `ring_fusion_mode` | `RingFusionMode.IGNORE` | `STRICT`: matched ring atoms have the same per-atom ring count; `PERMISSIVE` adds no constraint, like `IGNORE` |
 | `tautomer_aware` | `False` | Allow recognised tautomeric relaxations; `match_bond_order` is unchanged |
 | `pH`, `solvent` | `7.4`, `Solvent.AQUEOUS` | Context for `MCS.compute_tautomer_confidence` only |
 
@@ -339,6 +381,9 @@ queries. `TargetCorpus` holds targets for repeated queries:
 - `screen_many(queries, threshold, *, num_threads=0)`: the same ECFP4 screen
   for each query, returning a list of hit-index lists in query order. Each
   hit list keeps target order and needs the same `prewarm()`.
+- Errors in `prewarm()` and in CPU screening reach the caller; when several
+  targets fail, the error of the first in target order is raised, whatever the
+  thread count.
 - `screen_targets_many(queries, threshold, chemistry=None, *, num_threads=0)`:
   the atom-count MCS similarity-bound screen for each query, with one chemistry
   setting for the batch. No `prewarm()` is needed. Each hit list keeps target
@@ -353,10 +398,44 @@ assert corpus.screen_many(["CCO", "CCN"], 1.0, num_threads=1) == [[0], [1]]
 assert corpus.screen_targets_many(["CCO", "CCN"], 1.0, num_threads=1) == [[0], [1]]
 ```
 
-Corpus substructure searches can reject impossible molecule candidates with a
-conservative element-path screen before CPU matching. SMARTS queries, untyped
-queries and finite node limits bypass this screen. Target results keep their
-original slots, atom numbering and search status.
+### Explicit corpus prefilters
+
+The additive `Substructure.match_corpus(corpus, *, gpu_prefilter=False,
+num_threads=0)` and `MCS.match_corpus(corpus, minimum_atoms, *,
+gpu_prefilter=False, num_threads=0)` return `CorpusSearchResult` objects in
+original target order, preserving each target's input atom numbers.
+
+```python
+import smsd
+corpus = smsd.TargetCorpus.from_smiles(["CCO", "N"])
+embeddings = smsd.Substructure.find("CO").match_corpus(corpus, num_threads=1)
+assert embeddings[0].threshold_reached and embeddings[0].result.found
+decisions = smsd.MCS.find("CC").match_corpus(corpus, 2, num_threads=1)
+assert decisions[1].atom_upper_bound == 0
+assert decisions[1].proven_below_threshold and decisions[1].result is None
+```
+
+`result` is an actual CPU search result, or `None` only for a proved filter
+rejection. `threshold_reached` requires a real witness. Both decision flags
+being false means unknown, including stopped searches without a sufficient
+witness. For eligible unweighted MCIS, `atom_upper_bound` is an upper bound on
+the MCS atom count; a target whose bound equals `minimum_atoms` is searched.
+Substructure decisions report no bound, so the field is `None`.
+
+The default runs the same pre-screen on the CPU. `gpu_prefilter=True`
+explicitly asks the optional GPU provider to run it; unavailable or failed GPU
+work falls back to the CPU. Availability does not prove device use. No prewarm
+is required. With SMARTS, unsupported queries, node caps, immediate timeouts,
+cancellation tokens, MCS weights, MCES or excluded atoms, every target is
+searched on the CPU. MCES or weighted scores cannot prove an atom-count
+negative. `match_many` remains unchanged. Each target's search budget excludes
+the pre-screen; there is no whole-corpus timeout. Java retains its ordinary CPU
+batch API.
+
+Corpus substructure searches can rule out targets that cannot contain the query
+before CPU matching. With SMARTS queries, untyped queries or a finite node
+limit, every target is searched. Target results keep their original slots, atom
+numbering and search status.
 
 ## Constrained and consensus searches
 
@@ -382,7 +461,10 @@ assert consensus.to_smiles() == "CC"
   changing the target.
 - `MCS.consensus(molecules, options=None, threshold=1.0)`: a common graph in at
   least `ceil(threshold * len(molecules))` inputs, `threshold` in (0, 1], under
-  one budget; always `optimal=False`. Atom weights and exclusions raise
+  one budget; always `optimal=False`, including empty and single-input calls.
+  `complete` reports whether the progressive pass finished. Neither it nor
+  `COMPLETED` proves a global optimum or absence of a qualifying common graph.
+  Atom weights and exclusions raise
   `ValueError`. With complete rings or strict ring fusion, truncated ring
   perception in any input makes it `LIMIT_REACHED` and incomplete, unless it is
   already `TIMED_OUT` or `CANCELLED`; its fragment and supporting mappings are
@@ -501,9 +583,14 @@ Every name in `smsd.__all__` appears in this guide.
   languages; `canonical_smiles` is a deprecated alias. `/` and `\` go on single
   bonds wherever a configured double bond has one at an end; an end with only
   aromatic ring bonds carries them on an aromatic bond, as RDKit writes it,
-  which strict OpenSMILES readers take as a single bond.
+  which strict OpenSMILES readers take as a single bond. For a molecule of more
+  than 5,000 atoms, or when canonical labelling reaches its search limit, the
+  output can depend on the input atom order; the graph's
+  `automorphism_generators_truncated()` is then `True`. A graph that needs more
+  than 99 ring closures open at once is rejected.
 - `to_smarts(mol, include_aromaticity=True, include_charge=True, include_ring_member=False, include_h_count=False, include_isotope=False)`:
-  SMARTS for a molecule with the selected predicates.
+  SMARTS for a molecule with the selected predicates; a graph that needs more
+  than 99 ring closures open at once is rejected.
 - `canonical_hash(mol)`: a hash of connectivity, bond orders, aromaticity,
   rings, charges, mass numbers and stereo; a screening key, not proof of
   identity. `same_canonical_graph(mol1, mol2)` compares atom count, canonical
@@ -511,7 +598,8 @@ Every name in `smsd.__all__` appears in this guide.
 - `prewarm(mol)`: caches invariants and returns the graph; `prewarm_graph` is
   a deprecated alias returning `None`.
 - `extract_subgraph(mol, atom_indices)`: the induced subgraph, numbered in the
-  supplied order.
+  supplied order, keeping a stereocentre whose neighbours all stay and the E/Z
+  configuration of a double bond whose ends keep the neighbours that define it.
 - `murcko_scaffold(mol)`: the Bemis–Murcko scaffold (ring systems, linkers and
   atoms double- or triple-bonded to them), other substituents replaced by
   hydrogen and stereo kept where defined; acyclic graphs are returned
@@ -563,8 +651,28 @@ aromaticity_model=AromaticityModel.DAYLIGHT_LIKE)`.
 - `compute_sssr(mol)`: the smallest set of smallest rings, as atom lists by
   ascending size.
 - `rings_truncated(mol)`: whether the ring search behind `compute_sssr` stopped
-  at its work bound, as for a very large ring system, so that the rings may be
-  fewer than the graph holds.
+  before finding a complete set of rings, as for a very large ring system; its
+  8.0.x meaning is retained.
+- `relevant_cycles_truncated(mol)`: whether full relevant-cycle enumeration was
+  incomplete. It can be true with a complete minimum basis. Complete-ring
+  matching checks this perception; strict ring fusion checks the perception
+  that produced its per-atom ring counts.
+- `compute_relevant_cycle_families(mol)`: the relevant cycles grouped into
+  families, as `RelevantCycleFamilies` with `families`, `relevant_cycle_count`
+  and `truncated`. Each `RelevantCycleFamily` gives the ring `size`, the `root`
+  (the highest-numbered atom of every member), `first`, `second` and
+  `opposite`, which locate the bond or atom opposite the root, one member as
+  `prototype` and the exact `member_count`, so the relevant cycles can be
+  counted without listing them; counts are Python integers of any size.
+  `truncated` reports an incomplete enumeration, whose families are relevant
+  but may not be all of them. When the enumeration is complete, the relevant
+  cycles and their number do not depend on the input atom order; the grouping
+  into families can.
+- `relevant_cycle_family_of(mol, families, ring)`: the index in
+  `families.families` of the family that has `ring`, a list of atom indices in
+  ring order, as a member, or -1.
+- `relevant_cycle_family_members(mol, family, limit)`: up to `limit` members of
+  `family` as atom-index lists, starting with its prototype.
 - `perceive_aromaticity(mol, *, model=AromaticityModel.DAYLIGHT_LIKE)`:
   recompute ring membership and aromaticity.
 - `kekulize(mol)`: replace aromatic bonds with Kekulé bonds, or raise
@@ -574,6 +682,18 @@ aromaticity_model=AromaticityModel.DAYLIGHT_LIKE)`.
   1 acceptor, 2 positive and 3 negative ionisable, 4 aromatic, 5 hydrophobic.
 - `implicit_h(atomic_num, bond_order_sum, formal_charge, aromatic=False)`:
   implicit hydrogens by SMILES valence; 0 when none fits.
+
+Positive numeric SMARTS `R<n>` (`n > 0`) uses one deterministic minimum cycle
+basis, the same as C++ and Java. If ring perception cannot complete it, a
+search that cannot be decided without it returns `LIMIT_REACHED` without
+matches, including for negated, combined and recursive predicates; `found` is
+then false, which does not prove absence. Literal `R` and `R0` remain
+independent of that basis. Other functions that need the basis raise
+`smsd.RingBasisUnavailable`, a `RuntimeError`, naming the cause;
+`compute_sssr` may return incomplete rings, flagged by `rings_truncated`.
+`relevant_cycles_truncated` alone does not make the basis incomplete. Ring
+perception works within one fixed, deterministic work limit; see
+[Results and budgets](ALGORITHMS.md#results-and-budgets).
 
 The other functions here accept a molecule; `perceive_aromaticity`,
 `kekulize` and `dearomatize` change a `MolGraph` in place and return it. CIP
@@ -595,7 +715,10 @@ Binary fingerprints are sorted set positions; count fingerprints are
   the fingerprint of every molecule, each as `fingerprint` gives it, in input
   order. SMILES strings are parsed and the fingerprints computed natively on
   `num_threads` threads (0 uses the OpenMP default); the first molecule that
-  fails raises the error `fingerprint` gives for it.
+  fails raises the error `fingerprint` gives for it. An
+  `smsd.RingBasisUnavailable` error, or the error of a key left undecided by
+  its time or embedding limit, keeps its type and adds the zero-based input
+  index to its message.
 - `circular_fingerprint(mol, radius=2, fp_size=2048, mode="ecfp")`,
   `circular_fingerprint_counts(mol, radius=2, fp_size=2048, mode="ecfp")`: ECFP
   or FCFP of a graph; radius 2 is ECFP4.
@@ -684,8 +807,14 @@ at position k − 1; `maccs_keys()` lists them as `FingerprintKey` values with
 and writable, and `copy()` returns an independent copy. An unknown keyword
 raises `TypeError`; an unknown family, fragment or scaffold name raises
 `ValueError`, as do inconsistent options and unparsable keys when computing. A
-key count not settled in time raises `RuntimeError`. `mcs_fingerprint` ignores
-these options.
+key search that runs out of time, or a key count that the embedding limit
+leaves undecided, raises `RuntimeError`; a key whose minimum number of matches
+is found before that limit is set. Ring-size terms, double-bond stereo terms,
+aromatic-ring keys and SMARTS keys whose search needs the minimum cycle basis
+raise `smsd.RingBasisUnavailable` naming the cause if ring perception cannot
+complete that basis; a separate relevant-cycle truncation does not prevent
+their use. The ring refusals replace values that 8.0.3 could compute from incomplete rings.
+`mcs_fingerprint` ignores these options.
 
 ### Similarity coefficients and encodings
 

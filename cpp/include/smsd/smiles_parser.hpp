@@ -913,7 +913,8 @@ inline std::string writeCanonicalSMARTS(const MolGraph& g,
                 return writeAtomSMARTS(g, atom, implicitH[atom], inclArom, inclCharge, inclRing, inclHCount, inclIsotope);
             },
             [&](int, const RingDigit& digit, bool) { return bondSymbolSMARTS(digit.bo); },
-            [&](int atom, int nb) { return bondSymbolSMARTS(g.bondOrder(atom, nb)); });
+            [&](int atom, int nb) { return bondSymbolSMARTS(g.bondOrder(atom, nb)); },
+            "SMARTS output needs more than 99 simultaneously open ring closures");
     }
 
     return result.str();

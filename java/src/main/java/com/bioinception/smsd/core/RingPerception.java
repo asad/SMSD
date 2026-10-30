@@ -6,6 +6,7 @@
  */
 package com.bioinception.smsd.core;
 
+import java.math.BigInteger;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -234,7 +235,7 @@ final class RingPerception {
    */
   static int[][][] boundedRings(int n, int[][] neighbors, Systems systems, int cycleRank) {
     int[][] basis = greedyBasis(n, neighbors, systems, cycleRank);
-    List<int[]> candidates = relevantCycles(n, neighbors, systems, basis);
+    List<int[]> candidates = relevantCycles(n, neighbors, systems, basis, cycleRank, new boolean[1], false);
     Set<EdgeSet> seen = new HashSet<>();
     for (int[] cycle : candidates) seen.add(new EdgeSet(cycle));
     for (int[] cycle : basis) if (seen.add(new EdgeSet(cycle))) candidates.add(cycle);
@@ -335,13 +336,20 @@ final class RingPerception {
    * strictly shorter cycles, enumerated from shortest paths out of every root (at most 50 per
    * atom) inside its ring system, with the work bounded by RELEVANT_CYCLE_WORK_LIMIT.
    */
-  private static List<int[]> relevantCycles(int n, int[][] neighbors, Systems systems, int[][] basis) {
+  private static List<int[]> relevantCycles(int n, int[][] neighbors, Systems systems, int[][] basis,
+                                           int cycleRank, boolean[] truncated, boolean boundedResources) {
+    truncated[0] = basis.length != cycleRank;
     List<int[]> allCycles = new ArrayList<>();
     if (basis.length == 0) return allCycles;
-    int maxLen = 0;
+    int maxLen = boundedResources && basis.length != cycleRank ? n : 0;
     for (int[] cycle : basis) maxLen = Math.max(maxLen, cycle.length);
+    long[] work = {0};
     Set<EdgeSet> unique = new HashSet<>();
-    for (int[] cycle : basis) if (unique.add(new EdgeSet(cycle))) allCycles.add(cycle);
+    for (int[] cycle : basis) {
+      if (boundedResources && !chargeRelevant(work, 128 + 16L * cycle.length, truncated))
+        return new ArrayList<>(Arrays.asList(basis));
+      if (unique.add(new EdgeSet(cycle))) allCycles.add(cycle);
+    }
 
     int[] dist = new int[n], queue = new int[n];
     int[][] parents = new int[n][];
@@ -351,23 +359,22 @@ final class RingPerception {
     boolean[] listed = new boolean[n];
     int[] mark = new int[n];
     int stamp = 0;
-    long work = 0;
     int[] pathScratch = new int[n + 1];
     int[] stackNode = new int[n + 1], stackNext = new int[n + 1];
-    for (int root = 0; root < n && work < RELEVANT_CYCLE_WORK_LIMIT; root++) {
+    for (int root = 0; root < n && work[0] < RELEVANT_CYCLE_WORK_LIMIT; root++) {
       int system = systems == null ? -1 : systems.ofAtom[root];
       if (systems != null && (system < 0 || systems.simpleRing[system])) continue;
       Arrays.fill(dist, -1);
       Arrays.fill(parentCount, 0);
       Arrays.fill(listed, false);
-      work += n;
+      work[0] += n;
       dist[root] = 0;
       int head = 0, tail = 0;
       queue[tail++] = root;
-      while (head < tail) {
+      while (head < tail && (!boundedResources || work[0] < RELEVANT_CYCLE_WORK_LIMIT)) {
         int u = queue[head++];
         if (dist[u] >= maxLen / 2) continue;
-        work += 1 + neighbors[u].length;
+        work[0] += 1 + neighbors[u].length;
         for (int v : neighbors[u]) {
           if (systems != null && systems.ofAtom[v] != system) continue;
           if (dist[v] == -1) {
@@ -381,9 +388,10 @@ final class RingPerception {
       }
       // Odd-length cycles from edges; a tree edge whose farther atom has no other parent
       // closes no cycle.
-      for (int u = 0; u < n && work < RELEVANT_CYCLE_WORK_LIMIT; u++) {
+      for (int u = 0; u < n && work[0] < RELEVANT_CYCLE_WORK_LIMIT; u++) {
         if (dist[u] == -1) continue;
         for (int v : neighbors[u]) {
+          if (boundedResources && work[0] >= RELEVANT_CYCLE_WORK_LIMIT) break;
           if (v <= u || dist[v] == -1) continue;
           int cycleLen = dist[u] + dist[v] + 1;
           if (cycleLen < 3 || cycleLen > maxLen) continue;
@@ -391,63 +399,70 @@ final class RingPerception {
               ? onlyParent(parents, parentCount, u, v) : onlyParent(parents, parentCount, v, u))) continue;
           for (int atom : new int[] {u, v})
             if (!listed[atom]) {
-              pathsTo[atom] = shortestPaths(root, atom, dist, parents, parentCount, pathScratch, stackNode, stackNext);
+              pathsTo[atom] = shortestPaths(root, atom, dist, parents, parentCount, pathScratch, stackNode, stackNext, truncated, work, boundedResources);
               pathCount[atom] = pathsTo[atom].length;
               listed[atom] = true;
-              work += (long) pathCount[atom] * (dist[atom] + 1);
+              work[0] += (long) pathCount[atom] * (dist[atom] + 1);
             }
-          for (int pathU = 0; pathU < pathCount[u]; pathU++) {
+          for (int pathU = 0; pathU < pathCount[u] && (!boundedResources || work[0] < RELEVANT_CYCLE_WORK_LIMIT); pathU++) {
             int[] pu = pathsTo[u][pathU];
             int onPath = ++stamp;
             for (int x : pu) mark[x] = onPath;
-            work += pu.length;
-            for (int pathV = 0; pathV < pathCount[v]; pathV++) {
+            work[0] += pu.length;
+            for (int pathV = 0; pathV < pathCount[v] && (!boundedResources || work[0] < RELEVANT_CYCLE_WORK_LIMIT); pathV++) {
               int[] pv = pathsTo[v][pathV];
               boolean overlap = false;
               int read = 1;
               for (; read < pv.length; read++) if (mark[pv[read]] == onPath) { overlap = true; break; }
-              work += read;
+              work[0] += read;
               if (overlap) continue;
               int[] cycle = new int[pu.length + pv.length - 1];
               System.arraycopy(pu, 0, cycle, 0, pu.length);
               for (int k = pv.length - 1, at = pu.length; k >= 1; k--) cycle[at++] = pv[k];
-              work += remember(cycle, maxLen, unique, allCycles);
+              long cycleWork = remember(cycle, maxLen, unique, allCycles, work, truncated, boundedResources);
+              work[0] += cycleWork;
             }
           }
         }
       }
       // Even-length cycles from two disjoint paths to the same atom.
-      for (int u = 0; u < n && work < RELEVANT_CYCLE_WORK_LIMIT; u++) {
+      for (int u = 0; u < n && work[0] < RELEVANT_CYCLE_WORK_LIMIT; u++) {
         if (dist[u] == -1 || parentCount[u] < 2) continue;
         int cycleLen = 2 * dist[u];
         if (cycleLen < 3 || cycleLen > maxLen) continue;
         if (!listed[u]) {
-          pathsTo[u] = shortestPaths(root, u, dist, parents, parentCount, pathScratch, stackNode, stackNext);
+          pathsTo[u] = shortestPaths(root, u, dist, parents, parentCount, pathScratch, stackNode, stackNext, truncated, work, boundedResources);
           pathCount[u] = pathsTo[u].length;
           listed[u] = true;
-          work += (long) pathCount[u] * (dist[u] + 1);
+          work[0] += (long) pathCount[u] * (dist[u] + 1);
         }
         int[][] paths = pathsTo[u];
-        for (int pi = 0; pi < pathCount[u]; pi++) {
+        for (int pi = 0; pi < pathCount[u] && (!boundedResources || work[0] < RELEVANT_CYCLE_WORK_LIMIT); pi++) {
           int[] p1 = paths[pi];
           int interior = ++stamp;
           for (int k = 1; k + 1 < p1.length; k++) mark[p1[k]] = interior;
-          work += p1.length;
-          for (int pj = pi + 1; pj < pathCount[u]; pj++) {
+          work[0] += p1.length;
+          for (int pj = pi + 1; pj < pathCount[u] && (!boundedResources || work[0] < RELEVANT_CYCLE_WORK_LIMIT); pj++) {
             int[] p2 = paths[pj];
             boolean disjoint = true;
             int read = 1;
             for (; read + 1 < p2.length; read++) if (mark[p2[read]] == interior) { disjoint = false; break; }
-            work += read;
+            work[0] += read;
             if (!disjoint) continue;
             int[] cycle = new int[p1.length + p2.length - 2];
             System.arraycopy(p1, 0, cycle, 0, p1.length);
             for (int k = p2.length - 2, at = p1.length; k >= 1; k--) cycle[at++] = p2[k];
-            work += remember(cycle, maxLen, unique, allCycles);
+            long cycleWork = remember(cycle, maxLen, unique, allCycles, work, truncated, boundedResources);
+            work[0] += cycleWork;
           }
         }
       }
     }
+    if (work[0] >= RELEVANT_CYCLE_WORK_LIMIT) truncated[0] = true;
+    int levels = 0;
+    for (int count = allCycles.size(); count > 1; count = (count + 1) / 2) levels++;
+    if (boundedResources && !chargeRelevant(work, 2L * allCycles.size() * levels, truncated))
+      return new ArrayList<>(Arrays.asList(basis));
     allCycles.sort((a, b) -> Integer.compare(a.length, b.length));
     // Keep each cycle independent of strictly shorter cycles; rows keep their lowest bond as pivot.
     Map<Long, Integer> edges = edgeIndex(n, neighbors);
@@ -460,11 +475,21 @@ final class RingPerception {
     while (start < allCycles.size()) {
       int end = start;
       while (end < allCycles.size() && allCycles.get(end).length == allCycles.get(start).length) end++;
-      for (int k = start; k < end; k++)
-        if (reduce(bits(allCycles.get(k), edges, words), rows, rowByPivot, -1, null) >= 0) relevant.add(allCycles.get(k));
       for (int k = start; k < end; k++) {
-        long[] vector = bits(allCycles.get(k), edges, words);
-        int pivot = reduce(vector, rows, rowByPivot, -1, null);
+        int[] cycle = allCycles.get(k);
+        if (boundedResources && !chargeRelevant(work, 24 + 8L * words + cycle.length, truncated))
+          return new ArrayList<>(Arrays.asList(basis));
+        if ((boundedResources ? reduceRelevant(bits(cycle, edges, words), rows, rowByPivot, work, truncated) : reduce(bits(cycle, edges, words), rows, rowByPivot, -1, null)) >= 0)
+          relevant.add(cycle);
+        if (boundedResources && work[0] >= RELEVANT_CYCLE_WORK_LIMIT) return new ArrayList<>(Arrays.asList(basis));
+      }
+      for (int k = start; k < end; k++) {
+        int[] cycle = allCycles.get(k);
+        if (boundedResources && !chargeRelevant(work, 24 + 8L * words + cycle.length, truncated))
+          return new ArrayList<>(Arrays.asList(basis));
+        long[] vector = bits(cycle, edges, words);
+        int pivot = boundedResources ? reduceRelevant(vector, rows, rowByPivot, work, truncated) : reduce(vector, rows, rowByPivot, -1, null);
+        if (boundedResources && work[0] >= RELEVANT_CYCLE_WORK_LIMIT) return new ArrayList<>(Arrays.asList(basis));
         if (pivot < 0) continue;
         rowByPivot[pivot] = rows.size();
         rows.add(vector);
@@ -486,10 +511,42 @@ final class RingPerception {
     return true;
   }
 
-  private static long remember(int[] cycle, int maxLen, Set<EdgeSet> unique, List<int[]> allCycles) {
+  private static boolean chargeRelevant(long[] work, long amount, boolean[] truncated) {
+    if (work[0] >= RELEVANT_CYCLE_WORK_LIMIT || amount >= RELEVANT_CYCLE_WORK_LIMIT - work[0]) {
+      work[0] = RELEVANT_CYCLE_WORK_LIMIT;
+      truncated[0] = true;
+      return false;
+    }
+    work[0] += amount;
+    return true;
+  }
+
+  private static long remember(int[] cycle, int maxLen, Set<EdgeSet> unique, List<int[]> allCycles,
+                               long[] work, boolean[] truncated, boolean boundedResources) {
     if (cycle.length < 3 || cycle.length > maxLen) return 0;
-    if (unique.add(new EdgeSet(cycle))) allCycles.add(cycle);
+    EdgeSet key = new EdgeSet(cycle);
+    if (!unique.contains(key)) {
+      if (boundedResources && !chargeRelevant(work, 128 + 16L * cycle.length, truncated)) return 0;
+      unique.add(key);
+      allCycles.add(cycle);
+    }
     return cycle.length;
+  }
+
+  private static int reduceRelevant(long[] vector, List<long[]> rows, int[] rowByPivot,
+                                    long[] work, boolean[] truncated) {
+    for (int word = 0; word < vector.length; word++) {
+      if (!chargeRelevant(work, 1, truncated)) return -1;
+      while (vector[word] != 0) {
+        int pivot = (word << 6) + Long.numberOfTrailingZeros(vector[word]);
+        int row = rowByPivot[pivot];
+        if (row < 0) return pivot;
+        long[] basisRow = rows.get(row);
+        if (!chargeRelevant(work, vector.length - word, truncated)) return -1;
+        for (int other = word; other < vector.length; other++) vector[other] ^= basisRow[other];
+      }
+    }
+    return -1;
   }
 
   /**
@@ -497,11 +554,13 @@ final class RingPerception {
    * on an explicit stack; each path runs from root to target.
    */
   private static int[][] shortestPaths(int root, int target, int[] dist, int[][] parents, int[] parentCount,
-                                       int[] current, int[] stackNode, int[] stackNext) {
+                                       int[] current, int[] stackNode, int[] stackNext, boolean[] truncated,
+                                       long[] work, boolean boundedResources) {
     List<int[]> paths = new ArrayList<>();
     int length = 0;
     current[length++] = target;
     if (target == root) {
+      if (boundedResources && !chargeRelevant(work, 28, truncated)) return new int[0][];
       paths.add(new int[] {root});
       return paths.toArray(new int[0][]);
     }
@@ -520,6 +579,7 @@ final class RingPerception {
       int next = parents[node][stackNext[depth]++];
       current[length++] = next;
       if (next == root) {
+        if (boundedResources && !chargeRelevant(work, 24 + 4L * length, truncated)) break;
         int[] path = new int[length];
         for (int k = 0; k < length; k++) path[k] = current[length - 1 - k];
         paths.add(path);
@@ -530,6 +590,12 @@ final class RingPerception {
       stackNode[depth] = next;
       stackNext[depth] = 0;
     }
+    if (paths.size() == 50)
+      for (int frame = 0; frame <= depth && !truncated[0]; frame++) {
+        int node = stackNode[frame];
+        for (int parent = stackNext[frame]; parent < parentCount[node] && !truncated[0]; parent++)
+          truncated[0] = dist[parents[node][parent]] == dist[node] - 1;
+      }
     return paths.toArray(new int[0][]);
   }
 
@@ -591,43 +657,212 @@ final class RingPerception {
   // ---- Rings of a graph, perceived once and kept by it ----
 
   /**
-   * Work bound of the exhaustive candidate search of {@link #perceive}, counted in atoms and
-   * neighbours read: it pairs every atom with every bond of its ring system through two
-   * breadth-first searches. Ordinary molecules, including those of several hundred atoms, use
-   * a small fraction of it. A search that exhausts it, which takes a fraction of a second, is
-   * abandoned; the graph, such as a very large ring system, then takes its candidates from a
-   * bounded relevant-cycle enumeration and a greedy ring basis, and the same selection rules
-   * apply.
+   * Work bound of the exhaustive candidate search of {@link #perceive}. The work is that of the
+   * search that pairs every atom with every bond of its ring system by one breadth-first search
+   * per pair, counted in atoms and neighbours read: one plus the degree of every atom such a
+   * search takes from its queue, the atoms of both paths of every pair and the bonds of the graph
+   * for every candidate cycle. The candidates themselves are read from one shortest-path tree per
+   * atom ({@link RingCandidateSearch}), which finds the same count without spending it. Natural
+   * products, large cyclodextrins and fused polycyclic sheets of several hundred atoms stay within
+   * the bound. A graph that exceeds it, such as a very large ring system, takes its candidates from
+   * a bounded relevant-cycle enumeration and a greedy ring basis, and the same selection rules
+   * apply. A full basis found that way is exact only when {@link #certifiedMinimumBasis} proves it
+   * minimum within the same bound.
    */
-  static final long RING_SEARCH_WORK_LIMIT = 1L << 26;
+  static final long RING_SEARCH_WORK_LIMIT = 1L << 29;
 
   /**
    * The smallest set of smallest rings and the relevant cycles (the union of all minimum cycle
    * bases) of a graph, perceived together and never changed.
    */
   static final class Rings {
-    final int[][] smallest, relevant;
-    /**
-     * Whether the candidate search stopped at {@link #RING_SEARCH_WORK_LIMIT}, so that the rings
-     * come from the bounded perception and may be fewer than the graph holds.
-     */
+    final int[][] smallest, relevant, legacyRelevant, numericBasis;
+    /** The basis is not proved to be a minimum cycle basis of full cycle rank. */
+    final boolean basisTruncated;
+    final boolean relevantTruncated;
+    /** The original Horton work-bound flag; fusion counts are unproved while it is set. */
     final boolean truncated;
+    /**
+     * The basis the bounded fallback chose. It is the same array as smallest unless a basis the
+     * fallback left unproved was completed; the relevant cycles and tautomer classes then keep
+     * reading this one.
+     */
+    final int[][] baseSmallest;
+    /** A basis the fallback left unproved was completed and proved minimum. */
+    final boolean basisLifted;
 
     Rings(int[][] smallest, int[][] relevant) {
       this(smallest, relevant, false);
     }
 
     Rings(int[][] smallest, int[][] relevant, boolean truncated) {
+      this(smallest, relevant, relevant, smallest, truncated, truncated);
+    }
+
+    Rings(int[][] smallest, int[][] relevant, int[][] legacyRelevant, int[][] numericBasis,
+          boolean basisTruncated, boolean relevantTruncated) {
+      this(smallest, relevant, legacyRelevant, numericBasis, basisTruncated, relevantTruncated, basisTruncated);
+    }
+
+    Rings(int[][] smallest, int[][] relevant, int[][] legacyRelevant, int[][] numericBasis,
+          boolean basisTruncated, boolean relevantTruncated, boolean truncated) {
+      this(smallest, relevant, legacyRelevant, numericBasis, basisTruncated, relevantTruncated, truncated,
+           smallest, false);
+    }
+
+    Rings(int[][] smallest, int[][] relevant, int[][] legacyRelevant, int[][] numericBasis,
+          boolean basisTruncated, boolean relevantTruncated, boolean truncated,
+          int[][] baseSmallest, boolean basisLifted) {
       this.smallest = smallest;
       this.relevant = relevant != null ? relevant : new int[0][];
+      this.legacyRelevant = legacyRelevant != null ? legacyRelevant : new int[0][];
+      this.numericBasis = numericBasis;
+      this.basisTruncated = basisTruncated;
+      this.relevantTruncated = relevantTruncated;
       this.truncated = truncated;
+      this.baseSmallest = baseSmallest;
+      this.basisLifted = basisLifted;
     }
   }
 
-  /** The rings of a graph, found together by one candidate search. */
-  static Rings perceive(int n, int[][] neighbors) {
-    if (n == 0) return new Rings(new int[0][], new int[0][]);
+  /**
+   * Whether {@code cycles}, {@code cycleRank} of them, form a minimum cycle basis, decided
+   * exactly or not at all, by the rule and work count of the native core. Written over the
+   * bonds outside a breadth-first spanning forest, the cycles must be independent; each cycle
+   * then has a dual bond set that it meets an odd number of times and every other cycle meets
+   * an even number of times. They form a minimum basis exactly when no cycle shorter than a
+   * member meets that member's dual set an odd number of times, which a breadth-first search
+   * over atoms paired with a parity settles. Work is counted in words reduced and in atoms and
+   * neighbours read; the answer is false when the cycles are not a basis or the work exceeds
+   * {@code workLimit}.
+   */
+  static boolean certifiedMinimumBasis(int n, int[][] neighbors, int[][] cycles, int cycleRank, long workLimit) {
+    if (cycleRank <= 0 || cycles.length != cycleRank) return false;
+    Map<Long, Integer> edges = edgeIndex(n, neighbors);
+    int edgeCount = edges.size();
+    int[][] slotEdge = new int[n][];
+    long bondEnds = 0;
+    for (int v = 0; v < n; v++) {
+      slotEdge[v] = new int[neighbors[v].length];
+      for (int slot = 0; slot < neighbors[v].length; slot++) {
+        int w = neighbors[v][slot];
+        if (w == v || w < 0 || w >= n) return false;
+        slotEdge[v][slot] = edges.get(MolGraph.bondKey(v, w));
+      }
+      bondEnds += neighbors[v].length;
+    }
+    if (bondEnds != 2L * edgeCount) return false;
 
+    // Spanning forest in atom and neighbour order; the other bonds are the coordinates.
+    boolean[] treeEdge = new boolean[edgeCount], reached = new boolean[n];
+    int[] queue = new int[n];
+    for (int root = 0; root < n; root++) {
+      if (reached[root]) continue;
+      reached[root] = true;
+      int head = 0, tail = 0;
+      queue[tail++] = root;
+      while (head < tail) {
+        int v = queue[head++];
+        for (int slot = 0; slot < neighbors[v].length; slot++) {
+          int w = neighbors[v][slot];
+          if (reached[w]) continue;
+          reached[w] = true;
+          treeEdge[slotEdge[v][slot]] = true;
+          queue[tail++] = w;
+        }
+      }
+    }
+    int[] coordinate = new int[edgeCount];
+    int k = 0;
+    for (int edge = 0; edge < edgeCount; edge++) coordinate[edge] = treeEdge[edge] ? -1 : k++;
+    if (k != cycleRank) return false;
+    int[] coordinateEdge = new int[k];
+    for (int edge = 0; edge < edgeCount; edge++) if (coordinate[edge] >= 0) coordinateEdge[coordinate[edge]] = edge;
+    int words = (k + 63) >>> 6;
+    // The reduction keeps two k-by-k bit matrices, within a fixed share of the work bound.
+    if ((long) k * 2 * words > (workLimit >>> 7)) return false;
+
+    // transposed[r] has bit c when cycle c uses coordinate bond r; dual starts as the identity.
+    long[][] transposed = new long[k][words], dual = new long[k][words];
+    for (int c = 0; c < k; c++) {
+      int[] cycle = cycles[c];
+      if (cycle.length < 3) return false;
+      for (int i = 0; i < cycle.length; i++) {
+        int a = cycle[i], b = cycle[(i + 1) % cycle.length];
+        if (a < 0 || a >= n || b < 0 || b >= n) return false;
+        Integer edge = edges.get(MolGraph.bondKey(a, b));
+        if (edge == null) return false;
+        int r = coordinate[edge];
+        if (r >= 0) transposed[r][c >>> 6] ^= 1L << (c & 63);
+      }
+    }
+    for (int r = 0; r < k; r++) dual[r][r >>> 6] |= 1L << (r & 63);
+    long work = 0;
+    for (int c = 0; c < k; c++) {
+      int word = c >>> 6;
+      long bit = 1L << (c & 63);
+      int pivot = c;
+      while (pivot < k && (transposed[pivot][word] & bit) == 0) { pivot++; work++; }
+      if (pivot == k) return false;
+      long[] swap = transposed[pivot]; transposed[pivot] = transposed[c]; transposed[c] = swap;
+      swap = dual[pivot]; dual[pivot] = dual[c]; dual[c] = swap;
+      for (int r = 0; r < k; r++) {
+        if (r == c || (transposed[r][word] & bit) == 0) continue;
+        for (int w = 0; w < words; w++) {
+          transposed[r][w] ^= transposed[c][w];
+          dual[r][w] ^= dual[c][w];
+        }
+        work += 2L * words;
+      }
+      work += k;
+      if (work > workLimit) return false;
+    }
+
+    // dual[i] meets cycle i once and every other cycle an even number of times.
+    boolean[] inDual = new boolean[edgeCount], start = new boolean[n];
+    int[] seen = new int[2 * n], depth = new int[2 * n], states = new int[2 * n];
+    int stamp = 0;
+    for (int i = 0; i < k; i++) {
+      int length = cycles[i].length;
+      if (length == 3) continue;
+      Arrays.fill(inDual, false);
+      Arrays.fill(start, false);
+      for (int r = 0; r < k; r++)
+        if ((dual[i][r >>> 6] & (1L << (r & 63))) != 0) inDual[coordinateEdge[r]] = true;
+      // Every such closed walk crosses a dual bond, so it can start at one of their atoms.
+      for (int v = 0; v < n; v++)
+        for (int slot = 0; slot < slotEdge[v].length; slot++)
+          if (inDual[slotEdge[v][slot]]) start[v] = true;
+      for (int u = 0; u < n; u++) {
+        if (!start[u]) continue;
+        if (++stamp == 0) { Arrays.fill(seen, 0); stamp = 1; }
+        int head = 0, tail = 0;
+        states[tail++] = 2 * u;
+        seen[2 * u] = stamp;
+        depth[2 * u] = 0;
+        while (head < tail) {
+          int state = states[head++];
+          int v = state >> 1, parity = state & 1;
+          work += 1 + neighbors[v].length;
+          if (work > workLimit) return false;
+          int d = depth[state];
+          if (d >= length - 1) continue;
+          for (int slot = 0; slot < neighbors[v].length; slot++) {
+            int next = 2 * neighbors[v][slot] + (parity ^ (inDual[slotEdge[v][slot]] ? 1 : 0));
+            // A closed walk shorter than the member that meets its dual set oddly.
+            if (next == 2 * u + 1) return false;
+            if (seen[next] == stamp) continue;
+            seen[next] = stamp;
+            depth[next] = d + 1;
+            states[tail++] = next;
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  static int cycleRank(int n, int[][] neighbors) {
     int edgeCount = 0;
     for (int i = 0; i < n; i++) edgeCount += neighbors[i].length;
     edgeCount /= 2;
@@ -645,13 +880,101 @@ final class RingPerception {
         for (int v : neighbors[u]) if (!visited[v]) { visited[v] = true; bfsQ.add(v); }
       }
     }
-    int cycleRank = edgeCount - n + components;
+    return edgeCount - n + components;
+  }
+
+  /** Fill the relevant set without replacing the already published basis object. */
+  static Rings completeRelevant(int n, int[][] neighbors, Rings basis) {
+    return completeRelevant(n, neighbors, basis, RingCandidateSearch.RingSearchOptions.DEFAULTS);
+  }
+
+  /**
+   * As {@link #completeRelevant(int, int[][], Rings)}. After a completed basis the relevant cycles
+   * still come from the basis the fallback chose, and stay marked incomplete.
+   */
+  static Rings completeRelevant(int n, int[][] neighbors, Rings basis, RingCandidateSearch.RingSearchOptions options) {
+    Systems systems = systems(n, neighbors);
+    int rank = cycleRank(n, neighbors);
+    boolean[] cut = new boolean[1];
+    List<int[]> relevant = relevantCycles(n, neighbors, systems, basis.baseSmallest, rank, cut, true);
+    Rings rings = new Rings(basis.smallest, relevant.toArray(new int[0][]), basis.legacyRelevant,
+                            basis.numericBasis, basis.basisTruncated,
+                            cut[0] || basis.basisTruncated || basis.basisLifted, basis.truncated,
+                            basis.baseSmallest, basis.basisLifted);
+    return options != null && options.proveRelevantByFamilies ? proveRelevantComplete(n, neighbors, rings) : rings;
+  }
+
+  /**
+   * The numeric SMARTS basis that {@link #selected} pairs with a basis: an equally weighted full
+   * greedy basis, or the basis itself.
+   */
+  static int[][] numericBasis(int n, int[][] neighbors, Systems systems, int cycleRank, int[][] smallest) {
+    if (smallest.length != cycleRank) return smallest;
+    int[][] greedy = greedyBasis(n, neighbors, systems, cycleRank);
+    long greedyWeight = 0, minimumWeight = 0;
+    for (int[] cycle : greedy) greedyWeight += cycle.length;
+    for (int[] cycle : smallest) minimumWeight += cycle.length;
+    return greedy.length == cycleRank && greedyWeight == minimumWeight ? greedy : smallest;
+  }
+
+  /**
+   * The rings with the relevant-cycle truncation flag cleared when the relevant-cycle families
+   * prove the listed cycles complete: the basis is complete and proved without a completion, the
+   * families are complete, and the listed cycles are distinct members of them, as many as all
+   * their members. Otherwise the rings themselves; the list never changes.
+   */
+  static Rings proveRelevantComplete(int n, int[][] neighbors, Rings rings) {
+    if (!rings.relevantTruncated || rings.basisTruncated || rings.basisLifted) return rings;
+    RelevantCycleFamilies families = RelevantCycleFamilySearch.compute(n, neighbors);
+    if (families.truncated() || !families.relevantCycleCount().equals(BigInteger.valueOf(rings.relevant.length)))
+      return rings;
+    Set<EdgeSet> seen = new HashSet<>();
+    for (int[] cycle : rings.relevant) {
+      if (cycle.length < 3 || !seen.add(new EdgeSet(cycle))) return rings;
+      if (RelevantCycleFamilySearch.familyOf(n, neighbors, families, cycle) < 0) return rings;
+    }
+    return new Rings(rings.smallest, rings.relevant, rings.legacyRelevant, rings.numericBasis,
+                     rings.basisTruncated, false, rings.truncated, rings.baseSmallest, rings.basisLifted);
+  }
+
+  /** The rings of a graph, found together by one candidate search. */
+  static Rings perceive(int n, int[][] neighbors) {
+    return perceive(n, neighbors, true);
+  }
+
+  static Rings perceive(int n, int[][] neighbors, boolean enumerateRelevant) {
+    return perceive(n, neighbors, enumerateRelevant, RING_SEARCH_WORK_LIMIT);
+  }
+
+  /** As {@link #perceive(int, int[][], boolean)}, with the work bound a test may lower. */
+  static Rings perceive(int n, int[][] neighbors, boolean enumerateRelevant, long workLimit) {
+    return perceive(n, neighbors, enumerateRelevant, workLimit, RingCandidateSearch.RingSearchOptions.DEFAULTS, null);
+  }
+
+  /**
+   * As {@link #perceive(int, int[][], boolean, long)}, with internal switches, all off by default,
+   * and a record of the search in notes when notes is not null.
+   */
+  static Rings perceive(int n, int[][] neighbors, boolean enumerateRelevant, long workLimit,
+                        RingCandidateSearch.RingSearchOptions options, RingCandidateSearch.RingSearchNotes notes) {
+    if (n == 0) return new Rings(new int[0][], new int[0][]);
+
+    int cycleRank = cycleRank(n, neighbors);
     if (cycleRank <= 0) return new Rings(new int[0][], new int[0][]);
+
+    // With ring systems known, the candidates are read from one shortest-path tree per atom; the
+    // pairwise search below remains for a graph whose atom lists itself or a neighbour twice.
+    Systems systems = systems(n, neighbors);
+    if (systems != null) {
+      Rings rings = new RingCandidateSearch(n, neighbors, systems, cycleRank, workLimit, options, notes)
+          .perceive(enumerateRelevant);
+      return options != null && options.proveRelevantByFamilies ? proveRelevantComplete(n, neighbors, rings) : rings;
+    }
 
     // Candidates: for every vertex v and every edge (eU, eV),
     // find shortest path from v to eU and from v to eV (excluding edge eU-eV),
-    // form cycle from both paths + the edge. This is O(V*E*V) but guaranteed
-    // to find all cycles needed for both SSSR and relevant cycles.
+    // form a cycle from both paths + the edge. These candidates contain a minimum
+    // cycle basis; relevant cycles need the separate all-shortest-path enumeration.
 
     // Build edge index
     Map<Long, Integer> edgeIdx = new HashMap<>();
@@ -675,7 +998,6 @@ final class RingPerception {
     // order. A bridge leaves one of its atoms unreachable; from outside the ring system of a
     // bond both paths enter the system through the same atom; and in a system that is one
     // simple ring every pair repeats the ring that its lowest atom and first bond give.
-    Systems systems = systems(n, neighbors);
     int[][] systemEdges = null;
     int[] lowestAtom = null;
     if (systems != null) {
@@ -711,19 +1033,20 @@ final class RingPerception {
             : new int[0];
       }
       for (int pair : pairs) {
-        if (search.work > RING_SEARCH_WORK_LIMIT) {
+        if (search.work > workLimit) {
           int[][][] bounded = boundedRings(n, neighbors, systems, cycleRank);
-          return new Rings(bounded[0], bounded[1], true);
+          if (!certifiedMinimumBasis(n, neighbors, bounded[0], cycleRank, workLimit))
+            return new Rings(bounded[0], bounded[1], true);
+          // The work bound stays recorded: fusion counts still come from the bounded candidates.
+          return selected(n, neighbors, systems, cycleRank, bounded[0], bounded[1], enumerateRelevant, true);
         }
         int[] edge = edgeList.get(pair);
         int eU = edge[0], eV = edge[1];
 
-        // Find shortest path from v to eU, avoiding edge (eU, eV)
-        List<Integer> path1 = search.path(v, eU, eU, eV);
+        // Find both shortest paths while avoiding edge (eU, eV).
+        List<Integer> path1 = new ArrayList<>(), path2 = new ArrayList<>();
+        search.paths(v, eU, eV, eU, eV, path1, path2);
         if (path1.isEmpty()) continue;
-
-        // Find shortest path from v to eV, avoiding edge (eU, eV)
-        List<Integer> path2 = search.path(v, eV, eU, eV);
         if (path2.isEmpty()) continue;
         search.work += path1.size() + path2.size();
 
@@ -785,8 +1108,7 @@ final class RingPerception {
     // Phase 1: Check relevance (independence from STRICTLY SHORTER cycles only)
     // Phase 2: Check SSSR inclusion (independence from ALL basis cycles)
     List<int[]> sssr = new ArrayList<>();
-    List<int[]> rcb = new ArrayList<>();
-    List<boolean[]> rcbMasks = new ArrayList<>();
+    List<int[]> legacyRelevant = new ArrayList<>();
     List<boolean[]> basisMatrix = new ArrayList<>();
     List<Integer> basisSizes = new ArrayList<>();
 
@@ -815,16 +1137,7 @@ final class RingPerception {
       for (boolean bit : phase1Mask) if (bit) { relevant = true; break; }
 
       if (relevant) {
-        // Deduplicate for RCB by edge mask
-        boolean dup = false;
-        for (boolean[] existingMask : rcbMasks) {
-          if (Arrays.equals(mask, existingMask)) { dup = true; break; }
-        }
-        if (!dup) {
-          rcb.add(candidateAtoms.get(idx));
-          rcbMasks.add(mask);
-        }
-
+        legacyRelevant.add(candidateAtoms.get(idx));
         // Phase 2: Check SSSR inclusion — reduce against ALL basis cycles
         boolean[] phase2Mask = phase1Mask.clone();
         for (int b = 0; b < totalEdges; b++) {
@@ -853,7 +1166,32 @@ final class RingPerception {
       }
     }
 
-    return new Rings(sssr.toArray(new int[0][]), rcb.toArray(new int[0][]));
+    return selected(n, neighbors, systems, cycleRank, sssr.toArray(new int[0][]),
+                    legacyRelevant.toArray(new int[0][]), enumerateRelevant, false);
+  }
+
+  /**
+   * The rings of a selected basis: an equally weighted full greedy basis keeps the numeric
+   * SMARTS tie-break, and the relevant cycles are enumerated from the basis when asked for.
+   */
+  static Rings selected(int n, int[][] neighbors, Systems systems, int cycleRank, int[][] smallest,
+                        int[][] legacy, boolean enumerateRelevant, boolean searchLimited) {
+    boolean basisTruncated = smallest.length != cycleRank;
+    boolean truncated = basisTruncated || searchLimited;
+    int[][] numericBasis = smallest;
+    if (!basisTruncated) {
+      int[][] greedy = greedyBasis(n, neighbors, systems, cycleRank);
+      long greedyWeight = 0, minimumWeight = 0;
+      for (int[] cycle : greedy) greedyWeight += cycle.length;
+      for (int[] cycle : smallest) minimumWeight += cycle.length;
+      if (greedy.length == cycleRank && greedyWeight == minimumWeight) numericBasis = greedy;
+    }
+    if (!enumerateRelevant)
+      return new Rings(smallest, legacy, legacy, numericBasis, basisTruncated, basisTruncated, truncated);
+    boolean[] relevantTruncated = new boolean[1];
+    List<int[]> relevant = relevantCycles(n, neighbors, systems, smallest, cycleRank, relevantTruncated, true);
+    return new Rings(smallest, relevant.toArray(new int[0][]), legacy, numericBasis,
+                     basisTruncated, relevantTruncated[0] || basisTruncated, truncated);
   }
 
   /**
@@ -861,7 +1199,7 @@ final class RingPerception {
    * the atoms and neighbours read. With ring systems known, the search stays in the ring
    * system of the target: its atoms are reached in the same order and with the same parents.
    */
-  private static final class PathSearch {
+  static final class PathSearch {
     final int[][] neighbors;
     final Systems systems;
     final int[] parent, visited, queue;
@@ -876,20 +1214,22 @@ final class RingPerception {
       queue = new int[n];
     }
 
-    /** Shortest path from start to target avoiding the bond (avoidU, avoidV), or an empty list. */
-    List<Integer> path(int start, int target, int avoidU, int avoidV) {
-      if (start == target) {
-        List<Integer> single = new ArrayList<>();
-        single.add(start);
-        return single;
+    /** Shortest paths to both targets, avoiding the bond (avoidU, avoidV). */
+    void paths(int start, int firstTarget, int secondTarget, int avoidU, int avoidV,
+               List<Integer> firstPath, List<Integer> secondPath) {
+      boolean firstReached = start == firstTarget, secondReached = start == secondTarget;
+      if (firstReached && secondReached) {
+        firstPath.add(start);
+        secondPath.add(start);
+        return;
       }
       if (++stamp == 0) { Arrays.fill(visited, 0); stamp = 1; }
-      int system = systems == null ? -1 : systems.ofAtom[target];
+      int system = systems == null ? -1 : systems.ofAtom[firstTarget];
       visited[start] = stamp;
       parent[start] = -1;
       int head = 0, tail = 0;
       queue[tail++] = start;
-      while (head < tail) {
+      while (head < tail && !(firstReached && secondReached)) {
         int u = queue[head++];
         work += 1 + neighbors[u].length;
         for (int v : neighbors[u]) {
@@ -897,16 +1237,18 @@ final class RingPerception {
           if (visited[v] == stamp || (systems != null && systems.ofAtom[v] != system)) continue;
           visited[v] = stamp;
           parent[v] = u;
-          if (v == target) {
-            List<Integer> path = new ArrayList<>();
-            for (int c = target; c != -1; c = parent[c]) path.add(c);
-            Collections.reverse(path);
-            return path;
-          }
+          if (v == firstTarget) firstReached = true;
+          if (v == secondTarget) secondReached = true;
+          if (firstReached && secondReached) break;
           queue[tail++] = v;
         }
       }
-      return Collections.emptyList();
+      if (!firstReached) return;
+      for (int c = firstTarget; c != -1; c = parent[c]) firstPath.add(c);
+      Collections.reverse(firstPath);
+      if (!secondReached) return;
+      for (int c = secondTarget; c != -1; c = parent[c]) secondPath.add(c);
+      Collections.reverse(secondPath);
     }
   }
 

@@ -223,12 +223,11 @@ inline std::optional<std::vector<std::vector<int>>> fingerprintScreens(
         for (const auto& target : targets) if (target.size() != words) return std::nullopt;
         std::vector<std::uint64_t> wordMajor(words * targetCount);
         std::vector<std::int32_t> counts(targetCount, 0);
-        for (std::size_t target = 0; target < targetCount; ++target)
-            for (std::size_t word = 0; word < words; ++word) {
-                const std::uint64_t value = targets[target][word];
-                wordMajor[word * targetCount + target] = value;
-                counts[target] += smsd::popcount64(value);
-            }
+        for (std::size_t target = 0; target < targetCount; ++target) {
+            for (std::size_t word = 0; word < words; ++word)
+                wordMajor[word * targetCount + target] = targets[target][word];
+            counts[target] = static_cast<std::int32_t>(smsd::popcountWords(targets[target].data(), words));
+        }
         void* resident = nullptr;
         if (table->create_fingerprints(static_cast<std::int64_t>(targetCount), static_cast<std::int32_t>(words),
                                         wordMajor.data(), counts.data(), &resident, error, sizeof error) != 0) {
@@ -253,7 +252,8 @@ inline std::optional<std::vector<std::vector<int>>> fingerprintScreens(
         std::vector<std::int32_t> cutoffs(count * stride);
         for (std::size_t query = 0; query < count; ++query) {
             std::copy(queries[begin + query].begin(), queries[begin + query].end(), queryWords.begin() + query * words);
-            for (std::uint64_t word : queries[begin + query]) queryCounts[query] += smsd::popcount64(word);
+            queryCounts[query] = static_cast<std::int32_t>(
+                smsd::popcountWords(queries[begin + query].data(), queries[begin + query].size()));
             for (int targetBits = 0; targetBits <= bits; ++targetBits) {
                 int lower = 0, upper = std::min(queryCounts[query], targetBits) + 1;
                 while (lower < upper) {
@@ -304,11 +304,11 @@ inline std::optional<std::vector<std::vector<int>>> fingerprintScreens(
 }
 
 /** Integer resident label overlaps, in query-major order; no score is formed on the device. */
-template<class Targets>
-inline std::optional<std::vector<std::vector<int>>> residentSimilarityScreensForTargets(
+template<class Targets, class Consume>
+inline bool residentLabelOverlapsForTargets(
     const std::vector<const MolGraph*>& queries, const Targets& targets,
-    const screening_detail::TargetLabels& labels, double threshold, const ChemOptions& chemistry, int numThreads,
-    ResidentCache& cache, const smsd_screen_accelerator_v1* provider = nullptr) {
+    const screening_detail::TargetLabels& labels, const ChemOptions& chemistry,
+    ResidentCache& cache, const Consume& consume, const smsd_screen_accelerator_v1* provider = nullptr) {
     using screening_detail::QueryLabelCounts;
     using screening_detail::TargetLabels;
     static_assert(sizeof(TargetLabels::LabelCount) == sizeof(smsd_label_count)
@@ -320,12 +320,12 @@ inline std::optional<std::vector<std::vector<int>>> residentSimilarityScreensFor
     if (!hasResidentLabels(table) || targetCount == 0 || queries.empty()
         || targetCount > static_cast<std::size_t>(std::numeric_limits<int>::max())
         || labels.size() != targetCount || labels.mode() != screening_detail::labelMode(chemistry)
-        || (provider == nullptr && !reachesMinimum(table, 2, targetCount))) return std::nullopt;
+        || (provider == nullptr && !reachesMinimum(table, 2, targetCount))) return false;
     constexpr int tableSize = QueryLabelCounts::denseLimit;
     for (std::size_t query = 0; query < queries.size(); ++query)
         for (int atom = 0; atom < queries[query]->n; ++atom) {
             const int label = screening_detail::ubLabel(*queries[query], atom, chemistry);
-            if (label < 0 || label >= tableSize) return std::nullopt;
+            if (label < 0 || label >= tableSize) return false;
         }
     const std::lock_guard<std::mutex> lock(cache.mutex);
     if (cache.table != table) cache.clear();
@@ -346,16 +346,15 @@ inline std::optional<std::vector<std::vector<int>>> residentSimilarityScreensFor
                                   reinterpret_cast<const smsd_label_count*>(first), &resident, error, sizeof error) != 0) {
             error[sizeof error - 1] = '\0';
             detail::recordFailure(error);
-            return std::nullopt;
+            return false;
         }
         if (resident == nullptr) {
             detail::recordFailure("the accelerator returned no resident label table");
-            return std::nullopt;
+            return false;
         }
         cache.table = table;
         cache.resident = resident;
     }
-    std::vector<std::vector<int>> results(queries.size());
     const std::size_t chunkSize = queriesPerChunk(targetCount, queries.size());
     for (std::size_t begin = 0; begin < queries.size(); begin += chunkSize) {
         const std::size_t count = std::min(chunkSize, queries.size() - begin);
@@ -369,7 +368,7 @@ inline std::optional<std::vector<std::vector<int>>> residentSimilarityScreensFor
                                             overlaps.data(), error, sizeof error) != 0) {
             error[sizeof error - 1] = '\0';
             detail::recordFailure(error);
-            return std::nullopt;
+            return false;
         }
         for (std::size_t query = 0; query < count; ++query) {
             for (std::size_t target = 0; target < targetCount; ++target) {
@@ -377,9 +376,28 @@ inline std::optional<std::vector<std::vector<int>>> residentSimilarityScreensFor
                 const int held = labels.held(static_cast<int>(target)) ? labels.atomCount(static_cast<int>(target)) : 0;
                 if (overlap < 0 || overlap > held || overlap > std::max(0, queries[begin + query]->n)) {
                     detail::recordFailure("the accelerator returned a label overlap larger than its target");
-                    return std::nullopt;
+                    return false;
                 }
             }
+
+        }
+        consume(begin, count, overlaps);
+    }
+    return true;
+}
+
+
+/** Similarity-bound indices formed by the unchanged host expression. */
+template<class Targets>
+inline std::optional<std::vector<std::vector<int>>> residentSimilarityScreensForTargets(
+    const std::vector<const MolGraph*>& queries, const Targets& targets,
+    const screening_detail::TargetLabels& labels, double threshold, const ChemOptions& chemistry, int numThreads,
+    ResidentCache& cache, const smsd_screen_accelerator_v1* provider = nullptr) {
+    using screening_detail::QueryLabelCounts;
+    const std::size_t targetCount = targets.size();
+    std::vector<std::vector<int>> results(queries.size());
+    auto consume = [&](std::size_t begin, std::size_t count, const std::vector<std::int32_t>& overlaps) {
+        for (std::size_t query = 0; query < count; ++query) {
             const QueryLabelCounts cpuCounts(*queries[begin + query], chemistry);
             std::vector<std::uint8_t> mask(targetCount, 0);
             screening_detail::forEachTarget(static_cast<int>(targetCount), numThreads, [&](int target, std::vector<int>& scratch) {
@@ -392,7 +410,9 @@ inline std::optional<std::vector<std::vector<int>>> residentSimilarityScreensFor
             for (std::size_t target = 0; target < targetCount; ++target)
                 if (mask[target]) results[begin + query].push_back(static_cast<int>(target));
         }
-    }
+    };
+    if (!residentLabelOverlapsForTargets(queries, targets, labels, chemistry, cache, consume, provider))
+        return std::nullopt;
     return results;
 }
 

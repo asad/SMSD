@@ -143,6 +143,11 @@ same indices.
 This threshold applies to atom-count Tanimoto, not bond Tanimoto or weighted MCS scores.
 `MCS.match_many` itself searches every supplied target without a similarity threshold.
 
+With `smsd-cuda` and an NVIDIA GPU,
+[`gpu_screening.py`](../python/examples/gpu_screening.py) runs packed and
+corpus screens on the device and checks every result against the CPU; without
+them it runs on the CPU.
+
 ## SVG drawing
 
 The native SVG renderer needs no RDKit. Check each drawing before publishing
@@ -368,7 +373,21 @@ Use `strip_atom_maps()` rather than a regular expression: outside brackets, a
 colon is an aromatic bond, so text replacement can alter the structure.
 `parse_mapped_smiles()` strips and parses in one call.
 
+## AI assistants
+
+An AI assistant can call the molecular tools through the local MCP server
+(`smsd-mcp`) or through tool definitions in your own Python loop. The tools run
+on your machine. Each search result reports its `status` and whether it is
+`optimal` and `complete`. See [Connecting AI assistants](AI_ASSISTANTS.md) for
+set-up steps and worked examples.
+[`agent_workflow.py`](../python/examples/agent_workflow.py) chains screening,
+MCS and depiction through `call_tool` without a model, and
+[`mcp_stdio_client.py`](../python/examples/mcp_stdio_client.py) checks the MCP
+server from Python.
+
 ## Further reading
 
 See the [Python guide](PYTHON.md), the [installation guide](HOWTO-INSTALL.md),
-the [C++ guide](CPP.md) and the [Java guide](JAVA.md).
+the [C++ guide](CPP.md) and the [Java guide](JAVA.md). A C++ program that
+screens packed fingerprints on a Metal GPU, with the CPU screen as the fallback,
+is the [Metal screening example](../cpp/examples/metal_fingerprint_screen.cpp).

@@ -20,12 +20,14 @@
 
 #include "smsd/bitops.hpp"
 #include "smsd/mol_graph.hpp"
+#include "smsd/detail/ring_candidates.hpp"
 
 #include <algorithm>
 #include <cstdint>
 #include <deque>
 #include <numeric>
 #include <set>
+#include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -78,6 +80,16 @@ inline std::vector<int> bfsPath(const MolGraph& g, int start, int target,
 // Internal helpers
 // ==========================================================================
 namespace detail_rf {
+
+/** The exact ring basis required by a caller is unavailable. */
+class RingBasisUnavailable : public std::runtime_error {
+public:
+    using std::runtime_error::runtime_error;
+};
+
+/** The message of RingBasisUnavailable, the same in C++, Java and Python. */
+inline constexpr const char* RING_BASIS_UNAVAILABLE_MESSAGE =
+    "Exact ring basis unavailable: ring perception reached its work limit before the minimum cycle basis was complete";
 
 // Pack two atom indices into a single int64 for edge lookup
 inline int64_t edgeKey(int i, int j) {
@@ -171,6 +183,9 @@ inline RingSystemGroups groupRingsBySharedBond(const std::vector<std::vector<int
 
 } // namespace detail_rf
 
+/** Thrown where an exact ring basis is required but could not be established. */
+using RingBasisUnavailable = detail_rf::RingBasisUnavailable;
+
 
 // ==========================================================================
 // Shared Horton + GF(2) pipeline (returns both SSSR and RCB in one pass)
@@ -179,26 +194,29 @@ inline RingSystemGroups groupRingsBySharedBond(const std::vector<std::vector<int
 struct RingResult {
     std::vector<std::vector<int>> sssr;  // Minimum Cycle Basis
     std::vector<std::vector<int>> rcb;   // Relevant Cycle Basis
-    /**
-     * Whether the exhaustive candidate search stopped at RING_CANDIDATE_WORK_LIMIT, so that the
-     * rings come from the bounded perception and may be fewer than the graph holds. Java's
-     * MolGraph.ringsTruncated() reports the same.
-     */
+    /** The original Horton work-bound flag and original aggregate member position. */
     bool truncated = false;
+    std::vector<std::vector<int>> legacyRcb;
+    /** The basis is not proved to be a minimum cycle basis of full cycle rank. */
+    bool basisTruncated = false;
+    /** Relevant-cycle enumeration was incomplete, independently of the minimum basis. */
+    bool relevantTruncated = false;
 };
 
 /**
  * Work bound of the exhaustive ring candidate search below, counted as the Java implementation
- * counts it, in atoms and neighbours read, path atoms and the bonds of each candidate, so that
- * both implementations give the search up at the same point: it pairs atoms with the bonds of their ring
- * systems through two breadth-first searches, which grows with the cube of the ring system
- * size. Ordinary molecules, including those of several hundred atoms, finish well within it.
- * A search that exhausts it, which takes a fraction of a second, is abandoned; the graph,
- * such as a very large ring system, then takes its candidates from
+ * counts it, so that both implementations give the search up at the same point. The search
+ * pairs each atom with each bond of its ring system, and the work counted is that of one
+ * breadth-first search per pair: the atoms and neighbours it reads, its path atoms and the
+ * bonds of each candidate. The pairs are read from one breadth-first tree per atom, which
+ * gives the same candidates and counts the same work. Natural products, large cyclodextrins
+ * and fused polycyclic sheets of several hundred atoms finish within it. A graph that exhausts
+ * it, such as a very large ring system, takes its candidates from
  * MolGraph::computeRelevantCycles() and MolGraph::computeRings(), whose work is bounded, and
- * the same selection rules apply.
+ * the same selection rules apply. A full basis found that way is exact only when
+ * certifiedMinimumBasis() proves it minimum within the same bound.
  */
-constexpr uint64_t RING_CANDIDATE_WORK_LIMIT = uint64_t(1) << 26;
+constexpr uint64_t RING_CANDIDATE_WORK_LIMIT = uint64_t(1) << 29;
 
 namespace detail_rf {
 
@@ -254,12 +272,166 @@ inline RingResult selectRings(const MolGraph& g, std::vector<std::vector<int>> c
 }
 
 /**
- * The exhaustive ring perception: Horton candidate cycles from every atom and bond of a
- * ring system, selected into the relevant cycles and a minimum cycle basis by the GF(2)
- * rules above. Beyond RING_CANDIDATE_WORK_LIMIT the candidates come from the graph's own
- * bounded ring perception instead.
+ * Whether cycles, cycleRank of them, form a minimum cycle basis, decided exactly or not at all.
+ * Written over the bonds outside a breadth-first spanning forest, the cycles must be
+ * independent; each cycle then has a dual bond set that it meets an odd number of times and
+ * every other cycle meets an even number of times. They form a minimum basis exactly when no
+ * cycle shorter than a member meets that member's dual set an odd number of times, which a
+ * breadth-first search over atoms paired with a parity settles. Work is counted, as in the
+ * Java implementation, in words reduced and in atoms and neighbours read; the answer is false
+ * when the cycles are not a basis or the work exceeds workLimit.
  */
-inline RingResult perceiveRingSets(const MolGraph& g) {
+inline bool certifiedMinimumBasis(const MolGraph& g, const std::vector<std::vector<int>>& cycles,
+                                  int cycleRank, uint64_t workLimit) {
+    const int n = g.n;
+    if (cycleRank <= 0 || static_cast<int>(cycles.size()) != cycleRank) return false;
+    const auto edgeIndex = buildEdgeIndex(g);
+    const int edgeCount = static_cast<int>(edgeIndex.size());
+    std::vector<std::vector<int>> slotEdge(n);
+    size_t bondEnds = 0;
+    for (int v = 0; v < n; ++v) {
+        slotEdge[v].reserve(g.neighbors[v].size());
+        for (int w : g.neighbors[v]) {
+            if (w == v || w < 0 || w >= n) return false;
+            slotEdge[v].push_back(edgeIndex.at(edgeKey(v, w)));
+        }
+        bondEnds += g.neighbors[v].size();
+    }
+    if (bondEnds != 2 * static_cast<size_t>(edgeCount)) return false;
+
+    // Spanning forest in atom and neighbour order; the other bonds are the coordinates.
+    std::vector<char> treeEdge(edgeCount, 0), reached(n, 0);
+    std::vector<int> queue;
+    queue.reserve(n);
+    for (int root = 0; root < n; ++root) {
+        if (reached[root]) continue;
+        reached[root] = 1;
+        queue.assign(1, root);
+        for (size_t head = 0; head < queue.size(); ++head) {
+            const int v = queue[head];
+            for (size_t slot = 0; slot < g.neighbors[v].size(); ++slot) {
+                const int w = g.neighbors[v][slot];
+                if (reached[w]) continue;
+                reached[w] = 1;
+                treeEdge[slotEdge[v][slot]] = 1;
+                queue.push_back(w);
+            }
+        }
+    }
+    std::vector<int> coordinate(edgeCount, -1), coordinateEdge;
+    for (int edge = 0; edge < edgeCount; ++edge)
+        if (!treeEdge[edge]) {
+            coordinate[edge] = static_cast<int>(coordinateEdge.size());
+            coordinateEdge.push_back(edge);
+        }
+    const int k = static_cast<int>(coordinateEdge.size());
+    if (k != cycleRank) return false;
+    const size_t words = (static_cast<size_t>(k) + 63) >> 6;
+    // The reduction keeps two k-by-k bit matrices, within a fixed share of the work bound.
+    if (static_cast<uint64_t>(k) * 2 * words > (workLimit >> 7)) return false;
+
+    // transposed[r] has bit c when cycle c uses coordinate bond r; dual starts as the identity.
+    std::vector<std::vector<uint64_t>> transposed(k, std::vector<uint64_t>(words, 0));
+    std::vector<std::vector<uint64_t>> dual(k, std::vector<uint64_t>(words, 0));
+    for (int c = 0; c < k; ++c) {
+        const auto& cycle = cycles[c];
+        if (cycle.size() < 3) return false;
+        for (size_t i = 0; i < cycle.size(); ++i) {
+            const int a = cycle[i], b = cycle[(i + 1) % cycle.size()];
+            if (a < 0 || a >= n || b < 0 || b >= n) return false;
+            const auto it = edgeIndex.find(edgeKey(a, b));
+            if (it == edgeIndex.end()) return false;
+            const int r = coordinate[it->second];
+            if (r >= 0) transposed[r][c >> 6] ^= uint64_t(1) << (c & 63);
+        }
+    }
+    for (int r = 0; r < k; ++r) dual[r][r >> 6] |= uint64_t(1) << (r & 63);
+    uint64_t work = 0;
+    for (int c = 0; c < k; ++c) {
+        const size_t word = static_cast<size_t>(c) >> 6;
+        const uint64_t bit = uint64_t(1) << (c & 63);
+        int pivot = c;
+        while (pivot < k && !(transposed[pivot][word] & bit)) { ++pivot; ++work; }
+        if (pivot == k) return false;
+        std::swap(transposed[pivot], transposed[c]);
+        std::swap(dual[pivot], dual[c]);
+        for (int r = 0; r < k; ++r) {
+            if (r == c || !(transposed[r][word] & bit)) continue;
+            for (size_t w = 0; w < words; ++w) {
+                transposed[r][w] ^= transposed[c][w];
+                dual[r][w] ^= dual[c][w];
+            }
+            work += 2 * words;
+        }
+        work += static_cast<uint64_t>(k);
+        if (work > workLimit) return false;
+    }
+
+    // dual[i] meets cycle i once and every other cycle an even number of times.
+    std::vector<char> inDual(edgeCount, 0), start(n, 0);
+    std::vector<uint32_t> seen(2 * static_cast<size_t>(n), 0);
+    std::vector<int> depth(2 * static_cast<size_t>(n), 0), states;
+    states.reserve(2 * static_cast<size_t>(n));
+    uint32_t stamp = 0;
+    for (int i = 0; i < k; ++i) {
+        const int length = static_cast<int>(cycles[i].size());
+        if (length == 3) continue;
+        std::fill(inDual.begin(), inDual.end(), 0);
+        std::fill(start.begin(), start.end(), 0);
+        for (int r = 0; r < k; ++r)
+            if (dual[i][static_cast<size_t>(r) >> 6] & (uint64_t(1) << (r & 63)))
+                inDual[coordinateEdge[r]] = 1;
+        // Every such closed walk crosses a dual bond, so it can start at one of their atoms.
+        for (int v = 0; v < n; ++v)
+            for (size_t slot = 0; slot < slotEdge[v].size(); ++slot)
+                if (inDual[slotEdge[v][slot]]) start[v] = 1;
+        for (int u = 0; u < n; ++u) {
+            if (!start[u]) continue;
+            if (++stamp == 0) { std::fill(seen.begin(), seen.end(), 0u); stamp = 1; }
+            states.assign(1, 2 * u);
+            seen[2 * static_cast<size_t>(u)] = stamp;
+            depth[2 * static_cast<size_t>(u)] = 0;
+            for (size_t head = 0; head < states.size(); ++head) {
+                const int state = states[head];
+                const int v = state >> 1, parity = state & 1;
+                work += 1 + g.neighbors[v].size();
+                if (work > workLimit) return false;
+                const int d = depth[state];
+                if (d >= length - 1) continue;
+                for (size_t slot = 0; slot < g.neighbors[v].size(); ++slot) {
+                    const int w = g.neighbors[v][slot];
+                    const int next = 2 * w + (parity ^ inDual[slotEdge[v][slot]]);
+                    // A closed walk shorter than the member that meets its dual set oddly.
+                    if (next == 2 * u + 1) return false;
+                    if (seen[next] == stamp) continue;
+                    seen[next] = stamp;
+                    depth[next] = d + 1;
+                    states.push_back(next);
+                }
+            }
+        }
+    }
+    return true;
+}
+
+/** Whether the relevant-cycle families prove that cycles lists every relevant cycle of g. */
+inline bool relevantCyclesProvedComplete(const MolGraph& g, const std::vector<std::vector<int>>& cycles);
+
+/**
+ * A minimum cycle basis from root/bond candidates, with optional relevant-cycle enumeration
+ * from all shortest paths. Basis and relevant completeness are reported separately. Beyond
+ * workLimit (RING_CANDIDATE_WORK_LIMIT unless a test gives a smaller one) the basis
+ * candidates come from the graph's bounded ring perception. With ring systems, the pairs are
+ * read from one breadth-first tree per root (RingCandidateSearch), which gives the pairwise
+ * search's candidates, results and fallback decision; the pairwise search itself runs only for
+ * a graph without ring systems. options are internal switches, all off by default, and notes
+ * records what the search did.
+ */
+inline RingResult perceiveRingSets(const MolGraph& g, bool enumerateRelevant, uint64_t workLimit,
+                                   const RingSearchOptions& options, RingSearchNotes* notes = nullptr) {
+    RingSearchNotes unrecorded;
+    RingSearchNotes& record = notes != nullptr ? *notes : unrecorded;
+    record = RingSearchNotes();
     RingResult result;
     if (g.n == 0) return result;
 
@@ -268,14 +440,35 @@ inline RingResult perceiveRingSets(const MolGraph& g) {
 
     // Relevant cycles first, then any basis ring they omit, each cycle once.
     auto boundedPipeline = [&] {
-        std::vector<std::vector<int>> candidates = g.computeRelevantCycles();
+        bool legacyTruncated = false;
+        std::vector<std::vector<int>> candidates = g.computeRelevantCyclesFromBasis(
+            g.computeRings(), legacyTruncated, false);
         std::set<std::vector<int64_t>> seen;
         for (const auto& cycle : candidates) seen.insert(detail_rf::canonicalCycleKey(cycle));
         for (const auto& cycle : g.computeRings())
             if (seen.insert(detail_rf::canonicalCycleKey(cycle)).second) candidates.push_back(cycle);
         RingResult bounded = detail_rf::selectRings(g, std::move(candidates), cRank);
+        bounded.legacyRcb = bounded.rcb;
+        // The work bound stays recorded: fusion counts still come from the bounded candidates.
         bounded.truncated = true;
+        bounded.basisTruncated = !certifiedMinimumBasis(g, bounded.sssr, cRank, workLimit);
+        if (enumerateRelevant) {
+            bounded.rcb = g.computeRelevantCyclesFromBasis(
+                bounded.basisTruncated ? g.computeRings() : bounded.sssr, bounded.relevantTruncated);
+            bounded.relevantTruncated = bounded.relevantTruncated || bounded.basisTruncated;
+        } else {
+            bounded.relevantTruncated = bounded.basisTruncated;
+        }
         return bounded;
+    };
+    // An incomplete relevant list is proved complete only beside a basis that is not a lift.
+    auto proveRelevant = [&](RingResult& rings) {
+        if (!options.proveRelevantByFamilies || !enumerateRelevant || !rings.relevantTruncated
+            || rings.basisTruncated || record.basisLifted) return;
+        if (relevantCyclesProvedComplete(g, rings.rcb)) {
+            rings.relevantTruncated = false;
+            record.relevantProvedByFamilies = true;
+        }
     };
     uint64_t work = 0;
 
@@ -283,6 +476,43 @@ inline RingResult perceiveRingSets(const MolGraph& g) {
     auto edgeList  = detail_rf::buildEdgeList(g);
     int totalEdges = static_cast<int>(edgeIndex.size());
     int longWords  = (totalEdges + 63) >> 6;
+    const auto systems = g.cycleSystems();
+
+    // With ring systems, every pair is read from the tree of its root: the same candidates in
+    // the same order, and the same fallback decision from the same counted work.
+    RingCandidateSearch search(g, systems, edgeIndex, edgeList, workLimit, options, record);
+    if (search.applicable()) {
+        if (search.decideFallback()) {
+            RingResult bounded = boundedPipeline();
+            record.baseBasisTruncated = bounded.basisTruncated;
+            if (options.liftRefusedBasis && bounded.basisTruncated && search.completeCandidates()) {
+                // Only the basis and its flag change; relevant cycles and fusion counts stay.
+                std::vector<std::vector<int>> smallest, relevant;
+                search.select(cRank, smallest, relevant);
+                if (static_cast<int>(smallest.size()) == cRank && certifiedMinimumBasis(g, smallest, cRank, workLimit)) {
+                    bounded.sssr = std::move(smallest);
+                    bounded.basisTruncated = false;
+                    record.basisLifted = true;
+                }
+            }
+            proveRelevant(bounded);
+            return bounded;
+        }
+        search.select(cRank, result.sssr, result.legacyRcb);
+        result.basisTruncated = static_cast<int>(result.sssr.size()) != cRank;
+        result.truncated = result.basisTruncated;
+        record.baseBasisTruncated = result.basisTruncated;
+        if (enumerateRelevant) {
+            result.rcb = g.computeRelevantCyclesFromBasis(result.sssr, result.relevantTruncated);
+            result.relevantTruncated = result.relevantTruncated || result.basisTruncated;
+        } else {
+            result.rcb = result.legacyRcb;
+            result.relevantTruncated = result.basisTruncated;
+        }
+        proveRelevant(result);
+        return result;
+    }
+    record.pairwise = true;
 
     // --- Horton candidate generation ---
     std::set<std::vector<int64_t>> seenMasks;
@@ -295,7 +525,6 @@ inline RingResult perceiveRingSets(const MolGraph& g) {
     // the ring system of a bond, both paths enter the system through the same atom, so they
     // overlap and close no ring. In a system that is one simple ring, every pair inside it
     // repeats the ring that its lowest atom and first bond give.
-    const auto systems = g.cycleSystems();
     const bool bySystem = !systems.ofAtom.empty();
     std::vector<std::vector<int>> systemEdges;
     std::vector<int> lowestAtom;
@@ -312,21 +541,26 @@ inline RingResult perceiveRingSets(const MolGraph& g) {
             if (systems.ofAtom[atom] >= 0) lowestAtom[systems.ofAtom[atom]] = atom;
     }
     std::vector<int> pairs;
-    // bfsPath() with reused buffers. With ring systems known, both targets lie in the system of
+    // Shortest paths with reused buffers. With ring systems known, both targets lie in the system of
     // the bond and the search enters no other system; atoms of that system are reached in the
     // same order and with the same parents, so the path is the one bfsPath() finds.
     std::vector<int> parent(g.n, -1), queue;
     std::vector<uint32_t> visited(g.n, 0);
     uint32_t stamp = 0;
-    auto shortestPath = [&](int start, int target, int avoidU, int avoidV) {
-        std::vector<int> path;
-        if (start == target) { path.push_back(start); return path; }
+    auto shortestPaths = [&](int start, int firstTarget, int secondTarget, int avoidU, int avoidV,
+                             std::vector<int>& firstPath, std::vector<int>& secondPath) {
+        bool firstReached = start == firstTarget, secondReached = start == secondTarget;
+        if (firstReached && secondReached) {
+            firstPath.push_back(start);
+            secondPath.push_back(start);
+            return;
+        }
         if (++stamp == 0) { std::fill(visited.begin(), visited.end(), 0u); stamp = 1; }
-        const int system = bySystem ? systems.ofAtom[target] : -1;
+        const int system = bySystem ? systems.ofAtom[firstTarget] : -1;
         visited[start] = stamp;
         parent[start] = -1;
         queue.assign(1, start);
-        for (size_t head = 0; head < queue.size(); ++head) {
+        for (size_t head = 0; head < queue.size() && !(firstReached && secondReached); ++head) {
             const int u = queue[head];
             work += 1 + g.neighbors[u].size();
             for (int next : g.neighbors[u]) {
@@ -334,15 +568,18 @@ inline RingResult perceiveRingSets(const MolGraph& g) {
                 if (visited[next] == stamp || (bySystem && systems.ofAtom[next] != system)) continue;
                 visited[next] = stamp;
                 parent[next] = u;
-                if (next == target) {
-                    for (int c = target; c != -1; c = parent[c]) path.push_back(c);
-                    std::reverse(path.begin(), path.end());
-                    return path;
-                }
+                if (next == firstTarget) firstReached = true;
+                if (next == secondTarget) secondReached = true;
+                if (firstReached && secondReached) break;
                 queue.push_back(next);
             }
         }
-        return path;
+        if (!firstReached) return;
+        for (int c = firstTarget; c != -1; c = parent[c]) firstPath.push_back(c);
+        std::reverse(firstPath.begin(), firstPath.end());
+        if (!secondReached) return;
+        for (int c = secondTarget; c != -1; c = parent[c]) secondPath.push_back(c);
+        std::reverse(secondPath.begin(), secondPath.end());
     };
 
     for (int v = 0; v < g.n; v++) {
@@ -359,10 +596,10 @@ inline RingResult perceiveRingSets(const MolGraph& g) {
         }
         for (int edge : pairs) {
             const int eU = edgeList[edge].first, eV = edgeList[edge].second;
-            if (work > RING_CANDIDATE_WORK_LIMIT) return boundedPipeline();
-            auto path1 = shortestPath(v, eU, eU, eV);
+            if (work > workLimit) return boundedPipeline();
+            std::vector<int> path1, path2;
+            shortestPaths(v, eU, eV, eU, eV, path1, path2);
             if (path1.empty()) continue;
-            auto path2 = shortestPath(v, eV, eU, eV);
             if (path2.empty()) continue;
             work += path1.size() + path2.size();
 
@@ -422,7 +659,6 @@ inline RingResult perceiveRingSets(const MolGraph& g) {
         [&](int a, int b) { return candidateSizes[a] < candidateSizes[b]; });
 
     // --- 2-phase GF(2) interleaved pipeline ---
-    std::set<std::vector<int64_t>> rcbSeen;
     std::vector<std::vector<uint64_t>> basisMatrix;
     std::vector<int> basisSizes;
     std::vector<int> basisByLeadingBit(totalEdges, -1);
@@ -446,12 +682,7 @@ inline RingResult perceiveRingSets(const MolGraph& g) {
         bool relevant = false;
         for (auto w : phase1Mask) if (w != 0) { relevant = true; break; }
         if (!relevant) continue;
-
-        // Add to RCB (deduplicated)
-        auto rcbKey = detail_rf::canonicalCycleKey(candidateAtoms[idx]);
-        if (rcbSeen.insert(rcbKey).second) {
-            result.rcb.push_back(candidateAtoms[idx]);
-        }
+        result.legacyRcb.push_back(candidateAtoms[idx]);
 
         // Phase 2: reduce against ALL basis vectors for SSSR
         std::vector<uint64_t> phase2Mask(phase1Mask);
@@ -481,7 +712,58 @@ inline RingResult perceiveRingSets(const MolGraph& g) {
         }
     }
 
+    result.basisTruncated = static_cast<int>(result.sssr.size()) != cRank;
+    result.truncated = result.basisTruncated;
+    if (enumerateRelevant) {
+        result.rcb = g.computeRelevantCyclesFromBasis(result.sssr, result.relevantTruncated);
+        result.relevantTruncated = result.relevantTruncated || result.basisTruncated;
+    } else {
+        result.rcb = result.legacyRcb;
+        result.relevantTruncated = result.basisTruncated;
+    }
     return result;
+}
+
+inline RingResult perceiveRingSets(const MolGraph& g, bool enumerateRelevant = true,
+                                   uint64_t workLimit = RING_CANDIDATE_WORK_LIMIT) {
+    return perceiveRingSets(g, enumerateRelevant, workLimit, RingSearchOptions(), nullptr);
+}
+
+/** The options of the cached ring sets; every switch is off. */
+inline constexpr RingSearchOptions CACHED_RING_SEARCH_OPTIONS{};
+
+/** Basis-only callers never initiate the separately bounded relevant enumeration. */
+inline const RingResult& cachedRingBasis(const MolGraph& graph) {
+    if (graph.lazyCaches_.ready(MolGraph::LazyCaches::RingBasis)) return *graph.cachedRingBasis_;
+    const std::lock_guard<std::recursive_mutex> lock(graph.lazyCacheMutex());
+    if (!graph.cachedRingBasis_) {
+        RingSearchNotes notes;
+        graph.cachedRingBasis_ = std::make_shared<const RingResult>(
+            perceiveRingSets(graph, false, RING_CANDIDATE_WORK_LIMIT, CACHED_RING_SEARCH_OPTIONS, &notes));
+        graph.ringBasisLifted_ = notes.basisLifted;
+    }
+    graph.lazyCaches_.publish(MolGraph::LazyCaches::RingBasis);
+    return *graph.cachedRingBasis_;
+}
+
+/** The full relevant set is published separately; the earlier basis object remains unchanged. */
+inline const RingResult& cachedRingSets(const MolGraph& graph) {
+    if (graph.lazyCaches_.ready(MolGraph::LazyCaches::RingSets)) return *graph.cachedRingSets_;
+    const std::lock_guard<std::recursive_mutex> lock(graph.lazyCacheMutex());
+    if (!graph.cachedRingSets_) {
+        RingResult rings = cachedRingBasis(graph);
+        // A lifted basis keeps the relevant cycles and flag of the basis it replaced.
+        const bool refused = rings.basisTruncated || graph.ringBasisLifted_;
+        const auto& seed = refused ? graph.computeRings() : rings.sssr;
+        rings.rcb = graph.computeRelevantCyclesFromBasis(seed, rings.relevantTruncated);
+        rings.relevantTruncated = rings.relevantTruncated || refused;
+        if (CACHED_RING_SEARCH_OPTIONS.proveRelevantByFamilies && rings.relevantTruncated && !refused
+            && relevantCyclesProvedComplete(graph, rings.rcb))
+            rings.relevantTruncated = false;
+        graph.cachedRingSets_ = std::make_shared<const RingResult>(std::move(rings));
+    }
+    graph.lazyCaches_.publish(MolGraph::LazyCaches::RingSets);
+    return *graph.cachedRingSets_;
 }
 
 } // namespace detail_rf
@@ -501,8 +783,8 @@ inline RingResult runHortonPipeline(const MolGraph& g) {
  * Computes the Smallest Set of Smallest Rings (SSSR / MCB).
  *
  * This free form is the canonical ring perception. MolGraph::computeRings() is the
- * graph's bounded shortest-path basis: it finds the same relevant cycles and the same
- * ring sizes, but may choose differently among equal-size rings of a symmetric system.
+ * graph's bounded shortest-path basis. That basis may omit independent cycles or choose
+ * different cycles and lengths; completeBasis verifies its rank and minimum total length.
  *
  * Algorithm:
  *   1. Horton candidate generation: for every vertex v and every edge (eU,eV),
@@ -519,23 +801,29 @@ inline RingResult runHortonPipeline(const MolGraph& g) {
  * @return    SSSR rings, each ring as an ordered vector of atom indices.
  */
 inline std::vector<std::vector<int>> computeRings(const MolGraph& g) {
-    return detail_rf::perceiveRingSets(g).sssr;
+    return detail_rf::cachedRingBasis(g).sssr;
 }
 
 namespace detail_rf {
 
 /**
- * A smallest set of smallest rings with as many rings as the cycle rank: the graph's bounded
- * basis, MolGraph::computeRings(), when it is complete, else the rings of the candidate search,
- * which the Java implementation reads. The bounded basis keeps one shortest ring through each bond, so it
- * can omit a ring whose every bond lies in an equally small ring, as the central ring of
- * coronene.
+ * A complete minimum basis for exact ring-dependent predicates. An equally weighted full
+ * greedy basis retains the established numeric SMARTS tie-break; otherwise Horton is used.
+ * A work-limit fallback supplies exact ring membership counts only when its basis is proved
+ * minimum.
  */
-inline std::vector<std::vector<int>> completeBasis(const MolGraph& g) {
-    const auto& bounded = g.computeRings();
-    if (static_cast<int>(bounded.size()) >= detail::cycleRank(g)) return bounded;
-    auto rings = computeRings(g);
-    return rings.size() > bounded.size() ? rings : bounded;
+inline const std::vector<std::vector<int>>& completeBasis(const MolGraph& g) {
+    const auto& rings = cachedRingBasis(g);
+    if (rings.basisTruncated)
+        throw RingBasisUnavailable(RING_BASIS_UNAVAILABLE_MESSAGE);
+    const auto& greedy = g.computeRings();
+    if (greedy.size() == rings.sssr.size()) {
+        size_t greedyWeight = 0, minimumWeight = 0;
+        for (const auto& cycle : greedy) greedyWeight += cycle.size();
+        for (const auto& cycle : rings.sssr) minimumWeight += cycle.size();
+        if (greedyWeight == minimumWeight) return greedy;
+    }
+    return rings.sssr;
 }
 
 } // namespace detail_rf
@@ -549,38 +837,39 @@ inline std::vector<std::vector<int>> completeBasis(const MolGraph& g) {
  * A cycle is relevant if it cannot be expressed as the XOR (symmetric
  * difference) of strictly shorter cycles.
  *
- * Uses the same Horton + 2-phase GF(2) pipeline as computeRings, but
- * collects all cycles that pass phase-1 (relevance test) instead of
- * only the linearly independent ones.
+ * Enumerates shortest-path alternatives and filters them against strictly shorter cycles.
+ * relevantCyclesTruncated() reports incomplete seed, path, storage or work bounds.
  *
  * @param g   The molecular graph.
  * @return    Relevant cycles, each as an ordered vector of atom indices.
  */
 inline std::vector<std::vector<int>> computeRelevantCycles(const MolGraph& g) {
-    return detail_rf::perceiveRingSets(g).rcb;
+    return detail_rf::cachedRingSets(g).rcb;
 }
 
 /**
- * Whether the ring perception of computeRings() and computeRelevantCycles() stops its exhaustive
- * candidate search at RING_CANDIDATE_WORK_LIMIT for `g`, so that their rings come from the bounded
- * perception and may be fewer than the graph holds; RingResult::truncated holds the same with the
- * rings. Each call repeats the perception, as computeRelevantCycles() does. Java's
- * MolGraph.ringsTruncated() answers alike.
+ * Whether the cached basis is not proved to be a minimum cycle basis of full cycle rank.
+ * This flag is independent of relevant-cycle enumeration and does not change either ring set.
  */
 inline bool ringsTruncated(const MolGraph& g) {
-    return detail_rf::perceiveRingSets(g).truncated;
+    return detail_rf::cachedRingBasis(g).basisTruncated;
+}
+
+/** Whether the complete relevant-cycle enumeration may have omitted cycles. */
+inline bool relevantCyclesTruncated(const MolGraph& g) {
+    return detail_rf::cachedRingSets(g).relevantTruncated;
+}
+
+inline std::vector<std::vector<int>> MolGraph::computeRelevantCyclesReportingTruncation(bool& truncated) const {
+    const auto& rings = detail_rf::cachedRingSets(*this);
+    truncated = rings.relevantTruncated;
+    return rings.rcb;
 }
 
 /**
- * Per-atom ring counts by default: the relevant cycles through each atom, as the Java
- * implementation counts them, found over each atom's neighbours in index order. The relevant cycles do not
- * depend on which minimum cycle basis is chosen, so cages such as adamantane and cubane count
- * every equivalent ring whatever the atom order. Of several equally short paths the candidate
- * search keeps the first it reaches; reading the neighbours in index order makes that choice
- * follow the atom order alone, in both implementations, and not the order in which a parser listed the
- * bonds. Where a ring system has more relevant cycles of one size than the search reaches,
- * as the macrocycle of a cyclodextrin, each of whose glucose units offers two equally short
- * paths, the counts still depend on the atom order.
+ * Compatible per-atom fusion memberships from the bounded Horton candidates, reading
+ * neighbours in index order. These counts are separate from the full relevant-cycle set, and
+ * remain unproved after a work-limit fallback even when its basis is proved minimum.
  */
 inline void MolGraph::computeRingCounts() const {
     const std::lock_guard<std::recursive_mutex> cacheLock(lazyCacheMutex());
@@ -588,7 +877,9 @@ inline void MolGraph::computeRingCounts() const {
     for (int atom = 0; atom < n && indexOrder; ++atom)
         indexOrder = std::is_sorted(neighbors[atom].begin(), neighbors[atom].end());
     if (indexOrder) {
-        computeRingCounts(detail_rf::perceiveRingSets(*this).rcb);
+        const auto& perceived = detail_rf::cachedRingBasis(*this);
+        computeRingCounts(perceived.legacyRcb);
+        ringCountsTruncated_ = perceived.truncated;
         return;
     }
     std::vector<std::vector<int>> ordered(neighbors);
@@ -599,13 +890,17 @@ inline void MolGraph::computeRingCounts() const {
         // systems and no valid copy; it is read as given.
         if (std::adjacent_find(row.begin(), row.end()) != row.end()
             || std::binary_search(row.begin(), row.end(), atom)) {
-            computeRingCounts(detail_rf::perceiveRingSets(*this).rcb);
+            const auto& perceived = detail_rf::cachedRingBasis(*this);
+            computeRingCounts(perceived.legacyRcb);
+            ringCountsTruncated_ = perceived.truncated;
             return;
         }
     }
     const MolGraph topology = MolGraph::Builder().atomCount(n).atomicNumbers(atomicNum)
         .setNeighbors(std::move(ordered)).build(false);
-    computeRingCounts(detail_rf::perceiveRingSets(topology).rcb);
+    const auto perceived = detail_rf::perceiveRingSets(topology, false);
+    computeRingCounts(perceived.legacyRcb);
+    ringCountsTruncated_ = perceived.truncated;
 }
 
 
@@ -736,5 +1031,7 @@ inline std::vector<std::vector<int>> layoutSSSR(const MolGraph& g) {
 }
 
 } // namespace smsd
+
+#include "smsd/relevant_cycle_families.hpp"
 
 #endif // SMSD_RING_FINDER_HPP

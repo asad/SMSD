@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -69,6 +70,8 @@ struct Match {
     /** Selected graph with original perception and hydrogen counts. */
     MolGraph toGraph(const MolGraph& query) const;
     std::string toSmiles(const MolGraph& query) const;
+    /** SMARTS over the selected bonds under the supplied matching rules. */
+    std::string toSmarts(const MolGraph& query, const ChemOptions& chemistry = {}) const;
 };
 
 struct SearchResult {
@@ -81,6 +84,16 @@ struct SearchResult {
     uint64_t nodesVisited = 0;
     int64_t elapsedMillis = 0;
 };
+
+/** One original corpus slot, with a count decision and any exact CPU search result. */
+struct CorpusSearchResult {
+    size_t targetIndex = 0;
+    int atomUpperBound = -1;
+    bool provenBelowThreshold = false;
+    bool thresholdReached = false;
+    std::optional<SearchResult> result;
+};
+
 
 } // namespace smsd
 

@@ -886,6 +886,9 @@ public:
         if (!ringClosures.empty()) {
             throw std::invalid_argument("Unclosed ring in SMARTS");
         }
+        if (hasPendingBond) {
+            throw std::invalid_argument("Trailing bond in SMARTS");
+        }
     }
 };
 

@@ -12,6 +12,7 @@
 #pragma once
 
 #include "smsd/mol_graph.hpp"
+#include "smsd/detail/search_graph_validation.hpp"
 #include "smsd/smarts_parser.hpp"
 #include "smsd/stereo.hpp"
 
@@ -296,6 +297,10 @@ struct QueryView {
     }
     bool bondMatches(int first, int second, const MolGraph& target,
                      int mappedFirst, int mappedSecond, const ChemOptions& chemistry) const {
+        if (first > second) {
+            std::swap(first, second);
+            std::swap(mappedFirst, mappedSecond);
+        }
         if (molecule) return bondCompatible(*molecule, first, second, target, mappedFirst, mappedSecond, chemistry);
         const int bond = patternBond(first, second);
         return bond >= 0 && pattern->bondCompat(bond, target, mappedFirst, mappedSecond);

@@ -9,7 +9,7 @@ text is in [LICENSE](LICENSE).
 ## Where vecmath is bundled
 
 - The Java CLI JAR with dependencies contains the vecmath classes, and the
-  Java CLI installers and the Docker image built from it carry them.
+  Java CLI installers built from it carry them, as do the CPU Docker images.
 - The portable CLI archive carries the unmodified vecmath JAR.
 
 ## Source

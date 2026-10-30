@@ -120,6 +120,7 @@ public:
      * The same value for a target whose histogram the table holds, read from the histogram. The
      * query must be dense and the table built under the same label rule.
      */
+    int upperBound(const TargetLabels& labels, int target) const;
     double similarity(const TargetLabels& labels, int target) const;
 
 private:
@@ -247,12 +248,16 @@ private:
     std::vector<LabelCount> counts_;
 };
 
-inline double QueryLabelCounts::similarity(const TargetLabels& labels, int target) const {
+inline int QueryLabelCounts::upperBound(const TargetLabels& labels, int target) const {
     int overlap = 0;
     // A label the query lacks has a count of zero there, so only shared labels add.
     for (const auto* entry = labels.begin(target); entry != labels.end(target); ++entry)
         overlap += std::min(counts_[entry->label], static_cast<int>(entry->count));
-    return overlapSimilarity(overlap, query_.n, labels.atomCount(target));
+    return std::min(overlap, std::min(query_.n, labels.atomCount(target)));
+}
+
+inline double QueryLabelCounts::similarity(const TargetLabels& labels, int target) const {
+    return overlapSimilarity(upperBound(labels, target), query_.n, labels.atomCount(target));
 }
 
 /**

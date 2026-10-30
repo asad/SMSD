@@ -6,6 +6,7 @@
 # by the smsd build itself.
 cmake_minimum_required(VERSION 3.18)
 project(smsd_cuda LANGUAGES CXX)
+include(GNUInstallDirs)
 
 # The SMSD sources the package is built from. Their version is the smsd version it serves, and
 # the package version must equal it.
@@ -44,14 +45,31 @@ if("${CUDAToolkit_VERSION_MAJOR}.${CUDAToolkit_VERSION_MINOR}" VERSION_GREATER "
         "${SMSD_CUDA_RUNTIME_MINIMUM}; build with CUDA ${SMSD_CUDA_RUNTIME_MINIMUM} or raise the bound in pyproject.toml.")
 endif()
 
-# Device code for Turing (T4), Ampere, Ada and Hopper, and Hopper PTX that later GPUs compile at load time.
-set(SMSD_CUDA_ARCHITECTURES "75-real;80-real;86-real;89-real;90" CACHE STRING "The CUDA architectures to build for")
+# CUDA 12.8 adds Blackwell device code for data-centre (10.0) and RTX (12.0) GPUs. Each has its
+# own code and PTX, so later GPUs of either family can compile the kernels when they load.
+if(CUDAToolkit_VERSION VERSION_GREATER_EQUAL "12.8")
+    set(_smsd_cuda_architectures "75-real;80-real;86-real;89-real;90-real;100;120")
+else()
+    set(_smsd_cuda_architectures "75-real;80-real;86-real;89-real;90")
+endif()
+set(SMSD_CUDA_ARCHITECTURES "${_smsd_cuda_architectures}" CACHE STRING "The CUDA architectures to build for")
+option(SMSD_CUDA_BINARY_MMA_PROTOTYPE "Build the opt-in SM80-SM90 binary MMA prototype" OFF)
+option(SMSD_CUDA_BUILD_LAYOUT_TESTS "Build the CPU binary MMA layout oracle" OFF)
 message(STATUS "smsd-cuda ${SMSD_VERSION}: CUDA ${CUDAToolkit_VERSION}, architectures ${SMSD_CUDA_ARCHITECTURES}")
 
 add_library(smsd_cuda_screen SHARED src/screen_accelerator.cu)
 target_include_directories(smsd_cuda_screen PRIVATE "${SMSD_SOURCE_DIR}/include")
 target_compile_definitions(smsd_cuda_screen PRIVATE SMSD_CUDA_SMSD_VERSION="${SMSD_VERSION}")
 target_compile_features(smsd_cuda_screen PRIVATE cuda_std_17)
+if(SMSD_CUDA_BINARY_MMA_PROTOTYPE)
+    target_compile_definitions(smsd_cuda_screen PRIVATE SMSD_CUDA_BINARY_MMA_PROTOTYPE=1)
+endif()
+if(SMSD_CUDA_BUILD_LAYOUT_TESTS)
+    enable_testing()
+    add_executable(smsd_cuda_binary_mma_layout_tests tests/test_binary_mma_layout.cpp)
+    target_compile_features(smsd_cuda_binary_mma_layout_tests PRIVATE cxx_std_17)
+    add_test(NAME smsd_cuda_binary_mma_layout_tests COMMAND smsd_cuda_binary_mma_layout_tests)
+endif()
 target_link_libraries(smsd_cuda_screen PRIVATE CUDA::cudart)
 set_target_properties(smsd_cuda_screen PROPERTIES
     CUDA_ARCHITECTURES "${SMSD_CUDA_ARCHITECTURES}"
@@ -61,3 +79,11 @@ set_target_properties(smsd_cuda_screen PROPERTIES
     # The CUDA runtime from nvidia-cuda-runtime-cu12, installed beside smsd_cuda in site-packages.
     INSTALL_RPATH "$ORIGIN/../nvidia/cuda_runtime/lib")
 install(TARGETS smsd_cuda_screen LIBRARY DESTINATION smsd_cuda RUNTIME DESTINATION smsd_cuda)
+
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE"
+    "${CMAKE_CURRENT_SOURCE_DIR}/NOTICE"
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/smsd-cuda")
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/licenses/cub/LICENSE"
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/smsd-cuda/licenses/cub")
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/licenses/cccl/LICENSE"
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/smsd-cuda/licenses/cccl")

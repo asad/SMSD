@@ -56,7 +56,12 @@ struct SmartsQuery {
     // Build adjacency from atoms/bonds
     void buildAdjacency();
 
-    // Primitive compatibility helpers
+    /**
+     * Primitive compatibility helpers. atomCompat() tests query atom qi against target atom ti,
+     * chirality aside. It may throw RingBasisUnavailable, a std::runtime_error, when the atom
+     * tests numeric ring membership (R<n> other than R0, or a range) and the exact ring basis of
+     * the target is unavailable, which ringsTruncated(target) reports.
+     */
     bool atomCompat(int qi, const MolGraph& target, int ti) const;
     bool bondCompat(int bi, const MolGraph& target, int ti, int tj) const;
 
@@ -70,7 +75,17 @@ struct SmartsQuery {
 
 
     bool hasStereochemistry() const;
+    /**
+     * Whether a complete mapping satisfies the atom and bond stereo of the pattern. It may throw
+     * RingBasisUnavailable, as atomCompat() does, when the query uses numeric ring membership.
+     */
     bool stereoCompatible(const MolGraph& target, const std::vector<int>& mapping) const;
+    /**
+     * Whether a complete mapping satisfies the chirality of the pattern atoms. It may throw
+     * RingBasisUnavailable, as atomCompat() does, when the query uses numeric ring membership.
+     */
+    bool atomStereoCompatible(const MolGraph& target, const std::vector<int>& mapping) const;
+    bool bondStereoCompatible(const MolGraph& target, const std::vector<int>& mapping) const;
 
     /**
      * The component group of each atom, -1 outside one, or empty when the pattern has none, see
@@ -81,7 +96,10 @@ struct SmartsQuery {
     bool checksMapping() const { return !componentGroups.empty() || hasStereochemistry(); }
     /** Whether the mapped atoms of each component group lie in one target component, and those of different groups in different ones. */
     bool componentsCompatible(const MolGraph& target, const std::vector<int>& mapping) const;
-    /** stereoCompatible() and componentsCompatible() together. */
+    /**
+     * stereoCompatible() and componentsCompatible() together. It may throw RingBasisUnavailable,
+     * as atomCompat() does, when the query uses numeric ring membership.
+     */
     bool mappingCompatible(const MolGraph& target, const std::vector<int>& mapping) const {
         return componentsCompatible(target, mapping) && stereoCompatible(target, mapping);
     }
@@ -110,6 +128,10 @@ inline bool SmartsQuery::hasStereochemistry() const {
 }
 
 inline bool SmartsQuery::stereoCompatible(const MolGraph& target, const std::vector<int>& mapping) const {
+    return atomStereoCompatible(target, mapping) && bondStereoCompatible(target, mapping);
+}
+
+inline bool SmartsQuery::atomStereoCompatible(const MolGraph& target, const std::vector<int>& mapping) const {
     using smarts_detail::StereoTruth;
     for (int atom = 0; atom < atomCount(); ++atom) {
         if (!smarts_detail::hasChiralityPrimitive(atoms[atom].expr)) continue;
@@ -132,6 +154,10 @@ inline bool SmartsQuery::stereoCompatible(const MolGraph& target, const std::vec
         if (matched != StereoTruth::TRUE_VALUE) return false;
     }
 
+    return true;
+}
+
+inline bool SmartsQuery::bondStereoCompatible(const MolGraph& target, const std::vector<int>& mapping) const {
     std::vector<int> variableForBond(bonds.size(), -1), allowedDirections;
     for (int bondIndex = 0; bondIndex < static_cast<int>(bonds.size()); ++bondIndex) {
         const auto& bond = bonds[bondIndex];
@@ -151,6 +177,11 @@ inline bool SmartsQuery::stereoCompatible(const MolGraph& target, const std::vec
     }
     if (allowedDirections.empty()) return true;
     std::vector<std::vector<std::pair<int, int>>> constraints(allowedDirections.size());
+    std::vector<bool> specified(allowedDirections.size());
+    for (size_t variable = 0; variable < allowedDirections.size(); ++variable)
+        specified[variable] = (allowedDirections[variable] & 4) == 0;
+    std::vector<std::array<int, 3>> optionalConstraints;
+    std::vector<std::vector<int>> unspecifiedFoci;
     auto addConstraint = [&](int firstBond, int secondBond, int relation) {
         const int firstVariable = variableForBond[firstBond], secondVariable = variableForBond[secondBond];
         constraints[firstVariable].push_back({secondVariable, relation});
@@ -174,18 +205,29 @@ inline bool SmartsQuery::stereoCompatible(const MolGraph& target, const std::vec
                 if (neighbors[atom][position] != other && variableForBond[bondIndex] >= 0)
                     carriers[end].push_back(bondIndex);
             }
-            for (size_t previous = 0; previous < carriers[end].size(); ++previous)
-                for (size_t next = previous + 1; next < carriers[end].size(); ++next)
-                    addConstraint(carriers[end][previous], carriers[end][next],
-                        -outwardOrientation(carriers[end][previous], atom) * outwardOrientation(carriers[end][next], atom));
+        }
+        const int configuration = aromatic ? 0 : target.dbStereo(mappedFirst, mappedSecond);
+        const bool configured = configuration != 0 && !carriers[0].empty() && !carriers[1].empty();
+        for (int end = 0; end < 2; ++end) {
+            const int atom = end == 0 ? first : second;
+            for (int bondIndex : carriers[end])
+                if (configured) specified[variableForBond[bondIndex]] = true;
+            for (size_t previous = 0; previous < carriers[end].size(); ++previous) {
+                const int firstBond = carriers[end][previous];
+                for (size_t next = previous + 1; next < carriers[end].size(); ++next) {
+                    const int secondBond = carriers[end][next];
+                    const int relation = -outwardOrientation(firstBond, atom) * outwardOrientation(secondBond, atom);
+                    if (configured) addConstraint(firstBond, secondBond, relation);
+                    else optionalConstraints.push_back({variableForBond[firstBond], variableForBond[secondBond], relation});
+                }
+            }
         }
         if (carriers[0].empty() || carriers[1].empty()) continue;
-        const int configuration = aromatic ? 0 : target.dbStereo(mappedFirst, mappedSecond);
         if (configuration == 0) {
-            bool unspecified = false;
+            std::vector<int> variables;
             for (const auto& end : carriers)
-                for (int bondIndex : end) unspecified |= (allowedDirections[variableForBond[bondIndex]] & 4) != 0;
-            if (!unspecified) return false;
+                for (int bondIndex : end) variables.push_back(variableForBond[bondIndex]);
+            unspecifiedFoci.push_back(std::move(variables));
             continue;
         }
         const int firstReference = stereo_detail::doubleBondReference(target, mappedFirst, mappedSecond);
@@ -204,9 +246,22 @@ inline bool SmartsQuery::stereoCompatible(const MolGraph& target, const std::vec
             }
         }
     }
+    // An optional carrier not required by a configured focus can take no direction. This only
+    // removes same-end relations; every unconfigured focus must retain such a carrier.
+    for (const auto& variables : unspecifiedFoci) {
+        bool unspecified = false;
+        for (int variable : variables) unspecified |= !specified[variable];
+        if (!unspecified) return false;
+    }
+    for (const auto& constraint : optionalConstraints) {
+        if (!specified[constraint[0]] || !specified[constraint[1]]) continue;
+        constraints[constraint[0]].push_back({constraint[1], constraint[2]});
+        constraints[constraint[1]].push_back({constraint[0], constraint[2]});
+    }
     std::vector<int> relativeDirections(allowedDirections.size(), 0);
     for (int start = 0; start < static_cast<int>(allowedDirections.size()); ++start) {
         if (relativeDirections[start] != 0) continue;
+        if (!specified[start]) continue;
         relativeDirections[start] = 1;
         int allowedRoot = 3;
         std::deque<int> pending{start};
@@ -253,7 +308,9 @@ inline bool SmartsQuery::bondCompat(int bi, const MolGraph& target, int ti, int 
     const auto& expression = bonds[bi].expr;
     if (smarts_detail::hasDirectionalPrimitive(expression))
         return smarts_detail::evalBondExprWithDirection(expression, target, ti, tj, 1)
-            || smarts_detail::evalBondExprWithDirection(expression, target, ti, tj, -1);
+            || smarts_detail::evalBondExprWithDirection(expression, target, ti, tj, -1)
+            || smarts_detail::evalBondExprWithoutDirection(expression, target, ti, tj)
+                == smarts_detail::StereoTruth::TRUE_VALUE;
     return smarts_detail::evalBondExpr(expression, target, ti, tj);
 }
 

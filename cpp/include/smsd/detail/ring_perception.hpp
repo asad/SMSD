@@ -23,7 +23,7 @@ namespace smsd {
 
 inline void MolGraph::computeRingCounts(const std::vector<std::vector<int>>& rings) const {
     const std::lock_guard<std::recursive_mutex> cacheLock(lazyCacheMutex());
-    std::fill(ringCount.begin(), ringCount.end(), 0);
+    ringCount.assign(static_cast<size_t>(n), 0);
     for (const auto& ring : rings) {
         for (int atom : ring) ringCount[atom]++;
     }
@@ -389,10 +389,20 @@ inline std::vector<int64_t> MolGraph::canonicalCycleKey(const std::vector<int>& 
 inline size_t MolGraph::allShortestPathsCpp(int root, int target, const std::vector<int>& dist,
                                   const std::vector<std::vector<int>>& parents, std::vector<int>& current,
                                   std::vector<PathFrame>& stack, std::vector<std::vector<int>>& paths,
-                                  bool& cut) {
+                                  bool& cut, uint64_t* work) {
     constexpr size_t limit = RELEVANT_CYCLE_PATHS;
     size_t count = 0;
+    bool exhausted = false;
     auto emit = [&] {
+        const uint64_t storage = sizeof(std::vector<int>) + sizeof(int) * uint64_t(current.size());
+        if (work != nullptr) {
+            if (*work >= RELEVANT_CYCLE_WORK_LIMIT || storage >= RELEVANT_CYCLE_WORK_LIMIT - *work) {
+                *work = RELEVANT_CYCLE_WORK_LIMIT;
+                exhausted = cut = true;
+                return;
+            }
+            *work += storage;
+        }
         if (count == paths.size()) paths.emplace_back();
         paths[count++].assign(current.rbegin(), current.rend());
     };
@@ -400,7 +410,7 @@ inline size_t MolGraph::allShortestPathsCpp(int root, int target, const std::vec
     if (target == root) { emit(); return count; }
     stack.clear();
     stack.push_back({target, 0});
-    while (!stack.empty() && count < limit) {
+    while (!stack.empty() && count < limit && !exhausted) {
         PathFrame& frame = stack.back();
         const auto& candidates = parents[frame.node];
         while (frame.nextParent < candidates.size()
@@ -433,10 +443,11 @@ inline std::vector<std::vector<int>> MolGraph::computeRelevantCycles() const {
     return computeRelevantCyclesReportingTruncation(truncated);
 }
 
-inline std::vector<std::vector<int>> MolGraph::computeRelevantCyclesReportingTruncation(bool& truncated) const {
+inline std::vector<std::vector<int>> MolGraph::computeRelevantCyclesFromBasis(
+    const std::vector<std::vector<int>>& mcb, bool& truncated, bool requireCompleteSeed) const {
     truncated = false;
-    auto& mcb = computeRings();
-    if (mcb.empty()) return {};
+    const int requiredRank = detail::cycleRank(*this);
+    if (requiredRank == 0) return {};
 
     // Build edge index
     std::unordered_map<int64_t, int> edgeIndex;
@@ -454,9 +465,23 @@ inline std::vector<std::vector<int>> MolGraph::computeRelevantCyclesReportingTru
     int numEdges = static_cast<int>(edgeIndex.size());
     int longWords = (numEdges + 63) >> 6;
 
-    // Find max cycle length in MCB
-    int maxLen = 0;
+    // A full seed basis spans every longer cycle using strictly shorter cycles. Otherwise
+    // every simple cycle has at most n atoms, so the incomplete seed imposes no tighter cutoff.
+    if (requireCompleteSeed && static_cast<int>(mcb.size()) != requiredRank) truncated = true;
+    int maxLen = requireCompleteSeed && static_cast<int>(mcb.size()) != requiredRank ? n : 0;
     for (auto& c : mcb) if (static_cast<int>(c.size()) > maxLen) maxLen = static_cast<int>(c.size());
+
+    uint64_t work = 0;
+    auto charge = [&](uint64_t amount) {
+        if (!requireCompleteSeed) return true;
+        if (work >= RELEVANT_CYCLE_WORK_LIMIT || amount >= RELEVANT_CYCLE_WORK_LIMIT - work) {
+            work = RELEVANT_CYCLE_WORK_LIMIT;
+            truncated = true;
+            return false;
+        }
+        work += amount;
+        return true;
+    };
 
     // Collect all short cycles
     std::set<std::vector<int64_t>> uniqueCycleSet;
@@ -464,6 +489,7 @@ inline std::vector<std::vector<int>> MolGraph::computeRelevantCyclesReportingTru
 
     // Add MCB cycles
     for (auto& c : mcb) {
+        if (!charge(128 + 16 * uint64_t(c.size()))) return mcb;
         auto key = canonicalCycleKey(c);
         if (uniqueCycleSet.insert(key).second) allCycles.push_back(c);
     }
@@ -487,7 +513,6 @@ inline std::vector<std::vector<int>> MolGraph::computeRelevantCyclesReportingTru
         if (++stamp == 0) { std::fill(mark.begin(), mark.end(), 0u); stamp = 1; }
         return stamp;
     };
-    uint64_t work = 0;
     std::vector<int> cycle;
     std::vector<int64_t> cycleKey;
     auto rememberCycle = [&] {
@@ -495,6 +520,7 @@ inline std::vector<std::vector<int>> MolGraph::computeRelevantCyclesReportingTru
         work += cycle.size();
         canonicalCycleKeyInto(cycle, cycleKey);
         if (uniqueCycleSet.find(cycleKey) != uniqueCycleSet.end()) return;
+        if (!charge(128 + 16 * uint64_t(cycle.size()))) return;
         uniqueCycleSet.insert(cycleKey);
         allCycles.push_back(cycle);
     };
@@ -521,7 +547,7 @@ inline std::vector<std::vector<int>> MolGraph::computeRelevantCyclesReportingTru
         auto shortestPaths = [&](int atom) {
             if (!pathsListed[atom]) {
                 pathCount[atom] = allShortestPathsCpp(root, atom, dist, parents, pathScratch, pathStack, pathsTo[atom],
-                                                      truncated);
+                                                      truncated, requireCompleteSeed ? &work : nullptr);
                 pathsListed[atom] = 1;
                 work += pathCount[atom] * static_cast<uint64_t>(dist[atom] + 1);
             }
@@ -530,7 +556,7 @@ inline std::vector<std::vector<int>> MolGraph::computeRelevantCyclesReportingTru
         dist[root] = 0;
         queue.clear();
         queue.push_back(root);
-        for (size_t head = 0; head < queue.size(); ++head) {
+        for (size_t head = 0; head < queue.size() && (!requireCompleteSeed || work < RELEVANT_CYCLE_WORK_LIMIT); ++head) {
             int u = queue[head];
             if (dist[u] >= maxLen / 2) continue;
             work += 1 + neighbors[u].size();
@@ -550,6 +576,7 @@ inline std::vector<std::vector<int>> MolGraph::computeRelevantCyclesReportingTru
         for (int u = 0; u < n && work < RELEVANT_CYCLE_WORK_LIMIT; u++) {
             if (dist[u] == -1) continue;
             for (int v : neighbors[u]) {
+                if (requireCompleteSeed && work >= RELEVANT_CYCLE_WORK_LIMIT) break;
                 if (v <= u || dist[v] == -1) continue;
                 int cycleLen = dist[u] + dist[v] + 1;
                 if (cycleLen < 3 || cycleLen > maxLen) continue;
@@ -558,12 +585,12 @@ inline std::vector<std::vector<int>> MolGraph::computeRelevantCyclesReportingTru
                 const size_t pathsU = shortestPaths(u);
                 const size_t pathsV = shortestPaths(v);
 
-                for (size_t pathU = 0; pathU < pathsU; ++pathU) {
+                for (size_t pathU = 0; pathU < pathsU && (!requireCompleteSeed || work < RELEVANT_CYCLE_WORK_LIMIT); ++pathU) {
                     const auto& pu = pathsTo[u][pathU];
                     const uint32_t onPath = nextStamp();
                     for (int x : pu) mark[x] = onPath;
                     work += pu.size();
-                    for (size_t pathV = 0; pathV < pathsV; ++pathV) {
+                    for (size_t pathV = 0; pathV < pathsV && (!requireCompleteSeed || work < RELEVANT_CYCLE_WORK_LIMIT); ++pathV) {
                         const auto& pv = pathsTo[v][pathV];
                         bool overlap = false;
                         size_t read = 1;
@@ -591,12 +618,12 @@ inline std::vector<std::vector<int>> MolGraph::computeRelevantCyclesReportingTru
 
             const size_t pathCountU = shortestPaths(u);
             const auto& paths = pathsTo[u];
-            for (size_t pi = 0; pi < pathCountU; pi++) {
+            for (size_t pi = 0; pi < pathCountU && (!requireCompleteSeed || work < RELEVANT_CYCLE_WORK_LIMIT); pi++) {
                 const auto& p1 = paths[pi];
                 const uint32_t interior = nextStamp();
                 for (size_t k = 1; k + 1 < p1.size(); k++) mark[p1[k]] = interior;
                 work += p1.size();
-                for (size_t pj = pi + 1; pj < pathCountU; pj++) {
+                for (size_t pj = pi + 1; pj < pathCountU && (!requireCompleteSeed || work < RELEVANT_CYCLE_WORK_LIMIT); pj++) {
                     const auto& p2 = paths[pj];
                     bool disjoint = true;
                     size_t read = 1;
@@ -619,6 +646,14 @@ inline std::vector<std::vector<int>> MolGraph::computeRelevantCyclesReportingTru
     // With the work allowance used up, roots or candidates may have been left unsearched.
     if (work >= RELEVANT_CYCLE_WORK_LIMIT) truncated = true;
 
+    // Retained storage, sorting and elimination share the enumeration allowance. A complete
+    // seed consists of relevant cycles, so it is a safe partial list when this stage is cut.
+    size_t levels = 0;
+    for (size_t count = allCycles.size(); count > 1; count = (count + 1) / 2) ++levels;
+    if (!charge(2 * uint64_t(allCycles.size()) * levels)) return mcb;
+    if (!charge(uint64_t(allCycles.size())
+                * (sizeof(std::vector<uint64_t>) + sizeof(uint64_t) * uint64_t(longWords)))) return mcb;
+
     // Sort by length; cycles of one length keep the order in which they were found.
     std::stable_sort(allCycles.begin(), allCycles.end(),
         [](const std::vector<int>& a, const std::vector<int>& b) {
@@ -630,6 +665,7 @@ inline std::vector<std::vector<int>> MolGraph::computeRelevantCyclesReportingTru
         std::vector<uint64_t>(longWords, 0));
     for (size_t ci = 0; ci < allCycles.size(); ci++) {
         auto& c = allCycles[ci];
+        if (!charge(c.size())) return mcb;
         for (size_t i = 0; i < c.size(); i++) {
             int a = c[i], b = c[(i + 1) % c.size()];
             int64_t key = bondKey(std::min(a, b), std::max(a, b));
@@ -645,6 +681,7 @@ inline std::vector<std::vector<int>> MolGraph::computeRelevantCyclesReportingTru
     std::vector<int> rowByPivot(numEdges, -1);
     std::vector<uint64_t> reduced(longWords);
     auto reduce = [&](const std::vector<uint64_t>& cycleBits) {
+        if (!charge(longWords)) return -1;
         reduced = cycleBits;
         for (int word = 0; word < longWords; ++word) {
             while (reduced[word] != 0) {
@@ -652,6 +689,7 @@ inline std::vector<std::vector<int>> MolGraph::computeRelevantCyclesReportingTru
                 const int row = rowByPivot[pivot];
                 if (row < 0) return pivot;
                 const auto& basisRow = rows[row];
+                if (!charge(static_cast<uint64_t>(longWords - word))) return -1;
                 for (int other = word; other < longWords; ++other) reduced[other] ^= basisRow[other];
             }
         }
@@ -666,13 +704,20 @@ inline std::vector<std::vector<int>> MolGraph::computeRelevantCyclesReportingTru
         while (cj < allCycles.size() && static_cast<int>(allCycles[cj].size()) == len) cj++;
 
         // Test each cycle against basis of strictly shorter cycles
-        for (size_t k = ci; k < cj; k++)
-            if (reduce(vectors[k]) >= 0) relevant.push_back(allCycles[k]);
+        for (size_t k = ci; k < cj; k++) {
+            if (reduce(vectors[k]) >= 0) {
+                if (!charge(sizeof(std::vector<int>) + sizeof(int) * uint64_t(allCycles[k].size()))) return mcb;
+                relevant.push_back(allCycles[k]);
+            }
+            if (requireCompleteSeed && work >= RELEVANT_CYCLE_WORK_LIMIT) return mcb;
+        }
 
         // Add all cycles of this length to basis
         for (size_t k = ci; k < cj; k++) {
             const int pivot = reduce(vectors[k]);
+            if (requireCompleteSeed && work >= RELEVANT_CYCLE_WORK_LIMIT) return mcb;
             if (pivot < 0) continue;
+            if (!charge(sizeof(std::vector<uint64_t>) + sizeof(uint64_t) * uint64_t(longWords))) return mcb;
             rowByPivot[pivot] = static_cast<int>(rows.size());
             rows.push_back(reduced);
         }

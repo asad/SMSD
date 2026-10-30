@@ -1,5 +1,5 @@
 /*
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-License-Identifier: Apache-2.0 AND BSD-3-Clause
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
  * See the NOTICE file for attribution, trademark, and algorithm IP terms.
@@ -250,9 +250,11 @@ public final class FingerprintOptions {
   // ---- MACCS keys ----
 
   /**
-   * The public MACCS key definitions as SMARTS with a minimum count of distinct matches; keys 1,
-   * 125 and 166 are the isotope, aromatic ring and fragment counts. The native core holds the same
-   * table.
+   * The MACCS key definitions as SMARTS with a minimum count of distinct matches; keys 1, 125 and
+   * 166 are the isotope, aromatic ring and fragment counts. The native core holds the same table.
+   * The SMARTS are adapted from the RDKit file rdkit/Chem/MACCSkeys.py, Copyright (C) 2001-2011
+   * Greg Landrum and Rational Discovery LLC, and are used under the BSD 3-Clause License; see
+   * licenses/rdkit/LICENSE.
    */
   private static final String[] MACCS_SMARTS = {
     "",                                                           // 1 isotope

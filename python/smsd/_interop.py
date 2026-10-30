@@ -156,6 +156,14 @@ def get_index_map(g):
 
     Returns a list where ``result[smsd_idx] = rdkit_idx``, or None when the
     graph did not come from :func:`from_rdkit`.
+
+    Example::
+
+        >>> import smsd
+        >>> from rdkit import Chem
+        >>> graph = smsd.from_rdkit(Chem.MolFromSmiles("OCC"))
+        >>> assert sorted(smsd.get_index_map(graph)) == [0, 1, 2]
+        >>> assert smsd.get_index_map(smsd.parse_smiles("CCO")) is None
     """
     indices = _index_tuple(g)
     return list(indices) if indices is not None else None
@@ -175,6 +183,14 @@ def translate_mapping(mapping, g_query=None, g_target=None):
     Raises:
         IndexError: an index is negative or outside its molecule, as in
             search results.
+
+    Example::
+
+        >>> import smsd
+        >>> from rdkit import Chem
+        >>> graph = smsd.from_rdkit(Chem.MolFromSmiles("OCC"))
+        >>> indices = smsd.get_index_map(graph)
+        >>> assert smsd.translate_mapping({0: 1}, graph, graph) == {indices[0]: indices[1]}
     """
     if mapping is None or len(mapping) == 0:
         return {}
@@ -204,7 +220,17 @@ def translate_mapping(mapping, g_query=None, g_target=None):
 
 
 def clear_cache():
-    """Clear reusable conversions without invalidating live graphs' index maps."""
+    """Clear reusable conversions without invalidating live graphs' index maps.
+
+    Example::
+
+        >>> import smsd
+        >>> from rdkit import Chem
+        >>> graph = smsd.from_rdkit(Chem.MolFromSmiles("OCC"))
+        >>> indices = smsd.get_index_map(graph)
+        >>> smsd.clear_cache()
+        >>> assert smsd.get_index_map(graph) == indices
+    """
     with _rdkit_cache_lock:
         _rdkit_cache.clear()
 
@@ -236,7 +262,15 @@ def to_rdkit(mol_or_smiles):
 
 
 def from_openbabel(mol):
-    """Convert an Open Babel molecule into an SMSD MolGraph."""
+    """Convert an Open Babel molecule into an SMSD MolGraph.
+
+    Example::
+
+        >>> import smsd
+        >>> from openbabel import pybel
+        >>> graph = smsd.from_openbabel(pybel.readstring("smi", "CCO"))
+        >>> assert graph.n == 3
+    """
     try:
         from openbabel import openbabel as ob  # type: ignore[import]
         from openbabel import pybel  # type: ignore[import]
@@ -266,7 +300,14 @@ def from_openbabel(mol):
 
 
 def to_openbabel(mol):
-    """Convert a MolGraph, SMILES string or RDKit molecule into a pybel Molecule."""
+    """Convert a MolGraph, SMILES string or RDKit molecule into a pybel Molecule.
+
+    Example::
+
+        >>> import smsd
+        >>> molecule = smsd.to_openbabel("CCO")
+        >>> assert molecule.OBMol.NumAtoms() == 3
+    """
     try:
         from openbabel import pybel  # type: ignore[import]
     except ImportError:

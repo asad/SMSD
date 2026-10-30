@@ -89,6 +89,12 @@ def parse_smiles(smiles, *, lenient=False):
 
     An empty string gives an empty molecule. With ``lenient`` the parser recovers
     from malformed text that would otherwise raise ``ValueError``.
+
+    Example::
+
+        >>> import smsd
+        >>> graph = smsd.parse_smiles("CCO")
+        >>> assert graph.n == 3 and graph.atomic_num == [6, 6, 8]
     """
     if smiles == "":
         return MolGraph()
@@ -103,6 +109,13 @@ def to_smiles(mol):
     """Canonical SMILES of a MolGraph, SMILES string or RDKit Mol.
 
     The canonical order is defined by the writer and may differ between languages.
+
+    Example::
+
+        >>> import smsd
+        >>> graph = smsd.parse_smiles("OCC")
+        >>> restored = smsd.parse_smiles(smsd.to_smiles(graph))
+        >>> assert smsd.same_canonical_graph(graph, restored)
     """
     return _smsd.to_smiles(_ensure_mol(mol))
 
@@ -111,6 +124,14 @@ def canonical_smiles(mol):
     """Deprecated alias of :func:`to_smiles`.
 
     Use :func:`to_smiles`, which returns the same text.
+
+    Example::
+
+        >>> import smsd, warnings
+        >>> with warnings.catch_warnings():
+        ...     warnings.simplefilter("ignore", DeprecationWarning)
+        ...     text = smsd.canonical_smiles("OCC")
+        >>> assert text == smsd.to_smiles("OCC")
     """
     _deprecated("canonical_smiles", "to_smiles")
     return to_smiles(mol)
@@ -210,7 +231,15 @@ def parse_mapped_smiles(smiles):
 
 
 def prewarm(mol):
-    """Compute and cache the common lazy invariants of a molecule once; returns its graph."""
+    """Compute and cache the common lazy invariants of a molecule once; returns its graph.
+
+    Example::
+
+        >>> import smsd
+        >>> graph = smsd.parse_smiles("CCO")
+        >>> assert smsd.prewarm(graph) is graph
+        >>> assert smsd.MCS.find(graph).match("CCO").best.atom_count == 3
+    """
     g = _ensure_mol(mol)
     g.prewarm()
     return g
@@ -220,18 +249,50 @@ def prewarm_graph(mol):
     """Deprecated alias of :func:`prewarm` that returns None.
 
     Use :func:`prewarm` or :meth:`MolGraph.prewarm`.
+
+    Example::
+
+        >>> import smsd, warnings
+        >>> graph = smsd.parse_smiles("CCO")
+        >>> with warnings.catch_warnings():
+        ...     warnings.simplefilter("ignore", DeprecationWarning)
+        ...     assert smsd.prewarm_graph(graph) is None
+        >>> assert graph.n == 3
     """
     _deprecated("prewarm_graph", "prewarm")
     _ensure_mol(mol).prewarm()
 
 
 def read_mol_file(filename):
-    """Read a MOL file (V2000 or V3000) into a MolGraph; one that cannot be opened or read raises ValueError."""
+    """Read a MOL file (V2000 or V3000) into a MolGraph; one that cannot be opened or read raises ValueError.
+
+    Example::
+
+        >>> import smsd, warnings
+        >>> from pathlib import Path
+        >>> from tempfile import TemporaryDirectory
+        >>> with TemporaryDirectory() as directory, warnings.catch_warnings():
+        ...     warnings.simplefilter("ignore", DeprecationWarning)
+        ...     destination = Path(directory) / "molecule.mol"
+        ...     _ = destination.write_text(smsd.write_mol_block("CCO"), encoding="utf-8")
+        ...     assert smsd.read_mol_file(destination).n == 3
+    """
     return _smsd.read_mol_file(os.fspath(filename))
 
 
 def read_sdf(filename):
-    """Read every record of an SDF file at once; malformed records become empty graphs."""
+    """Read every record of an SDF file at once; malformed records become empty graphs.
+
+    Example::
+
+        >>> import smsd
+        >>> from pathlib import Path
+        >>> from tempfile import TemporaryDirectory
+        >>> with TemporaryDirectory() as directory:
+        ...     destination = Path(directory) / "molecules.sdf"
+        ...     smsd.write_sdf(["CCO", "c1ccccc1"], destination)
+        ...     assert [graph.n for graph in smsd.read_sdf(destination)] == [3, 6]
+    """
     return _smsd.read_sdf(os.fspath(filename))
 
 
@@ -239,6 +300,17 @@ def read_molfile(filename):
     """Deprecated alias of :func:`read_mol_file` that reads the file as UTF-8 text.
 
     Use :func:`read_mol_file`.
+
+    Example::
+
+        >>> import smsd, warnings
+        >>> from pathlib import Path
+        >>> from tempfile import TemporaryDirectory
+        >>> with TemporaryDirectory() as directory, warnings.catch_warnings():
+        ...     warnings.simplefilter("ignore", DeprecationWarning)
+        ...     destination = Path(directory) / "molecule.mol"
+        ...     _ = destination.write_text(smsd.write_mol_block("CCO"), encoding="utf-8")
+        ...     assert smsd.read_molfile(destination).n == 3
     """
     _deprecated("read_molfile", "read_mol_file")
     from pathlib import Path
@@ -246,7 +318,19 @@ def read_molfile(filename):
 
 
 def write_sdf(molecules, filename):
-    """Write molecules as SDF records, each a V2000 MOL block followed by ``$$$$``."""
+    """Write molecules as SDF records, each a V2000 MOL block followed by ``$$$$``.
+
+    Example::
+
+        >>> import smsd, warnings
+        >>> from pathlib import Path
+        >>> from tempfile import TemporaryDirectory
+        >>> with TemporaryDirectory() as directory, warnings.catch_warnings():
+        ...     warnings.simplefilter("ignore", DeprecationWarning)
+        ...     destination = Path(directory) / "molecules.sdf"
+        ...     smsd.write_sdf(["CCO", "CCN"], destination)
+        ...     assert [graph.n for graph in smsd.read_sdf(destination)] == [3, 3]
+    """
     _smsd.write_sdf([_ensure_mol(mol) for mol in molecules], os.fspath(filename))
 
 
@@ -254,6 +338,17 @@ def export_sdf(molecules, filename):
     """Deprecated alias of :func:`write_sdf`.
 
     Use :func:`write_sdf`, which writes the same records.
+
+    Example::
+
+        >>> import smsd, warnings
+        >>> from pathlib import Path
+        >>> from tempfile import TemporaryDirectory
+        >>> with TemporaryDirectory() as directory, warnings.catch_warnings():
+        ...     warnings.simplefilter("ignore", DeprecationWarning)
+        ...     destination = Path(directory) / "molecules.sdf"
+        ...     smsd.export_sdf(["CCO", "CCN"], destination)
+        ...     assert [graph.n for graph in smsd.read_sdf(destination)] == [3, 3]
     """
     _deprecated("export_sdf", "write_sdf")
     from pathlib import Path
@@ -261,7 +356,18 @@ def export_sdf(molecules, filename):
 
 
 def write_molfile(mol, filename, *, v3000=False, sdf=False):
-    """Write a molecule to disk as MOL V2000, MOL V3000 or a single SDF record."""
+    """Write a molecule to disk as MOL V2000, MOL V3000 or a single SDF record.
+
+    Example::
+
+        >>> import smsd
+        >>> from pathlib import Path
+        >>> from tempfile import TemporaryDirectory
+        >>> with TemporaryDirectory() as directory:
+        ...     destination = Path(directory) / "molecule.mol"
+        ...     smsd.write_molfile("CCO", destination, v3000=True)
+        ...     assert smsd.read_mol_file(destination).n == 3
+    """
     if sdf:
         text = write_sdf_record(mol)
     elif v3000:

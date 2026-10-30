@@ -597,7 +597,7 @@ final class TautomerClasses {
           for (int k : neighbors[j]) {
             if (k == i || !aromaticRingN(k)) continue;
             boolean in5 = false;
-            for (int[] r : g.computeRings()) {
+            for (int[] r : g.baseRingBasis()) {
               if (r.length != 5) continue;
               boolean hasI = false, hasK = false;
               for (int a : r) { if (a == i) hasI = true; if (a == k) hasK = true; }

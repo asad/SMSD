@@ -4,17 +4,17 @@
 # See the NOTICE file for attribution, trademark, and algorithm IP terms.
 # CPU wheels share one source distribution and the same build options.
 [tool.cibuildwheel]
-build = "cp310-* cp311-* cp312-* cp313-* cp314-*"
+build = "cp312-* cp313-* cp314-* cp315-*"
 build-frontend = "build"
 build-verbosity = 1
 config-settings = { "cmake.define.SMSD_BUILD_METAL" = "OFF", "cmake.define.SMSD_BUILD_CUDA" = "OFF", "cmake.define.SMSD_BUILD_OPENMP" = "ON", "cmake.define.SMSD_WITH_RDKIT" = "OFF" }
 environment = { OMP_NUM_THREADS = "1", CMAKE_BUILD_PARALLEL_LEVEL = "2" }
 before-build = [
   "python -m pip install --upgrade pip==26.2.2",
-  "python -m pip install cmake==4.4.3 ninja==1.13.2 \"tomli==2.2.1; python_version < '3.11'\"",
+  "python -m pip install cmake==4.4.3 ninja==1.13.2",
   'python "{package}/scripts/check_native_wheel_build.py" --source "{package}"',
 ]
-test-requires = ["pytest==9.1.1", "pytest-timeout==2.4.0", "rdkit==2026.03.6", "tomli==2.2.1; python_version < '3.11'"]
+test-requires = ["pytest==9.1.1", "pytest-timeout==2.4.0", "rdkit==2026.09.1"]
 before-test = "python -m pip install --upgrade pip==26.2.2"
 test-command = [
   'python "{package}/scripts/check_python_wheel.py" --source "{package}" --require-rdkit --require-openmp',
@@ -29,8 +29,8 @@ manylinux-aarch64-image = "manylinux_2_28"
 repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
 
 [tool.cibuildwheel.macos]
-before-all = "brew install libomp"
-environment = { OMP_NUM_THREADS = "1", CMAKE_BUILD_PARALLEL_LEVEL = "2", MACOSX_DEPLOYMENT_TARGET = "26.0", CMAKE_PREFIX_PATH = "$(brew --prefix libomp)" }
+before-all = 'if [ -z "${SMSD_MACOS_OPENMP_PREFIX:-}" ]; then brew install libomp; fi; python3 "{package}/scripts/check_macos_openmp.py" --deployment-target 14.0'
+environment = { OMP_NUM_THREADS = "1", CMAKE_BUILD_PARALLEL_LEVEL = "2", MACOSX_DEPLOYMENT_TARGET = "14.0", CMAKE_PREFIX_PATH = "$(sh -c 'printf \"%s\" \"${SMSD_MACOS_OPENMP_PREFIX:-$(brew --prefix libomp)}\"')" }
 repair-wheel-command = "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
 
 [tool.cibuildwheel.windows]

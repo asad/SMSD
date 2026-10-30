@@ -35,13 +35,40 @@ perform the MCS search.
   means the node limit stopped it, an enumeration reached its match limit, or
   an MCES pair beyond the size limits below was declined before any search;
   a declined pair returns no match and proves nothing.
-- Complete-ring matching and strict ring fusion depend on perceived cycles.
-  If ring perception was truncated in either input, MCS retains its selected
-  mappings but reports `LimitReached`, with `optimal` and `complete` both false.
+- Complete-ring matching uses full relevant-cycle perception. Strict ring fusion
+  compares per-atom ring counts. If the perception
+  required by either option is incomplete in either input, MCS retains its
+  selected mappings but reports `LimitReached`, with `optimal` and `complete`
+  both false.
   `TimedOut` and `Cancelled` take precedence. Consensus applies the same status
   rule when any input has truncated ring perception, keeping its fragment and
   supporting mappings. A valid mapping's maximality cannot be proved in this
   case, so the check raises its existing proof-unavailable exception.
+- Positive numeric SMARTS `R<n>` (`n > 0`) uses one deterministic minimum
+  cycle basis, the same in C++ and Java. When a molecule has more than one
+  minimum cycle basis, `R<n>` and per-atom ring counts can depend on the input
+  atom order. If ring perception cannot complete the basis, a search that
+  cannot be decided without it returns `LimitReached` without matches,
+  including for negated, combined and recursive predicates; the empty result
+  does not prove absence. Literal `R` and `R0` remain independent of that
+  basis. Other functions that need the basis raise an error naming the cause;
+  `computeSSSR` and `computeRings` may return incomplete rings with truncation
+  flags. `relevantCyclesTruncated` alone does not make the basis incomplete.
+- Ring perception works within one fixed, deterministic work limit, the same
+  in C++, Java and Python and independent of time, thread count and hardware.
+  Very large fused-ring systems, such as synthetic cages, can reach it. When it
+  is reached, `ringsTruncated` reports it. A refusal it causes recurs on every
+  run, so a longer timeout will not help.
+  Values computed without the missing ring information are still returned
+  exactly; searches that need it report `LimitReached`, and other
+  ring-dependent results raise `RingBasisUnavailable` (Java
+  `RingBasisUnavailableException`) naming the cause, with the zero-based input
+  index in C++ and Python batch calls.
+- Progressive consensus is an approximation. Its `optimal` flag is always
+  false, including empty and single-input calls. `complete` records whether
+  the progressive pass finished. Neither it nor `Completed` proves a global
+  optimum or absence of a qualifying common graph. Its threshold, budget,
+  selected fragment and supporting mappings retain their existing meanings.
 - A stopped search may return a valid mapping without proving the optimum, and
   a capped enumeration may prove the objective while leaving the enumeration
   incomplete. An empty incomplete result does not prove absence.
@@ -77,7 +104,7 @@ atoms and five of the six bonds, where MCIS keeps five atoms.
 
 ## Cross-language differences
 
-These differences are deliberate; each follows the conventions of its language.
+These differences are deliberate; most follow the conventions of each language.
 
 | Topic | C++ | Java | Python |
 | --- | --- | --- | --- |
@@ -90,3 +117,4 @@ These differences are deliberate; each follows the conventions of its language.
 | Batch searches | `matchMany(targets, numThreads = 0)`; zero uses every processor | `matchMany(List)` runs sequentially; `matchMany(List, numThreads)` uses up to `numThreads` threads, zero for one per processor | `match_many(targets, *, num_threads=0)` |
 | Tuning switches | None | Deprecated `ChemOptions` tuning switches that never change a result | None |
 | Cancellation | Shared `CancellationToken` | `BooleanSupplier`; thread interruption also cancels | Shared `CancellationToken` |
+| Stopped MCIS searches | The 8.1.0 search; a stopped result or its atom mapping can differ from 8.0.3 | The 8.0.3 search, so a stopped result can differ from C++ and Python | As in C++ |

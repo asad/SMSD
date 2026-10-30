@@ -1,0 +1,62 @@
+{% set version = smsd_version %}
+
+package:
+  name: smsd
+  version: {{ version }}
+
+source:
+  url: {{ smsd_source_url | string | tojson }}
+  sha256: "{{ smsd_source_sha256 }}"
+
+build:
+  number: 0
+  skip: true  # [py<312 or not (linux64 or (linux and aarch64) or osx or win64)]
+  script: '"{{ PYTHON }}" "{{ RECIPE_DIR }}/build.py"'
+
+requirements:
+  build:
+    - {{ compiler('cxx') }}
+    - {{ stdlib('c') }}
+    - cmake >=3.18
+    - ninja
+  host:
+    - python
+    - pip
+    - scikit-build-core >=0.5,<2
+    - pybind11 >=2.12,<4
+  run:
+    - {{ pin_compatible('python', max_pin='x.x') }}
+
+test:
+  imports:
+    - smsd
+    - smsd.adapters
+    - smsd.corpus
+    - smsd.clustering
+    - smsd.highlight
+    - smsd.mcp_server
+  requires:
+    - pip
+    - numpy >=1.24,<3
+  commands:
+    - python -m pip check
+
+about:
+  home: https://github.com/asad/SMSD
+  license: Apache-2.0
+  license_file:
+    - LICENSE
+    - NOTICE
+    - licenses/rdkit/LICENSE
+    - licenses/pybind11/LICENSE
+  summary: Substructure and MCS search and fingerprints for chemical graphs
+  description: |
+    Native Python bindings for SMSD, built without OpenMP, CUDA or Metal. Data
+    and ML dependencies remain optional.
+  doc_url: https://github.com/asad/SMSD/blob/master/docs/PYTHON.md
+  dev_url: https://github.com/asad/SMSD
+
+extra:
+  source_commit: "{{ smsd_source_commit }}"
+  recipe-maintainers:
+    - asad

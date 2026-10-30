@@ -62,6 +62,15 @@ void operator delete(void* memory) noexcept { std::free(memory); }
 void operator delete[](void* memory) noexcept { std::free(memory); }
 void operator delete(void* memory, std::size_t) noexcept { std::free(memory); }
 void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); }
+// Sanitiser runtimes supply their own nothrow forms, so route these through the same allocator.
+void* operator new(std::size_t size, const std::nothrow_t&) noexcept {
+    try { return ::operator new(size); } catch (...) { return nullptr; }
+}
+void* operator new[](std::size_t size, const std::nothrow_t&) noexcept {
+    try { return ::operator new[](size); } catch (...) { return nullptr; }
+}
+void operator delete(void* memory, const std::nothrow_t&) noexcept { std::free(memory); }
+void operator delete[](void* memory, const std::nothrow_t&) noexcept { std::free(memory); }
 
 using smsd_test::require;
 

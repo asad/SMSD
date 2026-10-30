@@ -72,6 +72,23 @@ def test_svg_depiction_renders_a_molecule(input_kind):
     assert list(image.iter("{http://www.w3.org/2000/svg}path"))
 
 
+@pytest.mark.parametrize("input_kind", ["graph", "external", "smiles"])
+def test_native_svg_depiction_renders_a_molecule(input_kind):
+    from xml.etree import ElementTree
+    molecule = "CCO"
+    if input_kind == "graph":
+        molecule = smsd.parse_smiles(molecule)
+    elif input_kind == "external":
+        chemistry = pytest.importorskip("rdkit.Chem")
+        molecule = chemistry.MolFromSmiles(molecule)
+    svg = smsd.depict_svg(molecule, width=320, height=240)
+    image = ElementTree.fromstring(svg)
+    assert image.tag == "{http://www.w3.org/2000/svg}svg"
+    assert float(image.attrib["width"]) == 320
+    assert float(image.attrib["height"]) == 240
+    assert list(image.iter("{http://www.w3.org/2000/svg}line"))
+
+
 def test_adaptive_search_uses_native_budget():
     result = smsd.MCS.find("CCCC").with_timeout(-1).match("CCCCC")
     assert result.best.atom_count == 4 and result.optimal

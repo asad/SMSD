@@ -1,0 +1,5 @@
+*
+!Dockerfile
+!wheelhouse/
+!wheelhouse/*.whl
+!copy_licences.py

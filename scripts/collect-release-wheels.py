@@ -3,7 +3,7 @@
 # Copyright (c) 2018-2026 BioInception PVT LTD
 # Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
 # See the NOTICE file for attribution, trademark, and algorithm IP terms.
-"""Check and collect matching CPython 3.10–3.14 wheels without publishing."""
+"""Check and collect matching CPython 3.12–3.15 wheels without publishing."""
 
 import argparse
 import ast
@@ -170,10 +170,12 @@ def main():
     parser.add_argument("--release-dir", type=Path, required=True)
     parser.add_argument("--wheel-dir", type=Path, action="append", default=[])
     parser.add_argument("--source-manifest", type=Path)
+    parser.add_argument("--lean-validation", type=Path,
+                        help="Shared frozen-source validation used by the lean wheel builds")
     parser.add_argument("--provenance", type=Path, action="append", default=[],
                         help="Checked build receipt; adjacent wheel-build-provenance.json files are found automatically")
     parser.add_argument("--allow-incomplete", action="store_true",
-                        help="Collect local build results before all 20 interpreter/platform targets are available")
+                        help="Collect local build results before all 16 interpreter/platform targets are available")
     parser.add_argument("--check-only", action="store_true")
     args = parser.parse_args()
     directory = args.release_dir.resolve()
@@ -183,6 +185,8 @@ def main():
         raise ValueError("Expected one Python source distribution in the release directory")
     version = archives[0].name[len("smsd-"):-len(".tar.gz")]
     source = BUILD.checked_source(archives[0], args.source_manifest)
+    shared_validation = (BUILD.checked_shared_validation(source, BUILD.read_manifest(args.lean_validation))
+                         if args.lean_validation else None)
     sources = BUILD.read_source_archive(archives[0])
     project = tomllib.loads(sources["pyproject.toml"].decode("utf-8"))["project"]
     if project["name"] != "smsd" or project["version"] != version:
@@ -213,7 +217,10 @@ def main():
         raise ValueError("Missing release wheels: " + ", ".join(sorted(missing)))
     manifest_path = directory / "WHEEL_MANIFEST.json"
     if args.check_only:
-        BUILD.checked_wheel_manifest(directory, source, selected, BUILD.read_manifest(manifest_path))
+        manifest = BUILD.read_manifest(manifest_path)
+        if shared_validation is not None and manifest.get("shared_validation") != shared_validation:
+            raise ValueError("Existing shared validation differs")
+        BUILD.checked_wheel_manifest(directory, source, selected, manifest)
     else:
         receipts = {path.resolve() for path in args.provenance}
         receipts.update(path.parent / "wheel-build-provenance.json" for path in candidates
@@ -226,23 +233,30 @@ def main():
                     and {entry.get("build_identifier") for entry in recorded_entries if isinstance(entry, dict)} != set(selected)):
                 raise ValueError("Existing wheel manifest has different targets; collect the full set in a new release directory")
             BUILD.checked_wheel_manifest(directory, source, selected, existing)
+            if existing["schema_version"] == 3:
+                if shared_validation is not None and shared_validation != existing["shared_validation"]:
+                    raise ValueError("Existing shared validation differs")
+                shared_validation = existing["shared_validation"]
             proofs.extend(entry["build_provenance"] for entry in existing["wheels"])
         entries = []
         for identifier, wheel in sorted(selected.items()):
             matching = [proof for proof in proofs if proof.get("wheel") == wheel.name]
             if not matching:
                 raise ValueError("Missing checked-build provenance: " + wheel.name)
-            entry = BUILD.wheel_entry(wheel, identifier, source, matching[0])
-            if any(BUILD.wheel_entry(wheel, identifier, source, proof) != entry for proof in matching[1:]):
+            entry = BUILD.wheel_entry(wheel, identifier, source, matching[0], shared_validation)
+            if any(BUILD.wheel_entry(wheel, identifier, source, proof, shared_validation) != entry for proof in matching[1:]):
                 raise ValueError("Conflicting checked-build provenance: " + wheel.name)
             entries.append(entry)
         for path in args.provenance:
             proof = BUILD.read_manifest(path)
             if proof.get("wheel") not in {wheel.name for wheel in selected.values()}:
                 raise ValueError("Explicit provenance does not identify a selected wheel")
-        manifest = {"schema_version": 2,
+        manifest = {"schema_version": 3 if shared_validation is not None else 2,
                     **{field: source[field] for field in ("version", "source_commit", "sdist", "sdist_sha256")},
                     "complete": not missing, "missing_targets": sorted(missing), "wheels": entries}
+        if shared_validation is not None:
+            manifest.update(shared_validation=shared_validation,
+                            shared_validation_sha256=BUILD.proof_digest(shared_validation))
         # Check both destinations before copying any release assets.
         for path, document in ((directory / "SOURCE_MANIFEST.json", source), (manifest_path, manifest)):
             if path.is_symlink() or (path.exists() and BUILD.read_manifest(path) != document):

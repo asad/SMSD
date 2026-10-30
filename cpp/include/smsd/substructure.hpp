@@ -76,6 +76,16 @@ public:
     std::vector<SearchResult> matchMany(const Targets& targets, int numThreads = 0) const {
         return search_detail::matchMany(*this, targets, numThreads);
     }
+    /** Search a captured corpus, with explicit bound decisions and optional GPU filtering. */
+    std::vector<CorpusSearchResult> matchCorpus(const batch::TargetCorpus& corpus,
+        bool gpuPrefilter = false, int numThreads = 0) const {
+        if (numThreads < 0) throw std::invalid_argument("Thread count must be non-negative");
+        const bool filter = query_ && options_.chemistry.matchAtomType && options_.nodeLimit == 0
+            && options_.timeoutMs != 0 && !options_.cancellation;
+        auto inputs = batch::detail::CorpusAccess::substructureInputs(
+            corpus, filter ? query_.get() : nullptr, options_.chemistry, numThreads, gpuPrefilter);
+        return batch::detail::matchCorpusInputs(*this, inputs.first, {}, inputs.second, 1, true, false, numThreads);
+    }
     /** A necessary-condition mask from the captured molecule query; SMARTS stays on the CPU. */
     std::optional<std::vector<uint8_t>> corpusCandidates(const batch::TargetCorpus& corpus, int numThreads = 0) const {
         if (!query_ || !options_.chemistry.matchAtomType || options_.nodeLimit != 0 || options_.timeoutMs == 0

@@ -18,7 +18,7 @@ import java.util.Set;
 
 /**
  * Writes the canonical SMILES of a graph: components and branches in the order of the canonical
- * labelling, ring closures numbered as they open, and tetrahedral and double-bond stereo written
+ * labelling, ring closures reusing labels as needed, and tetrahedral and double-bond stereo written
  * relative to that order.
  */
 final class SmilesWriter {
@@ -91,61 +91,133 @@ final class SmilesWriter {
     }
     Map<Long, Integer> bondDirections = smilesBondDirections();
     boolean[] visited = new boolean[n];
+    int[] ringLabels = new int[nextRing[0]];
+    boolean[] usedRingLabels = new boolean[100];
     StringBuilder sb = new StringBuilder();
     for (int ci = 0; ci < n; ci++) {
       int start = inv[ci];
       if (visited[start]) continue;
       if (sb.length() > 0) sb.append('.');
-      emitSmiles(start, -1, visited, sb, ringClosures, ringEdges, bondDirections, atomMaps);
+      emitSmiles(start, -1, visited, sb, ringClosures, ringEdges, bondDirections, atomMaps,
+          ringLabels, usedRingLabels);
     }
     return sb.toString();
   }
 
-  private void preScanDfs(int atom, int parent, int[] color, List<int[]>[] rc, Set<Long> ringEdges, int[] nextRing) {
+  private static final class ScanFrame {
+    final int atom, parent;
+    final int[] neighbors;
+    int nextNeighbor;
+    boolean skippedParent;
+
+    ScanFrame(int atom, int parent, int[] neighbors) {
+      this.atom = atom;
+      this.parent = parent;
+      this.neighbors = neighbors;
+    }
+  }
+
+  private void preScanDfs(int atom, int parent, int[] color, List<int[]>[] rc,
+                         Set<Long> ringEdges, int[] nextRing) {
+    ArrayDeque<ScanFrame> pending = new ArrayDeque<>();
     color[atom] = 1;
-    int[] sorted = sortedNeighborsByCanonical(atom);
-    int skippedParent = 0;
-    for (int nb : sorted) {
-      if (nb == parent && skippedParent == 0) { skippedParent = 1; continue; }
-      if (color[nb] == 0) {
-        preScanDfs(nb, atom, color, rc, ringEdges, nextRing);
-      } else if (color[nb] == 1) {
-        int rid = nextRing[0]++;
-        if (rc[nb] == null) rc[nb] = new ArrayList<>();
-        if (rc[atom] == null) rc[atom] = new ArrayList<>();
-        rc[nb].add(new int[] {rid, atom});
-        rc[atom].add(new int[] {rid, nb});
-        ringEdges.add(MolGraph.bondKey(atom, nb));
+    pending.push(new ScanFrame(atom, parent, sortedNeighborsByCanonical(atom)));
+    while (!pending.isEmpty()) {
+      ScanFrame frame = pending.peek();
+      if (frame.nextNeighbor == frame.neighbors.length) {
+        color[frame.atom] = 2;
+        pending.pop();
+        continue;
+      }
+      int neighbor = frame.neighbors[frame.nextNeighbor++];
+      if (neighbor == frame.parent && !frame.skippedParent) {
+        frame.skippedParent = true;
+        continue;
+      }
+      if (color[neighbor] == 0) {
+        color[neighbor] = 1;
+        pending.push(new ScanFrame(neighbor, frame.atom, sortedNeighborsByCanonical(neighbor)));
+      } else if (color[neighbor] == 1) {
+        int ring = nextRing[0]++;
+        if (rc[neighbor] == null) rc[neighbor] = new ArrayList<>();
+        if (rc[frame.atom] == null) rc[frame.atom] = new ArrayList<>();
+        rc[neighbor].add(new int[] {ring, frame.atom});
+        rc[frame.atom].add(new int[] {ring, neighbor});
+        ringEdges.add(MolGraph.bondKey(frame.atom, neighbor));
       }
     }
-    color[atom] = 2;
+  }
+
+  private static final class EmissionFrame {
+    final int atom, childCount;
+    final int[] neighbors;
+    final boolean closeBranch;
+    int nextNeighbor, childIndex;
+
+    EmissionFrame(int atom, int[] neighbors, int childCount, boolean closeBranch) {
+      this.atom = atom;
+      this.neighbors = neighbors;
+      this.childCount = childCount;
+      this.closeBranch = closeBranch;
+    }
   }
 
   private void emitSmiles(int atom, int parent, boolean[] visited, StringBuilder sb,
                           List<int[]>[] rc, Set<Long> ringEdges, Map<Long, Integer> bondDirections,
-                          Map<Integer, Integer> atomMaps) {
+                          Map<Integer, Integer> atomMaps, int[] ringLabels, boolean[] usedRingLabels) {
+    ArrayDeque<EmissionFrame> pending = new ArrayDeque<>();
+    pending.push(emitAtom(atom, parent, false, visited, sb, rc, ringEdges, bondDirections,
+        atomMaps, ringLabels, usedRingLabels));
+    while (!pending.isEmpty()) {
+      EmissionFrame frame = pending.peek();
+      if (frame.nextNeighbor == frame.neighbors.length) {
+        pending.pop();
+        if (frame.closeBranch) sb.append(')');
+        continue;
+      }
+      int neighbor = frame.neighbors[frame.nextNeighbor++];
+      if (visited[neighbor] || ringEdges.contains(MolGraph.bondKey(frame.atom, neighbor))) continue;
+      frame.childIndex++;
+      boolean needParen = frame.childCount > 1 && frame.childIndex < frame.childCount;
+      if (needParen) sb.append('(');
+      writeBondSymbol(frame.atom, neighbor, sb, bondDirections);
+      pending.push(emitAtom(neighbor, frame.atom, needParen, visited, sb, rc, ringEdges,
+          bondDirections, atomMaps, ringLabels, usedRingLabels));
+    }
+  }
+
+  private EmissionFrame emitAtom(int atom, int parent, boolean closeBranch, boolean[] visited,
+                                StringBuilder sb, List<int[]>[] rc, Set<Long> ringEdges,
+                                Map<Long, Integer> bondDirections, Map<Integer, Integer> atomMaps,
+                                int[] ringLabels, boolean[] usedRingLabels) {
     visited[atom] = true;
-    // Collect traversal neighbours in canonical order for tetrahedral parity
     int[] sorted = sortedNeighborsByCanonical(atom);
     writeAtom(atom, parent, sorted, rc, ringEdges, sb, atomMaps);
     if (rc[atom] != null) {
       for (int[] entry : rc[atom]) {
         if (!visited[entry[1]]) writeBondSymbol(atom, entry[1], sb, bondDirections);
-        writeRingDigit(entry[0], sb);
+        int label = ringLabels[entry[0]];
+        if (label == 0) {
+          label = entry[0];
+          if (label >= usedRingLabels.length || usedRingLabels[label]) {
+            label = 1;
+            while (label < usedRingLabels.length && usedRingLabels[label]) label++;
+          }
+          if (label == usedRingLabels.length)
+            throw new IllegalArgumentException("SMILES output needs more than 99 simultaneously open ring closures");
+          usedRingLabels[label] = true;
+          ringLabels[entry[0]] = label;
+        } else {
+          usedRingLabels[label] = false;
+          ringLabels[entry[0]] = 0;
+        }
+        writeRingDigit(label, sb);
       }
     }
     int childCount = 0;
-    for (int nb : sorted) if (!visited[nb] && !ringEdges.contains(MolGraph.bondKey(atom, nb))) childCount++;
-    int childIdx = 0;
-    for (int nb : sorted) {
-      if (visited[nb] || ringEdges.contains(MolGraph.bondKey(atom, nb))) continue;
-      childIdx++;
-      boolean needParen = childCount > 1 && childIdx < childCount;
-      if (needParen) sb.append('(');
-      writeBondSymbol(atom, nb, sb, bondDirections);
-      emitSmiles(nb, atom, visited, sb, rc, ringEdges, bondDirections, atomMaps);
-      if (needParen) sb.append(')');
-    }
+    for (int neighbor : sorted)
+      if (!visited[neighbor] && !ringEdges.contains(MolGraph.bondKey(atom, neighbor))) childCount++;
+    return new EmissionFrame(atom, sorted, childCount, closeBranch);
   }
 
   private int[] sortedNeighborsByCanonical(int atom) {

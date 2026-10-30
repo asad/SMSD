@@ -3,6 +3,210 @@
 All notable changes to SMSD Pro are documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [8.1.0] - 2026-10-31
+
+Python data and machine-learning adapters, local MCP tools, packed fingerprint
+corpora, corpus threshold searches and SMARTS export of MCS results, and a
+correction to the C++ RDKit adapter. Deprecated 8.x APIs remain available and
+supported throughout the 8.x line. The Java library and command-line tool stay
+at 8.0.3 on Maven Central. The CPU Docker images carry the 8.1.0 command-line
+tool; otherwise the Java changes below are available only from a source build.
+The [release notes](docs/RELEASE_NOTES.md) list the downloads and upgrade notes.
+
+### Added
+
+- `relevantCyclesTruncated` (C++ and Java) and Python
+  `relevant_cycles_truncated` report incomplete full relevant-cycle enumeration
+  separately from the existing `ringsTruncated`/`rings_truncated` basis flag.
+- `RingBasisUnavailable` identifies a result refused because ring perception
+  reached its work limit before the minimum cycle basis was complete: C++
+  `smsd::RingBasisUnavailable` (a `std::runtime_error`), Python
+  `smsd.RingBasisUnavailable` (a `RuntimeError`) and Java
+  `RingBasisUnavailableException` (an `IllegalStateException`), so existing
+  handlers still catch it. C++ `MolGraph::ringCountsTruncated()` reports when
+  the per-atom ring counts may be incomplete for that reason, and
+  `MolGraph::computeRelevantCyclesFromBasis` finds relevant cycles from a given
+  basis.
+- Relevant-cycle families: C++ `computeRelevantCycleFamilies`
+  (`relevant_cycle_families.hpp`), Python `compute_relevant_cycle_families` and
+  Java `MolGraph.computeRelevantCycleFamilies()` group the relevant cycles into
+  families, each with one member and its exact number of members, so the
+  relevant cycles can be counted without listing them; `truncated` reports an
+  incomplete enumeration. `relevantCycleFamilyOf` (Python
+  `relevant_cycle_family_of`) finds the family of a ring, and
+  `relevantCycleFamilyMembers` (Python `relevant_cycle_family_members`) lists
+  members up to a given limit. When the enumeration is complete, the relevant
+  cycles and their number do not depend on the input atom order; the grouping
+  into families can.
+- `Substructure.match_corpus` and `MCS.match_corpus` (C++ `matchCorpus`)
+  decide, for each target in a corpus, whether the query is contained or shares
+  at least a given number of atoms, with an optional GPU pre-screen
+  (`gpu_prefilter`). Matching runs on the CPU; ordinary batch methods are
+  unchanged.
+- Optional Python feature adapters for NumPy, SciPy CSR, pandas, Polars,
+  Arrow, PyTorch and PyTorch Geometric, plus scikit-learn fingerprint and
+  similarity transformers. Arrow records buffer ownership and required copies.
+- Local molecular tools for MCS, substructure, SMARTS, fingerprints, similarity,
+  screening, standardisation and depiction; one registry for MCP, function
+  definitions and optional LangChain/LlamaIndex adapters. Results retain limits
+  and native proof/status where applicable.
+- MCP container and Hugging Face demonstration source recipes using supplied
+  wheels and offline installation.
+- A consolidated API reference, an `llms.txt` documentation index and a guide
+  to connecting AI assistants to the local tools.
+- Python examples for NVIDIA screening checked against the CPU, an offline
+  chain of the molecular tools and an MCP client.
+- A C++ example, `cpp/examples/metal_fingerprint_screen.cpp`, screens packed
+  fingerprints on a Metal GPU through `metal::fingerprintAccelerator()`, falls
+  back to the CPU screen when the provider declines or fails, and reports which
+  path ran; build it with `-DSMSD_BUILD_EXAMPLES=ON`.
+- Native SVG highlights of existing MCS results.
+- Memory-mapped packed binary fingerprints with streamed construction, CPU/CUDA
+  threshold and exact top-k scans, Butina and MaxMin. Explicit backend selection
+  and `cuda_calls` expose completed packed device work; clustering bookkeeping
+  remains deterministic CPU work.
+- CUDA kernel preload, retained workspace, opt-in CUDA Graph replay and on-device
+  top-k selection.
+- `SMSD_CUDA_MIN_TARGETS` lets automatic ECFP4 screening of a prepared
+  `TargetCorpus` use any NVIDIA GPU with compute capability 7.5 or later from a
+  chosen corpus size; on a Tesla T4 it replaces the 100,000-target default.
+- Streamed native corpus screening and `warm_start` for an existing target corpus.
+- `smsd-cuda` includes native code for GPUs of compute capability 10.0 and
+  12.0, such as data-centre Blackwell GPUs, the GeForce RTX 50 series and
+  RTX PRO Blackwell cards.
+- `MCS::matchWithSmarts`, Java `MCS.matchWithSmarts` and Python
+  `MCS.match_with_smarts`, returning the ordinary result beside a SMARTS pattern
+  under the prepared chemistry, in Java as an `MCS.SmartsResult`. Java
+  `SearchResult.Match.toSmarts(query, chemistry)`, with the query as a
+  `MolGraph` or `IAtomContainer`, exports one match, and `SmartsWriter` exports
+  molecular graphs.
+- Conda recipes for `smsd` (CPU) and `smsd-cuda` (Linux CUDA), with conda,
+  mamba and Pixi install routes.
+- Release tooling updates citation metadata, extracts release notes and
+  collects wheel manifests.
+
+### Changed
+
+- `MCS.consensus` remains an approximation: `optimal` is always false,
+  including for empty and single-input calls, and `complete` means the
+  computation finished, not that no larger qualifying common graph exists.
+- Ring perception works within one fixed, deterministic work limit, the same
+  in C++, Java and Python and independent of time, thread count and hardware.
+  Very large fused-ring systems, such as synthetic cages, can reach it. Some
+  ring systems that 8.0.3 left incomplete now complete, so their ring-dependent
+  results can change. Where rings stay
+  incomplete, searches that need them report `LimitReached` and other calls
+  raise an error naming the cause, with the zero-based input index in C++ and
+  Python batch calls, where 8.0.3 computed such results from incomplete rings.
+- Complete-ring matching uses all relevant cycles, so a relevant cycle outside
+  the smallest set of smallest rings now counts as a complete ring; 8.0.3 could
+  reject it and report a smaller result, even an empty one, as proved.
+  `relevantCyclesTruncated` reports when the enumeration is incomplete. With
+  `completeRingsOnly`, Java substructure matching now rejects embeddings that
+  cover only part of a ring, as C++ and Python do, and reports `LimitReached`
+  when the ring perception it needs is incomplete.
+- Per-atom ring counts, and with them strict ring-fusion results, can differ
+  from 8.0.3 and can still depend on the input atom order.
+- Positive numeric SMARTS `R<n>` (`n > 0`) uses one deterministic minimum cycle
+  basis, the same in C++ and Java, so a Java result that came from a different
+  minimum basis of equal size can change. If ring perception cannot complete
+  the basis, a search that cannot be decided without it returns `LimitReached`
+  without matches, other functions that need the basis raise an error, and
+  `computeSSSR` and `computeRings` may return incomplete rings with truncation
+  flags. Literal `R` and `R0` do not depend on the basis, and
+  `relevantCyclesTruncated` alone does not make it incomplete.
+- Ring-size and double-bond stereo fingerprint terms, aromatic-ring keys (as in
+  MACCS) and SMARTS keys whose search needs the minimum cycle basis raise an
+  error naming the cause when ring perception cannot complete that basis, where
+  8.0.3 could return values computed from incomplete rings. Java now uses the
+  same basis for these terms as C++ and Python, so a Java value that came from
+  a different minimum basis of equal size can change. Time and embedding limits
+  on key searches behave as in 8.0.3, but in C++ and Python batch calls their
+  errors now also give the zero-based input index, as ring refusals do.
+- Compiled SMARTS evaluate distinct recursive predicates separately.
+  Common-graph search rejects inconsistent bond properties.
+- On Linux and macOS x86-64, fingerprint similarity and screening use the
+  processor's population-count instruction when it is present, detected at run
+  time; Windows builds already used it. With NumPy 2.0 or later, packed corpora
+  count bits with NumPy's `bitwise_count`. Results are unchanged.
+- C++ and Python MCIS search (the default MCS objective) has changed: when
+  8.0.3 or 8.1.0 stops a search at its node or time limit, including the
+  default time limit, the two results can differ, and a result of the same size
+  can come with a different atom mapping. Java does not have this change, so a
+  stopped search can return a different result in Java than in C++ and Python.
+- macOS arm64 wheels now target macOS 14 or later; the 8.0.3 wheels targeted
+  macOS 26.
+- The Python wheels and conda recipes support CPython 3.12–3.15. CPython 3.10
+  and 3.11 are no longer supported; on those versions, pip continues to install
+  8.0.3.
+- Python source builds, including installation from the source distribution,
+  leave Metal and CUDA out by default; set `SMSD_BUILD_METAL` or
+  `SMSD_BUILD_CUDA` to `ON` or `AUTO` with `-Ccmake.define` to include them.
+  This changes only what `gpu_is_available()` and `gpu_device_info()` report;
+  the published wheels are unchanged.
+
+### Fixed
+
+- The RDKit adapter (`fromRDKit` and `fromSmiles`, C++) now keeps each atom's
+  hydrogen count and the E/Z configuration of double bonds where it is specified,
+  bringing its graphs into line with SMSD's own SMILES parser. Previously,
+  aromatic N–H atoms, such as those in pyrrole, indole and imidazole, were imported
+  without their hydrogen.
+- NOTICE and the packaged licence files now credit the RDKit for the MACCS key
+  definitions and pybind11 for the Python extension module.
+- The `smsd-cuda` package now ships the CUB and CCCL licences, and its NOTICE
+  points to them.
+- SMILES writers reuse closure labels and traverse iteratively, and the C++
+  SMARTS writer, including `toSMARTS` (Python `to_smarts`), now reuses closure
+  labels as Java `SmartsWriter` does. They reject graphs needing more than 99
+  simultaneously open closures.
+- SMARTS parsing in C++ and Python now rejects a pattern that ends with a bond,
+  such as `CC-` or `CC=`, as Java already did; 8.0.3 C++ and Python accepted
+  it and dropped the bond.
+- Native corpus prewarming, native corpus screening on the CPU, the
+  path-fingerprint form of C++ `batchFingerprint` and `batchFingerprintScreen`
+  pass worker exceptions to the caller. On several threads the exception of the
+  first input that fails is raised, as on one thread, instead of ending the
+  process.
+- A CUDA device below compute capability 7.5 is reported as unavailable, with
+  the reason, rather than as available with failing device calls. Automatic
+  screening then uses the CPU.
+- Bond edits refresh cached topology and ring perception for later reads and
+  searches.
+- The MOL and SDF readers no longer record E/Z on double bonds that cannot carry
+  it, such as those in rings of fewer than eight atoms; such files now give the
+  same canonical SMILES as the equivalent SMILES and can be written as SMILES.
+- `extractSubgraph` (Python `extract_subgraph`), and with it R-group
+  decomposition, now keeps tetrahedral and E/Z stereo where the kept atoms
+  determine it, as Java already did.
+
+### Limitations
+
+- Packed all-against-all scans take quadratic time, and keeping every result
+  can need quadratic memory.
+- Explicit packed CUDA failures propagate; native corpus screening retains its
+  separate dispatch/fallback contract. Device availability alone does not prove
+  that a native screen used the GPU.
+- Portable SMARTS rejects unsupported stereo, tautomer, complete-ring and strict
+  ring-fusion rules; it does not encode the induced MCIS objective or a proof.
+- The PyTorch adapters reject detected bundled OpenMP conflicts; on macOS, an
+  OpenMP-free SMSD source build may be needed.
+- Canonical SMILES and canonical hashes of a molecule with more than 5,000
+  atoms (200 in Java), or whose canonical labelling reaches its search limit,
+  can depend on the input atom order; `automorphismGeneratorsTruncated()`
+  (Python `automorphism_generators_truncated()`) is then true.
+- In C++ and Python, canonical SMILES of molecules with very large rings, of
+  several hundred ring atoms, can take minutes to compute.
+- With complete-ring constraints, an MCIS search on a large polycyclic aromatic
+  system or a cyclodextrin can, for some atom orders, reach its time limit
+  without a match; its status reports the stop.
+- In rare cases Java reports `Cancelled`, with `optimal()` true and `complete()`
+  false, for a search whose proof had already completed; the score and the
+  proof are unaffected.
+- E/Z marks on a double bond with two identical substituents at one end are
+  kept as written, so such a molecule written with and without the marks has
+  two canonical SMILES.
+
 ## [8.0.3] - 2026-10-25
 
 Corrections to complete-ring MCS matching, to the status of MCS results that

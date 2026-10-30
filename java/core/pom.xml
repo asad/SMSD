@@ -7,7 +7,7 @@
   <parent>
     <groupId>com.bioinceptionlabs</groupId>
     <artifactId>smsd-parent</artifactId>
-    <version>8.0.3</version>
+    <version>8.1.0</version>
   </parent>
 
   <!-- The library: substructure and MCS search on CDK molecules. It depends only
@@ -112,6 +112,7 @@
           <include>NOTICE</include>
           <include>licenses/cdk/LICENSE</include>
           <include>licenses/cdk/README.md</include>
+          <include>licenses/rdkit/LICENSE</include>
         </includes>
       </resource>
     </resources>
@@ -129,6 +130,7 @@
           <include>NOTICE</include>
           <include>licenses/cdk/LICENSE</include>
           <include>licenses/cdk/README.md</include>
+          <include>licenses/rdkit/LICENSE</include>
         </includes>
       </testResource>
     </testResources>
@@ -157,6 +159,7 @@
                   <includes>
                     <include>LICENSE</include>
                     <include>NOTICE</include>
+                    <include>licenses/rdkit/LICENSE</include>
                   </includes>
                 </resource>
               </resources>

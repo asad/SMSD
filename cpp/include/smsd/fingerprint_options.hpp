@@ -1,5 +1,5 @@
 /*
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-License-Identifier: Apache-2.0 AND BSD-3-Clause
  * Copyright (c) 2018-2026 BioInception PVT LTD
  * Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
  * See the NOTICE file for attribution, trademark, and algorithm IP terms.
@@ -199,8 +199,11 @@ namespace fingerprint_detail {
 
 struct MaccsDefinition { const char* smarts; int minimum; };
 
-/// The public MACCS key definitions as SMARTS with a minimum count of distinct matches;
-/// keys 1, 125 and 166 are the isotope, aromatic ring and fragment counts.
+/// The MACCS key definitions as SMARTS with a minimum count of distinct matches;
+/// keys 1, 125 and 166 are the isotope, aromatic ring and fragment counts. The SMARTS are
+/// adapted from the RDKit file rdkit/Chem/MACCSkeys.py, Copyright (C) 2001-2011 Greg Landrum
+/// and Rational Discovery LLC, and are used under the BSD 3-Clause License; see
+/// licenses/rdkit/LICENSE.
 inline const std::array<MaccsDefinition, 166>& maccsDefinitions() {
     static const std::array<MaccsDefinition, 166> definitions = {{
         {"", 1},                                                    // 1 isotope
@@ -1052,18 +1055,31 @@ inline std::shared_ptr<const Substructure> preparedKey(const std::string& patter
 /// A key search must run to its end: a search cut short by time would make the bits depend on the machine.
 inline void requireSettled(const SearchResult& result) {
     if (result.status == SearchStatus::TimedOut || result.status == SearchStatus::Cancelled)
-        throw std::runtime_error("a substructure key search did not complete within its time budget");
+        throw detail::KeySearchUnsettled("a substructure key search did not complete within its time budget");
+}
+
+/**
+ * Refuses a key that a stopped search left undecided. A search on a graph without an exact
+ * ring basis stops before its first match when the pattern counts ring memberships; any other
+ * stop is the embedding limit, reached only after that many matches.
+ */
+[[noreturn]] inline void refuseUndecided(const SearchResult& result, const MolGraph& graph) {
+    if (result.matches.empty() && ::smsd::ringsTruncated(graph))
+        throw ::smsd::detail_rf::RingBasisUnavailable(::smsd::detail_rf::RING_BASIS_UNAVAILABLE_MESSAGE);
+    throw detail::KeySearchUnsettled("a substructure key matched more than 100000 embeddings before its count was settled");
 }
 
 /**
  * How many distinct atom sets a SMARTS pattern matches, or whether it matches at all when
- * `atMost` is one. Beyond the embedding limit the count is settled only when it has reached
- * `atMost`; otherwise the key is reported as an error rather than guessed.
+ * `atMost` is one. Every match found is a proved embedding, so a stopped search still settles
+ * a key whose count has reached `atMost`; a key it leaves below that is reported as an error
+ * rather than guessed.
  */
 inline int keyMatches(const Substructure& query, const MolGraph& graph, int atMost) {
     if (atMost <= 1) {
         const SearchResult first = query.match(graph);
         requireSettled(first);
+        if (first.status == SearchStatus::LimitReached && first.matches.empty()) refuseUndecided(first, graph);
         return first.matches.empty() ? 0 : 1;
     }
     const SearchResult all = query.matchAll(graph, KEY_MATCH_LIMIT);
@@ -1077,8 +1093,7 @@ inline int keyMatches(const Substructure& query, const MolGraph& graph, int atMo
         distinct.insert(std::move(atoms));
     }
     const int count = static_cast<int>(distinct.size());
-    if (all.status == SearchStatus::LimitReached && count < atMost)
-        throw std::runtime_error("a substructure key matched more than 100000 embeddings before its count was settled");
+    if (all.status == SearchStatus::LimitReached && count < atMost) refuseUndecided(all, graph);
     return count;
 }
 
@@ -1204,6 +1219,8 @@ inline std::vector<uint64_t> fingerprintFromSmiles(const std::string& smiles, co
 /// The fingerprints of every molecule under `options`, in input order, on up to numThreads threads
 /// (0 = all available), for any sequence whose items read as const MolGraph&. When a molecule
 /// throws, the exception of the first that fails propagates, as on one thread.
+/// A refusal (an unavailable exact ring basis or an unsettled key search) additionally identifies its
+/// zero-based input index.
 template<class Molecules>
 inline std::vector<std::vector<uint64_t>> batchFingerprint(const Molecules& mols,
                                                            const FingerprintOptions& options,

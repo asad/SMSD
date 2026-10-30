@@ -22,11 +22,13 @@
 
 #include "smsd/bitops.hpp"
 #include "smsd/mol_graph.hpp"
+#include "smsd/ring_finder.hpp"
 #include "smsd/screen_accelerator.hpp"
 #include "smsd/search_types.hpp"
 #include "smsd/similarity_screen.hpp"
 #include "smsd/smiles_parser.hpp"
 #include "smsd/detail/target_storage.hpp"
+#include "smsd/detail/search_graph_validation.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -619,6 +621,22 @@ inline std::vector<int> computeTopologicalTorsionCounts(
 // ============================================================================
 
 namespace detail {
+/** A substructure key search that stopped at its time or embedding limit before its key was decided. */
+class KeySearchUnsettled : public std::runtime_error {
+public:
+    using std::runtime_error::runtime_error;
+};
+
+/**
+ * Add the input position only to a refusal: an unavailable exact ring basis or an unsettled
+ * key search. The refusal keeps its type and message, with the position appended.
+ */
+template<class Refusal>
+[[noreturn]] inline void rethrowAtInput(const Refusal& cause, size_t inputIndex) {
+    std::throw_with_nested(Refusal(
+        std::string(cause.what()) + " (input index " + std::to_string(inputIndex) + ", zero-based)"));
+}
+
 /// Workers for a loop of count items when each worker should receive at least minimumPerWorker
 /// of them; small loops then run on the calling thread instead of waking a team.
 inline int workersFor(int count, int numThreads, int minimumPerWorker) {
@@ -626,9 +644,43 @@ inline int workersFor(int count, int numThreads, int minimumPerWorker) {
 }
 
 /**
+ * body(i) for every i in [0, count), on workers threads (one when workers <= 1) that claim chunk
+ * indices at a time. When body throws, the exception of the first index that fails propagates,
+ * as on one thread.
+ */
+template<class Body>
+inline void forEachIndex(int count, int workers, int chunk, const Body& body) {
+    std::atomic<int> firstFailure{count};
+    std::exception_ptr failure;
+    (void)workers;
+    (void)chunk;
+#ifdef _OPENMP
+    #pragma omp parallel for schedule(dynamic, chunk) num_threads(workers) if(workers > 1)
+#endif
+    for (int i = 0; i < count; ++i) {
+        // Indices after a failure are skipped; every index before it is still visited.
+        if (i > firstFailure.load(std::memory_order_relaxed)) continue;
+        try {
+            body(i);
+        } catch (...) {
+#ifdef _OPENMP
+            #pragma omp critical(smsd_for_each_index_failure)
+#endif
+            if (i < firstFailure.load(std::memory_order_relaxed)) {
+                failure = std::current_exception();
+                firstFailure.store(i, std::memory_order_relaxed);
+            }
+        }
+    }
+    if (failure) std::rethrow_exception(failure);
+}
+
+/**
  * fingerprint(molecules[i]) for every molecule, in input order, on up to numThreads threads
  * (0 = all available). Molecules is any sequence whose items read as const MolGraph&. When
  * fingerprint throws, the exception of the first molecule that fails propagates, as on one thread.
+ * A refusal (an unavailable exact ring basis or an unsettled key search) additionally
+ * identifies its zero-based input index.
  */
 template<class Molecules, class Fingerprint>
 inline auto fingerprintEach(const Molecules& molecules, int numThreads, const Fingerprint& fingerprint)
@@ -654,13 +706,30 @@ inline auto fingerprintEach(const Molecules& molecules, int numThreads, const Fi
                 }
             }
         }
-        if (failure) std::rethrow_exception(failure);
+        if (failure) {
+            const size_t inputIndex = static_cast<size_t>(firstFailure.load(std::memory_order_relaxed));
+            try {
+                std::rethrow_exception(failure);
+            } catch (const ::smsd::detail_rf::RingBasisUnavailable& cause) {
+                rethrowAtInput(cause, inputIndex);
+            } catch (const KeySearchUnsettled& cause) {
+                rethrowAtInput(cause, inputIndex);
+            }
+        }
         return results;
     }
 #else
     (void)numThreads;
 #endif
-    for (int i = 0; i < N; ++i) results[i] = fingerprint(molecules[i]);
+    for (int i = 0; i < N; ++i) {
+        try {
+            results[i] = fingerprint(molecules[i]);
+        } catch (const ::smsd::detail_rf::RingBasisUnavailable& cause) {
+            rethrowAtInput(cause, static_cast<size_t>(i));
+        } catch (const KeySearchUnsettled& cause) {
+            rethrowAtInput(cause, static_cast<size_t>(i));
+        }
+    }
     return results;
 }
 } // namespace detail
@@ -690,14 +759,9 @@ inline std::vector<std::vector<uint64_t>> batchFingerprint(
     fpSize = ((fpSize + 63) / 64) * 64;
 
     const int nThreads = detail::workersFor(N, numThreads, 1);
-    (void)nThreads;
-
-#ifdef _OPENMP
-    #pragma omp parallel for schedule(dynamic, 8) num_threads(nThreads) if(nThreads > 1)
-#endif
-    for (int i = 0; i < N; ++i) {
+    detail::forEachIndex(N, nThreads, 8, [&](int i) {
         results[i] = detail::computePathFingerprint(mols[i], pathLength, fpSize);
-    }
+    });
 
     return results;
 }
@@ -715,13 +779,9 @@ struct BitCounts {
 inline BitCounts bitCounts(const std::vector<uint64_t>& a, const std::vector<uint64_t>& b) {
     BitCounts counts;
     const size_t shared = std::min(a.size(), b.size());
-    for (size_t i = 0; i < shared; ++i) {
-        counts.common += popcount64(a[i] & b[i]);
-        counts.first  += popcount64(a[i]);
-        counts.second += popcount64(b[i]);
-    }
-    for (size_t i = shared; i < a.size(); ++i) counts.first += popcount64(a[i]);
-    for (size_t i = shared; i < b.size(); ++i) counts.second += popcount64(b[i]);
+    popcountWordPairs(a.data(), b.data(), shared, counts.common, counts.first, counts.second);
+    counts.first  += popcountWords(a.data() + shared, a.size() - shared);
+    counts.second += popcountWords(b.data() + shared, b.size() - shared);
     return counts;
 }
 
@@ -964,14 +1024,9 @@ inline std::vector<int> batchFingerprintScreen(
     std::vector<int> mask(N, 0);
     // A subset test takes nanoseconds, so claims are large and short screens stay serial.
     const int nThreads = detail::workersFor(N, numThreads, 2048);
-    (void)nThreads;
-
-#ifdef _OPENMP
-    #pragma omp parallel for schedule(dynamic, 1024) num_threads(nThreads) if(nThreads > 1)
-#endif
-    for (int i = 0; i < N; ++i) {
+    detail::forEachIndex(N, nThreads, 1024, [&](int i) {
         mask[i] = fingerprintSubset(queryFP, targetFPs[i]) ? 1 : 0;
-    }
+    });
 
     std::vector<int> hits;
     for (int i = 0; i < N; ++i) {
@@ -1142,13 +1197,10 @@ class TargetCorpus {
         double threshold, int numThreads) const {
         const int targetCount = static_cast<int>(targets_.size());
         const int workers = detail::workersFor(targetCount, numThreads, 1024);
-        (void)workers;
         std::vector<uint8_t> mask(targetCount, 0);
-#ifdef _OPENMP
-        #pragma omp parallel for schedule(dynamic, 512) num_threads(workers) if(workers > 1)
-#endif
-        for (int target = 0; target < targetCount; ++target)
+        detail::forEachIndex(targetCount, workers, 512, [&](int target) {
             mask[target] = fingerprintTanimoto(queryFingerprint, fingerprints_[target]) >= threshold;
+        });
         std::vector<int> hits;
         for (int target = 0; target < targetCount; ++target)
             if (mask[target]) hits.push_back(target);
@@ -1231,6 +1283,7 @@ public:
     /// Query methods may run concurrently; additions and prewarming are exclusive.
     void prewarm(int numThreads = 0) {
         const std::unique_lock<std::shared_mutex> corpusLock(corpusMutex());
+        prewarmed_ = false;
         fingerprintDevice_.clear();
         substructureFingerprints_.clear();
         const int N = static_cast<int>(targets_.size());
@@ -1240,23 +1293,30 @@ public:
         const int nThreads = detail::workersFor(N, numThreads, 1);
         (void)nThreads;
 
-        // Prewarm graph invariants in parallel
+        std::atomic<int> firstFailure{stored};
+        std::exception_ptr failure;
 #ifdef _OPENMP
         #pragma omp parallel for schedule(dynamic, 1) num_threads(nThreads) if(nThreads > 1)
 #endif
         for (int i = 0; i < stored; ++i) {
-            detail::prewarmGraph(targets_.storedGraph(i));
-        }
-
-        // Compute ECFP fingerprints in parallel
-        fingerprints_.resize(N);
+            if (i > firstFailure.load(std::memory_order_relaxed)) continue;
+            try {
+                detail::prewarmGraph(targets_.storedGraph(i));
+            } catch (...) {
 #ifdef _OPENMP
-        #pragma omp parallel for schedule(dynamic, 8) num_threads(nThreads) if(nThreads > 1)
+                #pragma omp critical(smsd_corpus_prewarm_failure)
 #endif
-        for (int i = 0; i < N; ++i) {
-            fingerprints_[i] = detail::computeCircularFingerprintECFP(
-                targets_[i], /*radius=*/2, /*fpSize=*/2048);
+                if (i < firstFailure.load(std::memory_order_relaxed)) {
+                    failure = std::current_exception();
+                    firstFailure.store(i, std::memory_order_relaxed);
+                }
+            }
         }
+        if (failure) std::rethrow_exception(failure);
+
+        fingerprints_ = detail::fingerprintEach(targets_, numThreads, [](const MolGraph& graph) {
+            return detail::computeCircularFingerprintECFP(graph, /*radius=*/2, /*fpSize=*/2048);
+        });
 
         prewarmed_ = true;
     }
@@ -1374,22 +1434,39 @@ public:
         return screenLabelQueries(pointers, threshold, chemistry, numThreads);
     }
 
-    /**
-     * A conservative molecule-substructure mask, or no mask when no measured accelerator is
-     * available. Targets containing pseudo atoms are always retained. No prewarm is required.
-     */
+    /** A necessary-condition mask under the existing automatic accelerator policy. */
     std::optional<std::vector<uint8_t>> substructureCandidates(const MolGraph& query,
         const ChemOptions& chemistry, int numThreads = 0, const CancellationToken* cancellation = nullptr) const {
         if (numThreads < 0) throw std::invalid_argument("Thread count must be non-negative");
         const std::shared_lock<std::shared_mutex> corpusLock(corpusMutex());
+        return substructureCandidatesUnlocked(query, chemistry, numThreads, cancellation, true, true);
+    }
+
+private:
+    /** Validate graph-search inputs before their fingerprint or label prefilter. */
+    bool validateGraphSearchInputs(const MolGraph& query, const CancellationToken* cancellation = nullptr) const {
+        auto cancelled = [&] { return cancellation != nullptr && cancellation->isCancelled(); };
+        if (cancelled() || !search_detail::validateSearchGraphStorage(query, cancelled)) return false;
+        for (size_t target = 0; target < targets_.storedSize(); ++target)
+            if (cancelled() || !search_detail::validateSearchGraphStorage(targets_.storedGraph(target), cancelled))
+                return false;
+        return true;
+    }
+
+    /** The caller holds the corpus lock, keeping the mask and captured targets together. */
+    std::optional<std::vector<uint8_t>> substructureCandidatesUnlocked(const MolGraph& query,
+        const ChemOptions& chemistry, int numThreads, const CancellationToken* cancellation,
+        bool useGpu, bool automatic) const {
         const auto* provider = screen_accelerator::active();
         if (!chemistry.matchAtomType || targets_.empty()
-            || targets_.size() > static_cast<std::size_t>(std::numeric_limits<int>::max())
-            || !screen_accelerator::hasResidentFingerprints(provider)
-            || !screen_accelerator::reachesMinimum(provider, 3, targets_.size())) return std::nullopt;
+            || targets_.size() > static_cast<std::size_t>(std::numeric_limits<int>::max())) return std::nullopt;
+        const bool accelerated = useGpu && screen_accelerator::hasResidentFingerprints(provider)
+            && (!automatic || screen_accelerator::reachesMinimum(provider, 3, targets_.size()));
+        if (automatic && !accelerated) return std::nullopt;
         auto cancelled = [&] { return cancellation != nullptr && cancellation->isCancelled(); };
         if (cancelled()) return std::nullopt;
         for (int element : query.atomicNum) if (element <= 0) return std::nullopt;
+        if (!validateGraphSearchInputs(query, cancellation)) return std::nullopt;
         constexpr int pathLength = 3, fingerprintBits = 2048;
         auto queryFingerprint = detail::computeElementPathFingerprint(query, pathLength, fingerprintBits);
         if (std::all_of(queryFingerprint.begin(), queryFingerprint.end(), [](uint64_t word) { return word == 0; }))
@@ -1412,14 +1489,61 @@ public:
         }
         std::vector<std::vector<uint64_t>> queries;
         queries.push_back(std::move(queryFingerprint));
-        auto selected = screen_accelerator::fingerprintScreens(queries, *substructureFingerprints_.fingerprints,
-            1.0, substructureFingerprints_.device,
-            [](int common, int queryCount, int) { return common == queryCount ? 1.0 : 0.0; }, provider);
-        if (!selected || cancelled()) return std::nullopt;
+        std::optional<std::vector<std::vector<int>>> selected;
+        if (accelerated)
+            selected = screen_accelerator::fingerprintScreens(queries, *substructureFingerprints_.fingerprints,
+                1.0, substructureFingerprints_.device,
+                [](int common, int queryCount, int) { return common == queryCount ? 1.0 : 0.0; }, provider);
+        if (cancelled() || (automatic && !selected)) return std::nullopt;
         std::vector<uint8_t> mask(targets_.size(), 0);
-        for (int target : selected->front()) mask[target] = 1;
+        if (selected) {
+            for (int target : selected->front()) mask[target] = 1;
+        } else {
+            screening_detail::forEachTarget(static_cast<int>(targets_.size()), numThreads,
+                [&](int target, std::vector<int>&) {
+                    mask[target] = fingerprintSubset(queries.front(), (*substructureFingerprints_.fingerprints)[target]);
+                });
+        }
         return mask;
     }
+
+    /** Element counts only: chemistry constraints can strengthen, never enlarge, this bound. */
+    std::vector<int> atomUpperBoundsUnlocked(const MolGraph& query, int numThreads, bool useGpu) const {
+        std::vector<int> bounds(targets_.size(), -1);
+        if (query.n <= 0 || targets_.empty()
+            || targets_.size() > static_cast<size_t>(std::numeric_limits<int>::max())
+            || std::any_of(query.atomicNum.begin(), query.atomicNum.end(), [](int element) { return element <= 0; }))
+            return bounds;
+        if (!validateGraphSearchInputs(query)) return bounds;
+        ChemOptions chemistry;
+        chemistry.aromaticityMode = ChemOptions::AromaticityMode::FLEXIBLE;
+        chemistry.ringMatchesRingOnly = false;
+        const screening_detail::QueryLabelCounts counts(query, chemistry);
+        if (!counts.dense()) return bounds;
+        const auto& labels = labelsFor(chemistry, numThreads);
+        auto supported = [&](int target) {
+            if (!labels.held(target)) return false;
+            for (auto* label = labels.begin(target); label != labels.end(target); ++label)
+                if (label->label == 0) return false;
+            return true;
+        };
+        const auto* provider = screen_accelerator::active();
+        if (useGpu && screen_accelerator::hasResidentLabels(provider)) {
+            auto consume = [&](size_t, size_t, const std::vector<int32_t>& overlaps) {
+                for (size_t target = 0; target < targets_.size(); ++target)
+                    if (supported(static_cast<int>(target))) bounds[target] = overlaps[target];
+            };
+            auto& cache = labelTables_.resident[screening_detail::labelMode(chemistry)];
+            if (screen_accelerator::residentLabelOverlapsForTargets(
+                    {&query}, targets_, labels, chemistry, cache, consume, provider)) return bounds;
+        }
+        screening_detail::forEachTarget(static_cast<int>(targets_.size()), numThreads,
+            [&](int target, std::vector<int>&) {
+                if (supported(target)) bounds[target] = counts.upperBound(labels, target);
+            });
+        return bounds;
+    }
+
 };
 
 namespace detail {
@@ -1432,7 +1556,54 @@ struct CorpusAccess {
     static TargetStorage targetView(const TargetCorpus& corpus) {
         return corpus.targetView();
     }
+    static std::pair<TargetStorage, std::optional<std::vector<uint8_t>>> substructureInputs(
+        const TargetCorpus& corpus, const MolGraph* query, const ChemOptions& chemistry,
+        int numThreads, bool useGpu) {
+        const std::shared_lock<std::shared_mutex> lock(corpus.corpusMutex());
+        auto mask = query ? corpus.substructureCandidatesUnlocked(*query, chemistry, numThreads, nullptr, useGpu, false)
+                          : std::optional<std::vector<uint8_t>>{};
+        return {corpus.targets_, std::move(mask)};
+    }
+    static std::pair<TargetStorage, std::vector<int>> atomBoundInputs(
+        const TargetCorpus& corpus, const MolGraph* query, int numThreads, bool useGpu) {
+        const std::shared_lock<std::shared_mutex> lock(corpus.corpusMutex());
+        auto bounds = query ? corpus.atomUpperBoundsUnlocked(*query, numThreads, useGpu)
+                            : std::vector<int>(corpus.targets_.size(), -1);
+        return {corpus.targets_, std::move(bounds)};
+    }
 };
+
+/** Search survivors with the ordinary dispatcher; a filter proof has no invented search result. */
+template<class Query>
+std::vector<CorpusSearchResult> matchCorpusInputs(const Query& query, const TargetStorage& targets,
+    const std::vector<int>& bounds, const std::optional<std::vector<uint8_t>>& mask,
+    int minimumAtoms, bool substructure, bool atomObjective, int numThreads) {
+    std::vector<CorpusSearchResult> outcomes(targets.size());
+    MolGraphView survivors;
+    std::vector<size_t> slots;
+    for (size_t target = 0; target < targets.size(); ++target) {
+        auto& outcome = outcomes[target];
+        outcome.targetIndex = target;
+        outcome.atomUpperBound = bounds.empty() ? -1 : bounds[target];
+        const bool rejected = mask ? (*mask)[target] == 0
+            : outcome.atomUpperBound >= 0 && outcome.atomUpperBound < minimumAtoms;
+        if (rejected) outcome.provenBelowThreshold = true;
+        else { survivors.push_back(targets[target]); slots.push_back(target); }
+    }
+    auto results = query.matchMany(survivors, numThreads);
+    for (size_t survivor = 0; survivor < results.size(); ++survivor) {
+        auto& outcome = outcomes[slots[survivor]];
+        auto& result = results[survivor];
+        for (const auto& match : result.matches)
+            if (substructure || match.atomMapping.size() >= static_cast<size_t>(minimumAtoms))
+                outcome.thresholdReached = true;
+        if (!outcome.thresholdReached && result.status == SearchStatus::Completed
+            && (substructure ? result.complete : atomObjective && result.optimal))
+            outcome.provenBelowThreshold = true;
+        outcome.result = std::move(result);
+    }
+    return outcomes;
+}
 
 } // namespace detail
 

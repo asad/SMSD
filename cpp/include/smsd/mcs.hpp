@@ -7,6 +7,7 @@
 #pragma once
 
 #include "smsd/search.hpp"
+#include "smsd/batch.hpp"
 #include "smsd/smiles_parser.hpp"
 
 namespace smsd {
@@ -20,6 +21,12 @@ public:
     using Options = MCSOptions;
     using Objective = MCSObjective;
     using Connectivity = MCSConnectivity;
+    /** A search result and a portable SMARTS query over its best selected graph. */
+    struct SmartsResult {
+        SearchResult result;
+        std::string smarts;
+    };
+    /** A progressive common graph and its supporting embeddings; never a proof of optimality. */
     struct ConsensusResult {
         Match fragment;
         int sourceIndex = -1;
@@ -138,9 +145,32 @@ public:
         return search_detail::commonSubgraph(*query_, target, options_, limit, true);
     }
     SearchResult match(const std::string& target) const { return match(parseSMILES(target)); }
+    /** Export under this prepared query's chemistry; unsupported export rules throw. */
+    SmartsResult matchWithSmarts(const MolGraph& target) const {
+        auto result = match(target);
+        auto pattern = result.matches.empty() ? std::string{}
+            : result.matches.front().toSmarts(*query_, options_.chemistry);
+        return {std::move(result), std::move(pattern)};
+    }
+    SmartsResult matchWithSmarts(const std::string& target) const {
+        return matchWithSmarts(parseSMILES(target));
+    }
     template<class Targets>
     std::vector<SearchResult> matchMany(const Targets& targets, int numThreads = 0) const {
         return search_detail::matchMany(*this, targets, numThreads);
+    }
+    /** Atom-count threshold decisions, retaining exact CPU results for every searched slot. */
+    std::vector<CorpusSearchResult> matchCorpus(const batch::TargetCorpus& corpus, int minimumAtoms,
+        bool gpuPrefilter = false, int numThreads = 0) const {
+        if (minimumAtoms < 1) throw std::invalid_argument("Minimum atom count must be positive");
+        if (numThreads < 0) throw std::invalid_argument("Thread count must be non-negative");
+        const bool atomObjective = options_.objective == Objective::MCIS && options_.atomWeights.empty();
+        const bool filter = atomObjective && options_.chemistry.matchAtomType && options_.nodeLimit == 0
+            && options_.timeoutMs != 0 && !options_.cancellation && options_.excludedTargetAtoms.empty();
+        auto inputs = batch::detail::CorpusAccess::atomBoundInputs(
+            corpus, filter ? query_.get() : nullptr, numThreads, gpuPrefilter);
+        return batch::detail::matchCorpusInputs(*this, inputs.first, inputs.second, std::nullopt,
+            minimumAtoms, false, atomObjective, numThreads);
     }
     SearchResult matchAll(const std::string& target, size_t limit = 1000) const {
         return matchAll(parseSMILES(target), limit);
@@ -149,6 +179,8 @@ public:
     /** Validate the selected graph, including the objective's topology rules. */
     static std::vector<std::string> validateMapping(const MolGraph& query, const MolGraph& target,
                                                    const Match& match, const Options& options = Options{}) {
+        search_detail::validateSearchGraphStorage(query);
+        search_detail::validateSearchGraphStorage(target);
         search_detail::validateOptions(options, query.n);
         for (int atom : options.excludedTargetAtoms)
             if (atom < 0 || atom >= target.n) throw std::out_of_range("Excluded target atom index out of range");
@@ -210,6 +242,8 @@ public:
     }
     static Match mappingMatch(const MolGraph& query, const MolGraph& target, const std::map<int, int>& atoms,
                               const Options& options = Options{}) {
+        search_detail::validateSearchGraphStorage(query);
+        search_detail::validateSearchGraphStorage(target);
         std::vector<int> mapping(query.n, -1);
         for (const auto& atom : atoms) {
             if (atom.first < 0 || atom.first >= query.n || atom.second < 0 || atom.second >= target.n)
@@ -258,7 +292,12 @@ public:
         }
         return results;
     }
-    /** Progressive common-graph reduction; this does not prove a global optimum. */
+    /**
+     * Progressive common-graph reduction under one shared budget.
+     * The result always has optimal false, including empty and single-input calls.
+     * complete reports whether the progressive pass finished. Neither complete nor Completed
+     * proves a global optimum or the absence of a qualifying common graph.
+     */
     static ConsensusResult consensus(const std::vector<MolGraph>& molecules, const Options& options = Options{},
                                       double threshold = 1.0) {
         if (!std::isfinite(threshold) || threshold <= 0.0 || threshold > 1.0)

@@ -101,6 +101,15 @@ if sys.argv[1:3] == ["-m", "pytest"]:
         self.assertNotIn("--allow-incomplete", script)
         self.assertNotIn("build_python_wheels.py prepare", script)
 
+    def test_release_archives_exclude_macos_metadata_only_with_bsdtar(self):
+        script = (Path(__file__).resolve().parents[1] / "prepare-release.sh").read_text()
+        self.assertIn('case "$(tar --version 2>/dev/null || true)" in\n'
+                      '  *bsdtar*) SMSD_RELEASE_TAR_ARGS=(--no-mac-metadata --no-xattrs) ;;\nesac\n', script)
+        archives = [line for line in script.splitlines() if " tar " in line and "-czf" in line]
+        self.assertEqual(len(archives), 2)
+        for line in archives:
+            self.assertTrue(line.startswith('COPYFILE_DISABLE=1 tar ${SMSD_RELEASE_TAR_ARGS[@]+"${SMSD_RELEASE_TAR_ARGS[@]}"} -czf '), line)
+
 
 if __name__ == "__main__":
     unittest.main()

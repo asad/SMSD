@@ -36,9 +36,9 @@ Java, against the source-built dependency JAR:
 
 ```bash
 mvn -f java/pom.xml package -DskipTests
-javac --release 8 -cp java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar \
+javac --release 8 -cp java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar \
   -d build/search-benchmarks benchmarks/BenchmarkSearchAPI.java
-java -cp "build/search-benchmarks:java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar" \
+java -cp "build/search-benchmarks:java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar" \
   BenchmarkSearchAPI --cases benchmarks/search_api_cases.tsv \
   --output build/search-benchmarks/java.jsonl --warmup 2 --repeats 5
 ```

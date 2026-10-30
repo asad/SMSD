@@ -100,7 +100,8 @@ struct [[deprecated("Unused by the searches, whose rules differ; MCS::validateMa
 
 // ===========================================================================
 // extractSubgraph -- extract a subgraph containing only the specified atom indices.
-// Extract an induced graph in the supplied atom order.
+// Extract an induced graph in the supplied atom order, keeping the stereo that the
+// retained atoms still define.
 // ===========================================================================
 
 inline MolGraph extractSubgraph(const MolGraph& mol, const std::vector<int>& atomIndices) {
@@ -157,6 +158,59 @@ inline MolGraph extractSubgraph(const MolGraph& mol, const std::vector<int>& ato
         }
     }
 
+    // As in the Java fragments, a tetrahedral centre keeps its configuration when all its
+    // neighbours stay, and a double bond when both ends keep the ligands its configuration is
+    // stored against, the first neighbour of each end besides the other end; any other stereo
+    // is dropped. A tag winds the neighbours in their order with an implicit ligand placed by
+    // index, as stereo_detail::tetrahedralLigands() reads it, so a centre whose ligand order
+    // changes with the new atom order takes the parity of that permutation.
+    std::vector<int> chirality(subN, 0);
+    std::vector<std::tuple<int, int, int>> stereoBonds;
+    if (static_cast<int>(oldToNew.size()) == subN) {
+        auto ligandOrder = [](const std::vector<int>& around, int atom, int (&ligands)[4]) {
+            const int implicitSlot = around.size() == 3 ? (around[0] < atom ? 1 : 0) : -1;
+            for (int slot = 0, next = 0; slot < 4; ++slot)
+                ligands[slot] = slot == implicitSlot ? -1 : around[next++];
+        };
+        for (int k = 0; k < subN; ++k) {
+            const int oldIdx = atomIndices[k];
+            const int tag = oldIdx < static_cast<int>(mol.tetraChirality.size()) ? mol.tetraChirality[oldIdx] : 0;
+            const size_t degree = mol.neighbors[oldIdx].size();
+            if (tag == 0 || (degree != 3 && degree != 4) || neighbors[k].size() != degree) continue;
+            int source[4], target[4], position[4];
+            ligandOrder(mol.neighbors[oldIdx], oldIdx, source);
+            ligandOrder(neighbors[k], k, target);
+            for (int slot = 0; slot < 4; ++slot) {
+                const int ligand = source[slot] < 0 ? -1 : oldToNew.at(source[slot]);
+                position[slot] = static_cast<int>(std::find(target, target + 4, ligand) - target);
+            }
+            bool odd = false;
+            for (int first = 0; first < 4; ++first)
+                for (int second = first + 1; second < 4; ++second)
+                    if (position[first] > position[second]) odd = !odd;
+            chirality[k] = odd ? 3 - tag : tag;
+        }
+        // The kept ligands stay in their original order, so a retained reference is still the
+        // first ligand of its end and the configuration holds unchanged. Aromatic bonds, and bonds
+        // between aromatic atoms whose order the Kekule fallback below may change, are left out.
+        auto firstLigand = [&mol](int end, int other) {
+            for (int ligand : mol.neighbors[end]) if (ligand != other) return ligand;
+            return -1;
+        };
+        for (int k = 0; k < subN; ++k)
+            for (int other : neighbors[k]) {
+                if (other <= k) continue;
+                const int first = atomIndices[k], second = atomIndices[other];
+                const int configuration = mol.dbStereo(first, second);
+                if (configuration == 0 || mol.bondOrder(first, second) != 2 || mol.bondAromatic(first, second)
+                    || (mol.aromatic[first] && mol.aromatic[second])) continue;
+                const int firstReference = firstLigand(first, second), secondReference = firstLigand(second, first);
+                if (firstReference >= 0 && secondReference >= 0
+                    && oldToNew.count(firstReference) != 0 && oldToNew.count(secondReference) != 0)
+                    stereoBonds.emplace_back(k, other, configuration);
+            }
+    }
+
     // Build the subgraph WITHOUT ring/aromatic flags first
     auto builder = MolGraph::Builder()
         .atomCount(subN)
@@ -167,6 +221,7 @@ inline MolGraph extractSubgraph(const MolGraph& mol, const std::vector<int>& ato
         .atomClasses(std::move(atomClass))
         .ringFlags(std::move(ring))        // all zeros — re-perceived below
         .aromaticFlags(std::move(aromatic)) // all zeros — re-perceived below
+        .tetrahedralChirality(std::move(chirality))
         .setNeighbors(std::move(neighbors))
         .setBondOrders(std::move(bondOrders))
         .bondRingFlags(std::move(bondRings))
@@ -176,6 +231,7 @@ inline MolGraph extractSubgraph(const MolGraph& mol, const std::vector<int>& ato
         .comment(mol.comment)
         .properties(mol.properties);
     if (!atomIds.empty()) builder.atomIds(std::move(atomIds));
+    if (!stereoBonds.empty()) builder.doubleBondStereoSparse(std::move(stereoBonds));
     auto sub = builder.build();
     sub.hydrogenCountsKnown = mol.hydrogenCountsKnown;
 

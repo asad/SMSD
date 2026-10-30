@@ -140,6 +140,16 @@ licensed under the Apache License, Version 2.0; the notices for Jackson
 and the code it incorporates under the MIT, BSD 2-Clause and Boost
 Software licences are kept in the META-INF directory of the CLI JAR.
 
+The SMARTS definitions of the MACCS structural keys
+(FingerprintOptions.maccs() in C++, Python and Java) are adapted from
+the RDKit file rdkit/Chem/MACCSkeys.py, Copyright (C) 2001-2011 Greg
+Landrum and Rational Discovery LLC, and are used under the BSD 3-Clause
+License. The licence text is provided in licenses/rdkit/LICENSE.
+
+The Python extension module includes code from pybind11, Copyright (c)
+2016 Wenzel Jakob, used under the BSD 3-Clause License. The licence text
+is provided in licenses/pybind11/LICENSE.
+
 The GPU Docker image includes separately licensed NVIDIA CUDA runtime
 components and retains their licence notices. It does not bundle the Java CLI.
 

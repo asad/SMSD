@@ -42,6 +42,7 @@
 #include <functional>
 #include <limits>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <numeric>
 #include <set>
@@ -62,6 +63,9 @@
 #endif
 
 namespace smsd {
+
+struct RingResult;
+struct RelevantCycleFamilies;
 
 // ============================================================================
 // MolGraph -- immutable molecular graph representation
@@ -287,7 +291,8 @@ struct MolGraph {
     class LazyCaches {
         std::atomic<unsigned> ready_{0};
     public:
-        enum Cache : unsigned { Canonical = 1, RingCounts = 2, RingSystems = 4, Rings = 8, Features = 16 };
+        enum Cache : unsigned { Canonical = 1, RingCounts = 2, RingSystems = 4, Rings = 8, Features = 16, RingSets = 32, RingBasis = 64,
+                                CycleFamilies = 128 };
         LazyCaches() = default;
         LazyCaches(const LazyCaches&) noexcept {}
         LazyCaches& operator=(const LazyCaches&) noexcept { clear(); return *this; }
@@ -298,6 +303,13 @@ struct MolGraph {
         void clear() noexcept { ready_.store(0, std::memory_order_relaxed); }
     };
     mutable LazyCaches lazyCaches_;
+
+    // --- Ring perception caches, appended so that the earlier members keep their order ---
+    mutable bool ringCountsTruncated_ = false;                   // see ringCountsTruncated()
+    mutable std::shared_ptr<const RingResult> cachedRingSets_;   // lazy ring sets (ring_finder.hpp)
+    mutable std::shared_ptr<const RingResult> cachedRingBasis_;  // lazy ring basis (ring_finder.hpp)
+    mutable bool ringBasisLifted_ = false;                       // the cached basis replaced a refusal
+    mutable std::shared_ptr<const RelevantCycleFamilies> cachedRelevantCycleFamilies_;  // relevant_cycle_families.hpp
 
     // ========================================================================
     // Bond key: pack two indices into one int64
@@ -335,6 +347,10 @@ struct MolGraph {
 
     void invalidateBondDerivedState() {
         lazyCaches_.clear();
+        cachedRingSets_.reset();
+        cachedRingBasis_.reset();
+        ringBasisLifted_ = false;
+        cachedRelevantCycleFamilies_.reset();
         cacheNonce = nextInstanceNonce();
         canonicalComputed_ = false;
         canonicalHash = 0;
@@ -373,6 +389,7 @@ struct MolGraph {
     }
 
     void setBondOrder(int i, int j, int ord) {
+        const bool hadForwardBond = hasBond(i, j), hadReverseBond = hasBond(j, i);
         if (useDense) {
             bondPacked[i][j] = (bondPacked[i][j] & ~BOND_ORDER_MASK) | static_cast<uint8_t>(ord & 0x07);
             bondPacked[j][i] = bondPacked[i][j];
@@ -381,6 +398,31 @@ struct MolGraph {
             auto key = bondKey(i, j);
             auto it = sparseBondProps.find(key);
             if (it != sparseBondProps.end()) it->second[0] = ord;
+        }
+        if (hadForwardBond != hasBond(i, j) || hadReverseBond != hasBond(j, i)) {
+            // An added or removed bond changes the eager topology as well as lazy properties.
+            auto updateNeighbors = [&](int atom, int neighbor) {
+                if (neighbors.size() == static_cast<size_t>(n)) {
+                    auto& row = neighbors[atom];
+                    if (hasBond(atom, neighbor)) {
+                        if (std::find(row.begin(), row.end(), neighbor) == row.end()) row.push_back(neighbor);
+                    } else row.erase(std::remove(row.begin(), row.end(), neighbor), row.end());
+                    if (degree.size() == static_cast<size_t>(n)) degree[atom] = static_cast<int>(row.size());
+                }
+                if (adjLong.size() == static_cast<size_t>(n)
+                    && adjLong[atom].size() > static_cast<size_t>(neighbor >> 6)) {
+                    const uint64_t bit = uint64_t(1) << (neighbor & 63);
+                    if (hasBond(atom, neighbor)) adjLong[atom][neighbor >> 6] |= bit;
+                    else adjLong[atom][neighbor >> 6] &= ~bit;
+                }
+            };
+            updateNeighbors(i, j);
+            if (i != j) updateNeighbors(j, i);
+            sssrRings.clear();
+            sssrComputed = false;
+            ringCount.clear();
+            ringCountsComputed_ = false;
+            cachedNeighborsByDegDesc.clear();
         }
         invalidateBondDerivedState();
     }
@@ -434,10 +476,15 @@ struct MolGraph {
     /** Compute ring counts from a given ring set (SSSR or RCB). */
     void computeRingCounts(const std::vector<std::vector<int>>& rings) const;
 
-    /** Default: compute ring counts from the relevant cycles of the ring candidate search over
-     *  each atom's neighbours in index order, as the Java library counts them, so that the counts
-     *  of cages such as adamantane and cubane do not depend on atom order. */
+    /** Compatible fusion counts from bounded Horton candidates in neighbour-index order. */
     void computeRingCounts() const;
+
+    /**
+     * Whether the ring perception behind the per-atom ring counts in ringCount reached its work
+     * limit before the minimum cycle basis was complete, in which case those counts may be
+     * incomplete. The counts are computed first when they have not been.
+     */
+    bool ringCountsTruncated() const { ensureRingCounts(); return ringCountsTruncated_; }
 
     // ========================================================================
     // Aromaticity perception and Kekule assignment (detail/aromaticity.hpp)
@@ -596,7 +643,7 @@ private:
     static size_t allShortestPathsCpp(int root, int target, const std::vector<int>& dist,
                                       const std::vector<std::vector<int>>& parents, std::vector<int>& current,
                                       std::vector<PathFrame>& stack, std::vector<std::vector<int>>& paths,
-                                      bool& cut);
+                                      bool& cut, uint64_t* work = nullptr);
 
 public:
 
@@ -614,7 +661,7 @@ public:
      * Computes the set of relevant cycles (union of all minimum cycle bases).
      * A cycle is relevant if it cannot be expressed as the XOR (symmetric
      * difference) of strictly shorter cycles. The enumeration is bounded by
-     * RELEVANT_CYCLE_WORK_LIMIT.
+     * RELEVANT_CYCLE_WORK_LIMIT, including retained storage and elimination work.
      */
     std::vector<std::vector<int>> computeRelevantCycles() const;
 
@@ -626,6 +673,16 @@ public:
      * computeRelevantCycles() either way.
      */
     std::vector<std::vector<int>> computeRelevantCyclesReportingTruncation(bool& truncated) const;
+
+    /**
+     * The relevant cycles of this graph found from `basis`, a set of its cycles, normally a
+     * minimum cycle basis. `truncated` is set to whether the result may lack relevant cycles:
+     * the basis has fewer cycles than the cycle rank, or the enumeration reached one of its
+     * bounds. With requireCompleteSeed false, a basis smaller than the cycle rank is not
+     * reported and the enumeration is not stopped by its work limit.
+     */
+    std::vector<std::vector<int>> computeRelevantCyclesFromBasis(
+        const std::vector<std::vector<int>>& basis, bool& truncated, bool requireCompleteSeed = true) const;
 
     /** Compute Unique Ring Families from relevant cycles and strictly shorter cycle spans. */
     std::vector<std::vector<std::vector<int>>> computeURFs();

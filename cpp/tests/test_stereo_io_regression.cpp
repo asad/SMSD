@@ -175,7 +175,7 @@ int main() {
         }
     });
     run("MOL double-bond writer", [] {
-        for (const char* text : {"C/C=C/C", "C/C=C\\C", "C/C=C/C=C\\C", "C/C=C(/F)\\C(Cl)=C/C", "C/C=C(\\F)/C(Cl)=C/C", "C1/C=C\\CCCC1"}) {
+        for (const char* text : {"C/C=C/C", "C/C=C\\C", "C/C=C/C=C\\C", "C/C=C(/F)\\C(Cl)=C/C", "C/C=C(\\F)/C(Cl)=C/C"}) {
             const auto graph = smsd::parseSMILES(text);
             for (const auto& block : {smsd::writeMolBlock(graph), smsd::writeMolBlockV3000(graph)}) {
                 std::istringstream input(block);

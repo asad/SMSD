@@ -7,6 +7,8 @@ COPY source.tar.gz SOURCE_MANIFEST.json ARTIFACTS.json ./
 COPY LICENSE NOTICE ./
 COPY wheels/ ./wheels/
 COPY licenses/NVIDIA-CUDA.txt ./licenses/NVIDIA-CUDA.txt
+COPY licenses/cub/LICENSE ./licenses/cub/LICENSE
+COPY licenses/cccl/LICENSE ./licenses/cccl/LICENSE
 COPY scripts/docker_install.py scripts/docker_smoke.py ./scripts/
 RUN python scripts/docker_install.py --verify-only --gpu --root /artifacts --architecture "$TARGETARCH" --revision "$SMSD_REVISION"
 
@@ -14,11 +16,11 @@ FROM nvidia/cuda:12.8.1-runtime-ubuntu24.04@sha256:ebef3c171eeef0298e4eb2e4be843
 ARG TARGETARCH
 ARG SMSD_REVISION
 LABEL org.opencontainers.image.title="SMSD Pro CUDA" \
-      org.opencontainers.image.description="Python substructure and MCS search with NVIDIA CUDA fingerprint and similarity screening" \
-      org.opencontainers.image.version="8.0.3" \
+      org.opencontainers.image.description="Python substructure and MCS search with NVIDIA CUDA fingerprint screening and GPU pre-screens" \
+      org.opencontainers.image.version="8.1.0" \
       org.opencontainers.image.revision="${SMSD_REVISION}" \
       org.opencontainers.image.source="https://github.com/asad/SMSD" \
-      org.opencontainers.image.licenses="Apache-2.0 AND PSF-2.0 AND LicenseRef-NVIDIA-CUDA" \
+      org.opencontainers.image.licenses="Apache-2.0 AND BSD-3-Clause AND Apache-2.0 WITH LLVM-exception AND PSF-2.0 AND LicenseRef-NVIDIA-CUDA" \
       org.opencontainers.image.vendor="BioInception PVT LTD" \
       org.opencontainers.image.authors="Syed Asad Rahman"
 ENV PATH="/usr/local/bin:${PATH}" PYTHONDONTWRITEBYTECODE=1 \
@@ -32,6 +34,8 @@ RUN test "$TARGETARCH" = amd64 \
 COPY --from=artifacts /usr/local/ /usr/local/
 COPY --from=artifacts /artifacts/scripts/ /usr/local/share/smsd/
 COPY --from=artifacts /artifacts/licenses/NVIDIA-CUDA.txt /usr/share/doc/smsd/licenses/NVIDIA-CUDA.txt
+COPY --from=artifacts /artifacts/licenses/cub/LICENSE /usr/share/doc/smsd/licenses/cub/LICENSE
+COPY --from=artifacts /artifacts/licenses/cccl/LICENSE /usr/share/doc/smsd/licenses/cccl/LICENSE
 COPY --from=artifacts /artifacts/LICENSE /artifacts/NOTICE /usr/share/doc/smsd/
 RUN --mount=type=bind,from=artifacts,source=/artifacts,target=/tmp/smsd,rw \
     ldconfig && python /usr/local/share/smsd/docker_install.py --gpu --root /tmp/smsd \

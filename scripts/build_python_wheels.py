@@ -3,7 +3,7 @@
 # Copyright (c) 2018-2026 BioInception PVT LTD
 # Algorithm Copyright (c) 2009-2026 Syed Asad Rahman
 # See the NOTICE file for attribution, trademark, and algorithm IP terms.
-"""Prepare one sdist or build repaired CPython 3.10–3.14 CPU wheels from it.
+"""Prepare one sdist or build repaired CPython 3.12–3.15 CPU wheels from it.
 
 Install build/twine for preparation and cibuildwheel==4.2.1 for wheel builds.
 Linux builds use local Docker or Podman; Windows/macOS require that host OS.
@@ -32,7 +32,7 @@ import zipfile
 
 SOURCE_FIELDS = ("version", "sdist", "sdist_sha256", "source_file_count",
                  "source_commit", "release_ref", "working_tree_clean")
-PYTHON_VERSIONS = ("3.10", "3.11", "3.12", "3.13", "3.14")
+PYTHON_VERSIONS = ("3.12", "3.13", "3.14", "3.15")
 ARCHITECTURES = {"linux": ("x86_64", "aarch64"), "macos": ("arm64",), "windows": ("AMD64",)}
 BUILD_IDENTIFIERS = {
     "cp" + version.replace(".", "") + "-" + tag:
@@ -46,6 +46,7 @@ BUILD_IDENTIFIERS = {
 # CPU-only configurations register 35 native suites on Linux and Windows;
 # macOS adds six Metal failure cases, and RDKit or CUDA builds add their own.
 NATIVE_TEST_FLOOR = 35
+SHARED_VALIDATION_CHECKS = ("cpp_release", "cpp_asan", "java8", "java25", "python", "examples", "check_source")
 NATIVE_CMAKE_OPTIONS = ("-DCMAKE_BUILD_TYPE=Debug", "-DSMSD_BUILD_TESTS=ON", "-DSMSD_BUILD_PYTHON=OFF",
                         "-DSMSD_BUILD_OPENMP=ON", "-DSMSD_BUILD_METAL=OFF", "-DSMSD_BUILD_CUDA=OFF",
                         "-DSMSD_WITH_RDKIT=OFF")
@@ -60,7 +61,7 @@ def wheel_target(name, version):
     platform_tag = fields[4]
     if platform_tag == "win_amd64":
         target_tag = "win_amd64"
-    elif platform_tag == "macosx_26_0_arm64":
+    elif re.fullmatch(r"macosx_(?:1[1-9]|2[0-6])_0_arm64", platform_tag):
         target_tag = "macosx_arm64"
     else:
         target_tag = None
@@ -165,8 +166,8 @@ def inspect_source(path):
     if (project["name"] != "smsd" or metadata["Name"] != "smsd" or metadata["Version"] != version
             or len(description) != 2 or description[1] != files["python/README.md"]):
         raise ValueError("Source package metadata or description differs")
-    if project.get("requires-python") != ">=3.10" or metadata["Requires-Python"] != project["requires-python"]:
-        raise ValueError("Source Python requirement must agree with >=3.10")
+    if project.get("requires-python") != ">=3.12" or metadata["Requires-Python"] != project["requires-python"]:
+        raise ValueError("Source Python requirement must agree with >=3.12")
     python_version = re.search(rb'^__version__ = "([^"]+)"', files["python/smsd/__init__.py"], re.M)
     cpp_version = re.search(rb'project\(smsd VERSION ([^ ]+)', files["cpp/CMakeLists.txt"])
     if not python_version or not cpp_version or python_version[1].decode() != version or cpp_version[1].decode() != version:
@@ -267,7 +268,20 @@ def proof_digest(proof):
     return hashlib.sha256(data).hexdigest()
 
 
-def wheel_entry(wheel, identifier, source, proof):
+def checked_shared_validation(source, validation):
+    """Check the shared frozen-source results without retaining private evidence."""
+    fields = {"source_commit", "sdist_sha256", *SHARED_VALIDATION_CHECKS}
+    if not isinstance(validation, dict) or set(validation) != fields:
+        raise ValueError("Expected the shared frozen-validation fields only")
+    for field in ("source_commit", "sdist_sha256"):
+        if validation[field] != source[field]:
+            raise ValueError("Shared validation source identity differs: " + field)
+    if any(validation[field] != "passed" for field in SHARED_VALIDATION_CHECKS):
+        raise ValueError("Shared validation lacks successful frozen-source checks")
+    return dict(validation)
+
+
+def wheel_entry(wheel, identifier, source, proof, shared_validation=None):
     """Validate a checked build receipt and retain only public release fields."""
     for field in SOURCE_FIELDS:
         if proof.get(field) != source[field]:
@@ -280,25 +294,48 @@ def wheel_entry(wheel, identifier, source, proof):
         raise ValueError("Wheel provenance build platform differs")
     if proof.get("build_system") not in ("local", "cibuildwheel"):
         raise ValueError("Expected provenance from a checked wheel build")
-    for field in ("native_debug_tests", "installed_wheel_tests"):
+    if shared_validation is not None:
+        validation = checked_shared_validation(source, shared_validation)
+        if (proof.get("validation_mode") != "lean"
+                or proof.get("shared_validation_sha256") != proof_digest(validation)):
+            raise ValueError("Wheel provenance shared validation differs")
+        if any(field in proof for field in ("native_debug_tests", "installed_wheel_tests")):
+            raise ValueError("Lean provenance must not claim per-wheel full-suite results")
+        if proof["build_system"] == "cibuildwheel":
+            check, forbidden = "platform_recipe_checks", "installed_wheel_identity"
+        else:
+            check, forbidden = "installed_wheel_identity", "platform_recipe_checks"
+        if forbidden in proof:
+            raise ValueError("Wheel provenance claims checks outside its build system: " + forbidden)
+        checks = (check, "installed_wheel_smoke")
+        validation_fields = ("validation_mode", "shared_validation_sha256", *checks)
+    else:
+        if "validation_mode" in proof:
+            raise ValueError("Lean provenance requires shared frozen validation")
+        checks = validation_fields = ("native_debug_tests", "installed_wheel_tests")
+    for field in checks:
         if proof.get(field) != "passed":
             raise ValueError("Wheel provenance lacks successful checks: " + field)
     fields = (*SOURCE_FIELDS, "wheel", "wheel_sha256", "build_identifier", "platform", "architecture", "python_version", "build_system",
-              "native_debug_tests", "installed_wheel_tests")
+              *validation_fields)
     retained = {field: proof[field] for field in fields}
     if proof["build_system"] == "cibuildwheel":
         if proof.get("cibuildwheel") != "4.2.1":
             raise ValueError("Expected cibuildwheel 4.2.1 provenance")
         retained["cibuildwheel"] = proof["cibuildwheel"]
     return {**target, "build_identifier": identifier, "wheel": wheel.name, "wheel_sha256": sha256(wheel),
-            "native_debug_tests": proof["native_debug_tests"],
-            "installed_wheel_tests": proof["installed_wheel_tests"],
+            **{field: proof[field] for field in validation_fields},
             "build_provenance": retained, "provenance_sha256": proof_digest(retained)}
 
 
 def checked_wheel_manifest(directory, source, selected, manifest):
-    if manifest.get("schema_version") != 2:
+    if manifest.get("schema_version") not in (2, 3):
         raise ValueError("Unexpected wheel manifest schema")
+    shared_validation = None
+    if manifest["schema_version"] == 3:
+        shared_validation = checked_shared_validation(source, manifest.get("shared_validation"))
+        if manifest.get("shared_validation_sha256") != proof_digest(shared_validation):
+            raise ValueError("Wheel manifest shared validation digest differs")
     for field in ("version", "source_commit", "sdist", "sdist_sha256"):
         if manifest.get(field) != source[field]:
             raise ValueError("Wheel manifest source identity differs: " + field)
@@ -313,7 +350,7 @@ def checked_wheel_manifest(directory, source, selected, manifest):
         if identifier not in selected or identifier in recorded:
             raise ValueError("Duplicate or unknown wheel manifest target")
         proof = entry.get("build_provenance")
-        if not isinstance(proof, dict) or wheel_entry(selected[identifier], identifier, source, proof) != entry:
+        if not isinstance(proof, dict) or wheel_entry(selected[identifier], identifier, source, proof, shared_validation) != entry:
             raise ValueError("Wheel manifest lacks matching checked-build provenance")
         recorded.add(identifier)
     missing = sorted(set(BUILD_IDENTIFIERS) - recorded)
@@ -336,6 +373,8 @@ def verify_installed_wheel(wheel):
 
 def verify_local(args):
     source = checked_source(args.sdist, args.source_manifest)
+    shared_validation = (checked_shared_validation(source, read_manifest(args.lean_validation))
+                         if getattr(args, "lean_validation", None) else None)
     identifier = wheel_target(args.wheel.name, source["version"])
     target = BUILD_IDENTIFIERS[identifier]
     family = target["platform"]
@@ -350,9 +389,12 @@ def verify_local(args):
         path = source_dir / relative
         if not path.is_file() or path.read_bytes() != data:
             raise ValueError("Extracted SDK differs from the source distribution: " + relative)
-    native_dir = args.native_test_dir.resolve()
-    if native_dir.exists() and any(native_dir.iterdir()):
-        raise ValueError("Native release checks require a new or empty build directory")
+    if shared_validation is None:
+        if args.native_test_dir is None:
+            raise ValueError("Full local checks require --native-test-dir")
+        native_dir = args.native_test_dir.resolve()
+        if native_dir.exists() and any(native_dir.iterdir()):
+            raise ValueError("Native release checks require a new or empty build directory")
     jobs = os.environ.get("CMAKE_BUILD_PARALLEL_LEVEL", "2")
     if not jobs.isdigit() or int(jobs) < 1:
         raise ValueError("CMAKE_BUILD_PARALLEL_LEVEL must be a positive integer")
@@ -360,21 +402,34 @@ def verify_local(args):
     for name in ("PYTHONPATH", "PYTHONHOME", "SMSD_DISABLE_GPU"):
         environment.pop(name, None)
     with tempfile.TemporaryDirectory(prefix="smsd-wheel-check-") as temporary:
-        run_native_debug_tests(source_dir, native_dir, jobs, environment, temporary)
-        checks = ([sys.executable, str(source_dir / "scripts/check_python_wheel.py"),
-                   "--source", str(source_dir), "--require-rdkit", "--require-openmp"],
-                  [sys.executable, "-m", "pytest", str(source_dir / "python/tests"), "-q",
-                   "--import-mode=importlib"])
+        if shared_validation is None:
+            run_native_debug_tests(source_dir, native_dir, jobs, environment, temporary)
+        checks = [[sys.executable, str(source_dir / "scripts/check_python_wheel.py"),
+                   "--source", str(source_dir), "--require-rdkit", "--require-openmp"]]
+        if shared_validation is None:
+            checks.append([sys.executable, "-m", "pytest", str(source_dir / "python/tests"), "-q",
+                           "--import-mode=importlib"])
         for command in checks:
             subprocess.run(command, env=environment, cwd=temporary, check=True)
         verify_installed_wheel(args.wheel)
-    record_build(source, args.wheel, args.wheel.parent, "local", identifier)
+    record_build(source, args.wheel, args.wheel.parent, "local", identifier, shared_validation)
 
 
-def record_build(source, wheel, output_dir, build_system, identifier):
+def record_build(source, wheel, output_dir, build_system, identifier, shared_validation=None):
     proof = {**source, **BUILD_IDENTIFIERS[identifier], "build_system": build_system, "build_identifier": identifier,
-             "wheel": wheel.name, "wheel_sha256": sha256(wheel),
-             "native_debug_tests": "passed", "installed_wheel_tests": "passed"}
+             "wheel": wheel.name, "wheel_sha256": sha256(wheel)}
+    if shared_validation is None:
+        proof.update(native_debug_tests="passed", installed_wheel_tests="passed")
+    else:
+        validation = checked_shared_validation(source, shared_validation)
+        proof.update(validation_mode="lean", shared_validation_sha256=proof_digest(validation),
+                     installed_wheel_smoke="passed")
+        if build_system == "cibuildwheel":
+            proof["platform_recipe_checks"] = "passed"
+        elif build_system == "local":
+            proof["installed_wheel_identity"] = "passed"
+        else:
+            raise ValueError("Expected a local or cibuildwheel validation path")
     if build_system == "cibuildwheel":
         proof["cibuildwheel"] = "4.2.1"
     write_manifest(output_dir / "wheel-build-provenance.json", proof)
@@ -432,6 +487,8 @@ def check_source(args):
 
 def build(args):
     source = checked_source(args.sdist, args.source_manifest)
+    shared_validation = (checked_shared_validation(source, read_manifest(args.lean_validation))
+                         if getattr(args, "lean_validation", None) else None)
     arch = args.arch or ARCHITECTURES[args.platform][0]
     if arch not in ARCHITECTURES[args.platform]:
         raise ValueError("Unsupported architecture for " + args.platform)
@@ -451,6 +508,11 @@ def build(args):
             del env[key]
     for key in ("CMAKE_ARGS", "SKBUILD_CMAKE_ARGS", "SKBUILD_CMAKE_DEFINE", "PYTHONPATH", "PYTHONHOME"):
         env.pop(key, None)
+    if shared_validation is not None:
+        env["CIBW_BEFORE_BUILD"] = ('python -m pip install --upgrade pip==26.2.2 && '
+            'python -m pip install cmake==4.4.3 ninja==1.13.2')
+        env["CIBW_TEST_COMMAND"] = ('python "{package}/scripts/check_python_wheel.py" '
+            '--source "{package}" --require-rdkit --require-openmp')
     if args.manylinux_image:
         if args.platform != "linux":
             raise ValueError("--manylinux-image is only valid for Linux")
@@ -482,7 +544,7 @@ def build(args):
             for license_name in ("COPYING3", "COPYING.RUNTIME"):
                 if not any(name.endswith("/" + license_name) for name in archive.namelist()):
                     raise ValueError("Linux wheel is missing libgomp licence notice " + license_name)
-    record_build(source, wheel, args.output_dir, "cibuildwheel", identifier)
+    record_build(source, wheel, args.output_dir, "cibuildwheel", identifier, shared_validation)
 
 
 def main():
@@ -507,13 +569,17 @@ def main():
     wheel.add_argument("--manylinux-image")
     wheel.add_argument("--output-dir", type=Path, required=True)
     wheel.add_argument("--dry-run", action="store_true")
+    wheel.add_argument("--lean-validation", type=Path,
+                       help="Shared frozen-source checks; run platform recipes and installed smoke only")
     wheel.set_defaults(function=build)
     local = commands.add_parser("verify-local", help="Build Debug tests from the SDK and check the installed local wheel")
     local.add_argument("--sdist", type=Path, required=True)
     local.add_argument("--wheel", type=Path, required=True)
     local.add_argument("--source-manifest", type=Path)
-    local.add_argument("--native-test-dir", type=Path, required=True)
+    local.add_argument("--native-test-dir", type=Path)
     local.add_argument("--source-dir", type=Path, required=True)
+    local.add_argument("--lean-validation", type=Path,
+                       help="Shared frozen-source checks; run installed smoke without repeating full suites")
     local.set_defaults(function=verify_local)
     args = parser.parse_args()
     try:

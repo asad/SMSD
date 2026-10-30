@@ -1,5 +1,8 @@
 # SMSD Pro Java guide
 
+Java prepared queries retain their CPU `matchMany` API. The optional native
+corpus prefilters exposed in C++ and Python do not add a Java GPU search API.
+
 The package `com.bioinception.smsd.core` (artefact `com.bioinceptionlabs:smsd`)
 provides substructure, maximum common substructure (MCS) and SMARTS search,
 fingerprints, stereo descriptors, standardisation and R-group decomposition
@@ -8,11 +11,18 @@ command-line interface (CLI) is `com.bioinception.smsd.cli.SMSDcli`
 (`com.bioinceptionlabs:smsd-cli`). The [Javadoc](#api-reference) lists every
 public member.
 
+In this release the Java library and command-line tool stay at 8.0.3 on Maven
+Central. This guide covers the Java code in the 8.1.0 source, which a
+[Java source build](HOWTO-INSTALL.md#java-source-build) turns into the library
+and command-line tool; the 8.0.3 artefacts do not have its 8.1.0 changes. The
+CPU [Docker images](HOWTO-INSTALL.md#docker) also carry the 8.1.0 command-line
+tool.
+
 ## Installation
 
 The JARs run on Java 8 and later; Java 25 LTS is recommended. See the
 [supported-platforms table](HOWTO-INSTALL.md#supported-platforms) for the CLI
-installers and Docker images. Maven:
+installers. Maven:
 
 ```xml
 <dependency>
@@ -25,6 +35,10 @@ installers and Docker images. Maven:
 Gradle (Kotlin DSL):
 
 ```kotlin
+repositories {
+    mavenCentral()
+}
+
 dependencies {
     implementation("com.bioinceptionlabs:smsd:8.0.3")
 }
@@ -40,12 +54,23 @@ its class name and compile it from the repository root against the
 self-contained JAR of the source build:
 
 ```bash
-javac --release 8 -cp java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar PreparedSearchExample.java
-java -cp "java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar:." PreparedSearchExample
+javac --release 8 -cp java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar PreparedSearchExample.java
+java -cp "java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar:." PreparedSearchExample
 ```
 
 With a Java 8 compiler, omit `--release 8`; on Windows, separate the classpath
 entries with a semicolon.
+
+## SMARTS export in 8.1.0
+
+`MCS.matchWithSmarts(target)` returns `MCS.SmartsResult`; `result()` retains the
+ordinary search status and mappings, and `smarts()` is the best match's portable
+pattern under the prepared chemistry. `SearchResult.Match.toSmarts(query,
+chemistry)` and `SmartsWriter.toSmarts(graph, chemistry)` provide explicit export.
+See [SMARTS export](SMARTS_EXPORT.md) for a library-search example, selected bond
+semantics and rejected options. Stereo, tautomer-aware, complete-ring and strict
+ring-fusion constraints cannot be silently discarded. Portable SMARTS does not
+encode the induced MCIS objective, a resource budget or an optimality proof.
 
 ## Input graphs
 
@@ -174,9 +199,10 @@ instance; `ChemOptions.copyOf(options)` returns an independent copy.
   single and double bonds; `STRICT` matches them only with aromatic bonds.
 - `ringMatchesRingOnly` (`false`): ring atoms and bonds match only ring atoms
   and bonds. `completeRingsOnly` (`false`): MCS keeps ring atoms and bonds only
-  within rings selected whole in both molecules.
+  within relevant cycles selected whole in both molecules.
 - `ringFusionMode` (`RingFusionMode.IGNORE`): `IGNORE`, `PERMISSIVE` or
-  `STRICT` comparison of fused ring systems.
+  `STRICT`; strict matching requires matched ring atoms to have the same
+  per-atom ring count.
 - `useChirality`, `useBondStereo` (`false`): mapped tetrahedral centres and
   double bonds must agree in configuration, compared by the parity of their
   mapped neighbours, not by CIP labels (R/S, E/Z); see
@@ -253,10 +279,23 @@ A `SearchResult` reports:
 - `matches()`, `score()`: the `SearchResult.Match` objects and the best score.
 - `nodesVisited()`, `elapsedMillis()`: search effort.
 
-With `completeRingsOnly` or `RingFusionMode.STRICT`, truncated ring perception
-in either input leaves the mappings selected using the perceived rings, but
-cannot prove the result. The status is `LimitReached`, with `optimal()` and
-`complete()` both `false`; `TimedOut` and `Cancelled` take precedence.
+`completeRingsOnly` requires complete relevant-cycle perception;
+`RingFusionMode.STRICT` requires complete perception for its per-atom ring
+counts. If that perception is incomplete in either input, the selected mappings
+remain, but the result is `LimitReached`, with `optimal()` and `complete()` both
+`false`; `TimedOut` and `Cancelled` take precedence. Positive numeric SMARTS
+`R<n>` (`n > 0`) uses one deterministic minimum cycle basis, the same as C++
+and Python, so a result that 8.0.3 computed from a different minimum basis of
+equal size can change. If ring perception cannot complete the basis, a search
+that cannot be decided without it returns `LimitReached` without matches,
+including for negated, combined and recursive predicates; `found()` is then
+false, which does not prove absence. Literal `R` and `R0` remain independent
+of that basis. Other functions that need the basis throw
+`RingBasisUnavailableException`, an `IllegalStateException`, naming the cause;
+`computeSSSR` and `computeRings` may return incomplete rings with truncation
+flags. `relevantCyclesTruncated` alone does not make the basis incomplete. Ring
+perception works within one fixed, deterministic work limit; see
+[Results and budgets](ALGORITHMS.md#results-and-budgets).
 
 A `SearchResult.Match` uses the original atom indices; pass it the query that
 prepared the search:
@@ -273,7 +312,12 @@ prepared the search:
 
 A completed search proves its result, including absence, and a substructure
 match proves existence; a stopped search may return a valid but unproved
-match. A capped MCS enumeration can be optimal yet incomplete.
+match. A capped MCS enumeration can be optimal yet incomplete. The C++ and
+Python MCIS search changed in 8.1.0 and Java's did not, so a stopped search can
+return a different result in Java; see the
+[upgrade notes](RELEASE_NOTES.md#upgrading-from-803). In rare cases Java
+reports `Cancelled`, with `optimal()` true and `complete()` false, for a search
+whose proof had already completed; the score and the proof are unaffected.
 
 ### Size limits
 
@@ -361,7 +405,8 @@ public class PreparedSearchExample {
   matches claimed; `Cancelled` for the rest after cancellation.
 - `MCS.consensus(molecules, options, threshold)`: a fragment shared by at least
   `ceil(threshold × number of molecules)` inputs, under one budget; `threshold`
-  lies in (0, 1], and atom weights are rejected.
+  lies in (0, 1], and atom weights are rejected. Progressive reduction is an
+  approximation; it does not prove a global multi-molecule optimum.
 - `MCS.validateMapping(query, target, match, options)`: the ways a match
   violates the options, empty if valid. The atom-mapping overload checks the
   bonds `mappingMatch` selects; the `ChemOptions` overload is deprecated.
@@ -387,8 +432,11 @@ public class PreparedSearchExample {
 `sourceIndex()`, the same fragment as `graph()` and `toSmiles()`, and
 `mappings()` from `graph()` atoms to each supporting input; `supportCount()`,
 `status()`, `complete()`, `nodesVisited()` and `elapsedMillis()` describe the
-search, and `optimal()` is always `false`. With no result, `sourceIndex()` is
--1 and the fragment, graph and SMILES are empty.
+search. `optimal()` is always `false`, including empty and single-input calls.
+`complete()` reports whether the progressive pass finished. Neither it nor
+`Completed` proves a global optimum or absence of a qualifying common graph.
+With no result, `sourceIndex()` is -1 and the fragment, graph and SMILES are
+empty.
 With complete rings or strict ring fusion, truncated ring perception in any
 input also makes consensus `LimitReached` and incomplete, unless its status
 is already `TimedOut` or `Cancelled`. Its fragment and supporting mappings are
@@ -560,6 +608,16 @@ Fields, with defaults and the families whose terms are on by default:
 raise `IllegalArgumentException`, and a key count not settled within its
 budget raises `IllegalStateException`. `mcsFingerprint` ignores these options.
 
+Ring-size terms, double-bond stereo terms and aromatic-ring keys use the same
+minimum cycle basis as C++ and Python, so a Java value that came from a
+different minimum basis of equal size can change. They throw
+`RingBasisUnavailableException` naming the cause if ring perception cannot
+complete that basis, as do SMARTS keys whose search needs it; a separate
+relevant-cycle truncation does not prevent their use. The ring refusals replace values that
+8.0.3 could compute from incomplete rings. A key whose minimum number of
+matches is found before the embedding limit is set; a key search that runs out
+of time throws, as in 8.0.3.
+
 `CIPAssigner.assignRS(graph)` returns R or S (r or s if pseudoasymmetric) by
 atom index, and `CIPAssigner.assignEZ(graph)` E or Z for each annotated double
 bond by a `long` bond key. Rule 1a of IUPAC 2013 is applied literally, so
@@ -581,13 +639,31 @@ bounded by `CIPAssigner.MAX_DEPTH`, so check which centres were assigned.
   end with only aromatic ring bonds carries them on an aromatic bond, as RDKit
   writes it, which strict OpenSMILES readers take as a single bond; the CDK
   2.13 `SmilesParser` does not keep that configuration.
+  For a graph of more than 200 atoms, or when canonical labelling reaches
+  its search limit, the output can depend on the input atom order;
+  `automorphismGeneratorsTruncated()` is then true.
 - `computeRings()`, `numRings()`, `MolGraph.computeSSSR(graph)`,
   `MolGraph.layoutSSSR(graph)`: the smallest set of smallest rings, also
   ordered for layout. `computeRelevantCycles()`, `computeURFs()`: relevant
   cycles and unique ring families. `ringsTruncated()`: whether the ring search
-  stopped at its work bound, as for a very large ring system, so that these
-  rings may be incomplete. `ensureRingCounts()`, `getRingCounts()`:
-  per-atom ring counts, computed on first use.
+  stopped before finding a complete set of rings. `relevantCyclesTruncated()`:
+  whether full relevant-cycle enumeration was incomplete. `ensureRingCounts()`,
+  `getRingCounts()`: per-atom ring counts, computed on first use;
+  they can depend on the input atom order.
+- `computeRelevantCycleFamilies()`: the relevant cycles grouped into families,
+  as `RelevantCycleFamilies` with `families()`, `relevantCycleCount()` and
+  `truncated()`. Each `RelevantCycleFamily` gives the ring `size()`, the
+  `root()` (the highest-numbered atom of every member), `first()`, `second()`
+  and `opposite()`, which locate the bond or atom opposite the root, one member
+  as `prototype()` and the exact `memberCount()`, so the relevant cycles can be
+  counted without listing them; counts are `BigInteger` values.
+  `truncated()` reports an incomplete enumeration, whose families are relevant
+  but may not be all of them. `relevantCycleFamilyOf(families, ring)` returns
+  the index of the family that has the ring as a member, or -1, and
+  `relevantCycleFamilyMembers(family, limit)` returns up to `limit` members,
+  starting with the prototype. When the enumeration is complete, the relevant
+  cycles and their number do not depend on the input atom order; the grouping
+  into families can.
 - `ringSystemOf(atom)`, `ringSystemCount()`, `ringSystemSig(id)`: ring systems
   and their signatures.
 - `MolGraph.sanitizeSmiles(smiles)`: balances parentheses and removes unclosed
@@ -605,19 +681,20 @@ bounded by `CIPAssigner.MAX_DEPTH`, so check which centres were assigned.
 
 ## Command-line interface
 
-The module `com.bioinceptionlabs:smsd-cli` provides the self-contained
-`smsd-cli-8.0.3-jar-with-dependencies.jar`; the
+A source build of the module `com.bioinceptionlabs:smsd-cli` writes the
+self-contained `smsd-cli-8.1.0-jar-with-dependencies.jar`; the
 [Java module README](../java/README.md#command-line-tool) shows how to obtain
-it or depend on `SMSDcli`. From the repository root, after a source build,
+the 8.0.3 JAR or depend on `SMSDcli`. From the repository root, after a
+source build,
 print the version and help, test whether benzene is a substructure of phenol,
 and find the MCS of N-methylacetamide and propanamide (`mcs_size` is 4):
 
 ```bash
-java -jar java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar --version
-java -jar java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar --help
-java -jar java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar --version
+java -jar java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar --help
+java -jar java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar \
   --Q SMI --q "c1ccccc1" --T SMI --t "c1ccc(O)cc1" --json -
-java -jar java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar \
   --Q SMI --q "CC(=O)NC" --T SMI --t "CCC(=O)N" --mode mcs --json -
 ```
 
@@ -625,7 +702,7 @@ MCS mode defaults to a connected MCIS; request MCES and fragments explicitly,
 here for the two ethyl groups of diethyl ether and diethylamine:
 
 ```bash
-java -jar java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar \
   --Q SMI --q "CCOCC" --T SMI --t "CCNCC" \
   --mode mcs --objective MCES --fragments --timeout 1000 --json -
 ```
@@ -634,9 +711,9 @@ SMARTS queries use the type `SIG` in substructure mode; here the first search
 reports `"exists": true` (exit status 0) and the second `"exists": false` (1):
 
 ```bash
-java -jar java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar \
   --Q SIG --q "C=O" --T SMI --t "CC(=O)O" --json -
-java -jar java/cli/target/smsd-cli-8.0.3-jar-with-dependencies.jar \
+java -jar java/cli/target/smsd-cli-8.1.0-jar-with-dependencies.jar \
   --Q SIG --q "C=O" --T SMI --t "CCO" --json -
 ```
 
@@ -694,7 +771,7 @@ mvn -f java/pom.xml -pl core javadoc:javadoc
 ## Further reading
 
 - [Installation guide](HOWTO-INSTALL.md), including
-  [Java CLI installers](HOWTO-INSTALL.md#java-cli-installers).
+  [Java CLI installers](HOWTO-INSTALL.md#portable-java-cli).
 - [Python guide](PYTHON.md), [C++ guide](CPP.md),
   [benchmark guide](../benchmarks/README.md) and [changelog](../CHANGELOG.md).
 

@@ -772,7 +772,10 @@ void strictRingFusion(const Json& section) {
     for (const auto& item : section["ring_counts"].items) {
         const auto graph = molecule(item["smiles"].text);
         graph.ensureRingCounts();
-        check(graph.ringCount == item["counts"].integers(),
+        check(!item.has("counts_cpp") || item["truncated"].boolean,
+              "partial ring-count override of " + item["name"].text);
+        const auto expectedCounts = item[item.has("counts_cpp") ? "counts_cpp" : "counts"].integers();
+        check(graph.ringCount == expectedCounts,
               "ring counts of " + item["name"].text + ": got " + describe(graph.ringCount));
         const auto rings = smsd::detail_rf::perceiveRingSets(graph);
         check(rings.truncated == item["truncated"].boolean && smsd::ringsTruncated(graph) == item["truncated"].boolean,

@@ -19,6 +19,7 @@
  */
 
 #include <cuda_runtime.h>
+#include "smsd/cuda_device_policy.hpp"
 #include "smsd/detail/overlap_similarity.hpp"
 #include <vector>
 #include <cstdint>
@@ -209,6 +210,18 @@ struct DeviceBuffer {
     }
 };
 
+/// Throws the reason when the current device is below compute capability 7.5,
+/// which these kernels are not built for, so that no screen runs on it.
+static void requireSupportedDevice() {
+    int device = 0, major = 0, minor = 0;
+    SMSD_CUDA_CHECK(cudaGetDevice(&device));
+    SMSD_CUDA_CHECK(cudaDeviceGetAttribute(&major, cudaDevAttrComputeCapabilityMajor, device));
+    SMSD_CUDA_CHECK(cudaDeviceGetAttribute(&minor, cudaDevAttrComputeCapabilityMinor, device));
+    char reason[256] = {};
+    if (!cuda_policy::explainCapability(nullptr, major, minor, reason, sizeof reason))
+        throw std::runtime_error(reason);
+}
+
 // ============================================================================
 // Host API: Batch Similarity-Bound Screening
 // ============================================================================
@@ -223,6 +236,7 @@ std::vector<ScreenResult> batchSimilarityScreen(
 ) {
     const int N = static_cast<int>(targets.size());
     if (N == 0) return {};
+    requireSupportedDevice();
 
     std::vector<ScreenResult> allHits;
 
@@ -292,6 +306,7 @@ std::vector<ScreenResult> batchFingerprintScreen(
 ) {
     const int N = static_cast<int>(targets.size());
     if (N == 0) return {};
+    requireSupportedDevice();
 
     std::vector<ScreenResult> allHits;
 
@@ -361,12 +376,18 @@ GpuFingerprint toGpuFingerprint(const uint64_t* fp, int numWords) {
 // Query helpers: check CUDA availability
 // ============================================================================
 
-/// Returns true if at least one CUDA device is available.
+/// Returns true if a CUDA device is present and the current one has compute
+/// capability 7.5 or later; an older device leaves screening on the CPU.
 bool cudaAvailable() {
     int deviceCount = 0;
     cudaError_t err = cudaGetDeviceCount(&deviceCount);
-    if (err != cudaSuccess) return false;
-    return deviceCount > 0;
+    if (err != cudaSuccess || deviceCount <= 0) return false;
+    int device = 0, major = 0, minor = 0;
+    if (cudaGetDevice(&device) != cudaSuccess
+        || cudaDeviceGetAttribute(&major, cudaDevAttrComputeCapabilityMajor, device) != cudaSuccess
+        || cudaDeviceGetAttribute(&minor, cudaDevAttrComputeCapabilityMinor, device) != cudaSuccess)
+        return false;
+    return cuda_policy::supportedCapability(major, minor);
 }
 
 /// Returns the name and compute capability of the current CUDA device.

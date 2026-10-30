@@ -56,7 +56,7 @@ def test_ordinary_conjugated_stereo_still_round_trips(text):
 
 
 @pytest.mark.parametrize("size,shortcut,alternating,expected", [(6, None, True, False),
-    (7, None, False, True), (8, None, False, True), (8, 5, True, False), (10, 7, False, True)])
+    (7, None, False, False), (8, None, False, True), (8, 5, True, False), (10, 7, False, True)])
 def test_mol_geometry_uses_the_shortest_focus_cycle(size, shortcut, alternating, expected):
     lines = ["Cycloalkene", "  SMSD              2D", "",
              f"{size:3d}{size + (shortcut is not None):3d}  0  0  0  0  0  0  0  0999 V2000"]

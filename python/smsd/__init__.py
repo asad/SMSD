@@ -19,7 +19,7 @@ import importlib.util as _util
 import os as _os
 import sys as _sys
 
-__version__ = "8.0.3"
+__version__ = "8.1.0"
 __author__ = "Syed Asad Rahman"
 
 
@@ -74,10 +74,13 @@ FingerprintKey = _smsd.FingerprintKey
 FragmentMode = _smsd.FragmentMode
 ScaffoldMode = _smsd.ScaffoldMode
 
+RingBasisUnavailable = _smsd.RingBasisUnavailable
+
 _NATIVE_TYPES = [
     "AromaticityMode", "AromaticityModel", "BondOrderMode", "CancellationToken", "ChemOptions",
     "FingerprintFamily", "FingerprintKey", "FingerprintOptions", "FragmentMode", "MolGraph",
-    "MolGraphBuilder", "RingFusionMode", "ScaffoldMode", "SearchStatus", "Solvent",
+    "MolGraphBuilder", "RingBasisUnavailable", "RingFusionMode", "ScaffoldMode", "SearchStatus",
+    "Solvent",
 ]
 
 # The public API, by purpose. The modules are private; each lists the names it exports.
@@ -90,7 +93,11 @@ from ._screening import *
 from ._layout import *
 from ._depiction import *
 from .search import *
+from .corpus import FingerprintCorpus, stream_screen_smiles, stream_screen_many_smiles
+from .clustering import butina, maxmin
+from ._accelerator import warm_start
 
 __all__ = sorted(_NATIVE_TYPES + _molecule.__all__ + _interop.__all__ + _chemistry.__all__
                  + _fingerprints.__all__ + _screening.__all__ + _layout.__all__ + _depiction.__all__
-                 + search.__all__)
+                 + search.__all__
+                 + ["FingerprintCorpus", "stream_screen_smiles", "stream_screen_many_smiles", "butina", "maxmin", "warm_start"])

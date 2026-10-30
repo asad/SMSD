@@ -34,7 +34,10 @@ EXPORTS_8_0_0 = [
 ]
 
 # Names added since 8.0.0; none is removed or renamed.
-ADDED_SINCE_8_0_0 = ['fingerprints', 'rings_truncated']
+ADDED_SINCE_8_0_0 = ['fingerprints', 'rings_truncated', 'relevant_cycles_truncated', 'FingerprintCorpus', 'SmartsResult', 'stream_screen_smiles',
+                     'stream_screen_many_smiles', 'butina', 'maxmin', 'warm_start', 'CorpusSearchResult', 'RingBasisUnavailable',
+                     'RelevantCycleFamilies', 'RelevantCycleFamily', 'compute_relevant_cycle_families',
+                     'relevant_cycle_family_members', 'relevant_cycle_family_of']
 
 BENZENE, PHENOL, ETHANOL = "c1ccccc1", "c1ccc(O)cc1", "CCO"
 
@@ -58,6 +61,7 @@ def test_prewarm_graph_is_deprecated_and_still_prewarms():
     mol = smsd.parse_smiles(BENZENE)
     with pytest.deprecated_call():
         assert smsd.prewarm_graph(mol) is None
+    assert smsd.prewarm(mol) is mol
     assert len(mol.morgan_rank) == mol.n
 
 
@@ -82,6 +86,8 @@ def test_chem_keyword_is_deprecated_in_favour_of_chemistry():
     assert smsd.similarity_upper_bound(first, second, options) == expected
     with pytest.deprecated_call():
         assert smsd.screen_targets(first, [second], 0.0, chem=options) == smsd.screen_targets(first, [second], 0.0)
+    assert smsd.screen_targets(first, [second], 0.0, chemistry=options) == smsd.screen_targets(first, [second], 0.0)
+    assert smsd.screen_targets(first, [second], 0.0, options) == [0]
 
 
 def test_depict_mcs_highlight_colour_is_deprecated():
@@ -118,7 +124,8 @@ def test_save_svg_writes_utf8(tmp_path):
 @pytest.mark.parametrize("name", ["to_smarts", "count_components", "split_components", "murcko_scaffold",
                                   "write_mol_block", "write_sdf_record", "compute_sssr", "assign_cip",
                                   "layout_sssr", "match_template", "generate_coords_2d", "generate_coords_3d",
-                                  "rings_truncated"])
+                                  "rings_truncated", "relevant_cycles_truncated",
+                                  "compute_relevant_cycle_families"])
 def test_graph_first_functions_accept_smiles(name):
     function = getattr(smsd, name)
     assert function.__name__ == name
