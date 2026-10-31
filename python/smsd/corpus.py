@@ -314,10 +314,11 @@ class FingerprintCorpus:
             else:
                 # A hard link publishes a complete file without replacing a concurrent writer.
                 os.link(temporary, destination)
-            return cls(destination)
         finally:
             if os.path.exists(temporary):
                 os.unlink(temporary)
+        # Open only after the temporary name is gone: Windows cannot remove a name of a mapped file.
+        return cls(destination)
 
     from_fingerprints = create
 
