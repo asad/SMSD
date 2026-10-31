@@ -6,6 +6,7 @@
  */
 #include "smsd/fingerprint_options.hpp"
 
+#include <bitset>
 #include <exception>
 #include <iostream>
 #include <stdexcept>
@@ -138,7 +139,7 @@ void embeddingLimit(const smsd::MolGraph& stack32) {
     const auto key = smsd::batch::FingerprintKey("C~C~C~C~C~C~C~C~C~C~C~C");
     const auto presence = smsd::batch::computeFingerprint(stack32, smsd::batch::FingerprintOptions::withKeys({key}));
     int bits = 0;
-    for (auto word : presence) bits += __builtin_popcountll(word);
+    for (auto word : presence) bits += static_cast<int>(std::bitset<64>(word).count());
     require(bits == 1, "A key whose minimum is met is present although the search stopped");
     const char* unsettled = "a substructure key matched more than 100000 embeddings before its count was settled";
     const auto counts = smsd::batch::FingerprintOptions::withKeys({key});
