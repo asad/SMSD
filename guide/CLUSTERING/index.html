@@ -1,0 +1,2971 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+      
+      
+      
+        <link rel="canonical" href="https://asad.github.io/SMSD/guide/CLUSTERING/">
+      
+      
+        <link rel="prev" href="../PACKED_INDEX/">
+      
+      
+        <link rel="next" href="../CPU_GPU/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/img/icon.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+  
+      
+        <title>Clustering and diversity - SMSD Pro</title>
+      
+    
+
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/smsd.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#clustering-and-diversity" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="SMSD Pro" class="md-header__button md-logo" aria-label="SMSD Pro" data-md-component="logo">
+      
+  <img src="../../assets/img/icon.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SMSD Pro
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Clustering and diversity
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/asad/SMSD" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    asad/SMSD
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+  User guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../notebooks/substructure_search/" class="md-tabs__link">
+          
+  
+  
+  Notebooks
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../HOWTO-INSTALL/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="SMSD Pro" class="md-nav__button md-logo" aria-label="SMSD Pro" data-md-component="logo">
+      
+  <img src="../../assets/img/icon.svg" alt="logo">
+
+    </a>
+    SMSD Pro
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/asad/SMSD" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    asad/SMSD
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GETTING_STARTED/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SUBSTRUCTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Substructure search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SMARTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SMARTS queries
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MCS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maximum common substructure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../FINGERPRINTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fingerprints and similarity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SCREENING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Screening a library
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PACKED_INDEX/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packed fingerprint index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Clustering and diversity
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Clustering and diversity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#choose-a-method" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choose a method
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prepare-the-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prepare the input
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cluster-a-library-with-butina" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cluster a library with Butina
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#thresholds-and-reordering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Thresholds and reordering
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pick-a-diverse-subset-with-maxmin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pick a diverse subset with MaxMin
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#nearest-neighbours-and-pairs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Nearest neighbours and pairs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chunk-size-determinism-and-cost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chunk size, determinism and cost
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cpu-and-gpu-backends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CPU and GPU backends
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#smsdbutina" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        smsd.butina
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#smsdmaxmin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        smsd.maxmin
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fingerprintcorpustop_k_pairs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FingerprintCorpus.top_k_pairs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CPU_GPU/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CPU and GPU screening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MACHINE_LEARNING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Machine learning and data frames
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AI_TOOLS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chemistry tools for AI assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../COMMAND_LINE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command line and containers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../OTHER_LANGUAGES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    C++ and Java
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notebooks
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Notebooks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/substructure_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Substructure and SMARTS search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/mcs_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maximum common substructure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/fingerprints_similarity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fingerprints and similarity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/library_screening/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Screening a library end to end
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/cpu_gpu_screening/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CPU and GPU screening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/feature_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCS to a small library search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../HOWTO-INSTALL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PYTHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PYTHON_ADAPTERS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python adapters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PACKED_CORPORA/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packed corpora
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../SMARTS_EXPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SMARTS export
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CPP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    C++
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../JAVA/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Java
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP_SERVER/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AI_ASSISTANTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../EXAMPLES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_REFERENCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ALGORITHMS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Algorithms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE_NOTES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release notes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#choose-a-method" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choose a method
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prepare-the-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prepare the input
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cluster-a-library-with-butina" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cluster a library with Butina
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#thresholds-and-reordering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Thresholds and reordering
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pick-a-diverse-subset-with-maxmin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pick a diverse subset with MaxMin
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#nearest-neighbours-and-pairs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Nearest neighbours and pairs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chunk-size-determinism-and-cost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chunk size, determinism and cost
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cpu-and-gpu-backends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CPU and GPU backends
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#smsdbutina" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        smsd.butina
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#smsdmaxmin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        smsd.maxmin
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fingerprintcorpustop_k_pairs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FingerprintCorpus.top_k_pairs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="clustering-and-diversity">Clustering and diversity<a class="headerlink" href="#clustering-and-diversity" title="Permanent link">&para;</a></h1>
+<p>Clustering and diverse selection turn a library into something a chemist can
+review: a set of series, each led by a representative, or a short list of
+molecules that cover the library's chemistry. SMSD Pro offers three exact
+tools on a packed fingerprint index: <code>smsd.butina</code> groups rows around cluster
+centres, <code>smsd.maxmin</code> picks a fixed number of diverse rows, and
+<code>FingerprintCorpus.top_k_pairs</code> finds the nearest neighbours of every row.
+This chapter shows which to use for which task, how the threshold, reordering,
+seed and chunk size behave, what each costs in time and memory, and what runs
+on a GPU. Every example uses the inline library of
+<a href="../SCREENING/">Screening a library</a>: 14 benzodiazepines, 7 common drugs and
+512 generated trisubstituted benzenes.</p>
+<p>All three tools read a <code>FingerprintCorpus</code>, so they need NumPy, from the
+<code>numpy</code> extra:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd[numpy]==8.1.0"</span>
+</code></pre></div>
+<h2 id="choose-a-method">Choose a method<a class="headerlink" href="#choose-a-method" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Use</th>
+<th>Returns</th>
+<th>Comparison work for n rows</th>
+<th>Extra memory</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Group a library into series, each with a representative</td>
+<td><code>smsd.butina(corpus, threshold)</code></td>
+<td>A list of tuples, centre first</td>
+<td>About n²/2, plus one pass over the library per cluster; <code>reordering=True</code> adds about n²</td>
+<td>Two arrays of n entries, about 9 bytes per row</td>
+</tr>
+<tr>
+<td>Pick a fixed number of diverse rows</td>
+<td><code>smsd.maxmin(corpus, count, seed=0)</code></td>
+<td>A list of rows in the order picked</td>
+<td>n for each row picked</td>
+<td>One array of n entries, 8 bytes per row</td>
+</tr>
+<tr>
+<td>Find the k nearest neighbours of every row, near-duplicates or outliers</td>
+<td><code>corpus.top_k_pairs(k, threshold=0.0)</code></td>
+<td>Yields <code>(row, neighbour, Tanimoto)</code>, at most k per row, best first</td>
+<td>About n²</td>
+<td>k entries per row in progress; n × k if every result is kept</td>
+</tr>
+<tr>
+<td>List every pair above a similarity</td>
+<td><code>corpus.threshold_pairs(threshold)</code></td>
+<td>Yields <code>(first, second, Tanimoto)</code>, each pair once</td>
+<td>About n²/2</td>
+<td>Up to n²/2 pairs if every result is kept</td>
+</tr>
+</tbody>
+</table>
+<p>Some guidance on the choice:</p>
+<ul>
+<li>Use Butina when the question is "which series does this library contain?".
+  The number of clusters follows from the threshold, not from a target count.</li>
+<li>Use MaxMin when the question is "which N molecules should we buy, test or
+  inspect first?". The count is fixed and the threshold is implicit.</li>
+<li>Use <code>top_k_pairs</code> to inspect a library before clustering it: identical
+  fingerprints, close analogues and molecules with no near neighbour all show
+  up in its output.</li>
+<li>Every method compares fingerprints exactly; none samples the library or
+  approximates a score. The work therefore grows with the square of the row
+  count, or with the row count times the number picked for MaxMin, and the
+  results are the same on every run, every chunk size and every backend.</li>
+</ul>
+<h2 id="prepare-the-input">Prepare the input<a class="headerlink" href="#prepare-the-input" title="Permanent link">&para;</a></h2>
+<p>The three tools take an open <code>FingerprintCorpus</code>, built once with
+<code>FingerprintCorpus.from_smiles</code> or <code>FingerprintCorpus.create</code>, as
+<a href="../PACKED_INDEX/#build-an-index">Packed fingerprint index</a> describes. Four
+points matter before clustering:</p>
+<ul>
+<li>The fingerprint decides the answer. A cluster threshold of 0.5 on ECFP4
+  bits is a different statement from 0.5 on path bits. The index file records
+  the width and row count but not the options, so keep the
+  <code>FingerprintOptions</code> beside it and state them with every result.</li>
+<li>Rows are numbers. The index stores no names, and every returned row refers
+  to the input order. Keep the identifiers in a list in the same order.</li>
+<li>Duplicates are counted. Identical fingerprints score 1 with each other, so a
+  series entered many times has many neighbours and tends to supply the first
+  and largest clusters. Remove duplicate structures first if the counts matter;
+  see <a href="../SCREENING/#prepare-the-library">Prepare the library</a>.</li>
+<li>Empty fingerprints score 1 with each other. Empty graphs from malformed SD
+  records therefore fall into one cluster, and they score 0 against every
+  other row. Drop graphs with no atoms before building the index.</li>
+</ul>
+<h2 id="cluster-a-library-with-butina">Cluster a library with Butina<a class="headerlink" href="#cluster-a-library-with-butina" title="Permanent link">&para;</a></h2>
+<p><code>smsd.butina(corpus, threshold=0.7)</code> counts, for every row, the other rows
+whose Tanimoto similarity is at least the threshold. The row with the most
+neighbours becomes the first centre and takes all its unassigned neighbours
+as members; the next centre is the unassigned row with the most neighbours,
+and so on until every row is assigned. Equal counts go to the lower row. The
+result is a list of tuples, each with its centre first and the other members
+in row order, and every row appears in exactly one tuple.</p>
+<p>A member reaches the threshold with its centre, but not necessarily with the
+other members of its cluster. A row also joins the first cluster whose centre
+reaches it, even when a later centre would be closer. The program below
+clusters the whole library at 0.5 and checks both properties:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">itertools</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">tempfile</span><span class="w"> </span><span class="kn">import</span> <span class="n">TemporaryDirectory</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">NAMED</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="s2">"diazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CN=C(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="s2">"nordazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccc2)c2cc(Cl)ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="s2">"temazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)C(O)N=C(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="s2">"oxazepam"</span><span class="p">:</span> <span class="s2">"OC1N=C(c2ccccc2)c2cc(Cl)ccc2NC1=O"</span><span class="p">,</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    <span class="s2">"lorazepam"</span><span class="p">:</span> <span class="s2">"OC1N=C(c2ccccc2Cl)c2cc(Cl)ccc2NC1=O"</span><span class="p">,</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>    <span class="s2">"clonazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccc2Cl)c2cc([N+](=O)[O-])ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    <span class="s2">"nitrazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccc2)c2cc([N+](=O)[O-])ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>    <span class="s2">"flunitrazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CN=C(c2ccccc2F)c2cc([N+](=O)[O-])ccc21"</span><span class="p">,</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>    <span class="s2">"bromazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccn2)c2cc(Br)ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>    <span class="s2">"tetrazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CN=C(C2=CCCCC2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>    <span class="s2">"alprazolam"</span><span class="p">:</span> <span class="s2">"Cc1nnc2n1-c1ccc(Cl)cc1C(c1ccccc1)=NC2"</span><span class="p">,</span>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>    <span class="s2">"triazolam"</span><span class="p">:</span> <span class="s2">"Cc1nnc2n1-c1ccc(Cl)cc1C(c1ccccc1Cl)=NC2"</span><span class="p">,</span>
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>    <span class="s2">"midazolam"</span><span class="p">:</span> <span class="s2">"Cc1ncc2n1-c1ccc(Cl)cc1C(c1ccccc1F)=NC2"</span><span class="p">,</span>
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>    <span class="s2">"clobazam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CC(=O)N(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>    <span class="s2">"aspirin"</span><span class="p">:</span> <span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">,</span>
+<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>    <span class="s2">"salicylic acid"</span><span class="p">:</span> <span class="s2">"OC(=O)c1ccccc1O"</span><span class="p">,</span>
+<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>    <span class="s2">"paracetamol"</span><span class="p">:</span> <span class="s2">"CC(=O)Nc1ccc(O)cc1"</span><span class="p">,</span>
+<a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>    <span class="s2">"ibuprofen"</span><span class="p">:</span> <span class="s2">"CC(C)Cc1ccc(cc1)C(C)C(=O)O"</span><span class="p">,</span>
+<a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>    <span class="s2">"naproxen"</span><span class="p">:</span> <span class="s2">"COc1ccc2cc(ccc2c1)C(C)C(=O)O"</span><span class="p">,</span>
+<a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>    <span class="s2">"caffeine"</span><span class="p">:</span> <span class="s2">"CN1C=NC2=C1C(=O)N(C(=O)N2C)C"</span><span class="p">,</span>
+<a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a>    <span class="s2">"phenol"</span><span class="p">:</span> <span class="s2">"Oc1ccccc1"</span><span class="p">,</span>
+<a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a><span class="p">}</span>
+<a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a><span class="n">GROUPS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"C"</span><span class="p">,</span> <span class="s2">"CC"</span><span class="p">,</span> <span class="s2">"OC"</span><span class="p">,</span> <span class="s2">"N"</span><span class="p">,</span> <span class="s2">"O"</span><span class="p">,</span> <span class="s2">"F"</span><span class="p">,</span> <span class="s2">"Cl"</span><span class="p">,</span> <span class="s2">"C(=O)O"</span><span class="p">]</span>
+<a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a><span class="n">library</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">NAMED</span><span class="o">.</span><span class="n">items</span><span class="p">())</span> <span class="o">+</span> <span class="p">[</span>
+<a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a>    <span class="p">(</span><span class="sa">f</span><span class="s2">"GEN-</span><span class="si">{</span><span class="n">number</span><span class="si">:</span><span class="s2">03d</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"c1c(</span><span class="si">{</span><span class="n">a</span><span class="si">}</span><span class="s2">)cc(</span><span class="si">{</span><span class="n">b</span><span class="si">}</span><span class="s2">)cc1</span><span class="si">{</span><span class="n">c</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a>    <span class="k">for</span> <span class="n">number</span><span class="p">,</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="n">GROUPS</span><span class="p">,</span> <span class="n">repeat</span><span class="o">=</span><span class="mi">3</span><span class="p">))</span>
+<a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a><span class="p">]</span>
+<a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a><span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">library</span><span class="p">]</span>
+<a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a><span class="n">smiles</span> <span class="o">=</span> <span class="p">[</span><span class="n">text</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">library</span><span class="p">]</span>
+<a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">library</span><span class="p">)</span> <span class="o">==</span> <span class="mi">533</span>
+<a id="__codelineno-1-38" name="__codelineno-1-38" href="#__codelineno-1-38"></a>
+<a id="__codelineno-1-39" name="__codelineno-1-39" href="#__codelineno-1-39"></a><span class="n">options</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="o">.</span><span class="n">ecfp</span><span class="p">(</span><span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-1-40" name="__codelineno-1-40" href="#__codelineno-1-40"></a><span class="k">with</span> <span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">directory</span><span class="p">:</span>
+<a id="__codelineno-1-41" name="__codelineno-1-41" href="#__codelineno-1-41"></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"library.fp"</span>
+<a id="__codelineno-1-42" name="__codelineno-1-42" href="#__codelineno-1-42"></a>    <span class="k">with</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintCorpus</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">smiles</span><span class="p">,</span>
+<a id="__codelineno-1-43" name="__codelineno-1-43" href="#__codelineno-1-43"></a>                                            <span class="n">options</span><span class="o">=</span><span class="n">options</span><span class="p">)</span> <span class="k">as</span> <span class="n">corpus</span><span class="p">:</span>
+<a id="__codelineno-1-44" name="__codelineno-1-44" href="#__codelineno-1-44"></a>        <span class="n">clusters</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">butina</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<a id="__codelineno-1-45" name="__codelineno-1-45" href="#__codelineno-1-45"></a>        <span class="n">fingerprints</span> <span class="o">=</span> <span class="p">[</span><span class="n">corpus</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">corpus</span><span class="p">))]</span>
+<a id="__codelineno-1-46" name="__codelineno-1-46" href="#__codelineno-1-46"></a>
+<a id="__codelineno-1-47" name="__codelineno-1-47" href="#__codelineno-1-47"></a><span class="c1"># Every row is in exactly one cluster ...</span>
+<a id="__codelineno-1-48" name="__codelineno-1-48" href="#__codelineno-1-48"></a><span class="k">assert</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">row</span> <span class="k">for</span> <span class="n">cluster</span> <span class="ow">in</span> <span class="n">clusters</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">cluster</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">533</span><span class="p">))</span>
+<a id="__codelineno-1-49" name="__codelineno-1-49" href="#__codelineno-1-49"></a><span class="c1"># ... and every member reaches the threshold with its centre.</span>
+<a id="__codelineno-1-50" name="__codelineno-1-50" href="#__codelineno-1-50"></a><span class="k">for</span> <span class="n">centre</span><span class="p">,</span> <span class="o">*</span><span class="n">members</span> <span class="ow">in</span> <span class="n">clusters</span><span class="p">:</span>
+<a id="__codelineno-1-51" name="__codelineno-1-51" href="#__codelineno-1-51"></a>    <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">members</span><span class="p">:</span>
+<a id="__codelineno-1-52" name="__codelineno-1-52" href="#__codelineno-1-52"></a>        <span class="k">assert</span> <span class="n">smsd</span><span class="o">.</span><span class="n">tanimoto_coefficient</span><span class="p">(</span><span class="n">fingerprints</span><span class="p">[</span><span class="n">centre</span><span class="p">],</span>
+<a id="__codelineno-1-53" name="__codelineno-1-53" href="#__codelineno-1-53"></a>                                         <span class="n">fingerprints</span><span class="p">[</span><span class="n">member</span><span class="p">])</span> <span class="o">&gt;=</span> <span class="mf">0.5</span>
+<a id="__codelineno-1-54" name="__codelineno-1-54" href="#__codelineno-1-54"></a>
+<a id="__codelineno-1-55" name="__codelineno-1-55" href="#__codelineno-1-55"></a><span class="n">sizes</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">cluster</span><span class="p">)</span> <span class="k">for</span> <span class="n">cluster</span> <span class="ow">in</span> <span class="n">clusters</span><span class="p">]</span>
+<a id="__codelineno-1-56" name="__codelineno-1-56" href="#__codelineno-1-56"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"clusters:"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">clusters</span><span class="p">),</span> <span class="s2">"| singletons:"</span><span class="p">,</span> <span class="n">sizes</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+<a id="__codelineno-1-57" name="__codelineno-1-57" href="#__codelineno-1-57"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"first three:"</span><span class="p">,</span> <span class="p">[(</span><span class="n">names</span><span class="p">[</span><span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">))</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">clusters</span><span class="p">[:</span><span class="mi">3</span><span class="p">]])</span>
+<a id="__codelineno-1-58" name="__codelineno-1-58" href="#__codelineno-1-58"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"clusters that hold the named drugs:"</span><span class="p">)</span>
+<a id="__codelineno-1-59" name="__codelineno-1-59" href="#__codelineno-1-59"></a><span class="k">for</span> <span class="n">cluster</span> <span class="ow">in</span> <span class="n">clusters</span><span class="p">:</span>
+<a id="__codelineno-1-60" name="__codelineno-1-60" href="#__codelineno-1-60"></a>    <span class="k">if</span> <span class="n">cluster</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">21</span><span class="p">:</span>
+<a id="__codelineno-1-61" name="__codelineno-1-61" href="#__codelineno-1-61"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">names</span><span class="p">[</span><span class="n">cluster</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="si">:</span><span class="s2">&lt;15</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="n">row</span><span class="p">]</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">cluster</span><span class="p">[</span><span class="mi">1</span><span class="p">:]])</span>
+<a id="__codelineno-1-62" name="__codelineno-1-62" href="#__codelineno-1-62"></a>
+<a id="__codelineno-1-63" name="__codelineno-1-63" href="#__codelineno-1-63"></a><span class="c1"># Bromazepam reaches 0.5 with nordazepam, but nordazepam was taken first.</span>
+<a id="__codelineno-1-64" name="__codelineno-1-64" href="#__codelineno-1-64"></a><span class="n">nordazepam</span><span class="p">,</span> <span class="n">bromazepam</span> <span class="o">=</span> <span class="n">names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">"nordazepam"</span><span class="p">),</span> <span class="n">names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">"bromazepam"</span><span class="p">)</span>
+<a id="__codelineno-1-65" name="__codelineno-1-65" href="#__codelineno-1-65"></a><span class="n">score</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">tanimoto_coefficient</span><span class="p">(</span><span class="n">fingerprints</span><span class="p">[</span><span class="n">nordazepam</span><span class="p">],</span>
+<a id="__codelineno-1-66" name="__codelineno-1-66" href="#__codelineno-1-66"></a>                                  <span class="n">fingerprints</span><span class="p">[</span><span class="n">bromazepam</span><span class="p">])</span>
+<a id="__codelineno-1-67" name="__codelineno-1-67" href="#__codelineno-1-67"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"nordazepam and bromazepam: </span><span class="si">{</span><span class="n">score</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-1-68" name="__codelineno-1-68" href="#__codelineno-1-68"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">clusters</span><span class="p">)</span> <span class="o">==</span> <span class="mi">34</span> <span class="ow">and</span> <span class="n">sizes</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">11</span>
+<a id="__codelineno-1-69" name="__codelineno-1-69" href="#__codelineno-1-69"></a><span class="k">assert</span> <span class="p">(</span><span class="n">bromazepam</span><span class="p">,)</span> <span class="ow">in</span> <span class="n">clusters</span> <span class="ow">and</span> <span class="nb">round</span><span class="p">(</span><span class="n">score</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span> <span class="o">==</span> <span class="mf">0.519</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>clusters: 34 | singletons: 11
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>first three: [('GEN-511', 67), ('GEN-019', 66), ('GEN-087', 42)]
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>clusters that hold the named drugs:
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>  diazepam        ['nordazepam', 'temazepam', 'tetrazepam', 'clobazam']
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>  oxazepam        ['lorazepam']
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>  nitrazepam      ['clonazepam']
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>  alprazolam      ['triazolam', 'midazolam']
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>  bromazepam      []
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>  flunitrazepam   []
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>  aspirin         []
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>  salicylic acid  []
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>  paracetamol     []
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>  ibuprofen       []
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>  naproxen        []
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>  caffeine        []
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>  phenol          []
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>nordazepam and bromazepam: 0.519
+</code></pre></div>
+<p>The generated benzenes supply the first and largest clusters because each of
+their 120 distinct structures occurs several times, so each has many identical
+neighbours. Bromazepam shows the order effect: it reaches the threshold with
+nordazepam, but nordazepam had already joined diazepam's cluster, so
+bromazepam forms a cluster of its own.</p>
+<h2 id="thresholds-and-reordering">Thresholds and reordering<a class="headerlink" href="#thresholds-and-reordering" title="Permanent link">&para;</a></h2>
+<p>The threshold is a Tanimoto similarity, inclusive, from 0 to 1; a higher
+threshold gives more, tighter clusters. With the default <code>reordering=False</code>
+the neighbour counts are computed once, before any cluster is taken, so a
+later centre may be chosen for neighbours that earlier clusters have already
+claimed. <code>reordering=True</code> recounts after each cluster so that only unassigned
+neighbours count, and later centres are chosen by the neighbours still
+available. It costs up to about three times the comparisons. Neither mode
+is more exact than the other; they answer slightly different questions, so
+record which one a result used.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">itertools</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">tempfile</span><span class="w"> </span><span class="kn">import</span> <span class="n">TemporaryDirectory</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">NAMED</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="s2">"diazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CN=C(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="s2">"nordazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccc2)c2cc(Cl)ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="s2">"temazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)C(O)N=C(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>    <span class="s2">"oxazepam"</span><span class="p">:</span> <span class="s2">"OC1N=C(c2ccccc2)c2cc(Cl)ccc2NC1=O"</span><span class="p">,</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    <span class="s2">"lorazepam"</span><span class="p">:</span> <span class="s2">"OC1N=C(c2ccccc2Cl)c2cc(Cl)ccc2NC1=O"</span><span class="p">,</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>    <span class="s2">"clonazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccc2Cl)c2cc([N+](=O)[O-])ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>    <span class="s2">"nitrazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccc2)c2cc([N+](=O)[O-])ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>    <span class="s2">"flunitrazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CN=C(c2ccccc2F)c2cc([N+](=O)[O-])ccc21"</span><span class="p">,</span>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>    <span class="s2">"bromazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccn2)c2cc(Br)ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>    <span class="s2">"tetrazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CN=C(C2=CCCCC2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>    <span class="s2">"alprazolam"</span><span class="p">:</span> <span class="s2">"Cc1nnc2n1-c1ccc(Cl)cc1C(c1ccccc1)=NC2"</span><span class="p">,</span>
+<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>    <span class="s2">"triazolam"</span><span class="p">:</span> <span class="s2">"Cc1nnc2n1-c1ccc(Cl)cc1C(c1ccccc1Cl)=NC2"</span><span class="p">,</span>
+<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>    <span class="s2">"midazolam"</span><span class="p">:</span> <span class="s2">"Cc1ncc2n1-c1ccc(Cl)cc1C(c1ccccc1F)=NC2"</span><span class="p">,</span>
+<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>    <span class="s2">"clobazam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CC(=O)N(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a>    <span class="s2">"aspirin"</span><span class="p">:</span> <span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">,</span>
+<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>    <span class="s2">"salicylic acid"</span><span class="p">:</span> <span class="s2">"OC(=O)c1ccccc1O"</span><span class="p">,</span>
+<a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a>    <span class="s2">"paracetamol"</span><span class="p">:</span> <span class="s2">"CC(=O)Nc1ccc(O)cc1"</span><span class="p">,</span>
+<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a>    <span class="s2">"ibuprofen"</span><span class="p">:</span> <span class="s2">"CC(C)Cc1ccc(cc1)C(C)C(=O)O"</span><span class="p">,</span>
+<a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a>    <span class="s2">"naproxen"</span><span class="p">:</span> <span class="s2">"COc1ccc2cc(ccc2c1)C(C)C(=O)O"</span><span class="p">,</span>
+<a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a>    <span class="s2">"caffeine"</span><span class="p">:</span> <span class="s2">"CN1C=NC2=C1C(=O)N(C(=O)N2C)C"</span><span class="p">,</span>
+<a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a>    <span class="s2">"phenol"</span><span class="p">:</span> <span class="s2">"Oc1ccccc1"</span><span class="p">,</span>
+<a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a><span class="p">}</span>
+<a id="__codelineno-3-30" name="__codelineno-3-30" href="#__codelineno-3-30"></a><span class="n">GROUPS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"C"</span><span class="p">,</span> <span class="s2">"CC"</span><span class="p">,</span> <span class="s2">"OC"</span><span class="p">,</span> <span class="s2">"N"</span><span class="p">,</span> <span class="s2">"O"</span><span class="p">,</span> <span class="s2">"F"</span><span class="p">,</span> <span class="s2">"Cl"</span><span class="p">,</span> <span class="s2">"C(=O)O"</span><span class="p">]</span>
+<a id="__codelineno-3-31" name="__codelineno-3-31" href="#__codelineno-3-31"></a><span class="n">library</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">NAMED</span><span class="o">.</span><span class="n">items</span><span class="p">())</span> <span class="o">+</span> <span class="p">[</span>
+<a id="__codelineno-3-32" name="__codelineno-3-32" href="#__codelineno-3-32"></a>    <span class="p">(</span><span class="sa">f</span><span class="s2">"GEN-</span><span class="si">{</span><span class="n">number</span><span class="si">:</span><span class="s2">03d</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"c1c(</span><span class="si">{</span><span class="n">a</span><span class="si">}</span><span class="s2">)cc(</span><span class="si">{</span><span class="n">b</span><span class="si">}</span><span class="s2">)cc1</span><span class="si">{</span><span class="n">c</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-3-33" name="__codelineno-3-33" href="#__codelineno-3-33"></a>    <span class="k">for</span> <span class="n">number</span><span class="p">,</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="n">GROUPS</span><span class="p">,</span> <span class="n">repeat</span><span class="o">=</span><span class="mi">3</span><span class="p">))</span>
+<a id="__codelineno-3-34" name="__codelineno-3-34" href="#__codelineno-3-34"></a><span class="p">]</span>
+<a id="__codelineno-3-35" name="__codelineno-3-35" href="#__codelineno-3-35"></a><span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">library</span><span class="p">]</span>
+<a id="__codelineno-3-36" name="__codelineno-3-36" href="#__codelineno-3-36"></a><span class="n">smiles</span> <span class="o">=</span> <span class="p">[</span><span class="n">text</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">library</span><span class="p">]</span>
+<a id="__codelineno-3-37" name="__codelineno-3-37" href="#__codelineno-3-37"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">library</span><span class="p">)</span> <span class="o">==</span> <span class="mi">533</span>
+<a id="__codelineno-3-38" name="__codelineno-3-38" href="#__codelineno-3-38"></a>
+<a id="__codelineno-3-39" name="__codelineno-3-39" href="#__codelineno-3-39"></a><span class="n">options</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="o">.</span><span class="n">ecfp</span><span class="p">(</span><span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-3-40" name="__codelineno-3-40" href="#__codelineno-3-40"></a><span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+<a id="__codelineno-3-41" name="__codelineno-3-41" href="#__codelineno-3-41"></a><span class="k">with</span> <span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">directory</span><span class="p">:</span>
+<a id="__codelineno-3-42" name="__codelineno-3-42" href="#__codelineno-3-42"></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"library.fp"</span>
+<a id="__codelineno-3-43" name="__codelineno-3-43" href="#__codelineno-3-43"></a>    <span class="k">with</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintCorpus</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">smiles</span><span class="p">,</span>
+<a id="__codelineno-3-44" name="__codelineno-3-44" href="#__codelineno-3-44"></a>                                            <span class="n">options</span><span class="o">=</span><span class="n">options</span><span class="p">)</span> <span class="k">as</span> <span class="n">corpus</span><span class="p">:</span>
+<a id="__codelineno-3-45" name="__codelineno-3-45" href="#__codelineno-3-45"></a>        <span class="k">for</span> <span class="n">threshold</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">):</span>
+<a id="__codelineno-3-46" name="__codelineno-3-46" href="#__codelineno-3-46"></a>            <span class="n">initial</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">butina</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="n">threshold</span><span class="p">)</span>
+<a id="__codelineno-3-47" name="__codelineno-3-47" href="#__codelineno-3-47"></a>            <span class="n">recount</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">butina</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="n">threshold</span><span class="p">,</span> <span class="n">reordering</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-3-48" name="__codelineno-3-48" href="#__codelineno-3-48"></a>            <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">threshold</span><span class="p">,</span> <span class="n">initial</span><span class="p">,</span> <span class="n">recount</span><span class="p">))</span>
+<a id="__codelineno-3-49" name="__codelineno-3-49" href="#__codelineno-3-49"></a>
+<a id="__codelineno-3-50" name="__codelineno-3-50" href="#__codelineno-3-50"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"threshold  clusters  singletons  | reordering: clusters  singletons"</span><span class="p">)</span>
+<a id="__codelineno-3-51" name="__codelineno-3-51" href="#__codelineno-3-51"></a><span class="k">for</span> <span class="n">threshold</span><span class="p">,</span> <span class="n">initial</span><span class="p">,</span> <span class="n">recount</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">:</span>
+<a id="__codelineno-3-52" name="__codelineno-3-52" href="#__codelineno-3-52"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">threshold</span><span class="si">:</span><span class="s2">&gt;9</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">initial</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2">  "</span>
+<a id="__codelineno-3-53" name="__codelineno-3-53" href="#__codelineno-3-53"></a>          <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">initial</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;10</span><span class="si">}</span><span class="s2">  |"</span>
+<a id="__codelineno-3-54" name="__codelineno-3-54" href="#__codelineno-3-54"></a>          <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">recount</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;21</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">recount</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;10</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-3-55" name="__codelineno-3-55" href="#__codelineno-3-55"></a>
+<a id="__codelineno-3-56" name="__codelineno-3-56" href="#__codelineno-3-56"></a><span class="k">assert</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">initial</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">initial</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">]</span> <span class="o">==</span> <span class="p">[</span><span class="mi">19</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">34</span><span class="p">,</span> <span class="mi">53</span><span class="p">,</span> <span class="mi">79</span><span class="p">]</span>
+<a id="__codelineno-3-57" name="__codelineno-3-57" href="#__codelineno-3-57"></a><span class="k">assert</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">recount</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">recount</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">]</span> <span class="o">==</span> <span class="p">[</span><span class="mi">18</span><span class="p">,</span> <span class="mi">29</span><span class="p">,</span> <span class="mi">33</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">77</span><span class="p">]</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>threshold  clusters  singletons  | reordering: clusters  singletons
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>      0.3        19           7  |                   18           8
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>      0.4        28          11  |                   29          12
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>      0.5        34          11  |                   33          11
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>      0.6        53          22  |                   50          20
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>      0.7        79          21  |                   77          21
+</code></pre></div>
+<p>There is no universally right threshold: the right value for a fingerprint
+and a library is the one whose clusters a chemist accepts on review. Look at
+a sample of clusters at two or three thresholds before fixing one, and keep it
+unchanged when results from different runs are to be compared.</p>
+<h2 id="pick-a-diverse-subset-with-maxmin">Pick a diverse subset with MaxMin<a class="headerlink" href="#pick-a-diverse-subset-with-maxmin" title="Permanent link">&para;</a></h2>
+<p><code>smsd.maxmin(corpus, count, seed=0)</code> starts at row <code>seed</code>, then repeatedly
+takes the row whose closest already-picked row is the least similar, that is,
+the row with the largest minimum Tanimoto distance (1 − Tanimoto) to the
+selection. Equal distances go to the lower row, and no random numbers are
+used, so the same index, count and seed always give the same list. The list is
+in the order picked, and a shorter run is a prefix of a longer one: the first
+three rows of a pick of eight are exactly the pick of three.</p>
+<p>The seed decides where the selection starts. Row 0 is the default, which makes
+the result depend on the input order. Choose a seed that means something, such
+as a reference compound or the centre of the largest Butina cluster, and record
+it.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">itertools</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">tempfile</span><span class="w"> </span><span class="kn">import</span> <span class="n">TemporaryDirectory</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="n">NAMED</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="s2">"diazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CN=C(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>    <span class="s2">"nordazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccc2)c2cc(Cl)ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>    <span class="s2">"temazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)C(O)N=C(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>    <span class="s2">"oxazepam"</span><span class="p">:</span> <span class="s2">"OC1N=C(c2ccccc2)c2cc(Cl)ccc2NC1=O"</span><span class="p">,</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>    <span class="s2">"lorazepam"</span><span class="p">:</span> <span class="s2">"OC1N=C(c2ccccc2Cl)c2cc(Cl)ccc2NC1=O"</span><span class="p">,</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>    <span class="s2">"clonazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccc2Cl)c2cc([N+](=O)[O-])ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>    <span class="s2">"nitrazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccc2)c2cc([N+](=O)[O-])ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>    <span class="s2">"flunitrazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CN=C(c2ccccc2F)c2cc([N+](=O)[O-])ccc21"</span><span class="p">,</span>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>    <span class="s2">"bromazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccn2)c2cc(Br)ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>    <span class="s2">"tetrazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CN=C(C2=CCCCC2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>    <span class="s2">"alprazolam"</span><span class="p">:</span> <span class="s2">"Cc1nnc2n1-c1ccc(Cl)cc1C(c1ccccc1)=NC2"</span><span class="p">,</span>
+<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>    <span class="s2">"triazolam"</span><span class="p">:</span> <span class="s2">"Cc1nnc2n1-c1ccc(Cl)cc1C(c1ccccc1Cl)=NC2"</span><span class="p">,</span>
+<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>    <span class="s2">"midazolam"</span><span class="p">:</span> <span class="s2">"Cc1ncc2n1-c1ccc(Cl)cc1C(c1ccccc1F)=NC2"</span><span class="p">,</span>
+<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>    <span class="s2">"clobazam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CC(=O)N(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a>    <span class="s2">"aspirin"</span><span class="p">:</span> <span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">,</span>
+<a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a>    <span class="s2">"salicylic acid"</span><span class="p">:</span> <span class="s2">"OC(=O)c1ccccc1O"</span><span class="p">,</span>
+<a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a>    <span class="s2">"paracetamol"</span><span class="p">:</span> <span class="s2">"CC(=O)Nc1ccc(O)cc1"</span><span class="p">,</span>
+<a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a>    <span class="s2">"ibuprofen"</span><span class="p">:</span> <span class="s2">"CC(C)Cc1ccc(cc1)C(C)C(=O)O"</span><span class="p">,</span>
+<a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a>    <span class="s2">"naproxen"</span><span class="p">:</span> <span class="s2">"COc1ccc2cc(ccc2c1)C(C)C(=O)O"</span><span class="p">,</span>
+<a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a>    <span class="s2">"caffeine"</span><span class="p">:</span> <span class="s2">"CN1C=NC2=C1C(=O)N(C(=O)N2C)C"</span><span class="p">,</span>
+<a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a>    <span class="s2">"phenol"</span><span class="p">:</span> <span class="s2">"Oc1ccccc1"</span><span class="p">,</span>
+<a id="__codelineno-5-29" name="__codelineno-5-29" href="#__codelineno-5-29"></a><span class="p">}</span>
+<a id="__codelineno-5-30" name="__codelineno-5-30" href="#__codelineno-5-30"></a><span class="n">GROUPS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"C"</span><span class="p">,</span> <span class="s2">"CC"</span><span class="p">,</span> <span class="s2">"OC"</span><span class="p">,</span> <span class="s2">"N"</span><span class="p">,</span> <span class="s2">"O"</span><span class="p">,</span> <span class="s2">"F"</span><span class="p">,</span> <span class="s2">"Cl"</span><span class="p">,</span> <span class="s2">"C(=O)O"</span><span class="p">]</span>
+<a id="__codelineno-5-31" name="__codelineno-5-31" href="#__codelineno-5-31"></a><span class="n">library</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">NAMED</span><span class="o">.</span><span class="n">items</span><span class="p">())</span> <span class="o">+</span> <span class="p">[</span>
+<a id="__codelineno-5-32" name="__codelineno-5-32" href="#__codelineno-5-32"></a>    <span class="p">(</span><span class="sa">f</span><span class="s2">"GEN-</span><span class="si">{</span><span class="n">number</span><span class="si">:</span><span class="s2">03d</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"c1c(</span><span class="si">{</span><span class="n">a</span><span class="si">}</span><span class="s2">)cc(</span><span class="si">{</span><span class="n">b</span><span class="si">}</span><span class="s2">)cc1</span><span class="si">{</span><span class="n">c</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-5-33" name="__codelineno-5-33" href="#__codelineno-5-33"></a>    <span class="k">for</span> <span class="n">number</span><span class="p">,</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="n">GROUPS</span><span class="p">,</span> <span class="n">repeat</span><span class="o">=</span><span class="mi">3</span><span class="p">))</span>
+<a id="__codelineno-5-34" name="__codelineno-5-34" href="#__codelineno-5-34"></a><span class="p">]</span>
+<a id="__codelineno-5-35" name="__codelineno-5-35" href="#__codelineno-5-35"></a><span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">library</span><span class="p">]</span>
+<a id="__codelineno-5-36" name="__codelineno-5-36" href="#__codelineno-5-36"></a><span class="n">smiles</span> <span class="o">=</span> <span class="p">[</span><span class="n">text</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">library</span><span class="p">]</span>
+<a id="__codelineno-5-37" name="__codelineno-5-37" href="#__codelineno-5-37"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">library</span><span class="p">)</span> <span class="o">==</span> <span class="mi">533</span>
+<a id="__codelineno-5-38" name="__codelineno-5-38" href="#__codelineno-5-38"></a>
+<a id="__codelineno-5-39" name="__codelineno-5-39" href="#__codelineno-5-39"></a>
+<a id="__codelineno-5-40" name="__codelineno-5-40" href="#__codelineno-5-40"></a><span class="k">def</span><span class="w"> </span><span class="nf">closest_pair</span><span class="p">(</span><span class="n">fingerprints</span><span class="p">,</span> <span class="n">rows</span><span class="p">):</span>
+<a id="__codelineno-5-41" name="__codelineno-5-41" href="#__codelineno-5-41"></a><span class="w">    </span><span class="sd">"""The highest Tanimoto similarity between any two of the given rows."""</span>
+<a id="__codelineno-5-42" name="__codelineno-5-42" href="#__codelineno-5-42"></a>    <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">tanimoto_coefficient</span><span class="p">(</span><span class="n">fingerprints</span><span class="p">[</span><span class="n">a</span><span class="p">],</span> <span class="n">fingerprints</span><span class="p">[</span><span class="n">b</span><span class="p">])</span>
+<a id="__codelineno-5-43" name="__codelineno-5-43" href="#__codelineno-5-43"></a>               <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">combinations</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+<a id="__codelineno-5-44" name="__codelineno-5-44" href="#__codelineno-5-44"></a>
+<a id="__codelineno-5-45" name="__codelineno-5-45" href="#__codelineno-5-45"></a>
+<a id="__codelineno-5-46" name="__codelineno-5-46" href="#__codelineno-5-46"></a><span class="n">options</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="o">.</span><span class="n">ecfp</span><span class="p">(</span><span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-5-47" name="__codelineno-5-47" href="#__codelineno-5-47"></a><span class="k">with</span> <span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">directory</span><span class="p">:</span>
+<a id="__codelineno-5-48" name="__codelineno-5-48" href="#__codelineno-5-48"></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"library.fp"</span>
+<a id="__codelineno-5-49" name="__codelineno-5-49" href="#__codelineno-5-49"></a>    <span class="k">with</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintCorpus</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">smiles</span><span class="p">,</span>
+<a id="__codelineno-5-50" name="__codelineno-5-50" href="#__codelineno-5-50"></a>                                            <span class="n">options</span><span class="o">=</span><span class="n">options</span><span class="p">)</span> <span class="k">as</span> <span class="n">corpus</span><span class="p">:</span>
+<a id="__codelineno-5-51" name="__codelineno-5-51" href="#__codelineno-5-51"></a>        <span class="n">first</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">maxmin</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>  <span class="c1"># starts at row 0, diazepam</span>
+<a id="__codelineno-5-52" name="__codelineno-5-52" href="#__codelineno-5-52"></a>        <span class="n">phenol</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">maxmin</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">"phenol"</span><span class="p">))</span>
+<a id="__codelineno-5-53" name="__codelineno-5-53" href="#__codelineno-5-53"></a>        <span class="k">assert</span> <span class="n">smsd</span><span class="o">.</span><span class="n">maxmin</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span> <span class="o">==</span> <span class="n">first</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span>  <span class="c1"># a prefix of the longer pick</span>
+<a id="__codelineno-5-54" name="__codelineno-5-54" href="#__codelineno-5-54"></a>        <span class="k">assert</span> <span class="n">smsd</span><span class="o">.</span><span class="n">maxmin</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="p">[]</span>
+<a id="__codelineno-5-55" name="__codelineno-5-55" href="#__codelineno-5-55"></a>        <span class="n">fingerprints</span> <span class="o">=</span> <span class="p">[</span><span class="n">corpus</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">corpus</span><span class="p">))]</span>
+<a id="__codelineno-5-56" name="__codelineno-5-56" href="#__codelineno-5-56"></a>
+<a id="__codelineno-5-57" name="__codelineno-5-57" href="#__codelineno-5-57"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"from diazepam:"</span><span class="p">,</span> <span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="n">row</span><span class="p">]</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">first</span><span class="p">])</span>
+<a id="__codelineno-5-58" name="__codelineno-5-58" href="#__codelineno-5-58"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"from phenol:  "</span><span class="p">,</span> <span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="n">row</span><span class="p">]</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">phenol</span><span class="p">])</span>
+<a id="__codelineno-5-59" name="__codelineno-5-59" href="#__codelineno-5-59"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"closest pair in the first pick: </span><span class="si">{</span><span class="n">closest_pair</span><span class="p">(</span><span class="n">fingerprints</span><span class="p">,</span><span class="w"> </span><span class="n">first</span><span class="p">)</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-5-60" name="__codelineno-5-60" href="#__codelineno-5-60"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"closest pair in rows 0 to 7:    "</span>
+<a id="__codelineno-5-61" name="__codelineno-5-61" href="#__codelineno-5-61"></a>      <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">closest_pair</span><span class="p">(</span><span class="n">fingerprints</span><span class="p">,</span><span class="w"> </span><span class="nb">range</span><span class="p">(</span><span class="mi">8</span><span class="p">))</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-5-62" name="__codelineno-5-62" href="#__codelineno-5-62"></a><span class="k">assert</span> <span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="n">row</span><span class="p">]</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">first</span><span class="p">[:</span><span class="mi">3</span><span class="p">]]</span> <span class="o">==</span> <span class="p">[</span><span class="s2">"diazepam"</span><span class="p">,</span> <span class="s2">"GEN-148"</span><span class="p">,</span> <span class="s2">"caffeine"</span><span class="p">]</span>
+<a id="__codelineno-5-63" name="__codelineno-5-63" href="#__codelineno-5-63"></a><span class="k">assert</span> <span class="n">phenol</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">"phenol"</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">phenol</span><span class="p">))</span> <span class="o">==</span> <span class="mi">8</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>from diazepam: ['diazepam', 'GEN-148', 'caffeine', 'GEN-175', 'paracetamol', 'GEN-219', 'naproxen', 'GEN-294']
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>from phenol:   ['phenol', 'flunitrazepam', 'caffeine', 'GEN-222', 'GEN-164', 'ibuprofen', 'GEN-077', 'GEN-167']
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>closest pair in the first pick: 0.113
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>closest pair in rows 0 to 7:    0.755
+</code></pre></div>
+<p>Eight rows picked by MaxMin share at most 0.113 with each other, whereas the
+first eight rows of the file, all benzodiazepines, include a pair at 0.755.
+Two seeds give different selections of similar quality, which is expected:
+MaxMin is a greedy pick, not a search for the most diverse subset of a given
+size. <code>count</code> may be any number from 0 to the row count; a seed past the last
+row raises <code>IndexError</code>, and a negative one <code>ValueError</code>.</p>
+<p>MaxMin favours the edges of the library: its first picks are the molecules
+least like everything already chosen, which often includes outliers and
+oddities. To cover the populated regions instead, cluster first and take the
+Butina centres, or run MaxMin on an index built from the centres.</p>
+<h2 id="nearest-neighbours-and-pairs">Nearest neighbours and pairs<a class="headerlink" href="#nearest-neighbours-and-pairs" title="Permanent link">&para;</a></h2>
+<p><code>corpus.top_k_pairs(k, threshold=0.0)</code> yields the k most similar other rows of
+every row as <code>(row, neighbour, Tanimoto)</code>. The output is grouped by row in row
+order, best first within each row, and equal scores prefer the lower
+neighbour. <code>threshold</code> drops neighbours below it, so a row with no neighbour
+at or above the threshold yields nothing: that is a direct way to find
+outliers. <code>include_self=False</code> leaves out each row's pairing with itself, and
+k is reduced to the number of other rows when it is larger. The method is a
+generator, so consume it as it streams when the library is large.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">itertools</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">tempfile</span><span class="w"> </span><span class="kn">import</span> <span class="n">TemporaryDirectory</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="n">NAMED</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    <span class="s2">"diazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CN=C(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="s2">"nordazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccc2)c2cc(Cl)ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>    <span class="s2">"temazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)C(O)N=C(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>    <span class="s2">"oxazepam"</span><span class="p">:</span> <span class="s2">"OC1N=C(c2ccccc2)c2cc(Cl)ccc2NC1=O"</span><span class="p">,</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>    <span class="s2">"lorazepam"</span><span class="p">:</span> <span class="s2">"OC1N=C(c2ccccc2Cl)c2cc(Cl)ccc2NC1=O"</span><span class="p">,</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>    <span class="s2">"clonazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccc2Cl)c2cc([N+](=O)[O-])ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>    <span class="s2">"nitrazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccc2)c2cc([N+](=O)[O-])ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>    <span class="s2">"flunitrazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CN=C(c2ccccc2F)c2cc([N+](=O)[O-])ccc21"</span><span class="p">,</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>    <span class="s2">"bromazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccn2)c2cc(Br)ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>    <span class="s2">"tetrazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CN=C(C2=CCCCC2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>    <span class="s2">"alprazolam"</span><span class="p">:</span> <span class="s2">"Cc1nnc2n1-c1ccc(Cl)cc1C(c1ccccc1)=NC2"</span><span class="p">,</span>
+<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>    <span class="s2">"triazolam"</span><span class="p">:</span> <span class="s2">"Cc1nnc2n1-c1ccc(Cl)cc1C(c1ccccc1Cl)=NC2"</span><span class="p">,</span>
+<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>    <span class="s2">"midazolam"</span><span class="p">:</span> <span class="s2">"Cc1ncc2n1-c1ccc(Cl)cc1C(c1ccccc1F)=NC2"</span><span class="p">,</span>
+<a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>    <span class="s2">"clobazam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CC(=O)N(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a>    <span class="s2">"aspirin"</span><span class="p">:</span> <span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">,</span>
+<a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a>    <span class="s2">"salicylic acid"</span><span class="p">:</span> <span class="s2">"OC(=O)c1ccccc1O"</span><span class="p">,</span>
+<a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a>    <span class="s2">"paracetamol"</span><span class="p">:</span> <span class="s2">"CC(=O)Nc1ccc(O)cc1"</span><span class="p">,</span>
+<a id="__codelineno-7-25" name="__codelineno-7-25" href="#__codelineno-7-25"></a>    <span class="s2">"ibuprofen"</span><span class="p">:</span> <span class="s2">"CC(C)Cc1ccc(cc1)C(C)C(=O)O"</span><span class="p">,</span>
+<a id="__codelineno-7-26" name="__codelineno-7-26" href="#__codelineno-7-26"></a>    <span class="s2">"naproxen"</span><span class="p">:</span> <span class="s2">"COc1ccc2cc(ccc2c1)C(C)C(=O)O"</span><span class="p">,</span>
+<a id="__codelineno-7-27" name="__codelineno-7-27" href="#__codelineno-7-27"></a>    <span class="s2">"caffeine"</span><span class="p">:</span> <span class="s2">"CN1C=NC2=C1C(=O)N(C(=O)N2C)C"</span><span class="p">,</span>
+<a id="__codelineno-7-28" name="__codelineno-7-28" href="#__codelineno-7-28"></a>    <span class="s2">"phenol"</span><span class="p">:</span> <span class="s2">"Oc1ccccc1"</span><span class="p">,</span>
+<a id="__codelineno-7-29" name="__codelineno-7-29" href="#__codelineno-7-29"></a><span class="p">}</span>
+<a id="__codelineno-7-30" name="__codelineno-7-30" href="#__codelineno-7-30"></a><span class="n">GROUPS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"C"</span><span class="p">,</span> <span class="s2">"CC"</span><span class="p">,</span> <span class="s2">"OC"</span><span class="p">,</span> <span class="s2">"N"</span><span class="p">,</span> <span class="s2">"O"</span><span class="p">,</span> <span class="s2">"F"</span><span class="p">,</span> <span class="s2">"Cl"</span><span class="p">,</span> <span class="s2">"C(=O)O"</span><span class="p">]</span>
+<a id="__codelineno-7-31" name="__codelineno-7-31" href="#__codelineno-7-31"></a><span class="n">library</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">NAMED</span><span class="o">.</span><span class="n">items</span><span class="p">())</span> <span class="o">+</span> <span class="p">[</span>
+<a id="__codelineno-7-32" name="__codelineno-7-32" href="#__codelineno-7-32"></a>    <span class="p">(</span><span class="sa">f</span><span class="s2">"GEN-</span><span class="si">{</span><span class="n">number</span><span class="si">:</span><span class="s2">03d</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"c1c(</span><span class="si">{</span><span class="n">a</span><span class="si">}</span><span class="s2">)cc(</span><span class="si">{</span><span class="n">b</span><span class="si">}</span><span class="s2">)cc1</span><span class="si">{</span><span class="n">c</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-7-33" name="__codelineno-7-33" href="#__codelineno-7-33"></a>    <span class="k">for</span> <span class="n">number</span><span class="p">,</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="n">GROUPS</span><span class="p">,</span> <span class="n">repeat</span><span class="o">=</span><span class="mi">3</span><span class="p">))</span>
+<a id="__codelineno-7-34" name="__codelineno-7-34" href="#__codelineno-7-34"></a><span class="p">]</span>
+<a id="__codelineno-7-35" name="__codelineno-7-35" href="#__codelineno-7-35"></a><span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">library</span><span class="p">]</span>
+<a id="__codelineno-7-36" name="__codelineno-7-36" href="#__codelineno-7-36"></a><span class="n">smiles</span> <span class="o">=</span> <span class="p">[</span><span class="n">text</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">library</span><span class="p">]</span>
+<a id="__codelineno-7-37" name="__codelineno-7-37" href="#__codelineno-7-37"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">library</span><span class="p">)</span> <span class="o">==</span> <span class="mi">533</span>
+<a id="__codelineno-7-38" name="__codelineno-7-38" href="#__codelineno-7-38"></a>
+<a id="__codelineno-7-39" name="__codelineno-7-39" href="#__codelineno-7-39"></a><span class="n">options</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="o">.</span><span class="n">ecfp</span><span class="p">(</span><span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-7-40" name="__codelineno-7-40" href="#__codelineno-7-40"></a><span class="k">with</span> <span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">directory</span><span class="p">:</span>
+<a id="__codelineno-7-41" name="__codelineno-7-41" href="#__codelineno-7-41"></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"library.fp"</span>
+<a id="__codelineno-7-42" name="__codelineno-7-42" href="#__codelineno-7-42"></a>    <span class="k">with</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintCorpus</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">smiles</span><span class="p">,</span>
+<a id="__codelineno-7-43" name="__codelineno-7-43" href="#__codelineno-7-43"></a>                                            <span class="n">options</span><span class="o">=</span><span class="n">options</span><span class="p">)</span> <span class="k">as</span> <span class="n">corpus</span><span class="p">:</span>
+<a id="__codelineno-7-44" name="__codelineno-7-44" href="#__codelineno-7-44"></a>        <span class="c1"># The three nearest neighbours of the first two rows.</span>
+<a id="__codelineno-7-45" name="__codelineno-7-45" href="#__codelineno-7-45"></a>        <span class="n">nearest</span> <span class="o">=</span> <span class="p">[</span><span class="n">pair</span> <span class="k">for</span> <span class="n">pair</span> <span class="ow">in</span> <span class="n">corpus</span><span class="o">.</span><span class="n">top_k_pairs</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="k">if</span> <span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">]</span>
+<a id="__codelineno-7-46" name="__codelineno-7-46" href="#__codelineno-7-46"></a>        <span class="c1"># Rows whose nearest neighbour has an identical fingerprint.</span>
+<a id="__codelineno-7-47" name="__codelineno-7-47" href="#__codelineno-7-47"></a>        <span class="n">twins</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">score</span> <span class="o">==</span> <span class="mf">1.0</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="n">corpus</span><span class="o">.</span><span class="n">top_k_pairs</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+<a id="__codelineno-7-48" name="__codelineno-7-48" href="#__codelineno-7-48"></a>        <span class="c1"># Rows with no neighbour at 0.4 or above.</span>
+<a id="__codelineno-7-49" name="__codelineno-7-49" href="#__codelineno-7-49"></a>        <span class="n">close</span> <span class="o">=</span> <span class="p">{</span><span class="n">row</span> <span class="k">for</span> <span class="n">row</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">corpus</span><span class="o">.</span><span class="n">top_k_pairs</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.4</span><span class="p">)}</span>
+<a id="__codelineno-7-50" name="__codelineno-7-50" href="#__codelineno-7-50"></a>
+<a id="__codelineno-7-51" name="__codelineno-7-51" href="#__codelineno-7-51"></a><span class="k">for</span> <span class="n">row</span><span class="p">,</span> <span class="n">neighbour</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="n">nearest</span><span class="p">:</span>
+<a id="__codelineno-7-52" name="__codelineno-7-52" href="#__codelineno-7-52"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">names</span><span class="p">[</span><span class="n">row</span><span class="p">]</span><span class="si">:</span><span class="s2">&lt;11</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">names</span><span class="p">[</span><span class="n">neighbour</span><span class="p">]</span><span class="si">:</span><span class="s2">&lt;11</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">score</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-7-53" name="__codelineno-7-53" href="#__codelineno-7-53"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"rows with an identical twin:"</span><span class="p">,</span> <span class="n">twins</span><span class="p">)</span>
+<a id="__codelineno-7-54" name="__codelineno-7-54" href="#__codelineno-7-54"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"rows with no neighbour at 0.4:"</span><span class="p">,</span>
+<a id="__codelineno-7-55" name="__codelineno-7-55" href="#__codelineno-7-55"></a>      <span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="n">row</span><span class="p">]</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">))</span> <span class="k">if</span> <span class="n">row</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">close</span><span class="p">])</span>
+<a id="__codelineno-7-56" name="__codelineno-7-56" href="#__codelineno-7-56"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">nearest</span><span class="p">)</span> <span class="o">==</span> <span class="mi">6</span> <span class="ow">and</span> <span class="n">twins</span> <span class="o">==</span> <span class="mi">504</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">close</span><span class="p">)</span> <span class="o">==</span> <span class="mi">526</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>diazepam    -&gt; temazepam   0.582
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>diazepam    -&gt; tetrazepam  0.542
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>diazepam    -&gt; nordazepam  0.528
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>nordazepam  -&gt; oxazepam    0.558
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>nordazepam  -&gt; diazepam    0.528
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>nordazepam  -&gt; bromazepam  0.519
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>rows with an identical twin: 504
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>rows with no neighbour at 0.4: ['aspirin', 'salicylic acid', 'paracetamol', 'ibuprofen', 'naproxen', 'caffeine', 'phenol']
+</code></pre></div>
+<p>The 504 twins are the repeated generated benzenes; the seven rows with no
+close neighbour are the common drugs, which have no analogue in this library.
+Both findings are worth having before clustering: the first says the counts
+behind Butina centres are inflated by duplicates, and the second says which
+rows will end up as singletons at 0.4 or above.</p>
+<p><code>top_k_pairs</code> reports each relationship from both sides, as two directed
+pairs. When every pair above a similarity is wanted once, use
+<code>corpus.threshold_pairs(threshold)</code>, which yields <code>(first, second, Tanimoto)</code>
+with <code>first &lt; second</code>; <a href="../PACKED_INDEX/#neighbours-and-pairs-within-the-index">Neighbours and pairs within the
+index</a> shows it.</p>
+<h2 id="chunk-size-determinism-and-cost">Chunk size, determinism and cost<a class="headerlink" href="#chunk-size-determinism-and-cost" title="Permanent link">&para;</a></h2>
+<p><code>chunk_size</code> sets how many rows are compared at a time. It changes the working
+memory, never the clusters, selections or neighbours. The default of 4096 rows
+is reduced automatically to keep each chunk's working arrays within about
+64 MiB, so it rarely needs changing; lower it only to cut peak memory on a
+small machine. Results do not depend on the chunk size, the backend or the
+run, because every score is computed exactly and every tie goes to the lower
+row.</p>
+<p>The comparison work is what limits library size:</p>
+<ul>
+<li>Butina compares every pair once to count neighbours, about n²/2 comparisons,
+  then makes one pass over the library for each cluster it forms. With
+  <code>reordering=True</code> it also makes a pass for every row it assigns, which adds
+  about n² comparisons. Doubling the library roughly quadruples the time.</li>
+<li>MaxMin makes one pass over the library for each row it picks, n × count
+  comparisons, so it grows linearly with the library for a fixed count.</li>
+<li><code>top_k_pairs</code> compares every row with every other row, about n²
+  comparisons, because each row is ranked against the whole library.</li>
+</ul>
+<p>Memory stays modest. Butina keeps two arrays of n entries, about 9 bytes per
+row, and MaxMin one array of 8 bytes per row; neither builds a similarity
+matrix or a neighbour list. The index file is memory-mapped, at
+<code>ceil(fp_size / 8)</code> bytes per row: 256 bytes for 2048 bits. The returned
+clusters and any pairs you keep are ordinary Python objects and come on top;
+collecting all of <code>top_k_pairs</code> needs n × k results, and all of
+<code>threshold_pairs</code> can need memory that grows with n². Time a representative
+sample on your own hardware before committing to a library size, as the
+<a href="../SCREENING/#notes">notes of Screening a library</a> advise.</p>
+<h2 id="cpu-and-gpu-backends">CPU and GPU backends<a class="headerlink" href="#cpu-and-gpu-backends" title="Permanent link">&para;</a></h2>
+<p><code>smsd.butina</code>, <code>smsd.maxmin</code>, <code>top_k_pairs</code> and <code>threshold_pairs</code> take the
+same <code>backend</code> argument as the other searches of a packed index:</p>
+<table>
+<thead>
+<tr>
+<th>Backend</th>
+<th>Behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>"cpu"</code></td>
+<td>The default. NumPy compares the packed rows on the CPU; the CUDA package is not loaded.</td>
+</tr>
+<tr>
+<td><code>"cuda"</code></td>
+<td>The comparisons run on an NVIDIA GPU. It needs the <code>smsd-cuda</code> package of the same version, a usable device and a little-endian host, and raises <code>RuntimeError</code> otherwise; fingerprints wider than 65,536 bits raise <code>ValueError</code>.</td>
+</tr>
+<tr>
+<td><code>"auto"</code></td>
+<td>Uses the GPU under the same conditions, for an index of any size, and the CPU otherwise.</td>
+</tr>
+</tbody>
+</table>
+<p>The GPU takes only the fingerprint comparisons; the decisions stay on the CPU:</p>
+<table>
+<thead>
+<tr>
+<th>Call</th>
+<th>On the GPU</th>
+<th>On the CPU</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>butina</code></td>
+<td>Exact integer intersection counts of one row against a tile of rows</td>
+<td>Tanimoto scores from those counts, threshold tests, neighbour counts, centre choice, membership and recounting</td>
+</tr>
+<tr>
+<td><code>maxmin</code></td>
+<td>Exact integer intersection counts of the last picked row against a tile of rows</td>
+<td>Tanimoto distances, minimum-distance updates and the choice of the next row</td>
+</tr>
+<tr>
+<td><code>top_k_pairs</code></td>
+<td>Intersection counts, the threshold test and the best k of each tile</td>
+<td>Tanimoto scores from those counts, and the merge of the tile lists into the final k with the same score and row-order tie break</td>
+</tr>
+<tr>
+<td><code>threshold_pairs</code></td>
+<td>Exact integer intersection counts</td>
+<td>Tanimoto scores and the inclusive threshold test</td>
+</tr>
+</tbody>
+</table>
+<p>Both devices form each score from the same integer counts with the same
+double-precision division, and every tie is broken on the CPU by row order. The
+clusters, selections, neighbours and scores are therefore identical on either
+device; the GPU does not make any of these methods approximate. Each device
+call covers one tile of at most 1,048,576 row pairs, and a 64 MiB host-work
+estimate can make a tile smaller than <code>chunk_size</code>. The rows of a tile are
+sent to the device for that call and released afterwards, so the index is not
+kept on the GPU between calls, and a Butina run sends the library once for
+every pass it makes.</p>
+<p><code>corpus.cuda_calls</code> is the cumulative number of packed CUDA calls that the
+corpus has completed, clustering passes included. Read it before and after a
+call: an increase proves that the device did work for that call. It is not a
+count of queries, hits or kernels, and it says nothing about speed. Under
+<code>"auto"</code>, the CPU is used only when the CUDA package or a device is
+unavailable, or the width is unsupported; once device work has started, an
+error is raised rather than the call being retried on the CPU. Setting
+<code>SMSD_DISABLE_GPU</code> to any value other than <code>0</code> keeps these calls on the CPU,
+and on a Mac they always run on the CPU.</p>
+<p>The program below runs on any machine. It checks that the chunk size and the
+<code>"auto"</code> backend leave every result unchanged, and, where <code>backend="cuda"</code> can
+run, that the GPU gives the same results:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">itertools</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">tempfile</span><span class="w"> </span><span class="kn">import</span> <span class="n">TemporaryDirectory</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>    <span class="kn">import</span><span class="w"> </span><span class="nn">smsd_cuda</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>    <span class="n">smsd_cuda</span> <span class="o">=</span> <span class="kc">None</span>
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>
+<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="n">NAMED</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a>    <span class="s2">"diazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CN=C(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a>    <span class="s2">"nordazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccc2)c2cc(Cl)ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a>    <span class="s2">"temazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)C(O)N=C(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a>    <span class="s2">"oxazepam"</span><span class="p">:</span> <span class="s2">"OC1N=C(c2ccccc2)c2cc(Cl)ccc2NC1=O"</span><span class="p">,</span>
+<a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a>    <span class="s2">"lorazepam"</span><span class="p">:</span> <span class="s2">"OC1N=C(c2ccccc2Cl)c2cc(Cl)ccc2NC1=O"</span><span class="p">,</span>
+<a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a>    <span class="s2">"clonazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccc2Cl)c2cc([N+](=O)[O-])ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a>    <span class="s2">"nitrazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccc2)c2cc([N+](=O)[O-])ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-9-22" name="__codelineno-9-22" href="#__codelineno-9-22"></a>    <span class="s2">"flunitrazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CN=C(c2ccccc2F)c2cc([N+](=O)[O-])ccc21"</span><span class="p">,</span>
+<a id="__codelineno-9-23" name="__codelineno-9-23" href="#__codelineno-9-23"></a>    <span class="s2">"bromazepam"</span><span class="p">:</span> <span class="s2">"O=C1CN=C(c2ccccn2)c2cc(Br)ccc2N1"</span><span class="p">,</span>
+<a id="__codelineno-9-24" name="__codelineno-9-24" href="#__codelineno-9-24"></a>    <span class="s2">"tetrazepam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CN=C(C2=CCCCC2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-9-25" name="__codelineno-9-25" href="#__codelineno-9-25"></a>    <span class="s2">"alprazolam"</span><span class="p">:</span> <span class="s2">"Cc1nnc2n1-c1ccc(Cl)cc1C(c1ccccc1)=NC2"</span><span class="p">,</span>
+<a id="__codelineno-9-26" name="__codelineno-9-26" href="#__codelineno-9-26"></a>    <span class="s2">"triazolam"</span><span class="p">:</span> <span class="s2">"Cc1nnc2n1-c1ccc(Cl)cc1C(c1ccccc1Cl)=NC2"</span><span class="p">,</span>
+<a id="__codelineno-9-27" name="__codelineno-9-27" href="#__codelineno-9-27"></a>    <span class="s2">"midazolam"</span><span class="p">:</span> <span class="s2">"Cc1ncc2n1-c1ccc(Cl)cc1C(c1ccccc1F)=NC2"</span><span class="p">,</span>
+<a id="__codelineno-9-28" name="__codelineno-9-28" href="#__codelineno-9-28"></a>    <span class="s2">"clobazam"</span><span class="p">:</span> <span class="s2">"CN1C(=O)CC(=O)N(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span>
+<a id="__codelineno-9-29" name="__codelineno-9-29" href="#__codelineno-9-29"></a>    <span class="s2">"aspirin"</span><span class="p">:</span> <span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">,</span>
+<a id="__codelineno-9-30" name="__codelineno-9-30" href="#__codelineno-9-30"></a>    <span class="s2">"salicylic acid"</span><span class="p">:</span> <span class="s2">"OC(=O)c1ccccc1O"</span><span class="p">,</span>
+<a id="__codelineno-9-31" name="__codelineno-9-31" href="#__codelineno-9-31"></a>    <span class="s2">"paracetamol"</span><span class="p">:</span> <span class="s2">"CC(=O)Nc1ccc(O)cc1"</span><span class="p">,</span>
+<a id="__codelineno-9-32" name="__codelineno-9-32" href="#__codelineno-9-32"></a>    <span class="s2">"ibuprofen"</span><span class="p">:</span> <span class="s2">"CC(C)Cc1ccc(cc1)C(C)C(=O)O"</span><span class="p">,</span>
+<a id="__codelineno-9-33" name="__codelineno-9-33" href="#__codelineno-9-33"></a>    <span class="s2">"naproxen"</span><span class="p">:</span> <span class="s2">"COc1ccc2cc(ccc2c1)C(C)C(=O)O"</span><span class="p">,</span>
+<a id="__codelineno-9-34" name="__codelineno-9-34" href="#__codelineno-9-34"></a>    <span class="s2">"caffeine"</span><span class="p">:</span> <span class="s2">"CN1C=NC2=C1C(=O)N(C(=O)N2C)C"</span><span class="p">,</span>
+<a id="__codelineno-9-35" name="__codelineno-9-35" href="#__codelineno-9-35"></a>    <span class="s2">"phenol"</span><span class="p">:</span> <span class="s2">"Oc1ccccc1"</span><span class="p">,</span>
+<a id="__codelineno-9-36" name="__codelineno-9-36" href="#__codelineno-9-36"></a><span class="p">}</span>
+<a id="__codelineno-9-37" name="__codelineno-9-37" href="#__codelineno-9-37"></a><span class="n">GROUPS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"C"</span><span class="p">,</span> <span class="s2">"CC"</span><span class="p">,</span> <span class="s2">"OC"</span><span class="p">,</span> <span class="s2">"N"</span><span class="p">,</span> <span class="s2">"O"</span><span class="p">,</span> <span class="s2">"F"</span><span class="p">,</span> <span class="s2">"Cl"</span><span class="p">,</span> <span class="s2">"C(=O)O"</span><span class="p">]</span>
+<a id="__codelineno-9-38" name="__codelineno-9-38" href="#__codelineno-9-38"></a><span class="n">library</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">NAMED</span><span class="o">.</span><span class="n">items</span><span class="p">())</span> <span class="o">+</span> <span class="p">[</span>
+<a id="__codelineno-9-39" name="__codelineno-9-39" href="#__codelineno-9-39"></a>    <span class="p">(</span><span class="sa">f</span><span class="s2">"GEN-</span><span class="si">{</span><span class="n">number</span><span class="si">:</span><span class="s2">03d</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"c1c(</span><span class="si">{</span><span class="n">a</span><span class="si">}</span><span class="s2">)cc(</span><span class="si">{</span><span class="n">b</span><span class="si">}</span><span class="s2">)cc1</span><span class="si">{</span><span class="n">c</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-9-40" name="__codelineno-9-40" href="#__codelineno-9-40"></a>    <span class="k">for</span> <span class="n">number</span><span class="p">,</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="n">GROUPS</span><span class="p">,</span> <span class="n">repeat</span><span class="o">=</span><span class="mi">3</span><span class="p">))</span>
+<a id="__codelineno-9-41" name="__codelineno-9-41" href="#__codelineno-9-41"></a><span class="p">]</span>
+<a id="__codelineno-9-42" name="__codelineno-9-42" href="#__codelineno-9-42"></a><span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">library</span><span class="p">]</span>
+<a id="__codelineno-9-43" name="__codelineno-9-43" href="#__codelineno-9-43"></a><span class="n">smiles</span> <span class="o">=</span> <span class="p">[</span><span class="n">text</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">library</span><span class="p">]</span>
+<a id="__codelineno-9-44" name="__codelineno-9-44" href="#__codelineno-9-44"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">library</span><span class="p">)</span> <span class="o">==</span> <span class="mi">533</span>
+<a id="__codelineno-9-45" name="__codelineno-9-45" href="#__codelineno-9-45"></a>
+<a id="__codelineno-9-46" name="__codelineno-9-46" href="#__codelineno-9-46"></a>
+<a id="__codelineno-9-47" name="__codelineno-9-47" href="#__codelineno-9-47"></a><span class="k">def</span><span class="w"> </span><span class="nf">cuda_usable</span><span class="p">():</span>
+<a id="__codelineno-9-48" name="__codelineno-9-48" href="#__codelineno-9-48"></a><span class="w">    </span><span class="sd">"""Whether backend="cuda" can run here."""</span>
+<a id="__codelineno-9-49" name="__codelineno-9-49" href="#__codelineno-9-49"></a>    <span class="k">return</span> <span class="p">(</span><span class="n">smsd_cuda</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">sys</span><span class="o">.</span><span class="n">byteorder</span> <span class="o">==</span> <span class="s2">"little"</span>
+<a id="__codelineno-9-50" name="__codelineno-9-50" href="#__codelineno-9-50"></a>            <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"SMSD_DISABLE_GPU"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">""</span><span class="p">,</span> <span class="s2">"0"</span><span class="p">)</span>
+<a id="__codelineno-9-51" name="__codelineno-9-51" href="#__codelineno-9-51"></a>            <span class="ow">and</span> <span class="n">smsd_cuda</span><span class="o">.</span><span class="n">__version__</span> <span class="o">==</span> <span class="n">smsd</span><span class="o">.</span><span class="n">__version__</span>
+<a id="__codelineno-9-52" name="__codelineno-9-52" href="#__codelineno-9-52"></a>            <span class="ow">and</span> <span class="n">smsd_cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">())</span>
+<a id="__codelineno-9-53" name="__codelineno-9-53" href="#__codelineno-9-53"></a>
+<a id="__codelineno-9-54" name="__codelineno-9-54" href="#__codelineno-9-54"></a>
+<a id="__codelineno-9-55" name="__codelineno-9-55" href="#__codelineno-9-55"></a><span class="k">def</span><span class="w"> </span><span class="nf">results</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="o">**</span><span class="n">controls</span><span class="p">):</span>
+<a id="__codelineno-9-56" name="__codelineno-9-56" href="#__codelineno-9-56"></a><span class="w">    </span><span class="sd">"""Butina clusters, a MaxMin pick and the two nearest neighbours of each row."""</span>
+<a id="__codelineno-9-57" name="__codelineno-9-57" href="#__codelineno-9-57"></a>    <span class="k">return</span> <span class="p">(</span><span class="n">smsd</span><span class="o">.</span><span class="n">butina</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="o">**</span><span class="n">controls</span><span class="p">),</span>
+<a id="__codelineno-9-58" name="__codelineno-9-58" href="#__codelineno-9-58"></a>            <span class="n">smsd</span><span class="o">.</span><span class="n">maxmin</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="o">**</span><span class="n">controls</span><span class="p">),</span>
+<a id="__codelineno-9-59" name="__codelineno-9-59" href="#__codelineno-9-59"></a>            <span class="nb">list</span><span class="p">(</span><span class="n">corpus</span><span class="o">.</span><span class="n">top_k_pairs</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="o">**</span><span class="n">controls</span><span class="p">)))</span>
+<a id="__codelineno-9-60" name="__codelineno-9-60" href="#__codelineno-9-60"></a>
+<a id="__codelineno-9-61" name="__codelineno-9-61" href="#__codelineno-9-61"></a>
+<a id="__codelineno-9-62" name="__codelineno-9-62" href="#__codelineno-9-62"></a><span class="n">options</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="o">.</span><span class="n">ecfp</span><span class="p">(</span><span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-9-63" name="__codelineno-9-63" href="#__codelineno-9-63"></a><span class="k">with</span> <span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">directory</span><span class="p">:</span>
+<a id="__codelineno-9-64" name="__codelineno-9-64" href="#__codelineno-9-64"></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"library.fp"</span>
+<a id="__codelineno-9-65" name="__codelineno-9-65" href="#__codelineno-9-65"></a>    <span class="k">with</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintCorpus</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">smiles</span><span class="p">,</span>
+<a id="__codelineno-9-66" name="__codelineno-9-66" href="#__codelineno-9-66"></a>                                            <span class="n">options</span><span class="o">=</span><span class="n">options</span><span class="p">)</span> <span class="k">as</span> <span class="n">corpus</span><span class="p">:</span>
+<a id="__codelineno-9-67" name="__codelineno-9-67" href="#__codelineno-9-67"></a>        <span class="n">reference</span> <span class="o">=</span> <span class="n">results</span><span class="p">(</span><span class="n">corpus</span><span class="p">)</span>  <span class="c1"># backend="cpu", chunk_size=4096</span>
+<a id="__codelineno-9-68" name="__codelineno-9-68" href="#__codelineno-9-68"></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">"CUDA calls after the CPU run:"</span><span class="p">,</span> <span class="n">corpus</span><span class="o">.</span><span class="n">cuda_calls</span><span class="p">)</span>
+<a id="__codelineno-9-69" name="__codelineno-9-69" href="#__codelineno-9-69"></a>        <span class="k">assert</span> <span class="n">corpus</span><span class="o">.</span><span class="n">cuda_calls</span> <span class="o">==</span> <span class="mi">0</span>
+<a id="__codelineno-9-70" name="__codelineno-9-70" href="#__codelineno-9-70"></a>        <span class="k">for</span> <span class="n">chunk_size</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="mi">100</span><span class="p">):</span>
+<a id="__codelineno-9-71" name="__codelineno-9-71" href="#__codelineno-9-71"></a>            <span class="k">assert</span> <span class="n">results</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="n">chunk_size</span><span class="p">)</span> <span class="o">==</span> <span class="n">reference</span>
+<a id="__codelineno-9-72" name="__codelineno-9-72" href="#__codelineno-9-72"></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">"chunk sizes 7, 100 and 4096: identical results"</span><span class="p">)</span>
+<a id="__codelineno-9-73" name="__codelineno-9-73" href="#__codelineno-9-73"></a>
+<a id="__codelineno-9-74" name="__codelineno-9-74" href="#__codelineno-9-74"></a>        <span class="c1"># "auto" may run on either device, so check its results, not where.</span>
+<a id="__codelineno-9-75" name="__codelineno-9-75" href="#__codelineno-9-75"></a>        <span class="k">assert</span> <span class="n">results</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"auto"</span><span class="p">)</span> <span class="o">==</span> <span class="n">reference</span>
+<a id="__codelineno-9-76" name="__codelineno-9-76" href="#__codelineno-9-76"></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">"backend='auto': identical results"</span><span class="p">)</span>
+<a id="__codelineno-9-77" name="__codelineno-9-77" href="#__codelineno-9-77"></a>
+<a id="__codelineno-9-78" name="__codelineno-9-78" href="#__codelineno-9-78"></a>        <span class="k">if</span> <span class="n">cuda_usable</span><span class="p">():</span>
+<a id="__codelineno-9-79" name="__codelineno-9-79" href="#__codelineno-9-79"></a>            <span class="n">before</span> <span class="o">=</span> <span class="n">corpus</span><span class="o">.</span><span class="n">cuda_calls</span>
+<a id="__codelineno-9-80" name="__codelineno-9-80" href="#__codelineno-9-80"></a>            <span class="k">assert</span> <span class="n">results</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s2">"cuda"</span><span class="p">)</span> <span class="o">==</span> <span class="n">reference</span>
+<a id="__codelineno-9-81" name="__codelineno-9-81" href="#__codelineno-9-81"></a>            <span class="k">assert</span> <span class="n">corpus</span><span class="o">.</span><span class="n">cuda_calls</span> <span class="o">&gt;</span> <span class="n">before</span>  <span class="c1"># the device did the comparisons</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>CUDA calls after the CPU run: 0
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>chunk sizes 7, 100 and 4096: identical results
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>backend='auto': identical results
+</code></pre></div>
+<p>On a machine without a usable GPU the <code>"auto"</code> run takes the CPU path and the
+branch under <code>if cuda_usable():</code> is skipped. On a machine with <code>smsd-cuda</code> and
+a supported NVIDIA GPU, the <code>"auto"</code> and <code>"cuda"</code> runs do their comparisons
+on the device, <code>corpus.cuda_calls</code> rises, and the program prints the same
+lines. <a href="../CPU_GPU/#choose-a-backend-for-packed-indexes">CPU and GPU screening</a>
+covers installation of the CUDA package and how to time the two devices
+fairly.</p>
+<h2 id="options">Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h2>
+<h3 id="smsdbutina">smsd.butina<a class="headerlink" href="#smsdbutina" title="Permanent link">&para;</a></h3>
+<p><code>smsd.butina(corpus, threshold=0.7, *, reordering=False, chunk_size=4096,
+backend="cpu")</code> returns a list of tuples of row indices, each with its centre
+first and its other members in row order.</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>corpus</code></td>
+<td><code>FingerprintCorpus</code></td>
+<td>required</td>
+<td>An open packed index; anything else raises <code>TypeError</code>, a closed one <code>ValueError</code></td>
+</tr>
+<tr>
+<td><code>threshold</code></td>
+<td>float</td>
+<td><code>0.7</code></td>
+<td>Inclusive Tanimoto similarity a member must reach with its centre; finite and from 0 to 1</td>
+</tr>
+<tr>
+<td><code>reordering</code></td>
+<td>bool</td>
+<td><code>False</code></td>
+<td><code>True</code> recounts unassigned neighbours after each cluster; must be a <code>bool</code></td>
+</tr>
+<tr>
+<td><code>chunk_size</code></td>
+<td>int</td>
+<td><code>4096</code></td>
+<td>Rows compared at a time; at least 1, reduced to keep each chunk within about 64 MiB</td>
+</tr>
+<tr>
+<td><code>backend</code></td>
+<td>str</td>
+<td><code>"cpu"</code></td>
+<td><code>"cpu"</code>, <code>"cuda"</code> or <code>"auto"</code>; any other value raises <code>ValueError</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="smsdmaxmin">smsd.maxmin<a class="headerlink" href="#smsdmaxmin" title="Permanent link">&para;</a></h3>
+<p><code>smsd.maxmin(corpus, count, *, seed=0, chunk_size=4096, backend="cpu")</code>
+returns a list of <code>count</code> distinct row indices in the order picked.</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>corpus</code></td>
+<td><code>FingerprintCorpus</code></td>
+<td>required</td>
+<td>An open packed index</td>
+</tr>
+<tr>
+<td><code>count</code></td>
+<td>int</td>
+<td>required</td>
+<td>Rows to pick, from 0 to the row count; outside that range raises <code>ValueError</code></td>
+</tr>
+<tr>
+<td><code>seed</code></td>
+<td>int</td>
+<td><code>0</code></td>
+<td>The first row picked; a row past the last raises <code>IndexError</code>, a negative one <code>ValueError</code></td>
+</tr>
+<tr>
+<td><code>chunk_size</code></td>
+<td>int</td>
+<td><code>4096</code></td>
+<td>As for <code>butina</code></td>
+</tr>
+<tr>
+<td><code>backend</code></td>
+<td>str</td>
+<td><code>"cpu"</code></td>
+<td>As for <code>butina</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="fingerprintcorpustop_k_pairs">FingerprintCorpus.top_k_pairs<a class="headerlink" href="#fingerprintcorpustop_k_pairs" title="Permanent link">&para;</a></h3>
+<p><code>corpus.top_k_pairs(k, *, threshold=0.0, include_self=False, chunk_size=4096,
+backend="cpu")</code> yields <code>(row, neighbour, Tanimoto)</code> tuples.</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>k</code></td>
+<td>int</td>
+<td>required</td>
+<td>Neighbours per row, at least 0; reduced to the number of candidate rows; 0 yields nothing</td>
+</tr>
+<tr>
+<td><code>threshold</code></td>
+<td>float</td>
+<td><code>0.0</code></td>
+<td>Inclusive lower bound on the reported Tanimoto similarity</td>
+</tr>
+<tr>
+<td><code>include_self</code></td>
+<td>bool</td>
+<td><code>False</code></td>
+<td><code>True</code> lets a row be its own neighbour, with a score of 1</td>
+</tr>
+<tr>
+<td><code>chunk_size</code></td>
+<td>int</td>
+<td><code>4096</code></td>
+<td>As for <code>butina</code></td>
+</tr>
+<tr>
+<td><code>backend</code></td>
+<td>str</td>
+<td><code>"cpu"</code></td>
+<td>As for <code>butina</code>; with <code>"cuda"</code> or <code>"auto"</code>, a loaded CUDA package must also provide its top-k operation, or <code>RuntimeError</code> is raised</td>
+</tr>
+</tbody>
+</table>
+<p>Integer arguments reject booleans and floats with <code>TypeError</code>. A threshold
+outside 0 to 1, or one that is not finite, raises <code>ValueError</code>.</p>
+<h2 id="notes">Notes<a class="headerlink" href="#notes" title="Permanent link">&para;</a></h2>
+<ul>
+<li>A Butina cluster is defined by its centre. Two members of one cluster can
+  be less similar to each other than the threshold, and a row joins the first
+  cluster whose centre reaches it, not necessarily the closest centre.</li>
+<li>Butina centres depend on the neighbour counts, so duplicates and the choice
+  of <code>reordering</code> change them. Apart from the row that <code>seed=0</code> names,
+  changing the row order changes only how equal counts and equal distances
+  are resolved.</li>
+<li>MaxMin is greedy. It gives a well-spread selection quickly, but a different
+  seed gives a different, equally valid selection.</li>
+<li>The scores are Tanimoto similarities on binary fingerprints. Count
+  fingerprints cannot be stored in a packed index.</li>
+<li>These tools rank fingerprints, not structures. Confirm a series or a
+  near-duplicate that matters with an exact search; see
+  <a href="../MCS/">Maximum common substructure</a> and
+  <a href="../SUBSTRUCTURE/">Substructure search</a>.</li>
+</ul>
+<h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../PACKED_INDEX/">Packed fingerprint index</a>: building, reopening and
+  searching the index these tools read.</li>
+<li><a href="../SCREENING/">Screening a library</a>: preparing a library and removing
+  duplicates.</li>
+<li><a href="../CPU_GPU/">CPU and GPU screening</a>: installing the CUDA package and
+  checking where work ran.</li>
+<li><a href="../FINGERPRINTS/">Fingerprints and similarity</a>: fingerprint families and
+  <code>FingerprintOptions</code>.</li>
+<li><a href="../../PACKED_CORPORA/">Packed fingerprint corpora</a>: the reference contract,
+  including <a href="../../PACKED_CORPORA/#cpu-and-cuda-backends">CPU and CUDA
+  backends</a> and <a href="../../PACKED_CORPORA/#ordering-work-and-memory">ordering, work
+  and memory</a>.</li>
+<li>The <a href="../../python/examples/feature_search.ipynb">MCS to a small library
+  search</a> notebook runs Butina
+  clustering and MaxMin selection.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../PACKED_INDEX/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Packed fingerprint index">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Packed fingerprint index
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../CPU_GPU/" class="md-footer__link md-footer__link--next" aria-label="Next: CPU and GPU screening">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                CPU and GPU screening
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2018-2026 BioInception PVT LTD
+    </div>
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/asad/SMSD" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/smsd/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.top", "navigation.footer", "navigation.instant", "navigation.tracking", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  <script data-mkdocs-jupyter-mathjax="{&quot;url&quot;: &quot;https://cdn.jsdelivr.net/npm/mathjax@4.1.3/tex-mml-chtml.js&quot;, &quot;version&quot;: 4}">
+/* Shared by full pages and Material's instant navigation. */
+(() => {
+  const config = JSON.parse(document.currentScript.dataset.mkdocsJupyterMathjax);
+  if (window.mkdocsJupyterMathJax) return;
+
+  let loading;
+  let queue = Promise.resolve();
+  let previous = [];
+
+  const ready = async () => {
+    if (!loading) {
+      loading = (async () => {
+        let math = window.MathJax;
+        if (!math?.typesetPromise) {
+          const url = new URL(config.url, document.baseURI).href;
+          const existing = Array.from(document.scripts).find(script =>
+            script.src && (script.src === url || script.id === 'MathJax-script' ||
+              (/mathjax/i.test(script.src) &&
+               /\/(?:MathJax|latest|(?:tex|mml)(?:-mml)?-(?:chtml|svg))\.js(?:[?#]|$)/i.test(script.src))));
+          if (existing) {
+            if (!math?.startup?.promise) {
+              await new Promise((resolve, reject) => {
+                existing.addEventListener('load', resolve, { once: true });
+                existing.addEventListener('error', reject, { once: true });
+              });
+            }
+          } else {
+            // Keep site macros, delimiters and startup hooks when supplied.
+            const options = math || {};
+            window.MathJax = {
+              ...options,
+              loader: {
+                ...options.loader,
+                load: Array.from(new Set(['ui/safe', ...(options.loader?.load || [])]))
+              },
+              startup: { typeset: false, ...options.startup },
+              tex: {
+                tags: 'ams',
+                useLabelIds: true,
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                processEnvironments: true,
+                ...options.tex
+              }
+            };
+            await new Promise((resolve, reject) => {
+              const script = document.createElement('script');
+              script.src = config.url;
+              script.id = 'MathJax-script';
+              script.async = true;
+              script.onload = resolve;
+              script.onerror = reject;
+              document.head.appendChild(script);
+            });
+          }
+        }
+        math = window.MathJax;
+        await math.startup.promise;
+        return math;
+      })();
+    }
+    const math = await loading;
+    // A site owner can extend the v3 queue again on each navigation.
+    await math.startup.promise;
+    return math;
+  };
+
+  const unrendered = node => {
+    if (node.matches('mjx-container')) return [];
+    if (!node.querySelector('mjx-container')) return [node];
+    // In v3, scanning generated assistive MathML again produces nested output.
+    return Array.from(node.children).flatMap(unrendered);
+  };
+
+  const refresh = () => {
+    // A separate chain also serializes v3, without changing v4's startup promise.
+    queue = queue.then(async () => {
+      const notebooks = Array.from(document.querySelectorAll('.jupyter-wrapper'));
+      if (!notebooks.length && !previous.length) return;
+      if (notebooks.length === previous.length &&
+          notebooks.every((node, index) => node === previous[index])) return;
+      const math = await ready();
+      if (previous.length) {
+        math.typesetClear(previous);
+        math.texReset();
+      }
+      previous = notebooks.filter(node => node.isConnected);
+      const pending = previous.flatMap(unrendered);
+      if (pending.length) await math.typesetPromise(pending);
+    }).catch(error => console.error('mkdocs-jupyter: MathJax rendering failed', error));
+    return queue;
+  };
+
+  window.mkdocsJupyterMathJax = { refresh };
+  const start = () => {
+    if (typeof document$ !== 'undefined') document$.subscribe(refresh);
+    else refresh();
+  };
+  // Theme bundles and user-provided MathJax scripts can follow notebook content.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+  } else start();
+})();
+
+</script>
+</body>
+</html>

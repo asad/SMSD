@@ -1,0 +1,3036 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+      
+      
+      
+        <link rel="canonical" href="https://asad.github.io/SMSD/guide/MACHINE_LEARNING/">
+      
+      
+        <link rel="prev" href="../CPU_GPU/">
+      
+      
+        <link rel="next" href="../AI_TOOLS/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/img/icon.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+  
+      
+        <title>Machine learning and data frames - SMSD Pro</title>
+      
+    
+
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/smsd.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#machine-learning-and-data-frames" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="SMSD Pro" class="md-header__button md-logo" aria-label="SMSD Pro" data-md-component="logo">
+      
+  <img src="../../assets/img/icon.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SMSD Pro
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Machine learning and data frames
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/asad/SMSD" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    asad/SMSD
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+  User guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../notebooks/substructure_search/" class="md-tabs__link">
+          
+  
+  
+  Notebooks
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../HOWTO-INSTALL/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="SMSD Pro" class="md-nav__button md-logo" aria-label="SMSD Pro" data-md-component="logo">
+      
+  <img src="../../assets/img/icon.svg" alt="logo">
+
+    </a>
+    SMSD Pro
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/asad/SMSD" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    asad/SMSD
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GETTING_STARTED/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SUBSTRUCTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Substructure search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SMARTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SMARTS queries
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MCS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maximum common substructure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../FINGERPRINTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fingerprints and similarity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SCREENING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Screening a library
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PACKED_INDEX/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packed fingerprint index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CLUSTERING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Clustering and diversity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CPU_GPU/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CPU and GPU screening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Machine learning and data frames
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Machine learning and data frames
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#choose-an-adapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choose an adapter
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#feature-matrices-with-numpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature matrices with NumPy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sparse-matrices-with-scipy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sparse matrices with SciPy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pandas-and-polars-columns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pandas and Polars columns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#arrow-tables-and-zero-copy-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arrow tables and zero-copy export
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#packed-bytes-and-bit-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Packed bytes and bit order
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scikit-learn-transformers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        scikit-learn transformers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pytorch-tensors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PyTorch tensors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-worked-example-train-and-screen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A worked example: train and screen
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#feature-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#conversion-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conversion functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#arrow-schema-metadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arrow schema metadata
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#transformers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Transformers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pitfalls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pitfalls
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AI_TOOLS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chemistry tools for AI assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../COMMAND_LINE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command line and containers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../OTHER_LANGUAGES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    C++ and Java
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notebooks
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Notebooks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/substructure_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Substructure and SMARTS search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/mcs_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maximum common substructure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/fingerprints_similarity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fingerprints and similarity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/library_screening/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Screening a library end to end
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/cpu_gpu_screening/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CPU and GPU screening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/feature_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCS to a small library search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../HOWTO-INSTALL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PYTHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PYTHON_ADAPTERS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python adapters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PACKED_CORPORA/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packed corpora
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../SMARTS_EXPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SMARTS export
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CPP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    C++
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../JAVA/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Java
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP_SERVER/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AI_ASSISTANTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../EXAMPLES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_REFERENCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ALGORITHMS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Algorithms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE_NOTES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release notes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#choose-an-adapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choose an adapter
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#feature-matrices-with-numpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature matrices with NumPy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sparse-matrices-with-scipy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sparse matrices with SciPy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pandas-and-polars-columns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pandas and Polars columns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#arrow-tables-and-zero-copy-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arrow tables and zero-copy export
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#packed-bytes-and-bit-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Packed bytes and bit order
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scikit-learn-transformers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        scikit-learn transformers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pytorch-tensors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PyTorch tensors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-worked-example-train-and-screen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A worked example: train and screen
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#feature-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#conversion-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conversion functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#arrow-schema-metadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arrow schema metadata
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#transformers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Transformers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pitfalls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pitfalls
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="machine-learning-and-data-frames">Machine learning and data frames<a class="headerlink" href="#machine-learning-and-data-frames" title="Permanent link">&para;</a></h1>
+<p>The <code>smsd.adapters</code> module turns SMSD Pro fingerprints into the structures that
+data and machine-learning libraries expect: NumPy matrices, SciPy sparse
+matrices, pandas and Polars columns, Arrow tables, PyTorch tensors and
+scikit-learn transformers. This chapter shows which adapter suits which data
+stack, how each one is used, and the points about data types, bit order,
+copies and memory that decide whether a pipeline is correct and affordable. A
+worked example at the end fingerprints a small set of molecules, trains two
+scikit-learn models in pipelines and screens the same molecules by similarity.</p>
+<h2 id="choose-an-adapter">Choose an adapter<a class="headerlink" href="#choose-an-adapter" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Data stack</th>
+<th>Use</th>
+<th>Returns</th>
+<th>Extra</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NumPy arrays</td>
+<td><code>fingerprints_numpy</code>, or <code>to_numpy</code> on fingerprints already computed</td>
+<td>A dense matrix, one row per molecule; <code>uint8</code> bits or <code>int64</code> counts</td>
+<td><code>numpy</code></td>
+</tr>
+<tr>
+<td>SciPy sparse matrices</td>
+<td><code>fingerprints_scipy</code>, or <code>to_scipy</code></td>
+<td>A CSR matrix with sorted columns; <code>uint8</code> bits or <code>int64</code> counts</td>
+<td><code>scipy</code></td>
+</tr>
+<tr>
+<td>pandas</td>
+<td><code>molecules_pandas</code></td>
+<td>A data frame with <code>molecule</code> and <code>fingerprint</code> object columns</td>
+<td><code>pandas</code></td>
+</tr>
+<tr>
+<td>Polars</td>
+<td><code>molecules_polars</code></td>
+<td>A data frame with an Object <code>molecule</code> column and a typed list <code>fingerprint</code> column</td>
+<td><code>polars</code></td>
+</tr>
+<tr>
+<td>Arrow, and tools that read Arrow</td>
+<td><code>to_arrow</code> on a NumPy matrix</td>
+<td>A table with one fixed-size-list <code>fingerprint</code> column, shared with the matrix where possible</td>
+<td><code>arrow</code></td>
+</tr>
+<tr>
+<td>scikit-learn, fingerprint features</td>
+<td><code>FingerprintTransformer</code></td>
+<td>A transformer whose output is the <code>fingerprints_numpy</code> matrix</td>
+<td><code>sklearn</code></td>
+</tr>
+<tr>
+<td>scikit-learn, similarity features or a Tanimoto kernel</td>
+<td><code>SimilarityTransformer</code></td>
+<td>A transformer whose output is a <code>float64</code> Tanimoto matrix against fitted references</td>
+<td><code>sklearn</code></td>
+</tr>
+<tr>
+<td>PyTorch</td>
+<td><code>fingerprints_torch</code>, or <code>to_torch</code></td>
+<td>A tensor, on the CPU unless a device is given</td>
+<td><code>torch</code></td>
+</tr>
+<tr>
+<td>PyTorch Geometric</td>
+<td><code>to_pyg</code></td>
+<td>A <code>Data</code> object with atom and bond features of one molecule</td>
+<td><code>pyg</code></td>
+</tr>
+</tbody>
+</table>
+<p>As a rule of thumb, take a dense NumPy matrix when the model needs one and the
+library fits in memory, a CSR matrix when it does not and the estimator accepts
+sparse input, and the data-frame adapters when molecules and fingerprints must
+stay next to other columns. Arrow is for handing fingerprints to another
+process or file format without a copy. For library-scale similarity searching,
+a <a href="../PACKED_INDEX/">packed fingerprint index</a> is better suited than a feature
+matrix.</p>
+<p>Install the extras that the chosen adapters need, for example
+<code>python -m pip install "smsd[sklearn,pandas,arrow]==8.1.0"</code>;
+<a href="../GETTING_STARTED/#install">Getting started</a> lists every extra. Importing
+<code>smsd.adapters</code> loads none of these packages; each function loads its own when
+it is called and raises <code>ImportError</code> naming the extra when the package is
+missing.</p>
+<h2 id="feature-matrices-with-numpy">Feature matrices with NumPy<a class="headerlink" href="#feature-matrices-with-numpy" title="Permanent link">&para;</a></h2>
+<p><code>fingerprints_numpy(molecules, ...)</code> computes the fingerprints and expands them
+to a matrix in one call. Column <code>j</code> is fingerprint position <code>j</code>. Bits are
+<code>uint8</code> and counts are <code>int64</code> unless <code>dtype</code> says otherwise. <code>to_numpy</code> does
+the same for sparse fingerprints that have already been computed, such as the
+output of <code>smsd.fingerprints</code>. Both accept SMILES strings, <code>MolGraph</code> objects
+and RDKit molecules.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smsd.adapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">fingerprints_numpy</span><span class="p">,</span> <span class="n">to_numpy</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">smiles</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">,</span> <span class="s2">"OC(=O)c1ccccc1O"</span><span class="p">,</span> <span class="s2">"CC(=O)Nc1ccc(O)cc1"</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>          <span class="s2">"Oc1ccccc1"</span><span class="p">]</span>  <span class="c1"># aspirin, salicylic acid, paracetamol, phenol</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">ecfp4</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="o">.</span><span class="n">ecfp</span><span class="p">(</span><span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="c1"># One row per molecule, one column per bit position.</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">bits</span> <span class="o">=</span> <span class="n">fingerprints_numpy</span><span class="p">(</span><span class="n">smiles</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">ecfp4</span><span class="p">)</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"bits:"</span><span class="p">,</span> <span class="n">bits</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">bits</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">bits</span><span class="o">.</span><span class="n">nbytes</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> bytes"</span><span class="p">)</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"set bits per row:"</span><span class="p">,</span> <span class="n">bits</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="k">assert</span> <span class="n">bits</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span> <span class="ow">and</span> <span class="n">bits</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="o">==</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">24</span><span class="p">,</span> <span class="mi">14</span><span class="p">]</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="c1"># The same matrix from sparse positions computed earlier.</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="n">positions</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprints</span><span class="p">(</span><span class="n">smiles</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">ecfp4</span><span class="p">)</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="k">assert</span> <span class="p">(</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">positions</span><span class="p">,</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span> <span class="o">==</span> <span class="n">bits</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="k">assert</span> <span class="n">bits</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="o">==</span> <span class="n">positions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="c1"># Count fingerprints: one column per bin, int64 counts.</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="n">counts_options</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="o">.</span><span class="n">ecfp</span><span class="p">(</span><span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="n">counts_options</span><span class="o">.</span><span class="n">counts</span> <span class="o">=</span> <span class="kc">True</span>
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="n">counts</span> <span class="o">=</span> <span class="n">fingerprints_numpy</span><span class="p">(</span><span class="n">smiles</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">counts_options</span><span class="p">)</span>
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"counts:"</span><span class="p">,</span> <span class="n">counts</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">counts</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">counts</span><span class="o">.</span><span class="n">nbytes</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> bytes"</span><span class="p">)</span>
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"largest count per row:"</span><span class="p">,</span> <span class="n">counts</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a><span class="k">assert</span> <span class="n">counts</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span> <span class="ow">and</span> <span class="n">counts</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="o">==</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">]</span>
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a><span class="k">assert</span> <span class="p">((</span><span class="n">counts</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="n">bits</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a><span class="c1"># Without kind or options the family is "mcs", not ECFP.</span>
+<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a><span class="n">default</span> <span class="o">=</span> <span class="n">fingerprints_numpy</span><span class="p">(</span><span class="n">smiles</span><span class="p">)</span>
+<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"default kind equals ECFP4:"</span><span class="p">,</span> <span class="nb">bool</span><span class="p">((</span><span class="n">default</span> <span class="o">==</span> <span class="n">bits</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()))</span>
+<a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a><span class="k">assert</span> <span class="ow">not</span> <span class="p">(</span><span class="n">default</span> <span class="o">==</span> <span class="n">bits</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>bits: (4, 2048) uint8 8,192 bytes
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>set bits per row: [36, 28, 24, 14]
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>counts: (4, 2048) int64 65,536 bytes
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>largest count per row: [3, 3, 4, 4]
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>default kind equals ECFP4: False
+</code></pre></div>
+<p>Like <code>smsd.fingerprints</code>, <code>fingerprints_numpy</code> defaults to <code>kind="mcs"</code>; pass
+<code>kind</code> or <code>options</code> every time. When <code>options</code> is given, its <code>size</code> and
+<code>counts</code> decide the width and the data type of the matrix. A count matrix is
+eight times the size of a bit matrix of the same width.
+<a href="../FINGERPRINTS/#numpy-arrays">NumPy arrays</a> in the fingerprint chapter shows a
+Tanimoto matrix computed from such a matrix with one product.</p>
+<h2 id="sparse-matrices-with-scipy">Sparse matrices with SciPy<a class="headerlink" href="#sparse-matrices-with-scipy" title="Permanent link">&para;</a></h2>
+<p>A 2,048-bit ECFP4 row of a drug-like molecule has a few dozen set bits, so most
+of a dense matrix is zeros. <code>fingerprints_scipy</code> and <code>to_scipy</code> return a SciPy
+CSR matrix without ever building the dense matrix. Only integer and boolean
+data types are accepted.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">itertools</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smsd.adapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">fingerprints_numpy</span><span class="p">,</span> <span class="n">fingerprints_scipy</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">GROUPS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"C"</span><span class="p">,</span> <span class="s2">"CC"</span><span class="p">,</span> <span class="s2">"OC"</span><span class="p">,</span> <span class="s2">"N"</span><span class="p">,</span> <span class="s2">"O"</span><span class="p">,</span> <span class="s2">"F"</span><span class="p">,</span> <span class="s2">"Cl"</span><span class="p">,</span> <span class="s2">"C(=O)O"</span><span class="p">]</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">smiles</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"c1c(</span><span class="si">{</span><span class="n">a</span><span class="si">}</span><span class="s2">)cc(</span><span class="si">{</span><span class="n">b</span><span class="si">}</span><span class="s2">)cc1</span><span class="si">{</span><span class="n">c</span><span class="si">}</span><span class="s2">"</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>          <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="n">GROUPS</span><span class="p">,</span> <span class="n">repeat</span><span class="o">=</span><span class="mi">3</span><span class="p">)]</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="n">ecfp4</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="o">.</span><span class="n">ecfp</span><span class="p">(</span><span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="n">dense</span> <span class="o">=</span> <span class="n">fingerprints_numpy</span><span class="p">(</span><span class="n">smiles</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">ecfp4</span><span class="p">)</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="n">sparse</span> <span class="o">=</span> <span class="n">fingerprints_scipy</span><span class="p">(</span><span class="n">smiles</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">ecfp4</span><span class="p">)</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="n">sparse_bytes</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">nbytes</span> <span class="o">+</span> <span class="n">sparse</span><span class="o">.</span><span class="n">indices</span><span class="o">.</span><span class="n">nbytes</span> <span class="o">+</span> <span class="n">sparse</span><span class="o">.</span><span class="n">indptr</span><span class="o">.</span><span class="n">nbytes</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="n">density</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">nnz</span> <span class="o">/</span> <span class="p">(</span><span class="n">sparse</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">sparse</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"molecules:"</span><span class="p">,</span> <span class="n">sparse</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">"| set bits:"</span><span class="p">,</span> <span class="n">sparse</span><span class="o">.</span><span class="n">nnz</span><span class="p">,</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>      <span class="sa">f</span><span class="s2">"| density: </span><span class="si">{</span><span class="n">density</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"dense: </span><span class="si">{</span><span class="n">dense</span><span class="o">.</span><span class="n">nbytes</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> bytes | CSR: </span><span class="si">{</span><span class="n">sparse_bytes</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> bytes"</span><span class="p">)</span>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="k">assert</span> <span class="p">(</span><span class="n">sparse</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span> <span class="o">==</span> <span class="n">dense</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="ow">and</span> <span class="n">sparse</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">dense</span><span class="o">.</span><span class="n">dtype</span>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="k">assert</span> <span class="n">sparse</span><span class="o">.</span><span class="n">nnz</span> <span class="o">==</span> <span class="mi">12874</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>molecules: 512 | set bits: 12874 | density: 0.0123
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>dense: 1,048,576 bytes | CSR: 66,422 bytes
+</code></pre></div>
+<p>The CSR matrix stores each set bit as a value and a 64-bit column index, so for
+<code>uint8</code> bits it saves memory only while fewer than about one position in nine
+is set. Most
+scikit-learn linear models and nearest-neighbour estimators accept CSR input;
+check the estimator before relying on it, because one that needs dense input
+will convert the whole matrix.</p>
+<h2 id="pandas-and-polars-columns">pandas and Polars columns<a class="headerlink" href="#pandas-and-polars-columns" title="Permanent link">&para;</a></h2>
+<p><code>molecules_pandas</code> and <code>molecules_polars</code> return a data frame with two columns,
+in input order: <code>molecule</code>, holding the parsed <code>MolGraph</code>, and <code>fingerprint</code>,
+holding the sorted set-bit positions. Further columns, such as names or
+measured values, are added in the usual way. <code>to_numpy</code> turns the fingerprint
+column into a feature matrix when a model needs one.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smsd.adapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">molecules_pandas</span><span class="p">,</span> <span class="n">molecules_polars</span><span class="p">,</span> <span class="n">to_numpy</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"aspirin"</span><span class="p">,</span> <span class="s2">"salicylic acid"</span><span class="p">,</span> <span class="s2">"paracetamol"</span><span class="p">,</span> <span class="s2">"phenol"</span><span class="p">]</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">smiles</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">,</span> <span class="s2">"OC(=O)c1ccccc1O"</span><span class="p">,</span> <span class="s2">"CC(=O)Nc1ccc(O)cc1"</span><span class="p">,</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>          <span class="s2">"Oc1ccccc1"</span><span class="p">]</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="n">ecfp4</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="o">.</span><span class="n">ecfp</span><span class="p">(</span><span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="c1"># pandas: object columns, one MolGraph and one tuple of positions per row.</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="n">frame</span> <span class="o">=</span> <span class="n">molecules_pandas</span><span class="p">(</span><span class="n">smiles</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">ecfp4</span><span class="p">)</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="n">frame</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">,</span> <span class="n">names</span><span class="p">)</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="n">frame</span><span class="p">[</span><span class="s2">"atoms"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">graph</span><span class="o">.</span><span class="n">n</span> <span class="k">for</span> <span class="n">graph</span> <span class="ow">in</span> <span class="n">frame</span><span class="p">[</span><span class="s2">"molecule"</span><span class="p">]]</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="n">frame</span><span class="p">[</span><span class="s2">"bits"</span><span class="p">]</span> <span class="o">=</span> <span class="n">frame</span><span class="p">[</span><span class="s2">"fingerprint"</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="nb">len</span><span class="p">)</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="nb">print</span><span class="p">(</span><span class="n">frame</span><span class="p">[[</span><span class="s2">"name"</span><span class="p">,</span> <span class="s2">"atoms"</span><span class="p">,</span> <span class="s2">"bits"</span><span class="p">]]</span><span class="o">.</span><span class="n">to_string</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"pandas columns:"</span><span class="p">,</span> <span class="n">frame</span><span class="p">[</span><span class="s2">"molecule"</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">frame</span><span class="p">[</span><span class="s2">"fingerprint"</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="n">X</span> <span class="o">=</span> <span class="n">to_numpy</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">"fingerprint"</span><span class="p">],</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"pandas features:"</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>
+<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="c1"># Polars: an Object column for molecules and a typed list of positions.</span>
+<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="n">table</span> <span class="o">=</span> <span class="n">molecules_polars</span><span class="p">(</span><span class="n">smiles</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">ecfp4</span><span class="p">)</span><span class="o">.</span><span class="n">with_columns</span><span class="p">(</span>
+<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>    <span class="n">pl</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="s2">"name"</span><span class="p">,</span> <span class="n">names</span><span class="p">),</span>
+<a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>    <span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"fingerprint"</span><span class="p">)</span><span class="o">.</span><span class="n">list</span><span class="o">.</span><span class="n">len</span><span class="p">()</span><span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"bits"</span><span class="p">),</span>
+<a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a><span class="p">)</span>
+<a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"polars columns:"</span><span class="p">,</span> <span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="p">[</span><span class="s2">"molecule"</span><span class="p">],</span> <span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="p">[</span><span class="s2">"fingerprint"</span><span class="p">])</span>
+<a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a><span class="n">Y</span> <span class="o">=</span> <span class="n">to_numpy</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">"fingerprint"</span><span class="p">]</span><span class="o">.</span><span class="n">to_list</span><span class="p">(),</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a><span class="k">assert</span> <span class="p">(</span><span class="n">X</span> <span class="o">==</span> <span class="n">Y</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+<a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a><span class="k">assert</span> <span class="n">table</span><span class="p">[</span><span class="s2">"bits"</span><span class="p">]</span><span class="o">.</span><span class="n">to_list</span><span class="p">()</span> <span class="o">==</span> <span class="n">frame</span><span class="p">[</span><span class="s2">"bits"</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="o">==</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">24</span><span class="p">,</span> <span class="mi">14</span><span class="p">]</span>
+<a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a><span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="s2">"molecule"</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">smsd</span><span class="o">.</span><span class="n">MolGraph</span><span class="p">)</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>          name  atoms  bits
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>       aspirin     13    36
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>salicylic acid     10    28
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>   paracetamol     11    24
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>        phenol      7    14
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>pandas columns: object object
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>pandas features: (4, 2048) uint8
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>polars columns: Object List(UInt64)
+</code></pre></div>
+<p>pandas stores the fingerprints as immutable tuples; Polars stores them as lists
+of <code>uint64</code> positions, or lists of <code>[position, count]</code> pairs with count
+options. Both functions accept only <code>MolGraph</code> objects and SMILES strings, and
+raise <code>TypeError</code> for anything else, including RDKit molecules and missing
+values; convert or drop those rows first. The frames hold references to the
+molecules rather than copies.</p>
+<p>A Polars Object column cannot be exported to Arrow. Drop the <code>molecule</code> column,
+or keep the SMILES in a string column, before writing a Polars frame to
+Parquet or Arrow.</p>
+<h2 id="arrow-tables-and-zero-copy-export">Arrow tables and zero-copy export<a class="headerlink" href="#arrow-tables-and-zero-copy-export" title="Permanent link">&para;</a></h2>
+<p><code>to_arrow</code> writes one <code>fingerprint</code> column as an Arrow fixed-size list of
+integers. When it is given a two-dimensional, C-contiguous, native-endian
+integer NumPy matrix, the Arrow column uses the matrix's memory directly, and
+Arrow keeps the matrix alive for as long as the table exists. Other boolean
+or integer input is copied once into a new matrix first, and floating-point
+input is rejected. The schema metadata says which happened, and
+<code>zero_copy_only=True</code> turns a needed copy into a <code>ValueError</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smsd.adapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">fingerprints_numpy</span><span class="p">,</span> <span class="n">to_arrow</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="n">smiles</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">,</span> <span class="s2">"OC(=O)c1ccccc1O"</span><span class="p">,</span> <span class="s2">"CC(=O)Nc1ccc(O)cc1"</span><span class="p">,</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>          <span class="s2">"Oc1ccccc1"</span><span class="p">]</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="n">ecfp4</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="o">.</span><span class="n">ecfp</span><span class="p">(</span><span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="n">bits</span> <span class="o">=</span> <span class="n">fingerprints_numpy</span><span class="p">(</span><span class="n">smiles</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">ecfp4</span><span class="p">)</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="k">def</span><span class="w"> </span><span class="nf">report</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="n">table</span><span class="p">):</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>    <span class="n">metadata</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">metadata</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">label</span><span class="si">:</span><span class="s2">18</span><span class="si">}</span><span class="s2"> zero copy </span><span class="si">{</span><span class="n">metadata</span><span class="p">[</span><span class="sa">b</span><span class="s1">'smsd.zero_copy'</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span><span class="si">:</span><span class="s2">5</span><span class="si">}</span><span class="s2">  "</span>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>          <span class="sa">f</span><span class="s2">"reason </span><span class="si">{</span><span class="n">metadata</span><span class="p">[</span><span class="sa">b</span><span class="s1">'smsd.copy_reason'</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>    <span class="k">return</span> <span class="n">metadata</span><span class="p">[</span><span class="sa">b</span><span class="s2">"smsd.zero_copy"</span><span class="p">]</span> <span class="o">==</span> <span class="sa">b</span><span class="s2">"true"</span>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>
+<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="c1"># A C-contiguous integer matrix shares its buffer with the Arrow column.</span>
+<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="n">shared</span> <span class="o">=</span> <span class="n">to_arrow</span><span class="p">(</span><span class="n">bits</span><span class="p">,</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">,</span> <span class="n">zero_copy_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"type:"</span><span class="p">,</span> <span class="n">shared</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">"fingerprint"</span><span class="p">)</span><span class="o">.</span><span class="n">type</span><span class="p">)</span>
+<a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a><span class="k">assert</span> <span class="n">report</span><span class="p">(</span><span class="s2">"uint8 matrix"</span><span class="p">,</span> <span class="n">shared</span><span class="p">)</span>
+<a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a><span class="n">values</span> <span class="o">=</span> <span class="n">shared</span><span class="o">.</span><span class="n">column</span><span class="p">(</span><span class="s2">"fingerprint"</span><span class="p">)</span><span class="o">.</span><span class="n">chunk</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+<a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a><span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">shares_memory</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">zero_copy_only</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="n">bits</span><span class="p">)</span>
+<a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a>
+<a id="__codelineno-6-26" name="__codelineno-6-26" href="#__codelineno-6-26"></a><span class="c1"># These inputs need a copy, and the metadata says why.</span>
+<a id="__codelineno-6-27" name="__codelineno-6-27" href="#__codelineno-6-27"></a><span class="k">assert</span> <span class="ow">not</span> <span class="n">report</span><span class="p">(</span><span class="s2">"boolean matrix"</span><span class="p">,</span> <span class="n">to_arrow</span><span class="p">(</span><span class="n">bits</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">bool</span><span class="p">),</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">))</span>
+<a id="__codelineno-6-28" name="__codelineno-6-28" href="#__codelineno-6-28"></a><span class="k">assert</span> <span class="ow">not</span> <span class="n">report</span><span class="p">(</span><span class="s2">"column slice"</span><span class="p">,</span> <span class="n">to_arrow</span><span class="p">(</span><span class="n">bits</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">1024</span><span class="p">],</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">1024</span><span class="p">))</span>
+<a id="__codelineno-6-29" name="__codelineno-6-29" href="#__codelineno-6-29"></a><span class="n">positions</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">fingerprints</span><span class="p">(</span><span class="n">smiles</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">ecfp4</span><span class="p">)</span>
+<a id="__codelineno-6-30" name="__codelineno-6-30" href="#__codelineno-6-30"></a><span class="k">assert</span> <span class="ow">not</span> <span class="n">report</span><span class="p">(</span><span class="s2">"sparse positions"</span><span class="p">,</span> <span class="n">to_arrow</span><span class="p">(</span><span class="n">positions</span><span class="p">,</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">))</span>
+<a id="__codelineno-6-31" name="__codelineno-6-31" href="#__codelineno-6-31"></a><span class="k">assert</span> <span class="ow">not</span> <span class="n">report</span><span class="p">(</span><span class="s2">"copy=True"</span><span class="p">,</span> <span class="n">to_arrow</span><span class="p">(</span><span class="n">bits</span><span class="p">,</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<a id="__codelineno-6-32" name="__codelineno-6-32" href="#__codelineno-6-32"></a><span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-6-33" name="__codelineno-6-33" href="#__codelineno-6-33"></a>    <span class="n">to_arrow</span><span class="p">(</span><span class="n">bits</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">bool</span><span class="p">),</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">,</span> <span class="n">zero_copy_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-6-34" name="__codelineno-6-34" href="#__codelineno-6-34"></a><span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+<a id="__codelineno-6-35" name="__codelineno-6-35" href="#__codelineno-6-35"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">"zero_copy_only:"</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
+<a id="__codelineno-6-36" name="__codelineno-6-36" href="#__codelineno-6-36"></a>
+<a id="__codelineno-6-37" name="__codelineno-6-37" href="#__codelineno-6-37"></a><span class="c1"># Polars reads the table as a fixed-width array column.</span>
+<a id="__codelineno-6-38" name="__codelineno-6-38" href="#__codelineno-6-38"></a><span class="n">frame</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">from_arrow</span><span class="p">(</span><span class="n">shared</span><span class="p">)</span>
+<a id="__codelineno-6-39" name="__codelineno-6-39" href="#__codelineno-6-39"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"polars:"</span><span class="p">,</span> <span class="n">frame</span><span class="o">.</span><span class="n">schema</span><span class="p">[</span><span class="s2">"fingerprint"</span><span class="p">],</span>
+<a id="__codelineno-6-40" name="__codelineno-6-40" href="#__codelineno-6-40"></a>      <span class="n">frame</span><span class="p">[</span><span class="s2">"fingerprint"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<a id="__codelineno-6-41" name="__codelineno-6-41" href="#__codelineno-6-41"></a>
+<a id="__codelineno-6-42" name="__codelineno-6-42" href="#__codelineno-6-42"></a><span class="c1"># Shared values alias the source: a change to the matrix shows in the table.</span>
+<a id="__codelineno-6-43" name="__codelineno-6-43" href="#__codelineno-6-43"></a><span class="k">assert</span> <span class="n">bits</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span>
+<a id="__codelineno-6-44" name="__codelineno-6-44" href="#__codelineno-6-44"></a><span class="n">bits</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+<a id="__codelineno-6-45" name="__codelineno-6-45" href="#__codelineno-6-45"></a><span class="n">seen</span> <span class="o">=</span> <span class="n">shared</span><span class="o">.</span><span class="n">column</span><span class="p">(</span><span class="s2">"fingerprint"</span><span class="p">)[</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">as_py</span><span class="p">()</span>
+<a id="__codelineno-6-46" name="__codelineno-6-46" href="#__codelineno-6-46"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"table sees the change:"</span><span class="p">,</span> <span class="n">seen</span><span class="p">)</span>
+<a id="__codelineno-6-47" name="__codelineno-6-47" href="#__codelineno-6-47"></a><span class="k">assert</span> <span class="n">seen</span> <span class="o">==</span> <span class="mi">1</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>type: fixed_size_list&lt;item: uint8&gt;[2048]
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>uint8 matrix       zero copy true   reason none
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>boolean matrix     zero copy false  reason layout_or_boolean
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>column slice       zero copy false  reason layout_or_boolean
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>sparse positions   zero copy false  reason sparse_expansion
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>copy=True          zero copy false  reason requested
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>zero_copy_only: This dtype or layout requires a copy
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>polars: Array(UInt8, shape=(2048,)) (4, 2048)
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>table sees the change: 1
+</code></pre></div>
+<p>The rules for a copy-free export:</p>
+<ul>
+<li>Use an integer data type. A boolean matrix is converted to <code>uint8</code>, because
+  Arrow packs booleans as bits; a floating-point matrix is rejected, also in
+  count mode.</li>
+<li>Keep the matrix C-contiguous. A column slice, a transposed matrix or a
+  Fortran-ordered matrix is copied, as is a stepped slice of rows such as
+  <code>bits[::2]</code>; a contiguous range of whole rows is not.</li>
+<li>Keep the byte order native. A big-endian matrix on a little-endian machine is
+  copied.</li>
+<li>Do not change the matrix while the table is in use, as the last lines of the
+  program show. Pass <code>copy=True</code> when the table must be independent of it.</li>
+</ul>
+<p><code>copy=True</code> and <code>zero_copy_only=True</code> cannot be combined. The <code>dtype</code> argument
+applies only when sparse positions are expanded; passing it with a NumPy
+matrix raises <code>ValueError</code>. The table carries fingerprint features only, not
+the molecules, and the export is a memory operation, not a transfer to a GPU.</p>
+<h2 id="packed-bytes-and-bit-order">Packed bytes and bit order<a class="headerlink" href="#packed-bytes-and-bit-order" title="Permanent link">&para;</a></h2>
+<p>A <a href="../PACKED_INDEX/#file-format">packed fingerprint index</a> stores bit <code>p</code> of a
+row in byte <code>p // 8</code>, at bit <code>p % 8</code>: bit 0 is the least significant bit of the
+first byte. NumPy's <code>packbits</code> and <code>unpackbits</code> use the opposite order unless
+they are told otherwise, so pass <code>bitorder="little"</code> whenever packed bytes are
+exchanged with an index:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smsd.adapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">fingerprints_numpy</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="n">smiles</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">,</span> <span class="s2">"Oc1ccccc1"</span><span class="p">]</span>  <span class="c1"># aspirin, phenol</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="n">bits</span> <span class="o">=</span> <span class="n">fingerprints_numpy</span><span class="p">(</span><span class="n">smiles</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"ecfp"</span><span class="p">,</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="n">little</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">packbits</span><span class="p">(</span><span class="n">bits</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">bitorder</span><span class="o">=</span><span class="s2">"little"</span><span class="p">)</span>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="n">big</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">packbits</span><span class="p">(</span><span class="n">bits</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># NumPy's default is bitorder="big"</span>
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"packed:"</span><span class="p">,</span> <span class="n">little</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">little</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">directory</span><span class="p">:</span>
+<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"two.smsdfp"</span>
+<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>    <span class="k">with</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintCorpus</span><span class="o">.</span><span class="n">from_smiles</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">smiles</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"ecfp"</span><span class="p">,</span>
+<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>                                            <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="k">as</span> <span class="n">index</span><span class="p">:</span>
+<a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>        <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stored</span><span class="p">),</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">iter_packed_chunks</span><span class="p">()</span>
+<a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">"matches bitorder='little':"</span><span class="p">,</span> <span class="nb">bool</span><span class="p">((</span><span class="n">stored</span> <span class="o">==</span> <span class="n">little</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()))</span>
+<a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">"matches the default order:"</span><span class="p">,</span> <span class="nb">bool</span><span class="p">((</span><span class="n">stored</span> <span class="o">==</span> <span class="n">big</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()))</span>
+<a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>        <span class="k">assert</span> <span class="p">(</span><span class="n">stored</span> <span class="o">==</span> <span class="n">little</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="n">stored</span> <span class="o">==</span> <span class="n">big</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+<a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a>        <span class="k">assert</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unpackbits</span><span class="p">(</span><span class="n">stored</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">bitorder</span><span class="o">=</span><span class="s2">"little"</span><span class="p">)</span> <span class="o">==</span> <span class="n">bits</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>packed: (2, 256) uint8
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>matches bitorder='little': True
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>matches the default order: False
+</code></pre></div>
+<p>A wrong bit order raises no error: the bytes are valid, but every similarity
+computed from them is wrong. The matrices of <code>smsd.adapters</code> hold one column
+per position and have no bit order to get wrong.</p>
+<h2 id="scikit-learn-transformers">scikit-learn transformers<a class="headerlink" href="#scikit-learn-transformers" title="Permanent link">&para;</a></h2>
+<p><code>FingerprintTransformer</code> wraps <code>fingerprints_numpy</code> as a scikit-learn
+transformer. It takes a one-dimensional sequence of molecules (a list, a
+pandas Series or one column selected by a <code>ColumnTransformer</code>) and returns the
+feature matrix. It learns nothing: <code>fit</code> only marks it fitted, so the same
+molecules always give the same features, inside or outside cross-validation.
+Its parameters are ordinary estimator parameters and work with <code>clone</code>,
+<code>set_params</code> and grid searches.</p>
+<p><code>SimilarityTransformer</code> stores the binary fingerprints of the molecules passed
+to <code>fit</code>, in order and with duplicates, and <code>transform</code> returns one <code>float64</code>
+column per stored reference: the Tanimoto similarity of each input molecule to
+that reference.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">clone</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.compose</span><span class="w"> </span><span class="kn">import</span> <span class="n">ColumnTransformer</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.linear_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">LogisticRegression</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_pipeline</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smsd.adapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">FingerprintTransformer</span><span class="p">,</span> <span class="n">SimilarityTransformer</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="n">smiles</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">,</span> <span class="s2">"OC(=O)c1ccccc1O"</span><span class="p">,</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>          <span class="s2">"CC(C)Cc1ccc(cc1)C(C)C(=O)O"</span><span class="p">,</span> <span class="s2">"OC(=O)c1ccccc1"</span><span class="p">,</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>          <span class="s2">"CC(=O)Nc1ccc(O)cc1"</span><span class="p">,</span> <span class="s2">"Oc1ccccc1"</span><span class="p">,</span> <span class="s2">"Clc1ccccc1"</span><span class="p">,</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>          <span class="s2">"CN1C=NC2=C1C(=O)N(C(=O)N2C)C"</span><span class="p">]</span>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>    <span class="s2">"smiles"</span><span class="p">:</span> <span class="n">smiles</span><span class="p">,</span>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>    <span class="s2">"heavy_atoms"</span><span class="p">:</span> <span class="p">[</span><span class="n">smsd</span><span class="o">.</span><span class="n">parse_smiles</span><span class="p">(</span><span class="n">text</span><span class="p">)</span><span class="o">.</span><span class="n">n</span> <span class="k">for</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">smiles</span><span class="p">],</span>
+<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a>    <span class="s2">"acid"</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>  <span class="c1"># 1: carboxylic acid</span>
+<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="p">})</span>
+<a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>
+<a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a><span class="c1"># A transformer on its own: fit records nothing, transform fingerprints.</span>
+<a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a><span class="n">fingerprint</span> <span class="o">=</span> <span class="n">FingerprintTransformer</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">"ecfp"</span><span class="p">,</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">1024</span><span class="p">)</span>
+<a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a><span class="n">X</span> <span class="o">=</span> <span class="n">fingerprint</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">"smiles"</span><span class="p">])</span>
+<a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"features:"</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="s2">"| first names:"</span><span class="p">,</span>
+<a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a>      <span class="n">fingerprint</span><span class="o">.</span><span class="n">get_feature_names_out</span><span class="p">()[:</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+<a id="__codelineno-10-24" name="__codelineno-10-24" href="#__codelineno-10-24"></a>
+<a id="__codelineno-10-25" name="__codelineno-10-25" href="#__codelineno-10-25"></a><span class="c1"># A column of SMILES beside a numeric column, in one pipeline.</span>
+<a id="__codelineno-10-26" name="__codelineno-10-26" href="#__codelineno-10-26"></a><span class="n">features</span> <span class="o">=</span> <span class="n">ColumnTransformer</span><span class="p">([</span>
+<a id="__codelineno-10-27" name="__codelineno-10-27" href="#__codelineno-10-27"></a>    <span class="p">(</span><span class="s2">"fingerprint"</span><span class="p">,</span> <span class="n">FingerprintTransformer</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">"ecfp"</span><span class="p">,</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">1024</span><span class="p">),</span>
+<a id="__codelineno-10-28" name="__codelineno-10-28" href="#__codelineno-10-28"></a>     <span class="s2">"smiles"</span><span class="p">),</span>
+<a id="__codelineno-10-29" name="__codelineno-10-29" href="#__codelineno-10-29"></a>    <span class="p">(</span><span class="s2">"size"</span><span class="p">,</span> <span class="s2">"passthrough"</span><span class="p">,</span> <span class="p">[</span><span class="s2">"heavy_atoms"</span><span class="p">]),</span>
+<a id="__codelineno-10-30" name="__codelineno-10-30" href="#__codelineno-10-30"></a><span class="p">])</span>
+<a id="__codelineno-10-31" name="__codelineno-10-31" href="#__codelineno-10-31"></a><span class="n">model</span> <span class="o">=</span> <span class="n">make_pipeline</span><span class="p">(</span><span class="n">features</span><span class="p">,</span> <span class="n">LogisticRegression</span><span class="p">(</span><span class="n">max_iter</span><span class="o">=</span><span class="mi">1000</span><span class="p">))</span>
+<a id="__codelineno-10-32" name="__codelineno-10-32" href="#__codelineno-10-32"></a><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data</span><span class="p">[[</span><span class="s2">"smiles"</span><span class="p">,</span> <span class="s2">"heavy_atoms"</span><span class="p">]],</span> <span class="n">data</span><span class="p">[</span><span class="s2">"acid"</span><span class="p">])</span>
+<a id="__codelineno-10-33" name="__codelineno-10-33" href="#__codelineno-10-33"></a><span class="n">predictions</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">data</span><span class="p">[[</span><span class="s2">"smiles"</span><span class="p">,</span> <span class="s2">"heavy_atoms"</span><span class="p">]])</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+<a id="__codelineno-10-34" name="__codelineno-10-34" href="#__codelineno-10-34"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"predictions:"</span><span class="p">,</span> <span class="n">predictions</span><span class="p">)</span>
+<a id="__codelineno-10-35" name="__codelineno-10-35" href="#__codelineno-10-35"></a><span class="k">assert</span> <span class="n">predictions</span> <span class="o">==</span> <span class="n">data</span><span class="p">[</span><span class="s2">"acid"</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+<a id="__codelineno-10-36" name="__codelineno-10-36" href="#__codelineno-10-36"></a>
+<a id="__codelineno-10-37" name="__codelineno-10-37" href="#__codelineno-10-37"></a><span class="c1"># Parameters work with clone and set_params, as for any estimator.</span>
+<a id="__codelineno-10-38" name="__codelineno-10-38" href="#__codelineno-10-38"></a><span class="n">wider</span> <span class="o">=</span> <span class="n">clone</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="o">.</span><span class="n">set_params</span><span class="p">(</span><span class="n">columntransformer__fingerprint__fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-10-39" name="__codelineno-10-39" href="#__codelineno-10-39"></a><span class="n">wider</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data</span><span class="p">[[</span><span class="s2">"smiles"</span><span class="p">,</span> <span class="s2">"heavy_atoms"</span><span class="p">]],</span> <span class="n">data</span><span class="p">[</span><span class="s2">"acid"</span><span class="p">])</span>
+<a id="__codelineno-10-40" name="__codelineno-10-40" href="#__codelineno-10-40"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"model inputs after widening:"</span><span class="p">,</span> <span class="n">wider</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">n_features_in_</span><span class="p">)</span>
+<a id="__codelineno-10-41" name="__codelineno-10-41" href="#__codelineno-10-41"></a><span class="k">assert</span> <span class="n">wider</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">n_features_in_</span> <span class="o">==</span> <span class="mi">2049</span>
+<a id="__codelineno-10-42" name="__codelineno-10-42" href="#__codelineno-10-42"></a>
+<a id="__codelineno-10-43" name="__codelineno-10-43" href="#__codelineno-10-43"></a><span class="c1"># Tanimoto similarity to fitted references, one column per reference.</span>
+<a id="__codelineno-10-44" name="__codelineno-10-44" href="#__codelineno-10-44"></a><span class="n">references</span> <span class="o">=</span> <span class="n">SimilarityTransformer</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">"ecfp"</span><span class="p">,</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">smiles</span><span class="p">[:</span><span class="mi">2</span><span class="p">])</span>
+<a id="__codelineno-10-45" name="__codelineno-10-45" href="#__codelineno-10-45"></a><span class="n">scores</span> <span class="o">=</span> <span class="n">references</span><span class="o">.</span><span class="n">transform</span><span class="p">([</span><span class="s2">"OC(=O)c1ccccc1"</span><span class="p">])</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+<a id="__codelineno-10-46" name="__codelineno-10-46" href="#__codelineno-10-46"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"columns:"</span><span class="p">,</span> <span class="n">references</span><span class="o">.</span><span class="n">get_feature_names_out</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+<a id="__codelineno-10-47" name="__codelineno-10-47" href="#__codelineno-10-47"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"benzoic acid:"</span><span class="p">,</span> <span class="n">scores</span><span class="p">)</span>
+<a id="__codelineno-10-48" name="__codelineno-10-48" href="#__codelineno-10-48"></a><span class="k">assert</span> <span class="n">scores</span> <span class="o">==</span> <span class="p">[[</span><span class="mf">0.256</span><span class="p">,</span> <span class="mf">0.278</span><span class="p">]]</span>
+<a id="__codelineno-10-49" name="__codelineno-10-49" href="#__codelineno-10-49"></a><span class="n">references</span><span class="o">.</span><span class="n">set_params</span><span class="p">(</span><span class="n">fp_size</span><span class="o">=</span><span class="mi">1024</span><span class="p">)</span>
+<a id="__codelineno-10-50" name="__codelineno-10-50" href="#__codelineno-10-50"></a><span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-10-51" name="__codelineno-10-51" href="#__codelineno-10-51"></a>    <span class="n">references</span><span class="o">.</span><span class="n">transform</span><span class="p">([</span><span class="s2">"OC(=O)c1ccccc1"</span><span class="p">])</span>
+<a id="__codelineno-10-52" name="__codelineno-10-52" href="#__codelineno-10-52"></a><span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+<a id="__codelineno-10-53" name="__codelineno-10-53" href="#__codelineno-10-53"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">"after set_params:"</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>features: (8, 1024) uint8 | first names: ['fp_0', 'fp_1', 'fp_2']
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>predictions: [1, 1, 1, 1, 0, 0, 0, 0]
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>model inputs after widening: 2049
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>columns: ['reference_0', 'reference_1']
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>benzoic acid: [[0.256, 0.278]]
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>after set_params: Fingerprint parameters changed; refit SimilarityTransformer
+</code></pre></div>
+<p>The training predictions only show that the pipeline runs; they are not a
+measure of model quality.</p>
+<table>
+<thead>
+<tr>
+<th>Transformer</th>
+<th>Learns in <code>fit</code></th>
+<th>Output</th>
+<th>Output size</th>
+<th>Molecule input</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>FingerprintTransformer</code></td>
+<td>Nothing</td>
+<td><code>uint8</code> bits, <code>int64</code> counts or the chosen <code>dtype</code></td>
+<td>Molecules times <code>fp_size</code></td>
+<td>SMILES, <code>MolGraph</code> or RDKit molecules</td>
+</tr>
+<tr>
+<td><code>SimilarityTransformer</code></td>
+<td>The reference fingerprints</td>
+<td><code>float64</code> Tanimoto values</td>
+<td>Molecules times references</td>
+<td>SMILES or <code>MolGraph</code> only</td>
+</tr>
+</tbody>
+</table>
+<p>Choose <code>FingerprintTransformer</code> when the model should weigh individual
+structural features, as linear models, tree ensembles and neural networks do.
+Choose <code>SimilarityTransformer</code> when similarity to known molecules is the
+signal: as the features of a nearest-neighbour model, as a precomputed kernel
+(see the worked example), or as a column of "distance to the nearest active"
+beside other descriptors.</p>
+<h2 id="pytorch-tensors">PyTorch tensors<a class="headerlink" href="#pytorch-tensors" title="Permanent link">&para;</a></h2>
+<p><code>fingerprints_torch</code> and <code>to_torch</code> return a tensor of the same shape and with
+the same default types as the NumPy adapters, without needing NumPy. The
+tensor is created on the CPU unless <code>device</code> names another device, and its
+type follows <code>dtype</code>. Write the call so that a missing or unusable PyTorch is
+handled:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">smsd</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smsd.adapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">fingerprints_numpy</span><span class="p">,</span> <span class="n">fingerprints_torch</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="n">smiles</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">,</span> <span class="s2">"OC(=O)c1ccccc1O"</span><span class="p">,</span> <span class="s2">"CC(=O)Nc1ccc(O)cc1"</span><span class="p">,</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>          <span class="s2">"Oc1ccccc1"</span><span class="p">]</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="n">ecfp4</span> <span class="o">=</span> <span class="n">smsd</span><span class="o">.</span><span class="n">FingerprintOptions</span><span class="o">.</span><span class="n">ecfp</span><span class="p">(</span><span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">2048</span><span class="p">)</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>    <span class="c1"># The adapter checks the runtime before it imports PyTorch.</span>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>    <span class="n">features</span> <span class="o">=</span> <span class="n">fingerprints_torch</span><span class="p">(</span><span class="n">smiles</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">ecfp4</span><span class="p">)</span>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">"PyTorch features unavailable:"</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>    <span class="n">features</span> <span class="o">=</span> <span class="n">fingerprints_numpy</span><span class="p">(</span><span class="n">smiles</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">ecfp4</span><span class="p">)</span>
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">"NumPy features instead:"</span><span class="p">,</span> <span class="n">features</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">features</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>    <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>  <span class="c1"># already loaded by the adapter</span>
+<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>
+<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>    <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">():</span>
+<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>        <span class="n">features</span> <span class="o">=</span> <span class="n">features</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="s2">"cuda"</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">"tensor:"</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">features</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span> <span class="n">features</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">features</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a><span class="k">assert</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">features</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2048</span><span class="p">)</span>
+</code></pre></div>
+<p>Without PyTorch, the program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>PyTorch features unavailable: This adapter requires torch; install smsd[torch]
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>NumPy features instead: (4, 2048) uint8
+</code></pre></div>
+<p>With PyTorch installed, the program prints one <code>tensor:</code> line instead: a
+<code>torch.uint8</code> tensor on the CPU, or, where PyTorch reports a usable CUDA
+device, a <code>torch.float32</code> tensor on that device. Fingerprints are always
+computed on CPU threads; the <code>device</code> argument and <code>.to()</code> move only the
+finished tensor. On macOS, a packaged SMSD wheel built with OpenMP and PyTorch
+can load two different OpenMP runtimes, which can stop the process. The
+adapters detect this before importing PyTorch and raise <code>ImportError</code>, which
+the program above catches; the remedy is an SMSD build without OpenMP, or
+packages linked to one shared OpenMP runtime, as described in
+<a href="../../PYTHON_ADAPTERS/#numpy-and-pytorch">NumPy and PyTorch</a>. Call the
+adapter before importing PyTorch yourself, so that the check runs first.</p>
+<p><code>to_pyg</code> turns one molecule into a PyTorch Geometric <code>Data</code> object with seven
+integer atom features and three integer bond features per directed edge;
+<a href="../../PYTHON_ADAPTERS/#pytorch-geometric-molecular-graphs">PyTorch Geometric molecular graphs</a>
+lists them.</p>
+<h2 id="a-worked-example-train-and-screen">A worked example: train and screen<a class="headerlink" href="#a-worked-example-train-and-screen" title="Permanent link">&para;</a></h2>
+<p>This program uses 18 labelled molecules to train two models, one on
+fingerprint features and one on Tanimoto similarity as a kernel, and scores 8
+held-out molecules with both. It then screens the same held-out molecules by
+their highest similarity to the known actives, and prints the three views side
+by side. The label marks the benzodiazepines; it is illustrative, and a set of
+this size says nothing about predictive performance.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.linear_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">LogisticRegression</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_pipeline</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.svm</span><span class="w"> </span><span class="kn">import</span> <span class="n">SVC</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smsd.adapters</span><span class="w"> </span><span class="kn">import</span> <span class="n">FingerprintTransformer</span><span class="p">,</span> <span class="n">SimilarityTransformer</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="c1"># Training set: label 1 for a benzodiazepine, 0 otherwise.</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="n">TRAIN</span> <span class="o">=</span> <span class="p">[</span>
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>    <span class="p">(</span><span class="s2">"diazepam"</span><span class="p">,</span> <span class="s2">"CN1C(=O)CN=C(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a>    <span class="p">(</span><span class="s2">"nordazepam"</span><span class="p">,</span> <span class="s2">"O=C1CN=C(c2ccccc2)c2cc(Cl)ccc2N1"</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a>    <span class="p">(</span><span class="s2">"temazepam"</span><span class="p">,</span> <span class="s2">"CN1C(=O)C(O)N=C(c2ccccc2)c2cc(Cl)ccc21"</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a>    <span class="p">(</span><span class="s2">"oxazepam"</span><span class="p">,</span> <span class="s2">"OC1N=C(c2ccccc2)c2cc(Cl)ccc2NC1=O"</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+<a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a>    <span class="p">(</span><span class="s2">"lorazepam"</span><span class="p">,</span> <span class="s2">"OC1N=C(c2ccccc2Cl)c2cc(Cl)ccc2NC1=O"</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+<a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a>    <span class="p">(</span><span class="s2">"clonazepam"</span><span class="p">,</span> <span class="s2">"O=C1CN=C(c2ccccc2Cl)c2cc([N+](=O)[O-])ccc2N1"</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+<a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a>    <span class="p">(</span><span class="s2">"nitrazepam"</span><span class="p">,</span> <span class="s2">"O=C1CN=C(c2ccccc2)c2cc([N+](=O)[O-])ccc2N1"</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+<a id="__codelineno-14-16" name="__codelineno-14-16" href="#__codelineno-14-16"></a>    <span class="p">(</span><span class="s2">"alprazolam"</span><span class="p">,</span> <span class="s2">"Cc1nnc2n1-c1ccc(Cl)cc1C(c1ccccc1)=NC2"</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+<a id="__codelineno-14-17" name="__codelineno-14-17" href="#__codelineno-14-17"></a>    <span class="p">(</span><span class="s2">"triazolam"</span><span class="p">,</span> <span class="s2">"Cc1nnc2n1-c1ccc(Cl)cc1C(c1ccccc1Cl)=NC2"</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+<a id="__codelineno-14-18" name="__codelineno-14-18" href="#__codelineno-14-18"></a>    <span class="p">(</span><span class="s2">"aspirin"</span><span class="p">,</span> <span class="s2">"CC(=O)Oc1ccccc1C(=O)O"</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+<a id="__codelineno-14-19" name="__codelineno-14-19" href="#__codelineno-14-19"></a>    <span class="p">(</span><span class="s2">"salicylic acid"</span><span class="p">,</span> <span class="s2">"OC(=O)c1ccccc1O"</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+<a id="__codelineno-14-20" name="__codelineno-14-20" href="#__codelineno-14-20"></a>    <span class="p">(</span><span class="s2">"ibuprofen"</span><span class="p">,</span> <span class="s2">"CC(C)Cc1ccc(cc1)C(C)C(=O)O"</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+<a id="__codelineno-14-21" name="__codelineno-14-21" href="#__codelineno-14-21"></a>    <span class="p">(</span><span class="s2">"naproxen"</span><span class="p">,</span> <span class="s2">"COc1ccc2cc(ccc2c1)C(C)C(=O)O"</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+<a id="__codelineno-14-22" name="__codelineno-14-22" href="#__codelineno-14-22"></a>    <span class="p">(</span><span class="s2">"caffeine"</span><span class="p">,</span> <span class="s2">"CN1C=NC2=C1C(=O)N(C(=O)N2C)C"</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+<a id="__codelineno-14-23" name="__codelineno-14-23" href="#__codelineno-14-23"></a>    <span class="p">(</span><span class="s2">"phenol"</span><span class="p">,</span> <span class="s2">"Oc1ccccc1"</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+<a id="__codelineno-14-24" name="__codelineno-14-24" href="#__codelineno-14-24"></a>    <span class="p">(</span><span class="s2">"benzophenone"</span><span class="p">,</span> <span class="s2">"O=C(c1ccccc1)c1ccccc1"</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+<a id="__codelineno-14-25" name="__codelineno-14-25" href="#__codelineno-14-25"></a>    <span class="p">(</span><span class="s2">"4-chloroaniline"</span><span class="p">,</span> <span class="s2">"Nc1ccc(Cl)cc1"</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+<a id="__codelineno-14-26" name="__codelineno-14-26" href="#__codelineno-14-26"></a>    <span class="p">(</span><span class="s2">"acetanilide"</span><span class="p">,</span> <span class="s2">"CC(=O)Nc1ccccc1"</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+<a id="__codelineno-14-27" name="__codelineno-14-27" href="#__codelineno-14-27"></a><span class="p">]</span>
+<a id="__codelineno-14-28" name="__codelineno-14-28" href="#__codelineno-14-28"></a><span class="c1"># Held-out molecules, scored after training.</span>
+<a id="__codelineno-14-29" name="__codelineno-14-29" href="#__codelineno-14-29"></a><span class="n">TEST</span> <span class="o">=</span> <span class="p">[</span>
+<a id="__codelineno-14-30" name="__codelineno-14-30" href="#__codelineno-14-30"></a>    <span class="p">(</span><span class="s2">"flunitrazepam"</span><span class="p">,</span> <span class="s2">"CN1C(=O)CN=C(c2ccccc2F)c2cc([N+](=O)[O-])ccc21"</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+<a id="__codelineno-14-31" name="__codelineno-14-31" href="#__codelineno-14-31"></a>    <span class="p">(</span><span class="s2">"bromazepam"</span><span class="p">,</span> <span class="s2">"O=C1CN=C(c2ccccn2)c2cc(Br)ccc2N1"</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+<a id="__codelineno-14-32" name="__codelineno-14-32" href="#__codelineno-14-32"></a>    <span class="p">(</span><span class="s2">"midazolam"</span><span class="p">,</span> <span class="s2">"Cc1ncc2n1-c1ccc(Cl)cc1C(c1ccccc1F)=NC2"</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+<a id="__codelineno-14-33" name="__codelineno-14-33" href="#__codelineno-14-33"></a>    <span class="p">(</span><span class="s2">"tetrazepam"</span><span class="p">,</span> <span class="s2">"CN1C(=O)CN=C(C2=CCCCC2)c2cc(Cl)ccc21"</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+<a id="__codelineno-14-34" name="__codelineno-14-34" href="#__codelineno-14-34"></a>    <span class="p">(</span><span class="s2">"paracetamol"</span><span class="p">,</span> <span class="s2">"CC(=O)Nc1ccc(O)cc1"</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+<a id="__codelineno-14-35" name="__codelineno-14-35" href="#__codelineno-14-35"></a>    <span class="p">(</span><span class="s2">"2-aminobenzophenone"</span><span class="p">,</span> <span class="s2">"Nc1ccccc1C(=O)c1ccccc1"</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+<a id="__codelineno-14-36" name="__codelineno-14-36" href="#__codelineno-14-36"></a>    <span class="p">(</span><span class="s2">"chlorobenzene"</span><span class="p">,</span> <span class="s2">"Clc1ccccc1"</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+<a id="__codelineno-14-37" name="__codelineno-14-37" href="#__codelineno-14-37"></a>    <span class="p">(</span><span class="s2">"benzoic acid"</span><span class="p">,</span> <span class="s2">"OC(=O)c1ccccc1"</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+<a id="__codelineno-14-38" name="__codelineno-14-38" href="#__codelineno-14-38"></a><span class="p">]</span>
+<a id="__codelineno-14-39" name="__codelineno-14-39" href="#__codelineno-14-39"></a><span class="n">train_smiles</span> <span class="o">=</span> <span class="p">[</span><span class="n">smiles</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">smiles</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">TRAIN</span><span class="p">]</span>
+<a id="__codelineno-14-40" name="__codelineno-14-40" href="#__codelineno-14-40"></a><span class="n">y_train</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">label</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">TRAIN</span><span class="p">])</span>
+<a id="__codelineno-14-41" name="__codelineno-14-41" href="#__codelineno-14-41"></a><span class="n">test_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">TEST</span><span class="p">]</span>
+<a id="__codelineno-14-42" name="__codelineno-14-42" href="#__codelineno-14-42"></a><span class="n">test_smiles</span> <span class="o">=</span> <span class="p">[</span><span class="n">smiles</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">smiles</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">TEST</span><span class="p">]</span>
+<a id="__codelineno-14-43" name="__codelineno-14-43" href="#__codelineno-14-43"></a><span class="n">y_test</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">label</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">TEST</span><span class="p">])</span>
+<a id="__codelineno-14-44" name="__codelineno-14-44" href="#__codelineno-14-44"></a>
+<a id="__codelineno-14-45" name="__codelineno-14-45" href="#__codelineno-14-45"></a><span class="c1"># 1. Fingerprint features and a linear model.</span>
+<a id="__codelineno-14-46" name="__codelineno-14-46" href="#__codelineno-14-46"></a><span class="n">linear</span> <span class="o">=</span> <span class="n">make_pipeline</span><span class="p">(</span>
+<a id="__codelineno-14-47" name="__codelineno-14-47" href="#__codelineno-14-47"></a>    <span class="n">FingerprintTransformer</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">"ecfp"</span><span class="p">,</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">),</span>
+<a id="__codelineno-14-48" name="__codelineno-14-48" href="#__codelineno-14-48"></a>    <span class="n">LogisticRegression</span><span class="p">(</span><span class="n">C</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">1000</span><span class="p">),</span>
+<a id="__codelineno-14-49" name="__codelineno-14-49" href="#__codelineno-14-49"></a><span class="p">)</span>
+<a id="__codelineno-14-50" name="__codelineno-14-50" href="#__codelineno-14-50"></a><span class="n">linear</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">train_smiles</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+<a id="__codelineno-14-51" name="__codelineno-14-51" href="#__codelineno-14-51"></a><span class="n">probability</span> <span class="o">=</span> <span class="n">linear</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">test_smiles</span><span class="p">)[:,</span> <span class="mi">1</span><span class="p">]</span>
+<a id="__codelineno-14-52" name="__codelineno-14-52" href="#__codelineno-14-52"></a>
+<a id="__codelineno-14-53" name="__codelineno-14-53" href="#__codelineno-14-53"></a><span class="c1"># 2. A Tanimoto kernel: the similarity matrix to the training molecules is</span>
+<a id="__codelineno-14-54" name="__codelineno-14-54" href="#__codelineno-14-54"></a><span class="c1">#    the precomputed kernel of a support vector machine.</span>
+<a id="__codelineno-14-55" name="__codelineno-14-55" href="#__codelineno-14-55"></a><span class="n">kernel</span> <span class="o">=</span> <span class="n">make_pipeline</span><span class="p">(</span>
+<a id="__codelineno-14-56" name="__codelineno-14-56" href="#__codelineno-14-56"></a>    <span class="n">SimilarityTransformer</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">"ecfp"</span><span class="p">,</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">),</span>
+<a id="__codelineno-14-57" name="__codelineno-14-57" href="#__codelineno-14-57"></a>    <span class="n">SVC</span><span class="p">(</span><span class="n">kernel</span><span class="o">=</span><span class="s2">"precomputed"</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="mf">1.0</span><span class="p">),</span>
+<a id="__codelineno-14-58" name="__codelineno-14-58" href="#__codelineno-14-58"></a><span class="p">)</span>
+<a id="__codelineno-14-59" name="__codelineno-14-59" href="#__codelineno-14-59"></a><span class="n">kernel</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">train_smiles</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+<a id="__codelineno-14-60" name="__codelineno-14-60" href="#__codelineno-14-60"></a><span class="n">margin</span> <span class="o">=</span> <span class="n">kernel</span><span class="o">.</span><span class="n">decision_function</span><span class="p">(</span><span class="n">test_smiles</span><span class="p">)</span>
+<a id="__codelineno-14-61" name="__codelineno-14-61" href="#__codelineno-14-61"></a>
+<a id="__codelineno-14-62" name="__codelineno-14-62" href="#__codelineno-14-62"></a><span class="c1"># 3. A similarity screen: the nearest known active for each test molecule.</span>
+<a id="__codelineno-14-63" name="__codelineno-14-63" href="#__codelineno-14-63"></a><span class="n">active_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">TRAIN</span> <span class="k">if</span> <span class="n">label</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span>
+<a id="__codelineno-14-64" name="__codelineno-14-64" href="#__codelineno-14-64"></a><span class="n">actives</span> <span class="o">=</span> <span class="p">[</span><span class="n">smiles</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">smiles</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">TRAIN</span> <span class="k">if</span> <span class="n">label</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span>
+<a id="__codelineno-14-65" name="__codelineno-14-65" href="#__codelineno-14-65"></a><span class="n">screen</span> <span class="o">=</span> <span class="n">SimilarityTransformer</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">"ecfp"</span><span class="p">,</span> <span class="n">fp_size</span><span class="o">=</span><span class="mi">2048</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">actives</span><span class="p">)</span>
+<a id="__codelineno-14-66" name="__codelineno-14-66" href="#__codelineno-14-66"></a><span class="n">scores</span> <span class="o">=</span> <span class="n">screen</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">test_smiles</span><span class="p">)</span>
+<a id="__codelineno-14-67" name="__codelineno-14-67" href="#__codelineno-14-67"></a><span class="n">best</span> <span class="o">=</span> <span class="n">scores</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-14-68" name="__codelineno-14-68" href="#__codelineno-14-68"></a><span class="n">nearest</span> <span class="o">=</span> <span class="n">scores</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-14-69" name="__codelineno-14-69" href="#__codelineno-14-69"></a>
+<a id="__codelineno-14-70" name="__codelineno-14-70" href="#__codelineno-14-70"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'molecule'</span><span class="si">:</span><span class="s2">20</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'label'</span><span class="si">:</span><span class="s2">&gt;5</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'P(active)'</span><span class="si">:</span><span class="s2">&gt;9</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'margin'</span><span class="si">:</span><span class="s2">&gt;7</span><span class="si">}</span><span class="s2"> "</span>
+<a id="__codelineno-14-71" name="__codelineno-14-71" href="#__codelineno-14-71"></a>      <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'Tanimoto'</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2">  nearest active"</span><span class="p">)</span>
+<a id="__codelineno-14-72" name="__codelineno-14-72" href="#__codelineno-14-72"></a><span class="n">order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="o">-</span><span class="n">best</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"stable"</span><span class="p">)</span>
+<a id="__codelineno-14-73" name="__codelineno-14-73" href="#__codelineno-14-73"></a><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">order</span><span class="p">:</span>
+<a id="__codelineno-14-74" name="__codelineno-14-74" href="#__codelineno-14-74"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">test_names</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">:</span><span class="s2">20</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">y_test</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">:</span><span class="s2">5d</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">probability</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">:</span><span class="s2">9.3f</span><span class="si">}</span><span class="s2"> "</span>
+<a id="__codelineno-14-75" name="__codelineno-14-75" href="#__codelineno-14-75"></a>          <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">margin</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">:</span><span class="s2">7.3f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">best</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">:</span><span class="s2">8.3f</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="n">active_names</span><span class="p">[</span><span class="n">nearest</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-14-76" name="__codelineno-14-76" href="#__codelineno-14-76"></a><span class="n">hits</span> <span class="o">=</span> <span class="p">[</span><span class="n">test_names</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">order</span> <span class="k">if</span> <span class="n">best</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mf">0.4</span><span class="p">]</span>
+<a id="__codelineno-14-77" name="__codelineno-14-77" href="#__codelineno-14-77"></a><span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">model</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">"linear"</span><span class="p">,</span> <span class="n">linear</span><span class="p">),</span> <span class="p">(</span><span class="s2">"kernel"</span><span class="p">,</span> <span class="n">kernel</span><span class="p">)):</span>
+<a id="__codelineno-14-78" name="__codelineno-14-78" href="#__codelineno-14-78"></a>    <span class="n">correct</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">test_smiles</span><span class="p">)</span> <span class="o">==</span> <span class="n">y_test</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+<a id="__codelineno-14-79" name="__codelineno-14-79" href="#__codelineno-14-79"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> model correct: </span><span class="si">{</span><span class="n">correct</span><span class="si">}</span><span class="s2"> of 8"</span><span class="p">)</span>
+<a id="__codelineno-14-80" name="__codelineno-14-80" href="#__codelineno-14-80"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"screen hits at Tanimoto &gt;= 0.4:"</span><span class="p">,</span> <span class="n">hits</span><span class="p">)</span>
+<a id="__codelineno-14-81" name="__codelineno-14-81" href="#__codelineno-14-81"></a>
+<a id="__codelineno-14-82" name="__codelineno-14-82" href="#__codelineno-14-82"></a><span class="k">assert</span> <span class="p">((</span><span class="n">probability</span> <span class="o">&gt;</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="n">y_test</span> <span class="o">==</span> <span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+<a id="__codelineno-14-83" name="__codelineno-14-83" href="#__codelineno-14-83"></a><span class="k">assert</span> <span class="p">((</span><span class="n">margin</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="n">y_test</span> <span class="o">==</span> <span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+<a id="__codelineno-14-84" name="__codelineno-14-84" href="#__codelineno-14-84"></a><span class="k">assert</span> <span class="n">best</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="o">==</span> <span class="p">[</span><span class="mf">0.465</span><span class="p">,</span> <span class="mf">0.519</span><span class="p">,</span> <span class="mf">0.541</span><span class="p">,</span> <span class="mf">0.542</span><span class="p">,</span> <span class="mf">0.031</span><span class="p">,</span> <span class="mf">0.125</span><span class="p">,</span>
+<a id="__codelineno-14-85" name="__codelineno-14-85" href="#__codelineno-14-85"></a>                                  <span class="mf">0.256</span><span class="p">,</span> <span class="mf">0.154</span><span class="p">]</span>
+<a id="__codelineno-14-86" name="__codelineno-14-86" href="#__codelineno-14-86"></a><span class="k">assert</span> <span class="n">hits</span> <span class="o">==</span> <span class="p">[</span><span class="s2">"tetrazepam"</span><span class="p">,</span> <span class="s2">"midazolam"</span><span class="p">,</span> <span class="s2">"bromazepam"</span><span class="p">,</span> <span class="s2">"flunitrazepam"</span><span class="p">]</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>molecule             label P(active)  margin Tanimoto  nearest active
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>tetrazepam               1     0.792   0.320    0.542  diazepam
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>midazolam                1     0.860   0.444    0.541  triazolam
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>bromazepam               1     0.841   0.387    0.519  nordazepam
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>flunitrazepam            1     0.835   0.424    0.465  clonazepam
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>chlorobenzene            0     0.181  -0.436    0.256  diazepam
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>benzoic acid             0     0.069  -0.730    0.154  oxazepam
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>2-aminobenzophenone      0     0.056  -0.735    0.125  nordazepam
+<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a>paracetamol              0     0.031  -0.698    0.031  diazepam
+<a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a>linear model correct: 8 of 8
+<a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a>kernel model correct: 8 of 8
+<a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a>screen hits at Tanimoto &gt;= 0.4: ['tetrazepam', 'midazolam', 'bromazepam', 'flunitrazepam']
+</code></pre></div>
+<p>The three columns answer different questions. The probability and the margin
+come from models that weigh the training molecules of both classes; the
+Tanimoto column depends only on the actives and is the easiest to explain,
+since the nearest active can be shown beside each hit. The Tanimoto values are
+exact for the chosen fingerprint. The probabilities and margins come from
+numerical solvers and may differ in the last digit between platforms or
+library versions.</p>
+<p>The kernel pipeline is correct as written because <code>SimilarityTransformer</code>
+returns the training molecules against themselves when the pipeline is
+fitted, and new molecules against the training molecules when it predicts,
+which are the two matrices a precomputed kernel needs. It holds one <code>float64</code>
+value per pair, so it suits training sets of thousands of molecules, not
+millions.</p>
+<p>To take the hits further, confirm the shared scaffold with an exact search, as
+in <a href="../SCREENING/#choose-a-route">Screening a library</a>. For a library too large
+to hold as a feature matrix, screen it with
+<a href="../SCREENING/#choose-a-route"><code>TargetCorpus</code> or a streamed screen</a>, or with a
+<a href="../PACKED_INDEX/">packed fingerprint index</a>, and pass only the shortlist to
+the model.</p>
+<h2 id="options">Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h2>
+<h3 id="feature-functions">Feature functions<a class="headerlink" href="#feature-functions" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Fingerprint arguments</th>
+<th>Other arguments</th>
+<th>Returns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>fingerprints_numpy(molecules, ...)</code></td>
+<td><code>kind="mcs"</code>, <code>path_length=7</code>, <code>fp_size=2048</code>, <code>radius=2</code>, <code>options=None</code></td>
+<td><code>num_threads=0</code>, <code>dtype=None</code></td>
+<td>NumPy matrix</td>
+</tr>
+<tr>
+<td><code>fingerprints_scipy(molecules, ...)</code></td>
+<td><code>kind="ecfp"</code>, <code>path_length=7</code>, <code>fp_size=2048</code>, <code>radius=2</code>, <code>options=None</code></td>
+<td><code>num_threads=0</code>, <code>dtype=None</code></td>
+<td>SciPy CSR matrix</td>
+</tr>
+<tr>
+<td><code>fingerprints_torch(molecules, ...)</code></td>
+<td><code>kind="mcs"</code>, <code>path_length=7</code>, <code>fp_size=2048</code>, <code>radius=2</code>, <code>options=None</code></td>
+<td><code>num_threads=0</code>, <code>dtype=None</code>, <code>device="cpu"</code></td>
+<td>PyTorch tensor</td>
+</tr>
+<tr>
+<td><code>molecules_pandas(molecules, ...)</code></td>
+<td><code>kind="ecfp"</code>, <code>fp_size=2048</code>, <code>radius=2</code>, <code>path_length=7</code>, <code>options=None</code></td>
+<td><code>num_threads=0</code></td>
+<td>pandas data frame</td>
+</tr>
+<tr>
+<td><code>molecules_polars(molecules, ...)</code></td>
+<td><code>kind="ecfp"</code>, <code>fp_size=2048</code>, <code>radius=2</code>, <code>path_length=7</code>, <code>options=None</code></td>
+<td><code>num_threads=0</code></td>
+<td>Polars data frame</td>
+</tr>
+</tbody>
+</table>
+<p>All arguments after <code>molecules</code> are keywords. The fingerprint arguments mean
+what they mean for <code>smsd.fingerprints</code>, and <code>options</code>, when given, sets the
+fingerprint completely, including its width and count mode. <code>num_threads=0</code>
+uses the OpenMP default. A single SMILES string passed as <code>molecules</code> raises
+<code>TypeError</code>; wrap it in a list.</p>
+<h3 id="conversion-functions">Conversion functions<a class="headerlink" href="#conversion-functions" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Arguments</th>
+<th>Returns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>to_numpy(sparse_fingerprints, *, fp_size=2048, counts=False, dtype=None)</code></td>
+<td>Positions, or <code>(position, count)</code> pairs when <code>counts=True</code></td>
+<td>NumPy matrix; boolean, integer or floating-point <code>dtype</code></td>
+</tr>
+<tr>
+<td><code>to_scipy(sparse_fingerprints, *, fp_size=2048, counts=False, dtype=None)</code></td>
+<td>As <code>to_numpy</code></td>
+<td>CSR matrix; boolean or integer <code>dtype</code></td>
+</tr>
+<tr>
+<td><code>to_torch(sparse_fingerprints, *, fp_size=2048, counts=False, dtype=None, device="cpu")</code></td>
+<td>As <code>to_numpy</code></td>
+<td>Tensor; a <code>torch.dtype</code></td>
+</tr>
+<tr>
+<td><code>to_arrow(fingerprints, *, fp_size=2048, counts=False, dtype=None, copy=False, zero_copy_only=False)</code></td>
+<td>A NumPy matrix of width <code>fp_size</code>, or sparse rows</td>
+<td>Arrow table with schema metadata</td>
+</tr>
+<tr>
+<td><code>to_pyg(molecule, *, device="cpu")</code></td>
+<td>One SMILES string or <code>MolGraph</code></td>
+<td>PyTorch Geometric <code>Data</code></td>
+</tr>
+</tbody>
+</table>
+<p>The conversion functions read sparse rows only. A dense row of zeros and ones
+passed to <code>to_numpy</code>, <code>to_scipy</code> or <code>to_torch</code> raises no error: it is read as
+positions, so <code>[[0, 1, 0, 1]]</code> becomes bits 0 and 1. Positions outside
+<code>fp_size</code>, negative counts and counts that do not fit the chosen type raise
+<code>ValueError</code>; repeated count bins are added together. An empty batch gives
+shape <code>(0, fp_size)</code>.</p>
+<h3 id="arrow-schema-metadata">Arrow schema metadata<a class="headerlink" href="#arrow-schema-metadata" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Values</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>smsd.fp_size</code></td>
+<td>The width</td>
+<td>Fingerprint width in bits or bins</td>
+</tr>
+<tr>
+<td><code>smsd.counts</code></td>
+<td><code>true</code>, <code>false</code></td>
+<td>Whether the values are counts</td>
+</tr>
+<tr>
+<td><code>smsd.zero_copy</code></td>
+<td><code>true</code>, <code>false</code></td>
+<td>Whether the column shares the caller's matrix</td>
+</tr>
+<tr>
+<td><code>smsd.copy_reason</code></td>
+<td><code>none</code>, <code>layout_or_boolean</code>, <code>sparse_expansion</code>, <code>requested</code></td>
+<td>Why a copy was made</td>
+</tr>
+<tr>
+<td><code>smsd.ownership</code></td>
+<td><code>shared_numpy_owner_retained</code>, <code>owned_numpy_owner_retained</code></td>
+<td>Whose matrix the table keeps alive</td>
+</tr>
+</tbody>
+</table>
+<h3 id="transformers">Transformers<a class="headerlink" href="#transformers" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Transformer</th>
+<th>Parameters, with defaults</th>
+<th>Fitted attributes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>FingerprintTransformer</code></td>
+<td><code>kind="ecfp"</code>, <code>fp_size=2048</code>, <code>radius=2</code>, <code>path_length=7</code>, <code>counts=False</code>, <code>dtype=None</code>, <code>num_threads=0</code></td>
+<td><code>is_fitted_</code></td>
+</tr>
+<tr>
+<td><code>SimilarityTransformer</code></td>
+<td><code>kind="ecfp"</code>, <code>fp_size=2048</code>, <code>radius=2</code>, <code>path_length=7</code>, <code>num_threads=0</code></td>
+<td><code>reference_fingerprints_</code>, <code>n_references_</code></td>
+</tr>
+</tbody>
+</table>
+<p>Both are keyword-only and both name their output columns through
+<code>get_feature_names_out()</code>: <code>fp_0</code>, <code>fp_1</code> and so on, or <code>reference_0</code>,
+<code>reference_1</code> and so on. <code>FingerprintTransformer(counts=True)</code> supports the
+ECFP, FCFP, path and torsion families. <code>SimilarityTransformer</code> always uses
+binary fingerprints, raises <code>ValueError</code> when fitted with no references, and
+gives a similarity of 1 between two empty fingerprints.</p>
+<h2 id="pitfalls">Pitfalls<a class="headerlink" href="#pitfalls" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Fingerprint family. <code>fingerprints_numpy</code> and <code>fingerprints_torch</code> default to
+  <code>kind="mcs"</code>, while <code>fingerprints_scipy</code>, the data-frame adapters and both
+  transformers default to <code>kind="ecfp"</code>. Pass the kind or a
+  <code>FingerprintOptions</code> everywhere, so that training features and screening
+  features come from the same fingerprint.</li>
+<li>One molecule. A bare SMILES string raises <code>TypeError</code> rather than being read
+  character by character; pass <code>["CCO"]</code>, not <code>"CCO"</code>.</li>
+<li>Input types. <code>molecules_pandas</code>, <code>molecules_polars</code>, <code>SimilarityTransformer</code>
+  and <code>to_pyg</code> accept only SMILES strings and <code>MolGraph</code> objects. Missing
+  values in a SMILES column raise <code>TypeError</code>; drop or fill them first.</li>
+<li>Data types. Bits arrive as <code>uint8</code> and counts as <code>int64</code>. An estimator that
+  works in <code>float64</code> converts the matrix, which makes a copy eight times the
+  size of the <code>uint8</code> matrix. Choose <code>dtype</code> once, at the adapter, rather than
+  converting large matrices repeatedly. A floating-point <code>dtype</code> can lose
+  precision for very large counts.</li>
+<li>Memory. A dense 2,048-bit matrix needs 2,048 bytes per molecule as <code>uint8</code>
+  and 16,384 bytes as <code>int64</code> or <code>float64</code>: about 2 GB and 16 GB for a million
+  molecules. Use <code>fingerprints_scipy</code>, smaller chunks or a
+  <a href="../PACKED_INDEX/">packed fingerprint index</a> beyond that. The output of
+  <code>SimilarityTransformer</code> grows with queries times references.</li>
+<li>Copies. Arrow shares only C-contiguous, native-endian integer matrices.
+  Slicing columns, transposing or converting to boolean before <code>to_arrow</code>
+  forces a copy. A shared table changes when its matrix changes.</li>
+<li>Bit order. Matrices hold one column per position. Packed bytes in an index
+  are little-endian within each byte, unlike NumPy's default <code>packbits</code> order.</li>
+<li>Width. Positions are hashed into <code>fp_size</code> columns, so different structures
+  can share a column. A width that is too narrow for the molecules saturates
+  the fingerprint; <a href="../FINGERPRINTS/#fingerprint-quality">fingerprint quality</a>
+  shows how to check.</li>
+<li>Refitting. Changing a <code>SimilarityTransformer</code> parameter after <code>fit</code> makes
+  <code>transform</code> raise until it is fitted again. <code>FingerprintTransformer</code> reads
+  its parameters at every <code>transform</code>.</li>
+<li>Feature names in a <code>ColumnTransformer</code>. A <code>FingerprintTransformer</code> inside a
+  <code>ColumnTransformer</code> fits and transforms normally, but the
+  <code>ColumnTransformer</code>'s <code>get_feature_names_out()</code> raises <code>ValueError</code>, because
+  the transformer refuses input column names. Call <code>get_feature_names_out()</code> on
+  the fingerprint transformer itself.</li>
+<li>Devices. A <code>device</code> argument places the finished tensor. Fingerprints and
+  graph features are always computed on the CPU, and <code>smsd-cuda</code> plays no part
+  in these adapters; see <a href="../CPU_GPU/#what-runs-where">What runs where</a>.</li>
+</ul>
+<h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../../PYTHON_ADAPTERS/">Python feature adapters and MCP</a>: the reference for
+  every adapter, including SciPy, Arrow and PyTorch Geometric.</li>
+<li><a href="../../API_REFERENCE/#packed-corpora-clustering-and-optional-data-adapters">Packed corpora, clustering and optional data adapters</a>
+  in the API reference.</li>
+<li><a href="../FINGERPRINTS/">Fingerprints and similarity</a>: fingerprint families,
+  configurable fingerprints and similarity coefficients.</li>
+<li><a href="../SCREENING/">Screening a library</a> and
+  <a href="../PACKED_INDEX/">Packed fingerprint index</a>, for libraries too large for a
+  feature matrix.</li>
+<li>The <a href="../../python/examples/feature_search.ipynb">feature-search notebook</a>,
+  which builds a small scikit-learn pipeline beside an MCS search and a packed
+  index.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../CPU_GPU/" class="md-footer__link md-footer__link--prev" aria-label="Previous: CPU and GPU screening">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                CPU and GPU screening
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../AI_TOOLS/" class="md-footer__link md-footer__link--next" aria-label="Next: Chemistry tools for AI assistants">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Chemistry tools for AI assistants
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2018-2026 BioInception PVT LTD
+    </div>
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/asad/SMSD" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/smsd/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.top", "navigation.footer", "navigation.instant", "navigation.tracking", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  <script data-mkdocs-jupyter-mathjax="{&quot;url&quot;: &quot;https://cdn.jsdelivr.net/npm/mathjax@4.1.3/tex-mml-chtml.js&quot;, &quot;version&quot;: 4}">
+/* Shared by full pages and Material's instant navigation. */
+(() => {
+  const config = JSON.parse(document.currentScript.dataset.mkdocsJupyterMathjax);
+  if (window.mkdocsJupyterMathJax) return;
+
+  let loading;
+  let queue = Promise.resolve();
+  let previous = [];
+
+  const ready = async () => {
+    if (!loading) {
+      loading = (async () => {
+        let math = window.MathJax;
+        if (!math?.typesetPromise) {
+          const url = new URL(config.url, document.baseURI).href;
+          const existing = Array.from(document.scripts).find(script =>
+            script.src && (script.src === url || script.id === 'MathJax-script' ||
+              (/mathjax/i.test(script.src) &&
+               /\/(?:MathJax|latest|(?:tex|mml)(?:-mml)?-(?:chtml|svg))\.js(?:[?#]|$)/i.test(script.src))));
+          if (existing) {
+            if (!math?.startup?.promise) {
+              await new Promise((resolve, reject) => {
+                existing.addEventListener('load', resolve, { once: true });
+                existing.addEventListener('error', reject, { once: true });
+              });
+            }
+          } else {
+            // Keep site macros, delimiters and startup hooks when supplied.
+            const options = math || {};
+            window.MathJax = {
+              ...options,
+              loader: {
+                ...options.loader,
+                load: Array.from(new Set(['ui/safe', ...(options.loader?.load || [])]))
+              },
+              startup: { typeset: false, ...options.startup },
+              tex: {
+                tags: 'ams',
+                useLabelIds: true,
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                processEnvironments: true,
+                ...options.tex
+              }
+            };
+            await new Promise((resolve, reject) => {
+              const script = document.createElement('script');
+              script.src = config.url;
+              script.id = 'MathJax-script';
+              script.async = true;
+              script.onload = resolve;
+              script.onerror = reject;
+              document.head.appendChild(script);
+            });
+          }
+        }
+        math = window.MathJax;
+        await math.startup.promise;
+        return math;
+      })();
+    }
+    const math = await loading;
+    // A site owner can extend the v3 queue again on each navigation.
+    await math.startup.promise;
+    return math;
+  };
+
+  const unrendered = node => {
+    if (node.matches('mjx-container')) return [];
+    if (!node.querySelector('mjx-container')) return [node];
+    // In v3, scanning generated assistive MathML again produces nested output.
+    return Array.from(node.children).flatMap(unrendered);
+  };
+
+  const refresh = () => {
+    // A separate chain also serializes v3, without changing v4's startup promise.
+    queue = queue.then(async () => {
+      const notebooks = Array.from(document.querySelectorAll('.jupyter-wrapper'));
+      if (!notebooks.length && !previous.length) return;
+      if (notebooks.length === previous.length &&
+          notebooks.every((node, index) => node === previous[index])) return;
+      const math = await ready();
+      if (previous.length) {
+        math.typesetClear(previous);
+        math.texReset();
+      }
+      previous = notebooks.filter(node => node.isConnected);
+      const pending = previous.flatMap(unrendered);
+      if (pending.length) await math.typesetPromise(pending);
+    }).catch(error => console.error('mkdocs-jupyter: MathJax rendering failed', error));
+    return queue;
+  };
+
+  window.mkdocsJupyterMathJax = { refresh };
+  const start = () => {
+    if (typeof document$ !== 'undefined') document$.subscribe(refresh);
+    else refresh();
+  };
+  // Theme bundles and user-provided MathJax scripts can follow notebook content.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+  } else start();
+})();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,3133 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Exact substructure, MCS and fingerprint search for C++, Java and Python">
+      
+      
+      
+        <link rel="canonical" href="https://asad.github.io/SMSD/guide/AI_TOOLS/">
+      
+      
+        <link rel="prev" href="../MACHINE_LEARNING/">
+      
+      
+        <link rel="next" href="../COMMAND_LINE/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/img/icon.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+  
+      
+        <title>Chemistry tools for AI assistants - SMSD Pro</title>
+      
+    
+
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/smsd.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#chemistry-tools-for-ai-assistants" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="SMSD Pro" class="md-header__button md-logo" aria-label="SMSD Pro" data-md-component="logo">
+      
+  <img src="../../assets/img/icon.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SMSD Pro
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Chemistry tools for AI assistants
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/asad/SMSD" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    asad/SMSD
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+  User guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../notebooks/substructure_search/" class="md-tabs__link">
+          
+  
+  
+  Notebooks
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../HOWTO-INSTALL/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="SMSD Pro" class="md-nav__button md-logo" aria-label="SMSD Pro" data-md-component="logo">
+      
+  <img src="../../assets/img/icon.svg" alt="logo">
+
+    </a>
+    SMSD Pro
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/asad/SMSD" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    asad/SMSD
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GETTING_STARTED/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SUBSTRUCTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Substructure search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SMARTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SMARTS queries
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MCS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maximum common substructure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../FINGERPRINTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fingerprints and similarity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SCREENING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Screening a library
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PACKED_INDEX/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packed fingerprint index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CLUSTERING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Clustering and diversity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CPU_GPU/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CPU and GPU screening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MACHINE_LEARNING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Machine learning and data frames
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chemistry tools for AI assistants
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chemistry tools for AI assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#choose-a-route" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choose a route
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The tools
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#start-the-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Start the server
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connect-an-mcp-client" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connect an MCP client
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#call-the-tools-from-python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Call the tools from Python
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#read-a-tool-result" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Read a tool result
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fingerprints-similarity-and-screening" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fingerprints, similarity and screening
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#standardisation-and-depiction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Standardisation and depiction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tool-definitions-for-a-model-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tool definitions for a model API
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-tool-loop-with-fixed-replies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A tool loop with fixed replies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limits-and-safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limits and safety
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#search-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Search tools
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fingerprint-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fingerprint tools
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#standardise_molecule" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        standardise_molecule
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../COMMAND_LINE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command line and containers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../OTHER_LANGUAGES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    C++ and Java
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notebooks
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Notebooks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/substructure_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Substructure and SMARTS search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/mcs_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Maximum common substructure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/fingerprints_similarity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fingerprints and similarity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/library_screening/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Screening a library end to end
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/cpu_gpu_screening/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CPU and GPU screening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notebooks/feature_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCS to a small library search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../HOWTO-INSTALL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PYTHON/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PYTHON_ADAPTERS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python adapters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PACKED_CORPORA/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packed corpora
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../SMARTS_EXPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SMARTS export
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CPP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    C++
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../JAVA/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Java
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MCP_SERVER/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AI_ASSISTANTS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI assistants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../EXAMPLES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_REFERENCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ALGORITHMS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Algorithms
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE_NOTES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release notes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#choose-a-route" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choose a route
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The tools
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#start-the-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Start the server
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connect-an-mcp-client" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connect an MCP client
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#call-the-tools-from-python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Call the tools from Python
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#read-a-tool-result" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Read a tool result
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fingerprints-similarity-and-screening" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fingerprints, similarity and screening
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#standardisation-and-depiction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Standardisation and depiction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tool-definitions-for-a-model-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tool definitions for a model API
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#a-tool-loop-with-fixed-replies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A tool loop with fixed replies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limits-and-safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limits and safety
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#search-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Search tools
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fingerprint-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fingerprint tools
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#standardise_molecule" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        standardise_molecule
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="chemistry-tools-for-ai-assistants">Chemistry tools for AI assistants<a class="headerlink" href="#chemistry-tools-for-ai-assistants" title="Permanent link">&para;</a></h1>
+<p>SMSD Pro 8.1.0 offers eight molecular tools that an AI assistant can call:
+maximum common substructure (MCS), substructure and SMARTS matching,
+fingerprints, similarity, small-list screening, standardisation and MCS
+depiction. The tools run on your own machine. They are served to an assistant
+by a local Model Context Protocol (MCP) server, <code>smsd-mcp</code>, and the same tools
+are available from Python as a registry with JSON schemas, so that your own
+code can offer them to a model or call them with no model at all. This chapter
+shows which route suits which task, what each tool takes and returns, how to
+start the server and connect a client, how to read a tool result, and the
+limits that keep each call bounded.</p>
+<h2 id="choose-a-route">Choose a route<a class="headerlink" href="#choose-a-route" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Use</th>
+<th>Needs</th>
+<th>Model involved</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Give a desktop or terminal assistant the tools</td>
+<td><code>smsd-mcp</code>, started by the assistant's MCP client</td>
+<td>The <code>mcp</code> extra</td>
+<td>Yours, through the client</td>
+</tr>
+<tr>
+<td>Offer the tools to a model API from your own program</td>
+<td><code>get_tool_definitions(provider)</code> and <code>call_tool(name, arguments)</code></td>
+<td>The core package</td>
+<td>Yours, through your code</td>
+</tr>
+<tr>
+<td>Run the tools from a script, a test or a workflow</td>
+<td><code>call_tool(name, arguments)</code></td>
+<td>The core package</td>
+<td>None</td>
+</tr>
+<tr>
+<td>Search a library, enumerate every match or set detailed chemistry</td>
+<td>The Python API: <a href="../SUBSTRUCTURE/">Substructure search</a>, <a href="../MCS/">MCS</a>, <a href="../SCREENING/">Screening</a></td>
+<td>The core package</td>
+<td>None</td>
+</tr>
+</tbody>
+</table>
+<p>The tools are deliberately narrow: each call takes SMILES or SMARTS text,
+runs one bounded operation and returns a JSON-compatible dictionary. They suit
+questions about a few molecules at a time. For a library of thousands of
+molecules, a saved index or a GPU, use the Python API directly; the tools
+expose a subset of its options and cap every input.</p>
+<h2 id="the-tools">The tools<a class="headerlink" href="#the-tools" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Required inputs</th>
+<th>Main optional inputs</th>
+<th>Returns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>find_mcs</code></td>
+<td><code>query_smiles</code>, <code>target_smiles</code></td>
+<td><code>objective</code> (<code>mcis</code> or <code>mces</code>), <code>connected</code>, <code>timeout_ms</code>, <code>node_limit</code>, chemistry switches</td>
+<td>One common graph as <code>matches</code>, with <code>status</code>, <code>optimal</code>, <code>complete</code>, <code>score</code> and the budget used</td>
+</tr>
+<tr>
+<td><code>find_substructure</code></td>
+<td><code>query</code>, <code>target_smiles</code></td>
+<td><code>query_format</code> (<code>smarts</code> or <code>smiles</code>), <code>induced</code>, <code>timeout_ms</code>, <code>node_limit</code>, chemistry switches</td>
+<td>One embedding of the query in the target, with the same proof fields</td>
+</tr>
+<tr>
+<td><code>search_smarts</code></td>
+<td><code>query_smarts</code>, <code>target_smiles</code></td>
+<td><code>max_matches</code> (1 to 32), <code>timeout_ms</code>, <code>node_limit</code>, chemistry switches</td>
+<td>Every embedding up to <code>max_matches</code>, and <code>truncated</code> when the list stopped at the cap</td>
+</tr>
+<tr>
+<td><code>molecular_fingerprint</code></td>
+<td><code>smiles</code></td>
+<td><code>kind</code>, <code>fp_size</code>, <code>radius</code>, <code>path_length</code>, <code>counts</code></td>
+<td><code>values</code>: set-bit positions, or position and count pairs</td>
+</tr>
+<tr>
+<td><code>molecular_similarity</code></td>
+<td><code>query_smiles</code>, <code>target_smiles</code></td>
+<td><code>metric</code> (<code>tanimoto</code>, <code>dice</code> or <code>cosine</code>) and the fingerprint inputs</td>
+<td><code>score</code>, the coefficient of the two fingerprints</td>
+</tr>
+<tr>
+<td><code>screen_molecules</code></td>
+<td><code>query_smiles</code>, <code>targets_smiles</code> (a list)</td>
+<td><code>threshold</code>, <code>max_hits</code>, <code>offset</code> and the fingerprint inputs</td>
+<td>One page of <code>hits</code>, each a <code>target_index</code> and Tanimoto <code>score</code>, with <code>total_hits</code> and <code>next_offset</code></td>
+</tr>
+<tr>
+<td><code>standardise_molecule</code></td>
+<td><code>smiles</code></td>
+<td><code>remove_atom_maps</code>; <code>cleanup</code>, <code>largest_fragment</code>, <code>neutralise</code> and <code>canonical_tautomer</code>, which need RDKit</td>
+<td>Canonical <code>smiles</code>, the <code>backend</code> used and the <code>operations</code> applied</td>
+</tr>
+<tr>
+<td><code>depict_mcs</code></td>
+<td><code>query_smiles</code>, <code>target_smiles</code></td>
+<td>The <code>find_mcs</code> inputs, <code>width</code>, <code>height</code></td>
+<td>The <code>find_mcs</code> result plus <code>svg</code>, a drawing of the pair with the common atoms highlighted</td>
+</tr>
+</tbody>
+</table>
+<p>The chemistry switches are <code>match_stereo</code>, <code>complete_rings_only</code> and
+<code>ring_matches_ring_only</code>, all off by default. Every other chemistry option
+keeps its default, described in
+<a href="../GETTING_STARTED/#default-chemistry">Getting started</a>, and each search
+result lists the options in force under <code>chemistry</code>. The fingerprint <code>kind</code> is
+one of <code>ecfp</code>, <code>fcfp</code>, <code>circular</code>, <code>path</code>, <code>torsion</code> or <code>mcs</code>; the
+<a href="#options">Options</a> section gives every default.</p>
+<h2 id="start-the-server">Start the server<a class="headerlink" href="#start-the-server" title="Permanent link">&para;</a></h2>
+<p>Install SMSD Pro with the <code>mcp</code> extra, which adds the MCP Python SDK. The
+server and the tool definitions need SMSD 8.1.0 or later and Python 3.12 or
+later:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"smsd[mcp]==8.1.0"</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>smsd-mcp
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># Equivalent: python -m smsd.mcp_server</span>
+</code></pre></div>
+<p><code>smsd-mcp</code> takes no arguments. It talks to its client over standard input and
+output, writes diagnostics to standard error and opens no network port, so it
+is normally started by the client rather than from a shell; run by hand, it
+waits silently for protocol messages. Without the <code>mcp</code> extra it stops with
+<code>ImportError: The MCP server requires the official SDK; install smsd[mcp]</code>.</p>
+<p>To check an installation without an assistant, run
+<a href="../../python/examples/mcp_stdio_client.py"><code>mcp_stdio_client.py</code></a> from the
+examples. It starts the server with the same interpreter, lists the eight
+tools and runs one <code>find_mcs</code> call through the protocol.</p>
+<h2 id="connect-an-mcp-client">Connect an MCP client<a class="headerlink" href="#connect-an-mcp-client" title="Permanent link">&para;</a></h2>
+<p>An MCP client needs two things: the command that starts the server and its
+arguments, which here are none. Many clients take a JSON entry of this form:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">"mcpServers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">"smsd"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">      </span><span class="nt">"command"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/absolute/path/to/smsd-mcp"</span><span class="p">,</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">      </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="p">}</span>
+</code></pre></div>
+<p>Give the absolute path that <code>which smsd-mcp</code> (on Windows,
+<code>where.exe smsd-mcp</code>) prints, because a desktop client may not search your
+shell's PATH; the path also fixes which Python environment, and so which SMSD
+version, the server uses. The server needs no API key and no environment
+settings. Once connected, the client lists the eight tools with their
+schemas, and the server also sends the client a short note on reading
+results: inspect <code>status</code>, <code>optimal</code> and <code>complete</code>, and do not read an
+unfinished search as a maximum or as proof of absence.</p>
+<p>The configuration file, its location and the command that adds a server
+differ from client to client.
+<a href="../../AI_ASSISTANTS/#connect-the-mcp-server">Connecting AI assistants</a> gives
+the exact steps for several desktop and terminal assistants and for an open
+model run on your own machine. Every result carries <code>engine_version</code>; use it
+to confirm the SMSD version, because some clients show the SDK's version for
+the server instead.</p>
+<h2 id="call-the-tools-from-python">Call the tools from Python<a class="headerlink" href="#call-the-tools-from-python" title="Permanent link">&para;</a></h2>
+<p><code>smsd.tool_definitions.call_tool(name, arguments)</code> runs a tool locally, with
+the arguments as a dictionary of JSON values, and returns the same dictionary
+that the server sends to a client. It needs neither the <code>mcp</code> extra nor a
+model. The program below runs an MCS, two single substructure searches and a
+SMARTS enumeration:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smsd.tool_definitions</span><span class="w"> </span><span class="kn">import</span> <span class="n">call_tool</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># MCS of N-methylacetamide and propanamide: atom-maximising, connected.</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">mcs</span> <span class="o">=</span> <span class="n">call_tool</span><span class="p">(</span><span class="s2">"find_mcs"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"query_smiles"</span><span class="p">:</span> <span class="s2">"CC(=O)NC"</span><span class="p">,</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>                             <span class="s2">"target_smiles"</span><span class="p">:</span> <span class="s2">"CCC(=O)N"</span><span class="p">})</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"find_mcs:"</span><span class="p">,</span> <span class="n">mcs</span><span class="p">[</span><span class="s2">"found"</span><span class="p">],</span> <span class="n">mcs</span><span class="p">[</span><span class="s2">"status"</span><span class="p">],</span> <span class="n">mcs</span><span class="p">[</span><span class="s2">"optimal"</span><span class="p">],</span> <span class="n">mcs</span><span class="p">[</span><span class="s2">"complete"</span><span class="p">])</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"  atoms:"</span><span class="p">,</span> <span class="n">mcs</span><span class="p">[</span><span class="s2">"matches"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">"atom_count"</span><span class="p">],</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>      <span class="s2">"mapping:"</span><span class="p">,</span> <span class="n">mcs</span><span class="p">[</span><span class="s2">"matches"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">"atom_mapping"</span><span class="p">])</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="c1"># One embedding of a SMARTS pattern: a hydroxyl on an aromatic carbon.</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="n">hit</span> <span class="o">=</span> <span class="n">call_tool</span><span class="p">(</span><span class="s2">"find_substructure"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"query"</span><span class="p">:</span> <span class="s2">"[OX2H]c"</span><span class="p">,</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>                                      <span class="s2">"target_smiles"</span><span class="p">:</span> <span class="s2">"CC(C)(C)c1ccc(O)cc1"</span><span class="p">})</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"find_substructure:"</span><span class="p">,</span> <span class="n">hit</span><span class="p">[</span><span class="s2">"found"</span><span class="p">],</span> <span class="n">hit</span><span class="p">[</span><span class="s2">"status"</span><span class="p">],</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>      <span class="n">hit</span><span class="p">[</span><span class="s2">"matches"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">"atom_mapping"</span><span class="p">])</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="c1"># The same call with a molecule as the query.</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="n">phenol</span> <span class="o">=</span> <span class="n">call_tool</span><span class="p">(</span><span class="s2">"find_substructure"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"query"</span><span class="p">:</span> <span class="s2">"Oc1ccccc1"</span><span class="p">,</span>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>                                         <span class="s2">"target_smiles"</span><span class="p">:</span> <span class="s2">"CC(C)(C)c1ccc(O)cc1"</span><span class="p">,</span>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>                                         <span class="s2">"query_format"</span><span class="p">:</span> <span class="s2">"smiles"</span><span class="p">})</span>
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"molecule query:"</span><span class="p">,</span> <span class="n">phenol</span><span class="p">[</span><span class="s2">"found"</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="n">phenol</span><span class="p">[</span><span class="s2">"matches"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">"atom_mapping"</span><span class="p">]))</span>
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>
+<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="c1"># Every embedding, up to max_matches: the three hydroxyls of glycerol.</span>
+<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="n">every</span> <span class="o">=</span> <span class="n">call_tool</span><span class="p">(</span><span class="s2">"search_smarts"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"query_smarts"</span><span class="p">:</span> <span class="s2">"[OX2H]"</span><span class="p">,</span>
+<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a>                                    <span class="s2">"target_smiles"</span><span class="p">:</span> <span class="s2">"OCC(O)CO"</span><span class="p">})</span>
+<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"search_smarts:"</span><span class="p">,</span> <span class="p">[</span><span class="n">m</span><span class="p">[</span><span class="s2">"atom_mapping"</span><span class="p">]</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">every</span><span class="p">[</span><span class="s2">"matches"</span><span class="p">]],</span>
+<a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a>      <span class="s2">"complete:"</span><span class="p">,</span> <span class="n">every</span><span class="p">[</span><span class="s2">"complete"</span><span class="p">],</span> <span class="s2">"truncated:"</span><span class="p">,</span> <span class="n">every</span><span class="p">[</span><span class="s2">"truncated"</span><span class="p">])</span>
+<a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a>
+<a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="k">assert</span> <span class="n">mcs</span><span class="p">[</span><span class="s2">"optimal"</span><span class="p">]</span> <span class="ow">and</span> <span class="n">mcs</span><span class="p">[</span><span class="s2">"matches"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">"atom_mapping"</span><span class="p">]</span> <span class="o">==</span> <span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]]</span>
+<a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="k">assert</span> <span class="n">hit</span><span class="p">[</span><span class="s2">"matches"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">"atom_mapping"</span><span class="p">]</span> <span class="o">==</span> <span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">8</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">7</span><span class="p">]]</span>
+<a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a><span class="k">assert</span> <span class="n">phenol</span><span class="p">[</span><span class="s2">"found"</span><span class="p">]</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">phenol</span><span class="p">[</span><span class="s2">"matches"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">"atom_mapping"</span><span class="p">])</span> <span class="o">==</span> <span class="mi">7</span>
+<a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">every</span><span class="p">[</span><span class="s2">"matches"</span><span class="p">])</span> <span class="o">==</span> <span class="mi">3</span> <span class="ow">and</span> <span class="n">every</span><span class="p">[</span><span class="s2">"complete"</span><span class="p">]</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">every</span><span class="p">[</span><span class="s2">"truncated"</span><span class="p">]</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>find_mcs: True COMPLETED True True
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>  atoms: 4 mapping: [[0, 1], [1, 2], [2, 3], [3, 4]]
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>find_substructure: True COMPLETED [[0, 8], [1, 7]]
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>molecule query: True 7
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>search_smarts: [[[0, 0]], [[0, 3]], [[0, 5]]] complete: True truncated: False
+</code></pre></div>
+<p>Mappings are lists of <code>[query_atom, target_atom]</code> pairs, sorted by query atom,
+with zero-based atom numbers in the order of the input SMILES, as described in
+<a href="../GETTING_STARTED/#atom-numbering">Atom numbering</a>. <code>find_substructure</code>
+expects SMARTS unless <code>query_format</code> is <code>"smiles"</code>. Each entry of <code>matches</code>
+also holds <code>bond_mapping</code>, <code>fragments</code>, <code>atom_count</code> and <code>bond_count</code>.</p>
+<p>The tool functions can also be imported from <code>smsd.mcp_server</code> and called with
+keyword arguments; importing that module neither loads the SDK nor starts a
+server. Use <code>call_tool</code> for arguments that come from a model or a file: it
+checks the whole argument object against the schema first, as the server does.</p>
+<h2 id="read-a-tool-result">Read a tool result<a class="headerlink" href="#read-a-tool-result" title="Permanent link">&para;</a></h2>
+<p>A search result keeps the native fields of a <code>SearchResult</code>: <code>found</code>,
+<code>status</code>, <code>optimal</code>, <code>complete</code>, <code>score</code>, <code>nodes_visited</code> and <code>elapsed_ms</code>,
+with the same meanings as in
+<a href="../GETTING_STARTED/#reading-a-result">Reading a result</a>. It adds:</p>
+<ul>
+<li><code>engine_version</code>, the SMSD version that ran the call;</li>
+<li><code>proof</code>, which repeats <code>optimal</code> and <code>complete</code> with the scope
+  <code>native_search</code>; it describes the search, and is not an independent
+  chemical validation;</li>
+<li><code>budget</code>, the <code>timeout_ms</code> and <code>node_limit</code> in force, and <code>chemistry</code>, the
+  chemistry options;</li>
+<li><code>limits</code>, the fixed input and output limits of the server;</li>
+<li><code>timings</code>, with <code>wall_elapsed_ms</code> from tool entry to just before the result
+  is serialised, and <code>native_search_ms</code>.</li>
+</ul>
+<p>The rule for an assistant is the rule for any search: a returned match is
+always a valid match, but <code>found: false</code> proves absence only when <code>status</code> is
+<code>COMPLETED</code> and <code>optimal</code> is true, and an MCS is proved maximum only when
+<code>optimal</code> is true. The program below shows a search stopped by its time limit,
+an enumeration stopped by its result cap, and the messages with which
+<code>call_tool</code> refuses bad arguments:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smsd.tool_definitions</span><span class="w"> </span><span class="kn">import</span> <span class="n">call_tool</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">anthracene</span> <span class="o">=</span> <span class="s2">"c1ccc2cc3ccccc3cc2c1"</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c1"># A time limit of 0 stops the search at once: found=False proves nothing.</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">stopped</span> <span class="o">=</span> <span class="n">call_tool</span><span class="p">(</span><span class="s2">"find_substructure"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"query"</span><span class="p">:</span> <span class="s2">"c1ccccc1"</span><span class="p">,</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>                                          <span class="s2">"target_smiles"</span><span class="p">:</span> <span class="n">anthracene</span><span class="p">,</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>                                          <span class="s2">"timeout_ms"</span><span class="p">:</span> <span class="mi">0</span><span class="p">})</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"stopped:"</span><span class="p">,</span> <span class="n">stopped</span><span class="p">[</span><span class="s2">"found"</span><span class="p">],</span> <span class="n">stopped</span><span class="p">[</span><span class="s2">"status"</span><span class="p">],</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>      <span class="n">stopped</span><span class="p">[</span><span class="s2">"optimal"</span><span class="p">],</span> <span class="n">stopped</span><span class="p">[</span><span class="s2">"complete"</span><span class="p">])</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="c1"># A result cap: the matches returned are real, but the list is not the whole.</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="n">capped</span> <span class="o">=</span> <span class="n">call_tool</span><span class="p">(</span><span class="s2">"search_smarts"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"query_smarts"</span><span class="p">:</span> <span class="s2">"[OX2H]"</span><span class="p">,</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>                                     <span class="s2">"target_smiles"</span><span class="p">:</span> <span class="s2">"OCC(O)CO"</span><span class="p">,</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>                                     <span class="s2">"max_matches"</span><span class="p">:</span> <span class="mi">2</span><span class="p">})</span>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"capped:"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">capped</span><span class="p">[</span><span class="s2">"matches"</span><span class="p">]),</span> <span class="n">capped</span><span class="p">[</span><span class="s2">"status"</span><span class="p">],</span>
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>      <span class="s2">"complete:"</span><span class="p">,</span> <span class="n">capped</span><span class="p">[</span><span class="s2">"complete"</span><span class="p">],</span> <span class="s2">"truncated:"</span><span class="p">,</span> <span class="n">capped</span><span class="p">[</span><span class="s2">"truncated"</span><span class="p">])</span>
+<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>
+<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>
+<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="k">def</span><span class="w"> </span><span class="nf">proves_absence</span><span class="p">(</span><span class="n">result</span><span class="p">):</span>
+<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>    <span class="k">return</span> <span class="p">(</span><span class="ow">not</span> <span class="n">result</span><span class="p">[</span><span class="s2">"found"</span><span class="p">]</span> <span class="ow">and</span> <span class="n">result</span><span class="p">[</span><span class="s2">"status"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"COMPLETED"</span>
+<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>            <span class="ow">and</span> <span class="n">result</span><span class="p">[</span><span class="s2">"optimal"</span><span class="p">])</span>
+<a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>
+<a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>
+<a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a><span class="n">absent</span> <span class="o">=</span> <span class="n">call_tool</span><span class="p">(</span><span class="s2">"find_substructure"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"query"</span><span class="p">:</span> <span class="s2">"[N]"</span><span class="p">,</span> <span class="s2">"target_smiles"</span><span class="p">:</span> <span class="n">anthracene</span><span class="p">})</span>
+<a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"absence proved:"</span><span class="p">,</span> <span class="n">proves_absence</span><span class="p">(</span><span class="n">absent</span><span class="p">),</span> <span class="s2">"| after a stop:"</span><span class="p">,</span>
+<a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a>      <span class="n">proves_absence</span><span class="p">(</span><span class="n">stopped</span><span class="p">))</span>
+<a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a>
+<a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a><span class="c1"># Bad arguments are refused before any molecular work, with a short message.</span>
+<a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a><span class="k">for</span> <span class="n">arguments</span> <span class="ow">in</span> <span class="p">({</span><span class="s2">"query_smiles"</span><span class="p">:</span> <span class="s2">"CCO"</span><span class="p">},</span>
+<a id="__codelineno-4-31" name="__codelineno-4-31" href="#__codelineno-4-31"></a>                  <span class="p">{</span><span class="s2">"query_smiles"</span><span class="p">:</span> <span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"target_smiles"</span><span class="p">:</span> <span class="s2">"CCN"</span><span class="p">,</span> <span class="s2">"timeout_ms"</span><span class="p">:</span> <span class="mi">60000</span><span class="p">},</span>
+<a id="__codelineno-4-32" name="__codelineno-4-32" href="#__codelineno-4-32"></a>                  <span class="p">{</span><span class="s2">"query_smiles"</span><span class="p">:</span> <span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"target_smiles"</span><span class="p">:</span> <span class="s2">"CCN"</span><span class="p">,</span> <span class="s2">"timeout_ms"</span><span class="p">:</span> <span class="s2">"500"</span><span class="p">},</span>
+<a id="__codelineno-4-33" name="__codelineno-4-33" href="#__codelineno-4-33"></a>                  <span class="p">{</span><span class="s2">"query_smiles"</span><span class="p">:</span> <span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"target_smiles"</span><span class="p">:</span> <span class="s2">"CCN"</span><span class="p">,</span> <span class="s2">"path"</span><span class="p">:</span> <span class="s2">"a.sdf"</span><span class="p">},</span>
+<a id="__codelineno-4-34" name="__codelineno-4-34" href="#__codelineno-4-34"></a>                  <span class="p">{</span><span class="s2">"query_smiles"</span><span class="p">:</span> <span class="s2">"C1CC"</span><span class="p">,</span> <span class="s2">"target_smiles"</span><span class="p">:</span> <span class="s2">"CCN"</span><span class="p">}):</span>
+<a id="__codelineno-4-35" name="__codelineno-4-35" href="#__codelineno-4-35"></a>    <span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-4-36" name="__codelineno-4-36" href="#__codelineno-4-36"></a>        <span class="n">call_tool</span><span class="p">(</span><span class="s2">"find_mcs"</span><span class="p">,</span> <span class="n">arguments</span><span class="p">)</span>
+<a id="__codelineno-4-37" name="__codelineno-4-37" href="#__codelineno-4-37"></a>    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+<a id="__codelineno-4-38" name="__codelineno-4-38" href="#__codelineno-4-38"></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">"refused:"</span><span class="p">,</span> <span class="n">error</span><span class="p">)</span>
+<a id="__codelineno-4-39" name="__codelineno-4-39" href="#__codelineno-4-39"></a>
+<a id="__codelineno-4-40" name="__codelineno-4-40" href="#__codelineno-4-40"></a><span class="k">assert</span> <span class="n">stopped</span><span class="p">[</span><span class="s2">"status"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"TIMED_OUT"</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">stopped</span><span class="p">[</span><span class="s2">"complete"</span><span class="p">]</span>
+<a id="__codelineno-4-41" name="__codelineno-4-41" href="#__codelineno-4-41"></a><span class="k">assert</span> <span class="n">capped</span><span class="p">[</span><span class="s2">"status"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"LIMIT_REACHED"</span> <span class="ow">and</span> <span class="n">capped</span><span class="p">[</span><span class="s2">"truncated"</span><span class="p">]</span>
+<a id="__codelineno-4-42" name="__codelineno-4-42" href="#__codelineno-4-42"></a><span class="k">assert</span> <span class="n">proves_absence</span><span class="p">(</span><span class="n">absent</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">proves_absence</span><span class="p">(</span><span class="n">stopped</span><span class="p">)</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>stopped: False TIMED_OUT False False
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>capped: 2 LIMIT_REACHED complete: False truncated: True
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>absence proved: True | after a stop: False
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>refused: Missing required tool argument
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>refused: timeout_ms is outside its supported range
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>refused: timeout_ms must have JSON type integer
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>refused: Unknown tool argument
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>refused: Unclosed ring(s): 1
+</code></pre></div>
+<p><code>search_smarts</code> reports a capped list as <code>LIMIT_REACHED</code> with
+<code>complete: false</code> and <code>truncated: true</code>; the matches it does return are valid,
+and <code>optimal</code> stays true because a match was found. Arguments are refused
+before any molecular work: unknown tools, unknown or missing arguments, JSON
+type changes such as a string for an integer, and values out of range each
+raise <code>ValueError</code> with a short message. A SMILES or SMARTS parse error also
+raises <code>ValueError</code>. Return that message to the model as the tool's answer, so
+that it can correct the call.</p>
+<p>Fingerprint, similarity, screening and standardisation results are not
+searches. They report <code>status: "COMPLETED"</code>, except a canonical tautomer
+chosen from a stopped enumeration, described below, and a <code>proof</code> whose scope
+names the operation and whose <code>search_proof_applicable</code> is false. A similarity
+score says how alike two fingerprints are; it is not an MCS size or a measure
+of biological activity.</p>
+<h2 id="fingerprints-similarity-and-screening">Fingerprints, similarity and screening<a class="headerlink" href="#fingerprints-similarity-and-screening" title="Permanent link">&para;</a></h2>
+<p><code>molecular_fingerprint</code> returns the fingerprint as positions, which keeps the
+result small and readable. <code>molecular_similarity</code> compares two molecules with
+one coefficient, and <code>screen_molecules</code> scores a short list against one query
+and returns the hits at or above <code>threshold</code> one page at a time:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smsd.tool_definitions</span><span class="w"> </span><span class="kn">import</span> <span class="n">call_tool</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1"># ECFP4 set bits in a 64-position fingerprint, then position/count pairs.</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">bits</span> <span class="o">=</span> <span class="n">call_tool</span><span class="p">(</span><span class="s2">"molecular_fingerprint"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"smiles"</span><span class="p">:</span> <span class="s2">"OCCO"</span><span class="p">,</span> <span class="s2">"fp_size"</span><span class="p">:</span> <span class="mi">64</span><span class="p">})</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="n">counts</span> <span class="o">=</span> <span class="n">call_tool</span><span class="p">(</span><span class="s2">"molecular_fingerprint"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"smiles"</span><span class="p">:</span> <span class="s2">"OCCO"</span><span class="p">,</span> <span class="s2">"fp_size"</span><span class="p">:</span> <span class="mi">64</span><span class="p">,</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>                                             <span class="s2">"counts"</span><span class="p">:</span> <span class="kc">True</span><span class="p">})</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"bits:"</span><span class="p">,</span> <span class="n">bits</span><span class="p">[</span><span class="s2">"values"</span><span class="p">])</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"counts:"</span><span class="p">,</span> <span class="n">counts</span><span class="p">[</span><span class="s2">"values"</span><span class="p">])</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"proof:"</span><span class="p">,</span> <span class="n">bits</span><span class="p">[</span><span class="s2">"proof"</span><span class="p">])</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="c1"># Phenol against 2-methylphenol with each coefficient.</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="n">pair</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"query_smiles"</span><span class="p">:</span> <span class="s2">"Oc1ccccc1"</span><span class="p">,</span> <span class="s2">"target_smiles"</span><span class="p">:</span> <span class="s2">"Cc1ccccc1O"</span><span class="p">}</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="k">for</span> <span class="n">metric</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"tanimoto"</span><span class="p">,</span> <span class="s2">"dice"</span><span class="p">,</span> <span class="s2">"cosine"</span><span class="p">):</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>    <span class="n">score</span> <span class="o">=</span> <span class="n">call_tool</span><span class="p">(</span><span class="s2">"molecular_similarity"</span><span class="p">,</span> <span class="p">{</span><span class="o">**</span><span class="n">pair</span><span class="p">,</span> <span class="s2">"metric"</span><span class="p">:</span> <span class="n">metric</span><span class="p">})[</span><span class="s2">"score"</span><span class="p">]</span>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">metric</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">score</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="c1"># A small list, two hits per page; next_offset leads to the next page.</span>
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="n">library</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"Oc1ccccc1"</span><span class="p">,</span> <span class="s2">"Cc1ccccc1O"</span><span class="p">,</span> <span class="s2">"Nc1ccccc1"</span><span class="p">,</span> <span class="s2">"CCO"</span><span class="p">,</span> <span class="s2">"Oc1ccccc1"</span><span class="p">,</span> <span class="s2">"c1ccccc1"</span><span class="p">]</span>
+<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="n">request</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"query_smiles"</span><span class="p">:</span> <span class="s2">"Oc1ccccc1"</span><span class="p">,</span> <span class="s2">"targets_smiles"</span><span class="p">:</span> <span class="n">library</span><span class="p">,</span>
+<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>           <span class="s2">"threshold"</span><span class="p">:</span> <span class="mf">0.3</span><span class="p">,</span> <span class="s2">"max_hits"</span><span class="p">:</span> <span class="mi">2</span><span class="p">}</span>
+<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a><span class="n">offset</span><span class="p">,</span> <span class="n">pages</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="p">[]</span>
+<a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a><span class="k">while</span> <span class="n">offset</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a>    <span class="n">page</span> <span class="o">=</span> <span class="n">call_tool</span><span class="p">(</span><span class="s2">"screen_molecules"</span><span class="p">,</span> <span class="p">{</span><span class="o">**</span><span class="n">request</span><span class="p">,</span> <span class="s2">"offset"</span><span class="p">:</span> <span class="n">offset</span><span class="p">})</span>
+<a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a>    <span class="n">pages</span><span class="o">.</span><span class="n">append</span><span class="p">([(</span><span class="n">hit</span><span class="p">[</span><span class="s2">"target_index"</span><span class="p">],</span> <span class="nb">round</span><span class="p">(</span><span class="n">hit</span><span class="p">[</span><span class="s2">"score"</span><span class="p">],</span> <span class="mi">3</span><span class="p">))</span> <span class="k">for</span> <span class="n">hit</span> <span class="ow">in</span> <span class="n">page</span><span class="p">[</span><span class="s2">"hits"</span><span class="p">]])</span>
+<a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a>    <span class="n">offset</span> <span class="o">=</span> <span class="n">page</span><span class="p">[</span><span class="s2">"next_offset"</span><span class="p">]</span>
+<a id="__codelineno-6-26" name="__codelineno-6-26" href="#__codelineno-6-26"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"total hits:"</span><span class="p">,</span> <span class="n">page</span><span class="p">[</span><span class="s2">"total_hits"</span><span class="p">],</span> <span class="s2">"of"</span><span class="p">,</span> <span class="n">page</span><span class="p">[</span><span class="s2">"total_targets"</span><span class="p">])</span>
+<a id="__codelineno-6-27" name="__codelineno-6-27" href="#__codelineno-6-27"></a><span class="k">for</span> <span class="n">number</span><span class="p">,</span> <span class="n">hits</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">pages</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+<a id="__codelineno-6-28" name="__codelineno-6-28" href="#__codelineno-6-28"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"page </span><span class="si">{</span><span class="n">number</span><span class="si">}</span><span class="s2">:"</span><span class="p">,</span> <span class="n">hits</span><span class="p">)</span>
+<a id="__codelineno-6-29" name="__codelineno-6-29" href="#__codelineno-6-29"></a>
+<a id="__codelineno-6-30" name="__codelineno-6-30" href="#__codelineno-6-30"></a><span class="k">assert</span> <span class="n">bits</span><span class="p">[</span><span class="s2">"values"</span><span class="p">]</span> <span class="o">==</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">27</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">62</span><span class="p">]</span>
+<a id="__codelineno-6-31" name="__codelineno-6-31" href="#__codelineno-6-31"></a><span class="k">assert</span> <span class="n">counts</span><span class="p">[</span><span class="s2">"values"</span><span class="p">]</span> <span class="o">==</span> <span class="p">[[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">27</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">40</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">62</span><span class="p">,</span> <span class="mi">2</span><span class="p">]]</span>
+<a id="__codelineno-6-32" name="__codelineno-6-32" href="#__codelineno-6-32"></a><span class="k">assert</span> <span class="n">bits</span><span class="p">[</span><span class="s2">"proof"</span><span class="p">][</span><span class="s2">"search_proof_applicable"</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">False</span>
+<a id="__codelineno-6-33" name="__codelineno-6-33" href="#__codelineno-6-33"></a><span class="k">assert</span> <span class="n">pages</span> <span class="o">==</span> <span class="p">[[(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)],</span> <span class="p">[(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.346</span><span class="p">)]]</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>bits: [4, 5, 6, 27, 40, 62]
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>counts: [[4, 2], [5, 2], [6, 2], [27, 2], [40, 2], [62, 2]]
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>proof: {'scope': 'fingerprint_generation', 'optimal': None, 'search_proof_applicable': False}
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>tanimoto: 0.346
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>dice: 0.514
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>cosine: 0.525
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>total hits: 3 of 6
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>page 1: [(0, 1.0), (4, 1.0)]
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>page 2: [(1, 0.346)]
+</code></pre></div>
+<p><code>screen_molecules</code> scores every target, keeps those whose Tanimoto score is at
+least <code>threshold</code>, sorts them by descending score and then by input index, and
+returns at most <code>max_hits</code> from <code>offset</code>. <code>next_offset</code> is the offset of the
+next page, or <code>None</code> (<code>null</code> in JSON) on the last page, and <code>truncated</code> is
+true when the page does not hold the whole hit list. The screen always uses
+Tanimoto; <code>metric</code> belongs to <code>molecular_similarity</code> only. It runs on the CPU
+and is not an exact structure search. For a larger library, use the screens
+in <a href="../SCREENING/">Screening a library</a>, which are not capped in this way.</p>
+<h2 id="standardisation-and-depiction">Standardisation and depiction<a class="headerlink" href="#standardisation-and-depiction" title="Permanent link">&para;</a></h2>
+<p><code>standardise_molecule</code> by default parses the molecule and writes canonical
+SMILES. It changes the representation only: charges, fragments, isotopes,
+stereochemistry and atom maps are kept, and <code>remove_atom_maps</code> is a separate
+switch. <code>depict_mcs</code> runs the same search as <code>find_mcs</code> and adds an SVG
+drawing of the pair:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smsd.tool_definitions</span><span class="w"> </span><span class="kn">import</span> <span class="n">call_tool</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="c1"># The default changes the representation only: charges and fragments stay.</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="n">salt</span> <span class="o">=</span> <span class="n">call_tool</span><span class="p">(</span><span class="s2">"standardise_molecule"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"smiles"</span><span class="p">:</span> <span class="s2">"[Na+].[O-]C(=O)c1ccccc1"</span><span class="p">})</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"smiles:"</span><span class="p">,</span> <span class="n">salt</span><span class="p">[</span><span class="s2">"smiles"</span><span class="p">],</span> <span class="s2">"| backend:"</span><span class="p">,</span> <span class="n">salt</span><span class="p">[</span><span class="s2">"backend"</span><span class="p">])</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"operations:"</span><span class="p">,</span> <span class="n">salt</span><span class="p">[</span><span class="s2">"operations"</span><span class="p">],</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>      <span class="s2">"| chemical transformations:"</span><span class="p">,</span> <span class="n">salt</span><span class="p">[</span><span class="s2">"chemical_transformations"</span><span class="p">])</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="n">mapped</span> <span class="o">=</span> <span class="n">call_tool</span><span class="p">(</span><span class="s2">"standardise_molecule"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"smiles"</span><span class="p">:</span> <span class="s2">"[CH3:1][OH:2]"</span><span class="p">,</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>                                            <span class="s2">"remove_atom_maps"</span><span class="p">:</span> <span class="kc">True</span><span class="p">})</span>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"atom maps removed:"</span><span class="p">,</span> <span class="n">mapped</span><span class="p">[</span><span class="s2">"smiles"</span><span class="p">],</span> <span class="n">mapped</span><span class="p">[</span><span class="s2">"operations"</span><span class="p">])</span>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="c1"># The MCS of phenol and aniline, with the search result and a drawing.</span>
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="n">drawing</span> <span class="o">=</span> <span class="n">call_tool</span><span class="p">(</span><span class="s2">"depict_mcs"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"query_smiles"</span><span class="p">:</span> <span class="s2">"Oc1ccccc1"</span><span class="p">,</span>
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>                                   <span class="s2">"target_smiles"</span><span class="p">:</span> <span class="s2">"Nc1ccccc1"</span><span class="p">,</span>
+<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>                                   <span class="s2">"width"</span><span class="p">:</span> <span class="mi">600</span><span class="p">,</span> <span class="s2">"height"</span><span class="p">:</span> <span class="mi">300</span><span class="p">})</span>
+<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"depict_mcs:"</span><span class="p">,</span> <span class="n">drawing</span><span class="p">[</span><span class="s2">"status"</span><span class="p">],</span> <span class="n">drawing</span><span class="p">[</span><span class="s2">"optimal"</span><span class="p">],</span>
+<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>      <span class="n">drawing</span><span class="p">[</span><span class="s2">"matches"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">"atom_count"</span><span class="p">],</span> <span class="s2">"atoms"</span><span class="p">)</span>
+<a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"svg:"</span><span class="p">,</span> <span class="s2">"&lt;svg"</span> <span class="ow">in</span> <span class="n">drawing</span><span class="p">[</span><span class="s2">"svg"</span><span class="p">],</span> <span class="n">drawing</span><span class="p">[</span><span class="s2">"mime_type"</span><span class="p">],</span>
+<a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>      <span class="n">drawing</span><span class="p">[</span><span class="s2">"width"</span><span class="p">],</span> <span class="s2">"x"</span><span class="p">,</span> <span class="n">drawing</span><span class="p">[</span><span class="s2">"height"</span><span class="p">])</span>
+<a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>
+<a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a><span class="c1"># No common graph, no drawing.</span>
+<a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a><span class="n">none</span> <span class="o">=</span> <span class="n">call_tool</span><span class="p">(</span><span class="s2">"depict_mcs"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"query_smiles"</span><span class="p">:</span> <span class="s2">"O"</span><span class="p">,</span> <span class="s2">"target_smiles"</span><span class="p">:</span> <span class="s2">"N"</span><span class="p">})</span>
+<a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"no match:"</span><span class="p">,</span> <span class="n">none</span><span class="p">[</span><span class="s2">"found"</span><span class="p">],</span> <span class="n">none</span><span class="p">[</span><span class="s2">"svg"</span><span class="p">])</span>
+<a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>
+<a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a><span class="k">assert</span> <span class="ow">not</span> <span class="n">salt</span><span class="p">[</span><span class="s2">"chemical_transformations"</span><span class="p">]</span> <span class="ow">and</span> <span class="s2">"."</span> <span class="ow">in</span> <span class="n">salt</span><span class="p">[</span><span class="s2">"smiles"</span><span class="p">]</span>
+<a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a><span class="k">assert</span> <span class="n">mapped</span><span class="p">[</span><span class="s2">"operations"</span><span class="p">]</span> <span class="o">==</span> <span class="p">[</span><span class="s2">"remove_atom_maps"</span><span class="p">,</span> <span class="s2">"canonical_smiles"</span><span class="p">]</span>
+<a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a><span class="k">assert</span> <span class="n">drawing</span><span class="p">[</span><span class="s2">"optimal"</span><span class="p">]</span> <span class="ow">and</span> <span class="n">drawing</span><span class="p">[</span><span class="s2">"matches"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">"atom_count"</span><span class="p">]</span> <span class="o">==</span> <span class="mi">6</span>
+<a id="__codelineno-8-29" name="__codelineno-8-29" href="#__codelineno-8-29"></a><span class="k">assert</span> <span class="n">none</span><span class="p">[</span><span class="s2">"svg"</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>smiles: C(c1ccccc1)([O-])=O.[Na+] | backend: smsd
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>operations: ['canonical_smiles'] | chemical transformations: False
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>atom maps removed: CO ['remove_atom_maps', 'canonical_smiles']
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>depict_mcs: COMPLETED True 6 atoms
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>svg: True image/svg+xml 600 x 300
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>no match: False None
+</code></pre></div>
+<p><code>cleanup</code>, <code>largest_fragment</code>, <code>neutralise</code> and <code>canonical_tautomer</code> change
+the chemical graph, so each must be asked for explicitly, and they need the
+<code>rdkit</code> extra; without it the call raises <code>ImportError</code>, and there is no
+silent fallback. With any of them set, <code>backend</code> is <code>rdkit</code>, <code>operations</code>
+lists each step in order and <code>chemical_transformations</code> is true. A canonical
+tautomer is a choice of representation, not a prediction of the most stable
+form. Tautomer enumeration stops at 128 tautomers or 256 transformations; when
+it stops, the result reports <code>LIMIT_REACHED</code> and <code>complete: false</code>, and the
+choice is made from the tautomers found.</p>
+<p>The drawing highlights the mapped atoms and the input bonds between them. For
+an MCES search, the selected common bonds are those in <code>bond_mapping</code>; the
+drawing can also highlight other bonds between mapped atoms. A search with no
+match returns <code>svg: None</code>, and a stopped search keeps its stopped status when
+drawn. The SVG is checked before it is returned and contains no scripts,
+external references or document declarations.</p>
+<h2 id="tool-definitions-for-a-model-api">Tool definitions for a model API<a class="headerlink" href="#tool-definitions-for-a-model-api" title="Permanent link">&para;</a></h2>
+<p><code>get_tool_definitions(provider)</code> returns the eight tools as a list of
+dictionaries in one of four shapes. Pass the list to a model API as its tools,
+then run each tool call the model makes with <code>call_tool</code> and send the result
+back. No client is created and nothing is sent anywhere:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smsd.tool_definitions</span><span class="w"> </span><span class="kn">import</span> <span class="n">TOOL_REGISTRY</span><span class="p">,</span> <span class="n">get_tool_definitions</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="k">for</span> <span class="n">provider</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"mcp"</span><span class="p">,</span> <span class="s2">"input-schema"</span><span class="p">,</span> <span class="s2">"function"</span><span class="p">,</span> <span class="s2">"chat-function"</span><span class="p">):</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    <span class="n">first</span> <span class="o">=</span> <span class="n">get_tool_definitions</span><span class="p">(</span><span class="n">provider</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">provider</span><span class="si">}</span><span class="s2">:"</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">first</span><span class="p">))</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="n">schema</span> <span class="o">=</span> <span class="n">TOOL_REGISTRY</span><span class="p">[</span><span class="s2">"find_mcs"</span><span class="p">]</span><span class="o">.</span><span class="n">input_schema</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"required:"</span><span class="p">,</span> <span class="n">schema</span><span class="p">[</span><span class="s2">"required"</span><span class="p">])</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"timeout_ms:"</span><span class="p">,</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">schema</span><span class="p">[</span><span class="s2">"properties"</span><span class="p">][</span><span class="s2">"timeout_ms"</span><span class="p">]))</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"objective:"</span><span class="p">,</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">schema</span><span class="p">[</span><span class="s2">"properties"</span><span class="p">][</span><span class="s2">"objective"</span><span class="p">]))</span>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"additionalProperties:"</span><span class="p">,</span> <span class="n">schema</span><span class="p">[</span><span class="s2">"additionalProperties"</span><span class="p">])</span>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"tools:"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">TOOL_REGISTRY</span><span class="p">),</span> <span class="s2">"| first:"</span><span class="p">,</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">TOOL_REGISTRY</span><span class="p">)))</span>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>
+<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">get_tool_definitions</span><span class="p">())</span> <span class="o">==</span> <span class="mi">8</span>
+<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="k">assert</span> <span class="n">get_tool_definitions</span><span class="p">(</span><span class="s2">"chat-function"</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"function"</span><span class="p">][</span><span class="s2">"strict"</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">False</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>mcp: ['description', 'inputSchema', 'name']
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>input-schema: ['description', 'input_schema', 'name']
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>function: ['description', 'name', 'parameters', 'strict', 'type']
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>chat-function: ['function', 'type']
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>required: ['query_smiles', 'target_smiles']
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>timeout_ms: {"type": "integer", "minimum": 0, "maximum": 30000, "default": 1000}
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>objective: {"type": "string", "enum": ["mcis", "mces"], "default": "mcis"}
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>additionalProperties: False
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>tools: 8 | first: find_mcs
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th><code>provider</code></th>
+<th>Shape</th>
+<th>Typical use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mcp</code> (default)</td>
+<td><code>name</code>, <code>description</code>, <code>inputSchema</code></td>
+<td>MCP tool lists</td>
+</tr>
+<tr>
+<td><code>input-schema</code></td>
+<td><code>name</code>, <code>description</code>, <code>input_schema</code></td>
+<td>APIs that take an input schema per tool</td>
+</tr>
+<tr>
+<td><code>function</code></td>
+<td>flat: <code>type: "function"</code>, <code>name</code>, <code>description</code>, <code>parameters</code>, <code>strict</code></td>
+<td>APIs that take flat function definitions</td>
+</tr>
+<tr>
+<td><code>chat-function</code></td>
+<td>nested: <code>type: "function"</code>, <code>function: {name, description, parameters, strict}</code></td>
+<td>Chat-completion APIs and most local model runtimes</td>
+</tr>
+</tbody>
+</table>
+<p>Every schema sets <code>additionalProperties: false</code>, marks the required
+arguments, gives each optional argument its default, and bounds every number,
+text length and list length. The function shapes set <code>strict: false</code> so that
+a model may leave out optional arguments and the defaults apply. A client that
+drops schema keywords cannot widen the limits, because <code>call_tool</code> and the
+server check every argument themselves. The schemas hold single-argument
+bounds only; combined limits, such as the atoms of a whole screen, are checked
+when the tool runs.</p>
+<p>Which shape each vendor's API expects, the changes some need, and complete
+loops for several hosted and local models are in
+<a href="../../AI_ASSISTANTS/#use-the-tool-definitions-from-python">Use the tool definitions from Python</a>.
+Optional LangChain and LlamaIndex adapters, <code>langchain_tools()</code> and
+<code>llamaindex_tools()</code>, wrap the same callables with the same bounds; see
+<a href="../../MCP_SERVER/#function-definitions-and-framework-adapters">Function definitions and framework adapters</a>.</p>
+<h2 id="a-tool-loop-with-fixed-replies">A tool loop with fixed replies<a class="headerlink" href="#a-tool-loop-with-fixed-replies" title="Permanent link">&para;</a></h2>
+<p>A tool loop sends the conversation and the tool definitions to a model, runs
+each tool call the model asks for, appends the results and asks again, until
+the model answers without a tool call. The loop below has that structure, but
+a small class returns prepared replies in place of a model, so the program
+runs offline and gives the same output every time. This is also a convenient
+way to test your own loop before connecting a model. The replies use the
+<code>chat-function</code> shape: the first asks for one valid call and one with an
+unknown argument, the second corrects the call after reading the refusal, and
+the third answers:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">smsd.tool_definitions</span><span class="w"> </span><span class="kn">import</span> <span class="n">call_tool</span><span class="p">,</span> <span class="n">get_tool_definitions</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="k">class</span><span class="w"> </span><span class="nc">FixedReplies</span><span class="p">:</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">    </span><span class="sd">"""Stands in for a model: returns the next prepared reply on each request."""</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">replies</span><span class="p">):</span>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">replies</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">requests</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">replies</span><span class="p">),</span> <span class="p">[]</span>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">messages</span><span class="p">,</span> <span class="n">tools</span><span class="p">):</span>
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">requests</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"messages"</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">messages</span><span class="p">),</span> <span class="s2">"tools"</span><span class="p">:</span> <span class="n">tools</span><span class="p">})</span>
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">replies</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>
+<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>
+<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a><span class="k">def</span><span class="w"> </span><span class="nf">tool_call</span><span class="p">(</span><span class="n">call_id</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">arguments</span><span class="p">):</span>
+<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>    <span class="k">return</span> <span class="p">{</span><span class="s2">"id"</span><span class="p">:</span> <span class="n">call_id</span><span class="p">,</span> <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"function"</span><span class="p">,</span>
+<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>            <span class="s2">"function"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span> <span class="s2">"arguments"</span><span class="p">:</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">arguments</span><span class="p">)}}</span>
+<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a>
+<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a>
+<a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a><span class="k">def</span><span class="w"> </span><span class="nf">run_tool</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">arguments</span><span class="p">):</span>
+<a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a><span class="w">    </span><span class="sd">"""Run one tool locally; a refusal goes back to the model as text."""</span>
+<a id="__codelineno-12-24" name="__codelineno-12-24" href="#__codelineno-12-24"></a>    <span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-12-25" name="__codelineno-12-25" href="#__codelineno-12-25"></a>        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">call_tool</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">arguments</span><span class="p">)))</span>
+<a id="__codelineno-12-26" name="__codelineno-12-26" href="#__codelineno-12-26"></a>    <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">ImportError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+<a id="__codelineno-12-27" name="__codelineno-12-27" href="#__codelineno-12-27"></a>        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">)})</span>
+<a id="__codelineno-12-28" name="__codelineno-12-28" href="#__codelineno-12-28"></a>
+<a id="__codelineno-12-29" name="__codelineno-12-29" href="#__codelineno-12-29"></a>
+<a id="__codelineno-12-30" name="__codelineno-12-30" href="#__codelineno-12-30"></a><span class="n">pair</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"query_smiles"</span><span class="p">:</span> <span class="s2">"c1ccccc1O"</span><span class="p">,</span> <span class="s2">"target_smiles"</span><span class="p">:</span> <span class="s2">"c1ccccc1N"</span><span class="p">}</span>
+<a id="__codelineno-12-31" name="__codelineno-12-31" href="#__codelineno-12-31"></a><span class="n">model</span> <span class="o">=</span> <span class="n">FixedReplies</span><span class="p">([</span>
+<a id="__codelineno-12-32" name="__codelineno-12-32" href="#__codelineno-12-32"></a>    <span class="c1"># Turn 1: one valid call, and one with an argument the tool does not take.</span>
+<a id="__codelineno-12-33" name="__codelineno-12-33" href="#__codelineno-12-33"></a>    <span class="p">{</span><span class="s2">"role"</span><span class="p">:</span> <span class="s2">"assistant"</span><span class="p">,</span> <span class="s2">"content"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">"tool_calls"</span><span class="p">:</span> <span class="p">[</span>
+<a id="__codelineno-12-34" name="__codelineno-12-34" href="#__codelineno-12-34"></a>        <span class="n">tool_call</span><span class="p">(</span><span class="s2">"call_1"</span><span class="p">,</span> <span class="s2">"find_mcs"</span><span class="p">,</span> <span class="n">pair</span><span class="p">),</span>
+<a id="__codelineno-12-35" name="__codelineno-12-35" href="#__codelineno-12-35"></a>        <span class="n">tool_call</span><span class="p">(</span><span class="s2">"call_2"</span><span class="p">,</span> <span class="s2">"find_mcs"</span><span class="p">,</span> <span class="p">{</span><span class="o">**</span><span class="n">pair</span><span class="p">,</span> <span class="s2">"timeout"</span><span class="p">:</span> <span class="mi">500</span><span class="p">})]},</span>
+<a id="__codelineno-12-36" name="__codelineno-12-36" href="#__codelineno-12-36"></a>    <span class="c1"># Turn 2: the corrected call, after reading the refusal.</span>
+<a id="__codelineno-12-37" name="__codelineno-12-37" href="#__codelineno-12-37"></a>    <span class="p">{</span><span class="s2">"role"</span><span class="p">:</span> <span class="s2">"assistant"</span><span class="p">,</span> <span class="s2">"content"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">"tool_calls"</span><span class="p">:</span> <span class="p">[</span>
+<a id="__codelineno-12-38" name="__codelineno-12-38" href="#__codelineno-12-38"></a>        <span class="n">tool_call</span><span class="p">(</span><span class="s2">"call_3"</span><span class="p">,</span> <span class="s2">"find_mcs"</span><span class="p">,</span> <span class="p">{</span><span class="o">**</span><span class="n">pair</span><span class="p">,</span> <span class="s2">"timeout_ms"</span><span class="p">:</span> <span class="mi">500</span><span class="p">})]},</span>
+<a id="__codelineno-12-39" name="__codelineno-12-39" href="#__codelineno-12-39"></a>    <span class="c1"># Turn 3: the answer, which reports the proof flags.</span>
+<a id="__codelineno-12-40" name="__codelineno-12-40" href="#__codelineno-12-40"></a>    <span class="p">{</span><span class="s2">"role"</span><span class="p">:</span> <span class="s2">"assistant"</span><span class="p">,</span> <span class="s2">"content"</span><span class="p">:</span> <span class="s2">"The MCS has 6 atoms; COMPLETED, "</span>
+<a id="__codelineno-12-41" name="__codelineno-12-41" href="#__codelineno-12-41"></a>     <span class="s2">"optimal and complete, so it is proved maximum."</span><span class="p">,</span> <span class="s2">"tool_calls"</span><span class="p">:</span> <span class="kc">None</span><span class="p">},</span>
+<a id="__codelineno-12-42" name="__codelineno-12-42" href="#__codelineno-12-42"></a><span class="p">])</span>
+<a id="__codelineno-12-43" name="__codelineno-12-43" href="#__codelineno-12-43"></a>
+<a id="__codelineno-12-44" name="__codelineno-12-44" href="#__codelineno-12-44"></a><span class="n">tools</span> <span class="o">=</span> <span class="n">get_tool_definitions</span><span class="p">(</span><span class="s2">"chat-function"</span><span class="p">)</span>
+<a id="__codelineno-12-45" name="__codelineno-12-45" href="#__codelineno-12-45"></a><span class="n">messages</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">"role"</span><span class="p">:</span> <span class="s2">"user"</span><span class="p">,</span> <span class="s2">"content"</span><span class="p">:</span> <span class="s2">"Find the MCS of phenol and aniline."</span><span class="p">}]</span>
+<a id="__codelineno-12-46" name="__codelineno-12-46" href="#__codelineno-12-46"></a><span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+<a id="__codelineno-12-47" name="__codelineno-12-47" href="#__codelineno-12-47"></a>    <span class="n">reply</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">messages</span><span class="o">=</span><span class="n">messages</span><span class="p">,</span> <span class="n">tools</span><span class="o">=</span><span class="n">tools</span><span class="p">)</span>
+<a id="__codelineno-12-48" name="__codelineno-12-48" href="#__codelineno-12-48"></a>    <span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reply</span><span class="p">)</span>
+<a id="__codelineno-12-49" name="__codelineno-12-49" href="#__codelineno-12-49"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">reply</span><span class="p">[</span><span class="s2">"tool_calls"</span><span class="p">]:</span>
+<a id="__codelineno-12-50" name="__codelineno-12-50" href="#__codelineno-12-50"></a>        <span class="k">break</span>
+<a id="__codelineno-12-51" name="__codelineno-12-51" href="#__codelineno-12-51"></a>    <span class="k">for</span> <span class="n">call</span> <span class="ow">in</span> <span class="n">reply</span><span class="p">[</span><span class="s2">"tool_calls"</span><span class="p">]:</span>
+<a id="__codelineno-12-52" name="__codelineno-12-52" href="#__codelineno-12-52"></a>        <span class="n">text</span> <span class="o">=</span> <span class="n">run_tool</span><span class="p">(</span><span class="n">call</span><span class="p">[</span><span class="s2">"function"</span><span class="p">][</span><span class="s2">"name"</span><span class="p">],</span> <span class="n">call</span><span class="p">[</span><span class="s2">"function"</span><span class="p">][</span><span class="s2">"arguments"</span><span class="p">])</span>
+<a id="__codelineno-12-53" name="__codelineno-12-53" href="#__codelineno-12-53"></a>        <span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"role"</span><span class="p">:</span> <span class="s2">"tool"</span><span class="p">,</span> <span class="s2">"tool_call_id"</span><span class="p">:</span> <span class="n">call</span><span class="p">[</span><span class="s2">"id"</span><span class="p">],</span> <span class="s2">"content"</span><span class="p">:</span> <span class="n">text</span><span class="p">})</span>
+<a id="__codelineno-12-54" name="__codelineno-12-54" href="#__codelineno-12-54"></a>        <span class="n">result</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+<a id="__codelineno-12-55" name="__codelineno-12-55" href="#__codelineno-12-55"></a>        <span class="nb">print</span><span class="p">(</span><span class="n">call</span><span class="p">[</span><span class="s2">"id"</span><span class="p">],</span> <span class="s2">"-&gt;"</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"error"</span><span class="p">)</span> <span class="ow">or</span>
+<a id="__codelineno-12-56" name="__codelineno-12-56" href="#__codelineno-12-56"></a>              <span class="sa">f</span><span class="s2">"status=</span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">'status'</span><span class="p">]</span><span class="si">}</span><span class="s2"> optimal=</span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">'optimal'</span><span class="p">]</span><span class="si">}</span><span class="s2"> "</span>
+<a id="__codelineno-12-57" name="__codelineno-12-57" href="#__codelineno-12-57"></a>              <span class="sa">f</span><span class="s2">"atoms=</span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">'matches'</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">'atom_count'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-12-58" name="__codelineno-12-58" href="#__codelineno-12-58"></a>
+<a id="__codelineno-12-59" name="__codelineno-12-59" href="#__codelineno-12-59"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"model requests:"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">requests</span><span class="p">))</span>
+<a id="__codelineno-12-60" name="__codelineno-12-60" href="#__codelineno-12-60"></a><span class="nb">print</span><span class="p">(</span><span class="s2">"answer:"</span><span class="p">,</span> <span class="n">messages</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">"content"</span><span class="p">])</span>
+<a id="__codelineno-12-61" name="__codelineno-12-61" href="#__codelineno-12-61"></a>
+<a id="__codelineno-12-62" name="__codelineno-12-62" href="#__codelineno-12-62"></a><span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">m</span><span class="p">[</span><span class="s2">"content"</span><span class="p">])</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">messages</span> <span class="k">if</span> <span class="n">m</span><span class="p">[</span><span class="s2">"role"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"tool"</span><span class="p">]</span>
+<a id="__codelineno-12-63" name="__codelineno-12-63" href="#__codelineno-12-63"></a><span class="k">assert</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"optimal"</span><span class="p">]</span> <span class="ow">and</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"matches"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">"atom_count"</span><span class="p">]</span> <span class="o">==</span> <span class="mi">6</span>
+<a id="__codelineno-12-64" name="__codelineno-12-64" href="#__codelineno-12-64"></a><span class="k">assert</span> <span class="n">results</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="p">{</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"Unknown tool argument"</span><span class="p">}</span>
+<a id="__codelineno-12-65" name="__codelineno-12-65" href="#__codelineno-12-65"></a><span class="k">assert</span> <span class="n">results</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="s2">"budget"</span><span class="p">][</span><span class="s2">"timeout_ms"</span><span class="p">]</span> <span class="o">==</span> <span class="mi">500</span>
+<a id="__codelineno-12-66" name="__codelineno-12-66" href="#__codelineno-12-66"></a><span class="k">assert</span> <span class="n">model</span><span class="o">.</span><span class="n">requests</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"tools"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">"function"</span><span class="p">][</span><span class="s2">"name"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"find_mcs"</span>
+</code></pre></div>
+<p>The program prints:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>call_1 -&gt; status=COMPLETED optimal=True atoms=6
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>call_2 -&gt; Unknown tool argument
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>call_3 -&gt; status=COMPLETED optimal=True atoms=6
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>model requests: 3
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>answer: The MCS has 6 atoms; COMPLETED, optimal and complete, so it is proved maximum.
+</code></pre></div>
+<p>Two points carry over to a loop with a real model. Send every result back in
+full, including <code>status</code>, <code>optimal</code> and <code>complete</code>, so that the model can say
+whether its answer is proved; and catch <code>ValueError</code> and <code>ImportError</code> from
+<code>call_tool</code> and return the message as the tool result, rather than ending the
+loop, so that the model can correct its call. To replace the fixed replies
+with a model, replace <code>model.create</code> with the client call of your model API;
+<a href="../../AI_ASSISTANTS/#use-the-tool-definitions-from-python">Connecting AI assistants</a>
+shows that change for each API. For a fixed sequence of calls with no model at
+all, see <a href="../../python/examples/agent_workflow.py"><code>agent_workflow.py</code></a>, which
+screens a list, runs an MCS on each hit and draws the best one.</p>
+<h2 id="limits-and-safety">Limits and safety<a class="headerlink" href="#limits-and-safety" title="Permanent link">&para;</a></h2>
+<p>The limits are fixed in the server and apply equally to <code>call_tool</code>. Each
+result reports them under <code>limits</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Limit</th>
+<th>Value</th>
+<th>Applies to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Text argument</td>
+<td>16,384 characters</td>
+<td>Every SMILES or SMARTS argument</td>
+</tr>
+<tr>
+<td>Atoms per molecule</td>
+<td>1,024</td>
+<td>Searches and fingerprints</td>
+</tr>
+<tr>
+<td>Atoms per molecule, depiction</td>
+<td>256</td>
+<td><code>depict_mcs</code></td>
+</tr>
+<tr>
+<td>Atoms per molecule, standardisation</td>
+<td>128</td>
+<td><code>standardise_molecule</code></td>
+</tr>
+<tr>
+<td>Search time, <code>timeout_ms</code></td>
+<td>Default 1,000; at most 30,000; 0 stops at once</td>
+<td><code>find_mcs</code>, <code>find_substructure</code>, <code>search_smarts</code>, <code>depict_mcs</code></td>
+</tr>
+<tr>
+<td>Search nodes, <code>node_limit</code></td>
+<td>Default 100,000; from 1 to 1,000,000</td>
+<td>The same four tools</td>
+</tr>
+<tr>
+<td>Matches or hits returned</td>
+<td>At most 32</td>
+<td><code>search_smarts</code>, a <code>screen_molecules</code> page</td>
+</tr>
+<tr>
+<td>Screen targets</td>
+<td>At most 64</td>
+<td><code>screen_molecules</code></td>
+</tr>
+<tr>
+<td>Combined text</td>
+<td>65,536 characters</td>
+<td>The query and targets of <code>screen_molecules</code></td>
+</tr>
+<tr>
+<td>Combined atoms</td>
+<td>4,096</td>
+<td><code>molecular_similarity</code>, <code>screen_molecules</code></td>
+</tr>
+<tr>
+<td>Fingerprint</td>
+<td><code>fp_size</code> up to 65,536; <code>radius</code> up to 8; <code>path_length</code> up to 8; at most 2,000,000 estimated path walks</td>
+<td>The fingerprint tools</td>
+</tr>
+<tr>
+<td>Drawing</td>
+<td>200 to 1,600 by 150 to 1,200 pixels; SVG at most 1 MiB</td>
+<td><code>depict_mcs</code></td>
+</tr>
+<tr>
+<td>Result</td>
+<td>2 MiB as JSON text</td>
+<td>Every tool</td>
+</tr>
+</tbody>
+</table>
+<p>Points to keep in mind when deploying the tools:</p>
+<ul>
+<li>Local only. The tools read no files, fetch no URLs and contact no network
+  or model service. Molecular arguments are SMILES or SMARTS text, never
+  paths, URLs, expressions or commands. The server has no network listener.</li>
+<li>Hosted assistants. A hosted assistant sends your prompts, the tool
+  arguments and the results, including any structures, to its provider. Use
+  a model run on your own machine when structures must not leave it.</li>
+<li>Time budgets cover the search, not the whole call. They start after the
+  input is parsed and the SMARTS compiled; preparation, depiction and
+  serialisation come on top, and standardisation has no time budget. For a
+  hard deadline, apply process or container limits. The
+  <a href="../../packaging/mcp/README.md">container recipe</a> runs the server with no
+  network access, a read-only file system and memory and CPU caps.</li>
+<li>No zero node limit. A <code>node_limit</code> of 0 is refused rather than read as
+  unlimited.</li>
+<li>Natural-language requests are not mapped to options. Only the switches in
+  the schema exist; an assistant cannot ask for an option the tools lack.</li>
+<li>Approval prompts. Keep your client's tool approval prompts on unless you
+  trust every tool it can call.</li>
+</ul>
+<h2 id="options">Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h2>
+<h3 id="search-tools">Search tools<a class="headerlink" href="#search-tools" title="Permanent link">&para;</a></h3>
+<p><code>find_mcs</code>, <code>depict_mcs</code>, <code>find_substructure</code> and <code>search_smarts</code> share these
+arguments where they apply:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Type</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>objective</code></td>
+<td>string</td>
+<td><code>"mcis"</code></td>
+<td><code>mcis</code> maximises common atoms; <code>mces</code> maximises common bonds (<code>find_mcs</code>, <code>depict_mcs</code>)</td>
+</tr>
+<tr>
+<td><code>connected</code></td>
+<td>boolean</td>
+<td><code>true</code></td>
+<td>A single connected common graph, or fragments when false (<code>find_mcs</code>, <code>depict_mcs</code>)</td>
+</tr>
+<tr>
+<td><code>query_format</code></td>
+<td>string</td>
+<td><code>"smarts"</code></td>
+<td>How <code>query</code> is read: <code>smarts</code> or <code>smiles</code> (<code>find_substructure</code>)</td>
+</tr>
+<tr>
+<td><code>induced</code></td>
+<td>boolean</td>
+<td><code>false</code></td>
+<td>Induced matching: unbonded query atoms must map to unbonded target atoms (<code>find_substructure</code>)</td>
+</tr>
+<tr>
+<td><code>max_matches</code></td>
+<td>integer</td>
+<td><code>16</code></td>
+<td>Embeddings to return, 1 to 32 (<code>search_smarts</code>)</td>
+</tr>
+<tr>
+<td><code>timeout_ms</code></td>
+<td>integer</td>
+<td><code>1000</code></td>
+<td>Search time limit, 0 to 30,000 ms</td>
+</tr>
+<tr>
+<td><code>node_limit</code></td>
+<td>integer</td>
+<td><code>100000</code></td>
+<td>Search node limit, 1 to 1,000,000</td>
+</tr>
+<tr>
+<td><code>match_stereo</code></td>
+<td>boolean</td>
+<td><code>false</code></td>
+<td>Match tetrahedral and double-bond stereochemistry</td>
+</tr>
+<tr>
+<td><code>complete_rings_only</code></td>
+<td>boolean</td>
+<td><code>false</code></td>
+<td>Matched ring atoms and bonds lie in fully matched rings</td>
+</tr>
+<tr>
+<td><code>ring_matches_ring_only</code></td>
+<td>boolean</td>
+<td><code>false</code></td>
+<td>Ring atoms and bonds match only ring atoms and bonds</td>
+</tr>
+<tr>
+<td><code>width</code>, <code>height</code></td>
+<td>integer</td>
+<td><code>800</code>, <code>360</code></td>
+<td>Drawing size, 200 to 1,600 and 150 to 1,200 (<code>depict_mcs</code>)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="fingerprint-tools">Fingerprint tools<a class="headerlink" href="#fingerprint-tools" title="Permanent link">&para;</a></h3>
+<p><code>molecular_fingerprint</code>, <code>molecular_similarity</code> and <code>screen_molecules</code> share
+the fingerprint arguments:</p>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Type</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>kind</code></td>
+<td>string</td>
+<td><code>"ecfp"</code></td>
+<td><code>ecfp</code> (also <code>circular</code>), <code>fcfp</code>, <code>path</code>, <code>torsion</code> or <code>mcs</code></td>
+</tr>
+<tr>
+<td><code>fp_size</code></td>
+<td>integer</td>
+<td><code>2048</code></td>
+<td>Fingerprint width, 1 to 65,536</td>
+</tr>
+<tr>
+<td><code>radius</code></td>
+<td>integer</td>
+<td><code>2</code></td>
+<td>Radius of <code>ecfp</code>, <code>circular</code> and <code>fcfp</code>, 0 to 8</td>
+</tr>
+<tr>
+<td><code>path_length</code></td>
+<td>integer</td>
+<td><code>7</code></td>
+<td>Longest path, in bonds, of <code>path</code> and <code>mcs</code>, 1 to 8</td>
+</tr>
+<tr>
+<td><code>counts</code></td>
+<td>boolean</td>
+<td><code>false</code></td>
+<td>Position and count pairs instead of set bits; not available for <code>mcs</code></td>
+</tr>
+<tr>
+<td><code>metric</code></td>
+<td>string</td>
+<td><code>"tanimoto"</code></td>
+<td><code>tanimoto</code>, <code>dice</code> or <code>cosine</code> (<code>molecular_similarity</code>)</td>
+</tr>
+<tr>
+<td><code>threshold</code></td>
+<td>number</td>
+<td><code>0.7</code></td>
+<td>Lowest Tanimoto score kept, 0 to 1, inclusive (<code>screen_molecules</code>)</td>
+</tr>
+<tr>
+<td><code>max_hits</code></td>
+<td>integer</td>
+<td><code>32</code></td>
+<td>Hits per page, 1 to 32 (<code>screen_molecules</code>)</td>
+</tr>
+<tr>
+<td><code>offset</code></td>
+<td>integer</td>
+<td><code>0</code></td>
+<td>First hit of the page, 0 to 64 (<code>screen_molecules</code>)</td>
+</tr>
+</tbody>
+</table>
+<p><a href="../FINGERPRINTS/">Fingerprints and similarity</a> describes the fingerprint
+families and coefficients.</p>
+<h3 id="standardise_molecule">standardise_molecule<a class="headerlink" href="#standardise_molecule" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Type</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>remove_atom_maps</code></td>
+<td>boolean</td>
+<td><code>false</code></td>
+<td>Remove atom-map numbers before writing</td>
+</tr>
+<tr>
+<td><code>cleanup</code></td>
+<td>boolean</td>
+<td><code>false</code></td>
+<td>RDKit clean-up of the structure</td>
+</tr>
+<tr>
+<td><code>largest_fragment</code></td>
+<td>boolean</td>
+<td><code>false</code></td>
+<td>Keep the largest fragment</td>
+</tr>
+<tr>
+<td><code>neutralise</code></td>
+<td>boolean</td>
+<td><code>false</code></td>
+<td>Neutralise charges where possible</td>
+</tr>
+<tr>
+<td><code>canonical_tautomer</code></td>
+<td>boolean</td>
+<td><code>false</code></td>
+<td>Write the canonical tautomer</td>
+</tr>
+</tbody>
+</table>
+<p>The last four need the <code>rdkit</code> extra.</p>
+<h2 id="notes">Notes<a class="headerlink" href="#notes" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Each call is independent. The tools keep no state between calls, so a
+  query is prepared again on every call; for many searches with one query,
+  use the Python API.</li>
+<li><code>screen_molecules</code> fingerprints the query and every target on each call,
+  and so does <code>molecular_similarity</code> for its pair.</li>
+<li><code>elapsed_ms</code> and the <code>timings</code> vary from run to run; do not compare them
+  across machines or ask an assistant to.</li>
+<li><code>find_mcs</code> returns one common graph. For every optimal mapping, constraints
+  or the common graph of a series, use the Python API in
+  <a href="../MCS/">Maximum common substructure</a>.</li>
+<li>A capped enumeration or a capped screen page is incomplete, not wrong; ask
+  for the next page or a higher cap, up to the limits above.</li>
+<li>An empty or whitespace-only argument is refused, and so is a <code>threshold</code>
+  that is not a finite number from 0 to 1.</li>
+</ul>
+<h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../../MCP_SERVER/">Molecular tools and MCP</a>: the reference for the tools,
+  their results and limits.</li>
+<li><a href="../../AI_ASSISTANTS/">Connecting AI assistants</a>: set-up for specific
+  assistants, model APIs and local model runtimes, with complete tool loops.</li>
+<li><a href="../COMMAND_LINE/#molecular-tools-server">Command line and containers</a>: the
+  server among the other command-line tools.</li>
+<li><a href="../../API_REFERENCE/#molecular-tools">API reference, molecular tools</a>: the
+  signature of every tool function.</li>
+<li><a href="../GETTING_STARTED/#reading-a-result">Getting started</a>: what a search
+  result proves.</li>
+<li>The <a href="../../python/examples/mcp_stdio_client.py">MCP stdio client</a> and
+  <a href="../../python/examples/agent_workflow.py">agent workflow</a> examples.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../MACHINE_LEARNING/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Machine learning and data frames">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Machine learning and data frames
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../COMMAND_LINE/" class="md-footer__link md-footer__link--next" aria-label="Next: Command line and containers">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Command line and containers
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2018-2026 BioInception PVT LTD
+    </div>
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/asad/SMSD" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/smsd/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.top", "navigation.footer", "navigation.instant", "navigation.tracking", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  <script data-mkdocs-jupyter-mathjax="{&quot;url&quot;: &quot;https://cdn.jsdelivr.net/npm/mathjax@4.1.3/tex-mml-chtml.js&quot;, &quot;version&quot;: 4}">
+/* Shared by full pages and Material's instant navigation. */
+(() => {
+  const config = JSON.parse(document.currentScript.dataset.mkdocsJupyterMathjax);
+  if (window.mkdocsJupyterMathJax) return;
+
+  let loading;
+  let queue = Promise.resolve();
+  let previous = [];
+
+  const ready = async () => {
+    if (!loading) {
+      loading = (async () => {
+        let math = window.MathJax;
+        if (!math?.typesetPromise) {
+          const url = new URL(config.url, document.baseURI).href;
+          const existing = Array.from(document.scripts).find(script =>
+            script.src && (script.src === url || script.id === 'MathJax-script' ||
+              (/mathjax/i.test(script.src) &&
+               /\/(?:MathJax|latest|(?:tex|mml)(?:-mml)?-(?:chtml|svg))\.js(?:[?#]|$)/i.test(script.src))));
+          if (existing) {
+            if (!math?.startup?.promise) {
+              await new Promise((resolve, reject) => {
+                existing.addEventListener('load', resolve, { once: true });
+                existing.addEventListener('error', reject, { once: true });
+              });
+            }
+          } else {
+            // Keep site macros, delimiters and startup hooks when supplied.
+            const options = math || {};
+            window.MathJax = {
+              ...options,
+              loader: {
+                ...options.loader,
+                load: Array.from(new Set(['ui/safe', ...(options.loader?.load || [])]))
+              },
+              startup: { typeset: false, ...options.startup },
+              tex: {
+                tags: 'ams',
+                useLabelIds: true,
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                processEnvironments: true,
+                ...options.tex
+              }
+            };
+            await new Promise((resolve, reject) => {
+              const script = document.createElement('script');
+              script.src = config.url;
+              script.id = 'MathJax-script';
+              script.async = true;
+              script.onload = resolve;
+              script.onerror = reject;
+              document.head.appendChild(script);
+            });
+          }
+        }
+        math = window.MathJax;
+        await math.startup.promise;
+        return math;
+      })();
+    }
+    const math = await loading;
+    // A site owner can extend the v3 queue again on each navigation.
+    await math.startup.promise;
+    return math;
+  };
+
+  const unrendered = node => {
+    if (node.matches('mjx-container')) return [];
+    if (!node.querySelector('mjx-container')) return [node];
+    // In v3, scanning generated assistive MathML again produces nested output.
+    return Array.from(node.children).flatMap(unrendered);
+  };
+
+  const refresh = () => {
+    // A separate chain also serializes v3, without changing v4's startup promise.
+    queue = queue.then(async () => {
+      const notebooks = Array.from(document.querySelectorAll('.jupyter-wrapper'));
+      if (!notebooks.length && !previous.length) return;
+      if (notebooks.length === previous.length &&
+          notebooks.every((node, index) => node === previous[index])) return;
+      const math = await ready();
+      if (previous.length) {
+        math.typesetClear(previous);
+        math.texReset();
+      }
+      previous = notebooks.filter(node => node.isConnected);
+      const pending = previous.flatMap(unrendered);
+      if (pending.length) await math.typesetPromise(pending);
+    }).catch(error => console.error('mkdocs-jupyter: MathJax rendering failed', error));
+    return queue;
+  };
+
+  window.mkdocsJupyterMathJax = { refresh };
+  const start = () => {
+    if (typeof document$ !== 'undefined') document$.subscribe(refresh);
+    else refresh();
+  };
+  // Theme bundles and user-provided MathJax scripts can follow notebook content.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+  } else start();
+})();
+
+</script>
+</body>
+</html>
