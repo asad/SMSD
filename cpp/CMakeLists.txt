@@ -207,6 +207,8 @@ if(SMSD_BUILD_TESTS)
             $<$<CXX_COMPILER_ID:MSVC>:/UNDEBUG /bigobj>
             $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-UNDEBUG>)
         add_test(NAME ${name} COMMAND ${name})
+        # A suite that hangs fails within five minutes instead of stalling a build.
+        set_tests_properties(${name} PROPERTIES TIMEOUT 300)
     endfunction()
 
     # Links the optional RDKit, CUDA and Metal back ends that this build enables.
@@ -429,6 +431,12 @@ if(SMSD_BUILD_TESTS)
         smsd_add_test(smsd_metal_screening_regression_tests tests/test_screening_regression.cpp)
         target_link_libraries(smsd_metal_screening_regression_tests PRIVATE smsd_metal)
     endif()
+
+    # Suites that take more than a minute in a Debug build. The check run before each wheel
+    # skips them; the full native test run keeps them.
+    set_tests_properties(smsd_header_self_containment_tests smsd_seed_incumbent_tests
+        smsd_mces_contract_regression_tests smsd_mcs_regression_tests smsd_ring_candidate_search_tests
+        PROPERTIES LABELS slow TIMEOUT 3600)
 endif()
 
 # ---- Install ----

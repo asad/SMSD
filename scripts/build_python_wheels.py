@@ -245,7 +245,7 @@ def verify_source_tree(path, commit):
 
 
 def run_native_debug_tests(source_dir, build_dir, jobs, environment=None, cwd=None):
-    """Build every native Debug test suite from an SDK checkout and run them all."""
+    """Build every native Debug test suite from an SDK checkout and run all but the slow ones."""
     def run(command):
         subprocess.run(command, env=environment, cwd=cwd, check=True)
     run(["cmake", "-S", str(source_dir / "cpp"), "-B", str(build_dir), *NATIVE_CMAKE_OPTIONS])
@@ -259,7 +259,8 @@ def run_native_debug_tests(source_dir, build_dir, jobs, environment=None, cwd=No
     if any(prop.get("name") == "DISABLED" and prop.get("value")
            for test in tests for prop in test.get("properties", [])):
         raise ValueError("Native Debug test suites must not be disabled")
-    run(["ctest", "--test-dir", str(build_dir), "--build-config", "Debug", "--output-on-failure"])
+    run(["ctest", "--test-dir", str(build_dir), "--build-config", "Debug", "--output-on-failure",
+         "--label-exclude", "slow", "--parallel", str(jobs)])
     return len(tests)
 
 
